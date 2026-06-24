@@ -14,6 +14,7 @@ from .utils import atomic_write_text, jaccard, tokens, utc_now, write_jsonl
 
 ProposalEngineOption = Literal["bottom-up", "top-down", "both"]
 ProposalEngineName = Literal["bottom_up_self_proposal", "top_down_orchestration"]
+CalibrationDefaultPath = Literal["bottom_up_self_proposal", "top_down_orchestration", "hybrid"]
 ProposalType = Literal[
     "satisfies_need",
     "strengthens_capability",
@@ -76,6 +77,11 @@ BLINDED_REVIEW_CSV_COLUMNS = [
     column for column in REVIEW_CSV_COLUMNS if column != "proposal_engine"
 ]
 REVIEW_UNBLIND_CSV_COLUMNS = ["sample_id", "proposal_id", "proposal_engine"]
+CALIBRATION_DEFAULT_PATHS = {
+    "bottom_up_self_proposal",
+    "top_down_orchestration",
+    "hybrid",
+}
 
 
 @dataclass
@@ -735,6 +741,18 @@ def summarize_proposal_reviews(reviews: list[ProposalReviewRecord]) -> dict[str,
     useful = [review for review in reviewed if review.usefulness == "useful"]
     safe = [review for review in reviewed if review.safety == "safe"]
     actionable = [review for review in reviewed if review.actionability == "actionable"]
+    false_positive_note_count = sum(1 for review in reviews if review.false_positive_reason)
+    false_negative_note_count = sum(1 for review in reviews if review.false_negative_note)
+    useful_example_note_count = sum(1 for review in reviews if review.useful_example_note)
+    calibration_gate_complete = (
+        len(by_engine.get("bottom_up_self_proposal", [])) >= 25
+        and len(by_engine.get("top_down_orchestration", [])) >= 25
+    )
+    structured_calibration_notes_complete = (
+        false_positive_note_count > 0
+        and false_negative_note_count > 0
+        and useful_example_note_count > 0
+    )
     return {
         "template_count": len(reviews),
         "reviewed_count": len(reviewed),
@@ -745,18 +763,16 @@ def summarize_proposal_reviews(reviews: list[ProposalReviewRecord]) -> dict[str,
         "useful_count": len(useful),
         "safe_count": len(safe),
         "actionable_count": len(actionable),
-        "calibration_gate_complete": (
-            len(by_engine.get("bottom_up_self_proposal", [])) >= 25
-            and len(by_engine.get("top_down_orchestration", [])) >= 25
-        ),
+        "calibration_gate_complete": calibration_gate_complete,
+        "structured_calibration_notes_complete": structured_calibration_notes_complete,
         "usefulness_counts": dict(Counter(review.usefulness for review in reviews)),
         "safety_counts": dict(Counter(review.safety for review in reviews)),
         "novelty_counts": dict(Counter(review.novelty for review in reviews)),
         "actionability_counts": dict(Counter(review.actionability for review in reviews)),
         "decision_counts": dict(Counter(review.decision for review in reviews)),
-        "false_positive_note_count": sum(1 for review in reviews if review.false_positive_reason),
-        "false_negative_note_count": sum(1 for review in reviews if review.false_negative_note),
-        "useful_example_note_count": sum(1 for review in reviews if review.useful_example_note),
+        "false_positive_note_count": false_positive_note_count,
+        "false_negative_note_count": false_negative_note_count,
+        "useful_example_note_count": useful_example_note_count,
     }
 
 
@@ -1186,6 +1202,7 @@ def proposal_review_results_markdown(reviews: list[ProposalReviewRecord], source
         f"- False positive notes: **{summary['false_positive_note_count']}**",
         f"- False negative notes: **{summary['false_negative_note_count']}**",
         f"- Useful example notes: **{summary['useful_example_note_count']}**",
+        f"- Structured calibration notes complete: **{summary['structured_calibration_notes_complete']}**",
         "",
         "Generated summary only. Track curated evidence separately after human review.",
         "",
@@ -1238,15 +1255,53 @@ def _candidate_default_path(reviews: list[ProposalReviewRecord]) -> str:
     return "bottom_up_self_proposal" if bottom > top else "top_down_orchestration"
 
 
+def _normalize_calibration_default_path(default_path: str | None) -> CalibrationDefaultPath:
+    if not default_path:
+        raise ValueError(
+            "Proposal calibration evidence requires --default-path with one of: "
+            "bottom-up, top-down, hybrid."
+        )
+    normalized = default_path.strip().lower().replace("_", "-")
+    aliases = {
+        "bottom-up": "bottom_up_self_proposal",
+        "bottom-up-self-proposal": "bottom_up_self_proposal",
+        "bottom_up_self_proposal": "bottom_up_self_proposal",
+        "top-down": "top_down_orchestration",
+        "top-down-orchestration": "top_down_orchestration",
+        "top_down_orchestration": "top_down_orchestration",
+        "hybrid": "hybrid",
+    }
+    selected = aliases.get(normalized)
+    if selected not in CALIBRATION_DEFAULT_PATHS:
+        raise ValueError(
+            "Proposal calibration default path must be one of: bottom-up, top-down, hybrid."
+        )
+    return selected  # type: ignore[return-value]
+
+
 def proposal_calibration_evidence_markdown(
-    reviews: list[ProposalReviewRecord], source_path: Path
+    reviews: list[ProposalReviewRecord],
+    source_path: Path,
+    *,
+    default_path: str | None = None,
+    default_rationale: str | None = None,
 ) -> str:
     summary = summarize_proposal_reviews(reviews)
     if not summary["calibration_gate_complete"]:
         raise ValueError(
             "Proposal calibration evidence requires at least 25 reviewed records from each engine."
         )
+    if not summary["structured_calibration_notes_complete"]:
+        raise ValueError(
+            "Proposal calibration evidence requires false positive, false negative, "
+            "and useful example notes."
+        )
+    selected_default_path = _normalize_calibration_default_path(default_path)
+    cleaned_default_rationale = (default_rationale or "").strip()
+    if not cleaned_default_rationale:
+        raise ValueError("Proposal calibration evidence requires --default-rationale.")
     accepted = _review_acceptance_counts(reviews)
+    candidate_default = _candidate_default_path(reviews)
     lines = [
         "# Proposal Engine Calibration Evidence",
         "",
@@ -1274,13 +1329,16 @@ def proposal_calibration_evidence_markdown(
         f"- Decisions: `{summary['decision_counts']}`",
         f"- Accepted bottom-up candidates: **{accepted['bottom_up_self_proposal']}**",
         f"- Accepted top-down candidates: **{accepted['top_down_orchestration']}**",
-        f"- Candidate default path from accepted counts: **{_candidate_default_path(reviews)}**",
+        f"- Candidate default path from accepted counts: **{candidate_default}**",
+        f"- Human-selected default path: **{selected_default_path}**",
+        f"- Human default rationale: {cleaned_default_rationale}",
         "",
         "## Calibration Findings",
         "",
         f"- False positive notes: **{summary['false_positive_note_count']}**",
         f"- False negative notes: **{summary['false_negative_note_count']}**",
         f"- Useful example notes: **{summary['useful_example_note_count']}**",
+        f"- Structured calibration notes complete: **{summary['structured_calibration_notes_complete']}**",
         "",
         "### False Positive Notes",
         "",
@@ -1312,11 +1370,19 @@ def write_proposal_calibration_evidence(
     reviews: list[ProposalReviewRecord],
     source_path: Path,
     output_path: Path | None = None,
+    *,
+    default_path: str | None = None,
+    default_rationale: str | None = None,
 ) -> tuple[dict[str, Any], str]:
     output = output_path or repo_root / "roadmap" / "evidence" / "proposal-engine-calibration.md"
     if not output.is_absolute():
         output = repo_root / output
-    text = proposal_calibration_evidence_markdown(reviews, source_path)
+    text = proposal_calibration_evidence_markdown(
+        reviews,
+        source_path,
+        default_path=default_path,
+        default_rationale=default_rationale,
+    )
     atomic_write_text(output, text)
     return summarize_proposal_reviews(reviews), str(output)
 
@@ -1456,13 +1522,15 @@ def calibration_summary_markdown(
         f"- Safe records: **{review_summary['safe_count']}**",
         f"- Actionable records: **{review_summary['actionable_count']}**",
         f"- Calibration gate complete: **{review_summary['calibration_gate_complete']}**",
+        f"- Structured calibration notes complete: **{review_summary['structured_calibration_notes_complete']}**",
         "",
         "## How To Complete The Gate",
         "",
         "- Generate at least 25 proposals from each engine, raising `--portfolio-limit` if needed.",
         "- Review the hidden Markdown sample before looking at engine labels.",
-        "- Record labels in `processed/proposals/proposal_review_template.jsonl` or a copied curated evidence file.",
-        "- Track curated evidence only after human labels are entered; do not track generated proposal outputs.",
+        "- Record labels and structured calibration notes in `processed/proposals/proposal_review_template.jsonl` or a copied curated evidence file.",
+        "- Select the default path explicitly when exporting evidence: `bottom-up`, `top-down`, or `hybrid`.",
+        "- Track curated evidence only after human labels, structured notes, and the default-path decision are entered; do not track generated proposal outputs.",
         "",
     ]
     return "\n".join(lines) + "\n"

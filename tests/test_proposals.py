@@ -658,6 +658,48 @@ def test_calibration_evidence_refuses_incomplete_reviews(tmp_path: Path):
     assert not output.exists()
 
 
+def test_calibration_evidence_requires_structured_notes(tmp_path: Path):
+    reviews = [
+        *(make_review(index, "bottom_up_self_proposal") for index in range(25)),
+        *(make_review(index, "top_down_orchestration", "reject_candidate") for index in range(25)),
+    ]
+    output = tmp_path / "roadmap" / "evidence" / "proposal-engine-calibration.md"
+
+    try:
+        write_proposal_calibration_evidence(
+            tmp_path,
+            reviews,
+            tmp_path / "reviews.jsonl",
+            output,
+            default_path="hybrid",
+            default_rationale="Human chose hybrid after review.",
+        )
+    except ValueError as exc:
+        assert "false positive, false negative, and useful example notes" in str(exc)
+    else:
+        raise AssertionError("calibration evidence without structured notes should fail closed")
+    assert not output.exists()
+
+
+def test_calibration_evidence_requires_explicit_default_decision(tmp_path: Path):
+    reviews = [
+        *(make_review(index, "bottom_up_self_proposal") for index in range(25)),
+        *(make_review(index, "top_down_orchestration", "reject_candidate") for index in range(25)),
+    ]
+    reviews[0].useful_example_note = "Human kept this as a strong bottom-up example."
+    reviews[26].false_positive_reason = "Human rejected this as duplicative."
+    reviews[27].false_negative_note = "Human expected a missing-part proposal for tests."
+    output = tmp_path / "roadmap" / "evidence" / "proposal-engine-calibration.md"
+
+    try:
+        write_proposal_calibration_evidence(tmp_path, reviews, tmp_path / "reviews.jsonl", output)
+    except ValueError as exc:
+        assert "--default-path" in str(exc)
+    else:
+        raise AssertionError("calibration evidence without default path should fail closed")
+    assert not output.exists()
+
+
 def test_calibration_evidence_writes_after_complete_reviews(tmp_path: Path):
     reviews = [
         *(make_review(index, "bottom_up_self_proposal") for index in range(25)),
@@ -668,14 +710,22 @@ def test_calibration_evidence_writes_after_complete_reviews(tmp_path: Path):
     reviews[27].false_negative_note = "Human expected a missing-part proposal for tests."
     output = tmp_path / "roadmap" / "evidence" / "proposal-engine-calibration.md"
     summary, path = write_proposal_calibration_evidence(
-        tmp_path, reviews, tmp_path / "reviews.jsonl", output
+        tmp_path,
+        reviews,
+        tmp_path / "reviews.jsonl",
+        output,
+        default_path="bottom-up",
+        default_rationale="Human review preferred the accepted bottom-up candidates.",
     )
 
     assert summary["calibration_gate_complete"] is True
+    assert summary["structured_calibration_notes_complete"] is True
     assert Path(path).exists()
     text = Path(path).read_text(encoding="utf-8")
     assert "Proposal Engine Calibration Evidence" in text
     assert "Candidate default path from accepted counts: **bottom_up_self_proposal**" in text
+    assert "Human-selected default path: **bottom_up_self_proposal**" in text
+    assert "Human review preferred the accepted bottom-up candidates." in text
     assert "False positive notes: **1**" in text
     assert "False negative notes: **1**" in text
     assert "Useful example notes: **1**" in text

@@ -164,11 +164,13 @@ This summary reports reviewed counts, label counts, structured calibration note 
 
 ## Export Tracked Evidence
 
-After at least 25 bottom-up and 25 top-down records have human labels, export tracked-ready roadmap evidence:
+After at least 25 bottom-up and 25 top-down records have human labels, and after structured
+false-positive, false-negative, and useful-example notes are captured, export tracked-ready
+roadmap evidence with an explicit human default-path decision:
 
 ```powershell
 $env:PYTHONPATH='src'
-python -m digital_asset_directory.cli recommend proposal-calibration-evidence
+python -m digital_asset_directory.cli recommend proposal-calibration-evidence --default-path hybrid --default-rationale "Human review found complementary strengths; use hybrid as the default until a later calibration cycle changes it."
 ```
 
 Expected tracked-ready output:
@@ -177,7 +179,7 @@ Expected tracked-ready output:
 roadmap/evidence/proposal-engine-calibration.md
 ```
 
-This command fails closed if the review gate is incomplete. It should not create roadmap evidence from unreviewed generated templates. When structured calibration notes exist, the evidence includes false positive notes, false negative notes, and useful examples.
+This command fails closed if the review gate is incomplete, if structured calibration notes are missing, or if `--default-path` / `--default-rationale` are omitted. It should not create roadmap evidence from unreviewed generated templates. The evidence includes false positive notes, false negative notes, useful examples, the candidate default from accepted counts, and the explicit human-selected default path.
 
 After evidence export, review the evidence file before committing it. Do not mark any roadmap phase complete unless its acceptance criteria are otherwise satisfied.
 

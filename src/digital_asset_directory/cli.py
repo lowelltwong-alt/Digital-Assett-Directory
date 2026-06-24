@@ -525,6 +525,8 @@ def recommend_proposal_calibration_evidence(
     hub: Optional[Path] = typer.Option(None),
     review_file: Optional[Path] = typer.Option(None, "--review-file"),
     output: Optional[Path] = typer.Option(None, "--output"),
+    default_path: Optional[str] = typer.Option(None, "--default-path"),
+    default_rationale: Optional[str] = typer.Option(None, "--default-rationale"),
 ) -> None:
     """Write tracked-ready roadmap evidence only after proposal calibration review is complete."""
     cfg = _cfg(hub=hub)
@@ -534,7 +536,12 @@ def recommend_proposal_calibration_evidence(
     reviews = load_proposal_reviews(path)
     try:
         summary, evidence_path = write_proposal_calibration_evidence(
-            cfg.repo_root, reviews, path, output
+            cfg.repo_root,
+            reviews,
+            path,
+            output,
+            default_path=default_path,
+            default_rationale=default_rationale,
         )
     except ValueError as exc:
         console.print(str(exc))
