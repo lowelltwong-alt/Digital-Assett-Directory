@@ -60,4 +60,20 @@ def validate_repo(repo_root: Path) -> dict[str, Any]:
                 errors.append(f"Schema registry entry missing ({name}): {rel}")
     except Exception:
         pass
+    proposal_schema_path = repo_root / "schemas" / "proposal.schema.json"
+    proposal_examples_dir = repo_root / "examples" / "proposals"
+    if proposal_schema_path.exists() and proposal_examples_dir.exists():
+        try:
+            schema = json.loads(proposal_schema_path.read_text(encoding="utf-8"))
+            validator_cls = validator_for(schema)
+            validator_cls.check_schema(schema)
+            validator = validator_cls(schema)
+            for path in sorted(proposal_examples_dir.glob("*.example.json")):
+                try:
+                    validator.validate(json.loads(path.read_text(encoding="utf-8")))
+                    checked.append(str(path.relative_to(repo_root)))
+                except Exception as exc:
+                    errors.append(f"Invalid proposal example {path.name}: {exc}")
+        except Exception as exc:
+            errors.append(f"Could not validate proposal examples: {exc}")
     return {"valid": not errors, "checked_count": len(set(checked)), "errors": errors}

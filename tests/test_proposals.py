@@ -121,6 +121,33 @@ def test_proposal_record_schema_requires_evidence_and_candidate_status():
     assert list(Draft202012Validator(schema).iter_errors(invalid))
 
 
+def test_proposal_examples_validate_against_schema_and_model():
+    schema = json.loads(Path("schemas/proposal.schema.json").read_text(encoding="utf-8"))
+    validator = Draft202012Validator(schema)
+    examples = sorted(Path("examples/proposals").glob("*.example.json"))
+
+    assert [path.name for path in examples] == [
+        "bottom-up-proposal.example.json",
+        "top-down-proposal.example.json",
+    ]
+
+    proposals = []
+    for path in examples:
+        payload = json.loads(path.read_text(encoding="utf-8"))
+        validator.validate(payload)
+        proposal = ProposalRecord.model_validate(payload)
+        proposals.append(proposal)
+        assert proposal.review_status == "generated_candidate"
+        assert proposal.evidence
+        assert "Generated candidate only" in proposal.authority_boundary
+        assert "no source mutation" in proposal.authority_boundary
+
+    assert {proposal.proposal_engine for proposal in proposals} == {
+        "bottom_up_self_proposal",
+        "top_down_orchestration",
+    }
+
+
 def test_proposal_review_record_schema_supports_unreviewed_template():
     review = ProposalReviewRecord(
         review_id="review-1",

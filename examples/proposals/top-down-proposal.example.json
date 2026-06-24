@@ -1,0 +1,40 @@
+{
+  "schema_version": "0.1.0",
+  "proposal_id": "example:proposal:top-down:missing-part-research",
+  "proposal_engine": "top_down_orchestration",
+  "proposal_type": "research_missing_part",
+  "source_asset_ids": [
+    "example:asset:proposal-review-workflow",
+    "example:asset:calibration-summary-report"
+  ],
+  "target_asset_ids": [],
+  "need_ids": [
+    "human_review_calibration"
+  ],
+  "capability_ids": [],
+  "rationale": "Portfolio-level review found repeated calibration needs without a reviewed reusable helper capability.",
+  "evidence": {
+    "need": "human_review_calibration",
+    "needer_count": 2,
+    "provider_count": 0,
+    "source_scope": "example_only"
+  },
+  "smallest_bounded_experiment": "Write a human-reviewed research note for the missing calibration helper before searching external repositories or importing code.",
+  "expected_benefit": "A repeated missing capability can become a governed research task instead of an unreviewed external-code import.",
+  "known_risks": [
+    "External research may require license, provenance, security, and compatibility review."
+  ],
+  "authority_boundary": "Generated candidate only; source repositories retain authority; no source mutation, graph promotion, or implementation is authorized by this proposal.",
+  "confidence": "medium",
+  "risk": "medium",
+  "estimated_review_cost": "medium",
+  "estimated_integration_cost": "low",
+  "safety_flags": [
+    "candidate_only",
+    "source_mutation_forbidden",
+    "human_review_required"
+  ],
+  "review_status": "generated_candidate",
+  "generated_at": "2026-01-01T00:00:00+00:00",
+  "scan_id": "example:scan:contract"
+}

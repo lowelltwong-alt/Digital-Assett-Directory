@@ -33,6 +33,10 @@
 - `schemas/synergy.schema.json`
 - `schemas/activation-trigger.schema.json`
 - `schemas/capability-recommendation.schema.json`
+- `schemas/proposal.schema.json`
+- `schemas/proposal-review.schema.json`
+- `examples/proposals/bottom-up-proposal.example.json`
+- `examples/proposals/top-down-proposal.example.json`
 
 ## Controlled vocabularies
 

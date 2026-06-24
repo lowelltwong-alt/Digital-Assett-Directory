@@ -1,0 +1,47 @@
+{
+  "schema_version": "0.1.0",
+  "proposal_id": "example:proposal:bottom-up:evaluation-helper",
+  "proposal_engine": "bottom_up_self_proposal",
+  "proposal_type": "satisfies_need",
+  "source_asset_ids": [
+    "example:asset:evaluation-harness"
+  ],
+  "target_asset_ids": [
+    "example:asset:skill-import-workflow"
+  ],
+  "need_ids": [
+    "evaluation_harness"
+  ],
+  "capability_ids": [
+    "evaluation_harness"
+  ],
+  "rationale": "The evaluation harness declares a capability that may satisfy the skill import workflow's declared need.",
+  "evidence": {
+    "matched_need": "evaluation_harness",
+    "source_capabilities": [
+      "evaluation_harness"
+    ],
+    "target_needs": [
+      "evaluation_harness"
+    ],
+    "source_scope": "example_only"
+  },
+  "smallest_bounded_experiment": "Review both example assets together and draft a candidate integration note without changing either source artifact.",
+  "expected_benefit": "A local helper may make skill import work safer to evaluate.",
+  "known_risks": [
+    "Example proposal is illustrative and must not be promoted without human review."
+  ],
+  "authority_boundary": "Generated candidate only; source repositories retain authority; no source mutation, graph promotion, or implementation is authorized by this proposal.",
+  "confidence": "medium",
+  "risk": "low",
+  "estimated_review_cost": "low",
+  "estimated_integration_cost": "low",
+  "safety_flags": [
+    "candidate_only",
+    "source_mutation_forbidden",
+    "human_review_required"
+  ],
+  "review_status": "generated_candidate",
+  "generated_at": "2026-01-01T00:00:00+00:00",
+  "scan_id": "example:scan:contract"
+}
