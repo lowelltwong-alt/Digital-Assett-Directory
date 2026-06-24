@@ -6,6 +6,7 @@ import pytest
 from jsonschema import Draft202012Validator
 
 from digital_asset_directory.calibration import (
+    build_asset_calibration_review_lens,
     build_asset_calibration_review_queue,
     build_asset_calibration_review_template,
     import_asset_calibration_review_csv,
@@ -148,6 +149,70 @@ def test_asset_calibration_review_schema_and_template_are_candidate_only():
         assert record.review_status == "generated_candidate"
         assert record.score_rating == "unreviewed"
         assert record.evidence["authority"].startswith("Generated calibration candidate")
+        lens = record.evidence["review_lens"]
+        assert lens["authority"].startswith("Generated review guidance only")
+        assert len(lens["layers"]) <= 3
+        assert {layer["evidence_level"] for layer in lens["layers"]} == {
+            "direct",
+            "derived",
+            "projected",
+        }
+        assert lens["calibration_caution"].startswith("Projected lift")
+        assert "near_duplicate" in lens["duplicate_review_prompt"]
+        assert "cluster delta" in lens["cluster_delta_prompt"]
+        assert lens["current_floor_basis"].startswith("Generated pre-review")
+        assert lens["current_score_range"]["midpoint"] == record.generated_value_score
+        assert lens["current_score_midpoint"] == record.generated_value_score
+        assert lens["current_score_uncertainty"] in {"narrow", "medium", "wide"}
+        assert "not a statistical confidence interval" in lens["current_score_range_basis"]
+        assert lens["review_order"][0].startswith("Judge current generated score")
+        assert lens["current_score_first_prompt"].startswith("Review the current value score first")
+        assert lens["potential_ceiling_basis"].startswith("Conditional upside")
+        assert set(lens["potential_ceiling_range"]) == {"low", "high"}
+        assert lens["score_warning"].startswith("High ceiling")
+        assert lens["score_justification"].startswith("Generated score")
+        assert lens["ceiling_justification"].startswith("Potential ceiling")
+        assert lens["ceiling_activation_conditions"] == lens["activation_requirements"]
+        assert "6 months" in lens["projection_review_cadence"]
+        assert "lesson asset-use" in lens["usage_feedback_command"]
+        assert "feedback_code" in lens["usage_feedback_fields"]
+        assert "interaction_stage" in lens["usage_feedback_fields"]
+        assert "expected_usefulness" in lens["usage_feedback_fields"]
+        assert lens["usage_feedback_instructions"][0].startswith("Complete a before_use")
+        assert "Do not change source repo code" in lens["usage_feedback_instructions"][-1]
+        assert "observed_usefulness" in lens["usage_feedback_scoring_methodology"]
+        assert lens["development_posture"] in {
+            "validate_first",
+            "actively_develop",
+            "prototype_bounded_experiment",
+            "monitor",
+        }
+
+
+def test_asset_calibration_review_lens_preserves_duplicate_and_projection_boundaries():
+    record = build_asset_calibration_review_template(
+        [make_asset("asset-a", title="asset.schema", score=76, asset_type="schema")],
+        per_band_sample=1,
+    )[0]
+
+    lens = build_asset_calibration_review_lens(record)
+
+    assert lens["current_graph_role"] == "Contract node for structured asset interoperability."
+    assert lens["current_score_range"] == {"low": 66.0, "midpoint": 76.0, "high": 86.0}
+    assert lens["current_score_uncertainty"] == "medium"
+    assert lens["projected_value_lift"] == "very_high"
+    assert lens["potential_ceiling"] == "very_high"
+    assert lens["potential_ceiling_range"] == {"low": "high", "high": "very_high"}
+    assert lens["ceiling_confidence"] == "low"
+    assert lens["upside_delta"] == 1
+    assert lens["upside_delta_range"] == {"low": 0, "high": 1}
+    assert lens["upside_delta_meaning"].startswith("One-band upside")
+    assert lens["development_posture"] == "validate_first"
+    assert lens["layers"][2]["evidence_level"] == "projected"
+    assert lens["layers"][2]["score_use"] == "review_note_only"
+    assert any(edge["edge"] == "constrains:catalog_contracts" for edge in lens["high_signal_edges"])
+    assert "variant_of" in lens["duplicate_review_prompt"]
+    assert "neutral differences" in lens["cluster_delta_prompt"]
 
 
 def test_asset_calibration_review_update_and_summary(tmp_path: Path):
@@ -244,6 +309,9 @@ def test_asset_calibration_review_queue_filters_pending_reviewed_and_band():
     assert low_pending["returned_count"] == 1
     assert low_pending["items"][0]["generated_value_band"] == "low"
     assert "value_components" in pending["items"][0]["evidence"]
+    assert "review_lens" in pending["items"][0]["evidence"]
+    assert pending["items"][0]["pattern_key"].startswith("code/medium/")
+    assert pending["items"][0]["evidence"]["review_lens"]["layers"][0]["evidence_level"] == "direct"
 
 
 def test_asset_calibration_review_queue_rejects_bad_filters():
@@ -300,6 +368,21 @@ def test_asset_calibration_review_csv_round_trip_labels(tmp_path: Path):
     rows = list(csv.DictReader(csv_file.open("r", encoding="utf-8", newline="")))
     assert "value_components" in rows[0]
     assert "capabilities" in rows[0]
+    assert "pattern_key" in rows[0]
+    assert "current_graph_role" in rows[0]
+    assert "duplicate_review_prompt" in rows[0]
+    assert "near_duplicate" in rows[0]["duplicate_review_prompt"]
+    assert "cluster_delta_prompt" in rows[0]
+    assert "shared core" in rows[0]["cluster_delta_prompt"]
+    assert "score_justification" in rows[0]
+    assert "current_score_range" in rows[0]
+    assert "current_score_midpoint" in rows[0]
+    assert "ceiling_justification" in rows[0]
+    assert "ceiling_activation_conditions" in rows[0]
+    assert "current_score_first_prompt" in rows[0]
+    assert "potential_ceiling_range" in rows[0]
+    assert "upside_delta_range" in rows[0]
+    assert "upside_delta_meaning" in rows[0]
     rows[0]["reviewer"] = "Human"
     rows[0]["score_rating"] = "too_high"
     rows[0]["notes"] = "CSV score review."

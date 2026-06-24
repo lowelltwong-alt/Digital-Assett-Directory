@@ -2,7 +2,9 @@
 
 ## Node families
 
-- digital assets: repositories, files, schemas, workflows, tests, datasets, prompts, skills, agents, decisions, lessons, research;
+- digital assets: repositories, files, schemas, workflows, tests, datasets, prompts, skills, agents, decisions, lessons, research, algorithms, models, forecasters, adapters, and composite bundles;
+- composite assets: repositories, workflows, bundles, clusters, and systems made from multiple connected assets;
+- asset instances: observed uses, runs, deployments, or task-specific combinations of assets;
 - revisions: content-specific observations;
 - activities: scans, builds, validations, research runs;
 - agents: human or software actors when known;
@@ -20,6 +22,55 @@ Every generated edge carries:
 - review status.
 
 A `related_to` edge means bounded similarity, not sameness. A `complements` edge means a plausible combination, not an implemented integration. A `satisfies_need` edge means lexical/metadata evidence that one capability may address another asset's need.
+
+## Composite Asset Recognition
+
+A digital asset may be a single file, but high-leverage assets are often composites:
+
+- a whole repository with workflows, tests, schemas, and governance;
+- an AI workflow made from agents, skills, prompts, tools, memory, and handoff rules;
+- an evaluation system made from tests, golden cases, schemas, and labels;
+- a model or algorithm system made from code, data, assumptions, backtests, and reports;
+- a knowledge-graph system made from ontology, taxonomy, extraction, retrieval, and review loops;
+- a cluster of near-duplicate or variant assets that needs a delta review;
+- an instance where several assets were used together for a task.
+
+Scanners should recognize these as generated candidates by combining weak signals instead of
+using one brittle filename rule. Useful signals include asset types, path terms, tags,
+capabilities, needs, outcomes, entrypoints, co-occurrence inside a repo, and explicit
+feedback markers such as `DAD_ASSET_USE_FEEDBACK_V1`.
+
+The pattern registry is `registry/asset-pattern-registry.json`. Pattern matches stay in
+metadata as candidate evidence until human review promotes a bundle, cluster, workflow, or
+instance.
+
+## Duplicate and variant handling
+
+When two assets are nearly the same because similar work was recreated in different repos,
+preserve both source records until a human review decides the relationship. Do not delete one
+asset or double-count both as independent value by default.
+
+Use existing reviewed edges where they fit:
+
+- `related_to` with evidence subtype `near_duplicate` when assets appear substantially similar;
+- `supersedes` when a reviewed newer asset replaces an older one;
+- `derived_from` when provenance shows one asset was copied or adapted from another;
+- `complements` when overlap exists but each asset contributes a different useful piece.
+
+If the relationship is not yet reviewed, record it as candidate evidence or calibration notes
+and propose a bounded consolidation experiment. Future registry changes may add explicit
+`variant_of` or `merge_candidate` edge types, but those should be reviewed before they become
+source-of-truth graph semantics.
+
+For clusters of very close assets, prefer a candidate cluster-delta file over a winner-take-all
+decision. The delta should preserve:
+
+- the shared core across the cluster;
+- per-asset strengths;
+- neutral differences for different roles or contexts;
+- weaker or obsolete parts;
+- missing evidence needed for fair comparison;
+- the proposed merge, variant, or supersession experiment.
 
 ## Provenance mapping
 

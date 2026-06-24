@@ -38,6 +38,9 @@ def score_asset(asset: AssetRecord, scoring: dict[str, Any]) -> AssetRecord:
         "schema",
         "ontology",
         "skill",
+        "model",
+        "algorithm",
+        "forecaster",
     }
     reusable_types = {
         "code",
@@ -47,6 +50,11 @@ def score_asset(asset: AssetRecord, scoring: dict[str, Any]) -> AssetRecord:
         "prompt",
         "skill",
         "workflow",
+        "model",
+        "algorithm",
+        "forecaster",
+        "adapter",
+        "connector",
         "evaluation",
         "test",
         "decision",

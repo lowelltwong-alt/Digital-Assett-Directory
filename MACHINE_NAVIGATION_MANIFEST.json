@@ -14,6 +14,7 @@
     "source_of_truth": "registry/source-of-truth.json",
     "design_authority": "registry/design-authority.json",
     "asset_types": "registry/asset-type-registry.json",
+    "asset_patterns": "registry/asset-pattern-registry.json",
     "edge_types": "registry/edge-type-registry.json",
     "lifecycle": "registry/lifecycle-registry.json",
     "schemas": "registry/schema-registry.json",

@@ -22,7 +22,13 @@ from .config import load_config
 from .context_pack import build_context_pack, write_context_pack
 from .database import CatalogDB
 from .governance import enforce_postflight, install_governance, scaffold_new_repo
-from .learning import add_lesson, postflight, preflight, rebuild_lesson_routes
+from .learning import (
+    add_asset_use_feedback,
+    add_lesson,
+    postflight,
+    preflight,
+    rebuild_lesson_routes,
+)
 from .orphan_adapter import run_orphan_radar
 from .proposals import (
     ProposalEngineOption,
@@ -176,6 +182,77 @@ def lesson_reindex(hub: Optional[Path] = typer.Option(None)) -> None:
     cfg = _cfg(hub=hub)
     result = rebuild_lesson_routes(cfg.repo_root)
     console.print_json(data=result)
+
+
+@lesson_app.command("asset-use")
+def lesson_asset_use(
+    asset_id: str = typer.Option(..., "--asset-id"),
+    repository: Path = typer.Option(Path("."), "--repo"),
+    task: str = typer.Option(..., "--task"),
+    agent: str = typer.Option(..., "--agent"),
+    used_for: str = typer.Option(..., "--used-for"),
+    interaction_stage: str = typer.Option("after_use", "--stage"),
+    expected_usefulness: str = typer.Option("unknown", "--expected-usefulness"),
+    expected_futurefulness: str = typer.Option("unknown", "--expected-futurefulness"),
+    expected_value_reason: str = typer.Option("", "--expected-value-reason"),
+    planned_use: str = typer.Option("", "--planned-use"),
+    found_by: str = typer.Option("", "--found-by"),
+    found_query: str = typer.Option("", "--found-query"),
+    part_used: list[str] = typer.Option([], "--part-used"),
+    part_not_used: list[str] = typer.Option([], "--part-not-used"),
+    not_used_reason: str = typer.Option("", "--not-used-reason"),
+    upgrade_made: list[str] = typer.Option([], "--upgrade-made"),
+    difficulty: list[str] = typer.Option([], "--difficulty"),
+    thing_learned: list[str] = typer.Option([], "--thing-learned"),
+    use_outcome: str = typer.Option(..., "--use-outcome"),
+    observed_usefulness: str = typer.Option(..., "--observed-usefulness"),
+    observed_futurefulness: str = typer.Option(..., "--observed-futurefulness"),
+    missing_part: list[str] = typer.Option([], "--missing-part"),
+    score_feedback: str = typer.Option("", "--score-feedback"),
+    ceiling_feedback: str = typer.Option("", "--ceiling-feedback"),
+    evidence: list[str] = typer.Option([], "--evidence"),
+    model: Optional[str] = None,
+    confidence: str = "medium",
+    hub: Optional[Path] = typer.Option(None),
+) -> None:
+    """Record deterministic candidate feedback after materially using an asset."""
+    cfg = _cfg(hub=hub)
+    try:
+        record = add_asset_use_feedback(
+            cfg.repo_root,
+            cfg.database_path,
+            asset_id=asset_id,
+            repository=str(repository.resolve()),
+            task=task,
+            agent=agent,
+            used_for=used_for,
+            interaction_stage=interaction_stage,
+            expected_usefulness=expected_usefulness,
+            expected_futurefulness=expected_futurefulness,
+            expected_value_reason=expected_value_reason,
+            planned_use=planned_use,
+            found_by=found_by,
+            found_query=found_query,
+            parts_used=part_used,
+            parts_not_used=part_not_used,
+            not_used_reason=not_used_reason,
+            upgrades_made=upgrade_made,
+            difficulties=difficulty,
+            things_learned=thing_learned,
+            use_outcome=use_outcome,
+            observed_usefulness=observed_usefulness,
+            observed_futurefulness=observed_futurefulness,
+            missing_parts_seen=missing_part,
+            score_feedback=score_feedback,
+            ceiling_feedback=ceiling_feedback,
+            evidence=evidence,
+            model=model,
+            confidence=confidence,
+        )
+    except ValueError as exc:
+        console.print(str(exc))
+        raise typer.Exit(2) from exc
+    console.print(record.lesson_id)
 
 
 @agent_app.command("preflight")

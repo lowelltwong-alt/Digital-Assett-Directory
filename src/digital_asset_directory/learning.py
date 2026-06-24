@@ -11,6 +11,8 @@ from .ids import stable_id, session_id as new_session_id
 from .models import HandoffRecord, LessonRecord
 from .utils import append_jsonl, split_multi, utc_now, write_json
 
+ASSET_USE_FEEDBACK_CODE = "DAD_ASSET_USE_FEEDBACK_V1"
+
 
 def git_changed_files(repo: Path) -> list[str]:
     try:
@@ -145,6 +147,128 @@ def add_lesson(repo_root: Path, database_path: Path, **kwargs: Any) -> LessonRec
     with CatalogDB(database_path) as db:
         db.add_lesson(record)
     return record
+
+
+def add_asset_use_feedback(
+    repo_root: Path,
+    database_path: Path,
+    *,
+    asset_id: str,
+    repository: str,
+    task: str,
+    agent: str,
+    used_for: str,
+    use_outcome: str = "unknown",
+    observed_usefulness: str = "unknown",
+    observed_futurefulness: str = "unknown",
+    interaction_stage: str = "after_use",
+    expected_usefulness: str = "unknown",
+    expected_futurefulness: str = "unknown",
+    expected_value_reason: str = "",
+    planned_use: str = "",
+    found_by: str = "",
+    found_query: str = "",
+    parts_used: list[str] | None = None,
+    parts_not_used: list[str] | None = None,
+    not_used_reason: str = "",
+    upgrades_made: list[str] | None = None,
+    difficulties: list[str] | None = None,
+    things_learned: list[str] | None = None,
+    missing_parts_seen: list[str] | None = None,
+    score_feedback: str = "",
+    ceiling_feedback: str = "",
+    evidence: list[str] | None = None,
+    model: str | None = None,
+    confidence: str = "medium",
+) -> LessonRecord:
+    allowed_outcomes = {"helped", "blocked", "no_effect", "unknown"}
+    allowed_observations = {"low", "medium", "high", "unknown"}
+    allowed_stages = {"before_use", "after_use"}
+    if interaction_stage not in allowed_stages:
+        raise ValueError(
+            "interaction_stage must be one of: " + ", ".join(sorted(allowed_stages))
+        )
+    if use_outcome not in allowed_outcomes:
+        raise ValueError(
+            "use_outcome must be one of: " + ", ".join(sorted(allowed_outcomes))
+        )
+    if observed_usefulness not in allowed_observations:
+        raise ValueError(
+            "observed_usefulness must be one of: "
+            + ", ".join(sorted(allowed_observations))
+        )
+    if observed_futurefulness not in allowed_observations:
+        raise ValueError(
+            "observed_futurefulness must be one of: "
+            + ", ".join(sorted(allowed_observations))
+        )
+    if expected_usefulness not in allowed_observations:
+        raise ValueError(
+            "expected_usefulness must be one of: "
+            + ", ".join(sorted(allowed_observations))
+        )
+    if expected_futurefulness not in allowed_observations:
+        raise ValueError(
+            "expected_futurefulness must be one of: "
+            + ", ".join(sorted(allowed_observations))
+        )
+
+    missing_parts = missing_parts_seen or []
+    evidence_items = evidence or []
+    used_parts = parts_used or []
+    unused_parts = parts_not_used or []
+    upgrades = upgrades_made or []
+    difficulty_items = difficulties or []
+    learned_items = things_learned or []
+    feedback_lines = [
+        f"feedback_code={ASSET_USE_FEEDBACK_CODE}",
+        f"interaction_stage={interaction_stage}",
+        f"asset_id={asset_id}",
+        f"found_by={found_by}",
+        f"found_query={found_query}",
+        f"used_for={used_for}",
+        f"planned_use={planned_use}",
+        f"expected_usefulness={expected_usefulness}",
+        f"expected_futurefulness={expected_futurefulness}",
+        f"expected_value_reason={expected_value_reason}",
+        "parts_used=" + ";".join(used_parts),
+        "parts_not_used=" + ";".join(unused_parts),
+        f"not_used_reason={not_used_reason}",
+        "upgrades_made=" + ";".join(upgrades),
+        "difficulties=" + ";".join(difficulty_items),
+        "things_learned=" + ";".join(learned_items),
+        f"use_outcome={use_outcome}",
+        f"observed_usefulness={observed_usefulness}",
+        f"observed_futurefulness={observed_futurefulness}",
+    ]
+    if missing_parts:
+        feedback_lines.append("missing_parts_seen=" + ";".join(missing_parts))
+    if score_feedback:
+        feedback_lines.append(f"score_feedback={score_feedback}")
+    if ceiling_feedback:
+        feedback_lines.append(f"ceiling_feedback={ceiling_feedback}")
+
+    return add_lesson(
+        repo_root,
+        database_path,
+        repository=repository,
+        task=task,
+        agent=agent,
+        model=model,
+        summary=f"Asset use feedback for {asset_id}: {interaction_stage}/{use_outcome}",
+        lessons=feedback_lines,
+        discoveries=[
+            (
+                "Observed asset usefulness feedback is candidate evidence for future "
+                "score-range and ceiling-range calibration."
+            )
+        ],
+        reusable_patterns=["asset_use_feedback_loop"],
+        missing_capabilities=missing_parts,
+        evidence=[f"asset:{asset_id}", *evidence_items],
+        confidence=confidence,
+        review_status="candidate",
+    )
 
 
 def preflight(

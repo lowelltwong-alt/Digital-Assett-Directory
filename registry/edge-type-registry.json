@@ -8,6 +8,21 @@
       "meaning": "A container includes an asset."
     },
     {
+      "id": "has_member_asset",
+      "direction": "composite_to_member",
+      "meaning": "A composite asset, bundle, cluster, or workflow includes a member asset."
+    },
+    {
+      "id": "has_workflow_step",
+      "direction": "workflow_to_step_asset",
+      "meaning": "A workflow uses an asset as an ordered or named step."
+    },
+    {
+      "id": "instantiates",
+      "direction": "instance_to_asset",
+      "meaning": "A use/run/deployment instance instantiates one or more assets."
+    },
+    {
       "id": "references",
       "direction": "source_to_target",
       "meaning": "An asset explicitly references another."
@@ -46,6 +61,11 @@
       "id": "related_to",
       "direction": "symmetric",
       "meaning": "Assets have bounded semantic or structural similarity."
+    },
+    {
+      "id": "variant_of",
+      "direction": "symmetric",
+      "meaning": "Assets are reviewed or candidate variants that share a core but may serve different contexts."
     },
     {
       "id": "complements",

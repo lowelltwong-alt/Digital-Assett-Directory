@@ -1,0 +1,67 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://local.digital-asset-directory/schemas/asset-pattern.schema.json",
+  "title": "Asset Pattern Registry",
+  "type": "object",
+  "required": ["registry_version", "status", "patterns"],
+  "properties": {
+    "registry_version": {
+      "type": "string"
+    },
+    "status": {
+      "type": "string"
+    },
+    "patterns": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "id",
+          "label",
+          "description",
+          "leverage",
+          "recognition_mode",
+          "positive_signals",
+          "missing_evidence"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 1
+          },
+          "label": {
+            "type": "string",
+            "minLength": 1
+          },
+          "description": {
+            "type": "string",
+            "minLength": 1
+          },
+          "leverage": {
+            "enum": ["low", "medium", "high", "very_high"]
+          },
+          "recognition_mode": {
+            "enum": ["file_hint", "repository_composite", "cluster", "instance"]
+          },
+          "positive_signals": {
+            "type": "array",
+            "minItems": 1,
+            "items": {
+              "type": "string"
+            }
+          },
+          "missing_evidence": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        }
+      }
+    },
+    "rule": {
+      "type": "string"
+    }
+  },
+  "additionalProperties": false
+}

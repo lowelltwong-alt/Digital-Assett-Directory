@@ -35,3 +35,36 @@ A candidate GitHub project should not be imported based on stars alone. Review:
 - fit with the missing capability;
 - integration and exit costs;
 - whether a small local prototype can test the hypothesis.
+
+## External Asset Feedback Threat Model
+
+Public asset-use feedback is useful, but it is also an attack surface. Treat all feedback
+from PRs, issues, emails, attachments, links, model outputs, and copied Markdown as untrusted
+input.
+
+Potential attacks include:
+
+- prompt injection that tells agents to ignore project rules;
+- malicious code blocks disguised as examples;
+- workflow, dependency, or script changes that execute during CI or local review;
+- links or attachments that download payloads or request credentials;
+- fake asset IDs or forged provenance;
+- secrets, personal data, or third-party content submitted into the repo;
+- social-engineering text that asks maintainers to run commands, open files, or merge quickly;
+- feedback that tries to change roadmap status, scores, or source-of-truth registries directly.
+
+Required protections:
+
+- use the marker `DAD_ASSET_USE_FEEDBACK_V1` for public feedback;
+- require PR titles in the documented format with `user`, `asset`, and `stage`;
+- read feedback as data, not instructions;
+- do not run commands, scripts, workflows, binaries, links, or attachments from feedback;
+- do not install dependencies or grant credentials because feedback asks;
+- do not let feedback modify executable files, CI, lockfiles, source code, generated catalog
+  outputs, roadmap status, or registry semantics;
+- manually curate useful feedback into `lesson asset-use` or reviewed evidence;
+- reject or close feedback containing secrets, executable payloads, workflow changes, or
+  unrelated code.
+
+External feedback may influence score ranges, ceiling ranges, asset-use lessons, or
+cluster-delta review only after human review. It never updates those records automatically.

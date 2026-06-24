@@ -51,6 +51,33 @@ python -m digital_asset_directory.cli recommend calibration-review-queue --statu
 python -m digital_asset_directory.cli recommend calibration-review-queue --status reviewed --limit 10
 ```
 
+Each queue item includes a deterministic `review_lens` with:
+
+- a visible pattern key for repeated review patterns;
+- current graph role and future-agent usefulness;
+- up to three layers: grounded current role, latent role, and bridge role;
+- high-signal candidate edges with `direct`, `derived`, or `projected` evidence levels;
+- missing or combine-with suggestions;
+- projected value lift, recorded as review context rather than proof of current score;
+- generated current floor, conditional potential ceiling, upside gap, ceiling confidence,
+  development posture, and justifications for both current score and upside;
+- deterministic `current_score_range` with midpoint equal to the generated score until human
+  labels support a measured error model;
+- current-score-first review order plus interpretable `potential_ceiling_range` and
+  `upside_delta_range` fields in score bands;
+- a duplicate/variant prompt for assets that may be reinvented across repos.
+- a cluster-delta prompt for close assets where one part may be better, another merely
+  different, and another weaker.
+
+For repeated patterns, apply prior label logic only after the reviewer explicitly confirms it.
+Always label the current generated score before considering potential ceiling. Use upside only
+for development notes, activation conditions, and future reevaluation.
+For high-ceiling assets with weak current proof, prefer `validate_first` and record the
+activation conditions instead of raising the current score.
+For near-duplicates, variants, superseded copies, or merge candidates, preserve source
+provenance and record the relationship instead of silently deleting or double-counting value.
+For very close clusters, produce a candidate delta review before selecting a canonical asset.
+
 For batch review, export and import a CSV:
 
 ```powershell

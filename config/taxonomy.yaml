@@ -14,6 +14,9 @@ facets:
     - skill
     - agent
     - workflow
+    - asset_bundle
+    - asset_cluster
+    - asset_instance
     - evaluation
     - test
     - decision
@@ -21,6 +24,11 @@ facets:
     - research
     - configuration
     - report
+    - model
+    - algorithm
+    - forecaster
+    - adapter
+    - connector
     - media
     - archive
   knowledge_status:

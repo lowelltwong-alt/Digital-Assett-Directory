@@ -113,6 +113,63 @@ OUTCOMES: dict[str, tuple[str, ...]] = {
     "repeatable_quality": ("regression", "evaluation", "quality", "validation"),
 }
 
+ASSET_PATTERN_HINTS: dict[str, dict[str, tuple[str, ...]]] = {
+    "ai_agent_workflow": {
+        "asset_types": ("agent", "skill", "workflow", "prompt"),
+        "tags": ("agent", "skill", "workflow", "governance"),
+        "capabilities": ("govern_agents", "capture_lessons", "retrieve_context"),
+        "text": ("agent", "skill", "orchestration", "handoff", "swarm", "preflight"),
+    },
+    "evaluation_harness": {
+        "asset_types": ("evaluation", "test"),
+        "tags": ("evaluation",),
+        "capabilities": ("validate_contracts",),
+        "text": ("evaluation", "benchmark", "golden", "pytest", "regression"),
+    },
+    "schema_contract_system": {
+        "asset_types": ("schema", "ontology", "taxonomy"),
+        "tags": ("schema", "knowledge-graph"),
+        "capabilities": ("validate_contracts", "build_knowledge_graph"),
+        "text": ("json schema", "schema", "ontology", "taxonomy", "contract"),
+    },
+    "knowledge_graph_system": {
+        "asset_types": ("ontology", "taxonomy", "dataset", "code", "workflow"),
+        "tags": ("knowledge-graph", "retrieval"),
+        "capabilities": ("build_knowledge_graph", "retrieve_context", "catalog_assets"),
+        "text": ("knowledge graph", "graph", "node", "edge", "retrieval", "context pack"),
+    },
+    "governed_learning_loop": {
+        "asset_types": ("lesson", "workflow", "test", "document"),
+        "tags": ("learning-loop", "governance"),
+        "capabilities": ("capture_lessons", "govern_agents", "validate_contracts"),
+        "text": ("lesson", "handoff", "postflight", "feedback", "learning loop"),
+    },
+    "security_governance_gate": {
+        "asset_types": ("workflow", "configuration", "test", "document"),
+        "tags": ("security", "governance"),
+        "capabilities": ("protect_sensitive_data", "govern_agents"),
+        "text": ("security", "secret", "prompt injection", "pre-push", "policy", "gate"),
+    },
+    "adapter_connector": {
+        "asset_types": ("code", "configuration", "workflow"),
+        "tags": ("retrieval",),
+        "capabilities": ("retrieve_context", "catalog_assets"),
+        "text": ("adapter", "connector", "import", "export", "api", "integration"),
+    },
+    "model_algorithm": {
+        "asset_types": ("code", "dataset", "document"),
+        "tags": ("evaluation", "research-radar"),
+        "capabilities": ("score_assets", "research_missing_parts"),
+        "text": ("algorithm", "model", "forecast", "predict", "optimize", "scoring"),
+    },
+    "research_discovery": {
+        "asset_types": ("research", "document", "dataset"),
+        "tags": ("research-radar", "provenance"),
+        "capabilities": ("research_missing_parts",),
+        "text": ("research", "frontier", "discovery", "citation", "paper", "conjecture"),
+    },
+}
+
 
 def is_probably_text(path: Path) -> bool:
     return path.suffix.lower() in TEXT_EXTENSIONS or path.name.lower() in {
@@ -147,14 +204,24 @@ def classify_asset(path: str) -> str:
         return "test"
     if "eval" in parts or "evaluation" in name or "benchmark" in name or "golden" in name:
         return "evaluation"
+    if "forecast" in name or "forecaster" in name or "forecasting" in parts:
+        return "forecaster"
+    if "algorithm" in name or "algorithms" in parts:
+        return "algorithm"
+    if "model" in name or "models" in parts:
+        return "model"
+    if "adapter" in name or "adapters" in parts:
+        return "adapter"
+    if "connector" in name or "connectors" in parts or "integration" in parts:
+        return "connector"
+    if "workflow" in name or "workflow" in parts or "workflows" in parts or ".github" in parts:
+        return "workflow"
     if "prompt" in name or "prompts" in parts:
         return "prompt"
     if "skill" in name or "skills" in parts:
         return "skill"
     if "agent" in name or "agents" in parts:
         return "agent"
-    if "workflow" in name or ".github" in parts:
-        return "workflow"
     if "decision" in name or "adr" in parts:
         return "decision"
     if "lesson" in name or "handoff" in name:
@@ -224,6 +291,8 @@ class SemanticFields(TypedDict):
     capabilities: list[str]
     needs: list[str]
     outcomes: list[str]
+    asset_patterns: list[str]
+    pattern_evidence: dict[str, list[str]]
 
 
 def infer_semantics(path: str, text: str) -> SemanticFields:
@@ -235,11 +304,33 @@ def infer_semantics(path: str, text: str) -> SemanticFields:
     if classify_asset(path) == "test":
         capabilities.append("validate_contracts")
         tags.append("evaluation")
+    asset_type = classify_asset(path)
+    combined_lower = combined.lower()
+    pattern_evidence: dict[str, list[str]] = {}
+    for pattern_id, hints in ASSET_PATTERN_HINTS.items():
+        evidence: list[str] = []
+        if asset_type in hints.get("asset_types", ()):
+            evidence.append(f"asset_type:{asset_type}")
+        evidence.extend(f"tag:{tag}" for tag in tags if tag in hints.get("tags", ()))
+        evidence.extend(
+            f"capability:{capability}"
+            for capability in capabilities
+            if capability in hints.get("capabilities", ())
+        )
+        evidence.extend(
+            f"text:{phrase}"
+            for phrase in hints.get("text", ())
+            if phrase in combined_lower
+        )
+        if len(evidence) >= 2:
+            pattern_evidence[pattern_id] = sorted(set(evidence))
     return {
         "tags": sorted(set(tags)),
         "capabilities": sorted(set(capabilities)),
         "needs": sorted(set(needs)),
         "outcomes": sorted(set(outcomes)),
+        "asset_patterns": sorted(pattern_evidence),
+        "pattern_evidence": pattern_evidence,
     }
 
 

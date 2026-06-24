@@ -10,11 +10,16 @@ dadc:software a skos:Concept ; skos:prefLabel "Software asset" ; skos:inScheme d
 dadc:code a skos:Concept ; skos:prefLabel "Code" ; skos:broader dadc:software .
 dadc:workflow a skos:Concept ; skos:prefLabel "Workflow" ; skos:broader dadc:software .
 dadc:skill a skos:Concept ; skos:prefLabel "Agent skill" ; skos:broader dadc:software .
+dadc:model-algorithm a skos:Concept ; skos:prefLabel "Model or algorithm" ; skos:broader dadc:software .
+dadc:adapter-connector a skos:Concept ; skos:prefLabel "Adapter or connector" ; skos:broader dadc:software .
 
 dadc:knowledge a skos:Concept ; skos:prefLabel "Knowledge asset" ; skos:inScheme dadc:asset-types .
 dadc:document a skos:Concept ; skos:prefLabel "Document" ; skos:broader dadc:knowledge .
 dadc:dataset a skos:Concept ; skos:prefLabel "Dataset" ; skos:broader dadc:knowledge .
 dadc:ontology a skos:Concept ; skos:prefLabel "Ontology" ; skos:broader dadc:knowledge .
+dadc:composite-asset a skos:Concept ; skos:prefLabel "Composite asset" ; skos:broader dadc:knowledge .
+dadc:asset-cluster a skos:Concept ; skos:prefLabel "Asset cluster" ; skos:broader dadc:knowledge .
+dadc:asset-instance a skos:Concept ; skos:prefLabel "Asset use instance" ; skos:broader dadc:knowledge .
 
 dadc:learning a skos:Concept ; skos:prefLabel "Learning asset" ; skos:inScheme dadc:asset-types .
 dadc:lesson a skos:Concept ; skos:prefLabel "Lesson learned" ; skos:broader dadc:learning .

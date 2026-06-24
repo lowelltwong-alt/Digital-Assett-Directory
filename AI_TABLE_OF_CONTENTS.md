@@ -16,6 +16,7 @@
 - `docs/ASSET_VALUE_MODEL.md`
 - `docs/ORPHAN_ACTIVATION_AND_SYNERGY_RADAR.md`
 - `docs/LESSONS_AND_HANDOFF_LOOP.md`
+- `docs/PUBLIC_ASSET_USE_FEEDBACK.md` — public PR path and untrusted-input rules for asset-use feedback
 - `docs/AI_GOVERNANCE.md`
 - `docs/SECURITY_AND_PRIVACY.md`
 - `docs/ORPHAN_RADAR_INTEGRATION.md`
@@ -25,6 +26,7 @@
 ## Contracts
 
 - `schemas/asset.schema.json`
+- `schemas/asset-pattern.schema.json`
 - `schemas/edge.schema.json`
 - `schemas/lesson.schema.json`
 - `schemas/handoff.schema.json`
@@ -42,6 +44,7 @@
 ## Controlled vocabularies
 
 - `registry/asset-type-registry.json`
+- `registry/asset-pattern-registry.json`
 - `registry/edge-type-registry.json`
 - `registry/lifecycle-registry.json`
 - `config/taxonomy.yaml`
@@ -61,6 +64,7 @@
 - `scripts/claude_hook.py`
 - `scripts/register_scheduled_scan.ps1`
 - `scripts/unregister_scheduled_scan.ps1`
+- `templates/asset-use-feedback.template.md` — copyable public feedback template
 
 ## Roadmap
 

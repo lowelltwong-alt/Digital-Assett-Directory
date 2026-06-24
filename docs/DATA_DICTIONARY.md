@@ -23,6 +23,12 @@
 | `entrypoints` | Files a new human or AI should read first. |
 | `value_score` | 0–100 review-priority heuristic; not proof of truth or business value. |
 | `value_components` | Exposed score dimensions used to produce `value_score`. |
+| `metadata.asset_patterns` | File-level generated candidate pattern IDs, such as evaluation harness or model/algorithm hints. |
+| `metadata.pattern_evidence` | Evidence terms that caused an asset pattern hint. |
+| `metadata.composite_patterns` | Repository or bundle-level generated candidate patterns inferred from connected child assets. |
+| `metadata.composite_asset_hint` | Candidate member IDs, child count, and authority note for a possible composite asset. |
+| `metadata.instance_of_asset_ids` | For use/run/deployment assets, the assets instantiated together. |
+| `metadata.workflow_steps` | For workflow assets, ordered or named steps when known. |
 
 ## Governance and time
 

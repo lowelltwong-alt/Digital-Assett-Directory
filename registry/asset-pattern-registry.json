@@ -1,0 +1,151 @@
+{
+  "registry_version": "0.1.0",
+  "status": "seed",
+  "patterns": [
+    {
+      "id": "ai_agent_workflow_system",
+      "label": "AI agent workflow system",
+      "description": "Agents, skills, prompts, tools, governance, and handoffs that work together as a repeatable AI workflow.",
+      "leverage": "very_high",
+      "recognition_mode": "repository_composite",
+      "positive_signals": [
+        "agent or skill assets",
+        "workflow or orchestration assets",
+        "preflight/postflight/handoff evidence",
+        "govern_agents or capture_lessons capability"
+      ],
+      "missing_evidence": [
+        "successful run evidence",
+        "before/after asset-use feedback",
+        "failure modes and escalation path"
+      ]
+    },
+    {
+      "id": "evaluation_contract_system",
+      "label": "Evaluation and contract system",
+      "description": "Tests, evaluations, schemas, golden cases, and validators that prove behavior and keep agents aligned.",
+      "leverage": "very_high",
+      "recognition_mode": "repository_composite",
+      "positive_signals": [
+        "test or evaluation assets",
+        "schema or ontology assets",
+        "validate_contracts capability",
+        "golden cases or regression language"
+      ],
+      "missing_evidence": [
+        "human labels",
+        "precision/recall or failure-case coverage",
+        "current validation command results"
+      ]
+    },
+    {
+      "id": "knowledge_graph_retrieval_system",
+      "label": "Knowledge graph and retrieval system",
+      "description": "Ontology, taxonomy, graph, retrieval, context-pack, and index assets that help agents find and connect the right things.",
+      "leverage": "very_high",
+      "recognition_mode": "repository_composite",
+      "positive_signals": [
+        "ontology or taxonomy assets",
+        "knowledge-graph tags",
+        "retrieval tags",
+        "build_knowledge_graph or retrieve_context capability"
+      ],
+      "missing_evidence": [
+        "query evaluation",
+        "retrieval quality labels",
+        "graph edge false-positive review"
+      ]
+    },
+    {
+      "id": "governed_learning_loop_system",
+      "label": "Governed learning loop system",
+      "description": "Lessons, handoffs, asset-use feedback, governance gates, and review loops that improve future agent behavior.",
+      "leverage": "very_high",
+      "recognition_mode": "repository_composite",
+      "positive_signals": [
+        "lesson or workflow assets",
+        "learning-loop tags",
+        "governance tags",
+        "capture_lessons capability"
+      ],
+      "missing_evidence": [
+        "repeated feedback records",
+        "reviewed promotion decisions",
+        "postflight compliance evidence"
+      ]
+    },
+    {
+      "id": "model_algorithm_system",
+      "label": "Model, algorithm, or forecasting system",
+      "description": "Algorithms, scoring models, forecasters, simulations, optimization models, or frontier math assets paired with tests/data.",
+      "leverage": "high",
+      "recognition_mode": "repository_composite",
+      "positive_signals": [
+        "code and dataset assets together",
+        "evaluation assets",
+        "score_assets capability",
+        "model, algorithm, forecast, predict, or optimize language"
+      ],
+      "missing_evidence": [
+        "calibration data",
+        "backtest or benchmark",
+        "assumption and failure-mode notes"
+      ]
+    },
+    {
+      "id": "security_governance_system",
+      "label": "Security and governance gate system",
+      "description": "Policies, hooks, tests, secret handling, prompt-injection defenses, and review gates that let assets scale safely.",
+      "leverage": "high",
+      "recognition_mode": "repository_composite",
+      "positive_signals": [
+        "security tags",
+        "governance tags",
+        "protect_sensitive_data capability",
+        "pre-push, policy, secret, or prompt-injection language"
+      ],
+      "missing_evidence": [
+        "bypass and failure behavior tests",
+        "threat model review",
+        "human approval of enforcement boundaries"
+      ]
+    },
+    {
+      "id": "asset_cluster_delta",
+      "label": "Asset cluster delta",
+      "description": "Near-duplicate or variant assets compared as a cluster with shared core, strengths, neutral differences, and weaker parts.",
+      "leverage": "high",
+      "recognition_mode": "cluster",
+      "positive_signals": [
+        "similar names or capabilities",
+        "same need solved in multiple repos",
+        "near_duplicate or variant evidence",
+        "cluster-delta review notes"
+      ],
+      "missing_evidence": [
+        "human comparison",
+        "shared-core summary",
+        "merge-or-keep-variant decision"
+      ]
+    },
+    {
+      "id": "asset_use_instance",
+      "label": "Asset use instance",
+      "description": "A specific before-use or after-use record showing how an asset was found, used, upgraded, blocked, or valued.",
+      "leverage": "high",
+      "recognition_mode": "instance",
+      "positive_signals": [
+        "DAD_ASSET_USE_FEEDBACK_V1 marker",
+        "before_use or after_use stage",
+        "observed usefulness/futurefulness",
+        "parts used and things learned"
+      ],
+      "missing_evidence": [
+        "matching before/after pair",
+        "curation into score or ceiling calibration",
+        "reviewed evidence link"
+      ]
+    }
+  ],
+  "rule": "Pattern matches are generated candidate evidence. They guide review, scoring calibration, and composite-asset proposals; they do not prove value or source truth."
+}

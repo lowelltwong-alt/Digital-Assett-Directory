@@ -4,7 +4,7 @@
   "types": [
     {
       "id": "repository",
-      "description": "Version-controlled project boundary",
+      "description": "Version-controlled project boundary; may act as a composite asset containing files, workflows, tests, schemas, and governance surfaces",
       "default_stale_days": 180
     },
     {
@@ -38,6 +38,31 @@
       "default_stale_days": 365
     },
     {
+      "id": "model",
+      "description": "Scoring, forecasting, causal, simulation, valuation, or decision model",
+      "default_stale_days": 180
+    },
+    {
+      "id": "algorithm",
+      "description": "Reusable algorithm, optimization method, ranking method, or mathematical procedure",
+      "default_stale_days": 365
+    },
+    {
+      "id": "forecaster",
+      "description": "Forecasting system, scenario model, prediction dashboard, or signal model",
+      "default_stale_days": 90
+    },
+    {
+      "id": "adapter",
+      "description": "Reusable translation layer between data formats, repos, APIs, tools, or agents",
+      "default_stale_days": 270
+    },
+    {
+      "id": "connector",
+      "description": "Integration surface that connects an external service, repo, API, or storage system",
+      "default_stale_days": 180
+    },
+    {
       "id": "prompt",
       "description": "Reusable prompt or instruction asset",
       "default_stale_days": 180
@@ -54,8 +79,23 @@
     },
     {
       "id": "workflow",
-      "description": "Repeatable multi-step process",
+      "description": "Repeatable multi-step process; may be a composite asset that coordinates multiple files, tools, skills, agents, or repositories",
       "default_stale_days": 540
+    },
+    {
+      "id": "asset_bundle",
+      "description": "Reviewed or candidate composite of multiple assets intentionally used together",
+      "default_stale_days": 540
+    },
+    {
+      "id": "asset_cluster",
+      "description": "Candidate grouping of related, near-duplicate, variant, or comparison-worthy assets",
+      "default_stale_days": 365
+    },
+    {
+      "id": "asset_instance",
+      "description": "Observed use, deployment, or task-specific instantiation of one or more digital assets",
+      "default_stale_days": 180
     },
     {
       "id": "evaluation",

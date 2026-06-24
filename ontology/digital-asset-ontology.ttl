@@ -15,6 +15,12 @@ dad: a owl:Ontology ;
 dad:DigitalAsset a owl:Class ; rdfs:subClassOf prov:Entity, dcat:Resource .
 dad:AssetRevision a owl:Class ; rdfs:subClassOf prov:Entity .
 dad:Repository a owl:Class ; rdfs:subClassOf dad:DigitalAsset .
+dad:Workflow a owl:Class ; rdfs:subClassOf dad:DigitalAsset .
+dad:CompositeAsset a owl:Class ; rdfs:subClassOf dad:DigitalAsset .
+dad:AssetBundle a owl:Class ; rdfs:subClassOf dad:CompositeAsset .
+dad:AssetCluster a owl:Class ; rdfs:subClassOf dad:CompositeAsset .
+dad:AssetInstance a owl:Class ; rdfs:subClassOf prov:Entity .
+dad:ModelOrAlgorithm a owl:Class ; rdfs:subClassOf dad:DigitalAsset .
 dad:Lesson a owl:Class ; rdfs:subClassOf dad:DigitalAsset .
 dad:Handoff a owl:Class ; rdfs:subClassOf prov:Entity .
 dad:Alert a owl:Class ; rdfs:subClassOf prov:Entity .
@@ -25,6 +31,10 @@ dad:Need a owl:Class ; rdfs:subClassOf skos:Concept .
 
 dad:hasRevision a owl:ObjectProperty ; rdfs:domain dad:DigitalAsset ; rdfs:range dad:AssetRevision .
 dad:contains a owl:ObjectProperty ; rdfs:domain dad:DigitalAsset ; rdfs:range dad:DigitalAsset .
+dad:hasMemberAsset a owl:ObjectProperty ; rdfs:domain dad:CompositeAsset ; rdfs:range dad:DigitalAsset .
+dad:instantiatesAsset a owl:ObjectProperty ; rdfs:domain dad:AssetInstance ; rdfs:range dad:DigitalAsset .
+dad:hasWorkflowStep a owl:ObjectProperty ; rdfs:domain dad:Workflow ; rdfs:range dad:DigitalAsset .
+dad:usesTogether a owl:ObjectProperty ; rdfs:domain dad:AssetInstance ; rdfs:range dad:DigitalAsset .
 dad:relatedTo a owl:ObjectProperty, owl:SymmetricProperty ; rdfs:domain dad:DigitalAsset ; rdfs:range dad:DigitalAsset .
 dad:complements a owl:ObjectProperty, owl:SymmetricProperty ; rdfs:domain dad:DigitalAsset ; rdfs:range dad:DigitalAsset .
 dad:satisfiesNeed a owl:ObjectProperty ; rdfs:domain dad:DigitalAsset ; rdfs:range dad:DigitalAsset .

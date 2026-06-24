@@ -61,6 +61,105 @@ def _repo_roots(files: Iterable[Path], base: Path) -> set[Path]:
     return roots
 
 
+def _repo_composite_patterns(child_assets: list[AssetRecord]) -> list[dict[str, object]]:
+    type_ids = {asset.asset_type for asset in child_assets}
+    tags = {tag for asset in child_assets for tag in asset.tags}
+    capabilities = {capability for asset in child_assets for capability in asset.capabilities}
+    patterns: list[dict[str, object]] = []
+
+    def add(pattern_id: str, label: str, evidence: list[str], leverage: str) -> None:
+        if len(evidence) >= 2:
+            patterns.append(
+                {
+                    "pattern_id": pattern_id,
+                    "label": label,
+                    "evidence": sorted(set(evidence)),
+                    "leverage": leverage,
+                    "review_status": "generated_candidate",
+                    "authority": "Composite pattern hint only; human review required.",
+                }
+            )
+
+    add(
+        "ai_agent_workflow_system",
+        "AI agent workflow system",
+        [
+            *(["asset_type:agent"] if "agent" in type_ids else []),
+            *(["asset_type:skill"] if "skill" in type_ids else []),
+            *(["asset_type:workflow"] if "workflow" in type_ids else []),
+            *(["tag:agent"] if "agent" in tags else []),
+            *(["capability:govern_agents"] if "govern_agents" in capabilities else []),
+            *(["capability:capture_lessons"] if "capture_lessons" in capabilities else []),
+        ],
+        "very_high",
+    )
+    add(
+        "evaluation_contract_system",
+        "Evaluation and contract system",
+        [
+            *(["asset_type:test"] if "test" in type_ids else []),
+            *(["asset_type:evaluation"] if "evaluation" in type_ids else []),
+            *(["asset_type:schema"] if "schema" in type_ids else []),
+            *(["asset_type:ontology"] if "ontology" in type_ids else []),
+            *(["capability:validate_contracts"] if "validate_contracts" in capabilities else []),
+        ],
+        "very_high",
+    )
+    add(
+        "knowledge_graph_retrieval_system",
+        "Knowledge graph and retrieval system",
+        [
+            *(["asset_type:ontology"] if "ontology" in type_ids else []),
+            *(["asset_type:taxonomy"] if "taxonomy" in type_ids else []),
+            *(["tag:knowledge-graph"] if "knowledge-graph" in tags else []),
+            *(["tag:retrieval"] if "retrieval" in tags else []),
+            *(["capability:build_knowledge_graph"] if "build_knowledge_graph" in capabilities else []),
+            *(["capability:retrieve_context"] if "retrieve_context" in capabilities else []),
+        ],
+        "very_high",
+    )
+    add(
+        "governed_learning_loop_system",
+        "Governed learning loop system",
+        [
+            *(["asset_type:lesson"] if "lesson" in type_ids else []),
+            *(["asset_type:workflow"] if "workflow" in type_ids else []),
+            *(["tag:learning-loop"] if "learning-loop" in tags else []),
+            *(["tag:governance"] if "governance" in tags else []),
+            *(["capability:capture_lessons"] if "capture_lessons" in capabilities else []),
+            *(["capability:govern_agents"] if "govern_agents" in capabilities else []),
+        ],
+        "very_high",
+    )
+    add(
+        "security_governance_system",
+        "Security and governance gate system",
+        [
+            *(["asset_type:configuration"] if "configuration" in type_ids else []),
+            *(["asset_type:test"] if "test" in type_ids else []),
+            *(["tag:security"] if "security" in tags else []),
+            *(["tag:governance"] if "governance" in tags else []),
+            *(["capability:protect_sensitive_data"] if "protect_sensitive_data" in capabilities else []),
+            *(["capability:govern_agents"] if "govern_agents" in capabilities else []),
+        ],
+        "high",
+    )
+    add(
+        "model_algorithm_system",
+        "Model, algorithm, or forecasting system",
+        [
+            *(["asset_type:code"] if "code" in type_ids else []),
+            *(["asset_type:dataset"] if "dataset" in type_ids else []),
+            *(["asset_type:evaluation"] if "evaluation" in type_ids else []),
+            *(["capability:score_assets"] if "score_assets" in capabilities else []),
+            *(["tag:evaluation"] if "evaluation" in tags else []),
+            *(["tag:research-radar"] if "research-radar" in tags else []),
+        ],
+        "high",
+    )
+    return sorted(patterns, key=lambda item: str(item["pattern_id"]))
+
+
 def scan_local_source(
     source: LocalSource,
     settings: Settings,
@@ -142,6 +241,8 @@ def scan_local_source(
                 "capabilities": [],
                 "needs": [],
                 "outcomes": [],
+                "asset_patterns": [],
+                "pattern_evidence": {},
             }
         else:
             data = path.read_bytes()
@@ -188,12 +289,39 @@ def scan_local_source(
                 "mime_type": extracted["mime_type"],
                 "excerpt": extracted["excerpt"] if settings.store_excerpts else "",
                 "text_tokens": extracted["text_tokens"],
+                "asset_patterns": extracted["asset_patterns"],
+                "pattern_evidence": extracted["pattern_evidence"],
                 "redaction_count": extracted["redaction_count"],
                 "decode_error": extracted["decode_error"],
                 "content_skipped_for_size": skipped_content,
             },
         )
         assets.append(score_asset(record, scoring))
+
+    assets_by_id = {asset.asset_id: asset for asset in assets}
+    for repo_path, repo_id in repo_asset_ids.items():
+        child_assets = [
+            asset
+            for asset in assets
+            if asset.parent_asset_id == repo_id
+            and asset.logical_path.startswith(f"{source.path_alias}/{safe_relative(repo_path, base)}")
+        ]
+        repo_asset = assets_by_id[repo_id]
+        repo_patterns = _repo_composite_patterns(child_assets)
+        if repo_patterns:
+            repo_asset.metadata["composite_patterns"] = repo_patterns
+            repo_asset.metadata["composite_asset_hint"] = {
+                "asset_type_candidates": ["repository", "asset_bundle"],
+                "child_asset_count": len(child_assets),
+                "member_asset_ids": [asset.asset_id for asset in child_assets[:50]],
+                "authority": "Generated composite candidate; source repository remains authoritative.",
+            }
+            repo_asset.tags = sorted(
+                set(repo_asset.tags)
+                | {"composite-asset", *(str(item["pattern_id"]) for item in repo_patterns)}
+            )
+            repo_asset.outcomes = sorted(set(repo_asset.outcomes) | {"repeatable_quality"})
+            score_asset(repo_asset, scoring)
 
     after = {str(path): sha256_file(path) for path in files}
     mutated = {path: digest for path, digest in before.items() if after.get(path) != digest}

@@ -15,6 +15,8 @@ def test_secret_redaction_and_semantic_extraction():
     assert extracted["redaction_count"] == 1
     assert "evaluation" in extracted["tags"]
     assert "build_knowledge_graph" in extracted["capabilities"]
+    assert "evaluation_harness" in extracted["asset_patterns"]
+    assert extracted["pattern_evidence"]["evaluation_harness"]
 
 
 def test_redaction_covers_json_and_env_secret_forms():
@@ -43,3 +45,4 @@ def test_asset_classification():
     assert classify_asset("schemas/asset.schema.json") == "schema"
     assert classify_asset("tests/test_something.py") == "test"
     assert classify_asset("src/app.py") == "code"
+    assert classify_asset("workflows/agent_pipeline.md") == "workflow"

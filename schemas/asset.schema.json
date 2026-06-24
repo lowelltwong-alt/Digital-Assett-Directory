@@ -173,7 +173,40 @@
       ]
     },
     "metadata": {
-      "type": "object"
+      "type": "object",
+      "additionalProperties": true,
+      "properties": {
+        "asset_patterns": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Generated candidate file-level pattern IDs."
+        },
+        "pattern_evidence": {
+          "type": "object",
+          "description": "Evidence that caused generated asset pattern hints."
+        },
+        "composite_patterns": {
+          "type": "array",
+          "description": "Generated candidate repository or bundle-level composite patterns."
+        },
+        "composite_asset_hint": {
+          "type": "object",
+          "description": "Candidate member IDs, child count, and authority notes for a possible composite asset."
+        },
+        "instance_of_asset_ids": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "For asset use/run/deployment instances, assets instantiated together."
+        },
+        "workflow_steps": {
+          "type": "array",
+          "description": "For workflow assets, ordered or named step assets when known."
+        }
+      }
     }
   },
   "additionalProperties": false

@@ -77,7 +77,294 @@
     },
     "evidence": {
       "type": "object",
-      "minProperties": 1
+      "minProperties": 1,
+      "properties": {
+        "review_lens": {
+          "type": "object",
+          "additionalProperties": true,
+          "required": [
+            "pattern_key",
+            "current_graph_role",
+            "useful_to_future_agents",
+            "layers",
+            "high_signal_edges",
+            "missing_or_combine_with",
+            "projected_value_lift",
+            "current_floor",
+            "current_floor_basis",
+            "current_score_range",
+            "current_score_midpoint",
+            "current_score_uncertainty",
+            "current_score_range_basis",
+            "review_order",
+            "current_score_first_prompt",
+            "potential_ceiling",
+            "potential_ceiling_range",
+            "potential_ceiling_basis",
+            "ceiling_confidence",
+            "upside_gap",
+            "upside_delta",
+            "upside_delta_range",
+            "upside_delta_meaning",
+            "activation_requirements",
+            "development_posture",
+            "score_warning",
+            "score_justification",
+            "ceiling_justification",
+            "ceiling_activation_conditions",
+            "projection_review_cadence",
+            "usage_feedback_prompt",
+            "usage_feedback_command",
+            "usage_feedback_fields",
+            "usage_feedback_instructions",
+            "usage_feedback_scoring_methodology",
+            "calibration_caution",
+            "duplicate_review_prompt",
+            "cluster_delta_prompt",
+            "authority"
+          ],
+          "properties": {
+            "pattern_key": {
+              "type": "string",
+              "minLength": 1
+            },
+            "current_graph_role": {
+              "type": "string",
+              "minLength": 1
+            },
+            "useful_to_future_agents": {
+              "type": "string",
+              "minLength": 1
+            },
+            "layers": {
+              "type": "array",
+              "maxItems": 3,
+              "items": {
+                "type": "object",
+                "required": ["layer", "role", "evidence_level", "score_use"],
+                "properties": {
+                  "layer": {
+                    "enum": ["grounded_current_role", "latent_role", "bridge_role"]
+                  },
+                  "role": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "evidence_level": {
+                    "enum": ["direct", "derived", "projected"]
+                  },
+                  "score_use": {
+                    "type": "string",
+                    "minLength": 1
+                  }
+                }
+              }
+            },
+            "high_signal_edges": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "required": ["edge", "evidence_level", "why"],
+                "properties": {
+                  "edge": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "evidence_level": {
+                    "enum": ["direct", "derived", "projected"]
+                  },
+                  "why": {
+                    "type": "string",
+                    "minLength": 1
+                  }
+                }
+              }
+            },
+            "missing_or_combine_with": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "projected_value_lift": {
+              "enum": ["low", "medium", "high", "very_high"]
+            },
+            "current_floor": {
+              "enum": ["low", "medium", "high", "very_high"]
+            },
+            "current_floor_basis": {
+              "type": "string",
+              "minLength": 1
+            },
+            "current_score_range": {
+              "type": "object",
+              "required": ["low", "midpoint", "high"],
+              "properties": {
+                "low": {
+                  "type": "number",
+                  "minimum": 0,
+                  "maximum": 100
+                },
+                "midpoint": {
+                  "type": "number",
+                  "minimum": 0,
+                  "maximum": 100
+                },
+                "high": {
+                  "type": "number",
+                  "minimum": 0,
+                  "maximum": 100
+                }
+              }
+            },
+            "current_score_midpoint": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 100
+            },
+            "current_score_uncertainty": {
+              "enum": ["narrow", "medium", "wide"]
+            },
+            "current_score_range_basis": {
+              "type": "string",
+              "minLength": 1
+            },
+            "review_order": {
+              "type": "array",
+              "minItems": 3,
+              "items": {
+                "type": "string",
+                "minLength": 1
+              }
+            },
+            "current_score_first_prompt": {
+              "type": "string",
+              "minLength": 1
+            },
+            "potential_ceiling": {
+              "enum": ["low", "medium", "high", "very_high"]
+            },
+            "potential_ceiling_range": {
+              "type": "object",
+              "required": ["low", "high"],
+              "properties": {
+                "low": {
+                  "enum": ["low", "medium", "high", "very_high"]
+                },
+                "high": {
+                  "enum": ["low", "medium", "high", "very_high"]
+                }
+              }
+            },
+            "potential_ceiling_basis": {
+              "type": "string",
+              "minLength": 1
+            },
+            "ceiling_confidence": {
+              "enum": ["low", "medium", "high"]
+            },
+            "upside_gap": {
+              "enum": ["small", "medium", "large"]
+            },
+            "upside_delta": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 3
+            },
+            "upside_delta_range": {
+              "type": "object",
+              "required": ["low", "high"],
+              "properties": {
+                "low": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 3
+                },
+                "high": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 3
+                }
+              }
+            },
+            "upside_delta_meaning": {
+              "type": "string",
+              "minLength": 1
+            },
+            "activation_requirements": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "development_posture": {
+              "enum": ["validate_first", "actively_develop", "prototype_bounded_experiment", "monitor"]
+            },
+            "score_warning": {
+              "type": "string",
+              "minLength": 1
+            },
+            "score_justification": {
+              "type": "string",
+              "minLength": 1
+            },
+            "ceiling_justification": {
+              "type": "string",
+              "minLength": 1
+            },
+            "ceiling_activation_conditions": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "projection_review_cadence": {
+              "type": "string",
+              "minLength": 1
+            },
+            "usage_feedback_prompt": {
+              "type": "string",
+              "minLength": 1
+            },
+            "usage_feedback_command": {
+              "type": "string",
+              "minLength": 1
+            },
+            "usage_feedback_fields": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "usage_feedback_instructions": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "usage_feedback_scoring_methodology": {
+              "type": "object",
+              "minProperties": 1
+            },
+            "calibration_caution": {
+              "type": "string",
+              "minLength": 1
+            },
+            "duplicate_review_prompt": {
+              "type": "string",
+              "minLength": 1
+            },
+            "cluster_delta_prompt": {
+              "type": "string",
+              "minLength": 1
+            },
+            "authority": {
+              "type": "string",
+              "minLength": 1
+            }
+          }
+        }
+      }
     },
     "review_status": {
       "enum": ["generated_candidate", "reviewed", "rejected"]

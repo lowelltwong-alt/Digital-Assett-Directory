@@ -33,6 +33,43 @@ CALIBRATION_REVIEW_CSV_COLUMNS = [
     "lifecycle_state",
     "freshness_status",
     "confidence",
+    "pattern_key",
+    "current_graph_role",
+    "useful_to_future_agents",
+    "missing_or_combine_with",
+    "projected_value_lift",
+    "current_floor",
+    "current_floor_basis",
+    "current_score_range",
+    "current_score_midpoint",
+    "current_score_uncertainty",
+    "current_score_range_basis",
+    "review_order",
+    "current_score_first_prompt",
+    "potential_ceiling",
+    "potential_ceiling_range",
+    "potential_ceiling_basis",
+    "ceiling_confidence",
+    "upside_gap",
+    "upside_delta",
+    "upside_delta_range",
+    "upside_delta_meaning",
+    "activation_requirements",
+    "development_posture",
+    "score_warning",
+    "score_justification",
+    "ceiling_justification",
+    "ceiling_activation_conditions",
+    "projection_review_cadence",
+    "usage_feedback_prompt",
+    "usage_feedback_command",
+    "usage_feedback_fields",
+    "usage_feedback_instructions",
+    "usage_feedback_scoring_methodology",
+    "edge_evidence_summary",
+    "calibration_caution",
+    "duplicate_review_prompt",
+    "cluster_delta_prompt",
     "review_status",
     "reviewer",
     "score_rating",
@@ -74,11 +111,616 @@ def _review_is_pending(record: AssetCalibrationReviewRecord) -> bool:
     return _review_status(record) == "generated_candidate"
 
 
+def _evidence_list(value: Any) -> list[str]:
+    if not isinstance(value, list):
+        return []
+    return [str(item) for item in value if str(item).strip()]
+
+
+def _top_component_names(value_components: Any, limit: int = 2) -> list[str]:
+    if not isinstance(value_components, dict):
+        return []
+    ranked = sorted(
+        ((str(component), float(score)) for component, score in value_components.items()),
+        key=lambda item: (item[1], item[0]),
+        reverse=True,
+    )
+    return [component for component, _score in ranked[:limit]]
+
+
+def _contains_any(text: str, terms: tuple[str, ...]) -> bool:
+    lowered = text.lower()
+    return any(term in lowered for term in terms)
+
+
+def _asset_role_hints(
+    asset_type: str, title: str, logical_path: str
+) -> tuple[str, str, list[str], str]:
+    text = f"{title} {logical_path}".lower()
+    if asset_type == "schema":
+        return (
+            "Contract node for structured asset interoperability.",
+            "Keeps agents aligned on record shape, authority, confidence, and provenance.",
+            [
+                "schema examples",
+                "migration/version tests",
+                "edge and proposal schema links",
+            ],
+            "very_high",
+        )
+    if asset_type == "lesson":
+        return (
+            "Agent memory and doctrine node.",
+            "Preserves reusable decision logic without promoting lessons to truth automatically.",
+            [
+                "linked postflight examples",
+                "lesson reindex evidence",
+                "outcome follow-up records",
+            ],
+            "high",
+        )
+    if asset_type == "test":
+        if _contains_any(text, ("graph", "radar", "synergy", "orphan")):
+            return (
+                "Graph-edge validation node.",
+                "Helps agents separate useful relationship signals from noisy matches.",
+                [
+                    "false-positive labels",
+                    "false-negative labels",
+                    "bounded edge-quality fixtures",
+                ],
+                "very_high",
+            )
+        if _contains_any(text, ("governance", "pre-push", "downstream")):
+            return (
+                "Governance safety validation node.",
+                "Lets agents test downstream controls before touching active repositories.",
+                [
+                    "sandbox pilot evidence",
+                    "bypass/failure policy",
+                    "postflight-clears-gate examples",
+                ],
+                "very_high",
+            )
+        if _contains_any(text, ("catalog", "pipeline")):
+            return (
+                "Catalog pipeline acceptance node.",
+                "Shows future agents the outputs and safety boundaries a scan must preserve.",
+                [
+                    "failure-mode fixtures",
+                    "roadmap gate traceability",
+                    "larger source matrix",
+                ],
+                "high",
+            )
+        if _contains_any(text, ("extract", "local_scan", "scan", "redact")):
+            return (
+                "Extraction and privacy validation node.",
+                "Protects the asset metadata and redaction edges that feed the graph.",
+                [
+                    "adversarial secret corpus",
+                    "semantic gold labels",
+                    "file-type coverage",
+                ],
+                "high",
+            )
+        if _contains_any(text, ("database", "learning", "lesson", "handoff")):
+            return (
+                "Agent memory persistence validation node.",
+                "Tests whether preflight, postflight, lessons, and handoffs survive as usable context.",
+                [
+                    "lesson reindex tests",
+                    "downstream hub arrival evidence",
+                    "multi-agent handoff examples",
+                ],
+                "high",
+            )
+        if _contains_any(text, ("recommend", "proposal", "skill", "swarm")):
+            return (
+                "Recommendation behavior validation node.",
+                "Checks how repeated needs become candidate skills, swarms, or upgrade proposals.",
+                [
+                    "human usefulness labels",
+                    "rejected recommendation examples",
+                    "proposal calibration outcomes",
+                ],
+                "high",
+            )
+        return (
+            "Verification node.",
+            "Gives future agents a runnable check for one behavior boundary.",
+            [
+                "failure cases",
+                "coverage rationale",
+                "human review notes",
+            ],
+            "medium",
+        )
+    if asset_type == "code":
+        if _contains_any(text, ("extract", "semantic", "classif")):
+            return (
+                "Semantic edge factory.",
+                "Creates asset type, capability, need, freshness, and privacy signals for the graph.",
+                [
+                    "gold semantic labels",
+                    "precision/recall evaluation harness",
+                    "human calibration outcomes",
+                ],
+                "very_high",
+            )
+        return (
+            "Executable behavior node.",
+            "Provides reusable implementation that other agents can call, test, or constrain.",
+            [
+                "public contract tests",
+                "usage examples",
+                "authority boundary notes",
+            ],
+            "high",
+        )
+    if asset_type in {"doc", "markdown"}:
+        return (
+            "Human-readable guidance node.",
+            "Explains behavior and decisions that future agents may need before changing code.",
+            [
+                "linked examples",
+                "acceptance checks",
+                "owner-reviewed decisions",
+            ],
+            "medium",
+        )
+    return (
+        "Cataloged asset node.",
+        "May help future agents if its capabilities, needs, and outcomes connect to a task.",
+        [
+            "clear usage example",
+            "validated relationship edges",
+            "authority boundary notes",
+        ],
+        "medium",
+    )
+
+
+def _score_level(score: float) -> str:
+    if score >= 90:
+        return "very_high"
+    if score >= 75:
+        return "high"
+    if score >= 45:
+        return "medium"
+    return "low"
+
+
+def _lift_rank(level: str) -> int:
+    return {"low": 0, "medium": 1, "high": 2, "very_high": 3}.get(level, 1)
+
+
+def _upside_gap(current_floor: str, potential_ceiling: str) -> str:
+    gap = _lift_rank(potential_ceiling) - _lift_rank(current_floor)
+    if gap >= 2:
+        return "large"
+    if gap == 1:
+        return "medium"
+    return "small"
+
+
+def _upside_delta(current_floor: str, potential_ceiling: str) -> int:
+    return max(0, _lift_rank(potential_ceiling) - _lift_rank(current_floor))
+
+
+def _upside_delta_meaning(delta: int, ceiling_confidence: str) -> str:
+    if delta == 0:
+        return (
+            "Current generated floor and conditional ceiling are in the same band; "
+            "review should focus on whether the current score itself is accurate."
+        )
+    if delta == 1:
+        return (
+            "One-band upside: useful development opportunity if activation conditions "
+            "are concrete and current score is not already inflated."
+        )
+    if ceiling_confidence == "low":
+        return (
+            "Large but low-confidence upside: do not raise current score; create a "
+            "validation experiment before directing major development attention."
+        )
+    return (
+        "Large grounded upside: candidate for active development after current score "
+        "label and activation conditions are reviewed."
+    )
+
+
+def _current_score_uncertainty(record: AssetCalibrationReviewRecord) -> tuple[float, str]:
+    evidence = record.evidence or {}
+    value_components = evidence.get("value_components", {})
+    verification = 0.0
+    if isinstance(value_components, dict):
+        verification = float(value_components.get("verification", 0.0))
+    needs = _evidence_list(evidence.get("needs", []))
+    confidence = str(evidence.get("confidence", "")).lower()
+    if confidence == "high" and verification >= 80 and len(needs) <= 2:
+        return 5.0, "narrow"
+    if confidence in {"high", "medium"} and verification >= 40:
+        return 10.0, "medium"
+    return 15.0, "wide"
+
+
+def _current_score_range(record: AssetCalibrationReviewRecord) -> dict[str, float]:
+    radius, _label = _current_score_uncertainty(record)
+    midpoint = float(record.generated_value_score)
+    return {
+        "low": round(max(0.0, midpoint - radius), 2),
+        "midpoint": round(midpoint, 2),
+        "high": round(min(100.0, midpoint + radius), 2),
+    }
+
+
+def _ceiling_confidence(record: AssetCalibrationReviewRecord, missing_parts: list[str]) -> str:
+    evidence = record.evidence or {}
+    value_components = evidence.get("value_components", {})
+    verification = 0.0
+    if isinstance(value_components, dict):
+        verification = float(value_components.get("verification", 0.0))
+    needs = _evidence_list(evidence.get("needs", []))
+    if verification >= 80 and len(needs) <= 2 and len(missing_parts) <= 3:
+        return "medium"
+    return "low"
+
+
+def _development_posture(
+    record: AssetCalibrationReviewRecord,
+    *,
+    potential_ceiling: str,
+    ceiling_confidence: str,
+    upside_gap: str,
+) -> str:
+    if ceiling_confidence == "low":
+        return "validate_first"
+    if record.asset_type == "schema" and potential_ceiling == "very_high":
+        return "actively_develop"
+    if upside_gap in {"large", "medium"}:
+        return "prototype_bounded_experiment"
+    return "monitor"
+
+
+def _potential_ceiling_range(potential_ceiling: str, ceiling_confidence: str) -> dict[str, str]:
+    rank_to_level = {0: "low", 1: "medium", 2: "high", 3: "very_high"}
+    ceiling_rank = _lift_rank(potential_ceiling)
+    if ceiling_confidence == "low":
+        low_rank = max(0, ceiling_rank - 1)
+    else:
+        low_rank = ceiling_rank
+    return {"low": rank_to_level[low_rank], "high": potential_ceiling}
+
+
+def _upside_delta_range(current_floor: str, ceiling_range: dict[str, str]) -> dict[str, int]:
+    current_rank = _lift_rank(current_floor)
+    return {
+        "low": max(0, _lift_rank(ceiling_range["low"]) - current_rank),
+        "high": max(0, _lift_rank(ceiling_range["high"]) - current_rank),
+    }
+
+
+def _score_justification(record: AssetCalibrationReviewRecord) -> str:
+    evidence = record.evidence or {}
+    components = evidence.get("value_components", {})
+    top_components = _top_component_names(components, limit=3)
+    capabilities = _evidence_list(evidence.get("capabilities", []))
+    needs = _evidence_list(evidence.get("needs", []))
+    parts = [
+        f"Generated score is {record.generated_value_score} ({record.generated_value_band})",
+    ]
+    if top_components:
+        parts.append("because top components are " + ", ".join(top_components))
+    if capabilities:
+        parts.append("with capabilities " + ", ".join(capabilities[:3]))
+    if needs:
+        parts.append("and inferred needs " + ", ".join(needs[:3]))
+    parts.append("human review decides whether this current score is too_high, about_right, or too_low")
+    return "; ".join(parts) + "."
+
+
+def _ceiling_justification(
+    current_role: str,
+    future_use: str,
+    potential_ceiling: str,
+    missing_parts: list[str],
+) -> str:
+    missing_text = ", ".join(missing_parts) if missing_parts else "no obvious missing parts"
+    return (
+        f"Potential ceiling is {potential_ceiling} because the asset's role is "
+        f"{current_role.lower()} and it could help future agents by: {future_use} "
+        f"Conditions still needed: {missing_text}."
+    )
+
+
+def build_asset_calibration_review_lens(
+    record: AssetCalibrationReviewRecord,
+) -> dict[str, Any]:
+    evidence = record.evidence or {}
+    capabilities = _evidence_list(evidence.get("capabilities", []))
+    needs = _evidence_list(evidence.get("needs", []))
+    outcomes = _evidence_list(evidence.get("outcomes", []))
+    value_components = evidence.get("value_components", {})
+    top_components = _top_component_names(value_components)
+    current_role, future_use, missing_parts, projected_lift = _asset_role_hints(
+        record.asset_type,
+        record.asset_title,
+        record.logical_path,
+    )
+    current_score_range = _current_score_range(record)
+    _score_radius, current_score_uncertainty = _current_score_uncertainty(record)
+    current_floor = _score_level(record.generated_value_score)
+    potential_ceiling = projected_lift
+    upside_gap = _upside_gap(current_floor, potential_ceiling)
+    ceiling_confidence = _ceiling_confidence(record, missing_parts)
+    potential_ceiling_range = _potential_ceiling_range(potential_ceiling, ceiling_confidence)
+    upside_delta = _upside_delta(current_floor, potential_ceiling)
+    upside_delta_range = _upside_delta_range(current_floor, potential_ceiling_range)
+    development_posture = _development_posture(
+        record,
+        potential_ceiling=potential_ceiling,
+        ceiling_confidence=ceiling_confidence,
+        upside_gap=upside_gap,
+    )
+    component_part = "+".join(top_components) or "no-components"
+    need_part = "needs-" + "+".join(needs[:2]) if needs else "no-needs"
+    capability_part = "caps-" + "+".join(capabilities[:2]) if capabilities else "no-caps"
+    pattern_key = (
+        f"{record.asset_type}/{record.generated_value_band}/"
+        f"{component_part}/{capability_part}/{need_part}"
+    )
+
+    high_signal_edges: list[dict[str, str]] = []
+    for capability in capabilities[:3]:
+        high_signal_edges.append(
+            {
+                "edge": f"provides_capability:{capability}",
+                "evidence_level": "direct",
+                "why": "Capability is present in generated asset evidence.",
+            }
+        )
+    for need in needs[:2]:
+        high_signal_edges.append(
+            {
+                "edge": f"needs:{need}",
+                "evidence_level": "derived",
+                "why": "Need was inferred from source text and needs human calibration.",
+            }
+        )
+    for outcome in outcomes[:2]:
+        high_signal_edges.append(
+            {
+                "edge": f"supports_outcome:{outcome}",
+                "evidence_level": "derived",
+                "why": "Outcome links the asset to future task value.",
+            }
+        )
+    if record.asset_type == "schema":
+        high_signal_edges.append(
+            {
+                "edge": "constrains:catalog_contracts",
+                "evidence_level": "direct",
+                "why": "Schema assets define interoperable record structure.",
+            }
+        )
+    elif record.asset_type == "test":
+        high_signal_edges.append(
+            {
+                "edge": "validates:behavior_boundary",
+                "evidence_level": "direct",
+                "why": "Test assets are executable checks for catalog behavior.",
+            }
+        )
+    elif record.asset_type == "lesson":
+        high_signal_edges.append(
+            {
+                "edge": "informs:agent_decision_memory",
+                "evidence_level": "direct",
+                "why": "Lesson assets preserve candidate guidance for future agents.",
+            }
+        )
+
+    layers = [
+        {
+            "layer": "grounded_current_role",
+            "role": current_role,
+            "evidence_level": "direct",
+            "score_use": "eligible_for_current_score",
+        },
+        {
+            "layer": "latent_role",
+            "role": (
+                "A smaller signal in this asset may become more valuable when paired "
+                "with calibrated labels, examples, or validators."
+            ),
+            "evidence_level": "derived",
+            "score_use": "light_weight_until_verified",
+        },
+        {
+            "layer": "bridge_role",
+            "role": future_use,
+            "evidence_level": "projected",
+            "score_use": "review_note_only",
+        },
+    ]
+
+    return {
+        "pattern_key": pattern_key,
+        "current_graph_role": current_role,
+        "useful_to_future_agents": future_use,
+        "layers": layers,
+        "high_signal_edges": high_signal_edges[:8],
+        "missing_or_combine_with": missing_parts,
+        "projected_value_lift": projected_lift,
+        "current_floor": current_floor,
+        "current_floor_basis": (
+            "Generated pre-review score band; reviewer may mark it too_high, "
+            "about_right, too_low, or unsure."
+        ),
+        "current_score_range": current_score_range,
+        "current_score_midpoint": current_score_range["midpoint"],
+        "current_score_uncertainty": current_score_uncertainty,
+        "current_score_range_basis": (
+            "Deterministic uncertainty interval around the generated score. It is "
+            "not a statistical confidence interval until calibrated against human labels."
+        ),
+        "review_order": [
+            "Judge current generated score using direct and cautiously derived evidence.",
+            "Assign score_rating before considering conditional upside.",
+            "Use ceiling, delta, and activation conditions only for future development notes.",
+        ],
+        "current_score_first_prompt": (
+            "Review the current value score first. Do not use potential ceiling or "
+            "upside gap to justify about_right or too_low unless current evidence supports it."
+        ),
+        "potential_ceiling": potential_ceiling,
+        "potential_ceiling_range": potential_ceiling_range,
+        "potential_ceiling_basis": (
+            "Conditional upside inferred from asset type, path, capabilities, needs, "
+            "and likely graph role; not proof of current value."
+        ),
+        "ceiling_confidence": ceiling_confidence,
+        "upside_gap": upside_gap,
+        "upside_delta": upside_delta,
+        "upside_delta_range": upside_delta_range,
+        "upside_delta_meaning": _upside_delta_meaning(upside_delta, ceiling_confidence),
+        "activation_requirements": missing_parts,
+        "development_posture": development_posture,
+        "score_warning": (
+            "High ceiling does not justify a high current score unless direct evidence "
+            "already proves the asset works in that role."
+        ),
+        "score_justification": _score_justification(record),
+        "ceiling_justification": _ceiling_justification(
+            current_role,
+            future_use,
+            potential_ceiling,
+            missing_parts,
+        ),
+        "ceiling_activation_conditions": missing_parts,
+        "projection_review_cadence": (
+            "Reevaluate floor, ceiling, upside gap, and development posture at least "
+            "every 6 months or after major source, roadmap, or usage changes."
+        ),
+        "usage_feedback_prompt": (
+            "Asset-use contract: before using this asset, record expected value and "
+            "planned use; after using it, record actual use, difficulty, lessons, "
+            "usefulness, futurefulness, upgrades, and score/ceiling feedback."
+        ),
+        "usage_feedback_command": (
+            "python -m digital_asset_directory.cli lesson asset-use --asset-id "
+            f"{record.asset_id} --stage before_use|after_use --repo <repo> "
+            "--task <task> --agent <agent> "
+            "--found-by <context|queue|search|memory|human> --found-query <query> "
+            "--planned-use <plan> --expected-usefulness low|medium|high|unknown "
+            "--expected-futurefulness low|medium|high|unknown "
+            "--expected-value-reason <why> "
+            "--used-for <use> --part-used <part> --part-not-used <part> "
+            "--not-used-reason <reason> --upgrade-made <upgrade> "
+            "--difficulty <difficulty> --thing-learned <lesson> "
+            "--use-outcome helped|blocked|no_effect|unknown "
+            "--observed-usefulness low|medium|high|unknown "
+            "--observed-futurefulness low|medium|high|unknown"
+        ),
+        "usage_feedback_fields": [
+            "feedback_code",
+            "interaction_stage",
+            "asset_id",
+            "task",
+            "agent",
+            "found_by",
+            "found_query",
+            "planned_use",
+            "expected_usefulness",
+            "expected_futurefulness",
+            "expected_value_reason",
+            "used_for",
+            "parts_used",
+            "parts_not_used",
+            "not_used_reason",
+            "upgrades_made",
+            "difficulties",
+            "things_learned",
+            "use_outcome",
+            "observed_usefulness",
+            "observed_futurefulness",
+            "missing_parts_seen",
+            "score_feedback",
+            "ceiling_feedback",
+            "evidence",
+        ],
+        "usage_feedback_instructions": [
+            "Complete a before_use record before material use whenever possible.",
+            "Complete an after_use record after material use; if impossible, note the missing follow-up in postflight.",
+            "Use the exact allowed values for categorical fields.",
+            "Base observed_usefulness on what happened in this task, not predicted future value.",
+            "Base observed_futurefulness on new evidence about future reuse or activation.",
+            "List concrete parts used; write none if the whole asset was only inspected.",
+            "List concrete parts not used when a relevant part was skipped or unsuitable.",
+            "Use evidence entries for files, commands, review IDs, or observed outputs.",
+            "Do not change source repo code or asset scores from this feedback record.",
+        ],
+        "usage_feedback_scoring_methodology": {
+            "observed_usefulness": {
+                "high": "Asset directly saved time, reduced risk, enabled a decision, or provided reusable implementation/evidence.",
+                "medium": "Asset helped with context or partial work but required extra verification or adaptation.",
+                "low": "Asset was mostly unhelpful, stale, misleading, duplicative, or too incomplete for the task.",
+                "unknown": "Agent inspected the asset but cannot judge usefulness from this task.",
+            },
+            "observed_futurefulness": {
+                "high": "Use revealed strong future reuse, graph leverage, or activation potential if clear conditions are met.",
+                "medium": "Use revealed plausible future value with missing examples, tests, labels, adapters, or review.",
+                "low": "Use suggested limited future reuse or a narrow context-specific role.",
+                "unknown": "Future value could not be assessed from this use.",
+            },
+            "use_outcome": {
+                "helped": "The asset contributed positively to the task outcome.",
+                "blocked": "The asset caused delay, confusion, failed assumptions, or exposed missing prerequisites.",
+                "no_effect": "The asset was tried but did not materially affect the task.",
+                "unknown": "The effect cannot be determined.",
+            },
+        },
+        "calibration_caution": (
+            "Projected lift is review context only; current score should be justified "
+            "by direct or cautiously derived evidence."
+        ),
+        "duplicate_review_prompt": (
+            "If another asset solves the same problem, record whether this should be "
+            "near_duplicate, variant_of, superseded_by, or merge_candidate before "
+            "treating both scores as independent value."
+        ),
+        "cluster_delta_prompt": (
+            "For close assets, create a candidate cluster delta that separates shared "
+            "core, stronger parts, neutral differences, weaker parts, context-specific "
+            "roles, and a bounded merge-or-keep-variant experiment."
+        ),
+        "authority": "Generated review guidance only; human labels remain required.",
+    }
+
+
+def _review_lens(record: AssetCalibrationReviewRecord) -> dict[str, Any]:
+    lens = record.evidence.get("review_lens")
+    if isinstance(lens, dict):
+        return lens
+    return build_asset_calibration_review_lens(record)
+
+
 def _asset_calibration_record(
     asset: AssetRecord, index: int
 ) -> AssetCalibrationReviewRecord:
     sample_id = f"asset-review-{index:03d}"
-    return AssetCalibrationReviewRecord(
+    evidence = {
+        "value_components": asset.value_components,
+        "capabilities": asset.capabilities,
+        "needs": asset.needs,
+        "outcomes": asset.outcomes,
+        "lifecycle_state": asset.lifecycle_state,
+        "freshness_status": asset.freshness_status,
+        "confidence": asset.confidence,
+        "authority": "Generated calibration candidate; human review required.",
+    }
+    record = AssetCalibrationReviewRecord(
         review_id=stable_id("asset-calibration-review", sample_id, asset.asset_id),
         sample_id=sample_id,
         asset_id=asset.asset_id,
@@ -87,17 +729,10 @@ def _asset_calibration_record(
         asset_type=asset.asset_type,
         generated_value_score=asset.value_score,
         generated_value_band=_value_band(asset.value_score),  # type: ignore[arg-type]
-        evidence={
-            "value_components": asset.value_components,
-            "capabilities": asset.capabilities,
-            "needs": asset.needs,
-            "outcomes": asset.outcomes,
-            "lifecycle_state": asset.lifecycle_state,
-            "freshness_status": asset.freshness_status,
-            "confidence": asset.confidence,
-            "authority": "Generated calibration candidate; human review required.",
-        },
+        evidence=evidence,
     )
+    evidence["review_lens"] = build_asset_calibration_review_lens(record)
+    return record.model_copy(update={"evidence": evidence})
 
 
 def build_asset_calibration_review_template(
@@ -194,6 +829,7 @@ def build_asset_calibration_review_queue(
             continue
         if band != "all" and record.generated_value_band != band:
             continue
+        lens = _review_lens(record)
         items.append(
             {
                 "sample_id": record.sample_id,
@@ -203,6 +839,7 @@ def build_asset_calibration_review_queue(
                 "asset_type": record.asset_type,
                 "generated_value_score": record.generated_value_score,
                 "generated_value_band": record.generated_value_band,
+                "pattern_key": lens["pattern_key"],
                 "review_status": _review_status(record),
                 "labels": {
                     "score_rating": record.score_rating,
@@ -225,6 +862,7 @@ def build_asset_calibration_review_queue(
                         "authority",
                         "Generated calibration candidate; human review required.",
                     ),
+                    "review_lens": lens,
                 },
             }
         )
@@ -358,6 +996,7 @@ def asset_calibration_review_csv_rows(
     rows: list[dict[str, str]] = []
     for record in sorted(records, key=lambda item: item.sample_id):
         evidence = record.evidence
+        lens = _review_lens(record)
         rows.append(
             {
                 "sample_id": record.sample_id,
@@ -374,6 +1013,63 @@ def asset_calibration_review_csv_rows(
                 "lifecycle_state": str(evidence.get("lifecycle_state", "")),
                 "freshness_status": str(evidence.get("freshness_status", "")),
                 "confidence": str(evidence.get("confidence", "")),
+                "pattern_key": str(lens.get("pattern_key", "")),
+                "current_graph_role": str(lens.get("current_graph_role", "")),
+                "useful_to_future_agents": str(lens.get("useful_to_future_agents", "")),
+                "missing_or_combine_with": _json_cell(
+                    lens.get("missing_or_combine_with", [])
+                ),
+                "projected_value_lift": str(lens.get("projected_value_lift", "")),
+                "current_floor": str(lens.get("current_floor", "")),
+                "current_floor_basis": str(lens.get("current_floor_basis", "")),
+                "current_score_range": _json_cell(lens.get("current_score_range", {})),
+                "current_score_midpoint": str(lens.get("current_score_midpoint", "")),
+                "current_score_uncertainty": str(
+                    lens.get("current_score_uncertainty", "")
+                ),
+                "current_score_range_basis": str(
+                    lens.get("current_score_range_basis", "")
+                ),
+                "review_order": _json_cell(lens.get("review_order", [])),
+                "current_score_first_prompt": str(
+                    lens.get("current_score_first_prompt", "")
+                ),
+                "potential_ceiling": str(lens.get("potential_ceiling", "")),
+                "potential_ceiling_range": _json_cell(
+                    lens.get("potential_ceiling_range", {})
+                ),
+                "potential_ceiling_basis": str(lens.get("potential_ceiling_basis", "")),
+                "ceiling_confidence": str(lens.get("ceiling_confidence", "")),
+                "upside_gap": str(lens.get("upside_gap", "")),
+                "upside_delta": str(lens.get("upside_delta", "")),
+                "upside_delta_range": _json_cell(lens.get("upside_delta_range", {})),
+                "upside_delta_meaning": str(lens.get("upside_delta_meaning", "")),
+                "activation_requirements": _json_cell(
+                    lens.get("activation_requirements", [])
+                ),
+                "development_posture": str(lens.get("development_posture", "")),
+                "score_warning": str(lens.get("score_warning", "")),
+                "score_justification": str(lens.get("score_justification", "")),
+                "ceiling_justification": str(lens.get("ceiling_justification", "")),
+                "ceiling_activation_conditions": _json_cell(
+                    lens.get("ceiling_activation_conditions", [])
+                ),
+                "projection_review_cadence": str(
+                    lens.get("projection_review_cadence", "")
+                ),
+                "usage_feedback_prompt": str(lens.get("usage_feedback_prompt", "")),
+                "usage_feedback_command": str(lens.get("usage_feedback_command", "")),
+                "usage_feedback_fields": _json_cell(lens.get("usage_feedback_fields", [])),
+                "usage_feedback_instructions": _json_cell(
+                    lens.get("usage_feedback_instructions", [])
+                ),
+                "usage_feedback_scoring_methodology": _json_cell(
+                    lens.get("usage_feedback_scoring_methodology", {})
+                ),
+                "edge_evidence_summary": _json_cell(lens.get("high_signal_edges", [])),
+                "calibration_caution": str(lens.get("calibration_caution", "")),
+                "duplicate_review_prompt": str(lens.get("duplicate_review_prompt", "")),
+                "cluster_delta_prompt": str(lens.get("cluster_delta_prompt", "")),
                 "review_status": _review_status(record),
                 "reviewer": record.reviewer,
                 "score_rating": record.score_rating,
@@ -495,6 +1191,7 @@ def scoring_calibration_markdown(assets: list[AssetRecord], sample_size: int = 2
         "",
     ]
     for asset in sorted_assets[:sample_size]:
+        lens = _review_lens(_asset_calibration_record(asset, 0))
         lines.extend(
             [
                 f"### {asset.asset_id}",
@@ -503,6 +1200,32 @@ def scoring_calibration_markdown(assets: list[AssetRecord], sample_size: int = 2
                 f"- Needs: {', '.join(asset.needs) or 'none'}",
                 f"- Outcomes: {', '.join(asset.outcomes) or 'none'}",
                 f"- Components: `{asset.value_components}`",
+                f"- Current graph role: {lens['current_graph_role']}",
+                f"- Useful to future agents: {lens['useful_to_future_agents']}",
+                f"- Missing/combine with: {', '.join(lens['missing_or_combine_with'])}",
+                f"- Projected value lift: `{lens['projected_value_lift']}`",
+                f"- Current-score-first prompt: {lens['current_score_first_prompt']}",
+                f"- Current score range: `{lens['current_score_range']['low']}.."
+                f"{lens['current_score_range']['high']}` "
+                f"(midpoint `{lens['current_score_midpoint']}`, "
+                f"{lens['current_score_uncertainty']} uncertainty)",
+                f"- Floor/ceiling: `{lens['current_floor']}` current, "
+                f"`{lens['potential_ceiling_range']['low']}.."
+                f"{lens['potential_ceiling_range']['high']}` ceiling range, "
+                f"`{lens['ceiling_confidence']}` ceiling confidence",
+                f"- Upside delta: `{lens['upside_delta_range']['low']}.."
+                f"{lens['upside_delta_range']['high']}` band(s), "
+                f"`{lens['upside_gap']}` gap. {lens['upside_delta_meaning']}",
+                f"- Development posture: `{lens['development_posture']}`",
+                f"- Score warning: {lens['score_warning']}",
+                f"- Score justification: {lens['score_justification']}",
+                f"- Ceiling justification: {lens['ceiling_justification']}",
+                (
+                    "- Ceiling activation conditions: "
+                    f"{', '.join(lens['ceiling_activation_conditions']) or 'none'}"
+                ),
+                f"- Duplicate/variant check: {lens['duplicate_review_prompt']}",
+                f"- Cluster delta check: {lens['cluster_delta_prompt']}",
                 "- Human rating: `[ ] too high  [ ] about right  [ ] too low  [ ] unsure`",
                 "- Notes:",
                 "",
@@ -510,6 +1233,7 @@ def scoring_calibration_markdown(assets: list[AssetRecord], sample_size: int = 2
         )
     lines.extend(["## Low-Score Review Sample", ""])
     for asset in low_assets[:sample_size]:
+        lens = _review_lens(_asset_calibration_record(asset, 0))
         lines.extend(
             [
                 f"### {asset.asset_id}",
@@ -517,6 +1241,32 @@ def scoring_calibration_markdown(assets: list[AssetRecord], sample_size: int = 2
                 f"- Capabilities: {', '.join(asset.capabilities) or 'none'}",
                 f"- Needs: {', '.join(asset.needs) or 'none'}",
                 f"- Components: `{asset.value_components}`",
+                f"- Current graph role: {lens['current_graph_role']}",
+                f"- Useful to future agents: {lens['useful_to_future_agents']}",
+                f"- Missing/combine with: {', '.join(lens['missing_or_combine_with'])}",
+                f"- Projected value lift: `{lens['projected_value_lift']}`",
+                f"- Current-score-first prompt: {lens['current_score_first_prompt']}",
+                f"- Current score range: `{lens['current_score_range']['low']}.."
+                f"{lens['current_score_range']['high']}` "
+                f"(midpoint `{lens['current_score_midpoint']}`, "
+                f"{lens['current_score_uncertainty']} uncertainty)",
+                f"- Floor/ceiling: `{lens['current_floor']}` current, "
+                f"`{lens['potential_ceiling_range']['low']}.."
+                f"{lens['potential_ceiling_range']['high']}` ceiling range, "
+                f"`{lens['ceiling_confidence']}` ceiling confidence",
+                f"- Upside delta: `{lens['upside_delta_range']['low']}.."
+                f"{lens['upside_delta_range']['high']}` band(s), "
+                f"`{lens['upside_gap']}` gap. {lens['upside_delta_meaning']}",
+                f"- Development posture: `{lens['development_posture']}`",
+                f"- Score warning: {lens['score_warning']}",
+                f"- Score justification: {lens['score_justification']}",
+                f"- Ceiling justification: {lens['ceiling_justification']}",
+                (
+                    "- Ceiling activation conditions: "
+                    f"{', '.join(lens['ceiling_activation_conditions']) or 'none'}"
+                ),
+                f"- Duplicate/variant check: {lens['duplicate_review_prompt']}",
+                f"- Cluster delta check: {lens['cluster_delta_prompt']}",
                 "- Human rating: `[ ] too high  [ ] about right  [ ] too low  [ ] unsure`",
                 "- Notes:",
                 "",
@@ -529,6 +1279,9 @@ def scoring_calibration_markdown(assets: list[AssetRecord], sample_size: int = 2
             "- Which high-score assets are false positives?",
             "- Which low-score assets are false negatives?",
             "- Which value components appear overweighted or underweighted?",
+            "- Which assets are near duplicates, variants, superseded copies, or merge candidates?",
+            "- Which clusters need a delta review before any merge or deletion decision?",
+            "- Which projected future-value edges should stay notes until direct evidence exists?",
             "- What weight changes should be tested before any roadmap status changes?",
             "",
         ]
