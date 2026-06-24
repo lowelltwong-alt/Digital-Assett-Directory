@@ -18,6 +18,7 @@ from .proposals import (
     ProposalEngineOption,
     build_proposal_review_queue,
     import_proposal_review_csv,
+    load_roadmap_relevance_context,
     load_generated_proposals,
     load_proposal_reviews,
     run_proposal_engines,
@@ -303,6 +304,7 @@ def recommend_proposals(
             per_asset_limit=per_asset_limit,
             portfolio_limit=portfolio_limit,
             review_sample=review_sample,
+            roadmap_context=load_roadmap_relevance_context(cfg.repo_root),
         )
     paths = write_proposal_outputs(cfg.repo_root, bottom_up, top_down, comparison)
     console.print_json(

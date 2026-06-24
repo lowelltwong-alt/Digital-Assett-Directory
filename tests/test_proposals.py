@@ -12,6 +12,7 @@ from digital_asset_directory.models import (
     ProposalReviewRecord,
 )
 from digital_asset_directory.proposals import (
+    RoadmapRelevanceContext,
     build_proposal_indexes,
     build_proposal_review_queue,
     build_proposal_review_template,
@@ -94,6 +95,21 @@ def make_alert(asset_id: str) -> AlertRecord:
         asset_ids=[asset_id],
         evidence={"degree": 0},
         recommended_action="review",
+        scan_id="scan-test",
+    )
+
+
+def make_stale_alert(asset_id: str) -> AlertRecord:
+    return AlertRecord(
+        alert_id=f"alert-stale-{asset_id}",
+        created_at="2026-01-01T00:00:00+00:00",
+        alert_type="stale_asset",
+        severity="medium",
+        title=f"Stale {asset_id}",
+        description="test stale alert",
+        asset_ids=[asset_id],
+        evidence={"freshness_status": "stale"},
+        recommended_action="review freshness",
         scan_id="scan-test",
     )
 
@@ -289,6 +305,68 @@ def test_top_down_proposals_use_lifecycle_index_for_risk_review():
     assert "source owner" in proposal.known_risks[0]
 
 
+def test_top_down_ranking_uses_roadmap_relevance_review_burden_and_risk():
+    roadmap_asset = make_asset(
+        "roadmap-asset",
+        asset_type="document",
+        logical_path="processed/reports/scan_summary.md",
+        outcome="gate_review",
+    )
+    assets = [
+        roadmap_asset,
+        make_asset("target", need="evaluation_harness", outcome="unrelated"),
+        make_asset("provider", capability="evaluation_harness", outcome="unrelated"),
+    ]
+    roadmap_context = RoadmapRelevanceContext(
+        phase_tokens={
+            "phase-1-first-inventory": {
+                "processed",
+                "reports",
+                "scan",
+                "summary",
+                "source",
+                "mutation",
+                "check",
+            }
+        },
+        phase_statuses={"phase-1-first-inventory": "awaiting_human_gate"},
+        path_phase_ids={"processed/reports/scan_summary.md": ["phase-1-first-inventory"]},
+    )
+
+    proposals = generate_top_down_proposals(
+        assets,
+        [],
+        [make_stale_alert("roadmap-asset")],
+        "scan-test",
+        portfolio_limit=1,
+        roadmap_context=roadmap_context,
+    )
+
+    assert len(proposals) == 1
+    proposal = proposals[0]
+    assert proposal.proposal_type == "reduces_risk"
+    assert proposal.source_asset_ids == ["roadmap-asset"]
+    assert proposal.evidence["roadmap_phase_ids"] == ["phase-1-first-inventory"]
+    assert proposal.evidence["roadmap_relevance_score"] > 0
+    assert proposal.evidence["ranking_factors"] == {
+        "roadmap_relevance_boost": proposal.evidence["roadmap_relevance_score"],
+        "review_cost_penalty": 0.0,
+        "risk_penalty": 0.0,
+    }
+
+    comparison = run_proposal_engines(
+        assets=assets,
+        edges=[],
+        alerts=[make_stale_alert("roadmap-asset")],
+        scan_id="scan-test",
+        engine="top-down",
+        portfolio_limit=1,
+        roadmap_context=roadmap_context,
+    )[2]
+    assert comparison["top_down"]["roadmap_relevant_count"] == 1
+    assert comparison["top_down"]["roadmap_phase_coverage"] == 1
+
+
 def test_run_and_write_proposal_outputs(tmp_path: Path):
     assets = [
         make_asset("target", need="evaluation_harness"),
@@ -315,6 +393,8 @@ def test_run_and_write_proposal_outputs(tmp_path: Path):
     assert comparison["combined"]["authority_boundary_pass_rate"] == 1.0
     assert comparison["combined"]["estimated_review_cost_counts"]
     assert comparison["combined"]["estimated_integration_cost_counts"]
+    assert comparison["combined"]["roadmap_relevant_count"] == 0
+    assert comparison["combined"]["roadmap_phase_coverage"] == 0
     assert comparison["combined"]["human_usefulness_metrics_available"] is False
     assert comparison["review_sample_engine_counts"]["bottom_up_self_proposal"] == min(
         len(bottom_up), 2
@@ -327,6 +407,7 @@ def test_run_and_write_proposal_outputs(tmp_path: Path):
     comparison_text = Path(paths["comparison"]).read_text(encoding="utf-8")
     assert "Proposal Engine Comparison" in comparison_text
     assert "Actionable experiment rate" in comparison_text
+    assert "Roadmap relevance rate" in comparison_text
     assert "Human usefulness metrics available: **False**" in comparison_text
     assert "Engine labels are hidden" in Path(paths["review_sample"]).read_text(encoding="utf-8")
     assert "Proposal Calibration Summary" in Path(paths["calibration_summary"]).read_text(

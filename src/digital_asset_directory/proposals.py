@@ -90,6 +90,37 @@ ASSET_TYPE_SUPPORT_PROPOSALS: tuple[tuple[str, ProposalType, str], ...] = (
 ASSET_TYPE_SUPPORT_TYPES = {
     asset_type for asset_type, _, _ in ASSET_TYPE_SUPPORT_PROPOSALS
 }
+RANKING_REVIEW_COST_PENALTIES = {"low": 0.0, "medium": 0.015, "high": 0.035}
+RANKING_RISK_PENALTIES = {"low": 0.0, "medium": 0.01, "high": 0.03}
+ROADMAP_RELEVANCE_STOPWORDS = {
+    "acceptance",
+    "asset",
+    "assets",
+    "awaiting",
+    "candidate",
+    "check",
+    "complete",
+    "computed",
+    "declared",
+    "evidence",
+    "gate",
+    "gates",
+    "human",
+    "phase",
+    "planned",
+    "review",
+    "reviewed",
+    "source",
+    "status",
+    "unverified",
+}
+
+
+@dataclass
+class RoadmapRelevanceContext:
+    phase_tokens: dict[str, set[str]]
+    phase_statuses: dict[str, str]
+    path_phase_ids: dict[str, list[str]]
 
 
 @dataclass
@@ -132,6 +163,44 @@ def _asset_tokens(asset: AssetRecord) -> set[str]:
         | set(asset.needs)
         | set(asset.outcomes)
         | metadata_tokens
+    )
+
+
+def _normalized_logical_path(path: str) -> str:
+    return path.replace("\\", "/").lstrip("./").lower()
+
+
+def _roadmap_tokens(text: str) -> set[str]:
+    return tokens(text) - ROADMAP_RELEVANCE_STOPWORDS
+
+
+def load_roadmap_relevance_context(repo_root: Path) -> RoadmapRelevanceContext:
+    from .roadmap import check_roadmap
+
+    state = check_roadmap(repo_root, update=False)
+    phase_tokens: dict[str, set[str]] = {}
+    phase_statuses: dict[str, str] = {}
+    path_phase_ids: dict[str, list[str]] = defaultdict(list)
+    for phase_id, phase in sorted(state.get("phases", {}).items()):
+        computed_status = str(phase.get("computed_status", "unknown"))
+        phase_statuses[phase_id] = computed_status
+        materials = [
+            phase_id,
+            str(phase.get("declared_status", "")),
+            computed_status,
+            *phase.get("missing", []),
+            *phase.get("evidence", []),
+            *phase.get("human_gates_unverified", []),
+        ]
+        phase_tokens[phase_id] = _roadmap_tokens(" ".join(materials))
+        for path in [*phase.get("missing", []), *phase.get("evidence", [])]:
+            normalized = _normalized_logical_path(str(path))
+            if normalized:
+                path_phase_ids[normalized].append(phase_id)
+    return RoadmapRelevanceContext(
+        phase_tokens=phase_tokens,
+        phase_statuses=phase_statuses,
+        path_phase_ids={path: sorted(set(ids)) for path, ids in path_phase_ids.items()},
     )
 
 
@@ -306,6 +375,105 @@ def _new_proposal(
     if proposal.review_status != "generated_candidate":
         return None
     return proposal
+
+
+def _roadmap_relevance_evidence(
+    proposal: ProposalRecord,
+    assets_by_id: dict[str, AssetRecord],
+    roadmap_context: RoadmapRelevanceContext | None,
+) -> dict[str, Any]:
+    if roadmap_context is None:
+        return {
+            "roadmap_relevance_score": 0.0,
+            "roadmap_phase_ids": [],
+            "roadmap_direct_path_phase_ids": [],
+            "roadmap_overlap_terms": {},
+        }
+
+    primary_asset_ids = proposal.target_asset_ids or proposal.source_asset_ids
+    involved_assets = [
+        assets_by_id[asset_id]
+        for asset_id in primary_asset_ids
+        if asset_id in assets_by_id
+    ]
+
+    def asset_roadmap_tokens(asset: AssetRecord) -> set[str]:
+        return (
+            _asset_tokens(asset)
+            | _roadmap_tokens(f"{asset.asset_type} {asset.lifecycle_state} {asset.logical_path}")
+        ) - ROADMAP_RELEVANCE_STOPWORDS
+
+    proposal_tokens = (
+        _roadmap_tokens(f"{proposal.proposal_type} {' '.join(proposal.need_ids)}")
+        | {
+            token
+            for asset in involved_assets
+            for token in asset_roadmap_tokens(asset)
+        }
+    )
+    direct_phase_ids: set[str] = set()
+    for asset in involved_assets:
+        direct_phase_ids.update(
+            roadmap_context.path_phase_ids.get(_normalized_logical_path(asset.logical_path), [])
+        )
+
+    overlap_terms: dict[str, list[str]] = {}
+    has_need_context = bool(proposal.need_ids)
+    for phase_id, phase_tokens in sorted(roadmap_context.phase_tokens.items()):
+        if roadmap_context.phase_statuses.get(phase_id) == "complete":
+            continue
+        overlap = sorted(proposal_tokens & phase_tokens)
+        if phase_id in direct_phase_ids or (has_need_context and len(overlap) >= 3):
+            overlap_terms[phase_id] = overlap[:8]
+
+    matched_phase_ids = sorted(set(overlap_terms) | direct_phase_ids)
+    score = min(
+        0.18,
+        0.06 * len(direct_phase_ids)
+        + 0.025 * len(matched_phase_ids)
+        + 0.005 * max((len(terms) for terms in overlap_terms.values()), default=0),
+    )
+    return {
+        "roadmap_relevance_score": round(score, 4),
+        "roadmap_phase_ids": matched_phase_ids,
+        "roadmap_direct_path_phase_ids": sorted(direct_phase_ids),
+        "roadmap_overlap_terms": overlap_terms,
+    }
+
+
+def _append_top_down_candidate(
+    candidates: list[tuple[float, ProposalRecord]],
+    proposal: ProposalRecord | None,
+    *,
+    assets_by_id: dict[str, AssetRecord],
+    roadmap_context: RoadmapRelevanceContext | None,
+) -> None:
+    if not proposal:
+        return
+    base_score = float(proposal.evidence["score"])
+    relevance = _roadmap_relevance_evidence(proposal, assets_by_id, roadmap_context)
+    review_cost_penalty = RANKING_REVIEW_COST_PENALTIES[proposal.estimated_review_cost]
+    risk_penalty = RANKING_RISK_PENALTIES[proposal.risk]
+    ranking_score = max(
+        0.0,
+        min(
+            0.98,
+            base_score
+            + float(relevance["roadmap_relevance_score"])
+            - review_cost_penalty
+            - risk_penalty,
+        ),
+    )
+    proposal.evidence["base_score"] = round(base_score, 4)
+    proposal.evidence.update(relevance)
+    proposal.evidence["ranking_score"] = round(ranking_score, 4)
+    proposal.evidence["ranking_factors"] = {
+        "roadmap_relevance_boost": relevance["roadmap_relevance_score"],
+        "review_cost_penalty": review_cost_penalty,
+        "risk_penalty": risk_penalty,
+    }
+    proposal.confidence = _confidence_label(ranking_score)
+    candidates.append((ranking_score, proposal))
 
 
 def _asset_type_support_candidates(
@@ -530,6 +698,7 @@ def generate_top_down_proposals(
     scan_id: str,
     portfolio_limit: int = 20,
     generated_at: str | None = None,
+    roadmap_context: RoadmapRelevanceContext | None = None,
 ) -> list[ProposalRecord]:
     indexes = build_proposal_indexes(assets, edges, alerts)
     generated = generated_at or utc_now()
@@ -569,8 +738,12 @@ def generate_top_down_proposals(
                 generated_at=generated,
                 score=score,
             )
-            if proposal:
-                candidates.append((float(proposal.evidence["score"]), proposal))
+            _append_top_down_candidate(
+                candidates,
+                proposal,
+                assets_by_id=indexes.by_id,
+                roadmap_context=roadmap_context,
+            )
         elif needers:
             score = min(0.86, 0.48 + 0.06 * len(needers))
             proposal = _new_proposal(
@@ -603,8 +776,12 @@ def generate_top_down_proposals(
                     "External research may require license, provenance, security, and compatibility review."
                 ],
             )
-            if proposal:
-                candidates.append((float(proposal.evidence["score"]), proposal))
+            _append_top_down_candidate(
+                candidates,
+                proposal,
+                assets_by_id=indexes.by_id,
+                roadmap_context=roadmap_context,
+            )
 
     for orphan_id in sorted(indexes.orphan_asset_ids):
         orphan = indexes.eligible.get(orphan_id)
@@ -654,8 +831,12 @@ def generate_top_down_proposals(
             generated_at=generated,
             score=0.7 + 0.03 * len(helper_ids),
         )
-        if proposal:
-            candidates.append((float(proposal.evidence["score"]), proposal))
+        _append_top_down_candidate(
+            candidates,
+            proposal,
+            assets_by_id=indexes.by_id,
+            roadmap_context=roadmap_context,
+        )
 
     for lifecycle_state in sorted(LIFECYCLE_RISK_STATES):
         lifecycle_assets = indexes.assets_by_lifecycle.get(lifecycle_state, [])
@@ -694,8 +875,12 @@ def generate_top_down_proposals(
             generated_at=generated,
             score=min(0.88, 0.58 + 0.04 * len(lifecycle_assets)),
         )
-        if proposal:
-            candidates.append((float(proposal.evidence["score"]), proposal))
+        _append_top_down_candidate(
+            candidates,
+            proposal,
+            assets_by_id=indexes.by_id,
+            roadmap_context=roadmap_context,
+        )
 
     stale_alerts = [alert for alert in alerts if alert.alert_type == "stale_asset"]
     for alert in sorted(stale_alerts, key=lambda record: record.alert_id):
@@ -725,8 +910,12 @@ def generate_top_down_proposals(
             generated_at=generated,
             score=0.62,
         )
-        if proposal:
-            candidates.append((float(proposal.evidence["score"]), proposal))
+        _append_top_down_candidate(
+            candidates,
+            proposal,
+            assets_by_id=indexes.by_id,
+            roadmap_context=roadmap_context,
+        )
 
     unique: dict[str, ProposalRecord] = {}
     for _, proposal in sorted(
@@ -779,6 +968,16 @@ def _proposal_metrics(proposals: list[ProposalRecord]) -> dict[str, Any]:
     research_missing_part = [
         proposal for proposal in proposals if proposal.proposal_type == "research_missing_part"
     ]
+    roadmap_relevant = [
+        proposal
+        for proposal in proposals
+        if float(proposal.evidence.get("roadmap_relevance_score", 0.0)) > 0
+    ]
+    roadmap_phase_ids = {
+        phase_id
+        for proposal in proposals
+        for phase_id in proposal.evidence.get("roadmap_phase_ids", [])
+    }
     return {
         "proposal_count": total,
         "distinct_needs_covered": len(needs),
@@ -806,6 +1005,10 @@ def _proposal_metrics(proposals: list[ProposalRecord]) -> dict[str, Any]:
         ),
         "external_review_risk_count": len(external_review_risks),
         "research_missing_part_count": len(research_missing_part),
+        "roadmap_relevant_count": len(roadmap_relevant),
+        "roadmap_relevance_rate": round(len(roadmap_relevant) / total, 4) if total else 0.0,
+        "roadmap_phase_coverage": len(roadmap_phase_ids),
+        "roadmap_phase_ids": sorted(roadmap_phase_ids),
         "human_usefulness_metrics_available": False,
         "proposal_types": dict(Counter(proposal.proposal_type for proposal in proposals)),
     }
@@ -1617,6 +1820,10 @@ def comparison_markdown(comparison: dict[str, Any]) -> str:
                 f"- Estimated integration cost counts: `{metrics['estimated_integration_cost_counts']}`",
                 f"- External review risk count: **{metrics['external_review_risk_count']}**",
                 f"- Research missing-part count: **{metrics['research_missing_part_count']}**",
+                f"- Roadmap relevant count: **{metrics['roadmap_relevant_count']}**",
+                f"- Roadmap relevance rate: **{metrics['roadmap_relevance_rate']}**",
+                f"- Roadmap phase coverage: **{metrics['roadmap_phase_coverage']}**",
+                f"- Roadmap phase IDs: `{metrics['roadmap_phase_ids']}`",
                 f"- Human usefulness metrics available: **{metrics['human_usefulness_metrics_available']}**",
                 f"- Proposal types: `{metrics['proposal_types']}`",
                 "",
@@ -1767,6 +1974,7 @@ def run_proposal_engines(
     portfolio_limit: int = 20,
     review_sample: int = 25,
     generated_at: str | None = None,
+    roadmap_context: RoadmapRelevanceContext | None = None,
 ) -> tuple[list[ProposalRecord], list[ProposalRecord], dict[str, Any]]:
     generated = generated_at or utc_now()
     bottom_up: list[ProposalRecord] = []
@@ -1777,7 +1985,7 @@ def run_proposal_engines(
         )
     if engine in {"top-down", "both"}:
         top_down = generate_top_down_proposals(
-            assets, edges, alerts, scan_id, portfolio_limit, generated
+            assets, edges, alerts, scan_id, portfolio_limit, generated, roadmap_context
         )
     comparison = build_proposal_comparison(bottom_up, top_down, review_sample)
     return bottom_up, top_down, comparison
