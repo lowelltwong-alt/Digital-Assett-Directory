@@ -1,5 +1,5 @@
 {
-  "last_checked_at": "2026-06-24T00:57:02.127768+00:00",
+  "last_checked_at": "2026-06-24T18:50:33.446474+00:00",
   "phases": {
     "phase-0-seed": {
       "commands_declared_not_executed_by_check": [
@@ -39,19 +39,19 @@
     },
     "phase-2-calibration": {
       "commands_declared_not_executed_by_check": [],
-      "computed_status": "planned",
+      "computed_status": "awaiting_human_gate",
       "declared_status": "planned",
-      "evidence": [],
+      "evidence": [
+        "processed/reports/scoring_calibration.md",
+        "processed/reports/orphan_review_sample.md",
+        "processed/reports/synergy_review_sample.md"
+      ],
       "human_gates_unverified": [
         "at least 50 reviewed asset ratings",
         "false-positive and false-negative notes captured",
         "weight changes documented"
       ],
-      "missing": [
-        "processed/reports/scoring_calibration.md",
-        "processed/reports/orphan_review_sample.md",
-        "processed/reports/synergy_review_sample.md"
-      ]
+      "missing": []
     },
     "phase-3-downstream-governance": {
       "commands_declared_not_executed_by_check": [],

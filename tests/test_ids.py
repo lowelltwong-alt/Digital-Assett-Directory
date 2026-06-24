@@ -1,4 +1,8 @@
+import pytest
+
 from digital_asset_directory.ids import asset_id, revision_id
+
+pytestmark = pytest.mark.unit
 
 
 def test_asset_identity_is_stable_and_revision_is_content_specific():

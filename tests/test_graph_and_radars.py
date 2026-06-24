@@ -2,6 +2,10 @@ from digital_asset_directory.graph_engine import build_edges
 from digital_asset_directory.models import AssetRecord
 from digital_asset_directory.radars import detect_synergies, generate_alerts, activation_triggers
 
+import pytest
+
+pytestmark = pytest.mark.unit
+
 
 def asset(aid, title, capabilities=None, needs=None, outcomes=None, tags=None, value=70):
     return AssetRecord(

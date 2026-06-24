@@ -3,6 +3,10 @@ from pathlib import Path
 from digital_asset_directory.database import CatalogDB
 from digital_asset_directory.learning import preflight, postflight
 
+import pytest
+
+pytestmark = pytest.mark.integration
+
 
 def test_preflight_postflight_closes_session_and_persists(tmp_path: Path):
     hub = tmp_path / "hub"

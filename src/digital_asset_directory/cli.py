@@ -20,8 +20,8 @@ from .catalog import catalog_status, run_scan
 from .config import load_config
 from .context_pack import build_context_pack, write_context_pack
 from .database import CatalogDB
-from .governance import enforce_postflight, install_governance
-from .learning import add_lesson, postflight, preflight
+from .governance import enforce_postflight, install_governance, scaffold_new_repo
+from .learning import add_lesson, postflight, preflight, rebuild_lesson_routes
 from .orphan_adapter import run_orphan_radar
 from .proposals import (
     ProposalEngineOption,
@@ -168,6 +168,14 @@ def lesson_add(
     console.print(record.lesson_id)
 
 
+@lesson_app.command("reindex")
+def lesson_reindex(hub: Optional[Path] = typer.Option(None)) -> None:
+    """Rebuild by-repo and by-capability lesson indexes from canonical lesson files."""
+    cfg = _cfg(hub=hub)
+    result = rebuild_lesson_routes(cfg.repo_root)
+    console.print_json(data=result)
+
+
 @agent_app.command("preflight")
 def agent_preflight(
     repository: Path = typer.Option(Path("."), "--repo"),
@@ -240,6 +248,18 @@ def agent_install(
 ) -> None:
     cfg = _cfg(hub=hub)
     changed = install_governance(repository, cfg.repo_root, force)
+    console.print("\n".join(str(path) for path in changed))
+
+
+@agent_app.command("new")
+def agent_new(
+    repository: Path = typer.Option(..., "--repo"),
+    name: Optional[str] = typer.Option(None, "--name"),
+    hub: Optional[Path] = typer.Option(None),
+) -> None:
+    """Scaffold a new repository already wired to this hub (starter files + governance)."""
+    cfg = _cfg(hub=hub)
+    changed = scaffold_new_repo(repository, cfg.repo_root, name)
     console.print("\n".join(str(path) for path in changed))
 
 

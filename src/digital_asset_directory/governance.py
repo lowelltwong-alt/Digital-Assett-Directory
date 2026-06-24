@@ -106,6 +106,51 @@ def install_governance(target_repo: Path, hub_root: Path, force: bool = False) -
     return changed
 
 
+STARTER_GITIGNORE = """__pycache__/
+*.pyc
+.venv/
+venv/
+.env
+.env.*
+*.pem
+*.key
+dist/
+build/
+"""
+
+
+def scaffold_new_repo(target_repo: Path, hub_root: Path, name: str | None = None) -> list[Path]:
+    """Create a new repository pre-wired to the hub: starter files + governance install.
+
+    Git init and `core.hooksPath` are handled by `scripts/new_repo.ps1` so this stays
+    import-safe and unit-testable without a git dependency.
+    """
+    target_repo = target_repo.resolve()
+    hub_root = hub_root.resolve()
+    target_repo.mkdir(parents=True, exist_ok=True)
+    project_name = name or target_repo.name
+    changed: list[Path] = []
+
+    readme = target_repo / "README.md"
+    if not readme.exists():
+        atomic_write_text(
+            readme,
+            f"# {project_name}\n\n"
+            f"Connected to the Digital Asset Directory hub at `{hub_root}`.\n\n"
+            "Before material AI work run the hub preflight; before reporting completion run "
+            "the postflight. See `AGENTS.md` and `DIGITAL_ASSET_DIRECTORY_HANDOFF.md`.\n",
+        )
+        changed.append(readme)
+
+    gitignore = target_repo / ".gitignore"
+    if not gitignore.exists():
+        atomic_write_text(gitignore, STARTER_GITIGNORE)
+        changed.append(gitignore)
+
+    changed.extend(install_governance(target_repo, hub_root))
+    return changed
+
+
 def enforce_postflight(hub_root: Path, target_repo: Path) -> tuple[bool, str]:
     pending = open_sessions(hub_root, target_repo)
     if pending:

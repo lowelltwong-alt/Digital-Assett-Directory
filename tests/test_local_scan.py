@@ -5,6 +5,10 @@ from digital_asset_directory.local_scan import scan_local_source
 from digital_asset_directory.scoring import DEFAULT_WEIGHTS
 from digital_asset_directory.utils import sha256_file
 
+import pytest
+
+pytestmark = pytest.mark.integration
+
 
 def test_local_scan_is_read_only_and_redacts_excerpt(tmp_path: Path):
     repo = tmp_path / "project"

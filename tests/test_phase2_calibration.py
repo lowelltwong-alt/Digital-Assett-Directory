@@ -2,6 +2,7 @@ from pathlib import Path
 import csv
 import json
 
+import pytest
 from jsonschema import Draft202012Validator
 
 from digital_asset_directory.calibration import (
@@ -22,6 +23,8 @@ from digital_asset_directory.models import (
     AssetRecord,
     SynergyRecord,
 )
+
+pytestmark = pytest.mark.calibration
 
 
 def make_asset(

@@ -2,6 +2,7 @@ import csv
 import json
 from pathlib import Path
 
+import pytest
 from jsonschema import Draft202012Validator
 
 from digital_asset_directory.models import (
@@ -31,6 +32,8 @@ from digital_asset_directory.proposals import (
     write_proposal_review_results_summary,
     write_proposal_outputs,
 )
+
+pytestmark = pytest.mark.proposals
 
 
 def make_asset(

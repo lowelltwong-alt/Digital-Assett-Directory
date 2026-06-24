@@ -26,7 +26,10 @@ dev = [
   "ruff>=0.5,<1",
   "mypy>=1.10,<2",
   "types-PyYAML>=6.0,<7",
-  "types-requests>=2.32,<3"
+  "types-requests>=2.32,<3",
+  "nox>=2024.4.15",
+  "pytest-testmon>=2.1",
+  "pytest-picked>=0.5"
 ]
 
 [project.scripts]
@@ -37,7 +40,18 @@ where = ["src"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
-addopts = "-q"
+addopts = "-q --strict-markers -m 'not network'"
+filterwarnings = [
+  "ignore:GitWildMatchPattern:DeprecationWarning",
+]
+markers = [
+  "unit: fast, pure-logic tests with no filesystem, sqlite, or network",
+  "integration: tests that touch the filesystem, sqlite, or the full pipeline",
+  "network: tests that reach external services (GitHub); deselected by default",
+  "slow: long-running tests; deselect with -m 'not slow'",
+  "proposals: proposal-engine tests",
+  "calibration: calibration-workflow tests",
+]
 
 [tool.ruff]
 line-length = 100

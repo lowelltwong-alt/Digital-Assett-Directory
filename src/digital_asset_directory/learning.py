@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import re
 import subprocess
 from pathlib import Path
 from typing import Any
@@ -25,6 +26,80 @@ def git_changed_files(repo: Path) -> list[str]:
     return [
         line[3:] if len(line) > 3 else line for line in result.stdout.splitlines() if line.strip()
     ]
+
+
+def _slug(value: str) -> str:
+    slug = re.sub(r"[^a-z0-9]+", "-", value.lower()).strip("-")
+    return slug[:80] or "unknown"
+
+
+def _lesson_pointer(record: LessonRecord) -> dict[str, Any]:
+    dated = record.created_at[:10]
+    return {
+        "lesson_id": record.lesson_id,
+        "created_at": record.created_at,
+        "repository": record.repository,
+        "summary": record.summary,
+        "reusable_patterns": record.reusable_patterns,
+        "missing_capabilities": record.missing_capabilities,
+        "session_id": record.session_id,
+        "source_path": f"raw/lessons/{dated}/{record.lesson_id.split(':')[-1]}.json",
+    }
+
+
+def route_lesson(repo_root: Path, record: LessonRecord) -> list[Path]:
+    """Append a context-rich pointer to repo- and capability-scoped lesson indexes.
+
+    The dated canonical JSON under raw/lessons/<date>/ stays the source of truth; these
+    append-only JSONL indexes make a lesson findable by repository and by capability,
+    instead of only by the date it was captured.
+    """
+    pointer = _lesson_pointer(record)
+    base = repo_root / "raw" / "lessons"
+    written: list[Path] = []
+
+    repo_name = Path(record.repository).name if record.repository else "unknown"
+    repo_index = base / "by-repo" / f"{_slug(repo_name)}.jsonl"
+    append_jsonl(repo_index, pointer)
+    written.append(repo_index)
+
+    for capability in sorted(dict.fromkeys(record.missing_capabilities or ["_general"])):
+        cap_index = base / "by-capability" / f"{_slug(capability)}.jsonl"
+        append_jsonl(cap_index, pointer)
+        written.append(cap_index)
+    return written
+
+
+def rebuild_lesson_routes(repo_root: Path) -> dict[str, Any]:
+    """Rebuild by-repo and by-capability indexes from the canonical dated lesson files.
+
+    Indexes are append-only at capture time, so re-running this dedupes by lesson_id.
+    """
+    base = repo_root / "raw" / "lessons"
+    for sub in ("by-repo", "by-capability"):
+        target = base / sub
+        if target.exists():
+            for path in target.glob("*.jsonl"):
+                path.unlink()
+    seen: set[str] = set()
+    indexed = 0
+    for path in sorted(base.glob("*/*.json")):
+        if path.parent.name in {"by-repo", "by-capability"}:
+            continue
+        try:
+            record = LessonRecord.model_validate_json(path.read_text(encoding="utf-8"))
+        except Exception:
+            continue
+        if record.lesson_id in seen:
+            continue
+        seen.add(record.lesson_id)
+        route_lesson(repo_root, record)
+        indexed += 1
+    return {
+        "lessons_indexed": indexed,
+        "by_repo_dir": str(base / "by-repo"),
+        "by_capability_dir": str(base / "by-capability"),
+    }
 
 
 def add_lesson(repo_root: Path, database_path: Path, **kwargs: Any) -> LessonRecord:
@@ -57,6 +132,7 @@ def add_lesson(repo_root: Path, database_path: Path, **kwargs: Any) -> LessonRec
         repo_root / "raw" / "lessons" / dated / f"{record.lesson_id.split(':')[-1]}.json",
         record.model_dump(mode="json"),
     )
+    route_lesson(repo_root, record)
     append_jsonl(
         repo_root / "audit" / "events" / f"{dated}.jsonl",
         {

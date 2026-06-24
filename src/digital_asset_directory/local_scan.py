@@ -8,7 +8,7 @@ from typing import Iterable
 from pathspec import PathSpec
 
 from .config import LocalSource, Settings
-from .extractors import classify_asset, extract_bytes, freshness_status
+from .extractors import ExtractedContent, classify_asset, extract_bytes, freshness_status
 from .ids import asset_id, revision_id
 from .models import AssetRecord
 from .scoring import score_asset
@@ -128,6 +128,7 @@ def scan_local_source(
         if repo_root:
             parent_id = repo_asset_ids[repo_root]
         skipped_content = size > source.max_file_bytes
+        extracted: ExtractedContent
         if skipped_content:
             extracted = {
                 "title": path.stem or path.name,

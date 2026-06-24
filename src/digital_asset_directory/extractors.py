@@ -3,7 +3,7 @@ from __future__ import annotations
 import mimetypes
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any, Literal
+from typing import Literal, TypedDict
 
 from .utils import redact_sensitive_text, tokens
 
@@ -217,7 +217,16 @@ def _matches(text: str, mapping: dict[str, tuple[str, ...]]) -> list[str]:
     )
 
 
-def infer_semantics(path: str, text: str) -> dict[str, Any]:
+class SemanticFields(TypedDict):
+    """Semantic labels inferred from an asset's path and (redacted) text."""
+
+    tags: list[str]
+    capabilities: list[str]
+    needs: list[str]
+    outcomes: list[str]
+
+
+def infer_semantics(path: str, text: str) -> SemanticFields:
     combined = f"{path}\n{text[:50000]}"
     tags = _matches(combined, KEYWORD_MAP)
     capabilities = _matches(combined, CAPABILITIES)
@@ -234,9 +243,27 @@ def infer_semantics(path: str, text: str) -> dict[str, Any]:
     }
 
 
+class ExtractedContent(SemanticFields):
+    """Everything `scan_local_source` persists for a single scanned file.
+
+    Shared by both extraction branches: `extract_bytes` (file read and decoded)
+    and the skipped-content placeholder built when a file exceeds the size limit.
+    Keeping it a single TypedDict documents the contract and lets mypy type the
+    individual fields (title, tags, ...) instead of falling back to `object`.
+    """
+
+    title: str
+    description: str
+    excerpt: str
+    text_tokens: list[str]
+    mime_type: str
+    decode_error: bool
+    redaction_count: int
+
+
 def extract_bytes(
     path: str, data: bytes, excerpt_chars: int, redact: bool = True
-) -> dict[str, Any]:
+) -> ExtractedContent:
     text = ""
     decode_error = False
     if is_probably_text(Path(path)):
@@ -245,23 +272,28 @@ def extract_bytes(
         except UnicodeDecodeError:
             text = data.decode("utf-8", errors="replace")
             decode_error = True
-    excerpt = text[:excerpt_chars]
+    # Redact secrets from the raw text once, then derive every persisted field
+    # (title, description, excerpt, tokens, semantics) from the redacted copy. The
+    # excerpt is not the only sink: tokens, title, and description are exported to the
+    # catalog and context packs, so redacting only the excerpt would still leak.
     redaction_count = 0
-    if redact and excerpt:
-        excerpt, redaction_count = redact_sensitive_text(excerpt)
-    semantic = infer_semantics(path, text)
+    safe_text = text
+    if redact and text:
+        safe_text, redaction_count = redact_sensitive_text(text)
+    excerpt = safe_text[:excerpt_chars]
+    semantic = infer_semantics(path, safe_text)
     return {
-        "title": extract_title(path, text),
+        "title": extract_title(path, safe_text),
         "description": next(
             (
                 line.strip()
-                for line in text.splitlines()
+                for line in safe_text.splitlines()
                 if line.strip() and not line.lstrip().startswith(("#", "---"))
             ),
             "",
         )[:500],
         "excerpt": excerpt,
-        "text_tokens": sorted(tokens(f"{path} {text[:20000]}"))[:1000],
+        "text_tokens": sorted(tokens(f"{path} {safe_text[:20000]}"))[:1000],
         "mime_type": mimetypes.guess_type(path)[0] or "application/octet-stream",
         "decode_error": decode_error,
         "redaction_count": redaction_count,

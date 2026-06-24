@@ -3,7 +3,11 @@ import json
 import yaml
 
 from digital_asset_directory.catalog import run_scan
+import pytest
+
 from digital_asset_directory.config import load_config
+
+pytestmark = pytest.mark.integration
 
 
 def test_local_catalog_pipeline_writes_outputs(tmp_path: Path):

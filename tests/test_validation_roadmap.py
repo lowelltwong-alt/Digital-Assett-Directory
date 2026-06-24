@@ -3,6 +3,10 @@ from pathlib import Path
 from digital_asset_directory.roadmap import check_roadmap
 from digital_asset_directory.validation import validate_repo
 
+import pytest
+
+pytestmark = pytest.mark.integration
+
 ROOT = Path(__file__).resolve().parents[1]
 
 

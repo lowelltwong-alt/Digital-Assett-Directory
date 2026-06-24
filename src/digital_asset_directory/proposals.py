@@ -630,7 +630,9 @@ def generate_bottom_up_proposals(
                 score = 0.72 + 0.05 * len(shared_outcomes) + 0.03 * len(edge_evidence)
                 if target.asset_id in indexes.orphan_asset_ids:
                     score += 0.08
-                proposal_type = "activates_orphan" if is_weak else "satisfies_need"
+                proposal_type: ProposalType = (
+                    "activates_orphan" if is_weak else "satisfies_need"
+                )
                 proposal = _new_proposal(
                     engine="bottom_up_self_proposal",
                     proposal_type=proposal_type,

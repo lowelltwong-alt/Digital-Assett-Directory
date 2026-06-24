@@ -1,5 +1,9 @@
 from digital_asset_directory.models import AssetRecord
+import pytest
+
 from digital_asset_directory.recommendations import recommend_skills_and_agents, recommend_swarm
+
+pytestmark = pytest.mark.unit
 
 
 def make_asset(

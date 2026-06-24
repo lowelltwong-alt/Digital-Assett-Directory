@@ -12,7 +12,8 @@ from typing import Any, Iterable
 WORD_RE = re.compile(r"[A-Za-z][A-Za-z0-9_+.#/-]{1,63}")
 SECRET_PATTERNS = [
     re.compile(
-        r"(?i)(api[_-]?key|token|secret|password|passwd|client[_-]?secret)\s*[:=]\s*([^\s,;]+)"
+        r"(?i)(api[_-]?key|token|secret|password|passwd|client[_-]?secret)"
+        r"""["']?\s*[:=]\s*["']?([^\s,;"']+)"""
     ),
     re.compile(
         r"-----BEGIN (?:RSA |EC |OPENSSH )?PRIVATE KEY-----.*?-----END (?:RSA |EC |OPENSSH )?PRIVATE KEY-----",

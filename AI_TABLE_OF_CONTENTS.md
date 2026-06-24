@@ -54,8 +54,10 @@
 - `docs/OPERATIONS.md`
 - `docs/PROPOSAL_ENGINE_CALIBRATION_WORKFLOW.md` — operational workflow for reviewing bottom-up and top-down proposal engines
 - `docs/DOWNSTREAM_REPO_GOVERNANCE.md`
+- `docs/TESTING_AND_ORCHESTRATION.md` — marker taxonomy, change-driven test selection, and nox tasks
 - `scripts/bootstrap.ps1`
 - `scripts/install_to_target.ps1`
+- `scripts/new_repo.ps1` — scaffold a new repository pre-wired to this hub
 - `scripts/claude_hook.py`
 - `scripts/register_scheduled_scan.ps1`
 - `scripts/unregister_scheduled_scan.ps1`
