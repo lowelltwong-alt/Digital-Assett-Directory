@@ -18,6 +18,7 @@ from .proposals import (
     ProposalEngineOption,
     load_proposal_reviews,
     run_proposal_engines,
+    update_proposal_review_file,
     write_proposal_calibration_evidence,
     write_proposal_outputs,
     write_proposal_review_results_summary,
@@ -324,6 +325,50 @@ def recommend_proposal_review_summary(
     reviews = load_proposal_reviews(path)
     summary, output = write_proposal_review_results_summary(cfg.repo_root, reviews, path)
     console.print_json(data={"review_file": str(path), "output": output, "summary": summary})
+
+
+@recommend_app.command("proposal-review-label")
+def recommend_proposal_review_label(
+    hub: Optional[Path] = typer.Option(None),
+    review_file: Optional[Path] = typer.Option(None, "--review-file"),
+    sample_id: Optional[str] = typer.Option(None, "--sample-id"),
+    proposal_id: Optional[str] = typer.Option(None, "--proposal-id"),
+    reviewer: Optional[str] = typer.Option(None, "--reviewer"),
+    usefulness: Optional[str] = typer.Option(None, "--usefulness"),
+    safety: Optional[str] = typer.Option(None, "--safety"),
+    novelty: Optional[str] = typer.Option(None, "--novelty"),
+    actionability: Optional[str] = typer.Option(None, "--actionability"),
+    decision: Optional[str] = typer.Option(None, "--decision"),
+    notes: Optional[str] = typer.Option(None, "--notes"),
+) -> None:
+    """Update one proposal review JSONL record with human calibration labels."""
+    cfg = _cfg(hub=hub)
+    path = review_file or cfg.repo_root / "processed" / "proposals" / "proposal_review_template.jsonl"
+    if not path.is_absolute():
+        path = cfg.repo_root / path
+    try:
+        updated, summary = update_proposal_review_file(
+            path,
+            sample_id=sample_id,
+            proposal_id=proposal_id,
+            reviewer=reviewer,
+            usefulness=usefulness,
+            safety=safety,
+            novelty=novelty,
+            actionability=actionability,
+            decision=decision,
+            notes=notes,
+        )
+    except ValueError as exc:
+        console.print(str(exc))
+        raise typer.Exit(2) from exc
+    console.print_json(
+        data={
+            "review_file": str(path),
+            "updated": updated.model_dump(mode="json"),
+            "summary": summary,
+        }
+    )
 
 
 @recommend_app.command("proposal-calibration-evidence")

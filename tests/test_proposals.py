@@ -17,6 +17,8 @@ from digital_asset_directory.proposals import (
     load_proposal_reviews,
     run_proposal_engines,
     summarize_proposal_reviews,
+    update_proposal_review_file,
+    update_proposal_review_record,
     write_proposal_calibration_evidence,
     write_proposal_review_results_summary,
     write_proposal_outputs,
@@ -281,6 +283,89 @@ def test_review_summary_loads_filled_jsonl_and_writes_report(tmp_path: Path):
     assert summary["decision_counts"]["reject_candidate"] == 1
     assert Path(output).exists()
     assert "Proposal Review Results Summary" in Path(output).read_text(encoding="utf-8")
+
+
+def test_update_proposal_review_record_sets_labels_and_review_status():
+    reviews = [
+        ProposalReviewRecord(
+            review_id="review-1",
+            sample_id="review-001",
+            proposal_id="proposal-1",
+            proposal_engine="bottom_up_self_proposal",
+            evidence={"proposal_type": "strengthens_capability"},
+        )
+    ]
+    updated_reviews, updated = update_proposal_review_record(
+        reviews,
+        sample_id="review-001",
+        reviewer="Lowell",
+        usefulness="useful",
+        safety="safe",
+        novelty="novel",
+        actionability="actionable",
+        decision="accept_candidate",
+        notes="Good candidate.",
+        reviewed_at="2026-01-01T00:00:00+00:00",
+    )
+
+    assert updated.review_status == "reviewed"
+    assert updated.reviewer == "Lowell"
+    assert updated.usefulness == "useful"
+    assert updated.safety == "safe"
+    assert updated.novelty == "novel"
+    assert updated.actionability == "actionable"
+    assert updated.decision == "accept_candidate"
+    assert summarize_proposal_reviews(updated_reviews)["reviewed_count"] == 1
+
+
+def test_update_proposal_review_record_rejects_bad_input():
+    reviews = [
+        ProposalReviewRecord(
+            review_id="review-1",
+            sample_id="review-001",
+            proposal_id="proposal-1",
+            proposal_engine="bottom_up_self_proposal",
+            evidence={"proposal_type": "strengthens_capability"},
+        )
+    ]
+    for kwargs, expected in [
+        ({}, "Provide --sample-id or --proposal-id"),
+        ({"sample_id": "missing", "usefulness": "useful"}, "No proposal review record"),
+        ({"sample_id": "review-001", "usefulness": "great"}, "Invalid usefulness"),
+    ]:
+        try:
+            update_proposal_review_record(reviews, **kwargs)
+        except ValueError as exc:
+            assert expected in str(exc)
+        else:
+            raise AssertionError("invalid review update should fail")
+
+
+def test_update_proposal_review_file_rewrites_jsonl(tmp_path: Path):
+    review_file = tmp_path / "reviews.jsonl"
+    review = ProposalReviewRecord(
+        review_id="review-1",
+        sample_id="review-001",
+        proposal_id="proposal-1",
+        proposal_engine="top_down_orchestration",
+        evidence={"proposal_type": "research_missing_part"},
+    )
+    review_file.write_text(json.dumps(review.model_dump(mode="json")) + "\n", encoding="utf-8")
+
+    updated, summary = update_proposal_review_file(
+        review_file,
+        proposal_id="proposal-1",
+        reviewer="Human",
+        usefulness="unsure",
+        safety="needs_more_review",
+        decision="defer",
+    )
+    loaded = load_proposal_reviews(review_file)
+
+    assert updated.sample_id == "review-001"
+    assert loaded[0].reviewer == "Human"
+    assert loaded[0].review_status == "reviewed"
+    assert summary["reviewed_count"] == 1
 
 
 def make_review(index: int, engine: str, decision: str = "accept_candidate") -> ProposalReviewRecord:

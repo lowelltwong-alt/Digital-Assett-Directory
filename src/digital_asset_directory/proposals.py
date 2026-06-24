@@ -29,6 +29,13 @@ AUTHORITY_BOUNDARY = (
     "graph promotion, or implementation is authorized by this proposal."
 )
 SAFETY_FLAGS = ["candidate_only", "source_mutation_forbidden", "human_review_required"]
+REVIEW_LABELS = {
+    "usefulness": {"unreviewed", "useful", "not_useful", "unsure"},
+    "safety": {"unreviewed", "safe", "unsafe", "needs_more_review"},
+    "novelty": {"unreviewed", "novel", "already_known", "unsure"},
+    "actionability": {"unreviewed", "actionable", "not_actionable", "unsure"},
+    "decision": {"pending", "accept_candidate", "reject_candidate", "defer"},
+}
 
 
 @dataclass
@@ -721,6 +728,113 @@ def load_proposal_reviews(path: Path) -> list[ProposalReviewRecord]:
         except Exception as exc:
             raise ValueError(f"Invalid proposal review record at {path}:{line_number}: {exc}") from exc
     return reviews
+
+
+def write_proposal_reviews(path: Path, reviews: list[ProposalReviewRecord]) -> None:
+    write_jsonl(path, [review.model_dump(mode="json") for review in reviews])
+
+
+def _validate_review_label(field: str, value: str | None) -> str | None:
+    if value is None:
+        return None
+    allowed = REVIEW_LABELS[field]
+    if value not in allowed:
+        raise ValueError(f"Invalid {field} `{value}`. Expected one of: {', '.join(sorted(allowed))}")
+    return value
+
+
+def update_proposal_review_record(
+    reviews: list[ProposalReviewRecord],
+    *,
+    sample_id: str | None = None,
+    proposal_id: str | None = None,
+    reviewer: str | None = None,
+    usefulness: str | None = None,
+    safety: str | None = None,
+    novelty: str | None = None,
+    actionability: str | None = None,
+    decision: str | None = None,
+    notes: str | None = None,
+    reviewed_at: str | None = None,
+) -> tuple[list[ProposalReviewRecord], ProposalReviewRecord]:
+    if not sample_id and not proposal_id:
+        raise ValueError("Provide --sample-id or --proposal-id to select one review record.")
+    matches = [
+        index
+        for index, review in enumerate(reviews)
+        if (sample_id and review.sample_id == sample_id)
+        or (proposal_id and review.proposal_id == proposal_id)
+    ]
+    if not matches:
+        raise ValueError("No proposal review record matched the provided identifier.")
+    if len(matches) > 1:
+        raise ValueError("Multiple proposal review records matched; provide both identifiers.")
+
+    updates: dict[str, Any] = {}
+    for field, value in {
+        "usefulness": usefulness,
+        "safety": safety,
+        "novelty": novelty,
+        "actionability": actionability,
+        "decision": decision,
+    }.items():
+        cleaned = _validate_review_label(field, value)
+        if cleaned is not None:
+            updates[field] = cleaned
+    if reviewer is not None:
+        updates["reviewer"] = reviewer
+    if notes is not None:
+        updates["notes"] = notes
+    if reviewed_at is not None:
+        updates["reviewed_at"] = reviewed_at
+
+    label_update_present = any(field in updates for field in REVIEW_LABELS)
+    if label_update_present and "reviewed_at" not in updates:
+        updates["reviewed_at"] = utc_now()
+    if label_update_present:
+        updates["review_status"] = "reviewed"
+    if not updates:
+        raise ValueError("No review fields were provided to update.")
+
+    selected_index = matches[0]
+    updated = reviews[selected_index].model_copy(update=updates)
+    # Re-validate after model_copy because copy skips assignment validation by default.
+    updated = ProposalReviewRecord.model_validate(updated.model_dump(mode="json"))
+    new_reviews = list(reviews)
+    new_reviews[selected_index] = updated
+    return new_reviews, updated
+
+
+def update_proposal_review_file(
+    path: Path,
+    *,
+    sample_id: str | None = None,
+    proposal_id: str | None = None,
+    reviewer: str | None = None,
+    usefulness: str | None = None,
+    safety: str | None = None,
+    novelty: str | None = None,
+    actionability: str | None = None,
+    decision: str | None = None,
+    notes: str | None = None,
+    reviewed_at: str | None = None,
+) -> tuple[ProposalReviewRecord, dict[str, Any]]:
+    reviews = load_proposal_reviews(path)
+    updated_reviews, updated = update_proposal_review_record(
+        reviews,
+        sample_id=sample_id,
+        proposal_id=proposal_id,
+        reviewer=reviewer,
+        usefulness=usefulness,
+        safety=safety,
+        novelty=novelty,
+        actionability=actionability,
+        decision=decision,
+        notes=notes,
+        reviewed_at=reviewed_at,
+    )
+    write_proposal_reviews(path, updated_reviews)
+    return updated, summarize_proposal_reviews(updated_reviews)
 
 
 def proposal_review_results_markdown(reviews: list[ProposalReviewRecord], source_path: Path) -> str:
