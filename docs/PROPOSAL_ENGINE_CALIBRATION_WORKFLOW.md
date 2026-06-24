@@ -85,7 +85,12 @@ Expected generated output:
 
 ```text
 processed/proposals/proposal_review_batch.csv
+processed/proposals/proposal_review_unblind_map.csv
 ```
+
+The batch CSV hides `proposal_engine` by default to reduce bottom-up/top-down review bias.
+Use the unblind map only after first-pass scoring, or pass `--include-engine` when an
+unblinded operational export is more useful than blinded calibration.
 
 Editable label columns:
 

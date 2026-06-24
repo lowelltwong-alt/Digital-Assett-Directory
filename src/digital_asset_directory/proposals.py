@@ -1,7 +1,7 @@
 from __future__ import annotations
 
-import json
 import csv
+import json
 from collections import Counter, defaultdict
 from dataclasses import dataclass
 from pathlib import PurePosixPath
@@ -64,6 +64,10 @@ REVIEW_CSV_COLUMNS = [
     "decision",
     "notes",
 ]
+BLINDED_REVIEW_CSV_COLUMNS = [
+    column for column in REVIEW_CSV_COLUMNS if column != "proposal_engine"
+]
+REVIEW_UNBLIND_CSV_COLUMNS = ["sample_id", "proposal_id", "proposal_engine"]
 
 
 @dataclass
@@ -965,44 +969,80 @@ def _join_values(values: list[str]) -> str:
 
 
 def proposal_review_csv_rows(
-    reviews: list[ProposalReviewRecord], proposals: list[ProposalRecord]
+    reviews: list[ProposalReviewRecord],
+    proposals: list[ProposalRecord],
+    *,
+    blind: bool = False,
 ) -> list[dict[str, str]]:
     proposals_by_id = {proposal.proposal_id: proposal for proposal in proposals}
     rows: list[dict[str, str]] = []
     for review in sorted(reviews, key=lambda record: record.sample_id):
         proposal = proposals_by_id.get(review.proposal_id)
-        rows.append(
-            {
-                "sample_id": review.sample_id,
-                "proposal_id": review.proposal_id,
-                "proposal_engine": review.proposal_engine,
-                "proposal_type": proposal.proposal_type if proposal else str(review.evidence.get("proposal_type", "")),
-                "source_asset_ids": _join_values(proposal.source_asset_ids if proposal else review.evidence.get("source_asset_ids", [])),
-                "target_asset_ids": _join_values(proposal.target_asset_ids if proposal else review.evidence.get("target_asset_ids", [])),
-                "need_ids": _join_values(proposal.need_ids if proposal else review.evidence.get("need_ids", [])),
-                "confidence": proposal.confidence if proposal else "",
-                "risk": proposal.risk if proposal else "",
-                "rationale": proposal.rationale if proposal else "",
-                "smallest_bounded_experiment": proposal.smallest_bounded_experiment if proposal else "",
-                "reviewer": review.reviewer,
-                "usefulness": review.usefulness,
-                "safety": review.safety,
-                "novelty": review.novelty,
-                "actionability": review.actionability,
-                "decision": review.decision,
-                "notes": review.notes,
-            }
-        )
+        row = {
+            "sample_id": review.sample_id,
+            "proposal_id": review.proposal_id,
+            "proposal_engine": review.proposal_engine,
+            "proposal_type": (
+                proposal.proposal_type if proposal else str(review.evidence.get("proposal_type", ""))
+            ),
+            "source_asset_ids": _join_values(
+                proposal.source_asset_ids if proposal else review.evidence.get("source_asset_ids", [])
+            ),
+            "target_asset_ids": _join_values(
+                proposal.target_asset_ids if proposal else review.evidence.get("target_asset_ids", [])
+            ),
+            "need_ids": _join_values(
+                proposal.need_ids if proposal else review.evidence.get("need_ids", [])
+            ),
+            "confidence": proposal.confidence if proposal else "",
+            "risk": proposal.risk if proposal else "",
+            "rationale": proposal.rationale if proposal else "",
+            "smallest_bounded_experiment": (
+                proposal.smallest_bounded_experiment if proposal else ""
+            ),
+            "reviewer": review.reviewer,
+            "usefulness": review.usefulness,
+            "safety": review.safety,
+            "novelty": review.novelty,
+            "actionability": review.actionability,
+            "decision": review.decision,
+            "notes": review.notes,
+        }
+        if blind:
+            row.pop("proposal_engine")
+        rows.append(row)
     return rows
 
 
 def write_proposal_review_csv(
-    path: Path, reviews: list[ProposalReviewRecord], proposals: list[ProposalRecord]
+    path: Path,
+    reviews: list[ProposalReviewRecord],
+    proposals: list[ProposalRecord],
+    *,
+    blind: bool = False,
 ) -> str:
     path.parent.mkdir(parents=True, exist_ok=True)
-    rows = proposal_review_csv_rows(reviews, proposals)
+    fieldnames = BLINDED_REVIEW_CSV_COLUMNS if blind else REVIEW_CSV_COLUMNS
+    rows = proposal_review_csv_rows(reviews, proposals, blind=blind)
     with path.open("w", encoding="utf-8", newline="") as handle:
-        writer = csv.DictWriter(handle, fieldnames=REVIEW_CSV_COLUMNS, extrasaction="ignore")
+        writer = csv.DictWriter(handle, fieldnames=fieldnames, extrasaction="ignore")
+        writer.writeheader()
+        writer.writerows(rows)
+    return str(path)
+
+
+def write_proposal_review_unblind_map(path: Path, reviews: list[ProposalReviewRecord]) -> str:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    rows = [
+        {
+            "sample_id": review.sample_id,
+            "proposal_id": review.proposal_id,
+            "proposal_engine": review.proposal_engine,
+        }
+        for review in sorted(reviews, key=lambda record: record.sample_id)
+    ]
+    with path.open("w", encoding="utf-8", newline="") as handle:
+        writer = csv.DictWriter(handle, fieldnames=REVIEW_UNBLIND_CSV_COLUMNS)
         writer.writeheader()
         writer.writerows(rows)
     return str(path)

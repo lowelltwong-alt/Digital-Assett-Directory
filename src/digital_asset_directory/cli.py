@@ -23,6 +23,7 @@ from .proposals import (
     run_proposal_engines,
     update_proposal_review_file,
     write_proposal_review_csv,
+    write_proposal_review_unblind_map,
     write_proposal_calibration_evidence,
     write_proposal_outputs,
     write_proposal_review_results_summary,
@@ -444,6 +445,8 @@ def recommend_proposal_review_export_csv(
     bottom_up_file: Optional[Path] = typer.Option(None, "--bottom-up-file"),
     top_down_file: Optional[Path] = typer.Option(None, "--top-down-file"),
     output: Optional[Path] = typer.Option(None, "--output"),
+    unblind_output: Optional[Path] = typer.Option(None, "--unblind-output"),
+    blind: bool = typer.Option(True, "--blind/--include-engine"),
 ) -> None:
     """Export proposal review records and proposal context to a human-editable CSV."""
     cfg = _cfg(hub=hub)
@@ -455,6 +458,10 @@ def recommend_proposal_review_export_csv(
     )
     top_path = top_down_file or cfg.repo_root / "processed" / "proposals" / "top_down_proposals.jsonl"
     output_path = output or cfg.repo_root / "processed" / "proposals" / "proposal_review_batch.csv"
+    unblind_path = (
+        unblind_output
+        or cfg.repo_root / "processed" / "proposals" / "proposal_review_unblind_map.csv"
+    )
     if not review_path.is_absolute():
         review_path = cfg.repo_root / review_path
     if not bottom_path.is_absolute():
@@ -463,15 +470,20 @@ def recommend_proposal_review_export_csv(
         top_path = cfg.repo_root / top_path
     if not output_path.is_absolute():
         output_path = cfg.repo_root / output_path
+    if not unblind_path.is_absolute():
+        unblind_path = cfg.repo_root / unblind_path
     reviews = load_proposal_reviews(review_path)
     proposals = load_generated_proposals(bottom_path, top_path)
-    written = write_proposal_review_csv(output_path, reviews, proposals)
+    written = write_proposal_review_csv(output_path, reviews, proposals, blind=blind)
+    unblind_written = write_proposal_review_unblind_map(unblind_path, reviews) if blind else None
     console.print_json(
         data={
             "review_file": str(review_path),
             "bottom_up_file": str(bottom_path),
             "top_down_file": str(top_path),
             "output": written,
+            "blind": blind,
+            "unblind_output": unblind_written,
             "row_count": len(reviews),
         }
     )

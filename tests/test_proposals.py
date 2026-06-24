@@ -1,5 +1,5 @@
-import json
 import csv
+import json
 from pathlib import Path
 
 from jsonschema import Draft202012Validator
@@ -25,6 +25,7 @@ from digital_asset_directory.proposals import (
     update_proposal_review_record,
     write_proposal_calibration_evidence,
     write_proposal_review_csv,
+    write_proposal_review_unblind_map,
     write_proposal_review_results_summary,
     write_proposal_outputs,
 )
@@ -528,6 +529,59 @@ def test_review_csv_import_fails_before_writing_bad_labels(tmp_path: Path):
     else:
         raise AssertionError("bad CSV labels should fail")
     assert review_file.read_text(encoding="utf-8") == original
+
+
+def test_blinded_review_csv_hides_engine_and_imports_labels(tmp_path: Path):
+    assets = [
+        make_asset("target", need="evaluation_harness"),
+        make_asset("provider", capability="evaluation_harness"),
+    ]
+    bottom_up, top_down, _ = run_proposal_engines(
+        assets=assets,
+        edges=[make_edge("provider", "target")],
+        alerts=[make_alert("target")],
+        scan_id="scan-test",
+        engine="both",
+        per_asset_limit=1,
+        portfolio_limit=1,
+        review_sample=1,
+    )
+    reviews = build_proposal_review_template(bottom_up, top_down, per_engine_sample=1)
+    review_file = tmp_path / "reviews.jsonl"
+    review_file.write_text(
+        "".join(json.dumps(record.model_dump(mode="json")) + "\n" for record in reviews),
+        encoding="utf-8",
+    )
+    csv_file = tmp_path / "blinded.csv"
+    unblind_file = tmp_path / "unblind.csv"
+
+    write_proposal_review_csv(csv_file, reviews, [*bottom_up, *top_down], blind=True)
+    write_proposal_review_unblind_map(unblind_file, reviews)
+
+    rows = list(csv.DictReader(csv_file.open("r", encoding="utf-8", newline="")))
+    assert rows
+    assert "proposal_engine" not in rows[0]
+    unblind_rows = list(csv.DictReader(unblind_file.open("r", encoding="utf-8", newline="")))
+    assert {row["proposal_engine"] for row in unblind_rows} == {
+        "bottom_up_self_proposal",
+        "top_down_orchestration",
+    }
+
+    rows[0]["reviewer"] = "Human"
+    rows[0]["usefulness"] = "useful"
+    rows[0]["safety"] = "safe"
+    rows[0]["novelty"] = "novel"
+    rows[0]["actionability"] = "actionable"
+    rows[0]["decision"] = "accept_candidate"
+    with csv_file.open("w", encoding="utf-8", newline="") as handle:
+        writer = csv.DictWriter(handle, fieldnames=rows[0].keys())
+        writer.writeheader()
+        writer.writerows(rows)
+
+    result = import_proposal_review_csv(review_file, csv_file)
+
+    assert result["updated_count"] == 1
+    assert result["summary"]["reviewed_count"] == 1
 
 
 def make_review(index: int, engine: str, decision: str = "accept_candidate") -> ProposalReviewRecord:
