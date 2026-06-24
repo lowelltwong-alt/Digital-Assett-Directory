@@ -1,0 +1,22 @@
+{
+  "schema_version": "0.1.0",
+  "handoff_id": "generated",
+  "session_id": "",
+  "created_at": "generated",
+  "repository": "",
+  "agent": "",
+  "task": "",
+  "summary": "",
+  "files_changed": [],
+  "commands_run": [],
+  "tests_run": [],
+  "tests_not_run": [],
+  "confirmed": [],
+  "inferred": [],
+  "assumptions": [],
+  "unknowns": [],
+  "lessons": [],
+  "risks": [],
+  "next_actions": [],
+  "review_status": "candidate"
+}

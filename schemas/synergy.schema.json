@@ -1,0 +1,83 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://local.digital-asset-directory/schemas/synergy.schema.json",
+  "title": "Candidate Asset Synergy",
+  "type": "object",
+  "required": [
+    "synergy_id",
+    "asset_ids",
+    "score",
+    "confidence",
+    "shared_outcomes",
+    "complementary_capabilities",
+    "needs_covered",
+    "missing_parts",
+    "integration_hypothesis",
+    "evidence",
+    "review_status"
+  ],
+  "properties": {
+    "synergy_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "asset_ids": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "minItems": 2,
+      "maxItems": 3
+    },
+    "score": {
+      "type": "number",
+      "minimum": 0,
+      "maximum": 1
+    },
+    "confidence": {
+      "enum": [
+        "low",
+        "medium",
+        "high"
+      ]
+    },
+    "shared_outcomes": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "complementary_capabilities": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "needs_covered": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "missing_parts": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "integration_hypothesis": {
+      "type": "string"
+    },
+    "evidence": {
+      "type": "object"
+    },
+    "review_status": {
+      "enum": [
+        "generated_candidate",
+        "reviewed",
+        "rejected"
+      ]
+    }
+  },
+  "additionalProperties": false
+}

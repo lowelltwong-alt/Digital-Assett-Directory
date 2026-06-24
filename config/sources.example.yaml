@@ -1,0 +1,112 @@
+project:
+  name: Digital Asset Directory
+  owner: lowelltwong-alt
+  catalog_root: .
+  database: state/catalog.sqlite3
+
+sources:
+  local:
+    - id: git-projects
+      enabled: true
+      path: 'C:\Users\lowel\OneDrive\Desktop\Git Projects'
+      path_alias: git-projects
+      follow_symlinks: false
+      max_file_bytes: 2000000
+      excerpt_chars: 5000
+      include_binary_metadata: true
+      exclude:
+        - '**/.git/**'
+        - '**/.venv/**'
+        - '**/venv/**'
+        - '**/node_modules/**'
+        - '**/dist/**'
+        - '**/build/**'
+        - '**/.next/**'
+        - '**/coverage/**'
+        - '**/__pycache__/**'
+        - '**/.env'
+        - '**/.env.*'
+        - '**/*credential*'
+        - '**/*secret*'
+        - '**/*.pem'
+        - '**/*.key'
+        - '**/04_Digital_Assett_Directory/raw/**'
+        - '**/04_Digital_Assett_Directory/processed/**'
+        - '**/04_Digital_Assett_Directory/state/**'
+
+    - id: optional-whole-c-drive
+      enabled: false
+      path: 'C:/'
+      path_alias: local-c-drive
+      follow_symlinks: false
+      max_file_bytes: 1000000
+      excerpt_chars: 3000
+      include_binary_metadata: true
+      exclude:
+        - '**/$Recycle.Bin/**'
+        - '**/System Volume Information/**'
+        - '**/Windows/**'
+        - '**/Program Files/**'
+        - '**/Program Files (x86)/**'
+        - '**/ProgramData/**'
+        - '**/AppData/**'
+        - '**/.git/**'
+        - '**/.venv/**'
+        - '**/node_modules/**'
+        - '**/.env*'
+        - '**/*credential*'
+        - '**/*secret*'
+        - '**/*.pem'
+        - '**/*.key'
+        - '**/04_Digital_Assett_Directory/raw/**'
+        - '**/04_Digital_Assett_Directory/processed/**'
+        - '**/04_Digital_Assett_Directory/state/**'
+
+  github:
+    - id: github-lowelltwong-alt
+      enabled: true
+      owner: lowelltwong-alt
+      token_env: GITHUB_TOKEN
+      include_private: true
+      include_archived: true
+      content_mode: priority
+      max_file_bytes: 1000000
+      priority_patterns:
+        - 'README*'
+        - 'AGENTS.md'
+        - 'CLAUDE.md'
+        - 'AI_*'
+        - 'MACHINE_NAVIGATION_MANIFEST.json'
+        - 'pyproject.toml'
+        - 'package.json'
+        - 'requirements*.txt'
+        - 'registry/**'
+        - 'schemas/**'
+        - 'schema/**'
+        - 'ontology/**'
+        - 'governance/**'
+        - 'docs/**/*.md'
+        - '.github/workflows/**'
+
+settings:
+  read_only: true
+  store_excerpts: true
+  redact_sensitive_excerpts: true
+  stale_days_default: 365
+  stale_days_by_type:
+    repository: 180
+    code: 365
+    schema: 540
+    ontology: 730
+    research: 365
+    lesson: 1095
+    decision: 1095
+    workflow: 540
+    evaluation: 365
+  related_similarity_threshold: 0.34
+  synergy_alert_threshold: 0.64
+  high_value_threshold: 70
+  orphan_degree_threshold: 1
+  max_related_edges_per_asset: 20
+  max_context_assets: 20
+  skill_candidate_repeat_threshold: 3

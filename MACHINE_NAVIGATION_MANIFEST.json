@@ -1,0 +1,42 @@
+{
+  "manifest_version": "0.1.0",
+  "project": "Digital-Assett-Directory",
+  "status": "seed_scaffold",
+  "purpose": "Local-first digital asset catalog, knowledge graph, orphan/activation/synergy radar, and governed learning hub.",
+  "start_files": [
+    "AI_FRONT_DOOR.md",
+    "AGENTS.md",
+    "registry/source-of-truth.json",
+    "registry/design-authority.json",
+    "AI_TABLE_OF_CONTENTS.md"
+  ],
+  "registries": {
+    "source_of_truth": "registry/source-of-truth.json",
+    "design_authority": "registry/design-authority.json",
+    "asset_types": "registry/asset-type-registry.json",
+    "edge_types": "registry/edge-type-registry.json",
+    "lifecycle": "registry/lifecycle-registry.json",
+    "schemas": "registry/schema-registry.json",
+    "capabilities": "registry/capability-registry.json",
+    "needs": "registry/need-registry.json",
+    "data_dictionary": "docs/DATA_DICTIONARY.md"
+  },
+  "generated_surfaces": [
+    "raw/",
+    "processed/",
+    "state/catalog.sqlite3",
+    "audit/events/"
+  ],
+  "safe_default": "read_only_scan",
+  "forbidden_default_actions": [
+    "source_mutation",
+    "secret_storage",
+    "automatic_canon_promotion",
+    "automatic_external_code_merge"
+  ],
+  "validation": [
+    "python -m pytest",
+    "python -m digital_asset_directory.cli validate",
+    "python -m digital_asset_directory.cli roadmap check"
+  ]
+}

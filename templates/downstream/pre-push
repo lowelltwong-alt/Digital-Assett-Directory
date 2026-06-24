@@ -1,0 +1,3 @@
+#!/usr/bin/env sh
+set -eu
+python "REPLACE_WITH_HUB_PATH/scripts/enforce_postflight.py" --hub "REPLACE_WITH_HUB_PATH" --repo "$(pwd)"

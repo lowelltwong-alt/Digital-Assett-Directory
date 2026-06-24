@@ -1,0 +1,86 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://local.digital-asset-directory/schemas/capability-recommendation.schema.json",
+  "title": "Skill, Agent, or Swarm Recommendation",
+  "type": "object",
+  "required": [
+    "recommendation_id",
+    "kind",
+    "name",
+    "rationale",
+    "evidence_asset_ids",
+    "capabilities",
+    "missing_capabilities",
+    "suggested_roles",
+    "confidence",
+    "risk",
+    "review_status"
+  ],
+  "properties": {
+    "recommendation_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "kind": {
+      "enum": [
+        "skill",
+        "agent",
+        "swarm",
+        "research"
+      ]
+    },
+    "name": {
+      "type": "string",
+      "minLength": 1
+    },
+    "rationale": {
+      "type": "string"
+    },
+    "evidence_asset_ids": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "capabilities": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "missing_capabilities": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "suggested_roles": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "confidence": {
+      "enum": [
+        "low",
+        "medium",
+        "high"
+      ]
+    },
+    "risk": {
+      "enum": [
+        "low",
+        "medium",
+        "high"
+      ]
+    },
+    "review_status": {
+      "enum": [
+        "generated_candidate",
+        "reviewed",
+        "rejected"
+      ]
+    }
+  },
+  "additionalProperties": false
+}

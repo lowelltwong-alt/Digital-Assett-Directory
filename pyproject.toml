@@ -1,0 +1,48 @@
+[build-system]
+requires = ["setuptools>=69", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "digital-asset-directory"
+version = "0.1.0"
+description = "Local-first digital asset catalog, graph, orphan/activation/synergy radar, and governed learning hub."
+readme = "README.md"
+requires-python = ">=3.11"
+authors = [{name = "Lowell T. Wong"}]
+dependencies = [
+  "networkx>=3.2,<4",
+  "pydantic>=2.7,<3",
+  "PyYAML>=6.0,<7",
+  "requests>=2.32,<3",
+  "typer>=0.12,<1",
+  "rich>=13.7,<15",
+  "pathspec>=0.12,<1",
+  "jsonschema>=4.22,<5"
+]
+
+[project.optional-dependencies]
+dev = [
+  "pytest>=8,<9",
+  "ruff>=0.5,<1",
+  "mypy>=1.10,<2",
+  "types-PyYAML>=6.0,<7",
+  "types-requests>=2.32,<3"
+]
+
+[project.scripts]
+asset-dir = "digital_asset_directory.cli:app"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-q"
+
+[tool.ruff]
+line-length = 100
+
+[tool.mypy]
+python_version = "3.11"
+ignore_missing_imports = true
+warn_unused_ignores = true

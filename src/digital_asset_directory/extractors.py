@@ -1,0 +1,288 @@
+from __future__ import annotations
+
+import mimetypes
+from datetime import datetime, timezone
+from pathlib import Path
+from typing import Any, Literal
+
+from .utils import redact_sensitive_text, tokens
+
+TEXT_EXTENSIONS = {
+    ".md",
+    ".mdx",
+    ".txt",
+    ".rst",
+    ".py",
+    ".js",
+    ".jsx",
+    ".ts",
+    ".tsx",
+    ".java",
+    ".cs",
+    ".go",
+    ".rs",
+    ".rb",
+    ".php",
+    ".sh",
+    ".ps1",
+    ".bat",
+    ".cmd",
+    ".sql",
+    ".json",
+    ".jsonl",
+    ".yaml",
+    ".yml",
+    ".toml",
+    ".ini",
+    ".cfg",
+    ".xml",
+    ".ttl",
+    ".rdf",
+    ".csv",
+    ".tsv",
+    ".html",
+    ".css",
+    ".scss",
+    ".graphql",
+    ".proto",
+}
+
+KEYWORD_MAP: dict[str, tuple[str, ...]] = {
+    "knowledge-graph": ("knowledge graph", "graphrag", "networkx", "node", "edge", "ontology"),
+    "governance": ("governance", "authority", "promotion decision", "trust zone", "policy"),
+    "learning-loop": (
+        "learning loop",
+        "lesson learned",
+        "feedback",
+        "regression test",
+        "exception",
+    ),
+    "evaluation": ("evaluation", "benchmark", "golden dataset", "gold case", "pytest", "recall@"),
+    "retrieval": ("retrieval", "rag", "embedding", "rerank", "chunking", "tf-idf"),
+    "provenance": ("provenance", "lineage", "source of truth", "citation", "evidence"),
+    "security": ("security", "secret", "privilege", "confidential", "prompt injection", "pii"),
+    "agent": ("agent", "codex", "claude code", "subagent", "swarm"),
+    "skill": ("skill", "capability registry", "skill registry"),
+    "orphan-radar": ("orphan radar", "orphan", "bridge candidate"),
+    "research-radar": ("research radar", "watch item", "frontier signal"),
+    "schema": ("json schema", "schema", "shacl"),
+    "workflow": ("workflow", "orchestration", "pipeline", "preflight", "postflight"),
+}
+
+CAPABILITIES: dict[str, tuple[str, ...]] = {
+    "catalog_assets": ("catalog", "inventory", "asset directory", "repository map"),
+    "build_knowledge_graph": ("knowledge graph", "node", "edge", "networkx", "graph"),
+    "detect_orphans": ("orphan", "disconnected", "bridge candidate"),
+    "capture_lessons": ("lesson learned", "postflight", "handoff", "learning loop"),
+    "validate_contracts": ("validator", "json schema", "validation", "pytest", "shacl"),
+    "retrieve_context": ("retrieval", "context pack", "rag", "search"),
+    "govern_agents": ("agent governance", "preflight", "allowed paths", "stop condition"),
+    "score_assets": ("value score", "priority score", "ranking", "calibration"),
+    "research_missing_parts": (
+        "missing part",
+        "github search",
+        "frontier signal",
+        "research radar",
+    ),
+    "protect_sensitive_data": ("pii", "confidential", "privilege", "redact", "access control"),
+}
+
+NEED_PATTERNS: dict[str, tuple[str, ...]] = {
+    "evaluation_harness": (
+        "needs evaluation",
+        "missing evaluation",
+        "golden dataset",
+        "gold cases needed",
+    ),
+    "provenance": ("missing provenance", "needs provenance", "source unknown", "citation needed"),
+    "human_review": ("human review required", "needs review", "unreviewed"),
+    "access_control": ("access control needed", "needs entitlement", "permission model"),
+    "data_source": ("missing data", "source needed", "needs source", "requires pdf"),
+    "runtime_implementation": ("not implemented", "runtime needed", "future runtime"),
+    "validator": ("validator needed", "validation missing", "tests missing"),
+    "license_review": ("license unknown", "license review", "license needed"),
+    "integration_adapter": ("adapter needed", "integration missing", "connector needed"),
+}
+
+OUTCOMES: dict[str, tuple[str, ...]] = {
+    "faster_builds": ("faster", "accelerate", "reuse", "next project"),
+    "lower_risk": ("risk", "safe", "fail closed", "human review"),
+    "institutional_memory": ("institutional memory", "lessons learned", "decision memory"),
+    "higher_discovery": ("discovery", "ideation", "synergy", "find forgotten"),
+    "better_grounding": ("grounded", "citation", "source identity", "provenance"),
+    "repeatable_quality": ("regression", "evaluation", "quality", "validation"),
+}
+
+
+def is_probably_text(path: Path) -> bool:
+    return path.suffix.lower() in TEXT_EXTENSIONS or path.name.lower() in {
+        "dockerfile",
+        "makefile",
+        "license",
+        "notice",
+        "agents.md",
+        "claude.md",
+    }
+
+
+def classify_asset(path: str) -> str:
+    p = Path(path)
+    name, suffix = p.name.lower(), p.suffix.lower()
+    parts = {part.lower() for part in p.parts}
+    if suffix in {".zip", ".tar", ".gz", ".7z", ".rar"}:
+        return "archive"
+    if name in {"pyproject.toml", "package.json", "requirements.txt", "dockerfile"} or suffix in {
+        ".ini",
+        ".cfg",
+        ".toml",
+    }:
+        return "configuration"
+    if "schemas" in parts or "schema" in parts or name.endswith(".schema.json"):
+        return "schema"
+    if "ontology" in parts or suffix in {".ttl", ".rdf", ".owl"}:
+        return "ontology"
+    if "taxonomy" in name or "taxonomy" in parts or "skos" in name:
+        return "taxonomy"
+    if "test" in parts or name.startswith("test_") or name.endswith("_test.py"):
+        return "test"
+    if "eval" in parts or "evaluation" in name or "benchmark" in name or "golden" in name:
+        return "evaluation"
+    if "prompt" in name or "prompts" in parts:
+        return "prompt"
+    if "skill" in name or "skills" in parts:
+        return "skill"
+    if "agent" in name or "agents" in parts:
+        return "agent"
+    if "workflow" in name or ".github" in parts:
+        return "workflow"
+    if "decision" in name or "adr" in parts:
+        return "decision"
+    if "lesson" in name or "handoff" in name:
+        return "lesson"
+    if "research" in parts or "research" in name or "literature" in name:
+        return "research"
+    if suffix in {
+        ".py",
+        ".js",
+        ".jsx",
+        ".ts",
+        ".tsx",
+        ".java",
+        ".cs",
+        ".go",
+        ".rs",
+        ".rb",
+        ".php",
+        ".sh",
+        ".ps1",
+        ".sql",
+    }:
+        return "code"
+    if suffix in {".json", ".jsonl", ".csv", ".tsv", ".parquet", ".sqlite", ".db"}:
+        return "dataset"
+    if suffix in {
+        ".png",
+        ".jpg",
+        ".jpeg",
+        ".gif",
+        ".svg",
+        ".webp",
+        ".mp3",
+        ".mp4",
+        ".wav",
+        ".pdf",
+        ".docx",
+        ".pptx",
+        ".xlsx",
+    }:
+        return "media"
+    if suffix in {".md", ".mdx", ".txt", ".rst", ".html"}:
+        return "document"
+    return "unknown"
+
+
+def extract_title(path: str, text: str) -> str:
+    for line in text.splitlines()[:40]:
+        stripped = line.strip()
+        if stripped.startswith("# "):
+            return stripped[2:].strip()[:240]
+    stem = Path(path).stem.replace("_", " ").replace("-", " ").strip()
+    return stem or Path(path).name
+
+
+def _matches(text: str, mapping: dict[str, tuple[str, ...]]) -> list[str]:
+    lowered = text.lower()
+    return sorted(
+        key for key, phrases in mapping.items() if any(phrase in lowered for phrase in phrases)
+    )
+
+
+def infer_semantics(path: str, text: str) -> dict[str, Any]:
+    combined = f"{path}\n{text[:50000]}"
+    tags = _matches(combined, KEYWORD_MAP)
+    capabilities = _matches(combined, CAPABILITIES)
+    needs = _matches(combined, NEED_PATTERNS)
+    outcomes = _matches(combined, OUTCOMES)
+    if classify_asset(path) == "test":
+        capabilities.append("validate_contracts")
+        tags.append("evaluation")
+    return {
+        "tags": sorted(set(tags)),
+        "capabilities": sorted(set(capabilities)),
+        "needs": sorted(set(needs)),
+        "outcomes": sorted(set(outcomes)),
+    }
+
+
+def extract_bytes(
+    path: str, data: bytes, excerpt_chars: int, redact: bool = True
+) -> dict[str, Any]:
+    text = ""
+    decode_error = False
+    if is_probably_text(Path(path)):
+        try:
+            text = data.decode("utf-8")
+        except UnicodeDecodeError:
+            text = data.decode("utf-8", errors="replace")
+            decode_error = True
+    excerpt = text[:excerpt_chars]
+    redaction_count = 0
+    if redact and excerpt:
+        excerpt, redaction_count = redact_sensitive_text(excerpt)
+    semantic = infer_semantics(path, text)
+    return {
+        "title": extract_title(path, text),
+        "description": next(
+            (
+                line.strip()
+                for line in text.splitlines()
+                if line.strip() and not line.lstrip().startswith(("#", "---"))
+            ),
+            "",
+        )[:500],
+        "excerpt": excerpt,
+        "text_tokens": sorted(tokens(f"{path} {text[:20000]}"))[:1000],
+        "mime_type": mimetypes.guess_type(path)[0] or "application/octet-stream",
+        "decode_error": decode_error,
+        "redaction_count": redaction_count,
+        **semantic,
+    }
+
+
+def freshness_status(
+    modified_at: str | None, stale_days: int
+) -> Literal["current", "watch", "stale", "unknown"]:
+    if not modified_at:
+        return "unknown"
+    try:
+        value = datetime.fromisoformat(modified_at.replace("Z", "+00:00"))
+        if value.tzinfo is None:
+            value = value.replace(tzinfo=timezone.utc)
+        age = (datetime.now(timezone.utc) - value.astimezone(timezone.utc)).days
+    except ValueError:
+        return "unknown"
+    if age > stale_days:
+        return "stale"
+    if age > int(stale_days * 0.75):
+        return "watch"
+    return "current"

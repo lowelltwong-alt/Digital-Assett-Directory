@@ -1,0 +1,111 @@
+{
+  "registry_version": "0.1.0",
+  "status": "seed",
+  "types": [
+    {
+      "id": "repository",
+      "description": "Version-controlled project boundary",
+      "default_stale_days": 180
+    },
+    {
+      "id": "code",
+      "description": "Executable source code or library module",
+      "default_stale_days": 365
+    },
+    {
+      "id": "document",
+      "description": "Human or AI-readable narrative documentation",
+      "default_stale_days": 540
+    },
+    {
+      "id": "schema",
+      "description": "Machine-readable structural contract",
+      "default_stale_days": 540
+    },
+    {
+      "id": "ontology",
+      "description": "Formal semantic model",
+      "default_stale_days": 730
+    },
+    {
+      "id": "taxonomy",
+      "description": "Controlled vocabulary or classification scheme",
+      "default_stale_days": 730
+    },
+    {
+      "id": "dataset",
+      "description": "Structured data collection",
+      "default_stale_days": 365
+    },
+    {
+      "id": "prompt",
+      "description": "Reusable prompt or instruction asset",
+      "default_stale_days": 180
+    },
+    {
+      "id": "skill",
+      "description": "Reusable governed agent capability",
+      "default_stale_days": 270
+    },
+    {
+      "id": "agent",
+      "description": "Agent definition or orchestration role",
+      "default_stale_days": 180
+    },
+    {
+      "id": "workflow",
+      "description": "Repeatable multi-step process",
+      "default_stale_days": 540
+    },
+    {
+      "id": "evaluation",
+      "description": "Evaluation harness, benchmark, golden case, or scoring asset",
+      "default_stale_days": 365
+    },
+    {
+      "id": "test",
+      "description": "Executable validation or regression test",
+      "default_stale_days": 365
+    },
+    {
+      "id": "decision",
+      "description": "Architecture or governance decision record",
+      "default_stale_days": 1095
+    },
+    {
+      "id": "lesson",
+      "description": "Reusable lesson, postmortem, or discovered pattern",
+      "default_stale_days": 1095
+    },
+    {
+      "id": "research",
+      "description": "Research source, synthesis, or watch item",
+      "default_stale_days": 365
+    },
+    {
+      "id": "configuration",
+      "description": "Configuration or environment contract",
+      "default_stale_days": 180
+    },
+    {
+      "id": "report",
+      "description": "Generated or curated analytical output",
+      "default_stale_days": 180
+    },
+    {
+      "id": "media",
+      "description": "Image, audio, video, or other media asset",
+      "default_stale_days": 730
+    },
+    {
+      "id": "archive",
+      "description": "Historical or inactive package",
+      "default_stale_days": 3650
+    },
+    {
+      "id": "unknown",
+      "description": "Unclassified asset",
+      "default_stale_days": 365
+    }
+  ]
+}

@@ -1,0 +1,167 @@
+from __future__ import annotations
+
+import hashlib
+import json
+import os
+import re
+import tempfile
+from datetime import datetime, timezone
+from pathlib import Path
+from typing import Any, Iterable
+
+WORD_RE = re.compile(r"[A-Za-z][A-Za-z0-9_+.#/-]{1,63}")
+SECRET_PATTERNS = [
+    re.compile(
+        r"(?i)(api[_-]?key|token|secret|password|passwd|client[_-]?secret)\s*[:=]\s*([^\s,;]+)"
+    ),
+    re.compile(
+        r"-----BEGIN (?:RSA |EC |OPENSSH )?PRIVATE KEY-----.*?-----END (?:RSA |EC |OPENSSH )?PRIVATE KEY-----",
+        re.S,
+    ),
+    re.compile(r"\bgh[pousr]_[A-Za-z0-9_]{20,}\b"),
+    re.compile(r"\bsk-[A-Za-z0-9_-]{20,}\b"),
+]
+
+
+def utc_now() -> str:
+    return datetime.now(timezone.utc).isoformat()
+
+
+def sha256_bytes(data: bytes) -> str:
+    return hashlib.sha256(data).hexdigest()
+
+
+def sha256_file(path: Path, chunk_size: int = 1024 * 1024) -> str:
+    digest = hashlib.sha256()
+    with path.open("rb") as handle:
+        while chunk := handle.read(chunk_size):
+            digest.update(chunk)
+    return digest.hexdigest()
+
+
+def json_dumps(value: Any, *, pretty: bool = False) -> str:
+    return json.dumps(
+        value,
+        indent=2 if pretty else None,
+        sort_keys=True,
+        ensure_ascii=False,
+        default=str,
+    )
+
+
+def atomic_write_text(path: Path, text: str) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    fd, tmp_name = tempfile.mkstemp(prefix=f".{path.name}.", dir=str(path.parent))
+    try:
+        with os.fdopen(fd, "w", encoding="utf-8", newline="\n") as handle:
+            handle.write(text)
+        os.replace(tmp_name, path)
+    finally:
+        if os.path.exists(tmp_name):
+            os.unlink(tmp_name)
+
+
+def append_jsonl(path: Path, value: Any) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    with path.open("a", encoding="utf-8", newline="\n") as handle:
+        handle.write(json_dumps(value) + "\n")
+
+
+def write_json(path: Path, value: Any) -> None:
+    atomic_write_text(path, json_dumps(value, pretty=True) + "\n")
+
+
+def write_jsonl(path: Path, values: Iterable[Any]) -> None:
+    text = "".join(json_dumps(value) + "\n" for value in values)
+    atomic_write_text(path, text)
+
+
+def redact_sensitive_text(text: str) -> tuple[str, int]:
+    count = 0
+    redacted = text
+    for pattern in SECRET_PATTERNS:
+
+        def repl(match: re.Match[str]) -> str:
+            nonlocal count
+            count += 1
+            if match.lastindex and match.lastindex >= 1 and match.lastindex == 2:
+                return f"{match.group(1)}=[REDACTED]"
+            return "[REDACTED_SECRET]"
+
+        redacted = pattern.sub(repl, redacted)
+    return redacted, count
+
+
+def tokens(text: str) -> set[str]:
+    stop = {
+        "the",
+        "and",
+        "for",
+        "with",
+        "from",
+        "this",
+        "that",
+        "into",
+        "your",
+        "you",
+        "are",
+        "not",
+        "will",
+        "all",
+        "use",
+        "using",
+        "has",
+        "have",
+        "can",
+        "its",
+        "but",
+        "our",
+        "file",
+        "files",
+        "repo",
+        "repository",
+        "readme",
+        "http",
+        "https",
+        "www",
+        "com",
+    }
+    return {
+        m.group(0).lower().strip("_./-+") for m in WORD_RE.finditer(text) if len(m.group(0)) > 2
+    } - stop
+
+
+def jaccard(left: Iterable[str], right: Iterable[str]) -> float:
+    a, b = set(left), set(right)
+    if not a or not b:
+        return 0.0
+    return len(a & b) / len(a | b)
+
+
+def split_multi(values: list[str] | tuple[str, ...] | None) -> list[str]:
+    result: list[str] = []
+    for value in values or []:
+        for part in re.split(r"[,;\n]", value):
+            cleaned = part.strip()
+            if cleaned:
+                result.append(cleaned)
+    return result
+
+
+def safe_relative(path: Path, base: Path) -> str:
+    try:
+        return path.resolve().relative_to(base.resolve()).as_posix()
+    except (ValueError, OSError):
+        return path.name
+
+
+def find_repo_root(start: Path) -> Path:
+    current = start.resolve()
+    if current.is_file():
+        current = current.parent
+    for candidate in (current, *current.parents):
+        if (candidate / "pyproject.toml").exists() and (candidate / "registry").exists():
+            return candidate
+        if (candidate / ".git").exists():
+            return candidate
+    return current

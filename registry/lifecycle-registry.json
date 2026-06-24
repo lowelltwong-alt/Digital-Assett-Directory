@@ -1,0 +1,19 @@
+{
+  "registry_version": "0.1.0",
+  "states": [
+    "discovered",
+    "candidate",
+    "reviewed",
+    "active",
+    "dormant",
+    "stale",
+    "deprecated",
+    "archived",
+    "missing",
+    "quarantined",
+    "removed_tombstone"
+  ],
+  "preferred_removal": "deprecate_then_archive_or_tombstone",
+  "direct_delete_of_history": false,
+  "generated_default": "candidate"
+}

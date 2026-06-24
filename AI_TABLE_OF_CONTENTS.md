@@ -1,0 +1,66 @@
+# AI Table of Contents
+
+## Front doors and authority
+
+- `AI_FRONT_DOOR.md` — mission, ownership, routing, stop conditions
+- `AGENTS.md` — standing agent contract
+- `MACHINE_NAVIGATION_MANIFEST.json` — machine-readable entrypoint map
+- `registry/source-of-truth.json` — repository precedence and layer definitions
+- `registry/design-authority.json` — non-negotiable design rules
+
+## Architecture
+
+- `docs/ARCHITECTURE.md`
+- `docs/DATA_FLOW.md`
+- `docs/KNOWLEDGE_GRAPH_MODEL.md`
+- `docs/ASSET_VALUE_MODEL.md`
+- `docs/ORPHAN_ACTIVATION_AND_SYNERGY_RADAR.md`
+- `docs/LESSONS_AND_HANDOFF_LOOP.md`
+- `docs/AI_GOVERNANCE.md`
+- `docs/SECURITY_AND_PRIVACY.md`
+- `docs/ORPHAN_RADAR_INTEGRATION.md`
+- `docs/RESEARCH_BASIS.md`
+
+## Contracts
+
+- `schemas/asset.schema.json`
+- `schemas/edge.schema.json`
+- `schemas/lesson.schema.json`
+- `schemas/handoff.schema.json`
+- `schemas/alert.schema.json`
+- `schemas/source.schema.json`
+- `schemas/synergy.schema.json`
+- `schemas/activation-trigger.schema.json`
+- `schemas/capability-recommendation.schema.json`
+
+## Controlled vocabularies
+
+- `registry/asset-type-registry.json`
+- `registry/edge-type-registry.json`
+- `registry/lifecycle-registry.json`
+- `config/taxonomy.yaml`
+- `ontology/digital-asset-ontology.ttl`
+- `ontology/taxonomy.skos.ttl`
+
+## Operations
+
+- `config/sources.example.yaml`
+- `docs/OPERATIONS.md`
+- `docs/DOWNSTREAM_REPO_GOVERNANCE.md`
+- `scripts/bootstrap.ps1`
+- `scripts/install_to_target.ps1`
+- `scripts/claude_hook.py`
+- `scripts/register_scheduled_scan.ps1`
+- `scripts/unregister_scheduled_scan.ps1`
+
+## Roadmap
+
+- `roadmap/roadmap.yaml`
+- `roadmap/state.json`
+- `docs/ROADMAP_EXECUTION.md`
+
+- `docs/DATA_DICTIONARY.md` — field meanings and authority posture.
+- `registry/capability-registry.json` — controlled capability IDs.
+- `registry/need-registry.json` — controlled missing-part IDs.
+
+- `VERIFICATION_REPORT.md` — verified checks, scope, and environment-dependent gaps

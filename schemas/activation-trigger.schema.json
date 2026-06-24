@@ -1,0 +1,53 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://local.digital-asset-directory/schemas/activation-trigger.schema.json",
+  "title": "Dormant Asset Activation Trigger",
+  "type": "object",
+  "required": [
+    "trigger_id",
+    "asset_id",
+    "trigger_type",
+    "condition",
+    "missing_parts",
+    "evidence_required",
+    "status"
+  ],
+  "properties": {
+    "trigger_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "asset_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "trigger_type": {
+      "type": "string",
+      "minLength": 1
+    },
+    "condition": {
+      "type": "string"
+    },
+    "missing_parts": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "evidence_required": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "status": {
+      "enum": [
+        "watching",
+        "fired",
+        "dismissed",
+        "resolved"
+      ]
+    }
+  },
+  "additionalProperties": false
+}

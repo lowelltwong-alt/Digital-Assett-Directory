@@ -1,0 +1,6 @@
+version: 0.1.0
+hub_path: REPLACE_WITH_ABSOLUTE_HUB_PATH
+lessons_required: true
+handoff_required: true
+enforcement: pre_push
+source_repo_authority_preserved: true

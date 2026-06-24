@@ -1,0 +1,51 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://local.digital-asset-directory/schemas/source.schema.json",
+  "title": "Catalog Source",
+  "type": "object",
+  "required": [
+    "source_id",
+    "kind",
+    "name",
+    "read_only",
+    "enabled"
+  ],
+  "properties": {
+    "source_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "kind": {
+      "enum": [
+        "local",
+        "github"
+      ]
+    },
+    "name": {
+      "type": "string",
+      "minLength": 1
+    },
+    "read_only": {
+      "type": "boolean"
+    },
+    "enabled": {
+      "type": "boolean"
+    },
+    "path_alias": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "owner": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "metadata": {
+      "type": "object"
+    }
+  },
+  "additionalProperties": false
+}

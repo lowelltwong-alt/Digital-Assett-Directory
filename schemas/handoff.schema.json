@@ -1,0 +1,130 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://local.digital-asset-directory/schemas/handoff.schema.json",
+  "title": "AI Work Handoff",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "handoff_id",
+    "session_id",
+    "created_at",
+    "repository",
+    "agent",
+    "task",
+    "summary",
+    "files_changed",
+    "commands_run",
+    "tests_run",
+    "tests_not_run",
+    "confirmed",
+    "inferred",
+    "assumptions",
+    "unknowns",
+    "lessons",
+    "risks",
+    "next_actions",
+    "review_status"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": "0.1.0"
+    },
+    "handoff_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "session_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "created_at": {
+      "type": "string"
+    },
+    "repository": {
+      "type": "string"
+    },
+    "agent": {
+      "type": "string"
+    },
+    "task": {
+      "type": "string"
+    },
+    "summary": {
+      "type": "string"
+    },
+    "files_changed": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "commands_run": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "tests_run": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "tests_not_run": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "confirmed": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "inferred": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "assumptions": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "unknowns": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "lessons": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "risks": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "next_actions": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "review_status": {
+      "enum": [
+        "auto_captured_unreviewed",
+        "candidate",
+        "reviewed"
+      ]
+    }
+  },
+  "additionalProperties": false
+}

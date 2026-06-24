@@ -1,0 +1,19 @@
+version: 0.1.0
+status: heuristic_seed
+weights:
+  reuse_potential: 0.18
+  verification: 0.15
+  provenance: 0.13
+  composability: 0.15
+  learning_loop_value: 0.15
+  uniqueness: 0.08
+  demand_signal: 0.08
+  freshness: 0.08
+risk_penalties:
+  unknown_license: 0.04
+  sensitive_unclassified: 0.08
+  stale: 0.06
+  no_provenance: 0.08
+notes:
+  - Scores prioritize review and routing; they do not prove truth, quality, or business value.
+  - Pair and bundle synergy scores must expose their evidence and missing assumptions.

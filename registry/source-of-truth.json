@@ -1,0 +1,23 @@
+{
+  "registry_version": "0.1.0",
+  "status": "seed",
+  "repository_role": "portfolio_intelligence_and_governed_learning_hub",
+  "precedence": [
+    "registry/source-of-truth.json",
+    "registry/design-authority.json",
+    "registered schemas and vocabularies",
+    "validated implementation",
+    "roadmap state",
+    "narrative documentation",
+    "generated outputs"
+  ],
+  "layers": {
+    "source": "External local and GitHub repositories and files. Never silently mutated by discovery.",
+    "raw_observation": "Append-only scan, research, lesson, handoff, and audit evidence.",
+    "processed_catalog": "Regenerable normalized asset records, graph edges, scores, alerts, and context packs.",
+    "governance": "Repo-local schemas, registries, workflow gates, and promotion rules.",
+    "curated_export": "Human-reviewed exports suitable for reuse outside the generated catalog."
+  },
+  "authority_rule": "Scanned repositories retain authority over their own internal meaning and canon.",
+  "promotion_rule": "Generated candidates do not become reviewed or baseline assets without explicit promotion evidence."
+}

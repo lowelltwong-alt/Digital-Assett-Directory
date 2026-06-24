@@ -1,0 +1,43 @@
+{
+  "registry_version": "0.1.0",
+  "status": "seed",
+  "needs": [
+    {
+      "id": "evaluation_harness",
+      "description": "Golden cases, regression tests, metrics, and acceptance thresholds."
+    },
+    {
+      "id": "provenance",
+      "description": "Source identity, lineage, evidence, and revision traceability."
+    },
+    {
+      "id": "human_review",
+      "description": "Named review ownership and promotion decision."
+    },
+    {
+      "id": "access_control",
+      "description": "Entitlements, sensitivity, allowed-use, and boundary enforcement."
+    },
+    {
+      "id": "data_source",
+      "description": "Missing or unavailable source evidence."
+    },
+    {
+      "id": "runtime_implementation",
+      "description": "Executable runtime missing from an architectural contract."
+    },
+    {
+      "id": "validator",
+      "description": "Machine-checkable validation is missing."
+    },
+    {
+      "id": "license_review",
+      "description": "External reuse rights have not been verified."
+    },
+    {
+      "id": "integration_adapter",
+      "description": "A connector or compatibility adapter is required."
+    }
+  ],
+  "rule": "Needs may be inferred heuristically but remain candidate metadata until reviewed."
+}

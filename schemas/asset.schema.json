@@ -1,0 +1,180 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://local.digital-asset-directory/schemas/asset.schema.json",
+  "title": "Digital Asset Record",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "asset_id",
+    "revision_id",
+    "source_id",
+    "source_kind",
+    "asset_type",
+    "title",
+    "logical_path",
+    "content_hash",
+    "first_seen_at",
+    "last_seen_at",
+    "tags",
+    "capabilities",
+    "needs",
+    "outcomes",
+    "lifecycle_state",
+    "freshness_status",
+    "trust_zone",
+    "value_score",
+    "value_components",
+    "metadata"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": "0.1.0"
+    },
+    "asset_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "revision_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "source_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "parent_asset_id": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "source_kind": {
+      "enum": [
+        "local",
+        "github",
+        "lesson",
+        "research",
+        "generated"
+      ]
+    },
+    "asset_type": {
+      "type": "string",
+      "minLength": 1
+    },
+    "title": {
+      "type": "string",
+      "minLength": 1
+    },
+    "description": {
+      "type": "string"
+    },
+    "logical_path": {
+      "type": "string",
+      "minLength": 1
+    },
+    "uri": {
+      "type": "string"
+    },
+    "content_hash": {
+      "type": "string"
+    },
+    "size_bytes": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "modified_at": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "first_seen_at": {
+      "type": "string"
+    },
+    "last_seen_at": {
+      "type": "string"
+    },
+    "tags": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "uniqueItems": true
+    },
+    "capabilities": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "uniqueItems": true
+    },
+    "needs": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "uniqueItems": true
+    },
+    "outcomes": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "uniqueItems": true
+    },
+    "entrypoints": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "uniqueItems": true
+    },
+    "lifecycle_state": {
+      "type": "string",
+      "minLength": 1
+    },
+    "freshness_status": {
+      "enum": [
+        "current",
+        "watch",
+        "stale",
+        "unknown"
+      ]
+    },
+    "sensitivity": {
+      "enum": [
+        "public",
+        "internal",
+        "confidential",
+        "restricted",
+        "unknown"
+      ]
+    },
+    "trust_zone": {
+      "type": "string",
+      "minLength": 1
+    },
+    "value_score": {
+      "type": "number",
+      "minimum": 0,
+      "maximum": 100
+    },
+    "value_components": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "number"
+      }
+    },
+    "confidence": {
+      "enum": [
+        "low",
+        "medium",
+        "high"
+      ]
+    },
+    "metadata": {
+      "type": "object"
+    }
+  },
+  "additionalProperties": false
+}

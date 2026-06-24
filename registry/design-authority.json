@@ -1,0 +1,25 @@
+{
+  "registry_version": "0.1.0",
+  "status": "seed",
+  "principles": [
+    "read_only_by_default",
+    "stable_identity_separate_from_revision",
+    "raw_observations_are_append_only",
+    "processed_outputs_are_regenerable",
+    "source_repo_authority_is_preserved",
+    "provenance_and_confidence_are_mandatory",
+    "candidate_relationships_do_not_prove_truth",
+    "human_review_precedes_promotion",
+    "secrets_are_excluded_or_redacted",
+    "roadmap_completion_requires_acceptance_evidence",
+    "lessons_and_handoffs_are_mandatory_for_material_ai_work",
+    "external_code_requires_license_security_and_compatibility_review"
+  ],
+  "non_goals": [
+    "automatic_source_rewriting",
+    "unreviewed_autonomous_self_modification",
+    "production_secret_management",
+    "claiming_graph_scores_are_ground_truth",
+    "replacing_source_repository_front_doors"
+  ]
+}

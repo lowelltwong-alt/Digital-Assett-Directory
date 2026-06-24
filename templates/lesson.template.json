@@ -1,0 +1,22 @@
+{
+  "schema_version": "0.1.0",
+  "lesson_id": "generated",
+  "created_at": "generated",
+  "repository": "",
+  "task": "",
+  "agent": "",
+  "model": null,
+  "summary": "",
+  "lessons": [],
+  "files_changed": [],
+  "tests_run": [],
+  "tests_not_run": [],
+  "discoveries": [],
+  "failures": [],
+  "reusable_patterns": [],
+  "missing_capabilities": [],
+  "evidence": [],
+  "confidence": "medium",
+  "review_status": "candidate",
+  "session_id": null
+}

@@ -1,0 +1,47 @@
+{
+  "registry_version": "0.1.0",
+  "status": "seed",
+  "capabilities": [
+    {
+      "id": "catalog_assets",
+      "description": "Inventory and normalize digital assets."
+    },
+    {
+      "id": "build_knowledge_graph",
+      "description": "Construct nodes, edges, communities, and relationship evidence."
+    },
+    {
+      "id": "detect_orphans",
+      "description": "Detect disconnected, weakly connected, stale, or context-poor assets."
+    },
+    {
+      "id": "capture_lessons",
+      "description": "Capture lessons, handoffs, discoveries, failures, and learning loops."
+    },
+    {
+      "id": "validate_contracts",
+      "description": "Validate schemas, examples, policies, tests, and acceptance gates."
+    },
+    {
+      "id": "retrieve_context",
+      "description": "Build query-specific context packs for humans and AI."
+    },
+    {
+      "id": "govern_agents",
+      "description": "Apply preflight, postflight, authority, scope, and stop-condition controls."
+    },
+    {
+      "id": "score_assets",
+      "description": "Score value, freshness, reuse, risk, and discovery priority."
+    },
+    {
+      "id": "research_missing_parts",
+      "description": "Search bounded external sources for missing components."
+    },
+    {
+      "id": "protect_sensitive_data",
+      "description": "Classify, redact, restrict, and route sensitive information."
+    }
+  ],
+  "rule": "New capabilities are candidates until reviewed; IDs must remain stable after adoption."
+}

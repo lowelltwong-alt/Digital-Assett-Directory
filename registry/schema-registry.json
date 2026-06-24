@@ -1,0 +1,14 @@
+{
+  "registry_version": "0.1.0",
+  "schemas": {
+    "asset": "schemas/asset.schema.json",
+    "edge": "schemas/edge.schema.json",
+    "lesson": "schemas/lesson.schema.json",
+    "handoff": "schemas/handoff.schema.json",
+    "alert": "schemas/alert.schema.json",
+    "source": "schemas/source.schema.json",
+    "synergy": "schemas/synergy.schema.json",
+    "activation_trigger": "schemas/activation-trigger.schema.json",
+    "capability_recommendation": "schemas/capability-recommendation.schema.json"
+  }
+}

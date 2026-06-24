@@ -1,0 +1,132 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://local.digital-asset-directory/schemas/lesson.schema.json",
+  "title": "Lesson Learned Record",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "lesson_id",
+    "created_at",
+    "repository",
+    "task",
+    "agent",
+    "summary",
+    "lessons",
+    "files_changed",
+    "tests_run",
+    "tests_not_run",
+    "discoveries",
+    "failures",
+    "reusable_patterns",
+    "missing_capabilities",
+    "evidence",
+    "confidence",
+    "review_status"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": "0.1.0"
+    },
+    "lesson_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "created_at": {
+      "type": "string"
+    },
+    "repository": {
+      "type": "string"
+    },
+    "task": {
+      "type": "string"
+    },
+    "agent": {
+      "type": "string"
+    },
+    "model": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "summary": {
+      "type": "string"
+    },
+    "lessons": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "files_changed": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "tests_run": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "tests_not_run": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "discoveries": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "failures": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "reusable_patterns": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "missing_capabilities": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "evidence": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "confidence": {
+      "enum": [
+        "low",
+        "medium",
+        "high"
+      ]
+    },
+    "review_status": {
+      "enum": [
+        "auto_captured_unreviewed",
+        "candidate",
+        "reviewed",
+        "rejected"
+      ]
+    },
+    "session_id": {
+      "type": [
+        "string",
+        "null"
+      ]
+    }
+  },
+  "additionalProperties": false
+}

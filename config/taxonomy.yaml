@@ -1,0 +1,83 @@
+version: 0.1.0
+status: seed
+facets:
+  form:
+    - repository
+    - code
+    - document
+    - schema
+    - ontology
+    - taxonomy
+    - dataset
+    - model
+    - prompt
+    - skill
+    - agent
+    - workflow
+    - evaluation
+    - test
+    - decision
+    - lesson
+    - research
+    - configuration
+    - report
+    - media
+    - archive
+  knowledge_status:
+    - source
+    - evidence
+    - observation
+    - inference
+    - proposal
+    - reviewed
+    - baseline
+    - deprecated
+    - archived
+  lifecycle:
+    - discovered
+    - active
+    - dormant
+    - stale
+    - deprecated
+    - archived
+    - missing
+    - quarantined
+  trust:
+    - source_owned
+    - externally_sourced
+    - generated_candidate
+    - reviewed_candidate
+    - verified
+    - unknown
+  reuse:
+    - one_off
+    - reusable_pattern
+    - shared_component
+    - platform_asset
+    - compounding_asset
+  risk:
+    - public
+    - internal
+    - confidential
+    - restricted
+    - unknown
+  learning_function:
+    - improvement_signal
+    - failure_mode
+    - regression_test
+    - golden_case
+    - lesson_learned
+    - decision_memory
+    - source_version
+    - escalation_pattern
+    - context_intake
+  activation_trigger:
+    - missing_dependency_available
+    - related_asset_created
+    - external_standard_changed
+    - new_user_goal
+    - repeated_failure_pattern
+    - new_data_available
+    - model_capability_changed
+    - license_status_changed
+    - risk_boundary_changed

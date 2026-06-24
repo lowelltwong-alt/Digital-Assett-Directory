@@ -1,0 +1,87 @@
+{
+  "registry_version": "0.1.0",
+  "status": "seed",
+  "edge_types": [
+    {
+      "id": "contains",
+      "direction": "parent_to_child",
+      "meaning": "A container includes an asset."
+    },
+    {
+      "id": "references",
+      "direction": "source_to_target",
+      "meaning": "An asset explicitly references another."
+    },
+    {
+      "id": "derived_from",
+      "direction": "derived_to_source",
+      "meaning": "An asset was derived from another."
+    },
+    {
+      "id": "supersedes",
+      "direction": "new_to_old",
+      "meaning": "A reviewed asset replaces an older asset."
+    },
+    {
+      "id": "implements",
+      "direction": "implementation_to_contract",
+      "meaning": "Code or workflow implements a contract or design."
+    },
+    {
+      "id": "documents",
+      "direction": "document_to_subject",
+      "meaning": "A document explains another asset."
+    },
+    {
+      "id": "tests",
+      "direction": "test_to_subject",
+      "meaning": "A test evaluates another asset."
+    },
+    {
+      "id": "depends_on",
+      "direction": "dependent_to_dependency",
+      "meaning": "An asset requires another."
+    },
+    {
+      "id": "related_to",
+      "direction": "symmetric",
+      "meaning": "Assets have bounded semantic or structural similarity."
+    },
+    {
+      "id": "complements",
+      "direction": "symmetric",
+      "meaning": "Assets provide non-identical capabilities that combine usefully."
+    },
+    {
+      "id": "satisfies_need",
+      "direction": "provider_to_needing_asset",
+      "meaning": "A provider capability addresses a declared need."
+    },
+    {
+      "id": "blocked_by",
+      "direction": "blocked_to_blocker",
+      "meaning": "A missing condition prevents activation."
+    },
+    {
+      "id": "activates",
+      "direction": "trigger_to_asset",
+      "meaning": "A state change may make a dormant asset relevant."
+    },
+    {
+      "id": "learned_from",
+      "direction": "lesson_to_evidence",
+      "meaning": "A lesson is grounded in an event or asset."
+    },
+    {
+      "id": "candidate_skill_for",
+      "direction": "skill_candidate_to_pattern",
+      "meaning": "Repeated lessons suggest a reusable skill."
+    },
+    {
+      "id": "governed_by",
+      "direction": "asset_to_governance",
+      "meaning": "An asset is constrained by a governance surface."
+    }
+  ],
+  "rule": "Every generated edge must retain method, evidence, confidence, and scan provenance."
+}

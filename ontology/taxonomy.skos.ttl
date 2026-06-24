@@ -1,0 +1,26 @@
+@prefix dadc: <https://local.digital-asset-directory/concept/> .
+@prefix skos: <http://www.w3.org/2004/02/skos/core#> .
+@prefix dct: <http://purl.org/dc/terms/> .
+
+dadc:asset-types a skos:ConceptScheme ;
+  dct:title "Digital Asset Type Taxonomy" ;
+  skos:hasTopConcept dadc:software, dadc:knowledge, dadc:learning, dadc:governance .
+
+dadc:software a skos:Concept ; skos:prefLabel "Software asset" ; skos:inScheme dadc:asset-types .
+dadc:code a skos:Concept ; skos:prefLabel "Code" ; skos:broader dadc:software .
+dadc:workflow a skos:Concept ; skos:prefLabel "Workflow" ; skos:broader dadc:software .
+dadc:skill a skos:Concept ; skos:prefLabel "Agent skill" ; skos:broader dadc:software .
+
+dadc:knowledge a skos:Concept ; skos:prefLabel "Knowledge asset" ; skos:inScheme dadc:asset-types .
+dadc:document a skos:Concept ; skos:prefLabel "Document" ; skos:broader dadc:knowledge .
+dadc:dataset a skos:Concept ; skos:prefLabel "Dataset" ; skos:broader dadc:knowledge .
+dadc:ontology a skos:Concept ; skos:prefLabel "Ontology" ; skos:broader dadc:knowledge .
+
+dadc:learning a skos:Concept ; skos:prefLabel "Learning asset" ; skos:inScheme dadc:asset-types .
+dadc:lesson a skos:Concept ; skos:prefLabel "Lesson learned" ; skos:broader dadc:learning .
+dadc:evaluation a skos:Concept ; skos:prefLabel "Evaluation harness or case" ; skos:broader dadc:learning .
+dadc:failure-mode a skos:Concept ; skos:prefLabel "Failure mode" ; skos:broader dadc:learning .
+
+dadc:governance a skos:Concept ; skos:prefLabel "Governance asset" ; skos:inScheme dadc:asset-types .
+dadc:schema a skos:Concept ; skos:prefLabel "Schema" ; skos:broader dadc:governance .
+dadc:decision a skos:Concept ; skos:prefLabel "Decision record" ; skos:broader dadc:governance .
