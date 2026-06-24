@@ -220,6 +220,36 @@ def test_bottom_up_proposals_are_stable_capped_candidate_and_not_self_matches():
     assert any(proposal.proposal_type == "activates_orphan" for proposal in first)
 
 
+def test_bottom_up_uses_asset_type_index_for_support_proposals():
+    assets = [
+        make_asset("target-code", asset_type="code", outcome="quality_gate"),
+        make_asset("unit-test", asset_type="test", outcome="quality_gate"),
+        make_asset("runbook", asset_type="document", outcome="quality_gate"),
+    ]
+
+    proposals = generate_bottom_up_proposals(assets, [], [], "scan-test", per_asset_limit=3)
+    support_proposals = [
+        proposal
+        for proposal in proposals
+        if proposal.target_asset_ids == ["target-code"]
+        and proposal.evidence.get("matching_primitive") == "asset_type_support"
+    ]
+
+    assert {proposal.proposal_type for proposal in support_proposals} == {
+        "adds_test",
+        "documents",
+    }
+    assert {proposal.source_asset_ids[0] for proposal in support_proposals} == {
+        "unit-test",
+        "runbook",
+    }
+    assert all(proposal.review_status == "generated_candidate" for proposal in support_proposals)
+    assert all(
+        not (set(proposal.source_asset_ids) & set(proposal.target_asset_ids))
+        for proposal in support_proposals
+    )
+
+
 def test_top_down_proposals_respect_portfolio_cap_and_cover_missing_parts():
     assets = [
         make_asset("need-1", need="missing_capability"),

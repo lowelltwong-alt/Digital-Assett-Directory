@@ -83,6 +83,13 @@ CALIBRATION_DEFAULT_PATHS = {
     "hybrid",
 }
 LIFECYCLE_RISK_STATES = {"dormant", "stale", "deprecated", "quarantined"}
+ASSET_TYPE_SUPPORT_PROPOSALS: tuple[tuple[str, ProposalType, str], ...] = (
+    ("test", "adds_test", "test coverage"),
+    ("document", "documents", "documentation coverage"),
+)
+ASSET_TYPE_SUPPORT_TYPES = {
+    asset_type for asset_type, _, _ in ASSET_TYPE_SUPPORT_PROPOSALS
+}
 
 
 @dataclass
@@ -301,6 +308,73 @@ def _new_proposal(
     return proposal
 
 
+def _asset_type_support_candidates(
+    *,
+    indexes: ProposalIndexes,
+    target: AssetRecord,
+    target_tokens: set[str],
+    alert_ids: list[str],
+    scan_id: str,
+    generated_at: str,
+) -> list[tuple[float, ProposalRecord]]:
+    candidates: list[tuple[float, ProposalRecord]] = []
+    for support_type, proposal_type, support_label in ASSET_TYPE_SUPPORT_PROPOSALS:
+        if target.asset_type == support_type:
+            continue
+        for provider in indexes.assets_by_type.get(support_type, []):
+            if provider.asset_id == target.asset_id:
+                continue
+            provider_tokens = _asset_tokens(provider)
+            shared_outcomes = sorted(set(provider.outcomes) & set(target.outcomes))
+            similarity = jaccard(target_tokens, provider_tokens)
+            if not shared_outcomes and similarity < 0.12:
+                continue
+            matched_capabilities = sorted(set(provider.capabilities) & set(target.needs))
+            score = min(
+                0.72,
+                0.42
+                + min(similarity, 0.18)
+                + 0.08 * len(shared_outcomes)
+                + 0.04 * len(matched_capabilities),
+            )
+            proposal = _new_proposal(
+                engine="bottom_up_self_proposal",
+                proposal_type=proposal_type,
+                source_asset_ids=[provider.asset_id],
+                target_asset_ids=[target.asset_id],
+                need_ids=[],
+                capability_ids=provider.capabilities[:8],
+                rationale=(
+                    f"{provider.title} is cataloged as a `{support_type}` asset and overlaps "
+                    f"with {target.title}; it may provide candidate {support_label}."
+                ),
+                evidence={
+                    "matching_primitive": "asset_type_support",
+                    "support_asset_type": support_type,
+                    "provider_asset_type": provider.asset_type,
+                    "target_asset_type": target.asset_type,
+                    "shared_outcomes": shared_outcomes,
+                    "matched_capabilities": matched_capabilities,
+                    "similarity": round(similarity, 4),
+                    "alert_ids": alert_ids,
+                },
+                smallest_bounded_experiment=(
+                    "Review the support asset against the target and record whether it adds "
+                    "candidate coverage without changing either source artifact."
+                ),
+                expected_benefit=(
+                    "Existing support assets may expose reusable coverage before new work is planned."
+                ),
+                assets_by_id=indexes.by_id,
+                scan_id=scan_id,
+                generated_at=generated_at,
+                score=score,
+            )
+            if proposal:
+                candidates.append((float(proposal.evidence["score"]), proposal))
+    return candidates
+
+
 def generate_bottom_up_proposals(
     assets: list[AssetRecord],
     edges: list[EdgeRecord],
@@ -365,8 +439,24 @@ def generate_bottom_up_proposals(
                 if proposal:
                     candidates.append((float(proposal.evidence["score"]), proposal))
 
+        candidates.extend(
+            _asset_type_support_candidates(
+                indexes=indexes,
+                target=target,
+                target_tokens=target_tokens,
+                alert_ids=alert_ids,
+                scan_id=scan_id,
+                generated_at=generated,
+            )
+        )
+
         for provider in indexes.eligible.values():
             if provider.asset_id == target.asset_id:
+                continue
+            if (
+                provider.asset_type in ASSET_TYPE_SUPPORT_TYPES
+                and provider.asset_type != target.asset_type
+            ):
                 continue
             shared_outcomes = sorted(set(provider.outcomes) & set(target.outcomes))
             if not shared_outcomes:
