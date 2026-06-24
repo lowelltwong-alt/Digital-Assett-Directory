@@ -82,6 +82,7 @@ CALIBRATION_DEFAULT_PATHS = {
     "top_down_orchestration",
     "hybrid",
 }
+LIFECYCLE_RISK_STATES = {"dormant", "stale", "deprecated", "quarantined"}
 
 
 @dataclass
@@ -562,6 +563,46 @@ def generate_top_down_proposals(
             scan_id=scan_id,
             generated_at=generated,
             score=0.7 + 0.03 * len(helper_ids),
+        )
+        if proposal:
+            candidates.append((float(proposal.evidence["score"]), proposal))
+
+    for lifecycle_state in sorted(LIFECYCLE_RISK_STATES):
+        lifecycle_assets = indexes.assets_by_lifecycle.get(lifecycle_state, [])
+        if not lifecycle_assets:
+            continue
+        source_ids = [asset.asset_id for asset in lifecycle_assets[:20]]
+        asset_type_counts = Counter(asset.asset_type for asset in lifecycle_assets)
+        proposal = _new_proposal(
+            engine="top_down_orchestration",
+            proposal_type="reduces_risk",
+            source_asset_ids=source_ids,
+            target_asset_ids=[],
+            need_ids=[],
+            capability_ids=[],
+            rationale=(
+                f"Portfolio scan found {len(lifecycle_assets)} eligible assets in "
+                f"`{lifecycle_state}` lifecycle state; they may need a governed "
+                "keep, renew, archive, or dismiss decision."
+            ),
+            evidence={
+                "lifecycle_state": lifecycle_state,
+                "asset_count": len(lifecycle_assets),
+                "asset_ids": [asset.asset_id for asset in lifecycle_assets],
+                "asset_type_counts": dict(asset_type_counts),
+            },
+            smallest_bounded_experiment=(
+                "Review the lifecycle state with source owners and record whether each "
+                "asset should be renewed, intentionally left alone, archived, or dismissed."
+            ),
+            expected_benefit="Lifecycle risk can be triaged without mutating source assets.",
+            known_risks=[
+                "Lifecycle state may be intentional; confirm with source owner before action."
+            ],
+            assets_by_id=indexes.by_id,
+            scan_id=scan_id,
+            generated_at=generated,
+            score=min(0.88, 0.58 + 0.04 * len(lifecycle_assets)),
         )
         if proposal:
             candidates.append((float(proposal.evidence["score"]), proposal))

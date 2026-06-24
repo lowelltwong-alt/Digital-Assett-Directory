@@ -235,6 +235,30 @@ def test_top_down_proposals_respect_portfolio_cap_and_cover_missing_parts():
     assert not (set(proposals[0].source_asset_ids) & set(proposals[0].target_asset_ids))
 
 
+def test_top_down_proposals_use_lifecycle_index_for_risk_review():
+    assets = [
+        make_asset("active-workflow", asset_type="workflow", lifecycle="active"),
+        make_asset("stale-code", asset_type="code", lifecycle="stale"),
+        make_asset("stale-doc", asset_type="document", lifecycle="stale"),
+    ]
+
+    proposals = generate_top_down_proposals(assets, [], [], "scan-test", portfolio_limit=5)
+    lifecycle_proposals = [
+        proposal
+        for proposal in proposals
+        if proposal.proposal_type == "reduces_risk"
+        and proposal.evidence.get("lifecycle_state") == "stale"
+    ]
+
+    assert len(lifecycle_proposals) == 1
+    proposal = lifecycle_proposals[0]
+    assert proposal.review_status == "generated_candidate"
+    assert proposal.target_asset_ids == []
+    assert set(proposal.source_asset_ids) == {"stale-code", "stale-doc"}
+    assert proposal.evidence["asset_type_counts"] == {"code": 1, "document": 1}
+    assert "source owner" in proposal.known_risks[0]
+
+
 def test_run_and_write_proposal_outputs(tmp_path: Path):
     assets = [
         make_asset("target", need="evaluation_harness"),
