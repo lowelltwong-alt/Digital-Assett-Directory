@@ -35,6 +35,7 @@
 - `schemas/capability-recommendation.schema.json`
 - `schemas/proposal.schema.json`
 - `schemas/proposal-review.schema.json`
+- `schemas/asset-calibration-review.schema.json`
 - `examples/proposals/bottom-up-proposal.example.json`
 - `examples/proposals/top-down-proposal.example.json`
 

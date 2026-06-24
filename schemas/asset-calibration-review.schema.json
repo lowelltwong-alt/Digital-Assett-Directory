@@ -1,0 +1,86 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://digital-asset-directory.local/schemas/asset-calibration-review.schema.json",
+  "title": "Asset Calibration Review Record",
+  "type": "object",
+  "additionalProperties": true,
+  "required": [
+    "review_id",
+    "sample_id",
+    "asset_id",
+    "asset_title",
+    "logical_path",
+    "asset_type",
+    "generated_value_score",
+    "generated_value_band",
+    "score_rating",
+    "evidence",
+    "review_status"
+  ],
+  "properties": {
+    "schema_version": {
+      "type": "string",
+      "default": "0.1.0"
+    },
+    "review_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "sample_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "asset_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "asset_title": {
+      "type": "string",
+      "minLength": 1
+    },
+    "logical_path": {
+      "type": "string",
+      "minLength": 1
+    },
+    "asset_type": {
+      "type": "string",
+      "minLength": 1
+    },
+    "generated_value_score": {
+      "type": "number",
+      "minimum": 0,
+      "maximum": 100
+    },
+    "generated_value_band": {
+      "enum": ["low", "medium", "high"]
+    },
+    "reviewer": {
+      "type": "string"
+    },
+    "reviewed_at": {
+      "type": ["string", "null"]
+    },
+    "score_rating": {
+      "enum": ["unreviewed", "too_high", "about_right", "too_low", "unsure"]
+    },
+    "false_positive_reason": {
+      "type": "string"
+    },
+    "false_negative_note": {
+      "type": "string"
+    },
+    "weight_change_note": {
+      "type": "string"
+    },
+    "notes": {
+      "type": "string"
+    },
+    "evidence": {
+      "type": "object",
+      "minProperties": 1
+    },
+    "review_status": {
+      "enum": ["generated_candidate", "reviewed", "rejected"]
+    }
+  }
+}

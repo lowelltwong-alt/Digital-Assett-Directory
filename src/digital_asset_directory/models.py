@@ -206,3 +206,26 @@ class ProposalReviewRecord(BaseModel):
     useful_example_note: str = ""
     evidence: dict[str, Any] = Field(default_factory=dict)
     review_status: Literal["generated_candidate", "reviewed", "rejected"] = "generated_candidate"
+
+
+class AssetCalibrationReviewRecord(BaseModel):
+    schema_version: str = "0.1.0"
+    review_id: str
+    sample_id: str
+    asset_id: str
+    asset_title: str
+    logical_path: str
+    asset_type: str
+    generated_value_score: float
+    generated_value_band: Literal["low", "medium", "high"]
+    reviewer: str = ""
+    reviewed_at: str | None = None
+    score_rating: Literal["unreviewed", "too_high", "about_right", "too_low", "unsure"] = (
+        "unreviewed"
+    )
+    false_positive_reason: str = ""
+    false_negative_note: str = ""
+    weight_change_note: str = ""
+    notes: str = ""
+    evidence: dict[str, Any] = Field(default_factory=dict)
+    review_status: Literal["generated_candidate", "reviewed", "rejected"] = "generated_candidate"

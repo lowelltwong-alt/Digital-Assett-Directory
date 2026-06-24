@@ -1,8 +1,23 @@
 from pathlib import Path
+import json
 
-from digital_asset_directory.calibration import write_phase2_calibration_reports
+from jsonschema import Draft202012Validator
+
+from digital_asset_directory.calibration import (
+    build_asset_calibration_review_template,
+    load_asset_calibration_reviews,
+    summarize_asset_calibration_reviews,
+    update_asset_calibration_review_file,
+    update_asset_calibration_review_record,
+    write_phase2_calibration_reports,
+)
 from digital_asset_directory.database import CatalogDB
-from digital_asset_directory.models import AlertRecord, AssetRecord, SynergyRecord
+from digital_asset_directory.models import (
+    AlertRecord,
+    AssetCalibrationReviewRecord,
+    AssetRecord,
+    SynergyRecord,
+)
 
 
 def make_asset(
@@ -87,11 +102,16 @@ def test_write_phase2_calibration_reports_creates_review_artifacts(tmp_path: Pat
         "scoring_calibration",
         "orphan_review_sample",
         "synergy_review_sample",
+        "asset_rating_template",
+        "asset_rating_summary",
     }
+    assert result["asset_review_template_count"] == 2
+    assert result["asset_review_summary"]["reviewed_count"] == 0
 
     scoring = Path(result["outputs"]["scoring_calibration"]).read_text(encoding="utf-8")
     orphan = Path(result["outputs"]["orphan_review_sample"]).read_text(encoding="utf-8")
     synergy = Path(result["outputs"]["synergy_review_sample"]).read_text(encoding="utf-8")
+    reviews = load_asset_calibration_reviews(Path(result["outputs"]["asset_rating_template"]))
 
     assert "Generated candidate review artifact" in scoring
     assert "Human rating" in scoring
@@ -99,7 +119,97 @@ def test_write_phase2_calibration_reports_creates_review_artifacts(tmp_path: Pat
     assert "Human decision" in orphan
     assert "Synergy Review Sample" in synergy
     assert "Smallest bounded experiment" in synergy
+    assert {record.review_status for record in reviews} == {"generated_candidate"}
     assert not (tmp_path / "roadmap" / "state.json").exists()
+
+
+def test_asset_calibration_review_schema_and_template_are_candidate_only():
+    assets = [
+        make_asset("asset-a", title="Evaluator", score=88, asset_type="test"),
+        make_asset("asset-b", title="Review Workflow", score=42),
+    ]
+    records = build_asset_calibration_review_template(assets, per_band_sample=1)
+    schema = json.loads(
+        Path("schemas/asset-calibration-review.schema.json").read_text(encoding="utf-8")
+    )
+
+    assert len(records) == 2
+    for record in records:
+        AssetCalibrationReviewRecord.model_validate(record.model_dump(mode="json"))
+        Draft202012Validator(schema).validate(record.model_dump(mode="json"))
+        assert record.review_status == "generated_candidate"
+        assert record.score_rating == "unreviewed"
+        assert record.evidence["authority"].startswith("Generated calibration candidate")
+
+
+def test_asset_calibration_review_update_and_summary(tmp_path: Path):
+    records = build_asset_calibration_review_template(
+        [
+            make_asset("asset-a", title="Evaluator", score=88, asset_type="test"),
+            make_asset("asset-b", title="Review Workflow", score=42),
+        ],
+        per_band_sample=1,
+    )
+    updated_records, updated = update_asset_calibration_review_record(
+        records,
+        sample_id="asset-review-001",
+        reviewer="Human",
+        score_rating="too_high",
+        false_positive_reason="Score overweights reusable test assets.",
+        weight_change_note="Lower verification weight for generated tests.",
+    )
+
+    assert updated.review_status == "reviewed"
+    assert updated.reviewer == "Human"
+    summary = summarize_asset_calibration_reviews(updated_records)
+    assert summary["reviewed_count"] == 1
+    assert summary["false_positive_note_count"] == 1
+    assert summary["weight_change_note_count"] == 1
+    assert summary["calibration_gate_complete"] is False
+
+    review_file = tmp_path / "asset_reviews.jsonl"
+    review_file.write_text(
+        "".join(json.dumps(record.model_dump(mode="json")) + "\n" for record in records),
+        encoding="utf-8",
+    )
+    file_updated, file_summary = update_asset_calibration_review_file(
+        review_file,
+        asset_id="asset-b",
+        score_rating="too_low",
+        false_negative_note="Human expected this workflow to rank higher.",
+    )
+
+    assert file_updated.asset_id == "asset-b"
+    assert file_summary["reviewed_count"] == 1
+    assert load_asset_calibration_reviews(review_file)[1].review_status == "reviewed"
+
+
+def test_asset_calibration_notes_only_do_not_count_as_reviewed():
+    records = build_asset_calibration_review_template(
+        [make_asset("asset-a", title="Evaluator", score=88)], per_band_sample=1
+    )
+    updated_records, updated = update_asset_calibration_review_record(
+        records, sample_id="asset-review-001", notes="Metadata-only note."
+    )
+
+    assert updated.review_status == "generated_candidate"
+    assert updated.reviewed_at is None
+    assert summarize_asset_calibration_reviews(updated_records)["reviewed_count"] == 0
+
+
+def test_asset_calibration_review_update_rejects_bad_rating():
+    records = build_asset_calibration_review_template(
+        [make_asset("asset-a", title="Evaluator", score=88)], per_band_sample=1
+    )
+
+    try:
+        update_asset_calibration_review_record(
+            records, sample_id="asset-review-001", score_rating="great"
+        )
+    except ValueError as exc:
+        assert "Invalid score_rating" in str(exc)
+    else:
+        raise AssertionError("bad score rating should fail closed")
 
 
 def test_catalog_db_reads_synergies_for_calibration_reports(tmp_path: Path):

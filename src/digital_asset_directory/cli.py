@@ -7,7 +7,12 @@ from typing import Optional, cast
 import typer
 from rich.console import Console
 
-from .calibration import write_phase2_calibration_reports
+from .calibration import (
+    load_asset_calibration_reviews,
+    update_asset_calibration_review_file,
+    write_asset_calibration_summary,
+    write_phase2_calibration_reports,
+)
 from .catalog import catalog_status, run_scan
 from .config import load_config
 from .context_pack import build_context_pack, write_context_pack
@@ -336,6 +341,66 @@ def recommend_calibration_reports(
             sample_size=sample_size,
         )
     console.print_json(data=result)
+
+
+@recommend_app.command("calibration-review-summary")
+def recommend_calibration_review_summary(
+    hub: Optional[Path] = typer.Option(None),
+    review_file: Optional[Path] = typer.Option(None, "--review-file"),
+) -> None:
+    """Summarize phase-2 asset scoring calibration review progress."""
+    cfg = _cfg(hub=hub)
+    path = review_file or cfg.repo_root / "processed" / "calibration" / "asset_rating_template.jsonl"
+    if not path.is_absolute():
+        path = cfg.repo_root / path
+    records = load_asset_calibration_reviews(path)
+    summary, output = write_asset_calibration_summary(cfg.repo_root, records, path)
+    console.print_json(data={"review_file": str(path), "output": output, "summary": summary})
+
+
+@recommend_app.command("calibration-review-label")
+def recommend_calibration_review_label(
+    hub: Optional[Path] = typer.Option(None),
+    review_file: Optional[Path] = typer.Option(None, "--review-file"),
+    sample_id: Optional[str] = typer.Option(None, "--sample-id"),
+    asset_id: Optional[str] = typer.Option(None, "--asset-id"),
+    reviewer: Optional[str] = typer.Option(None, "--reviewer"),
+    score_rating: Optional[str] = typer.Option(None, "--score-rating"),
+    false_positive_reason: Optional[str] = typer.Option(None, "--false-positive-reason"),
+    false_negative_note: Optional[str] = typer.Option(None, "--false-negative-note"),
+    weight_change_note: Optional[str] = typer.Option(None, "--weight-change-note"),
+    notes: Optional[str] = typer.Option(None, "--notes"),
+) -> None:
+    """Update one phase-2 asset calibration review record with human labels."""
+    cfg = _cfg(hub=hub)
+    path = review_file or cfg.repo_root / "processed" / "calibration" / "asset_rating_template.jsonl"
+    if not path.is_absolute():
+        path = cfg.repo_root / path
+    try:
+        updated, summary = update_asset_calibration_review_file(
+            path,
+            sample_id=sample_id,
+            asset_id=asset_id,
+            reviewer=reviewer,
+            score_rating=score_rating,
+            false_positive_reason=false_positive_reason,
+            false_negative_note=false_negative_note,
+            weight_change_note=weight_change_note,
+            notes=notes,
+        )
+        write_asset_calibration_summary(
+            cfg.repo_root, load_asset_calibration_reviews(path), path
+        )
+    except (FileNotFoundError, ValueError) as exc:
+        console.print(str(exc))
+        raise typer.Exit(2) from exc
+    console.print_json(
+        data={
+            "review_file": str(path),
+            "updated": updated.model_dump(mode="json"),
+            "summary": summary,
+        }
+    )
 
 
 @recommend_app.command("proposal-review-summary")

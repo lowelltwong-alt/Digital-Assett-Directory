@@ -24,6 +24,7 @@ raw/events/**
 processed/catalog/**
 processed/graph/**
 processed/alerts/**
+processed/calibration/**
 processed/context_packs/**
 processed/proposals/**
 processed/reports/**

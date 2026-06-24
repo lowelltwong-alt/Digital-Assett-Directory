@@ -21,9 +21,26 @@ This writes generated outputs only:
 processed/reports/scoring_calibration.md
 processed/reports/orphan_review_sample.md
 processed/reports/synergy_review_sample.md
+processed/calibration/asset_rating_template.jsonl
+processed/reports/asset_rating_calibration_summary.md
 ```
 
 These reports prepare human calibration; they do not satisfy human gates or change roadmap status by themselves.
+
+Record one structured asset score review:
+
+```powershell
+python -m digital_asset_directory.cli recommend calibration-review-label --sample-id asset-review-001 --reviewer "Human Reviewer" --score-rating about_right --notes "Looks reasonable."
+```
+
+Summarize structured asset score reviews:
+
+```powershell
+python -m digital_asset_directory.cli recommend calibration-review-summary
+```
+
+The phase-2 gate still requires at least 50 reviewed asset ratings plus false-positive,
+false-negative, and weight-change notes.
 
 A phase may be marked complete only when:
 
