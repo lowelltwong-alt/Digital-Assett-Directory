@@ -5,6 +5,7 @@ import json
 from jsonschema import Draft202012Validator
 
 from digital_asset_directory.calibration import (
+    build_asset_calibration_review_queue,
     build_asset_calibration_review_template,
     import_asset_calibration_review_csv,
     load_asset_calibration_reviews,
@@ -198,6 +199,67 @@ def test_asset_calibration_notes_only_do_not_count_as_reviewed():
     assert updated.review_status == "generated_candidate"
     assert updated.reviewed_at is None
     assert summarize_asset_calibration_reviews(updated_records)["reviewed_count"] == 0
+
+
+def test_asset_calibration_review_queue_filters_pending_reviewed_and_band():
+    records = build_asset_calibration_review_template(
+        [
+            make_asset("asset-a", title="Evaluator", score=88, asset_type="test"),
+            make_asset("asset-b", title="Review Workflow", score=42),
+            make_asset("asset-c", title="Middle Asset", score=55),
+        ],
+        per_band_sample=2,
+    )
+    records, _ = update_asset_calibration_review_record(
+        records,
+        sample_id="asset-review-001",
+        reviewer="Human",
+        score_rating="about_right",
+    )
+    records, _ = update_asset_calibration_review_record(
+        records,
+        sample_id="asset-review-003",
+        notes="Metadata-only note.",
+    )
+
+    pending = build_asset_calibration_review_queue(records, status="pending", limit=10)
+    reviewed = build_asset_calibration_review_queue(records, status="reviewed", limit=10)
+    low_pending = build_asset_calibration_review_queue(
+        records, status="pending", band="low", limit=10
+    )
+
+    assert pending["returned_count"] == 2
+    assert [item["sample_id"] for item in pending["items"]] == [
+        "asset-review-002",
+        "asset-review-003",
+    ]
+    assert pending["items"][1]["labels"]["notes"] == "Metadata-only note."
+    assert pending["items"][1]["review_status"] == "generated_candidate"
+    assert reviewed["returned_count"] == 1
+    assert reviewed["items"][0]["labels"]["score_rating"] == "about_right"
+    assert low_pending["returned_count"] == 1
+    assert low_pending["items"][0]["generated_value_band"] == "low"
+    assert "value_components" in pending["items"][0]["evidence"]
+
+
+def test_asset_calibration_review_queue_rejects_bad_filters():
+    records = build_asset_calibration_review_template(
+        [make_asset("asset-a", title="Evaluator", score=88)], per_band_sample=1
+    )
+
+    try:
+        build_asset_calibration_review_queue(records, status="done")  # type: ignore[arg-type]
+    except ValueError as exc:
+        assert "Status must be one of" in str(exc)
+    else:
+        raise AssertionError("bad queue status should fail closed")
+
+    try:
+        build_asset_calibration_review_queue(records, band="urgent")  # type: ignore[arg-type]
+    except ValueError as exc:
+        assert "Band must be one of" in str(exc)
+    else:
+        raise AssertionError("bad queue band should fail closed")
 
 
 def test_asset_calibration_review_update_rejects_bad_rating():

@@ -39,6 +39,13 @@ Summarize structured asset score reviews:
 python -m digital_asset_directory.cli recommend calibration-review-summary
 ```
 
+List pending or reviewed asset score reviews with generated score context:
+
+```powershell
+python -m digital_asset_directory.cli recommend calibration-review-queue --status pending --band all --limit 10
+python -m digital_asset_directory.cli recommend calibration-review-queue --status reviewed --limit 10
+```
+
 For batch review, export and import a CSV:
 
 ```powershell

@@ -5,7 +5,7 @@ import json
 from collections import Counter, defaultdict
 from pathlib import Path
 from statistics import mean
-from typing import Any
+from typing import Any, Literal
 
 from .ids import stable_id
 from .models import AlertRecord, AssetCalibrationReviewRecord, AssetRecord, SynergyRecord
@@ -169,6 +169,74 @@ def summarize_asset_calibration_reviews(
         "false_positive_note_count": false_positive_count,
         "false_negative_note_count": false_negative_count,
         "weight_change_note_count": weight_change_count,
+    }
+
+
+def build_asset_calibration_review_queue(
+    records: list[AssetCalibrationReviewRecord],
+    *,
+    status: Literal["pending", "reviewed", "all"] = "pending",
+    band: Literal["low", "medium", "high", "all"] = "all",
+    limit: int = 10,
+) -> dict[str, Any]:
+    if status not in {"pending", "reviewed", "all"}:
+        raise ValueError("Status must be one of: pending, reviewed, all")
+    if band not in {"low", "medium", "high", "all"}:
+        raise ValueError("Band must be one of: low, medium, high, all")
+
+    items: list[dict[str, Any]] = []
+    for record in sorted(records, key=lambda item: item.sample_id):
+        pending = _review_is_pending(record)
+        if status == "pending" and not pending:
+            continue
+        if status == "reviewed" and pending:
+            continue
+        if band != "all" and record.generated_value_band != band:
+            continue
+        items.append(
+            {
+                "sample_id": record.sample_id,
+                "asset_id": record.asset_id,
+                "asset_title": record.asset_title,
+                "logical_path": record.logical_path,
+                "asset_type": record.asset_type,
+                "generated_value_score": record.generated_value_score,
+                "generated_value_band": record.generated_value_band,
+                "review_status": _review_status(record),
+                "labels": {
+                    "score_rating": record.score_rating,
+                    "false_positive_reason": record.false_positive_reason,
+                    "false_negative_note": record.false_negative_note,
+                    "weight_change_note": record.weight_change_note,
+                    "notes": record.notes,
+                },
+                "reviewer": record.reviewer,
+                "reviewed_at": record.reviewed_at,
+                "evidence": {
+                    "value_components": record.evidence.get("value_components", {}),
+                    "capabilities": record.evidence.get("capabilities", []),
+                    "needs": record.evidence.get("needs", []),
+                    "outcomes": record.evidence.get("outcomes", []),
+                    "lifecycle_state": record.evidence.get("lifecycle_state", ""),
+                    "freshness_status": record.evidence.get("freshness_status", ""),
+                    "confidence": record.evidence.get("confidence", ""),
+                    "authority": record.evidence.get(
+                        "authority",
+                        "Generated calibration candidate; human review required.",
+                    ),
+                },
+            }
+        )
+        if len(items) >= limit:
+            break
+
+    return {
+        "status_filter": status,
+        "band_filter": band,
+        "limit": limit,
+        "returned_count": len(items),
+        "summary": summarize_asset_calibration_reviews(records),
+        "items": items,
     }
 
 

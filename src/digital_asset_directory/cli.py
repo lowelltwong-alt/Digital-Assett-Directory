@@ -8,6 +8,7 @@ import typer
 from rich.console import Console
 
 from .calibration import (
+    build_asset_calibration_review_queue,
     import_asset_calibration_review_csv,
     load_asset_calibration_reviews,
     update_asset_calibration_review_file,
@@ -403,6 +404,43 @@ def recommend_calibration_review_label(
             "summary": summary,
         }
     )
+
+
+@recommend_app.command("calibration-review-queue")
+def recommend_calibration_review_queue(
+    hub: Optional[Path] = typer.Option(None),
+    review_file: Optional[Path] = typer.Option(None, "--review-file"),
+    status: str = typer.Option("pending", "--status"),
+    band: str = typer.Option("all", "--band"),
+    limit: int = typer.Option(10, min=1, max=100),
+) -> None:
+    """List asset calibration review queue items with generated score context."""
+    cfg = _cfg(hub=hub)
+    path = (
+        review_file or cfg.repo_root / "processed" / "calibration" / "asset_rating_template.jsonl"
+    )
+    if not path.is_absolute():
+        path = cfg.repo_root / path
+
+    status_value = status.lower()
+    band_value = band.lower()
+    if status_value not in {"pending", "reviewed", "all"}:
+        console.print("Status must be one of: pending, reviewed, all")
+        raise typer.Exit(2)
+    if band_value not in {"low", "medium", "high", "all"}:
+        console.print("Band must be one of: low, medium, high, all")
+        raise typer.Exit(2)
+    try:
+        queue = build_asset_calibration_review_queue(
+            load_asset_calibration_reviews(path),
+            status=status_value,  # type: ignore[arg-type]
+            band=band_value,  # type: ignore[arg-type]
+            limit=limit,
+        )
+    except (FileNotFoundError, ValueError) as exc:
+        console.print(str(exc))
+        raise typer.Exit(2) from exc
+    console.print_json(data={"review_file": str(path), **queue})
 
 
 @recommend_app.command("calibration-review-export-csv")
