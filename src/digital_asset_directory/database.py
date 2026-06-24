@@ -199,6 +199,14 @@ class CatalogDB:
             for row in self.connection.execute(query)
         ]
 
+    def synergies(self) -> list[SynergyRecord]:
+        return [
+            SynergyRecord.model_validate_json(row["payload_json"])
+            for row in self.connection.execute(
+                "SELECT payload_json FROM synergies ORDER BY score DESC, synergy_id"
+            )
+        ]
+
     def latest_scan(self) -> dict[str, Any] | None:
         row = self.connection.execute(
             "SELECT * FROM scans ORDER BY started_at DESC LIMIT 1"

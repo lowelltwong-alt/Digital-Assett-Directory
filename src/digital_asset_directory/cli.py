@@ -7,6 +7,7 @@ from typing import Optional, cast
 import typer
 from rich.console import Console
 
+from .calibration import write_phase2_calibration_reports
 from .catalog import catalog_status, run_scan
 from .config import load_config
 from .context_pack import build_context_pack, write_context_pack
@@ -317,6 +318,24 @@ def recommend_proposals(
             "outputs": paths,
         }
     )
+
+
+@recommend_app.command("calibration-reports")
+def recommend_calibration_reports(
+    hub: Optional[Path] = typer.Option(None),
+    sample_size: int = typer.Option(25, "--sample-size", min=1, max=100),
+) -> None:
+    """Write generated phase-2 scoring, orphan, and synergy calibration review reports."""
+    cfg = _cfg(hub=hub)
+    with CatalogDB(cfg.database_path) as db:
+        result = write_phase2_calibration_reports(
+            cfg.repo_root,
+            db.assets(),
+            db.alerts(open_only=True),
+            db.synergies(),
+            sample_size=sample_size,
+        )
+    console.print_json(data=result)
 
 
 @recommend_app.command("proposal-review-summary")
