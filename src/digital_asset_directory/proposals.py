@@ -618,6 +618,28 @@ def _proposal_metrics(proposals: list[ProposalRecord]) -> dict[str, Any]:
         for proposal in proposals
     ]
     evidence_complete = [bool(proposal.evidence) for proposal in proposals]
+    actionable_experiments = [
+        bool(proposal.smallest_bounded_experiment.strip()) for proposal in proposals
+    ]
+    candidate_status_passes = [
+        proposal.review_status == "generated_candidate" for proposal in proposals
+    ]
+    authority_boundary_passes = [
+        "source repositories retain authority" in proposal.authority_boundary
+        and "no source mutation" in proposal.authority_boundary
+        for proposal in proposals
+    ]
+    external_review_risks = [
+        proposal
+        for proposal in proposals
+        if any(
+            term in " ".join(proposal.known_risks).lower()
+            for term in ("external", "license", "security", "compatibility")
+        )
+    ]
+    research_missing_part = [
+        proposal for proposal in proposals if proposal.proposal_type == "research_missing_part"
+    ]
     return {
         "proposal_count": total,
         "distinct_needs_covered": len(needs),
@@ -628,6 +650,24 @@ def _proposal_metrics(proposals: list[ProposalRecord]) -> dict[str, Any]:
         ),
         "safety_pass_rate": round(sum(safety_passes) / total, 4) if total else 1.0,
         "evidence_completeness_rate": round(sum(evidence_complete) / total, 4) if total else 1.0,
+        "actionable_experiment_rate": round(sum(actionable_experiments) / total, 4)
+        if total
+        else 1.0,
+        "candidate_status_pass_rate": round(sum(candidate_status_passes) / total, 4)
+        if total
+        else 1.0,
+        "authority_boundary_pass_rate": round(sum(authority_boundary_passes) / total, 4)
+        if total
+        else 1.0,
+        "estimated_review_cost_counts": dict(
+            Counter(proposal.estimated_review_cost for proposal in proposals)
+        ),
+        "estimated_integration_cost_counts": dict(
+            Counter(proposal.estimated_integration_cost for proposal in proposals)
+        ),
+        "external_review_risk_count": len(external_review_risks),
+        "research_missing_part_count": len(research_missing_part),
+        "human_usefulness_metrics_available": False,
         "proposal_types": dict(Counter(proposal.proposal_type for proposal in proposals)),
     }
 
@@ -1431,6 +1471,14 @@ def comparison_markdown(comparison: dict[str, Any]) -> str:
                 f"- Self-match violations: **{metrics['self_match_violations']}**",
                 f"- Safety pass rate: **{metrics['safety_pass_rate']}**",
                 f"- Evidence completeness rate: **{metrics['evidence_completeness_rate']}**",
+                f"- Actionable experiment rate: **{metrics['actionable_experiment_rate']}**",
+                f"- Candidate status pass rate: **{metrics['candidate_status_pass_rate']}**",
+                f"- Authority boundary pass rate: **{metrics['authority_boundary_pass_rate']}**",
+                f"- Estimated review cost counts: `{metrics['estimated_review_cost_counts']}`",
+                f"- Estimated integration cost counts: `{metrics['estimated_integration_cost_counts']}`",
+                f"- External review risk count: **{metrics['external_review_risk_count']}**",
+                f"- Research missing-part count: **{metrics['research_missing_part_count']}**",
+                f"- Human usefulness metrics available: **{metrics['human_usefulness_metrics_available']}**",
                 f"- Proposal types: `{metrics['proposal_types']}`",
                 "",
             ]

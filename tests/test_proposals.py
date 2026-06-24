@@ -230,6 +230,12 @@ def test_run_and_write_proposal_outputs(tmp_path: Path):
     assert top_down
     assert comparison["combined"]["self_match_violations"] == 0
     assert comparison["combined"]["safety_pass_rate"] == 1.0
+    assert comparison["combined"]["actionable_experiment_rate"] == 1.0
+    assert comparison["combined"]["candidate_status_pass_rate"] == 1.0
+    assert comparison["combined"]["authority_boundary_pass_rate"] == 1.0
+    assert comparison["combined"]["estimated_review_cost_counts"]
+    assert comparison["combined"]["estimated_integration_cost_counts"]
+    assert comparison["combined"]["human_usefulness_metrics_available"] is False
     assert comparison["review_sample_engine_counts"]["bottom_up_self_proposal"] == min(
         len(bottom_up), 2
     )
@@ -238,7 +244,10 @@ def test_run_and_write_proposal_outputs(tmp_path: Path):
     )
     for output in paths.values():
         assert Path(output).exists()
-    assert "Proposal Engine Comparison" in Path(paths["comparison"]).read_text(encoding="utf-8")
+    comparison_text = Path(paths["comparison"]).read_text(encoding="utf-8")
+    assert "Proposal Engine Comparison" in comparison_text
+    assert "Actionable experiment rate" in comparison_text
+    assert "Human usefulness metrics available: **False**" in comparison_text
     assert "Engine labels are hidden" in Path(paths["review_sample"]).read_text(encoding="utf-8")
     assert "Proposal Calibration Summary" in Path(paths["calibration_summary"]).read_text(
         encoding="utf-8"
