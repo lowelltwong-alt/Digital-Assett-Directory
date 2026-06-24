@@ -185,3 +185,21 @@ class ProposalRecord(BaseModel):
     review_status: Literal["generated_candidate", "reviewed", "rejected"] = "generated_candidate"
     generated_at: str
     scan_id: str
+
+
+class ProposalReviewRecord(BaseModel):
+    schema_version: str = "0.1.0"
+    review_id: str
+    sample_id: str
+    proposal_id: str
+    proposal_engine: Literal["bottom_up_self_proposal", "top_down_orchestration"]
+    reviewer: str = ""
+    reviewed_at: str | None = None
+    usefulness: Literal["unreviewed", "useful", "not_useful", "unsure"] = "unreviewed"
+    safety: Literal["unreviewed", "safe", "unsafe", "needs_more_review"] = "unreviewed"
+    novelty: Literal["unreviewed", "novel", "already_known", "unsure"] = "unreviewed"
+    actionability: Literal["unreviewed", "actionable", "not_actionable", "unsure"] = "unreviewed"
+    decision: Literal["pending", "accept_candidate", "reject_candidate", "defer"] = "pending"
+    notes: str = ""
+    evidence: dict[str, Any] = Field(default_factory=dict)
+    review_status: Literal["generated_candidate", "reviewed", "rejected"] = "generated_candidate"

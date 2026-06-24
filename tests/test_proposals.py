@@ -3,11 +3,19 @@ from pathlib import Path
 
 from jsonschema import Draft202012Validator
 
-from digital_asset_directory.models import AlertRecord, AssetRecord, EdgeRecord, ProposalRecord
+from digital_asset_directory.models import (
+    AlertRecord,
+    AssetRecord,
+    EdgeRecord,
+    ProposalRecord,
+    ProposalReviewRecord,
+)
 from digital_asset_directory.proposals import (
+    build_proposal_review_template,
     generate_bottom_up_proposals,
     generate_top_down_proposals,
     run_proposal_engines,
+    summarize_proposal_reviews,
     write_proposal_outputs,
 )
 
@@ -102,6 +110,24 @@ def test_proposal_record_schema_requires_evidence_and_candidate_status():
     assert list(Draft202012Validator(schema).iter_errors(invalid))
 
 
+def test_proposal_review_record_schema_supports_unreviewed_template():
+    review = ProposalReviewRecord(
+        review_id="review-1",
+        sample_id="review-001",
+        proposal_id="proposal-1",
+        proposal_engine="top_down_orchestration",
+        evidence={"proposal_type": "research_missing_part"},
+    )
+    assert review.usefulness == "unreviewed"
+    assert review.decision == "pending"
+
+    schema = json.loads(Path("schemas/proposal-review.schema.json").read_text(encoding="utf-8"))
+    Draft202012Validator(schema).validate(review.model_dump(mode="json"))
+    invalid = review.model_dump(mode="json")
+    invalid["usefulness"] = "great"
+    assert list(Draft202012Validator(schema).iter_errors(invalid))
+
+
 def test_bottom_up_proposals_are_stable_capped_candidate_and_not_self_matches():
     assets = [
         make_asset("target", need="evaluation_harness"),
@@ -163,7 +189,49 @@ def test_run_and_write_proposal_outputs(tmp_path: Path):
     assert top_down
     assert comparison["combined"]["self_match_violations"] == 0
     assert comparison["combined"]["safety_pass_rate"] == 1.0
+    assert comparison["review_sample_engine_counts"]["bottom_up_self_proposal"] == min(
+        len(bottom_up), 2
+    )
+    assert comparison["review_sample_engine_counts"]["top_down_orchestration"] == min(
+        len(top_down), 2
+    )
     for output in paths.values():
         assert Path(output).exists()
     assert "Proposal Engine Comparison" in Path(paths["comparison"]).read_text(encoding="utf-8")
     assert "Engine labels are hidden" in Path(paths["review_sample"]).read_text(encoding="utf-8")
+    assert "Proposal Calibration Summary" in Path(paths["calibration_summary"]).read_text(
+        encoding="utf-8"
+    )
+    review_template = [
+        json.loads(line)
+        for line in Path(paths["review_template"]).read_text(encoding="utf-8").splitlines()
+        if line.strip()
+    ]
+    assert {record["proposal_engine"] for record in review_template} == {
+        "bottom_up_self_proposal",
+        "top_down_orchestration",
+    }
+
+
+def test_review_template_tracks_per_engine_and_human_completion_counts():
+    assets = [
+        make_asset("target", need="evaluation_harness"),
+        make_asset("provider", capability="evaluation_harness"),
+    ]
+    bottom_up, top_down, _ = run_proposal_engines(
+        assets=assets,
+        edges=[make_edge("provider", "target")],
+        alerts=[make_alert("target")],
+        scan_id="scan-test",
+        engine="both",
+        per_asset_limit=2,
+        portfolio_limit=2,
+        review_sample=1,
+    )
+    template = build_proposal_review_template(bottom_up, top_down, per_engine_sample=1)
+    assert len(template) == 2
+    assert summarize_proposal_reviews(template)["calibration_gate_complete"] is False
+    template[0].usefulness = "useful"
+    template[0].safety = "safe"
+    template[0].actionability = "actionable"
+    assert summarize_proposal_reviews(template)["reviewed_count"] == 1

@@ -7,7 +7,7 @@ from pathlib import Path
 from typing import Any, Literal
 
 from .ids import stable_id
-from .models import AlertRecord, AssetRecord, EdgeRecord, ProposalRecord
+from .models import AlertRecord, AssetRecord, EdgeRecord, ProposalRecord, ProposalReviewRecord
 from .utils import atomic_write_text, jaccard, tokens, utc_now, write_jsonl
 
 ProposalEngineOption = Literal["bottom-up", "top-down", "both"]
@@ -578,32 +578,128 @@ def _proposal_metrics(proposals: list[ProposalRecord]) -> dict[str, Any]:
     }
 
 
+def build_proposal_review_template(
+    bottom_up: list[ProposalRecord],
+    top_down: list[ProposalRecord],
+    per_engine_sample: int = 25,
+) -> list[ProposalReviewRecord]:
+    selected: list[ProposalRecord] = [
+        *sorted(bottom_up, key=lambda record: record.proposal_id)[:per_engine_sample],
+        *sorted(top_down, key=lambda record: record.proposal_id)[:per_engine_sample],
+    ]
+    records: list[ProposalReviewRecord] = []
+    for index, proposal in enumerate(selected, start=1):
+        sample_id = f"review-{index:03d}"
+        records.append(
+            ProposalReviewRecord(
+                review_id=stable_id("proposal-review", sample_id, proposal.proposal_id),
+                sample_id=sample_id,
+                proposal_id=proposal.proposal_id,
+                proposal_engine=proposal.proposal_engine,
+                evidence={
+                    "proposal_type": proposal.proposal_type,
+                    "scan_id": proposal.scan_id,
+                    "source_asset_ids": proposal.source_asset_ids,
+                    "target_asset_ids": proposal.target_asset_ids,
+                    "need_ids": proposal.need_ids,
+                },
+            )
+        )
+    return records
+
+
 def build_proposal_comparison(
     bottom_up: list[ProposalRecord],
     top_down: list[ProposalRecord],
     review_sample: int = 25,
 ) -> dict[str, Any]:
-    combined = sorted(bottom_up + top_down, key=lambda record: record.proposal_id)
+    review_template = build_proposal_review_template(bottom_up, top_down, review_sample)
+    by_id = {proposal.proposal_id: proposal for proposal in bottom_up + top_down}
     sample = [
         {
-            "sample_id": f"review-{index:03d}",
-            "proposal_id": proposal.proposal_id,
-            "proposal_type": proposal.proposal_type,
-            "source_asset_ids": proposal.source_asset_ids,
-            "target_asset_ids": proposal.target_asset_ids,
-            "need_ids": proposal.need_ids,
-            "rationale": proposal.rationale,
-            "smallest_bounded_experiment": proposal.smallest_bounded_experiment,
+            "sample_id": record.sample_id,
+            "proposal_id": record.proposal_id,
+            "proposal_type": record.evidence.get("proposal_type", ""),
+            "source_asset_ids": record.evidence.get("source_asset_ids", []),
+            "target_asset_ids": record.evidence.get("target_asset_ids", []),
+            "need_ids": record.evidence.get("need_ids", []),
+            "rationale": by_id[record.proposal_id].rationale,
+            "smallest_bounded_experiment": by_id[
+                record.proposal_id
+            ].smallest_bounded_experiment,
         }
-        for index, proposal in enumerate(combined[:review_sample], start=1)
+        for record in review_template
+        if record.proposal_id in by_id
     ]
+    engine_sample_counts = Counter(record.proposal_engine for record in review_template)
+    combined = sorted(bottom_up + top_down, key=lambda record: record.proposal_id)
     return {
         "bottom_up": _proposal_metrics(bottom_up),
         "top_down": _proposal_metrics(top_down),
         "combined": _proposal_metrics(combined),
+        "review_sample_per_engine_requested": review_sample,
         "review_sample_size": len(sample),
+        "review_sample_engine_counts": {
+            "bottom_up_self_proposal": engine_sample_counts.get("bottom_up_self_proposal", 0),
+            "top_down_orchestration": engine_sample_counts.get("top_down_orchestration", 0),
+        },
+        "calibration_gate_ready": (
+            engine_sample_counts.get("bottom_up_self_proposal", 0) >= review_sample
+            and engine_sample_counts.get("top_down_orchestration", 0) >= review_sample
+        ),
         "review_sample": sample,
-        "review_sample_note": "Engine labels are omitted from review sample items; JSONL retains them.",
+        "review_sample_note": (
+            "Engine labels are omitted from review sample markdown; proposal review JSONL retains them."
+        ),
+    }
+
+
+def _review_record_for_markdown(
+    record: ProposalReviewRecord, proposals_by_id: dict[str, ProposalRecord]
+) -> dict[str, Any]:
+    proposal = proposals_by_id[record.proposal_id]
+    return {
+        "sample_id": record.sample_id,
+        "proposal_id": record.proposal_id,
+        "proposal_type": proposal.proposal_type,
+        "source_asset_ids": proposal.source_asset_ids,
+        "target_asset_ids": proposal.target_asset_ids,
+        "need_ids": proposal.need_ids,
+        "rationale": proposal.rationale,
+        "smallest_bounded_experiment": proposal.smallest_bounded_experiment,
+    }
+
+
+def summarize_proposal_reviews(reviews: list[ProposalReviewRecord]) -> dict[str, Any]:
+    reviewed = [
+        review
+        for review in reviews
+        if review.usefulness != "unreviewed"
+        or review.safety != "unreviewed"
+        or review.novelty != "unreviewed"
+        or review.actionability != "unreviewed"
+        or review.decision != "pending"
+    ]
+    by_engine: dict[str, list[ProposalReviewRecord]] = defaultdict(list)
+    for review in reviewed:
+        by_engine[review.proposal_engine].append(review)
+    useful = [review for review in reviewed if review.usefulness == "useful"]
+    safe = [review for review in reviewed if review.safety == "safe"]
+    actionable = [review for review in reviewed if review.actionability == "actionable"]
+    return {
+        "template_count": len(reviews),
+        "reviewed_count": len(reviewed),
+        "reviewed_by_engine": {
+            "bottom_up_self_proposal": len(by_engine.get("bottom_up_self_proposal", [])),
+            "top_down_orchestration": len(by_engine.get("top_down_orchestration", [])),
+        },
+        "useful_count": len(useful),
+        "safe_count": len(safe),
+        "actionable_count": len(actionable),
+        "calibration_gate_complete": (
+            len(by_engine.get("bottom_up_self_proposal", [])) >= 25
+            and len(by_engine.get("top_down_orchestration", [])) >= 25
+        ),
     }
 
 
@@ -661,7 +757,11 @@ def comparison_markdown(comparison: dict[str, Any]) -> str:
             "",
             comparison["review_sample_note"],
             "",
+            f"- Requested per engine: **{comparison['review_sample_per_engine_requested']}**",
             f"- Sample size: **{comparison['review_sample_size']}**",
+            f"- Bottom-up sample count: **{comparison['review_sample_engine_counts']['bottom_up_self_proposal']}**",
+            f"- Top-down sample count: **{comparison['review_sample_engine_counts']['top_down_orchestration']}**",
+            f"- Calibration gate ready: **{comparison['calibration_gate_ready']}**",
             "",
         ]
     )
@@ -672,7 +772,12 @@ def review_sample_markdown(comparison: dict[str, Any]) -> str:
     lines = [
         "# Proposal Review Sample",
         "",
-        "Engine labels are hidden here for review calibration. Use proposal IDs to unblind after scoring.",
+        "Engine labels are hidden here for review calibration. Use proposal IDs and `processed/proposals/proposal_review_template.jsonl` to unblind after scoring.",
+        "",
+        f"- Requested per engine: **{comparison['review_sample_per_engine_requested']}**",
+        f"- Bottom-up sample count: **{comparison['review_sample_engine_counts']['bottom_up_self_proposal']}**",
+        f"- Top-down sample count: **{comparison['review_sample_engine_counts']['top_down_orchestration']}**",
+        f"- Calibration gate ready: **{comparison['calibration_gate_ready']}**",
         "",
     ]
     for item in comparison["review_sample"]:
@@ -695,6 +800,56 @@ def review_sample_markdown(comparison: dict[str, Any]) -> str:
     return "\n".join(lines) + "\n"
 
 
+def calibration_summary_markdown(
+    comparison: dict[str, Any], review_template: list[ProposalReviewRecord]
+) -> str:
+    review_summary = summarize_proposal_reviews(review_template)
+    missing_bottom_up = max(
+        0,
+        comparison["review_sample_per_engine_requested"]
+        - comparison["review_sample_engine_counts"]["bottom_up_self_proposal"],
+    )
+    missing_top_down = max(
+        0,
+        comparison["review_sample_per_engine_requested"]
+        - comparison["review_sample_engine_counts"]["top_down_orchestration"],
+    )
+    lines = [
+        "# Proposal Calibration Summary",
+        "",
+        "Generated candidate calibration workspace. This file does not claim human review is complete.",
+        "",
+        "## Sample Coverage",
+        "",
+        f"- Requested per engine: **{comparison['review_sample_per_engine_requested']}**",
+        f"- Bottom-up sample count: **{comparison['review_sample_engine_counts']['bottom_up_self_proposal']}**",
+        f"- Top-down sample count: **{comparison['review_sample_engine_counts']['top_down_orchestration']}**",
+        f"- Missing bottom-up samples: **{missing_bottom_up}**",
+        f"- Missing top-down samples: **{missing_top_down}**",
+        f"- Calibration gate ready for human review: **{comparison['calibration_gate_ready']}**",
+        "",
+        "## Human Review Status",
+        "",
+        f"- Review template records: **{review_summary['template_count']}**",
+        f"- Reviewed records: **{review_summary['reviewed_count']}**",
+        f"- Reviewed bottom-up records: **{review_summary['reviewed_by_engine']['bottom_up_self_proposal']}**",
+        f"- Reviewed top-down records: **{review_summary['reviewed_by_engine']['top_down_orchestration']}**",
+        f"- Useful records: **{review_summary['useful_count']}**",
+        f"- Safe records: **{review_summary['safe_count']}**",
+        f"- Actionable records: **{review_summary['actionable_count']}**",
+        f"- Calibration gate complete: **{review_summary['calibration_gate_complete']}**",
+        "",
+        "## How To Complete The Gate",
+        "",
+        "- Generate at least 25 proposals from each engine, raising `--portfolio-limit` if needed.",
+        "- Review the hidden Markdown sample before looking at engine labels.",
+        "- Record labels in `processed/proposals/proposal_review_template.jsonl` or a copied curated evidence file.",
+        "- Track curated evidence only after human labels are entered; do not track generated proposal outputs.",
+        "",
+    ]
+    return "\n".join(lines) + "\n"
+
+
 def write_proposal_outputs(
     repo_root: Path,
     bottom_up: list[ProposalRecord],
@@ -703,17 +858,28 @@ def write_proposal_outputs(
 ) -> dict[str, str]:
     bottom_path = repo_root / "processed" / "proposals" / "bottom_up_proposals.jsonl"
     top_path = repo_root / "processed" / "proposals" / "top_down_proposals.jsonl"
+    review_template_path = repo_root / "processed" / "proposals" / "proposal_review_template.jsonl"
     comparison_path = repo_root / "processed" / "reports" / "proposal_engine_comparison.md"
     review_path = repo_root / "processed" / "reports" / "proposal_review_sample.md"
+    calibration_path = repo_root / "processed" / "reports" / "proposal_calibration_summary.md"
+    review_template = build_proposal_review_template(
+        bottom_up, top_down, comparison["review_sample_per_engine_requested"]
+    )
     write_jsonl(bottom_path, [proposal.model_dump(mode="json") for proposal in bottom_up])
     write_jsonl(top_path, [proposal.model_dump(mode="json") for proposal in top_down])
+    write_jsonl(
+        review_template_path, [review.model_dump(mode="json") for review in review_template]
+    )
     atomic_write_text(comparison_path, comparison_markdown(comparison))
     atomic_write_text(review_path, review_sample_markdown(comparison))
+    atomic_write_text(calibration_path, calibration_summary_markdown(comparison, review_template))
     return {
         "bottom_up": str(bottom_path),
         "top_down": str(top_path),
+        "review_template": str(review_template_path),
         "comparison": str(comparison_path),
         "review_sample": str(review_path),
+        "calibration_summary": str(calibration_path),
     }
 
 

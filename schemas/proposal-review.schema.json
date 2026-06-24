@@ -1,0 +1,106 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://local.digital-asset-directory/schemas/proposal-review.schema.json",
+  "title": "Candidate Proposal Review",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "review_id",
+    "sample_id",
+    "proposal_id",
+    "proposal_engine",
+    "usefulness",
+    "safety",
+    "novelty",
+    "actionability",
+    "decision",
+    "evidence",
+    "review_status"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": "0.1.0"
+    },
+    "review_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "sample_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "proposal_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "proposal_engine": {
+      "enum": [
+        "bottom_up_self_proposal",
+        "top_down_orchestration"
+      ]
+    },
+    "reviewer": {
+      "type": "string"
+    },
+    "reviewed_at": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "usefulness": {
+      "enum": [
+        "unreviewed",
+        "useful",
+        "not_useful",
+        "unsure"
+      ]
+    },
+    "safety": {
+      "enum": [
+        "unreviewed",
+        "safe",
+        "unsafe",
+        "needs_more_review"
+      ]
+    },
+    "novelty": {
+      "enum": [
+        "unreviewed",
+        "novel",
+        "already_known",
+        "unsure"
+      ]
+    },
+    "actionability": {
+      "enum": [
+        "unreviewed",
+        "actionable",
+        "not_actionable",
+        "unsure"
+      ]
+    },
+    "decision": {
+      "enum": [
+        "pending",
+        "accept_candidate",
+        "reject_candidate",
+        "defer"
+      ]
+    },
+    "notes": {
+      "type": "string"
+    },
+    "evidence": {
+      "type": "object"
+    },
+    "review_status": {
+      "enum": [
+        "generated_candidate",
+        "reviewed",
+        "rejected"
+      ]
+    }
+  },
+  "additionalProperties": false
+}
