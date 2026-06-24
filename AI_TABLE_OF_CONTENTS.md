@@ -20,6 +20,7 @@
 - `docs/SECURITY_AND_PRIVACY.md`
 - `docs/ORPHAN_RADAR_INTEGRATION.md`
 - `docs/RESEARCH_BASIS.md`
+- `docs/DUAL_PROPOSAL_ENGINE_RESEARCH_AND_BUILD_PLAN.md` — research-backed plan for bottom-up and top-down proposal engines
 
 ## Contracts
 
