@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import re
 from pathlib import Path
-from typing import Optional
+from typing import Optional, cast
 
 import typer
 from rich.console import Console
@@ -14,6 +14,7 @@ from .database import CatalogDB
 from .governance import enforce_postflight, install_governance
 from .learning import add_lesson, postflight, preflight
 from .orphan_adapter import run_orphan_radar
+from .proposals import ProposalEngineOption, run_proposal_engines, write_proposal_outputs
 from .recommendations import recommend_skills_and_agents, recommend_swarm
 from .research import research_missing_parts
 from .roadmap import check_roadmap
@@ -260,6 +261,47 @@ def recommend_swarm_command(
     with CatalogDB(cfg.database_path) as db:
         record = recommend_swarm(goal, db.assets(), limit)
     console.print_json(data=record.model_dump(mode="json"))
+
+
+@recommend_app.command("proposals")
+def recommend_proposals(
+    hub: Optional[Path] = typer.Option(None),
+    engine: str = typer.Option("both", "--engine"),
+    per_asset_limit: int = typer.Option(3, min=1, max=20),
+    portfolio_limit: int = typer.Option(20, min=1, max=200),
+    review_sample: int = typer.Option(25, min=1, max=200),
+) -> None:
+    """Generate bottom-up and/or top-down candidate proposals from the current catalog."""
+    normalized_engine = engine.lower()
+    if normalized_engine not in {"bottom-up", "top-down", "both"}:
+        console.print("Engine must be one of: bottom-up, top-down, both")
+        raise typer.Exit(2)
+    selected_engine = cast(ProposalEngineOption, normalized_engine)
+    cfg = _cfg(hub=hub)
+    with CatalogDB(cfg.database_path) as db:
+        latest_scan = db.latest_scan()
+        scan_id = latest_scan["scan_id"] if latest_scan else "catalog-without-scan"
+        bottom_up, top_down, comparison = run_proposal_engines(
+            assets=db.assets(),
+            edges=db.edges(),
+            alerts=db.alerts(open_only=True),
+            scan_id=scan_id,
+            engine=selected_engine,
+            per_asset_limit=per_asset_limit,
+            portfolio_limit=portfolio_limit,
+            review_sample=review_sample,
+        )
+    paths = write_proposal_outputs(cfg.repo_root, bottom_up, top_down, comparison)
+    console.print_json(
+        data={
+            "scan_id": scan_id,
+            "engine": normalized_engine,
+            "bottom_up_count": len(bottom_up),
+            "top_down_count": len(top_down),
+            "comparison": comparison,
+            "outputs": paths,
+        }
+    )
 
 
 @orphan_app.command("run")

@@ -9,6 +9,7 @@
     "source": "schemas/source.schema.json",
     "synergy": "schemas/synergy.schema.json",
     "activation_trigger": "schemas/activation-trigger.schema.json",
-    "capability_recommendation": "schemas/capability-recommendation.schema.json"
+    "capability_recommendation": "schemas/capability-recommendation.schema.json",
+    "proposal": "schemas/proposal.schema.json"
   }
 }

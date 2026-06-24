@@ -25,6 +25,7 @@ processed/catalog/**
 processed/graph/**
 processed/alerts/**
 processed/context_packs/**
+processed/proposals/**
 processed/reports/**
 !processed/**/.gitkeep
 !processed/**/README.md

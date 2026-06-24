@@ -151,3 +151,37 @@ class CapabilityRecommendation(BaseModel):
     confidence: ConfidenceLabel = "medium"
     risk: Literal["low", "medium", "high"] = "medium"
     review_status: Literal["generated_candidate", "reviewed", "rejected"] = "generated_candidate"
+
+
+class ProposalRecord(BaseModel):
+    schema_version: str = "0.1.0"
+    proposal_id: str
+    proposal_engine: Literal["bottom_up_self_proposal", "top_down_orchestration"]
+    proposal_type: Literal[
+        "satisfies_need",
+        "strengthens_capability",
+        "activates_orphan",
+        "reduces_risk",
+        "adds_test",
+        "documents",
+        "bundles_assets",
+        "research_missing_part",
+    ]
+    source_asset_ids: list[str] = Field(min_length=1)
+    target_asset_ids: list[str] = Field(default_factory=list)
+    need_ids: list[str] = Field(default_factory=list)
+    capability_ids: list[str] = Field(default_factory=list)
+    rationale: str = Field(min_length=1)
+    evidence: dict[str, Any] = Field(min_length=1)
+    smallest_bounded_experiment: str = Field(min_length=1)
+    expected_benefit: str = ""
+    known_risks: list[str] = Field(default_factory=list)
+    authority_boundary: str = Field(min_length=1)
+    confidence: ConfidenceLabel = "medium"
+    risk: Literal["low", "medium", "high"] = "medium"
+    estimated_review_cost: Literal["low", "medium", "high"] = "medium"
+    estimated_integration_cost: Literal["low", "medium", "high"] = "medium"
+    safety_flags: list[str] = Field(default_factory=list)
+    review_status: Literal["generated_candidate", "reviewed", "rejected"] = "generated_candidate"
+    generated_at: str
+    scan_id: str

@@ -1,0 +1,149 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://local.digital-asset-directory/schemas/proposal.schema.json",
+  "title": "Candidate Asset Proposal",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "proposal_id",
+    "proposal_engine",
+    "proposal_type",
+    "source_asset_ids",
+    "target_asset_ids",
+    "rationale",
+    "evidence",
+    "smallest_bounded_experiment",
+    "authority_boundary",
+    "confidence",
+    "risk",
+    "review_status",
+    "generated_at",
+    "scan_id"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": "0.1.0"
+    },
+    "proposal_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "proposal_engine": {
+      "enum": [
+        "bottom_up_self_proposal",
+        "top_down_orchestration"
+      ]
+    },
+    "proposal_type": {
+      "enum": [
+        "satisfies_need",
+        "strengthens_capability",
+        "activates_orphan",
+        "reduces_risk",
+        "adds_test",
+        "documents",
+        "bundles_assets",
+        "research_missing_part"
+      ]
+    },
+    "source_asset_ids": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "minItems": 1
+    },
+    "target_asset_ids": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "need_ids": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "capability_ids": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "rationale": {
+      "type": "string",
+      "minLength": 1
+    },
+    "evidence": {
+      "type": "object",
+      "minProperties": 1
+    },
+    "smallest_bounded_experiment": {
+      "type": "string",
+      "minLength": 1
+    },
+    "expected_benefit": {
+      "type": "string"
+    },
+    "known_risks": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "authority_boundary": {
+      "type": "string",
+      "minLength": 1
+    },
+    "confidence": {
+      "enum": [
+        "low",
+        "medium",
+        "high"
+      ]
+    },
+    "risk": {
+      "enum": [
+        "low",
+        "medium",
+        "high"
+      ]
+    },
+    "estimated_review_cost": {
+      "enum": [
+        "low",
+        "medium",
+        "high"
+      ]
+    },
+    "estimated_integration_cost": {
+      "enum": [
+        "low",
+        "medium",
+        "high"
+      ]
+    },
+    "safety_flags": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "review_status": {
+      "enum": [
+        "generated_candidate",
+        "reviewed",
+        "rejected"
+      ]
+    },
+    "generated_at": {
+      "type": "string"
+    },
+    "scan_id": {
+      "type": "string",
+      "minLength": 1
+    }
+  },
+  "additionalProperties": false
+}
