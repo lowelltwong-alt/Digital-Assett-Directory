@@ -1,14 +1,17 @@
 from pathlib import Path
+import csv
 import json
 
 from jsonschema import Draft202012Validator
 
 from digital_asset_directory.calibration import (
     build_asset_calibration_review_template,
+    import_asset_calibration_review_csv,
     load_asset_calibration_reviews,
     summarize_asset_calibration_reviews,
     update_asset_calibration_review_file,
     update_asset_calibration_review_record,
+    write_asset_calibration_review_csv,
     write_phase2_calibration_reports,
 )
 from digital_asset_directory.database import CatalogDB
@@ -210,6 +213,98 @@ def test_asset_calibration_review_update_rejects_bad_rating():
         assert "Invalid score_rating" in str(exc)
     else:
         raise AssertionError("bad score rating should fail closed")
+
+
+def test_asset_calibration_review_csv_round_trip_labels(tmp_path: Path):
+    records = build_asset_calibration_review_template(
+        [
+            make_asset("asset-a", title="Evaluator", score=88, asset_type="test"),
+            make_asset("asset-b", title="Review Workflow", score=42),
+        ],
+        per_band_sample=1,
+    )
+    review_file = tmp_path / "asset_reviews.jsonl"
+    review_file.write_text(
+        "".join(json.dumps(record.model_dump(mode="json")) + "\n" for record in records),
+        encoding="utf-8",
+    )
+    csv_file = tmp_path / "asset_reviews.csv"
+    write_asset_calibration_review_csv(csv_file, records)
+
+    rows = list(csv.DictReader(csv_file.open("r", encoding="utf-8", newline="")))
+    assert "value_components" in rows[0]
+    assert "capabilities" in rows[0]
+    rows[0]["reviewer"] = "Human"
+    rows[0]["score_rating"] = "too_high"
+    rows[0]["notes"] = "CSV score review."
+    rows[0]["false_positive_reason"] = "Score is too high for this asset."
+    rows[0]["weight_change_note"] = "Reduce reusable test boost."
+    with csv_file.open("w", encoding="utf-8", newline="") as handle:
+        writer = csv.DictWriter(handle, fieldnames=rows[0].keys())
+        writer.writeheader()
+        writer.writerows(rows)
+
+    result = import_asset_calibration_review_csv(review_file, csv_file)
+    loaded = load_asset_calibration_reviews(review_file)
+
+    assert result["updated_count"] == 1
+    assert result["summary"]["reviewed_count"] == 1
+    assert loaded[0].review_status == "reviewed"
+    assert loaded[0].false_positive_reason == "Score is too high for this asset."
+    assert loaded[1].review_status == "generated_candidate"
+
+
+def test_asset_calibration_review_csv_notes_only_does_not_count_as_reviewed(tmp_path: Path):
+    records = build_asset_calibration_review_template(
+        [make_asset("asset-a", title="Evaluator", score=88)], per_band_sample=1
+    )
+    review_file = tmp_path / "asset_reviews.jsonl"
+    review_file.write_text(
+        "".join(json.dumps(record.model_dump(mode="json")) + "\n" for record in records),
+        encoding="utf-8",
+    )
+    csv_file = tmp_path / "asset_reviews.csv"
+    write_asset_calibration_review_csv(csv_file, records)
+
+    rows = list(csv.DictReader(csv_file.open("r", encoding="utf-8", newline="")))
+    rows[0]["notes"] = "Metadata-only note."
+    with csv_file.open("w", encoding="utf-8", newline="") as handle:
+        writer = csv.DictWriter(handle, fieldnames=rows[0].keys())
+        writer.writeheader()
+        writer.writerows(rows)
+
+    result = import_asset_calibration_review_csv(review_file, csv_file)
+    loaded = load_asset_calibration_reviews(review_file)
+
+    assert result["updated_count"] == 1
+    assert result["summary"]["reviewed_count"] == 0
+    assert loaded[0].notes == "Metadata-only note."
+    assert loaded[0].review_status == "generated_candidate"
+
+
+def test_asset_calibration_review_csv_import_fails_before_writing_bad_rating(tmp_path: Path):
+    records = build_asset_calibration_review_template(
+        [make_asset("asset-a", title="Evaluator", score=88)], per_band_sample=1
+    )
+    review_file = tmp_path / "asset_reviews.jsonl"
+    review_file.write_text(
+        "".join(json.dumps(record.model_dump(mode="json")) + "\n" for record in records),
+        encoding="utf-8",
+    )
+    csv_file = tmp_path / "asset_reviews.csv"
+    csv_file.write_text(
+        "sample_id,asset_id,score_rating\nasset-review-001,asset-a,great\n",
+        encoding="utf-8",
+    )
+    original = review_file.read_text(encoding="utf-8")
+
+    try:
+        import_asset_calibration_review_csv(review_file, csv_file)
+    except ValueError as exc:
+        assert "Invalid score_rating" in str(exc)
+    else:
+        raise AssertionError("bad CSV score rating should fail closed")
+    assert review_file.read_text(encoding="utf-8") == original
 
 
 def test_catalog_db_reads_synergies_for_calibration_reports(tmp_path: Path):

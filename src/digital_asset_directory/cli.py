@@ -8,9 +8,11 @@ import typer
 from rich.console import Console
 
 from .calibration import (
+    import_asset_calibration_review_csv,
     load_asset_calibration_reviews,
     update_asset_calibration_review_file,
     write_asset_calibration_summary,
+    write_asset_calibration_review_csv,
     write_phase2_calibration_reports,
 )
 from .catalog import catalog_status, run_scan
@@ -401,6 +403,59 @@ def recommend_calibration_review_label(
             "summary": summary,
         }
     )
+
+
+@recommend_app.command("calibration-review-export-csv")
+def recommend_calibration_review_export_csv(
+    hub: Optional[Path] = typer.Option(None),
+    review_file: Optional[Path] = typer.Option(None, "--review-file"),
+    output: Optional[Path] = typer.Option(None, "--output"),
+) -> None:
+    """Export phase-2 asset calibration reviews to a human-editable CSV."""
+    cfg = _cfg(hub=hub)
+    review_path = (
+        review_file or cfg.repo_root / "processed" / "calibration" / "asset_rating_template.jsonl"
+    )
+    output_path = output or cfg.repo_root / "processed" / "calibration" / "asset_rating_batch.csv"
+    if not review_path.is_absolute():
+        review_path = cfg.repo_root / review_path
+    if not output_path.is_absolute():
+        output_path = cfg.repo_root / output_path
+    records = load_asset_calibration_reviews(review_path)
+    written = write_asset_calibration_review_csv(output_path, records)
+    console.print_json(
+        data={"review_file": str(review_path), "output": written, "row_count": len(records)}
+    )
+
+
+@recommend_app.command("calibration-review-import-csv")
+def recommend_calibration_review_import_csv(
+    hub: Optional[Path] = typer.Option(None),
+    review_file: Optional[Path] = typer.Option(None, "--review-file"),
+    csv_file: Optional[Path] = typer.Option(None, "--csv-file"),
+    reviewer: Optional[str] = typer.Option(None, "--reviewer"),
+) -> None:
+    """Import human-edited phase-2 asset calibration review CSV labels."""
+    cfg = _cfg(hub=hub)
+    review_path = (
+        review_file or cfg.repo_root / "processed" / "calibration" / "asset_rating_template.jsonl"
+    )
+    csv_path = csv_file or cfg.repo_root / "processed" / "calibration" / "asset_rating_batch.csv"
+    if not review_path.is_absolute():
+        review_path = cfg.repo_root / review_path
+    if not csv_path.is_absolute():
+        csv_path = cfg.repo_root / csv_path
+    try:
+        result = import_asset_calibration_review_csv(
+            review_path, csv_path, default_reviewer=reviewer
+        )
+        write_asset_calibration_summary(
+            cfg.repo_root, load_asset_calibration_reviews(review_path), review_path
+        )
+    except (FileNotFoundError, ValueError) as exc:
+        console.print(str(exc))
+        raise typer.Exit(2) from exc
+    console.print_json(data=result)
 
 
 @recommend_app.command("proposal-review-summary")

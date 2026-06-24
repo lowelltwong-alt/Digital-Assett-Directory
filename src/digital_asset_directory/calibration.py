@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import csv
 import json
 from collections import Counter, defaultdict
 from pathlib import Path
@@ -12,6 +13,29 @@ from .utils import atomic_write_text, utc_now, write_jsonl
 
 CALIBRATION_SCORE_RATINGS = {"unreviewed", "too_high", "about_right", "too_low", "unsure"}
 CALIBRATION_NOTE_FIELDS = [
+    "false_positive_reason",
+    "false_negative_note",
+    "weight_change_note",
+]
+CALIBRATION_REVIEW_CSV_COLUMNS = [
+    "sample_id",
+    "asset_id",
+    "asset_title",
+    "logical_path",
+    "asset_type",
+    "generated_value_score",
+    "generated_value_band",
+    "value_components",
+    "capabilities",
+    "needs",
+    "outcomes",
+    "lifecycle_state",
+    "freshness_status",
+    "confidence",
+    "review_status",
+    "reviewer",
+    "score_rating",
+    "notes",
     "false_positive_reason",
     "false_negative_note",
     "weight_change_note",
@@ -201,12 +225,11 @@ def update_asset_calibration_review_record(
             updates[field] = value
     if not updates:
         raise ValueError("No calibration review fields were provided to update.")
-    if (
-        "score_rating" in updates
-        or any(field in updates for field in CALIBRATION_NOTE_FIELDS)
-    ) and "reviewed_at" not in updates:
+    rating_counts_as_review = updates.get("score_rating") not in {None, "unreviewed"}
+    structured_note_present = any(field in updates for field in CALIBRATION_NOTE_FIELDS)
+    if (rating_counts_as_review or structured_note_present) and "reviewed_at" not in updates:
         updates["reviewed_at"] = utc_now()
-    if "score_rating" in updates or any(field in updates for field in CALIBRATION_NOTE_FIELDS):
+    if rating_counts_as_review or structured_note_present:
         updates["review_status"] = "reviewed"
 
     selected_index = matches[0]
@@ -243,6 +266,126 @@ def update_asset_calibration_review_file(
     )
     write_asset_calibration_reviews(path, updated_records)
     return updated, summarize_asset_calibration_reviews(updated_records)
+
+
+def _join_values(values: Any) -> str:
+    if isinstance(values, list):
+        return ";".join(str(value) for value in values)
+    return ""
+
+
+def _json_cell(value: Any) -> str:
+    return json.dumps(value, ensure_ascii=False, sort_keys=True)
+
+
+def _csv_value(row: dict[str, str], field: str) -> str | None:
+    value = (row.get(field) or "").strip()
+    return value or None
+
+
+def asset_calibration_review_csv_rows(
+    records: list[AssetCalibrationReviewRecord],
+) -> list[dict[str, str]]:
+    rows: list[dict[str, str]] = []
+    for record in sorted(records, key=lambda item: item.sample_id):
+        evidence = record.evidence
+        rows.append(
+            {
+                "sample_id": record.sample_id,
+                "asset_id": record.asset_id,
+                "asset_title": record.asset_title,
+                "logical_path": record.logical_path,
+                "asset_type": record.asset_type,
+                "generated_value_score": str(record.generated_value_score),
+                "generated_value_band": record.generated_value_band,
+                "value_components": _json_cell(evidence.get("value_components", {})),
+                "capabilities": _join_values(evidence.get("capabilities", [])),
+                "needs": _join_values(evidence.get("needs", [])),
+                "outcomes": _join_values(evidence.get("outcomes", [])),
+                "lifecycle_state": str(evidence.get("lifecycle_state", "")),
+                "freshness_status": str(evidence.get("freshness_status", "")),
+                "confidence": str(evidence.get("confidence", "")),
+                "review_status": _review_status(record),
+                "reviewer": record.reviewer,
+                "score_rating": record.score_rating,
+                "notes": record.notes,
+                "false_positive_reason": record.false_positive_reason,
+                "false_negative_note": record.false_negative_note,
+                "weight_change_note": record.weight_change_note,
+            }
+        )
+    return rows
+
+
+def write_asset_calibration_review_csv(
+    path: Path, records: list[AssetCalibrationReviewRecord]
+) -> str:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    rows = asset_calibration_review_csv_rows(records)
+    with path.open("w", encoding="utf-8", newline="") as handle:
+        writer = csv.DictWriter(handle, fieldnames=CALIBRATION_REVIEW_CSV_COLUMNS)
+        writer.writeheader()
+        writer.writerows(rows)
+    return str(path)
+
+
+def import_asset_calibration_review_csv(
+    review_path: Path,
+    csv_path: Path,
+    *,
+    default_reviewer: str | None = None,
+) -> dict[str, Any]:
+    records = load_asset_calibration_reviews(review_path)
+    if not csv_path.exists():
+        raise FileNotFoundError(f"Asset calibration review CSV not found: {csv_path}")
+
+    updated_count = 0
+    skipped_count = 0
+    errors: list[str] = []
+    with csv_path.open("r", encoding="utf-8", newline="") as handle:
+        reader = csv.DictReader(handle)
+        missing_columns = {"sample_id", "asset_id", "score_rating"} - set(
+            reader.fieldnames or []
+        )
+        if missing_columns:
+            raise ValueError(
+                "Asset calibration review CSV missing required columns: "
+                + ", ".join(sorted(missing_columns))
+            )
+        for row_number, row in enumerate(reader, start=2):
+            score_rating = _csv_value(row, "score_rating")
+            has_rating = score_rating is not None and score_rating != "unreviewed"
+            has_structured_note = any(_csv_value(row, field) for field in CALIBRATION_NOTE_FIELDS)
+            has_metadata = any(_csv_value(row, field) for field in {"reviewer", "notes"})
+            if not has_rating and not has_structured_note and not has_metadata:
+                skipped_count += 1
+                continue
+            try:
+                records, _ = update_asset_calibration_review_record(
+                    records,
+                    sample_id=_csv_value(row, "sample_id"),
+                    asset_id=_csv_value(row, "asset_id"),
+                    reviewer=_csv_value(row, "reviewer") or default_reviewer,
+                    score_rating=score_rating,
+                    false_positive_reason=_csv_value(row, "false_positive_reason"),
+                    false_negative_note=_csv_value(row, "false_negative_note"),
+                    weight_change_note=_csv_value(row, "weight_change_note"),
+                    notes=_csv_value(row, "notes"),
+                )
+                updated_count += 1
+            except ValueError as exc:
+                errors.append(f"row {row_number}: {exc}")
+
+    if errors:
+        raise ValueError("Asset calibration review CSV import failed: " + "; ".join(errors[:10]))
+    write_asset_calibration_reviews(review_path, records)
+    return {
+        "review_file": str(review_path),
+        "csv_file": str(csv_path),
+        "updated_count": updated_count,
+        "skipped_count": skipped_count,
+        "summary": summarize_asset_calibration_reviews(records),
+    }
 
 
 def _component_averages(assets: list[AssetRecord]) -> dict[str, float]:

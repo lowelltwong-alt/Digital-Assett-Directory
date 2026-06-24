@@ -39,6 +39,13 @@ Summarize structured asset score reviews:
 python -m digital_asset_directory.cli recommend calibration-review-summary
 ```
 
+For batch review, export and import a CSV:
+
+```powershell
+python -m digital_asset_directory.cli recommend calibration-review-export-csv
+python -m digital_asset_directory.cli recommend calibration-review-import-csv --reviewer "Human Reviewer"
+```
+
 The phase-2 gate still requires at least 50 reviewed asset ratings plus false-positive,
 false-negative, and weight-change notes.
 
