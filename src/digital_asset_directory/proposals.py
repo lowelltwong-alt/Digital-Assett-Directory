@@ -91,6 +91,8 @@ class ProposalIndexes:
     providers_by_capability: dict[str, list[AssetRecord]]
     needers_by_need: dict[str, list[AssetRecord]]
     assets_by_outcome: dict[str, list[AssetRecord]]
+    assets_by_type: dict[str, list[AssetRecord]]
+    assets_by_lifecycle: dict[str, list[AssetRecord]]
     neighbors_by_asset: dict[str, set[str]]
     edge_evidence_by_pair: dict[tuple[str, str], list[dict[str, Any]]]
     alerts_by_asset: dict[str, list[AlertRecord]]
@@ -133,7 +135,11 @@ def build_proposal_indexes(
     providers_by_capability: dict[str, list[AssetRecord]] = defaultdict(list)
     needers_by_need: dict[str, list[AssetRecord]] = defaultdict(list)
     assets_by_outcome: dict[str, list[AssetRecord]] = defaultdict(list)
+    assets_by_type: dict[str, list[AssetRecord]] = defaultdict(list)
+    assets_by_lifecycle: dict[str, list[AssetRecord]] = defaultdict(list)
     for asset in sorted(eligible.values(), key=lambda record: record.asset_id):
+        assets_by_type[asset.asset_type].append(asset)
+        assets_by_lifecycle[asset.lifecycle_state].append(asset)
         for capability in sorted(set(asset.capabilities)):
             providers_by_capability[capability].append(asset)
         for need in sorted(set(asset.needs)):
@@ -175,6 +181,8 @@ def build_proposal_indexes(
         providers_by_capability={k: v for k, v in providers_by_capability.items()},
         needers_by_need={k: v for k, v in needers_by_need.items()},
         assets_by_outcome={k: v for k, v in assets_by_outcome.items()},
+        assets_by_type={k: v for k, v in assets_by_type.items()},
+        assets_by_lifecycle={k: v for k, v in assets_by_lifecycle.items()},
         neighbors_by_asset={k: v for k, v in neighbors_by_asset.items()},
         edge_evidence_by_pair={k: v for k, v in edge_evidence_by_pair.items()},
         alerts_by_asset={k: v for k, v in alerts_by_asset.items()},

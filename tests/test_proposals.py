@@ -12,6 +12,7 @@ from digital_asset_directory.models import (
     ProposalReviewRecord,
 )
 from digital_asset_directory.proposals import (
+    build_proposal_indexes,
     build_proposal_review_queue,
     build_proposal_review_template,
     generate_bottom_up_proposals,
@@ -39,23 +40,26 @@ def make_asset(
     need: str | None = None,
     outcome: str = "faster_builds",
     freshness: str = "current",
+    lifecycle: str = "active",
+    source_kind: str = "local",
+    logical_path: str | None = None,
 ) -> AssetRecord:
     return AssetRecord(
         asset_id=aid,
         revision_id=f"rev-{aid}",
         source_id="local-test",
-        source_kind="local",
+        source_kind=source_kind,  # type: ignore[arg-type]
         asset_type=asset_type,
         title=f"Asset {aid}",
         description="proposal engine test asset",
-        logical_path=f"{aid}.md",
+        logical_path=logical_path or f"{aid}.md",
         content_hash=aid,
         first_seen_at="2026-01-01T00:00:00+00:00",
         last_seen_at="2026-01-01T00:00:00+00:00",
         capabilities=[capability] if capability else [],
         needs=[need] if need else [],
         outcomes=[outcome],
-        lifecycle_state="active",
+        lifecycle_state=lifecycle,
         freshness_status=freshness,  # type: ignore[arg-type]
         sensitivity="internal",
         trust_zone="source_owned",
@@ -146,6 +150,28 @@ def test_proposal_examples_validate_against_schema_and_model():
         "bottom_up_self_proposal",
         "top_down_orchestration",
     }
+
+
+def test_proposal_indexes_include_asset_type_and_lifecycle_for_eligible_assets_only():
+    assets = [
+        make_asset("workflow-a", asset_type="workflow", lifecycle="active"),
+        make_asset("doc-a", asset_type="document", lifecycle="discovered"),
+        make_asset("generated-a", asset_type="workflow", source_kind="generated"),
+        make_asset("sentinel", asset_type="document", logical_path=".gitkeep"),
+    ]
+
+    indexes = build_proposal_indexes(assets, [], [])
+
+    assert [asset.asset_id for asset in indexes.assets_by_type["workflow"]] == ["workflow-a"]
+    assert [asset.asset_id for asset in indexes.assets_by_type["document"]] == ["doc-a"]
+    assert [asset.asset_id for asset in indexes.assets_by_lifecycle["active"]] == [
+        "workflow-a"
+    ]
+    assert [asset.asset_id for asset in indexes.assets_by_lifecycle["discovered"]] == [
+        "doc-a"
+    ]
+    assert "generated-a" not in indexes.eligible
+    assert "sentinel" not in indexes.eligible
 
 
 def test_proposal_review_record_schema_supports_unreviewed_template():
