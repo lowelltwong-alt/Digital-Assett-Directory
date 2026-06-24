@@ -14,8 +14,10 @@ from digital_asset_directory.proposals import (
     build_proposal_review_template,
     generate_bottom_up_proposals,
     generate_top_down_proposals,
+    load_proposal_reviews,
     run_proposal_engines,
     summarize_proposal_reviews,
+    write_proposal_review_results_summary,
     write_proposal_outputs,
 )
 
@@ -235,3 +237,46 @@ def test_review_template_tracks_per_engine_and_human_completion_counts():
     template[0].safety = "safe"
     template[0].actionability = "actionable"
     assert summarize_proposal_reviews(template)["reviewed_count"] == 1
+
+
+def test_review_summary_loads_filled_jsonl_and_writes_report(tmp_path: Path):
+    reviews = [
+        ProposalReviewRecord(
+            review_id="review-a",
+            sample_id="review-001",
+            proposal_id="proposal-a",
+            proposal_engine="bottom_up_self_proposal",
+            usefulness="useful",
+            safety="safe",
+            novelty="novel",
+            actionability="actionable",
+            decision="accept_candidate",
+            evidence={"proposal_type": "strengthens_capability"},
+        ),
+        ProposalReviewRecord(
+            review_id="review-b",
+            sample_id="review-002",
+            proposal_id="proposal-b",
+            proposal_engine="top_down_orchestration",
+            usefulness="not_useful",
+            safety="needs_more_review",
+            novelty="already_known",
+            actionability="not_actionable",
+            decision="reject_candidate",
+            evidence={"proposal_type": "research_missing_part"},
+        ),
+    ]
+    review_file = tmp_path / "reviews.jsonl"
+    review_file.write_text(
+        "".join(json.dumps(review.model_dump(mode="json")) + "\n" for review in reviews),
+        encoding="utf-8",
+    )
+
+    loaded = load_proposal_reviews(review_file)
+    summary, output = write_proposal_review_results_summary(tmp_path, loaded, review_file)
+
+    assert summary["reviewed_count"] == 2
+    assert summary["usefulness_counts"]["useful"] == 1
+    assert summary["decision_counts"]["reject_candidate"] == 1
+    assert Path(output).exists()
+    assert "Proposal Review Results Summary" in Path(output).read_text(encoding="utf-8")

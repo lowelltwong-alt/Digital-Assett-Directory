@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 from collections import Counter, defaultdict
 from dataclasses import dataclass
 from pathlib import PurePosixPath
@@ -700,7 +701,61 @@ def summarize_proposal_reviews(reviews: list[ProposalReviewRecord]) -> dict[str,
             len(by_engine.get("bottom_up_self_proposal", [])) >= 25
             and len(by_engine.get("top_down_orchestration", [])) >= 25
         ),
+        "usefulness_counts": dict(Counter(review.usefulness for review in reviews)),
+        "safety_counts": dict(Counter(review.safety for review in reviews)),
+        "novelty_counts": dict(Counter(review.novelty for review in reviews)),
+        "actionability_counts": dict(Counter(review.actionability for review in reviews)),
+        "decision_counts": dict(Counter(review.decision for review in reviews)),
     }
+
+
+def load_proposal_reviews(path: Path) -> list[ProposalReviewRecord]:
+    reviews: list[ProposalReviewRecord] = []
+    if not path.exists():
+        raise FileNotFoundError(f"Proposal review file not found: {path}")
+    for line_number, line in enumerate(path.read_text(encoding="utf-8").splitlines(), start=1):
+        if not line.strip():
+            continue
+        try:
+            reviews.append(ProposalReviewRecord.model_validate(json.loads(line)))
+        except Exception as exc:
+            raise ValueError(f"Invalid proposal review record at {path}:{line_number}: {exc}") from exc
+    return reviews
+
+
+def proposal_review_results_markdown(reviews: list[ProposalReviewRecord], source_path: Path) -> str:
+    summary = summarize_proposal_reviews(reviews)
+    lines = [
+        "# Proposal Review Results Summary",
+        "",
+        f"- Source review file: `{source_path}`",
+        f"- Template records: **{summary['template_count']}**",
+        f"- Reviewed records: **{summary['reviewed_count']}**",
+        f"- Reviewed bottom-up records: **{summary['reviewed_by_engine']['bottom_up_self_proposal']}**",
+        f"- Reviewed top-down records: **{summary['reviewed_by_engine']['top_down_orchestration']}**",
+        f"- Calibration gate complete: **{summary['calibration_gate_complete']}**",
+        "",
+        "## Label Counts",
+        "",
+        f"- Usefulness: `{summary['usefulness_counts']}`",
+        f"- Safety: `{summary['safety_counts']}`",
+        f"- Novelty: `{summary['novelty_counts']}`",
+        f"- Actionability: `{summary['actionability_counts']}`",
+        f"- Decisions: `{summary['decision_counts']}`",
+        "",
+        "Generated summary only. Track curated evidence separately after human review.",
+        "",
+    ]
+    return "\n".join(lines)
+
+
+def write_proposal_review_results_summary(
+    repo_root: Path, reviews: list[ProposalReviewRecord], source_path: Path
+) -> tuple[dict[str, Any], str]:
+    summary = summarize_proposal_reviews(reviews)
+    output = repo_root / "processed" / "reports" / "proposal_review_results_summary.md"
+    atomic_write_text(output, proposal_review_results_markdown(reviews, source_path))
+    return summary, str(output)
 
 
 def _proposal_lines(title: str, proposals: list[ProposalRecord]) -> list[str]:

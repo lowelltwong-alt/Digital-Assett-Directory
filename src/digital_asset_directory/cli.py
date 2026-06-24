@@ -14,7 +14,13 @@ from .database import CatalogDB
 from .governance import enforce_postflight, install_governance
 from .learning import add_lesson, postflight, preflight
 from .orphan_adapter import run_orphan_radar
-from .proposals import ProposalEngineOption, run_proposal_engines, write_proposal_outputs
+from .proposals import (
+    ProposalEngineOption,
+    load_proposal_reviews,
+    run_proposal_engines,
+    write_proposal_outputs,
+    write_proposal_review_results_summary,
+)
 from .recommendations import recommend_skills_and_agents, recommend_swarm
 from .research import research_missing_parts
 from .roadmap import check_roadmap
@@ -302,6 +308,21 @@ def recommend_proposals(
             "outputs": paths,
         }
     )
+
+
+@recommend_app.command("proposal-review-summary")
+def recommend_proposal_review_summary(
+    hub: Optional[Path] = typer.Option(None),
+    review_file: Optional[Path] = typer.Option(None, "--review-file"),
+) -> None:
+    """Summarize filled proposal review JSONL labels without changing roadmap state."""
+    cfg = _cfg(hub=hub)
+    path = review_file or cfg.repo_root / "processed" / "proposals" / "proposal_review_template.jsonl"
+    if not path.is_absolute():
+        path = cfg.repo_root / path
+    reviews = load_proposal_reviews(path)
+    summary, output = write_proposal_review_results_summary(cfg.repo_root, reviews, path)
+    console.print_json(data={"review_file": str(path), "output": output, "summary": summary})
 
 
 @orphan_app.command("run")
