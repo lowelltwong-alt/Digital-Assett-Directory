@@ -17,10 +17,12 @@ from .orphan_adapter import run_orphan_radar
 from .proposals import (
     ProposalEngineOption,
     build_proposal_review_queue,
+    import_proposal_review_csv,
     load_generated_proposals,
     load_proposal_reviews,
     run_proposal_engines,
     update_proposal_review_file,
+    write_proposal_review_csv,
     write_proposal_calibration_evidence,
     write_proposal_outputs,
     write_proposal_review_results_summary,
@@ -433,6 +435,71 @@ def recommend_proposal_review_queue(
             **queue,
         }
     )
+
+
+@recommend_app.command("proposal-review-export-csv")
+def recommend_proposal_review_export_csv(
+    hub: Optional[Path] = typer.Option(None),
+    review_file: Optional[Path] = typer.Option(None, "--review-file"),
+    bottom_up_file: Optional[Path] = typer.Option(None, "--bottom-up-file"),
+    top_down_file: Optional[Path] = typer.Option(None, "--top-down-file"),
+    output: Optional[Path] = typer.Option(None, "--output"),
+) -> None:
+    """Export proposal review records and proposal context to a human-editable CSV."""
+    cfg = _cfg(hub=hub)
+    review_path = (
+        review_file or cfg.repo_root / "processed" / "proposals" / "proposal_review_template.jsonl"
+    )
+    bottom_path = (
+        bottom_up_file or cfg.repo_root / "processed" / "proposals" / "bottom_up_proposals.jsonl"
+    )
+    top_path = top_down_file or cfg.repo_root / "processed" / "proposals" / "top_down_proposals.jsonl"
+    output_path = output or cfg.repo_root / "processed" / "proposals" / "proposal_review_batch.csv"
+    if not review_path.is_absolute():
+        review_path = cfg.repo_root / review_path
+    if not bottom_path.is_absolute():
+        bottom_path = cfg.repo_root / bottom_path
+    if not top_path.is_absolute():
+        top_path = cfg.repo_root / top_path
+    if not output_path.is_absolute():
+        output_path = cfg.repo_root / output_path
+    reviews = load_proposal_reviews(review_path)
+    proposals = load_generated_proposals(bottom_path, top_path)
+    written = write_proposal_review_csv(output_path, reviews, proposals)
+    console.print_json(
+        data={
+            "review_file": str(review_path),
+            "bottom_up_file": str(bottom_path),
+            "top_down_file": str(top_path),
+            "output": written,
+            "row_count": len(reviews),
+        }
+    )
+
+
+@recommend_app.command("proposal-review-import-csv")
+def recommend_proposal_review_import_csv(
+    hub: Optional[Path] = typer.Option(None),
+    review_file: Optional[Path] = typer.Option(None, "--review-file"),
+    csv_file: Optional[Path] = typer.Option(None, "--csv-file"),
+    reviewer: Optional[str] = typer.Option(None, "--reviewer"),
+) -> None:
+    """Import validated human labels from proposal review CSV back into review JSONL."""
+    cfg = _cfg(hub=hub)
+    review_path = (
+        review_file or cfg.repo_root / "processed" / "proposals" / "proposal_review_template.jsonl"
+    )
+    csv_path = csv_file or cfg.repo_root / "processed" / "proposals" / "proposal_review_batch.csv"
+    if not review_path.is_absolute():
+        review_path = cfg.repo_root / review_path
+    if not csv_path.is_absolute():
+        csv_path = cfg.repo_root / csv_path
+    try:
+        result = import_proposal_review_csv(review_path, csv_path, default_reviewer=reviewer)
+    except (FileNotFoundError, ValueError) as exc:
+        console.print(str(exc))
+        raise typer.Exit(2) from exc
+    console.print_json(data=result)
 
 
 @recommend_app.command("proposal-calibration-evidence")

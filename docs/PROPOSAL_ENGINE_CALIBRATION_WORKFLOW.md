@@ -72,6 +72,44 @@ Use queue output to inspect:
 - smallest bounded experiment;
 - confidence and risk.
 
+## Batch Review CSV
+
+For spreadsheet-style review, export the review set and proposal context to CSV:
+
+```powershell
+$env:PYTHONPATH='src'
+python -m digital_asset_directory.cli recommend proposal-review-export-csv
+```
+
+Expected generated output:
+
+```text
+processed/proposals/proposal_review_batch.csv
+```
+
+Editable label columns:
+
+```text
+reviewer
+usefulness
+safety
+novelty
+actionability
+decision
+notes
+```
+
+Do not edit proposal context columns to change proposal meaning. The importer uses the IDs and validated label columns; generated proposal evidence remains candidate-only.
+
+After editing the CSV, import labels back into the review JSONL:
+
+```powershell
+$env:PYTHONPATH='src'
+python -m digital_asset_directory.cli recommend proposal-review-import-csv --reviewer "Human Reviewer"
+```
+
+The import fails closed on invalid labels or unmatched review records. It does not write roadmap evidence.
+
 ## Label A Review Record
 
 Update one record at a time:
@@ -150,4 +188,3 @@ Stop and report if:
 - a roadmap phase would be marked complete without acceptance evidence;
 - any command would mutate scanned source files;
 - validation fails.
-

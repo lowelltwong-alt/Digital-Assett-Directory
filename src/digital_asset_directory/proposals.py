@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import csv
 from collections import Counter, defaultdict
 from dataclasses import dataclass
 from pathlib import PurePosixPath
@@ -36,6 +37,33 @@ REVIEW_LABELS = {
     "actionability": {"unreviewed", "actionable", "not_actionable", "unsure"},
     "decision": {"pending", "accept_candidate", "reject_candidate", "defer"},
 }
+REVIEW_DEFAULT_LABELS = {
+    "usefulness": "unreviewed",
+    "safety": "unreviewed",
+    "novelty": "unreviewed",
+    "actionability": "unreviewed",
+    "decision": "pending",
+}
+REVIEW_CSV_COLUMNS = [
+    "sample_id",
+    "proposal_id",
+    "proposal_engine",
+    "proposal_type",
+    "source_asset_ids",
+    "target_asset_ids",
+    "need_ids",
+    "confidence",
+    "risk",
+    "rationale",
+    "smallest_bounded_experiment",
+    "reviewer",
+    "usefulness",
+    "safety",
+    "novelty",
+    "actionability",
+    "decision",
+    "notes",
+]
 
 
 @dataclass
@@ -929,6 +957,125 @@ def build_proposal_review_queue(
         "missing_proposal_ids": sorted(set(missing_proposal_ids))[:25],
         "summary": summary,
         "items": items,
+    }
+
+
+def _join_values(values: list[str]) -> str:
+    return ";".join(values)
+
+
+def proposal_review_csv_rows(
+    reviews: list[ProposalReviewRecord], proposals: list[ProposalRecord]
+) -> list[dict[str, str]]:
+    proposals_by_id = {proposal.proposal_id: proposal for proposal in proposals}
+    rows: list[dict[str, str]] = []
+    for review in sorted(reviews, key=lambda record: record.sample_id):
+        proposal = proposals_by_id.get(review.proposal_id)
+        rows.append(
+            {
+                "sample_id": review.sample_id,
+                "proposal_id": review.proposal_id,
+                "proposal_engine": review.proposal_engine,
+                "proposal_type": proposal.proposal_type if proposal else str(review.evidence.get("proposal_type", "")),
+                "source_asset_ids": _join_values(proposal.source_asset_ids if proposal else review.evidence.get("source_asset_ids", [])),
+                "target_asset_ids": _join_values(proposal.target_asset_ids if proposal else review.evidence.get("target_asset_ids", [])),
+                "need_ids": _join_values(proposal.need_ids if proposal else review.evidence.get("need_ids", [])),
+                "confidence": proposal.confidence if proposal else "",
+                "risk": proposal.risk if proposal else "",
+                "rationale": proposal.rationale if proposal else "",
+                "smallest_bounded_experiment": proposal.smallest_bounded_experiment if proposal else "",
+                "reviewer": review.reviewer,
+                "usefulness": review.usefulness,
+                "safety": review.safety,
+                "novelty": review.novelty,
+                "actionability": review.actionability,
+                "decision": review.decision,
+                "notes": review.notes,
+            }
+        )
+    return rows
+
+
+def write_proposal_review_csv(
+    path: Path, reviews: list[ProposalReviewRecord], proposals: list[ProposalRecord]
+) -> str:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    rows = proposal_review_csv_rows(reviews, proposals)
+    with path.open("w", encoding="utf-8", newline="") as handle:
+        writer = csv.DictWriter(handle, fieldnames=REVIEW_CSV_COLUMNS, extrasaction="ignore")
+        writer.writeheader()
+        writer.writerows(rows)
+    return str(path)
+
+
+def _csv_value(row: dict[str, str], field: str) -> str | None:
+    value = (row.get(field) or "").strip()
+    return value or None
+
+
+def import_proposal_review_csv(
+    review_path: Path,
+    csv_path: Path,
+    *,
+    default_reviewer: str | None = None,
+) -> dict[str, Any]:
+    reviews = load_proposal_reviews(review_path)
+    if not csv_path.exists():
+        raise FileNotFoundError(f"Proposal review CSV not found: {csv_path}")
+
+    updated_count = 0
+    skipped_count = 0
+    errors: list[str] = []
+    with csv_path.open("r", encoding="utf-8", newline="") as handle:
+        reader = csv.DictReader(handle)
+        missing_columns = {
+            "sample_id",
+            "proposal_id",
+            "usefulness",
+            "safety",
+            "novelty",
+            "actionability",
+            "decision",
+        } - set(reader.fieldnames or [])
+        if missing_columns:
+            raise ValueError(f"Review CSV missing required columns: {', '.join(sorted(missing_columns))}")
+        for row_number, row in enumerate(reader, start=2):
+            has_label = any(
+                (value := _csv_value(row, field)) is not None
+                and value != REVIEW_DEFAULT_LABELS[field]
+                for field in REVIEW_LABELS
+            )
+            has_metadata = any(_csv_value(row, field) for field in {"reviewer", "notes"})
+            if not has_label and not has_metadata:
+                skipped_count += 1
+                continue
+            try:
+                reviews, _ = update_proposal_review_record(
+                    reviews,
+                    sample_id=_csv_value(row, "sample_id"),
+                    proposal_id=_csv_value(row, "proposal_id"),
+                    reviewer=_csv_value(row, "reviewer") or default_reviewer,
+                    usefulness=_csv_value(row, "usefulness"),
+                    safety=_csv_value(row, "safety"),
+                    novelty=_csv_value(row, "novelty"),
+                    actionability=_csv_value(row, "actionability"),
+                    decision=_csv_value(row, "decision"),
+                    notes=_csv_value(row, "notes"),
+                )
+                updated_count += 1
+            except ValueError as exc:
+                errors.append(f"row {row_number}: {exc}")
+
+    if errors:
+        raise ValueError("Review CSV import failed: " + "; ".join(errors[:10]))
+    write_proposal_reviews(review_path, reviews)
+    summary = summarize_proposal_reviews(reviews)
+    return {
+        "review_file": str(review_path),
+        "csv_file": str(csv_path),
+        "updated_count": updated_count,
+        "skipped_count": skipped_count,
+        "summary": summary,
     }
 
 

@@ -1,4 +1,5 @@
 import json
+import csv
 from pathlib import Path
 
 from jsonschema import Draft202012Validator
@@ -15,6 +16,7 @@ from digital_asset_directory.proposals import (
     build_proposal_review_template,
     generate_bottom_up_proposals,
     generate_top_down_proposals,
+    import_proposal_review_csv,
     load_generated_proposals,
     load_proposal_reviews,
     run_proposal_engines,
@@ -22,6 +24,7 @@ from digital_asset_directory.proposals import (
     update_proposal_review_file,
     update_proposal_review_record,
     write_proposal_calibration_evidence,
+    write_proposal_review_csv,
     write_proposal_review_results_summary,
     write_proposal_outputs,
 )
@@ -450,6 +453,81 @@ def test_load_generated_proposals_reads_both_engine_files(tmp_path: Path):
     loaded = load_generated_proposals(bottom_path, top_path)
 
     assert len(loaded) == len(bottom_up) + len(top_down)
+
+
+def test_review_csv_export_and_import_round_trip_labels(tmp_path: Path):
+    assets = [
+        make_asset("target", need="evaluation_harness"),
+        make_asset("provider", capability="evaluation_harness"),
+    ]
+    bottom_up, top_down, _ = run_proposal_engines(
+        assets=assets,
+        edges=[make_edge("provider", "target")],
+        alerts=[make_alert("target")],
+        scan_id="scan-test",
+        engine="both",
+        per_asset_limit=1,
+        portfolio_limit=1,
+        review_sample=1,
+    )
+    reviews = build_proposal_review_template(bottom_up, top_down, per_engine_sample=1)
+    review_file = tmp_path / "reviews.jsonl"
+    review_file.write_text(
+        "".join(json.dumps(record.model_dump(mode="json")) + "\n" for record in reviews),
+        encoding="utf-8",
+    )
+    csv_file = tmp_path / "reviews.csv"
+    write_proposal_review_csv(csv_file, reviews, [*bottom_up, *top_down])
+
+    rows = list(csv.DictReader(csv_file.open("r", encoding="utf-8", newline="")))
+    rows[0]["reviewer"] = "Human"
+    rows[0]["usefulness"] = "useful"
+    rows[0]["safety"] = "safe"
+    rows[0]["novelty"] = "novel"
+    rows[0]["actionability"] = "actionable"
+    rows[0]["decision"] = "accept_candidate"
+    rows[0]["notes"] = "CSV reviewed."
+    with csv_file.open("w", encoding="utf-8", newline="") as handle:
+        writer = csv.DictWriter(handle, fieldnames=rows[0].keys())
+        writer.writeheader()
+        writer.writerows(rows)
+
+    result = import_proposal_review_csv(review_file, csv_file, default_reviewer="Fallback")
+    loaded = load_proposal_reviews(review_file)
+
+    assert result["updated_count"] == 1
+    assert result["summary"]["reviewed_count"] == 1
+    assert loaded[0].reviewer == "Human"
+    assert loaded[0].usefulness == "useful"
+    assert loaded[0].review_status == "reviewed"
+    assert loaded[1].review_status == "generated_candidate"
+
+
+def test_review_csv_import_fails_before_writing_bad_labels(tmp_path: Path):
+    review = ProposalReviewRecord(
+        review_id="review-1",
+        sample_id="review-001",
+        proposal_id="proposal-1",
+        proposal_engine="bottom_up_self_proposal",
+        evidence={"proposal_type": "strengthens_capability"},
+    )
+    review_file = tmp_path / "reviews.jsonl"
+    review_file.write_text(json.dumps(review.model_dump(mode="json")) + "\n", encoding="utf-8")
+    csv_file = tmp_path / "reviews.csv"
+    csv_file.write_text(
+        "sample_id,proposal_id,usefulness,safety,novelty,actionability,decision\n"
+        "review-001,proposal-1,great,safe,novel,actionable,accept_candidate\n",
+        encoding="utf-8",
+    )
+
+    original = review_file.read_text(encoding="utf-8")
+    try:
+        import_proposal_review_csv(review_file, csv_file)
+    except ValueError as exc:
+        assert "Invalid usefulness" in str(exc)
+    else:
+        raise AssertionError("bad CSV labels should fail")
+    assert review_file.read_text(encoding="utf-8") == original
 
 
 def make_review(index: int, engine: str, decision: str = "accept_candidate") -> ProposalReviewRecord:
