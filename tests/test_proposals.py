@@ -228,6 +228,7 @@ def test_bottom_up_proposals_are_stable_capped_candidate_and_not_self_matches():
         proposal.proposal_id for proposal in second
     ]
     assert all(proposal.review_status == "generated_candidate" for proposal in first)
+    assert all(proposal.evidence["source_asset_context"] for proposal in first)
     assert all(
         not (set(proposal.source_asset_ids) & set(proposal.target_asset_ids))
         for proposal in first
@@ -409,7 +410,10 @@ def test_run_and_write_proposal_outputs(tmp_path: Path):
     assert "Actionable experiment rate" in comparison_text
     assert "Roadmap relevance rate" in comparison_text
     assert "Human usefulness metrics available: **False**" in comparison_text
-    assert "Engine labels are hidden" in Path(paths["review_sample"]).read_text(encoding="utf-8")
+    review_sample_text = Path(paths["review_sample"]).read_text(encoding="utf-8")
+    assert "Engine labels are hidden" in review_sample_text
+    assert "Source context:" in review_sample_text
+    assert "Target context:" in review_sample_text
     assert "Proposal Calibration Summary" in Path(paths["calibration_summary"]).read_text(
         encoding="utf-8"
     )
@@ -418,6 +422,7 @@ def test_run_and_write_proposal_outputs(tmp_path: Path):
         for line in Path(paths["review_template"]).read_text(encoding="utf-8").splitlines()
         if line.strip()
     ]
+    assert review_template[0]["evidence"]["source_asset_context"]
     assert {record["proposal_engine"] for record in review_template} == {
         "bottom_up_self_proposal",
         "top_down_orchestration",
@@ -638,8 +643,10 @@ def test_review_queue_joins_reviews_to_proposal_context_and_filters():
     assert pending["returned_count"] == 1
     assert pending["items"][0]["proposal_engine"] == "top_down_orchestration"
     assert "rationale" in pending["items"][0]
+    assert pending["items"][0]["source_asset_context"]
     assert reviewed["returned_count"] == 1
     assert reviewed["items"][0]["labels"]["usefulness"] == "useful"
+    assert reviewed["items"][0]["target_asset_context"]
 
 
 def test_review_queue_reports_missing_proposal_records():
@@ -713,6 +720,9 @@ def test_review_csv_export_and_import_round_trip_labels(tmp_path: Path):
     write_proposal_review_csv(csv_file, reviews, [*bottom_up, *top_down])
 
     rows = list(csv.DictReader(csv_file.open("r", encoding="utf-8", newline="")))
+    assert "source_asset_context" in rows[0]
+    assert "target_asset_context" in rows[0]
+    assert "Asset provider" in rows[0]["source_asset_context"]
     rows[0]["reviewer"] = "Human"
     rows[0]["usefulness"] = "useful"
     rows[0]["safety"] = "safe"
@@ -798,6 +808,8 @@ def test_blinded_review_csv_hides_engine_and_imports_labels(tmp_path: Path):
     rows = list(csv.DictReader(csv_file.open("r", encoding="utf-8", newline="")))
     assert rows
     assert "proposal_engine" not in rows[0]
+    assert "source_asset_context" in rows[0]
+    assert "Asset provider" in rows[0]["source_asset_context"]
     assert "false_positive_reason" in rows[0]
     assert "false_negative_note" in rows[0]
     assert "useful_example_note" in rows[0]

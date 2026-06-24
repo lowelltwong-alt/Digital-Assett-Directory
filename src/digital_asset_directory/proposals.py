@@ -57,6 +57,8 @@ REVIEW_CSV_COLUMNS = [
     "proposal_type",
     "source_asset_ids",
     "target_asset_ids",
+    "source_asset_context",
+    "target_asset_context",
     "need_ids",
     "confidence",
     "risk",
@@ -286,6 +288,45 @@ def _risk_label(assets: list[AssetRecord]) -> Literal["low", "medium", "high"]:
     return "low"
 
 
+def _asset_review_context(asset: AssetRecord) -> dict[str, str]:
+    return {
+        "asset_id": asset.asset_id,
+        "title": asset.title,
+        "logical_path": asset.logical_path,
+        "asset_type": asset.asset_type,
+        "lifecycle_state": asset.lifecycle_state,
+        "freshness_status": asset.freshness_status,
+        "confidence": asset.confidence,
+    }
+
+
+def _asset_context_label(context: dict[str, Any]) -> str:
+    title = str(context.get("title") or context.get("asset_id") or "unknown asset")
+    asset_type = str(context.get("asset_type") or "unknown")
+    logical_path = str(context.get("logical_path") or "no path")
+    lifecycle = str(context.get("lifecycle_state") or "unknown")
+    freshness = str(context.get("freshness_status") or "unknown")
+    confidence = str(context.get("confidence") or "unknown")
+    return (
+        f"{title} [{asset_type}] {logical_path} "
+        f"({lifecycle}/{freshness}, confidence {confidence})"
+    )
+
+
+def _coerce_asset_contexts(contexts: Any) -> list[dict[str, Any]]:
+    if not isinstance(contexts, list):
+        return []
+    return [context for context in contexts if isinstance(context, dict)]
+
+
+def _format_asset_context(contexts: Any) -> str:
+    return " | ".join(_asset_context_label(context) for context in _coerce_asset_contexts(contexts))
+
+
+def _proposal_asset_context(proposal: ProposalRecord, field: str) -> list[dict[str, Any]]:
+    return _coerce_asset_contexts(proposal.evidence.get(field, []))
+
+
 def _confidence_label(score: float) -> Literal["low", "medium", "high"]:
     if score >= 0.78:
         return "high"
@@ -340,6 +381,16 @@ def _new_proposal(
     if not evidence:
         return None
     involved = [assets_by_id[aid] for aid in source_ids + target_ids if aid in assets_by_id]
+    source_context = [
+        _asset_review_context(assets_by_id[asset_id])
+        for asset_id in source_ids
+        if asset_id in assets_by_id
+    ]
+    target_context = [
+        _asset_review_context(assets_by_id[asset_id])
+        for asset_id in target_ids
+        if asset_id in assets_by_id
+    ]
     proposal = ProposalRecord(
         proposal_id=_proposal_id(
             engine,
@@ -357,7 +408,12 @@ def _new_proposal(
         need_ids=sorted(dict.fromkeys(need_ids)),
         capability_ids=sorted(dict.fromkeys(capability_ids)),
         rationale=rationale,
-        evidence={"score": round(score, 4), **evidence},
+        evidence={
+            "score": round(score, 4),
+            **evidence,
+            "source_asset_context": source_context,
+            "target_asset_context": target_context,
+        },
         smallest_bounded_experiment=smallest_bounded_experiment,
         expected_benefit=expected_benefit,
         known_risks=known_risks or [
@@ -1037,6 +1093,12 @@ def build_proposal_review_template(
                     "scan_id": proposal.scan_id,
                     "source_asset_ids": proposal.source_asset_ids,
                     "target_asset_ids": proposal.target_asset_ids,
+                    "source_asset_context": _proposal_asset_context(
+                        proposal, "source_asset_context"
+                    ),
+                    "target_asset_context": _proposal_asset_context(
+                        proposal, "target_asset_context"
+                    ),
                     "need_ids": proposal.need_ids,
                 },
             )
@@ -1058,6 +1120,8 @@ def build_proposal_comparison(
             "proposal_type": record.evidence.get("proposal_type", ""),
             "source_asset_ids": record.evidence.get("source_asset_ids", []),
             "target_asset_ids": record.evidence.get("target_asset_ids", []),
+            "source_asset_context": record.evidence.get("source_asset_context", []),
+            "target_asset_context": record.evidence.get("target_asset_context", []),
             "need_ids": record.evidence.get("need_ids", []),
             "rationale": by_id[record.proposal_id].rationale,
             "smallest_bounded_experiment": by_id[
@@ -1100,6 +1164,8 @@ def _review_record_for_markdown(
         "proposal_type": proposal.proposal_type,
         "source_asset_ids": proposal.source_asset_ids,
         "target_asset_ids": proposal.target_asset_ids,
+        "source_asset_context": _proposal_asset_context(proposal, "source_asset_context"),
+        "target_asset_context": _proposal_asset_context(proposal, "target_asset_context"),
         "need_ids": proposal.need_ids,
         "rationale": proposal.rationale,
         "smallest_bounded_experiment": proposal.smallest_bounded_experiment,
@@ -1372,6 +1438,12 @@ def build_proposal_review_queue(
                 },
                 "source_asset_ids": proposal.source_asset_ids,
                 "target_asset_ids": proposal.target_asset_ids,
+                "source_asset_context": _proposal_asset_context(
+                    proposal, "source_asset_context"
+                ),
+                "target_asset_context": _proposal_asset_context(
+                    proposal, "target_asset_context"
+                ),
                 "need_ids": proposal.need_ids,
                 "confidence": proposal.confidence,
                 "risk": proposal.risk,
@@ -1421,6 +1493,16 @@ def proposal_review_csv_rows(
             ),
             "target_asset_ids": _join_values(
                 proposal.target_asset_ids if proposal else review.evidence.get("target_asset_ids", [])
+            ),
+            "source_asset_context": _format_asset_context(
+                _proposal_asset_context(proposal, "source_asset_context")
+                if proposal
+                else review.evidence.get("source_asset_context", [])
+            ),
+            "target_asset_context": _format_asset_context(
+                _proposal_asset_context(proposal, "target_asset_context")
+                if proposal
+                else review.evidence.get("target_asset_context", [])
             ),
             "need_ids": _join_values(
                 proposal.need_ids if proposal else review.evidence.get("need_ids", [])
@@ -1866,7 +1948,9 @@ def review_sample_markdown(comparison: dict[str, Any]) -> str:
                 f"- Type: `{item['proposal_type']}`",
                 f"- Needs: {', '.join(item['need_ids']) or 'none'}",
                 f"- Sources: {', '.join(item['source_asset_ids'])}",
+                f"- Source context: {_format_asset_context(item['source_asset_context']) or 'none'}",
                 f"- Targets: {', '.join(item['target_asset_ids']) or 'none'}",
+                f"- Target context: {_format_asset_context(item['target_asset_context']) or 'none'}",
                 f"- Rationale: {item['rationale']}",
                 f"- Smallest experiment: {item['smallest_bounded_experiment']}",
                 "- Human useful? `[ ] yes  [ ] no  [ ] unsure`",

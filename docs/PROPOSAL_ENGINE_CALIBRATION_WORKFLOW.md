@@ -67,6 +67,7 @@ Use queue output to inspect:
 - `proposal_engine`;
 - `proposal_type`;
 - source and target asset IDs;
+- source and target asset context, including title, path, asset type, lifecycle, freshness, and confidence;
 - needs;
 - rationale;
 - smallest bounded experiment;
@@ -91,6 +92,9 @@ processed/proposals/proposal_review_unblind_map.csv
 The batch CSV hides `proposal_engine` by default to reduce bottom-up/top-down review bias.
 Use the unblind map only after first-pass scoring, or pass `--include-engine` when an
 unblinded operational export is more useful than blinded calibration.
+
+The CSV includes compact source and target asset context so reviewers can inspect titles,
+paths, types, lifecycle state, freshness, and confidence without unblinding the engine label.
 
 Editable label columns:
 
