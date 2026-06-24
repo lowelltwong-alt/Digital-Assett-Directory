@@ -17,6 +17,7 @@ from digital_asset_directory.proposals import (
     load_proposal_reviews,
     run_proposal_engines,
     summarize_proposal_reviews,
+    write_proposal_calibration_evidence,
     write_proposal_review_results_summary,
     write_proposal_outputs,
 )
@@ -280,3 +281,51 @@ def test_review_summary_loads_filled_jsonl_and_writes_report(tmp_path: Path):
     assert summary["decision_counts"]["reject_candidate"] == 1
     assert Path(output).exists()
     assert "Proposal Review Results Summary" in Path(output).read_text(encoding="utf-8")
+
+
+def make_review(index: int, engine: str, decision: str = "accept_candidate") -> ProposalReviewRecord:
+    return ProposalReviewRecord(
+        review_id=f"review-{engine}-{index}",
+        sample_id=f"review-{index:03d}",
+        proposal_id=f"proposal-{engine}-{index}",
+        proposal_engine=engine,  # type: ignore[arg-type]
+        reviewer="human",
+        reviewed_at="2026-01-01T00:00:00+00:00",
+        usefulness="useful",
+        safety="safe",
+        novelty="novel",
+        actionability="actionable",
+        decision=decision,  # type: ignore[arg-type]
+        evidence={"proposal_type": "strengthens_capability"},
+        review_status="reviewed",
+    )
+
+
+def test_calibration_evidence_refuses_incomplete_reviews(tmp_path: Path):
+    reviews = [make_review(index, "bottom_up_self_proposal") for index in range(25)]
+    output = tmp_path / "roadmap" / "evidence" / "proposal-engine-calibration.md"
+
+    try:
+        write_proposal_calibration_evidence(tmp_path, reviews, tmp_path / "reviews.jsonl", output)
+    except ValueError as exc:
+        assert "at least 25 reviewed records from each engine" in str(exc)
+    else:
+        raise AssertionError("incomplete proposal calibration evidence should fail closed")
+    assert not output.exists()
+
+
+def test_calibration_evidence_writes_after_complete_reviews(tmp_path: Path):
+    reviews = [
+        *(make_review(index, "bottom_up_self_proposal") for index in range(25)),
+        *(make_review(index, "top_down_orchestration", "reject_candidate") for index in range(25)),
+    ]
+    output = tmp_path / "roadmap" / "evidence" / "proposal-engine-calibration.md"
+    summary, path = write_proposal_calibration_evidence(
+        tmp_path, reviews, tmp_path / "reviews.jsonl", output
+    )
+
+    assert summary["calibration_gate_complete"] is True
+    assert Path(path).exists()
+    text = Path(path).read_text(encoding="utf-8")
+    assert "Proposal Engine Calibration Evidence" in text
+    assert "Candidate default path from accepted counts: **bottom_up_self_proposal**" in text

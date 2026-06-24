@@ -18,6 +18,7 @@ from .proposals import (
     ProposalEngineOption,
     load_proposal_reviews,
     run_proposal_engines,
+    write_proposal_calibration_evidence,
     write_proposal_outputs,
     write_proposal_review_results_summary,
 )
@@ -323,6 +324,30 @@ def recommend_proposal_review_summary(
     reviews = load_proposal_reviews(path)
     summary, output = write_proposal_review_results_summary(cfg.repo_root, reviews, path)
     console.print_json(data={"review_file": str(path), "output": output, "summary": summary})
+
+
+@recommend_app.command("proposal-calibration-evidence")
+def recommend_proposal_calibration_evidence(
+    hub: Optional[Path] = typer.Option(None),
+    review_file: Optional[Path] = typer.Option(None, "--review-file"),
+    output: Optional[Path] = typer.Option(None, "--output"),
+) -> None:
+    """Write tracked-ready roadmap evidence only after proposal calibration review is complete."""
+    cfg = _cfg(hub=hub)
+    path = review_file or cfg.repo_root / "processed" / "proposals" / "proposal_review_template.jsonl"
+    if not path.is_absolute():
+        path = cfg.repo_root / path
+    reviews = load_proposal_reviews(path)
+    try:
+        summary, evidence_path = write_proposal_calibration_evidence(
+            cfg.repo_root, reviews, path, output
+        )
+    except ValueError as exc:
+        console.print(str(exc))
+        raise typer.Exit(2) from exc
+    console.print_json(
+        data={"review_file": str(path), "output": evidence_path, "summary": summary}
+    )
 
 
 @orphan_app.command("run")

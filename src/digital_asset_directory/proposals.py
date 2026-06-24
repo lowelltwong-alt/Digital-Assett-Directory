@@ -758,6 +758,88 @@ def write_proposal_review_results_summary(
     return summary, str(output)
 
 
+def _review_acceptance_counts(reviews: list[ProposalReviewRecord]) -> dict[str, Any]:
+    by_engine: dict[str, list[ProposalReviewRecord]] = defaultdict(list)
+    for review in reviews:
+        if review.decision == "accept_candidate":
+            by_engine[review.proposal_engine].append(review)
+    return {
+        "bottom_up_self_proposal": len(by_engine.get("bottom_up_self_proposal", [])),
+        "top_down_orchestration": len(by_engine.get("top_down_orchestration", [])),
+    }
+
+
+def _candidate_default_path(reviews: list[ProposalReviewRecord]) -> str:
+    accepted = _review_acceptance_counts(reviews)
+    bottom = accepted["bottom_up_self_proposal"]
+    top = accepted["top_down_orchestration"]
+    if bottom == top:
+        return "hybrid"
+    return "bottom_up_self_proposal" if bottom > top else "top_down_orchestration"
+
+
+def proposal_calibration_evidence_markdown(
+    reviews: list[ProposalReviewRecord], source_path: Path
+) -> str:
+    summary = summarize_proposal_reviews(reviews)
+    if not summary["calibration_gate_complete"]:
+        raise ValueError(
+            "Proposal calibration evidence requires at least 25 reviewed records from each engine."
+        )
+    accepted = _review_acceptance_counts(reviews)
+    lines = [
+        "# Proposal Engine Calibration Evidence",
+        "",
+        f"Evidence date: {utc_now()}",
+        "",
+        "## Source Review File",
+        "",
+        f"- Review file: `{source_path}`",
+        "- Source review records are human labels over generated candidate proposals.",
+        "- This evidence does not promote source-repository changes or generated proposals to truth.",
+        "",
+        "## Gate Coverage",
+        "",
+        f"- Reviewed records: **{summary['reviewed_count']}**",
+        f"- Reviewed bottom-up records: **{summary['reviewed_by_engine']['bottom_up_self_proposal']}**",
+        f"- Reviewed top-down records: **{summary['reviewed_by_engine']['top_down_orchestration']}**",
+        f"- Calibration gate complete: **{summary['calibration_gate_complete']}**",
+        "",
+        "## Review Outcomes",
+        "",
+        f"- Usefulness: `{summary['usefulness_counts']}`",
+        f"- Safety: `{summary['safety_counts']}`",
+        f"- Novelty: `{summary['novelty_counts']}`",
+        f"- Actionability: `{summary['actionability_counts']}`",
+        f"- Decisions: `{summary['decision_counts']}`",
+        f"- Accepted bottom-up candidates: **{accepted['bottom_up_self_proposal']}**",
+        f"- Accepted top-down candidates: **{accepted['top_down_orchestration']}**",
+        f"- Candidate default path from accepted counts: **{_candidate_default_path(reviews)}**",
+        "",
+        "## Remaining Risks",
+        "",
+        "- Human labels are calibration evidence, not proof that any source repo should change.",
+        "- External code, license, security, and compatibility review remain required before reuse.",
+        "- Roadmap status should change only if the relevant phase acceptance criteria are otherwise met.",
+        "",
+    ]
+    return "\n".join(lines)
+
+
+def write_proposal_calibration_evidence(
+    repo_root: Path,
+    reviews: list[ProposalReviewRecord],
+    source_path: Path,
+    output_path: Path | None = None,
+) -> tuple[dict[str, Any], str]:
+    output = output_path or repo_root / "roadmap" / "evidence" / "proposal-engine-calibration.md"
+    if not output.is_absolute():
+        output = repo_root / output
+    text = proposal_calibration_evidence_markdown(reviews, source_path)
+    atomic_write_text(output, text)
+    return summarize_proposal_reviews(reviews), str(output)
+
+
 def _proposal_lines(title: str, proposals: list[ProposalRecord]) -> list[str]:
     lines = [f"## {title}", ""]
     if not proposals:
