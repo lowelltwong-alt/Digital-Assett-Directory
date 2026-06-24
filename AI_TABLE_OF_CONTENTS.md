@@ -47,6 +47,7 @@
 
 - `config/sources.example.yaml`
 - `docs/OPERATIONS.md`
+- `docs/PROPOSAL_ENGINE_CALIBRATION_WORKFLOW.md` — operational workflow for reviewing bottom-up and top-down proposal engines
 - `docs/DOWNSTREAM_REPO_GOVERNANCE.md`
 - `scripts/bootstrap.ps1`
 - `scripts/install_to_target.ps1`
