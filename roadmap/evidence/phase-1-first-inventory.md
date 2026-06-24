@@ -8,7 +8,7 @@ The user authorized the following phase-1 gate posture:
 
 - Current local source scope is approved for the first inventory.
 - GitHub scanning is deferred.
-- Phase 1 remains `awaiting_human_gate`.
+- Phase 1 is accepted as a bounded local-only inventory gate.
 - A tracked roadmap evidence file should record the current gate review.
 
 ## Reviewed Source Scope
@@ -69,7 +69,7 @@ GitHub inventory is deferred.
 
 ## Roadmap Status
 
-Phase 1 should remain `awaiting_human_gate`.
+Phase 1 gate evidence verifies the bounded local inventory only.
 
 This evidence records approval of the current local scope and explicit deferral of GitHub scanning, but it does not claim that the broader local portfolio or GitHub repositories have been inventoried.
 

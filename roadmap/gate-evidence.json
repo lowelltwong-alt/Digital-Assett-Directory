@@ -1,0 +1,53 @@
+{
+  "schema_version": "0.1.0",
+  "human_gates": {
+    "phase-1-source-scope-reviewed": {
+      "phase_id": "phase-1-first-inventory",
+      "status": "verified",
+      "reviewed_at": "2026-06-24",
+      "reviewer": "user",
+      "summary": "Current bounded local source scope was approved for the first inventory; broad sibling folders and generated/private layers remain excluded.",
+      "evidence": [
+        "roadmap/evidence/phase-1-first-inventory.md"
+      ]
+    },
+    "phase-1-github-token-scope-reviewed-deferred": {
+      "phase_id": "phase-1-first-inventory",
+      "status": "verified",
+      "reviewed_at": "2026-06-24",
+      "reviewer": "user",
+      "summary": "GitHub token scope was reviewed; GitHub scanning remains deferred and disabled until separately approved.",
+      "evidence": [
+        "roadmap/evidence/phase-1-first-inventory.md"
+      ]
+    },
+    "phase-1-source-mutation-check-passed": {
+      "phase_id": "phase-1-first-inventory",
+      "status": "verified",
+      "reviewed_at": "2026-06-24",
+      "reviewer": "codex",
+      "summary": "First bounded local inventory reported source_files_mutated=false.",
+      "evidence": [
+        "roadmap/evidence/phase-1-first-inventory.md"
+      ]
+    }
+  },
+  "commands": {
+    "phase-0-seed": {
+      "python -m pytest": {
+        "status": "passed",
+        "recorded_at": "2026-06-24",
+        "evidence": [
+          "roadmap/evidence/phase-0-seed-validation.md"
+        ]
+      },
+      "python -m digital_asset_directory.cli validate": {
+        "status": "passed",
+        "recorded_at": "2026-06-24",
+        "evidence": [
+          "roadmap/evidence/phase-0-seed-validation.md"
+        ]
+      }
+    }
+  }
+}

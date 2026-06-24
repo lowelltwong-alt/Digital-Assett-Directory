@@ -3,6 +3,8 @@ namespace: DAD-ROADMAP-SEED
 status_model:
   - planned
   - active
+  - awaiting_human_gate
+  - awaiting_validation_evidence
   - blocked
   - complete
 phases:
@@ -24,7 +26,7 @@ phases:
     evidence_note: Package generation and local tests must be reported separately; status does not claim a user-machine scan.
 
   - id: phase-1-first-inventory
-    title: First reviewed local and GitHub inventory
+    title: First reviewed bounded local inventory
     status: planned
     acceptance:
       required_outputs:
@@ -33,9 +35,12 @@ phases:
         - processed/reports/scan_summary.md
         - processed/alerts/alert_inbox.md
       human_gates:
-        - sources.local.yaml reviewed for excluded sensitive paths
-        - GitHub token scope reviewed
-        - source mutation check passed
+        - id: phase-1-source-scope-reviewed
+          description: sources.local.yaml reviewed for excluded sensitive paths
+        - id: phase-1-github-token-scope-reviewed-deferred
+          description: GitHub token scope reviewed and GitHub scanning deferred
+        - id: phase-1-source-mutation-check-passed
+          description: source mutation check passed
 
   - id: phase-2-calibration
     title: Calibrate value, staleness, orphan, and synergy scoring
@@ -46,36 +51,51 @@ phases:
         - processed/reports/orphan_review_sample.md
         - processed/reports/synergy_review_sample.md
       human_gates:
-        - at least 50 reviewed asset ratings
-        - false-positive and false-negative notes captured
-        - weight changes documented
+        - id: phase-2-asset-ratings-reviewed
+          description: at least 50 reviewed asset ratings
+        - id: phase-2-false-positive-negative-notes-captured
+          description: false-positive and false-negative notes captured
+        - id: phase-2-weight-changes-documented
+          description: weight changes documented
 
   - id: phase-3-downstream-governance
     title: Install mandatory lessons and handoffs in active build repos
     status: planned
     acceptance:
       human_gates:
-        - pilot repositories selected
-        - pre-push enforcement reviewed
-        - lessons arrive in central hub
-        - bypass and failure behavior tested
+        - id: phase-3-pilot-repositories-selected
+          description: pilot repositories selected
+        - id: phase-3-pre-push-enforcement-reviewed
+          description: pre-push enforcement reviewed
+        - id: phase-3-lessons-arrive-central-hub
+          description: lessons arrive in central hub
+        - id: phase-3-bypass-failure-tested
+          description: bypass and failure behavior tested
 
   - id: phase-4-semantic-enrichment
     title: Optional embeddings and AI-assisted enrichment
     status: planned
     acceptance:
       human_gates:
-        - provider and privacy boundary approved
-        - deterministic baseline retained
-        - evaluation harness shows measurable benefit
-        - generated metadata remains candidate status
+        - id: phase-4-provider-privacy-boundary-approved
+          description: provider and privacy boundary approved
+        - id: phase-4-deterministic-baseline-retained
+          description: deterministic baseline retained
+        - id: phase-4-evaluation-harness-benefit-shown
+          description: evaluation harness shows measurable benefit
+        - id: phase-4-generated-metadata-candidate-status
+          description: generated metadata remains candidate status
 
   - id: phase-5-alerting-and-research-radar
     title: Scheduled change detection and external missing-part research
     status: planned
     acceptance:
       human_gates:
-        - alert channels approved
-        - rate limits and source terms reviewed
-        - external code review gates active
-        - no autonomous merge or promotion path
+        - id: phase-5-alert-channels-approved
+          description: alert channels approved
+        - id: phase-5-rate-limits-source-terms-reviewed
+          description: rate limits and source terms reviewed
+        - id: phase-5-external-code-review-gates-active
+          description: external code review gates active
+        - id: phase-5-no-autonomous-merge-promotion
+          description: no autonomous merge or promotion path

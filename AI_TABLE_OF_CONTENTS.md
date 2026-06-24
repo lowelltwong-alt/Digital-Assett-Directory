@@ -65,6 +65,7 @@
 ## Roadmap
 
 - `roadmap/roadmap.yaml`
+- `roadmap/gate-evidence.json` — tracked human-gate and validation-command evidence
 - `roadmap/state.json`
 - `docs/ROADMAP_EXECUTION.md`
 

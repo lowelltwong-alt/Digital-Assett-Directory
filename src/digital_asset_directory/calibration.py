@@ -9,6 +9,7 @@ from typing import Any, Literal
 
 from .ids import stable_id
 from .models import AlertRecord, AssetCalibrationReviewRecord, AssetRecord, SynergyRecord
+from .roadmap import record_human_gate_evidence
 from .utils import atomic_write_text, utc_now, write_jsonl
 
 CALIBRATION_SCORE_RATINGS = {"unreviewed", "too_high", "about_right", "too_low", "unsure"}
@@ -662,6 +663,140 @@ def write_asset_calibration_summary(
     output = repo_root / "processed" / "reports" / "asset_rating_calibration_summary.md"
     atomic_write_text(output, asset_calibration_summary_markdown(records, source_path) + "\n")
     return summarize_asset_calibration_reviews(records), str(output)
+
+
+def _path_for_evidence(repo_root: Path, path: Path) -> str:
+    try:
+        return path.resolve().relative_to(repo_root.resolve()).as_posix()
+    except ValueError:
+        return str(path)
+
+
+def _noted_review_lines(
+    records: list[AssetCalibrationReviewRecord], field: str, empty_message: str
+) -> list[str]:
+    noted = [record for record in records if getattr(record, field)]
+    if not noted:
+        return [f"- {empty_message}"]
+    lines: list[str] = []
+    for record in sorted(noted, key=lambda item: item.sample_id)[:10]:
+        lines.append(
+            f"- `{record.sample_id}` `{record.asset_id}` `{record.asset_title}`: "
+            f"{getattr(record, field)}"
+        )
+    return lines
+
+
+def asset_calibration_evidence_markdown(
+    repo_root: Path, records: list[AssetCalibrationReviewRecord], source_path: Path
+) -> str:
+    summary = summarize_asset_calibration_reviews(records)
+    if summary["reviewed_count"] < 50:
+        raise ValueError("Asset calibration evidence requires at least 50 reviewed asset ratings.")
+    if not summary["structured_notes_complete"]:
+        raise ValueError(
+            "Asset calibration evidence requires false-positive, false-negative, "
+            "and weight-change notes."
+        )
+    reviewed = [record for record in records if not _review_is_pending(record)]
+    missing_reviewers = [record.sample_id for record in reviewed if not record.reviewer]
+    if missing_reviewers:
+        raise ValueError(
+            "Asset calibration evidence requires reviewer values for reviewed records: "
+            + ", ".join(missing_reviewers[:10])
+        )
+
+    reviewers = sorted({record.reviewer for record in reviewed if record.reviewer})
+    lines = [
+        "# Phase 2 Asset Calibration Evidence",
+        "",
+        "Human-reviewed asset score calibration evidence. Generated scores remain "
+        "heuristics and do not become source-repository truth.",
+        "",
+        f"- Generated at: `{utc_now()}`",
+        f"- Source review file: `{_path_for_evidence(repo_root, source_path)}`",
+        f"- Reviewers: {', '.join(reviewers)}",
+        f"- Template records: **{summary['template_count']}**",
+        f"- Reviewed records: **{summary['reviewed_count']}**",
+        f"- Calibration gate complete: **{summary['calibration_gate_complete']}**",
+        f"- Score rating counts: `{summary['score_rating_counts']}`",
+        f"- Value band counts: `{summary['value_band_counts']}`",
+        f"- False positive notes: **{summary['false_positive_note_count']}**",
+        f"- False negative notes: **{summary['false_negative_note_count']}**",
+        f"- Weight change notes: **{summary['weight_change_note_count']}**",
+        "",
+        "## Authority Boundary",
+        "",
+        "- Human labels calibrate the catalog scoring model.",
+        "- They do not mutate source repositories.",
+        "- They do not promote generated metadata, alerts, synergies, or scores to truth.",
+        "",
+        "## False Positive Notes",
+        "",
+        *_noted_review_lines(
+            records, "false_positive_reason", "No false positive notes were recorded."
+        ),
+        "",
+        "## False Negative Notes",
+        "",
+        *_noted_review_lines(
+            records, "false_negative_note", "No false negative notes were recorded."
+        ),
+        "",
+        "## Weight Change Notes",
+        "",
+        *_noted_review_lines(
+            records, "weight_change_note", "No weight change notes were recorded."
+        ),
+        "",
+        "## Remaining Risks",
+        "",
+        "- Calibration reflects this review set and should be revisited after broader scans.",
+        "- GitHub inventory remains deferred until separately approved.",
+        "",
+    ]
+    return "\n".join(lines)
+
+
+def write_asset_calibration_evidence(
+    repo_root: Path,
+    records: list[AssetCalibrationReviewRecord],
+    source_path: Path,
+    output: Path | None = None,
+) -> tuple[dict[str, Any], str]:
+    output_path = output or repo_root / "roadmap" / "evidence" / "phase-2-asset-calibration.md"
+    if not output_path.is_absolute():
+        output_path = repo_root / output_path
+    text = asset_calibration_evidence_markdown(repo_root, records, source_path)
+    atomic_write_text(output_path, text + "\n")
+    evidence_path = _path_for_evidence(repo_root, output_path)
+    source_evidence_path = _path_for_evidence(repo_root, source_path)
+    reviewer = ", ".join(sorted({record.reviewer for record in records if record.reviewer}))
+    record_human_gate_evidence(
+        repo_root,
+        phase_id="phase-2-calibration",
+        gate_id="phase-2-asset-ratings-reviewed",
+        reviewer=reviewer,
+        summary="At least 50 asset calibration review records have human ratings.",
+        evidence=[evidence_path, source_evidence_path],
+    )
+    record_human_gate_evidence(
+        repo_root,
+        phase_id="phase-2-calibration",
+        gate_id="phase-2-false-positive-negative-notes-captured",
+        reviewer=reviewer,
+        summary="False-positive and false-negative calibration notes were captured.",
+        evidence=[evidence_path, source_evidence_path],
+    )
+    record_human_gate_evidence(
+        repo_root,
+        phase_id="phase-2-calibration",
+        gate_id="phase-2-weight-changes-documented",
+        reviewer=reviewer,
+        summary="Asset scoring weight-change notes were documented.",
+        evidence=[evidence_path, source_evidence_path],
+    )
+    return summarize_asset_calibration_reviews(records), str(output_path)
 
 
 def write_phase2_calibration_reports(

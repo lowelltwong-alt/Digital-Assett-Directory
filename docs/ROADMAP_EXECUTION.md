@@ -7,6 +7,11 @@ asset-dir roadmap check
 ```
 
 The checker computes file-based gates and records evidence in `roadmap/state.json`. Human gates remain explicit and cannot be auto-satisfied.
+Verified human gates are recorded in `roadmap/gate-evidence.json`; generated reports under
+`processed/` do not satisfy gates by themselves.
+
+Phase 1 is a reviewed bounded local inventory. GitHub scanning remains deferred until a
+fine-grained read-only token scope is separately approved.
 
 Generate phase-2 calibration review reports from the current catalog without rescanning:
 
@@ -56,9 +61,38 @@ python -m digital_asset_directory.cli recommend calibration-review-import-csv --
 The phase-2 gate still requires at least 50 reviewed asset ratings plus false-positive,
 false-negative, and weight-change notes.
 
+After the 50 asset ratings and structured notes exist, export tracked evidence:
+
+```powershell
+python -m digital_asset_directory.cli recommend calibration-evidence
+```
+
+This writes `roadmap/evidence/phase-2-asset-calibration.md` and updates
+`roadmap/gate-evidence.json`. It fails closed if review counts, structured notes, reviewers,
+or the source review file are missing.
+
+Generate a downstream governance pilot selection pack without installing hooks:
+
+```powershell
+python -m digital_asset_directory.cli recommend downstream-pilots --limit 10
+```
+
+This writes `processed/reports/downstream_pilot_candidates.md`. Mock Trial repositories are
+excluded from pilot recommendations while active work is in progress.
+
+Generate planning-only readiness templates for later roadmap phases:
+
+```powershell
+python -m digital_asset_directory.cli recommend roadmap-readiness
+```
+
+This writes Phase 4 and Phase 5 readiness reports under `processed/reports/`. It does not
+enable embeddings, scheduled scans, external research automation, or alert delivery.
+
 A phase may be marked complete only when:
 
 - required files or outputs exist;
+- tracked gate evidence verifies every human gate;
 - required validation commands have been run and reported;
 - human gates are recorded where required;
 - remaining risks are stated;

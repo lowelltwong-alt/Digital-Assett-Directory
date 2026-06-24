@@ -1,11 +1,8 @@
 {
-  "last_checked_at": "2026-06-24T18:50:33.446474+00:00",
+  "last_checked_at": "2026-06-24T19:34:13.816509+00:00",
   "phases": {
     "phase-0-seed": {
-      "commands_declared_not_executed_by_check": [
-        "python -m pytest",
-        "python -m digital_asset_directory.cli validate"
-      ],
+      "commands_declared_not_executed_by_check": [],
       "computed_status": "complete",
       "declared_status": "complete",
       "evidence": [
@@ -17,12 +14,15 @@
         "src/digital_asset_directory/cli.py",
         "tests/test_ids.py"
       ],
+      "human_gate_ids_unverified": [],
+      "human_gate_ids_verified": [],
       "human_gates_unverified": [],
+      "human_gates_verified": [],
       "missing": []
     },
     "phase-1-first-inventory": {
       "commands_declared_not_executed_by_check": [],
-      "computed_status": "awaiting_human_gate",
+      "computed_status": "complete",
       "declared_status": "planned",
       "evidence": [
         "processed/catalog/assets.jsonl",
@@ -30,9 +30,16 @@
         "processed/reports/scan_summary.md",
         "processed/alerts/alert_inbox.md"
       ],
-      "human_gates_unverified": [
+      "human_gate_ids_unverified": [],
+      "human_gate_ids_verified": [
+        "phase-1-source-scope-reviewed",
+        "phase-1-github-token-scope-reviewed-deferred",
+        "phase-1-source-mutation-check-passed"
+      ],
+      "human_gates_unverified": [],
+      "human_gates_verified": [
         "sources.local.yaml reviewed for excluded sensitive paths",
-        "GitHub token scope reviewed",
+        "GitHub token scope reviewed and GitHub scanning deferred",
         "source mutation check passed"
       ],
       "missing": []
@@ -46,11 +53,18 @@
         "processed/reports/orphan_review_sample.md",
         "processed/reports/synergy_review_sample.md"
       ],
+      "human_gate_ids_unverified": [
+        "phase-2-asset-ratings-reviewed",
+        "phase-2-false-positive-negative-notes-captured",
+        "phase-2-weight-changes-documented"
+      ],
+      "human_gate_ids_verified": [],
       "human_gates_unverified": [
         "at least 50 reviewed asset ratings",
         "false-positive and false-negative notes captured",
         "weight changes documented"
       ],
+      "human_gates_verified": [],
       "missing": []
     },
     "phase-3-downstream-governance": {
@@ -58,12 +72,20 @@
       "computed_status": "awaiting_human_gate",
       "declared_status": "planned",
       "evidence": [],
+      "human_gate_ids_unverified": [
+        "phase-3-pilot-repositories-selected",
+        "phase-3-pre-push-enforcement-reviewed",
+        "phase-3-lessons-arrive-central-hub",
+        "phase-3-bypass-failure-tested"
+      ],
+      "human_gate_ids_verified": [],
       "human_gates_unverified": [
         "pilot repositories selected",
         "pre-push enforcement reviewed",
         "lessons arrive in central hub",
         "bypass and failure behavior tested"
       ],
+      "human_gates_verified": [],
       "missing": []
     },
     "phase-4-semantic-enrichment": {
@@ -71,12 +93,20 @@
       "computed_status": "awaiting_human_gate",
       "declared_status": "planned",
       "evidence": [],
+      "human_gate_ids_unverified": [
+        "phase-4-provider-privacy-boundary-approved",
+        "phase-4-deterministic-baseline-retained",
+        "phase-4-evaluation-harness-benefit-shown",
+        "phase-4-generated-metadata-candidate-status"
+      ],
+      "human_gate_ids_verified": [],
       "human_gates_unverified": [
         "provider and privacy boundary approved",
         "deterministic baseline retained",
         "evaluation harness shows measurable benefit",
         "generated metadata remains candidate status"
       ],
+      "human_gates_verified": [],
       "missing": []
     },
     "phase-5-alerting-and-research-radar": {
@@ -84,12 +114,20 @@
       "computed_status": "awaiting_human_gate",
       "declared_status": "planned",
       "evidence": [],
+      "human_gate_ids_unverified": [
+        "phase-5-alert-channels-approved",
+        "phase-5-rate-limits-source-terms-reviewed",
+        "phase-5-external-code-review-gates-active",
+        "phase-5-no-autonomous-merge-promotion"
+      ],
+      "human_gate_ids_verified": [],
       "human_gates_unverified": [
         "alert channels approved",
         "rate limits and source terms reviewed",
         "external code review gates active",
         "no autonomous merge or promotion path"
       ],
+      "human_gates_verified": [],
       "missing": []
     }
   },

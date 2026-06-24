@@ -13,6 +13,7 @@ from digital_asset_directory.calibration import (
     summarize_asset_calibration_reviews,
     update_asset_calibration_review_file,
     update_asset_calibration_review_record,
+    write_asset_calibration_evidence,
     write_asset_calibration_review_csv,
     write_phase2_calibration_reports,
 )
@@ -370,6 +371,93 @@ def test_asset_calibration_review_csv_import_fails_before_writing_bad_rating(tmp
     else:
         raise AssertionError("bad CSV score rating should fail closed")
     assert review_file.read_text(encoding="utf-8") == original
+
+
+def _complete_asset_calibration_records() -> list[AssetCalibrationReviewRecord]:
+    assets = [
+        make_asset(
+            f"asset-{index:02d}",
+            title=f"Calibration Asset {index:02d}",
+            score=90 if index < 25 else 20,
+        )
+        for index in range(50)
+    ]
+    records = build_asset_calibration_review_template(assets, per_band_sample=25)
+    for index, record in enumerate(list(records), start=1):
+        kwargs = {
+            "sample_id": record.sample_id,
+            "reviewer": "Human",
+            "score_rating": "about_right",
+        }
+        if index == 1:
+            kwargs["false_positive_reason"] = "Representative false positive."
+        if index == 2:
+            kwargs["false_negative_note"] = "Representative false negative."
+        if index == 3:
+            kwargs["weight_change_note"] = "Adjust review weight after calibration."
+        records, _ = update_asset_calibration_review_record(records, **kwargs)
+    return records
+
+
+def test_asset_calibration_evidence_refuses_incomplete_reviews(tmp_path: Path):
+    records = build_asset_calibration_review_template(
+        [make_asset("asset-a", title="Evaluator", score=88)], per_band_sample=1
+    )
+    review_file = tmp_path / "asset_reviews.jsonl"
+    review_file.write_text(
+        "".join(json.dumps(record.model_dump(mode="json")) + "\n" for record in records),
+        encoding="utf-8",
+    )
+
+    try:
+        write_asset_calibration_evidence(tmp_path, records, review_file)
+    except ValueError as exc:
+        assert "at least 50 reviewed asset ratings" in str(exc)
+    else:
+        raise AssertionError("incomplete asset calibration evidence should fail closed")
+
+
+def test_asset_calibration_evidence_requires_structured_notes(tmp_path: Path):
+    records = _complete_asset_calibration_records()
+    for record in records:
+        record.false_positive_reason = ""
+        record.false_negative_note = ""
+        record.weight_change_note = ""
+    review_file = tmp_path / "asset_reviews.jsonl"
+    review_file.write_text(
+        "".join(json.dumps(record.model_dump(mode="json")) + "\n" for record in records),
+        encoding="utf-8",
+    )
+
+    try:
+        write_asset_calibration_evidence(tmp_path, records, review_file)
+    except ValueError as exc:
+        assert "requires false-positive" in str(exc)
+    else:
+        raise AssertionError("asset calibration evidence without notes should fail closed")
+
+
+def test_asset_calibration_evidence_writes_tracked_gate_evidence(tmp_path: Path):
+    records = _complete_asset_calibration_records()
+    review_file = tmp_path / "asset_reviews.jsonl"
+    review_file.write_text(
+        "".join(json.dumps(record.model_dump(mode="json")) + "\n" for record in records),
+        encoding="utf-8",
+    )
+
+    summary, evidence_path = write_asset_calibration_evidence(tmp_path, records, review_file)
+
+    assert summary["calibration_gate_complete"] is True
+    assert Path(evidence_path).exists()
+    markdown = Path(evidence_path).read_text(encoding="utf-8")
+    assert "Phase 2 Asset Calibration Evidence" in markdown
+    gate_evidence = json.loads((tmp_path / "roadmap" / "gate-evidence.json").read_text())
+    assert gate_evidence["human_gates"]["phase-2-asset-ratings-reviewed"]["status"] == (
+        "verified"
+    )
+    assert gate_evidence["human_gates"]["phase-2-weight-changes-documented"]["phase_id"] == (
+        "phase-2-calibration"
+    )
 
 
 def test_catalog_db_reads_synergies_for_calibration_reports(tmp_path: Path):

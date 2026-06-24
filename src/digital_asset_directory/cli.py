@@ -12,6 +12,7 @@ from .calibration import (
     import_asset_calibration_review_csv,
     load_asset_calibration_reviews,
     update_asset_calibration_review_file,
+    write_asset_calibration_evidence,
     write_asset_calibration_summary,
     write_asset_calibration_review_csv,
     write_phase2_calibration_reports,
@@ -39,6 +40,7 @@ from .proposals import (
     write_proposal_review_results_summary,
 )
 from .recommendations import recommend_skills_and_agents, recommend_swarm
+from .readiness import write_downstream_pilot_candidates, write_phase45_readiness_reports
 from .research import research_missing_parts
 from .roadmap import check_roadmap
 from .validation import validate_repo
@@ -514,6 +516,49 @@ def recommend_calibration_review_import_csv(
         console.print(str(exc))
         raise typer.Exit(2) from exc
     console.print_json(data=result)
+
+
+@recommend_app.command("calibration-evidence")
+def recommend_calibration_evidence(
+    hub: Optional[Path] = typer.Option(None),
+    review_file: Optional[Path] = typer.Option(None, "--review-file"),
+    output: Optional[Path] = typer.Option(None, "--output"),
+) -> None:
+    """Write tracked roadmap evidence only after asset calibration review is complete."""
+    cfg = _cfg(hub=hub)
+    path = review_file or cfg.repo_root / "processed" / "calibration" / "asset_rating_template.jsonl"
+    if not path.is_absolute():
+        path = cfg.repo_root / path
+    records = load_asset_calibration_reviews(path)
+    try:
+        summary, evidence_path = write_asset_calibration_evidence(
+            cfg.repo_root, records, path, output
+        )
+    except ValueError as exc:
+        console.print(str(exc))
+        raise typer.Exit(2) from exc
+    console.print_json(
+        data={"review_file": str(path), "output": evidence_path, "summary": summary}
+    )
+
+
+@recommend_app.command("downstream-pilots")
+def recommend_downstream_pilots(
+    hub: Optional[Path] = typer.Option(None),
+    limit: int = typer.Option(10, min=1, max=50),
+) -> None:
+    """Write a generated candidate pack for selecting a downstream governance pilot."""
+    cfg = _cfg(hub=hub)
+    with CatalogDB(cfg.database_path) as db:
+        result = write_downstream_pilot_candidates(cfg.repo_root, db.assets(), limit=limit)
+    console.print_json(data=result)
+
+
+@recommend_app.command("roadmap-readiness")
+def recommend_roadmap_readiness(hub: Optional[Path] = typer.Option(None)) -> None:
+    """Write planning-only readiness templates for later roadmap phases."""
+    cfg = _cfg(hub=hub)
+    console.print_json(data=write_phase45_readiness_reports(cfg.repo_root))
 
 
 @recommend_app.command("proposal-review-summary")
