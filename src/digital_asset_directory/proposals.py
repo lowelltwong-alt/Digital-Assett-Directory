@@ -730,6 +730,24 @@ def load_proposal_reviews(path: Path) -> list[ProposalReviewRecord]:
     return reviews
 
 
+def load_proposals(path: Path) -> list[ProposalRecord]:
+    proposals: list[ProposalRecord] = []
+    if not path.exists():
+        raise FileNotFoundError(f"Proposal file not found: {path}")
+    for line_number, line in enumerate(path.read_text(encoding="utf-8").splitlines(), start=1):
+        if not line.strip():
+            continue
+        try:
+            proposals.append(ProposalRecord.model_validate(json.loads(line)))
+        except Exception as exc:
+            raise ValueError(f"Invalid proposal record at {path}:{line_number}: {exc}") from exc
+    return proposals
+
+
+def load_generated_proposals(bottom_up_path: Path, top_down_path: Path) -> list[ProposalRecord]:
+    return [*load_proposals(bottom_up_path), *load_proposals(top_down_path)]
+
+
 def write_proposal_reviews(path: Path, reviews: list[ProposalReviewRecord]) -> None:
     write_jsonl(path, [review.model_dump(mode="json") for review in reviews])
 
@@ -835,6 +853,83 @@ def update_proposal_review_file(
     )
     write_proposal_reviews(path, updated_reviews)
     return updated, summarize_proposal_reviews(updated_reviews)
+
+
+def _review_is_pending(review: ProposalReviewRecord) -> bool:
+    return (
+        review.usefulness == "unreviewed"
+        and review.safety == "unreviewed"
+        and review.novelty == "unreviewed"
+        and review.actionability == "unreviewed"
+        and review.decision == "pending"
+    )
+
+
+def build_proposal_review_queue(
+    reviews: list[ProposalReviewRecord],
+    proposals: list[ProposalRecord],
+    *,
+    status: Literal["pending", "reviewed", "all"] = "pending",
+    engine: Literal["bottom_up_self_proposal", "top_down_orchestration", "all"] = "all",
+    limit: int = 10,
+) -> dict[str, Any]:
+    proposals_by_id = {proposal.proposal_id: proposal for proposal in proposals}
+    if status not in {"pending", "reviewed", "all"}:
+        raise ValueError("Status must be one of: pending, reviewed, all")
+    if engine not in {"bottom_up_self_proposal", "top_down_orchestration", "all"}:
+        raise ValueError("Engine must be one of: bottom_up_self_proposal, top_down_orchestration, all")
+
+    items: list[dict[str, Any]] = []
+    missing_proposal_ids: list[str] = []
+    for review in sorted(reviews, key=lambda record: record.sample_id):
+        pending = _review_is_pending(review)
+        if status == "pending" and not pending:
+            continue
+        if status == "reviewed" and pending:
+            continue
+        if engine != "all" and review.proposal_engine != engine:
+            continue
+        proposal = proposals_by_id.get(review.proposal_id)
+        if not proposal:
+            missing_proposal_ids.append(review.proposal_id)
+            continue
+        items.append(
+            {
+                "sample_id": review.sample_id,
+                "proposal_id": review.proposal_id,
+                "proposal_engine": review.proposal_engine,
+                "proposal_type": proposal.proposal_type,
+                "review_status": review.review_status,
+                "labels": {
+                    "usefulness": review.usefulness,
+                    "safety": review.safety,
+                    "novelty": review.novelty,
+                    "actionability": review.actionability,
+                    "decision": review.decision,
+                },
+                "source_asset_ids": proposal.source_asset_ids,
+                "target_asset_ids": proposal.target_asset_ids,
+                "need_ids": proposal.need_ids,
+                "confidence": proposal.confidence,
+                "risk": proposal.risk,
+                "rationale": proposal.rationale,
+                "smallest_bounded_experiment": proposal.smallest_bounded_experiment,
+            }
+        )
+        if len(items) >= limit:
+            break
+
+    summary = summarize_proposal_reviews(reviews)
+    return {
+        "status_filter": status,
+        "engine_filter": engine,
+        "limit": limit,
+        "returned_count": len(items),
+        "missing_proposal_count": len(set(missing_proposal_ids)),
+        "missing_proposal_ids": sorted(set(missing_proposal_ids))[:25],
+        "summary": summary,
+        "items": items,
+    }
 
 
 def proposal_review_results_markdown(reviews: list[ProposalReviewRecord], source_path: Path) -> str:

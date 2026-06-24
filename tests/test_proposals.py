@@ -11,9 +11,11 @@ from digital_asset_directory.models import (
     ProposalReviewRecord,
 )
 from digital_asset_directory.proposals import (
+    build_proposal_review_queue,
     build_proposal_review_template,
     generate_bottom_up_proposals,
     generate_top_down_proposals,
+    load_generated_proposals,
     load_proposal_reviews,
     run_proposal_engines,
     summarize_proposal_reviews,
@@ -366,6 +368,88 @@ def test_update_proposal_review_file_rewrites_jsonl(tmp_path: Path):
     assert loaded[0].reviewer == "Human"
     assert loaded[0].review_status == "reviewed"
     assert summary["reviewed_count"] == 1
+
+
+def test_review_queue_joins_reviews_to_proposal_context_and_filters():
+    assets = [
+        make_asset("target", need="evaluation_harness"),
+        make_asset("provider", capability="evaluation_harness"),
+    ]
+    bottom_up, top_down, _ = run_proposal_engines(
+        assets=assets,
+        edges=[make_edge("provider", "target")],
+        alerts=[make_alert("target")],
+        scan_id="scan-test",
+        engine="both",
+        per_asset_limit=2,
+        portfolio_limit=2,
+        review_sample=1,
+    )
+    reviews = build_proposal_review_template(bottom_up, top_down, per_engine_sample=1)
+    reviews, _ = update_proposal_review_record(
+        reviews,
+        sample_id="review-001",
+        usefulness="useful",
+        safety="safe",
+        decision="accept_candidate",
+    )
+
+    pending = build_proposal_review_queue(reviews, [*bottom_up, *top_down], status="pending")
+    reviewed = build_proposal_review_queue(
+        reviews, [*bottom_up, *top_down], status="reviewed", engine="bottom_up_self_proposal"
+    )
+
+    assert pending["returned_count"] == 1
+    assert pending["items"][0]["proposal_engine"] == "top_down_orchestration"
+    assert "rationale" in pending["items"][0]
+    assert reviewed["returned_count"] == 1
+    assert reviewed["items"][0]["labels"]["usefulness"] == "useful"
+
+
+def test_review_queue_reports_missing_proposal_records():
+    review = ProposalReviewRecord(
+        review_id="review-missing",
+        sample_id="review-001",
+        proposal_id="proposal-missing",
+        proposal_engine="bottom_up_self_proposal",
+        evidence={"proposal_type": "strengthens_capability"},
+    )
+    queue = build_proposal_review_queue([review], [], status="pending")
+
+    assert queue["returned_count"] == 0
+    assert queue["missing_proposal_count"] == 1
+    assert queue["missing_proposal_ids"] == ["proposal-missing"]
+
+
+def test_load_generated_proposals_reads_both_engine_files(tmp_path: Path):
+    assets = [
+        make_asset("target", need="evaluation_harness"),
+        make_asset("provider", capability="evaluation_harness"),
+    ]
+    bottom_up, top_down, _ = run_proposal_engines(
+        assets=assets,
+        edges=[make_edge("provider", "target")],
+        alerts=[make_alert("target")],
+        scan_id="scan-test",
+        engine="both",
+        per_asset_limit=1,
+        portfolio_limit=1,
+        review_sample=1,
+    )
+    bottom_path = tmp_path / "bottom.jsonl"
+    top_path = tmp_path / "top.jsonl"
+    bottom_path.write_text(
+        "".join(json.dumps(record.model_dump(mode="json")) + "\n" for record in bottom_up),
+        encoding="utf-8",
+    )
+    top_path.write_text(
+        "".join(json.dumps(record.model_dump(mode="json")) + "\n" for record in top_down),
+        encoding="utf-8",
+    )
+
+    loaded = load_generated_proposals(bottom_path, top_path)
+
+    assert len(loaded) == len(bottom_up) + len(top_down)
 
 
 def make_review(index: int, engine: str, decision: str = "accept_candidate") -> ProposalReviewRecord:

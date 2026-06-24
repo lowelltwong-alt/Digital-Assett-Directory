@@ -16,6 +16,8 @@ from .learning import add_lesson, postflight, preflight
 from .orphan_adapter import run_orphan_radar
 from .proposals import (
     ProposalEngineOption,
+    build_proposal_review_queue,
+    load_generated_proposals,
     load_proposal_reviews,
     run_proposal_engines,
     update_proposal_review_file,
@@ -367,6 +369,68 @@ def recommend_proposal_review_label(
             "review_file": str(path),
             "updated": updated.model_dump(mode="json"),
             "summary": summary,
+        }
+    )
+
+
+@recommend_app.command("proposal-review-queue")
+def recommend_proposal_review_queue(
+    hub: Optional[Path] = typer.Option(None),
+    review_file: Optional[Path] = typer.Option(None, "--review-file"),
+    bottom_up_file: Optional[Path] = typer.Option(None, "--bottom-up-file"),
+    top_down_file: Optional[Path] = typer.Option(None, "--top-down-file"),
+    status: str = typer.Option("pending", "--status"),
+    engine: str = typer.Option("all", "--engine"),
+    limit: int = typer.Option(10, min=1, max=100),
+) -> None:
+    """List proposal review queue items joined with proposal context."""
+    cfg = _cfg(hub=hub)
+    review_path = (
+        review_file or cfg.repo_root / "processed" / "proposals" / "proposal_review_template.jsonl"
+    )
+    bottom_path = (
+        bottom_up_file or cfg.repo_root / "processed" / "proposals" / "bottom_up_proposals.jsonl"
+    )
+    top_path = top_down_file or cfg.repo_root / "processed" / "proposals" / "top_down_proposals.jsonl"
+    if not review_path.is_absolute():
+        review_path = cfg.repo_root / review_path
+    if not bottom_path.is_absolute():
+        bottom_path = cfg.repo_root / bottom_path
+    if not top_path.is_absolute():
+        top_path = cfg.repo_root / top_path
+
+    status_value = status.lower()
+    engine_value = engine.lower()
+    engine_map = {
+        "all": "all",
+        "bottom-up": "bottom_up_self_proposal",
+        "bottom_up_self_proposal": "bottom_up_self_proposal",
+        "top-down": "top_down_orchestration",
+        "top_down_orchestration": "top_down_orchestration",
+    }
+    if status_value not in {"pending", "reviewed", "all"}:
+        console.print("Status must be one of: pending, reviewed, all")
+        raise typer.Exit(2)
+    if engine_value not in engine_map:
+        console.print("Engine must be one of: all, bottom-up, top-down")
+        raise typer.Exit(2)
+    try:
+        queue = build_proposal_review_queue(
+            load_proposal_reviews(review_path),
+            load_generated_proposals(bottom_path, top_path),
+            status=status_value,  # type: ignore[arg-type]
+            engine=engine_map[engine_value],  # type: ignore[arg-type]
+            limit=limit,
+        )
+    except (FileNotFoundError, ValueError) as exc:
+        console.print(str(exc))
+        raise typer.Exit(2) from exc
+    console.print_json(
+        data={
+            "review_file": str(review_path),
+            "bottom_up_file": str(bottom_path),
+            "top_down_file": str(top_path),
+            **queue,
         }
     )
 
