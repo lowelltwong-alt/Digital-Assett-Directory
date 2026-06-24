@@ -102,6 +102,9 @@ novelty
 actionability
 decision
 notes
+false_positive_reason
+false_negative_note
+useful_example_note
 ```
 
 Do not edit proposal context columns to change proposal meaning. The importer uses the IDs and validated label columns; generated proposal evidence remains candidate-only.
@@ -121,7 +124,7 @@ Update one record at a time:
 
 ```powershell
 $env:PYTHONPATH='src'
-python -m digital_asset_directory.cli recommend proposal-review-label --sample-id review-001 --reviewer "Human Reviewer" --usefulness useful --safety safe --novelty novel --actionability actionable --decision accept_candidate --notes "Useful and safe bounded candidate."
+python -m digital_asset_directory.cli recommend proposal-review-label --sample-id review-001 --reviewer "Human Reviewer" --usefulness useful --safety safe --novelty novel --actionability actionable --decision accept_candidate --notes "Useful and safe bounded candidate." --useful-example-note "Clear bounded reuse example."
 ```
 
 Allowed values:
@@ -133,6 +136,12 @@ novelty: unreviewed, novel, already_known, unsure
 actionability: unreviewed, actionable, not_actionable, unsure
 decision: pending, accept_candidate, reject_candidate, defer
 ```
+
+Use the structured calibration note fields to capture:
+
+- `false_positive_reason`: why a generated proposal looked wrong, unsafe, duplicate, or not useful.
+- `false_negative_note`: what better proposal, missing connection, or missed need the engine failed to surface.
+- `useful_example_note`: why a proposal is worth keeping as a representative positive example.
 
 A label command rewrites only the selected review JSONL file. It does not change proposal records, graph edges, source files, roadmap state, or source repositories.
 
@@ -151,7 +160,7 @@ Expected generated output:
 processed/reports/proposal_review_results_summary.md
 ```
 
-This summary reports reviewed counts, label counts, and whether the calibration gate is complete. It is generated output and should not be treated as tracked roadmap evidence by itself.
+This summary reports reviewed counts, label counts, structured calibration note counts, and whether the calibration gate is complete. It is generated output and should not be treated as tracked roadmap evidence by itself.
 
 ## Export Tracked Evidence
 
@@ -168,7 +177,7 @@ Expected tracked-ready output:
 roadmap/evidence/proposal-engine-calibration.md
 ```
 
-This command fails closed if the review gate is incomplete. It should not create roadmap evidence from unreviewed generated templates.
+This command fails closed if the review gate is incomplete. It should not create roadmap evidence from unreviewed generated templates. When structured calibration notes exist, the evidence includes false positive notes, false negative notes, and useful examples.
 
 After evidence export, review the evidence file before committing it. Do not mark any roadmap phase complete unless its acceptance criteria are otherwise satisfied.
 

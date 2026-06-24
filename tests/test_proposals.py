@@ -131,6 +131,9 @@ def test_proposal_review_record_schema_supports_unreviewed_template():
     )
     assert review.usefulness == "unreviewed"
     assert review.decision == "pending"
+    assert review.false_positive_reason == ""
+    assert review.false_negative_note == ""
+    assert review.useful_example_note == ""
 
     schema = json.loads(Path("schemas/proposal-review.schema.json").read_text(encoding="utf-8"))
     Draft202012Validator(schema).validate(review.model_dump(mode="json"))
@@ -311,6 +314,9 @@ def test_update_proposal_review_record_sets_labels_and_review_status():
         actionability="actionable",
         decision="accept_candidate",
         notes="Good candidate.",
+        false_positive_reason="",
+        false_negative_note="No better missing proposal was observed.",
+        useful_example_note="Good representative positive example.",
         reviewed_at="2026-01-01T00:00:00+00:00",
     )
 
@@ -321,7 +327,36 @@ def test_update_proposal_review_record_sets_labels_and_review_status():
     assert updated.novelty == "novel"
     assert updated.actionability == "actionable"
     assert updated.decision == "accept_candidate"
-    assert summarize_proposal_reviews(updated_reviews)["reviewed_count"] == 1
+    assert updated.false_negative_note == "No better missing proposal was observed."
+    assert updated.useful_example_note == "Good representative positive example."
+    summary = summarize_proposal_reviews(updated_reviews)
+    assert summary["reviewed_count"] == 1
+    assert summary["false_negative_note_count"] == 1
+    assert summary["useful_example_note_count"] == 1
+
+
+def test_calibration_note_counts_as_review_signal():
+    reviews = [
+        ProposalReviewRecord(
+            review_id="review-1",
+            sample_id="review-001",
+            proposal_id="proposal-1",
+            proposal_engine="top_down_orchestration",
+            evidence={"proposal_type": "research_missing_part"},
+        )
+    ]
+
+    updated_reviews, updated = update_proposal_review_record(
+        reviews,
+        sample_id="review-001",
+        false_positive_reason="Rejected because it duplicates an existing source-owned path.",
+    )
+    summary = summarize_proposal_reviews(updated_reviews)
+
+    assert updated.review_status == "reviewed"
+    assert updated.false_positive_reason.startswith("Rejected")
+    assert summary["reviewed_count"] == 1
+    assert summary["false_positive_note_count"] == 1
 
 
 def test_update_proposal_review_record_rejects_bad_input():
@@ -488,6 +523,9 @@ def test_review_csv_export_and_import_round_trip_labels(tmp_path: Path):
     rows[0]["actionability"] = "actionable"
     rows[0]["decision"] = "accept_candidate"
     rows[0]["notes"] = "CSV reviewed."
+    rows[0]["false_positive_reason"] = ""
+    rows[0]["false_negative_note"] = "CSV reviewer saw a missed adjacent need."
+    rows[0]["useful_example_note"] = "CSV reviewer liked this as a positive sample."
     with csv_file.open("w", encoding="utf-8", newline="") as handle:
         writer = csv.DictWriter(handle, fieldnames=rows[0].keys())
         writer.writeheader()
@@ -500,6 +538,8 @@ def test_review_csv_export_and_import_round_trip_labels(tmp_path: Path):
     assert result["summary"]["reviewed_count"] == 1
     assert loaded[0].reviewer == "Human"
     assert loaded[0].usefulness == "useful"
+    assert loaded[0].false_negative_note == "CSV reviewer saw a missed adjacent need."
+    assert loaded[0].useful_example_note == "CSV reviewer liked this as a positive sample."
     assert loaded[0].review_status == "reviewed"
     assert loaded[1].review_status == "generated_candidate"
 
@@ -561,6 +601,9 @@ def test_blinded_review_csv_hides_engine_and_imports_labels(tmp_path: Path):
     rows = list(csv.DictReader(csv_file.open("r", encoding="utf-8", newline="")))
     assert rows
     assert "proposal_engine" not in rows[0]
+    assert "false_positive_reason" in rows[0]
+    assert "false_negative_note" in rows[0]
+    assert "useful_example_note" in rows[0]
     unblind_rows = list(csv.DictReader(unblind_file.open("r", encoding="utf-8", newline="")))
     assert {row["proposal_engine"] for row in unblind_rows} == {
         "bottom_up_self_proposal",
@@ -620,6 +663,9 @@ def test_calibration_evidence_writes_after_complete_reviews(tmp_path: Path):
         *(make_review(index, "bottom_up_self_proposal") for index in range(25)),
         *(make_review(index, "top_down_orchestration", "reject_candidate") for index in range(25)),
     ]
+    reviews[0].useful_example_note = "Human kept this as a strong bottom-up example."
+    reviews[26].false_positive_reason = "Human rejected this as duplicative."
+    reviews[27].false_negative_note = "Human expected a missing-part proposal for tests."
     output = tmp_path / "roadmap" / "evidence" / "proposal-engine-calibration.md"
     summary, path = write_proposal_calibration_evidence(
         tmp_path, reviews, tmp_path / "reviews.jsonl", output
@@ -630,3 +676,7 @@ def test_calibration_evidence_writes_after_complete_reviews(tmp_path: Path):
     text = Path(path).read_text(encoding="utf-8")
     assert "Proposal Engine Calibration Evidence" in text
     assert "Candidate default path from accepted counts: **bottom_up_self_proposal**" in text
+    assert "False positive notes: **1**" in text
+    assert "False negative notes: **1**" in text
+    assert "Useful example notes: **1**" in text
+    assert "Human rejected this as duplicative." in text

@@ -201,5 +201,8 @@ class ProposalReviewRecord(BaseModel):
     actionability: Literal["unreviewed", "actionable", "not_actionable", "unsure"] = "unreviewed"
     decision: Literal["pending", "accept_candidate", "reject_candidate", "defer"] = "pending"
     notes: str = ""
+    false_positive_reason: str = ""
+    false_negative_note: str = ""
+    useful_example_note: str = ""
     evidence: dict[str, Any] = Field(default_factory=dict)
     review_status: Literal["generated_candidate", "reviewed", "rejected"] = "generated_candidate"

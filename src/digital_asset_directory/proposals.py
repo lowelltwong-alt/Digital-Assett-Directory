@@ -44,6 +44,11 @@ REVIEW_DEFAULT_LABELS = {
     "actionability": "unreviewed",
     "decision": "pending",
 }
+REVIEW_CALIBRATION_NOTE_FIELDS = [
+    "false_positive_reason",
+    "false_negative_note",
+    "useful_example_note",
+]
 REVIEW_CSV_COLUMNS = [
     "sample_id",
     "proposal_id",
@@ -63,6 +68,9 @@ REVIEW_CSV_COLUMNS = [
     "actionability",
     "decision",
     "notes",
+    "false_positive_reason",
+    "false_negative_note",
+    "useful_example_note",
 ]
 BLINDED_REVIEW_CSV_COLUMNS = [
     column for column in REVIEW_CSV_COLUMNS if column != "proposal_engine"
@@ -719,6 +727,7 @@ def summarize_proposal_reviews(reviews: list[ProposalReviewRecord]) -> dict[str,
         or review.novelty != "unreviewed"
         or review.actionability != "unreviewed"
         or review.decision != "pending"
+        or any(getattr(review, field) for field in REVIEW_CALIBRATION_NOTE_FIELDS)
     ]
     by_engine: dict[str, list[ProposalReviewRecord]] = defaultdict(list)
     for review in reviewed:
@@ -745,6 +754,9 @@ def summarize_proposal_reviews(reviews: list[ProposalReviewRecord]) -> dict[str,
         "novelty_counts": dict(Counter(review.novelty for review in reviews)),
         "actionability_counts": dict(Counter(review.actionability for review in reviews)),
         "decision_counts": dict(Counter(review.decision for review in reviews)),
+        "false_positive_note_count": sum(1 for review in reviews if review.false_positive_reason),
+        "false_negative_note_count": sum(1 for review in reviews if review.false_negative_note),
+        "useful_example_note_count": sum(1 for review in reviews if review.useful_example_note),
     }
 
 
@@ -805,6 +817,9 @@ def update_proposal_review_record(
     actionability: str | None = None,
     decision: str | None = None,
     notes: str | None = None,
+    false_positive_reason: str | None = None,
+    false_negative_note: str | None = None,
+    useful_example_note: str | None = None,
     reviewed_at: str | None = None,
 ) -> tuple[list[ProposalReviewRecord], ProposalReviewRecord]:
     if not sample_id and not proposal_id:
@@ -835,13 +850,21 @@ def update_proposal_review_record(
         updates["reviewer"] = reviewer
     if notes is not None:
         updates["notes"] = notes
+    for field, value in {
+        "false_positive_reason": false_positive_reason,
+        "false_negative_note": false_negative_note,
+        "useful_example_note": useful_example_note,
+    }.items():
+        if value is not None:
+            updates[field] = value
     if reviewed_at is not None:
         updates["reviewed_at"] = reviewed_at
 
     label_update_present = any(field in updates for field in REVIEW_LABELS)
-    if label_update_present and "reviewed_at" not in updates:
+    calibration_note_present = any(field in updates for field in REVIEW_CALIBRATION_NOTE_FIELDS)
+    if (label_update_present or calibration_note_present) and "reviewed_at" not in updates:
         updates["reviewed_at"] = utc_now()
-    if label_update_present:
+    if label_update_present or calibration_note_present:
         updates["review_status"] = "reviewed"
     if not updates:
         raise ValueError("No review fields were provided to update.")
@@ -867,6 +890,9 @@ def update_proposal_review_file(
     actionability: str | None = None,
     decision: str | None = None,
     notes: str | None = None,
+    false_positive_reason: str | None = None,
+    false_negative_note: str | None = None,
+    useful_example_note: str | None = None,
     reviewed_at: str | None = None,
 ) -> tuple[ProposalReviewRecord, dict[str, Any]]:
     reviews = load_proposal_reviews(path)
@@ -881,6 +907,9 @@ def update_proposal_review_file(
         actionability=actionability,
         decision=decision,
         notes=notes,
+        false_positive_reason=false_positive_reason,
+        false_negative_note=false_negative_note,
+        useful_example_note=useful_example_note,
         reviewed_at=reviewed_at,
     )
     write_proposal_reviews(path, updated_reviews)
@@ -894,6 +923,7 @@ def _review_is_pending(review: ProposalReviewRecord) -> bool:
         and review.novelty == "unreviewed"
         and review.actionability == "unreviewed"
         and review.decision == "pending"
+        and not any(getattr(review, field) for field in REVIEW_CALIBRATION_NOTE_FIELDS)
     )
 
 
@@ -938,6 +968,9 @@ def build_proposal_review_queue(
                     "novelty": review.novelty,
                     "actionability": review.actionability,
                     "decision": review.decision,
+                    "false_positive_reason": review.false_positive_reason,
+                    "false_negative_note": review.false_negative_note,
+                    "useful_example_note": review.useful_example_note,
                 },
                 "source_asset_ids": proposal.source_asset_ids,
                 "target_asset_ids": proposal.target_asset_ids,
@@ -1007,6 +1040,9 @@ def proposal_review_csv_rows(
             "actionability": review.actionability,
             "decision": review.decision,
             "notes": review.notes,
+            "false_positive_reason": review.false_positive_reason,
+            "false_negative_note": review.false_negative_note,
+            "useful_example_note": review.useful_example_note,
         }
         if blind:
             row.pop("proposal_engine")
@@ -1085,8 +1121,11 @@ def import_proposal_review_csv(
                 and value != REVIEW_DEFAULT_LABELS[field]
                 for field in REVIEW_LABELS
             )
+            has_calibration_note = any(
+                _csv_value(row, field) for field in REVIEW_CALIBRATION_NOTE_FIELDS
+            )
             has_metadata = any(_csv_value(row, field) for field in {"reviewer", "notes"})
-            if not has_label and not has_metadata:
+            if not has_label and not has_metadata and not has_calibration_note:
                 skipped_count += 1
                 continue
             try:
@@ -1101,6 +1140,9 @@ def import_proposal_review_csv(
                     actionability=_csv_value(row, "actionability"),
                     decision=_csv_value(row, "decision"),
                     notes=_csv_value(row, "notes"),
+                    false_positive_reason=_csv_value(row, "false_positive_reason"),
+                    false_negative_note=_csv_value(row, "false_negative_note"),
+                    useful_example_note=_csv_value(row, "useful_example_note"),
                 )
                 updated_count += 1
             except ValueError as exc:
@@ -1139,6 +1181,12 @@ def proposal_review_results_markdown(reviews: list[ProposalReviewRecord], source
         f"- Actionability: `{summary['actionability_counts']}`",
         f"- Decisions: `{summary['decision_counts']}`",
         "",
+        "## Calibration Notes",
+        "",
+        f"- False positive notes: **{summary['false_positive_note_count']}**",
+        f"- False negative notes: **{summary['false_negative_note_count']}**",
+        f"- Useful example notes: **{summary['useful_example_note_count']}**",
+        "",
         "Generated summary only. Track curated evidence separately after human review.",
         "",
     ]
@@ -1152,6 +1200,22 @@ def write_proposal_review_results_summary(
     output = repo_root / "processed" / "reports" / "proposal_review_results_summary.md"
     atomic_write_text(output, proposal_review_results_markdown(reviews, source_path))
     return summary, str(output)
+
+
+def _calibration_note_lines(
+    reviews: list[ProposalReviewRecord], field: str, empty_message: str
+) -> list[str]:
+    noted = [review for review in reviews if getattr(review, field)]
+    if not noted:
+        return [f"- {empty_message}", ""]
+    lines: list[str] = []
+    for review in sorted(noted, key=lambda record: record.sample_id)[:10]:
+        note = str(getattr(review, field))
+        lines.append(
+            f"- `{review.sample_id}` `{review.proposal_engine}` `{review.proposal_id}`: {note}"
+        )
+    lines.append("")
+    return lines
 
 
 def _review_acceptance_counts(reviews: list[ProposalReviewRecord]) -> dict[str, Any]:
@@ -1212,6 +1276,27 @@ def proposal_calibration_evidence_markdown(
         f"- Accepted top-down candidates: **{accepted['top_down_orchestration']}**",
         f"- Candidate default path from accepted counts: **{_candidate_default_path(reviews)}**",
         "",
+        "## Calibration Findings",
+        "",
+        f"- False positive notes: **{summary['false_positive_note_count']}**",
+        f"- False negative notes: **{summary['false_negative_note_count']}**",
+        f"- Useful example notes: **{summary['useful_example_note_count']}**",
+        "",
+        "### False Positive Notes",
+        "",
+        *_calibration_note_lines(
+            reviews, "false_positive_reason", "No false positive notes were recorded."
+        ),
+        "### False Negative Notes",
+        "",
+        *_calibration_note_lines(
+            reviews, "false_negative_note", "No false negative notes were recorded."
+        ),
+        "### Useful Examples",
+        "",
+        *_calibration_note_lines(
+            reviews, "useful_example_note", "No useful example notes were recorded."
+        ),
         "## Remaining Risks",
         "",
         "- Human labels are calibration evidence, not proof that any source repo should change.",

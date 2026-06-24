@@ -91,6 +91,15 @@
     "notes": {
       "type": "string"
     },
+    "false_positive_reason": {
+      "type": "string"
+    },
+    "false_negative_note": {
+      "type": "string"
+    },
+    "useful_example_note": {
+      "type": "string"
+    },
     "evidence": {
       "type": "object"
     },

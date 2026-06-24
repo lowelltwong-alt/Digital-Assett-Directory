@@ -345,6 +345,9 @@ def recommend_proposal_review_label(
     actionability: Optional[str] = typer.Option(None, "--actionability"),
     decision: Optional[str] = typer.Option(None, "--decision"),
     notes: Optional[str] = typer.Option(None, "--notes"),
+    false_positive_reason: Optional[str] = typer.Option(None, "--false-positive-reason"),
+    false_negative_note: Optional[str] = typer.Option(None, "--false-negative-note"),
+    useful_example_note: Optional[str] = typer.Option(None, "--useful-example-note"),
 ) -> None:
     """Update one proposal review JSONL record with human calibration labels."""
     cfg = _cfg(hub=hub)
@@ -363,6 +366,9 @@ def recommend_proposal_review_label(
             actionability=actionability,
             decision=decision,
             notes=notes,
+            false_positive_reason=false_positive_reason,
+            false_negative_note=false_negative_note,
+            useful_example_note=useful_example_note,
         )
     except ValueError as exc:
         console.print(str(exc))
