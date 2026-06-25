@@ -2,7 +2,7 @@ from pathlib import Path
 
 from digital_asset_directory.config import LocalSource, Settings
 import digital_asset_directory.local_scan as local_scan
-from digital_asset_directory.local_scan import scan_local_source
+from digital_asset_directory.local_scan import discover_files, quarantine_summary, scan_local_source
 from digital_asset_directory.scoring import DEFAULT_WEIGHTS
 from digital_asset_directory.utils import sha256_file
 
@@ -38,6 +38,43 @@ def test_local_scan_is_read_only_and_redacts_excerpt(tmp_path: Path):
     assert "exceeded the configured size limit" not in empty_asset.description
 
 
+def test_default_noise_excludes_are_quarantined_not_scored(tmp_path: Path):
+    repo = tmp_path / "project"
+    repo.mkdir()
+    (repo / ".git").mkdir()
+    (repo / "README.md").write_text("# Real asset\nknowledge graph", encoding="utf-8")
+    noisy = repo / ".pytest-tmp-root" / "pytest-of-Lowell" / "copy.schema.json"
+    noisy.parent.mkdir(parents=True)
+    noisy.write_text('{"title":"copy"}', encoding="utf-8")
+    (repo / ".DS_Store").write_bytes(b"junk")
+    source = LocalSource(id="test", path=tmp_path, path_alias="test", exclude=["**/.git/**"])
+
+    files = discover_files(source)
+    assets, _hashes = scan_local_source(source, Settings(), {"weights": DEFAULT_WEIGHTS})
+    quarantine = quarantine_summary(source)
+
+    assert noisy not in files
+    assert not any(asset.logical_path.endswith("copy.schema.json") for asset in assets)
+    assert quarantine["count"] >= 2
+    assert "pytest temp root" in quarantine["by_reason"]
+    assert "macOS metadata file" in quarantine["by_reason"]
+
+
+def test_quarantine_summary_can_be_bounded_for_validation_scans(tmp_path: Path):
+    repo = tmp_path / "project"
+    repo.mkdir()
+    for index in range(5):
+        noisy = repo / ".pytest-tmp-root" / f"case-{index}" / "copy.txt"
+        noisy.parent.mkdir(parents=True, exist_ok=True)
+        noisy.write_text("temporary copy", encoding="utf-8")
+    source = LocalSource(id="test", path=tmp_path, path_alias="test")
+
+    quarantine = quarantine_summary(source, max_paths=1)
+
+    assert quarantine["bounded"] is True
+    assert quarantine["inspected_path_count"] == 1
+
+
 def test_local_scan_adds_candidate_composite_patterns_to_repository(tmp_path: Path):
     repo = tmp_path / "project"
     repo.mkdir()
@@ -68,8 +105,7 @@ def test_local_scan_adds_candidate_composite_patterns_to_repository(tmp_path: Pa
 
     repo_asset = next(asset for asset in assets if asset.asset_type == "repository")
     pattern_ids = {
-        str(pattern["pattern_id"])
-        for pattern in repo_asset.metadata.get("composite_patterns", [])
+        str(pattern["pattern_id"]) for pattern in repo_asset.metadata.get("composite_patterns", [])
     }
     assert "evaluation_contract_system" in pattern_ids
     assert "governed_learning_loop_system" in pattern_ids
@@ -112,6 +148,25 @@ def test_local_scan_uses_metadata_identity_for_oversize_files(
     assert len(file_asset.content_hash) == 64
     assert file_asset.metadata["content_skipped_for_size"] is True
     assert file_asset.metadata["revision_identity_mode"] == "metadata_sha256_for_oversize_file"
+
+
+def test_local_scan_extracts_bounded_pdf_text_for_media_scoring(tmp_path: Path):
+    repo = tmp_path / "project"
+    repo.mkdir()
+    (repo / ".git").mkdir()
+    pdf = repo / "research.pdf"
+    pdf.write_bytes(
+        b"%PDF-1.4\n1 0 obj<</Length 44>>stream\nBT (rare digital asset budget corpus) Tj ET\nendstream"
+    )
+    source = LocalSource(id="test", path=tmp_path, path_alias="test", exclude=["**/.git/**"])
+
+    assets, _hashes = scan_local_source(source, Settings(), {"weights": DEFAULT_WEIGHTS})
+
+    media = next(asset for asset in assets if asset.logical_path.endswith("research.pdf"))
+    assert media.asset_type == "media"
+    assert media.metadata["extraction_method"] == "pdf_literal_strings"
+    assert "digital asset budget corpus" in media.metadata["chunk_text"]
+    assert media.value_components["information_content"] > 0
 
 
 def test_local_scan_detects_cloud_placeholder_attributes(monkeypatch: pytest.MonkeyPatch):

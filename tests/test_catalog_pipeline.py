@@ -57,6 +57,7 @@ def test_local_catalog_pipeline_writes_outputs(tmp_path: Path):
     assert summary["duplicate_cluster_count"] >= 1
     assert summary["delta_count"] >= 1
     assert summary["changed_during_scan_count"] == 0
+    assert "quarantine" in summary
     assert summary["raw_observation_files"]
     raw_path = hub / summary["raw_observation_files"][0]
     assert raw_path.exists()
@@ -69,6 +70,8 @@ def test_local_catalog_pipeline_writes_outputs(tmp_path: Path):
     assert (hub / "processed" / "graph" / "duplicate_clusters.jsonl").exists()
     assert (hub / "processed" / "graph" / "deltas.jsonl").exists()
     assert (hub / "processed" / "graph" / "graph.json").exists()
+    assert (hub / "processed" / "reports" / "quarantine_summary.md").exists()
+    assert (hub / "processed" / "quarantine" / "quarantine_summary.json").exists()
     duplicate_clusters = [
         json.loads(line)
         for line in (hub / "processed" / "graph" / "duplicate_clusters.jsonl")

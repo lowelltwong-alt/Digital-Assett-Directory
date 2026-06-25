@@ -67,6 +67,22 @@ def test_exact_content_duplicates_emit_cluster_edges_and_delta():
     assert all(edge.review_status == "generated_candidate" for edge in edges)
 
 
+def test_exact_duplicate_edges_are_bounded_for_large_groups():
+    assets = [
+        asset(f"asset-{index}", content_sha256="same-sha", size_bytes=25) for index in range(20)
+    ]
+
+    _chunks, _clusters, _deltas, edges = build_identity_layers(assets, "scan")
+
+    exact_edges = [edge for edge in edges if edge.edge_type == "exact_duplicate_of"]
+    per_asset = {item.asset_id: 0 for item in assets}
+    for edge in exact_edges:
+        per_asset[edge.source_asset_id] += 1
+        per_asset[edge.target_asset_id] += 1
+    assert exact_edges
+    assert max(per_asset.values()) <= 8
+
+
 def test_near_duplicates_use_text_chunks_not_metadata_chunks():
     left = asset("left", excerpt="shared workflow agent governance")
     right = asset("right", excerpt="shared workflow agent governance")

@@ -71,6 +71,33 @@ keeps risk interpretable as a discount on otherwise useful evidence. Freshness i
 the freshness component only, not a second stale penalty. Unknown GitHub repository license status
 is a risk factor when GitHub scanning is explicitly enabled and reviewed.
 
+The current implementation methodology is
+`asset-value-v0.2-red-team-discipline`. It keeps score output in the familiar 0-100
+range but adds:
+
+- an `information_content` component from bounded text, token, and semantic evidence;
+- deterministic `instance_class` labels for source, archive, generated output,
+  temp fixture, worktree copy, and cache/OS junk observations;
+- deterministic `information_content_class` labels for OS junk, empty markers,
+  empty files, metadata-only observations, extracted content, binary metadata,
+  and content-bearing files;
+- multiplicative discounts for non-canonical instances and duplicate
+  non-representatives;
+- evidence-gated type bonuses so schemas, tests, and evaluations need direct
+  content or usage evidence before receiving large verification/reuse boosts;
+- `heuristic_strength` metadata to avoid treating uncalibrated confidence labels
+  as probabilities.
+
+Temp fixtures, generated outputs, and worktree copies may still be useful lineage
+or coverage evidence. Their individual current score is discounted unless a
+reviewed delta proves unique value. The canonical source or duplicate
+representative is the asset that should carry reusable current value.
+
+Phase 2 calibration must use the current clean-sampling methodology,
+`asset-calibration-sampling-v0.2-clean-deduped`. Review samples generated before
+the instance/noise/duplicate discipline are stale evidence. They can inform bug
+notes, but they should not be used to satisfy Phase 2 calibration gates.
+
 Any calculated score or grade must cite an explicit methodology before it is used for review,
 ranking, roadmap evidence, or graph edges. At minimum, the artifact must state:
 

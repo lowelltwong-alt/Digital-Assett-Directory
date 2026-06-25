@@ -1,15 +1,19 @@
 from __future__ import annotations
 
 import os
+import re
+import zipfile
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Iterable
+from xml.etree import ElementTree
 
 from pathspec import PathSpec
 
 from .config import LocalSource, Settings
 from .extractors import ExtractedContent, classify_asset, extract_bytes, freshness_status
 from .ids import asset_id, revision_id
+from .instance_class import classify_instance_class, information_content_class
 from .models import AssetRecord
 from .scoring import score_asset
 from .utils import safe_relative, sha256_bytes, sha256_file, utc_now
@@ -20,17 +24,42 @@ FILE_ATTRIBUTE_RECALL_ON_DATA_ACCESS = 0x00400000
 CLOUD_PLACEHOLDER_FLAGS = (
     FILE_ATTRIBUTE_OFFLINE | FILE_ATTRIBUTE_RECALL_ON_OPEN | FILE_ATTRIBUTE_RECALL_ON_DATA_ACCESS
 )
+NOISE_QUARANTINE_RULES: tuple[tuple[str, str], ...] = (
+    ("**/.pytest-tmp-root/**", "pytest temp root"),
+    ("**/pytest-of-*/**", "pytest temp run directory"),
+    ("**/_codex_worktrees/**", "temporary Codex worktree copy"),
+    ("**/.pytest_cache/**", "pytest cache"),
+    ("**/.ruff_cache/**", "ruff cache"),
+    ("**/.mypy_cache/**", "mypy cache"),
+    ("**/.nox/**", "nox cache"),
+    ("**/.tox/**", "tox cache"),
+    (".DS_Store", "macOS metadata file"),
+    ("**/.DS_Store", "macOS metadata file"),
+    ("Thumbs.db", "Windows thumbnail metadata file"),
+    ("**/Thumbs.db", "Windows thumbnail metadata file"),
+    ("desktop.ini", "Windows folder metadata file"),
+    ("**/desktop.ini", "Windows folder metadata file"),
+    ("**/04_Digital_Assett_Directory/raw/**", "hub generated raw observation output"),
+    ("**/04_Digital_Assett_Directory/processed/**", "hub generated processed output"),
+    ("**/04_Digital_Assett_Directory/state/**", "hub generated local state"),
+    ("**/04_Digital_Assett_Directory/audit/**", "hub generated audit output"),
+)
+DEFAULT_NOISE_EXCLUDES = [pattern for pattern, _reason in NOISE_QUARANTINE_RULES]
 
 
 def _compile_spec(patterns: list[str]) -> PathSpec:
     return PathSpec.from_lines("gitwildmatch", patterns)
 
 
+def _effective_exclude_patterns(source: LocalSource) -> list[str]:
+    return [*DEFAULT_NOISE_EXCLUDES, *source.exclude]
+
+
 def discover_files(source: LocalSource, max_files: int | None = None) -> list[Path]:
     base = source.path.resolve()
     if not base.exists():
         return []
-    spec = _compile_spec(source.exclude)
+    spec = _compile_spec(_effective_exclude_patterns(source))
     result: list[Path] = []
     for current, dirs, names in os.walk(base, followlinks=source.follow_symlinks):
         current_path = Path(current)
@@ -52,6 +81,71 @@ def discover_files(source: LocalSource, max_files: int | None = None) -> list[Pa
     return result
 
 
+def quarantine_summary(
+    source: LocalSource, sample_limit: int = 50, max_paths: int | None = None
+) -> dict[str, object]:
+    """Summarize generated/noisy paths suppressed from the scoring catalog."""
+    base = source.path.resolve()
+    by_reason: dict[str, int] = {}
+    samples: list[dict[str, str]] = []
+
+    def build_result(*, bounded: bool, inspected_path_count: int) -> dict[str, object]:
+        return {
+            "source_id": source.id,
+            "path_alias": source.path_alias,
+            "count": sum(by_reason.values()),
+            "by_reason": dict(sorted(by_reason.items())),
+            "samples": samples,
+            "bounded": bounded,
+            "inspected_path_count": inspected_path_count,
+            "authority": "Generated quarantine summary only; suppressed paths are not scored assets.",
+        }
+
+    if not base.exists():
+        return build_result(bounded=False, inspected_path_count=0)
+    compiled = [
+        (pattern, reason, _compile_spec([pattern])) for pattern, reason in NOISE_QUARANTINE_RULES
+    ]
+    inspected_path_count = 0
+    for current, dirs, names in os.walk(base, followlinks=False):
+        current_path = Path(current)
+        rel_dir = safe_relative(current_path, base)
+        keep_dirs: list[str] = []
+        for dirname in dirs:
+            inspected_path_count += 1
+            rel = f"{rel_dir}/{dirname}/" if rel_dir != "." else f"{dirname}/"
+            reason = next(
+                (reason for _pattern, reason, spec in compiled if spec.match_file(rel)), None
+            )
+            if reason:
+                by_reason[reason] = by_reason.get(reason, 0) + 1
+                if len(samples) < sample_limit:
+                    samples.append(
+                        {"path": f"{source.path_alias}/{rel}".rstrip("/"), "reason": reason}
+                    )
+            else:
+                keep_dirs.append(dirname)
+            if max_paths is not None and inspected_path_count >= max_paths:
+                return build_result(bounded=True, inspected_path_count=inspected_path_count)
+        dirs[:] = keep_dirs
+        for name in names:
+            inspected_path_count += 1
+            rel = f"{rel_dir}/{name}" if rel_dir != "." else name
+            reason = next(
+                (reason for _pattern, reason, spec in compiled if spec.match_file(rel)), None
+            )
+            if not reason:
+                if max_paths is not None and inspected_path_count >= max_paths:
+                    return build_result(bounded=True, inspected_path_count=inspected_path_count)
+                continue
+            by_reason[reason] = by_reason.get(reason, 0) + 1
+            if len(samples) < sample_limit:
+                samples.append({"path": f"{source.path_alias}/{rel}", "reason": reason})
+            if max_paths is not None and inspected_path_count >= max_paths:
+                return build_result(bounded=True, inspected_path_count=inspected_path_count)
+    return build_result(bounded=False, inspected_path_count=inspected_path_count)
+
+
 def _is_cloud_placeholder(stat: os.stat_result) -> bool:
     if os.name != "nt":
         return False
@@ -64,8 +158,7 @@ def _cloud_placeholder_detection_mode() -> str:
 
 def _metadata_fingerprint(stat: os.stat_result) -> str:
     payload = (
-        f"{stat.st_size}:{stat.st_mtime_ns}:"
-        f"{getattr(stat, 'st_file_attributes', 0)}"
+        f"{stat.st_size}:{stat.st_mtime_ns}:{getattr(stat, 'st_file_attributes', 0)}"
     ).encode("utf-8")
     return sha256_bytes(payload)
 
@@ -81,6 +174,57 @@ def _file_revision_identity(path: Path, max_file_bytes: int) -> tuple[str, str]:
         )
         return _metadata_fingerprint(stat), mode
     return sha256_file(path), "content_sha256"
+
+
+def _extract_zip_xml_text(data: bytes) -> str:
+    parts: list[str] = []
+    try:
+        from io import BytesIO
+
+        with zipfile.ZipFile(BytesIO(data)) as archive:
+            for name in sorted(archive.namelist()):
+                if not name.endswith(".xml"):
+                    continue
+                if not (
+                    name.startswith("word/")
+                    or name.startswith("ppt/")
+                    or name.startswith("xl/")
+                    or name == "docProps/core.xml"
+                ):
+                    continue
+                try:
+                    root = ElementTree.fromstring(archive.read(name))
+                except ElementTree.ParseError:
+                    continue
+                for node in root.iter():
+                    if node.text and node.text.strip():
+                        parts.append(node.text.strip())
+    except (OSError, zipfile.BadZipFile):
+        return ""
+    return "\n".join(parts)
+
+
+def _extract_pdf_text(data: bytes) -> str:
+    raw = data.decode("latin-1", errors="ignore")
+    literals: list[str] = []
+    for match in re.finditer(r"\((?:\\.|[^\\()]){2,}\)", raw):
+        value = match.group(0)[1:-1]
+        value = value.replace(r"\(", "(").replace(r"\)", ")").replace(r"\\", "\\")
+        cleaned = "".join(char if char.isprintable() else " " for char in value)
+        if cleaned.strip():
+            literals.append(cleaned.strip())
+    if literals:
+        return "\n".join(literals)
+    return ""
+
+
+def _extract_media_text(path: str, data: bytes) -> tuple[str, str]:
+    suffix = Path(path).suffix.lower()
+    if suffix == ".pdf":
+        return _extract_pdf_text(data), "pdf_literal_strings"
+    if suffix in {".docx", ".pptx", ".xlsx"}:
+        return _extract_zip_xml_text(data), "office_open_xml"
+    return "", "unsupported"
 
 
 def _repo_roots(files: Iterable[Path], base: Path) -> set[Path]:
@@ -156,7 +300,11 @@ def _repo_composite_patterns(child_assets: list[AssetRecord]) -> list[dict[str, 
             *(["asset_type:taxonomy"] if "taxonomy" in type_ids else []),
             *(["tag:knowledge-graph"] if "knowledge-graph" in tags else []),
             *(["tag:retrieval"] if "retrieval" in tags else []),
-            *(["capability:build_knowledge_graph"] if "build_knowledge_graph" in capabilities else []),
+            *(
+                ["capability:build_knowledge_graph"]
+                if "build_knowledge_graph" in capabilities
+                else []
+            ),
             *(["capability:retrieve_context"] if "retrieve_context" in capabilities else []),
         ],
         "very_high",
@@ -207,7 +355,11 @@ def _repo_composite_patterns(child_assets: list[AssetRecord]) -> list[dict[str, 
             *(["asset_type:agent"] if "agent" in type_ids else []),
             *(["asset_type:skill"] if "skill" in type_ids else []),
             *(["tag:knowledge-graph"] if "knowledge-graph" in tags else []),
-            *(["capability:build_knowledge_graph"] if "build_knowledge_graph" in capabilities else []),
+            *(
+                ["capability:build_knowledge_graph"]
+                if "build_knowledge_graph" in capabilities
+                else []
+            ),
             *(
                 ["asset_pattern:agent_skill_graph_system"]
                 if "agent_skill_graph_system" in asset_patterns
@@ -222,7 +374,11 @@ def _repo_composite_patterns(child_assets: list[AssetRecord]) -> list[dict[str, 
         [
             *(["tag:security"] if "security" in tags else []),
             *(["tag:governance"] if "governance" in tags else []),
-            *(["capability:protect_sensitive_data"] if "protect_sensitive_data" in capabilities else []),
+            *(
+                ["capability:protect_sensitive_data"]
+                if "protect_sensitive_data" in capabilities
+                else []
+            ),
             *(
                 ["asset_pattern:boundary_contamination_firewall"]
                 if "boundary_contamination_firewall" in asset_patterns
@@ -257,7 +413,11 @@ def _repo_composite_patterns(child_assets: list[AssetRecord]) -> list[dict[str, 
         [
             *(["asset_type:research"] if "research" in type_ids else []),
             *(["tag:research-radar"] if "research-radar" in tags else []),
-            *(["capability:research_missing_parts"] if "research_missing_parts" in capabilities else []),
+            *(
+                ["capability:research_missing_parts"]
+                if "research_missing_parts" in capabilities
+                else []
+            ),
             *(
                 ["asset_pattern:frontier_signal_intake_loop"]
                 if "frontier_signal_intake_loop" in asset_patterns
@@ -302,7 +462,11 @@ def _repo_composite_patterns(child_assets: list[AssetRecord]) -> list[dict[str, 
             *(["asset_type:test"] if "test" in type_ids else []),
             *(["tag:security"] if "security" in tags else []),
             *(["tag:governance"] if "governance" in tags else []),
-            *(["capability:protect_sensitive_data"] if "protect_sensitive_data" in capabilities else []),
+            *(
+                ["capability:protect_sensitive_data"]
+                if "protect_sensitive_data" in capabilities
+                else []
+            ),
             *(["capability:govern_agents"] if "govern_agents" in capabilities else []),
         ],
         "high",
@@ -395,6 +559,9 @@ def scan_local_source(
             metadata={
                 "path_alias": source.path_alias,
                 "repository_root": logical,
+                "instance_class": "source",
+                "instance_class_reason": "local_git_repository_boundary",
+                "information_content_class": "repository_boundary",
                 "revision_identity_mode": "directory_metadata",
             },
         )
@@ -435,6 +602,7 @@ def scan_local_source(
                 "mime_type": "application/octet-stream",
                 "decode_error": False,
                 "redaction_count": 0,
+                "extraction_method": "content_not_read",
                 "tags": [],
                 "capabilities": [],
                 "needs": [],
@@ -444,11 +612,46 @@ def scan_local_source(
             }
         else:
             data = path.read_bytes()
+            extracted_text, extraction_method = _extract_media_text(logical, data)
             extracted = extract_bytes(
-                logical, data, source.excerpt_chars, settings.redact_sensitive_excerpts
+                logical,
+                data,
+                source.excerpt_chars,
+                settings.redact_sensitive_excerpts,
+                extracted_text=extracted_text or None,
+                extraction_method=extraction_method if extracted_text else "direct_text",
             )
         modified = datetime.fromtimestamp(stat.st_mtime, tz=timezone.utc).isoformat()
         asset_type = classify_asset(logical)
+        instance_class = classify_instance_class(logical)
+        content_sha256 = file_hash if revision_identity_mode == "content_sha256" else None
+        metadata: dict[str, object] = {
+            "path_alias": source.path_alias,
+            "relative_path": rel,
+            "repository_root": safe_relative(repo_root, base) if repo_root else None,
+            "mime_type": extracted["mime_type"],
+            "excerpt": extracted["excerpt"] if settings.store_excerpts else "",
+            "chunk_text": extracted["chunk_text"] if settings.store_excerpts else "",
+            "text_tokens": extracted["text_tokens"],
+            "asset_patterns": extracted["asset_patterns"],
+            "pattern_evidence": extracted["pattern_evidence"],
+            "redaction_count": extracted["redaction_count"],
+            "decode_error": extracted["decode_error"],
+            "extraction_method": extracted["extraction_method"],
+            "content_skipped_for_size": content_exceeds_size_limit,
+            "content_skipped_for_cloud_placeholder": cloud_placeholder,
+            "cloud_placeholder_detection_mode": _cloud_placeholder_detection_mode(),
+            "revision_identity_mode": revision_identity_mode,
+            "instance_class": instance_class,
+            "instance_class_reason": "derived_from_logical_path",
+        }
+        metadata["information_content_class"] = information_content_class(
+            logical,
+            asset_type=asset_type,
+            size_bytes=size,
+            content_sha256=content_sha256,
+            metadata=metadata,
+        )
         stale_days = settings.stale_days_by_type.get(asset_type, settings.stale_days_default)
         record = AssetRecord(
             asset_id=identifier,
@@ -463,7 +666,7 @@ def scan_local_source(
             uri=f"file://{logical}",
             content_hash=file_hash,
             metadata_fingerprint=metadata_fingerprint,
-            content_sha256=file_hash if revision_identity_mode == "content_sha256" else None,
+            content_sha256=content_sha256,
             size_bytes=size,
             modified_at=modified,
             first_seen_at=now,
@@ -477,6 +680,8 @@ def scan_local_source(
             else [],
             lifecycle_state="stale"
             if freshness_status(modified, stale_days) == "stale"
+            else "quarantined"
+            if instance_class in {"temp_fixture", "worktree", "generated", "os_junk"}
             else "discovered",
             freshness_status=freshness_status(modified, stale_days),
             sensitivity="internal",
@@ -490,23 +695,7 @@ def scan_local_source(
                 "observed_by": "local_scan",
                 "authority": "Source repository remains authoritative.",
             },
-            metadata={
-                "path_alias": source.path_alias,
-                "relative_path": rel,
-                "repository_root": safe_relative(repo_root, base) if repo_root else None,
-                "mime_type": extracted["mime_type"],
-                "excerpt": extracted["excerpt"] if settings.store_excerpts else "",
-                "chunk_text": extracted["chunk_text"] if settings.store_excerpts else "",
-                "text_tokens": extracted["text_tokens"],
-                "asset_patterns": extracted["asset_patterns"],
-                "pattern_evidence": extracted["pattern_evidence"],
-                "redaction_count": extracted["redaction_count"],
-                "decode_error": extracted["decode_error"],
-                "content_skipped_for_size": content_exceeds_size_limit,
-                "content_skipped_for_cloud_placeholder": cloud_placeholder,
-                "cloud_placeholder_detection_mode": _cloud_placeholder_detection_mode(),
-                "revision_identity_mode": revision_identity_mode,
-            },
+            metadata=metadata,
         )
         assets.append(score_asset(record, scoring))
         assets_by_path[str(path)] = record
@@ -517,7 +706,9 @@ def scan_local_source(
             asset
             for asset in assets
             if asset.parent_asset_id == repo_id
-            and asset.logical_path.startswith(f"{source.path_alias}/{safe_relative(repo_path, base)}")
+            and asset.logical_path.startswith(
+                f"{source.path_alias}/{safe_relative(repo_path, base)}"
+            )
         ]
         repo_asset = assets_by_id[repo_id]
         repo_patterns = _repo_composite_patterns(child_assets)

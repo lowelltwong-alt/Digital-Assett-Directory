@@ -1,21 +1,29 @@
 from __future__ import annotations
 
+from math import sqrt
 from pathlib import Path
 from typing import Any
 import yaml
 
+from .instance_class import classify_instance_class, information_content_class
 from .models import AssetRecord
 
+SCORE_METHODOLOGY_VERSION = "asset-value-v0.2-red-team-discipline"
+
 DEFAULT_WEIGHTS = {
-    "reuse_potential": 0.18,
-    "verification": 0.15,
-    "provenance": 0.13,
-    "composability": 0.15,
-    "learning_loop_value": 0.15,
+    "reuse_potential": 0.16,
+    "verification": 0.14,
+    "provenance": 0.12,
+    "composability": 0.13,
+    "learning_loop_value": 0.13,
+    "information_content": 0.10,
     "uniqueness": 0.08,
-    "demand_signal": 0.08,
-    "freshness": 0.08,
+    "demand_signal": 0.07,
+    "freshness": 0.07,
 }
+
+QUARANTINED_INSTANCE_CLASSES = {"generated", "temp_fixture", "worktree", "os_junk"}
+EVIDENCE_GATED_TYPES = {"test", "evaluation", "schema"}
 
 
 def load_scoring(repo_root: Path) -> dict[str, Any]:
@@ -27,12 +35,131 @@ def load_scoring(repo_root: Path) -> dict[str, Any]:
     )
 
 
+def classify_instance(asset: AssetRecord) -> str:
+    value = asset.metadata.get("instance_class")
+    if isinstance(value, str) and value:
+        return value
+    return classify_instance_class(asset.logical_path)
+
+
+def _information_content(asset: AssetRecord) -> float:
+    metadata = asset.metadata or {}
+    info_class = information_content_class(
+        asset.logical_path,
+        asset_type=asset.asset_type,
+        size_bytes=asset.size_bytes,
+        content_sha256=asset.content_sha256,
+        metadata=metadata,
+    )
+    token_count = len(metadata.get("text_tokens") or [])
+    text_len = len(str(metadata.get("chunk_text") or metadata.get("excerpt") or ""))
+    semantic_count = (
+        len(asset.tags) + len(asset.capabilities) + len(asset.needs) + len(asset.outcomes)
+    )
+    if asset.asset_type == "repository" or info_class == "repository_boundary":
+        return min(1.0, 0.45 + 0.10 * len(asset.entrypoints) + 0.08 * semantic_count)
+    if info_class == "os_junk":
+        return 0.0
+    if info_class in {"empty", "empty_marker"}:
+        return 0.03 if info_class == "empty_marker" else 0.05
+    if info_class == "metadata_only":
+        return 0.15
+    text_signal = max(min(1.0, token_count / 80), min(1.0, text_len / 4000))
+    semantic_signal = min(1.0, semantic_count / 8)
+    binary_signal = 0.20 if info_class == "binary_metadata" else 0.0
+    return max(text_signal, semantic_signal * 0.8, binary_signal, 0.25)
+
+
+def _has_direct_value_evidence(asset: AssetRecord, instance_class: str, information: float) -> bool:
+    if instance_class in QUARANTINED_INSTANCE_CLASSES:
+        return False
+    if not asset.content_sha256 or information < 0.20:
+        return False
+    if asset.asset_type not in EVIDENCE_GATED_TYPES:
+        return True
+    return bool(
+        asset.capabilities
+        or asset.outcomes
+        or asset.entrypoints
+        or asset.metadata.get("pattern_evidence")
+    )
+
+
+def _freshness_value(asset: AssetRecord, instance_class: str) -> float:
+    base = {"current": 1.0, "watch": 0.65, "stale": 0.25, "unknown": 0.45}.get(
+        asset.freshness_status, 0.45
+    )
+    caps = {
+        "temp_fixture": 0.25,
+        "worktree": 0.45,
+        "generated": 0.45,
+        "os_junk": 0.0,
+    }
+    return min(base, caps.get(instance_class, base))
+
+
+def _uniqueness_value(duplicate_count: int, is_representative: bool) -> float:
+    if duplicate_count <= 1:
+        return 1.0
+    if is_representative:
+        return 0.85
+    return max(0.05, 1.0 - min(0.95, 0.20 * (duplicate_count - 1)))
+
+
+def _score_discount(
+    instance_class: str,
+    info_class: str,
+    duplicate_count: int,
+    is_representative: bool,
+) -> tuple[float, list[str]]:
+    factor = 1.0
+    reasons: list[str] = []
+    if instance_class == "os_junk" or info_class == "os_junk":
+        factor = min(factor, 0.02)
+        reasons.append("os_junk_floor")
+    elif instance_class == "temp_fixture":
+        factor = min(factor, 0.25)
+        reasons.append("temp_fixture_lineage_not_independent_value")
+    elif instance_class == "worktree":
+        factor = min(factor, 0.45)
+        reasons.append("worktree_copy_candidate_only")
+    elif instance_class == "generated":
+        factor = min(factor, 0.45)
+        reasons.append("generated_output_not_source_truth")
+    if info_class == "empty_marker":
+        factor = min(factor, 0.25)
+        reasons.append("empty_marker_not_independent_value")
+    elif info_class == "empty":
+        factor = min(factor, 0.30)
+        reasons.append("empty_file_low_information")
+    elif info_class == "metadata_only":
+        factor = min(factor, 0.65)
+        reasons.append("metadata_only_no_content_evidence")
+    if duplicate_count > 1 and not is_representative:
+        factor = min(factor, max(0.18, 1.0 / sqrt(duplicate_count + 1)))
+        reasons.append("duplicate_non_representative_discount")
+    return factor, reasons
+
+
 def score_asset(
     asset: AssetRecord,
     scoring: dict[str, Any],
     duplicate_counts: dict[str, int] | None = None,
 ) -> AssetRecord:
     weights = scoring.get("weights", DEFAULT_WEIGHTS)
+    instance_class = classify_instance(asset)
+    info_class = information_content_class(
+        asset.logical_path,
+        asset_type=asset.asset_type,
+        size_bytes=asset.size_bytes,
+        content_sha256=asset.content_sha256,
+        metadata=asset.metadata,
+    )
+    duplicate_count = (duplicate_counts or {}).get(asset.asset_id, 1)
+    representative_id = asset.metadata.get("duplicate_representative_id")
+    is_representative = duplicate_count <= 1 or representative_id == asset.asset_id
+    information = _information_content(asset)
+    has_direct_evidence = _has_direct_value_evidence(asset, instance_class, information)
     learning_types = {
         "evaluation",
         "test",
@@ -64,18 +191,23 @@ def score_asset(
         "decision",
         "lesson",
     }
+    reusable_type_bonus = (
+        0.25 if asset.asset_type in reusable_types and has_direct_evidence else 0.0
+    )
+    verification_type_bonus = (
+        0.55 if asset.asset_type in EVIDENCE_GATED_TYPES and has_direct_evidence else 0.0
+    )
+    learning_type_bonus = (
+        0.45 if asset.asset_type in learning_types and has_direct_evidence else 0.0
+    )
     components = {
         "reuse_potential": min(
             1.0,
-            0.45
-            + 0.15 * len(asset.capabilities)
-            + (0.25 if asset.asset_type in reusable_types else 0.0),
+            0.45 + 0.15 * len(asset.capabilities) + reusable_type_bonus,
         ),
         "verification": min(
             1.0,
-            0.25
-            + (0.55 if asset.asset_type in {"test", "evaluation", "schema"} else 0.0)
-            + (0.15 if "evaluation" in asset.tags else 0.0),
+            0.25 + verification_type_bonus + (0.15 if "evaluation" in asset.tags else 0.0),
         ),
         "provenance": (
             0.95
@@ -87,16 +219,11 @@ def score_asset(
         "composability": min(
             1.0, 0.25 + 0.13 * len(asset.capabilities) + 0.08 * len(asset.outcomes)
         ),
-        "learning_loop_value": min(
-            1.0,
-            0.30 + (0.45 if asset.asset_type in learning_types else 0.0) + 0.08 * len(asset.needs),
-        ),
-        "uniqueness": 1.0
-        - min(0.6, 0.15 * max(0, (duplicate_counts or {}).get(asset.asset_id, 1) - 1)),
+        "learning_loop_value": min(1.0, 0.30 + learning_type_bonus + 0.08 * len(asset.needs)),
+        "information_content": information,
+        "uniqueness": _uniqueness_value(duplicate_count, is_representative),
         "demand_signal": min(1.0, 0.30 + 0.15 * len(asset.needs) + 0.10 * len(asset.outcomes)),
-        "freshness": {"current": 1.0, "watch": 0.65, "stale": 0.25, "unknown": 0.45}.get(
-            asset.freshness_status, 0.45
-        ),
+        "freshness": _freshness_value(asset, instance_class),
     }
     raw = sum(float(weights.get(name, 0)) * value for name, value in components.items())
     penalties = scoring.get("risk_penalties", {})
@@ -111,9 +238,61 @@ def score_asset(
         and not asset.metadata.get("license")
     ):
         risk += float(penalties.get("unknown_license", 0.04))
-    raw *= max(0.0, 1.0 - min(0.85, risk))
+    risk_factor = max(0.0, 1.0 - min(0.85, risk))
+    raw *= risk_factor
+    discount_factor, discount_reasons = _score_discount(
+        instance_class,
+        info_class,
+        duplicate_count,
+        is_representative,
+    )
+    raw *= discount_factor
+
     asset.value_components = {k: round(v * 100, 2) for k, v in components.items()}
     if risk:
-        asset.value_components["risk_factor"] = round((1.0 - min(0.85, risk)) * 100, 2)
+        asset.value_components["risk_factor"] = round(risk_factor * 100, 2)
+    if discount_factor < 1.0:
+        asset.value_components["score_discount_factor"] = round(discount_factor * 100, 2)
     asset.value_score = round(max(0.0, min(1.0, raw)) * 100, 2)
+    asset.metadata["instance_class"] = instance_class
+    asset.metadata["information_content_class"] = info_class
+    asset.metadata["scoring_eligibility"] = (
+        "eligible" if instance_class == "source" else "discounted"
+    )
+    asset.metadata["information_content"] = {
+        "score": round(information * 100, 2),
+        "text_token_count": len(asset.metadata.get("text_tokens") or []),
+        "text_char_count": len(
+            str(asset.metadata.get("chunk_text") or asset.metadata.get("excerpt") or "")
+        ),
+        "class": info_class,
+        "methodology": "bounded text/token/semantic evidence heuristic",
+    }
+    asset.metadata["score_methodology_version"] = SCORE_METHODOLOGY_VERSION
+    asset.metadata["score_discount_reasons"] = discount_reasons
+    asset.metadata["heuristic_strength"] = asset.confidence
+    asset.metadata["score_methodology"] = {
+        "version": SCORE_METHODOLOGY_VERSION,
+        "inputs": [
+            "asset_type",
+            "content_sha256",
+            "source_provenance",
+            "capabilities",
+            "needs",
+            "outcomes",
+            "tags",
+            "freshness_status",
+            "sensitivity",
+            "instance_class",
+            "information_content_class",
+            "duplicate_representative_id",
+            "duplicate_count",
+        ],
+        "normalization": (
+            "weighted components in 0..1, multiplicative risk and instance discounts, "
+            "output clamped to 0..100"
+        ),
+        "uncertainty": "heuristic_strength is not calibrated probability; human review required",
+        "candidate_only": True,
+    }
     return asset

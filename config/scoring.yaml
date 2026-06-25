@@ -1,18 +1,21 @@
-version: 0.1.0
-status: heuristic_seed
+version: asset-value-v0.2-red-team-discipline
+status: heuristic_seed_needs_human_calibration
 weights:
-  reuse_potential: 0.18
-  verification: 0.15
-  provenance: 0.13
-  composability: 0.15
-  learning_loop_value: 0.15
+  reuse_potential: 0.16
+  verification: 0.14
+  provenance: 0.12
+  composability: 0.13
+  learning_loop_value: 0.13
+  information_content: 0.10
   uniqueness: 0.08
-  demand_signal: 0.08
-  freshness: 0.08
+  demand_signal: 0.07
+  freshness: 0.07
 risk_penalties:
   unknown_license: 0.04
   sensitive_unclassified: 0.08
   no_provenance: 0.08
 notes:
   - Scores prioritize review and routing; they do not prove truth, quality, or business value.
+  - Type bonuses are gated on direct evidence and source instance class.
+  - Temp fixtures, worktrees, generated outputs, OS junk, empty markers, metadata-only observations, and non-representative duplicates receive multiplicative discounts.
   - Pair and bundle synergy scores must expose their evidence and missing assumptions.

@@ -91,7 +91,13 @@
 | `freshness_status` | Current, watch, stale, or unknown relative to the type-specific threshold. |
 | `sensitivity` | Public, internal, confidential, restricted, or unknown. |
 | `trust_zone` | Source-owned, generated candidate, reviewed candidate, verified, or other registered trust posture. |
-| `confidence` | Heuristic strength/confidence in normalized metadata, not calibrated P(useful) and not confidence that the source claim is true. |
+| `confidence` | Backward-compatible label for heuristic strength in normalized metadata; not calibrated P(useful) and not confidence that the source claim is true. |
+| `metadata.instance_class` | Generated scoring class such as source, archive, generated output, temp fixture, worktree copy, or cache/OS junk. |
+| `metadata.information_content_class` | Generated content class such as OS junk, empty marker, empty file, metadata-only observation, extracted content, binary metadata, or content-bearing file. |
+| `metadata.information_content` | Generated bounded text/token/semantic evidence used by the current score methodology. |
+| `metadata.score_methodology` | Methodology version, inputs, normalization, uncertainty posture, and candidate-only status for the current calculated score. |
+| `metadata.score_discount_reasons` | Generated reasons for multiplicative score discounts; candidate-only and not source truth. |
+| `metadata.heuristic_strength` | Preferred label for uncalibrated confidence-like values until human labels support probability calibration. |
 | `first_seen_at` / `last_seen_at` | Catalog observation times. |
 | `modified_at` | Source-reported modification time when available. |
 

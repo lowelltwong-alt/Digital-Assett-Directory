@@ -44,7 +44,9 @@ def test_extract_bytes_redacts_secrets_from_all_derived_fields():
 
 def test_keyword_matching_uses_word_boundaries():
     # Substring false positives must not fire: "management"->agent, "paragraph"->graph, "storage"->rag.
-    benign = infer_semantics("docs/notes.md", "The management paragraph documents storage of records.")
+    benign = infer_semantics(
+        "docs/notes.md", "The management paragraph documents storage of records."
+    )
     assert "agent" not in benign["tags"]
     assert "build_knowledge_graph" not in benign["capabilities"]
     assert "retrieve_context" not in benign["capabilities"]
@@ -58,4 +60,5 @@ def test_asset_classification():
     assert classify_asset("schemas/asset.schema.json") == "schema"
     assert classify_asset("tests/test_something.py") == "test"
     assert classify_asset("src/app.py") == "code"
+    assert classify_asset("orphan_radar/eval/__init__.py") == "code"
     assert classify_asset("workflows/agent_pipeline.md") == "workflow"

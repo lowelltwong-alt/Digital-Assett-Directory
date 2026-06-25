@@ -189,7 +189,14 @@ ASSET_PATTERN_HINTS: dict[str, dict[str, tuple[str, ...]]] = {
         "asset_types": ("research", "document", "workflow", "dataset"),
         "tags": ("research-radar", "provenance"),
         "capabilities": ("research_missing_parts",),
-        "text": ("frontier", "signal", "watch item", "literature", "source terms", "license review"),
+        "text": (
+            "frontier",
+            "signal",
+            "watch item",
+            "literature",
+            "source terms",
+            "license review",
+        ),
     },
     "gold_review_packet_system": {
         "asset_types": ("evaluation", "test", "dataset", "document"),
@@ -245,6 +252,8 @@ def classify_asset(path: str) -> str:
     p = Path(path)
     name, suffix = p.name.lower(), p.suffix.lower()
     parts = {part.lower() for part in p.parts}
+    if name == "__init__.py":
+        return "code"
     if suffix in {".zip", ".tar", ".gz", ".7z", ".rar"}:
         return "archive"
     if name in {"pyproject.toml", "package.json", "requirements.txt", "dockerfile"} or suffix in {
@@ -259,10 +268,24 @@ def classify_asset(path: str) -> str:
         return "ontology"
     if "taxonomy" in name or "taxonomy" in parts or "skos" in name:
         return "taxonomy"
+    if suffix in {
+        ".png",
+        ".jpg",
+        ".jpeg",
+        ".gif",
+        ".svg",
+        ".webp",
+        ".mp3",
+        ".mp4",
+        ".wav",
+        ".pdf",
+        ".docx",
+        ".pptx",
+        ".xlsx",
+    }:
+        return "media"
     if "test" in parts or name.startswith("test_") or name.endswith("_test.py"):
         return "test"
-    if "eval" in parts or "evaluation" in name or "benchmark" in name or "golden" in name:
-        return "evaluation"
     if "forecast" in name or "forecaster" in name or "forecasting" in parts:
         return "forecaster"
     if "algorithm" in name or "algorithms" in parts:
@@ -304,24 +327,10 @@ def classify_asset(path: str) -> str:
         ".sql",
     }:
         return "code"
+    if "eval" in parts or "evaluation" in name or "benchmark" in name or "golden" in name:
+        return "evaluation"
     if suffix in {".json", ".jsonl", ".csv", ".tsv", ".parquet", ".sqlite", ".db"}:
         return "dataset"
-    if suffix in {
-        ".png",
-        ".jpg",
-        ".jpeg",
-        ".gif",
-        ".svg",
-        ".webp",
-        ".mp3",
-        ".mp4",
-        ".wav",
-        ".pdf",
-        ".docx",
-        ".pptx",
-        ".xlsx",
-    }:
-        return "media"
     if suffix in {".md", ".mdx", ".txt", ".rst", ".html"}:
         return "document"
     return "unknown"
@@ -392,9 +401,7 @@ def infer_semantics(path: str, text: str) -> SemanticFields:
             if capability in hints.get("capabilities", ())
         )
         evidence.extend(
-            f"text:{phrase}"
-            for phrase in hints.get("text", ())
-            if phrase in combined_lower
+            f"text:{phrase}" for phrase in hints.get("text", ()) if phrase in combined_lower
         )
         if len(evidence) >= 2:
             pattern_evidence[pattern_id] = sorted(set(evidence))
@@ -425,14 +432,22 @@ class ExtractedContent(SemanticFields):
     mime_type: str
     decode_error: bool
     redaction_count: int
+    extraction_method: str
 
 
 def extract_bytes(
-    path: str, data: bytes, excerpt_chars: int, redact: bool = True
+    path: str,
+    data: bytes,
+    excerpt_chars: int,
+    redact: bool = True,
+    extracted_text: str | None = None,
+    extraction_method: str = "direct_text",
 ) -> ExtractedContent:
     text = ""
     decode_error = False
-    if is_probably_text(Path(path)):
+    if extracted_text is not None:
+        text = extracted_text
+    elif is_probably_text(Path(path)):
         try:
             text = data.decode("utf-8")
         except UnicodeDecodeError:
@@ -464,6 +479,7 @@ def extract_bytes(
         "mime_type": mimetypes.guess_type(path)[0] or "application/octet-stream",
         "decode_error": decode_error,
         "redaction_count": redaction_count,
+        "extraction_method": extraction_method,
         **semantic,
     }
 

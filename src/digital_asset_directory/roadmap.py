@@ -81,14 +81,20 @@ def check_roadmap(repo_root: Path, update: bool = True) -> dict[str, Any]:
         "last_checked_at": utc_now(),
         "phases": {},
     }
+    computed_by_phase: dict[str, str] = {}
     for phase in roadmap.get("phases", []):
         acceptance = phase.get("acceptance", {})
+        dependencies = list(acceptance.get("depends_on", []))
+        blocked_dependencies = [
+            phase_id
+            for phase_id in dependencies
+            if computed_by_phase.get(str(phase_id)) != "complete"
+        ]
         required = acceptance.get("required_files", []) + acceptance.get("required_outputs", [])
         present = [path for path in required if (repo_root / path).exists()]
         missing = [path for path in required if not (repo_root / path).exists()]
         human_gates = [
-            _normalize_human_gate(phase["id"], gate)
-            for gate in acceptance.get("human_gates", [])
+            _normalize_human_gate(phase["id"], gate) for gate in acceptance.get("human_gates", [])
         ]
         verified_gates: list[dict[str, str]] = []
         unverified_gates: list[dict[str, str]] = []
@@ -103,7 +109,9 @@ def check_roadmap(repo_root: Path, update: bool = True) -> dict[str, Any]:
             for command in commands
             if not _command_has_evidence(command, phase["id"], gate_evidence)
         ]
-        if missing:
+        if blocked_dependencies:
+            computed = "blocked"
+        elif missing:
             computed = "planned" if phase.get("status") == "planned" else "blocked"
         elif unverified_gates:
             computed = "awaiting_human_gate"
@@ -116,16 +124,14 @@ def check_roadmap(repo_root: Path, update: bool = True) -> dict[str, Any]:
             "computed_status": computed,
             "evidence": present,
             "missing": missing,
-            "human_gates_verified": [
-                gate["description"] for gate in verified_gates
-            ],
-            "human_gates_unverified": [
-                gate["description"] for gate in unverified_gates
-            ],
+            "human_gates_verified": [gate["description"] for gate in verified_gates],
+            "human_gates_unverified": [gate["description"] for gate in unverified_gates],
             "human_gate_ids_verified": [gate["id"] for gate in verified_gates],
             "human_gate_ids_unverified": [gate["id"] for gate in unverified_gates],
             "commands_declared_not_executed_by_check": commands_missing_evidence,
+            "blocked_dependencies": blocked_dependencies,
         }
+        computed_by_phase[phase["id"]] = computed
     if update:
         write_json(repo_root / "roadmap" / "state.json", result)
     return result

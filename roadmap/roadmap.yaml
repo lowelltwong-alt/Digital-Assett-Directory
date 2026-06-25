@@ -29,6 +29,8 @@ phases:
     title: First reviewed bounded local inventory
     status: planned
     acceptance:
+      required_files:
+        - roadmap/evidence/phase-1-first-inventory.md
       required_outputs:
         - processed/catalog/assets.jsonl
         - processed/graph/graph.json
@@ -40,12 +42,33 @@ phases:
         - id: phase-1-github-token-scope-reviewed-deferred
           description: GitHub token scope reviewed and GitHub scanning deferred
         - id: phase-1-source-mutation-check-passed
-          description: source mutation check passed
+          description: source mutation and changed-during-scan summary reviewed
+
+  - id: phase-1.5-scoring-discipline-clean-sampling
+    title: Scoring discipline and clean calibration sampling
+    status: planned
+    acceptance:
+      required_files:
+        - docs/ASSET_VALUE_MODEL.md
+        - docs/ALGORITHM_CALIBRATION_AND_FIXES_HANDOFF.md
+        - roadmap/evidence/phase-1.5-scoring-discipline.md
+      required_outputs:
+        - processed/reports/quarantine_summary.md
+        - processed/reports/asset_rating_calibration_summary.md
+      human_gates:
+        - id: phase-1.5-noise-quarantine-reviewed
+          description: scanner noise excludes and quarantine summary reviewed
+        - id: phase-1.5-score-methodology-reviewed
+          description: score methodology and discount metadata reviewed
+        - id: phase-1.5-clean-calibration-sample-reviewed
+          description: clean deduped calibration sample regenerated and reviewed
 
   - id: phase-2-calibration
     title: Calibrate value, staleness, orphan, and synergy scoring
     status: planned
     acceptance:
+      depends_on:
+        - phase-1.5-scoring-discipline-clean-sampling
       required_outputs:
         - processed/reports/scoring_calibration.md
         - processed/reports/orphan_review_sample.md

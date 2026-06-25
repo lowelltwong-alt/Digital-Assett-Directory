@@ -13,6 +13,22 @@ Verified human gates are recorded in `roadmap/gate-evidence.json`; generated rep
 Phase 1 is a reviewed bounded local inventory. GitHub scanning remains deferred until a
 fine-grained read-only token scope is separately approved.
 
+Before more Phase 2 labels are applied, complete the Phase 1.5 scoring-discipline
+checkpoint. This checkpoint exists because noisy temp fixtures, duplicated source
+copies, zero-byte markers, and metadata-only observations can otherwise consume human
+calibration time and make the value scorer look better than it is.
+
+Phase 1.5 requires:
+
+- scanner noise and quarantine behavior reviewed;
+- score methodology reviewed, including instance/content classes and multiplicative
+  discounts;
+- a fresh clean, deduped calibration sample regenerated after those changes.
+
+Generated samples with a missing or legacy `sample_methodology_version` are stale.
+They may be kept as bug evidence, but `calibration-evidence` fails closed until the
+sample uses `asset-calibration-sampling-v0.2-clean-deduped`.
+
 Generate phase-2 calibration review reports from the current catalog without rescanning:
 
 ```powershell

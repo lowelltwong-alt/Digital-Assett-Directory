@@ -7,6 +7,13 @@ from pathlib import Path
 from statistics import mean
 from typing import Any, Literal
 
+from .instance_class import (
+    calibration_group_key,
+    classify_instance_class,
+    information_content_class,
+    instance_priority,
+    is_independent_portfolio_asset,
+)
 from .ids import stable_id
 from .models import AlertRecord, AssetCalibrationReviewRecord, AssetRecord, SynergyRecord
 from .roadmap import record_human_gate_evidence
@@ -18,6 +25,13 @@ CALIBRATION_NOTE_FIELDS = [
     "false_negative_note",
     "weight_change_note",
 ]
+CALIBRATION_SAMPLE_METHODOLOGY_VERSION = "asset-calibration-sampling-v0.2-clean-deduped"
+CALIBRATION_EXCLUDED_INSTANCE_CLASSES = {
+    "generated",
+    "os_junk",
+    "temp_fixture",
+    "worktree",
+}
 CALIBRATION_REVIEW_CSV_COLUMNS = [
     "sample_id",
     "asset_id",
@@ -33,6 +47,10 @@ CALIBRATION_REVIEW_CSV_COLUMNS = [
     "lifecycle_state",
     "freshness_status",
     "confidence",
+    "instance_class",
+    "information_content_class",
+    "calibration_group_key",
+    "sampling_bucket",
     "pattern_key",
     "current_graph_role",
     "useful_to_future_agents",
@@ -86,6 +104,45 @@ def _asset_context(asset: AssetRecord) -> str:
         f"(score {asset.value_score}, {asset.lifecycle_state}/{asset.freshness_status}, "
         f"confidence {asset.confidence})"
     )
+
+
+def _asset_instance_class(asset: AssetRecord) -> str:
+    value = asset.metadata.get("instance_class")
+    return str(value) if value else classify_instance_class(asset.logical_path)
+
+
+def _asset_information_content_class(asset: AssetRecord) -> str:
+    value = asset.metadata.get("information_content_class")
+    if isinstance(value, str) and value:
+        return value
+    return information_content_class(
+        asset.logical_path,
+        asset_type=asset.asset_type,
+        size_bytes=asset.size_bytes,
+        content_sha256=asset.content_sha256,
+        metadata=asset.metadata,
+    )
+
+
+def _asset_calibration_group_key(asset: AssetRecord) -> str:
+    return calibration_group_key(
+        asset_id=asset.asset_id,
+        logical_path=asset.logical_path,
+        asset_type=asset.asset_type,
+        content_sha256=asset.content_sha256,
+        metadata_fingerprint=asset.metadata_fingerprint,
+        instance_class=_asset_instance_class(asset),
+    )
+
+
+def _sampling_bucket(asset: AssetRecord) -> str:
+    instance_class = _asset_instance_class(asset)
+    info_class = _asset_information_content_class(asset)
+    if is_independent_portfolio_asset(instance_class, info_class):
+        return "portfolio_candidate"
+    if instance_class == "os_junk" or info_class == "os_junk":
+        return "excluded_junk"
+    return "lineage_or_quarantine"
 
 
 def _value_band(score: float) -> str:
@@ -416,7 +473,9 @@ def _score_justification(record: AssetCalibrationReviewRecord) -> str:
         parts.append("with capabilities " + ", ".join(capabilities[:3]))
     if needs:
         parts.append("and inferred needs " + ", ".join(needs[:3]))
-    parts.append("human review decides whether this current score is too_high, about_right, or too_low")
+    parts.append(
+        "human review decides whether this current score is too_high, about_right, or too_low"
+    )
     return "; ".join(parts) + "."
 
 
@@ -442,6 +501,9 @@ def build_asset_calibration_review_lens(
     needs = _evidence_list(evidence.get("needs", []))
     outcomes = _evidence_list(evidence.get("outcomes", []))
     value_components = evidence.get("value_components", {})
+    instance_class = str(evidence.get("instance_class") or "unknown")
+    info_class = str(evidence.get("information_content_class") or "unknown")
+    sampling_bucket = str(evidence.get("sampling_bucket") or "unknown")
     top_components = _top_component_names(value_components)
     current_role, future_use, missing_parts, projected_lift = _asset_role_hints(
         record.asset_type,
@@ -467,7 +529,7 @@ def build_asset_calibration_review_lens(
     need_part = "needs-" + "+".join(needs[:2]) if needs else "no-needs"
     capability_part = "caps-" + "+".join(capabilities[:2]) if capabilities else "no-caps"
     pattern_key = (
-        f"{record.asset_type}/{record.generated_value_band}/"
+        f"{record.asset_type}/{record.generated_value_band}/{instance_class}/{info_class}/"
         f"{component_part}/{capability_part}/{need_part}"
     )
 
@@ -549,6 +611,9 @@ def build_asset_calibration_review_lens(
         "pattern_key": pattern_key,
         "current_graph_role": current_role,
         "useful_to_future_agents": future_use,
+        "instance_class": instance_class,
+        "information_content_class": info_class,
+        "sampling_bucket": sampling_bucket,
         "layers": layers,
         "high_signal_edges": high_signal_edges[:8],
         "missing_or_combine_with": missing_parts,
@@ -589,7 +654,9 @@ def build_asset_calibration_review_lens(
         "development_posture": development_posture,
         "score_warning": (
             "High ceiling does not justify a high current score unless direct evidence "
-            "already proves the asset works in that role."
+            "already proves the asset works in that role. Temp fixtures, worktrees, "
+            "generated outputs, OS junk, and empty markers should be scored as copied "
+            "or lineage evidence unless reviewed unique value exists."
         ),
         "score_justification": _score_justification(record),
         "ceiling_justification": _ceiling_justification(
@@ -706,10 +773,12 @@ def _review_lens(record: AssetCalibrationReviewRecord) -> dict[str, Any]:
     return build_asset_calibration_review_lens(record)
 
 
-def _asset_calibration_record(
-    asset: AssetRecord, index: int
-) -> AssetCalibrationReviewRecord:
+def _asset_calibration_record(asset: AssetRecord, index: int) -> AssetCalibrationReviewRecord:
     sample_id = f"asset-review-{index:03d}"
+    instance_class = _asset_instance_class(asset)
+    info_class = _asset_information_content_class(asset)
+    group_key = _asset_calibration_group_key(asset)
+    sampling_bucket = _sampling_bucket(asset)
     evidence = {
         "value_components": asset.value_components,
         "capabilities": asset.capabilities,
@@ -718,6 +787,21 @@ def _asset_calibration_record(
         "lifecycle_state": asset.lifecycle_state,
         "freshness_status": asset.freshness_status,
         "confidence": asset.confidence,
+        "heuristic_strength": asset.metadata.get("heuristic_strength", asset.confidence),
+        "instance_class": instance_class,
+        "information_content_class": info_class,
+        "calibration_group_key": group_key,
+        "sampling_bucket": sampling_bucket,
+        "scoring_eligibility": asset.metadata.get("scoring_eligibility", "unknown"),
+        "score_methodology_version": asset.metadata.get("score_methodology_version"),
+        "score_discount_reasons": asset.metadata.get("score_discount_reasons", []),
+        "sample_methodology_version": CALIBRATION_SAMPLE_METHODOLOGY_VERSION,
+        "sample_generation": {
+            "methodology_version": CALIBRATION_SAMPLE_METHODOLOGY_VERSION,
+            "deduped_by": "content_sha256, quarantined basename group, or asset id",
+            "excluded_instance_classes": sorted(CALIBRATION_EXCLUDED_INSTANCE_CLASSES),
+            "authority": "Clean generated calibration candidate; human review required.",
+        },
         "authority": "Generated calibration candidate; human review required.",
     }
     record = AssetCalibrationReviewRecord(
@@ -735,15 +819,54 @@ def _asset_calibration_record(
     return record.model_copy(update={"evidence": evidence})
 
 
+def _asset_type_bucket(asset: AssetRecord) -> str:
+    if asset.asset_type in {"code", "schema", "test", "evaluation", "media", "workflow"}:
+        return asset.asset_type
+    if asset.asset_type in {"document", "research", "lesson", "decision"}:
+        return "document"
+    return "other"
+
+
+def _clean_calibration_candidates(assets: list[AssetRecord]) -> list[AssetRecord]:
+    representatives: dict[str, AssetRecord] = {}
+    for asset in assets:
+        instance_class = _asset_instance_class(asset)
+        info_class = _asset_information_content_class(asset)
+        if instance_class in CALIBRATION_EXCLUDED_INSTANCE_CLASSES:
+            continue
+        if not is_independent_portfolio_asset(instance_class, info_class):
+            continue
+        representative_key = _asset_calibration_group_key(asset)
+        existing = representatives.get(representative_key)
+        if existing is None or (
+            -instance_priority(instance_class),
+            asset.value_score,
+            asset.asset_id,
+        ) > (
+            -instance_priority(_asset_instance_class(existing)),
+            existing.value_score,
+            existing.asset_id,
+        ):
+            representatives[representative_key] = asset
+    return sorted(
+        representatives.values(),
+        key=lambda asset: (_asset_type_bucket(asset), asset.value_score, asset.asset_id),
+        reverse=True,
+    )
+
+
 def build_asset_calibration_review_template(
     assets: list[AssetRecord], per_band_sample: int = 25
 ) -> list[AssetCalibrationReviewRecord]:
+    assets = _clean_calibration_candidates(assets)
     high_assets = sorted(
-        assets, key=lambda asset: (asset.value_score, asset.asset_id), reverse=True
+        assets,
+        key=lambda asset: (_asset_type_bucket(asset), asset.value_score, asset.asset_id),
+        reverse=True,
     )[:per_band_sample]
-    low_assets = sorted(assets, key=lambda asset: (asset.value_score, asset.asset_id))[
-        :per_band_sample
-    ]
+    low_assets = sorted(
+        assets, key=lambda asset: (_asset_type_bucket(asset), asset.value_score, asset.asset_id)
+    )[:per_band_sample]
     selected: list[AssetRecord] = []
     seen: set[str] = set()
     for asset in [*high_assets, *low_assets]:
@@ -752,8 +875,7 @@ def build_asset_calibration_review_template(
         seen.add(asset.asset_id)
         selected.append(asset)
     return [
-        _asset_calibration_record(asset, index)
-        for index, asset in enumerate(selected, start=1)
+        _asset_calibration_record(asset, index) for index, asset in enumerate(selected, start=1)
     ]
 
 
@@ -786,6 +908,10 @@ def summarize_asset_calibration_reviews(
     false_positive_count = sum(1 for record in records if record.false_positive_reason)
     false_negative_count = sum(1 for record in records if record.false_negative_note)
     weight_change_count = sum(1 for record in records if record.weight_change_note)
+    stale_sample_warning = any(
+        record.evidence.get("sample_methodology_version") != CALIBRATION_SAMPLE_METHODOLOGY_VERSION
+        for record in records
+    )
     return {
         "template_count": len(records),
         "reviewed_count": len(reviewed),
@@ -794,11 +920,20 @@ def summarize_asset_calibration_reviews(
             and false_positive_count > 0
             and false_negative_count > 0
             and weight_change_count > 0
+            and not stale_sample_warning
         ),
         "structured_notes_complete": (
-            false_positive_count > 0
-            and false_negative_count > 0
-            and weight_change_count > 0
+            false_positive_count > 0 and false_negative_count > 0 and weight_change_count > 0
+        ),
+        "sample_methodology_versions": sorted(
+            {
+                str(record.evidence.get("sample_methodology_version") or "legacy_or_unknown")
+                for record in records
+            }
+        ),
+        "stale_sample_warning": stale_sample_warning,
+        "instance_class_counts": dict(
+            Counter(str(record.evidence.get("instance_class") or "unknown") for record in records)
         ),
         "score_rating_counts": dict(Counter(record.score_rating for record in records)),
         "value_band_counts": dict(Counter(record.generated_value_band for record in records)),
@@ -858,6 +993,15 @@ def build_asset_calibration_review_queue(
                     "lifecycle_state": record.evidence.get("lifecycle_state", ""),
                     "freshness_status": record.evidence.get("freshness_status", ""),
                     "confidence": record.evidence.get("confidence", ""),
+                    "instance_class": record.evidence.get("instance_class", ""),
+                    "information_content_class": record.evidence.get(
+                        "information_content_class", ""
+                    ),
+                    "calibration_group_key": record.evidence.get("calibration_group_key", ""),
+                    "sampling_bucket": record.evidence.get("sampling_bucket", ""),
+                    "score_methodology_version": record.evidence.get(
+                        "score_methodology_version", ""
+                    ),
                     "authority": record.evidence.get(
                         "authority",
                         "Generated calibration candidate; human review required.",
@@ -1013,40 +1157,32 @@ def asset_calibration_review_csv_rows(
                 "lifecycle_state": str(evidence.get("lifecycle_state", "")),
                 "freshness_status": str(evidence.get("freshness_status", "")),
                 "confidence": str(evidence.get("confidence", "")),
+                "instance_class": str(evidence.get("instance_class", "")),
+                "information_content_class": str(evidence.get("information_content_class", "")),
+                "calibration_group_key": str(evidence.get("calibration_group_key", "")),
+                "sampling_bucket": str(evidence.get("sampling_bucket", "")),
                 "pattern_key": str(lens.get("pattern_key", "")),
                 "current_graph_role": str(lens.get("current_graph_role", "")),
                 "useful_to_future_agents": str(lens.get("useful_to_future_agents", "")),
-                "missing_or_combine_with": _json_cell(
-                    lens.get("missing_or_combine_with", [])
-                ),
+                "missing_or_combine_with": _json_cell(lens.get("missing_or_combine_with", [])),
                 "projected_value_lift": str(lens.get("projected_value_lift", "")),
                 "current_floor": str(lens.get("current_floor", "")),
                 "current_floor_basis": str(lens.get("current_floor_basis", "")),
                 "current_score_range": _json_cell(lens.get("current_score_range", {})),
                 "current_score_midpoint": str(lens.get("current_score_midpoint", "")),
-                "current_score_uncertainty": str(
-                    lens.get("current_score_uncertainty", "")
-                ),
-                "current_score_range_basis": str(
-                    lens.get("current_score_range_basis", "")
-                ),
+                "current_score_uncertainty": str(lens.get("current_score_uncertainty", "")),
+                "current_score_range_basis": str(lens.get("current_score_range_basis", "")),
                 "review_order": _json_cell(lens.get("review_order", [])),
-                "current_score_first_prompt": str(
-                    lens.get("current_score_first_prompt", "")
-                ),
+                "current_score_first_prompt": str(lens.get("current_score_first_prompt", "")),
                 "potential_ceiling": str(lens.get("potential_ceiling", "")),
-                "potential_ceiling_range": _json_cell(
-                    lens.get("potential_ceiling_range", {})
-                ),
+                "potential_ceiling_range": _json_cell(lens.get("potential_ceiling_range", {})),
                 "potential_ceiling_basis": str(lens.get("potential_ceiling_basis", "")),
                 "ceiling_confidence": str(lens.get("ceiling_confidence", "")),
                 "upside_gap": str(lens.get("upside_gap", "")),
                 "upside_delta": str(lens.get("upside_delta", "")),
                 "upside_delta_range": _json_cell(lens.get("upside_delta_range", {})),
                 "upside_delta_meaning": str(lens.get("upside_delta_meaning", "")),
-                "activation_requirements": _json_cell(
-                    lens.get("activation_requirements", [])
-                ),
+                "activation_requirements": _json_cell(lens.get("activation_requirements", [])),
                 "development_posture": str(lens.get("development_posture", "")),
                 "score_warning": str(lens.get("score_warning", "")),
                 "score_justification": str(lens.get("score_justification", "")),
@@ -1054,9 +1190,7 @@ def asset_calibration_review_csv_rows(
                 "ceiling_activation_conditions": _json_cell(
                     lens.get("ceiling_activation_conditions", [])
                 ),
-                "projection_review_cadence": str(
-                    lens.get("projection_review_cadence", "")
-                ),
+                "projection_review_cadence": str(lens.get("projection_review_cadence", "")),
                 "usage_feedback_prompt": str(lens.get("usage_feedback_prompt", "")),
                 "usage_feedback_command": str(lens.get("usage_feedback_command", "")),
                 "usage_feedback_fields": _json_cell(lens.get("usage_feedback_fields", [])),
@@ -1109,9 +1243,7 @@ def import_asset_calibration_review_csv(
     errors: list[str] = []
     with csv_path.open("r", encoding="utf-8", newline="") as handle:
         reader = csv.DictReader(handle)
-        missing_columns = {"sample_id", "asset_id", "score_rating"} - set(
-            reader.fieldnames or []
-        )
+        missing_columns = {"sample_id", "asset_id", "score_rating"} - set(reader.fieldnames or [])
         if missing_columns:
             raise ValueError(
                 "Asset calibration review CSV missing required columns: "
@@ -1394,6 +1526,9 @@ def asset_calibration_summary_markdown(
         f"- Reviewed records: **{summary['reviewed_count']}**",
         f"- Calibration gate complete: **{summary['calibration_gate_complete']}**",
         f"- Structured notes complete: **{summary['structured_notes_complete']}**",
+        f"- Stale sample warning: **{summary['stale_sample_warning']}**",
+        f"- Sample methodology versions: `{summary['sample_methodology_versions']}`",
+        f"- Instance class counts: `{summary['instance_class_counts']}`",
         f"- Score rating counts: `{summary['score_rating_counts']}`",
         f"- Value band counts: `{summary['value_band_counts']}`",
         f"- False positive notes: **{summary['false_positive_note_count']}**",
@@ -1405,6 +1540,7 @@ def asset_calibration_summary_markdown(
         "- Review at least 50 asset rating records.",
         "- Capture false-positive and false-negative notes.",
         "- Document any scoring weight changes before treating calibration as complete.",
+        "- Regenerate the sample after scoring or scanner-noise changes when stale sample warning is true.",
         "",
     ]
     return "\n".join(lines)
@@ -1446,6 +1582,11 @@ def asset_calibration_evidence_markdown(
     summary = summarize_asset_calibration_reviews(records)
     if summary["reviewed_count"] < 50:
         raise ValueError("Asset calibration evidence requires at least 50 reviewed asset ratings.")
+    if summary["stale_sample_warning"]:
+        raise ValueError(
+            "Asset calibration evidence requires a current deduped calibration sample. "
+            "Regenerate calibration reports before exporting evidence."
+        )
     if not summary["structured_notes_complete"]:
         raise ValueError(
             "Asset calibration evidence requires false-positive, false-negative, "
@@ -1581,9 +1722,7 @@ def write_phase2_calibration_reports(
     )
 
     orphan_count = sum(
-        1
-        for alert in alerts
-        if alert.alert_type == "orphan_asset" and alert.status == "open"
+        1 for alert in alerts if alert.alert_type == "orphan_asset" and alert.status == "open"
     )
     return {
         "asset_count": len(assets),

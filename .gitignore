@@ -28,6 +28,7 @@ processed/calibration/**
 processed/context_packs/**
 processed/learning/**
 processed/proposals/**
+processed/quarantine/**
 processed/reports/**
 !processed/**/.gitkeep
 !processed/**/README.md

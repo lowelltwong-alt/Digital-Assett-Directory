@@ -11,7 +11,8 @@ from .github_scan import scan_github_source
 from .graph_engine import build_edges, graph_export
 from .ids import scan_id as new_scan_id
 from .identity_layers import build_identity_layers
-from .local_scan import scan_local_source
+from .instance_class import instance_priority
+from .local_scan import quarantine_summary, scan_local_source
 from .radars import activation_triggers, detect_synergies, generate_alerts
 from .recommendations import recommend_skills_and_agents
 from .scoring import load_scoring, score_asset
@@ -54,6 +55,69 @@ def _write_raw_scan_observations(
     return [safe_relative(path, repo_root)]
 
 
+def _instance_priority(asset: AssetRecord) -> int:
+    return instance_priority(str(asset.metadata.get("instance_class") or "source"))
+
+
+def _mark_duplicate_representatives(
+    assets: list[AssetRecord], duplicate_clusters
+) -> dict[str, int]:
+    by_id = {asset.asset_id: asset for asset in assets}
+    duplicate_counts: dict[str, int] = {}
+    for cluster in duplicate_clusters:
+        members = [by_id[member_id] for member_id in cluster.asset_ids if member_id in by_id]
+        if not members:
+            continue
+        representative = min(
+            members,
+            key=lambda asset: (
+                _instance_priority(asset),
+                str(asset.logical_path),
+                str(asset.asset_id),
+            ),
+        )
+        cluster_size = len(cluster.asset_ids)
+        for member in members:
+            duplicate_counts[member.asset_id] = max(
+                duplicate_counts.get(member.asset_id, 1), cluster_size
+            )
+            member.metadata["duplicate_cluster_size"] = cluster_size
+            member.metadata["duplicate_representative_id"] = representative.asset_id
+            member.metadata["is_duplicate_representative"] = (
+                member.asset_id == representative.asset_id
+            )
+    return duplicate_counts
+
+
+def _aggregate_quarantine(records: list[dict[str, Any]]) -> dict[str, Any]:
+    by_reason: Counter[str] = Counter()
+    samples: list[dict[str, str]] = []
+    by_source: dict[str, int] = {}
+    inspected_path_count = 0
+    bounded = False
+    for record in records:
+        source_id = str(record.get("source_id") or "unknown")
+        count = int(record.get("count") or 0)
+        by_source[source_id] = by_source.get(source_id, 0) + count
+        inspected_path_count += int(record.get("inspected_path_count") or 0)
+        bounded = bounded or bool(record.get("bounded") is True)
+        for reason, reason_count in (record.get("by_reason") or {}).items():
+            by_reason[str(reason)] += int(reason_count)
+        for sample in record.get("samples") or []:
+            if len(samples) >= 50:
+                break
+            samples.append({"path": str(sample.get("path")), "reason": str(sample.get("reason"))})
+    return {
+        "count": sum(by_source.values()),
+        "by_source": dict(sorted(by_source.items())),
+        "by_reason": dict(sorted(by_reason.items())),
+        "samples": samples,
+        "bounded": bounded,
+        "inspected_path_count": inspected_path_count,
+        "authority": "Generated quarantine summary only; no quarantined path is a scored asset.",
+    }
+
+
 def run_scan(
     config: AppConfig, *, local: bool = True, github: bool = True, max_files: int | None = None
 ) -> dict[str, Any]:
@@ -62,6 +126,7 @@ def run_scan(
     assets: list[AssetRecord] = []
     errors: list[dict[str, str]] = []
     raw_observation_files: list[str] = []
+    quarantine_records: list[dict[str, Any]] = []
     scoring = load_scoring(config.repo_root)
     _append_scan_audit(
         config.repo_root,
@@ -90,13 +155,14 @@ def run_scan(
                         )
                         continue
                     try:
+                        quarantine_records.append(
+                            quarantine_summary(local_source, max_paths=max_files)
+                        )
                         discovered, _ = scan_local_source(
                             local_source, config.settings, scoring, max_files=max_files
                         )
                         raw_observation_files.extend(
-                            _write_raw_scan_observations(
-                                config.repo_root, sid, "local", discovered
-                            )
+                            _write_raw_scan_observations(config.repo_root, sid, "local", discovered)
                         )
                         assets.extend(discovered)
                     except Exception as exc:
@@ -135,13 +201,7 @@ def run_scan(
             # Re-score with duplicate context so `uniqueness` reflects cluster membership
             # instead of a constant. Identity layers are already built, so this only
             # updates value_score/value_components.
-            duplicate_counts: dict[str, int] = {}
-            for cluster in duplicate_clusters:
-                cluster_size = len(cluster.asset_ids)
-                for member_id in cluster.asset_ids:
-                    duplicate_counts[member_id] = max(
-                        duplicate_counts.get(member_id, 1), cluster_size
-                    )
+            duplicate_counts = _mark_duplicate_representatives(assets, duplicate_clusters)
             for asset in assets:
                 score_asset(asset, scoring, duplicate_counts)
             graph_edges = build_edges(
@@ -199,6 +259,7 @@ def run_scan(
                 "alert_count": len(alerts),
                 "capability_recommendation_count": len(recommendations),
                 "changed_during_scan_count": changed_during_scan_count,
+                "quarantine": _aggregate_quarantine(quarantine_records),
                 "raw_observation_files": sorted(set(raw_observation_files)),
                 "asset_types": dict(Counter(a.asset_type for a in assets)),
                 "sources": dict(Counter(a.source_id for a in assets)),
@@ -311,6 +372,10 @@ def export_outputs(
         [a.model_dump(mode="json") for a in alerts],
     )
     write_json(repo_root / "processed" / "reports" / "scan_summary.json", summary)
+    write_json(
+        repo_root / "processed" / "quarantine" / "quarantine_summary.json",
+        summary.get("quarantine", {}),
+    )
     lines = [
         "# Digital Asset Directory Scan Summary",
         "",
@@ -326,6 +391,7 @@ def export_outputs(
         f"- Alerts: **{summary['alert_count']}**",
         f"- Source files mutated: **{summary['source_files_mutated']}**",
         f"- Changed during scan: **{summary.get('changed_during_scan_count', 0)}**",
+        f"- Quarantined non-scoring paths: **{summary.get('quarantine', {}).get('count', 0)}**",
         "",
         "## Errors",
         "",
@@ -335,6 +401,32 @@ def export_outputs(
     )
     atomic_write_text(
         repo_root / "processed" / "reports" / "scan_summary.md", "\n".join(lines) + "\n"
+    )
+    quarantine = summary.get("quarantine", {})
+    quarantine_lines = [
+        "# Quarantine Summary",
+        "",
+        "Generated candidate evidence only. These paths were suppressed from asset scoring.",
+        "",
+        f"- Count: **{quarantine.get('count', 0)}**",
+        f"- Bounded scan: **{quarantine.get('bounded', False)}**",
+        f"- Inspected paths: **{quarantine.get('inspected_path_count', 0)}**",
+        "",
+        "## Reasons",
+        "",
+    ]
+    by_reason = quarantine.get("by_reason", {}) if isinstance(quarantine, dict) else {}
+    quarantine_lines.extend(
+        [f"- {reason}: **{count}**" for reason, count in sorted(by_reason.items())] or ["- None"]
+    )
+    quarantine_lines.extend(["", "## Samples", ""])
+    samples = quarantine.get("samples", []) if isinstance(quarantine, dict) else []
+    quarantine_lines.extend(
+        [f"- `{item['path']}`: {item['reason']}" for item in samples[:50]] or ["- None"]
+    )
+    atomic_write_text(
+        repo_root / "processed" / "reports" / "quarantine_summary.md",
+        "\n".join(quarantine_lines) + "\n",
     )
     identity_lines = [
         "# Identity Layers",

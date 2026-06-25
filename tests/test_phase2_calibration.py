@@ -36,6 +36,9 @@ def make_asset(
     score: float,
     asset_type: str = "code",
     freshness: str = "current",
+    logical_path: str | None = None,
+    content_sha256: str | None = None,
+    metadata: dict | None = None,
 ) -> AssetRecord:
     return AssetRecord(
         asset_id=asset_id,
@@ -45,8 +48,9 @@ def make_asset(
         asset_type=asset_type,
         title=title,
         description="phase 2 calibration test asset",
-        logical_path=f"src/{title.lower().replace(' ', '_')}.py",
+        logical_path=logical_path or f"src/{title.lower().replace(' ', '_')}.py",
         content_hash=asset_id,
+        content_sha256=content_sha256,
         first_seen_at="2026-01-01T00:00:00+00:00",
         last_seen_at="2026-01-01T00:00:00+00:00",
         capabilities=["evaluate_assets"] if asset_id == "asset-a" else [],
@@ -62,6 +66,7 @@ def make_asset(
             "verification": 80 if asset_type == "test" else 40,
         },
         confidence="medium",
+        metadata=metadata or {},
     )
 
 
@@ -187,6 +192,55 @@ def test_asset_calibration_review_schema_and_template_are_candidate_only():
             "prototype_bounded_experiment",
             "monitor",
         }
+
+
+def test_asset_calibration_template_dedupes_and_excludes_quarantined_instances():
+    source = make_asset(
+        "source-schema",
+        title="Claim Schema",
+        score=70,
+        asset_type="schema",
+        logical_path="repo/schemas/claim.schema.json",
+        content_sha256="same-content",
+        metadata={
+            "instance_class": "source",
+            "information_content_class": "content_extracted",
+            "text_tokens": ["schema", "claim"],
+        },
+    )
+    temp = make_asset(
+        "temp-schema",
+        title="Claim Schema Copy",
+        score=95,
+        asset_type="schema",
+        logical_path="repo/.pytest-tmp-root/pytest-of-Lowell/pytest-1/test_x/contract-repo/schemas/claim.schema.json",
+        content_sha256="same-content",
+        metadata={
+            "instance_class": "temp_fixture",
+            "information_content_class": "content_extracted",
+            "text_tokens": ["schema", "claim"],
+        },
+    )
+    junk = make_asset(
+        "junk",
+        title=".DS_Store",
+        score=35,
+        asset_type="unknown",
+        logical_path="repo/.DS_Store",
+        content_sha256="junk",
+        metadata={"instance_class": "os_junk", "information_content_class": "os_junk"},
+    )
+
+    records = build_asset_calibration_review_template([temp, junk, source], per_band_sample=5)
+
+    assert [record.asset_id for record in records] == ["source-schema"]
+    assert records[0].evidence["instance_class"] == "source"
+    assert records[0].evidence["sampling_bucket"] == "portfolio_candidate"
+    assert (
+        records[0]
+        .evidence["sample_methodology_version"]
+        .startswith("asset-calibration-sampling-v0.2")
+    )
 
 
 def test_asset_calibration_review_lens_preserves_duplicate_and_projection_boundaries():
@@ -520,6 +574,24 @@ def test_asset_calibration_evidence_requires_structured_notes(tmp_path: Path):
         raise AssertionError("asset calibration evidence without notes should fail closed")
 
 
+def test_asset_calibration_evidence_refuses_legacy_sample_methodology(tmp_path: Path):
+    records = _complete_asset_calibration_records()
+    for record in records:
+        record.evidence.pop("sample_methodology_version", None)
+    review_file = tmp_path / "asset_reviews.jsonl"
+    review_file.write_text(
+        "".join(json.dumps(record.model_dump(mode="json")) + "\n" for record in records),
+        encoding="utf-8",
+    )
+
+    try:
+        write_asset_calibration_evidence(tmp_path, records, review_file)
+    except ValueError as exc:
+        assert "current deduped calibration sample" in str(exc)
+    else:
+        raise AssertionError("legacy calibration samples should fail closed")
+
+
 def test_asset_calibration_evidence_writes_tracked_gate_evidence(tmp_path: Path):
     records = _complete_asset_calibration_records()
     review_file = tmp_path / "asset_reviews.jsonl"
@@ -535,9 +607,7 @@ def test_asset_calibration_evidence_writes_tracked_gate_evidence(tmp_path: Path)
     markdown = Path(evidence_path).read_text(encoding="utf-8")
     assert "Phase 2 Asset Calibration Evidence" in markdown
     gate_evidence = json.loads((tmp_path / "roadmap" / "gate-evidence.json").read_text())
-    assert gate_evidence["human_gates"]["phase-2-asset-ratings-reviewed"]["status"] == (
-        "verified"
-    )
+    assert gate_evidence["human_gates"]["phase-2-asset-ratings-reviewed"]["status"] == ("verified")
     assert gate_evidence["human_gates"]["phase-2-weight-changes-documented"]["phase_id"] == (
         "phase-2-calibration"
     )

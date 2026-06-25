@@ -26,7 +26,7 @@
       "status": "verified",
       "reviewed_at": "2026-06-24",
       "reviewer": "codex",
-      "summary": "First bounded local inventory reported source_files_mutated=false.",
+      "summary": "First bounded local inventory reported source_files_mutated=false with changed_during_scan_count reviewed in the scan summary.",
       "evidence": [
         "roadmap/evidence/phase-1-first-inventory.md"
       ]

@@ -72,9 +72,45 @@ phases:
     )
 
     result = check_roadmap(tmp_path, update=False)
-    assert result["phases"]["phase-command"]["computed_status"] == (
-        "awaiting_validation_evidence"
-    )
+    assert result["phases"]["phase-command"]["computed_status"] == ("awaiting_validation_evidence")
     assert result["phases"]["phase-command"]["commands_declared_not_executed_by_check"] == [
         "python -m pytest"
     ]
+
+
+def test_roadmap_dependencies_block_later_phases(tmp_path: Path):
+    (tmp_path / "roadmap").mkdir()
+    (tmp_path / "roadmap" / "roadmap.yaml").write_text(
+        """
+roadmap_version: test
+phases:
+  - id: phase-1.5
+    status: planned
+    acceptance:
+      human_gates:
+        - id: gate-1-5
+          description: scoring discipline reviewed
+  - id: phase-2
+    status: planned
+    acceptance:
+      depends_on:
+        - phase-1.5
+""",
+        encoding="utf-8",
+    )
+
+    blocked = check_roadmap(tmp_path, update=False)
+    assert blocked["phases"]["phase-2"]["computed_status"] == "blocked"
+    assert blocked["phases"]["phase-2"]["blocked_dependencies"] == ["phase-1.5"]
+
+    record_human_gate_evidence(
+        tmp_path,
+        phase_id="phase-1.5",
+        gate_id="gate-1-5",
+        reviewer="Human",
+        summary="Reviewed.",
+        evidence=["roadmap/evidence/phase-1.5.md"],
+    )
+    unblocked = check_roadmap(tmp_path, update=False)
+    assert unblocked["phases"]["phase-1.5"]["computed_status"] == "complete"
+    assert unblocked["phases"]["phase-2"]["computed_status"] == "complete"
