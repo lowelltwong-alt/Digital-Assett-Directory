@@ -22,8 +22,12 @@ Layered identity records
         +----> metadata fingerprints
         +----> optional exact content SHA-256
         +----> deterministic chunk records
+        +----> extracted text, when safe and supported
+        +----> embeddings only after privacy/license/provider/eval gates
         +----> duplicate / near-duplicate cluster candidates
         +----> delta records between similar assets
+        +----> knowledge-graph role and relationship signals
+        +----> append-only audit events
         |
         v
 SQLite catalog + JSONL export
@@ -58,16 +62,20 @@ The seed uses SQLite as the durable local catalog and NetworkX/JSON/GraphML as r
 
 ## Similarity and delta layers
 
-The deterministic v1 uses multiple bounded layers:
+The deterministic v1 follows the Asset Identity And Similarity Ladder in
+`docs/ASSET_IDENTITY_AND_SIMILARITY_LADDER.md`:
 
 - metadata fingerprint: fast change detection and metadata-only broad scans;
 - exact SHA-256: exact content sameness when available;
 - chunk records: overlapping token shingles or metadata chunks tied to a specific asset revision;
+- extracted text: generated evidence for comparison, tagging, and indexing when safe and supported;
 - exact duplicate clusters: assets with the same non-empty `content_sha256`;
 - near-duplicate clusters: generated candidates from deterministic token-shingle MinHash similarity;
 - containment candidates: generated `contained_in` edges when most source shingles appear inside a larger target;
 - delta records: bounded pairwise evidence showing exact match or shared/one-sided chunk hashes;
-- graph edges: `exact_duplicate_of`, `near_duplicate_of`, and `has_delta_candidate` edges for retrieval and review.
+- graph edges: `exact_duplicate_of`, `near_duplicate_of`, `has_delta_candidate`, and role/similarity
+  edges for retrieval and review;
+- audit logs: append-only scan, lesson, handoff, and governance evidence.
 
 `related_to` graph edges use IDF-weighted cosine over bounded rare-token candidate sets. This keeps common boilerplate from dominating relation evidence while staying deterministic.
 

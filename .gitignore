@@ -26,6 +26,7 @@ processed/graph/**
 processed/alerts/**
 processed/calibration/**
 processed/context_packs/**
+processed/learning/**
 processed/proposals/**
 processed/reports/**
 !processed/**/.gitkeep

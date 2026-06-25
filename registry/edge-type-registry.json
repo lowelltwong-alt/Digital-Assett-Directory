@@ -63,6 +63,16 @@
       "meaning": "Assets have bounded semantic or structural similarity."
     },
     {
+      "id": "semantically_similar_to",
+      "direction": "symmetric",
+      "meaning": "Assets are semantically similar under an approved embedding or semantic-similarity gate; deferred until privacy, provider, retention, and eval controls exist."
+    },
+    {
+      "id": "plays_same_architecture_role_as",
+      "direction": "symmetric",
+      "meaning": "Assets appear to serve the same architecture role even if their content differs; candidate relationship requiring review."
+    },
+    {
       "id": "variant_of",
       "direction": "symmetric",
       "meaning": "Assets are reviewed or candidate variants that share a core but may serve different contexts."
@@ -121,6 +131,141 @@
       "id": "governed_by",
       "direction": "asset_to_governance",
       "meaning": "An asset is constrained by a governance surface."
+    },
+    {
+      "id": "routes_to",
+      "direction": "router_to_target",
+      "meaning": "A routing, chunking, or orchestration asset directs work to a target asset or path."
+    },
+    {
+      "id": "handles_form",
+      "direction": "handler_to_form",
+      "meaning": "An asset appears to handle a structural form, document form, workflow form, or domain-specific case type."
+    },
+    {
+      "id": "has_gold_set",
+      "direction": "evaluation_to_gold_set",
+      "meaning": "An evaluation or route harness is paired with a gold, golden, expected-output, or reference set."
+    },
+    {
+      "id": "has_review_packet",
+      "direction": "workflow_to_review_packet",
+      "meaning": "A workflow or evaluation system produces or depends on a human-review packet."
+    },
+    {
+      "id": "produces_learning_signal",
+      "direction": "evidence_to_learning_signal",
+      "meaning": "An exception, failure, feedback, or evaluation asset produces a candidate learning signal."
+    },
+    {
+      "id": "requires_human_gate",
+      "direction": "candidate_to_gate",
+      "meaning": "A candidate adaptation, promotion, or reuse path requires an explicit human review gate."
+    },
+    {
+      "id": "archived_variant_of",
+      "direction": "archive_to_active_or_related_variant",
+      "meaning": "An archived asset appears to be a preserved variant of another asset. This is not a deletion or canonicalization instruction."
+    },
+    {
+      "id": "duplicate_candidate",
+      "direction": "symmetric",
+      "meaning": "Assets appear duplicate-like by role, name, or structure but do not yet meet exact or near-duplicate evidence thresholds."
+    },
+    {
+      "id": "delta_better_at",
+      "direction": "asset_to_comparison_dimension",
+      "meaning": "A delta review suggests one asset is stronger on a bounded dimension while preserving both variants."
+    },
+    {
+      "id": "composes_with",
+      "direction": "symmetric",
+      "meaning": "Assets appear useful together as a higher-level composite workflow or system."
+    },
+    {
+      "id": "unsafe_composition_with",
+      "direction": "symmetric",
+      "meaning": "Assets appear risky to combine without extra boundary, security, or authority review."
+    },
+    {
+      "id": "contaminates_if_default",
+      "direction": "source_to_target",
+      "meaning": "An asset may contaminate a target workflow if treated as default truth or authority without review."
+    },
+    {
+      "id": "supports_but_cannot_override",
+      "direction": "supporting_asset_to_authority_asset",
+      "meaning": "A supporting asset can guide, validate, or enrich another asset but cannot override that source asset's authority."
+    },
+    {
+      "id": "observed_in_attempt",
+      "direction": "signal_to_attempt",
+      "meaning": "A generated signal, failure, or lesson candidate was observed inside a worktree, temp repo, archive, or repository attempt."
+    },
+    {
+      "id": "changed_with",
+      "direction": "symmetric",
+      "meaning": "Assets or paths repeatedly changed together in local git history or repeated attempts."
+    },
+    {
+      "id": "failed_before",
+      "direction": "failure_to_later_signal",
+      "meaning": "A failure-like signal appears earlier than a later stabilizer or corrective artifact."
+    },
+    {
+      "id": "fixed_by",
+      "direction": "failure_to_fix_candidate",
+      "meaning": "A later artifact appears to address an earlier failure signal. Generated candidate only."
+    },
+    {
+      "id": "stabilized_by",
+      "direction": "workflow_or_attempt_to_stabilizer",
+      "meaning": "A test, schema, validator, review packet, or gate appears to stabilize a workflow or attempt."
+    },
+    {
+      "id": "should_precede",
+      "direction": "recommended_prior_step_to_later_step",
+      "meaning": "A counterfactual lesson suggests one step should happen before another in similar contexts."
+    },
+    {
+      "id": "applies_when",
+      "direction": "lesson_to_context",
+      "meaning": "A lesson candidate is intended to apply only under the stated context."
+    },
+    {
+      "id": "does_not_apply_when",
+      "direction": "lesson_to_context",
+      "meaning": "A lesson candidate explicitly warns that it should not be applied under the stated context."
+    },
+    {
+      "id": "dangerous_out_of_context",
+      "direction": "lesson_to_risk_context",
+      "meaning": "A lesson candidate may be harmful if stripped from its context or applied as a universal rule."
+    },
+    {
+      "id": "learned_from_attempt",
+      "direction": "lesson_to_attempt",
+      "meaning": "A candidate lesson was inferred from one or more worktree, temp, archive, or repository attempts."
+    },
+    {
+      "id": "semantic_variant_of",
+      "direction": "symmetric",
+      "meaning": "Assets or family versions differ in behavior-relevant structured content after deterministic normalization."
+    },
+    {
+      "id": "evolved_from",
+      "direction": "newer_variant_to_older_variant",
+      "meaning": "A candidate semantic-evolution record suggests one version evolved from another. Requires provenance review before source-order claims."
+    },
+    {
+      "id": "noise_variant_of",
+      "direction": "symmetric",
+      "meaning": "Assets differ mainly by formatting, path, metadata, fixture propagation, or copy lineage rather than semantic behavior."
+    },
+    {
+      "id": "lineage_evidence_for",
+      "direction": "copy_or_variant_to_family",
+      "meaning": "A copied, temp, archive, changelog, or variant asset is evidence for a higher-level family lineage."
     }
   ],
   "rule": "Every generated edge must retain method, evidence, confidence, and scan provenance."

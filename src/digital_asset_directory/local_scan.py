@@ -103,6 +103,11 @@ def _repo_composite_patterns(child_assets: list[AssetRecord]) -> list[dict[str, 
     type_ids = {asset.asset_type for asset in child_assets}
     tags = {tag for asset in child_assets for tag in asset.tags}
     capabilities = {capability for asset in child_assets for capability in asset.capabilities}
+    asset_patterns = {
+        str(pattern_id)
+        for asset in child_assets
+        for pattern_id in asset.metadata.get("asset_patterns", [])
+    }
     patterns: list[dict[str, object]] = []
 
     def add(pattern_id: str, label: str, evidence: list[str], leverage: str) -> None:
@@ -166,8 +171,128 @@ def _repo_composite_patterns(child_assets: list[AssetRecord]) -> list[dict[str, 
             *(["tag:governance"] if "governance" in tags else []),
             *(["capability:capture_lessons"] if "capture_lessons" in capabilities else []),
             *(["capability:govern_agents"] if "govern_agents" in capabilities else []),
+            *(
+                ["asset_pattern:governed_learning_loop"]
+                if "governed_learning_loop" in asset_patterns
+                else []
+            ),
         ],
         "very_high",
+    )
+    add(
+        "route_isolated_evaluation_harness",
+        "Route-isolated evaluation harness",
+        [
+            *(["asset_type:evaluation"] if "evaluation" in type_ids else []),
+            *(["asset_type:test"] if "test" in type_ids else []),
+            *(["tag:retrieval"] if "retrieval" in tags else []),
+            *(["capability:validate_contracts"] if "validate_contracts" in capabilities else []),
+            *(
+                ["asset_pattern:route_isolated_evaluation_harness"]
+                if "route_isolated_evaluation_harness" in asset_patterns
+                else []
+            ),
+            *(
+                ["asset_pattern:gold_review_packet_system"]
+                if "gold_review_packet_system" in asset_patterns
+                else []
+            ),
+        ],
+        "very_high",
+    )
+    add(
+        "agent_skill_graph_system",
+        "Agent and skill graph system",
+        [
+            *(["asset_type:agent"] if "agent" in type_ids else []),
+            *(["asset_type:skill"] if "skill" in type_ids else []),
+            *(["tag:knowledge-graph"] if "knowledge-graph" in tags else []),
+            *(["capability:build_knowledge_graph"] if "build_knowledge_graph" in capabilities else []),
+            *(
+                ["asset_pattern:agent_skill_graph_system"]
+                if "agent_skill_graph_system" in asset_patterns
+                else []
+            ),
+        ],
+        "very_high",
+    )
+    add(
+        "boundary_contamination_firewall",
+        "Boundary and contamination firewall",
+        [
+            *(["tag:security"] if "security" in tags else []),
+            *(["tag:governance"] if "governance" in tags else []),
+            *(["capability:protect_sensitive_data"] if "protect_sensitive_data" in capabilities else []),
+            *(
+                ["asset_pattern:boundary_contamination_firewall"]
+                if "boundary_contamination_firewall" in asset_patterns
+                else []
+            ),
+            *(
+                ["asset_pattern:security_governance_gate"]
+                if "security_governance_gate" in asset_patterns
+                else []
+            ),
+        ],
+        "very_high",
+    )
+    add(
+        "proposal_promotion_workflow",
+        "Proposal-to-promotion workflow",
+        [
+            *(["asset_type:decision"] if "decision" in type_ids else []),
+            *(["asset_type:workflow"] if "workflow" in type_ids else []),
+            *(["tag:governance"] if "governance" in tags else []),
+            *(
+                ["asset_pattern:proposal_promotion_workflow"]
+                if "proposal_promotion_workflow" in asset_patterns
+                else []
+            ),
+        ],
+        "very_high",
+    )
+    add(
+        "frontier_signal_intake_loop",
+        "Frontier signal intake loop",
+        [
+            *(["asset_type:research"] if "research" in type_ids else []),
+            *(["tag:research-radar"] if "research-radar" in tags else []),
+            *(["capability:research_missing_parts"] if "research_missing_parts" in capabilities else []),
+            *(
+                ["asset_pattern:frontier_signal_intake_loop"]
+                if "frontier_signal_intake_loop" in asset_patterns
+                else []
+            ),
+        ],
+        "high",
+    )
+    add(
+        "gold_review_packet_system",
+        "Gold set and review packet system",
+        [
+            *(["asset_type:evaluation"] if "evaluation" in type_ids else []),
+            *(["asset_type:dataset"] if "dataset" in type_ids else []),
+            *(
+                ["asset_pattern:gold_review_packet_system"]
+                if "gold_review_packet_system" in asset_patterns
+                else []
+            ),
+        ],
+        "very_high",
+    )
+    add(
+        "duplicate_variant_preservation_system",
+        "Duplicate and variant preservation system",
+        [
+            *(["asset_type:archive"] if "archive" in type_ids else []),
+            *(["tag:provenance"] if "provenance" in tags else []),
+            *(
+                ["asset_pattern:duplicate_variant_preservation_system"]
+                if "duplicate_variant_preservation_system" in asset_patterns
+                else []
+            ),
+        ],
+        "high",
     )
     add(
         "security_governance_system",

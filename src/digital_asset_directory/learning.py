@@ -8,10 +8,11 @@ from typing import Any
 
 from .database import CatalogDB
 from .ids import stable_id, session_id as new_session_id
-from .models import HandoffRecord, LessonRecord
+from .models import HandoffRecord, LearningRuleRecord, LessonRecord
 from .utils import append_jsonl, split_multi, utc_now, write_json
 
 ASSET_USE_FEEDBACK_CODE = "DAD_ASSET_USE_FEEDBACK_V1"
+ACK_REQUIRED_LEVELS = {"require_ack", "human_gate"}
 
 
 def git_changed_files(repo: Path) -> list[str]:
@@ -47,6 +48,83 @@ def _lesson_pointer(record: LessonRecord) -> dict[str, Any]:
         "session_id": record.session_id,
         "source_path": f"raw/lessons/{dated}/{record.lesson_id.split(':')[-1]}.json",
     }
+
+
+def _learning_rule_pointer(record: LearningRuleRecord) -> dict[str, Any]:
+    return {
+        "rule_id": record.rule_id,
+        "title": record.title,
+        "summary": record.summary,
+        "context_tags": record.context_tags,
+        "applies_when": record.applies_when,
+        "does_not_apply_when": record.does_not_apply_when,
+        "required_actions": record.required_actions,
+        "danger_if_ignored": record.danger_if_ignored,
+        "evidence": record.evidence,
+        "enforcement_level": record.enforcement_level,
+        "review_status": record.review_status,
+    }
+
+
+def load_learning_rules(repo_root: Path) -> list[LearningRuleRecord]:
+    path = repo_root / "registry" / "learning-rule-registry.json"
+    if not path.exists():
+        return []
+    payload = json.loads(path.read_text(encoding="utf-8"))
+    records = [
+        LearningRuleRecord.model_validate(item)
+        for item in payload.get("rules", [])
+        if item.get("review_status") == "reviewed"
+    ]
+    seen: set[str] = set()
+    deduped: list[LearningRuleRecord] = []
+    for record in sorted(records, key=lambda item: item.rule_id):
+        if record.rule_id in seen:
+            raise ValueError(f"Duplicate learning rule ID: {record.rule_id}")
+        seen.add(record.rule_id)
+        deduped.append(record)
+    return deduped
+
+
+def match_learning_rules(
+    repo_root: Path,
+    *,
+    task: str = "",
+    context: list[str] | None = None,
+    paths: list[str] | None = None,
+) -> list[dict[str, Any]]:
+    context_values = context or []
+    path_values = paths or []
+    text_blob = "\n".join([task, *context_values, *path_values]).lower().replace("\\", "/")
+    matched: list[dict[str, Any]] = []
+    for record in load_learning_rules(repo_root):
+        term_hits = [
+            term
+            for term in record.trigger_terms
+            if term and term.lower() in text_blob
+        ]
+        path_hits = [
+            pattern
+            for pattern in record.trigger_path_patterns
+            if pattern and pattern.lower().replace("\\", "/") in text_blob
+        ]
+        if not term_hits and not path_hits:
+            continue
+        pointer = _learning_rule_pointer(record)
+        pointer["matched_terms"] = term_hits
+        pointer["matched_path_patterns"] = path_hits
+        matched.append(pointer)
+    return matched
+
+
+def required_learning_rule_ids(matches: list[dict[str, Any]]) -> list[str]:
+    return sorted(
+        {
+            str(match["rule_id"])
+            for match in matches
+            if match.get("enforcement_level") in ACK_REQUIRED_LEVELS
+        }
+    )
 
 
 def route_lesson(repo_root: Path, record: LessonRecord) -> list[Path]:
@@ -280,6 +358,12 @@ def preflight(
     model: str | None = None,
 ) -> dict[str, Any]:
     sid = new_session_id()
+    baseline_changed_files = git_changed_files(target_repo)
+    learning_rule_matches = match_learning_rules(
+        hub_root,
+        task=task,
+        paths=baseline_changed_files,
+    )
     payload: dict[str, Any] = {
         "schema_version": "0.1.0",
         "session_id": sid,
@@ -289,8 +373,13 @@ def preflight(
         "model": model,
         "task": task,
         "status": "open",
-        "baseline_changed_files": git_changed_files(target_repo),
+        "baseline_changed_files": baseline_changed_files,
         "required_postflight": True,
+        "learning_rule_matches": learning_rule_matches,
+        "required_learning_rule_acknowledgements": required_learning_rule_ids(
+            learning_rule_matches
+        ),
+        "learning_rule_acknowledgements": [],
     }
     write_json(hub_root / "state" / "agent_sessions" / f"{sid.split(':')[-1]}.json", payload)
     append_jsonl(
@@ -298,6 +387,51 @@ def preflight(
         {"event_type": "agent_preflight", **payload},
     )
     return payload
+
+
+def midflight(
+    hub_root: Path,
+    sid: str,
+    *,
+    context: list[str] | None = None,
+    paths: list[str] | None = None,
+    ack_rules: list[str] | None = None,
+) -> dict[str, Any]:
+    session_path, session = load_session(hub_root, sid)
+    path_values = [
+        *session.get("baseline_changed_files", []),
+        *(paths or []),
+    ]
+    matches = match_learning_rules(
+        hub_root,
+        task=str(session.get("task", "")),
+        context=context or [],
+        paths=path_values,
+    )
+    required = required_learning_rule_ids(matches)
+    acknowledged = sorted(set(session.get("learning_rule_acknowledgements", [])) | set(ack_rules or []))
+    missing = sorted(set(required) - set(acknowledged))
+    created = utc_now()
+    result = {
+        "schema_version": "0.1.0",
+        "session_id": sid,
+        "created_at": created,
+        "status": "blocked_missing_learning_rule_ack" if missing else "ok",
+        "matched_rules": matches,
+        "required_learning_rule_acknowledgements": required,
+        "learning_rule_acknowledgements": acknowledged,
+        "missing_learning_rule_acknowledgements": missing,
+    }
+    session["learning_rule_matches"] = matches
+    session["required_learning_rule_acknowledgements"] = required
+    session["learning_rule_acknowledgements"] = acknowledged
+    session.setdefault("midflight_checks", []).append(result)
+    write_json(session_path, session)
+    append_jsonl(
+        hub_root / "audit" / "events" / f"{created[:10]}.jsonl",
+        {"event_type": "agent_midflight", **result},
+    )
+    return result
 
 
 def load_session(hub_root: Path, sid: str) -> tuple[Path, dict[str, Any]]:

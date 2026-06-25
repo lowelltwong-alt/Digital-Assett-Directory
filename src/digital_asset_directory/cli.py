@@ -7,6 +7,13 @@ from typing import Optional, cast
 import typer
 from rich.console import Console
 
+from .archaeology import (
+    append_repo_learning_event,
+    install_repo_learning_loop,
+    write_archaeology_outputs,
+    write_root_cause_lesson_outputs,
+)
+from .asset_families import write_asset_family_reports, write_learning_loop_outputs
 from .calibration import (
     build_asset_calibration_review_queue,
     import_asset_calibration_review_csv,
@@ -25,6 +32,7 @@ from .governance import enforce_postflight, install_governance, scaffold_new_rep
 from .learning import (
     add_asset_use_feedback,
     add_lesson,
+    midflight,
     postflight,
     preflight,
     rebuild_lesson_routes,
@@ -49,6 +57,7 @@ from .recommendations import recommend_skills_and_agents, recommend_swarm
 from .readiness import write_downstream_pilot_candidates, write_phase45_readiness_reports
 from .research import research_missing_parts
 from .roadmap import check_roadmap
+from .semantic_evolution import write_semantic_evolution_outputs
 from .validation import validate_repo
 
 app = typer.Typer(no_args_is_help=True, help="Digital Asset Directory portfolio intelligence CLI.")
@@ -255,6 +264,45 @@ def lesson_asset_use(
     console.print(record.lesson_id)
 
 
+@lesson_app.command("repo-event")
+def lesson_repo_event(
+    repository: Path = typer.Option(Path("."), "--repo"),
+    stage: str = typer.Option(..., "--stage"),
+    task: str = typer.Option(..., "--task"),
+    agent: str = typer.Option("human", "--agent"),
+    context_tag: list[str] = typer.Option([], "--context-tag"),
+    asset_used: list[str] = typer.Option([], "--asset-used"),
+    expected_value: str = typer.Option("", "--expected-value"),
+    actual_value: str = typer.Option("", "--actual-value"),
+    failure_class: str = typer.Option("", "--failure-class"),
+    dependency_order_notes: str = typer.Option("", "--dependency-order-notes"),
+    evidence: list[str] = typer.Option([], "--evidence"),
+) -> None:
+    """Append a repo-local candidate learning event as data, never executable instructions."""
+    stage_value = stage.lower()
+    if stage_value not in {"before_work", "during_failure", "after_work", "review"}:
+        console.print("Stage must be one of: before_work, during_failure, after_work, review")
+        raise typer.Exit(2)
+    try:
+        record = append_repo_learning_event(
+            repository,
+            stage=stage_value,
+            task=task,
+            agent=agent,
+            context_tags=context_tag,
+            assets_used=asset_used,
+            expected_value=expected_value,
+            actual_value=actual_value,
+            failure_class=failure_class,
+            dependency_order_notes=dependency_order_notes,
+            evidence=evidence,
+        )
+    except ValueError as exc:
+        console.print(str(exc))
+        raise typer.Exit(2) from exc
+    console.print_json(data=record.model_dump(mode="json"))
+
+
 @agent_app.command("preflight")
 def agent_preflight(
     repository: Path = typer.Option(Path("."), "--repo"),
@@ -319,6 +367,32 @@ def agent_postflight(
     )
 
 
+@agent_app.command("midflight")
+def agent_midflight(
+    session: str = typer.Option(...),
+    hub: Optional[Path] = typer.Option(None),
+    context: list[str] = typer.Option([], "--context"),
+    path: list[str] = typer.Option([], "--path"),
+    ack_rule: list[str] = typer.Option([], "--ack-rule"),
+) -> None:
+    """Check and acknowledge deterministic learning rules during material work."""
+    cfg = _cfg(hub=hub)
+    try:
+        result = midflight(
+            cfg.repo_root,
+            session,
+            context=context,
+            paths=path,
+            ack_rules=ack_rule,
+        )
+    except FileNotFoundError as exc:
+        console.print(str(exc))
+        raise typer.Exit(2) from exc
+    console.print_json(data=result)
+    if result["missing_learning_rule_acknowledgements"]:
+        raise typer.Exit(2)
+
+
 @agent_app.command("install")
 def agent_install(
     repository: Path = typer.Option(..., "--repo"),
@@ -328,6 +402,21 @@ def agent_install(
     cfg = _cfg(hub=hub)
     changed = install_governance(repository, cfg.repo_root, force)
     console.print("\n".join(str(path) for path in changed))
+
+
+@agent_app.command("install-learning-loop")
+def agent_install_learning_loop(
+    repository: Path = typer.Option(..., "--repo"),
+    mode: str = typer.Option("files-only", "--mode"),
+    force: bool = False,
+) -> None:
+    """Install files-only repo learning-loop templates; no hooks are created."""
+    try:
+        changed = install_repo_learning_loop(repository, mode=mode, force=force)
+    except ValueError as exc:
+        console.print(str(exc))
+        raise typer.Exit(2) from exc
+    console.print_json(data={"repo": str(repository.resolve()), "changed": [str(path) for path in changed]})
 
 
 @agent_app.command("new")
@@ -383,6 +472,135 @@ def recommend_swarm_command(
     with CatalogDB(cfg.database_path) as db:
         record = recommend_swarm(goal, db.assets(), limit)
     console.print_json(data=record.model_dump(mode="json"))
+
+
+@recommend_app.command("asset-families")
+def recommend_asset_families(
+    hub: Optional[Path] = typer.Option(None),
+    source_id: str = typer.Option("all", "--source-id"),
+    review_sample: int = typer.Option(50, "--review-sample", min=1, max=200),
+) -> None:
+    """Write generated candidate reports for high-leverage asset-family patterns."""
+    cfg = _cfg(hub=hub)
+    with CatalogDB(cfg.database_path) as db:
+        result = write_asset_family_reports(
+            cfg.repo_root,
+            db.assets(),
+            source_id=source_id,
+            review_sample=review_sample,
+        )
+    console.print_json(data=result)
+
+
+@recommend_app.command("learning-loops")
+def recommend_learning_loops(
+    hub: Optional[Path] = typer.Option(None),
+    source_id: str = typer.Option("all", "--source-id"),
+    review_sample: int = typer.Option(25, "--review-sample", min=1, max=200),
+) -> None:
+    """Write generated candidate learning-loop records from the current catalog."""
+    cfg = _cfg(hub=hub)
+    with CatalogDB(cfg.database_path) as db:
+        latest_scan = db.latest_scan()
+        scan_id = latest_scan["scan_id"] if latest_scan else "catalog-without-scan"
+        result = write_learning_loop_outputs(
+            cfg.repo_root,
+            db.assets(),
+            scan_id=scan_id,
+            source_id=source_id,
+            review_sample=review_sample,
+        )
+    console.print_json(data=result)
+
+
+@recommend_app.command("archaeology")
+def recommend_archaeology(
+    hub: Optional[Path] = typer.Option(None),
+    source_id: str = typer.Option("all", "--source-id"),
+    include_worktrees: bool = typer.Option(True, "--include-worktrees/--exclude-worktrees"),
+    include_temp: bool = typer.Option(True, "--include-temp/--exclude-temp"),
+    max_repos: int = typer.Option(25, "--max-repos", min=1, max=100),
+    max_commits: int = typer.Option(200, "--max-commits", min=1, max=1000),
+    review_sample: int = typer.Option(50, "--review-sample", min=1, max=200),
+) -> None:
+    """Write generated worktree, git-history, failure, and change-pattern archaeology reports."""
+    cfg = _cfg(hub=hub)
+    with CatalogDB(cfg.database_path) as db:
+        latest_scan = db.latest_scan()
+        scan_id = latest_scan["scan_id"] if latest_scan else "catalog-without-scan"
+        result = write_archaeology_outputs(
+            cfg.repo_root,
+            db.assets(),
+            cfg.local_sources,
+            scan_id=scan_id,
+            source_id=source_id,
+            include_worktrees=include_worktrees,
+            include_temp=include_temp,
+            max_repos=max_repos,
+            max_commits=max_commits,
+            review_sample=review_sample,
+        )
+    console.print_json(data=result)
+
+
+@recommend_app.command("root-cause-lessons")
+def recommend_root_cause_lessons(
+    hub: Optional[Path] = typer.Option(None),
+    source_id: str = typer.Option("all", "--source-id"),
+    include_worktrees: bool = typer.Option(True, "--include-worktrees/--exclude-worktrees"),
+    include_temp: bool = typer.Option(True, "--include-temp/--exclude-temp"),
+    max_repos: int = typer.Option(25, "--max-repos", min=1, max=100),
+    max_commits: int = typer.Option(200, "--max-commits", min=1, max=1000),
+    review_sample: int = typer.Option(50, "--review-sample", min=1, max=200),
+) -> None:
+    """Write generated context-bound root-cause and counterfactual lesson candidates."""
+    cfg = _cfg(hub=hub)
+    with CatalogDB(cfg.database_path) as db:
+        latest_scan = db.latest_scan()
+        scan_id = latest_scan["scan_id"] if latest_scan else "catalog-without-scan"
+        result = write_root_cause_lesson_outputs(
+            cfg.repo_root,
+            db.assets(),
+            cfg.local_sources,
+            scan_id=scan_id,
+            source_id=source_id,
+            include_worktrees=include_worktrees,
+            include_temp=include_temp,
+            max_repos=max_repos,
+            max_commits=max_commits,
+            review_sample=review_sample,
+        )
+    console.print_json(data=result)
+
+
+@recommend_app.command("semantic-evolution")
+def recommend_semantic_evolution(
+    hub: Optional[Path] = typer.Option(None),
+    source_id: str = typer.Option("all", "--source-id"),
+    basename: Optional[str] = typer.Option(None, "--basename"),
+    asset_type: str = typer.Option("schema", "--asset-type"),
+    max_families: int = typer.Option(100, "--max-families", min=1, max=500),
+    review_sample: int = typer.Option(50, "--review-sample", min=1, max=200),
+    max_read_bytes: int = typer.Option(1_000_000, "--max-read-bytes", min=0),
+) -> None:
+    """Grade structured semantic evolution versus copy/fixture noise from the current catalog."""
+    cfg = _cfg(hub=hub)
+    with CatalogDB(cfg.database_path) as db:
+        latest_scan = db.latest_scan()
+        scan_id = latest_scan["scan_id"] if latest_scan else "catalog-without-scan"
+        result = write_semantic_evolution_outputs(
+            cfg.repo_root,
+            db.assets(),
+            cfg.local_sources,
+            scan_id=scan_id,
+            source_id=source_id,
+            basename=basename,
+            asset_type=asset_type,
+            max_families=max_families,
+            review_sample=review_sample,
+            max_read_bytes=max_read_bytes,
+        )
+    console.print_json(data=result)
 
 
 @recommend_app.command("proposals")

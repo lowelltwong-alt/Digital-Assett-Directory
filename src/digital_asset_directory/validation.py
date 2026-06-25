@@ -18,7 +18,9 @@ def validate_repo(repo_root: Path) -> dict[str, Any]:
         "MACHINE_NAVIGATION_MANIFEST.json",
         "registry/source-of-truth.json",
         "registry/design-authority.json",
+        "registry/identity-layer-registry.json",
         "registry/schema-registry.json",
+        "docs/ASSET_IDENTITY_AND_SIMILARITY_LADDER.md",
         "config/sources.example.yaml",
         "roadmap/roadmap.yaml",
         "src/digital_asset_directory/cli.py",
@@ -60,6 +62,68 @@ def validate_repo(repo_root: Path) -> dict[str, Any]:
                 errors.append(f"Schema registry entry missing ({name}): {rel}")
     except Exception:
         pass
+    try:
+        registry = json.loads(
+            (repo_root / "registry" / "schema-registry.json").read_text(encoding="utf-8")
+        )
+        schema_path = repo_root / registry["schemas"]["learning_rule"]
+        schema = json.loads(schema_path.read_text(encoding="utf-8"))
+        payload = json.loads(
+            (repo_root / "registry" / "learning-rule-registry.json").read_text(
+                encoding="utf-8"
+            )
+        )
+        validator_cls = validator_for(schema)
+        validator_cls.check_schema(schema)
+        validator = validator_cls(schema)
+        rule_ids: list[str] = []
+        for rule in payload.get("rules", []):
+            validator.validate(rule)
+            rule_ids.append(rule["rule_id"])
+        if len(rule_ids) != len(set(rule_ids)):
+            errors.append("Learning rule registry has duplicate rule IDs")
+        checked.append("registry/learning-rule-registry.json")
+    except Exception as exc:
+        errors.append(f"Invalid learning rule registry: {exc}")
+    try:
+        registry = json.loads(
+            (repo_root / "registry" / "schema-registry.json").read_text(encoding="utf-8")
+        )
+        schema_path = repo_root / registry["schemas"]["asset_identity_layer"]
+        schema = json.loads(schema_path.read_text(encoding="utf-8"))
+        payload = json.loads(
+            (repo_root / "registry" / "identity-layer-registry.json").read_text(
+                encoding="utf-8"
+            )
+        )
+        validator_cls = validator_for(schema)
+        validator_cls.check_schema(schema)
+        validator_cls(schema).validate(payload)
+        authority_doc = repo_root / payload["authority_doc"]
+        if not authority_doc.exists():
+            errors.append(f"Identity layer authority doc missing: {payload['authority_doc']}")
+        layers = payload.get("layers", [])
+        layer_ids = [layer["id"] for layer in layers]
+        layer_orders = [layer["order"] for layer in layers]
+        required_layers = {
+            "metadata_fingerprint",
+            "sha256",
+            "chunk_hashes",
+            "extracted_text",
+            "embeddings",
+            "knowledge_graph",
+            "audit_log",
+        }
+        missing_layers = sorted(required_layers - set(layer_ids))
+        if missing_layers:
+            errors.append(f"Identity layer registry missing required layers: {missing_layers}")
+        if len(layer_ids) != len(set(layer_ids)):
+            errors.append("Identity layer registry has duplicate layer IDs")
+        if len(layer_orders) != len(set(layer_orders)):
+            errors.append("Identity layer registry has duplicate layer order values")
+        checked.append("registry/identity-layer-registry.json")
+    except Exception as exc:
+        errors.append(f"Invalid identity layer registry: {exc}")
     proposal_schema_path = repo_root / "schemas" / "proposal.schema.json"
     proposal_examples_dir = repo_root / "examples" / "proposals"
     if proposal_schema_path.exists() and proposal_examples_dir.exists():

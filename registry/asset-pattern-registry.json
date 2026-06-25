@@ -75,6 +75,132 @@
       ]
     },
     {
+      "id": "route_isolated_evaluation_harness",
+      "label": "Route-isolated evaluation harness",
+      "description": "Routing, chunking, form classification, context packets, scorecards, and gold cases that evaluate different asset forms without mixing authority boundaries.",
+      "leverage": "very_high",
+      "recognition_mode": "repository_composite",
+      "positive_signals": [
+        "route or form classification assets",
+        "chunk or context-packet assets",
+        "evaluation or scorecard assets",
+        "gold cases or review packets"
+      ],
+      "missing_evidence": [
+        "route-level precision and recall",
+        "human-labeled gold set",
+        "contamination and fallback tests"
+      ]
+    },
+    {
+      "id": "agent_skill_graph_system",
+      "label": "Agent and skill graph system",
+      "description": "Agents, skills, capability registries, tool routes, handoffs, and graph relationships that let future agents discover and compose the right capabilities.",
+      "leverage": "very_high",
+      "recognition_mode": "repository_composite",
+      "positive_signals": [
+        "agent or skill assets",
+        "capability or tool registry",
+        "handoff or orchestration workflow",
+        "knowledge-graph edges between capabilities"
+      ],
+      "missing_evidence": [
+        "actual agent-use feedback",
+        "capability conflict rules",
+        "evaluation of discovery quality"
+      ]
+    },
+    {
+      "id": "boundary_contamination_firewall",
+      "label": "Boundary and contamination firewall",
+      "description": "Rules, validators, or workflows that prevent generated candidates, retrieved context, or external assets from overriding source authority.",
+      "leverage": "very_high",
+      "recognition_mode": "repository_composite",
+      "positive_signals": [
+        "authority boundary language",
+        "candidate-only or source-owned trust zones",
+        "prompt-injection or contamination defenses",
+        "human gate or quarantine rules"
+      ],
+      "missing_evidence": [
+        "attack/failure tests",
+        "bypass policy",
+        "reviewed enforcement boundary"
+      ]
+    },
+    {
+      "id": "proposal_promotion_workflow",
+      "label": "Proposal-to-promotion workflow",
+      "description": "Candidate proposals, review gates, promotion logs, validators, and rollback paths that turn observations into reviewed changes only after human approval.",
+      "leverage": "very_high",
+      "recognition_mode": "repository_composite",
+      "positive_signals": [
+        "proposal records",
+        "promotion decisions",
+        "human review gates",
+        "validator or registry update path"
+      ],
+      "missing_evidence": [
+        "reviewed promotion examples",
+        "rollback or rejection examples",
+        "source-authority boundary tests"
+      ]
+    },
+    {
+      "id": "frontier_signal_intake_loop",
+      "label": "Frontier signal intake loop",
+      "description": "Research, literature, watch items, external signals, and review gates that surface new ideas without automatically importing them as truth.",
+      "leverage": "high",
+      "recognition_mode": "repository_composite",
+      "positive_signals": [
+        "research radar assets",
+        "frontier or literature watch language",
+        "source provenance fields",
+        "license and review gates"
+      ],
+      "missing_evidence": [
+        "source terms review",
+        "false-positive review",
+        "human-curated adoption decision"
+      ]
+    },
+    {
+      "id": "gold_review_packet_system",
+      "label": "Gold set and review packet system",
+      "description": "Gold cases, expected outputs, review packets, labels, and scoring rubrics that make future evaluation and calibration repeatable.",
+      "leverage": "very_high",
+      "recognition_mode": "repository_composite",
+      "positive_signals": [
+        "gold or golden cases",
+        "review packets",
+        "labels or scorecards",
+        "calibration or benchmark files"
+      ],
+      "missing_evidence": [
+        "reviewed labels",
+        "sampling rationale",
+        "calibration history"
+      ]
+    },
+    {
+      "id": "duplicate_variant_preservation_system",
+      "label": "Duplicate and variant preservation system",
+      "description": "Exact identity, near-duplicate, variant, delta, and archive lineage evidence that preserves similar assets while making their differences reviewable.",
+      "leverage": "high",
+      "recognition_mode": "cluster",
+      "positive_signals": [
+        "duplicate or variant language",
+        "delta records",
+        "archive lineage",
+        "chunk, shingle, fingerprint, or hash evidence"
+      ],
+      "missing_evidence": [
+        "human-reviewed delta summary",
+        "merge, variant, or supersession decision",
+        "strength/weakness comparison"
+      ]
+    },
+    {
       "id": "model_algorithm_system",
       "label": "Model, algorithm, or forecasting system",
       "description": "Algorithms, scoring models, forecasters, simulations, optimization models, or frontier math assets paired with tests/data.",
@@ -126,6 +252,25 @@
         "human comparison",
         "shared-core summary",
         "merge-or-keep-variant decision"
+      ]
+    },
+    {
+      "id": "semantic_evolution_grading_system",
+      "label": "Semantic evolution grading system",
+      "description": "A deterministic workflow that separates behavior-relevant evolution from copy, fixture, formatting, path, and metadata noise across asset families.",
+      "leverage": "very_high",
+      "recognition_mode": "repository_composite",
+      "positive_signals": [
+        "semantic evolution or version lineage language",
+        "explicit scoring methodology and grade registry",
+        "separate semantic_change_score and noise_score",
+        "candidate graph edges for evolved_from, semantic_variant_of, noise_variant_of, or lineage_evidence_for",
+        "tests proving semantic changes are not confused with fixture or formatting churn"
+      ],
+      "missing_evidence": [
+        "human-reviewed threshold calibration",
+        "reviewed family-level delta examples",
+        "precision/recall for semantic-vs-noise classification"
       ]
     },
     {

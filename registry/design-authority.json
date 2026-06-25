@@ -4,6 +4,7 @@
   "principles": [
     "read_only_by_default",
     "stable_identity_separate_from_revision",
+    "asset_identity_and_similarity_ladder_controls_reuse_discovery",
     "raw_observations_are_append_only",
     "processed_outputs_are_regenerable",
     "source_repo_authority_is_preserved",
@@ -20,6 +21,7 @@
     "unreviewed_autonomous_self_modification",
     "production_secret_management",
     "claiming_graph_scores_are_ground_truth",
+    "claiming_sha256_or_similarity_alone_proves_asset_value_or_authority",
     "replacing_source_repository_front_doors"
   ]
 }

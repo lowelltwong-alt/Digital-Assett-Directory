@@ -1,0 +1,133 @@
+{
+  "registry_version": "0.1.0",
+  "status": "seed",
+  "tags": [
+    {
+      "schema_version": "0.1.0",
+      "context_tag_id": "route_isolation",
+      "label": "Route isolation",
+      "description": "Separate forms, sources, or workflow routes need separate handling before outputs are promoted.",
+      "applies_when": ["Assets mention route classification, routing, form handling, or route-specific evaluation."],
+      "does_not_apply_when": ["The task has only one stable source form and no route-dependent behavior."],
+      "risk_if_misapplied": "May overcomplicate a simple workflow and delay useful work."
+    },
+    {
+      "schema_version": "0.1.0",
+      "context_tag_id": "chunking",
+      "label": "Chunking",
+      "description": "Text, code, or corpus assets are split into reusable chunks, packets, or spans.",
+      "applies_when": ["Assets mention chunks, spans, context packets, token windows, or source segmentation."],
+      "does_not_apply_when": ["The asset is not content-like or does not need retrieval/comparison."],
+      "risk_if_misapplied": "May treat arbitrary file boundaries as meaningful evidence."
+    },
+    {
+      "schema_version": "0.1.0",
+      "context_tag_id": "gold_promotion",
+      "label": "Gold promotion",
+      "description": "Expected outputs, gold cases, or reviewed examples are promoted through a gate.",
+      "applies_when": ["Tests, fixtures, review packets, or docs mention gold, golden, reviewed examples, or promotion decisions."],
+      "does_not_apply_when": ["Examples are exploratory, unreviewed, or intentionally temporary."],
+      "risk_if_misapplied": "May freeze bad examples as truth before review."
+    },
+    {
+      "schema_version": "0.1.0",
+      "context_tag_id": "schema_contract",
+      "label": "Schema contract",
+      "description": "Schemas, validators, type contracts, or structured data constraints govern behavior.",
+      "applies_when": ["Assets include JSON Schema, validators, typed contracts, or schema-conformance tests."],
+      "does_not_apply_when": ["The work is exploratory prose or does not create structured records."],
+      "risk_if_misapplied": "May force premature structure before the domain is understood."
+    },
+    {
+      "schema_version": "0.1.0",
+      "context_tag_id": "source_authority",
+      "label": "Source authority",
+      "description": "A source repository, source corpus, or authority file retains control over meaning.",
+      "applies_when": ["The lesson touches source truth, canon, provenance, or generated candidate evidence."],
+      "does_not_apply_when": ["The work is purely local generated reporting with no authority implications."],
+      "risk_if_misapplied": "May block harmless derived reporting or overstate authority concerns."
+    },
+    {
+      "schema_version": "0.1.0",
+      "context_tag_id": "human_gate",
+      "label": "Human gate",
+      "description": "A human decision is required before promotion, mutation, merge, or default behavior change.",
+      "applies_when": ["Assets mention review gates, approval, preflight, postflight, or explicit human decisions."],
+      "does_not_apply_when": ["The action is generated-only reporting or a reversible local fixture."],
+      "risk_if_misapplied": "May unnecessarily slow safe deterministic reporting."
+    },
+    {
+      "schema_version": "0.1.0",
+      "context_tag_id": "duplicate_variant",
+      "label": "Duplicate or variant",
+      "description": "Assets appear repeated, copied, near-duplicate, variant, or delta-worthy.",
+      "applies_when": ["Same names, paths, hashes, chunks, or roles recur across repos, worktrees, or archives."],
+      "does_not_apply_when": ["Similar names refer to intentionally independent modules."],
+      "risk_if_misapplied": "May collapse useful variants or overstate sameness."
+    },
+    {
+      "schema_version": "0.1.0",
+      "context_tag_id": "temp_fixture_noise",
+      "label": "Temp fixture noise",
+      "description": "Evidence comes from temp folders, test scaffolds, synthetic repos, or generated fixtures.",
+      "applies_when": ["Paths include pytest temp roots, tmp/temp directories, fixture repos, or generated test workspaces."],
+      "does_not_apply_when": ["The path is an active source repository or curated archive."],
+      "risk_if_misapplied": "May promote synthetic failures or fixture patterns as production lessons."
+    },
+    {
+      "schema_version": "0.1.0",
+      "context_tag_id": "dependency_ordering",
+      "label": "Dependency ordering",
+      "description": "The order of build steps, validators, schemas, gates, or data sources likely affected outcome quality.",
+      "applies_when": ["Failures appear before tests, validators, schemas, review gates, or source manifests are added."],
+      "does_not_apply_when": ["Evidence does not include a sequence or dependency relationship."],
+      "risk_if_misapplied": "May invent an order from coincidental co-occurrence."
+    },
+    {
+      "schema_version": "0.1.0",
+      "context_tag_id": "late_stabilizer",
+      "label": "Late stabilizer",
+      "description": "A test, validator, schema, gate, or review packet appears late after repeated failure signals.",
+      "applies_when": ["A stabilizing artifact appears after error, failure, revert, or drift evidence."],
+      "does_not_apply_when": ["The stabilizer was present from the start or the sequence is unknown."],
+      "risk_if_misapplied": "May blame missing gates when the real cause was changing requirements."
+    },
+    {
+      "schema_version": "0.1.0",
+      "context_tag_id": "repeated_failure",
+      "label": "Repeated failure",
+      "description": "Similar failures, TODOs, reverts, or error terms recur across attempts or history.",
+      "applies_when": ["Failure-like terms recur in multiple assets, commits, tests, or worktrees."],
+      "does_not_apply_when": ["Only one isolated failure signal exists."],
+      "risk_if_misapplied": "May overweight common words like error or fail without task context."
+    },
+    {
+      "schema_version": "0.1.0",
+      "context_tag_id": "counterfactual_sequence",
+      "label": "Counterfactual sequence",
+      "description": "A candidate lesson proposes a better order for future similar work.",
+      "applies_when": ["Evidence supports a plausible 'do X before Y next time' ordering."],
+      "does_not_apply_when": ["The order is a preference without failure, timing, or dependency evidence."],
+      "risk_if_misapplied": "May turn one project's recovery path into a rigid universal process."
+    },
+    {
+      "schema_version": "0.1.0",
+      "context_tag_id": "score_methodology",
+      "label": "Score methodology",
+      "description": "A calculated score, grade, confidence, threshold, lift, risk, or similarity value needs an explicit formula and methodology version.",
+      "applies_when": ["The task creates, changes, interprets, or uses a calculated value for review, ranking, graph edges, or roadmap evidence."],
+      "does_not_apply_when": ["The work only stores raw observations and no calculated value is introduced or used."],
+      "risk_if_misapplied": "May add unnecessary ceremony to simple raw evidence, or hide formulas when applied too weakly."
+    },
+    {
+      "schema_version": "0.1.0",
+      "context_tag_id": "calibration",
+      "label": "Calibration",
+      "description": "Human or measured review is comparing generated heuristics against observed usefulness, correctness, safety, or future value.",
+      "applies_when": ["The task reviews labels, thresholds, score bands, false positives, false negatives, or weight changes."],
+      "does_not_apply_when": ["The task only generates candidate records without review or measured comparison."],
+      "risk_if_misapplied": "May imply a score is validated when it is only generated or guessed."
+    }
+  ],
+  "rule": "Context tags are candidate routing and safety labels. They help constrain lessons; they do not prove that a lesson applies."
+}

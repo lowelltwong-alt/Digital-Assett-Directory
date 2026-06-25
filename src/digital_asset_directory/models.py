@@ -104,6 +104,50 @@ class AssetDeltaRecord(BaseModel):
     review_status: Literal["generated_candidate", "reviewed", "rejected"] = "generated_candidate"
 
 
+class SemanticEvolutionRecord(BaseModel):
+    schema_version: str = "0.1.0"
+    evolution_id: str
+    family_key: str = Field(min_length=1)
+    asset_type: str = ""
+    source_asset_ids: list[str] = Field(min_length=1)
+    representative_paths: list[str] = Field(default_factory=list)
+    path_class_counts: dict[str, int] = Field(default_factory=dict)
+    raw_version_count: int = Field(ge=0)
+    normalized_version_count: int = Field(ge=0)
+    semantic_version_count: int = Field(ge=0)
+    evolution_grade: Literal[
+        "insufficient_evidence",
+        "none",
+        "cosmetic_metadata",
+        "minor_semantic",
+        "moderate_semantic",
+        "major_semantic",
+        "breaking_semantic",
+    ]
+    noise_class: Literal[
+        "insufficient_evidence",
+        "exact_copy",
+        "format_or_order_noise",
+        "path_or_metadata_noise",
+        "fixture_lineage_noise",
+        "mixed_signal",
+    ]
+    semantic_change_score: float = Field(ge=0, le=1)
+    noise_score: float = Field(ge=0, le=1)
+    methodology_version: str = "semantic-evolution-grading-v1"
+    grading_summary: str = Field(min_length=1)
+    structural_changes: dict[str, Any] = Field(default_factory=dict)
+    current_instance_score_guidance: str = Field(min_length=1)
+    family_value_guidance: str = Field(min_length=1)
+    graph_edge_suggestions: list[str] = Field(default_factory=list)
+    applies_when: list[str] = Field(min_length=1)
+    does_not_apply_when: list[str] = Field(min_length=1)
+    evidence: dict[str, Any] = Field(min_length=1)
+    generated_at: str
+    scan_id: str
+    review_status: Literal["generated_candidate", "reviewed", "rejected"] = "generated_candidate"
+
+
 class SynergyRecord(BaseModel):
     synergy_id: str
     asset_ids: list[str] = Field(min_length=2, max_length=3)
@@ -166,6 +210,23 @@ class LessonRecord(BaseModel):
         "candidate"
     )
     session_id: str | None = None
+
+
+class LearningRuleRecord(BaseModel):
+    schema_version: str = "0.1.0"
+    rule_id: str
+    title: str = Field(min_length=1)
+    summary: str = Field(min_length=1)
+    trigger_terms: list[str] = Field(default_factory=list)
+    trigger_path_patterns: list[str] = Field(default_factory=list)
+    context_tags: list[str] = Field(default_factory=list)
+    applies_when: list[str] = Field(min_length=1)
+    does_not_apply_when: list[str] = Field(min_length=1)
+    required_actions: list[str] = Field(min_length=1)
+    danger_if_ignored: str = Field(min_length=1)
+    evidence: list[str] = Field(default_factory=list)
+    enforcement_level: Literal["surface", "require_ack", "human_gate"] = "surface"
+    review_status: Literal["generated_candidate", "reviewed", "rejected"] = "reviewed"
 
 
 class HandoffRecord(BaseModel):
@@ -257,6 +318,180 @@ class ProposalReviewRecord(BaseModel):
     false_negative_note: str = ""
     useful_example_note: str = ""
     evidence: dict[str, Any] = Field(default_factory=dict)
+    review_status: Literal["generated_candidate", "reviewed", "rejected"] = "generated_candidate"
+
+
+class LearningLoopRecord(BaseModel):
+    schema_version: str = "0.1.0"
+    learning_loop_id: str
+    learning_loop_type: Literal[
+        "governed_learning_loop",
+        "asset_use_feedback_loop",
+        "evaluation_promotion_loop",
+        "exception_to_adaptation_loop",
+    ]
+    source_asset_ids: list[str] = Field(min_length=1)
+    expectation_source: str = Field(min_length=1)
+    exception_signal: str = Field(min_length=1)
+    adaptation_proposal: str = Field(min_length=1)
+    review_gate: str = Field(min_length=1)
+    promotion_target: str = Field(min_length=1)
+    evidence: dict[str, Any] = Field(min_length=1)
+    confidence: ConfidenceLabel = "medium"
+    risk: Literal["low", "medium", "high"] = "medium"
+    authority_boundary: str = Field(min_length=1)
+    generated_at: str
+    scan_id: str
+    review_status: Literal["generated_candidate", "reviewed", "rejected"] = "generated_candidate"
+
+
+class ContextTagRecord(BaseModel):
+    schema_version: str = "0.1.0"
+    context_tag_id: str
+    label: str = Field(min_length=1)
+    description: str = Field(min_length=1)
+    applies_when: list[str] = Field(min_length=1)
+    does_not_apply_when: list[str] = Field(default_factory=list)
+    risk_if_misapplied: str = Field(min_length=1)
+
+
+class WorktreeAttemptRecord(BaseModel):
+    schema_version: str = "0.1.0"
+    attempt_id: str
+    attempt_kind: Literal["repository", "worktree", "temp", "archive"]
+    repo_lineage_key: str = Field(min_length=1)
+    attempt_path: str = Field(min_length=1)
+    task_hint: str = ""
+    branch_name: str = ""
+    source_asset_ids: list[str] = Field(default_factory=list)
+    context_tags: list[str] = Field(default_factory=list)
+    evidence: dict[str, Any] = Field(min_length=1)
+    generated_at: str
+    scan_id: str
+    review_status: Literal["generated_candidate", "reviewed", "rejected"] = "generated_candidate"
+
+
+class RepoTimelineEventRecord(BaseModel):
+    schema_version: str = "0.1.0"
+    timeline_event_id: str
+    repository_path: str = Field(min_length=1)
+    event_type: Literal[
+        "commit",
+        "merge",
+        "revert",
+        "file_change",
+        "changelog",
+        "ci_artifact",
+        "learning_event",
+    ]
+    occurred_at: str
+    asset_ids: list[str] = Field(default_factory=list)
+    changed_paths: list[str] = Field(default_factory=list)
+    summary: str = Field(min_length=1)
+    evidence: dict[str, Any] = Field(min_length=1)
+    context_tags: list[str] = Field(default_factory=list)
+    generated_at: str
+    scan_id: str
+    review_status: Literal["generated_candidate", "reviewed", "rejected"] = "generated_candidate"
+
+
+class ChangePatternRecord(BaseModel):
+    schema_version: str = "0.1.0"
+    change_pattern_id: str
+    pattern_type: Literal[
+        "co_change",
+        "repeated_edit",
+        "variant_file",
+        "late_stabilizer",
+        "changelog_theme",
+    ]
+    asset_ids: list[str] = Field(default_factory=list)
+    paths: list[str] = Field(default_factory=list)
+    summary: str = Field(min_length=1)
+    evidence: dict[str, Any] = Field(min_length=1)
+    context_tags: list[str] = Field(default_factory=list)
+    confidence: ConfidenceLabel = "medium"
+    risk: Literal["low", "medium", "high"] = "medium"
+    generated_at: str
+    scan_id: str
+    review_status: Literal["generated_candidate", "reviewed", "rejected"] = "generated_candidate"
+
+
+class FailureSignalRecord(BaseModel):
+    schema_version: str = "0.1.0"
+    failure_signal_id: str
+    signal_type: Literal[
+        "test_failure",
+        "error_word",
+        "todo_fixme",
+        "revert",
+        "drift",
+        "missing_gate",
+    ]
+    asset_ids: list[str] = Field(default_factory=list)
+    signal_terms: list[str] = Field(min_length=1)
+    summary: str = Field(min_length=1)
+    evidence: dict[str, Any] = Field(min_length=1)
+    context_tags: list[str] = Field(default_factory=list)
+    confidence: ConfidenceLabel = "medium"
+    risk: Literal["low", "medium", "high"] = "medium"
+    generated_at: str
+    scan_id: str
+    review_status: Literal["generated_candidate", "reviewed", "rejected"] = "generated_candidate"
+
+
+class RootCauseHypothesisRecord(BaseModel):
+    schema_version: str = "0.1.0"
+    root_cause_id: str
+    hypothesis: str = Field(min_length=1)
+    evidence_asset_ids: list[str] = Field(default_factory=list)
+    source_events: list[str] = Field(min_length=1)
+    context_tags: list[str] = Field(min_length=1)
+    applies_when: list[str] = Field(min_length=1)
+    does_not_apply_when: list[str] = Field(min_length=1)
+    confidence: ConfidenceLabel = "medium"
+    risk: Literal["low", "medium", "high"] = "medium"
+    authority_boundary: str = Field(min_length=1)
+    generated_at: str
+    scan_id: str
+    review_status: Literal["generated_candidate", "reviewed", "rejected"] = "generated_candidate"
+
+
+class CounterfactualLessonRecord(BaseModel):
+    schema_version: str = "0.1.0"
+    lesson_candidate_id: str
+    lesson_candidate: str = Field(min_length=1)
+    applies_when: list[str] = Field(min_length=1)
+    does_not_apply_when: list[str] = Field(min_length=1)
+    danger_if_misapplied: str = Field(min_length=1)
+    counterfactual_better_order: list[str] = Field(min_length=1)
+    evidence_asset_ids: list[str] = Field(default_factory=list)
+    source_events: list[str] = Field(min_length=1)
+    context_tags: list[str] = Field(min_length=1)
+    confidence: ConfidenceLabel = "medium"
+    risk: Literal["low", "medium", "high"] = "medium"
+    authority_boundary: str = Field(min_length=1)
+    generated_at: str
+    scan_id: str
+    review_status: Literal["generated_candidate", "reviewed", "rejected"] = "generated_candidate"
+
+
+class RepoLearningEventRecord(BaseModel):
+    schema_version: str = "0.1.0"
+    event_id: str
+    repository: str = Field(min_length=1)
+    stage: Literal["before_work", "during_failure", "after_work", "review"]
+    task: str = Field(min_length=1)
+    agent: str = "unknown"
+    context_tags: list[str] = Field(min_length=1)
+    assets_used: list[str] = Field(default_factory=list)
+    expected_value: str = ""
+    actual_value: str = ""
+    failure_class: str = ""
+    dependency_order_notes: str = ""
+    evidence: list[str] = Field(default_factory=list)
+    safety_confirmation: str = Field(min_length=1)
+    created_at: str
     review_status: Literal["generated_candidate", "reviewed", "rejected"] = "generated_candidate"
 
 

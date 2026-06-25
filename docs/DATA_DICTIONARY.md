@@ -21,10 +21,16 @@
 | `AssetChunkRecord` | Deterministic token-shingle or metadata chunk tied to one asset revision. | Generated candidate evidence |
 | `DuplicateClusterRecord` | Exact-content or near-duplicate candidate group of assets. | Generated candidate evidence |
 | `AssetDeltaRecord` | Pairwise exact/near duplicate delta summary and shared/one-sided chunk hashes. | Generated candidate evidence |
+| `SemanticEvolutionRecord` | Family-level candidate that separates behavior-relevant version change from formatting, path, metadata, or fixture-copy noise. | Generated candidate evidence |
+| `identity_layer` | One step in the Asset Identity And Similarity Ladder. Controlled by `registry/identity-layer-registry.json`. | Directory contract |
 | `exact_duplicate_of` edge | Assets share the same non-empty exact `content_sha256`. | Generated candidate relationship |
 | `near_duplicate_of` edge | Assets share enough deterministic token-shingle MinHash similarity to warrant review. | Generated candidate relationship |
 | `contained_in` edge | Most source shingles appear inside the target asset even when symmetric overlap is lower. | Generated candidate relationship |
 | `has_delta_candidate` edge | A generated delta record exists for the asset pair. | Generated candidate relationship |
+| `semantic_change_score` | Deterministic 0-1 strength of behavior-relevant evolution under the current methodology. | Candidate routing signal |
+| `noise_score` | Deterministic 0-1 strength of copy, path, formatting, metadata, or fixture-lineage noise. | Candidate routing signal |
+| `evolution_grade` | Insufficient, none, cosmetic, minor, moderate, major, or breaking semantic evolution. | Candidate routing signal |
+| `noise_class` | Exact copy, format/order noise, path/metadata noise, fixture-lineage noise, mixed signal, or insufficient evidence. | Candidate routing signal |
 
 ## Discovery and use
 
@@ -45,6 +51,37 @@
 | `metadata.instance_of_asset_ids` | For use/run/deployment assets, the assets instantiated together. |
 | `metadata.workflow_steps` | For workflow assets, ordered or named steps when known. |
 | `metadata.chunk_text` | Redacted extracted text used for deterministic token-shingle chunking. Generated output only. |
+
+## Learning-loop candidates
+
+| Record / field | Meaning | Authority |
+|---|---|---|
+| `LearningLoopRecord` | Generated candidate linking expectation/evaluation evidence, exception signals, adaptation proposals, human gates, and promotion targets. | Generated candidate evidence |
+| `learning_loop_type` | Candidate loop shape: governed learning, asset-use feedback, evaluation-promotion, or exception-to-adaptation. | Directory contract |
+| `source_asset_ids` | Assets that provided evidence for the loop. | Generated relationship evidence |
+| `expectation_source` | Asset or text evidence that defines expected behavior or evaluation criteria. | Generated candidate summary |
+| `exception_signal` | Asset or text evidence that something failed, drifted, or needs learning. | Generated candidate summary |
+| `adaptation_proposal` | Candidate improvement, rule, patch, or workflow update. | Generated candidate summary |
+| `review_gate` | Human or governance gate required before promotion. | Directory contract |
+| `promotion_target` | Rule, validator, workflow, schema, or registry that could change after review. | Generated candidate summary |
+
+## Contextual archaeology
+
+| Record / field | Meaning | Authority |
+|---|---|---|
+| `ContextTagRecord` | Controlled context label with applicability and misapplication risk. | Directory contract |
+| `WorktreeAttemptRecord` | Candidate grouping for a repository, worktree, temp repo, or archive attempt. | Generated candidate evidence |
+| `RepoTimelineEventRecord` | Bounded local history, changelog, CI, or repo-learning event. | Generated candidate evidence |
+| `ChangePatternRecord` | Co-change, repeated edit, variant, late stabilizer, or changelog theme candidate. | Generated candidate evidence |
+| `FailureSignalRecord` | Failure-like evidence such as tests, error terms, TODO/FIXME, reverts, drift, or missing gates. | Generated candidate evidence |
+| `RootCauseHypothesisRecord` | Reviewable hypothesis explaining why repeated failure or rework may have happened. | Generated candidate evidence |
+| `CounterfactualLessonRecord` | Context-bound lesson candidate with applicability limits and a better-order hypothesis. | Generated candidate evidence |
+| `RepoLearningEventRecord` | Opt-in downstream repo event captured before, during, after, or during review of work. | Source repo opt-in candidate evidence |
+| `LearningRuleRecord` | Reviewed deterministic rule surfaced by preflight and acknowledged by midflight. | Reviewed operating constraint |
+| `applies_when` | Conditions under which a lesson may be useful. | Candidate constraint |
+| `does_not_apply_when` | Conditions under which a lesson should not be applied. | Candidate constraint |
+| `danger_if_misapplied` | Explicit warning for stripping a lesson from context. | Candidate safety constraint |
+| `danger_if_ignored` | Explicit warning for ignoring a reviewed learning rule during matching work. | Reviewed operating constraint |
 
 ## Governance and time
 

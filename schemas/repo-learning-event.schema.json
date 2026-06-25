@@ -1,0 +1,39 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://local.digital-asset-directory/schemas/repo-learning-event.schema.json",
+  "title": "Repository Learning Event Record",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "event_id",
+    "repository",
+    "stage",
+    "task",
+    "agent",
+    "context_tags",
+    "assets_used",
+    "evidence",
+    "safety_confirmation",
+    "created_at",
+    "review_status"
+  ],
+  "properties": {
+    "schema_version": {"const": "0.1.0"},
+    "event_id": {"type": "string", "minLength": 1},
+    "repository": {"type": "string", "minLength": 1},
+    "stage": {"enum": ["before_work", "during_failure", "after_work", "review"]},
+    "task": {"type": "string", "minLength": 1},
+    "agent": {"type": "string"},
+    "context_tags": {"type": "array", "items": {"type": "string"}, "minItems": 1},
+    "assets_used": {"type": "array", "items": {"type": "string"}},
+    "expected_value": {"type": "string"},
+    "actual_value": {"type": "string"},
+    "failure_class": {"type": "string"},
+    "dependency_order_notes": {"type": "string"},
+    "evidence": {"type": "array", "items": {"type": "string"}},
+    "safety_confirmation": {"type": "string", "minLength": 1},
+    "created_at": {"type": "string"},
+    "review_status": {"enum": ["generated_candidate", "reviewed", "rejected"]}
+  },
+  "additionalProperties": false
+}

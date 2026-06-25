@@ -13,6 +13,12 @@ A high-value asset is not merely large or recent. It tends to be:
 - legally and operationally reusable within its license, sensitivity, and authority boundaries;
 - connected to outcomes, dependencies, missing parts, and activation conditions.
 
+The Asset Identity And Similarity Ladder in
+`docs/ASSET_IDENTITY_AND_SIMILARITY_LADDER.md` controls how the directory recognizes and
+compares assets before scoring them. Hashes can prove exact identity; chunk hashes,
+extracted text, graph edges, and later gated embeddings make assets discoverable. None of
+those signals alone proves value, authority, or canonical status.
+
 ## Highest-compounding asset families
 
 The seed prioritizes these families because they accelerate multiple downstream builds:
@@ -64,6 +70,21 @@ Risk adjustments are applied as a multiplicative factor after the weighted compo
 keeps risk interpretable as a discount on otherwise useful evidence. Freshness is represented by
 the freshness component only, not a second stale penalty. Unknown GitHub repository license status
 is a risk factor when GitHub scanning is explicitly enabled and reviewed.
+
+Any calculated score or grade must cite an explicit methodology before it is used for review,
+ranking, roadmap evidence, or graph edges. At minimum, the artifact must state:
+
+- methodology version;
+- input fields;
+- normalization;
+- weights or thresholds;
+- risk factors;
+- uncertainty handling;
+- output range;
+- whether the value is heuristic, calibrated probability, percentile, or reviewed truth.
+
+If the formula is missing, future agents must treat the value as an uncalibrated heuristic and
+should not promote it into source-of-truth, labels, or roadmap completion evidence.
 
 ## Dormant option value
 

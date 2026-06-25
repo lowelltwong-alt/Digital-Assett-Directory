@@ -1,4 +1,4 @@
-# AI Front Door — Digital Asset Directory
+# AI Front Door - Digital Asset Directory
 
 ## Repository identity
 
@@ -13,9 +13,11 @@
 2. `MACHINE_NAVIGATION_MANIFEST.json`
 3. `registry/source-of-truth.json`
 4. `registry/design-authority.json`
-5. `AI_TABLE_OF_CONTENTS.md`
-6. `docs/ARCHITECTURE.md`
-7. task-relevant schemas, registries, and roadmap gates
+5. `registry/identity-layer-registry.json`
+6. `AI_TABLE_OF_CONTENTS.md`
+7. `docs/ARCHITECTURE.md`
+8. `docs/ASSET_IDENTITY_AND_SIMILARITY_LADDER.md`
+9. task-relevant schemas, registries, and roadmap gates
 
 ## Core boundary
 
@@ -34,6 +36,7 @@ Discovery output is evidence and recommendation, not source-repository authority
 
 - source adapters and scan policy;
 - asset identity and revision identity;
+- the Asset Identity And Similarity Ladder for exact identity, similarity, graph discovery, and audit provenance;
 - catalog metadata and local graph vocabulary;
 - candidate value, staleness, orphan, missing-part, and synergy scoring;
 - lessons and AI handoff capture;
@@ -55,6 +58,7 @@ Discovery output is evidence and recommendation, not source-repository authority
 | Scan new sources | `source_scan` | raw snapshot, processed assets, audit event, source-mutation check |
 | Change metadata contracts | `schema_change` | schema, example, registry update, validation |
 | Change graph vocabulary | `ontology_change` | edge registry, ontology/taxonomy update, migration note |
+| Change identity or similarity rules | `identity_change` | ladder doc, identity-layer registry, schema/edge updates, validation |
 | Add a learning record | `lesson_capture` | lesson JSONL, provenance, confidence, reuse candidates |
 | Build a feature | `implementation` | preflight, changed files, tests, postflight, lessons |
 | Search external GitHub | `research_missing_part` | query, candidates, license/freshness metadata, human review note |
@@ -79,6 +83,13 @@ Run:
 
 ```text
 asset-dir agent preflight --repo <repo> --agent <agent> --task "<task>"
+```
+
+If the preflight includes `required_learning_rule_acknowledgements`, run a midflight
+acknowledgement before proceeding through the matching work:
+
+```powershell
+asset-dir agent midflight --session <id> --context "<task context>" --ack-rule "<rule id>"
 ```
 
 ## Mandatory AI postflight
@@ -114,6 +125,7 @@ Stop rather than guess when:
 - a requested action would modify source artifacts;
 - a token or secret appears in content or configuration;
 - the same logical asset appears under conflicting identities;
+- a proposed workflow treats SHA-256, embeddings, graph similarity, or fuzzy hashing as enough by itself to prove authority, reuse value, or canonical status;
 - a proposed relationship would imply authority transfer;
 - a schema, lifecycle, or edge definition conflicts with an existing registry;
 - validation fails;

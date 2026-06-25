@@ -8,6 +8,7 @@
     "AGENTS.md",
     "registry/source-of-truth.json",
     "registry/design-authority.json",
+    "registry/identity-layer-registry.json",
     "AI_TABLE_OF_CONTENTS.md"
   ],
   "registries": {
@@ -15,6 +16,10 @@
     "design_authority": "registry/design-authority.json",
     "asset_types": "registry/asset-type-registry.json",
     "asset_patterns": "registry/asset-pattern-registry.json",
+    "context_tags": "registry/context-tag-registry.json",
+    "learning_rules": "registry/learning-rule-registry.json",
+    "semantic_evolution_grades": "registry/semantic-evolution-grade-registry.json",
+    "identity_layers": "registry/identity-layer-registry.json",
     "edge_types": "registry/edge-type-registry.json",
     "lifecycle": "registry/lifecycle-registry.json",
     "schemas": "registry/schema-registry.json",
@@ -25,6 +30,7 @@
   "generated_surfaces": [
     "raw/",
     "processed/",
+    "processed/learning/",
     "state/catalog.sqlite3",
     "audit/events/"
   ],
