@@ -13,6 +13,7 @@ from digital_asset_directory.models import (
     ProposalReviewRecord,
 )
 from digital_asset_directory.proposals import (
+    MAX_BOTTOM_UP_TARGETS,
     RoadmapRelevanceContext,
     build_proposal_indexes,
     build_proposal_review_queue,
@@ -172,11 +173,35 @@ def test_proposal_examples_validate_against_schema_and_model():
 
 
 def test_proposal_indexes_include_asset_type_and_lifecycle_for_eligible_assets_only():
+    stale_source_tagged_ci_contract = make_asset(
+        "stale-source-tagged-ci-contract",
+        asset_type="document",
+        logical_path=(
+            "git-projects/90_AI_Tooling_And_Temp/.ci-contracts/"
+            "fmg-fractal-capability-ontology-pinned/docs/AUTOMATION_MANAGER_STARTER_PACK.md"
+        ),
+    )
+    stale_source_tagged_ci_contract.metadata["instance_class"] = "source"
+
     assets = [
         make_asset("workflow-a", asset_type="workflow", lifecycle="active"),
         make_asset("doc-a", asset_type="document", lifecycle="discovered"),
         make_asset("generated-a", asset_type="workflow", source_kind="generated"),
         make_asset("sentinel", asset_type="document", logical_path=".gitkeep"),
+        make_asset(
+            "codex-worktree-doc",
+            asset_type="document",
+            logical_path="git-projects/03_World_View/_codex_worktrees/task/docs/note.md",
+        ),
+        make_asset(
+            "ci-contract-temp-doc",
+            asset_type="document",
+            logical_path=(
+                "git-projects/90_AI_Tooling_And_Temp/.ci-contracts/"
+                "fmg-fractal-capability-ontology-pinned/data/comparisons/README.md"
+            ),
+        ),
+        stale_source_tagged_ci_contract,
     ]
 
     indexes = build_proposal_indexes(assets, [], [])
@@ -191,6 +216,9 @@ def test_proposal_indexes_include_asset_type_and_lifecycle_for_eligible_assets_o
     ]
     assert "generated-a" not in indexes.eligible
     assert "sentinel" not in indexes.eligible
+    assert "codex-worktree-doc" not in indexes.eligible
+    assert "ci-contract-temp-doc" not in indexes.eligible
+    assert "stale-source-tagged-ci-contract" not in indexes.eligible
 
 
 def test_proposal_review_record_schema_supports_unreviewed_template():
@@ -270,6 +298,30 @@ def test_bottom_up_uses_asset_type_index_for_support_proposals():
     )
 
 
+def test_bottom_up_proposals_are_bounded_for_large_catalogs():
+    assets = [
+        make_asset(
+            f"target-{index:04d}",
+            asset_type="code",
+            outcome="quality_gate",
+            logical_path=f"src/target_{index:04d}.py",
+        )
+        for index in range(MAX_BOTTOM_UP_TARGETS + 25)
+    ]
+    assets.extend(
+        [
+            make_asset("unit-test", asset_type="test", outcome="quality_gate"),
+            make_asset("runbook", asset_type="document", outcome="quality_gate"),
+        ]
+    )
+
+    proposals = generate_bottom_up_proposals(assets, [], [], "scan-test", per_asset_limit=3)
+
+    assert len(proposals) <= MAX_BOTTOM_UP_TARGETS * 3
+    assert proposals
+    assert all(proposal.review_status == "generated_candidate" for proposal in proposals)
+
+
 def test_top_down_proposals_respect_portfolio_cap_and_cover_missing_parts():
     assets = [
         make_asset("need-1", need="missing_capability"),
@@ -313,7 +365,7 @@ def test_top_down_ranking_uses_roadmap_relevance_review_burden_and_risk():
     roadmap_asset = make_asset(
         "roadmap-asset",
         asset_type="document",
-        logical_path="processed/reports/scan_summary.md",
+        logical_path="docs/scan_summary.md",
         outcome="gate_review",
     )
     assets = [
@@ -334,7 +386,7 @@ def test_top_down_ranking_uses_roadmap_relevance_review_burden_and_risk():
             }
         },
         phase_statuses={"phase-1-first-inventory": "awaiting_human_gate"},
-        path_phase_ids={"processed/reports/scan_summary.md": ["phase-1-first-inventory"]},
+        path_phase_ids={"docs/scan_summary.md": ["phase-1-first-inventory"]},
     )
 
     proposals = generate_top_down_proposals(

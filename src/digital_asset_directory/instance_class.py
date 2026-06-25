@@ -53,14 +53,17 @@ def classify_instance_class(logical_path: str) -> str:
         "/.pytest-tmp-root/" in path_with_slashes
         or "/pytest-of-" in path_with_slashes
         or ("/pytest-" in path_with_slashes and "/contract-repo/" in path_with_slashes)
+        or "/90_ai_tooling_and_temp/" in path_with_slashes
+        or "/.ci-contracts/" in path_with_slashes
     ):
         return "temp_fixture"
     if any(part in {"processed", "raw", "state"} for part in parts):
         return "generated"
     if any(
-        part in {"worktree", "worktrees"}
+        part in {"worktree", "worktrees", "_codex_worktrees", ".worktrees"}
         or part.endswith("-worktree")
         or part.endswith("-workspace")
+        or part.endswith("_worktrees")
         for part in parts
     ):
         return "worktree"

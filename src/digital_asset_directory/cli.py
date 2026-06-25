@@ -633,13 +633,16 @@ def recommend_proposals(
             roadmap_context=load_roadmap_relevance_context(cfg.repo_root),
         )
     paths = write_proposal_outputs(cfg.repo_root, bottom_up, top_down, comparison)
+    comparison_summary = {
+        key: value for key, value in comparison.items() if key != "review_sample"
+    }
     console.print_json(
         data={
             "scan_id": scan_id,
             "engine": normalized_engine,
             "bottom_up_count": len(bottom_up),
             "top_down_count": len(top_down),
-            "comparison": comparison,
+            "comparison": comparison_summary,
             "outputs": paths,
         }
     )

@@ -9,6 +9,12 @@ from pathlib import Path
 from typing import Any, Literal
 
 from .ids import stable_id
+from .instance_class import (
+    QUARANTINED_INSTANCE_CLASSES,
+    classify_instance_class,
+    information_content_class,
+    is_independent_portfolio_asset,
+)
 from .models import AlertRecord, AssetRecord, EdgeRecord, ProposalRecord, ProposalReviewRecord
 from .utils import atomic_write_text, jaccard, tokens, utc_now, write_jsonl
 
@@ -94,6 +100,8 @@ ASSET_TYPE_SUPPORT_TYPES = {
 }
 RANKING_REVIEW_COST_PENALTIES = {"low": 0.0, "medium": 0.015, "high": 0.035}
 RANKING_RISK_PENALTIES = {"low": 0.0, "medium": 0.01, "high": 0.03}
+MAX_BOTTOM_UP_TARGETS = 500
+MAX_PROVIDER_POOL_PER_KEY = 250
 ROADMAP_RELEVANCE_STOPWORDS = {
     "acceptance",
     "asset",
@@ -139,6 +147,7 @@ class ProposalIndexes:
     alerts_by_asset: dict[str, list[AlertRecord]]
     orphan_asset_ids: set[str]
     weak_asset_ids: set[str]
+    asset_tokens: dict[str, set[str]]
 
 
 def _logical_name(asset: AssetRecord) -> str:
@@ -153,6 +162,22 @@ def _is_eligible(asset: AssetRecord) -> bool:
         return False
     if not asset.asset_id or not asset.logical_path:
         return False
+    path_instance_class = classify_instance_class(asset.logical_path)
+    if path_instance_class in QUARANTINED_INSTANCE_CLASSES:
+        return False
+    instance_class = str(asset.metadata.get("instance_class") or path_instance_class)
+    info_class = str(
+        asset.metadata.get("information_content_class")
+        or information_content_class(
+            asset.logical_path,
+            asset_type=asset.asset_type,
+            size_bytes=asset.size_bytes,
+            content_sha256=asset.content_sha256,
+            metadata=asset.metadata,
+        )
+    )
+    if not is_independent_portfolio_asset(instance_class, info_class):
+        return False
     return True
 
 
@@ -166,6 +191,44 @@ def _asset_tokens(asset: AssetRecord) -> set[str]:
         | set(asset.outcomes)
         | metadata_tokens
     )
+
+
+def _asset_review_rank(asset: AssetRecord) -> tuple[float, int, int, str]:
+    return (
+        float(asset.value_score or 0.0),
+        len(asset.capabilities) + len(asset.needs) + len(asset.outcomes),
+        len(asset.entrypoints),
+        asset.asset_id,
+    )
+
+
+def _rank_assets(assets: list[AssetRecord], limit: int | None = None) -> list[AssetRecord]:
+    ranked = sorted(assets, key=_asset_review_rank, reverse=True)
+    return ranked[:limit] if limit is not None else ranked
+
+
+def _bottom_up_target_rank(
+    asset: AssetRecord, indexes: ProposalIndexes
+) -> tuple[int, int, int, float, str]:
+    has_alert = 1 if indexes.alerts_by_asset.get(asset.asset_id) else 0
+    is_weak = 1 if asset.asset_id in indexes.weak_asset_ids else 0
+    has_need = 1 if asset.needs else 0
+    return (
+        has_alert,
+        is_weak,
+        has_need,
+        float(asset.value_score or 0.0),
+        asset.asset_id,
+    )
+
+
+def _bounded_bottom_up_targets(indexes: ProposalIndexes) -> list[AssetRecord]:
+    ranked = sorted(
+        indexes.eligible.values(),
+        key=lambda asset: _bottom_up_target_rank(asset, indexes),
+        reverse=True,
+    )
+    return ranked[:MAX_BOTTOM_UP_TARGETS]
 
 
 def _normalized_logical_path(path: str) -> str:
@@ -211,6 +274,7 @@ def build_proposal_indexes(
 ) -> ProposalIndexes:
     by_id = {asset.asset_id: asset for asset in assets}
     eligible = {asset.asset_id: asset for asset in assets if _is_eligible(asset)}
+    asset_tokens = {asset.asset_id: _asset_tokens(asset) for asset in eligible.values()}
     providers_by_capability: dict[str, list[AssetRecord]] = defaultdict(list)
     needers_by_need: dict[str, list[AssetRecord]] = defaultdict(list)
     assets_by_outcome: dict[str, list[AssetRecord]] = defaultdict(list)
@@ -257,16 +321,24 @@ def build_proposal_indexes(
     return ProposalIndexes(
         by_id=by_id,
         eligible=eligible,
-        providers_by_capability={k: v for k, v in providers_by_capability.items()},
-        needers_by_need={k: v for k, v in needers_by_need.items()},
-        assets_by_outcome={k: v for k, v in assets_by_outcome.items()},
-        assets_by_type={k: v for k, v in assets_by_type.items()},
-        assets_by_lifecycle={k: v for k, v in assets_by_lifecycle.items()},
+        providers_by_capability={
+            k: _rank_assets(v, MAX_PROVIDER_POOL_PER_KEY)
+            for k, v in providers_by_capability.items()
+        },
+        needers_by_need={k: _rank_assets(v, MAX_PROVIDER_POOL_PER_KEY) for k, v in needers_by_need.items()},
+        assets_by_outcome={
+            k: _rank_assets(v, MAX_PROVIDER_POOL_PER_KEY) for k, v in assets_by_outcome.items()
+        },
+        assets_by_type={
+            k: _rank_assets(v, MAX_PROVIDER_POOL_PER_KEY) for k, v in assets_by_type.items()
+        },
+        assets_by_lifecycle={k: _rank_assets(v) for k, v in assets_by_lifecycle.items()},
         neighbors_by_asset={k: v for k, v in neighbors_by_asset.items()},
         edge_evidence_by_pair={k: v for k, v in edge_evidence_by_pair.items()},
         alerts_by_asset={k: v for k, v in alerts_by_asset.items()},
         orphan_asset_ids=orphan_asset_ids,
         weak_asset_ids=weak_asset_ids,
+        asset_tokens=asset_tokens,
     )
 
 
@@ -548,7 +620,7 @@ def _asset_type_support_candidates(
         for provider in indexes.assets_by_type.get(support_type, []):
             if provider.asset_id == target.asset_id:
                 continue
-            provider_tokens = _asset_tokens(provider)
+            provider_tokens = indexes.asset_tokens.get(provider.asset_id, set())
             shared_outcomes = sorted(set(provider.outcomes) & set(target.outcomes))
             similarity = jaccard(target_tokens, provider_tokens)
             if not shared_outcomes and similarity < 0.12:
@@ -610,9 +682,9 @@ def generate_bottom_up_proposals(
     indexes = build_proposal_indexes(assets, edges, alerts)
     generated = generated_at or utc_now()
     proposals: list[ProposalRecord] = []
-    for target in sorted(indexes.eligible.values(), key=lambda record: record.asset_id):
+    for target in _bounded_bottom_up_targets(indexes):
         candidates: list[tuple[float, ProposalRecord]] = []
-        target_tokens = _asset_tokens(target)
+        target_tokens = indexes.asset_tokens.get(target.asset_id, set())
         target_alerts = indexes.alerts_by_asset.get(target.asset_id, [])
         alert_ids = [alert.alert_id for alert in target_alerts]
         is_weak = target.asset_id in indexes.weak_asset_ids or not indexes.neighbors_by_asset.get(
@@ -676,7 +748,16 @@ def generate_bottom_up_proposals(
             )
         )
 
-        for provider in indexes.eligible.values():
+        shared_outcome_provider_ids = sorted(
+            {
+                provider.asset_id
+                for outcome in target.outcomes
+                for provider in indexes.assets_by_outcome.get(outcome, [])
+                if provider.asset_id != target.asset_id
+            }
+        )
+        for provider_id in shared_outcome_provider_ids[:MAX_PROVIDER_POOL_PER_KEY]:
+            provider = indexes.eligible[provider_id]
             if provider.asset_id == target.asset_id:
                 continue
             if (
@@ -687,7 +768,7 @@ def generate_bottom_up_proposals(
             shared_outcomes = sorted(set(provider.outcomes) & set(target.outcomes))
             if not shared_outcomes:
                 continue
-            similarity = jaccard(target_tokens, _asset_tokens(provider))
+            similarity = jaccard(target_tokens, indexes.asset_tokens.get(provider.asset_id, set()))
             if similarity < 0.08:
                 continue
             shared_capabilities = sorted(set(provider.capabilities) & set(target.capabilities))
