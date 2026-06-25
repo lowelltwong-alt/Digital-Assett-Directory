@@ -1,53 +1,77 @@
 {
-  "schema_version": "0.1.0",
-  "human_gates": {
-    "phase-1-source-scope-reviewed": {
-      "phase_id": "phase-1-first-inventory",
-      "status": "verified",
-      "reviewed_at": "2026-06-24",
-      "reviewer": "user",
-      "summary": "Current bounded local source scope was approved for the first inventory; broad sibling folders and generated/private layers remain excluded.",
-      "evidence": [
-        "roadmap/evidence/phase-1-first-inventory.md"
-      ]
-    },
-    "phase-1-github-token-scope-reviewed-deferred": {
-      "phase_id": "phase-1-first-inventory",
-      "status": "verified",
-      "reviewed_at": "2026-06-24",
-      "reviewer": "user",
-      "summary": "GitHub token scope was reviewed; GitHub scanning remains deferred and disabled until separately approved.",
-      "evidence": [
-        "roadmap/evidence/phase-1-first-inventory.md"
-      ]
-    },
-    "phase-1-source-mutation-check-passed": {
-      "phase_id": "phase-1-first-inventory",
-      "status": "verified",
-      "reviewed_at": "2026-06-24",
-      "reviewer": "codex",
-      "summary": "First bounded local inventory reported source_files_mutated=false with changed_during_scan_count reviewed in the scan summary.",
-      "evidence": [
-        "roadmap/evidence/phase-1-first-inventory.md"
-      ]
-    }
-  },
   "commands": {
     "phase-0-seed": {
-      "python -m pytest": {
-        "status": "passed",
-        "recorded_at": "2026-06-24",
-        "evidence": [
-          "roadmap/evidence/phase-0-seed-validation.md"
-        ]
-      },
       "python -m digital_asset_directory.cli validate": {
-        "status": "passed",
-        "recorded_at": "2026-06-24",
         "evidence": [
           "roadmap/evidence/phase-0-seed-validation.md"
-        ]
+        ],
+        "recorded_at": "2026-06-24",
+        "status": "passed"
+      },
+      "python -m pytest": {
+        "evidence": [
+          "roadmap/evidence/phase-0-seed-validation.md"
+        ],
+        "recorded_at": "2026-06-24",
+        "status": "passed"
       }
     }
-  }
+  },
+  "human_gates": {
+    "phase-1-github-token-scope-reviewed-deferred": {
+      "evidence": [
+        "roadmap/evidence/phase-1-first-inventory.md"
+      ],
+      "phase_id": "phase-1-first-inventory",
+      "reviewed_at": "2026-06-24",
+      "reviewer": "user",
+      "status": "verified",
+      "summary": "GitHub token scope was reviewed; GitHub scanning remains deferred and disabled until separately approved."
+    },
+    "phase-1-source-mutation-check-passed": {
+      "evidence": [
+        "roadmap/evidence/phase-1-first-inventory.md"
+      ],
+      "phase_id": "phase-1-first-inventory",
+      "reviewed_at": "2026-06-24",
+      "reviewer": "codex",
+      "status": "verified",
+      "summary": "First bounded local inventory reported source_files_mutated=false with changed_during_scan_count reviewed in the scan summary."
+    },
+    "phase-1-source-scope-reviewed": {
+      "evidence": [
+        "roadmap/evidence/phase-1-first-inventory.md"
+      ],
+      "phase_id": "phase-1-first-inventory",
+      "reviewed_at": "2026-06-24",
+      "reviewer": "user",
+      "status": "verified",
+      "summary": "Current bounded local source scope was approved for the first inventory; broad sibling folders and generated/private layers remain excluded."
+    },
+    "phase-1.5-clean-calibration-sample-reviewed": {
+      "evidence": [
+        "processed/reports/asset_rating_calibration_summary.md",
+        "processed/calibration/asset_rating_template.jsonl",
+        "roadmap/evidence/phase-1.5-scoring-discipline.md"
+      ],
+      "phase_id": "phase-1.5-scoring-discipline-clean-sampling",
+      "reviewed_at": "2026-06-25T18:47:47.421901+00:00",
+      "reviewer": "Lowell",
+      "status": "verified",
+      "summary": "Human authorized Phase 1.5 clean calibration sample gate for the regenerated deduped sample; Phase 2 labels remain unapplied and pending."
+    },
+    "phase-1.5-score-methodology-reviewed": {
+      "evidence": [
+        "docs/ASSET_VALUE_MODEL.md",
+        "config/scoring.yaml",
+        "roadmap/evidence/phase-1.5-scoring-discipline.md"
+      ],
+      "phase_id": "phase-1.5-scoring-discipline-clean-sampling",
+      "reviewed_at": "2026-06-25T18:47:47.389523+00:00",
+      "reviewer": "Lowell",
+      "status": "verified",
+      "summary": "Human authorized Phase 1.5 score methodology gate after reviewing the explicit asset-value methodology, instance/content classes, discount metadata, and candidate-only calibration posture."
+    }
+  },
+  "schema_version": "0.1.0"
 }
