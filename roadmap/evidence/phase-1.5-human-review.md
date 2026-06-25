@@ -2,7 +2,8 @@
 
 Status: human-authorized roadmap gate review. Generated catalog outputs remain
 candidate evidence. This file does not apply Phase 2 labels and does not claim
-asset-value probability calibration is complete.
+asset-value probability calibration is complete. Later Phase 2 evidence records
+the separate asset-rating calibration labels.
 
 Date: 2026-06-25
 
@@ -61,23 +62,24 @@ The scanner now suppresses the red-team noise classes from scoring by default:
 The quarantine output is generated evidence only. Quarantined paths do not create
 `AssetRecord`s and do not become roadmap truth by themselves.
 
-The latest generated quarantine report came from a bounded validation scan:
+The latest generated quarantine report was refreshed by a longer local-only scan:
 
-- scan id: `dad:scan:f9dec3c0-3fdf-4657-9c1a-cba16fb70207`;
+- scan id: `dad:scan:062aa3e6-8ddb-4bd6-97fc-8a3cb2d8c0c1`;
 - status: `complete`;
-- assets: `505`;
-- changed during scan: `0`;
+- assets: `51204`;
+- changed during scan: `40`;
 - source files mutated: `False`;
-- quarantine count: `1`;
-- bounded scan: `True`;
-- inspected paths: `500`;
-- reason observed: `pytest cache`.
+- quarantine count: `57`;
+- bounded scan: `False`;
+- inspected paths: `106743`;
+- reasons observed: hub generated outputs, macOS metadata, mypy/pytest/ruff
+  caches, pytest temp roots/runs, and temporary Codex worktree copies.
 
 Review conclusion: the scanner-noise and quarantine behavior is accepted for the
-Phase 1.5 gate. The caveat is that this is a behavior and methodology approval,
-not proof that a full unbounded portfolio scan is fast enough. The full local
-scan over the whole Git Projects tree timed out during implementation and needs
-a later performance slice.
+Phase 1.5 gate. The caveat is that `changed_during_scan_count=40`, which means
+some source files changed externally during the scan window. That is not a DAD
+source mutation, but future calibration refreshes should prefer a quieter source
+window when possible.
 
 ### Score Methodology
 
@@ -109,18 +111,19 @@ still a heuristic routing signal, not a calibrated probability.
 The regenerated asset calibration sample reports methodology
 `asset-calibration-sampling-v0.2-clean-deduped`.
 
-Current summary:
+Latest calibration summary:
 
 - template records: `100`;
-- reviewed records: `0`;
+- reviewed records: `100`;
 - stale sample warning: `False`;
 - instance classes: `source=91`, `archive=9`;
-- score ratings: `unreviewed=100`;
+- score ratings: `about_right=54`, `too_high=18`, `too_low=28`;
 - value bands: `medium=50`, `low=50`.
 
 The sample is clean enough to start Phase 2 labeling because it is no longer the
-old temp-fixture dominated 50-record sample. It is not Phase 2 evidence yet
-because no labels have been applied.
+old temp-fixture dominated 50-record sample. Phase 2 labels are recorded in
+`roadmap/evidence/phase-2-asset-calibration.md`; this Phase 1.5 evidence only
+records that the clean sample gate is accepted.
 
 Review conclusion: the clean-sampling gate is accepted. Phase 2 can now proceed
 to human asset rating labels and structured false-positive, false-negative, and
@@ -130,34 +133,26 @@ weight-change notes.
 
 | gate | decision | caveat |
 | --- | --- | --- |
-| `phase-1.5-noise-quarantine-reviewed` | verified | Full unbounded scan performance remains a follow-up. |
+| `phase-1.5-noise-quarantine-reviewed` | verified | Full scan completed; `changed_during_scan_count=40` remains a churn caveat. |
 | `phase-1.5-score-methodology-reviewed` | verified | Scores remain heuristic strength, not probabilities. |
-| `phase-1.5-clean-calibration-sample-reviewed` | verified | The sample has zero reviewed labels; Phase 2 is still separate. |
+| `phase-1.5-clean-calibration-sample-reviewed` | verified | Phase 2 labels are tracked separately in Phase 2 evidence. |
 
 ## What This Unlocks
 
-Phase 1.5 can be treated as complete by the roadmap checker once gate evidence
-is recorded. That should unblock Phase 2 from dependency-blocked to
-awaiting-human-gate.
-
-The next work should be Phase 2 labeling:
-
-- review at least 50 asset rating records;
-- capture false-positive and false-negative notes;
-- document any weight-change notes;
-- keep temp-fixture findings as bug evidence, not as labels on the old stale
-  sample.
+Phase 1.5 can be treated as complete by the roadmap checker. Phase 2 asset
+rating evidence is now tracked separately and can be used to plan the scoring
+weight/threshold adjustment pass.
 
 ## Risks And Follow-Ups
 
-- Full local scan performance is still not solved.
-- The quarantine report from the validation run is bounded and should not be
-  described as a complete portfolio quarantine census.
+- Full local scan performance is workable for this pass but still non-trivial;
+  the scan should be treated as a material operation, not a lightweight check.
+- `changed_during_scan_count=40` should be watched in future scan summaries.
 - Media extraction is intentionally minimal and bounded.
 - Path-based instance classification may need more patterns after more repos are
   scanned.
-- The database may still contain older records until a full refreshed scan is
-  completed.
+- The state database may retain historical records across scans, so reports
+  should cite the latest scan ID when making gate claims.
 
 ## Reusable Lesson
 

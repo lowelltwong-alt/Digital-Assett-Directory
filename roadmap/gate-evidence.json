@@ -70,10 +70,10 @@
         "roadmap/evidence/phase-1.5-human-review.md"
       ],
       "phase_id": "phase-1.5-scoring-discipline-clean-sampling",
-      "reviewed_at": "2026-06-25T18:58:00+00:00",
+      "reviewed_at": "2026-06-25T20:49:28.138542+00:00",
       "reviewer": "Lowell",
       "status": "verified",
-      "summary": "Human authorized Phase 1.5 scanner-noise and quarantine gate after reviewing default excludes, bounded quarantine evidence, scan summary, and regression coverage. This verifies behavior and methodology, not full unbounded portfolio scan performance."
+      "summary": "Human authorized Phase 1.5 scanner-noise and quarantine gate after a longer local-only scan completed with status=complete, github=false, errors=0, source_files_mutated=false, bounded=false, inspected_path_count=106743, quarantine_count=57, and changed_during_scan_count=40 reviewed as a churn caveat."
     },
     "phase-1.5-score-methodology-reviewed": {
       "evidence": [
