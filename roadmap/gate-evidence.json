@@ -87,6 +87,39 @@
       "reviewer": "Lowell",
       "status": "verified",
       "summary": "Human authorized Phase 1.5 score methodology gate after reviewing the explicit asset-value methodology, instance/content classes, discount metadata, and candidate-only calibration posture."
+    },
+    "phase-2-asset-ratings-reviewed": {
+      "evidence": [
+        "roadmap/evidence/phase-2-asset-calibration.md",
+        "processed/calibration/asset_rating_template.jsonl"
+      ],
+      "phase_id": "phase-2-calibration",
+      "reviewed_at": "2026-06-25T20:40:09.500912+00:00",
+      "reviewer": "Lowell",
+      "status": "verified",
+      "summary": "At least 50 asset calibration review records have human ratings."
+    },
+    "phase-2-false-positive-negative-notes-captured": {
+      "evidence": [
+        "roadmap/evidence/phase-2-asset-calibration.md",
+        "processed/calibration/asset_rating_template.jsonl"
+      ],
+      "phase_id": "phase-2-calibration",
+      "reviewed_at": "2026-06-25T20:40:09.534131+00:00",
+      "reviewer": "Lowell",
+      "status": "verified",
+      "summary": "False-positive and false-negative calibration notes were captured."
+    },
+    "phase-2-weight-changes-documented": {
+      "evidence": [
+        "roadmap/evidence/phase-2-asset-calibration.md",
+        "processed/calibration/asset_rating_template.jsonl"
+      ],
+      "phase_id": "phase-2-calibration",
+      "reviewed_at": "2026-06-25T20:40:09.576462+00:00",
+      "reviewer": "Lowell",
+      "status": "verified",
+      "summary": "Asset scoring weight-change notes were documented."
     }
   },
   "schema_version": "0.1.0"

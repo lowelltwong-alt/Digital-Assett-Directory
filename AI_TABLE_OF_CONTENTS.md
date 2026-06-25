@@ -106,6 +106,9 @@
 - `roadmap/evidence/phase-2-temp-fixture-calibration-research.md` - first-batch Phase 2 temp fixture scoring research and recommendations
 - `roadmap/evidence/phase-2-claude-second-opinion.md` - intake file for Claude's independent Phase 2 calibration findings
 - `roadmap/evidence/phase-2-claude-red-team-premortem.md` - Claude red-team premortem warning against calibrating on stale noisy samples
+- `roadmap/evidence/phase-2-asset-calibration.md` - generated tracked Phase 2 calibration gate evidence after 100 reviewed labels
+- `roadmap/evidence/phase-2-calibration-human-review-research.md` - human review rationale, label policy, and score-change recommendations for Phase 2
+- `roadmap/evidence/phase-2-calibration-label-table.csv` - compact tracked table of all 100 Phase 2 asset-rating labels
 
 ## Reference
 
