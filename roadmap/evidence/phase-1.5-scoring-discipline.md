@@ -1,6 +1,8 @@
 # Phase 1.5 Scoring Discipline Evidence
 
-Status: generated implementation evidence; human gates remain unverified.
+Status: generated implementation evidence. Human gate decisions are recorded in
+`roadmap/evidence/phase-1.5-human-review.md` and
+`roadmap/gate-evidence.json`.
 
 Date: 2026-06-25
 
@@ -50,13 +52,17 @@ Review order for each asset remains:
 3. Real semantic evolution.
 4. Upside and ceiling after the current-score label.
 
-## Remaining Human Gates
+## Human Review Update
 
-The following Phase 1.5 gates remain open until human review confirms them:
+The Phase 1.5 review now verifies:
 
 - `phase-1.5-noise-quarantine-reviewed`
 - `phase-1.5-score-methodology-reviewed`
 - `phase-1.5-clean-calibration-sample-reviewed`
+
+The review accepts the behavior and methodology gates. It does not apply Phase 2
+asset rating labels and does not claim a full unbounded portfolio scan is fast
+enough.
 
 ## Risks
 

@@ -102,6 +102,7 @@
 - `roadmap/evidence/deterministic-learning-rules.md` - reviewed learning-rule seed evidence and midflight acknowledgement trace
 - `roadmap/evidence/semantic-evolution-grading.md` - candidate evidence for separating real semantic evolution from copy/fixture noise
 - `roadmap/evidence/phase-1.5-scoring-discipline.md` - implemented scoring discipline and clean-sampling checkpoint evidence
+- `roadmap/evidence/phase-1.5-human-review.md` - human review research and gate decisions for Phase 1.5
 - `roadmap/evidence/phase-2-temp-fixture-calibration-research.md` - first-batch Phase 2 temp fixture scoring research and recommendations
 - `roadmap/evidence/phase-2-claude-second-opinion.md` - intake file for Claude's independent Phase 2 calibration findings
 - `roadmap/evidence/phase-2-claude-red-team-premortem.md` - Claude red-team premortem warning against calibrating on stale noisy samples

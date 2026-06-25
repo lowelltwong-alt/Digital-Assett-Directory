@@ -52,7 +52,8 @@
       "evidence": [
         "processed/reports/asset_rating_calibration_summary.md",
         "processed/calibration/asset_rating_template.jsonl",
-        "roadmap/evidence/phase-1.5-scoring-discipline.md"
+        "roadmap/evidence/phase-1.5-scoring-discipline.md",
+        "roadmap/evidence/phase-1.5-human-review.md"
       ],
       "phase_id": "phase-1.5-scoring-discipline-clean-sampling",
       "reviewed_at": "2026-06-25T18:47:47.421901+00:00",
@@ -60,11 +61,26 @@
       "status": "verified",
       "summary": "Human authorized Phase 1.5 clean calibration sample gate for the regenerated deduped sample; Phase 2 labels remain unapplied and pending."
     },
+    "phase-1.5-noise-quarantine-reviewed": {
+      "evidence": [
+        "config/sources.example.yaml",
+        "processed/reports/quarantine_summary.md",
+        "processed/reports/scan_summary.md",
+        "roadmap/evidence/phase-1.5-scoring-discipline.md",
+        "roadmap/evidence/phase-1.5-human-review.md"
+      ],
+      "phase_id": "phase-1.5-scoring-discipline-clean-sampling",
+      "reviewed_at": "2026-06-25T18:58:00+00:00",
+      "reviewer": "Lowell",
+      "status": "verified",
+      "summary": "Human authorized Phase 1.5 scanner-noise and quarantine gate after reviewing default excludes, bounded quarantine evidence, scan summary, and regression coverage. This verifies behavior and methodology, not full unbounded portfolio scan performance."
+    },
     "phase-1.5-score-methodology-reviewed": {
       "evidence": [
         "docs/ASSET_VALUE_MODEL.md",
         "config/scoring.yaml",
-        "roadmap/evidence/phase-1.5-scoring-discipline.md"
+        "roadmap/evidence/phase-1.5-scoring-discipline.md",
+        "roadmap/evidence/phase-1.5-human-review.md"
       ],
       "phase_id": "phase-1.5-scoring-discipline-clean-sampling",
       "reviewed_at": "2026-06-25T18:47:47.389523+00:00",
