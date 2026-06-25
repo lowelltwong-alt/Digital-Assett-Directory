@@ -2,6 +2,9 @@
   "registry_version": "0.1.0",
   "schemas": {
     "asset": "schemas/asset.schema.json",
+    "asset_chunk": "schemas/asset-chunk.schema.json",
+    "asset_delta": "schemas/asset-delta.schema.json",
+    "duplicate_cluster": "schemas/duplicate-cluster.schema.json",
     "edge": "schemas/edge.schema.json",
     "lesson": "schemas/lesson.schema.json",
     "handoff": "schemas/handoff.schema.json",

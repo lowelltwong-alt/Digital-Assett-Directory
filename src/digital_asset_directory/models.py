@@ -19,6 +19,8 @@ class AssetRecord(BaseModel):
     logical_path: str
     uri: str = ""
     content_hash: str = ""
+    metadata_fingerprint: str = ""
+    content_sha256: str | None = None
     size_bytes: int = 0
     modified_at: str | None = None
     first_seen_at: str
@@ -35,6 +37,7 @@ class AssetRecord(BaseModel):
     value_score: float = 0.0
     value_components: dict[str, float] = Field(default_factory=dict)
     confidence: ConfidenceLabel = "medium"
+    source_provenance: dict[str, Any] = Field(default_factory=dict)
     metadata: dict[str, Any] = Field(default_factory=dict)
 
 
@@ -48,6 +51,55 @@ class EdgeRecord(BaseModel):
     confidence: float = Field(ge=0, le=1)
     evidence: dict[str, Any] = Field(default_factory=dict)
     created_at: str
+    scan_id: str
+    review_status: Literal["generated_candidate", "reviewed", "rejected"] = "generated_candidate"
+
+
+class AssetChunkRecord(BaseModel):
+    schema_version: str = "0.1.0"
+    chunk_id: str
+    asset_id: str
+    revision_id: str
+    source_id: str
+    logical_path: str
+    chunk_index: int = Field(ge=0)
+    chunk_kind: Literal["text", "metadata"]
+    content_hash: str = Field(min_length=1)
+    char_start: int = Field(ge=0)
+    char_end: int = Field(ge=0)
+    text_excerpt: str = ""
+    evidence: dict[str, Any] = Field(default_factory=dict)
+    created_at: str
+    scan_id: str
+    review_status: Literal["generated_candidate", "reviewed", "rejected"] = "generated_candidate"
+
+
+class DuplicateClusterRecord(BaseModel):
+    schema_version: str = "0.1.0"
+    cluster_id: str
+    cluster_type: Literal["exact_content_duplicate", "near_duplicate_candidate"]
+    asset_ids: list[str] = Field(min_length=2)
+    methods: list[str] = Field(min_length=1)
+    evidence: dict[str, Any] = Field(default_factory=dict)
+    confidence: float = Field(ge=0, le=1)
+    generated_at: str
+    scan_id: str
+    review_status: Literal["generated_candidate", "reviewed", "rejected"] = "generated_candidate"
+
+
+class AssetDeltaRecord(BaseModel):
+    schema_version: str = "0.1.0"
+    delta_id: str
+    left_asset_id: str
+    right_asset_id: str
+    delta_type: Literal["exact_duplicate", "near_duplicate_candidate", "containment_candidate"]
+    summary: str = Field(min_length=1)
+    shared_chunk_hashes: list[str] = Field(default_factory=list)
+    left_only_chunk_hashes: list[str] = Field(default_factory=list)
+    right_only_chunk_hashes: list[str] = Field(default_factory=list)
+    evidence: dict[str, Any] = Field(default_factory=dict)
+    confidence: float = Field(ge=0, le=1)
+    generated_at: str
     scan_id: str
     review_status: Literal["generated_candidate", "reviewed", "rejected"] = "generated_candidate"
 

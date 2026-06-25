@@ -27,7 +27,11 @@ def load_scoring(repo_root: Path) -> dict[str, Any]:
     )
 
 
-def score_asset(asset: AssetRecord, scoring: dict[str, Any]) -> AssetRecord:
+def score_asset(
+    asset: AssetRecord,
+    scoring: dict[str, Any],
+    duplicate_counts: dict[str, int] | None = None,
+) -> AssetRecord:
     weights = scoring.get("weights", DEFAULT_WEIGHTS)
     learning_types = {
         "evaluation",
@@ -73,7 +77,13 @@ def score_asset(asset: AssetRecord, scoring: dict[str, Any]) -> AssetRecord:
             + (0.55 if asset.asset_type in {"test", "evaluation", "schema"} else 0.0)
             + (0.15 if "evaluation" in asset.tags else 0.0),
         ),
-        "provenance": 0.95 if asset.source_id and asset.content_hash else 0.25,
+        "provenance": (
+            0.95
+            if asset.content_sha256
+            else 0.55
+            if (asset.source_provenance or asset.source_id)
+            else 0.2
+        ),
         "composability": min(
             1.0, 0.25 + 0.13 * len(asset.capabilities) + 0.08 * len(asset.outcomes)
         ),
@@ -81,7 +91,8 @@ def score_asset(asset: AssetRecord, scoring: dict[str, Any]) -> AssetRecord:
             1.0,
             0.30 + (0.45 if asset.asset_type in learning_types else 0.0) + 0.08 * len(asset.needs),
         ),
-        "uniqueness": 0.55,
+        "uniqueness": 1.0
+        - min(0.6, 0.15 * max(0, (duplicate_counts or {}).get(asset.asset_id, 1) - 1)),
         "demand_signal": min(1.0, 0.30 + 0.15 * len(asset.needs) + 0.10 * len(asset.outcomes)),
         "freshness": {"current": 1.0, "watch": 0.65, "stale": 0.25, "unknown": 0.45}.get(
             asset.freshness_status, 0.45
@@ -89,12 +100,20 @@ def score_asset(asset: AssetRecord, scoring: dict[str, Any]) -> AssetRecord:
     }
     raw = sum(float(weights.get(name, 0)) * value for name, value in components.items())
     penalties = scoring.get("risk_penalties", {})
-    if asset.freshness_status == "stale":
-        raw -= float(penalties.get("stale", 0.06))
+    risk = 0.0
     if asset.sensitivity == "unknown":
-        raw -= float(penalties.get("sensitive_unclassified", 0.08))
-    if not asset.content_hash:
-        raw -= float(penalties.get("no_provenance", 0.08))
+        risk += float(penalties.get("sensitive_unclassified", 0.08))
+    if not asset.content_sha256 and not asset.source_provenance:
+        risk += float(penalties.get("no_provenance", 0.08))
+    if (
+        asset.source_kind == "github"
+        and asset.asset_type == "repository"
+        and not asset.metadata.get("license")
+    ):
+        risk += float(penalties.get("unknown_license", 0.04))
+    raw *= max(0.0, 1.0 - min(0.85, risk))
     asset.value_components = {k: round(v * 100, 2) for k, v in components.items()}
+    if risk:
+        asset.value_components["risk_factor"] = round((1.0 - min(0.85, risk)) * 100, 2)
     asset.value_score = round(max(0.0, min(1.0, raw)) * 100, 2)
     return asset

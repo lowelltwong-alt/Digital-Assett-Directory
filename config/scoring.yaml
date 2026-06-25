@@ -12,7 +12,6 @@ weights:
 risk_penalties:
   unknown_license: 0.04
   sensitive_unclassified: 0.08
-  stale: 0.06
   no_provenance: 0.08
 notes:
   - Scores prioritize review and routing; they do not prove truth, quality, or business value.

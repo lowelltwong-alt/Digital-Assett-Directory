@@ -12,7 +12,14 @@ from .extractors import ExtractedContent, classify_asset, extract_bytes, freshne
 from .ids import asset_id, revision_id
 from .models import AssetRecord
 from .scoring import score_asset
-from .utils import safe_relative, sha256_file, utc_now
+from .utils import safe_relative, sha256_bytes, sha256_file, utc_now
+
+FILE_ATTRIBUTE_OFFLINE = 0x00001000
+FILE_ATTRIBUTE_RECALL_ON_OPEN = 0x00040000
+FILE_ATTRIBUTE_RECALL_ON_DATA_ACCESS = 0x00400000
+CLOUD_PLACEHOLDER_FLAGS = (
+    FILE_ATTRIBUTE_OFFLINE | FILE_ATTRIBUTE_RECALL_ON_OPEN | FILE_ATTRIBUTE_RECALL_ON_DATA_ACCESS
+)
 
 
 def _compile_spec(patterns: list[str]) -> PathSpec:
@@ -43,6 +50,37 @@ def discover_files(source: LocalSource, max_files: int | None = None) -> list[Pa
             if max_files and len(result) >= max_files:
                 return result
     return result
+
+
+def _is_cloud_placeholder(stat: os.stat_result) -> bool:
+    if os.name != "nt":
+        return False
+    return bool(getattr(stat, "st_file_attributes", 0) & CLOUD_PLACEHOLDER_FLAGS)
+
+
+def _cloud_placeholder_detection_mode() -> str:
+    return "windows_file_attributes" if os.name == "nt" else "bounded_size_only_non_windows"
+
+
+def _metadata_fingerprint(stat: os.stat_result) -> str:
+    payload = (
+        f"{stat.st_size}:{stat.st_mtime_ns}:"
+        f"{getattr(stat, 'st_file_attributes', 0)}"
+    ).encode("utf-8")
+    return sha256_bytes(payload)
+
+
+def _file_revision_identity(path: Path, max_file_bytes: int) -> tuple[str, str]:
+    stat = path.stat()
+    placeholder = _is_cloud_placeholder(stat)
+    if stat.st_size > max_file_bytes or placeholder:
+        mode = (
+            "metadata_sha256_for_cloud_placeholder"
+            if placeholder
+            else "metadata_sha256_for_oversize_file"
+        )
+        return _metadata_fingerprint(stat), mode
+    return sha256_file(path), "content_sha256"
 
 
 def _repo_roots(files: Iterable[Path], base: Path) -> set[Path]:
@@ -167,9 +205,17 @@ def scan_local_source(
     max_files: int | None = None,
 ) -> tuple[list[AssetRecord], dict[str, str]]:
     files = discover_files(source, max_files=max_files)
-    before = {str(path): sha256_file(path) for path in files}
+    before_identities: dict[str, tuple[str, str]] = {}
+    for path in files:
+        try:
+            before_identities[str(path)] = _file_revision_identity(path, source.max_file_bytes)
+        except (FileNotFoundError, OSError):
+            continue
+    files = [path for path in files if str(path) in before_identities]
+    before = {path: identity for path, (identity, _mode) in before_identities.items()}
     now = utc_now()
     assets: list[AssetRecord] = []
+    assets_by_path: dict[str, AssetRecord] = {}
     base = source.path.resolve()
     repo_roots = _repo_roots(files, base)
     repo_asset_ids: dict[Path, str] = {}
@@ -178,12 +224,12 @@ def scan_local_source(
         logical = f"{source.path_alias}/{safe_relative(repo, base)}".rstrip("/")
         identifier = asset_id(source.id, f"repository:{logical}")
         repo_asset_ids[repo] = identifier
-        modified = datetime.fromtimestamp(repo.stat().st_mtime, tz=timezone.utc).isoformat()
+        repo_stat = repo.stat()
+        metadata_fingerprint = _metadata_fingerprint(repo_stat)
+        modified = datetime.fromtimestamp(repo_stat.st_mtime, tz=timezone.utc).isoformat()
         record = AssetRecord(
             asset_id=identifier,
-            revision_id=revision_id(
-                identifier, before.get(str(next(iter(repo.glob("*")), repo)), "directory")
-            ),
+            revision_id=revision_id(identifier, metadata_fingerprint),
             source_id=source.id,
             source_kind="local",
             asset_type="repository",
@@ -192,6 +238,8 @@ def scan_local_source(
             logical_path=logical,
             uri=f"file://{logical}",
             content_hash="directory",
+            metadata_fingerprint=metadata_fingerprint,
+            content_sha256=None,
             modified_at=modified,
             first_seen_at=now,
             last_seen_at=now,
@@ -211,28 +259,53 @@ def scan_local_source(
             sensitivity="internal",
             trust_zone="source_owned",
             confidence="high",
-            metadata={"path_alias": source.path_alias, "repository_root": logical},
+            source_provenance={
+                "source_id": source.id,
+                "source_kind": "local",
+                "path_alias": source.path_alias,
+                "logical_path": logical,
+                "observed_by": "local_scan",
+                "authority": "Source repository remains authoritative.",
+            },
+            metadata={
+                "path_alias": source.path_alias,
+                "repository_root": logical,
+                "revision_identity_mode": "directory_metadata",
+            },
         )
         assets.append(score_asset(record, scoring))
 
     for path in files:
-        stat = path.stat()
+        try:
+            stat = path.stat()
+        except (FileNotFoundError, OSError):
+            continue
         size = stat.st_size
         rel = safe_relative(path, base)
         logical = f"{source.path_alias}/{rel}"
         file_hash = before[str(path)]
+        revision_identity_mode = before_identities[str(path)][1]
+        metadata_fingerprint = _metadata_fingerprint(stat)
         identifier = asset_id(source.id, logical)
         parent_id = None
         repo_root = next((repo for repo in repo_roots if path.is_relative_to(repo)), None)
         if repo_root:
             parent_id = repo_asset_ids[repo_root]
-        skipped_content = size > source.max_file_bytes
+        cloud_placeholder = _is_cloud_placeholder(stat)
+        content_exceeds_size_limit = size > source.max_file_bytes
+        skipped_content = content_exceeds_size_limit or cloud_placeholder
         extracted: ExtractedContent
         if skipped_content:
+            skip_reason = (
+                "cloud storage placeholder or offline file"
+                if cloud_placeholder
+                else "configured size limit"
+            )
             extracted = {
                 "title": path.stem or path.name,
-                "description": "Content not read because the file exceeded the configured size limit.",
+                "description": f"Content not read because the file matched the {skip_reason}.",
                 "excerpt": "",
+                "chunk_text": "",
                 "text_tokens": [],
                 "mime_type": "application/octet-stream",
                 "decode_error": False,
@@ -264,6 +337,8 @@ def scan_local_source(
             logical_path=logical,
             uri=f"file://{logical}",
             content_hash=file_hash,
+            metadata_fingerprint=metadata_fingerprint,
+            content_sha256=file_hash if revision_identity_mode == "content_sha256" else None,
             size_bytes=size,
             modified_at=modified,
             first_seen_at=now,
@@ -282,21 +357,34 @@ def scan_local_source(
             sensitivity="internal",
             trust_zone="source_owned",
             confidence="high",
+            source_provenance={
+                "source_id": source.id,
+                "source_kind": "local",
+                "path_alias": source.path_alias,
+                "logical_path": logical,
+                "observed_by": "local_scan",
+                "authority": "Source repository remains authoritative.",
+            },
             metadata={
                 "path_alias": source.path_alias,
                 "relative_path": rel,
                 "repository_root": safe_relative(repo_root, base) if repo_root else None,
                 "mime_type": extracted["mime_type"],
                 "excerpt": extracted["excerpt"] if settings.store_excerpts else "",
+                "chunk_text": extracted["chunk_text"] if settings.store_excerpts else "",
                 "text_tokens": extracted["text_tokens"],
                 "asset_patterns": extracted["asset_patterns"],
                 "pattern_evidence": extracted["pattern_evidence"],
                 "redaction_count": extracted["redaction_count"],
                 "decode_error": extracted["decode_error"],
-                "content_skipped_for_size": skipped_content,
+                "content_skipped_for_size": content_exceeds_size_limit,
+                "content_skipped_for_cloud_placeholder": cloud_placeholder,
+                "cloud_placeholder_detection_mode": _cloud_placeholder_detection_mode(),
+                "revision_identity_mode": revision_identity_mode,
             },
         )
         assets.append(score_asset(record, scoring))
+        assets_by_path[str(path)] = record
 
     assets_by_id = {asset.asset_id: asset for asset in assets}
     for repo_path, repo_id in repo_asset_ids.items():
@@ -323,8 +411,23 @@ def scan_local_source(
             repo_asset.outcomes = sorted(set(repo_asset.outcomes) | {"repeatable_quality"})
             score_asset(repo_asset, scoring)
 
-    after = {str(path): sha256_file(path) for path in files}
-    mutated = {path: digest for path, digest in before.items() if after.get(path) != digest}
-    if mutated:
-        raise RuntimeError(f"Source mutation detected during scan: {sorted(mutated)[:5]}")
+    after_identities: dict[str, tuple[str, str]] = {}
+    for path in files:
+        try:
+            after_identities[str(path)] = _file_revision_identity(path, source.max_file_bytes)
+        except (FileNotFoundError, OSError):
+            continue
+    after = {path: identity for path, (identity, _mode) in after_identities.items()}
+    mutated = {
+        path: digest
+        for path, digest in before.items()
+        if path in after and after.get(path) != digest
+    }
+    for path in mutated:
+        asset = assets_by_path.get(path)
+        if asset:
+            asset.confidence = "low"
+            asset.metadata["scan_stability"] = "changed_during_scan"
+            asset.metadata["changed_during_scan"] = True
+            asset.metadata["post_scan_revision_identity"] = after.get(path)
     return assets, before

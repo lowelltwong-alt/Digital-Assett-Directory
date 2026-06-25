@@ -68,9 +68,26 @@ def _synergy_candidate_pairs(
     return [(by_id[left], by_id[right]) for left, right in ranked]
 
 
-def detect_synergies(assets: list[AssetRecord], max_candidates: int = 20000) -> list[SynergyRecord]:
+def _pair_key(left_id: str, right_id: str) -> tuple[str, str]:
+    return tuple(sorted((left_id, right_id)))
+
+
+def _moderate_proximity(score: float) -> float:
+    if score <= 0:
+        return 0.0
+    return max(0.0, 1.0 - min(1.0, abs(score - 0.35) / 0.35))
+
+
+def detect_synergies(
+    assets: list[AssetRecord],
+    max_candidates: int = 20000,
+    duplicate_asset_pairs: set[tuple[str, str]] | None = None,
+) -> list[SynergyRecord]:
     records: list[SynergyRecord] = []
+    duplicate_asset_pairs = duplicate_asset_pairs or set()
     for left, right in _synergy_candidate_pairs(assets, max_candidates):
+        if _pair_key(left.asset_id, right.asset_id) in duplicate_asset_pairs:
+            continue
         shared_outcomes = sorted(set(left.outcomes) & set(right.outcomes))
         left_covers = set(left.capabilities) & set(right.needs)
         right_covers = set(right.capabilities) & set(left.needs)
@@ -78,11 +95,20 @@ def detect_synergies(assets: list[AssetRecord], max_candidates: int = 20000) -> 
         capability_union = set(left.capabilities) | set(right.capabilities)
         capability_overlap = set(left.capabilities) & set(right.capabilities)
         complementary = sorted(capability_union - capability_overlap)
-        tag_overlap = jaccard(left.tags, right.tags)
-        outcome_score = min(1.0, len(shared_outcomes) / 2) if shared_outcomes else 0.0
-        need_score = min(1.0, len(needs_covered) / 2) if needs_covered else 0.0
-        diversity = min(1.0, len(complementary) / 5) if complementary else 0.0
-        score = 0.35 * outcome_score + 0.35 * need_score + 0.20 * diversity + 0.10 * tag_overlap
+        domain_left = set(left.tags) | set(left.outcomes) | {left.asset_type}
+        domain_right = set(right.tags) | set(right.outcomes) | {right.asset_type}
+        domain_overlap = jaccard(domain_left, domain_right)
+        total_needs = set(left.needs) | set(right.needs)
+        need_score = (
+            len(needs_covered) / max(1, len(total_needs))
+            if total_needs and needs_covered
+            else 0.0
+        )
+        complementarity = (
+            len(complementary) / max(1, len(capability_union)) if capability_union else 0.0
+        )
+        proximity = _moderate_proximity(domain_overlap)
+        score = 0.55 * need_score + 0.30 * complementarity + 0.15 * proximity
         if score < 0.35:
             continue
         missing = sorted(
@@ -102,8 +128,12 @@ def detect_synergies(assets: list[AssetRecord], max_candidates: int = 20000) -> 
                 evidence={
                     "left": left.logical_path,
                     "right": right.logical_path,
-                    "tag_overlap": round(tag_overlap, 4),
+                    "domain_overlap": round(domain_overlap, 4),
+                    "need_score": round(need_score, 4),
+                    "complementarity": round(complementarity, 4),
+                    "moderate_proximity": round(proximity, 4),
                     "candidate_generation": "inverted_semantic_facets",
+                    "duplicate_pairs_excluded": True,
                     "heuristic_only": True,
                 },
             )

@@ -1,0 +1,73 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://local.digital-asset-directory/schemas/duplicate-cluster.schema.json",
+  "title": "Duplicate Cluster Record",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "cluster_id",
+    "cluster_type",
+    "asset_ids",
+    "methods",
+    "evidence",
+    "confidence",
+    "generated_at",
+    "scan_id",
+    "review_status"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": "0.1.0"
+    },
+    "cluster_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "cluster_type": {
+      "enum": [
+        "exact_content_duplicate",
+        "near_duplicate_candidate"
+      ]
+    },
+    "asset_ids": {
+      "type": "array",
+      "minItems": 2,
+      "items": {
+        "type": "string",
+        "minLength": 1
+      },
+      "uniqueItems": true
+    },
+    "methods": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "string",
+        "minLength": 1
+      }
+    },
+    "evidence": {
+      "type": "object"
+    },
+    "confidence": {
+      "type": "number",
+      "minimum": 0,
+      "maximum": 1
+    },
+    "generated_at": {
+      "type": "string"
+    },
+    "scan_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "review_status": {
+      "enum": [
+        "generated_candidate",
+        "reviewed",
+        "rejected"
+      ]
+    }
+  },
+  "additionalProperties": false
+}

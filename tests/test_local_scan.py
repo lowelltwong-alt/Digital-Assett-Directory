@@ -1,6 +1,7 @@
 from pathlib import Path
 
 from digital_asset_directory.config import LocalSource, Settings
+import digital_asset_directory.local_scan as local_scan
 from digital_asset_directory.local_scan import scan_local_source
 from digital_asset_directory.scoring import DEFAULT_WEIGHTS
 from digital_asset_directory.utils import sha256_file
@@ -28,6 +29,9 @@ def test_local_scan_is_read_only_and_redacts_excerpt(tmp_path: Path):
     file_asset = next(a for a in assets if a.logical_path.endswith("README.md"))
     assert "do-not-store" not in file_asset.metadata["excerpt"]
     assert file_asset.parent_asset_id is not None
+    assert file_asset.metadata_fingerprint
+    assert file_asset.content_sha256 == before
+    assert file_asset.source_provenance["authority"] == "Source repository remains authoritative."
     empty_asset = next(a for a in assets if a.logical_path.endswith("empty.md"))
     assert empty_asset.metadata["content_skipped_for_size"] is False
     assert empty_asset.metadata["excerpt"] == ""
@@ -72,3 +76,98 @@ def test_local_scan_adds_candidate_composite_patterns_to_repository(tmp_path: Pa
     assert repo_asset.metadata["composite_asset_hint"]["child_asset_count"] >= 4
     assert repo_asset.metadata["composite_asset_hint"]["authority"].startswith("Generated")
     assert "composite-asset" in repo_asset.tags
+
+
+def test_local_scan_uses_metadata_identity_for_oversize_files(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+):
+    repo = tmp_path / "project"
+    repo.mkdir()
+    (repo / ".git").mkdir()
+    big_file = repo / "archive.bin"
+    big_file.write_bytes(b"0123456789")
+
+    original_sha256_file = local_scan.sha256_file
+
+    def guarded_sha256_file(path: Path) -> str:
+        if path == big_file:
+            raise AssertionError("oversize files should not require full-byte hashing")
+        return original_sha256_file(path)
+
+    monkeypatch.setattr(local_scan, "sha256_file", guarded_sha256_file)
+    source = LocalSource(
+        id="test",
+        path=tmp_path,
+        path_alias="test",
+        exclude=["**/.git/**"],
+        max_file_bytes=5,
+    )
+
+    assets, hashes = scan_local_source(source, Settings(), {"weights": DEFAULT_WEIGHTS})
+
+    file_asset = next(a for a in assets if a.logical_path.endswith("archive.bin"))
+    assert file_asset.content_hash == hashes[str(big_file)]
+    assert file_asset.content_sha256 is None
+    assert file_asset.metadata_fingerprint == hashes[str(big_file)]
+    assert len(file_asset.content_hash) == 64
+    assert file_asset.metadata["content_skipped_for_size"] is True
+    assert file_asset.metadata["revision_identity_mode"] == "metadata_sha256_for_oversize_file"
+
+
+def test_local_scan_detects_cloud_placeholder_attributes(monkeypatch: pytest.MonkeyPatch):
+    class FakeStat:
+        st_file_attributes = local_scan.FILE_ATTRIBUTE_RECALL_ON_DATA_ACCESS
+
+    monkeypatch.setattr(local_scan.os, "name", "nt")
+    assert local_scan._is_cloud_placeholder(FakeStat()) is True
+
+
+def test_local_scan_cloud_placeholder_non_windows_fallback(monkeypatch: pytest.MonkeyPatch):
+    class FakeStat:
+        st_file_attributes = local_scan.FILE_ATTRIBUTE_RECALL_ON_DATA_ACCESS
+
+    monkeypatch.setattr(local_scan.os, "name", "posix")
+    assert local_scan._is_cloud_placeholder(FakeStat()) is False
+    assert local_scan._cloud_placeholder_detection_mode() == "bounded_size_only_non_windows"
+
+
+def test_local_scan_ignores_files_that_vanish_during_inventory(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+):
+    missing = tmp_path / "vanished.md"
+    source = LocalSource(id="test", path=tmp_path, path_alias="test")
+    monkeypatch.setattr(local_scan, "discover_files", lambda _source, max_files=None: [missing])
+
+    assets, hashes = scan_local_source(source, Settings(), {"weights": DEFAULT_WEIGHTS})
+
+    assert assets == []
+    assert hashes == {}
+
+
+def test_local_scan_marks_files_that_change_during_inventory(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+):
+    repo = tmp_path / "project"
+    repo.mkdir()
+    (repo / ".git").mkdir()
+    note = repo / "README.md"
+    note.write_text("# Project", encoding="utf-8")
+    calls = 0
+
+    def changing_identity(path: Path, max_file_bytes: int) -> tuple[str, str]:
+        nonlocal calls
+        if path == note:
+            calls += 1
+            return ("before", "content_sha256") if calls == 1 else ("after", "content_sha256")
+        return ("stable", "content_sha256")
+
+    monkeypatch.setattr(local_scan, "_file_revision_identity", changing_identity)
+    source = LocalSource(id="test", path=tmp_path, path_alias="test", exclude=["**/.git/**"])
+
+    assets, _hashes = scan_local_source(source, Settings(), {"weights": DEFAULT_WEIGHTS})
+
+    file_asset = next(a for a in assets if a.logical_path.endswith("README.md"))
+    assert file_asset.confidence == "low"
+    assert file_asset.metadata["changed_during_scan"] is True
+    assert file_asset.metadata["scan_stability"] == "changed_during_scan"
+    assert file_asset.metadata["post_scan_revision_identity"] == "after"

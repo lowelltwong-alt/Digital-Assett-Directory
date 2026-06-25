@@ -9,7 +9,22 @@
 | `source_id` | Registered local or GitHub source adapter identity. | Source configuration |
 | `parent_asset_id` | Container/repository relationship. | Observed source hierarchy |
 | `logical_path` | Path using a source alias rather than exposing an absolute local path. | Normalized observation |
-| `content_hash` | SHA-256 locally or Git blob identity remotely. | Observed evidence |
+| `content_hash` | Scanner revision identity hash. It may be exact content identity or metadata-derived when content was intentionally not read. | Observed evidence |
+| `metadata_fingerprint` | Fast fingerprint of observable metadata such as size, timestamps, and platform attributes. | Derived observation |
+| `content_sha256` | Exact SHA-256 of file bytes when bytes were safely read; otherwise `null`. | Exact observed evidence when present |
+| `source_provenance` | Source adapter, path/repo context, scanner, and authority boundary. | Normalized observation |
+
+## Identity layers
+
+| Record | Meaning | Authority |
+|---|---|---|
+| `AssetChunkRecord` | Deterministic token-shingle or metadata chunk tied to one asset revision. | Generated candidate evidence |
+| `DuplicateClusterRecord` | Exact-content or near-duplicate candidate group of assets. | Generated candidate evidence |
+| `AssetDeltaRecord` | Pairwise exact/near duplicate delta summary and shared/one-sided chunk hashes. | Generated candidate evidence |
+| `exact_duplicate_of` edge | Assets share the same non-empty exact `content_sha256`. | Generated candidate relationship |
+| `near_duplicate_of` edge | Assets share enough deterministic token-shingle MinHash similarity to warrant review. | Generated candidate relationship |
+| `contained_in` edge | Most source shingles appear inside the target asset even when symmetric overlap is lower. | Generated candidate relationship |
+| `has_delta_candidate` edge | A generated delta record exists for the asset pair. | Generated candidate relationship |
 
 ## Discovery and use
 
@@ -29,6 +44,7 @@
 | `metadata.composite_asset_hint` | Candidate member IDs, child count, and authority note for a possible composite asset. |
 | `metadata.instance_of_asset_ids` | For use/run/deployment assets, the assets instantiated together. |
 | `metadata.workflow_steps` | For workflow assets, ordered or named steps when known. |
+| `metadata.chunk_text` | Redacted extracted text used for deterministic token-shingle chunking. Generated output only. |
 
 ## Governance and time
 
@@ -38,7 +54,7 @@
 | `freshness_status` | Current, watch, stale, or unknown relative to the type-specific threshold. |
 | `sensitivity` | Public, internal, confidential, restricted, or unknown. |
 | `trust_zone` | Source-owned, generated candidate, reviewed candidate, verified, or other registered trust posture. |
-| `confidence` | Confidence in the normalized metadata, not confidence that the source claim is true. |
+| `confidence` | Heuristic strength/confidence in normalized metadata, not calibrated P(useful) and not confidence that the source claim is true. |
 | `first_seen_at` / `last_seen_at` | Catalog observation times. |
 | `modified_at` | Source-reported modification time when available. |
 

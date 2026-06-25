@@ -14,6 +14,9 @@ dad: a owl:Ontology ;
 
 dad:DigitalAsset a owl:Class ; rdfs:subClassOf prov:Entity, dcat:Resource .
 dad:AssetRevision a owl:Class ; rdfs:subClassOf prov:Entity .
+dad:AssetChunk a owl:Class ; rdfs:subClassOf prov:Entity .
+dad:AssetDelta a owl:Class ; rdfs:subClassOf prov:Entity .
+dad:DuplicateCluster a owl:Class ; rdfs:subClassOf prov:Entity .
 dad:Repository a owl:Class ; rdfs:subClassOf dad:DigitalAsset .
 dad:Workflow a owl:Class ; rdfs:subClassOf dad:DigitalAsset .
 dad:CompositeAsset a owl:Class ; rdfs:subClassOf dad:DigitalAsset .
@@ -36,12 +39,20 @@ dad:instantiatesAsset a owl:ObjectProperty ; rdfs:domain dad:AssetInstance ; rdf
 dad:hasWorkflowStep a owl:ObjectProperty ; rdfs:domain dad:Workflow ; rdfs:range dad:DigitalAsset .
 dad:usesTogether a owl:ObjectProperty ; rdfs:domain dad:AssetInstance ; rdfs:range dad:DigitalAsset .
 dad:relatedTo a owl:ObjectProperty, owl:SymmetricProperty ; rdfs:domain dad:DigitalAsset ; rdfs:range dad:DigitalAsset .
+dad:exactDuplicateOf a owl:ObjectProperty, owl:SymmetricProperty ; rdfs:domain dad:DigitalAsset ; rdfs:range dad:DigitalAsset .
+dad:nearDuplicateOf a owl:ObjectProperty, owl:SymmetricProperty ; rdfs:domain dad:DigitalAsset ; rdfs:range dad:DigitalAsset .
+dad:containedIn a owl:ObjectProperty ; rdfs:domain dad:DigitalAsset ; rdfs:range dad:DigitalAsset .
+dad:hasDeltaCandidate a owl:ObjectProperty, owl:SymmetricProperty ; rdfs:domain dad:DigitalAsset ; rdfs:range dad:DigitalAsset .
 dad:complements a owl:ObjectProperty, owl:SymmetricProperty ; rdfs:domain dad:DigitalAsset ; rdfs:range dad:DigitalAsset .
 dad:satisfiesNeed a owl:ObjectProperty ; rdfs:domain dad:DigitalAsset ; rdfs:range dad:DigitalAsset .
 dad:activates a owl:ObjectProperty ; rdfs:domain dad:DigitalAsset ; rdfs:range dad:DigitalAsset .
 dad:learnedFrom a owl:ObjectProperty ; rdfs:domain dad:Lesson ; rdfs:range prov:Entity .
 dad:hasCapability a owl:ObjectProperty ; rdfs:domain dad:DigitalAsset ; rdfs:range dad:Capability .
 dad:hasNeed a owl:ObjectProperty ; rdfs:domain dad:DigitalAsset ; rdfs:range dad:Need .
+dad:hasChunk a owl:ObjectProperty ; rdfs:domain dad:AssetRevision ; rdfs:range dad:AssetChunk .
+dad:hasDuplicateMember a owl:ObjectProperty ; rdfs:domain dad:DuplicateCluster ; rdfs:range dad:DigitalAsset .
 dad:valueScore a owl:DatatypeProperty ; rdfs:domain dad:DigitalAsset ; rdfs:range xsd:decimal .
+dad:metadataFingerprint a owl:DatatypeProperty ; rdfs:domain dad:DigitalAsset ; rdfs:range xsd:string .
+dad:contentSha256 a owl:DatatypeProperty ; rdfs:domain dad:DigitalAsset ; rdfs:range xsd:string .
 dad:confidence a owl:DatatypeProperty ; rdfs:range xsd:string .
 dad:freshnessStatus a owl:DatatypeProperty ; rdfs:domain dad:DigitalAsset ; rdfs:range xsd:string .

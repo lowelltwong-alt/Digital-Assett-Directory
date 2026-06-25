@@ -68,6 +68,26 @@
       "meaning": "Assets are reviewed or candidate variants that share a core but may serve different contexts."
     },
     {
+      "id": "exact_duplicate_of",
+      "direction": "symmetric",
+      "meaning": "Assets have the same exact content SHA-256. Provenance and role may still differ."
+    },
+    {
+      "id": "near_duplicate_of",
+      "direction": "symmetric",
+      "meaning": "Assets share enough deterministic chunks or signatures to warrant duplicate/variant review."
+    },
+    {
+      "id": "contained_in",
+      "direction": "subset_to_superset",
+      "meaning": "Most deterministic shingles from the source asset appear inside the target asset; generated candidate only."
+    },
+    {
+      "id": "has_delta_candidate",
+      "direction": "symmetric",
+      "meaning": "Assets have a generated delta record describing exact or near-duplicate differences."
+    },
+    {
       "id": "complements",
       "direction": "symmetric",
       "meaning": "Assets provide non-identical capabilities that combine usefully."

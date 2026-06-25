@@ -51,3 +51,25 @@ def test_need_edges_synergy_and_alerts():
     triggers = activation_triggers([left, right])
     alerts = generate_alerts([left, right], edges, synergies, triggers, "scan", 1, 0.3, 60)
     assert any(a.alert_type == "synergy_candidate" for a in alerts)
+
+
+def test_related_edges_use_idf_weighted_cosine_and_rare_terms():
+    left = asset("a", "Alpha rareterm common", tags=["common", "rareterm"])
+    right = asset("b", "Beta rareterm common", tags=["common", "rareterm"])
+    boilerplate = asset("c", "Gamma common", tags=["common"])
+
+    edges = build_edges([left, right, boilerplate], "scan", threshold=0.1)
+
+    related = next(e for e in edges if e.edge_type == "related_to")
+    assert related.method == "idf_weighted_token_cosine"
+    assert related.evidence["token_weighting"] == "idf"
+    assert related.evidence["shared_terms"][0] == "rareterm"
+
+
+def test_synergy_excludes_duplicate_pairs():
+    left = asset("a", "Shared A", ["same_capability"], [], ["same_outcome"], ["same"])
+    right = asset("b", "Shared B", ["same_capability"], [], ["same_outcome"], ["same"])
+
+    synergies = detect_synergies([left, right], duplicate_asset_pairs={("a", "b")})
+
+    assert synergies == []

@@ -60,6 +60,11 @@ asset_value =
 
 Each dimension is normalized and the resulting 0–100 score is a triage heuristic. It must expose component scores and confidence.
 
+Risk adjustments are applied as a multiplicative factor after the weighted component score. This
+keeps risk interpretable as a discount on otherwise useful evidence. Freshness is represented by
+the freshness component only, not a second stale penalty. Unknown GitHub repository license status
+is a risk factor when GitHub scanning is explicitly enabled and reviewed.
+
 ## Dormant option value
 
 Low current use does not mean low future value. The radar preserves:

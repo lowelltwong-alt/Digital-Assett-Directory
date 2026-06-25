@@ -1,7 +1,9 @@
 from __future__ import annotations
 
 import mimetypes
+import re
 from datetime import datetime, timezone
+from functools import lru_cache
 from pathlib import Path
 from typing import Literal, TypedDict
 
@@ -277,10 +279,25 @@ def extract_title(path: str, text: str) -> str:
     return stem or Path(path).name
 
 
+@lru_cache(maxsize=4096)
+def _phrase_pattern(phrase: str) -> re.Pattern[str]:
+    """Match a phrase only at word boundaries so 'agent' does not match 'management'.
+
+    Boundaries are applied only at alphanumeric ends, so phrases ending in symbols
+    (for example 'recall@' or 'tf-idf') still match in running text.
+    """
+    escaped = re.escape(phrase)
+    prefix = r"(?<!\w)" if phrase[:1].isalnum() else ""
+    suffix = r"(?!\w)" if phrase[-1:].isalnum() else ""
+    return re.compile(prefix + escaped + suffix)
+
+
 def _matches(text: str, mapping: dict[str, tuple[str, ...]]) -> list[str]:
     lowered = text.lower()
     return sorted(
-        key for key, phrases in mapping.items() if any(phrase in lowered for phrase in phrases)
+        key
+        for key, phrases in mapping.items()
+        if any(_phrase_pattern(phrase).search(lowered) for phrase in phrases)
     )
 
 
@@ -346,6 +363,7 @@ class ExtractedContent(SemanticFields):
     title: str
     description: str
     excerpt: str
+    chunk_text: str
     text_tokens: list[str]
     mime_type: str
     decode_error: bool
@@ -384,6 +402,7 @@ def extract_bytes(
             "",
         )[:500],
         "excerpt": excerpt,
+        "chunk_text": safe_text,
         "text_tokens": sorted(tokens(f"{path} {safe_text[:20000]}"))[:1000],
         "mime_type": mimetypes.guess_type(path)[0] or "application/octet-stream",
         "decode_error": decode_error,

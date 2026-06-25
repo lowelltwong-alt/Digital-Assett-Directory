@@ -26,6 +26,9 @@
 ## Contracts
 
 - `schemas/asset.schema.json`
+- `schemas/asset-chunk.schema.json`
+- `schemas/asset-delta.schema.json`
+- `schemas/duplicate-cluster.schema.json`
 - `schemas/asset-pattern.schema.json`
 - `schemas/edge.schema.json`
 - `schemas/lesson.schema.json`
@@ -58,6 +61,7 @@
 - `docs/PROPOSAL_ENGINE_CALIBRATION_WORKFLOW.md` — operational workflow for reviewing bottom-up and top-down proposal engines
 - `docs/DOWNSTREAM_REPO_GOVERNANCE.md`
 - `docs/TESTING_AND_ORCHESTRATION.md` — marker taxonomy, change-driven test selection, and nox tasks
+- `docs/ALGORITHM_CALIBRATION_AND_FIXES_HANDOFF.md` — implemented algorithm fixes, remaining work, and how to calibrate thresholds/weights/confidence
 - `scripts/bootstrap.ps1`
 - `scripts/install_to_target.ps1`
 - `scripts/new_repo.ps1` — scaffold a new repository pre-wired to this hub

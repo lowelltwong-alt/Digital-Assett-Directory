@@ -1,6 +1,6 @@
 import json
 
-from digital_asset_directory.extractors import classify_asset, extract_bytes
+from digital_asset_directory.extractors import classify_asset, extract_bytes, infer_semantics
 from digital_asset_directory.utils import redact_sensitive_text
 
 import pytest
@@ -38,7 +38,20 @@ def test_extract_bytes_redacts_secrets_from_all_derived_fields():
     blob = json.dumps(extracted).lower()
     assert "ghp_abcdefghijklmnopqrstuvwxyz012345" not in blob
     assert "sk-abcdefghijklmnopqrstuv0123" not in blob
+    assert "ghp_ABCDEFGHIJKLMNOPQRSTUVWXYZ012345" not in extracted["chunk_text"]
     assert extracted["redaction_count"] >= 2
+
+
+def test_keyword_matching_uses_word_boundaries():
+    # Substring false positives must not fire: "management"->agent, "paragraph"->graph, "storage"->rag.
+    benign = infer_semantics("docs/notes.md", "The management paragraph documents storage of records.")
+    assert "agent" not in benign["tags"]
+    assert "build_knowledge_graph" not in benign["capabilities"]
+    assert "retrieve_context" not in benign["capabilities"]
+    # Real phrases at word boundaries still match.
+    real = infer_semantics("docs/eval.md", "This is an evaluation harness for a knowledge graph.")
+    assert "evaluation" in real["tags"]
+    assert "build_knowledge_graph" in real["capabilities"]
 
 
 def test_asset_classification():
