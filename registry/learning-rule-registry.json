@@ -467,6 +467,76 @@
       ],
       "enforcement_level": "human_gate",
       "review_status": "reviewed"
+    },
+    {
+      "schema_version": "0.1.0",
+      "rule_id": "learning-rule:software-repo-work-uses-checklist-tree",
+      "title": "Software and repo work uses checklist tree",
+      "summary": "Before non-trivial software, repo, data, workflow, scoring, governance, source-scan, release, or automation work, classify task dimensions and apply the matching checklist branches and risk-tier gates.",
+      "trigger_terms": [
+        "software checklist",
+        "repo checklist",
+        "checklist tree",
+        "data normalization",
+        "normalize data",
+        "normalization rules",
+        "software development",
+        "repo development",
+        "implementation plan",
+        "schema change",
+        "migration",
+        "scoring change",
+        "red team",
+        "premortem",
+        "a/b test",
+        "fresh eyes",
+        "human review"
+      ],
+      "trigger_path_patterns": [
+        "src/",
+        "tests/",
+        "scripts/",
+        "schemas/",
+        "registry/",
+        "config/",
+        "roadmap/",
+        "docs/SOFTWARE_REPO_CHECKLIST_TREE.md",
+        "templates/software-repo-checklist-tree.template.md",
+        ".github/workflows/"
+      ],
+      "context_tags": [
+        "software_repo_checklist",
+        "data_normalization",
+        "load_bearing_decision",
+        "fresh_eyes_review",
+        "asset_use_pay_forward"
+      ],
+      "applies_when": [
+        "An agent is planning or implementing non-trivial software, repo, data, workflow, scoring, governance, source-scan, release, or automation work.",
+        "A task touches data normalization, identity, schemas, migrations, generated exports, scoring, security/privacy, source authority, or future-agent defaults.",
+        "The task has multiple dimensions and the agent needs to decide which checks, human gates, red-team steps, or A/B comparisons are required."
+      ],
+      "does_not_apply_when": [
+        "The task is a trivial isolated edit or one-command query with no downstream consumer, no shared contract, no data normalization, and no authority implication.",
+        "A current-context checklist record already states the selected branches, risk tier, validation, and stop conditions.",
+        "The work only records raw observations and does not plan or change software, data, workflows, scoring, governance, or repo behavior."
+      ],
+      "required_actions": [
+        "Classify task dimensions using `docs/SOFTWARE_REPO_CHECKLIST_TREE.md`.",
+        "State the risk tier and selected checklist branches before implementation.",
+        "Apply data normalization, schema, scoring, security/privacy, migration, workflow, source-scan, release, and testing branches when they match the task.",
+        "Run self red-team, fresh-eyes review, premortem, and A/B or bounded comparison when the risk tier or checklist tree requires them.",
+        "Record validation, stop conditions, human gates, and pay-forward lessons in postflight or evidence."
+      ],
+      "danger_if_ignored": "Agents may skip data normalization rules, miss high-risk downstream effects, fail to request human or fresh-eyes review, or choose defaults without comparing plausible alternatives.",
+      "evidence": [
+        "docs/SOFTWARE_REPO_CHECKLIST_TREE.md",
+        "templates/software-repo-checklist-tree.template.md",
+        "docs/LOAD_BEARING_DECISION_REVIEW.md",
+        "docs/ASSET_USE_PAY_FORWARD_LOOP.md"
+      ],
+      "enforcement_level": "surface",
+      "review_status": "reviewed"
     }
   ],
   "rule": "Reviewed learning rules are deterministic preflight and midflight routing aids. They constrain agent behavior but do not promote generated observations to source truth."

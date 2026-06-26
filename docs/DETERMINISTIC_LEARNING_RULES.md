@@ -45,7 +45,8 @@ Current seed rules are:
 - capture observable decision traces as bounded lesson candidates;
 - context-bound lessons need non-applicability and danger notes;
 - software work should search asset-use pay-forward evidence;
-- load-bearing decisions need risk-tier review.
+- load-bearing decisions need risk-tier review;
+- software and repo work uses the checklist tree.
 
 ## Temp Fixture Copy Rule
 
@@ -165,6 +166,28 @@ review should be requested from another AI or human using
 
 Use `docs/LOAD_BEARING_DECISION_REVIEW.md` for the full checklist, A/B comparison
 requirements, rollback criteria, and evidence storage rules.
+
+## Software And Repo Checklist Tree Rule
+
+Before non-trivial software, repo, data, workflow, scoring, governance, source-scan, release,
+or automation work, agents should classify the task dimensions and select the matching
+checklist branches from `docs/SOFTWARE_REPO_CHECKLIST_TREE.md`.
+
+Minimum pre-implementation statement:
+
+- task dimensions;
+- risk tier;
+- selected checklist branches;
+- human gates;
+- fresh-eyes, premortem, or A/B requirement;
+- validation commands;
+- stop conditions;
+- pay-forward evidence checked.
+
+This rule is intentionally compositional. Use the data normalization branch only when data
+shape, identity, joins, exports, or source records are affected. Use high-risk gates when the
+work changes shared contracts, defaults, source authority, scoring, privacy, migrations,
+automation, or downstream repos. Keep the checklist light for low-risk isolated edits.
 
 ## Promotion Rule
 

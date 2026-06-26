@@ -154,6 +154,24 @@
       "applies_when": ["An agent is planning or implementing software, hits a non-trivial issue, or is trying to prevent a predictable issue before it appears."],
       "does_not_apply_when": ["The task is a trivial isolated edit, a simple command, or an asset was only glanced at and did not influence the work."],
       "risk_if_misapplied": "May add noisy process to small tasks, or may make one prior feedback event look more authoritative than it is."
+    },
+    {
+      "schema_version": "0.1.0",
+      "context_tag_id": "data_normalization",
+      "label": "Data normalization",
+      "description": "Raw observations are transformed into normalized records, identities, controlled vocabularies, joins, exports, or graph-ready data.",
+      "applies_when": ["The task extracts, cleans, joins, dedupes, migrates, scores, exports, or normalizes data from raw or source records."],
+      "does_not_apply_when": ["The task only reads data without changing record shape, identity, schema, joins, or exports."],
+      "risk_if_misapplied": "May add ceremony to simple reads, or miss source-truth and identity errors if applied too weakly."
+    },
+    {
+      "schema_version": "0.1.0",
+      "context_tag_id": "software_repo_checklist",
+      "label": "Software and repo checklist",
+      "description": "A task should compose checklist branches by work dimension and risk tier before implementation or promotion.",
+      "applies_when": ["The task plans or implements non-trivial software, repo, workflow, data, scoring, governance, source-scan, release, or automation work."],
+      "does_not_apply_when": ["The task is a trivial command or isolated reversible edit with no downstream consumer."],
+      "risk_if_misapplied": "May create checklist fatigue, or allow important branches such as data normalization or security to be skipped."
     }
   ],
   "rule": "Context tags are candidate routing and safety labels. They help constrain lessons; they do not prove that a lesson applies."

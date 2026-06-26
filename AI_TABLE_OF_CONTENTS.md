@@ -21,6 +21,7 @@
 - `docs/ASSET_USE_PAY_FORWARD_LOOP.md` - deterministic before/after use feedback workflow for all asset classes
 - `docs/DETERMINISTIC_LEARNING_RULES.md` - reviewed learning rules surfaced in preflight and enforced by midflight acknowledgements
 - `docs/LOAD_BEARING_DECISION_REVIEW.md` - high/medium/low risk gates for load-bearing software, repo, roadmap, schema, governance, scoring, and automation decisions
+- `docs/SOFTWARE_REPO_CHECKLIST_TREE.md` - compositional checklist tree for software, repo, data normalization, governance, scoring, source-scan, review, and release work
 - `docs/WORKFLOW_SWEEPS.md` - governance-first generated-candidate sweeps for discovering important workflow assets across repos
 - `docs/PROFESSIONAL_RECRUITING_INTELLIGENCE_WORKFLOW.md` - reusable workflow asset for official-source professional identity, roster, enrichment, recruiting, acquisition, and group-liftout intelligence
 - `docs/SEMANTIC_EVOLUTION_GRADING.md` - deterministic grading scale for real semantic evolution versus copy/fixture noise
@@ -97,6 +98,7 @@
 - `scripts/unregister_scheduled_scan.ps1`
 - `templates/asset-use-feedback.template.md` - copyable public feedback template
 - `templates/load-bearing-decision-review.template.md` - fresh-eyes red-team/premortem template for high-risk load-bearing decisions
+- `templates/software-repo-checklist-tree.template.md` - reusable checklist-tree record for non-trivial software, repo, data, workflow, scoring, governance, source-scan, and release work
 
 ## Roadmap
 
@@ -107,6 +109,7 @@
 - `roadmap/evidence/contextual-learning-archaeology.md` - generated-candidate archaeology counts, caveats, and review needs
 - `roadmap/evidence/deterministic-learning-rules.md` - reviewed learning-rule seed evidence and midflight acknowledgement trace
 - `roadmap/evidence/load-bearing-decision-review-asset.md` - curated evidence that the load-bearing decision review workflow is a reusable composite digital asset
+- `roadmap/evidence/software-repo-checklist-tree.md` - curated evidence for the software and repo checklist tree workflow asset
 - `roadmap/evidence/semantic-evolution-grading.md` - candidate evidence for separating real semantic evolution from copy/fixture noise
 - `roadmap/evidence/phase-1.5-scoring-discipline.md` - implemented scoring discipline and clean-sampling checkpoint evidence
 - `roadmap/evidence/phase-1.5-human-review.md` - human review research and gate decisions for Phase 1.5

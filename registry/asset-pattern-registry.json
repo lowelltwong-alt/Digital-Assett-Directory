@@ -357,6 +357,27 @@
         "scraper variant clustering and delta review",
         "reviewed evidence that generated exports derive from the canonical store"
       ]
+    },
+    {
+      "id": "software_repo_checklist_tree_system",
+      "label": "Software and repo checklist tree system",
+      "description": "A compositional workflow that routes software, repository, data, workflow, scoring, governance, source-scan, and release tasks through selected checklist branches based on task dimensions and risk tier.",
+      "leverage": "very_high",
+      "recognition_mode": "repository_composite",
+      "positive_signals": [
+        "task dimension or checklist-tree language",
+        "data normalization checklist with source truth, identity, field semantics, matching, and export rules",
+        "risk-tier routing for high, medium, and low impact work",
+        "fresh-eyes review, red-team, premortem, or A/B comparison triggers",
+        "validation, rollback, stop conditions, and evidence-before-promotion fields",
+        "pay-forward learning and context-bound lesson capture"
+      ],
+      "missing_evidence": [
+        "reviewed examples across several repo types",
+        "evidence that checklist use reduces downstream rework or false positives",
+        "human-reviewed boundary for when checklist ceremony is too heavy",
+        "tooling that auto-suggests branches from changed paths and task text"
+      ]
     }
   ],
   "rule": "Pattern matches are generated candidate evidence. They guide review, scoring calibration, and composite-asset proposals; they do not prove value or source truth."
