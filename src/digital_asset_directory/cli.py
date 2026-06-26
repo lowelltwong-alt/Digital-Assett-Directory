@@ -19,6 +19,7 @@ from .asset_families import (
     write_learning_loop_outputs,
     write_workflow_sweep_reports,
 )
+from .background_connections import write_background_connection_outputs
 from .calibration import (
     build_asset_calibration_review_queue,
     import_asset_calibration_review_csv,
@@ -665,6 +666,49 @@ def recommend_semantic_evolution(
             max_families=max_families,
             review_sample=review_sample,
             max_read_bytes=max_read_bytes,
+        )
+    console.print_json(data=result)
+
+
+@recommend_app.command("background-connections")
+def recommend_background_connections(
+    hub: Optional[Path] = typer.Option(None),
+    attention: str = typer.Option("recent", "--attention"),
+    cold: str = typer.Option("older", "--cold"),
+    limit: int = typer.Option(50, "--limit", min=1, max=200),
+    escalation_budget: int = typer.Option(5, "--escalation-budget", min=1, max=20),
+    tau: float = typer.Option(0.70, "--tau", min=0.0, max=1.0),
+    max_hops: int = typer.Option(2, "--max-hops", min=0, max=2),
+    reserve_cold: int = typer.Option(2, "--reserve-cold", min=0, max=20),
+) -> None:
+    """Generate manual, local-only background connection candidates from existing catalog data."""
+    normalized_attention = attention.lower()
+    normalized_cold = cold.lower()
+    if normalized_attention != "recent":
+        console.print("Attention mode must be: recent")
+        raise typer.Exit(2)
+    if normalized_cold != "older":
+        console.print("Cold mode must be: older")
+        raise typer.Exit(2)
+    if reserve_cold > escalation_budget:
+        console.print("reserve-cold cannot exceed escalation-budget")
+        raise typer.Exit(2)
+    cfg = _cfg(hub=hub)
+    with CatalogDB(cfg.database_path) as db:
+        latest_scan = db.latest_scan()
+        scan_id = latest_scan["scan_id"] if latest_scan else "catalog-without-scan"
+        result = write_background_connection_outputs(
+            cfg.repo_root,
+            db.assets(),
+            db.edges(),
+            scan_id=scan_id,
+            attention=normalized_attention,
+            cold=normalized_cold,
+            limit=limit,
+            escalation_budget=escalation_budget,
+            tau=tau,
+            max_hops=max_hops,
+            reserve_cold=reserve_cold,
         )
     console.print_json(data=result)
 

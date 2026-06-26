@@ -2,15 +2,20 @@ import json
 from pathlib import Path
 
 from jsonschema.validators import validator_for
+from pydantic import ValidationError
 
 from digital_asset_directory.models import (
     AssetChunkRecord,
     AssetDeltaRecord,
     AssetRecord,
+    AttentionSeedRecord,
     ChangePatternRecord,
+    ConnectionCandidateRecord,
     ContextTagRecord,
     CounterfactualLessonRecord,
     DuplicateClusterRecord,
+    EscalationPacketRecord,
+    ExpansionMapRecord,
     FailureSignalRecord,
     LearningLoopRecord,
     LearningRuleRecord,
@@ -324,3 +329,132 @@ def test_contextual_archaeology_model_dumps_match_registered_schemas():
     validate_registered_schema("root_cause_hypothesis", root_cause.model_dump(mode="json"))
     validate_registered_schema("counterfactual_lesson", lesson.model_dump(mode="json"))
     validate_registered_schema("repo_learning_event", repo_event.model_dump(mode="json"))
+
+
+def test_background_connection_model_dumps_match_registered_schemas():
+    timestamp = "2026-01-01T00:00:00+00:00"
+    seed = AttentionSeedRecord(
+        attention_seed_id="dad:attention-seed:test",
+        source_kind="recent_asset",
+        source_ref="dad:asset:source",
+        seed_asset_ids=["dad:asset:source"],
+        tags=["governance"],
+        capabilities=["review"],
+        needs=["calibration"],
+        attention_weight=0.8,
+        raw_text_persisted=False,
+        evidence={"source": "catalog_artifact_recency"},
+        generated_at=timestamp,
+        scan_id="dad:scan:test",
+    )
+    candidate = ConnectionCandidateRecord(
+        connection_candidate_id="dad:connection-candidate:test",
+        connection_type="activates_cold_asset",
+        source_asset_ids=["dad:asset:source"],
+        target_asset_ids=["dad:asset:target"],
+        endpoint_family_keys=["workflow:source", "workflow:target"],
+        attention_seed_ids=[seed.attention_seed_id],
+        cold_asset_ids=["dad:asset:target"],
+        cheap_signal_evidence={"signals": ["term_overlap", "cold_lift"]},
+        component_scores={
+            "attention_relevance": 0.8,
+            "cold_lift": 1.0,
+            "complementarity": 0.5,
+            "multi_hop_potential": 0.2,
+            "novelty": 1.0,
+        },
+        connectivity_score=0.695,
+        gates={"safety_gate": True, "evidence_gate": True, "authority_gate": True},
+        gate_failures=[],
+        escalation_eligible=False,
+        reuse_first_edge_mapping=["activates", "satisfies_need"],
+        why_might_matter_now="Target may help the current attention seed.",
+        why_might_be_false="Signals may be coincidental.",
+        evidence={"methodology": "background-connection-connectivity-v1"},
+        generated_at=timestamp,
+        scan_id="dad:scan:test",
+    )
+    packet = EscalationPacketRecord(
+        packet_id="dad:escalation-packet:test",
+        connection_candidate_id=candidate.connection_candidate_id,
+        scan_id_watermark="dad:scan:test",
+        attention_seed_ids=[seed.attention_seed_id],
+        cold_memory_cue="cold_asset_present",
+        source_asset_ids=["dad:asset:source"],
+        target_asset_ids=["dad:asset:target"],
+        deduped_member_candidate_ids=[],
+        minimal_context=[{"asset_id": "dad:asset:source"}],
+        redacted_evidence_snippets=["source workflow"],
+        cheap_signal_evidence={"signals": ["term_overlap", "cold_lift"]},
+        component_scores=candidate.component_scores,
+        connectivity_score=candidate.connectivity_score,
+        proposed_connection_type=candidate.connection_type,
+        reuse_first_edge_mapping=candidate.reuse_first_edge_mapping,
+        why_might_matter_now=candidate.why_might_matter_now,
+        why_might_be_false=candidate.why_might_be_false,
+        stop_conditions=["Stop if authority is unclear."],
+        safety_cleared=True,
+        requested_verifier_tasks=["confirm_or_reject_connection"],
+        budget_priority=1,
+        evidence={"source_candidate": candidate.connection_candidate_id},
+        generated_at=timestamp,
+        scan_id="dad:scan:test",
+    )
+    expansion = ExpansionMapRecord(
+        expansion_map_id="dad:expansion-map:test",
+        packet_id=packet.packet_id,
+        root_connection_candidate_id=candidate.connection_candidate_id,
+        direct_asset_ids=["dad:asset:neighbor"],
+        second_hop_asset_ids=[],
+        max_hops=2,
+        max_nodes=25,
+        per_hop_confidence={"1": 0.7},
+        why_useful=["Shows immediate graph neighbors."],
+        why_wrong=["Graph neighbors may be unreviewed."],
+        stop_conditions=["Stop at max 2 hops."],
+        evidence={"packet_id": packet.packet_id},
+        generated_at=timestamp,
+        scan_id="dad:scan:test",
+    )
+
+    validate_registered_schema("attention_seed", seed.model_dump(mode="json"))
+    validate_registered_schema("connection_candidate", candidate.model_dump(mode="json"))
+    validate_registered_schema("escalation_packet", packet.model_dump(mode="json"))
+    validate_registered_schema("expansion_map", expansion.model_dump(mode="json"))
+
+
+def test_background_connection_models_reject_privacy_and_safety_constant_violations():
+    with pytest.raises(ValidationError):
+        AttentionSeedRecord(
+            attention_seed_id="dad:attention-seed:bad",
+            source_kind="recent_asset",
+            source_ref="dad:asset:source",
+            attention_weight=0.8,
+            raw_text_persisted=True,
+            evidence={"source": "test"},
+            generated_at="2026-01-01T00:00:00+00:00",
+            scan_id="dad:scan:test",
+        )
+    with pytest.raises(ValidationError):
+        EscalationPacketRecord(
+            packet_id="dad:escalation-packet:bad",
+            connection_candidate_id="dad:connection-candidate:test",
+            scan_id_watermark="dad:scan:test",
+            cold_memory_cue="cold_asset_present",
+            source_asset_ids=["dad:asset:source"],
+            target_asset_ids=["dad:asset:target"],
+            minimal_context=[{"asset_id": "dad:asset:source"}],
+            cheap_signal_evidence={"signals": ["term_overlap"]},
+            component_scores={"attention_relevance": 0.5},
+            connectivity_score=0.5,
+            proposed_connection_type="activates_cold_asset",
+            why_might_matter_now="Target may help.",
+            why_might_be_false="Could be false.",
+            stop_conditions=["Stop if unsafe."],
+            safety_cleared=False,
+            requested_verifier_tasks=["confirm_or_reject_connection"],
+            budget_priority=1,
+            evidence={"source": "test"},
+            generated_at="2026-01-01T00:00:00+00:00",
+            scan_id="dad:scan:test",
+        )

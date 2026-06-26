@@ -1,0 +1,53 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://local.digital-asset-directory/schemas/attention-seed.schema.json",
+  "title": "Background Connection Attention Seed Record",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "attention_seed_id",
+    "source_kind",
+    "source_ref",
+    "seed_asset_ids",
+    "tags",
+    "capabilities",
+    "needs",
+    "half_life_days",
+    "attention_weight",
+    "raw_text_persisted",
+    "evidence",
+    "methodology_version",
+    "generated_at",
+    "scan_id",
+    "review_status"
+  ],
+  "properties": {
+    "schema_version": {"const": "0.1.0"},
+    "attention_seed_id": {"type": "string", "minLength": 1},
+    "source_kind": {
+      "enum": [
+        "git_recent_asset",
+        "recent_asset",
+        "roadmap_state",
+        "review_record",
+        "lesson_or_postflight",
+        "preflight_task",
+        "approved_source_scope"
+      ]
+    },
+    "source_ref": {"type": "string", "minLength": 1},
+    "seed_asset_ids": {"type": "array", "items": {"type": "string"}},
+    "tags": {"type": "array", "items": {"type": "string"}},
+    "capabilities": {"type": "array", "items": {"type": "string"}},
+    "needs": {"type": "array", "items": {"type": "string"}},
+    "half_life_days": {"type": "integer", "minimum": 1},
+    "attention_weight": {"type": "number", "minimum": 0, "maximum": 1},
+    "raw_text_persisted": {"const": false},
+    "evidence": {"type": "object", "minProperties": 1},
+    "methodology_version": {"const": "background-connection-connectivity-v1"},
+    "generated_at": {"type": "string"},
+    "scan_id": {"type": "string", "minLength": 1},
+    "review_status": {"enum": ["generated_candidate", "reviewed", "rejected"]}
+  },
+  "additionalProperties": false
+}

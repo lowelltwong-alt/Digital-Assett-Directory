@@ -32,6 +32,7 @@ them.
 | `public_safe` | Metadata-only patterns safe for a future public DAD repo. |
 | `cross_repo` | Multi-repo patterns, workflows, and authority boundaries. |
 | `validation` | Tests, CLI validators, and verification reports. |
+| `background_connection` | Low-compute connection scouting, escalation packets, and bounded expansion maps. |
 
 ## Front Doors And Authority
 
@@ -91,6 +92,8 @@ them.
 | `processed/graph/graph.json` | Generated candidate graph. | `knowledge_graph`, `generated_output` | You need current generated graph evidence; never treat it as truth. |
 | `processed/reports/asset_family_recognition.md` | Generated asset-family candidate report. | `knowledge_graph`, `generated_output`, `workflow` | You need candidate composite assets or family patterns. |
 | `processed/reports/workflow_sweeps/workflow_sweeps_index.md` | Generated workflow-sweep index. | `knowledge_graph`, `generated_output`, `cross_repo` | You need cross-repo workflow candidates. |
+| `processed/reports/background_connection_candidates.md` | Generated manual-review report for background connection candidates. | `knowledge_graph`, `generated_output`, `background_connection` | You need candidate links between current attention and cold-storage assets. |
+| `processed/reports/background_connection_escalation_packets.md` | Generated bounded review packets for high-score candidate connections. | `knowledge_graph`, `generated_output`, `background_connection` | You need minimal context for fresh-eyes review or future strong-model verification. |
 
 ## Contracts
 
@@ -115,6 +118,10 @@ them.
 | `schemas/root-cause-hypothesis.schema.json` | Root-cause hypothesis contract. | `schema`, `learning_loop` | You propose context-bound causes from evidence. |
 | `schemas/counterfactual-lesson.schema.json` | Counterfactual lesson contract. | `schema`, `learning_loop` | You record better-order lessons with applicability limits. |
 | `schemas/repo-learning-event.schema.json` | Repo-local learning event contract. | `schema`, `learning_loop` | You capture before, during, after, or review events. |
+| `schemas/attention-seed.schema.json` | Background radar attention seed contract. | `schema`, `background_connection`, `security_privacy` | You define privacy-first attention inputs without raw chat persistence. |
+| `schemas/connection-candidate.schema.json` | Background radar connection candidate contract. | `schema`, `background_connection`, `knowledge_graph` | You score candidate links with gate-before-score semantics. |
+| `schemas/escalation-packet.schema.json` | Background radar escalation packet contract. | `schema`, `background_connection`, `workflow` | You package bounded evidence for manual or future verifier review. |
+| `schemas/expansion-map.schema.json` | Background radar expansion map contract. | `schema`, `background_connection`, `knowledge_graph` | You inspect capped direct and second-hop graph expansion. |
 | `schemas/handoff.schema.json` | Handoff contract. | `schema`, `learning_loop` | You transfer context between agents. |
 | `schemas/alert.schema.json` | Alert contract. | `schema`, `knowledge_graph` | You emit reviewable alerts. |
 | `schemas/source.schema.json` | Source config contract. | `schema`, `authority` | You add or validate scanned sources. |
@@ -151,6 +158,7 @@ them.
 | `docs/OPERATIONS.md` | Operational command and runbook guidance. | `workflow`, `validation` | You run DAD tasks. |
 | `docs/PROPOSAL_ENGINE_CALIBRATION_WORKFLOW.md` | Proposal review workflow. | `calibration`, `workflow` | You review bottom-up and top-down proposal engines. |
 | `asset-dir recommend workflow-sweeps` | CLI command for generated workflow-family sweep reports. | `workflow`, `generated_output`, `cross_repo` | You need generated workflow candidates. |
+| `asset-dir recommend background-connections` | CLI command for manual, local-only background connection scouting. | `background_connection`, `generated_output`, `knowledge_graph` | You want bounded candidate connections without rescanning, daemon work, GitHub, or model calls. |
 | `docs/DOWNSTREAM_REPO_GOVERNANCE.md` | Downstream governance install and pilot guidance. | `workflow`, `authority`, `cross_repo` | You prepare a sandbox or downstream pilot. |
 | `docs/TESTING_AND_ORCHESTRATION.md` | Marker taxonomy, change-driven test selection, and nox tasks. | `validation`, `workflow` | You select or explain tests. |
 | `docs/ALGORITHM_CALIBRATION_AND_FIXES_HANDOFF.md` | Algorithm fixes and calibration handoff. | `calibration`, `workflow` | You work on similarity, scoring, confidence, or threshold calibration. |
@@ -194,6 +202,7 @@ them.
 | `roadmap/evidence/background-connection-radar-design.md` | Evidence that the background connection radar is designed but not enabled. | `roadmap`, `knowledge_graph`, `learning_loop` | You need status, risks, or gates before implementing background connection discovery. |
 | `roadmap/evidence/background-connection-radar-synthesis.md` | Synthesis of Codex's radar design and Claude's workflow-composition red-team. | `roadmap`, `knowledge_graph`, `workflow` | You need the reuse-first design decision before implementing connection or workflow-part logic. |
 | `roadmap/evidence/claude-background-connection-radar-review.md` | Claude's fresh-eyes review adding gate-before-score math, privacy-first attention, compute caps, and family dedup. | `roadmap`, `knowledge_graph`, `calibration` | You need the independent hardening review before implementing background connection scoring or escalation. |
+| `roadmap/evidence/background-connection-radar-v1-implementation.md` | Implementation evidence, red-team, premortem, validation, and risks for manual radar v1. | `roadmap`, `background_connection`, `validation` | You verify what v1 shipped and why it remains candidate-only. |
 | `roadmap/evidence/claude-workflow-composition-red-team.md` | Claude's independent warning against ontology sprawl and recommendation for WorkflowPartRecord. | `roadmap`, `workflow`, `knowledge_graph` | You need the fresh-eyes review behind the background-radar synthesis. |
 
 ## Reference

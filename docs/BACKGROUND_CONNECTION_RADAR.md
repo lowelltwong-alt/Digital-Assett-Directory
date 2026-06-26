@@ -12,8 +12,8 @@ It copies a useful human pattern: quiet associative search runs in the
 background around current attention, then a promising connection pulls older
 memory out of cold storage and receives concentrated reasoning.
 
-This is a design, not an enabled daemon. V1 should remain local-only,
-candidate-only, bounded, and review-gated.
+V1 is implemented as a manual local-only CLI command, not an enabled daemon. It
+remains candidate-only, bounded, and review-gated.
 
 ## Mental Model
 
@@ -516,9 +516,12 @@ asset-dir recommend background-connections --attention recent --cold older --lim
 
 V1 should produce:
 
+- `processed/learning/background_attention_seeds.jsonl`
 - `processed/reports/background_connection_candidates.md`
 - `processed/learning/background_connection_candidates.jsonl`
+- `processed/learning/background_escalation_packets.jsonl`
 - `processed/reports/background_connection_escalation_packets.md`
+- `processed/learning/background_expansion_maps.jsonl`
 
 No autonomous model calls are needed in the first pass. The report can instead
 select the top escalation packets for human or Claude/Codex review.
@@ -541,8 +544,8 @@ Defaults adopted for v1:
 
 Remaining decisions:
 
-- exact schema fields for `AttentionSeedRecord`, `ConnectionCandidateRecord`,
-  `EscalationPacketRecord`, and `ExpansionMapRecord`;
+- threshold calibration for when real catalog candidates should become
+  escalation packets;
 - whether workflow parts live in public-safe tracked evidence, private generated
   records, or both;
 - which asset patterns are mature enough for first workflow-part families;

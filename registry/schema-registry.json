@@ -26,6 +26,10 @@
     "root_cause_hypothesis": "schemas/root-cause-hypothesis.schema.json",
     "counterfactual_lesson": "schemas/counterfactual-lesson.schema.json",
     "repo_learning_event": "schemas/repo-learning-event.schema.json",
+    "attention_seed": "schemas/attention-seed.schema.json",
+    "connection_candidate": "schemas/connection-candidate.schema.json",
+    "escalation_packet": "schemas/escalation-packet.schema.json",
+    "expansion_map": "schemas/expansion-map.schema.json",
     "capability_recommendation": "schemas/capability-recommendation.schema.json",
     "proposal": "schemas/proposal.schema.json",
     "proposal_review": "schemas/proposal-review.schema.json"

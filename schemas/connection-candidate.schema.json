@@ -1,0 +1,83 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://local.digital-asset-directory/schemas/connection-candidate.schema.json",
+  "title": "Background Connection Candidate Record",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "connection_candidate_id",
+    "connection_type",
+    "source_asset_ids",
+    "target_asset_ids",
+    "endpoint_family_keys",
+    "attention_seed_ids",
+    "cold_asset_ids",
+    "cheap_signal_evidence",
+    "component_scores",
+    "connectivity_score",
+    "gates",
+    "gate_failures",
+    "escalation_eligible",
+    "reuse_first_edge_mapping",
+    "why_might_matter_now",
+    "why_might_be_false",
+    "evidence",
+    "methodology_version",
+    "generated_at",
+    "scan_id",
+    "review_status"
+  ],
+  "properties": {
+    "schema_version": {"const": "0.1.0"},
+    "connection_candidate_id": {"type": "string", "minLength": 1},
+    "connection_type": {
+      "enum": [
+        "activates_cold_asset",
+        "bridges_orphan_to_attention_seed",
+        "composes_with",
+        "duplicate_variant_delta",
+        "same_workflow_different_domain",
+        "lesson_applies_when",
+        "lesson_does_not_apply_when",
+        "workflow_part_of",
+        "missing_capability_for",
+        "dangerous_composition_with",
+        "requires_human_gate",
+        "supports_but_cannot_override"
+      ]
+    },
+    "source_asset_ids": {"type": "array", "items": {"type": "string"}, "minItems": 1},
+    "target_asset_ids": {"type": "array", "items": {"type": "string"}, "minItems": 1},
+    "endpoint_family_keys": {"type": "array", "items": {"type": "string"}, "minItems": 2},
+    "attention_seed_ids": {"type": "array", "items": {"type": "string"}},
+    "cold_asset_ids": {"type": "array", "items": {"type": "string"}},
+    "cheap_signal_evidence": {"type": "object", "minProperties": 1},
+    "component_scores": {
+      "type": "object",
+      "minProperties": 1,
+      "additionalProperties": {"type": "number", "minimum": 0, "maximum": 1}
+    },
+    "connectivity_score": {"type": "number", "minimum": 0, "maximum": 1},
+    "gates": {
+      "type": "object",
+      "required": ["safety_gate", "evidence_gate", "authority_gate"],
+      "properties": {
+        "safety_gate": {"type": "boolean"},
+        "evidence_gate": {"type": "boolean"},
+        "authority_gate": {"type": "boolean"}
+      },
+      "additionalProperties": {"type": "boolean"}
+    },
+    "gate_failures": {"type": "array", "items": {"type": "string"}},
+    "escalation_eligible": {"type": "boolean"},
+    "reuse_first_edge_mapping": {"type": "array", "items": {"type": "string"}},
+    "why_might_matter_now": {"type": "string", "minLength": 1},
+    "why_might_be_false": {"type": "string", "minLength": 1},
+    "evidence": {"type": "object", "minProperties": 1},
+    "methodology_version": {"const": "background-connection-connectivity-v1"},
+    "generated_at": {"type": "string"},
+    "scan_id": {"type": "string", "minLength": 1},
+    "review_status": {"enum": ["generated_candidate", "reviewed", "rejected"]}
+  },
+  "additionalProperties": false
+}

@@ -495,6 +495,121 @@ class RepoLearningEventRecord(BaseModel):
     review_status: Literal["generated_candidate", "reviewed", "rejected"] = "generated_candidate"
 
 
+class AttentionSeedRecord(BaseModel):
+    schema_version: str = "0.1.0"
+    attention_seed_id: str
+    source_kind: Literal[
+        "git_recent_asset",
+        "recent_asset",
+        "roadmap_state",
+        "review_record",
+        "lesson_or_postflight",
+        "preflight_task",
+        "approved_source_scope",
+    ]
+    source_ref: str = Field(min_length=1)
+    seed_asset_ids: list[str] = Field(default_factory=list)
+    tags: list[str] = Field(default_factory=list)
+    capabilities: list[str] = Field(default_factory=list)
+    needs: list[str] = Field(default_factory=list)
+    half_life_days: int = Field(default=7, ge=1)
+    attention_weight: float = Field(ge=0, le=1)
+    raw_text_persisted: Literal[False] = False
+    evidence: dict[str, Any] = Field(min_length=1)
+    methodology_version: str = "background-connection-connectivity-v1"
+    generated_at: str
+    scan_id: str
+    review_status: Literal["generated_candidate", "reviewed", "rejected"] = "generated_candidate"
+
+
+class ConnectionCandidateRecord(BaseModel):
+    schema_version: str = "0.1.0"
+    connection_candidate_id: str
+    connection_type: Literal[
+        "activates_cold_asset",
+        "bridges_orphan_to_attention_seed",
+        "composes_with",
+        "duplicate_variant_delta",
+        "same_workflow_different_domain",
+        "lesson_applies_when",
+        "lesson_does_not_apply_when",
+        "workflow_part_of",
+        "missing_capability_for",
+        "dangerous_composition_with",
+        "requires_human_gate",
+        "supports_but_cannot_override",
+    ]
+    source_asset_ids: list[str] = Field(min_length=1)
+    target_asset_ids: list[str] = Field(min_length=1)
+    endpoint_family_keys: list[str] = Field(min_length=2)
+    attention_seed_ids: list[str] = Field(default_factory=list)
+    cold_asset_ids: list[str] = Field(default_factory=list)
+    cheap_signal_evidence: dict[str, Any] = Field(min_length=1)
+    component_scores: dict[str, float] = Field(min_length=1)
+    connectivity_score: float = Field(ge=0, le=1)
+    gates: dict[str, bool] = Field(min_length=1)
+    gate_failures: list[str] = Field(default_factory=list)
+    escalation_eligible: bool = False
+    reuse_first_edge_mapping: list[str] = Field(default_factory=list)
+    why_might_matter_now: str = Field(min_length=1)
+    why_might_be_false: str = Field(min_length=1)
+    evidence: dict[str, Any] = Field(min_length=1)
+    methodology_version: str = "background-connection-connectivity-v1"
+    generated_at: str
+    scan_id: str
+    review_status: Literal["generated_candidate", "reviewed", "rejected"] = "generated_candidate"
+
+
+class EscalationPacketRecord(BaseModel):
+    schema_version: str = "0.1.0"
+    packet_id: str
+    connection_candidate_id: str
+    scan_id_watermark: str = Field(min_length=1)
+    attention_seed_ids: list[str] = Field(default_factory=list)
+    cold_memory_cue: str = Field(min_length=1)
+    source_asset_ids: list[str] = Field(min_length=1)
+    target_asset_ids: list[str] = Field(min_length=1)
+    deduped_member_candidate_ids: list[str] = Field(default_factory=list)
+    minimal_context: list[dict[str, Any]] = Field(min_length=1)
+    redacted_evidence_snippets: list[str] = Field(default_factory=list)
+    cheap_signal_evidence: dict[str, Any] = Field(min_length=1)
+    component_scores: dict[str, float] = Field(min_length=1)
+    connectivity_score: float = Field(ge=0, le=1)
+    proposed_connection_type: str = Field(min_length=1)
+    reuse_first_edge_mapping: list[str] = Field(default_factory=list)
+    why_might_matter_now: str = Field(min_length=1)
+    why_might_be_false: str = Field(min_length=1)
+    stop_conditions: list[str] = Field(min_length=1)
+    safety_cleared: Literal[True] = True
+    requested_verifier_tasks: list[str] = Field(min_length=1)
+    budget_priority: int = Field(ge=1)
+    evidence: dict[str, Any] = Field(min_length=1)
+    methodology_version: str = "background-connection-connectivity-v1"
+    generated_at: str
+    scan_id: str
+    review_status: Literal["generated_candidate", "reviewed", "rejected"] = "generated_candidate"
+
+
+class ExpansionMapRecord(BaseModel):
+    schema_version: str = "0.1.0"
+    expansion_map_id: str
+    packet_id: str
+    root_connection_candidate_id: str
+    direct_asset_ids: list[str] = Field(default_factory=list)
+    second_hop_asset_ids: list[str] = Field(default_factory=list)
+    max_hops: int = Field(default=2, ge=0, le=2)
+    max_nodes: int = Field(default=25, ge=1, le=25)
+    per_hop_confidence: dict[str, float] = Field(default_factory=dict)
+    why_useful: list[str] = Field(default_factory=list)
+    why_wrong: list[str] = Field(default_factory=list)
+    stop_conditions: list[str] = Field(min_length=1)
+    evidence: dict[str, Any] = Field(min_length=1)
+    methodology_version: str = "background-connection-connectivity-v1"
+    generated_at: str
+    scan_id: str
+    review_status: Literal["generated_candidate", "reviewed", "rejected"] = "generated_candidate"
+
+
 class AssetCalibrationReviewRecord(BaseModel):
     schema_version: str = "0.1.0"
     review_id: str

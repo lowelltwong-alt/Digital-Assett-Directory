@@ -1,0 +1,48 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://local.digital-asset-directory/schemas/expansion-map.schema.json",
+  "title": "Background Connection Expansion Map Record",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "expansion_map_id",
+    "packet_id",
+    "root_connection_candidate_id",
+    "direct_asset_ids",
+    "second_hop_asset_ids",
+    "max_hops",
+    "max_nodes",
+    "per_hop_confidence",
+    "why_useful",
+    "why_wrong",
+    "stop_conditions",
+    "evidence",
+    "methodology_version",
+    "generated_at",
+    "scan_id",
+    "review_status"
+  ],
+  "properties": {
+    "schema_version": {"const": "0.1.0"},
+    "expansion_map_id": {"type": "string", "minLength": 1},
+    "packet_id": {"type": "string", "minLength": 1},
+    "root_connection_candidate_id": {"type": "string", "minLength": 1},
+    "direct_asset_ids": {"type": "array", "items": {"type": "string"}},
+    "second_hop_asset_ids": {"type": "array", "items": {"type": "string"}, "maxItems": 25},
+    "max_hops": {"type": "integer", "minimum": 0, "maximum": 2},
+    "max_nodes": {"type": "integer", "minimum": 1, "maximum": 25},
+    "per_hop_confidence": {
+      "type": "object",
+      "additionalProperties": {"type": "number", "minimum": 0, "maximum": 1}
+    },
+    "why_useful": {"type": "array", "items": {"type": "string"}},
+    "why_wrong": {"type": "array", "items": {"type": "string"}},
+    "stop_conditions": {"type": "array", "items": {"type": "string"}, "minItems": 1},
+    "evidence": {"type": "object", "minProperties": 1},
+    "methodology_version": {"const": "background-connection-connectivity-v1"},
+    "generated_at": {"type": "string"},
+    "scan_id": {"type": "string", "minLength": 1},
+    "review_status": {"enum": ["generated_candidate", "reviewed", "rejected"]}
+  },
+  "additionalProperties": false
+}
