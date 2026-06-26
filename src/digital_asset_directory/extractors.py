@@ -7,6 +7,7 @@ from functools import lru_cache
 from pathlib import Path
 from typing import Literal, TypedDict
 
+from .content_features import build_content_profile
 from .utils import redact_sensitive_text, tokens
 
 TEXT_EXTENSIONS = {
@@ -433,6 +434,7 @@ class ExtractedContent(SemanticFields):
     decode_error: bool
     redaction_count: int
     extraction_method: str
+    content_profile: dict[str, object]
 
 
 def extract_bytes(
@@ -463,6 +465,7 @@ def extract_bytes(
         safe_text, redaction_count = redact_sensitive_text(text)
     excerpt = safe_text[:excerpt_chars]
     semantic = infer_semantics(path, safe_text)
+    asset_type = classify_asset(path)
     return {
         "title": extract_title(path, safe_text),
         "description": next(
@@ -480,6 +483,7 @@ def extract_bytes(
         "decode_error": decode_error,
         "redaction_count": redaction_count,
         "extraction_method": extraction_method,
+        "content_profile": build_content_profile(path, safe_text, asset_type),
         **semantic,
     }
 

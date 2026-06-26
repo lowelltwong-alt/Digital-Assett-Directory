@@ -58,6 +58,8 @@ asset_value =
 + provenance
 + composability
 + learning_loop_value
++ information_content
++ content_role
 + uniqueness
 + demand_signal
 + freshness
@@ -72,21 +74,42 @@ the freshness component only, not a second stale penalty. Unknown GitHub reposit
 is a risk factor when GitHub scanning is explicitly enabled and reviewed.
 
 The current implementation methodology is
-`asset-value-v0.2-red-team-discipline`. It keeps score output in the familiar 0-100
+`asset-value-v0.3-content-aware`. It keeps score output in the familiar 0-100
 range but adds:
 
-- an `information_content` component from bounded text, token, and semantic evidence;
+- an `information_content` component from bounded text, token, semantic, and
+  content-profile evidence;
+- a `content_role` component for deterministic code role and workflow subtype
+  signals;
+- bounded profile-only extraction for readable skipped or oversize files so
+  source structure can be scored without full-byte hashing;
 - deterministic `instance_class` labels for source, archive, generated output,
   temp fixture, worktree copy, and cache/OS junk observations;
 - deterministic `information_content_class` labels for OS junk, empty markers,
-  empty files, metadata-only observations, extracted content, binary metadata,
-  and content-bearing files;
+  empty files, metadata-only observations, content-profiled observations,
+  extracted content, binary metadata, and content-bearing files;
 - multiplicative discounts for non-canonical instances and duplicate
   non-representatives;
+- additional discounts for package markers, issue/pull-request templates,
+  ownership metadata, archive/pinned workflow copies, and configuration wrappers
+  that lack usage evidence;
 - evidence-gated type bonuses so schemas, tests, and evaluations need direct
   content or usage evidence before receiving large verification/reuse boosts;
 - `heuristic_strength` metadata to avoid treating uncalibrated confidence labels
   as probabilities.
+
+Phase 2 human review found two recurring score errors: readable substantive code
+modules were often too low when the catalog had only metadata, while short
+templates, archive/pinned workflow copies, and low-information workflow wrappers
+could score too high from freshness, provenance, and type labels. Version 0.3
+therefore reduces the weight of freshness and provenance, increases direct
+information content, and separates workflow subtypes before banding.
+
+The content profile is deliberately shallow. It counts bounded lines, public
+symbols, imports, and deterministic path/content roles. It does not parse
+semantic correctness, prove business value, or authorize source promotion.
+Large files, generated outputs, and source repositories remain governed by the
+same candidate-only and no-mutation rules.
 
 Temp fixtures, generated outputs, and worktree copies may still be useful lineage
 or coverage evidence. Their individual current score is discounted unless a

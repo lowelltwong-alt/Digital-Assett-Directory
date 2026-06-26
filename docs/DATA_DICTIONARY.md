@@ -44,6 +44,7 @@
 | `entrypoints` | Files a new human or AI should read first. |
 | `value_score` | 0–100 review-priority heuristic; not proof of truth or business value. |
 | `value_components` | Exposed score dimensions used to produce `value_score`. |
+| `value_components.content_role` | Generated deterministic code-role or workflow-subtype score component under the current methodology. |
 | `metadata.asset_patterns` | File-level generated candidate pattern IDs, such as evaluation harness or model/algorithm hints. |
 | `metadata.pattern_evidence` | Evidence terms that caused an asset pattern hint. |
 | `metadata.composite_patterns` | Repository or bundle-level generated candidate patterns inferred from connected child assets. |
@@ -95,6 +96,7 @@
 | `metadata.instance_class` | Generated scoring class such as source, archive, generated output, temp fixture, worktree copy, or cache/OS junk. |
 | `metadata.information_content_class` | Generated content class such as OS junk, empty marker, empty file, metadata-only observation, extracted content, binary metadata, or content-bearing file. |
 | `metadata.information_content` | Generated bounded text/token/semantic evidence used by the current score methodology. |
+| `metadata.content_profile` | Generated bounded line, symbol, import, code-role, and workflow-subtype evidence for scoring and review routing. |
 | `metadata.score_methodology` | Methodology version, inputs, normalization, uncertainty posture, and candidate-only status for the current calculated score. |
 | `metadata.score_discount_reasons` | Generated reasons for multiplicative score discounts; candidate-only and not source truth. |
 | `metadata.heuristic_strength` | Preferred label for uncalibrated confidence-like values until human labels support probability calibration. |

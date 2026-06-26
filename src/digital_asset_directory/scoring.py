@@ -8,18 +8,19 @@ import yaml
 from .instance_class import classify_instance_class, information_content_class
 from .models import AssetRecord
 
-SCORE_METHODOLOGY_VERSION = "asset-value-v0.2-red-team-discipline"
+SCORE_METHODOLOGY_VERSION = "asset-value-v0.3-content-aware"
 
 DEFAULT_WEIGHTS = {
-    "reuse_potential": 0.16,
-    "verification": 0.14,
-    "provenance": 0.12,
-    "composability": 0.13,
-    "learning_loop_value": 0.13,
-    "information_content": 0.10,
-    "uniqueness": 0.08,
-    "demand_signal": 0.07,
-    "freshness": 0.07,
+    "reuse_potential": 0.15,
+    "verification": 0.13,
+    "provenance": 0.09,
+    "composability": 0.12,
+    "learning_loop_value": 0.11,
+    "information_content": 0.17,
+    "content_role": 0.08,
+    "uniqueness": 0.06,
+    "demand_signal": 0.05,
+    "freshness": 0.04,
 }
 
 QUARANTINED_INSTANCE_CLASSES = {"generated", "temp_fixture", "worktree", "os_junk"}
@@ -42,8 +43,21 @@ def classify_instance(asset: AssetRecord) -> str:
     return classify_instance_class(asset.logical_path)
 
 
+def _content_profile(asset: AssetRecord) -> dict[str, Any]:
+    profile = asset.metadata.get("content_profile")
+    return profile if isinstance(profile, dict) else {}
+
+
+def _profile_int(profile: dict[str, Any], key: str) -> int:
+    try:
+        return int(profile.get(key) or 0)
+    except (TypeError, ValueError):
+        return 0
+
+
 def _information_content(asset: AssetRecord) -> float:
     metadata = asset.metadata or {}
+    profile = _content_profile(asset)
     info_class = information_content_class(
         asset.logical_path,
         asset_type=asset.asset_type,
@@ -53,6 +67,9 @@ def _information_content(asset: AssetRecord) -> float:
     )
     token_count = len(metadata.get("text_tokens") or [])
     text_len = len(str(metadata.get("chunk_text") or metadata.get("excerpt") or ""))
+    line_count = _profile_int(profile, "non_empty_line_count")
+    public_symbols = _profile_int(profile, "public_symbol_count")
+    imports = _profile_int(profile, "import_count")
     semantic_count = (
         len(asset.tags) + len(asset.capabilities) + len(asset.needs) + len(asset.outcomes)
     )
@@ -62,8 +79,16 @@ def _information_content(asset: AssetRecord) -> float:
         return 0.0
     if info_class in {"empty", "empty_marker"}:
         return 0.03 if info_class == "empty_marker" else 0.05
+    if info_class == "content_profiled":
+        line_signal = min(1.0, line_count / 160)
+        symbol_signal = min(1.0, (public_symbols + imports * 0.4) / 12)
+        if asset.asset_type == "code":
+            return max(0.35, line_signal, symbol_signal)
+        if asset.asset_type == "workflow":
+            return max(0.30, min(0.85, line_signal * 0.75 + symbol_signal * 0.25))
+        return max(0.25, line_signal * 0.8)
     if info_class == "metadata_only":
-        return 0.15
+        return 0.12
     text_signal = max(min(1.0, token_count / 80), min(1.0, text_len / 4000))
     semantic_signal = min(1.0, semantic_count / 8)
     binary_signal = 0.20 if info_class == "binary_metadata" else 0.0
@@ -73,7 +98,9 @@ def _information_content(asset: AssetRecord) -> float:
 def _has_direct_value_evidence(asset: AssetRecord, instance_class: str, information: float) -> bool:
     if instance_class in QUARANTINED_INSTANCE_CLASSES:
         return False
-    if not asset.content_sha256 or information < 0.20:
+    profile = _content_profile(asset)
+    has_bounded_profile = _profile_int(profile, "non_empty_line_count") > 0
+    if not (asset.content_sha256 or has_bounded_profile) or information < 0.20:
         return False
     if asset.asset_type not in EVIDENCE_GATED_TYPES:
         return True
@@ -106,9 +133,48 @@ def _uniqueness_value(duplicate_count: int, is_representative: bool) -> float:
     return max(0.05, 1.0 - min(0.95, 0.20 * (duplicate_count - 1)))
 
 
+def _content_role_value(asset: AssetRecord, instance_class: str) -> float:
+    if instance_class in QUARANTINED_INSTANCE_CLASSES:
+        return 0.0
+    profile = _content_profile(asset)
+    line_count = _profile_int(profile, "non_empty_line_count")
+    public_symbols = _profile_int(profile, "public_symbol_count")
+    imports = _profile_int(profile, "import_count")
+    if asset.asset_type == "code":
+        role = str(profile.get("code_role") or "unknown")
+        if role == "package_marker":
+            return 0.05
+        if role == "entrypoint_wrapper":
+            return 0.25
+        if role in {"runtime_core", "entrypoint"}:
+            return min(1.0, 0.55 + line_count / 350 + public_symbols / 20)
+        if role == "test_support":
+            return min(0.75, 0.35 + line_count / 400 + public_symbols / 30)
+        if role in {"support_module", "script"}:
+            return min(0.65, 0.25 + line_count / 500 + public_symbols / 40)
+        return min(0.75, 0.20 + line_count / 450 + (public_symbols + imports) / 50)
+    if asset.asset_type == "workflow":
+        subtype = str(profile.get("workflow_subtype") or "workflow_unspecified")
+        values = {
+            "ci_validation_workflow": 0.78,
+            "governance_workflow_doc": min(0.75, 0.35 + line_count / 220),
+            "registry_or_config_wrapper": 0.38,
+            "ruleset_config": 0.35,
+            "ci_workflow_wrapper": 0.30,
+            "issue_or_pr_template": 0.12,
+            "ownership_metadata": 0.10,
+            "archive_or_pinned_copy": 0.12,
+            "workflow_unspecified": 0.25,
+        }
+        return float(values.get(subtype, 0.25))
+    return min(1.0, line_count / 240) if line_count else 0.15
+
+
 def _score_discount(
     instance_class: str,
     info_class: str,
+    asset_type: str,
+    profile: dict[str, Any],
     duplicate_count: int,
     is_representative: bool,
 ) -> tuple[float, list[str]]:
@@ -133,8 +199,25 @@ def _score_discount(
         factor = min(factor, 0.30)
         reasons.append("empty_file_low_information")
     elif info_class == "metadata_only":
-        factor = min(factor, 0.65)
+        factor = min(factor, 0.55)
         reasons.append("metadata_only_no_content_evidence")
+    if asset_type == "code" and profile.get("code_role") == "package_marker":
+        factor = min(factor, 0.30)
+        reasons.append("package_marker_low_independent_value")
+    if asset_type == "workflow":
+        subtype = str(profile.get("workflow_subtype") or "")
+        if subtype == "archive_or_pinned_copy":
+            factor = min(factor, 0.50)
+            reasons.append("workflow_archive_or_pinned_copy")
+        elif subtype == "issue_or_pr_template":
+            factor = min(factor, 0.45)
+            reasons.append("workflow_issue_or_pr_template")
+        elif subtype == "ownership_metadata":
+            factor = min(factor, 0.40)
+            reasons.append("workflow_ownership_metadata")
+        elif subtype in {"ruleset_config", "registry_or_config_wrapper"}:
+            factor = min(factor, 0.75)
+            reasons.append("workflow_config_wrapper_needs_usage_evidence")
     if duplicate_count > 1 and not is_representative:
         factor = min(factor, max(0.18, 1.0 / sqrt(duplicate_count + 1)))
         reasons.append("duplicate_non_representative_discount")
@@ -160,6 +243,8 @@ def score_asset(
     is_representative = duplicate_count <= 1 or representative_id == asset.asset_id
     information = _information_content(asset)
     has_direct_evidence = _has_direct_value_evidence(asset, instance_class, information)
+    profile = _content_profile(asset)
+    content_role = _content_role_value(asset, instance_class)
     learning_types = {
         "evaluation",
         "test",
@@ -221,6 +306,7 @@ def score_asset(
         ),
         "learning_loop_value": min(1.0, 0.30 + learning_type_bonus + 0.08 * len(asset.needs)),
         "information_content": information,
+        "content_role": content_role,
         "uniqueness": _uniqueness_value(duplicate_count, is_representative),
         "demand_signal": min(1.0, 0.30 + 0.15 * len(asset.needs) + 0.10 * len(asset.outcomes)),
         "freshness": _freshness_value(asset, instance_class),
@@ -243,6 +329,8 @@ def score_asset(
     discount_factor, discount_reasons = _score_discount(
         instance_class,
         info_class,
+        asset.asset_type,
+        profile,
         duplicate_count,
         is_representative,
     )
@@ -265,8 +353,9 @@ def score_asset(
         "text_char_count": len(
             str(asset.metadata.get("chunk_text") or asset.metadata.get("excerpt") or "")
         ),
+        "content_profile_present": bool(profile),
         "class": info_class,
-        "methodology": "bounded text/token/semantic evidence heuristic",
+        "methodology": "bounded text/token/semantic/profile evidence heuristic",
     }
     asset.metadata["score_methodology_version"] = SCORE_METHODOLOGY_VERSION
     asset.metadata["score_discount_reasons"] = discount_reasons
@@ -285,6 +374,7 @@ def score_asset(
             "sensitivity",
             "instance_class",
             "information_content_class",
+            "content_profile",
             "duplicate_representative_id",
             "duplicate_count",
         ],

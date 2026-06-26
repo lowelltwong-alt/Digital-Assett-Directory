@@ -150,6 +150,49 @@ def test_local_scan_uses_metadata_identity_for_oversize_files(
     assert file_asset.metadata["revision_identity_mode"] == "metadata_sha256_for_oversize_file"
 
 
+def test_local_scan_profiles_skipped_text_code_without_full_content_hash(tmp_path: Path):
+    repo = tmp_path / "project"
+    repo.mkdir()
+    (repo / ".git").mkdir()
+    module = repo / "src" / "admission_validator.py"
+    module.parent.mkdir()
+    module.write_text(
+        "\n".join(
+            [
+                "import json",
+                "",
+                "class AdmissionValidator:",
+                "    def validate(self, packet):",
+                "        return bool(packet)",
+                "",
+                "def build_validator():",
+                "    return AdmissionValidator()",
+            ]
+        ),
+        encoding="utf-8",
+    )
+    source = LocalSource(
+        id="test",
+        path=tmp_path,
+        path_alias="test",
+        exclude=["**/.git/**"],
+        max_file_bytes=1,
+    )
+
+    assets, _hashes = scan_local_source(source, Settings(), {"weights": DEFAULT_WEIGHTS})
+
+    code_asset = next(a for a in assets if a.logical_path.endswith("admission_validator.py"))
+    profile = code_asset.metadata["content_profile"]
+    assert code_asset.content_sha256 is None
+    assert code_asset.metadata["content_skipped_for_size"] is True
+    assert code_asset.metadata["information_content_class"] == "content_profiled"
+    assert profile["non_empty_line_count"] >= 5
+    assert profile["class_count"] == 1
+    assert profile["function_count"] == 2
+    assert profile["code_role"] == "runtime_core"
+    assert code_asset.value_components["content_role"] > 0
+
+
 def test_local_scan_extracts_bounded_pdf_text_for_media_scoring(tmp_path: Path):
     repo = tmp_path / "project"
     repo.mkdir()

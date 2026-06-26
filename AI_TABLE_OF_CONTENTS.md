@@ -109,6 +109,7 @@
 - `roadmap/evidence/phase-2-asset-calibration.md` - generated tracked Phase 2 calibration gate evidence after 100 reviewed labels
 - `roadmap/evidence/phase-2-calibration-human-review-research.md` - human review rationale, label policy, and score-change recommendations for Phase 2
 - `roadmap/evidence/phase-2-calibration-label-table.csv` - compact tracked table of all 100 Phase 2 asset-rating labels
+- `roadmap/evidence/phase-2.5-content-aware-scoring.md` - content-aware scoring recommendation, implementation notes, and red-team before downstream use
 
 ## Reference
 

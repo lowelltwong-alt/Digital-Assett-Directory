@@ -11,7 +11,14 @@ from xml.etree import ElementTree
 from pathspec import PathSpec
 
 from .config import LocalSource, Settings
-from .extractors import ExtractedContent, classify_asset, extract_bytes, freshness_status
+from .content_features import build_content_profile
+from .extractors import (
+    ExtractedContent,
+    classify_asset,
+    extract_bytes,
+    freshness_status,
+    is_probably_text,
+)
 from .ids import asset_id, revision_id
 from .instance_class import classify_instance_class, information_content_class
 from .models import AssetRecord
@@ -24,6 +31,7 @@ FILE_ATTRIBUTE_RECALL_ON_DATA_ACCESS = 0x00400000
 CLOUD_PLACEHOLDER_FLAGS = (
     FILE_ATTRIBUTE_OFFLINE | FILE_ATTRIBUTE_RECALL_ON_OPEN | FILE_ATTRIBUTE_RECALL_ON_DATA_ACCESS
 )
+BOUNDED_PROFILE_BYTES = 65536
 NOISE_QUARANTINE_RULES: tuple[tuple[str, str], ...] = (
     ("**/.pytest-tmp-root/**", "pytest temp root"),
     ("**/pytest-of-*/**", "pytest temp run directory"),
@@ -225,6 +233,42 @@ def _extract_media_text(path: str, data: bytes) -> tuple[str, str]:
     if suffix in {".docx", ".pptx", ".xlsx"}:
         return _extract_zip_xml_text(data), "office_open_xml"
     return "", "unsupported"
+
+
+def _bounded_content_profile(path: Path, logical: str, asset_type: str) -> dict[str, object]:
+    if not is_probably_text(path):
+        return {
+            "line_count": 0,
+            "non_empty_line_count": 0,
+            "char_count": 0,
+            "code_like": False,
+            "import_count": 0,
+            "function_count": 0,
+            "class_count": 0,
+            "public_symbol_count": 0,
+            "methodology": "bounded profile skipped for non-text file",
+        }
+    try:
+        with path.open("rb") as handle:
+            data = handle.read(BOUNDED_PROFILE_BYTES)
+    except OSError:
+        return {
+            "line_count": 0,
+            "non_empty_line_count": 0,
+            "char_count": 0,
+            "code_like": False,
+            "import_count": 0,
+            "function_count": 0,
+            "class_count": 0,
+            "public_symbol_count": 0,
+            "methodology": "bounded profile read failed",
+        }
+    text = data.decode("utf-8", errors="replace")
+    profile = build_content_profile(logical, text, asset_type)
+    profile["bounded_profile_bytes"] = len(data)
+    profile["bounded_profile_truncated"] = len(data) >= BOUNDED_PROFILE_BYTES
+    profile["methodology"] = "bounded profile-only text/code feature extraction"
+    return profile
 
 
 def _repo_roots(files: Iterable[Path], base: Path) -> set[Path]:
@@ -587,6 +631,7 @@ def scan_local_source(
         content_exceeds_size_limit = size > source.max_file_bytes
         skipped_content = content_exceeds_size_limit or cloud_placeholder
         extracted: ExtractedContent
+        asset_type = classify_asset(logical)
         if skipped_content:
             skip_reason = (
                 "cloud storage placeholder or offline file"
@@ -603,6 +648,9 @@ def scan_local_source(
                 "decode_error": False,
                 "redaction_count": 0,
                 "extraction_method": "content_not_read",
+                "content_profile": {}
+                if cloud_placeholder
+                else _bounded_content_profile(path, logical, asset_type),
                 "tags": [],
                 "capabilities": [],
                 "needs": [],
@@ -622,7 +670,6 @@ def scan_local_source(
                 extraction_method=extraction_method if extracted_text else "direct_text",
             )
         modified = datetime.fromtimestamp(stat.st_mtime, tz=timezone.utc).isoformat()
-        asset_type = classify_asset(logical)
         instance_class = classify_instance_class(logical)
         content_sha256 = file_hash if revision_identity_mode == "content_sha256" else None
         metadata: dict[str, object] = {
@@ -638,6 +685,7 @@ def scan_local_source(
             "redaction_count": extracted["redaction_count"],
             "decode_error": extracted["decode_error"],
             "extraction_method": extracted["extraction_method"],
+            "content_profile": extracted["content_profile"],
             "content_skipped_for_size": content_exceeds_size_limit,
             "content_skipped_for_cloud_placeholder": cloud_placeholder,
             "cloud_placeholder_detection_mode": _cloud_placeholder_detection_mode(),

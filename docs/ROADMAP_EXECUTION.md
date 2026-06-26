@@ -114,6 +114,14 @@ This writes `roadmap/evidence/phase-2-asset-calibration.md` and updates
 `roadmap/gate-evidence.json`. It fails closed if review counts, structured notes, reviewers,
 or the source review file are missing.
 
+After Phase 2 labels are exported, apply the Phase 2.5 content-aware scoring
+recommendation before using scores for downstream pilot selection. The governing
+note is `roadmap/evidence/phase-2.5-content-aware-scoring.md`. A fresh scan and
+comparison should show that reviewed too-high workflow/template/archive examples
+move down, reviewed too-low substantive code examples move up, and about-right
+examples do not churn heavily. Treat this as a score-methodology evaluation, not
+a source-truth promotion.
+
 Generate a downstream governance pilot selection pack without installing hooks:
 
 ```powershell

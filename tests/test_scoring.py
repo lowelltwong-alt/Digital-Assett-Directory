@@ -203,3 +203,121 @@ def test_duplicate_non_representative_gets_strong_discount():
 
     assert copy.value_score < representative.value_score
     assert "duplicate_non_representative_discount" in copy.metadata["score_discount_reasons"]
+
+
+def test_content_profile_lifts_substantive_source_code_out_of_metadata_low():
+    metadata_only = _asset(
+        "metadata-code",
+        asset_type="code",
+        logical_path="repo/src/digital_asset_directory/admission_validator.py",
+        content_sha256=None,
+        size_bytes=14_000,
+        sensitivity="internal",
+        source_provenance={"observed_by": "local_scan"},
+        capabilities=["validate_contracts"],
+        outcomes=["repeatable_quality"],
+    )
+    profiled = _asset(
+        "profiled-code",
+        asset_type="code",
+        logical_path="repo/src/digital_asset_directory/admission_validator.py",
+        content_sha256=None,
+        size_bytes=14_000,
+        sensitivity="internal",
+        source_provenance={"observed_by": "local_scan"},
+        capabilities=["validate_contracts"],
+        outcomes=["repeatable_quality"],
+        metadata={
+            "content_profile": {
+                "non_empty_line_count": 190,
+                "import_count": 8,
+                "function_count": 14,
+                "class_count": 2,
+                "public_symbol_count": 16,
+                "code_role": "runtime_core",
+            }
+        },
+    )
+
+    score_asset(metadata_only, SCORING)
+    score_asset(profiled, SCORING)
+
+    assert profiled.metadata["information_content_class"] == "content_profiled"
+    assert profiled.value_components["content_role"] >= 90
+    assert profiled.value_score >= 40
+    assert profiled.value_score > metadata_only.value_score + 20
+    assert profiled.metadata["score_methodology_version"] == "asset-value-v0.3-content-aware"
+
+
+def test_workflow_templates_discount_below_validation_workflows():
+    issue_template = _asset(
+        "issue-template",
+        asset_type="workflow",
+        logical_path="repo/.github/ISSUE_TEMPLATE/bug_report.md",
+        content_sha256=None,
+        size_bytes=1200,
+        sensitivity="internal",
+        source_provenance={"observed_by": "local_scan"},
+        metadata={
+            "content_profile": {
+                "non_empty_line_count": 24,
+                "workflow_subtype": "issue_or_pr_template",
+            }
+        },
+    )
+    validation_workflow = _asset(
+        "validation-workflow",
+        asset_type="workflow",
+        logical_path="repo/.github/workflows/validate.yml",
+        content_sha256=None,
+        size_bytes=2100,
+        sensitivity="internal",
+        source_provenance={"observed_by": "local_scan"},
+        capabilities=["validate_contracts"],
+        outcomes=["repeatable_quality"],
+        metadata={
+            "pattern_evidence": [{"term": "pytest"}, {"term": "validate"}],
+            "content_profile": {
+                "non_empty_line_count": 42,
+                "workflow_subtype": "ci_validation_workflow",
+            },
+        },
+    )
+
+    score_asset(issue_template, SCORING)
+    score_asset(validation_workflow, SCORING)
+
+    assert issue_template.value_score < validation_workflow.value_score
+    assert issue_template.value_score < 35
+    assert "workflow_issue_or_pr_template" in issue_template.metadata["score_discount_reasons"]
+    assert (
+        validation_workflow.value_components["content_role"]
+        > issue_template.value_components["content_role"]
+    )
+
+
+def test_package_marker_cannot_inflate_as_runtime_code():
+    marker = _asset(
+        "marker",
+        asset_type="code",
+        logical_path="repo/src/digital_asset_directory/__init__.py",
+        content_sha256=None,
+        size_bytes=40,
+        sensitivity="internal",
+        source_provenance={"observed_by": "local_scan"},
+        capabilities=["validate_contracts"],
+        metadata={
+            "content_profile": {
+                "non_empty_line_count": 1,
+                "public_symbol_count": 0,
+                "import_count": 0,
+                "code_role": "package_marker",
+            }
+        },
+    )
+
+    score_asset(marker, SCORING)
+
+    assert marker.value_score < 20
+    assert marker.value_components["content_role"] == 5
+    assert "package_marker_low_independent_value" in marker.metadata["score_discount_reasons"]

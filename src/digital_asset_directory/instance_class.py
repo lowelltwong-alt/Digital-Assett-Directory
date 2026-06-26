@@ -101,6 +101,14 @@ def information_content_class(
         return "empty_marker"
     if size_bytes == 0:
         return "empty"
+    profile = metadata.get("content_profile")
+    if isinstance(profile, dict):
+        try:
+            non_empty_line_count = int(profile.get("non_empty_line_count") or 0)
+        except (TypeError, ValueError):
+            non_empty_line_count = 0
+        if non_empty_line_count > 0:
+            return "content_profiled"
     if not content_sha256:
         return "metadata_only"
     text_tokens = metadata.get("text_tokens")
