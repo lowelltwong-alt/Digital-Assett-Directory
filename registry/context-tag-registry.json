@@ -112,6 +112,24 @@
     },
     {
       "schema_version": "0.1.0",
+      "context_tag_id": "load_bearing_decision",
+      "label": "Load-bearing decision",
+      "description": "A planning, architecture, schema, scoring, governance, dependency, or automation decision can affect many downstream files, repos, agents, labels, or workflows.",
+      "applies_when": ["A decision changes shared contracts, defaults, authority boundaries, scan scope, scoring, CI/hooks, data models, source mutation policy, or behavior used by multiple downstream tasks."],
+      "does_not_apply_when": ["The change is isolated, reversible, and has no known downstream consumers or authority implications."],
+      "risk_if_misapplied": "May over-escalate ordinary implementation details, or miss a hidden high-risk default if applied too narrowly."
+    },
+    {
+      "schema_version": "0.1.0",
+      "context_tag_id": "fresh_eyes_review",
+      "label": "Fresh-eyes review",
+      "description": "A second reviewer or AI is asked to independently red-team, premortem, or compare options while preserving goal and authority context.",
+      "applies_when": ["The decision is high risk, load-bearing, ambiguous, irreversible, or likely to shape future agents' defaults."],
+      "does_not_apply_when": ["A small low-risk change has already passed local tests and does not affect shared behavior."],
+      "risk_if_misapplied": "May add noise if the reviewer lacks context, or create false confidence if the second review is not independent."
+    },
+    {
+      "schema_version": "0.1.0",
       "context_tag_id": "score_methodology",
       "label": "Score methodology",
       "description": "A calculated score, grade, confidence, threshold, lift, risk, or similarity value needs an explicit formula and methodology version.",

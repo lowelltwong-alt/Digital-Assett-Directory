@@ -21,6 +21,11 @@ Before material AI-assisted work:
 1. Read this repository's own front door and authority surfaces.
 2. Run: `asset-dir agent preflight --repo . --agent <agent> --task \"<task>\" --hub \"{hub}\"`
 3. State scope, allowed/forbidden paths, validation plan, and stop conditions.
+4. For load-bearing decisions that affect shared contracts, schemas, CI/hooks, governance,
+   scoring/ranking, roadmap gates, source-boundary rules, dependencies, migrations, or
+   future-agent defaults, classify high/medium/low risk before implementation. High-risk
+   decisions require human attention, implementer red-team, premortem, rollback criteria,
+   and fresh-eyes review.
 
 Before reporting completion or pushing material changes:
 1. Run appropriate tests and report exact outcomes.
@@ -70,6 +75,11 @@ def install_governance(target_repo: Path, hub_root: Path, force: bool = False) -
         "handoff_required": True,
         "enforcement": "pre_push",
         "source_repo_authority_preserved": True,
+        "load_bearing_decision_review": {
+            "enabled": True,
+            "high_risk_requires_human_gate": True,
+            "fresh_eyes_review_template": "templates/load-bearing-decision-review.template.md",
+        },
     }
     atomic_write_text(config, yaml.safe_dump(payload, sort_keys=False))
     changed.append(config)

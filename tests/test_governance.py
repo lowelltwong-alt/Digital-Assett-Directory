@@ -21,7 +21,10 @@ def test_downstream_install_is_idempotent_and_enforces_open_session(tmp_path: Pa
     target.mkdir()
     install_governance(target, hub)
     install_governance(target, hub)
-    assert (target / "AGENTS.md").read_text().count(BEGIN) == 1
+    agents_text = (target / "AGENTS.md").read_text()
+    assert agents_text.count(BEGIN) == 1
+    assert "load-bearing decisions" in agents_text
+    assert "fresh-eyes review" in agents_text
     session = preflight(hub, target, hub / "state" / "catalog.sqlite3", "codex", "change")
     ok, _ = enforce_postflight(hub, target)
     assert not ok
@@ -38,6 +41,8 @@ def test_scaffold_new_repo_wires_starter_files_and_governance(tmp_path: Path):
     assert (target / "README.md").exists()
     assert (target / ".gitignore").exists()
     assert BEGIN in (target / "AGENTS.md").read_text(encoding="utf-8")
-    assert "hub_path" in (target / ".digital-asset-directory.yml").read_text(encoding="utf-8")
+    config_text = (target / ".digital-asset-directory.yml").read_text(encoding="utf-8")
+    assert "hub_path" in config_text
+    assert "load_bearing_decision_review" in config_text
     assert (target / ".githooks" / "pre-push").exists()
     assert any("README.md" in str(path) for path in changed)

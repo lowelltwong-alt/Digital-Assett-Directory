@@ -43,7 +43,8 @@ Current seed rules are:
 - check semantic evolution separately from copy noise;
 - calculated scores require explicit methodology;
 - capture observable decision traces as bounded lesson candidates;
-- context-bound lessons need non-applicability and danger notes.
+- context-bound lessons need non-applicability and danger notes;
+- load-bearing decisions need risk-tier review.
 
 ## Temp Fixture Copy Rule
 
@@ -118,6 +119,28 @@ Do not store or require private hidden reasoning. Capture the observable decisio
 
 Ordinary new lessons belong in postflight or candidate learning records. Promote a lesson
 to preflight/midflight only when it is repeated, high-risk, or explicitly human-approved.
+
+## Load-Bearing Decision Risk Rule
+
+Some decisions shape many downstream artifacts: schemas, registries, scoring formulas,
+roadmap gates, CI/hooks, source-boundary rules, migrations, defaults, or automation.
+These are load-bearing decisions.
+
+Before implementing or promoting a load-bearing decision, classify it:
+
+- `high`: broad downstream blast radius, hard rollback, source authority, scoring,
+  schema, governance, security/privacy, automation, migration, or future-agent default.
+- `medium`: bounded but real downstream effect with observable rollback and known callers.
+- `low`: isolated, reversible, and no shared contract, score, authority, roadmap, or
+  automation effect.
+
+High-risk decisions require a human-gated red-team and premortem before implementation
+or promotion. The implementing agent must also red-team its own plan, and a fresh-eyes
+review should be requested from another AI or human using
+`templates/load-bearing-decision-review.template.md`.
+
+Use `docs/LOAD_BEARING_DECISION_REVIEW.md` for the full checklist, A/B comparison
+requirements, rollback criteria, and evidence storage rules.
 
 ## Promotion Rule
 

@@ -4,3 +4,7 @@ lessons_required: true
 handoff_required: true
 enforcement: pre_push
 source_repo_authority_preserved: true
+load_bearing_decision_review:
+  enabled: true
+  high_risk_requires_human_gate: true
+  fresh_eyes_review_template: templates/load-bearing-decision-review.template.md

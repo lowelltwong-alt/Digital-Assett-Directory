@@ -140,3 +140,25 @@ def test_learning_rule_registry_loads_and_matches_real_seed_rules():
         "learning-rule:current-score-before-upside",
         "learning-rule:temp-fixture-copy-is-lineage-evidence",
     }.issubset({match["rule_id"] for match in matches})
+
+
+def test_load_bearing_decision_rule_matches_roadmap_and_schema_defaults():
+    root = Path(__file__).resolve().parents[1]
+    matches = match_learning_rules(
+        root,
+        task=(
+            "Plan a roadmap phase with a schema change, default behavior change, "
+            "red team premortem, and A/B test before downstream agents inherit it"
+        ),
+        paths=["roadmap/roadmap.yaml", "schemas/proposal.schema.json"],
+    )
+
+    assert "learning-rule:load-bearing-decisions-need-risk-tier-review" in {
+        match["rule_id"] for match in matches
+    }
+    matched = next(
+        match
+        for match in matches
+        if match["rule_id"] == "learning-rule:load-bearing-decisions-need-risk-tier-review"
+    )
+    assert matched["enforcement_level"] == "human_gate"

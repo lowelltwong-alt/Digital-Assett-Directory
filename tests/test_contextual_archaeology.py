@@ -202,6 +202,7 @@ def test_repo_learning_loop_install_and_event_are_files_only(tmp_path: Path):
     assert record.review_status == "generated_candidate"
     readme_text = (tmp_path / ".digital-asset-directory" / "learning" / "README.md").read_text()
     assert "methodology version" in readme_text
+    assert "load-bearing decisions" in readme_text
     assert "observable decision traces" in readme_text
     event_text = (tmp_path / ".digital-asset-directory" / "learning" / "events.jsonl").read_text()
     assert "malicious-looking text is stored as data only" in event_text

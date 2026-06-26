@@ -19,6 +19,7 @@
 - `docs/ORPHAN_ACTIVATION_AND_SYNERGY_RADAR.md`
 - `docs/LESSONS_AND_HANDOFF_LOOP.md`
 - `docs/DETERMINISTIC_LEARNING_RULES.md` - reviewed learning rules surfaced in preflight and enforced by midflight acknowledgements
+- `docs/LOAD_BEARING_DECISION_REVIEW.md` - high/medium/low risk gates for load-bearing software, repo, roadmap, schema, governance, scoring, and automation decisions
 - `docs/SEMANTIC_EVOLUTION_GRADING.md` - deterministic grading scale for real semantic evolution versus copy/fixture noise
 - `docs/PUBLIC_ASSET_USE_FEEDBACK.md` - public PR path and untrusted-input rules for asset-use feedback
 - `docs/LOGOS_REUSABLE_ASSET_FINDINGS.md` - reusable Logos-derived asset-family and learning-loop patterns
@@ -91,6 +92,7 @@
 - `scripts/register_scheduled_scan.ps1`
 - `scripts/unregister_scheduled_scan.ps1`
 - `templates/asset-use-feedback.template.md` - copyable public feedback template
+- `templates/load-bearing-decision-review.template.md` - fresh-eyes red-team/premortem template for high-risk load-bearing decisions
 
 ## Roadmap
 

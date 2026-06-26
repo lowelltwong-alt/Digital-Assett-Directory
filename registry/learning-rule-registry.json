@@ -313,6 +313,89 @@
       ],
       "enforcement_level": "require_ack",
       "review_status": "reviewed"
+    },
+    {
+      "schema_version": "0.1.0",
+      "rule_id": "learning-rule:load-bearing-decisions-need-risk-tier-review",
+      "title": "Load-bearing decisions need risk-tier review",
+      "summary": "When a software, repo, roadmap, schema, scoring, governance, dependency, or automation decision can affect many downstream artifacts or future agents, classify the decision as high, medium, or low risk before implementation and run the matching red-team/premortem gate.",
+      "trigger_terms": [
+        "architecture decision",
+        "load-bearing",
+        "downstream",
+        "roadmap phase",
+        "phase plan",
+        "schema change",
+        "contract change",
+        "default behavior",
+        "scoring change",
+        "ranking change",
+        "calibration default",
+        "governance hook",
+        "pre-push",
+        "source mutation",
+        "automation",
+        "migration",
+        "dependency upgrade",
+        "risk tier",
+        "red team",
+        "premortem",
+        "fresh eyes",
+        "a/b test"
+      ],
+      "trigger_path_patterns": [
+        "roadmap/",
+        "registry/",
+        "schemas/",
+        "ontology/",
+        "config/",
+        ".github/workflows/",
+        ".githooks/",
+        "scoring.py",
+        "proposals.py",
+        "governance.py",
+        "roadmap.py",
+        "local_scan.py",
+        "learning.py",
+        "validation.py",
+        "database.py",
+        "cli.py",
+        "AGENTS.md",
+        "CLAUDE.md",
+        "AI_FRONT_DOOR.md"
+      ],
+      "context_tags": [
+        "load_bearing_decision",
+        "fresh_eyes_review",
+        "human_gate",
+        "source_authority",
+        "counterfactual_sequence"
+      ],
+      "applies_when": [
+        "A planned or active change affects shared contracts, public or repo-local APIs, schemas, registries, ontology, scoring/ranking formulas, roadmap phase gates, CI/hooks, governance rules, source mutation policy, scan scope, dependencies used across modules, or defaults that future agents will inherit.",
+        "A decision is hard to reverse, easy to over-trust, likely to influence labels or graph edges, or likely to cascade into other repos, workflows, agents, prompts, tests, or generated evidence.",
+        "The agent is writing a roadmap, implementation plan, phase gate, architecture note, or migration path where wrong order or wrong default could create downstream rework."
+      ],
+      "does_not_apply_when": [
+        "The change is a small isolated edit with no shared contract, no downstream consumer, no authority boundary, no generated-score effect, and an obvious rollback.",
+        "The work only records raw observations or generated candidate evidence without changing behavior, defaults, schemas, gates, or source/repo authority.",
+        "A reviewed risk-tier decision already covers the same exact change, context, and downstream scope and is cited."
+      ],
+      "required_actions": [
+        "Classify the decision before implementation as high, medium, or low risk using `docs/LOAD_BEARING_DECISION_REVIEW.md`.",
+        "For high-risk decisions, stop for human attention, list downstream blast radius, gather at least two plausible options, run an implementer self red-team and premortem, request fresh-eyes review from another AI or reviewer using the template, define rollback and kill criteria, and propose an A/B or bounded comparison when feasible.",
+        "For medium-risk decisions, record why the risk is not high, run a short self-premortem, identify tests and rollback, and request fresh-eyes review when uncertainty or downstream ambiguity remains.",
+        "For low-risk decisions, state why the change is isolated and reversible, then run normal validation.",
+        "Store the risk-tier note, red-team findings, premortem, chosen option, rejected options, validation plan, and remaining unknowns as evidence or in the repo-local learning loop."
+      ],
+      "danger_if_ignored": "A future agent may quietly choose a bad default, schema, scoring formula, source-boundary rule, migration order, or automation hook that multiplies across repos and future agents before a human notices.",
+      "evidence": [
+        "docs/LOAD_BEARING_DECISION_REVIEW.md",
+        "templates/load-bearing-decision-review.template.md",
+        "docs/DETERMINISTIC_LEARNING_RULES.md"
+      ],
+      "enforcement_level": "human_gate",
+      "review_status": "reviewed"
     }
   ],
   "rule": "Reviewed learning rules are deterministic preflight and midflight routing aids. They constrain agent behavior but do not promote generated observations to source truth."

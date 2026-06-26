@@ -965,6 +965,8 @@ def install_repo_learning_loop(repo: Path, *, mode: str = "files-only", force: b
             "",
             "When recording calculated scores, grades, thresholds, confidence, lift, risk, or similarity, include the methodology version, inputs, normalization, thresholds or weights, uncertainty handling, and output range.",
             "",
+            "When planning load-bearing decisions that affect shared contracts, schemas, CI/hooks, governance, scoring/ranking, roadmap gates, dependencies, migrations, source-boundary rules, or future-agent defaults, classify risk as high, medium, or low. High-risk decisions need human attention, implementer red-team, premortem, rollback criteria, and fresh-eyes review.",
+            "",
             "When recording lessons, capture observable decision traces only: task trigger, files or commands involved, failure or correction, evidence path, applies_when, does_not_apply_when, and danger_if_misapplied.",
             "",
         ]
