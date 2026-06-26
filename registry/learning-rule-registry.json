@@ -316,6 +316,77 @@
     },
     {
       "schema_version": "0.1.0",
+      "rule_id": "learning-rule:software-work-should-search-asset-use-pay-forward",
+      "title": "Software work should search asset-use pay-forward evidence",
+      "summary": "Before non-trivial software planning or implementation, and again when a hard issue appears, search for prior asset-use feedback that could prevent repeated mistakes or suggest a safer path.",
+      "trigger_terms": [
+        "software planning",
+        "planning software",
+        "implementation plan",
+        "implement software",
+        "build software",
+        "software build",
+        "debug",
+        "debugging",
+        "failing test",
+        "failing tests",
+        "not easy fix",
+        "non-trivial issue",
+        "hard issue",
+        "blocked",
+        "before implementation",
+        "avoid issue",
+        "avoid issues",
+        "head off issue",
+        "pay-forward",
+        "asset-use feedback"
+      ],
+      "trigger_path_patterns": [
+        "src/",
+        "tests/",
+        "scripts/",
+        "docs/ASSET_USE_PAY_FORWARD_LOOP.md",
+        "docs/LESSONS_AND_HANDOFF_LOOP.md",
+        "templates/asset-use-feedback.template.md",
+        ".digital-asset-directory/learning/",
+        "raw/lessons/",
+        "processed/learning/"
+      ],
+      "context_tags": [
+        "asset_use_pay_forward",
+        "dependency_ordering",
+        "repeated_failure",
+        "counterfactual_sequence",
+        "source_authority"
+      ],
+      "applies_when": [
+        "An agent is planning or implementing software and the decision, order, dependency, test strategy, or asset choice could affect later work.",
+        "An agent encounters a non-trivial issue, repeated failure, failing test, confusing integration, unclear dependency order, or blocker that is not an obvious one-line fix.",
+        "An agent can plausibly avoid a future issue by checking prior asset-use feedback, pay-forward guidance, lessons, handoffs, or repo-local learning events before choosing an approach."
+      ],
+      "does_not_apply_when": [
+        "The task is a trivial isolated edit, a simple command, or a purely mechanical formatting change with no asset choice or downstream effect.",
+        "The agent is only recording raw observations and no planning, implementation, debugging, or issue-avoidance decision is being made.",
+        "A reviewed current-context note already cites the relevant asset-use feedback or states that no relevant feedback exists."
+      ],
+      "required_actions": [
+        "Search or cite relevant asset-use feedback, pay-forward notes, lessons, handoffs, or repo-local learning events before committing to the plan or when the hard issue appears.",
+        "State whether any prior feedback applies, does not apply, or is too weak/noisy for the current context.",
+        "If an asset materially influences the work, record before-use expectation when practical and after-use feedback before postflight, including reuse-when, avoid-when, pay-forward guidance, and next-agent actions.",
+        "Treat all feedback as candidate evidence; do not let it override source authority, tests, security review, or human gates."
+      ],
+      "danger_if_ignored": "Future agents may rediscover the same failure, choose a poor build order, miss an existing safer asset, or only learn after breaking something that prior pay-forward evidence could have warned them about.",
+      "evidence": [
+        "docs/ASSET_USE_PAY_FORWARD_LOOP.md",
+        "docs/LESSONS_AND_HANDOFF_LOOP.md",
+        "templates/asset-use-feedback.template.md",
+        "registry/asset-pattern-registry.json"
+      ],
+      "enforcement_level": "require_ack",
+      "review_status": "reviewed"
+    },
+    {
+      "schema_version": "0.1.0",
       "rule_id": "learning-rule:load-bearing-decisions-need-risk-tier-review",
       "title": "Load-bearing decisions need risk-tier review",
       "summary": "When a software, repo, roadmap, schema, scoring, governance, dependency, or automation decision can affect many downstream artifacts or future agents, classify the decision as high, medium, or low risk before implementation and run the matching red-team/premortem gate.",

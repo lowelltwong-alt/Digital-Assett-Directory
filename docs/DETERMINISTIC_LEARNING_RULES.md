@@ -44,6 +44,7 @@ Current seed rules are:
 - calculated scores require explicit methodology;
 - capture observable decision traces as bounded lesson candidates;
 - context-bound lessons need non-applicability and danger notes;
+- software work should search asset-use pay-forward evidence;
 - load-bearing decisions need risk-tier review.
 
 ## Temp Fixture Copy Rule
@@ -119,6 +120,29 @@ Do not store or require private hidden reasoning. Capture the observable decisio
 
 Ordinary new lessons belong in postflight or candidate learning records. Promote a lesson
 to preflight/midflight only when it is repeated, high-risk, or explicitly human-approved.
+
+## Asset-Use Pay-Forward Rule
+
+Before non-trivial software planning or implementation, and again when a hard issue appears,
+agents should search for prior asset-use feedback and pay-forward notes that could prevent a
+known failure, suggest a safer order, or identify an asset that already helped in a similar
+context.
+
+This rule applies when:
+
+- the task is planning or implementing software and the order, dependency, test strategy, or
+  asset choice can affect later work;
+- a non-trivial issue, repeated failure, failing test, confusing integration, or blocker
+  appears;
+- prior feedback could plausibly help avoid an issue before it is created.
+
+The agent must state whether relevant prior feedback applies, does not apply, or is too weak
+for the current context. If an asset materially influences the work, the agent should record
+before-use expectation when practical and after-use feedback before postflight.
+
+This rule is intentionally not for trivial edits or one-command tasks. Pay-forward evidence
+remains candidate evidence and cannot override source authority, tests, security review, or
+human gates.
 
 ## Load-Bearing Decision Risk Rule
 

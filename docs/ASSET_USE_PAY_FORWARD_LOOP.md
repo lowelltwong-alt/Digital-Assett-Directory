@@ -71,3 +71,18 @@ research path, or cross-repo workflow.
 
 Do not require it for trivial reads, one-off commands, or assets that did not influence the
 decision or implementation.
+
+## Preflight And Midflight Routing
+
+The reviewed learning rule
+`learning-rule:software-work-should-search-asset-use-pay-forward` should surface during
+non-trivial software planning, implementation, debugging, and issue-avoidance work.
+
+When it surfaces in preflight, the agent should search or cite relevant prior feedback before
+choosing the plan. When a hard issue appears midflight, the agent should pause long enough to
+check whether a similar asset-use note, handoff, or repo-local learning event already says
+what to reuse, avoid, or do next.
+
+The check is meant to head off avoidable mistakes before they are made. It is not a command to
+trust old feedback blindly; the agent must carry forward applicability limits and candidate
+status.

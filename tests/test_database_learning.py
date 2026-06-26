@@ -162,3 +162,40 @@ def test_load_bearing_decision_rule_matches_roadmap_and_schema_defaults():
         if match["rule_id"] == "learning-rule:load-bearing-decisions-need-risk-tier-review"
     )
     assert matched["enforcement_level"] == "human_gate"
+
+
+def test_asset_use_pay_forward_rule_matches_non_trivial_software_work():
+    root = Path(__file__).resolve().parents[1]
+    matches = match_learning_rules(
+        root,
+        task=(
+            "Plan software implementation before implementation and check whether "
+            "asset-use feedback can help avoid issues"
+        ),
+        context=["A non-trivial issue appears while debugging failing tests."],
+        paths=["src/digital_asset_directory/learning.py"],
+    )
+
+    assert "learning-rule:software-work-should-search-asset-use-pay-forward" in {
+        match["rule_id"] for match in matches
+    }
+    matched = next(
+        match
+        for match in matches
+        if match["rule_id"] == "learning-rule:software-work-should-search-asset-use-pay-forward"
+    )
+    assert matched["enforcement_level"] == "require_ack"
+
+
+def test_asset_use_pay_forward_rule_does_not_match_trivial_non_software_task():
+    root = Path(__file__).resolve().parents[1]
+    matches = match_learning_rules(
+        root,
+        task="show the current date",
+        context=["simple one-command request"],
+        paths=[],
+    )
+
+    assert "learning-rule:software-work-should-search-asset-use-pay-forward" not in {
+        match["rule_id"] for match in matches
+    }

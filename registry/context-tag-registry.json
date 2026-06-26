@@ -145,6 +145,15 @@
       "applies_when": ["The task reviews labels, thresholds, score bands, false positives, false negatives, or weight changes."],
       "does_not_apply_when": ["The task only generates candidate records without review or measured comparison."],
       "risk_if_misapplied": "May imply a score is validated when it is only generated or guessed."
+    },
+    {
+      "schema_version": "0.1.0",
+      "context_tag_id": "asset_use_pay_forward",
+      "label": "Asset-use pay-forward",
+      "description": "Prior asset-use feedback should be searched before or during non-trivial software planning, implementation, debugging, or issue avoidance work.",
+      "applies_when": ["An agent is planning or implementing software, hits a non-trivial issue, or is trying to prevent a predictable issue before it appears."],
+      "does_not_apply_when": ["The task is a trivial isolated edit, a simple command, or an asset was only glanced at and did not influence the work."],
+      "risk_if_misapplied": "May add noisy process to small tasks, or may make one prior feedback event look more authoritative than it is."
     }
   ],
   "rule": "Context tags are candidate routing and safety labels. They help constrain lessons; they do not prove that a lesson applies."
