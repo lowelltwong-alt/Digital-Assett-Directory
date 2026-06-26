@@ -332,6 +332,31 @@
         "reviewed evidence link",
         "reuse-when and avoid-when context"
       ]
+    },
+    {
+      "id": "professional_recruiting_intelligence_workflow_system",
+      "label": "Professional recruiting intelligence workflow system",
+      "description": "Official credential intake, person/credential identity, organization roster capture, public enrichment, exception review, and candidate-only recruiting or opportunity signals combined into a governed intelligence workflow.",
+      "leverage": "very_high",
+      "recognition_mode": "repository_composite",
+      "positive_signals": [
+        "official register, credential, license, membership, exam-result, or population-source intake",
+        "separate person, credential, organization, alias, source, and profile identities",
+        "source snapshots, extraction audits, source hashes, or source drill-down fields",
+        "roster, bio, profile, directory, or public source extraction scripts",
+        "enrichment lanes that explicitly cannot override official source truth",
+        "exception lake, conflict queue, no-confident-match state, or needs-review queue",
+        "opportunity, acquisition, liftout, succession, rising-star, recruiting, or market-context signals",
+        "generated exports or dashboards derived from a canonical database",
+        "tests or roadmap gates for source coverage, idempotence, scraping boundaries, evidence completeness, or stale state"
+      ],
+      "missing_evidence": [
+        "privacy and source-terms review for row-level person data",
+        "human-reviewed false-positive examples for identity and opportunity signals",
+        "calibrated thresholds for recruiting, acquisition, liftout, or rising-star signals",
+        "scraper variant clustering and delta review",
+        "reviewed evidence that generated exports derive from the canonical store"
+      ]
     }
   ],
   "rule": "Pattern matches are generated candidate evidence. They guide review, scoring calibration, and composite-asset proposals; they do not prove value or source truth."

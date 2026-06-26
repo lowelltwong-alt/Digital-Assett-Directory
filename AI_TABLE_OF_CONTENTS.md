@@ -22,6 +22,7 @@
 - `docs/DETERMINISTIC_LEARNING_RULES.md` - reviewed learning rules surfaced in preflight and enforced by midflight acknowledgements
 - `docs/LOAD_BEARING_DECISION_REVIEW.md` - high/medium/low risk gates for load-bearing software, repo, roadmap, schema, governance, scoring, and automation decisions
 - `docs/WORKFLOW_SWEEPS.md` - governance-first generated-candidate sweeps for discovering important workflow assets across repos
+- `docs/PROFESSIONAL_RECRUITING_INTELLIGENCE_WORKFLOW.md` - reusable workflow asset for official-source professional identity, roster, enrichment, recruiting, acquisition, and group-liftout intelligence
 - `docs/SEMANTIC_EVOLUTION_GRADING.md` - deterministic grading scale for real semantic evolution versus copy/fixture noise
 - `docs/PUBLIC_ASSET_USE_FEEDBACK.md` - public PR path and untrusted-input rules for asset-use feedback
 - `docs/LOGOS_REUSABLE_ASSET_FINDINGS.md` - reusable Logos-derived asset-family and learning-loop patterns
@@ -116,6 +117,7 @@
 - `roadmap/evidence/phase-2-calibration-human-review-research.md` - human review rationale, label policy, and score-change recommendations for Phase 2
 - `roadmap/evidence/phase-2-calibration-label-table.csv` - compact tracked table of all 100 Phase 2 asset-rating labels
 - `roadmap/evidence/phase-2.5-content-aware-scoring.md` - content-aware scoring recommendation, implementation notes, and red-team before downstream use
+- `roadmap/evidence/nevada-bar-professional-intelligence-workflow.md` - curated evidence for the Nevada Bar Results professional recruiting intelligence workflow asset family
 
 ## Reference
 
