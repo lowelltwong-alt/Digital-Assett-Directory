@@ -204,6 +204,9 @@ them.
 | `roadmap/evidence/claude-background-connection-radar-review.md` | Claude's fresh-eyes review adding gate-before-score math, privacy-first attention, compute caps, and family dedup. | `roadmap`, `knowledge_graph`, `calibration` | You need the independent hardening review before implementing background connection scoring or escalation. |
 | `roadmap/evidence/background-connection-radar-v1-implementation.md` | Implementation evidence, red-team, premortem, validation, and risks for manual radar v1. | `roadmap`, `background_connection`, `validation` | You verify what v1 shipped and why it remains candidate-only. |
 | `roadmap/evidence/claude-workflow-composition-red-team.md` | Claude's independent warning against ontology sprawl and recommendation for WorkflowPartRecord. | `roadmap`, `workflow`, `knowledge_graph` | You need the fresh-eyes review behind the background-radar synthesis. |
+| `roadmap/evidence/phase-3-sandbox-pilot.md` | Sandbox downstream-governance pilot evidence. | `roadmap`, `downstream_governance`, `validation` | You verify Phase 3 gates or learn how the files-only learning loop was tested. |
+| `roadmap/evidence/phase-4-semantic-enrichment.md` | Conservative Phase 4 semantic-enrichment boundary and evaluation evidence. | `roadmap`, `semantic_enrichment`, `privacy` | You need to know what Phase 4 approved, what remains deferred, or why embeddings are still gated. |
+| `roadmap/evidence/phase-5-alerting-and-research-radar.md` | Conservative Phase 5 manual-alert/radar boundary and external-research gates. | `roadmap`, `alerting`, `external_research` | You need to know what alerting/research surfaces are approved and what remains gated. |
 
 ## Reference
 

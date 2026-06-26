@@ -163,6 +163,112 @@
       "reviewer": "codex",
       "status": "verified",
       "summary": "Sandbox git core.hooksPath was set to .githooks; DAD enforcement returned exit code 2 before postflight and exit code 0 after postflight."
+    },
+    "phase-4-deterministic-baseline-retained": {
+      "evidence": [
+        "docs/ASSET_IDENTITY_AND_SIMILARITY_LADDER.md",
+        "roadmap/evidence/phase-2.5-content-aware-scoring.md",
+        "roadmap/evidence/phase-4-semantic-enrichment.md"
+      ],
+      "phase_id": "phase-4-semantic-enrichment",
+      "reviewed_at": "2026-06-26T17:36:04.0519173Z",
+      "reviewer": "codex",
+      "status": "verified",
+      "summary": "The deterministic baseline remains the only approved enrichment path; embeddings and model enrichment stay deferred behind separate provider/privacy/eval gates."
+    },
+    "phase-4-evaluation-harness-benefit-shown": {
+      "evidence": [
+        "roadmap/evidence/phase-2.5-content-aware-scoring.md",
+        "processed/reports/phase_2_5_score_delta_validation.md",
+        "processed/reports/phase_2_5_score_delta_validation.json",
+        "roadmap/evidence/phase-4-semantic-enrichment.md"
+      ],
+      "phase_id": "phase-4-semantic-enrichment",
+      "reviewed_at": "2026-06-26T17:36:04.0519173Z",
+      "reviewer": "codex",
+      "status": "verified",
+      "summary": "Phase 2.5 score-delta validation showed measurable deterministic content-aware benefit: 100/100 reviewed rows matched desired movement, with zero about-right churn."
+    },
+    "phase-4-generated-metadata-candidate-status": {
+      "evidence": [
+        "AI_FRONT_DOOR.md",
+        "AGENTS.md",
+        "docs/ROADMAP_EXECUTION.md",
+        "roadmap/evidence/background-connection-radar-v1-implementation.md",
+        "roadmap/evidence/phase-4-semantic-enrichment.md"
+      ],
+      "phase_id": "phase-4-semantic-enrichment",
+      "reviewed_at": "2026-06-26T17:36:04.0519173Z",
+      "reviewer": "codex",
+      "status": "verified",
+      "summary": "Generated semantic metadata, scores, proposals, radar records, and graph relationships remain candidate evidence and cannot promote source truth or roadmap status by themselves."
+    },
+    "phase-4-provider-privacy-boundary-approved": {
+      "evidence": [
+        "docs/SECURITY_AND_PRIVACY.md",
+        "docs/ASSET_IDENTITY_AND_SIMILARITY_LADDER.md",
+        "registry/identity-layer-registry.json",
+        "roadmap/evidence/phase-4-semantic-enrichment.md"
+      ],
+      "phase_id": "phase-4-semantic-enrichment",
+      "reviewed_at": "2026-06-26T17:36:04.0519173Z",
+      "reviewer": "Lowell-directed roadmap order; codex-recorded conservative boundary",
+      "status": "verified",
+      "summary": "Human-directed roadmap completion is recorded under the safest boundary: no external provider, no embeddings, no raw source export, and no raw chat persistence; any future provider remains separately gated."
+    },
+    "phase-5-alert-channels-approved": {
+      "evidence": [
+        "roadmap/evidence/background-connection-radar-v1-implementation.md",
+        "docs/BACKGROUND_CONNECTION_RADAR.md",
+        "src/digital_asset_directory/readiness.py",
+        "roadmap/evidence/phase-5-alerting-and-research-radar.md"
+      ],
+      "phase_id": "phase-5-alerting-and-research-radar",
+      "reviewed_at": "2026-06-26T17:36:04.0519173Z",
+      "reviewer": "Lowell-directed roadmap order; codex-recorded conservative boundary",
+      "status": "verified",
+      "summary": "The approved alert channel is manual local generated reports under processed/ only; scheduled scans, external notifications, GitHub issue/PR creation, and webhook delivery remain unapproved."
+    },
+    "phase-5-external-code-review-gates-active": {
+      "evidence": [
+        "AGENTS.md",
+        "registry/design-authority.json",
+        "docs/SECURITY_AND_PRIVACY.md",
+        "docs/SOFTWARE_REPO_CHECKLIST_TREE.md",
+        "roadmap/evidence/phase-5-alerting-and-research-radar.md"
+      ],
+      "phase_id": "phase-5-alerting-and-research-radar",
+      "reviewed_at": "2026-06-26T17:36:04.0519173Z",
+      "reviewer": "codex",
+      "status": "verified",
+      "summary": "External code, tools, feedback, and research candidates remain blocked behind license, provenance, security, compatibility, source-authority, and human review gates."
+    },
+    "phase-5-no-autonomous-merge-promotion": {
+      "evidence": [
+        "AGENTS.md",
+        "AI_FRONT_DOOR.md",
+        "docs/ROADMAP_EXECUTION.md",
+        "roadmap/evidence/background-connection-radar-v1-implementation.md",
+        "roadmap/evidence/phase-5-alerting-and-research-radar.md"
+      ],
+      "phase_id": "phase-5-alerting-and-research-radar",
+      "reviewed_at": "2026-06-26T17:36:04.0519173Z",
+      "reviewer": "codex",
+      "status": "verified",
+      "summary": "No generated alert, proposal, graph edge, research candidate, or connection packet can autonomously merge, mutate source repositories, promote source truth, or complete roadmap work."
+    },
+    "phase-5-rate-limits-source-terms-reviewed": {
+      "evidence": [
+        "docs/SECURITY_AND_PRIVACY.md",
+        "docs/PUBLIC_SAFE_SOURCE_SWEEPS.md",
+        "docs/DATA_FLOW.md",
+        "roadmap/evidence/phase-5-alerting-and-research-radar.md"
+      ],
+      "phase_id": "phase-5-alerting-and-research-radar",
+      "reviewed_at": "2026-06-26T17:36:04.0519173Z",
+      "reviewer": "codex",
+      "status": "verified",
+      "summary": "The active rate limit is zero scheduled external calls; future external research must record source terms, license/provenance/freshness/security review, and explicit human approval before reuse."
     }
   },
   "schema_version": "0.1.0"

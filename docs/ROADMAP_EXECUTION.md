@@ -155,6 +155,17 @@ python -m digital_asset_directory.cli recommend roadmap-readiness
 This writes Phase 4 and Phase 5 readiness reports under `processed/reports/`. It does not
 enable embeddings, scheduled scans, external research automation, or alert delivery.
 
+Phase 4 may close only under the tracked semantic-enrichment boundary in
+`roadmap/evidence/phase-4-semantic-enrichment.md`: deterministic local content-aware
+enrichment is approved, the deterministic baseline remains primary, generated metadata
+stays candidate-only, and external embeddings/model providers remain separately gated.
+
+Phase 5 may close only under the tracked alerting/research boundary in
+`roadmap/evidence/phase-5-alerting-and-research-radar.md`: the approved alert channel is
+manual local generated reports under `processed/`; scheduled scans, external research
+automation, external notifications, GitHub scanning, external code import, and autonomous
+promotion remain separately gated.
+
 A phase may be marked complete only when:
 
 - required files or outputs exist;
