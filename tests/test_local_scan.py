@@ -193,6 +193,32 @@ def test_local_scan_profiles_skipped_text_code_without_full_content_hash(tmp_pat
     assert code_asset.value_components["content_role"] > 0
 
 
+def test_local_scan_does_not_profile_low_signal_skipped_documents(tmp_path: Path):
+    repo = tmp_path / "project"
+    repo.mkdir()
+    (repo / ".git").mkdir()
+    note = repo / "notes.md"
+    note.write_text("# Notes\n" + "general context\n" * 50, encoding="utf-8")
+    source = LocalSource(
+        id="local",
+        path=repo,
+        path_alias="local",
+        exclude=["**/.git/**"],
+        max_file_bytes=1,
+    )
+
+    assets, _hashes = scan_local_source(source, Settings(), {"weights": DEFAULT_WEIGHTS})
+
+    document = next(a for a in assets if a.logical_path.endswith("notes.md"))
+    profile = document.metadata["content_profile"]
+    assert document.asset_type == "document"
+    assert document.content_sha256 is None
+    assert document.metadata["content_skipped_for_size"] is True
+    assert document.metadata["information_content_class"] == "metadata_only"
+    assert profile["non_empty_line_count"] == 0
+    assert profile["profile_skipped_reason"] == "low_signal_asset_type_or_non_text"
+
+
 def test_local_scan_extracts_bounded_pdf_text_for_media_scoring(tmp_path: Path):
     repo = tmp_path / "project"
     repo.mkdir()

@@ -321,3 +321,55 @@ def test_package_marker_cannot_inflate_as_runtime_code():
     assert marker.value_score < 20
     assert marker.value_components["content_role"] == 5
     assert "package_marker_low_independent_value" in marker.metadata["score_discount_reasons"]
+
+
+def test_small_support_module_stays_low_without_usage_evidence():
+    helper = _asset(
+        "helper",
+        asset_type="code",
+        logical_path="repo/src/package/storage/defect_store.py",
+        content_sha256=None,
+        size_bytes=900,
+        sensitivity="internal",
+        source_provenance={"observed_by": "local_scan"},
+        metadata={
+            "content_profile": {
+                "non_empty_line_count": 18,
+                "import_count": 4,
+                "function_count": 4,
+                "class_count": 0,
+                "public_symbol_count": 4,
+                "code_role": "support_module",
+            }
+        },
+    )
+
+    score_asset(helper, SCORING)
+
+    assert helper.value_score < 45
+    assert "small_support_module_needs_usage_evidence" in helper.metadata["score_discount_reasons"]
+
+
+def test_source_ruleset_config_workflow_remains_review_worthy():
+    ruleset = _asset(
+        "ruleset",
+        asset_type="workflow",
+        logical_path="repo/.github/rulesets/main-canonical-ruleset.json",
+        content_sha256=None,
+        size_bytes=1300,
+        sensitivity="internal",
+        source_provenance={"observed_by": "local_scan"},
+        metadata={
+            "content_profile": {
+                "non_empty_line_count": 42,
+                "workflow_subtype": "ruleset_config",
+            }
+        },
+    )
+
+    score_asset(ruleset, SCORING)
+
+    assert ruleset.value_score >= 45
+    assert (
+        "workflow_config_wrapper_needs_usage_evidence" in ruleset.metadata["score_discount_reasons"]
+    )

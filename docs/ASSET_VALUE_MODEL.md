@@ -81,7 +81,8 @@ range but adds:
   content-profile evidence;
 - a `content_role` component for deterministic code role and workflow subtype
   signals;
-- bounded profile-only extraction for readable skipped or oversize files so
+- bounded profile-only extraction for skipped or oversize code, workflow,
+  schema, test, configuration, agent, skill, prompt, and evaluation files so
   source structure can be scored without full-byte hashing;
 - deterministic `instance_class` labels for source, archive, generated output,
   temp fixture, worktree copy, and cache/OS junk observations;
@@ -93,6 +94,10 @@ range but adds:
 - additional discounts for package markers, issue/pull-request templates,
   ownership metadata, archive/pinned workflow copies, and configuration wrappers
   that lack usage evidence;
+- additional discounts for small support modules, small test-support helpers,
+  and tiny generic modules unless usage evidence supports a higher band;
+- reduced discounting for source ruleset/config workflow artifacts after Phase
+  2.5 churn review showed they can remain medium review candidates;
 - evidence-gated type bonuses so schemas, tests, and evaluations need direct
   content or usage evidence before receiving large verification/reuse boosts;
 - `heuristic_strength` metadata to avoid treating uncalibrated confidence labels
@@ -109,7 +114,10 @@ The content profile is deliberately shallow. It counts bounded lines, public
 symbols, imports, and deterministic path/content roles. It does not parse
 semantic correctness, prove business value, or authorize source promotion.
 Large files, generated outputs, and source repositories remain governed by the
-same candidate-only and no-mutation rules.
+same candidate-only and no-mutation rules. Low-signal skipped documents may
+remain metadata-only under the local read-only scan profile; document and media
+content calibration is a separate future extraction problem, not proof that the
+code/workflow score fix failed.
 
 Temp fixtures, generated outputs, and worktree copies may still be useful lineage
 or coverage evidence. Their individual current score is discounted unless a

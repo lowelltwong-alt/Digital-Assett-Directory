@@ -17,6 +17,7 @@ from digital_asset_directory.calibration import (
     write_asset_calibration_evidence,
     write_asset_calibration_review_csv,
     write_phase2_calibration_reports,
+    write_phase25_score_delta_validation,
 )
 from digital_asset_directory.database import CatalogDB
 from digital_asset_directory.models import (
@@ -309,6 +310,119 @@ def test_asset_calibration_review_update_and_summary(tmp_path: Path):
     assert file_updated.asset_id == "asset-b"
     assert file_summary["reviewed_count"] == 1
     assert load_asset_calibration_reviews(review_file)[1].review_status == "reviewed"
+
+
+def test_phase25_score_delta_validation_writes_directional_report(tmp_path: Path):
+    records = [
+        AssetCalibrationReviewRecord(
+            review_id="review-high",
+            sample_id="asset-review-001",
+            asset_id="asset-too-high",
+            asset_title="Template",
+            logical_path="repo/.github/ISSUE_TEMPLATE/bug_report.md",
+            asset_type="workflow",
+            generated_value_score=58.5,
+            generated_value_band="medium",
+            reviewer="Lowell",
+            score_rating="too_high",
+            evidence={"information_content_class": "metadata_only"},
+        ),
+        AssetCalibrationReviewRecord(
+            review_id="review-low",
+            sample_id="asset-review-002",
+            asset_id="asset-too-low",
+            asset_title="Runtime",
+            logical_path="repo/src/runtime.py",
+            asset_type="code",
+            generated_value_score=27.98,
+            generated_value_band="low",
+            reviewer="Lowell",
+            score_rating="too_low",
+            evidence={"information_content_class": "metadata_only"},
+        ),
+        AssetCalibrationReviewRecord(
+            review_id="review-right",
+            sample_id="asset-review-003",
+            asset_id="asset-about-right",
+            asset_title="Thin helper",
+            logical_path="repo/src/helper.py",
+            asset_type="code",
+            generated_value_score=27.98,
+            generated_value_band="low",
+            reviewer="Lowell",
+            score_rating="about_right",
+            evidence={"information_content_class": "metadata_only"},
+        ),
+    ]
+    assets = [
+        make_asset(
+            "asset-too-high",
+            title="Template",
+            score=24,
+            asset_type="workflow",
+            logical_path="repo/.github/ISSUE_TEMPLATE/bug_report.md",
+            metadata={
+                "information_content_class": "content_profiled",
+                "score_methodology_version": "asset-value-v0.3-content-aware",
+                "content_profile": {
+                    "non_empty_line_count": 10,
+                    "workflow_subtype": "issue_or_pr_template",
+                },
+            },
+        ),
+        make_asset(
+            "asset-too-low",
+            title="Runtime",
+            score=61,
+            asset_type="code",
+            logical_path="repo/src/runtime.py",
+            metadata={
+                "information_content_class": "content_profiled",
+                "score_methodology_version": "asset-value-v0.3-content-aware",
+                "content_profile": {"non_empty_line_count": 150, "code_role": "runtime_core"},
+            },
+        ),
+        make_asset(
+            "asset-about-right",
+            title="Thin helper",
+            score=31,
+            asset_type="code",
+            logical_path="repo/src/helper.py",
+            metadata={
+                "information_content_class": "content_profiled",
+                "score_methodology_version": "asset-value-v0.3-content-aware",
+                "content_profile": {"non_empty_line_count": 20, "code_role": "support_module"},
+            },
+        ),
+    ]
+
+    result = write_phase25_score_delta_validation(
+        tmp_path,
+        records,
+        assets,
+        scan_summary={
+            "scan_id": "scan-v03",
+            "status": "complete",
+            "source_files_mutated": False,
+            "changed_during_scan_count": 0,
+            "quarantine": {"count": 0},
+        },
+    )
+
+    report = Path(result["report"]).read_text(encoding="utf-8")
+    payload = json.loads(Path(result["json"]).read_text(encoding="utf-8"))
+
+    assert result["status"] == "passed"
+    assert payload["desired_band_movement_counts"] == {
+        "about_right": 1,
+        "too_high": 1,
+        "too_low": 1,
+    }
+    assert payload["movement_by_rating"]["too_high"] == {"medium->low": 1}
+    assert payload["movement_by_rating"]["too_low"] == {"low->medium": 1}
+    assert payload["about_right_churn_count"] == 0
+    assert "Phase 2.5 Fresh Scan Score-Delta Validation" in report
+    assert "source repositories remain authoritative" in report.lower()
 
 
 def test_asset_calibration_notes_only_do_not_count_as_reviewed():

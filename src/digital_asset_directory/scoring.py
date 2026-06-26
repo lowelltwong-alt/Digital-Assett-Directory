@@ -204,6 +204,22 @@ def _score_discount(
     if asset_type == "code" and profile.get("code_role") == "package_marker":
         factor = min(factor, 0.30)
         reasons.append("package_marker_low_independent_value")
+    if asset_type == "code" and profile.get("code_role") == "support_module":
+        line_count = _profile_int(profile, "non_empty_line_count")
+        if line_count < 50:
+            factor = min(factor, 0.75)
+            reasons.append("small_support_module_needs_usage_evidence")
+    if asset_type == "code" and profile.get("code_role") == "test_support":
+        line_count = _profile_int(profile, "non_empty_line_count")
+        if line_count < 50:
+            factor = min(factor, 0.85)
+            reasons.append("small_test_support_module_needs_usage_evidence")
+    if asset_type == "code" and profile.get("code_role") == "module":
+        line_count = _profile_int(profile, "non_empty_line_count")
+        public_symbols = _profile_int(profile, "public_symbol_count")
+        if line_count < 40 and public_symbols <= 3:
+            factor = min(factor, 0.88)
+            reasons.append("small_module_needs_usage_evidence")
     if asset_type == "workflow":
         subtype = str(profile.get("workflow_subtype") or "")
         if subtype == "archive_or_pinned_copy":
@@ -216,7 +232,7 @@ def _score_discount(
             factor = min(factor, 0.40)
             reasons.append("workflow_ownership_metadata")
         elif subtype in {"ruleset_config", "registry_or_config_wrapper"}:
-            factor = min(factor, 0.75)
+            factor = min(factor, 0.95)
             reasons.append("workflow_config_wrapper_needs_usage_evidence")
     if duplicate_count > 1 and not is_representative:
         factor = min(factor, max(0.18, 1.0 / sqrt(duplicate_count + 1)))

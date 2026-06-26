@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 import re
 from pathlib import Path
 from typing import Optional, cast
@@ -18,11 +19,13 @@ from .calibration import (
     build_asset_calibration_review_queue,
     import_asset_calibration_review_csv,
     load_asset_calibration_reviews,
+    load_catalog_assets,
     update_asset_calibration_review_file,
     write_asset_calibration_evidence,
     write_asset_calibration_summary,
     write_asset_calibration_review_csv,
     write_phase2_calibration_reports,
+    write_phase25_score_delta_validation,
 )
 from .catalog import catalog_status, run_scan
 from .config import load_config
@@ -416,7 +419,9 @@ def agent_install_learning_loop(
     except ValueError as exc:
         console.print(str(exc))
         raise typer.Exit(2) from exc
-    console.print_json(data={"repo": str(repository.resolve()), "changed": [str(path) for path in changed]})
+    console.print_json(
+        data={"repo": str(repository.resolve()), "changed": [str(path) for path in changed]}
+    )
 
 
 @agent_app.command("new")
@@ -633,9 +638,7 @@ def recommend_proposals(
             roadmap_context=load_roadmap_relevance_context(cfg.repo_root),
         )
     paths = write_proposal_outputs(cfg.repo_root, bottom_up, top_down, comparison)
-    comparison_summary = {
-        key: value for key, value in comparison.items() if key != "review_sample"
-    }
+    comparison_summary = {key: value for key, value in comparison.items() if key != "review_sample"}
     console.print_json(
         data={
             "scan_id": scan_id,
@@ -673,7 +676,9 @@ def recommend_calibration_review_summary(
 ) -> None:
     """Summarize phase-2 asset scoring calibration review progress."""
     cfg = _cfg(hub=hub)
-    path = review_file or cfg.repo_root / "processed" / "calibration" / "asset_rating_template.jsonl"
+    path = (
+        review_file or cfg.repo_root / "processed" / "calibration" / "asset_rating_template.jsonl"
+    )
     if not path.is_absolute():
         path = cfg.repo_root / path
     records = load_asset_calibration_reviews(path)
@@ -696,7 +701,9 @@ def recommend_calibration_review_label(
 ) -> None:
     """Update one phase-2 asset calibration review record with human labels."""
     cfg = _cfg(hub=hub)
-    path = review_file or cfg.repo_root / "processed" / "calibration" / "asset_rating_template.jsonl"
+    path = (
+        review_file or cfg.repo_root / "processed" / "calibration" / "asset_rating_template.jsonl"
+    )
     if not path.is_absolute():
         path = cfg.repo_root / path
     try:
@@ -711,9 +718,7 @@ def recommend_calibration_review_label(
             weight_change_note=weight_change_note,
             notes=notes,
         )
-        write_asset_calibration_summary(
-            cfg.repo_root, load_asset_calibration_reviews(path), path
-        )
+        write_asset_calibration_summary(cfg.repo_root, load_asset_calibration_reviews(path), path)
     except (FileNotFoundError, ValueError) as exc:
         console.print(str(exc))
         raise typer.Exit(2) from exc
@@ -824,7 +829,9 @@ def recommend_calibration_evidence(
 ) -> None:
     """Write tracked roadmap evidence only after asset calibration review is complete."""
     cfg = _cfg(hub=hub)
-    path = review_file or cfg.repo_root / "processed" / "calibration" / "asset_rating_template.jsonl"
+    path = (
+        review_file or cfg.repo_root / "processed" / "calibration" / "asset_rating_template.jsonl"
+    )
     if not path.is_absolute():
         path = cfg.repo_root / path
     records = load_asset_calibration_reviews(path)
@@ -835,9 +842,35 @@ def recommend_calibration_evidence(
     except ValueError as exc:
         console.print(str(exc))
         raise typer.Exit(2) from exc
-    console.print_json(
-        data={"review_file": str(path), "output": evidence_path, "summary": summary}
+    console.print_json(data={"review_file": str(path), "output": evidence_path, "summary": summary})
+
+
+@recommend_app.command("phase25-score-delta")
+def recommend_phase25_score_delta(
+    hub: Optional[Path] = typer.Option(None),
+    review_file: Optional[Path] = typer.Option(None, "--review-file"),
+    output: Optional[Path] = typer.Option(None, "--output"),
+    json_output: Optional[Path] = typer.Option(None, "--json-output"),
+) -> None:
+    """Compare reviewed Phase 2 labels against current Phase 2.5 v0.3 scores."""
+    cfg = _cfg(hub=hub)
+    path = (
+        review_file or cfg.repo_root / "processed" / "calibration" / "asset_rating_template.jsonl"
     )
+    if not path.is_absolute():
+        path = cfg.repo_root / path
+    with CatalogDB(cfg.database_path) as db:
+        latest_scan = db.latest_scan()
+        scan_summary = json.loads(latest_scan.get("summary_json") or "{}") if latest_scan else {}
+        result = write_phase25_score_delta_validation(
+            cfg.repo_root,
+            load_asset_calibration_reviews(path),
+            load_catalog_assets(cfg.repo_root / "processed" / "catalog" / "assets.jsonl"),
+            scan_summary=scan_summary,
+            output=output,
+            json_output=json_output,
+        )
+    console.print_json(data={"review_file": str(path), **result})
 
 
 @recommend_app.command("downstream-pilots")
@@ -866,7 +899,9 @@ def recommend_proposal_review_summary(
 ) -> None:
     """Summarize filled proposal review JSONL labels without changing roadmap state."""
     cfg = _cfg(hub=hub)
-    path = review_file or cfg.repo_root / "processed" / "proposals" / "proposal_review_template.jsonl"
+    path = (
+        review_file or cfg.repo_root / "processed" / "proposals" / "proposal_review_template.jsonl"
+    )
     if not path.is_absolute():
         path = cfg.repo_root / path
     reviews = load_proposal_reviews(path)
@@ -893,7 +928,9 @@ def recommend_proposal_review_label(
 ) -> None:
     """Update one proposal review JSONL record with human calibration labels."""
     cfg = _cfg(hub=hub)
-    path = review_file or cfg.repo_root / "processed" / "proposals" / "proposal_review_template.jsonl"
+    path = (
+        review_file or cfg.repo_root / "processed" / "proposals" / "proposal_review_template.jsonl"
+    )
     if not path.is_absolute():
         path = cfg.repo_root / path
     try:
@@ -942,7 +979,9 @@ def recommend_proposal_review_queue(
     bottom_path = (
         bottom_up_file or cfg.repo_root / "processed" / "proposals" / "bottom_up_proposals.jsonl"
     )
-    top_path = top_down_file or cfg.repo_root / "processed" / "proposals" / "top_down_proposals.jsonl"
+    top_path = (
+        top_down_file or cfg.repo_root / "processed" / "proposals" / "top_down_proposals.jsonl"
+    )
     if not review_path.is_absolute():
         review_path = cfg.repo_root / review_path
     if not bottom_path.is_absolute():
@@ -1004,7 +1043,9 @@ def recommend_proposal_review_export_csv(
     bottom_path = (
         bottom_up_file or cfg.repo_root / "processed" / "proposals" / "bottom_up_proposals.jsonl"
     )
-    top_path = top_down_file or cfg.repo_root / "processed" / "proposals" / "top_down_proposals.jsonl"
+    top_path = (
+        top_down_file or cfg.repo_root / "processed" / "proposals" / "top_down_proposals.jsonl"
+    )
     output_path = output or cfg.repo_root / "processed" / "proposals" / "proposal_review_batch.csv"
     unblind_path = (
         unblind_output
@@ -1072,7 +1113,9 @@ def recommend_proposal_calibration_evidence(
 ) -> None:
     """Write tracked-ready roadmap evidence only after proposal calibration review is complete."""
     cfg = _cfg(hub=hub)
-    path = review_file or cfg.repo_root / "processed" / "proposals" / "proposal_review_template.jsonl"
+    path = (
+        review_file or cfg.repo_root / "processed" / "proposals" / "proposal_review_template.jsonl"
+    )
     if not path.is_absolute():
         path = cfg.repo_root / path
     reviews = load_proposal_reviews(path)
@@ -1088,9 +1131,7 @@ def recommend_proposal_calibration_evidence(
     except ValueError as exc:
         console.print(str(exc))
         raise typer.Exit(2) from exc
-    console.print_json(
-        data={"review_file": str(path), "output": evidence_path, "summary": summary}
-    )
+    console.print_json(data={"review_file": str(path), "output": evidence_path, "summary": summary})
 
 
 @orphan_app.command("run")

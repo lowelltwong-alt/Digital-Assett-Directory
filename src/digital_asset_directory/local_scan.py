@@ -4,7 +4,7 @@ import os
 import re
 import zipfile
 from datetime import datetime, timezone
-from pathlib import Path
+from pathlib import Path, PurePosixPath
 from typing import Iterable
 from xml.etree import ElementTree
 
@@ -32,6 +32,17 @@ CLOUD_PLACEHOLDER_FLAGS = (
     FILE_ATTRIBUTE_OFFLINE | FILE_ATTRIBUTE_RECALL_ON_OPEN | FILE_ATTRIBUTE_RECALL_ON_DATA_ACCESS
 )
 BOUNDED_PROFILE_BYTES = 65536
+SKIPPED_CONTENT_PROFILE_ASSET_TYPES = {
+    "agent",
+    "code",
+    "configuration",
+    "evaluation",
+    "prompt",
+    "schema",
+    "skill",
+    "test",
+    "workflow",
+}
 NOISE_QUARANTINE_RULES: tuple[tuple[str, str], ...] = (
     ("**/.pytest-tmp-root/**", "pytest temp root"),
     ("**/pytest-of-*/**", "pytest temp run directory"),
@@ -235,33 +246,50 @@ def _extract_media_text(path: str, data: bytes) -> tuple[str, str]:
     return "", "unsupported"
 
 
-def _bounded_content_profile(path: Path, logical: str, asset_type: str) -> dict[str, object]:
+def _should_profile_skipped_content(path: Path, logical: str, asset_type: str) -> bool:
     if not is_probably_text(path):
+        return False
+    if asset_type in SKIPPED_CONTENT_PROFILE_ASSET_TYPES:
+        return True
+    normalized = logical.replace("\\", "/").lower()
+    name = PurePosixPath(normalized).name
+    parts = set(PurePosixPath(normalized).parts)
+    return (
+        name in {"agent.md", "skill.md", "workflow.md"}
+        or ".github" in parts
+        or "workflows" in parts
+        or "schemas" in parts
+        or "tests" in parts
+    )
+
+
+def _empty_content_profile(methodology: str) -> dict[str, object]:
+    return {
+        "line_count": 0,
+        "non_empty_line_count": 0,
+        "char_count": 0,
+        "code_like": False,
+        "import_count": 0,
+        "function_count": 0,
+        "class_count": 0,
+        "public_symbol_count": 0,
+        "methodology": methodology,
+    }
+
+
+def _bounded_content_profile(path: Path, logical: str, asset_type: str) -> dict[str, object]:
+    if not _should_profile_skipped_content(path, logical, asset_type):
         return {
-            "line_count": 0,
-            "non_empty_line_count": 0,
-            "char_count": 0,
-            "code_like": False,
-            "import_count": 0,
-            "function_count": 0,
-            "class_count": 0,
-            "public_symbol_count": 0,
-            "methodology": "bounded profile skipped for non-text file",
+            **_empty_content_profile("bounded profile skipped for low-signal skipped file"),
+            "profile_skipped_reason": "low_signal_asset_type_or_non_text",
         }
     try:
         with path.open("rb") as handle:
             data = handle.read(BOUNDED_PROFILE_BYTES)
     except OSError:
         return {
-            "line_count": 0,
-            "non_empty_line_count": 0,
-            "char_count": 0,
-            "code_like": False,
-            "import_count": 0,
-            "function_count": 0,
-            "class_count": 0,
-            "public_symbol_count": 0,
-            "methodology": "bounded profile read failed",
+            **_empty_content_profile("bounded profile read failed"),
+            "profile_skipped_reason": "read_failed",
         }
     text = data.decode("utf-8", errors="replace")
     profile = build_content_profile(logical, text, asset_type)

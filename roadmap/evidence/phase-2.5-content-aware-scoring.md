@@ -1,7 +1,8 @@
 # Phase 2.5 Content-Aware Scoring Recommendation
 
-Status: implemented candidate scoring slice. Scores remain generated heuristics,
-not source-repository truth or calibrated probabilities.
+Status: completed candidate score-methodology validation for the Phase 2
+reviewed code/workflow defect set. Scores remain generated heuristics, not
+source-repository truth or calibrated probabilities.
 
 Date: 2026-06-26
 
@@ -53,6 +54,15 @@ as authoritative.
   information content.
 - Added discounts for package markers, issue/pull-request templates, ownership
   metadata, archive/pinned workflow copies, and workflow config wrappers.
+- Added calibration tuning after churn review so source ruleset/config workflow
+  artifacts remain medium review candidates, while small support modules and
+  small test helpers stay low without usage evidence.
+- Added scoped skipped-file profiling: code, workflow, schema, test,
+  configuration, agent, skill, prompt, and evaluation assets receive bounded
+  profiles when full content is skipped; low-signal skipped documents remain
+  metadata-only for scan performance and authority reasons.
+- Added repeatable validation command:
+  `python -m digital_asset_directory.cli recommend phase25-score-delta`.
 - Preserved `candidate_only` methodology metadata and `heuristic_strength`
   language.
 
@@ -66,6 +76,9 @@ as authoritative.
   exact `content_sha256`.
 
 ## Read-Only Comparison Against Phase 2 Labels
+
+This initial comparison is historical evidence from before the final churn tune.
+It identified the exact overcorrection that the final Phase 2.5 pass fixed.
 
 Codex ran a read-only bounded comparison against the 100 reviewed Phase 2 rows.
 This did not rewrite the catalog or commit generated outputs. It reused the
@@ -96,6 +109,57 @@ Interpretation:
   not rebuild duplicate clusters, repository composites, graph edges, or scan
   summaries under v0.3.
 
+## Fresh Scan Validation
+
+Codex then ran fresh local-only v0.3 scans after narrowing skipped-file
+profiling to the Phase 2.5 target surfaces and tuning the churn cases.
+
+Final validation command:
+
+```powershell
+$env:PYTHONPATH='src'
+python -m digital_asset_directory.cli scan --local-only
+python -m digital_asset_directory.cli recommend phase25-score-delta
+```
+
+Final scan result:
+
+- scan ID: `dad:scan:cecbf5eb-7d57-4774-b81e-9c37ae0b5a01`
+- status: `complete`
+- assets: `51241`
+- source files mutated: `False`
+- changed during scan: `0`
+- quarantined non-scoring paths: `57`
+- score methodology count: `{'asset-value-v0.3-content-aware': 51241}`
+
+Final score-delta validation:
+
+- validation methodology: `phase-2.5-score-delta-validation-v1`
+- generated report: `processed/reports/phase_2_5_score_delta_validation.md`
+- status: `passed`
+- reviewed rows matched: `100 / 100`
+- rating counts: `{'about_right': 54, 'too_high': 18, 'too_low': 28}`
+- movement by rating:
+  `{'about_right': {'low->low': 22, 'medium->medium': 32}, 'too_high': {'medium->low': 18}, 'too_low': {'low->medium': 28}}`
+- desired band movement counts:
+  `{'about_right': 54, 'too_high': 18, 'too_low': 28}`
+- about-right churn count: `0`
+
+Target surface coverage:
+
+- `code`: `1389/1434` content-profiled; metadata-only `0`
+- `workflow`: `342/354` content-profiled; metadata-only `12`
+- `schema`: `1303/1303` content-profiled; metadata-only `0`
+- `test`: `523/524` content-profiled; metadata-only `1`
+- `configuration`: `30/30` content-profiled; metadata-only `0`
+
+The broader catalog remains document-heavy and intentionally has many
+metadata-only document observations under `max_file_bytes=0`. This is not a
+Phase 2.5 blocker because the reviewed defect set and target operational
+surface are code/workflow/schema/test/config scoring, not full document
+understanding. Future document calibration needs a separate media/document
+extraction phase.
+
 ## Red-Team And Premortem
 
 This is a necessary fix, not a final calibration answer.
@@ -120,25 +184,25 @@ Main failure modes to watch:
   still appear when direct evidence is sparse.
 - Generated profiles and scores must not become roadmap truth by themselves.
 
-Stop conditions before downstream use:
+Stop conditions for this Phase 2.5 pass:
 
-- regenerated catalog still has mostly `metadata_only` records;
+- regenerated target surfaces remain mostly `metadata_only`;
 - score changes improve false negatives but create a new wrapper/template false
   positive flood;
 - broad scan performance regresses or mutates source repositories;
 - validation cannot explain why an asset moved score bands.
 
-## Next Evaluation
+All four stop conditions are cleared for the reviewed Phase 2.5 target set.
 
-1. Run a fresh bounded local scan with the v0.3 scorer.
-2. Export a new calibration summary that reports content-profile coverage,
-   metadata-only share, and score movement by asset type.
-3. Compare the 100 reviewed labels against v0.3 score movement:
-   - too-high workflow/template/archive examples should move down;
-   - too-low substantive code examples should move up;
-   - about-right examples should not churn heavily.
-4. Add a short confusion-style report by reviewed rating and asset type.
-5. Only then decide whether Phase 3 pilot selection can use the updated scores.
+## Completion Result
+
+Phase 2.5 is complete as a candidate deterministic score-methodology checkpoint.
+It is now reasonable to use v0.3 scores as one input to Phase 3 pilot selection,
+provided downstream pilot selection still inspects evidence, preserves source
+authority, and does not treat scores alone as promotion authority.
+
+Recommended next phase: Phase 3 downstream-governance pilot selection in
+warning-only/read-only mode.
 
 ## Research Basis
 

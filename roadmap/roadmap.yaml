@@ -81,10 +81,28 @@ phases:
         - id: phase-2-weight-changes-documented
           description: weight changes documented
 
+  - id: phase-2.5-content-aware-score-validation
+    title: Fresh content-aware score validation
+    status: complete
+    acceptance:
+      depends_on:
+        - phase-2-calibration
+      required_files:
+        - config/scoring.yaml
+        - docs/ASSET_VALUE_MODEL.md
+        - roadmap/evidence/phase-2.5-content-aware-scoring.md
+      required_outputs:
+        - processed/reports/scan_summary.md
+        - processed/reports/phase_2_5_score_delta_validation.md
+        - processed/reports/phase_2_5_score_delta_validation.json
+    evidence_note: Validates asset-value-v0.3-content-aware against the 100 reviewed Phase 2 rows after a fresh local-only scan; scores remain candidate heuristics.
+
   - id: phase-3-downstream-governance
     title: Install mandatory lessons and handoffs in active build repos
     status: planned
     acceptance:
+      depends_on:
+        - phase-2.5-content-aware-score-validation
       human_gates:
         - id: phase-3-pilot-repositories-selected
           description: pilot repositories selected

@@ -26,6 +26,7 @@ CALIBRATION_NOTE_FIELDS = [
     "weight_change_note",
 ]
 CALIBRATION_SAMPLE_METHODOLOGY_VERSION = "asset-calibration-sampling-v0.2-clean-deduped"
+PHASE25_SCORE_DELTA_METHODOLOGY_VERSION = "phase-2.5-score-delta-validation-v1"
 CALIBRATION_EXCLUDED_INSTANCE_CLASSES = {
     "generated",
     "os_junk",
@@ -895,6 +896,20 @@ def load_asset_calibration_reviews(path: Path) -> list[AssetCalibrationReviewRec
     return records
 
 
+def load_catalog_assets(path: Path) -> list[AssetRecord]:
+    records: list[AssetRecord] = []
+    if not path.exists():
+        raise FileNotFoundError(f"Catalog asset file not found: {path}")
+    for line_number, line in enumerate(path.read_text(encoding="utf-8").splitlines(), start=1):
+        if not line.strip():
+            continue
+        try:
+            records.append(AssetRecord.model_validate_json(line))
+        except Exception as exc:
+            raise ValueError(f"Invalid asset record at {path}:{line_number}: {exc}") from exc
+    return records
+
+
 def write_asset_calibration_reviews(
     path: Path, records: list[AssetCalibrationReviewRecord]
 ) -> None:
@@ -1691,6 +1706,299 @@ def write_asset_calibration_evidence(
         evidence=[evidence_path, source_evidence_path],
     )
     return summarize_asset_calibration_reviews(records), str(output_path)
+
+
+def _band_rank(band: str) -> int:
+    return {"low": 0, "medium": 1, "high": 2}.get(band, -1)
+
+
+def _metadata_int(metadata: dict[str, Any], key: str) -> int:
+    try:
+        return int(metadata.get(key) or 0)
+    except (TypeError, ValueError):
+        return 0
+
+
+def _has_non_empty_content_profile(asset: AssetRecord) -> bool:
+    profile = asset.metadata.get("content_profile")
+    return isinstance(profile, dict) and _metadata_int(profile, "non_empty_line_count") > 0
+
+
+def build_phase25_score_delta_validation(
+    records: list[AssetCalibrationReviewRecord],
+    assets: list[AssetRecord],
+    scan_summary: dict[str, Any] | None = None,
+) -> dict[str, Any]:
+    """Compare reviewed Phase 2 labels with the current v0.3 catalog scores."""
+    by_id = {asset.asset_id: asset for asset in assets}
+    by_path = {asset.logical_path: asset for asset in assets}
+    rows: list[dict[str, Any]] = []
+    missing: list[dict[str, str]] = []
+    rating_counts: Counter[str] = Counter()
+    movement_by_rating: dict[str, Counter[str]] = defaultdict(Counter)
+    old_band_counts: Counter[str] = Counter()
+    new_band_counts: Counter[str] = Counter()
+    desired_band_counts: Counter[str] = Counter()
+    desired_score_counts: Counter[str] = Counter()
+    about_right_churn: list[dict[str, Any]] = []
+
+    for record in records:
+        asset = by_id.get(record.asset_id) or by_path.get(record.logical_path)
+        if asset is None:
+            missing.append({"sample_id": record.sample_id, "asset_id": record.asset_id})
+            continue
+        old_band = record.generated_value_band
+        new_band = _value_band(asset.value_score)
+        rating = record.score_rating
+        rating_counts[rating] += 1
+        old_band_counts[old_band] += 1
+        new_band_counts[new_band] += 1
+        movement_by_rating[rating][f"{old_band}->{new_band}"] += 1
+        old_rank = _band_rank(old_band)
+        new_rank = _band_rank(new_band)
+        score_delta = round(asset.value_score - record.generated_value_score, 2)
+        desired_band_move = False
+        desired_score_move = False
+        review_reason = ""
+        if rating == "too_high":
+            desired_band_move = new_rank < old_rank
+            desired_score_move = score_delta < 0
+            review_reason = "reviewed false positive should move down"
+        elif rating == "too_low":
+            desired_band_move = new_rank > old_rank
+            desired_score_move = score_delta > 0
+            review_reason = "reviewed false negative should move up"
+        elif rating == "about_right":
+            desired_band_move = new_rank == old_rank
+            desired_score_move = new_rank == old_rank
+            review_reason = "reviewed about-right asset should avoid band churn"
+        else:
+            review_reason = "unreviewed or unsure row is informational"
+        if desired_band_move:
+            desired_band_counts[rating] += 1
+        if desired_score_move:
+            desired_score_counts[rating] += 1
+
+        profile = asset.metadata.get("content_profile")
+        row = {
+            "sample_id": record.sample_id,
+            "asset_id": record.asset_id,
+            "asset_title": record.asset_title,
+            "asset_type": record.asset_type,
+            "score_rating": rating,
+            "old_score": record.generated_value_score,
+            "new_score": asset.value_score,
+            "score_delta": score_delta,
+            "old_band": old_band,
+            "new_band": new_band,
+            "band_movement": f"{old_band}->{new_band}",
+            "desired_band_move": desired_band_move,
+            "desired_score_move": desired_score_move,
+            "review_reason": review_reason,
+            "old_information_content_class": record.evidence.get(
+                "information_content_class", "unknown"
+            ),
+            "new_information_content_class": asset.metadata.get(
+                "information_content_class", "unknown"
+            ),
+            "new_instance_class": asset.metadata.get("instance_class", "unknown"),
+            "score_methodology_version": asset.metadata.get("score_methodology_version"),
+            "content_profile_present": _has_non_empty_content_profile(asset),
+            "content_role": asset.value_components.get("content_role"),
+            "content_profile_role": profile.get("code_role") or profile.get("workflow_subtype")
+            if isinstance(profile, dict)
+            else None,
+            "discount_reasons": asset.metadata.get("score_discount_reasons", []),
+            "logical_path": asset.logical_path,
+        }
+        rows.append(row)
+        if rating == "about_right" and new_rank != old_rank:
+            about_right_churn.append(row)
+
+    content_classes = Counter(
+        str(asset.metadata.get("information_content_class") or "unknown") for asset in assets
+    )
+    score_methods = Counter(
+        str(asset.metadata.get("score_methodology_version") or "unknown") for asset in assets
+    )
+    coverage_by_type: dict[str, dict[str, Any]] = {}
+    for asset_type in sorted({asset.asset_type for asset in assets}):
+        typed = [asset for asset in assets if asset.asset_type == asset_type]
+        if not typed:
+            continue
+        coverage_by_type[asset_type] = {
+            "total": len(typed),
+            "content_profiled": sum(1 for asset in typed if _has_non_empty_content_profile(asset)),
+            "metadata_only": sum(
+                1
+                for asset in typed
+                if asset.metadata.get("information_content_class") == "metadata_only"
+            ),
+        }
+
+    too_high_total = rating_counts.get("too_high", 0)
+    too_low_total = rating_counts.get("too_low", 0)
+    status = "passed"
+    if missing:
+        status = "failed_missing_reviewed_assets"
+    elif desired_band_counts.get("too_high", 0) < too_high_total:
+        status = "failed_false_positive_direction"
+    elif desired_band_counts.get("too_low", 0) < too_low_total:
+        status = "failed_false_negative_direction"
+    elif about_right_churn:
+        status = "passed_with_review_caveat"
+
+    def plain_counter(counter: Counter[str]) -> dict[str, int]:
+        return dict(sorted(counter.items()))
+
+    return {
+        "methodology_version": PHASE25_SCORE_DELTA_METHODOLOGY_VERSION,
+        "score_methodology_expected": "asset-value-v0.3-content-aware",
+        "status": status,
+        "authority": (
+            "Generated score-delta validation candidate; source repositories remain "
+            "authoritative and human review controls downstream use."
+        ),
+        "scan_summary": scan_summary or {},
+        "catalog_asset_count": len(assets),
+        "review_record_count": len(records),
+        "matched_review_record_count": len(rows),
+        "missing_review_records": missing,
+        "rating_counts": plain_counter(rating_counts),
+        "old_band_counts": plain_counter(old_band_counts),
+        "new_band_counts": plain_counter(new_band_counts),
+        "movement_by_rating": {
+            rating: plain_counter(counter) for rating, counter in sorted(movement_by_rating.items())
+        },
+        "desired_band_movement_counts": plain_counter(desired_band_counts),
+        "desired_score_movement_counts": plain_counter(desired_score_counts),
+        "about_right_churn_count": len(about_right_churn),
+        "about_right_churn_rows": about_right_churn,
+        "content_class_counts": plain_counter(content_classes),
+        "score_methodology_counts": plain_counter(score_methods),
+        "content_profile_coverage_by_type": coverage_by_type,
+        "rows": rows,
+        "candidate_only": True,
+    }
+
+
+def phase25_score_delta_validation_markdown(summary: dict[str, Any]) -> str:
+    scan = summary.get("scan_summary") or {}
+    coverage = summary.get("content_profile_coverage_by_type") or {}
+    target_types = ["code", "workflow", "schema", "test", "configuration"]
+    target_lines = []
+    for asset_type in target_types:
+        values = coverage.get(asset_type)
+        if values:
+            target_lines.append(
+                f"- `{asset_type}`: {values['content_profiled']}/{values['total']} "
+                f"content-profiled; metadata-only={values['metadata_only']}"
+            )
+    churn_rows = summary.get("about_right_churn_rows") or []
+    churn_lines = [
+        (
+            f"- `{row['sample_id']}` `{row['asset_title']}`: "
+            f"{row['old_band']}->{row['new_band']}, "
+            f"{row['old_score']}->{row['new_score']} "
+            f"({row.get('content_profile_role') or 'no-role'}; "
+            f"discounts={row.get('discount_reasons', [])})"
+        )
+        for row in churn_rows[:20]
+    ] or ["- None."]
+    lines = [
+        "# Phase 2.5 Fresh Scan Score-Delta Validation",
+        "",
+        "Generated candidate validation evidence. Scores remain heuristics and do not "
+        "become source-repository truth.",
+        "",
+        f"- Generated at: `{utc_now()}`",
+        f"- Methodology: `{summary['methodology_version']}`",
+        f"- Score methodology expected: `{summary['score_methodology_expected']}`",
+        f"- Status: `{summary['status']}`",
+        f"- Fresh scan ID: `{scan.get('scan_id', 'unknown')}`",
+        f"- Fresh scan status: `{scan.get('status', 'unknown')}`",
+        f"- Fresh scan assets: **{scan.get('asset_count', summary['catalog_asset_count'])}**",
+        f"- Fresh scan source files mutated: **{scan.get('source_files_mutated', 'unknown')}**",
+        f"- Fresh scan changed-during-scan count: **{scan.get('changed_during_scan_count', 'unknown')}**",
+        f"- Fresh scan quarantined paths: **{(scan.get('quarantine') or {}).get('count', 'unknown')}**",
+        f"- Reviewed rows matched: **{summary['matched_review_record_count']} / {summary['review_record_count']}**",
+        f"- Rating counts: `{summary['rating_counts']}`",
+        f"- Old band counts: `{summary['old_band_counts']}`",
+        f"- New band counts: `{summary['new_band_counts']}`",
+        f"- Movement by rating: `{summary['movement_by_rating']}`",
+        f"- Desired band movement counts: `{summary['desired_band_movement_counts']}`",
+        f"- About-right churn count: **{summary['about_right_churn_count']}**",
+        f"- Content class counts: `{summary['content_class_counts']}`",
+        f"- Score methodology counts: `{summary['score_methodology_counts']}`",
+        "",
+        "## Target Surface Coverage",
+        "",
+        *target_lines,
+        "",
+        "The target surface for this Phase 2.5 fix is the reviewed code/workflow "
+        "score-defect set. The broader catalog remains document-heavy and many "
+        "documents are intentionally metadata-only under the current read-only local "
+        "scan scope.",
+        "",
+        "## About-Right Churn Review",
+        "",
+        *churn_lines,
+        "",
+        "## Authority Boundary",
+        "",
+        "- Source repositories remain authoritative.",
+        "- This validates score movement under the current candidate methodology.",
+        "- It does not promote generated scores, profiles, graph edges, alerts, or "
+        "source meaning to truth.",
+        "- Downstream pilot selection must continue to inspect evidence and avoid "
+        "using score alone as authority.",
+        "",
+    ]
+    return "\n".join(lines)
+
+
+def write_phase25_score_delta_validation(
+    repo_root: Path,
+    records: list[AssetCalibrationReviewRecord],
+    assets: list[AssetRecord],
+    scan_summary: dict[str, Any] | None = None,
+    output: Path | None = None,
+    json_output: Path | None = None,
+) -> dict[str, Any]:
+    report_path = (
+        output or repo_root / "processed" / "reports" / "phase_2_5_score_delta_validation.md"
+    )
+    json_path = (
+        json_output or repo_root / "processed" / "reports" / "phase_2_5_score_delta_validation.json"
+    )
+    if not report_path.is_absolute():
+        report_path = repo_root / report_path
+    if not json_path.is_absolute():
+        json_path = repo_root / json_path
+    summary = build_phase25_score_delta_validation(records, assets, scan_summary)
+    atomic_write_text(report_path, phase25_score_delta_validation_markdown(summary) + "\n")
+    atomic_write_text(json_path, json.dumps(summary, indent=2, sort_keys=True) + "\n")
+    return {
+        "status": summary["status"],
+        "report": str(report_path),
+        "json": str(json_path),
+        "summary": {
+            key: summary[key]
+            for key in [
+                "methodology_version",
+                "score_methodology_expected",
+                "catalog_asset_count",
+                "review_record_count",
+                "matched_review_record_count",
+                "rating_counts",
+                "movement_by_rating",
+                "desired_band_movement_counts",
+                "about_right_churn_count",
+                "content_class_counts",
+                "score_methodology_counts",
+            ]
+        },
+    }
 
 
 def write_phase2_calibration_reports(
