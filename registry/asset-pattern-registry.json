@@ -75,6 +75,26 @@
       ]
     },
     {
+      "id": "asset_use_pay_forward_loop",
+      "label": "Asset-use pay-forward loop",
+      "description": "A before-use and after-use workflow that records how any digital asset was found, used, upgraded, blocked, valued, and safely handed forward to future agents.",
+      "leverage": "very_high",
+      "recognition_mode": "repository_composite",
+      "positive_signals": [
+        "DAD_ASSET_USE_FEEDBACK_V1 marker",
+        "before-use expectation and after-use result fields",
+        "parts used, parts not used, difficulties, and upgrades",
+        "reuse-when, avoid-when, pay-forward, and next-agent-action guidance",
+        "candidate-only safety boundary for external or repo-local feedback"
+      ],
+      "missing_evidence": [
+        "paired before-use and after-use records for the same asset",
+        "reviewed examples across multiple asset types",
+        "calibrated impact on current score and ceiling ranges",
+        "curated rejection examples showing unsafe or unhelpful feedback"
+      ]
+    },
+    {
       "id": "route_isolated_evaluation_harness",
       "label": "Route-isolated evaluation harness",
       "description": "Routing, chunking, form classification, context packets, scorecards, and gold cases that evaluate different asset forms without mixing authority boundaries.",
@@ -144,6 +164,26 @@
         "reviewed promotion examples",
         "rollback or rejection examples",
         "source-authority boundary tests"
+      ]
+    },
+    {
+      "id": "load_bearing_decision_review_system",
+      "label": "Load-bearing decision review system",
+      "description": "A governed workflow that classifies high-impact software, roadmap, schema, scoring, governance, dependency, and automation decisions by risk tier before they shape downstream repos or future agents.",
+      "leverage": "very_high",
+      "recognition_mode": "repository_composite",
+      "positive_signals": [
+        "load-bearing decision or risk-tier language",
+        "fresh-eyes red-team or premortem review template",
+        "rollback, kill criteria, and bounded A/B comparison language",
+        "reviewed learning rule surfaced by preflight or midflight",
+        "tests or governance checks that prevent silent bypass"
+      ],
+      "missing_evidence": [
+        "reviewed examples across multiple repos",
+        "measured reduction in downstream rework or false-positive defaults",
+        "fresh-eyes review records for the highest-risk decisions",
+        "human-reviewed threshold for when ceremony becomes too heavy"
       ]
     },
     {
@@ -283,12 +323,14 @@
         "DAD_ASSET_USE_FEEDBACK_V1 marker",
         "before_use or after_use stage",
         "observed usefulness/futurefulness",
-        "parts used and things learned"
+        "parts used and things learned",
+        "pay-forward guidance for future agents"
       ],
       "missing_evidence": [
         "matching before/after pair",
         "curation into score or ceiling calibration",
-        "reviewed evidence link"
+        "reviewed evidence link",
+        "reuse-when and avoid-when context"
       ]
     }
   ],

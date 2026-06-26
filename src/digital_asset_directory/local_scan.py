@@ -400,6 +400,23 @@ def _repo_composite_patterns(child_assets: list[AssetRecord]) -> list[dict[str, 
         "very_high",
     )
     add(
+        "asset_use_pay_forward_loop",
+        "Asset-use pay-forward loop",
+        [
+            *(["asset_type:lesson"] if "lesson" in type_ids else []),
+            *(["asset_type:workflow"] if "workflow" in type_ids else []),
+            *(["tag:learning-loop"] if "learning-loop" in tags else []),
+            *(["tag:provenance"] if "provenance" in tags else []),
+            *(["capability:capture_lessons"] if "capture_lessons" in capabilities else []),
+            *(
+                ["asset_pattern:asset_use_pay_forward_loop"]
+                if "asset_use_pay_forward_loop" in asset_patterns
+                else []
+            ),
+        ],
+        "very_high",
+    )
+    add(
         "route_isolated_evaluation_harness",
         "Route-isolated evaluation harness",
         [
@@ -474,6 +491,24 @@ def _repo_composite_patterns(child_assets: list[AssetRecord]) -> list[dict[str, 
             *(
                 ["asset_pattern:proposal_promotion_workflow"]
                 if "proposal_promotion_workflow" in asset_patterns
+                else []
+            ),
+        ],
+        "very_high",
+    )
+    add(
+        "load_bearing_decision_review_system",
+        "Load-bearing decision review system",
+        [
+            *(["asset_type:decision"] if "decision" in type_ids else []),
+            *(["asset_type:workflow"] if "workflow" in type_ids else []),
+            *(["asset_type:test"] if "test" in type_ids else []),
+            *(["tag:governance"] if "governance" in tags else []),
+            *(["capability:govern_agents"] if "govern_agents" in capabilities else []),
+            *(["capability:validate_contracts"] if "validate_contracts" in capabilities else []),
+            *(
+                ["asset_pattern:load_bearing_decision_review_system"]
+                if "load_bearing_decision_review_system" in asset_patterns
                 else []
             ),
         ],

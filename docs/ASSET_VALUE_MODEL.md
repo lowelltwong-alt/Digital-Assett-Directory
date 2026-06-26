@@ -212,8 +212,10 @@ asset type and score band.
 Actual use is stronger evidence than projected usefulness. When an agent materially uses an
 asset, it should run `lesson asset-use` to record how the asset was used, whether it helped,
 observed usefulness, observed futurefulness, missing parts, and feedback on the current score
-and ceiling range. These records are candidate evidence for future calibration, not automatic
-score updates.
+and ceiling range. It should also record pay-forward guidance: what issue or potential issue
+the asset helped assess, when future agents should reuse it, when they should avoid it, and
+what next action would make the asset more useful. These records are candidate evidence for
+future calibration, not automatic score updates.
 
 Floors and ceilings are review-time projections, not permanent truth. Reevaluate them at
 least every six months, and sooner after major source changes, new usage evidence, roadmap

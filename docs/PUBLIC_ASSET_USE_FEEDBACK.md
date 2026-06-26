@@ -64,6 +64,7 @@ Interaction
 - Task:
 - How the asset was found: context | queue | search | memory | human | other
 - Query, link, or path that surfaced it:
+- Issue or potential issue addressed:
 
 Before-use expectation
 - Planned use:
@@ -82,6 +83,12 @@ After-use result
 - Use outcome: helped | blocked | no_effect | unknown
 - Observed usefulness: low | medium | high | unknown
 - Observed futurefulness: low | medium | high | unknown
+
+Pay-forward guidance
+- Reuse when:
+- Avoid when:
+- Pay-forward guidance for future agents:
+- Next-agent action:
 
 Model feedback
 - Current score feedback:

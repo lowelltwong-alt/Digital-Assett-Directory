@@ -56,6 +56,36 @@ def test_keyword_matching_uses_word_boundaries():
     assert "build_knowledge_graph" in real["capabilities"]
 
 
+def test_load_bearing_decision_review_is_detected_as_asset_pattern():
+    inferred = infer_semantics(
+        "docs/LOAD_BEARING_DECISION_REVIEW.md",
+        (
+            "A load-bearing decision needs a risk tier, red-team, premortem, "
+            "fresh-eyes review, rollback criteria, and an A/B comparison."
+        ),
+    )
+
+    assert "load_bearing_decision_review_system" in inferred["asset_patterns"]
+    evidence = inferred["pattern_evidence"]["load_bearing_decision_review_system"]
+    assert "asset_type:decision" in evidence
+    assert "text:load-bearing decision" in evidence
+
+
+def test_asset_use_pay_forward_loop_is_detected_as_asset_pattern():
+    inferred = infer_semantics(
+        "templates/asset-use-feedback.template.md",
+        (
+            "DAD_ASSET_USE_FEEDBACK_V1 before-use after-use observed usefulness "
+            "observed futurefulness pay-forward reuse when avoid when next-agent action."
+        ),
+    )
+
+    assert "asset_use_pay_forward_loop" in inferred["asset_patterns"]
+    evidence = inferred["pattern_evidence"]["asset_use_pay_forward_loop"]
+    assert "text:dad_asset_use_feedback_v1" in evidence
+    assert "text:pay-forward" in evidence
+
+
 def test_asset_classification():
     assert classify_asset("schemas/asset.schema.json") == "schema"
     assert classify_asset("tests/test_something.py") == "test"

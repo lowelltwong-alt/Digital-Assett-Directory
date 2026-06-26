@@ -114,6 +114,40 @@ def test_local_scan_adds_candidate_composite_patterns_to_repository(tmp_path: Pa
     assert "composite-asset" in repo_asset.tags
 
 
+def test_local_scan_adds_load_bearing_decision_review_composite_pattern(tmp_path: Path):
+    repo = tmp_path / "project"
+    repo.mkdir()
+    (repo / ".git").mkdir()
+    (repo / "docs").mkdir()
+    (repo / "templates").mkdir()
+    (repo / "tests").mkdir()
+    (repo / "docs" / "LOAD_BEARING_DECISION_REVIEW.md").write_text(
+        (
+            "# Load-Bearing Decision Review\n"
+            "A load-bearing decision needs a risk tier, red-team, premortem, "
+            "fresh-eyes review, rollback criteria, kill criteria, and A/B comparison."
+        ),
+        encoding="utf-8",
+    )
+    (repo / "templates" / "load-bearing-decision-review.template.md").write_text(
+        "# Fresh Eyes Review\nrisk tier red-team premortem rollback",
+        encoding="utf-8",
+    )
+    (repo / "tests" / "test_governance.py").write_text(
+        "def test_gate():\n    assert 'load-bearing decision risk tier'\n",
+        encoding="utf-8",
+    )
+    source = LocalSource(id="test", path=tmp_path, path_alias="test", exclude=["**/.git/**"])
+
+    assets, _hashes = scan_local_source(source, Settings(), {"weights": DEFAULT_WEIGHTS})
+
+    repo_asset = next(asset for asset in assets if asset.asset_type == "repository")
+    pattern_ids = {
+        str(pattern["pattern_id"]) for pattern in repo_asset.metadata.get("composite_patterns", [])
+    }
+    assert "load_bearing_decision_review_system" in pattern_ids
+
+
 def test_local_scan_uses_metadata_identity_for_oversize_files(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ):

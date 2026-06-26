@@ -246,12 +246,17 @@ def add_asset_use_feedback(
     planned_use: str = "",
     found_by: str = "",
     found_query: str = "",
+    issue_addressed: str = "",
     parts_used: list[str] | None = None,
     parts_not_used: list[str] | None = None,
     not_used_reason: str = "",
     upgrades_made: list[str] | None = None,
     difficulties: list[str] | None = None,
     things_learned: list[str] | None = None,
+    reuse_when: list[str] | None = None,
+    avoid_when: list[str] | None = None,
+    pay_forward_guidance: str = "",
+    next_agent_actions: list[str] | None = None,
     missing_parts_seen: list[str] | None = None,
     score_feedback: str = "",
     ceiling_feedback: str = "",
@@ -293,38 +298,51 @@ def add_asset_use_feedback(
 
     missing_parts = missing_parts_seen or []
     evidence_items = evidence or []
-    used_parts = parts_used or []
-    unused_parts = parts_not_used or []
-    upgrades = upgrades_made or []
-    difficulty_items = difficulties or []
-    learned_items = things_learned or []
+    feedback_separator = re.compile(r"[,;\r\n]+")
+
+    def clean_feedback_value(value: str) -> str:
+        cleaned = feedback_separator.sub(" | ", str(value))
+        return re.sub(r"\s*\|\s*", " | ", cleaned).strip()
+
+    def join_feedback_values(values: list[str] | None) -> str:
+        return " | ".join(
+            cleaned
+            for item in values or []
+            if (cleaned := clean_feedback_value(item))
+        )
+
     feedback_lines = [
         f"feedback_code={ASSET_USE_FEEDBACK_CODE}",
         f"interaction_stage={interaction_stage}",
-        f"asset_id={asset_id}",
-        f"found_by={found_by}",
-        f"found_query={found_query}",
-        f"used_for={used_for}",
-        f"planned_use={planned_use}",
+        f"asset_id={clean_feedback_value(asset_id)}",
+        f"found_by={clean_feedback_value(found_by)}",
+        f"found_query={clean_feedback_value(found_query)}",
+        f"issue_addressed={clean_feedback_value(issue_addressed)}",
+        f"used_for={clean_feedback_value(used_for)}",
+        f"planned_use={clean_feedback_value(planned_use)}",
         f"expected_usefulness={expected_usefulness}",
         f"expected_futurefulness={expected_futurefulness}",
-        f"expected_value_reason={expected_value_reason}",
-        "parts_used=" + ";".join(used_parts),
-        "parts_not_used=" + ";".join(unused_parts),
-        f"not_used_reason={not_used_reason}",
-        "upgrades_made=" + ";".join(upgrades),
-        "difficulties=" + ";".join(difficulty_items),
-        "things_learned=" + ";".join(learned_items),
+        f"expected_value_reason={clean_feedback_value(expected_value_reason)}",
+        "parts_used=" + join_feedback_values(parts_used),
+        "parts_not_used=" + join_feedback_values(parts_not_used),
+        f"not_used_reason={clean_feedback_value(not_used_reason)}",
+        "upgrades_made=" + join_feedback_values(upgrades_made),
+        "difficulties=" + join_feedback_values(difficulties),
+        "things_learned=" + join_feedback_values(things_learned),
+        "reuse_when=" + join_feedback_values(reuse_when),
+        "avoid_when=" + join_feedback_values(avoid_when),
+        f"pay_forward_guidance={clean_feedback_value(pay_forward_guidance)}",
+        "next_agent_actions=" + join_feedback_values(next_agent_actions),
         f"use_outcome={use_outcome}",
         f"observed_usefulness={observed_usefulness}",
         f"observed_futurefulness={observed_futurefulness}",
     ]
     if missing_parts:
-        feedback_lines.append("missing_parts_seen=" + ";".join(missing_parts))
+        feedback_lines.append("missing_parts_seen=" + join_feedback_values(missing_parts))
     if score_feedback:
-        feedback_lines.append(f"score_feedback={score_feedback}")
+        feedback_lines.append(f"score_feedback={clean_feedback_value(score_feedback)}")
     if ceiling_feedback:
-        feedback_lines.append(f"ceiling_feedback={ceiling_feedback}")
+        feedback_lines.append(f"ceiling_feedback={clean_feedback_value(ceiling_feedback)}")
 
     return add_lesson(
         repo_root,
@@ -339,9 +357,13 @@ def add_asset_use_feedback(
             (
                 "Observed asset usefulness feedback is candidate evidence for future "
                 "score-range and ceiling-range calibration."
+            ),
+            (
+                "Pay-forward guidance helps future agents reuse the asset in the right "
+                "context without treating one use as source truth."
             )
         ],
-        reusable_patterns=["asset_use_feedback_loop"],
+        reusable_patterns=["asset_use_feedback_loop", "asset_use_pay_forward_loop"],
         missing_capabilities=missing_parts,
         evidence=[f"asset:{asset_id}", *evidence_items],
         confidence=confidence,

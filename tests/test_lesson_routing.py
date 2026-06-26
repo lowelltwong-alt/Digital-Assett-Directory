@@ -77,12 +77,17 @@ def test_add_asset_use_feedback_records_candidate_learning_loop(tmp_path: Path):
         planned_use="validate asset record shape",
         found_by="queue",
         found_query="asset-review-010",
+        issue_addressed="schema ambiguity during calibration",
         parts_used=["required properties"],
         parts_not_used=["examples"],
         not_used_reason="examples are missing",
         upgrades_made=["added test expectation"],
         difficulties=["examples absent"],
         things_learned=["schema needs examples"],
+        reuse_when=["validating candidate asset records"],
+        avoid_when=["treating generated candidates as source truth"],
+        pay_forward_guidance="Use the schema first, then verify examples separately.",
+        next_agent_actions=["add schema examples"],
         use_outcome="helped",
         observed_usefulness="high",
         observed_futurefulness="medium",
@@ -93,11 +98,12 @@ def test_add_asset_use_feedback_records_candidate_learning_loop(tmp_path: Path):
     )
 
     assert record.review_status == "candidate"
-    assert record.reusable_patterns == ["asset_use_feedback_loop"]
+    assert record.reusable_patterns == ["asset_use_feedback_loop", "asset_use_pay_forward_loop"]
     assert "feedback_code=DAD_ASSET_USE_FEEDBACK_V1" in record.lessons
     assert "interaction_stage=after_use" in record.lessons
     assert "asset_id=dad:asset:test" in record.lessons
     assert "planned_use=validate asset record shape" in record.lessons
+    assert "issue_addressed=schema ambiguity during calibration" in record.lessons
     assert "expected_usefulness=medium" in record.lessons
     assert "expected_futurefulness=high" in record.lessons
     assert "expected_value_reason=schema should constrain asset shape" in record.lessons
@@ -109,6 +115,13 @@ def test_add_asset_use_feedback_records_candidate_learning_loop(tmp_path: Path):
     assert "upgrades_made=added test expectation" in record.lessons
     assert "difficulties=examples absent" in record.lessons
     assert "things_learned=schema needs examples" in record.lessons
+    assert "reuse_when=validating candidate asset records" in record.lessons
+    assert "avoid_when=treating generated candidates as source truth" in record.lessons
+    assert (
+        "pay_forward_guidance=Use the schema first | then verify examples separately."
+        in record.lessons
+    )
+    assert "next_agent_actions=add schema examples" in record.lessons
     assert "use_outcome=helped" in record.lessons
     assert "observed_usefulness=high" in record.lessons
     assert "observed_futurefulness=medium" in record.lessons
