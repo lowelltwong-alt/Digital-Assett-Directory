@@ -16,6 +16,26 @@ AUTHORITY_BOUNDARY = (
 )
 ASSET_FAMILY_METHOD = "asset_family_recognizer_v1"
 LEVERAGE_RANK = {"very_high": 3, "high": 2, "medium": 1, "low": 0}
+WORKFLOW_SWEEP_NOISE_PATH_PARTS = (
+    "/.pytest-tmp-root/",
+    "\\.pytest-tmp-root\\",
+    "/pytest-of-",
+    "\\pytest-of-",
+    "/__pycache__/",
+    "\\__pycache__\\",
+    "/.pytest_cache/",
+    "\\.pytest_cache\\",
+    "/_codex_worktrees/",
+    "\\_codex_worktrees\\",
+    "/.worktrees/",
+    "\\.worktrees\\",
+    "/node_modules/",
+    "\\node_modules\\",
+    "/.venv/",
+    "\\.venv\\",
+    "/venv/",
+    "\\venv\\",
+)
 
 
 @dataclass(frozen=True)
@@ -33,6 +53,21 @@ class AssetFamilyDefinition:
     capabilities: tuple[str, ...] = ()
     terms: tuple[str, ...] = ()
     pattern_aliases: tuple[str, ...] = ()
+
+
+@dataclass(frozen=True)
+class WorkflowSweepDefinition:
+    sweep_id: str
+    label: str
+    priority: int
+    rationale: str
+    useful_to_future_agents: str
+    follow_up_sweep: str
+    asset_types: tuple[str, ...] = ()
+    tags: tuple[str, ...] = ()
+    capabilities: tuple[str, ...] = ()
+    terms: tuple[str, ...] = ()
+    patterns: tuple[str, ...] = ()
 
 
 FAMILY_DEFINITIONS: tuple[AssetFamilyDefinition, ...] = (
@@ -242,6 +277,317 @@ FAMILY_DEFINITIONS: tuple[AssetFamilyDefinition, ...] = (
     ),
 )
 
+WORKFLOW_SWEEPS: tuple[WorkflowSweepDefinition, ...] = (
+    WorkflowSweepDefinition(
+        sweep_id="governance_workflows",
+        label="Governance workflows",
+        priority=10,
+        rationale=(
+            "Run first because governance, authority boundaries, review gates, and "
+            "promotion rules shape what future agents are allowed to trust or change."
+        ),
+        useful_to_future_agents=(
+            "Finds preflight/postflight gates, human review paths, source authority "
+            "rules, approval flows, and load-bearing decision checks."
+        ),
+        follow_up_sweep="learning_feedback_workflows",
+        asset_types=("workflow", "decision", "configuration", "document", "test", "schema"),
+        tags=("governance", "security", "provenance"),
+        capabilities=("govern_agents", "validate_contracts", "protect_sensitive_data"),
+        terms=(
+            "governance",
+            "preflight",
+            "postflight",
+            "human review",
+            "review gate",
+            "approval",
+            "source authority",
+            "authority boundary",
+            "candidate-only",
+            "load-bearing",
+            "risk tier",
+            "promotion",
+            "rollback",
+        ),
+        patterns=(
+            "governed_learning_loop_system",
+            "boundary_contamination_firewall",
+            "proposal_promotion_workflow",
+            "load_bearing_decision_review_system",
+            "security_governance_system",
+        ),
+    ),
+    WorkflowSweepDefinition(
+        sweep_id="learning_feedback_workflows",
+        label="Learning and feedback workflows",
+        priority=20,
+        rationale=(
+            "Run after governance because learning loops should improve behavior without "
+            "overriding authority or promoting candidates automatically."
+        ),
+        useful_to_future_agents=(
+            "Finds lessons, handoffs, asset-use feedback, pay-forward notes, and "
+            "exception-to-adaptation loops."
+        ),
+        follow_up_sweep="evaluation_calibration_workflows",
+        asset_types=("lesson", "workflow", "document", "test"),
+        tags=("learning-loop", "governance", "provenance"),
+        capabilities=("capture_lessons", "govern_agents"),
+        terms=(
+            "learning loop",
+            "lesson learned",
+            "handoff",
+            "postflight",
+            "asset-use feedback",
+            "pay-forward",
+            "reuse when",
+            "avoid when",
+            "exception",
+            "adaptation",
+        ),
+        patterns=(
+            "governed_learning_loop_system",
+            "asset_use_pay_forward_loop",
+            "asset_use_instance",
+        ),
+    ),
+    WorkflowSweepDefinition(
+        sweep_id="evaluation_calibration_workflows",
+        label="Evaluation and calibration workflows",
+        priority=30,
+        rationale=(
+            "Run early because tests, scorecards, review packets, and labels determine "
+            "whether generated candidates can be trusted enough for review."
+        ),
+        useful_to_future_agents=(
+            "Finds gold sets, validation commands, review queues, scorecards, and "
+            "calibration evidence."
+        ),
+        follow_up_sweep="agent_skill_orchestration_workflows",
+        asset_types=("evaluation", "test", "dataset", "workflow", "document"),
+        tags=("evaluation", "workflow"),
+        capabilities=("validate_contracts", "score_assets"),
+        terms=(
+            "evaluation",
+            "calibration",
+            "gold",
+            "golden",
+            "review packet",
+            "scorecard",
+            "label",
+            "precision",
+            "recall",
+            "validator",
+            "pytest",
+            "ruff",
+        ),
+        patterns=("gold_review_packet_system", "route_isolated_evaluation_harness"),
+    ),
+    WorkflowSweepDefinition(
+        sweep_id="agent_skill_orchestration_workflows",
+        label="Agent and skill orchestration workflows",
+        priority=40,
+        rationale=(
+            "Run after governance and evaluation so agent composition is discovered "
+            "with boundaries and quality checks attached."
+        ),
+        useful_to_future_agents=(
+            "Finds agent routes, skill graphs, capability registries, orchestration "
+            "plans, and handoff surfaces."
+        ),
+        follow_up_sweep="retrieval_context_workflows",
+        asset_types=("agent", "skill", "workflow", "prompt", "document", "ontology"),
+        tags=("agent", "skill", "workflow", "knowledge-graph"),
+        capabilities=("govern_agents", "retrieve_context", "build_knowledge_graph"),
+        terms=(
+            "agent",
+            "skill",
+            "capability registry",
+            "orchestration",
+            "handoff",
+            "tool route",
+            "swarm",
+            "planner",
+            "worker",
+        ),
+        patterns=("agent_skill_graph_system", "ai_agent_workflow_system"),
+    ),
+    WorkflowSweepDefinition(
+        sweep_id="retrieval_context_workflows",
+        label="Retrieval and context workflows",
+        priority=50,
+        rationale=(
+            "Run after orchestration because agents need the right retrieval and "
+            "context routes before composing assets."
+        ),
+        useful_to_future_agents=(
+            "Finds chunking, route classification, context packets, search, graph, and "
+            "retrieval pipelines."
+        ),
+        follow_up_sweep="security_privacy_workflows",
+        asset_types=("workflow", "code", "evaluation", "document", "ontology", "taxonomy"),
+        tags=("retrieval", "knowledge-graph", "workflow"),
+        capabilities=("retrieve_context", "build_knowledge_graph", "catalog_assets"),
+        terms=(
+            "retrieval",
+            "context pack",
+            "context packet",
+            "chunking",
+            "route classification",
+            "embedding",
+            "rerank",
+            "knowledge graph",
+            "ontology",
+        ),
+        patterns=("route_isolated_evaluation_harness", "knowledge_graph_retrieval_system"),
+    ),
+    WorkflowSweepDefinition(
+        sweep_id="security_privacy_workflows",
+        label="Security and privacy workflows",
+        priority=60,
+        rationale=(
+            "Run before external intake and automation because untrusted inputs and "
+            "sensitive data can contaminate every downstream workflow."
+        ),
+        useful_to_future_agents=(
+            "Finds prompt-injection defenses, secret handling, redaction, access "
+            "control, and unsafe-composition warnings."
+        ),
+        follow_up_sweep="research_intake_workflows",
+        asset_types=("workflow", "configuration", "test", "document", "schema", "code"),
+        tags=("security", "governance", "provenance"),
+        capabilities=("protect_sensitive_data", "govern_agents", "validate_contracts"),
+        terms=(
+            "security",
+            "privacy",
+            "secret",
+            "redact",
+            "prompt injection",
+            "untrusted",
+            "access control",
+            "credential",
+            "pii",
+            "unsafe composition",
+        ),
+        patterns=("boundary_contamination_firewall", "security_governance_system"),
+    ),
+    WorkflowSweepDefinition(
+        sweep_id="research_intake_workflows",
+        label="Research and external-intake workflows",
+        priority=70,
+        rationale=(
+            "Run after security because external sources, papers, repos, and ideas "
+            "need provenance, license, and source-terms review."
+        ),
+        useful_to_future_agents=(
+            "Finds frontier signal loops, research radars, source terms checks, and "
+            "license/security review gates."
+        ),
+        follow_up_sweep="duplicate_variant_workflows",
+        asset_types=("research", "document", "workflow", "dataset"),
+        tags=("research-radar", "provenance"),
+        capabilities=("research_missing_parts",),
+        terms=(
+            "research",
+            "frontier",
+            "signal",
+            "watch item",
+            "literature",
+            "source terms",
+            "license review",
+            "external",
+        ),
+        patterns=("frontier_signal_intake_loop",),
+    ),
+    WorkflowSweepDefinition(
+        sweep_id="duplicate_variant_workflows",
+        label="Duplicate and variant workflows",
+        priority=80,
+        rationale=(
+            "Run before consolidation because near-duplicates may be lineage evidence, "
+            "semantic evolution, or different useful variants."
+        ),
+        useful_to_future_agents=(
+            "Finds duplicate clusters, deltas, variant families, semantic evolution, "
+            "and merge-or-keep review paths."
+        ),
+        follow_up_sweep="scoring_ranking_workflows",
+        asset_types=("workflow", "code", "document", "dataset", "archive", "schema"),
+        tags=("provenance", "knowledge-graph"),
+        capabilities=("catalog_assets", "build_knowledge_graph"),
+        terms=(
+            "duplicate",
+            "variant",
+            "delta",
+            "cluster",
+            "shingle",
+            "fingerprint",
+            "semantic evolution",
+            "near-duplicate",
+            "lineage",
+        ),
+        patterns=("duplicate_variant_preservation_system", "asset_cluster_delta"),
+    ),
+    WorkflowSweepDefinition(
+        sweep_id="scoring_ranking_workflows",
+        label="Scoring and ranking workflows",
+        priority=90,
+        rationale=(
+            "Run after evidence-gathering sweeps because scores and rankings should be "
+            "grounded in explicit methodology and calibration."
+        ),
+        useful_to_future_agents=(
+            "Finds value-score methodology, ranking models, confidence bands, upside "
+            "ranges, and score calibration workflows."
+        ),
+        follow_up_sweep="ci_validation_workflows",
+        asset_types=("model", "algorithm", "workflow", "document", "code", "configuration"),
+        tags=("evaluation", "governance"),
+        capabilities=("score_assets", "validate_contracts"),
+        terms=(
+            "value score",
+            "ranking",
+            "calibration",
+            "confidence",
+            "threshold",
+            "methodology",
+            "ceiling",
+            "upside",
+            "risk score",
+        ),
+        patterns=("model_algorithm_system",),
+    ),
+    WorkflowSweepDefinition(
+        sweep_id="ci_validation_workflows",
+        label="CI and validation workflows",
+        priority=100,
+        rationale=(
+            "Run as the closing operational sweep because CI and validation show what "
+            "actually checks the system repeatedly."
+        ),
+        useful_to_future_agents=(
+            "Finds GitHub Actions, test orchestration, lint, validate commands, and "
+            "pre-push or enforcement wrappers."
+        ),
+        follow_up_sweep="human review of sweep results",
+        asset_types=("workflow", "configuration", "test", "code", "document"),
+        tags=("evaluation", "governance", "workflow"),
+        capabilities=("validate_contracts", "govern_agents"),
+        terms=(
+            ".github/workflows",
+            "ci",
+            "github actions",
+            "pytest",
+            "ruff",
+            "validate",
+            "pre-push",
+            "nox",
+            "test orchestration",
+        ),
+        patterns=("evaluation_contract_system", "security_governance_system"),
+    ),
+)
+
 ROLE_TERMS: dict[str, tuple[str, ...]] = {
     "expectation_source": (
         "expectation",
@@ -383,6 +729,126 @@ def detect_asset_family_matches(asset: AssetRecord) -> list[dict[str, Any]]:
     )
 
 
+def _workflow_sweep_evidence(asset: AssetRecord, definition: WorkflowSweepDefinition) -> list[str]:
+    evidence: list[str] = []
+    declared = _declared_patterns(asset)
+    if asset.asset_type in definition.asset_types:
+        evidence.append(f"asset_type:{asset.asset_type}")
+    evidence.extend(f"tag:{tag}" for tag in sorted(set(asset.tags) & set(definition.tags)))
+    evidence.extend(
+        f"capability:{capability}"
+        for capability in sorted(set(asset.capabilities) & set(definition.capabilities))
+    )
+    for pattern_id in sorted(declared & set(definition.patterns)):
+        evidence.append(f"declared_pattern:{pattern_id}")
+    evidence.extend(_term_evidence(_asset_text(asset), definition.terms)[:10])
+    return sorted(dict.fromkeys(evidence))
+
+
+def _repository_label(asset: AssetRecord, by_id: dict[str, AssetRecord]) -> str:
+    path_hint = _repository_hint_from_logical_path(asset.logical_path)
+    if asset.asset_type == "repository":
+        return path_hint or asset.logical_path or asset.title or asset.source_id
+    if asset.parent_asset_id and asset.parent_asset_id in by_id:
+        parent = by_id[asset.parent_asset_id]
+        parent_path = parent.logical_path.strip().replace("\\", "/")
+        if parent_path in {"", ".", "git-projects", "git-projects/."}:
+            return path_hint or parent.source_id
+        return parent.logical_path or parent.title or parent.source_id
+    return path_hint or asset.source_id
+
+
+def _repository_hint_from_logical_path(logical_path: str) -> str:
+    parts = [part for part in logical_path.replace("\\", "/").split("/") if part and part != "."]
+    if not parts:
+        return ""
+    if parts[0] != "git-projects":
+        return "/".join(parts[:2]) if len(parts) >= 2 else parts[0]
+    if len(parts) < 3:
+        return "/".join(parts)
+    category = parts[1]
+    package = parts[2]
+    if package in {"repos", "zips", "_codex_worktrees"} and len(parts) >= 4:
+        return "/".join(parts[:4])
+    return f"{parts[0]}/{category}/{package}"
+
+
+def _is_workflow_sweep_noise(asset: AssetRecord) -> bool:
+    path = asset.logical_path.replace("\\", "/").lower()
+    return any(part.replace("\\", "/").lower() in path for part in WORKFLOW_SWEEP_NOISE_PATH_PARTS)
+
+
+def build_workflow_sweep_candidates(
+    assets: list[AssetRecord],
+    *,
+    source_id: str = "all",
+    review_sample: int = 50,
+    include_noise: bool = False,
+) -> tuple[list[dict[str, Any]], dict[str, Any]]:
+    source_filtered = _filter_assets(assets, source_id)
+    filtered = [
+        asset for asset in source_filtered if include_noise or not _is_workflow_sweep_noise(asset)
+    ]
+    excluded_noise_count = len(source_filtered) - len(filtered)
+    by_id = {asset.asset_id: asset for asset in filtered}
+    sweep_records: list[dict[str, Any]] = []
+    for definition in sorted(WORKFLOW_SWEEPS, key=lambda sweep: sweep.priority):
+        matches: list[dict[str, Any]] = []
+        for asset in filtered:
+            evidence = _workflow_sweep_evidence(asset, definition)
+            declared_match = any(item.startswith("declared_pattern:") for item in evidence)
+            if not declared_match and len(evidence) < 2:
+                continue
+            matches.append(
+                {
+                    "asset_id": asset.asset_id,
+                    "title": asset.title,
+                    "logical_path": asset.logical_path,
+                    "asset_type": asset.asset_type,
+                    "repository": _repository_label(asset, by_id),
+                    "value_score": round(asset.value_score, 2),
+                    "confidence": asset.confidence,
+                    "evidence": evidence,
+                    "review_status": "generated_candidate",
+                }
+            )
+        matches.sort(
+            key=lambda item: (
+                -float(item["value_score"]),
+                str(item["repository"]),
+                str(item["logical_path"]),
+            )
+        )
+        repo_count = len({str(item["repository"]) for item in matches})
+        score_summary = _score_summary([by_id[str(item["asset_id"])] for item in matches])
+        sweep_records.append(
+            {
+                "sweep_id": definition.sweep_id,
+                "label": definition.label,
+                "priority": definition.priority,
+                "rationale": definition.rationale,
+                "useful_to_future_agents": definition.useful_to_future_agents,
+                "follow_up_sweep": definition.follow_up_sweep,
+                "matched_asset_count": len(matches),
+                "matched_repository_count": repo_count,
+                **score_summary,
+                "sample_matches": matches[:review_sample],
+                "review_status": "generated_candidate",
+            }
+        )
+    summary = {
+        "source_id": source_id,
+        "assets_considered": len(filtered),
+        "noise_assets_excluded": excluded_noise_count,
+        "include_noise": include_noise,
+        "workflow_sweep_count": len(sweep_records),
+        "candidate_asset_matches": sum(len(item["sample_matches"]) for item in sweep_records),
+        "first_sweep": WORKFLOW_SWEEPS[0].sweep_id,
+        "output_type": "generated_candidate_report",
+    }
+    return sweep_records, summary
+
+
 def _filter_assets(assets: list[AssetRecord], source_id: str) -> list[AssetRecord]:
     if source_id == "all":
         return list(assets)
@@ -396,6 +862,136 @@ def _score_summary(assets: list[AssetRecord]) -> dict[str, Any]:
     return {
         "current_score_range": [round(scores[0], 2), round(scores[-1], 2)],
         "current_score_midpoint": round(float(median(scores)), 2),
+    }
+
+
+def workflow_sweeps_index_markdown(
+    sweep_records: list[dict[str, Any]],
+    *,
+    source_id: str,
+    generated_at: str,
+    include_noise: bool = False,
+) -> str:
+    lines = [
+        "# Workflow Sweeps",
+        "",
+        "Generated candidate report only. Governance workflows are intentionally first.",
+        "",
+        f"- Generated at: `{generated_at}`",
+        f"- Source filter: `{source_id}`",
+        f"- Include temp/noise paths: `{include_noise}`",
+        f"- Sweep count: **{len(sweep_records)}**",
+        "- No source repository mutation, promotion, hook installation, or GitHub scanning is implied.",
+        "",
+        "## Sweep Order",
+        "",
+    ]
+    for item in sweep_records:
+        lines.extend(
+            [
+                f"### {item['priority']}. {item['label']}",
+                "",
+                f"- Sweep ID: `{item['sweep_id']}`",
+                f"- Matched assets: **{item['matched_asset_count']}**",
+                f"- Matched repositories: **{item['matched_repository_count']}**",
+                f"- Current score midpoint: **{item['current_score_midpoint']}**",
+                f"- Why this sweep exists: {item['rationale']}",
+                f"- Useful to future agents: {item['useful_to_future_agents']}",
+                f"- Next sweep: `{item['follow_up_sweep']}`",
+                "",
+            ]
+        )
+    return "\n".join(lines)
+
+
+def workflow_sweep_detail_markdown(
+    sweep: dict[str, Any],
+    *,
+    generated_at: str,
+) -> str:
+    lines = [
+        f"# {sweep['label']}",
+        "",
+        "Generated candidate workflow-sweep report only.",
+        "",
+        f"- Generated at: `{generated_at}`",
+        f"- Sweep ID: `{sweep['sweep_id']}`",
+        f"- Priority: `{sweep['priority']}`",
+        f"- Matched assets: **{sweep['matched_asset_count']}**",
+        f"- Matched repositories: **{sweep['matched_repository_count']}**",
+        f"- Current score range: `{sweep['current_score_range']}`",
+        f"- Current score midpoint: **{sweep['current_score_midpoint']}**",
+        f"- Why this sweep exists: {sweep['rationale']}",
+        f"- Useful to future agents: {sweep['useful_to_future_agents']}",
+        f"- Next sweep: `{sweep['follow_up_sweep']}`",
+        "",
+        "## Review Sample",
+        "",
+    ]
+    if not sweep["sample_matches"]:
+        lines.append("No candidates were detected for this sweep in the current catalog.")
+        lines.append("")
+        return "\n".join(lines)
+    for match in sweep["sample_matches"]:
+        evidence = ", ".join(match["evidence"][:8])
+        lines.extend(
+            [
+                f"### {match['title']}",
+                "",
+                f"- Asset ID: `{match['asset_id']}`",
+                f"- Repository: `{match['repository']}`",
+                f"- Path: `{match['logical_path']}`",
+                f"- Asset type: `{match['asset_type']}`",
+                f"- Current value score: **{match['value_score']}**",
+                f"- Confidence: `{match['confidence']}`",
+                f"- Evidence: {evidence}",
+                f"- Review status: `{match['review_status']}`",
+                "",
+            ]
+        )
+    return "\n".join(lines)
+
+
+def write_workflow_sweep_reports(
+    repo_root: Path,
+    assets: list[AssetRecord],
+    *,
+    source_id: str = "all",
+    review_sample: int = 50,
+    include_noise: bool = False,
+    generated_at: str | None = None,
+) -> dict[str, Any]:
+    generated = generated_at or utc_now()
+    sweep_records, summary = build_workflow_sweep_candidates(
+        assets,
+        source_id=source_id,
+        review_sample=review_sample,
+        include_noise=include_noise,
+    )
+    sweep_dir = repo_root / "processed" / "reports" / "workflow_sweeps"
+    index_path = sweep_dir / "workflow_sweeps_index.md"
+    atomic_write_text(
+        index_path,
+        workflow_sweeps_index_markdown(
+            sweep_records,
+            source_id=source_id,
+            generated_at=generated,
+            include_noise=include_noise,
+        )
+        + "\n",
+    )
+    detail_paths: dict[str, str] = {}
+    for sweep in sweep_records:
+        detail_path = sweep_dir / f"{sweep['sweep_id']}.md"
+        atomic_write_text(
+            detail_path,
+            workflow_sweep_detail_markdown(sweep, generated_at=generated) + "\n",
+        )
+        detail_paths[str(sweep["sweep_id"])] = str(detail_path)
+    return {
+        **summary,
+        "workflow_sweeps_index": str(index_path),
+        "workflow_sweep_reports": detail_paths,
     }
 
 

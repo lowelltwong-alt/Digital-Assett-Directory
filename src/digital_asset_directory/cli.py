@@ -14,7 +14,11 @@ from .archaeology import (
     write_archaeology_outputs,
     write_root_cause_lesson_outputs,
 )
-from .asset_families import write_asset_family_reports, write_learning_loop_outputs
+from .asset_families import (
+    write_asset_family_reports,
+    write_learning_loop_outputs,
+    write_workflow_sweep_reports,
+)
 from .calibration import (
     build_asset_calibration_review_queue,
     import_asset_calibration_review_csv,
@@ -524,6 +528,26 @@ def recommend_learning_loops(
             scan_id=scan_id,
             source_id=source_id,
             review_sample=review_sample,
+        )
+    console.print_json(data=result)
+
+
+@recommend_app.command("workflow-sweeps")
+def recommend_workflow_sweeps(
+    hub: Optional[Path] = typer.Option(None),
+    source_id: str = typer.Option("all", "--source-id"),
+    review_sample: int = typer.Option(50, "--review-sample", min=1, max=200),
+    include_noise: bool = typer.Option(False, "--include-noise/--exclude-noise"),
+) -> None:
+    """Write generated candidate workflow-family sweeps, governance first."""
+    cfg = _cfg(hub=hub)
+    with CatalogDB(cfg.database_path) as db:
+        result = write_workflow_sweep_reports(
+            cfg.repo_root,
+            db.assets(),
+            source_id=source_id,
+            review_sample=review_sample,
+            include_noise=include_noise,
         )
     console.print_json(data=result)
 

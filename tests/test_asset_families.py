@@ -9,9 +9,11 @@ from digital_asset_directory.asset_families import (
     build_asset_family_candidates,
     build_learning_loop_candidates,
     build_learning_loop_edges,
+    build_workflow_sweep_candidates,
     detect_asset_family_matches,
     write_asset_family_reports,
     write_learning_loop_outputs,
+    write_workflow_sweep_reports,
 )
 from digital_asset_directory.models import AssetRecord
 
@@ -122,6 +124,85 @@ def test_asset_family_candidates_report_current_score_before_upside():
     assert agent_graph["current_score_midpoint"] == 58
     assert agent_graph["upside_score_range"][1] > agent_graph["current_score_midpoint"]
     assert agent_graph["delta_to_upside_midpoint"] > 0
+
+
+def test_workflow_sweeps_are_governance_first_and_candidate_only():
+    assets = [
+        repo_asset(),
+        make_asset(
+            "dad:asset:governance-workflow",
+            title="Governance Gate Workflow",
+            logical_path="git-projects/00_LawFirm_OS/repo-a/docs/governance-workflow.md",
+            asset_type="workflow",
+            parent_asset_id=None,
+            text=(
+                "Preflight postflight human review gate source authority candidate-only "
+                "approval and rollback."
+            ),
+            tags=["governance", "provenance"],
+            capabilities=["govern_agents"],
+            value_score=74,
+        ),
+        make_asset(
+            "dad:asset:temp-governance-copy",
+            title="Temp Governance Copy",
+            logical_path="repo/.pytest-tmp-root/pytest-of-Lowell/copy/governance.md",
+            asset_type="workflow",
+            parent_asset_id=None,
+            text="Preflight postflight human review gate source authority approval.",
+            tags=["governance"],
+            capabilities=["govern_agents"],
+            value_score=99,
+        ),
+        make_asset(
+            "dad:asset:second-repo-governance",
+            title="Second Repo Governance",
+            logical_path="git-projects/03_World_View/repo-b/docs/governance.md",
+            asset_type="workflow",
+            parent_asset_id=None,
+            text="Preflight postflight governance approval source authority.",
+            tags=["governance"],
+            capabilities=["govern_agents"],
+            value_score=60,
+        ),
+        make_asset(
+            "dad:asset:evaluation-workflow",
+            title="Evaluation Calibration Workflow",
+            logical_path="docs/evaluation-calibration.md",
+            asset_type="evaluation",
+            text="Gold review packet scorecard calibration precision recall validator.",
+            tags=["evaluation"],
+            capabilities=["validate_contracts"],
+            value_score=63,
+        ),
+        make_asset(
+            "dad:asset:agent-workflow",
+            title="Agent Skill Workflow",
+            logical_path="agents/skill-orchestration.md",
+            asset_type="workflow",
+            text="Agent skill capability registry orchestration handoff tool route.",
+            tags=["agent", "skill", "workflow"],
+            capabilities=["govern_agents"],
+            value_score=58,
+        ),
+    ]
+
+    sweeps, summary = build_workflow_sweep_candidates(assets, review_sample=10)
+
+    assert summary["first_sweep"] == "governance_workflows"
+    assert sweeps[0]["sweep_id"] == "governance_workflows"
+    assert sweeps[0]["matched_asset_count"] >= 1
+    assert sweeps[0]["sample_matches"][0]["review_status"] == "generated_candidate"
+    assert any(
+        match["asset_id"] == "dad:asset:governance-workflow"
+        for match in sweeps[0]["sample_matches"]
+    )
+    assert sweeps[0]["matched_repository_count"] >= 2
+    assert all(
+        match["asset_id"] != "dad:asset:temp-governance-copy"
+        for match in sweeps[0]["sample_matches"]
+    )
+    assert summary["noise_assets_excluded"] == 1
 
 
 def test_learning_loop_candidates_and_edges_are_candidate_only():
@@ -247,11 +328,18 @@ def test_asset_family_writers_create_generated_outputs(tmp_path: Path):
         scan_id="dad:scan:test",
         generated_at="2026-01-01T00:00:00+00:00",
     )
+    sweep_result = write_workflow_sweep_reports(
+        tmp_path,
+        assets,
+        generated_at="2026-01-01T00:00:00+00:00",
+    )
 
     assert Path(family_result["asset_family_report"]).exists()
     assert Path(family_result["logos_report"]).exists()
     assert Path(loop_result["learning_loop_candidates"]).exists()
     assert Path(loop_result["candidate_edges"]).exists()
+    assert Path(sweep_result["workflow_sweeps_index"]).exists()
+    assert Path(sweep_result["workflow_sweep_reports"]["governance_workflows"]).exists()
     records = [
         json.loads(line)
         for line in Path(loop_result["learning_loop_candidates"]).read_text().splitlines()

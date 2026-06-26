@@ -21,6 +21,7 @@
 - `docs/ASSET_USE_PAY_FORWARD_LOOP.md` - deterministic before/after use feedback workflow for all asset classes
 - `docs/DETERMINISTIC_LEARNING_RULES.md` - reviewed learning rules surfaced in preflight and enforced by midflight acknowledgements
 - `docs/LOAD_BEARING_DECISION_REVIEW.md` - high/medium/low risk gates for load-bearing software, repo, roadmap, schema, governance, scoring, and automation decisions
+- `docs/WORKFLOW_SWEEPS.md` - governance-first generated-candidate sweeps for discovering important workflow assets across repos
 - `docs/SEMANTIC_EVOLUTION_GRADING.md` - deterministic grading scale for real semantic evolution versus copy/fixture noise
 - `docs/PUBLIC_ASSET_USE_FEEDBACK.md` - public PR path and untrusted-input rules for asset-use feedback
 - `docs/LOGOS_REUSABLE_ASSET_FINDINGS.md` - reusable Logos-derived asset-family and learning-loop patterns
@@ -83,6 +84,7 @@
 - `config/sources.example.yaml`
 - `docs/OPERATIONS.md`
 - `docs/PROPOSAL_ENGINE_CALIBRATION_WORKFLOW.md` - operational workflow for reviewing bottom-up and top-down proposal engines
+- `asset-dir recommend workflow-sweeps` - generated governance-first workflow-family sweep reports under `processed/reports/workflow_sweeps/`
 - `docs/DOWNSTREAM_REPO_GOVERNANCE.md`
 - `docs/TESTING_AND_ORCHESTRATION.md` - marker taxonomy, change-driven test selection, and nox tasks
 - `docs/ALGORITHM_CALIBRATION_AND_FIXES_HANDOFF.md` - implemented algorithm fixes, remaining work, and how to calibrate thresholds/weights/confidence
