@@ -141,6 +141,13 @@ actionability: unreviewed, actionable, not_actionable, unsure
 decision: pending, accept_candidate, reject_candidate, defer
 ```
 
+Label semantics:
+
+- `accept_candidate` means the proposal is worth a bounded experiment or review action. It does not authorize source mutation, graph promotion, external code import, or roadmap completion.
+- `actionable` means the next review step can be taken now without an unresolved boundary dependency. Use `not_actionable` when the proposal is useful but blocked by active-repo, source-authority, license, privacy, or owner-review gates.
+- `safety=needs_more_review` should be used when the proposal touches an active or explicitly excluded repo, suggests external code/research, implies source changes, or crosses an authority boundary that has not been reviewed.
+- Generated `deterministic_review_guards` in proposal evidence are suggestions for the human reviewer, not labels. They must not count as human review until a reviewer records labels.
+
 Use the structured calibration note fields to capture:
 
 - `false_positive_reason`: why a generated proposal looked wrong, unsafe, duplicate, or not useful.
@@ -166,6 +173,14 @@ processed/reports/proposal_review_results_summary.md
 
 This summary reports reviewed counts, label counts, structured calibration note counts, and whether the calibration gate is complete. It is generated output and should not be treated as tracked roadmap evidence by itself.
 
+## Distinct-Idea Sampling And Bundles
+
+Proposal comparison reports count both raw records and distinct proposal ideas. Distinct idea keys are deterministic candidate metadata derived from proposal type, relationship, collection, need/capability context, and source/target assets. Use distinct idea counts when comparing engines; raw proposal counts can be inflated by repeated item-level records.
+
+Top-down stale/risk review should prefer collection-level bundles over repeated item-level stale proposals. A stale bundle is grouped by collection and asset type and carries member asset IDs plus alert IDs. Accepting a bundle means "review this collection-level decision path," not "act on every member without review."
+
+Bottom-up proposals are same-repo or same-family by default. Cross-repo bottom-up proposals require stronger evidence than lexical overlap, such as a shared need/capability, existing graph evidence, same content identity, or shared outcome plus calibrated similarity. Cross-repo lexical-only matches should be treated as false-positive-prone review noise.
+
 ## Export Tracked Evidence
 
 After at least 25 bottom-up and 25 top-down records have human labels, and after structured
@@ -184,6 +199,8 @@ roadmap/evidence/proposal-engine-calibration.md
 ```
 
 This command fails closed if the review gate is incomplete, if structured calibration notes are missing, or if `--default-path` / `--default-rationale` are omitted. It should not create roadmap evidence from unreviewed generated templates. The evidence includes false positive notes, false negative notes, useful examples, the candidate default from accepted counts, and the explicit human-selected default path.
+
+When distinct proposal idea keys are available, use the distinct accepted idea counts as the candidate default signal. Raw accepted counts are still reported for traceability, but they should not be used alone to conclude that one engine outperformed another.
 
 After evidence export, review the evidence file before committing it. Do not mark any roadmap phase complete unless its acceptance criteria are otherwise satisfied.
 
