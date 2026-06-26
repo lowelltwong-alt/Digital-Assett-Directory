@@ -8,6 +8,7 @@ import pytest
 from digital_asset_directory.asset_families import (
     build_asset_family_candidates,
     build_learning_loop_candidates,
+    build_workflow_usefulness_review,
     build_learning_loop_edges,
     build_workflow_sweep_candidates,
     detect_asset_family_matches,
@@ -205,6 +206,52 @@ def test_workflow_sweeps_are_governance_first_and_candidate_only():
     assert summary["noise_assets_excluded"] == 1
 
 
+def test_workflow_usefulness_review_separates_reuse_from_variant_review():
+    assets = [
+        repo_asset(),
+        make_asset(
+            "dad:asset:canonical-governance",
+            title="Canonical Governance Workflow",
+            logical_path="git-projects/00_LawFirm_OS/governance/docs/review.md",
+            asset_type="workflow",
+            parent_asset_id=None,
+            text="Governance preflight postflight human review source authority approval.",
+            tags=["governance"],
+            capabilities=["govern_agents"],
+            value_score=65,
+        ),
+        make_asset(
+            "dad:asset:archive-governance",
+            title="Archived Governance Workflow",
+            logical_path="git-projects/99_Archive/zips/governance/docs/review.md",
+            asset_type="workflow",
+            parent_asset_id=None,
+            text="Governance preflight postflight human review source authority approval.",
+            tags=["governance"],
+            capabilities=["govern_agents"],
+            value_score=65,
+        ),
+    ]
+
+    sweeps, _summary = build_workflow_sweep_candidates(assets, review_sample=10)
+    review = build_workflow_usefulness_review(sweeps, per_sweep_limit=10, global_limit=10)
+    by_id = {record["asset_id"]: record for record in review["records"]}
+
+    assert by_id["dad:asset:canonical-governance"]["path_class"] == "canonical_or_active_source"
+    assert by_id["dad:asset:canonical-governance"]["usefulness_category"] in {
+        "review_first_for_reuse",
+        "review_after_first_batch",
+    }
+    assert by_id["dad:asset:archive-governance"]["path_class"] == "archive_variant"
+    assert (
+        by_id["dad:asset:archive-governance"]["usefulness_category"]
+        == "variant_or_delta_review"
+    )
+    assert by_id["dad:asset:canonical-governance"]["utility_score"] > by_id[
+        "dad:asset:archive-governance"
+    ]["utility_score"]
+
+
 def test_learning_loop_candidates_and_edges_are_candidate_only():
     assets = [
         repo_asset(),
@@ -340,6 +387,8 @@ def test_asset_family_writers_create_generated_outputs(tmp_path: Path):
     assert Path(loop_result["candidate_edges"]).exists()
     assert Path(sweep_result["workflow_sweeps_index"]).exists()
     assert Path(sweep_result["workflow_sweep_reports"]["governance_workflows"]).exists()
+    assert Path(sweep_result["workflow_usefulness_report"]).exists()
+    assert Path(sweep_result["workflow_usefulness_candidates"]).exists()
     records = [
         json.loads(line)
         for line in Path(loop_result["learning_loop_candidates"]).read_text().splitlines()

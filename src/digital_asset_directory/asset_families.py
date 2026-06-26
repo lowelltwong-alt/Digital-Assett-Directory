@@ -16,6 +16,7 @@ AUTHORITY_BOUNDARY = (
 )
 ASSET_FAMILY_METHOD = "asset_family_recognizer_v1"
 LEVERAGE_RANK = {"very_high": 3, "high": 2, "medium": 1, "low": 0}
+WORKFLOW_USEFULNESS_METHOD = "workflow-sweep-usefulness-v1"
 WORKFLOW_SWEEP_NOISE_PATH_PARTS = (
     "/.pytest-tmp-root/",
     "\\.pytest-tmp-root\\",
@@ -36,6 +37,31 @@ WORKFLOW_SWEEP_NOISE_PATH_PARTS = (
     "/venv/",
     "\\venv\\",
 )
+WORKFLOW_USEFULNESS_ASSET_TYPE_BONUS = {
+    "workflow": 12.0,
+    "schema": 10.0,
+    "test": 9.0,
+    "code": 8.0,
+    "configuration": 7.0,
+    "decision": 7.0,
+    "evaluation": 7.0,
+    "document": 5.0,
+    "repository": 4.0,
+}
+WORKFLOW_USEFULNESS_PATH_ADJUSTMENT = {
+    "canonical_or_active_source": 8.0,
+    "repo_collection_variant": -4.0,
+    "archive_variant": -14.0,
+    "generated_output": -16.0,
+    "noise_or_temp": -35.0,
+}
+WORKFLOW_SWEEP_PRIORITY_BONUS = {
+    "governance_workflows": 8.0,
+    "learning_feedback_workflows": 6.0,
+    "evaluation_calibration_workflows": 6.0,
+    "security_privacy_workflows": 6.0,
+    "scoring_ranking_workflows": 4.0,
+}
 
 
 @dataclass(frozen=True)
@@ -778,6 +804,123 @@ def _is_workflow_sweep_noise(asset: AssetRecord) -> bool:
     return any(part.replace("\\", "/").lower() in path for part in WORKFLOW_SWEEP_NOISE_PATH_PARTS)
 
 
+def _workflow_path_class(logical_path: str) -> str:
+    path = logical_path.replace("\\", "/").lower()
+    if any(part.replace("\\", "/").lower() in path for part in WORKFLOW_SWEEP_NOISE_PATH_PARTS):
+        return "noise_or_temp"
+    if "/processed/" in path or "/raw/" in path or "/state/" in path:
+        return "generated_output"
+    if "/99_archive/" in path or "/archive/" in path or "/zips/" in path:
+        return "archive_variant"
+    if "/repos/" in path:
+        return "repo_collection_variant"
+    return "canonical_or_active_source"
+
+
+def _workflow_usefulness_tier(score: float) -> str:
+    if score >= 72:
+        return "high_usefulness_candidate"
+    if score >= 58:
+        return "medium_usefulness_candidate"
+    if score >= 40:
+        return "context_dependent_candidate"
+    return "low_signal_candidate"
+
+
+def _workflow_usefulness_category(tier: str, path_class: str) -> str:
+    if path_class == "noise_or_temp":
+        return "exclude_from_default_review"
+    if path_class in {"archive_variant", "repo_collection_variant"}:
+        return "variant_or_delta_review"
+    if tier == "high_usefulness_candidate":
+        return "review_first_for_reuse"
+    if tier == "medium_usefulness_candidate":
+        return "review_after_first_batch"
+    if tier == "context_dependent_candidate":
+        return "keep_for_contextual_review"
+    return "low_signal_keep_as_evidence"
+
+
+def _workflow_usefulness_record(
+    sweep: dict[str, Any], match: dict[str, Any]
+) -> dict[str, Any]:
+    path_class = _workflow_path_class(str(match["logical_path"]))
+    evidence_count = len(match.get("evidence", []))
+    declared_pattern_bonus = (
+        8.0
+        if any(str(item).startswith("declared_pattern:") for item in match.get("evidence", []))
+        else 0.0
+    )
+    utility_score = (
+        float(match["value_score"])
+        + WORKFLOW_USEFULNESS_ASSET_TYPE_BONUS.get(str(match["asset_type"]), 3.0)
+        + min(evidence_count * 3.0, 18.0)
+        + declared_pattern_bonus
+        + WORKFLOW_USEFULNESS_PATH_ADJUSTMENT.get(path_class, 0.0)
+        + WORKFLOW_SWEEP_PRIORITY_BONUS.get(str(sweep["sweep_id"]), 0.0)
+    )
+    utility_score = round(max(0.0, min(100.0, utility_score)), 2)
+    tier = _workflow_usefulness_tier(utility_score)
+    category = _workflow_usefulness_category(tier, path_class)
+    return {
+        "methodology_version": WORKFLOW_USEFULNESS_METHOD,
+        "sweep_id": sweep["sweep_id"],
+        "sweep_label": sweep["label"],
+        "asset_id": match["asset_id"],
+        "title": match["title"],
+        "repository": match["repository"],
+        "logical_path": match["logical_path"],
+        "asset_type": match["asset_type"],
+        "current_value_score": match["value_score"],
+        "utility_score": utility_score,
+        "usefulness_tier": tier,
+        "usefulness_category": category,
+        "path_class": path_class,
+        "evidence": match.get("evidence", []),
+        "review_status": "generated_candidate",
+        "why_useful": _workflow_why_useful(str(sweep["sweep_id"]), str(match["asset_type"])),
+        "review_guidance": _workflow_review_guidance(category),
+    }
+
+
+def _workflow_why_useful(sweep_id: str, asset_type: str) -> str:
+    if sweep_id == "governance_workflows":
+        return "May define authority, review, approval, or promotion behavior that constrains later workflow use."
+    if sweep_id == "learning_feedback_workflows":
+        return "May preserve how an asset was used, improved, blocked, or paid forward for future agents."
+    if sweep_id == "evaluation_calibration_workflows":
+        return "May provide tests, labels, scorecards, or validation evidence for candidate quality."
+    if sweep_id == "agent_skill_orchestration_workflows":
+        return "May show how agents, skills, prompts, tools, or handoffs compose into a reusable workflow."
+    if sweep_id == "retrieval_context_workflows":
+        return "May help future agents find, chunk, route, or ground the right context."
+    if sweep_id == "security_privacy_workflows":
+        return "May reduce prompt-injection, secret-handling, unsafe-composition, or privacy risk."
+    if sweep_id == "research_intake_workflows":
+        return "May bring external ideas into the asset graph with provenance and review gates."
+    if sweep_id == "duplicate_variant_workflows":
+        return "May explain whether similar assets are copies, variants, semantic evolution, or merge candidates."
+    if sweep_id == "scoring_ranking_workflows":
+        return "May define score, rank, confidence, upside, or calibration behavior future agents will inherit."
+    if asset_type == "workflow":
+        return "May be a reusable multi-step workflow asset."
+    return "May support a larger workflow family as a component asset."
+
+
+def _workflow_review_guidance(category: str) -> str:
+    if category == "review_first_for_reuse":
+        return "Inspect first for direct reuse, pay-forward notes, and missing validation."
+    if category == "review_after_first_batch":
+        return "Review after high-usefulness candidates or when this sweep becomes active."
+    if category == "variant_or_delta_review":
+        return "Compare against nearby canonical variants before reuse; preserve useful deltas."
+    if category == "keep_for_contextual_review":
+        return "Keep as contextual evidence until a task needs this workflow family."
+    if category == "exclude_from_default_review":
+        return "Exclude from ordinary workflow review; use only for archaeology or lineage analysis."
+    return "Keep as low-signal evidence; do not spend human review first."
+
+
 def build_workflow_sweep_candidates(
     assets: list[AssetRecord],
     *,
@@ -952,6 +1095,140 @@ def workflow_sweep_detail_markdown(
     return "\n".join(lines)
 
 
+def build_workflow_usefulness_review(
+    sweep_records: list[dict[str, Any]],
+    *,
+    per_sweep_limit: int = 25,
+    global_limit: int = 75,
+) -> dict[str, Any]:
+    records: list[dict[str, Any]] = []
+    for sweep in sweep_records:
+        sweep_candidates = [
+            _workflow_usefulness_record(sweep, match)
+            for match in sweep.get("sample_matches", [])
+        ]
+        sweep_candidates.sort(
+            key=lambda item: (
+                -float(item["utility_score"]),
+                str(item["usefulness_category"]),
+                str(item["repository"]),
+                str(item["logical_path"]),
+            )
+        )
+        records.extend(sweep_candidates[:per_sweep_limit])
+    records.sort(
+        key=lambda item: (
+            -float(item["utility_score"]),
+            str(item["sweep_id"]),
+            str(item["repository"]),
+            str(item["logical_path"]),
+        )
+    )
+    category_counts: dict[str, int] = defaultdict(int)
+    tier_counts: dict[str, int] = defaultdict(int)
+    path_class_counts: dict[str, int] = defaultdict(int)
+    sweep_counts: dict[str, int] = defaultdict(int)
+    for record in records:
+        category_counts[str(record["usefulness_category"])] += 1
+        tier_counts[str(record["usefulness_tier"])] += 1
+        path_class_counts[str(record["path_class"])] += 1
+        sweep_counts[str(record["sweep_id"])] += 1
+    return {
+        "methodology_version": WORKFLOW_USEFULNESS_METHOD,
+        "records_considered": len(records),
+        "category_counts": dict(sorted(category_counts.items())),
+        "tier_counts": dict(sorted(tier_counts.items())),
+        "path_class_counts": dict(sorted(path_class_counts.items())),
+        "sweep_counts": dict(sorted(sweep_counts.items())),
+        "records": records[:global_limit],
+        "review_status": "generated_candidate",
+    }
+
+
+def workflow_usefulness_markdown(
+    review: dict[str, Any],
+    *,
+    generated_at: str,
+) -> str:
+    records = review["records"]
+    lines = [
+        "# Workflow Sweep Usefulness Review",
+        "",
+        "Generated candidate report only. This ranks review priority; it does not label assets as truth.",
+        "",
+        f"- Generated at: `{generated_at}`",
+        f"- Methodology: `{review['methodology_version']}`",
+        f"- Candidate records counted: **{review['records_considered']}**",
+        f"- Candidate records shown: **{len(records)}**",
+        "- The same asset may appear under multiple sweeps when it has multiple useful roles.",
+        "",
+        "## Methodology",
+        "",
+        "Utility score range: `0..100`, clamped.",
+        "",
+        "Formula:",
+        "",
+        "```text",
+        "utility_score = current_value_score",
+        "  + asset_type_bonus",
+        "  + min(evidence_count * 3, 18)",
+        "  + declared_pattern_bonus",
+        "  + path_class_adjustment",
+        "  + sweep_priority_bonus",
+        "```",
+        "",
+        "Important adjustments:",
+        "",
+        "- `canonical_or_active_source`: `+8`",
+        "- `repo_collection_variant`: `-4`",
+        "- `archive_variant`: `-14`",
+        "- `generated_output`: `-16`",
+        "- `noise_or_temp`: `-35`",
+        "- Governance, learning, evaluation, security, and scoring sweeps receive small priority bonuses.",
+        "- Archive and copied repo variants can still be useful, but are routed to delta review before reuse.",
+        "",
+        "## Counts",
+        "",
+        "### By Category",
+        "",
+    ]
+    for key, value in review["category_counts"].items():
+        lines.append(f"- `{key}`: **{value}**")
+    lines.extend(["", "### By Tier", ""])
+    for key, value in review["tier_counts"].items():
+        lines.append(f"- `{key}`: **{value}**")
+    lines.extend(["", "### By Path Class", ""])
+    for key, value in review["path_class_counts"].items():
+        lines.append(f"- `{key}`: **{value}**")
+    lines.extend(["", "## Highest Utility Candidates", ""])
+    if not records:
+        lines.append("No workflow usefulness candidates were available from the current sweep sample.")
+        lines.append("")
+        return "\n".join(lines)
+    for record in records:
+        evidence = ", ".join(record["evidence"][:8])
+        lines.extend(
+            [
+                f"### {record['title']}",
+                "",
+                f"- Utility score: **{record['utility_score']}**",
+                f"- Current value score: **{record['current_value_score']}**",
+                f"- Tier: `{record['usefulness_tier']}`",
+                f"- Category: `{record['usefulness_category']}`",
+                f"- Path class: `{record['path_class']}`",
+                f"- Sweep: `{record['sweep_id']}`",
+                f"- Repository: `{record['repository']}`",
+                f"- Path: `{record['logical_path']}`",
+                f"- Asset type: `{record['asset_type']}`",
+                f"- Why useful: {record['why_useful']}",
+                f"- Review guidance: {record['review_guidance']}",
+                f"- Evidence: {evidence}",
+                "",
+            ]
+        )
+    return "\n".join(lines)
+
+
 def write_workflow_sweep_reports(
     repo_root: Path,
     assets: list[AssetRecord],
@@ -959,6 +1236,8 @@ def write_workflow_sweep_reports(
     source_id: str = "all",
     review_sample: int = 50,
     include_noise: bool = False,
+    usefulness_per_sweep_limit: int = 25,
+    usefulness_global_limit: int = 75,
     generated_at: str | None = None,
 ) -> dict[str, Any]:
     generated = generated_at or utc_now()
@@ -988,10 +1267,24 @@ def write_workflow_sweep_reports(
             workflow_sweep_detail_markdown(sweep, generated_at=generated) + "\n",
         )
         detail_paths[str(sweep["sweep_id"])] = str(detail_path)
+    usefulness_review = build_workflow_usefulness_review(
+        sweep_records,
+        per_sweep_limit=usefulness_per_sweep_limit,
+        global_limit=usefulness_global_limit,
+    )
+    usefulness_report_path = sweep_dir / "workflow_usefulness_review.md"
+    usefulness_jsonl_path = sweep_dir / "workflow_usefulness_candidates.jsonl"
+    atomic_write_text(
+        usefulness_report_path,
+        workflow_usefulness_markdown(usefulness_review, generated_at=generated) + "\n",
+    )
+    write_jsonl(usefulness_jsonl_path, usefulness_review["records"])
     return {
         **summary,
         "workflow_sweeps_index": str(index_path),
         "workflow_sweep_reports": detail_paths,
+        "workflow_usefulness_report": str(usefulness_report_path),
+        "workflow_usefulness_candidates": str(usefulness_jsonl_path),
     }
 
 

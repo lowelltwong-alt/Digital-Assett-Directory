@@ -538,6 +538,10 @@ def recommend_workflow_sweeps(
     source_id: str = typer.Option("all", "--source-id"),
     review_sample: int = typer.Option(50, "--review-sample", min=1, max=200),
     include_noise: bool = typer.Option(False, "--include-noise/--exclude-noise"),
+    usefulness_per_sweep_limit: int = typer.Option(
+        25, "--usefulness-per-sweep-limit", min=1, max=100
+    ),
+    usefulness_global_limit: int = typer.Option(75, "--usefulness-global-limit", min=1, max=300),
 ) -> None:
     """Write generated candidate workflow-family sweeps, governance first."""
     cfg = _cfg(hub=hub)
@@ -548,6 +552,8 @@ def recommend_workflow_sweeps(
             source_id=source_id,
             review_sample=review_sample,
             include_noise=include_noise,
+            usefulness_per_sweep_limit=usefulness_per_sweep_limit,
+            usefulness_global_limit=usefulness_global_limit,
         )
     console.print_json(data=result)
 

@@ -37,6 +37,13 @@ Generated reports are written under:
 processed/reports/workflow_sweeps/
 ```
 
+The command also writes:
+
+```text
+processed/reports/workflow_sweeps/workflow_usefulness_review.md
+processed/reports/workflow_sweeps/workflow_usefulness_candidates.jsonl
+```
+
 ## Interpretation
 
 Each sweep is candidate evidence. A match means "review this as a possible workflow asset,"
@@ -53,3 +60,29 @@ Use the sweep reports to:
 - identify which workflow families are missing tests, gates, labels, or feedback;
 - choose the next human review batch;
 - route follow-up asset-use feedback through the pay-forward loop.
+
+## Usefulness Review
+
+The usefulness review is a generated triage layer over the sweep samples. It separates:
+
+- `review_first_for_reuse`
+- `review_after_first_batch`
+- `variant_or_delta_review`
+- `keep_for_contextual_review`
+- `low_signal_keep_as_evidence`
+- `exclude_from_default_review`
+
+The utility score is deterministic, candidate-only, and method-versioned as
+`workflow-sweep-usefulness-v1`.
+
+```text
+utility_score = current_value_score
+  + asset_type_bonus
+  + min(evidence_count * 3, 18)
+  + declared_pattern_bonus
+  + path_class_adjustment
+  + sweep_priority_bonus
+```
+
+Archive and copied repo variants can still be useful, but they route to delta review before
+reuse. Current score remains separate from usefulness triage.
