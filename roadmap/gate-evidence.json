@@ -120,6 +120,49 @@
       "reviewer": "Lowell",
       "status": "verified",
       "summary": "Asset scoring weight-change notes were documented."
+    },
+    "phase-3-bypass-failure-tested": {
+      "evidence": [
+        "roadmap/evidence/phase-3-sandbox-pilot.md",
+        "docs/DOWNSTREAM_REPO_GOVERNANCE.md"
+      ],
+      "phase_id": "phase-3-downstream-governance",
+      "reviewed_at": "2026-06-26T17:29:00+00:00",
+      "reviewer": "codex",
+      "status": "verified",
+      "summary": "Sandbox enforcement failed closed while an AI work session was open, passed only after postflight, and the bypass policy remains explicit/logged/reviewed rather than silently disabling hooks."
+    },
+    "phase-3-lessons-arrive-central-hub": {
+      "evidence": [
+        "roadmap/evidence/phase-3-sandbox-pilot.md",
+        "raw/lessons/by-repo"
+      ],
+      "phase_id": "phase-3-downstream-governance",
+      "reviewed_at": "2026-06-26T17:29:00+00:00",
+      "reviewer": "codex",
+      "status": "verified",
+      "summary": "Sandbox postflight wrote central hub handoff dad:handoff:b4167661-497c-52f8-9359-3a5b25cecb07 and lesson dad:lesson:053149a2-2a2e-51a8-accc-c5a8e9ddabfe; lesson reindex completed with 100 indexed lessons."
+    },
+    "phase-3-pilot-repositories-selected": {
+      "evidence": [
+        "processed/reports/downstream_pilot_candidates.md",
+        "roadmap/evidence/phase-3-sandbox-pilot.md"
+      ],
+      "phase_id": "phase-3-downstream-governance",
+      "reviewed_at": "2026-06-26T17:29:00+00:00",
+      "reviewer": "Lowell",
+      "status": "verified",
+      "summary": "Human authorized continuing roadmap order with the safest first pilot; a disposable sandbox repo was selected instead of Mock Trial or any active repository."
+    },
+    "phase-3-pre-push-enforcement-reviewed": {
+      "evidence": [
+        "roadmap/evidence/phase-3-sandbox-pilot.md"
+      ],
+      "phase_id": "phase-3-downstream-governance",
+      "reviewed_at": "2026-06-26T17:29:00+00:00",
+      "reviewer": "codex",
+      "status": "verified",
+      "summary": "Sandbox git core.hooksPath was set to .githooks; DAD enforcement returned exit code 2 before postflight and exit code 0 after postflight."
     }
   },
   "schema_version": "0.1.0"
