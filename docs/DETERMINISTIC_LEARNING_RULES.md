@@ -46,7 +46,8 @@ Current seed rules are:
 - context-bound lessons need non-applicability and danger notes;
 - software work should search asset-use pay-forward evidence;
 - load-bearing decisions need risk-tier review;
-- software and repo work uses the checklist tree.
+- software and repo work uses the checklist tree;
+- AI entrypoints and TOCs need deterministic routing rows.
 
 ## Temp Fixture Copy Rule
 
@@ -188,6 +189,26 @@ This rule is intentionally compositional. Use the data normalization branch only
 shape, identity, joins, exports, or source records are affected. Use high-risk gates when the
 work changes shared contracts, defaults, source authority, scoring, privacy, migrations,
 automation, or downstream repos. Keep the checklist light for low-risk isolated edits.
+
+## AI Entrypoint And TOC Routing Rule
+
+When creating or updating AI front doors, AI tables of contents, machine navigation
+manifests, or knowledge-graph entrypoints, maintain one deterministic front door and
+make the TOC actionable for future agents.
+
+Minimum navigation requirements:
+
+- `AI_FRONT_DOOR.md` remains the single start point;
+- the front door points to authority, the AI TOC, knowledge-graph entrypoints,
+  stop conditions, and validation;
+- AI TOC rows include path, what it is, tags, and use-when triggers;
+- generated graph and report outputs are tagged as candidate evidence, not truth;
+- the repo has a reusable standard or template for future repos.
+
+Use `docs/AI_ENTRYPOINT_AND_TOC_ROUTING_STANDARD.md` and
+`templates/ai-table-of-contents.template.md` when building this pattern
+elsewhere. This rule is not for trivial typo edits or tiny scratch repos with no
+persistent AI navigation need.
 
 ## Promotion Rule
 

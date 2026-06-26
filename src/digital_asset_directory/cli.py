@@ -60,6 +60,7 @@ from .proposals import (
     write_proposal_outputs,
     write_proposal_review_results_summary,
 )
+from .public_safe_sweep import write_public_safe_source_sweep
 from .recommendations import recommend_skills_and_agents, recommend_swarm
 from .readiness import write_downstream_pilot_candidates, write_phase45_readiness_reports
 from .research import research_missing_parts
@@ -555,6 +556,26 @@ def recommend_workflow_sweeps(
             usefulness_per_sweep_limit=usefulness_per_sweep_limit,
             usefulness_global_limit=usefulness_global_limit,
         )
+    console.print_json(data=result)
+
+
+@recommend_app.command("public-safe-source-sweep")
+def recommend_public_safe_source_sweep(
+    source_path: Path = typer.Option(..., "--source-path"),
+    source_id: str = typer.Option(..., "--source-id"),
+    review_sample: int = typer.Option(50, "--review-sample", min=1, max=300),
+    max_files: Optional[int] = typer.Option(None, "--max-files", min=1),
+    hub: Optional[Path] = typer.Option(None),
+) -> None:
+    """Metadata-only sweep for private sources whose workflow is reusable but rows are not."""
+    cfg = _cfg(hub=hub)
+    result = write_public_safe_source_sweep(
+        cfg.repo_root,
+        source_path,
+        source_id=source_id,
+        review_sample=review_sample,
+        max_files=max_files,
+    )
     console.print_json(data=result)
 
 

@@ -11,6 +11,23 @@
     "registry/identity-layer-registry.json",
     "AI_TABLE_OF_CONTENTS.md"
   ],
+  "navigation_standards": {
+    "single_ai_entrypoint": "AI_FRONT_DOOR.md",
+    "ai_table_of_contents": "AI_TABLE_OF_CONTENTS.md",
+    "routing_standard": "docs/AI_ENTRYPOINT_AND_TOC_ROUTING_STANDARD.md",
+    "toc_template": "templates/ai-table-of-contents.template.md"
+  },
+  "knowledge_graph_entrypoints": [
+    "docs/KNOWLEDGE_GRAPH_MODEL.md",
+    "ontology/digital-asset-ontology.ttl",
+    "ontology/taxonomy.skos.ttl",
+    "registry/edge-type-registry.json",
+    "registry/asset-pattern-registry.json",
+    "registry/context-tag-registry.json",
+    "processed/graph/graph.json",
+    "processed/reports/asset_family_recognition.md",
+    "processed/reports/workflow_sweeps/workflow_sweeps_index.md"
+  ],
   "registries": {
     "source_of_truth": "registry/source-of-truth.json",
     "design_authority": "registry/design-authority.json",

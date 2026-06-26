@@ -7,6 +7,26 @@
 - **Authority level:** authority for this repository's catalog contracts and workflows only
 - **Non-authority:** this repository does not redefine the internal canon of any source repository it scans
 
+## Single AI entrypoint
+
+All AI agents start here. Do not begin from a random doc, generated report, or
+remembered path. This file is the deterministic front door; it routes agents to
+authority, the AI table of contents, knowledge-graph entrypoints, task-specific
+contracts, and validation.
+
+```text
+AI_FRONT_DOOR.md
+-> authority stack
+-> AI_TABLE_OF_CONTENTS.md branch
+-> knowledge graph entrypoints
+-> task-relevant schemas, registries, docs, and roadmap gates
+-> generated reports only as candidate evidence
+```
+
+AI navigation files follow `docs/AI_ENTRYPOINT_AND_TOC_ROUTING_STANDARD.md`.
+Every AI table-of-contents row must give the path, what it is, routing tags,
+and when to look further.
+
 ## Required read order
 
 1. `AGENTS.md`
@@ -18,6 +38,37 @@
 7. `docs/ARCHITECTURE.md`
 8. `docs/ASSET_IDENTITY_AND_SIMILARITY_LADDER.md`
 9. task-relevant schemas, registries, and roadmap gates
+
+## AI TOC branches
+
+Use `AI_TABLE_OF_CONTENTS.md` as the branching map after the required read
+order. Choose the branch by task, then read only the matching docs, schemas,
+registries, evidence, and generated reports needed for the work.
+
+Core branches:
+
+- front doors and authority;
+- architecture and knowledge graph;
+- contracts and controlled vocabularies;
+- operations and validation;
+- roadmap evidence;
+- reference and generated-candidate surfaces.
+
+## Knowledge graph entrypoints
+
+Knowledge-graph surfaces are navigation and candidate-evidence aids. They do
+not prove source truth, value, authority, or promotion.
+
+| Entrypoint | What it is | Use when |
+|---|---|---|
+| `docs/KNOWLEDGE_GRAPH_MODEL.md` | Conceptual model for asset nodes, edges, authority posture, and graph use. | You need to understand what graph facts can and cannot mean. |
+| `registry/edge-type-registry.json` | Controlled edge vocabulary. | You create, interpret, or validate graph relationships. |
+| `registry/asset-pattern-registry.json` | Controlled high-leverage pattern vocabulary. | You classify workflows, composite assets, or reusable systems. |
+| `ontology/digital-asset-ontology.ttl` | Ontology layer for graph concepts. | You need semantic graph structure or external graph alignment. |
+| `ontology/taxonomy.skos.ttl` | Taxonomy layer for broader/narrower concept navigation. | You need controlled concept hierarchy. |
+| `processed/graph/graph.json` | Generated graph output. | You need candidate edges from the latest processed catalog; treat as generated evidence. |
+| `processed/reports/asset_family_recognition.md` | Generated report of asset-family candidates. | You need composite workflow or family candidates from scans. |
+| `processed/reports/workflow_sweeps/workflow_sweeps_index.md` | Generated workflow-sweep index. | You need cross-repo workflow pattern candidates. |
 
 ## Core boundary
 

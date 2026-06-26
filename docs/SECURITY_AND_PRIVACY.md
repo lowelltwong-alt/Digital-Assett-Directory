@@ -24,6 +24,17 @@ Before expanding beyond the Git Projects folder, review:
 - whether content excerpts should be disabled for particular roots;
 - whether a source requires metadata-only scanning.
 
+## Public-Safe Source Sweeps
+
+When a local source contains reusable workflow architecture mixed with scraped rows, public-person
+data, source snapshots, or generated exports, use the public-safe sweep workflow before any normal
+scan. The command `recommend public-safe-source-sweep` reads path metadata only, quarantines data
+and output lanes, and writes generated reports under `processed/`.
+
+Track only the curated method, source-scope decision, aggregate categories, and reusable workflow
+patterns. Do not track row-level scraped data, raw source snapshots, profile facts, recruiting
+leads, local absolute paths, or generated export contents in a public-ready DAD repository.
+
 ## Cloud Placeholder Files
 
 The local scanner has a Windows-specific guard for OneDrive/cloud placeholder attributes

@@ -166,6 +166,15 @@
     },
     {
       "schema_version": "0.1.0",
+      "context_tag_id": "ai_navigation",
+      "label": "AI navigation",
+      "description": "AI front doors, tables of contents, manifests, and graph entrypoints route future agents through repo context.",
+      "applies_when": ["The task creates, changes, or relies on AI_FRONT_DOOR.md, AI_TABLE_OF_CONTENTS.md, machine navigation manifests, start-here docs, or knowledge-graph entrypoints."],
+      "does_not_apply_when": ["The task is a trivial edit unrelated to repo navigation or persistent AI onboarding."],
+      "risk_if_misapplied": "May add unnecessary navigation ceremony to tiny tasks, or miss important authority and graph context if applied too weakly."
+    },
+    {
+      "schema_version": "0.1.0",
       "context_tag_id": "software_repo_checklist",
       "label": "Software and repo checklist",
       "description": "A task should compose checklist branches by work dimension and risk tier before implementation or promotion.",

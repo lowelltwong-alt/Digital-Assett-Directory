@@ -537,6 +537,67 @@
       ],
       "enforcement_level": "surface",
       "review_status": "reviewed"
+    },
+    {
+      "schema_version": "0.1.0",
+      "rule_id": "learning-rule:ai-entrypoint-toc-routing-required",
+      "title": "AI entrypoints and TOCs need deterministic routing rows",
+      "summary": "When creating or updating AI front doors, AI tables of contents, machine navigation manifests, or knowledge-graph entrypoints, keep one front door and give TOC entries descriptions, tags, and use-when triggers.",
+      "trigger_terms": [
+        "AI front door",
+        "AI_FRONT_DOOR",
+        "AI table of contents",
+        "AI_TABLE_OF_CONTENTS",
+        "AI TOC",
+        "table of contents",
+        "entrypoint",
+        "front door",
+        "start here",
+        "machine navigation",
+        "knowledge graph entrypoint",
+        "use when",
+        "routing tags"
+      ],
+      "trigger_path_patterns": [
+        "AI_FRONT_DOOR.md",
+        "AI_TABLE_OF_CONTENTS.md",
+        "MACHINE_NAVIGATION_MANIFEST.json",
+        "docs/AI_ENTRYPOINT_AND_TOC_ROUTING_STANDARD.md",
+        "templates/ai-table-of-contents.template.md",
+        "docs/KNOWLEDGE_GRAPH_MODEL.md"
+      ],
+      "context_tags": [
+        "ai_navigation",
+        "source_authority",
+        "software_repo_checklist",
+        "asset_use_pay_forward"
+      ],
+      "applies_when": [
+        "An agent creates, revises, or relies on AI_FRONT_DOOR.md, AI_TABLE_OF_CONTENTS.md, machine navigation manifests, start-here docs, or knowledge-graph entrypoints.",
+        "A repo is being prepared for future AI builders who need deterministic entry, authority, and graph-routing context.",
+        "A table of contents entry is being added and future agents need to know when to read it, not just what it is named."
+      ],
+      "does_not_apply_when": [
+        "The task is a trivial typo or formatting edit unrelated to repo navigation.",
+        "The repo is a short-lived scratch project with no persistent AI navigation need.",
+        "A current navigation standard already provides path, role, tags, use-when triggers, and graph entrypoints for the exact scope being edited."
+      ],
+      "required_actions": [
+        "Keep AI_FRONT_DOOR.md as the single start point and route branches from it.",
+        "Make AI_TABLE_OF_CONTENTS.md entries include path, what it is, tags, and use-when triggers.",
+        "Point from the front door and TOC to knowledge-graph entrypoints when the repo has graph, ontology, taxonomy, registry, or generated relationship outputs.",
+        "Tag generated graph and report outputs as candidate evidence, not source truth.",
+        "Preserve a reusable standard or template so future repos can adopt the same navigation contract."
+      ],
+      "danger_if_ignored": "Future agents may miss authority rules, skip knowledge-graph context, duplicate navigation paths, or treat generated reports as truth because the repo only lists filenames without routing meaning.",
+      "evidence": [
+        "docs/AI_ENTRYPOINT_AND_TOC_ROUTING_STANDARD.md",
+        "AI_FRONT_DOOR.md",
+        "AI_TABLE_OF_CONTENTS.md",
+        "templates/ai-table-of-contents.template.md"
+      ],
+      "enforcement_level": "require_ack",
+      "review_status": "reviewed"
     }
   ],
   "rule": "Reviewed learning rules are deterministic preflight and midflight routing aids. They constrain agent behavior but do not promote generated observations to source truth."

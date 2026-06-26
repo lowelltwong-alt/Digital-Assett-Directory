@@ -4,9 +4,11 @@ Status: curated evidence for a reusable generated-candidate workflow asset.
 
 Source sweep:
 
-- `C:\Users\lowel\OneDrive\Desktop\Nevada Bar Results`
-- Generated report: `processed/reports/external_sweeps/nevada_bar_results_usefulness_sweep.md`
-- Generated candidates: `processed/reports/external_sweeps/nevada_bar_results_usefulness_candidates.json`
+- Local source label: `Nevada Bar Results`; absolute path intentionally omitted from tracked evidence.
+- Generated report: `processed/reports/external_sweeps/nevada_bar_results_usefulness_sweep.md` (ignored by Git)
+- Generated candidates: `processed/reports/external_sweeps/nevada_bar_results_usefulness_candidates.json` (ignored by Git)
+- Public-safe boundary: `docs/NEVADA_BAR_PUBLIC_SAFE_IMPORT_POLICY.md`
+- Safe sweep method: `docs/PUBLIC_SAFE_SOURCE_SWEEPS.md`
 
 ## What Was Detected
 
@@ -59,9 +61,9 @@ Promote as a candidate workflow family for future DAD recognition:
 professional_recruiting_intelligence_workflow_system
 ```
 
-This does not promote Nevada Bar row data, attorney records, recruiting leads, LinkedIn
-matches, acquisition signals, or liftout signals to truth. It only records the workflow shape
-and recognition pattern for future AI builders.
+This does not promote or import Nevada Bar row data, attorney records, recruiting leads,
+LinkedIn matches, acquisition signals, or liftout signals to truth. It only records the
+workflow shape and recognition pattern for future AI builders.
 
 ## Reuse Conditions
 
