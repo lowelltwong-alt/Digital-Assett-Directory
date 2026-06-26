@@ -182,6 +182,24 @@ def test_proposal_indexes_include_asset_type_and_lifecycle_for_eligible_assets_o
         ),
     )
     stale_source_tagged_ci_contract.metadata["instance_class"] = "source"
+    stale_source_tagged_appledouble = make_asset(
+        "stale-source-tagged-appledouble",
+        asset_type="unknown",
+        logical_path=(
+            "git-projects/02_Other_Git_Projects/kirsten-dissertation-knowledge-graph/"
+            "evidence/reference-sources/inbox/pdf-dump/Engagement/._.DS_Store"
+        ),
+    )
+    stale_source_tagged_appledouble.metadata["instance_class"] = "source"
+    stale_source_tagged_scratch = make_asset(
+        "stale-source-tagged-scratch",
+        asset_type="code",
+        logical_path=(
+            "git-projects/02_Other_Git_Projects/orphan_radar/"
+            "orphan-radar/.scratch/files3/review_queue.py"
+        ),
+    )
+    stale_source_tagged_scratch.metadata["instance_class"] = "source"
 
     assets = [
         make_asset("workflow-a", asset_type="workflow", lifecycle="active"),
@@ -202,6 +220,8 @@ def test_proposal_indexes_include_asset_type_and_lifecycle_for_eligible_assets_o
             ),
         ),
         stale_source_tagged_ci_contract,
+        stale_source_tagged_appledouble,
+        stale_source_tagged_scratch,
     ]
 
     indexes = build_proposal_indexes(assets, [], [])
@@ -219,6 +239,8 @@ def test_proposal_indexes_include_asset_type_and_lifecycle_for_eligible_assets_o
     assert "codex-worktree-doc" not in indexes.eligible
     assert "ci-contract-temp-doc" not in indexes.eligible
     assert "stale-source-tagged-ci-contract" not in indexes.eligible
+    assert "stale-source-tagged-appledouble" not in indexes.eligible
+    assert "stale-source-tagged-scratch" not in indexes.eligible
 
 
 def test_proposal_review_record_schema_supports_unreviewed_template():

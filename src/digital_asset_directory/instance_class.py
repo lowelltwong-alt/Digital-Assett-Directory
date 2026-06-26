@@ -9,6 +9,8 @@ EMPTY_MARKER_FILENAMES = {"__init__.py", ".gitkeep", ".keep"}
 ALWAYS_EXCLUDE_PATTERNS = [
     ".DS_Store",
     "**/.DS_Store",
+    "._*",
+    "**/._*",
     "Thumbs.db",
     "**/Thumbs.db",
     "desktop.ini",
@@ -35,6 +37,10 @@ def _parts(path: str) -> list[str]:
     return [part for part in PurePosixPath(_normalized_path(path)).parts if part not in {"", "/"}]
 
 
+def _is_os_junk_name(name: str) -> bool:
+    return name in OS_JUNK_FILENAMES or name.startswith("._")
+
+
 def classify_instance_class(logical_path: str) -> str:
     """Classify whether an observation is a source asset or a non-portfolio instance.
 
@@ -47,7 +53,7 @@ def classify_instance_class(logical_path: str) -> str:
     name = parts[-1] if parts else normalized
     path_with_slashes = f"/{normalized.strip('/')}/"
 
-    if name in OS_JUNK_FILENAMES:
+    if _is_os_junk_name(name):
         return "os_junk"
     if (
         "/.pytest-tmp-root/" in path_with_slashes
@@ -55,6 +61,7 @@ def classify_instance_class(logical_path: str) -> str:
         or ("/pytest-" in path_with_slashes and "/contract-repo/" in path_with_slashes)
         or "/90_ai_tooling_and_temp/" in path_with_slashes
         or "/.ci-contracts/" in path_with_slashes
+        or "/.scratch/" in path_with_slashes
     ):
         return "temp_fixture"
     if any(part in {"processed", "raw", "state"} for part in parts):
@@ -88,7 +95,7 @@ def information_content_class(
     metadata = metadata or {}
     normalized = _normalized_path(logical_path)
     name = PurePosixPath(normalized).name
-    if name in OS_JUNK_FILENAMES:
+    if _is_os_junk_name(name):
         return "os_junk"
     if size_bytes == 0 and name in EMPTY_MARKER_FILENAMES:
         return "empty_marker"
