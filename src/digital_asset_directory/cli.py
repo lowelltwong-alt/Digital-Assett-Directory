@@ -68,6 +68,7 @@ from .research import research_missing_parts
 from .roadmap import check_roadmap
 from .semantic_evolution import write_semantic_evolution_outputs
 from .validation import validate_repo
+from .workflow_parts import write_workflow_part_outputs
 
 app = typer.Typer(no_args_is_help=True, help="Digital Asset Directory portfolio intelligence CLI.")
 lesson_app = typer.Typer(no_args_is_help=True)
@@ -566,6 +567,28 @@ def recommend_workflow_sweeps(
             include_noise=include_noise,
             usefulness_per_sweep_limit=usefulness_per_sweep_limit,
             usefulness_global_limit=usefulness_global_limit,
+        )
+    console.print_json(data=result)
+
+
+@recommend_app.command("workflow-parts")
+def recommend_workflow_parts(
+    hub: Optional[Path] = typer.Option(None),
+    source_id: str = typer.Option("all", "--source-id"),
+    review_sample: int = typer.Option(50, "--review-sample", min=1, max=200),
+) -> None:
+    """Write generated candidate workflow-part records from the current catalog."""
+    cfg = _cfg(hub=hub)
+    with CatalogDB(cfg.database_path) as db:
+        latest_scan = db.latest_scan()
+        scan_id = latest_scan["scan_id"] if latest_scan else "catalog-without-scan"
+        result = write_workflow_part_outputs(
+            cfg.repo_root,
+            db.assets(),
+            db.edges(),
+            scan_id=scan_id,
+            source_id=source_id,
+            review_sample=review_sample,
         )
     console.print_json(data=result)
 

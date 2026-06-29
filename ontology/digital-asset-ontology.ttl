@@ -20,6 +20,7 @@ dad:SemanticEvolutionCandidate a owl:Class ; rdfs:subClassOf prov:Entity .
 dad:DuplicateCluster a owl:Class ; rdfs:subClassOf prov:Entity .
 dad:Repository a owl:Class ; rdfs:subClassOf dad:DigitalAsset .
 dad:Workflow a owl:Class ; rdfs:subClassOf dad:DigitalAsset .
+dad:WorkflowPart a owl:Class ; rdfs:subClassOf prov:Entity .
 dad:CompositeAsset a owl:Class ; rdfs:subClassOf dad:DigitalAsset .
 dad:AssetBundle a owl:Class ; rdfs:subClassOf dad:CompositeAsset .
 dad:AssetCluster a owl:Class ; rdfs:subClassOf dad:CompositeAsset .
@@ -70,6 +71,11 @@ dad:composesWith a owl:ObjectProperty, owl:SymmetricProperty ; rdfs:domain dad:D
 dad:unsafeCompositionWith a owl:ObjectProperty, owl:SymmetricProperty ; rdfs:domain dad:DigitalAsset ; rdfs:range dad:DigitalAsset .
 dad:contaminatesIfDefault a owl:ObjectProperty ; rdfs:domain dad:DigitalAsset ; rdfs:range dad:DigitalAsset .
 dad:supportsButCannotOverride a owl:ObjectProperty ; rdfs:domain dad:DigitalAsset ; rdfs:range dad:DigitalAsset .
+dad:producesInputFor a owl:ObjectProperty ; rdfs:domain dad:WorkflowPart ; rdfs:range dad:WorkflowPart .
+dad:substitutesFor a owl:ObjectProperty, owl:SymmetricProperty ; rdfs:domain dad:WorkflowPart ; rdfs:range dad:WorkflowPart .
+dad:specializes a owl:ObjectProperty ; rdfs:domain dad:WorkflowPart ; rdfs:range dad:WorkflowPart .
+dad:generalizes a owl:ObjectProperty ; rdfs:domain dad:WorkflowPart ; rdfs:range dad:WorkflowPart .
+dad:quarantines a owl:ObjectProperty ; rdfs:domain dad:WorkflowPart ; rdfs:range dad:DigitalAsset .
 dad:observedInAttempt a owl:ObjectProperty ; rdfs:domain prov:Entity ; rdfs:range dad:WorktreeAttempt .
 dad:changedWith a owl:ObjectProperty, owl:SymmetricProperty ; rdfs:domain dad:DigitalAsset ; rdfs:range dad:DigitalAsset .
 dad:failedBefore a owl:ObjectProperty ; rdfs:domain dad:FailureSignal ; rdfs:range prov:Entity .

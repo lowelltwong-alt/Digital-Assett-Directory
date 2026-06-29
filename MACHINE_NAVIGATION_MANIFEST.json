@@ -34,6 +34,7 @@
     "asset_types": "registry/asset-type-registry.json",
     "asset_patterns": "registry/asset-pattern-registry.json",
     "context_tags": "registry/context-tag-registry.json",
+    "workflow_part_types": "registry/workflow-part-type-registry.json",
     "learning_rules": "registry/learning-rule-registry.json",
     "semantic_evolution_grades": "registry/semantic-evolution-grade-registry.json",
     "identity_layers": "registry/identity-layer-registry.json",
