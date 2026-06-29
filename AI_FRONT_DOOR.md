@@ -69,6 +69,7 @@ not prove source truth, value, authority, or promotion.
 | `processed/graph/graph.json` | Generated graph output. | You need candidate edges from the latest processed catalog; treat as generated evidence. |
 | `processed/reports/asset_family_recognition.md` | Generated report of asset-family candidates. | You need composite workflow or family candidates from scans. |
 | `processed/reports/workflow_sweeps/workflow_sweeps_index.md` | Generated workflow-sweep index. | You need cross-repo workflow pattern candidates. |
+| `processed/reports/workflow_part_recognition.md` | Generated workflow-part report. | You need recombinable workflow sub-unit candidates beneath existing asset patterns. |
 
 ## Core boundary
 
@@ -89,6 +90,7 @@ Discovery output is evidence and recommendation, not source-repository authority
 - asset identity and revision identity;
 - the Asset Identity And Similarity Ladder for exact identity, similarity, graph discovery, and audit provenance;
 - catalog metadata and local graph vocabulary;
+- generated workflow-part candidates beneath existing asset-family patterns;
 - candidate value, staleness, orphan, missing-part, and synergy scoring;
 - lessons and AI handoff capture;
 - AI entrypoints and downstream integration templates;

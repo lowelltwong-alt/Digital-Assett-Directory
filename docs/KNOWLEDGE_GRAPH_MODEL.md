@@ -39,6 +39,21 @@ Asset-family recognition may also emit candidate edges such as `routes_to`,
 future agents inspect workflows, learning loops, and composition risks. They do not
 authorize implementation, source mutation, or source-authority override.
 
+Workflow-part recognition sits beneath asset-family recognition. A
+`WorkflowPartRecord` is a generated candidate for a recombinable sub-unit such
+as a validator, contract, gate, runner, prompt part, human gate, learning
+signal, boundary map, calibration gate, or quarantine gate. It references an
+existing asset pattern instead of replacing the pattern registry. V1 records
+only deterministic metadata and sanitized asset-id references; inputs, outputs,
+preconditions, side effects, failure modes, and composition affordances remain
+empty unless declared, structured, or human-reviewed.
+
+Workflow-part recomposition reuses existing graph vocabulary first. The narrow
+new edge types are `produces_input_for`, `substitutes_for`, `specializes`,
+`generalizes`, and `quarantines`. These are candidate planning signals only.
+They do not prove that two parts are safe to compose, do not select a canonical
+variant, and do not cross source-authority boundaries without human review.
+
 ## Composite Asset Recognition
 
 A digital asset may be a single file, but high-leverage assets are often composites:

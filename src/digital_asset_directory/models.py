@@ -345,6 +345,55 @@ class LearningLoopRecord(BaseModel):
     review_status: Literal["generated_candidate", "reviewed", "rejected"] = "generated_candidate"
 
 
+class WorkflowPartRecord(BaseModel):
+    schema_version: str = "0.1.0"
+    part_id: str
+    part_type: Literal[
+        "validator",
+        "contract",
+        "gate",
+        "runner",
+        "orchestrator",
+        "prompt_part",
+        "capability_provider",
+        "human_gate",
+        "eval_gold",
+        "learning_signal",
+        "boundary_map",
+        "decision_record",
+        "lesson_part",
+        "calibration_gate",
+        "quarantine_gate",
+    ]
+    source_asset_ids: list[str] = Field(min_length=1)
+    asset_pattern_id: str = Field(min_length=1)
+    role_in_workflow: str = Field(min_length=1)
+    inputs: list[str] = Field(default_factory=list)
+    outputs: list[str] = Field(default_factory=list)
+    preconditions: list[str] = Field(default_factory=list)
+    postconditions: list[str] = Field(default_factory=list)
+    side_effects: list[str] = Field(default_factory=list)
+    authority_boundary: str = Field(min_length=1)
+    human_gates: list[str] = Field(default_factory=list)
+    validation_commands: list[str] = Field(default_factory=list)
+    failure_modes: list[str] = Field(default_factory=list)
+    applies_when: list[str] = Field(min_length=1)
+    does_not_apply_when: list[str] = Field(min_length=1)
+    danger_if_misapplied: str = Field(min_length=1)
+    composition_affordances: list[str] = Field(default_factory=list)
+    incompatible_parts: list[str] = Field(default_factory=list)
+    example_workflows: list[str] = Field(default_factory=list)
+    context_tags: list[str] = Field(default_factory=list)
+    maturity: Literal["recognized", "validated", "reused", "reviewed"] = "recognized"
+    confidence: ConfidenceLabel = "medium"
+    risk: Literal["low", "medium", "high"] = "medium"
+    evidence: dict[str, Any] = Field(min_length=1)
+    methodology_version: str = "workflow-part-recognition-v1"
+    generated_at: str
+    scan_id: str
+    review_status: Literal["generated_candidate", "reviewed", "rejected"] = "generated_candidate"
+
+
 class ContextTagRecord(BaseModel):
     schema_version: str = "0.1.0"
     context_tag_id: str

@@ -1,0 +1,113 @@
+{
+  "registry_version": "0.1.0",
+  "status": "seed",
+  "methodology_version": "workflow-part-recognition-v1",
+  "part_types": [
+    {
+      "id": "validator",
+      "label": "Validator",
+      "description": "A test, audit, or validator that checks a contract, generated output, workflow, or safety boundary.",
+      "deterministic_v1_signals": ["test assets", "validate/audit/check paths", "pytest or validation language"],
+      "public_safe": true
+    },
+    {
+      "id": "contract",
+      "label": "Contract",
+      "description": "A schema, ontology, taxonomy, or structured interface that constrains records or graph meaning.",
+      "deterministic_v1_signals": ["schema assets", "ontology/taxonomy assets", "contract language"],
+      "public_safe": true
+    },
+    {
+      "id": "gate",
+      "label": "Gate",
+      "description": "A CI, hook, policy, or approval check that blocks unsafe promotion, mutation, or release.",
+      "deterministic_v1_signals": ["workflow files", "preflight/postflight language", "approval or block language"],
+      "public_safe": true
+    },
+    {
+      "id": "runner",
+      "label": "Runner",
+      "description": "A command, script, task file, or orchestration entrypoint that runs workflow steps.",
+      "deterministic_v1_signals": ["build/run/script paths", "nox/make/just task files"],
+      "public_safe": true
+    },
+    {
+      "id": "orchestrator",
+      "label": "Orchestrator",
+      "description": "A runbook or workflow controller that orders multiple parts without being the only authority.",
+      "deterministic_v1_signals": ["workflow assets", "runbook or orchestration language", "ordered step language"],
+      "public_safe": true
+    },
+    {
+      "id": "prompt_part",
+      "label": "Prompt Part",
+      "description": "A prompt, instruction, front-door, or agent-facing text component.",
+      "deterministic_v1_signals": ["prompt assets", "AI front-door paths", "agent instruction language"],
+      "public_safe": true
+    },
+    {
+      "id": "capability_provider",
+      "label": "Capability Provider",
+      "description": "An agent, skill, adapter, script, or registry entry that provides a reusable capability.",
+      "deterministic_v1_signals": ["agent or skill assets", "capability fields", "adapter/provider language"],
+      "public_safe": true
+    },
+    {
+      "id": "human_gate",
+      "label": "Human Gate",
+      "description": "A review packet, approval path, or evidence gate requiring human judgment before promotion.",
+      "deterministic_v1_signals": ["human gate tags", "review packet paths", "approval/evidence gate language"],
+      "public_safe": true
+    },
+    {
+      "id": "eval_gold",
+      "label": "Evaluation Gold Set",
+      "description": "Gold, expected, fixture, benchmark, or review examples used to evaluate behavior.",
+      "deterministic_v1_signals": ["gold/golden/expected fixture language", "evaluation assets", "scorecard language"],
+      "public_safe": true
+    },
+    {
+      "id": "learning_signal",
+      "label": "Learning Signal",
+      "description": "A failure, exception, feedback, postflight, handoff, or lesson cue that can improve future work.",
+      "deterministic_v1_signals": ["lesson/handoff assets", "failure/exception/feedback language"],
+      "public_safe": true
+    },
+    {
+      "id": "boundary_map",
+      "label": "Boundary Map",
+      "description": "A source-authority, privacy, security, public-safe, or cross-repo boundary surface.",
+      "deterministic_v1_signals": ["authority, privacy, security, or source-boundary language"],
+      "public_safe": true
+    },
+    {
+      "id": "decision_record",
+      "label": "Decision Record",
+      "description": "An ADR, roadmap evidence file, gate evidence file, or decision log that records why a path was chosen.",
+      "deterministic_v1_signals": ["decision/ADR/evidence paths", "roadmap gate language"],
+      "public_safe": true
+    },
+    {
+      "id": "lesson_part",
+      "label": "Lesson Part",
+      "description": "A reusable lesson, deterministic rule, or pay-forward note with applicability limits.",
+      "deterministic_v1_signals": ["lesson assets", "applies_when/does_not_apply_when language"],
+      "public_safe": true
+    },
+    {
+      "id": "calibration_gate",
+      "label": "Calibration Gate",
+      "description": "A label, threshold, score, false-positive, false-negative, or measured review step.",
+      "deterministic_v1_signals": ["calibration assets", "threshold/score/label language"],
+      "public_safe": true
+    },
+    {
+      "id": "quarantine_gate",
+      "label": "Quarantine Gate",
+      "description": "A scanner, exclusion, quarantine, secret, or unsafe-input control that keeps risky material out of default use.",
+      "deterministic_v1_signals": ["quarantine/security/exclusion language", "secret or prompt-injection checks"],
+      "public_safe": true
+    }
+  ],
+  "rule": "Workflow part records are generated candidates. They store role and metadata only, never private row content or source-repository authority claims."
+}

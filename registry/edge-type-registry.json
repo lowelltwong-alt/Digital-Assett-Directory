@@ -198,6 +198,31 @@
       "meaning": "A supporting asset can guide, validate, or enrich another asset but cannot override that source asset's authority."
     },
     {
+      "id": "produces_input_for",
+      "direction": "producer_to_consumer",
+      "meaning": "A workflow part appears to produce an output that can become an input to another workflow part. Generated candidate only unless declared or reviewed."
+    },
+    {
+      "id": "substitutes_for",
+      "direction": "symmetric",
+      "meaning": "Workflow parts appear to fill a similar role and may be interchangeable in a bounded context. This is not variant lineage or a canonical-preference claim."
+    },
+    {
+      "id": "specializes",
+      "direction": "specific_to_general",
+      "meaning": "A workflow part appears to be a narrower or domain-specific version of a broader workflow part."
+    },
+    {
+      "id": "generalizes",
+      "direction": "general_to_specific",
+      "meaning": "A workflow part appears to be a broader reusable form of a narrower or domain-specific workflow part."
+    },
+    {
+      "id": "quarantines",
+      "direction": "gate_to_input_or_asset",
+      "meaning": "A security, privacy, source-scope, or quality gate routes an input or asset out of default use until review."
+    },
+    {
       "id": "observed_in_attempt",
       "direction": "signal_to_attempt",
       "meaning": "A generated signal, failure, or lesson candidate was observed inside a worktree, temp repo, archive, or repository attempt."

@@ -53,6 +53,17 @@
 | `metadata.workflow_steps` | For workflow assets, ordered or named steps when known. |
 | `metadata.chunk_text` | Redacted extracted text used for deterministic token-shingle chunking. Generated output only. |
 
+## Workflow-part candidates
+
+| Record / field | Meaning | Authority |
+|---|---|---|
+| `WorkflowPartRecord` | Generated candidate for a recombinable sub-unit beneath an asset pattern, such as a validator, contract, gate, runner, prompt part, human gate, learning signal, boundary map, calibration gate, or quarantine gate. | Generated candidate evidence |
+| `part_type` | Controlled part role from `registry/workflow-part-type-registry.json`. | Directory contract |
+| `asset_pattern_id` | Existing high-level asset pattern this part supports; the part does not replace the pattern registry. | Generated candidate relationship |
+| `inputs` / `outputs` / `preconditions` / `side_effects` | Empty in deterministic v1 unless declared in structured metadata or reviewed by a human. | Candidate constraint |
+| `maturity` | Recognized, validated, reused, or reviewed; v1 defaults to recognized and does not claim validation merely because a test-like file exists. | Candidate routing signal |
+| `methodology_version` | The recognition method and formulas used to produce the candidate. Current value: `workflow-part-recognition-v1`. | Directory contract |
+
 ## Learning-loop candidates
 
 | Record / field | Meaning | Authority |

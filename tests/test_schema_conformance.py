@@ -24,6 +24,7 @@ from digital_asset_directory.models import (
     RootCauseHypothesisRecord,
     SemanticEvolutionRecord,
     WorktreeAttemptRecord,
+    WorkflowPartRecord,
 )
 
 import pytest
@@ -193,6 +194,32 @@ def test_learning_loop_model_dump_matches_registered_schema():
     )
 
     validate_registered_schema("learning_loop", record.model_dump(mode="json"))
+
+
+def test_workflow_part_model_dump_matches_registered_schema():
+    record = WorkflowPartRecord(
+        part_id="dad:workflow-part:test",
+        part_type="validator",
+        source_asset_ids=["dad:asset:test"],
+        asset_pattern_id="evaluation_contract_system",
+        role_in_workflow="Checks generated outputs before promotion.",
+        authority_boundary="Generated candidate only; source repositories retain authority.",
+        validation_commands=["python -m pytest tests/test_example.py"],
+        applies_when=["A workflow emits a structured output."],
+        does_not_apply_when=["The task is exploratory prose."],
+        danger_if_misapplied="May be mistaken for passing validation when it has not run.",
+        composition_affordances=["tests", "stabilized_by"],
+        example_workflows=["dad:asset:test"],
+        context_tags=["schema_contract"],
+        maturity="recognized",
+        confidence="medium",
+        risk="low",
+        evidence={"source": "test"},
+        generated_at="2026-01-01T00:00:00+00:00",
+        scan_id="dad:scan:test",
+    )
+
+    validate_registered_schema("workflow_part", record.model_dump(mode="json"))
 
 
 def test_learning_rule_model_dump_matches_registered_schema():

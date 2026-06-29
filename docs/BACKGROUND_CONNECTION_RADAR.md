@@ -273,16 +273,17 @@ Reuse-first mapping:
 | Unsafe or boundary-risky connection | `unsafe_composition_with`, `contaminates_if_default`, `supports_but_cannot_override` |
 | Duplicate, variant, or lineage evidence | `variant_of`, `near_duplicate_of`, `lineage_evidence_for`, `has_delta_candidate` |
 
-Possible future edge additions should be minimal and only after implementation-time
-registry review. Claude's candidate additions were:
+WorkflowPartRecord Phase A added the narrow edge additions after
+implementation-time registry review:
 
 - `produces_input_for`
 - `substitutes_for`
 - `specializes`
 - `generalizes`
 - `quarantines`
-- optional `incompatible_with`, only if structural incompatibility is distinct
-  from `unsafe_composition_with`
+
+`incompatible_with` remains deferred unless structural incompatibility proves
+distinct from `unsafe_composition_with`.
 
 Do not add near-synonym edges when an existing edge plus context tag is enough.
 
@@ -300,10 +301,15 @@ Current distinction:
 | Connection candidate | A proposed relation between assets or parts. |
 | Assembly packet | A candidate plan for combining parts in a new context. |
 
-Future candidate contract: `WorkflowPartRecord`.
+Candidate contract: `WorkflowPartRecord`.
 
-V1 should not invent this contract until the field shape is reviewed, but the
-design should reserve space for it. Deterministically knowable fields include:
+Phase A implements this contract and the manual command:
+
+```text
+asset-dir recommend workflow-parts --source-id all --review-sample 50
+```
+
+Deterministically knowable fields include:
 
 - `part_id`
 - `part_type`
@@ -333,6 +339,9 @@ Fields that must remain empty unless declared, structured, or human-reviewed:
 
 This prevents the radar from hallucinating dataflow from filenames or weak
 semantic similarity.
+
+Workflow-part assembly packs and preflight surfacing remain deferred until
+reviewed part examples exist and the ceremony threshold is calibrated.
 
 ## Multi-Hop Expansion
 
@@ -484,8 +493,8 @@ Applied synthesis from Claude's workflow-composition red-team:
 
 - reuse existing edge, context-tag, and asset-pattern registries first;
 - add only genuinely missing edge types after registry review;
-- treat `WorkflowPartRecord` as a future candidate contract beneath existing
-  asset patterns;
+- treat `WorkflowPartRecord` as a candidate contract beneath existing asset
+  patterns;
 - recognize one part per asset family, not one per temp or pytest copy;
 - keep private/public-safe boundaries from `docs/PUBLIC_SAFE_SOURCE_SWEEPS.md`;
 - use same-repo or same-family evidence before cross-repo recomposition unless a
@@ -539,6 +548,8 @@ Defaults adopted for v1:
 - Tier 2 strong-model verification is manual until Phase 4 provider/privacy
   gates;
 - review-packet labels stay generated-only before any edge-registry promotion;
+- workflow-part records stay generated-only and are not shown in preflight by
+  default;
 - verified connections can affect ceiling or edge-candidacy review, not current
   score, until calibrated.
 
@@ -546,9 +557,8 @@ Remaining decisions:
 
 - threshold calibration for when real catalog candidates should become
   escalation packets;
-- whether workflow parts live in public-safe tracked evidence, private generated
-  records, or both;
-- which asset patterns are mature enough for first workflow-part families;
+- which workflow-part families are useful enough for human review and later
+  preflight surfacing;
 - whether scheduled or postflight-triggered runs are worth the governance cost
   after the manual one-shot experiment.
 

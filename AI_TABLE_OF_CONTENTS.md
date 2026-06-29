@@ -33,6 +33,7 @@ them.
 | `cross_repo` | Multi-repo patterns, workflows, and authority boundaries. |
 | `validation` | Tests, CLI validators, and verification reports. |
 | `background_connection` | Low-compute connection scouting, escalation packets, and bounded expansion maps. |
+| `workflow_part` | Reusable workflow sub-units beneath asset patterns. |
 
 ## Front Doors And Authority
 
@@ -92,6 +93,8 @@ them.
 | `processed/graph/graph.json` | Generated candidate graph. | `knowledge_graph`, `generated_output` | You need current generated graph evidence; never treat it as truth. |
 | `processed/reports/asset_family_recognition.md` | Generated asset-family candidate report. | `knowledge_graph`, `generated_output`, `workflow` | You need candidate composite assets or family patterns. |
 | `processed/reports/workflow_sweeps/workflow_sweeps_index.md` | Generated workflow-sweep index. | `knowledge_graph`, `generated_output`, `cross_repo` | You need cross-repo workflow candidates. |
+| `processed/reports/workflow_part_recognition.md` | Generated workflow-part candidate report. | `knowledge_graph`, `generated_output`, `workflow_part` | You need recombinable sub-units such as validators, contracts, gates, runners, prompt parts, learning signals, and quarantine gates. |
+| `processed/reports/workflow_part_review_sample.md` | Generated workflow-part review queue sample. | `generated_output`, `workflow_part`, `calibration` | You need to review whether detected parts are useful, safe, too broad, or missing declared dataflow. |
 | `processed/reports/background_connection_candidates.md` | Generated manual-review report for background connection candidates. | `knowledge_graph`, `generated_output`, `background_connection` | You need candidate links between current attention and cold-storage assets. |
 | `processed/reports/background_connection_escalation_packets.md` | Generated bounded review packets for high-score candidate connections. | `knowledge_graph`, `generated_output`, `background_connection` | You need minimal context for fresh-eyes review or future strong-model verification. |
 
@@ -110,6 +113,7 @@ them.
 | `schemas/lesson.schema.json` | Lesson record contract. | `schema`, `learning_loop` | You capture reusable lessons. |
 | `schemas/learning-rule.schema.json` | Reviewed learning-rule contract. | `schema`, `learning_loop`, `authority` | You add rules that preflight or midflight can surface. |
 | `schemas/learning-loop.schema.json` | Learning-loop candidate contract. | `schema`, `learning_loop` | You generate learning-loop candidates. |
+| `schemas/workflow-part.schema.json` | Workflow-part candidate contract. | `schema`, `workflow_part`, `knowledge_graph` | You generate or validate recombinable workflow sub-units beneath existing asset patterns. |
 | `schemas/context-tag.schema.json` | Context tag contract. | `schema`, `registry`, `learning_loop` | You add or validate context vocabulary. |
 | `schemas/worktree-attempt.schema.json` | Worktree attempt contract. | `schema`, `learning_loop`, `cross_repo` | You mine temp or worktree attempts. |
 | `schemas/repo-timeline-event.schema.json` | Repo timeline event contract. | `schema`, `learning_loop`, `cross_repo` | You mine bounded local git history. |
@@ -141,6 +145,7 @@ them.
 | `registry/asset-type-registry.json` | Controlled asset type vocabulary. | `registry`, `knowledge_graph` | You classify what an asset is. |
 | `registry/asset-pattern-registry.json` | High-leverage asset pattern vocabulary. | `registry`, `knowledge_graph`, `workflow` | You classify reusable systems and composite workflows. |
 | `registry/context-tag-registry.json` | Context tags for lesson and routing constraints. | `registry`, `learning_loop` | You define when lessons apply or do not apply. |
+| `registry/workflow-part-type-registry.json` | Controlled workflow-part role vocabulary. | `registry`, `workflow_part`, `knowledge_graph` | You classify recombinable workflow parts such as validators, contracts, gates, runners, and learning signals. |
 | `registry/learning-rule-registry.json` | Reviewed deterministic learning rules. | `registry`, `learning_loop`, `authority` | You change preflight/midflight surfaced rules. |
 | `registry/semantic-evolution-grade-registry.json` | Semantic evolution grade thresholds. | `registry`, `calibration` | You grade change versus noise. |
 | `registry/identity-layer-registry.json` | Identity/similarity layer definitions. | `registry`, `knowledge_graph` | You compare assets at exact, chunk, semantic, or graph layers. |
@@ -158,6 +163,7 @@ them.
 | `docs/OPERATIONS.md` | Operational command and runbook guidance. | `workflow`, `validation` | You run DAD tasks. |
 | `docs/PROPOSAL_ENGINE_CALIBRATION_WORKFLOW.md` | Proposal review workflow. | `calibration`, `workflow` | You review bottom-up and top-down proposal engines. |
 | `asset-dir recommend workflow-sweeps` | CLI command for generated workflow-family sweep reports. | `workflow`, `generated_output`, `cross_repo` | You need generated workflow candidates. |
+| `asset-dir recommend workflow-parts` | CLI command for generated workflow-part candidates from the current catalog. | `workflow`, `workflow_part`, `generated_output` | You need recombinable sub-unit candidates without rescanning or mutating source repos. |
 | `asset-dir recommend background-connections` | CLI command for manual, local-only background connection scouting. | `background_connection`, `generated_output`, `knowledge_graph` | You want bounded candidate connections without rescanning, daemon work, GitHub, or model calls. |
 | `docs/DOWNSTREAM_REPO_GOVERNANCE.md` | Downstream governance install and pilot guidance. | `workflow`, `authority`, `cross_repo` | You prepare a sandbox or downstream pilot. |
 | `docs/TESTING_AND_ORCHESTRATION.md` | Marker taxonomy, change-driven test selection, and nox tasks. | `validation`, `workflow` | You select or explain tests. |
@@ -203,6 +209,7 @@ them.
 | `roadmap/evidence/background-connection-radar-synthesis.md` | Synthesis of Codex's radar design and Claude's workflow-composition red-team. | `roadmap`, `knowledge_graph`, `workflow` | You need the reuse-first design decision before implementing connection or workflow-part logic. |
 | `roadmap/evidence/claude-background-connection-radar-review.md` | Claude's fresh-eyes review adding gate-before-score math, privacy-first attention, compute caps, and family dedup. | `roadmap`, `knowledge_graph`, `calibration` | You need the independent hardening review before implementing background connection scoring or escalation. |
 | `roadmap/evidence/background-connection-radar-v1-implementation.md` | Implementation evidence, red-team, premortem, validation, and risks for manual radar v1. | `roadmap`, `background_connection`, `validation` | You verify what v1 shipped and why it remains candidate-only. |
+| `roadmap/evidence/workflow-part-record-phase-a.md` | Implementation evidence for WorkflowPartRecord Phase A. | `roadmap`, `workflow_part`, `validation` | You need the contract, conservative defaults, risks, and validation status for workflow-part recognition. |
 | `roadmap/evidence/claude-workflow-composition-red-team.md` | Claude's independent warning against ontology sprawl and recommendation for WorkflowPartRecord. | `roadmap`, `workflow`, `knowledge_graph` | You need the fresh-eyes review behind the background-radar synthesis. |
 | `roadmap/evidence/phase-3-sandbox-pilot.md` | Sandbox downstream-governance pilot evidence. | `roadmap`, `downstream_governance`, `validation` | You verify Phase 3 gates or learn how the files-only learning loop was tested. |
 | `roadmap/evidence/phase-4-semantic-enrichment.md` | Conservative Phase 4 semantic-enrichment boundary and evaluation evidence. | `roadmap`, `semantic_enrichment`, `privacy` | You need to know what Phase 4 approved, what remains deferred, or why embeddings are still gated. |
