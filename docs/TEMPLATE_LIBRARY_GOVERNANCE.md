@@ -7,6 +7,16 @@ checklists, governance blocks, handoffs, lessons, feedback, and downstream repo
 scaffolds. They are not just files; each registered template must declare what it
 depends on and what depends on it.
 
+The cross-repo governance dependency-map template is a higher-risk governance
+seed. It is useful when a repo family needs an upstream/control-plane governance
+map and child-repo mirrors, but it must be adapted to the target repo family's
+actual authority. It is registered as:
+
+```text
+template:cross-repo-governance-dependency-map
+templates/cross-repo-governance-dependency-map/
+```
+
 ## Command
 
 ```powershell
@@ -50,6 +60,11 @@ Deferred behavior:
 - cross-repo template propagation;
 - downstream repo rewrites;
 - hook updates without explicit human approval.
+
+Cross-repo governance dependency-map adoption remains human-approved. DAD can
+provide templates and validation stubs, but it cannot decide the upstream
+authority, install child mirrors, or let a generated scaffold override local
+repo governance.
 
 ## Dependency Model
 

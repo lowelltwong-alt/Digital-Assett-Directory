@@ -203,6 +203,44 @@ Danger if misapplied:
 - A vertical demo, runtime observation, local copy, or generated export can be mistaken for
   platform canon.
 
+### Cross-Repo Governance Dependency Map Pattern
+
+Seed examples:
+
+- Logos governance architecture dependency map and changed-path validator.
+- Logos boundary literature child mirror and local mirror validator.
+- Logos Scripture graph child mirror on `origin/main`.
+
+Reusable shape:
+
+```text
+upstream governance authority
+-> governance dependency map
+-> child repo mirror controls
+-> AI front door and TOC routes
+-> repo contract and PR-description checks
+-> validator and test
+-> handoff/adoption checklist
+```
+
+Use when:
+
+- one control-plane repo owns governance truth for a repo family;
+- child repos need local mirrors but cannot override upstream governance;
+- governance-facing file changes must update maps, front doors, TOCs, repo contracts,
+  PR descriptions, validators, and tests together.
+
+Do not use as-is when:
+
+- there is no real upstream/local authority relationship;
+- the template would copy domain-specific source rules from another repo family;
+- the adopting repo cannot maintain validators.
+
+Danger if misapplied:
+
+- A child repo can appear authorized to weaken upstream governance, or a stale template can
+  create false confidence without a living fail-closed check.
+
 ### Calibration And A/B Gate System
 
 Seed examples:

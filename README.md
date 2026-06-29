@@ -37,6 +37,9 @@ Turn scattered files, repositories, lessons, schemas, workflows, prompts, tests,
 - A roadmap with machine-checkable phase gates.
 - JSON Schemas, a SKOS taxonomy seed, and a lightweight RDF/OWL ontology seed.
 - Optional integration with the existing `orphan-radar` repository.
+- A reusable cross-repo governance dependency-map pattern and template seed for
+  future repo families that need upstream governance maps, child mirrors, AI
+  discovery surfaces, PR disclosure, validators, and tests aligned from day one.
 
 ## Safety posture
 

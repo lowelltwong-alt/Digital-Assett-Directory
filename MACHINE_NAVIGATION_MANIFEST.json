@@ -25,6 +25,7 @@
     "registry/asset-pattern-registry.json",
     "registry/context-tag-registry.json",
     "registry/template-registry.json",
+    "docs/CROSS_REPO_GOVERNANCE_DEPENDENCY_MAP_PATTERN.md",
     "processed/graph/graph.json",
     "processed/reports/asset_family_recognition.md",
     "processed/reports/workflow_sweeps/workflow_sweeps_index.md",

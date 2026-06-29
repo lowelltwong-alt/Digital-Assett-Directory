@@ -36,6 +36,7 @@ them.
 | `workflow_part` | Reusable workflow sub-units beneath asset patterns. |
 | `repo_buildout` | Repo-specific buildout advice from cataloged assets, workflows, alerts, and safe inspiration candidates. |
 | `template_library` | Reusable templates, dependencies, review cadence, and template upgrade governance. |
+| `governance` | Governance maps, repo contracts, authority mirrors, PR checks, and fail-closed controls. |
 
 ## Front Doors And Authority
 
@@ -67,6 +68,7 @@ them.
 | `docs/SOFTWARE_REPO_CHECKLIST_TREE.md` | Checklist tree for software, repo, data, workflow, scoring, governance, source-scan, and release work. | `workflow`, `validation`, `security_privacy` | You plan or implement non-trivial repo work. |
 | `docs/WORKFLOW_SWEEPS.md` | Governance-first candidate sweeps for workflow assets across repos. | `workflow`, `cross_repo`, `generated_output` | You need to find workflow assets from scans. |
 | `docs/CROSS_REPO_WORKFLOW_ASSET_PATTERNS.md` | Reusable workflow patterns found across major repo families. | `workflow`, `cross_repo`, `knowledge_graph` | You want to compose or recognize workflows across repos. |
+| `docs/CROSS_REPO_GOVERNANCE_DEPENDENCY_MAP_PATTERN.md` | Reusable pattern and adoption guide for upstream governance maps, child mirrors, discovery surfaces, PR disclosure, validators, and tests. | `workflow`, `cross_repo`, `governance`, `template_library`, `validation` | You design or scan for repo-family governance dependency-map patterns. |
 | `docs/PROFESSIONAL_RECRUITING_INTELLIGENCE_WORKFLOW.md` | Official-source professional identity, enrichment, recruiting, acquisition, and liftout workflow. | `workflow`, `public_safe`, `security_privacy` | You are modeling attorney/professional intelligence without importing private rows. |
 | `docs/PUBLIC_SAFE_SOURCE_SWEEPS.md` | Metadata-only sweep workflow for private sources. | `public_safe`, `security_privacy`, `workflow` | You need reusable lessons from sensitive repos without copying data. |
 | `docs/NEVADA_BAR_PUBLIC_SAFE_IMPORT_POLICY.md` | Public-safe boundary for Nevada Bar workflow reuse. | `public_safe`, `security_privacy`, `authority` | You scan Nevada-style sources and must avoid row-level import. |
@@ -91,6 +93,7 @@ them.
 | `registry/asset-pattern-registry.json` | Controlled high-leverage asset pattern vocabulary. | `knowledge_graph`, `registry`, `workflow` | You classify workflows, composite assets, or reusable systems. |
 | `registry/context-tag-registry.json` | Controlled context tags for lessons and routing. | `knowledge_graph`, `registry`, `learning_loop` | You constrain when a lesson or pattern applies. |
 | `registry/template-registry.json` | Controlled template library with direct and reverse dependencies. | `registry`, `template_library`, `workflow` | You create, update, validate, or reuse templates and need impact analysis. |
+| `docs/CROSS_REPO_GOVERNANCE_DEPENDENCY_MAP_PATTERN.md` | Cross-repo governance dependency-map digital asset and scanning checklist. | `knowledge_graph`, `cross_repo`, `workflow`, `template_library` | You need the reusable control-plane/child-mirror pattern or want to recognize missing versions in scanned repos. |
 | `registry/capability-registry.json` | Controlled capability IDs. | `knowledge_graph`, `registry` | You connect assets to what they can do. |
 | `registry/need-registry.json` | Controlled need and missing-part IDs. | `knowledge_graph`, `registry` | You connect assets to gaps or activation needs. |
 | `processed/graph/graph.json` | Generated candidate graph. | `knowledge_graph`, `generated_output` | You need current generated graph evidence; never treat it as truth. |
@@ -202,6 +205,7 @@ them.
 | `templates/software-repo-checklist-tree.template.md` | Reusable checklist-tree record. | `workflow`, `validation` | You document selected checklist branches. |
 | `templates/ai-table-of-contents.template.md` | Reusable AI TOC template with descriptions, tags, and use-when triggers. | `front_door`, `workflow`, `learning_loop` | You build AI navigation for this repo or another repo. |
 | `templates/downstream/AGENTS_MANAGED_BLOCK.md` | Managed downstream governance block template. | `template_library`, `workflow`, `cross_repo` | A downstream repo is explicitly approved for DAD governance installation. |
+| `templates/cross-repo-governance-dependency-map/` | Template seed for upstream governance maps, child mirrors, front-door and TOC sections, repo contracts, PR sections, validators, tests, and handoff/adoption checklists. | `template_library`, `governance`, `cross_repo`, `validation` | A future repo family needs deterministic governance dependency mapping from day one. |
 
 ## Roadmap
 
@@ -240,6 +244,7 @@ them.
 | `roadmap/evidence/manual-task-queue-prioritization.md` | Evidence, formula, local research support, and red-team for manual task queue prioritization. | `roadmap`, `knowledge_graph`, `workflow_part`, `validation` | You need why alerts are re-ranked before human work and what the queue must not be used to justify. |
 | `roadmap/evidence/repo-buildout-advisor-v1.md` | Evidence, formula, red-team, and boundaries for repo-specific buildout advice. | `roadmap`, `repo_buildout`, `knowledge_graph`, `validation` | You need why repo buildout recommendations are generated-only and how their priority score is derived. |
 | `roadmap/evidence/template-library-governance-v1.md` | Evidence for tracked template dependency governance and update boundaries. | `roadmap`, `template_library`, `validation` | You need why templates became first-class dependency-tracked assets. |
+| `roadmap/evidence/cross-repo-governance-dependency-map-pattern.md` | Implementation evidence, premortem, red-team, and validation plan for the cross-repo governance dependency-map asset. | `roadmap`, `cross_repo`, `governance`, `template_library` | You need why the pattern was added and what remains candidate or human-gated. |
 | `roadmap/evidence/claude-workflow-composition-red-team.md` | Claude's independent warning against ontology sprawl and recommendation for WorkflowPartRecord. | `roadmap`, `workflow`, `knowledge_graph` | You need the fresh-eyes review behind the background-radar synthesis. |
 | `roadmap/evidence/phase-3-sandbox-pilot.md` | Sandbox downstream-governance pilot evidence. | `roadmap`, `downstream_governance`, `validation` | You verify Phase 3 gates or learn how the files-only learning loop was tested. |
 | `roadmap/evidence/phase-4-semantic-enrichment.md` | Conservative Phase 4 semantic-enrichment boundary and evaluation evidence. | `roadmap`, `semantic_enrichment`, `privacy` | You need to know what Phase 4 approved, what remains deferred, or why embeddings are still gated. |

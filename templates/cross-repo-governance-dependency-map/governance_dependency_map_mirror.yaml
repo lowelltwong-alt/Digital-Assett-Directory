@@ -1,0 +1,42 @@
+object_type: governance_dependency_map_mirror
+trust_zone: local_mirror
+lifecycle_status: active
+provenance_note: "Created from the DAD cross-repo governance dependency map template. Replace this with local adoption evidence."
+reason_for_inclusion: "Local governance-facing changes must check the upstream governance map and local mirror surfaces before proceeding."
+schema_version: governance_dependency_map_mirror.v1
+mirror_id: "{{CHILD_REPO_ID}}_governance_dependency_map_mirror"
+owner_repo: "{{CHILD_REPO}}"
+upstream_dependency_map:
+  repo: "{{UPSTREAM_GOVERNANCE_REPO}}"
+  path: governance/GOVERNANCE_DEPENDENCY_MAP.yaml
+  artifact_id: GD-002
+  rule: governance_map_update_gate
+  source_of_truth: true
+local_enforcement:
+  validator: scripts/validate_governance_dependency_map_mirror.py
+  test: tests/test_governance_dependency_map_mirror.py
+  front_door: AI_FRONT_DOOR.md
+  table_of_contents: AI_TABLE_OF_CONTENTS.md
+  repo_contract: AGENTS.md
+  readme: README.md
+authority:
+  local_repo_may_override_upstream_dependency_map: false
+  local_repo_may_weaken_upstream_governance: false
+  local_repo_may_treat_local_need_as_governance_authority: false
+  local_repo_must_stop_if_upstream_map_conflicts: true
+watched_local_governance_surfaces:
+  - AI_FRONT_DOOR.md
+  - AI_TABLE_OF_CONTENTS.md
+  - AGENTS.md
+  - README.md
+  - governance/
+  - config/governance/
+  - .ai/control/governance_dependency_map_mirror.yaml
+  - scripts/validate_governance_dependency_map_mirror.py
+  - tests/test_governance_dependency_map_mirror.py
+required_behavior:
+  - check_upstream_governance_dependency_map_when_governance_files_change
+  - update_local_mirror_surfaces_when_upstream_governance_affects_this_repo
+  - keep_local_repo_under_declared_upstream_governance_authority
+  - fail_closed_when_dependency_map_mirror_is_missing_or_weakened
+

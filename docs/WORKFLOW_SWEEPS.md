@@ -58,6 +58,8 @@ Use the sweep reports to:
 
 - find high-leverage workflows across repos;
 - identify which workflow families are missing tests, gates, labels, or feedback;
+- identify repo families that need an upstream governance dependency map,
+  child-repo mirrors, AI discovery-surface review, and PR-description checks;
 - choose the next human review batch;
 - route follow-up asset-use feedback through the pay-forward loop.
 
@@ -86,3 +88,18 @@ utility_score = current_value_score
 
 Archive and copied repo variants can still be useful, but they route to delta review before
 reuse. Current score remains separate from usefulness triage.
+
+## Cross-Repo Governance Dependency Map Signals
+
+During the governance sweep, look for signal clusters such as:
+
+- control-plane or upstream governance repo language;
+- child repo, mirror, local mirror, or non-override language;
+- `GOVERNANCE_DEPENDENCY_MAP.yaml` or `governance_dependency_map_mirror.yaml`;
+- AI front door and AI TOC sections that route to the map or mirror;
+- repo contracts requiring governance-map checks before governance-facing edits;
+- PR-description sections requiring map/mirror impact disclosure;
+- validators or tests that fail closed when watched governance paths drift.
+
+Single words such as "governance" or "mirror" are not enough. The reusable
+pattern requires multiple surfaces plus validation.

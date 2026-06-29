@@ -301,6 +301,43 @@ FAMILY_DEFINITIONS: tuple[AssetFamilyDefinition, ...] = (
         terms=("duplicate", "variant", "delta", "cluster", "shingle", "fingerprint", "hash"),
         pattern_aliases=("asset_cluster_delta",),
     ),
+    AssetFamilyDefinition(
+        pattern_id="cross_repo_governance_dependency_map_pattern",
+        label="Cross-repo governance dependency map pattern",
+        leverage="very_high",
+        useful_to_future_agents=(
+            "Shows how an upstream governance authority, child mirrors, AI discovery "
+            "surfaces, repo contracts, PR descriptions, validators, and tests stay aligned."
+        ),
+        could_be_used_for=(
+            "Future repo scaffolds, multi-repo governance reviews, child-repo mirror checks, "
+            "and PR drift prevention."
+        ),
+        missing_to_be_more_useful=(
+            "Needs repo-specific authority approval, watched path lists, companion surfaces, "
+            "and child mirror validators for the adopting repo family."
+        ),
+        upside_range=(84, 98),
+        lift_conditions=(
+            "upstream map names real authority and watched governance paths",
+            "child mirrors are validator-backed",
+            "front doors, TOCs, repo contracts, and PR descriptions route to the map",
+            "tests prove governance-facing drift fails closed",
+        ),
+        asset_types=("workflow", "configuration", "document", "test", "code", "schema"),
+        tags=("governance", "governance-map", "provenance", "workflow", "ai-navigation"),
+        capabilities=("govern_agents", "validate_contracts", "catalog_assets"),
+        terms=(
+            "governance dependency map",
+            "governance_dependency_map",
+            "governance dependency-map mirror",
+            "changed path gate",
+            "required companion surfaces",
+            "child repo mirror",
+            "upstream governance",
+            "pr description",
+        ),
+    ),
 )
 
 WORKFLOW_SWEEPS: tuple[WorkflowSweepDefinition, ...] = (
@@ -334,6 +371,13 @@ WORKFLOW_SWEEPS: tuple[WorkflowSweepDefinition, ...] = (
             "risk tier",
             "promotion",
             "rollback",
+            "governance dependency map",
+            "governance_dependency_map",
+            "governance dependency-map mirror",
+            "changed path gate",
+            "required companion surfaces",
+            "child repo mirror",
+            "pr description",
         ),
         patterns=(
             "governed_learning_loop_system",
@@ -341,6 +385,7 @@ WORKFLOW_SWEEPS: tuple[WorkflowSweepDefinition, ...] = (
             "proposal_promotion_workflow",
             "load_bearing_decision_review_system",
             "security_governance_system",
+            "cross_repo_governance_dependency_map_pattern",
         ),
     ),
     WorkflowSweepDefinition(

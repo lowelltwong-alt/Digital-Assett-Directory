@@ -1,0 +1,103 @@
+object_type: governance_dependency_map
+trust_zone: canonical
+lifecycle_status: active
+provenance_note: "Created from the DAD cross-repo governance dependency map template. Replace this with the adopting repo family's real approval evidence."
+reason_for_inclusion: "Governance-facing changes must update dependency maps, discovery surfaces, PR disclosures, and validators rather than relying on chat memory or stale boilerplate."
+schema_version: governance_dependency_map.v1
+map_id: "{{REPO_FAMILY_ID}}_governance_dependency_map"
+owner: "{{OWNER_OR_REVIEW_BODY}}"
+source_repo: "{{UPSTREAM_GOVERNANCE_REPO}}"
+map_authority:
+  records_governance_dependencies: true
+  authorizes_child_repo_override: false
+  authorizes_source_data_change: false
+  authorizes_external_import: false
+update_policy:
+  changed_path_gate_enabled: true
+  map_update_required_when_paths_change:
+    - governance/
+    - docs/governance/
+    - config/governance/
+    - scripts/validate_
+    - AI_FRONT_DOOR.md
+    - AI_TABLE_OF_CONTENTS.md
+    - AGENTS.md
+    - README.md
+    - .github/PULL_REQUEST_TEMPLATE.md
+    - .github/workflows/
+  changed_governance_path_must_be_registered_in_map_coverage: true
+  required_companion_surfaces_when_governance_changes:
+    - governance/GOVERNANCE_DEPENDENCY_MAP.yaml
+    - AI_FRONT_DOOR.md
+    - AI_TABLE_OF_CONTENTS.md
+    - AGENTS.md
+    - README.md
+    - .github/PULL_REQUEST_TEMPLATE.md
+    - scripts/validate_governance_dependency_map.py
+    - tests/test_governance_dependency_map.py
+  validator: scripts/validate_governance_dependency_map.py
+artifacts:
+  - artifact_id: GD-001
+    title: Governance front door and discovery surfaces
+    repo: "{{UPSTREAM_GOVERNANCE_REPO}}"
+    paths:
+      - AI_FRONT_DOOR.md
+      - AI_TABLE_OF_CONTENTS.md
+      - AGENTS.md
+      - README.md
+    object_type: governance_front_door
+    trust_zone: canonical
+    lifecycle_status: active
+    authorized_by: "{{HUMAN_APPROVAL_OR_DECISION_REF}}"
+    owner_decision_ref: AI_FRONT_DOOR.md
+    depends_on: []
+    downstream_controls:
+      - repo_entry_sequence
+      - source_authority_boundary
+      - generated_candidate_limits
+    mirrored_by:
+      - "{{CHILD_REPO}}/AI_FRONT_DOOR.md"
+      - "{{CHILD_REPO}}/.ai/control/governance_dependency_map_mirror.yaml"
+    validators:
+      - scripts/validate_governance_dependency_map.py
+      - tests/test_governance_dependency_map.py
+    update_triggers:
+      - AI_FRONT_DOOR.md
+      - AI_TABLE_OF_CONTENTS.md
+      - AGENTS.md
+    provenance_note: "Front-door and TOC surfaces must route agents to the governance map before governance-facing work."
+    reason_for_inclusion: "Future agents need deterministic entrypoints and non-override rules."
+  - artifact_id: GD-002
+    title: Governance dependency map update gate
+    repo: "{{UPSTREAM_GOVERNANCE_REPO}}"
+    paths:
+      - governance/GOVERNANCE_DEPENDENCY_MAP.yaml
+      - scripts/validate_governance_dependency_map.py
+      - tests/test_governance_dependency_map.py
+      - .github/PULL_REQUEST_TEMPLATE.md
+    object_type: governance_map_update_gate
+    trust_zone: canonical
+    lifecycle_status: active
+    authorized_by: "{{HUMAN_APPROVAL_OR_DECISION_REF}}"
+    owner_decision_ref: governance/GOVERNANCE_DEPENDENCY_MAP.yaml
+    depends_on:
+      - GD-001
+    downstream_controls:
+      - governance_dependency_map_correction_required
+      - changed_path_coverage_required
+      - child_repo_mirror_review_required
+      - no_governance_change_by_chat_memory_only
+    mirrored_by:
+      - "{{CHILD_REPO}}/.ai/control/governance_dependency_map_mirror.yaml"
+      - "{{CHILD_REPO}}/scripts/validate_governance_dependency_map_mirror.py"
+    validators:
+      - scripts/validate_governance_dependency_map.py
+      - tests/test_governance_dependency_map.py
+    update_triggers:
+      - governance/GOVERNANCE_DEPENDENCY_MAP.yaml
+      - scripts/validate_governance_dependency_map.py
+      - tests/test_governance_dependency_map.py
+      - .github/PULL_REQUEST_TEMPLATE.md
+    provenance_note: "Every governance-facing change must check this map and companion surfaces."
+    reason_for_inclusion: "The map itself must be validator-backed and discoverable."
+

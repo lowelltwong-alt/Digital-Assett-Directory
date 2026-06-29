@@ -14,7 +14,7 @@
       "does_not_apply_when": ["A scratch repo has no persistent AI navigation or future-agent reuse need."],
       "danger_if_misapplied": "A TOC can become a filename dump if rows lack routing tags and use-when triggers.",
       "depends_on_template_ids": [],
-      "dependent_template_ids": ["template:downstream-agents-managed-block"],
+      "dependent_template_ids": ["template:cross-repo-governance-dependency-map", "template:downstream-agents-managed-block"],
       "depends_on_contracts": [
         "docs/AI_ENTRYPOINT_AND_TOC_ROUTING_STANDARD.md",
         "AI_FRONT_DOOR.md",
@@ -78,7 +78,7 @@
       "does_not_apply_when": ["The change is trivial, isolated, reversible, and has no shared contract or downstream consumer."],
       "danger_if_misapplied": "Overusing the template can slow low-risk work; skipping it can let bad defaults cascade across repos.",
       "depends_on_template_ids": ["template:software-repo-checklist-tree"],
-      "dependent_template_ids": ["template:downstream-agents-managed-block"],
+      "dependent_template_ids": ["template:cross-repo-governance-dependency-map", "template:downstream-agents-managed-block"],
       "depends_on_contracts": [
         "docs/LOAD_BEARING_DECISION_REVIEW.md",
         "docs/SOFTWARE_REPO_CHECKLIST_TREE.md",
@@ -128,6 +128,41 @@
       "deterministic_update_rule": "Keep branch names aligned with the software checklist tree and require applies_when, does_not_apply_when, danger, validation, and pay-forward notes.",
       "validation_commands": ["python -m digital_asset_directory.cli validate"],
       "authority_boundary": "Checklist selects review posture; it does not replace tests, source authority, or human gates.",
+      "review_status": "reviewed"
+    },
+    {
+      "schema_version": "0.1.0",
+      "template_id": "template:cross-repo-governance-dependency-map",
+      "path": "templates/cross-repo-governance-dependency-map",
+      "template_name": "Cross-repo governance dependency map",
+      "template_type": "governance",
+      "purpose": "Reusable template seed for repo families where an upstream governance map, child mirror controls, AI discovery surfaces, repo contracts, PR descriptions, validators, and tests must stay aligned.",
+      "applies_when": ["Multiple repos form a governed family and one upstream/control-plane repo owns governance truth or contracts that child repos must mirror locally."],
+      "does_not_apply_when": ["A repo is a scratch project, has no downstream consumers, has no cross-repo authority relationship, or cannot maintain validators."],
+      "danger_if_misapplied": "A copied template can make a child repo appear to override upstream governance or can preserve stale boilerplate without living validation.",
+      "depends_on_template_ids": ["template:ai-table-of-contents", "template:load-bearing-decision-review"],
+      "dependent_template_ids": [],
+      "depends_on_contracts": [
+        "docs/CROSS_REPO_GOVERNANCE_DEPENDENCY_MAP_PATTERN.md",
+        "registry/asset-pattern-registry.json",
+        "templates/cross-repo-governance-dependency-map/GOVERNANCE_DEPENDENCY_MAP.yaml",
+        "templates/cross-repo-governance-dependency-map/governance_dependency_map_mirror.yaml",
+        "templates/cross-repo-governance-dependency-map/validate_governance_dependency_map.stub.py",
+        "templates/cross-repo-governance-dependency-map/test_governance_dependency_map.stub.py"
+      ],
+      "upgrade_triggers": [
+        "cross-repo governance dependency-map pattern changes",
+        "AI front-door or TOC routing standard changes",
+        "load-bearing decision review requirements change",
+        "downstream repo governance installer or validator expectations change"
+      ],
+      "recommended_review_interval_days": 90,
+      "last_reviewed_at": "2026-06-29",
+      "next_review_due_at": "2026-09-27",
+      "upgrade_policy": "human_approved_patch",
+      "deterministic_update_rule": "Keep map, mirror, AI front-door section, AI TOC section, repo contract, PR description, validator stub, test stub, handoff checklist, and adoption checklist aligned; never copy source-specific authority language without adaptation.",
+      "validation_commands": ["python -m pytest tests/test_cross_repo_governance_template.py tests/test_template_library.py", "python -m digital_asset_directory.cli templates validate"],
+      "authority_boundary": "DAD template seed only; adopting repo families must point to their own reviewed governance authority and child repos cannot override upstream governance.",
       "review_status": "reviewed"
     },
     {

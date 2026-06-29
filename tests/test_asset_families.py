@@ -101,6 +101,27 @@ def test_asset_family_recognizer_is_domain_general_not_bible_specific():
     assert "gold_review_packet_system" in pattern_ids
 
 
+def test_cross_repo_governance_dependency_map_family_is_detected():
+    asset = make_asset(
+        "dad:asset:governance-map",
+        title="Governance Dependency Map",
+        logical_path="repo/governance/GOVERNANCE_DEPENDENCY_MAP.yaml",
+        asset_type="configuration",
+        text=(
+            "Governance dependency map with changed path gate, required companion "
+            "surfaces, child repo mirror controls, PR description requirements, and "
+            "validator-backed upstream governance non-override rules."
+        ),
+        tags=["governance", "governance-map"],
+        capabilities=["govern_agents", "validate_contracts"],
+        value_score=68,
+    )
+
+    pattern_ids = {match["pattern_id"] for match in detect_asset_family_matches(asset)}
+
+    assert "cross_repo_governance_dependency_map_pattern" in pattern_ids
+
+
 def test_asset_family_candidates_report_current_score_before_upside():
     assets = [
         repo_asset(),

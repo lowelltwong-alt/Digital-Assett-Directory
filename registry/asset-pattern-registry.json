@@ -439,6 +439,29 @@
       ]
     },
     {
+      "id": "cross_repo_governance_dependency_map_pattern",
+      "label": "Cross-repo governance dependency map pattern",
+      "description": "A reusable repo-family control-plane and child-repo mirror pattern where an upstream governance map, local mirror controls, AI discovery surfaces, repo contracts, PR descriptions, validators, and tests stay aligned.",
+      "leverage": "very_high",
+      "recognition_mode": "repository_composite",
+      "positive_signals": [
+        "upstream or control-plane governance map",
+        "child-repo governance dependency-map mirror",
+        "AI front door and AI table of contents route to map or mirror",
+        "repo contract states non-override and fail-closed behavior",
+        "PR description requires governance map or mirror review",
+        "validator-backed watched governance path gate",
+        "tests for map, mirror, discovery-surface, or companion-surface drift"
+      ],
+      "missing_evidence": [
+        "human-reviewed upstream authority for the adopting repo family",
+        "repo-specific watched path list and companion surface list",
+        "child mirror validators in every participating child repo",
+        "proof that generated templates do not override source governance",
+        "reviewed examples from non-Logos repo families"
+      ]
+    },
+    {
       "id": "calibration_ab_gate_system",
       "label": "Calibration and A/B gate system",
       "description": "A decision workflow that compares baseline and candidate methods against shared evals, coverage and safety gates, metric reports, human calibration, and decision packets.",

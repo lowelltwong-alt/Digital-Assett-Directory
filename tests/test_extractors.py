@@ -86,6 +86,23 @@ def test_asset_use_pay_forward_loop_is_detected_as_asset_pattern():
     assert "text:pay-forward" in evidence
 
 
+def test_cross_repo_governance_dependency_map_pattern_is_detected():
+    inferred = infer_semantics(
+        "governance/GOVERNANCE_DEPENDENCY_MAP.yaml",
+        (
+            "The upstream governance dependency map has a changed path gate, "
+            "required companion surfaces, child repo mirror controls, PR description "
+            "requirements, and a validator so child repos cannot override upstream governance."
+        ),
+    )
+
+    assert "governance-map" in inferred["tags"]
+    assert "cross_repo_governance_dependency_map_pattern" in inferred["asset_patterns"]
+    evidence = inferred["pattern_evidence"]["cross_repo_governance_dependency_map_pattern"]
+    assert "text:governance dependency map" in evidence
+    assert "text:child repo" in evidence
+
+
 def test_asset_classification():
     assert classify_asset("schemas/asset.schema.json") == "schema"
     assert classify_asset("tests/test_something.py") == "test"
