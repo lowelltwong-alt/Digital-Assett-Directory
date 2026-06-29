@@ -6,7 +6,12 @@ from pathlib import Path
 import pytest
 from pydantic import ValidationError
 
-from digital_asset_directory.models import AssetRecord, EdgeRecord, WorkflowPartRecord
+from digital_asset_directory.models import (
+    AssetRecord,
+    EdgeRecord,
+    WorkflowPartRecord,
+    WorkflowPartReviewRecord,
+)
 from digital_asset_directory.workflow_parts import (
     build_workflow_part_review_queue,
     build_workflow_part_review_template,
@@ -17,6 +22,7 @@ from digital_asset_directory.workflow_parts import (
     summarize_workflow_part_reviews,
     update_workflow_part_review_record,
     workflow_part_calibration_evidence_markdown,
+    write_workflow_part_calibration_evidence,
     write_workflow_part_review_template_outputs,
     write_workflow_part_outputs,
 )
@@ -332,6 +338,62 @@ def test_workflow_part_calibration_evidence_fails_closed_without_labels():
 
     with pytest.raises(ValueError, match="requires reviewed records"):
         workflow_part_calibration_evidence_markdown(reviews, Path("review.jsonl"))
+
+
+def test_workflow_part_calibration_evidence_preserves_review_notes(tmp_path: Path):
+    reviews = [
+        WorkflowPartReviewRecord(
+            review_id="dad:workflow-part-review:001",
+            sample_id="workflow-part-review-001",
+            part_id="dad:workflow-part:accepted",
+            part_type="validator",
+            asset_pattern_id="evaluation_contract_system",
+            reviewer="Lowell",
+            reviewed_at=TIMESTAMP,
+            usefulness="useful",
+            safety="safe",
+            specificity="right_level",
+            dataflow_completeness="missing_inputs",
+            decision="accept_for_review_use",
+            notes="Accepted for review-use only.",
+            false_negative_note="Composite validator/runner role should be surfaced.",
+            useful_example_note="Useful validator example.",
+            missing_dataflow_note="Needs declared input fixtures before assembly.",
+            evidence={"representative_paths": ["repo/tests/test_validator.py"]},
+            review_status="reviewed",
+        ),
+        WorkflowPartReviewRecord(
+            review_id="dad:workflow-part-review:002",
+            sample_id="workflow-part-review-002",
+            part_id="dad:workflow-part:rejected",
+            part_type="quarantine_gate",
+            asset_pattern_id="security_scanner_quarantine_system",
+            reviewer="Lowell",
+            reviewed_at=TIMESTAMP,
+            usefulness="not_useful",
+            safety="needs_more_review",
+            specificity="too_broad",
+            dataflow_completeness="not_applicable",
+            decision="reject_candidate",
+            notes="Reject marker-file candidate.",
+            false_positive_reason="Empty marker file does not prove a quarantine gate.",
+            evidence={"representative_paths": ["repo/security/.gitkeep"]},
+            review_status="reviewed",
+        ),
+    ]
+    review_path = tmp_path / "processed" / "workflow_parts" / "workflow_part_review_template.jsonl"
+    review_path.parent.mkdir(parents=True)
+    review_path.write_text("", encoding="utf-8")
+
+    _, output = write_workflow_part_calibration_evidence(tmp_path, reviews, review_path)
+    text = Path(output).read_text(encoding="utf-8")
+
+    assert "processed/workflow_parts/workflow_part_review_template.jsonl" in text
+    assert "Composite validator/runner role should be surfaced." in text
+    assert "Empty marker file does not prove a quarantine gate." in text
+    assert "Useful validator example." in text
+    assert "Needs declared input fixtures before assembly." in text
+    assert str(tmp_path) not in text
 
 
 def test_workflow_part_review_template_writer_outputs_generated_files(tmp_path: Path):

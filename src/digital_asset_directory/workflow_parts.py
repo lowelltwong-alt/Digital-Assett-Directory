@@ -1113,6 +1113,41 @@ def workflow_part_review_results_markdown(
     return "\n".join(lines)
 
 
+def _workflow_part_note_lines(
+    reviews: list[WorkflowPartReviewRecord], field: str, empty_message: str
+) -> list[str]:
+    noted = [review for review in reviews if getattr(review, field)]
+    if not noted:
+        return [f"- {empty_message}", ""]
+    lines: list[str] = []
+    for review in sorted(noted, key=lambda record: record.sample_id)[:15]:
+        note = str(getattr(review, field))
+        lines.append(
+            f"- `{review.sample_id}` `{review.part_type}` `{review.asset_pattern_id}`: {note}"
+        )
+    lines.append("")
+    return lines
+
+
+def _workflow_part_decision_lines(
+    reviews: list[WorkflowPartReviewRecord], decision: str, empty_message: str
+) -> list[str]:
+    selected = [review for review in reviews if review.decision == decision]
+    if not selected:
+        return [f"- {empty_message}", ""]
+    lines: list[str] = []
+    for review in sorted(selected, key=lambda record: record.sample_id)[:20]:
+        paths = review.evidence.get("representative_paths", [])
+        path = paths[0] if paths else ""
+        lines.append(
+            f"- `{review.sample_id}` `{review.part_type}` `{review.asset_pattern_id}`"
+            f" - {review.notes or 'No note.'}"
+            f"{f' Path: `{path}`' if path else ''}"
+        )
+    lines.append("")
+    return lines
+
+
 def write_workflow_part_review_results_summary(
     repo_root: Path, reviews: list[WorkflowPartReviewRecord], source_path: Path
 ) -> tuple[dict[str, Any], str]:
@@ -1123,7 +1158,7 @@ def write_workflow_part_review_results_summary(
 
 
 def workflow_part_calibration_evidence_markdown(
-    reviews: list[WorkflowPartReviewRecord], source_path: Path
+    reviews: list[WorkflowPartReviewRecord], source_path: Path | str
 ) -> str:
     summary = summarize_workflow_part_reviews(reviews)
     if not summary["calibration_gate_complete"]:
@@ -1156,6 +1191,53 @@ def workflow_part_calibration_evidence_markdown(
         f"- Dataflow completeness: `{summary['dataflow_completeness_counts']}`",
         f"- Decisions: `{summary['decision_counts']}`",
         "",
+        "## Decision Samples",
+        "",
+        "### Accepted For Review Use",
+        "",
+        *_workflow_part_decision_lines(
+            reviews, "accept_for_review_use", "No candidates were accepted for review use."
+        ),
+        "### Human-Gated",
+        "",
+        *_workflow_part_decision_lines(
+            reviews, "needs_human_gate", "No candidates were routed to a human gate."
+        ),
+        "### Rejected",
+        "",
+        *_workflow_part_decision_lines(
+            reviews, "reject_candidate", "No candidates were rejected."
+        ),
+        "### Deferred",
+        "",
+        *_workflow_part_decision_lines(reviews, "defer", "No candidates were deferred."),
+        "## Calibration Notes",
+        "",
+        f"- False positive notes: **{summary['false_positive_note_count']}**",
+        f"- False negative notes: **{summary['false_negative_note_count']}**",
+        f"- Useful example notes: **{summary['useful_example_note_count']}**",
+        f"- Missing dataflow notes: **{summary['missing_dataflow_note_count']}**",
+        "",
+        "### False Positive Notes",
+        "",
+        *_workflow_part_note_lines(
+            reviews, "false_positive_reason", "No false positive notes were recorded."
+        ),
+        "### False Negative Notes",
+        "",
+        *_workflow_part_note_lines(
+            reviews, "false_negative_note", "No false negative notes were recorded."
+        ),
+        "### Useful Examples",
+        "",
+        *_workflow_part_note_lines(
+            reviews, "useful_example_note", "No useful example notes were recorded."
+        ),
+        "### Missing Dataflow Notes",
+        "",
+        *_workflow_part_note_lines(
+            reviews, "missing_dataflow_note", "No missing dataflow notes were recorded."
+        ),
         "## Remaining Risks",
         "",
         "- Labels calibrate review usefulness only; they do not authorize source-repo mutation.",
@@ -1174,7 +1256,13 @@ def write_workflow_part_calibration_evidence(
     output = output_path or repo_root / "roadmap" / "evidence" / "workflow-part-calibration.md"
     if not output.is_absolute():
         output = repo_root / output
-    text = workflow_part_calibration_evidence_markdown(reviews, source_path)
+    display_source_path = source_path
+    try:
+        display_source_path = source_path.relative_to(repo_root)
+    except ValueError:
+        display_source_path = source_path
+    source_path_text = str(display_source_path).replace("\\", "/")
+    text = workflow_part_calibration_evidence_markdown(reviews, source_path_text)
     atomic_write_text(output, text)
     return summarize_workflow_part_reviews(reviews), str(output)
 
