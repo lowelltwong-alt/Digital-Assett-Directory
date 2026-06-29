@@ -13,6 +13,7 @@ from digital_asset_directory.models import (
     WorkflowPartReviewRecord,
 )
 from digital_asset_directory.workflow_parts import (
+    build_workflow_part_usage_guidance,
     build_workflow_part_review_queue,
     build_workflow_part_review_template,
     build_workflow_part_edges,
@@ -23,6 +24,7 @@ from digital_asset_directory.workflow_parts import (
     update_workflow_part_review_record,
     workflow_part_calibration_evidence_markdown,
     write_workflow_part_calibration_evidence,
+    write_workflow_part_usage_guidance,
     write_workflow_part_review_template_outputs,
     write_workflow_part_outputs,
 )
@@ -340,8 +342,8 @@ def test_workflow_part_calibration_evidence_fails_closed_without_labels():
         workflow_part_calibration_evidence_markdown(reviews, Path("review.jsonl"))
 
 
-def test_workflow_part_calibration_evidence_preserves_review_notes(tmp_path: Path):
-    reviews = [
+def make_reviewed_workflow_part_reviews() -> list[WorkflowPartReviewRecord]:
+    return [
         WorkflowPartReviewRecord(
             review_id="dad:workflow-part-review:001",
             sample_id="workflow-part-review-001",
@@ -380,7 +382,45 @@ def test_workflow_part_calibration_evidence_preserves_review_notes(tmp_path: Pat
             evidence={"representative_paths": ["repo/security/.gitkeep"]},
             review_status="reviewed",
         ),
+        WorkflowPartReviewRecord(
+            review_id="dad:workflow-part-review:003",
+            sample_id="workflow-part-review-003",
+            part_id="dad:workflow-part:human-gated",
+            part_type="boundary_map",
+            asset_pattern_id="agent_skill_graph_system",
+            reviewer="Lowell",
+            reviewed_at=TIMESTAMP,
+            usefulness="useful",
+            safety="needs_more_review",
+            specificity="right_level",
+            dataflow_completeness="missing_side_effects",
+            decision="needs_human_gate",
+            notes="Authority-sensitive boundary map.",
+            evidence={"representative_paths": ["repo/docs/security-boundary.md"]},
+            review_status="reviewed",
+        ),
+        WorkflowPartReviewRecord(
+            review_id="dad:workflow-part-review:004",
+            sample_id="workflow-part-review-004",
+            part_id="dad:workflow-part:deferred",
+            part_type="eval_gold",
+            asset_pattern_id="route_isolated_evaluation_harness",
+            reviewer="Lowell",
+            reviewed_at=TIMESTAMP,
+            usefulness="unsure",
+            safety="needs_more_review",
+            specificity="too_narrow",
+            dataflow_completeness="unsure",
+            decision="defer",
+            notes="Generated eval output might not be gold.",
+            evidence={"representative_paths": ["repo/eval/run.json"]},
+            review_status="reviewed",
+        ),
     ]
+
+
+def test_workflow_part_calibration_evidence_preserves_review_notes(tmp_path: Path):
+    reviews = make_reviewed_workflow_part_reviews()
     review_path = tmp_path / "processed" / "workflow_parts" / "workflow_part_review_template.jsonl"
     review_path.parent.mkdir(parents=True)
     review_path.write_text("", encoding="utf-8")
@@ -394,6 +434,40 @@ def test_workflow_part_calibration_evidence_preserves_review_notes(tmp_path: Pat
     assert "Useful validator example." in text
     assert "Needs declared input fixtures before assembly." in text
     assert str(tmp_path) not in text
+
+
+def test_workflow_part_usage_guidance_is_manual_and_decision_aware(tmp_path: Path):
+    reviews = make_reviewed_workflow_part_reviews()
+
+    guidance = build_workflow_part_usage_guidance(reviews, limit=10)
+
+    assert guidance["review_status"] == "generated_candidate"
+    assert guidance["risk_tier"] == "medium"
+    assert guidance["manual_use_policy"]["automatic_preflight_surfacing"].startswith("Deferred")
+    assert guidance["summary"]["accepted_count"] == 1
+    assert guidance["summary"]["human_gated_count"] == 1
+    assert guidance["summary"]["rejected_count"] == 1
+    assert guidance["summary"]["deferred_count"] == 1
+    assert guidance["review_use_candidates"][0]["action"] == (
+        "usable_as_review_context_but_declare_dataflow_before_assembly"
+    )
+    assert guidance["human_gated_candidates"][0]["action"] == "requires_human_gate_before_reuse"
+    assert guidance["rejected_patterns"][0]["action"] == (
+        "use_as_false_positive_or_lineage_evidence_only"
+    )
+
+    review_path = tmp_path / "processed" / "workflow_parts" / "workflow_part_review_template.jsonl"
+    review_path.parent.mkdir(parents=True)
+    review_path.write_text("", encoding="utf-8")
+    _, report, payload = write_workflow_part_usage_guidance(tmp_path, reviews, review_path)
+    report_text = Path(report).read_text(encoding="utf-8")
+    payload_text = Path(payload).read_text(encoding="utf-8")
+
+    assert Path(report).is_relative_to(tmp_path / "processed")
+    assert Path(payload).is_relative_to(tmp_path / "processed")
+    assert "Automatic preflight surfacing" in report_text
+    assert "requires_human_gate_before_reuse" in payload_text
+    assert str(tmp_path) not in report_text
 
 
 def test_workflow_part_review_template_writer_outputs_generated_files(tmp_path: Path):

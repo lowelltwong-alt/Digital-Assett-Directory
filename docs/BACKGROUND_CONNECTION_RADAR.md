@@ -319,6 +319,7 @@ asset-dir recommend workflow-part-review-queue --status pending --limit 10
 asset-dir recommend workflow-part-review-label --sample-id <id> --reviewer Lowell ...
 asset-dir recommend workflow-part-review-summary
 asset-dir recommend workflow-part-calibration-evidence
+asset-dir recommend workflow-part-guidance
 ```
 
 `workflow-part-calibration-evidence` fails closed until human labels cover the
@@ -358,8 +359,11 @@ Fields that must remain empty unless declared, structured, or human-reviewed:
 This prevents the radar from hallucinating dataflow from filenames or weak
 semantic similarity.
 
-Workflow-part assembly packs and preflight surfacing remain deferred until
-reviewed part examples exist and the ceremony threshold is calibrated.
+After calibration, `workflow-part-guidance` writes a generated manual guidance
+surface that separates review-use examples, human-gated parts, rejected/noise
+patterns, and missing-dataflow blockers. Automatic preflight surfacing,
+workflow assembly packs, score influence, or cross-repo installation remain
+deferred until a separate high-risk design review and human gate approve them.
 
 ## Multi-Hop Expansion
 
