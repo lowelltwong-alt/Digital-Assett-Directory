@@ -37,7 +37,9 @@ audit/events/audit.jsonl
 
 ## Scheduled change detection on Windows
 
-After a successful reviewed first scan, register a daily read-only refresh:
+Scheduled scans are not approved by the current Phase 5 boundary. Treat this as a
+future operations template only. After a separate human gate approves scheduled
+scans, register a daily read-only refresh:
 
 ```powershell
 powershell -ExecutionPolicy Bypass -File .\scripts\register_scheduled_scan.ps1 -DailyAt '02:30'

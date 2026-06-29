@@ -7,6 +7,24 @@ import yaml
 
 from .utils import utc_now, write_json
 
+AGENT_REVIEWERS = {
+    "agent",
+    "ai",
+    "automation",
+    "bot",
+    "claude",
+    "claude-code",
+    "codex",
+    "system",
+}
+
+HUMAN_REVIEWERS = {
+    "human",
+    "human reviewer",
+    "lowell",
+    "user",
+}
+
 
 def _slug(value: str) -> str:
     return "".join(char.lower() if char.isalnum() else "-" for char in value).strip("-")
@@ -64,7 +82,32 @@ def _verified_human_gate(
         return None
     if record.get("status") != "verified":
         return None
+    if not _has_human_reviewer(record):
+        return None
     return record
+
+
+def _has_human_reviewer(record: dict[str, Any]) -> bool:
+    reviewer = str(record.get("reviewer") or "").strip().lower()
+    if reviewer in HUMAN_REVIEWERS:
+        return True
+    if reviewer in AGENT_REVIEWERS:
+        return False
+    if reviewer.startswith(("codex", "claude", "agent", "automation", "bot", "system")):
+        return False
+    return bool(record.get("human_verified") is True)
+
+
+def _human_gate_rejection_reason(record: dict[str, Any] | None, phase_id: str) -> str:
+    if not isinstance(record, dict):
+        return "missing_gate_evidence"
+    if record.get("phase_id") != phase_id:
+        return "phase_mismatch"
+    if record.get("status") != "verified":
+        return "not_verified"
+    if not _has_human_reviewer(record):
+        return "missing_human_reviewer"
+    return "unknown"
 
 
 def _command_has_evidence(command: str, phase_id: str, gate_evidence: dict[str, Any]) -> bool:
@@ -103,6 +146,17 @@ def check_roadmap(repo_root: Path, update: bool = True) -> dict[str, Any]:
                 verified_gates.append(gate)
             else:
                 unverified_gates.append(gate)
+        unverified_gate_details = []
+        for gate in unverified_gates:
+            record = gate_evidence.get("human_gates", {}).get(gate["id"])
+            unverified_gate_details.append(
+                {
+                    "gate_id": gate["id"],
+                    "description": gate["description"],
+                    "reviewer": record.get("reviewer") if isinstance(record, dict) else None,
+                    "reason": _human_gate_rejection_reason(record, phase["id"]),
+                }
+            )
         commands = acceptance.get("commands", [])
         commands_missing_evidence = [
             command
@@ -117,8 +171,15 @@ def check_roadmap(repo_root: Path, update: bool = True) -> dict[str, Any]:
             computed = "awaiting_human_gate"
         elif commands_missing_evidence:
             computed = "awaiting_validation_evidence"
+        elif phase.get("status") == "boundary_deferred":
+            computed = "boundary_deferred"
         else:
             computed = "complete"
+        status_warnings = []
+        if phase.get("status", "planned") != computed:
+            status_warnings.append(
+                f"declared_status {phase.get('status', 'planned')} differs from computed_status {computed}"
+            )
         result["phases"][phase["id"]] = {
             "declared_status": phase.get("status", "planned"),
             "computed_status": computed,
@@ -128,8 +189,10 @@ def check_roadmap(repo_root: Path, update: bool = True) -> dict[str, Any]:
             "human_gates_unverified": [gate["description"] for gate in unverified_gates],
             "human_gate_ids_verified": [gate["id"] for gate in verified_gates],
             "human_gate_ids_unverified": [gate["id"] for gate in unverified_gates],
+            "human_gate_unverified_details": unverified_gate_details,
             "commands_declared_not_executed_by_check": commands_missing_evidence,
             "blocked_dependencies": blocked_dependencies,
+            "status_warnings": status_warnings,
         }
         computed_by_phase[phase["id"]] = computed
     if update:

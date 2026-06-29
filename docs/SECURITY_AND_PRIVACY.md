@@ -45,6 +45,9 @@ those attributes may not exist, so broad cloud-synced scans should default to co
 
 ## External repositories
 
+Live missing-part research is disabled by default. `asset-dir research missing`
+must be run with `--enable-external` before it can call the GitHub API.
+
 A candidate GitHub project should not be imported based on stars alone. Review:
 
 - license and compatibility;

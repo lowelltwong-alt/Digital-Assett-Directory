@@ -5,6 +5,7 @@ status_model:
   - active
   - awaiting_human_gate
   - awaiting_validation_evidence
+  - boundary_deferred
   - blocked
   - complete
 phases:
@@ -114,9 +115,11 @@ phases:
           description: bypass and failure behavior tested
 
   - id: phase-4-semantic-enrichment
-    title: Optional embeddings and AI-assisted enrichment
-    status: planned
+    title: Semantic enrichment boundary; embeddings and AI-assisted enrichment deferred
+    status: boundary_deferred
     acceptance:
+      required_files:
+        - roadmap/evidence/phase-4-semantic-enrichment.md
       human_gates:
         - id: phase-4-provider-privacy-boundary-approved
           description: provider and privacy boundary approved
@@ -128,9 +131,11 @@ phases:
           description: generated metadata remains candidate status
 
   - id: phase-5-alerting-and-research-radar
-    title: Scheduled change detection and external missing-part research
-    status: planned
+    title: Manual alerting and research radar boundary; scheduled external research deferred
+    status: boundary_deferred
     acceptance:
+      required_files:
+        - roadmap/evidence/phase-5-alerting-and-research-radar.md
       human_gates:
         - id: phase-5-alert-channels-approved
           description: alert channels approved

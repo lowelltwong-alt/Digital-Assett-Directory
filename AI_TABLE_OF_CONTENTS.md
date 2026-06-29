@@ -207,6 +207,8 @@ them.
 | `roadmap/evidence/phase-3-sandbox-pilot.md` | Sandbox downstream-governance pilot evidence. | `roadmap`, `downstream_governance`, `validation` | You verify Phase 3 gates or learn how the files-only learning loop was tested. |
 | `roadmap/evidence/phase-4-semantic-enrichment.md` | Conservative Phase 4 semantic-enrichment boundary and evaluation evidence. | `roadmap`, `semantic_enrichment`, `privacy` | You need to know what Phase 4 approved, what remains deferred, or why embeddings are still gated. |
 | `roadmap/evidence/phase-5-alerting-and-research-radar.md` | Conservative Phase 5 manual-alert/radar boundary and external-research gates. | `roadmap`, `alerting`, `external_research` | You need to know what alerting/research surfaces are approved and what remains gated. |
+| `roadmap/evidence/claude-post-merge-roadmap-red-team.md` | Claude's post-merge red-team of roadmap completion, human gates, and external-call risks. | `roadmap`, `fresh_eyes_review`, `human_gate` | You need the independent critique behind roadmap gate hardening. |
+| `roadmap/evidence/roadmap-gate-hardening.md` | Remediation evidence for strict human-gate verification, boundary-deferred status, and external research enablement. | `roadmap`, `human_gate`, `security_privacy` | You need why some phases intentionally no longer compute complete after hardening. |
 
 ## Reference
 

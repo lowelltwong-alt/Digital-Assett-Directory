@@ -465,11 +465,21 @@ def agent_enforce(
 
 @research_app.command("missing")
 def research_missing(
-    limit: int = typer.Option(20, min=1, max=30), hub: Optional[Path] = typer.Option(None)
+    limit: int = typer.Option(20, min=1, max=30),
+    enable_external: bool = typer.Option(
+        False,
+        "--enable-external",
+        help="Allow live external GitHub API calls for missing-part research.",
+    ),
+    hub: Optional[Path] = typer.Option(None),
 ) -> None:
     cfg = _cfg(hub=hub)
-    report = research_missing_parts(cfg.repo_root, cfg.database_path, limit)
+    report = research_missing_parts(
+        cfg.repo_root, cfg.database_path, limit, enable_external=enable_external
+    )
     console.print_json(data=report)
+    if report["status"] == "blocked_external_research_not_enabled":
+        raise typer.Exit(2)
 
 
 @recommend_app.command("skills")

@@ -1,6 +1,7 @@
 # Phase 4 Semantic Enrichment Evidence
 
-Status: complete under a conservative local-only semantic-enrichment boundary.
+Status: boundary deferred under a conservative local-only
+semantic-enrichment boundary.
 
 Date: 2026-06-26
 
@@ -17,9 +18,9 @@ The approved Phase 4 surface is:
 - human-reviewed calibration evidence.
 
 Any later embedding provider, model enrichment provider, retention policy, or
-raw-content transfer remains a new human gate. This evidence closes the current
-roadmap phase by retaining the deterministic baseline and proving that the
-local content-aware enrichment harness produced measurable review benefit.
+raw-content transfer remains a new human gate. This evidence records the safe
+boundary and the deterministic evaluation result, but it does not claim that
+external embeddings or AI-assisted enrichment have been delivered.
 
 ## Gate Coverage
 
@@ -90,6 +91,7 @@ all preserve candidate-only semantics.
 
 ## Result
 
-Phase 4 is complete as a conservative deterministic semantic-enrichment
-checkpoint. It does not authorize external embeddings, external model calls,
-scheduled enrichment, or promotion of generated metadata to truth.
+Phase 4 is `boundary_deferred`: the deterministic enrichment boundary is
+documented, while external embeddings, external model calls, scheduled
+enrichment, and promotion of generated metadata to truth remain undelivered and
+separately gated.

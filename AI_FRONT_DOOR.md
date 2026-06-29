@@ -112,7 +112,7 @@ Discovery output is evidence and recommendation, not source-repository authority
 | Change identity or similarity rules | `identity_change` | ladder doc, identity-layer registry, schema/edge updates, validation |
 | Add a learning record | `lesson_capture` | lesson JSONL, provenance, confidence, reuse candidates |
 | Build a feature | `implementation` | preflight, changed files, tests, postflight, lessons |
-| Search external GitHub | `research_missing_part` | query, candidates, license/freshness metadata, human review note |
+| Search external GitHub | `research_missing_part` | explicit `--enable-external`, query, candidates, license/freshness metadata, human review note |
 | Change roadmap | `roadmap_change` | gate evidence, status transition, remaining risks |
 
 ## Mandatory AI preflight

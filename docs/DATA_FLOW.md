@@ -46,7 +46,7 @@ new idea or asset
 
 ```text
 unsatisfied need
--> explicit research command
+-> explicit research command with --enable-external
 -> GitHub repository search
 -> metadata-only candidate list
 -> license/freshness/security review

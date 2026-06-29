@@ -56,6 +56,66 @@ phases:
     assert verified["phases"]["phase-test"]["human_gate_ids_verified"] == ["gate-test"]
 
 
+def test_roadmap_human_gate_rejects_agent_reviewer(tmp_path: Path):
+    (tmp_path / "roadmap").mkdir()
+    (tmp_path / "required.txt").write_text("ok", encoding="utf-8")
+    (tmp_path / "roadmap" / "roadmap.yaml").write_text(
+        """
+roadmap_version: test
+phases:
+  - id: phase-test
+    status: planned
+    acceptance:
+      required_files:
+        - required.txt
+      human_gates:
+        - id: gate-test
+          description: human reviewed the thing
+""",
+        encoding="utf-8",
+    )
+
+    record_human_gate_evidence(
+        tmp_path,
+        phase_id="phase-test",
+        gate_id="gate-test",
+        reviewer="codex",
+        summary="Agent-observed, not human-reviewed.",
+        evidence=["roadmap/evidence/test.md"],
+    )
+    result = check_roadmap(tmp_path, update=False)
+
+    assert result["phases"]["phase-test"]["computed_status"] == "awaiting_human_gate"
+    assert result["phases"]["phase-test"]["human_gate_ids_unverified"] == ["gate-test"]
+    assert result["phases"]["phase-test"]["human_gate_unverified_details"] == [
+        {
+            "gate_id": "gate-test",
+            "description": "human reviewed the thing",
+            "reviewer": "codex",
+            "reason": "missing_human_reviewer",
+        }
+    ]
+
+
+def test_boundary_deferred_phase_does_not_compute_complete(tmp_path: Path):
+    (tmp_path / "roadmap").mkdir()
+    (tmp_path / "roadmap" / "roadmap.yaml").write_text(
+        """
+roadmap_version: test
+phases:
+  - id: phase-deferred
+    status: boundary_deferred
+    acceptance: {}
+""",
+        encoding="utf-8",
+    )
+
+    result = check_roadmap(tmp_path, update=False)
+
+    assert result["phases"]["phase-deferred"]["computed_status"] == "boundary_deferred"
+    assert result["phases"]["phase-deferred"]["status_warnings"] == []
+
+
 def test_roadmap_command_requires_validation_evidence(tmp_path: Path):
     (tmp_path / "roadmap").mkdir()
     (tmp_path / "roadmap" / "roadmap.yaml").write_text(

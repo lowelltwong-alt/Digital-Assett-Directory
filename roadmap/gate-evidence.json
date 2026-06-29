@@ -173,7 +173,7 @@
       "phase_id": "phase-4-semantic-enrichment",
       "reviewed_at": "2026-06-26T17:36:04.0519173Z",
       "reviewer": "codex",
-      "status": "verified",
+      "status": "boundary_deferred",
       "summary": "The deterministic baseline remains the only approved enrichment path; embeddings and model enrichment stay deferred behind separate provider/privacy/eval gates."
     },
     "phase-4-evaluation-harness-benefit-shown": {
@@ -186,7 +186,7 @@
       "phase_id": "phase-4-semantic-enrichment",
       "reviewed_at": "2026-06-26T17:36:04.0519173Z",
       "reviewer": "codex",
-      "status": "verified",
+      "status": "boundary_deferred",
       "summary": "Phase 2.5 score-delta validation showed measurable deterministic content-aware benefit: 100/100 reviewed rows matched desired movement, with zero about-right churn."
     },
     "phase-4-generated-metadata-candidate-status": {
@@ -200,7 +200,7 @@
       "phase_id": "phase-4-semantic-enrichment",
       "reviewed_at": "2026-06-26T17:36:04.0519173Z",
       "reviewer": "codex",
-      "status": "verified",
+      "status": "boundary_deferred",
       "summary": "Generated semantic metadata, scores, proposals, radar records, and graph relationships remain candidate evidence and cannot promote source truth or roadmap status by themselves."
     },
     "phase-4-provider-privacy-boundary-approved": {
@@ -213,7 +213,7 @@
       "phase_id": "phase-4-semantic-enrichment",
       "reviewed_at": "2026-06-26T17:36:04.0519173Z",
       "reviewer": "Lowell-directed roadmap order; codex-recorded conservative boundary",
-      "status": "verified",
+      "status": "boundary_deferred",
       "summary": "Human-directed roadmap completion is recorded under the safest boundary: no external provider, no embeddings, no raw source export, and no raw chat persistence; any future provider remains separately gated."
     },
     "phase-5-alert-channels-approved": {
@@ -226,7 +226,7 @@
       "phase_id": "phase-5-alerting-and-research-radar",
       "reviewed_at": "2026-06-26T17:36:04.0519173Z",
       "reviewer": "Lowell-directed roadmap order; codex-recorded conservative boundary",
-      "status": "verified",
+      "status": "boundary_deferred",
       "summary": "The approved alert channel is manual local generated reports under processed/ only; scheduled scans, external notifications, GitHub issue/PR creation, and webhook delivery remain unapproved."
     },
     "phase-5-external-code-review-gates-active": {
@@ -240,7 +240,7 @@
       "phase_id": "phase-5-alerting-and-research-radar",
       "reviewed_at": "2026-06-26T17:36:04.0519173Z",
       "reviewer": "codex",
-      "status": "verified",
+      "status": "boundary_deferred",
       "summary": "External code, tools, feedback, and research candidates remain blocked behind license, provenance, security, compatibility, source-authority, and human review gates."
     },
     "phase-5-no-autonomous-merge-promotion": {
@@ -254,7 +254,7 @@
       "phase_id": "phase-5-alerting-and-research-radar",
       "reviewed_at": "2026-06-26T17:36:04.0519173Z",
       "reviewer": "codex",
-      "status": "verified",
+      "status": "boundary_deferred",
       "summary": "No generated alert, proposal, graph edge, research candidate, or connection packet can autonomously merge, mutate source repositories, promote source truth, or complete roadmap work."
     },
     "phase-5-rate-limits-source-terms-reviewed": {
@@ -267,7 +267,7 @@
       "phase_id": "phase-5-alerting-and-research-radar",
       "reviewed_at": "2026-06-26T17:36:04.0519173Z",
       "reviewer": "codex",
-      "status": "verified",
+      "status": "boundary_deferred",
       "summary": "The active rate limit is zero scheduled external calls; future external research must record source terms, license/provenance/freshness/security review, and explicit human approval before reuse."
     }
   },

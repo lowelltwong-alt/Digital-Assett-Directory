@@ -12,8 +12,25 @@ from .utils import utc_now, write_json, atomic_write_text
 
 
 def research_missing_parts(
-    repo_root: Path, database_path: Path, limit: int = 20, token_env: str = "GITHUB_TOKEN"
+    repo_root: Path,
+    database_path: Path,
+    limit: int = 20,
+    token_env: str = "GITHUB_TOKEN",
+    *,
+    enable_external: bool = False,
 ) -> dict[str, Any]:
+    if not enable_external:
+        return {
+            "schema_version": "0.1.0",
+            "created_at": utc_now(),
+            "status": "blocked_external_research_not_enabled",
+            "findings": [],
+            "rules": [
+                "Live GitHub research requires --enable-external.",
+                "External research must record source terms, rate-limit posture, license, provenance, freshness, security, and compatibility review.",
+                "Do not copy code automatically.",
+            ],
+        }
     with CatalogDB(database_path) as db:
         assets = db.assets()
     missing = missing_need_counts(assets)[:10]

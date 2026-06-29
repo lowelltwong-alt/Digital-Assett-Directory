@@ -1,7 +1,7 @@
 # Phase 5 Alerting And Research Radar Evidence
 
-Status: complete under a conservative manual/local-only alerting and research
-radar boundary.
+Status: boundary deferred under a conservative manual/local-only alerting and
+research radar boundary.
 
 Date: 2026-06-26
 
@@ -134,6 +134,7 @@ uses cold reserve plus hard compute caps.
 
 ## Result
 
-Phase 5 is complete as a manual local radar and generated-report alert boundary.
-It does not authorize scheduled scans, external research automation, external
-notifications, GitHub scanning, external code import, or autonomous promotion.
+Phase 5 is `boundary_deferred`: the manual local radar and generated-report
+alert boundary are documented, while scheduled scans, external research
+automation, external notifications, GitHub scanning, external code import, and
+autonomous promotion remain undelivered and separately gated.

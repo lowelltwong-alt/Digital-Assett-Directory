@@ -80,7 +80,7 @@ asset-dir lesson add --repo . --summary "What changed" --lesson "Reusable insigh
 asset-dir agent preflight --repo . --agent codex --task "Implement a new scanner"
 asset-dir agent postflight --session <SESSION_ID> --repo . --summary "Implemented scanner" --tests "pytest"
 asset-dir agent install --repo 'C:\path\to\another\repo'
-asset-dir research missing --limit 20
+asset-dir research missing --limit 20 --enable-external
 asset-dir recommend skills --threshold 3
 asset-dir recommend swarm "Build a source-grounded assistant with evaluation and audit"
 asset-dir roadmap check
