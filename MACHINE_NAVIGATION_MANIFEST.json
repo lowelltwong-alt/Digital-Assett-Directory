@@ -24,6 +24,7 @@
     "registry/edge-type-registry.json",
     "registry/asset-pattern-registry.json",
     "registry/context-tag-registry.json",
+    "registry/template-registry.json",
     "processed/graph/graph.json",
     "processed/reports/asset_family_recognition.md",
     "processed/reports/workflow_sweeps/workflow_sweeps_index.md",
@@ -32,6 +33,7 @@
     "processed/reports/workflow_part_usage_guidance.md",
     "processed/reports/manual_task_queue.md",
     "processed/reports/repo_buildout/index.md",
+    "processed/reports/template_library.md",
     "processed/reports/operational_readiness.md"
   ],
   "registries": {
@@ -46,6 +48,7 @@
     "identity_layers": "registry/identity-layer-registry.json",
     "edge_types": "registry/edge-type-registry.json",
     "lifecycle": "registry/lifecycle-registry.json",
+    "templates": "registry/template-registry.json",
     "schemas": "registry/schema-registry.json",
     "capabilities": "registry/capability-registry.json",
     "needs": "registry/need-registry.json",

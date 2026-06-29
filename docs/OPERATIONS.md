@@ -86,6 +86,33 @@ present. It does not rescan, mutate the target repo, call GitHub, call models,
 install hooks, promote candidates to truth, change scores, or mark roadmap
 phases complete.
 
+## Template library
+
+Use `templates check` when you need to validate DAD's reusable template library,
+review stale templates, or inspect direct and reverse dependencies:
+
+```powershell
+$env:PYTHONPATH='src'; python -m digital_asset_directory.cli templates check
+```
+
+The command writes:
+
+```text
+processed/reports/template_library.md
+processed/reports/template_library.json
+```
+
+Use no-write validation when you only need the registry check:
+
+```powershell
+$env:PYTHONPATH='src'; python -m digital_asset_directory.cli templates validate
+```
+
+Template improvement is recommend-only in v1. The checker may flag due templates
+and dependency impacts, but it does not rewrite templates, install hooks, mutate
+downstream repositories, or propagate updates without a separate human-approved
+patch workflow.
+
 ## Recommended cadence
 
 - scan active repos after material updates;

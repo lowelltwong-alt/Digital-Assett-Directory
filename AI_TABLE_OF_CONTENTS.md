@@ -35,6 +35,7 @@ them.
 | `background_connection` | Low-compute connection scouting, escalation packets, and bounded expansion maps. |
 | `workflow_part` | Reusable workflow sub-units beneath asset patterns. |
 | `repo_buildout` | Repo-specific buildout advice from cataloged assets, workflows, alerts, and safe inspiration candidates. |
+| `template_library` | Reusable templates, dependencies, review cadence, and template upgrade governance. |
 
 ## Front Doors And Authority
 
@@ -89,6 +90,7 @@ them.
 | `registry/edge-type-registry.json` | Controlled edge-type vocabulary. | `knowledge_graph`, `registry` | You add, validate, or interpret graph edges. |
 | `registry/asset-pattern-registry.json` | Controlled high-leverage asset pattern vocabulary. | `knowledge_graph`, `registry`, `workflow` | You classify workflows, composite assets, or reusable systems. |
 | `registry/context-tag-registry.json` | Controlled context tags for lessons and routing. | `knowledge_graph`, `registry`, `learning_loop` | You constrain when a lesson or pattern applies. |
+| `registry/template-registry.json` | Controlled template library with direct and reverse dependencies. | `registry`, `template_library`, `workflow` | You create, update, validate, or reuse templates and need impact analysis. |
 | `registry/capability-registry.json` | Controlled capability IDs. | `knowledge_graph`, `registry` | You connect assets to what they can do. |
 | `registry/need-registry.json` | Controlled need and missing-part IDs. | `knowledge_graph`, `registry` | You connect assets to gaps or activation needs. |
 | `processed/graph/graph.json` | Generated candidate graph. | `knowledge_graph`, `generated_output` | You need current generated graph evidence; never treat it as truth. |
@@ -103,6 +105,7 @@ them.
 | `processed/reports/background_connection_escalation_packets.md` | Generated bounded review packets for high-score candidate connections. | `knowledge_graph`, `generated_output`, `background_connection` | You need minimal context for fresh-eyes review or future strong-model verification. |
 | `processed/reports/manual_task_queue.md` | Generated manual task queue that re-ranks alerts and workflow-part guidance with source-boundary and red-team posture. | `knowledge_graph`, `generated_output`, `workflow_part`, `validation` | You need the safest next human-review tasks from the current alert and workflow-part queues. |
 | `processed/reports/repo_buildout/index.md` | Generated repo-specific buildout advisor index. | `knowledge_graph`, `generated_output`, `repo_buildout`, `cross_repo` | You need one cataloged repo's candidate buildout plan, internal combinations, safe cross-repo inspirations, and fresh-eyes prompt. |
+| `processed/reports/template_library.md` | Generated template dependency, reverse-dependency, and review-cadence report. | `generated_output`, `template_library`, `workflow` | You need to know which templates are stale, what they depend on, and what depends on them. |
 
 ## Contracts
 
@@ -121,6 +124,7 @@ them.
 | `schemas/learning-loop.schema.json` | Learning-loop candidate contract. | `schema`, `learning_loop` | You generate learning-loop candidates. |
 | `schemas/workflow-part.schema.json` | Workflow-part candidate contract. | `schema`, `workflow_part`, `knowledge_graph` | You generate or validate recombinable workflow sub-units beneath existing asset patterns. |
 | `schemas/workflow-part-review.schema.json` | Workflow-part human review label contract. | `schema`, `workflow_part`, `calibration` | You label workflow-part candidates for usefulness, safety, specificity, dataflow completeness, and review-use decision. |
+| `schemas/template-record.schema.json` | Template registry record contract. | `schema`, `template_library`, `workflow` | You register or validate reusable templates, dependencies, review cadence, and update policies. |
 | `schemas/context-tag.schema.json` | Context tag contract. | `schema`, `registry`, `learning_loop` | You add or validate context vocabulary. |
 | `schemas/worktree-attempt.schema.json` | Worktree attempt contract. | `schema`, `learning_loop`, `cross_repo` | You mine temp or worktree attempts. |
 | `schemas/repo-timeline-event.schema.json` | Repo timeline event contract. | `schema`, `learning_loop`, `cross_repo` | You mine bounded local git history. |
@@ -170,6 +174,9 @@ them.
 | `config/sources.example.yaml` | Example source configuration. | `workflow`, `authority` | You configure local scan scope. |
 | `docs/OPERATIONS.md` | Operational command and runbook guidance. | `workflow`, `validation` | You run DAD tasks. |
 | `asset-dir doctor` | Local operational readiness check that does not rescan or mutate sources. | `validation`, `workflow`, `generated_output` | You need one command to verify front-door, catalog, roadmap, generated surfaces, and readiness warnings. |
+| `docs/TEMPLATE_LIBRARY_GOVERNANCE.md` | Template library dependency and upgrade-governance rules. | `template_library`, `workflow`, `validation` | You create, update, review, or validate reusable templates. |
+| `asset-dir templates check` | Template registry validator and generated dependency report command. | `template_library`, `validation`, `generated_output` | You need template dependency impact analysis or periodic template review. |
+| `asset-dir templates validate` | No-write template registry validation command. | `template_library`, `validation` | You need to check template graph metadata without writing generated reports. |
 | `docs/PROPOSAL_ENGINE_CALIBRATION_WORKFLOW.md` | Proposal review workflow. | `calibration`, `workflow` | You review bottom-up and top-down proposal engines. |
 | `asset-dir recommend workflow-sweeps` | CLI command for generated workflow-family sweep reports. | `workflow`, `generated_output`, `cross_repo` | You need generated workflow candidates. |
 | `asset-dir recommend workflow-parts` | CLI command for generated workflow-part candidates from the current catalog. | `workflow`, `workflow_part`, `generated_output` | You need recombinable sub-unit candidates without rescanning or mutating source repos. |
@@ -194,6 +201,7 @@ them.
 | `templates/load-bearing-decision-review.template.md` | Fresh-eyes red-team and premortem template. | `workflow`, `calibration` | A high-risk decision needs independent review. |
 | `templates/software-repo-checklist-tree.template.md` | Reusable checklist-tree record. | `workflow`, `validation` | You document selected checklist branches. |
 | `templates/ai-table-of-contents.template.md` | Reusable AI TOC template with descriptions, tags, and use-when triggers. | `front_door`, `workflow`, `learning_loop` | You build AI navigation for this repo or another repo. |
+| `templates/downstream/AGENTS_MANAGED_BLOCK.md` | Managed downstream governance block template. | `template_library`, `workflow`, `cross_repo` | A downstream repo is explicitly approved for DAD governance installation. |
 
 ## Roadmap
 
@@ -231,6 +239,7 @@ them.
 | `roadmap/evidence/operational-readiness-doctor.md` | Evidence for the local-only `doctor` readiness command. | `roadmap`, `validation`, `workflow` | You need to know what the readiness command proves and what it does not prove. |
 | `roadmap/evidence/manual-task-queue-prioritization.md` | Evidence, formula, local research support, and red-team for manual task queue prioritization. | `roadmap`, `knowledge_graph`, `workflow_part`, `validation` | You need why alerts are re-ranked before human work and what the queue must not be used to justify. |
 | `roadmap/evidence/repo-buildout-advisor-v1.md` | Evidence, formula, red-team, and boundaries for repo-specific buildout advice. | `roadmap`, `repo_buildout`, `knowledge_graph`, `validation` | You need why repo buildout recommendations are generated-only and how their priority score is derived. |
+| `roadmap/evidence/template-library-governance-v1.md` | Evidence for tracked template dependency governance and update boundaries. | `roadmap`, `template_library`, `validation` | You need why templates became first-class dependency-tracked assets. |
 | `roadmap/evidence/claude-workflow-composition-red-team.md` | Claude's independent warning against ontology sprawl and recommendation for WorkflowPartRecord. | `roadmap`, `workflow`, `knowledge_graph` | You need the fresh-eyes review behind the background-radar synthesis. |
 | `roadmap/evidence/phase-3-sandbox-pilot.md` | Sandbox downstream-governance pilot evidence. | `roadmap`, `downstream_governance`, `validation` | You verify Phase 3 gates or learn how the files-only learning loop was tested. |
 | `roadmap/evidence/phase-4-semantic-enrichment.md` | Conservative Phase 4 semantic-enrichment boundary and evaluation evidence. | `roadmap`, `semantic_enrichment`, `privacy` | You need to know what Phase 4 approved, what remains deferred, or why embeddings are still gated. |

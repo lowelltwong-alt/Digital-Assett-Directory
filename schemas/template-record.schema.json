@@ -1,0 +1,68 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://local.digital-asset-directory/schemas/template-record.schema.json",
+  "title": "Template Record",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "template_id",
+    "path",
+    "template_name",
+    "template_type",
+    "purpose",
+    "applies_when",
+    "does_not_apply_when",
+    "danger_if_misapplied",
+    "depends_on_template_ids",
+    "dependent_template_ids",
+    "depends_on_contracts",
+    "upgrade_triggers",
+    "recommended_review_interval_days",
+    "last_reviewed_at",
+    "next_review_due_at",
+    "upgrade_policy",
+    "deterministic_update_rule",
+    "validation_commands",
+    "authority_boundary",
+    "review_status"
+  ],
+  "properties": {
+    "schema_version": {"const": "0.1.0"},
+    "template_id": {"type": "string", "minLength": 1},
+    "path": {"type": "string", "minLength": 1},
+    "template_name": {"type": "string", "minLength": 1},
+    "template_type": {
+      "enum": [
+        "repo_scaffold",
+        "ai_navigation",
+        "governance",
+        "learning_loop",
+        "handoff",
+        "lesson",
+        "review_gate",
+        "checklist",
+        "feedback",
+        "automation"
+      ]
+    },
+    "purpose": {"type": "string", "minLength": 1},
+    "applies_when": {"type": "array", "items": {"type": "string"}, "minItems": 1},
+    "does_not_apply_when": {"type": "array", "items": {"type": "string"}, "minItems": 1},
+    "danger_if_misapplied": {"type": "string", "minLength": 1},
+    "depends_on_template_ids": {"type": "array", "items": {"type": "string"}},
+    "dependent_template_ids": {"type": "array", "items": {"type": "string"}},
+    "depends_on_contracts": {"type": "array", "items": {"type": "string"}},
+    "upgrade_triggers": {"type": "array", "items": {"type": "string"}, "minItems": 1},
+    "recommended_review_interval_days": {"type": "integer", "minimum": 1},
+    "last_reviewed_at": {"type": "string", "minLength": 1},
+    "next_review_due_at": {"type": "string", "minLength": 1},
+    "upgrade_policy": {
+      "enum": ["recommend_only", "human_approved_patch", "managed_block_only"]
+    },
+    "deterministic_update_rule": {"type": "string", "minLength": 1},
+    "validation_commands": {"type": "array", "items": {"type": "string"}},
+    "authority_boundary": {"type": "string", "minLength": 1},
+    "review_status": {"enum": ["generated_candidate", "reviewed", "rejected"]}
+  },
+  "additionalProperties": false
+}

@@ -459,6 +459,45 @@ class ContextTagRecord(BaseModel):
     risk_if_misapplied: str = Field(min_length=1)
 
 
+class TemplateRecord(BaseModel):
+    schema_version: str = "0.1.0"
+    template_id: str
+    path: str = Field(min_length=1)
+    template_name: str = Field(min_length=1)
+    template_type: Literal[
+        "repo_scaffold",
+        "ai_navigation",
+        "governance",
+        "learning_loop",
+        "handoff",
+        "lesson",
+        "review_gate",
+        "checklist",
+        "feedback",
+        "automation",
+    ]
+    purpose: str = Field(min_length=1)
+    applies_when: list[str] = Field(min_length=1)
+    does_not_apply_when: list[str] = Field(min_length=1)
+    danger_if_misapplied: str = Field(min_length=1)
+    depends_on_template_ids: list[str] = Field(default_factory=list)
+    dependent_template_ids: list[str] = Field(default_factory=list)
+    depends_on_contracts: list[str] = Field(default_factory=list)
+    upgrade_triggers: list[str] = Field(min_length=1)
+    recommended_review_interval_days: int = Field(ge=1)
+    last_reviewed_at: str
+    next_review_due_at: str
+    upgrade_policy: Literal[
+        "recommend_only",
+        "human_approved_patch",
+        "managed_block_only",
+    ] = "recommend_only"
+    deterministic_update_rule: str = Field(min_length=1)
+    validation_commands: list[str] = Field(default_factory=list)
+    authority_boundary: str = Field(min_length=1)
+    review_status: Literal["generated_candidate", "reviewed", "rejected"] = "reviewed"
+
+
 class WorktreeAttemptRecord(BaseModel):
     schema_version: str = "0.1.0"
     attempt_id: str

@@ -1,0 +1,257 @@
+{
+  "registry_version": "0.1.0",
+  "status": "seed",
+  "authority_boundary": "Template records are DAD-owned governance metadata. They do not rewrite downstream repositories automatically.",
+  "templates": [
+    {
+      "schema_version": "0.1.0",
+      "template_id": "template:ai-table-of-contents",
+      "path": "templates/ai-table-of-contents.template.md",
+      "template_name": "AI table of contents",
+      "template_type": "ai_navigation",
+      "purpose": "Reusable deterministic AI TOC row shape with descriptions, tags, and use-when routing.",
+      "applies_when": ["A repo needs future AI agents to find authority, graph, schema, workflow, and validation surfaces."],
+      "does_not_apply_when": ["A scratch repo has no persistent AI navigation or future-agent reuse need."],
+      "danger_if_misapplied": "A TOC can become a filename dump if rows lack routing tags and use-when triggers.",
+      "depends_on_template_ids": [],
+      "dependent_template_ids": ["template:downstream-agents-managed-block"],
+      "depends_on_contracts": [
+        "docs/AI_ENTRYPOINT_AND_TOC_ROUTING_STANDARD.md",
+        "AI_FRONT_DOOR.md",
+        "AI_TABLE_OF_CONTENTS.md",
+        "registry/learning-rule-registry.json"
+      ],
+      "upgrade_triggers": [
+        "AI TOC row-shape standard changes",
+        "new required AI navigation tags are added",
+        "knowledge-graph entrypoints change"
+      ],
+      "recommended_review_interval_days": 180,
+      "last_reviewed_at": "2026-06-29",
+      "next_review_due_at": "2026-12-26",
+      "upgrade_policy": "human_approved_patch",
+      "deterministic_update_rule": "Update only when the routing standard, front door, TOC tag index, or graph entrypoint list changes; preserve path, what-it-is, tags, and use-when columns.",
+      "validation_commands": ["python -m pytest tests/test_ai_navigation.py"],
+      "authority_boundary": "DAD template guidance only; target repos retain their local front-door authority.",
+      "review_status": "reviewed"
+    },
+    {
+      "schema_version": "0.1.0",
+      "template_id": "template:asset-use-feedback",
+      "path": "templates/asset-use-feedback.template.md",
+      "template_name": "Asset use feedback",
+      "template_type": "feedback",
+      "purpose": "Before/after asset-use feedback form for the pay-forward learning loop.",
+      "applies_when": ["A person or AI uses a DAD asset and should report expectation, actual value, reuse limits, and safety notes."],
+      "does_not_apply_when": ["The asset was not used or the feedback would include secrets or raw private source data."],
+      "danger_if_misapplied": "Untrusted feedback can become prompt injection or false authority if treated as executable instructions or reviewed truth.",
+      "depends_on_template_ids": [],
+      "dependent_template_ids": ["template:software-repo-checklist-tree"],
+      "depends_on_contracts": [
+        "docs/ASSET_USE_PAY_FORWARD_LOOP.md",
+        "docs/PUBLIC_ASSET_USE_FEEDBACK.md",
+        "schemas/repo-learning-event.schema.json",
+        "registry/learning-rule-registry.json"
+      ],
+      "upgrade_triggers": [
+        "asset-use feedback contract changes",
+        "public feedback security guidance changes",
+        "new asset classes require feedback fields"
+      ],
+      "recommended_review_interval_days": 180,
+      "last_reviewed_at": "2026-06-29",
+      "next_review_due_at": "2026-12-26",
+      "upgrade_policy": "human_approved_patch",
+      "deterministic_update_rule": "Keep before-use and after-use sections, context limits, safety confirmation, and untrusted-input warnings aligned with the pay-forward docs.",
+      "validation_commands": ["python -m digital_asset_directory.cli validate"],
+      "authority_boundary": "Feedback is candidate evidence until reviewed; it cannot override source truth, tests, or human gates.",
+      "review_status": "reviewed"
+    },
+    {
+      "schema_version": "0.1.0",
+      "template_id": "template:load-bearing-decision-review",
+      "path": "templates/load-bearing-decision-review.template.md",
+      "template_name": "Load-bearing decision review",
+      "template_type": "review_gate",
+      "purpose": "Fresh-eyes red-team and premortem template for high-impact software, roadmap, schema, scoring, governance, dependency, and automation decisions.",
+      "applies_when": ["A decision can affect downstream repos, agents, schemas, scores, gates, hooks, or future defaults."],
+      "does_not_apply_when": ["The change is trivial, isolated, reversible, and has no shared contract or downstream consumer."],
+      "danger_if_misapplied": "Overusing the template can slow low-risk work; skipping it can let bad defaults cascade across repos.",
+      "depends_on_template_ids": ["template:software-repo-checklist-tree"],
+      "dependent_template_ids": ["template:downstream-agents-managed-block"],
+      "depends_on_contracts": [
+        "docs/LOAD_BEARING_DECISION_REVIEW.md",
+        "docs/SOFTWARE_REPO_CHECKLIST_TREE.md",
+        "registry/learning-rule-registry.json"
+      ],
+      "upgrade_triggers": [
+        "risk-tier methodology changes",
+        "new high-risk software checklist branch is added",
+        "fresh-eyes review requirements change"
+      ],
+      "recommended_review_interval_days": 180,
+      "last_reviewed_at": "2026-06-29",
+      "next_review_due_at": "2026-12-26",
+      "upgrade_policy": "human_approved_patch",
+      "deterministic_update_rule": "Keep risk tier, downstream blast radius, options, red-team, premortem, rollback, validation, and fresh-eyes sections aligned with the load-bearing decision rule.",
+      "validation_commands": ["python -m digital_asset_directory.cli validate"],
+      "authority_boundary": "Template supports human review; it does not self-approve high-risk decisions.",
+      "review_status": "reviewed"
+    },
+    {
+      "schema_version": "0.1.0",
+      "template_id": "template:software-repo-checklist-tree",
+      "path": "templates/software-repo-checklist-tree.template.md",
+      "template_name": "Software repo checklist tree",
+      "template_type": "checklist",
+      "purpose": "Reusable checklist tree for non-trivial software, repo, data, workflow, scoring, governance, source-scan, release, and automation work.",
+      "applies_when": ["A task has multiple dimensions and needs selected checklist branches before implementation."],
+      "does_not_apply_when": ["The task is a simple one-command query or trivial isolated edit."],
+      "danger_if_misapplied": "A checklist can become noise if every branch is applied without task-specific selection.",
+      "depends_on_template_ids": ["template:asset-use-feedback"],
+      "dependent_template_ids": ["template:load-bearing-decision-review"],
+      "depends_on_contracts": [
+        "docs/SOFTWARE_REPO_CHECKLIST_TREE.md",
+        "docs/ASSET_USE_PAY_FORWARD_LOOP.md",
+        "registry/context-tag-registry.json",
+        "registry/learning-rule-registry.json"
+      ],
+      "upgrade_triggers": [
+        "new repo-work checklist branch is added",
+        "pay-forward loop fields change",
+        "context tag vocabulary changes"
+      ],
+      "recommended_review_interval_days": 180,
+      "last_reviewed_at": "2026-06-29",
+      "next_review_due_at": "2026-12-26",
+      "upgrade_policy": "human_approved_patch",
+      "deterministic_update_rule": "Keep branch names aligned with the software checklist tree and require applies_when, does_not_apply_when, danger, validation, and pay-forward notes.",
+      "validation_commands": ["python -m digital_asset_directory.cli validate"],
+      "authority_boundary": "Checklist selects review posture; it does not replace tests, source authority, or human gates.",
+      "review_status": "reviewed"
+    },
+    {
+      "schema_version": "0.1.0",
+      "template_id": "template:handoff-json",
+      "path": "templates/handoff.template.json",
+      "template_name": "Handoff JSON",
+      "template_type": "handoff",
+      "purpose": "Structured handoff seed for transferring agent context, tests, assumptions, risks, and next actions.",
+      "applies_when": ["An agent needs to transfer task state or preserve postflight context for another agent."],
+      "does_not_apply_when": ["No material work occurred or the task has no reusable continuation context."],
+      "danger_if_misapplied": "A handoff can preserve stale assumptions if it does not separate confirmed facts from inferred findings.",
+      "depends_on_template_ids": [],
+      "dependent_template_ids": [],
+      "depends_on_contracts": [
+        "schemas/handoff.schema.json",
+        "docs/LESSONS_AND_HANDOFF_LOOP.md",
+        "AGENTS.md"
+      ],
+      "upgrade_triggers": [
+        "handoff schema changes",
+        "postflight required fields change"
+      ],
+      "recommended_review_interval_days": 180,
+      "last_reviewed_at": "2026-06-29",
+      "next_review_due_at": "2026-12-26",
+      "upgrade_policy": "human_approved_patch",
+      "deterministic_update_rule": "Keep template fields aligned with the handoff schema and required postflight report sections.",
+      "validation_commands": ["python -m digital_asset_directory.cli validate"],
+      "authority_boundary": "Handoffs preserve context; they do not certify source truth or roadmap completion.",
+      "review_status": "reviewed"
+    },
+    {
+      "schema_version": "0.1.0",
+      "template_id": "template:lesson-json",
+      "path": "templates/lesson.template.json",
+      "template_name": "Lesson JSON",
+      "template_type": "lesson",
+      "purpose": "Structured lesson seed for capturing reusable learning with provenance and applicability limits.",
+      "applies_when": ["A task reveals a reusable lesson that should help future agents in similar contexts."],
+      "does_not_apply_when": ["The observation is raw, private hidden reasoning, or too context-free to reuse safely."],
+      "danger_if_misapplied": "A lesson without non-applicability and danger notes can become harmful as a universal rule.",
+      "depends_on_template_ids": [],
+      "dependent_template_ids": [],
+      "depends_on_contracts": [
+        "schemas/lesson.schema.json",
+        "docs/LESSONS_AND_HANDOFF_LOOP.md",
+        "docs/DETERMINISTIC_LEARNING_RULES.md"
+      ],
+      "upgrade_triggers": [
+        "lesson schema changes",
+        "deterministic learning-rule requirements change"
+      ],
+      "recommended_review_interval_days": 180,
+      "last_reviewed_at": "2026-06-29",
+      "next_review_due_at": "2026-12-26",
+      "upgrade_policy": "human_approved_patch",
+      "deterministic_update_rule": "Keep lesson fields aligned with source, evidence, confidence, applies_when, does_not_apply_when, and danger-if-misapplied requirements.",
+      "validation_commands": ["python -m digital_asset_directory.cli validate"],
+      "authority_boundary": "Lessons are reusable guidance only when context fits; they do not override tests or source authority.",
+      "review_status": "reviewed"
+    },
+    {
+      "schema_version": "0.1.0",
+      "template_id": "template:downstream-agents-managed-block",
+      "path": "templates/downstream/AGENTS_MANAGED_BLOCK.md",
+      "template_name": "Downstream AGENTS managed block",
+      "template_type": "governance",
+      "purpose": "Managed governance block inserted into downstream repos to connect them to DAD preflight, postflight, learning, and load-bearing decision review.",
+      "applies_when": ["A downstream repo is explicitly approved for DAD governance installation."],
+      "does_not_apply_when": ["The repo is active and not authorized for mutation, or only a read-only scan is approved."],
+      "danger_if_misapplied": "Installing governance into the wrong repo can disrupt active work or imply DAD authority over local canon.",
+      "depends_on_template_ids": ["template:ai-table-of-contents", "template:load-bearing-decision-review"],
+      "dependent_template_ids": ["template:downstream-pre-push-hook"],
+      "depends_on_contracts": [
+        "docs/DOWNSTREAM_REPO_GOVERNANCE.md",
+        "src/digital_asset_directory/governance.py",
+        "scripts/new_repo.ps1",
+        "AGENTS.md"
+      ],
+      "upgrade_triggers": [
+        "preflight or postflight contract changes",
+        "load-bearing decision rule changes",
+        "downstream governance installer changes"
+      ],
+      "recommended_review_interval_days": 90,
+      "last_reviewed_at": "2026-06-29",
+      "next_review_due_at": "2026-09-27",
+      "upgrade_policy": "managed_block_only",
+      "deterministic_update_rule": "Only update the managed block between DAD markers; preserve downstream repo-authored AGENTS content outside the block.",
+      "validation_commands": ["python -m pytest tests/test_governance.py", "python -m digital_asset_directory.cli validate"],
+      "authority_boundary": "DAD may manage only its marked downstream block after explicit repo authorization.",
+      "review_status": "reviewed"
+    },
+    {
+      "schema_version": "0.1.0",
+      "template_id": "template:downstream-pre-push-hook",
+      "path": "templates/downstream/pre-push",
+      "template_name": "Downstream pre-push hook",
+      "template_type": "automation",
+      "purpose": "Tool-neutral pre-push hook template that enforces postflight through the central DAD hub.",
+      "applies_when": ["A downstream repo is explicitly approved for DAD hook installation."],
+      "does_not_apply_when": ["Only files-only governance is approved, or hooks would disrupt an active repo."],
+      "danger_if_misapplied": "A hook can block or disrupt work if installed without human approval, bypass policy, and tested postflight behavior.",
+      "depends_on_template_ids": ["template:downstream-agents-managed-block"],
+      "dependent_template_ids": [],
+      "depends_on_contracts": [
+        "scripts/enforce_postflight.py",
+        "docs/DOWNSTREAM_REPO_GOVERNANCE.md",
+        "src/digital_asset_directory/governance.py"
+      ],
+      "upgrade_triggers": [
+        "postflight enforcement changes",
+        "hook bypass policy changes",
+        "governance installer changes"
+      ],
+      "recommended_review_interval_days": 90,
+      "last_reviewed_at": "2026-06-29",
+      "next_review_due_at": "2026-09-27",
+      "upgrade_policy": "human_approved_patch",
+      "deterministic_update_rule": "Keep hook minimal, path-parameterized, and dependent on central postflight enforcement; never install without explicit target repo approval.",
+      "validation_commands": ["python -m pytest tests/test_governance.py"],
+      "authority_boundary": "Hook installation is opt-in per repo and cannot be enabled by a scan or recommendation command.",
+      "review_status": "reviewed"
+    }
+  ]
+}

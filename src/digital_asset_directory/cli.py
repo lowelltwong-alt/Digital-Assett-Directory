@@ -70,6 +70,7 @@ from .research import research_missing_parts
 from .repo_buildout import load_default_repo_buildout_artifacts, write_repo_buildout_outputs
 from .roadmap import check_roadmap
 from .semantic_evolution import write_semantic_evolution_outputs
+from .template_library import validate_template_registry, write_template_library_report
 from .validation import validate_repo
 from .workflow_parts import (
     build_workflow_part_review_queue,
@@ -92,6 +93,8 @@ roadmap_app = typer.Typer(no_args_is_help=True)
 app.add_typer(roadmap_app, name="roadmap")
 research_app = typer.Typer(no_args_is_help=True)
 app.add_typer(research_app, name="research")
+template_app = typer.Typer(no_args_is_help=True)
+app.add_typer(template_app, name="templates")
 orphan_app = typer.Typer(no_args_is_help=True)
 app.add_typer(orphan_app, name="orphan-radar")
 recommend_app = typer.Typer(no_args_is_help=True)
@@ -130,6 +133,26 @@ def doctor(config: Optional[Path] = typer.Option(None), hub: Optional[Path] = ty
     result = write_operational_readiness_report(_cfg(config, hub))
     console.print_json(data=result)
     if not result["ready"]:
+        raise typer.Exit(2)
+
+
+@template_app.command("check")
+def templates_check(hub: Optional[Path] = typer.Option(None)) -> None:
+    """Validate the tracked template registry and write the generated dependency report."""
+    cfg = _cfg(hub=hub)
+    result = write_template_library_report(cfg.repo_root)
+    console.print_json(data=result)
+    if not result["valid"]:
+        raise typer.Exit(2)
+
+
+@template_app.command("validate")
+def templates_validate(hub: Optional[Path] = typer.Option(None)) -> None:
+    """Validate template records without writing reports."""
+    cfg = _cfg(hub=hub)
+    result = validate_template_registry(cfg.repo_root)
+    console.print_json(data=result)
+    if not result["valid"]:
         raise typer.Exit(2)
 
 

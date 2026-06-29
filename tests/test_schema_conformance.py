@@ -24,6 +24,7 @@ from digital_asset_directory.models import (
     RepoTimelineEventRecord,
     RootCauseHypothesisRecord,
     SemanticEvolutionRecord,
+    TemplateRecord,
     WorktreeAttemptRecord,
     WorkflowPartRecord,
     WorkflowPartReviewRecord,
@@ -558,3 +559,29 @@ def test_repo_buildout_recommendation_model_dump_matches_registered_schema():
     )
 
     validate_registered_schema("repo_buildout_recommendation", record.model_dump(mode="json"))
+
+
+def test_template_record_model_dump_matches_registered_schema():
+    record = TemplateRecord(
+        template_id="template:test",
+        path="templates/test.template.md",
+        template_name="Test Template",
+        template_type="checklist",
+        purpose="Test template governance.",
+        applies_when=["A template is under review."],
+        does_not_apply_when=["No template exists."],
+        danger_if_misapplied="May imply authority where none exists.",
+        depends_on_template_ids=[],
+        dependent_template_ids=[],
+        depends_on_contracts=["docs/TEMPLATE_LIBRARY_GOVERNANCE.md"],
+        upgrade_triggers=["Template schema changes."],
+        recommended_review_interval_days=180,
+        last_reviewed_at="2026-06-29",
+        next_review_due_at="2026-12-26",
+        upgrade_policy="recommend_only",
+        deterministic_update_rule="Review before patching.",
+        validation_commands=["python -m digital_asset_directory.cli validate"],
+        authority_boundary="Template metadata only.",
+    )
+
+    validate_registered_schema("template_record", record.model_dump(mode="json"))

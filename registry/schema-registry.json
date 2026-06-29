@@ -20,6 +20,7 @@
     "learning_loop": "schemas/learning-loop.schema.json",
     "workflow_part": "schemas/workflow-part.schema.json",
     "workflow_part_review": "schemas/workflow-part-review.schema.json",
+    "template_record": "schemas/template-record.schema.json",
     "context_tag": "schemas/context-tag.schema.json",
     "worktree_attempt": "schemas/worktree-attempt.schema.json",
     "repo_timeline_event": "schemas/repo-timeline-event.schema.json",

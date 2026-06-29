@@ -20,6 +20,7 @@ def validate_repo(repo_root: Path) -> dict[str, Any]:
         "registry/design-authority.json",
         "registry/identity-layer-registry.json",
         "registry/schema-registry.json",
+        "registry/template-registry.json",
         "docs/ASSET_IDENTITY_AND_SIMILARITY_LADDER.md",
         "config/sources.example.yaml",
         "roadmap/roadmap.yaml",
@@ -140,4 +141,21 @@ def validate_repo(repo_root: Path) -> dict[str, Any]:
                     errors.append(f"Invalid proposal example {path.name}: {exc}")
         except Exception as exc:
             errors.append(f"Could not validate proposal examples: {exc}")
+    try:
+        from .template_library import validate_template_registry
+
+        result = validate_template_registry(repo_root)
+        checked.append("registry/template-registry.json")
+        checked.extend(
+            str((repo_root / row["path"]).relative_to(repo_root))
+            for row in json.loads(
+                (repo_root / "registry" / "template-registry.json").read_text(
+                    encoding="utf-8"
+                )
+            ).get("templates", [])
+            if (repo_root / row["path"]).exists()
+        )
+        errors.extend(result["errors"])
+    except Exception as exc:
+        errors.append(f"Invalid template registry: {exc}")
     return {"valid": not errors, "checked_count": len(set(checked)), "errors": errors}
