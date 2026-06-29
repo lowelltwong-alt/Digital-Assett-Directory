@@ -31,6 +31,7 @@
     "processed/reports/workflow_part_calibration_review_sample.md",
     "processed/reports/workflow_part_usage_guidance.md",
     "processed/reports/manual_task_queue.md",
+    "processed/reports/repo_buildout/index.md",
     "processed/reports/operational_readiness.md"
   ],
   "registries": {

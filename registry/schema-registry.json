@@ -32,6 +32,7 @@
     "connection_candidate": "schemas/connection-candidate.schema.json",
     "escalation_packet": "schemas/escalation-packet.schema.json",
     "expansion_map": "schemas/expansion-map.schema.json",
+    "repo_buildout_recommendation": "schemas/repo-buildout-recommendation.schema.json",
     "capability_recommendation": "schemas/capability-recommendation.schema.json",
     "proposal": "schemas/proposal.schema.json",
     "proposal_review": "schemas/proposal-review.schema.json"

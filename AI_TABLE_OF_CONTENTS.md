@@ -34,6 +34,7 @@ them.
 | `validation` | Tests, CLI validators, and verification reports. |
 | `background_connection` | Low-compute connection scouting, escalation packets, and bounded expansion maps. |
 | `workflow_part` | Reusable workflow sub-units beneath asset patterns. |
+| `repo_buildout` | Repo-specific buildout advice from cataloged assets, workflows, alerts, and safe inspiration candidates. |
 
 ## Front Doors And Authority
 
@@ -101,6 +102,7 @@ them.
 | `processed/reports/background_connection_candidates.md` | Generated manual-review report for background connection candidates. | `knowledge_graph`, `generated_output`, `background_connection` | You need candidate links between current attention and cold-storage assets. |
 | `processed/reports/background_connection_escalation_packets.md` | Generated bounded review packets for high-score candidate connections. | `knowledge_graph`, `generated_output`, `background_connection` | You need minimal context for fresh-eyes review or future strong-model verification. |
 | `processed/reports/manual_task_queue.md` | Generated manual task queue that re-ranks alerts and workflow-part guidance with source-boundary and red-team posture. | `knowledge_graph`, `generated_output`, `workflow_part`, `validation` | You need the safest next human-review tasks from the current alert and workflow-part queues. |
+| `processed/reports/repo_buildout/index.md` | Generated repo-specific buildout advisor index. | `knowledge_graph`, `generated_output`, `repo_buildout`, `cross_repo` | You need one cataloged repo's candidate buildout plan, internal combinations, safe cross-repo inspirations, and fresh-eyes prompt. |
 
 ## Contracts
 
@@ -131,6 +133,7 @@ them.
 | `schemas/connection-candidate.schema.json` | Background radar connection candidate contract. | `schema`, `background_connection`, `knowledge_graph` | You score candidate links with gate-before-score semantics. |
 | `schemas/escalation-packet.schema.json` | Background radar escalation packet contract. | `schema`, `background_connection`, `workflow` | You package bounded evidence for manual or future verifier review. |
 | `schemas/expansion-map.schema.json` | Background radar expansion map contract. | `schema`, `background_connection`, `knowledge_graph` | You inspect capped direct and second-hop graph expansion. |
+| `schemas/repo-buildout-recommendation.schema.json` | Repo buildout recommendation contract. | `schema`, `repo_buildout`, `workflow` | You generate or validate candidate repo-specific buildout recommendations. |
 | `schemas/handoff.schema.json` | Handoff contract. | `schema`, `learning_loop` | You transfer context between agents. |
 | `schemas/alert.schema.json` | Alert contract. | `schema`, `knowledge_graph` | You emit reviewable alerts. |
 | `schemas/source.schema.json` | Source config contract. | `schema`, `authority` | You add or validate scanned sources. |
@@ -176,6 +179,7 @@ them.
 | `asset-dir recommend workflow-part-calibration-evidence` | Fail-closed evidence export for workflow-part calibration. | `workflow_part`, `calibration`, `roadmap` | You have enough human labels and structured notes to track curated calibration evidence. |
 | `asset-dir recommend workflow-part-guidance` | Generated manual guidance command for reviewed workflow parts. | `workflow_part`, `calibration`, `generated_output`, `human_gate` | You need review-use, human-gated, rejected/noise, and missing-dataflow boundaries before citing workflow parts. |
 | `asset-dir recommend manual-tasks` | Generated manual task queue over current alerts and workflow-part guidance. | `workflow`, `knowledge_graph`, `generated_output`, `workflow_part` | You need ranked manual tasks, family grouping, local research support, and red-team caveats before acting on alerts. |
+| `asset-dir recommend repo-buildout` | Generated repo-specific buildout advisor command. | `repo_buildout`, `knowledge_graph`, `workflow`, `generated_output` | You want DAD to recommend how to improve one cataloged repo without rescanning or mutating it. |
 | `asset-dir recommend background-connections` | CLI command for manual, local-only background connection scouting. | `background_connection`, `generated_output`, `knowledge_graph` | You want bounded candidate connections without rescanning, daemon work, GitHub, or model calls. |
 | `docs/DOWNSTREAM_REPO_GOVERNANCE.md` | Downstream governance install and pilot guidance. | `workflow`, `authority`, `cross_repo` | You prepare a sandbox or downstream pilot. |
 | `docs/TESTING_AND_ORCHESTRATION.md` | Marker taxonomy, change-driven test selection, and nox tasks. | `validation`, `workflow` | You select or explain tests. |
@@ -226,6 +230,7 @@ them.
 | `roadmap/evidence/workflow-part-usage-guidance.md` | Evidence for the manual workflow-part usage guidance surface after calibration. | `roadmap`, `workflow_part`, `calibration`, `human_gate` | You need the risk tier, boundaries, and next gate before using reviewed workflow parts operationally. |
 | `roadmap/evidence/operational-readiness-doctor.md` | Evidence for the local-only `doctor` readiness command. | `roadmap`, `validation`, `workflow` | You need to know what the readiness command proves and what it does not prove. |
 | `roadmap/evidence/manual-task-queue-prioritization.md` | Evidence, formula, local research support, and red-team for manual task queue prioritization. | `roadmap`, `knowledge_graph`, `workflow_part`, `validation` | You need why alerts are re-ranked before human work and what the queue must not be used to justify. |
+| `roadmap/evidence/repo-buildout-advisor-v1.md` | Evidence, formula, red-team, and boundaries for repo-specific buildout advice. | `roadmap`, `repo_buildout`, `knowledge_graph`, `validation` | You need why repo buildout recommendations are generated-only and how their priority score is derived. |
 | `roadmap/evidence/claude-workflow-composition-red-team.md` | Claude's independent warning against ontology sprawl and recommendation for WorkflowPartRecord. | `roadmap`, `workflow`, `knowledge_graph` | You need the fresh-eyes review behind the background-radar synthesis. |
 | `roadmap/evidence/phase-3-sandbox-pilot.md` | Sandbox downstream-governance pilot evidence. | `roadmap`, `downstream_governance`, `validation` | You verify Phase 3 gates or learn how the files-only learning loop was tested. |
 | `roadmap/evidence/phase-4-semantic-enrichment.md` | Conservative Phase 4 semantic-enrichment boundary and evaluation evidence. | `roadmap`, `semantic_enrichment`, `privacy` | You need to know what Phase 4 approved, what remains deferred, or why embeddings are still gated. |

@@ -714,6 +714,50 @@ class ExpansionMapRecord(BaseModel):
     review_status: Literal["generated_candidate", "reviewed", "rejected"] = "generated_candidate"
 
 
+class RepoBuildoutRecommendationRecord(BaseModel):
+    schema_version: str = "0.1.0"
+    recommendation_id: str
+    target_repo_key: str = Field(min_length=1)
+    target_repo_label: str = Field(min_length=1)
+    recommendation_type: Literal[
+        "front_door_ai_navigation",
+        "governance_human_gates",
+        "schemas_contracts_validators",
+        "workflow_parts_reusable_subsystems",
+        "learning_pay_forward_loops",
+        "dataflow_normalization",
+        "testing_qa_ci",
+        "duplicate_variant_semantic_evolution",
+        "security_privacy_public_safe",
+        "internal_composition",
+        "cross_repo_inspiration",
+        "manual_task_alert",
+        "proposal_or_background_connection",
+    ]
+    title: str = Field(min_length=1)
+    rationale: str = Field(min_length=1)
+    priority_score: float = Field(ge=0, le=100)
+    priority_components: dict[str, float] = Field(min_length=1)
+    gates: dict[str, bool] = Field(min_length=1)
+    gate_failures: list[str] = Field(default_factory=list)
+    risk: Literal["low", "medium", "high"] = "medium"
+    evidence_asset_ids: list[str] = Field(min_length=1)
+    current_value_summary: str = Field(min_length=1)
+    upside_lift_conditions: list[str] = Field(min_length=1)
+    smallest_bounded_experiment: str = Field(min_length=1)
+    validation_plan: list[str] = Field(min_length=1)
+    human_gates: list[str] = Field(default_factory=list)
+    red_team_note: str = Field(min_length=1)
+    authority_boundary: str = Field(min_length=1)
+    source_boundary: str = Field(min_length=1)
+    cross_repo_inspiration: bool = False
+    evidence: dict[str, Any] = Field(min_length=1)
+    methodology_version: str = "repo-buildout-advisor-v0.1"
+    generated_at: str
+    scan_id: str
+    review_status: Literal["generated_candidate", "reviewed", "rejected"] = "generated_candidate"
+
+
 class AssetCalibrationReviewRecord(BaseModel):
     schema_version: str = "0.1.0"
     review_id: str

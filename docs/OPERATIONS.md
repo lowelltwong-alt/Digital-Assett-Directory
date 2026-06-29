@@ -63,6 +63,29 @@ formula and joins them with reviewed workflow-part guidance. It does not rescan,
 mutate source repositories, promote graph edges to truth, change current value
 scores, or mark roadmap phases complete.
 
+## Repo buildout advisor
+
+Use `recommend repo-buildout` when you want generated, repo-specific advice for
+one cataloged repository:
+
+```powershell
+$env:PYTHONPATH='src'; python -m digital_asset_directory.cli recommend repo-buildout --repo "git-projects/04_Digital_Assett_Directory" --limit 10
+```
+
+The command writes:
+
+```text
+processed/reports/repo_buildout/<repo_slug>.md
+processed/reports/repo_buildout/<repo_slug>.json
+processed/reports/repo_buildout/<repo_slug>_fresh_eyes_prompt.md
+processed/reports/repo_buildout/index.md
+```
+
+It reads the existing catalog database and optional generated reports when
+present. It does not rescan, mutate the target repo, call GitHub, call models,
+install hooks, promote candidates to truth, change scores, or mark roadmap
+phases complete.
+
 ## Recommended cadence
 
 - scan active repos after material updates;

@@ -73,6 +73,7 @@ not prove source truth, value, authority, or promotion.
 | `processed/reports/workflow_part_calibration_review_sample.md` | Stratified workflow-part calibration sample. | You need human labels before workflow parts affect radar, preflight guidance, scoring, or assembly. |
 | `processed/reports/workflow_part_usage_guidance.md` | Generated manual guidance from reviewed workflow-part labels. | You need to know which workflow-part candidates are review-use examples, human-gated, rejected noise, or blocked by missing dataflow. |
 | `processed/reports/manual_task_queue.md` | Generated manual task queue that re-ranks alerts and workflow-part guidance. | You need the safest next manual review tasks, with source-boundary and red-team posture. |
+| `processed/reports/repo_buildout/index.md` | Generated repo-specific buildout advisor index. | You need candidate recommendations for improving one cataloged repo from its own assets and safe cross-repo inspiration. |
 
 ## Core boundary
 

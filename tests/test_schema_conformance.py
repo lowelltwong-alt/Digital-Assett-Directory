@@ -20,6 +20,7 @@ from digital_asset_directory.models import (
     LearningLoopRecord,
     LearningRuleRecord,
     RepoLearningEventRecord,
+    RepoBuildoutRecommendationRecord,
     RepoTimelineEventRecord,
     RootCauseHypothesisRecord,
     SemanticEvolutionRecord,
@@ -512,3 +513,48 @@ def test_background_connection_models_reject_privacy_and_safety_constant_violati
             generated_at="2026-01-01T00:00:00+00:00",
             scan_id="dad:scan:test",
         )
+
+
+def test_repo_buildout_recommendation_model_dump_matches_registered_schema():
+    record = RepoBuildoutRecommendationRecord(
+        recommendation_id="dad:repo-buildout-recommendation:test",
+        target_repo_key="git-projects/example",
+        target_repo_label="example",
+        recommendation_type="testing_qa_ci",
+        title="Add smallest validator",
+        rationale="A repo-local validator would make the buildout safer.",
+        priority_score=72.5,
+        priority_components={
+            "repo_relevance": 1.0,
+            "gap_severity": 0.8,
+            "workflow_leverage": 0.7,
+            "validation_readiness": 0.4,
+            "evidence_strength": 0.5,
+            "low_risk_bonus": 0.55,
+        },
+        gates={
+            "evidence_gate": True,
+            "source_boundary_gate": True,
+            "privacy_gate": True,
+            "no_target_mutation_gate": True,
+            "no_external_call_gate": True,
+            "scan_watermark_gate": True,
+        },
+        gate_failures=[],
+        risk="medium",
+        evidence_asset_ids=["dad:asset:test"],
+        current_value_summary="Current scoped evidence before upside.",
+        upside_lift_conditions=["Add a validator and rerun tests."],
+        smallest_bounded_experiment="Review one file and one test.",
+        validation_plan=["python -m pytest"],
+        human_gates=["human review before mutation"],
+        red_team_note="The validator may not cover the real workflow.",
+        authority_boundary="Generated candidate only; source repositories retain authority.",
+        source_boundary="same_repo_report_only",
+        cross_repo_inspiration=False,
+        evidence={"methodology_version": "repo-buildout-advisor-v0.1"},
+        generated_at="2026-01-01T00:00:00+00:00",
+        scan_id="dad:scan:test",
+    )
+
+    validate_registered_schema("repo_buildout_recommendation", record.model_dump(mode="json"))

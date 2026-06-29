@@ -67,6 +67,7 @@ from .public_safe_sweep import write_public_safe_source_sweep
 from .recommendations import recommend_skills_and_agents, recommend_swarm
 from .readiness import write_downstream_pilot_candidates, write_phase45_readiness_reports
 from .research import research_missing_parts
+from .repo_buildout import load_default_repo_buildout_artifacts, write_repo_buildout_outputs
 from .roadmap import check_roadmap
 from .semantic_evolution import write_semantic_evolution_outputs
 from .validation import validate_repo
@@ -849,6 +850,38 @@ def recommend_manual_tasks(
             family_limit=family_limit,
         )
     console.print_json(data={"workflow_guidance_file": str(guidance_path), **result})
+
+
+@recommend_app.command("repo-buildout")
+def recommend_repo_buildout(
+    repo: str = typer.Option(..., "--repo"),
+    hub: Optional[Path] = typer.Option(None),
+    limit: int = typer.Option(10, "--limit", min=1, max=50),
+) -> None:
+    """Write generated repo-specific buildout recommendations from current catalog data."""
+    cfg = _cfg(hub=hub)
+    artifacts = load_default_repo_buildout_artifacts(cfg.repo_root)
+    with CatalogDB(cfg.database_path) as db:
+        latest_scan = db.latest_scan()
+        latest_scan_id = latest_scan["scan_id"] if latest_scan else "catalog-without-scan"
+        scan_summary = json.loads(latest_scan.get("summary_json") or "{}") if latest_scan else {}
+        try:
+            result = write_repo_buildout_outputs(
+                cfg.repo_root,
+                repo,
+                db.assets(),
+                db.edges(),
+                db.alerts(open_only=True),
+                local_sources=cfg.local_sources,
+                artifacts=artifacts,
+                scan_id=latest_scan_id,
+                scan_changed_count=int(scan_summary.get("changed_during_scan_count") or 0),
+                limit=limit,
+            )
+        except ValueError as exc:
+            console.print(str(exc))
+            raise typer.Exit(2) from exc
+    console.print_json(data=result)
 
 
 @recommend_app.command("public-safe-source-sweep")

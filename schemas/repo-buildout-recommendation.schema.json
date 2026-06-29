@@ -1,0 +1,116 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://local.digital-asset-directory/schemas/repo-buildout-recommendation.schema.json",
+  "title": "Repo Buildout Recommendation Record",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "recommendation_id",
+    "target_repo_key",
+    "target_repo_label",
+    "recommendation_type",
+    "title",
+    "rationale",
+    "priority_score",
+    "priority_components",
+    "gates",
+    "gate_failures",
+    "risk",
+    "evidence_asset_ids",
+    "current_value_summary",
+    "upside_lift_conditions",
+    "smallest_bounded_experiment",
+    "validation_plan",
+    "human_gates",
+    "red_team_note",
+    "authority_boundary",
+    "source_boundary",
+    "cross_repo_inspiration",
+    "evidence",
+    "methodology_version",
+    "generated_at",
+    "scan_id",
+    "review_status"
+  ],
+  "properties": {
+    "schema_version": {"const": "0.1.0"},
+    "recommendation_id": {"type": "string", "minLength": 1},
+    "target_repo_key": {"type": "string", "minLength": 1},
+    "target_repo_label": {"type": "string", "minLength": 1},
+    "recommendation_type": {
+      "enum": [
+        "front_door_ai_navigation",
+        "governance_human_gates",
+        "schemas_contracts_validators",
+        "workflow_parts_reusable_subsystems",
+        "learning_pay_forward_loops",
+        "dataflow_normalization",
+        "testing_qa_ci",
+        "duplicate_variant_semantic_evolution",
+        "security_privacy_public_safe",
+        "internal_composition",
+        "cross_repo_inspiration",
+        "manual_task_alert",
+        "proposal_or_background_connection"
+      ]
+    },
+    "title": {"type": "string", "minLength": 1},
+    "rationale": {"type": "string", "minLength": 1},
+    "priority_score": {"type": "number", "minimum": 0, "maximum": 100},
+    "priority_components": {
+      "type": "object",
+      "minProperties": 1,
+      "additionalProperties": {"type": "number", "minimum": 0, "maximum": 1}
+    },
+    "gates": {
+      "type": "object",
+      "required": [
+        "evidence_gate",
+        "source_boundary_gate",
+        "privacy_gate",
+        "no_target_mutation_gate",
+        "no_external_call_gate",
+        "scan_watermark_gate"
+      ],
+      "properties": {
+        "evidence_gate": {"type": "boolean"},
+        "source_boundary_gate": {"type": "boolean"},
+        "privacy_gate": {"type": "boolean"},
+        "no_target_mutation_gate": {"type": "boolean"},
+        "no_external_call_gate": {"type": "boolean"},
+        "scan_watermark_gate": {"type": "boolean"}
+      },
+      "additionalProperties": {"type": "boolean"}
+    },
+    "gate_failures": {"type": "array", "items": {"type": "string"}},
+    "risk": {"enum": ["low", "medium", "high"]},
+    "evidence_asset_ids": {
+      "type": "array",
+      "items": {"type": "string"},
+      "minItems": 1
+    },
+    "current_value_summary": {"type": "string", "minLength": 1},
+    "upside_lift_conditions": {
+      "type": "array",
+      "items": {"type": "string"},
+      "minItems": 1
+    },
+    "smallest_bounded_experiment": {"type": "string", "minLength": 1},
+    "validation_plan": {
+      "type": "array",
+      "items": {"type": "string"},
+      "minItems": 1
+    },
+    "human_gates": {"type": "array", "items": {"type": "string"}},
+    "red_team_note": {"type": "string", "minLength": 1},
+    "authority_boundary": {"type": "string", "minLength": 1},
+    "source_boundary": {"type": "string", "minLength": 1},
+    "cross_repo_inspiration": {"type": "boolean"},
+    "evidence": {"type": "object", "minProperties": 1},
+    "methodology_version": {"const": "repo-buildout-advisor-v0.1"},
+    "generated_at": {"type": "string"},
+    "scan_id": {"type": "string", "minLength": 1},
+    "review_status": {"enum": ["generated_candidate", "reviewed", "rejected"]}
+  },
+  "additionalProperties": false
+}
