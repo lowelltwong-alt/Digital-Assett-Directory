@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 import re
 from pathlib import Path
 from typing import Optional, cast
@@ -7,15 +8,29 @@ from typing import Optional, cast
 import typer
 from rich.console import Console
 
+from .archaeology import (
+    append_repo_learning_event,
+    install_repo_learning_loop,
+    write_archaeology_outputs,
+    write_root_cause_lesson_outputs,
+)
+from .asset_families import (
+    write_asset_family_reports,
+    write_learning_loop_outputs,
+    write_workflow_sweep_reports,
+)
+from .background_connections import write_background_connection_outputs
 from .calibration import (
     build_asset_calibration_review_queue,
     import_asset_calibration_review_csv,
     load_asset_calibration_reviews,
+    load_catalog_assets,
     update_asset_calibration_review_file,
     write_asset_calibration_evidence,
     write_asset_calibration_summary,
     write_asset_calibration_review_csv,
     write_phase2_calibration_reports,
+    write_phase25_score_delta_validation,
 )
 from .catalog import catalog_status, run_scan
 from .config import load_config
@@ -25,6 +40,7 @@ from .governance import enforce_postflight, install_governance, scaffold_new_rep
 from .learning import (
     add_asset_use_feedback,
     add_lesson,
+    midflight,
     postflight,
     preflight,
     rebuild_lesson_routes,
@@ -45,10 +61,12 @@ from .proposals import (
     write_proposal_outputs,
     write_proposal_review_results_summary,
 )
+from .public_safe_sweep import write_public_safe_source_sweep
 from .recommendations import recommend_skills_and_agents, recommend_swarm
 from .readiness import write_downstream_pilot_candidates, write_phase45_readiness_reports
 from .research import research_missing_parts
 from .roadmap import check_roadmap
+from .semantic_evolution import write_semantic_evolution_outputs
 from .validation import validate_repo
 
 app = typer.Typer(no_args_is_help=True, help="Digital Asset Directory portfolio intelligence CLI.")
@@ -198,12 +216,17 @@ def lesson_asset_use(
     planned_use: str = typer.Option("", "--planned-use"),
     found_by: str = typer.Option("", "--found-by"),
     found_query: str = typer.Option("", "--found-query"),
+    issue_addressed: str = typer.Option("", "--issue-addressed"),
     part_used: list[str] = typer.Option([], "--part-used"),
     part_not_used: list[str] = typer.Option([], "--part-not-used"),
     not_used_reason: str = typer.Option("", "--not-used-reason"),
     upgrade_made: list[str] = typer.Option([], "--upgrade-made"),
     difficulty: list[str] = typer.Option([], "--difficulty"),
     thing_learned: list[str] = typer.Option([], "--thing-learned"),
+    reuse_when: list[str] = typer.Option([], "--reuse-when"),
+    avoid_when: list[str] = typer.Option([], "--avoid-when"),
+    pay_forward: str = typer.Option("", "--pay-forward"),
+    next_agent_action: list[str] = typer.Option([], "--next-agent-action"),
     use_outcome: str = typer.Option(..., "--use-outcome"),
     observed_usefulness: str = typer.Option(..., "--observed-usefulness"),
     observed_futurefulness: str = typer.Option(..., "--observed-futurefulness"),
@@ -233,12 +256,17 @@ def lesson_asset_use(
             planned_use=planned_use,
             found_by=found_by,
             found_query=found_query,
+            issue_addressed=issue_addressed,
             parts_used=part_used,
             parts_not_used=part_not_used,
             not_used_reason=not_used_reason,
             upgrades_made=upgrade_made,
             difficulties=difficulty,
             things_learned=thing_learned,
+            reuse_when=reuse_when,
+            avoid_when=avoid_when,
+            pay_forward_guidance=pay_forward,
+            next_agent_actions=next_agent_action,
             use_outcome=use_outcome,
             observed_usefulness=observed_usefulness,
             observed_futurefulness=observed_futurefulness,
@@ -253,6 +281,45 @@ def lesson_asset_use(
         console.print(str(exc))
         raise typer.Exit(2) from exc
     console.print(record.lesson_id)
+
+
+@lesson_app.command("repo-event")
+def lesson_repo_event(
+    repository: Path = typer.Option(Path("."), "--repo"),
+    stage: str = typer.Option(..., "--stage"),
+    task: str = typer.Option(..., "--task"),
+    agent: str = typer.Option("human", "--agent"),
+    context_tag: list[str] = typer.Option([], "--context-tag"),
+    asset_used: list[str] = typer.Option([], "--asset-used"),
+    expected_value: str = typer.Option("", "--expected-value"),
+    actual_value: str = typer.Option("", "--actual-value"),
+    failure_class: str = typer.Option("", "--failure-class"),
+    dependency_order_notes: str = typer.Option("", "--dependency-order-notes"),
+    evidence: list[str] = typer.Option([], "--evidence"),
+) -> None:
+    """Append a repo-local candidate learning event as data, never executable instructions."""
+    stage_value = stage.lower()
+    if stage_value not in {"before_work", "during_failure", "after_work", "review"}:
+        console.print("Stage must be one of: before_work, during_failure, after_work, review")
+        raise typer.Exit(2)
+    try:
+        record = append_repo_learning_event(
+            repository,
+            stage=stage_value,
+            task=task,
+            agent=agent,
+            context_tags=context_tag,
+            assets_used=asset_used,
+            expected_value=expected_value,
+            actual_value=actual_value,
+            failure_class=failure_class,
+            dependency_order_notes=dependency_order_notes,
+            evidence=evidence,
+        )
+    except ValueError as exc:
+        console.print(str(exc))
+        raise typer.Exit(2) from exc
+    console.print_json(data=record.model_dump(mode="json"))
 
 
 @agent_app.command("preflight")
@@ -319,6 +386,32 @@ def agent_postflight(
     )
 
 
+@agent_app.command("midflight")
+def agent_midflight(
+    session: str = typer.Option(...),
+    hub: Optional[Path] = typer.Option(None),
+    context: list[str] = typer.Option([], "--context"),
+    path: list[str] = typer.Option([], "--path"),
+    ack_rule: list[str] = typer.Option([], "--ack-rule"),
+) -> None:
+    """Check and acknowledge deterministic learning rules during material work."""
+    cfg = _cfg(hub=hub)
+    try:
+        result = midflight(
+            cfg.repo_root,
+            session,
+            context=context,
+            paths=path,
+            ack_rules=ack_rule,
+        )
+    except FileNotFoundError as exc:
+        console.print(str(exc))
+        raise typer.Exit(2) from exc
+    console.print_json(data=result)
+    if result["missing_learning_rule_acknowledgements"]:
+        raise typer.Exit(2)
+
+
 @agent_app.command("install")
 def agent_install(
     repository: Path = typer.Option(..., "--repo"),
@@ -328,6 +421,23 @@ def agent_install(
     cfg = _cfg(hub=hub)
     changed = install_governance(repository, cfg.repo_root, force)
     console.print("\n".join(str(path) for path in changed))
+
+
+@agent_app.command("install-learning-loop")
+def agent_install_learning_loop(
+    repository: Path = typer.Option(..., "--repo"),
+    mode: str = typer.Option("files-only", "--mode"),
+    force: bool = False,
+) -> None:
+    """Install files-only repo learning-loop templates; no hooks are created."""
+    try:
+        changed = install_repo_learning_loop(repository, mode=mode, force=force)
+    except ValueError as exc:
+        console.print(str(exc))
+        raise typer.Exit(2) from exc
+    console.print_json(
+        data={"repo": str(repository.resolve()), "changed": [str(path) for path in changed]}
+    )
 
 
 @agent_app.command("new")
@@ -385,6 +495,224 @@ def recommend_swarm_command(
     console.print_json(data=record.model_dump(mode="json"))
 
 
+@recommend_app.command("asset-families")
+def recommend_asset_families(
+    hub: Optional[Path] = typer.Option(None),
+    source_id: str = typer.Option("all", "--source-id"),
+    review_sample: int = typer.Option(50, "--review-sample", min=1, max=200),
+) -> None:
+    """Write generated candidate reports for high-leverage asset-family patterns."""
+    cfg = _cfg(hub=hub)
+    with CatalogDB(cfg.database_path) as db:
+        result = write_asset_family_reports(
+            cfg.repo_root,
+            db.assets(),
+            source_id=source_id,
+            review_sample=review_sample,
+        )
+    console.print_json(data=result)
+
+
+@recommend_app.command("learning-loops")
+def recommend_learning_loops(
+    hub: Optional[Path] = typer.Option(None),
+    source_id: str = typer.Option("all", "--source-id"),
+    review_sample: int = typer.Option(25, "--review-sample", min=1, max=200),
+) -> None:
+    """Write generated candidate learning-loop records from the current catalog."""
+    cfg = _cfg(hub=hub)
+    with CatalogDB(cfg.database_path) as db:
+        latest_scan = db.latest_scan()
+        scan_id = latest_scan["scan_id"] if latest_scan else "catalog-without-scan"
+        result = write_learning_loop_outputs(
+            cfg.repo_root,
+            db.assets(),
+            scan_id=scan_id,
+            source_id=source_id,
+            review_sample=review_sample,
+        )
+    console.print_json(data=result)
+
+
+@recommend_app.command("workflow-sweeps")
+def recommend_workflow_sweeps(
+    hub: Optional[Path] = typer.Option(None),
+    source_id: str = typer.Option("all", "--source-id"),
+    review_sample: int = typer.Option(50, "--review-sample", min=1, max=200),
+    include_noise: bool = typer.Option(False, "--include-noise/--exclude-noise"),
+    usefulness_per_sweep_limit: int = typer.Option(
+        25, "--usefulness-per-sweep-limit", min=1, max=100
+    ),
+    usefulness_global_limit: int = typer.Option(75, "--usefulness-global-limit", min=1, max=300),
+) -> None:
+    """Write generated candidate workflow-family sweeps, governance first."""
+    cfg = _cfg(hub=hub)
+    with CatalogDB(cfg.database_path) as db:
+        result = write_workflow_sweep_reports(
+            cfg.repo_root,
+            db.assets(),
+            source_id=source_id,
+            review_sample=review_sample,
+            include_noise=include_noise,
+            usefulness_per_sweep_limit=usefulness_per_sweep_limit,
+            usefulness_global_limit=usefulness_global_limit,
+        )
+    console.print_json(data=result)
+
+
+@recommend_app.command("public-safe-source-sweep")
+def recommend_public_safe_source_sweep(
+    source_path: Path = typer.Option(..., "--source-path"),
+    source_id: str = typer.Option(..., "--source-id"),
+    review_sample: int = typer.Option(50, "--review-sample", min=1, max=300),
+    max_files: Optional[int] = typer.Option(None, "--max-files", min=1),
+    hub: Optional[Path] = typer.Option(None),
+) -> None:
+    """Metadata-only sweep for private sources whose workflow is reusable but rows are not."""
+    cfg = _cfg(hub=hub)
+    result = write_public_safe_source_sweep(
+        cfg.repo_root,
+        source_path,
+        source_id=source_id,
+        review_sample=review_sample,
+        max_files=max_files,
+    )
+    console.print_json(data=result)
+
+
+@recommend_app.command("archaeology")
+def recommend_archaeology(
+    hub: Optional[Path] = typer.Option(None),
+    source_id: str = typer.Option("all", "--source-id"),
+    include_worktrees: bool = typer.Option(True, "--include-worktrees/--exclude-worktrees"),
+    include_temp: bool = typer.Option(True, "--include-temp/--exclude-temp"),
+    max_repos: int = typer.Option(25, "--max-repos", min=1, max=100),
+    max_commits: int = typer.Option(200, "--max-commits", min=1, max=1000),
+    review_sample: int = typer.Option(50, "--review-sample", min=1, max=200),
+) -> None:
+    """Write generated worktree, git-history, failure, and change-pattern archaeology reports."""
+    cfg = _cfg(hub=hub)
+    with CatalogDB(cfg.database_path) as db:
+        latest_scan = db.latest_scan()
+        scan_id = latest_scan["scan_id"] if latest_scan else "catalog-without-scan"
+        result = write_archaeology_outputs(
+            cfg.repo_root,
+            db.assets(),
+            cfg.local_sources,
+            scan_id=scan_id,
+            source_id=source_id,
+            include_worktrees=include_worktrees,
+            include_temp=include_temp,
+            max_repos=max_repos,
+            max_commits=max_commits,
+            review_sample=review_sample,
+        )
+    console.print_json(data=result)
+
+
+@recommend_app.command("root-cause-lessons")
+def recommend_root_cause_lessons(
+    hub: Optional[Path] = typer.Option(None),
+    source_id: str = typer.Option("all", "--source-id"),
+    include_worktrees: bool = typer.Option(True, "--include-worktrees/--exclude-worktrees"),
+    include_temp: bool = typer.Option(True, "--include-temp/--exclude-temp"),
+    max_repos: int = typer.Option(25, "--max-repos", min=1, max=100),
+    max_commits: int = typer.Option(200, "--max-commits", min=1, max=1000),
+    review_sample: int = typer.Option(50, "--review-sample", min=1, max=200),
+) -> None:
+    """Write generated context-bound root-cause and counterfactual lesson candidates."""
+    cfg = _cfg(hub=hub)
+    with CatalogDB(cfg.database_path) as db:
+        latest_scan = db.latest_scan()
+        scan_id = latest_scan["scan_id"] if latest_scan else "catalog-without-scan"
+        result = write_root_cause_lesson_outputs(
+            cfg.repo_root,
+            db.assets(),
+            cfg.local_sources,
+            scan_id=scan_id,
+            source_id=source_id,
+            include_worktrees=include_worktrees,
+            include_temp=include_temp,
+            max_repos=max_repos,
+            max_commits=max_commits,
+            review_sample=review_sample,
+        )
+    console.print_json(data=result)
+
+
+@recommend_app.command("semantic-evolution")
+def recommend_semantic_evolution(
+    hub: Optional[Path] = typer.Option(None),
+    source_id: str = typer.Option("all", "--source-id"),
+    basename: Optional[str] = typer.Option(None, "--basename"),
+    asset_type: str = typer.Option("schema", "--asset-type"),
+    max_families: int = typer.Option(100, "--max-families", min=1, max=500),
+    review_sample: int = typer.Option(50, "--review-sample", min=1, max=200),
+    max_read_bytes: int = typer.Option(1_000_000, "--max-read-bytes", min=0),
+) -> None:
+    """Grade structured semantic evolution versus copy/fixture noise from the current catalog."""
+    cfg = _cfg(hub=hub)
+    with CatalogDB(cfg.database_path) as db:
+        latest_scan = db.latest_scan()
+        scan_id = latest_scan["scan_id"] if latest_scan else "catalog-without-scan"
+        result = write_semantic_evolution_outputs(
+            cfg.repo_root,
+            db.assets(),
+            cfg.local_sources,
+            scan_id=scan_id,
+            source_id=source_id,
+            basename=basename,
+            asset_type=asset_type,
+            max_families=max_families,
+            review_sample=review_sample,
+            max_read_bytes=max_read_bytes,
+        )
+    console.print_json(data=result)
+
+
+@recommend_app.command("background-connections")
+def recommend_background_connections(
+    hub: Optional[Path] = typer.Option(None),
+    attention: str = typer.Option("recent", "--attention"),
+    cold: str = typer.Option("older", "--cold"),
+    limit: int = typer.Option(50, "--limit", min=1, max=200),
+    escalation_budget: int = typer.Option(5, "--escalation-budget", min=1, max=20),
+    tau: float = typer.Option(0.70, "--tau", min=0.0, max=1.0),
+    max_hops: int = typer.Option(2, "--max-hops", min=0, max=2),
+    reserve_cold: int = typer.Option(2, "--reserve-cold", min=0, max=20),
+) -> None:
+    """Generate manual, local-only background connection candidates from existing catalog data."""
+    normalized_attention = attention.lower()
+    normalized_cold = cold.lower()
+    if normalized_attention != "recent":
+        console.print("Attention mode must be: recent")
+        raise typer.Exit(2)
+    if normalized_cold != "older":
+        console.print("Cold mode must be: older")
+        raise typer.Exit(2)
+    if reserve_cold > escalation_budget:
+        console.print("reserve-cold cannot exceed escalation-budget")
+        raise typer.Exit(2)
+    cfg = _cfg(hub=hub)
+    with CatalogDB(cfg.database_path) as db:
+        latest_scan = db.latest_scan()
+        scan_id = latest_scan["scan_id"] if latest_scan else "catalog-without-scan"
+        result = write_background_connection_outputs(
+            cfg.repo_root,
+            db.assets(),
+            db.edges(),
+            scan_id=scan_id,
+            attention=normalized_attention,
+            cold=normalized_cold,
+            limit=limit,
+            escalation_budget=escalation_budget,
+            tau=tau,
+            max_hops=max_hops,
+            reserve_cold=reserve_cold,
+        )
+    console.print_json(data=result)
+
+
 @recommend_app.command("proposals")
 def recommend_proposals(
     hub: Optional[Path] = typer.Option(None),
@@ -415,13 +743,14 @@ def recommend_proposals(
             roadmap_context=load_roadmap_relevance_context(cfg.repo_root),
         )
     paths = write_proposal_outputs(cfg.repo_root, bottom_up, top_down, comparison)
+    comparison_summary = {key: value for key, value in comparison.items() if key != "review_sample"}
     console.print_json(
         data={
             "scan_id": scan_id,
             "engine": normalized_engine,
             "bottom_up_count": len(bottom_up),
             "top_down_count": len(top_down),
-            "comparison": comparison,
+            "comparison": comparison_summary,
             "outputs": paths,
         }
     )
@@ -452,7 +781,9 @@ def recommend_calibration_review_summary(
 ) -> None:
     """Summarize phase-2 asset scoring calibration review progress."""
     cfg = _cfg(hub=hub)
-    path = review_file or cfg.repo_root / "processed" / "calibration" / "asset_rating_template.jsonl"
+    path = (
+        review_file or cfg.repo_root / "processed" / "calibration" / "asset_rating_template.jsonl"
+    )
     if not path.is_absolute():
         path = cfg.repo_root / path
     records = load_asset_calibration_reviews(path)
@@ -475,7 +806,9 @@ def recommend_calibration_review_label(
 ) -> None:
     """Update one phase-2 asset calibration review record with human labels."""
     cfg = _cfg(hub=hub)
-    path = review_file or cfg.repo_root / "processed" / "calibration" / "asset_rating_template.jsonl"
+    path = (
+        review_file or cfg.repo_root / "processed" / "calibration" / "asset_rating_template.jsonl"
+    )
     if not path.is_absolute():
         path = cfg.repo_root / path
     try:
@@ -490,9 +823,7 @@ def recommend_calibration_review_label(
             weight_change_note=weight_change_note,
             notes=notes,
         )
-        write_asset_calibration_summary(
-            cfg.repo_root, load_asset_calibration_reviews(path), path
-        )
+        write_asset_calibration_summary(cfg.repo_root, load_asset_calibration_reviews(path), path)
     except (FileNotFoundError, ValueError) as exc:
         console.print(str(exc))
         raise typer.Exit(2) from exc
@@ -603,7 +934,9 @@ def recommend_calibration_evidence(
 ) -> None:
     """Write tracked roadmap evidence only after asset calibration review is complete."""
     cfg = _cfg(hub=hub)
-    path = review_file or cfg.repo_root / "processed" / "calibration" / "asset_rating_template.jsonl"
+    path = (
+        review_file or cfg.repo_root / "processed" / "calibration" / "asset_rating_template.jsonl"
+    )
     if not path.is_absolute():
         path = cfg.repo_root / path
     records = load_asset_calibration_reviews(path)
@@ -614,9 +947,35 @@ def recommend_calibration_evidence(
     except ValueError as exc:
         console.print(str(exc))
         raise typer.Exit(2) from exc
-    console.print_json(
-        data={"review_file": str(path), "output": evidence_path, "summary": summary}
+    console.print_json(data={"review_file": str(path), "output": evidence_path, "summary": summary})
+
+
+@recommend_app.command("phase25-score-delta")
+def recommend_phase25_score_delta(
+    hub: Optional[Path] = typer.Option(None),
+    review_file: Optional[Path] = typer.Option(None, "--review-file"),
+    output: Optional[Path] = typer.Option(None, "--output"),
+    json_output: Optional[Path] = typer.Option(None, "--json-output"),
+) -> None:
+    """Compare reviewed Phase 2 labels against current Phase 2.5 v0.3 scores."""
+    cfg = _cfg(hub=hub)
+    path = (
+        review_file or cfg.repo_root / "processed" / "calibration" / "asset_rating_template.jsonl"
     )
+    if not path.is_absolute():
+        path = cfg.repo_root / path
+    with CatalogDB(cfg.database_path) as db:
+        latest_scan = db.latest_scan()
+        scan_summary = json.loads(latest_scan.get("summary_json") or "{}") if latest_scan else {}
+        result = write_phase25_score_delta_validation(
+            cfg.repo_root,
+            load_asset_calibration_reviews(path),
+            load_catalog_assets(cfg.repo_root / "processed" / "catalog" / "assets.jsonl"),
+            scan_summary=scan_summary,
+            output=output,
+            json_output=json_output,
+        )
+    console.print_json(data={"review_file": str(path), **result})
 
 
 @recommend_app.command("downstream-pilots")
@@ -645,7 +1004,9 @@ def recommend_proposal_review_summary(
 ) -> None:
     """Summarize filled proposal review JSONL labels without changing roadmap state."""
     cfg = _cfg(hub=hub)
-    path = review_file or cfg.repo_root / "processed" / "proposals" / "proposal_review_template.jsonl"
+    path = (
+        review_file or cfg.repo_root / "processed" / "proposals" / "proposal_review_template.jsonl"
+    )
     if not path.is_absolute():
         path = cfg.repo_root / path
     reviews = load_proposal_reviews(path)
@@ -672,7 +1033,9 @@ def recommend_proposal_review_label(
 ) -> None:
     """Update one proposal review JSONL record with human calibration labels."""
     cfg = _cfg(hub=hub)
-    path = review_file or cfg.repo_root / "processed" / "proposals" / "proposal_review_template.jsonl"
+    path = (
+        review_file or cfg.repo_root / "processed" / "proposals" / "proposal_review_template.jsonl"
+    )
     if not path.is_absolute():
         path = cfg.repo_root / path
     try:
@@ -721,7 +1084,9 @@ def recommend_proposal_review_queue(
     bottom_path = (
         bottom_up_file or cfg.repo_root / "processed" / "proposals" / "bottom_up_proposals.jsonl"
     )
-    top_path = top_down_file or cfg.repo_root / "processed" / "proposals" / "top_down_proposals.jsonl"
+    top_path = (
+        top_down_file or cfg.repo_root / "processed" / "proposals" / "top_down_proposals.jsonl"
+    )
     if not review_path.is_absolute():
         review_path = cfg.repo_root / review_path
     if not bottom_path.is_absolute():
@@ -783,7 +1148,9 @@ def recommend_proposal_review_export_csv(
     bottom_path = (
         bottom_up_file or cfg.repo_root / "processed" / "proposals" / "bottom_up_proposals.jsonl"
     )
-    top_path = top_down_file or cfg.repo_root / "processed" / "proposals" / "top_down_proposals.jsonl"
+    top_path = (
+        top_down_file or cfg.repo_root / "processed" / "proposals" / "top_down_proposals.jsonl"
+    )
     output_path = output or cfg.repo_root / "processed" / "proposals" / "proposal_review_batch.csv"
     unblind_path = (
         unblind_output
@@ -851,7 +1218,9 @@ def recommend_proposal_calibration_evidence(
 ) -> None:
     """Write tracked-ready roadmap evidence only after proposal calibration review is complete."""
     cfg = _cfg(hub=hub)
-    path = review_file or cfg.repo_root / "processed" / "proposals" / "proposal_review_template.jsonl"
+    path = (
+        review_file or cfg.repo_root / "processed" / "proposals" / "proposal_review_template.jsonl"
+    )
     if not path.is_absolute():
         path = cfg.repo_root / path
     reviews = load_proposal_reviews(path)
@@ -867,9 +1236,7 @@ def recommend_proposal_calibration_evidence(
     except ValueError as exc:
         console.print(str(exc))
         raise typer.Exit(2) from exc
-    console.print_json(
-        data={"review_file": str(path), "output": evidence_path, "summary": summary}
-    )
+    console.print_json(data={"review_file": str(path), "output": evidence_path, "summary": summary})
 
 
 @orphan_app.command("run")

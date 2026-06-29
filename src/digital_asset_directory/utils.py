@@ -2,10 +2,13 @@ from __future__ import annotations
 
 import hashlib
 import json
+import math
 import os
 import re
 import tempfile
+import time
 from datetime import datetime, timezone
+from collections import Counter
 from pathlib import Path
 from typing import Any, Iterable
 
@@ -56,7 +59,14 @@ def atomic_write_text(path: Path, text: str) -> None:
     try:
         with os.fdopen(fd, "w", encoding="utf-8", newline="\n") as handle:
             handle.write(text)
-        os.replace(tmp_name, path)
+        for attempt in range(5):
+            try:
+                os.replace(tmp_name, path)
+                break
+            except PermissionError:
+                if attempt == 4:
+                    raise
+                time.sleep(0.05 * (attempt + 1))
     finally:
         if os.path.exists(tmp_name):
             os.unlink(tmp_name)
@@ -137,6 +147,40 @@ def jaccard(left: Iterable[str], right: Iterable[str]) -> float:
     if not a or not b:
         return 0.0
     return len(a & b) / len(a | b)
+
+
+def idf_weights(token_sets: Iterable[Iterable[str]]) -> dict[str, float]:
+    sets = [set(values) for values in token_sets]
+    if not sets:
+        return {}
+    document_count = len(sets)
+    df: Counter[str] = Counter(token for values in sets for token in values)
+    return {
+        token: math.log((document_count + 1) / (count + 1)) + 1.0
+        for token, count in df.items()
+    }
+
+
+def idf_weighted_cosine(
+    left: Iterable[str], right: Iterable[str], weights: dict[str, float]
+) -> float:
+    left_tokens = set(left)
+    right_tokens = set(right)
+    if not left_tokens or not right_tokens:
+        return 0.0
+    shared = left_tokens & right_tokens
+    if not shared:
+        return 0.0
+    numerator = sum(weights.get(token, 1.0) ** 2 for token in shared)
+    left_norm = math.sqrt(sum(weights.get(token, 1.0) ** 2 for token in left_tokens))
+    right_norm = math.sqrt(sum(weights.get(token, 1.0) ** 2 for token in right_tokens))
+    if not left_norm or not right_norm:
+        return 0.0
+    return numerator / (left_norm * right_norm)
+
+
+def rarest_tokens(tokens_: Iterable[str], weights: dict[str, float], limit: int) -> list[str]:
+    return sorted(set(tokens_), key=lambda token: (-weights.get(token, 1.0), token))[:limit]
 
 
 def split_multi(values: list[str] | tuple[str, ...] | None) -> list[str]:

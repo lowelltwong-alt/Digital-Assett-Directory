@@ -21,7 +21,23 @@ Every generated edge carries:
 - scan ID;
 - review status.
 
-A `related_to` edge means bounded similarity, not sameness. A `complements` edge means a plausible combination, not an implemented integration. A `satisfies_need` edge means lexical/metadata evidence that one capability may address another asset's need.
+A `related_to` edge means bounded IDF-weighted token similarity, not sameness. A
+`semantically_similar_to` edge is reserved for a later approved semantic layer. A
+`plays_same_architecture_role_as` edge means candidate role similarity, not content
+equivalence. A `complements` edge means a plausible combination, not an implemented
+integration. A `satisfies_need` edge means lexical/metadata evidence that one capability
+may address another asset's need. An `exact_duplicate_of` edge means exact content
+identity only, not canonical preference. A `near_duplicate_of` edge means deterministic
+token-shingle MinHash similarity sufficient for review, not proof that one asset should
+replace another. A `contained_in` edge means the source asset's shingles are mostly
+present inside the target asset.
+
+Asset-family recognition may also emit candidate edges such as `routes_to`,
+`handles_form`, `has_gold_set`, `has_review_packet`, `produces_learning_signal`,
+`requires_human_gate`, `composes_with`, `unsafe_composition_with`,
+`contaminates_if_default`, and `supports_but_cannot_override`. These edges help
+future agents inspect workflows, learning loops, and composition risks. They do not
+authorize implementation, source mutation, or source-authority override.
 
 ## Composite Asset Recognition
 
@@ -50,20 +66,29 @@ When two assets are nearly the same because similar work was recreated in differ
 preserve both source records until a human review decides the relationship. Do not delete one
 asset or double-count both as independent value by default.
 
-Use existing reviewed edges where they fit:
+Use generated candidate edges where they fit:
 
 - `related_to` with evidence subtype `near_duplicate` when assets appear substantially similar;
+- `exact_duplicate_of` when non-empty exact `content_sha256` matches;
+- `near_duplicate_of` when deterministic token-shingle MinHash similarity exceeds the configured threshold;
+- `contained_in` when deterministic shingle containment is high but symmetric similarity is lower;
+- `has_delta_candidate` when a pairwise delta record exists;
 - `supersedes` when a reviewed newer asset replaces an older one;
 - `derived_from` when provenance shows one asset was copied or adapted from another;
 - `complements` when overlap exists but each asset contributes a different useful piece.
 
+These edges implement part of the Asset Identity And Similarity Ladder. Hashes identify
+exact versions; chunk hashes and deltas locate overlap and change; graph edges make role,
+workflow, dependency, and reuse relationships discoverable. No one layer proves asset
+value, authority, or canonical status by itself.
+
 If the relationship is not yet reviewed, record it as candidate evidence or calibration notes
 and propose a bounded consolidation experiment. Future registry changes may add explicit
-`variant_of` or `merge_candidate` edge types, but those should be reviewed before they become
-source-of-truth graph semantics.
+`merge_candidate` edge types, but those should be reviewed before they become source-of-truth
+graph semantics.
 
-For clusters of very close assets, prefer a candidate cluster-delta file over a winner-take-all
-decision. The delta should preserve:
+For clusters of very close assets, prefer generated `duplicate_clusters.jsonl` and
+`deltas.jsonl` records over a winner-take-all decision. The delta should preserve:
 
 - the shared core across the cluster;
 - per-asset strengths;

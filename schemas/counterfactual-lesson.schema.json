@@ -1,0 +1,43 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://local.digital-asset-directory/schemas/counterfactual-lesson.schema.json",
+  "title": "Counterfactual Lesson Candidate Record",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "lesson_candidate_id",
+    "lesson_candidate",
+    "applies_when",
+    "does_not_apply_when",
+    "danger_if_misapplied",
+    "counterfactual_better_order",
+    "evidence_asset_ids",
+    "source_events",
+    "context_tags",
+    "confidence",
+    "risk",
+    "authority_boundary",
+    "generated_at",
+    "scan_id",
+    "review_status"
+  ],
+  "properties": {
+    "schema_version": {"const": "0.1.0"},
+    "lesson_candidate_id": {"type": "string", "minLength": 1},
+    "lesson_candidate": {"type": "string", "minLength": 1},
+    "applies_when": {"type": "array", "items": {"type": "string"}, "minItems": 1},
+    "does_not_apply_when": {"type": "array", "items": {"type": "string"}, "minItems": 1},
+    "danger_if_misapplied": {"type": "string", "minLength": 1},
+    "counterfactual_better_order": {"type": "array", "items": {"type": "string"}, "minItems": 1},
+    "evidence_asset_ids": {"type": "array", "items": {"type": "string"}},
+    "source_events": {"type": "array", "items": {"type": "string"}, "minItems": 1},
+    "context_tags": {"type": "array", "items": {"type": "string"}, "minItems": 1},
+    "confidence": {"enum": ["low", "medium", "high"]},
+    "risk": {"enum": ["low", "medium", "high"]},
+    "authority_boundary": {"type": "string", "minLength": 1},
+    "generated_at": {"type": "string"},
+    "scan_id": {"type": "string", "minLength": 1},
+    "review_status": {"enum": ["generated_candidate", "reviewed", "rejected"]}
+  },
+  "additionalProperties": false
+}

@@ -21,6 +21,7 @@ dependencies, mutate source files, change scores, or mark roadmap work complete.
 - Task:
 - How the asset was found: context | queue | search | memory | human | other
 - Query, link, or path that surfaced it:
+- Issue or potential issue addressed:
 
 ## Before-Use Expectation
 
@@ -41,6 +42,13 @@ dependencies, mutate source files, change scores, or mark roadmap work complete.
 - Use outcome: helped | blocked | no_effect | unknown
 - Observed usefulness: low | medium | high | unknown
 - Observed futurefulness: low | medium | high | unknown
+
+## Pay-Forward Guidance
+
+- Reuse when:
+- Avoid when:
+- Pay-forward guidance for future agents:
+- Next-agent action:
 
 ## Model Feedback
 

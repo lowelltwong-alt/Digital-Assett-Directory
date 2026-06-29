@@ -1,6 +1,6 @@
 import json
 
-from digital_asset_directory.extractors import classify_asset, extract_bytes
+from digital_asset_directory.extractors import classify_asset, extract_bytes, infer_semantics
 from digital_asset_directory.utils import redact_sensitive_text
 
 import pytest
@@ -38,11 +38,57 @@ def test_extract_bytes_redacts_secrets_from_all_derived_fields():
     blob = json.dumps(extracted).lower()
     assert "ghp_abcdefghijklmnopqrstuvwxyz012345" not in blob
     assert "sk-abcdefghijklmnopqrstuv0123" not in blob
+    assert "ghp_ABCDEFGHIJKLMNOPQRSTUVWXYZ012345" not in extracted["chunk_text"]
     assert extracted["redaction_count"] >= 2
+
+
+def test_keyword_matching_uses_word_boundaries():
+    # Substring false positives must not fire: "management"->agent, "paragraph"->graph, "storage"->rag.
+    benign = infer_semantics(
+        "docs/notes.md", "The management paragraph documents storage of records."
+    )
+    assert "agent" not in benign["tags"]
+    assert "build_knowledge_graph" not in benign["capabilities"]
+    assert "retrieve_context" not in benign["capabilities"]
+    # Real phrases at word boundaries still match.
+    real = infer_semantics("docs/eval.md", "This is an evaluation harness for a knowledge graph.")
+    assert "evaluation" in real["tags"]
+    assert "build_knowledge_graph" in real["capabilities"]
+
+
+def test_load_bearing_decision_review_is_detected_as_asset_pattern():
+    inferred = infer_semantics(
+        "docs/LOAD_BEARING_DECISION_REVIEW.md",
+        (
+            "A load-bearing decision needs a risk tier, red-team, premortem, "
+            "fresh-eyes review, rollback criteria, and an A/B comparison."
+        ),
+    )
+
+    assert "load_bearing_decision_review_system" in inferred["asset_patterns"]
+    evidence = inferred["pattern_evidence"]["load_bearing_decision_review_system"]
+    assert "asset_type:decision" in evidence
+    assert "text:load-bearing decision" in evidence
+
+
+def test_asset_use_pay_forward_loop_is_detected_as_asset_pattern():
+    inferred = infer_semantics(
+        "templates/asset-use-feedback.template.md",
+        (
+            "DAD_ASSET_USE_FEEDBACK_V1 before-use after-use observed usefulness "
+            "observed futurefulness pay-forward reuse when avoid when next-agent action."
+        ),
+    )
+
+    assert "asset_use_pay_forward_loop" in inferred["asset_patterns"]
+    evidence = inferred["pattern_evidence"]["asset_use_pay_forward_loop"]
+    assert "text:dad_asset_use_feedback_v1" in evidence
+    assert "text:pay-forward" in evidence
 
 
 def test_asset_classification():
     assert classify_asset("schemas/asset.schema.json") == "schema"
     assert classify_asset("tests/test_something.py") == "test"
     assert classify_asset("src/app.py") == "code"
+    assert classify_asset("orphan_radar/eval/__init__.py") == "code"
     assert classify_asset("workflows/agent_pipeline.md") == "workflow"

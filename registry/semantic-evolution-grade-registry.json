@@ -1,0 +1,82 @@
+{
+  "registry_version": "0.1.0",
+  "methodology_version": "semantic-evolution-grading-v1",
+  "status": "seed_reviewed",
+  "evolution_grades": [
+    {
+      "id": "insufficient_evidence",
+      "score_range": [0.0, 0.0],
+      "meaning": "The analyzer could not read enough comparable structured or normalized content to judge semantic evolution.",
+      "required_handling": "Do not infer evolution. Route to human review or collect better evidence."
+    },
+    {
+      "id": "none",
+      "score_range": [0.0, 0.05],
+      "meaning": "No meaningful semantic change detected after normalization.",
+      "required_handling": "Treat copies as duplicate or lineage evidence, not independent semantic evolution."
+    },
+    {
+      "id": "cosmetic_metadata",
+      "score_range": [0.05, 0.15],
+      "meaning": "Only identity or explanatory metadata changed, such as $id, $schema, title, description, comments, or ordering.",
+      "required_handling": "Do not count as real semantic evolution unless the metadata itself is the asset under review."
+    },
+    {
+      "id": "minor_semantic",
+      "score_range": [0.15, 0.35],
+      "meaning": "Small compatible semantic change, such as optional property additions or enum additions without removals, type changes, required-field changes, or pattern tightening.",
+      "required_handling": "Preserve as family-level evolution signal and consider a low-cost compatibility check."
+    },
+    {
+      "id": "moderate_semantic",
+      "score_range": [0.35, 0.6],
+      "meaning": "Several compatible additions or bounded constraint changes that likely affect downstream behavior but are not obviously breaking.",
+      "required_handling": "Create a candidate delta review and check tests, examples, and consumers."
+    },
+    {
+      "id": "major_semantic",
+      "score_range": [0.6, 0.85],
+      "meaning": "Large semantic change, such as many property or constraint changes, schema role changes, or broad enum expansion.",
+      "required_handling": "Treat as high-value evolution evidence requiring family-level review."
+    },
+    {
+      "id": "breaking_semantic",
+      "score_range": [0.85, 1.0],
+      "meaning": "Compatibility-risking change, such as required-field changes, property removals, type changes, enum removals or renames, or pattern tightening.",
+      "required_handling": "Escalate as a high-signal semantic-evolution candidate before score calibration or merge/default decisions."
+    }
+  ],
+  "noise_classes": [
+    {
+      "id": "insufficient_evidence",
+      "meaning": "Not enough readable evidence to separate signal from noise."
+    },
+    {
+      "id": "exact_copy",
+      "meaning": "Copies are exact after the selected identity layer."
+    },
+    {
+      "id": "format_or_order_noise",
+      "meaning": "Raw hashes differ, but normalized structured content is the same."
+    },
+    {
+      "id": "path_or_metadata_noise",
+      "meaning": "Only source path, $id, title, description, comments, timestamps, or non-behavioral metadata changed."
+    },
+    {
+      "id": "fixture_lineage_noise",
+      "meaning": "Many temp/test fixture copies mirror canonical variants and should not be scored as independent high-value assets."
+    },
+    {
+      "id": "mixed_signal",
+      "meaning": "Both noise/copy propagation and real semantic evolution are present; preserve both separately."
+    }
+  ],
+  "deterministic_rules": [
+    "Score semantic evolution at the family or variant-cluster level, not at every copied fixture instance.",
+    "Normalize structured JSON by sorting keys, then compute a semantic signature that ignores $id, $schema, title, description, $comment, and examples.",
+    "Treat required-field changes, property removals, type changes, enum removals or renames, and pattern tightening as breaking-semantic signals.",
+    "Treat raw-hash churn that collapses under normalized JSON as noise unless the task specifically studies formatting or metadata.",
+    "When temp copies mirror canonical variants, keep copy counts and path lineage as evidence of propagation or test coverage."
+  ]
+}

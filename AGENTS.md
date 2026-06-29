@@ -21,6 +21,16 @@ asset-dir agent preflight --repo . --agent <codex|claude-code|other> --task "<ta
 
 State the route, scope, validation plan, and stop conditions before editing.
 
+If preflight returns `required_learning_rule_acknowledgements`, or if matching context
+appears later during calibration, duplicate/variant review, temp-fixture review, or lesson
+reuse, run a midflight check:
+
+```text
+asset-dir agent midflight --session <SESSION_ID> --context "<context>" --path "<path>" --ack-rule "<rule-id>"
+```
+
+Do not continue a matching task while required learning-rule acknowledgements are missing.
+
 ## Operating rules
 
 Agents must:
@@ -35,6 +45,7 @@ Agents must:
 - run task-relevant validation;
 - report exact commands and results;
 - capture at least one explicit lesson or state that no reusable lesson was found;
+- honor reviewed deterministic learning rules surfaced by preflight or midflight;
 - produce a postflight before reporting completion.
 
 Agents must not:

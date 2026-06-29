@@ -26,6 +26,8 @@ Turn scattered files, repositories, lessons, schemas, workflows, prompts, tests,
 - Local-drive and GitHub inventory adapters.
 - Raw versus processed data separation.
 - Stable asset identity separate from content revisions.
+- An Asset Identity And Similarity Ladder: metadata fingerprint, SHA-256, chunk
+  hashes, extracted text, gated embeddings, knowledge graph, and audit log.
 - SQLite catalog plus JSONL and graph exports.
 - Deterministic tags, capabilities, needs, outcomes, and lifecycle metadata.
 - Staleness, orphan, missing-part, dormant-asset, and synergy radars.
@@ -96,8 +98,10 @@ AGENTS.md
 MACHINE_NAVIGATION_MANIFEST.json
 registry/source-of-truth.json
 registry/design-authority.json
+registry/identity-layer-registry.json
 AI_TABLE_OF_CONTENTS.md
 docs/ARCHITECTURE.md
+docs/ASSET_IDENTITY_AND_SIMILARITY_LADDER.md
 docs/ASSET_VALUE_MODEL.md
 roadmap/roadmap.yaml
 ```

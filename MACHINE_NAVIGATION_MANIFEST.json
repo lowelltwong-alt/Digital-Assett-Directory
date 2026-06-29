@@ -8,13 +8,35 @@
     "AGENTS.md",
     "registry/source-of-truth.json",
     "registry/design-authority.json",
+    "registry/identity-layer-registry.json",
     "AI_TABLE_OF_CONTENTS.md"
+  ],
+  "navigation_standards": {
+    "single_ai_entrypoint": "AI_FRONT_DOOR.md",
+    "ai_table_of_contents": "AI_TABLE_OF_CONTENTS.md",
+    "routing_standard": "docs/AI_ENTRYPOINT_AND_TOC_ROUTING_STANDARD.md",
+    "toc_template": "templates/ai-table-of-contents.template.md"
+  },
+  "knowledge_graph_entrypoints": [
+    "docs/KNOWLEDGE_GRAPH_MODEL.md",
+    "ontology/digital-asset-ontology.ttl",
+    "ontology/taxonomy.skos.ttl",
+    "registry/edge-type-registry.json",
+    "registry/asset-pattern-registry.json",
+    "registry/context-tag-registry.json",
+    "processed/graph/graph.json",
+    "processed/reports/asset_family_recognition.md",
+    "processed/reports/workflow_sweeps/workflow_sweeps_index.md"
   ],
   "registries": {
     "source_of_truth": "registry/source-of-truth.json",
     "design_authority": "registry/design-authority.json",
     "asset_types": "registry/asset-type-registry.json",
     "asset_patterns": "registry/asset-pattern-registry.json",
+    "context_tags": "registry/context-tag-registry.json",
+    "learning_rules": "registry/learning-rule-registry.json",
+    "semantic_evolution_grades": "registry/semantic-evolution-grade-registry.json",
+    "identity_layers": "registry/identity-layer-registry.json",
     "edge_types": "registry/edge-type-registry.json",
     "lifecycle": "registry/lifecycle-registry.json",
     "schemas": "registry/schema-registry.json",
@@ -25,6 +47,7 @@
   "generated_surfaces": [
     "raw/",
     "processed/",
+    "processed/learning/",
     "state/catalog.sqlite3",
     "audit/events/"
   ],

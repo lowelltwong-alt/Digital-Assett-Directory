@@ -17,6 +17,7 @@ from digital_asset_directory.calibration import (
     write_asset_calibration_evidence,
     write_asset_calibration_review_csv,
     write_phase2_calibration_reports,
+    write_phase25_score_delta_validation,
 )
 from digital_asset_directory.database import CatalogDB
 from digital_asset_directory.models import (
@@ -36,6 +37,9 @@ def make_asset(
     score: float,
     asset_type: str = "code",
     freshness: str = "current",
+    logical_path: str | None = None,
+    content_sha256: str | None = None,
+    metadata: dict | None = None,
 ) -> AssetRecord:
     return AssetRecord(
         asset_id=asset_id,
@@ -45,8 +49,9 @@ def make_asset(
         asset_type=asset_type,
         title=title,
         description="phase 2 calibration test asset",
-        logical_path=f"src/{title.lower().replace(' ', '_')}.py",
+        logical_path=logical_path or f"src/{title.lower().replace(' ', '_')}.py",
         content_hash=asset_id,
+        content_sha256=content_sha256,
         first_seen_at="2026-01-01T00:00:00+00:00",
         last_seen_at="2026-01-01T00:00:00+00:00",
         capabilities=["evaluate_assets"] if asset_id == "asset-a" else [],
@@ -62,6 +67,7 @@ def make_asset(
             "verification": 80 if asset_type == "test" else 40,
         },
         confidence="medium",
+        metadata=metadata or {},
     )
 
 
@@ -189,6 +195,55 @@ def test_asset_calibration_review_schema_and_template_are_candidate_only():
         }
 
 
+def test_asset_calibration_template_dedupes_and_excludes_quarantined_instances():
+    source = make_asset(
+        "source-schema",
+        title="Claim Schema",
+        score=70,
+        asset_type="schema",
+        logical_path="repo/schemas/claim.schema.json",
+        content_sha256="same-content",
+        metadata={
+            "instance_class": "source",
+            "information_content_class": "content_extracted",
+            "text_tokens": ["schema", "claim"],
+        },
+    )
+    temp = make_asset(
+        "temp-schema",
+        title="Claim Schema Copy",
+        score=95,
+        asset_type="schema",
+        logical_path="repo/.pytest-tmp-root/pytest-of-Lowell/pytest-1/test_x/contract-repo/schemas/claim.schema.json",
+        content_sha256="same-content",
+        metadata={
+            "instance_class": "temp_fixture",
+            "information_content_class": "content_extracted",
+            "text_tokens": ["schema", "claim"],
+        },
+    )
+    junk = make_asset(
+        "junk",
+        title=".DS_Store",
+        score=35,
+        asset_type="unknown",
+        logical_path="repo/.DS_Store",
+        content_sha256="junk",
+        metadata={"instance_class": "os_junk", "information_content_class": "os_junk"},
+    )
+
+    records = build_asset_calibration_review_template([temp, junk, source], per_band_sample=5)
+
+    assert [record.asset_id for record in records] == ["source-schema"]
+    assert records[0].evidence["instance_class"] == "source"
+    assert records[0].evidence["sampling_bucket"] == "portfolio_candidate"
+    assert (
+        records[0]
+        .evidence["sample_methodology_version"]
+        .startswith("asset-calibration-sampling-v0.2")
+    )
+
+
 def test_asset_calibration_review_lens_preserves_duplicate_and_projection_boundaries():
     record = build_asset_calibration_review_template(
         [make_asset("asset-a", title="asset.schema", score=76, asset_type="schema")],
@@ -255,6 +310,119 @@ def test_asset_calibration_review_update_and_summary(tmp_path: Path):
     assert file_updated.asset_id == "asset-b"
     assert file_summary["reviewed_count"] == 1
     assert load_asset_calibration_reviews(review_file)[1].review_status == "reviewed"
+
+
+def test_phase25_score_delta_validation_writes_directional_report(tmp_path: Path):
+    records = [
+        AssetCalibrationReviewRecord(
+            review_id="review-high",
+            sample_id="asset-review-001",
+            asset_id="asset-too-high",
+            asset_title="Template",
+            logical_path="repo/.github/ISSUE_TEMPLATE/bug_report.md",
+            asset_type="workflow",
+            generated_value_score=58.5,
+            generated_value_band="medium",
+            reviewer="Lowell",
+            score_rating="too_high",
+            evidence={"information_content_class": "metadata_only"},
+        ),
+        AssetCalibrationReviewRecord(
+            review_id="review-low",
+            sample_id="asset-review-002",
+            asset_id="asset-too-low",
+            asset_title="Runtime",
+            logical_path="repo/src/runtime.py",
+            asset_type="code",
+            generated_value_score=27.98,
+            generated_value_band="low",
+            reviewer="Lowell",
+            score_rating="too_low",
+            evidence={"information_content_class": "metadata_only"},
+        ),
+        AssetCalibrationReviewRecord(
+            review_id="review-right",
+            sample_id="asset-review-003",
+            asset_id="asset-about-right",
+            asset_title="Thin helper",
+            logical_path="repo/src/helper.py",
+            asset_type="code",
+            generated_value_score=27.98,
+            generated_value_band="low",
+            reviewer="Lowell",
+            score_rating="about_right",
+            evidence={"information_content_class": "metadata_only"},
+        ),
+    ]
+    assets = [
+        make_asset(
+            "asset-too-high",
+            title="Template",
+            score=24,
+            asset_type="workflow",
+            logical_path="repo/.github/ISSUE_TEMPLATE/bug_report.md",
+            metadata={
+                "information_content_class": "content_profiled",
+                "score_methodology_version": "asset-value-v0.3-content-aware",
+                "content_profile": {
+                    "non_empty_line_count": 10,
+                    "workflow_subtype": "issue_or_pr_template",
+                },
+            },
+        ),
+        make_asset(
+            "asset-too-low",
+            title="Runtime",
+            score=61,
+            asset_type="code",
+            logical_path="repo/src/runtime.py",
+            metadata={
+                "information_content_class": "content_profiled",
+                "score_methodology_version": "asset-value-v0.3-content-aware",
+                "content_profile": {"non_empty_line_count": 150, "code_role": "runtime_core"},
+            },
+        ),
+        make_asset(
+            "asset-about-right",
+            title="Thin helper",
+            score=31,
+            asset_type="code",
+            logical_path="repo/src/helper.py",
+            metadata={
+                "information_content_class": "content_profiled",
+                "score_methodology_version": "asset-value-v0.3-content-aware",
+                "content_profile": {"non_empty_line_count": 20, "code_role": "support_module"},
+            },
+        ),
+    ]
+
+    result = write_phase25_score_delta_validation(
+        tmp_path,
+        records,
+        assets,
+        scan_summary={
+            "scan_id": "scan-v03",
+            "status": "complete",
+            "source_files_mutated": False,
+            "changed_during_scan_count": 0,
+            "quarantine": {"count": 0},
+        },
+    )
+
+    report = Path(result["report"]).read_text(encoding="utf-8")
+    payload = json.loads(Path(result["json"]).read_text(encoding="utf-8"))
+
+    assert result["status"] == "passed"
+    assert payload["desired_band_movement_counts"] == {
+        "about_right": 1,
+        "too_high": 1,
+        "too_low": 1,
+    }
+    assert payload["movement_by_rating"]["too_high"] == {"medium->low": 1}
+    assert payload["movement_by_rating"]["too_low"] == {"low->medium": 1}
+    assert payload["about_right_churn_count"] == 0
+    assert "Phase 2.5 Fresh Scan Score-Delta Validation" in report
+    assert "source repositories remain authoritative" in report.lower()
 
 
 def test_asset_calibration_notes_only_do_not_count_as_reviewed():
@@ -520,6 +688,24 @@ def test_asset_calibration_evidence_requires_structured_notes(tmp_path: Path):
         raise AssertionError("asset calibration evidence without notes should fail closed")
 
 
+def test_asset_calibration_evidence_refuses_legacy_sample_methodology(tmp_path: Path):
+    records = _complete_asset_calibration_records()
+    for record in records:
+        record.evidence.pop("sample_methodology_version", None)
+    review_file = tmp_path / "asset_reviews.jsonl"
+    review_file.write_text(
+        "".join(json.dumps(record.model_dump(mode="json")) + "\n" for record in records),
+        encoding="utf-8",
+    )
+
+    try:
+        write_asset_calibration_evidence(tmp_path, records, review_file)
+    except ValueError as exc:
+        assert "current deduped calibration sample" in str(exc)
+    else:
+        raise AssertionError("legacy calibration samples should fail closed")
+
+
 def test_asset_calibration_evidence_writes_tracked_gate_evidence(tmp_path: Path):
     records = _complete_asset_calibration_records()
     review_file = tmp_path / "asset_reviews.jsonl"
@@ -535,9 +721,7 @@ def test_asset_calibration_evidence_writes_tracked_gate_evidence(tmp_path: Path)
     markdown = Path(evidence_path).read_text(encoding="utf-8")
     assert "Phase 2 Asset Calibration Evidence" in markdown
     gate_evidence = json.loads((tmp_path / "roadmap" / "gate-evidence.json").read_text())
-    assert gate_evidence["human_gates"]["phase-2-asset-ratings-reviewed"]["status"] == (
-        "verified"
-    )
+    assert gate_evidence["human_gates"]["phase-2-asset-ratings-reviewed"]["status"] == ("verified")
     assert gate_evidence["human_gates"]["phase-2-weight-changes-documented"]["phase_id"] == (
         "phase-2-calibration"
     )

@@ -13,7 +13,7 @@ from .extractors import classify_asset, extract_bytes, freshness_status
 from .ids import asset_id, revision_id
 from .models import AssetRecord
 from .scoring import score_asset
-from .utils import sha256_bytes, utc_now
+from .utils import json_dumps, sha256_bytes, utc_now
 
 API = "https://api.github.com"
 
@@ -60,6 +60,10 @@ def _priority_match(path: str, patterns: list[str]) -> bool:
     return False
 
 
+def _metadata_fingerprint(payload: dict[str, Any]) -> str:
+    return sha256_bytes(json_dumps(payload).encode("utf-8"))
+
+
 def scan_github_source(
     source: GitHubSource, settings: Settings, scoring: dict, max_files: int | None = None
 ) -> list[AssetRecord]:
@@ -91,6 +95,15 @@ def scan_github_source(
         logical_repo = f"github/{full_name}"
         identifier = asset_id(source.id, f"repository:{full_name}")
         repo_hash = str(repo.get("pushed_at") or repo.get("updated_at") or repo.get("id"))
+        repo_metadata = {
+            "id": repo.get("id"),
+            "full_name": full_name,
+            "pushed_at": repo.get("pushed_at"),
+            "updated_at": repo.get("updated_at"),
+            "default_branch": repo.get("default_branch"),
+            "size": repo.get("size"),
+        }
+        metadata_fingerprint = _metadata_fingerprint(repo_metadata)
         modified = repo.get("pushed_at") or repo.get("updated_at")
         record = AssetRecord(
             asset_id=identifier,
@@ -103,6 +116,8 @@ def scan_github_source(
             logical_path=logical_repo,
             uri=repo.get("html_url", ""),
             content_hash=sha256_bytes(repo_hash.encode()),
+            metadata_fingerprint=metadata_fingerprint,
+            content_sha256=None,
             size_bytes=int(repo.get("size", 0)) * 1024,
             modified_at=modified,
             first_seen_at=now,
@@ -119,6 +134,14 @@ def scan_github_source(
             sensitivity="internal" if repo.get("private") else "public",
             trust_zone="source_owned",
             confidence="high",
+            source_provenance={
+                "source_id": source.id,
+                "source_kind": "github",
+                "owner": source.owner,
+                "repository": full_name,
+                "observed_by": "github_scan",
+                "authority": "GitHub repository remains authoritative.",
+            },
             metadata={
                 "default_branch": repo.get("default_branch", "main"),
                 "private": bool(repo.get("private")),
@@ -128,6 +151,7 @@ def scan_github_source(
                 "language": repo.get("language"),
                 "stars": repo.get("stargazers_count", 0),
                 "open_issues": repo.get("open_issues_count", 0),
+                "revision_identity_mode": "github_repository_metadata",
             },
         )
         assets.append(score_asset(record, scoring))
@@ -165,6 +189,16 @@ def scan_github_source(
             extracted = extract_bytes(logical, data, 5000, settings.redact_sensitive_excerpts)
             file_id = asset_id(source.id, logical)
             asset_type = classify_asset(logical)
+            file_metadata_fingerprint = _metadata_fingerprint(
+                {
+                    "git_blob_sha": item["sha"],
+                    "size": item.get("size"),
+                    "path": path,
+                    "branch": branch,
+                    "repository": full_name,
+                }
+            )
+            content_sha256 = sha256_bytes(data)
             file_record = AssetRecord(
                 asset_id=file_id,
                 revision_id=revision_id(file_id, item["sha"]),
@@ -177,6 +211,8 @@ def scan_github_source(
                 logical_path=logical,
                 uri=f"https://github.com/{full_name}/blob/{branch}/{path}",
                 content_hash=item["sha"],
+                metadata_fingerprint=file_metadata_fingerprint,
+                content_sha256=content_sha256,
                 size_bytes=int(item.get("size") or len(data)),
                 modified_at=modified,
                 first_seen_at=now,
@@ -196,13 +232,25 @@ def scan_github_source(
                 sensitivity="internal" if repo.get("private") else "public",
                 trust_zone="source_owned",
                 confidence="high",
+                source_provenance={
+                    "source_id": source.id,
+                    "source_kind": "github",
+                    "owner": source.owner,
+                    "repository": full_name,
+                    "branch": branch,
+                    "logical_path": logical,
+                    "observed_by": "github_scan",
+                    "authority": "GitHub repository remains authoritative.",
+                },
                 metadata={
                     "repository": full_name,
                     "branch": branch,
                     "git_blob_sha": item["sha"],
                     "excerpt": extracted["excerpt"],
+                    "chunk_text": extracted["chunk_text"] if settings.store_excerpts else "",
                     "text_tokens": extracted["text_tokens"],
                     "redaction_count": extracted["redaction_count"],
+                    "revision_identity_mode": "git_blob_sha",
                 },
             )
             assets.append(score_asset(file_record, scoring))

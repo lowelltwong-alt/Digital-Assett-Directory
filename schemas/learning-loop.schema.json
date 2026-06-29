@@ -1,0 +1,106 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://local.digital-asset-directory/schemas/learning-loop.schema.json",
+  "title": "Candidate Learning Loop Record",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "learning_loop_id",
+    "learning_loop_type",
+    "source_asset_ids",
+    "expectation_source",
+    "exception_signal",
+    "adaptation_proposal",
+    "review_gate",
+    "promotion_target",
+    "evidence",
+    "confidence",
+    "risk",
+    "authority_boundary",
+    "generated_at",
+    "scan_id",
+    "review_status"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": "0.1.0"
+    },
+    "learning_loop_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "learning_loop_type": {
+      "enum": [
+        "governed_learning_loop",
+        "asset_use_feedback_loop",
+        "evaluation_promotion_loop",
+        "exception_to_adaptation_loop"
+      ]
+    },
+    "source_asset_ids": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 1
+      },
+      "minItems": 1
+    },
+    "expectation_source": {
+      "type": "string",
+      "minLength": 1
+    },
+    "exception_signal": {
+      "type": "string",
+      "minLength": 1
+    },
+    "adaptation_proposal": {
+      "type": "string",
+      "minLength": 1
+    },
+    "review_gate": {
+      "type": "string",
+      "minLength": 1
+    },
+    "promotion_target": {
+      "type": "string",
+      "minLength": 1
+    },
+    "evidence": {
+      "type": "object",
+      "minProperties": 1
+    },
+    "confidence": {
+      "enum": [
+        "low",
+        "medium",
+        "high"
+      ]
+    },
+    "risk": {
+      "enum": [
+        "low",
+        "medium",
+        "high"
+      ]
+    },
+    "authority_boundary": {
+      "type": "string",
+      "minLength": 1
+    },
+    "generated_at": {
+      "type": "string"
+    },
+    "scan_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "review_status": {
+      "enum": [
+        "generated_candidate",
+        "reviewed",
+        "rejected"
+      ]
+    }
+  },
+  "additionalProperties": false
+}

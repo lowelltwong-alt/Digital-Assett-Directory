@@ -1,0 +1,82 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://local.digital-asset-directory/schemas/semantic-evolution.schema.json",
+  "title": "Semantic Evolution Candidate Record",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "evolution_id",
+    "family_key",
+    "asset_type",
+    "source_asset_ids",
+    "representative_paths",
+    "path_class_counts",
+    "raw_version_count",
+    "normalized_version_count",
+    "semantic_version_count",
+    "evolution_grade",
+    "noise_class",
+    "semantic_change_score",
+    "noise_score",
+    "methodology_version",
+    "grading_summary",
+    "structural_changes",
+    "current_instance_score_guidance",
+    "family_value_guidance",
+    "graph_edge_suggestions",
+    "applies_when",
+    "does_not_apply_when",
+    "evidence",
+    "generated_at",
+    "scan_id",
+    "review_status"
+  ],
+  "properties": {
+    "schema_version": {"const": "0.1.0"},
+    "evolution_id": {"type": "string", "minLength": 1},
+    "family_key": {"type": "string", "minLength": 1},
+    "asset_type": {"type": "string"},
+    "source_asset_ids": {"type": "array", "items": {"type": "string"}, "minItems": 1},
+    "representative_paths": {"type": "array", "items": {"type": "string"}},
+    "path_class_counts": {"type": "object", "additionalProperties": {"type": "integer", "minimum": 0}},
+    "raw_version_count": {"type": "integer", "minimum": 0},
+    "normalized_version_count": {"type": "integer", "minimum": 0},
+    "semantic_version_count": {"type": "integer", "minimum": 0},
+    "evolution_grade": {
+      "enum": [
+        "insufficient_evidence",
+        "none",
+        "cosmetic_metadata",
+        "minor_semantic",
+        "moderate_semantic",
+        "major_semantic",
+        "breaking_semantic"
+      ]
+    },
+    "noise_class": {
+      "enum": [
+        "insufficient_evidence",
+        "exact_copy",
+        "format_or_order_noise",
+        "path_or_metadata_noise",
+        "fixture_lineage_noise",
+        "mixed_signal"
+      ]
+    },
+    "semantic_change_score": {"type": "number", "minimum": 0, "maximum": 1},
+    "noise_score": {"type": "number", "minimum": 0, "maximum": 1},
+    "methodology_version": {"const": "semantic-evolution-grading-v1"},
+    "grading_summary": {"type": "string", "minLength": 1},
+    "structural_changes": {"type": "object"},
+    "current_instance_score_guidance": {"type": "string", "minLength": 1},
+    "family_value_guidance": {"type": "string", "minLength": 1},
+    "graph_edge_suggestions": {"type": "array", "items": {"type": "string"}},
+    "applies_when": {"type": "array", "items": {"type": "string"}, "minItems": 1},
+    "does_not_apply_when": {"type": "array", "items": {"type": "string"}, "minItems": 1},
+    "evidence": {"type": "object"},
+    "generated_at": {"type": "string"},
+    "scan_id": {"type": "string", "minLength": 1},
+    "review_status": {"enum": ["generated_candidate", "reviewed", "rejected"]}
+  },
+  "additionalProperties": false
+}

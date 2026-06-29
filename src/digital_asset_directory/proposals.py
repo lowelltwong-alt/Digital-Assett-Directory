@@ -4,11 +4,17 @@ import csv
 import json
 from collections import Counter, defaultdict
 from dataclasses import dataclass
-from pathlib import PurePosixPath
 from pathlib import Path
+from pathlib import PurePosixPath
 from typing import Any, Literal
 
 from .ids import stable_id
+from .instance_class import (
+    QUARANTINED_INSTANCE_CLASSES,
+    classify_instance_class,
+    information_content_class,
+    is_independent_portfolio_asset,
+)
 from .models import AlertRecord, AssetRecord, EdgeRecord, ProposalRecord, ProposalReviewRecord
 from .utils import atomic_write_text, jaccard, tokens, utc_now, write_jsonl
 
@@ -94,6 +100,10 @@ ASSET_TYPE_SUPPORT_TYPES = {
 }
 RANKING_REVIEW_COST_PENALTIES = {"low": 0.0, "medium": 0.015, "high": 0.035}
 RANKING_RISK_PENALTIES = {"low": 0.0, "medium": 0.01, "high": 0.03}
+MAX_BOTTOM_UP_TARGETS = 500
+MAX_PROVIDER_POOL_PER_KEY = 250
+CROSS_REPO_BOTTOM_UP_SIMILARITY_THRESHOLD = 0.34
+ACTIVE_EXCLUDED_REPO_TERMS = ("mock trial", "mock-trial", "mock_trial", "mock trial4.26")
 ROADMAP_RELEVANCE_STOPWORDS = {
     "acceptance",
     "asset",
@@ -139,6 +149,7 @@ class ProposalIndexes:
     alerts_by_asset: dict[str, list[AlertRecord]]
     orphan_asset_ids: set[str]
     weak_asset_ids: set[str]
+    asset_tokens: dict[str, set[str]]
 
 
 def _logical_name(asset: AssetRecord) -> str:
@@ -152,6 +163,22 @@ def _is_eligible(asset: AssetRecord) -> bool:
     if _logical_name(asset) in {".gitkeep", ".gitignore", "thumbs.db", ".ds_store"}:
         return False
     if not asset.asset_id or not asset.logical_path:
+        return False
+    path_instance_class = classify_instance_class(asset.logical_path)
+    if path_instance_class in QUARANTINED_INSTANCE_CLASSES:
+        return False
+    instance_class = str(asset.metadata.get("instance_class") or path_instance_class)
+    info_class = str(
+        asset.metadata.get("information_content_class")
+        or information_content_class(
+            asset.logical_path,
+            asset_type=asset.asset_type,
+            size_bytes=asset.size_bytes,
+            content_sha256=asset.content_sha256,
+            metadata=asset.metadata,
+        )
+    )
+    if not is_independent_portfolio_asset(instance_class, info_class):
         return False
     return True
 
@@ -168,8 +195,173 @@ def _asset_tokens(asset: AssetRecord) -> set[str]:
     )
 
 
+def _asset_review_rank(asset: AssetRecord) -> tuple[float, int, int, str]:
+    return (
+        float(asset.value_score or 0.0),
+        len(asset.capabilities) + len(asset.needs) + len(asset.outcomes),
+        len(asset.entrypoints),
+        asset.asset_id,
+    )
+
+
+def _rank_assets(assets: list[AssetRecord], limit: int | None = None) -> list[AssetRecord]:
+    ranked = sorted(assets, key=_asset_review_rank, reverse=True)
+    return ranked[:limit] if limit is not None else ranked
+
+
+def _bottom_up_target_rank(
+    asset: AssetRecord, indexes: ProposalIndexes
+) -> tuple[int, int, int, float, str]:
+    has_alert = 1 if indexes.alerts_by_asset.get(asset.asset_id) else 0
+    is_weak = 1 if asset.asset_id in indexes.weak_asset_ids else 0
+    has_need = 1 if asset.needs else 0
+    return (
+        has_alert,
+        is_weak,
+        has_need,
+        float(asset.value_score or 0.0),
+        asset.asset_id,
+    )
+
+
+def _bounded_bottom_up_targets(indexes: ProposalIndexes) -> list[AssetRecord]:
+    ranked = sorted(
+        indexes.eligible.values(),
+        key=lambda asset: _bottom_up_target_rank(asset, indexes),
+        reverse=True,
+    )
+    return ranked[:MAX_BOTTOM_UP_TARGETS]
+
+
 def _normalized_logical_path(path: str) -> str:
     return path.replace("\\", "/").lstrip("./").lower()
+
+
+def _path_parts(path: str) -> tuple[str, ...]:
+    return tuple(part for part in PurePosixPath(_normalized_logical_path(path)).parts if part)
+
+
+def _collection_key(asset: AssetRecord) -> str:
+    repository_root = asset.metadata.get("repository_root")
+    if isinstance(repository_root, str) and repository_root.strip():
+        return _normalized_logical_path(repository_root)
+    parts = _path_parts(asset.logical_path)
+    if len(parts) >= 2 and parts[0] in {"git-projects", "github", "repos"}:
+        return "/".join(parts[:2])
+    if len(parts) >= 2:
+        return parts[0]
+    return "."
+
+
+def _repo_key(asset: AssetRecord) -> str:
+    return f"{asset.source_id}:{_collection_key(asset)}"
+
+
+def _repo_relationship(left: AssetRecord, right: AssetRecord) -> str:
+    if _repo_key(left) == _repo_key(right):
+        return "same_repo"
+    if left.parent_asset_id and left.parent_asset_id == right.parent_asset_id:
+        return "same_family"
+    if (
+        left.content_sha256
+        and right.content_sha256
+        and left.content_sha256 == right.content_sha256
+    ):
+        return "same_family"
+    return "cross_repo"
+
+
+def _touches_active_excluded_repo(asset: AssetRecord) -> bool:
+    haystack = f"{asset.title} {asset.logical_path}".lower()
+    return any(term in haystack for term in ACTIVE_EXCLUDED_REPO_TERMS)
+
+
+def _proposal_review_guards(involved: list[AssetRecord]) -> list[dict[str, Any]]:
+    matched_assets = [asset for asset in involved if _touches_active_excluded_repo(asset)]
+    if not matched_assets:
+        return []
+    return [
+        {
+            "guard_id": "active_excluded_repo_review_required",
+            "reason": "Proposal touches an active or explicitly excluded repository.",
+            "matched_asset_ids": sorted(asset.asset_id for asset in matched_assets),
+            "suggested_safety": "needs_more_review",
+            "suggested_actionability": "not_actionable",
+            "suggested_decision": "defer",
+        }
+    ]
+
+
+def _guard_suggested_review_labels(guards: Any) -> dict[str, str]:
+    if not isinstance(guards, list) or not guards:
+        return {}
+    labels: dict[str, str] = {}
+    for guard in guards:
+        if not isinstance(guard, dict):
+            continue
+        for source, target in [
+            ("suggested_safety", "safety"),
+            ("suggested_actionability", "actionability"),
+            ("suggested_decision", "decision"),
+        ]:
+            value = guard.get(source)
+            if isinstance(value, str) and value:
+                labels.setdefault(target, value)
+    return labels
+
+
+def _bottom_up_relation_guard(
+    *,
+    provider: AssetRecord,
+    target: AssetRecord,
+    shared_outcomes: list[str],
+    matched_capabilities: list[str],
+    edge_evidence: list[dict[str, Any]],
+    similarity: float,
+) -> tuple[bool, dict[str, Any]]:
+    relationship = _repo_relationship(provider, target)
+    strong_reasons: list[str] = []
+    if relationship in {"same_repo", "same_family"}:
+        strong_reasons.append(relationship)
+    if matched_capabilities:
+        strong_reasons.append("shared_need_or_capability")
+    if edge_evidence:
+        strong_reasons.append("existing_graph_evidence")
+    if (
+        provider.content_sha256
+        and target.content_sha256
+        and provider.content_sha256 == target.content_sha256
+    ):
+        strong_reasons.append("same_content_sha256")
+    if shared_outcomes and similarity >= CROSS_REPO_BOTTOM_UP_SIMILARITY_THRESHOLD:
+        strong_reasons.append("shared_outcome_plus_similarity")
+
+    allowed = relationship != "cross_repo" or bool(strong_reasons)
+    return allowed, {
+        "repo_relationship": relationship,
+        "provider_collection_key": _collection_key(provider),
+        "target_collection_key": _collection_key(target),
+        "cross_repo_guard": {
+            "allowed": allowed,
+            "methodology_version": "bottom-up-cross-repo-guard-v1",
+            "similarity_threshold": CROSS_REPO_BOTTOM_UP_SIMILARITY_THRESHOLD,
+            "strong_reasons": strong_reasons,
+        },
+    }
+
+
+def _proposal_idea_key(proposal: ProposalRecord) -> str:
+    explicit = proposal.evidence.get("proposal_idea_key")
+    if isinstance(explicit, str) and explicit:
+        return explicit
+    relationship = str(proposal.evidence.get("repo_relationship") or "unknown")
+    need_part = ",".join(sorted(proposal.need_ids)) or "none"
+    source_part = ",".join(sorted(proposal.source_asset_ids))
+    target_part = ",".join(sorted(proposal.target_asset_ids)) or "portfolio"
+    return (
+        f"{proposal.proposal_type}|{relationship}|{need_part}|"
+        f"{source_part}|{target_part}"
+    )
 
 
 def _roadmap_tokens(text: str) -> set[str]:
@@ -211,6 +403,7 @@ def build_proposal_indexes(
 ) -> ProposalIndexes:
     by_id = {asset.asset_id: asset for asset in assets}
     eligible = {asset.asset_id: asset for asset in assets if _is_eligible(asset)}
+    asset_tokens = {asset.asset_id: _asset_tokens(asset) for asset in eligible.values()}
     providers_by_capability: dict[str, list[AssetRecord]] = defaultdict(list)
     needers_by_need: dict[str, list[AssetRecord]] = defaultdict(list)
     assets_by_outcome: dict[str, list[AssetRecord]] = defaultdict(list)
@@ -257,16 +450,24 @@ def build_proposal_indexes(
     return ProposalIndexes(
         by_id=by_id,
         eligible=eligible,
-        providers_by_capability={k: v for k, v in providers_by_capability.items()},
-        needers_by_need={k: v for k, v in needers_by_need.items()},
-        assets_by_outcome={k: v for k, v in assets_by_outcome.items()},
-        assets_by_type={k: v for k, v in assets_by_type.items()},
-        assets_by_lifecycle={k: v for k, v in assets_by_lifecycle.items()},
+        providers_by_capability={
+            k: _rank_assets(v, MAX_PROVIDER_POOL_PER_KEY)
+            for k, v in providers_by_capability.items()
+        },
+        needers_by_need={k: _rank_assets(v, MAX_PROVIDER_POOL_PER_KEY) for k, v in needers_by_need.items()},
+        assets_by_outcome={
+            k: _rank_assets(v, MAX_PROVIDER_POOL_PER_KEY) for k, v in assets_by_outcome.items()
+        },
+        assets_by_type={
+            k: _rank_assets(v, MAX_PROVIDER_POOL_PER_KEY) for k, v in assets_by_type.items()
+        },
+        assets_by_lifecycle={k: _rank_assets(v) for k, v in assets_by_lifecycle.items()},
         neighbors_by_asset={k: v for k, v in neighbors_by_asset.items()},
         edge_evidence_by_pair={k: v for k, v in edge_evidence_by_pair.items()},
         alerts_by_asset={k: v for k, v in alerts_by_asset.items()},
         orphan_asset_ids=orphan_asset_ids,
         weak_asset_ids=weak_asset_ids,
+        asset_tokens=asset_tokens,
     )
 
 
@@ -391,6 +592,24 @@ def _new_proposal(
         for asset_id in target_ids
         if asset_id in assets_by_id
     ]
+    review_guards = _proposal_review_guards(involved)
+    proposal_evidence = {
+        "score": round(score, 4),
+        **evidence,
+        "source_asset_context": source_context,
+        "target_asset_context": target_context,
+    }
+    proposal_known_risks = list(
+        known_risks
+        or ["Generated proposal may be a false positive; review provenance before acting."]
+    )
+    proposal_safety_flags = SAFETY_FLAGS.copy()
+    if review_guards:
+        proposal_evidence["deterministic_review_guards"] = review_guards
+        proposal_safety_flags.extend(guard["guard_id"] for guard in review_guards)
+        proposal_known_risks.append(
+            "Active or explicitly excluded repository touched; defer until human boundary review."
+        )
     proposal = ProposalRecord(
         proposal_id=_proposal_id(
             engine,
@@ -408,23 +627,16 @@ def _new_proposal(
         need_ids=sorted(dict.fromkeys(need_ids)),
         capability_ids=sorted(dict.fromkeys(capability_ids)),
         rationale=rationale,
-        evidence={
-            "score": round(score, 4),
-            **evidence,
-            "source_asset_context": source_context,
-            "target_asset_context": target_context,
-        },
+        evidence=proposal_evidence,
         smallest_bounded_experiment=smallest_bounded_experiment,
         expected_benefit=expected_benefit,
-        known_risks=known_risks or [
-            "Generated proposal may be a false positive; review provenance before acting."
-        ],
+        known_risks=proposal_known_risks,
         authority_boundary=AUTHORITY_BOUNDARY,
         confidence=_confidence_label(score),
         risk=_risk_label(involved),
         estimated_review_cost=_cost_label(len(involved)),
         estimated_integration_cost=_cost_label(len(source_ids) + len(target_ids)),
-        safety_flags=SAFETY_FLAGS.copy(),
+        safety_flags=proposal_safety_flags,
         generated_at=generated_at,
         scan_id=scan_id,
     )
@@ -548,12 +760,25 @@ def _asset_type_support_candidates(
         for provider in indexes.assets_by_type.get(support_type, []):
             if provider.asset_id == target.asset_id:
                 continue
-            provider_tokens = _asset_tokens(provider)
+            provider_tokens = indexes.asset_tokens.get(provider.asset_id, set())
             shared_outcomes = sorted(set(provider.outcomes) & set(target.outcomes))
             similarity = jaccard(target_tokens, provider_tokens)
             if not shared_outcomes and similarity < 0.12:
                 continue
             matched_capabilities = sorted(set(provider.capabilities) & set(target.needs))
+            edge_evidence = indexes.edge_evidence_by_pair.get(
+                (provider.asset_id, target.asset_id), []
+            )
+            allowed, relation_evidence = _bottom_up_relation_guard(
+                provider=provider,
+                target=target,
+                shared_outcomes=shared_outcomes,
+                matched_capabilities=matched_capabilities,
+                edge_evidence=edge_evidence,
+                similarity=similarity,
+            )
+            if not allowed:
+                continue
             score = min(
                 0.72,
                 0.42
@@ -579,8 +804,10 @@ def _asset_type_support_candidates(
                     "target_asset_type": target.asset_type,
                     "shared_outcomes": shared_outcomes,
                     "matched_capabilities": matched_capabilities,
+                    "edge_evidence": edge_evidence[:5],
                     "similarity": round(similarity, 4),
                     "alert_ids": alert_ids,
+                    **relation_evidence,
                 },
                 smallest_bounded_experiment=(
                     "Review the support asset against the target and record whether it adds "
@@ -610,9 +837,9 @@ def generate_bottom_up_proposals(
     indexes = build_proposal_indexes(assets, edges, alerts)
     generated = generated_at or utc_now()
     proposals: list[ProposalRecord] = []
-    for target in sorted(indexes.eligible.values(), key=lambda record: record.asset_id):
+    for target in _bounded_bottom_up_targets(indexes):
         candidates: list[tuple[float, ProposalRecord]] = []
-        target_tokens = _asset_tokens(target)
+        target_tokens = indexes.asset_tokens.get(target.asset_id, set())
         target_alerts = indexes.alerts_by_asset.get(target.asset_id, [])
         alert_ids = [alert.alert_id for alert in target_alerts]
         is_weak = target.asset_id in indexes.weak_asset_ids or not indexes.neighbors_by_asset.get(
@@ -624,9 +851,21 @@ def generate_bottom_up_proposals(
                 if provider.asset_id == target.asset_id:
                     continue
                 shared_outcomes = sorted(set(provider.outcomes) & set(target.outcomes))
+                provider_tokens = indexes.asset_tokens.get(provider.asset_id, set())
+                similarity = jaccard(target_tokens, provider_tokens)
                 edge_evidence = indexes.edge_evidence_by_pair.get(
                     (provider.asset_id, target.asset_id), []
                 )
+                allowed, relation_evidence = _bottom_up_relation_guard(
+                    provider=provider,
+                    target=target,
+                    shared_outcomes=shared_outcomes,
+                    matched_capabilities=[need],
+                    edge_evidence=edge_evidence,
+                    similarity=similarity,
+                )
+                if not allowed:
+                    continue
                 score = 0.72 + 0.05 * len(shared_outcomes) + 0.03 * len(edge_evidence)
                 if target.asset_id in indexes.orphan_asset_ids:
                     score += 0.08
@@ -650,7 +889,9 @@ def generate_bottom_up_proposals(
                         "target_needs": target.needs,
                         "shared_outcomes": shared_outcomes,
                         "edge_evidence": edge_evidence[:5],
+                        "similarity": round(similarity, 4),
                         "alert_ids": alert_ids,
+                        **relation_evidence,
                     },
                     smallest_bounded_experiment=(
                         "Review the provider and target assets together, then draft a one-page "
@@ -676,7 +917,16 @@ def generate_bottom_up_proposals(
             )
         )
 
-        for provider in indexes.eligible.values():
+        shared_outcome_provider_ids = sorted(
+            {
+                provider.asset_id
+                for outcome in target.outcomes
+                for provider in indexes.assets_by_outcome.get(outcome, [])
+                if provider.asset_id != target.asset_id
+            }
+        )
+        for provider_id in shared_outcome_provider_ids[:MAX_PROVIDER_POOL_PER_KEY]:
+            provider = indexes.eligible[provider_id]
             if provider.asset_id == target.asset_id:
                 continue
             if (
@@ -687,10 +937,29 @@ def generate_bottom_up_proposals(
             shared_outcomes = sorted(set(provider.outcomes) & set(target.outcomes))
             if not shared_outcomes:
                 continue
-            similarity = jaccard(target_tokens, _asset_tokens(provider))
+            shared_capabilities = sorted(set(provider.capabilities) & set(target.capabilities))
+            if (
+                provider.asset_type == target.asset_type
+                and not shared_capabilities
+                and not target_alerts
+            ):
+                continue
+            similarity = jaccard(target_tokens, indexes.asset_tokens.get(provider.asset_id, set()))
             if similarity < 0.08:
                 continue
-            shared_capabilities = sorted(set(provider.capabilities) & set(target.capabilities))
+            edge_evidence = indexes.edge_evidence_by_pair.get(
+                (provider.asset_id, target.asset_id), []
+            )
+            allowed, relation_evidence = _bottom_up_relation_guard(
+                provider=provider,
+                target=target,
+                shared_outcomes=shared_outcomes,
+                matched_capabilities=shared_capabilities,
+                edge_evidence=edge_evidence,
+                similarity=similarity,
+            )
+            if not allowed:
+                continue
             if shared_capabilities and not target.needs:
                 proposal_type = "strengthens_capability"
             elif provider.asset_type == "test":
@@ -716,7 +985,10 @@ def generate_bottom_up_proposals(
                     "similarity": round(similarity, 4),
                     "provider_asset_type": provider.asset_type,
                     "target_asset_type": target.asset_type,
+                    "shared_capabilities": shared_capabilities,
+                    "edge_evidence": edge_evidence[:5],
                     "alert_ids": alert_ids,
+                    **relation_evidence,
                 },
                 smallest_bounded_experiment=(
                     "Compare the two assets' entrypoints and capture one concrete reuse, "
@@ -747,6 +1019,86 @@ def generate_bottom_up_proposals(
                 break
         proposals.extend(unique.values())
     return sorted(proposals, key=lambda record: (record.source_asset_ids, record.target_asset_ids))
+
+
+def _append_stale_review_bundle_candidates(
+    candidates: list[tuple[float, ProposalRecord]],
+    *,
+    indexes: ProposalIndexes,
+    stale_assets: list[AssetRecord],
+    scan_id: str,
+    generated_at: str,
+    roadmap_context: RoadmapRelevanceContext | None,
+) -> set[str]:
+    grouped: dict[tuple[str, str], list[AssetRecord]] = defaultdict(list)
+    for asset in stale_assets:
+        if asset.asset_id in indexes.eligible:
+            grouped[(_collection_key(asset), asset.asset_type)].append(asset)
+
+    bundled_asset_ids: set[str] = set()
+    for (collection_key, asset_type), group in sorted(grouped.items()):
+        group = _rank_assets(group)
+        bundled_asset_ids.update(asset.asset_id for asset in group)
+        source_ids = [asset.asset_id for asset in group[:20]]
+        alert_ids = sorted(
+            {
+                alert.alert_id
+                for asset in group
+                for alert in indexes.alerts_by_asset.get(asset.asset_id, [])
+                if alert.alert_type == "stale_asset"
+            }
+        )
+        lifecycle_counts = Counter(asset.lifecycle_state for asset in group)
+        freshness_counts = Counter(asset.freshness_status for asset in group)
+        proposal = _new_proposal(
+            engine="top_down_orchestration",
+            proposal_type="bundles_assets",
+            source_asset_ids=source_ids,
+            target_asset_ids=[],
+            need_ids=[],
+            capability_ids=[],
+            rationale=(
+                f"Portfolio scan found {len(group)} stale or stale-alerted `{asset_type}` "
+                f"assets in `{collection_key}`; review them as one collection-level keep, "
+                "renew, archive, or dismiss bundle."
+            ),
+            evidence={
+                "matching_primitive": "collection_stale_review_bundle",
+                "proposal_idea_key": f"stale_bundle|{collection_key}|{asset_type}",
+                "collection_key": collection_key,
+                "asset_type": asset_type,
+                "bundle_member_count": len(group),
+                "member_asset_ids": [asset.asset_id for asset in group],
+                "alert_ids": alert_ids,
+                "asset_type_counts": {asset_type: len(group)},
+                "lifecycle_state_counts": dict(lifecycle_counts),
+                "freshness_status_counts": dict(freshness_counts),
+                "methodology_version": "collection-stale-bundling-v1",
+            },
+            smallest_bounded_experiment=(
+                "Review the bundle once, then record which member assets should be renewed, "
+                "left alone, archived, dismissed, or split into a more specific review."
+            ),
+            expected_benefit=(
+                "Stale collection risk can be triaged without flooding the review queue "
+                "with repeated item-level proposals."
+            ),
+            known_risks=[
+                "Bundle members may need different decisions; split the bundle during review if needed.",
+                "Lifecycle state may be intentional; confirm with source owner before action.",
+            ],
+            assets_by_id=indexes.by_id,
+            scan_id=scan_id,
+            generated_at=generated_at,
+            score=min(0.9, 0.6 + 0.03 * len(group)),
+        )
+        _append_top_down_candidate(
+            candidates,
+            proposal,
+            assets_by_id=indexes.by_id,
+            roadmap_context=roadmap_context,
+        )
+    return bundled_asset_ids
 
 
 def generate_top_down_proposals(
@@ -896,7 +1248,35 @@ def generate_top_down_proposals(
             roadmap_context=roadmap_context,
         )
 
+    stale_alert_asset_ids = {
+        asset_id
+        for alert in alerts
+        if alert.alert_type == "stale_asset"
+        for asset_id in alert.asset_ids
+    }
+    stale_assets_by_id = {
+        asset.asset_id: asset
+        for asset in [
+            *indexes.assets_by_lifecycle.get("stale", []),
+            *(
+                indexes.eligible[asset_id]
+                for asset_id in sorted(stale_alert_asset_ids)
+                if asset_id in indexes.eligible
+            ),
+        ]
+    }
+    _append_stale_review_bundle_candidates(
+        candidates,
+        indexes=indexes,
+        stale_assets=list(stale_assets_by_id.values()),
+        scan_id=scan_id,
+        generated_at=generated,
+        roadmap_context=roadmap_context,
+    )
+
     for lifecycle_state in sorted(LIFECYCLE_RISK_STATES):
+        if lifecycle_state == "stale":
+            continue
         lifecycle_assets = indexes.assets_by_lifecycle.get(lifecycle_state, [])
         if not lifecycle_assets:
             continue
@@ -940,41 +1320,6 @@ def generate_top_down_proposals(
             roadmap_context=roadmap_context,
         )
 
-    stale_alerts = [alert for alert in alerts if alert.alert_type == "stale_asset"]
-    for alert in sorted(stale_alerts, key=lambda record: record.alert_id):
-        source_ids = [aid for aid in alert.asset_ids if aid in indexes.eligible]
-        if not source_ids:
-            continue
-        proposal = _new_proposal(
-            engine="top_down_orchestration",
-            proposal_type="reduces_risk",
-            source_asset_ids=source_ids,
-            target_asset_ids=[],
-            need_ids=[],
-            capability_ids=[],
-            rationale=f"{alert.title} may need a freshness or risk review.",
-            evidence={
-                "alert_id": alert.alert_id,
-                "alert_type": alert.alert_type,
-                "severity": alert.severity,
-                "recommended_action": alert.recommended_action,
-            },
-            smallest_bounded_experiment=(
-                "Review freshness evidence and either renew, archive, or dismiss the stale alert."
-            ),
-            expected_benefit="Risky or stale assets can be triaged without source mutation.",
-            assets_by_id=indexes.by_id,
-            scan_id=scan_id,
-            generated_at=generated,
-            score=0.62,
-        )
-        _append_top_down_candidate(
-            candidates,
-            proposal,
-            assets_by_id=indexes.by_id,
-            roadmap_context=roadmap_context,
-        )
-
     unique: dict[str, ProposalRecord] = {}
     for _, proposal in sorted(
         candidates,
@@ -990,6 +1335,7 @@ def generate_top_down_proposals(
 def _proposal_metrics(proposals: list[ProposalRecord]) -> dict[str, Any]:
     total = len(proposals)
     unique_ids = {proposal.proposal_id for proposal in proposals}
+    idea_keys = [_proposal_idea_key(proposal) for proposal in proposals]
     needs = {need for proposal in proposals for need in proposal.need_ids}
     orphan_targets = {
         asset_id
@@ -1036,8 +1382,15 @@ def _proposal_metrics(proposals: list[ProposalRecord]) -> dict[str, Any]:
         for proposal in proposals
         for phase_id in proposal.evidence.get("roadmap_phase_ids", [])
     }
+    review_guarded = [
+        proposal
+        for proposal in proposals
+        if proposal.evidence.get("deterministic_review_guards")
+    ]
     return {
         "proposal_count": total,
+        "distinct_idea_count": len(set(idea_keys)),
+        "duplicate_idea_count": total - len(set(idea_keys)),
         "distinct_needs_covered": len(needs),
         "orphan_activation_coverage": len(orphan_targets),
         "duplicate_count": total - len(unique_ids),
@@ -1069,7 +1422,43 @@ def _proposal_metrics(proposals: list[ProposalRecord]) -> dict[str, Any]:
         "roadmap_phase_ids": sorted(roadmap_phase_ids),
         "human_usefulness_metrics_available": False,
         "proposal_types": dict(Counter(proposal.proposal_type for proposal in proposals)),
+        "repo_relationship_counts": dict(
+            Counter(str(proposal.evidence.get("repo_relationship", "portfolio")) for proposal in proposals)
+        ),
+        "proposal_idea_type_counts": dict(
+            Counter(key.split("|", 1)[0] for key in idea_keys)
+        ),
+        "active_excluded_guard_count": len(review_guarded),
+        "stale_bundle_count": sum(
+            1
+            for proposal in proposals
+            if proposal.evidence.get("matching_primitive") == "collection_stale_review_bundle"
+        ),
     }
+
+
+def _rank_proposals_for_review(proposals: list[ProposalRecord]) -> list[ProposalRecord]:
+    return sorted(
+        proposals,
+        key=lambda record: (
+            float(record.evidence.get("ranking_score", record.evidence.get("score", 0.0))),
+            len(record.source_asset_ids) + len(record.target_asset_ids),
+            record.proposal_type,
+            record.proposal_id,
+        ),
+        reverse=True,
+    )
+
+
+def _select_distinct_idea_sample(
+    proposals: list[ProposalRecord], per_engine_sample: int
+) -> list[ProposalRecord]:
+    selected_by_idea: dict[str, ProposalRecord] = {}
+    for proposal in _rank_proposals_for_review(proposals):
+        selected_by_idea.setdefault(_proposal_idea_key(proposal), proposal)
+        if len(selected_by_idea) >= per_engine_sample:
+            break
+    return list(selected_by_idea.values())
 
 
 def build_proposal_review_template(
@@ -1078,8 +1467,8 @@ def build_proposal_review_template(
     per_engine_sample: int = 25,
 ) -> list[ProposalReviewRecord]:
     selected: list[ProposalRecord] = [
-        *sorted(bottom_up, key=lambda record: record.proposal_id)[:per_engine_sample],
-        *sorted(top_down, key=lambda record: record.proposal_id)[:per_engine_sample],
+        *_select_distinct_idea_sample(bottom_up, per_engine_sample),
+        *_select_distinct_idea_sample(top_down, per_engine_sample),
     ]
     records: list[ProposalReviewRecord] = []
     for index, proposal in enumerate(selected, start=1):
@@ -1102,6 +1491,11 @@ def build_proposal_review_template(
                         proposal, "target_asset_context"
                     ),
                     "need_ids": proposal.need_ids,
+                    "proposal_idea_key": _proposal_idea_key(proposal),
+                    "repo_relationship": proposal.evidence.get("repo_relationship", "portfolio"),
+                    "deterministic_review_guards": proposal.evidence.get(
+                        "deterministic_review_guards", []
+                    ),
                 },
             )
         )
@@ -1125,6 +1519,11 @@ def build_proposal_comparison(
             "source_asset_context": record.evidence.get("source_asset_context", []),
             "target_asset_context": record.evidence.get("target_asset_context", []),
             "need_ids": record.evidence.get("need_ids", []),
+            "proposal_idea_key": record.evidence.get("proposal_idea_key", ""),
+            "repo_relationship": record.evidence.get("repo_relationship", ""),
+            "deterministic_review_guards": record.evidence.get(
+                "deterministic_review_guards", []
+            ),
             "rationale": by_id[record.proposal_id].rationale,
             "smallest_bounded_experiment": by_id[
                 record.proposal_id
@@ -1169,6 +1568,11 @@ def _review_record_for_markdown(
         "source_asset_context": _proposal_asset_context(proposal, "source_asset_context"),
         "target_asset_context": _proposal_asset_context(proposal, "target_asset_context"),
         "need_ids": proposal.need_ids,
+        "proposal_idea_key": _proposal_idea_key(proposal),
+        "repo_relationship": proposal.evidence.get("repo_relationship", "portfolio"),
+        "deterministic_review_guards": proposal.evidence.get(
+            "deterministic_review_guards", []
+        ),
         "rationale": proposal.rationale,
         "smallest_bounded_experiment": proposal.smallest_bounded_experiment,
     }
@@ -1449,6 +1853,12 @@ def build_proposal_review_queue(
                 "need_ids": proposal.need_ids,
                 "confidence": proposal.confidence,
                 "risk": proposal.risk,
+                "proposal_idea_key": _proposal_idea_key(proposal),
+                "repo_relationship": proposal.evidence.get("repo_relationship", "portfolio"),
+                "review_guards": proposal.evidence.get("deterministic_review_guards", []),
+                "suggested_review_labels": _guard_suggested_review_labels(
+                    proposal.evidence.get("deterministic_review_guards", [])
+                ),
                 "rationale": proposal.rationale,
                 "smallest_bounded_experiment": proposal.smallest_bounded_experiment,
             }
@@ -1712,8 +2122,21 @@ def _review_acceptance_counts(reviews: list[ProposalReviewRecord]) -> dict[str, 
     }
 
 
+def _review_distinct_acceptance_counts(reviews: list[ProposalReviewRecord]) -> dict[str, Any]:
+    by_engine: dict[str, set[str]] = defaultdict(set)
+    for review in reviews:
+        if review.decision != "accept_candidate":
+            continue
+        idea_key = str(review.evidence.get("proposal_idea_key") or review.proposal_id)
+        by_engine[review.proposal_engine].add(idea_key)
+    return {
+        "bottom_up_self_proposal": len(by_engine.get("bottom_up_self_proposal", set())),
+        "top_down_orchestration": len(by_engine.get("top_down_orchestration", set())),
+    }
+
+
 def _candidate_default_path(reviews: list[ProposalReviewRecord]) -> str:
-    accepted = _review_acceptance_counts(reviews)
+    accepted = _review_distinct_acceptance_counts(reviews)
     bottom = accepted["bottom_up_self_proposal"]
     top = accepted["top_down_orchestration"]
     if bottom == top:
@@ -1767,6 +2190,7 @@ def proposal_calibration_evidence_markdown(
     if not cleaned_default_rationale:
         raise ValueError("Proposal calibration evidence requires --default-rationale.")
     accepted = _review_acceptance_counts(reviews)
+    distinct_accepted = _review_distinct_acceptance_counts(reviews)
     candidate_default = _candidate_default_path(reviews)
     lines = [
         "# Proposal Engine Calibration Evidence",
@@ -1795,7 +2219,9 @@ def proposal_calibration_evidence_markdown(
         f"- Decisions: `{summary['decision_counts']}`",
         f"- Accepted bottom-up candidates: **{accepted['bottom_up_self_proposal']}**",
         f"- Accepted top-down candidates: **{accepted['top_down_orchestration']}**",
-        f"- Candidate default path from accepted counts: **{candidate_default}**",
+        f"- Distinct accepted bottom-up ideas: **{distinct_accepted['bottom_up_self_proposal']}**",
+        f"- Distinct accepted top-down ideas: **{distinct_accepted['top_down_orchestration']}**",
+        f"- Candidate default path from distinct accepted idea counts: **{candidate_default}**",
         f"- Human-selected default path: **{selected_default_path}**",
         f"- Human default rationale: {cleaned_default_rationale}",
         "",
@@ -1891,6 +2317,8 @@ def comparison_markdown(comparison: dict[str, Any]) -> str:
             [
                 f"## {label}",
                 f"- Proposals: **{metrics['proposal_count']}**",
+                f"- Distinct proposal ideas: **{metrics['distinct_idea_count']}**",
+                f"- Duplicate idea count: **{metrics['duplicate_idea_count']}**",
                 f"- Distinct needs covered: **{metrics['distinct_needs_covered']}**",
                 f"- Orphan activation coverage: **{metrics['orphan_activation_coverage']}**",
                 f"- Duplicate count: **{metrics['duplicate_count']}**",
@@ -1910,6 +2338,10 @@ def comparison_markdown(comparison: dict[str, Any]) -> str:
                 f"- Roadmap phase IDs: `{metrics['roadmap_phase_ids']}`",
                 f"- Human usefulness metrics available: **{metrics['human_usefulness_metrics_available']}**",
                 f"- Proposal types: `{metrics['proposal_types']}`",
+                f"- Proposal idea types: `{metrics['proposal_idea_type_counts']}`",
+                f"- Repo relationship counts: `{metrics['repo_relationship_counts']}`",
+                f"- Active/excluded review guard count: **{metrics['active_excluded_guard_count']}**",
+                f"- Stale bundle count: **{metrics['stale_bundle_count']}**",
                 "",
             ]
         )
@@ -1936,6 +2368,8 @@ def review_sample_markdown(comparison: dict[str, Any]) -> str:
         "",
         "Engine labels are hidden here for review calibration. Use proposal IDs and `processed/proposals/proposal_review_template.jsonl` to unblind after scoring.",
         "",
+        "Label semantics: `accept_candidate` means worth a bounded experiment, not ready-to-mutate. `actionable` means the next review step can be done now without an unresolved boundary dependency. `safety=needs_more_review` should be used when an active/excluded repo, external code path, or source-authority boundary needs human review.",
+        "",
         f"- Requested per engine: **{comparison['review_sample_per_engine_requested']}**",
         f"- Bottom-up sample count: **{comparison['review_sample_engine_counts']['bottom_up_self_proposal']}**",
         f"- Top-down sample count: **{comparison['review_sample_engine_counts']['top_down_orchestration']}**",
@@ -1948,6 +2382,9 @@ def review_sample_markdown(comparison: dict[str, Any]) -> str:
                 f"## {item['sample_id']}",
                 f"- Proposal ID: `{item['proposal_id']}`",
                 f"- Type: `{item['proposal_type']}`",
+                f"- Distinct idea key: `{item['proposal_idea_key']}`",
+                f"- Repo relationship: `{item['repo_relationship'] or 'portfolio'}`",
+                f"- Review guards: `{item['deterministic_review_guards']}`",
                 f"- Needs: {', '.join(item['need_ids']) or 'none'}",
                 f"- Sources: {', '.join(item['source_asset_ids'])}",
                 f"- Source context: {_format_asset_context(item['source_asset_context']) or 'none'}",

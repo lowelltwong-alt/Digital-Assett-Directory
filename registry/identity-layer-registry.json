@@ -1,0 +1,79 @@
+{
+  "registry_version": "0.1.0",
+  "status": "seed",
+  "authority_doc": "docs/ASSET_IDENTITY_AND_SIMILARITY_LADDER.md",
+  "layers": [
+    {
+      "id": "metadata_fingerprint",
+      "order": 1,
+      "status": "required",
+      "question": "Did this observable file state probably change?",
+      "outputs": ["asset.metadata_fingerprint", "asset.content_hash when metadata-derived"],
+      "authority_posture": "Fast change detection only; not proof of content sameness.",
+      "required_controls": ["source_mutation_check", "scan_id", "source_provenance"]
+    },
+    {
+      "id": "sha256",
+      "order": 2,
+      "status": "required_when_bytes_can_be_safely_read",
+      "question": "Is this exact file content already known?",
+      "outputs": ["asset.content_sha256", "exact_content_duplicate clusters", "exact_duplicate_of edges"],
+      "authority_posture": "Exact byte-stream identity only; not canonical preference.",
+      "required_controls": ["size_nonzero_for_duplicate_clusters", "source_provenance", "review_status"]
+    },
+    {
+      "id": "chunk_hashes",
+      "order": 3,
+      "status": "required_for_extracted_text_or_metadata_records",
+      "question": "Which parts changed or overlap?",
+      "outputs": ["processed/catalog/chunks.jsonl", "processed/catalog/deltas.jsonl"],
+      "authority_posture": "Fine-grained comparison evidence; shared chunks are candidates for review.",
+      "required_controls": ["revision_id", "scan_id", "chunk_kind", "evidence"]
+    },
+    {
+      "id": "extracted_text",
+      "order": 4,
+      "status": "required_when_safe_and_supported",
+      "question": "What text can deterministic tools compare, tag, or index?",
+      "outputs": ["asset.metadata.chunk_text", "asset.metadata.excerpt"],
+      "authority_posture": "Generated evidence surface; source files remain authoritative.",
+      "required_controls": ["redaction_policy", "source_aliases", "store_excerpts_setting"]
+    },
+    {
+      "id": "embeddings",
+      "order": 5,
+      "status": "deferred",
+      "question": "What assets are semantically similar?",
+      "outputs": [],
+      "authority_posture": "Semantic discovery only after privacy, license, provider, retention, and eval gates.",
+      "required_controls": ["privacy_gate", "license_gate", "provider_gate", "retention_gate", "eval_gate"]
+    },
+    {
+      "id": "knowledge_graph",
+      "order": 6,
+      "status": "required",
+      "question": "How does this asset relate to systems, workflows, schemas, tests, people, risks, and future uses?",
+      "outputs": ["processed/graph/edges.jsonl", "processed/graph/graph.json", "processed/graph/graph.graphml"],
+      "authority_posture": "Reviewable relationship evidence; candidate edges do not prove truth.",
+      "required_controls": ["edge_type_registry", "method", "confidence", "evidence", "review_status"]
+    },
+    {
+      "id": "audit_log",
+      "order": 7,
+      "status": "required",
+      "question": "Who/what observed, generated, changed, or approved this asset record?",
+      "outputs": ["audit/events/*.jsonl"],
+      "authority_posture": "Append-only provenance and accountability record.",
+      "required_controls": ["created_at", "event_type", "scan_id", "payload"]
+    },
+    {
+      "id": "fuzzy_hashing",
+      "order": 8,
+      "status": "deferred_until_duplicate_binary_or_export_pressure",
+      "question": "Is this probably a modified version of a binary/export asset?",
+      "outputs": [],
+      "authority_posture": "Optional near-duplicate signal; requires an evaluation set before promotion.",
+      "required_controls": ["duplicate_pressure_signal", "evaluation_set", "false_positive_review"]
+    }
+  ]
+}

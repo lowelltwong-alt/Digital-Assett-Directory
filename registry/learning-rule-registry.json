@@ -1,0 +1,604 @@
+{
+  "registry_version": "0.1.0",
+  "status": "seed_reviewed",
+  "rules": [
+    {
+      "schema_version": "0.1.0",
+      "rule_id": "learning-rule:current-score-before-upside",
+      "title": "Review current score before upside",
+      "summary": "During asset calibration, judge the generated current score from direct or cautiously derived evidence before considering ceiling, future lift, or development potential.",
+      "trigger_terms": [
+        "asset calibration",
+        "asset review",
+        "current score",
+        "ceiling",
+        "upside",
+        "value score",
+        "phase 2"
+      ],
+      "trigger_path_patterns": [
+        "processed/calibration/",
+        "asset_rating_template.jsonl"
+      ],
+      "context_tags": [
+        "human_gate",
+        "counterfactual_sequence"
+      ],
+      "applies_when": [
+        "A human or agent is labeling current asset value, score ranges, upside, ceiling, or development posture.",
+        "The asset has projected future value that could distract from weak current evidence."
+      ],
+      "does_not_apply_when": [
+        "The task is explicitly future-roadmap planning and no current score label is being assigned.",
+        "A reviewed calibration note already separates current score from ceiling for the asset."
+      ],
+      "required_actions": [
+        "Assign or discuss the current score label before using ceiling or upside.",
+        "Keep ceiling and lift notes as future-development evidence, not current-score proof.",
+        "Record why the current score is about_right, too_high, too_low, or unsure."
+      ],
+      "danger_if_ignored": "Future potential can inflate current scores and make review queues look more mature than the assets actually are.",
+      "evidence": [
+        "docs/ASSET_VALUE_MODEL.md",
+        "processed/calibration/asset_rating_template.jsonl"
+      ],
+      "enforcement_level": "require_ack",
+      "review_status": "reviewed"
+    },
+    {
+      "schema_version": "0.1.0",
+      "rule_id": "learning-rule:temp-fixture-copy-is-lineage-evidence",
+      "title": "Temp fixture copies are lineage evidence, not independent high-value assets",
+      "summary": "When a scanned asset is a temp/test fixture copy and canonical/source variants exist, score the specific copy conservatively while preserving its version, coverage, and evolution signal for the asset family.",
+      "trigger_terms": [
+        "temp copy",
+        "fixture copy",
+        "pytest",
+        "pytest-tmp-root",
+        "canonical",
+        "schema copy",
+        "duplicate",
+        "variant",
+        "calibration"
+      ],
+      "trigger_path_patterns": [
+        ".pytest-tmp-root",
+        "/tmp/",
+        "/temp/",
+        "contract-repo/schemas/",
+        "processed/calibration/"
+      ],
+      "context_tags": [
+        "duplicate_variant",
+        "temp_fixture_noise",
+        "source_authority",
+        "schema_contract"
+      ],
+      "applies_when": [
+        "A file is inside a temp, test fixture, copied contract repo, generated fixture, or worktree path.",
+        "Same-basename, same-hash, chunk, or normalized-content evidence points to canonical/source variants nearby.",
+        "The review is deciding whether the individual copied asset deserves its generated current value score."
+      ],
+      "does_not_apply_when": [
+        "The copied fixture is the only available source of truth and no canonical/source variant exists.",
+        "The task is specifically evaluating fixture coverage rather than scoring the file as an independent reusable asset.",
+        "A reviewed delta proves the temp copy contains a meaningful improvement not present in canonical variants."
+      ],
+      "required_actions": [
+        "Classify the path authority first: canonical/source, temp fixture, worktree, archive, or generated copy.",
+        "Check whether canonical/source candidates or duplicate variants exist before labeling current score.",
+        "If canonical variants exist, treat the temp copy's current score as likely inflated unless the copy has reviewed unique value.",
+        "Preserve copy counts, hashes, normalized diffs, and test path lineage as family-level evidence.",
+        "Do not delete or ignore differing copies; route meaningful deltas to duplicate/variant review."
+      ],
+      "danger_if_ignored": "A copied fixture flood can create dozens of false high-value assets, while a blanket discard can erase useful version-evolution and coverage evidence.",
+      "evidence": [
+        "processed/calibration/asset_rating_template.jsonl",
+        "processed/reports/worktree_archaeology.md",
+        "roadmap/evidence/contextual-learning-archaeology.md"
+      ],
+      "enforcement_level": "require_ack",
+      "review_status": "reviewed"
+    },
+    {
+      "schema_version": "0.1.0",
+      "rule_id": "learning-rule:semantic-evolution-check-required",
+      "title": "Check semantic evolution separately from copy noise",
+      "summary": "When reviewing temp copies, near-duplicates, changelogs, deltas, or copied schema families, run or cite deterministic semantic-evolution grading before changing current scores or graph edges.",
+      "trigger_terms": [
+        "semantic evolution",
+        "real semantic evolution",
+        "near duplicate",
+        "near-duplicate",
+        "delta",
+        "changelog",
+        "version drift",
+        "temp copy",
+        "fixture copy",
+        "evolved",
+        "schema family"
+      ],
+      "trigger_path_patterns": [
+        ".pytest-tmp-root",
+        "CHANGELOG",
+        "processed/learning/",
+        "processed/calibration/",
+        "processed/graph/",
+        "schemas/",
+        "schema/"
+      ],
+      "context_tags": [
+        "duplicate_variant",
+        "temp_fixture_noise",
+        "dependency_ordering",
+        "schema_contract"
+      ],
+      "applies_when": [
+        "A task is comparing copied files, near-duplicates, schema variants, changelog changes, or deltas over time.",
+        "A calibration decision depends on whether differences are real semantic evolution or noise.",
+        "Graph edges such as semantic_variant_of, evolved_from, noise_variant_of, or lineage_evidence_for may be created or interpreted."
+      ],
+      "does_not_apply_when": [
+        "The task has only one readable asset and no version, duplicate, changelog, or temp-copy evidence.",
+        "A reviewed semantic-evolution record already covers the exact family and is cited."
+      ],
+      "required_actions": [
+        "Run or cite `asset-dir recommend semantic-evolution` for the relevant family, path class, or schema group.",
+        "Separate semantic_change_score from noise_score before labeling current value.",
+        "Use the grade registry in `registry/semantic-evolution-grade-registry.json` rather than inventing a grading scale.",
+        "Route meaningful evolution to family-level graph edges and keep copied fixture instances from inflating current asset scores."
+      ],
+      "danger_if_ignored": "Agents may either discard valuable version-evolution evidence as fixture noise or over-score noisy copied files as many independent high-value assets.",
+      "evidence": [
+        "registry/semantic-evolution-grade-registry.json",
+        "docs/SEMANTIC_EVOLUTION_GRADING.md",
+        "processed/learning/semantic_evolution_candidates.jsonl"
+      ],
+      "enforcement_level": "require_ack",
+      "review_status": "reviewed"
+    },
+    {
+      "schema_version": "0.1.0",
+      "rule_id": "learning-rule:calculated-score-requires-methodology",
+      "title": "Calculated scores require explicit methodology",
+      "summary": "Any score, grade, confidence, lift, ceiling, risk, or similarity field that influences review must cite a deterministic formula, inputs, thresholds, uncertainty handling, and methodology version.",
+      "trigger_terms": [
+        "score",
+        "scoring",
+        "grade",
+        "confidence",
+        "threshold",
+        "formula",
+        "methodology",
+        "lift",
+        "ceiling",
+        "upside",
+        "risk score",
+        "similarity",
+        "semantic_change_score",
+        "noise_score"
+      ],
+      "trigger_path_patterns": [
+        "docs/ASSET_VALUE_MODEL.md",
+        "docs/SEMANTIC_EVOLUTION_GRADING.md",
+        "registry/*grade*",
+        "registry/*scor*",
+        "processed/calibration/",
+        "processed/learning/",
+        "schemas/"
+      ],
+      "context_tags": [
+        "schema_contract",
+        "human_gate",
+        "calibration",
+        "source_authority"
+      ],
+      "applies_when": [
+        "An agent creates, changes, interprets, or uses a calculated score, grade, confidence label, threshold, lift, ceiling, or risk field.",
+        "A calculated value could affect asset ranking, calibration labels, graph edges, review priority, or roadmap evidence."
+      ],
+      "does_not_apply_when": [
+        "The task only records raw observations and no calculated value is introduced or used.",
+        "The exact methodology version and formula are already cited in the artifact being used."
+      ],
+      "required_actions": [
+        "Name the methodology version and cite the registry or document that defines it.",
+        "List the inputs, normalization, thresholds, tie-breakers, uncertainty handling, and output range.",
+        "Keep current score, ceiling/upside, confidence, semantic-change, and noise scores as separate fields when they mean different things.",
+        "If the formula is not defined, mark the field as heuristic or block promotion until the formula is written."
+      ],
+      "danger_if_ignored": "Different agents can assign the same-looking score with different hidden formulas, making calibration, graph edges, and future planning inconsistent or misleading.",
+      "evidence": [
+        "docs/ASSET_VALUE_MODEL.md",
+        "docs/SEMANTIC_EVOLUTION_GRADING.md",
+        "registry/semantic-evolution-grade-registry.json"
+      ],
+      "enforcement_level": "require_ack",
+      "review_status": "reviewed"
+    },
+    {
+      "schema_version": "0.1.0",
+      "rule_id": "learning-rule:observable-decision-trace-to-candidate-lesson",
+      "title": "Capture observable decision traces as bounded lesson candidates",
+      "summary": "When implementation work reveals a reusable lesson, capture the observable decision trail as candidate learning with applicability limits instead of storing private hidden reasoning or applying the lesson everywhere.",
+      "trigger_terms": [
+        "lesson learned",
+        "we learned",
+        "decision trace",
+        "root cause",
+        "fixed after test",
+        "postflight",
+        "handoff",
+        "why did this fail",
+        "train of thought"
+      ],
+      "trigger_path_patterns": [
+        "raw/lessons/",
+        "processed/learning/",
+        "roadmap/evidence/",
+        "docs/DETERMINISTIC_LEARNING_RULES.md",
+        ".digital-asset-directory/learning/"
+      ],
+      "context_tags": [
+        "counterfactual_sequence",
+        "dependency_ordering",
+        "human_gate"
+      ],
+      "applies_when": [
+        "A test failure, implementation correction, calibration decision, or user steering creates a reusable lesson for similar future tasks.",
+        "The lesson changes when a preflight/midflight rule should surface or how a workflow should be ordered."
+      ],
+      "does_not_apply_when": [
+        "The work is a trivial command with no reusable behavior change.",
+        "The only available material is private hidden reasoning rather than observable artifacts, commands, edits, failures, or user decisions.",
+        "Capturing the lesson would duplicate an already reviewed rule without adding new context."
+      ],
+      "required_actions": [
+        "Capture observable artifacts: task trigger, files or commands involved, failure or correction, resulting rule or workflow change, and evidence path.",
+        "Record applies_when, does_not_apply_when, and danger_if_misapplied before making it a reusable rule.",
+        "Use postflight or a candidate learning file for ordinary lessons; promote to a reviewed preflight rule only when repeated, high-risk, or explicitly human-approved."
+      ],
+      "danger_if_ignored": "Useful implementation learning can disappear, while over-capturing unbounded reasoning can clutter preflight and cause agents to apply lessons outside their safe context.",
+      "evidence": [
+        "docs/DETERMINISTIC_LEARNING_RULES.md",
+        "docs/CONTEXTUAL_LEARNING_AND_WORKTREE_ARCHAEOLOGY.md",
+        "schemas/counterfactual-lesson.schema.json"
+      ],
+      "enforcement_level": "surface",
+      "review_status": "reviewed"
+    },
+    {
+      "schema_version": "0.1.0",
+      "rule_id": "learning-rule:context-bound-lessons-need-non-applicability",
+      "title": "Context-bound lessons need non-applicability and danger notes",
+      "summary": "Do not reuse a counterfactual lesson unless the agent carries forward where it applies, where it does not apply, and what can go wrong if stripped from context.",
+      "trigger_terms": [
+        "lesson",
+        "root cause",
+        "counterfactual",
+        "premortem",
+        "postflight",
+        "worktree archaeology",
+        "learning loop"
+      ],
+      "trigger_path_patterns": [
+        "processed/learning/",
+        "raw/lessons/",
+        "roadmap/evidence/",
+        ".digital-asset-directory/learning/"
+      ],
+      "context_tags": [
+        "counterfactual_sequence",
+        "human_gate",
+        "source_authority"
+      ],
+      "applies_when": [
+        "A lesson, root-cause hypothesis, handoff, or archaeology signal will influence future task order or scoring behavior.",
+        "An agent wants to apply a past lesson to a new repo, asset family, calibration batch, or workflow."
+      ],
+      "does_not_apply_when": [
+        "The work only stores raw observations and does not derive an action rule.",
+        "The lesson has already been reviewed in the same exact context and the review evidence is cited."
+      ],
+      "required_actions": [
+        "Carry forward applies_when, does_not_apply_when, and danger_if_misapplied.",
+        "State whether the current context matches the lesson's allowed context.",
+        "Prefer unsure or human gate when context evidence is weak."
+      ],
+      "danger_if_ignored": "A useful lesson can become harmful when applied as a universal rule outside the conditions that produced it.",
+      "evidence": [
+        "docs/CONTEXTUAL_LEARNING_AND_WORKTREE_ARCHAEOLOGY.md",
+        "schemas/counterfactual-lesson.schema.json",
+        "registry/context-tag-registry.json"
+      ],
+      "enforcement_level": "require_ack",
+      "review_status": "reviewed"
+    },
+    {
+      "schema_version": "0.1.0",
+      "rule_id": "learning-rule:software-work-should-search-asset-use-pay-forward",
+      "title": "Software work should search asset-use pay-forward evidence",
+      "summary": "Before non-trivial software planning or implementation, and again when a hard issue appears, search for prior asset-use feedback that could prevent repeated mistakes or suggest a safer path.",
+      "trigger_terms": [
+        "software planning",
+        "planning software",
+        "implementation plan",
+        "implement software",
+        "build software",
+        "software build",
+        "debug",
+        "debugging",
+        "failing test",
+        "failing tests",
+        "not easy fix",
+        "non-trivial issue",
+        "hard issue",
+        "blocked",
+        "before implementation",
+        "avoid issue",
+        "avoid issues",
+        "head off issue",
+        "pay-forward",
+        "asset-use feedback"
+      ],
+      "trigger_path_patterns": [
+        "src/",
+        "tests/",
+        "scripts/",
+        "docs/ASSET_USE_PAY_FORWARD_LOOP.md",
+        "docs/LESSONS_AND_HANDOFF_LOOP.md",
+        "templates/asset-use-feedback.template.md",
+        ".digital-asset-directory/learning/",
+        "raw/lessons/",
+        "processed/learning/"
+      ],
+      "context_tags": [
+        "asset_use_pay_forward",
+        "dependency_ordering",
+        "repeated_failure",
+        "counterfactual_sequence",
+        "source_authority"
+      ],
+      "applies_when": [
+        "An agent is planning or implementing software and the decision, order, dependency, test strategy, or asset choice could affect later work.",
+        "An agent encounters a non-trivial issue, repeated failure, failing test, confusing integration, unclear dependency order, or blocker that is not an obvious one-line fix.",
+        "An agent can plausibly avoid a future issue by checking prior asset-use feedback, pay-forward guidance, lessons, handoffs, or repo-local learning events before choosing an approach."
+      ],
+      "does_not_apply_when": [
+        "The task is a trivial isolated edit, a simple command, or a purely mechanical formatting change with no asset choice or downstream effect.",
+        "The agent is only recording raw observations and no planning, implementation, debugging, or issue-avoidance decision is being made.",
+        "A reviewed current-context note already cites the relevant asset-use feedback or states that no relevant feedback exists."
+      ],
+      "required_actions": [
+        "Search or cite relevant asset-use feedback, pay-forward notes, lessons, handoffs, or repo-local learning events before committing to the plan or when the hard issue appears.",
+        "State whether any prior feedback applies, does not apply, or is too weak/noisy for the current context.",
+        "If an asset materially influences the work, record before-use expectation when practical and after-use feedback before postflight, including reuse-when, avoid-when, pay-forward guidance, and next-agent actions.",
+        "Treat all feedback as candidate evidence; do not let it override source authority, tests, security review, or human gates."
+      ],
+      "danger_if_ignored": "Future agents may rediscover the same failure, choose a poor build order, miss an existing safer asset, or only learn after breaking something that prior pay-forward evidence could have warned them about.",
+      "evidence": [
+        "docs/ASSET_USE_PAY_FORWARD_LOOP.md",
+        "docs/LESSONS_AND_HANDOFF_LOOP.md",
+        "templates/asset-use-feedback.template.md",
+        "registry/asset-pattern-registry.json"
+      ],
+      "enforcement_level": "require_ack",
+      "review_status": "reviewed"
+    },
+    {
+      "schema_version": "0.1.0",
+      "rule_id": "learning-rule:load-bearing-decisions-need-risk-tier-review",
+      "title": "Load-bearing decisions need risk-tier review",
+      "summary": "When a software, repo, roadmap, schema, scoring, governance, dependency, or automation decision can affect many downstream artifacts or future agents, classify the decision as high, medium, or low risk before implementation and run the matching red-team/premortem gate.",
+      "trigger_terms": [
+        "architecture decision",
+        "load-bearing",
+        "downstream",
+        "roadmap phase",
+        "phase plan",
+        "schema change",
+        "contract change",
+        "default behavior",
+        "scoring change",
+        "ranking change",
+        "calibration default",
+        "governance hook",
+        "pre-push",
+        "source mutation",
+        "automation",
+        "migration",
+        "dependency upgrade",
+        "risk tier",
+        "red team",
+        "premortem",
+        "fresh eyes",
+        "a/b test"
+      ],
+      "trigger_path_patterns": [
+        "roadmap/",
+        "registry/",
+        "schemas/",
+        "ontology/",
+        "config/",
+        ".github/workflows/",
+        ".githooks/",
+        "scoring.py",
+        "proposals.py",
+        "governance.py",
+        "roadmap.py",
+        "local_scan.py",
+        "learning.py",
+        "validation.py",
+        "database.py",
+        "cli.py",
+        "AGENTS.md",
+        "CLAUDE.md",
+        "AI_FRONT_DOOR.md"
+      ],
+      "context_tags": [
+        "load_bearing_decision",
+        "fresh_eyes_review",
+        "human_gate",
+        "source_authority",
+        "counterfactual_sequence"
+      ],
+      "applies_when": [
+        "A planned or active change affects shared contracts, public or repo-local APIs, schemas, registries, ontology, scoring/ranking formulas, roadmap phase gates, CI/hooks, governance rules, source mutation policy, scan scope, dependencies used across modules, or defaults that future agents will inherit.",
+        "A decision is hard to reverse, easy to over-trust, likely to influence labels or graph edges, or likely to cascade into other repos, workflows, agents, prompts, tests, or generated evidence.",
+        "The agent is writing a roadmap, implementation plan, phase gate, architecture note, or migration path where wrong order or wrong default could create downstream rework."
+      ],
+      "does_not_apply_when": [
+        "The change is a small isolated edit with no shared contract, no downstream consumer, no authority boundary, no generated-score effect, and an obvious rollback.",
+        "The work only records raw observations or generated candidate evidence without changing behavior, defaults, schemas, gates, or source/repo authority.",
+        "A reviewed risk-tier decision already covers the same exact change, context, and downstream scope and is cited."
+      ],
+      "required_actions": [
+        "Classify the decision before implementation as high, medium, or low risk using `docs/LOAD_BEARING_DECISION_REVIEW.md`.",
+        "For high-risk decisions, stop for human attention, list downstream blast radius, gather at least two plausible options, run an implementer self red-team and premortem, request fresh-eyes review from another AI or reviewer using the template, define rollback and kill criteria, and propose an A/B or bounded comparison when feasible.",
+        "For medium-risk decisions, record why the risk is not high, run a short self-premortem, identify tests and rollback, and request fresh-eyes review when uncertainty or downstream ambiguity remains.",
+        "For low-risk decisions, state why the change is isolated and reversible, then run normal validation.",
+        "Store the risk-tier note, red-team findings, premortem, chosen option, rejected options, validation plan, and remaining unknowns as evidence or in the repo-local learning loop."
+      ],
+      "danger_if_ignored": "A future agent may quietly choose a bad default, schema, scoring formula, source-boundary rule, migration order, or automation hook that multiplies across repos and future agents before a human notices.",
+      "evidence": [
+        "docs/LOAD_BEARING_DECISION_REVIEW.md",
+        "templates/load-bearing-decision-review.template.md",
+        "docs/DETERMINISTIC_LEARNING_RULES.md"
+      ],
+      "enforcement_level": "human_gate",
+      "review_status": "reviewed"
+    },
+    {
+      "schema_version": "0.1.0",
+      "rule_id": "learning-rule:software-repo-work-uses-checklist-tree",
+      "title": "Software and repo work uses checklist tree",
+      "summary": "Before non-trivial software, repo, data, workflow, scoring, governance, source-scan, release, or automation work, classify task dimensions and apply the matching checklist branches and risk-tier gates.",
+      "trigger_terms": [
+        "software checklist",
+        "repo checklist",
+        "checklist tree",
+        "data normalization",
+        "normalize data",
+        "normalization rules",
+        "software development",
+        "repo development",
+        "implementation plan",
+        "schema change",
+        "migration",
+        "scoring change",
+        "red team",
+        "premortem",
+        "a/b test",
+        "fresh eyes",
+        "human review"
+      ],
+      "trigger_path_patterns": [
+        "src/",
+        "tests/",
+        "scripts/",
+        "schemas/",
+        "registry/",
+        "config/",
+        "roadmap/",
+        "docs/SOFTWARE_REPO_CHECKLIST_TREE.md",
+        "templates/software-repo-checklist-tree.template.md",
+        ".github/workflows/"
+      ],
+      "context_tags": [
+        "software_repo_checklist",
+        "data_normalization",
+        "load_bearing_decision",
+        "fresh_eyes_review",
+        "asset_use_pay_forward"
+      ],
+      "applies_when": [
+        "An agent is planning or implementing non-trivial software, repo, data, workflow, scoring, governance, source-scan, release, or automation work.",
+        "A task touches data normalization, identity, schemas, migrations, generated exports, scoring, security/privacy, source authority, or future-agent defaults.",
+        "The task has multiple dimensions and the agent needs to decide which checks, human gates, red-team steps, or A/B comparisons are required."
+      ],
+      "does_not_apply_when": [
+        "The task is a trivial isolated edit or one-command query with no downstream consumer, no shared contract, no data normalization, and no authority implication.",
+        "A current-context checklist record already states the selected branches, risk tier, validation, and stop conditions.",
+        "The work only records raw observations and does not plan or change software, data, workflows, scoring, governance, or repo behavior."
+      ],
+      "required_actions": [
+        "Classify task dimensions using `docs/SOFTWARE_REPO_CHECKLIST_TREE.md`.",
+        "State the risk tier and selected checklist branches before implementation.",
+        "Apply data normalization, schema, scoring, security/privacy, migration, workflow, source-scan, release, and testing branches when they match the task.",
+        "Run self red-team, fresh-eyes review, premortem, and A/B or bounded comparison when the risk tier or checklist tree requires them.",
+        "Record validation, stop conditions, human gates, and pay-forward lessons in postflight or evidence."
+      ],
+      "danger_if_ignored": "Agents may skip data normalization rules, miss high-risk downstream effects, fail to request human or fresh-eyes review, or choose defaults without comparing plausible alternatives.",
+      "evidence": [
+        "docs/SOFTWARE_REPO_CHECKLIST_TREE.md",
+        "templates/software-repo-checklist-tree.template.md",
+        "docs/LOAD_BEARING_DECISION_REVIEW.md",
+        "docs/ASSET_USE_PAY_FORWARD_LOOP.md"
+      ],
+      "enforcement_level": "surface",
+      "review_status": "reviewed"
+    },
+    {
+      "schema_version": "0.1.0",
+      "rule_id": "learning-rule:ai-entrypoint-toc-routing-required",
+      "title": "AI entrypoints and TOCs need deterministic routing rows",
+      "summary": "When creating or updating AI front doors, AI tables of contents, machine navigation manifests, or knowledge-graph entrypoints, keep one front door and give TOC entries descriptions, tags, and use-when triggers.",
+      "trigger_terms": [
+        "AI front door",
+        "AI_FRONT_DOOR",
+        "AI table of contents",
+        "AI_TABLE_OF_CONTENTS",
+        "AI TOC",
+        "table of contents",
+        "entrypoint",
+        "front door",
+        "start here",
+        "machine navigation",
+        "knowledge graph entrypoint",
+        "use when",
+        "routing tags"
+      ],
+      "trigger_path_patterns": [
+        "AI_FRONT_DOOR.md",
+        "AI_TABLE_OF_CONTENTS.md",
+        "MACHINE_NAVIGATION_MANIFEST.json",
+        "docs/AI_ENTRYPOINT_AND_TOC_ROUTING_STANDARD.md",
+        "templates/ai-table-of-contents.template.md",
+        "docs/KNOWLEDGE_GRAPH_MODEL.md"
+      ],
+      "context_tags": [
+        "ai_navigation",
+        "source_authority",
+        "software_repo_checklist",
+        "asset_use_pay_forward"
+      ],
+      "applies_when": [
+        "An agent creates, revises, or relies on AI_FRONT_DOOR.md, AI_TABLE_OF_CONTENTS.md, machine navigation manifests, start-here docs, or knowledge-graph entrypoints.",
+        "A repo is being prepared for future AI builders who need deterministic entry, authority, and graph-routing context.",
+        "A table of contents entry is being added and future agents need to know when to read it, not just what it is named."
+      ],
+      "does_not_apply_when": [
+        "The task is a trivial typo or formatting edit unrelated to repo navigation.",
+        "The repo is a short-lived scratch project with no persistent AI navigation need.",
+        "A current navigation standard already provides path, role, tags, use-when triggers, and graph entrypoints for the exact scope being edited."
+      ],
+      "required_actions": [
+        "Keep AI_FRONT_DOOR.md as the single start point and route branches from it.",
+        "Make AI_TABLE_OF_CONTENTS.md entries include path, what it is, tags, and use-when triggers.",
+        "Point from the front door and TOC to knowledge-graph entrypoints when the repo has graph, ontology, taxonomy, registry, or generated relationship outputs.",
+        "Tag generated graph and report outputs as candidate evidence, not source truth.",
+        "Preserve a reusable standard or template so future repos can adopt the same navigation contract."
+      ],
+      "danger_if_ignored": "Future agents may miss authority rules, skip knowledge-graph context, duplicate navigation paths, or treat generated reports as truth because the repo only lists filenames without routing meaning.",
+      "evidence": [
+        "docs/AI_ENTRYPOINT_AND_TOC_ROUTING_STANDARD.md",
+        "AI_FRONT_DOOR.md",
+        "AI_TABLE_OF_CONTENTS.md",
+        "templates/ai-table-of-contents.template.md"
+      ],
+      "enforcement_level": "require_ack",
+      "review_status": "reviewed"
+    }
+  ],
+  "rule": "Reviewed learning rules are deterministic preflight and midflight routing aids. They constrain agent behavior but do not promote generated observations to source truth."
+}

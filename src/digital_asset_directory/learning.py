@@ -8,10 +8,11 @@ from typing import Any
 
 from .database import CatalogDB
 from .ids import stable_id, session_id as new_session_id
-from .models import HandoffRecord, LessonRecord
+from .models import HandoffRecord, LearningRuleRecord, LessonRecord
 from .utils import append_jsonl, split_multi, utc_now, write_json
 
 ASSET_USE_FEEDBACK_CODE = "DAD_ASSET_USE_FEEDBACK_V1"
+ACK_REQUIRED_LEVELS = {"require_ack", "human_gate"}
 
 
 def git_changed_files(repo: Path) -> list[str]:
@@ -47,6 +48,83 @@ def _lesson_pointer(record: LessonRecord) -> dict[str, Any]:
         "session_id": record.session_id,
         "source_path": f"raw/lessons/{dated}/{record.lesson_id.split(':')[-1]}.json",
     }
+
+
+def _learning_rule_pointer(record: LearningRuleRecord) -> dict[str, Any]:
+    return {
+        "rule_id": record.rule_id,
+        "title": record.title,
+        "summary": record.summary,
+        "context_tags": record.context_tags,
+        "applies_when": record.applies_when,
+        "does_not_apply_when": record.does_not_apply_when,
+        "required_actions": record.required_actions,
+        "danger_if_ignored": record.danger_if_ignored,
+        "evidence": record.evidence,
+        "enforcement_level": record.enforcement_level,
+        "review_status": record.review_status,
+    }
+
+
+def load_learning_rules(repo_root: Path) -> list[LearningRuleRecord]:
+    path = repo_root / "registry" / "learning-rule-registry.json"
+    if not path.exists():
+        return []
+    payload = json.loads(path.read_text(encoding="utf-8"))
+    records = [
+        LearningRuleRecord.model_validate(item)
+        for item in payload.get("rules", [])
+        if item.get("review_status") == "reviewed"
+    ]
+    seen: set[str] = set()
+    deduped: list[LearningRuleRecord] = []
+    for record in sorted(records, key=lambda item: item.rule_id):
+        if record.rule_id in seen:
+            raise ValueError(f"Duplicate learning rule ID: {record.rule_id}")
+        seen.add(record.rule_id)
+        deduped.append(record)
+    return deduped
+
+
+def match_learning_rules(
+    repo_root: Path,
+    *,
+    task: str = "",
+    context: list[str] | None = None,
+    paths: list[str] | None = None,
+) -> list[dict[str, Any]]:
+    context_values = context or []
+    path_values = paths or []
+    text_blob = "\n".join([task, *context_values, *path_values]).lower().replace("\\", "/")
+    matched: list[dict[str, Any]] = []
+    for record in load_learning_rules(repo_root):
+        term_hits = [
+            term
+            for term in record.trigger_terms
+            if term and term.lower() in text_blob
+        ]
+        path_hits = [
+            pattern
+            for pattern in record.trigger_path_patterns
+            if pattern and pattern.lower().replace("\\", "/") in text_blob
+        ]
+        if not term_hits and not path_hits:
+            continue
+        pointer = _learning_rule_pointer(record)
+        pointer["matched_terms"] = term_hits
+        pointer["matched_path_patterns"] = path_hits
+        matched.append(pointer)
+    return matched
+
+
+def required_learning_rule_ids(matches: list[dict[str, Any]]) -> list[str]:
+    return sorted(
+        {
+            str(match["rule_id"])
+            for match in matches
+            if match.get("enforcement_level") in ACK_REQUIRED_LEVELS
+        }
+    )
 
 
 def route_lesson(repo_root: Path, record: LessonRecord) -> list[Path]:
@@ -168,12 +246,17 @@ def add_asset_use_feedback(
     planned_use: str = "",
     found_by: str = "",
     found_query: str = "",
+    issue_addressed: str = "",
     parts_used: list[str] | None = None,
     parts_not_used: list[str] | None = None,
     not_used_reason: str = "",
     upgrades_made: list[str] | None = None,
     difficulties: list[str] | None = None,
     things_learned: list[str] | None = None,
+    reuse_when: list[str] | None = None,
+    avoid_when: list[str] | None = None,
+    pay_forward_guidance: str = "",
+    next_agent_actions: list[str] | None = None,
     missing_parts_seen: list[str] | None = None,
     score_feedback: str = "",
     ceiling_feedback: str = "",
@@ -215,38 +298,51 @@ def add_asset_use_feedback(
 
     missing_parts = missing_parts_seen or []
     evidence_items = evidence or []
-    used_parts = parts_used or []
-    unused_parts = parts_not_used or []
-    upgrades = upgrades_made or []
-    difficulty_items = difficulties or []
-    learned_items = things_learned or []
+    feedback_separator = re.compile(r"[,;\r\n]+")
+
+    def clean_feedback_value(value: str) -> str:
+        cleaned = feedback_separator.sub(" | ", str(value))
+        return re.sub(r"\s*\|\s*", " | ", cleaned).strip()
+
+    def join_feedback_values(values: list[str] | None) -> str:
+        return " | ".join(
+            cleaned
+            for item in values or []
+            if (cleaned := clean_feedback_value(item))
+        )
+
     feedback_lines = [
         f"feedback_code={ASSET_USE_FEEDBACK_CODE}",
         f"interaction_stage={interaction_stage}",
-        f"asset_id={asset_id}",
-        f"found_by={found_by}",
-        f"found_query={found_query}",
-        f"used_for={used_for}",
-        f"planned_use={planned_use}",
+        f"asset_id={clean_feedback_value(asset_id)}",
+        f"found_by={clean_feedback_value(found_by)}",
+        f"found_query={clean_feedback_value(found_query)}",
+        f"issue_addressed={clean_feedback_value(issue_addressed)}",
+        f"used_for={clean_feedback_value(used_for)}",
+        f"planned_use={clean_feedback_value(planned_use)}",
         f"expected_usefulness={expected_usefulness}",
         f"expected_futurefulness={expected_futurefulness}",
-        f"expected_value_reason={expected_value_reason}",
-        "parts_used=" + ";".join(used_parts),
-        "parts_not_used=" + ";".join(unused_parts),
-        f"not_used_reason={not_used_reason}",
-        "upgrades_made=" + ";".join(upgrades),
-        "difficulties=" + ";".join(difficulty_items),
-        "things_learned=" + ";".join(learned_items),
+        f"expected_value_reason={clean_feedback_value(expected_value_reason)}",
+        "parts_used=" + join_feedback_values(parts_used),
+        "parts_not_used=" + join_feedback_values(parts_not_used),
+        f"not_used_reason={clean_feedback_value(not_used_reason)}",
+        "upgrades_made=" + join_feedback_values(upgrades_made),
+        "difficulties=" + join_feedback_values(difficulties),
+        "things_learned=" + join_feedback_values(things_learned),
+        "reuse_when=" + join_feedback_values(reuse_when),
+        "avoid_when=" + join_feedback_values(avoid_when),
+        f"pay_forward_guidance={clean_feedback_value(pay_forward_guidance)}",
+        "next_agent_actions=" + join_feedback_values(next_agent_actions),
         f"use_outcome={use_outcome}",
         f"observed_usefulness={observed_usefulness}",
         f"observed_futurefulness={observed_futurefulness}",
     ]
     if missing_parts:
-        feedback_lines.append("missing_parts_seen=" + ";".join(missing_parts))
+        feedback_lines.append("missing_parts_seen=" + join_feedback_values(missing_parts))
     if score_feedback:
-        feedback_lines.append(f"score_feedback={score_feedback}")
+        feedback_lines.append(f"score_feedback={clean_feedback_value(score_feedback)}")
     if ceiling_feedback:
-        feedback_lines.append(f"ceiling_feedback={ceiling_feedback}")
+        feedback_lines.append(f"ceiling_feedback={clean_feedback_value(ceiling_feedback)}")
 
     return add_lesson(
         repo_root,
@@ -261,9 +357,13 @@ def add_asset_use_feedback(
             (
                 "Observed asset usefulness feedback is candidate evidence for future "
                 "score-range and ceiling-range calibration."
+            ),
+            (
+                "Pay-forward guidance helps future agents reuse the asset in the right "
+                "context without treating one use as source truth."
             )
         ],
-        reusable_patterns=["asset_use_feedback_loop"],
+        reusable_patterns=["asset_use_feedback_loop", "asset_use_pay_forward_loop"],
         missing_capabilities=missing_parts,
         evidence=[f"asset:{asset_id}", *evidence_items],
         confidence=confidence,
@@ -280,6 +380,12 @@ def preflight(
     model: str | None = None,
 ) -> dict[str, Any]:
     sid = new_session_id()
+    baseline_changed_files = git_changed_files(target_repo)
+    learning_rule_matches = match_learning_rules(
+        hub_root,
+        task=task,
+        paths=baseline_changed_files,
+    )
     payload: dict[str, Any] = {
         "schema_version": "0.1.0",
         "session_id": sid,
@@ -289,8 +395,13 @@ def preflight(
         "model": model,
         "task": task,
         "status": "open",
-        "baseline_changed_files": git_changed_files(target_repo),
+        "baseline_changed_files": baseline_changed_files,
         "required_postflight": True,
+        "learning_rule_matches": learning_rule_matches,
+        "required_learning_rule_acknowledgements": required_learning_rule_ids(
+            learning_rule_matches
+        ),
+        "learning_rule_acknowledgements": [],
     }
     write_json(hub_root / "state" / "agent_sessions" / f"{sid.split(':')[-1]}.json", payload)
     append_jsonl(
@@ -298,6 +409,51 @@ def preflight(
         {"event_type": "agent_preflight", **payload},
     )
     return payload
+
+
+def midflight(
+    hub_root: Path,
+    sid: str,
+    *,
+    context: list[str] | None = None,
+    paths: list[str] | None = None,
+    ack_rules: list[str] | None = None,
+) -> dict[str, Any]:
+    session_path, session = load_session(hub_root, sid)
+    path_values = [
+        *session.get("baseline_changed_files", []),
+        *(paths or []),
+    ]
+    matches = match_learning_rules(
+        hub_root,
+        task=str(session.get("task", "")),
+        context=context or [],
+        paths=path_values,
+    )
+    required = required_learning_rule_ids(matches)
+    acknowledged = sorted(set(session.get("learning_rule_acknowledgements", [])) | set(ack_rules or []))
+    missing = sorted(set(required) - set(acknowledged))
+    created = utc_now()
+    result = {
+        "schema_version": "0.1.0",
+        "session_id": sid,
+        "created_at": created,
+        "status": "blocked_missing_learning_rule_ack" if missing else "ok",
+        "matched_rules": matches,
+        "required_learning_rule_acknowledgements": required,
+        "learning_rule_acknowledgements": acknowledged,
+        "missing_learning_rule_acknowledgements": missing,
+    }
+    session["learning_rule_matches"] = matches
+    session["required_learning_rule_acknowledgements"] = required
+    session["learning_rule_acknowledgements"] = acknowledged
+    session.setdefault("midflight_checks", []).append(result)
+    write_json(session_path, session)
+    append_jsonl(
+        hub_root / "audit" / "events" / f"{created[:10]}.jsonl",
+        {"event_type": "agent_midflight", **result},
+    )
+    return result
 
 
 def load_session(hub_root: Path, sid: str) -> tuple[Path, dict[str, Any]]:

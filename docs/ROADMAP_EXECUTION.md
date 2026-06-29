@@ -13,6 +13,22 @@ Verified human gates are recorded in `roadmap/gate-evidence.json`; generated rep
 Phase 1 is a reviewed bounded local inventory. GitHub scanning remains deferred until a
 fine-grained read-only token scope is separately approved.
 
+Before more Phase 2 labels are applied, complete the Phase 1.5 scoring-discipline
+checkpoint. This checkpoint exists because noisy temp fixtures, duplicated source
+copies, zero-byte markers, and metadata-only observations can otherwise consume human
+calibration time and make the value scorer look better than it is.
+
+Phase 1.5 requires:
+
+- scanner noise and quarantine behavior reviewed;
+- score methodology reviewed, including instance/content classes and multiplicative
+  discounts;
+- a fresh clean, deduped calibration sample regenerated after those changes.
+
+Generated samples with a missing or legacy `sample_methodology_version` are stale.
+They may be kept as bug evidence, but `calibration-evidence` fails closed until the
+sample uses `asset-calibration-sampling-v0.2-clean-deduped`.
+
 Generate phase-2 calibration review reports from the current catalog without rescanning:
 
 ```powershell
@@ -98,6 +114,29 @@ This writes `roadmap/evidence/phase-2-asset-calibration.md` and updates
 `roadmap/gate-evidence.json`. It fails closed if review counts, structured notes, reviewers,
 or the source review file are missing.
 
+After Phase 2 labels are exported, apply the Phase 2.5 content-aware scoring
+recommendation before using scores for downstream pilot selection. The governing
+note is `roadmap/evidence/phase-2.5-content-aware-scoring.md`.
+
+Run a fresh scan and score-delta validation:
+
+```powershell
+python -m digital_asset_directory.cli scan --local-only
+python -m digital_asset_directory.cli recommend phase25-score-delta
+```
+
+The generated report is written to:
+
+```text
+processed/reports/phase_2_5_score_delta_validation.md
+processed/reports/phase_2_5_score_delta_validation.json
+```
+
+The comparison should show that reviewed too-high workflow/template/archive
+examples move down, reviewed too-low substantive code examples move up, and
+about-right examples do not churn bands. Treat this as a score-methodology
+evaluation, not a source-truth promotion.
+
 Generate a downstream governance pilot selection pack without installing hooks:
 
 ```powershell
@@ -115,6 +154,17 @@ python -m digital_asset_directory.cli recommend roadmap-readiness
 
 This writes Phase 4 and Phase 5 readiness reports under `processed/reports/`. It does not
 enable embeddings, scheduled scans, external research automation, or alert delivery.
+
+Phase 4 may close only under the tracked semantic-enrichment boundary in
+`roadmap/evidence/phase-4-semantic-enrichment.md`: deterministic local content-aware
+enrichment is approved, the deterministic baseline remains primary, generated metadata
+stays candidate-only, and external embeddings/model providers remain separately gated.
+
+Phase 5 may close only under the tracked alerting/research boundary in
+`roadmap/evidence/phase-5-alerting-and-research-radar.md`: the approved alert channel is
+manual local generated reports under `processed/`; scheduled scans, external research
+automation, external notifications, GitHub scanning, external code import, and autonomous
+promotion remain separately gated.
 
 A phase may be marked complete only when:
 

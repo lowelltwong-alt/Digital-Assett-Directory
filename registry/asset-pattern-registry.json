@@ -75,6 +75,172 @@
       ]
     },
     {
+      "id": "asset_use_pay_forward_loop",
+      "label": "Asset-use pay-forward loop",
+      "description": "A before-use and after-use workflow that records how any digital asset was found, used, upgraded, blocked, valued, and safely handed forward to future agents.",
+      "leverage": "very_high",
+      "recognition_mode": "repository_composite",
+      "positive_signals": [
+        "DAD_ASSET_USE_FEEDBACK_V1 marker",
+        "before-use expectation and after-use result fields",
+        "parts used, parts not used, difficulties, and upgrades",
+        "reuse-when, avoid-when, pay-forward, and next-agent-action guidance",
+        "candidate-only safety boundary for external or repo-local feedback"
+      ],
+      "missing_evidence": [
+        "paired before-use and after-use records for the same asset",
+        "reviewed examples across multiple asset types",
+        "calibrated impact on current score and ceiling ranges",
+        "curated rejection examples showing unsafe or unhelpful feedback"
+      ]
+    },
+    {
+      "id": "route_isolated_evaluation_harness",
+      "label": "Route-isolated evaluation harness",
+      "description": "Routing, chunking, form classification, context packets, scorecards, and gold cases that evaluate different asset forms without mixing authority boundaries.",
+      "leverage": "very_high",
+      "recognition_mode": "repository_composite",
+      "positive_signals": [
+        "route or form classification assets",
+        "chunk or context-packet assets",
+        "evaluation or scorecard assets",
+        "gold cases or review packets"
+      ],
+      "missing_evidence": [
+        "route-level precision and recall",
+        "human-labeled gold set",
+        "contamination and fallback tests"
+      ]
+    },
+    {
+      "id": "agent_skill_graph_system",
+      "label": "Agent and skill graph system",
+      "description": "Agents, skills, capability registries, tool routes, handoffs, and graph relationships that let future agents discover and compose the right capabilities.",
+      "leverage": "very_high",
+      "recognition_mode": "repository_composite",
+      "positive_signals": [
+        "agent or skill assets",
+        "capability or tool registry",
+        "handoff or orchestration workflow",
+        "knowledge-graph edges between capabilities"
+      ],
+      "missing_evidence": [
+        "actual agent-use feedback",
+        "capability conflict rules",
+        "evaluation of discovery quality"
+      ]
+    },
+    {
+      "id": "boundary_contamination_firewall",
+      "label": "Boundary and contamination firewall",
+      "description": "Rules, validators, or workflows that prevent generated candidates, retrieved context, or external assets from overriding source authority.",
+      "leverage": "very_high",
+      "recognition_mode": "repository_composite",
+      "positive_signals": [
+        "authority boundary language",
+        "candidate-only or source-owned trust zones",
+        "prompt-injection or contamination defenses",
+        "human gate or quarantine rules"
+      ],
+      "missing_evidence": [
+        "attack/failure tests",
+        "bypass policy",
+        "reviewed enforcement boundary"
+      ]
+    },
+    {
+      "id": "proposal_promotion_workflow",
+      "label": "Proposal-to-promotion workflow",
+      "description": "Candidate proposals, review gates, promotion logs, validators, and rollback paths that turn observations into reviewed changes only after human approval.",
+      "leverage": "very_high",
+      "recognition_mode": "repository_composite",
+      "positive_signals": [
+        "proposal records",
+        "promotion decisions",
+        "human review gates",
+        "validator or registry update path"
+      ],
+      "missing_evidence": [
+        "reviewed promotion examples",
+        "rollback or rejection examples",
+        "source-authority boundary tests"
+      ]
+    },
+    {
+      "id": "load_bearing_decision_review_system",
+      "label": "Load-bearing decision review system",
+      "description": "A governed workflow that classifies high-impact software, roadmap, schema, scoring, governance, dependency, and automation decisions by risk tier before they shape downstream repos or future agents.",
+      "leverage": "very_high",
+      "recognition_mode": "repository_composite",
+      "positive_signals": [
+        "load-bearing decision or risk-tier language",
+        "fresh-eyes red-team or premortem review template",
+        "rollback, kill criteria, and bounded A/B comparison language",
+        "reviewed learning rule surfaced by preflight or midflight",
+        "tests or governance checks that prevent silent bypass"
+      ],
+      "missing_evidence": [
+        "reviewed examples across multiple repos",
+        "measured reduction in downstream rework or false-positive defaults",
+        "fresh-eyes review records for the highest-risk decisions",
+        "human-reviewed threshold for when ceremony becomes too heavy"
+      ]
+    },
+    {
+      "id": "frontier_signal_intake_loop",
+      "label": "Frontier signal intake loop",
+      "description": "Research, literature, watch items, external signals, and review gates that surface new ideas without automatically importing them as truth.",
+      "leverage": "high",
+      "recognition_mode": "repository_composite",
+      "positive_signals": [
+        "research radar assets",
+        "frontier or literature watch language",
+        "source provenance fields",
+        "license and review gates"
+      ],
+      "missing_evidence": [
+        "source terms review",
+        "false-positive review",
+        "human-curated adoption decision"
+      ]
+    },
+    {
+      "id": "gold_review_packet_system",
+      "label": "Gold set and review packet system",
+      "description": "Gold cases, expected outputs, review packets, labels, and scoring rubrics that make future evaluation and calibration repeatable.",
+      "leverage": "very_high",
+      "recognition_mode": "repository_composite",
+      "positive_signals": [
+        "gold or golden cases",
+        "review packets",
+        "labels or scorecards",
+        "calibration or benchmark files"
+      ],
+      "missing_evidence": [
+        "reviewed labels",
+        "sampling rationale",
+        "calibration history"
+      ]
+    },
+    {
+      "id": "duplicate_variant_preservation_system",
+      "label": "Duplicate and variant preservation system",
+      "description": "Exact identity, near-duplicate, variant, delta, and archive lineage evidence that preserves similar assets while making their differences reviewable.",
+      "leverage": "high",
+      "recognition_mode": "cluster",
+      "positive_signals": [
+        "duplicate or variant language",
+        "delta records",
+        "archive lineage",
+        "chunk, shingle, fingerprint, or hash evidence"
+      ],
+      "missing_evidence": [
+        "human-reviewed delta summary",
+        "merge, variant, or supersession decision",
+        "strength/weakness comparison"
+      ]
+    },
+    {
       "id": "model_algorithm_system",
       "label": "Model, algorithm, or forecasting system",
       "description": "Algorithms, scoring models, forecasters, simulations, optimization models, or frontier math assets paired with tests/data.",
@@ -129,6 +295,25 @@
       ]
     },
     {
+      "id": "semantic_evolution_grading_system",
+      "label": "Semantic evolution grading system",
+      "description": "A deterministic workflow that separates behavior-relevant evolution from copy, fixture, formatting, path, and metadata noise across asset families.",
+      "leverage": "very_high",
+      "recognition_mode": "repository_composite",
+      "positive_signals": [
+        "semantic evolution or version lineage language",
+        "explicit scoring methodology and grade registry",
+        "separate semantic_change_score and noise_score",
+        "candidate graph edges for evolved_from, semantic_variant_of, noise_variant_of, or lineage_evidence_for",
+        "tests proving semantic changes are not confused with fixture or formatting churn"
+      ],
+      "missing_evidence": [
+        "human-reviewed threshold calibration",
+        "reviewed family-level delta examples",
+        "precision/recall for semantic-vs-noise classification"
+      ]
+    },
+    {
       "id": "asset_use_instance",
       "label": "Asset use instance",
       "description": "A specific before-use or after-use record showing how an asset was found, used, upgraded, blocked, or valued.",
@@ -138,12 +323,243 @@
         "DAD_ASSET_USE_FEEDBACK_V1 marker",
         "before_use or after_use stage",
         "observed usefulness/futurefulness",
-        "parts used and things learned"
+        "parts used and things learned",
+        "pay-forward guidance for future agents"
       ],
       "missing_evidence": [
         "matching before/after pair",
         "curation into score or ceiling calibration",
-        "reviewed evidence link"
+        "reviewed evidence link",
+        "reuse-when and avoid-when context"
+      ]
+    },
+    {
+      "id": "professional_recruiting_intelligence_workflow_system",
+      "label": "Professional recruiting intelligence workflow system",
+      "description": "Official credential intake, person/credential identity, organization roster capture, public enrichment, exception review, and candidate-only recruiting or opportunity signals combined into a governed intelligence workflow.",
+      "leverage": "very_high",
+      "recognition_mode": "repository_composite",
+      "positive_signals": [
+        "official register, credential, license, membership, exam-result, or population-source intake",
+        "separate person, credential, organization, alias, source, and profile identities",
+        "source snapshots, extraction audits, source hashes, or source drill-down fields",
+        "roster, bio, profile, directory, or public source extraction scripts",
+        "enrichment lanes that explicitly cannot override official source truth",
+        "exception lake, conflict queue, no-confident-match state, or needs-review queue",
+        "opportunity, acquisition, liftout, succession, rising-star, recruiting, or market-context signals",
+        "generated exports or dashboards derived from a canonical database",
+        "tests or roadmap gates for source coverage, idempotence, scraping boundaries, evidence completeness, or stale state"
+      ],
+      "missing_evidence": [
+        "privacy and source-terms review for row-level person data",
+        "human-reviewed false-positive examples for identity and opportunity signals",
+        "calibrated thresholds for recruiting, acquisition, liftout, or rising-star signals",
+        "scraper variant clustering and delta review",
+        "reviewed evidence that generated exports derive from the canonical store"
+      ]
+    },
+    {
+      "id": "source_faithful_chunking_gate_system",
+      "label": "Source-faithful chunking gate system",
+      "description": "A workflow that protects raw source custody, generated normalized text, source-faithful chunks, coverage audits, A/B retrieval gates, and promotion boundaries before graph, vector, or agent use.",
+      "leverage": "very_high",
+      "recognition_mode": "repository_composite",
+      "positive_signals": [
+        "source-faithful chunking, canonical chunks, or route-specific chunking language",
+        "raw source immutability, source hashes, or generated normalized source layers",
+        "coverage audits, independent validators, or source-completeness checks",
+        "A/B retrieval gates or baseline-vs-candidate chunk comparisons",
+        "explicit graph, vector, embedding, or retrieval promotion gates"
+      ],
+      "missing_evidence": [
+        "reviewed gold or hard-negative eval set",
+        "coverage audit that cannot be satisfied by the chunker under test",
+        "source drift and generated-artifact validation",
+        "human decision for output-changing behavior"
+      ]
+    },
+    {
+      "id": "exception_lake_error_correction_system",
+      "label": "Exception-lake error-correction system",
+      "description": "Append-only runtime observations are validated, summarized as pressure vectors or learning candidates, and routed through proposals and promotion decisions without directly mutating canon.",
+      "leverage": "very_high",
+      "recognition_mode": "repository_composite",
+      "positive_signals": [
+        "exception event, pressure vector, adaptation proposal, or promotion decision language",
+        "append-only event store, audit log, correction, supersession, or admission validation",
+        "route registry, event class registry, contract lock, or pinned schema authority",
+        "explicit no-canon-mutation, synthetic-only, or evidence-plane boundary",
+        "learning loop from repeated defects, conflicts, or retrieval misses"
+      ],
+      "missing_evidence": [
+        "reviewed route and event-class authority",
+        "raw-sensitive-payload exclusion rules",
+        "pressure-vector false-positive calibration",
+        "human promotion and rejection examples"
+      ]
+    },
+    {
+      "id": "ai_work_cycle_governance_system",
+      "label": "AI work-cycle governance system",
+      "description": "A reusable orient, authority-check, route-classify, mode-select, stop-condition, validate, report, and lesson-capture workflow for AI-assisted repo work.",
+      "leverage": "very_high",
+      "recognition_mode": "repository_composite",
+      "positive_signals": [
+        "preflight, midflight, postflight, AI work cycle, or no-context review protocol",
+        "mode selection such as explore, plan, edit, or execute",
+        "stop conditions, allowed paths, forbidden paths, or authority confirmation",
+        "handoff ledger, audit surface, review report template, or lesson capture",
+        "validation and outcome reporting required before completion"
+      ],
+      "missing_evidence": [
+        "clear triggers for when the workflow is required",
+        "examples of low-risk tasks where the workflow is intentionally reduced",
+        "tests or lint checks for required handoff fields",
+        "fresh-eyes or red-team path for high-risk decisions"
+      ]
+    },
+    {
+      "id": "cross_repo_authority_data_flow_system",
+      "label": "Cross-repo authority and data-flow system",
+      "description": "A workflow that maps repo planes, authority order, allowed data directions, forbidden writes, principal cross-boundary objects, handoff paths, and human gates.",
+      "leverage": "very_high",
+      "recognition_mode": "repository_composite",
+      "positive_signals": [
+        "data-flow map, cross-repo map, authority order, control plane, evidence plane, or execution plane language",
+        "contract consumption, pinned SHA, read-only substrate, or source authority boundary",
+        "principal objects with owner and direction",
+        "forbidden writes, no canon mutation, no raw payload, or no direct production connector rules",
+        "human gate or promotion path for cross-boundary changes"
+      ],
+      "missing_evidence": [
+        "current reviewed authority map",
+        "clean distinction between local copies and canonical remotes",
+        "source mutation tests or policy gates",
+        "human approval path for changing cross-repo contracts"
+      ]
+    },
+    {
+      "id": "calibration_ab_gate_system",
+      "label": "Calibration and A/B gate system",
+      "description": "A decision workflow that compares baseline and candidate methods against shared evals, coverage and safety gates, metric reports, human calibration, and decision packets.",
+      "leverage": "very_high",
+      "recognition_mode": "repository_composite",
+      "positive_signals": [
+        "A/B test, baseline, candidate, calibration, score review, or decision packet language",
+        "shared eval set, review sample, gold labels, precision, recall, or false-positive notes",
+        "coverage and safety gates in addition to performance metrics",
+        "human label import, review summary, or weight-change notes",
+        "explicit warning that a metric is not truth"
+      ],
+      "missing_evidence": [
+        "fresh reviewed sample",
+        "stale or biased sample detection",
+        "hard-negative coverage",
+        "kill criteria and rollback plan"
+      ]
+    },
+    {
+      "id": "security_scanner_quarantine_system",
+      "label": "Security scanner and quarantine system",
+      "description": "A workflow for scanning incoming skills, prompts, tools, feedback, and external code for prompt injection, exfiltration, unsafe execution, persistence, secret access, and opaque payload risk before reuse.",
+      "leverage": "very_high",
+      "recognition_mode": "repository_composite",
+      "positive_signals": [
+        "security scanner, semantic intent, rulepack, quarantine, reject, manual review, or safe-for-eval language",
+        "prompt-injection, exfiltration, telemetry, hidden network call, persistence, destructive action, or secret access rules",
+        "risk score, risk level, finding count, or recommendation output",
+        "AI ingestion quarantine or generated material not canonical by default",
+        "tests for scanner or quarantine behavior"
+      ],
+      "missing_evidence": [
+        "sandbox analysis for opaque binaries",
+        "false-positive and false-negative calibration",
+        "license and provenance review",
+        "human override policy for high-severity findings"
+      ]
+    },
+    {
+      "id": "public_safe_source_sweep_system",
+      "label": "Public-safe source sweep system",
+      "description": "A metadata-only workflow for learning reusable architecture from private or sensitive local sources without importing scraped rows, raw snapshots, exports, or person-level facts into a public-ready DAD repository.",
+      "leverage": "very_high",
+      "recognition_mode": "repository_composite",
+      "positive_signals": [
+        "public-safe source sweep or metadata-only sweep language",
+        "explicit no row-level import and no file contents read boundary",
+        "data, raw snapshot, export, SQLite, CSV, HTML, TXT, PDF, DOCX, XLSX, and ZIP quarantine rules",
+        "tracked evidence limited to methodology, aggregate categories, and workflow patterns",
+        "separate private-store gate for any future row-level cataloging"
+      ],
+      "missing_evidence": [
+        "human-approved source-specific policy",
+        "proof generated outputs remain ignored",
+        "tests proving private content is not surfaced",
+        "source terms and privacy review before any private row-level mode"
+      ]
+    },
+    {
+      "id": "software_repo_checklist_tree_system",
+      "label": "Software and repo checklist tree system",
+      "description": "A compositional workflow that routes software, repository, data, workflow, scoring, governance, source-scan, and release tasks through selected checklist branches based on task dimensions and risk tier.",
+      "leverage": "very_high",
+      "recognition_mode": "repository_composite",
+      "positive_signals": [
+        "task dimension or checklist-tree language",
+        "data normalization checklist with source truth, identity, field semantics, matching, and export rules",
+        "risk-tier routing for high, medium, and low impact work",
+        "fresh-eyes review, red-team, premortem, or A/B comparison triggers",
+        "validation, rollback, stop conditions, and evidence-before-promotion fields",
+        "pay-forward learning and context-bound lesson capture"
+      ],
+      "missing_evidence": [
+        "reviewed examples across several repo types",
+        "evidence that checklist use reduces downstream rework or false positives",
+        "human-reviewed boundary for when checklist ceremony is too heavy",
+        "tooling that auto-suggests branches from changed paths and task text"
+      ]
+    },
+    {
+      "id": "ai_entrypoint_toc_routing_system",
+      "label": "AI entrypoint and TOC routing system",
+      "description": "A single AI front door, deterministic table-of-contents rows, routing tags, knowledge-graph entrypoints, and templates that let future agents enter a repo and know when to look deeper.",
+      "leverage": "very_high",
+      "recognition_mode": "repository_composite",
+      "positive_signals": [
+        "AI_FRONT_DOOR.md is declared as the single AI entrypoint",
+        "AI_TABLE_OF_CONTENTS.md rows include path, role description, tags, and use-when triggers",
+        "machine navigation manifest points to start files and registries",
+        "knowledge-graph entrypoints are listed from the front door and TOC",
+        "generated graph or report surfaces are explicitly candidate evidence",
+        "template or standard exists for reuse in future repos"
+      ],
+      "missing_evidence": [
+        "validator that checks AI TOC row shape",
+        "reviewed examples from downstream repos",
+        "measured reduction in missed authority files or misrouted agent work",
+        "human-reviewed threshold for when the navigation standard is too heavy"
+      ]
+    },
+    {
+      "id": "background_connection_radar_system",
+      "label": "Background connection radar system",
+      "description": "A two-speed discovery workflow where a low-compute background scout searches current attention against cold-storage assets, then escalates unusually connective candidates to stronger verification and multi-hop expansion.",
+      "leverage": "very_high",
+      "recognition_mode": "repository_composite",
+      "positive_signals": [
+        "attention seeds or current-interest queues",
+        "cold-storage or older low-attention asset queues",
+        "cheap deterministic scout over tags, graph paths, lessons, variants, and needs",
+        "bounded escalation packets for stronger model verification",
+        "multi-hop expansion maps that separate similarity from complementarity",
+        "candidate-only generated connection records and human review gates"
+      ],
+      "missing_evidence": [
+        "reviewed false-positive examples for weak associations",
+        "calibrated escalation threshold and compute budget",
+        "provider/privacy gate for strong-model verification",
+        "measured usefulness of surfaced connections",
+        "human-reviewed promotion path from candidate connection to graph edge"
       ]
     }
   ],

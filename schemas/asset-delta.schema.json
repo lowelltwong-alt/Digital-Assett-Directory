@@ -1,0 +1,94 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://local.digital-asset-directory/schemas/asset-delta.schema.json",
+  "title": "Asset Delta Record",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "delta_id",
+    "left_asset_id",
+    "right_asset_id",
+    "delta_type",
+    "summary",
+    "shared_chunk_hashes",
+    "left_only_chunk_hashes",
+    "right_only_chunk_hashes",
+    "evidence",
+    "confidence",
+    "generated_at",
+    "scan_id",
+    "review_status"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": "0.1.0"
+    },
+    "delta_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "left_asset_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "right_asset_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "delta_type": {
+      "enum": [
+        "exact_duplicate",
+        "near_duplicate_candidate",
+        "containment_candidate"
+      ]
+    },
+    "summary": {
+      "type": "string",
+      "minLength": 1
+    },
+    "shared_chunk_hashes": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "uniqueItems": true
+    },
+    "left_only_chunk_hashes": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "uniqueItems": true
+    },
+    "right_only_chunk_hashes": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "uniqueItems": true
+    },
+    "evidence": {
+      "type": "object"
+    },
+    "confidence": {
+      "type": "number",
+      "minimum": 0,
+      "maximum": 1
+    },
+    "generated_at": {
+      "type": "string"
+    },
+    "scan_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "review_status": {
+      "enum": [
+        "generated_candidate",
+        "reviewed",
+        "rejected"
+      ]
+    }
+  },
+  "additionalProperties": false
+}

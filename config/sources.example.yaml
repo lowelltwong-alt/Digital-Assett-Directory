@@ -24,6 +24,21 @@ sources:
         - '**/.next/**'
         - '**/coverage/**'
         - '**/__pycache__/**'
+        - '**/.pytest_cache/**'
+        - '**/.ruff_cache/**'
+        - '**/.mypy_cache/**'
+        - '**/.nox/**'
+        - '**/.tox/**'
+        - '**/.pytest-tmp-root/**'
+        - '**/pytest-of-*/**'
+        - '**/_codex_worktrees/**'
+        - '**/.worktrees/**'
+        - '.DS_Store'
+        - '**/.DS_Store'
+        - 'Thumbs.db'
+        - '**/Thumbs.db'
+        - 'desktop.ini'
+        - '**/desktop.ini'
         - '**/.env'
         - '**/.env.*'
         - '**/*credential*'
@@ -33,6 +48,7 @@ sources:
         - '**/04_Digital_Assett_Directory/raw/**'
         - '**/04_Digital_Assett_Directory/processed/**'
         - '**/04_Digital_Assett_Directory/state/**'
+        - '**/04_Digital_Assett_Directory/audit/**'
 
     - id: optional-whole-c-drive
       enabled: false
@@ -53,6 +69,21 @@ sources:
         - '**/.git/**'
         - '**/.venv/**'
         - '**/node_modules/**'
+        - '**/.pytest_cache/**'
+        - '**/.ruff_cache/**'
+        - '**/.mypy_cache/**'
+        - '**/.nox/**'
+        - '**/.tox/**'
+        - '**/.pytest-tmp-root/**'
+        - '**/pytest-of-*/**'
+        - '**/_codex_worktrees/**'
+        - '**/.worktrees/**'
+        - '.DS_Store'
+        - '**/.DS_Store'
+        - 'Thumbs.db'
+        - '**/Thumbs.db'
+        - 'desktop.ini'
+        - '**/desktop.ini'
         - '**/.env*'
         - '**/*credential*'
         - '**/*secret*'
@@ -61,10 +92,11 @@ sources:
         - '**/04_Digital_Assett_Directory/raw/**'
         - '**/04_Digital_Assett_Directory/processed/**'
         - '**/04_Digital_Assett_Directory/state/**'
+        - '**/04_Digital_Assett_Directory/audit/**'
 
   github:
     - id: github-lowelltwong-alt
-      enabled: true
+      enabled: false
       owner: lowelltwong-alt
       token_env: GITHUB_TOKEN
       include_private: true

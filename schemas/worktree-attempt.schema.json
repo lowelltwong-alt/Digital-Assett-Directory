@@ -1,0 +1,35 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://local.digital-asset-directory/schemas/worktree-attempt.schema.json",
+  "title": "Worktree Attempt Record",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "attempt_id",
+    "attempt_kind",
+    "repo_lineage_key",
+    "attempt_path",
+    "source_asset_ids",
+    "context_tags",
+    "evidence",
+    "generated_at",
+    "scan_id",
+    "review_status"
+  ],
+  "properties": {
+    "schema_version": {"const": "0.1.0"},
+    "attempt_id": {"type": "string", "minLength": 1},
+    "attempt_kind": {"enum": ["repository", "worktree", "temp", "archive"]},
+    "repo_lineage_key": {"type": "string", "minLength": 1},
+    "attempt_path": {"type": "string", "minLength": 1},
+    "task_hint": {"type": "string"},
+    "branch_name": {"type": "string"},
+    "source_asset_ids": {"type": "array", "items": {"type": "string"}},
+    "context_tags": {"type": "array", "items": {"type": "string"}},
+    "evidence": {"type": "object", "minProperties": 1},
+    "generated_at": {"type": "string"},
+    "scan_id": {"type": "string", "minLength": 1},
+    "review_status": {"enum": ["generated_candidate", "reviewed", "rejected"]}
+  },
+  "additionalProperties": false
+}

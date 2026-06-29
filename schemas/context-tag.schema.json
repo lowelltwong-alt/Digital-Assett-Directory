@@ -1,0 +1,24 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://local.digital-asset-directory/schemas/context-tag.schema.json",
+  "title": "Context Tag",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "context_tag_id",
+    "label",
+    "description",
+    "applies_when",
+    "risk_if_misapplied"
+  ],
+  "properties": {
+    "schema_version": {"const": "0.1.0"},
+    "context_tag_id": {"type": "string", "minLength": 1},
+    "label": {"type": "string", "minLength": 1},
+    "description": {"type": "string", "minLength": 1},
+    "applies_when": {"type": "array", "items": {"type": "string"}, "minItems": 1},
+    "does_not_apply_when": {"type": "array", "items": {"type": "string"}},
+    "risk_if_misapplied": {"type": "string", "minLength": 1}
+  },
+  "additionalProperties": false
+}

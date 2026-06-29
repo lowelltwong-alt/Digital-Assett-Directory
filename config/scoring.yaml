@@ -1,19 +1,24 @@
-version: 0.1.0
-status: heuristic_seed
+version: asset-value-v0.3-content-aware
+status: heuristic_seed_needs_human_calibration
 weights:
-  reuse_potential: 0.18
-  verification: 0.15
-  provenance: 0.13
-  composability: 0.15
-  learning_loop_value: 0.15
-  uniqueness: 0.08
-  demand_signal: 0.08
-  freshness: 0.08
+  reuse_potential: 0.15
+  verification: 0.13
+  provenance: 0.09
+  composability: 0.12
+  learning_loop_value: 0.11
+  information_content: 0.17
+  content_role: 0.08
+  uniqueness: 0.06
+  demand_signal: 0.05
+  freshness: 0.04
 risk_penalties:
   unknown_license: 0.04
   sensitive_unclassified: 0.08
-  stale: 0.06
   no_provenance: 0.08
 notes:
   - Scores prioritize review and routing; they do not prove truth, quality, or business value.
+  - Type bonuses are gated on direct evidence and source instance class.
+  - Content-aware scoring uses bounded deterministic content profiles for code and workflow role signals.
+  - Freshness and provenance alone should not carry metadata-only workflow wrappers into medium value.
+  - Temp fixtures, worktrees, generated outputs, OS junk, empty markers, metadata-only observations, and non-representative duplicates receive multiplicative discounts.
   - Pair and bundle synergy scores must expose their evidence and missing assumptions.

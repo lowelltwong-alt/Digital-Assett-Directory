@@ -1,0 +1,92 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://local.digital-asset-directory/schemas/asset-chunk.schema.json",
+  "title": "Asset Chunk Record",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "chunk_id",
+    "asset_id",
+    "revision_id",
+    "source_id",
+    "logical_path",
+    "chunk_index",
+    "chunk_kind",
+    "content_hash",
+    "char_start",
+    "char_end",
+    "text_excerpt",
+    "evidence",
+    "created_at",
+    "scan_id",
+    "review_status"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": "0.1.0"
+    },
+    "chunk_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "asset_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "revision_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "source_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "logical_path": {
+      "type": "string",
+      "minLength": 1
+    },
+    "chunk_index": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "chunk_kind": {
+      "enum": [
+        "text",
+        "metadata"
+      ]
+    },
+    "content_hash": {
+      "type": "string",
+      "minLength": 1
+    },
+    "char_start": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "char_end": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "text_excerpt": {
+      "type": "string"
+    },
+    "evidence": {
+      "type": "object"
+    },
+    "created_at": {
+      "type": "string"
+    },
+    "scan_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "review_status": {
+      "enum": [
+        "generated_candidate",
+        "reviewed",
+        "rejected"
+      ]
+    }
+  },
+  "additionalProperties": false
+}

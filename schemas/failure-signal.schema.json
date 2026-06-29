@@ -1,0 +1,37 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://local.digital-asset-directory/schemas/failure-signal.schema.json",
+  "title": "Failure Signal Record",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "failure_signal_id",
+    "signal_type",
+    "asset_ids",
+    "signal_terms",
+    "summary",
+    "evidence",
+    "context_tags",
+    "confidence",
+    "risk",
+    "generated_at",
+    "scan_id",
+    "review_status"
+  ],
+  "properties": {
+    "schema_version": {"const": "0.1.0"},
+    "failure_signal_id": {"type": "string", "minLength": 1},
+    "signal_type": {"enum": ["test_failure", "error_word", "todo_fixme", "revert", "drift", "missing_gate"]},
+    "asset_ids": {"type": "array", "items": {"type": "string"}},
+    "signal_terms": {"type": "array", "items": {"type": "string"}, "minItems": 1},
+    "summary": {"type": "string", "minLength": 1},
+    "evidence": {"type": "object", "minProperties": 1},
+    "context_tags": {"type": "array", "items": {"type": "string"}},
+    "confidence": {"enum": ["low", "medium", "high"]},
+    "risk": {"enum": ["low", "medium", "high"]},
+    "generated_at": {"type": "string"},
+    "scan_id": {"type": "string", "minLength": 1},
+    "review_status": {"enum": ["generated_candidate", "reviewed", "rejected"]}
+  },
+  "additionalProperties": false
+}

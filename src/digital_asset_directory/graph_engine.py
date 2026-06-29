@@ -8,7 +8,7 @@ import networkx as nx
 
 from .ids import edge_id
 from .models import AssetRecord, EdgeRecord
-from .utils import jaccard, tokens, utc_now
+from .utils import idf_weighted_cosine, idf_weights, rarest_tokens, tokens, utc_now
 
 
 def _asset_tokens(asset: AssetRecord) -> set[str]:
@@ -46,9 +46,13 @@ def build_edges(
             edges[e.edge_id] = e
 
     token_map = {asset.asset_id: _asset_tokens(asset) for asset in assets}
+    weights = idf_weights(token_map.values())
+    candidate_token_map = {
+        aid: set(rarest_tokens(toks, weights, 500)) for aid, toks in token_map.items()
+    }
     postings: dict[str, list[str]] = defaultdict(list)
-    for aid, toks in token_map.items():
-        for token in list(toks)[:500]:
+    for aid, toks in candidate_token_map.items():
+        for token in sorted(toks):
             postings[token].append(aid)
     candidates: set[tuple[str, str]] = set()
     for ids in postings.values():
@@ -62,17 +66,26 @@ def build_edges(
         left, right = by_id[left_id], by_id[right_id]
         if left.parent_asset_id == right.asset_id or right.parent_asset_id == left.asset_id:
             continue
-        similarity = jaccard(token_map[left_id], token_map[right_id])
-        shared = sorted(token_map[left_id] & token_map[right_id])[:30]
+        similarity = idf_weighted_cosine(
+            candidate_token_map[left_id], candidate_token_map[right_id], weights
+        )
+        shared = rarest_tokens(
+            candidate_token_map[left_id] & candidate_token_map[right_id], weights, 30
+        )
         if similarity >= threshold:
             e = EdgeRecord(
                 edge_id=edge_id("related_to", left_id, right_id),
                 edge_type="related_to",
                 source_asset_id=left_id,
                 target_asset_id=right_id,
-                method="deterministic_token_jaccard",
+                method="idf_weighted_token_cosine",
                 confidence=round(min(0.95, similarity), 4),
-                evidence={"similarity": round(similarity, 4), "shared_terms": shared},
+                evidence={
+                    "similarity": round(similarity, 4),
+                    "shared_terms": shared,
+                    "token_weighting": "idf",
+                    "candidate_tokens": "rarest_500_per_asset",
+                },
                 created_at=now,
                 scan_id=scan_id,
             )
@@ -150,6 +163,8 @@ def graph_export(assets: list[AssetRecord], edges: list[EdgeRecord]) -> dict:
                 "logical_path": a.logical_path,
                 "value_score": a.value_score,
                 "freshness_status": a.freshness_status,
+                "metadata_fingerprint": a.metadata_fingerprint,
+                "has_content_sha256": bool(a.content_sha256),
             }
             for a in assets
         ],

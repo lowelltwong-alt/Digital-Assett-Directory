@@ -13,6 +13,12 @@ A high-value asset is not merely large or recent. It tends to be:
 - legally and operationally reusable within its license, sensitivity, and authority boundaries;
 - connected to outcomes, dependencies, missing parts, and activation conditions.
 
+The Asset Identity And Similarity Ladder in
+`docs/ASSET_IDENTITY_AND_SIMILARITY_LADDER.md` controls how the directory recognizes and
+compares assets before scoring them. Hashes can prove exact identity; chunk hashes,
+extracted text, graph edges, and later gated embeddings make assets discoverable. None of
+those signals alone proves value, authority, or canonical status.
+
 ## Highest-compounding asset families
 
 The seed prioritizes these families because they accelerate multiple downstream builds:
@@ -52,6 +58,8 @@ asset_value =
 + provenance
 + composability
 + learning_loop_value
++ information_content
++ content_role
 + uniqueness
 + demand_signal
 + freshness
@@ -59,6 +67,82 @@ asset_value =
 ```
 
 Each dimension is normalized and the resulting 0–100 score is a triage heuristic. It must expose component scores and confidence.
+
+Risk adjustments are applied as a multiplicative factor after the weighted component score. This
+keeps risk interpretable as a discount on otherwise useful evidence. Freshness is represented by
+the freshness component only, not a second stale penalty. Unknown GitHub repository license status
+is a risk factor when GitHub scanning is explicitly enabled and reviewed.
+
+The current implementation methodology is
+`asset-value-v0.3-content-aware`. It keeps score output in the familiar 0-100
+range but adds:
+
+- an `information_content` component from bounded text, token, semantic, and
+  content-profile evidence;
+- a `content_role` component for deterministic code role and workflow subtype
+  signals;
+- bounded profile-only extraction for skipped or oversize code, workflow,
+  schema, test, configuration, agent, skill, prompt, and evaluation files so
+  source structure can be scored without full-byte hashing;
+- deterministic `instance_class` labels for source, archive, generated output,
+  temp fixture, worktree copy, and cache/OS junk observations;
+- deterministic `information_content_class` labels for OS junk, empty markers,
+  empty files, metadata-only observations, content-profiled observations,
+  extracted content, binary metadata, and content-bearing files;
+- multiplicative discounts for non-canonical instances and duplicate
+  non-representatives;
+- additional discounts for package markers, issue/pull-request templates,
+  ownership metadata, archive/pinned workflow copies, and configuration wrappers
+  that lack usage evidence;
+- additional discounts for small support modules, small test-support helpers,
+  and tiny generic modules unless usage evidence supports a higher band;
+- reduced discounting for source ruleset/config workflow artifacts after Phase
+  2.5 churn review showed they can remain medium review candidates;
+- evidence-gated type bonuses so schemas, tests, and evaluations need direct
+  content or usage evidence before receiving large verification/reuse boosts;
+- `heuristic_strength` metadata to avoid treating uncalibrated confidence labels
+  as probabilities.
+
+Phase 2 human review found two recurring score errors: readable substantive code
+modules were often too low when the catalog had only metadata, while short
+templates, archive/pinned workflow copies, and low-information workflow wrappers
+could score too high from freshness, provenance, and type labels. Version 0.3
+therefore reduces the weight of freshness and provenance, increases direct
+information content, and separates workflow subtypes before banding.
+
+The content profile is deliberately shallow. It counts bounded lines, public
+symbols, imports, and deterministic path/content roles. It does not parse
+semantic correctness, prove business value, or authorize source promotion.
+Large files, generated outputs, and source repositories remain governed by the
+same candidate-only and no-mutation rules. Low-signal skipped documents may
+remain metadata-only under the local read-only scan profile; document and media
+content calibration is a separate future extraction problem, not proof that the
+code/workflow score fix failed.
+
+Temp fixtures, generated outputs, and worktree copies may still be useful lineage
+or coverage evidence. Their individual current score is discounted unless a
+reviewed delta proves unique value. The canonical source or duplicate
+representative is the asset that should carry reusable current value.
+
+Phase 2 calibration must use the current clean-sampling methodology,
+`asset-calibration-sampling-v0.2-clean-deduped`. Review samples generated before
+the instance/noise/duplicate discipline are stale evidence. They can inform bug
+notes, but they should not be used to satisfy Phase 2 calibration gates.
+
+Any calculated score or grade must cite an explicit methodology before it is used for review,
+ranking, roadmap evidence, or graph edges. At minimum, the artifact must state:
+
+- methodology version;
+- input fields;
+- normalization;
+- weights or thresholds;
+- risk factors;
+- uncertainty handling;
+- output range;
+- whether the value is heuristic, calibrated probability, percentile, or reviewed truth.
+
+If the formula is missing, future agents must treat the value as an uncalibrated heuristic and
+should not promote it into source-of-truth, labels, or roadmap completion evidence.
 
 ## Dormant option value
 
@@ -128,8 +212,10 @@ asset type and score band.
 Actual use is stronger evidence than projected usefulness. When an agent materially uses an
 asset, it should run `lesson asset-use` to record how the asset was used, whether it helped,
 observed usefulness, observed futurefulness, missing parts, and feedback on the current score
-and ceiling range. These records are candidate evidence for future calibration, not automatic
-score updates.
+and ceiling range. It should also record pay-forward guidance: what issue or potential issue
+the asset helped assess, when future agents should reuse it, when they should avoid it, and
+what next action would make the asset more useful. These records are candidate evidence for
+future calibration, not automatic score updates.
 
 Floors and ceilings are review-time projections, not permanent truth. Reevaluate them at
 least every six months, and sooner after major source changes, new usage evidence, roadmap

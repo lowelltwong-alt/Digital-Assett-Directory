@@ -29,6 +29,8 @@ phases:
     title: First reviewed bounded local inventory
     status: planned
     acceptance:
+      required_files:
+        - roadmap/evidence/phase-1-first-inventory.md
       required_outputs:
         - processed/catalog/assets.jsonl
         - processed/graph/graph.json
@@ -40,12 +42,33 @@ phases:
         - id: phase-1-github-token-scope-reviewed-deferred
           description: GitHub token scope reviewed and GitHub scanning deferred
         - id: phase-1-source-mutation-check-passed
-          description: source mutation check passed
+          description: source mutation and changed-during-scan summary reviewed
+
+  - id: phase-1.5-scoring-discipline-clean-sampling
+    title: Scoring discipline and clean calibration sampling
+    status: planned
+    acceptance:
+      required_files:
+        - docs/ASSET_VALUE_MODEL.md
+        - docs/ALGORITHM_CALIBRATION_AND_FIXES_HANDOFF.md
+        - roadmap/evidence/phase-1.5-scoring-discipline.md
+      required_outputs:
+        - processed/reports/quarantine_summary.md
+        - processed/reports/asset_rating_calibration_summary.md
+      human_gates:
+        - id: phase-1.5-noise-quarantine-reviewed
+          description: scanner noise excludes and quarantine summary reviewed
+        - id: phase-1.5-score-methodology-reviewed
+          description: score methodology and discount metadata reviewed
+        - id: phase-1.5-clean-calibration-sample-reviewed
+          description: clean deduped calibration sample regenerated and reviewed
 
   - id: phase-2-calibration
     title: Calibrate value, staleness, orphan, and synergy scoring
     status: planned
     acceptance:
+      depends_on:
+        - phase-1.5-scoring-discipline-clean-sampling
       required_outputs:
         - processed/reports/scoring_calibration.md
         - processed/reports/orphan_review_sample.md
@@ -58,10 +81,28 @@ phases:
         - id: phase-2-weight-changes-documented
           description: weight changes documented
 
+  - id: phase-2.5-content-aware-score-validation
+    title: Fresh content-aware score validation
+    status: complete
+    acceptance:
+      depends_on:
+        - phase-2-calibration
+      required_files:
+        - config/scoring.yaml
+        - docs/ASSET_VALUE_MODEL.md
+        - roadmap/evidence/phase-2.5-content-aware-scoring.md
+      required_outputs:
+        - processed/reports/scan_summary.md
+        - processed/reports/phase_2_5_score_delta_validation.md
+        - processed/reports/phase_2_5_score_delta_validation.json
+    evidence_note: Validates asset-value-v0.3-content-aware against the 100 reviewed Phase 2 rows after a fresh local-only scan; scores remain candidate heuristics.
+
   - id: phase-3-downstream-governance
     title: Install mandatory lessons and handoffs in active build repos
     status: planned
     acceptance:
+      depends_on:
+        - phase-2.5-content-aware-score-validation
       human_gates:
         - id: phase-3-pilot-repositories-selected
           description: pilot repositories selected

@@ -4,25 +4,32 @@ from pathlib import Path
 from typing import Any
 
 from .models import AssetRecord, EdgeRecord, AlertRecord
-from .utils import tokens, utc_now, write_json, atomic_write_text
+from .utils import idf_weighted_cosine, idf_weights, rarest_tokens, tokens, utc_now, write_json, atomic_write_text
+
+
+def _asset_tokens(asset: AssetRecord) -> set[str]:
+    return (
+        tokens(f"{asset.title} {asset.description} {asset.logical_path}")
+        | set(asset.tags)
+        | set(asset.capabilities)
+        | set(asset.needs)
+        | set(asset.outcomes)
+        | set(asset.metadata.get("text_tokens", []))
+    )
 
 
 def rank_assets(
     query: str, assets: list[AssetRecord]
 ) -> list[tuple[float, AssetRecord, list[str]]]:
     q = tokens(query)
+    token_map = {asset.asset_id: _asset_tokens(asset) for asset in assets}
+    weights = idf_weights([*token_map.values(), q])
     ranked = []
     for asset in assets:
-        hay = (
-            tokens(f"{asset.title} {asset.description} {asset.logical_path}")
-            | set(asset.tags)
-            | set(asset.capabilities)
-            | set(asset.needs)
-            | set(asset.outcomes)
-            | set(asset.metadata.get("text_tokens", []))
-        )
-        overlap = sorted(q & hay)
-        score = (len(overlap) / max(1, len(q))) * 0.75 + (asset.value_score / 100) * 0.25
+        hay = token_map[asset.asset_id]
+        overlap = rarest_tokens(q & hay, weights, 30)
+        lexical_score = idf_weighted_cosine(q, hay, weights)
+        score = lexical_score * 0.75 + (asset.value_score / 100) * 0.25
         if overlap or query.casefold() in asset.title.casefold():
             ranked.append((score, asset, overlap))
     return sorted(ranked, key=lambda row: row[0], reverse=True)

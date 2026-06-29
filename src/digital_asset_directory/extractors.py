@@ -1,10 +1,13 @@
 from __future__ import annotations
 
 import mimetypes
+import re
 from datetime import datetime, timezone
+from functools import lru_cache
 from pathlib import Path
 from typing import Literal, TypedDict
 
+from .content_features import build_content_profile
 from .utils import redact_sensitive_text, tokens
 
 TEXT_EXTENSIONS = {
@@ -48,6 +51,25 @@ TEXT_EXTENSIONS = {
 }
 
 KEYWORD_MAP: dict[str, tuple[str, ...]] = {
+    "ai-navigation": (
+        "ai front door",
+        "ai_front_door",
+        "ai table of contents",
+        "ai_table_of_contents",
+        "machine navigation",
+        "knowledge graph entrypoint",
+        "use when",
+        "routing tags",
+    ),
+    "connection-radar": (
+        "background connection radar",
+        "attention seed",
+        "cold storage",
+        "cold-storage",
+        "background scout",
+        "escalation packet",
+        "multi-hop expansion",
+    ),
     "knowledge-graph": ("knowledge graph", "graphrag", "networkx", "node", "edge", "ontology"),
     "governance": ("governance", "authority", "promotion decision", "trust zone", "policy"),
     "learning-loop": (
@@ -144,6 +166,210 @@ ASSET_PATTERN_HINTS: dict[str, dict[str, tuple[str, ...]]] = {
         "capabilities": ("capture_lessons", "govern_agents", "validate_contracts"),
         "text": ("lesson", "handoff", "postflight", "feedback", "learning loop"),
     },
+    "asset_use_pay_forward_loop": {
+        "asset_types": ("lesson", "workflow", "document", "test"),
+        "tags": ("learning-loop", "governance", "provenance"),
+        "capabilities": ("capture_lessons", "catalog_assets"),
+        "text": (
+            "dad_asset_use_feedback_v1",
+            "asset-use feedback",
+            "before-use",
+            "after-use",
+            "observed usefulness",
+            "observed futurefulness",
+            "pay-forward",
+            "reuse when",
+            "avoid when",
+            "next-agent action",
+        ),
+    },
+    "source_faithful_chunking_gate_system": {
+        "asset_types": ("workflow", "evaluation", "test", "code", "document"),
+        "tags": ("workflow", "evaluation", "provenance"),
+        "capabilities": ("validate_contracts", "retrieve_context", "build_knowledge_graph"),
+        "text": (
+            "source-faithful",
+            "chunking workflow",
+            "raw source",
+            "coverage audit",
+            "a/b retrieval",
+            "reviewed gold",
+            "vector index",
+            "graph work",
+        ),
+    },
+    "exception_lake_error_correction_system": {
+        "asset_types": ("workflow", "document", "schema", "code", "test"),
+        "tags": ("learning-loop", "governance", "provenance"),
+        "capabilities": ("capture_lessons", "validate_contracts", "govern_agents"),
+        "text": (
+            "exception lake",
+            "exception-event",
+            "pressure-vector",
+            "adaptation proposal",
+            "promotion decision",
+            "append-only",
+            "contract lock",
+            "no canon mutation",
+        ),
+    },
+    "ai_work_cycle_governance_system": {
+        "asset_types": ("agent", "workflow", "lesson", "document", "configuration", "test"),
+        "tags": ("agent", "governance", "workflow"),
+        "capabilities": ("govern_agents", "capture_lessons", "validate_contracts"),
+        "text": (
+            "preflight",
+            "midflight",
+            "postflight",
+            "ai work cycle",
+            "stop conditions",
+            "allowed paths",
+            "no-context review",
+            "handoff ledger",
+        ),
+    },
+    "cross_repo_authority_data_flow_system": {
+        "asset_types": ("workflow", "document", "configuration", "schema", "ontology"),
+        "tags": ("governance", "provenance", "knowledge-graph"),
+        "capabilities": ("govern_agents", "catalog_assets", "build_knowledge_graph"),
+        "text": (
+            "data flow map",
+            "authority order",
+            "control plane",
+            "evidence plane",
+            "execution plane",
+            "pinned sha",
+            "read-only",
+            "cross-repo",
+        ),
+    },
+    "calibration_ab_gate_system": {
+        "asset_types": ("workflow", "evaluation", "test", "code", "document"),
+        "tags": ("evaluation", "workflow", "governance"),
+        "capabilities": ("validate_contracts", "score_assets", "retrieve_context"),
+        "text": (
+            "a/b",
+            "ab test",
+            "baseline",
+            "candidate",
+            "calibration",
+            "review sample",
+            "false-positive",
+            "false-negative",
+            "decision packet",
+        ),
+    },
+    "security_scanner_quarantine_system": {
+        "asset_types": ("code", "workflow", "document", "test", "configuration"),
+        "tags": ("security", "governance", "provenance"),
+        "capabilities": ("protect_sensitive_data", "govern_agents", "validate_contracts"),
+        "text": (
+            "security scanner",
+            "semantic intent",
+            "rulepack",
+            "quarantine",
+            "prompt injection",
+            "exfiltration",
+            "safe_for_eval",
+            "manual review",
+        ),
+    },
+    "public_safe_source_sweep_system": {
+        "asset_types": ("workflow", "document", "test", "code", "configuration"),
+        "tags": ("governance", "security", "provenance"),
+        "capabilities": ("catalog_assets", "protect_sensitive_data", "validate_contracts"),
+        "text": (
+            "public-safe source sweep",
+            "metadata-only sweep",
+            "row-level data imported",
+            "file contents read",
+            "sqlite opened",
+            "quarantine lanes",
+            "scraped rows",
+            "tracked evidence",
+        ),
+    },
+    "route_isolated_evaluation_harness": {
+        "asset_types": ("evaluation", "test", "workflow", "code", "document"),
+        "tags": ("evaluation", "retrieval", "workflow"),
+        "capabilities": ("validate_contracts", "retrieve_context"),
+        "text": (
+            "route",
+            "routing",
+            "form classification",
+            "chunking",
+            "context packet",
+            "scorecard",
+            "gold case",
+        ),
+    },
+    "agent_skill_graph_system": {
+        "asset_types": ("agent", "skill", "workflow", "ontology", "taxonomy", "document"),
+        "tags": ("agent", "skill", "knowledge-graph", "workflow"),
+        "capabilities": ("govern_agents", "retrieve_context", "build_knowledge_graph"),
+        "text": ("agent", "skill", "capability registry", "tool route", "handoff", "orchestration"),
+    },
+    "boundary_contamination_firewall": {
+        "asset_types": ("workflow", "configuration", "test", "document", "schema"),
+        "tags": ("security", "governance", "provenance"),
+        "capabilities": ("protect_sensitive_data", "govern_agents", "validate_contracts"),
+        "text": (
+            "authority boundary",
+            "source authority",
+            "candidate-only",
+            "contamination",
+            "prompt injection",
+            "quarantine",
+        ),
+    },
+    "proposal_promotion_workflow": {
+        "asset_types": ("workflow", "decision", "schema", "document", "code"),
+        "tags": ("governance", "workflow", "provenance"),
+        "capabilities": ("govern_agents", "validate_contracts", "capture_lessons"),
+        "text": ("proposal", "promotion", "human review", "review gate", "approval", "rollback"),
+    },
+    "load_bearing_decision_review_system": {
+        "asset_types": ("decision", "workflow", "document", "test", "configuration"),
+        "tags": ("governance", "workflow", "provenance"),
+        "capabilities": ("govern_agents", "validate_contracts", "capture_lessons"),
+        "text": (
+            "load-bearing decision",
+            "risk tier",
+            "red-team",
+            "red team",
+            "premortem",
+            "fresh-eyes",
+            "fresh eyes",
+            "a/b",
+            "rollback",
+            "kill criteria",
+        ),
+    },
+    "frontier_signal_intake_loop": {
+        "asset_types": ("research", "document", "workflow", "dataset"),
+        "tags": ("research-radar", "provenance"),
+        "capabilities": ("research_missing_parts",),
+        "text": (
+            "frontier",
+            "signal",
+            "watch item",
+            "literature",
+            "source terms",
+            "license review",
+        ),
+    },
+    "gold_review_packet_system": {
+        "asset_types": ("evaluation", "test", "dataset", "document"),
+        "tags": ("evaluation",),
+        "capabilities": ("validate_contracts",),
+        "text": ("gold", "golden", "review packet", "label", "scorecard", "calibration"),
+    },
+    "duplicate_variant_preservation_system": {
+        "asset_types": ("document", "code", "dataset", "archive"),
+        "tags": ("provenance", "knowledge-graph"),
+        "capabilities": ("catalog_assets", "build_knowledge_graph"),
+        "text": ("duplicate", "variant", "delta", "cluster", "shingle", "fingerprint", "hash"),
+    },
     "security_governance_gate": {
         "asset_types": ("workflow", "configuration", "test", "document"),
         "tags": ("security", "governance"),
@@ -161,6 +387,36 @@ ASSET_PATTERN_HINTS: dict[str, dict[str, tuple[str, ...]]] = {
         "tags": ("evaluation", "research-radar"),
         "capabilities": ("score_assets", "research_missing_parts"),
         "text": ("algorithm", "model", "forecast", "predict", "optimize", "scoring"),
+    },
+    "ai_entrypoint_toc_routing_system": {
+        "asset_types": ("document", "configuration", "workflow", "ontology", "taxonomy"),
+        "tags": ("ai-navigation", "knowledge-graph", "governance"),
+        "capabilities": ("govern_agents", "catalog_assets", "build_knowledge_graph"),
+        "text": (
+            "ai_front_door",
+            "ai_table_of_contents",
+            "single ai entrypoint",
+            "ai toc row",
+            "machine navigation",
+            "knowledge graph entrypoint",
+            "routing tags",
+            "use when",
+        ),
+    },
+    "background_connection_radar_system": {
+        "asset_types": ("document", "workflow", "configuration", "code"),
+        "tags": ("connection-radar", "knowledge-graph", "learning-loop", "workflow"),
+        "capabilities": ("retrieve_context", "build_knowledge_graph", "capture_lessons"),
+        "text": (
+            "background connection radar",
+            "attention seed",
+            "cold storage",
+            "background scout",
+            "escalation packet",
+            "high-intensity verifier",
+            "multi-hop expansion",
+            "candidate connection",
+        ),
     },
     "research_discovery": {
         "asset_types": ("research", "document", "dataset"),
@@ -186,6 +442,8 @@ def classify_asset(path: str) -> str:
     p = Path(path)
     name, suffix = p.name.lower(), p.suffix.lower()
     parts = {part.lower() for part in p.parts}
+    if name == "__init__.py":
+        return "code"
     if suffix in {".zip", ".tar", ".gz", ".7z", ".rar"}:
         return "archive"
     if name in {"pyproject.toml", "package.json", "requirements.txt", "dockerfile"} or suffix in {
@@ -200,10 +458,24 @@ def classify_asset(path: str) -> str:
         return "ontology"
     if "taxonomy" in name or "taxonomy" in parts or "skos" in name:
         return "taxonomy"
+    if suffix in {
+        ".png",
+        ".jpg",
+        ".jpeg",
+        ".gif",
+        ".svg",
+        ".webp",
+        ".mp3",
+        ".mp4",
+        ".wav",
+        ".pdf",
+        ".docx",
+        ".pptx",
+        ".xlsx",
+    }:
+        return "media"
     if "test" in parts or name.startswith("test_") or name.endswith("_test.py"):
         return "test"
-    if "eval" in parts or "evaluation" in name or "benchmark" in name or "golden" in name:
-        return "evaluation"
     if "forecast" in name or "forecaster" in name or "forecasting" in parts:
         return "forecaster"
     if "algorithm" in name or "algorithms" in parts:
@@ -245,24 +517,10 @@ def classify_asset(path: str) -> str:
         ".sql",
     }:
         return "code"
+    if "eval" in parts or "evaluation" in name or "benchmark" in name or "golden" in name:
+        return "evaluation"
     if suffix in {".json", ".jsonl", ".csv", ".tsv", ".parquet", ".sqlite", ".db"}:
         return "dataset"
-    if suffix in {
-        ".png",
-        ".jpg",
-        ".jpeg",
-        ".gif",
-        ".svg",
-        ".webp",
-        ".mp3",
-        ".mp4",
-        ".wav",
-        ".pdf",
-        ".docx",
-        ".pptx",
-        ".xlsx",
-    }:
-        return "media"
     if suffix in {".md", ".mdx", ".txt", ".rst", ".html"}:
         return "document"
     return "unknown"
@@ -277,10 +535,25 @@ def extract_title(path: str, text: str) -> str:
     return stem or Path(path).name
 
 
+@lru_cache(maxsize=4096)
+def _phrase_pattern(phrase: str) -> re.Pattern[str]:
+    """Match a phrase only at word boundaries so 'agent' does not match 'management'.
+
+    Boundaries are applied only at alphanumeric ends, so phrases ending in symbols
+    (for example 'recall@' or 'tf-idf') still match in running text.
+    """
+    escaped = re.escape(phrase)
+    prefix = r"(?<!\w)" if phrase[:1].isalnum() else ""
+    suffix = r"(?!\w)" if phrase[-1:].isalnum() else ""
+    return re.compile(prefix + escaped + suffix)
+
+
 def _matches(text: str, mapping: dict[str, tuple[str, ...]]) -> list[str]:
     lowered = text.lower()
     return sorted(
-        key for key, phrases in mapping.items() if any(phrase in lowered for phrase in phrases)
+        key
+        for key, phrases in mapping.items()
+        if any(_phrase_pattern(phrase).search(lowered) for phrase in phrases)
     )
 
 
@@ -318,9 +591,7 @@ def infer_semantics(path: str, text: str) -> SemanticFields:
             if capability in hints.get("capabilities", ())
         )
         evidence.extend(
-            f"text:{phrase}"
-            for phrase in hints.get("text", ())
-            if phrase in combined_lower
+            f"text:{phrase}" for phrase in hints.get("text", ()) if phrase in combined_lower
         )
         if len(evidence) >= 2:
             pattern_evidence[pattern_id] = sorted(set(evidence))
@@ -346,18 +617,28 @@ class ExtractedContent(SemanticFields):
     title: str
     description: str
     excerpt: str
+    chunk_text: str
     text_tokens: list[str]
     mime_type: str
     decode_error: bool
     redaction_count: int
+    extraction_method: str
+    content_profile: dict[str, object]
 
 
 def extract_bytes(
-    path: str, data: bytes, excerpt_chars: int, redact: bool = True
+    path: str,
+    data: bytes,
+    excerpt_chars: int,
+    redact: bool = True,
+    extracted_text: str | None = None,
+    extraction_method: str = "direct_text",
 ) -> ExtractedContent:
     text = ""
     decode_error = False
-    if is_probably_text(Path(path)):
+    if extracted_text is not None:
+        text = extracted_text
+    elif is_probably_text(Path(path)):
         try:
             text = data.decode("utf-8")
         except UnicodeDecodeError:
@@ -373,6 +654,7 @@ def extract_bytes(
         safe_text, redaction_count = redact_sensitive_text(text)
     excerpt = safe_text[:excerpt_chars]
     semantic = infer_semantics(path, safe_text)
+    asset_type = classify_asset(path)
     return {
         "title": extract_title(path, safe_text),
         "description": next(
@@ -384,10 +666,13 @@ def extract_bytes(
             "",
         )[:500],
         "excerpt": excerpt,
+        "chunk_text": safe_text,
         "text_tokens": sorted(tokens(f"{path} {safe_text[:20000]}"))[:1000],
         "mime_type": mimetypes.guess_type(path)[0] or "application/octet-stream",
         "decode_error": decode_error,
         "redaction_count": redaction_count,
+        "extraction_method": extraction_method,
+        "content_profile": build_content_profile(path, safe_text, asset_type),
         **semantic,
     }
 

@@ -13,6 +13,8 @@
     "title",
     "logical_path",
     "content_hash",
+    "metadata_fingerprint",
+    "content_sha256",
     "first_seen_at",
     "last_seen_at",
     "tags",
@@ -24,6 +26,7 @@
     "trust_zone",
     "value_score",
     "value_components",
+    "source_provenance",
     "metadata"
   ],
   "properties": {
@@ -76,7 +79,19 @@
       "type": "string"
     },
     "content_hash": {
-      "type": "string"
+      "type": "string",
+      "description": "Revision identity hash used by the scanner. It may be an exact content SHA-256 or a metadata-derived fingerprint when content was intentionally not read."
+    },
+    "metadata_fingerprint": {
+      "type": "string",
+      "description": "Fast deterministic fingerprint of observable metadata for change detection and broad scans."
+    },
+    "content_sha256": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "description": "Exact SHA-256 of file content when content was read safely; null when only metadata identity was used."
     },
     "size_bytes": {
       "type": "integer",
@@ -172,6 +187,11 @@
         "high"
       ]
     },
+    "source_provenance": {
+      "type": "object",
+      "additionalProperties": true,
+      "description": "Source location, authority boundary, and scanner context. This does not transfer source-repository authority."
+    },
     "metadata": {
       "type": "object",
       "additionalProperties": true,
@@ -205,6 +225,10 @@
         "workflow_steps": {
           "type": "array",
           "description": "For workflow assets, ordered or named step assets when known."
+        },
+        "chunk_text": {
+          "type": "string",
+          "description": "Redacted extracted text used for deterministic chunking. Generated output only; source remains authoritative."
         }
       }
     }

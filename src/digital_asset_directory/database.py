@@ -7,8 +7,11 @@ from typing import Iterable, Any
 
 from .models import (
     AssetRecord,
+    AssetChunkRecord,
+    AssetDeltaRecord,
     EdgeRecord,
     AlertRecord,
+    DuplicateClusterRecord,
     LessonRecord,
     HandoffRecord,
     SynergyRecord,
@@ -53,6 +56,24 @@ class CatalogDB:
         );
         CREATE INDEX IF NOT EXISTS idx_edges_source ON edges(source_asset_id);
         CREATE INDEX IF NOT EXISTS idx_edges_target ON edges(target_asset_id);
+        CREATE TABLE IF NOT EXISTS asset_chunks (
+          chunk_id TEXT PRIMARY KEY, asset_id TEXT NOT NULL, revision_id TEXT NOT NULL,
+          chunk_kind TEXT NOT NULL, scan_id TEXT NOT NULL, payload_json TEXT NOT NULL
+        );
+        CREATE INDEX IF NOT EXISTS idx_asset_chunks_asset ON asset_chunks(asset_id);
+        CREATE INDEX IF NOT EXISTS idx_asset_chunks_scan ON asset_chunks(scan_id);
+        CREATE TABLE IF NOT EXISTS duplicate_clusters (
+          cluster_id TEXT PRIMARY KEY, cluster_type TEXT NOT NULL, scan_id TEXT NOT NULL,
+          payload_json TEXT NOT NULL
+        );
+        CREATE INDEX IF NOT EXISTS idx_duplicate_clusters_scan ON duplicate_clusters(scan_id);
+        CREATE TABLE IF NOT EXISTS asset_deltas (
+          delta_id TEXT PRIMARY KEY, left_asset_id TEXT NOT NULL, right_asset_id TEXT NOT NULL,
+          delta_type TEXT NOT NULL, scan_id TEXT NOT NULL, payload_json TEXT NOT NULL
+        );
+        CREATE INDEX IF NOT EXISTS idx_asset_deltas_left ON asset_deltas(left_asset_id);
+        CREATE INDEX IF NOT EXISTS idx_asset_deltas_right ON asset_deltas(right_asset_id);
+        CREATE INDEX IF NOT EXISTS idx_asset_deltas_scan ON asset_deltas(scan_id);
         CREATE TABLE IF NOT EXISTS scans (
           scan_id TEXT PRIMARY KEY, started_at TEXT NOT NULL, completed_at TEXT,
           status TEXT NOT NULL, summary_json TEXT NOT NULL
@@ -74,6 +95,53 @@ class CatalogDB:
           handoff_id TEXT PRIMARY KEY, session_id TEXT NOT NULL, created_at TEXT NOT NULL, repository TEXT NOT NULL, payload_json TEXT NOT NULL
         );
         """)
+        self.connection.commit()
+
+    def replace_scan_identity_records(
+        self,
+        scan_id: str,
+        chunks: Iterable[AssetChunkRecord],
+        clusters: Iterable[DuplicateClusterRecord],
+        deltas: Iterable[AssetDeltaRecord],
+    ) -> None:
+        self.connection.execute("DELETE FROM asset_chunks WHERE scan_id=?", (scan_id,))
+        self.connection.execute("DELETE FROM duplicate_clusters WHERE scan_id=?", (scan_id,))
+        self.connection.execute("DELETE FROM asset_deltas WHERE scan_id=?", (scan_id,))
+        self.connection.executemany(
+            "INSERT OR REPLACE INTO asset_chunks VALUES (?, ?, ?, ?, ?, ?)",
+            [
+                (
+                    c.chunk_id,
+                    c.asset_id,
+                    c.revision_id,
+                    c.chunk_kind,
+                    c.scan_id,
+                    self._payload(c),
+                )
+                for c in chunks
+            ],
+        )
+        self.connection.executemany(
+            "INSERT OR REPLACE INTO duplicate_clusters VALUES (?, ?, ?, ?)",
+            [
+                (c.cluster_id, c.cluster_type, c.scan_id, self._payload(c))
+                for c in clusters
+            ],
+        )
+        self.connection.executemany(
+            "INSERT OR REPLACE INTO asset_deltas VALUES (?, ?, ?, ?, ?, ?)",
+            [
+                (
+                    d.delta_id,
+                    d.left_asset_id,
+                    d.right_asset_id,
+                    d.delta_type,
+                    d.scan_id,
+                    self._payload(d),
+                )
+                for d in deltas
+            ],
+        )
         self.connection.commit()
 
     @staticmethod

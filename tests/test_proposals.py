@@ -13,6 +13,7 @@ from digital_asset_directory.models import (
     ProposalReviewRecord,
 )
 from digital_asset_directory.proposals import (
+    MAX_BOTTOM_UP_TARGETS,
     RoadmapRelevanceContext,
     build_proposal_indexes,
     build_proposal_review_queue,
@@ -47,7 +48,11 @@ def make_asset(
     lifecycle: str = "active",
     source_kind: str = "local",
     logical_path: str | None = None,
+    repository_root: str | None = None,
 ) -> AssetRecord:
+    metadata = {}
+    if repository_root:
+        metadata["repository_root"] = repository_root
     return AssetRecord(
         asset_id=aid,
         revision_id=f"rev-{aid}",
@@ -70,6 +75,7 @@ def make_asset(
         value_score=70,
         value_components={},
         confidence="medium",
+        metadata=metadata,
     )
 
 
@@ -172,11 +178,55 @@ def test_proposal_examples_validate_against_schema_and_model():
 
 
 def test_proposal_indexes_include_asset_type_and_lifecycle_for_eligible_assets_only():
+    stale_source_tagged_ci_contract = make_asset(
+        "stale-source-tagged-ci-contract",
+        asset_type="document",
+        logical_path=(
+            "git-projects/90_AI_Tooling_And_Temp/.ci-contracts/"
+            "fmg-fractal-capability-ontology-pinned/docs/AUTOMATION_MANAGER_STARTER_PACK.md"
+        ),
+    )
+    stale_source_tagged_ci_contract.metadata["instance_class"] = "source"
+    stale_source_tagged_appledouble = make_asset(
+        "stale-source-tagged-appledouble",
+        asset_type="unknown",
+        logical_path=(
+            "git-projects/02_Other_Git_Projects/kirsten-dissertation-knowledge-graph/"
+            "evidence/reference-sources/inbox/pdf-dump/Engagement/._.DS_Store"
+        ),
+    )
+    stale_source_tagged_appledouble.metadata["instance_class"] = "source"
+    stale_source_tagged_scratch = make_asset(
+        "stale-source-tagged-scratch",
+        asset_type="code",
+        logical_path=(
+            "git-projects/02_Other_Git_Projects/orphan_radar/"
+            "orphan-radar/.scratch/files3/review_queue.py"
+        ),
+    )
+    stale_source_tagged_scratch.metadata["instance_class"] = "source"
+
     assets = [
         make_asset("workflow-a", asset_type="workflow", lifecycle="active"),
         make_asset("doc-a", asset_type="document", lifecycle="discovered"),
         make_asset("generated-a", asset_type="workflow", source_kind="generated"),
         make_asset("sentinel", asset_type="document", logical_path=".gitkeep"),
+        make_asset(
+            "codex-worktree-doc",
+            asset_type="document",
+            logical_path="git-projects/03_World_View/_codex_worktrees/task/docs/note.md",
+        ),
+        make_asset(
+            "ci-contract-temp-doc",
+            asset_type="document",
+            logical_path=(
+                "git-projects/90_AI_Tooling_And_Temp/.ci-contracts/"
+                "fmg-fractal-capability-ontology-pinned/data/comparisons/README.md"
+            ),
+        ),
+        stale_source_tagged_ci_contract,
+        stale_source_tagged_appledouble,
+        stale_source_tagged_scratch,
     ]
 
     indexes = build_proposal_indexes(assets, [], [])
@@ -191,6 +241,11 @@ def test_proposal_indexes_include_asset_type_and_lifecycle_for_eligible_assets_o
     ]
     assert "generated-a" not in indexes.eligible
     assert "sentinel" not in indexes.eligible
+    assert "codex-worktree-doc" not in indexes.eligible
+    assert "ci-contract-temp-doc" not in indexes.eligible
+    assert "stale-source-tagged-ci-contract" not in indexes.eligible
+    assert "stale-source-tagged-appledouble" not in indexes.eligible
+    assert "stale-source-tagged-scratch" not in indexes.eligible
 
 
 def test_proposal_review_record_schema_supports_unreviewed_template():
@@ -270,6 +325,88 @@ def test_bottom_up_uses_asset_type_index_for_support_proposals():
     )
 
 
+def test_bottom_up_blocks_cross_repo_lexical_support_without_structured_evidence():
+    assets = [
+        make_asset(
+            "target-code",
+            asset_type="code",
+            outcome="application_runtime",
+            logical_path="repos/app/src/target.py",
+            repository_root="repos/app",
+        ),
+        make_asset(
+            "runbook",
+            asset_type="document",
+            outcome="knowledge_base",
+            logical_path="repos/wiki/docs/target.md",
+            repository_root="repos/wiki",
+        ),
+    ]
+
+    proposals = generate_bottom_up_proposals(assets, [], [], "scan-test", per_asset_limit=3)
+
+    assert not any(
+        proposal.target_asset_ids == ["target-code"]
+        and proposal.source_asset_ids == ["runbook"]
+        for proposal in proposals
+    )
+
+
+def test_bottom_up_allows_cross_repo_support_with_structured_need_evidence():
+    assets = [
+        make_asset(
+            "target-code",
+            asset_type="code",
+            need="documentation",
+            outcome="quality_gate",
+            logical_path="repos/app/src/target.py",
+            repository_root="repos/app",
+        ),
+        make_asset(
+            "runbook",
+            asset_type="document",
+            capability="documentation",
+            outcome="quality_gate",
+            logical_path="repos/wiki/docs/target.md",
+            repository_root="repos/wiki",
+        ),
+    ]
+
+    proposals = generate_bottom_up_proposals(assets, [], [], "scan-test", per_asset_limit=3)
+    proposal = next(
+        item
+        for item in proposals
+        if item.target_asset_ids == ["target-code"] and item.source_asset_ids == ["runbook"]
+    )
+
+    assert proposal.evidence["repo_relationship"] == "cross_repo"
+    assert "shared_need_or_capability" in proposal.evidence["cross_repo_guard"]["strong_reasons"]
+
+
+def test_bottom_up_proposals_are_bounded_for_large_catalogs():
+    assets = [
+        make_asset(
+            f"target-{index:04d}",
+            asset_type="code",
+            outcome="quality_gate",
+            logical_path=f"src/target_{index:04d}.py",
+        )
+        for index in range(MAX_BOTTOM_UP_TARGETS + 25)
+    ]
+    assets.extend(
+        [
+            make_asset("unit-test", asset_type="test", outcome="quality_gate"),
+            make_asset("runbook", asset_type="document", outcome="quality_gate"),
+        ]
+    )
+
+    proposals = generate_bottom_up_proposals(assets, [], [], "scan-test", per_asset_limit=3)
+
+    assert len(proposals) <= MAX_BOTTOM_UP_TARGETS * 3
+    assert proposals
+    assert all(proposal.review_status == "generated_candidate" for proposal in proposals)
+
+
 def test_top_down_proposals_respect_portfolio_cap_and_cover_missing_parts():
     assets = [
         make_asset("need-1", need="missing_capability"),
@@ -289,15 +426,15 @@ def test_top_down_proposals_use_lifecycle_index_for_risk_review():
     assets = [
         make_asset("active-workflow", asset_type="workflow", lifecycle="active"),
         make_asset("stale-code", asset_type="code", lifecycle="stale"),
-        make_asset("stale-doc", asset_type="document", lifecycle="stale"),
+        make_asset("stale-doc", asset_type="code", lifecycle="stale"),
     ]
 
     proposals = generate_top_down_proposals(assets, [], [], "scan-test", portfolio_limit=5)
     lifecycle_proposals = [
         proposal
         for proposal in proposals
-        if proposal.proposal_type == "reduces_risk"
-        and proposal.evidence.get("lifecycle_state") == "stale"
+        if proposal.proposal_type == "bundles_assets"
+        and proposal.evidence.get("matching_primitive") == "collection_stale_review_bundle"
     ]
 
     assert len(lifecycle_proposals) == 1
@@ -305,15 +442,55 @@ def test_top_down_proposals_use_lifecycle_index_for_risk_review():
     assert proposal.review_status == "generated_candidate"
     assert proposal.target_asset_ids == []
     assert set(proposal.source_asset_ids) == {"stale-code", "stale-doc"}
-    assert proposal.evidence["asset_type_counts"] == {"code": 1, "document": 1}
-    assert "source owner" in proposal.known_risks[0]
+    assert proposal.evidence["asset_type_counts"] == {"code": 2}
+    assert proposal.evidence["methodology_version"] == "collection-stale-bundling-v1"
+    assert any("source owner" in risk for risk in proposal.known_risks)
+
+
+def test_top_down_bundles_stale_alerts_by_collection_and_type():
+    assets = [
+        make_asset(
+            "stale-a",
+            asset_type="document",
+            logical_path="repos/research/docs/a.md",
+            repository_root="repos/research",
+        ),
+        make_asset(
+            "stale-b",
+            asset_type="document",
+            logical_path="repos/research/docs/b.md",
+            repository_root="repos/research",
+        ),
+    ]
+
+    proposals = generate_top_down_proposals(
+        assets,
+        [],
+        [make_stale_alert("stale-a"), make_stale_alert("stale-b")],
+        "scan-test",
+        portfolio_limit=10,
+    )
+    stale_bundles = [
+        proposal
+        for proposal in proposals
+        if proposal.evidence.get("matching_primitive") == "collection_stale_review_bundle"
+    ]
+
+    assert len(stale_bundles) == 1
+    assert stale_bundles[0].proposal_type == "bundles_assets"
+    assert set(stale_bundles[0].source_asset_ids) == {"stale-a", "stale-b"}
+    assert set(stale_bundles[0].evidence["alert_ids"]) == {
+        "alert-stale-stale-a",
+        "alert-stale-stale-b",
+    }
+    assert stale_bundles[0].evidence["proposal_idea_key"] == "stale_bundle|repos/research|document"
 
 
 def test_top_down_ranking_uses_roadmap_relevance_review_burden_and_risk():
     roadmap_asset = make_asset(
         "roadmap-asset",
         asset_type="document",
-        logical_path="processed/reports/scan_summary.md",
+        logical_path="docs/scan_summary.md",
         outcome="gate_review",
     )
     assets = [
@@ -334,7 +511,7 @@ def test_top_down_ranking_uses_roadmap_relevance_review_burden_and_risk():
             }
         },
         phase_statuses={"phase-1-first-inventory": "awaiting_human_gate"},
-        path_phase_ids={"processed/reports/scan_summary.md": ["phase-1-first-inventory"]},
+        path_phase_ids={"docs/scan_summary.md": ["phase-1-first-inventory"]},
     )
 
     proposals = generate_top_down_proposals(
@@ -348,7 +525,7 @@ def test_top_down_ranking_uses_roadmap_relevance_review_burden_and_risk():
 
     assert len(proposals) == 1
     proposal = proposals[0]
-    assert proposal.proposal_type == "reduces_risk"
+    assert proposal.proposal_type == "bundles_assets"
     assert proposal.source_asset_ids == ["roadmap-asset"]
     assert proposal.evidence["roadmap_phase_ids"] == ["phase-1-first-inventory"]
     assert proposal.evidence["roadmap_relevance_score"] > 0
@@ -395,6 +572,7 @@ def test_run_and_write_proposal_outputs(tmp_path: Path):
     assert comparison["combined"]["actionable_experiment_rate"] == 1.0
     assert comparison["combined"]["candidate_status_pass_rate"] == 1.0
     assert comparison["combined"]["authority_boundary_pass_rate"] == 1.0
+    assert comparison["combined"]["distinct_idea_count"] <= comparison["combined"]["proposal_count"]
     assert comparison["combined"]["estimated_review_cost_counts"]
     assert comparison["combined"]["estimated_integration_cost_counts"]
     assert comparison["combined"]["roadmap_relevant_count"] == 0
@@ -411,6 +589,7 @@ def test_run_and_write_proposal_outputs(tmp_path: Path):
     comparison_text = Path(paths["comparison"]).read_text(encoding="utf-8")
     assert "Proposal Engine Comparison" in comparison_text
     assert "Actionable experiment rate" in comparison_text
+    assert "Distinct proposal ideas" in comparison_text
     assert "Roadmap relevance rate" in comparison_text
     assert "Human usefulness metrics available: **False**" in comparison_text
     review_sample_text = Path(paths["review_sample"]).read_text(encoding="utf-8")
@@ -426,6 +605,7 @@ def test_run_and_write_proposal_outputs(tmp_path: Path):
         if line.strip()
     ]
     assert review_template[0]["evidence"]["source_asset_context"]
+    assert review_template[0]["evidence"]["proposal_idea_key"]
     assert {record["proposal_engine"] for record in review_template} == {
         "bottom_up_self_proposal",
         "top_down_orchestration",
@@ -650,6 +830,41 @@ def test_review_queue_joins_reviews_to_proposal_context_and_filters():
     assert reviewed["returned_count"] == 1
     assert reviewed["items"][0]["labels"]["usefulness"] == "useful"
     assert reviewed["items"][0]["target_asset_context"]
+    assert "proposal_idea_key" in reviewed["items"][0]
+
+
+def test_review_queue_surfaces_active_excluded_repo_guard_without_labeling():
+    assets = [
+        make_asset(
+            "mock-trial",
+            asset_type="workflow",
+            need="evaluation_harness",
+            logical_path="git-projects/Mock Trial4.26/README.md",
+        ),
+        make_asset("provider", capability="evaluation_harness"),
+    ]
+    bottom_up, _, _ = run_proposal_engines(
+        assets=assets,
+        edges=[],
+        alerts=[make_alert("mock-trial")],
+        scan_id="scan-test",
+        engine="bottom-up",
+        per_asset_limit=1,
+        review_sample=1,
+    )
+    reviews = build_proposal_review_template(bottom_up, [], per_engine_sample=1)
+    queue = build_proposal_review_queue(reviews, bottom_up, status="pending")
+
+    assert reviews[0].safety == "unreviewed"
+    assert reviews[0].decision == "pending"
+    assert queue["items"][0]["review_guards"][0]["guard_id"] == (
+        "active_excluded_repo_review_required"
+    )
+    assert queue["items"][0]["suggested_review_labels"] == {
+        "safety": "needs_more_review",
+        "actionability": "not_actionable",
+        "decision": "defer",
+    }
 
 
 def test_review_queue_reports_missing_proposal_records():
@@ -935,7 +1150,10 @@ def test_calibration_evidence_writes_after_complete_reviews(tmp_path: Path):
     assert Path(path).exists()
     text = Path(path).read_text(encoding="utf-8")
     assert "Proposal Engine Calibration Evidence" in text
-    assert "Candidate default path from accepted counts: **bottom_up_self_proposal**" in text
+    assert (
+        "Candidate default path from distinct accepted idea counts: "
+        "**bottom_up_self_proposal**"
+    ) in text
     assert "Human-selected default path: **bottom_up_self_proposal**" in text
     assert "Human review preferred the accepted bottom-up candidates." in text
     assert "False positive notes: **1**" in text
