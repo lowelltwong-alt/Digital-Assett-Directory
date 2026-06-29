@@ -45,6 +45,7 @@ from .learning import (
     preflight,
     rebuild_lesson_routes,
 )
+from .manual_tasks import write_manual_task_queue
 from .orphan_adapter import run_orphan_radar
 from .operational import write_operational_readiness_report
 from .proposals import (
@@ -811,6 +812,43 @@ def recommend_workflow_part_guidance(
             "authority_boundary": guidance["authority_boundary"],
         }
     )
+
+
+@recommend_app.command("manual-tasks")
+def recommend_manual_tasks(
+    hub: Optional[Path] = typer.Option(None),
+    workflow_guidance_file: Optional[Path] = typer.Option(None, "--workflow-guidance-file"),
+    limit: int = typer.Option(25, "--limit", min=1, max=100),
+    family_limit: int = typer.Option(12, "--family-limit", min=1, max=50),
+) -> None:
+    """Write a generated manual task queue from current alerts and workflow-part guidance."""
+    cfg = _cfg(hub=hub)
+    guidance_path = (
+        workflow_guidance_file
+        or cfg.repo_root / "processed" / "workflow_parts" / "workflow_part_usage_guidance.json"
+    )
+    if not guidance_path.is_absolute():
+        guidance_path = cfg.repo_root / guidance_path
+    try:
+        workflow_guidance = json.loads(guidance_path.read_text(encoding="utf-8"))
+    except (FileNotFoundError, json.JSONDecodeError) as exc:
+        console.print(str(exc))
+        raise typer.Exit(2) from exc
+    with CatalogDB(cfg.database_path) as db:
+        latest_scan = db.latest_scan()
+        latest_scan_id = latest_scan["scan_id"] if latest_scan else None
+        scan_summary = json.loads(latest_scan.get("summary_json") or "{}") if latest_scan else {}
+        result = write_manual_task_queue(
+            cfg.repo_root,
+            db.alerts(open_only=True),
+            db.assets(),
+            workflow_guidance,
+            latest_scan_id=latest_scan_id,
+            scan_changed_count=int(scan_summary.get("changed_during_scan_count") or 0),
+            limit=limit,
+            family_limit=family_limit,
+        )
+    console.print_json(data={"workflow_guidance_file": str(guidance_path), **result})
 
 
 @recommend_app.command("public-safe-source-sweep")

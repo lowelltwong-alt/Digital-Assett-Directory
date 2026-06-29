@@ -42,6 +42,27 @@ commands needed to restore the missing surface. A clean clone may be code-valid
 while not locally operational because generated `processed/` and `state/`
 outputs are intentionally ignored.
 
+## Manual task queue
+
+Use `recommend manual-tasks` after a scan, doctor run, and workflow-part guidance
+refresh when you need the safest next human-review tasks:
+
+```powershell
+$env:PYTHONPATH='src'; python -m digital_asset_directory.cli recommend manual-tasks --limit 25 --family-limit 12
+```
+
+The command writes:
+
+```text
+processed/reports/manual_task_queue.md
+processed/reports/manual_task_queue.json
+```
+
+It re-ranks the current open alerts for manual review using a cited deterministic
+formula and joins them with reviewed workflow-part guidance. It does not rescan,
+mutate source repositories, promote graph edges to truth, change current value
+scores, or mark roadmap phases complete.
+
 ## Recommended cadence
 
 - scan active repos after material updates;
