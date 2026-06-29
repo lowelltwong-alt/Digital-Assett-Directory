@@ -77,6 +77,7 @@ from .workflow_parts import (
     write_workflow_part_outputs,
     write_workflow_part_review_results_summary,
     write_workflow_part_review_template_outputs,
+    write_workflow_part_usage_guidance,
 )
 
 app = typer.Typer(no_args_is_help=True, help="Digital Asset Directory portfolio intelligence CLI.")
@@ -768,6 +769,38 @@ def recommend_workflow_part_calibration_evidence(
         console.print(str(exc))
         raise typer.Exit(2) from exc
     console.print_json(data={"review_file": str(path), "output": evidence_path, "summary": summary})
+
+
+@recommend_app.command("workflow-part-guidance")
+def recommend_workflow_part_guidance(
+    hub: Optional[Path] = typer.Option(None),
+    review_file: Optional[Path] = typer.Option(None, "--review-file"),
+    limit: int = typer.Option(30, "--limit", min=1, max=100),
+) -> None:
+    """Write manual workflow-part usage guidance from completed human review labels."""
+    cfg = _cfg(hub=hub)
+    path = (
+        review_file
+        or cfg.repo_root / "processed" / "workflow_parts" / "workflow_part_review_template.jsonl"
+    )
+    if not path.is_absolute():
+        path = cfg.repo_root / path
+    try:
+        guidance, report, payload = write_workflow_part_usage_guidance(
+            cfg.repo_root, load_workflow_part_reviews(path), path, limit=limit
+        )
+    except (FileNotFoundError, ValueError) as exc:
+        console.print(str(exc))
+        raise typer.Exit(2) from exc
+    console.print_json(
+        data={
+            "review_file": str(path),
+            "report": report,
+            "payload": payload,
+            "summary": guidance["summary"],
+            "authority_boundary": guidance["authority_boundary"],
+        }
+    )
 
 
 @recommend_app.command("public-safe-source-sweep")

@@ -71,6 +71,7 @@ not prove source truth, value, authority, or promotion.
 | `processed/reports/workflow_sweeps/workflow_sweeps_index.md` | Generated workflow-sweep index. | You need cross-repo workflow pattern candidates. |
 | `processed/reports/workflow_part_recognition.md` | Generated workflow-part report. | You need recombinable workflow sub-unit candidates beneath existing asset patterns. |
 | `processed/reports/workflow_part_calibration_review_sample.md` | Stratified workflow-part calibration sample. | You need human labels before workflow parts affect radar, preflight guidance, scoring, or assembly. |
+| `processed/reports/workflow_part_usage_guidance.md` | Generated manual guidance from reviewed workflow-part labels. | You need to know which workflow-part candidates are review-use examples, human-gated, rejected noise, or blocked by missing dataflow. |
 
 ## Core boundary
 

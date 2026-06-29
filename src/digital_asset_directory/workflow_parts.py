@@ -1267,6 +1267,266 @@ def write_workflow_part_calibration_evidence(
     return summarize_workflow_part_reviews(reviews), str(output)
 
 
+def _workflow_part_review_path(review: WorkflowPartReviewRecord) -> str:
+    paths = review.evidence.get("representative_paths", [])
+    return str(paths[0]) if paths else ""
+
+
+def _workflow_part_usage_action(review: WorkflowPartReviewRecord) -> str:
+    if review.decision == "needs_human_gate":
+        return "requires_human_gate_before_reuse"
+    if review.decision == "reject_candidate":
+        return "use_as_false_positive_or_lineage_evidence_only"
+    if review.decision == "defer":
+        return "manual_review_required_before_use"
+    if review.dataflow_completeness == "adequate_for_now":
+        return "usable_as_review_context"
+    return "usable_as_review_context_but_declare_dataflow_before_assembly"
+
+
+def _workflow_part_guidance_row(review: WorkflowPartReviewRecord) -> dict[str, Any]:
+    return {
+        "sample_id": review.sample_id,
+        "part_id": review.part_id,
+        "part_type": review.part_type,
+        "asset_pattern_id": review.asset_pattern_id,
+        "decision": review.decision,
+        "usefulness": review.usefulness,
+        "safety": review.safety,
+        "specificity": review.specificity,
+        "dataflow_completeness": review.dataflow_completeness,
+        "action": _workflow_part_usage_action(review),
+        "note": review.notes,
+        "false_positive_reason": review.false_positive_reason,
+        "false_negative_note": review.false_negative_note,
+        "useful_example_note": review.useful_example_note,
+        "missing_dataflow_note": review.missing_dataflow_note,
+        "representative_path": _workflow_part_review_path(review),
+    }
+
+
+def build_workflow_part_usage_guidance(
+    reviews: list[WorkflowPartReviewRecord],
+    *,
+    limit: int = 30,
+) -> dict[str, Any]:
+    summary = summarize_workflow_part_reviews(reviews)
+    if not summary["calibration_gate_complete"]:
+        raise ValueError(
+            "Workflow part usage guidance requires complete workflow-part calibration evidence."
+        )
+
+    accepted = sorted(
+        [review for review in reviews if review.decision == "accept_for_review_use"],
+        key=lambda record: record.sample_id,
+    )
+    human_gated = sorted(
+        [review for review in reviews if review.decision == "needs_human_gate"],
+        key=lambda record: record.sample_id,
+    )
+    rejected = sorted(
+        [review for review in reviews if review.decision == "reject_candidate"],
+        key=lambda record: record.sample_id,
+    )
+    deferred = sorted(
+        [review for review in reviews if review.decision == "defer"],
+        key=lambda record: record.sample_id,
+    )
+    missing_dataflow = [
+        review
+        for review in accepted
+        if review.dataflow_completeness
+        in {"missing_inputs", "missing_outputs", "missing_side_effects", "unsure"}
+    ]
+
+    return {
+        "schema": "workflow_part_usage_guidance.v1",
+        "methodology_version": "workflow-part-usage-guidance-v0.1",
+        "source_methodology_versions": summary["methodology_versions"],
+        "generated_at": utc_now(),
+        "review_status": "generated_candidate",
+        "risk_tier": "medium",
+        "candidate_only": True,
+        "authority_boundary": (
+            "Manual review guidance only. Does not promote workflow parts to source truth, "
+            "current value scoring, automatic preflight surfacing, workflow assembly, "
+            "or source-repo mutation."
+        ),
+        "applies_when": [
+            "An agent is planning workflow reuse, workflow-part review, or a context pack.",
+            "A task needs examples of validators, gates, contracts, runners, prompts, "
+            "learning signals, boundary maps, or calibration gates from the current catalog.",
+            "A future agent needs false-positive patterns before trusting generated workflow-part candidates.",
+        ],
+        "does_not_apply_when": [
+            "The task would execute or copy code from a scanned source repo without source authority review.",
+            "The task would use workflow parts to change current value score, roadmap phase status, "
+            "or source truth.",
+            "The candidate has missing dataflow and the agent wants to assemble or install it without "
+            "declaring inputs, outputs, side effects, and human gates.",
+        ],
+        "danger_if_misapplied": (
+            "A generated workflow-part candidate can look like reusable architecture while actually being "
+            "a marker file, temp fixture, private authority surface, or context-specific gate. Treating it "
+            "as automatic source truth can create noisy preflights, unsafe composition, and false confidence."
+        ),
+        "manual_use_policy": {
+            "accept_for_review_use": (
+                "May be cited as review context or an example pattern. Before assembly, declare "
+                "inputs, outputs, side effects, authority boundary, validation, and human gates."
+            ),
+            "needs_human_gate": (
+                "Do not reuse across repos or authority boundaries until a human explicitly approves the "
+                "specific use context."
+            ),
+            "reject_candidate": (
+                "Use only as false-positive, noise, temp-fixture, marker-file, or lineage evidence."
+            ),
+            "defer": "Require manual review before any reuse.",
+            "automatic_preflight_surfacing": (
+                "Deferred. Agents may run this command manually; preflight must not surface these as "
+                "mandatory guidance until a separate human-gated design is approved."
+            ),
+        },
+        "summary": {
+            "reviewed_count": summary["reviewed_count"],
+            "accepted_count": len(accepted),
+            "human_gated_count": len(human_gated),
+            "rejected_count": len(rejected),
+            "deferred_count": len(deferred),
+            "accepted_missing_dataflow_count": len(missing_dataflow),
+            "accepted_part_type_counts": dict(Counter(review.part_type for review in accepted)),
+            "human_gated_part_type_counts": dict(
+                Counter(review.part_type for review in human_gated)
+            ),
+            "rejected_part_type_counts": dict(Counter(review.part_type for review in rejected)),
+        },
+        "review_use_candidates": [
+            _workflow_part_guidance_row(review) for review in accepted[:limit]
+        ],
+        "human_gated_candidates": [
+            _workflow_part_guidance_row(review) for review in human_gated[:limit]
+        ],
+        "rejected_patterns": [
+            _workflow_part_guidance_row(review) for review in rejected[:limit]
+        ],
+        "deferred_candidates": [
+            _workflow_part_guidance_row(review) for review in deferred[:limit]
+        ],
+    }
+
+
+def _workflow_part_usage_table(rows: list[dict[str, Any]]) -> list[str]:
+    if not rows:
+        return ["No rows.", ""]
+    lines = [
+        "| sample | part | pattern | action | dataflow | path |",
+        "|---|---|---|---|---|---|",
+    ]
+    for row in rows:
+        lines.append(
+            "| "
+            f"`{row['sample_id']}` | `{row['part_type']}` | `{row['asset_pattern_id']}` | "
+            f"`{row['action']}` | `{row['dataflow_completeness']}` | "
+            f"`{row['representative_path']}` |"
+        )
+    lines.append("")
+    return lines
+
+
+def workflow_part_usage_guidance_markdown(
+    guidance: dict[str, Any], source_path: Path | str
+) -> str:
+    summary = guidance["summary"]
+    source_path_text = str(source_path).replace("\\", "/")
+    lines = [
+        "# Workflow Part Usage Guidance",
+        "",
+        f"Generated at: `{guidance['generated_at']}`",
+        f"Source review file: `{source_path_text}`",
+        f"Methodology: `{guidance['methodology_version']}`",
+        "",
+        "This is manual, generated guidance from reviewed workflow-part calibration labels. "
+        "It is not source truth, current scoring authority, automatic preflight guidance, "
+        "or permission to mutate scanned repositories.",
+        "",
+        "## Summary",
+        "",
+        f"- Reviewed records: **{summary['reviewed_count']}**",
+        f"- Accepted for review use: **{summary['accepted_count']}**",
+        f"- Human-gated: **{summary['human_gated_count']}**",
+        f"- Rejected/noise: **{summary['rejected_count']}**",
+        f"- Deferred: **{summary['deferred_count']}**",
+        f"- Accepted but missing dataflow: **{summary['accepted_missing_dataflow_count']}**",
+        "",
+        "## Manual Use Policy",
+        "",
+    ]
+    for key, value in guidance["manual_use_policy"].items():
+        lines.append(f"- `{key}`: {value}")
+    lines.extend(
+        [
+            "",
+            "## Applies When",
+            "",
+            *[f"- {item}" for item in guidance["applies_when"]],
+            "",
+            "## Does Not Apply When",
+            "",
+            *[f"- {item}" for item in guidance["does_not_apply_when"]],
+            "",
+            "## Danger If Misapplied",
+            "",
+            guidance["danger_if_misapplied"],
+            "",
+            "## Review-Use Candidates",
+            "",
+            *_workflow_part_usage_table(guidance["review_use_candidates"]),
+            "## Human-Gated Candidates",
+            "",
+            *_workflow_part_usage_table(guidance["human_gated_candidates"]),
+            "## Rejected Or Noise Patterns",
+            "",
+            *_workflow_part_usage_table(guidance["rejected_patterns"]),
+            "## Deferred Candidates",
+            "",
+            *_workflow_part_usage_table(guidance["deferred_candidates"]),
+            "## Next Gate",
+            "",
+            "Automatic preflight surfacing, workflow assembly packs, score influence, or cross-repo "
+            "installation require a separate high-risk design review and human approval.",
+            "",
+        ]
+    )
+    return "\n".join(lines)
+
+
+def write_workflow_part_usage_guidance(
+    repo_root: Path,
+    reviews: list[WorkflowPartReviewRecord],
+    source_path: Path,
+    *,
+    limit: int = 30,
+    report_path: Path | None = None,
+    json_path: Path | None = None,
+) -> tuple[dict[str, Any], str, str]:
+    guidance = build_workflow_part_usage_guidance(reviews, limit=limit)
+    report = report_path or repo_root / "processed" / "reports" / "workflow_part_usage_guidance.md"
+    payload = json_path or repo_root / "processed" / "workflow_parts" / "workflow_part_usage_guidance.json"
+    if not report.is_absolute():
+        report = repo_root / report
+    if not payload.is_absolute():
+        payload = repo_root / payload
+    display_source_path = source_path
+    try:
+        display_source_path = source_path.relative_to(repo_root)
+    except ValueError:
+        display_source_path = source_path
+    atomic_write_text(report, workflow_part_usage_guidance_markdown(guidance, display_source_path))
+    atomic_write_text(payload, json.dumps(guidance, indent=2, sort_keys=True) + "\n")
+    return guidance, str(report), str(payload)
+
+
 def write_workflow_part_review_template_outputs(
     repo_root: Path,
     records: list[WorkflowPartRecord],
