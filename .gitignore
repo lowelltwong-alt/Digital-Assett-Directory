@@ -30,6 +30,7 @@ processed/learning/**
 processed/proposals/**
 processed/quarantine/**
 processed/reports/**
+processed/workflow_parts/**
 !processed/**/.gitkeep
 !processed/**/README.md
 audit/events/*.jsonl

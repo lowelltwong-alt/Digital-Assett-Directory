@@ -68,7 +68,16 @@ from .research import research_missing_parts
 from .roadmap import check_roadmap
 from .semantic_evolution import write_semantic_evolution_outputs
 from .validation import validate_repo
-from .workflow_parts import write_workflow_part_outputs
+from .workflow_parts import (
+    build_workflow_part_review_queue,
+    load_workflow_part_reviews,
+    load_workflow_parts,
+    update_workflow_part_review_file,
+    write_workflow_part_calibration_evidence,
+    write_workflow_part_outputs,
+    write_workflow_part_review_results_summary,
+    write_workflow_part_review_template_outputs,
+)
 
 app = typer.Typer(no_args_is_help=True, help="Digital Asset Directory portfolio intelligence CLI.")
 lesson_app = typer.Typer(no_args_is_help=True)
@@ -591,6 +600,174 @@ def recommend_workflow_parts(
             review_sample=review_sample,
         )
     console.print_json(data=result)
+
+
+@recommend_app.command("workflow-part-review-template")
+def recommend_workflow_part_review_template(
+    hub: Optional[Path] = typer.Option(None),
+    workflow_parts_file: Optional[Path] = typer.Option(None, "--workflow-parts-file"),
+    sample_size: int = typer.Option(50, "--sample-size", min=1, max=200),
+) -> None:
+    """Write a stratified generated review template for workflow-part calibration."""
+    cfg = _cfg(hub=hub)
+    path = workflow_parts_file or cfg.repo_root / "processed" / "learning" / "workflow_parts.jsonl"
+    if not path.is_absolute():
+        path = cfg.repo_root / path
+    try:
+        result = write_workflow_part_review_template_outputs(
+            cfg.repo_root, load_workflow_parts(path), sample_size=sample_size
+        )
+    except (FileNotFoundError, ValueError) as exc:
+        console.print(str(exc))
+        raise typer.Exit(2) from exc
+    console.print_json(data={"workflow_parts_file": str(path), **result})
+
+
+@recommend_app.command("workflow-part-review-summary")
+def recommend_workflow_part_review_summary(
+    hub: Optional[Path] = typer.Option(None),
+    review_file: Optional[Path] = typer.Option(None, "--review-file"),
+) -> None:
+    """Summarize filled workflow-part review JSONL labels without changing roadmap state."""
+    cfg = _cfg(hub=hub)
+    path = (
+        review_file
+        or cfg.repo_root / "processed" / "workflow_parts" / "workflow_part_review_template.jsonl"
+    )
+    if not path.is_absolute():
+        path = cfg.repo_root / path
+    try:
+        reviews = load_workflow_part_reviews(path)
+        summary, output = write_workflow_part_review_results_summary(
+            cfg.repo_root, reviews, path
+        )
+    except (FileNotFoundError, ValueError) as exc:
+        console.print(str(exc))
+        raise typer.Exit(2) from exc
+    console.print_json(data={"review_file": str(path), "output": output, "summary": summary})
+
+
+@recommend_app.command("workflow-part-review-queue")
+def recommend_workflow_part_review_queue(
+    hub: Optional[Path] = typer.Option(None),
+    review_file: Optional[Path] = typer.Option(None, "--review-file"),
+    workflow_parts_file: Optional[Path] = typer.Option(None, "--workflow-parts-file"),
+    status: str = typer.Option("pending", "--status"),
+    part_type: str = typer.Option("all", "--part-type"),
+    limit: int = typer.Option(10, min=1, max=100),
+) -> None:
+    """List workflow-part review queue items joined with candidate context."""
+    cfg = _cfg(hub=hub)
+    review_path = (
+        review_file
+        or cfg.repo_root / "processed" / "workflow_parts" / "workflow_part_review_template.jsonl"
+    )
+    parts_path = workflow_parts_file or cfg.repo_root / "processed" / "learning" / "workflow_parts.jsonl"
+    if not review_path.is_absolute():
+        review_path = cfg.repo_root / review_path
+    if not parts_path.is_absolute():
+        parts_path = cfg.repo_root / parts_path
+    status_value = status.lower()
+    if status_value not in {"pending", "reviewed", "all"}:
+        console.print("Status must be one of: pending, reviewed, all")
+        raise typer.Exit(2)
+    try:
+        queue = build_workflow_part_review_queue(
+            load_workflow_part_reviews(review_path),
+            load_workflow_parts(parts_path),
+            status=status_value,  # type: ignore[arg-type]
+            part_type=part_type,
+            limit=limit,
+        )
+    except (FileNotFoundError, ValueError) as exc:
+        console.print(str(exc))
+        raise typer.Exit(2) from exc
+    console.print_json(
+        data={
+            "review_file": str(review_path),
+            "workflow_parts_file": str(parts_path),
+            **queue,
+        }
+    )
+
+
+@recommend_app.command("workflow-part-review-label")
+def recommend_workflow_part_review_label(
+    hub: Optional[Path] = typer.Option(None),
+    review_file: Optional[Path] = typer.Option(None, "--review-file"),
+    sample_id: Optional[str] = typer.Option(None, "--sample-id"),
+    part_id: Optional[str] = typer.Option(None, "--part-id"),
+    reviewer: Optional[str] = typer.Option(None, "--reviewer"),
+    usefulness: Optional[str] = typer.Option(None, "--usefulness"),
+    safety: Optional[str] = typer.Option(None, "--safety"),
+    specificity: Optional[str] = typer.Option(None, "--specificity"),
+    dataflow_completeness: Optional[str] = typer.Option(None, "--dataflow-completeness"),
+    decision: Optional[str] = typer.Option(None, "--decision"),
+    notes: Optional[str] = typer.Option(None, "--notes"),
+    false_positive_reason: Optional[str] = typer.Option(None, "--false-positive-reason"),
+    false_negative_note: Optional[str] = typer.Option(None, "--false-negative-note"),
+    useful_example_note: Optional[str] = typer.Option(None, "--useful-example-note"),
+    missing_dataflow_note: Optional[str] = typer.Option(None, "--missing-dataflow-note"),
+) -> None:
+    """Update one workflow-part review JSONL record with human calibration labels."""
+    cfg = _cfg(hub=hub)
+    path = (
+        review_file
+        or cfg.repo_root / "processed" / "workflow_parts" / "workflow_part_review_template.jsonl"
+    )
+    if not path.is_absolute():
+        path = cfg.repo_root / path
+    try:
+        updated, summary = update_workflow_part_review_file(
+            path,
+            sample_id=sample_id,
+            part_id=part_id,
+            reviewer=reviewer,
+            usefulness=usefulness,
+            safety=safety,
+            specificity=specificity,
+            dataflow_completeness=dataflow_completeness,
+            decision=decision,
+            notes=notes,
+            false_positive_reason=false_positive_reason,
+            false_negative_note=false_negative_note,
+            useful_example_note=useful_example_note,
+            missing_dataflow_note=missing_dataflow_note,
+        )
+    except (FileNotFoundError, ValueError) as exc:
+        console.print(str(exc))
+        raise typer.Exit(2) from exc
+    console.print_json(
+        data={
+            "review_file": str(path),
+            "updated": updated.model_dump(mode="json"),
+            "summary": summary,
+        }
+    )
+
+
+@recommend_app.command("workflow-part-calibration-evidence")
+def recommend_workflow_part_calibration_evidence(
+    hub: Optional[Path] = typer.Option(None),
+    review_file: Optional[Path] = typer.Option(None, "--review-file"),
+    output: Optional[Path] = typer.Option(None, "--output"),
+) -> None:
+    """Write tracked-ready evidence only after workflow-part calibration review is complete."""
+    cfg = _cfg(hub=hub)
+    path = (
+        review_file
+        or cfg.repo_root / "processed" / "workflow_parts" / "workflow_part_review_template.jsonl"
+    )
+    if not path.is_absolute():
+        path = cfg.repo_root / path
+    try:
+        summary, evidence_path = write_workflow_part_calibration_evidence(
+            cfg.repo_root, load_workflow_part_reviews(path), path, output
+        )
+    except (FileNotFoundError, ValueError) as exc:
+        console.print(str(exc))
+        raise typer.Exit(2) from exc
+    console.print_json(data={"review_file": str(path), "output": evidence_path, "summary": summary})
 
 
 @recommend_app.command("public-safe-source-sweep")

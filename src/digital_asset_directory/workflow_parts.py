@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 from collections import Counter, defaultdict
 from dataclasses import dataclass
 from pathlib import Path
@@ -7,13 +8,42 @@ from typing import Any, Iterable, Literal
 
 from .asset_families import detect_asset_family_matches
 from .ids import edge_id, stable_id
-from .models import AssetRecord, EdgeRecord, WorkflowPartRecord
+from .models import AssetRecord, EdgeRecord, WorkflowPartRecord, WorkflowPartReviewRecord
 from .utils import atomic_write_text, utc_now, write_jsonl
 
 METHODOLOGY_VERSION = "workflow-part-recognition-v1"
+REVIEW_METHODOLOGY_VERSION = "workflow-part-review-sampling-v0.1-stratified"
 AUTHORITY_BOUNDARY = (
     "Generated candidate only; source repositories retain authority; no source mutation, "
     "promotion, implementation, or cross-authority composition is authorized by this record."
+)
+
+WORKFLOW_PART_REVIEW_LABELS = {
+    "usefulness": {"unreviewed", "useful", "not_useful", "unsure"},
+    "safety": {"unreviewed", "safe", "unsafe", "needs_more_review"},
+    "specificity": {"unreviewed", "right_level", "too_broad", "too_narrow", "unsure"},
+    "dataflow_completeness": {
+        "unreviewed",
+        "adequate_for_now",
+        "missing_inputs",
+        "missing_outputs",
+        "missing_side_effects",
+        "not_applicable",
+        "unsure",
+    },
+    "decision": {
+        "pending",
+        "accept_for_review_use",
+        "reject_candidate",
+        "defer",
+        "needs_human_gate",
+    },
+}
+WORKFLOW_PART_REVIEW_NOTE_FIELDS = (
+    "false_positive_reason",
+    "false_negative_note",
+    "useful_example_note",
+    "missing_dataflow_note",
 )
 
 DUPLICATE_EDGE_TYPES = {
@@ -609,6 +639,580 @@ def build_workflow_part_edges(
                 )
             )
     return sorted(edges, key=lambda edge: edge.edge_id)
+
+
+def load_workflow_parts(path: Path) -> list[WorkflowPartRecord]:
+    records: list[WorkflowPartRecord] = []
+    if not path.exists():
+        raise FileNotFoundError(f"Workflow part file not found: {path}")
+    for line_number, line in enumerate(path.read_text(encoding="utf-8").splitlines(), start=1):
+        if not line.strip():
+            continue
+        try:
+            records.append(WorkflowPartRecord.model_validate_json(line))
+        except Exception as exc:
+            raise ValueError(f"Invalid workflow part record at {path}:{line_number}: {exc}") from exc
+    return records
+
+
+def load_workflow_part_reviews(path: Path) -> list[WorkflowPartReviewRecord]:
+    records: list[WorkflowPartReviewRecord] = []
+    if not path.exists():
+        raise FileNotFoundError(f"Workflow part review file not found: {path}")
+    for line_number, line in enumerate(path.read_text(encoding="utf-8").splitlines(), start=1):
+        if not line.strip():
+            continue
+        try:
+            records.append(WorkflowPartReviewRecord.model_validate(json.loads(line)))
+        except Exception as exc:
+            raise ValueError(
+                f"Invalid workflow part review record at {path}:{line_number}: {exc}"
+            ) from exc
+    return records
+
+
+def write_workflow_part_reviews(path: Path, reviews: list[WorkflowPartReviewRecord]) -> None:
+    write_jsonl(path, [review.model_dump(mode="json") for review in reviews])
+
+
+def _risk_rank(risk: str) -> int:
+    return {"high": 3, "medium": 2, "low": 1}.get(risk, 0)
+
+
+def _confidence_rank(confidence: str) -> int:
+    return {"high": 3, "medium": 2, "low": 1}.get(confidence, 0)
+
+
+def _rank_for_review(record: WorkflowPartRecord) -> tuple[int, int, int, str, str]:
+    return (
+        _risk_rank(record.risk),
+        _confidence_rank(record.confidence),
+        len(record.source_asset_ids),
+        record.asset_pattern_id,
+        record.part_id,
+    )
+
+
+def _stratified_workflow_part_sample(
+    records: list[WorkflowPartRecord], sample_size: int
+) -> list[WorkflowPartRecord]:
+    if sample_size < 1:
+        raise ValueError("sample_size must be at least 1")
+    by_part_type: dict[str, list[WorkflowPartRecord]] = defaultdict(list)
+    for record in records:
+        by_part_type[record.part_type].append(record)
+    for part_type, values in by_part_type.items():
+        values.sort(key=lambda record: _rank_for_review(record), reverse=True)
+        pattern_seen: set[str] = set()
+        diversified: list[WorkflowPartRecord] = []
+        remainder: list[WorkflowPartRecord] = []
+        for record in values:
+            if record.asset_pattern_id in pattern_seen:
+                remainder.append(record)
+            else:
+                pattern_seen.add(record.asset_pattern_id)
+                diversified.append(record)
+        by_part_type[part_type] = [*diversified, *remainder]
+
+    selected: list[WorkflowPartRecord] = []
+    seen: set[str] = set()
+    part_types = sorted(by_part_type)
+    index = 0
+    while len(selected) < min(sample_size, len(records)):
+        progressed = False
+        for part_type in part_types:
+            values = by_part_type[part_type]
+            if index >= len(values):
+                continue
+            candidate = values[index]
+            if candidate.part_id in seen:
+                continue
+            seen.add(candidate.part_id)
+            selected.append(candidate)
+            progressed = True
+            if len(selected) >= min(sample_size, len(records)):
+                break
+        if not progressed:
+            break
+        index += 1
+    return selected
+
+
+def build_workflow_part_review_template(
+    records: list[WorkflowPartRecord], sample_size: int = 50
+) -> list[WorkflowPartReviewRecord]:
+    selected = _stratified_workflow_part_sample(records, sample_size)
+    reviews: list[WorkflowPartReviewRecord] = []
+    for index, record in enumerate(selected, start=1):
+        sample_id = f"workflow-part-review-{index:03d}"
+        evidence = record.evidence or {}
+        reviews.append(
+            WorkflowPartReviewRecord(
+                review_id=stable_id("workflow-part-review", sample_id, record.part_id),
+                sample_id=sample_id,
+                part_id=record.part_id,
+                part_type=record.part_type,
+                asset_pattern_id=record.asset_pattern_id,
+                evidence={
+                    "methodology_version": REVIEW_METHODOLOGY_VERSION,
+                    "candidate_methodology_version": record.methodology_version,
+                    "source_asset_ids": record.source_asset_ids,
+                    "source_asset_count": len(record.source_asset_ids),
+                    "confidence": record.confidence,
+                    "risk": record.risk,
+                    "maturity": record.maturity,
+                    "role_in_workflow": record.role_in_workflow,
+                    "applies_when": record.applies_when,
+                    "does_not_apply_when": record.does_not_apply_when,
+                    "danger_if_misapplied": record.danger_if_misapplied,
+                    "composition_affordances": record.composition_affordances,
+                    "context_tags": record.context_tags,
+                    "human_gates": record.human_gates,
+                    "validation_commands": record.validation_commands,
+                    "representative_paths": evidence.get("representative_paths", []),
+                    "path_class_counts": dict(
+                        Counter((evidence.get("path_classes") or {}).values())
+                    ),
+                    "family_key": evidence.get("family_key", ""),
+                    "dataflow_inference": evidence.get("dataflow_inference", ""),
+                    "generated_candidate_only": True,
+                },
+            )
+        )
+    return reviews
+
+
+def _workflow_part_review_is_pending(review: WorkflowPartReviewRecord) -> bool:
+    return (
+        review.usefulness == "unreviewed"
+        and review.safety == "unreviewed"
+        and review.specificity == "unreviewed"
+        and review.dataflow_completeness == "unreviewed"
+        and review.decision == "pending"
+        and not any(getattr(review, field) for field in WORKFLOW_PART_REVIEW_NOTE_FIELDS)
+    )
+
+
+def summarize_workflow_part_reviews(
+    reviews: list[WorkflowPartReviewRecord],
+) -> dict[str, Any]:
+    reviewed = [review for review in reviews if not _workflow_part_review_is_pending(review)]
+    false_positive_count = sum(1 for review in reviews if review.false_positive_reason)
+    false_negative_count = sum(1 for review in reviews if review.false_negative_note)
+    useful_example_count = sum(1 for review in reviews if review.useful_example_note)
+    missing_dataflow_count = sum(1 for review in reviews if review.missing_dataflow_note)
+    accepted = [review for review in reviewed if review.decision == "accept_for_review_use"]
+    rejected = [review for review in reviewed if review.decision == "reject_candidate"]
+    by_type = Counter(review.part_type for review in reviewed)
+    required_review_count = min(50, len(reviews))
+    return {
+        "template_count": len(reviews),
+        "reviewed_count": len(reviewed),
+        "required_review_count": required_review_count,
+        "calibration_gate_complete": (
+            len(reviewed) >= required_review_count
+            and false_positive_count > 0
+            and false_negative_count > 0
+            and useful_example_count > 0
+            and missing_dataflow_count > 0
+            and len(accepted) > 0
+        ),
+        "structured_calibration_notes_complete": (
+            false_positive_count > 0
+            and false_negative_count > 0
+            and useful_example_count > 0
+            and missing_dataflow_count > 0
+        ),
+        "reviewed_by_part_type": dict(sorted(by_type.items())),
+        "part_type_counts": dict(Counter(review.part_type for review in reviews)),
+        "asset_pattern_counts": dict(Counter(review.asset_pattern_id for review in reviews)),
+        "usefulness_counts": dict(Counter(review.usefulness for review in reviews)),
+        "safety_counts": dict(Counter(review.safety for review in reviews)),
+        "specificity_counts": dict(Counter(review.specificity for review in reviews)),
+        "dataflow_completeness_counts": dict(
+            Counter(review.dataflow_completeness for review in reviews)
+        ),
+        "decision_counts": dict(Counter(review.decision for review in reviews)),
+        "accepted_count": len(accepted),
+        "rejected_count": len(rejected),
+        "false_positive_note_count": false_positive_count,
+        "false_negative_note_count": false_negative_count,
+        "useful_example_note_count": useful_example_count,
+        "missing_dataflow_note_count": missing_dataflow_count,
+        "methodology_versions": sorted(
+            {
+                str(review.evidence.get("methodology_version") or "legacy_or_unknown")
+                for review in reviews
+            }
+        ),
+    }
+
+
+def _validate_workflow_part_review_label(field: str, value: str | None) -> str | None:
+    if value is None:
+        return None
+    allowed = WORKFLOW_PART_REVIEW_LABELS[field]
+    if value not in allowed:
+        raise ValueError(f"Invalid {field} `{value}`. Expected one of: {', '.join(sorted(allowed))}")
+    return value
+
+
+def update_workflow_part_review_record(
+    reviews: list[WorkflowPartReviewRecord],
+    *,
+    sample_id: str | None = None,
+    part_id: str | None = None,
+    reviewer: str | None = None,
+    usefulness: str | None = None,
+    safety: str | None = None,
+    specificity: str | None = None,
+    dataflow_completeness: str | None = None,
+    decision: str | None = None,
+    notes: str | None = None,
+    false_positive_reason: str | None = None,
+    false_negative_note: str | None = None,
+    useful_example_note: str | None = None,
+    missing_dataflow_note: str | None = None,
+    reviewed_at: str | None = None,
+) -> tuple[list[WorkflowPartReviewRecord], WorkflowPartReviewRecord]:
+    if not sample_id and not part_id:
+        raise ValueError("Provide --sample-id or --part-id to select one review record.")
+    matches = [
+        index
+        for index, review in enumerate(reviews)
+        if (sample_id and review.sample_id == sample_id) or (part_id and review.part_id == part_id)
+    ]
+    if not matches:
+        raise ValueError("No workflow part review record matched the provided identifier.")
+    if len(matches) > 1:
+        raise ValueError("Multiple workflow part review records matched; provide both identifiers.")
+
+    updates: dict[str, Any] = {}
+    for field, value in {
+        "usefulness": usefulness,
+        "safety": safety,
+        "specificity": specificity,
+        "dataflow_completeness": dataflow_completeness,
+        "decision": decision,
+    }.items():
+        cleaned = _validate_workflow_part_review_label(field, value)
+        if cleaned is not None:
+            updates[field] = cleaned
+    if reviewer is not None:
+        updates["reviewer"] = reviewer
+    if notes is not None:
+        updates["notes"] = notes
+    for field, value in {
+        "false_positive_reason": false_positive_reason,
+        "false_negative_note": false_negative_note,
+        "useful_example_note": useful_example_note,
+        "missing_dataflow_note": missing_dataflow_note,
+    }.items():
+        if value is not None:
+            updates[field] = value
+    if reviewed_at is not None:
+        updates["reviewed_at"] = reviewed_at
+
+    label_update_present = any(field in updates for field in WORKFLOW_PART_REVIEW_LABELS)
+    note_update_present = any(field in updates for field in WORKFLOW_PART_REVIEW_NOTE_FIELDS)
+    if (label_update_present or note_update_present) and "reviewed_at" not in updates:
+        updates["reviewed_at"] = utc_now()
+    if label_update_present or note_update_present:
+        updates["review_status"] = (
+            "rejected" if updates.get("decision") == "reject_candidate" else "reviewed"
+        )
+    if not updates:
+        raise ValueError("No review fields were provided to update.")
+
+    selected_index = matches[0]
+    updated = reviews[selected_index].model_copy(update=updates)
+    updated = WorkflowPartReviewRecord.model_validate(updated.model_dump(mode="json"))
+    new_reviews = list(reviews)
+    new_reviews[selected_index] = updated
+    return new_reviews, updated
+
+
+def update_workflow_part_review_file(
+    path: Path,
+    *,
+    sample_id: str | None = None,
+    part_id: str | None = None,
+    reviewer: str | None = None,
+    usefulness: str | None = None,
+    safety: str | None = None,
+    specificity: str | None = None,
+    dataflow_completeness: str | None = None,
+    decision: str | None = None,
+    notes: str | None = None,
+    false_positive_reason: str | None = None,
+    false_negative_note: str | None = None,
+    useful_example_note: str | None = None,
+    missing_dataflow_note: str | None = None,
+    reviewed_at: str | None = None,
+) -> tuple[WorkflowPartReviewRecord, dict[str, Any]]:
+    reviews = load_workflow_part_reviews(path)
+    updated_reviews, updated = update_workflow_part_review_record(
+        reviews,
+        sample_id=sample_id,
+        part_id=part_id,
+        reviewer=reviewer,
+        usefulness=usefulness,
+        safety=safety,
+        specificity=specificity,
+        dataflow_completeness=dataflow_completeness,
+        decision=decision,
+        notes=notes,
+        false_positive_reason=false_positive_reason,
+        false_negative_note=false_negative_note,
+        useful_example_note=useful_example_note,
+        missing_dataflow_note=missing_dataflow_note,
+        reviewed_at=reviewed_at,
+    )
+    write_workflow_part_reviews(path, updated_reviews)
+    return updated, summarize_workflow_part_reviews(updated_reviews)
+
+
+def build_workflow_part_review_queue(
+    reviews: list[WorkflowPartReviewRecord],
+    parts: list[WorkflowPartRecord],
+    *,
+    status: Literal["pending", "reviewed", "all"] = "pending",
+    part_type: str = "all",
+    limit: int = 10,
+) -> dict[str, Any]:
+    if status not in {"pending", "reviewed", "all"}:
+        raise ValueError("Status must be one of: pending, reviewed, all")
+    part_types = {record.part_type for record in reviews}
+    if part_type != "all" and part_type not in part_types:
+        raise ValueError("Part type must be one of: all, " + ", ".join(sorted(part_types)))
+    parts_by_id = {part.part_id: part for part in parts}
+    items: list[dict[str, Any]] = []
+    for review in sorted(reviews, key=lambda record: record.sample_id):
+        pending = _workflow_part_review_is_pending(review)
+        if status == "pending" and not pending:
+            continue
+        if status == "reviewed" and pending:
+            continue
+        if part_type != "all" and review.part_type != part_type:
+            continue
+        part = parts_by_id.get(review.part_id)
+        items.append(
+            {
+                "sample_id": review.sample_id,
+                "part_id": review.part_id,
+                "part_type": review.part_type,
+                "asset_pattern_id": review.asset_pattern_id,
+                "review_status": "pending" if pending else "reviewed",
+                "labels": {
+                    "usefulness": review.usefulness,
+                    "safety": review.safety,
+                    "specificity": review.specificity,
+                    "dataflow_completeness": review.dataflow_completeness,
+                    "decision": review.decision,
+                    "false_positive_reason": review.false_positive_reason,
+                    "false_negative_note": review.false_negative_note,
+                    "useful_example_note": review.useful_example_note,
+                    "missing_dataflow_note": review.missing_dataflow_note,
+                    "notes": review.notes,
+                },
+                "reviewer": review.reviewer,
+                "reviewed_at": review.reviewed_at,
+                "context": {
+                    "role_in_workflow": review.evidence.get("role_in_workflow", ""),
+                    "confidence": review.evidence.get("confidence", part.confidence if part else ""),
+                    "risk": review.evidence.get("risk", part.risk if part else ""),
+                    "source_asset_count": review.evidence.get("source_asset_count", 0),
+                    "representative_paths": review.evidence.get("representative_paths", []),
+                    "path_class_counts": review.evidence.get("path_class_counts", {}),
+                    "applies_when": review.evidence.get("applies_when", []),
+                    "does_not_apply_when": review.evidence.get("does_not_apply_when", []),
+                    "danger_if_misapplied": review.evidence.get("danger_if_misapplied", ""),
+                    "context_tags": review.evidence.get("context_tags", []),
+                    "composition_affordances": review.evidence.get(
+                        "composition_affordances", []
+                    ),
+                    "dataflow_inference": review.evidence.get("dataflow_inference", ""),
+                },
+            }
+        )
+        if len(items) >= limit:
+            break
+    return {
+        "status_filter": status,
+        "part_type_filter": part_type,
+        "limit": limit,
+        "returned_count": len(items),
+        "summary": summarize_workflow_part_reviews(reviews),
+        "items": items,
+    }
+
+
+def workflow_part_review_sample_markdown_from_reviews(
+    reviews: list[WorkflowPartReviewRecord], *, generated_at: str
+) -> str:
+    lines = [
+        "# Workflow Part Calibration Review Sample",
+        "",
+        f"Generated at: `{generated_at}`",
+        "",
+        "This is a stratified generated review template. Human labels belong in `processed/workflow_parts/workflow_part_review_template.jsonl`; do not edit generated workflow-part candidates as truth.",
+        "",
+        "| sample_id | part_type | pattern | confidence | risk | source_assets | path cue | review focus |",
+        "|---|---|---|---|---|---:|---|---|",
+    ]
+    for review in reviews:
+        representative_paths = review.evidence.get("representative_paths", [])
+        path_cue = representative_paths[0] if representative_paths else ""
+        lines.append(
+            "| "
+            f"`{review.sample_id}` | `{review.part_type}` | `{review.asset_pattern_id}` | "
+            f"`{review.evidence.get('confidence', '')}` | `{review.evidence.get('risk', '')}` | "
+            f"{review.evidence.get('source_asset_count', 0)} | `{path_cue}` | "
+            "Useful? safe? right abstraction level? missing dataflow? |"
+        )
+    return "\n".join(lines) + "\n"
+
+
+def workflow_part_review_results_markdown(
+    reviews: list[WorkflowPartReviewRecord], source_path: Path
+) -> str:
+    summary = summarize_workflow_part_reviews(reviews)
+    lines = [
+        "# Workflow Part Review Results Summary",
+        "",
+        f"- Source review file: `{source_path}`",
+        f"- Template records: **{summary['template_count']}**",
+        f"- Reviewed records: **{summary['reviewed_count']}**",
+        f"- Required reviewed records: **{summary['required_review_count']}**",
+        f"- Calibration gate complete: **{summary['calibration_gate_complete']}**",
+        "",
+        "## Coverage",
+        "",
+        f"- Part type counts: `{summary['part_type_counts']}`",
+        f"- Reviewed by part type: `{summary['reviewed_by_part_type']}`",
+        "",
+        "## Label Counts",
+        "",
+        f"- Usefulness: `{summary['usefulness_counts']}`",
+        f"- Safety: `{summary['safety_counts']}`",
+        f"- Specificity: `{summary['specificity_counts']}`",
+        f"- Dataflow completeness: `{summary['dataflow_completeness_counts']}`",
+        f"- Decisions: `{summary['decision_counts']}`",
+        "",
+        "## Calibration Notes",
+        "",
+        f"- False positive notes: **{summary['false_positive_note_count']}**",
+        f"- False negative notes: **{summary['false_negative_note_count']}**",
+        f"- Useful example notes: **{summary['useful_example_note_count']}**",
+        f"- Missing dataflow notes: **{summary['missing_dataflow_note_count']}**",
+        f"- Structured calibration notes complete: **{summary['structured_calibration_notes_complete']}**",
+        "",
+        "Generated summary only. Track curated evidence separately after human review.",
+        "",
+    ]
+    return "\n".join(lines)
+
+
+def write_workflow_part_review_results_summary(
+    repo_root: Path, reviews: list[WorkflowPartReviewRecord], source_path: Path
+) -> tuple[dict[str, Any], str]:
+    summary = summarize_workflow_part_reviews(reviews)
+    output = repo_root / "processed" / "reports" / "workflow_part_review_results_summary.md"
+    atomic_write_text(output, workflow_part_review_results_markdown(reviews, source_path))
+    return summary, str(output)
+
+
+def workflow_part_calibration_evidence_markdown(
+    reviews: list[WorkflowPartReviewRecord], source_path: Path
+) -> str:
+    summary = summarize_workflow_part_reviews(reviews)
+    if not summary["calibration_gate_complete"]:
+        raise ValueError(
+            "Workflow part calibration evidence requires reviewed records, structured notes, "
+            "and at least one accepted review-use candidate."
+        )
+    lines = [
+        "# Workflow Part Calibration Evidence",
+        "",
+        f"Evidence date: {utc_now()}",
+        "",
+        "## Source Review File",
+        "",
+        f"- Review file: `{source_path}`",
+        "- Source review records are human labels over generated workflow-part candidates.",
+        "- This evidence does not promote workflow parts to source truth, current scoring, or mandatory preflight guidance.",
+        "",
+        "## Gate Coverage",
+        "",
+        f"- Reviewed records: **{summary['reviewed_count']}**",
+        f"- Required reviewed records: **{summary['required_review_count']}**",
+        f"- Calibration gate complete: **{summary['calibration_gate_complete']}**",
+        "",
+        "## Review Outcomes",
+        "",
+        f"- Usefulness: `{summary['usefulness_counts']}`",
+        f"- Safety: `{summary['safety_counts']}`",
+        f"- Specificity: `{summary['specificity_counts']}`",
+        f"- Dataflow completeness: `{summary['dataflow_completeness_counts']}`",
+        f"- Decisions: `{summary['decision_counts']}`",
+        "",
+        "## Remaining Risks",
+        "",
+        "- Labels calibrate review usefulness only; they do not authorize source-repo mutation.",
+        "- Preflight surfacing, workflow assembly, and score influence remain separate gates.",
+        "",
+    ]
+    return "\n".join(lines)
+
+
+def write_workflow_part_calibration_evidence(
+    repo_root: Path,
+    reviews: list[WorkflowPartReviewRecord],
+    source_path: Path,
+    output_path: Path | None = None,
+) -> tuple[dict[str, Any], str]:
+    output = output_path or repo_root / "roadmap" / "evidence" / "workflow-part-calibration.md"
+    if not output.is_absolute():
+        output = repo_root / output
+    text = workflow_part_calibration_evidence_markdown(reviews, source_path)
+    atomic_write_text(output, text)
+    return summarize_workflow_part_reviews(reviews), str(output)
+
+
+def write_workflow_part_review_template_outputs(
+    repo_root: Path,
+    records: list[WorkflowPartRecord],
+    *,
+    sample_size: int = 50,
+    generated_at: str | None = None,
+) -> dict[str, Any]:
+    generated = generated_at or utc_now()
+    reviews = build_workflow_part_review_template(records, sample_size=sample_size)
+    workflow_dir = repo_root / "processed" / "workflow_parts"
+    reports_dir = repo_root / "processed" / "reports"
+    review_path = workflow_dir / "workflow_part_review_template.jsonl"
+    sample_path = reports_dir / "workflow_part_calibration_review_sample.md"
+    summary_path = reports_dir / "workflow_part_review_results_summary.md"
+    write_workflow_part_reviews(review_path, reviews)
+    atomic_write_text(
+        sample_path,
+        workflow_part_review_sample_markdown_from_reviews(reviews, generated_at=generated),
+    )
+    atomic_write_text(summary_path, workflow_part_review_results_markdown(reviews, review_path))
+    summary = summarize_workflow_part_reviews(reviews)
+    return {
+        "schema": "workflow_part_review_template_result.v1",
+        "methodology_version": REVIEW_METHODOLOGY_VERSION,
+        "candidate_count": len(records),
+        "review_template_count": len(reviews),
+        "summary": summary,
+        "outputs": {
+            "review_template": str(review_path),
+            "review_sample": str(sample_path),
+            "review_summary": str(summary_path),
+        },
+        "candidate_only": True,
+    }
 
 
 def workflow_part_markdown(

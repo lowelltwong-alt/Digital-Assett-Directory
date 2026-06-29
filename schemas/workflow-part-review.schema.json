@@ -1,0 +1,102 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://digital-asset-directory.local/schemas/workflow-part-review.schema.json",
+  "title": "WorkflowPartReviewRecord",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "review_id",
+    "sample_id",
+    "part_id",
+    "part_type",
+    "asset_pattern_id",
+    "reviewer",
+    "reviewed_at",
+    "usefulness",
+    "safety",
+    "specificity",
+    "dataflow_completeness",
+    "decision",
+    "notes",
+    "false_positive_reason",
+    "false_negative_note",
+    "useful_example_note",
+    "missing_dataflow_note",
+    "evidence",
+    "review_status"
+  ],
+  "properties": {
+    "schema_version": { "type": "string" },
+    "review_id": { "type": "string", "minLength": 1 },
+    "sample_id": { "type": "string", "minLength": 1 },
+    "part_id": { "type": "string", "minLength": 1 },
+    "part_type": {
+      "type": "string",
+      "enum": [
+        "validator",
+        "contract",
+        "gate",
+        "runner",
+        "orchestrator",
+        "prompt_part",
+        "capability_provider",
+        "human_gate",
+        "eval_gold",
+        "learning_signal",
+        "boundary_map",
+        "decision_record",
+        "lesson_part",
+        "calibration_gate",
+        "quarantine_gate"
+      ]
+    },
+    "asset_pattern_id": { "type": "string", "minLength": 1 },
+    "reviewer": { "type": "string" },
+    "reviewed_at": { "type": ["string", "null"] },
+    "usefulness": {
+      "type": "string",
+      "enum": ["unreviewed", "useful", "not_useful", "unsure"]
+    },
+    "safety": {
+      "type": "string",
+      "enum": ["unreviewed", "safe", "unsafe", "needs_more_review"]
+    },
+    "specificity": {
+      "type": "string",
+      "enum": ["unreviewed", "right_level", "too_broad", "too_narrow", "unsure"]
+    },
+    "dataflow_completeness": {
+      "type": "string",
+      "enum": [
+        "unreviewed",
+        "adequate_for_now",
+        "missing_inputs",
+        "missing_outputs",
+        "missing_side_effects",
+        "not_applicable",
+        "unsure"
+      ]
+    },
+    "decision": {
+      "type": "string",
+      "enum": [
+        "pending",
+        "accept_for_review_use",
+        "reject_candidate",
+        "defer",
+        "needs_human_gate"
+      ]
+    },
+    "notes": { "type": "string" },
+    "false_positive_reason": { "type": "string" },
+    "false_negative_note": { "type": "string" },
+    "useful_example_note": { "type": "string" },
+    "missing_dataflow_note": { "type": "string" },
+    "evidence": { "type": "object" },
+    "review_status": {
+      "type": "string",
+      "enum": ["generated_candidate", "reviewed", "rejected"]
+    }
+  }
+}
