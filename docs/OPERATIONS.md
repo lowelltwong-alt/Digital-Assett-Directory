@@ -16,6 +16,32 @@ state/catalog.sqlite3
 audit/events/audit.jsonl
 ```
 
+## Operational readiness
+
+Use `doctor` when you need one local check that DAD is wired up and has the
+generated surfaces needed by future agents:
+
+```powershell
+$env:PYTHONPATH='src'; python -m digital_asset_directory.cli doctor
+```
+
+The command writes:
+
+```text
+processed/reports/operational_readiness.md
+processed/reports/operational_readiness.json
+```
+
+It checks the front door, machine manifest, catalog database, generated graph,
+scan summary, alert inbox, workflow-part usage guidance, roadmap gates, and
+schema validation state. It does not scan, call GitHub, mutate source repos,
+mark roadmap gates complete, or promote generated outputs to truth.
+
+If it exits non-zero, read the warnings and run only the specific recommended
+commands needed to restore the missing surface. A clean clone may be code-valid
+while not locally operational because generated `processed/` and `state/`
+outputs are intentionally ignored.
+
 ## Recommended cadence
 
 - scan active repos after material updates;

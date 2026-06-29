@@ -165,6 +165,7 @@ them.
 |---|---|---|---|
 | `config/sources.example.yaml` | Example source configuration. | `workflow`, `authority` | You configure local scan scope. |
 | `docs/OPERATIONS.md` | Operational command and runbook guidance. | `workflow`, `validation` | You run DAD tasks. |
+| `asset-dir doctor` | Local operational readiness check that does not rescan or mutate sources. | `validation`, `workflow`, `generated_output` | You need one command to verify front-door, catalog, roadmap, generated surfaces, and readiness warnings. |
 | `docs/PROPOSAL_ENGINE_CALIBRATION_WORKFLOW.md` | Proposal review workflow. | `calibration`, `workflow` | You review bottom-up and top-down proposal engines. |
 | `asset-dir recommend workflow-sweeps` | CLI command for generated workflow-family sweep reports. | `workflow`, `generated_output`, `cross_repo` | You need generated workflow candidates. |
 | `asset-dir recommend workflow-parts` | CLI command for generated workflow-part candidates from the current catalog. | `workflow`, `workflow_part`, `generated_output` | You need recombinable sub-unit candidates without rescanning or mutating source repos. |
@@ -221,6 +222,7 @@ them.
 | `roadmap/evidence/workflow-part-record-phase-a.md` | Implementation evidence for WorkflowPartRecord Phase A. | `roadmap`, `workflow_part`, `validation` | You need the contract, conservative defaults, risks, and validation status for workflow-part recognition. |
 | `roadmap/evidence/workflow-part-calibration-review-path.md` | Evidence for workflow-part calibration review commands and fail-closed gate. | `roadmap`, `workflow_part`, `calibration` | You need to know how workflow-part candidates should be reviewed before radar, preflight, scoring, or assembly use. |
 | `roadmap/evidence/workflow-part-usage-guidance.md` | Evidence for the manual workflow-part usage guidance surface after calibration. | `roadmap`, `workflow_part`, `calibration`, `human_gate` | You need the risk tier, boundaries, and next gate before using reviewed workflow parts operationally. |
+| `roadmap/evidence/operational-readiness-doctor.md` | Evidence for the local-only `doctor` readiness command. | `roadmap`, `validation`, `workflow` | You need to know what the readiness command proves and what it does not prove. |
 | `roadmap/evidence/claude-workflow-composition-red-team.md` | Claude's independent warning against ontology sprawl and recommendation for WorkflowPartRecord. | `roadmap`, `workflow`, `knowledge_graph` | You need the fresh-eyes review behind the background-radar synthesis. |
 | `roadmap/evidence/phase-3-sandbox-pilot.md` | Sandbox downstream-governance pilot evidence. | `roadmap`, `downstream_governance`, `validation` | You verify Phase 3 gates or learn how the files-only learning loop was tested. |
 | `roadmap/evidence/phase-4-semantic-enrichment.md` | Conservative Phase 4 semantic-enrichment boundary and evaluation evidence. | `roadmap`, `semantic_enrichment`, `privacy` | You need to know what Phase 4 approved, what remains deferred, or why embeddings are still gated. |
