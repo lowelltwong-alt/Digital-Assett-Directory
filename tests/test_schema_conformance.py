@@ -25,6 +25,7 @@ from digital_asset_directory.models import (
     SemanticEvolutionRecord,
     WorktreeAttemptRecord,
     WorkflowPartRecord,
+    WorkflowPartReviewRecord,
 )
 
 import pytest
@@ -220,6 +221,32 @@ def test_workflow_part_model_dump_matches_registered_schema():
     )
 
     validate_registered_schema("workflow_part", record.model_dump(mode="json"))
+
+
+def test_workflow_part_review_model_dump_matches_registered_schema():
+    record = WorkflowPartReviewRecord(
+        review_id="dad:workflow-part-review:test",
+        sample_id="workflow-part-review-001",
+        part_id="dad:workflow-part:test",
+        part_type="validator",
+        asset_pattern_id="evaluation_contract_system",
+        reviewer="Lowell",
+        reviewed_at="2026-06-29T00:00:00+00:00",
+        usefulness="useful",
+        safety="safe",
+        specificity="right_level",
+        dataflow_completeness="adequate_for_now",
+        decision="accept_for_review_use",
+        notes="Good review fixture.",
+        false_positive_reason="",
+        false_negative_note="",
+        useful_example_note="Useful validator example.",
+        missing_dataflow_note="",
+        evidence={"methodology_version": "workflow-part-review-sampling-v0.1-stratified"},
+        review_status="reviewed",
+    )
+
+    validate_registered_schema("workflow_part_review", record.model_dump(mode="json"))
 
 
 def test_learning_rule_model_dump_matches_registered_schema():

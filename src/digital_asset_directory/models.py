@@ -394,6 +394,61 @@ class WorkflowPartRecord(BaseModel):
     review_status: Literal["generated_candidate", "reviewed", "rejected"] = "generated_candidate"
 
 
+class WorkflowPartReviewRecord(BaseModel):
+    schema_version: str = "0.1.0"
+    review_id: str
+    sample_id: str
+    part_id: str
+    part_type: Literal[
+        "validator",
+        "contract",
+        "gate",
+        "runner",
+        "orchestrator",
+        "prompt_part",
+        "capability_provider",
+        "human_gate",
+        "eval_gold",
+        "learning_signal",
+        "boundary_map",
+        "decision_record",
+        "lesson_part",
+        "calibration_gate",
+        "quarantine_gate",
+    ]
+    asset_pattern_id: str
+    reviewer: str = ""
+    reviewed_at: str | None = None
+    usefulness: Literal["unreviewed", "useful", "not_useful", "unsure"] = "unreviewed"
+    safety: Literal["unreviewed", "safe", "unsafe", "needs_more_review"] = "unreviewed"
+    specificity: Literal[
+        "unreviewed", "right_level", "too_broad", "too_narrow", "unsure"
+    ] = "unreviewed"
+    dataflow_completeness: Literal[
+        "unreviewed",
+        "adequate_for_now",
+        "missing_inputs",
+        "missing_outputs",
+        "missing_side_effects",
+        "not_applicable",
+        "unsure",
+    ] = "unreviewed"
+    decision: Literal[
+        "pending",
+        "accept_for_review_use",
+        "reject_candidate",
+        "defer",
+        "needs_human_gate",
+    ] = "pending"
+    notes: str = ""
+    false_positive_reason: str = ""
+    false_negative_note: str = ""
+    useful_example_note: str = ""
+    missing_dataflow_note: str = ""
+    evidence: dict[str, Any] = Field(default_factory=dict)
+    review_status: Literal["generated_candidate", "reviewed", "rejected"] = "generated_candidate"
+
+
 class ContextTagRecord(BaseModel):
     schema_version: str = "0.1.0"
     context_tag_id: str

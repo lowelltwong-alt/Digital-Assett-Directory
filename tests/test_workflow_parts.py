@@ -8,9 +8,16 @@ from pydantic import ValidationError
 
 from digital_asset_directory.models import AssetRecord, EdgeRecord, WorkflowPartRecord
 from digital_asset_directory.workflow_parts import (
+    build_workflow_part_review_queue,
+    build_workflow_part_review_template,
     build_workflow_part_edges,
     build_workflow_part_records,
     detect_workflow_part_matches,
+    load_workflow_part_reviews,
+    summarize_workflow_part_reviews,
+    update_workflow_part_review_record,
+    workflow_part_calibration_evidence_markdown,
+    write_workflow_part_review_template_outputs,
     write_workflow_part_outputs,
 )
 
@@ -231,6 +238,123 @@ def test_workflow_part_edges_and_writer_create_generated_outputs(tmp_path: Path)
         assert path.is_relative_to(tmp_path / "processed")
     payload = Path(result["outputs"]["workflow_parts"]).read_text(encoding="utf-8")
     assert "Generated candidate only" in payload
+
+
+def test_workflow_part_review_template_is_stratified_and_candidate_only():
+    assets = [
+        make_asset(
+            "dad:asset:validator",
+            title="Validator",
+            logical_path="tests/test_contract.py",
+            asset_type="test",
+            text="pytest validator schema conformance fixture.",
+            capabilities=["validate_contracts"],
+        ),
+        make_asset(
+            "dad:asset:gate",
+            title="Gate",
+            logical_path="docs/preflight-gate.md",
+            asset_type="workflow",
+            text="preflight postflight human review gate approval stop condition.",
+            tags=["governance"],
+        ),
+        make_asset(
+            "dad:asset:learning",
+            title="Learning Loop",
+            logical_path="docs/lesson-handoff.md",
+            asset_type="lesson",
+            text="lesson handoff postflight feedback exception failure applies_when does_not_apply_when.",
+            tags=["learning-loop"],
+        ),
+    ]
+    records = build_workflow_part_records(assets, [], scan_id=SCAN_ID, generated_at=TIMESTAMP)
+
+    reviews = build_workflow_part_review_template(records, sample_size=6)
+
+    assert reviews
+    assert len({review.part_type for review in reviews}) > 1
+    assert all(review.review_status == "generated_candidate" for review in reviews)
+    assert all(
+        review.evidence["methodology_version"]
+        == "workflow-part-review-sampling-v0.1-stratified"
+        for review in reviews
+    )
+    assert all(review.evidence["generated_candidate_only"] is True for review in reviews)
+
+
+def test_workflow_part_review_update_summary_and_queue():
+    asset = make_asset(
+        "dad:asset:validator",
+        title="Validator",
+        logical_path="tests/test_contract.py",
+        asset_type="test",
+        text="pytest validator schema conformance fixture.",
+        capabilities=["validate_contracts"],
+    )
+    records = build_workflow_part_records([asset], [], scan_id=SCAN_ID, generated_at=TIMESTAMP)
+    reviews = build_workflow_part_review_template(records, sample_size=1)
+
+    updated_reviews, updated = update_workflow_part_review_record(
+        reviews,
+        sample_id=reviews[0].sample_id,
+        reviewer="Lowell",
+        usefulness="useful",
+        safety="safe",
+        specificity="right_level",
+        dataflow_completeness="missing_inputs",
+        decision="accept_for_review_use",
+        useful_example_note="Good validator part.",
+        missing_dataflow_note="Inputs should be declared before assembly.",
+    )
+    summary = summarize_workflow_part_reviews(updated_reviews)
+    queue = build_workflow_part_review_queue(updated_reviews, records, status="reviewed", limit=5)
+
+    assert updated.review_status == "reviewed"
+    assert updated.reviewed_at
+    assert summary["reviewed_count"] == 1
+    assert summary["useful_example_note_count"] == 1
+    assert summary["missing_dataflow_note_count"] == 1
+    assert queue["returned_count"] == 1
+    assert queue["items"][0]["labels"]["usefulness"] == "useful"
+
+
+def test_workflow_part_calibration_evidence_fails_closed_without_labels():
+    asset = make_asset(
+        "dad:asset:validator",
+        title="Validator",
+        logical_path="tests/test_contract.py",
+        asset_type="test",
+        text="pytest validator schema conformance fixture.",
+        capabilities=["validate_contracts"],
+    )
+    records = build_workflow_part_records([asset], [], scan_id=SCAN_ID, generated_at=TIMESTAMP)
+    reviews = build_workflow_part_review_template(records, sample_size=1)
+
+    with pytest.raises(ValueError, match="requires reviewed records"):
+        workflow_part_calibration_evidence_markdown(reviews, Path("review.jsonl"))
+
+
+def test_workflow_part_review_template_writer_outputs_generated_files(tmp_path: Path):
+    asset = make_asset(
+        "dad:asset:validator",
+        title="Validator",
+        logical_path="tests/test_contract.py",
+        asset_type="test",
+        text="pytest validator schema conformance fixture.",
+        capabilities=["validate_contracts"],
+    )
+    records = build_workflow_part_records([asset], [], scan_id=SCAN_ID, generated_at=TIMESTAMP)
+
+    result = write_workflow_part_review_template_outputs(
+        tmp_path, records, sample_size=1, generated_at=TIMESTAMP
+    )
+
+    assert result["review_template_count"] == 1
+    review_path = Path(result["outputs"]["review_template"])
+    assert review_path.exists()
+    assert review_path.is_relative_to(tmp_path / "processed")
+    loaded = load_workflow_part_reviews(review_path)
+    assert loaded[0].sample_id == "workflow-part-review-001"
 
 
 def test_workflow_part_edge_types_are_registered():

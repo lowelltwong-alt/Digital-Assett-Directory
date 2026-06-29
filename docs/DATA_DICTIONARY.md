@@ -63,6 +63,12 @@
 | `inputs` / `outputs` / `preconditions` / `side_effects` | Empty in deterministic v1 unless declared in structured metadata or reviewed by a human. | Candidate constraint |
 | `maturity` | Recognized, validated, reused, or reviewed; v1 defaults to recognized and does not claim validation merely because a test-like file exists. | Candidate routing signal |
 | `methodology_version` | The recognition method and formulas used to produce the candidate. Current value: `workflow-part-recognition-v1`. | Directory contract |
+| `WorkflowPartReviewRecord` | Human-label wrapper around generated workflow-part candidates. | Human calibration evidence after label entry |
+| `usefulness` | Whether the detected part is useful as a reusable review/planning surface: `useful`, `not_useful`, or `unsure`; default `unreviewed`. | Human calibration label |
+| `safety` | Whether the candidate can be safely considered for review use: `safe`, `unsafe`, or `needs_more_review`; default `unreviewed`. | Human calibration label |
+| `specificity` | Whether the part is at the right abstraction level, too broad, too narrow, or unsure. | Human calibration label |
+| `dataflow_completeness` | Whether v1's empty or declared inputs/outputs/side effects are adequate for now or missing something important. | Human calibration label |
+| `decision` | Review-use decision: accept for review use, reject, defer, or require human gate. This does not authorize source mutation, score influence, or preflight surfacing. | Human calibration label |
 
 ## Learning-loop candidates
 

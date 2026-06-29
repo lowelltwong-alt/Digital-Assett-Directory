@@ -19,6 +19,7 @@
     "asset_calibration_review": "schemas/asset-calibration-review.schema.json",
     "learning_loop": "schemas/learning-loop.schema.json",
     "workflow_part": "schemas/workflow-part.schema.json",
+    "workflow_part_review": "schemas/workflow-part-review.schema.json",
     "context_tag": "schemas/context-tag.schema.json",
     "worktree_attempt": "schemas/worktree-attempt.schema.json",
     "repo_timeline_event": "schemas/repo-timeline-event.schema.json",

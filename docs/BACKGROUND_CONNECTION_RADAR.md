@@ -309,6 +309,24 @@ Phase A implements this contract and the manual command:
 asset-dir recommend workflow-parts --source-id all --review-sample 50
 ```
 
+Calibration review uses a separate generated template so the first labels are
+stratified across part types instead of biased toward whichever type sorts
+first:
+
+```text
+asset-dir recommend workflow-part-review-template --sample-size 50
+asset-dir recommend workflow-part-review-queue --status pending --limit 10
+asset-dir recommend workflow-part-review-label --sample-id <id> --reviewer Lowell ...
+asset-dir recommend workflow-part-review-summary
+asset-dir recommend workflow-part-calibration-evidence
+```
+
+`workflow-part-calibration-evidence` fails closed until human labels cover the
+review template and include false-positive, false-negative, useful-example, and
+missing-dataflow notes. Until then, workflow parts remain review candidates and
+must not influence current scores, mandatory preflight guidance, or workflow
+assembly.
+
 Deterministically knowable fields include:
 
 - `part_id`
