@@ -116,6 +116,78 @@ phases:
     assert result["phases"]["phase-deferred"]["status_warnings"] == []
 
 
+def test_boundary_deferred_phase_accepts_human_deferred_gates(tmp_path: Path):
+    (tmp_path / "roadmap").mkdir()
+    (tmp_path / "roadmap" / "roadmap.yaml").write_text(
+        """
+roadmap_version: test
+phases:
+  - id: phase-deferred
+    status: boundary_deferred
+    acceptance:
+      human_gates:
+        - id: gate-deferred
+          description: capability remains deferred behind boundary
+""",
+        encoding="utf-8",
+    )
+    record_human_gate_evidence(
+        tmp_path,
+        phase_id="phase-deferred",
+        gate_id="gate-deferred",
+        reviewer="Lowell",
+        status="boundary_deferred",
+        summary="Human approved keeping this capability deferred.",
+        evidence=["roadmap/evidence/deferred.md"],
+    )
+
+    result = check_roadmap(tmp_path, update=False)
+
+    assert result["phases"]["phase-deferred"]["computed_status"] == "boundary_deferred"
+    assert result["phases"]["phase-deferred"]["human_gate_ids_boundary_deferred"] == [
+        "gate-deferred"
+    ]
+    assert result["phases"]["phase-deferred"]["human_gate_ids_unverified"] == []
+
+
+def test_boundary_deferred_phase_rejects_agent_deferred_gates(tmp_path: Path):
+    (tmp_path / "roadmap").mkdir()
+    (tmp_path / "roadmap" / "roadmap.yaml").write_text(
+        """
+roadmap_version: test
+phases:
+  - id: phase-deferred
+    status: boundary_deferred
+    acceptance:
+      human_gates:
+        - id: gate-deferred
+          description: capability remains deferred behind boundary
+""",
+        encoding="utf-8",
+    )
+    record_human_gate_evidence(
+        tmp_path,
+        phase_id="phase-deferred",
+        gate_id="gate-deferred",
+        reviewer="codex",
+        status="boundary_deferred",
+        summary="Agent cannot approve deferred human gate.",
+        evidence=["roadmap/evidence/deferred.md"],
+    )
+
+    result = check_roadmap(tmp_path, update=False)
+
+    assert result["phases"]["phase-deferred"]["computed_status"] == "awaiting_human_gate"
+    assert result["phases"]["phase-deferred"]["human_gate_unverified_details"] == [
+        {
+            "gate_id": "gate-deferred",
+            "description": "capability remains deferred behind boundary",
+            "reviewer": "codex",
+            "reason": "missing_human_reviewer",
+        }
+    ]
+
+
 def test_roadmap_command_requires_validation_evidence(tmp_path: Path):
     (tmp_path / "roadmap").mkdir()
     (tmp_path / "roadmap" / "roadmap.yaml").write_text(

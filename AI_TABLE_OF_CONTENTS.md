@@ -209,6 +209,7 @@ them.
 | `roadmap/evidence/phase-5-alerting-and-research-radar.md` | Conservative Phase 5 manual-alert/radar boundary and external-research gates. | `roadmap`, `alerting`, `external_research` | You need to know what alerting/research surfaces are approved and what remains gated. |
 | `roadmap/evidence/claude-post-merge-roadmap-red-team.md` | Claude's post-merge red-team of roadmap completion, human gates, and external-call risks. | `roadmap`, `fresh_eyes_review`, `human_gate` | You need the independent critique behind roadmap gate hardening. |
 | `roadmap/evidence/roadmap-gate-hardening.md` | Remediation evidence for strict human-gate verification, boundary-deferred status, and external research enablement. | `roadmap`, `human_gate`, `security_privacy` | You need why some phases intentionally no longer compute complete after hardening. |
+| `roadmap/evidence/human-gate-review-2026-06-29.md` | Lowell's human-review decisions for reopened Phase 1, Phase 3, and Phase 4/5 boundary gates. | `roadmap`, `human_gate`, `boundary_deferred` | You need the human decision trail after roadmap gate hardening. |
 
 ## Reference
 

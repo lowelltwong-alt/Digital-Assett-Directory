@@ -167,6 +167,12 @@ channel is manual local generated reports under `processed/`; scheduled scans, e
 research automation, external notifications, GitHub scanning, external code import, and
 autonomous promotion remain separately gated.
 
+`boundary_deferred` means a human has accepted the safe boundary and the
+capability remains intentionally undelivered. It is neither `complete` nor a
+generic missing-review state. A phase may compute `boundary_deferred` only when
+its required boundary evidence exists and each deferred human gate is recorded
+with `status="boundary_deferred"` by an explicit human reviewer.
+
 A phase may be marked complete only when:
 
 - required files or outputs exist;

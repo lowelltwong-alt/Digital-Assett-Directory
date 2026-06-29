@@ -33,10 +33,10 @@
         "roadmap/evidence/phase-1-first-inventory.md"
       ],
       "phase_id": "phase-1-first-inventory",
-      "reviewed_at": "2026-06-24",
-      "reviewer": "codex",
+      "reviewed_at": "2026-06-29T15:36:19Z",
+      "reviewer": "Lowell",
       "status": "verified",
-      "summary": "First bounded local inventory reported source_files_mutated=false with changed_during_scan_count reviewed in the scan summary."
+      "summary": "Human accepted verification that the reviewed scan evidence reports source_files_mutated=false and changed_during_scan_count=0 in the current scan summary."
     },
     "phase-1-source-scope-reviewed": {
       "evidence": [
@@ -127,10 +127,10 @@
         "docs/DOWNSTREAM_REPO_GOVERNANCE.md"
       ],
       "phase_id": "phase-3-downstream-governance",
-      "reviewed_at": "2026-06-26T17:29:00+00:00",
-      "reviewer": "codex",
+      "reviewed_at": "2026-06-29T15:36:19Z",
+      "reviewer": "Lowell",
       "status": "verified",
-      "summary": "Sandbox enforcement failed closed while an AI work session was open, passed only after postflight, and the bypass policy remains explicit/logged/reviewed rather than silently disabling hooks."
+      "summary": "Human accepted sandbox-only verification that enforcement failed closed while an AI work session was open, passed only after postflight, and bypass policy remains explicit/logged/reviewed."
     },
     "phase-3-lessons-arrive-central-hub": {
       "evidence": [
@@ -138,10 +138,10 @@
         "raw/lessons/by-repo"
       ],
       "phase_id": "phase-3-downstream-governance",
-      "reviewed_at": "2026-06-26T17:29:00+00:00",
-      "reviewer": "codex",
+      "reviewed_at": "2026-06-29T15:36:19Z",
+      "reviewer": "Lowell",
       "status": "verified",
-      "summary": "Sandbox postflight wrote central hub handoff dad:handoff:b4167661-497c-52f8-9359-3a5b25cecb07 and lesson dad:lesson:053149a2-2a2e-51a8-accc-c5a8e9ddabfe; lesson reindex completed with 100 indexed lessons."
+      "summary": "Human accepted sandbox-only verification that sandbox postflight wrote central hub handoff dad:handoff:b4167661-497c-52f8-9359-3a5b25cecb07 and lesson dad:lesson:053149a2-2a2e-51a8-accc-c5a8e9ddabfe; lesson reindex completed with 100 indexed lessons."
     },
     "phase-3-pilot-repositories-selected": {
       "evidence": [
@@ -159,10 +159,10 @@
         "roadmap/evidence/phase-3-sandbox-pilot.md"
       ],
       "phase_id": "phase-3-downstream-governance",
-      "reviewed_at": "2026-06-26T17:29:00+00:00",
-      "reviewer": "codex",
+      "reviewed_at": "2026-06-29T15:36:19Z",
+      "reviewer": "Lowell",
       "status": "verified",
-      "summary": "Sandbox git core.hooksPath was set to .githooks; DAD enforcement returned exit code 2 before postflight and exit code 0 after postflight."
+      "summary": "Human accepted sandbox-only verification that sandbox git core.hooksPath was set to .githooks; DAD enforcement returned exit code 2 before postflight and exit code 0 after postflight."
     },
     "phase-4-deterministic-baseline-retained": {
       "evidence": [
@@ -171,10 +171,10 @@
         "roadmap/evidence/phase-4-semantic-enrichment.md"
       ],
       "phase_id": "phase-4-semantic-enrichment",
-      "reviewed_at": "2026-06-26T17:36:04.0519173Z",
-      "reviewer": "codex",
+      "reviewed_at": "2026-06-29T15:36:19Z",
+      "reviewer": "Lowell",
       "status": "boundary_deferred",
-      "summary": "The deterministic baseline remains the only approved enrichment path; embeddings and model enrichment stay deferred behind separate provider/privacy/eval gates."
+      "summary": "Human approved keeping Phase 4 boundary_deferred: deterministic local enrichment boundary is documented, while embeddings/model enrichment stay deferred behind separate provider/privacy/eval gates."
     },
     "phase-4-evaluation-harness-benefit-shown": {
       "evidence": [
@@ -184,10 +184,10 @@
         "roadmap/evidence/phase-4-semantic-enrichment.md"
       ],
       "phase_id": "phase-4-semantic-enrichment",
-      "reviewed_at": "2026-06-26T17:36:04.0519173Z",
-      "reviewer": "codex",
+      "reviewed_at": "2026-06-29T15:36:19Z",
+      "reviewer": "Lowell",
       "status": "boundary_deferred",
-      "summary": "Phase 2.5 score-delta validation showed measurable deterministic content-aware benefit: 100/100 reviewed rows matched desired movement, with zero about-right churn."
+      "summary": "Human approved keeping Phase 4 boundary_deferred while retaining the Phase 2.5 deterministic score-delta evaluation as boundary evidence, not proof that embeddings/model enrichment are delivered."
     },
     "phase-4-generated-metadata-candidate-status": {
       "evidence": [
@@ -198,10 +198,10 @@
         "roadmap/evidence/phase-4-semantic-enrichment.md"
       ],
       "phase_id": "phase-4-semantic-enrichment",
-      "reviewed_at": "2026-06-26T17:36:04.0519173Z",
-      "reviewer": "codex",
+      "reviewed_at": "2026-06-29T15:36:19Z",
+      "reviewer": "Lowell",
       "status": "boundary_deferred",
-      "summary": "Generated semantic metadata, scores, proposals, radar records, and graph relationships remain candidate evidence and cannot promote source truth or roadmap status by themselves."
+      "summary": "Human approved keeping Phase 4 boundary_deferred with generated semantic metadata, scores, proposals, radar records, and graph relationships remaining candidate evidence only."
     },
     "phase-4-provider-privacy-boundary-approved": {
       "evidence": [
@@ -211,10 +211,10 @@
         "roadmap/evidence/phase-4-semantic-enrichment.md"
       ],
       "phase_id": "phase-4-semantic-enrichment",
-      "reviewed_at": "2026-06-26T17:36:04.0519173Z",
-      "reviewer": "Lowell-directed roadmap order; codex-recorded conservative boundary",
+      "reviewed_at": "2026-06-29T15:36:19Z",
+      "reviewer": "Lowell",
       "status": "boundary_deferred",
-      "summary": "Human-directed roadmap completion is recorded under the safest boundary: no external provider, no embeddings, no raw source export, and no raw chat persistence; any future provider remains separately gated."
+      "summary": "Human approved keeping Phase 4 boundary_deferred under the safest boundary: no external provider, no embeddings, no raw source export, and no raw chat persistence; any future provider remains separately gated."
     },
     "phase-5-alert-channels-approved": {
       "evidence": [
@@ -224,10 +224,10 @@
         "roadmap/evidence/phase-5-alerting-and-research-radar.md"
       ],
       "phase_id": "phase-5-alerting-and-research-radar",
-      "reviewed_at": "2026-06-26T17:36:04.0519173Z",
-      "reviewer": "Lowell-directed roadmap order; codex-recorded conservative boundary",
+      "reviewed_at": "2026-06-29T15:36:19Z",
+      "reviewer": "Lowell",
       "status": "boundary_deferred",
-      "summary": "The approved alert channel is manual local generated reports under processed/ only; scheduled scans, external notifications, GitHub issue/PR creation, and webhook delivery remain unapproved."
+      "summary": "Human approved keeping Phase 5 boundary_deferred: the only approved alert channel is manual local generated reports under processed/; scheduled scans, external notifications, GitHub issue/PR creation, and webhook delivery remain unapproved."
     },
     "phase-5-external-code-review-gates-active": {
       "evidence": [
@@ -238,10 +238,10 @@
         "roadmap/evidence/phase-5-alerting-and-research-radar.md"
       ],
       "phase_id": "phase-5-alerting-and-research-radar",
-      "reviewed_at": "2026-06-26T17:36:04.0519173Z",
-      "reviewer": "codex",
+      "reviewed_at": "2026-06-29T15:36:19Z",
+      "reviewer": "Lowell",
       "status": "boundary_deferred",
-      "summary": "External code, tools, feedback, and research candidates remain blocked behind license, provenance, security, compatibility, source-authority, and human review gates."
+      "summary": "Human approved keeping Phase 5 boundary_deferred while external code, tools, feedback, and research candidates remain blocked behind license, provenance, security, compatibility, source-authority, and human review gates."
     },
     "phase-5-no-autonomous-merge-promotion": {
       "evidence": [
@@ -252,10 +252,10 @@
         "roadmap/evidence/phase-5-alerting-and-research-radar.md"
       ],
       "phase_id": "phase-5-alerting-and-research-radar",
-      "reviewed_at": "2026-06-26T17:36:04.0519173Z",
-      "reviewer": "codex",
+      "reviewed_at": "2026-06-29T15:36:19Z",
+      "reviewer": "Lowell",
       "status": "boundary_deferred",
-      "summary": "No generated alert, proposal, graph edge, research candidate, or connection packet can autonomously merge, mutate source repositories, promote source truth, or complete roadmap work."
+      "summary": "Human approved keeping Phase 5 boundary_deferred with no generated alert, proposal, graph edge, research candidate, or connection packet allowed to autonomously merge, mutate source repositories, promote source truth, or complete roadmap work."
     },
     "phase-5-rate-limits-source-terms-reviewed": {
       "evidence": [
@@ -265,10 +265,10 @@
         "roadmap/evidence/phase-5-alerting-and-research-radar.md"
       ],
       "phase_id": "phase-5-alerting-and-research-radar",
-      "reviewed_at": "2026-06-26T17:36:04.0519173Z",
-      "reviewer": "codex",
+      "reviewed_at": "2026-06-29T15:36:19Z",
+      "reviewer": "Lowell",
       "status": "boundary_deferred",
-      "summary": "The active rate limit is zero scheduled external calls; future external research must record source terms, license/provenance/freshness/security review, and explicit human approval before reuse."
+      "summary": "Human approved keeping Phase 5 boundary_deferred with active rate limit of zero scheduled external calls; future external research must record source terms, license/provenance/freshness/security review, and explicit human approval before reuse."
     }
   },
   "schema_version": "0.1.0"

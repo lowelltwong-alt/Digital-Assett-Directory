@@ -88,3 +88,20 @@ Until then, the safer machine state is `awaiting_human_gate` or
 
 Future external research, scheduled scanning, notifications, embeddings, model
 enrichment, and autonomous promotion still require separate human gates.
+
+## 2026-06-29 Human Review Addendum
+
+Lowell later accepted the recommended human gate decisions recorded in
+`roadmap/evidence/human-gate-review-2026-06-29.md`.
+
+Result:
+
+- Phase 1 source-mutation / changed-during-scan gate is human verified.
+- Phase 3 sandbox enforcement, central lesson arrival, and bypass/failure gates
+  are human verified as sandbox-only.
+- Phase 4 remains `boundary_deferred`.
+- Phase 5 remains `boundary_deferred`.
+
+This addendum does not approve active-repo hook installation, embeddings,
+scheduled scans, external research automation, notification delivery, GitHub
+scanning, external code import, or autonomous promotion.

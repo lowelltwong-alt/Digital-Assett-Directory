@@ -87,6 +87,21 @@ def _verified_human_gate(
     return record
 
 
+def _boundary_deferred_human_gate(
+    gate: dict[str, str], phase_id: str, gate_evidence: dict[str, Any]
+) -> dict[str, Any] | None:
+    record = gate_evidence.get("human_gates", {}).get(gate["id"])
+    if not isinstance(record, dict):
+        return None
+    if record.get("phase_id") != phase_id:
+        return None
+    if record.get("status") != "boundary_deferred":
+        return None
+    if not _has_human_reviewer(record):
+        return None
+    return record
+
+
 def _has_human_reviewer(record: dict[str, Any]) -> bool:
     reviewer = str(record.get("reviewer") or "").strip().lower()
     if reviewer in HUMAN_REVIEWERS:
@@ -103,10 +118,12 @@ def _human_gate_rejection_reason(record: dict[str, Any] | None, phase_id: str) -
         return "missing_gate_evidence"
     if record.get("phase_id") != phase_id:
         return "phase_mismatch"
-    if record.get("status") != "verified":
+    if record.get("status") not in {"verified", "boundary_deferred"}:
         return "not_verified"
     if not _has_human_reviewer(record):
         return "missing_human_reviewer"
+    if record.get("status") == "boundary_deferred":
+        return "boundary_deferred"
     return "unknown"
 
 
@@ -140,10 +157,15 @@ def check_roadmap(repo_root: Path, update: bool = True) -> dict[str, Any]:
             _normalize_human_gate(phase["id"], gate) for gate in acceptance.get("human_gates", [])
         ]
         verified_gates: list[dict[str, str]] = []
+        deferred_gates: list[dict[str, str]] = []
         unverified_gates: list[dict[str, str]] = []
         for gate in human_gates:
             if _verified_human_gate(gate, phase["id"], gate_evidence):
                 verified_gates.append(gate)
+            elif phase.get("status") == "boundary_deferred" and _boundary_deferred_human_gate(
+                gate, phase["id"], gate_evidence
+            ):
+                deferred_gates.append(gate)
             else:
                 unverified_gates.append(gate)
         unverified_gate_details = []
@@ -186,8 +208,12 @@ def check_roadmap(repo_root: Path, update: bool = True) -> dict[str, Any]:
             "evidence": present,
             "missing": missing,
             "human_gates_verified": [gate["description"] for gate in verified_gates],
+            "human_gates_boundary_deferred": [
+                gate["description"] for gate in deferred_gates
+            ],
             "human_gates_unverified": [gate["description"] for gate in unverified_gates],
             "human_gate_ids_verified": [gate["id"] for gate in verified_gates],
+            "human_gate_ids_boundary_deferred": [gate["id"] for gate in deferred_gates],
             "human_gate_ids_unverified": [gate["id"] for gate in unverified_gates],
             "human_gate_unverified_details": unverified_gate_details,
             "commands_declared_not_executed_by_check": commands_missing_evidence,
