@@ -2,7 +2,13 @@ from pathlib import Path
 
 import pytest
 
+from digital_asset_directory.config import AppConfig, Settings
 from digital_asset_directory.models import AssetRecord
+from digital_asset_directory.operational import (
+    build_operational_readiness,
+    operational_readiness_markdown,
+    write_operational_readiness_report,
+)
 from digital_asset_directory.readiness import (
     phase4_readiness_markdown,
     phase5_readiness_markdown,
@@ -60,3 +66,42 @@ def test_phase45_readiness_reports_are_planning_only(tmp_path: Path):
     assert Path(result["phase5_readiness"]).exists()
     assert "Do not enable embeddings" in phase4_readiness_markdown()
     assert "Do not schedule scans" in phase5_readiness_markdown()
+
+
+def test_operational_readiness_fails_closed_for_empty_repo(tmp_path: Path):
+    cfg = AppConfig(
+        repo_root=tmp_path,
+        raw={},
+        database_path=tmp_path / "state" / "catalog.sqlite3",
+        local_sources=[],
+        github_sources=[],
+        settings=Settings(),
+    )
+
+    result = build_operational_readiness(cfg, include_git=False)
+    text = operational_readiness_markdown(result)
+
+    assert result["ready"] is False
+    assert result["missing_surfaces"]
+    assert any("Catalog database is missing or empty" in warning for warning in result["warnings"])
+    assert "python -m pytest" in text
+    assert "Operational readiness summarizes current local evidence" in text
+
+
+def test_operational_readiness_report_is_generated_output(tmp_path: Path):
+    cfg = AppConfig(
+        repo_root=tmp_path,
+        raw={},
+        database_path=tmp_path / "state" / "catalog.sqlite3",
+        local_sources=[],
+        github_sources=[],
+        settings=Settings(),
+    )
+
+    result = write_operational_readiness_report(cfg)
+
+    assert Path(result["report"]).is_relative_to(tmp_path / "processed")
+    assert Path(result["payload"]).is_relative_to(tmp_path / "processed")
+    assert Path(result["report"]).exists()
+    assert Path(result["payload"]).exists()
+    assert result["candidate_only"] is True

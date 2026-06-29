@@ -46,6 +46,7 @@ from .learning import (
     rebuild_lesson_routes,
 )
 from .orphan_adapter import run_orphan_radar
+from .operational import write_operational_readiness_report
 from .proposals import (
     ProposalEngineOption,
     build_proposal_review_queue,
@@ -119,6 +120,15 @@ def status(
     config: Optional[Path] = typer.Option(None), hub: Optional[Path] = typer.Option(None)
 ) -> None:
     console.print_json(data=catalog_status(_cfg(config, hub)))
+
+
+@app.command()
+def doctor(config: Optional[Path] = typer.Option(None), hub: Optional[Path] = typer.Option(None)) -> None:
+    """Check whether the local DAD hub is operational without rescanning or mutating sources."""
+    result = write_operational_readiness_report(_cfg(config, hub))
+    console.print_json(data=result)
+    if not result["ready"]:
+        raise typer.Exit(2)
 
 
 @app.command()

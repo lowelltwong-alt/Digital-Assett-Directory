@@ -29,7 +29,8 @@
     "processed/reports/workflow_sweeps/workflow_sweeps_index.md",
     "processed/reports/workflow_part_recognition.md",
     "processed/reports/workflow_part_calibration_review_sample.md",
-    "processed/reports/workflow_part_usage_guidance.md"
+    "processed/reports/workflow_part_usage_guidance.md",
+    "processed/reports/operational_readiness.md"
   ],
   "registries": {
     "source_of_truth": "registry/source-of-truth.json",
