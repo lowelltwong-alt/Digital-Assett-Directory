@@ -15,7 +15,8 @@
     "single_ai_entrypoint": "AI_FRONT_DOOR.md",
     "ai_table_of_contents": "AI_TABLE_OF_CONTENTS.md",
     "routing_standard": "docs/AI_ENTRYPOINT_AND_TOC_ROUTING_STANDARD.md",
-    "toc_template": "templates/ai-table-of-contents.template.md"
+    "toc_template": "templates/ai-table-of-contents.template.md",
+    "ai_environment_capabilities": "docs/AI_ENVIRONMENT_CAPABILITY_MATRIX.md"
   },
   "knowledge_graph_entrypoints": [
     "docs/KNOWLEDGE_GRAPH_MODEL.md",

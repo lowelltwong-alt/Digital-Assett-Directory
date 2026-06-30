@@ -5,5 +5,7 @@ Before material AI work, run a central-hub preflight. Before reporting completio
 
 Before changing shared contracts, schemas, CI/hooks, governance, scoring/ranking, roadmap gates, dependencies, migrations, source-boundary rules, or defaults that future agents may inherit, classify the decision as high, medium, or low risk. High-risk load-bearing decisions require human attention, implementer red-team, premortem, rollback criteria, and fresh-eyes review.
 
+When choosing AI-environment-specific helpers such as skills, subagents, MCP servers, hooks, plugins, connectors, or background/cloud agents, consult the local repo's reviewed guidance first; the central hub's AI environment capability matrix is advisory until adopted by this repo.
+
 The central catalog does not override this repository's local authority or canon.
 <!-- END DIGITAL_ASSET_DIRECTORY_GOVERNANCE -->

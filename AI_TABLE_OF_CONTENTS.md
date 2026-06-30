@@ -52,6 +52,7 @@ them.
 | `registry/design-authority.json` | Non-negotiable design rules and boundary constraints. | `authority`, `registry` | You are changing design behavior or evaluating a proposed change. |
 | `registry/identity-layer-registry.json` | Asset identity and similarity ladder registry. | `authority`, `registry`, `knowledge_graph` | You compare assets, versions, duplicates, or semantic similarity. |
 | `docs/AI_ENTRYPOINT_AND_TOC_ROUTING_STANDARD.md` | Deterministic standard for AI front doors, TOCs, tags, and graph entrypoints. | `front_door`, `workflow`, `learning_loop` | You create or update AI navigation in this repo or another repo. |
+| `docs/AI_ENVIRONMENT_CAPABILITY_MATRIX.md` | Advisory matrix for Codex, Cursor, Claude Code, skills, subagents, MCP, hooks, plugins, and background agents. | `front_door`, `workflow`, `governance`, `learning_loop` | You choose which AI-environment capability to use or update cross-repo guidance. |
 
 ## Architecture And Workflows
 
