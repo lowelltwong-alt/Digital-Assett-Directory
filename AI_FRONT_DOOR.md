@@ -78,6 +78,7 @@ not prove source truth, value, authority, or promotion.
 | `processed/reports/repo_buildout/index.md` | Generated repo-specific buildout advisor index. | You need candidate recommendations for improving one cataloged repo from its own assets and safe cross-repo inspiration. |
 | `processed/reports/template_library.md` | Generated template dependency and review-cadence report. | You need to know what templates depend on and what depends on them. |
 | `processed/reports/scan_coverage_cycle.md` | Generated no-rescan coverage-cycle log. | You need to know what was checked, intentionally skipped, and should be scanned next without repeating broad passes. |
+| `processed/reports/priority_content_extract_scope.md` | Generated metadata-only approval scope for a future bounded content pass. | You need candidate priority paths before any source content is read. |
 
 ## Core boundary
 

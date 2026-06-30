@@ -110,6 +110,23 @@ report presence. It does not rescan, read source contents, call GitHub, inspect
 CI logs, call models, mutate source repos, install hooks, or promote generated
 gaps to truth.
 
+Use `recommend priority-content-scope` before any bounded content pass:
+
+```powershell
+$env:PYTHONPATH='src'; python -m digital_asset_directory.cli recommend priority-content-scope --limit 200 --per-repo-limit 12
+```
+
+The command writes:
+
+```text
+processed/reports/priority_content_extract_scope.md
+processed/reports/priority_content_extract_scope.json
+processed/reports/priority_content_extract_approval_prompt.md
+```
+
+It lists candidate file paths already present in the catalog and creates a
+fresh-eyes approval prompt. It still reads no source file contents.
+
 ## Template library
 
 Use `templates check` when you need to validate DAD's reusable template library,

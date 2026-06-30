@@ -82,7 +82,7 @@ def local_source(max_file_bytes: int = 0) -> LocalSource:
     )
 
 
-def test_coverage_identifies_metadata_only_gaps_and_scan_cycle():
+def test_coverage_identifies_metadata_only_gaps_and_scan_cycle(tmp_path: Path):
     assets = [
         make_repo("dad:asset:repo-a", "git-projects/repo-a", ["AGENTS.md", "AI_FRONT_DOOR.md"]),
         make_asset("dad:asset:toc", "git-projects/repo-a/AI_TABLE_OF_CONTENTS.md"),
@@ -103,7 +103,7 @@ def test_coverage_identifies_metadata_only_gaps_and_scan_cycle():
     ]
 
     result = build_lesson_automation_coverage(
-        Path("."),
+        tmp_path,
         assets,
         [local_source(max_file_bytes=0)],
         [GitHubSource(id="github", owner="owner", enabled=False)],
@@ -135,7 +135,7 @@ def test_coverage_is_deterministic_with_fixed_generated_at():
     ]
 
     left = build_lesson_automation_coverage(
-        Path("."),
+        Path("nonexistent-hub-for-deterministic-test"),
         assets,
         [local_source(max_file_bytes=0)],
         [],
@@ -143,7 +143,7 @@ def test_coverage_is_deterministic_with_fixed_generated_at():
         generated_at=TIMESTAMP,
     )
     right = build_lesson_automation_coverage(
-        Path("."),
+        Path("nonexistent-hub-for-deterministic-test"),
         assets,
         [local_source(max_file_bytes=0)],
         [],

@@ -85,3 +85,35 @@ Default order:
 8. private-source workflow sweeps without row import.
 
 Each step remains gated by source scope, privacy, and mutation rules.
+
+## Priority Content Scope
+
+Before a bounded content extract pass, generate an approval scope from catalog
+metadata:
+
+```powershell
+$env:PYTHONPATH='src'; python -m digital_asset_directory.cli recommend priority-content-scope --limit 200 --per-repo-limit 12
+```
+
+This writes:
+
+```text
+processed/reports/priority_content_extract_scope.md
+processed/reports/priority_content_extract_scope.json
+processed/reports/priority_content_extract_approval_prompt.md
+```
+
+The scope command still does not read source file contents. It only lists
+candidate paths already present in the catalog and classifies them into
+human-review categories:
+
+- AI navigation and repo contracts;
+- schemas, contracts, and registries;
+- validators, tests, and quality gates;
+- governance, security, and privacy boundaries;
+- learning loops and pay-forward surfaces;
+- workflows, dataflow, and normalization.
+
+After this scope exists, `recommend lesson-automation-coverage` marks
+`priority_content_extracts` as `scoped_not_extracted`. Human approval is still
+required before any content is read.

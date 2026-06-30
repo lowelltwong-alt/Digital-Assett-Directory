@@ -49,6 +49,7 @@ from .lesson_automation_coverage import write_lesson_automation_coverage_outputs
 from .manual_tasks import write_manual_task_queue
 from .orphan_adapter import run_orphan_radar
 from .operational import write_operational_readiness_report
+from .priority_content_scope import write_priority_content_extract_scope_outputs
 from .proposals import (
     ProposalEngineOption,
     build_proposal_review_queue,
@@ -927,6 +928,28 @@ def recommend_lesson_automation_coverage(
             scan_id=latest_scan_id,
             scan_summary=scan_summary,
             limit=limit,
+        )
+    console.print_json(data=result)
+
+
+@recommend_app.command("priority-content-scope")
+def recommend_priority_content_scope(
+    hub: Optional[Path] = typer.Option(None),
+    limit: int = typer.Option(200, "--limit", min=1, max=1000),
+    per_repo_limit: int = typer.Option(12, "--per-repo-limit", min=1, max=50),
+) -> None:
+    """Write a metadata-only approval scope for a future bounded content extract pass."""
+    cfg = _cfg(hub=hub)
+    with CatalogDB(cfg.database_path) as db:
+        latest_scan = db.latest_scan()
+        latest_scan_id = latest_scan["scan_id"] if latest_scan else "catalog-without-scan"
+        result = write_priority_content_extract_scope_outputs(
+            cfg.repo_root,
+            db.assets(),
+            cfg.local_sources,
+            scan_id=latest_scan_id,
+            limit=limit,
+            per_repo_limit=per_repo_limit,
         )
     console.print_json(data=result)
 
