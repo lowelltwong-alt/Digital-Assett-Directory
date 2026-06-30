@@ -38,6 +38,7 @@ from .config import load_config
 from .context_pack import build_context_pack, write_context_pack
 from .database import CatalogDB
 from .governance import enforce_postflight, install_governance, scaffold_new_repo
+from .governance_map_scope import write_governance_map_adoption_scope_outputs
 from .learning import (
     add_asset_use_feedback,
     add_lesson,
@@ -1002,6 +1003,26 @@ def recommend_repo_learning_loop_scope(
         latest_scan = db.latest_scan()
         latest_scan_id = latest_scan["scan_id"] if latest_scan else "catalog-without-scan"
         result = write_repo_learning_loop_install_scope_outputs(
+            cfg.repo_root,
+            db.assets(),
+            cfg.local_sources,
+            scan_id=latest_scan_id,
+            limit=limit,
+        )
+    console.print_json(data=result)
+
+
+@recommend_app.command("governance-map-scope")
+def recommend_governance_map_scope(
+    hub: Optional[Path] = typer.Option(None),
+    limit: int = typer.Option(50, "--limit", min=1, max=200),
+) -> None:
+    """Write a generated approval scope for governance maps and child mirrors."""
+    cfg = _cfg(hub=hub)
+    with CatalogDB(cfg.database_path) as db:
+        latest_scan = db.latest_scan()
+        latest_scan_id = latest_scan["scan_id"] if latest_scan else "catalog-without-scan"
+        result = write_governance_map_adoption_scope_outputs(
             cfg.repo_root,
             db.assets(),
             cfg.local_sources,

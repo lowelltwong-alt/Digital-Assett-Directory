@@ -126,6 +126,39 @@ requires explicit repo selection and uses files-only mode:
 $env:PYTHONPATH='src'; python -m digital_asset_directory.cli agent install-learning-loop --repo "<repo-path>" --mode files-only
 ```
 
+## Governance Map Adoption Scope
+
+Before writing governance dependency maps, child mirrors, validators, tests, or
+PR disclosure sections into source repos, generate a metadata-only approval
+scope:
+
+```powershell
+$env:PYTHONPATH='src'; python -m digital_asset_directory.cli recommend governance-map-scope --limit 50
+```
+
+This writes:
+
+```text
+processed/reports/governance_map_adoption_scope.md
+processed/reports/governance_map_adoption_scope.json
+processed/reports/governance_map_adoption_approval_prompt.md
+```
+
+The command does not install the cross-repo governance dependency-map template,
+read source file contents, recurse through source filesystems, call GitHub, call
+models, or mutate source repos. It only ranks candidate repos and families from
+cataloged logical paths and existing generated metadata.
+
+It uses this review-routing formula:
+
+```text
+priority_score = 100 * (0.25*family_size_signal + 0.25*governance_gap + 0.20*downstream_likelihood + 0.15*ai_navigation_readiness + 0.10*validation_readiness + 0.05*configured_source_path)
+```
+
+The score does not prove authority, value, or approval. After this scope exists,
+`recommend lesson-automation-coverage` marks `governance_map_adoption` as
+`adoption_scope_ready` unless maps or mirrors are already observed.
+
 ## CI And Release Artifact Scope
 
 Before reading CI logs, release notes, changelogs, QA reports, dependency locks,

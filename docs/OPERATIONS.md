@@ -143,6 +143,27 @@ with:
 $env:PYTHONPATH='src'; python -m digital_asset_directory.cli agent install-learning-loop --repo "<repo-path>" --mode files-only
 ```
 
+Use `recommend governance-map-scope` before installing cross-repo governance
+dependency maps, child mirrors, validators, tests, or PR disclosure sections:
+
+```powershell
+$env:PYTHONPATH='src'; python -m digital_asset_directory.cli recommend governance-map-scope --limit 50
+```
+
+The command writes:
+
+```text
+processed/reports/governance_map_adoption_scope.md
+processed/reports/governance_map_adoption_scope.json
+processed/reports/governance_map_adoption_approval_prompt.md
+```
+
+It is metadata-only. It does not read source file contents, recurse through
+source filesystems, call GitHub, call models, mutate source repos, install
+hooks, or mark roadmap phases complete. It routes a later human choice of which
+repo family should receive the `templates/cross-repo-governance-dependency-map/`
+pattern first.
+
 Use `recommend priority-content-scope` before any bounded content pass:
 
 ```powershell

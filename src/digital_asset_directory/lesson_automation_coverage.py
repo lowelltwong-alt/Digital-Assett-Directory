@@ -343,6 +343,10 @@ def _existing_output_status(repo_root: Path) -> dict[str, bool]:
         / "processed"
         / "reports"
         / "repo_learning_loop_install_scope.json",
+        "governance_map_adoption_scope": repo_root
+        / "processed"
+        / "reports"
+        / "governance_map_adoption_scope.json",
         "background_connections": (
             repo_root / "processed" / "learning" / "background_connection_candidates.jsonl"
         ),
@@ -421,10 +425,18 @@ def _signal_family_status(
                 ),
             }
         elif family_id == "governance_map_adoption":
-            status = "partial_coverage" if governance_ready else "not_instrumented"
+            if governance_ready:
+                status = "partial_coverage"
+            elif output_status.get("governance_map_adoption_scope"):
+                status = "adoption_scope_ready"
+            else:
+                status = "not_instrumented"
             evidence = {
                 "repos_with_map_or_mirror_surface": governance_ready,
                 "cataloged_repo_count": repo_count,
+                "governance_map_adoption_scope_present": output_status.get(
+                    "governance_map_adoption_scope", False
+                ),
             }
         elif family_id == "bounded_git_history":
             status = "covered_by_existing_report" if output_status.get("archaeology") else "not_run_this_cycle"
