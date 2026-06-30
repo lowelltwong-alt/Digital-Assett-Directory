@@ -79,12 +79,25 @@ test IDs and outcomes. If those records also include `duration_seconds`,
 replacement savings:
 
 ```bash
+# Native example assumes a report-producing pytest plugin is installed.
 python -m digital_asset_directory.cli test parity \
-  --native-command "python -m pytest -q --json-report --json-report-file processed/test_parity/native.json" \
-  --shadow-command "cargo run --manifest-path rust-tests/Cargo.toml -- --report processed/test_parity/rust.jsonl" \
+  --native-command-json '["python","-m","pytest","-q","--json-report","--json-report-file","processed/test_parity/native.json"]' \
+  --shadow-command-json '["cargo","run","--manifest-path","rust-tests/Cargo.toml","--","--report","processed/test_parity/rust.jsonl"]' \
   --native-report processed/test_parity/native.json \
   --shadow-report processed/test_parity/rust.jsonl
 ```
+
+The report files may be JSON or JSONL. Each record should include `test_id`,
+`nodeid`, or `name`, plus `outcome`, `status`, or `result`:
+
+```json
+{"tests":[{"test_id":"tests/test_example.py::test_case","outcome":"passed","duration_seconds":0.12}]}
+```
+
+If a native pytest plugin such as `pytest-json-report` is installed in the local
+environment, it can be used to produce the native JSON report. It is not a
+project dependency by default, so do not assume `--json-report` is available in
+fresh environments.
 
 Interpretation:
 

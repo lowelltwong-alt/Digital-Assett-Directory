@@ -32,6 +32,19 @@ def _command_text(command: CommandSpec) -> str:
     return " ".join(shlex.quote(str(part)) for part in command)
 
 
+def infer_native_authority(command: CommandSpec) -> str:
+    args = _command_args(command)
+    lowered = [part.lower() for part in args]
+    if not lowered:
+        return "native_command_candidate"
+    executable = Path(lowered[0]).name
+    if executable in {"pytest", "pytest.exe"}:
+        return "pytest"
+    if len(lowered) >= 3 and executable.startswith("python") and lowered[1:3] == ["-m", "pytest"]:
+        return "pytest"
+    return "native_command_candidate"
+
+
 def _tail(value: str, limit: int = 4000) -> str:
     if len(value) <= limit:
         return value
@@ -49,6 +62,18 @@ def _file_fingerprint(path: Path | None) -> tuple[int, int] | None:
         return None
     stat = path.stat()
     return (stat.st_mtime_ns, stat.st_size)
+
+
+def _report_error_result(errors: list[str]) -> dict[str, Any]:
+    return {
+        "used": True,
+        "status": "report_integrity_failed",
+        "integrity_errors": errors,
+        "native_only": [],
+        "shadow_only": [],
+        "outcome_mismatches": [],
+        "duration_comparison": {"used": False, "status": "not_available"},
+    }
 
 
 def run_command(command: CommandSpec, cwd: Path, timeout_seconds: int) -> dict[str, Any]:
@@ -382,21 +407,18 @@ def build_parity_result(
     shadow_report: Path | None = None,
     report_integrity_errors: list[str] | None = None,
     session_id: str | None = None,
+    native_authority: str | None = None,
 ) -> dict[str, Any]:
     if report_integrity_errors:
-        structured = {
-            "used": True,
-            "status": "report_integrity_failed",
-            "integrity_errors": report_integrity_errors,
-            "native_only": [],
-            "shadow_only": [],
-            "outcome_mismatches": [],
-            "duration_comparison": {"used": False, "status": "not_available"},
-        }
+        structured = _report_error_result(report_integrity_errors)
     else:
-        native_observations = load_structured_observations(native_report) if native_report else None
-        shadow_observations = load_structured_observations(shadow_report) if shadow_report else None
-        structured = compare_structured_reports(native_observations, shadow_observations)
+        try:
+            native_observations = load_structured_observations(native_report) if native_report else None
+            shadow_observations = load_structured_observations(shadow_report) if shadow_report else None
+        except (OSError, ValueError, JSONDecodeError) as exc:
+            structured = _report_error_result([f"structured report parse failed: {exc}"])
+        else:
+            structured = compare_structured_reports(native_observations, shadow_observations)
     status = _parity_status(native_result, shadow_result, structured)
     exit_code = 0 if status == "matched_pass" else 1
     return {
@@ -405,7 +427,7 @@ def build_parity_result(
         "created_at": utc_now(),
         "repo_root": str(repo_root),
         "session_id": session_id,
-        "native_authority": "pytest",
+        "native_authority": native_authority or "native_command_candidate",
         "shadow_authority": "candidate_only",
         "candidate_only": True,
         "parity_status": status,
@@ -471,6 +493,7 @@ def run_test_parity(
     session_id: str | None = None,
 ) -> dict[str, Any]:
     repo_root = repo_root.resolve()
+    run_started_ns = time.time_ns()
     native_report_path = _repo_path(repo_root, native_report)
     shadow_report_path = _repo_path(repo_root, shadow_report)
     report_before = {
@@ -492,6 +515,8 @@ def run_test_parity(
         after = _file_fingerprint(path)
         if after is None:
             report_integrity_errors.append(f"{label}_report was not produced: {path}")
+        elif after[0] < run_started_ns:
+            report_integrity_errors.append(f"{label}_report appears older than this run: {path}")
         elif report_before[label] == after:
             report_integrity_errors.append(f"{label}_report appears stale or unchanged: {path}")
     result = build_parity_result(
@@ -502,6 +527,7 @@ def run_test_parity(
         shadow_report=shadow_report_path,
         report_integrity_errors=report_integrity_errors,
         session_id=session_id,
+        native_authority=infer_native_authority(native_command),
     )
     if audit:
         result["audit_path"] = str(append_parity_audit(repo_root, result, audit_path))

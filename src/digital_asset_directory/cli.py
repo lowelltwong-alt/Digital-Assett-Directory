@@ -154,6 +154,20 @@ def _repo_path(repo_root: Path, path: Path | None) -> Path | None:
     return path if path.is_absolute() else repo_root / path
 
 
+def _json_command(value: Optional[str], option_name: str) -> list[str] | None:
+    if value is None:
+        return None
+    try:
+        parsed = json.loads(value)
+    except json.JSONDecodeError as exc:
+        raise typer.BadParameter(f"{option_name} must be a JSON array of arguments.") from exc
+    if not isinstance(parsed, list) or not parsed:
+        raise typer.BadParameter(f"{option_name} must be a non-empty JSON array of arguments.")
+    if not all(isinstance(item, str | int | float | bool) for item in parsed):
+        raise typer.BadParameter(f"{option_name} arguments must be strings, numbers, or booleans.")
+    return [str(item) for item in parsed]
+
+
 @app.command()
 def scan(
     config: Optional[Path] = typer.Option(None),
@@ -244,12 +258,22 @@ def test_parity_command(
     native_command: str = typer.Option(
         "python -m pytest -q",
         "--native-command",
-        help="Authoritative native pytest command.",
+        help="Native command string. Prefer --native-command-json for paths with spaces.",
     ),
-    shadow_command: str = typer.Option(
-        ...,
+    native_command_json: Optional[str] = typer.Option(
+        None,
+        "--native-command-json",
+        help='Native command argv as JSON, for example ["python","-m","pytest","-q"].',
+    ),
+    shadow_command: Optional[str] = typer.Option(
+        None,
         "--shadow-command",
-        help="Candidate Rust shadow command, for example cargo test.",
+        help="Candidate shadow command string. Prefer --shadow-command-json for paths with spaces.",
+    ),
+    shadow_command_json: Optional[str] = typer.Option(
+        None,
+        "--shadow-command-json",
+        help='Candidate shadow command argv as JSON, for example ["cargo","test"].',
     ),
     timeout_seconds: int = typer.Option(120, min=1, max=7200),
     native_report: Optional[Path] = typer.Option(None, "--native-report"),
@@ -261,10 +285,14 @@ def test_parity_command(
 ) -> None:
     """Run native pytest and a candidate Rust shadow path, then compare and audit."""
     cfg = _cfg(hub=hub)
+    native_spec = _json_command(native_command_json, "--native-command-json") or native_command
+    shadow_spec = _json_command(shadow_command_json, "--shadow-command-json") or shadow_command
+    if shadow_spec is None:
+        raise typer.BadParameter("Provide --shadow-command or --shadow-command-json.")
     result = run_test_parity(
         cfg.repo_root,
-        native_command=native_command,
-        shadow_command=shadow_command,
+        native_command=native_spec,
+        shadow_command=shadow_spec,
         timeout_seconds=timeout_seconds,
         native_report=native_report,
         shadow_report=shadow_report,
