@@ -7,14 +7,21 @@ import pytest
 
 from digital_asset_directory.config import LocalSource
 from digital_asset_directory.lesson_automation_coverage import build_lesson_automation_coverage
-from digital_asset_directory.models import AssetRecord, CounterfactualLessonRecord
+from digital_asset_directory.models import (
+    AssetRecord,
+    CounterfactualLessonRecord,
+    LearningRulePromotionCandidateRecord,
+)
 from digital_asset_directory.priority_content_lessons import (
     build_priority_content_lesson_candidates,
     build_priority_content_lesson_review_queue,
     build_priority_content_lesson_review_template,
+    build_learning_rule_promotion_candidates,
     load_priority_content_observations,
+    learning_rule_promotion_summary,
     summarize_priority_content_lesson_reviews,
     update_priority_content_lesson_review_file,
+    write_learning_rule_promotion_candidate_outputs,
     write_priority_content_lesson_outputs,
     write_priority_content_lesson_review_template_outputs,
 )
@@ -236,3 +243,111 @@ def test_priority_content_lesson_review_template_queue_and_label(tmp_path: Path)
     )
     assert reviewed_queue["count"] == 1
     assert summarize_priority_content_lesson_reviews([updated])["promotion_gate_complete"] is False
+
+
+def test_learning_rule_promotion_candidates_remain_generated_and_gated(tmp_path: Path):
+    candidates = build_priority_content_lesson_candidates(
+        [
+            observation("obs:1"),
+            observation("obs:2", relative_path="AI_FRONT_DOOR.md"),
+        ],
+        scan_id=SCAN_ID,
+        generated_at=TIMESTAMP,
+    )
+    reviews = build_priority_content_lesson_review_template(candidates)
+    accepted = reviews[0].model_copy(
+        update={
+            "reviewer": "Lowell",
+            "reviewed_at": TIMESTAMP,
+            "applicability": "valid_context",
+            "usefulness": "useful",
+            "safety": "safe",
+            "actionability": "actionable",
+            "decision": "accept_for_review_use",
+            "useful_example_note": "Good candidate when context matches.",
+            "review_status": "reviewed",
+        }
+    )
+    accepted_reviews = [accepted]
+
+    records = build_learning_rule_promotion_candidates(
+        candidates,
+        accepted_reviews,
+        scan_id=SCAN_ID,
+        generated_at=TIMESTAMP,
+    )
+
+    assert len(records) == 1
+    record = records[0]
+    LearningRulePromotionCandidateRecord.model_validate(record.model_dump(mode="json"))
+    assert record.promotion_readiness == "eligible_for_human_promotion"
+    assert record.registry_mutated is False
+    assert record.proposed_rule.review_status == "generated_candidate"
+    assert record.proposed_rule.enforcement_level == "surface"
+    assert record.required_human_gates
+    assert record.proposed_rule.applies_when
+    assert record.proposed_rule.does_not_apply_when
+    assert record.proposed_rule.danger_if_ignored
+    assert learning_rule_promotion_summary(records)["registry_mutated"] is False
+
+    result = write_learning_rule_promotion_candidate_outputs(
+        tmp_path,
+        candidates,
+        accepted_reviews,
+        scan_id=SCAN_ID,
+        generated_at=TIMESTAMP,
+    )
+    assert Path(result["outputs"]["promotion_candidates"]).exists()
+    assert Path(result["outputs"]["report_markdown"]).exists()
+
+    coverage = build_lesson_automation_coverage(
+        tmp_path,
+        [make_asset("dad:asset:repo", "git-projects/repo-a", asset_type="repository")],
+        [local_source()],
+        [],
+        scan_id=SCAN_ID,
+        generated_at=TIMESTAMP,
+    )
+    by_family = {item["signal_family_id"]: item for item in coverage["signal_families"]}
+    assert by_family["priority_content_extracts"]["current_status"] == "promotion_candidates_packaged"
+    assert (
+        by_family["priority_content_extracts"]["evidence"][
+            "learning_rule_promotion_candidates_present"
+        ]
+        is True
+    )
+
+
+def test_learning_rule_promotion_candidates_block_unclean_reviews():
+    candidates = build_priority_content_lesson_candidates(
+        [
+            observation("obs:1"),
+            observation("obs:2", relative_path="AI_FRONT_DOOR.md"),
+        ],
+        scan_id=SCAN_ID,
+        generated_at=TIMESTAMP,
+    )
+    review = build_priority_content_lesson_review_template(candidates)[0].model_copy(
+        update={
+            "reviewer": "Lowell",
+            "reviewed_at": TIMESTAMP,
+            "applicability": "valid_context",
+            "usefulness": "useful",
+            "safety": "needs_more_review",
+            "actionability": "actionable",
+            "decision": "accept_for_review_use",
+            "promotion_blocker_note": "Needs a narrower context.",
+            "review_status": "reviewed",
+        }
+    )
+
+    records = build_learning_rule_promotion_candidates(
+        candidates,
+        [review],
+        scan_id=SCAN_ID,
+        generated_at=TIMESTAMP,
+    )
+
+    assert records[0].promotion_readiness == "blocked"
+    assert records[0].blockers
+    assert records[0].registry_mutated is False

@@ -29,6 +29,8 @@
     "root_cause_hypothesis": "schemas/root-cause-hypothesis.schema.json",
     "counterfactual_lesson": "schemas/counterfactual-lesson.schema.json",
     "priority_content_lesson_review": "schemas/priority-content-lesson-review.schema.json",
+    "learning_rule_promotion_candidate": "schemas/learning-rule-promotion-candidate.schema.json",
+    "scan_cycle_event": "schemas/scan-cycle-event.schema.json",
     "repo_learning_event": "schemas/repo-learning-event.schema.json",
     "attention_seed": "schemas/attention-seed.schema.json",
     "connection_candidate": "schemas/connection-candidate.schema.json",

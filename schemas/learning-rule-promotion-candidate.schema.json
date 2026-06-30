@@ -1,0 +1,49 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://digital-asset-directory.local/schemas/learning-rule-promotion-candidate.schema.json",
+  "title": "LearningRulePromotionCandidateRecord",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "promotion_candidate_id",
+    "source_lesson_candidate_id",
+    "source_review_id",
+    "proposed_rule",
+    "promotion_readiness",
+    "blockers",
+    "required_human_gates",
+    "registry_mutated",
+    "authority_boundary",
+    "evidence",
+    "generated_at",
+    "scan_id",
+    "review_status"
+  ],
+  "properties": {
+    "schema_version": { "type": "string" },
+    "promotion_candidate_id": { "type": "string", "minLength": 1 },
+    "source_lesson_candidate_id": { "type": "string", "minLength": 1 },
+    "source_review_id": { "type": "string", "minLength": 1 },
+    "proposed_rule": { "type": "object" },
+    "promotion_readiness": {
+      "type": "string",
+      "enum": ["eligible_for_human_promotion", "blocked", "needs_more_evidence"]
+    },
+    "blockers": { "type": "array", "items": { "type": "string" } },
+    "required_human_gates": {
+      "type": "array",
+      "items": { "type": "string" },
+      "minItems": 1
+    },
+    "registry_mutated": { "const": false },
+    "authority_boundary": { "type": "string", "minLength": 1 },
+    "evidence": { "type": "object" },
+    "generated_at": { "type": "string" },
+    "scan_id": { "type": "string" },
+    "review_status": {
+      "type": "string",
+      "enum": ["generated_candidate", "reviewed", "rejected"]
+    }
+  }
+}

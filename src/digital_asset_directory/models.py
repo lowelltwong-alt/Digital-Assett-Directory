@@ -653,6 +653,48 @@ class PriorityContentLessonReviewRecord(BaseModel):
     review_status: Literal["generated_candidate", "reviewed", "rejected"] = "generated_candidate"
 
 
+class LearningRulePromotionCandidateRecord(BaseModel):
+    schema_version: str = "0.1.0"
+    promotion_candidate_id: str
+    source_lesson_candidate_id: str = Field(min_length=1)
+    source_review_id: str = Field(min_length=1)
+    proposed_rule: LearningRuleRecord
+    promotion_readiness: Literal[
+        "eligible_for_human_promotion",
+        "blocked",
+        "needs_more_evidence",
+    ]
+    blockers: list[str] = Field(default_factory=list)
+    required_human_gates: list[str] = Field(min_length=1)
+    registry_mutated: Literal[False] = False
+    authority_boundary: str = Field(min_length=1)
+    evidence: dict[str, Any] = Field(default_factory=dict)
+    generated_at: str
+    scan_id: str
+    review_status: Literal["generated_candidate", "reviewed", "rejected"] = "generated_candidate"
+
+
+class ScanCycleEventRecord(BaseModel):
+    schema_version: str = "0.1.0"
+    event_id: str
+    event_type: Literal["coverage_cycle_run"] = "coverage_cycle_run"
+    pass_type: str = Field(min_length=1)
+    methodology_version: str = Field(min_length=1)
+    scan_id: str
+    generated_at: str
+    checked_inputs: list[str] = Field(min_length=1)
+    intentionally_not_checked: list[str] = Field(default_factory=list)
+    signal_family_statuses: list[dict[str, Any]] = Field(min_length=1)
+    recommended_next_signal_family_ids: list[str] = Field(default_factory=list)
+    blocked_or_gated_signal_family_ids: list[str] = Field(default_factory=list)
+    next_scan_guidance: list[str] = Field(default_factory=list)
+    authority_boundary: str = Field(min_length=1)
+    applies_when: list[str] = Field(min_length=1)
+    does_not_apply_when: list[str] = Field(min_length=1)
+    danger_if_misapplied: str = Field(min_length=1)
+    review_status: Literal["generated_candidate", "reviewed", "rejected"] = "generated_candidate"
+
+
 class RepoLearningEventRecord(BaseModel):
     schema_version: str = "0.1.0"
     event_id: str

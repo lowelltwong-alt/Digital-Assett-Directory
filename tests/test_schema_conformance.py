@@ -17,6 +17,7 @@ from digital_asset_directory.models import (
     EscalationPacketRecord,
     ExpansionMapRecord,
     FailureSignalRecord,
+    LearningRulePromotionCandidateRecord,
     LearningLoopRecord,
     LearningRuleRecord,
     PriorityContentLessonReviewRecord,
@@ -24,6 +25,7 @@ from digital_asset_directory.models import (
     RepoBuildoutRecommendationRecord,
     RepoTimelineEventRecord,
     RootCauseHypothesisRecord,
+    ScanCycleEventRecord,
     SemanticEvolutionRecord,
     TemplateRecord,
     WorktreeAttemptRecord,
@@ -270,6 +272,67 @@ def test_learning_rule_model_dump_matches_registered_schema():
     )
 
     validate_registered_schema("learning_rule", record.model_dump(mode="json"))
+
+
+def test_learning_rule_promotion_candidate_model_dump_matches_registered_schema():
+    proposed_rule = LearningRuleRecord(
+        rule_id="learning-rule:generated-test",
+        title="Generated candidate rule",
+        summary="A generated candidate rule that still needs human promotion.",
+        trigger_terms=["priority-content", "lesson-review"],
+        trigger_path_patterns=[],
+        context_tags=["human_gate"],
+        applies_when=["The reviewed context still matches."],
+        does_not_apply_when=["The source lesson cannot be verified."],
+        required_actions=["Verify context before promotion."],
+        danger_if_ignored="A rule may be promoted without source context.",
+        evidence=["dad:lesson:test", "dad:review:test"],
+        enforcement_level="surface",
+        review_status="generated_candidate",
+    )
+    record = LearningRulePromotionCandidateRecord(
+        promotion_candidate_id="dad:learning-rule-promotion-candidate:test",
+        source_lesson_candidate_id="dad:lesson:test",
+        source_review_id="dad:review:test",
+        proposed_rule=proposed_rule,
+        promotion_readiness="eligible_for_human_promotion",
+        blockers=[],
+        required_human_gates=["Human approval before registry edit."],
+        registry_mutated=False,
+        authority_boundary="Generated candidate only.",
+        evidence={"methodology_version": "learning-rule-promotion-candidate-v0.1"},
+        generated_at="2026-01-01T00:00:00+00:00",
+        scan_id="dad:scan:test",
+    )
+
+    validate_registered_schema("learning_rule_promotion_candidate", record.model_dump(mode="json"))
+
+
+def test_scan_cycle_event_model_dump_matches_registered_schema():
+    record = ScanCycleEventRecord(
+        event_id="dad:scan-cycle-event:test",
+        pass_type="no_rescan_catalog_coverage",
+        methodology_version="lesson-automation-coverage-v0.1",
+        scan_id="dad:scan:test",
+        generated_at="2026-01-01T00:00:00+00:00",
+        checked_inputs=["state/catalog.sqlite3 assets table"],
+        intentionally_not_checked=["source file contents"],
+        signal_family_statuses=[
+            {
+                "signal_family_id": "priority_content_extracts",
+                "current_status": "scoped_not_extracted",
+            }
+        ],
+        recommended_next_signal_family_ids=["priority_content_extracts"],
+        blocked_or_gated_signal_family_ids=["priority_content_extracts"],
+        next_scan_guidance=["priority_content_extracts: run only after approval"],
+        authority_boundary="Generated routing event only.",
+        applies_when=["A future agent needs the scan cycle history."],
+        does_not_apply_when=["The user authorizes a fresh broad scan."],
+        danger_if_misapplied="The event is not permission to scan.",
+    )
+
+    validate_registered_schema("scan_cycle_event", record.model_dump(mode="json"))
 
 
 def test_contextual_archaeology_model_dumps_match_registered_schemas():

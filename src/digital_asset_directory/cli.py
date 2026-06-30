@@ -55,6 +55,7 @@ from .priority_content_lessons import (
     load_priority_content_lesson_reviews,
     summarize_priority_content_lesson_reviews,
     update_priority_content_lesson_review_file,
+    write_learning_rule_promotion_candidate_outputs,
     write_priority_content_lesson_outputs,
     write_priority_content_lesson_review_template_outputs,
 )
@@ -1072,6 +1073,48 @@ def recommend_priority_content_lesson_review_summary(
         console.print(str(exc))
         raise typer.Exit(2) from exc
     console.print_json(data={"review_file": str(path), "summary": summary})
+
+
+@recommend_app.command("priority-content-lesson-promotion-candidates")
+def recommend_priority_content_lesson_promotion_candidates(
+    candidates_file: Optional[Path] = typer.Option(None, "--candidates-file"),
+    review_file: Optional[Path] = typer.Option(None, "--review-file"),
+    hub: Optional[Path] = typer.Option(None),
+    limit: int = typer.Option(100, "--limit", min=1, max=500),
+) -> None:
+    """Package reviewed priority-content lessons as generated learning-rule promotion candidates."""
+    cfg = _cfg(hub=hub)
+    candidates_path = candidates_file or (
+        cfg.repo_root / "processed" / "learning" / "priority_content_lesson_candidates.jsonl"
+    )
+    reviews_path = review_file or (
+        cfg.repo_root / "processed" / "learning" / "priority_content_lesson_review_template.jsonl"
+    )
+    if not candidates_path.is_absolute():
+        candidates_path = cfg.repo_root / candidates_path
+    if not reviews_path.is_absolute():
+        reviews_path = cfg.repo_root / reviews_path
+    with CatalogDB(cfg.database_path) as db:
+        latest_scan = db.latest_scan()
+        latest_scan_id = latest_scan["scan_id"] if latest_scan else "catalog-without-scan"
+    try:
+        result = write_learning_rule_promotion_candidate_outputs(
+            cfg.repo_root,
+            load_priority_content_lesson_candidates(candidates_path),
+            load_priority_content_lesson_reviews(reviews_path),
+            scan_id=latest_scan_id,
+            limit=limit,
+        )
+    except ValueError as exc:
+        console.print(str(exc))
+        raise typer.Exit(2) from exc
+    console.print_json(
+        data={
+            "candidates_file": str(candidates_path),
+            "review_file": str(reviews_path),
+            **result,
+        }
+    )
 
 
 @recommend_app.command("priority-content-lesson-review-queue")

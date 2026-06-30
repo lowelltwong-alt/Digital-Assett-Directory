@@ -16,6 +16,7 @@ processed/reports/lesson_automation_coverage.md
 processed/reports/lesson_automation_coverage.json
 processed/reports/scan_coverage_cycle.md
 processed/reports/scan_coverage_cycle.json
+processed/learning/scan_cycle_events.jsonl
 ```
 
 ## What It Checks
@@ -46,6 +47,11 @@ agent. It records:
 - which signal families are next in the cycle;
 - which next steps require human approval;
 - stop conditions for broad scans, external APIs, and downstream repo mutation.
+
+`processed/learning/scan_cycle_events.jsonl` is the append-only generated event
+trail. It records each coverage run as a `ScanCycleEventRecord`, including the
+checked inputs, intentionally skipped inputs, signal-family statuses,
+recommended next signal families, gated families, and context boundaries.
 
 Use the log as a routing aid, not as proof that a repo has no value. A missing
 surface means DAD has not observed it yet.
@@ -223,3 +229,25 @@ $env:PYTHONPATH='src'; python -m digital_asset_directory.cli recommend priority-
 Review labels are not deterministic learning rules. The promotion gate remains
 separate and must not silently convert accepted review-use examples into
 preflight defaults.
+
+## Learning Rule Promotion Candidates
+
+After priority content lesson candidates have been reviewed, package accepted
+review-use labels into generated promotion candidates:
+
+```powershell
+$env:PYTHONPATH='src'; python -m digital_asset_directory.cli recommend priority-content-lesson-promotion-candidates --limit 100
+```
+
+This writes:
+
+```text
+processed/learning/learning_rule_promotion_candidates.jsonl
+processed/reports/learning_rule_promotion_candidates.md
+processed/reports/learning_rule_promotion_candidates.json
+```
+
+Promotion candidates are still not reviewed learning rules. They carry a
+proposed `LearningRuleRecord`, blockers, required human gates, and
+`registry_mutated=false`. A separate human-approved registry edit is required
+before any candidate can affect preflight or midflight behavior.

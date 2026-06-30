@@ -12,6 +12,8 @@ processed/alerts/alerts.jsonl
 processed/alerts/alert_inbox.md
 processed/reports/scan_summary.md
 processed/context_packs/<timestamp>-<slug>.md
+processed/learning/scan_cycle_events.jsonl
+processed/learning/learning_rule_promotion_candidates.jsonl
 state/catalog.sqlite3
 audit/events/audit.jsonl
 ```
@@ -103,12 +105,18 @@ processed/reports/lesson_automation_coverage.md
 processed/reports/lesson_automation_coverage.json
 processed/reports/scan_coverage_cycle.md
 processed/reports/scan_coverage_cycle.json
+processed/learning/scan_cycle_events.jsonl
 ```
 
 It reads current catalog records, scan metadata, config metadata, and generated
 report presence. It does not rescan, read source contents, call GitHub, inspect
 CI logs, call models, mutate source repos, install hooks, or promote generated
 gaps to truth.
+
+`processed/reports/scan_coverage_cycle.md` is the latest handoff. The append-only
+`processed/learning/scan_cycle_events.jsonl` file is the generated event trail
+that lets later agents see what prior passes checked, skipped, and recommended
+next.
 
 Use `recommend priority-content-scope` before any bounded content pass:
 
@@ -167,6 +175,16 @@ Apply labels only after human approval with
 `recommend priority-content-lesson-review-summary`. Accepted review-use examples
 remain candidates; promotion to deterministic learning rules is a separate
 future gate.
+
+After review, package generated promotion candidates without editing the rule
+registry:
+
+```powershell
+$env:PYTHONPATH='src'; python -m digital_asset_directory.cli recommend priority-content-lesson-promotion-candidates --limit 100
+```
+
+This writes `processed/learning/learning_rule_promotion_candidates.jsonl` plus
+markdown/JSON reports. It does not mutate `registry/learning-rule-registry.json`.
 
 ## Template library
 

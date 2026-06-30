@@ -37,9 +37,11 @@
     "processed/reports/template_library.md",
     "processed/reports/operational_readiness.md",
     "processed/reports/scan_coverage_cycle.md",
+    "processed/learning/scan_cycle_events.jsonl",
     "processed/reports/priority_content_extract_scope.md",
     "processed/learning/priority_content_observations.jsonl",
-    "processed/learning/priority_content_lesson_candidates.jsonl"
+    "processed/learning/priority_content_lesson_candidates.jsonl",
+    "processed/learning/learning_rule_promotion_candidates.jsonl"
   ],
   "registries": {
     "source_of_truth": "registry/source-of-truth.json",
@@ -56,6 +58,8 @@
     "templates": "registry/template-registry.json",
     "schemas": "registry/schema-registry.json",
     "priority_content_lesson_review_schema": "schemas/priority-content-lesson-review.schema.json",
+    "learning_rule_promotion_candidate_schema": "schemas/learning-rule-promotion-candidate.schema.json",
+    "scan_cycle_event_schema": "schemas/scan-cycle-event.schema.json",
     "capabilities": "registry/capability-registry.json",
     "needs": "registry/need-registry.json",
     "data_dictionary": "docs/DATA_DICTIONARY.md",

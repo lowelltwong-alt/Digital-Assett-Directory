@@ -175,8 +175,18 @@ def test_writer_creates_generated_reports_only_under_processed(tmp_path: Path):
         "coverage_json",
         "scan_cycle_markdown",
         "scan_cycle_json",
+        "scan_cycle_events",
     }
-    assert all(Path(path).is_relative_to(tmp_path / "processed" / "reports") for path in outputs.values())
+    assert all(str(path).startswith(str(tmp_path / "processed")) for path in outputs.values())
     payload = json.loads(Path(outputs["scan_cycle_json"]).read_text(encoding="utf-8"))
     assert payload["pass_type"] == "no_rescan_catalog_coverage"
     assert "GitHub PR/issue APIs" in payload["intentionally_not_checked"]
+    events = [
+        json.loads(line)
+        for line in Path(outputs["scan_cycle_events"]).read_text(encoding="utf-8").splitlines()
+        if line.strip()
+    ]
+    assert len(events) == 1
+    assert events[0]["event_type"] == "coverage_cycle_run"
+    assert events[0]["recommended_next_signal_family_ids"]
+    assert events[0]["authority_boundary"]

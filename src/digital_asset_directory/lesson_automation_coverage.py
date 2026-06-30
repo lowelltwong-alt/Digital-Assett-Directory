@@ -5,9 +5,10 @@ from pathlib import Path, PurePosixPath
 from typing import Any
 
 from .config import GitHubSource, LocalSource
-from .models import AssetRecord
+from .ids import stable_id
+from .models import AssetRecord, ScanCycleEventRecord
 from .repo_buildout import build_repo_groups
-from .utils import atomic_write_text, json_dumps, utc_now
+from .utils import append_jsonl, atomic_write_text, json_dumps, utc_now
 
 METHODOLOGY_VERSION = "lesson-automation-coverage-v0.1"
 AUTHORITY_BOUNDARY = (
@@ -327,6 +328,10 @@ def _existing_output_status(repo_root: Path) -> dict[str, bool]:
         / "processed"
         / "learning"
         / "priority_content_lesson_candidates.jsonl",
+        "learning_rule_promotion_candidates": repo_root
+        / "processed"
+        / "learning"
+        / "learning_rule_promotion_candidates.jsonl",
         "archaeology": repo_root / "processed" / "reports" / "worktree_archaeology.md",
         "root_cause_lessons": repo_root / "processed" / "learning" / "counterfactual_lessons.jsonl",
         "semantic_evolution": repo_root / "processed" / "learning" / "semantic_evolution_candidates.jsonl",
@@ -369,7 +374,9 @@ def _signal_family_status(
             status = "covered_by_current_catalog" if repo_count else "missing_catalog"
             evidence = {"cataloged_repo_count": repo_count}
         elif family_id == "priority_content_extracts":
-            if output_status.get("priority_content_lesson_candidates"):
+            if output_status.get("learning_rule_promotion_candidates"):
+                status = "promotion_candidates_packaged"
+            elif output_status.get("priority_content_lesson_candidates"):
                 status = "lesson_candidates_synthesized"
             elif output_status.get("priority_content_observations"):
                 status = "extracted_candidate_observations_present"
@@ -386,6 +393,9 @@ def _signal_family_status(
                 ),
                 "priority_content_lesson_candidates_present": output_status.get(
                     "priority_content_lesson_candidates", False
+                ),
+                "learning_rule_promotion_candidates_present": output_status.get(
+                    "learning_rule_promotion_candidates", False
                 ),
             }
         elif family_id == "repo_learning_events":
@@ -438,6 +448,75 @@ def _signal_family_status(
             }
         )
     return sorted(statuses, key=lambda item: int(item["cycle_order"]))
+
+
+def _needs_followup(status: str) -> bool:
+    complete_statuses = {
+        "covered_by_current_catalog",
+        "covered_by_existing_report",
+        "promotion_candidates_packaged",
+    }
+    return status not in complete_statuses
+
+
+def build_scan_cycle_event(
+    scan_cycle_log: dict[str, Any],
+    *,
+    generated_at: str,
+    scan_id: str,
+) -> ScanCycleEventRecord:
+    signal_statuses = [
+        {
+            "signal_family_id": entry["signal_family_id"],
+            "label": entry["label"],
+            "cycle_order": entry["cycle_order"],
+            "current_status": entry["current_status"],
+            "requires_human_approval": entry["requires_human_approval"],
+            "next_action": entry["next_action"],
+        }
+        for entry in scan_cycle_log["cycle_entries"]
+    ]
+    next_families = [
+        entry["signal_family_id"]
+        for entry in signal_statuses
+        if _needs_followup(str(entry["current_status"]))
+    ]
+    gated = [
+        entry["signal_family_id"]
+        for entry in signal_statuses
+        if entry["requires_human_approval"] and _needs_followup(str(entry["current_status"]))
+    ]
+    next_guidance = [
+        f"{entry['signal_family_id']}: {entry['next_action']}"
+        for entry in signal_statuses
+        if entry["signal_family_id"] in set(next_families[:5])
+    ]
+    return ScanCycleEventRecord(
+        event_id=stable_id("scan-cycle-event", scan_id, generated_at, scan_cycle_log["pass_type"]),
+        pass_type=scan_cycle_log["pass_type"],
+        methodology_version=scan_cycle_log["methodology_version"],
+        scan_id=scan_id,
+        generated_at=generated_at,
+        checked_inputs=list(scan_cycle_log["checked_inputs"]),
+        intentionally_not_checked=list(scan_cycle_log["intentionally_not_checked"]),
+        signal_family_statuses=signal_statuses,
+        recommended_next_signal_family_ids=next_families,
+        blocked_or_gated_signal_family_ids=gated,
+        next_scan_guidance=next_guidance,
+        authority_boundary=AUTHORITY_BOUNDARY,
+        applies_when=[
+            "A future agent needs to know what lesson-automation signal families were checked in prior passes.",
+            "A future agent is selecting the next scan family without repeating broad scans.",
+        ],
+        does_not_apply_when=[
+            "The user has explicitly authorized a fresh broad scan.",
+            "The target source is outside the approved local source scope.",
+        ],
+        danger_if_misapplied=(
+            "A generated scan-cycle event can be mistaken for source truth or permission to scan. "
+            "It is only a routing log and does not authorize reading content, calling APIs, or mutating repos."
+        ),
+    )
 
 
 def _repo_next_actions(record: dict[str, Any], source: LocalSource | None) -> list[str]:
@@ -537,6 +616,11 @@ def build_lesson_automation_coverage(
             "Stop if private row-level data would be imported into DAD.",
         ],
     }
+    scan_cycle_event = build_scan_cycle_event(
+        scan_cycle_log,
+        generated_at=generated,
+        scan_id=scan_id,
+    )
     return {
         "methodology_version": METHODOLOGY_VERSION,
         "generated_at": generated,
@@ -559,6 +643,7 @@ def build_lesson_automation_coverage(
         "signal_families": signal_families,
         "repo_records": limited_records,
         "scan_cycle_log": scan_cycle_log,
+        "scan_cycle_event": scan_cycle_event.model_dump(mode="json"),
         "review_status": "generated_candidate",
     }
 
@@ -708,11 +793,13 @@ def write_lesson_automation_coverage_outputs(
         "coverage_json": reports_dir / "lesson_automation_coverage.json",
         "scan_cycle_markdown": reports_dir / "scan_coverage_cycle.md",
         "scan_cycle_json": reports_dir / "scan_coverage_cycle.json",
+        "scan_cycle_events": repo_root / "processed" / "learning" / "scan_cycle_events.jsonl",
     }
     atomic_write_text(paths["coverage_markdown"], coverage_markdown(result))
     atomic_write_text(paths["coverage_json"], json_dumps(result, pretty=True) + "\n")
     atomic_write_text(paths["scan_cycle_markdown"], scan_cycle_markdown(result))
     atomic_write_text(paths["scan_cycle_json"], json_dumps(result["scan_cycle_log"], pretty=True) + "\n")
+    append_jsonl(paths["scan_cycle_events"], result["scan_cycle_event"])
     return {
         "output_type": "generated_candidate_report",
         "review_status": "generated_candidate",

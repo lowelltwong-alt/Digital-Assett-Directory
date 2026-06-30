@@ -1,0 +1,78 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://digital-asset-directory.local/schemas/scan-cycle-event.schema.json",
+  "title": "ScanCycleEventRecord",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "event_id",
+    "event_type",
+    "pass_type",
+    "methodology_version",
+    "scan_id",
+    "generated_at",
+    "checked_inputs",
+    "intentionally_not_checked",
+    "signal_family_statuses",
+    "recommended_next_signal_family_ids",
+    "blocked_or_gated_signal_family_ids",
+    "next_scan_guidance",
+    "authority_boundary",
+    "applies_when",
+    "does_not_apply_when",
+    "danger_if_misapplied",
+    "review_status"
+  ],
+  "properties": {
+    "schema_version": { "const": "0.1.0" },
+    "event_id": { "type": "string", "minLength": 1 },
+    "event_type": { "const": "coverage_cycle_run" },
+    "pass_type": { "type": "string", "minLength": 1 },
+    "methodology_version": { "type": "string", "minLength": 1 },
+    "scan_id": { "type": "string", "minLength": 1 },
+    "generated_at": { "type": "string", "minLength": 1 },
+    "checked_inputs": {
+      "type": "array",
+      "items": { "type": "string" },
+      "minItems": 1
+    },
+    "intentionally_not_checked": {
+      "type": "array",
+      "items": { "type": "string" }
+    },
+    "signal_family_statuses": {
+      "type": "array",
+      "items": { "type": "object" },
+      "minItems": 1
+    },
+    "recommended_next_signal_family_ids": {
+      "type": "array",
+      "items": { "type": "string" }
+    },
+    "blocked_or_gated_signal_family_ids": {
+      "type": "array",
+      "items": { "type": "string" }
+    },
+    "next_scan_guidance": {
+      "type": "array",
+      "items": { "type": "string" }
+    },
+    "authority_boundary": { "type": "string", "minLength": 1 },
+    "applies_when": {
+      "type": "array",
+      "items": { "type": "string" },
+      "minItems": 1
+    },
+    "does_not_apply_when": {
+      "type": "array",
+      "items": { "type": "string" },
+      "minItems": 1
+    },
+    "danger_if_misapplied": { "type": "string", "minLength": 1 },
+    "review_status": {
+      "type": "string",
+      "enum": ["generated_candidate", "reviewed", "rejected"]
+    }
+  }
+}
