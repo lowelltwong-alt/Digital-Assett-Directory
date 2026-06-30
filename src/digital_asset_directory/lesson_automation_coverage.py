@@ -339,6 +339,10 @@ def _existing_output_status(repo_root: Path) -> dict[str, bool]:
         / "processed"
         / "reports"
         / "ci_release_artifact_scope.json",
+        "repo_learning_loop_install_scope": repo_root
+        / "processed"
+        / "reports"
+        / "repo_learning_loop_install_scope.json",
         "background_connections": (
             repo_root / "processed" / "learning" / "background_connection_candidates.jsonl"
         ),
@@ -403,10 +407,18 @@ def _signal_family_status(
                 ),
             }
         elif family_id == "repo_learning_events":
-            status = "partial_coverage" if learning_ready else "not_instrumented"
+            if learning_ready:
+                status = "partial_coverage"
+            elif output_status.get("repo_learning_loop_install_scope"):
+                status = "installation_scope_ready"
+            else:
+                status = "not_instrumented"
             evidence = {
                 "repos_with_learning_event_surface": learning_ready,
                 "cataloged_repo_count": repo_count,
+                "repo_learning_loop_install_scope_present": output_status.get(
+                    "repo_learning_loop_install_scope", False
+                ),
             }
         elif family_id == "governance_map_adoption":
             status = "partial_coverage" if governance_ready else "not_instrumented"

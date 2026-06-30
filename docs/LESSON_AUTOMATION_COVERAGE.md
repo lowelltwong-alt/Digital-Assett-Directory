@@ -92,6 +92,40 @@ Default order:
 
 Each step remains gated by source scope, privacy, and mutation rules.
 
+## Repo Learning Loop Install Scope
+
+Before installing repo-local learning files into any source repo, generate a
+selection and approval scope:
+
+```powershell
+$env:PYTHONPATH='src'; python -m digital_asset_directory.cli recommend repo-learning-loop-scope --limit 50
+```
+
+This writes:
+
+```text
+processed/reports/repo_learning_loop_install_scope.md
+processed/reports/repo_learning_loop_install_scope.json
+processed/reports/repo_learning_loop_install_approval_prompt.md
+```
+
+The command does not install anything. It ranks candidate repos using:
+
+```text
+priority_score = 100 * (0.35*learning_gap + 0.20*ai_navigation_readiness + 0.15*validation_readiness + 0.15*governance_readiness + 0.10*configured_source_path + 0.05*low_noise_bonus)
+```
+
+The score is only review routing. It does not prove repo value or authorize
+mutation.
+
+After this scope exists, `recommend lesson-automation-coverage` marks
+`repo_learning_events` as `installation_scope_ready`. A later installation still
+requires explicit repo selection and uses files-only mode:
+
+```powershell
+$env:PYTHONPATH='src'; python -m digital_asset_directory.cli agent install-learning-loop --repo "<repo-path>" --mode files-only
+```
+
 ## CI And Release Artifact Scope
 
 Before reading CI logs, release notes, changelogs, QA reports, dependency locks,

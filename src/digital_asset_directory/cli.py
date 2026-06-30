@@ -84,6 +84,7 @@ from .recommendations import recommend_skills_and_agents, recommend_swarm
 from .readiness import write_downstream_pilot_candidates, write_phase45_readiness_reports
 from .research import research_missing_parts
 from .repo_buildout import load_default_repo_buildout_artifacts, write_repo_buildout_outputs
+from .repo_learning_scope import write_repo_learning_loop_install_scope_outputs
 from .roadmap import check_roadmap
 from .semantic_evolution import write_semantic_evolution_outputs
 from .template_library import validate_template_registry, write_template_library_report
@@ -986,6 +987,26 @@ def recommend_ci_release_scope(
             scan_id=latest_scan_id,
             limit=limit,
             per_repo_limit=per_repo_limit,
+        )
+    console.print_json(data=result)
+
+
+@recommend_app.command("repo-learning-loop-scope")
+def recommend_repo_learning_loop_scope(
+    hub: Optional[Path] = typer.Option(None),
+    limit: int = typer.Option(50, "--limit", min=1, max=200),
+) -> None:
+    """Write a generated approval scope for files-only repo learning-loop installation."""
+    cfg = _cfg(hub=hub)
+    with CatalogDB(cfg.database_path) as db:
+        latest_scan = db.latest_scan()
+        latest_scan_id = latest_scan["scan_id"] if latest_scan else "catalog-without-scan"
+        result = write_repo_learning_loop_install_scope_outputs(
+            cfg.repo_root,
+            db.assets(),
+            cfg.local_sources,
+            scan_id=latest_scan_id,
+            limit=limit,
         )
     console.print_json(data=result)
 

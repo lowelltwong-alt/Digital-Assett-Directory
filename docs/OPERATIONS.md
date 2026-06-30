@@ -14,6 +14,7 @@ processed/reports/scan_summary.md
 processed/context_packs/<timestamp>-<slug>.md
 processed/learning/scan_cycle_events.jsonl
 processed/learning/learning_rule_promotion_candidates.jsonl
+processed/reports/repo_learning_loop_install_scope.md
 processed/reports/ci_release_artifact_scope.md
 state/catalog.sqlite3
 audit/events/audit.jsonl
@@ -118,6 +119,29 @@ gaps to truth.
 `processed/learning/scan_cycle_events.jsonl` file is the generated event trail
 that lets later agents see what prior passes checked, skipped, and recommended
 next.
+
+Use `recommend repo-learning-loop-scope` before installing repo-local learning
+files into any source repo:
+
+```powershell
+$env:PYTHONPATH='src'; python -m digital_asset_directory.cli recommend repo-learning-loop-scope --limit 50
+```
+
+The command writes:
+
+```text
+processed/reports/repo_learning_loop_install_scope.md
+processed/reports/repo_learning_loop_install_scope.json
+processed/reports/repo_learning_loop_install_approval_prompt.md
+```
+
+It recommends candidate repos for files-only learning-loop installation but
+does not write to those repos. After Lowell explicitly selects a repo, install
+with:
+
+```powershell
+$env:PYTHONPATH='src'; python -m digital_asset_directory.cli agent install-learning-loop --repo "<repo-path>" --mode files-only
+```
 
 Use `recommend priority-content-scope` before any bounded content pass:
 
