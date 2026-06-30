@@ -6,8 +6,10 @@ from pathlib import Path
 
 import pytest
 
+from digital_asset_directory.cli import _json_command
 from digital_asset_directory.test_parity import (
     compare_structured_reports,
+    infer_native_authority,
     load_structured_observations,
     load_structured_report,
     run_test_parity,
@@ -42,6 +44,20 @@ def _write_report_command(path: Path, *, outcome: str = "passed", duration: floa
     ]
 
 
+def test_json_command_helper_accepts_windows_paths_with_spaces() -> None:
+    command = _json_command(
+        '["C:/Program Files/Python/python.exe","-m","pytest","tests/test file.py"]',
+        "--native-command-json",
+    )
+
+    assert command == [
+        "C:/Program Files/Python/python.exe",
+        "-m",
+        "pytest",
+        "tests/test file.py",
+    ]
+
+
 def test_parity_passes_and_appends_audit_when_native_and_shadow_pass(tmp_path: Path) -> None:
     native_report = tmp_path / "native.json"
     shadow_report = tmp_path / "shadow.json"
@@ -57,11 +73,13 @@ def test_parity_passes_and_appends_audit_when_native_and_shadow_pass(tmp_path: P
     assert result["parity_status"] == "matched_pass"
     assert result["exit_code"] == 0
     assert result["candidate_only"] is True
+    assert infer_native_authority([sys.executable, "-m", "pytest", "-q"]) == "pytest"
+    assert infer_native_authority(["cargo", "test"]) == "native_command_candidate"
     audit_path = Path(result["audit_path"])
     assert audit_path.is_relative_to(tmp_path / "audit" / "events")
     event = json.loads(audit_path.read_text(encoding="utf-8").splitlines()[0])
     assert event["event_type"] == "test_parity_run"
-    assert event["payload"]["native_authority"] == "pytest"
+    assert event["payload"]["native_authority"] == "native_command_candidate"
     assert event["payload"]["native"]["stdout_tail"] == "<omitted from audit>"
     assert event["payload"]["native"]["stderr_tail"] == "<omitted from audit>"
 
@@ -79,6 +97,7 @@ def test_parity_flags_shadow_false_green_when_native_fails(tmp_path: Path) -> No
     assert result["exit_code"] == 1
     assert result["native"]["exit_code"] == 7
     assert result["shadow"]["exit_code"] == 0
+    assert result["native_authority"] == "native_command_candidate"
 
 
 def test_parity_distinguishes_exit_code_only_from_verified_parity(tmp_path: Path) -> None:
@@ -247,3 +266,30 @@ def test_parity_rejects_stale_empty_and_same_report_paths(tmp_path: Path) -> Non
     )
     assert result["parity_status"] == "structured_mismatch"
     assert "same path" in result["structured_comparison"]["integrity_errors"][0]
+
+
+def test_parity_rejects_malformed_structured_report(tmp_path: Path) -> None:
+    native_report = tmp_path / "native.jsonl"
+    shadow_report = tmp_path / "shadow.json"
+
+    result = run_test_parity(
+        tmp_path,
+        native_command=[
+            sys.executable,
+            "-c",
+            (
+                "import pathlib; "
+                f"pathlib.Path({json.dumps(str(native_report))}).write_text("
+                "'{not valid json', encoding='utf-8')"
+            ),
+        ],
+        shadow_command=_write_report_command(shadow_report),
+        timeout_seconds=10,
+        native_report=native_report,
+        shadow_report=shadow_report,
+        audit=False,
+    )
+
+    assert result["parity_status"] == "structured_mismatch"
+    assert result["structured_comparison"]["status"] == "report_integrity_failed"
+    assert "parse failed" in result["structured_comparison"]["integrity_errors"][0]
