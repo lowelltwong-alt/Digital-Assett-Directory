@@ -133,6 +133,33 @@ The label command fails closed:
   note;
 - defer/reject decisions require rationale or notes.
 
+## Execution Plan
+
+After one or more decision rows are reviewed and approved, generate the
+execution plan:
+
+```powershell
+$env:PYTHONPATH='src'; python -m digital_asset_directory.cli recommend lesson-automation-execution-plan
+```
+
+This writes:
+
+```text
+processed/reports/lesson_automation_execution_plan.md
+processed/reports/lesson_automation_execution_plan.json
+```
+
+The plan does not execute commands. It converts reviewed `approve` rows into
+exact command text or manual source-repo next steps, and reports zero runnable
+entries while all decisions remain pending, deferred, or rejected.
+
+For `priority_content_extracts`, the plan can produce a bounded
+`priority-content-extract` command using only the approved repo keys,
+categories, approval id, scope file, byte cap, and file cap from the decision
+record. For source-repo writes or governance-map adoption, it keeps the work as
+manual next steps unless the approved decision supplies exact repo paths and
+mutation permission.
+
 ## Context Boundaries
 
 Applies when:

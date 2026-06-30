@@ -9,10 +9,12 @@ from digital_asset_directory.lesson_action_queue import (
     PRIORITY_FORMULA,
     build_lesson_automation_next_action_queue,
     build_lesson_automation_decision_template,
+    build_lesson_automation_execution_plan,
     load_lesson_automation_decisions,
     update_lesson_automation_decision_record,
     write_lesson_automation_decision_template_outputs,
     write_lesson_automation_decisions,
+    write_lesson_automation_execution_plan_outputs,
     write_lesson_automation_next_action_outputs,
 )
 
@@ -270,3 +272,85 @@ def test_decision_template_writer_and_jsonl_round_trip(tmp_path: Path):
     write_lesson_automation_decisions(Path(outputs["decision_template"]), records)
     reloaded = load_lesson_automation_decisions(Path(outputs["decision_template"]))
     assert [record.sample_id for record in reloaded] == [record.sample_id for record in records]
+
+
+def test_execution_plan_is_empty_until_decision_is_approved(tmp_path: Path):
+    seed_scope_outputs(tmp_path)
+    result = write_lesson_automation_decision_template_outputs(
+        tmp_path,
+        generated_at=TIMESTAMP,
+    )
+    records = load_lesson_automation_decisions(Path(result["outputs"]["decision_template"]))
+
+    plan = build_lesson_automation_execution_plan(
+        tmp_path,
+        records,
+        generated_at=TIMESTAMP,
+    )
+
+    assert plan["summary"]["approved_count"] == 0
+    assert plan["summary"]["ready_for_manual_run_count"] == 0
+    assert plan["summary"]["commands_executed"] == 0
+    assert plan["summary"]["source_repos_mutated"] == 0
+    assert plan["summary"]["content_files_read"] == 0
+    assert plan["execution_entries"] == []
+
+
+def test_execution_plan_generates_approved_content_command_without_running_it(tmp_path: Path):
+    seed_scope_outputs(tmp_path)
+    queue = build_lesson_automation_next_action_queue(tmp_path, generated_at=TIMESTAMP)
+    records = build_lesson_automation_decision_template(queue["actions"])
+    records, _updated = update_lesson_automation_decision_record(
+        records,
+        sample_id="lesson-automation-decision-001",
+        reviewer="Lowell",
+        decision="approve",
+        reviewed_at=TIMESTAMP,
+        approval_id="approval:test",
+        approved_repo_keys=["git-projects/repo-a"],
+        approved_categories=["ai_navigation"],
+        allow_content_read=True,
+        max_bytes_per_file=20000,
+        max_files=10,
+        rationale="Bounded front-door review approved.",
+    )
+
+    plan = build_lesson_automation_execution_plan(
+        tmp_path,
+        records,
+        generated_at=TIMESTAMP,
+    )
+
+    assert plan["summary"]["approved_count"] == 1
+    assert plan["summary"]["ready_for_manual_run_count"] == 1
+    assert plan["summary"]["commands_executed"] == 0
+    assert plan["summary"]["content_files_read"] == 0
+    entry = plan["execution_entries"][0]
+    assert entry["execution_status"] == "ready_for_manual_run"
+    assert "priority-content-extract" in entry["command"]
+    assert "--approval-id \"approval:test\"" in entry["command"]
+    assert "--repo-key \"git-projects/repo-a\"" in entry["command"]
+    assert "--category \"ai_navigation\"" in entry["command"]
+    assert "--max-bytes-per-file 20000" in entry["command"]
+    assert "--limit 10" in entry["command"]
+
+
+def test_execution_plan_writer_stays_under_processed_reports(tmp_path: Path):
+    seed_scope_outputs(tmp_path)
+    template = write_lesson_automation_decision_template_outputs(
+        tmp_path,
+        generated_at=TIMESTAMP,
+    )
+
+    result = write_lesson_automation_execution_plan_outputs(
+        tmp_path,
+        decisions_file=Path(template["outputs"]["decision_template"]),
+        generated_at=TIMESTAMP,
+    )
+
+    outputs = result["outputs"]
+    assert set(outputs) == {"plan_markdown", "plan_json"}
+    assert all(Path(path).is_relative_to(tmp_path / "processed" / "reports") for path in outputs.values())
+    payload = json.loads(Path(outputs["plan_json"]).read_text(encoding="utf-8"))
+    assert payload["summary"]["commands_executed"] == 0
+    assert "command execution" in payload["intentionally_not_done"]

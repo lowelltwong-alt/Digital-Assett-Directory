@@ -173,6 +173,26 @@ $env:PYTHONPATH='src'; python -m digital_asset_directory.cli recommend lesson-au
   --rationale "<approval rationale>"
 ```
 
+After one or more decision rows are reviewed and approved, generate the
+execution plan:
+
+```powershell
+$env:PYTHONPATH='src'; python -m digital_asset_directory.cli recommend lesson-automation-execution-plan
+```
+
+This writes:
+
+```text
+processed/reports/lesson_automation_execution_plan.md
+processed/reports/lesson_automation_execution_plan.json
+```
+
+The plan converts approved rows into exact command text or manual next steps.
+It does not execute commands, read source contents, call GitHub, call models,
+mutate source repos, or mark roadmap phases complete. Future agents should read
+`processed/reports/scan_coverage_cycle.md` first to see what was checked,
+skipped, and gated before running any command from this plan.
+
 Use `recommend repo-learning-loop-scope` before installing repo-local learning
 files into any source repo:
 

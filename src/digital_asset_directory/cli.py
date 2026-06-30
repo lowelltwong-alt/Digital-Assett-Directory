@@ -55,6 +55,7 @@ from .lesson_action_queue import (
     update_lesson_automation_decision_record,
     write_lesson_automation_decision_template_outputs,
     write_lesson_automation_decisions,
+    write_lesson_automation_execution_plan_outputs,
     write_lesson_automation_next_action_outputs,
 )
 from .manual_tasks import write_manual_task_queue
@@ -1084,6 +1085,20 @@ def recommend_lesson_automation_decision_label(
             "updated": updated.model_dump(mode="json"),
         }
     )
+
+
+@recommend_app.command("lesson-automation-execution-plan")
+def recommend_lesson_automation_execution_plan(
+    hub: Optional[Path] = typer.Option(None),
+    decisions_file: Optional[Path] = typer.Option(None, "--decisions-file"),
+) -> None:
+    """Write a generated execution plan from approved lesson-automation decisions."""
+    cfg = _cfg(hub=hub)
+    result = write_lesson_automation_execution_plan_outputs(
+        cfg.repo_root,
+        decisions_file=decisions_file,
+    )
+    console.print_json(data=result)
 
 
 @recommend_app.command("priority-content-scope")

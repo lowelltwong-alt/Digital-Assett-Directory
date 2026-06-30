@@ -749,6 +749,300 @@ def lesson_automation_decision_markdown(records: list[LessonAutomationDecisionRe
     return "\n".join(lines)
 
 
+def _path_for_command(repo_root: Path, path_text: str) -> str:
+    if not path_text:
+        return ""
+    path = Path(path_text)
+    try:
+        return path.resolve().relative_to(repo_root.resolve()).as_posix()
+    except (OSError, ValueError):
+        return path_text.replace("\\", "/")
+
+
+def _repeat_option(option: str, values: list[str]) -> str:
+    return " ".join(f'{option} "{value}"' for value in values)
+
+
+def _execution_entry_for_decision(
+    repo_root: Path,
+    record: LessonAutomationDecisionRecord,
+) -> dict[str, Any]:
+    _validate_decision(record)
+    base = {
+        "decision_id": record.decision_id,
+        "sample_id": record.sample_id,
+        "signal_family_id": record.signal_family_id,
+        "action_kind": record.action_kind,
+        "approval_id": record.approval_id,
+        "reviewer": record.reviewer,
+        "reviewed_at": record.reviewed_at,
+        "approval_evidence": {
+            "approved_scope_file": record.approved_scope_file,
+            "approved_repo_keys": record.approved_repo_keys,
+            "approved_categories": record.approved_categories,
+            "approved_repo_paths": record.approved_repo_paths,
+            "max_bytes_per_file": record.max_bytes_per_file,
+            "max_files": record.max_files,
+            "allow_content_read": record.allow_content_read,
+            "allow_source_mutation": record.allow_source_mutation,
+            "allow_external_api": record.allow_external_api,
+            "allow_model_call": record.allow_model_call,
+            "redaction_required": record.redaction_required,
+            "token_scope_note": record.token_scope_note,
+            "privacy_boundary_note": record.privacy_boundary_note,
+            "rationale": record.rationale,
+        },
+        "stop_conditions": record.stop_conditions,
+        "validation_commands": record.validation_commands,
+        "source_repos_mutated_by_plan": 0,
+        "content_files_read_by_plan": 0,
+        "github_calls_by_plan": 0,
+        "model_calls_by_plan": 0,
+    }
+    scope_file = _path_for_command(repo_root, record.approved_scope_file)
+    if record.action_kind == "bounded_content_extract":
+        command = (
+            "$env:PYTHONPATH='src'; python -m digital_asset_directory.cli recommend "
+            f'priority-content-extract --approval-id "{record.approval_id}" '
+            f'{_repeat_option("--repo-key", record.approved_repo_keys)} '
+            f'{_repeat_option("--category", record.approved_categories)} '
+            f'--scope-file "{scope_file}" '
+            f"--max-bytes-per-file {record.max_bytes_per_file} "
+            f"--limit {record.max_files}"
+        )
+        return {
+            **base,
+            "execution_status": "ready_for_manual_run",
+            "execution_mode": "generated_command_only",
+            "command": " ".join(command.split()),
+            "manual_next_step": "",
+            "danger_if_misapplied": (
+                "Running this command reads approved source content into generated observations. "
+                "Do not broaden repo keys, categories, byte caps, or file limits."
+            ),
+        }
+    if record.action_kind == "source_repo_files_only_install":
+        commands = [
+            "$env:PYTHONPATH='src'; python -m digital_asset_directory.cli agent "
+            f'install-learning-loop --repo "{path}" --mode files-only'
+            for path in record.approved_repo_paths
+        ]
+        status = "ready_for_manual_run" if commands else "blocked_missing_repo_path"
+        return {
+            **base,
+            "execution_status": status,
+            "execution_mode": "manual_source_repo_write_command",
+            "command": "\n".join(commands),
+            "manual_next_step": (
+                "" if commands else "Resolve approved repo keys to exact repo paths before installation."
+            ),
+            "danger_if_misapplied": (
+                "This writes files into source repos. Run only for explicitly approved repo paths."
+            ),
+        }
+    if record.action_kind == "source_repo_governance_adoption":
+        return {
+            **base,
+            "execution_status": "manual_source_repo_change_required",
+            "execution_mode": "no_auto_executor",
+            "command": "",
+            "manual_next_step": (
+                "Create a normal source-repo change from "
+                "templates/cross-repo-governance-dependency-map/ for the approved repo family."
+            ),
+            "danger_if_misapplied": (
+                "Governance maps and child mirrors can imply authority. Human review must select "
+                "upstream authority, child mirrors, validators, and tests before editing source repos."
+            ),
+        }
+    if record.action_kind == "extractor_gap_or_bounded_content_extract":
+        return {
+            **base,
+            "execution_status": "blocked_missing_executor",
+            "execution_mode": "requires_future_extractor",
+            "command": "",
+            "manual_next_step": (
+                "Implement or approve a bounded CI/release artifact extractor before reading artifacts."
+            ),
+            "danger_if_misapplied": (
+                "CI and release artifacts may contain secrets or noisy generated logs. Do not reuse "
+                "the priority-content extractor without a specific artifact redaction policy."
+            ),
+        }
+    if record.action_kind == "external_api_gate":
+        return {
+            **base,
+            "execution_status": "blocked_external_api_gate",
+            "execution_mode": "no_auto_executor",
+            "command": "",
+            "manual_next_step": "Configure read-only token scope, rate limits, and privacy boundary first.",
+            "danger_if_misapplied": "External metadata can leak private repo context or exceed source terms.",
+        }
+    return {
+        **base,
+        "execution_status": "manual_review_required",
+        "execution_mode": "unknown_action_kind",
+        "command": "",
+        "manual_next_step": "Review this approved action manually; no deterministic executor is registered.",
+        "danger_if_misapplied": "Unknown action kinds must not be executed automatically.",
+    }
+
+
+def build_lesson_automation_execution_plan(
+    repo_root: Path,
+    records: list[LessonAutomationDecisionRecord],
+    *,
+    generated_at: str | None = None,
+) -> dict[str, Any]:
+    generated = generated_at or utc_now()
+    approved = [
+        record
+        for record in records
+        if record.decision == "approve" and record.review_status == "reviewed"
+    ]
+    rejected_or_deferred = [
+        record for record in records if record.decision in {"defer", "reject"}
+    ]
+    pending = [record for record in records if record.decision == "pending"]
+    entries = [_execution_entry_for_decision(repo_root, record) for record in approved]
+    ready_statuses = {"ready_for_manual_run"}
+    return {
+        "methodology_version": "lesson-automation-execution-plan-v0.1",
+        "generated_at": generated,
+        "authority_boundary": (
+            "Generated execution plan only. This command reads reviewed decision rows and writes "
+            "runnable command text for approved actions; it does not execute commands, read source "
+            "content, mutate source repos, call GitHub, call models, or promote candidates to truth."
+        ),
+        "summary": {
+            "decision_count": len(records),
+            "approved_count": len(approved),
+            "pending_count": len(pending),
+            "deferred_or_rejected_count": len(rejected_or_deferred),
+            "execution_entry_count": len(entries),
+            "ready_for_manual_run_count": sum(
+                1 for entry in entries if entry["execution_status"] in ready_statuses
+            ),
+            "blocked_or_manual_count": sum(
+                1 for entry in entries if entry["execution_status"] not in ready_statuses
+            ),
+            "commands_executed": 0,
+            "source_repos_mutated": 0,
+            "content_files_read": 0,
+            "github_calls": 0,
+            "model_calls": 0,
+        },
+        "checked_inputs": [
+            "processed/learning/lesson_automation_action_decisions.jsonl",
+        ],
+        "intentionally_not_done": [
+            "command execution",
+            "source repo mutation",
+            "source file content reads",
+            "fresh filesystem recursion",
+            "GitHub, CI, package registry, or model calls",
+            "roadmap phase completion",
+        ],
+        "applies_when": [
+            "A human has reviewed one or more lesson-automation decision rows.",
+            "A future agent needs exact commands or manual next steps for approved actions.",
+        ],
+        "does_not_apply_when": [
+            "All decision rows are pending, deferred, or rejected.",
+            "The user asks to approve a new action; use the decision-label command first.",
+        ],
+        "danger_if_misapplied": (
+            "A generated execution plan can be mistaken for completed execution. It only contains "
+            "commands or manual steps and never proves that a lesson was extracted or installed."
+        ),
+        "execution_entries": entries,
+        "review_status": "generated_candidate",
+    }
+
+
+def lesson_automation_execution_plan_markdown(result: dict[str, Any]) -> str:
+    summary = result["summary"]
+    lines = [
+        "# Lesson Automation Execution Plan",
+        "",
+        result["authority_boundary"],
+        "",
+        f"- Generated at: `{result['generated_at']}`",
+        f"- Methodology: `{result['methodology_version']}`",
+        f"- Approved decisions: **{summary['approved_count']}**",
+        f"- Pending decisions: **{summary['pending_count']}**",
+        f"- Ready for manual run: **{summary['ready_for_manual_run_count']}**",
+        f"- Commands executed: **{summary['commands_executed']}**",
+        f"- Source repos mutated: **{summary['source_repos_mutated']}**",
+        f"- Content files read: **{summary['content_files_read']}**",
+        "",
+    ]
+    if not result["execution_entries"]:
+        lines.extend(
+            [
+                "No approved execution entries exist yet.",
+                "",
+                "Next step: label a row in `processed/learning/lesson_automation_action_decisions.jsonl` "
+                "with `recommend lesson-automation-decision-label`, then regenerate this plan.",
+                "",
+            ]
+        )
+    else:
+        lines.extend(["## Entries", ""])
+        for entry in result["execution_entries"]:
+            lines.extend(
+                [
+                    f"### {entry['sample_id']} - {entry['signal_family_id']}",
+                    "",
+                    f"- Status: `{entry['execution_status']}`",
+                    f"- Mode: `{entry['execution_mode']}`",
+                    f"- Approval id: `{entry['approval_id']}`",
+                    f"- Danger if misapplied: {entry['danger_if_misapplied']}",
+                    "",
+                ]
+            )
+            if entry["command"]:
+                lines.extend(["```powershell", entry["command"], "```", ""])
+            if entry["manual_next_step"]:
+                lines.append(f"Manual next step: {entry['manual_next_step']}")
+                lines.append("")
+    lines.extend(["## Intentionally Not Done", ""])
+    for item in result["intentionally_not_done"]:
+        lines.append(f"- {item}")
+    lines.append("")
+    return "\n".join(lines)
+
+
+def write_lesson_automation_execution_plan_outputs(
+    repo_root: Path,
+    *,
+    decisions_file: Path | None = None,
+    generated_at: str | None = None,
+) -> dict[str, Any]:
+    path = decisions_file or repo_root / DECISION_TEMPLATE_PATH
+    if not path.is_absolute():
+        path = repo_root / path
+    records = load_lesson_automation_decisions(path)
+    result = build_lesson_automation_execution_plan(
+        repo_root,
+        records,
+        generated_at=generated_at,
+    )
+    reports_dir = repo_root / "processed" / "reports"
+    paths = {
+        "plan_markdown": reports_dir / "lesson_automation_execution_plan.md",
+        "plan_json": reports_dir / "lesson_automation_execution_plan.json",
+    }
+    atomic_write_text(paths["plan_markdown"], lesson_automation_execution_plan_markdown(result))
+    atomic_write_text(paths["plan_json"], json_dumps(result, pretty=True) + "\n")
+    return {
+        "output_type": "generated_execution_plan",
+        "review_status": "generated_candidate",
+        "summary": result["summary"],
+        "outputs": {key: str(path) for key, path in paths.items()},
+    }
+
+
 def write_lesson_automation_decision_template_outputs(
     repo_root: Path,
     *,
