@@ -98,6 +98,7 @@ from .research import research_missing_parts
 from .repo_buildout import load_default_repo_buildout_artifacts, write_repo_buildout_outputs
 from .repo_completion import (
     write_repo_completion_dashboard_outputs,
+    write_repo_completion_proof_check_outputs,
     write_repo_completion_wave_plan_outputs,
 )
 from .repo_learning_scope import write_repo_learning_loop_install_scope_outputs
@@ -967,6 +968,24 @@ def recommend_repo_completion_waves(
     cfg = _cfg(hub=hub)
     with CatalogDB(cfg.database_path) as db:
         result = write_repo_completion_wave_plan_outputs(
+            cfg.repo_root,
+            db.assets(),
+            dashboard_limit=dashboard_limit,
+            per_wave_repo_limit=per_wave_repo_limit,
+        )
+    console.print_json(data=result)
+
+
+@recommend_app.command("repo-completion-proof-check")
+def recommend_repo_completion_proof_check(
+    hub: Optional[Path] = typer.Option(None),
+    dashboard_limit: int = typer.Option(500, "--dashboard-limit", min=1, max=1000),
+    per_wave_repo_limit: int = typer.Option(25, "--per-wave-repo-limit", min=1, max=100),
+) -> None:
+    """Write generated proof status for repo-completion wave advancement."""
+    cfg = _cfg(hub=hub)
+    with CatalogDB(cfg.database_path) as db:
+        result = write_repo_completion_proof_check_outputs(
             cfg.repo_root,
             db.assets(),
             dashboard_limit=dashboard_limit,

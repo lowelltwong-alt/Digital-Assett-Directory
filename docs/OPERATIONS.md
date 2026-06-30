@@ -14,6 +14,7 @@ processed/reports/scan_summary.md
 processed/context_packs/<timestamp>-<slug>.md
 processed/reports/repo_completion_dashboard.md
 processed/reports/repo_completion_wave_plan.md
+processed/reports/repo_completion_proof_check.md
 processed/learning/scan_cycle_events.jsonl
 processed/reports/lesson_automation_approval_packet.md
 processed/learning/learning_rule_promotion_candidates.jsonl
@@ -133,6 +134,26 @@ synthesis, learning-loop installation, governance-map adoption, AI
 navigation/validation review, and final human review waves. It still does not
 approve decisions, run commands, read content, mutate repos, or mark phases
 complete.
+
+Use `recommend repo-completion-proof-check` after the wave plan when you need
+fail-closed proof status before advancing a wave:
+
+```powershell
+$env:PYTHONPATH='src'; python -m digital_asset_directory.cli recommend repo-completion-proof-check --dashboard-limit 500 --per-wave-repo-limit 25
+```
+
+The command writes:
+
+```text
+processed/reports/repo_completion_proof_check.md
+processed/reports/repo_completion_proof_check.json
+```
+
+The proof check reads generated decision/proof outputs and reports the current
+blocked wave, satisfied proof ids, missing proof ids, and generated next step.
+It is not authorization; it does not approve decisions, execute commands, read
+source contents, mutate source repos, install hooks, call GitHub, call models,
+or mark roadmap phases complete.
 
 ## Lesson automation coverage
 

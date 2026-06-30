@@ -36,6 +36,7 @@
     "processed/reports/repo_buildout/index.md",
     "processed/reports/repo_completion_dashboard.md",
     "processed/reports/repo_completion_wave_plan.md",
+    "processed/reports/repo_completion_proof_check.md",
     "processed/reports/template_library.md",
     "processed/reports/operational_readiness.md",
     "processed/reports/scan_coverage_cycle.md",

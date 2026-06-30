@@ -8,8 +8,10 @@ import pytest
 from digital_asset_directory.models import AssetRecord
 from digital_asset_directory.repo_completion import (
     build_repo_completion_dashboard,
+    build_repo_completion_proof_check,
     build_repo_completion_wave_plan,
     write_repo_completion_dashboard_outputs,
+    write_repo_completion_proof_check_outputs,
     write_repo_completion_wave_plan_outputs,
 )
 
@@ -126,6 +128,47 @@ def seed_generated_outputs(repo_root: Path) -> None:
                 "allow_content_read": False,
                 "allow_source_mutation": False,
                 "allow_external_api": False,
+            }
+        ],
+    )
+
+
+def seed_approved_content_extract_proof(repo_root: Path) -> None:
+    write_json(
+        repo_root / "processed" / "reports" / "lesson_automation_execution_plan.json",
+        {
+            "summary": {
+                "ready_for_manual_run_count": 1,
+                "commands_executed": 0,
+                "content_files_read": 0,
+                "source_repos_mutated": 0,
+            },
+            "execution_entries": [
+                {
+                    "execution_status": "ready_for_manual_run",
+                    "command": "python -m digital_asset_directory.cli recommend priority-content-extract",
+                }
+            ],
+        },
+    )
+    write_jsonl(
+        repo_root / "processed" / "learning" / "lesson_automation_action_decisions.jsonl",
+        [
+            {
+                "action_kind": "bounded_content_extract",
+                "decision": "approve",
+                "allow_content_read": True,
+                "allow_source_mutation": False,
+                "allow_external_api": False,
+            }
+        ],
+    )
+    write_jsonl(
+        repo_root / "processed" / "learning" / "priority_content_observations.jsonl",
+        [
+            {
+                "observation_id": "dad:observation:test",
+                "review_status": "generated_candidate",
             }
         ],
     )
@@ -274,6 +317,78 @@ def test_repo_completion_wave_plan_writer_stays_under_processed_reports(tmp_path
     assert set(outputs) == {"wave_markdown", "wave_json"}
     assert all(Path(path).is_relative_to(tmp_path / "processed" / "reports") for path in outputs.values())
     payload = json.loads(Path(outputs["wave_json"]).read_text(encoding="utf-8"))
+    assert payload["summary"]["source_repos_mutated"] == 0
+    assert payload["summary"]["content_files_read"] == 0
+    assert "decision approval" in payload["intentionally_not_done"]
+
+
+def test_repo_completion_proof_check_blocks_pending_content_gate(tmp_path: Path):
+    seed_generated_outputs(tmp_path)
+    assets = [
+        make_repo("dad:asset:repo-a", "git-projects/repo-a", ["AGENTS.md"]),
+        make_asset("dad:asset:repo-a-agent", "git-projects/repo-a/AGENTS.md"),
+        make_asset("dad:asset:repo-a-front", "git-projects/repo-a/AI_FRONT_DOOR.md"),
+    ]
+
+    result = build_repo_completion_proof_check(
+        tmp_path,
+        assets,
+        generated_at=TIMESTAMP,
+    )
+
+    assert result["review_status"] == "generated_candidate"
+    assert result["summary"]["safe_to_advance"] is False
+    assert result["summary"]["current_wave_id"] == "content_read_approval_wave"
+    assert result["summary"]["content_files_read"] == 0
+    assert result["summary"]["source_repos_mutated"] == 0
+    current = result["current_wave"]
+    assert current["proof_status"] == "blocked"
+    assert "content_read_approval_recorded" in current["missing_proof_ids"]
+    assert "priority_observations_present" in current["missing_proof_ids"]
+
+
+def test_repo_completion_proof_check_advances_only_after_proof(tmp_path: Path):
+    seed_generated_outputs(tmp_path)
+    seed_approved_content_extract_proof(tmp_path)
+    assets = [
+        make_repo("dad:asset:repo-a", "git-projects/repo-a", ["AGENTS.md"]),
+        make_asset("dad:asset:repo-a-agent", "git-projects/repo-a/AGENTS.md"),
+        make_asset("dad:asset:repo-a-front", "git-projects/repo-a/AI_FRONT_DOOR.md"),
+    ]
+
+    result = build_repo_completion_proof_check(
+        tmp_path,
+        assets,
+        generated_at=TIMESTAMP,
+    )
+
+    assert result["summary"]["complete_wave_count"] == 1
+    assert result["summary"]["current_wave_id"] == "lesson_candidate_synthesis_wave"
+    assert result["summary"]["safe_to_advance"] is False
+    first_wave = result["wave_statuses"][0]
+    assert first_wave["proof_status"] == "complete"
+    second_wave = result["wave_statuses"][1]
+    assert "priority_lesson_candidates_present" in second_wave["missing_proof_ids"]
+    assert result["artifact_counts"]["priority_content_observations"] == 1
+
+
+def test_repo_completion_proof_check_writer_stays_under_processed_reports(tmp_path: Path):
+    seed_generated_outputs(tmp_path)
+    assets = [
+        make_repo("dad:asset:repo-a", "git-projects/repo-a", ["AGENTS.md"]),
+        make_asset("dad:asset:repo-a-agent", "git-projects/repo-a/AGENTS.md"),
+    ]
+
+    result = write_repo_completion_proof_check_outputs(
+        tmp_path,
+        assets,
+        generated_at=TIMESTAMP,
+    )
+
+    outputs = result["outputs"]
+    assert set(outputs) == {"proof_markdown", "proof_json"}
+    assert all(Path(path).is_relative_to(tmp_path / "processed" / "reports") for path in outputs.values())
+    payload = json.loads(Path(outputs["proof_json"]).read_text(encoding="utf-8"))
     assert payload["summary"]["source_repos_mutated"] == 0
     assert payload["summary"]["content_files_read"] == 0
     assert "decision approval" in payload["intentionally_not_done"]

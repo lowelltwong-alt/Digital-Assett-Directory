@@ -770,3 +770,520 @@ def write_repo_completion_wave_plan_outputs(
         "summary": result["summary"],
         "outputs": {key: str(path) for key, path in paths.items()},
     }
+
+
+PROOF_CHECK_METHODOLOGY_VERSION = "repo-completion-proof-check-v0.1"
+PROOF_CHECK_AUTHORITY_BOUNDARY = (
+    "Generated repo-completion proof check only. This command reads the wave plan "
+    "and generated decision/proof outputs; it does not approve decisions, execute "
+    "commands, read source contents, mutate source repos, call GitHub, call models, "
+    "install hooks, or mark roadmap phases complete."
+)
+
+
+def _approved_decision_count(decisions: list[dict[str, Any]], action_kind: str) -> int:
+    return sum(
+        1
+        for item in decisions
+        if item.get("decision") == "approve" and item.get("action_kind") == action_kind
+    )
+
+
+def _truthy_count(path: Path) -> int:
+    return len(_load_jsonl(path))
+
+
+def _lesson_candidate_context_bound(rows: list[dict[str, Any]]) -> bool:
+    required = {
+        "applies_when",
+        "does_not_apply_when",
+        "danger_if_misapplied",
+        "counterfactual_better_order",
+        "source_events",
+        "context_tags",
+    }
+    return bool(rows) and all(
+        all(row.get(field) for field in required)
+        and row.get("review_status") == "generated_candidate"
+        for row in rows
+    )
+
+
+def _proof_item(
+    proof_id: str,
+    label: str,
+    *,
+    satisfied: bool,
+    evidence: dict[str, Any],
+    missing_when_false: str,
+) -> dict[str, Any]:
+    return {
+        "proof_id": proof_id,
+        "label": label,
+        "satisfied": satisfied,
+        "evidence": evidence,
+        "missing_when_false": "" if satisfied else missing_when_false,
+    }
+
+
+def _proof_status(
+    wave: dict[str, Any],
+    proof_items: list[dict[str, Any]],
+    *,
+    prior_waves_complete: bool,
+) -> dict[str, Any]:
+    satisfied = [item for item in proof_items if item["satisfied"]]
+    missing = [item for item in proof_items if not item["satisfied"]]
+    if not prior_waves_complete:
+        status = "blocked_by_prior_wave"
+    elif not missing:
+        status = "complete"
+    else:
+        status = "blocked"
+    return {
+        "sequence_order": wave["sequence_order"],
+        "wave_id": wave["wave_id"],
+        "label": wave["label"],
+        "proof_status": status,
+        "satisfied_proof_ids": [item["proof_id"] for item in satisfied],
+        "missing_proof_ids": [item["proof_id"] for item in missing],
+        "missing_proof": [item["missing_when_false"] for item in missing],
+        "proof_items": proof_items,
+        "human_gate": wave["human_gate"],
+        "generated_next_step": wave["generated_next_step"],
+        "danger_if_misapplied": wave["danger_if_misapplied"],
+        "repo_count": wave["repo_count"],
+        "reported_repo_keys": wave["reported_repo_keys"],
+        "review_status": "generated_candidate",
+    }
+
+
+def build_repo_completion_proof_check(
+    repo_root: Path,
+    assets: list[AssetRecord],
+    *,
+    generated_at: str | None = None,
+    dashboard_limit: int = 500,
+    per_wave_repo_limit: int = 25,
+) -> dict[str, Any]:
+    generated = generated_at or utc_now()
+    wave_plan = build_repo_completion_wave_plan(
+        repo_root,
+        assets,
+        generated_at=generated,
+        dashboard_limit=dashboard_limit,
+        per_wave_repo_limit=per_wave_repo_limit,
+    )
+    learning_dir = repo_root / "processed" / "learning"
+    reports_dir = repo_root / "processed" / "reports"
+    decisions = _load_jsonl(learning_dir / "lesson_automation_action_decisions.jsonl")
+    execution_plan = _load_json(reports_dir / "lesson_automation_execution_plan.json") or {}
+    observations = _load_jsonl(learning_dir / "priority_content_observations.jsonl")
+    lesson_candidates = _load_jsonl(learning_dir / "priority_content_lesson_candidates.jsonl")
+    promotion_candidates = _load_jsonl(learning_dir / "learning_rule_promotion_candidates.jsonl")
+    decision_summary = _decision_summary(decisions)
+    execution_summary = execution_plan.get("summary") or {}
+    blocker_counts = wave_plan["dashboard_summary"].get("blocker_counts") or {}
+
+    proof_by_wave = {
+        "content_read_approval_wave": [
+            _proof_item(
+                "content_read_approval_recorded",
+                "Decision ledger has at least one reviewed content-read approval.",
+                satisfied=decision_summary["content_read_approval_count"] > 0,
+                evidence={
+                    "content_read_approval_count": decision_summary[
+                        "content_read_approval_count"
+                    ],
+                    "approved_count": decision_summary["approved_count"],
+                },
+                missing_when_false=(
+                    "Approve one bounded content-read decision row with exact repo keys, "
+                    "categories, byte/file caps, approval id, and redaction."
+                ),
+            ),
+            _proof_item(
+                "priority_extract_execution_plan_ready",
+                "Execution plan has at least one ready priority-content extract entry.",
+                satisfied=int(execution_summary.get("ready_for_manual_run_count") or 0) > 0,
+                evidence={
+                    "execution_plan_present": bool(execution_plan),
+                    "ready_for_manual_run_count": int(
+                        execution_summary.get("ready_for_manual_run_count") or 0
+                    ),
+                },
+                missing_when_false=(
+                    "Regenerate the execution plan after a reviewed content-read approval."
+                ),
+            ),
+            _proof_item(
+                "priority_observations_present",
+                "Content extraction wrote generated observations under processed/.",
+                satisfied=bool(observations),
+                evidence={"priority_content_observation_count": len(observations)},
+                missing_when_false=(
+                    "Run the approved bounded priority-content-extract command; keep "
+                    "observations generated-only under processed/."
+                ),
+            ),
+        ],
+        "lesson_candidate_synthesis_wave": [
+            _proof_item(
+                "priority_lesson_candidates_present",
+                "Priority content lesson candidates exist.",
+                satisfied=bool(lesson_candidates),
+                evidence={"priority_content_lesson_candidate_count": len(lesson_candidates)},
+                missing_when_false=(
+                    "Run priority-content-lessons after approved observations exist."
+                ),
+            ),
+            _proof_item(
+                "lesson_candidates_context_bound",
+                "Lesson candidates include context-bound safety fields and candidate status.",
+                satisfied=_lesson_candidate_context_bound(lesson_candidates),
+                evidence={
+                    "checked_candidate_count": len(lesson_candidates),
+                    "required_fields": [
+                        "applies_when",
+                        "does_not_apply_when",
+                        "danger_if_misapplied",
+                        "counterfactual_better_order",
+                        "source_events",
+                        "context_tags",
+                    ],
+                },
+                missing_when_false=(
+                    "Regenerate or fix lesson candidates so each has applies_when, "
+                    "does_not_apply_when, danger_if_misapplied, counterfactual order, "
+                    "source events, context tags, and generated_candidate status."
+                ),
+            ),
+            _proof_item(
+                "learning_rules_not_promoted_by_synthesis",
+                "Lesson synthesis has not promoted learning rules automatically.",
+                satisfied=not any(row.get("registry_mutated") for row in promotion_candidates),
+                evidence={
+                    "promotion_candidate_count": len(promotion_candidates),
+                    "registry_mutated_flags_seen": [
+                        row.get("registry_mutated")
+                        for row in promotion_candidates
+                        if row.get("registry_mutated")
+                    ],
+                },
+                missing_when_false=(
+                    "Stop and review promotion outputs; registry mutation must be a "
+                    "separate human-approved change."
+                ),
+            ),
+        ],
+        "repo_learning_loop_selection_wave": [
+            _proof_item(
+                "source_mutation_approval_for_learning_loop_recorded",
+                "A reviewed files-only learning-loop source-mutation approval exists.",
+                satisfied=_approved_decision_count(decisions, "source_repo_files_only_install") > 0
+                and decision_summary["source_mutation_approval_count"] > 0,
+                evidence={
+                    "approved_files_only_install_count": _approved_decision_count(
+                        decisions, "source_repo_files_only_install"
+                    ),
+                    "source_mutation_approval_count": decision_summary[
+                        "source_mutation_approval_count"
+                    ],
+                },
+                missing_when_false=(
+                    "Select exact repos and approve files-only learning-loop installation "
+                    "before writing any source-repo files."
+                ),
+            ),
+            _proof_item(
+                "learning_loop_surfaces_observed_or_waived",
+                "Learning-loop missing blockers are resolved or explicitly waived.",
+                satisfied=int(blocker_counts.get("repo_learning_loop_missing") or 0) == 0,
+                evidence={
+                    "repo_learning_loop_missing_count": int(
+                        blocker_counts.get("repo_learning_loop_missing") or 0
+                    )
+                },
+                missing_when_false=(
+                    "Install files-only learning-loop surfaces in selected repos or record "
+                    "human waivers; then refresh the catalog/dashboard."
+                ),
+            ),
+        ],
+        "governance_map_selection_wave": [
+            _proof_item(
+                "source_mutation_approval_for_governance_recorded",
+                "A reviewed governance-map source-mutation approval exists.",
+                satisfied=_approved_decision_count(decisions, "source_repo_governance_adoption") > 0
+                and decision_summary["source_mutation_approval_count"] > 0,
+                evidence={
+                    "approved_governance_adoption_count": _approved_decision_count(
+                        decisions, "source_repo_governance_adoption"
+                    ),
+                    "source_mutation_approval_count": decision_summary[
+                        "source_mutation_approval_count"
+                    ],
+                },
+                missing_when_false=(
+                    "Select exact repo families and approve governance-map/mirror writes "
+                    "before changing source repos."
+                ),
+            ),
+            _proof_item(
+                "governance_surfaces_observed_or_waived",
+                "Governance dependency blockers are resolved or explicitly waived.",
+                satisfied=int(blocker_counts.get("governance_dependency_surface_missing") or 0)
+                == 0,
+                evidence={
+                    "governance_dependency_surface_missing_count": int(
+                        blocker_counts.get("governance_dependency_surface_missing") or 0
+                    )
+                },
+                missing_when_false=(
+                    "Install or review governance maps/mirrors for selected repo families, "
+                    "or record human waivers; then refresh the catalog/dashboard."
+                ),
+            ),
+        ],
+        "ai_navigation_and_validation_review_wave": [
+            _proof_item(
+                "ai_navigation_gaps_resolved_or_waived",
+                "AI navigation blockers are resolved or explicitly waived.",
+                satisfied=int(blocker_counts.get("ai_navigation_incomplete") or 0) == 0,
+                evidence={
+                    "ai_navigation_incomplete_count": int(
+                        blocker_counts.get("ai_navigation_incomplete") or 0
+                    )
+                },
+                missing_when_false=(
+                    "Review AI front doors, TOCs, and repo contracts; add surfaces or "
+                    "record human waivers."
+                ),
+            ),
+            _proof_item(
+                "validation_gaps_resolved_or_waived",
+                "Validation blockers are resolved or explicitly waived.",
+                satisfied=int(blocker_counts.get("validation_surface_not_observed") or 0) == 0,
+                evidence={
+                    "validation_surface_not_observed_count": int(
+                        blocker_counts.get("validation_surface_not_observed") or 0
+                    )
+                },
+                missing_when_false=(
+                    "Review tests/validators for remaining repos; add surfaces or record "
+                    "human waivers."
+                ),
+            ),
+        ],
+        "metadata_ready_review_wave": [
+            _proof_item(
+                "metadata_ready_repos_present",
+                "At least one repo is metadata-ready for human review.",
+                satisfied=int(wave_plan["summary"]["metadata_ready_repo_count"]) > 0,
+                evidence={
+                    "metadata_ready_repo_count": int(
+                        wave_plan["summary"]["metadata_ready_repo_count"]
+                    )
+                },
+                missing_when_false=(
+                    "Resolve earlier blockers before final metadata-ready review."
+                ),
+            ),
+            _proof_item(
+                "metadata_ready_human_review_recorded",
+                "Human review has accepted, deferred, or rejected metadata-ready repo status.",
+                satisfied=False,
+                evidence={"human_review_record_path": ""},
+                missing_when_false=(
+                    "Record explicit human review evidence for metadata-ready repos before "
+                    "treating this wave as complete."
+                ),
+            ),
+        ],
+    }
+
+    wave_statuses: list[dict[str, Any]] = []
+    prior_complete = True
+    for wave in wave_plan["waves"]:
+        status = _proof_status(
+            wave,
+            proof_by_wave.get(wave["wave_id"], []),
+            prior_waves_complete=prior_complete,
+        )
+        wave_statuses.append(status)
+        if status["proof_status"] != "complete":
+            prior_complete = False
+
+    current = next(
+        (wave for wave in wave_statuses if wave["proof_status"] != "complete"),
+        None,
+    )
+    complete_count = sum(1 for wave in wave_statuses if wave["proof_status"] == "complete")
+    return {
+        "methodology_version": PROOF_CHECK_METHODOLOGY_VERSION,
+        "generated_at": generated,
+        "authority_boundary": PROOF_CHECK_AUTHORITY_BOUNDARY,
+        "summary": {
+            "wave_count": len(wave_statuses),
+            "complete_wave_count": complete_count,
+            "blocked_wave_count": len(wave_statuses) - complete_count,
+            "current_wave_id": current["wave_id"] if current else "",
+            "current_wave_status": current["proof_status"] if current else "complete",
+            "safe_to_advance": current is None,
+            "source_repos_mutated": 0,
+            "content_files_read": 0,
+            "github_calls": 0,
+            "model_calls": 0,
+            "roadmap_phases_marked_complete": 0,
+        },
+        "checked_inputs": [
+            "repo completion wave plan",
+            "repo completion dashboard summary",
+            "processed/learning/lesson_automation_action_decisions.jsonl",
+            "processed/reports/lesson_automation_execution_plan.json",
+            "processed/learning/priority_content_observations.jsonl",
+            "processed/learning/priority_content_lesson_candidates.jsonl",
+            "processed/learning/learning_rule_promotion_candidates.jsonl",
+        ],
+        "intentionally_not_done": [
+            "decision approval",
+            "command execution",
+            "source file content reads",
+            "source repo mutation",
+            "learning-loop installation",
+            "GitHub/API/model calls",
+            "roadmap phase completion",
+        ],
+        "current_wave": current or {},
+        "wave_statuses": wave_statuses,
+        "decision_summary": decision_summary,
+        "execution_summary": execution_summary,
+        "artifact_counts": {
+            "priority_content_observations": _truthy_count(
+                learning_dir / "priority_content_observations.jsonl"
+            ),
+            "priority_content_lesson_candidates": _truthy_count(
+                learning_dir / "priority_content_lesson_candidates.jsonl"
+            ),
+            "learning_rule_promotion_candidates": _truthy_count(
+                learning_dir / "learning_rule_promotion_candidates.jsonl"
+            ),
+        },
+        "applies_when": [
+            "A future agent needs to know whether a repo-completion wave has proof to advance.",
+            "The work must avoid confusing a generated plan with completed execution.",
+        ],
+        "does_not_apply_when": [
+            "The user has explicitly selected and approved one gated action to execute now.",
+            "The catalog or generated scope reports are stale and need approved refresh first.",
+        ],
+        "danger_if_misapplied": (
+            "A proof check can be mistaken for authorization. It only reports missing or "
+            "present evidence and never grants permission to read content or mutate repos."
+        ),
+        "review_status": "generated_candidate",
+    }
+
+
+def repo_completion_proof_check_markdown(result: dict[str, Any]) -> str:
+    summary = result["summary"]
+    current = result["current_wave"]
+    lines = [
+        "# Repo Completion Proof Check",
+        "",
+        result["authority_boundary"],
+        "",
+        f"- Generated at: `{result['generated_at']}`",
+        f"- Methodology: `{result['methodology_version']}`",
+        f"- Complete waves: **{summary['complete_wave_count']} / {summary['wave_count']}**",
+        f"- Current wave: `{summary['current_wave_id'] or 'none'}`",
+        f"- Current status: `{summary['current_wave_status']}`",
+        f"- Safe to advance all waves: **{summary['safe_to_advance']}**",
+        f"- Source repos mutated: **{summary['source_repos_mutated']}**",
+        f"- Content files read: **{summary['content_files_read']}**",
+        f"- GitHub/model calls: **{summary['github_calls']}** / **{summary['model_calls']}**",
+        "",
+        "## Current Blocker",
+        "",
+    ]
+    if current:
+        lines.extend(
+            [
+                f"- Wave: `{current['wave_id']}`",
+                f"- Label: {current['label']}",
+                f"- Human gate: {current['human_gate']}",
+                f"- Danger if misapplied: {current['danger_if_misapplied']}",
+                "",
+                "Missing proof:",
+            ]
+        )
+        for item in current["missing_proof"]:
+            lines.append(f"- {item}")
+        lines.extend(["", "Generated next step:", "", "```powershell"])
+        lines.append(current["generated_next_step"])
+        lines.extend(["```", ""])
+    else:
+        lines.append("No blocked wave found; all proof items are satisfied.")
+        lines.append("")
+
+    lines.extend(["## Wave Proof Status", ""])
+    lines.append("| Order | Wave | Status | Satisfied | Missing |")
+    lines.append("|---:|---|---|---|---|")
+    for wave in result["wave_statuses"]:
+        lines.append(
+            "| {order} | `{wave_id}` | `{status}` | `{satisfied}` | `{missing}` |".format(
+                order=wave["sequence_order"],
+                wave_id=wave["wave_id"],
+                status=wave["proof_status"],
+                satisfied=", ".join(wave["satisfied_proof_ids"]),
+                missing=", ".join(wave["missing_proof_ids"]),
+            )
+        )
+    lines.extend(["", "## Checked Inputs", ""])
+    for item in result["checked_inputs"]:
+        lines.append(f"- {item}")
+    lines.extend(["", "## Intentionally Not Done", ""])
+    for item in result["intentionally_not_done"]:
+        lines.append(f"- {item}")
+    lines.extend(["", "## Context Boundaries", ""])
+    lines.append("Applies when:")
+    for item in result["applies_when"]:
+        lines.append(f"- {item}")
+    lines.append("")
+    lines.append("Does not apply when:")
+    for item in result["does_not_apply_when"]:
+        lines.append(f"- {item}")
+    lines.append("")
+    lines.append(f"Danger if misapplied: {result['danger_if_misapplied']}")
+    lines.append("")
+    return "\n".join(lines)
+
+
+def write_repo_completion_proof_check_outputs(
+    repo_root: Path,
+    assets: list[AssetRecord],
+    *,
+    dashboard_limit: int = 500,
+    per_wave_repo_limit: int = 25,
+    generated_at: str | None = None,
+) -> dict[str, Any]:
+    result = build_repo_completion_proof_check(
+        repo_root,
+        assets,
+        generated_at=generated_at,
+        dashboard_limit=dashboard_limit,
+        per_wave_repo_limit=per_wave_repo_limit,
+    )
+    reports_dir = repo_root / "processed" / "reports"
+    paths = {
+        "proof_markdown": reports_dir / "repo_completion_proof_check.md",
+        "proof_json": reports_dir / "repo_completion_proof_check.json",
+    }
+    atomic_write_text(paths["proof_markdown"], repo_completion_proof_check_markdown(result))
+    atomic_write_text(paths["proof_json"], json_dumps(result, pretty=True) + "\n")
+    return {
+        "output_type": "generated_repo_completion_proof_check",
+        "review_status": "generated_candidate",
+        "summary": result["summary"],
+        "outputs": {key: str(path) for key, path in paths.items()},
+    }

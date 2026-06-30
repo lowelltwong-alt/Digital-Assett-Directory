@@ -96,6 +96,25 @@ content-read approval, lesson synthesis, repo learning-loop installation,
 governance-map adoption, AI navigation and validation review, then final
 metadata-ready human review. It is still generated guidance only.
 
+Run the proof check after the wave plan when you need to know whether a wave is
+actually proven complete:
+
+```powershell
+$env:PYTHONPATH='src'; python -m digital_asset_directory.cli recommend repo-completion-proof-check --dashboard-limit 500 --per-wave-repo-limit 25
+```
+
+This writes:
+
+```text
+processed/reports/repo_completion_proof_check.md
+processed/reports/repo_completion_proof_check.json
+```
+
+The proof check reports the current blocked wave, satisfied proof ids, missing
+proof ids, and the generated next step. It still does not approve decisions,
+execute commands, read source contents, mutate repos, call GitHub, call models,
+install hooks, or mark roadmap phases complete.
+
 ## Next-Action Queue
 
 After scope reports exist, generate one consolidated queue before choosing the
