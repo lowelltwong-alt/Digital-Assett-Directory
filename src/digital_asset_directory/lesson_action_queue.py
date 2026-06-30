@@ -661,6 +661,41 @@ def _dedupe(values: list[str]) -> list[str]:
     return sorted({value.strip() for value in values if value.strip()})
 
 
+def load_lesson_automation_path_filter_file(path: Path, *, filter_kind: str) -> list[str]:
+    """Load include/exclude path filters from a generated review artifact."""
+    if filter_kind not in {"include", "exclude"}:
+        raise ValueError("filter_kind must be 'include' or 'exclude'.")
+    if not path.exists():
+        raise ValueError(f"Path filter file does not exist: {path}")
+    try:
+        payload = json.loads(path.read_text(encoding="utf-8"))
+    except json.JSONDecodeError as exc:
+        raise ValueError(f"Path filter file is not valid JSON: {path}") from exc
+    if isinstance(payload, list):
+        return _dedupe([str(item) for item in payload])
+    if not isinstance(payload, dict):
+        raise ValueError("Path filter file must be a JSON list or object.")
+
+    direct_keys = (
+        ("include_paths", "approved_include_paths")
+        if filter_kind == "include"
+        else ("exclude_paths", "approved_exclude_paths", "excluded_flagged_paths")
+    )
+    for key in direct_keys:
+        value = payload.get(key)
+        if isinstance(value, list):
+            return _dedupe([str(item) for item in value])
+
+    narrowed = payload.get("narrowed_approval")
+    if isinstance(narrowed, dict):
+        key = "include_paths" if filter_kind == "include" else "excluded_flagged_paths"
+        value = narrowed.get(key)
+        if isinstance(value, list):
+            return _dedupe([str(item) for item in value])
+
+    raise ValueError(f"No {filter_kind} path list found in {path}.")
+
+
 def _validate_decision(record: LessonAutomationDecisionRecord) -> None:
     if record.decision == "pending":
         return
@@ -904,6 +939,8 @@ def _label_command(
     repo_paths: list[str] | None = None,
     include_paths: list[str] | None = None,
     exclude_paths: list[str] | None = None,
+    include_path_file: str = "",
+    exclude_path_file: str = "",
     max_bytes_per_file: int = 0,
     max_files: int = 0,
     allow_content_read: bool = False,
@@ -934,6 +971,10 @@ def _label_command(
         parts.extend(["--include-path", _ps_quote(include_path)])
     for exclude_path in exclude_paths or []:
         parts.extend(["--exclude-path", _ps_quote(exclude_path)])
+    if include_path_file:
+        parts.extend(["--include-path-file", _ps_quote(include_path_file)])
+    if exclude_path_file:
+        parts.extend(["--exclude-path-file", _ps_quote(exclude_path_file)])
     if max_bytes_per_file:
         parts.extend(["--max-bytes-per-file", str(max_bytes_per_file)])
     if max_files:
@@ -1404,8 +1445,8 @@ def build_lesson_automation_approval_impact(
             approval_id=str(approval_fields.get("approval_id") or ""),
             repo_keys=repo_keys,
             categories=categories,
-            include_paths=include_paths,
-            exclude_paths=[],
+            include_path_file="processed/reports/lesson_automation_approval_impact.json",
+            exclude_path_file="processed/reports/lesson_automation_approval_impact.json",
             max_bytes_per_file=max_bytes,
             max_files=narrowed_max_files,
             allow_content_read=True,
@@ -1416,7 +1457,7 @@ def build_lesson_automation_approval_impact(
     )
     max_possible_bytes = min(matched_count, max_file_count) * max_bytes
     return {
-        "methodology_version": "lesson-automation-approval-impact-v0.3",
+        "methodology_version": "lesson-automation-approval-impact-v0.4",
         "generated_at": generated,
         "authority_boundary": (
             "Generated approval impact brief only. This command reads pending decision rows, "
@@ -1465,6 +1506,7 @@ def build_lesson_automation_approval_impact(
             "max_possible_bytes_if_later_executed": narrowed_max_files * max_bytes,
             "include_paths": include_paths,
             "excluded_flagged_paths": excluded_paths,
+            "path_filter_file": "processed/reports/lesson_automation_approval_impact.json",
             "approval_command": narrowed_approval_command,
             "rationale": narrowed_rationale if can_generate_exact_narrowed_command else "",
             "danger_if_misapplied": (
@@ -1592,6 +1634,7 @@ def lesson_automation_approval_impact_markdown(result: dict[str, Any]) -> str:
                 f"- Excluded flagged paths: **{narrowed['excluded_flagged_path_count']}**",
                 f"- Max files: **{narrowed['max_files']}**",
                 f"- Max possible bytes if later executed: **{narrowed['max_possible_bytes_if_later_executed']}**",
+                f"- Path filter file: `{narrowed['path_filter_file']}`",
                 f"- Danger if misapplied: {narrowed['danger_if_misapplied']}",
                 "",
                 "```powershell",

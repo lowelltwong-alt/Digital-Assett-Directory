@@ -24,7 +24,7 @@ processed/reports/lesson_automation_approval_impact.json
 
 ## Methodology
 
-Methodology version: `lesson-automation-approval-impact-v0.3`
+Methodology version: `lesson-automation-approval-impact-v0.4`
 
 The command reads only generated DAD surfaces:
 
@@ -95,6 +95,17 @@ V0.3 adds executable path constraints:
 The clean-subset command is still only generated guidance. It does not approve a
 decision, update the ledger, read source content, or mutate any source repo.
 
+V0.4 makes the clean-subset approval reviewable without a very long command:
+
+- `lesson-automation-decision-label` accepts `--include-path-file` and
+  `--exclude-path-file`;
+- `priority-content-extract` accepts the same file options for direct bounded
+  runs;
+- the generated clean-subset command points at
+  `processed/reports/lesson_automation_approval_impact.json`;
+- the CLI expands that file and stores the exact include/exclude paths in the
+  reviewed decision record before any execution plan can run.
+
 ## Red Team
 
 - Risk: a generated impact brief could be mistaken for approval.
@@ -108,6 +119,10 @@ decision, update the ledger, read source content, or mutate any source repo.
 - Risk: a narrowed command could be shown but not enforced later.
   Guard: the decision contract, execution-plan command, and extractor now carry
   exact include/exclude path filters.
+- Risk: an exact clean-subset command can become too long for reliable human
+  review.
+  Guard: path-filter files keep the human-facing command compact while still
+  expanding into exact stored paths before execution.
 - Risk: byte caps can create false comfort.
   Guard: the report gives the maximum possible bytes if later executed, but
   still treats source content as human-gated.

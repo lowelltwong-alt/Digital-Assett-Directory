@@ -225,7 +225,9 @@ processed/reports/lesson_automation_decision_template.json
 Pending rows are not approvals. The label command fails closed unless approvals
 include exact repo/category/path selectors and the required safety flags. Add
 `--include-path` and `--exclude-path` when the human approval should be limited
-to an exact clean subset inside the selected repo/category scope:
+to an exact clean subset inside the selected repo/category scope. For larger
+sets, use `--include-path-file` and `--exclude-path-file`; the CLI expands the
+file into exact stored paths before any execution plan is generated:
 
 ```powershell
 $env:PYTHONPATH='src'; python -m digital_asset_directory.cli recommend lesson-automation-decision-label `
@@ -235,8 +237,8 @@ $env:PYTHONPATH='src'; python -m digital_asset_directory.cli recommend lesson-au
   --approval-id "<human-approval-id>" `
   --repo-key "<approved-repo-key>" `
   --category "<approved-category>" `
-  --include-path "<exact-logical-or-relative-path-to-read>" `
-  --exclude-path "<exact-logical-or-relative-path-to-block>" `
+  --include-path-file "processed/reports/lesson_automation_approval_impact.json" `
+  --exclude-path-file "processed/reports/lesson_automation_approval_impact.json" `
   --allow-content-read `
   --max-bytes-per-file 20000 `
   --max-files 10 `
@@ -286,7 +288,9 @@ run the generated approval command as-is. Narrow the repo keys, categories, path
 classes, or caps first, unless Lowell explicitly approves the flagged path
 classes for that exact action. When the full candidate path list is visible, use
 the generated clean-subset command in the impact brief; it carries exact
-`--include-path` constraints into the later extractor command.
+path constraints into the later extractor command. Large clean subsets should
+use the compact `--include-path-file` / `--exclude-path-file` form from the
+impact brief.
 
 After one or more decision rows are reviewed and approved, generate the
 execution plan:

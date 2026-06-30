@@ -12,6 +12,7 @@ from digital_asset_directory.lesson_action_queue import (
     build_lesson_automation_next_action_queue,
     build_lesson_automation_decision_template,
     build_lesson_automation_execution_plan,
+    load_lesson_automation_path_filter_file,
     load_lesson_automation_decisions,
     update_lesson_automation_decision_record,
     write_lesson_automation_approval_impact_outputs,
@@ -427,9 +428,14 @@ def test_approval_impact_brief_reports_candidate_paths_without_approval(tmp_path
     assert impact["narrowed_approval"]["available"] is True
     assert impact["narrowed_approval"]["include_path_count"] == 2
     assert impact["narrowed_approval"]["excluded_flagged_path_count"] == 1
-    assert "--include-path \"git-projects/repo-a/AI_FRONT_DOOR.md\"" in impact[
-        "narrowed_approval"
-    ]["approval_command"]
+    assert (
+        "--include-path-file \"processed/reports/lesson_automation_approval_impact.json\""
+        in impact["narrowed_approval"]["approval_command"]
+    )
+    assert (
+        "--exclude-path-file \"processed/reports/lesson_automation_approval_impact.json\""
+        in impact["narrowed_approval"]["approval_command"]
+    )
     assert "content_read_approval_recorded" in impact["proof_unlocked_after_human_approval"][0]
     assert "--allow-content-read" in impact["approval_command"]
 
@@ -454,6 +460,32 @@ def test_approval_impact_writer_stays_under_processed_reports(tmp_path: Path):
     assert payload["summary"]["content_files_read"] == 0
     assert payload["summary"]["labels_applied"] == 0
     assert "approval application" in payload["intentionally_not_done"]
+
+
+def test_path_filter_file_loader_reads_impact_clean_subset(tmp_path: Path):
+    seed_scope_outputs(tmp_path)
+    template = write_lesson_automation_decision_template_outputs(
+        tmp_path,
+        generated_at=TIMESTAMP,
+    )
+    result = write_lesson_automation_approval_impact_outputs(
+        tmp_path,
+        decisions_file=Path(template["outputs"]["decision_template"]),
+        generated_at=TIMESTAMP,
+    )
+    impact_path = Path(result["outputs"]["impact_json"])
+
+    include_paths = load_lesson_automation_path_filter_file(impact_path, filter_kind="include")
+    exclude_paths = load_lesson_automation_path_filter_file(impact_path, filter_kind="exclude")
+
+    assert include_paths == [
+        "git-projects/repo-a/AI_FRONT_DOOR.md",
+        "git-projects/repo-a/schemas/example.schema.json",
+    ]
+    assert exclude_paths == [
+        "git-projects/repo-a/repos/_talent_zip_inspect_20260618/"
+        "lawfirm_os_talent_intelligence_private_repo/AGENTS.md"
+    ]
 
 
 def test_execution_plan_is_empty_until_decision_is_approved(tmp_path: Path):

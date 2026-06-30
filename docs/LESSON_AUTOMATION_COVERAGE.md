@@ -166,7 +166,9 @@ processed/reports/lesson_automation_decision_template.json
 Pending rows are not approvals. Apply a decision only after Lowell has approved
 the exact action and scope. Use `--include-path` and `--exclude-path` when the
 approval should apply to an exact clean subset rather than every path matched by
-the repo/category pair:
+the repo/category pair. For large path sets, prefer `--include-path-file` and
+`--exclude-path-file`; the CLI expands the file into exact stored decision paths
+before any execution plan is generated:
 
 ```powershell
 $env:PYTHONPATH='src'; python -m digital_asset_directory.cli recommend lesson-automation-decision-label `
@@ -176,8 +178,8 @@ $env:PYTHONPATH='src'; python -m digital_asset_directory.cli recommend lesson-au
   --approval-id "<human-approval-id>" `
   --repo-key "<approved-repo-key>" `
   --category "<approved-category>" `
-  --include-path "<exact-logical-or-relative-path-to-read>" `
-  --exclude-path "<exact-logical-or-relative-path-to-block>" `
+  --include-path-file "processed/reports/lesson_automation_approval_impact.json" `
+  --exclude-path-file "processed/reports/lesson_automation_approval_impact.json" `
   --allow-content-read `
   --max-bytes-per-file 20000 `
   --max-files 10 `
@@ -249,8 +251,11 @@ Lowell explicitly approves those exact classes for the current action.
 
 When every matched path is visible, the impact brief also emits a generated
 clean-subset approval command that uses `--include-path` for unflagged paths.
-That command is still only a suggestion; Lowell must explicitly approve or run
-it before the decision ledger changes.
+For large clean subsets, the generated command uses `--include-path-file` and
+`--exclude-path-file` against the impact JSON so the human review command stays
+short while the decision ledger still stores exact paths. That command is still
+only a suggestion; Lowell must explicitly approve or run it before the decision
+ledger changes.
 
 ## Execution Plan
 
@@ -456,7 +461,8 @@ $env:PYTHONPATH='src'; python -m digital_asset_directory.cli recommend priority-
   --repo-key "git-projects/00_lawfirm_os/lawfirm-os-orchestrator" `
   --category ai_navigation `
   --category schemas_contracts `
-  --include-path "git-projects/00_lawfirm_os/lawfirm-os-orchestrator/agents.md" `
+  --include-path-file "processed/reports/lesson_automation_approval_impact.json" `
+  --exclude-path-file "processed/reports/lesson_automation_approval_impact.json" `
   --max-bytes-per-file 20000 `
   --limit 50
 ```

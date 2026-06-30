@@ -50,6 +50,7 @@ from .learning import (
 from .lesson_automation_coverage import write_lesson_automation_coverage_outputs
 from .lesson_action_queue import (
     DECISION_TEMPLATE_PATH,
+    load_lesson_automation_path_filter_file,
     load_lesson_automation_decisions,
     summarize_lesson_automation_decisions,
     update_lesson_automation_decision_record,
@@ -140,6 +141,12 @@ console = Console()
 
 def _cfg(config: Optional[Path] = None, hub: Optional[Path] = None):
     return load_config(config, repo_root=hub)
+
+
+def _repo_path(repo_root: Path, path: Path | None) -> Path | None:
+    if path is None:
+        return None
+    return path if path.is_absolute() else repo_root / path
 
 
 @app.command()
@@ -1083,6 +1090,8 @@ def recommend_lesson_automation_decision_label(
     repo_path: list[str] = typer.Option([], "--repo-path"),
     include_path: list[str] = typer.Option([], "--include-path"),
     exclude_path: list[str] = typer.Option([], "--exclude-path"),
+    include_path_file: Optional[Path] = typer.Option(None, "--include-path-file"),
+    exclude_path_file: Optional[Path] = typer.Option(None, "--exclude-path-file"),
     max_bytes_per_file: int = typer.Option(0, "--max-bytes-per-file", min=0),
     max_files: int = typer.Option(0, "--max-files", min=0),
     allow_content_read: bool = typer.Option(False, "--allow-content-read"),
@@ -1110,6 +1119,28 @@ def recommend_lesson_automation_decision_label(
             "No decision template exists. Run recommend lesson-automation-decision-template first."
         )
         raise typer.Exit(2)
+    include_paths = list(include_path)
+    exclude_paths = list(exclude_path)
+    try:
+        resolved_include_file = _repo_path(cfg.repo_root, include_path_file)
+        if resolved_include_file:
+            include_paths.extend(
+                load_lesson_automation_path_filter_file(
+                    resolved_include_file,
+                    filter_kind="include",
+                )
+            )
+        resolved_exclude_file = _repo_path(cfg.repo_root, exclude_path_file)
+        if resolved_exclude_file:
+            exclude_paths.extend(
+                load_lesson_automation_path_filter_file(
+                    resolved_exclude_file,
+                    filter_kind="exclude",
+                )
+            )
+    except ValueError as exc:
+        console.print(str(exc))
+        raise typer.Exit(2) from exc
     try:
         updated_records, updated = update_lesson_automation_decision_record(
             records,
@@ -1121,8 +1152,8 @@ def recommend_lesson_automation_decision_label(
             approved_repo_keys=repo_key,
             approved_categories=category,
             approved_repo_paths=repo_path,
-            approved_include_paths=include_path,
-            approved_exclude_paths=exclude_path,
+            approved_include_paths=include_paths,
+            approved_exclude_paths=exclude_paths,
             max_bytes_per_file=max_bytes_per_file,
             max_files=max_files,
             allow_content_read=allow_content_read,
@@ -1301,6 +1332,8 @@ def recommend_priority_content_extract(
     category: list[str] = typer.Option([], "--category"),
     include_path: list[str] = typer.Option([], "--include-path"),
     exclude_path: list[str] = typer.Option([], "--exclude-path"),
+    include_path_file: Optional[Path] = typer.Option(None, "--include-path-file"),
+    exclude_path_file: Optional[Path] = typer.Option(None, "--exclude-path-file"),
     scope_file: Optional[Path] = typer.Option(None, "--scope-file"),
     hub: Optional[Path] = typer.Option(None),
     limit: int = typer.Option(50, "--limit", min=1, max=500),
@@ -1313,6 +1346,24 @@ def recommend_priority_content_extract(
         latest_scan = db.latest_scan()
         latest_scan_id = latest_scan["scan_id"] if latest_scan else "catalog-without-scan"
         try:
+            include_paths = list(include_path)
+            exclude_paths = list(exclude_path)
+            resolved_include_file = _repo_path(cfg.repo_root, include_path_file)
+            if resolved_include_file:
+                include_paths.extend(
+                    load_lesson_automation_path_filter_file(
+                        resolved_include_file,
+                        filter_kind="include",
+                    )
+                )
+            resolved_exclude_file = _repo_path(cfg.repo_root, exclude_path_file)
+            if resolved_exclude_file:
+                exclude_paths.extend(
+                    load_lesson_automation_path_filter_file(
+                        resolved_exclude_file,
+                        filter_kind="exclude",
+                    )
+                )
             result = write_priority_content_extract_outputs(
                 cfg.repo_root,
                 cfg.local_sources,
@@ -1320,8 +1371,8 @@ def recommend_priority_content_extract(
                 approval_id=approval_id,
                 repo_keys=repo_key,
                 category_ids=category,
-                include_paths=include_path,
-                exclude_paths=exclude_path,
+                include_paths=include_paths,
+                exclude_paths=exclude_paths,
                 scan_id=latest_scan_id,
                 max_bytes_per_file=max_bytes_per_file,
                 max_excerpt_chars=max_excerpt_chars,
