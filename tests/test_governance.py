@@ -44,5 +44,8 @@ def test_scaffold_new_repo_wires_starter_files_and_governance(tmp_path: Path):
     config_text = (target / ".digital-asset-directory.yml").read_text(encoding="utf-8")
     assert "hub_path" in config_text
     assert "load_bearing_decision_review" in config_text
+    assert "mailbox_path" in config_text
+    assert (target / ".digital-asset" / "mail" / "README.md").exists()
+    assert (target / ".digital-asset" / "mail" / "inbox.jsonl").exists()
     assert (target / ".githooks" / "pre-push").exists()
     assert any("README.md" in str(path) for path in changed)

@@ -22,6 +22,8 @@ from digital_asset_directory.models import (
     LearningRulePromotionCandidateRecord,
     LearningLoopRecord,
     LearningRuleRecord,
+    MailDecisionRecord,
+    MailMessageRecord,
     PriorityContentLessonReviewRecord,
     RepoLearningEventRecord,
     RepoBuildoutRecommendationRecord,
@@ -452,6 +454,35 @@ def test_contextual_archaeology_model_dumps_match_registered_schemas():
     validate_registered_schema("root_cause_hypothesis", root_cause.model_dump(mode="json"))
     validate_registered_schema("counterfactual_lesson", lesson.model_dump(mode="json"))
     validate_registered_schema("repo_learning_event", repo_event.model_dump(mode="json"))
+
+
+def test_mail_model_dumps_match_registered_schemas():
+    message = MailMessageRecord(
+        mail_id="dad:mail:test",
+        thread_id="dad:mail-thread:test",
+        message_type="lesson_suggestion",
+        source_repo="repo-a",
+        target_repo="repo-b",
+        created_at="2026-06-30T00:00:00+00:00",
+        dedupe_key="lesson:repo-a:repo-b",
+        sensitivity="internal",
+        review_status="generated_candidate",
+        payload={"summary": "Use daily mail digests for cross-repo suggestions."},
+        evidence=["test"],
+        suggested_actions=["Review locally before adopting."],
+    )
+    decision = MailDecisionRecord(
+        decision_id="dad:mail-decision:test",
+        mail_id=message.mail_id,
+        repository="repo-b",
+        decision="accept",
+        decided_at="2026-06-30T00:05:00+00:00",
+        decided_by="test",
+        notes="Accepted for local follow-up.",
+    )
+
+    validate_registered_schema("mail_message", message.model_dump(mode="json"))
+    validate_registered_schema("mail_decision", decision.model_dump(mode="json"))
 
 
 def test_background_connection_model_dumps_match_registered_schemas():

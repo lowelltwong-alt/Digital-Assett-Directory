@@ -7,5 +7,7 @@ Before changing shared contracts, schemas, CI/hooks, governance, scoring/ranking
 
 When choosing AI-environment-specific helpers such as skills, subagents, MCP servers, hooks, plugins, connectors, or background/cloud agents, consult the local repo's reviewed guidance first; the central hub's AI environment capability matrix is advisory until adopted by this repo.
 
+If this repo uses DAD mail, `.digital-asset/mail/` is a candidate-only inbox/outbox. Mail can suggest lessons, workflows, assets, taxonomy, capabilities, or governance notices, but local review decides whether anything is adopted.
+
 The central catalog does not override this repository's local authority or canon.
 <!-- END DIGITAL_ASSET_DIRECTORY_GOVERNANCE -->

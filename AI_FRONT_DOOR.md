@@ -66,6 +66,7 @@ not prove source truth, value, authority, or promotion.
 | `registry/asset-pattern-registry.json` | Controlled high-leverage pattern vocabulary. | You classify workflows, composite assets, or reusable systems. |
 | `registry/template-registry.json` | Controlled template library with forward and reverse dependencies. | You create, update, validate, or reuse templates. |
 | `docs/CROSS_REPO_GOVERNANCE_DEPENDENCY_MAP_PATTERN.md` | Reusable cross-repo governance map and child-mirror template pattern. | You design a repo family where upstream governance and child repo mirrors must stay aligned. |
+| `docs/MAIL_CENTER.md` | Governed DAD mail hub and repo-local inbox/outbox mirror. | You need candidate lessons, workflows, assets, taxonomy, capabilities, or governance notices to move across repos without mutating source authority. |
 | `ontology/digital-asset-ontology.ttl` | Ontology layer for graph concepts. | You need semantic graph structure or external graph alignment. |
 | `ontology/taxonomy.skos.ttl` | Taxonomy layer for broader/narrower concept navigation. | You need controlled concept hierarchy. |
 | `processed/graph/graph.json` | Generated graph output. | You need candidate edges from the latest processed catalog; treat as generated evidence. |
@@ -83,6 +84,8 @@ not prove source truth, value, authority, or promotion.
 | `processed/reports/repo_completion_wave_plan.md` | Generated ordered wave plan for completing repo lesson automation. | You need the safest order for content-read approval, lesson synthesis, learning-loop installs, governance maps, and final reviews. |
 | `processed/reports/repo_completion_proof_check.md` | Generated proof check for repo-completion wave advancement. | You need to know which wave is actually blocked, what proof is missing, and whether it is safe to advance. |
 | `processed/reports/template_library.md` | Generated template dependency and review-cadence report. | You need to know what templates depend on and what depends on them. |
+| `processed/mail/` | Generated central mail inbox, outbox, archive, and delivery logs. | You need collected/routed candidate suggestions; never treat them as source truth. |
+| `processed/reports/mail_center.md` | Generated mail-center summary report. | You need mail counts and message-type distribution. |
 | `processed/reports/scan_coverage_cycle.md` | Generated no-rescan coverage-cycle log. | You need to know what was checked, intentionally skipped, and should be scanned next without repeating broad passes. |
 | `processed/learning/scan_cycle_events.jsonl` | Generated append-only scan-cycle event trail. | You need the sequence of prior coverage passes, skipped signal families, gated next work, and cycle handoff context. |
 | `processed/reports/lesson_automation_next_actions.md` | Generated queue of human-gated next actions from existing scopes. | You need the safest next approval decision across priority content, repo learning loops, governance maps, CI/release artifacts, and external gates. |
@@ -120,6 +123,7 @@ Discovery output is evidence and recommendation, not source-repository authority
 - generated workflow-part candidates beneath existing asset-family patterns;
 - candidate value, staleness, orphan, missing-part, and synergy scoring;
 - lessons and AI handoff capture;
+- DAD mail-center candidate suggestion transport;
 - lesson-automation coverage routing and scan-cycle logs;
 - metadata-only reference-architecture recognition and grading;
 - generated architecture consult packs for new repo seeding;
@@ -144,6 +148,7 @@ Discovery output is evidence and recommendation, not source-repository authority
 | Change graph vocabulary | `ontology_change` | edge registry, ontology/taxonomy update, migration note |
 | Change identity or similarity rules | `identity_change` | ladder doc, identity-layer registry, schema/edge updates, validation |
 | Add a learning record | `lesson_capture` | lesson JSONL, provenance, confidence, reuse candidates |
+| Move repo suggestions | `mail_center` | compose/collect/route/deliver/digest/review, append-only JSONL, local review decision |
 | Build a feature | `implementation` | preflight, changed files, tests, postflight, lessons |
 | Check operational readiness | `doctor` | readiness JSON, `processed/reports/operational_readiness.md`, missing-surface warnings |
 | Search external GitHub | `research_missing_part` | explicit `--enable-external`, query, candidates, license/freshness metadata, human review note |

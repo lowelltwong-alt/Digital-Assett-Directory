@@ -18,6 +18,9 @@ processed/reports/repo_completion_proof_check.md
 processed/reports/reference_architectures.md
 processed/learning/reference_architecture_candidates.jsonl
 processed/reports/architecture_consults/
+processed/mail/
+processed/reports/mail_center.md
+processed/reports/mail_center.json
 processed/learning/scan_cycle_events.jsonl
 processed/reports/lesson_automation_approval_packet.md
 processed/reports/lesson_automation_approval_impact.md
@@ -124,6 +127,38 @@ It reads generated/local DAD guidance only. It does not rescan, read source repo
 contents, mutate a target repo, call GitHub, call models, install templates,
 promote candidates to truth, or mark roadmap phases complete. The new repo owns
 its own canon; the consult is seed advice for human review.
+
+## Mail center
+
+Use `mail` commands when repos need to exchange candidate lessons, assets,
+workflows, taxonomy ideas, capability updates, or governance notices without
+mutating source authority:
+
+```powershell
+$env:PYTHONPATH='src'; python -m digital_asset_directory.cli mail collect --repo all
+$env:PYTHONPATH='src'; python -m digital_asset_directory.cli mail route
+$env:PYTHONPATH='src'; python -m digital_asset_directory.cli mail deliver --repo all
+```
+
+Repo-local checks are light:
+
+```powershell
+$env:PYTHONPATH='src'; python -m digital_asset_directory.cli mail digest --repo C:\path\to\repo
+```
+
+The command family reads and writes only:
+
+```text
+processed/mail/
+processed/reports/mail_center.md
+processed/reports/mail_center.json
+.digital-asset/mail/
+```
+
+Mail packets are candidate evidence. They do not overwrite repo authority,
+schemas, registries, source code, hooks, or sensitive files. Transport rejects
+confidential, restricted, and unknown sensitivity, redacts secret-like text, and
+delivers only to repos explicitly supplied or discovered from approved config.
 
 ## Reference architecture recognition
 

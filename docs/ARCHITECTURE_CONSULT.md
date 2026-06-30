@@ -11,6 +11,11 @@ The command is consult-and-compose, not copy-and-impose. DAD advises a seed
 architecture pack from local generated evidence. The new repository keeps its
 own canon, source-of-truth, and design authority.
 
+Persistent repos should include a lightweight DAD mailbox by default:
+`.digital-asset/mail/README.md` plus append-only inbox/outbox/archive JSONL
+files. Mail is candidate suggestion transport only; it does not install
+governance or adopt cross-repo lessons without local review.
+
 ## Command
 
 ```powershell
@@ -75,6 +80,7 @@ The consult returns:
 - a unique architecture combination plan;
 - a starter repo structure;
 - template dependencies and validation commands;
+- DAD mail inbox/outbox guidance for persistent repos;
 - workflow-part, learning-rule, governance, and background-connection cues;
 - required human gates;
 - a seed prompt for a future coding agent.

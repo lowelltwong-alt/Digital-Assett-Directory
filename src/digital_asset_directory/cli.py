@@ -63,6 +63,14 @@ from .lesson_action_queue import (
     write_lesson_automation_next_action_outputs,
 )
 from .manual_tasks import write_manual_task_queue
+from .mail_center import (
+    collect_mail,
+    compose_mail,
+    deliver_mail,
+    digest_mail,
+    route_mail,
+    review_mail,
+)
 from .orphan_adapter import run_orphan_radar
 from .operational import write_operational_readiness_report
 from .priority_content_lessons import (
@@ -141,6 +149,8 @@ test_app = typer.Typer(no_args_is_help=True)
 app.add_typer(test_app, name="test")
 recommend_app = typer.Typer(no_args_is_help=True)
 app.add_typer(recommend_app, name="recommend")
+mail_app = typer.Typer(no_args_is_help=True)
+app.add_typer(mail_app, name="mail")
 console = Console()
 
 
@@ -166,6 +176,38 @@ def _json_command(value: Optional[str], option_name: str) -> list[str] | None:
     if not all(isinstance(item, str | int | float | bool) for item in parsed):
         raise typer.BadParameter(f"{option_name} arguments must be strings, numbers, or booleans.")
     return [str(item) for item in parsed]
+
+
+def _key_value_payload(values: list[str]) -> dict[str, str]:
+    payload: dict[str, str] = {}
+    for value in values:
+        if "=" not in value:
+            raise typer.BadParameter("Mail payload values must use key=value form.")
+        key, item = value.split("=", 1)
+        key = key.strip()
+        if not key:
+            raise typer.BadParameter("Mail payload keys cannot be empty.")
+        payload[key] = item.strip()
+    return payload
+
+
+def _discover_mail_repos(raw_repos: list[str], cfg) -> list[Path]:
+    if not raw_repos:
+        raise typer.BadParameter("Provide at least one --repo value, or --repo all.")
+    if raw_repos != ["all"]:
+        return [Path(repo).resolve() for repo in raw_repos]
+
+    repos: dict[str, Path] = {str(cfg.repo_root.resolve()): cfg.repo_root.resolve()}
+    for source in cfg.local_sources:
+        if not source.enabled:
+            continue
+        base = source.path.resolve()
+        candidates = [base, *(item for item in base.iterdir() if item.is_dir())] if base.exists() else []
+        for candidate in candidates:
+            mail_dir = candidate / ".digital-asset" / "mail"
+            if (mail_dir / "outbox.jsonl").exists() or (mail_dir / "inbox.jsonl").exists():
+                repos[str(candidate.resolve())] = candidate.resolve()
+    return list(repos.values())
 
 
 @app.command()
@@ -309,6 +351,102 @@ def test_parity_command(
 def roadmap_check(hub: Optional[Path] = typer.Option(None), no_update: bool = False) -> None:
     cfg = _cfg(hub=hub)
     result = check_roadmap(cfg.repo_root, update=not no_update)
+    console.print_json(data=result)
+
+
+@mail_app.command("compose")
+def mail_compose(
+    repo: Path = typer.Option(Path("."), "--repo"),
+    message_type: str = typer.Option(..., "--type"),
+    target_repo: str = typer.Option("central_only", "--target-repo"),
+    summary: str = typer.Option(..., "--summary"),
+    payload: list[str] = typer.Option([], "--payload"),
+    evidence: list[str] = typer.Option([], "--evidence"),
+    suggested_action: list[str] = typer.Option([], "--suggested-action"),
+    sensitivity: str = typer.Option("internal", "--sensitivity"),
+    thread_id: Optional[str] = typer.Option(None, "--thread-id"),
+    dedupe_key: Optional[str] = typer.Option(None, "--dedupe-key"),
+) -> None:
+    """Append a candidate mail packet to a repo-local outbox."""
+    try:
+        result = compose_mail(
+            repo.resolve(),
+            message_type=message_type,
+            target_repo=target_repo,
+            summary=summary,
+            payload=_key_value_payload(payload),
+            evidence=evidence,
+            suggested_actions=suggested_action,
+            sensitivity=sensitivity,
+            thread_id=thread_id,
+            dedupe_key=dedupe_key,
+        )
+    except (ValueError, TypeError) as exc:
+        console.print(str(exc))
+        raise typer.Exit(2) from exc
+    console.print_json(data=result)
+
+
+@mail_app.command("collect")
+def mail_collect(
+    repo: list[str] = typer.Option([], "--repo"),
+    hub: Optional[Path] = typer.Option(None),
+) -> None:
+    """Collect repo outboxes into DAD's central mail inbox."""
+    cfg = _cfg(hub=hub)
+    result = collect_mail(cfg.repo_root, _discover_mail_repos(repo, cfg))
+    console.print_json(data=result)
+
+
+@mail_app.command("route")
+def mail_route(
+    default_target_repo: str = typer.Option("central_only", "--default-target-repo"),
+    hub: Optional[Path] = typer.Option(None),
+) -> None:
+    """Categorize central inbox mail and stage delivery candidates."""
+    cfg = _cfg(hub=hub)
+    result = route_mail(cfg.repo_root, default_target_repo=default_target_repo)
+    console.print_json(data=result)
+
+
+@mail_app.command("deliver")
+def mail_deliver(
+    repo: list[str] = typer.Option([], "--repo"),
+    hub: Optional[Path] = typer.Option(None),
+) -> None:
+    """Deliver staged central outbox mail only into target repo mailboxes."""
+    cfg = _cfg(hub=hub)
+    result = deliver_mail(cfg.repo_root, _discover_mail_repos(repo, cfg))
+    console.print_json(data=result)
+
+
+@mail_app.command("review")
+def mail_review(
+    repo: Path = typer.Option(Path("."), "--repo"),
+    mail_id: str = typer.Option(..., "--mail-id"),
+    decision: str = typer.Option(..., "--decision"),
+    decided_by: str = typer.Option("unknown", "--decided-by"),
+    notes: str = typer.Option("", "--notes"),
+) -> None:
+    """Append a local review decision for an inbox mail packet."""
+    try:
+        result = review_mail(
+            repo.resolve(),
+            mail_id=mail_id,
+            decision=decision,
+            decided_by=decided_by,
+            notes=notes,
+        )
+    except (ValueError, TypeError) as exc:
+        console.print(str(exc))
+        raise typer.Exit(2) from exc
+    console.print_json(data=result)
+
+
+@mail_app.command("digest")
+def mail_digest(repo: Path = typer.Option(Path("."), "--repo")) -> None:
+    """Show unread mail and mark the repo mailbox as checked."""
+    result = digest_mail(repo.resolve())
     console.print_json(data=result)
 
 

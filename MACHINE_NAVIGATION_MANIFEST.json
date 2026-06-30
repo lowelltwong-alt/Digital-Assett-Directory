@@ -27,6 +27,7 @@
     "registry/context-tag-registry.json",
     "registry/template-registry.json",
     "docs/CROSS_REPO_GOVERNANCE_DEPENDENCY_MAP_PATTERN.md",
+    "docs/MAIL_CENTER.md",
     "processed/graph/graph.json",
     "processed/reports/asset_family_recognition.md",
     "processed/reports/workflow_sweeps/workflow_sweeps_index.md",
@@ -42,6 +43,8 @@
     "processed/reports/repo_completion_wave_plan.md",
     "processed/reports/repo_completion_proof_check.md",
     "processed/reports/template_library.md",
+    "processed/mail/",
+    "processed/reports/mail_center.md",
     "processed/reports/operational_readiness.md",
     "processed/reports/scan_coverage_cycle.md",
     "processed/learning/scan_cycle_events.jsonl",
@@ -75,6 +78,8 @@
     "priority_content_lesson_review_schema": "schemas/priority-content-lesson-review.schema.json",
     "learning_rule_promotion_candidate_schema": "schemas/learning-rule-promotion-candidate.schema.json",
     "scan_cycle_event_schema": "schemas/scan-cycle-event.schema.json",
+    "mail_message_schema": "schemas/mail-message.schema.json",
+    "mail_decision_schema": "schemas/mail-decision.schema.json",
     "reference_architecture_schema": "schemas/reference-architecture.schema.json",
     "architecture_consult_schema": "schemas/architecture-consult.schema.json",
     "capabilities": "registry/capability-registry.json",
@@ -85,6 +90,7 @@
   "generated_surfaces": [
     "raw/",
     "processed/",
+    "processed/mail/",
     "processed/learning/",
     "state/catalog.sqlite3",
     "audit/events/"
