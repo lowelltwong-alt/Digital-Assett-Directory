@@ -49,6 +49,7 @@ from .lesson_automation_coverage import write_lesson_automation_coverage_outputs
 from .manual_tasks import write_manual_task_queue
 from .orphan_adapter import run_orphan_radar
 from .operational import write_operational_readiness_report
+from .priority_content_lessons import write_priority_content_lesson_outputs
 from .priority_content_scope import (
     write_priority_content_extract_outputs,
     write_priority_content_extract_scope_outputs,
@@ -984,6 +985,32 @@ def recommend_priority_content_extract(
                 scan_id=latest_scan_id,
                 max_bytes_per_file=max_bytes_per_file,
                 max_excerpt_chars=max_excerpt_chars,
+                limit=limit,
+            )
+        except ValueError as exc:
+            console.print(str(exc))
+            raise typer.Exit(2) from exc
+    console.print_json(data=result)
+
+
+@recommend_app.command("priority-content-lessons")
+def recommend_priority_content_lessons(
+    observations_file: Optional[Path] = typer.Option(None, "--observations-file"),
+    hub: Optional[Path] = typer.Option(None),
+    min_observations: int = typer.Option(1, "--min-observations", min=1, max=20),
+    limit: int = typer.Option(100, "--limit", min=1, max=500),
+) -> None:
+    """Synthesize generated lesson candidates from bounded priority-content observations."""
+    cfg = _cfg(hub=hub)
+    with CatalogDB(cfg.database_path) as db:
+        latest_scan = db.latest_scan()
+        latest_scan_id = latest_scan["scan_id"] if latest_scan else "catalog-without-scan"
+        try:
+            result = write_priority_content_lesson_outputs(
+                cfg.repo_root,
+                observations_file=observations_file,
+                scan_id=latest_scan_id,
+                min_observations=min_observations,
                 limit=limit,
             )
         except ValueError as exc:

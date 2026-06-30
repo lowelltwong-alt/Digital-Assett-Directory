@@ -38,7 +38,8 @@
     "processed/reports/operational_readiness.md",
     "processed/reports/scan_coverage_cycle.md",
     "processed/reports/priority_content_extract_scope.md",
-    "processed/learning/priority_content_observations.jsonl"
+    "processed/learning/priority_content_observations.jsonl",
+    "processed/learning/priority_content_lesson_candidates.jsonl"
   ],
   "registries": {
     "source_of_truth": "registry/source-of-truth.json",

@@ -152,3 +152,36 @@ them under configured local source roots, caps bytes per file, redacts
 secret-like text, and keeps all observations as `generated_candidate` evidence.
 After observations exist, `recommend lesson-automation-coverage` marks
 `priority_content_extracts` as `extracted_candidate_observations_present`.
+
+## Priority Content Lesson Candidates
+
+After generated observations exist, synthesize context-bound lesson candidates:
+
+```powershell
+$env:PYTHONPATH='src'; python -m digital_asset_directory.cli recommend priority-content-lessons --min-observations 1 --limit 100
+```
+
+This writes:
+
+```text
+processed/learning/priority_content_lesson_candidates.jsonl
+processed/reports/priority_content_lesson_candidates.md
+processed/reports/priority_content_lesson_candidates.json
+```
+
+The synthesis command consumes generated observations only. It does not read
+source repos. Every candidate uses the existing `CounterfactualLessonRecord`
+contract and must include:
+
+- `applies_when`;
+- `does_not_apply_when`;
+- `danger_if_misapplied`;
+- `counterfactual_better_order`;
+- `source_events`;
+- `context_tags`;
+- `review_status="generated_candidate"`.
+
+After lesson candidates exist, `recommend lesson-automation-coverage` marks
+`priority_content_extracts` as `lesson_candidates_synthesized`. Human review is
+still required before any candidate becomes a deterministic learning rule or
+preflight default.

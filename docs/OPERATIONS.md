@@ -143,6 +143,18 @@ It fails closed without an approval id, repo key, and category. It writes
 generated observations under `processed/learning/` and a generated report under
 `processed/reports/`; it does not mutate source repos.
 
+After generated observations exist, use `recommend priority-content-lessons` to
+create context-bound lesson candidates:
+
+```powershell
+$env:PYTHONPATH='src'; python -m digital_asset_directory.cli recommend priority-content-lessons --min-observations 1 --limit 100
+```
+
+The command writes generated `CounterfactualLessonRecord` candidates under
+`processed/learning/` and a generated review report under `processed/reports/`.
+It does not read source repos or promote lesson candidates into reviewed
+learning rules.
+
 ## Template library
 
 Use `templates check` when you need to validate DAD's reusable template library,

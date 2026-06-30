@@ -80,6 +80,7 @@ not prove source truth, value, authority, or promotion.
 | `processed/reports/scan_coverage_cycle.md` | Generated no-rescan coverage-cycle log. | You need to know what was checked, intentionally skipped, and should be scanned next without repeating broad passes. |
 | `processed/reports/priority_content_extract_scope.md` | Generated metadata-only approval scope for a future bounded content pass. | You need candidate priority paths before any source content is read. |
 | `processed/learning/priority_content_observations.jsonl` | Generated bounded observations from approved content reads. | You need candidate content signals after a human-approved scoped extract; do not treat as source truth. |
+| `processed/learning/priority_content_lesson_candidates.jsonl` | Generated context-bound lesson candidates from approved content observations. | You need reviewable lesson candidates before any learning rule or preflight default is changed. |
 
 ## Core boundary
 
