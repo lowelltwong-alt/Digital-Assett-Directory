@@ -14,6 +14,28 @@ The installer can add an idempotent managed block to `AGENTS.md`, create a `CLAU
 preflight -> context pack -> work -> tests -> postflight -> central lesson/handoff -> pre-push gate
 ```
 
+## AI environment capability guidance
+
+Downstream repos may add a short advisory pointer to the hub's AI environment
+capability matrix when they want Codex, Cursor, Claude Code, or another agent
+runtime to choose appropriate skills, subagents, MCP servers, hooks, plugins,
+connectors, or background/cloud agents.
+
+Keep the full matrix outside mandatory repo contracts until the target repo
+owner reviews it. A safe adoption path is:
+
+1. add a link or local copy as advisory documentation;
+2. state which AI environments the repo actually supports;
+3. keep local authority in the target repo's `AGENTS.md`, `CLAUDE.md`, Cursor
+   rules, hooks, CI, and review policy;
+4. record last-verified and stale-after dates;
+5. capture postflight feedback when a capability was useful, missing, risky, or
+   misleading.
+
+Do not auto-install tool-specific MCP servers, hooks, plugins, skills, cloud
+agents, or subagent configurations across repos without the normal source
+boundary, security, provenance, and human-gate review.
+
 ## Load-bearing decisions
 
 Before changing shared contracts, schemas, CI/hooks, governance, scoring/ranking,

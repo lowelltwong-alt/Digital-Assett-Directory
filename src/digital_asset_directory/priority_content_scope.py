@@ -568,6 +568,19 @@ def _load_scope(scope_file: Path) -> dict[str, Any]:
         raise ValueError(f"Scope file is not valid JSON: {scope_file}") from exc
 
 
+def _case_insensitive_child(parent: Path, part: str) -> Path:
+    candidate = parent / part
+    if candidate.exists():
+        return candidate
+    try:
+        for child in parent.iterdir():
+            if child.name.lower() == part.lower():
+                return child
+    except OSError:
+        return candidate
+    return candidate
+
+
 def _resolve_logical_path(
     logical_path: str, local_sources: list[LocalSource]
 ) -> tuple[Path | None, str]:
@@ -580,7 +593,9 @@ def _resolve_logical_path(
             continue
         rel = logical[len(alias) :].strip("/")
         source_root = source.path.resolve()
-        candidate = source_root.joinpath(*PurePosixPath(rel).parts)
+        candidate = source_root
+        for part in PurePosixPath(rel).parts:
+            candidate = _case_insensitive_child(candidate, part)
         resolved = candidate.resolve(strict=False)
         try:
             resolved.relative_to(source_root)

@@ -11,6 +11,13 @@
 
 Instruction files guide model behavior. Enforcement belongs in deterministic hooks, validators, Git hooks, CI, and review policy.
 
+## Environment-specific capabilities
+
+Use `docs/AI_ENVIRONMENT_CAPABILITY_MATRIX.md` when deciding whether Codex,
+Cursor, Claude Code, or another AI environment should use skills, subagents,
+MCP servers, hooks, plugins, connectors, cloud/background agents, or plain local
+work. The matrix is advisory and date-bound; reverify vendor docs when stale.
+
 ## Handoff quality
 
 Automatic hook capture is a fallback, not the preferred record. An explicit postflight should replace the draft with task context, tests, uncertainty, and reusable lessons.

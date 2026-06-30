@@ -109,6 +109,7 @@ from .repo_learning_scope import write_repo_learning_loop_install_scope_outputs
 from .roadmap import check_roadmap
 from .semantic_evolution import write_semantic_evolution_outputs
 from .template_library import validate_template_registry, write_template_library_report
+from .test_parity import run_test_parity
 from .validation import validate_repo
 from .workflow_parts import (
     build_workflow_part_review_queue,
@@ -136,6 +137,8 @@ template_app = typer.Typer(no_args_is_help=True)
 app.add_typer(template_app, name="templates")
 orphan_app = typer.Typer(no_args_is_help=True)
 app.add_typer(orphan_app, name="orphan-radar")
+test_app = typer.Typer(no_args_is_help=True)
+app.add_typer(test_app, name="test")
 recommend_app = typer.Typer(no_args_is_help=True)
 app.add_typer(recommend_app, name="recommend")
 console = Console()
@@ -234,6 +237,44 @@ def validate_command(hub: Optional[Path] = typer.Option(None)) -> None:
     console.print_json(data=result)
     if not result["valid"]:
         raise typer.Exit(1)
+
+
+@test_app.command("parity")
+def test_parity_command(
+    native_command: str = typer.Option(
+        "python -m pytest -q",
+        "--native-command",
+        help="Authoritative native pytest command.",
+    ),
+    shadow_command: str = typer.Option(
+        ...,
+        "--shadow-command",
+        help="Candidate Rust shadow command, for example cargo test.",
+    ),
+    timeout_seconds: int = typer.Option(120, min=1, max=7200),
+    native_report: Optional[Path] = typer.Option(None, "--native-report"),
+    shadow_report: Optional[Path] = typer.Option(None, "--shadow-report"),
+    audit: bool = typer.Option(True, "--audit/--no-audit"),
+    audit_path: Optional[Path] = typer.Option(None, "--audit-path"),
+    session: Optional[str] = typer.Option(None, "--session"),
+    hub: Optional[Path] = typer.Option(None),
+) -> None:
+    """Run native pytest and a candidate Rust shadow path, then compare and audit."""
+    cfg = _cfg(hub=hub)
+    result = run_test_parity(
+        cfg.repo_root,
+        native_command=native_command,
+        shadow_command=shadow_command,
+        timeout_seconds=timeout_seconds,
+        native_report=native_report,
+        shadow_report=shadow_report,
+        audit=audit,
+        audit_path=audit_path,
+        session_id=session,
+    )
+    console.print_json(data=result)
+    if result["exit_code"] != 0:
+        raise typer.Exit(result["exit_code"])
 
 
 @roadmap_app.command("check")
