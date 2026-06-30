@@ -11,7 +11,7 @@ from .models import AssetRecord
 from .utils import atomic_write_text, json_dumps, redact_sensitive_text, tokens, utc_now, write_jsonl
 
 METHODOLOGY_VERSION = "priority-content-extract-scope-v0.1"
-EXTRACT_METHODOLOGY_VERSION = "priority-content-extract-v0.1"
+EXTRACT_METHODOLOGY_VERSION = "priority-content-extract-v0.2"
 AUTHORITY_BOUNDARY = (
     "Generated approval scope only. This command uses catalog metadata and logical paths to "
     "select candidate files for a future bounded content pass. It does not read source file "
@@ -595,10 +595,14 @@ def _approved_candidates(
     *,
     repo_keys: list[str],
     category_ids: list[str],
+    include_paths: list[str] | None = None,
+    exclude_paths: list[str] | None = None,
     limit: int,
 ) -> list[dict[str, Any]]:
     repo_allow = {_normalized(repo_key) for repo_key in repo_keys}
     category_allow = {_normalized(category_id) for category_id in category_ids}
+    include_allow = {_normalized(path) for path in include_paths or [] if str(path).strip()}
+    exclude_block = {_normalized(path) for path in exclude_paths or [] if str(path).strip()}
     candidates: list[dict[str, Any]] = []
     for repo in scope.get("repo_scopes", []):
         repo_key = _normalized(str(repo.get("repo_key", "")))
@@ -607,6 +611,14 @@ def _approved_candidates(
         for candidate in repo.get("candidates", []):
             category_id = _normalized(str(candidate.get("primary_category_id", "")))
             if category_id not in category_allow:
+                continue
+            path_keys = {
+                _normalized(str(candidate.get("logical_path", ""))),
+                _normalized(str(candidate.get("relative_path", ""))),
+            }
+            if include_allow and not (path_keys & include_allow):
+                continue
+            if exclude_block and path_keys & exclude_block:
                 continue
             candidates.append({"repo_key": repo_key, **candidate})
             if len(candidates) >= limit:
@@ -630,6 +642,8 @@ def run_priority_content_extract(
     approval_id: str,
     repo_keys: list[str],
     category_ids: list[str],
+    include_paths: list[str] | None = None,
+    exclude_paths: list[str] | None = None,
     scan_id: str,
     max_bytes_per_file: int = 20_000,
     max_excerpt_chars: int = 4_000,
@@ -649,6 +663,8 @@ def run_priority_content_extract(
         scope,
         repo_keys=repo_keys,
         category_ids=category_ids,
+        include_paths=include_paths,
+        exclude_paths=exclude_paths,
         limit=limit,
     )
     observations: list[dict[str, Any]] = []
@@ -737,6 +753,8 @@ def run_priority_content_extract(
             "category_counts": dict(sorted(category_counts.items())),
             "repo_keys": sorted({_normalized(repo_key) for repo_key in repo_keys}),
             "category_ids": sorted({_normalized(category_id) for category_id in category_ids}),
+            "include_path_count": len({_normalized(path) for path in include_paths or [] if str(path).strip()}),
+            "exclude_path_count": len({_normalized(path) for path in exclude_paths or [] if str(path).strip()}),
         },
         "observations": observations,
         "skipped": skipped,
@@ -755,6 +773,8 @@ def priority_content_extract_markdown(result: dict[str, Any]) -> str:
         f"- Methodology: `{result['methodology_version']}`",
         f"- Approval id: `{result['approval_id']}`",
         f"- Candidate paths considered: **{summary['candidate_count_considered']}**",
+        f"- Include path filters: **{summary['include_path_count']}**",
+        f"- Exclude path filters: **{summary['exclude_path_count']}**",
         f"- Observations written: **{summary['observation_count']}**",
         f"- Skipped paths: **{summary['skipped_count']}**",
         f"- Bytes read: **{summary['bytes_read']}**",
@@ -809,6 +829,8 @@ def write_priority_content_extract_outputs(
     approval_id: str,
     repo_keys: list[str],
     category_ids: list[str],
+    include_paths: list[str] | None = None,
+    exclude_paths: list[str] | None = None,
     scan_id: str,
     max_bytes_per_file: int = 20_000,
     max_excerpt_chars: int = 4_000,
@@ -824,6 +846,8 @@ def write_priority_content_extract_outputs(
         approval_id=approval_id,
         repo_keys=repo_keys,
         category_ids=category_ids,
+        include_paths=include_paths,
+        exclude_paths=exclude_paths,
         scan_id=scan_id,
         max_bytes_per_file=max_bytes_per_file,
         max_excerpt_chars=max_excerpt_chars,

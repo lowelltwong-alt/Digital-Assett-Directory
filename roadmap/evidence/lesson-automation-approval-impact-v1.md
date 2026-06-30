@@ -24,7 +24,7 @@ processed/reports/lesson_automation_approval_impact.json
 
 ## Methodology
 
-Methodology version: `lesson-automation-approval-impact-v0.2`
+Methodology version: `lesson-automation-approval-impact-v0.3`
 
 The command reads only generated DAD surfaces:
 
@@ -81,6 +81,20 @@ recommendation is no longer "approve as-is" when flagged path classes are
 present. The safe next human action is to narrow the repo/category/path scope or
 explicitly approve those flagged classes for this exact action.
 
+V0.3 adds executable path constraints:
+
+- decision labels can record `approved_include_paths` and
+  `approved_exclude_paths`;
+- `priority-content-extract` accepts `--include-path` and `--exclude-path`;
+- the execution plan carries those constraints into the generated extractor
+  command;
+- the live impact brief now emits a clean-subset approval command with 34
+  explicit include paths, 6 flagged paths excluded, `max_files=34`, and max
+  possible bytes reduced from 800,000 to 680,000.
+
+The clean-subset command is still only generated guidance. It does not approve a
+decision, update the ledger, read source content, or mutate any source repo.
+
 ## Red Team
 
 - Risk: a generated impact brief could be mistaken for approval.
@@ -91,6 +105,9 @@ explicitly approve those flagged classes for this exact action.
   backup or snapshot variants, fixture or seed-pack paths, and private-looking
   names. Any flagged path changes the generated suggested human decision to
   `narrow_before_approval`.
+- Risk: a narrowed command could be shown but not enforced later.
+  Guard: the decision contract, execution-plan command, and extractor now carry
+  exact include/exclude path filters.
 - Risk: byte caps can create false comfort.
   Guard: the report gives the maximum possible bytes if later executed, but
   still treats source content as human-gated.

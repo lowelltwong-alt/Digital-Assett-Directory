@@ -305,6 +305,50 @@ def test_priority_content_extract_reads_only_approved_paths_with_redaction(tmp_p
     assert all(item["review_status"] == "generated_candidate" for item in observations)
 
 
+def test_priority_content_extract_honors_include_and_exclude_paths(tmp_path: Path):
+    source_root = tmp_path / "source"
+    repo = source_root / "repo-a"
+    (repo / "schemas").mkdir(parents=True)
+    (repo / "AGENTS.md").write_text("Agent contract.\n", encoding="utf-8")
+    (repo / "AI_FRONT_DOOR.md").write_text("Front door with preflight.\n", encoding="utf-8")
+    (repo / "schemas" / "item.schema.json").write_text('{"title": "Item"}', encoding="utf-8")
+    local = local_source_at(source_root)
+    scope_result = write_priority_content_extract_scope_outputs(
+        tmp_path,
+        scope_assets(),
+        [local],
+        scan_id=SCAN_ID,
+        limit=10,
+        per_repo_limit=10,
+        generated_at=TIMESTAMP,
+    )
+
+    result = write_priority_content_extract_outputs(
+        tmp_path,
+        [local],
+        scope_file=Path(scope_result["outputs"]["scope_json"]),
+        approval_id="approval:lowell:path-filter",
+        repo_keys=["git-projects/repo-a"],
+        category_ids=["ai_navigation", "schemas_contracts"],
+        include_paths=["git-projects/repo-a/ai_front_door.md"],
+        exclude_paths=["git-projects/repo-a/agents.md"],
+        scan_id=SCAN_ID,
+        max_bytes_per_file=80,
+        max_excerpt_chars=200,
+        limit=10,
+        generated_at=TIMESTAMP,
+    )
+
+    assert result["summary"]["observation_count"] == 1
+    assert result["summary"]["include_path_count"] == 1
+    assert result["summary"]["exclude_path_count"] == 1
+    observations = [
+        json.loads(line)
+        for line in Path(result["outputs"]["observations"]).read_text(encoding="utf-8").splitlines()
+    ]
+    assert [item["relative_path"] for item in observations] == ["ai_front_door.md"]
+
+
 def test_lesson_automation_coverage_marks_priority_content_as_extracted(tmp_path: Path):
     source_root = tmp_path / "source"
     repo = source_root / "repo-a"

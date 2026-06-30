@@ -164,7 +164,9 @@ processed/reports/lesson_automation_decision_template.json
 ```
 
 Pending rows are not approvals. Apply a decision only after Lowell has approved
-the exact action and scope:
+the exact action and scope. Use `--include-path` and `--exclude-path` when the
+approval should apply to an exact clean subset rather than every path matched by
+the repo/category pair:
 
 ```powershell
 $env:PYTHONPATH='src'; python -m digital_asset_directory.cli recommend lesson-automation-decision-label `
@@ -174,6 +176,8 @@ $env:PYTHONPATH='src'; python -m digital_asset_directory.cli recommend lesson-au
   --approval-id "<human-approval-id>" `
   --repo-key "<approved-repo-key>" `
   --category "<approved-category>" `
+  --include-path "<exact-logical-or-relative-path-to-read>" `
+  --exclude-path "<exact-logical-or-relative-path-to-block>" `
   --allow-content-read `
   --max-bytes-per-file 20000 `
   --max-files 10 `
@@ -242,6 +246,11 @@ backup or snapshot variants, private-looking names, dependency/cache outputs,
 fixtures, and seed packs. If any candidate is flagged, the suggested human
 decision becomes `narrow_before_approval`: exclude flagged path classes unless
 Lowell explicitly approves those exact classes for the current action.
+
+When every matched path is visible, the impact brief also emits a generated
+clean-subset approval command that uses `--include-path` for unflagged paths.
+That command is still only a suggestion; Lowell must explicitly approve or run
+it before the decision ledger changes.
 
 ## Execution Plan
 
@@ -447,6 +456,7 @@ $env:PYTHONPATH='src'; python -m digital_asset_directory.cli recommend priority-
   --repo-key "git-projects/00_lawfirm_os/lawfirm-os-orchestrator" `
   --category ai_navigation `
   --category schemas_contracts `
+  --include-path "git-projects/00_lawfirm_os/lawfirm-os-orchestrator/agents.md" `
   --max-bytes-per-file 20000 `
   --limit 50
 ```

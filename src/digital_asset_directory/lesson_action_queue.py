@@ -709,6 +709,8 @@ def update_lesson_automation_decision_record(
     approved_repo_keys: list[str] | None = None,
     approved_categories: list[str] | None = None,
     approved_repo_paths: list[str] | None = None,
+    approved_include_paths: list[str] | None = None,
+    approved_exclude_paths: list[str] | None = None,
     max_bytes_per_file: int = 0,
     max_files: int = 0,
     allow_content_read: bool = False,
@@ -742,6 +744,8 @@ def update_lesson_automation_decision_record(
                 "approved_repo_keys": _dedupe(approved_repo_keys or []),
                 "approved_categories": _dedupe(approved_categories or []),
                 "approved_repo_paths": _dedupe(approved_repo_paths or []),
+                "approved_include_paths": _dedupe(approved_include_paths or []),
+                "approved_exclude_paths": _dedupe(approved_exclude_paths or []),
                 "max_bytes_per_file": max_bytes_per_file,
                 "max_files": max_files,
                 "allow_content_read": allow_content_read,
@@ -898,6 +902,8 @@ def _label_command(
     repo_keys: list[str] | None = None,
     categories: list[str] | None = None,
     repo_paths: list[str] | None = None,
+    include_paths: list[str] | None = None,
+    exclude_paths: list[str] | None = None,
     max_bytes_per_file: int = 0,
     max_files: int = 0,
     allow_content_read: bool = False,
@@ -924,6 +930,10 @@ def _label_command(
         parts.extend(["--category", category])
     for repo_path in repo_paths or []:
         parts.extend(["--repo-path", _ps_quote(repo_path)])
+    for include_path in include_paths or []:
+        parts.extend(["--include-path", _ps_quote(include_path)])
+    for exclude_path in exclude_paths or []:
+        parts.extend(["--exclude-path", _ps_quote(exclude_path)])
     if max_bytes_per_file:
         parts.extend(["--max-bytes-per-file", str(max_bytes_per_file)])
     if max_files:
@@ -1328,6 +1338,9 @@ def build_lesson_automation_approval_impact(
     )
     if entry is None:
         raise ValueError(f"No pending approval entry found for {sample_id}.")
+    decision_record = next((record for record in records if record.sample_id == sample_id), None)
+    if decision_record is None:
+        raise ValueError(f"No decision record found for {sample_id}.")
     scope_file = Path(str(entry.get("scope_file") or ""))
     scope = _load_json(scope_file) if scope_file.exists() else None
     approval_fields = entry.get("approval_fields") or {}
@@ -1361,9 +1374,49 @@ def build_lesson_automation_approval_impact(
     suggested_human_decision = (
         "narrow_before_approval" if flagged_count else "approve_generated_scope_if_human_agrees"
     )
+    include_paths = [
+        str(row.get("logical_path") or row.get("relative_path") or "")
+        for row in candidate_rows
+        if not row.get("hygiene_flags") and (row.get("logical_path") or row.get("relative_path"))
+    ]
+    excluded_paths = [
+        str(row.get("logical_path") or row.get("relative_path") or "")
+        for row in candidate_rows
+        if row.get("hygiene_flags") and (row.get("logical_path") or row.get("relative_path"))
+    ]
+    can_generate_exact_narrowed_command = bool(
+        flagged_count
+        and include_paths
+        and int(candidate_summary["truncated_candidate_count"]) == 0
+        and len(candidate_rows) == matched_count
+    )
+    narrowed_max_files = len(include_paths) if can_generate_exact_narrowed_command else 0
+    narrowed_rationale = (
+        "Approve bounded read-only extraction from the unflagged generated scope rows only. "
+        "Hygiene-flagged inspection, backup, fixture, seed-pack, private-looking, dependency, "
+        "or cache paths remain excluded unless separately approved. No source repo mutation, "
+        "no GitHub/API/model calls, redaction required."
+    )
+    narrowed_approval_command = (
+        _label_command(
+            decision_record,
+            decision="approve",
+            approval_id=str(approval_fields.get("approval_id") or ""),
+            repo_keys=repo_keys,
+            categories=categories,
+            include_paths=include_paths,
+            exclude_paths=[],
+            max_bytes_per_file=max_bytes,
+            max_files=narrowed_max_files,
+            allow_content_read=True,
+            rationale=narrowed_rationale,
+        )
+        if can_generate_exact_narrowed_command
+        else ""
+    )
     max_possible_bytes = min(matched_count, max_file_count) * max_bytes
     return {
-        "methodology_version": "lesson-automation-approval-impact-v0.2",
+        "methodology_version": "lesson-automation-approval-impact-v0.3",
         "generated_at": generated,
         "authority_boundary": (
             "Generated approval impact brief only. This command reads pending decision rows, "
@@ -1399,6 +1452,26 @@ def build_lesson_automation_approval_impact(
             "model_calls": 0,
         },
         "approval_command": entry.get("label_command", ""),
+        "narrowed_approval": {
+            "available": can_generate_exact_narrowed_command,
+            "recommended_decision": (
+                "approve_clean_subset_if_human_agrees"
+                if can_generate_exact_narrowed_command
+                else "regenerate_or_manually_narrow_before_approval"
+            ),
+            "include_path_count": len(include_paths),
+            "excluded_flagged_path_count": len(excluded_paths),
+            "max_files": narrowed_max_files,
+            "max_possible_bytes_if_later_executed": narrowed_max_files * max_bytes,
+            "include_paths": include_paths,
+            "excluded_flagged_paths": excluded_paths,
+            "approval_command": narrowed_approval_command,
+            "rationale": narrowed_rationale if can_generate_exact_narrowed_command else "",
+            "danger_if_misapplied": (
+                "This command is still only a generated suggestion. It must be explicitly "
+                "approved by Lowell before the decision ledger is updated or content is read."
+            ),
+        },
         "approval_fields": approval_fields,
         "candidate_summary": candidate_summary,
         "scope_hygiene": {
@@ -1507,10 +1580,41 @@ def lesson_automation_approval_impact_markdown(result: dict[str, Any]) -> str:
         result["approval_command"],
         "```",
         "",
+        "## Narrowed Clean-Subset Command",
+        "",
+    ]
+    narrowed = result["narrowed_approval"]
+    if narrowed["available"]:
+        lines.extend(
+            [
+                f"- Recommended decision: `{narrowed['recommended_decision']}`",
+                f"- Included unflagged paths: **{narrowed['include_path_count']}**",
+                f"- Excluded flagged paths: **{narrowed['excluded_flagged_path_count']}**",
+                f"- Max files: **{narrowed['max_files']}**",
+                f"- Max possible bytes if later executed: **{narrowed['max_possible_bytes_if_later_executed']}**",
+                f"- Danger if misapplied: {narrowed['danger_if_misapplied']}",
+                "",
+                "```powershell",
+                narrowed["approval_command"],
+                "```",
+                "",
+            ]
+        )
+    else:
+        lines.extend(
+            [
+                f"- Recommended decision: `{narrowed['recommended_decision']}`",
+                "- Exact clean-subset command unavailable because the scope is truncated, unflagged paths are missing, or no hygiene flags were found.",
+                "",
+            ]
+        )
+    lines.extend(
+        [
         "## Candidate Counts",
         "",
         "By repo:",
-    ]
+        ]
+    )
     for repo_key, count in result["candidate_summary"]["repo_counts"].items():
         lines.append(f"- `{repo_key}`: **{count}**")
     lines.extend(["", "By category:"])
@@ -1626,6 +1730,8 @@ def _execution_entry_for_decision(
             "approved_repo_keys": record.approved_repo_keys,
             "approved_categories": record.approved_categories,
             "approved_repo_paths": record.approved_repo_paths,
+            "approved_include_paths": record.approved_include_paths,
+            "approved_exclude_paths": record.approved_exclude_paths,
             "max_bytes_per_file": record.max_bytes_per_file,
             "max_files": record.max_files,
             "allow_content_read": record.allow_content_read,
@@ -1651,6 +1757,8 @@ def _execution_entry_for_decision(
             f'priority-content-extract --approval-id "{record.approval_id}" '
             f'{_repeat_option("--repo-key", record.approved_repo_keys)} '
             f'{_repeat_option("--category", record.approved_categories)} '
+            f'{_repeat_option("--include-path", record.approved_include_paths)} '
+            f'{_repeat_option("--exclude-path", record.approved_exclude_paths)} '
             f'--scope-file "{scope_file}" '
             f"--max-bytes-per-file {record.max_bytes_per_file} "
             f"--limit {record.max_files}"

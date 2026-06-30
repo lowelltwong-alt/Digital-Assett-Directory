@@ -668,6 +668,8 @@ class LessonAutomationDecisionRecord(BaseModel):
     approved_repo_keys: list[str] = Field(default_factory=list)
     approved_categories: list[str] = Field(default_factory=list)
     approved_repo_paths: list[str] = Field(default_factory=list)
+    approved_include_paths: list[str] = Field(default_factory=list)
+    approved_exclude_paths: list[str] = Field(default_factory=list)
     max_bytes_per_file: int = Field(default=0, ge=0)
     max_files: int = Field(default=0, ge=0)
     allow_content_read: bool = False

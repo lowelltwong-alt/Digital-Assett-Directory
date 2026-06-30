@@ -279,6 +279,11 @@ def test_decision_template_and_label_fail_closed_for_content_read(tmp_path: Path
         approval_id="approval:test",
         approved_repo_keys=["git-projects/repo-a"],
         approved_categories=["ai_navigation"],
+        approved_include_paths=["git-projects/repo-a/AI_FRONT_DOOR.md"],
+        approved_exclude_paths=[
+            "git-projects/repo-a/repos/_talent_zip_inspect_20260618/"
+            "lawfirm_os_talent_intelligence_private_repo/AGENTS.md"
+        ],
         allow_content_read=True,
         max_bytes_per_file=20000,
         max_files=10,
@@ -289,6 +294,11 @@ def test_decision_template_and_label_fail_closed_for_content_read(tmp_path: Path
     assert updated.allow_content_read is True
     assert updated.allow_source_mutation is False
     assert updated.redaction_required is True
+    assert updated.approved_include_paths == ["git-projects/repo-a/AI_FRONT_DOOR.md"]
+    assert updated.approved_exclude_paths == [
+        "git-projects/repo-a/repos/_talent_zip_inspect_20260618/"
+        "lawfirm_os_talent_intelligence_private_repo/AGENTS.md"
+    ]
     assert updated.approved_repo_keys == ["git-projects/repo-a"]
     assert updated.approved_categories == ["ai_navigation"]
     assert updated_records[0].decision == "approve"
@@ -414,6 +424,12 @@ def test_approval_impact_brief_reports_candidate_paths_without_approval(tmp_path
     assert impact["scope_hygiene"]["applies_when"]
     assert impact["scope_hygiene"]["does_not_apply_when"]
     assert impact["scope_hygiene"]["danger_if_misapplied"]
+    assert impact["narrowed_approval"]["available"] is True
+    assert impact["narrowed_approval"]["include_path_count"] == 2
+    assert impact["narrowed_approval"]["excluded_flagged_path_count"] == 1
+    assert "--include-path \"git-projects/repo-a/AI_FRONT_DOOR.md\"" in impact[
+        "narrowed_approval"
+    ]["approval_command"]
     assert "content_read_approval_recorded" in impact["proof_unlocked_after_human_approval"][0]
     assert "--allow-content-read" in impact["approval_command"]
 
@@ -475,6 +491,11 @@ def test_execution_plan_generates_approved_content_command_without_running_it(tm
         approval_id="approval:test",
         approved_repo_keys=["git-projects/repo-a"],
         approved_categories=["ai_navigation"],
+        approved_include_paths=["git-projects/repo-a/AI_FRONT_DOOR.md"],
+        approved_exclude_paths=[
+            "git-projects/repo-a/repos/_talent_zip_inspect_20260618/"
+            "lawfirm_os_talent_intelligence_private_repo/AGENTS.md"
+        ],
         allow_content_read=True,
         max_bytes_per_file=20000,
         max_files=10,
@@ -497,6 +518,11 @@ def test_execution_plan_generates_approved_content_command_without_running_it(tm
     assert "--approval-id \"approval:test\"" in entry["command"]
     assert "--repo-key \"git-projects/repo-a\"" in entry["command"]
     assert "--category \"ai_navigation\"" in entry["command"]
+    assert "--include-path \"git-projects/repo-a/AI_FRONT_DOOR.md\"" in entry["command"]
+    assert (
+        "--exclude-path \"git-projects/repo-a/repos/_talent_zip_inspect_20260618/"
+        "lawfirm_os_talent_intelligence_private_repo/AGENTS.md\"" in entry["command"]
+    )
     assert "--max-bytes-per-file 20000" in entry["command"]
     assert "--limit 10" in entry["command"]
 

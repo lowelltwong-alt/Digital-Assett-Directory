@@ -19,6 +19,8 @@
     "approved_repo_keys",
     "approved_categories",
     "approved_repo_paths",
+    "approved_include_paths",
+    "approved_exclude_paths",
     "max_bytes_per_file",
     "max_files",
     "allow_content_read",
@@ -59,6 +61,14 @@
       "items": { "type": "string" }
     },
     "approved_repo_paths": {
+      "type": "array",
+      "items": { "type": "string" }
+    },
+    "approved_include_paths": {
+      "type": "array",
+      "items": { "type": "string" }
+    },
+    "approved_exclude_paths": {
       "type": "array",
       "items": { "type": "string" }
     },
