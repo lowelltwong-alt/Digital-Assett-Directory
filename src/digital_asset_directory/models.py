@@ -955,6 +955,43 @@ class ReferenceArchitectureRecord(BaseModel):
     review_status: Literal["generated_candidate", "reviewed", "rejected"] = "generated_candidate"
 
 
+class ArchitectureConsultRecord(BaseModel):
+    schema_version: str = "0.1.0"
+    consult_id: str
+    intent_file: str = Field(min_length=1)
+    intent_hash: str = Field(min_length=1)
+    new_repo_purpose: str = Field(min_length=1)
+    domain: str = "unknown"
+    risk_level: Literal["low", "medium", "high", "unknown"] = "unknown"
+    data_sensitivity: Literal["public", "internal", "restricted", "unknown"] = "unknown"
+    expected_users_agents: list[str] = Field(default_factory=list)
+    workflows_needed: list[str] = Field(default_factory=list)
+    validation_needs: list[str] = Field(default_factory=list)
+    matched_reference_architectures: list[dict[str, Any]] = Field(default_factory=list)
+    recommended_templates: list[dict[str, Any]] = Field(default_factory=list)
+    recommended_workflow_parts: list[dict[str, Any]] = Field(default_factory=list)
+    background_connection_cues: list[dict[str, Any]] = Field(default_factory=list)
+    governance_map_cues: list[dict[str, Any]] = Field(default_factory=list)
+    learning_rule_cues: list[dict[str, Any]] = Field(default_factory=list)
+    what_to_reuse: list[str] = Field(min_length=1)
+    what_not_to_copy: list[str] = Field(min_length=1)
+    architecture_combination_plan: list[str] = Field(min_length=1)
+    starter_repo_structure: list[str] = Field(min_length=1)
+    template_dependencies: list[dict[str, Any]] = Field(default_factory=list)
+    validation_checklist: list[str] = Field(min_length=1)
+    required_human_gates: list[str] = Field(default_factory=list)
+    gates: dict[str, bool] = Field(min_length=1)
+    gate_failures: list[str] = Field(default_factory=list)
+    warnings: list[str] = Field(default_factory=list)
+    seed_prompt_path: str = ""
+    authority_boundary: str = Field(min_length=1)
+    evidence: dict[str, Any] = Field(min_length=1)
+    methodology_version: str = "architecture-consult-v0.1"
+    generated_at: str
+    scan_id: str
+    review_status: Literal["generated_candidate", "reviewed", "rejected"] = "generated_candidate"
+
+
 class AssetCalibrationReviewRecord(BaseModel):
     schema_version: str = "0.1.0"
     review_id: str

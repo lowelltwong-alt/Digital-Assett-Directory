@@ -17,6 +17,7 @@ processed/reports/repo_completion_wave_plan.md
 processed/reports/repo_completion_proof_check.md
 processed/reports/reference_architectures.md
 processed/learning/reference_architecture_candidates.jsonl
+processed/reports/architecture_consults/
 processed/learning/scan_cycle_events.jsonl
 processed/reports/lesson_automation_approval_packet.md
 processed/reports/lesson_automation_approval_impact.md
@@ -96,6 +97,33 @@ It reads the existing catalog database and optional generated reports when
 present. It does not rescan, mutate the target repo, call GitHub, call models,
 install hooks, promote candidates to truth, change scores, or mark roadmap
 phases complete.
+
+## Architecture consult
+
+Use `recommend architecture-consult` before seeding a new repository when you
+want DAD to compose reference architectures, templates, workflow parts,
+governance cues, learning rules, and validation guidance into a generated seed
+architecture pack:
+
+```powershell
+$env:PYTHONPATH='src'; python -m digital_asset_directory.cli recommend architecture-consult --intent-file "<new-repo-intent.md>" --limit 10
+```
+
+The intent file should state the new repo purpose, domain, risk level, expected
+users or agents, data sensitivity, workflows needed, and validation needs.
+
+The command writes:
+
+```text
+processed/reports/architecture_consults/<slug>.md
+processed/reports/architecture_consults/<slug>.json
+processed/reports/architecture_consults/<slug>_seed_prompt.md
+```
+
+It reads generated/local DAD guidance only. It does not rescan, read source repo
+contents, mutate a target repo, call GitHub, call models, install templates,
+promote candidates to truth, or mark roadmap phases complete. The new repo owns
+its own canon; the consult is seed advice for human review.
 
 ## Reference architecture recognition
 

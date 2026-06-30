@@ -8,6 +8,7 @@ from digital_asset_directory.models import (
     AssetChunkRecord,
     AssetDeltaRecord,
     AssetRecord,
+    ArchitectureConsultRecord,
     AttentionSeedRecord,
     ChangePatternRecord,
     ConnectionCandidateRecord,
@@ -744,6 +745,73 @@ def test_reference_architecture_model_dump_matches_registered_schema():
     )
 
     validate_registered_schema("reference_architecture", record.model_dump(mode="json"))
+
+
+def test_architecture_consult_model_dump_matches_registered_schema():
+    record = ArchitectureConsultRecord(
+        consult_id="dad:architecture-consult:test",
+        intent_file="C:/intent/new-repo-intent.md",
+        intent_hash="hash",
+        new_repo_purpose="Seed a governed AI workflow repository.",
+        domain="ai governance",
+        risk_level="high",
+        data_sensitivity="internal",
+        expected_users_agents=["Codex", "Claude", "human maintainer"],
+        workflows_needed=["AI navigation", "schema contracts", "learning loop"],
+        validation_needs=["pytest", "schema validation"],
+        matched_reference_architectures=[
+            {
+                "reference_architecture_id": "dad:reference-architecture:test",
+                "architecture_label": "example governance control plane",
+                "architecture_type": "governance_control_plane",
+                "match_score": 88.5,
+                "candidate_only": True,
+            }
+        ],
+        recommended_templates=[
+            {
+                "template_id": "template:ai-table-of-contents",
+                "template_name": "AI table of contents",
+                "match_score": 45.0,
+            }
+        ],
+        recommended_workflow_parts=[],
+        background_connection_cues=[],
+        governance_map_cues=[],
+        learning_rule_cues=[],
+        what_to_reuse=["Reuse architecture shape only."],
+        what_not_to_copy=["Do not copy source-owned facts."],
+        architecture_combination_plan=["Start with AI navigation and authority boundaries."],
+        starter_repo_structure=["AI_FRONT_DOOR.md", "schemas/", "tests/"],
+        template_dependencies=[
+            {
+                "template_id": "template:ai-table-of-contents",
+                "depends_on_template_ids": [],
+                "dependent_template_ids": [],
+                "depends_on_contracts": ["docs/AI_ENTRYPOINT_AND_TOC_ROUTING_STANDARD.md"],
+            }
+        ],
+        validation_checklist=["python -m pytest"],
+        required_human_gates=["Human review before treating consult as canon."],
+        gates={
+            "intent_present_gate": True,
+            "source_boundary_gate": True,
+            "privacy_gate": True,
+            "no_source_mutation_gate": True,
+            "no_external_call_gate": True,
+            "candidate_only_gate": True,
+        },
+        gate_failures=[],
+        warnings=[],
+        seed_prompt_path="processed/reports/architecture_consults/test_seed_prompt.md",
+        authority_boundary="Generated consult only; the new repo owns its own canon.",
+        evidence={"methodology_version": "architecture-consult-v0.1"},
+        methodology_version="architecture-consult-v0.1",
+        generated_at="2026-01-01T00:00:00+00:00",
+        scan_id="dad:scan:test",
+    )
+
+    validate_registered_schema("architecture_consult", record.model_dump(mode="json"))
 
 
 def test_template_record_model_dump_matches_registered_schema():

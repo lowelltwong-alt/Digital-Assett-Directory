@@ -1,0 +1,160 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://local.digital-asset-directory/schemas/architecture-consult.schema.json",
+  "title": "Architecture Consult Record",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "consult_id",
+    "intent_file",
+    "intent_hash",
+    "new_repo_purpose",
+    "domain",
+    "risk_level",
+    "data_sensitivity",
+    "expected_users_agents",
+    "workflows_needed",
+    "validation_needs",
+    "matched_reference_architectures",
+    "recommended_templates",
+    "recommended_workflow_parts",
+    "background_connection_cues",
+    "governance_map_cues",
+    "learning_rule_cues",
+    "what_to_reuse",
+    "what_not_to_copy",
+    "architecture_combination_plan",
+    "starter_repo_structure",
+    "template_dependencies",
+    "validation_checklist",
+    "required_human_gates",
+    "gates",
+    "gate_failures",
+    "warnings",
+    "seed_prompt_path",
+    "authority_boundary",
+    "evidence",
+    "methodology_version",
+    "generated_at",
+    "scan_id",
+    "review_status"
+  ],
+  "properties": {
+    "schema_version": { "const": "0.1.0" },
+    "consult_id": { "type": "string", "minLength": 1 },
+    "intent_file": { "type": "string", "minLength": 1 },
+    "intent_hash": { "type": "string", "minLength": 1 },
+    "new_repo_purpose": { "type": "string", "minLength": 1 },
+    "domain": { "type": "string" },
+    "risk_level": { "enum": ["low", "medium", "high", "unknown"] },
+    "data_sensitivity": { "enum": ["public", "internal", "restricted", "unknown"] },
+    "expected_users_agents": {
+      "type": "array",
+      "items": { "type": "string" }
+    },
+    "workflows_needed": {
+      "type": "array",
+      "items": { "type": "string" }
+    },
+    "validation_needs": {
+      "type": "array",
+      "items": { "type": "string" }
+    },
+    "matched_reference_architectures": {
+      "type": "array",
+      "items": { "type": "object" }
+    },
+    "recommended_templates": {
+      "type": "array",
+      "items": { "type": "object" }
+    },
+    "recommended_workflow_parts": {
+      "type": "array",
+      "items": { "type": "object" }
+    },
+    "background_connection_cues": {
+      "type": "array",
+      "items": { "type": "object" }
+    },
+    "governance_map_cues": {
+      "type": "array",
+      "items": { "type": "object" }
+    },
+    "learning_rule_cues": {
+      "type": "array",
+      "items": { "type": "object" }
+    },
+    "what_to_reuse": {
+      "type": "array",
+      "items": { "type": "string" },
+      "minItems": 1
+    },
+    "what_not_to_copy": {
+      "type": "array",
+      "items": { "type": "string" },
+      "minItems": 1
+    },
+    "architecture_combination_plan": {
+      "type": "array",
+      "items": { "type": "string" },
+      "minItems": 1
+    },
+    "starter_repo_structure": {
+      "type": "array",
+      "items": { "type": "string" },
+      "minItems": 1
+    },
+    "template_dependencies": {
+      "type": "array",
+      "items": { "type": "object" }
+    },
+    "validation_checklist": {
+      "type": "array",
+      "items": { "type": "string" },
+      "minItems": 1
+    },
+    "required_human_gates": {
+      "type": "array",
+      "items": { "type": "string" }
+    },
+    "gates": {
+      "type": "object",
+      "required": [
+        "intent_present_gate",
+        "source_boundary_gate",
+        "privacy_gate",
+        "no_source_mutation_gate",
+        "no_external_call_gate",
+        "candidate_only_gate"
+      ],
+      "properties": {
+        "intent_present_gate": { "type": "boolean" },
+        "source_boundary_gate": { "type": "boolean" },
+        "privacy_gate": { "type": "boolean" },
+        "no_source_mutation_gate": { "type": "boolean" },
+        "no_external_call_gate": { "type": "boolean" },
+        "candidate_only_gate": { "type": "boolean" }
+      },
+      "additionalProperties": { "type": "boolean" }
+    },
+    "gate_failures": {
+      "type": "array",
+      "items": { "type": "string" }
+    },
+    "warnings": {
+      "type": "array",
+      "items": { "type": "string" }
+    },
+    "seed_prompt_path": { "type": "string" },
+    "authority_boundary": { "type": "string", "minLength": 1 },
+    "evidence": { "type": "object", "minProperties": 1 },
+    "methodology_version": { "const": "architecture-consult-v0.1" },
+    "generated_at": { "type": "string", "minLength": 1 },
+    "scan_id": { "type": "string", "minLength": 1 },
+    "review_status": {
+      "type": "string",
+      "enum": ["generated_candidate", "reviewed", "rejected"]
+    }
+  }
+}

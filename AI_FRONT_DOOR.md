@@ -78,6 +78,7 @@ not prove source truth, value, authority, or promotion.
 | `processed/reports/repo_buildout/index.md` | Generated repo-specific buildout advisor index. | You need candidate recommendations for improving one cataloged repo from its own assets and safe cross-repo inspiration. |
 | `processed/reports/reference_architectures.md` | Generated reference architecture candidate report. | You need local metadata-only candidates for reusable architecture patterns, component roles, and grade rationale. |
 | `processed/learning/reference_architecture_candidates.jsonl` | Generated reference architecture candidate records. | You need structured candidate records for architecture components, roles, gates, scores, and reuse guidance. |
+| `processed/reports/architecture_consults/` | Generated seed architecture consult reports and prompts. | You need to advise a new repo before implementation using DAD patterns without copying or imposing canon. |
 | `processed/reports/repo_completion_dashboard.md` | Generated per-repo completion dashboard for lesson automation. | You need to see which cataloged repos are blocked by content-read, learning-loop, governance, validation, or AI-navigation gates. |
 | `processed/reports/repo_completion_wave_plan.md` | Generated ordered wave plan for completing repo lesson automation. | You need the safest order for content-read approval, lesson synthesis, learning-loop installs, governance maps, and final reviews. |
 | `processed/reports/repo_completion_proof_check.md` | Generated proof check for repo-completion wave advancement. | You need to know which wave is actually blocked, what proof is missing, and whether it is safe to advance. |
@@ -121,6 +122,7 @@ Discovery output is evidence and recommendation, not source-repository authority
 - lessons and AI handoff capture;
 - lesson-automation coverage routing and scan-cycle logs;
 - metadata-only reference-architecture recognition and grading;
+- generated architecture consult packs for new repo seeding;
 - AI entrypoints and downstream integration templates;
 - cross-repo governance dependency-map template seeds;
 - local audit, validation, and roadmap state.

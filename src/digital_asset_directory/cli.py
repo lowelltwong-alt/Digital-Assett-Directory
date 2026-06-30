@@ -14,6 +14,7 @@ from .archaeology import (
     write_archaeology_outputs,
     write_root_cause_lesson_outputs,
 )
+from .architecture_consult import write_architecture_consult_outputs
 from .asset_families import (
     write_asset_family_reports,
     write_learning_loop_outputs,
@@ -975,6 +976,26 @@ def recommend_reference_architectures(
             limit=limit,
             component_limit=component_limit,
         )
+    console.print_json(data=result)
+
+
+@recommend_app.command("architecture-consult")
+def recommend_architecture_consult(
+    intent_file: Path = typer.Option(..., "--intent-file"),
+    hub: Optional[Path] = typer.Option(None),
+    limit: int = typer.Option(10, "--limit", min=1, max=25),
+) -> None:
+    """Write a generated seed architecture consult for a new repo intent file."""
+    cfg = _cfg(hub=hub)
+    resolved_intent = intent_file if intent_file.is_absolute() else Path.cwd() / intent_file
+    if not resolved_intent.exists():
+        console.print(f"Intent file not found: {resolved_intent}")
+        raise typer.Exit(2)
+    result = write_architecture_consult_outputs(
+        cfg.repo_root,
+        resolved_intent.resolve(),
+        limit=limit,
+    )
     console.print_json(data=result)
 
 
