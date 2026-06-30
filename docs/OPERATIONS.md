@@ -120,6 +120,26 @@ gaps to truth.
 that lets later agents see what prior passes checked, skipped, and recommended
 next.
 
+Use `recommend lesson-automation-next-actions` after scope reports exist to
+choose the next human-gated action without rereading every scope:
+
+```powershell
+$env:PYTHONPATH='src'; python -m digital_asset_directory.cli recommend lesson-automation-next-actions --limit 25
+```
+
+The command writes:
+
+```text
+processed/reports/lesson_automation_next_actions.md
+processed/reports/lesson_automation_next_actions.json
+processed/reports/lesson_automation_next_actions_approval_prompt.md
+```
+
+It reads only generated scope reports and the scan-cycle log. It does not
+rescan, read source contents, call GitHub, call models, mutate source repos,
+install hooks, or mark roadmap phases complete. Its priority score is review
+routing only.
+
 Use `recommend repo-learning-loop-scope` before installing repo-local learning
 files into any source repo:
 

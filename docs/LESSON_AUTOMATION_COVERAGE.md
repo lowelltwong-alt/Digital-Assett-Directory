@@ -56,6 +56,36 @@ recommended next signal families, gated families, and context boundaries.
 Use the log as a routing aid, not as proof that a repo has no value. A missing
 surface means DAD has not observed it yet.
 
+## Next-Action Queue
+
+After scope reports exist, generate one consolidated queue before choosing the
+next human-gated action:
+
+```powershell
+$env:PYTHONPATH='src'; python -m digital_asset_directory.cli recommend lesson-automation-next-actions --limit 25
+```
+
+This writes:
+
+```text
+processed/reports/lesson_automation_next_actions.md
+processed/reports/lesson_automation_next_actions.json
+processed/reports/lesson_automation_next_actions_approval_prompt.md
+```
+
+The queue reads only generated scope reports and `scan_coverage_cycle.json`. It
+does not rescan, read source file contents, call GitHub, call models, mutate
+source repos, install hooks, or mark roadmap phases complete.
+
+It uses this review-routing formula:
+
+```text
+priority_score = 100 * (0.30*scope_readiness + 0.25*lesson_yield + 0.20*safety_margin + 0.15*approval_specificity + 0.10*cycle_urgency)
+```
+
+The score is only a way to order human review. It does not authorize content
+reads, API calls, source-repo file writes, governance adoption, or promotion.
+
 ## Context Boundaries
 
 Applies when:

@@ -332,6 +332,10 @@ def _existing_output_status(repo_root: Path) -> dict[str, bool]:
         / "processed"
         / "learning"
         / "learning_rule_promotion_candidates.jsonl",
+        "lesson_automation_next_actions": repo_root
+        / "processed"
+        / "reports"
+        / "lesson_automation_next_actions.json",
         "archaeology": repo_root / "processed" / "reports" / "worktree_archaeology.md",
         "root_cause_lessons": repo_root / "processed" / "learning" / "counterfactual_lessons.jsonl",
         "semantic_evolution": repo_root / "processed" / "learning" / "semantic_evolution_candidates.jsonl",

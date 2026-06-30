@@ -38,6 +38,7 @@
     "processed/reports/operational_readiness.md",
     "processed/reports/scan_coverage_cycle.md",
     "processed/learning/scan_cycle_events.jsonl",
+    "processed/reports/lesson_automation_next_actions.md",
     "processed/reports/repo_learning_loop_install_scope.md",
     "processed/reports/governance_map_adoption_scope.md",
     "processed/reports/ci_release_artifact_scope.md",

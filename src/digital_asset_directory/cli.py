@@ -48,6 +48,7 @@ from .learning import (
     rebuild_lesson_routes,
 )
 from .lesson_automation_coverage import write_lesson_automation_coverage_outputs
+from .lesson_action_queue import write_lesson_automation_next_action_outputs
 from .manual_tasks import write_manual_task_queue
 from .orphan_adapter import run_orphan_radar
 from .operational import write_operational_readiness_report
@@ -945,6 +946,20 @@ def recommend_lesson_automation_coverage(
             scan_summary=scan_summary,
             limit=limit,
         )
+    console.print_json(data=result)
+
+
+@recommend_app.command("lesson-automation-next-actions")
+def recommend_lesson_automation_next_actions(
+    hub: Optional[Path] = typer.Option(None),
+    limit: int = typer.Option(25, "--limit", min=1, max=100),
+) -> None:
+    """Write a generated queue of next human-gated lesson-automation actions."""
+    cfg = _cfg(hub=hub)
+    result = write_lesson_automation_next_action_outputs(
+        cfg.repo_root,
+        limit=limit,
+    )
     console.print_json(data=result)
 
 
