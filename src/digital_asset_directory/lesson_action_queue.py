@@ -28,6 +28,76 @@ SCOPE_FILES = {
     "ci_and_release_artifacts": "ci_release_artifact_scope.json",
 }
 
+SCOPE_HYGIENE_RULES = (
+    {
+        "rule_id": "inspection_or_extract_path",
+        "label": "inspection/extract path",
+        "markers": (
+            "_zip_inspect",
+            "zip_inspect",
+            "/_inspect/",
+            "/inspect/",
+            "/extracted/",
+            "_extract",
+            "extract_",
+        ),
+        "recommended_action": "Exclude extracted or inspection copies unless the approval is specifically about those variants.",
+    },
+    {
+        "rule_id": "backup_or_snapshot_variant",
+        "label": "backup/snapshot variant",
+        "markers": (
+            "backup",
+            ".bak",
+            "main-clean-",
+            "/snapshot/",
+            "_snapshot",
+            "snapshot_",
+        ),
+        "recommended_action": "Prefer the canonical source path and keep backups as lineage evidence.",
+    },
+    {
+        "rule_id": "private_or_sensitive_name",
+        "label": "private/sensitive name",
+        "markers": (
+            "/private/",
+            "_private_",
+            "-private-",
+            "private_repo",
+            "runtime-private",
+            "talent_intelligence_private",
+        ),
+        "recommended_action": "Require explicit human confirmation before approving private-looking paths.",
+    },
+    {
+        "rule_id": "generated_dependency_or_cache_path",
+        "label": "generated/dependency/cache path",
+        "markers": (
+            "/node_modules/",
+            "/.venv/",
+            "/venv/",
+            "/__pycache__/",
+            "/.pytest_cache/",
+            "/dist/",
+            "/build/",
+        ),
+        "recommended_action": "Do not use dependency, cache, or build-output paths as primary lesson sources.",
+    },
+    {
+        "rule_id": "fixture_or_seed_pack_path",
+        "label": "fixture/seed pack path",
+        "markers": (
+            "/seed_pack/",
+            "_seed_pack",
+            "/fixtures/",
+            "/fixture/",
+            ".pytest-tmp-root",
+            "pytest-of-",
+        ),
+        "recommended_action": "Treat fixtures and seed packs as test evidence unless the approval is specifically about scaffolds.",
+    },
+)
+
 
 def _load_json(path: Path) -> dict[str, Any] | None:
     if not path.exists():
@@ -53,6 +123,26 @@ def _scope_summary_count(scope: dict[str, Any] | None) -> int:
         if isinstance(value, int | float):
             return int(value)
     return 0
+
+
+def _scope_hygiene_flags(candidate: dict[str, Any]) -> list[dict[str, str]]:
+    path_text = " ".join(
+        str(candidate.get(key, ""))
+        for key in ("logical_path", "relative_path", "asset_id")
+        if candidate.get(key)
+    )
+    normalized = "/" + path_text.replace("\\", "/").lower().strip("/")
+    flags: list[dict[str, str]] = []
+    for rule in SCOPE_HYGIENE_RULES:
+        if any(marker in normalized for marker in rule["markers"]):
+            flags.append(
+                {
+                    "rule_id": str(rule["rule_id"]),
+                    "label": str(rule["label"]),
+                    "recommended_action": str(rule["recommended_action"]),
+                }
+            )
+    return flags
 
 
 def _scope_ready(status: str, scope: dict[str, Any] | None) -> float:
@@ -1157,6 +1247,10 @@ def _scope_candidates_for_approval(
     rows: list[dict[str, Any]] = []
     repo_counts: dict[str, int] = {}
     category_counts: dict[str, int] = {}
+    flagged_candidate_count = 0
+    hygiene_rule_counts: dict[str, int] = {}
+    flagged_repo_counts: dict[str, int] = {}
+    flagged_category_counts: dict[str, int] = {}
     for repo_scope in scope.get("repo_scopes", []):
         repo_key = str(repo_scope.get("repo_key", ""))
         if repo_key.lower() not in repo_allow:
@@ -1167,6 +1261,14 @@ def _scope_candidates_for_approval(
                 continue
             repo_counts[repo_key] = repo_counts.get(repo_key, 0) + 1
             category_counts[category] = category_counts.get(category, 0) + 1
+            hygiene_flags = _scope_hygiene_flags(candidate)
+            if hygiene_flags:
+                flagged_candidate_count += 1
+                flagged_repo_counts[repo_key] = flagged_repo_counts.get(repo_key, 0) + 1
+                flagged_category_counts[category] = flagged_category_counts.get(category, 0) + 1
+                for flag in hygiene_flags:
+                    rule_id = str(flag["rule_id"])
+                    hygiene_rule_counts[rule_id] = hygiene_rule_counts.get(rule_id, 0) + 1
             if len(rows) >= max_files:
                 continue
             rows.append(
@@ -1179,6 +1281,7 @@ def _scope_candidates_for_approval(
                     "asset_type": candidate.get("asset_type", ""),
                     "value_score": candidate.get("value_score", 0),
                     "match_reasons": candidate.get("match_reasons", []),
+                    "hygiene_flags": hygiene_flags,
                     "content_read_status": candidate.get(
                         "content_read_status", "not_read_by_scope_pack"
                     ),
@@ -1191,6 +1294,12 @@ def _scope_candidates_for_approval(
         "truncated_candidate_count": max(0, sum(repo_counts.values()) - len(rows)),
         "repo_counts": dict(sorted(repo_counts.items())),
         "category_counts": dict(sorted(category_counts.items())),
+        "flagged_candidate_count": flagged_candidate_count,
+        "unflagged_candidate_count": max(0, sum(repo_counts.values()) - flagged_candidate_count),
+        "reported_flagged_candidate_count": sum(1 for row in rows if row.get("hygiene_flags")),
+        "hygiene_rule_counts": dict(sorted(hygiene_rule_counts.items())),
+        "flagged_repo_counts": dict(sorted(flagged_repo_counts.items())),
+        "flagged_category_counts": dict(sorted(flagged_category_counts.items())),
     }
 
 
@@ -1232,6 +1341,12 @@ def build_lesson_automation_approval_impact(
         "truncated_candidate_count": 0,
         "repo_counts": {},
         "category_counts": {},
+        "flagged_candidate_count": 0,
+        "unflagged_candidate_count": 0,
+        "reported_flagged_candidate_count": 0,
+        "hygiene_rule_counts": {},
+        "flagged_repo_counts": {},
+        "flagged_category_counts": {},
     }
     if scope:
         candidate_rows, candidate_summary = _scope_candidates_for_approval(
@@ -1242,9 +1357,13 @@ def build_lesson_automation_approval_impact(
         )
     max_bytes = int(approval_fields.get("max_bytes_per_file") or max_bytes_per_file)
     matched_count = int(candidate_summary["matched_candidate_count"])
+    flagged_count = int(candidate_summary["flagged_candidate_count"])
+    suggested_human_decision = (
+        "narrow_before_approval" if flagged_count else "approve_generated_scope_if_human_agrees"
+    )
     max_possible_bytes = min(matched_count, max_file_count) * max_bytes
     return {
-        "methodology_version": "lesson-automation-approval-impact-v0.1",
+        "methodology_version": "lesson-automation-approval-impact-v0.2",
         "generated_at": generated,
         "authority_boundary": (
             "Generated approval impact brief only. This command reads pending decision rows, "
@@ -1262,6 +1381,12 @@ def build_lesson_automation_approval_impact(
             "matched_candidate_count": matched_count,
             "reported_candidate_count": int(candidate_summary["reported_candidate_count"]),
             "truncated_candidate_count": int(candidate_summary["truncated_candidate_count"]),
+            "flagged_candidate_count": flagged_count,
+            "unflagged_candidate_count": int(candidate_summary["unflagged_candidate_count"]),
+            "reported_flagged_candidate_count": int(
+                candidate_summary["reported_flagged_candidate_count"]
+            ),
+            "suggested_human_decision": suggested_human_decision,
             "max_bytes_per_file": max_bytes,
             "max_files": max_file_count,
             "max_possible_bytes_if_later_executed": max_possible_bytes,
@@ -1276,6 +1401,33 @@ def build_lesson_automation_approval_impact(
         "approval_command": entry.get("label_command", ""),
         "approval_fields": approval_fields,
         "candidate_summary": candidate_summary,
+        "scope_hygiene": {
+            "suggested_human_decision": suggested_human_decision,
+            "flagged_candidate_count": flagged_count,
+            "unflagged_candidate_count": int(candidate_summary["unflagged_candidate_count"]),
+            "reported_flagged_candidate_count": int(
+                candidate_summary["reported_flagged_candidate_count"]
+            ),
+            "hygiene_rule_counts": candidate_summary["hygiene_rule_counts"],
+            "flagged_repo_counts": candidate_summary["flagged_repo_counts"],
+            "flagged_category_counts": candidate_summary["flagged_category_counts"],
+            "recommended_narrowing": (
+                "Exclude flagged inspection, extract, backup, private-looking, dependency/cache, "
+                "fixture, or seed-pack paths unless Lowell explicitly approves those classes."
+            ),
+            "applies_when": [
+                "A generated approval scope is being reviewed before content reads or source-repo actions.",
+                "Candidate paths include extracted copies, backups, fixtures, private-looking names, or build/cache outputs.",
+            ],
+            "does_not_apply_when": [
+                "Lowell has explicitly approved those flagged path classes for this exact action.",
+                "The task is only recording raw metadata and will not unlock a content read or source mutation.",
+            ],
+            "danger_if_misapplied": (
+                "Over-narrowing can hide useful lineage evidence, while under-narrowing can spend "
+                "human approval on copied, private-looking, or generated noise."
+            ),
+        },
         "candidate_rows": candidate_rows,
         "proof_unlocked_after_human_approval": [
             "content_read_approval_recorded",
@@ -1311,12 +1463,13 @@ def build_lesson_automation_approval_impact(
             "self_red_team": [
                 "A generated impact brief can be mistaken for approval.",
                 "Path metadata can be stale if the catalog has not been refreshed after source changes.",
+                "Flagged hygiene paths can be mistaken for automatic rejection instead of a narrowing cue.",
                 "The byte cap is an upper bound, not a guarantee that all sensitive content will be harmless.",
                 "Category matching is deterministic path metadata, not proof that content is useful.",
             ],
             "premortem": (
                 "The likely failure is approving a broad repo/category set without checking the "
-                "candidate path list and max possible bytes."
+                "candidate path list, hygiene flags, and max possible bytes."
             ),
             "rollback": "Delete generated lesson_automation_approval_impact.* outputs; no source repos are touched.",
         },
@@ -1340,6 +1493,8 @@ def lesson_automation_approval_impact_markdown(result: dict[str, Any]) -> str:
         f"- Proposed category count: **{summary['approved_category_count']}**",
         f"- Matched candidate paths: **{summary['matched_candidate_count']}**",
         f"- Candidate paths shown: **{summary['reported_candidate_count']}**",
+        f"- Hygiene-flagged candidate paths: **{summary['flagged_candidate_count']}**",
+        f"- Suggested human decision: `{summary['suggested_human_decision']}`",
         f"- Max possible bytes if later executed: **{summary['max_possible_bytes_if_later_executed']}**",
         f"- Labels applied: **{summary['labels_applied']}**",
         f"- Commands executed: **{summary['commands_executed']}**",
@@ -1361,18 +1516,36 @@ def lesson_automation_approval_impact_markdown(result: dict[str, Any]) -> str:
     lines.extend(["", "By category:"])
     for category, count in result["candidate_summary"]["category_counts"].items():
         lines.append(f"- `{category}`: **{count}**")
+    hygiene = result["scope_hygiene"]
+    lines.extend(["", "## Scope Hygiene", ""])
+    lines.append(f"- Suggested human decision: `{hygiene['suggested_human_decision']}`")
+    lines.append(f"- Flagged candidate paths: **{hygiene['flagged_candidate_count']}**")
+    lines.append(f"- Unflagged candidate paths: **{hygiene['unflagged_candidate_count']}**")
+    lines.append(f"- Recommendation: {hygiene['recommended_narrowing']}")
+    lines.extend(["", "By hygiene rule:"])
+    if hygiene["hygiene_rule_counts"]:
+        for rule_id, count in hygiene["hygiene_rule_counts"].items():
+            lines.append(f"- `{rule_id}`: **{count}**")
+    else:
+        lines.append("- None.")
+    lines.extend(["", "Context boundary:"])
+    lines.append("- Applies when: " + "; ".join(hygiene["applies_when"]))
+    lines.append("- Does not apply when: " + "; ".join(hygiene["does_not_apply_when"]))
+    lines.append(f"- Danger if misapplied: {hygiene['danger_if_misapplied']}")
     lines.extend(["", "## Candidate Path Sample", ""])
-    lines.append("| Repo | Category | Path | Type | Score | Match reasons |")
-    lines.append("|---|---|---|---|---:|---|")
+    lines.append("| Repo | Category | Path | Type | Score | Hygiene flags | Match reasons |")
+    lines.append("|---|---|---|---|---:|---|---|")
     for row in result["candidate_rows"][:100]:
         path = row.get("relative_path") or row.get("logical_path") or ""
+        hygiene_flags = ", ".join(flag["rule_id"] for flag in row.get("hygiene_flags") or [])
         lines.append(
-            "| `{repo}` | `{category}` | `{path}` | `{asset_type}` | {score:.1f} | `{reasons}` |".format(
+            "| `{repo}` | `{category}` | `{path}` | `{asset_type}` | {score:.1f} | `{hygiene}` | `{reasons}` |".format(
                 repo=row.get("repo_key", ""),
                 category=row.get("category", ""),
                 path=str(path).replace("|", "/"),
                 asset_type=row.get("asset_type", ""),
                 score=float(row.get("value_score") or 0),
+                hygiene=hygiene_flags or "none",
                 reasons=", ".join(row.get("match_reasons") or []),
             )
         )

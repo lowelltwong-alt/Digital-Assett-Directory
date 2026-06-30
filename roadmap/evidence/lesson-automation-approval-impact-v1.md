@@ -24,7 +24,7 @@ processed/reports/lesson_automation_approval_impact.json
 
 ## Methodology
 
-Methodology version: `lesson-automation-approval-impact-v0.1`
+Methodology version: `lesson-automation-approval-impact-v0.2`
 
 The command reads only generated DAD surfaces:
 
@@ -65,14 +65,32 @@ The brief intentionally exposes the candidate path list in generated outputs so
 Lowell can decide whether the proposed scope is too broad, includes noisy
 inspection/extract paths, or should be narrowed before approval.
 
+After scope-hygiene hardening, the live brief reports:
+
+- hygiene-flagged candidate paths: 6;
+- unflagged candidate paths: 34;
+- hygiene rules observed:
+  - `backup_or_snapshot_variant`: 3;
+  - `fixture_or_seed_pack_path`: 1;
+  - `inspection_or_extract_path`: 2;
+  - `private_or_sensitive_name`: 1;
+- suggested human decision: `narrow_before_approval`.
+
+The generated approval command remains visible for review, but the generated
+recommendation is no longer "approve as-is" when flagged path classes are
+present. The safe next human action is to narrow the repo/category/path scope or
+explicitly approve those flagged classes for this exact action.
+
 ## Red Team
 
 - Risk: a generated impact brief could be mistaken for approval.
   Guard: the brief states that it does not apply labels or execute commands.
 - Risk: the proposed content-read scope may include stale, nested, inspection,
   or private working paths.
-  Guard: the candidate path sample is shown before approval so a human can
-  narrow repo keys, categories, caps, or reject the row.
+  Guard: deterministic scope-hygiene flags identify inspection/extract paths,
+  backup or snapshot variants, fixture or seed-pack paths, and private-looking
+  names. Any flagged path changes the generated suggested human decision to
+  `narrow_before_approval`.
 - Risk: byte caps can create false comfort.
   Guard: the report gives the maximum possible bytes if later executed, but
   still treats source content as human-gated.
@@ -111,4 +129,3 @@ Results:
 
 Full validation was run after implementation and recorded in the agent
 postflight for this session.
-

@@ -232,9 +232,16 @@ processed/reports/lesson_automation_approval_impact.json
 
 The impact brief joins the pending decision to the generated scope metadata and
 shows proposed repo keys, categories, candidate path counts, byte caps, maximum
-possible bytes if later executed, proof unlocked, and red-team notes. It still
-does not apply labels, approve actions, execute commands, read source contents,
-mutate repos, call GitHub, call models, or mark roadmap phases complete.
+possible bytes if later executed, deterministic scope-hygiene flags, proof
+unlocked, and red-team notes. It still does not apply labels, approve actions,
+execute commands, read source contents, mutate repos, call GitHub, call models,
+or mark roadmap phases complete.
+
+Scope hygiene is a scan-cycle handoff aid. It flags inspection/extract paths,
+backup or snapshot variants, private-looking names, dependency/cache outputs,
+fixtures, and seed packs. If any candidate is flagged, the suggested human
+decision becomes `narrow_before_approval`: exclude flagged path classes unless
+Lowell explicitly approves those exact classes for the current action.
 
 ## Execution Plan
 

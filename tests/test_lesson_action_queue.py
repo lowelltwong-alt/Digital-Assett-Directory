@@ -120,6 +120,23 @@ def seed_scope_outputs(repo_root: Path) -> None:
                             "content_read_status": "not_read_by_scope_pack",
                             "review_status": "generated_candidate",
                         },
+                        {
+                            "asset_id": "dad:asset:inspect-copy",
+                            "logical_path": (
+                                "git-projects/repo-a/repos/_talent_zip_inspect_20260618/"
+                                "lawfirm_os_talent_intelligence_private_repo/AGENTS.md"
+                            ),
+                            "relative_path": (
+                                "repos/_talent_zip_inspect_20260618/"
+                                "lawfirm_os_talent_intelligence_private_repo/AGENTS.md"
+                            ),
+                            "asset_type": "document",
+                            "value_score": 65.0,
+                            "primary_category_id": "ai_navigation",
+                            "match_reasons": ["filename:agents.md"],
+                            "content_read_status": "not_read_by_scope_pack",
+                            "review_status": "generated_candidate",
+                        },
                     ],
                 }
             ],
@@ -379,14 +396,24 @@ def test_approval_impact_brief_reports_candidate_paths_without_approval(tmp_path
     assert impact["review_status"] == "generated_candidate"
     assert impact["summary"]["sample_id"] == "lesson-automation-decision-001"
     assert impact["summary"]["recommended_decision"] == "approve"
-    assert impact["summary"]["matched_candidate_count"] == 2
-    assert impact["summary"]["reported_candidate_count"] == 2
-    assert impact["summary"]["max_possible_bytes_if_later_executed"] == 40000
+    assert impact["summary"]["matched_candidate_count"] == 3
+    assert impact["summary"]["reported_candidate_count"] == 3
+    assert impact["summary"]["flagged_candidate_count"] == 1
+    assert impact["summary"]["reported_flagged_candidate_count"] == 1
+    assert impact["summary"]["suggested_human_decision"] == "narrow_before_approval"
+    assert impact["summary"]["max_possible_bytes_if_later_executed"] == 60000
     assert impact["summary"]["labels_applied"] == 0
     assert impact["summary"]["commands_executed"] == 0
     assert impact["summary"]["content_files_read"] == 0
     assert impact["summary"]["source_repos_mutated"] == 0
     assert impact["candidate_rows"][0]["relative_path"] == "AI_FRONT_DOOR.md"
+    assert impact["candidate_rows"][0]["hygiene_flags"] == []
+    assert impact["candidate_rows"][2]["hygiene_flags"][0]["rule_id"] == "inspection_or_extract_path"
+    assert "private_or_sensitive_name" in impact["candidate_summary"]["hygiene_rule_counts"]
+    assert impact["scope_hygiene"]["suggested_human_decision"] == "narrow_before_approval"
+    assert impact["scope_hygiene"]["applies_when"]
+    assert impact["scope_hygiene"]["does_not_apply_when"]
+    assert impact["scope_hygiene"]["danger_if_misapplied"]
     assert "content_read_approval_recorded" in impact["proof_unlocked_after_human_approval"][0]
     assert "--allow-content-read" in impact["approval_command"]
 

@@ -272,10 +272,15 @@ processed/reports/lesson_automation_approval_impact.json
 ```
 
 The brief reports proposed repo keys, categories, matched candidate paths,
-byte caps, maximum possible bytes if later executed, proof unlocked, and
-red-team notes. It does not apply labels, execute commands, read source
-contents, mutate repos, call GitHub, call models, or mark roadmap phases
-complete.
+byte caps, maximum possible bytes if later executed, deterministic
+scope-hygiene flags, proof unlocked, and red-team notes. It does not apply
+labels, execute commands, read source contents, mutate repos, call GitHub, call
+models, or mark roadmap phases complete.
+
+If the brief reports `suggested_human_decision: narrow_before_approval`, do not
+run the generated approval command as-is. Narrow the repo keys, categories, path
+classes, or caps first, unless Lowell explicitly approves the flagged path
+classes for that exact action.
 
 After one or more decision rows are reviewed and approved, generate the
 execution plan:
