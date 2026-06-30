@@ -17,6 +17,7 @@ processed/reports/repo_completion_wave_plan.md
 processed/reports/repo_completion_proof_check.md
 processed/learning/scan_cycle_events.jsonl
 processed/reports/lesson_automation_approval_packet.md
+processed/reports/lesson_automation_approval_impact.md
 processed/learning/learning_rule_promotion_candidates.jsonl
 processed/reports/repo_learning_loop_install_scope.md
 processed/reports/ci_release_artifact_scope.md
@@ -255,6 +256,26 @@ processed/reports/lesson_automation_approval_packet.json
 The packet does not approve rows or execute the suggested commands. It exists so
 future agents can present a deterministic human gate instead of improvising
 approval text from memory.
+
+Use `recommend lesson-automation-approval-impact` before approving a row when
+you need a compact impact brief for the exact pending decision:
+
+```powershell
+$env:PYTHONPATH='src'; python -m digital_asset_directory.cli recommend lesson-automation-approval-impact --sample-id lesson-automation-decision-001
+```
+
+This writes:
+
+```text
+processed/reports/lesson_automation_approval_impact.md
+processed/reports/lesson_automation_approval_impact.json
+```
+
+The brief reports proposed repo keys, categories, matched candidate paths,
+byte caps, maximum possible bytes if later executed, proof unlocked, and
+red-team notes. It does not apply labels, execute commands, read source
+contents, mutate repos, call GitHub, call models, or mark roadmap phases
+complete.
 
 After one or more decision rows are reviewed and approved, generate the
 execution plan:

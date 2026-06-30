@@ -53,6 +53,7 @@ from .lesson_action_queue import (
     load_lesson_automation_decisions,
     summarize_lesson_automation_decisions,
     update_lesson_automation_decision_record,
+    write_lesson_automation_approval_impact_outputs,
     write_lesson_automation_approval_packet_outputs,
     write_lesson_automation_decision_template_outputs,
     write_lesson_automation_decisions,
@@ -1162,6 +1163,32 @@ def recommend_lesson_automation_approval_packet(
         max_bytes_per_file=max_bytes_per_file,
         max_files=max_files,
     )
+    console.print_json(data=result)
+
+
+@recommend_app.command("lesson-automation-approval-impact")
+def recommend_lesson_automation_approval_impact(
+    hub: Optional[Path] = typer.Option(None),
+    decisions_file: Optional[Path] = typer.Option(None, "--decisions-file"),
+    sample_id: str = typer.Option("lesson-automation-decision-001", "--sample-id"),
+    repo_limit: int = typer.Option(5, "--repo-limit", min=1, max=25),
+    max_bytes_per_file: int = typer.Option(20000, "--max-bytes-per-file", min=1),
+    max_files: int = typer.Option(50, "--max-files", min=1, max=500),
+) -> None:
+    """Write generated approval impact brief for one pending lesson-automation decision."""
+    cfg = _cfg(hub=hub)
+    try:
+        result = write_lesson_automation_approval_impact_outputs(
+            cfg.repo_root,
+            decisions_file=decisions_file,
+            sample_id=sample_id,
+            repo_limit=repo_limit,
+            max_bytes_per_file=max_bytes_per_file,
+            max_files=max_files,
+        )
+    except ValueError as exc:
+        console.print(str(exc))
+        raise typer.Exit(2) from exc
     console.print_json(data=result)
 
 

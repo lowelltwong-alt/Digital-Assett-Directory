@@ -7,12 +7,14 @@ import pytest
 
 from digital_asset_directory.lesson_action_queue import (
     PRIORITY_FORMULA,
+    build_lesson_automation_approval_impact,
     build_lesson_automation_approval_packet,
     build_lesson_automation_next_action_queue,
     build_lesson_automation_decision_template,
     build_lesson_automation_execution_plan,
     load_lesson_automation_decisions,
     update_lesson_automation_decision_record,
+    write_lesson_automation_approval_impact_outputs,
     write_lesson_automation_approval_packet_outputs,
     write_lesson_automation_decision_template_outputs,
     write_lesson_automation_decisions,
@@ -96,8 +98,28 @@ def seed_scope_outputs(repo_root: Path) -> None:
                     "repo_key": "git-projects/repo-a",
                     "candidate_count": 8,
                     "candidates": [
-                        {"primary_category_id": "ai_navigation"},
-                        {"primary_category_id": "schemas_contracts"},
+                        {
+                            "asset_id": "dad:asset:front",
+                            "logical_path": "git-projects/repo-a/AI_FRONT_DOOR.md",
+                            "relative_path": "AI_FRONT_DOOR.md",
+                            "asset_type": "document",
+                            "value_score": 75.0,
+                            "primary_category_id": "ai_navigation",
+                            "match_reasons": ["filename:ai_front_door.md"],
+                            "content_read_status": "not_read_by_scope_pack",
+                            "review_status": "generated_candidate",
+                        },
+                        {
+                            "asset_id": "dad:asset:schema",
+                            "logical_path": "git-projects/repo-a/schemas/example.schema.json",
+                            "relative_path": "schemas/example.schema.json",
+                            "asset_type": "schema",
+                            "value_score": 70.0,
+                            "primary_category_id": "schemas_contracts",
+                            "match_reasons": ["path_term:schema"],
+                            "content_read_status": "not_read_by_scope_pack",
+                            "review_status": "generated_candidate",
+                        },
                     ],
                 }
             ],
@@ -335,6 +357,60 @@ def test_approval_packet_writer_stays_under_processed_reports(tmp_path: Path):
     assert payload["summary"]["labels_applied"] == 0
     assert payload["summary"]["commands_executed"] == 0
     assert "decision-label command execution" in payload["intentionally_not_done"]
+
+
+def test_approval_impact_brief_reports_candidate_paths_without_approval(tmp_path: Path):
+    seed_scope_outputs(tmp_path)
+    template = write_lesson_automation_decision_template_outputs(
+        tmp_path,
+        generated_at=TIMESTAMP,
+    )
+    records = load_lesson_automation_decisions(Path(template["outputs"]["decision_template"]))
+
+    impact = build_lesson_automation_approval_impact(
+        tmp_path,
+        records,
+        generated_at=TIMESTAMP,
+        repo_limit=1,
+        max_bytes_per_file=20000,
+        max_files=50,
+    )
+
+    assert impact["review_status"] == "generated_candidate"
+    assert impact["summary"]["sample_id"] == "lesson-automation-decision-001"
+    assert impact["summary"]["recommended_decision"] == "approve"
+    assert impact["summary"]["matched_candidate_count"] == 2
+    assert impact["summary"]["reported_candidate_count"] == 2
+    assert impact["summary"]["max_possible_bytes_if_later_executed"] == 40000
+    assert impact["summary"]["labels_applied"] == 0
+    assert impact["summary"]["commands_executed"] == 0
+    assert impact["summary"]["content_files_read"] == 0
+    assert impact["summary"]["source_repos_mutated"] == 0
+    assert impact["candidate_rows"][0]["relative_path"] == "AI_FRONT_DOOR.md"
+    assert "content_read_approval_recorded" in impact["proof_unlocked_after_human_approval"][0]
+    assert "--allow-content-read" in impact["approval_command"]
+
+
+def test_approval_impact_writer_stays_under_processed_reports(tmp_path: Path):
+    seed_scope_outputs(tmp_path)
+    template = write_lesson_automation_decision_template_outputs(
+        tmp_path,
+        generated_at=TIMESTAMP,
+    )
+
+    result = write_lesson_automation_approval_impact_outputs(
+        tmp_path,
+        decisions_file=Path(template["outputs"]["decision_template"]),
+        generated_at=TIMESTAMP,
+    )
+
+    outputs = result["outputs"]
+    assert set(outputs) == {"impact_markdown", "impact_json"}
+    assert all(Path(path).is_relative_to(tmp_path / "processed" / "reports") for path in outputs.values())
+    payload = json.loads(Path(outputs["impact_json"]).read_text(encoding="utf-8"))
+    assert payload["summary"]["content_files_read"] == 0
+    assert payload["summary"]["labels_applied"] == 0
+    assert "approval application" in payload["intentionally_not_done"]
 
 
 def test_execution_plan_is_empty_until_decision_is_approved(tmp_path: Path):

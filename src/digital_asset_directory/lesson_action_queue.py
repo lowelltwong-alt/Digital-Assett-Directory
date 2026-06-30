@@ -1145,6 +1145,296 @@ def write_lesson_automation_approval_packet_outputs(
     }
 
 
+def _scope_candidates_for_approval(
+    scope: dict[str, Any],
+    *,
+    repo_keys: list[str],
+    categories: list[str],
+    max_files: int,
+) -> tuple[list[dict[str, Any]], dict[str, Any]]:
+    repo_allow = {str(repo_key).strip().lower() for repo_key in repo_keys}
+    category_allow = {str(category).strip().lower() for category in categories}
+    rows: list[dict[str, Any]] = []
+    repo_counts: dict[str, int] = {}
+    category_counts: dict[str, int] = {}
+    for repo_scope in scope.get("repo_scopes", []):
+        repo_key = str(repo_scope.get("repo_key", ""))
+        if repo_key.lower() not in repo_allow:
+            continue
+        for candidate in repo_scope.get("candidates", []):
+            category = str(candidate.get("primary_category_id", ""))
+            if category.lower() not in category_allow:
+                continue
+            repo_counts[repo_key] = repo_counts.get(repo_key, 0) + 1
+            category_counts[category] = category_counts.get(category, 0) + 1
+            if len(rows) >= max_files:
+                continue
+            rows.append(
+                {
+                    "repo_key": repo_key,
+                    "category": category,
+                    "asset_id": candidate.get("asset_id", ""),
+                    "logical_path": candidate.get("logical_path", ""),
+                    "relative_path": candidate.get("relative_path", ""),
+                    "asset_type": candidate.get("asset_type", ""),
+                    "value_score": candidate.get("value_score", 0),
+                    "match_reasons": candidate.get("match_reasons", []),
+                    "content_read_status": candidate.get(
+                        "content_read_status", "not_read_by_scope_pack"
+                    ),
+                    "review_status": candidate.get("review_status", "generated_candidate"),
+                }
+            )
+    return rows, {
+        "matched_candidate_count": sum(repo_counts.values()),
+        "reported_candidate_count": len(rows),
+        "truncated_candidate_count": max(0, sum(repo_counts.values()) - len(rows)),
+        "repo_counts": dict(sorted(repo_counts.items())),
+        "category_counts": dict(sorted(category_counts.items())),
+    }
+
+
+def build_lesson_automation_approval_impact(
+    repo_root: Path,
+    records: list[LessonAutomationDecisionRecord],
+    *,
+    sample_id: str = "lesson-automation-decision-001",
+    generated_at: str | None = None,
+    repo_limit: int = 5,
+    max_bytes_per_file: int = 20000,
+    max_files: int = 50,
+) -> dict[str, Any]:
+    generated = generated_at or utc_now()
+    packet = build_lesson_automation_approval_packet(
+        repo_root,
+        records,
+        generated_at=generated,
+        repo_limit=repo_limit,
+        max_bytes_per_file=max_bytes_per_file,
+        max_files=max_files,
+    )
+    entry = next(
+        (item for item in packet["approval_entries"] if item["sample_id"] == sample_id),
+        None,
+    )
+    if entry is None:
+        raise ValueError(f"No pending approval entry found for {sample_id}.")
+    scope_file = Path(str(entry.get("scope_file") or ""))
+    scope = _load_json(scope_file) if scope_file.exists() else None
+    approval_fields = entry.get("approval_fields") or {}
+    repo_keys = list(approval_fields.get("approved_repo_keys") or [])
+    categories = list(approval_fields.get("approved_categories") or [])
+    max_file_count = int(approval_fields.get("max_files") or max_files)
+    candidate_rows: list[dict[str, Any]] = []
+    candidate_summary: dict[str, Any] = {
+        "matched_candidate_count": 0,
+        "reported_candidate_count": 0,
+        "truncated_candidate_count": 0,
+        "repo_counts": {},
+        "category_counts": {},
+    }
+    if scope:
+        candidate_rows, candidate_summary = _scope_candidates_for_approval(
+            scope,
+            repo_keys=repo_keys,
+            categories=categories,
+            max_files=max_file_count,
+        )
+    max_bytes = int(approval_fields.get("max_bytes_per_file") or max_bytes_per_file)
+    matched_count = int(candidate_summary["matched_candidate_count"])
+    max_possible_bytes = min(matched_count, max_file_count) * max_bytes
+    return {
+        "methodology_version": "lesson-automation-approval-impact-v0.1",
+        "generated_at": generated,
+        "authority_boundary": (
+            "Generated approval impact brief only. This command reads pending decision rows, "
+            "the generated approval packet, and generated scope metadata; it does not apply "
+            "labels, approve actions, execute commands, read source contents, mutate source repos, "
+            "call GitHub, call models, or promote candidates."
+        ),
+        "summary": {
+            "sample_id": sample_id,
+            "signal_family_id": entry.get("signal_family_id", ""),
+            "action_kind": entry.get("action_kind", ""),
+            "recommended_decision": entry.get("recommended_decision", ""),
+            "approved_repo_count": len(repo_keys),
+            "approved_category_count": len(categories),
+            "matched_candidate_count": matched_count,
+            "reported_candidate_count": int(candidate_summary["reported_candidate_count"]),
+            "truncated_candidate_count": int(candidate_summary["truncated_candidate_count"]),
+            "max_bytes_per_file": max_bytes,
+            "max_files": max_file_count,
+            "max_possible_bytes_if_later_executed": max_possible_bytes,
+            "scope_file_present": bool(scope),
+            "labels_applied": 0,
+            "commands_executed": 0,
+            "content_files_read": 0,
+            "source_repos_mutated": 0,
+            "github_calls": 0,
+            "model_calls": 0,
+        },
+        "approval_command": entry.get("label_command", ""),
+        "approval_fields": approval_fields,
+        "candidate_summary": candidate_summary,
+        "candidate_rows": candidate_rows,
+        "proof_unlocked_after_human_approval": [
+            "content_read_approval_recorded",
+            "priority_extract_execution_plan_ready after regenerating execution plan",
+            "priority_observations_present only after running the approved extractor",
+        ],
+        "post_approval_sequence": [
+            "Run only the human-approved decision-label command.",
+            "Regenerate lesson-automation-execution-plan.",
+            "Inspect the generated priority-content-extract command.",
+            "Run the extractor only if the command exactly matches the approved repo keys, categories, caps, and approval id.",
+            "Regenerate repo-completion-proof-check.",
+        ],
+        "checked_inputs": [
+            "processed/learning/lesson_automation_action_decisions.jsonl",
+            "processed/reports/lesson_automation_approval_packet.json or regenerated packet data",
+            "processed/reports/priority_content_extract_scope.json",
+        ],
+        "intentionally_not_done": [
+            "decision-label command execution",
+            "approval application",
+            "content extraction",
+            "source repo mutation",
+            "GitHub/API/model calls",
+            "roadmap phase completion",
+        ],
+        "risk_review": {
+            "risk_tier": "medium",
+            "why_not_high": (
+                "The brief is generated-only and reads metadata, but the decision it supports "
+                "would unlock a real content-read command if Lowell approves it."
+            ),
+            "self_red_team": [
+                "A generated impact brief can be mistaken for approval.",
+                "Path metadata can be stale if the catalog has not been refreshed after source changes.",
+                "The byte cap is an upper bound, not a guarantee that all sensitive content will be harmless.",
+                "Category matching is deterministic path metadata, not proof that content is useful.",
+            ],
+            "premortem": (
+                "The likely failure is approving a broad repo/category set without checking the "
+                "candidate path list and max possible bytes."
+            ),
+            "rollback": "Delete generated lesson_automation_approval_impact.* outputs; no source repos are touched.",
+        },
+        "review_status": "generated_candidate",
+    }
+
+
+def lesson_automation_approval_impact_markdown(result: dict[str, Any]) -> str:
+    summary = result["summary"]
+    lines = [
+        "# Lesson Automation Approval Impact",
+        "",
+        result["authority_boundary"],
+        "",
+        f"- Generated at: `{result['generated_at']}`",
+        f"- Methodology: `{result['methodology_version']}`",
+        f"- Sample id: `{summary['sample_id']}`",
+        f"- Signal family: `{summary['signal_family_id']}`",
+        f"- Recommended decision: `{summary['recommended_decision']}`",
+        f"- Proposed repo count: **{summary['approved_repo_count']}**",
+        f"- Proposed category count: **{summary['approved_category_count']}**",
+        f"- Matched candidate paths: **{summary['matched_candidate_count']}**",
+        f"- Candidate paths shown: **{summary['reported_candidate_count']}**",
+        f"- Max possible bytes if later executed: **{summary['max_possible_bytes_if_later_executed']}**",
+        f"- Labels applied: **{summary['labels_applied']}**",
+        f"- Commands executed: **{summary['commands_executed']}**",
+        f"- Content files read: **{summary['content_files_read']}**",
+        f"- Source repos mutated: **{summary['source_repos_mutated']}**",
+        "",
+        "## Proposed Approval Command",
+        "",
+        "```powershell",
+        result["approval_command"],
+        "```",
+        "",
+        "## Candidate Counts",
+        "",
+        "By repo:",
+    ]
+    for repo_key, count in result["candidate_summary"]["repo_counts"].items():
+        lines.append(f"- `{repo_key}`: **{count}**")
+    lines.extend(["", "By category:"])
+    for category, count in result["candidate_summary"]["category_counts"].items():
+        lines.append(f"- `{category}`: **{count}**")
+    lines.extend(["", "## Candidate Path Sample", ""])
+    lines.append("| Repo | Category | Path | Type | Score | Match reasons |")
+    lines.append("|---|---|---|---|---:|---|")
+    for row in result["candidate_rows"][:100]:
+        path = row.get("relative_path") or row.get("logical_path") or ""
+        lines.append(
+            "| `{repo}` | `{category}` | `{path}` | `{asset_type}` | {score:.1f} | `{reasons}` |".format(
+                repo=row.get("repo_key", ""),
+                category=row.get("category", ""),
+                path=str(path).replace("|", "/"),
+                asset_type=row.get("asset_type", ""),
+                score=float(row.get("value_score") or 0),
+                reasons=", ".join(row.get("match_reasons") or []),
+            )
+        )
+    lines.extend(["", "## Proof Unlocked After Human Approval", ""])
+    for item in result["proof_unlocked_after_human_approval"]:
+        lines.append(f"- {item}")
+    lines.extend(["", "## Post-Approval Sequence", ""])
+    for item in result["post_approval_sequence"]:
+        lines.append(f"- {item}")
+    lines.extend(["", "## Risk Review", ""])
+    lines.append(f"- Risk tier: `{result['risk_review']['risk_tier']}`")
+    lines.append(f"- Why not high: {result['risk_review']['why_not_high']}")
+    lines.append(f"- Premortem: {result['risk_review']['premortem']}")
+    lines.append(f"- Rollback: {result['risk_review']['rollback']}")
+    lines.extend(["", "Self red-team:"])
+    for item in result["risk_review"]["self_red_team"]:
+        lines.append(f"- {item}")
+    lines.extend(["", "## Intentionally Not Done", ""])
+    for item in result["intentionally_not_done"]:
+        lines.append(f"- {item}")
+    lines.append("")
+    return "\n".join(lines)
+
+
+def write_lesson_automation_approval_impact_outputs(
+    repo_root: Path,
+    *,
+    decisions_file: Path | None = None,
+    sample_id: str = "lesson-automation-decision-001",
+    generated_at: str | None = None,
+    repo_limit: int = 5,
+    max_bytes_per_file: int = 20000,
+    max_files: int = 50,
+) -> dict[str, Any]:
+    path = decisions_file or repo_root / DECISION_TEMPLATE_PATH
+    if not path.is_absolute():
+        path = repo_root / path
+    records = load_lesson_automation_decisions(path)
+    result = build_lesson_automation_approval_impact(
+        repo_root,
+        records,
+        sample_id=sample_id,
+        generated_at=generated_at,
+        repo_limit=repo_limit,
+        max_bytes_per_file=max_bytes_per_file,
+        max_files=max_files,
+    )
+    reports_dir = repo_root / "processed" / "reports"
+    paths = {
+        "impact_markdown": reports_dir / "lesson_automation_approval_impact.md",
+        "impact_json": reports_dir / "lesson_automation_approval_impact.json",
+    }
+    atomic_write_text(paths["impact_markdown"], lesson_automation_approval_impact_markdown(result))
+    atomic_write_text(paths["impact_json"], json_dumps(result, pretty=True) + "\n")
+    return {
+        "output_type": "generated_approval_impact_brief",
+        "review_status": "generated_candidate",
+        "summary": result["summary"],
+        "outputs": {key: str(path) for key, path in paths.items()},
+    }
+
+
 def _execution_entry_for_decision(
     repo_root: Path,
     record: LessonAutomationDecisionRecord,

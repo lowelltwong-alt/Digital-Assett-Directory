@@ -217,6 +217,25 @@ suggested for approval when a generated scope exists, while source-repo writes,
 governance adoption, external APIs, and missing extractors are suggested for
 deferral unless Lowell explicitly chooses exact scope and permissions.
 
+Before approving a row, generate the impact brief for the pending decision:
+
+```powershell
+$env:PYTHONPATH='src'; python -m digital_asset_directory.cli recommend lesson-automation-approval-impact --sample-id lesson-automation-decision-001
+```
+
+This writes:
+
+```text
+processed/reports/lesson_automation_approval_impact.md
+processed/reports/lesson_automation_approval_impact.json
+```
+
+The impact brief joins the pending decision to the generated scope metadata and
+shows proposed repo keys, categories, candidate path counts, byte caps, maximum
+possible bytes if later executed, proof unlocked, and red-team notes. It still
+does not apply labels, approve actions, execute commands, read source contents,
+mutate repos, call GitHub, call models, or mark roadmap phases complete.
+
 ## Execution Plan
 
 After one or more decision rows are reviewed and approved, generate the
