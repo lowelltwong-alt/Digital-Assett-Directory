@@ -40,6 +40,7 @@
     "processed/learning/scan_cycle_events.jsonl",
     "processed/reports/lesson_automation_next_actions.md",
     "processed/learning/lesson_automation_action_decisions.jsonl",
+    "processed/reports/lesson_automation_approval_packet.md",
     "processed/reports/lesson_automation_execution_plan.md",
     "processed/reports/repo_learning_loop_install_scope.md",
     "processed/reports/governance_map_adoption_scope.md",

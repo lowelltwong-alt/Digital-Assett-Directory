@@ -340,6 +340,10 @@ def _existing_output_status(repo_root: Path) -> dict[str, bool]:
         / "processed"
         / "learning"
         / "lesson_automation_action_decisions.jsonl",
+        "lesson_automation_approval_packet": repo_root
+        / "processed"
+        / "reports"
+        / "lesson_automation_approval_packet.json",
         "lesson_automation_execution_plan": repo_root
         / "processed"
         / "reports"

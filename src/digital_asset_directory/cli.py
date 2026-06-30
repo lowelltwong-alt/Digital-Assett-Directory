@@ -53,6 +53,7 @@ from .lesson_action_queue import (
     load_lesson_automation_decisions,
     summarize_lesson_automation_decisions,
     update_lesson_automation_decision_record,
+    write_lesson_automation_approval_packet_outputs,
     write_lesson_automation_decision_template_outputs,
     write_lesson_automation_decisions,
     write_lesson_automation_execution_plan_outputs,
@@ -1085,6 +1086,26 @@ def recommend_lesson_automation_decision_label(
             "updated": updated.model_dump(mode="json"),
         }
     )
+
+
+@recommend_app.command("lesson-automation-approval-packet")
+def recommend_lesson_automation_approval_packet(
+    hub: Optional[Path] = typer.Option(None),
+    decisions_file: Optional[Path] = typer.Option(None, "--decisions-file"),
+    repo_limit: int = typer.Option(5, "--repo-limit", min=1, max=25),
+    max_bytes_per_file: int = typer.Option(20000, "--max-bytes-per-file", min=1),
+    max_files: int = typer.Option(50, "--max-files", min=1, max=500),
+) -> None:
+    """Write generated decision-label commands for pending lesson-automation approvals."""
+    cfg = _cfg(hub=hub)
+    result = write_lesson_automation_approval_packet_outputs(
+        cfg.repo_root,
+        decisions_file=decisions_file,
+        repo_limit=repo_limit,
+        max_bytes_per_file=max_bytes_per_file,
+        max_files=max_files,
+    )
+    console.print_json(data=result)
 
 
 @recommend_app.command("lesson-automation-execution-plan")

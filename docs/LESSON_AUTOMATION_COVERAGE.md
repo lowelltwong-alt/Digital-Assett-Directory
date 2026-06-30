@@ -133,6 +133,31 @@ The label command fails closed:
   note;
 - defer/reject decisions require rationale or notes.
 
+## Approval Packet
+
+Before applying any pending decision label, generate the approval packet:
+
+```powershell
+$env:PYTHONPATH='src'; python -m digital_asset_directory.cli recommend lesson-automation-approval-packet
+```
+
+This writes:
+
+```text
+processed/reports/lesson_automation_approval_packet.md
+processed/reports/lesson_automation_approval_packet.json
+```
+
+The packet prepares exact `lesson-automation-decision-label` commands for human
+review. It does not apply labels, approve rows, execute commands, read source
+contents, mutate source repos, call GitHub, call models, or mark roadmap phases
+complete.
+
+The default recommendation is conservative: bounded content extraction can be
+suggested for approval when a generated scope exists, while source-repo writes,
+governance adoption, external APIs, and missing extractors are suggested for
+deferral unless Lowell explicitly chooses exact scope and permissions.
+
 ## Execution Plan
 
 After one or more decision rows are reviewed and approved, generate the

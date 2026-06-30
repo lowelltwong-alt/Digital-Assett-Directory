@@ -763,6 +763,388 @@ def _repeat_option(option: str, values: list[str]) -> str:
     return " ".join(f'{option} "{value}"' for value in values)
 
 
+def _ps_quote(value: str) -> str:
+    return f'"{value.replace(chr(34), "`" + chr(34))}"'
+
+
+def _approval_id_for(record: LessonAutomationDecisionRecord, generated_at: str) -> str:
+    date = generated_at[:10] if len(generated_at) >= 10 else "undated"
+    family = record.signal_family_id.replace("_", "-")
+    return f"approval:lowell:{family}:{date}"
+
+
+def _scope_categories(scope: dict[str, Any] | None, record: LessonAutomationDecisionRecord) -> list[str]:
+    if scope:
+        categories = [
+            str(item.get("category_id", "")).strip()
+            for item in scope.get("categories", [])
+            if str(item.get("category_id", "")).strip()
+        ]
+        if categories:
+            return sorted(set(categories))
+    categories = [
+        str(category).strip()
+        for example in record.evidence.get("top_examples", [])
+        for category in example.get("categories", [])
+        if str(category).strip()
+    ]
+    return sorted(set(categories))
+
+
+def _scope_repo_keys(record: LessonAutomationDecisionRecord, *, limit: int) -> list[str]:
+    return [
+        str(example.get("repo_key", "")).strip()
+        for example in record.evidence.get("top_examples", [])[:limit]
+        if str(example.get("repo_key", "")).strip()
+    ]
+
+
+def _label_command(
+    record: LessonAutomationDecisionRecord,
+    *,
+    decision: str,
+    rationale: str,
+    approval_id: str = "",
+    repo_keys: list[str] | None = None,
+    categories: list[str] | None = None,
+    repo_paths: list[str] | None = None,
+    max_bytes_per_file: int = 0,
+    max_files: int = 0,
+    allow_content_read: bool = False,
+    allow_source_mutation: bool = False,
+    allow_external_api: bool = False,
+    token_scope_note: str = "",
+    privacy_boundary_note: str = "",
+) -> str:
+    parts = [
+        "$env:PYTHONPATH='src'; python -m digital_asset_directory.cli recommend "
+        "lesson-automation-decision-label",
+        "--sample-id",
+        _ps_quote(record.sample_id),
+        "--reviewer",
+        _ps_quote("Lowell"),
+        "--decision",
+        decision,
+    ]
+    if approval_id:
+        parts.extend(["--approval-id", _ps_quote(approval_id)])
+    for repo_key in repo_keys or []:
+        parts.extend(["--repo-key", _ps_quote(repo_key)])
+    for category in categories or []:
+        parts.extend(["--category", category])
+    for repo_path in repo_paths or []:
+        parts.extend(["--repo-path", _ps_quote(repo_path)])
+    if max_bytes_per_file:
+        parts.extend(["--max-bytes-per-file", str(max_bytes_per_file)])
+    if max_files:
+        parts.extend(["--max-files", str(max_files)])
+    if allow_content_read:
+        parts.append("--allow-content-read")
+    if allow_source_mutation:
+        parts.append("--allow-source-mutation")
+    if allow_external_api:
+        parts.append("--allow-external-api")
+    if token_scope_note:
+        parts.extend(["--token-scope-note", _ps_quote(token_scope_note)])
+    if privacy_boundary_note:
+        parts.extend(["--privacy-boundary-note", _ps_quote(privacy_boundary_note)])
+    parts.extend(["--rationale", _ps_quote(rationale)])
+    return " ".join(parts)
+
+
+def _approval_packet_entry(
+    repo_root: Path,
+    record: LessonAutomationDecisionRecord,
+    *,
+    generated_at: str,
+    repo_limit: int,
+    max_bytes_per_file: int,
+    max_files: int,
+) -> dict[str, Any]:
+    scope_path = Path(record.approved_scope_file) if record.approved_scope_file else None
+    if scope_path and not scope_path.is_absolute():
+        scope_path = repo_root / scope_path
+    scope = _load_json(scope_path) if scope_path else None
+    base = {
+        "sample_id": record.sample_id,
+        "decision_id": record.decision_id,
+        "signal_family_id": record.signal_family_id,
+        "action_kind": record.action_kind,
+        "current_decision": record.decision,
+        "priority_score": record.evidence.get("priority_score"),
+        "priority_formula": record.evidence.get("priority_formula", PRIORITY_FORMULA),
+        "methodology_version": record.evidence.get("methodology_version", METHODOLOGY_VERSION),
+        "top_examples": record.evidence.get("top_examples", []),
+        "scope_file": str(scope_path) if scope_path else "",
+        "review_status": "generated_candidate",
+        "applies_when": [
+            "A human is deciding whether to label this lesson-automation decision row.",
+            "The goal is to convert a pending generated candidate into an explicit approve, defer, or reject decision.",
+        ],
+        "does_not_apply_when": [
+            "The row has already been reviewed.",
+            "The user is asking to execute an approved action rather than label the approval ledger.",
+        ],
+        "danger_if_misapplied": (
+            "A suggested label command can be mistaken for approval. It is only a prepared command; "
+            "Lowell must explicitly authorize or run it before any row is reviewed."
+        ),
+    }
+    if record.decision != "pending":
+        return {
+            **base,
+            "recommended_decision": "already_reviewed",
+            "label_command": "",
+            "rationale": "This row is no longer pending.",
+            "approval_fields": {},
+        }
+    if record.action_kind == "bounded_content_extract":
+        repo_keys = _scope_repo_keys(record, limit=repo_limit)
+        categories = _scope_categories(scope, record)
+        rationale = (
+            "Approve bounded read-only extraction from generated scope rows so DAD can synthesize "
+            "context-bound lesson candidates. No source repo mutation, no GitHub/API/model calls, "
+            "redaction required."
+        )
+        return {
+            **base,
+            "recommended_decision": "approve",
+            "rationale": rationale,
+            "approval_fields": {
+                "approval_id": _approval_id_for(record, generated_at),
+                "approved_repo_keys": repo_keys,
+                "approved_categories": categories,
+                "max_bytes_per_file": max_bytes_per_file,
+                "max_files": max_files,
+                "allow_content_read": True,
+                "allow_source_mutation": False,
+                "redaction_required": True,
+            },
+            "label_command": _label_command(
+                record,
+                decision="approve",
+                approval_id=_approval_id_for(record, generated_at),
+                repo_keys=repo_keys,
+                categories=categories,
+                max_bytes_per_file=max_bytes_per_file,
+                max_files=max_files,
+                allow_content_read=True,
+                rationale=rationale,
+            ),
+        }
+    if record.action_kind in {"source_repo_files_only_install", "source_repo_governance_adoption"}:
+        rationale = (
+            "Defer source-repo mutation until Lowell selects exact repo paths and confirms write permission."
+        )
+        return {
+            **base,
+            "recommended_decision": "defer",
+            "rationale": rationale,
+            "approval_fields": {"allow_source_mutation": False},
+            "label_command": _label_command(record, decision="defer", rationale=rationale),
+        }
+    if record.action_kind == "extractor_gap_or_bounded_content_extract":
+        rationale = "Defer until a specific bounded CI/release artifact extractor and redaction policy exists."
+        return {
+            **base,
+            "recommended_decision": "defer",
+            "rationale": rationale,
+            "approval_fields": {"allow_content_read": False},
+            "label_command": _label_command(record, decision="defer", rationale=rationale),
+        }
+    if record.action_kind == "external_api_gate":
+        rationale = "Defer until read-only token scope, rate limits, and privacy boundary are approved."
+        return {
+            **base,
+            "recommended_decision": "defer",
+            "rationale": rationale,
+            "approval_fields": {"allow_external_api": False},
+            "label_command": _label_command(record, decision="defer", rationale=rationale),
+        }
+    rationale = "Defer because no deterministic executor or approval scope is available for this row yet."
+    return {
+        **base,
+        "recommended_decision": "defer",
+        "rationale": rationale,
+        "approval_fields": {},
+        "label_command": _label_command(record, decision="defer", rationale=rationale),
+    }
+
+
+def build_lesson_automation_approval_packet(
+    repo_root: Path,
+    records: list[LessonAutomationDecisionRecord],
+    *,
+    generated_at: str | None = None,
+    repo_limit: int = 5,
+    max_bytes_per_file: int = 20000,
+    max_files: int = 50,
+) -> dict[str, Any]:
+    generated = generated_at or utc_now()
+    pending = [record for record in records if record.decision == "pending"]
+    entries = [
+        _approval_packet_entry(
+            repo_root,
+            record,
+            generated_at=generated,
+            repo_limit=repo_limit,
+            max_bytes_per_file=max_bytes_per_file,
+            max_files=max_files,
+        )
+        for record in pending
+    ]
+    return {
+        "methodology_version": "lesson-automation-approval-packet-v0.1",
+        "generated_at": generated,
+        "authority_boundary": (
+            "Generated approval packet only. This packet prepares decision-label commands from "
+            "pending generated rows; it does not apply labels, approve actions, execute commands, "
+            "read source contents, mutate source repos, call GitHub, call models, or promote candidates."
+        ),
+        "summary": {
+            "decision_count": len(records),
+            "pending_count": len(pending),
+            "recommended_approve_count": sum(
+                1 for entry in entries if entry["recommended_decision"] == "approve"
+            ),
+            "recommended_defer_count": sum(
+                1 for entry in entries if entry["recommended_decision"] == "defer"
+            ),
+            "label_commands_generated": sum(1 for entry in entries if entry["label_command"]),
+            "labels_applied": 0,
+            "commands_executed": 0,
+            "source_repos_mutated": 0,
+            "content_files_read": 0,
+            "github_calls": 0,
+            "model_calls": 0,
+        },
+        "checked_inputs": [
+            "processed/learning/lesson_automation_action_decisions.jsonl",
+            "processed/reports/*_scope.json when referenced by a pending row",
+        ],
+        "intentionally_not_done": [
+            "decision-label command execution",
+            "approval application",
+            "content extraction",
+            "source repo mutation",
+            "GitHub/API/model calls",
+            "roadmap phase completion",
+        ],
+        "risk_review": {
+            "risk_tier": "low",
+            "why_not_high": (
+                "This packet is generated output and changes no behavior, schema, registry, score, "
+                "source repo, hook, or roadmap gate."
+            ),
+            "self_red_team": [
+                "A suggested command can be mistaken for human approval.",
+                "A future agent could run all suggested commands instead of only the one Lowell approves.",
+                "Scope files may be stale after a new scan and should be regenerated before use.",
+            ],
+            "premortem": (
+                "The likely failure is copying a generated approve command after the source scope changed. "
+                "Regenerate the packet and inspect repo keys, categories, caps, and rationale first."
+            ),
+            "rollback": "Delete generated lesson_automation_approval_packet.* outputs; no source repos are touched.",
+        },
+        "approval_entries": entries,
+        "review_status": "generated_candidate",
+    }
+
+
+def lesson_automation_approval_packet_markdown(result: dict[str, Any]) -> str:
+    summary = result["summary"]
+    lines = [
+        "# Lesson Automation Approval Packet",
+        "",
+        result["authority_boundary"],
+        "",
+        f"- Generated at: `{result['generated_at']}`",
+        f"- Methodology: `{result['methodology_version']}`",
+        f"- Pending decisions: **{summary['pending_count']}**",
+        f"- Recommended approvals: **{summary['recommended_approve_count']}**",
+        f"- Recommended deferrals: **{summary['recommended_defer_count']}**",
+        f"- Labels applied: **{summary['labels_applied']}**",
+        f"- Commands executed: **{summary['commands_executed']}**",
+        f"- Source repos mutated: **{summary['source_repos_mutated']}**",
+        f"- Content files read: **{summary['content_files_read']}**",
+        "",
+        "## Recommended Decision Commands",
+        "",
+    ]
+    for entry in result["approval_entries"]:
+        lines.extend(
+            [
+                f"### {entry['sample_id']} - {entry['signal_family_id']}",
+                "",
+                f"- Recommended decision: `{entry['recommended_decision']}`",
+                f"- Action kind: `{entry['action_kind']}`",
+                f"- Priority score: `{entry['priority_score']}`",
+                f"- Rationale: {entry['rationale']}",
+                f"- Danger if misapplied: {entry['danger_if_misapplied']}",
+                "",
+            ]
+        )
+        if entry["label_command"]:
+            lines.extend(["```powershell", entry["label_command"], "```", ""])
+    lines.extend(
+        [
+            "## Risk Review",
+            "",
+            f"- Risk tier: `{result['risk_review']['risk_tier']}`",
+            f"- Why not high: {result['risk_review']['why_not_high']}",
+            f"- Premortem: {result['risk_review']['premortem']}",
+            f"- Rollback: {result['risk_review']['rollback']}",
+            "",
+            "Self red-team:",
+            "",
+        ]
+    )
+    for item in result["risk_review"]["self_red_team"]:
+        lines.append(f"- {item}")
+    lines.extend(["", "## Intentionally Not Done", ""])
+    for item in result["intentionally_not_done"]:
+        lines.append(f"- {item}")
+    lines.append("")
+    return "\n".join(lines)
+
+
+def write_lesson_automation_approval_packet_outputs(
+    repo_root: Path,
+    *,
+    decisions_file: Path | None = None,
+    generated_at: str | None = None,
+    repo_limit: int = 5,
+    max_bytes_per_file: int = 20000,
+    max_files: int = 50,
+) -> dict[str, Any]:
+    path = decisions_file or repo_root / DECISION_TEMPLATE_PATH
+    if not path.is_absolute():
+        path = repo_root / path
+    records = load_lesson_automation_decisions(path)
+    result = build_lesson_automation_approval_packet(
+        repo_root,
+        records,
+        generated_at=generated_at,
+        repo_limit=repo_limit,
+        max_bytes_per_file=max_bytes_per_file,
+        max_files=max_files,
+    )
+    reports_dir = repo_root / "processed" / "reports"
+    paths = {
+        "packet_markdown": reports_dir / "lesson_automation_approval_packet.md",
+        "packet_json": reports_dir / "lesson_automation_approval_packet.json",
+    }
+    atomic_write_text(paths["packet_markdown"], lesson_automation_approval_packet_markdown(result))
+    atomic_write_text(paths["packet_json"], json_dumps(result, pretty=True) + "\n")
+    return {
+        "output_type": "generated_approval_packet",
+        "review_status": "generated_candidate",
+        "summary": result["summary"],
+        "outputs": {key: str(path) for key, path in paths.items()},
+    }
+
+
 def _execution_entry_for_decision(
     repo_root: Path,
     record: LessonAutomationDecisionRecord,

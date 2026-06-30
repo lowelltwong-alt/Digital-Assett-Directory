@@ -7,11 +7,13 @@ import pytest
 
 from digital_asset_directory.lesson_action_queue import (
     PRIORITY_FORMULA,
+    build_lesson_automation_approval_packet,
     build_lesson_automation_next_action_queue,
     build_lesson_automation_decision_template,
     build_lesson_automation_execution_plan,
     load_lesson_automation_decisions,
     update_lesson_automation_decision_record,
+    write_lesson_automation_approval_packet_outputs,
     write_lesson_automation_decision_template_outputs,
     write_lesson_automation_decisions,
     write_lesson_automation_execution_plan_outputs,
@@ -272,6 +274,67 @@ def test_decision_template_writer_and_jsonl_round_trip(tmp_path: Path):
     write_lesson_automation_decisions(Path(outputs["decision_template"]), records)
     reloaded = load_lesson_automation_decisions(Path(outputs["decision_template"]))
     assert [record.sample_id for record in reloaded] == [record.sample_id for record in records]
+
+
+def test_approval_packet_prepares_labels_without_applying_them(tmp_path: Path):
+    seed_scope_outputs(tmp_path)
+    template = write_lesson_automation_decision_template_outputs(
+        tmp_path,
+        generated_at=TIMESTAMP,
+    )
+    records = load_lesson_automation_decisions(Path(template["outputs"]["decision_template"]))
+
+    packet = build_lesson_automation_approval_packet(
+        tmp_path,
+        records,
+        generated_at=TIMESTAMP,
+        repo_limit=1,
+        max_bytes_per_file=20000,
+        max_files=50,
+    )
+
+    assert packet["review_status"] == "generated_candidate"
+    assert packet["summary"]["pending_count"] == 5
+    assert packet["summary"]["recommended_approve_count"] == 1
+    assert packet["summary"]["recommended_defer_count"] == 4
+    assert packet["summary"]["labels_applied"] == 0
+    assert packet["summary"]["commands_executed"] == 0
+    assert packet["summary"]["content_files_read"] == 0
+    assert packet["summary"]["source_repos_mutated"] == 0
+    first = packet["approval_entries"][0]
+    assert first["sample_id"] == "lesson-automation-decision-001"
+    assert first["recommended_decision"] == "approve"
+    assert first["approval_fields"]["approved_repo_keys"] == ["git-projects/repo-a"]
+    assert first["approval_fields"]["approved_categories"] == [
+        "ai_navigation",
+        "schemas_contracts",
+    ]
+    assert "--allow-content-read" in first["label_command"]
+    assert "--max-bytes-per-file 20000" in first["label_command"]
+    assert "--max-files 50" in first["label_command"]
+    assert all(record.decision == "pending" for record in records)
+
+
+def test_approval_packet_writer_stays_under_processed_reports(tmp_path: Path):
+    seed_scope_outputs(tmp_path)
+    template = write_lesson_automation_decision_template_outputs(
+        tmp_path,
+        generated_at=TIMESTAMP,
+    )
+
+    result = write_lesson_automation_approval_packet_outputs(
+        tmp_path,
+        decisions_file=Path(template["outputs"]["decision_template"]),
+        generated_at=TIMESTAMP,
+    )
+
+    outputs = result["outputs"]
+    assert set(outputs) == {"packet_markdown", "packet_json"}
+    assert all(Path(path).is_relative_to(tmp_path / "processed" / "reports") for path in outputs.values())
+    payload = json.loads(Path(outputs["packet_json"]).read_text(encoding="utf-8"))
+    assert payload["summary"]["labels_applied"] == 0
+    assert payload["summary"]["commands_executed"] == 0
+    assert "decision-label command execution" in payload["intentionally_not_done"]
 
 
 def test_execution_plan_is_empty_until_decision_is_approved(tmp_path: Path):

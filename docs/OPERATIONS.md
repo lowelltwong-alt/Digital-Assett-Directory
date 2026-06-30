@@ -13,6 +13,7 @@ processed/alerts/alert_inbox.md
 processed/reports/scan_summary.md
 processed/context_packs/<timestamp>-<slug>.md
 processed/learning/scan_cycle_events.jsonl
+processed/reports/lesson_automation_approval_packet.md
 processed/learning/learning_rule_promotion_candidates.jsonl
 processed/reports/repo_learning_loop_install_scope.md
 processed/reports/ci_release_artifact_scope.md
@@ -172,6 +173,24 @@ $env:PYTHONPATH='src'; python -m digital_asset_directory.cli recommend lesson-au
   --max-files 10 `
   --rationale "<approval rationale>"
 ```
+
+Use `recommend lesson-automation-approval-packet` to prepare exact approve or
+defer commands for human review without applying them:
+
+```powershell
+$env:PYTHONPATH='src'; python -m digital_asset_directory.cli recommend lesson-automation-approval-packet
+```
+
+This writes:
+
+```text
+processed/reports/lesson_automation_approval_packet.md
+processed/reports/lesson_automation_approval_packet.json
+```
+
+The packet does not approve rows or execute the suggested commands. It exists so
+future agents can present a deterministic human gate instead of improvising
+approval text from memory.
 
 After one or more decision rows are reviewed and approved, generate the
 execution plan:
