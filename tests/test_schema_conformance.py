@@ -25,6 +25,7 @@ from digital_asset_directory.models import (
     RepoLearningEventRecord,
     RepoBuildoutRecommendationRecord,
     RepoTimelineEventRecord,
+    ReferenceArchitectureRecord,
     RootCauseHypothesisRecord,
     ScanCycleEventRecord,
     SemanticEvolutionRecord,
@@ -687,6 +688,62 @@ def test_repo_buildout_recommendation_model_dump_matches_registered_schema():
     )
 
     validate_registered_schema("repo_buildout_recommendation", record.model_dump(mode="json"))
+
+
+def test_reference_architecture_model_dump_matches_registered_schema():
+    record = ReferenceArchitectureRecord(
+        reference_architecture_id="dad:reference-architecture:test",
+        architecture_key="git-projects/example::governance_control_plane",
+        architecture_label="example governance control plane",
+        repository_key="git-projects/example",
+        architecture_type="governance_control_plane",
+        component_asset_ids=["dad:asset:front", "dad:asset:schema", "dad:asset:test"],
+        component_roles={
+            "agent_navigation": ["dad:asset:front"],
+            "schemas_contracts": ["dad:asset:schema"],
+            "validators_tests": ["dad:asset:test"],
+        },
+        detected_patterns=["contracts-backed-by-validation"],
+        composition_summary="Front door routes agents; schemas define contracts; tests validate.",
+        why_it_is_good_reference=["It has cooperating architecture roles."],
+        missing_or_weak_pieces=["template or scaffold for reuse"],
+        reuse_guidance=["Reuse the architecture shape, not source-owned facts."],
+        novelty_score=0.4,
+        usefulness_score=0.7,
+        completeness_score=0.5,
+        reusability_score=0.6,
+        composition_score=0.55,
+        validation_readiness=0.8,
+        risk_score=0.2,
+        reference_score=57.8,
+        score_components={
+            "novelty_score": 0.4,
+            "usefulness_score": 0.7,
+            "completeness_score": 0.5,
+            "reusability_score": 0.6,
+            "composition_score": 0.55,
+            "validation_readiness": 0.8,
+            "risk_score": 0.2,
+        },
+        gates={
+            "evidence_gate": True,
+            "source_boundary_gate": True,
+            "privacy_gate": True,
+            "no_content_read_gate": True,
+            "no_external_call_gate": True,
+            "candidate_only_gate": True,
+        },
+        gate_failures=[],
+        smallest_bounded_experiment="Human reviews the component roles.",
+        validation_plan=["python -m pytest"],
+        human_gates=["human review before promotion"],
+        authority_boundary="Generated candidate only; source repositories retain authority.",
+        evidence={"methodology_version": "reference-architecture-recognition-v0.1"},
+        generated_at="2026-01-01T00:00:00+00:00",
+        scan_id="dad:scan:test",
+    )
+
+    validate_registered_schema("reference_architecture", record.model_dump(mode="json"))
 
 
 def test_template_record_model_dump_matches_registered_schema():

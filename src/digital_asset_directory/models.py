@@ -907,6 +907,54 @@ class RepoBuildoutRecommendationRecord(BaseModel):
     review_status: Literal["generated_candidate", "reviewed", "rejected"] = "generated_candidate"
 
 
+class ReferenceArchitectureRecord(BaseModel):
+    schema_version: str = "0.1.0"
+    reference_architecture_id: str
+    architecture_key: str = Field(min_length=1)
+    architecture_label: str = Field(min_length=1)
+    repository_key: str = Field(min_length=1)
+    architecture_type: Literal[
+        "repo_system_architecture",
+        "governance_control_plane",
+        "workflow_reference_architecture",
+        "schema_contract_architecture",
+        "agent_skill_architecture",
+        "dataflow_normalization_architecture",
+        "evaluation_quality_architecture",
+        "learning_loop_architecture",
+        "public_safe_private_source_architecture",
+        "template_scaffold_architecture",
+        "unknown_reference_architecture",
+    ]
+    component_asset_ids: list[str] = Field(min_length=1)
+    component_roles: dict[str, list[str]] = Field(min_length=1)
+    detected_patterns: list[str] = Field(min_length=1)
+    composition_summary: str = Field(min_length=1)
+    why_it_is_good_reference: list[str] = Field(min_length=1)
+    missing_or_weak_pieces: list[str] = Field(default_factory=list)
+    reuse_guidance: list[str] = Field(min_length=1)
+    novelty_score: float = Field(ge=0, le=1)
+    usefulness_score: float = Field(ge=0, le=1)
+    completeness_score: float = Field(ge=0, le=1)
+    reusability_score: float = Field(ge=0, le=1)
+    composition_score: float = Field(ge=0, le=1)
+    validation_readiness: float = Field(ge=0, le=1)
+    risk_score: float = Field(ge=0, le=1)
+    reference_score: float = Field(ge=0, le=100)
+    score_components: dict[str, float] = Field(min_length=1)
+    gates: dict[str, bool] = Field(min_length=1)
+    gate_failures: list[str] = Field(default_factory=list)
+    smallest_bounded_experiment: str = Field(min_length=1)
+    validation_plan: list[str] = Field(min_length=1)
+    human_gates: list[str] = Field(default_factory=list)
+    authority_boundary: str = Field(min_length=1)
+    evidence: dict[str, Any] = Field(min_length=1)
+    methodology_version: str = "reference-architecture-recognition-v0.1"
+    generated_at: str
+    scan_id: str
+    review_status: Literal["generated_candidate", "reviewed", "rejected"] = "generated_candidate"
+
+
 class AssetCalibrationReviewRecord(BaseModel):
     schema_version: str = "0.1.0"
     review_id: str

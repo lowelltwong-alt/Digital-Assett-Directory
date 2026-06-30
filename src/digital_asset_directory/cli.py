@@ -96,6 +96,7 @@ from .proposals import (
 from .public_safe_sweep import write_public_safe_source_sweep
 from .recommendations import recommend_skills_and_agents, recommend_swarm
 from .readiness import write_downstream_pilot_candidates, write_phase45_readiness_reports
+from .reference_architectures import write_reference_architecture_outputs
 from .research import research_missing_parts
 from .repo_buildout import load_default_repo_buildout_artifacts, write_repo_buildout_outputs
 from .repo_completion import (
@@ -947,6 +948,33 @@ def recommend_repo_buildout(
         except ValueError as exc:
             console.print(str(exc))
             raise typer.Exit(2) from exc
+    console.print_json(data=result)
+
+
+@recommend_app.command("reference-architectures")
+def recommend_reference_architectures(
+    hub: Optional[Path] = typer.Option(None),
+    limit: int = typer.Option(50, "--limit", min=1, max=200),
+    component_limit: int = typer.Option(12, "--component-limit", min=3, max=50),
+    include_edges: bool = typer.Option(
+        False,
+        "--include-edges",
+        help="Load the full candidate edge table for composition scoring; off by default for large catalogs.",
+    ),
+) -> None:
+    """Write generated reference architecture candidates from current catalog data."""
+    cfg = _cfg(hub=hub)
+    with CatalogDB(cfg.database_path) as db:
+        latest_scan = db.latest_scan()
+        latest_scan_id = latest_scan["scan_id"] if latest_scan else "catalog-without-scan"
+        result = write_reference_architecture_outputs(
+            cfg.repo_root,
+            db.assets(),
+            db.edges() if include_edges else [],
+            scan_id=latest_scan_id,
+            limit=limit,
+            component_limit=component_limit,
+        )
     console.print_json(data=result)
 
 

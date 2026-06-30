@@ -15,6 +15,8 @@ processed/context_packs/<timestamp>-<slug>.md
 processed/reports/repo_completion_dashboard.md
 processed/reports/repo_completion_wave_plan.md
 processed/reports/repo_completion_proof_check.md
+processed/reports/reference_architectures.md
+processed/learning/reference_architecture_candidates.jsonl
 processed/learning/scan_cycle_events.jsonl
 processed/reports/lesson_automation_approval_packet.md
 processed/reports/lesson_automation_approval_impact.md
@@ -94,6 +96,34 @@ It reads the existing catalog database and optional generated reports when
 present. It does not rescan, mutate the target repo, call GitHub, call models,
 install hooks, promote candidates to truth, change scores, or mark roadmap
 phases complete.
+
+## Reference architecture recognition
+
+Use `recommend reference-architectures` when you need a metadata-only scan for
+repo-level reference architectures, the component files that make them up, and
+the roles those pieces play together:
+
+```powershell
+$env:PYTHONPATH='src'; python -m digital_asset_directory.cli recommend reference-architectures --limit 50 --component-limit 12
+```
+
+The command writes:
+
+```text
+processed/reports/reference_architectures.md
+processed/reports/reference_architectures.json
+processed/learning/reference_architecture_candidates.jsonl
+processed/learning/scan_cycle_events.jsonl
+```
+
+It reads existing catalog assets only by default. Use `--include-edges` only for
+a later bounded composition pass when loading the full candidate edge table is
+safe. It does not rescan, read source file contents, call GitHub, call models,
+mutate source repos,
+promote candidates to truth, change scores, or mark roadmap phases complete.
+The score is a review-order signal for completeness, usefulness, reusability,
+composition, validation readiness, novelty, and risk. Failed gates cap the
+score at `25`.
 
 ## Repo completion dashboard
 

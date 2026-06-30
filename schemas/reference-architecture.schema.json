@@ -1,0 +1,156 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://local.digital-asset-directory/schemas/reference-architecture.schema.json",
+  "title": "Reference Architecture Record",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "reference_architecture_id",
+    "architecture_key",
+    "architecture_label",
+    "repository_key",
+    "architecture_type",
+    "component_asset_ids",
+    "component_roles",
+    "detected_patterns",
+    "composition_summary",
+    "why_it_is_good_reference",
+    "missing_or_weak_pieces",
+    "reuse_guidance",
+    "novelty_score",
+    "usefulness_score",
+    "completeness_score",
+    "reusability_score",
+    "composition_score",
+    "validation_readiness",
+    "risk_score",
+    "reference_score",
+    "score_components",
+    "gates",
+    "gate_failures",
+    "smallest_bounded_experiment",
+    "validation_plan",
+    "human_gates",
+    "authority_boundary",
+    "evidence",
+    "methodology_version",
+    "generated_at",
+    "scan_id",
+    "review_status"
+  ],
+  "properties": {
+    "schema_version": { "const": "0.1.0" },
+    "reference_architecture_id": { "type": "string", "minLength": 1 },
+    "architecture_key": { "type": "string", "minLength": 1 },
+    "architecture_label": { "type": "string", "minLength": 1 },
+    "repository_key": { "type": "string", "minLength": 1 },
+    "architecture_type": {
+      "enum": [
+        "repo_system_architecture",
+        "governance_control_plane",
+        "workflow_reference_architecture",
+        "schema_contract_architecture",
+        "agent_skill_architecture",
+        "dataflow_normalization_architecture",
+        "evaluation_quality_architecture",
+        "learning_loop_architecture",
+        "public_safe_private_source_architecture",
+        "template_scaffold_architecture",
+        "unknown_reference_architecture"
+      ]
+    },
+    "component_asset_ids": {
+      "type": "array",
+      "items": { "type": "string" },
+      "minItems": 1,
+      "uniqueItems": true
+    },
+    "component_roles": {
+      "type": "object",
+      "minProperties": 1,
+      "additionalProperties": {
+        "type": "array",
+        "items": { "type": "string" },
+        "minItems": 1,
+        "uniqueItems": true
+      }
+    },
+    "detected_patterns": {
+      "type": "array",
+      "items": { "type": "string" },
+      "minItems": 1
+    },
+    "composition_summary": { "type": "string", "minLength": 1 },
+    "why_it_is_good_reference": {
+      "type": "array",
+      "items": { "type": "string" },
+      "minItems": 1
+    },
+    "missing_or_weak_pieces": {
+      "type": "array",
+      "items": { "type": "string" }
+    },
+    "reuse_guidance": {
+      "type": "array",
+      "items": { "type": "string" },
+      "minItems": 1
+    },
+    "novelty_score": { "type": "number", "minimum": 0, "maximum": 1 },
+    "usefulness_score": { "type": "number", "minimum": 0, "maximum": 1 },
+    "completeness_score": { "type": "number", "minimum": 0, "maximum": 1 },
+    "reusability_score": { "type": "number", "minimum": 0, "maximum": 1 },
+    "composition_score": { "type": "number", "minimum": 0, "maximum": 1 },
+    "validation_readiness": { "type": "number", "minimum": 0, "maximum": 1 },
+    "risk_score": { "type": "number", "minimum": 0, "maximum": 1 },
+    "reference_score": { "type": "number", "minimum": 0, "maximum": 100 },
+    "score_components": {
+      "type": "object",
+      "minProperties": 1,
+      "additionalProperties": { "type": "number", "minimum": 0, "maximum": 1 }
+    },
+    "gates": {
+      "type": "object",
+      "required": [
+        "evidence_gate",
+        "source_boundary_gate",
+        "privacy_gate",
+        "no_content_read_gate",
+        "no_external_call_gate",
+        "candidate_only_gate"
+      ],
+      "properties": {
+        "evidence_gate": { "type": "boolean" },
+        "source_boundary_gate": { "type": "boolean" },
+        "privacy_gate": { "type": "boolean" },
+        "no_content_read_gate": { "type": "boolean" },
+        "no_external_call_gate": { "type": "boolean" },
+        "candidate_only_gate": { "type": "boolean" }
+      },
+      "additionalProperties": { "type": "boolean" }
+    },
+    "gate_failures": {
+      "type": "array",
+      "items": { "type": "string" }
+    },
+    "smallest_bounded_experiment": { "type": "string", "minLength": 1 },
+    "validation_plan": {
+      "type": "array",
+      "items": { "type": "string" },
+      "minItems": 1
+    },
+    "human_gates": {
+      "type": "array",
+      "items": { "type": "string" }
+    },
+    "authority_boundary": { "type": "string", "minLength": 1 },
+    "evidence": { "type": "object", "minProperties": 1 },
+    "methodology_version": { "const": "reference-architecture-recognition-v0.1" },
+    "generated_at": { "type": "string", "minLength": 1 },
+    "scan_id": { "type": "string", "minLength": 1 },
+    "review_status": {
+      "type": "string",
+      "enum": ["generated_candidate", "reviewed", "rejected"]
+    }
+  }
+}

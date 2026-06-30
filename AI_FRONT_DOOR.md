@@ -76,6 +76,8 @@ not prove source truth, value, authority, or promotion.
 | `processed/reports/workflow_part_usage_guidance.md` | Generated manual guidance from reviewed workflow-part labels. | You need to know which workflow-part candidates are review-use examples, human-gated, rejected noise, or blocked by missing dataflow. |
 | `processed/reports/manual_task_queue.md` | Generated manual task queue that re-ranks alerts and workflow-part guidance. | You need the safest next manual review tasks, with source-boundary and red-team posture. |
 | `processed/reports/repo_buildout/index.md` | Generated repo-specific buildout advisor index. | You need candidate recommendations for improving one cataloged repo from its own assets and safe cross-repo inspiration. |
+| `processed/reports/reference_architectures.md` | Generated reference architecture candidate report. | You need local metadata-only candidates for reusable architecture patterns, component roles, and grade rationale. |
+| `processed/learning/reference_architecture_candidates.jsonl` | Generated reference architecture candidate records. | You need structured candidate records for architecture components, roles, gates, scores, and reuse guidance. |
 | `processed/reports/repo_completion_dashboard.md` | Generated per-repo completion dashboard for lesson automation. | You need to see which cataloged repos are blocked by content-read, learning-loop, governance, validation, or AI-navigation gates. |
 | `processed/reports/repo_completion_wave_plan.md` | Generated ordered wave plan for completing repo lesson automation. | You need the safest order for content-read approval, lesson synthesis, learning-loop installs, governance maps, and final reviews. |
 | `processed/reports/repo_completion_proof_check.md` | Generated proof check for repo-completion wave advancement. | You need to know which wave is actually blocked, what proof is missing, and whether it is safe to advance. |
@@ -118,6 +120,7 @@ Discovery output is evidence and recommendation, not source-repository authority
 - candidate value, staleness, orphan, missing-part, and synergy scoring;
 - lessons and AI handoff capture;
 - lesson-automation coverage routing and scan-cycle logs;
+- metadata-only reference-architecture recognition and grading;
 - AI entrypoints and downstream integration templates;
 - cross-repo governance dependency-map template seeds;
 - local audit, validation, and roadmap state.
