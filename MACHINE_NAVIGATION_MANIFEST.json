@@ -34,6 +34,7 @@
     "processed/reports/workflow_part_usage_guidance.md",
     "processed/reports/manual_task_queue.md",
     "processed/reports/repo_buildout/index.md",
+    "processed/reports/repo_completion_dashboard.md",
     "processed/reports/template_library.md",
     "processed/reports/operational_readiness.md",
     "processed/reports/scan_coverage_cycle.md",

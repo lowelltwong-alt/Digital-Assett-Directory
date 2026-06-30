@@ -12,6 +12,7 @@ processed/alerts/alerts.jsonl
 processed/alerts/alert_inbox.md
 processed/reports/scan_summary.md
 processed/context_packs/<timestamp>-<slug>.md
+processed/reports/repo_completion_dashboard.md
 processed/learning/scan_cycle_events.jsonl
 processed/reports/lesson_automation_approval_packet.md
 processed/learning/learning_rule_promotion_candidates.jsonl
@@ -90,6 +91,27 @@ It reads the existing catalog database and optional generated reports when
 present. It does not rescan, mutate the target repo, call GitHub, call models,
 install hooks, promote candidates to truth, change scores, or mark roadmap
 phases complete.
+
+## Repo completion dashboard
+
+Use `recommend repo-completion-dashboard` when you need the repo-by-repo blocker
+view for lesson automation:
+
+```powershell
+$env:PYTHONPATH='src'; python -m digital_asset_directory.cli recommend repo-completion-dashboard --limit 100
+```
+
+The command writes:
+
+```text
+processed/reports/repo_completion_dashboard.md
+processed/reports/repo_completion_dashboard.json
+```
+
+It reads catalog metadata and generated scope/decision outputs only. It uses
+deterministic status labels, not calculated scores, and it does not rescan, read
+source file contents, mutate source repos, approve decisions, call GitHub, call
+models, install hooks, or mark roadmap phases complete.
 
 ## Lesson automation coverage
 

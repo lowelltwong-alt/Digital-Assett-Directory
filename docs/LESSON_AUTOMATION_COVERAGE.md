@@ -56,6 +56,28 @@ recommended next signal families, gated families, and context boundaries.
 Use the log as a routing aid, not as proof that a repo has no value. A missing
 surface means DAD has not observed it yet.
 
+## Repo Completion Dashboard
+
+After scope reports exist, generate the per-repo blocker view:
+
+```powershell
+$env:PYTHONPATH='src'; python -m digital_asset_directory.cli recommend repo-completion-dashboard --limit 100
+```
+
+This writes:
+
+```text
+processed/reports/repo_completion_dashboard.md
+processed/reports/repo_completion_dashboard.json
+```
+
+The dashboard reports deterministic status labels for each cataloged repo, such
+as `blocked_by_content_read_gate`, `blocked_by_source_repo_governance_gate`, or
+`metadata_completion_ready_for_human_review`. It uses observed catalog surfaces
+and generated scope/decision outputs only. It does not read source content,
+approve decisions, install learning loops, write governance maps, call GitHub,
+call models, or mark phases complete.
+
 ## Next-Action Queue
 
 After scope reports exist, generate one consolidated queue before choosing the
