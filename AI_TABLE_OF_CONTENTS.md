@@ -37,6 +37,7 @@ them.
 | `repo_buildout` | Repo-specific buildout advice from cataloged assets, workflows, alerts, and safe inspiration candidates. |
 | `template_library` | Reusable templates, dependencies, review cadence, and template upgrade governance. |
 | `governance` | Governance maps, repo contracts, authority mirrors, PR checks, and fail-closed controls. |
+| `coverage_cycle` | No-rescan coverage logs that show what was checked, skipped, and should be scanned next. |
 
 ## Front Doors And Authority
 
@@ -63,6 +64,7 @@ them.
 | `docs/BACKGROUND_CONNECTION_RADAR.md` | Two-speed design for low-compute background connection scouting and bounded high-intensity verification. | `knowledge_graph`, `workflow`, `learning_loop` | You want DAD to surface new connections between current attention and cold-storage assets. |
 | `docs/LESSONS_AND_HANDOFF_LOOP.md` | Lesson and handoff capture workflow. | `learning_loop`, `workflow` | You need to preserve reusable work knowledge. |
 | `docs/ASSET_USE_PAY_FORWARD_LOOP.md` | Before/after asset-use feedback workflow for all asset classes. | `learning_loop`, `workflow` | You use an asset and need to pay forward usefulness and reuse notes. |
+| `docs/LESSON_AUTOMATION_COVERAGE.md` | No-rescan coverage and scan-cycle workflow for future lesson automation. | `learning_loop`, `coverage_cycle`, `generated_output` | You need to start with unscanned signal families or avoid repeating broad scans. |
 | `docs/DETERMINISTIC_LEARNING_RULES.md` | Reviewed learning rules surfaced by preflight and midflight. | `learning_loop`, `authority`, `workflow` | Preflight flags rules or you are adding a future-agent rule. |
 | `docs/LOAD_BEARING_DECISION_REVIEW.md` | Risk-tier gate for downstream-impact decisions. | `workflow`, `authority`, `calibration` | A decision affects schemas, scoring, roadmap gates, or future defaults. |
 | `docs/SOFTWARE_REPO_CHECKLIST_TREE.md` | Checklist tree for software, repo, data, workflow, scoring, governance, source-scan, and release work. | `workflow`, `validation`, `security_privacy` | You plan or implement non-trivial repo work. |
@@ -109,6 +111,7 @@ them.
 | `processed/reports/manual_task_queue.md` | Generated manual task queue that re-ranks alerts and workflow-part guidance with source-boundary and red-team posture. | `knowledge_graph`, `generated_output`, `workflow_part`, `validation` | You need the safest next human-review tasks from the current alert and workflow-part queues. |
 | `processed/reports/repo_buildout/index.md` | Generated repo-specific buildout advisor index. | `knowledge_graph`, `generated_output`, `repo_buildout`, `cross_repo` | You need one cataloged repo's candidate buildout plan, internal combinations, safe cross-repo inspirations, and fresh-eyes prompt. |
 | `processed/reports/template_library.md` | Generated template dependency, reverse-dependency, and review-cadence report. | `generated_output`, `template_library`, `workflow` | You need to know which templates are stale, what they depend on, and what depends on them. |
+| `processed/reports/scan_coverage_cycle.md` | Generated scan-cycle log showing checked, skipped, and next signal families. | `generated_output`, `coverage_cycle`, `learning_loop` | You need to know where the next agent should scan without repeating old passes. |
 
 ## Contracts
 
@@ -190,6 +193,7 @@ them.
 | `asset-dir recommend workflow-part-guidance` | Generated manual guidance command for reviewed workflow parts. | `workflow_part`, `calibration`, `generated_output`, `human_gate` | You need review-use, human-gated, rejected/noise, and missing-dataflow boundaries before citing workflow parts. |
 | `asset-dir recommend manual-tasks` | Generated manual task queue over current alerts and workflow-part guidance. | `workflow`, `knowledge_graph`, `generated_output`, `workflow_part` | You need ranked manual tasks, family grouping, local research support, and red-team caveats before acting on alerts. |
 | `asset-dir recommend repo-buildout` | Generated repo-specific buildout advisor command. | `repo_buildout`, `knowledge_graph`, `workflow`, `generated_output` | You want DAD to recommend how to improve one cataloged repo without rescanning or mutating it. |
+| `asset-dir recommend lesson-automation-coverage` | Generated no-rescan coverage report and scan-cycle log. | `coverage_cycle`, `learning_loop`, `generated_output` | You need a queue of unscanned repos, unscanned signal families, and next-cycle gates. |
 | `asset-dir recommend background-connections` | CLI command for manual, local-only background connection scouting. | `background_connection`, `generated_output`, `knowledge_graph` | You want bounded candidate connections without rescanning, daemon work, GitHub, or model calls. |
 | `docs/DOWNSTREAM_REPO_GOVERNANCE.md` | Downstream governance install and pilot guidance. | `workflow`, `authority`, `cross_repo` | You prepare a sandbox or downstream pilot. |
 | `docs/TESTING_AND_ORCHESTRATION.md` | Marker taxonomy, change-driven test selection, and nox tasks. | `validation`, `workflow` | You select or explain tests. |
@@ -245,6 +249,7 @@ them.
 | `roadmap/evidence/repo-buildout-advisor-v1.md` | Evidence, formula, red-team, and boundaries for repo-specific buildout advice. | `roadmap`, `repo_buildout`, `knowledge_graph`, `validation` | You need why repo buildout recommendations are generated-only and how their priority score is derived. |
 | `roadmap/evidence/template-library-governance-v1.md` | Evidence for tracked template dependency governance and update boundaries. | `roadmap`, `template_library`, `validation` | You need why templates became first-class dependency-tracked assets. |
 | `roadmap/evidence/cross-repo-governance-dependency-map-pattern.md` | Implementation evidence, premortem, red-team, and validation plan for the cross-repo governance dependency-map asset. | `roadmap`, `cross_repo`, `governance`, `template_library` | You need why the pattern was added and what remains candidate or human-gated. |
+| `roadmap/evidence/lesson-automation-coverage-v1.md` | Evidence for no-rescan lesson-automation coverage and scan-cycle logging. | `roadmap`, `coverage_cycle`, `learning_loop`, `validation` | You need why the coverage command exists and what it must not be used to prove. |
 | `roadmap/evidence/claude-workflow-composition-red-team.md` | Claude's independent warning against ontology sprawl and recommendation for WorkflowPartRecord. | `roadmap`, `workflow`, `knowledge_graph` | You need the fresh-eyes review behind the background-radar synthesis. |
 | `roadmap/evidence/phase-3-sandbox-pilot.md` | Sandbox downstream-governance pilot evidence. | `roadmap`, `downstream_governance`, `validation` | You verify Phase 3 gates or learn how the files-only learning loop was tested. |
 | `roadmap/evidence/phase-4-semantic-enrichment.md` | Conservative Phase 4 semantic-enrichment boundary and evaluation evidence. | `roadmap`, `semantic_enrichment`, `privacy` | You need to know what Phase 4 approved, what remains deferred, or why embeddings are still gated. |

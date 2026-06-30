@@ -45,6 +45,7 @@ from .learning import (
     preflight,
     rebuild_lesson_routes,
 )
+from .lesson_automation_coverage import write_lesson_automation_coverage_outputs
 from .manual_tasks import write_manual_task_queue
 from .orphan_adapter import run_orphan_radar
 from .operational import write_operational_readiness_report
@@ -904,6 +905,29 @@ def recommend_repo_buildout(
         except ValueError as exc:
             console.print(str(exc))
             raise typer.Exit(2) from exc
+    console.print_json(data=result)
+
+
+@recommend_app.command("lesson-automation-coverage")
+def recommend_lesson_automation_coverage(
+    hub: Optional[Path] = typer.Option(None),
+    limit: int = typer.Option(50, "--limit", min=1, max=200),
+) -> None:
+    """Write a no-rescan coverage report and scan-cycle log for future learning automation."""
+    cfg = _cfg(hub=hub)
+    with CatalogDB(cfg.database_path) as db:
+        latest_scan = db.latest_scan()
+        latest_scan_id = latest_scan["scan_id"] if latest_scan else "catalog-without-scan"
+        scan_summary = json.loads(latest_scan.get("summary_json") or "{}") if latest_scan else {}
+        result = write_lesson_automation_coverage_outputs(
+            cfg.repo_root,
+            db.assets(),
+            cfg.local_sources,
+            cfg.github_sources,
+            scan_id=latest_scan_id,
+            scan_summary=scan_summary,
+            limit=limit,
+        )
     console.print_json(data=result)
 
 

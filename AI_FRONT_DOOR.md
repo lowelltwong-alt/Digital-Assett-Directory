@@ -77,6 +77,7 @@ not prove source truth, value, authority, or promotion.
 | `processed/reports/manual_task_queue.md` | Generated manual task queue that re-ranks alerts and workflow-part guidance. | You need the safest next manual review tasks, with source-boundary and red-team posture. |
 | `processed/reports/repo_buildout/index.md` | Generated repo-specific buildout advisor index. | You need candidate recommendations for improving one cataloged repo from its own assets and safe cross-repo inspiration. |
 | `processed/reports/template_library.md` | Generated template dependency and review-cadence report. | You need to know what templates depend on and what depends on them. |
+| `processed/reports/scan_coverage_cycle.md` | Generated no-rescan coverage-cycle log. | You need to know what was checked, intentionally skipped, and should be scanned next without repeating broad passes. |
 
 ## Core boundary
 
@@ -100,6 +101,7 @@ Discovery output is evidence and recommendation, not source-repository authority
 - generated workflow-part candidates beneath existing asset-family patterns;
 - candidate value, staleness, orphan, missing-part, and synergy scoring;
 - lessons and AI handoff capture;
+- lesson-automation coverage routing and scan-cycle logs;
 - AI entrypoints and downstream integration templates;
 - cross-repo governance dependency-map template seeds;
 - local audit, validation, and roadmap state.

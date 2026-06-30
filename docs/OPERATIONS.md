@@ -86,6 +86,30 @@ present. It does not rescan, mutate the target repo, call GitHub, call models,
 install hooks, promote candidates to truth, change scores, or mark roadmap
 phases complete.
 
+## Lesson automation coverage
+
+Use `recommend lesson-automation-coverage` when you need to know what has not
+been scanned or instrumented yet, and you do not want to repeat prior broad
+passes:
+
+```powershell
+$env:PYTHONPATH='src'; python -m digital_asset_directory.cli recommend lesson-automation-coverage --limit 50
+```
+
+The command writes:
+
+```text
+processed/reports/lesson_automation_coverage.md
+processed/reports/lesson_automation_coverage.json
+processed/reports/scan_coverage_cycle.md
+processed/reports/scan_coverage_cycle.json
+```
+
+It reads current catalog records, scan metadata, config metadata, and generated
+report presence. It does not rescan, read source contents, call GitHub, inspect
+CI logs, call models, mutate source repos, install hooks, or promote generated
+gaps to truth.
+
 ## Template library
 
 Use `templates check` when you need to validate DAD's reusable template library,

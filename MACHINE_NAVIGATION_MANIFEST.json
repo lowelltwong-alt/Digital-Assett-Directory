@@ -35,7 +35,8 @@
     "processed/reports/manual_task_queue.md",
     "processed/reports/repo_buildout/index.md",
     "processed/reports/template_library.md",
-    "processed/reports/operational_readiness.md"
+    "processed/reports/operational_readiness.md",
+    "processed/reports/scan_coverage_cycle.md"
   ],
   "registries": {
     "source_of_truth": "registry/source-of-truth.json",
@@ -53,7 +54,8 @@
     "schemas": "registry/schema-registry.json",
     "capabilities": "registry/capability-registry.json",
     "needs": "registry/need-registry.json",
-    "data_dictionary": "docs/DATA_DICTIONARY.md"
+    "data_dictionary": "docs/DATA_DICTIONARY.md",
+    "lesson_automation_coverage": "docs/LESSON_AUTOMATION_COVERAGE.md"
   },
   "generated_surfaces": [
     "raw/",
