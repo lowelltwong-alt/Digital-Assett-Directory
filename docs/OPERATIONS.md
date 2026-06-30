@@ -127,6 +127,22 @@ processed/reports/priority_content_extract_approval_prompt.md
 It lists candidate file paths already present in the catalog and creates a
 fresh-eyes approval prompt. It still reads no source file contents.
 
+After human approval, use `recommend priority-content-extract` to read only
+approved paths from the scope file:
+
+```powershell
+$env:PYTHONPATH='src'; python -m digital_asset_directory.cli recommend priority-content-extract `
+  --approval-id "<human-approval-id>" `
+  --repo-key "<catalog-repo-key>" `
+  --category ai_navigation `
+  --max-bytes-per-file 20000 `
+  --limit 50
+```
+
+It fails closed without an approval id, repo key, and category. It writes
+generated observations under `processed/learning/` and a generated report under
+`processed/reports/`; it does not mutate source repos.
+
 ## Template library
 
 Use `templates check` when you need to validate DAD's reusable template library,

@@ -1,19 +1,29 @@
 from __future__ import annotations
 
+import json
 from collections import Counter
 from pathlib import Path, PurePosixPath
 from typing import Any
 
 from .config import LocalSource
+from .ids import stable_id
 from .models import AssetRecord
-from .utils import atomic_write_text, json_dumps, utc_now
+from .utils import atomic_write_text, json_dumps, redact_sensitive_text, tokens, utc_now, write_jsonl
 
 METHODOLOGY_VERSION = "priority-content-extract-scope-v0.1"
+EXTRACT_METHODOLOGY_VERSION = "priority-content-extract-v0.1"
 AUTHORITY_BOUNDARY = (
     "Generated approval scope only. This command uses catalog metadata and logical paths to "
     "select candidate files for a future bounded content pass. It does not read source file "
     "contents, recurse through source filesystems, call GitHub, call models, mutate source "
     "repos, install hooks, or promote candidate findings to truth."
+)
+EXTRACT_AUTHORITY_BOUNDARY = (
+    "Generated bounded content observations only. This command reads only human-approved "
+    "candidate paths from a generated scope file, resolves them under configured local source "
+    "roots, caps bytes per file, redacts secret-like text, writes generated outputs under "
+    "`processed/`, and does not mutate source repos, call GitHub, call models, install hooks, "
+    "or promote findings to truth."
 )
 
 CATEGORY_DEFINITIONS: tuple[dict[str, Any], ...] = (
@@ -93,6 +103,52 @@ CATEGORY_DEFINITIONS: tuple[dict[str, Any], ...] = (
         "why": "Workflow and dataflow files are the best candidates for reusable process assets.",
     },
 )
+
+CONTENT_SIGNAL_TERMS: dict[str, tuple[str, ...]] = {
+    "ai_navigation": (
+        "ai front door",
+        "agents.md",
+        "preflight",
+        "postflight",
+        "read first",
+        "toc",
+        "table of contents",
+        "validation plan",
+    ),
+    "schema_contract": (
+        "schema",
+        "contract",
+        "validator",
+        "required",
+        "json schema",
+        "pydantic",
+    ),
+    "governance": (
+        "authority",
+        "gate",
+        "human review",
+        "source of truth",
+        "boundary",
+        "privacy",
+        "security",
+    ),
+    "learning_loop": (
+        "lesson",
+        "learning",
+        "handoff",
+        "pay forward",
+        "context tag",
+        "review_status",
+    ),
+    "workflow_dataflow": (
+        "workflow",
+        "data flow",
+        "normalization",
+        "pipeline",
+        "chunk",
+        "migration",
+    ),
+}
 
 
 def _normalized(value: str) -> str:
@@ -497,6 +553,295 @@ def write_priority_content_extract_scope_outputs(
     atomic_write_text(paths["approval_prompt"], approval_prompt_markdown(result))
     return {
         "output_type": "generated_candidate_scope",
+        "review_status": "generated_candidate",
+        "summary": result["summary"],
+        "outputs": {key: str(path) for key, path in paths.items()},
+    }
+
+
+def _load_scope(scope_file: Path) -> dict[str, Any]:
+    try:
+        return json.loads(scope_file.read_text(encoding="utf-8"))
+    except FileNotFoundError as exc:
+        raise ValueError(f"Scope file does not exist: {scope_file}") from exc
+    except ValueError as exc:
+        raise ValueError(f"Scope file is not valid JSON: {scope_file}") from exc
+
+
+def _resolve_logical_path(
+    logical_path: str, local_sources: list[LocalSource]
+) -> tuple[Path | None, str]:
+    logical = _normalized(logical_path)
+    for source in sorted(local_sources, key=lambda item: len(item.path_alias), reverse=True):
+        if not source.enabled:
+            continue
+        alias = _normalized(source.path_alias)
+        if logical != alias and not logical.startswith(f"{alias}/"):
+            continue
+        rel = logical[len(alias) :].strip("/")
+        source_root = source.path.resolve()
+        candidate = source_root.joinpath(*PurePosixPath(rel).parts)
+        resolved = candidate.resolve(strict=False)
+        try:
+            resolved.relative_to(source_root)
+        except ValueError:
+            return None, "resolved path escapes configured source root"
+        return resolved, ""
+    return None, "no enabled local source matches logical path"
+
+
+def _approved_candidates(
+    scope: dict[str, Any],
+    *,
+    repo_keys: list[str],
+    category_ids: list[str],
+    limit: int,
+) -> list[dict[str, Any]]:
+    repo_allow = {_normalized(repo_key) for repo_key in repo_keys}
+    category_allow = {_normalized(category_id) for category_id in category_ids}
+    candidates: list[dict[str, Any]] = []
+    for repo in scope.get("repo_scopes", []):
+        repo_key = _normalized(str(repo.get("repo_key", "")))
+        if repo_key not in repo_allow:
+            continue
+        for candidate in repo.get("candidates", []):
+            category_id = _normalized(str(candidate.get("primary_category_id", "")))
+            if category_id not in category_allow:
+                continue
+            candidates.append({"repo_key": repo_key, **candidate})
+            if len(candidates) >= limit:
+                return candidates
+    return candidates
+
+
+def _signal_counts(text: str) -> dict[str, int]:
+    lowered = text.lower()
+    return {
+        signal_id: sum(1 for term in terms if term in lowered)
+        for signal_id, terms in CONTENT_SIGNAL_TERMS.items()
+        if any(term in lowered for term in terms)
+    }
+
+
+def run_priority_content_extract(
+    scope: dict[str, Any],
+    local_sources: list[LocalSource],
+    *,
+    approval_id: str,
+    repo_keys: list[str],
+    category_ids: list[str],
+    scan_id: str,
+    max_bytes_per_file: int = 20_000,
+    max_excerpt_chars: int = 4_000,
+    limit: int = 50,
+    generated_at: str | None = None,
+) -> dict[str, Any]:
+    if not approval_id.strip():
+        raise ValueError("--approval-id is required before reading scoped content.")
+    if not repo_keys:
+        raise ValueError("At least one --repo-key is required for bounded extraction.")
+    if not category_ids:
+        raise ValueError("At least one --category is required for bounded extraction.")
+    if max_bytes_per_file <= 0:
+        raise ValueError("--max-bytes-per-file must be positive.")
+    generated = generated_at or utc_now()
+    candidates = _approved_candidates(
+        scope,
+        repo_keys=repo_keys,
+        category_ids=category_ids,
+        limit=limit,
+    )
+    observations: list[dict[str, Any]] = []
+    skipped: list[dict[str, Any]] = []
+    category_counts: Counter[str] = Counter()
+    redaction_count = 0
+    bytes_read = 0
+
+    for candidate in candidates:
+        logical_path = str(candidate.get("logical_path", ""))
+        resolved, reason = _resolve_logical_path(logical_path, local_sources)
+        if resolved is None:
+            skipped.append({"logical_path": logical_path, "reason": reason})
+            continue
+        if not resolved.exists():
+            skipped.append({"logical_path": logical_path, "reason": "file does not exist"})
+            continue
+        if not resolved.is_file():
+            skipped.append({"logical_path": logical_path, "reason": "path is not a file"})
+            continue
+        with resolved.open("rb") as handle:
+            raw = handle.read(max_bytes_per_file + 1)
+        truncated = len(raw) > max_bytes_per_file
+        raw = raw[:max_bytes_per_file]
+        bytes_read += len(raw)
+        text = raw.decode("utf-8", errors="replace")
+        redacted, count = redact_sensitive_text(text)
+        redaction_count += count
+        signal_counts = _signal_counts(redacted)
+        category_id = str(candidate.get("primary_category_id", ""))
+        category_counts[category_id] += 1
+        observation_id = stable_id(
+            "priority-content-observation",
+            approval_id,
+            str(candidate.get("asset_id", "")),
+            logical_path,
+        )
+        observations.append(
+            {
+                "schema_version": "0.1.0",
+                "observation_id": observation_id,
+                "approval_id": approval_id,
+                "methodology_version": EXTRACT_METHODOLOGY_VERSION,
+                "repo_key": candidate["repo_key"],
+                "asset_id": candidate.get("asset_id", ""),
+                "logical_path": logical_path,
+                "relative_path": candidate.get("relative_path", ""),
+                "category_id": category_id,
+                "asset_type": candidate.get("asset_type", ""),
+                "content_read_bytes": len(raw),
+                "content_truncated": truncated,
+                "redaction_count": count,
+                "content_excerpt": redacted[:max_excerpt_chars],
+                "content_token_sample": sorted(tokens(redacted))[:80],
+                "signal_counts": signal_counts,
+                "signal_tags": sorted(signal_counts),
+                "evidence": {
+                    "match_reasons": candidate.get("match_reasons", []),
+                    "max_bytes_per_file": max_bytes_per_file,
+                    "max_excerpt_chars": max_excerpt_chars,
+                    "resolved_under_configured_source": True,
+                    "candidate_only": True,
+                },
+                "authority_boundary": EXTRACT_AUTHORITY_BOUNDARY,
+                "generated_at": generated,
+                "scan_id": scan_id,
+                "review_status": "generated_candidate",
+            }
+        )
+
+    return {
+        "methodology_version": EXTRACT_METHODOLOGY_VERSION,
+        "generated_at": generated,
+        "scan_id": scan_id,
+        "authority_boundary": EXTRACT_AUTHORITY_BOUNDARY,
+        "approval_id": approval_id,
+        "summary": {
+            "candidate_count_considered": len(candidates),
+            "observation_count": len(observations),
+            "skipped_count": len(skipped),
+            "bytes_read": bytes_read,
+            "redaction_count": redaction_count,
+            "source_repos_mutated": 0,
+            "github_calls": 0,
+            "model_calls": 0,
+            "category_counts": dict(sorted(category_counts.items())),
+            "repo_keys": sorted({_normalized(repo_key) for repo_key in repo_keys}),
+            "category_ids": sorted({_normalized(category_id) for category_id in category_ids}),
+        },
+        "observations": observations,
+        "skipped": skipped,
+        "review_status": "generated_candidate",
+    }
+
+
+def priority_content_extract_markdown(result: dict[str, Any]) -> str:
+    summary = result["summary"]
+    lines = [
+        "# Priority Content Extract Observations",
+        "",
+        EXTRACT_AUTHORITY_BOUNDARY,
+        "",
+        f"- Generated at: `{result['generated_at']}`",
+        f"- Methodology: `{result['methodology_version']}`",
+        f"- Approval id: `{result['approval_id']}`",
+        f"- Candidate paths considered: **{summary['candidate_count_considered']}**",
+        f"- Observations written: **{summary['observation_count']}**",
+        f"- Skipped paths: **{summary['skipped_count']}**",
+        f"- Bytes read: **{summary['bytes_read']}**",
+        f"- Redactions: **{summary['redaction_count']}**",
+        f"- Source repos mutated: **{summary['source_repos_mutated']}**",
+        "",
+        "## Category Counts",
+        "",
+    ]
+    for category_id, count in summary["category_counts"].items():
+        lines.append(f"- `{category_id}`: **{count}**")
+    lines.extend(["", "## Observation Sample", ""])
+    for observation in result["observations"][:25]:
+        signals = ", ".join(observation["signal_tags"]) or "none"
+        lines.extend(
+            [
+                f"### {observation['relative_path']}",
+                "",
+                f"- Repo: `{observation['repo_key']}`",
+                f"- Category: `{observation['category_id']}`",
+                f"- Bytes read: **{observation['content_read_bytes']}**",
+                f"- Truncated: **{observation['content_truncated']}**",
+                f"- Redactions: **{observation['redaction_count']}**",
+                f"- Signal tags: `{signals}`",
+                "",
+            ]
+        )
+    if result["skipped"]:
+        lines.extend(["## Skipped Paths", ""])
+        for item in result["skipped"][:25]:
+            lines.append(f"- `{item['logical_path']}`: {item['reason']}")
+        lines.append("")
+    lines.extend(
+        [
+            "## Red-Team",
+            "",
+            "- These are generated observations, not source truth.",
+            "- Redaction is pattern-based and cannot prove all sensitive text was removed.",
+            "- Excerpts are bounded, but still derived from source content and must stay ignored under `processed/`.",
+            "- Human review is required before turning observations into deterministic learning rules.",
+            "",
+        ]
+    )
+    return "\n".join(lines)
+
+
+def write_priority_content_extract_outputs(
+    repo_root: Path,
+    local_sources: list[LocalSource],
+    *,
+    scope_file: Path | None = None,
+    approval_id: str,
+    repo_keys: list[str],
+    category_ids: list[str],
+    scan_id: str,
+    max_bytes_per_file: int = 20_000,
+    max_excerpt_chars: int = 4_000,
+    limit: int = 50,
+    generated_at: str | None = None,
+) -> dict[str, Any]:
+    scope_path = scope_file or repo_root / "processed" / "reports" / "priority_content_extract_scope.json"
+    if not scope_path.is_absolute():
+        scope_path = repo_root / scope_path
+    result = run_priority_content_extract(
+        _load_scope(scope_path),
+        local_sources,
+        approval_id=approval_id,
+        repo_keys=repo_keys,
+        category_ids=category_ids,
+        scan_id=scan_id,
+        max_bytes_per_file=max_bytes_per_file,
+        max_excerpt_chars=max_excerpt_chars,
+        limit=limit,
+        generated_at=generated_at,
+    )
+    learning_dir = repo_root / "processed" / "learning"
+    reports_dir = repo_root / "processed" / "reports"
+    paths = {
+        "observations": learning_dir / "priority_content_observations.jsonl",
+        "report_markdown": reports_dir / "priority_content_extract_report.md",
+        "report_json": reports_dir / "priority_content_extract_report.json",
+    }
+    write_jsonl(paths["observations"], result["observations"])
+    atomic_write_text(paths["report_markdown"], priority_content_extract_markdown(result))
+    atomic_write_text(paths["report_json"], json_dumps(result, pretty=True) + "\n")
+    return {
+        "output_type": "generated_candidate_observations",
         "review_status": "generated_candidate",
         "summary": result["summary"],
         "outputs": {key: str(path) for key, path in paths.items()},

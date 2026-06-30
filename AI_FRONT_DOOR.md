@@ -79,6 +79,7 @@ not prove source truth, value, authority, or promotion.
 | `processed/reports/template_library.md` | Generated template dependency and review-cadence report. | You need to know what templates depend on and what depends on them. |
 | `processed/reports/scan_coverage_cycle.md` | Generated no-rescan coverage-cycle log. | You need to know what was checked, intentionally skipped, and should be scanned next without repeating broad passes. |
 | `processed/reports/priority_content_extract_scope.md` | Generated metadata-only approval scope for a future bounded content pass. | You need candidate priority paths before any source content is read. |
+| `processed/learning/priority_content_observations.jsonl` | Generated bounded observations from approved content reads. | You need candidate content signals after a human-approved scoped extract; do not treat as source truth. |
 
 ## Core boundary
 

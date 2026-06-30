@@ -319,6 +319,10 @@ def _existing_output_status(repo_root: Path) -> dict[str, bool]:
         / "processed"
         / "reports"
         / "priority_content_extract_scope.json",
+        "priority_content_observations": repo_root
+        / "processed"
+        / "learning"
+        / "priority_content_observations.jsonl",
         "archaeology": repo_root / "processed" / "reports" / "worktree_archaeology.md",
         "root_cause_lessons": repo_root / "processed" / "learning" / "counterfactual_lessons.jsonl",
         "semantic_evolution": repo_root / "processed" / "learning" / "semantic_evolution_candidates.jsonl",
@@ -361,7 +365,9 @@ def _signal_family_status(
             status = "covered_by_current_catalog" if repo_count else "missing_catalog"
             evidence = {"cataloged_repo_count": repo_count}
         elif family_id == "priority_content_extracts":
-            if output_status.get("priority_content_scope"):
+            if output_status.get("priority_content_observations"):
+                status = "extracted_candidate_observations_present"
+            elif output_status.get("priority_content_scope"):
                 status = "scoped_not_extracted"
             else:
                 status = "not_scanned_metadata_only" if metadata_only_sources else "partially_available"
@@ -369,6 +375,9 @@ def _signal_family_status(
                 "metadata_only_source_ids": [source.id for source in metadata_only_sources],
                 "content_scan_outputs_present": output_status.get("workflow_parts", False),
                 "priority_content_scope_present": output_status.get("priority_content_scope", False),
+                "priority_content_observations_present": output_status.get(
+                    "priority_content_observations", False
+                ),
             }
         elif family_id == "repo_learning_events":
             status = "partial_coverage" if learning_ready else "not_instrumented"

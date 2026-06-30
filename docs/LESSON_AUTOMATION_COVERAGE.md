@@ -117,3 +117,38 @@ human-review categories:
 After this scope exists, `recommend lesson-automation-coverage` marks
 `priority_content_extracts` as `scoped_not_extracted`. Human approval is still
 required before any content is read.
+
+## Bounded Priority Content Extract
+
+After human approval, use the fail-closed extractor:
+
+```powershell
+$env:PYTHONPATH='src'; python -m digital_asset_directory.cli recommend priority-content-extract `
+  --approval-id "<human-approval-id>" `
+  --repo-key "git-projects/00_lawfirm_os/lawfirm-os-orchestrator" `
+  --category ai_navigation `
+  --category schemas_contracts `
+  --max-bytes-per-file 20000 `
+  --limit 50
+```
+
+The extractor refuses to run without:
+
+- an approval id;
+- at least one repo key;
+- at least one category;
+- a positive byte cap.
+
+It writes generated outputs only:
+
+```text
+processed/learning/priority_content_observations.jsonl
+processed/reports/priority_content_extract_report.md
+processed/reports/priority_content_extract_report.json
+```
+
+The extractor reads only candidate paths from the generated scope file, resolves
+them under configured local source roots, caps bytes per file, redacts
+secret-like text, and keeps all observations as `generated_candidate` evidence.
+After observations exist, `recommend lesson-automation-coverage` marks
+`priority_content_extracts` as `extracted_candidate_observations_present`.

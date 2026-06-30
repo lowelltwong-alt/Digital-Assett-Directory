@@ -49,7 +49,10 @@ from .lesson_automation_coverage import write_lesson_automation_coverage_outputs
 from .manual_tasks import write_manual_task_queue
 from .orphan_adapter import run_orphan_radar
 from .operational import write_operational_readiness_report
-from .priority_content_scope import write_priority_content_extract_scope_outputs
+from .priority_content_scope import (
+    write_priority_content_extract_outputs,
+    write_priority_content_extract_scope_outputs,
+)
 from .proposals import (
     ProposalEngineOption,
     build_proposal_review_queue,
@@ -951,6 +954,41 @@ def recommend_priority_content_scope(
             limit=limit,
             per_repo_limit=per_repo_limit,
         )
+    console.print_json(data=result)
+
+
+@recommend_app.command("priority-content-extract")
+def recommend_priority_content_extract(
+    approval_id: str = typer.Option(..., "--approval-id"),
+    repo_key: list[str] = typer.Option([], "--repo-key"),
+    category: list[str] = typer.Option([], "--category"),
+    scope_file: Optional[Path] = typer.Option(None, "--scope-file"),
+    hub: Optional[Path] = typer.Option(None),
+    limit: int = typer.Option(50, "--limit", min=1, max=500),
+    max_bytes_per_file: int = typer.Option(20_000, "--max-bytes-per-file", min=1, max=200_000),
+    max_excerpt_chars: int = typer.Option(4_000, "--max-excerpt-chars", min=200, max=20_000),
+) -> None:
+    """Read only approved scoped paths with byte caps and write generated observations."""
+    cfg = _cfg(hub=hub)
+    with CatalogDB(cfg.database_path) as db:
+        latest_scan = db.latest_scan()
+        latest_scan_id = latest_scan["scan_id"] if latest_scan else "catalog-without-scan"
+        try:
+            result = write_priority_content_extract_outputs(
+                cfg.repo_root,
+                cfg.local_sources,
+                scope_file=scope_file,
+                approval_id=approval_id,
+                repo_keys=repo_key,
+                category_ids=category,
+                scan_id=latest_scan_id,
+                max_bytes_per_file=max_bytes_per_file,
+                max_excerpt_chars=max_excerpt_chars,
+                limit=limit,
+            )
+        except ValueError as exc:
+            console.print(str(exc))
+            raise typer.Exit(2) from exc
     console.print_json(data=result)
 
 
