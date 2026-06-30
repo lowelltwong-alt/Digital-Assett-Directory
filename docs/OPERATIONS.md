@@ -14,6 +14,7 @@ processed/reports/scan_summary.md
 processed/context_packs/<timestamp>-<slug>.md
 processed/learning/scan_cycle_events.jsonl
 processed/learning/learning_rule_promotion_candidates.jsonl
+processed/reports/ci_release_artifact_scope.md
 state/catalog.sqlite3
 audit/events/audit.jsonl
 ```
@@ -134,6 +135,25 @@ processed/reports/priority_content_extract_approval_prompt.md
 
 It lists candidate file paths already present in the catalog and creates a
 fresh-eyes approval prompt. It still reads no source file contents.
+
+Use `recommend ci-release-scope` before reading CI logs, release notes,
+changelogs, QA reports, dependency locks, or build artifacts:
+
+```powershell
+$env:PYTHONPATH='src'; python -m digital_asset_directory.cli recommend ci-release-scope --limit 200 --per-repo-limit 12
+```
+
+The command writes:
+
+```text
+processed/reports/ci_release_artifact_scope.md
+processed/reports/ci_release_artifact_scope.json
+processed/reports/ci_release_artifact_approval_prompt.md
+```
+
+It is metadata-only. It does not read artifact contents, recurse through source
+filesystems, call GitHub, call CI services, call models, mutate source repos, or
+promote candidate findings to truth.
 
 After human approval, use `recommend priority-content-extract` to read only
 approved paths from the scope file:

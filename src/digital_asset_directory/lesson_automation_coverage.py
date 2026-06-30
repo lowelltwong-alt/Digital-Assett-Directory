@@ -335,6 +335,10 @@ def _existing_output_status(repo_root: Path) -> dict[str, bool]:
         "archaeology": repo_root / "processed" / "reports" / "worktree_archaeology.md",
         "root_cause_lessons": repo_root / "processed" / "learning" / "counterfactual_lessons.jsonl",
         "semantic_evolution": repo_root / "processed" / "learning" / "semantic_evolution_candidates.jsonl",
+        "ci_release_artifact_scope": repo_root
+        / "processed"
+        / "reports"
+        / "ci_release_artifact_scope.json",
         "background_connections": (
             repo_root / "processed" / "learning" / "background_connection_candidates.jsonl"
         ),
@@ -414,8 +418,18 @@ def _signal_family_status(
             status = "covered_by_existing_report" if output_status.get("archaeology") else "not_run_this_cycle"
             evidence = {"archaeology_report_present": output_status.get("archaeology", False)}
         elif family_id == "ci_and_release_artifacts":
-            status = "not_scanned"
-            evidence = {"reason": "No approved CI/release artifact ingestion path in v1."}
+            status = (
+                "scoped_not_extracted"
+                if output_status.get("ci_release_artifact_scope")
+                else "not_scanned"
+            )
+            evidence = {
+                "ci_release_artifact_scope_present": output_status.get(
+                    "ci_release_artifact_scope", False
+                ),
+                "content_extraction_present": False,
+                "reason": "No approved CI/release artifact content extraction path in v1.",
+            }
         elif family_id == "github_pr_issue_metadata":
             enabled = [source for source in github_sources if source.enabled]
             status = "deferred_by_human_gate" if not enabled else "configured_but_not_checked_here"

@@ -38,6 +38,7 @@
     "processed/reports/operational_readiness.md",
     "processed/reports/scan_coverage_cycle.md",
     "processed/learning/scan_cycle_events.jsonl",
+    "processed/reports/ci_release_artifact_scope.md",
     "processed/reports/priority_content_extract_scope.md",
     "processed/learning/priority_content_observations.jsonl",
     "processed/learning/priority_content_lesson_candidates.jsonl",

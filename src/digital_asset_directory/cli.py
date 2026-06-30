@@ -33,6 +33,7 @@ from .calibration import (
     write_phase25_score_delta_validation,
 )
 from .catalog import catalog_status, run_scan
+from .ci_release_scope import write_ci_release_artifact_scope_outputs
 from .config import load_config
 from .context_pack import build_context_pack, write_context_pack
 from .database import CatalogDB
@@ -957,6 +958,28 @@ def recommend_priority_content_scope(
         latest_scan = db.latest_scan()
         latest_scan_id = latest_scan["scan_id"] if latest_scan else "catalog-without-scan"
         result = write_priority_content_extract_scope_outputs(
+            cfg.repo_root,
+            db.assets(),
+            cfg.local_sources,
+            scan_id=latest_scan_id,
+            limit=limit,
+            per_repo_limit=per_repo_limit,
+        )
+    console.print_json(data=result)
+
+
+@recommend_app.command("ci-release-scope")
+def recommend_ci_release_scope(
+    hub: Optional[Path] = typer.Option(None),
+    limit: int = typer.Option(200, "--limit", min=1, max=1000),
+    per_repo_limit: int = typer.Option(12, "--per-repo-limit", min=1, max=50),
+) -> None:
+    """Write a metadata-only approval scope for CI, release, changelog, QA, and log artifacts."""
+    cfg = _cfg(hub=hub)
+    with CatalogDB(cfg.database_path) as db:
+        latest_scan = db.latest_scan()
+        latest_scan_id = latest_scan["scan_id"] if latest_scan else "catalog-without-scan"
+        result = write_ci_release_artifact_scope_outputs(
             cfg.repo_root,
             db.assets(),
             cfg.local_sources,

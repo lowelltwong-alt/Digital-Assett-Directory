@@ -92,6 +92,38 @@ Default order:
 
 Each step remains gated by source scope, privacy, and mutation rules.
 
+## CI And Release Artifact Scope
+
+Before reading CI logs, release notes, changelogs, QA reports, dependency locks,
+or build artifacts, generate a metadata-only approval scope:
+
+```powershell
+$env:PYTHONPATH='src'; python -m digital_asset_directory.cli recommend ci-release-scope --limit 200 --per-repo-limit 12
+```
+
+This writes:
+
+```text
+processed/reports/ci_release_artifact_scope.md
+processed/reports/ci_release_artifact_scope.json
+processed/reports/ci_release_artifact_approval_prompt.md
+```
+
+The command does not read artifact contents, recurse through source
+filesystems, call GitHub, call CI services, call models, or mutate source repos.
+It only lists candidate artifacts already present in the catalog:
+
+- CI workflow configuration;
+- release notes and changelogs;
+- QA, validation, and verification reports;
+- build and test log artifacts;
+- dependency lock and version manifests.
+
+After this scope exists, `recommend lesson-automation-coverage` marks
+`ci_and_release_artifacts` as `scoped_not_extracted`. A later content pass still
+requires human approval, byte caps, secret redaction, and generated-output-only
+storage.
+
 ## Priority Content Scope
 
 Before a bounded content extract pass, generate an approval scope from catalog
