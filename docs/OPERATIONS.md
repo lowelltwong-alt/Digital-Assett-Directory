@@ -155,6 +155,19 @@ The command writes generated `CounterfactualLessonRecord` candidates under
 It does not read source repos or promote lesson candidates into reviewed
 learning rules.
 
+Create the human review queue:
+
+```powershell
+$env:PYTHONPATH='src'; python -m digital_asset_directory.cli recommend priority-content-lesson-review-template --sample-size 100
+$env:PYTHONPATH='src'; python -m digital_asset_directory.cli recommend priority-content-lesson-review-queue --status pending --limit 10
+```
+
+Apply labels only after human approval with
+`recommend priority-content-lesson-review-label`, then inspect
+`recommend priority-content-lesson-review-summary`. Accepted review-use examples
+remain candidates; promotion to deterministic learning rules is a separate
+future gate.
+
 ## Template library
 
 Use `templates check` when you need to validate DAD's reusable template library,

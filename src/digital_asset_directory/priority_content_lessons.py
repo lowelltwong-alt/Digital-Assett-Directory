@@ -6,7 +6,7 @@ from pathlib import Path
 from typing import Any
 
 from .ids import stable_id
-from .models import CounterfactualLessonRecord
+from .models import CounterfactualLessonRecord, PriorityContentLessonReviewRecord
 from .utils import atomic_write_text, json_dumps, utc_now, write_jsonl
 
 METHODOLOGY_VERSION = "priority-content-lesson-synthesis-v0.1"
@@ -167,6 +167,36 @@ def load_priority_content_observations(path: Path) -> list[dict[str, Any]]:
     if not records:
         raise ValueError(f"Priority content observations file is empty: {path}")
     return records
+
+
+def load_priority_content_lesson_candidates(path: Path) -> list[CounterfactualLessonRecord]:
+    if not path.exists():
+        raise ValueError(f"Priority content lesson candidate file does not exist: {path}")
+    records: list[CounterfactualLessonRecord] = []
+    for line_number, line in enumerate(path.read_text(encoding="utf-8").splitlines(), start=1):
+        if not line.strip():
+            continue
+        try:
+            records.append(CounterfactualLessonRecord.model_validate_json(line))
+        except Exception as exc:
+            raise ValueError(f"Invalid lesson candidate at {path}:{line_number}: {exc}") from exc
+    if not records:
+        raise ValueError(f"Priority content lesson candidate file is empty: {path}")
+    return records
+
+
+def load_priority_content_lesson_reviews(path: Path) -> list[PriorityContentLessonReviewRecord]:
+    if not path.exists():
+        raise ValueError(f"Priority content lesson review file does not exist: {path}")
+    reviews: list[PriorityContentLessonReviewRecord] = []
+    for line_number, line in enumerate(path.read_text(encoding="utf-8").splitlines(), start=1):
+        if not line.strip():
+            continue
+        try:
+            reviews.append(PriorityContentLessonReviewRecord.model_validate_json(line))
+        except Exception as exc:
+            raise ValueError(f"Invalid lesson review at {path}:{line_number}: {exc}") from exc
+    return reviews
 
 
 def _confidence(count: int) -> str:
@@ -355,3 +385,251 @@ def write_priority_content_lesson_outputs(
         "summary": payload["summary"],
         "outputs": {key: str(path) for key, path in paths.items()},
     }
+
+
+def build_priority_content_lesson_review_template(
+    candidates: list[CounterfactualLessonRecord],
+    *,
+    sample_size: int = 100,
+) -> list[PriorityContentLessonReviewRecord]:
+    if sample_size < 1:
+        raise ValueError("sample_size must be at least 1.")
+    ranked = sorted(
+        candidates,
+        key=lambda record: (
+            {"high": 0, "medium": 1, "low": 2}.get(record.risk, 3),
+            {"high": 0, "medium": 1, "low": 2}.get(record.confidence, 3),
+            record.lesson_candidate_id,
+        ),
+    )[:sample_size]
+    reviews: list[PriorityContentLessonReviewRecord] = []
+    for index, candidate in enumerate(ranked, start=1):
+        sample_id = f"priority-content-lesson-review-{index:03d}"
+        reviews.append(
+            PriorityContentLessonReviewRecord(
+                review_id=stable_id(
+                    "priority-content-lesson-review",
+                    sample_id,
+                    candidate.lesson_candidate_id,
+                ),
+                sample_id=sample_id,
+                lesson_candidate_id=candidate.lesson_candidate_id,
+                evidence={
+                    "methodology_version": METHODOLOGY_VERSION,
+                    "candidate_risk": candidate.risk,
+                    "candidate_confidence": candidate.confidence,
+                    "lesson_candidate": candidate.lesson_candidate,
+                    "applies_when": candidate.applies_when,
+                    "does_not_apply_when": candidate.does_not_apply_when,
+                    "danger_if_misapplied": candidate.danger_if_misapplied,
+                    "counterfactual_better_order": candidate.counterfactual_better_order,
+                    "context_tags": candidate.context_tags,
+                    "source_events": candidate.source_events,
+                    "evidence_asset_ids": candidate.evidence_asset_ids,
+                    "generated_candidate_only": True,
+                },
+            )
+        )
+    return reviews
+
+
+def _review_is_pending(review: PriorityContentLessonReviewRecord) -> bool:
+    return (
+        review.applicability == "unreviewed"
+        and review.usefulness == "unreviewed"
+        and review.safety == "unreviewed"
+        and review.actionability == "unreviewed"
+        and review.decision == "pending"
+        and not any(
+            [
+                review.notes,
+                review.false_positive_reason,
+                review.missing_context_note,
+                review.useful_example_note,
+                review.promotion_blocker_note,
+            ]
+        )
+    )
+
+
+def summarize_priority_content_lesson_reviews(
+    reviews: list[PriorityContentLessonReviewRecord],
+) -> dict[str, Any]:
+    reviewed = [review for review in reviews if not _review_is_pending(review)]
+    accepted = [review for review in reviewed if review.decision == "accept_for_review_use"]
+    rejected = [review for review in reviewed if review.decision == "reject_candidate"]
+    return {
+        "template_count": len(reviews),
+        "reviewed_count": len(reviewed),
+        "pending_count": len(reviews) - len(reviewed),
+        "accepted_for_review_use_count": len(accepted),
+        "rejected_count": len(rejected),
+        "applicability_counts": dict(Counter(review.applicability for review in reviews)),
+        "usefulness_counts": dict(Counter(review.usefulness for review in reviews)),
+        "safety_counts": dict(Counter(review.safety for review in reviews)),
+        "actionability_counts": dict(Counter(review.actionability for review in reviews)),
+        "decision_counts": dict(Counter(review.decision for review in reviews)),
+        "false_positive_note_count": sum(1 for review in reviews if review.false_positive_reason),
+        "missing_context_note_count": sum(1 for review in reviews if review.missing_context_note),
+        "useful_example_note_count": sum(1 for review in reviews if review.useful_example_note),
+        "promotion_blocker_note_count": sum(1 for review in reviews if review.promotion_blocker_note),
+        "promotion_gate_complete": False,
+        "authority_boundary": (
+            "Review records are labels for generated candidates only; they do not promote "
+            "lessons to deterministic learning rules."
+        ),
+    }
+
+
+def priority_content_lesson_review_markdown(
+    reviews: list[PriorityContentLessonReviewRecord],
+    *,
+    review_sample: int = 50,
+) -> str:
+    summary = summarize_priority_content_lesson_reviews(reviews)
+    lines = [
+        "# Priority Content Lesson Review Template",
+        "",
+        "Generated review queue only. Human labels are required before any candidate lesson is reused.",
+        "",
+        f"- Template count: **{summary['template_count']}**",
+        f"- Reviewed count: **{summary['reviewed_count']}**",
+        "",
+    ]
+    for review in reviews[:review_sample]:
+        evidence = review.evidence
+        lines.extend(
+            [
+                f"## {review.sample_id}",
+                "",
+                f"- Lesson id: `{review.lesson_candidate_id}`",
+                f"- Risk: `{evidence.get('candidate_risk', '')}`",
+                f"- Confidence: `{evidence.get('candidate_confidence', '')}`",
+                f"- Lesson: {evidence.get('lesson_candidate', '')}",
+                f"- Context tags: `{evidence.get('context_tags', [])}`",
+                f"- Danger if misapplied: {evidence.get('danger_if_misapplied', '')}",
+                "",
+            ]
+        )
+    return "\n".join(lines)
+
+
+def write_priority_content_lesson_review_template_outputs(
+    repo_root: Path,
+    candidates: list[CounterfactualLessonRecord],
+    *,
+    sample_size: int = 100,
+) -> dict[str, Any]:
+    reviews = build_priority_content_lesson_review_template(candidates, sample_size=sample_size)
+    learning_dir = repo_root / "processed" / "learning"
+    reports_dir = repo_root / "processed" / "reports"
+    paths = {
+        "review_template": learning_dir / "priority_content_lesson_review_template.jsonl",
+        "review_report": reports_dir / "priority_content_lesson_review_template.md",
+        "review_summary": reports_dir / "priority_content_lesson_review_summary.json",
+    }
+    write_jsonl(paths["review_template"], [review.model_dump(mode="json") for review in reviews])
+    atomic_write_text(paths["review_report"], priority_content_lesson_review_markdown(reviews))
+    atomic_write_text(
+        paths["review_summary"],
+        json_dumps(summarize_priority_content_lesson_reviews(reviews), pretty=True) + "\n",
+    )
+    return {
+        "output_type": "generated_candidate_review_template",
+        "review_status": "generated_candidate",
+        "summary": summarize_priority_content_lesson_reviews(reviews),
+        "outputs": {key: str(path) for key, path in paths.items()},
+    }
+
+
+def build_priority_content_lesson_review_queue(
+    reviews: list[PriorityContentLessonReviewRecord],
+    *,
+    status: str = "pending",
+    limit: int = 10,
+) -> dict[str, Any]:
+    if status not in {"pending", "reviewed", "all"}:
+        raise ValueError("status must be one of: pending, reviewed, all")
+    selected: list[PriorityContentLessonReviewRecord] = []
+    for review in reviews:
+        pending = _review_is_pending(review)
+        if status == "pending" and not pending:
+            continue
+        if status == "reviewed" and pending:
+            continue
+        selected.append(review)
+        if len(selected) >= limit:
+            break
+    return {
+        "status": status,
+        "limit": limit,
+        "count": len(selected),
+        "items": [review.model_dump(mode="json") for review in selected],
+        "summary": summarize_priority_content_lesson_reviews(reviews),
+    }
+
+
+def update_priority_content_lesson_review_record(
+    reviews: list[PriorityContentLessonReviewRecord],
+    *,
+    sample_id: str | None = None,
+    lesson_candidate_id: str | None = None,
+    reviewer: str | None = None,
+    applicability: str | None = None,
+    usefulness: str | None = None,
+    safety: str | None = None,
+    actionability: str | None = None,
+    decision: str | None = None,
+    notes: str | None = None,
+    false_positive_reason: str | None = None,
+    missing_context_note: str | None = None,
+    useful_example_note: str | None = None,
+    promotion_blocker_note: str | None = None,
+    reviewed_at: str | None = None,
+) -> tuple[list[PriorityContentLessonReviewRecord], PriorityContentLessonReviewRecord]:
+    matches = [
+        review
+        for review in reviews
+        if (sample_id and review.sample_id == sample_id)
+        or (lesson_candidate_id and review.lesson_candidate_id == lesson_candidate_id)
+    ]
+    if not sample_id and not lesson_candidate_id:
+        raise ValueError("sample_id or lesson_candidate_id is required.")
+    if not matches:
+        raise ValueError("No matching priority content lesson review record found.")
+    if len(matches) > 1:
+        raise ValueError("Multiple matching review records found; use sample_id.")
+    target = matches[0]
+    updates = {
+        key: value
+        for key, value in {
+            "reviewer": reviewer,
+            "applicability": applicability,
+            "usefulness": usefulness,
+            "safety": safety,
+            "actionability": actionability,
+            "decision": decision,
+            "notes": notes,
+            "false_positive_reason": false_positive_reason,
+            "missing_context_note": missing_context_note,
+            "useful_example_note": useful_example_note,
+            "promotion_blocker_note": promotion_blocker_note,
+        }.items()
+        if value is not None
+    }
+    if updates and "reviewed_at" not in updates:
+        updates["reviewed_at"] = reviewed_at or utc_now()
+    updated = target.model_copy(update=updates)
+    updated.review_status = "reviewed" if not _review_is_pending(updated) else "generated_candidate"
+    validated = PriorityContentLessonReviewRecord.model_validate(updated.model_dump(mode="json"))
+    return [validated if review.review_id == target.review_id else review for review in reviews], validated
+
+
+def update_priority_content_lesson_review_file(
+    path: Path,
+    **kwargs: Any,
+) -> tuple[PriorityContentLessonReviewRecord, dict[str, Any]]:
+    reviews = load_priority_content_lesson_reviews(path)
+    updated_reviews, updated = update_priority_content_lesson_review_record(reviews, **kwargs)
+    write_jsonl(path, [review.model_dump(mode="json") for review in updated_reviews])
+    return updated, summarize_priority_content_lesson_reviews(updated_reviews)

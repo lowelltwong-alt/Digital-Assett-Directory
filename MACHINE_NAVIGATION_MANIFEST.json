@@ -55,6 +55,7 @@
     "lifecycle": "registry/lifecycle-registry.json",
     "templates": "registry/template-registry.json",
     "schemas": "registry/schema-registry.json",
+    "priority_content_lesson_review_schema": "schemas/priority-content-lesson-review.schema.json",
     "capabilities": "registry/capability-registry.json",
     "needs": "registry/need-registry.json",
     "data_dictionary": "docs/DATA_DICTIONARY.md",

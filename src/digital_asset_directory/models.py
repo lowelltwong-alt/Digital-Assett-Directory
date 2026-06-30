@@ -619,6 +619,40 @@ class CounterfactualLessonRecord(BaseModel):
     review_status: Literal["generated_candidate", "reviewed", "rejected"] = "generated_candidate"
 
 
+class PriorityContentLessonReviewRecord(BaseModel):
+    schema_version: str = "0.1.0"
+    review_id: str
+    sample_id: str = Field(min_length=1)
+    lesson_candidate_id: str = Field(min_length=1)
+    reviewer: str = ""
+    reviewed_at: str | None = None
+    applicability: Literal[
+        "unreviewed",
+        "valid_context",
+        "too_broad",
+        "too_narrow",
+        "unsafe_context",
+        "unsure",
+    ] = "unreviewed"
+    usefulness: Literal["unreviewed", "useful", "not_useful", "unsure"] = "unreviewed"
+    safety: Literal["unreviewed", "safe", "unsafe", "needs_more_review"] = "unreviewed"
+    actionability: Literal["unreviewed", "actionable", "not_actionable", "unsure"] = "unreviewed"
+    decision: Literal[
+        "pending",
+        "accept_for_review_use",
+        "reject_candidate",
+        "defer",
+        "needs_revision",
+    ] = "pending"
+    notes: str = ""
+    false_positive_reason: str = ""
+    missing_context_note: str = ""
+    useful_example_note: str = ""
+    promotion_blocker_note: str = ""
+    evidence: dict[str, Any] = Field(default_factory=dict)
+    review_status: Literal["generated_candidate", "reviewed", "rejected"] = "generated_candidate"
+
+
 class RepoLearningEventRecord(BaseModel):
     schema_version: str = "0.1.0"
     event_id: str

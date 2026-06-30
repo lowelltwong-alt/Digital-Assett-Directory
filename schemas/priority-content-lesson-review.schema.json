@@ -1,0 +1,65 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://digital-asset-directory.local/schemas/priority-content-lesson-review.schema.json",
+  "title": "PriorityContentLessonReviewRecord",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "review_id",
+    "sample_id",
+    "lesson_candidate_id",
+    "reviewer",
+    "reviewed_at",
+    "applicability",
+    "usefulness",
+    "safety",
+    "actionability",
+    "decision",
+    "notes",
+    "false_positive_reason",
+    "missing_context_note",
+    "useful_example_note",
+    "promotion_blocker_note",
+    "evidence",
+    "review_status"
+  ],
+  "properties": {
+    "schema_version": { "type": "string" },
+    "review_id": { "type": "string", "minLength": 1 },
+    "sample_id": { "type": "string", "minLength": 1 },
+    "lesson_candidate_id": { "type": "string", "minLength": 1 },
+    "reviewer": { "type": "string" },
+    "reviewed_at": { "type": ["string", "null"] },
+    "applicability": {
+      "type": "string",
+      "enum": ["unreviewed", "valid_context", "too_broad", "too_narrow", "unsafe_context", "unsure"]
+    },
+    "usefulness": {
+      "type": "string",
+      "enum": ["unreviewed", "useful", "not_useful", "unsure"]
+    },
+    "safety": {
+      "type": "string",
+      "enum": ["unreviewed", "safe", "unsafe", "needs_more_review"]
+    },
+    "actionability": {
+      "type": "string",
+      "enum": ["unreviewed", "actionable", "not_actionable", "unsure"]
+    },
+    "decision": {
+      "type": "string",
+      "enum": ["pending", "accept_for_review_use", "reject_candidate", "defer", "needs_revision"]
+    },
+    "notes": { "type": "string" },
+    "false_positive_reason": { "type": "string" },
+    "missing_context_note": { "type": "string" },
+    "useful_example_note": { "type": "string" },
+    "promotion_blocker_note": { "type": "string" },
+    "evidence": { "type": "object" },
+    "review_status": {
+      "type": "string",
+      "enum": ["generated_candidate", "reviewed", "rejected"]
+    }
+  }
+}

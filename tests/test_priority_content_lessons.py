@@ -10,8 +10,13 @@ from digital_asset_directory.lesson_automation_coverage import build_lesson_auto
 from digital_asset_directory.models import AssetRecord, CounterfactualLessonRecord
 from digital_asset_directory.priority_content_lessons import (
     build_priority_content_lesson_candidates,
+    build_priority_content_lesson_review_queue,
+    build_priority_content_lesson_review_template,
     load_priority_content_observations,
+    summarize_priority_content_lesson_reviews,
+    update_priority_content_lesson_review_file,
     write_priority_content_lesson_outputs,
+    write_priority_content_lesson_review_template_outputs,
 )
 
 pytestmark = pytest.mark.integration
@@ -182,3 +187,52 @@ def test_priority_content_lesson_outputs_and_coverage_status(tmp_path: Path):
         ]
         is True
     )
+
+
+def test_priority_content_lesson_review_template_queue_and_label(tmp_path: Path):
+    candidates = build_priority_content_lesson_candidates(
+        [
+            observation("obs:1"),
+            observation("obs:2", relative_path="AI_FRONT_DOOR.md"),
+        ],
+        scan_id=SCAN_ID,
+        generated_at=TIMESTAMP,
+    )
+    reviews = build_priority_content_lesson_review_template(candidates)
+
+    assert len(reviews) == 1
+    review = reviews[0]
+    assert review.review_status == "generated_candidate"
+    assert review.evidence["does_not_apply_when"]
+    assert review.evidence["danger_if_misapplied"]
+    queue = build_priority_content_lesson_review_queue(reviews, status="pending", limit=10)
+    assert queue["count"] == 1
+
+    review_path = tmp_path / "reviews.jsonl"
+    write_priority_content_lesson_review_template_outputs(tmp_path, candidates)
+    generated_review_path = (
+        tmp_path / "processed" / "learning" / "priority_content_lesson_review_template.jsonl"
+    )
+    review_path.write_text(generated_review_path.read_text(encoding="utf-8"), encoding="utf-8")
+    updated, summary = update_priority_content_lesson_review_file(
+        review_path,
+        sample_id="priority-content-lesson-review-001",
+        reviewer="Lowell",
+        applicability="valid_context",
+        usefulness="useful",
+        safety="safe",
+        actionability="actionable",
+        decision="accept_for_review_use",
+        useful_example_note="Good example of AI navigation lesson reuse.",
+        promotion_blocker_note="Needs later human promotion gate.",
+    )
+
+    assert updated.review_status == "reviewed"
+    assert updated.reviewed_at
+    assert summary["reviewed_count"] == 1
+    assert summary["accepted_for_review_use_count"] == 1
+    reviewed_queue = build_priority_content_lesson_review_queue(
+        [updated], status="reviewed", limit=10
+    )
+    assert reviewed_queue["count"] == 1
+    assert summarize_priority_content_lesson_reviews([updated])["promotion_gate_complete"] is False

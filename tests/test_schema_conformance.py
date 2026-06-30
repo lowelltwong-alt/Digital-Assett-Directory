@@ -19,6 +19,7 @@ from digital_asset_directory.models import (
     FailureSignalRecord,
     LearningLoopRecord,
     LearningRuleRecord,
+    PriorityContentLessonReviewRecord,
     RepoLearningEventRecord,
     RepoBuildoutRecommendationRecord,
     RepoTimelineEventRecord,
@@ -514,6 +515,32 @@ def test_background_connection_models_reject_privacy_and_safety_constant_violati
             generated_at="2026-01-01T00:00:00+00:00",
             scan_id="dad:scan:test",
         )
+
+
+def test_priority_content_lesson_review_model_dump_matches_registered_schema():
+    record = PriorityContentLessonReviewRecord(
+        review_id="dad:priority-content-lesson-review:test",
+        sample_id="priority-content-lesson-review-001",
+        lesson_candidate_id="dad:lesson-candidate:test",
+        reviewer="Lowell",
+        reviewed_at="2026-01-01T00:00:00+00:00",
+        applicability="valid_context",
+        usefulness="useful",
+        safety="safe",
+        actionability="actionable",
+        decision="accept_for_review_use",
+        notes="Looks useful with context.",
+        false_positive_reason="",
+        missing_context_note="",
+        useful_example_note="Useful review example.",
+        promotion_blocker_note="Needs separate promotion gate.",
+        evidence={"candidate_only": True},
+        review_status="reviewed",
+    )
+
+    validate_registered_schema(
+        "priority_content_lesson_review", record.model_dump(mode="json")
+    )
 
 
 def test_repo_buildout_recommendation_model_dump_matches_registered_schema():

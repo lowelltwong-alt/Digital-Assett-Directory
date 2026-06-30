@@ -185,3 +185,41 @@ After lesson candidates exist, `recommend lesson-automation-coverage` marks
 `priority_content_extracts` as `lesson_candidates_synthesized`. Human review is
 still required before any candidate becomes a deterministic learning rule or
 preflight default.
+
+## Priority Content Lesson Review
+
+Generate a human review template:
+
+```powershell
+$env:PYTHONPATH='src'; python -m digital_asset_directory.cli recommend priority-content-lesson-review-template --sample-size 100
+```
+
+Review candidates in small batches:
+
+```powershell
+$env:PYTHONPATH='src'; python -m digital_asset_directory.cli recommend priority-content-lesson-review-queue --status pending --limit 10
+```
+
+Apply only human-approved labels:
+
+```powershell
+$env:PYTHONPATH='src'; python -m digital_asset_directory.cli recommend priority-content-lesson-review-label `
+  --sample-id priority-content-lesson-review-001 `
+  --reviewer Lowell `
+  --applicability valid_context `
+  --usefulness useful `
+  --safety safe `
+  --actionability actionable `
+  --decision accept_for_review_use `
+  --promotion-blocker-note "Needs separate promotion gate."
+```
+
+Summarize without promotion:
+
+```powershell
+$env:PYTHONPATH='src'; python -m digital_asset_directory.cli recommend priority-content-lesson-review-summary
+```
+
+Review labels are not deterministic learning rules. The promotion gate remains
+separate and must not silently convert accepted review-use examples into
+preflight defaults.

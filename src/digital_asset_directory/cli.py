@@ -49,7 +49,15 @@ from .lesson_automation_coverage import write_lesson_automation_coverage_outputs
 from .manual_tasks import write_manual_task_queue
 from .orphan_adapter import run_orphan_radar
 from .operational import write_operational_readiness_report
-from .priority_content_lessons import write_priority_content_lesson_outputs
+from .priority_content_lessons import (
+    build_priority_content_lesson_review_queue,
+    load_priority_content_lesson_candidates,
+    load_priority_content_lesson_reviews,
+    summarize_priority_content_lesson_reviews,
+    update_priority_content_lesson_review_file,
+    write_priority_content_lesson_outputs,
+    write_priority_content_lesson_review_template_outputs,
+)
 from .priority_content_scope import (
     write_priority_content_extract_outputs,
     write_priority_content_extract_scope_outputs,
@@ -1017,6 +1025,129 @@ def recommend_priority_content_lessons(
             console.print(str(exc))
             raise typer.Exit(2) from exc
     console.print_json(data=result)
+
+
+@recommend_app.command("priority-content-lesson-review-template")
+def recommend_priority_content_lesson_review_template(
+    candidates_file: Optional[Path] = typer.Option(None, "--candidates-file"),
+    hub: Optional[Path] = typer.Option(None),
+    sample_size: int = typer.Option(100, "--sample-size", min=1, max=500),
+) -> None:
+    """Write a generated human-review template for priority-content lesson candidates."""
+    cfg = _cfg(hub=hub)
+    path = candidates_file or (
+        cfg.repo_root / "processed" / "learning" / "priority_content_lesson_candidates.jsonl"
+    )
+    if not path.is_absolute():
+        path = cfg.repo_root / path
+    try:
+        result = write_priority_content_lesson_review_template_outputs(
+            cfg.repo_root,
+            load_priority_content_lesson_candidates(path),
+            sample_size=sample_size,
+        )
+    except ValueError as exc:
+        console.print(str(exc))
+        raise typer.Exit(2) from exc
+    console.print_json(data={"candidates_file": str(path), **result})
+
+
+@recommend_app.command("priority-content-lesson-review-summary")
+def recommend_priority_content_lesson_review_summary(
+    review_file: Optional[Path] = typer.Option(None, "--review-file"),
+    hub: Optional[Path] = typer.Option(None),
+) -> None:
+    """Summarize priority-content lesson review labels without promoting lessons."""
+    cfg = _cfg(hub=hub)
+    path = review_file or (
+        cfg.repo_root / "processed" / "learning" / "priority_content_lesson_review_template.jsonl"
+    )
+    if not path.is_absolute():
+        path = cfg.repo_root / path
+    try:
+        summary = summarize_priority_content_lesson_reviews(
+            load_priority_content_lesson_reviews(path)
+        )
+    except ValueError as exc:
+        console.print(str(exc))
+        raise typer.Exit(2) from exc
+    console.print_json(data={"review_file": str(path), "summary": summary})
+
+
+@recommend_app.command("priority-content-lesson-review-queue")
+def recommend_priority_content_lesson_review_queue(
+    review_file: Optional[Path] = typer.Option(None, "--review-file"),
+    hub: Optional[Path] = typer.Option(None),
+    status: str = typer.Option("pending", "--status"),
+    limit: int = typer.Option(10, "--limit", min=1, max=100),
+) -> None:
+    """List priority-content lesson review queue items for human labeling."""
+    cfg = _cfg(hub=hub)
+    path = review_file or (
+        cfg.repo_root / "processed" / "learning" / "priority_content_lesson_review_template.jsonl"
+    )
+    if not path.is_absolute():
+        path = cfg.repo_root / path
+    try:
+        result = build_priority_content_lesson_review_queue(
+            load_priority_content_lesson_reviews(path),
+            status=status,
+            limit=limit,
+        )
+    except ValueError as exc:
+        console.print(str(exc))
+        raise typer.Exit(2) from exc
+    console.print_json(data={"review_file": str(path), **result})
+
+
+@recommend_app.command("priority-content-lesson-review-label")
+def recommend_priority_content_lesson_review_label(
+    review_file: Optional[Path] = typer.Option(None, "--review-file"),
+    sample_id: Optional[str] = typer.Option(None, "--sample-id"),
+    lesson_candidate_id: Optional[str] = typer.Option(None, "--lesson-candidate-id"),
+    reviewer: Optional[str] = typer.Option(None, "--reviewer"),
+    applicability: Optional[str] = typer.Option(None, "--applicability"),
+    usefulness: Optional[str] = typer.Option(None, "--usefulness"),
+    safety: Optional[str] = typer.Option(None, "--safety"),
+    actionability: Optional[str] = typer.Option(None, "--actionability"),
+    decision: Optional[str] = typer.Option(None, "--decision"),
+    notes: Optional[str] = typer.Option(None, "--notes"),
+    false_positive_reason: Optional[str] = typer.Option(None, "--false-positive-reason"),
+    missing_context_note: Optional[str] = typer.Option(None, "--missing-context-note"),
+    useful_example_note: Optional[str] = typer.Option(None, "--useful-example-note"),
+    promotion_blocker_note: Optional[str] = typer.Option(None, "--promotion-blocker-note"),
+    hub: Optional[Path] = typer.Option(None),
+) -> None:
+    """Apply one human-approved priority-content lesson review label."""
+    cfg = _cfg(hub=hub)
+    path = review_file or (
+        cfg.repo_root / "processed" / "learning" / "priority_content_lesson_review_template.jsonl"
+    )
+    if not path.is_absolute():
+        path = cfg.repo_root / path
+    try:
+        updated, summary = update_priority_content_lesson_review_file(
+            path,
+            sample_id=sample_id,
+            lesson_candidate_id=lesson_candidate_id,
+            reviewer=reviewer,
+            applicability=applicability,
+            usefulness=usefulness,
+            safety=safety,
+            actionability=actionability,
+            decision=decision,
+            notes=notes,
+            false_positive_reason=false_positive_reason,
+            missing_context_note=missing_context_note,
+            useful_example_note=useful_example_note,
+            promotion_blocker_note=promotion_blocker_note,
+        )
+    except ValueError as exc:
+        console.print(str(exc))
+        raise typer.Exit(2) from exc
+    console.print_json(
+        data={"review_file": str(path), "updated": updated.model_dump(mode="json"), "summary": summary}
+    )
 
 
 @recommend_app.command("public-safe-source-sweep")
