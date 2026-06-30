@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from typing import Any, Literal
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 
 ConfidenceLabel = Literal["low", "medium", "high"]
 
@@ -746,6 +746,55 @@ class RepoLearningEventRecord(BaseModel):
     safety_confirmation: str = Field(min_length=1)
     created_at: str
     review_status: Literal["generated_candidate", "reviewed", "rejected"] = "generated_candidate"
+
+
+class MailMessageRecord(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    schema_version: str = "0.1.0"
+    mail_id: str
+    thread_id: str
+    message_type: Literal[
+        "lesson_suggestion",
+        "asset_suggestion",
+        "workflow_suggestion",
+        "taxonomy_suggestion",
+        "capability_suggestion",
+        "governance_notice",
+        "inbox_ack",
+        "review_decision",
+    ]
+    source_repo: str = Field(min_length=1)
+    target_repo: str = Field(min_length=1)
+    created_at: str
+    dedupe_key: str = Field(min_length=1)
+    sensitivity: Literal["public", "internal", "confidential", "restricted", "unknown"] = "internal"
+    review_status: Literal[
+        "generated_candidate",
+        "collected_candidate",
+        "routed_candidate",
+        "delivered_candidate",
+        "reviewed",
+        "rejected",
+        "archived",
+    ] = "generated_candidate"
+    payload: dict[str, Any] = Field(default_factory=dict)
+    evidence: list[str] = Field(default_factory=list)
+    suggested_actions: list[str] = Field(default_factory=list)
+
+
+class MailDecisionRecord(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    schema_version: str = "0.1.0"
+    decision_id: str
+    mail_id: str = Field(min_length=1)
+    repository: str = Field(min_length=1)
+    decision: Literal["accept", "defer", "reject", "archive"]
+    decided_at: str
+    decided_by: str = "unknown"
+    notes: str = ""
+    review_status: Literal["reviewed"] = "reviewed"
 
 
 class AttentionSeedRecord(BaseModel):

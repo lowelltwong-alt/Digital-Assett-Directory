@@ -5,6 +5,7 @@ from pathlib import Path
 import yaml
 
 from .learning import open_sessions
+from .mail_center import mail_readme_text
 from .utils import atomic_write_text
 
 BEGIN = "<!-- BEGIN DIGITAL_ASSET_DIRECTORY_GOVERNANCE -->"
@@ -80,9 +81,27 @@ def install_governance(target_repo: Path, hub_root: Path, force: bool = False) -
             "high_risk_requires_human_gate": True,
             "fresh_eyes_review_template": "templates/load-bearing-decision-review.template.md",
         },
+        "mail": {
+            "enabled": True,
+            "mailbox_path": ".digital-asset/mail",
+            "digest_stale_after_hours": 24,
+            "candidate_only": True,
+        },
     }
     atomic_write_text(config, yaml.safe_dump(payload, sort_keys=False))
     changed.append(config)
+
+    mailbox = target_repo / ".digital-asset" / "mail"
+    mailbox.mkdir(parents=True, exist_ok=True)
+    mail_readme = mailbox / "README.md"
+    if not mail_readme.exists() or force:
+        atomic_write_text(mail_readme, mail_readme_text())
+        changed.append(mail_readme)
+    for name in ("inbox.jsonl", "outbox.jsonl", "archive.jsonl"):
+        path = mailbox / name
+        if not path.exists():
+            atomic_write_text(path, "")
+            changed.append(path)
 
     hook_dir = target_repo / ".githooks"
     hook_dir.mkdir(exist_ok=True)

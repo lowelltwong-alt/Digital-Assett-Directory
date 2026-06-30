@@ -573,6 +573,7 @@ def _starter_structure(intent: dict[str, Any]) -> list[str]:
         "scripts/",
         "roadmap/",
         ".digital-asset-directory/learning/README.md",
+        ".digital-asset/mail/README.md",
     ]
     text = _intent_text(intent).lower()
     if "template" in text or "seed" in text or "scaffold" in text:
@@ -590,6 +591,7 @@ def _validation_checklist(intent: dict[str, Any], templates: list[dict[str, Any]
         "Validate schemas/contracts before generated outputs rely on them.",
         "Run AI navigation checks for AI_FRONT_DOOR.md and AI_TABLE_OF_CONTENTS.md.",
         "Run security/privacy review before any public release or external data flow.",
+        "Run `asset-dir mail digest --repo .` after the daily DAD mail refresh when the repo uses mail.",
         "Record postflight and pay-forward feedback after the seed build.",
     ]
     if intent.get("risk_level") == "high":
@@ -783,6 +785,7 @@ def _architecture_combination_plan(
         "Add governance and source-authority boundaries before adding automation or generated outputs.",
         "Define schemas/contracts and validators together; do not let generated outputs outrun contracts.",
         "Install a files-only learning/pay-forward loop so future usage feedback returns to DAD as data.",
+        "Add a lightweight DAD mail inbox/outbox so cross-repo suggestions arrive as candidate evidence.",
         "Use the software repo checklist tree to choose only the branches that match this repo's risk and domain.",
     ]
     if intent.get("data_sensitivity") in {"restricted", "internal"}:

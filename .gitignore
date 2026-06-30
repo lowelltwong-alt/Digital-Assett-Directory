@@ -27,6 +27,7 @@ processed/alerts/**
 processed/calibration/**
 processed/context_packs/**
 processed/learning/**
+processed/mail/**
 processed/proposals/**
 processed/quarantine/**
 processed/reports/**

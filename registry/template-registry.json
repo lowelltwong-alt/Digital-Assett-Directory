@@ -259,6 +259,37 @@
     },
     {
       "schema_version": "0.1.0",
+      "template_id": "template:downstream-mail-readme",
+      "path": "templates/downstream/MAIL_README.md",
+      "template_name": "Downstream DAD mailbox README",
+      "template_type": "learning_loop",
+      "purpose": "Lightweight repo-local mailbox guidance for receiving and sending DAD candidate suggestions without installing heavy test suites.",
+      "applies_when": ["A persistent repo participates in DAD mail collection, delivery, digest, or review."],
+      "does_not_apply_when": ["A scratch repo has no persistent AI navigation or should remain entirely read-only."],
+      "danger_if_misapplied": "Mail can be mistaken for source truth if the README does not state candidate-only status and local review authority.",
+      "depends_on_template_ids": [],
+      "dependent_template_ids": [],
+      "depends_on_contracts": [
+        "docs/MAIL_CENTER.md",
+        "schemas/mail-message.schema.json",
+        "schemas/mail-decision.schema.json"
+      ],
+      "upgrade_triggers": [
+        "mail packet schema changes",
+        "daily digest freshness policy changes",
+        "cross-repo delivery boundary changes"
+      ],
+      "recommended_review_interval_days": 90,
+      "last_reviewed_at": "2026-06-30",
+      "next_review_due_at": "2026-09-28",
+      "upgrade_policy": "human_approved_patch",
+      "deterministic_update_rule": "Keep mailbox file names, candidate-only language, sensitivity limits, and daily digest guidance aligned with docs/MAIL_CENTER.md.",
+      "validation_commands": ["python -m pytest tests/test_mail_center.py", "python -m digital_asset_directory.cli templates validate"],
+      "authority_boundary": "DAD mailbox guidance is suggestion transport only; target repos decide whether to adopt delivered mail.",
+      "review_status": "reviewed"
+    },
+    {
+      "schema_version": "0.1.0",
       "template_id": "template:downstream-pre-push-hook",
       "path": "templates/downstream/pre-push",
       "template_name": "Downstream pre-push hook",

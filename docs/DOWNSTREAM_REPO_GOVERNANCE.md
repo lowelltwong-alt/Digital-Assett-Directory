@@ -6,7 +6,10 @@
 asset-dir agent install --repo C:\path\to\repo
 ```
 
-The installer can add an idempotent managed block to `AGENTS.md`, create a `CLAUDE.md` import when absent, add `.digital-asset-directory.yml`, and install a tool-neutral `pre-push` hook.
+The installer can add an idempotent managed block to `AGENTS.md`, create a
+`CLAUDE.md` import when absent, add `.digital-asset-directory.yml`, create the
+lightweight `.digital-asset/mail/` mirror, and install a tool-neutral `pre-push`
+hook.
 
 ## Flow
 
@@ -35,6 +38,27 @@ owner reviews it. A safe adoption path is:
 Do not auto-install tool-specific MCP servers, hooks, plugins, skills, cloud
 agents, or subagent configurations across repos without the normal source
 boundary, security, provenance, and human-gate review.
+
+## DAD mailboxes
+
+Persistent downstream repos may add a lightweight mailbox:
+
+```text
+.digital-asset/mail/README.md
+.digital-asset/mail/inbox.jsonl
+.digital-asset/mail/outbox.jsonl
+.digital-asset/mail/archive.jsonl
+```
+
+The mailbox is suggestion transport only. DAD may collect outbox packets and
+deliver inbox packets under `.digital-asset/mail/`, but the target repo decides
+whether to adopt any lesson, workflow, asset, taxonomy, capability, or
+governance notice. Mail must not overwrite source code, registries, schemas,
+hooks, AI authority files, or sensitive files.
+
+Use `templates/downstream/MAIL_README.md` as the optional repo-local README.
+Preflight does not collect mail. It only reports whether the repo's digest is
+stale so daily checks do not run multiple times per day.
 
 ## Load-bearing decisions
 

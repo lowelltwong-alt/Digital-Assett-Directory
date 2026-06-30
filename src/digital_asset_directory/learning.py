@@ -386,6 +386,16 @@ def preflight(
         task=task,
         paths=baseline_changed_files,
     )
+    try:
+        from .mail_center import mail_digest_status
+
+        digest_status = mail_digest_status(target_repo.resolve())
+    except Exception as exc:
+        digest_status = {
+            "status": "unavailable",
+            "stale": True,
+            "error": str(exc),
+        }
     payload: dict[str, Any] = {
         "schema_version": "0.1.0",
         "session_id": sid,
@@ -402,6 +412,7 @@ def preflight(
             learning_rule_matches
         ),
         "learning_rule_acknowledgements": [],
+        "mail_digest_status": digest_status,
     }
     write_json(hub_root / "state" / "agent_sessions" / f"{sid.split(':')[-1]}.json", payload)
     append_jsonl(

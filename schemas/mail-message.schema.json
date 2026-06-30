@@ -1,0 +1,58 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://local.digital-asset-directory/schemas/mail-message.schema.json",
+  "title": "Mail Message Record",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "mail_id",
+    "thread_id",
+    "message_type",
+    "source_repo",
+    "target_repo",
+    "created_at",
+    "dedupe_key",
+    "sensitivity",
+    "review_status",
+    "payload",
+    "evidence",
+    "suggested_actions"
+  ],
+  "properties": {
+    "schema_version": {"const": "0.1.0"},
+    "mail_id": {"type": "string", "minLength": 1},
+    "thread_id": {"type": "string", "minLength": 1},
+    "message_type": {
+      "enum": [
+        "lesson_suggestion",
+        "asset_suggestion",
+        "workflow_suggestion",
+        "taxonomy_suggestion",
+        "capability_suggestion",
+        "governance_notice",
+        "inbox_ack",
+        "review_decision"
+      ]
+    },
+    "source_repo": {"type": "string", "minLength": 1},
+    "target_repo": {"type": "string", "minLength": 1},
+    "created_at": {"type": "string", "minLength": 1},
+    "dedupe_key": {"type": "string", "minLength": 1},
+    "sensitivity": {"enum": ["public", "internal", "confidential", "restricted", "unknown"]},
+    "review_status": {
+      "enum": [
+        "generated_candidate",
+        "collected_candidate",
+        "routed_candidate",
+        "delivered_candidate",
+        "reviewed",
+        "rejected",
+        "archived"
+      ]
+    },
+    "payload": {"type": "object"},
+    "evidence": {"type": "array", "items": {"type": "string"}},
+    "suggested_actions": {"type": "array", "items": {"type": "string"}}
+  },
+  "additionalProperties": false
+}

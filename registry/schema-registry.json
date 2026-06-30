@@ -33,6 +33,8 @@
     "learning_rule_promotion_candidate": "schemas/learning-rule-promotion-candidate.schema.json",
     "scan_cycle_event": "schemas/scan-cycle-event.schema.json",
     "repo_learning_event": "schemas/repo-learning-event.schema.json",
+    "mail_message": "schemas/mail-message.schema.json",
+    "mail_decision": "schemas/mail-decision.schema.json",
     "attention_seed": "schemas/attention-seed.schema.json",
     "connection_candidate": "schemas/connection-candidate.schema.json",
     "escalation_packet": "schemas/escalation-packet.schema.json",

@@ -123,6 +123,11 @@ Recommended first step for other repos:
 5. During postflight, note which capability helped or failed: skill, subagent,
    MCP, hook, cloud agent, connector, plugin, or none.
 
+When one repo discovers a capability update that may help others, send it as a
+DAD `capability_suggestion` mail packet. Target repos decide whether to adopt it
+in their own AI front door, `AGENTS.md`, `CLAUDE.md`, Cursor rules, hooks, or
+local docs.
+
 Do not automatically mutate external repos from this hub. Use the existing
 downstream governance install flow and human gate before copying managed blocks
 or changing hooks.

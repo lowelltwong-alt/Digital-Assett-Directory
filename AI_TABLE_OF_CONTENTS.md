@@ -31,6 +31,7 @@ them.
 | `generated_output` | Ignored processed outputs; useful but not source truth. |
 | `public_safe` | Metadata-only patterns safe for a future public DAD repo. |
 | `cross_repo` | Multi-repo patterns, workflows, and authority boundaries. |
+| `mail_center` | Cross-repo candidate suggestion inbox/outbox transport. |
 | `validation` | Tests, CLI validators, and verification reports. |
 | `background_connection` | Low-compute connection scouting, escalation packets, and bounded expansion maps. |
 | `workflow_part` | Reusable workflow sub-units beneath asset patterns. |
@@ -74,6 +75,7 @@ them.
 | `docs/WORKFLOW_SWEEPS.md` | Governance-first candidate sweeps for workflow assets across repos. | `workflow`, `cross_repo`, `generated_output` | You need to find workflow assets from scans. |
 | `docs/CROSS_REPO_WORKFLOW_ASSET_PATTERNS.md` | Reusable workflow patterns found across major repo families. | `workflow`, `cross_repo`, `knowledge_graph` | You want to compose or recognize workflows across repos. |
 | `docs/CROSS_REPO_GOVERNANCE_DEPENDENCY_MAP_PATTERN.md` | Reusable pattern and adoption guide for upstream governance maps, child mirrors, discovery surfaces, PR disclosure, validators, and tests. | `workflow`, `cross_repo`, `governance`, `template_library`, `validation` | You design or scan for repo-family governance dependency-map patterns. |
+| `docs/MAIL_CENTER.md` | Governed DAD mail hub and repo-local inbox/outbox mirror for candidate lessons, workflows, assets, taxonomy, capabilities, and governance notices. | `workflow`, `cross_repo`, `mail_center`, `learning_loop`, `security_privacy` | You need repos to suggest or receive cross-repo learning without mutating source authority. |
 | `docs/REFERENCE_ARCHITECTURE_RECOGNITION.md` | Metadata-only reference architecture recognition method, score formula, boundaries, and next scan cycle. | `reference_architecture`, `knowledge_graph`, `workflow`, `coverage_cycle` | You need to scan for reusable architecture patterns or understand what makes an architecture a good reference. |
 | `docs/ARCHITECTURE_CONSULT.md` | Consult-and-compose workflow for seeding new repos from local DAD reference patterns and templates. | `architecture_consult`, `reference_architecture`, `template_library`, `workflow`, `human_gate` | A new repo agent needs architecture advice before it starts building. |
 | `docs/PROFESSIONAL_RECRUITING_INTELLIGENCE_WORKFLOW.md` | Official-source professional identity, enrichment, recruiting, acquisition, and liftout workflow. | `workflow`, `public_safe`, `security_privacy` | You are modeling attorney/professional intelligence without importing private rows. |
@@ -122,6 +124,8 @@ them.
 | `processed/reports/repo_completion_wave_plan.md` | Generated ordered wave plan for completing repo lesson automation. | `generated_output`, `coverage_cycle`, `learning_loop`, `human_gate` | You need the deterministic order and proof gates for moving all repos from blockers to reviewed coverage. |
 | `processed/reports/repo_completion_proof_check.md` | Generated proof check for repo-completion wave advancement. | `generated_output`, `coverage_cycle`, `learning_loop`, `human_gate`, `validation` | You need to know which wave is blocked, what proof is missing, and whether it is safe to advance. |
 | `processed/reports/template_library.md` | Generated template dependency, reverse-dependency, and review-cadence report. | `generated_output`, `template_library`, `workflow` | You need to know which templates are stale, what they depend on, and what depends on them. |
+| `processed/mail/` | Generated central DAD mail inbox, outbox, archive, and delivery logs. | `generated_output`, `mail_center`, `cross_repo`, `learning_loop` | You need collected or routed candidate suggestions; never treat mail as source truth. |
+| `processed/reports/mail_center.md` | Generated mail-center summary report. | `generated_output`, `mail_center`, `cross_repo` | You need counts, message-type distribution, and current central mail report paths. |
 | `processed/reports/scan_coverage_cycle.md` | Generated scan-cycle log showing checked, skipped, and next signal families. | `generated_output`, `coverage_cycle`, `learning_loop` | You need to know where the next agent should scan without repeating old passes. |
 | `processed/learning/scan_cycle_events.jsonl` | Generated append-only scan-cycle event trail. | `generated_output`, `coverage_cycle`, `learning_loop` | You need the sequence of prior coverage passes and gated next scan families. |
 | `processed/reports/lesson_automation_next_actions.md` | Generated next-action queue across existing lesson-automation scopes. | `generated_output`, `coverage_cycle`, `learning_loop`, `human_gate` | You need the safest next human approval decision before content reads, source-repo installs, governance adoption, CI/release artifact extraction, or external APIs. |
@@ -167,6 +171,8 @@ them.
 | `schemas/learning-rule-promotion-candidate.schema.json` | Generated learning-rule promotion candidate contract. | `schema`, `learning_loop`, `human_gate` | You package reviewed lesson candidates without mutating the learning-rule registry. |
 | `schemas/scan-cycle-event.schema.json` | Generated scan-cycle event contract. | `schema`, `coverage_cycle`, `learning_loop` | You append or validate coverage pass history for future scan routing. |
 | `schemas/repo-learning-event.schema.json` | Repo-local learning event contract. | `schema`, `learning_loop` | You capture before, during, after, or review events. |
+| `schemas/mail-message.schema.json` | Cross-repo candidate mail packet contract. | `schema`, `mail_center`, `cross_repo`, `learning_loop` | You validate DAD mail suggestions before collect, route, deliver, or digest. |
+| `schemas/mail-decision.schema.json` | Repo-local mail review decision contract. | `schema`, `mail_center`, `learning_loop` | You record accept, defer, reject, or archive decisions for delivered mail. |
 | `schemas/attention-seed.schema.json` | Background radar attention seed contract. | `schema`, `background_connection`, `security_privacy` | You define privacy-first attention inputs without raw chat persistence. |
 | `schemas/connection-candidate.schema.json` | Background radar connection candidate contract. | `schema`, `background_connection`, `knowledge_graph` | You score candidate links with gate-before-score semantics. |
 | `schemas/escalation-packet.schema.json` | Background radar escalation packet contract. | `schema`, `background_connection`, `workflow` | You package bounded evidence for manual or future verifier review. |
@@ -213,6 +219,7 @@ them.
 | `docs/TEMPLATE_LIBRARY_GOVERNANCE.md` | Template library dependency and upgrade-governance rules. | `template_library`, `workflow`, `validation` | You create, update, review, or validate reusable templates. |
 | `asset-dir templates check` | Template registry validator and generated dependency report command. | `template_library`, `validation`, `generated_output` | You need template dependency impact analysis or periodic template review. |
 | `asset-dir templates validate` | No-write template registry validation command. | `template_library`, `validation` | You need to check template graph metadata without writing generated reports. |
+| `asset-dir mail collect/route/deliver/digest/review` | CLI commands for the governed DAD mail center and repo-local mirrors. | `mail_center`, `workflow`, `cross_repo`, `learning_loop` | You move candidate suggestions between repos without mutating local source authority. |
 | `docs/PROPOSAL_ENGINE_CALIBRATION_WORKFLOW.md` | Proposal review workflow. | `calibration`, `workflow` | You review bottom-up and top-down proposal engines. |
 | `asset-dir recommend workflow-sweeps` | CLI command for generated workflow-family sweep reports. | `workflow`, `generated_output`, `cross_repo` | You need generated workflow candidates. |
 | `asset-dir recommend workflow-parts` | CLI command for generated workflow-part candidates from the current catalog. | `workflow`, `workflow_part`, `generated_output` | You need recombinable sub-unit candidates without rescanning or mutating source repos. |
