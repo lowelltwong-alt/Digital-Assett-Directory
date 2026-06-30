@@ -78,6 +78,24 @@ and generated scope/decision outputs only. It does not read source content,
 approve decisions, install learning loops, write governance maps, call GitHub,
 call models, or mark phases complete.
 
+Generate the ordered wave plan after the dashboard:
+
+```powershell
+$env:PYTHONPATH='src'; python -m digital_asset_directory.cli recommend repo-completion-waves --dashboard-limit 500 --per-wave-repo-limit 25
+```
+
+This writes:
+
+```text
+processed/reports/repo_completion_wave_plan.md
+processed/reports/repo_completion_wave_plan.json
+```
+
+The wave plan turns blocker labels into an execution order with proof gates:
+content-read approval, lesson synthesis, repo learning-loop installation,
+governance-map adoption, AI navigation and validation review, then final
+metadata-ready human review. It is still generated guidance only.
+
 ## Next-Action Queue
 
 After scope reports exist, generate one consolidated queue before choosing the

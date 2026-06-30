@@ -8,7 +8,9 @@ import pytest
 from digital_asset_directory.models import AssetRecord
 from digital_asset_directory.repo_completion import (
     build_repo_completion_dashboard,
+    build_repo_completion_wave_plan,
     write_repo_completion_dashboard_outputs,
+    write_repo_completion_wave_plan_outputs,
 )
 
 pytestmark = pytest.mark.integration
@@ -200,3 +202,78 @@ def test_repo_completion_dashboard_writer_stays_under_processed_reports(tmp_path
     assert payload["summary"]["source_repos_mutated"] == 0
     assert payload["summary"]["content_files_read"] == 0
     assert "source repo mutation" in payload["intentionally_not_done"]
+
+
+def test_repo_completion_wave_plan_orders_blockers_without_executing(tmp_path: Path):
+    seed_generated_outputs(tmp_path)
+    assets = [
+        make_repo("dad:asset:repo-a", "git-projects/repo-a", ["AGENTS.md"]),
+        make_asset("dad:asset:repo-a-agent", "git-projects/repo-a/AGENTS.md"),
+        make_asset("dad:asset:repo-a-front", "git-projects/repo-a/AI_FRONT_DOOR.md"),
+        make_repo("dad:asset:repo-b", "git-projects/repo-b", ["AGENTS.md"]),
+        make_asset("dad:asset:repo-b-agent", "git-projects/repo-b/AGENTS.md"),
+        make_asset("dad:asset:repo-b-front", "git-projects/repo-b/AI_FRONT_DOOR.md"),
+        make_asset("dad:asset:repo-b-toc", "git-projects/repo-b/AI_TABLE_OF_CONTENTS.md"),
+        make_asset(
+            "dad:asset:repo-b-learn-readme",
+            "git-projects/repo-b/.digital-asset-directory/learning/README.md",
+        ),
+        make_asset(
+            "dad:asset:repo-b-learn-tags",
+            "git-projects/repo-b/.digital-asset-directory/learning/context-tags.yaml",
+        ),
+        make_asset(
+            "dad:asset:repo-b-learn-events",
+            "git-projects/repo-b/.digital-asset-directory/learning/events.jsonl",
+        ),
+        make_asset(
+            "dad:asset:repo-b-gov",
+            "git-projects/repo-b/governance/GOVERNANCE_DEPENDENCY_MAP.yaml",
+        ),
+        make_asset("dad:asset:repo-b-test", "git-projects/repo-b/tests/test_repo.py"),
+    ]
+
+    result = build_repo_completion_wave_plan(
+        tmp_path,
+        assets,
+        generated_at=TIMESTAMP,
+        per_wave_repo_limit=10,
+    )
+
+    assert result["review_status"] == "generated_candidate"
+    assert result["status_methodology"]["score_used"] is False
+    assert result["summary"]["source_repos_mutated"] == 0
+    assert result["summary"]["content_files_read"] == 0
+    assert result["summary"]["github_calls"] == 0
+    assert [wave["wave_id"] for wave in result["waves"][:3]] == [
+        "content_read_approval_wave",
+        "lesson_candidate_synthesis_wave",
+        "repo_learning_loop_selection_wave",
+    ]
+    content_wave = result["waves"][0]
+    assert content_wave["repo_count"] == 1
+    assert content_wave["reported_repo_keys"] == ["git-projects/repo-a"]
+    assert "approval-packet" in content_wave["generated_next_step"]
+    assert content_wave["review_status"] == "generated_candidate"
+
+
+def test_repo_completion_wave_plan_writer_stays_under_processed_reports(tmp_path: Path):
+    seed_generated_outputs(tmp_path)
+    assets = [
+        make_repo("dad:asset:repo-a", "git-projects/repo-a", ["AGENTS.md"]),
+        make_asset("dad:asset:repo-a-agent", "git-projects/repo-a/AGENTS.md"),
+    ]
+
+    result = write_repo_completion_wave_plan_outputs(
+        tmp_path,
+        assets,
+        generated_at=TIMESTAMP,
+    )
+
+    outputs = result["outputs"]
+    assert set(outputs) == {"wave_markdown", "wave_json"}
+    assert all(Path(path).is_relative_to(tmp_path / "processed" / "reports") for path in outputs.values())
+    payload = json.loads(Path(outputs["wave_json"]).read_text(encoding="utf-8"))
+    assert payload["summary"]["source_repos_mutated"] == 0
+    assert payload["summary"]["content_files_read"] == 0
+    assert "decision approval" in payload["intentionally_not_done"]

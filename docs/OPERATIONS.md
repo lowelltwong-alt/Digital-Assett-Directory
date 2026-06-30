@@ -13,6 +13,7 @@ processed/alerts/alert_inbox.md
 processed/reports/scan_summary.md
 processed/context_packs/<timestamp>-<slug>.md
 processed/reports/repo_completion_dashboard.md
+processed/reports/repo_completion_wave_plan.md
 processed/learning/scan_cycle_events.jsonl
 processed/reports/lesson_automation_approval_packet.md
 processed/learning/learning_rule_promotion_candidates.jsonl
@@ -112,6 +113,26 @@ It reads catalog metadata and generated scope/decision outputs only. It uses
 deterministic status labels, not calculated scores, and it does not rescan, read
 source file contents, mutate source repos, approve decisions, call GitHub, call
 models, install hooks, or mark roadmap phases complete.
+
+Use `recommend repo-completion-waves` when you need the ordered wave plan for
+moving repo completion forward:
+
+```powershell
+$env:PYTHONPATH='src'; python -m digital_asset_directory.cli recommend repo-completion-waves --dashboard-limit 500 --per-wave-repo-limit 25
+```
+
+The command writes:
+
+```text
+processed/reports/repo_completion_wave_plan.md
+processed/reports/repo_completion_wave_plan.json
+```
+
+The wave plan orders the dashboard blockers into content-read approval, lesson
+synthesis, learning-loop installation, governance-map adoption, AI
+navigation/validation review, and final human review waves. It still does not
+approve decisions, run commands, read content, mutate repos, or mark phases
+complete.
 
 ## Lesson automation coverage
 

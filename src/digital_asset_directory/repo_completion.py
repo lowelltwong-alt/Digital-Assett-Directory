@@ -431,3 +431,342 @@ def write_repo_completion_dashboard_outputs(
         "summary": result["summary"],
         "outputs": {key: str(path) for key, path in paths.items()},
     }
+
+
+def _records_with_blocker(dashboard: dict[str, Any], blocker: str) -> list[dict[str, Any]]:
+    return [record for record in dashboard["repo_records"] if blocker in record["blockers"]]
+
+
+def _wave(
+    *,
+    sequence_order: int,
+    wave_id: str,
+    label: str,
+    repo_records: list[dict[str, Any]],
+    readiness_state: str,
+    human_gate: str,
+    generated_next_step: str,
+    proof_to_advance: list[str],
+    danger_if_misapplied: str,
+    per_wave_repo_limit: int,
+) -> dict[str, Any]:
+    repo_keys = [record["repo_key"] for record in repo_records[:per_wave_repo_limit]]
+    return {
+        "sequence_order": sequence_order,
+        "wave_id": wave_id,
+        "label": label,
+        "readiness_state": readiness_state,
+        "repo_count": len(repo_records),
+        "reported_repo_keys": repo_keys,
+        "truncated_repo_count": max(0, len(repo_records) - len(repo_keys)),
+        "human_gate": human_gate,
+        "generated_next_step": generated_next_step,
+        "proof_to_advance": proof_to_advance,
+        "danger_if_misapplied": danger_if_misapplied,
+        "authority_boundary": AUTHORITY_BOUNDARY,
+        "review_status": "generated_candidate",
+    }
+
+
+def build_repo_completion_wave_plan(
+    repo_root: Path,
+    assets: list[AssetRecord],
+    *,
+    generated_at: str | None = None,
+    dashboard_limit: int = 500,
+    per_wave_repo_limit: int = 25,
+) -> dict[str, Any]:
+    generated = generated_at or utc_now()
+    dashboard = build_repo_completion_dashboard(
+        repo_root,
+        assets,
+        generated_at=generated,
+        limit=dashboard_limit,
+    )
+    records = list(dashboard["repo_records"])
+    decision_summary = dashboard["summary"]["decision_summary"]
+    content_records = _records_with_blocker(dashboard, "content_extract_human_gate")
+    learning_records = _records_with_blocker(dashboard, "repo_learning_loop_missing")
+    governance_records = _records_with_blocker(dashboard, "governance_dependency_surface_missing")
+    ai_records = _records_with_blocker(dashboard, "ai_navigation_incomplete")
+    validation_records = _records_with_blocker(dashboard, "validation_surface_not_observed")
+    ready_records = [
+        record
+        for record in records
+        if record["completion_state"] == "metadata_completion_ready_for_human_review"
+    ]
+    content_ready = (
+        "ready_for_human_decision"
+        if dashboard["summary"]["approval_packet_present"]
+        and not decision_summary["content_read_approval_count"]
+        else "already_approved_or_missing_packet"
+    )
+    waves = [
+        _wave(
+            sequence_order=1,
+            wave_id="content_read_approval_wave",
+            label="Approve bounded priority content extraction",
+            repo_records=content_records,
+            readiness_state=content_ready,
+            human_gate="Lowell approves lesson-automation-decision-001 or regenerates the approval packet.",
+            generated_next_step=(
+                "$env:PYTHONPATH='src'; python -m digital_asset_directory.cli recommend "
+                "lesson-automation-approval-packet"
+            ),
+            proof_to_advance=[
+                "decision ledger has at least one reviewed content-read approval",
+                "execution plan contains a ready_for_manual_run priority-content-extract entry",
+                "content extraction writes generated observations only under processed/",
+            ],
+            danger_if_misapplied=(
+                "Approving broad content reads without repo keys, categories, caps, and redaction can "
+                "pull sensitive source content into generated outputs."
+            ),
+            per_wave_repo_limit=per_wave_repo_limit,
+        ),
+        _wave(
+            sequence_order=2,
+            wave_id="lesson_candidate_synthesis_wave",
+            label="Synthesize lessons from approved priority observations",
+            repo_records=content_records,
+            readiness_state=(
+                "waiting_for_priority_observations"
+                if not (repo_root / "processed" / "learning" / "priority_content_observations.jsonl").exists()
+                else "ready_for_generated_synthesis"
+            ),
+            human_gate="No new gate if observations already exist; otherwise depends on wave 1.",
+            generated_next_step=(
+                "$env:PYTHONPATH='src'; python -m digital_asset_directory.cli recommend "
+                "priority-content-lessons --min-observations 1 --limit 100"
+            ),
+            proof_to_advance=[
+                "priority_content_lesson_candidates.jsonl exists",
+                "lesson candidates include applies_when, does_not_apply_when, and danger_if_misapplied",
+                "no learning rule registry mutation occurred",
+            ],
+            danger_if_misapplied="Generated lesson candidates can be mistaken for reviewed learning rules.",
+            per_wave_repo_limit=per_wave_repo_limit,
+        ),
+        _wave(
+            sequence_order=3,
+            wave_id="repo_learning_loop_selection_wave",
+            label="Select repos for files-only learning-loop installation",
+            repo_records=learning_records,
+            readiness_state="awaiting_exact_repo_selection_and_source_write_permission",
+            human_gate="Lowell selects exact repo paths and allows source mutation for files-only install.",
+            generated_next_step=(
+                "$env:PYTHONPATH='src'; python -m digital_asset_directory.cli recommend "
+                "repo-learning-loop-scope --limit 50"
+            ),
+            proof_to_advance=[
+                "decision ledger has reviewed source-mutation approval for exact repo paths",
+                "learning-loop files exist in selected repos",
+                "repo-local events remain data-only and append-only",
+            ],
+            danger_if_misapplied="Installing learning-loop files across active repos can create noisy source churn.",
+            per_wave_repo_limit=per_wave_repo_limit,
+        ),
+        _wave(
+            sequence_order=4,
+            wave_id="governance_map_selection_wave",
+            label="Select repo families for governance maps or child mirrors",
+            repo_records=governance_records,
+            readiness_state="awaiting_exact_family_selection_and_source_write_permission",
+            human_gate="Lowell selects repo family, upstream authority, child mirrors, validators, and tests.",
+            generated_next_step=(
+                "$env:PYTHONPATH='src'; python -m digital_asset_directory.cli recommend "
+                "governance-map-scope --limit 50"
+            ),
+            proof_to_advance=[
+                "selected source repos include reviewed governance dependency map or mirror",
+                "validators/tests exist for the map or mirror",
+                "PR or change notes disclose governance dependency",
+            ],
+            danger_if_misapplied="Governance maps can imply authority if installed without source-owner review.",
+            per_wave_repo_limit=per_wave_repo_limit,
+        ),
+        _wave(
+            sequence_order=5,
+            wave_id="ai_navigation_and_validation_review_wave",
+            label="Review remaining AI navigation and validation gaps",
+            repo_records=sorted(
+                {record["repo_key"]: record for record in ai_records + validation_records}.values(),
+                key=lambda item: item["repo_key"],
+            ),
+            readiness_state="metadata_review_needed",
+            human_gate="Lowell decides whether gaps are real, intentionally absent, or scan-exclusion artifacts.",
+            generated_next_step=(
+                "$env:PYTHONPATH='src'; python -m digital_asset_directory.cli recommend "
+                "repo-completion-dashboard --limit 100"
+            ),
+            proof_to_advance=[
+                "AI navigation surfaces are observed or intentionally waived",
+                "validation surfaces are observed or intentionally waived",
+                "waivers are recorded as reviewed evidence, not inferred from absence",
+            ],
+            danger_if_misapplied="Metadata-only absence can be mistaken for proof that a repo lacks a surface.",
+            per_wave_repo_limit=per_wave_repo_limit,
+        ),
+        _wave(
+            sequence_order=6,
+            wave_id="metadata_ready_review_wave",
+            label="Human-review repos with no observed dashboard blockers",
+            repo_records=ready_records,
+            readiness_state="ready_for_human_review" if ready_records else "no_repos_ready",
+            human_gate="Lowell verifies that generated metadata is sufficient for the repo's role.",
+            generated_next_step=(
+                "$env:PYTHONPATH='src'; python -m digital_asset_directory.cli recommend "
+                "repo-buildout --repo <repo-key> --limit 10"
+            ),
+            proof_to_advance=[
+                "human review confirms repo is covered for current scope",
+                "any repo-specific buildout recommendations are accepted, deferred, or rejected",
+                "no generated status is promoted to source truth",
+            ],
+            danger_if_misapplied="No dashboard blockers does not prove source completeness or repo quality.",
+            per_wave_repo_limit=per_wave_repo_limit,
+        ),
+    ]
+    return {
+        "methodology_version": "repo-completion-wave-plan-v0.1",
+        "generated_at": generated,
+        "authority_boundary": (
+            "Generated repo-completion wave plan only. This command orders dashboard blockers; "
+            "it does not approve decisions, execute commands, read source contents, mutate source repos, "
+            "call GitHub, call models, install hooks, or mark roadmap phases complete."
+        ),
+        "summary": {
+            "repo_count": dashboard["summary"]["repo_count"],
+            "wave_count": len(waves),
+            "content_read_wave_repo_count": len(content_records),
+            "learning_loop_wave_repo_count": len(learning_records),
+            "governance_wave_repo_count": len(governance_records),
+            "ai_navigation_or_validation_wave_repo_count": len(
+                {record["repo_key"] for record in ai_records + validation_records}
+            ),
+            "metadata_ready_repo_count": len(ready_records),
+            "source_repos_mutated": 0,
+            "content_files_read": 0,
+            "github_calls": 0,
+            "model_calls": 0,
+            "roadmap_phases_marked_complete": 0,
+        },
+        "dashboard_summary": dashboard["summary"],
+        "status_methodology": {
+            "type": "deterministic_wave_order",
+            "inputs": [
+                "repo completion dashboard blocker labels",
+                "lesson automation decision summary",
+                "presence of priority content observations",
+            ],
+            "order": [
+                "content_read_approval_wave",
+                "lesson_candidate_synthesis_wave",
+                "repo_learning_loop_selection_wave",
+                "governance_map_selection_wave",
+                "ai_navigation_and_validation_review_wave",
+                "metadata_ready_review_wave",
+            ],
+            "score_used": False,
+        },
+        "intentionally_not_done": [
+            "decision approval",
+            "command execution",
+            "source file content reads",
+            "source repo mutation",
+            "learning-loop installation",
+            "GitHub/API/model calls",
+            "roadmap phase completion",
+        ],
+        "waves": waves,
+        "review_status": "generated_candidate",
+    }
+
+
+def repo_completion_wave_plan_markdown(result: dict[str, Any]) -> str:
+    summary = result["summary"]
+    lines = [
+        "# Repo Completion Wave Plan",
+        "",
+        result["authority_boundary"],
+        "",
+        f"- Generated at: `{result['generated_at']}`",
+        f"- Methodology: `{result['methodology_version']}`",
+        f"- Repo count: **{summary['repo_count']}**",
+        f"- Wave count: **{summary['wave_count']}**",
+        f"- Source repos mutated: **{summary['source_repos_mutated']}**",
+        f"- Content files read: **{summary['content_files_read']}**",
+        f"- GitHub/model calls: **{summary['github_calls']}** / **{summary['model_calls']}**",
+        "",
+        "## Methodology",
+        "",
+        "This wave plan uses deterministic blocker labels from the repo completion dashboard, not calculated scores.",
+        "",
+        "Wave order:",
+        "",
+    ]
+    for wave_id in result["status_methodology"]["order"]:
+        lines.append(f"- `{wave_id}`")
+    lines.extend(["", "## Waves", ""])
+    for wave in result["waves"]:
+        lines.extend(
+            [
+                f"### {wave['sequence_order']}. {wave['label']}",
+                "",
+                f"- Wave id: `{wave['wave_id']}`",
+                f"- Readiness: `{wave['readiness_state']}`",
+                f"- Repo count: **{wave['repo_count']}**",
+                f"- Human gate: {wave['human_gate']}",
+                f"- Danger if misapplied: {wave['danger_if_misapplied']}",
+                "",
+                "Next step:",
+                "",
+                "```powershell",
+                wave["generated_next_step"],
+                "```",
+                "",
+                "Proof to advance:",
+            ]
+        )
+        for proof in wave["proof_to_advance"]:
+            lines.append(f"- {proof}")
+        if wave["reported_repo_keys"]:
+            lines.extend(["", "Repos in this wave:"])
+            for repo_key in wave["reported_repo_keys"]:
+                lines.append(f"- `{repo_key}`")
+        lines.append("")
+    lines.extend(["## Intentionally Not Done", ""])
+    for item in result["intentionally_not_done"]:
+        lines.append(f"- {item}")
+    lines.append("")
+    return "\n".join(lines)
+
+
+def write_repo_completion_wave_plan_outputs(
+    repo_root: Path,
+    assets: list[AssetRecord],
+    *,
+    dashboard_limit: int = 500,
+    per_wave_repo_limit: int = 25,
+    generated_at: str | None = None,
+) -> dict[str, Any]:
+    result = build_repo_completion_wave_plan(
+        repo_root,
+        assets,
+        generated_at=generated_at,
+        dashboard_limit=dashboard_limit,
+        per_wave_repo_limit=per_wave_repo_limit,
+    )
+    reports_dir = repo_root / "processed" / "reports"
+    paths = {
+        "wave_markdown": reports_dir / "repo_completion_wave_plan.md",
+        "wave_json": reports_dir / "repo_completion_wave_plan.json",
+    }
+    atomic_write_text(paths["wave_markdown"], repo_completion_wave_plan_markdown(result))
+    atomic_write_text(paths["wave_json"], json_dumps(result, pretty=True) + "\n")
+    return {
+        "output_type": "generated_repo_completion_wave_plan",
+        "review_status": "generated_candidate",
+        "summary": result["summary"],
+        "outputs": {key: str(path) for key, path in paths.items()},
+    }

@@ -371,6 +371,10 @@ def _existing_output_status(repo_root: Path) -> dict[str, bool]:
         / "processed"
         / "reports"
         / "repo_completion_dashboard.json",
+        "repo_completion_wave_plan": repo_root
+        / "processed"
+        / "reports"
+        / "repo_completion_wave_plan.json",
         "public_safe_sweeps": repo_root / "processed" / "reports" / "external_sweeps",
     }
     return {name: path.exists() for name, path in paths.items()}
