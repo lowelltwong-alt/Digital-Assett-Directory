@@ -140,6 +140,39 @@ rescan, read source contents, call GitHub, call models, mutate source repos,
 install hooks, or mark roadmap phases complete. Its priority score is review
 routing only.
 
+Use `recommend lesson-automation-decision-template` before running any gated
+action from the next-action queue:
+
+```powershell
+$env:PYTHONPATH='src'; python -m digital_asset_directory.cli recommend lesson-automation-decision-template --limit 25
+$env:PYTHONPATH='src'; python -m digital_asset_directory.cli recommend lesson-automation-decision-queue --status pending --limit 10
+```
+
+This writes:
+
+```text
+processed/learning/lesson_automation_action_decisions.jsonl
+processed/reports/lesson_automation_decision_template.md
+processed/reports/lesson_automation_decision_template.json
+```
+
+Pending rows are not approvals. The label command fails closed unless approvals
+include exact repo/category/path selectors and the required safety flags:
+
+```powershell
+$env:PYTHONPATH='src'; python -m digital_asset_directory.cli recommend lesson-automation-decision-label `
+  --sample-id lesson-automation-decision-001 `
+  --reviewer Lowell `
+  --decision approve `
+  --approval-id "<human-approval-id>" `
+  --repo-key "<approved-repo-key>" `
+  --category "<approved-category>" `
+  --allow-content-read `
+  --max-bytes-per-file 20000 `
+  --max-files 10 `
+  --rationale "<approval rationale>"
+```
+
 Use `recommend repo-learning-loop-scope` before installing repo-local learning
 files into any source repo:
 

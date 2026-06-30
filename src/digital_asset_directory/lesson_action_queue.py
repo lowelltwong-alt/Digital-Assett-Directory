@@ -5,7 +5,8 @@ from pathlib import Path
 from typing import Any
 
 from .ids import stable_id
-from .utils import atomic_write_text, json_dumps, utc_now
+from .models import LessonAutomationDecisionRecord
+from .utils import atomic_write_text, json_dumps, utc_now, write_jsonl
 
 METHODOLOGY_VERSION = "lesson-automation-next-action-queue-v0.1"
 AUTHORITY_BOUNDARY = (
@@ -18,6 +19,7 @@ PRIORITY_FORMULA = (
     "priority_score = 100 * (0.30*scope_readiness + 0.25*lesson_yield + "
     "0.20*safety_margin + 0.15*approval_specificity + 0.10*cycle_urgency)"
 )
+DECISION_TEMPLATE_PATH = Path("processed/learning/lesson_automation_action_decisions.jsonl")
 
 SCOPE_FILES = {
     "priority_content_extracts": "priority_content_extract_scope.json",
@@ -487,4 +489,298 @@ def write_lesson_automation_next_action_outputs(
         "review_status": "generated_candidate",
         "summary": result["summary"],
         "outputs": {key: str(path) for key, path in paths.items()},
+    }
+
+
+def load_lesson_automation_decisions(path: Path) -> list[LessonAutomationDecisionRecord]:
+    if not path.exists():
+        return []
+    records: list[LessonAutomationDecisionRecord] = []
+    for line in path.read_text(encoding="utf-8").splitlines():
+        if line.strip():
+            records.append(LessonAutomationDecisionRecord.model_validate_json(line))
+    return records
+
+
+def write_lesson_automation_decisions(
+    path: Path,
+    records: list[LessonAutomationDecisionRecord],
+) -> None:
+    write_jsonl(path, [record.model_dump(mode="json") for record in records])
+
+
+def _decision_is_pending(record: LessonAutomationDecisionRecord) -> bool:
+    return (
+        record.decision == "pending"
+        and not record.reviewer
+        and not record.reviewed_at
+        and not record.approval_id
+        and not record.rationale
+        and not record.notes
+    )
+
+
+def build_lesson_automation_decision_template(
+    actions: list[dict[str, Any]],
+    *,
+    limit: int = 25,
+) -> list[LessonAutomationDecisionRecord]:
+    records: list[LessonAutomationDecisionRecord] = []
+    for index, action in enumerate(actions[:limit], start=1):
+        sample_id = f"lesson-automation-decision-{index:03d}"
+        records.append(
+            LessonAutomationDecisionRecord(
+                decision_id=stable_id(
+                    "lesson-automation-decision",
+                    sample_id,
+                    str(action["action_id"]),
+                ),
+                sample_id=sample_id,
+                action_id=str(action["action_id"]),
+                signal_family_id=str(action["signal_family_id"]),
+                action_kind=str(action["action_kind"]),
+                approved_scope_file=str(action.get("scope_file") or ""),
+                evidence={
+                    "methodology_version": METHODOLOGY_VERSION,
+                    "priority_score": action.get("priority_score"),
+                    "priority_components": action.get("priority_components", {}),
+                    "priority_formula": action.get("priority_formula", PRIORITY_FORMULA),
+                    "current_status": action.get("current_status"),
+                    "human_gate_reason": action.get("human_gate_reason"),
+                    "recommended_command_or_next_step": action.get("recommended_command_or_next_step"),
+                    "top_examples": action.get("top_examples", []),
+                    "generated_candidate_only": True,
+                },
+                stop_conditions=[
+                    "Stop before source repo mutation unless allow_source_mutation is true and a repo selector is present.",
+                    "Stop before content reads unless allow_content_read is true with byte/file caps and redaction required.",
+                    "Stop before GitHub/API calls unless allow_external_api is true with token and privacy notes.",
+                    "Stop before model calls unless allow_model_call is true and provider/privacy gates are approved.",
+                ],
+                validation_commands=[
+                    "python -m pytest",
+                    "PYTHONPATH=src python -m digital_asset_directory.cli validate",
+                    "PYTHONPATH=src python -m digital_asset_directory.cli roadmap check --no-update",
+                ],
+            )
+        )
+    return records
+
+
+def _dedupe(values: list[str]) -> list[str]:
+    return sorted({value.strip() for value in values if value.strip()})
+
+
+def _validate_decision(record: LessonAutomationDecisionRecord) -> None:
+    if record.decision == "pending":
+        return
+    if not record.reviewer.strip():
+        raise ValueError("--reviewer is required for a non-pending decision.")
+    if record.decision in {"defer", "reject"} and not (record.rationale or record.notes):
+        raise ValueError("--rationale or --notes is required when deferring or rejecting.")
+    if record.decision != "approve":
+        return
+    if not record.approval_id.strip():
+        raise ValueError("--approval-id is required for approval.")
+    has_target = bool(record.approved_repo_keys or record.approved_categories or record.approved_repo_paths)
+    if not has_target:
+        raise ValueError("Approval requires at least one repo key, category, or repo path.")
+    if record.action_kind in {"bounded_content_extract", "extractor_gap_or_bounded_content_extract"}:
+        if not record.allow_content_read:
+            raise ValueError("Content-read actions require --allow-content-read.")
+        if record.allow_source_mutation:
+            raise ValueError("Content-read approvals must not allow source mutation.")
+        if record.max_bytes_per_file <= 0 or record.max_files <= 0:
+            raise ValueError("Content-read approvals require positive byte and file caps.")
+        if not record.redaction_required:
+            raise ValueError("Content-read approvals require redaction.")
+    if record.action_kind in {"source_repo_files_only_install", "source_repo_governance_adoption"}:
+        if not record.allow_source_mutation:
+            raise ValueError("Source-repo actions require --allow-source-mutation.")
+        if record.allow_content_read:
+            raise ValueError("Source-repo mutation approvals must not include content-read permission.")
+    if record.action_kind == "external_api_gate":
+        if not record.allow_external_api:
+            raise ValueError("External API approvals require --allow-external-api.")
+        if not record.token_scope_note or not record.privacy_boundary_note:
+            raise ValueError("External API approvals require token-scope and privacy-boundary notes.")
+    if record.allow_model_call and not record.privacy_boundary_note:
+        raise ValueError("Model-call approvals require a privacy-boundary note.")
+
+
+def update_lesson_automation_decision_record(
+    records: list[LessonAutomationDecisionRecord],
+    *,
+    sample_id: str,
+    reviewer: str,
+    decision: str,
+    reviewed_at: str,
+    approval_id: str = "",
+    approved_repo_keys: list[str] | None = None,
+    approved_categories: list[str] | None = None,
+    approved_repo_paths: list[str] | None = None,
+    max_bytes_per_file: int = 0,
+    max_files: int = 0,
+    allow_content_read: bool = False,
+    allow_source_mutation: bool = False,
+    allow_external_api: bool = False,
+    allow_model_call: bool = False,
+    redaction_required: bool = True,
+    token_scope_note: str = "",
+    privacy_boundary_note: str = "",
+    rationale: str = "",
+    notes: str = "",
+    stop_conditions: list[str] | None = None,
+    validation_commands: list[str] | None = None,
+) -> tuple[list[LessonAutomationDecisionRecord], LessonAutomationDecisionRecord]:
+    allowed_decisions = {"approve", "defer", "reject", "pending"}
+    if decision not in allowed_decisions:
+        raise ValueError(f"decision must be one of {sorted(allowed_decisions)}.")
+    updated_records: list[LessonAutomationDecisionRecord] = []
+    updated: LessonAutomationDecisionRecord | None = None
+    for record in records:
+        if record.sample_id != sample_id:
+            updated_records.append(record)
+            continue
+        data = record.model_dump(mode="json")
+        data.update(
+            {
+                "reviewer": reviewer,
+                "reviewed_at": reviewed_at if decision != "pending" else None,
+                "decision": decision,
+                "approval_id": approval_id,
+                "approved_repo_keys": _dedupe(approved_repo_keys or []),
+                "approved_categories": _dedupe(approved_categories or []),
+                "approved_repo_paths": _dedupe(approved_repo_paths or []),
+                "max_bytes_per_file": max_bytes_per_file,
+                "max_files": max_files,
+                "allow_content_read": allow_content_read,
+                "allow_source_mutation": allow_source_mutation,
+                "allow_external_api": allow_external_api,
+                "allow_model_call": allow_model_call,
+                "redaction_required": redaction_required,
+                "token_scope_note": token_scope_note,
+                "privacy_boundary_note": privacy_boundary_note,
+                "rationale": rationale,
+                "notes": notes,
+                "review_status": "generated_candidate"
+                if decision == "pending"
+                else ("rejected" if decision == "reject" else "reviewed"),
+            }
+        )
+        if stop_conditions:
+            data["stop_conditions"] = _dedupe(stop_conditions)
+        if validation_commands:
+            data["validation_commands"] = list(validation_commands)
+        updated = LessonAutomationDecisionRecord.model_validate(data)
+        _validate_decision(updated)
+        updated_records.append(updated)
+    if updated is None:
+        raise ValueError(f"No lesson automation decision sample found for {sample_id}.")
+    return updated_records, updated
+
+
+def summarize_lesson_automation_decisions(
+    records: list[LessonAutomationDecisionRecord],
+) -> dict[str, Any]:
+    pending = [record for record in records if _decision_is_pending(record)]
+    return {
+        "template_count": len(records),
+        "pending_count": len(pending),
+        "reviewed_count": len(records) - len(pending),
+        "approved_count": sum(1 for record in records if record.decision == "approve"),
+        "deferred_count": sum(1 for record in records if record.decision == "defer"),
+        "rejected_count": sum(1 for record in records if record.decision == "reject"),
+        "content_read_approval_count": sum(1 for record in records if record.allow_content_read),
+        "source_mutation_approval_count": sum(
+            1 for record in records if record.allow_source_mutation
+        ),
+        "external_api_approval_count": sum(1 for record in records if record.allow_external_api),
+    }
+
+
+def lesson_automation_decision_markdown(records: list[LessonAutomationDecisionRecord]) -> str:
+    summary = summarize_lesson_automation_decisions(records)
+    lines = [
+        "# Lesson Automation Decision Template",
+        "",
+        "Generated human-decision template. Pending rows are not approvals.",
+        "",
+        f"- Template rows: **{summary['template_count']}**",
+        f"- Reviewed rows: **{summary['reviewed_count']}**",
+        f"- Approved rows: **{summary['approved_count']}**",
+        f"- Deferred rows: **{summary['deferred_count']}**",
+        f"- Rejected rows: **{summary['rejected_count']}**",
+        "",
+        "| Sample | Family | Kind | Decision | Reviewer | Gate fields |",
+        "|---|---|---|---|---|---|",
+    ]
+    for record in records:
+        gate_fields = []
+        if record.allow_content_read:
+            gate_fields.append(f"content cap {record.max_files} files/{record.max_bytes_per_file} bytes")
+        if record.allow_source_mutation:
+            gate_fields.append("source mutation allowed")
+        if record.allow_external_api:
+            gate_fields.append("external API allowed")
+        lines.append(
+            "| `{sample}` | `{family}` | `{kind}` | `{decision}` | `{reviewer}` | {gate_fields} |".format(
+                sample=record.sample_id,
+                family=record.signal_family_id,
+                kind=record.action_kind,
+                decision=record.decision,
+                reviewer=record.reviewer,
+                gate_fields=", ".join(gate_fields) or "none",
+            )
+        )
+    lines.extend(
+        [
+            "",
+            "## Red-Team",
+            "",
+            "- This template records decisions; it does not execute the approved action.",
+            "- An approval without exact repo/category/path selectors is invalid.",
+            "- Content-read approvals require byte/file caps and redaction.",
+            "- Source-repo write approvals require an explicit mutation flag and repo selector.",
+            "- External API approvals require token-scope and privacy-boundary notes.",
+            "",
+        ]
+    )
+    return "\n".join(lines)
+
+
+def write_lesson_automation_decision_template_outputs(
+    repo_root: Path,
+    *,
+    limit: int = 25,
+    generated_at: str | None = None,
+) -> dict[str, Any]:
+    queue = build_lesson_automation_next_action_queue(
+        repo_root,
+        generated_at=generated_at,
+        limit=limit,
+    )
+    records = build_lesson_automation_decision_template(queue["actions"], limit=limit)
+    decision_path = repo_root / DECISION_TEMPLATE_PATH
+    report_path = repo_root / "processed" / "reports" / "lesson_automation_decision_template.md"
+    report_json_path = repo_root / "processed" / "reports" / "lesson_automation_decision_template.json"
+    write_lesson_automation_decisions(decision_path, records)
+    payload = {
+        "methodology_version": METHODOLOGY_VERSION,
+        "authority_boundary": AUTHORITY_BOUNDARY,
+        "summary": summarize_lesson_automation_decisions(records),
+        "decision_template": [record.model_dump(mode="json") for record in records],
+        "review_status": "generated_candidate",
+    }
+    atomic_write_text(report_path, lesson_automation_decision_markdown(records))
+    atomic_write_text(report_json_path, json_dumps(payload, pretty=True) + "\n")
+    return {
+        "output_type": "generated_decision_template",
+        "review_status": "generated_candidate",
+        "summary": payload["summary"],
+        "outputs": {
+            "decision_template": str(decision_path),
+            "report_markdown": str(report_path),
+            "report_json": str(report_json_path),
+        },
     }

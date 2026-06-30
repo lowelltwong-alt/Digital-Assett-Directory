@@ -86,6 +86,53 @@ priority_score = 100 * (0.30*scope_readiness + 0.25*lesson_yield + 0.20*safety_m
 The score is only a way to order human review. It does not authorize content
 reads, API calls, source-repo file writes, governance adoption, or promotion.
 
+## Decision Template
+
+Before running a gated action from the next-action queue, create or inspect the
+decision template:
+
+```powershell
+$env:PYTHONPATH='src'; python -m digital_asset_directory.cli recommend lesson-automation-decision-template --limit 25
+$env:PYTHONPATH='src'; python -m digital_asset_directory.cli recommend lesson-automation-decision-queue --status pending --limit 10
+```
+
+This writes:
+
+```text
+processed/learning/lesson_automation_action_decisions.jsonl
+processed/reports/lesson_automation_decision_template.md
+processed/reports/lesson_automation_decision_template.json
+```
+
+Pending rows are not approvals. Apply a decision only after Lowell has approved
+the exact action and scope:
+
+```powershell
+$env:PYTHONPATH='src'; python -m digital_asset_directory.cli recommend lesson-automation-decision-label `
+  --sample-id lesson-automation-decision-001 `
+  --reviewer Lowell `
+  --decision approve `
+  --approval-id "<human-approval-id>" `
+  --repo-key "<approved-repo-key>" `
+  --category "<approved-category>" `
+  --allow-content-read `
+  --max-bytes-per-file 20000 `
+  --max-files 10 `
+  --rationale "<why this bounded action is approved>"
+```
+
+The label command fails closed:
+
+- content-read approvals require `--allow-content-read`, positive byte/file
+  caps, a repo/category/path selector, and redaction;
+- source-repo write approvals require `--allow-source-mutation` plus a repo
+  selector;
+- external API approvals require `--allow-external-api`,
+  `--token-scope-note`, and `--privacy-boundary-note`;
+- model-call approvals require `--allow-model-call` and a privacy-boundary
+  note;
+- defer/reject decisions require rationale or notes.
+
 ## Context Boundaries
 
 Applies when:

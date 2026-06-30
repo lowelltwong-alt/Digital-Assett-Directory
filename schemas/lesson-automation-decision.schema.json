@@ -1,0 +1,90 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://digital-asset-directory.local/schemas/lesson-automation-decision.schema.json",
+  "title": "LessonAutomationDecisionRecord",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "decision_id",
+    "sample_id",
+    "action_id",
+    "signal_family_id",
+    "action_kind",
+    "reviewer",
+    "reviewed_at",
+    "decision",
+    "approval_id",
+    "approved_scope_file",
+    "approved_repo_keys",
+    "approved_categories",
+    "approved_repo_paths",
+    "max_bytes_per_file",
+    "max_files",
+    "allow_content_read",
+    "allow_source_mutation",
+    "allow_external_api",
+    "allow_model_call",
+    "redaction_required",
+    "token_scope_note",
+    "privacy_boundary_note",
+    "rationale",
+    "notes",
+    "stop_conditions",
+    "validation_commands",
+    "evidence",
+    "review_status"
+  ],
+  "properties": {
+    "schema_version": { "const": "0.1.0" },
+    "decision_id": { "type": "string", "minLength": 1 },
+    "sample_id": { "type": "string", "minLength": 1 },
+    "action_id": { "type": "string", "minLength": 1 },
+    "signal_family_id": { "type": "string", "minLength": 1 },
+    "action_kind": { "type": "string", "minLength": 1 },
+    "reviewer": { "type": "string" },
+    "reviewed_at": { "type": ["string", "null"] },
+    "decision": {
+      "type": "string",
+      "enum": ["pending", "approve", "defer", "reject"]
+    },
+    "approval_id": { "type": "string" },
+    "approved_scope_file": { "type": "string" },
+    "approved_repo_keys": {
+      "type": "array",
+      "items": { "type": "string" }
+    },
+    "approved_categories": {
+      "type": "array",
+      "items": { "type": "string" }
+    },
+    "approved_repo_paths": {
+      "type": "array",
+      "items": { "type": "string" }
+    },
+    "max_bytes_per_file": { "type": "integer", "minimum": 0 },
+    "max_files": { "type": "integer", "minimum": 0 },
+    "allow_content_read": { "type": "boolean" },
+    "allow_source_mutation": { "type": "boolean" },
+    "allow_external_api": { "type": "boolean" },
+    "allow_model_call": { "type": "boolean" },
+    "redaction_required": { "type": "boolean" },
+    "token_scope_note": { "type": "string" },
+    "privacy_boundary_note": { "type": "string" },
+    "rationale": { "type": "string" },
+    "notes": { "type": "string" },
+    "stop_conditions": {
+      "type": "array",
+      "items": { "type": "string" }
+    },
+    "validation_commands": {
+      "type": "array",
+      "items": { "type": "string" }
+    },
+    "evidence": { "type": "object" },
+    "review_status": {
+      "type": "string",
+      "enum": ["generated_candidate", "reviewed", "rejected"]
+    }
+  }
+}

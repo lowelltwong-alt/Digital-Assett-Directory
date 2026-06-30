@@ -653,6 +653,38 @@ class PriorityContentLessonReviewRecord(BaseModel):
     review_status: Literal["generated_candidate", "reviewed", "rejected"] = "generated_candidate"
 
 
+class LessonAutomationDecisionRecord(BaseModel):
+    schema_version: str = "0.1.0"
+    decision_id: str
+    sample_id: str = Field(min_length=1)
+    action_id: str = Field(min_length=1)
+    signal_family_id: str = Field(min_length=1)
+    action_kind: str = Field(min_length=1)
+    reviewer: str = ""
+    reviewed_at: str | None = None
+    decision: Literal["pending", "approve", "defer", "reject"] = "pending"
+    approval_id: str = ""
+    approved_scope_file: str = ""
+    approved_repo_keys: list[str] = Field(default_factory=list)
+    approved_categories: list[str] = Field(default_factory=list)
+    approved_repo_paths: list[str] = Field(default_factory=list)
+    max_bytes_per_file: int = Field(default=0, ge=0)
+    max_files: int = Field(default=0, ge=0)
+    allow_content_read: bool = False
+    allow_source_mutation: bool = False
+    allow_external_api: bool = False
+    allow_model_call: bool = False
+    redaction_required: bool = True
+    token_scope_note: str = ""
+    privacy_boundary_note: str = ""
+    rationale: str = ""
+    notes: str = ""
+    stop_conditions: list[str] = Field(default_factory=list)
+    validation_commands: list[str] = Field(default_factory=list)
+    evidence: dict[str, Any] = Field(default_factory=dict)
+    review_status: Literal["generated_candidate", "reviewed", "rejected"] = "generated_candidate"
+
+
 class LearningRulePromotionCandidateRecord(BaseModel):
     schema_version: str = "0.1.0"
     promotion_candidate_id: str

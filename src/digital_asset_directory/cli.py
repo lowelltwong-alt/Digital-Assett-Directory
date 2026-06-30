@@ -48,7 +48,15 @@ from .learning import (
     rebuild_lesson_routes,
 )
 from .lesson_automation_coverage import write_lesson_automation_coverage_outputs
-from .lesson_action_queue import write_lesson_automation_next_action_outputs
+from .lesson_action_queue import (
+    DECISION_TEMPLATE_PATH,
+    load_lesson_automation_decisions,
+    summarize_lesson_automation_decisions,
+    update_lesson_automation_decision_record,
+    write_lesson_automation_decision_template_outputs,
+    write_lesson_automation_decisions,
+    write_lesson_automation_next_action_outputs,
+)
 from .manual_tasks import write_manual_task_queue
 from .orphan_adapter import run_orphan_radar
 from .operational import write_operational_readiness_report
@@ -102,6 +110,7 @@ from .workflow_parts import (
     write_workflow_part_review_template_outputs,
     write_workflow_part_usage_guidance,
 )
+from .utils import utc_now
 
 app = typer.Typer(no_args_is_help=True, help="Digital Asset Directory portfolio intelligence CLI.")
 lesson_app = typer.Typer(no_args_is_help=True)
@@ -961,6 +970,120 @@ def recommend_lesson_automation_next_actions(
         limit=limit,
     )
     console.print_json(data=result)
+
+
+@recommend_app.command("lesson-automation-decision-template")
+def recommend_lesson_automation_decision_template(
+    hub: Optional[Path] = typer.Option(None),
+    limit: int = typer.Option(25, "--limit", min=1, max=100),
+) -> None:
+    """Write a generated human-decision template for lesson-automation actions."""
+    cfg = _cfg(hub=hub)
+    result = write_lesson_automation_decision_template_outputs(
+        cfg.repo_root,
+        limit=limit,
+    )
+    console.print_json(data=result)
+
+
+@recommend_app.command("lesson-automation-decision-queue")
+def recommend_lesson_automation_decision_queue(
+    hub: Optional[Path] = typer.Option(None),
+    status: str = typer.Option("pending", "--status"),
+    limit: int = typer.Option(25, "--limit", min=1, max=100),
+) -> None:
+    """List pending or reviewed lesson-automation decision rows."""
+    cfg = _cfg(hub=hub)
+    path = cfg.repo_root / DECISION_TEMPLATE_PATH
+    records = load_lesson_automation_decisions(path)
+    if status not in {"pending", "reviewed", "all"}:
+        raise typer.BadParameter("--status must be pending, reviewed, or all.")
+    if status == "pending":
+        selected = [record for record in records if record.decision == "pending"]
+    elif status == "reviewed":
+        selected = [record for record in records if record.decision != "pending"]
+    else:
+        selected = records
+    payload = {
+        "decision_file": str(path),
+        "summary": summarize_lesson_automation_decisions(records),
+        "items": [record.model_dump(mode="json") for record in selected[:limit]],
+    }
+    console.print_json(data=payload)
+
+
+@recommend_app.command("lesson-automation-decision-label")
+def recommend_lesson_automation_decision_label(
+    sample_id: str = typer.Option(..., "--sample-id"),
+    reviewer: str = typer.Option(..., "--reviewer"),
+    decision: str = typer.Option(..., "--decision"),
+    approval_id: str = typer.Option("", "--approval-id"),
+    repo_key: list[str] = typer.Option([], "--repo-key"),
+    category: list[str] = typer.Option([], "--category"),
+    repo_path: list[str] = typer.Option([], "--repo-path"),
+    max_bytes_per_file: int = typer.Option(0, "--max-bytes-per-file", min=0),
+    max_files: int = typer.Option(0, "--max-files", min=0),
+    allow_content_read: bool = typer.Option(False, "--allow-content-read"),
+    allow_source_mutation: bool = typer.Option(False, "--allow-source-mutation"),
+    allow_external_api: bool = typer.Option(False, "--allow-external-api"),
+    allow_model_call: bool = typer.Option(False, "--allow-model-call"),
+    redaction_required: bool = typer.Option(
+        True,
+        "--redaction-required/--no-redaction-required",
+    ),
+    token_scope_note: str = typer.Option("", "--token-scope-note"),
+    privacy_boundary_note: str = typer.Option("", "--privacy-boundary-note"),
+    rationale: str = typer.Option("", "--rationale"),
+    notes: str = typer.Option("", "--notes"),
+    stop_condition: list[str] = typer.Option([], "--stop-condition"),
+    validation_command: list[str] = typer.Option([], "--validation-command"),
+    hub: Optional[Path] = typer.Option(None),
+) -> None:
+    """Apply one human-approved lesson-automation decision label."""
+    cfg = _cfg(hub=hub)
+    path = cfg.repo_root / DECISION_TEMPLATE_PATH
+    records = load_lesson_automation_decisions(path)
+    if not records:
+        console.print(
+            "No decision template exists. Run recommend lesson-automation-decision-template first."
+        )
+        raise typer.Exit(2)
+    try:
+        updated_records, updated = update_lesson_automation_decision_record(
+            records,
+            sample_id=sample_id,
+            reviewer=reviewer,
+            decision=decision,
+            reviewed_at=utc_now(),
+            approval_id=approval_id,
+            approved_repo_keys=repo_key,
+            approved_categories=category,
+            approved_repo_paths=repo_path,
+            max_bytes_per_file=max_bytes_per_file,
+            max_files=max_files,
+            allow_content_read=allow_content_read,
+            allow_source_mutation=allow_source_mutation,
+            allow_external_api=allow_external_api,
+            allow_model_call=allow_model_call,
+            redaction_required=redaction_required,
+            token_scope_note=token_scope_note,
+            privacy_boundary_note=privacy_boundary_note,
+            rationale=rationale,
+            notes=notes,
+            stop_conditions=stop_condition,
+            validation_commands=validation_command,
+        )
+    except ValueError as exc:
+        console.print(str(exc))
+        raise typer.Exit(2) from exc
+    write_lesson_automation_decisions(path, updated_records)
+    console.print_json(
+        data={
+            "decision_file": str(path),
+            "summary": summarize_lesson_automation_decisions(updated_records),
+            "updated": updated.model_dump(mode="json"),
+        }
+    )
 
 
 @recommend_app.command("priority-content-scope")

@@ -17,6 +17,7 @@ from digital_asset_directory.models import (
     EscalationPacketRecord,
     ExpansionMapRecord,
     FailureSignalRecord,
+    LessonAutomationDecisionRecord,
     LearningRulePromotionCandidateRecord,
     LearningLoopRecord,
     LearningRuleRecord,
@@ -603,6 +604,43 @@ def test_priority_content_lesson_review_model_dump_matches_registered_schema():
 
     validate_registered_schema(
         "priority_content_lesson_review", record.model_dump(mode="json")
+    )
+
+
+def test_lesson_automation_decision_model_dump_matches_registered_schema():
+    record = LessonAutomationDecisionRecord(
+        decision_id="dad:lesson-automation-decision:test",
+        sample_id="lesson-automation-decision-001",
+        action_id="dad:lesson-automation-action:test",
+        signal_family_id="priority_content_extracts",
+        action_kind="bounded_content_extract",
+        reviewer="Lowell",
+        reviewed_at="2026-01-01T00:00:00+00:00",
+        decision="approve",
+        approval_id="approval:test",
+        approved_scope_file="processed/reports/priority_content_extract_scope.json",
+        approved_repo_keys=["git-projects/repo-a"],
+        approved_categories=["ai_navigation"],
+        approved_repo_paths=[],
+        max_bytes_per_file=20000,
+        max_files=10,
+        allow_content_read=True,
+        allow_source_mutation=False,
+        allow_external_api=False,
+        allow_model_call=False,
+        redaction_required=True,
+        token_scope_note="",
+        privacy_boundary_note="No external provider; local generated observations only.",
+        rationale="Bounded content pass approved for AI navigation.",
+        notes="Candidate-only generated observations.",
+        stop_conditions=["Stop on secrets."],
+        validation_commands=["PYTHONPATH=src python -m digital_asset_directory.cli validate"],
+        evidence={"candidate_only": True},
+        review_status="reviewed",
+    )
+
+    validate_registered_schema(
+        "lesson_automation_decision", record.model_dump(mode="json")
     )
 
 

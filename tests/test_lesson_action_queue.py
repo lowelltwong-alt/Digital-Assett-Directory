@@ -8,6 +8,11 @@ import pytest
 from digital_asset_directory.lesson_action_queue import (
     PRIORITY_FORMULA,
     build_lesson_automation_next_action_queue,
+    build_lesson_automation_decision_template,
+    load_lesson_automation_decisions,
+    update_lesson_automation_decision_record,
+    write_lesson_automation_decision_template_outputs,
+    write_lesson_automation_decisions,
     write_lesson_automation_next_action_outputs,
 )
 
@@ -195,3 +200,73 @@ def test_next_action_queue_writer_stays_under_processed_reports(tmp_path: Path):
     assert payload["medium_risk_review"]["risk_tier"] == "medium"
     assert "source repo mutation" in payload["intentionally_not_done"]
     assert "priority_content_extracts" in Path(outputs["queue_markdown"]).read_text(encoding="utf-8")
+
+
+def test_decision_template_and_label_fail_closed_for_content_read(tmp_path: Path):
+    seed_scope_outputs(tmp_path)
+    queue = build_lesson_automation_next_action_queue(tmp_path, generated_at=TIMESTAMP)
+    records = build_lesson_automation_decision_template(queue["actions"])
+
+    assert records[0].sample_id == "lesson-automation-decision-001"
+    assert records[0].signal_family_id == "priority_content_extracts"
+    assert records[0].decision == "pending"
+    assert records[0].review_status == "generated_candidate"
+
+    with pytest.raises(ValueError, match="positive byte and file caps"):
+        update_lesson_automation_decision_record(
+            records,
+            sample_id="lesson-automation-decision-001",
+            reviewer="Lowell",
+            decision="approve",
+            reviewed_at=TIMESTAMP,
+            approval_id="approval:test",
+            approved_repo_keys=["git-projects/repo-a"],
+            approved_categories=["ai_navigation"],
+            allow_content_read=True,
+            max_bytes_per_file=0,
+            max_files=10,
+        )
+
+    updated_records, updated = update_lesson_automation_decision_record(
+        records,
+        sample_id="lesson-automation-decision-001",
+        reviewer="Lowell",
+        decision="approve",
+        reviewed_at=TIMESTAMP,
+        approval_id="approval:test",
+        approved_repo_keys=["git-projects/repo-a"],
+        approved_categories=["ai_navigation"],
+        allow_content_read=True,
+        max_bytes_per_file=20000,
+        max_files=10,
+        rationale="Bounded front-door review approved.",
+    )
+
+    assert updated.review_status == "reviewed"
+    assert updated.allow_content_read is True
+    assert updated.allow_source_mutation is False
+    assert updated.redaction_required is True
+    assert updated.approved_repo_keys == ["git-projects/repo-a"]
+    assert updated.approved_categories == ["ai_navigation"]
+    assert updated_records[0].decision == "approve"
+
+
+def test_decision_template_writer_and_jsonl_round_trip(tmp_path: Path):
+    seed_scope_outputs(tmp_path)
+
+    result = write_lesson_automation_decision_template_outputs(
+        tmp_path,
+        generated_at=TIMESTAMP,
+    )
+
+    outputs = result["outputs"]
+    assert set(outputs) == {"decision_template", "report_markdown", "report_json"}
+    assert Path(outputs["decision_template"]).is_relative_to(tmp_path / "processed" / "learning")
+    assert Path(outputs["report_markdown"]).is_relative_to(tmp_path / "processed" / "reports")
+    records = load_lesson_automation_decisions(Path(outputs["decision_template"]))
+    assert len(records) == 5
+    assert records[0].evidence["generated_candidate_only"] is True
+
+    write_lesson_automation_decisions(Path(outputs["decision_template"]), records)
+    reloaded = load_lesson_automation_decisions(Path(outputs["decision_template"]))
+    assert [record.sample_id for record in reloaded] == [record.sample_id for record in records]
