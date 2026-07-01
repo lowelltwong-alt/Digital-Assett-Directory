@@ -828,6 +828,32 @@ def test_repo_all_uses_reviewed_config_allowlist_only(tmp_path: Path):
     assert _discover_mail_repos(["all"], cfg, delivery=True) == [allowed.resolve()]
 
 
+def test_repo_option_resolves_reviewed_aliases_and_rejects_ambiguous_names(tmp_path: Path):
+    hub = tmp_path / "dad"
+    target = tmp_path / "logos-scripture-graph-repo"
+    first_same_name = tmp_path / "one" / "shared-name"
+    second_same_name = tmp_path / "two" / "shared-name"
+    hub.mkdir()
+    target.mkdir()
+    first_same_name.mkdir(parents=True)
+    second_same_name.mkdir(parents=True)
+    cfg = SimpleNamespace(
+        repo_root=hub,
+        local_sources=[],
+        mail_repos=[
+            _policy(target, "logos-scripture-graph"),
+            _policy(first_same_name, "first-shared"),
+            _policy(second_same_name, "second-shared"),
+        ],
+    )
+
+    assert _discover_mail_repos(["logos-scripture-graph"], cfg) == [target.resolve()]
+    assert _discover_mail_repos(["logos-scripture-graph-repo"], cfg) == [target.resolve()]
+    assert _discover_mail_repos([str(target)], cfg) == [target.resolve()]
+    with pytest.raises(typer.BadParameter, match="ambiguous"):
+        _discover_mail_repos(["shared-name"], cfg)
+
+
 def test_explicit_delivery_path_requires_reviewed_mail_policy(tmp_path: Path):
     hub = tmp_path / "dad"
     allowed = tmp_path / "allowed"
