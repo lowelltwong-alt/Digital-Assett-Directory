@@ -6,6 +6,7 @@ from pathlib import Path
 from types import SimpleNamespace
 
 import pytest
+import typer
 
 from digital_asset_directory.cli import _discover_mail_repos, _mail_repo_candidates
 from digital_asset_directory.config import MailRepoPolicy
@@ -19,6 +20,7 @@ from digital_asset_directory.mail_center import (
     release_mail,
     route_mail,
     review_mail,
+    triage_mail,
 )
 import digital_asset_directory.mail_center as mail_center
 
@@ -48,6 +50,8 @@ def _policy(
     visibility: str = "internal",
     public_facing: bool = False,
     delivery_allowed: bool = True,
+    write_protected: bool = False,
+    write_protection_reason: str = "",
 ) -> MailRepoPolicy:
     return MailRepoPolicy(
         id=repo_id,
@@ -57,6 +61,8 @@ def _policy(
         public_facing=public_facing,
         mail_enabled=True,
         delivery_allowed=delivery_allowed,
+        write_protected=write_protected,
+        write_protection_reason=write_protection_reason,
     )
 
 
@@ -606,6 +612,81 @@ def test_agent_review_is_triage_not_human_review(tmp_path: Path):
     assert human_digest["reviewed_count"] == 1
 
 
+def test_mail_triage_records_future_adoption_pointer(tmp_path: Path):
+    hub = tmp_path / "dad"
+    source = tmp_path / "source"
+    target = tmp_path / "target"
+    hub.mkdir()
+    source.mkdir()
+    target.mkdir()
+    composed = compose_mail(
+        source,
+        message_type="asset_suggestion",
+        target_repo=str(target),
+        summary="Target may want to watch a Rust parity harness.",
+        payload={
+            "asset_id": "dad:offering:rust-shadow-parity-harness",
+            "source_ref": "assets/coding-harnesses/rust-shadow-parity-harness",
+        },
+        evidence=["registry/dad-offerings-registry.json"],
+    )
+    collect_mail(hub, [source])
+    route_mail(hub)
+    deliver_mail(hub, [target])
+
+    result = triage_mail(
+        target,
+        mail_id=composed["record"]["mail_id"],
+        intake_decision="save_for_future",
+        importance="future",
+        planned_use="Watch for Python/Rust parity work.",
+        implementation_plan=["Review when replacing slow pytest cases."],
+        recorded_by="unit-test",
+    )
+
+    adoption = result["adoption"]
+    assert adoption["intake_decision"] == "save_for_future"
+    assert adoption["implementation_status"] == "watching"
+    assert adoption["update_tracking"]["watch_source"] is True
+    assert adoption["update_tracking"]["upgrade_policy"] == "notify_via_dad_mail_before_local_change"
+    assert "dad:offering:rust-shadow-parity-harness" in adoption["source_asset_refs"]
+    records = _jsonl(target / ".digital-asset" / "mail" / "adoption.jsonl")
+    assert records[0]["adoption_id"] == adoption["adoption_id"]
+
+
+def test_write_protected_mailbox_blocks_local_review_triage_and_digest(tmp_path: Path):
+    repo = tmp_path / "logos"
+    repo.mkdir()
+    policies = [
+        _policy(
+            repo,
+            "logos-scripture-graph",
+            write_protected=True,
+            write_protection_reason="explicit local-write approval required",
+        )
+    ]
+
+    with pytest.raises(ValueError, match="write-protected"):
+        compose_mail(
+            repo,
+            message_type="lesson_suggestion",
+            target_repo="central_only",
+            summary="Should remain central-only.",
+            repo_policies=policies,
+        )
+    with pytest.raises(ValueError, match="write-protected"):
+        review_mail(repo, mail_id="dad:mail:test", decision="defer", repo_policies=policies)
+    with pytest.raises(ValueError, match="write-protected"):
+        triage_mail(
+            repo,
+            mail_id="dad:mail:test",
+            intake_decision="defer",
+            repo_policies=policies,
+        )
+    with pytest.raises(ValueError, match="write-protected"):
+        digest_mail(repo, repo_policies=policies)
+
+
 def test_public_safe_payload_policy_rejects_raw_blob_to_public_target(tmp_path: Path):
     hub = tmp_path / "dad"
     source = tmp_path / "public-source"
@@ -745,6 +826,25 @@ def test_repo_all_uses_reviewed_config_allowlist_only(tmp_path: Path):
 
     assert _discover_mail_repos(["all"], cfg) == [allowed.resolve()]
     assert _discover_mail_repos(["all"], cfg, delivery=True) == [allowed.resolve()]
+
+
+def test_explicit_delivery_path_requires_reviewed_mail_policy(tmp_path: Path):
+    hub = tmp_path / "dad"
+    allowed = tmp_path / "allowed"
+    stray = tmp_path / "stray"
+    hub.mkdir()
+    allowed.mkdir()
+    stray.mkdir()
+    cfg = SimpleNamespace(
+        repo_root=hub,
+        local_sources=[],
+        mail_repos=[_policy(allowed, "allowed")],
+    )
+
+    with pytest.raises(typer.BadParameter, match="reviewed mail.repos"):
+        _discover_mail_repos([str(stray)], cfg, delivery=True)
+
+    assert _discover_mail_repos([str(allowed)], cfg, delivery=True) == [allowed.resolve()]
 
 
 def test_mail_discovery_reports_nested_configured_repos(tmp_path: Path):

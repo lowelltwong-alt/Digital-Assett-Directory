@@ -1,0 +1,48 @@
+{
+  "schema_version": "0.1.0",
+  "mail_id": "dad:mail:<stable-id>",
+  "thread_id": "dad:thread:<stable-thread-id>",
+  "message_type": "workflow_suggestion",
+  "source_repo": "<reviewed source repo id>",
+  "target_repo": "<reviewed target repo id>",
+  "created_at": "<ISO-8601 timestamp>",
+  "dedupe_key": "coding-tactic:<tactic-id>:<target-repo>",
+  "sensitivity": "internal",
+  "review_status": "generated_candidate",
+  "payload": {
+    "command_kind": "coding_tactic_suggestion",
+    "tactic_id": "<tactic id>",
+    "source_asset": "registry/coding-tactics-radar.json",
+    "profile": "<profile id>",
+    "summary": "<public-safe summary>",
+    "suggested_local_files_to_update": ["<optional local managed block or docs path>"],
+    "exact_managed_block_or_pointer_content": "<short managed block or pointer; omit raw private source>",
+    "risks": ["Mail is candidate-only", "Do not copy full DAD assets, hooks, or raw private source into the target repo", "Target repo must run local preflight and validation"],
+    "acceptance_checks": ["Local owner reviews applicability", "Target repo tests pass"],
+    "validation_commands": ["asset-dir agent preflight --repo . --agent <agent> --task \"<task>\""],
+    "rollback_notes": "Remove local candidate adoption or revert managed-block change in the target repo."
+  },
+  "evidence": ["registry/coding-tactics-radar.json"],
+  "suggested_actions": ["Review tactic locally", "Run target repo preflight", "Adopt only if local validation passes"],
+  "source_provenance": {
+    "canonical_source_repo": "<canonical source repo path>",
+    "source_repo_id": "<source repo id>",
+    "source_repo_alias": "<source alias>",
+    "source_visibility": "unknown",
+    "original_source_chain": ["<source repo id>"],
+    "return_address": "<source repo mailbox or central DAD>",
+    "original_mail_id": "",
+    "composed_by": "<agent or human>",
+    "collected_by": "",
+    "collected_at": "",
+    "received_at": ""
+  },
+  "public_release": {
+    "target_visibility": "unknown",
+    "target_public_facing": false,
+    "public_release_required": false,
+    "public_release_status": "not_required",
+    "human_release_id": "",
+    "release_reason": ""
+  }
+}

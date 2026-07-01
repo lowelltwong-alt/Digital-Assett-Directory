@@ -277,15 +277,481 @@
       "upgrade_triggers": [
         "mail packet schema changes",
         "daily digest freshness policy changes",
-        "cross-repo delivery boundary changes"
+        "cross-repo delivery boundary changes",
+        "agent skill lifecycle mail policy changes"
       ],
       "recommended_review_interval_days": 90,
       "last_reviewed_at": "2026-06-30",
       "next_review_due_at": "2026-09-28",
       "upgrade_policy": "human_approved_patch",
-      "deterministic_update_rule": "Keep mailbox file names, candidate-only language, sensitivity limits, and daily digest guidance aligned with docs/MAIL_CENTER.md.",
+      "deterministic_update_rule": "Keep mailbox file names, candidate-only language, sensitivity limits, skill-mail notices, and daily digest guidance aligned with docs/MAIL_CENTER.md.",
       "validation_commands": ["python -m pytest tests/test_mail_center.py", "python -m digital_asset_directory.cli templates validate"],
       "authority_boundary": "DAD mailbox guidance is suggestion transport only; target repos decide whether to adopt delivered mail.",
+      "review_status": "reviewed"
+    },
+    {
+      "schema_version": "0.1.0",
+      "template_id": "template:downstream-coding-asset-pointer-json",
+      "path": "templates/downstream/AI_ASSETS_POINTER.template.json",
+      "template_name": "Downstream coding asset pointer JSON",
+      "template_type": "ai_navigation",
+      "purpose": "Lightweight downstream pointer to DAD coding assets, profiles, router, and tactic radar without copying full assets.",
+      "applies_when": ["A persistent repo is explicitly approved to point AI agents to DAD coding assets before material coding work."],
+      "does_not_apply_when": ["A scratch repo has no durable AI navigation or a target repo has not approved a DAD pointer."],
+      "danger_if_misapplied": "A pointer can look like DAD owns target repo authority if candidate-only and local-adoption language is removed.",
+      "depends_on_template_ids": [],
+      "dependent_template_ids": [],
+      "depends_on_contracts": [
+        "docs/DOWNSTREAM_CODING_ASSET_POINTERS.md",
+        "registry/coding-asset-registry.json",
+        "registry/preflight-profile-router.json"
+      ],
+      "upgrade_triggers": [
+        "coding asset registry changes",
+        "preflight profile router changes",
+        "downstream pointer policy changes"
+      ],
+      "recommended_review_interval_days": 90,
+      "last_reviewed_at": "2026-07-01",
+      "next_review_due_at": "2026-09-29",
+      "upgrade_policy": "managed_block_only",
+      "deterministic_update_rule": "Keep pointer paths, asset IDs, local-adoption boundary, and no-full-asset-copy rule aligned with the coding asset registry.",
+      "validation_commands": ["python scripts/validate_coding_asset_control_plane.py"],
+      "authority_boundary": "Pointer is advisory and local; it does not authorize DAD to mutate the target repo.",
+      "review_status": "reviewed"
+    },
+    {
+      "schema_version": "0.1.0",
+      "template_id": "template:downstream-coding-asset-managed-block",
+      "path": "templates/downstream/CODING_ASSET_MANAGED_BLOCK.md",
+      "template_name": "Downstream coding asset managed block",
+      "template_type": "governance",
+      "purpose": "Managed instruction block telling future agents to run DAD preflight, consult coding assets, and report tactic lessons.",
+      "applies_when": ["A downstream AI front door or root instruction file is approved for a DAD coding asset pointer block."],
+      "does_not_apply_when": ["The repo has not approved managed-block edits or local guidance conflicts with the DAD pointer."],
+      "danger_if_misapplied": "Installing the block without approval can override local workflow expectations or imply authority transfer.",
+      "depends_on_template_ids": [],
+      "dependent_template_ids": [],
+      "depends_on_contracts": [
+        "docs/DOWNSTREAM_CODING_ASSET_POINTERS.md",
+        "docs/CODING_ASSET_CONTROL_PLANE.md",
+        "src/digital_asset_directory/cli.py"
+      ],
+      "upgrade_triggers": [
+        "DAD preflight or postflight command contract changes",
+        "coding asset pointer policy changes",
+        "mail candidate-only language changes"
+      ],
+      "recommended_review_interval_days": 90,
+      "last_reviewed_at": "2026-07-01",
+      "next_review_due_at": "2026-09-29",
+      "upgrade_policy": "managed_block_only",
+      "deterministic_update_rule": "Preserve DAD markers, local-authority boundary, no-full-asset-copy rule, and correct CLI flags.",
+      "validation_commands": ["python scripts/validate_coding_asset_control_plane.py"],
+      "authority_boundary": "DAD may recommend this block; target repos decide whether to install it.",
+      "review_status": "reviewed"
+    },
+    {
+      "schema_version": "0.1.0",
+      "template_id": "template:tactic-use-feedback-json",
+      "path": "templates/tactic-use-feedback.template.json",
+      "template_name": "Tactic use feedback JSON",
+      "template_type": "feedback",
+      "purpose": "Structured candidate feedback for coding tactics used, rejected, or corrected during postflight.",
+      "applies_when": ["A material task reveals a reusable coding tactic, failure mode, or non-applicability lesson."],
+      "does_not_apply_when": ["No material work occurred or the feedback would include secrets, private rows, or copied source blobs."],
+      "danger_if_misapplied": "Context-free tactic feedback can become unsafe universal guidance.",
+      "depends_on_template_ids": [],
+      "dependent_template_ids": [],
+      "depends_on_contracts": [
+        "schemas/tactic-use-feedback.schema.json",
+        "docs/CODING_TACTIC_PROMOTION_POLICY.md",
+        "registry/coding-tactics-radar.json"
+      ],
+      "upgrade_triggers": [
+        "tactic feedback schema changes",
+        "tactic promotion policy changes",
+        "postflight learning-loop requirements change"
+      ],
+      "recommended_review_interval_days": 90,
+      "last_reviewed_at": "2026-07-01",
+      "next_review_due_at": "2026-09-29",
+      "upgrade_policy": "human_approved_patch",
+      "deterministic_update_rule": "Keep feedback fields aligned with helped/failed/reuse/avoid evidence and safety confirmation requirements.",
+      "validation_commands": ["python scripts/validate_coding_asset_control_plane.py"],
+      "authority_boundary": "Feedback is candidate evidence and cannot promote a tactic by itself.",
+      "review_status": "reviewed"
+    },
+    {
+      "schema_version": "0.1.0",
+      "template_id": "template:coding-tactic-suggestion-mail",
+      "path": "templates/mail/coding-tactic-suggestion.mail.template.json",
+      "template_name": "Coding tactic suggestion mail",
+      "template_type": "learning_loop",
+      "purpose": "Candidate mail packet for suggesting a coding tactic to another repo without mutating it.",
+      "applies_when": ["DAD wants to route a tactic recommendation to a reviewed target repo mailbox."],
+      "does_not_apply_when": ["The packet would include raw private content, secrets, hooks, full copied assets, or executable authority."],
+      "danger_if_misapplied": "A target repo may treat candidate mail as source truth or accidentally receive private-origin content without release.",
+      "depends_on_template_ids": [],
+      "dependent_template_ids": [],
+      "depends_on_contracts": [
+        "docs/MAIL_CENTER.md",
+        "schemas/mail-message.schema.json",
+        "registry/coding-tactics-radar.json"
+      ],
+      "upgrade_triggers": [
+        "mail message schema changes",
+        "public release gate changes",
+        "coding tactic packet fields change"
+      ],
+      "recommended_review_interval_days": 90,
+      "last_reviewed_at": "2026-07-01",
+      "next_review_due_at": "2026-09-29",
+      "upgrade_policy": "human_approved_patch",
+      "deterministic_update_rule": "Keep payload short, candidate-only, public-release-aware, and free of full copied assets or raw private source.",
+      "validation_commands": ["python scripts/validate_coding_asset_control_plane.py"],
+      "authority_boundary": "Mail template is suggestion transport only; target repos decide adoption locally.",
+      "review_status": "reviewed"
+    },
+    {
+      "schema_version": "0.1.0",
+      "template_id": "template:asset-upgrade-available-mail",
+      "path": "templates/mail/asset-upgrade-available.mail.template.json",
+      "template_name": "Asset upgrade available mail",
+      "template_type": "learning_loop",
+      "purpose": "Candidate mail packet for announcing a DAD coding asset upgrade to a target repo.",
+      "applies_when": ["A reviewed target repo should know a DAD asset or pointer has an available update."],
+      "does_not_apply_when": ["The update would require automatic source mutation or full asset copying without target approval."],
+      "danger_if_misapplied": "Upgrade mail can pressure target repos to adopt changes without local validation.",
+      "depends_on_template_ids": [],
+      "dependent_template_ids": [],
+      "depends_on_contracts": [
+        "docs/MAIL_CENTER.md",
+        "schemas/mail-message.schema.json",
+        "registry/coding-asset-registry.json"
+      ],
+      "upgrade_triggers": [
+        "asset registry changes",
+        "mail message schema changes",
+        "public release gate changes"
+      ],
+      "recommended_review_interval_days": 90,
+      "last_reviewed_at": "2026-07-01",
+      "next_review_due_at": "2026-09-29",
+      "upgrade_policy": "human_approved_patch",
+      "deterministic_update_rule": "Keep upgrade packet candidate-only, locally validated, and bounded to pointers or managed blocks unless explicitly approved.",
+      "validation_commands": ["python scripts/validate_coding_asset_control_plane.py"],
+      "authority_boundary": "Upgrade packet does not install or approve the asset in the target repo.",
+      "review_status": "reviewed"
+    },
+    {
+      "schema_version": "0.1.0",
+      "template_id": "template:repo-pointer-install-request-mail",
+      "path": "templates/mail/repo-pointer-install-request.mail.template.json",
+      "template_name": "Repo pointer install request mail",
+      "template_type": "learning_loop",
+      "purpose": "Candidate mail packet requesting local review of a DAD coding asset pointer install.",
+      "applies_when": ["DAD wants a target repo to consider installing a lightweight coding asset pointer."],
+      "does_not_apply_when": ["The target repo is not in reviewed mail/governance policy or has not approved local mutation."],
+      "danger_if_misapplied": "Pointer-install mail can become unreviewed governance installation if local approval is skipped.",
+      "depends_on_template_ids": [],
+      "dependent_template_ids": [],
+      "depends_on_contracts": [
+        "docs/MAIL_CENTER.md",
+        "docs/DOWNSTREAM_CODING_ASSET_POINTERS.md",
+        "schemas/mail-message.schema.json"
+      ],
+      "upgrade_triggers": [
+        "downstream pointer policy changes",
+        "mail message schema changes",
+        "public release gate changes"
+      ],
+      "recommended_review_interval_days": 90,
+      "last_reviewed_at": "2026-07-01",
+      "next_review_due_at": "2026-09-29",
+      "upgrade_policy": "human_approved_patch",
+      "deterministic_update_rule": "Keep install request explicit about local approval, managed markers, validation, and rollback.",
+      "validation_commands": ["python scripts/validate_coding_asset_control_plane.py"],
+      "authority_boundary": "Mail requests review; it does not authorize DAD to edit the target repo.",
+      "review_status": "reviewed"
+    },
+    {
+      "schema_version": "0.1.0",
+      "template_id": "template:downstream-agent-skill-pointer-json",
+      "path": "templates/downstream/AGENT_SKILL_POINTER.template.json",
+      "template_name": "Downstream agent skill pointer JSON",
+      "template_type": "ai_navigation",
+      "purpose": "Lightweight downstream pointer to DAD-managed agent skills without copying full skill bodies.",
+      "applies_when": ["A persistent repo is approved to check out a DAD skill pointer or wrapper."],
+      "does_not_apply_when": ["A repo has not approved DAD skill pointers, or the desired skill requires a plugin/full copy without human approval."],
+      "danger_if_misapplied": "A pointer can look like DAD owns local agent behavior if candidate-only and local-adoption language is removed.",
+      "depends_on_template_ids": [],
+      "dependent_template_ids": [],
+      "depends_on_contracts": [
+        "docs/AGENT_SKILL_LIBRARY.md",
+        "docs/AGENT_SKILL_CHECKOUTS.md",
+        "registry/agent-skill-library.json"
+      ],
+      "upgrade_triggers": [
+        "agent skill registry changes",
+        "checkout policy changes",
+        "downstream pointer policy changes"
+      ],
+      "recommended_review_interval_days": 90,
+      "last_reviewed_at": "2026-07-01",
+      "next_review_due_at": "2026-09-29",
+      "upgrade_policy": "managed_block_only",
+      "deterministic_update_rule": "Keep skill IDs, versions, source paths, return address, no-full-skill-copy rule, and local-adoption language aligned with the agent skill library.",
+      "validation_commands": ["python scripts/validate_agent_skill_library.py"],
+      "authority_boundary": "Pointer is advisory and local; it does not authorize DAD to mutate the target repo.",
+      "review_status": "reviewed"
+    },
+    {
+      "schema_version": "0.1.0",
+      "template_id": "template:downstream-agent-skill-managed-block",
+      "path": "templates/downstream/AGENT_SKILL_MANAGED_BLOCK.md",
+      "template_name": "Downstream agent skill managed block",
+      "template_type": "governance",
+      "purpose": "Managed instruction block telling future agents how to use DAD skill checkouts and update notices.",
+      "applies_when": ["A downstream AI front door or root instruction file is approved for a DAD skill checkout block."],
+      "does_not_apply_when": ["The repo has not approved managed-block edits or local guidance conflicts with the DAD skill pointer."],
+      "danger_if_misapplied": "Installing the block without approval can imply DAD controls local agent skills.",
+      "depends_on_template_ids": [],
+      "dependent_template_ids": [],
+      "depends_on_contracts": [
+        "docs/AGENT_SKILL_LIBRARY.md",
+        "docs/AGENT_SKILL_CHECKOUTS.md",
+        "scripts/render_agent_skill_checkout.py"
+      ],
+      "upgrade_triggers": [
+        "agent skill checkout command changes",
+        "skill mail lifecycle policy changes",
+        "downstream managed-block policy changes"
+      ],
+      "recommended_review_interval_days": 90,
+      "last_reviewed_at": "2026-07-01",
+      "next_review_due_at": "2026-09-29",
+      "upgrade_policy": "managed_block_only",
+      "deterministic_update_rule": "Preserve DAD markers, local-authority boundary, no-full-skill-copy rule, and correct renderer/validator commands.",
+      "validation_commands": ["python scripts/validate_agent_skill_library.py"],
+      "authority_boundary": "DAD may recommend this block; target repos decide whether to install it.",
+      "review_status": "reviewed"
+    },
+    {
+      "schema_version": "0.1.0",
+      "template_id": "template:skill-checkout-request-mail",
+      "path": "templates/mail/skill-checkout-request.mail.template.json",
+      "template_name": "Skill checkout request mail",
+      "template_type": "learning_loop",
+      "purpose": "Candidate mail packet requesting local review of a DAD skill checkout pointer.",
+      "applies_when": ["DAD wants a target repo to consider checking out a DAD-managed skill."],
+      "does_not_apply_when": ["The target repo is not in reviewed mail policy or the packet would require automatic local mutation."],
+      "danger_if_misapplied": "Checkout mail can become unreviewed skill installation if local approval is skipped.",
+      "depends_on_template_ids": [],
+      "dependent_template_ids": [],
+      "depends_on_contracts": [
+        "docs/MAIL_CENTER.md",
+        "docs/AGENT_SKILL_LIBRARY.md",
+        "schemas/mail-message.schema.json"
+      ],
+      "upgrade_triggers": [
+        "agent skill registry changes",
+        "mail message schema changes",
+        "public release gate changes"
+      ],
+      "recommended_review_interval_days": 90,
+      "last_reviewed_at": "2026-07-01",
+      "next_review_due_at": "2026-09-29",
+      "upgrade_policy": "human_approved_patch",
+      "deterministic_update_rule": "Keep checkout request explicit about local approval, pointer-only default, public-release policy, and rollback.",
+      "validation_commands": ["python scripts/validate_agent_skill_library.py"],
+      "authority_boundary": "Mail requests review; it does not authorize DAD to edit the target repo.",
+      "review_status": "reviewed"
+    },
+    {
+      "schema_version": "0.1.0",
+      "template_id": "template:skill-update-available-mail",
+      "path": "templates/mail/skill-update-available.mail.template.json",
+      "template_name": "Skill update available mail",
+      "template_type": "learning_loop",
+      "purpose": "Candidate mail packet announcing an available DAD skill update to a target repo.",
+      "applies_when": ["A target repo has or may have checked out an older DAD skill version."],
+      "does_not_apply_when": ["The update would require automatic source mutation or full skill copying without target approval."],
+      "danger_if_misapplied": "Update mail can pressure target repos to adopt skill changes without local validation.",
+      "depends_on_template_ids": [],
+      "dependent_template_ids": [],
+      "depends_on_contracts": [
+        "docs/MAIL_CENTER.md",
+        "docs/AGENT_SKILL_LIBRARY.md",
+        "schemas/mail-message.schema.json"
+      ],
+      "upgrade_triggers": [
+        "agent skill lifecycle policy changes",
+        "mail message schema changes",
+        "public release gate changes"
+      ],
+      "recommended_review_interval_days": 90,
+      "last_reviewed_at": "2026-07-01",
+      "next_review_due_at": "2026-09-29",
+      "upgrade_policy": "human_approved_patch",
+      "deterministic_update_rule": "Keep update packet candidate-only, versioned, locally validated, and bounded to pointers or wrappers unless explicitly approved.",
+      "validation_commands": ["python scripts/validate_agent_skill_library.py"],
+      "authority_boundary": "Update packet does not install or approve the skill in the target repo.",
+      "review_status": "reviewed"
+    },
+    {
+      "schema_version": "0.1.0",
+      "template_id": "template:skill-retirement-notice-mail",
+      "path": "templates/mail/skill-retirement-notice.mail.template.json",
+      "template_name": "Skill retirement notice mail",
+      "template_type": "learning_loop",
+      "purpose": "Candidate mail packet announcing that a checked-out DAD skill is retired or replaced.",
+      "applies_when": ["A target repo should stop using or should replace a DAD skill checkout."],
+      "does_not_apply_when": ["The target repo has no checked-out skill or no reviewed mail policy."],
+      "danger_if_misapplied": "Retirement mail can remove useful local guidance if local review and rollback are skipped.",
+      "depends_on_template_ids": [],
+      "dependent_template_ids": [],
+      "depends_on_contracts": [
+        "docs/MAIL_CENTER.md",
+        "docs/AGENT_SKILL_LIBRARY.md",
+        "schemas/mail-message.schema.json"
+      ],
+      "upgrade_triggers": [
+        "agent skill lifecycle policy changes",
+        "mail message schema changes",
+        "replacement skill policy changes"
+      ],
+      "recommended_review_interval_days": 90,
+      "last_reviewed_at": "2026-07-01",
+      "next_review_due_at": "2026-09-29",
+      "upgrade_policy": "human_approved_patch",
+      "deterministic_update_rule": "Keep retirement packet explicit about replacement, local decision, archive behavior, and no automatic mutation.",
+      "validation_commands": ["python scripts/validate_agent_skill_library.py"],
+      "authority_boundary": "Retirement packet is a notice; target repos decide the local response.",
+      "review_status": "reviewed"
+    },
+    {
+      "schema_version": "0.1.0",
+      "template_id": "template:downstream-dad-integration-json",
+      "path": "templates/downstream/DAD_INTEGRATION.template.json",
+      "template_name": "Downstream DAD integration contract",
+      "template_type": "governance",
+      "purpose": "Versioned repo-local enrollment contract for approved persistent repos connected to the DAD hub.",
+      "applies_when": ["A persistent repo is approved for DAD full governance enrollment or enrollment update."],
+      "does_not_apply_when": ["The repo is unreviewed, scratch-only, or only approved for mailbox transport."],
+      "danger_if_misapplied": "A contract installed without approval can imply DAD authority over local source truth.",
+      "depends_on_template_ids": [],
+      "dependent_template_ids": [],
+      "depends_on_contracts": [
+        "schemas/repo-enrollment-contract.schema.json",
+        "docs/DAD_REPO_ENROLLMENT.md",
+        "src/digital_asset_directory/enrollment.py"
+      ],
+      "upgrade_triggers": [
+        "enrollment contract schema changes",
+        "control-plane cadence changes",
+        "approved managed path list changes"
+      ],
+      "recommended_review_interval_days": 90,
+      "last_reviewed_at": "2026-07-01",
+      "next_review_due_at": "2026-09-29",
+      "upgrade_policy": "human_approved_patch",
+      "deterministic_update_rule": "Keep repo ID, visibility, DAD hub reference, cadence, control planes, approval ID, managed paths, and mailbox-only normal operation aligned with the enrollment schema.",
+      "validation_commands": ["python -m pytest tests/test_enrollment.py", "python -m digital_asset_directory.cli templates validate"],
+      "authority_boundary": "Contract is installed or updated only by reviewed enrollment apply/update-apply with a human approval ID.",
+      "review_status": "reviewed"
+    },
+    {
+      "schema_version": "0.1.0",
+      "template_id": "template:downstream-context-map-json",
+      "path": "templates/downstream/CONTEXT_MAP.template.json",
+      "template_name": "Downstream DAD context map",
+      "template_type": "ai_navigation",
+      "purpose": "Repo-local table of context that routes work to DAD assets, skills, templates, and control planes.",
+      "applies_when": ["An enrolled repo needs deterministic context-to-asset routing for future AI agents."],
+      "does_not_apply_when": ["A repo is not approved for persistent DAD enrollment."],
+      "danger_if_misapplied": "Context routes can become false authority if treated as proof that a DAD suggestion must be adopted.",
+      "depends_on_template_ids": [],
+      "dependent_template_ids": [],
+      "depends_on_contracts": [
+        "schemas/repo-context-map.schema.json",
+        "registry/control-plane-registry.json",
+        "docs/DAD_REPO_ENROLLMENT.md"
+      ],
+      "upgrade_triggers": [
+        "context map schema changes",
+        "new DAD control plane is reviewed",
+        "coding asset or skill routing changes"
+      ],
+      "recommended_review_interval_days": 90,
+      "last_reviewed_at": "2026-07-01",
+      "next_review_due_at": "2026-09-29",
+      "upgrade_policy": "managed_block_only",
+      "deterministic_update_rule": "Keep routes tied to reviewed control planes and candidate-only local-adoption language.",
+      "validation_commands": ["python -m pytest tests/test_enrollment.py", "python -m digital_asset_directory.cli templates validate"],
+      "authority_boundary": "Context map recommends DAD assets to consult; target repo authority controls adoption.",
+      "review_status": "reviewed"
+    },
+    {
+      "schema_version": "0.1.0",
+      "template_id": "template:downstream-governance-map-yaml",
+      "path": "templates/downstream/GOVERNANCE_MAP.template.yaml",
+      "template_name": "Downstream governance map",
+      "template_type": "governance",
+      "purpose": "Repo-local governance dependency mirror for enrolled repos.",
+      "applies_when": ["An enrolled repo needs local visibility into DAD-managed surfaces, human gates, and authority boundaries."],
+      "does_not_apply_when": ["The repo is not enrolled or should remain mailbox-only."],
+      "danger_if_misapplied": "A governance map can be mistaken for authority transfer if local canon boundaries are removed.",
+      "depends_on_template_ids": [],
+      "dependent_template_ids": [],
+      "depends_on_contracts": [
+        "schemas/governance-map-adoption.schema.json",
+        "registry/control-plane-registry.json",
+        "docs/DAD_REPO_ENROLLMENT.md"
+      ],
+      "upgrade_triggers": [
+        "governance map schema changes",
+        "human gate policy changes",
+        "DAD-managed path list changes"
+      ],
+      "recommended_review_interval_days": 90,
+      "last_reviewed_at": "2026-07-01",
+      "next_review_due_at": "2026-09-29",
+      "upgrade_policy": "managed_block_only",
+      "deterministic_update_rule": "Keep approved surfaces, normal write boundary, control planes, validation commands, and human gates aligned with enrollment policy.",
+      "validation_commands": ["python -m pytest tests/test_enrollment.py", "python -m digital_asset_directory.cli templates validate"],
+      "authority_boundary": "Governance map describes dependencies only; it cannot override target repo source authority.",
+      "review_status": "reviewed"
+    },
+    {
+      "schema_version": "0.1.0",
+      "template_id": "template:downstream-data-map-yaml",
+      "path": "templates/downstream/DATA_MAP.template.yaml",
+      "template_name": "Downstream data map",
+      "template_type": "governance",
+      "purpose": "Repo-local data movement and sensitivity-boundary map for DAD mail and enrollment surfaces.",
+      "applies_when": ["An enrolled repo needs visible data movement, public/private release, and sensitive-boundary guidance."],
+      "does_not_apply_when": ["The repo is not enrolled or no DAD-controlled data movement is approved."],
+      "danger_if_misapplied": "A data map can create false confidence if it is treated as a secret scanner or human release approval.",
+      "depends_on_template_ids": [],
+      "dependent_template_ids": [],
+      "depends_on_contracts": [
+        "schemas/data-map-adoption.schema.json",
+        "docs/MAIL_CENTER.md",
+        "docs/DAD_REPO_ENROLLMENT.md"
+      ],
+      "upgrade_triggers": [
+        "data map schema changes",
+        "public release gate changes",
+        "mail sensitivity policy changes"
+      ],
+      "recommended_review_interval_days": 90,
+      "last_reviewed_at": "2026-07-01",
+      "next_review_due_at": "2026-09-29",
+      "upgrade_policy": "managed_block_only",
+      "deterministic_update_rule": "Keep allowed movement, sensitive boundaries, generated outputs, and public-facing release language aligned with mail and enrollment policy.",
+      "validation_commands": ["python -m pytest tests/test_enrollment.py", "python -m digital_asset_directory.cli templates validate"],
+      "authority_boundary": "Data map is governance metadata and does not certify public safety by itself.",
       "review_status": "reviewed"
     },
     {

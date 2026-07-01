@@ -1,0 +1,21 @@
+{
+  "harness_id": "dad:harness:rust-shadow-parity",
+  "name": "Rust Shadow Parity",
+  "version": "0.1.0",
+  "path": "assets/coding-harnesses/rust-shadow-parity-harness",
+  "family": "test_parity",
+  "status": "candidate",
+  "languages": ["python", "rust", "mixed"],
+  "repo_types": ["application", "library", "test_suite"],
+  "domains": ["software_engineering", "test_performance"],
+  "context_tags": ["test_parity", "rust_shadow", "audit"],
+  "task_types": ["testing", "rust_shadow_layer", "parity_review", "test_performance"],
+  "capabilities": ["dual_path_comparison", "parity_audit", "timing_claim_gate"],
+  "public_safe": true,
+  "entrypoints": ["README.md", "harness.json", "prompts/README.md"],
+  "research_questions": ["How much time can Rust save after verified same-scope parity?", "What coverage map supports same-scope Python-to-Rust coverage review?"],
+  "validation_commands": ["python -m digital_asset_directory.cli test parity --help"],
+  "source_evidence": ["src/digital_asset_directory/test_parity.py", "docs/TESTING_AND_ORCHESTRATION.md"],
+  "review_status": "candidate",
+  "authority_boundary": "Rust shadow tests are candidates until structured reports verify same-scope coverage mapping for review."
+}

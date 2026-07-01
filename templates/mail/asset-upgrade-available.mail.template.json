@@ -1,0 +1,47 @@
+{
+  "schema_version": "0.1.0",
+  "mail_id": "dad:mail:<stable-id>",
+  "thread_id": "dad:thread:<stable-thread-id>",
+  "message_type": "asset_suggestion",
+  "source_repo": "dad",
+  "target_repo": "<reviewed target repo id>",
+  "created_at": "<ISO-8601 timestamp>",
+  "dedupe_key": "asset-upgrade:<asset-id>:<version>:<target-repo>",
+  "sensitivity": "internal",
+  "review_status": "generated_candidate",
+  "payload": {
+    "command_kind": "asset_upgrade_available",
+    "source_asset": "<asset id>",
+    "profile": "<profile id>",
+    "summary": "<public-safe summary of upgrade>",
+    "suggested_local_files_to_update": ["<managed pointer or local docs path>"],
+    "exact_managed_block_or_pointer_content": "<short pointer content only>",
+    "risks": ["Upgrade may not fit local repo", "Do not copy full DAD asset without approval"],
+    "acceptance_checks": ["Review diff locally", "Run target repo tests", "Run DAD postflight"],
+    "validation_commands": ["python <DAD_ROOT>/scripts/render_downstream_coding_pointer.py --hub <DAD_ROOT>"],
+    "rollback_notes": "Revert the target repo managed-block or pointer change."
+  },
+  "evidence": ["assets/asset-registry.json", "registry/coding-asset-registry.json"],
+  "suggested_actions": ["Review upgrade notes", "Render pointer dry-run", "Adopt only through local repo process"],
+  "source_provenance": {
+    "canonical_source_repo": "<DAD repo path>",
+    "source_repo_id": "dad",
+    "source_repo_alias": "dad",
+    "source_visibility": "internal",
+    "original_source_chain": ["dad"],
+    "return_address": "processed/mail/outbox",
+    "original_mail_id": "",
+    "composed_by": "<agent or human>",
+    "collected_by": "",
+    "collected_at": "",
+    "received_at": ""
+  },
+  "public_release": {
+    "target_visibility": "unknown",
+    "target_public_facing": false,
+    "public_release_required": false,
+    "public_release_status": "not_required",
+    "human_release_id": "",
+    "release_reason": ""
+  }
+}

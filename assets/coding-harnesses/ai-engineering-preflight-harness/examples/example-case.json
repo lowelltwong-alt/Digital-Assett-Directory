@@ -1,0 +1,7 @@
+{
+  "example_id": "dad:harness-example:ai-engineering-preflight:material-change",
+  "harness_id": "dad:harness:ai-engineering-preflight",
+  "task": "Add a DAD registry and tests.",
+  "expected_use": "Run preflight, acknowledge required learning rules, run review lanes, and close postflight with lane statuses.",
+  "candidate_only": true
+}

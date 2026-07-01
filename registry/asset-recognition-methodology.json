@@ -1,0 +1,146 @@
+{
+  "schema_version": "0.1.0",
+  "methodology_id": "dad:methodology:asset-recognition:v0.1.0",
+  "methodology_version": "0.1.0",
+  "authority_boundary": "Asset recognition scores are deterministic candidate signals. They do not prove value, truth, safety, licensing, or authority, and they do not authorize copying private contents across repos.",
+  "min_candidate_score": 30,
+  "candidate_locations": [
+    {
+      "location_id": "repo-front-door-and-agent-guidance",
+      "patterns": ["AGENTS.md", "CLAUDE.md", "AI_FRONT_DOOR.md", "AI_TABLE_OF_CONTENTS.md", "MACHINE_NAVIGATION_MANIFEST.json"],
+      "weight": 30,
+      "reason": "Repo entrypoints often encode local non-negotiables, workflow memory, and navigational structure."
+    },
+    {
+      "location_id": "registries-and-schemas",
+      "patterns": [
+        "registry/*.json",
+        "registry/**/*.json",
+        "schemas/*.json",
+        "schemas/**/*.json",
+        "schema/*.json",
+        "schema/**/*.json"
+      ],
+      "weight": 25,
+      "reason": "Registries and schemas usually carry reusable contracts, vocabularies, and source-of-truth boundaries."
+    },
+    {
+      "location_id": "templates-and-prompts",
+      "patterns": [
+        "templates/*",
+        "templates/**/*",
+        "prompts/*",
+        "prompts/**/*",
+        "assets/*/prompts/*",
+        "assets/**/prompts/**/*"
+      ],
+      "weight": 20,
+      "reason": "Templates and prompts can become reusable workflow assets when provenance and context are preserved."
+    },
+    {
+      "location_id": "harnesses-and-evals",
+      "patterns": ["**/harness.json", "**/tests-or-evals/**/*", "**/evals/**/*", "**/benchmarks/**/*"],
+      "weight": 25,
+      "reason": "Harnesses and evals are high-leverage because they improve future coding, review, and validation loops."
+    },
+    {
+      "location_id": "governance-and-data-maps",
+      "patterns": ["**/governance*.md", "**/governance*.yaml", "**/data-map*.yaml", "**/architecture*.md"],
+      "weight": 22,
+      "reason": "Governance, data movement, and architecture maps help repos decide what can safely move or change."
+    }
+  ],
+  "recognition_signals": [
+    {
+      "signal_id": "source-of-truth-language",
+      "weight": 18,
+      "description": "Path or task mentions source truth, authority, governance, canonical registries, or design authority.",
+      "path_keywords": ["source", "truth", "authority", "governance", "canonical", "design"],
+      "task_keywords": ["source", "truth", "governance", "authority"]
+    },
+    {
+      "signal_id": "agent-workflow-language",
+      "weight": 16,
+      "description": "Path or task mentions agent, skill, preflight, midflight, postflight, prompt, or review workflows.",
+      "path_keywords": ["agent", "skill", "preflight", "midflight", "postflight", "prompt", "review"],
+      "task_keywords": ["agent", "skill", "preflight", "harness", "prompt", "review"]
+    },
+    {
+      "signal_id": "test-or-evaluation-language",
+      "weight": 16,
+      "description": "Path or task mentions tests, evals, parity, benchmark, performance, or validation.",
+      "path_keywords": ["test", "tests", "eval", "evals", "parity", "benchmark", "performance", "validation"],
+      "task_keywords": ["test", "testing", "eval", "parity", "performance", "validation"]
+    },
+    {
+      "signal_id": "machine-readable-contract",
+      "weight": 12,
+      "description": "Machine-readable JSON/YAML/TOML files can be reusable contracts when reviewed.",
+      "extensions": [".json", ".yaml", ".yml", ".toml"]
+    },
+    {
+      "signal_id": "documentation-asset",
+      "weight": 8,
+      "description": "Markdown docs can be reusable assets when they encode workflows, decisions, or templates.",
+      "extensions": [".md"]
+    }
+  ],
+  "downgrade_signals": [
+    {
+      "signal_id": "generated-cache-or-build-output",
+      "patterns": ["**/.pytest_cache/**", "**/__pycache__/**", "**/node_modules/**", "**/dist/**", "**/build/**", "**/coverage/**"],
+      "weight": 50,
+      "reason": "Generated cache and build output should not become reusable assets."
+    },
+    {
+      "signal_id": "secret-like-path",
+      "patterns": ["**/.env", "**/.env.*", "**/*secret*", "**/*credential*", "**/*.pem", "**/*.key"],
+      "weight": 100,
+      "reason": "Secret-like paths are excluded from asset sharing and require sensitive handling."
+    },
+    {
+      "signal_id": "archive-or-temp-path",
+      "patterns": ["**/99_Archive/**", "**/archive/**", "**/archives/**", "**/temp/**", "**/tmp/**"],
+      "weight": 25,
+      "reason": "Archive and temp paths need extra provenance review before promotion."
+    },
+    {
+      "signal_id": "readme-only-harness-folder-note",
+      "patterns": ["**/scripts/README.md", "**/tests-or-evals/README.md", "**/examples/README.md"],
+      "weight": 40,
+      "reason": "README-only harness folder notes are navigation scaffolding, not implemented scripts, evals, or examples."
+    },
+    {
+      "signal_id": "explicit-template-stub",
+      "patterns": ["**/*.stub.py", "**/*stub*.template.*"],
+      "weight": 25,
+      "reason": "Explicit stubs can be useful template evidence but should not be ranked as implemented runtime or eval assets."
+    }
+  ],
+  "importance_tiers": [
+    {
+      "tier": "paramount-coding-improvement",
+      "min_score": 75,
+      "meaning": "Likely high-leverage for AI coding, testing, review, or repo governance.",
+      "required_review": "Human or senior-agent review before promotion to DAD offerings."
+    },
+    {
+      "tier": "candidate-library-asset",
+      "min_score": 55,
+      "meaning": "Likely reusable as a DAD library asset or repo-local pointer.",
+      "required_review": "Check provenance, license, public/private movement, and local authority."
+    },
+    {
+      "tier": "save-for-future",
+      "min_score": 30,
+      "meaning": "Worth preserving as a candidate with source pointer and context.",
+      "required_review": "Keep as candidate metadata until a future task needs it."
+    }
+  ],
+  "output_labels": ["use_now", "save_for_future", "defer", "reject", "needs_human_review"],
+  "scan_policy": {
+    "content_policy": "Default scans use path and metadata only. Do not copy file contents, private rows, secrets, credentials, or large raw blobs into candidate reports.",
+    "public_safe_default": false,
+    "max_files_default": 2000
+  }
+}

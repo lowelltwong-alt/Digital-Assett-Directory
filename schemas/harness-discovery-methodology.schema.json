@@ -1,0 +1,77 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://local.digital-asset-directory/schemas/harness-discovery-methodology.schema.json",
+  "title": "DAD harness discovery methodology",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "methodology_id",
+    "methodology_version",
+    "authority_boundary",
+    "missing_family_bonus",
+    "radar_inputs",
+    "opportunity_signals",
+    "candidate_harness_families",
+    "external_research_policy",
+    "promotion_gates"
+  ],
+  "properties": {
+    "schema_version": {"type": "string"},
+    "methodology_id": {"type": "string", "minLength": 1},
+    "methodology_version": {"type": "string", "minLength": 1},
+    "authority_boundary": {"type": "string", "minLength": 1},
+    "missing_family_bonus": {"type": "number"},
+    "radar_inputs": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["input_id", "path_or_command", "reason"],
+        "properties": {
+          "input_id": {"type": "string", "minLength": 1},
+          "path_or_command": {"type": "string", "minLength": 1},
+          "reason": {"type": "string", "minLength": 1}
+        }
+      }
+    },
+    "opportunity_signals": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["signal_id", "candidate_family", "keywords", "weight", "reason"],
+        "properties": {
+          "signal_id": {"type": "string", "minLength": 1},
+          "candidate_family": {"type": "string", "minLength": 1},
+          "keywords": {"type": "array", "items": {"type": "string"}, "minItems": 1},
+          "weight": {"type": "number"},
+          "reason": {"type": "string", "minLength": 1}
+        }
+      }
+    },
+    "candidate_harness_families": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["family", "goal", "first_pass_artifacts"],
+        "properties": {
+          "family": {"type": "string", "minLength": 1},
+          "goal": {"type": "string", "minLength": 1},
+          "first_pass_artifacts": {"type": "array", "items": {"type": "string"}, "minItems": 1}
+        }
+      }
+    },
+    "external_research_policy": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["status", "rule"],
+      "properties": {
+        "status": {"type": "string", "minLength": 1},
+        "rule": {"type": "string", "minLength": 1}
+      }
+    },
+    "promotion_gates": {"type": "array", "items": {"type": "string"}, "minItems": 1}
+  }
+}

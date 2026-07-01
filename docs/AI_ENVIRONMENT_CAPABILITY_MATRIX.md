@@ -54,6 +54,7 @@ Start with the smallest reliable capability that fits the task:
 | Deterministic lifecycle checks | Hook, CI, validator, pre-push gate | The check requires judgment that should be reviewed by a human. |
 | Long or isolated work | Cloud/background agent or separate worktree | Local files are dirty and the work could overwrite active edits. |
 | Cross-repo propagation | Advisory template plus human-gated install | The guidance has not been reviewed in the target repo. |
+| Reusable agent skill checkout | DAD skill pointer or wrapper from `registry/agent-skill-library.json` | The repo needs a full copied skill, plugin install, hook, or automation without human approval. |
 
 ## Environment Matrix
 
@@ -117,10 +118,13 @@ Recommended first step for other repos:
 1. Add a short advisory link in the repo's AI front door or `AGENTS.md`.
 2. State which environments the repo supports: Codex, Cursor, Claude Code, or
    another agent runtime.
-3. Keep tool-specific details in a separate doc, not in the mandatory contract,
+3. For reusable skills, check out a pointer or wrapper from
+   `registry/agent-skill-library.json` and subscribe to DAD mail notices for
+   updates, retirements, and replacements.
+4. Keep tool-specific details in a separate doc, not in the mandatory contract,
    until the repo owner reviews them.
-4. Record the last verified date and stale-after date.
-5. During postflight, note which capability helped or failed: skill, subagent,
+5. Record the last verified date and stale-after date.
+6. During postflight, note which capability helped or failed: skill, subagent,
    MCP, hook, cloud agent, connector, plugin, or none.
 
 When one repo discovers a capability update that may help others, send it as a

@@ -1,0 +1,41 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://local.digital-asset-directory/schemas/control-plane-registry.schema.json",
+  "title": "DAD Control Plane Registry",
+  "type": "object",
+  "required": ["schema_version", "registry_id", "authority_boundary", "control_planes"],
+  "properties": {
+    "schema_version": {"const": "0.1.0"},
+    "registry_id": {"type": "string", "minLength": 1},
+    "authority_boundary": {"type": "string", "minLength": 1},
+    "control_planes": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": [
+          "control_plane_id",
+          "name",
+          "status",
+          "cadence",
+          "primary_surfaces",
+          "normal_write_boundary",
+          "authority_boundary",
+          "review_status"
+        ],
+        "properties": {
+          "control_plane_id": {"type": "string", "minLength": 1},
+          "name": {"type": "string", "minLength": 1},
+          "status": {"enum": ["active", "candidate", "retired"]},
+          "cadence": {"type": "string", "minLength": 1},
+          "primary_surfaces": {"type": "array", "items": {"type": "string", "minLength": 1}},
+          "normal_write_boundary": {"type": "string", "minLength": 1},
+          "authority_boundary": {"type": "string", "minLength": 1},
+          "review_status": {"enum": ["reviewed", "candidate", "rejected"]}
+        },
+        "additionalProperties": false
+      }
+    }
+  },
+  "additionalProperties": false
+}

@@ -1,0 +1,111 @@
+{
+  "schema_version": "0.1.0",
+  "registry_id": "dad-needs-registry",
+  "authority_boundary": "This registry tells enrolled repos what DAD wants them to send back. It does not authorize copying private rows, secrets, source code, or repo canon into DAD mail.",
+  "needs": [
+    {
+      "need_id": "dad:need:postflight-lessons",
+      "name": "Postflight Lessons And Reusable Workflows",
+      "category": "lesson",
+      "priority": "high",
+      "send_when": [
+        "A repo learns a reusable coding, testing, governance, or agent-workflow lesson.",
+        "A DAD asset helped, failed, or needed local adaptation."
+      ],
+      "do_not_send": [
+        "Do not send secrets, raw private data rows, or long copied source blobs.",
+        "Do not send a lesson as universal guidance unless local evidence supports the scope."
+      ],
+      "payload_guidance": "Send short summaries, paths, hashes, validation commands, and context limits through DAD mail.",
+      "target_control_planes": ["learning_postflight_loops", "mail_center"],
+      "review_status": "reviewed"
+    },
+    {
+      "need_id": "dad:need:coding-harness-feedback",
+      "name": "Coding Harness Feedback",
+      "category": "coding_harness",
+      "priority": "critical",
+      "send_when": [
+        "A harness improves AI coding speed, test performance, review quality, or safety.",
+        "A harness misses a bug or creates false confidence."
+      ],
+      "do_not_send": [
+        "Do not promote candidate research output as reviewed guidance without human review.",
+        "Do not include proprietary test data or credentials in harness feedback."
+      ],
+      "payload_guidance": "Send harness ID, repo context, task type, observed benefit or failure, timing if available, and validation commands.",
+      "target_control_planes": ["coding_test_parity", "reusable_assets", "agent_skills"],
+      "review_status": "reviewed"
+    },
+    {
+      "need_id": "dad:need:subagent-review-and-asset-scout-findings",
+      "name": "Subagent Review And Asset Scout Findings",
+      "category": "learning_loop",
+      "priority": "critical",
+      "send_when": [
+        "A red-team/checker lane finds a reusable failure mode, missing test, governance risk, or false-confidence pattern.",
+        "A lesson/asset/harness scout lane finds a novel or important digital asset, coding-harness idea, skill update, or reusable workflow.",
+        "A repo discovers a DAD need or offering gap during preflight, midflight, review, or postflight."
+      ],
+      "do_not_send": [
+        "Do not send raw private data, credentials, secret-like values, or long source blobs.",
+        "Do not send subagent output as reviewed truth; keep it as candidate evidence until DAD review.",
+        "Do not mutate another repo while transmitting the finding."
+      ],
+      "payload_guidance": "Send lane ID, repo context, task, concise finding, why it may matter, source pointers or hashes, suggested DAD control plane, and validation evidence.",
+      "target_control_planes": ["learning_postflight_loops", "reusable_assets", "coding_harnesses", "agent_skills", "mail_center"],
+      "review_status": "reviewed"
+    },
+    {
+      "need_id": "dad:need:asset-upgrade-impact",
+      "name": "Asset Upgrade Impact",
+      "category": "usage_feedback",
+      "priority": "high",
+      "send_when": [
+        "A repo is using or watching a DAD asset and notices drift, upgrade need, or replacement value.",
+        "A DAD upgrade changes local implementation plans."
+      ],
+      "do_not_send": [
+        "Do not overwrite the repo's local source authority from an upgrade notice.",
+        "Do not report private implementation details to public-facing targets."
+      ],
+      "payload_guidance": "Send asset ID, local status, update channel, local decision, and evidence pointers.",
+      "target_control_planes": ["reusable_assets", "mail_center"],
+      "review_status": "reviewed"
+    },
+    {
+      "need_id": "dad:need:skill-capability-updates",
+      "name": "Agent Skill And Capability Updates",
+      "category": "agent_skill",
+      "priority": "medium",
+      "send_when": [
+        "Codex, Claude, Cursor, or another AI environment gains or loses a relevant capability.",
+        "A repo needs a skill pointer, wrapper, retirement, or replacement notice."
+      ],
+      "do_not_send": [
+        "Do not install plugins, hooks, or full skills through mail alone.",
+        "Do not imply that a skill pointer overrides local AGENTS or CLAUDE authority."
+      ],
+      "payload_guidance": "Send skill ID, environment, capability, when-to-use, when-not-to-use, and local adoption requirements.",
+      "target_control_planes": ["agent_skills", "mail_center"],
+      "review_status": "reviewed"
+    },
+    {
+      "need_id": "dad:need:governance-and-data-map-drift",
+      "name": "Governance And Data Map Drift",
+      "category": "governance",
+      "priority": "high",
+      "send_when": [
+        "A repo changes authority boundaries, data movement, public-facing status, or sensitive sources.",
+        "A repo rename, copy, split, or merge could affect stable return addresses."
+      ],
+      "do_not_send": [
+        "Do not auto-update governance maps without enrollment approval.",
+        "Do not send private-origin information to a public-facing target without a human release."
+      ],
+      "payload_guidance": "Send metadata-only drift summaries, stable repo IDs, source provenance, and requested human gate.",
+      "target_control_planes": ["governance_maps", "data_maps", "mail_center", "repo_enrollment"],
+      "review_status": "reviewed"
+    }
+  ]
+}

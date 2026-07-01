@@ -1,0 +1,511 @@
+{
+  "schema_version": "0.1.0",
+  "created_at": "2026-07-01",
+  "purpose": "Python language/stdlib feature inventory for AI coding agents; emphasizes underused high-leverage features.",
+  "authority_note": "Official Python docs are authoritative for language semantics; underuse classifications here are heuristic, not GitHub-wide measured frequencies.",
+  "keywords": [
+    "False",
+    "None",
+    "True",
+    "and",
+    "as",
+    "assert",
+    "async",
+    "await",
+    "break",
+    "class",
+    "continue",
+    "def",
+    "del",
+    "elif",
+    "else",
+    "except",
+    "finally",
+    "for",
+    "from",
+    "global",
+    "if",
+    "import",
+    "in",
+    "is",
+    "lambda",
+    "nonlocal",
+    "not",
+    "or",
+    "pass",
+    "raise",
+    "return",
+    "try",
+    "while",
+    "with",
+    "yield"
+  ],
+  "soft_keywords": [
+    {
+      "token": "match",
+      "context": "match statement",
+      "min_python": "3.10",
+      "use": "structural pattern matching"
+    },
+    {
+      "token": "case",
+      "context": "match statement",
+      "min_python": "3.10",
+      "use": "pattern alternatives"
+    },
+    {
+      "token": "_",
+      "context": "match statement wildcard; otherwise normal identifier by convention",
+      "min_python": "3.10",
+      "use": "wildcard/unused placeholder"
+    },
+    {
+      "token": "type",
+      "context": "type statement / generic type aliases",
+      "min_python": "3.12",
+      "use": "PEP 695 type alias syntax; keep compatibility in mind"
+    }
+  ],
+  "operators_and_delimiters": [
+    {
+      "symbols": [
+        "+",
+        "-",
+        "*",
+        "/",
+        "//",
+        "%",
+        "**"
+      ],
+      "class": "arithmetic",
+      "notes": "Prefer clarity over clever arithmetic operator overloads."
+    },
+    {
+      "symbols": [
+        "@",
+        "@="
+      ],
+      "class": "matrix/decorator",
+      "notes": "Expression @ is matrix multiplication; leading @ line is decorator syntax."
+    },
+    {
+      "symbols": [
+        "<",
+        "<=",
+        ">",
+        ">=",
+        "==",
+        "!="
+      ],
+      "class": "comparison",
+      "notes": "Use rich comparison dunders carefully and return NotImplemented for unsupported types."
+    },
+    {
+      "symbols": [
+        "is",
+        "is not"
+      ],
+      "class": "identity",
+      "notes": "Use for None, sentinels, identity; not for value equality."
+    },
+    {
+      "symbols": [
+        "in",
+        "not in"
+      ],
+      "class": "membership",
+      "notes": "Expose __contains__ for domain containers."
+    },
+    {
+      "symbols": [
+        "and",
+        "or",
+        "not"
+      ],
+      "class": "boolean",
+      "notes": "Short-circuiting; avoid abusing truthiness for ambiguous domain state."
+    },
+    {
+      "symbols": [
+        "&",
+        "|",
+        "^",
+        "~",
+        "<<",
+        ">>"
+      ],
+      "class": "bitwise/set/type-union",
+      "notes": "Also used by sets; | is type union in annotations and dict merge on dicts."
+    },
+    {
+      "symbols": [
+        ":="
+      ],
+      "class": "assignment expression",
+      "notes": "Use sparingly for expensive predicate reuse; avoid dense one-liners."
+    },
+    {
+      "symbols": [
+        "=",
+        "+=",
+        "-=",
+        "*=",
+        "/=",
+        "//=",
+        "%=",
+        "**=",
+        "@=",
+        "&=",
+        "|=",
+        "^=",
+        "<<=",
+        ">>="
+      ],
+      "class": "assignment",
+      "notes": "Avoid in-place mutation at domain boundaries unless intentional."
+    },
+    {
+      "symbols": [
+        ".",
+        ",",
+        ":",
+        ";"
+      ],
+      "class": "delimiters",
+      "notes": "Semicolon is legal but usually harms readability; colon defines suites/slices/dicts."
+    },
+    {
+      "symbols": [
+        "()",
+        "[]",
+        "{}"
+      ],
+      "class": "group/call/index/literal",
+      "notes": "Use implicit line joining inside these instead of backslashes."
+    },
+    {
+      "symbols": [
+        "*",
+        "**"
+      ],
+      "class": "packing/unpacking/call expansion",
+      "notes": "Useful for explicit adaptation layers; avoid hiding shape changes."
+    },
+    {
+      "symbols": [
+        "..."
+      ],
+      "class": "ellipsis literal",
+      "notes": "Useful as placeholder or multidimensional slicing; do not leave in real code silently."
+    },
+    {
+      "symbols": [
+        "\\\\"
+      ],
+      "class": "explicit line joining",
+      "notes": "Avoid; prefer parentheses/brackets/braces."
+    }
+  ],
+  "builtins": [
+    "abs",
+    "aiter",
+    "all",
+    "anext",
+    "any",
+    "ascii",
+    "bin",
+    "bool",
+    "breakpoint",
+    "bytearray",
+    "bytes",
+    "callable",
+    "chr",
+    "classmethod",
+    "compile",
+    "complex",
+    "delattr",
+    "dict",
+    "dir",
+    "divmod",
+    "enumerate",
+    "eval",
+    "exec",
+    "filter",
+    "float",
+    "format",
+    "frozenset",
+    "getattr",
+    "globals",
+    "hasattr",
+    "hash",
+    "help",
+    "hex",
+    "id",
+    "input",
+    "int",
+    "isinstance",
+    "issubclass",
+    "iter",
+    "len",
+    "list",
+    "locals",
+    "map",
+    "max",
+    "memoryview",
+    "min",
+    "next",
+    "object",
+    "oct",
+    "open",
+    "ord",
+    "pow",
+    "print",
+    "property",
+    "range",
+    "repr",
+    "reversed",
+    "round",
+    "set",
+    "setattr",
+    "slice",
+    "sorted",
+    "staticmethod",
+    "str",
+    "sum",
+    "super",
+    "tuple",
+    "type",
+    "vars",
+    "zip",
+    "__import__"
+  ],
+  "special_methods_and_reserved_names": [
+    "__init__",
+    "__post_init__",
+    "__new__",
+    "__repr__",
+    "__str__",
+    "__format__",
+    "__bytes__",
+    "__bool__",
+    "__len__",
+    "__iter__",
+    "__next__",
+    "__contains__",
+    "__getitem__",
+    "__setitem__",
+    "__delitem__",
+    "__enter__",
+    "__exit__",
+    "__aenter__",
+    "__aexit__",
+    "__call__",
+    "__eq__",
+    "__hash__",
+    "__lt__",
+    "__le__",
+    "__gt__",
+    "__ge__",
+    "__add__",
+    "__radd__",
+    "__sub__",
+    "__mul__",
+    "__matmul__",
+    "__truediv__",
+    "__floordiv__",
+    "__mod__",
+    "__pow__",
+    "__or__",
+    "__and__",
+    "__xor__",
+    "__invert__",
+    "__getattr__",
+    "__getattribute__",
+    "__setattr__",
+    "__delattr__",
+    "__set_name__",
+    "__init_subclass__",
+    "__class_getitem__",
+    "__match_args__",
+    "__slots__",
+    "__all__"
+  ],
+  "underused_high_leverage_patterns": [
+    {
+      "id": "py.boundary.public-api-__all__-underscore",
+      "name": "Module public API with __all__ plus underscore helpers",
+      "category": "encapsulation",
+      "min_python": "3.8",
+      "why_advantage": "Makes the intended import surface obvious to humans and AI agents; prevents random code from reaching into internals.",
+      "use_when": "A module/package has public classes/functions and private helpers.",
+      "avoid_when": "Tiny throwaway scripts with no reuse.",
+      "prompt_rule": "Expose only intended API via __all__; prefix internal helpers with _; do not import _helpers from outside the module.",
+      "example": "__all__ = ['SubscriptionBilling', 'BillingResult']"
+    },
+    {
+      "id": "py.dataclass.frozen-slots-kwonly",
+      "name": "dataclass(frozen=True, slots=True, kw_only=True)",
+      "category": "data-modeling",
+      "min_python": "3.10",
+      "why_advantage": "Gives AI a compact, typed, immutable value object; reduces accidental mutation and noisy boilerplate.",
+      "use_when": "Domain records, config objects, parsed packets, result objects.",
+      "avoid_when": "Objects require identity mutation, ORM models, or dynamic attributes.",
+      "prompt_rule": "Prefer frozen slots dataclasses for value objects and command/result packets.",
+      "example": "@dataclass(frozen=True, slots=True, kw_only=True)"
+    },
+    {
+      "id": "py.typing.newtype-domain-ids",
+      "name": "NewType for domain IDs",
+      "category": "typing",
+      "min_python": "3.8",
+      "why_advantage": "Prevents AI from mixing customer_id, matter_id, route_id, and file_id as generic strings.",
+      "use_when": "IDs, keys, units, hashes, refs.",
+      "avoid_when": "Trivial scripts or values genuinely interchangeable.",
+      "prompt_rule": "Use NewType or small dataclass wrappers for IDs crossing module boundaries.",
+      "example": "CustomerId = NewType('CustomerId', str)"
+    },
+    {
+      "id": "py.protocol.dependency-boundary",
+      "name": "Protocol for dependency boundaries",
+      "category": "architecture",
+      "min_python": "3.8",
+      "why_advantage": "Lets agents code against small behavior contracts instead of concrete infrastructure classes.",
+      "use_when": "Adapters for filesystem, API clients, repositories, clocks, random sources, model clients.",
+      "avoid_when": "One-off internal code with no test seam.",
+      "prompt_rule": "Define Protocols for side-effect dependencies and inject them into public workflow classes.",
+      "example": "class Clock(Protocol):\n    def now(self) -> datetime: ..."
+    },
+    {
+      "id": "py.typeddict-json-boundary",
+      "name": "TypedDict at JSON/API boundaries",
+      "category": "typing",
+      "min_python": "3.8",
+      "why_advantage": "Clarifies external dict shapes without pretending loose JSON is a domain object.",
+      "use_when": "Parsing JSON, CLI packets, API payloads, config files.",
+      "avoid_when": "Internal domain logic; convert to dataclass after validation.",
+      "prompt_rule": "Use TypedDict for raw dict boundary shapes; convert to dataclasses for internal domain logic.",
+      "example": "class UserPayload(TypedDict):\n    user_id: str\n    email: str"
+    },
+    {
+      "id": "py.enum.strenum-literal-state",
+      "name": "StrEnum / Enum / Literal for explicit states",
+      "category": "state-modeling",
+      "min_python": "3.11 for StrEnum; 3.8 for Enum/Literal",
+      "why_advantage": "Replaces magic strings with checked state vocabulary.",
+      "use_when": "Statuses, modes, lanes, policy outcomes, event types.",
+      "avoid_when": "Values are open-ended external labels.",
+      "prompt_rule": "Use StrEnum or Literal for closed vocabularies; do not use free-form strings for known states.",
+      "example": "class RiskLane(StrEnum):\n    GREEN = auto()\n    YELLOW = auto()\n    RED = auto()"
+    },
+    {
+      "id": "py.match.tagged-union-assert-never",
+      "name": "match on tagged unions plus assert_never",
+      "category": "control-flow",
+      "min_python": "3.10; assert_never 3.11",
+      "why_advantage": "Makes multi-variant logic visible and reviewable; helps type checkers catch missing cases.",
+      "use_when": "Closed domain states, command packet variants, route/event variants.",
+      "avoid_when": "Simple if/else is clearer or Python min version <3.10.",
+      "prompt_rule": "Use match only for structured variants; include an exhaustive fallback with assert_never when type checkers support it.",
+      "example": "match event.kind:\n    case EventKind.CREATED: ...\n    case EventKind.DELETED: ...\n    case other: assert_never(other)"
+    },
+    {
+      "id": "py.contextlib.exitstack",
+      "name": "contextlib.ExitStack for dynamic cleanup",
+      "category": "resource-management",
+      "min_python": "3.8",
+      "why_advantage": "Prevents try/finally nests and leaked resources when number of resources is dynamic.",
+      "use_when": "Opening N files, layered tempdirs, dynamic mocks, multi-resource transactions.",
+      "avoid_when": "One obvious resource; use plain with.",
+      "prompt_rule": "When acquiring variable numbers of resources, use ExitStack rather than manual cleanup lists.",
+      "example": "with ExitStack() as stack:\n    files = [stack.enter_context(path.open()) for path in paths]"
+    },
+    {
+      "id": "py.pathlib.path-boundaries",
+      "name": "pathlib.Path instead of string paths",
+      "category": "filesystem",
+      "min_python": "3.8",
+      "why_advantage": "Gives agents a uniform path object and reduces cross-platform path bugs.",
+      "use_when": "Any filesystem boundary.",
+      "avoid_when": "Library explicitly requires a string, then convert at boundary.",
+      "prompt_rule": "Accept and return Path for filesystem code; convert strings at CLI/API edge.",
+      "example": "def load_config(path: Path) -> Config: ..."
+    },
+    {
+      "id": "py.contextvars-no-global-state",
+      "name": "contextvars for async/request-local context",
+      "category": "concurrency",
+      "min_python": "3.8",
+      "why_advantage": "Avoids global mutable state bugs in async/server-style code.",
+      "use_when": "Request/session IDs, audit context, correlation IDs in async code.",
+      "avoid_when": "Simple synchronous scripts.",
+      "prompt_rule": "Do not use globals for request/session context; use explicit parameters first, contextvars when propagation is needed.",
+      "example": "current_session: ContextVar[str | None] = ContextVar('current_session', default=None)"
+    },
+    {
+      "id": "py.exception.raise-from-add-note",
+      "name": "raise ... from exc and exception notes",
+      "category": "error-handling",
+      "min_python": "3.11 for add_note; raise from older",
+      "why_advantage": "Preserves causal chain and human-readable debugging context.",
+      "use_when": "Wrapping low-level errors into domain errors.",
+      "avoid_when": "You are deliberately hiding sensitive low-level details.",
+      "prompt_rule": "Wrap external errors with raise DomainError(...) from exc and add safe notes where useful.",
+      "example": "except OSError as exc:\n    raise ConfigLoadError(path) from exc"
+    },
+    {
+      "id": "py.importlib.resources-package-data",
+      "name": "importlib.resources for packaged data",
+      "category": "packaging",
+      "min_python": "3.9+ recommended",
+      "why_advantage": "Avoids fragile __file__ path hacks when reading package templates/resources.",
+      "use_when": "Templates, schema files, bundled prompts.",
+      "avoid_when": "User-provided external files.",
+      "prompt_rule": "Use importlib.resources.files(package) for package-owned assets instead of relative __file__ path traversal.",
+      "example": "files('my_pkg.templates').joinpath('prompt.md').read_text()"
+    },
+    {
+      "id": "py.functools.singledispatch",
+      "name": "functools.singledispatch for conversion/plugin dispatch",
+      "category": "dispatch",
+      "min_python": "3.8",
+      "why_advantage": "Replaces brittle if isinstance chains in adapter/conversion layers.",
+      "use_when": "Serialization/conversion from several known input classes.",
+      "avoid_when": "Domain logic should be explicit or variants are data tags not types.",
+      "prompt_rule": "Use singledispatch for type-based adapters, not for core business rules.",
+      "example": "@singledispatch\ndef to_payload(value): ..."
+    },
+    {
+      "id": "py.itertools-batched-pairwise",
+      "name": "itertools pipelines for clear iteration",
+      "category": "iteration",
+      "min_python": "3.10+ for pairwise; 3.12+ for batched",
+      "why_advantage": "Reduces hand-written index loops and off-by-one errors.",
+      "use_when": "Chunking, grouping, adjacent comparisons, streaming transforms.",
+      "avoid_when": "The resulting pipeline becomes cryptic.",
+      "prompt_rule": "Prefer itertools for standard iterator shapes; keep pipelines named and testable.",
+      "example": "for previous, current in pairwise(events): ..."
+    },
+    {
+      "id": "py.secrets-not-random",
+      "name": "secrets for tokens and security randomness",
+      "category": "security",
+      "min_python": "3.8",
+      "why_advantage": "Prevents AI from using random for passwords, tokens, nonces, or session IDs.",
+      "use_when": "Security-sensitive random values.",
+      "avoid_when": "Simulation, sampling, deterministic tests.",
+      "prompt_rule": "Use secrets for security tokens; use random only for non-security simulation and tests.",
+      "example": "token = secrets.token_urlsafe(32)"
+    },
+    {
+      "id": "py.tomllib-config",
+      "name": "tomllib + dataclass Config",
+      "category": "configuration",
+      "min_python": "3.11",
+      "why_advantage": "Gives a standard config parser and typed internal config object.",
+      "use_when": "pyproject-style or app config TOML.",
+      "avoid_when": "Need to write TOML; tomllib is read-only.",
+      "prompt_rule": "Parse TOML at the edge, validate, then convert to a typed config object.",
+      "example": "raw = tomllib.loads(path.read_text())"
+    }
+  ]
+}

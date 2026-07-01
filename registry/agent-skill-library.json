@@ -1,0 +1,217 @@
+{
+  "schema_version": "0.1.0",
+  "library_version": "0.1.0",
+  "status": "candidate_seed",
+  "authority_boundary": "DAD owns lifecycle metadata for DAD-managed skill records. Target repos decide whether to check out, update, retire, replace, or locally adapt a skill.",
+  "checkout_policy": {
+    "default_checkout_mode": "pointer",
+    "allowed_checkout_modes": [
+      "pointer",
+      "wrapper",
+      "local_copy_requires_human_approval",
+      "plugin_install_manual"
+    ],
+    "default_update_channel": "dad_mail",
+    "downstream_mutation_policy": "Render checkout artifacts in dry-run mode by default. Never mutate downstream repos, install plugins, or copy full skill bodies without explicit local approval."
+  },
+  "skills": [
+    {
+      "skill_id": "skill:dad-coding-asset-control-plane",
+      "name": "DAD Coding Asset Control Plane",
+      "version": "0.1.0",
+      "status": "active",
+      "skill_format": "codex_skill",
+      "path": "assets/agent-skills/dad-coding-asset-control-plane",
+      "entrypoint": "assets/agent-skills/dad-coding-asset-control-plane/SKILL.md",
+      "description": "Routes agents to DAD coding assets, preflight profile selection, tactic recommendations, downstream pointer rules, and postflight pay-forward capture.",
+      "trigger_examples": [
+        "Use DAD coding assets before a Python, Rust, mixed-language, or agent-instruction change.",
+        "Choose the right DAD preflight profile for a repo or task.",
+        "Check whether a coding tactic should be suggested, rejected, or reported back to DAD."
+      ],
+      "does_not_apply_when": [
+        "The target repo has not approved a DAD pointer or wrapper.",
+        "The task is a trivial one-command query with no material coding work."
+      ],
+      "capabilities": [
+        "preflight_profile_routing",
+        "coding_tactic_selection",
+        "downstream_pointer_guidance",
+        "postflight_pay_forward"
+      ],
+      "checkout_modes": ["pointer", "wrapper"],
+      "update_policy": "dad_mail_notice",
+      "lifecycle": {
+        "supersedes": [],
+        "superseded_by": [],
+        "retirement_reason": "",
+        "replacement_skill_id": "",
+        "change_notice_templates": [
+          "templates/mail/skill-update-available.mail.template.json",
+          "templates/mail/skill-retirement-notice.mail.template.json"
+        ]
+      },
+      "dependencies": [
+        "docs/CODING_ASSET_CONTROL_PLANE.md",
+        "registry/coding-asset-registry.json",
+        "registry/preflight-profile-router.json",
+        "registry/coding-tactics-radar.json"
+      ],
+      "source_evidence": [
+        "docs/AGENT_SKILL_LIBRARY.md",
+        "docs/CODING_ASSET_CONTROL_PLANE.md",
+        "assets/agent-skills/dad-coding-asset-control-plane/SKILL.md",
+        "https://developers.openai.com/codex/skills",
+        "https://agentskills.io/specification"
+      ],
+      "authority_boundary": "Skill guidance is a DAD routing aid. It does not override target repo authority, tests, human gates, or public-release policy.",
+      "review_status": "reviewed",
+      "last_reviewed_at": "2026-07-01",
+      "next_review_due_at": "2026-10-01"
+    },
+    {
+      "skill_id": "skill:ai-engineering-preflight-python",
+      "name": "AI Engineering Preflight Python",
+      "version": "0.1.0",
+      "status": "active",
+      "skill_format": "claude_skill",
+      "path": "assets/ai-engineering-preflight/templates/python/claude_skill",
+      "entrypoint": "assets/ai-engineering-preflight/templates/python/claude_skill/SKILL.md",
+      "description": "Python-specific AI engineering preflight guidance for modularity, long-script refactors, and repo instruction work.",
+      "trigger_examples": [
+        "Prepare a Python refactor or package design task.",
+        "Review a long Python script before splitting it.",
+        "Seed a Python repo with agent preflight guidance."
+      ],
+      "does_not_apply_when": [
+        "The task is not Python or Python-adjacent.",
+        "The target repo has a stricter local Python style guide that conflicts with the guidance."
+      ],
+      "capabilities": [
+        "python_preflight",
+        "long_script_refactor",
+        "agent_instruction_design"
+      ],
+      "checkout_modes": ["pointer", "local_copy_requires_human_approval"],
+      "update_policy": "dad_mail_notice",
+      "lifecycle": {
+        "supersedes": [],
+        "superseded_by": [],
+        "retirement_reason": "",
+        "replacement_skill_id": "",
+        "change_notice_templates": [
+          "templates/mail/skill-update-available.mail.template.json",
+          "templates/mail/skill-retirement-notice.mail.template.json"
+        ]
+      },
+      "dependencies": [
+        "assets/ai-engineering-preflight/asset.json",
+        "assets/ai-engineering-preflight/templates/python/PRE_FLIGHT.python.md"
+      ],
+      "source_evidence": [
+        "assets/ai-engineering-preflight/templates/python/claude_skill/SKILL.md",
+        "assets/ai-engineering-preflight/ASSET_MANIFEST.md"
+      ],
+      "authority_boundary": "This is an imported reusable asset surface; target repos still decide adoption and validation.",
+      "review_status": "reviewed",
+      "last_reviewed_at": "2026-07-01",
+      "next_review_due_at": "2026-10-01"
+    },
+    {
+      "skill_id": "skill:ai-engineering-preflight-rust",
+      "name": "AI Engineering Preflight Rust",
+      "version": "0.1.0",
+      "status": "active",
+      "skill_format": "claude_skill",
+      "path": "assets/ai-engineering-preflight/templates/rust/claude_skill",
+      "entrypoint": "assets/ai-engineering-preflight/templates/rust/claude_skill/SKILL.md",
+      "description": "Rust-specific AI engineering preflight guidance for API boundaries, encapsulation, tests, and review posture.",
+      "trigger_examples": [
+        "Prepare a Rust crate or API design task.",
+        "Review Rust test strategy or shadow-layer parity work.",
+        "Seed a Rust repo with agent preflight guidance."
+      ],
+      "does_not_apply_when": [
+        "The target repo is not Rust or mixed-language with Rust.",
+        "The task is a Python-only workflow with no Rust parity or API work."
+      ],
+      "capabilities": [
+        "rust_preflight",
+        "rust_api_boundary",
+        "test_validation_strategy"
+      ],
+      "checkout_modes": ["pointer", "local_copy_requires_human_approval"],
+      "update_policy": "dad_mail_notice",
+      "lifecycle": {
+        "supersedes": [],
+        "superseded_by": [],
+        "retirement_reason": "",
+        "replacement_skill_id": "",
+        "change_notice_templates": [
+          "templates/mail/skill-update-available.mail.template.json",
+          "templates/mail/skill-retirement-notice.mail.template.json"
+        ]
+      },
+      "dependencies": [
+        "assets/ai-engineering-preflight/asset.json",
+        "assets/ai-engineering-preflight/templates/rust/PRE_FLIGHT.rust.md"
+      ],
+      "source_evidence": [
+        "assets/ai-engineering-preflight/templates/rust/claude_skill/SKILL.md",
+        "assets/ai-engineering-preflight/ASSET_MANIFEST.md"
+      ],
+      "authority_boundary": "This is an imported reusable asset surface; target repos still decide adoption and validation.",
+      "review_status": "reviewed",
+      "last_reviewed_at": "2026-07-01",
+      "next_review_due_at": "2026-10-01"
+    },
+    {
+      "skill_id": "skill:python-ai-advantage-preflight-profile",
+      "name": "Python AI Advantage Preflight Profile",
+      "version": "0.1.0",
+      "status": "candidate",
+      "skill_format": "generic_agent_skill",
+      "path": "assets/python-ai-advantage-preflight/templates/PYTHON_PREFLIGHT_PROFILE.md",
+      "entrypoint": "assets/python-ai-advantage-preflight/templates/PYTHON_PREFLIGHT_PROFILE.md",
+      "description": "Python-specific profile for underused language tactics, applicability limits, and reviewable examples.",
+      "trigger_examples": [
+        "Check Python tactic applicability before implementation.",
+        "Review whether dataclasses, protocols, enums, or resource helpers fit a Python task.",
+        "Capture a Python tactic lesson after postflight."
+      ],
+      "does_not_apply_when": [
+        "The task is not Python or Python-adjacent.",
+        "The tactic cannot be verified locally."
+      ],
+      "capabilities": [
+        "python_tactic_selection",
+        "python_api_design",
+        "postflight_tactic_feedback"
+      ],
+      "checkout_modes": ["pointer"],
+      "update_policy": "dad_mail_notice",
+      "lifecycle": {
+        "supersedes": [],
+        "superseded_by": [],
+        "retirement_reason": "",
+        "replacement_skill_id": "",
+        "change_notice_templates": [
+          "templates/mail/skill-update-available.mail.template.json",
+          "templates/mail/skill-retirement-notice.mail.template.json"
+        ]
+      },
+      "dependencies": [
+        "assets/python-ai-advantage-preflight/asset.json",
+        "assets/python-ai-advantage-preflight/data/python_language_ai_advantage_inventory.json"
+      ],
+      "source_evidence": [
+        "assets/python-ai-advantage-preflight/templates/PYTHON_PREFLIGHT_PROFILE.md",
+        "assets/python-ai-advantage-preflight/SOURCES.md"
+      ],
+      "authority_boundary": "Candidate tactic profile; target repos retain local style, tests, and review authority.",
+      "review_status": "candidate",
+      "last_reviewed_at": "2026-07-01",
+      "next_review_due_at": "2026-10-01"
+    }
+  ]
+}

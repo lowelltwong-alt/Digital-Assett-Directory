@@ -1,0 +1,98 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://local.digital-asset-directory/schemas/repo-enrollment-contract.schema.json",
+  "title": "DAD Repo Enrollment Contract",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "repo_id",
+    "repo_alias",
+    "repo_ref",
+    "visibility",
+    "public_facing",
+    "dad_hub",
+    "enrollment",
+    "cadence",
+    "enabled_control_planes",
+    "local_validation_commands",
+    "approved_dad_managed_paths",
+    "return_address",
+    "authority_boundary"
+  ],
+  "properties": {
+    "schema_version": {"const": "0.1.0"},
+    "repo_id": {"type": "string", "minLength": 1},
+    "repo_alias": {"type": "string", "minLength": 1},
+    "repo_ref": {"type": "string", "minLength": 1},
+    "repo_path": {"type": "string", "minLength": 1},
+    "visibility": {"enum": ["public", "internal", "private", "restricted", "unknown"]},
+    "public_facing": {"type": "boolean"},
+    "dad_hub": {
+      "type": "object",
+      "required": ["hub_id", "hub_ref", "local_paths_included"],
+      "properties": {
+        "hub_id": {"type": "string", "minLength": 1},
+        "hub_ref": {"type": "string", "minLength": 1},
+        "local_paths_included": {"type": "boolean"}
+      },
+      "additionalProperties": false
+    },
+    "enrollment": {
+      "type": "object",
+      "required": [
+        "version",
+        "status",
+        "wave",
+        "approval_id",
+        "installed_at",
+        "last_operation",
+        "normal_write_boundary",
+        "one_time_full_governance_install"
+      ],
+      "properties": {
+        "version": {"type": "string", "minLength": 1},
+        "status": {"enum": ["enrolled", "blocked", "retired"]},
+        "wave": {"type": "string"},
+        "approval_id": {"type": "string", "minLength": 1},
+        "installed_at": {"type": "string", "minLength": 1},
+        "last_operation": {"enum": ["enroll", "update"]},
+        "normal_write_boundary": {"const": ".digital-asset/mail/**"},
+        "one_time_full_governance_install": {"type": "boolean"}
+      },
+      "additionalProperties": false
+    },
+    "cadence": {
+      "type": "object",
+      "required": ["mail", "weekly_checks"],
+      "properties": {
+        "mail": {
+          "type": "object",
+          "required": ["frequency", "preflight_behavior", "stale_after_hours"],
+          "properties": {
+            "frequency": {"const": "daily"},
+            "preflight_behavior": {"const": "warn_only_when_stale"},
+            "stale_after_hours": {"type": "integer", "minimum": 1}
+          },
+          "additionalProperties": false
+        },
+        "weekly_checks": {
+          "type": "object",
+          "required": ["frequency", "checks", "preflight_behavior"],
+          "properties": {
+            "frequency": {"const": "weekly"},
+            "checks": {"type": "array", "items": {"type": "string", "minLength": 1}},
+            "preflight_behavior": {"const": "warn_only_when_stale"}
+          },
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": false
+    },
+    "enabled_control_planes": {"type": "array", "items": {"type": "string", "minLength": 1}},
+    "local_validation_commands": {"type": "array", "items": {"type": "string", "minLength": 1}},
+    "approved_dad_managed_paths": {"type": "array", "items": {"type": "string", "minLength": 1}},
+    "return_address": {"type": "string", "minLength": 1},
+    "authority_boundary": {"type": "string", "minLength": 1}
+  },
+  "additionalProperties": false
+}

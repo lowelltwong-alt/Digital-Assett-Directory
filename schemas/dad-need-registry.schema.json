@@ -1,0 +1,56 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://local.digital-asset-directory/schemas/dad-need-registry.schema.json",
+  "title": "DAD Needs Registry",
+  "type": "object",
+  "required": ["schema_version", "registry_id", "authority_boundary", "needs"],
+  "properties": {
+    "schema_version": {"const": "0.1.0"},
+    "registry_id": {"type": "string", "minLength": 1},
+    "authority_boundary": {"type": "string", "minLength": 1},
+    "needs": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": [
+          "need_id",
+          "name",
+          "category",
+          "priority",
+          "send_when",
+          "do_not_send",
+          "payload_guidance",
+          "target_control_planes",
+          "review_status"
+        ],
+        "properties": {
+          "need_id": {"type": "string", "pattern": "^dad:need:[a-z0-9][a-z0-9:-]*$"},
+          "name": {"type": "string", "minLength": 1},
+          "category": {
+            "enum": [
+              "lesson",
+              "asset",
+              "workflow",
+              "taxonomy",
+              "capability",
+              "governance",
+              "coding_harness",
+              "agent_skill",
+              "learning_loop",
+              "usage_feedback"
+            ]
+          },
+          "priority": {"enum": ["critical", "high", "medium", "low"]},
+          "send_when": {"type": "array", "items": {"type": "string", "minLength": 1}, "minItems": 1},
+          "do_not_send": {"type": "array", "items": {"type": "string", "minLength": 1}},
+          "payload_guidance": {"type": "string", "minLength": 1},
+          "target_control_planes": {"type": "array", "items": {"type": "string", "minLength": 1}, "minItems": 1},
+          "review_status": {"enum": ["candidate", "reviewed", "rejected"]}
+        },
+        "additionalProperties": false
+      }
+    }
+  },
+  "additionalProperties": false
+}

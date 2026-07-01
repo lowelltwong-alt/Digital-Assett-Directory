@@ -1,0 +1,102 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://local.digital-asset-directory/schemas/agent-skill-checkout-pointer.schema.json",
+  "title": "Agent Skill Checkout Pointer",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "pointer_type",
+    "hub",
+    "authority_boundary",
+    "daily_check",
+    "source_provenance",
+    "checked_out_skills",
+    "do_not_copy_full_skills_without_approval",
+    "local_adoption_required"
+  ],
+  "properties": {
+    "schema_version": {"const": "0.1.0"},
+    "pointer_type": {"const": "dad_agent_skill_checkout"},
+    "hub": {"type": "string", "minLength": 1},
+    "local_hub_path": {"type": "string"},
+    "authority_boundary": {"type": "string", "minLength": 1},
+    "daily_check": {
+      "type": "object",
+      "required": ["skill_digest_stale_after_hours", "preflight_behavior"],
+      "properties": {
+        "skill_digest_stale_after_hours": {"type": "integer", "minimum": 1},
+        "preflight_behavior": {"enum": ["warn_only_when_stale"]}
+      },
+      "additionalProperties": false
+    },
+    "source_provenance": {
+      "type": "object",
+      "required": [
+        "source_repo_id",
+        "source_repo_alias",
+        "source_visibility",
+        "source_registry",
+        "return_address",
+        "local_paths_included"
+      ],
+      "properties": {
+        "source_repo_id": {"type": "string", "minLength": 1},
+        "source_repo_alias": {"type": "string", "minLength": 1},
+        "source_visibility": {"enum": ["public", "internal", "private", "restricted", "unknown"]},
+        "source_registry": {"type": "string", "minLength": 1},
+        "return_address": {"type": "string", "minLength": 1},
+        "local_paths_included": {"type": "boolean"}
+      },
+      "additionalProperties": false
+    },
+    "checked_out_skills": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": [
+          "skill_id",
+          "source",
+          "entrypoint",
+          "version",
+          "status",
+          "skill_format",
+          "checkout_mode",
+          "return_address",
+          "update_channel",
+          "required_before",
+          "capabilities"
+        ],
+        "properties": {
+          "skill_id": {"type": "string", "minLength": 1},
+          "source": {"type": "string", "minLength": 1},
+          "entrypoint": {"type": "string", "minLength": 1},
+          "version": {"type": "string", "minLength": 1},
+          "status": {"enum": ["active", "candidate", "deprecated", "retired", "replaced"]},
+          "skill_format": {"type": "string", "minLength": 1},
+          "checkout_mode": {"enum": ["pointer", "wrapper", "local_copy_requires_human_approval", "plugin_install_manual"]},
+          "return_address": {"type": "string", "minLength": 1},
+          "update_channel": {"type": "string", "minLength": 1},
+          "required_before": {
+            "type": "array",
+            "items": {"type": "string", "minLength": 1},
+            "minItems": 1
+          },
+          "capabilities": {
+            "type": "array",
+            "items": {"type": "string", "minLength": 1},
+            "minItems": 1
+          },
+          "local_source_path": {"type": "string"},
+          "local_entrypoint": {"type": "string"},
+          "local_return_address": {"type": "string"}
+        },
+        "additionalProperties": false
+      }
+    },
+    "do_not_copy_full_skills_without_approval": {"type": "boolean"},
+    "local_adoption_required": {"type": "boolean"}
+  },
+  "additionalProperties": false
+}
+

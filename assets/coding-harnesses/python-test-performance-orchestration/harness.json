@@ -1,0 +1,21 @@
+{
+  "harness_id": "dad:harness:python-test-performance-orchestration",
+  "name": "Python Test Performance And Orchestration",
+  "version": "0.1.0",
+  "path": "assets/coding-harnesses/python-test-performance-orchestration",
+  "family": "test_performance",
+  "status": "candidate",
+  "languages": ["python"],
+  "repo_types": ["application", "library", "test_suite"],
+  "domains": ["software_engineering", "test_performance"],
+  "context_tags": ["pytest", "test_selection", "performance"],
+  "task_types": ["testing", "pytest", "test_performance", "ci_orchestration"],
+  "capabilities": ["slow_test_inventory", "change_based_selection", "parallel_test_strategy"],
+  "public_safe": true,
+  "entrypoints": ["README.md", "harness.json", "prompts/README.md"],
+  "research_questions": ["Which tests dominate wall time?", "Which tests can be selected safely by changed surface?"],
+  "validation_commands": ["python -m pytest tests/test_test_parity.py -q"],
+  "source_evidence": ["docs/TESTING_AND_ORCHESTRATION.md"],
+  "review_status": "candidate",
+  "authority_boundary": "Faster test selection must fail closed for risky or shared-surface changes."
+}

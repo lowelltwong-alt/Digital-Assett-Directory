@@ -37,7 +37,32 @@ from .catalog import catalog_status, run_scan
 from .ci_release_scope import write_ci_release_artifact_scope_outputs
 from .config import load_config
 from .context_pack import build_context_pack, write_context_pack
+from .dad_library import (
+    build_dad_cadence_plan,
+    discover_harness_opportunities,
+    harness_evaluate,
+    harness_package,
+    harness_research,
+    list_harnesses,
+    load_asset_recognition_methodology,
+    load_harness_discovery_methodology,
+    load_needs,
+    load_offerings,
+    match_repo_offerings,
+    reconcile_repo_inventory,
+    recommend_harnesses,
+    record_usage,
+    scout_asset_candidates,
+    usage_upgrades,
+)
 from .database import CatalogDB
+from .enrollment import (
+    apply_enrollment,
+    build_enrollment_plan,
+    discover_enrollment_candidates,
+    enrollment_status_all,
+    select_enrollment_policies,
+)
 from .governance import enforce_postflight, install_governance, scaffold_new_repo
 from .governance_map_scope import write_governance_map_adoption_scope_outputs
 from .learning import (
@@ -71,6 +96,7 @@ from .mail_center import (
     release_mail,
     route_mail,
     review_mail,
+    triage_mail,
 )
 from .orphan_adapter import run_orphan_radar
 from .operational import write_operational_readiness_report
@@ -152,6 +178,14 @@ recommend_app = typer.Typer(no_args_is_help=True)
 app.add_typer(recommend_app, name="recommend")
 mail_app = typer.Typer(no_args_is_help=True)
 app.add_typer(mail_app, name="mail")
+enroll_app = typer.Typer(no_args_is_help=True)
+app.add_typer(enroll_app, name="enroll")
+dad_app = typer.Typer(no_args_is_help=True)
+app.add_typer(dad_app, name="dad")
+usage_app = typer.Typer(no_args_is_help=True)
+app.add_typer(usage_app, name="usage")
+harness_app = typer.Typer(no_args_is_help=True)
+app.add_typer(harness_app, name="harness")
 console = Console()
 
 
@@ -196,13 +230,44 @@ def _discover_mail_repos(raw_repos: list[str], cfg, *, delivery: bool = False) -
     if not raw_repos:
         raise typer.BadParameter("Provide at least one --repo value, or --repo all.")
     if raw_repos != ["all"]:
-        return [Path(repo).resolve() for repo in raw_repos]
+        repos = [Path(repo).resolve() for repo in raw_repos]
+        if delivery:
+            protected: list[str] = []
+            unreviewed: list[str] = []
+            for repo in repos:
+                matched_policy = None
+                for policy in cfg.mail_repos:
+                    if repo == policy.path.resolve():
+                        matched_policy = policy
+                        if (
+                            not policy.mail_enabled
+                            or
+                            not policy.delivery_allowed
+                            or getattr(policy, "write_protected", False)
+                        ):
+                            protected.append(policy.id)
+                        break
+                if matched_policy is None:
+                    unreviewed.append(str(repo))
+            if unreviewed:
+                raise typer.BadParameter(
+                    "Mail delivery can target only reviewed mail.repos entries: "
+                    + ", ".join(unreviewed)
+                )
+            if protected:
+                raise typer.BadParameter(
+                    "Mail delivery is blocked by reviewed policy for: "
+                    + ", ".join(protected)
+                )
+        return repos
 
     repos: dict[str, Path] = {}
     for policy in cfg.mail_repos:
         if not policy.mail_enabled:
             continue
-        if delivery and not policy.delivery_allowed:
+        if delivery and (
+            not policy.delivery_allowed or getattr(policy, "write_protected", False)
+        ):
             continue
         repos[str(policy.path.resolve())] = policy.path.resolve()
     if not repos:
@@ -241,11 +306,27 @@ def _mail_repo_candidates(cfg) -> list[dict[str, object]]:
                 "configured": policy is not None,
                 "mail_enabled": bool(policy.mail_enabled) if policy else False,
                 "delivery_allowed": bool(policy.delivery_allowed) if policy else False,
+                "write_protected": bool(getattr(policy, "write_protected", False))
+                if policy
+                else False,
+                "write_protection_reason": str(
+                    getattr(policy, "write_protection_reason", "")
+                )
+                if policy
+                else "",
                 "visibility": policy.visibility if policy else "unreviewed_candidate",
                 "public_facing": bool(policy.public_facing) if policy else False,
             }
         )
     return rows
+
+
+def _select_enrollment(repo: list[str], cfg, *, wave: str | None = None):
+    try:
+        return select_enrollment_policies(repo, cfg, wave=wave or None)
+    except ValueError as exc:
+        console.print(str(exc))
+        raise typer.Exit(2) from exc
 
 
 @app.command()
@@ -500,6 +581,7 @@ def mail_review(
     notes: str = typer.Option("", "--notes"),
 ) -> None:
     """Append a local triage or human review decision for an inbox mail packet."""
+    cfg = _cfg()
     try:
         result = review_mail(
             repo.resolve(),
@@ -508,6 +590,40 @@ def mail_review(
             decided_by=decided_by,
             human_verified=human_verified,
             notes=notes,
+            repo_policies=cfg.mail_repos,
+        )
+    except (ValueError, TypeError) as exc:
+        console.print(str(exc))
+        raise typer.Exit(2) from exc
+    console.print_json(data=result)
+
+
+@mail_app.command("triage")
+def mail_triage(
+    repo: Path = typer.Option(Path("."), "--repo"),
+    mail_id: str = typer.Option(..., "--mail-id"),
+    decision: str = typer.Option(..., "--decision"),
+    importance: str = typer.Option("unknown", "--importance"),
+    planned_use: str = typer.Option("", "--planned-use"),
+    implementation_plan: list[str] = typer.Option([], "--implementation-plan"),
+    recorded_by: str = typer.Option("unknown", "--recorded-by"),
+    human_verified: bool = typer.Option(False, "--human-reviewed"),
+    notes: str = typer.Option("", "--notes"),
+) -> None:
+    """Evaluate inbox mail and record now/future adoption tracking."""
+    cfg = _cfg()
+    try:
+        result = triage_mail(
+            repo.resolve(),
+            mail_id=mail_id,
+            intake_decision=decision,
+            importance=importance,
+            planned_use=planned_use,
+            implementation_plan=implementation_plan,
+            recorded_by=recorded_by,
+            human_verified=human_verified,
+            notes=notes,
+            repo_policies=cfg.mail_repos,
         )
     except (ValueError, TypeError) as exc:
         console.print(str(exc))
@@ -542,7 +658,354 @@ def mail_release(
 @mail_app.command("digest")
 def mail_digest(repo: Path = typer.Option(Path("."), "--repo")) -> None:
     """Show unread mail and mark the repo mailbox as checked."""
-    result = digest_mail(repo.resolve())
+    cfg = _cfg()
+    result = digest_mail(repo.resolve(), repo_policies=cfg.mail_repos)
+    console.print_json(data=result)
+
+
+@enroll_app.command("discover")
+def enroll_discover(
+    config: Optional[Path] = typer.Option(None),
+    hub: Optional[Path] = typer.Option(None),
+) -> None:
+    """Report configured and candidate repos without mutating targets."""
+    cfg = _cfg(config, hub)
+    console.print_json(data=discover_enrollment_candidates(cfg))
+
+
+@enroll_app.command("plan")
+def enroll_plan(
+    repo: list[str] = typer.Option([], "--repo"),
+    wave: str = typer.Option(..., "--wave"),
+    config: Optional[Path] = typer.Option(None),
+    hub: Optional[Path] = typer.Option(None),
+) -> None:
+    """Write a reviewed-wave enrollment plan under processed/enrollment."""
+    cfg = _cfg(config, hub)
+    policies = _select_enrollment(repo, cfg, wave=wave)
+    result = build_enrollment_plan(cfg.repo_root, policies, wave=wave, update=False)
+    console.print_json(data=result)
+
+
+@enroll_app.command("apply")
+def enroll_apply(
+    repo: str = typer.Option(..., "--repo"),
+    approval_id: str = typer.Option(..., "--approval-id"),
+    config: Optional[Path] = typer.Option(None),
+    hub: Optional[Path] = typer.Option(None),
+) -> None:
+    """Apply full DAD governance enrollment to one reviewed repo."""
+    cfg = _cfg(config, hub)
+    policy = _select_enrollment([repo], cfg)[0]
+    try:
+        result = apply_enrollment(
+            cfg.repo_root,
+            policy,
+            approval_id=approval_id,
+            update=False,
+        )
+    except ValueError as exc:
+        console.print(str(exc))
+        raise typer.Exit(2) from exc
+    console.print_json(data=result)
+
+
+@enroll_app.command("update-plan")
+def enroll_update_plan(
+    repo: list[str] = typer.Option([], "--repo"),
+    wave: str = typer.Option(..., "--wave"),
+    config: Optional[Path] = typer.Option(None),
+    hub: Optional[Path] = typer.Option(None),
+) -> None:
+    """Write a reviewed-wave enrollment update plan under processed/enrollment."""
+    cfg = _cfg(config, hub)
+    policies = _select_enrollment(repo, cfg, wave=wave)
+    result = build_enrollment_plan(cfg.repo_root, policies, wave=wave, update=True)
+    console.print_json(data=result)
+
+
+@enroll_app.command("update-apply")
+def enroll_update_apply(
+    repo: str = typer.Option(..., "--repo"),
+    approval_id: str = typer.Option(..., "--approval-id"),
+    config: Optional[Path] = typer.Option(None),
+    hub: Optional[Path] = typer.Option(None),
+) -> None:
+    """Apply a reviewed DAD enrollment update to one repo."""
+    cfg = _cfg(config, hub)
+    policy = _select_enrollment([repo], cfg)[0]
+    try:
+        result = apply_enrollment(
+            cfg.repo_root,
+            policy,
+            approval_id=approval_id,
+            update=True,
+        )
+    except ValueError as exc:
+        console.print(str(exc))
+        raise typer.Exit(2) from exc
+    console.print_json(data=result)
+
+
+@enroll_app.command("status")
+def enroll_status(
+    repo: list[str] = typer.Option(["all"], "--repo"),
+    config: Optional[Path] = typer.Option(None),
+    hub: Optional[Path] = typer.Option(None),
+) -> None:
+    """Show enrollment contract and daily/weekly freshness status."""
+    cfg = _cfg(config, hub)
+    policies = cfg.enrollment_repos if repo == ["all"] else _select_enrollment(repo, cfg)
+    console.print_json(data=enrollment_status_all(policies))
+
+
+@dad_app.command("needs")
+def dad_needs(hub: Optional[Path] = typer.Option(None)) -> None:
+    """Show what DAD wants repos to send back through candidate mail."""
+    cfg = _cfg(hub=hub)
+    console.print_json(data=load_needs(cfg.repo_root))
+
+
+@dad_app.command("offerings")
+def dad_offerings(hub: Optional[Path] = typer.Option(None)) -> None:
+    """Show DAD's richer asset, skill, template, harness, and map catalog."""
+    cfg = _cfg(hub=hub)
+    console.print_json(data=load_offerings(cfg.repo_root))
+
+
+@dad_app.command("match")
+def dad_match(
+    repo: Path = typer.Option(Path("."), "--repo"),
+    task: str = typer.Option("", "--task"),
+    limit: int = typer.Option(10, min=1, max=50),
+    hub: Optional[Path] = typer.Option(None),
+) -> None:
+    """Match a repo context to DAD offerings with deterministic candidate scoring."""
+    cfg = _cfg(hub=hub)
+    try:
+        result = match_repo_offerings(cfg.repo_root, repo.resolve(), task=task, limit=limit)
+    except (OSError, ValueError, FileNotFoundError) as exc:
+        console.print(str(exc))
+        raise typer.Exit(2) from exc
+    console.print_json(data=result)
+
+
+@dad_app.command("inventory")
+def dad_inventory(
+    config: Optional[Path] = typer.Option(None),
+    hub: Optional[Path] = typer.Option(None),
+    max_depth: int = typer.Option(5, "--max-depth", min=1, max=12),
+) -> None:
+    """Write central-only repo inventory reconciliation reports."""
+    cfg = _cfg(config, hub)
+    try:
+        result = reconcile_repo_inventory(
+            cfg.repo_root,
+            local_sources=cfg.local_sources,
+            github_sources=cfg.github_sources,
+            mail_policies=cfg.mail_repos,
+            enrollment_policies=cfg.enrollment_repos,
+            max_depth=max_depth,
+        )
+    except (OSError, ValueError) as exc:
+        console.print(str(exc))
+        raise typer.Exit(2) from exc
+    console.print_json(data=result)
+
+
+@dad_app.command("cadence-plan")
+def dad_cadence_plan(
+    config: Optional[Path] = typer.Option(None),
+    hub: Optional[Path] = typer.Option(None),
+) -> None:
+    """Write the daily mail and weekly library/check cadence plan."""
+    cfg = _cfg(config, hub)
+    try:
+        result = build_dad_cadence_plan(
+            cfg.repo_root,
+            mail_policies=cfg.mail_repos,
+            enrollment_policies=cfg.enrollment_repos,
+        )
+    except (OSError, ValueError) as exc:
+        console.print(str(exc))
+        raise typer.Exit(2) from exc
+    console.print_json(data=result)
+
+
+@dad_app.command("asset-recognition")
+def dad_asset_recognition(hub: Optional[Path] = typer.Option(None)) -> None:
+    """Show the methodology DAD uses to recognize useful digital assets."""
+    cfg = _cfg(hub=hub)
+    console.print_json(data=load_asset_recognition_methodology(cfg.repo_root))
+
+
+@dad_app.command("asset-scout")
+def dad_asset_scout(
+    repo: Path = typer.Option(Path("."), "--repo"),
+    task: str = typer.Option("", "--task"),
+    limit: int = typer.Option(25, min=1, max=100),
+    hub: Optional[Path] = typer.Option(None),
+) -> None:
+    """Write a path/metadata-only candidate asset recognition report for a repo."""
+    cfg = _cfg(hub=hub)
+    try:
+        result = scout_asset_candidates(cfg.repo_root, repo.resolve(), task=task, limit=limit)
+    except (OSError, ValueError, FileNotFoundError) as exc:
+        console.print(str(exc))
+        raise typer.Exit(2) from exc
+    console.print_json(data=result)
+
+
+@usage_app.command("record")
+def usage_record(
+    repo: Path = typer.Option(Path("."), "--repo"),
+    asset: str = typer.Option(..., "--asset"),
+    status: str = typer.Option(..., "--status"),
+    recorded_by: str = typer.Option("unknown", "--recorded-by"),
+    source_ref: str = typer.Option("", "--source-ref"),
+    reason: str = typer.Option("", "--reason"),
+    mail_id: str = typer.Option("", "--mail-id"),
+    adoption_id: str = typer.Option("", "--adoption-id"),
+    hub: Optional[Path] = typer.Option(None),
+) -> None:
+    """Record that a repo uses, watches, rejects, or retired a DAD asset."""
+    cfg = _cfg(hub=hub)
+    try:
+        result = record_usage(
+            cfg.repo_root,
+            repo.resolve(),
+            asset_id=asset,
+            status=status,
+            recorded_by=recorded_by,
+            source_ref=source_ref,
+            reason=reason,
+            mail_id=mail_id,
+            adoption_id=adoption_id,
+            mail_policies=cfg.mail_repos,
+            enrollment_policies=cfg.enrollment_repos,
+        )
+    except (OSError, ValueError) as exc:
+        console.print(str(exc))
+        raise typer.Exit(2) from exc
+    console.print_json(data=result)
+
+
+@usage_app.command("upgrades")
+def usage_upgrades_command(
+    repo: Path = typer.Option(Path("."), "--repo"),
+    hub: Optional[Path] = typer.Option(None),
+) -> None:
+    """Show candidate upgrade notices for assets a repo uses or watches."""
+    cfg = _cfg(hub=hub)
+    try:
+        result = usage_upgrades(
+            cfg.repo_root,
+            repo.resolve(),
+            mail_policies=cfg.mail_repos,
+            enrollment_policies=cfg.enrollment_repos,
+        )
+    except (OSError, ValueError) as exc:
+        console.print(str(exc))
+        raise typer.Exit(2) from exc
+    console.print_json(data=result)
+
+
+@harness_app.command("list")
+def harness_list(hub: Optional[Path] = typer.Option(None)) -> None:
+    """List DAD coding-improvement harnesses."""
+    cfg = _cfg(hub=hub)
+    console.print_json(data=list_harnesses(cfg.repo_root))
+
+
+@harness_app.command("recommend")
+def harness_recommend(
+    repo: Path = typer.Option(Path("."), "--repo"),
+    task: str = typer.Option("", "--task"),
+    limit: int = typer.Option(5, min=1, max=25),
+    hub: Optional[Path] = typer.Option(None),
+) -> None:
+    """Recommend coding harnesses for a repo and task."""
+    cfg = _cfg(hub=hub)
+    try:
+        result = recommend_harnesses(cfg.repo_root, repo.resolve(), task=task, limit=limit)
+    except (OSError, ValueError, FileNotFoundError) as exc:
+        console.print(str(exc))
+        raise typer.Exit(2) from exc
+    console.print_json(data=result)
+
+
+@harness_app.command("discovery-methodology")
+def harness_discovery_methodology(hub: Optional[Path] = typer.Option(None)) -> None:
+    """Show the radar methodology for finding new coding harness opportunities."""
+    cfg = _cfg(hub=hub)
+    console.print_json(data=load_harness_discovery_methodology(cfg.repo_root))
+
+
+@harness_app.command("discover")
+def harness_discover_command(
+    repo: Path = typer.Option(Path("."), "--repo"),
+    task: str = typer.Option("", "--task"),
+    limit: int = typer.Option(10, min=1, max=50),
+    hub: Optional[Path] = typer.Option(None),
+) -> None:
+    """Write a candidate harness-opportunity discovery report for a repo."""
+    cfg = _cfg(hub=hub)
+    try:
+        result = discover_harness_opportunities(
+            cfg.repo_root,
+            repo.resolve(),
+            task=task,
+            limit=limit,
+        )
+    except (OSError, ValueError, FileNotFoundError) as exc:
+        console.print(str(exc))
+        raise typer.Exit(2) from exc
+    console.print_json(data=result)
+
+
+@harness_app.command("research")
+def harness_research_command(
+    harness: str = typer.Option(..., "--harness"),
+    hub: Optional[Path] = typer.Option(None),
+) -> None:
+    """Write a candidate research packet for a harness."""
+    cfg = _cfg(hub=hub)
+    try:
+        result = harness_research(cfg.repo_root, harness)
+    except (OSError, ValueError, FileNotFoundError) as exc:
+        console.print(str(exc))
+        raise typer.Exit(2) from exc
+    console.print_json(data=result)
+
+
+@harness_app.command("evaluate")
+def harness_evaluate_command(
+    harness: str = typer.Option(..., "--harness"),
+    repo: Path = typer.Option(Path("."), "--repo"),
+    hub: Optional[Path] = typer.Option(None),
+) -> None:
+    """Write a candidate harness fit report for a repo."""
+    cfg = _cfg(hub=hub)
+    try:
+        result = harness_evaluate(cfg.repo_root, harness, repo.resolve())
+    except (OSError, ValueError, FileNotFoundError) as exc:
+        console.print(str(exc))
+        raise typer.Exit(2) from exc
+    console.print_json(data=result)
+
+
+@harness_app.command("package")
+def harness_package_command(
+    harness: str = typer.Option(..., "--harness"),
+    hub: Optional[Path] = typer.Option(None),
+) -> None:
+    """Package a DAD coding harness under processed/harnesses."""
+    cfg = _cfg(hub=hub)
+    try:
+        result = harness_package(cfg.repo_root, harness)
+    except (OSError, ValueError, FileNotFoundError) as exc:
+        console.print(str(exc))
+        raise typer.Exit(2) from exc
     console.print_json(data=result)
 
 
@@ -746,6 +1209,7 @@ def agent_postflight(
     lesson: list[str] = typer.Option([], "--lesson"),
     risk: list[str] = typer.Option([], "--risk"),
     next_action: list[str] = typer.Option([], "--next-action"),
+    review_lane: list[str] = typer.Option([], "--review-lane"),
     discovery: list[str] = typer.Option([], "--discovery"),
     failure: list[str] = typer.Option([], "--failure"),
     reusable_pattern: list[str] = typer.Option([], "--reusable-pattern"),
@@ -769,6 +1233,7 @@ def agent_postflight(
         lessons=lesson,
         risks=risk,
         next_actions=next_action,
+        review_lanes=review_lane,
         discoveries=discovery,
         failures=failure,
         reusable_patterns=reusable_pattern,

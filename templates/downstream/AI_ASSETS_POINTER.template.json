@@ -1,0 +1,38 @@
+{
+  "schema_version": "0.1.0",
+  "pointer_type": "dad_coding_assets",
+  "hub": "../Digital-Assett-Directory",
+  "authority_boundary": "This pointer helps local AI agents find DAD coding assets. It does not copy assets into this repo or authorize DAD to override local authority.",
+  "daily_check": {
+    "mail_digest_stale_after_hours": 24,
+    "preflight_behavior": "warn_only_when_stale"
+  },
+  "assets": [
+    {
+      "asset_id": "asset:ai-engineering-preflight",
+      "source": "../Digital-Assett-Directory/assets/ai-engineering-preflight",
+      "profiles": ["common", "python", "rust", "mixed-language", "long-script-refactor"],
+      "required_before": ["coding", "refactoring", "repo-template-creation", "test-strategy"]
+    },
+    {
+      "asset_id": "asset:python-ai-advantage-preflight",
+      "source": "../Digital-Assett-Directory/assets/python-ai-advantage-preflight",
+      "profiles": ["python", "underused-python-tactics", "long-script-refactor"],
+      "required_before": ["python-coding", "python-refactor", "python-library-api-design"]
+    },
+    {
+      "asset_id": "asset:preflight-profile-router",
+      "source": "../Digital-Assett-Directory/registry/preflight-profile-router.json",
+      "profiles": ["profile-router", "midflight-tactic-recommendation"],
+      "required_before": ["high-risk-coding", "governance-sensitive-work", "security-sensitive-work"]
+    },
+    {
+      "asset_id": "asset:coding-tactics-radar",
+      "source": "../Digital-Assett-Directory/registry/coding-tactics-radar.json",
+      "profiles": ["python", "rust", "agent-instruction", "security-sensitive"],
+      "required_before": ["tactic-selection", "midflight-when-stuck", "postflight-learning"]
+    }
+  ],
+  "do_not_copy_full_assets_without_approval": true,
+  "local_adoption_required": true
+}

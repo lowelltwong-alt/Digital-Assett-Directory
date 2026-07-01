@@ -6,7 +6,7 @@ from typing import Any
 from .models import AssetRecord
 from .utils import atomic_write_text, utc_now
 
-MOCK_TRIAL_EXCLUSION_TERMS = ("mock trial", "mock-trial", "mock_trial", "mock trial4.26")
+DEFAULT_EXCLUSION_TERMS: tuple[str, ...] = ()
 
 
 def _contains_any(value: str, terms: tuple[str, ...]) -> bool:
@@ -30,7 +30,7 @@ def downstream_pilot_candidates_markdown(
     assets: list[AssetRecord],
     *,
     limit: int = 10,
-    excluded_terms: tuple[str, ...] = MOCK_TRIAL_EXCLUSION_TERMS,
+    excluded_terms: tuple[str, ...] = DEFAULT_EXCLUSION_TERMS,
 ) -> tuple[str, dict[str, Any]]:
     repositories = [asset for asset in assets if asset.asset_type == "repository"]
     excluded = [
@@ -54,8 +54,8 @@ def downstream_pilot_candidates_markdown(
         f"- Generated at: `{utc_now()}`",
         f"- Repository assets considered: **{len(repositories)}**",
         f"- Candidate repositories: **{len(candidates)}**",
-        f"- Excluded active/changing repositories: **{len(excluded)}**",
-        "- Default exclusion: Mock Trial repositories while active work is in progress.",
+        f"- Excluded by explicit policy terms: **{len(excluded)}**",
+        "- Default exclusion: none. Use reviewed policy terms for temporary holds.",
         "",
         "## Recommended Candidates",
         "",
@@ -83,7 +83,7 @@ def downstream_pilot_candidates_markdown(
     if excluded:
         lines.extend(["## Excluded Repositories", ""])
         for asset in sorted(excluded, key=lambda item: item.title):
-            lines.append(f"- `{asset.logical_path}`: excluded by active Mock Trial safety rule.")
+            lines.append(f"- `{asset.logical_path}`: excluded by reviewed policy term.")
         lines.append("")
     lines.extend(
         [

@@ -1,0 +1,47 @@
+{
+  "schema_version": "0.1.0",
+  "mail_id": "dad:mail:<stable-id>",
+  "thread_id": "dad:thread:<stable-thread-id>",
+  "message_type": "governance_notice",
+  "source_repo": "dad",
+  "target_repo": "<reviewed target repo id>",
+  "created_at": "<ISO-8601 timestamp>",
+  "dedupe_key": "repo-pointer-install:<target-repo>:dad-coding-assets-v0.1.0",
+  "sensitivity": "internal",
+  "review_status": "generated_candidate",
+  "payload": {
+    "command_kind": "repo_pointer_install_request",
+    "source_asset": "asset:downstream-coding-asset-pointer",
+    "profile": "downstream-pointer",
+    "summary": "Install a small DAD coding asset pointer so future AI agents check DAD before material coding work.",
+    "suggested_local_files_to_update": ["AGENTS.md managed block", ".ai-assets.json", ".digital-asset/mail/README.md"],
+    "exact_managed_block_or_pointer_content": "Use templates/downstream/CODING_ASSET_MANAGED_BLOCK.md and templates/downstream/AI_ASSETS_POINTER.template.json.",
+    "risks": ["Pointer must not imply DAD owns target repo canon", "Do not copy full DAD assets into the target repo", "Do not overwrite local authority outside managed markers"],
+    "acceptance_checks": ["Target repo owner approves", "Local preflight passes", "Local validation passes"],
+    "validation_commands": ["python <DAD_ROOT>/scripts/render_downstream_coding_pointer.py --hub <DAD_ROOT>"],
+    "rollback_notes": "Remove the managed block and pointer file in the target repo if local adoption is rejected."
+  },
+  "evidence": ["docs/DOWNSTREAM_CODING_ASSET_POINTERS.md", "templates/downstream/CODING_ASSET_MANAGED_BLOCK.md"],
+  "suggested_actions": ["Review local authority files", "Install only in managed blocks", "Run postflight after adoption"],
+  "source_provenance": {
+    "canonical_source_repo": "<DAD repo path>",
+    "source_repo_id": "dad",
+    "source_repo_alias": "dad",
+    "source_visibility": "internal",
+    "original_source_chain": ["dad"],
+    "return_address": "processed/mail/outbox",
+    "original_mail_id": "",
+    "composed_by": "<agent or human>",
+    "collected_by": "",
+    "collected_at": "",
+    "received_at": ""
+  },
+  "public_release": {
+    "target_visibility": "unknown",
+    "target_public_facing": false,
+    "public_release_required": false,
+    "public_release_status": "not_required",
+    "human_release_id": "",
+    "release_reason": ""
+  }
+}

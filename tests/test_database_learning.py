@@ -1,3 +1,4 @@
+import json
 from pathlib import Path
 
 from digital_asset_directory.database import CatalogDB
@@ -22,6 +23,13 @@ def test_preflight_postflight_closes_session_and_persists(tmp_path: Path):
     repo.mkdir()
     db_path = hub / "state" / "catalog.sqlite3"
     session = preflight(hub, repo, db_path, "codex", "test work")
+    lanes = {lane["lane_id"]: lane for lane in session["recommended_review_lanes"]}
+    assert "review-lane:red-team-and-premortem" in lanes
+    assert "review-lane:lesson-asset-harness-scout" in lanes
+    assert lanes["review-lane:red-team-and-premortem"]["mode"] in {
+        "subagent_when_available_else_checklist",
+        "checklist_if_useful",
+    }
     handoff, lesson = postflight(
         hub,
         db_path,
@@ -29,12 +37,73 @@ def test_preflight_postflight_closes_session_and_persists(tmp_path: Path):
         "completed",
         tests_run=["pytest"],
         lessons=["capture state transitions"],
+        review_lanes=[
+            "review-lane:red-team-and-premortem:checklist:checked failure modes",
+            "review-lane:lesson-asset-harness-scout:checklist:captured reusable lesson",
+        ],
     )
     assert handoff.session_id == session["session_id"]
+    assert {lane.status for lane in handoff.review_lanes} == {"checklist"}
+    assert {
+        lane.lane_id for lane in handoff.review_lanes
+    } == {
+        "review-lane:red-team-and-premortem",
+        "review-lane:lesson-asset-harness-scout",
+    }
     assert lesson.lessons == ["capture state transitions"]
     with CatalogDB(db_path) as db:
         assert db.connection.execute("select count(*) from handoffs").fetchone()[0] == 1
         assert db.connection.execute("select count(*) from lessons").fetchone()[0] == 1
+
+
+def test_postflight_defaults_unrecorded_review_lanes_to_not_run(tmp_path: Path):
+    hub = tmp_path / "hub"
+    hub.mkdir()
+    (hub / "state" / "agent_sessions").mkdir(parents=True)
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    db_path = hub / "state" / "catalog.sqlite3"
+    session = preflight(hub, repo, db_path, "codex", "schema registry work")
+
+    handoff, _lesson = postflight(hub, db_path, session["session_id"], "completed")
+
+    assert {lane.status for lane in handoff.review_lanes} == {"not_run"}
+    assert all("recommended but not recorded" in lane.summary for lane in handoff.review_lanes)
+
+
+def test_postflight_accepts_json_review_lane_records(tmp_path: Path):
+    hub = tmp_path / "hub"
+    hub.mkdir()
+    (hub / "state" / "agent_sessions").mkdir(parents=True)
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    db_path = hub / "state" / "catalog.sqlite3"
+    session = preflight(hub, repo, db_path, "codex", "harness asset scout work")
+    lane = {
+        "lane_id": "review-lane:lesson-asset-harness-scout",
+        "status": "subagent",
+        "reviewer": "asset-scout-agent",
+        "summary": "Found one reusable harness idea.",
+        "findings": ["Candidate harness discovery loop is reusable."],
+        "candidate_outputs": ["dad:need:subagent-review-and-asset-scout-findings"],
+        "follow_up": ["Review for promotion."],
+    }
+
+    handoff, _lesson = postflight(
+        hub,
+        db_path,
+        session["session_id"],
+        "completed",
+        review_lanes=[json.dumps(lane)],
+    )
+
+    scout = next(
+        item
+        for item in handoff.review_lanes
+        if item.lane_id == "review-lane:lesson-asset-harness-scout"
+    )
+    assert scout.status == "subagent"
+    assert scout.candidate_outputs == ["dad:need:subagent-review-and-asset-scout-findings"]
 
 
 def _write_learning_rule_registry(hub: Path) -> None:
@@ -116,6 +185,12 @@ def test_midflight_blocks_until_learning_rule_acknowledged(tmp_path: Path):
     )
 
     assert blocked["status"] == "blocked_missing_learning_rule_ack"
+    assert {
+        lane["lane_id"] for lane in blocked["recommended_review_lanes"]
+    } == {
+        "review-lane:red-team-and-premortem",
+        "review-lane:lesson-asset-harness-scout",
+    }
     assert blocked["missing_learning_rule_acknowledgements"] == [
         "learning-rule:test-temp-fixture"
     ]

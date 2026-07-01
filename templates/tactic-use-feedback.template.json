@@ -1,0 +1,16 @@
+{
+  "schema_version": "0.1.0",
+  "feedback_id": "dad:tactic-feedback:<stable-id>",
+  "repo": "<repo path or reviewed repo id>",
+  "task": "<short task summary>",
+  "agent": "<codex|claude-code|cursor|copilot|other>",
+  "tactic_id": "<tactic id from registry/coding-tactics-radar.json>",
+  "used_at": "<ISO-8601 timestamp>",
+  "helped_because": "<observable benefit or empty string>",
+  "failed_because": "<observable failure or empty string>",
+  "reuse_when": ["<context where this should be reused>"],
+  "avoid_when": ["<context where this should be avoided>"],
+  "evidence": ["<local file path, test command, review note, or mail id>"],
+  "safety_confirmation": "No secrets, credentials, private rows, or large raw source content are included.",
+  "review_status": "generated_candidate"
+}

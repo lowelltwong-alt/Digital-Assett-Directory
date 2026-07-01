@@ -1,0 +1,9 @@
+version: 1
+skill:
+  name: dad-coding-asset-control-plane
+  source: assets/agent-skills/dad-coding-asset-control-plane/SKILL.md
+  registry_record: registry/agent-skill-library.json#skill:dad-coding-asset-control-plane
+  checkout_policy: pointer_or_wrapper_only
+  update_channel: dad_mail
+  authority_boundary: DAD skill guidance routes agents to assets; target repos keep local authority.
+

@@ -14,13 +14,26 @@ This file is read by Codex and may be imported by Claude Code through `CLAUDE.md
 ## Reusable engineering assets
 
 Before coding, refactoring, or creating repo templates, check
-`assets/asset-registry.json` and consult `assets/ai-engineering-preflight/`
+`assets/asset-registry.json`, `registry/coding-asset-registry.json`, and
+consult `assets/ai-engineering-preflight/`
 when the task involves AI-assisted Python, Rust, mixed-language, or agent
 instruction work.
+
+For Python-specific work, also consult
+`assets/python-ai-advantage-preflight/`. For task-to-profile routing and
+midflight tactic selection, use `registry/preflight-profile-router.json` and
+`registry/coding-tactics-radar.json`. These are candidate guidance unless a
+record is explicitly reviewed or promoted.
 
 Use the asset's dry-run deployment and audit scripts before applying downstream
 repo changes. Installing or consulting the central asset does not authorize
 mutating another repository.
+
+Before creating, updating, retiring, replacing, or checking out agent skills,
+check `registry/agent-skill-library.json` and `docs/AGENT_SKILL_LIBRARY.md`.
+Downstream repos should receive skill pointers or wrappers by local approval;
+do not copy full DAD skills, plugins, hooks, or automation into another repo
+from the library alone.
 
 ## Before material work
 
@@ -41,6 +54,20 @@ asset-dir agent midflight --session <SESSION_ID> --context "<context>" --path "<
 ```
 
 Do not continue a matching task while required learning-rule acknowledgements are missing.
+
+For material coding, governance, mail, enrollment, schema, registry, public/private,
+or cross-repo work, use the preflight `recommended_review_lanes`:
+
+- `review-lane:red-team-and-premortem` checks the current change for bugs,
+  false confidence, governance drift, sensitive-data movement, and missing tests.
+- `review-lane:lesson-asset-harness-scout` looks for reusable lessons, novel or
+  important digital assets, coding-harness ideas, skill updates, and DAD needs.
+
+Use subagents for those lanes when the environment supports them and the work is
+large enough to benefit. Otherwise run them as explicit checklist prompts. Record
+useful findings in postflight, and for downstream repos route candidate learning
+through the repo outbox only when local policy allows. Do not copy private rows,
+secrets, or long source blobs into DAD learning records.
 
 ## Operating rules
 
@@ -89,6 +116,16 @@ The final report must include:
 - reusable lessons;
 - remaining risks.
 
+Postflight should also close the review lanes with `--review-lane` records:
+
+```text
+--review-lane "review-lane:red-team-and-premortem:<subagent|checklist|not_applicable|not_run>:<summary>"
+--review-lane "review-lane:lesson-asset-harness-scout:<subagent|checklist|not_applicable|not_run>:<summary>"
+```
+
+If a lane was not run, record `not_run` or let postflight default it to
+`not_run`; do not leave lane status implicit.
+
 ## Validation baseline
 
 ```bash
@@ -96,3 +133,32 @@ python -m pytest
 python -m digital_asset_directory.cli validate
 python -m digital_asset_directory.cli roadmap check
 ```
+
+<!-- BEGIN DIGITAL_ASSET_DIRECTORY_GOVERNANCE -->
+## Digital Asset Directory enrollment contract
+
+Repo enrollment ID: `dad`
+Central DAD hub: `C:/Users/lowel/OneDrive/Desktop/Git Projects/04_Digital_Assett_Directory`
+Contract: `.digital-asset/dad-integration.json`
+
+Before material AI-assisted work, read this repo's front door and run:
+
+```text
+asset-dir agent preflight --repo . --agent <codex|claude-code|cursor|other> --task "<task>"
+```
+
+Use `.digital-asset/context-map.json` to decide which DAD assets, skills,
+templates, architecture references, governance maps, or data maps are relevant.
+Mail is checked daily by digest; asset, skill, template, architecture,
+governance-map, data-map, and enrollment freshness checks are weekly and should
+surface preflight warnings only when stale.
+
+DAD may write broadly only during `asset-dir enroll apply` or
+`asset-dir enroll update-apply` with a reviewed approval ID. Normal recurring
+DAD operation writes only to `.digital-asset/mail/**`.
+
+Mail, assets, skills, and templates are candidate evidence until reviewed
+locally. This repo keeps local source authority and decides whether to adopt
+any suggestion. Public-facing repos cannot receive private/internal/
+restricted/unknown-origin mail without a DAD human release record.
+<!-- END DIGITAL_ASSET_DIRECTORY_GOVERNANCE -->
