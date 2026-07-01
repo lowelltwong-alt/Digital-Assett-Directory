@@ -2,6 +2,7 @@
 __pycache__/
 *.py[cod]
 .pytest_cache/
+.pytest-tmp-root/
 .ruff_cache/
 .mypy_cache/
 .coverage
@@ -29,9 +30,12 @@ processed/calibration/**
 processed/context_packs/**
 processed/learning/**
 processed/mail/**
+processed/harnesses/**
 processed/proposals/**
 processed/quarantine/**
 processed/reports/**
+processed/skills/**
+processed/usage/*.jsonl
 processed/workflow_parts/**
 !processed/**/.gitkeep
 !processed/**/README.md

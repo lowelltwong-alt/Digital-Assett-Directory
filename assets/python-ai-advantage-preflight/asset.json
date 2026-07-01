@@ -1,0 +1,23 @@
+{
+  "asset_id": "dad.asset.python-ai-advantage-preflight",
+  "version": "0.1.0",
+  "name": "Python AI Advantage Preflight",
+  "created_at": "2026-07-01",
+  "asset_type": "preflight_profile",
+  "profiles": [
+    "python",
+    "long-script-refactor",
+    "ai-coding-agent",
+    "repo-template"
+  ],
+  "master_location_recommendation": "assets/python-ai-advantage-preflight/",
+  "authority_boundary": "DAD asset guidance only. Target repos retain local authority and validation requirements.",
+  "entrypoints": {
+    "readme": "README.md",
+    "taxonomy": "python_language_taxonomy.md",
+    "advantage_map": "underused_python_advantage_map.md",
+    "agent_block": "templates/AGENTS_PYTHON_ADVANTAGE_BLOCK.md",
+    "codex_prompt": "prompts/codex_python_advantage_preflight.prompt.md",
+    "inventory": "data/python_language_ai_advantage_inventory.json"
+  }
+}

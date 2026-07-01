@@ -1,0 +1,323 @@
+{
+  "authority_boundary": "DAD enrollment installs or updates only reviewed, marker-bounded governance surfaces after a human approval ID. Normal recurring DAD operation remains mailbox-only under .digital-asset/mail/**.",
+  "generated_at": "2026-07-01T20:03:14.816452+00:00",
+  "item_count": 6,
+  "items": [
+    {
+      "apply_allowed": true,
+      "approval_required": true,
+      "approved_approval_ids": [
+        "USER-2026-07-01-ENROLLMENT-WAVES"
+      ],
+      "approved_dad_managed_paths": [
+        ".digital-asset/dad-integration.json",
+        ".digital-asset/mail/README.md",
+        ".digital-asset/mail/.gitignore",
+        ".digital-asset/mail/inbox.jsonl",
+        ".digital-asset/mail/outbox.jsonl",
+        ".digital-asset/mail/archive.jsonl",
+        ".digital-asset/skills/checkout.json",
+        ".digital-asset/context-map.json",
+        ".digital-asset/governance-map.yaml",
+        ".digital-asset/data-map.yaml",
+        ".ai-assets.json",
+        "AGENTS.md",
+        "CLAUDE.md",
+        "AI_FRONT_DOOR.md",
+        "AI_TABLE_OF_CONTENTS.md",
+        ".githooks/pre-push",
+        ".githooks/pre-push.ps1"
+      ],
+      "authority_boundary": "DAD enrollment installs or updates only reviewed, marker-bounded governance surfaces after a human approval ID. Normal recurring DAD operation remains mailbox-only under .digital-asset/mail/**.",
+      "cadence": {
+        "asset_skill_template_enrollment_checks": "weekly",
+        "mail": "daily",
+        "preflight": "warn_only_when_stale"
+      },
+      "candidate_weekly_notices": [
+        "asset_update_available",
+        "skill_update_retirement_or_replacement",
+        "template_update_available",
+        "architecture_reference_update",
+        "governance_map_drift",
+        "data_map_drift",
+        "new_best_practice_or_library_recommendation"
+      ],
+      "dad_hub_ref": "dad://hub/Digital-Assett-Directory",
+      "hook_install_disclosed": true,
+      "normal_operation_write_boundary": ".digital-asset/mail/**",
+      "operation": "enroll",
+      "public_facing": true,
+      "repo_alias": "logos-scripture-graph",
+      "repo_id": "logos-scripture-graph",
+      "repo_ref": "dad://repo/logos-scripture-graph",
+      "update_allowed": true,
+      "visibility": "public",
+      "wave": "wave-2026-07-01-public-reference"
+    },
+    {
+      "apply_allowed": true,
+      "approval_required": true,
+      "approved_approval_ids": [
+        "USER-2026-07-01-ENROLLMENT-WAVES"
+      ],
+      "approved_dad_managed_paths": [
+        ".digital-asset/dad-integration.json",
+        ".digital-asset/mail/README.md",
+        ".digital-asset/mail/.gitignore",
+        ".digital-asset/mail/inbox.jsonl",
+        ".digital-asset/mail/outbox.jsonl",
+        ".digital-asset/mail/archive.jsonl",
+        ".digital-asset/skills/checkout.json",
+        ".digital-asset/context-map.json",
+        ".digital-asset/governance-map.yaml",
+        ".digital-asset/data-map.yaml",
+        ".ai-assets.json",
+        "AGENTS.md",
+        "CLAUDE.md",
+        "AI_FRONT_DOOR.md",
+        "AI_TABLE_OF_CONTENTS.md",
+        ".githooks/pre-push",
+        ".githooks/pre-push.ps1"
+      ],
+      "authority_boundary": "DAD enrollment installs or updates only reviewed, marker-bounded governance surfaces after a human approval ID. Normal recurring DAD operation remains mailbox-only under .digital-asset/mail/**.",
+      "cadence": {
+        "asset_skill_template_enrollment_checks": "weekly",
+        "mail": "daily",
+        "preflight": "warn_only_when_stale"
+      },
+      "candidate_weekly_notices": [
+        "asset_update_available",
+        "skill_update_retirement_or_replacement",
+        "template_update_available",
+        "architecture_reference_update",
+        "governance_map_drift",
+        "data_map_drift",
+        "new_best_practice_or_library_recommendation"
+      ],
+      "dad_hub_ref": "dad://hub/Digital-Assett-Directory",
+      "hook_install_disclosed": true,
+      "normal_operation_write_boundary": ".digital-asset/mail/**",
+      "operation": "enroll",
+      "public_facing": true,
+      "repo_alias": "LawFirm-os-semantic-substrate",
+      "repo_id": "lawfirm-os-semantic-substrate",
+      "repo_ref": "dad://repo/lawfirm-os-semantic-substrate",
+      "update_allowed": true,
+      "visibility": "public",
+      "wave": "wave-2026-07-01-public-reference"
+    },
+    {
+      "apply_allowed": true,
+      "approval_required": true,
+      "approved_approval_ids": [
+        "USER-2026-07-01-ENROLLMENT-WAVES"
+      ],
+      "approved_dad_managed_paths": [
+        ".digital-asset/dad-integration.json",
+        ".digital-asset/mail/README.md",
+        ".digital-asset/mail/.gitignore",
+        ".digital-asset/mail/inbox.jsonl",
+        ".digital-asset/mail/outbox.jsonl",
+        ".digital-asset/mail/archive.jsonl",
+        ".digital-asset/skills/checkout.json",
+        ".digital-asset/context-map.json",
+        ".digital-asset/governance-map.yaml",
+        ".digital-asset/data-map.yaml",
+        ".ai-assets.json",
+        "AGENTS.md",
+        "CLAUDE.md",
+        "AI_FRONT_DOOR.md",
+        "AI_TABLE_OF_CONTENTS.md",
+        ".githooks/pre-push",
+        ".githooks/pre-push.ps1"
+      ],
+      "authority_boundary": "DAD enrollment installs or updates only reviewed, marker-bounded governance surfaces after a human approval ID. Normal recurring DAD operation remains mailbox-only under .digital-asset/mail/**.",
+      "cadence": {
+        "asset_skill_template_enrollment_checks": "weekly",
+        "mail": "daily",
+        "preflight": "warn_only_when_stale"
+      },
+      "candidate_weekly_notices": [
+        "asset_update_available",
+        "skill_update_retirement_or_replacement",
+        "template_update_available",
+        "architecture_reference_update",
+        "governance_map_drift",
+        "data_map_drift",
+        "new_best_practice_or_library_recommendation"
+      ],
+      "dad_hub_ref": "dad://hub/Digital-Assett-Directory",
+      "hook_install_disclosed": true,
+      "normal_operation_write_boundary": ".digital-asset/mail/**",
+      "operation": "enroll",
+      "public_facing": true,
+      "repo_alias": "LawFirm-os-skills-registry",
+      "repo_id": "lawfirm-os-skills-registry",
+      "repo_ref": "dad://repo/lawfirm-os-skills-registry",
+      "update_allowed": true,
+      "visibility": "public",
+      "wave": "wave-2026-07-01-public-reference"
+    },
+    {
+      "apply_allowed": true,
+      "approval_required": true,
+      "approved_approval_ids": [
+        "USER-2026-07-01-ENROLLMENT-WAVES"
+      ],
+      "approved_dad_managed_paths": [
+        ".digital-asset/dad-integration.json",
+        ".digital-asset/mail/README.md",
+        ".digital-asset/mail/.gitignore",
+        ".digital-asset/mail/inbox.jsonl",
+        ".digital-asset/mail/outbox.jsonl",
+        ".digital-asset/mail/archive.jsonl",
+        ".digital-asset/skills/checkout.json",
+        ".digital-asset/context-map.json",
+        ".digital-asset/governance-map.yaml",
+        ".digital-asset/data-map.yaml",
+        ".ai-assets.json",
+        "AGENTS.md",
+        "CLAUDE.md",
+        "AI_FRONT_DOOR.md",
+        "AI_TABLE_OF_CONTENTS.md",
+        ".githooks/pre-push",
+        ".githooks/pre-push.ps1"
+      ],
+      "authority_boundary": "DAD enrollment installs or updates only reviewed, marker-bounded governance surfaces after a human approval ID. Normal recurring DAD operation remains mailbox-only under .digital-asset/mail/**.",
+      "cadence": {
+        "asset_skill_template_enrollment_checks": "weekly",
+        "mail": "daily",
+        "preflight": "warn_only_when_stale"
+      },
+      "candidate_weekly_notices": [
+        "asset_update_available",
+        "skill_update_retirement_or_replacement",
+        "template_update_available",
+        "architecture_reference_update",
+        "governance_map_drift",
+        "data_map_drift",
+        "new_best_practice_or_library_recommendation"
+      ],
+      "dad_hub_ref": "dad://hub/Digital-Assett-Directory",
+      "hook_install_disclosed": true,
+      "normal_operation_write_boundary": ".digital-asset/mail/**",
+      "operation": "enroll",
+      "public_facing": true,
+      "repo_alias": "LawFirm-os-orchestrator",
+      "repo_id": "lawfirm-os-orchestrator",
+      "repo_ref": "dad://repo/lawfirm-os-orchestrator",
+      "update_allowed": true,
+      "visibility": "public",
+      "wave": "wave-2026-07-01-public-reference"
+    },
+    {
+      "apply_allowed": true,
+      "approval_required": true,
+      "approved_approval_ids": [
+        "USER-2026-07-01-ENROLLMENT-WAVES"
+      ],
+      "approved_dad_managed_paths": [
+        ".digital-asset/dad-integration.json",
+        ".digital-asset/mail/README.md",
+        ".digital-asset/mail/.gitignore",
+        ".digital-asset/mail/inbox.jsonl",
+        ".digital-asset/mail/outbox.jsonl",
+        ".digital-asset/mail/archive.jsonl",
+        ".digital-asset/skills/checkout.json",
+        ".digital-asset/context-map.json",
+        ".digital-asset/governance-map.yaml",
+        ".digital-asset/data-map.yaml",
+        ".ai-assets.json",
+        "AGENTS.md",
+        "CLAUDE.md",
+        "AI_FRONT_DOOR.md",
+        "AI_TABLE_OF_CONTENTS.md",
+        ".githooks/pre-push",
+        ".githooks/pre-push.ps1"
+      ],
+      "authority_boundary": "DAD enrollment installs or updates only reviewed, marker-bounded governance surfaces after a human approval ID. Normal recurring DAD operation remains mailbox-only under .digital-asset/mail/**.",
+      "cadence": {
+        "asset_skill_template_enrollment_checks": "weekly",
+        "mail": "daily",
+        "preflight": "warn_only_when_stale"
+      },
+      "candidate_weekly_notices": [
+        "asset_update_available",
+        "skill_update_retirement_or_replacement",
+        "template_update_available",
+        "architecture_reference_update",
+        "governance_map_drift",
+        "data_map_drift",
+        "new_best_practice_or_library_recommendation"
+      ],
+      "dad_hub_ref": "dad://hub/Digital-Assett-Directory",
+      "hook_install_disclosed": true,
+      "normal_operation_write_boundary": ".digital-asset/mail/**",
+      "operation": "enroll",
+      "public_facing": true,
+      "repo_alias": "LawFirm-os-exceptions-lake-runtime",
+      "repo_id": "lawfirm-os-exceptions-lake-runtime",
+      "repo_ref": "dad://repo/lawfirm-os-exceptions-lake-runtime",
+      "update_allowed": true,
+      "visibility": "public",
+      "wave": "wave-2026-07-01-public-reference"
+    },
+    {
+      "apply_allowed": true,
+      "approval_required": true,
+      "approved_approval_ids": [
+        "USER-2026-07-01-ENROLLMENT-WAVES"
+      ],
+      "approved_dad_managed_paths": [
+        ".digital-asset/dad-integration.json",
+        ".digital-asset/mail/README.md",
+        ".digital-asset/mail/.gitignore",
+        ".digital-asset/mail/inbox.jsonl",
+        ".digital-asset/mail/outbox.jsonl",
+        ".digital-asset/mail/archive.jsonl",
+        ".digital-asset/skills/checkout.json",
+        ".digital-asset/context-map.json",
+        ".digital-asset/governance-map.yaml",
+        ".digital-asset/data-map.yaml",
+        ".ai-assets.json",
+        "AGENTS.md",
+        "CLAUDE.md",
+        "AI_FRONT_DOOR.md",
+        "AI_TABLE_OF_CONTENTS.md",
+        ".githooks/pre-push",
+        ".githooks/pre-push.ps1"
+      ],
+      "authority_boundary": "DAD enrollment installs or updates only reviewed, marker-bounded governance surfaces after a human approval ID. Normal recurring DAD operation remains mailbox-only under .digital-asset/mail/**.",
+      "cadence": {
+        "asset_skill_template_enrollment_checks": "weekly",
+        "mail": "daily",
+        "preflight": "warn_only_when_stale"
+      },
+      "candidate_weekly_notices": [
+        "asset_update_available",
+        "skill_update_retirement_or_replacement",
+        "template_update_available",
+        "architecture_reference_update",
+        "governance_map_drift",
+        "data_map_drift",
+        "new_best_practice_or_library_recommendation"
+      ],
+      "dad_hub_ref": "dad://hub/Digital-Assett-Directory",
+      "hook_install_disclosed": true,
+      "normal_operation_write_boundary": ".digital-asset/mail/**",
+      "operation": "enroll",
+      "public_facing": true,
+      "repo_alias": "LawFirm-os-legal-knowledge-runtime",
+      "repo_id": "lawfirm-os-legal-knowledge-runtime",
+      "repo_ref": "dad://repo/lawfirm-os-legal-knowledge-runtime",
+      "update_allowed": true,
+      "visibility": "public",
+      "wave": "wave-2026-07-01-public-reference"
+    }
+  ],
+  "operation": "enroll",
+  "plan_id": "enroll-wave-2026-07-01-public-reference",
+  "schema_version": "0.1.0",
+  "wave": "wave-2026-07-01-public-reference"
+}

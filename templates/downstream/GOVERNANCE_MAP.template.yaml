@@ -1,0 +1,35 @@
+schema_version: 0.1.0
+repo_id: <repo-id>
+repo_ref: dad://repo/<repo-id>
+dad_hub_ref: dad://hub/Digital-Assett-Directory
+authority_boundary: DAD governance maps describe dependencies and approved surfaces; they do not transfer local source authority.
+source_authority: target_repo_retains_local_canon
+dad_managed_surfaces:
+  - .digital-asset/mail/**
+  - .digital-asset/skills/checkout.json
+  - .digital-asset/context-map.json
+  - .digital-asset/governance-map.yaml
+  - .digital-asset/data-map.yaml
+  - .ai-assets.json
+  - AGENTS.md managed block
+  - CLAUDE.md import/block
+  - AI_FRONT_DOOR.md managed block
+  - AI_TABLE_OF_CONTENTS.md managed rows
+  - .githooks/pre-push
+  - .githooks/pre-push.ps1
+normal_operation_write_boundary: .digital-asset/mail/**
+control_planes:
+  - mail_center
+  - reusable_assets
+  - agent_skills
+  - templates
+  - architecture_references
+  - coding_test_parity
+  - governance_maps
+  - data_maps
+  - learning_postflight_loops
+validation_commands: []
+human_gates:
+  - enroll apply requires reviewed approval ID
+  - enroll update-apply requires reviewed approval ID
+  - private/internal/restricted/unknown-origin mail to public-facing repos requires human release

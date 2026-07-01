@@ -1,0 +1,74 @@
+{
+  "schema_version": "0.1.0",
+  "repo_id": "<repo-id>",
+  "repo_alias": "<repo-alias>",
+  "repo_ref": "dad://repo/<repo-id>",
+  "visibility": "unknown",
+  "public_facing": false,
+  "dad_hub": {
+    "hub_id": "dad",
+    "hub_ref": "dad://hub/Digital-Assett-Directory",
+    "local_paths_included": false
+  },
+  "enrollment": {
+    "version": "0.1.0",
+    "status": "enrolled",
+    "wave": "<reviewed-wave-id>",
+    "approval_id": "<human-approval-id>",
+    "installed_at": "<iso-8601>",
+    "last_operation": "enroll",
+    "normal_write_boundary": ".digital-asset/mail/**",
+    "one_time_full_governance_install": true
+  },
+  "cadence": {
+    "mail": {
+      "frequency": "daily",
+      "preflight_behavior": "warn_only_when_stale",
+      "stale_after_hours": 24
+    },
+    "weekly_checks": {
+      "frequency": "weekly",
+      "checks": [
+        "asset_update_available",
+        "skill_update_retirement_or_replacement",
+        "template_update_available",
+        "architecture_reference_update",
+        "governance_map_drift",
+        "data_map_drift",
+        "new_best_practice_or_library_recommendation"
+      ],
+      "preflight_behavior": "warn_only_when_stale"
+    }
+  },
+  "enabled_control_planes": [
+    "dad_library",
+    "mail_center",
+    "reusable_assets",
+    "coding_harnesses",
+    "agent_skills",
+    "templates",
+    "architecture_references",
+    "repo_enrollment",
+    "coding_test_parity",
+    "governance_maps",
+    "data_maps",
+    "learning_postflight_loops"
+  ],
+  "local_validation_commands": [],
+  "approved_dad_managed_paths": [
+    ".digital-asset/mail/**",
+    ".digital-asset/skills/checkout.json",
+    ".digital-asset/context-map.json",
+    ".digital-asset/governance-map.yaml",
+    ".digital-asset/data-map.yaml",
+    ".ai-assets.json",
+    "AGENTS.md managed block",
+    "CLAUDE.md import/block",
+    "AI_FRONT_DOOR.md managed block",
+    "AI_TABLE_OF_CONTENTS.md managed rows",
+    ".githooks/pre-push",
+    ".githooks/pre-push.ps1"
+  ],
+  "return_address": "dad://repo/<repo-id>/.digital-asset/mail/outbox.jsonl",
+  "authority_boundary": "DAD enrollment installs approved surfaces only with a human approval ID. Normal recurring DAD operation writes only to .digital-asset/mail/**."
+}

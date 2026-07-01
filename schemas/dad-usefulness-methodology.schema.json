@@ -1,0 +1,44 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://local.digital-asset-directory/schemas/dad-usefulness-methodology.schema.json",
+  "title": "DAD Usefulness Methodology",
+  "type": "object",
+  "required": ["schema_version", "methodology_id", "authority_boundary", "weights", "thresholds", "decision_rules"],
+  "properties": {
+    "schema_version": {"const": "0.1.0"},
+    "methodology_id": {"type": "string", "minLength": 1},
+    "authority_boundary": {"type": "string", "minLength": 1},
+    "weights": {
+      "type": "object",
+      "required": [
+        "language_match",
+        "repo_type_match",
+        "domain_match",
+        "context_tag_match",
+        "task_match",
+        "capability_match"
+      ],
+      "properties": {
+        "language_match": {"type": "number", "minimum": 0},
+        "repo_type_match": {"type": "number", "minimum": 0},
+        "domain_match": {"type": "number", "minimum": 0},
+        "context_tag_match": {"type": "number", "minimum": 0},
+        "task_match": {"type": "number", "minimum": 0},
+        "capability_match": {"type": "number", "minimum": 0}
+      },
+      "additionalProperties": false
+    },
+    "thresholds": {
+      "type": "object",
+      "required": ["use_now", "save_for_future", "defer"],
+      "properties": {
+        "use_now": {"type": "number", "minimum": 0, "maximum": 100},
+        "save_for_future": {"type": "number", "minimum": 0, "maximum": 100},
+        "defer": {"type": "number", "minimum": 0, "maximum": 100}
+      },
+      "additionalProperties": false
+    },
+    "decision_rules": {"type": "array", "items": {"type": "string", "minLength": 1}, "minItems": 1}
+  },
+  "additionalProperties": false
+}

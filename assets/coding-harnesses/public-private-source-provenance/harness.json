@@ -1,0 +1,21 @@
+{
+  "harness_id": "dad:harness:public-private-provenance",
+  "name": "Public Private Source Provenance",
+  "version": "0.1.0",
+  "path": "assets/coding-harnesses/public-private-source-provenance",
+  "family": "public_private_release",
+  "status": "candidate",
+  "languages": ["python", "agent-instruction"],
+  "repo_types": ["application", "control_plane", "public_repo"],
+  "domains": ["security", "privacy", "mail_center"],
+  "context_tags": ["source_provenance", "public_release", "sensitive_boundary"],
+  "task_types": ["public_release", "mail_delivery", "security_review", "provenance_review"],
+  "capabilities": ["private_to_public_hold", "source_chain_audit", "sensitive_payload_screening"],
+  "public_safe": true,
+  "entrypoints": ["README.md", "harness.json", "prompts/README.md"],
+  "research_questions": ["Can a private source reach a public repo without human release?", "Can untrusted mail spoof public provenance?"],
+  "validation_commands": ["python -m pytest tests/test_mail_center.py -q"],
+  "source_evidence": ["docs/MAIL_CENTER.md", "schemas/mail-message.schema.json"],
+  "review_status": "candidate",
+  "authority_boundary": "Best-effort screening does not prove safety; human release gates private-to-public movement."
+}

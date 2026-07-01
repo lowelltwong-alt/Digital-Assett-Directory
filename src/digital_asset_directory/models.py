@@ -229,6 +229,19 @@ class LearningRuleRecord(BaseModel):
     review_status: Literal["generated_candidate", "reviewed", "rejected"] = "reviewed"
 
 
+class ReviewLaneRecord(BaseModel):
+    lane_id: Literal[
+        "review-lane:red-team-and-premortem",
+        "review-lane:lesson-asset-harness-scout",
+    ]
+    status: Literal["subagent", "checklist", "not_applicable", "not_run"]
+    reviewer: str = ""
+    summary: str = ""
+    findings: list[str] = Field(default_factory=list)
+    candidate_outputs: list[str] = Field(default_factory=list)
+    follow_up: list[str] = Field(default_factory=list)
+
+
 class HandoffRecord(BaseModel):
     schema_version: str = "0.1.0"
     handoff_id: str
@@ -249,6 +262,7 @@ class HandoffRecord(BaseModel):
     lessons: list[str] = Field(default_factory=list)
     risks: list[str] = Field(default_factory=list)
     next_actions: list[str] = Field(default_factory=list)
+    review_lanes: list[ReviewLaneRecord] = Field(default_factory=list)
     review_status: Literal["auto_captured_unreviewed", "candidate", "reviewed"] = "candidate"
 
 
@@ -824,6 +838,36 @@ class MailDecisionRecord(BaseModel):
     decided_by: str = "unknown"
     decision_actor_type: Literal["human", "agent", "unknown"] = "agent"
     human_verified: bool = False
+    notes: str = ""
+    review_status: Literal["agent_triage", "human_reviewed"] = "agent_triage"
+
+
+class MailAdoptionRecord(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    schema_version: str = "0.1.0"
+    adoption_id: str
+    mail_id: str = Field(min_length=1)
+    repository: str = Field(min_length=1)
+    intake_decision: Literal["implement_now", "save_for_future", "defer", "reject", "archive"]
+    importance: Literal["now", "future", "not_relevant", "unknown"] = "unknown"
+    recorded_at: str
+    recorded_by: str = "unknown"
+    human_verified: bool = False
+    planned_use: str = ""
+    implementation_plan: list[str] = Field(default_factory=list)
+    implementation_status: Literal[
+        "not_started",
+        "planned",
+        "watching",
+        "deferred",
+        "rejected",
+        "archived",
+    ] = "not_started"
+    source_asset_refs: list[str] = Field(default_factory=list)
+    source_repo: str = ""
+    source_provenance: dict[str, Any] = Field(default_factory=dict)
+    update_tracking: dict[str, Any] = Field(default_factory=dict)
     notes: str = ""
     review_status: Literal["agent_triage", "human_reviewed"] = "agent_triage"
 

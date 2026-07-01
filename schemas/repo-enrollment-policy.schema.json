@@ -1,0 +1,31 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://local.digital-asset-directory/schemas/repo-enrollment-policy.schema.json",
+  "title": "DAD Enrollment Repo Policy",
+  "type": "object",
+  "required": ["id", "path", "alias", "visibility", "public_facing", "enrollment_enabled"],
+  "properties": {
+    "id": {"type": "string", "minLength": 1},
+    "path": {"type": "string", "minLength": 1},
+    "alias": {"type": "string", "minLength": 1},
+    "visibility": {"enum": ["public", "internal", "private", "restricted", "unknown"]},
+    "public_facing": {"type": "boolean"},
+    "enrollment_enabled": {"type": "boolean"},
+    "apply_allowed": {"type": "boolean"},
+    "update_allowed": {"type": "boolean"},
+    "active_hold": {"type": "boolean"},
+    "active_hold_reason": {"type": "string"},
+    "allow_dirty_worktree": {"type": "boolean"},
+    "allow_non_main_branch": {"type": "boolean"},
+    "wave": {"type": "string"},
+    "approved_approval_ids": {"type": "array", "items": {"type": "string", "minLength": 1}},
+    "local_paths_allowed": {"type": "boolean"},
+    "repo_type": {"type": "string"},
+    "languages": {"type": "array", "items": {"type": "string", "minLength": 1}},
+    "domains": {"type": "array", "items": {"type": "string", "minLength": 1}},
+    "context_tags": {"type": "array", "items": {"type": "string", "minLength": 1}},
+    "validation_commands": {"type": "array", "items": {"type": "string", "minLength": 1}},
+    "enabled_control_planes": {"type": "array", "items": {"type": "string", "minLength": 1}}
+  },
+  "additionalProperties": false
+}

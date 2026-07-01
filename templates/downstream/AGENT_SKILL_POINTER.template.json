@@ -1,0 +1,46 @@
+{
+  "schema_version": "0.1.0",
+  "pointer_type": "dad_agent_skill_checkout",
+  "hub": "dad://hub/Digital-Assett-Directory",
+  "authority_boundary": "This pointer helps local AI agents find DAD-managed skills. It does not copy full DAD skills into this repo or authorize DAD to override local authority.",
+  "daily_check": {
+    "skill_digest_stale_after_hours": 24,
+    "preflight_behavior": "warn_only_when_stale"
+  },
+  "source_provenance": {
+    "source_repo_id": "dad",
+    "source_repo_alias": "Digital-Assett-Directory",
+    "source_visibility": "internal",
+    "source_registry": "dad://registry/agent-skill-library",
+    "return_address": "dad://mail/outbox",
+    "local_paths_included": false
+  },
+  "checked_out_skills": [
+    {
+      "skill_id": "skill:dad-coding-asset-control-plane",
+      "source": "dad://skill/skill:dad-coding-asset-control-plane/0.1.0",
+      "entrypoint": "dad://skill/skill:dad-coding-asset-control-plane/0.1.0/SKILL.md",
+      "version": "0.1.0",
+      "status": "active",
+      "skill_format": "codex_skill",
+      "checkout_mode": "pointer",
+      "return_address": "dad://mail/outbox",
+      "update_channel": "dad_mail",
+      "required_before": [
+        "coding",
+        "refactoring",
+        "repo-template-creation",
+        "test-strategy",
+        "agent-instruction-design"
+      ],
+      "capabilities": [
+        "preflight_profile_routing",
+        "coding_tactic_selection",
+        "downstream_pointer_guidance",
+        "postflight_pay_forward"
+      ]
+    }
+  ],
+  "do_not_copy_full_skills_without_approval": true,
+  "local_adoption_required": true
+}

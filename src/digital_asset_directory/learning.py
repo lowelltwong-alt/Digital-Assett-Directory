@@ -8,7 +8,7 @@ from typing import Any
 
 from .database import CatalogDB
 from .ids import stable_id, session_id as new_session_id
-from .models import HandoffRecord, LearningRuleRecord, LessonRecord
+from .models import HandoffRecord, LearningRuleRecord, LessonRecord, ReviewLaneRecord
 from .utils import append_jsonl, split_multi, utc_now, write_json
 
 ASSET_USE_FEEDBACK_CODE = "DAD_ASSET_USE_FEEDBACK_V1"
@@ -371,6 +371,95 @@ def add_asset_use_feedback(
     )
 
 
+def recommended_review_lanes(task: str, paths: list[str] | None = None) -> list[dict[str, Any]]:
+    """Return lightweight review lanes future agents can run as subagents or checklists."""
+    task_text = task.lower()
+    path_text = " ".join(paths or []).lower()
+    substantial_signals = {
+        "coding",
+        "refactor",
+        "test",
+        "governance",
+        "mail",
+        "enrollment",
+        "schema",
+        "registry",
+        "asset",
+        "harness",
+        "template",
+        "public",
+        "private",
+    }
+    material = any(signal in task_text or signal in path_text for signal in substantial_signals)
+    mode = "subagent_when_available_else_checklist" if material else "checklist_if_useful"
+    return [
+        {
+            "lane_id": "review-lane:red-team-and-premortem",
+            "mode": mode,
+            "purpose": "Independently check the change for bugs, false confidence, governance drift, sensitive-data movement, and missing tests.",
+            "capture": "Add findings to the task summary and route reusable safety lessons through DAD postflight or candidate mail.",
+            "required_for": "material coding, governance, schema, mail, enrollment, public/private, or cross-repo work",
+        },
+        {
+            "lane_id": "review-lane:lesson-asset-harness-scout",
+            "mode": mode,
+            "purpose": "Look for reusable lessons, novel/important digital assets, coding-harness ideas, skill updates, and DAD needs discovered during the work.",
+            "capture": "Record candidate lessons/assets/harness ideas in postflight and, for downstream repos, in the repo outbox when local policy allows.",
+            "required_for": "material work where a reusable lesson, asset, harness, or workflow may have been learned",
+        },
+    ]
+
+
+def parse_review_lane_records(values: Any) -> list[ReviewLaneRecord]:
+    lanes: dict[str, ReviewLaneRecord] = {
+        lane["lane_id"]: ReviewLaneRecord(
+            lane_id=lane["lane_id"],
+            status="not_run",
+            reviewer="",
+            summary="Review lane was recommended but not recorded.",
+            findings=[],
+            candidate_outputs=[],
+            follow_up=["Record this lane as subagent, checklist, or not_applicable."],
+        )
+        for lane in recommended_review_lanes("")
+    }
+    for value in _review_lane_values(values):
+        parsed = _parse_review_lane_value(value)
+        lanes[parsed.lane_id] = parsed
+    return [lanes["review-lane:red-team-and-premortem"], lanes["review-lane:lesson-asset-harness-scout"]]
+
+
+def _review_lane_values(values: Any) -> list[str]:
+    if values is None:
+        return []
+    if isinstance(values, str):
+        return [values]
+    return [str(value) for value in values if str(value).strip()]
+
+
+def _parse_review_lane_value(value: str) -> ReviewLaneRecord:
+    text = value.strip()
+    if not text:
+        raise ValueError("review lane record cannot be empty")
+    if text.startswith("{"):
+        payload = json.loads(text)
+        return ReviewLaneRecord.model_validate(payload)
+    parts = text.split(":", 3)
+    if len(parts) < 3 or parts[0] != "review-lane":
+        raise ValueError(
+            "review lane must be JSON or review-lane:<name>:<status>[:summary]"
+        )
+    lane_id = f"{parts[0]}:{parts[1]}"
+    status = parts[2]
+    summary = parts[3] if len(parts) > 3 else ""
+    return ReviewLaneRecord(
+        lane_id=lane_id,
+        status=status,
+        reviewer="agent",
+        summary=summary,
+    )
+
+
 def preflight(
     hub_root: Path,
     target_repo: Path,
@@ -413,6 +502,10 @@ def preflight(
         ),
         "learning_rule_acknowledgements": [],
         "mail_digest_status": digest_status,
+        "recommended_review_lanes": recommended_review_lanes(
+            task,
+            baseline_changed_files,
+        ),
     }
     write_json(hub_root / "state" / "agent_sessions" / f"{sid.split(':')[-1]}.json", payload)
     append_jsonl(
@@ -454,6 +547,10 @@ def midflight(
         "required_learning_rule_acknowledgements": required,
         "learning_rule_acknowledgements": acknowledged,
         "missing_learning_rule_acknowledgements": missing,
+        "recommended_review_lanes": recommended_review_lanes(
+            str(session.get("task", "")),
+            path_values,
+        ),
     }
     session["learning_rule_matches"] = matches
     session["required_learning_rule_acknowledgements"] = required
@@ -500,6 +597,7 @@ def postflight(
         lessons=split_multi(kwargs.get("lessons")),
         risks=split_multi(kwargs.get("risks")),
         next_actions=split_multi(kwargs.get("next_actions")),
+        review_lanes=parse_review_lane_records(kwargs.get("review_lanes")),
         review_status=kwargs.get("review_status", "candidate"),
     )
     dated = created[:10]

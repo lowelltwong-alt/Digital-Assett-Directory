@@ -1,0 +1,92 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://local.digital-asset-directory/schemas/coding-asset-registry.schema.json",
+  "title": "Coding Asset Registry",
+  "type": "object",
+  "required": [
+    "registry_version",
+    "status",
+    "authority_boundary",
+    "assets"
+  ],
+  "properties": {
+    "registry_version": {"const": "0.1.0"},
+    "status": {"type": "string", "minLength": 1},
+    "authority_boundary": {"type": "string", "minLength": 1},
+    "assets": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": [
+          "asset_id",
+          "name",
+          "version",
+          "asset_type",
+          "path",
+          "profiles",
+          "languages",
+          "applies_when",
+          "does_not_apply_when",
+          "danger_if_misapplied",
+          "recommended_for_repo_types",
+          "recommended_for_task_types",
+          "authority_boundary",
+          "validation_commands",
+          "upgrade_policy",
+          "review_status",
+          "last_reviewed_at",
+          "next_review_due_at",
+          "source_evidence",
+          "related_assets"
+        ],
+        "properties": {
+          "asset_id": {"type": "string", "minLength": 1},
+          "name": {"type": "string", "minLength": 1},
+          "version": {"type": "string", "minLength": 1},
+          "asset_type": {
+            "enum": [
+              "preflight_profile",
+              "midflight_check",
+              "postflight_template",
+              "coding_tactic_bundle",
+              "repo_template",
+              "agent_instruction_block",
+              "mail_command_template",
+              "research_packet",
+              "security_review_profile",
+              "testing_profile",
+              "refactor_protocol"
+            ]
+          },
+          "path": {"type": "string", "minLength": 1},
+          "profiles": {"type": "array", "items": {"type": "string"}, "minItems": 1},
+          "languages": {"type": "array", "items": {"type": "string"}},
+          "applies_when": {"type": "array", "items": {"type": "string"}, "minItems": 1},
+          "does_not_apply_when": {"type": "array", "items": {"type": "string"}, "minItems": 1},
+          "danger_if_misapplied": {"type": "string", "minLength": 1},
+          "recommended_for_repo_types": {"type": "array", "items": {"type": "string"}},
+          "recommended_for_task_types": {"type": "array", "items": {"type": "string"}, "minItems": 1},
+          "authority_boundary": {"type": "string", "minLength": 1},
+          "validation_commands": {"type": "array", "items": {"type": "string"}},
+          "upgrade_policy": {"type": "string", "minLength": 1},
+          "review_status": {
+            "enum": [
+              "candidate",
+              "installed_for_local_reuse",
+              "reviewed",
+              "rejected",
+              "deprecated"
+            ]
+          },
+          "last_reviewed_at": {"type": "string", "minLength": 1},
+          "next_review_due_at": {"type": "string", "minLength": 1},
+          "source_evidence": {"type": "array", "items": {"type": "string"}, "minItems": 1},
+          "related_assets": {"type": "array", "items": {"type": "string"}}
+        },
+        "additionalProperties": false
+      }
+    }
+  },
+  "additionalProperties": false
+}

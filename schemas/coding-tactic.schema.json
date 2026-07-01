@@ -1,0 +1,84 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://local.digital-asset-directory/schemas/coding-tactic.schema.json",
+  "title": "Coding Tactic",
+  "type": "object",
+  "required": [
+    "tactic_id",
+    "name",
+    "language",
+    "category",
+    "maturity",
+    "status",
+    "applies_when",
+    "does_not_apply_when",
+    "danger_if_misapplied",
+    "build_contexts",
+    "agent_failure_modes_it_prevents",
+    "why_ai_may_underuse_it",
+    "example_prompt_instruction",
+    "minimal_code_example_path",
+    "counterexample_path",
+    "verification_commands",
+    "source_evidence",
+    "confidence",
+    "risk_level",
+    "review_status",
+    "promotion_status",
+    "last_reviewed_at",
+    "next_review_due_at",
+    "reported_by",
+    "observed_usefulness",
+    "reuse_notes"
+  ],
+  "properties": {
+    "tactic_id": {"type": "string", "minLength": 1},
+    "name": {"type": "string", "minLength": 1},
+    "language": {"type": "string", "minLength": 1},
+    "category": {"type": "string", "minLength": 1},
+    "maturity": {
+      "enum": [
+        "confirmed_underused",
+        "likely_underused",
+        "specialized_not_common",
+        "underused_by_local_agents",
+        "unknown_frequency_high_value",
+        "not_underused_but_high_value"
+      ]
+    },
+    "status": {"enum": ["candidate", "reviewed", "promoted", "rejected", "deprecated"]},
+    "applies_when": {"type": "array", "items": {"type": "string"}, "minItems": 1},
+    "does_not_apply_when": {"type": "array", "items": {"type": "string"}, "minItems": 1},
+    "danger_if_misapplied": {"type": "string", "minLength": 1},
+    "build_contexts": {"type": "array", "items": {"type": "string"}, "minItems": 1},
+    "agent_failure_modes_it_prevents": {
+      "type": "array",
+      "items": {"type": "string"},
+      "minItems": 1
+    },
+    "why_ai_may_underuse_it": {"type": "string", "minLength": 1},
+    "example_prompt_instruction": {"type": "string", "minLength": 1},
+    "minimal_code_example_path": {"type": "string", "minLength": 1},
+    "counterexample_path": {"type": "string", "minLength": 1},
+    "verification_commands": {"type": "array", "items": {"type": "string"}},
+    "source_evidence": {"type": "array", "items": {"type": "string"}, "minItems": 1},
+    "confidence": {"enum": ["low", "medium", "high", "unknown"]},
+    "risk_level": {"enum": ["low", "medium", "high"]},
+    "review_status": {"enum": ["generated_candidate", "candidate", "reviewed", "rejected"]},
+    "promotion_status": {
+      "enum": [
+        "not_promoted",
+        "eligible_for_review",
+        "promoted_to_profile",
+        "blocked",
+        "rejected"
+      ]
+    },
+    "last_reviewed_at": {"type": "string", "minLength": 1},
+    "next_review_due_at": {"type": "string", "minLength": 1},
+    "reported_by": {"type": "array", "items": {"type": "string"}},
+    "observed_usefulness": {"type": "array", "items": {"type": "string"}},
+    "reuse_notes": {"type": "string", "minLength": 1}
+  },
+  "additionalProperties": false
+}

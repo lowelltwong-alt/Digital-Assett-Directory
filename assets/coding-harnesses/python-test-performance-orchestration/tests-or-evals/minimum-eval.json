@@ -1,0 +1,26 @@
+{
+  "schema_version": "0.1.0",
+  "eval_id": "dad:harness-eval:python-test-performance-orchestration:minimum",
+  "harness_id": "dad:harness:python-test-performance-orchestration",
+  "status": "candidate",
+  "purpose": "Check that a Python test-performance recommendation fails closed instead of using speed as proof.",
+  "input_contract": [
+    "changed file paths",
+    "native full-suite command",
+    "available targeted-test command",
+    "risk classification for changed surface"
+  ],
+  "cases": [
+    {
+      "case_id": "shared-surface-requires-full-suite",
+      "given": ["A shared module or public API changed.", "Only targeted tests were timed."],
+      "expected": ["Recommend targeted tests as a quick signal only.", "Require full-suite validation before claiming safety."],
+      "fail_if": ["Reports time saved as replacement savings.", "Claims selected tests prove full behavior."]
+    }
+  ],
+  "must_not_claim": [
+    "Do not claim test savings unless the same validation obligation is met.",
+    "Do not skip the full suite for unknown-risk changes."
+  ],
+  "promotion_gate": "Promote only after real repo runs show selected tests catch known failures and full-suite gates remain intact."
+}

@@ -1,0 +1,33 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://local.digital-asset-directory/schemas/data-map-adoption.schema.json",
+  "title": "DAD Data Map Adoption",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "repo_id",
+    "repo_ref",
+    "dad_hub_ref",
+    "visibility",
+    "public_facing",
+    "data_inputs",
+    "generated_outputs",
+    "sensitive_boundaries",
+    "allowed_movement",
+    "authority_boundary"
+  ],
+  "properties": {
+    "schema_version": {"const": "0.1.0"},
+    "repo_id": {"type": "string", "minLength": 1},
+    "repo_ref": {"type": "string", "minLength": 1},
+    "dad_hub_ref": {"type": "string", "minLength": 1},
+    "visibility": {"enum": ["public", "internal", "private", "restricted", "unknown"]},
+    "public_facing": {"type": "boolean"},
+    "data_inputs": {"type": "array", "items": {"type": "object"}},
+    "generated_outputs": {"type": "array", "items": {"type": "string", "minLength": 1}},
+    "sensitive_boundaries": {"type": "array", "items": {"type": "string", "minLength": 1}},
+    "allowed_movement": {"type": "object"},
+    "authority_boundary": {"type": "string", "minLength": 1}
+  },
+  "additionalProperties": false
+}

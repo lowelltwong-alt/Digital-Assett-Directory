@@ -1,0 +1,274 @@
+{
+  "authority_boundary": "This DAD report is central candidate metadata only. It does not authorize enrollment, delivery, hooks, source edits, or writes to downstream repos.",
+  "classification_counts": {
+    "enroll": 7,
+    "needs-human-classification": 1,
+    "protected-central-only": 2
+  },
+  "generated_at": "2026-07-01T21:33:42.102011+00:00",
+  "github_sources": [
+    {
+      "enabled": false,
+      "include_private": true,
+      "inventory_status": "configured_source_only",
+      "next_action": "Import reviewed GitHub repository list or connector output before delivery. Discovery does not authorize local writes.",
+      "owner": "lowelltwong-alt",
+      "source_id": "github-lowelltwong-alt"
+    }
+  ],
+  "records": [
+    {
+      "alias": "dad",
+      "authority_boundary": "This DAD report is central candidate metadata only. It does not authorize enrollment, delivery, hooks, source edits, or writes to downstream repos.",
+      "classification": "enroll",
+      "classification_reasons": [
+        "Reviewed enrollment/mail policy is present."
+      ],
+      "contract_present": true,
+      "enrollment_policy_present": true,
+      "mail_policy_present": true,
+      "next_action": "Use reviewed waves and approval IDs for any broad writes.",
+      "path_public_safe": "C:/Users/lowel/OneDrive/Desktop/Git Projects/04_Digital_Assett_Directory",
+      "path_ref": "C:/Users/lowel/OneDrive/Desktop/Git Projects/04_Digital_Assett_Directory",
+      "public_facing": false,
+      "repo_id": "dad",
+      "repo_name": "04_Digital_Assett_Directory",
+      "repo_record_id": "dad:dad-repo-record:d6bc3181-e822-5fef-ab5b-6f71168d4555",
+      "source_signals": [
+        "enrollment_policy",
+        "enrollment_policy",
+        "mail_policy"
+      ],
+      "visibility": "internal",
+      "write_boundary": "reviewed_policy_required"
+    },
+    {
+      "alias": "LawFirm-os-exceptions-lake-runtime",
+      "authority_boundary": "This DAD report is central candidate metadata only. It does not authorize enrollment, delivery, hooks, source edits, or writes to downstream repos.",
+      "classification": "enroll",
+      "classification_reasons": [
+        "Reviewed enrollment/mail policy is present."
+      ],
+      "contract_present": true,
+      "enrollment_policy_present": true,
+      "mail_policy_present": true,
+      "next_action": "Use reviewed waves and approval IDs for any broad writes.",
+      "path_public_safe": "dad://repo/lawfirm-os-exceptions-lake-runtime",
+      "path_ref": "dad://repo/lawfirm-os-exceptions-lake-runtime",
+      "public_facing": true,
+      "repo_id": "lawfirm-os-exceptions-lake-runtime",
+      "repo_name": "LawFirm-os-exceptions-lake-runtime-main",
+      "repo_record_id": "dad:dad-repo-record:7147ea62-3ee7-524a-801e-731f1d4954b3",
+      "source_signals": [
+        "enrollment_policy",
+        "enrollment_policy",
+        "mail_policy"
+      ],
+      "visibility": "public",
+      "write_boundary": "reviewed_policy_required"
+    },
+    {
+      "alias": "LawFirm-os-legal-knowledge-runtime",
+      "authority_boundary": "This DAD report is central candidate metadata only. It does not authorize enrollment, delivery, hooks, source edits, or writes to downstream repos.",
+      "classification": "enroll",
+      "classification_reasons": [
+        "Reviewed enrollment/mail policy is present."
+      ],
+      "contract_present": true,
+      "enrollment_policy_present": true,
+      "mail_policy_present": true,
+      "next_action": "Use reviewed waves and approval IDs for any broad writes.",
+      "path_public_safe": "dad://repo/lawfirm-os-legal-knowledge-runtime",
+      "path_ref": "dad://repo/lawfirm-os-legal-knowledge-runtime",
+      "public_facing": true,
+      "repo_id": "lawfirm-os-legal-knowledge-runtime",
+      "repo_name": "LawFirm-os-legal-knowledge-runtime",
+      "repo_record_id": "dad:dad-repo-record:ddc38033-554c-5142-93c3-9e0355245f98",
+      "source_signals": [
+        "enrollment_policy",
+        "enrollment_policy",
+        "mail_policy"
+      ],
+      "visibility": "public",
+      "write_boundary": "reviewed_policy_required"
+    },
+    {
+      "alias": "LawFirm-os-orchestrator",
+      "authority_boundary": "This DAD report is central candidate metadata only. It does not authorize enrollment, delivery, hooks, source edits, or writes to downstream repos.",
+      "classification": "enroll",
+      "classification_reasons": [
+        "Reviewed enrollment/mail policy is present."
+      ],
+      "contract_present": true,
+      "enrollment_policy_present": true,
+      "mail_policy_present": true,
+      "next_action": "Use reviewed waves and approval IDs for any broad writes.",
+      "path_public_safe": "dad://repo/lawfirm-os-orchestrator",
+      "path_ref": "dad://repo/lawfirm-os-orchestrator",
+      "public_facing": true,
+      "repo_id": "lawfirm-os-orchestrator",
+      "repo_name": "LawFirm-os-orchestrator",
+      "repo_record_id": "dad:dad-repo-record:efc51eee-72d2-5aa6-90df-3ad4929de5c7",
+      "source_signals": [
+        "enrollment_policy",
+        "enrollment_policy",
+        "mail_policy"
+      ],
+      "visibility": "public",
+      "write_boundary": "reviewed_policy_required"
+    },
+    {
+      "alias": "LawFirm-os-semantic-substrate",
+      "authority_boundary": "This DAD report is central candidate metadata only. It does not authorize enrollment, delivery, hooks, source edits, or writes to downstream repos.",
+      "classification": "enroll",
+      "classification_reasons": [
+        "Reviewed enrollment/mail policy is present."
+      ],
+      "contract_present": true,
+      "enrollment_policy_present": true,
+      "mail_policy_present": true,
+      "next_action": "Use reviewed waves and approval IDs for any broad writes.",
+      "path_public_safe": "dad://repo/lawfirm-os-semantic-substrate",
+      "path_ref": "dad://repo/lawfirm-os-semantic-substrate",
+      "public_facing": true,
+      "repo_id": "lawfirm-os-semantic-substrate",
+      "repo_name": "LawFirm-os-semantic-substrate",
+      "repo_record_id": "dad:dad-repo-record:14eb9945-c9db-5e11-bc96-daedf0b70dce",
+      "source_signals": [
+        "enrollment_policy",
+        "enrollment_policy",
+        "mail_policy"
+      ],
+      "visibility": "public",
+      "write_boundary": "reviewed_policy_required"
+    },
+    {
+      "alias": "LawFirm-os-skills-registry",
+      "authority_boundary": "This DAD report is central candidate metadata only. It does not authorize enrollment, delivery, hooks, source edits, or writes to downstream repos.",
+      "classification": "enroll",
+      "classification_reasons": [
+        "Reviewed enrollment/mail policy is present."
+      ],
+      "contract_present": true,
+      "enrollment_policy_present": true,
+      "mail_policy_present": true,
+      "next_action": "Use reviewed waves and approval IDs for any broad writes.",
+      "path_public_safe": "dad://repo/lawfirm-os-skills-registry",
+      "path_ref": "dad://repo/lawfirm-os-skills-registry",
+      "public_facing": true,
+      "repo_id": "lawfirm-os-skills-registry",
+      "repo_name": "LawFirm-os-skills-registry",
+      "repo_record_id": "dad:dad-repo-record:15b3d1e4-e643-52d2-b421-f0bd22a65f22",
+      "source_signals": [
+        "enrollment_policy",
+        "enrollment_policy",
+        "mail_policy"
+      ],
+      "visibility": "public",
+      "write_boundary": "reviewed_policy_required"
+    },
+    {
+      "alias": "mock-trial",
+      "authority_boundary": "This DAD report is central candidate metadata only. It does not authorize enrollment, delivery, hooks, source edits, or writes to downstream repos.",
+      "classification": "enroll",
+      "classification_reasons": [
+        "Reviewed enrollment/mail policy is present."
+      ],
+      "contract_present": true,
+      "enrollment_policy_present": true,
+      "mail_policy_present": true,
+      "next_action": "Use reviewed waves and approval IDs for any broad writes.",
+      "path_public_safe": "C:/Users/lowel/OneDrive/Desktop/Git Projects/02_Other_Git_Projects/Mock Trial4.26",
+      "path_ref": "C:/Users/lowel/OneDrive/Desktop/Git Projects/02_Other_Git_Projects/Mock Trial4.26",
+      "public_facing": false,
+      "repo_id": "mock-trial-4-26",
+      "repo_name": "Mock Trial4.26",
+      "repo_record_id": "dad:dad-repo-record:8adc5448-6081-5a58-b314-6b4f005912e7",
+      "source_signals": [
+        "enrollment_policy",
+        "enrollment_policy",
+        "mail_policy"
+      ],
+      "visibility": "internal",
+      "write_boundary": "reviewed_policy_required"
+    },
+    {
+      "alias": "",
+      "authority_boundary": "This DAD report is central candidate metadata only. It does not authorize enrollment, delivery, hooks, source edits, or writes to downstream repos.",
+      "classification": "needs-human-classification",
+      "classification_reasons": [
+        "No reviewed policy or special classification marker."
+      ],
+      "contract_present": false,
+      "enrollment_policy_present": false,
+      "mail_policy_present": false,
+      "next_action": "Add to reviewed policy or explicitly ignore before DAD delivery/enrollment.",
+      "path_public_safe": "C:/Users/lowel/OneDrive/Desktop/Git Projects",
+      "path_ref": "C:/Users/lowel/OneDrive/Desktop/Git Projects",
+      "public_facing": false,
+      "repo_id": "",
+      "repo_name": "Git Projects",
+      "repo_record_id": "dad:dad-repo-record:ee8330d7-1e55-5e29-b485-c7fb0d25df72",
+      "source_signals": [
+        "local_source:git-projects",
+        "local_source:git-projects"
+      ],
+      "visibility": "unknown",
+      "write_boundary": "reviewed_policy_required"
+    },
+    {
+      "alias": "logos-governance",
+      "authority_boundary": "This DAD report is central candidate metadata only. It does not authorize enrollment, delivery, hooks, source edits, or writes to downstream repos.",
+      "classification": "protected-central-only",
+      "classification_reasons": [
+        "Logos repo marker requires protected central-only handling."
+      ],
+      "contract_present": false,
+      "enrollment_policy_present": true,
+      "mail_policy_present": true,
+      "next_action": "Require explicit Logos local-write approval before any repair or enrollment write.",
+      "path_public_safe": "dad://repo/logos-governance-architecture",
+      "path_ref": "dad://repo/logos-governance-architecture",
+      "public_facing": true,
+      "repo_id": "logos-governance-architecture",
+      "repo_name": "logos-governance-architecture",
+      "repo_record_id": "dad:dad-repo-record:b1ff4cd9-5f77-5d89-a23c-7585cd46c123",
+      "source_signals": [
+        "enrollment_policy",
+        "enrollment_policy",
+        "mail_policy"
+      ],
+      "visibility": "public",
+      "write_boundary": "central_only"
+    },
+    {
+      "alias": "logos-scripture-graph",
+      "authority_boundary": "This DAD report is central candidate metadata only. It does not authorize enrollment, delivery, hooks, source edits, or writes to downstream repos.",
+      "classification": "protected-central-only",
+      "classification_reasons": [
+        "Logos repo marker requires protected central-only handling."
+      ],
+      "contract_present": true,
+      "enrollment_policy_present": true,
+      "mail_policy_present": true,
+      "next_action": "Require explicit Logos local-write approval before any repair or enrollment write.",
+      "path_public_safe": "dad://repo/logos-scripture-graph",
+      "path_ref": "dad://repo/logos-scripture-graph",
+      "public_facing": true,
+      "repo_id": "logos-scripture-graph",
+      "repo_name": "logos-scripture-graph-repo",
+      "repo_record_id": "dad:dad-repo-record:9e83f34c-a601-50d0-9ce1-63b6d242ce2e",
+      "source_signals": [
+        "enrollment_policy",
+        "enrollment_policy",
+        "mail_policy"
+      ],
+      "visibility": "public",
+      "write_boundary": "central_only"
+    }
+  ],
+  "repo_count": 10,
+  "report_id": "dad:dad-repo-inventory:3252822b-9f4a-59c9-9d17-e2ee8132ae7c",
+  "schema_version": "0.1.0",
+  "source_warnings": []
+}

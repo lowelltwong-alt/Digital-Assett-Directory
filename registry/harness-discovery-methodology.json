@@ -1,0 +1,102 @@
+{
+  "schema_version": "0.1.0",
+  "methodology_id": "dad:methodology:harness-discovery:v0.1.0",
+  "methodology_version": "0.1.0",
+  "authority_boundary": "Harness discovery produces candidate opportunities. It does not install harnesses, copy private code, claim state-of-the-art status, or authorize repo mutation.",
+  "missing_family_bonus": 15,
+  "radar_inputs": [
+    {
+      "input_id": "orphan-activation-radar",
+      "path_or_command": "docs/ORPHAN_ACTIVATION_AND_SYNERGY_RADAR.md and processed/reports/background_connection_candidates.md",
+      "reason": "Cold assets and missing-part links can reveal repeatable coding harness opportunities."
+    },
+    {
+      "input_id": "coding-tactics-radar",
+      "path_or_command": "registry/coding-tactics-radar.json",
+      "reason": "Repeated candidate tactics should graduate into harnesses when they need scripts, evals, or prompts."
+    },
+    {
+      "input_id": "postflight-and-usage-feedback",
+      "path_or_command": "processed/usage/repo-asset-usage.jsonl and repo outbox mail",
+      "reason": "Repos using or watching DAD assets can report friction that deserves a reusable harness."
+    },
+    {
+      "input_id": "external-research-candidate",
+      "path_or_command": "asset-dir harness research --harness <id>",
+      "reason": "External research may seed better harnesses, but output remains candidate-only until reviewed."
+    }
+  ],
+  "opportunity_signals": [
+    {
+      "signal_id": "slow-python-tests",
+      "candidate_family": "test_performance",
+      "keywords": ["python", "pytest", "slow", "tests", "orchestration", "selection", "performance"],
+      "weight": 16,
+      "reason": "Slow or broad Python test batteries deserve orchestration, selection, timing, and risk-gate harnesses."
+    },
+    {
+      "signal_id": "rust-shadow-or-parser",
+      "candidate_family": "test_parity",
+      "keywords": ["rust", "shadow", "parity", "chunking", "parser", "performance", "dual", "compare"],
+      "weight": 16,
+      "reason": "Rust acceleration needs same-scope parity, mismatch audit, and timing claim gates."
+    },
+    {
+      "signal_id": "agent-instruction-quality",
+      "candidate_family": "agent_instruction",
+      "keywords": ["agent", "codex", "claude", "cursor", "instruction", "skill", "preflight", "style", "nonnegotiable"],
+      "weight": 14,
+      "reason": "Agent coding quality improves when instructions are evaluated as reusable, versioned assets."
+    },
+    {
+      "signal_id": "private-public-provenance",
+      "candidate_family": "public_private_release",
+      "keywords": ["public", "private", "secret", "provenance", "source", "release", "visibility", "sensitive"],
+      "weight": 15,
+      "reason": "Private-to-public movement needs provenance, release, and sensitive-content checks."
+    },
+    {
+      "signal_id": "governed-repo-rollout",
+      "candidate_family": "governance_safety",
+      "keywords": ["enrollment", "mail", "governance", "control", "protected", "repo", "cadence", "daily", "weekly"],
+      "weight": 13,
+      "reason": "Cross-repo rollout needs harnesses that prevent accidental mutation and repo spam."
+    },
+    {
+      "signal_id": "asset-recognition",
+      "candidate_family": "asset_recognition",
+      "keywords": ["asset", "catalog", "orphan", "radar", "discover", "recognize", "graph", "library", "useful"],
+      "weight": 14,
+      "reason": "DAD needs repeatable methods for recognizing useful assets and preserving source pointers."
+    }
+  ],
+  "candidate_harness_families": [
+    {
+      "family": "asset_recognition",
+      "goal": "Find high-value reusable digital assets from repo scans without copying sensitive content.",
+      "first_pass_artifacts": ["harness.json", "README.md", "prompts/red-team.prompt.md", "tests-or-evals/asset-recognition-cases.json"]
+    },
+    {
+      "family": "agent_instruction",
+      "goal": "Evaluate whether coding agents obey DAD style, preflight, harness, and non-negotiable instructions.",
+      "first_pass_artifacts": ["harness.json", "README.md", "prompts/instruction-eval.prompt.md", "tests-or-evals/agent-instruction-rubric.json"]
+    },
+    {
+      "family": "research_radar",
+      "goal": "Turn orphan radar and external research into reviewed coding-improvement harness candidates.",
+      "first_pass_artifacts": ["harness.json", "README.md", "research-notes.md", "tests-or-evals/research-promotion-checklist.json"]
+    }
+  ],
+  "external_research_policy": {
+    "status": "candidate_only",
+    "rule": "External research may be summarized with links and provenance, but it must not be promoted, installed, or shared to public-facing repos without license, security, compatibility, and source-visibility review."
+  },
+  "promotion_gates": [
+    "schema-valid harness.json",
+    "README explains when to use and when not to use",
+    "prompt or script entrypoint exists",
+    "tests/evals or red-team checklist exists",
+    "source evidence and public/private safety are recorded",
+    "human or senior-agent review approves promotion from candidate"
+  ]
+}

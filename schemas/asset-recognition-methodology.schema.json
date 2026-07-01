@@ -1,0 +1,96 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://local.digital-asset-directory/schemas/asset-recognition-methodology.schema.json",
+  "title": "DAD asset recognition methodology",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "methodology_id",
+    "methodology_version",
+    "authority_boundary",
+    "min_candidate_score",
+    "candidate_locations",
+    "recognition_signals",
+    "downgrade_signals",
+    "importance_tiers",
+    "output_labels",
+    "scan_policy"
+  ],
+  "properties": {
+    "schema_version": {"type": "string"},
+    "methodology_id": {"type": "string", "minLength": 1},
+    "methodology_version": {"type": "string", "minLength": 1},
+    "authority_boundary": {"type": "string", "minLength": 1},
+    "min_candidate_score": {"type": "number", "minimum": 0},
+    "candidate_locations": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["location_id", "patterns", "weight", "reason"],
+        "properties": {
+          "location_id": {"type": "string", "minLength": 1},
+          "patterns": {"type": "array", "items": {"type": "string"}, "minItems": 1},
+          "weight": {"type": "number"},
+          "reason": {"type": "string", "minLength": 1}
+        }
+      }
+    },
+    "recognition_signals": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["signal_id", "weight", "description"],
+        "properties": {
+          "signal_id": {"type": "string", "minLength": 1},
+          "weight": {"type": "number"},
+          "description": {"type": "string", "minLength": 1},
+          "path_keywords": {"type": "array", "items": {"type": "string"}},
+          "task_keywords": {"type": "array", "items": {"type": "string"}},
+          "extensions": {"type": "array", "items": {"type": "string"}}
+        }
+      }
+    },
+    "downgrade_signals": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["signal_id", "patterns", "weight", "reason"],
+        "properties": {
+          "signal_id": {"type": "string", "minLength": 1},
+          "patterns": {"type": "array", "items": {"type": "string"}, "minItems": 1},
+          "weight": {"type": "number", "minimum": 0},
+          "reason": {"type": "string", "minLength": 1}
+        }
+      }
+    },
+    "importance_tiers": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["tier", "min_score", "meaning", "required_review"],
+        "properties": {
+          "tier": {"type": "string", "minLength": 1},
+          "min_score": {"type": "number", "minimum": 0},
+          "meaning": {"type": "string", "minLength": 1},
+          "required_review": {"type": "string", "minLength": 1}
+        }
+      }
+    },
+    "output_labels": {"type": "array", "items": {"type": "string"}, "minItems": 1},
+    "scan_policy": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["content_policy", "public_safe_default", "max_files_default"],
+      "properties": {
+        "content_policy": {"type": "string", "minLength": 1},
+        "public_safe_default": {"type": "boolean"},
+        "max_files_default": {"type": "integer", "minimum": 1}
+      }
+    }
+  }
+}

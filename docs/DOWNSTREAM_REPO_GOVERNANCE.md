@@ -11,6 +11,22 @@ The installer can add an idempotent managed block to `AGENTS.md`, create a
 lightweight `.digital-asset/mail/` mirror, and install a tool-neutral `pre-push`
 hook.
 
+For persistent repos, prefer reviewed DAD enrollment:
+
+```text
+asset-dir enroll plan --repo all --wave <id>
+asset-dir enroll apply --repo <path-or-id> --approval-id <human-review-id>
+```
+
+Enrollment is the full governance install path. It requires the repo to appear
+in reviewed `enrollment.repos` policy and writes only approved DAD surfaces:
+mailbox, context map, governance map, data map, coding asset pointer, skill
+checkout pointer, managed AI guidance blocks, and pre-push hook files. After
+enrollment, normal DAD operation is mailbox-only under `.digital-asset/mail/**`.
+
+See `docs/DAD_REPO_ENROLLMENT.md` for the contract, cadence, public-safe
+pointer policy, and update flow.
+
 ## Flow
 
 ```text
@@ -34,6 +50,9 @@ owner reviews it. A safe adoption path is:
 4. record last-verified and stale-after dates;
 5. capture postflight feedback when a capability was useful, missing, risky, or
    misleading.
+6. check out DAD-managed agent skills by pointer or wrapper from
+   `registry/agent-skill-library.json` when the repo wants reusable skill
+   awareness and update notices.
 
 Do not auto-install tool-specific MCP servers, hooks, plugins, skills, cloud
 agents, or subagent configurations across repos without the normal source
@@ -65,6 +84,37 @@ public-facing repo.
 Use `templates/downstream/MAIL_README.md` as the optional repo-local README.
 Preflight does not collect mail. It only reports whether the repo's digest is
 stale so daily checks do not run multiple times per day.
+
+## DAD coding asset pointers
+
+Persistent repos may adopt a small pointer to DAD coding assets after local
+approval:
+
+```text
+templates/downstream/AI_ASSETS_POINTER.template.json
+templates/downstream/CODING_ASSET_MANAGED_BLOCK.md
+```
+
+The pointer tells future AI agents to run DAD preflight, consult DAD coding
+assets and tactics, and report useful tactic feedback after material work. It
+does not copy full DAD assets, install hooks, or authorize DAD to override local
+repo canon.
+
+## DAD agent skill checkouts
+
+Persistent repos may adopt a small pointer or wrapper to DAD-managed agent
+skills after local approval:
+
+```text
+templates/downstream/AGENT_SKILL_POINTER.template.json
+templates/downstream/AGENT_SKILL_MANAGED_BLOCK.md
+```
+
+The checkout tells future agents which DAD skill ID, version, source path, and
+return address to use. It does not copy full DAD skills, install plugins, create
+hooks, configure MCP servers, or authorize DAD to mutate local repo files. DAD
+mail may announce skill updates, retirements, or replacements; the target repo
+decides whether to adopt them.
 
 ## Load-bearing decisions
 

@@ -23,6 +23,7 @@
     "lessons",
     "risks",
     "next_actions",
+    "review_lanes",
     "review_status"
   ],
   "properties": {
@@ -116,6 +117,39 @@
       "type": "array",
       "items": {
         "type": "string"
+      }
+    },
+    "review_lanes": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["lane_id", "status", "reviewer", "summary", "findings", "candidate_outputs", "follow_up"],
+        "properties": {
+          "lane_id": {
+            "enum": [
+              "review-lane:red-team-and-premortem",
+              "review-lane:lesson-asset-harness-scout"
+            ]
+          },
+          "status": {
+            "enum": ["subagent", "checklist", "not_applicable", "not_run"]
+          },
+          "reviewer": {"type": "string"},
+          "summary": {"type": "string"},
+          "findings": {
+            "type": "array",
+            "items": {"type": "string"}
+          },
+          "candidate_outputs": {
+            "type": "array",
+            "items": {"type": "string"}
+          },
+          "follow_up": {
+            "type": "array",
+            "items": {"type": "string"}
+          }
+        }
       }
     },
     "review_status": {

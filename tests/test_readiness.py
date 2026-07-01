@@ -41,7 +41,7 @@ def make_repo_asset(asset_id: str, title: str, logical_path: str) -> AssetRecord
     )
 
 
-def test_downstream_pilot_report_excludes_mock_trial_and_installs_no_hooks(tmp_path: Path):
+def test_downstream_pilot_report_includes_mock_trial_without_special_protection(tmp_path: Path):
     assets = [
         make_repo_asset("repo-a", "Stable Repo", "git-projects/stable-repo"),
         make_repo_asset("repo-b", "Mock Trial4.26", "git-projects/Mock Trial4.26"),
@@ -51,11 +51,11 @@ def test_downstream_pilot_report_excludes_mock_trial_and_installs_no_hooks(tmp_p
     output = Path(result["output"])
     text = output.read_text(encoding="utf-8")
 
-    assert result["candidate_count"] == 1
-    assert result["excluded_count"] == 1
+    assert result["candidate_count"] == 2
+    assert result["excluded_count"] == 0
     assert "Stable Repo" in text
     assert "Mock Trial4.26" in text
-    assert "excluded by active Mock Trial safety rule" in text
+    assert "Default exclusion: none" in text
     assert not (tmp_path / ".githooks").exists()
 
 
