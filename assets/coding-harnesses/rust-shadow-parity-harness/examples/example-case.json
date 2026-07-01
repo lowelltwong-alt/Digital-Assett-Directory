@@ -1,0 +1,7 @@
+{
+  "example_id": "dad:harness-example:rust-shadow-parity:empty-report",
+  "harness_id": "dad:harness:rust-shadow-parity",
+  "task": "Compare a tiny Rust suite against a larger Python pytest suite.",
+  "expected_use": "Reject matched_pass until structured reports verify the same mapped tests ran for review.",
+  "candidate_only": true
+}

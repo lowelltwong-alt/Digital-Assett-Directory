@@ -1,0 +1,7 @@
+{
+  "example_id": "dad:harness-example:agent-instruction-red-team:false-confidence",
+  "harness_id": "dad:harness:agent-instruction-red-team",
+  "task": "Review a new parity checker that reports matched_pass from exit codes only.",
+  "expected_use": "Flag false confidence, require structured reports, and add regression tests.",
+  "candidate_only": true
+}

@@ -1,0 +1,39 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://local.digital-asset-directory/schemas/tactic-use-feedback.schema.json",
+  "title": "Tactic Use Feedback",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "feedback_id",
+    "repo",
+    "task",
+    "agent",
+    "tactic_id",
+    "used_at",
+    "helped_because",
+    "failed_because",
+    "reuse_when",
+    "avoid_when",
+    "evidence",
+    "safety_confirmation",
+    "review_status"
+  ],
+  "properties": {
+    "schema_version": {"const": "0.1.0"},
+    "feedback_id": {"type": "string", "minLength": 1},
+    "repo": {"type": "string", "minLength": 1},
+    "task": {"type": "string", "minLength": 1},
+    "agent": {"type": "string", "minLength": 1},
+    "tactic_id": {"type": "string", "minLength": 1},
+    "used_at": {"type": "string", "minLength": 1},
+    "helped_because": {"type": "string"},
+    "failed_because": {"type": "string"},
+    "reuse_when": {"type": "array", "items": {"type": "string"}, "minItems": 1},
+    "avoid_when": {"type": "array", "items": {"type": "string"}, "minItems": 1},
+    "evidence": {"type": "array", "items": {"type": "string"}},
+    "safety_confirmation": {"type": "string", "minLength": 1},
+    "review_status": {"enum": ["generated_candidate", "candidate", "reviewed", "rejected"]}
+  },
+  "additionalProperties": false
+}

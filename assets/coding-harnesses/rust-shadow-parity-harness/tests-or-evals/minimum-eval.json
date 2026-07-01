@@ -1,0 +1,26 @@
+{
+  "schema_version": "0.1.0",
+  "eval_id": "dad:harness-eval:rust-shadow-parity:minimum",
+  "harness_id": "dad:harness:rust-shadow-parity",
+  "status": "candidate",
+  "purpose": "Check that Rust shadow-test recommendations reject false green parity.",
+  "input_contract": [
+    "native Python command and structured report path",
+    "Rust shadow command and structured report path",
+    "expected Python-to-Rust test map",
+    "start time for freshness checks"
+  ],
+  "cases": [
+    {
+      "case_id": "empty-rust-report-is-unverified",
+      "given": ["Python command exits 0 with non-empty report.", "Rust command exits 0 with an empty or missing report."],
+      "expected": ["Classify as coverage_unverified.", "Block replacement timing claims."],
+      "fail_if": ["Classifies the result as matched_pass.", "Reports Rust replacement savings."]
+    }
+  ],
+  "must_not_claim": [
+    "Do not claim Rust equivalence from exit codes alone.",
+    "Do not claim savings when structured same-scope parity is unverified."
+  ],
+  "promotion_gate": "Promote only after regression tests show stale, empty, malformed, and mismatched reports fail closed."
+}

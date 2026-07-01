@@ -1,0 +1,151 @@
+{
+  "schema_version": "0.1.0",
+  "registry_id": "dad-control-plane-registry",
+  "authority_boundary": "DAD control planes provide reviewed guidance, candidate notices, and approved enrollment surfaces. Target repos retain local source authority and normal recurring DAD writes are mailbox-only.",
+  "control_planes": [
+    {
+      "control_plane_id": "dad_library",
+      "name": "DAD Library And Signal Graph",
+      "status": "active",
+      "cadence": "weekly",
+      "primary_surfaces": [
+        "registry/dad-needs-registry.json",
+        "registry/dad-offerings-registry.json",
+        "registry/dad-usefulness-methodology.json",
+        "registry/asset-recognition-methodology.json",
+        "processed/usage/repo-asset-usage.jsonl"
+      ],
+      "normal_write_boundary": ".digital-asset/mail/**",
+      "authority_boundary": "DAD library matches are deterministic candidate recommendations; local repos decide adoption.",
+      "review_status": "reviewed"
+    },
+    {
+      "control_plane_id": "mail_center",
+      "name": "DAD Mail Center",
+      "status": "active",
+      "cadence": "daily",
+      "primary_surfaces": ["processed/mail/**", ".digital-asset/mail/**", "docs/MAIL_CENTER.md"],
+      "normal_write_boundary": ".digital-asset/mail/**",
+      "authority_boundary": "Candidate-only message transport; local repo review decides adoption.",
+      "review_status": "reviewed"
+    },
+    {
+      "control_plane_id": "reusable_assets",
+      "name": "Reusable Asset Library",
+      "status": "active",
+      "cadence": "weekly",
+      "primary_surfaces": ["assets/**", "assets/asset-registry.json", ".ai-assets.json"],
+      "normal_write_boundary": ".digital-asset/mail/**",
+      "authority_boundary": "Asset pointers and update notices are suggestions until adopted locally.",
+      "review_status": "reviewed"
+    },
+    {
+      "control_plane_id": "coding_harnesses",
+      "name": "Coding Harness Library",
+      "status": "active",
+      "cadence": "weekly",
+      "primary_surfaces": [
+        "assets/coding-harnesses/**",
+        "registry/coding-harness-registry.json",
+        "registry/harness-discovery-methodology.json",
+        "docs/HARNESS_DISCOVERY_RADAR.md",
+        "docs/CODING_HARNESS_LIBRARY.md"
+      ],
+      "normal_write_boundary": ".digital-asset/mail/**",
+      "authority_boundary": "Harnesses are candidate improvement workflows until reviewed and validated in the target repo.",
+      "review_status": "reviewed"
+    },
+    {
+      "control_plane_id": "agent_skills",
+      "name": "Agent Skill Library",
+      "status": "active",
+      "cadence": "weekly",
+      "primary_surfaces": [
+        "registry/agent-skill-library.json",
+        "assets/agent-skills/**",
+        ".digital-asset/skills/checkout.json"
+      ],
+      "normal_write_boundary": ".digital-asset/mail/**",
+      "authority_boundary": "Skill checkout pointers do not install plugins, copy full skills, or override local agent instructions without approval.",
+      "review_status": "reviewed"
+    },
+    {
+      "control_plane_id": "templates",
+      "name": "Template Library",
+      "status": "active",
+      "cadence": "weekly",
+      "primary_surfaces": ["registry/template-registry.json", "templates/**"],
+      "normal_write_boundary": ".digital-asset/mail/**",
+      "authority_boundary": "Template update notices are candidate guidance; managed blocks require approved enrollment apply/update.",
+      "review_status": "reviewed"
+    },
+    {
+      "control_plane_id": "architecture_references",
+      "name": "Architecture References",
+      "status": "active",
+      "cadence": "weekly",
+      "primary_surfaces": ["docs/ARCHITECTURE_CONSULT.md", "registry/template-registry.json"],
+      "normal_write_boundary": ".digital-asset/mail/**",
+      "authority_boundary": "Architecture recommendations are advisory and must be checked against local repo constraints.",
+      "review_status": "reviewed"
+    },
+    {
+      "control_plane_id": "repo_enrollment",
+      "name": "Repo Enrollment",
+      "status": "active",
+      "cadence": "reviewed-wave",
+      "primary_surfaces": [
+        "src/digital_asset_directory/enrollment.py",
+        "docs/DAD_REPO_ENROLLMENT.md",
+        ".digital-asset/dad-integration.json"
+      ],
+      "normal_write_boundary": ".digital-asset/mail/**",
+      "authority_boundary": "Full governance enrollment applies only to reviewed policy entries with approval IDs; recurring operation remains mailbox-only.",
+      "review_status": "reviewed"
+    },
+    {
+      "control_plane_id": "coding_test_parity",
+      "name": "Coding And Test Parity Guidance",
+      "status": "active",
+      "cadence": "task-triggered",
+      "primary_surfaces": [
+        "assets/ai-engineering-preflight/**",
+        "docs/TESTING_AND_ORCHESTRATION.md",
+        "src/digital_asset_directory/test_parity.py"
+      ],
+      "normal_write_boundary": ".digital-asset/mail/**",
+      "authority_boundary": "Rust or shadow-layer test guidance remains candidate-only until parity is proven and accepted locally.",
+      "review_status": "reviewed"
+    },
+    {
+      "control_plane_id": "governance_maps",
+      "name": "Governance Maps",
+      "status": "active",
+      "cadence": "weekly",
+      "primary_surfaces": [".digital-asset/governance-map.yaml", "registry/control-plane-registry.json"],
+      "normal_write_boundary": ".digital-asset/mail/**",
+      "authority_boundary": "Governance maps describe authority dependencies; they do not transfer authority to DAD.",
+      "review_status": "reviewed"
+    },
+    {
+      "control_plane_id": "data_maps",
+      "name": "Data Maps",
+      "status": "active",
+      "cadence": "weekly",
+      "primary_surfaces": [".digital-asset/data-map.yaml", "docs/MAIL_CENTER.md"],
+      "normal_write_boundary": ".digital-asset/mail/**",
+      "authority_boundary": "Data maps track movement and sensitivity boundaries; public/private release gates remain human-governed.",
+      "review_status": "reviewed"
+    },
+    {
+      "control_plane_id": "learning_postflight_loops",
+      "name": "Learning And Postflight Loops",
+      "status": "active",
+      "cadence": "task-triggered",
+      "primary_surfaces": ["raw/lessons/**", "raw/handoffs/**", "docs/LESSONS_AND_HANDOFF_LOOP.md"],
+      "normal_write_boundary": ".digital-asset/mail/**",
+      "authority_boundary": "Lessons, review-lane findings, and asset/harness scout outputs are bounded candidate learning unless reviewed and context-matched.",
+      "review_status": "reviewed"
+    }
+  ]
+}

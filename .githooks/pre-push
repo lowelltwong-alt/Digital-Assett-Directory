@@ -1,0 +1,4 @@
+#!/usr/bin/env sh
+set -eu
+DAD_HUB="C:/Users/lowel/OneDrive/Desktop/Git Projects/04_Digital_Assett_Directory"
+python "$DAD_HUB/scripts/enforce_postflight.py" --hub "$DAD_HUB" --repo "$(pwd)"

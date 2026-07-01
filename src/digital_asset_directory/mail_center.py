@@ -11,7 +11,7 @@ from typing import Any, Iterator, Sequence
 from pydantic import ValidationError
 
 from .ids import stable_id
-from .models import MailDecisionRecord, MailMessageRecord
+from .models import MailAdoptionRecord, MailDecisionRecord, MailMessageRecord
 from .utils import (
     append_jsonl,
     atomic_write_text,
@@ -32,6 +32,7 @@ MAIL_FILE_NAMES = {
     "inbox.jsonl",
     "outbox.jsonl",
     "archive.jsonl",
+    "adoption.jsonl",
     "README.md",
     "last_checked.json",
     ".gitignore",
@@ -105,6 +106,23 @@ def _policy_visibility(policy: Any | None) -> str:
 
 def _policy_public_facing(policy: Any | None) -> bool:
     return bool(getattr(policy, "public_facing", False)) if policy else False
+
+
+def _policy_write_protected(policy: Any | None) -> bool:
+    return bool(getattr(policy, "write_protected", False)) if policy else False
+
+
+def _write_protection_reason(policy: Any | None) -> str:
+    reason = str(getattr(policy, "write_protection_reason", "") if policy else "").strip()
+    return reason or "repo mailbox is write-protected by reviewed DAD policy"
+
+
+def _raise_if_write_protected(repo: Path | str, policy: Any | None, *, operation: str) -> None:
+    if _policy_write_protected(policy):
+        raise ValueError(
+            f"DAD mail {operation} is write-protected for {repo}: "
+            f"{_write_protection_reason(policy)}"
+        )
 
 
 def _policy_by_path(policies: Sequence[Any] | None) -> dict[str, Any]:
@@ -208,6 +226,7 @@ This directory is the repo-local mailbox for Digital Asset Directory suggestions
 - `outbox.jsonl`: append-only suggestions this repo wants DAD or another repo to review.
 - `inbox.jsonl`: append-only suggestions delivered to this repo.
 - `archive.jsonl`: acknowledgements and local review decisions.
+- `adoption.jsonl`: local triage, implementation, and future-use asset pointers.
 - `last_checked.json`: timestamp written by `asset-dir mail digest`.
 - `.gitignore`: keeps operational mailbox data local by default.
 
@@ -221,6 +240,20 @@ Run a digest at most once per day unless a human asks for an immediate check:
 
 ```text
 asset-dir mail digest --repo .
+```
+
+After reading inbox mail, record whether the suggestion should be implemented
+now, saved for future, deferred, rejected, or archived:
+
+```text
+asset-dir mail triage --repo . --mail-id <id> --decision save_for_future
+```
+
+If this repo uses or watches a DAD asset, record that separately so DAD can send
+targeted upgrade notices later:
+
+```text
+asset-dir usage record --repo . --asset <dad-offering-or-asset-id> --status watching
 ```
 
 Do not commit mailbox JSONL to a public-facing repo unless a human explicitly
@@ -336,6 +369,16 @@ def _append_unique_decision(path: Path, record: MailDecisionRecord) -> bool:
         payload = record.model_dump(mode="json")
         existing = {str(item.get("decision_id", "")) for item in _read_jsonl(path)}
         if payload["decision_id"] in existing:
+            return False
+        append_jsonl(path, payload)
+        return True
+
+
+def _append_unique_adoption(path: Path, record: MailAdoptionRecord) -> bool:
+    with _jsonl_lock(path):
+        payload = record.model_dump(mode="json")
+        existing = {str(item.get("adoption_id", "")) for item in _read_jsonl(path)}
+        if payload["adoption_id"] in existing:
             return False
         append_jsonl(path, payload)
         return True
@@ -543,8 +586,9 @@ def compose_mail(
     repo_policies: Sequence[Any] | None = None,
     composed_by: str = "unknown",
 ) -> dict[str, Any]:
-    mail_dir = ensure_repo_mailbox(repo)
     policy = _policy_for_repo(repo, repo_policies)
+    _raise_if_write_protected(repo, policy, operation="compose")
+    mail_dir = ensure_repo_mailbox(repo)
     created = created_at or utc_now()
     record = _build_mail_record(
         message_type=message_type,
@@ -838,6 +882,49 @@ def _ack_record(target_repo: Path, record: MailMessageRecord) -> MailMessageReco
     )
 
 
+def _source_asset_refs(record: MailMessageRecord) -> list[str]:
+    refs: list[str] = []
+    payload = record.payload
+    for key in ("asset_id", "source_ref", "hash", "sha256", "path"):
+        value = payload.get(key)
+        if isinstance(value, str) and value.strip():
+            refs.append(value.strip())
+    for key in ("asset_ids", "paths"):
+        value = payload.get(key)
+        if isinstance(value, list):
+            refs.extend(str(item).strip() for item in value if str(item).strip())
+    refs.extend(str(item).strip() for item in record.evidence if str(item).strip())
+    if record.source_provenance.get("return_address"):
+        refs.append(str(record.source_provenance["return_address"]))
+    seen: set[str] = set()
+    output: list[str] = []
+    for ref in refs:
+        if ref not in seen:
+            seen.add(ref)
+            output.append(ref)
+    return output
+
+
+def _triage_to_review_decision(intake_decision: str) -> str:
+    return {
+        "implement_now": "accept",
+        "save_for_future": "defer",
+        "defer": "defer",
+        "reject": "reject",
+        "archive": "archive",
+    }[intake_decision]
+
+
+def _triage_status(intake_decision: str) -> str:
+    return {
+        "implement_now": "planned",
+        "save_for_future": "watching",
+        "defer": "deferred",
+        "reject": "rejected",
+        "archive": "archived",
+    }[intake_decision]
+
+
 def deliver_mail(
     hub_root: Path,
     repos: list[Path],
@@ -892,6 +979,27 @@ def deliver_mail(
         policy_record = _record_with_policy(
             record, repo_policies, release_decision=release_decision
         )
+        if _policy_write_protected(target_policy):
+            append_jsonl(
+                delivery_log,
+                {
+                    "event_type": "central_only",
+                    "mail_id": record.mail_id,
+                    "target_repo": str(target_repo),
+                    "reason": _write_protection_reason(target_policy),
+                    "source_provenance": policy_record.source_provenance,
+                    "public_release": policy_record.public_release,
+                },
+            )
+            skipped.append(
+                {
+                    "mail_id": record.mail_id,
+                    "reason": "target repo mailbox is write-protected",
+                    "target_repo": str(target_repo),
+                }
+            )
+            central_only += 1
+            continue
         public_violations = _public_payload_violations(policy_record, target_policy)
         release = policy_record.public_release
         if public_violations:
@@ -1022,7 +1130,13 @@ def review_mail(
     human_verified: bool = False,
     notes: str = "",
     decided_at: str | None = None,
+    repo_policies: Sequence[Any] | None = None,
 ) -> dict[str, Any]:
+    _raise_if_write_protected(
+        repo,
+        _policy_for_repo(repo, repo_policies),
+        operation="review",
+    )
     ensure_repo_mailbox(repo)
     matching = [
         item
@@ -1055,6 +1169,115 @@ def review_mail(
         "decision": record.model_dump(mode="json"),
         "appended": appended,
         "archive": str(archive_path),
+        "authority_boundary": AUTHORITY_BOUNDARY,
+    }
+
+
+def triage_mail(
+    repo: Path,
+    *,
+    mail_id: str,
+    intake_decision: str,
+    importance: str = "unknown",
+    planned_use: str = "",
+    implementation_plan: list[str] | None = None,
+    recorded_by: str = "unknown",
+    human_verified: bool = False,
+    notes: str = "",
+    recorded_at: str | None = None,
+    repo_policies: Sequence[Any] | None = None,
+) -> dict[str, Any]:
+    normalized_decision = intake_decision.replace("-", "_").lower()
+    if normalized_decision not in {
+        "implement_now",
+        "save_for_future",
+        "defer",
+        "reject",
+        "archive",
+    }:
+        raise ValueError(
+            "intake_decision must be implement_now, save_for_future, defer, reject, or archive"
+        )
+    normalized_importance = importance.replace("-", "_").lower()
+    if normalized_importance not in {"now", "future", "not_relevant", "unknown"}:
+        raise ValueError("importance must be now, future, not_relevant, or unknown")
+    _raise_if_write_protected(
+        repo,
+        _policy_for_repo(repo, repo_policies),
+        operation="triage",
+    )
+    ensure_repo_mailbox(repo)
+    matching = [
+        item
+        for item in _read_jsonl(_mail_file(repo, "inbox.jsonl"))
+        if str(item.get("mail_id")) == mail_id
+    ]
+    if not matching:
+        raise ValueError(f"No inbox mail found for {mail_id}.")
+    mail_record = MailMessageRecord(**matching[0])
+    timestamp = recorded_at or utc_now()
+    review_decision = MailDecisionRecord(
+        decision_id=stable_id(
+            "mail-decision",
+            str(repo),
+            mail_id,
+            _triage_to_review_decision(normalized_decision),
+            "human" if human_verified else "agent",
+        ),
+        mail_id=mail_id,
+        repository=_normalized_repo(repo),
+        decision=_triage_to_review_decision(normalized_decision),  # type: ignore[arg-type]
+        decided_at=timestamp,
+        decided_by=recorded_by,
+        decision_actor_type="human" if human_verified else "agent",
+        human_verified=human_verified,
+        notes=notes,
+        review_status="human_reviewed" if human_verified else "agent_triage",
+    )
+    archive_path = _mail_file(repo, "archive.jsonl")
+    decision_appended = _append_unique_decision(archive_path, review_decision)
+    adoption = MailAdoptionRecord(
+        adoption_id=stable_id(
+            "mail-adoption",
+            str(repo),
+            mail_id,
+            normalized_decision,
+            planned_use,
+        ),
+        mail_id=mail_id,
+        repository=_normalized_repo(repo),
+        intake_decision=normalized_decision,  # type: ignore[arg-type]
+        importance=normalized_importance,  # type: ignore[arg-type]
+        recorded_at=timestamp,
+        recorded_by=recorded_by,
+        human_verified=human_verified,
+        planned_use=planned_use,
+        implementation_plan=implementation_plan or [],
+        implementation_status=_triage_status(normalized_decision),  # type: ignore[arg-type]
+        source_asset_refs=_source_asset_refs(mail_record),
+        source_repo=mail_record.source_repo,
+        source_provenance=mail_record.source_provenance,
+        update_tracking={
+            "watch_source": normalized_decision in {"implement_now", "save_for_future", "defer"},
+            "update_channel": "dad_mail",
+            "original_mail_id": mail_record.source_provenance.get("original_mail_id")
+            or mail_record.mail_id,
+            "dedupe_key": mail_record.dedupe_key,
+            "return_address": mail_record.source_provenance.get("return_address", ""),
+            "upgrade_policy": "notify_via_dad_mail_before_local_change",
+        },
+        notes=notes,
+        review_status="human_reviewed" if human_verified else "agent_triage",
+    )
+    adoption_path = _mail_file(repo, "adoption.jsonl")
+    adoption_appended = _append_unique_adoption(adoption_path, adoption)
+    return {
+        "decision": review_decision.model_dump(mode="json"),
+        "adoption": adoption.model_dump(mode="json"),
+        "decision_appended": decision_appended,
+        "adoption_appended": adoption_appended,
+        "archive": str(archive_path),
+        "adoption_path": str(adoption_path),
         "authority_boundary": AUTHORITY_BOUNDARY,
     }
 
@@ -1106,7 +1329,17 @@ def release_mail(
     }
 
 
-def digest_mail(repo: Path, *, checked_at: str | None = None) -> dict[str, Any]:
+def digest_mail(
+    repo: Path,
+    *,
+    checked_at: str | None = None,
+    repo_policies: Sequence[Any] | None = None,
+) -> dict[str, Any]:
+    _raise_if_write_protected(
+        repo,
+        _policy_for_repo(repo, repo_policies),
+        operation="digest",
+    )
     ensure_repo_mailbox(repo)
     inbox, inbox_errors = _read_jsonl_with_errors(_mail_file(repo, "inbox.jsonl"))
     archive, archive_errors = _read_jsonl_with_errors(_mail_file(repo, "archive.jsonl"))

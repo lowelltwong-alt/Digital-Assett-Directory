@@ -1,0 +1,49 @@
+{
+  "schema_version": "0.1.0",
+  "mail_id": "dad:mail:<stable-id>",
+  "thread_id": "dad:thread:<stable-thread-id>",
+  "message_type": "governance_notice",
+  "source_repo": "dad",
+  "target_repo": "<reviewed target repo id>",
+  "created_at": "<ISO-8601 timestamp>",
+  "dedupe_key": "skill-retirement:<skill-id>:<version>:<target-repo>",
+  "sensitivity": "internal",
+  "review_status": "generated_candidate",
+  "payload": {
+    "command_kind": "skill_retirement_notice",
+    "source_skill": "<skill id>",
+    "retired_version": "<skill version>",
+    "replacement_skill": "<replacement skill id or empty>",
+    "summary": "<public-safe reason this skill was retired or replaced>",
+    "suggested_local_files_to_update": [".digital-asset/skills/checkout.json"],
+    "exact_managed_block_or_pointer_content": "<short replacement pointer content only>",
+    "risks": ["Retired skill may route agents to stale guidance", "Do not copy full DAD skills or full copied assets without approval"],
+    "acceptance_checks": ["Review replacement skill if present", "Archive stale local checkout", "Run local validation if replacing"],
+    "validation_commands": ["python <DAD_ROOT>/scripts/validate_agent_skill_library.py"],
+    "rollback_notes": "If local repo must pin the retired skill, record the local reason and review date."
+  },
+  "evidence": ["registry/agent-skill-library.json", "docs/AGENT_SKILL_LIBRARY.md"],
+  "suggested_actions": ["Review retirement notice", "Replace, defer, or archive through local process", "Record local decision"],
+  "source_provenance": {
+    "canonical_source_repo": "<DAD repo path>",
+    "source_repo_id": "dad",
+    "source_repo_alias": "dad",
+    "source_visibility": "internal",
+    "original_source_chain": ["dad"],
+    "return_address": "processed/mail/outbox",
+    "original_mail_id": "",
+    "composed_by": "<agent or human>",
+    "collected_by": "",
+    "collected_at": "",
+    "received_at": ""
+  },
+  "public_release": {
+    "target_visibility": "unknown",
+    "target_public_facing": false,
+    "public_release_required": false,
+    "public_release_status": "not_required",
+    "human_release_id": "",
+    "release_reason": ""
+  }
+}
+

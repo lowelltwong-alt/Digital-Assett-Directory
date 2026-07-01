@@ -1,0 +1,51 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://local.digital-asset-directory/schemas/coding-harness-eval.schema.json",
+  "title": "Coding Harness Eval Record",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "eval_id",
+    "harness_id",
+    "status",
+    "purpose",
+    "input_contract",
+    "cases",
+    "must_not_claim",
+    "promotion_gate"
+  ],
+  "properties": {
+    "schema_version": {"const": "0.1.0"},
+    "eval_id": {"type": "string", "minLength": 1},
+    "harness_id": {"type": "string", "pattern": "^dad:harness:[a-z0-9][a-z0-9:-]*$"},
+    "status": {"enum": ["candidate", "reviewed", "retired"]},
+    "purpose": {"type": "string", "minLength": 1},
+    "input_contract": {
+      "type": "array",
+      "items": {"type": "string", "minLength": 1},
+      "minItems": 1
+    },
+    "cases": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["case_id", "given", "expected", "fail_if"],
+        "properties": {
+          "case_id": {"type": "string", "minLength": 1},
+          "given": {"type": "array", "items": {"type": "string"}, "minItems": 1},
+          "expected": {"type": "array", "items": {"type": "string"}, "minItems": 1},
+          "fail_if": {"type": "array", "items": {"type": "string"}, "minItems": 1}
+        }
+      },
+      "minItems": 1
+    },
+    "must_not_claim": {
+      "type": "array",
+      "items": {"type": "string", "minLength": 1},
+      "minItems": 1
+    },
+    "promotion_gate": {"type": "string", "minLength": 1}
+  }
+}

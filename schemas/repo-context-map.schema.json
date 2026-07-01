@@ -1,0 +1,42 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://local.digital-asset-directory/schemas/repo-context-map.schema.json",
+  "title": "DAD Repo Context Map",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "repo_id",
+    "repo_alias",
+    "repo_ref",
+    "dad_hub_ref",
+    "context_dimensions",
+    "routes",
+    "mail_feedback",
+    "authority_boundary"
+  ],
+  "properties": {
+    "schema_version": {"const": "0.1.0"},
+    "repo_id": {"type": "string", "minLength": 1},
+    "repo_alias": {"type": "string", "minLength": 1},
+    "repo_ref": {"type": "string", "minLength": 1},
+    "dad_hub_ref": {"type": "string", "minLength": 1},
+    "context_dimensions": {"type": "object"},
+    "routes": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["route_id", "use_when", "dad_assets", "control_planes"],
+        "properties": {
+          "route_id": {"type": "string", "minLength": 1},
+          "use_when": {"type": "array", "items": {"type": "string", "minLength": 1}},
+          "dad_assets": {"type": "array", "items": {"type": "string", "minLength": 1}},
+          "control_planes": {"type": "array", "items": {"type": "string", "minLength": 1}}
+        },
+        "additionalProperties": false
+      }
+    },
+    "mail_feedback": {"type": "object"},
+    "authority_boundary": {"type": "string", "minLength": 1}
+  },
+  "additionalProperties": false
+}

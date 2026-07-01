@@ -1,0 +1,21 @@
+{
+  "harness_id": "dad:harness:repo-enrollment-mail-governance-safety",
+  "name": "Repo Enrollment Mail Governance Safety",
+  "version": "0.1.0",
+  "path": "assets/coding-harnesses/repo-enrollment-mail-governance-safety",
+  "family": "governance_safety",
+  "status": "candidate",
+  "languages": ["python", "agent-instruction"],
+  "repo_types": ["control_plane", "governed_repo_family", "application"],
+  "domains": ["governance", "mail_center"],
+  "context_tags": ["repo_enrollment", "mail_center", "protected_repo", "public_safe"],
+  "task_types": ["enrollment", "mail_delivery", "governance_review", "public_release"],
+  "capabilities": ["protected_repo_gate", "mail_write_boundary_check", "approval_id_gate"],
+  "public_safe": true,
+  "entrypoints": ["README.md", "harness.json", "prompts/README.md"],
+  "research_questions": ["Could this wave mutate protected Logos repos?", "Could normal operation write outside mailbox paths?"],
+  "validation_commands": ["python -m pytest tests/test_enrollment.py tests/test_mail_center.py -q"],
+  "source_evidence": ["docs/DAD_REPO_ENROLLMENT.md", "docs/MAIL_CENTER.md"],
+  "review_status": "candidate",
+  "authority_boundary": "Enrollment apply/update remains approval-gated and path-allowlisted."
+}

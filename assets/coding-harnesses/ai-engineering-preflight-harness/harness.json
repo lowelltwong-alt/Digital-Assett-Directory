@@ -1,0 +1,21 @@
+{
+  "harness_id": "dad:harness:ai-engineering-preflight",
+  "name": "AI Engineering Preflight",
+  "version": "0.1.0",
+  "path": "assets/coding-harnesses/ai-engineering-preflight-harness",
+  "family": "ai_engineering",
+  "status": "candidate",
+  "languages": ["python", "rust", "mixed", "agent-instruction"],
+  "repo_types": ["application", "library", "template_repo", "control_plane"],
+  "domains": ["ai_engineering", "software_engineering"],
+  "context_tags": ["preflight", "agent_instruction", "validation"],
+  "task_types": ["coding", "refactor", "agent_instruction_design", "repo_template_creation"],
+  "capabilities": ["preflight_profile", "midflight_check", "postflight_feedback"],
+  "public_safe": true,
+  "entrypoints": ["README.md", "harness.json", "prompts/README.md"],
+  "research_questions": ["Which preflight profiles improve AI coding outcomes?", "Which prompts cause overreach or false confidence?"],
+  "validation_commands": ["python -m digital_asset_directory.cli agent preflight --help"],
+  "source_evidence": ["assets/ai-engineering-preflight", "registry/preflight-profile-router.json"],
+  "review_status": "candidate",
+  "authority_boundary": "Preflight output guides agent behavior but does not replace local repo authority."
+}

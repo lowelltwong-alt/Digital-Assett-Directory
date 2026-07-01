@@ -1,0 +1,26 @@
+{
+  "schema_version": "0.1.0",
+  "eval_id": "dad:harness-eval:ai-engineering-preflight:minimum",
+  "harness_id": "dad:harness:ai-engineering-preflight",
+  "status": "candidate",
+  "purpose": "Check that preflight guidance produces auditable, model-agnostic work records.",
+  "input_contract": [
+    "task description",
+    "repo path",
+    "preflight output",
+    "postflight record"
+  ],
+  "cases": [
+    {
+      "case_id": "material-work-records-review-lanes",
+      "given": ["Task changes code or governance.", "Preflight is available."],
+      "expected": ["Preflight emits both review lanes.", "Postflight records each lane as subagent, checklist, not_applicable, or not_run."],
+      "fail_if": ["Review lanes are only prose.", "Postflight omits lane status."]
+    }
+  ],
+  "must_not_claim": [
+    "Do not claim a model complied unless the session record shows the required steps.",
+    "Do not treat preflight output as permission to mutate another repo."
+  ],
+  "promotion_gate": "Promote only after Codex, Claude, Cursor, and checklist-only flows can all record the same lane statuses."
+}

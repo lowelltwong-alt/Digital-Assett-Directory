@@ -140,6 +140,60 @@ mail:
     #   mail_enabled: true
     #   delivery_allowed: true
 
+enrollment:
+  repos:
+    - id: dad
+      path: .
+      alias: dad
+      visibility: internal
+      public_facing: false
+      enrollment_enabled: true
+      apply_allowed: false
+      update_allowed: false
+      wave: dad-self
+      approved_approval_ids: []
+      local_paths_allowed: false
+      repo_type: control_plane
+      languages: [python]
+      domains: [digital_asset_directory]
+      context_tags: [dad_hub, control_plane, governance]
+      validation_commands:
+        - python -m pytest
+        - python -m digital_asset_directory.cli validate
+      enabled_control_planes:
+        - dad_library
+        - mail_center
+        - reusable_assets
+        - coding_harnesses
+        - agent_skills
+        - templates
+        - architecture_references
+        - repo_enrollment
+        - coding_test_parity
+        - governance_maps
+        - data_maps
+        - learning_postflight_loops
+    # Add reviewed downstream repos here before using `enroll plan --repo all`
+    # or `enroll apply`. Discovery reports candidates only; it does not
+    # authorize governance installation.
+    # - id: example-public-repo
+    #   path: 'C:\Users\lowel\OneDrive\Desktop\Git Projects\example-public-repo'
+    #   alias: example-public
+    #   visibility: public
+    #   public_facing: true
+    #   enrollment_enabled: true
+    #   apply_allowed: true
+    #   update_allowed: true
+    #   wave: wave-2026-07-reviewed
+    #   approved_approval_ids: ['HUMAN-APPROVED-EXAMPLE']
+    #   local_paths_allowed: false
+    #   repo_type: application
+    #   languages: [python, javascript]
+    #   domains: [example]
+    #   context_tags: [persistent_repo, public_safe]
+    #   validation_commands:
+    #     - python -m pytest
+
 settings:
   read_only: true
   store_excerpts: true

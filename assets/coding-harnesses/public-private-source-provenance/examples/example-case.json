@@ -1,0 +1,7 @@
+{
+  "example_id": "dad:harness-example:public-private-provenance:unknown-to-public",
+  "harness_id": "dad:harness:public-private-provenance",
+  "task": "Route a capability suggestion from an unknown-origin repo to a public-facing repo.",
+  "expected_use": "Hold for human release and keep delivery central-only until approved.",
+  "candidate_only": true
+}

@@ -79,6 +79,120 @@
         "Before waves 1 and later, DAD must refresh local repo paths, authority files, branch state, visibility, and mail policy.",
         "Hooks remain disabled unless separately approved."
       ]
+    },
+    {
+      "asset_id": "python-ai-advantage-preflight-asset",
+      "name": "Python AI Advantage Preflight Asset",
+      "version": "0.1.0",
+      "path": "assets/python-ai-advantage-preflight",
+      "asset_type": "reusable_instruction_asset",
+      "managed_block_id": "PYTHON_AI_ADVANTAGE_PREFLIGHT_ASSET",
+      "profiles": [
+        "python",
+        "long-script-refactor",
+        "ai-coding-agent",
+        "repo-template",
+        "underused-python-tactics"
+      ],
+      "use_when": [
+        "Planning Python AI-assisted implementation, refactoring, or package/API design.",
+        "Teaching an AI agent when to use high-leverage Python features with applicability limits.",
+        "Creating a Python-specific preflight profile or downstream managed instruction block."
+      ],
+      "does_not_apply_when": [
+        "The task is not Python or Python-adjacent.",
+        "The target repo has not approved DAD-managed pointers or instruction changes.",
+        "The tactic cannot be verified with local tests, type checks, linters, or review."
+      ],
+      "install_path": "assets/python-ai-advantage-preflight",
+      "source_package": {
+        "filename": "python-ai-advantage-preflight-asset-v0.1.0.zip",
+        "sha256": "324b66b23015c46fde818fcc4758505f29d231de9989884ffbc4a0b233b09673"
+      },
+      "installed_at": "2026-07-01",
+      "review_status": "installed_for_local_reuse",
+      "safety_notes": [
+        "Installed from the inspected zip without __pycache__ or .pyc files.",
+        "Underused-pattern labels are heuristic unless backed by measurement evidence.",
+        "Use as candidate DAD guidance; target repos retain local authority and validation requirements.",
+        "Do not copy the full asset into downstream repos without explicit approval."
+      ]
+    },
+    {
+      "asset_id": "dad-agent-skill-library",
+      "name": "DAD Agent Skill Library",
+      "version": "0.1.0",
+      "path": "registry/agent-skill-library.json",
+      "asset_type": "agent_skill_library",
+      "managed_block_id": "DAD_AGENT_SKILL_LIBRARY",
+      "profiles": [
+        "agent-skill",
+        "codex-skill",
+        "claude-skill",
+        "downstream-checkout",
+        "mail-lifecycle"
+      ],
+      "use_when": [
+        "A repo wants to check out a DAD-managed agent skill by pointer or wrapper.",
+        "DAD needs to send skill update, retirement, or replacement notices through mail.",
+        "A future repo template should know how to discover and refresh agent skills."
+      ],
+      "does_not_apply_when": [
+        "The target repo has not approved DAD skill pointers or wrappers.",
+        "The task would copy full skill bodies, install plugins, or mutate downstream source files without human approval."
+      ],
+      "install_path": "registry/agent-skill-library.json",
+      "source_package": {
+        "filename": "repo-local",
+        "sha256": ""
+      },
+      "installed_at": "2026-07-01",
+      "review_status": "candidate",
+      "safety_notes": [
+        "Checkouts default to pointer mode.",
+        "Skill mail is candidate evidence and does not install or update target repos.",
+        "Private/internal/restricted/unknown-origin skill notices headed to public-facing repos inherit DAD human release gates.",
+        "Do not copy full DAD skills into downstream repos without explicit approval."
+      ]
+    },
+    {
+      "asset_id": "dad-repo-enrollment-control-plane",
+      "name": "DAD Repo Enrollment And Control Plane",
+      "version": "0.1.0",
+      "path": "docs/DAD_REPO_ENROLLMENT.md",
+      "asset_type": "governance_control_plane",
+      "managed_block_id": "DAD_REPO_ENROLLMENT",
+      "profiles": [
+        "repo-enrollment",
+        "control-plane",
+        "mail-center",
+        "governance-map",
+        "data-map",
+        "downstream-template"
+      ],
+      "use_when": [
+        "A persistent repo should receive DAD full governance enrollment in a reviewed wave.",
+        "DAD needs to update enrolled repo pointers, maps, hooks, or managed AI guidance.",
+        "A future repo template needs daily mail and weekly asset/skill/template/control-plane cadence."
+      ],
+      "does_not_apply_when": [
+        "The repo is not present in reviewed enrollment.repos policy.",
+        "The task only needs candidate mail delivery under .digital-asset/mail/**.",
+        "A human approval ID has not been recorded for full governance install or update."
+      ],
+      "install_path": "docs/DAD_REPO_ENROLLMENT.md",
+      "source_package": {
+        "filename": "repo-local",
+        "sha256": ""
+      },
+      "installed_at": "2026-07-01",
+      "review_status": "candidate",
+      "safety_notes": [
+        "Enrollment apply/update requires reviewed policy and a human approval ID.",
+        "Normal recurring DAD operation remains mailbox-only.",
+        "Public-facing repo output omits local absolute paths by default.",
+        "Repo renames keep stable repo IDs only when the same contract still applies; repo splits require new enrollment records."
+      ]
     }
   ]
 }

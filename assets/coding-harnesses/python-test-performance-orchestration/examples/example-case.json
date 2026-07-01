@@ -1,0 +1,7 @@
+{
+  "example_id": "dad:harness-example:python-test-performance-orchestration:shared-module",
+  "harness_id": "dad:harness:python-test-performance-orchestration",
+  "task": "A shared parser helper changed and pytest is slow.",
+  "expected_use": "Run targeted parser tests for quick feedback, then run the full suite before completion.",
+  "candidate_only": true
+}

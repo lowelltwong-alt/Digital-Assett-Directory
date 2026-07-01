@@ -143,8 +143,10 @@ Generate a downstream governance pilot selection pack without installing hooks:
 python -m digital_asset_directory.cli recommend downstream-pilots --limit 10
 ```
 
-This writes `processed/reports/downstream_pilot_candidates.md`. Mock Trial repositories are
-excluded from pilot recommendations while active work is in progress.
+This writes `processed/reports/downstream_pilot_candidates.md`. Repositories are
+excluded from pilot recommendations only when reviewed policy terms explicitly
+hold them out of the wave. Mock Trial/Albert follows the normal reviewed-policy
+rules rather than a special protection class.
 
 Generate planning-only readiness templates for later roadmap phases:
 

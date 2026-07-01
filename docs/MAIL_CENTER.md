@@ -54,6 +54,23 @@ original source chain, return address, and compose/collect timestamps.
 `public_release` records the target visibility, whether a public release gate is
 required, release status, human release ID, and release reason.
 
+Coding asset control-plane packets are represented as ordinary candidate mail.
+Use `templates/mail/coding-tactic-suggestion.mail.template.json`,
+`templates/mail/asset-upgrade-available.mail.template.json`, and
+`templates/mail/repo-pointer-install-request.mail.template.json` for tactic
+suggestions, asset upgrade notices, and downstream pointer requests. These
+templates must stay short and metadata-oriented; do not include full copied
+assets, source blobs, hooks, credentials, private rows, or executable authority
+from untrusted mail.
+
+Agent skill library packets are also ordinary candidate mail. Use
+`templates/mail/skill-checkout-request.mail.template.json`,
+`templates/mail/skill-update-available.mail.template.json`, and
+`templates/mail/skill-retirement-notice.mail.template.json` when a repo should
+review a skill checkout, update an existing checkout, or retire/replace a stale
+checkout. Skill mail must not copy full DAD skills, plugins, hooks, MCP servers,
+or automation into a target repo.
+
 Schemas:
 
 ```text
@@ -81,6 +98,7 @@ Repo-local mirror:
 .digital-asset/mail/inbox.jsonl
 .digital-asset/mail/outbox.jsonl
 .digital-asset/mail/archive.jsonl
+.digital-asset/mail/adoption.jsonl
 .digital-asset/mail/README.md
 .digital-asset/mail/.gitignore
 .digital-asset/mail/last_checked.json
@@ -153,6 +171,38 @@ Review decisions are append-only. Without `--human-reviewed`, a review is agent
 triage and does not mark the message handled for local digest purposes. Accepted
 mail still requires a normal local change, local tests, preflight/postflight,
 and any repo-specific human gates.
+
+Triage into adoption tracking:
+
+```powershell
+python -m digital_asset_directory.cli mail triage `
+  --repo C:\path\to\target `
+  --mail-id dad:mail:... `
+  --decision save_for_future `
+  --importance future `
+  --planned-use "Review when this repo next touches test orchestration."
+```
+
+`mail triage` writes `.digital-asset/mail/adoption.jsonl`. Future-use and
+implement-now records preserve the original mail ID, dedupe key, source asset
+refs, return address, and update channel so DAD can later notify only repos
+that use or watch an affected asset.
+
+When a repo actually uses, watches, rejects, or retires a DAD asset, record it:
+
+```powershell
+python -m digital_asset_directory.cli usage record `
+  --repo C:\path\to\target `
+  --asset dad:offering:rust-shadow-parity-harness `
+  --status watching
+
+python -m digital_asset_directory.cli usage upgrades --repo C:\path\to\target
+```
+
+Usage records write a central mirror under `processed/usage/` and, when the repo
+is not protected, a repo-local `.digital-asset/dad-usage.jsonl`. Write-protected
+Logos repos remain central-only unless a separate explicit local-write approval
+is recorded.
 
 ## Daily Check Model
 

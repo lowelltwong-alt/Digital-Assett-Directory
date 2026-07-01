@@ -1,0 +1,25 @@
+{
+  "schema_version": "0.1.0",
+  "methodology_id": "dad-usefulness-methodology-v0.1",
+  "authority_boundary": "Usefulness scores are deterministic routing aids, not proof of truth, value, safety, or local adoption readiness.",
+  "weights": {
+    "language_match": 0.2,
+    "repo_type_match": 0.15,
+    "domain_match": 0.1,
+    "context_tag_match": 0.2,
+    "task_match": 0.2,
+    "capability_match": 0.15
+  },
+  "thresholds": {
+    "use_now": 70,
+    "save_for_future": 40,
+    "defer": 20
+  },
+  "decision_rules": [
+    "Return needs_human_review when an offering is not reviewed enough for the target context or is not public-safe for a public-facing repo.",
+    "Return use_now only when deterministic overlap is strong enough and local authority still reviews adoption.",
+    "Return save_for_future when overlap is meaningful but the task does not require immediate implementation.",
+    "Return defer when weak context exists but evidence is not enough for a recommendation.",
+    "Return reject when deterministic overlap is too weak or the offering clearly does not fit."
+  ]
+}

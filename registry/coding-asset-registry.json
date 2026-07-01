@@ -1,0 +1,284 @@
+{
+  "registry_version": "0.1.0",
+  "status": "installed_candidate",
+  "authority_boundary": "This registry routes AI coding agents to DAD-owned reusable assets. It does not authorize mutation of downstream repos, override repo-local canon, or promote generated candidates to reviewed doctrine.",
+  "assets": [
+    {
+      "asset_id": "asset:ai-engineering-preflight",
+      "name": "AI Engineering Preflight",
+      "version": "0.1.0",
+      "asset_type": "preflight_profile",
+      "path": "assets/ai-engineering-preflight",
+      "profiles": ["common", "python", "rust", "mixed-language", "long-script-refactor"],
+      "languages": ["python", "rust", "mixed"],
+      "applies_when": [
+        "An AI agent is planning material coding, refactoring, test, package, or repo-template work.",
+        "A repo needs Python, Rust, or mixed-language modularity guidance before implementation.",
+        "A downstream repo has explicitly approved a dry-run of managed AI instruction pointers."
+      ],
+      "does_not_apply_when": [
+        "The task is a read-only catalog lookup with no coding or repo-template work.",
+        "A downstream repo has not approved mutation or managed-block installation.",
+        "The target repo has stricter local guidance that conflicts with this asset."
+      ],
+      "danger_if_misapplied": "A full asset copy or unapproved hook/rule install could imply DAD authority over a target repo or disrupt local workflows.",
+      "recommended_for_repo_types": ["persistent_software_repo", "template_repo", "governed_repo_family"],
+      "recommended_for_task_types": ["coding", "refactor", "testing", "repo_template_creation", "agent_instruction_design"],
+      "authority_boundary": "DAD reusable asset guidance only; target repos retain local source truth and validation authority.",
+      "validation_commands": [
+        "python assets/ai-engineering-preflight/scripts/audit_repo.py --help",
+        "python assets/ai-engineering-preflight/scripts/deploy_to_repo.py --help"
+      ],
+      "upgrade_policy": "human_approved_asset_patch",
+      "review_status": "installed_for_local_reuse",
+      "last_reviewed_at": "2026-07-01",
+      "next_review_due_at": "2026-10-01",
+      "source_evidence": [
+        "assets/asset-registry.json",
+        "assets/ai-engineering-preflight/asset.json",
+        "https://developers.openai.com/codex/guides/agents-md",
+        "https://developers.openai.com/codex/skills",
+        "https://developers.openai.com/codex/subagents"
+      ],
+      "related_assets": ["asset:python-ai-advantage-preflight", "asset:preflight-profile-router"]
+    },
+    {
+      "asset_id": "asset:python-ai-advantage-preflight",
+      "name": "Python AI Advantage Preflight",
+      "version": "0.1.0",
+      "asset_type": "coding_tactic_bundle",
+      "path": "assets/python-ai-advantage-preflight",
+      "profiles": ["python", "long-script-refactor", "python-library-api-design", "underused-python-tactics"],
+      "languages": ["python"],
+      "applies_when": [
+        "A Python task involves public API shape, refactoring, JSON boundaries, state machines, secrets, context propagation, or testable side-effect boundaries.",
+        "An AI agent is about to write broad procedural Python and needs better-than-average defaults.",
+        "A repo-template or package design task needs Python-specific instruction blocks."
+      ],
+      "does_not_apply_when": [
+        "The target code is intentionally tiny script glue where extra abstractions would obscure the workflow.",
+        "The repo is not Python or has a local style guide that rejects the suggested tactic.",
+        "The tactic cannot be verified with tests, type checks, or code review in the target context."
+      ],
+      "danger_if_misapplied": "Overusing advanced Python features can create clever-looking code that is harder for maintainers and agents to debug.",
+      "recommended_for_repo_types": ["python_library", "python_cli", "etl_repo", "repo_template"],
+      "recommended_for_task_types": ["python_coding", "python_refactor", "python_api_design", "long_script_refactor"],
+      "authority_boundary": "Candidate Python tactic guidance; local tests, style, and maintainers decide adoption.",
+      "validation_commands": [
+        "python assets/python-ai-advantage-preflight/scripts/validate_inventory.py"
+      ],
+      "upgrade_policy": "human_approved_asset_patch",
+      "review_status": "installed_for_local_reuse",
+      "last_reviewed_at": "2026-07-01",
+      "next_review_due_at": "2026-10-01",
+      "source_evidence": [
+        "assets/python-ai-advantage-preflight/asset.json",
+        "assets/python-ai-advantage-preflight/SOURCES.md",
+        "C:/Users/lowel/Downloads/python-ai-advantage-preflight-asset-v0.1.0.zip#sha256=324b66b23015c46fde818fcc4758505f29d231de9989884ffbc4a0b233b09673",
+        "https://docs.python.org/3/library/dataclasses.html",
+        "https://docs.python.org/3/library/typing.html"
+      ],
+      "related_assets": ["asset:ai-engineering-preflight", "asset:coding-tactics-radar"]
+    },
+    {
+      "asset_id": "asset:coding-tactics-radar",
+      "name": "Coding Tactics Radar",
+      "version": "0.1.0",
+      "asset_type": "research_packet",
+      "path": "registry/coding-tactics-radar.json",
+      "profiles": ["python", "rust", "agent-instruction", "security-sensitive", "testing"],
+      "languages": ["python", "rust", "agent-instruction"],
+      "applies_when": [
+        "An agent needs candidate tactics that include applicability, non-applicability, danger, examples, verification, and evidence.",
+        "A postflight or mail packet reports a tactic that might become reusable after review."
+      ],
+      "does_not_apply_when": [
+        "A tactic lacks evidence, verification, or context limits.",
+        "The agent wants to claim broad industry underuse without measurement evidence."
+      ],
+      "danger_if_misapplied": "A tactic radar can become prompt folklore if candidates are promoted without evidence and review.",
+      "recommended_for_repo_types": ["persistent_software_repo", "research_repo", "template_repo"],
+      "recommended_for_task_types": ["tactic_recommendation", "coding_review", "postflight_feedback", "research"],
+      "authority_boundary": "Candidate radar entries are triage guidance until reviewed and promoted through DAD policy.",
+      "validation_commands": ["python scripts/validate_coding_asset_control_plane.py"],
+      "upgrade_policy": "candidate_then_human_reviewed_promotion",
+      "review_status": "candidate",
+      "last_reviewed_at": "2026-07-01",
+      "next_review_due_at": "2026-10-01",
+      "source_evidence": [
+        "docs/CODING_TACTICS_RESEARCH_RADAR.md",
+        "schemas/coding-tactic.schema.json",
+        "https://rust-lang.github.io/api-guidelines/about.html",
+        "https://arxiv.org/abs/2211.03622"
+      ],
+      "related_assets": ["asset:python-ai-advantage-preflight", "asset:preflight-profile-router"]
+    },
+    {
+      "asset_id": "asset:preflight-profile-router",
+      "name": "Preflight Profile Router",
+      "version": "0.1.0",
+      "asset_type": "midflight_check",
+      "path": "registry/preflight-profile-router.json",
+      "profiles": ["common", "python", "rust", "security", "governance", "testing"],
+      "languages": ["python", "rust", "mixed", "agent-instruction"],
+      "applies_when": [
+        "A future agent needs to map task type, repo family, language, and risk to DAD assets and tactics.",
+        "An agent is stuck midflight and needs a bounded tactic recommendation."
+      ],
+      "does_not_apply_when": [
+        "A target repo's local authority has already selected a conflicting route.",
+        "The task is too vague to identify language, risk, or validation expectations."
+      ],
+      "danger_if_misapplied": "Bad routing can cause future agents to overuse tactics, skip local authority, or run the wrong validation.",
+      "recommended_for_repo_types": ["persistent_software_repo", "governed_repo_family", "template_repo"],
+      "recommended_for_task_types": ["preflight", "midflight", "validation_strategy", "agent_instruction_design"],
+      "authority_boundary": "Router recommendations are advisory until the active repo accepts and validates them locally.",
+      "validation_commands": ["python scripts/validate_coding_asset_control_plane.py"],
+      "upgrade_policy": "human_review_for_new_default_routes",
+      "review_status": "candidate",
+      "last_reviewed_at": "2026-07-01",
+      "next_review_due_at": "2026-09-29",
+      "source_evidence": [
+        "docs/PREFLIGHT_PROFILE_ROUTING.md",
+        "registry/preflight-profile-router.json",
+        "https://developers.openai.com/codex/concepts/customization",
+        "https://docs.github.com/copilot/customizing-copilot/adding-custom-instructions-for-github-copilot"
+      ],
+      "related_assets": ["asset:ai-engineering-preflight", "asset:coding-tactics-radar"]
+    },
+    {
+      "asset_id": "asset:downstream-coding-asset-pointer",
+      "name": "Downstream Coding Asset Pointer",
+      "version": "0.1.0",
+      "asset_type": "agent_instruction_block",
+      "path": "templates/downstream/CODING_ASSET_MANAGED_BLOCK.md",
+      "profiles": ["downstream-pointer", "ai-front-door", "repo-template"],
+      "languages": ["agent-instruction"],
+      "applies_when": [
+        "A persistent downstream repo is approved to point agents back to DAD before material AI coding work.",
+        "A repo template needs a small pointer instead of vendored DAD assets."
+      ],
+      "does_not_apply_when": [
+        "The repo has not approved DAD-managed blocks or local pointer files.",
+        "The pointer would be treated as DAD overriding local authority."
+      ],
+      "danger_if_misapplied": "A pointer installed without approval can look like cross-repo governance capture.",
+      "recommended_for_repo_types": ["persistent_software_repo", "repo_template"],
+      "recommended_for_task_types": ["repo_template_creation", "downstream_pointer_install", "agent_instruction_design"],
+      "authority_boundary": "Managed pointer only; preserve local files outside reviewed markers.",
+      "validation_commands": [
+        "python scripts/render_downstream_coding_pointer.py --hub ../Digital-Assett-Directory"
+      ],
+      "upgrade_policy": "managed_block_only_after_target_approval",
+      "review_status": "candidate",
+      "last_reviewed_at": "2026-07-01",
+      "next_review_due_at": "2026-09-29",
+      "source_evidence": [
+        "docs/DOWNSTREAM_CODING_ASSET_POINTERS.md",
+        "templates/downstream/AI_ASSETS_POINTER.template.json",
+        "templates/downstream/CODING_ASSET_MANAGED_BLOCK.md"
+      ],
+      "related_assets": ["asset:ai-engineering-preflight", "asset:preflight-profile-router"]
+    },
+    {
+      "asset_id": "asset:mail-coding-asset-packets",
+      "name": "Coding Asset Mail Packet Templates",
+      "version": "0.1.0",
+      "asset_type": "mail_command_template",
+      "path": "templates/mail",
+      "profiles": ["mail-center", "cross-repo", "candidate-packet"],
+      "languages": ["agent-instruction"],
+      "applies_when": [
+        "DAD needs to route a coding tactic, asset upgrade, or repo pointer suggestion to another repo as candidate mail.",
+        "A repo wants to request feedback without automatic source mutation."
+      ],
+      "does_not_apply_when": [
+        "The packet would include secrets, raw private rows, copied blobs, or executable instructions from untrusted mail.",
+        "The target repo is public-facing and the packet lacks required human release."
+      ],
+      "danger_if_misapplied": "Mail can become prompt injection or accidental private-to-public leakage if treated as trusted code or authority.",
+      "recommended_for_repo_types": ["persistent_software_repo", "governed_repo_family"],
+      "recommended_for_task_types": ["cross_repo_suggestion", "asset_upgrade_notice", "tactic_feedback_request"],
+      "authority_boundary": "Mail is candidate evidence only and writes only to approved mailbox paths.",
+      "validation_commands": ["python scripts/validate_coding_asset_control_plane.py"],
+      "upgrade_policy": "human_review_for_new_packet_types",
+      "review_status": "candidate",
+      "last_reviewed_at": "2026-07-01",
+      "next_review_due_at": "2026-09-29",
+      "source_evidence": [
+        "docs/MAIL_CENTER.md",
+        "schemas/mail-message.schema.json",
+        "templates/mail/coding-tactic-suggestion.mail.template.json",
+        "templates/mail/asset-upgrade-available.mail.template.json",
+        "templates/mail/repo-pointer-install-request.mail.template.json"
+      ],
+      "related_assets": ["asset:downstream-coding-asset-pointer", "asset:coding-tactics-radar"]
+    },
+    {
+      "asset_id": "asset:agent-skill-library",
+      "name": "Agent Skill Library",
+      "version": "0.1.0",
+      "asset_type": "agent_instruction_block",
+      "path": "registry/agent-skill-library.json",
+      "profiles": ["agent-skill", "codex-skill", "claude-skill", "downstream-checkout", "mail-lifecycle"],
+      "languages": ["agent-instruction", "python", "rust", "mixed"],
+      "applies_when": [
+        "A future repo needs to check out a DAD-managed skill pointer or wrapper.",
+        "DAD needs to notify repos of skill updates, retirements, or replacements.",
+        "A repo template should include skill checkout discovery without vendoring full skills."
+      ],
+      "does_not_apply_when": [
+        "The target repo has not approved DAD skill pointers or wrappers.",
+        "A full skill copy, plugin install, hook, or automation would be needed without human approval."
+      ],
+      "danger_if_misapplied": "A skill pointer can become cross-repo governance capture if local adoption, update review, and no-full-copy language are removed.",
+      "recommended_for_repo_types": ["persistent_software_repo", "template_repo", "governed_repo_family"],
+      "recommended_for_task_types": ["agent_instruction_design", "repo_template_creation", "skill_checkout", "skill_lifecycle_notice"],
+      "authority_boundary": "DAD owns the skill library lifecycle metadata; target repos decide local checkout and adoption.",
+      "validation_commands": ["python scripts/validate_agent_skill_library.py"],
+      "upgrade_policy": "dad_mail_notice_with_local_review",
+      "review_status": "candidate",
+      "last_reviewed_at": "2026-07-01",
+      "next_review_due_at": "2026-10-01",
+      "source_evidence": [
+        "docs/AGENT_SKILL_LIBRARY.md",
+        "docs/AGENT_SKILL_CHECKOUTS.md",
+        "registry/agent-skill-library.json",
+        "templates/downstream/AGENT_SKILL_POINTER.template.json"
+      ],
+      "related_assets": ["asset:downstream-coding-asset-pointer", "asset:mail-coding-asset-packets", "asset:preflight-profile-router"]
+    },
+    {
+      "asset_id": "asset:tactic-use-feedback",
+      "name": "Tactic Use Feedback",
+      "version": "0.1.0",
+      "asset_type": "postflight_template",
+      "path": "templates/tactic-use-feedback.template.json",
+      "profiles": ["postflight", "learning-loop", "tactic-promotion"],
+      "languages": ["python", "rust", "agent-instruction", "mixed"],
+      "applies_when": [
+        "An agent used, rejected, or corrected a coding tactic and should report usefulness with context limits.",
+        "A tactic needs candidate evidence before promotion."
+      ],
+      "does_not_apply_when": [
+        "The feedback would reveal secrets or copied private source content.",
+        "The agent has no observable evidence beyond private hidden reasoning."
+      ],
+      "danger_if_misapplied": "Context-free feedback can make a local success look like universal guidance.",
+      "recommended_for_repo_types": ["persistent_software_repo", "template_repo"],
+      "recommended_for_task_types": ["postflight", "lesson_capture", "tactic_promotion_candidate"],
+      "authority_boundary": "Feedback is candidate evidence and cannot promote a tactic by itself.",
+      "validation_commands": ["python scripts/validate_coding_asset_control_plane.py"],
+      "upgrade_policy": "align_with_tactic_feedback_schema",
+      "review_status": "candidate",
+      "last_reviewed_at": "2026-07-01",
+      "next_review_due_at": "2026-10-01",
+      "source_evidence": [
+        "schemas/tactic-use-feedback.schema.json",
+        "templates/tactic-use-feedback.template.json",
+        "docs/CODING_TACTIC_PROMOTION_POLICY.md"
+      ],
+      "related_assets": ["asset:coding-tactics-radar"]
+    }
+  ]
+}

@@ -1,0 +1,58 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://local.digital-asset-directory/schemas/agent-skill-checkout-record.schema.json",
+  "title": "Agent Skill Checkout Record",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "checkout_id",
+    "repo_id",
+    "repo_alias",
+    "repo_visibility",
+    "public_facing",
+    "skill_id",
+    "checked_out_version",
+    "checkout_mode",
+    "local_pointer_path",
+    "checked_out_at",
+    "last_checked_at",
+    "source_provenance",
+    "review_status"
+  ],
+  "properties": {
+    "schema_version": {"const": "0.1.0"},
+    "checkout_id": {"type": "string", "minLength": 1},
+    "repo_id": {"type": "string", "minLength": 1},
+    "repo_alias": {"type": "string", "minLength": 1},
+    "repo_visibility": {"enum": ["public", "internal", "private", "restricted", "unknown"]},
+    "public_facing": {"type": "boolean"},
+    "skill_id": {"type": "string", "minLength": 1},
+    "checked_out_version": {"type": "string", "minLength": 1},
+    "checkout_mode": {"enum": ["pointer", "wrapper", "local_copy_requires_human_approval", "plugin_install_manual"]},
+    "local_pointer_path": {"type": "string", "minLength": 1},
+    "checked_out_at": {"type": "string", "minLength": 1},
+    "last_checked_at": {"type": "string", "minLength": 1},
+    "source_provenance": {
+      "type": "object",
+      "required": [
+        "source_repo_id",
+        "source_repo_alias",
+        "source_visibility",
+        "source_registry",
+        "return_address"
+      ],
+      "properties": {
+        "source_repo_id": {"type": "string", "minLength": 1},
+        "source_repo_alias": {"type": "string", "minLength": 1},
+        "source_visibility": {"enum": ["public", "internal", "private", "restricted", "unknown"]},
+        "source_registry": {"type": "string", "minLength": 1},
+        "return_address": {"type": "string", "minLength": 1}
+      },
+      "additionalProperties": false
+    },
+    "review_status": {"enum": ["active", "deferred", "archived", "rejected"]},
+    "notes": {"type": "string"}
+  },
+  "additionalProperties": false
+}
+

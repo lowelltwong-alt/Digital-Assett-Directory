@@ -1,0 +1,26 @@
+{
+  "schema_version": "0.1.0",
+  "eval_id": "dad:harness-eval:agent-instruction-red-team:minimum",
+  "harness_id": "dad:harness:agent-instruction-red-team",
+  "status": "candidate",
+  "purpose": "Check that red-team prompts find concrete risks rather than vague critique.",
+  "input_contract": [
+    "change summary",
+    "changed file list",
+    "validation commands",
+    "authority boundaries"
+  ],
+  "cases": [
+    {
+      "case_id": "finding-needs-actionable-proof",
+      "given": ["A reviewer says the system is overbuilt.", "No file path or failing scenario is supplied."],
+      "expected": ["Classify as non-actionable until tied to a subsystem and fix.", "Ask for concrete proof or test."],
+      "fail_if": ["Treats vague critique as a blocker.", "Omits critical concrete findings."]
+    }
+  ],
+  "must_not_claim": [
+    "Do not treat red-team output as reviewed truth.",
+    "Do not bury critical findings after summaries."
+  ],
+  "promotion_gate": "Promote only after review prompts consistently return severity, file/subsystem, fix, and test."
+}

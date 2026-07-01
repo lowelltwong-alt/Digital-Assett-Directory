@@ -44,6 +44,33 @@ class MailRepoPolicy:
     public_facing: bool = False
     mail_enabled: bool = True
     delivery_allowed: bool = True
+    write_protected: bool = False
+    write_protection_reason: str = ""
+
+
+@dataclass
+class EnrollmentRepoPolicy:
+    id: str
+    path: Path
+    alias: str
+    visibility: str = "unknown"
+    public_facing: bool = False
+    enrollment_enabled: bool = True
+    apply_allowed: bool = False
+    update_allowed: bool = False
+    active_hold: bool = False
+    active_hold_reason: str = ""
+    allow_dirty_worktree: bool = False
+    allow_non_main_branch: bool = False
+    wave: str = ""
+    approved_approval_ids: list[str] = field(default_factory=list)
+    local_paths_allowed: bool = False
+    repo_type: str = "unknown"
+    languages: list[str] = field(default_factory=list)
+    domains: list[str] = field(default_factory=list)
+    context_tags: list[str] = field(default_factory=list)
+    validation_commands: list[str] = field(default_factory=list)
+    enabled_control_planes: list[str] = field(default_factory=list)
 
 
 @dataclass
@@ -71,6 +98,7 @@ class AppConfig:
     github_sources: list[GitHubSource]
     settings: Settings
     mail_repos: list[MailRepoPolicy] = field(default_factory=list)
+    enrollment_repos: list[EnrollmentRepoPolicy] = field(default_factory=list)
 
 
 def resolve_config_path(repo_root: Path, requested: Path | None = None) -> Path:
@@ -137,6 +165,46 @@ def load_config(path: Path | None = None, repo_root: Path | None = None) -> AppC
                 public_facing=bool(item.get("public_facing", False)),
                 mail_enabled=bool(item.get("mail_enabled", True)),
                 delivery_allowed=bool(item.get("delivery_allowed", True)),
+                write_protected=bool(item.get("write_protected", False)),
+                write_protection_reason=str(item.get("write_protection_reason", "")),
+            )
+        )
+
+    enrollment_repos: list[EnrollmentRepoPolicy] = []
+    for item in raw.get("enrollment", {}).get("repos", []) or []:
+        raw_path = os.path.expandvars(os.path.expanduser(str(item.get("path", ""))))
+        path = Path(raw_path)
+        resolved_path = path if path.is_absolute() else root / path
+        repo_id = str(item["id"])
+        enrollment_repos.append(
+            EnrollmentRepoPolicy(
+                id=repo_id,
+                path=resolved_path,
+                alias=str(item.get("alias") or repo_id),
+                visibility=str(item.get("visibility", "unknown")),
+                public_facing=bool(item.get("public_facing", False)),
+                enrollment_enabled=bool(item.get("enrollment_enabled", True)),
+                apply_allowed=bool(item.get("apply_allowed", False)),
+                update_allowed=bool(item.get("update_allowed", False)),
+                active_hold=bool(item.get("active_hold", False)),
+                active_hold_reason=str(item.get("active_hold_reason", "")),
+                allow_dirty_worktree=bool(item.get("allow_dirty_worktree", False)),
+                allow_non_main_branch=bool(item.get("allow_non_main_branch", False)),
+                wave=str(item.get("wave", "")),
+                approved_approval_ids=[
+                    str(value) for value in item.get("approved_approval_ids", []) or []
+                ],
+                local_paths_allowed=bool(item.get("local_paths_allowed", False)),
+                repo_type=str(item.get("repo_type", "unknown")),
+                languages=[str(value) for value in item.get("languages", []) or []],
+                domains=[str(value) for value in item.get("domains", []) or []],
+                context_tags=[str(value) for value in item.get("context_tags", []) or []],
+                validation_commands=[
+                    str(value) for value in item.get("validation_commands", []) or []
+                ],
+                enabled_control_planes=[
+                    str(value) for value in item.get("enabled_control_planes", []) or []
+                ],
             )
         )
 
@@ -144,4 +212,13 @@ def load_config(path: Path | None = None, repo_root: Path | None = None) -> AppC
     settings = Settings(
         **{k: v for k, v in settings_raw.items() if k in Settings.__dataclass_fields__}
     )
-    return AppConfig(root, raw, db_path, local_sources, github_sources, settings, mail_repos)
+    return AppConfig(
+        root,
+        raw,
+        db_path,
+        local_sources,
+        github_sources,
+        settings,
+        mail_repos,
+        enrollment_repos,
+    )
