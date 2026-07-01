@@ -14,7 +14,9 @@ own canon, source-of-truth, and design authority.
 Persistent repos should include a lightweight DAD mailbox by default:
 `.digital-asset/mail/README.md` plus append-only inbox/outbox/archive JSONL
 files. Mail is candidate suggestion transport only; it does not install
-governance or adopt cross-repo lessons without local review.
+governance or adopt cross-repo lessons without local review. Public-facing repos
+must also use DAD's human release gate before receiving mail whose source
+visibility is private, internal, restricted, or unknown.
 
 ## Command
 

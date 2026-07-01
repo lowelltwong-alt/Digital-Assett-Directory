@@ -36,6 +36,17 @@ class GitHubSource:
 
 
 @dataclass
+class MailRepoPolicy:
+    id: str
+    path: Path
+    alias: str
+    visibility: str = "unknown"
+    public_facing: bool = False
+    mail_enabled: bool = True
+    delivery_allowed: bool = True
+
+
+@dataclass
 class Settings:
     read_only: bool = True
     store_excerpts: bool = True
@@ -59,6 +70,7 @@ class AppConfig:
     local_sources: list[LocalSource]
     github_sources: list[GitHubSource]
     settings: Settings
+    mail_repos: list[MailRepoPolicy] = field(default_factory=list)
 
 
 def resolve_config_path(repo_root: Path, requested: Path | None = None) -> Path:
@@ -110,8 +122,26 @@ def load_config(path: Path | None = None, repo_root: Path | None = None) -> AppC
         for item in raw.get("sources", {}).get("github", []) or []
     ]
 
+    mail_repos: list[MailRepoPolicy] = []
+    for item in raw.get("mail", {}).get("repos", []) or []:
+        raw_path = os.path.expandvars(os.path.expanduser(str(item.get("path", ""))))
+        path = Path(raw_path)
+        resolved_path = path if path.is_absolute() else root / path
+        repo_id = str(item["id"])
+        mail_repos.append(
+            MailRepoPolicy(
+                id=repo_id,
+                path=resolved_path,
+                alias=str(item.get("alias") or repo_id),
+                visibility=str(item.get("visibility", "unknown")),
+                public_facing=bool(item.get("public_facing", False)),
+                mail_enabled=bool(item.get("mail_enabled", True)),
+                delivery_allowed=bool(item.get("delivery_allowed", True)),
+            )
+        )
+
     settings_raw = raw.get("settings", {})
     settings = Settings(
         **{k: v for k, v in settings_raw.items() if k in Settings.__dataclass_fields__}
     )
-    return AppConfig(root, raw, db_path, local_sources, github_sources, settings)
+    return AppConfig(root, raw, db_path, local_sources, github_sources, settings, mail_repos)

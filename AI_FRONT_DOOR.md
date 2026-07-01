@@ -65,6 +65,8 @@ not prove source truth, value, authority, or promotion.
 | `registry/edge-type-registry.json` | Controlled edge vocabulary. | You create, interpret, or validate graph relationships. |
 | `registry/asset-pattern-registry.json` | Controlled high-leverage pattern vocabulary. | You classify workflows, composite assets, or reusable systems. |
 | `registry/template-registry.json` | Controlled template library with forward and reverse dependencies. | You create, update, validate, or reuse templates. |
+| `assets/asset-registry.json` | Local index of installed reusable assets. | You need a reusable asset, package provenance, rollout command, or source path before coding or template work. |
+| `assets/ai-engineering-preflight/` | Installed AI engineering preflight asset with Python/Rust agent guidance, templates, prompts, and dry-run rollout scripts. | You are planning AI-assisted software changes, refactors, or repo instruction/template deployment. |
 | `docs/CROSS_REPO_GOVERNANCE_DEPENDENCY_MAP_PATTERN.md` | Reusable cross-repo governance map and child-mirror template pattern. | You design a repo family where upstream governance and child repo mirrors must stay aligned. |
 | `docs/MAIL_CENTER.md` | Governed DAD mail hub and repo-local inbox/outbox mirror. | You need candidate lessons, workflows, assets, taxonomy, capabilities, or governance notices to move across repos without mutating source authority. |
 | `ontology/digital-asset-ontology.ttl` | Ontology layer for graph concepts. | You need semantic graph structure or external graph alignment. |
@@ -124,6 +126,7 @@ Discovery output is evidence and recommendation, not source-repository authority
 - candidate value, staleness, orphan, missing-part, and synergy scoring;
 - lessons and AI handoff capture;
 - DAD mail-center candidate suggestion transport;
+- tracked reusable asset packages and their local discovery index;
 - lesson-automation coverage routing and scan-cycle logs;
 - metadata-only reference-architecture recognition and grading;
 - generated architecture consult packs for new repo seeding;

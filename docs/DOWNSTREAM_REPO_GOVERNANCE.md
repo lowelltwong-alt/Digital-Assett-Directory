@@ -48,6 +48,7 @@ Persistent downstream repos may add a lightweight mailbox:
 .digital-asset/mail/inbox.jsonl
 .digital-asset/mail/outbox.jsonl
 .digital-asset/mail/archive.jsonl
+.digital-asset/mail/.gitignore
 ```
 
 The mailbox is suggestion transport only. DAD may collect outbox packets and
@@ -55,6 +56,11 @@ deliver inbox packets under `.digital-asset/mail/`, but the target repo decides
 whether to adopt any lesson, workflow, asset, taxonomy, capability, or
 governance notice. Mail must not overwrite source code, registries, schemas,
 hooks, AI authority files, or sensitive files.
+
+Agent review of inbox mail is triage only. Human review is required for local
+adoption, and DAD must record an explicit human release before
+private/internal/restricted/unknown-origin mail can be delivered to a
+public-facing repo.
 
 Use `templates/downstream/MAIL_README.md` as the optional repo-local README.
 Preflight does not collect mail. It only reports whether the repo's digest is

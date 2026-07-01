@@ -1,0 +1,5 @@
+# One repository path per line.
+# Lines beginning with # are ignored.
+#/Users/you/code/python-repo
+#/Users/you/code/rust-repo
+#/Users/you/code/mixed-repo

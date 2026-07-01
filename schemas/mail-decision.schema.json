@@ -11,6 +11,8 @@
     "decision",
     "decided_at",
     "decided_by",
+    "decision_actor_type",
+    "human_verified",
     "notes",
     "review_status"
   ],
@@ -22,8 +24,10 @@
     "decision": {"enum": ["accept", "defer", "reject", "archive"]},
     "decided_at": {"type": "string", "minLength": 1},
     "decided_by": {"type": "string"},
+    "decision_actor_type": {"enum": ["human", "agent", "unknown"]},
+    "human_verified": {"type": "boolean"},
     "notes": {"type": "string"},
-    "review_status": {"const": "reviewed"}
+    "review_status": {"enum": ["agent_triage", "human_reviewed"]}
   },
   "additionalProperties": false
 }

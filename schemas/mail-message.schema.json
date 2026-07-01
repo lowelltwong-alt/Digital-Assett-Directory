@@ -16,7 +16,9 @@
     "review_status",
     "payload",
     "evidence",
-    "suggested_actions"
+    "suggested_actions",
+    "source_provenance",
+    "public_release"
   ],
   "properties": {
     "schema_version": {"const": "0.1.0"},
@@ -52,7 +54,52 @@
     },
     "payload": {"type": "object"},
     "evidence": {"type": "array", "items": {"type": "string"}},
-    "suggested_actions": {"type": "array", "items": {"type": "string"}}
+    "suggested_actions": {"type": "array", "items": {"type": "string"}},
+    "source_provenance": {
+      "type": "object",
+      "required": [
+        "canonical_source_repo",
+        "source_repo_id",
+        "source_repo_alias",
+        "source_visibility",
+        "original_source_chain",
+        "return_address"
+      ],
+      "properties": {
+        "canonical_source_repo": {"type": "string"},
+        "source_repo_id": {"type": "string"},
+        "source_repo_alias": {"type": "string"},
+        "source_visibility": {"enum": ["public", "internal", "private", "restricted", "unknown"]},
+        "original_source_chain": {"type": "array", "items": {"type": "string"}},
+        "return_address": {"type": "string"},
+        "original_mail_id": {"type": "string"},
+        "composed_by": {"type": "string"},
+        "collected_by": {"type": "string"},
+        "collected_at": {"type": "string"},
+        "received_at": {"type": "string"}
+      },
+      "additionalProperties": true
+    },
+    "public_release": {
+      "type": "object",
+      "required": [
+        "target_visibility",
+        "target_public_facing",
+        "public_release_required",
+        "public_release_status",
+        "human_release_id",
+        "release_reason"
+      ],
+      "properties": {
+        "target_visibility": {"enum": ["public", "internal", "private", "restricted", "unknown"]},
+        "target_public_facing": {"type": "boolean"},
+        "public_release_required": {"type": "boolean"},
+        "public_release_status": {"enum": ["not_required", "pending_human", "approved", "rejected"]},
+        "human_release_id": {"type": "string"},
+        "release_reason": {"type": "string"}
+      },
+      "additionalProperties": true
+    }
   },
   "additionalProperties": false
 }

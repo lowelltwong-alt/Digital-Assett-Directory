@@ -5,7 +5,7 @@ from pathlib import Path
 import yaml
 
 from .learning import open_sessions
-from .mail_center import mail_readme_text
+from .mail_center import mail_gitignore_text, mail_readme_text
 from .utils import atomic_write_text
 
 BEGIN = "<!-- BEGIN DIGITAL_ASSET_DIRECTORY_GOVERNANCE -->"
@@ -97,6 +97,10 @@ def install_governance(target_repo: Path, hub_root: Path, force: bool = False) -
     if not mail_readme.exists() or force:
         atomic_write_text(mail_readme, mail_readme_text())
         changed.append(mail_readme)
+    mail_gitignore = mailbox / ".gitignore"
+    if not mail_gitignore.exists() or force:
+        atomic_write_text(mail_gitignore, mail_gitignore_text())
+        changed.append(mail_gitignore)
     for name in ("inbox.jsonl", "outbox.jsonl", "archive.jsonl"):
         path = mailbox / name
         if not path.exists():

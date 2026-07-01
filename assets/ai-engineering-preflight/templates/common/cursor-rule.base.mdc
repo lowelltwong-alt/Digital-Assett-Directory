@@ -1,0 +1,21 @@
+---
+description: AI engineering preflight and modular encapsulation rules
+globs: "**/*"
+alwaysApply: true
+---
+
+# AI Engineering Preflight
+
+Follow `AGENTS.md` and `docs/ai-preflight/` for this repository.
+
+Before code changes:
+
+- read relevant files;
+- identify public entry points and internal helpers;
+- identify side effects;
+- plan before large edits;
+- keep changes small;
+- verify with tests/lint/typecheck/build where available;
+- report checks run, checks not run, assumptions, and risks.
+
+Use modular encapsulation. Do not reach into internals from outside modules.

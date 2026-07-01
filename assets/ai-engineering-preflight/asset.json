@@ -1,0 +1,14 @@
+{
+  "name": "ai-engineering-preflight-asset",
+  "version": "0.1.0",
+  "default_install_subdir": "assets/ai-engineering-preflight",
+  "profiles": [
+    "common",
+    "python",
+    "rust",
+    "mixed",
+    "auto"
+  ],
+  "managed_block_id": "AI_ENGINEERING_PREFLIGHT_ASSET",
+  "intended_use": "Central digital asset for AI coding-agent preflight instructions and repo rollout templates."
+}

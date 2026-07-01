@@ -37,6 +37,7 @@ them.
 | `workflow_part` | Reusable workflow sub-units beneath asset patterns. |
 | `repo_buildout` | Repo-specific buildout advice from cataloged assets, workflows, alerts, and safe inspiration candidates. |
 | `template_library` | Reusable templates, dependencies, review cadence, and template upgrade governance. |
+| `reusable_asset` | Installed reusable assets, asset packages, and rollout helpers. |
 | `reference_architecture` | Reusable architecture patterns, component roles, grading criteria, and metadata-only architecture scans. |
 | `architecture_consult` | Seed architecture advice for new repos from reference architectures, templates, workflow parts, and gates. |
 | `governance` | Governance maps, repo contracts, authority mirrors, PR checks, and fail-closed controls. |
@@ -52,6 +53,7 @@ them.
 | `registry/source-of-truth.json` | Repository precedence and authority-layer definitions. | `authority`, `registry` | You need to know what can override what. |
 | `registry/design-authority.json` | Non-negotiable design rules and boundary constraints. | `authority`, `registry` | You are changing design behavior or evaluating a proposed change. |
 | `registry/identity-layer-registry.json` | Asset identity and similarity ladder registry. | `authority`, `registry`, `knowledge_graph` | You compare assets, versions, duplicates, or semantic similarity. |
+| `assets/asset-registry.json` | Local index of installed reusable assets, provenance, rollout helpers, and safety notes. | `front_door`, `registry`, `reusable_asset`, `workflow` | You need to find a reusable asset before coding, refactoring, or template work. |
 | `docs/AI_ENTRYPOINT_AND_TOC_ROUTING_STANDARD.md` | Deterministic standard for AI front doors, TOCs, tags, and graph entrypoints. | `front_door`, `workflow`, `learning_loop` | You create or update AI navigation in this repo or another repo. |
 | `docs/AI_ENVIRONMENT_CAPABILITY_MATRIX.md` | Advisory matrix for Codex, Cursor, Claude Code, skills, subagents, MCP, hooks, plugins, and background agents. | `front_door`, `workflow`, `governance`, `learning_loop` | You choose which AI-environment capability to use or update cross-repo guidance. |
 
@@ -76,6 +78,7 @@ them.
 | `docs/CROSS_REPO_WORKFLOW_ASSET_PATTERNS.md` | Reusable workflow patterns found across major repo families. | `workflow`, `cross_repo`, `knowledge_graph` | You want to compose or recognize workflows across repos. |
 | `docs/CROSS_REPO_GOVERNANCE_DEPENDENCY_MAP_PATTERN.md` | Reusable pattern and adoption guide for upstream governance maps, child mirrors, discovery surfaces, PR disclosure, validators, and tests. | `workflow`, `cross_repo`, `governance`, `template_library`, `validation` | You design or scan for repo-family governance dependency-map patterns. |
 | `docs/MAIL_CENTER.md` | Governed DAD mail hub and repo-local inbox/outbox mirror for candidate lessons, workflows, assets, taxonomy, capabilities, and governance notices. | `workflow`, `cross_repo`, `mail_center`, `learning_loop`, `security_privacy` | You need repos to suggest or receive cross-repo learning without mutating source authority. |
+| `assets/ai-engineering-preflight/` | Installed reusable asset for AI coding-agent preflight, Python/Rust modular encapsulation, repo instruction templates, prompts, and dry-run rollout scripts. | `workflow`, `reusable_asset`, `template_library`, `validation` | You plan AI-assisted implementation, refactoring, or downstream agent-instruction rollout. |
 | `docs/REFERENCE_ARCHITECTURE_RECOGNITION.md` | Metadata-only reference architecture recognition method, score formula, boundaries, and next scan cycle. | `reference_architecture`, `knowledge_graph`, `workflow`, `coverage_cycle` | You need to scan for reusable architecture patterns or understand what makes an architecture a good reference. |
 | `docs/ARCHITECTURE_CONSULT.md` | Consult-and-compose workflow for seeding new repos from local DAD reference patterns and templates. | `architecture_consult`, `reference_architecture`, `template_library`, `workflow`, `human_gate` | A new repo agent needs architecture advice before it starts building. |
 | `docs/PROFESSIONAL_RECRUITING_INTELLIGENCE_WORKFLOW.md` | Official-source professional identity, enrichment, recruiting, acquisition, and liftout workflow. | `workflow`, `public_safe`, `security_privacy` | You are modeling attorney/professional intelligence without importing private rows. |

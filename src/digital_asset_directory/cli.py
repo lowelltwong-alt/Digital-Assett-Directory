@@ -68,6 +68,7 @@ from .mail_center import (
     compose_mail,
     deliver_mail,
     digest_mail,
+    release_mail,
     route_mail,
     review_mail,
 )
@@ -191,23 +192,60 @@ def _key_value_payload(values: list[str]) -> dict[str, str]:
     return payload
 
 
-def _discover_mail_repos(raw_repos: list[str], cfg) -> list[Path]:
+def _discover_mail_repos(raw_repos: list[str], cfg, *, delivery: bool = False) -> list[Path]:
     if not raw_repos:
         raise typer.BadParameter("Provide at least one --repo value, or --repo all.")
     if raw_repos != ["all"]:
         return [Path(repo).resolve() for repo in raw_repos]
 
-    repos: dict[str, Path] = {str(cfg.repo_root.resolve()): cfg.repo_root.resolve()}
+    repos: dict[str, Path] = {}
+    for policy in cfg.mail_repos:
+        if not policy.mail_enabled:
+            continue
+        if delivery and not policy.delivery_allowed:
+            continue
+        repos[str(policy.path.resolve())] = policy.path.resolve()
+    if not repos:
+        raise typer.BadParameter(
+            "--repo all uses reviewed mail.repos config only; provide explicit --repo "
+            "or add enabled mail.repos entries."
+        )
+    return list(repos.values())
+
+
+def _mail_repo_candidates(cfg) -> list[dict[str, object]]:
+    configured = {str(policy.path.resolve()): policy for policy in cfg.mail_repos}
+    discovered: dict[str, Path] = {str(cfg.repo_root.resolve()): cfg.repo_root.resolve()}
+    for policy in cfg.mail_repos:
+        discovered[str(policy.path.resolve())] = policy.path.resolve()
     for source in cfg.local_sources:
         if not source.enabled:
             continue
         base = source.path.resolve()
-        candidates = [base, *(item for item in base.iterdir() if item.is_dir())] if base.exists() else []
-        for candidate in candidates:
+        source_candidates = (
+            [base, *(item for item in base.iterdir() if item.is_dir())] if base.exists() else []
+        )
+        for candidate in source_candidates:
             mail_dir = candidate / ".digital-asset" / "mail"
             if (mail_dir / "outbox.jsonl").exists() or (mail_dir / "inbox.jsonl").exists():
-                repos[str(candidate.resolve())] = candidate.resolve()
-    return list(repos.values())
+                discovered[str(candidate.resolve())] = candidate.resolve()
+    rows: list[dict[str, object]] = []
+    for path in sorted(discovered.values(), key=lambda item: str(item).lower()):
+        mail_dir = path / ".digital-asset" / "mail"
+        policy = configured.get(str(path.resolve()))
+        rows.append(
+            {
+                "path": str(path.resolve()),
+                "has_inbox": (mail_dir / "inbox.jsonl").exists(),
+                "has_outbox": (mail_dir / "outbox.jsonl").exists(),
+                "configured": policy is not None,
+                "mail_enabled": bool(policy.mail_enabled) if policy else False,
+                "delivery_allowed": bool(policy.delivery_allowed) if policy else False,
+                "visibility": policy.visibility if policy else "unreviewed_candidate",
+                "public_facing": bool(policy.public_facing) if policy else False,
+            }
+        )
+    return rows
 
 
 @app.command()
@@ -366,8 +404,11 @@ def mail_compose(
     sensitivity: str = typer.Option("internal", "--sensitivity"),
     thread_id: Optional[str] = typer.Option(None, "--thread-id"),
     dedupe_key: Optional[str] = typer.Option(None, "--dedupe-key"),
+    composed_by: str = typer.Option("unknown", "--composed-by"),
+    hub: Optional[Path] = typer.Option(None),
 ) -> None:
     """Append a candidate mail packet to a repo-local outbox."""
+    cfg = _cfg(hub=hub)
     try:
         result = compose_mail(
             repo.resolve(),
@@ -380,11 +421,27 @@ def mail_compose(
             sensitivity=sensitivity,
             thread_id=thread_id,
             dedupe_key=dedupe_key,
+            repo_policies=cfg.mail_repos,
+            composed_by=composed_by,
         )
     except (ValueError, TypeError) as exc:
         console.print(str(exc))
         raise typer.Exit(2) from exc
     console.print_json(data=result)
+
+
+@mail_app.command("discover-repos")
+def mail_discover_repos(hub: Optional[Path] = typer.Option(None)) -> None:
+    """Report candidate repo mailboxes without delivering to them."""
+    cfg = _cfg(hub=hub)
+    console.print_json(
+        data={
+            "candidates": _mail_repo_candidates(cfg),
+            "authority_boundary": (
+                "Discovery is read-only. Add reviewed mail.repos policy before using --repo all."
+            ),
+        }
+    )
 
 
 @mail_app.command("collect")
@@ -394,7 +451,11 @@ def mail_collect(
 ) -> None:
     """Collect repo outboxes into DAD's central mail inbox."""
     cfg = _cfg(hub=hub)
-    result = collect_mail(cfg.repo_root, _discover_mail_repos(repo, cfg))
+    result = collect_mail(
+        cfg.repo_root,
+        _discover_mail_repos(repo, cfg),
+        repo_policies=cfg.mail_repos,
+    )
     console.print_json(data=result)
 
 
@@ -405,7 +466,11 @@ def mail_route(
 ) -> None:
     """Categorize central inbox mail and stage delivery candidates."""
     cfg = _cfg(hub=hub)
-    result = route_mail(cfg.repo_root, default_target_repo=default_target_repo)
+    result = route_mail(
+        cfg.repo_root,
+        default_target_repo=default_target_repo,
+        repo_policies=cfg.mail_repos,
+    )
     console.print_json(data=result)
 
 
@@ -416,7 +481,12 @@ def mail_deliver(
 ) -> None:
     """Deliver staged central outbox mail only into target repo mailboxes."""
     cfg = _cfg(hub=hub)
-    result = deliver_mail(cfg.repo_root, _discover_mail_repos(repo, cfg))
+    result = deliver_mail(
+        cfg.repo_root,
+        _discover_mail_repos(repo, cfg, delivery=True),
+        repo_policies=cfg.mail_repos,
+        require_target_policy=True,
+    )
     console.print_json(data=result)
 
 
@@ -426,15 +496,41 @@ def mail_review(
     mail_id: str = typer.Option(..., "--mail-id"),
     decision: str = typer.Option(..., "--decision"),
     decided_by: str = typer.Option("unknown", "--decided-by"),
+    human_verified: bool = typer.Option(False, "--human-reviewed"),
     notes: str = typer.Option("", "--notes"),
 ) -> None:
-    """Append a local review decision for an inbox mail packet."""
+    """Append a local triage or human review decision for an inbox mail packet."""
     try:
         result = review_mail(
             repo.resolve(),
             mail_id=mail_id,
             decision=decision,
             decided_by=decided_by,
+            human_verified=human_verified,
+            notes=notes,
+        )
+    except (ValueError, TypeError) as exc:
+        console.print(str(exc))
+        raise typer.Exit(2) from exc
+    console.print_json(data=result)
+
+
+@mail_app.command("release")
+def mail_release(
+    mail_id: str = typer.Option(..., "--mail-id"),
+    decision: str = typer.Option(..., "--decision"),
+    human_reviewed_by: str = typer.Option(..., "--human-reviewed-by"),
+    notes: str = typer.Option("", "--notes"),
+    hub: Optional[Path] = typer.Option(None),
+) -> None:
+    """Human-approve or reject a public-facing release hold."""
+    cfg = _cfg(hub=hub)
+    try:
+        result = release_mail(
+            cfg.repo_root,
+            mail_id=mail_id,
+            decision=decision,
+            human_reviewed_by=human_reviewed_by,
             notes=notes,
         )
     except (ValueError, TypeError) as exc:

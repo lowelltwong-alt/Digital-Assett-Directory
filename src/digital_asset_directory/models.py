@@ -748,6 +748,33 @@ class RepoLearningEventRecord(BaseModel):
     review_status: Literal["generated_candidate", "reviewed", "rejected"] = "generated_candidate"
 
 
+def default_mail_source_provenance() -> dict[str, Any]:
+    return {
+        "canonical_source_repo": "unknown",
+        "source_repo_id": "",
+        "source_repo_alias": "",
+        "source_visibility": "unknown",
+        "original_source_chain": [],
+        "return_address": "",
+        "original_mail_id": "",
+        "composed_by": "unknown",
+        "collected_by": "",
+        "collected_at": "",
+        "received_at": "",
+    }
+
+
+def default_mail_public_release() -> dict[str, Any]:
+    return {
+        "target_visibility": "unknown",
+        "target_public_facing": False,
+        "public_release_required": False,
+        "public_release_status": "not_required",
+        "human_release_id": "",
+        "release_reason": "public_release_not_required",
+    }
+
+
 class MailMessageRecord(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
@@ -781,6 +808,8 @@ class MailMessageRecord(BaseModel):
     payload: dict[str, Any] = Field(default_factory=dict)
     evidence: list[str] = Field(default_factory=list)
     suggested_actions: list[str] = Field(default_factory=list)
+    source_provenance: dict[str, Any] = Field(default_factory=default_mail_source_provenance)
+    public_release: dict[str, Any] = Field(default_factory=default_mail_public_release)
 
 
 class MailDecisionRecord(BaseModel):
@@ -793,8 +822,10 @@ class MailDecisionRecord(BaseModel):
     decision: Literal["accept", "defer", "reject", "archive"]
     decided_at: str
     decided_by: str = "unknown"
+    decision_actor_type: Literal["human", "agent", "unknown"] = "agent"
+    human_verified: bool = False
     notes: str = ""
-    review_status: Literal["reviewed"] = "reviewed"
+    review_status: Literal["agent_triage", "human_reviewed"] = "agent_triage"
 
 
 class AttentionSeedRecord(BaseModel):

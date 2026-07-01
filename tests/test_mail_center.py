@@ -1,19 +1,26 @@
 from __future__ import annotations
 
 import json
+import os
 from pathlib import Path
+from types import SimpleNamespace
 
 import pytest
 
+from digital_asset_directory.cli import _discover_mail_repos, _mail_repo_candidates
+from digital_asset_directory.config import MailRepoPolicy
 from digital_asset_directory.mail_center import (
+    central_inbox_path,
     collect_mail,
     compose_mail,
     deliver_mail,
     digest_mail,
     mail_digest_status,
+    release_mail,
     route_mail,
     review_mail,
 )
+import digital_asset_directory.mail_center as mail_center
 
 pytestmark = pytest.mark.integration
 
@@ -34,6 +41,25 @@ def _append_jsonl(path: Path, payload: dict) -> None:
         handle.write(json.dumps(payload, sort_keys=True) + "\n")
 
 
+def _policy(
+    repo: Path,
+    repo_id: str,
+    *,
+    visibility: str = "internal",
+    public_facing: bool = False,
+    delivery_allowed: bool = True,
+) -> MailRepoPolicy:
+    return MailRepoPolicy(
+        id=repo_id,
+        path=repo,
+        alias=repo_id,
+        visibility=visibility,
+        public_facing=public_facing,
+        mail_enabled=True,
+        delivery_allowed=delivery_allowed,
+    )
+
+
 def test_compose_redacts_secret_like_payload_and_rejects_restricted_mail(tmp_path: Path):
     repo = tmp_path / "repo-a"
     repo.mkdir()
@@ -43,18 +69,35 @@ def test_compose_redacts_secret_like_payload_and_rejects_restricted_mail(tmp_pat
         message_type="lesson_suggestion",
         target_repo="central_only",
         summary="Share daily digest guidance.",
-        payload={"note": "api_key=super-secret-value should never persist"},
+        payload={
+            "note": (
+                "api_key=super-secret-value AWS AKIAABCDEFGHIJKLMNOP JWT "
+                "eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiIxMjMifQ.abcdefghijkl "
+                "db postgres://user:pass@example.com/db email test@example.com "
+                "phone 555-123-4567 ssn 123-45-6789 should never persist"
+            )
+        },
         evidence=["generated unit test"],
         suggested_actions=["Review locally before adopting."],
     )
 
     assert result["appended"] is True
     assert (repo / ".digital-asset" / "mail" / "README.md").exists()
+    assert (repo / ".digital-asset" / "mail" / ".gitignore").read_text(
+        encoding="utf-8"
+    ) == "*.jsonl\nlast_checked.json\n"
     records = _jsonl(repo / ".digital-asset" / "mail" / "outbox.jsonl")
     assert len(records) == 1
-    assert "super-secret-value" not in json.dumps(records[0])
-    assert records[0]["payload"]["redaction_count"] == 1
-    assert records[0]["payload"]["note"] == "api_key=[REDACTED] should never persist"
+    serialized = json.dumps(records[0])
+    assert "super-secret-value" not in serialized
+    assert "AKIAABCDEFGHIJKLMNOP" not in serialized
+    assert "eyJhbGciOiJIUzI1NiJ9" not in serialized
+    assert "postgres://user:pass@example.com/db" not in serialized
+    assert "test@example.com" not in serialized
+    assert "555-123-4567" not in serialized
+    assert "123-45-6789" not in serialized
+    assert records[0]["payload"]["redaction_count"] >= 7
+    assert "Best-effort credential/PII screening" in records[0]["payload"]["redaction_note"]
 
     with pytest.raises(ValueError, match="confidential or restricted"):
         compose_mail(
@@ -225,20 +268,32 @@ def test_central_only_delivery_is_not_treated_as_filesystem_path(tmp_path: Path)
     assert not (tmp_path / "central_only").exists()
 
 
-def test_malformed_central_outbox_blocks_delivery(tmp_path: Path):
+def test_malformed_central_outbox_quarantines_bad_row_and_continues(tmp_path: Path):
     hub = tmp_path / "dad"
+    repo_a = tmp_path / "repo-a"
     repo_b = tmp_path / "repo-b"
     hub.mkdir()
+    repo_a.mkdir()
     repo_b.mkdir()
+    compose_mail(
+        repo_a,
+        message_type="workflow_suggestion",
+        target_repo=str(repo_b),
+        summary="Good row should still deliver.",
+    )
+    collect_mail(hub, [repo_a])
+    route_mail(hub)
     outbox = hub / "processed" / "mail" / "outbox" / "routed.jsonl"
-    outbox.parent.mkdir(parents=True)
-    outbox.write_text("{not-json\n", encoding="utf-8")
+    with outbox.open("a", encoding="utf-8", newline="\n") as handle:
+        handle.write("{not-json\n")
 
     delivered = deliver_mail(hub, [repo_b])
 
-    assert delivered["blocked"] is True
+    assert delivered["blocked"] is False
     assert delivered["error_count"] == 1
-    assert delivered["delivered_count"] == 0
+    assert delivered["delivered_count"] == 1
+    quarantine = _jsonl(hub / "processed" / "mail" / "quarantine" / "malformed_jsonl.jsonl")
+    assert quarantine[0]["event_type"] == "malformed_jsonl"
 
 
 def test_review_archive_digest_and_daily_freshness(tmp_path: Path):
@@ -264,6 +319,7 @@ def test_review_archive_digest_and_daily_freshness(tmp_path: Path):
         mail_id=composed["record"]["mail_id"],
         decision="reject",
         decided_by="unit-test",
+        human_verified=True,
         notes="Not useful for this repo yet.",
     )
     digest = digest_mail(repo_b, checked_at="2026-06-30T10:00:00+00:00")
@@ -326,6 +382,494 @@ def test_digest_ignores_forged_archive_decision_rows(tmp_path: Path):
     digest = digest_mail(repo_b, checked_at="2026-06-30T10:00:00+00:00")
 
     assert digest["unread_count"] == 1
+
+
+def test_private_source_to_internal_target_delivers_with_provenance(tmp_path: Path):
+    hub = tmp_path / "dad"
+    source = tmp_path / "private-source"
+    target = tmp_path / "internal-target"
+    hub.mkdir()
+    source.mkdir()
+    target.mkdir()
+    policies = [
+        _policy(source, "private-source", visibility="private"),
+        _policy(target, "internal-target", visibility="internal"),
+    ]
+
+    compose_mail(
+        source,
+        message_type="lesson_suggestion",
+        target_repo=str(target),
+        summary="Internal target may review private-origin candidate mail.",
+        repo_policies=policies,
+    )
+    collect_mail(hub, [source], repo_policies=policies)
+    route_mail(hub, repo_policies=policies)
+    delivered = deliver_mail(hub, [target], repo_policies=policies)
+
+    assert delivered["delivered_count"] == 1
+    assert delivered["held_for_release_count"] == 0
+    inbox = _jsonl(target / ".digital-asset" / "mail" / "inbox.jsonl")
+    assert inbox[0]["source_provenance"]["source_visibility"] == "private"
+    assert inbox[0]["public_release"]["public_release_required"] is False
+
+
+def test_private_source_to_public_target_is_held_until_human_release(tmp_path: Path):
+    hub = tmp_path / "dad"
+    source = tmp_path / "private-source"
+    target = tmp_path / "public-target"
+    hub.mkdir()
+    source.mkdir()
+    target.mkdir()
+    policies = [
+        _policy(source, "private-source", visibility="private"),
+        _policy(target, "public-target", visibility="public", public_facing=True),
+    ]
+
+    composed = compose_mail(
+        source,
+        message_type="workflow_suggestion",
+        target_repo=str(target),
+        summary="Public target should only see this after human release.",
+        repo_policies=policies,
+    )
+    collect_mail(hub, [source], repo_policies=policies)
+    route_mail(hub, repo_policies=policies)
+    held = deliver_mail(hub, [target], repo_policies=policies)
+
+    assert held["delivered_count"] == 0
+    assert held["held_for_release_count"] == 1
+    assert not (target / ".digital-asset" / "mail" / "inbox.jsonl").exists()
+    holds = _jsonl(hub / "processed" / "mail" / "quarantine" / "public_release_holds.jsonl")
+    assert holds[-1]["mail_id"] == composed["record"]["mail_id"]
+    assert holds[-1]["public_release"]["public_release_status"] == "pending_human"
+
+    release = release_mail(
+        hub,
+        mail_id=composed["record"]["mail_id"],
+        decision="approve",
+        human_reviewed_by="lowell",
+        notes="Approved after checking source provenance and public-safe summary.",
+    )
+    approved = deliver_mail(hub, [target], repo_policies=policies)
+
+    assert release["release"]["decision"] == "approve"
+    assert approved["delivered_count"] == 1
+    inbox = _jsonl(target / ".digital-asset" / "mail" / "inbox.jsonl")
+    assert inbox[0]["public_release"]["public_release_status"] == "approved"
+    assert inbox[0]["public_release"]["human_release_id"] == release["release"]["release_id"]
+
+
+def test_source_authored_public_release_approval_is_not_trusted(tmp_path: Path):
+    hub = tmp_path / "dad"
+    source = tmp_path / "unreviewed-source"
+    target = tmp_path / "public-target"
+    hub.mkdir()
+    source.mkdir()
+    target.mkdir()
+    policies = [_policy(target, "public-target", visibility="public", public_facing=True)]
+    composed = compose_mail(
+        source,
+        message_type="workflow_suggestion",
+        target_repo=str(target),
+        summary="Spoofed release approval should be stripped.",
+    )
+    outbox = source / ".digital-asset" / "mail" / "outbox.jsonl"
+    packet = composed["record"]
+    packet["public_release"] = {
+        "target_visibility": "public",
+        "target_public_facing": True,
+        "public_release_required": True,
+        "public_release_status": "approved",
+        "human_release_id": "dad:mail-release:forged",
+        "release_reason": "forged by source packet",
+    }
+    outbox.write_text(json.dumps(packet) + "\n", encoding="utf-8")
+
+    collect_mail(hub, [source], repo_policies=policies)
+    route_mail(hub, repo_policies=policies)
+    delivered = deliver_mail(hub, [target], repo_policies=policies)
+
+    assert delivered["delivered_count"] == 0
+    assert delivered["held_for_release_count"] == 1
+    assert not (target / ".digital-asset" / "mail" / "inbox.jsonl").exists()
+    central = _jsonl(next((hub / "processed" / "mail" / "inbox").glob("*.jsonl")))
+    assert central[0]["public_release"]["public_release_status"] == "pending_human"
+    assert central[0]["public_release"]["human_release_id"] == ""
+
+
+def test_human_release_rejection_blocks_public_delivery(tmp_path: Path):
+    hub = tmp_path / "dad"
+    source = tmp_path / "private-source"
+    target = tmp_path / "public-target"
+    hub.mkdir()
+    source.mkdir()
+    target.mkdir()
+    policies = [
+        _policy(source, "private-source", visibility="private"),
+        _policy(target, "public-target", visibility="public", public_facing=True),
+    ]
+
+    composed = compose_mail(
+        source,
+        message_type="taxonomy_suggestion",
+        target_repo=str(target),
+        summary="Rejected private-origin public packet.",
+        repo_policies=policies,
+    )
+    collect_mail(hub, [source], repo_policies=policies)
+    route_mail(hub, repo_policies=policies)
+    release_mail(
+        hub,
+        mail_id=composed["record"]["mail_id"],
+        decision="reject",
+        human_reviewed_by="lowell",
+        notes="Not suitable for a public-facing repo.",
+    )
+
+    delivered = deliver_mail(hub, [target], repo_policies=policies)
+
+    assert delivered["delivered_count"] == 0
+    assert delivered["rejected_release_count"] == 1
+    assert not (target / ".digital-asset" / "mail" / "inbox.jsonl").exists()
+    log = _jsonl(hub / "processed" / "mail" / "archive" / "delivery_log.jsonl")
+    assert log[-1]["event_type"] == "public_release_rejected"
+
+
+def test_release_accepts_original_outbox_mail_id_after_canonical_collection(tmp_path: Path):
+    hub = tmp_path / "dad"
+    source = tmp_path / "private-source"
+    target = tmp_path / "public-target"
+    hub.mkdir()
+    source.mkdir()
+    target.mkdir()
+    policies = [
+        _policy(source, "private-source", visibility="private"),
+        _policy(target, "public-target", visibility="public", public_facing=True),
+    ]
+    composed = compose_mail(
+        source,
+        message_type="workflow_suggestion",
+        target_repo=str(target),
+        summary="Custom local dedupe key should not make release impossible.",
+        repo_policies=policies,
+        dedupe_key="local-outbox-key-that-will-be-canonicalized",
+    )
+    collect_mail(hub, [source], repo_policies=policies)
+    central = _jsonl(next((hub / "processed" / "mail" / "inbox").glob("*.jsonl")))
+
+    release = release_mail(
+        hub,
+        mail_id=composed["record"]["mail_id"],
+        decision="approve",
+        human_reviewed_by="lowell",
+    )
+
+    assert central[0]["mail_id"] != composed["record"]["mail_id"]
+    assert central[0]["source_provenance"]["original_mail_id"] == composed["record"]["mail_id"]
+    assert release["release"]["mail_id"] == central[0]["mail_id"]
+    assert release["release"]["requested_mail_id"] == composed["record"]["mail_id"]
+
+
+def test_agent_review_is_triage_not_human_review(tmp_path: Path):
+    hub = tmp_path / "dad"
+    source = tmp_path / "source"
+    target = tmp_path / "target"
+    hub.mkdir()
+    source.mkdir()
+    target.mkdir()
+    composed = compose_mail(
+        source,
+        message_type="capability_suggestion",
+        target_repo=str(target),
+        summary="Agent triage should not clear unread mail.",
+    )
+    collect_mail(hub, [source])
+    route_mail(hub)
+    deliver_mail(hub, [target])
+
+    review_mail(target, mail_id=composed["record"]["mail_id"], decision="defer")
+    agent_digest = digest_mail(target, checked_at="2026-06-30T10:00:00+00:00")
+    human_decision = review_mail(
+        target,
+        mail_id=composed["record"]["mail_id"],
+        decision="defer",
+        human_verified=True,
+        decided_by="lowell",
+    )
+    human_digest = digest_mail(target, checked_at="2026-06-30T10:05:00+00:00")
+
+    assert agent_digest["unread_count"] == 1
+    assert agent_digest["agent_triage_count"] == 1
+    assert human_decision["appended"] is True
+    assert human_digest["unread_count"] == 0
+    assert human_digest["reviewed_count"] == 1
+
+
+def test_public_safe_payload_policy_rejects_raw_blob_to_public_target(tmp_path: Path):
+    hub = tmp_path / "dad"
+    source = tmp_path / "public-source"
+    target = tmp_path / "public-target"
+    hub.mkdir()
+    source.mkdir()
+    target.mkdir()
+    policies = [
+        _policy(source, "public-source", visibility="public", public_facing=True),
+        _policy(target, "public-target", visibility="public", public_facing=True),
+    ]
+
+    compose_mail(
+        source,
+        message_type="asset_suggestion",
+        target_repo=str(target),
+        summary="Raw table should not go to a public-facing mailbox.",
+        payload={"raw_rows": "a,b,c,d,e\n1,2,3,4,5"},
+        repo_policies=policies,
+    )
+    collect_mail(hub, [source], repo_policies=policies)
+    route_mail(hub, repo_policies=policies)
+    delivered = deliver_mail(hub, [target], repo_policies=policies)
+
+    assert delivered["delivered_count"] == 0
+    assert delivered["held_for_release_count"] == 1
+    assert delivered["skipped"][0]["reason"] == "public-safe payload violations"
+    assert not (target / ".digital-asset" / "mail" / "inbox.jsonl").exists()
+
+
+def test_public_safe_payload_policy_rejects_raw_evidence_to_public_target(tmp_path: Path):
+    hub = tmp_path / "dad"
+    source = tmp_path / "public-source"
+    target = tmp_path / "public-target"
+    hub.mkdir()
+    source.mkdir()
+    target.mkdir()
+    policies = [
+        _policy(source, "public-source", visibility="public", public_facing=True),
+        _policy(target, "public-target", visibility="public", public_facing=True),
+    ]
+
+    compose_mail(
+        source,
+        message_type="asset_suggestion",
+        target_repo=str(target),
+        summary="Long raw evidence should not go to a public-facing mailbox.",
+        evidence=["x" * 1000],
+        repo_policies=policies,
+    )
+    collect_mail(hub, [source], repo_policies=policies)
+    route_mail(hub, repo_policies=policies)
+    delivered = deliver_mail(hub, [target], repo_policies=policies)
+
+    assert delivered["delivered_count"] == 0
+    assert delivered["held_for_release_count"] == 1
+    assert "payload_value_too_long:evidence" in delivered["skipped"][0]["violations"]
+
+
+def test_unreviewed_source_visibility_claim_is_downgraded_before_public_delivery(
+    tmp_path: Path,
+):
+    hub = tmp_path / "dad"
+    source = tmp_path / "unreviewed-source"
+    target = tmp_path / "public-target"
+    hub.mkdir()
+    source.mkdir()
+    target.mkdir()
+    target_policy = [_policy(target, "public-target", visibility="public", public_facing=True)]
+    composed = compose_mail(
+        source,
+        message_type="lesson_suggestion",
+        target_repo=str(target),
+        summary="Spoofed public provenance must not clear the public release gate.",
+    )
+    outbox = source / ".digital-asset" / "mail" / "outbox.jsonl"
+    packet = composed["record"]
+    packet["source_provenance"]["source_visibility"] = "public"
+    outbox.write_text(json.dumps(packet) + "\n", encoding="utf-8")
+
+    collect_mail(hub, [source], repo_policies=target_policy)
+    route_mail(hub, repo_policies=target_policy)
+    delivered = deliver_mail(hub, [target], repo_policies=target_policy)
+
+    assert delivered["delivered_count"] == 0
+    assert delivered["held_for_release_count"] == 1
+    central = _jsonl(next((hub / "processed" / "mail" / "inbox").glob("*.jsonl")))
+    assert central[0]["source_provenance"]["source_visibility"] == "unknown"
+
+
+def test_same_basename_repo_targets_are_held_as_ambiguous(tmp_path: Path):
+    hub = tmp_path / "dad"
+    source = tmp_path / "source"
+    target_one = tmp_path / "one" / "shared"
+    target_two = tmp_path / "two" / "shared"
+    hub.mkdir()
+    source.mkdir()
+    target_one.mkdir(parents=True)
+    target_two.mkdir(parents=True)
+    policies = [
+        _policy(source, "source", visibility="internal"),
+        _policy(target_one, "shared-one", visibility="internal"),
+        _policy(target_two, "shared-two", visibility="internal"),
+    ]
+
+    compose_mail(
+        source,
+        message_type="workflow_suggestion",
+        target_repo="shared",
+        summary="Bare basename target should not pick a repo arbitrarily.",
+        repo_policies=policies,
+    )
+    collect_mail(hub, [source], repo_policies=policies)
+    route_mail(hub, repo_policies=policies)
+    delivered = deliver_mail(hub, [target_one, target_two], repo_policies=policies)
+
+    assert delivered["delivered_count"] == 0
+    assert delivered["skipped"][0]["reason"] == "target repo key is ambiguous"
+    assert not (target_one / ".digital-asset" / "mail" / "inbox.jsonl").exists()
+    assert not (target_two / ".digital-asset" / "mail" / "inbox.jsonl").exists()
+
+
+def test_repo_all_uses_reviewed_config_allowlist_only(tmp_path: Path):
+    hub = tmp_path / "dad"
+    allowed = tmp_path / "allowed"
+    stray = tmp_path / "stray"
+    hub.mkdir()
+    allowed.mkdir()
+    stray.mkdir()
+    (stray / ".digital-asset" / "mail").mkdir(parents=True)
+    (stray / ".digital-asset" / "mail" / "inbox.jsonl").write_text("", encoding="utf-8")
+    cfg = SimpleNamespace(
+        repo_root=hub,
+        local_sources=[SimpleNamespace(enabled=True, path=tmp_path)],
+        mail_repos=[_policy(allowed, "allowed")],
+    )
+
+    assert _discover_mail_repos(["all"], cfg) == [allowed.resolve()]
+    assert _discover_mail_repos(["all"], cfg, delivery=True) == [allowed.resolve()]
+
+
+def test_mail_discovery_reports_nested_configured_repos(tmp_path: Path):
+    hub = tmp_path / "dad"
+    nested = tmp_path / "group" / "nested-repo"
+    hub.mkdir()
+    nested.mkdir(parents=True)
+    cfg = SimpleNamespace(
+        repo_root=hub,
+        local_sources=[SimpleNamespace(enabled=True, path=tmp_path)],
+        mail_repos=[_policy(nested, "nested-repo")],
+    )
+
+    candidates = _mail_repo_candidates(cfg)
+
+    nested_rows = [row for row in candidates if row["path"] == str(nested.resolve())]
+    assert len(nested_rows) == 1
+    assert nested_rows[0]["configured"] is True
+    assert nested_rows[0]["visibility"] == "internal"
+
+
+def test_strict_delivery_requires_reviewed_target_policy_for_explicit_paths(tmp_path: Path):
+    hub = tmp_path / "dad"
+    source = tmp_path / "source"
+    target = tmp_path / "target"
+    hub.mkdir()
+    source.mkdir()
+    target.mkdir()
+    compose_mail(
+        source,
+        message_type="governance_notice",
+        target_repo=str(target),
+        summary="Explicit delivery still needs reviewed target policy in strict mode.",
+    )
+    collect_mail(hub, [source])
+    route_mail(hub)
+
+    delivered = deliver_mail(hub, [target], require_target_policy=True)
+
+    assert delivered["delivered_count"] == 0
+    assert delivered["skipped"][0]["reason"] == "target repo lacks reviewed mail policy"
+    assert not (target / ".digital-asset" / "mail" / "inbox.jsonl").exists()
+
+
+def test_digest_tolerates_malformed_rows_and_updates_last_checked(tmp_path: Path):
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    mailbox = repo / ".digital-asset" / "mail"
+    mailbox.mkdir(parents=True)
+    (mailbox / "inbox.jsonl").write_text("{bad-json\n", encoding="utf-8")
+
+    digest = digest_mail(repo, checked_at="2026-06-30T10:00:00+00:00")
+
+    assert digest["parse_warning_count"] == 1
+    assert digest["unread_count"] == 0
+    assert (mailbox / "last_checked.json").exists()
+
+
+def test_digest_tolerates_invalid_utf8_rows_and_updates_last_checked(tmp_path: Path):
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    mailbox = repo / ".digital-asset" / "mail"
+    mailbox.mkdir(parents=True)
+    (mailbox / "inbox.jsonl").write_bytes(b"\xff\n")
+
+    digest = digest_mail(repo, checked_at="2026-06-30T10:00:00+00:00")
+
+    assert digest["parse_warning_count"] == 1
+    assert "Invalid UTF-8" in digest["parse_warnings"][0]["error"]
+    assert digest["unread_count"] == 0
+    assert (mailbox / "last_checked.json").exists()
+
+
+def test_stale_jsonl_lock_is_recovered(tmp_path: Path, monkeypatch: pytest.MonkeyPatch):
+    hub = tmp_path / "dad"
+    source = tmp_path / "source"
+    hub.mkdir()
+    source.mkdir()
+    compose_mail(
+        source,
+        message_type="lesson_suggestion",
+        target_repo="central_only",
+        summary="Stale lock should be removed.",
+    )
+    central = central_inbox_path(hub, source)
+    central.parent.mkdir(parents=True)
+    lock = central.with_name(f".{central.name}.lock")
+    lock.write_text("stale", encoding="utf-8")
+    old_time = os.path.getmtime(lock) - 1_000
+    os.utime(lock, (old_time, old_time))
+    monkeypatch.setattr(mail_center, "STALE_LOCK_SECONDS", 1.0)
+
+    result = collect_mail(hub, [source])
+
+    assert result["collected_count"] == 1
+    assert not lock.exists()
+
+
+def test_active_jsonl_lock_timeout_is_reported_per_record(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+):
+    hub = tmp_path / "dad"
+    source = tmp_path / "source"
+    hub.mkdir()
+    source.mkdir()
+    compose_mail(
+        source,
+        message_type="lesson_suggestion",
+        target_repo="central_only",
+        summary="Active lock should be reported.",
+    )
+    central = central_inbox_path(hub, source)
+    central.parent.mkdir(parents=True)
+    lock = central.with_name(f".{central.name}.lock")
+    lock.write_text("active", encoding="utf-8")
+    monkeypatch.setattr(mail_center, "LOCK_TIMEOUT_SECONDS", 0.01)
+    monkeypatch.setattr(mail_center, "STALE_LOCK_SECONDS", 999.0)
+
+    result = collect_mail(hub, [source])
+
+    assert result["collected_count"] == 0
+    assert result["error_count"] == 1
+    assert "Timed out waiting for JSONL lock" in result["errors"][0]["error"]
+    lock.unlink()
 
 
 def test_missing_digest_status_is_stale_without_writing(tmp_path: Path):

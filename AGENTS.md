@@ -11,6 +11,17 @@ This file is read by Codex and may be imported by Claude Code through `CLAUDE.md
 5. `AI_TABLE_OF_CONTENTS.md`
 6. task-relevant schemas, registries, and roadmap gates
 
+## Reusable engineering assets
+
+Before coding, refactoring, or creating repo templates, check
+`assets/asset-registry.json` and consult `assets/ai-engineering-preflight/`
+when the task involves AI-assisted Python, Rust, mixed-language, or agent
+instruction work.
+
+Use the asset's dry-run deployment and audit scripts before applying downstream
+repo changes. Installing or consulting the central asset does not authorize
+mutating another repository.
+
 ## Before material work
 
 Run a preflight:

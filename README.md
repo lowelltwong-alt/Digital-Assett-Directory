@@ -36,6 +36,9 @@ Turn scattered files, repositories, lessons, schemas, workflows, prompts, tests,
 - `AGENTS.md`, `CLAUDE.md`, Claude Code hooks, and downstream Git-hook templates.
 - A roadmap with machine-checkable phase gates.
 - JSON Schemas, a SKOS taxonomy seed, and a lightweight RDF/OWL ontology seed.
+- `assets/asset-registry.json` plus installed reusable asset packages such as
+  `assets/ai-engineering-preflight/` for AI coding-agent preflight and
+  Python/Rust repo instruction rollout.
 - Optional integration with the existing `orphan-radar` repository.
 - A reusable cross-repo governance dependency-map pattern and template seed for
   future repo families that need upstream governance maps, child mirrors, AI

@@ -140,6 +140,12 @@ $env:PYTHONPATH='src'; python -m digital_asset_directory.cli mail route
 $env:PYTHONPATH='src'; python -m digital_asset_directory.cli mail deliver --repo all
 ```
 
+`--repo all` uses only reviewed `mail.repos` config entries. Use
+`mail discover-repos` for read-only candidate discovery; discovery does not
+authorize collection or delivery. `mail deliver` also requires reviewed
+`mail.repos` target policy for explicit `--repo` paths so target visibility and
+public-facing status are known before DAD writes to another repo mailbox.
+
 Repo-local checks are light:
 
 ```powershell
@@ -157,8 +163,11 @@ processed/reports/mail_center.json
 
 Mail packets are candidate evidence. They do not overwrite repo authority,
 schemas, registries, source code, hooks, or sensitive files. Transport rejects
-confidential, restricted, and unknown sensitivity, redacts secret-like text, and
-delivers only to repos explicitly supplied or discovered from approved config.
+confidential, restricted, and unknown sensitivity, applies best-effort
+credential/PII screening, and delivers only to explicit repos or reviewed
+`mail.repos` targets. Private/internal/restricted/unknown-origin mail headed to
+public-facing repos is quarantined until `mail release` records explicit human
+approval.
 
 ## Reference architecture recognition
 

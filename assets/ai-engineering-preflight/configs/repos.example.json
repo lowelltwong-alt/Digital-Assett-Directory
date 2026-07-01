@@ -1,0 +1,16 @@
+{
+  "repos": [
+    {
+      "path": "/Users/you/code/python-repo",
+      "profile": "python"
+    },
+    {
+      "path": "/Users/you/code/rust-repo",
+      "profile": "rust"
+    },
+    {
+      "path": "/Users/you/code/mixed-repo",
+      "profile": "mixed"
+    }
+  ]
+}

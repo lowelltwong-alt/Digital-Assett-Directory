@@ -1,0 +1,47 @@
+{
+  "registry_version": "0.1.0",
+  "status": "installed_candidate",
+  "authority_boundary": "This registry indexes reusable assets installed in this repository. Each asset directory remains the source package for its own files; downstream deployment remains a separate reviewed action.",
+  "assets": [
+    {
+      "asset_id": "ai-engineering-preflight-asset",
+      "name": "AI Engineering Preflight Asset",
+      "version": "0.1.0",
+      "path": "assets/ai-engineering-preflight",
+      "asset_type": "reusable_instruction_asset",
+      "managed_block_id": "AI_ENGINEERING_PREFLIGHT_ASSET",
+      "profiles": [
+        "common",
+        "python",
+        "rust",
+        "mixed",
+        "auto"
+      ],
+      "use_when": [
+        "Planning AI-assisted software implementation or refactoring.",
+        "Creating or updating Python, Rust, or mixed-language repo agent instructions.",
+        "Preparing a dry-run rollout of AI preflight files to another repo.",
+        "Reviewing long Python scripts or Rust modules for modular encapsulation boundaries."
+      ],
+      "does_not_apply_when": [
+        "The task is pure catalog validation with no software engineering or repo-template work.",
+        "A downstream repo has not been approved for mutation."
+      ],
+      "install_path": "assets/ai-engineering-preflight",
+      "deploy_script": "assets/ai-engineering-preflight/scripts/deploy_to_repo.py",
+      "audit_script": "assets/ai-engineering-preflight/scripts/audit_repo.py",
+      "source_package": {
+        "filename": "ai-engineering-preflight-asset-v0.1.0.zip",
+        "sha256": "933c2a5ccf640b90c6fb8c97ed28bf8081c6fd6fcaa01a08133ec1f8fdd21e73"
+      },
+      "installed_at": "2026-06-30",
+      "review_status": "installed_for_local_reuse",
+      "safety_notes": [
+        "Deployment scripts default to dry-run.",
+        "Managed blocks are used for existing agent instruction files.",
+        "Collision-prone generated files are written as .candidate files unless force is requested.",
+        "Installing the asset in DAD does not authorize deployment to any other repository."
+      ]
+    }
+  ]
+}

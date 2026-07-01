@@ -1,0 +1,11 @@
+# Optional Rust lint snippet. Merge manually into Cargo.toml.
+
+[lints.rust]
+unsafe_code = "forbid"
+missing_docs = "warn"
+
+[lints.clippy]
+all = "warn"
+pedantic = "warn"
+# Enable carefully; restriction lints can contradict other guidance.
+# restriction = "warn"

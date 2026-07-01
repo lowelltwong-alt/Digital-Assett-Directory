@@ -10,6 +10,7 @@ htmlcov/
 .env.*
 !.env.example
 config/sources.local.yaml
+.digital-asset/
 state/*.sqlite3
 state/*.sqlite3-*
 state/agent_sessions/*.json
