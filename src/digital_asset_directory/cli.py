@@ -192,11 +192,51 @@ def _key_value_payload(values: list[str]) -> dict[str, str]:
     return payload
 
 
+def _mail_repo_aliases(policy) -> set[str]:
+    aliases: set[str] = set()
+    for attr in ("id", "alias"):
+        value = str(getattr(policy, attr, "") or "").strip()
+        if value:
+            aliases.add(value)
+    path = getattr(policy, "path", None)
+    if path is not None:
+        aliases.add(Path(path).name)
+        aliases.add(str(Path(path).resolve()))
+    return aliases
+
+
+def _looks_like_repo_path(value: str) -> bool:
+    if value in {".", ".."}:
+        return True
+    return any(part in value for part in ("/", "\\")) or Path(value).is_absolute()
+
+
+def _resolve_mail_repo(raw_repo: str, cfg) -> Path:
+    value = raw_repo.strip()
+    if not value:
+        raise typer.BadParameter("Repo values cannot be empty.")
+    if _looks_like_repo_path(value):
+        return Path(value).resolve()
+    matches = [
+        policy
+        for policy in cfg.mail_repos
+        if getattr(policy, "mail_enabled", True) and value in _mail_repo_aliases(policy)
+    ]
+    if len(matches) == 1:
+        return Path(matches[0].path).resolve()
+    if len(matches) > 1:
+        matched = ", ".join(sorted(str(Path(policy.path).resolve()) for policy in matches))
+        raise typer.BadParameter(
+            f"Repo value {value!r} is ambiguous in reviewed mail.repos policy: {matched}"
+        )
+    return Path(value).resolve()
+
+
 def _discover_mail_repos(raw_repos: list[str], cfg, *, delivery: bool = False) -> list[Path]:
     if not raw_repos:
         raise typer.BadParameter("Provide at least one --repo value, or --repo all.")
     if raw_repos != ["all"]:
-        return [Path(repo).resolve() for repo in raw_repos]
+        return [_resolve_mail_repo(repo, cfg) for repo in raw_repos]
 
     repos: dict[str, Path] = {}
     for policy in cfg.mail_repos:
@@ -540,9 +580,10 @@ def mail_release(
 
 
 @mail_app.command("digest")
-def mail_digest(repo: Path = typer.Option(Path("."), "--repo")) -> None:
+def mail_digest(repo: str = typer.Option(".", "--repo"), hub: Optional[Path] = typer.Option(None)) -> None:
     """Show unread mail and mark the repo mailbox as checked."""
-    result = digest_mail(repo.resolve())
+    cfg = _cfg(hub=hub)
+    result = digest_mail(_resolve_mail_repo(repo, cfg))
     console.print_json(data=result)
 
 
