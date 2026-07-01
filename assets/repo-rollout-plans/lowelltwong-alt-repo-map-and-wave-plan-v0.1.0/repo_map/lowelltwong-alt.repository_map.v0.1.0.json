@@ -1,0 +1,354 @@
+{
+  "schema_version": "0.1.0",
+  "generated_at": "2026-06-30T22:21:56Z",
+  "github_owner": "lowelltwong-alt",
+  "repo_count_observed": 26,
+  "status": "preliminary_name_and_readme_based_map",
+  "repos": [
+    {
+      "name": "Digital-Assett-Directory",
+      "full_name": "lowelltwong-alt/Digital-Assett-Directory",
+      "family": "DAD",
+      "role": "portfolio intelligence, governed learning hub, central asset source of truth",
+      "authority_tier": "control_hub",
+      "rollout_policy": "source_of_truth_owner",
+      "recommended_profiles": [
+        "dad-control-plane",
+        "asset-lifecycle",
+        "mail-center",
+        "preflight-router"
+      ],
+      "wave": 0
+    },
+    {
+      "name": "LawFirm-os-semantic-substrate",
+      "full_name": "lowelltwong-alt/LawFirm-os-semantic-substrate",
+      "family": "LawFirm OS",
+      "role": "canonical semantic-governance and contract repository",
+      "authority_tier": "canonical_control_plane",
+      "rollout_policy": "governance_pointer_only",
+      "recommended_profiles": [
+        "cross-repo-governance",
+        "lawfirm-control-plane",
+        "schema-contracts"
+      ],
+      "wave": 1
+    },
+    {
+      "name": "LawFirm-os-skills-registry",
+      "full_name": "lowelltwong-alt/LawFirm-os-skills-registry",
+      "family": "LawFirm OS",
+      "role": "skill supply chain, quarantine, scan, grade, approve, install",
+      "authority_tier": "skill_supply_chain",
+      "rollout_policy": "skill_wrapper_pointer",
+      "recommended_profiles": [
+        "skills-registry",
+        "asset-skill-wrapper",
+        "python-modular-design"
+      ],
+      "wave": 1
+    },
+    {
+      "name": "LawFirm-os-orchestrator",
+      "full_name": "lowelltwong-alt/LawFirm-os-orchestrator",
+      "family": "LawFirm OS",
+      "role": "execution plane consuming substrate read-only",
+      "authority_tier": "execution_plane",
+      "rollout_policy": "managed_pointer_plus_mailbox",
+      "recommended_profiles": [
+        "python-modular-design",
+        "orchestrator-read-only-substrate",
+        "contract-locks"
+      ],
+      "wave": 1
+    },
+    {
+      "name": "LawFirm-os-exceptions-lake-runtime",
+      "full_name": "lowelltwong-alt/LawFirm-os-exceptions-lake-runtime",
+      "family": "LawFirm OS",
+      "role": "evidence plane / append-only exceptions lake runtime",
+      "authority_tier": "evidence_plane",
+      "rollout_policy": "managed_pointer_plus_mailbox_append_only_caution",
+      "recommended_profiles": [
+        "python-modular-design",
+        "append-only-evidence",
+        "contract-consumer"
+      ],
+      "wave": 1
+    },
+    {
+      "name": "LawFirm-os-legal-knowledge-runtime",
+      "full_name": "lowelltwong-alt/LawFirm-os-legal-knowledge-runtime",
+      "family": "LawFirm OS",
+      "role": "legal document ingestion preflight, retrieval planning, Legal Context Bundle assembly",
+      "authority_tier": "knowledge_runtime",
+      "rollout_policy": "managed_pointer_plus_mailbox",
+      "recommended_profiles": [
+        "python-modular-design",
+        "legal-knowledge-runtime",
+        "retrieval-boundaries"
+      ],
+      "wave": 1
+    },
+    {
+      "name": "LawFirm-os-intake",
+      "full_name": "lowelltwong-alt/LawFirm-os-intake",
+      "family": "LawFirm OS",
+      "role": "vertical workflow composition and evaluation for intake-to-budget",
+      "authority_tier": "vertical_composition_no_platform_canon",
+      "rollout_policy": "managed_pointer_plus_mailbox",
+      "recommended_profiles": [
+        "python-modular-design",
+        "vertical-workflow",
+        "synthetic-only-gates",
+        "long-script-refactor"
+      ],
+      "wave": 2
+    },
+    {
+      "name": "LawFirm-os-talent-intelligence",
+      "full_name": "lowelltwong-alt/LawFirm-os-talent-intelligence",
+      "family": "LawFirm OS",
+      "role": "runtime / feature repo for talent intelligence",
+      "authority_tier": "runtime_feature_repo",
+      "rollout_policy": "managed_pointer_plus_mailbox",
+      "recommended_profiles": [
+        "python-modular-design",
+        "sqlite-runtime",
+        "identity-resolution"
+      ],
+      "wave": 2
+    },
+    {
+      "name": "All-Law-Firm-Talent-Intel",
+      "full_name": "lowelltwong-alt/All-Law-Firm-Talent-Intel",
+      "family": "Law/Talent",
+      "role": "talent intelligence project, likely predecessor or peer",
+      "authority_tier": "project_repo",
+      "rollout_policy": "managed_pointer_after_inventory",
+      "recommended_profiles": [
+        "python-modular-design",
+        "asset-inventory"
+      ],
+      "wave": 3
+    },
+    {
+      "name": "Albert-Trial-Simulation-System",
+      "full_name": "lowelltwong-alt/Albert-Trial-Simulation-System",
+      "family": "Law/Simulation",
+      "role": "trial simulation system",
+      "authority_tier": "project_repo",
+      "rollout_policy": "managed_pointer_after_inventory",
+      "recommended_profiles": [
+        "python-modular-design",
+        "simulation-boundaries"
+      ],
+      "wave": 3
+    },
+    {
+      "name": "exceptions-lake-runtime",
+      "full_name": "lowelltwong-alt/exceptions-lake-runtime",
+      "family": "Exceptions Lake",
+      "role": "exceptions lake runtime project, possibly predecessor/parallel to LawFirm OS runtime",
+      "authority_tier": "runtime_project",
+      "rollout_policy": "managed_pointer_after_inventory",
+      "recommended_profiles": [
+        "append-only-evidence",
+        "python-modular-design"
+      ],
+      "wave": 3
+    },
+    {
+      "name": "orphan-radar",
+      "full_name": "lowelltwong-alt/orphan-radar",
+      "family": "DAD support",
+      "role": "orphan/staleness/discovery radar supporting DAD-style asset reuse",
+      "authority_tier": "support_tool",
+      "rollout_policy": "managed_pointer_plus_mailbox",
+      "recommended_profiles": [
+        "asset-discovery",
+        "python-modular-design"
+      ],
+      "wave": 2
+    },
+    {
+      "name": "lowell-career-os",
+      "full_name": "lowelltwong-alt/lowell-career-os",
+      "family": "Personal OS",
+      "role": "career operating system",
+      "authority_tier": "individual_project",
+      "rollout_policy": "managed_pointer_after_inventory",
+      "recommended_profiles": [
+        "repo-preflight",
+        "python-modular-design"
+      ],
+      "wave": 4
+    },
+    {
+      "name": "logos-governance-architecture",
+      "full_name": "lowelltwong-alt/logos-governance-architecture",
+      "family": "Logos/LAIRCA",
+      "role": "governance architecture project",
+      "authority_tier": "governance_project",
+      "rollout_policy": "governance_pointer_after_inventory",
+      "recommended_profiles": [
+        "cross-repo-governance",
+        "knowledge-graph"
+      ],
+      "wave": 3
+    },
+    {
+      "name": "logos-governed-core",
+      "full_name": "lowelltwong-alt/logos-governed-core",
+      "family": "Logos/LAIRCA",
+      "role": "governed core project",
+      "authority_tier": "core_project",
+      "rollout_policy": "managed_pointer_after_inventory",
+      "recommended_profiles": [
+        "cross-repo-governance",
+        "python-modular-design"
+      ],
+      "wave": 3
+    },
+    {
+      "name": "logos-scripture-graph",
+      "full_name": "lowelltwong-alt/logos-scripture-graph",
+      "family": "Logos/LAIRCA",
+      "role": "scripture graph / knowledge graph project",
+      "authority_tier": "knowledge_graph_project",
+      "rollout_policy": "managed_pointer_after_inventory",
+      "recommended_profiles": [
+        "knowledge-graph",
+        "provenance"
+      ],
+      "wave": 4
+    },
+    {
+      "name": "logos-boundary-literature",
+      "full_name": "lowelltwong-alt/logos-boundary-literature",
+      "family": "Logos/LAIRCA",
+      "role": "boundary literature project",
+      "authority_tier": "knowledge_project",
+      "rollout_policy": "managed_pointer_after_inventory",
+      "recommended_profiles": [
+        "knowledge-asset",
+        "provenance"
+      ],
+      "wave": 4
+    },
+    {
+      "name": "lairca-logos-grounded-theological-model",
+      "full_name": "lowelltwong-alt/lairca-logos-grounded-theological-model",
+      "family": "Logos/LAIRCA",
+      "role": "grounded theological model project",
+      "authority_tier": "model_project",
+      "rollout_policy": "managed_pointer_after_inventory",
+      "recommended_profiles": [
+        "knowledge-asset",
+        "source-grounding"
+      ],
+      "wave": 4
+    },
+    {
+      "name": "airca-fractal-decision-architecture",
+      "full_name": "lowelltwong-alt/airca-fractal-decision-architecture",
+      "family": "AIRCA/FM governance",
+      "role": "fractal decision architecture project",
+      "authority_tier": "architecture_project",
+      "rollout_policy": "managed_pointer_after_inventory",
+      "recommended_profiles": [
+        "decision-architecture",
+        "cross-repo-governance"
+      ],
+      "wave": 3
+    },
+    {
+      "name": "fmg-fractal-capability-ontology",
+      "full_name": "lowelltwong-alt/fmg-fractal-capability-ontology",
+      "family": "AIRCA/FM governance",
+      "role": "fractal capability ontology project",
+      "authority_tier": "ontology_project",
+      "rollout_policy": "managed_pointer_after_inventory",
+      "recommended_profiles": [
+        "ontology",
+        "schema-contracts"
+      ],
+      "wave": 3
+    },
+    {
+      "name": "kirsten-dissertation-knowledge-graph",
+      "full_name": "lowelltwong-alt/kirsten-dissertation-knowledge-graph",
+      "family": "Knowledge graph",
+      "role": "dissertation knowledge graph project",
+      "authority_tier": "knowledge_graph_project",
+      "rollout_policy": "managed_pointer_after_inventory",
+      "recommended_profiles": [
+        "knowledge-graph",
+        "source-grounding"
+      ],
+      "wave": 4
+    },
+    {
+      "name": "obsidian-foundry-vault",
+      "full_name": "lowelltwong-alt/obsidian-foundry-vault",
+      "family": "Knowledge vault",
+      "role": "Obsidian/Foundry knowledge vault",
+      "authority_tier": "knowledge_vault",
+      "rollout_policy": "mailbox_or_pointer_only",
+      "recommended_profiles": [
+        "knowledge-asset",
+        "no-code-mutation-caution"
+      ],
+      "wave": 4
+    },
+    {
+      "name": "noesis-atlas",
+      "full_name": "lowelltwong-alt/noesis-atlas",
+      "family": "Knowledge atlas",
+      "role": "atlas/knowledge system",
+      "authority_tier": "project_repo",
+      "rollout_policy": "managed_pointer_after_inventory",
+      "recommended_profiles": [
+        "knowledge-asset",
+        "python-modular-design"
+      ],
+      "wave": 3
+    },
+    {
+      "name": "Ryans-Project",
+      "full_name": "lowelltwong-alt/Ryans-Project",
+      "family": "Individual/misc",
+      "role": "individual project; inventory required before classification",
+      "authority_tier": "unknown_project",
+      "rollout_policy": "inventory_first_then_pointer",
+      "recommended_profiles": [
+        "repo-audit"
+      ],
+      "wave": 5
+    },
+    {
+      "name": "Bi-Test",
+      "full_name": "lowelltwong-alt/Bi-Test",
+      "family": "Individual/misc",
+      "role": "test or BI project; inventory required before classification",
+      "authority_tier": "unknown_project",
+      "rollout_policy": "inventory_first_then_pointer",
+      "recommended_profiles": [
+        "repo-audit"
+      ],
+      "wave": 5
+    },
+    {
+      "name": "lowelltwong-alt",
+      "full_name": "lowelltwong-alt/lowelltwong-alt",
+      "family": "GitHub profile/meta",
+      "role": "GitHub profile or meta repository",
+      "authority_tier": "profile_repo",
+      "rollout_policy": "do_not_install_without_specific_reason",
+      "recommended_profiles": [
+        "none-by-default"
+      ],
+      "wave": 9
+    }
+  ]
+}

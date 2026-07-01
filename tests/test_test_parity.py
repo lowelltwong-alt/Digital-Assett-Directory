@@ -125,9 +125,9 @@ def test_timing_analysis_reports_burn_in_cost_and_replacement_savings(
             sys.executable,
             "-c",
             (
-                "import pathlib, time; time.sleep(0.08); "
+                "import pathlib, time; time.sleep(0.5); "
                 f"pathlib.Path({json.dumps(str(native_report))}).write_text("
-                f"{json.dumps(json.dumps({'tests': [{'test_id': 'tests/test_shadow.py::test_equivalent', 'outcome': 'passed', 'duration_seconds': 0.08}]}))}, "
+                f"{json.dumps(json.dumps({'tests': [{'test_id': 'tests/test_shadow.py::test_equivalent', 'outcome': 'passed', 'duration_seconds': 0.5}]}))}, "
                 "encoding='utf-8')"
             ),
         ],

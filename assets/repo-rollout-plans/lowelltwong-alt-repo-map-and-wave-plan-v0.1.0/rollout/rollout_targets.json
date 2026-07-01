@@ -1,0 +1,402 @@
+{
+  "schema_version": "0.1.0",
+  "targets": [
+    {
+      "repo_path_or_name": "Digital-Assett-Directory",
+      "github_full_name": "lowelltwong-alt/Digital-Assett-Directory",
+      "family": "DAD",
+      "authority_tier": "control_hub",
+      "rollout_policy": "source_of_truth_owner",
+      "wave": 0,
+      "profiles": [
+        "dad-control-plane",
+        "asset-lifecycle",
+        "mail-center",
+        "preflight-router"
+      ],
+      "allow_mailbox": true,
+      "allow_hooks": false,
+      "notes": "Review local authority files before applying. Hooks remain disabled by default."
+    },
+    {
+      "repo_path_or_name": "LawFirm-os-semantic-substrate",
+      "github_full_name": "lowelltwong-alt/LawFirm-os-semantic-substrate",
+      "family": "LawFirm OS",
+      "authority_tier": "canonical_control_plane",
+      "rollout_policy": "governance_pointer_only",
+      "wave": 1,
+      "profiles": [
+        "cross-repo-governance",
+        "lawfirm-control-plane",
+        "schema-contracts"
+      ],
+      "allow_mailbox": true,
+      "allow_hooks": false,
+      "notes": "Review local authority files before applying. Hooks remain disabled by default."
+    },
+    {
+      "repo_path_or_name": "LawFirm-os-skills-registry",
+      "github_full_name": "lowelltwong-alt/LawFirm-os-skills-registry",
+      "family": "LawFirm OS",
+      "authority_tier": "skill_supply_chain",
+      "rollout_policy": "skill_wrapper_pointer",
+      "wave": 1,
+      "profiles": [
+        "skills-registry",
+        "asset-skill-wrapper",
+        "python-modular-design"
+      ],
+      "allow_mailbox": true,
+      "allow_hooks": false,
+      "notes": "Review local authority files before applying. Hooks remain disabled by default."
+    },
+    {
+      "repo_path_or_name": "LawFirm-os-orchestrator",
+      "github_full_name": "lowelltwong-alt/LawFirm-os-orchestrator",
+      "family": "LawFirm OS",
+      "authority_tier": "execution_plane",
+      "rollout_policy": "managed_pointer_plus_mailbox",
+      "wave": 1,
+      "profiles": [
+        "python-modular-design",
+        "orchestrator-read-only-substrate",
+        "contract-locks"
+      ],
+      "allow_mailbox": true,
+      "allow_hooks": false,
+      "notes": "Review local authority files before applying. Hooks remain disabled by default."
+    },
+    {
+      "repo_path_or_name": "LawFirm-os-exceptions-lake-runtime",
+      "github_full_name": "lowelltwong-alt/LawFirm-os-exceptions-lake-runtime",
+      "family": "LawFirm OS",
+      "authority_tier": "evidence_plane",
+      "rollout_policy": "managed_pointer_plus_mailbox_append_only_caution",
+      "wave": 1,
+      "profiles": [
+        "python-modular-design",
+        "append-only-evidence",
+        "contract-consumer"
+      ],
+      "allow_mailbox": true,
+      "allow_hooks": false,
+      "notes": "Review local authority files before applying. Hooks remain disabled by default."
+    },
+    {
+      "repo_path_or_name": "LawFirm-os-legal-knowledge-runtime",
+      "github_full_name": "lowelltwong-alt/LawFirm-os-legal-knowledge-runtime",
+      "family": "LawFirm OS",
+      "authority_tier": "knowledge_runtime",
+      "rollout_policy": "managed_pointer_plus_mailbox",
+      "wave": 1,
+      "profiles": [
+        "python-modular-design",
+        "legal-knowledge-runtime",
+        "retrieval-boundaries"
+      ],
+      "allow_mailbox": true,
+      "allow_hooks": false,
+      "notes": "Review local authority files before applying. Hooks remain disabled by default."
+    },
+    {
+      "repo_path_or_name": "LawFirm-os-intake",
+      "github_full_name": "lowelltwong-alt/LawFirm-os-intake",
+      "family": "LawFirm OS",
+      "authority_tier": "vertical_composition_no_platform_canon",
+      "rollout_policy": "managed_pointer_plus_mailbox",
+      "wave": 2,
+      "profiles": [
+        "python-modular-design",
+        "vertical-workflow",
+        "synthetic-only-gates",
+        "long-script-refactor"
+      ],
+      "allow_mailbox": true,
+      "allow_hooks": false,
+      "notes": "Review local authority files before applying. Hooks remain disabled by default."
+    },
+    {
+      "repo_path_or_name": "LawFirm-os-talent-intelligence",
+      "github_full_name": "lowelltwong-alt/LawFirm-os-talent-intelligence",
+      "family": "LawFirm OS",
+      "authority_tier": "runtime_feature_repo",
+      "rollout_policy": "managed_pointer_plus_mailbox",
+      "wave": 2,
+      "profiles": [
+        "python-modular-design",
+        "sqlite-runtime",
+        "identity-resolution"
+      ],
+      "allow_mailbox": true,
+      "allow_hooks": false,
+      "notes": "Review local authority files before applying. Hooks remain disabled by default."
+    },
+    {
+      "repo_path_or_name": "All-Law-Firm-Talent-Intel",
+      "github_full_name": "lowelltwong-alt/All-Law-Firm-Talent-Intel",
+      "family": "Law/Talent",
+      "authority_tier": "project_repo",
+      "rollout_policy": "managed_pointer_after_inventory",
+      "wave": 3,
+      "profiles": [
+        "python-modular-design",
+        "asset-inventory"
+      ],
+      "allow_mailbox": true,
+      "allow_hooks": false,
+      "notes": "Review local authority files before applying. Hooks remain disabled by default."
+    },
+    {
+      "repo_path_or_name": "Albert-Trial-Simulation-System",
+      "github_full_name": "lowelltwong-alt/Albert-Trial-Simulation-System",
+      "family": "Law/Simulation",
+      "authority_tier": "project_repo",
+      "rollout_policy": "managed_pointer_after_inventory",
+      "wave": 3,
+      "profiles": [
+        "python-modular-design",
+        "simulation-boundaries"
+      ],
+      "allow_mailbox": true,
+      "allow_hooks": false,
+      "notes": "Review local authority files before applying. Hooks remain disabled by default."
+    },
+    {
+      "repo_path_or_name": "exceptions-lake-runtime",
+      "github_full_name": "lowelltwong-alt/exceptions-lake-runtime",
+      "family": "Exceptions Lake",
+      "authority_tier": "runtime_project",
+      "rollout_policy": "managed_pointer_after_inventory",
+      "wave": 3,
+      "profiles": [
+        "append-only-evidence",
+        "python-modular-design"
+      ],
+      "allow_mailbox": true,
+      "allow_hooks": false,
+      "notes": "Review local authority files before applying. Hooks remain disabled by default."
+    },
+    {
+      "repo_path_or_name": "orphan-radar",
+      "github_full_name": "lowelltwong-alt/orphan-radar",
+      "family": "DAD support",
+      "authority_tier": "support_tool",
+      "rollout_policy": "managed_pointer_plus_mailbox",
+      "wave": 2,
+      "profiles": [
+        "asset-discovery",
+        "python-modular-design"
+      ],
+      "allow_mailbox": true,
+      "allow_hooks": false,
+      "notes": "Review local authority files before applying. Hooks remain disabled by default."
+    },
+    {
+      "repo_path_or_name": "lowell-career-os",
+      "github_full_name": "lowelltwong-alt/lowell-career-os",
+      "family": "Personal OS",
+      "authority_tier": "individual_project",
+      "rollout_policy": "managed_pointer_after_inventory",
+      "wave": 4,
+      "profiles": [
+        "repo-preflight",
+        "python-modular-design"
+      ],
+      "allow_mailbox": true,
+      "allow_hooks": false,
+      "notes": "Review local authority files before applying. Hooks remain disabled by default."
+    },
+    {
+      "repo_path_or_name": "logos-governance-architecture",
+      "github_full_name": "lowelltwong-alt/logos-governance-architecture",
+      "family": "Logos/LAIRCA",
+      "authority_tier": "governance_project",
+      "rollout_policy": "governance_pointer_after_inventory",
+      "wave": 3,
+      "profiles": [
+        "cross-repo-governance",
+        "knowledge-graph"
+      ],
+      "allow_mailbox": true,
+      "allow_hooks": false,
+      "notes": "Review local authority files before applying. Hooks remain disabled by default."
+    },
+    {
+      "repo_path_or_name": "logos-governed-core",
+      "github_full_name": "lowelltwong-alt/logos-governed-core",
+      "family": "Logos/LAIRCA",
+      "authority_tier": "core_project",
+      "rollout_policy": "managed_pointer_after_inventory",
+      "wave": 3,
+      "profiles": [
+        "cross-repo-governance",
+        "python-modular-design"
+      ],
+      "allow_mailbox": true,
+      "allow_hooks": false,
+      "notes": "Review local authority files before applying. Hooks remain disabled by default."
+    },
+    {
+      "repo_path_or_name": "logos-scripture-graph",
+      "github_full_name": "lowelltwong-alt/logos-scripture-graph",
+      "family": "Logos/LAIRCA",
+      "authority_tier": "knowledge_graph_project",
+      "rollout_policy": "managed_pointer_after_inventory",
+      "wave": 4,
+      "profiles": [
+        "knowledge-graph",
+        "provenance"
+      ],
+      "allow_mailbox": true,
+      "allow_hooks": false,
+      "notes": "Review local authority files before applying. Hooks remain disabled by default."
+    },
+    {
+      "repo_path_or_name": "logos-boundary-literature",
+      "github_full_name": "lowelltwong-alt/logos-boundary-literature",
+      "family": "Logos/LAIRCA",
+      "authority_tier": "knowledge_project",
+      "rollout_policy": "managed_pointer_after_inventory",
+      "wave": 4,
+      "profiles": [
+        "knowledge-asset",
+        "provenance"
+      ],
+      "allow_mailbox": true,
+      "allow_hooks": false,
+      "notes": "Review local authority files before applying. Hooks remain disabled by default."
+    },
+    {
+      "repo_path_or_name": "lairca-logos-grounded-theological-model",
+      "github_full_name": "lowelltwong-alt/lairca-logos-grounded-theological-model",
+      "family": "Logos/LAIRCA",
+      "authority_tier": "model_project",
+      "rollout_policy": "managed_pointer_after_inventory",
+      "wave": 4,
+      "profiles": [
+        "knowledge-asset",
+        "source-grounding"
+      ],
+      "allow_mailbox": true,
+      "allow_hooks": false,
+      "notes": "Review local authority files before applying. Hooks remain disabled by default."
+    },
+    {
+      "repo_path_or_name": "airca-fractal-decision-architecture",
+      "github_full_name": "lowelltwong-alt/airca-fractal-decision-architecture",
+      "family": "AIRCA/FM governance",
+      "authority_tier": "architecture_project",
+      "rollout_policy": "managed_pointer_after_inventory",
+      "wave": 3,
+      "profiles": [
+        "decision-architecture",
+        "cross-repo-governance"
+      ],
+      "allow_mailbox": true,
+      "allow_hooks": false,
+      "notes": "Review local authority files before applying. Hooks remain disabled by default."
+    },
+    {
+      "repo_path_or_name": "fmg-fractal-capability-ontology",
+      "github_full_name": "lowelltwong-alt/fmg-fractal-capability-ontology",
+      "family": "AIRCA/FM governance",
+      "authority_tier": "ontology_project",
+      "rollout_policy": "managed_pointer_after_inventory",
+      "wave": 3,
+      "profiles": [
+        "ontology",
+        "schema-contracts"
+      ],
+      "allow_mailbox": true,
+      "allow_hooks": false,
+      "notes": "Review local authority files before applying. Hooks remain disabled by default."
+    },
+    {
+      "repo_path_or_name": "kirsten-dissertation-knowledge-graph",
+      "github_full_name": "lowelltwong-alt/kirsten-dissertation-knowledge-graph",
+      "family": "Knowledge graph",
+      "authority_tier": "knowledge_graph_project",
+      "rollout_policy": "managed_pointer_after_inventory",
+      "wave": 4,
+      "profiles": [
+        "knowledge-graph",
+        "source-grounding"
+      ],
+      "allow_mailbox": true,
+      "allow_hooks": false,
+      "notes": "Review local authority files before applying. Hooks remain disabled by default."
+    },
+    {
+      "repo_path_or_name": "obsidian-foundry-vault",
+      "github_full_name": "lowelltwong-alt/obsidian-foundry-vault",
+      "family": "Knowledge vault",
+      "authority_tier": "knowledge_vault",
+      "rollout_policy": "mailbox_or_pointer_only",
+      "wave": 4,
+      "profiles": [
+        "knowledge-asset",
+        "no-code-mutation-caution"
+      ],
+      "allow_mailbox": true,
+      "allow_hooks": false,
+      "notes": "Review local authority files before applying. Hooks remain disabled by default."
+    },
+    {
+      "repo_path_or_name": "noesis-atlas",
+      "github_full_name": "lowelltwong-alt/noesis-atlas",
+      "family": "Knowledge atlas",
+      "authority_tier": "project_repo",
+      "rollout_policy": "managed_pointer_after_inventory",
+      "wave": 3,
+      "profiles": [
+        "knowledge-asset",
+        "python-modular-design"
+      ],
+      "allow_mailbox": true,
+      "allow_hooks": false,
+      "notes": "Review local authority files before applying. Hooks remain disabled by default."
+    },
+    {
+      "repo_path_or_name": "Ryans-Project",
+      "github_full_name": "lowelltwong-alt/Ryans-Project",
+      "family": "Individual/misc",
+      "authority_tier": "unknown_project",
+      "rollout_policy": "inventory_first_then_pointer",
+      "wave": 5,
+      "profiles": [
+        "repo-audit"
+      ],
+      "allow_mailbox": true,
+      "allow_hooks": false,
+      "notes": "Review local authority files before applying. Hooks remain disabled by default."
+    },
+    {
+      "repo_path_or_name": "Bi-Test",
+      "github_full_name": "lowelltwong-alt/Bi-Test",
+      "family": "Individual/misc",
+      "authority_tier": "unknown_project",
+      "rollout_policy": "inventory_first_then_pointer",
+      "wave": 5,
+      "profiles": [
+        "repo-audit"
+      ],
+      "allow_mailbox": true,
+      "allow_hooks": false,
+      "notes": "Review local authority files before applying. Hooks remain disabled by default."
+    },
+    {
+      "repo_path_or_name": "lowelltwong-alt",
+      "github_full_name": "lowelltwong-alt/lowelltwong-alt",
+      "family": "GitHub profile/meta",
+      "authority_tier": "profile_repo",
+      "rollout_policy": "do_not_install_without_specific_reason",
+      "wave": 9,
+      "profiles": [
+        "none-by-default"
+      ],
+      "allow_mailbox": false,
+      "allow_hooks": false,
+      "notes": "Review local authority files before applying. Hooks remain disabled by default."
+    }
+  ]
+}

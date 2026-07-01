@@ -42,6 +42,43 @@
         "Collision-prone generated files are written as .candidate files unless force is requested.",
         "Installing the asset in DAD does not authorize deployment to any other repository."
       ]
+    },
+    {
+      "asset_id": "lowelltwong-alt-repo-map-and-wave-plan",
+      "name": "lowelltwong-alt Repo Map And Wave Plan",
+      "version": "0.1.0",
+      "path": "assets/repo-rollout-plans/lowelltwong-alt-repo-map-and-wave-plan-v0.1.0",
+      "asset_type": "rollout_planning_packet",
+      "profiles": [
+        "dad-control-plane",
+        "asset-lifecycle",
+        "mail-center",
+        "preflight-router"
+      ],
+      "use_when": [
+        "Planning DAD managed-pointer, mailbox, or preflight-profile rollout across the lowelltwong-alt workspace.",
+        "Reviewing candidate wave order before mutating downstream repositories.",
+        "Checking which repos require local inventory before any managed pointer or mailbox install."
+      ],
+      "does_not_apply_when": [
+        "A downstream repo has not had local authority files refreshed.",
+        "The task needs canonical source truth rather than a preliminary GitHub-observed map.",
+        "A human has not approved the next wave beyond DAD wave 0."
+      ],
+      "install_path": "assets/repo-rollout-plans/lowelltwong-alt-repo-map-and-wave-plan-v0.1.0",
+      "source_package": {
+        "filename": "lowelltwong-alt-repo-map-and-wave-plan-v0.1.0.zip",
+        "sha256": "fd3e30b22beea019e069682d7beb9f524bda4e3e7f1ddc2897ba1c85ad840f2d"
+      },
+      "installed_at": "2026-07-01",
+      "review_status": "wave_0_installed_for_candidate_rollout_planning",
+      "safety_notes": [
+        "This packet is a planning seed, not source authority.",
+        "Draft PowerShell commands must not be run wholesale.",
+        "Wave 0 applies to DAD only and does not run downstream agent install against DAD.",
+        "Before waves 1 and later, DAD must refresh local repo paths, authority files, branch state, visibility, and mail policy.",
+        "Hooks remain disabled unless separately approved."
+      ]
     }
   ]
 }
