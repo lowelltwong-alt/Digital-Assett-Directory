@@ -79,6 +79,7 @@ from .exceptions_lake import (
     record_exception_fix_outcome,
     record_exception_event,
     summarize_exception_backfill_review_decisions,
+    write_exception_backfill_refresh_plan,
     write_exception_backfill_review_queue,
     write_exception_learning_queue,
     write_exception_report,
@@ -1989,6 +1990,28 @@ def exceptions_backfill_review_queue(
             example_limit=example_limit,
             include_readable_path_refs=include_readable_path_refs,
             readable_path_refs_authorized=include_readable_path_refs,
+        )
+    except (OSError, json.JSONDecodeError, KeyError, ValueError) as exc:
+        console.print(str(exc))
+        raise typer.Exit(2) from exc
+    console.print_json(data=result)
+
+
+@exceptions_app.command("backfill-refresh-plan")
+def exceptions_backfill_refresh_plan(
+    output: Optional[Path] = typer.Option(None, "--output"),
+    limit: int = typer.Option(100, "--limit", min=1, max=1000),
+    example_limit: int = typer.Option(5, "--example-limit", min=1, max=25),
+    hub: Optional[Path] = typer.Option(None),
+) -> None:
+    """Regenerate and print the classifier refresh plan for backfill groups."""
+    cfg = _cfg(hub=hub)
+    try:
+        result = write_exception_backfill_refresh_plan(
+            cfg.repo_root,
+            output=output,
+            limit=limit,
+            example_limit=example_limit,
         )
     except (OSError, json.JSONDecodeError, KeyError, ValueError) as exc:
         console.print(str(exc))

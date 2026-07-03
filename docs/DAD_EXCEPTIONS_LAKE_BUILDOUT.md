@@ -965,6 +965,14 @@ Backfill safety and classification:
   queued as `needs_classifier_refresh`. They should be rerun or invalidated
   before source review so DAD does not review candidates under an unknown or
   outdated classifier contract.
+- `asset-dir exceptions backfill-refresh-plan` turns those blocked review groups
+  into an explicit generated plan at
+  `processed/reports/exception_backfill_classifier_refresh_plan.json` and
+  `.md`. It separates all-old groups that need bounded rerun or append-only
+  invalidation from mixed groups where current-classifier rows can be handled
+  separately. Path refs in the plan are hash-only by default, while source repo
+  IDs are central/internal identifiers and not public-safe exports. The plan is
+  candidate-only and does not rewrite the immutable lake.
 - The generated review queue surfaces the latest backfill run's stopped reason
   and coverage warning, so bounded first-N backfill waves do not look complete
   unless the latest run actually exhausted the walk.

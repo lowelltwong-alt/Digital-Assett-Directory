@@ -34,6 +34,7 @@ def test_ai_toc_has_deterministic_rows_and_tagged_graph_branch() -> None:
     assert "`templates/ai-table-of-contents.template.md`" in toc
     assert "`processed/graph/graph.json`" in toc
     assert "`generated_output`" in toc
+    assert "`processed/reports/exception_backfill_classifier_refresh_plan.md`" in toc
 
 
 def test_manifest_exposes_navigation_and_graph_entrypoints() -> None:
@@ -47,6 +48,10 @@ def test_manifest_exposes_navigation_and_graph_entrypoints() -> None:
     assert "docs/KNOWLEDGE_GRAPH_MODEL.md" in manifest["knowledge_graph_entrypoints"]
     assert "registry/asset-pattern-registry.json" in manifest["knowledge_graph_entrypoints"]
     assert "processed/graph/graph.json" in manifest["knowledge_graph_entrypoints"]
+    assert (
+        "processed/reports/exception_backfill_classifier_refresh_plan.md"
+        in manifest["knowledge_graph_entrypoints"]
+    )
 
 
 def test_ai_navigation_rule_and_pattern_are_registered() -> None:

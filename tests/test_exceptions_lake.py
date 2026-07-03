@@ -7,7 +7,9 @@ from types import SimpleNamespace
 
 import pytest
 from jsonschema.validators import validator_for
+from typer.testing import CliRunner
 
+from digital_asset_directory.cli import app
 from digital_asset_directory.mail_center import deliver_mail
 from digital_asset_directory.exceptions_lake import (
     BackfillAuthorization,
@@ -18,6 +20,7 @@ from digital_asset_directory.exceptions_lake import (
     collect_exception_events,
     evaluate_exception_learning_readiness_scenarios,
     event_type_taxonomy_dimensions,
+    exception_lake_paths,
     exception_category_taxonomy_defaults,
     exception_taxonomy_dimension_axes,
     load_exception_backfill_review_decisions,
@@ -26,6 +29,7 @@ from digital_asset_directory.exceptions_lake import (
     record_exception_fix_outcome,
     record_exception_event,
     summarize_exception_backfill_review_decisions,
+    write_exception_backfill_refresh_plan,
     write_exception_backfill_review_queue,
     write_exception_learning_queue,
     write_exception_report,
@@ -34,12 +38,14 @@ from digital_asset_directory.exceptions_lake import (
 from digital_asset_directory.utils import append_jsonl
 
 ROOT = Path(__file__).resolve().parents[1]
+RUNNER = CliRunner()
 
 
 def _copy_exception_contracts(hub: Path) -> None:
     for rel in [
         "registry/exception-event-type-registry.json",
         "registry/exception-learning-methodology.json",
+        "config/sources.example.yaml",
     ]:
         target = hub / rel
         target.parent.mkdir(parents=True, exist_ok=True)
@@ -1044,6 +1050,292 @@ def test_backfill_review_queue_flags_stale_classifier_version(tmp_path: Path) ->
     assert row["classifier_version_stale_count"] == 1
     assert row["current_classifier_version"] == "exception-backfill-classifier-v0.2.0"
     assert any("classifier version provenance is stale" in blocker for blocker in row["promotion_blockers"])
+
+
+def test_backfill_refresh_plan_routes_all_old_groups_to_rerun_or_invalidate(
+    tmp_path: Path,
+) -> None:
+    hub = tmp_path / "hub"
+    repo = tmp_path / "repo"
+    (repo / ".git").mkdir(parents=True)
+    _copy_exception_contracts(hub)
+    target = repo / "docs" / "pytest-timeout.md"
+    target.parent.mkdir(parents=True)
+    target.write_text("metadata-only backfill should not read content\n", encoding="utf-8")
+
+    backfill_exception_candidates(
+        hub,
+        repo,
+        limit=10,
+        authorization=_backfill_auth(repo),
+    )
+    lake_path = hub / "processed" / "exceptions" / "lake" / "events.jsonl"
+    rows = _jsonl(lake_path)
+    rows[0]["context_refs"] = [
+        ref
+        for ref in rows[0]["context_refs"]
+        if not ref.startswith("backfill-classifier-version:")
+    ]
+    lake_path.write_text("\n".join(json.dumps(row) for row in rows) + "\n", encoding="utf-8")
+
+    report = write_exception_backfill_refresh_plan(hub)
+
+    item = report["plan_items"][0]
+    assert report["report_id"] == "dad:exception-backfill-classifier-refresh-plan"
+    assert report["action_counts"] == {"rerun_or_invalidate_old_group": 1}
+    assert item["recommended_refresh_action"] == "rerun_or_invalidate_old_group"
+    assert item["current_classifier_candidate_count"] == 0
+    assert item["classifier_version_missing_count"] == 1
+    assert item["path_hash_refs"][0].startswith("repo-relative-sha256:")
+    assert item["command_hints"] == []
+    assert "bounded backfill" in " ".join(item["operator_next_steps"])
+    assert item["source_repo_ref_policy"].startswith("central_internal_identifier")
+    assert "does not mutate lake rows" in report["authority_boundary"]
+    assert "Path references" in report["path_ref_policy"]
+    assert report["generation_parameters"]["limit"] == 100
+    report_text = (
+        hub / "processed" / "reports" / "exception_backfill_classifier_refresh_plan.json"
+    ).read_text(encoding="utf-8")
+    assert "pytest-timeout.md" not in report_text
+
+
+def test_backfill_refresh_plan_splits_mixed_current_and_old_groups(tmp_path: Path) -> None:
+    hub = tmp_path / "hub"
+    repo = tmp_path / "repo"
+    (repo / ".git").mkdir(parents=True)
+    _copy_exception_contracts(hub)
+    for name in ["pytest-timeout-one.md", "pytest-timeout-two.md"]:
+        target = repo / "docs" / name
+        target.parent.mkdir(parents=True, exist_ok=True)
+        target.write_text("metadata-only backfill should not read content\n", encoding="utf-8")
+
+    backfill_exception_candidates(
+        hub,
+        repo,
+        limit=10,
+        authorization=_backfill_auth(repo),
+    )
+    lake_path = hub / "processed" / "exceptions" / "lake" / "events.jsonl"
+    rows = _jsonl(lake_path)
+    rows[0]["context_refs"] = [
+        "backfill-classifier-version:exception-backfill-classifier-v0.1.0"
+        if ref.startswith("backfill-classifier-version:")
+        else ref
+        for ref in rows[0]["context_refs"]
+    ]
+    lake_path.write_text("\n".join(json.dumps(row) for row in rows) + "\n", encoding="utf-8")
+
+    report = write_exception_backfill_refresh_plan(hub)
+
+    item = report["plan_items"][0]
+    assert report["action_counts"] == {"split_current_subset_then_rerun_old_subset": 1}
+    assert item["recommended_refresh_action"] == "split_current_subset_then_rerun_old_subset"
+    assert item["candidate_count"] == 2
+    assert item["current_classifier_candidate_count"] == 1
+    assert item["classifier_version_stale_count"] == 1
+    assert "current-classifier rows exist" in " ".join(item["reasons"])
+    assert item["command_hints"] == []
+    assert "current-classifier subset" in " ".join(item["operator_next_steps"])
+
+
+def test_backfill_refresh_plan_routes_current_groups_to_source_packets(
+    tmp_path: Path,
+) -> None:
+    hub = tmp_path / "hub"
+    repo = tmp_path / "repo"
+    (repo / ".git").mkdir(parents=True)
+    _copy_exception_contracts(hub)
+    target = repo / "docs" / "pytest-timeout.md"
+    target.parent.mkdir(parents=True)
+    target.write_text("metadata-only backfill should not read content\n", encoding="utf-8")
+
+    backfill_exception_candidates(
+        hub,
+        repo,
+        limit=10,
+        authorization=_backfill_auth(repo),
+    )
+
+    report = write_exception_backfill_refresh_plan(hub)
+
+    item = report["plan_items"][0]
+    assert report["action_counts"] == {"source_packet_possible": 1}
+    assert item["recommended_refresh_action"] == "source_packet_possible"
+    assert item["current_classifier_candidate_count"] == 1
+    assert "needs_source_packet" in item["command_hints"][0]
+    assert "classifier provenance matches" in " ".join(item["reasons"])
+
+
+def test_backfill_refresh_plan_routes_readable_path_refs_to_central_review(
+    tmp_path: Path,
+) -> None:
+    hub = tmp_path / "hub"
+    repo = tmp_path / "repo"
+    (repo / ".git").mkdir(parents=True)
+    _copy_exception_contracts(hub)
+    target = repo / "docs" / "review-finding.md"
+    target.parent.mkdir(parents=True)
+    target.write_text("metadata-only backfill should not read content\n", encoding="utf-8")
+
+    backfill_exception_candidates(
+        hub,
+        repo,
+        limit=10,
+        include_path_refs=True,
+        authorization=_backfill_auth(repo, include_path_refs=True),
+    )
+
+    report = write_exception_backfill_refresh_plan(hub)
+
+    item = report["plan_items"][0]
+    assert report["action_counts"] == {"central_review_required": 1}
+    assert item["recommended_refresh_action"] == "central_review_required"
+    assert item["readable_path_ref_count"] == 1
+    assert item["command_hints"] == []
+    assert "central-only review" in " ".join(item["reasons"])
+    assert "Resolve central-only" in " ".join(item["operator_next_steps"])
+
+
+def test_backfill_refresh_plan_custom_output_does_not_rewrite_review_queue(
+    tmp_path: Path,
+) -> None:
+    hub = tmp_path / "hub"
+    repo = tmp_path / "repo"
+    (repo / ".git").mkdir(parents=True)
+    _copy_exception_contracts(hub)
+    target = repo / "docs" / "pytest-timeout.md"
+    target.parent.mkdir(parents=True)
+    target.write_text("metadata-only backfill should not read content\n", encoding="utf-8")
+    backfill_exception_candidates(
+        hub,
+        repo,
+        limit=10,
+        authorization=_backfill_auth(repo),
+    )
+
+    report = write_exception_backfill_refresh_plan(
+        hub,
+        output=Path("processed/reports/custom_refresh_plan.json"),
+    )
+
+    assert report["report_id"] == "dad:exception-backfill-classifier-refresh-plan"
+    assert (hub / "processed" / "reports" / "custom_refresh_plan.json").exists()
+    assert not (hub / "processed" / "reports" / "exception_backfill_review_queue.json").exists()
+
+
+def test_backfill_refresh_plan_limited_output_keeps_one_example_per_action(
+    tmp_path: Path,
+) -> None:
+    hub = tmp_path / "hub"
+    _copy_exception_contracts(hub)
+    repos = []
+    for index in range(3):
+        repo = tmp_path / f"repo-{index}"
+        (repo / ".git").mkdir(parents=True)
+        repos.append(repo)
+    for index, repo in enumerate(repos[:2]):
+        target = repo / "docs" / "pytest-timeout.md"
+        target.parent.mkdir(parents=True)
+        target.write_text("metadata-only backfill should not read content\n", encoding="utf-8")
+        policies = [_backfill_policy(repo, repo_id=f"repo-{index}")]
+        backfill_exception_candidates(
+            hub,
+            repo,
+            limit=10,
+            authorization=_backfill_auth(repo, repo_policies=policies),
+        )
+    split_repo = repos[2]
+    for name in ["pytest-timeout-one.md", "pytest-timeout-two.md"]:
+        target = split_repo / "docs" / name
+        target.parent.mkdir(parents=True, exist_ok=True)
+        target.write_text("metadata-only backfill should not read content\n", encoding="utf-8")
+    backfill_exception_candidates(
+        hub,
+        split_repo,
+        limit=10,
+        authorization=_backfill_auth(
+            split_repo,
+            repo_policies=[_backfill_policy(split_repo, repo_id="split-repo")],
+        ),
+    )
+    lake_path = hub / "processed" / "exceptions" / "lake" / "events.jsonl"
+    rows = _jsonl(lake_path)
+    by_repo = {}
+    for row in rows:
+        by_repo.setdefault(row["source_repo"], []).append(row)
+    for row in by_repo["repo-0"]:
+        row["context_refs"] = [
+            ref
+            for ref in row["context_refs"]
+            if not ref.startswith("backfill-classifier-version:")
+        ]
+    for row in by_repo["repo-1"]:
+        row["context_refs"] = [
+            ref
+            for ref in row["context_refs"]
+            if not ref.startswith("backfill-classifier-version:")
+        ]
+    by_repo["split-repo"][0]["context_refs"] = [
+        "backfill-classifier-version:exception-backfill-classifier-v0.1.0"
+        if ref.startswith("backfill-classifier-version:")
+        else ref
+        for ref in by_repo["split-repo"][0]["context_refs"]
+    ]
+    lake_path.write_text("\n".join(json.dumps(row) for row in rows) + "\n", encoding="utf-8")
+
+    report = write_exception_backfill_refresh_plan(hub, limit=2)
+
+    reported_actions = {
+        item["recommended_refresh_action"] for item in report["plan_items"]
+    }
+    assert reported_actions == {
+        "rerun_or_invalidate_old_group",
+        "split_current_subset_then_rerun_old_subset",
+    }
+    assert report["reported_action_counts"] == {
+        "rerun_or_invalidate_old_group": 1,
+        "split_current_subset_then_rerun_old_subset": 1,
+    }
+    assert report["omitted_action_counts"] == {"rerun_or_invalidate_old_group": 1}
+
+
+def test_exception_lake_paths_exposes_backfill_refresh_plan() -> None:
+    paths = exception_lake_paths()
+
+    assert (
+        paths["backfill_refresh_plan_json"]
+        == "processed/reports/exception_backfill_classifier_refresh_plan.json"
+    )
+    assert (
+        paths["backfill_refresh_plan_markdown"]
+        == "processed/reports/exception_backfill_classifier_refresh_plan.md"
+    )
+
+
+def test_backfill_refresh_plan_cli_smoke(tmp_path: Path) -> None:
+    hub = tmp_path / "hub"
+    repo = tmp_path / "repo"
+    (repo / ".git").mkdir(parents=True)
+    _copy_exception_contracts(hub)
+    target = repo / "docs" / "pytest-timeout.md"
+    target.parent.mkdir(parents=True)
+    target.write_text("metadata-only backfill should not read content\n", encoding="utf-8")
+    backfill_exception_candidates(
+        hub,
+        repo,
+        limit=10,
+        authorization=_backfill_auth(repo),
+    )
+
+    result = RUNNER.invoke(
+        app,
+        ["exceptions", "backfill-refresh-plan", "--hub", str(hub), "--limit", "1"],
+    )
+
+    assert result.exit_code == 0, result.stdout
+    payload = json.loads(result.stdout)
+    assert payload["report_id"] == "dad:exception-backfill-classifier-refresh-plan"
+    assert payload["reported_plan_item_count"] == 1
 
 
 def test_backfill_review_queue_counts_only_approved_public_release_as_cleared(

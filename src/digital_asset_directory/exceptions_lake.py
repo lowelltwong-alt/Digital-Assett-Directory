@@ -36,6 +36,12 @@ LEARNING_QUEUE_JSON = Path("processed") / "reports" / "exception_learning_queue.
 LEARNING_QUEUE_MD = Path("processed") / "reports" / "exception_learning_queue.md"
 BACKFILL_REVIEW_QUEUE_JSON = Path("processed") / "reports" / "exception_backfill_review_queue.json"
 BACKFILL_REVIEW_QUEUE_MD = Path("processed") / "reports" / "exception_backfill_review_queue.md"
+BACKFILL_REFRESH_PLAN_JSON = (
+    Path("processed") / "reports" / "exception_backfill_classifier_refresh_plan.json"
+)
+BACKFILL_REFRESH_PLAN_MD = (
+    Path("processed") / "reports" / "exception_backfill_classifier_refresh_plan.md"
+)
 BACKFILL_REVIEW_DECISIONS = (
     Path("processed") / "exceptions" / "review-queue" / "backfill_review_decisions.jsonl"
 )
@@ -2710,6 +2716,7 @@ def write_exception_backfill_review_queue(
     example_limit: int = 5,
     include_readable_path_refs: bool = False,
     readable_path_refs_authorized: bool = False,
+    write_outputs: bool = True,
 ) -> dict[str, Any]:
     """Write a source-review queue for historical path-signal backfill candidates.
 
@@ -2882,6 +2889,8 @@ def write_exception_backfill_review_queue(
             "exceptions, fix-outcome evidence, lessons, harness cases, or DAD rules."
         ),
     }
+    if not write_outputs:
+        return report
     output_path = hub_root / (output or BACKFILL_REVIEW_QUEUE_JSON)
     output_path.parent.mkdir(parents=True, exist_ok=True)
     output_path.write_text(json_dumps(report, pretty=True) + "\n", encoding="utf-8")
@@ -2916,6 +2925,299 @@ def write_exception_backfill_review_queue(
             + f"`{row['source_repo']}` | `{row['event_type']}` | `{row['rule_id']}` | "
             + f"`{row['review_status']}` | {row['candidate_count']} | "
             + f"`{row['review_priority']}` | {row['recommended_next_action']} |"
+        )
+    md_path.parent.mkdir(parents=True, exist_ok=True)
+    md_path.write_text("\n".join(lines) + "\n", encoding="utf-8")
+    return report
+
+
+def _backfill_refresh_plan_action(
+    row: dict[str, Any],
+) -> tuple[str, list[str], list[str], list[str]]:
+    candidate_count = int(row.get("candidate_count") or 0)
+    missing_count = int(row.get("classifier_version_missing_count") or 0)
+    stale_count = int(row.get("classifier_version_stale_count") or 0)
+    current_count = max(0, candidate_count - missing_count - stale_count)
+    readable_path_ref_count = int(row.get("readable_path_ref_count") or 0)
+    public_release_required_count = int(row.get("public_release_required_count") or 0)
+    reasons: list[str] = []
+    commands: list[str] = []
+    operator_next_steps: list[str] = []
+    if missing_count:
+        reasons.append("classifier provenance missing")
+    if stale_count:
+        reasons.append("classifier provenance stale")
+    if readable_path_ref_count:
+        reasons.append("readable path refs require central-only review")
+    if public_release_required_count:
+        reasons.append("non-public or unknown origin remains human-release gated")
+    review_group_id = str(row.get("review_group_id") or "")
+    if missing_count or stale_count:
+        if current_count:
+            action = "split_current_subset_then_rerun_old_subset"
+            reasons.append(
+                "current-classifier rows exist but old rows block source review for the group"
+            )
+            operator_next_steps.append(
+                "Review the current-classifier subset separately from old rows before requesting source packets."
+            )
+        else:
+            action = "rerun_or_invalidate_old_group"
+            reasons.append("no current-classifier rows exist for this review group")
+        operator_next_steps.extend(
+            [
+                "Rerun bounded backfill only with a reviewed source root, approval ID, and scope.",
+                "If the candidate no longer reproduces or source review rejects it, append a reject/archive decision with notes instead of editing lake rows.",
+            ]
+        )
+        return action, reasons, commands, operator_next_steps
+    if str(row.get("review_status") or "") == "source_review_required":
+        action = "source_packet_possible"
+        reasons.append("classifier provenance matches the current reviewed classifier")
+        operator_next_steps.append(
+            "If source confirmation is needed, append a needs_source_packet review decision for this current queue fingerprint."
+        )
+        commands.append(
+            "asset-dir exceptions backfill-review-decision "
+            f"--review-group-id {review_group_id} --decision needs_source_packet"
+        )
+        return action, reasons, commands, operator_next_steps
+    action = "central_review_required"
+    reasons.append("classifier provenance is current but another gate blocks direct source review")
+    operator_next_steps.append(
+        "Resolve central-only readable path review, source visibility, or release gates before requesting source packets."
+    )
+    return action, reasons, commands, operator_next_steps
+
+
+def _select_backfill_refresh_plan_rows(
+    rows: list[dict[str, Any]],
+    limit: int,
+) -> list[dict[str, Any]]:
+    if len(rows) <= limit:
+        return rows
+    selected = list(rows[:limit])
+    if not selected:
+        return selected
+    selected_ids = {str(row.get("plan_item_id") or "") for row in selected}
+    action_order = sorted({str(row.get("recommended_refresh_action") or "") for row in rows})
+    counts = Counter(str(row.get("recommended_refresh_action") or "") for row in selected)
+    for action in action_order:
+        if counts[action]:
+            continue
+        candidate = next(
+            (
+                row
+                for row in rows
+                if str(row.get("recommended_refresh_action") or "") == action
+                and str(row.get("plan_item_id") or "") not in selected_ids
+            ),
+            None,
+        )
+        if candidate is None:
+            continue
+        replace_index = None
+        for index in range(len(selected) - 1, -1, -1):
+            selected_action = str(selected[index].get("recommended_refresh_action") or "")
+            if counts[selected_action] > 1:
+                replace_index = index
+                break
+        if replace_index is None:
+            continue
+        replaced = selected[replace_index]
+        counts[str(replaced.get("recommended_refresh_action") or "")] -= 1
+        selected_ids.discard(str(replaced.get("plan_item_id") or ""))
+        selected[replace_index] = candidate
+        counts[action] += 1
+        selected_ids.add(str(candidate.get("plan_item_id") or ""))
+    order = {str(row.get("plan_item_id") or ""): index for index, row in enumerate(rows)}
+    return sorted(selected, key=lambda row: order.get(str(row.get("plan_item_id") or ""), 0))
+
+
+def write_exception_backfill_refresh_plan(
+    hub_root: Path,
+    *,
+    output: Path | None = None,
+    limit: int = 100,
+    example_limit: int = 5,
+) -> dict[str, Any]:
+    """Write a candidate-only plan for stale historical backfill rows.
+
+    The plan deliberately does not rewrite lake records. It turns the immutable
+    review queue into explicit next actions so old rows can be rerun,
+    source-packeted, or invalidated through append-only decisions.
+    """
+    queue = write_exception_backfill_review_queue(
+        hub_root,
+        limit=MAX_BACKFILL_EVENTS,
+        example_limit=example_limit,
+        write_outputs=False,
+    )
+    limit = max(1, min(limit, MAX_BACKFILL_EVENTS))
+    action_counts: Counter[str] = Counter()
+    rows: list[dict[str, Any]] = []
+    priority_rank = {"critical": 0, "high": 1, "medium": 2, "low": 3, "info": 4}
+    for queue_row in queue.get("review_queue", []):
+        if not isinstance(queue_row, dict):
+            continue
+        action, reasons, commands, operator_next_steps = _backfill_refresh_plan_action(queue_row)
+        action_counts[action] += 1
+        candidate_count = int(queue_row.get("candidate_count") or 0)
+        missing_count = int(queue_row.get("classifier_version_missing_count") or 0)
+        stale_count = int(queue_row.get("classifier_version_stale_count") or 0)
+        rows.append(
+            {
+                "plan_item_id": stable_id(
+                    "exception-backfill-refresh-plan-item",
+                    str(queue_row.get("review_group_id") or ""),
+                    action,
+                    str(candidate_count),
+                    str(missing_count),
+                    str(stale_count),
+                ),
+                "review_group_id": queue_row.get("review_group_id", ""),
+                "source_repo": queue_row.get("source_repo", ""),
+                "event_type": queue_row.get("event_type", ""),
+                "rule_id": queue_row.get("rule_id", ""),
+                "review_priority": queue_row.get("review_priority", "info"),
+                "review_status": queue_row.get("review_status", ""),
+                "recommended_refresh_action": action,
+                "source_repo_ref_policy": (
+                    "central_internal_identifier_not_public_safe; path refs are "
+                    "hash-only by default"
+                ),
+                "candidate_count": candidate_count,
+                "current_classifier_candidate_count": max(
+                    0,
+                    candidate_count - missing_count - stale_count,
+                ),
+                "classifier_version_missing_count": missing_count,
+                "classifier_version_stale_count": stale_count,
+                "public_release_required_count": queue_row.get(
+                    "public_release_required_count",
+                    0,
+                ),
+                "readable_path_ref_count": queue_row.get("readable_path_ref_count", 0),
+                "path_hash_refs": queue_row.get("path_hash_refs", []),
+                "example_event_ids": queue_row.get("example_event_ids", []),
+                "reasons": sorted(set(reasons)),
+                "operator_next_steps": operator_next_steps,
+                "command_hints": commands,
+                "authority_boundary": (
+                    "This item is routing evidence only. It does not mutate lake rows, "
+                    "invalidate candidates, confirm incidents, approve public release, "
+                    "or authorize source repo writes."
+                ),
+            }
+        )
+    rows.sort(
+        key=lambda row: (
+            priority_rank.get(str(row.get("review_priority")), 9),
+            str(row.get("recommended_refresh_action")),
+            -int(row.get("candidate_count") or 0),
+            str(row.get("source_repo")),
+            str(row.get("event_type")),
+            str(row.get("rule_id")),
+        )
+    )
+    all_rows = rows
+    rows = _select_backfill_refresh_plan_rows(all_rows, limit)
+    reported_action_counts = Counter(
+        str(row.get("recommended_refresh_action") or "") for row in rows
+    )
+    omitted_action_counts = {
+        action: count - reported_action_counts.get(action, 0)
+        for action, count in action_counts.items()
+        if count - reported_action_counts.get(action, 0) > 0
+    }
+    report = {
+        "generated_at": utc_now(),
+        "report_id": "dad:exception-backfill-classifier-refresh-plan",
+        "input_hashes": _exception_backfill_review_queue_input_hashes(hub_root),
+        "generated_by_command": "asset-dir exceptions backfill-refresh-plan",
+        "generation_parameters": {
+            "limit": limit,
+            "example_limit": example_limit,
+            "row_selection": "priority_sorted_with_action_coverage_when_limit_permits",
+        },
+        "freshness_guidance": (
+            "Regenerate this plan before review if any input hash, classifier version, "
+            "latest backfill run, review queue logic, or lake contents changed."
+        ),
+        "path_ref_policy": (
+            "Path references in plan rows are hash-only by default. Source repo IDs "
+            "may be readable central/internal policy identifiers and are not a "
+            "public-safe export."
+        ),
+        "current_classifier_version": queue.get("current_classifier_version", ""),
+        "latest_backfill_run": queue.get("latest_backfill_run", {}),
+        "backfill_candidate_count": queue.get("backfill_candidate_count", 0),
+        "review_group_count": queue.get("review_group_count", 0),
+        "reported_plan_item_count": len(rows),
+        "omitted_plan_item_count": max(
+            0,
+            int(queue.get("review_group_count") or 0) - len(rows),
+        ),
+        "action_counts": dict(sorted(action_counts.items())),
+        "reported_action_counts": dict(sorted(reported_action_counts.items())),
+        "omitted_action_counts": dict(sorted(omitted_action_counts.items())),
+        "plan_items": rows,
+        "authority_boundary": (
+            "The refresh plan is a generated review aid. It does not mutate lake "
+            "rows; reviewers must rerun bounded backfill or append review "
+            "decisions instead of editing historical lake rows."
+        ),
+    }
+    output_path = hub_root / (output or BACKFILL_REFRESH_PLAN_JSON)
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    output_path.write_text(json_dumps(report, pretty=True) + "\n", encoding="utf-8")
+    md_path = output_path.with_suffix(".md") if output else hub_root / BACKFILL_REFRESH_PLAN_MD
+    lines = [
+        "# Exception Backfill Classifier Refresh Plan",
+        "",
+        f"- Generated: {report['generated_at']}",
+        f"- Path-signal backfill candidates: {report['backfill_candidate_count']}",
+        f"- Review groups: {report['review_group_count']}",
+        f"- Reported plan items: {report['reported_plan_item_count']}",
+        f"- Omitted plan items: {report['omitted_plan_item_count']}",
+        f"- Current classifier version: `{report['current_classifier_version']}`",
+        f"- Generated by: `{report['generated_by_command']}`",
+        f"- Limit: {limit}",
+        f"- Example limit: {example_limit}",
+        "- Boundary: this report does not mutate lake rows, confirm incidents, "
+        "invalidate candidates, approve release, or write to source repos.",
+        "- Path policy: path references are hash-only by default; source repo IDs "
+        "may be readable central/internal identifiers and are not public-safe exports.",
+        f"- Freshness: {report['freshness_guidance']}",
+        "",
+        "## Action Counts",
+        "",
+    ]
+    lines.extend(f"- `{action}`: {count}" for action, count in report["action_counts"].items())
+    lines.extend(["", "## Reported Action Counts", ""])
+    lines.extend(
+        f"- `{action}`: {count}"
+        for action, count in report["reported_action_counts"].items()
+    )
+    if report["omitted_action_counts"]:
+        lines.extend(["", "## Omitted Action Counts", ""])
+        lines.extend(
+            f"- `{action}`: {count}"
+            for action, count in report["omitted_action_counts"].items()
+        )
+    lines.extend(["", "## Plan Items", ""])
+    lines.append(
+        "| Source Repo | Event Type | Rule | Action | Candidates | Current | Missing | Stale |"
+    )
+    lines.append("| --- | --- | --- | --- | ---: | ---: | ---: | ---: |")
+    for row in rows:
+        lines.append(
+            "| "
+            + f"`{row['source_repo']}` | `{row['event_type']}` | `{row['rule_id']}` | "
+            + f"`{row['recommended_refresh_action']}` | {row['candidate_count']} | "
+            + f"{row['current_classifier_candidate_count']} | "
+            + f"{row['classifier_version_missing_count']} | "
+            + f"{row['classifier_version_stale_count']} |"
         )
     md_path.parent.mkdir(parents=True, exist_ok=True)
     md_path.write_text("\n".join(lines) + "\n", encoding="utf-8")
@@ -4555,6 +4857,8 @@ def exception_lake_paths() -> dict[str, str]:
         "source_packet_requests_mail_stage": SOURCE_PACKET_REQUESTS_STAGED.as_posix(),
         "backfill_review_queue_json": BACKFILL_REVIEW_QUEUE_JSON.as_posix(),
         "backfill_review_queue_markdown": BACKFILL_REVIEW_QUEUE_MD.as_posix(),
+        "backfill_refresh_plan_json": BACKFILL_REFRESH_PLAN_JSON.as_posix(),
+        "backfill_refresh_plan_markdown": BACKFILL_REFRESH_PLAN_MD.as_posix(),
         "learning_queue_json": LEARNING_QUEUE_JSON.as_posix(),
         "learning_queue_markdown": LEARNING_QUEUE_MD.as_posix(),
         "learning_readiness_json": LEARNING_READINESS_JSON.as_posix(),
