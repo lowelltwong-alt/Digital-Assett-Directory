@@ -1,0 +1,32 @@
+{
+  "schema_version": "0.1.0",
+  "eval_id": "exception-capture-completeness-minimum-eval-v0.1.0",
+  "harness_id": "dad:harness:exception-capture-completeness",
+  "status": "candidate",
+  "purpose": "Confirm the harness catches a real missed-capture pattern and suppresses unsafe positive matches.",
+  "input_contract": [
+    "A reviewed capture-pattern registry exists.",
+    "Synthetic scenarios include positive, update-required, and negative-control cases.",
+    "Scenario output remains candidate evidence only."
+  ],
+  "cases": [
+    {
+      "case_id": "lawfirm-review-issue",
+      "given": ["structured review workflow", "exception-lake mapping gap"],
+      "expected": ["ordinary workflow_suggestion mail", "review_finding exception event", "update_required when old capture surface is present", "observed outbox fixture matches expected packet classes"],
+      "fail_if": ["only mail is emitted", "only exception is emitted", "no update requirement is reported for an old capture surface", "observed JSONL outbox comparison is missing or fails"]
+    },
+    {
+      "case_id": "unsafe-positive-match",
+      "given": ["reusable asset signal", "unsafe payload sample"],
+      "expected": ["no outbound packet", "blocked reason points to executable payload screening"],
+      "fail_if": ["ordinary mail is emitted", "exception event copies private context", "unsafe payload is only simulated by a pre-labeled signal"]
+    }
+  ],
+  "must_not_claim": [
+    "The harness proves all real repos are complete.",
+    "The harness proves public safety.",
+    "The harness authorizes DAD to mutate downstream repos."
+  ],
+  "promotion_gate": "Promote only after real repo missed-capture cases and pattern-update simulations pass with reviewed labels."
+}

@@ -46,10 +46,65 @@
       "authority_boundary": "Skill records are pointers and lifecycle metadata; target repos decide checkout."
     },
     {
+      "offering_id": "dad:offering:python-underused-idioms",
+      "name": "Python Underused Idioms AI Coding Card",
+      "version": "0.1.0",
+      "offering_type": "best_practice",
+      "path": "assets/python-underused-idioms",
+      "languages": ["python"],
+      "repo_types": ["application", "library", "control_plane", "test_suite", "template_repo"],
+      "domains": ["software_engineering", "ai_engineering"],
+      "context_tags": ["coding_asset", "python_idioms", "readability", "code_research"],
+      "task_types": ["coding", "refactor", "review", "debugging", "performance", "code_research", "python"],
+      "capabilities": ["idiom_card", "underused_stdlib_guidance", "code_research_toolkit", "ai_legibility"],
+      "applies_when": [
+        "An AI agent is writing, refactoring, reviewing, debugging, or researching Python code and should consider under-represented stdlib constructs.",
+        "A review wants citable idiom ids for suggested improvements."
+      ],
+      "does_not_apply_when": [
+        "The target repo's Python floor is below an idiom's min_python.",
+        "Working code would be rewritten solely to use an idiom without a task-level reason."
+      ],
+      "public_safe": true,
+      "upgrade_channel": "dad_mail",
+      "known_upgrades": [],
+      "source_refs": ["assets/python-underused-idioms/idioms.json", "assets/python-underused-idioms/README.md"],
+      "review_status": "installed_for_local_reuse",
+      "authority_boundary": "Idioms are candidate guidance gated by avoid_when conditions; local repo style authority wins on conflict."
+    },
+    {
+      "offering_id": "dad:offering:rust-buildout-guide",
+      "name": "Rust Buildout And Python-To-Rust Migration Guide",
+      "version": "0.1.0",
+      "offering_type": "best_practice",
+      "path": "assets/rust-buildout-guide",
+      "languages": ["rust", "python", "mixed"],
+      "repo_types": ["application", "library", "control_plane", "test_suite"],
+      "domains": ["software_engineering", "test_performance"],
+      "context_tags": ["coding_asset", "rust_buildout", "performance", "migration"],
+      "task_types": ["performance", "rust", "migration", "rust_shadow_layer", "coding", "parsing"],
+      "capabilities": ["rust_decision_guide", "python_to_rust_migration_path", "pyo3_maturin_guidance", "rust_ai_legibility_idioms"],
+      "applies_when": [
+        "A task mentions performance, Rust, ports, parsing speed, or replacing a profiled Python hot path.",
+        "A repo is deciding whether Rust pays off before writing any Rust."
+      ],
+      "does_not_apply_when": [
+        "No profile evidence exists yet (stage 1 requires profiling first).",
+        "The work is I/O-bound glue or a fast-changing prototype."
+      ],
+      "public_safe": true,
+      "upgrade_channel": "dad_mail",
+      "known_upgrades": [],
+      "source_refs": ["assets/rust-buildout-guide/rust-buildout.json", "assets/coding-harnesses/rust-shadow-parity-harness"],
+      "review_status": "installed_for_local_reuse",
+      "authority_boundary": "Stage gates (profile evidence, parity reports, human review for full ports) are the enforceable part; language preference is not."
+    },
+    {
       "offering_id": "dad:offering:rust-shadow-parity-harness",
       "name": "Rust Shadow Parity Harness",
       "version": "0.1.0",
       "offering_type": "harness",
+      "harness_registry_ref": "dad:harness:rust-shadow-parity",
       "path": "assets/coding-harnesses/rust-shadow-parity-harness",
       "languages": ["python", "rust", "mixed"],
       "repo_types": ["application", "library", "test_suite"],
@@ -68,7 +123,7 @@
           "available_at": "assets/coding-harnesses/rust-shadow-parity-harness"
         }
       ],
-      "source_refs": ["src/digital_asset_directory/test_parity.py", "docs/TESTING_AND_ORCHESTRATION.md"],
+      "source_refs": ["registry/coding-harness-registry.json#dad:harness:rust-shadow-parity", "src/digital_asset_directory/test_parity.py", "docs/TESTING_AND_ORCHESTRATION.md"],
       "review_status": "candidate",
       "authority_boundary": "Rust timing claims are gated behind verified structured parity."
     },
@@ -77,6 +132,7 @@
       "name": "Python Test Performance And Orchestration Harness",
       "version": "0.1.0",
       "offering_type": "harness",
+      "harness_registry_ref": "dad:harness:python-test-performance-orchestration",
       "path": "assets/coding-harnesses/python-test-performance-orchestration",
       "languages": ["python"],
       "repo_types": ["application", "library", "test_suite"],
@@ -89,7 +145,7 @@
       "public_safe": true,
       "upgrade_channel": "dad_mail",
       "known_upgrades": [],
-      "source_refs": ["docs/TESTING_AND_ORCHESTRATION.md", "assets/python-ai-advantage-preflight"],
+      "source_refs": ["registry/coding-harness-registry.json#dad:harness:python-test-performance-orchestration", "docs/TESTING_AND_ORCHESTRATION.md", "assets/python-ai-advantage-preflight"],
       "review_status": "candidate",
       "authority_boundary": "Test selection is a proposal; full validation remains required for risky changes."
     },
@@ -98,6 +154,7 @@
       "name": "Repo Enrollment Mail Governance Safety Harness",
       "version": "0.1.0",
       "offering_type": "harness",
+      "harness_registry_ref": "dad:harness:repo-enrollment-mail-governance-safety",
       "path": "assets/coding-harnesses/repo-enrollment-mail-governance-safety",
       "languages": ["python", "agent-instruction"],
       "repo_types": ["control_plane", "governed_repo_family", "application"],
@@ -110,9 +167,48 @@
       "public_safe": true,
       "upgrade_channel": "dad_mail",
       "known_upgrades": [],
-      "source_refs": ["docs/DAD_REPO_ENROLLMENT.md", "docs/MAIL_CENTER.md"],
+      "source_refs": ["registry/coding-harness-registry.json#dad:harness:repo-enrollment-mail-governance-safety", "docs/DAD_REPO_ENROLLMENT.md", "docs/MAIL_CENTER.md"],
       "review_status": "candidate",
       "authority_boundary": "Normal recurring DAD operation writes only mailbox files; broader changes require approval."
+    },
+    {
+      "offering_id": "dad:offering:exception-capture-completeness-harness",
+      "name": "Exception Capture Completeness Harness",
+      "version": "0.1.0",
+      "offering_type": "harness",
+      "harness_registry_ref": "dad:harness:exception-capture-completeness",
+      "path": "assets/coding-harnesses/exception-capture-completeness",
+      "languages": ["python", "agent-instruction"],
+      "repo_types": ["control_plane", "governed_repo_family", "application", "library"],
+      "domains": ["governance", "learning_loop", "exceptions_lake", "mail_center"],
+      "context_tags": ["exception_capture", "mail_emission", "pattern_update", "observed_repo_audit"],
+      "task_types": ["testing", "governance_review", "learning_loop", "repo_enrollment"],
+      "capabilities": [
+        "capture_completeness_eval",
+        "pattern_update_simulation",
+        "required_field_contract_check",
+        "negative_payload_gate",
+        "observed_outbox_audit"
+      ],
+      "applies_when": [
+        "A repo should prove it would emit DAD-worthy mail, exception, fix, usage, or no packet without Lowell rescuing the miss from chat.",
+        "DAD changes wanted asset, harness, skill, template, workflow, governance, data-map, mail, exception, review, fix, or learning-loop patterns.",
+        "A pattern update adds required metadata fields that enrolled repos must emit, not just recognize."
+      ],
+      "does_not_apply_when": [
+        "The target repo has not approved DAD pointers or enrollment refresh checks.",
+        "The evidence requires raw logs, private rows, secrets, or copied source blobs instead of pointer-safe metadata."
+      ],
+      "public_safe": true,
+      "upgrade_channel": "dad_mail",
+      "known_upgrades": [],
+      "source_refs": [
+        "registry/coding-harness-registry.json#dad:harness:exception-capture-completeness",
+        "docs/DAD_EXCEPTIONS_LAKE_BUILDOUT.md",
+        "registry/exception-capture-pattern-registry.json"
+      ],
+      "review_status": "candidate",
+      "authority_boundary": "Capture-completeness results are candidate evidence; they prove scenario coverage and observed outbox comparisons, not source truth or public safety."
     }
   ]
 }

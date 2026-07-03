@@ -40,6 +40,14 @@
       "preflight_behavior": "warn_only_when_stale"
     }
   },
+  "capture": {
+    "surface_version": "0.2.0",
+    "pattern_registry_ref": "dad://hub/Digital-Assett-Directory/registry/exception-capture-pattern-registry.json",
+    "mail_outbox": ".digital-asset/mail/outbox.jsonl",
+    "exceptions_outbox": ".digital-asset/exceptions/outbox.jsonl",
+    "fix_outcomes": "processed/exceptions/fix-outcomes/outcomes.jsonl",
+    "cli_fallback": "If asset-dir is unavailable, try PYTHONPATH=src python -m digital_asset_directory.cli from the DAD checkout; otherwise append metadata-only JSONL with dad_cli_unavailable and safe refs."
+  },
   "enabled_control_planes": [
     "dad_library",
     "mail_center",

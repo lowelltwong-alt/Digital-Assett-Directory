@@ -1,7 +1,7 @@
 {
   "schema_version": "0.1.0",
   "pointer_type": "dad_coding_assets",
-  "hub": "../Digital-Assett-Directory",
+  "hub": "dad://hub/Digital-Assett-Directory",
   "authority_boundary": "This pointer helps local AI agents find DAD coding assets. It does not copy assets into this repo or authorize DAD to override local authority.",
   "daily_check": {
     "mail_digest_stale_after_hours": 24,

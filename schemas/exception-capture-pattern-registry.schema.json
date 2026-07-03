@@ -1,0 +1,144 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://local.digital-asset-directory/schemas/exception-capture-pattern-registry.schema.json",
+  "title": "Exception Capture Pattern Registry",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "registry_version",
+    "capture_surface_version",
+    "methodology",
+    "global_block_signals",
+    "rules",
+    "authority_boundary"
+  ],
+  "properties": {
+    "registry_version": {"type": "string", "minLength": 1},
+    "capture_surface_version": {"type": "string", "minLength": 1},
+    "methodology": {"type": "string", "minLength": 1},
+    "global_block_signals": {
+      "type": "array",
+      "items": {"type": "string", "minLength": 1},
+      "uniqueItems": true
+    },
+    "rules": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "rule_id",
+          "pattern_family",
+          "description",
+          "min_capture_surface_version",
+          "match_signals",
+          "any_signals",
+          "suppress_signals",
+          "emit",
+          "applies_when",
+          "does_not_apply_when",
+          "danger_if_missed",
+          "review_status"
+        ],
+        "properties": {
+          "rule_id": {"type": "string", "pattern": "^exception-capture-rule:[a-z0-9][a-z0-9:-]*$"},
+          "pattern_family": {
+            "enum": [
+              "asset",
+              "harness",
+              "skill",
+              "template",
+              "workflow",
+              "architecture_reference",
+              "governance_map",
+              "data_map",
+              "mail_pattern",
+              "exception_pattern",
+              "review_finding",
+              "fix_outcome",
+              "learning_loop_candidate"
+            ]
+          },
+          "description": {"type": "string", "minLength": 1},
+          "min_capture_surface_version": {"type": "string", "minLength": 1},
+          "match_signals": {
+            "type": "array",
+            "items": {"type": "string", "minLength": 1},
+            "uniqueItems": true
+          },
+          "any_signals": {
+            "type": "array",
+            "items": {"type": "string", "minLength": 1},
+            "uniqueItems": true
+          },
+          "suppress_signals": {
+            "type": "array",
+            "items": {"type": "string", "minLength": 1},
+            "uniqueItems": true
+          },
+          "emit": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "packet_classes",
+              "mail_message_type",
+              "exception_event_type",
+              "capture_contract",
+              "severity",
+              "required_fields",
+              "rationale"
+            ],
+            "properties": {
+              "packet_classes": {
+                "type": "array",
+                "items": {
+                  "enum": [
+                    "ordinary_mail",
+                    "exception_event",
+                    "fix_outcome",
+                    "local_usage_only",
+                    "no_packet"
+                  ]
+                },
+                "minItems": 1,
+                "uniqueItems": true
+              },
+              "mail_message_type": {
+                "type": "string"
+              },
+              "exception_event_type": {
+                "type": "string"
+              },
+              "capture_contract": {
+                "type": "string"
+              },
+              "severity": {
+                "enum": ["critical", "high", "medium", "low", "info", ""]
+              },
+              "required_fields": {
+                "type": "array",
+                "items": {"type": "string", "minLength": 1},
+                "uniqueItems": true
+              },
+              "rationale": {"type": "string", "minLength": 1}
+            }
+          },
+          "applies_when": {
+            "type": "array",
+            "items": {"type": "string", "minLength": 1},
+            "minItems": 1
+          },
+          "does_not_apply_when": {
+            "type": "array",
+            "items": {"type": "string", "minLength": 1},
+            "minItems": 1
+          },
+          "danger_if_missed": {"type": "string", "minLength": 1},
+          "review_status": {"enum": ["candidate", "reviewed", "rejected"]}
+        }
+      }
+    },
+    "authority_boundary": {"type": "string", "minLength": 1}
+  }
+}

@@ -9,9 +9,26 @@ from typing import Any
 from .database import CatalogDB
 from .ids import stable_id, session_id as new_session_id
 from .models import HandoffRecord, LearningRuleRecord, LessonRecord, ReviewLaneRecord
-from .utils import append_jsonl, split_multi, utc_now, write_json
+from .dad_library import (
+    CENTRAL_USAGE_LEDGER,
+    compile_context_pack,
+    load_asset_patterns,
+    load_offerings,
+    record_trace_outcomes,
+)
+from .utils import append_jsonl, sha256_bytes, sha256_file, split_multi, utc_now, write_json
 
 ASSET_USE_FEEDBACK_CODE = "DAD_ASSET_USE_FEEDBACK_V1"
+REVIEW_FEEDBACK_CODE = "DAD_REVIEW_FEEDBACK_V1"
+REVIEW_FEEDBACK_TYPES = {
+    "red_team",
+    "premortem",
+    "audit",
+    "code_review",
+    "security_review",
+    "swe_feedback",
+}
+REVIEW_FEEDBACK_SEVERITIES = {"critical", "high", "medium", "low", "info", "mixed"}
 ACK_REQUIRED_LEVELS = {"require_ack", "human_gate"}
 
 
@@ -161,8 +178,140 @@ def rebuild_lesson_routes(repo_root: Path) -> dict[str, Any]:
         if target.exists():
             for path in target.glob("*.jsonl"):
                 path.unlink()
-    seen: set[str] = set()
     indexed = 0
+    for record in _load_canonical_lessons(repo_root):
+        route_lesson(repo_root, record)
+        indexed += 1
+    return {
+        "lessons_indexed": indexed,
+        "by_repo_dir": str(base / "by-repo"),
+        "by_capability_dir": str(base / "by-capability"),
+    }
+
+
+LESSON_GRAPH_PATH = Path("processed") / "learning" / "lesson-graph.json"
+LESSON_GRAPH_MANIFEST_PATH = Path("processed") / "learning" / "lesson-graph-manifest.json"
+LESSON_GRAPH_EDGE_RULE = (
+    "Edges are deterministic joins named in edge_basis. They are generated candidate "
+    "evidence for review and pattern-gap discovery, not proof of relationship value."
+)
+DEFAULT_GRAPH_EDGE_REGISTRY = {
+    "registry_version": "0.1.0",
+    "status": "seed",
+    "edge_types": [
+        {
+            "edge_type": "learned_in",
+            "edge_class": "join",
+            "direction": "lesson -> repo",
+            "cardinality": "many-to-one",
+            "semantics": "A canonical lesson record names the repository where the lesson was learned.",
+            "allowed_bases": ["lesson.repository"],
+            "evidence_required": ["canonical lesson record repository field"],
+            "version": "0.1.0",
+            "examples": ["lesson:dad:lesson:x -> repo:example"],
+            "danger_if_wrong": "Lessons can be routed to the wrong repo history.",
+            "review_status": "reviewed",
+        },
+        {
+            "edge_type": "about_asset",
+            "edge_class": "join",
+            "direction": "lesson -> offering",
+            "cardinality": "many-to-many",
+            "semantics": "A lesson evidence pointer names a registered DAD offering.",
+            "allowed_bases": ["lesson.evidence.asset-ref"],
+            "evidence_required": ["asset:<offering_id> evidence pointer", "registered offering id"],
+            "version": "0.1.0",
+            "examples": ["lesson:dad:lesson:x -> offering:dad:offering:y"],
+            "danger_if_wrong": "Asset feedback and upgrade targeting can attach to the wrong offering.",
+            "review_status": "reviewed",
+        },
+        {
+            "edge_type": "matches_pattern",
+            "edge_class": "join",
+            "direction": "lesson -> pattern",
+            "cardinality": "many-to-many",
+            "semantics": "A lesson reusable-pattern value matches a reviewed pattern id or label.",
+            "allowed_bases": ["lesson.reusable_patterns.pattern-id-or-label"],
+            "evidence_required": ["lesson reusable_patterns entry", "reviewed pattern registry row"],
+            "version": "0.1.0",
+            "examples": ["lesson:dad:lesson:x -> pattern:governed_learning_loop_system"],
+            "danger_if_wrong": "Pattern-gap curation can be polluted by accidental prose matches.",
+            "review_status": "reviewed",
+        },
+        {
+            "edge_type": "uses_asset",
+            "edge_class": "join",
+            "direction": "repo -> offering",
+            "cardinality": "many-to-many",
+            "semantics": "A repo usage ledger row says the repo is using an offering.",
+            "allowed_bases": ["usage.status.using"],
+            "evidence_required": ["repo asset usage ledger row with status using"],
+            "version": "0.1.0",
+            "examples": ["repo:example -> offering:dad:offering:y"],
+            "danger_if_wrong": "Upgrade mail can target repos that are not using the asset.",
+            "review_status": "reviewed",
+        },
+        {
+            "edge_type": "watches_asset",
+            "edge_class": "join",
+            "direction": "repo -> offering",
+            "cardinality": "many-to-many",
+            "semantics": "A repo usage ledger row says the repo is watching an offering for possible future use.",
+            "allowed_bases": ["usage.status.watching"],
+            "evidence_required": ["repo asset usage ledger row with status watching"],
+            "version": "0.1.0",
+            "examples": ["repo:example -> offering:dad:offering:y"],
+            "danger_if_wrong": "Future-use recommendations can spam repos with irrelevant upgrades.",
+            "review_status": "reviewed",
+        },
+    ],
+}
+
+
+def _pattern_key(value: str) -> str:
+    return re.sub(r"[^a-z0-9]+", "_", value.lower()).strip("_")
+
+
+def _read_jsonl_records(path: Path) -> list[dict[str, Any]]:
+    if not path.exists():
+        return []
+    records: list[dict[str, Any]] = []
+    for line in path.read_text(encoding="utf-8").splitlines():
+        if line.strip():
+            try:
+                records.append(json.loads(line))
+            except json.JSONDecodeError:
+                continue
+    return records
+
+
+def _load_graph_edge_registry(repo_root: Path) -> dict[str, Any]:
+    path = repo_root / "registry" / "graph-edge-registry.json"
+    if not path.exists():
+        return DEFAULT_GRAPH_EDGE_REGISTRY
+    return json.loads(path.read_text(encoding="utf-8"))
+
+
+def _hash_path(path: Path) -> str:
+    if not path.exists():
+        return "missing"
+    if path.is_file():
+        return f"sha256:{sha256_file(path)}"
+    parts: list[str] = []
+    for child in sorted(item for item in path.rglob("*") if item.is_file()):
+        try:
+            rel = child.relative_to(path).as_posix()
+        except ValueError:
+            rel = child.name
+        parts.append(f"{rel}\0{sha256_file(child)}")
+    digest_input = "\n".join(parts).encode("utf-8")
+    return f"sha256:{sha256_bytes(digest_input)}"
+
+
+def _load_canonical_lessons(repo_root: Path) -> list[LessonRecord]:
+    base = repo_root / "raw" / "lessons"
+    seen: set[str] = set()
+    lessons: list[LessonRecord] = []
     for path in sorted(base.glob("*/*.json")):
         if path.parent.name in {"by-repo", "by-capability"}:
             continue
@@ -173,13 +322,259 @@ def rebuild_lesson_routes(repo_root: Path) -> dict[str, Any]:
         if record.lesson_id in seen:
             continue
         seen.add(record.lesson_id)
-        route_lesson(repo_root, record)
-        indexed += 1
-    return {
-        "lessons_indexed": indexed,
-        "by_repo_dir": str(base / "by-repo"),
-        "by_capability_dir": str(base / "by-capability"),
+        lessons.append(record)
+    return lessons
+
+
+def build_lesson_graph(repo_root: Path) -> dict[str, Any]:
+    """Compile lessons, patterns, offerings, repos, and usage into candidate nodes and edges.
+
+    The graph is a rebuildable compilation of existing raw records: dated lesson files
+    stay the source of truth, every edge carries the deterministic edge_basis that
+    produced it, and reusable-pattern names that match no pattern card are surfaced as
+    pattern-gap candidates instead of being dropped.
+    """
+    try:
+        pattern_registry = load_asset_patterns(repo_root)
+    except FileNotFoundError:
+        pattern_registry = {"registry_version": "", "patterns": []}
+    try:
+        offerings = load_offerings(repo_root).get("offerings", [])
+    except FileNotFoundError:
+        offerings = []
+    edge_registry = _load_graph_edge_registry(repo_root)
+    edge_defs = {
+        str(row["edge_type"]): row for row in edge_registry.get("edge_types", [])
     }
+
+    nodes: dict[str, dict[str, Any]] = {}
+    edges: dict[str, dict[str, Any]] = {}
+    pattern_gap_counts: dict[str, int] = {}
+    unmatched_asset_refs: dict[str, int] = {}
+
+    pattern_ids_by_key: dict[str, str] = {}
+    for pattern in pattern_registry.get("patterns", []):
+        pattern_id = str(pattern.get("id", ""))
+        if not pattern_id:
+            continue
+        nodes[f"pattern:{pattern_id}"] = {
+            "node_id": f"pattern:{pattern_id}",
+            "node_type": "pattern",
+            "label": str(pattern.get("label", pattern_id)),
+            "leverage": str(pattern.get("leverage", "")),
+        }
+        pattern_ids_by_key[_pattern_key(pattern_id)] = pattern_id
+        label_key = _pattern_key(str(pattern.get("label", "")))
+        if label_key:
+            pattern_ids_by_key.setdefault(label_key, pattern_id)
+
+    offering_ids: set[str] = set()
+    for offering in offerings:
+        offering_id = str(offering.get("offering_id", ""))
+        if not offering_id:
+            continue
+        offering_ids.add(offering_id)
+        nodes[f"offering:{offering_id}"] = {
+            "node_id": f"offering:{offering_id}",
+            "node_type": "offering",
+            "label": str(offering.get("name", offering_id)),
+            "offering_type": str(offering.get("offering_type", "")),
+        }
+
+    def repo_node_id(repository: str) -> str:
+        name = Path(repository).name if repository else "unknown"
+        node_id = f"repo:{_pattern_key(name) or 'unknown'}"
+        nodes.setdefault(
+            node_id,
+            {"node_id": node_id, "node_type": "repo", "label": name or "unknown"},
+        )
+        return node_id
+
+    def add_edge(
+        source: str,
+        target: str,
+        edge_type: str,
+        edge_basis: str,
+        evidence_refs: list[str],
+    ) -> None:
+        edge_id = stable_id("lesson-graph-edge", source, target, edge_type)
+        edge_def = edge_defs.get(edge_type, {"edge_class": "join"})
+        edges.setdefault(
+            edge_id,
+            {
+                "edge_id": edge_id,
+                "source": source,
+                "target": target,
+                "edge_type": edge_type,
+                "edge_class": str(edge_def.get("edge_class", "join")),
+                "edge_basis": edge_basis,
+                "method_version": "",
+                "created_at": "",
+                "evidence_refs": sorted(dict.fromkeys(evidence_refs)),
+                "review_status": "candidate",
+            },
+        )
+
+    lessons = _load_canonical_lessons(repo_root)
+    for lesson in lessons:
+        lesson_node = f"lesson:{lesson.lesson_id}"
+        nodes[lesson_node] = {
+            "node_id": lesson_node,
+            "node_type": "lesson",
+            "label": lesson.summary[:120],
+            "created_at": lesson.created_at,
+            "confidence": lesson.confidence,
+            "review_status": lesson.review_status,
+        }
+        add_edge(
+            lesson_node,
+            repo_node_id(lesson.repository),
+            "learned_in",
+            "lesson.repository",
+            [lesson.lesson_id],
+        )
+        for raw_pattern in lesson.reusable_patterns or []:
+            key = _pattern_key(str(raw_pattern))
+            if not key:
+                continue
+            pattern_id = pattern_ids_by_key.get(key)
+            if pattern_id:
+                add_edge(
+                    lesson_node,
+                    f"pattern:{pattern_id}",
+                    "matches_pattern",
+                    "lesson.reusable_patterns.pattern-id-or-label",
+                    [lesson.lesson_id, f"pattern:{pattern_id}"],
+                )
+            else:
+                pattern_gap_counts[key] = pattern_gap_counts.get(key, 0) + 1
+        for evidence in lesson.evidence or []:
+            text = str(evidence)
+            if not text.startswith("asset:"):
+                continue
+            asset_id = text[len("asset:"):].strip()
+            if asset_id in offering_ids:
+                add_edge(
+                    lesson_node,
+                    f"offering:{asset_id}",
+                    "about_asset",
+                    "lesson.evidence.asset-ref",
+                    [lesson.lesson_id, f"offering:{asset_id}"],
+                )
+            elif asset_id:
+                unmatched_asset_refs[asset_id] = unmatched_asset_refs.get(asset_id, 0) + 1
+
+    for row in _read_jsonl_records(repo_root / CENTRAL_USAGE_LEDGER):
+        status = str(row.get("status", ""))
+        if status not in {"using", "watching"}:
+            continue
+        asset_id = str(row.get("asset_id", ""))
+        if asset_id not in offering_ids:
+            continue
+        edge_type = "uses_asset" if status == "using" else "watches_asset"
+        add_edge(
+            repo_node_id(str(row.get("repo", ""))),
+            f"offering:{asset_id}",
+            edge_type,
+            f"usage.status.{status}",
+            [str(row.get("usage_id", "")) or stable_id("usage-row", row)],
+        )
+
+    nodes_by_type: dict[str, int] = {}
+    for node in nodes.values():
+        nodes_by_type[node["node_type"]] = nodes_by_type.get(node["node_type"], 0) + 1
+    edges_by_type: dict[str, int] = {}
+    for edge in edges.values():
+        edges_by_type[edge["edge_type"]] = edges_by_type.get(edge["edge_type"], 0) + 1
+
+    payload = {
+        "schema_version": "0.1.0",
+        "generated_at": utc_now(),
+        "edge_registry_version": str(edge_registry.get("registry_version", "")),
+        "manifest_path": LESSON_GRAPH_MANIFEST_PATH.as_posix(),
+        "pattern_library_version": str(pattern_registry.get("registry_version", "")),
+        "lesson_count": len(lessons),
+        "node_count": len(nodes),
+        "edge_count": len(edges),
+        "nodes_by_type": nodes_by_type,
+        "edges_by_type": edges_by_type,
+        "nodes": sorted(nodes.values(), key=lambda item: item["node_id"]),
+        "edges": sorted(edges.values(), key=lambda item: item["edge_id"]),
+        "pattern_gap_candidates": [
+            {"reusable_pattern": key, "lesson_mentions": count}
+            for key, count in sorted(
+                pattern_gap_counts.items(), key=lambda item: (-item[1], item[0])
+            )
+        ],
+        "unmatched_asset_refs": [
+            {"asset_id": key, "lesson_mentions": count}
+            for key, count in sorted(
+                unmatched_asset_refs.items(), key=lambda item: (-item[1], item[0])
+            )
+        ],
+        "edge_rule": LESSON_GRAPH_EDGE_RULE,
+        "authority_boundary": (
+            "Lesson-graph nodes and edges are generated candidate evidence compiled "
+            "from raw lessons, registries, and usage ledgers. They guide review and "
+            "pattern-library growth; they do not prove value or source truth."
+        ),
+    }
+    out_path = repo_root / LESSON_GRAPH_PATH
+    write_json(out_path, payload)
+    input_hashes = {
+        "raw/lessons": _hash_path(repo_root / "raw" / "lessons"),
+        "registry/asset-pattern-registry.json": _hash_path(
+            repo_root / "registry" / "asset-pattern-registry.json"
+        ),
+        "registry/dad-offerings-registry.json": _hash_path(
+            repo_root / "registry" / "dad-offerings-registry.json"
+        ),
+        str(CENTRAL_USAGE_LEDGER): _hash_path(repo_root / CENTRAL_USAGE_LEDGER),
+        "registry/graph-edge-registry.json": _hash_path(
+            repo_root / "registry" / "graph-edge-registry.json"
+        ),
+    }
+    edge_types_present = sorted(edges_by_type)
+    manifest = {
+        "schema_version": "0.1.0",
+        "generated_at": payload["generated_at"],
+        "graph_path": LESSON_GRAPH_PATH.as_posix(),
+        "edge_registry_version": payload["edge_registry_version"],
+        "input_hashes": input_hashes,
+        "nodes_by_type": nodes_by_type,
+        "edges_by_type": edges_by_type,
+        "edge_definitions_present": {
+            edge_type: edge_defs[edge_type]
+            for edge_type in edge_types_present
+            if edge_type in edge_defs
+        },
+        "method_versions_used": sorted(
+            {
+                str(edge.get("method_version", ""))
+                for edge in edges.values()
+                if str(edge.get("method_version", ""))
+            }
+        ),
+        "coverage_report": {
+            "registered_edge_types_with_zero_edges": sorted(
+                edge_type
+                for edge_type in edge_defs
+                if edge_type not in edges_by_type
+            ),
+            "pattern_gap_candidate_count": len(pattern_gap_counts),
+            "unmatched_asset_ref_count": len(unmatched_asset_refs),
+            "lesson_records_without_pattern_edges": sum(
+                1
+                for lesson in lessons
+                if not any(edge["source"] == f"lesson:{lesson.lesson_id}" and edge["edge_type"] == "matches_pattern" for edge in edges.values())
+            ),
+            "offering_count": len(offering_ids),
+        },
+        "authority_boundary": payload["authority_boundary"],
+    }
+    manifest_path = repo_root / LESSON_GRAPH_MANIFEST_PATH
+    write_json(manifest_path, manifest)
+    return {"graph": payload, "path": str(out_path), "manifest_path": str(manifest_path)}
 
 
 def add_lesson(repo_root: Path, database_path: Path, **kwargs: Any) -> LessonRecord:
@@ -371,6 +766,76 @@ def add_asset_use_feedback(
     )
 
 
+def add_review_feedback(
+    repo_root: Path,
+    database_path: Path,
+    *,
+    repository: str,
+    task: str,
+    agent: str,
+    review_type: str,
+    findings: list[str],
+    model: str | None = None,
+    severity: str = "mixed",
+    confirmed: list[str] | None = None,
+    recommendations: list[str] | None = None,
+    paths: list[str] | None = None,
+    evidence: list[str] | None = None,
+    confidence: str = "medium",
+) -> LessonRecord:
+    """Record red-team/premortem/audit/code-review findings from any agent as a minable lesson.
+
+    Findings stay candidate evidence with agent and model attribution; DAD mines them for
+    repeated failure patterns via the lesson graph and the swe_review_feedback_loop pattern
+    card. Findings must be summaries and pointers, never copied source blobs or secrets.
+    """
+    if review_type not in REVIEW_FEEDBACK_TYPES:
+        raise ValueError("review_type must be one of: " + ", ".join(sorted(REVIEW_FEEDBACK_TYPES)))
+    if severity not in REVIEW_FEEDBACK_SEVERITIES:
+        raise ValueError("severity must be one of: " + ", ".join(sorted(REVIEW_FEEDBACK_SEVERITIES)))
+    cleaned_findings = [str(item).strip() for item in findings if str(item).strip()]
+    if not cleaned_findings:
+        raise ValueError("review feedback requires at least one non-empty finding")
+    feedback_lines = [
+        f"feedback_code={REVIEW_FEEDBACK_CODE}",
+        f"review_type={review_type}",
+        f"agent={agent}",
+        f"model={model or 'unknown'}",
+        f"severity={severity}",
+        *[f"finding={item}" for item in cleaned_findings],
+        *[f"confirmed={str(item).strip()}" for item in confirmed or [] if str(item).strip()],
+        *[
+            f"recommendation={str(item).strip()}"
+            for item in recommendations or []
+            if str(item).strip()
+        ],
+    ]
+    return add_lesson(
+        repo_root,
+        database_path,
+        repository=repository,
+        task=task,
+        agent=agent,
+        model=model,
+        summary=(
+            f"{review_type} feedback from {agent}: "
+            f"{len(cleaned_findings)} finding(s), severity {severity}"
+        ),
+        lessons=feedback_lines,
+        discoveries=[
+            "Review findings are candidate evidence for pattern mining; repeated finding "
+            "classes across repos are promotion candidates for rules, harness checks, or "
+            "pattern cards."
+        ],
+        files_changed=paths,
+        reusable_patterns=["swe_review_feedback_loop"],
+        missing_capabilities=[review_type],
+        evidence=evidence,
+        confidence=confidence,
+        review_status="candidate",
+    )
+
+
 def recommended_review_lanes(task: str, paths: list[str] | None = None) -> list[dict[str, Any]]:
     """Return lightweight review lanes future agents can run as subagents or checklists."""
     task_text = task.lower()
@@ -485,6 +950,19 @@ def preflight(
             "stale": True,
             "error": str(exc),
         }
+    try:
+        from .mail_center import resurface_deferred_mail
+
+        deferred_mail = resurface_deferred_mail(
+            target_repo.resolve(), task=task, hub_root=hub_root
+        )
+    except Exception as exc:
+        deferred_mail = {
+            "deferred_total": 0,
+            "match_basis": "",
+            "items": [],
+            "error": str(exc),
+        }
     payload: dict[str, Any] = {
         "schema_version": "0.1.0",
         "session_id": sid,
@@ -507,6 +985,14 @@ def preflight(
             baseline_changed_files,
         ),
     }
+    payload["context_pack"] = compile_context_pack(
+        hub_root,
+        target_repo,
+        session_id=sid,
+        task=task,
+        mail_digest_status=digest_status,
+        deferred_mail=deferred_mail,
+    )
     write_json(hub_root / "state" / "agent_sessions" / f"{sid.split(':')[-1]}.json", payload)
     append_jsonl(
         hub_root / "audit" / "events" / f"{payload['created_at'][:10]}.jsonl",
@@ -600,6 +1086,18 @@ def postflight(
         review_lanes=parse_review_lane_records(kwargs.get("review_lanes")),
         review_status=kwargs.get("review_status", "candidate"),
     )
+    trace_outcomes = record_trace_outcomes(
+        hub_root,
+        trace_id=str(kwargs.get("trace") or session.get("context_pack", {}).get("trace_id", "")),
+        session_id=sid,
+        outcomes={
+            "used": split_multi(kwargs.get("used")),
+            "ignored": split_multi(kwargs.get("ignored")),
+            "attempted_failed": split_multi(kwargs.get("attempted_failed")),
+            "harmful": split_multi(kwargs.get("harmful")),
+        },
+        summary=summary,
+    )
     dated = created[:10]
     write_json(
         hub_root / "raw" / "handoffs" / dated / f"{handoff.handoff_id.split(':')[-1]}.json",
@@ -633,6 +1131,7 @@ def postflight(
             "closed_at": created,
             "handoff_id": handoff.handoff_id,
             "lesson_id": lesson.lesson_id,
+            "trace_outcomes": trace_outcomes,
         }
     )
     write_json(session_path, session)

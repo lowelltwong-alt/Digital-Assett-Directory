@@ -18,6 +18,7 @@ from digital_asset_directory.mail_center import (
     digest_mail,
     mail_digest_status,
     release_mail,
+    review_central_mail,
     route_mail,
     review_mail,
     triage_mail,
@@ -137,12 +138,43 @@ def test_collect_canonicalizes_source_identity_and_redaction(tmp_path: Path):
     result = collect_mail(hub, [repo])
 
     assert result["collected_count"] == 1
-    slug = str(repo.resolve()).replace("\\", "/").replace(":", "").replace("/", "__")
-    central = _jsonl(hub / "processed" / "mail" / "inbox" / f"{slug}.jsonl")
-    assert central[0]["source_repo"] == str(repo.resolve()).replace("\\", "/")
+    central = _jsonl(central_inbox_path(hub, repo))
+    assert central[0]["source_repo"].startswith("repo-path-sha256:")
+    assert central[0]["source_provenance"]["canonical_source_repo"].startswith(
+        "repo-path-sha256:"
+    )
     assert central[0]["mail_id"] != "dad:mail:spoofed"
     assert central[0]["dedupe_key"] != "spoofed-key"
-    assert "very-secret-value" not in json.dumps(central[0])
+    central_text = json.dumps(central[0])
+    assert "very-secret-value" not in central_text
+    assert str(repo.resolve()).replace("\\", "/") not in central_text.replace("\\", "/")
+
+
+def test_collect_sanitizes_local_paths_inside_mail_content(tmp_path: Path):
+    hub = tmp_path / "dad"
+    repo = tmp_path / "repo-a"
+    hub.mkdir()
+    repo.mkdir()
+    local_ref = "C:/Users/lowel/OneDrive/Desktop/Git Projects/private-repo/docs/review.md"
+    compose_mail(
+        repo,
+        message_type="lesson_suggestion",
+        target_repo="central_only",
+        summary="Local path refs should be hashed before central storage.",
+        payload={"note": f"See {local_ref}"},
+        evidence=[local_ref],
+        suggested_actions=[f"Review {local_ref} locally."],
+    )
+
+    result = collect_mail(hub, [repo])
+    central = _jsonl(central_inbox_path(hub, repo))
+    central_text = json.dumps(central, sort_keys=True).replace("\\", "/")
+
+    assert result["collected_count"] == 1
+    assert "C:/Users" not in central_text
+    assert "OneDrive" not in central_text
+    assert "Git Projects" not in central_text
+    assert "repo-path-sha256:" in central_text
 
 
 def test_collect_dedupes_same_content_with_changed_packet_ids(tmp_path: Path):
@@ -341,6 +373,126 @@ def test_review_archive_digest_and_daily_freshness(tmp_path: Path):
     assert stale["stale"] is True
 
 
+def test_central_review_handles_collected_mail_without_local_delivery(tmp_path: Path):
+    hub = tmp_path / "dad"
+    source = tmp_path / "mock-trial"
+    hub.mkdir()
+    source.mkdir()
+    composed = compose_mail(
+        source,
+        message_type="governance_notice",
+        target_repo=str(hub),
+        summary="Artifact registration drift should be triaged centrally by DAD.",
+        payload={"safe_summary": "metadata-only registration drift"},
+        evidence=["docs/artifact-registration-drift.md"],
+        suggested_actions=["Review as candidate exception-lake signal."],
+        allow_similar=True,
+    )
+
+    collected = collect_mail(hub, [source])
+    central = _jsonl(central_inbox_path(hub, source))
+    central_mail_id = central[0]["mail_id"]
+    with pytest.raises(ValueError, match="No inbox mail found"):
+        review_mail(hub, mail_id=central_mail_id, decision="accept")
+
+    result = review_central_mail(
+        hub,
+        mail_id=composed["record"]["mail_id"],
+        decision="accept",
+        decided_by="codex",
+        notes="DAD central triage only.",
+    )
+
+    assert collected["collected_count"] == 1
+    assert result["appended"] is True
+    assert result["decision"]["mail_id"] == central_mail_id
+    assert result["decision"]["requested_mail_id"] == composed["record"]["mail_id"]
+    assert result["decision"]["repository"] == "dad://central-mail"
+    assert result["decision"]["review_status"] == "agent_triage"
+    assert result["decision"]["public_release_gate_satisfied"] is False
+    assert result["decision"]["target_repo_adoption_satisfied"] is False
+    assert result["archive"] == "processed/mail/archive/central_review_decisions.jsonl"
+    assert _jsonl(hub / result["archive"])[0]["decision_id"] == result["decision"]["decision_id"]
+    archive_text = (hub / result["archive"]).read_text(encoding="utf-8")
+    for fragment in [str(source), str(hub), "C:/Users", "C:\\Users", "OneDrive", "AppData"]:
+        assert fragment.replace("\\", "/") not in archive_text.replace("\\", "/")
+    assert not (hub / ".digital-asset" / "mail" / "archive.jsonl").exists()
+
+
+def test_central_review_is_idempotent_and_not_public_release(tmp_path: Path):
+    hub = tmp_path / "dad"
+    source = tmp_path / "private-source"
+    target = tmp_path / "public-target"
+    hub.mkdir()
+    source.mkdir()
+    target.mkdir()
+    policies = [
+        _policy(source, "private-source", visibility="private"),
+        _policy(target, "public-target", visibility="public", public_facing=True),
+    ]
+    composed = compose_mail(
+        source,
+        message_type="lesson_suggestion",
+        target_repo=str(target),
+        summary="Private-origin mail must still need human release.",
+        repo_policies=policies,
+        allow_similar=True,
+    )
+    collect_mail(hub, [source], repo_policies=policies)
+    route_mail(hub, repo_policies=policies)
+
+    first = review_central_mail(
+        hub,
+        mail_id=composed["record"]["mail_id"],
+        decision="defer",
+        decided_by="Lowell",
+        human_verified=True,
+        repo_policies=policies,
+    )
+    second = review_central_mail(
+        hub,
+        mail_id=composed["record"]["mail_id"],
+        decision="defer",
+        decided_by="Lowell",
+        human_verified=True,
+        repo_policies=policies,
+    )
+    delivered = deliver_mail(hub, [target], repo_policies=policies)
+
+    assert first["appended"] is True
+    assert second["appended"] is False
+    assert first["decision"]["human_verified"] is True
+    assert first["decision"]["source_repo"] == "repo:private-source"
+    assert first["decision"]["target_repo"] == "repo:public-target"
+    assert first["decision"]["public_release_gate_satisfied"] is False
+    assert delivered["delivered_count"] == 0
+    assert delivered["held_for_release_count"] == 1
+
+
+def test_central_inbox_filename_uses_policy_id_or_hash_not_absolute_path(tmp_path: Path):
+    hub = tmp_path / "dad"
+    source = tmp_path / "private source with spaces"
+    hub.mkdir()
+    source.mkdir()
+    policies = [_policy(source, "private-source", visibility="private")]
+    compose_mail(
+        source,
+        message_type="lesson_suggestion",
+        target_repo="central_only",
+        summary="Central inbox filename should be policy based.",
+        repo_policies=policies,
+        allow_similar=True,
+    )
+
+    collect_mail(hub, [source], repo_policies=policies)
+    central_path = central_inbox_path(hub, source, policies)
+    inbox_files = sorted((hub / "processed" / "mail" / "inbox").glob("*.jsonl"))
+
+    assert central_path.name == "private-source.jsonl"
+    assert inbox_files == [central_path]
+    assert str(source).replace("\\", "/") not in central_path.as_posix()
+
+
 def test_reviewed_mail_is_not_redelivered_after_inbox_compaction(tmp_path: Path):
     hub = tmp_path / "dad"
     repo_a = tmp_path / "repo-a"
@@ -464,6 +616,9 @@ def test_private_source_to_public_target_is_held_until_human_release(tmp_path: P
     inbox = _jsonl(target / ".digital-asset" / "mail" / "inbox.jsonl")
     assert inbox[0]["public_release"]["public_release_status"] == "approved"
     assert inbox[0]["public_release"]["human_release_id"] == release["release"]["release_id"]
+    inbox_text = (target / ".digital-asset" / "mail" / "inbox.jsonl").read_text(encoding="utf-8")
+    assert str(source).replace("\\", "/") not in inbox_text.replace("\\", "/")
+    assert inbox[0]["source_repo"] == "repo:private-source"
 
 
 def test_source_authored_public_release_approval_is_not_trusted(tmp_path: Path):
@@ -746,6 +901,43 @@ def test_public_safe_payload_policy_rejects_raw_evidence_to_public_target(tmp_pa
     assert "payload_value_too_long:evidence" in delivered["skipped"][0]["violations"]
 
 
+def test_public_safe_payload_policy_rejects_legacy_local_path_refs(tmp_path: Path):
+    hub = tmp_path / "dad"
+    source = tmp_path / "public-source"
+    target = tmp_path / "public-target"
+    hub.mkdir()
+    source.mkdir()
+    target.mkdir()
+    policies = [
+        _policy(source, "public-source", visibility="public", public_facing=True),
+        _policy(target, "public-target", visibility="public", public_facing=True),
+    ]
+    compose_mail(
+        source,
+        message_type="asset_suggestion",
+        target_repo=str(target),
+        summary="Legacy routed mail should not leak local paths to public repos.",
+        payload={"note": "metadata-only"},
+        repo_policies=policies,
+    )
+    collect_mail(hub, [source], repo_policies=policies)
+    route_mail(hub, repo_policies=policies)
+    routed_path = hub / "processed" / "mail" / "outbox" / "routed.jsonl"
+    routed = _jsonl(routed_path)
+    routed[0]["payload"]["note"] = (
+        "See C:/Users/lowel/OneDrive/Desktop/Git Projects/private-repo/asset.json"
+    )
+    routed_path.write_text(json.dumps(routed[0], sort_keys=True) + "\n", encoding="utf-8")
+
+    delivered = deliver_mail(hub, [target], repo_policies=policies)
+
+    assert delivered["delivered_count"] == 0
+    assert delivered["held_for_release_count"] == 1
+    assert delivered["skipped"][0]["reason"] == "public-safe payload violations"
+    assert "payload_contains_local_path_ref:payload.note" in delivered["skipped"][0]["violations"]
+    assert not (target / ".digital-asset" / "mail" / "inbox.jsonl").exists()
+
+
 def test_unreviewed_source_visibility_claim_is_downgraded_before_public_delivery(
     tmp_path: Path,
 ):
@@ -873,6 +1065,25 @@ def test_explicit_delivery_path_requires_reviewed_mail_policy(tmp_path: Path):
     assert _discover_mail_repos([str(allowed)], cfg, delivery=True) == [allowed.resolve()]
 
 
+def test_explicit_reviewed_operation_path_requires_reviewed_mail_policy(tmp_path: Path):
+    hub = tmp_path / "dad"
+    allowed = tmp_path / "allowed"
+    stray = tmp_path / "stray"
+    hub.mkdir()
+    allowed.mkdir()
+    stray.mkdir()
+    cfg = SimpleNamespace(
+        repo_root=hub,
+        local_sources=[],
+        mail_repos=[_policy(allowed, "allowed")],
+    )
+
+    with pytest.raises(typer.BadParameter, match="reviewed mail.repos"):
+        _discover_mail_repos([str(stray)], cfg, reviewed=True)
+
+    assert _discover_mail_repos([str(allowed)], cfg, reviewed=True) == [allowed.resolve()]
+
+
 def test_mail_discovery_reports_nested_configured_repos(tmp_path: Path):
     hub = tmp_path / "dad"
     nested = tmp_path / "group" / "nested-repo"
@@ -913,6 +1124,25 @@ def test_strict_delivery_requires_reviewed_target_policy_for_explicit_paths(tmp_
     assert delivered["delivered_count"] == 0
     assert delivered["skipped"][0]["reason"] == "target repo lacks reviewed mail policy"
     assert not (target / ".digital-asset" / "mail" / "inbox.jsonl").exists()
+
+
+def test_collect_mail_errors_use_safe_repo_refs(tmp_path: Path):
+    hub = tmp_path / "dad"
+    source = tmp_path / "C__Users__lowel__OneDrive__Desktop__Git Projects__source"
+    hub.mkdir()
+    outbox = source / ".digital-asset" / "mail" / "outbox.jsonl"
+    outbox.parent.mkdir(parents=True)
+    outbox.write_text("{bad-json}\n", encoding="utf-8")
+
+    result = collect_mail(hub, [source])
+    result_text = json.dumps(result, sort_keys=True).replace("\\", "/")
+
+    assert result["collected_count"] == 0
+    assert result["error_count"] == 1
+    assert result["errors"][0]["repo"].startswith("repo-path-sha256:")
+    assert "C__Users" not in result_text
+    assert "OneDrive" not in result_text
+    assert "Git Projects" not in result_text
 
 
 def test_digest_tolerates_malformed_rows_and_updates_last_checked(tmp_path: Path):

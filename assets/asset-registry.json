@@ -193,6 +193,152 @@
         "Public-facing repo output omits local absolute paths by default.",
         "Repo renames keep stable repo IDs only when the same contract still applies; repo splits require new enrollment records."
       ]
+    },
+    {
+      "asset_id": "python-underused-idioms-ai-coding-card",
+      "name": "Python Underused Idioms AI Coding Card",
+      "version": "0.1.0",
+      "path": "assets/python-underused-idioms",
+      "asset_type": "coding_guidance_asset",
+      "managed_block_id": "PYTHON_UNDERUSED_IDIOMS",
+      "profiles": [
+        "python",
+        "ai-coding-agent",
+        "code-review",
+        "debugging",
+        "performance"
+      ],
+      "use_when": [
+        "An AI agent is writing, refactoring, reviewing, debugging, or researching Python code.",
+        "A review wants citable Python idiom IDs with avoid-when limits.",
+        "DAD is refreshing Python language guidance from frontier sources."
+      ],
+      "does_not_apply_when": [
+        "The target repo's Python version is below the idiom's min_python.",
+        "The edit would rewrite working code solely to use an idiom without a task-level reason.",
+        "Local repo style authority conflicts with a suggested idiom."
+      ],
+      "install_path": "assets/python-underused-idioms",
+      "source_package": {
+        "filename": "repo-local",
+        "sha256": ""
+      },
+      "installed_at": "2026-07-02",
+      "review_status": "installed_for_local_reuse",
+      "safety_notes": [
+        "Under-representation claims are heuristic unless measured.",
+        "Each idiom carries avoid_when and min_python gates.",
+        "Frontier refreshes use pointer-only research intake before changing guidance."
+      ]
+    },
+    {
+      "asset_id": "rust-buildout-guide",
+      "name": "Rust Buildout And Python-To-Rust Migration Guide",
+      "version": "0.1.0",
+      "path": "assets/rust-buildout-guide",
+      "asset_type": "coding_guidance_asset",
+      "managed_block_id": "RUST_BUILDOUT_GUIDE",
+      "profiles": [
+        "rust",
+        "python",
+        "mixed",
+        "performance",
+        "parity"
+      ],
+      "use_when": [
+        "A task mentions Rust, performance, parsing speed, a Python hot path, or a possible rewrite.",
+        "A repo needs a staged Python-to-Rust migration path with profile and parity gates.",
+        "DAD is refreshing Rust language guidance from frontier sources."
+      ],
+      "does_not_apply_when": [
+        "No profile evidence identifies a real hot path.",
+        "The work is I/O-bound glue or fast-changing prototype logic.",
+        "A full port is being considered without human-reviewed load-bearing decision evidence."
+      ],
+      "install_path": "assets/rust-buildout-guide",
+      "source_package": {
+        "filename": "repo-local",
+        "sha256": ""
+      },
+      "installed_at": "2026-07-02",
+      "review_status": "installed_for_local_reuse",
+      "safety_notes": [
+        "Rust recommendations require profiling first.",
+        "Replacement claims require same-scope shadow parity before timing claims.",
+        "Frontier refreshes use pointer-only research intake before changing guidance."
+      ]
+    },
+    {
+      "asset_id": "exception-capture-completeness-harness",
+      "name": "Exception Capture Completeness Harness",
+      "version": "0.1.0",
+      "path": "assets/coding-harnesses/exception-capture-completeness",
+      "asset_type": "coding_harness",
+      "managed_block_id": "EXCEPTION_CAPTURE_COMPLETENESS",
+      "profiles": [
+        "exceptions-lake",
+        "mail-center",
+        "learning-loop",
+        "cross-repo-governance"
+      ],
+      "use_when": [
+        "DAD changes what repos should emit as mail, exceptions, fix outcomes, or usage records.",
+        "A repo should prove it would send the right metadata packet without Lowell rescuing it from chat.",
+        "Observed outboxes need read-only audit against DAD capture patterns."
+      ],
+      "does_not_apply_when": [
+        "The evidence would require copying raw private data, secrets, long logs, or source blobs.",
+        "The target repo has not approved DAD pointers or capture-surface checks."
+      ],
+      "install_path": "assets/coding-harnesses/exception-capture-completeness",
+      "source_package": {
+        "filename": "repo-local",
+        "sha256": ""
+      },
+      "installed_at": "2026-07-02",
+      "review_status": "candidate",
+      "safety_notes": [
+        "Scenario matches prove expected packet behavior, not source truth.",
+        "Observed capture audit is read-only and path-hash-first.",
+        "Every reviewed capture rule needs at least one declared synthetic scenario."
+      ]
+    },
+    {
+      "asset_id": "language-frontier-source-radar",
+      "name": "Language Frontier Source Radar",
+      "version": "0.1.0",
+      "path": "registry/trusted-source-registry.json",
+      "asset_type": "research_intake_control",
+      "managed_block_id": "LANGUAGE_FRONTIER_SOURCE_RADAR",
+      "profiles": [
+        "rust",
+        "python",
+        "mixed",
+        "research-intake",
+        "coding-harness"
+      ],
+      "use_when": [
+        "DAD needs to refresh Rust, Python, or mixed-language coding guidance.",
+        "A repo finds a new source, technique, crate, package, or idiom worth sending to DAD.",
+        "A future language should get a reviewed frontier watch list before becoming DAD guidance."
+      ],
+      "does_not_apply_when": [
+        "The source is unknown and no justification is available.",
+        "The content would be copied instead of stored as a pointer-only intake candidate.",
+        "A recommendation lacks screening, local validation, and applicability limits."
+      ],
+      "install_path": "registry/trusted-source-registry.json",
+      "source_package": {
+        "filename": "repo-local",
+        "sha256": ""
+      },
+      "installed_at": "2026-07-03",
+      "review_status": "reviewed",
+      "safety_notes": [
+        "Source cadence is not promotion authority.",
+        "All external content still requires screening and human approval before promotion.",
+        "Language-frontier mail uses safe summaries, URLs, hashes, and validation ideas only."
+      ]
     }
   ]
 }

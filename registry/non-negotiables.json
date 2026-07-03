@@ -1,0 +1,42 @@
+{
+  "schema_version": "0.1.0",
+  "registry_id": "dad-non-negotiables",
+  "authority_boundary": "Reviewed compact rules compiled into DAD preflight context packs. Local repo source authority still governs adoption.",
+  "non_negotiables": [
+    {
+      "id": "dad-nonnegotiable:source-authority",
+      "version": "0.1.0",
+      "rule": "Local repo source authority beats DAD recommendations; conflicts stop for human review.",
+      "severity": "hard_gate",
+      "source_ref": "AGENTS.md"
+    },
+    {
+      "id": "dad-nonnegotiable:mail-candidate-only",
+      "version": "0.1.0",
+      "rule": "Mail, offerings, harnesses, and generated reports are candidate evidence until reviewed locally.",
+      "severity": "hard_gate",
+      "source_ref": "docs/MAIL_CENTER.md"
+    },
+    {
+      "id": "dad-nonnegotiable:no-secrets-in-mail",
+      "version": "0.1.0",
+      "rule": "Never place secrets, private rows, credentials, or long raw source blobs in DAD mail or cross-repo payloads.",
+      "severity": "hard_gate",
+      "source_ref": "docs/MAIL_CENTER.md"
+    },
+    {
+      "id": "dad-nonnegotiable:approved-write-boundary",
+      "version": "0.1.0",
+      "rule": "Normal DAD recurring operation writes only .digital-asset/mail/**; broader writes require enrollment approval.",
+      "severity": "hard_gate",
+      "source_ref": "docs/DAD_REPO_ENROLLMENT.md"
+    },
+    {
+      "id": "dad-nonnegotiable:trace-postflight",
+      "version": "0.1.0",
+      "rule": "Close material work with postflight and trace any used, ignored, failed, or harmful DAD recommendation.",
+      "severity": "warning",
+      "source_ref": "docs/DOWNSTREAM_REPO_GOVERNANCE.md"
+    }
+  ]
+}

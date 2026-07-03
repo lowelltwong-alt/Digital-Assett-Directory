@@ -1,0 +1,57 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://local.digital-asset-directory/schemas/context-pack.schema.json",
+  "title": "DAD Context Pack",
+  "type": "object",
+  "additionalProperties": true,
+  "required": ["schema_version", "trace_id", "session_id", "non_negotiables", "assets", "stop_conditions", "validation_commands", "registry_hashes"],
+  "properties": {
+    "schema_version": {"const": "0.1.0"},
+    "trace_id": {"type": "string", "minLength": 1},
+    "session_id": {"type": "string", "minLength": 1},
+    "non_negotiables": {"type": "array", "maxItems": 10},
+    "assets": {"type": "array", "maxItems": 5},
+    "asset_patterns": {
+      "type": "array",
+      "maxItems": 3,
+      "items": {
+        "type": "object",
+        "required": ["pattern_id", "label", "matched_terms", "watch_for", "report_via"],
+        "properties": {
+          "pattern_id": {"type": "string", "minLength": 1},
+          "label": {"type": "string", "minLength": 1},
+          "leverage": {"type": "string"},
+          "matched_terms": {"type": "array", "items": {"type": "string"}},
+          "watch_for": {"type": "array", "maxItems": 4, "items": {"type": "string"}},
+          "report_via": {"const": "dad:need:asset-pattern-sightings"}
+        }
+      }
+    },
+    "pattern_library_version": {"type": "string"},
+    "pattern_match_basis": {"type": "string"},
+    "deferred_mail": {
+      "type": "array",
+      "maxItems": 3,
+      "items": {
+        "type": "object",
+        "required": ["mail_id", "intake_decision", "matched_terms", "repo_watches_asset", "why_now"],
+        "properties": {
+          "mail_id": {"type": "string", "minLength": 1},
+          "message_type": {"type": "string"},
+          "summary": {"type": "string", "maxLength": 160},
+          "intake_decision": {"enum": ["save_for_future", "defer"]},
+          "matched_terms": {"type": "array", "items": {"type": "string"}},
+          "repo_watches_asset": {"type": "boolean"},
+          "source_asset_refs": {"type": "array", "items": {"type": "string"}},
+          "why_now": {"type": "string", "minLength": 1}
+        }
+      }
+    },
+    "deferred_mail_basis": {"type": "string"},
+    "deferred_backlog_count": {"type": "integer", "minimum": 0},
+    "stop_conditions": {"type": "array", "items": {"type": "string"}},
+    "validation_commands": {"type": "array", "items": {"type": "string"}},
+    "registry_hashes": {"type": "object"},
+    "warnings": {"type": "array", "items": {"type": "string"}}
+  }
+}

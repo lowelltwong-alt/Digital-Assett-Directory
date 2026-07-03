@@ -1,10 +1,27 @@
 {
   "schema_version": "0.1.0",
   "methodology_id": "dad:methodology:asset-recognition:v0.1.0",
-  "methodology_version": "0.1.0",
+  "methodology_version": "0.2.0",
   "authority_boundary": "Asset recognition scores are deterministic candidate signals. They do not prove value, truth, safety, licensing, or authority, and they do not authorize copying private contents across repos.",
+  "scoring_formula": "File importance sums candidate location, path keyword, and extension weights, subtracts downgrade signals, and clamps at zero. Task relevance is computed separately from task keywords and never affects importance tiers or candidate cutoff.",
   "min_candidate_score": 30,
   "candidate_locations": [
+    {
+      "location_id": "build-and-ci-contracts",
+      "patterns": [
+        ".github/workflows/*",
+        ".github/workflows/**/*",
+        ".githooks/*",
+        ".githooks/**/*",
+        "Makefile",
+        "justfile",
+        "pyproject.toml",
+        "package.json",
+        "Cargo.toml"
+      ],
+      "weight": 28,
+      "reason": "Build, CI, hook, and tool config files encode what must be true for a repo."
+    },
     {
       "location_id": "repo-front-door-and-agent-guidance",
       "patterns": ["AGENTS.md", "CLAUDE.md", "AI_FRONT_DOOR.md", "AI_TABLE_OF_CONTENTS.md", "MACHINE_NAVIGATION_MANIFEST.json"],

@@ -4,7 +4,7 @@
   "version": "0.1.0",
   "path": "assets/coding-harnesses/agent-instruction-code-review-red-team",
   "family": "red_team",
-  "status": "candidate",
+  "status": "active",
   "languages": ["agent-instruction", "python", "rust", "mixed"],
   "repo_types": ["application", "library", "control_plane", "template_repo"],
   "domains": ["ai_engineering", "governance", "security"],
@@ -12,10 +12,10 @@
   "task_types": ["review", "premortem", "agent_instruction_design", "security_review"],
   "capabilities": ["fresh_eyes_review", "premortem_prompt", "criticality_ranking"],
   "public_safe": true,
-  "entrypoints": ["README.md", "harness.json", "prompts/README.md"],
+  "entrypoints": ["README.md", "harness.json", "prompts/README.md", "tests-or-evals/red-team-rubric.md", "tests-or-evals/labeled-eval-cases.json"],
   "research_questions": ["What failure story would make this agent guidance unsafe?", "Which tests would catch false green outcomes?"],
   "validation_commands": ["python -m pytest tests/test_mail_center.py -q"],
-  "source_evidence": ["templates/load-bearing-decision-review.template.md", "docs/LOAD_BEARING_DECISION_REVIEW.md"],
-  "review_status": "candidate",
+  "source_evidence": ["templates/load-bearing-decision-review.template.md", "docs/LOAD_BEARING_DECISION_REVIEW.md", "tests-or-evals/red-team-rubric.md", "tests-or-evals/labeled-eval-cases.json"],
+  "review_status": "reviewed",
   "authority_boundary": "Red-team findings are recommendations until implemented and validated."
 }

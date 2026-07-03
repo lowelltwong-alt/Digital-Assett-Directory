@@ -1,0 +1,900 @@
+# DAD Exceptions Lake Buildout
+
+Status: architecture buildout plan, candidate until reviewed.
+Risk tier: high. This affects all repos, agent behavior, schemas, mail, learning
+loops, and future control-plane defaults.
+
+## Goal
+
+DAD needs an exceptions lake that captures every important exception, failed
+command, code change exception, review finding, rejected recommendation, bypass,
+rollback, flaky test, governance violation, and fix outcome from enrolled repos.
+
+The lake is not just an error log. It is a learning system:
+
+1. capture the exception with provenance and safe context;
+2. connect it to the change, repo, agent, asset, harness, and validation command;
+3. record how it was fixed or why it was accepted;
+4. mine repeated patterns into candidate lessons, tests, harnesses, non-negotiables,
+   and DAD offerings;
+5. route those lessons back to repos through pointer mail and context packs.
+
+## Non-Negotiables
+
+- Repos retain local source authority.
+- DAD receives pointers, summaries, hashes, command metadata, and safe excerpts, not
+  secrets, private rows, credentials, or large raw logs.
+- Raw exception events are append-only.
+- Fix knowledge is candidate evidence until reviewed.
+- Private, restricted, internal, or unknown-origin exception records cannot flow into
+  public-facing repos without the existing DAD human release gate.
+- Scores are not allowed until a named methodology is written and validated.
+- Human bypasses, protected repo events, and public-release holds are first-class
+  exception types, not comments in a log.
+
+## Never Collect
+
+DAD must reject, quarantine, or leave in the source repo:
+
+- credentials, tokens, cookies, private keys, session IDs, and secret-looking values;
+- private rows, customer/client records, legal facts, medical facts, or row-level data;
+- full stack traces or raw logs by default;
+- prompt bodies, model hidden reasoning, pasted conversations, or tool transcripts;
+- long source snippets, generated diffs, or complete files;
+- local absolute paths destined for public-facing repos;
+- payloads whose original source visibility is private, internal, restricted, or unknown
+  when the target is public-facing and no human release exists;
+- binary crash dumps, screenshots, database dumps, cache files, or dependency archives.
+
+Allowed payloads are short metadata, IDs, hashes, command argv, exit code, duration,
+redacted output references, path pointers, summary text, validation refs, and review
+notes. Any exception event that needs more context should point back to the source repo
+or a central-only quarantine record rather than copying the context.
+
+## Architecture
+
+```mermaid
+flowchart LR
+  A["Repo event sources"] --> B["Repo-local exception outbox"]
+  B --> C["DAD collect"]
+  C --> D["Quarantine and screening"]
+  D --> E["Canonical exception lake"]
+  E --> F["Triage and clustering"]
+  F --> G["Fix outcome ledger"]
+  G --> H["Learning compiler"]
+  H --> I["Lessons, harness ideas, tests, rules"]
+  I --> J["Context pack and mail notices"]
+  J --> K["Repo-local adoption decision"]
+  K --> G
+```
+
+The design mirrors the LawFirm OS exception-lake idea, but DAD's version is more
+general: it handles software failures, AI-agent mistakes, governance exceptions,
+public/private release holds, harness misses, and cross-repo learning.
+
+## Event Sources
+
+Each enrolled repo should emit exception packets from these sources:
+
+- preflight: stale DAD, missing context, blocked gates, unavailable hub;
+- midflight: failing command, retry, changed plan, user correction, rule ack,
+  bypass request, sensitive payload block;
+- tests and CI: pytest failures, cargo failures, lint failures, flaky retries,
+  timeout, dependency install failure;
+- runtime and CLI: uncaught exception, handled domain error, malformed input,
+  lock timeout, stale report, stale cache;
+- review: red-team finding, premortem failure story, security finding, false
+  confidence, missing test, Claude/Fable/Codex disagreement;
+- code change: rollback, hotfix, unexpected side effect, schema migration failure,
+  generated file drift, roadmap gate mismatch;
+- mail and enrollment: duplicate delivery, quarantine, human-release hold,
+  protected repo write block, dirty worktree block;
+- asset usage: DAD recommendation used, ignored, harmful, failed, or later upgraded.
+
+## Capture Completeness Contract
+
+The lake cannot learn if repos only send memorable failures. Each enrolled repo needs a
+small deterministic capture contract:
+
+- `failed_command`: every AI-run command with non-zero exit, timeout, or tool error;
+- `retry_or_plan_change`: a retry, workaround, changed approach, or user correction
+  after a failure;
+- `postflight_exception`: any test not run, validation gap, harmful recommendation,
+  ignored required recommendation, or remaining risk;
+- `ci_failure`: failed CI job, flaky retry, dependency install failure, or timeout;
+- `governance_block`: protected repo write block, public-release hold, stale DAD,
+  missing approval ID, dirty worktree block, or failed policy gate;
+- `review_finding`: red-team, premortem, security, code-review, Fable, Claude, Codex,
+  Cursor, or human finding with severity;
+- `fix_outcome`: the fix, accepted-risk decision, rollback, or duplicate decision
+  that resolves or closes an event;
+- `dad_recommendation_outcome`: DAD asset, harness, skill, template, or mail advice
+  used, ignored, attempted-and-failed, harmful, or saved for future.
+
+Capture can be lightweight. Repos do not need DAD Python internals for normal writes:
+they can append JSONL, use a tiny helper, export a CI artifact, or let the DAD CLI
+record events during preflight/midflight/postflight. Completeness is measured by
+expected capture surfaces, not by raw volume.
+
+## Repo-Local Capture
+
+Normal recurring operation writes only inside the repo's mailbox/control surface:
+
+```text
+.digital-asset/exceptions/outbox.jsonl
+.digital-asset/exceptions/inbox.jsonl
+.digital-asset/exceptions/archive.jsonl
+.digital-asset/exceptions/README.md
+```
+
+If a repo has not received the exceptions-lake enrollment surface yet, it can send
+events through existing DAD mail using `message_type: governance_notice` or
+`workflow_suggestion`, but the target state is a first-class exception packet.
+
+Repo-local packets should be cheap to write. They do not run heavy Python test
+suites and do not import DAD internals. A repo may append JSONL with a small helper,
+a hook, an AI postflight command, or CI artifact export.
+
+Source-side minimization happens before the packet leaves the repo:
+
+- command output is omitted by default;
+- output tails require an explicit local flag and must pass credential/PII screening;
+- per-field length caps apply before DAD collection;
+- raw stack traces become a short `error_fingerprint`, exception type, top frame path
+  pointer, and output hash unless a human explicitly approves a richer central-only
+  record;
+- local paths are stored as repo-relative paths when possible;
+- source repo visibility and return address are included on every packet.
+
+The repo-local outbox is append-only. Archive records are acknowledgements and review
+decisions, not destructive edits to the original event line.
+
+## Live Specimen
+
+The first real design specimen is a `LawFirm-os-intake` Fable 5 review issue that
+identified a P0 budget-output expectation gap. The source repo wrote a candidate
+DAD mail packet, DAD collected it as central mail, routed it as candidate-only
+mail, then recorded a metadata-only exception event:
+
+- collected DAD mail: `dad:mail:e347e567-3960-56e7-8db4-803ecffbf547`;
+- original source mail: `dad:mail:ac201c5e-4f51-5fc2-ac9f-ddc7d45a79f1`;
+- exception event:
+  `dad:exception-event:lawfirm-os-intake-fable-budget-output-expectations-001`;
+- event type: `review_finding`;
+- issue classes: budget driver gap, budget math risk, authority-boundary risk,
+  exception-lake mapping gap, learning-loop gap, UI authority risk, and test gap;
+- boundary: observable context and decision logic only, no hidden chain-of-thought,
+  no raw private payload, no silent learning, no source repo lake write.
+
+This specimen demonstrates the intended path for complex review issues:
+
+```text
+repo-local structured review issue -> DAD mail collect -> DAD route ->
+exception-lake candidate event -> future fix outcome / lesson candidate
+```
+
+The source repo may create candidate mail; DAD owns central exception-lake
+classification and promotion gates.
+
+## Canonical DAD Storage
+
+DAD central storage:
+
+```text
+raw/exceptions/repo-events/YYYY-MM-DD/*.jsonl
+processed/exceptions/quarantine/*.jsonl
+processed/exceptions/lake/*.jsonl
+processed/exceptions/fix-outcomes/*.jsonl
+processed/exceptions/clusters/*.jsonl
+processed/exceptions/review-queue/*.jsonl
+processed/reports/exceptions_lake.md
+processed/reports/exceptions_lake.json
+```
+
+Raw events are append-only. Processed records may be rebuilt from raw plus
+registries. Review decisions are append-only and reference the raw event IDs.
+
+Implemented contract surfaces:
+
+- `schemas/exception-event.schema.json`
+- `schemas/exception-fix-outcome.schema.json`
+- `schemas/exception-event-type-registry.schema.json`
+- `schemas/exception-learning-methodology.schema.json`
+- `schemas/exception-capture-pattern-registry.schema.json`
+- `schemas/exception-capture-scenarios.schema.json`
+- `registry/exception-event-type-registry.json`
+- `registry/exception-learning-methodology.json`
+- `registry/exception-capture-pattern-registry.json`
+- `assets/coding-harnesses/exception-capture-completeness/`
+- `templates/downstream/EXCEPTIONS_README.md`
+
+The CLI entrypoint is `asset-dir exceptions` with `paths`, `taxonomy`,
+`capture-patterns`, `capture-check`, `capture-audit`, `record`, `collect`,
+`backfill`, and `report` commands.
+
+## Packet Shape
+
+Initial `ExceptionEventRecord` fields:
+
+```json
+{
+  "event_id": "dad:exception-event:...",
+  "schema_version": "0.1.0",
+  "event_time": "2026-07-02T00:00:00+00:00",
+  "source_repo": "repo-id-or-path",
+  "source_visibility": "private|internal|restricted|public|unknown",
+  "public_facing_source": false,
+  "origin_chain": [],
+  "return_address": "repo mailbox or central-only address",
+  "agent": "codex|claude|cursor|human|ci|runtime",
+  "model": "optional model name",
+  "task": "short task summary",
+  "stage": "preflight|midflight|postflight|ci|runtime|review|release",
+  "event_type": "test_failure|runtime_exception|governance_block|review_finding|bypass|rollback|stale_artifact|harmful_recommendation|other",
+  "severity": "critical|high|medium|low|info",
+  "status": "open|triaged|fixed|accepted|rejected|duplicate|archived",
+  "context_refs": [],
+  "capture_contract": "failed_command|retry_or_plan_change|postflight_exception|ci_failure|governance_block|review_finding|fix_outcome|dad_recommendation_outcome",
+  "event_identity": {
+    "identity_version": "exception-event-identity-v1",
+    "identity_inputs": ["source_repo_id", "capture_contract", "stage", "event_type", "normalized_command", "normalized_path_refs", "error_fingerprint"],
+    "collision_policy": "same identity but materially different context becomes duplicate_suspect and requires review"
+  },
+  "command": {
+    "argv": [],
+    "exit_code": 1,
+    "duration_ms": 0,
+    "redacted_output_ref": ""
+  },
+  "safe_summary": "short summary",
+  "symptoms": [],
+  "error_fingerprint": "",
+  "suspected_cause": "",
+  "fix_refs": [],
+  "validation_refs": [],
+  "asset_refs": [],
+  "harness_refs": [],
+  "trace_refs": [],
+  "sensitivity": "public_safe|internal|private|restricted|unknown",
+  "screening": {
+    "credential_pii_screen": "pending|pass|blocked",
+    "raw_blob_policy": "pass|blocked",
+    "public_release_required": false,
+    "human_release_id": ""
+  },
+  "dedupe_key": "stable normalized event key",
+  "review_status": "candidate"
+}
+```
+
+`ExceptionFixOutcomeRecord` rows live in
+`processed/exceptions/fix-outcomes/outcomes.jsonl`. They are append-only
+candidate metadata linked to one `event_id`; they do not rewrite exception
+events. Reports join outcomes back to events by ID.
+
+Current required fields:
+
+```json
+{
+  "fix_id": "dad:exception-fix:...",
+  "event_id": "dad:exception-event:...",
+  "recorded_at": "2026-07-02T00:00:00+00:00",
+  "source_repo": "repo-id",
+  "source_visibility": "public|internal|private|restricted|unknown",
+  "source_provenance": {},
+  "recorded_by": "codex",
+  "decision": "fixed|accepted_risk|deferred|duplicate|rejected|rollback",
+  "summary": "short safe fix outcome",
+  "validation_status": "validated|validation_missing|not_applicable|failed",
+  "validation_refs": [],
+  "regression_test_refs": [],
+  "fix_refs": [],
+  "asset_refs": [],
+  "lesson_refs": [],
+  "remaining_risks": [],
+  "owner_authority": "repo-id or named human/local authority",
+  "canonical_event_id": "",
+  "canonical_event_lookup_status": "found_in_lake|missing_from_lake",
+  "expiry": "",
+  "event_lookup_status": "found_in_lake|missing_from_lake",
+  "capture_contract": "fix_outcome",
+  "dedupe_key": "stable normalized fix key",
+  "screening": {},
+  "review_status": "candidate"
+}
+```
+
+Implementation policy:
+
+- every fix outcome requires explicit `owner_authority`; DAD must not silently
+  infer ownership from the source repo.
+- `fixed` and `rollback` outcomes require at least one `validation_ref` and the
+  linked `event_id` must already exist in the central lake.
+- `accepted_risk` and `deferred` outcomes require an `expiry` or revisit marker.
+- `duplicate` outcomes require `canonical_event_id`, and that canonical event
+  must already exist in the central lake.
+- `fixed` outcomes only count as validated when `validation_status=validated` and
+  validation refs are present and `event_lookup_status=found_in_lake`.
+- A missing event link is allowed as candidate metadata (`missing_from_lake`), but
+  reports surface it separately and it cannot prove the original event was fixed,
+  rolled back, or duplicated.
+
+## Event Identity And Dedupe
+
+`event_id` is stable when a repo intentionally records the same event again. The
+default ID formula should use:
+
+```text
+stable_id(
+  "exception-event",
+  source_repo_id,
+  capture_contract,
+  stage,
+  event_type,
+  normalized_command_or_tool,
+  normalized_path_refs,
+  error_fingerprint,
+  first_observed_date_bucket
+)
+```
+
+`dedupe_key` is broader and may group repeated sightings. It must never be used to
+silently merge records with different source visibility, different target visibility,
+different human release state, or materially different affected assets.
+
+Duplicate behavior:
+
+- exact duplicate event ID -> acknowledgement count increments;
+- same dedupe key, same source, same fingerprint -> repeated sighting;
+- same dedupe key, different source repo -> candidate cluster member;
+- same dedupe key, conflicting severity or fix status -> duplicate-suspect review;
+- malformed or collision-suspect records go to quarantine, not the canonical lake.
+
+## Fix Lifecycle
+
+Allowed event status transitions:
+
+```text
+open -> triaged
+open -> duplicate
+open -> rejected
+triaged -> fix_planned
+triaged -> accepted_risk
+triaged -> duplicate
+fix_planned -> fixed_pending_validation
+fixed_pending_validation -> fixed_validated
+fixed_pending_validation -> reopened
+accepted_risk -> reopened
+fixed_validated -> regression_observed
+regression_observed -> reopened
+rejected -> reopened
+duplicate -> reopened
+* -> archived
+```
+
+Rules:
+
+- only a fix outcome record can move an event to `fixed_pending_validation`;
+- only validation evidence can move it to `fixed_validated`;
+- `accepted_risk` requires rationale, owner, expiry/review date, and local authority;
+- a duplicate must point to its canonical event;
+- a reopened event preserves the old fix outcome as negative evidence;
+- an archived event remains queryable and must not be deleted.
+
+## Ingestion Flow
+
+1. Repo writes a packet to `.digital-asset/exceptions/outbox.jsonl`.
+2. DAD `exceptions collect` reads only reviewed repo policy entries.
+3. DAD validates JSONL line-by-line. Malformed rows go to quarantine and good rows
+   continue.
+4. DAD verifies source-side minimization fields and rejects packets that include raw
+   logs, long blobs, private rows, or output tails without explicit local approval.
+5. DAD screens for secrets, PII, private rows, huge raw blobs, local path leakage,
+   prompt injection, and public/private movement.
+6. DAD canonicalizes repo ID, visibility, return address, origin chain, timestamps,
+   and dedupe key.
+7. DAD writes raw append-only records.
+8. DAD routes safe events into the canonical lake or holds them in quarantine.
+9. DAD clusters repeated events only by deterministic methods with methodology
+   versions.
+10. Fix outcomes are joined to events by event ID, commit/PR ref, command ref, or
+   explicit postflight trace ID.
+11. Learning compiler proposes candidate lessons, harness updates, tests, or
+    non-negotiable changes.
+
+## Learning Loop
+
+The lake learns by separating raw facts from candidate interpretations.
+
+Raw facts:
+
+- event happened;
+- repo and agent provenance;
+- command metadata;
+- status and timestamps;
+- fix refs and validation refs;
+- public/private screening results.
+
+Candidate interpretations:
+
+- root cause;
+- repeated pattern;
+- recommended future action;
+- harness gap;
+- non-negotiable candidate;
+- DAD offering or skill update;
+- repo-specific warning.
+
+Learning products:
+
+- candidate lessons in `raw/lessons/`;
+- review feedback records through `lesson review-feedback`;
+- harness candidates under `assets/coding-harnesses/`;
+- preflight rule candidates;
+- graph edges such as `gap_evidence_for`, `validated_by`, `depends_on`, and future
+  exception-specific edges;
+- context-pack warnings for repos likely to hit the same failure;
+- upgrade mail to repos using or watching affected assets.
+
+## Learning Compiler
+
+The learning compiler runs after screened events and fix outcomes exist. It produces
+candidate learning packets, never direct authority.
+
+Inputs:
+
+- exception events and fix outcomes;
+- postflight trace outcomes;
+- DAD recommendation outcomes;
+- harness outcome records;
+- usage ledger rows;
+- review feedback records;
+- graph edge registry and learning methodology registry.
+
+Outputs:
+
+- candidate lesson records with applies/does-not-apply/danger fields;
+- candidate harness eval cases;
+- candidate regression tests;
+- candidate non-negotiable or preflight rule proposals;
+- DAD offering calibration requests;
+- graph edge candidates;
+- repo-specific context-pack warnings;
+- pointer-only mail notices.
+
+Promotion gates:
+
+- no global rule from a single event;
+- no harness promotion without a failing case and a passing validation path;
+- no preflight warning without reviewed repeated evidence and non-applicability notes;
+- no public-facing notice from private/internal/restricted/unknown source without human
+  release;
+- no score, similarity, cluster confidence, or priority percentage without a named
+  methodology and at least 10 reviewed samples for that family.
+
+## Self-Learning Rules
+
+DAD should promote a pattern only when enough reviewed evidence exists.
+
+Early rules:
+
+- one critical exception can create a high-priority review queue item, not a global
+  rule;
+- repeated exception type across two repos can create a candidate harness or test;
+- repeated exception type across three independent contexts can create a candidate
+  preflight warning;
+- a harmful DAD recommendation creates an immediate calibration review for that
+  offering;
+- a fixed exception without validation stays open;
+- an accepted exception must record why accepting it is safer than fixing it;
+- a bypass without a reason is invalid;
+- a public-facing target with private-origin context is held until human release.
+
+Independence rules:
+
+- repeated events from the same repo count as one context unless separated by a
+  reviewed regression/fix cycle;
+- events caused by the same DAD bug, same harness, same dependency outage, or same CI
+  incident do not count as independent repo evidence;
+- copied repos, renamed repos, and repo splits preserve lineage, so duplicate clones do
+  not inflate counts;
+- flaky tests are tracked separately until stability evidence proves a real product
+  failure pattern;
+- agent mistakes count by observable failure class, not by model blame.
+
+No percentages should be shown until the sample size is at least 10 reviewed events
+for that event family. Before then, reports show counts and examples only.
+
+## Proposed CLI
+
+```text
+asset-dir exceptions record --repo <repo> --type <type> --summary <text> ...
+asset-dir exceptions collect --repo all|<repo>
+asset-dir exceptions screen --event-id <id>|--all-pending
+asset-dir exceptions triage --event-id <id> --decision fix|accept|defer|duplicate|reject
+asset-dir exceptions fix --repo <repo> --event-id <id> --decision fixed \
+  --summary <text> --validation-ref <cmd-or-report> --regression-test-ref <test>
+asset-dir exceptions cluster --method <method-id>
+asset-dir exceptions learn --event-id <id>|--cluster <id>
+asset-dir exceptions digest --repo <repo>
+asset-dir exceptions report
+```
+
+Repo agents should normally use `record` during postflight or after a failing
+midflight. CI can write JSONL directly if the repo has only a lightweight footprint.
+
+## Policy And Governance
+
+Add reviewed config parallel to `mail.repos` and `enrollment.repos`:
+
+```yaml
+exceptions:
+  repos:
+    - id: dad
+      path: .
+      alias: dad
+      visibility: private
+      public_facing: false
+      exceptions_enabled: true
+      collect_allowed: true
+      capture_audit_allowed: true
+      backfill_allowed: true
+      write_protected: false
+```
+
+Default policy:
+
+- `--repo all` for exception collection or capture audit only uses reviewed
+  `exceptions.repos`, not `mail.repos`.
+- Discovered repos can be reported but not collected from until reviewed.
+- Protected repos can be central-only.
+- Public repos receive public-safe pointers by default.
+- DAD never writes source code fixes into other repos as part of exception handling.
+
+## Backpressure, Retention, And Noise Control
+
+Without backpressure, the lake will drown in repeated failures.
+
+- Per repo, cap low-severity repeated sightings per day and roll overflow into a digest.
+- Always preserve critical/high governance, security, public-release, and harmful DAD
+  recommendation events.
+- Suppress repeated noisy clusters from cross-repo mail until a human or reviewed
+  methodology marks them actionable.
+- Keep raw append-only metadata, but archive old low-severity duplicates into compact
+  summaries with source hashes.
+- Record retention class per event: `standard`, `security_sensitive`, `public_release`,
+  `protected_repo`, `debug_noise`, or `training_candidate`.
+- Reports must show collection coverage, quarantine count, duplicate count, stale open
+  count, fixed-without-validation count, and learning-candidate count.
+
+## Relationship To Mail
+
+Exceptions are higher-signal than ordinary mail, but they should still use the same
+transport philosophy:
+
+- repo-local outbox for sending;
+- DAD central collection and screening;
+- pointer-only delivery;
+- dedupe by stable event ID and dedupe key;
+- local adoption decision by target repo.
+
+Mail can carry exception-derived recommendations, but raw exception packets live in
+the exceptions lake.
+
+## Relationship To Harnesses
+
+The exceptions lake should feed harnesses directly.
+
+Examples:
+
+- repeated pytest timeout events -> Python test orchestration harness update;
+- Rust shadow parity mismatch -> Rust parity harness regression case;
+- Claude/Codex review miss -> agent-instruction red-team harness case;
+- public/private release hold -> provenance harness case;
+- malformed JSONL event -> mail/enrollment safety harness case;
+- harmful DAD recommendation -> recommendation calibration eval.
+
+Every harness promotion should cite exception event IDs or fix outcome IDs when the
+harness exists to prevent a known failure class.
+
+## Relationship To Graph
+
+New graph work should eventually add exception-aware nodes and edges:
+
+- node types: `exception_event`, `exception_cluster`, `fix_outcome`, `regression_test`;
+- join edges: `fixed_by`, `validated_by`, `caused_by`, `blocked_by_policy`,
+  `observed_in`, `affects_asset`;
+- inference edges: `same_failure_pattern_as`, `likely_prevented_by`,
+  `gap_evidence_for`.
+
+Inference edges require named methodology versions and reviewed thresholds.
+No exception-aware graph edge may be generated until the edge type exists in
+`registry/graph-edge-registry.json`, the event schema is validated, and the edge basis
+is declared in an exception learning methodology. Failure-derived graph edges are
+candidate evidence only.
+
+## Rollout Roadmap
+
+Wave 0: Architecture Review
+
+- Review this buildout with Fable 5, Claude, and Codex.
+- Compare against LawFirm OS exceptions lake runtime.
+- Decide minimal event schema and public/private policy.
+- Produce red-team and premortem before implementation.
+
+Wave 1: Schemas And Registries
+
+- Add `schemas/exception-event.schema.json`.
+- Add `schemas/exception-fix-outcome.schema.json`.
+- Add `registry/exception-event-type-registry.json`.
+- Add `registry/exception-learning-methodology.json`.
+- Add validation for duplicate event types, stale methodology reports, and public
+  release gates.
+- Add tests for schema conformance, event status transitions, required minimization
+  fields, and duplicate event-type rejection.
+
+Wave 2: Local Capture And Central Collection
+
+- Add `.digital-asset/exceptions/` template.
+- Add `asset-dir exceptions record`.
+- Add `asset-dir exceptions collect`.
+- Parse JSONL line-by-line with quarantine.
+- Redact/screen before canonical lake write.
+- Add tests for malformed JSONL quarantine, raw log rejection, source-side field caps,
+  same-path duplicate handling, and reviewed repo allowlist enforcement.
+
+Wave 2.5: Capture-Completeness Harness
+
+- Build a synthetic cross-repo capture harness that proves repos emit candidate mail
+  and exception packets for the things DAD wants, without Lowell having to notice the
+  pattern in chat.
+- Use the LawFirm-os-intake specimen as a golden missed-capture case:
+  `dad:mail:ac201c5e-4f51-5fc2-ac9f-ddc7d45a79f1` should have been generated by
+  deterministic repo-side capture logic when the agent created a reusable structured
+  review-issue workflow with schema/model, CLI, tests, docs, candidate mail, and an
+  exception-lake mapping gap.
+- Add synthetic fixtures for every DAD pattern family:
+  asset, harness, skill, template, workflow, architecture reference, governance map,
+  data map, mail pattern, exception pattern, review finding, fix outcome, and
+  learning-loop candidate.
+- For each fixture, assert whether the source repo should emit:
+  - ordinary DAD mail;
+  - an exception event;
+  - both mail and exception event;
+  - only local adoption/usage feedback;
+  - no DAD packet because it is duplicate, too private, routine, or out of scope.
+- For every positive fixture, assert `expected.required_fields` as part of the
+  capture contract. Packet class and message type are not enough; if DAD updates
+  a pattern to require a new metadata field, the scenario and observed outbox
+  check must fail until the repo emits that field.
+- Required fields follow the `required_fields_pattern_update_contract`: at least
+  one matching JSONL packet row must carry all required fields with usable
+  metadata values. Blank placeholders or fields split across unrelated or partial
+  rows do not count.
+- Add pattern-update simulations: change `registry/dad-needs-registry.json`,
+  `registry/dad-offerings-registry.json`, `registry/exception-event-type-registry.json`,
+  or a downstream template requirement, then prove enrolled repos receive/update the
+  capture rule and start emitting the new fields or packet class.
+- Add a `dad_cli_unavailable` mail-pattern simulation. If an enrolled repo cannot
+  run `asset-dir` on PATH, it should try the DAD source checkout entrypoint and
+  then append metadata-only JSONL fallback mail; the issue should not remain
+  trapped in chat until Lowell notices.
+- Add regression cases for “repo already had old DAD enrollment but lacked the new
+  capture surface” so DAD can distinguish expected historical misses from true
+  current capture failures.
+- Add negative tests that hidden chain-of-thought, raw private data, long logs, real
+  case rows, secrets, and prompt-injection-looking text do not get sent even when a
+  pattern matches.
+- Add a coverage report that lists each synthetic pattern, expected packet, actual
+  packet, missed reason, repo enrollment version, and required DAD update.
+- Acceptance criterion: a future run over the LawFirm-os-intake review-issue scenario
+  creates the candidate mail and exception-lake seed deterministically, with no human
+  intervention beyond ordinary review.
+
+Implemented starter harness:
+
+- `registry/exception-capture-pattern-registry.json` defines deterministic capture
+  rules for asset, harness, skill, template, workflow, architecture-reference,
+  governance-map, data-map, mail-pattern, exception-pattern, review-finding,
+  fix-outcome, and learning-loop-candidate families.
+- `assets/coding-harnesses/exception-capture-completeness/examples/synthetic-capture-scenarios.json`
+  includes one reviewed synthetic fixture for each required family, the
+  LawFirm-os-intake missed-capture case, pattern-update simulations, and unsafe
+  positive-match negative controls.
+- `asset-dir exceptions capture-check --scenarios <file>` writes a methodology-hashed
+  report under `processed/reports/exception_capture_completeness.*`.
+- Positive synthetic cases compare required metadata fields from the capture
+  registry, and observed fixture checks verify those fields are present in actual
+  JSONL outbox rows. This prevents a false green where a repo emits
+  `workflow_suggestion` but omits the new fields DAD needs after a pattern update.
+- Each reviewed capture rule must be explicitly listed in at least one reviewed
+  synthetic scenario through `covered_rule_ids`, and the evaluator compares those
+  declared IDs against the rules actually matched by the scenario signals. This
+  prevents a reviewed rule from being added to the registry without a harness
+  case, and prevents broad signals from silently exercising a different rule than
+  the scenario claims to cover.
+- Observed checks require one matching packet row to contain all required fields
+  with usable values, and they fail on best-effort credential/PII, raw blob, or
+  prompt-injection-like payload issues.
+- The starter harness now supports observed-emission checks against actual JSONL
+  outbox files. The canonical scenario set includes a metadata-only observed
+  LawFirm-style mail outbox and exception outbox fixture, and tests also generate a
+  temp repo outbox through DAD helpers.
+- Payload samples are screened by DAD's best-effort credential/PII policy and a small
+  prompt-injection-like text detector before any packet class is considered emitted.
+- Current limitation: this proves synthetic rule coverage plus fixture/temporary
+  observed outbox comparison. Later waves still need live repo exporters, enrollment
+  refresh checks, and observed-vs-expected verification across actual enrolled repos.
+- `assets/coding-harnesses/exception-capture-completeness/prompts/fable5-exception-capture-and-backfill-red-team.prompt.md`
+  is the handoff prompt for Fable 5 to review this exact standard: would the repo
+  have emitted the right packet without Lowell rescuing the miss from chat?
+
+Backfill safety and classification:
+
+- Historical `exceptions backfill` is path/name-signal-only. It does not read file
+  contents for evidence, and every generated event remains candidate evidence.
+- Backfill uses the reviewed classifier in
+  `registry/exception-event-type-registry.json#backfill_classifier`, not hidden
+  in agent memory. Rules are ordered, schema-validated, and include
+  `classification_confidence`, `false_positive_risk`, `applies_when`, and
+  `does_not_apply_when`.
+- Current reviewed path-signal families include parity, slow tests, command
+  timeouts, tool unavailable, environment config gaps, permission blocks,
+  external service failures, data ingestion failures, identity conflicts, source
+  authority conflicts, generated-code compile failures, build/packaging failures,
+  synthetic fixture gaps, stale capture surfaces, graph/taxonomy drift, mail
+  quarantine/backpressure, stale reports, artifact-registration drift,
+  license/provenance review gaps, model-instruction drift, rollback,
+  dependency-install, schema-validation, review-finding, premortem, CI-failure,
+  and generic exception candidates.
+- Every backfill event records `backfill-rule-id`, `backfill-classifier-ref`,
+  `backfill-classifier-version`, and a repo-relative path hash. That provenance
+  lets DAD re-run or invalidate old candidate classifications when the taxonomy
+  changes.
+- Readable repo-relative path refs are suppressed by default. Events store a
+  `repo-relative-sha256` pointer and a `repo-relative-path-redacted:true` marker.
+  `--include-path-refs` and non-DAD backfill roots require `--approval-id` at the
+  CLI layer and should be used only for reviewed local/private runs.
+- Backfill waves should be bounded with `--limit`, `--per-repo-limit`, and
+  `--max-scanned-files`. The scanned-file ceiling prevents a "safe" historical
+  pass from walking indefinitely when many repos are already at cap or only
+  produce duplicate candidates.
+- Exception reports summarize both event types and reviewed event categories, so
+  DAD can detect repeated families of failure without treating raw path keywords
+  as proof.
+
+Observed repo audit add-on:
+
+- `asset-dir exceptions capture-audit` reads repo-local mail outboxes, exception
+  outboxes, and fix-outcome JSONL files without mutating the target repo.
+- The audit also scans repo-relative path names for DAD-worthy capture signals such
+  as postmortems, review findings, harnesses, skills, templates, architecture
+  references, governance maps, data maps, workflows, and learning-loop artifacts.
+- The report flags `missed_capture_candidate`, `pattern_gap_candidate`,
+  `emission_unverified`, `mail_present_exception_gap_candidate`,
+  `stale_capture_surface`, `capture_surface_version_unknown`, and
+  `malformed_jsonl` for review. Existing unrelated mail is not enough to prove
+  capture worked; candidate signals are compared against matching message types,
+  event types, and capture contracts.
+- `asset-dir exceptions capture-audit --strict --fail-on-gaps` also fails on
+  `type_present_uncorrelated`, `emission_unverified`, stale capture surfaces, and
+  unknown capture surfaces. Use this in hardening runs, not as proof that every
+  candidate path signal is a real exception.
+- Private or unknown repo path signals are hash-only by default. Reviewed public
+  or internal repos may include repo-relative path hints for local audit use.
+- Acceptance criterion for this layer: running the observed audit over reviewed
+  enrolled repos should catch the LawFirm-style missed-capture pattern without
+  Lowell needing to notice it in chat, while old repos that predate the upgraded
+  capture surface are labeled as stale/legacy instead of silently passing.
+
+Central mail review add-on:
+
+- `asset-dir mail central-review` records DAD hub triage for collected/routed
+  central mail that was not delivered to a repo-local inbox.
+- Central review writes `processed/mail/archive/central_review_decisions.jsonl`.
+  It does not satisfy repo-local adoption, does not deliver mail, and does not
+  replace `asset-dir mail release` for public-facing delivery gates.
+- Pattern-update testing must cover every asset family DAD wants repos to send:
+  assets, harnesses, skills, templates, workflows, architecture references,
+  governance maps, data maps, mail patterns, exception patterns, review findings,
+  fix outcomes, and learning-loop candidates. When DAD adds or changes a wanted
+  pattern, synthetic fixtures and observed audits must prove repos receive the
+  updated rule and emit the new packet or field after enrollment refresh.
+- Mock Trial / Albert mail `dad:mail:4ea117b9-e308-5646-a364-78d411f7e3b0`
+  added the `artifact_registration_drift` event class. This catches the false-green
+  case where a governed artifact exists but is missing from hash/reproducibility
+  manifests, suite/cadence validators, generated snapshots, AI front doors, TOCs,
+  catalogs, or governance/data maps.
+
+Wave 3: Fix Outcome Ledger
+
+- Add `asset-dir exceptions fix`.
+- Join postflight trace IDs, command results, commits, PRs, tests, and review
+  findings to event IDs.
+- Require validation refs before marking fixed.
+- Add tests that fixed-without-validation remains open, accepted-risk requires owner
+  and expiry, duplicate requires canonical event, and reopened preserves prior outcome.
+
+Wave 4: Reports And Digest
+
+- Add `asset-dir exceptions report`.
+- Add repo digest of open, fixed, accepted, repeated, and stale events.
+- Add context-pack warnings for relevant repeated exceptions.
+- Add tests for low-severity backpressure, digest overflow, stale open counts, and
+  public-safe report output.
+
+Wave 5: Learning Compiler
+
+- Generate candidate lessons, harness cases, test ideas, non-negotiable candidates,
+  and DAD offering calibration requests.
+- Keep all generated learning candidate-only until reviewed.
+- Add tests for independence rules, N < 10 count-only reporting, harmful
+  recommendation calibration, and no global rule from one event.
+
+Wave 6: Cross-Repo Feedback Loop
+
+- Send pointer-only notices to repos using or watching affected assets.
+- Enforce weekly notice budgets.
+- Track whether target repos implemented, saved for future, rejected, or reported
+  the recommendation harmful.
+- Add tests for private-to-public hold, human release approval, weekly notice budget,
+  duplicate notice suppression, repo rename lineage, and repo split behavior.
+
+Wave 7: Runtime Integrations
+
+- Optional CI exporters for GitHub Actions.
+- Optional Python logging handler.
+- Optional Rust tracing subscriber.
+- Optional MCP/tool wrapper that catches agent tool failures.
+- Optional Cloudflare deployment only after local-first model is proven.
+
+## Red-Team And Premortem
+
+Likely failure story:
+
+DAD starts collecting raw logs from many repos, one public repo receives a private
+failure summary, a repeated flaky test is promoted as a global rule too early, and
+agents begin obeying noisy exception-derived advice. Meanwhile, real root causes are
+lost because fix records say "fixed" without validation.
+
+Critical mitigations:
+
+- raw output blocked by default;
+- private-to-public human release gate;
+- no score or cluster confidence without methodology;
+- fixed requires validation refs;
+- accepted requires explicit rationale;
+- generated lessons remain candidate;
+- event and fix schemas validated in CI;
+- malformed records quarantined, not dropped silently;
+- repo allowlist required for collection.
+
+## Fable 5 Review Prompt
+
+```text
+You are reviewing DAD's proposed Exceptions Lake Buildout.
+
+Goal: DAD should collect exception/failure/fix information from all enrolled repos,
+learn from how failures were fixed, and route safe pointer-only recommendations back
+to repos without leaking private information or overriding local source authority.
+
+Please red-team and improve this design:
+
+1. Where could this accidentally collect secrets, private rows, raw logs, prompt
+   injection, or public-unsafe context?
+2. Is the event schema enough to connect an exception to the repo, agent, command,
+   DAD asset, harness, fix, validation, and future lesson?
+3. How would you design the lake if you wanted it to become an exceptional learning
+   engine rather than a graveyard of logs?
+4. What should DAD learn deterministically, and what should require human review?
+5. What should be borrowed from LawFirm OS exception-lake ideas, and what should DAD
+   do better or differently?
+6. What are the highest-leverage first schemas, commands, and tests?
+7. How should DAD avoid false confidence from tiny sample sizes, duplicate failures,
+   flaky tests, and noisy AI-agent mistakes?
+8. What unique architecture would you propose if you were not constrained to a
+   standard logging/observability design?
+
+Return Critical, High, Medium, and Low findings, then a revised implementation order
+with concrete schema and command suggestions. Do not implement changes.
+```

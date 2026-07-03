@@ -1,7 +1,13 @@
 from pathlib import Path
 
 from digital_asset_directory.roadmap import check_roadmap, record_human_gate_evidence
-from digital_asset_directory.validation import validate_repo
+from digital_asset_directory.validation import (
+    _contains_readable_repo_relative_ref,
+    _fix_outcome_semantic_errors,
+    _path_identity_hash,
+    _resolve_observed_audit_repo,
+    validate_repo,
+)
 
 import pytest
 
@@ -13,6 +19,57 @@ ROOT = Path(__file__).resolve().parents[1]
 def test_repo_contracts_validate():
     result = validate_repo(ROOT)
     assert result["valid"], result["errors"]
+
+
+def test_exception_lake_validation_flags_readable_repo_relative_refs():
+    assert _contains_readable_repo_relative_ref(
+        {"context_refs": ["repo-relative:docs/private-postmortem.md"]}
+    )
+    assert not _contains_readable_repo_relative_ref(
+        {"context_refs": ["repo-relative-sha256:abc123"]}
+    )
+
+
+def test_exception_fix_outcome_semantic_validation_flags_false_validated_fix():
+    errors = _fix_outcome_semantic_errors(
+        {
+            "decision": "fixed",
+            "validation_status": "validated",
+            "validation_refs": ["python -m pytest tests/test_fix.py"],
+            "owner_authority": "repo",
+            "event_lookup_status": "missing_from_lake",
+            "canonical_event_id": "",
+            "canonical_event_lookup_status": "missing_from_lake",
+        },
+        7,
+    )
+
+    assert any("missing event" in error for error in errors)
+    assert any("validated but event link" in error for error in errors)
+
+
+def test_observed_audit_external_repo_resolves_by_reviewed_path_hash(tmp_path: Path):
+    hub = tmp_path / "hub"
+    external = tmp_path / "elsewhere" / "Mock Trial4.26"
+    hub.mkdir()
+    external.mkdir(parents=True)
+    repo_info = {
+        "repo_id": "mock-trial-4-26",
+        "path_hint": "Mock Trial4.26",
+        "path_hash": _path_identity_hash(external),
+    }
+
+    resolved, error = _resolve_observed_audit_repo(
+        hub,
+        repo_info,
+        {_path_identity_hash(external): external},
+    )
+    unresolved, unresolved_error = _resolve_observed_audit_repo(hub, repo_info, {})
+
+    assert resolved == external.resolve()
+    assert error == ""
+    assert unresolved is None
+    assert unresolved_error == "unresolved external audited repo"
 
 
 def test_seed_roadmap_file_gate_is_complete():

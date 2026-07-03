@@ -59,6 +59,14 @@ PUBLIC_SAFE_PAYLOAD_KEYS = {
     "redaction_count",
     "redaction_note",
 }
+LOCAL_PATH_FRAGMENTS = (
+    "c:/users/",
+    "c__users__",
+    "/users/",
+    "appdata/",
+    "git projects/",
+    "onedrive/",
+)
 AUTHORITY_BOUNDARY = (
     "DAD mail is append-only candidate evidence. It may suggest lessons, assets, "
     "workflows, taxonomy, capabilities, or governance notices, but it does not "
@@ -93,6 +101,7 @@ def _policy_aliases(policy: Any) -> set[str]:
         value = str(getattr(policy, attr, "") or "").strip()
         if value:
             aliases.add(value)
+            aliases.add(f"repo:{value}")
     path = _policy_path(policy)
     if path:
         aliases.add(Path(path).name)
@@ -149,6 +158,93 @@ def _policy_for_repo(repo: Path | str, policies: Sequence[Any] | None) -> Any | 
     return matches[0] if len(matches) == 1 else None
 
 
+def _path_hash_ref(value: str) -> str:
+    normalized = str(value).replace("\\", "/").strip()
+    return f"path-sha256:{sha256_bytes(normalized.encode('utf-8'))}"
+
+
+def _looks_local_path_like(value: str) -> bool:
+    text = str(value).strip()
+    if not text or text.startswith(("dad://", "repo:", "repo-path-sha256:", "path-sha256:")):
+        return False
+    normalized = text.replace("\\", "/").casefold()
+    return (
+        bool(re.match(r"^[A-Za-z]:[\\/]", text))
+        or text.startswith(("/", "\\"))
+        or any(fragment in normalized for fragment in LOCAL_PATH_FRAGMENTS)
+    )
+
+
+def _safe_repo_ref(value: str | Path, policies: Sequence[Any] | None = None) -> str:
+    text = str(value).strip()
+    if not text:
+        return ""
+    if text in CENTRAL_ONLY_TARGETS or text.startswith("dad://"):
+        return text
+    policy = _policy_for_repo(text, policies)
+    if policy is not None:
+        return f"repo:{getattr(policy, 'id', 'unknown')}"
+    normalized = text.replace("\\", "/")
+    for suffix in (
+        "/.digital-asset/mail/outbox.jsonl",
+        "/.digital-asset/mail/inbox.jsonl",
+        "/.digital-asset/mail/archive.jsonl",
+    ):
+        if normalized.endswith(suffix):
+            repo_part = normalized[: -len(suffix)]
+            return f"{_safe_repo_ref(repo_part, policies)}:{suffix.removeprefix('/')}"
+    if _looks_local_path_like(text):
+        return f"repo-path-sha256:{sha256_bytes(normalized.encode('utf-8'))}"
+    return text
+
+
+def _sanitize_central_review_value(value: Any, policies: Sequence[Any] | None = None) -> Any:
+    if isinstance(value, dict):
+        return {key: _sanitize_central_review_value(item, policies) for key, item in value.items()}
+    if isinstance(value, list):
+        return [_sanitize_central_review_value(item, policies) for item in value]
+    if isinstance(value, str):
+        return _safe_repo_ref(value, policies) if _looks_local_path_like(value) else value
+    return value
+
+
+def sanitize_central_review_record(
+    payload: dict[str, Any], policies: Sequence[Any] | None = None
+) -> dict[str, Any]:
+    sanitized = dict(payload)
+    for key in ("source_repo", "target_repo"):
+        if key in sanitized:
+            sanitized[key] = _safe_repo_ref(str(sanitized[key]), policies)
+    for key in ("payload", "evidence", "suggested_actions"):
+        if key in sanitized:
+            sanitized[key] = _sanitize_central_review_value(sanitized[key], policies)
+    if isinstance(sanitized.get("source_provenance"), dict):
+        sanitized["source_provenance"] = _sanitize_central_review_value(
+            sanitized["source_provenance"],
+            policies,
+        )
+    return sanitized
+
+
+def _sanitize_mail_record_for_storage(
+    record: MailMessageRecord,
+    policies: Sequence[Any] | None = None,
+) -> MailMessageRecord:
+    payload = sanitize_central_review_record(record.model_dump(mode="json"), policies)
+    return MailMessageRecord(**payload)
+
+
+def _central_repo_file_slug(repo: Path, policies: Sequence[Any] | None = None) -> str:
+    ref = _safe_repo_ref(repo, policies)
+    if ref.startswith("repo:"):
+        slug = ref.removeprefix("repo:")
+    elif ref.startswith("repo-path-sha256:"):
+        slug = "repo-path-" + ref.removeprefix("repo-path-sha256:")[:24]
+    else:
+        slug = "repo-key-" + sha256_bytes(ref.encode("utf-8"))[:24]
+    return re.sub(r"[^A-Za-z0-9._-]+", "-", slug).strip("-") or "repo"
+
+
 def _delivery_key_map(
     repos: list[Path], policies: Sequence[Any] | None
 ) -> tuple[dict[str, Path], dict[str, list[str]]]:
@@ -158,6 +254,7 @@ def _delivery_key_map(
     for repo in repos:
         normalized = _normalized_repo(repo)
         candidate_keys.setdefault(normalized, []).append(repo)
+        candidate_keys.setdefault(_safe_repo_ref(repo, policies), []).append(repo)
         policy = _policy_for_repo(repo, policies)
         if policy:
             for alias in _policy_aliases(policy):
@@ -254,6 +351,24 @@ targeted upgrade notices later:
 
 ```text
 asset-dir usage record --repo . --asset <dad-offering-or-asset-id> --status watching
+```
+
+Before composing outbox mail, check what this repo already sent so a reworded
+near-duplicate is not sent again. If the new message is a true upgrade of an
+earlier one (new evidence, new findings), send it with `--supersedes <mail-id>`
+so it joins the original thread instead of duplicating it:
+
+```text
+asset-dir mail outbox-check --repo . --summary "<proposed summary>"
+asset-dir mail compose --repo . --type asset_suggestion --summary "<upgrade>" --supersedes <mail-id>
+```
+
+Send red-team, premortem, audit, security-review, and code-review findings from
+any agent (Fable, Opus, Codex, Claude, Cursor, human) back to DAD as structured
+lessons so repeated failure patterns can be mined:
+
+```text
+asset-dir lesson review-feedback --repo . --agent <agent> --review-type red_team --finding "<summary>"
 ```
 
 Do not commit mailbox JSONL to a public-facing repo unless a human explicitly
@@ -384,6 +499,23 @@ def _append_unique_adoption(path: Path, record: MailAdoptionRecord) -> bool:
         return True
 
 
+def _append_unique_central_decision(path: Path, payload: dict[str, Any]) -> bool:
+    with _jsonl_lock(path):
+        existing = {str(item.get("decision_id", "")) for item in _read_jsonl(path)}
+        if str(payload.get("decision_id", "")) in existing:
+            return False
+        append_jsonl(path, payload)
+        return True
+
+
+def _append_central_audit_record(
+    path: Path,
+    payload: dict[str, Any],
+    repo_policies: Sequence[Any] | None = None,
+) -> None:
+    append_jsonl(path, sanitize_central_review_record(payload, repo_policies))
+
+
 def _redact_value(value: Any) -> tuple[Any, int]:
     if isinstance(value, str):
         return redact_sensitive_text(value)
@@ -501,6 +633,8 @@ def _public_payload_violations(record: MailMessageRecord, target_policy: Any | N
         else:
             strings = [str(value)]
         for text in strings:
+            if _looks_local_path_like(text):
+                violations.append(f"payload_contains_local_path_ref:{key}")
             if len(text) > MAX_PUBLIC_PAYLOAD_STRING:
                 violations.append(f"payload_value_too_long:{key}")
             if "\t" in text or text.count(",") >= 4 or text.count("\n") >= 4:
@@ -570,6 +704,127 @@ def _build_mail_record(
     )
 
 
+OUTBOX_NOVELTY_BASIS = (
+    "deterministic token Jaccard (|intersection|/|union|) between the proposed message's "
+    "summary/payload-value/evidence tokens and each previously sent outbox message after "
+    "stopword removal; thresholds: >=0.6 near_duplicate, >=0.3 related. Routing aid for "
+    "send decisions, not a value score; content-level deltas still belong to "
+    "semantic-evolution grading."
+)
+NEAR_DUPLICATE_THRESHOLD = 0.6
+RELATED_THRESHOLD = 0.3
+
+
+def _payload_value_strings(value: Any) -> list[str]:
+    if isinstance(value, str):
+        return [value]
+    if isinstance(value, dict):
+        strings: list[str] = []
+        for item in value.values():
+            strings.extend(_payload_value_strings(item))
+        return strings
+    if isinstance(value, (list, tuple, set)):
+        strings = []
+        for item in value:
+            strings.extend(_payload_value_strings(item))
+        return strings
+    if isinstance(value, (int, float, bool)) or value is None:
+        return []
+    return [str(value)]
+
+
+def _message_tokens(
+    *,
+    message_type: str,
+    summary: str,
+    payload: dict[str, Any] | None,
+    evidence: list[str] | None,
+) -> set[str]:
+    from .dad_library import PATTERN_MATCH_STOPWORDS, _tokenize
+
+    return _tokenize(
+        [
+            message_type,
+            summary,
+            _payload_value_strings(payload or {}),
+            list(evidence or []),
+        ]
+    ) - PATTERN_MATCH_STOPWORDS
+
+
+def check_outbox_novelty(
+    repo: Path,
+    *,
+    message_type: str = "",
+    summary: str = "",
+    payload: dict[str, Any] | None = None,
+    evidence: list[str] | None = None,
+    limit: int = 5,
+    exclude_mail_ids: set[str] | None = None,
+) -> dict[str, Any]:
+    """Compare a proposed message against this repo's previously sent outbox mail.
+
+    Catches semantic near-duplicates that different wording (and therefore a different
+    dedupe_key) would slip past exact dedupe, and surfaces the prior thread so a true
+    upgrade can be sent as a supersede instead of a parallel message.
+    """
+    candidate_tokens = _message_tokens(
+        message_type=message_type, summary=summary, payload=payload, evidence=evidence
+    )
+    matches: list[dict[str, Any]] = []
+    sent_rows = _read_jsonl(_mail_file(repo, "outbox.jsonl"))
+    for row in sent_rows:
+        mail_id = str(row.get("mail_id", ""))
+        if exclude_mail_ids and mail_id in exclude_mail_ids:
+            continue
+        sent_tokens = _message_tokens(
+            message_type=str(row.get("message_type", "")),
+            summary="",
+            payload=row.get("payload") if isinstance(row.get("payload"), dict) else {},
+            evidence=[str(item) for item in row.get("evidence", []) or []],
+        )
+        union = candidate_tokens | sent_tokens
+        if not union:
+            continue
+        similarity = len(candidate_tokens & sent_tokens) / len(union)
+        if similarity < RELATED_THRESHOLD:
+            continue
+        matches.append(
+            {
+                "mail_id": mail_id,
+                "thread_id": str(row.get("thread_id", "")),
+                "message_type": str(row.get("message_type", "")),
+                "created_at": str(row.get("created_at", "")),
+                "similarity": round(similarity, 3),
+                "relation": (
+                    "near_duplicate"
+                    if similarity >= NEAR_DUPLICATE_THRESHOLD
+                    else "related"
+                ),
+                "new_terms": sorted(candidate_tokens - sent_tokens)[:12],
+            }
+        )
+    matches.sort(key=lambda item: (-item["similarity"], item["mail_id"]))
+    if any(item["relation"] == "near_duplicate" for item in matches):
+        verdict = "already_sent_similar"
+    elif matches:
+        verdict = "possible_upgrade"
+    else:
+        verdict = "new"
+    return {
+        "verdict": verdict,
+        "check_basis": OUTBOX_NOVELTY_BASIS,
+        "sent_count": len(sent_rows),
+        "matches": matches[:limit],
+        "guidance": (
+            "already_sent_similar: do not re-send without new evidence; use supersedes "
+            "for a true upgrade. possible_upgrade: send with supersedes=<mail_id> so the "
+            "receiver sees the lineage in one thread. new: send normally."
+        ),
+        "authority_boundary": AUTHORITY_BOUNDARY,
+    }
+
+
 def compose_mail(
     repo: Path,
     *,
@@ -585,16 +840,54 @@ def compose_mail(
     created_at: str | None = None,
     repo_policies: Sequence[Any] | None = None,
     composed_by: str = "unknown",
+    supersedes: str = "",
+    allow_similar: bool = False,
 ) -> dict[str, Any]:
     policy = _policy_for_repo(repo, repo_policies)
     _raise_if_write_protected(repo, policy, operation="compose")
     mail_dir = ensure_repo_mailbox(repo)
     created = created_at or utc_now()
+    superseded_row: dict[str, Any] | None = None
+    if supersedes:
+        superseded_row = next(
+            (
+                row
+                for row in _read_jsonl(_mail_file(repo, "outbox.jsonl"))
+                if str(row.get("mail_id", "")) == supersedes
+            ),
+            None,
+        )
+        if superseded_row is None:
+            raise ValueError(f"Cannot supersede unknown outbox mail: {supersedes}")
+        if thread_id is None:
+            thread_id = str(superseded_row.get("thread_id", "")) or None
+    novelty = check_outbox_novelty(
+        repo,
+        message_type=message_type,
+        summary=summary,
+        payload=payload,
+        evidence=evidence,
+        exclude_mail_ids={supersedes} if supersedes else None,
+    )
+    if (
+        novelty["verdict"] == "already_sent_similar"
+        and not supersedes
+        and not allow_similar
+    ):
+        top = novelty["matches"][0]
+        raise ValueError(
+            f"Near-duplicate of previously sent mail {top['mail_id']} "
+            f"(similarity {top['similarity']}). Re-send with supersedes=<mail_id> if this "
+            "is a true upgrade, or allow_similar=True to send anyway."
+        )
+    outgoing_payload = {"summary": summary, **(payload or {})}
+    if supersedes:
+        outgoing_payload["supersedes"] = supersedes
     record = _build_mail_record(
         message_type=message_type,
         source_repo=str(repo),
         target_repo=target_repo,
-        payload={"summary": summary, **(payload or {})},
+        payload=outgoing_payload,
         evidence=evidence,
         suggested_actions=suggested_actions,
         sensitivity=sensitivity,
@@ -617,12 +910,144 @@ def compose_mail(
         "record": record.model_dump(mode="json"),
         "appended": appended,
         "outbox": str(mail_dir / "outbox.jsonl"),
+        "novelty_check": {
+            "verdict": novelty["verdict"],
+            "matches": novelty["matches"][:3],
+            "check_basis": novelty["check_basis"],
+        },
+        "supersedes": supersedes,
         "authority_boundary": AUTHORITY_BOUNDARY,
     }
 
 
-def central_inbox_path(hub_root: Path, repo: Path) -> Path:
-    slug = _normalized_repo(repo).replace(":", "").replace("/", "__")
+ASSET_SUGGESTION_DELIVERY_MODEL = (
+    "pointer_not_copy: this message carries the asset's library address, version, "
+    "context, and graph evidence. Asset bodies are never mailed; fetch from the DAD "
+    "library after local review."
+)
+
+
+def _asset_graph_context(hub_root: Path, asset_id: str) -> dict[str, Any]:
+    graph_path = hub_root / "processed" / "learning" / "lesson-graph.json"
+    if not graph_path.exists():
+        return {"available": False, "reason": "lesson graph not built"}
+    try:
+        graph = json.loads(graph_path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return {"available": False, "reason": "lesson graph unreadable"}
+    node_id = f"offering:{asset_id}"
+    labels = {node["node_id"]: str(node.get("label", "")) for node in graph.get("nodes", [])}
+    used_by: list[str] = []
+    lesson_samples: list[str] = []
+    lesson_count = 0
+    for edge in graph.get("edges", []):
+        if edge.get("target") != node_id:
+            continue
+        if edge.get("edge_type") == "uses_asset":
+            used_by.append(labels.get(str(edge.get("source", "")), str(edge.get("source", ""))))
+        elif edge.get("edge_type") == "about_asset":
+            lesson_count += 1
+            if len(lesson_samples) < 2:
+                lesson_samples.append(
+                    labels.get(str(edge.get("source", "")), str(edge.get("source", "")))[:120]
+                )
+    return {
+        "available": True,
+        "graph_generated_at": str(graph.get("generated_at", "")),
+        "used_by_repos": sorted(used_by)[:3],
+        "used_by_repo_count": len(used_by),
+        "lesson_count": lesson_count,
+        "lesson_samples": lesson_samples,
+        "edge_rule": (
+            "Graph evidence is generated candidate metadata from the DAD lesson graph, "
+            "not proof of value."
+        ),
+    }
+
+
+def compose_asset_suggestion(
+    hub_root: Path,
+    *,
+    asset_id: str,
+    target_repo: str,
+    note: str = "",
+    repo_policies: Sequence[Any] | None = None,
+    composed_by: str = "dad_hub",
+    supersedes: str = "",
+    allow_similar: bool = False,
+) -> dict[str, Any]:
+    """Compose the standard repo-facing asset suggestion: pointer + context + graph edges.
+
+    The message tells a repo what the asset does, where it lives in the library, its
+    version and latest upgrade, when to use it, and what the lesson graph shows about
+    who already uses it - never the asset body itself.
+    """
+    from .dad_library import load_offerings
+
+    offering = next(
+        (
+            item
+            for item in load_offerings(hub_root).get("offerings", [])
+            if item.get("offering_id") == asset_id
+        ),
+        None,
+    )
+    if offering is None:
+        raise ValueError(f"Unknown DAD offering: {asset_id}")
+    known_upgrades = offering.get("known_upgrades") or []
+    payload: dict[str, Any] = {
+        "asset_id": asset_id,
+        "asset_name": offering.get("name", ""),
+        "version": str(offering.get("version", "")),
+        "offering_type": str(offering.get("offering_type", "")),
+        "library_path": str(offering.get("path", "")),
+        "library_ref": f"dad://hub/Digital-Assett-Directory/{offering.get('path', '')}",
+        "what_it_does": (offering.get("applies_when") or [""])[0],
+        "capabilities": list(offering.get("capabilities", []))[:6],
+        "use_when": list(offering.get("applies_when", []))[:3],
+        "avoid_when": list(offering.get("does_not_apply_when", []))[:2],
+        "latest_upgrade": (
+            str(known_upgrades[-1].get("upgrade_id", "")) if known_upgrades else ""
+        ),
+        "graph_context": _asset_graph_context(hub_root, asset_id),
+        "note": note,
+        "delivery_model": ASSET_SUGGESTION_DELIVERY_MODEL,
+        "next_step": (
+            "Triage with asset-dir mail triage; if adopting, record usage with "
+            "asset-dir usage record so upgrade notices stay targeted."
+        ),
+    }
+    return compose_mail(
+        hub_root,
+        message_type="asset_suggestion",
+        target_repo=target_repo,
+        summary=(
+            f"DAD asset suggestion: {offering.get('name', asset_id)} "
+            f"v{offering.get('version', '')} ({asset_id})"
+        ),
+        payload=payload,
+        evidence=[
+            str(offering.get("path", "")),
+            "registry/dad-offerings-registry.json",
+            *list(offering.get("source_refs", []))[:2],
+        ],
+        suggested_actions=[
+            "Review the asset at its library path before any local adoption.",
+            "Record a usage row if this repo adopts or watches the asset.",
+        ],
+        repo_policies=repo_policies,
+        composed_by=composed_by,
+        supersedes=supersedes,
+        allow_similar=allow_similar,
+    )
+
+
+def central_inbox_path(
+    hub_root: Path,
+    repo: Path,
+    repo_policies: Sequence[Any] | None = None,
+) -> Path:
+    slug = _central_repo_file_slug(repo, repo_policies)
     return hub_root / CENTRAL_MAIL_DIR / "inbox" / f"{slug}.jsonl"
 
 
@@ -653,7 +1078,7 @@ def _canonical_collected_record(
         target_policy=target_policy,
         existing=incoming.public_release,
     )
-    return _build_mail_record(
+    collected_record = _build_mail_record(
         message_type=incoming.message_type,
         source_repo=str(repo),
         target_repo=incoming.target_repo,
@@ -666,6 +1091,7 @@ def _canonical_collected_record(
         source_provenance=source_provenance,
         public_release=release,
     )
+    return _sanitize_mail_record_for_storage(collected_record, repo_policies)
 
 
 def collect_mail(
@@ -679,23 +1105,43 @@ def collect_mail(
             outbox = _mail_file(repo, "outbox.jsonl")
             payloads, parse_errors = _read_jsonl_with_errors(outbox)
             _quarantine_jsonl_errors(hub_root, parse_errors)
-            errors.extend({"repo": str(repo), **error} for error in parse_errors)
+            errors.extend(
+                {
+                    "repo": _safe_repo_ref(str(repo), repo_policies),
+                    **{
+                        key: _sanitize_central_review_value(value, repo_policies)
+                        for key, value in error.items()
+                    },
+                }
+                for error in parse_errors
+            )
         except ValueError as exc:
-            errors.append({"repo": str(repo), "error": f"Invalid JSONL outbox: {exc}"})
+            errors.append(
+                {
+                    "repo": _safe_repo_ref(str(repo), repo_policies),
+                    "error": f"Invalid JSONL outbox: {exc}",
+                }
+            )
             continue
         for payload in payloads:
             try:
                 record = _canonical_collected_record(repo, payload, repo_policies)
             except (ValidationError, ValueError) as exc:
-                errors.append({"repo": str(repo), "error": str(exc)})
+                errors.append({"repo": _safe_repo_ref(str(repo), repo_policies), "error": str(exc)})
                 continue
             try:
-                if _append_unique(central_inbox_path(hub_root, repo), record):
+                if _append_unique(central_inbox_path(hub_root, repo, repo_policies), record):
                     collected += 1
                 else:
                     duplicates += 1
             except TimeoutError as exc:
-                errors.append({"repo": str(repo), "mail_id": record.mail_id, "error": str(exc)})
+                errors.append(
+                    {
+                        "repo": _safe_repo_ref(str(repo), repo_policies),
+                        "mail_id": record.mail_id,
+                        "error": str(exc),
+                    }
+                )
     report = write_mail_center_report(hub_root)
     return {
         "collected_count": collected,
@@ -755,8 +1201,9 @@ def _quarantine_public_hold(
     *,
     reason: str,
     violations: list[str] | None = None,
+    repo_policies: Sequence[Any] | None = None,
 ) -> None:
-    append_jsonl(
+    _append_central_audit_record(
         hub_root / CENTRAL_MAIL_DIR / "quarantine" / "public_release_holds.jsonl",
         {
             "event_type": "public_release_hold",
@@ -767,6 +1214,7 @@ def _quarantine_public_hold(
             "reason": reason,
             "violations": violations or [],
         },
+        repo_policies,
     )
 
 
@@ -817,6 +1265,7 @@ def route_mail(
         else:
             routed_record = record.model_copy(update={"review_status": "routed_candidate"})
         routed_record = _record_with_policy(routed_record, repo_policies)
+        routed_record = _sanitize_mail_record_for_storage(routed_record, repo_policies)
         try:
             if _append_unique(outbox, routed_record):
                 routed += 1
@@ -837,22 +1286,34 @@ def route_mail(
     }
 
 
-def _delivery_logged(hub_root: Path, repo: Path, record: MailMessageRecord) -> bool:
+def _delivery_logged(
+    hub_root: Path,
+    repo: Path,
+    record: MailMessageRecord,
+    repo_policies: Sequence[Any] | None = None,
+) -> bool:
     log_path = hub_root / CENTRAL_MAIL_DIR / "archive" / "delivery_log.jsonl"
     rows, errors = _read_jsonl_with_errors(log_path)
     _quarantine_jsonl_errors(hub_root, errors)
-    target = _normalized_repo(repo)
+    target_refs = {_normalized_repo(repo), _safe_repo_ref(repo, repo_policies)}
     for row in rows:
         if row.get("event_type") != "delivered":
             continue
-        if str(row.get("mail_id")) == record.mail_id and _normalized_repo(
-            str(row.get("target_repo", ""))
-        ) == target:
+        row_target = str(row.get("target_repo", ""))
+        if str(row.get("mail_id")) == record.mail_id and (
+            _normalized_repo(row_target, preserve_named_target=True) in target_refs
+            or row_target in target_refs
+        ):
             return True
     return False
 
 
-def _mail_exists(repo: Path, record: MailMessageRecord, hub_root: Path | None = None) -> bool:
+def _mail_exists(
+    repo: Path,
+    record: MailMessageRecord,
+    hub_root: Path | None = None,
+    repo_policies: Sequence[Any] | None = None,
+) -> bool:
     identity = _dedupe_identity(record.model_dump(mode="json"))
     inbox_path = _mail_file(repo, "inbox.jsonl")
     if identity in {_dedupe_identity(item) for item in _read_jsonl(inbox_path)}:
@@ -860,7 +1321,7 @@ def _mail_exists(repo: Path, record: MailMessageRecord, hub_root: Path | None = 
     for item in _read_jsonl(_mail_file(repo, "archive.jsonl")):
         if identity == _dedupe_identity(item):
             return True
-    if hub_root and _delivery_logged(hub_root, repo, record):
+    if hub_root and _delivery_logged(hub_root, repo, record, repo_policies):
         return True
     return False
 
@@ -980,7 +1441,7 @@ def deliver_mail(
             record, repo_policies, release_decision=release_decision
         )
         if _policy_write_protected(target_policy):
-            append_jsonl(
+            _append_central_audit_record(
                 delivery_log,
                 {
                     "event_type": "central_only",
@@ -990,6 +1451,7 @@ def deliver_mail(
                     "source_provenance": policy_record.source_provenance,
                     "public_release": policy_record.public_release,
                 },
+                repo_policies,
             )
             skipped.append(
                 {
@@ -1008,6 +1470,7 @@ def deliver_mail(
                 policy_record,
                 reason="public_safe_payload_violation",
                 violations=public_violations,
+                repo_policies=repo_policies,
             )
             skipped.append(
                 {
@@ -1019,7 +1482,7 @@ def deliver_mail(
             held_for_release += 1
             continue
         if release.get("public_release_status") == "rejected":
-            append_jsonl(
+            _append_central_audit_record(
                 delivery_log,
                 {
                     "event_type": "public_release_rejected",
@@ -1029,6 +1492,7 @@ def deliver_mail(
                     "source_provenance": policy_record.source_provenance,
                     "public_release": release,
                 },
+                repo_policies,
             )
             rejected_release += 1
             continue
@@ -1037,8 +1501,9 @@ def deliver_mail(
                 hub_root,
                 policy_record,
                 reason="human_release_required",
+                repo_policies=repo_policies,
             )
-            append_jsonl(
+            _append_central_audit_record(
                 delivery_log,
                 {
                     "event_type": "held_for_public_release",
@@ -1048,13 +1513,14 @@ def deliver_mail(
                     "source_provenance": policy_record.source_provenance,
                     "public_release": release,
                 },
+                repo_policies,
             )
             held_for_release += 1
             continue
         try:
             ensure_repo_mailbox(target_repo)
         except (OSError, ValueError) as exc:
-            append_jsonl(
+            _append_central_audit_record(
                 delivery_log,
                 {
                     "event_type": "central_only",
@@ -1064,17 +1530,18 @@ def deliver_mail(
                     "source_provenance": policy_record.source_provenance,
                     "public_release": release,
                 },
+                repo_policies,
             )
             central_only += 1
             continue
-        if _mail_exists(target_repo, policy_record, hub_root):
+        if _mail_exists(target_repo, policy_record, hub_root, repo_policies):
             ack = _ack_record(target_repo, policy_record)
             try:
                 _append_unique(_mail_file(target_repo, "archive.jsonl"), ack)
             except TimeoutError as exc:
                 errors.append({"mail_id": record.mail_id, "error": str(exc)})
                 continue
-            append_jsonl(
+            _append_central_audit_record(
                 delivery_log,
                 {
                     "event_type": "duplicate_ack",
@@ -1084,16 +1551,20 @@ def deliver_mail(
                     "source_provenance": policy_record.source_provenance,
                     "public_release": release,
                 },
+                repo_policies,
             )
             acknowledged_duplicates += 1
             continue
-        delivered_record = policy_record.model_copy(update={"review_status": "delivered_candidate"})
+        delivered_record = _sanitize_mail_record_for_storage(
+            policy_record.model_copy(update={"review_status": "delivered_candidate"}),
+            repo_policies,
+        )
         try:
             _append_unique(_mail_file(target_repo, "inbox.jsonl"), delivered_record)
         except TimeoutError as exc:
             errors.append({"mail_id": record.mail_id, "error": str(exc)})
             continue
-        append_jsonl(
+        _append_central_audit_record(
             delivery_log,
             {
                 "event_type": "delivered",
@@ -1103,6 +1574,7 @@ def deliver_mail(
                 "source_provenance": delivered_record.source_provenance,
                 "public_release": release,
             },
+            repo_policies,
         )
         delivered += 1
     report = write_mail_center_report(hub_root)
@@ -1170,6 +1642,93 @@ def review_mail(
         "appended": appended,
         "archive": str(archive_path),
         "authority_boundary": AUTHORITY_BOUNDARY,
+    }
+
+
+def _central_review_log_path(hub_root: Path) -> Path:
+    return hub_root / CENTRAL_MAIL_DIR / "archive" / "central_review_decisions.jsonl"
+
+
+def _central_message_matches_id(record: MailMessageRecord, mail_id: str) -> bool:
+    return (
+        record.mail_id == mail_id
+        or str(record.source_provenance.get("original_mail_id") or "") == mail_id
+    )
+
+
+def review_central_mail(
+    hub_root: Path,
+    *,
+    mail_id: str,
+    decision: str,
+    decided_by: str = "unknown",
+    human_verified: bool = False,
+    notes: str = "",
+    decided_at: str | None = None,
+    repo_policies: Sequence[Any] | None = None,
+) -> dict[str, Any]:
+    normalized_decision = decision.replace("-", "_").lower()
+    if normalized_decision not in {"accept", "defer", "reject", "archive"}:
+        raise ValueError("central mail decision must be accept, defer, reject, or archive")
+    records = [
+        record
+        for record in [
+            *_all_central_messages(hub_root, "inbox"),
+            *_all_central_messages(hub_root, "outbox"),
+        ]
+        if _central_message_matches_id(record, mail_id)
+    ]
+    if not records:
+        raise ValueError(f"No central mail found for {mail_id}.")
+    record = records[0]
+    timestamp = decided_at or utc_now()
+    decision_record = MailDecisionRecord(
+        decision_id=stable_id(
+            "central-mail-decision",
+            record.mail_id,
+            normalized_decision,
+            "human" if human_verified else "agent",
+        ),
+        mail_id=record.mail_id,
+        repository="dad://central-mail",
+        decision=normalized_decision,  # type: ignore[arg-type]
+        decided_at=timestamp,
+        decided_by=decided_by,
+        decision_actor_type="human" if human_verified else "agent",
+        human_verified=human_verified,
+        notes=notes,
+        review_status="human_reviewed" if human_verified else "agent_triage",
+    )
+    payload = sanitize_central_review_record(
+        {
+            **decision_record.model_dump(mode="json"),
+            "schema_version": "0.1.0",
+            "requested_mail_id": mail_id,
+            "central_review": True,
+            "message_type": record.message_type,
+            "source_repo": record.source_repo,
+            "target_repo": record.target_repo,
+            "dedupe_key": record.dedupe_key,
+            "source_provenance": record.source_provenance,
+            "public_release": record.public_release,
+            "public_release_gate_satisfied": False,
+            "target_repo_adoption_satisfied": False,
+            "authority_boundary": (
+                "Central mail review is DAD triage only. It does not satisfy human "
+                "public release, deliver mail to a target repo, or create target repo adoption."
+            ),
+        },
+        repo_policies,
+    )
+    log_path = _central_review_log_path(hub_root)
+    appended = _append_unique_central_decision(log_path, payload)
+    report = write_mail_center_report(hub_root)
+    return {
+        "decision": payload,
+        "appended": appended,
+        "archive": (CENTRAL_MAIL_DIR / "archive" / "central_review_decisions.jsonl").as_posix(),
+        "report": report,
+        "authority_boundary": payload["authority_boundary"],
     }
 
 
@@ -1290,6 +1849,7 @@ def release_mail(
     human_reviewed_by: str,
     notes: str = "",
     decided_at: str | None = None,
+    repo_policies: Sequence[Any] | None = None,
 ) -> dict[str, Any]:
     normalized_decision = decision.lower()
     if normalized_decision not in {"approve", "reject"}:
@@ -1321,6 +1881,7 @@ def release_mail(
         "public_release": records[0].public_release,
         "authority_boundary": "Human release gates private/internal/unknown-origin mail before public-facing delivery.",
     }
+    record = sanitize_central_review_record(record, repo_policies)
     append_jsonl(_release_record_path(hub_root), record)
     return {
         "release": record,
@@ -1404,6 +1965,156 @@ def mail_digest_status(repo: Path, *, now: str | None = None, stale_hours: int =
     }
 
 
+DEFERRED_TRIAGE_DECISIONS = {"save_for_future", "defer"}
+DEFERRED_MAIL_PAYLOAD_KEYS = (
+    "summary",
+    "note",
+    "notes",
+    "path",
+    "paths",
+    "asset_id",
+    "asset_ids",
+    "capability",
+    "taxonomy",
+    "source_ref",
+)
+DEFERRED_MATCH_BASIS = (
+    "deterministic keyword overlap between current task tokens and the deferred message's "
+    "type, payload, evidence, suggested actions, and adoption notes after stopword removal; "
+    "count-ranked routing aid, not a value score. repo_watches_asset comes from central "
+    "usage-ledger rows with status using or watching for an asset the message references."
+)
+
+
+def _latest_adoption_by_mail(repo: Path) -> dict[str, dict[str, Any]]:
+    latest: dict[str, dict[str, Any]] = {}
+    for row in _read_jsonl(_mail_file(repo, "adoption.jsonl")):
+        mail_id = str(row.get("mail_id", ""))
+        if not mail_id:
+            continue
+        current = latest.get(mail_id)
+        if current is None or str(row.get("recorded_at", "")) >= str(current.get("recorded_at", "")):
+            latest[mail_id] = row
+    return latest
+
+
+def _deferred_message_index(repo: Path) -> dict[str, dict[str, Any]]:
+    messages: dict[str, dict[str, Any]] = {}
+    for name in ("inbox.jsonl", "archive.jsonl"):
+        for row in _read_jsonl(_mail_file(repo, name)):
+            mail_id = str(row.get("mail_id", ""))
+            if mail_id:
+                messages.setdefault(mail_id, row)
+    return messages
+
+
+def _watched_assets_for_repo(hub_root: Path, repo: Path) -> set[str]:
+    ledger = hub_root / "processed" / "usage" / "repo-asset-usage.jsonl"
+    normalized = str(repo.resolve()).replace("\\", "/")
+    watched: set[str] = set()
+    for row in _read_jsonl(ledger):
+        if str(row.get("status", "")) not in {"using", "watching"}:
+            continue
+        row_repo = str(row.get("repo", ""))
+        if row_repo == normalized or Path(row_repo).name == repo.name:
+            asset_id = str(row.get("asset_id", ""))
+            if asset_id:
+                watched.add(asset_id)
+    return watched
+
+
+def resurface_deferred_mail(
+    repo: Path,
+    *,
+    task: str,
+    hub_root: Path | None = None,
+    limit: int = 3,
+) -> dict[str, Any]:
+    """Bring back save_for_future/defer mail when the current task or watched assets make it relevant.
+
+    Combines two signals: the repo's own triage records (its read mail) and the central
+    usage ledger (library edges showing the repo now uses or watches a referenced asset).
+    Resurfaced items are candidates to re-triage, not obligations.
+    """
+    from .dad_library import PATTERN_MATCH_STOPWORDS, _tokenize
+
+    adoption = _latest_adoption_by_mail(repo)
+    deferred = {
+        mail_id: row
+        for mail_id, row in adoption.items()
+        if str(row.get("intake_decision", "")) in DEFERRED_TRIAGE_DECISIONS
+    }
+    result = {
+        "deferred_total": len(deferred),
+        "match_basis": DEFERRED_MATCH_BASIS,
+        "items": [],
+        "authority_boundary": AUTHORITY_BOUNDARY,
+    }
+    if not deferred:
+        return result
+    messages = _deferred_message_index(repo)
+    task_tokens = _tokenize(task) - PATTERN_MATCH_STOPWORDS
+    watched = _watched_assets_for_repo(hub_root, repo) if hub_root else set()
+    items: list[dict[str, Any]] = []
+    for mail_id, row in deferred.items():
+        message = messages.get(mail_id, {})
+        payload = message.get("payload", {}) if isinstance(message.get("payload"), dict) else {}
+        asset_refs = sorted(
+            {
+                str(value)
+                for value in [
+                    payload.get("asset_id", ""),
+                    *(payload.get("asset_ids") or []),
+                    *(row.get("source_asset_refs") or []),
+                ]
+                if str(value)
+            }
+        )
+        message_tokens = _tokenize(
+            [
+                str(message.get("message_type", "")),
+                *[payload.get(key) for key in DEFERRED_MAIL_PAYLOAD_KEYS],
+                message.get("evidence", []),
+                message.get("suggested_actions", []),
+                str(row.get("planned_use", "")),
+                str(row.get("notes", "")),
+                asset_refs,
+            ]
+        ) - PATTERN_MATCH_STOPWORDS
+        matched = sorted(task_tokens & message_tokens)
+        repo_watches_asset = bool(watched & set(asset_refs))
+        if not matched and not repo_watches_asset:
+            continue
+        summary = str(payload.get("summary") or payload.get("note") or "")[:160]
+        items.append(
+            {
+                "mail_id": mail_id,
+                "message_type": str(message.get("message_type", "unknown")),
+                "summary": summary,
+                "intake_decision": str(row.get("intake_decision", "")),
+                "recorded_at": str(row.get("recorded_at", "")),
+                "matched_terms": matched,
+                "repo_watches_asset": repo_watches_asset,
+                "source_asset_refs": asset_refs,
+                "why_now": (
+                    "repo now uses or watches a referenced asset"
+                    if repo_watches_asset
+                    else "previously deferred mail matches the current task context"
+                ),
+                "next_step": "Re-triage with asset-dir mail triage; resurfacing is a reminder, not an obligation.",
+            }
+        )
+    items.sort(
+        key=lambda item: (
+            not item["repo_watches_asset"],
+            -len(item["matched_terms"]),
+            item["mail_id"],
+        )
+    )
+    result["items"] = items[:limit]
+    return result
+
+
 def write_mail_center_report(hub_root: Path) -> dict[str, str]:
     inbox = _all_central_messages(hub_root, "inbox")
     outbox = _all_central_messages(hub_root, "outbox")
@@ -1471,4 +2182,7 @@ def write_mail_center_report(hub_root: Path) -> dict[str, str]:
     for message_type, count in summary["message_type_counts"].items():
         lines.append(f"- `{message_type}`: **{count}**")
     atomic_write_text(report_md, "\n".join(lines) + "\n")
-    return {"report_markdown": str(report_md), "report_json": str(report_json)}
+    return {
+        "report_markdown": (REPORTS_DIR / "mail_center.md").as_posix(),
+        "report_json": (REPORTS_DIR / "mail_center.json").as_posix(),
+    }

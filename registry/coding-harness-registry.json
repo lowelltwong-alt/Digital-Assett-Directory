@@ -2,6 +2,33 @@
   "schema_version": "0.1.0",
   "registry_id": "coding-harness-registry",
   "authority_boundary": "Coding harnesses are reusable candidate systems for improving AI coding, testing, review, and governance. They do not prove correctness or authorize downstream mutation by themselves.",
+  "future_candidate_harnesses": [
+    {
+      "harness_id": "dad:harness:context-pack-compiler",
+      "status": "candidate_only_not_implemented",
+      "purpose": "Evaluate whether preflight context packs improve task completion versus scattered registry/docs browsing."
+    },
+    {
+      "harness_id": "dad:harness:recommendation-calibration-eval",
+      "status": "candidate_only_not_implemented",
+      "purpose": "Measure whether DAD recommendations are used, ignored, harmful, or miscalibrated."
+    },
+    {
+      "harness_id": "dad:harness:outbox-emission-gate",
+      "status": "candidate_only_not_implemented",
+      "purpose": "Screen repo outbox mail before private or sensitive payloads leave the source repo."
+    },
+    {
+      "harness_id": "dad:harness:ai-legibility-lint",
+      "status": "candidate_only_not_implemented",
+      "purpose": "Detect code structures that are hard for AI agents and humans to review safely."
+    },
+    {
+      "harness_id": "dad:harness:learning-compiler",
+      "status": "candidate_only_not_implemented",
+      "purpose": "Cluster postflight lessons into candidate assets, needs, and harness improvements for human review."
+    }
+  ],
   "harnesses": [
     {
       "harness_id": "dad:harness:python-test-performance-orchestration",
@@ -72,7 +99,7 @@
       "version": "0.1.0",
       "path": "assets/coding-harnesses/agent-instruction-code-review-red-team",
       "family": "red_team",
-      "status": "candidate",
+      "status": "active",
       "languages": ["agent-instruction", "python", "rust", "mixed"],
       "repo_types": ["application", "library", "control_plane", "template_repo"],
       "domains": ["ai_engineering", "governance", "security"],
@@ -80,11 +107,11 @@
       "task_types": ["review", "premortem", "agent_instruction_design", "security_review"],
       "capabilities": ["fresh_eyes_review", "premortem_prompt", "criticality_ranking"],
       "public_safe": true,
-      "entrypoints": ["README.md", "harness.json", "prompts/README.md"],
+      "entrypoints": ["README.md", "harness.json", "prompts/README.md", "tests-or-evals/red-team-rubric.md", "tests-or-evals/labeled-eval-cases.json"],
       "research_questions": ["What failure story would make this agent guidance unsafe?", "Which tests would catch false green outcomes?"],
       "validation_commands": ["python -m pytest tests/test_mail_center.py -q"],
-      "source_evidence": ["templates/load-bearing-decision-review.template.md", "docs/LOAD_BEARING_DECISION_REVIEW.md"],
-      "review_status": "candidate",
+      "source_evidence": ["templates/load-bearing-decision-review.template.md", "docs/LOAD_BEARING_DECISION_REVIEW.md", "tests-or-evals/red-team-rubric.md", "tests-or-evals/labeled-eval-cases.json"],
+      "review_status": "reviewed",
       "authority_boundary": "Red-team findings are recommendations until implemented and validated."
     },
     {
@@ -128,6 +155,50 @@
       "source_evidence": ["docs/MAIL_CENTER.md", "schemas/mail-message.schema.json"],
       "review_status": "candidate",
       "authority_boundary": "Best-effort screening does not prove safety; human release gates private-to-public movement."
+    },
+    {
+      "harness_id": "dad:harness:exception-capture-completeness",
+      "name": "Exception Capture Completeness",
+      "version": "0.1.0",
+      "path": "assets/coding-harnesses/exception-capture-completeness",
+      "family": "learning_capture",
+      "status": "candidate",
+      "languages": ["python", "agent-instruction"],
+      "repo_types": ["control_plane", "governed_repo_family", "application", "library"],
+      "domains": ["governance", "learning_loop", "exceptions_lake", "mail_center"],
+      "context_tags": ["exception_capture", "mail_emission", "pattern_update", "synthetic_fixture", "observed_repo_audit"],
+      "task_types": ["testing", "governance_review", "learning_loop", "repo_enrollment"],
+      "capabilities": [
+        "capture_completeness_eval",
+        "pattern_update_simulation",
+        "required_field_contract_check",
+        "negative_payload_gate",
+        "observed_outbox_audit"
+      ],
+      "public_safe": true,
+      "entrypoints": [
+        "README.md",
+        "harness.json",
+        "examples/synthetic-capture-scenarios.json",
+        "prompts/fable5-exception-capture-and-backfill-red-team.prompt.md"
+      ],
+      "research_questions": [
+        "Would a repo emit the right DAD mail or exception packet without Lowell noticing the pattern manually?",
+        "Do updated DAD needs, offerings, mail, and exception patterns trigger capture-surface update requirements?",
+        "Would the repo emit the required metadata fields for the packet, not just the right packet type?"
+      ],
+      "validation_commands": [
+        "python -m pytest tests/test_exception_capture.py -q",
+        "python -m digital_asset_directory.cli exceptions capture-check --scenarios assets/coding-harnesses/exception-capture-completeness/examples/synthetic-capture-scenarios.json",
+        "python -m digital_asset_directory.cli exceptions capture-audit --repo all"
+      ],
+      "source_evidence": [
+        "docs/DAD_EXCEPTIONS_LAKE_BUILDOUT.md",
+        "registry/exception-capture-pattern-registry.json",
+        "templates/downstream/EXCEPTIONS_README.md"
+      ],
+      "review_status": "candidate",
+      "authority_boundary": "The harness proves synthetic capture-rule coverage and read-only observed outbox/path-signal audits. It does not prove real repo completeness, public safety, or source truth."
     }
   ]
 }

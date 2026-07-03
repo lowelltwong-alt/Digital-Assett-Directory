@@ -1,0 +1,507 @@
+{
+  "schema_version": "0.1.0",
+  "asset_id": "dad:offering:python-underused-idioms",
+  "version": "0.1.0",
+  "purpose": "Give AI coding agents a curated card of stdlib Python constructs that are under-represented in public code relative to their value for writing, reading, and researching code, so agents deliberately consider them instead of defaulting to training-distribution habits.",
+  "selection_rule": "Included constructs are stdlib-only, stable, and judged under-represented relative to their value. Under-representation claims are heuristic judgments, not measured GitHub frequencies. Every entry carries avoid_when; an idiom used where avoid_when applies makes code worse, not better.",
+  "usage_rule": "Pick the groups matching the task; cite idiom ids (e.g. py-idiom:walrus) in reviews and lessons so usage becomes traceable. Never rewrite working code solely to use an idiom.",
+  "frontier_research_sources": [
+    {
+      "source_id": "python-core",
+      "cadence": "weekly",
+      "look_for": ["accepted PEPs", "CPython diagnostics/performance", "stdlib features", "typing and concurrency changes"],
+      "registry_ref": "registry/trusted-source-registry.json#python-core"
+    },
+    {
+      "source_id": "python-packaging",
+      "cadence": "monthly",
+      "look_for": ["packaging standards", "build isolation", "dependency metadata", "supply-chain controls"],
+      "registry_ref": "registry/trusted-source-registry.json#python-packaging"
+    },
+    {
+      "source_id": "astral",
+      "cadence": "monthly",
+      "look_for": ["uv and ruff speedups", "lint rules that prevent AI-generated bugs", "environment workflows"],
+      "registry_ref": "registry/trusted-source-registry.json#astral"
+    },
+    {
+      "source_id": "pyo3",
+      "cadence": "monthly",
+      "look_for": ["Python-to-Rust extension workflows", "bridge changes that affect mixed-language repos"],
+      "registry_ref": "registry/trusted-source-registry.json#pyo3"
+    }
+  ],
+  "groups": [
+    {
+      "group_id": "syntax_and_operators",
+      "label": "Syntax and operators",
+      "idioms": [
+        {
+          "id": "py-idiom:walrus",
+          "construct": ":= assignment expression",
+          "min_python": "3.8",
+          "what": "Bind a value inside an expression, usually a while condition or comprehension filter.",
+          "use_when": "A loop reads a chunk/match then tests it, or a comprehension would otherwise compute the same value twice.",
+          "avoid_when": "Nested inside complex expressions or used to save one line at the cost of a double-take.",
+          "ai_note": "Agents often write read-then-check loops with duplicated calls; walrus removes the duplication and the drift risk between the two call sites.",
+          "example": "while chunk := reader.read(8192): process(chunk)"
+        },
+        {
+          "id": "py-idiom:dict-merge-operator",
+          "construct": "dict | dict and dict |= dict",
+          "min_python": "3.9",
+          "what": "Merge dicts with an operator; right side wins on key conflicts.",
+          "use_when": "Building config layers such as defaults | file_config | cli_overrides.",
+          "avoid_when": "You need deep merging or mutation of a shared dict matters.",
+          "ai_note": "Agents default to {**a, **b} or dict.update; the operator states precedence order in one readable line.",
+          "example": "config = defaults | file_config | cli_overrides"
+        },
+        {
+          "id": "py-idiom:fstring-debug",
+          "construct": "f\"{expr=}\" debug specifier",
+          "min_python": "3.8",
+          "what": "Renders both the expression text and its value.",
+          "use_when": "Temporary debug output and assertion messages.",
+          "avoid_when": "User-facing or log-schema output where the expression text is noise.",
+          "ai_note": "Halves the tokens of print(f\"x={x}\") patterns and cannot drift from the variable it names.",
+          "example": "print(f\"{len(candidates)=} {threshold=}\")"
+        },
+        {
+          "id": "py-idiom:chained-comparison",
+          "construct": "a < b < c chained comparisons",
+          "min_python": "3.0",
+          "what": "Range checks in mathematical notation; b evaluates once.",
+          "use_when": "Bounds and range checks.",
+          "avoid_when": "Mixing directions (a < b > c) which parses but misleads.",
+          "ai_note": "Agents write `x >= lo and x <= hi`; `lo <= x <= hi` is shorter and matches the math it implements.",
+          "example": "if 0 <= index < len(items): ..."
+        },
+        {
+          "id": "py-idiom:iterable-unpacking",
+          "construct": "first, *rest = items / a, b = b, a",
+          "min_python": "3.0",
+          "what": "Structural unpacking with a starred remainder, and swap without a temp variable.",
+          "use_when": "Splitting head/tail, unpacking known-shape rows, swapping.",
+          "avoid_when": "The right side's shape is not locally obvious; unpacking then hides a latent ValueError.",
+          "ai_note": "Communicates expected shape to the reader and fails loudly on shape drift instead of silently mis-indexing.",
+          "example": "command, *args = line.split()"
+        },
+        {
+          "id": "py-idiom:zip-strict",
+          "construct": "zip(a, b, strict=True)",
+          "min_python": "3.10",
+          "what": "zip that raises if inputs have different lengths instead of silently truncating.",
+          "use_when": "Zipping sequences that must stay aligned (ids with scores, headers with rows).",
+          "avoid_when": "Intentional truncation against an infinite iterator.",
+          "ai_note": "Silent zip truncation is a classic quiet data bug in generated code; strict=True converts it to an immediate error.",
+          "example": "for name, score in zip(names, scores, strict=True): ..."
+        },
+        {
+          "id": "py-idiom:divmod",
+          "construct": "divmod(n, base)",
+          "min_python": "3.0",
+          "what": "Quotient and remainder in one call.",
+          "use_when": "Pagination, time decomposition, base conversion.",
+          "avoid_when": "Only one of the two values is needed.",
+          "ai_note": "Replaces paired // and % lines that agents must otherwise keep consistent by hand.",
+          "example": "minutes, seconds = divmod(total_seconds, 60)"
+        },
+        {
+          "id": "py-idiom:named-slice",
+          "construct": "named slice objects",
+          "min_python": "3.0",
+          "what": "Assign slice(...) to a constant and index with it.",
+          "use_when": "Fixed-layout records, repeated magic-number slices.",
+          "avoid_when": "One-off slices where the literal is clearer.",
+          "ai_note": "Turns opaque line[23:31] into line[TIMESTAMP], self-documenting fixed-width parsing for the next reader.",
+          "example": "HEADER = slice(0, 4); kind = record[HEADER]"
+        },
+        {
+          "id": "py-idiom:removeprefix",
+          "construct": "str.removeprefix / str.removesuffix",
+          "min_python": "3.9",
+          "what": "Strip an exact prefix/suffix only if present.",
+          "use_when": "Cleaning ids, paths, and markers.",
+          "avoid_when": "You need lstrip/rstrip character-set semantics (a different operation).",
+          "ai_note": "Agents write error-prone s[len(prefix):] slices or misuse .lstrip(prefix) which strips a character set, a well-known bug class.",
+          "example": "asset = ref.removeprefix(\"asset:\")"
+        }
+      ]
+    },
+    {
+      "group_id": "control_flow_and_matching",
+      "label": "Control flow and matching",
+      "idioms": [
+        {
+          "id": "py-idiom:match-case",
+          "construct": "match/case structural pattern matching",
+          "min_python": "3.10",
+          "what": "Destructure tagged unions, tuples, and mappings by shape with capture variables.",
+          "use_when": "Dispatching on message/event/AST shapes with several variants; parsing command tuples.",
+          "avoid_when": "A dict lookup or simple if/elif on one value is enough; match on bare class names risks the name-capture pitfall.",
+          "ai_note": "Under-represented because most training code predates 3.10. Exhaustive case arms with a final `case _` make variant handling reviewable at a glance.",
+          "example": "match msg:\n    case {\"kind\": \"upgrade\", \"asset_id\": aid}: handle_upgrade(aid)\n    case _: quarantine(msg)"
+        },
+        {
+          "id": "py-idiom:except-group",
+          "construct": "ExceptionGroup and except*",
+          "min_python": "3.11",
+          "what": "Raise/handle multiple concurrent errors without discarding all but the first.",
+          "use_when": "Fan-out work (TaskGroup, batch validation) where several failures matter.",
+          "avoid_when": "Sequential code with a single failure path.",
+          "ai_note": "Agents commonly report only the first validation error; collecting into an ExceptionGroup preserves the full failure picture for the next agent.",
+          "example": "except* OSError as eg: log_each(eg.exceptions)"
+        },
+        {
+          "id": "py-idiom:contextlib-suppress",
+          "construct": "contextlib.suppress(Exc)",
+          "min_python": "3.4",
+          "what": "Explicitly ignore a specific expected exception.",
+          "use_when": "Best-effort cleanup like FileNotFoundError on delete.",
+          "avoid_when": "The exception carries information you should log or handle; never suppress broad Exception.",
+          "ai_note": "Replaces try/except/pass blocks; states intent ('this failure is fine') instead of looking like an unfinished handler.",
+          "example": "with suppress(FileNotFoundError): path.unlink()"
+        },
+        {
+          "id": "py-idiom:exit-stack",
+          "construct": "contextlib.ExitStack",
+          "min_python": "3.3",
+          "what": "Manage a dynamic number of context managers with correct unwind order.",
+          "use_when": "Opening N files/resources decided at runtime, or conditional resource acquisition.",
+          "avoid_when": "A fixed small number of resources fits a plain with statement.",
+          "ai_note": "Agents nest with-statements or leak handles when the count is dynamic; ExitStack is the correct primitive and rarely appears in generated code.",
+          "example": "with ExitStack() as stack:\n    files = [stack.enter_context(open(p)) for p in paths]"
+        },
+        {
+          "id": "py-idiom:for-else",
+          "construct": "for/else and while/else",
+          "min_python": "3.0",
+          "what": "The else block runs only when the loop finished without break.",
+          "use_when": "Search loops where 'not found' has a distinct action, replacing found-flag variables.",
+          "avoid_when": "Team readability is a concern; many humans misread loop-else. Prefer extracting a function returning early when in doubt.",
+          "ai_note": "Included with a warning: knowing it matters for reading code, but flag-variable or early-return styles are often the safer write choice.",
+          "example": "for row in rows:\n    if row.id == target: break\nelse:\n    raise KeyError(target)"
+        },
+        {
+          "id": "py-idiom:sentinel-default",
+          "construct": "module-level sentinel = object()",
+          "min_python": "3.0",
+          "what": "A unique default distinguishing 'not passed' from None.",
+          "use_when": "None is a legitimate caller value and the API must detect omission.",
+          "avoid_when": "None never collides with real values; plain None default is simpler.",
+          "ai_note": "Agents overload None for 'missing' and create untestable branches when None is also valid data; the sentinel pattern is the standard fix.",
+          "example": "_MISSING = object()\ndef get(key, default=_MISSING): ..."
+        }
+      ]
+    },
+    {
+      "group_id": "stdlib_data_tools",
+      "label": "Stdlib data tools",
+      "idioms": [
+        {
+          "id": "py-idiom:counter-arithmetic",
+          "construct": "collections.Counter with +, -, &, |",
+          "min_python": "3.0",
+          "what": "Multiset arithmetic: add counts, subtract with floor at zero, intersection/union by min/max count.",
+          "use_when": "Diffing token/asset counts between two states, top-k with most_common.",
+          "avoid_when": "Negative counts must be preserved (use counter.subtract).",
+          "ai_note": "Agents hand-roll count-merging loops; Counter algebra is one line and already handles missing keys.",
+          "example": "regressions = before_counts - after_counts"
+        },
+        {
+          "id": "py-idiom:defaultdict",
+          "construct": "collections.defaultdict(list)",
+          "min_python": "3.0",
+          "what": "Auto-initialize missing values on first access.",
+          "use_when": "Grouping/accumulating into lists, sets, or counters.",
+          "avoid_when": "Reads should NOT create keys (membership checks on a defaultdict mutate it via [] access).",
+          "ai_note": "The avoid_when is the valuable half: generated code frequently introduces the read-creates-key bug.",
+          "example": "by_repo = defaultdict(list); by_repo[lesson.repo].append(lesson)"
+        },
+        {
+          "id": "py-idiom:deque-maxlen",
+          "construct": "collections.deque(maxlen=n)",
+          "min_python": "3.0",
+          "what": "Fixed-size rolling window that discards oldest items automatically; O(1) appends at both ends.",
+          "use_when": "Last-N logs, sliding windows, tail buffers.",
+          "avoid_when": "Random access by index dominates (lists are faster for that).",
+          "ai_note": "Replaces manual `if len(buf) > n: buf.pop(0)` which is both O(n) and a common off-by-one site.",
+          "example": "recent_errors = deque(maxlen=50)"
+        },
+        {
+          "id": "py-idiom:bisect",
+          "construct": "bisect.bisect_left / insort",
+          "min_python": "3.0",
+          "what": "Binary search and sorted insertion on sorted sequences; key= supported since 3.10.",
+          "use_when": "Threshold-bucket lookup, maintaining small sorted lists, range queries.",
+          "avoid_when": "The sequence is not kept sorted, or a dict/set answers the question.",
+          "ai_note": "Agents write linear scans over sorted threshold tables; bisect states the sortedness contract and is O(log n).",
+          "example": "tier = TIERS[bisect_right(CUTOFFS, score)]"
+        },
+        {
+          "id": "py-idiom:heapq-nlargest",
+          "construct": "heapq.nlargest(k, items, key=...)",
+          "min_python": "3.0",
+          "what": "Top-k selection without fully sorting.",
+          "use_when": "k is small relative to n, e.g. top-5 matches from thousands of candidates.",
+          "avoid_when": "You need the whole ranking anyway (sorted() is clearer).",
+          "ai_note": "Generated code sorts entire lists to take the head; nlargest states 'top-k' as intent and is O(n log k).",
+          "example": "top = heapq.nlargest(5, matches, key=lambda m: m.score)"
+        },
+        {
+          "id": "py-idiom:itertools-pairwise",
+          "construct": "itertools.pairwise(iterable)",
+          "min_python": "3.10",
+          "what": "Consecutive overlapping pairs (a,b), (b,c), ...",
+          "use_when": "Deltas between successive records, adjacency checks, gap detection.",
+          "avoid_when": "Window sizes other than 2.",
+          "ai_note": "Replaces index-arithmetic zip(xs, xs[1:]) which copies the list and breaks on generators.",
+          "example": "gaps = [b.ts - a.ts for a, b in pairwise(events)]"
+        },
+        {
+          "id": "py-idiom:chain-from-iterable",
+          "construct": "itertools.chain.from_iterable",
+          "min_python": "3.0",
+          "what": "Lazily flatten one level of nesting.",
+          "use_when": "Flattening grouped results without building an intermediate list.",
+          "avoid_when": "Deep/recursive flattening (needs its own function).",
+          "ai_note": "The lazy alternative to nested-listcomp flattening; composes with any(), islice, and friends without materializing.",
+          "example": "all_paths = chain.from_iterable(r.paths for r in reports)"
+        },
+        {
+          "id": "py-idiom:itertools-groupby",
+          "construct": "itertools.groupby(sorted_items, key=...)",
+          "min_python": "3.0",
+          "what": "Group consecutive items sharing a key.",
+          "use_when": "Streaming group-by over already-sorted data.",
+          "avoid_when": "Input is not sorted by the same key — the classic silent-wrong-groups bug; use defaultdict grouping instead.",
+          "ai_note": "The avoid_when is the payload: generated code regularly calls groupby on unsorted data and produces fragmented groups without erroring.",
+          "example": "for repo, lessons in groupby(sorted(rows, key=k), key=k): ..."
+        },
+        {
+          "id": "py-idiom:itertools-batched",
+          "construct": "itertools.batched(iterable, n)",
+          "min_python": "3.12",
+          "what": "Yield tuples of up to n items.",
+          "use_when": "Chunking work for APIs, DB inserts, or rate limits.",
+          "avoid_when": "Interpreter may be older than 3.12 (use a small helper instead).",
+          "ai_note": "Ends the era of hand-rolled chunk helpers agents re-derive (differently) in every repo.",
+          "example": "for batch in batched(records, 100): insert_many(batch)"
+        },
+        {
+          "id": "py-idiom:graphlib-toposort",
+          "construct": "graphlib.TopologicalSorter",
+          "min_python": "3.9",
+          "what": "Stdlib topological sort with cycle detection (raises CycleError).",
+          "use_when": "Dependency ordering: build steps, migration order, asset dependencies.",
+          "avoid_when": "Graphs needing weights or shortest paths (use a graph library).",
+          "ai_note": "Agents hand-roll DFS ordering with subtle cycle-handling bugs; almost nobody knows this is in the stdlib.",
+          "example": "order = list(TopologicalSorter(dependencies).static_order())"
+        },
+        {
+          "id": "py-idiom:operator-itemgetter",
+          "construct": "operator.itemgetter / attrgetter",
+          "min_python": "3.0",
+          "what": "Callable extractors for keys/attributes, including multi-key.",
+          "use_when": "sort/min/max/groupby keys, especially multi-field sorts.",
+          "avoid_when": "Any computation on the extracted value is needed (use a lambda or named function).",
+          "ai_note": "itemgetter(\"a\", \"b\") declares a multi-key sort as data, is faster than a lambda, and cannot hide logic.",
+          "example": "rows.sort(key=itemgetter(\"severity\", \"path\"))"
+        },
+        {
+          "id": "py-idiom:functools-singledispatch",
+          "construct": "functools.singledispatch",
+          "min_python": "3.4",
+          "what": "Type-based function dispatch via registered overloads.",
+          "use_when": "Serializers/renderers/handlers that would otherwise be isinstance ladders, especially when new types arrive over time.",
+          "avoid_when": "Only two fixed types exist, or dispatch should be by value not type.",
+          "ai_note": "Each type's handler is a separate small function an agent can add without touching the others — safer diffs than editing a shared if/elif ladder.",
+          "example": "@singledispatch\ndef render(x): raise TypeError(type(x))\n@render.register\ndef _(x: Path): return str(x)"
+        },
+        {
+          "id": "py-idiom:functools-cache",
+          "construct": "functools.cache / cached_property",
+          "min_python": "3.9 / 3.8",
+          "what": "Memoize a pure function; compute an attribute once per instance.",
+          "use_when": "Pure, repeated, hashable-argument computations; expensive derived attributes.",
+          "avoid_when": "Arguments are mutable, results depend on external state, or the cache would pin large objects/instances in memory forever.",
+          "ai_note": "One decorator replaces hand-written _cache dicts that agents implement with race and invalidation bugs.",
+          "example": "@cache\ndef methodology(path: str) -> dict: ..."
+        },
+        {
+          "id": "py-idiom:functools-partial",
+          "construct": "functools.partial",
+          "min_python": "3.0",
+          "what": "Pre-bind arguments to produce a configured callable with an inspectable repr.",
+          "use_when": "Injecting config into callbacks, map/executor workers, and handler tables.",
+          "avoid_when": "A def with a docstring would carry meaning the callsite needs.",
+          "ai_note": "Unlike lambdas, partials print their function and bound args when debugged — better for agents reading tracebacks.",
+          "example": "worker = partial(process_repo, hub=hub_root, dry_run=True)"
+        }
+      ]
+    },
+    {
+      "group_id": "contracts_and_typing",
+      "label": "Contracts and typing",
+      "idioms": [
+        {
+          "id": "py-idiom:protocol",
+          "construct": "typing.Protocol",
+          "min_python": "3.8",
+          "what": "Structural interfaces: any object with matching methods satisfies the type, no inheritance needed.",
+          "use_when": "Typing module boundaries by capability (Reader, Scorer) so tests can pass simple fakes.",
+          "avoid_when": "You control all implementations and an ABC with shared behavior is genuinely wanted.",
+          "ai_note": "Lets agents type getattr-style duck typing (like DAD's policy objects) without inventing base classes; the single highest-leverage typing feature for AI-legible boundaries.",
+          "example": "class Scorer(Protocol):\n    def score(self, item: dict) -> float: ..."
+        },
+        {
+          "id": "py-idiom:newtype",
+          "construct": "typing.NewType",
+          "min_python": "3.5",
+          "what": "Distinct static types for same-runtime-type values, zero runtime cost.",
+          "use_when": "Multiple string/int id spaces coexist (AssetId vs RepoId vs MailId).",
+          "avoid_when": "Only one id space exists; ceremony without payoff.",
+          "ai_note": "Passing the wrong id string is a signature AI bug; NewType makes the checker catch what reviewers miss.",
+          "example": "AssetId = NewType(\"AssetId\", str)"
+        },
+        {
+          "id": "py-idiom:assert-never",
+          "construct": "typing.assert_never in match/elif chains",
+          "min_python": "3.11",
+          "what": "Static exhaustiveness check: type checker errors if any variant is unhandled.",
+          "use_when": "Handling Literal/Enum/union variants that will grow over time.",
+          "avoid_when": "No type checker runs in CI (it still raises at runtime, but the static value is the point).",
+          "ai_note": "When an agent adds a new variant, every non-exhaustive handler becomes a checker error listing exactly the missed case — the cheapest cross-file TODO system.",
+          "example": "case _ as unreachable: assert_never(unreachable)"
+        },
+        {
+          "id": "py-idiom:strenum",
+          "construct": "enum.StrEnum (and enum.Flag)",
+          "min_python": "3.11 / 3.6",
+          "what": "Enums whose members are their string values; Flag for bitwise-combinable options.",
+          "use_when": "Closed string vocabularies (statuses, decisions) that serialize to JSON; combinable feature flags.",
+          "avoid_when": "The vocabulary is open or owned by an external schema.",
+          "ai_note": "Magic status strings are where generated code silently invents new states ('use-now' vs 'use_now'); StrEnum centralizes the vocabulary while staying JSON-compatible.",
+          "example": "class Decision(StrEnum):\n    USE_NOW = \"use_now\"\n    DEFER = \"defer\""
+        },
+        {
+          "id": "py-idiom:dataclass-strict",
+          "construct": "@dataclass(frozen=True, slots=True, kw_only=True)",
+          "min_python": "3.10",
+          "what": "Immutable, memory-lean records with keyword-only construction.",
+          "use_when": "Value objects and config records; kw_only makes many-field construction self-documenting and reorder-safe.",
+          "avoid_when": "Pydantic-style validation/serialization is required (this repo uses pydantic at those boundaries).",
+          "ai_note": "kw_only=True eliminates positional-argument transposition, a frequent generated-code bug in wide constructors.",
+          "example": "@dataclass(frozen=True, slots=True, kw_only=True)\nclass Edge:\n    source: str\n    target: str"
+        },
+        {
+          "id": "py-idiom:init-subclass",
+          "construct": "__init_subclass__ auto-registration",
+          "min_python": "3.6",
+          "what": "Hook running when a class is subclassed; registers plugins without decorators or metaclasses.",
+          "use_when": "Plugin/handler registries where defining a class should be sufficient to enroll it.",
+          "avoid_when": "Explicit registration lists are easier to grep; implicit registries can hide control flow from readers.",
+          "ai_note": "Included with a caution: agents should recognize this pattern when reading code (it explains 'where does this handler come from?'), and use it only when the registry is documented.",
+          "example": "def __init_subclass__(cls, **kw):\n    super().__init_subclass__(**kw)\n    REGISTRY[cls.kind] = cls"
+        },
+        {
+          "id": "py-idiom:override",
+          "construct": "typing.override decorator",
+          "min_python": "3.12",
+          "what": "Declares a method overrides a base method; checker errors if the base renames/removes it.",
+          "use_when": "Any intentional override in a class hierarchy.",
+          "avoid_when": "Pre-3.12 without typing_extensions.",
+          "ai_note": "Catches the silent-dead-override bug when an agent renames a base method and forgets a subclass.",
+          "example": "@override\ndef score(self, item: dict) -> float: ..."
+        }
+      ]
+    },
+    {
+      "group_id": "code_research_toolkit",
+      "label": "Code research toolkit",
+      "idioms": [
+        {
+          "id": "py-idiom:ast-walk",
+          "construct": "ast.parse + ast.walk / NodeVisitor",
+          "min_python": "3.0",
+          "what": "Parse Python source into a tree and query it structurally.",
+          "use_when": "Researching a codebase: find call sites, dead imports, signature shapes, magic values — grep-proof questions.",
+          "avoid_when": "A plain text search answers the question faster.",
+          "ai_note": "Agents over-rely on regex over source; ast answers 'what functions take hub_root?' exactly, with line numbers, in a dozen lines.",
+          "example": "calls = [n for n in ast.walk(tree) if isinstance(n, ast.Call)]"
+        },
+        {
+          "id": "py-idiom:inspect-signature",
+          "construct": "inspect.signature / getsource / unwrap",
+          "min_python": "3.3",
+          "what": "Runtime introspection of callables: parameters, defaults, source, and decorator-unwrapping.",
+          "use_when": "Verifying an API's real shape before calling it; building adapters against third-party code.",
+          "avoid_when": "Static reading suffices; introspection in hot paths.",
+          "ai_note": "Checking signature(fn) is cheaper and truer than guessing parameters from training data — a direct hallucination guard.",
+          "example": "params = list(inspect.signature(deliver_mail).parameters)"
+        },
+        {
+          "id": "py-idiom:importlib-metadata",
+          "construct": "importlib.metadata.version / entry_points",
+          "min_python": "3.8",
+          "what": "Query installed package versions and plugin entry points without importing them.",
+          "use_when": "Environment diagnosis, version gates, plugin discovery.",
+          "avoid_when": "The package exposes __version__ and is already imported.",
+          "ai_note": "Replaces pkg_resources (deprecated) and subprocess-to-pip patterns that agents still emit from stale training data.",
+          "example": "if version(\"pydantic\").startswith(\"2.\"): ..."
+        },
+        {
+          "id": "py-idiom:dis",
+          "construct": "dis.dis",
+          "min_python": "3.0",
+          "what": "Disassemble a function to bytecode.",
+          "use_when": "Settling 'is this construct actually different?' performance/semantics questions with evidence.",
+          "avoid_when": "Ordinary debugging; profiling answers 'is it slow' better.",
+          "ai_note": "Gives agents ground truth about what Python executes instead of arguing from folklore.",
+          "example": "dis.dis(lambda: x := f())"
+        },
+        {
+          "id": "py-idiom:tracemalloc",
+          "construct": "tracemalloc snapshots",
+          "min_python": "3.4",
+          "what": "Attribute memory allocations to source lines; diff snapshots.",
+          "use_when": "Finding which line grew memory between two program points.",
+          "avoid_when": "CPU time is the question (use cProfile).",
+          "ai_note": "The stdlib answer to 'what is leaking' — agents typically guess instead because they don't reach for it.",
+          "example": "before = tracemalloc.take_snapshot(); ...; top = after.compare_to(before, \"lineno\")[:5]"
+        },
+        {
+          "id": "py-idiom:cprofile-pstats",
+          "construct": "cProfile + pstats.SortKey",
+          "min_python": "3.0",
+          "what": "Function-level CPU profile with sortable stats, no dependencies.",
+          "use_when": "Any 'make it faster' request — measure before editing; save with -o for later diffing.",
+          "avoid_when": "Line-level or sampling detail is needed (external tools).",
+          "ai_note": "Non-negotiable pairing for optimization tasks: a profile before and after is the difference between a timing claim and timing evidence.",
+          "example": "python -m cProfile -o out.prof -m digital_asset_directory.cli scan"
+        },
+        {
+          "id": "py-idiom:breakpoint-hook",
+          "construct": "breakpoint() and PYTHONBREAKPOINT",
+          "min_python": "3.7",
+          "what": "Debugger entry hook; env var swaps the debugger or disables all breakpoints (PYTHONBREAKPOINT=0).",
+          "use_when": "Interactive debugging sessions; leaving conditionally-enabled breakpoints during investigation.",
+          "avoid_when": "Committed code paths — remove before merge.",
+          "ai_note": "Agents emit import pdb; pdb.set_trace() from old training data; breakpoint() is shorter and centrally controllable.",
+          "example": "if suspicious(record): breakpoint()"
+        },
+        {
+          "id": "py-idiom:faulthandler",
+          "construct": "faulthandler.enable() / -X faulthandler",
+          "min_python": "3.3",
+          "what": "Print Python tracebacks on segfaults, deadlocks (dump_traceback_later), and fatal signals.",
+          "use_when": "Diagnosing hangs and native-extension crashes that otherwise die silently.",
+          "avoid_when": "Ordinary exceptions (normal tracebacks already cover them).",
+          "ai_note": "Turns 'the process just died / hangs forever' — where agents otherwise flail — into a stack trace pointing at the culprit.",
+          "example": "python -X faulthandler -m pytest tests/"
+        }
+      ]
+    }
+  ],
+  "authority_boundary": "This card is installed candidate guidance for local reuse. Idioms are suggestions gated by their avoid_when conditions and local repo style authority; nothing here justifies rewriting working code without a task-level reason."
+}

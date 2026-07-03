@@ -111,6 +111,14 @@ release status.
 
 ## Commands
 
+DAD docs use `python -m digital_asset_directory.cli` because some enrolled repo
+shells may not have the `asset-dir` console script on `PATH`. When working from
+the source checkout, set `PYTHONPATH=src` first. If neither entrypoint is
+available in a downstream repo, append metadata-only fallback mail to
+`.digital-asset/mail/outbox.jsonl` with `dad_cli_unavailable` and the attempted
+command; do not include raw logs, secrets, private rows, hidden reasoning, or
+copied source blobs.
+
 Compose a repo-local outbox packet:
 
 ```powershell
@@ -171,6 +179,21 @@ Review decisions are append-only. Without `--human-reviewed`, a review is agent
 triage and does not mark the message handled for local digest purposes. Accepted
 mail still requires a normal local change, local tests, preflight/postflight,
 and any repo-specific human gates.
+
+Review central-only collected mail in DAD:
+
+```powershell
+python -m digital_asset_directory.cli mail central-review `
+  --mail-id dad:mail:... `
+  --decision accept `
+  --decided-by codex
+```
+
+`mail central-review` is DAD hub triage for mail that was collected or routed
+centrally but not delivered to a repo-local inbox. It writes
+`processed/mail/archive/central_review_decisions.jsonl` and does not satisfy
+target repo adoption, does not deliver mail, and does not replace
+`asset-dir mail release` for public-facing delivery gates.
 
 Triage into adoption tracking:
 

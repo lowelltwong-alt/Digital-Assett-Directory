@@ -26,6 +26,19 @@ Run a digest at most once per day unless a human asks for an immediate check:
 asset-dir mail digest --repo .
 ```
 
+If `asset-dir` is not available on `PATH`, run the same command from the DAD
+source checkout with `PYTHONPATH=src`:
+
+```text
+python -m digital_asset_directory.cli mail digest --repo .
+```
+
+If neither command is available, append pointer-safe JSONL to this repo's
+`outbox.jsonl` and note `dad_cli_unavailable` plus the attempted command in the
+payload. DAD should collect it later as candidate mail and may record a
+`validation_command_missing` exception. Do not include raw logs, secrets, private
+rows, hidden reasoning, or copied source blobs in that fallback packet.
+
 After reading inbox mail, record whether the suggestion should be implemented
 now, saved for future, deferred, rejected, or archived:
 
@@ -38,6 +51,24 @@ targeted upgrade notices later:
 
 ```text
 asset-dir usage record --repo . --asset <dad-offering-or-asset-id> --status watching
+```
+
+Before composing outbox mail, check what this repo already sent so a reworded
+near-duplicate is not sent again. If the new message is a true upgrade of an
+earlier one (new evidence, new findings), send it with `--supersedes <mail-id>`
+so it joins the original thread instead of duplicating it:
+
+```text
+asset-dir mail outbox-check --repo . --summary "<proposed summary>"
+asset-dir mail compose --repo . --type asset_suggestion --summary "<upgrade>" --supersedes <mail-id>
+```
+
+Send red-team, premortem, audit, security-review, and code-review findings from
+any agent (Fable, Opus, Codex, Claude, Cursor, human) back to DAD as structured
+lessons so repeated failure patterns can be mined:
+
+```text
+asset-dir lesson review-feedback --repo . --agent <agent> --review-type red_team --finding "<summary>"
 ```
 
 Do not commit mailbox JSONL to a public-facing repo unless a human explicitly

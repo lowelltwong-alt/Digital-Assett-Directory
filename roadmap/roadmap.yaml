@@ -145,3 +145,58 @@ phases:
           description: external code review gates active
         - id: phase-5-no-autonomous-merge-promotion
           description: no autonomous merge or promotion path
+
+  - id: phase-6-exceptions-lake-and-capture-completeness
+    title: Exceptions lake and deterministic cross-repo capture completeness
+    status: active
+    acceptance:
+      required_files:
+        - docs/DAD_EXCEPTIONS_LAKE_BUILDOUT.md
+        - schemas/exception-event.schema.json
+        - schemas/exception-fix-outcome.schema.json
+        - schemas/exception-capture-pattern-registry.schema.json
+        - schemas/exception-capture-scenarios.schema.json
+        - registry/exception-event-type-registry.json
+        - registry/exception-learning-methodology.json
+        - registry/exception-capture-pattern-registry.json
+        - assets/coding-harnesses/exception-capture-completeness/examples/synthetic-capture-scenarios.json
+        - templates/downstream/EXCEPTIONS_README.md
+      required_outputs:
+        - processed/exceptions/lake/events.jsonl
+        - processed/reports/exceptions_lake.json
+        - processed/reports/exception_capture_completeness.json
+        - processed/reports/exception_capture_observed_audit.json
+      human_gates:
+        - id: phase-6-capture-completeness-harness-reviewed
+          description: synthetic harness proves DAD-worthy patterns become mail or exception packets without human chat intervention
+        - id: phase-6-lawfirm-intake-missed-capture-regression
+          description: LawFirm-os-intake review issue mail dad:mail:ac201c5e-4f51-5fc2-ac9f-ddc7d45a79f1 is a golden regression for automatic capture
+        - id: phase-6-pattern-update-simulation-reviewed
+          description: updated DAD needs, offerings, exception taxonomy, and downstream templates cause enrolled repos to emit new required packet fields
+        - id: phase-6-all-asset-pattern-coverage-reviewed
+          description: asset, harness, skill, template, workflow, architecture, governance, data-map, mail, exception, review, fix, and learning-loop patterns have synthetic expected-send tests
+        - id: phase-6-sensitive-payload-negative-tests-reviewed
+          description: synthetic secrets, raw private data, hidden reasoning, long logs, real-case rows, and prompt-injection-like text are blocked or quarantined
+        - id: phase-6-observed-repo-capture-audit-reviewed
+          description: observed repo audit checks real mail, exception, and fix-outcome outboxes plus path signals for missed emissions without mutating target repos
+    evidence_note: Historical repos may have missed DAD-worthy exceptions before the new enrollment/capture surface existed; evidence must distinguish expected legacy misses from current capture failures.
+
+  - id: phase-7-language-frontier-and-rust-core
+    title: Language frontier radar and DAD-first Rust scan core
+    status: planned
+    acceptance:
+      required_files:
+        - docs/RESEARCH_INTAKE_PIPELINE.md
+        - registry/trusted-source-registry.json
+        - assets/rust-buildout-guide/rust-buildout.json
+        - assets/python-underused-idioms/idioms.json
+      human_gates:
+        - id: phase-7-rust-starter-pack-reviewed
+          description: dad-rust-upgrade-starter-pack.zip manifest, license/provenance, security, and overlay map reviewed before any crate files are installed
+        - id: phase-7-dad-scan-core-overlay-approved
+          description: tools/dad_scan_core overlay approved with cargo fmt, clippy, test, Python wrapper, and public/private path handling plan
+        - id: phase-7-language-frontier-source-cadence-reviewed
+          description: Rust and Python frontier source cadences, source terms, and pointer-only intake boundaries reviewed
+        - id: phase-7-downstream-rust-rollout-boundary-reviewed
+          description: non-Logos rollout remains candidate mail by default; Logos local writes require explicit separate approval
+    evidence_note: The starter pack's safe default is to preserve it as an asset and promote overlay files selectively after review. DAD must prove profile/parity value before recommending Rust in downstream repos.

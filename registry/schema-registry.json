@@ -64,6 +64,17 @@
     "control_plane_registry": "schemas/control-plane-registry.schema.json",
     "governance_map_adoption": "schemas/governance-map-adoption.schema.json",
     "data_map_adoption": "schemas/data-map-adoption.schema.json",
+    "non_negotiables": "schemas/non-negotiables.schema.json",
+    "context_pack": "schemas/context-pack.schema.json",
+    "lesson_graph": "schemas/lesson-graph.schema.json",
+    "graph_edge_registry": "schemas/graph-edge-registry.schema.json",
+    "trusted_source_registry": "schemas/trusted-source-registry.schema.json",
+    "exception_event": "schemas/exception-event.schema.json",
+    "exception_fix_outcome": "schemas/exception-fix-outcome.schema.json",
+    "exception_event_type_registry": "schemas/exception-event-type-registry.schema.json",
+    "exception_learning_methodology": "schemas/exception-learning-methodology.schema.json",
+    "exception_capture_pattern_registry": "schemas/exception-capture-pattern-registry.schema.json",
+    "exception_capture_scenarios": "schemas/exception-capture-scenarios.schema.json",
     "proposal": "schemas/proposal.schema.json",
     "proposal_review": "schemas/proposal-review.schema.json"
   }

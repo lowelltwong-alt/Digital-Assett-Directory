@@ -16,6 +16,7 @@ ENROLLMENT_VERSION = "0.1.0"
 ENROLLMENT_SCHEMA_VERSION = "0.1.0"
 ENROLLMENT_DIR = Path("processed") / "enrollment"
 AUDIT_PATH = ENROLLMENT_DIR / "audit.jsonl"
+CAPTURE_PATTERN_REGISTRY = Path("registry") / "exception-capture-pattern-registry.json"
 
 GOVERNANCE_BEGIN = "<!-- BEGIN DIGITAL_ASSET_DIRECTORY_GOVERNANCE -->"
 GOVERNANCE_END = "<!-- END DIGITAL_ASSET_DIRECTORY_GOVERNANCE -->"
@@ -88,21 +89,15 @@ def _public_safe(policy: EnrollmentRepoPolicy) -> bool:
 
 
 def _hub_ref(hub_root: Path, policy: EnrollmentRepoPolicy) -> str:
-    if _public_safe(policy):
-        return "dad://hub/Digital-Assett-Directory"
-    return _normalize_path(hub_root)
+    return "dad://hub/Digital-Assett-Directory"
 
 
 def _repo_ref(policy: EnrollmentRepoPolicy) -> str:
-    if _public_safe(policy):
-        return f"dad://repo/{policy.id}"
-    return _normalize_path(policy.path)
+    return f"dad://repo/{policy.id}"
 
 
 def _return_address(policy: EnrollmentRepoPolicy) -> str:
-    if _public_safe(policy):
-        return f"dad://repo/{policy.id}/.digital-asset/mail/outbox.jsonl"
-    return f"{_normalize_path(policy.path)}/.digital-asset/mail/outbox.jsonl"
+    return f"dad://repo/{policy.id}/.digital-asset/mail/outbox.jsonl"
 
 
 def _enabled_control_planes(policy: EnrollmentRepoPolicy) -> list[str]:
@@ -477,6 +472,32 @@ def _existing_installed_at(repo_root: Path) -> str:
     return str(payload.get("enrollment", {}).get("installed_at") or utc_now())
 
 
+def _capture_surface_payload(hub_root: Path) -> dict[str, str]:
+    surface_version = "unknown"
+    registry_path = hub_root / CAPTURE_PATTERN_REGISTRY
+    if registry_path.exists():
+        try:
+            registry = json.loads(registry_path.read_text(encoding="utf-8"))
+            surface_version = str(registry.get("capture_surface_version") or surface_version)
+        except (OSError, json.JSONDecodeError):
+            surface_version = "unknown"
+    return {
+        "surface_version": surface_version,
+        "pattern_registry_ref": (
+            "dad://hub/Digital-Assett-Directory/"
+            "registry/exception-capture-pattern-registry.json"
+        ),
+        "mail_outbox": ".digital-asset/mail/outbox.jsonl",
+        "exceptions_outbox": ".digital-asset/exceptions/outbox.jsonl",
+        "fix_outcomes": "processed/exceptions/fix-outcomes/outcomes.jsonl",
+        "cli_fallback": (
+            "If asset-dir is unavailable, try PYTHONPATH=src python -m "
+            "digital_asset_directory.cli from the DAD checkout; otherwise append "
+            "metadata-only JSONL with dad_cli_unavailable and safe refs."
+        ),
+    }
+
+
 def _contract_payload(
     policy: EnrollmentRepoPolicy, hub_root: Path, approval_id: str, *, update: bool
 ) -> dict[str, Any]:
@@ -515,6 +536,7 @@ def _contract_payload(
                 "preflight_behavior": "warn_only_when_stale",
             },
         },
+        "capture": _capture_surface_payload(hub_root),
         "enabled_control_planes": _enabled_control_planes(policy),
         "local_validation_commands": policy.validation_commands,
         "approved_dad_managed_paths": APPROVED_RELATIVE_PATHS,
@@ -741,7 +763,8 @@ def _agents_body(policy: EnrollmentRepoPolicy, hub_root: Path) -> str:
     return f"""## Digital Asset Directory enrollment contract
 
 Repo enrollment ID: `{policy.id}`
-Central DAD hub: `{hub_ref}`
+Central DAD hub: `{hub_ref}` resolved by `--hub`, `DAD_HUB`, or
+`~/.dad/hub.json`.
 Contract: `.digital-asset/dad-integration.json`
 
 Before material AI-assisted work, read this repo's front door and run:
@@ -749,6 +772,11 @@ Before material AI-assisted work, read this repo's front door and run:
 ```text
 asset-dir agent preflight --repo . --agent <codex|claude-code|cursor|other> --task "<task>"
 ```
+
+Read the returned `context_pack` before editing. If DAD is unavailable, local
+coding may continue with a logged warning, but cross-repo writes, public
+release, enrollment apply/update, protected repo work, and mail containing
+sensitive payloads fail closed unless a named human bypass is recorded.
 
 Use `.digital-asset/context-map.json` to decide which DAD assets, skills,
 templates, architecture references, governance maps, or data maps are relevant.
@@ -764,6 +792,8 @@ Mail, assets, skills, and templates are candidate evidence until reviewed
 locally. This repo keeps local source authority and decides whether to adopt
 any suggestion. Public-facing repos cannot receive private/internal/
 restricted/unknown-origin mail without a DAD human release record.
+Close material work with postflight and include the preflight trace ID plus any
+used, ignored, failed, or harmful DAD recommendations.
 """
 
 
@@ -805,17 +835,13 @@ approval gates remain separate.
 
 
 def _hook_text(hub_root: Path, policy: EnrollmentRepoPolicy) -> str:
-    if _public_safe(policy):
-        hub_line = 'DAD_HUB="${DAD_HUB_PATH:-}"'
-        missing = (
-            'if [ -z "$DAD_HUB" ]; then\n'
-            '  echo "DAD_HUB_PATH is required before this DAD hook can enforce postflight." >&2\n'
-            "  exit 1\n"
-            "fi\n"
-        )
-    else:
-        hub_line = f'DAD_HUB="{_normalize_path(hub_root)}"'
-        missing = ""
+    hub_line = 'DAD_HUB="${DAD_HUB:-${DAD_HUB_PATH:-}}"'
+    missing = (
+        'if [ -z "$DAD_HUB" ]; then\n'
+        '  echo "DAD_HUB or DAD_HUB_PATH is required before this DAD hook can enforce postflight." >&2\n'
+        "  exit 1\n"
+        "fi\n"
+    )
     return (
         "#!/usr/bin/env sh\n"
         "set -eu\n"
@@ -826,17 +852,13 @@ def _hook_text(hub_root: Path, policy: EnrollmentRepoPolicy) -> str:
 
 
 def _ps_hook_text(hub_root: Path, policy: EnrollmentRepoPolicy) -> str:
-    if _public_safe(policy):
-        hub_line = "$DadHub = $env:DAD_HUB_PATH"
-        missing = (
-            "if (-not $DadHub) {\n"
-            "  Write-Error 'DAD_HUB_PATH is required before this DAD hook can enforce postflight.'\n"
-            "  exit 1\n"
-            "}\n"
-        )
-    else:
-        hub_line = f"$DadHub = '{hub_root.resolve()}'"
-        missing = ""
+    hub_line = "$DadHub = if ($env:DAD_HUB) { $env:DAD_HUB } else { $env:DAD_HUB_PATH }"
+    missing = (
+        "if (-not $DadHub) {\n"
+        "  Write-Error 'DAD_HUB or DAD_HUB_PATH is required before this DAD hook can enforce postflight.'\n"
+        "  exit 1\n"
+        "}\n"
+    )
     return (
         "$ErrorActionPreference = 'Stop'\n"
         f"{hub_line}\n"

@@ -268,7 +268,7 @@
       "does_not_apply_when": ["A scratch repo has no persistent AI navigation or should remain entirely read-only."],
       "danger_if_misapplied": "Mail can be mistaken for source truth if the README does not state candidate-only status and local review authority.",
       "depends_on_template_ids": [],
-      "dependent_template_ids": [],
+      "dependent_template_ids": ["template:downstream-exceptions-readme"],
       "depends_on_contracts": [
         "docs/MAIL_CENTER.md",
         "schemas/mail-message.schema.json",
@@ -287,6 +287,40 @@
       "deterministic_update_rule": "Keep mailbox file names, candidate-only language, sensitivity limits, skill-mail notices, and daily digest guidance aligned with docs/MAIL_CENTER.md.",
       "validation_commands": ["python -m pytest tests/test_mail_center.py", "python -m digital_asset_directory.cli templates validate"],
       "authority_boundary": "DAD mailbox guidance is suggestion transport only; target repos decide whether to adopt delivered mail.",
+      "review_status": "reviewed"
+    },
+    {
+      "schema_version": "0.1.0",
+      "template_id": "template:downstream-exceptions-readme",
+      "path": "templates/downstream/EXCEPTIONS_README.md",
+      "template_name": "Downstream DAD exceptions README",
+      "template_type": "learning_loop",
+      "purpose": "Repo-local guidance for formatting exception, failure, review, and fix-outcome JSONL packets for DAD without copying raw private context.",
+      "applies_when": ["A persistent repo participates in DAD exception, review finding, failed-command, or fix-outcome capture."],
+      "does_not_apply_when": ["A scratch repo has no persistent DAD learning loop or would need to include raw private data to describe the event."],
+      "danger_if_misapplied": "Exception records can leak sensitive context or become false global rules if raw payloads, hidden reasoning, or unreviewed fixes are copied into DAD.",
+      "depends_on_template_ids": ["template:downstream-mail-readme"],
+      "dependent_template_ids": [],
+      "depends_on_contracts": [
+        "docs/DAD_EXCEPTIONS_LAKE_BUILDOUT.md",
+        "schemas/exception-event.schema.json",
+        "schemas/exception-fix-outcome.schema.json",
+        "registry/exception-event-type-registry.json",
+        "registry/exception-learning-methodology.json"
+      ],
+      "upgrade_triggers": [
+        "exception event schema changes",
+        "exception taxonomy changes",
+        "exception learning methodology changes",
+        "public/private release boundary changes"
+      ],
+      "recommended_review_interval_days": 90,
+      "last_reviewed_at": "2026-07-02",
+      "next_review_due_at": "2026-09-30",
+      "upgrade_policy": "human_approved_patch",
+      "deterministic_update_rule": "Keep local file paths, packet examples, capture contracts, never-send list, and candidate-only promotion boundary aligned with DAD exception schemas and methodology.",
+      "validation_commands": ["python -m pytest tests/test_exceptions_lake.py", "python -m digital_asset_directory.cli templates validate"],
+      "authority_boundary": "Exception packets are candidate evidence for DAD review; source repos or named humans own final fix status and local adoption.",
       "review_status": "reviewed"
     },
     {

@@ -88,6 +88,26 @@
       },
       "additionalProperties": false
     },
+    "capture": {
+      "type": "object",
+      "required": [
+        "surface_version",
+        "pattern_registry_ref",
+        "mail_outbox",
+        "exceptions_outbox",
+        "fix_outcomes",
+        "cli_fallback"
+      ],
+      "properties": {
+        "surface_version": {"type": "string", "minLength": 1},
+        "pattern_registry_ref": {"type": "string", "minLength": 1},
+        "mail_outbox": {"const": ".digital-asset/mail/outbox.jsonl"},
+        "exceptions_outbox": {"const": ".digital-asset/exceptions/outbox.jsonl"},
+        "fix_outcomes": {"const": "processed/exceptions/fix-outcomes/outcomes.jsonl"},
+        "cli_fallback": {"type": "string", "minLength": 1}
+      },
+      "additionalProperties": false
+    },
     "enabled_control_planes": {"type": "array", "items": {"type": "string", "minLength": 1}},
     "local_validation_commands": {"type": "array", "items": {"type": "string", "minLength": 1}},
     "approved_dad_managed_paths": {"type": "array", "items": {"type": "string", "minLength": 1}},

@@ -1,0 +1,299 @@
+{
+  "schema_version": "0.1.0",
+  "report_id": "dad:research:external-harness-research-2026-07-02",
+  "generated_at": "2026-07-02T05:30:00+00:00",
+  "session_id": "dad:session:d14fc19b-f861-45a6-bfac-112b056237b9",
+  "research_policy": "External research is candidate-only evidence with links and provenance. Nothing in this report is promoted, installed, or shared to downstream repos without license, security, compatibility, and source-visibility review (registry/harness-discovery-methodology.json external_research_policy).",
+  "confidence_labels": {
+    "fetched_verified": "Page content was fetched and lessons extracted directly this pass.",
+    "search_summary": "Claim comes from search-result summaries only; verify the page before acting on details."
+  },
+  "categories": [
+    {
+      "category_id": "harness_engineering_lessons",
+      "label": "Harness engineering lessons from frontier labs and experts",
+      "entries": [
+        {
+          "entry_id": "ext:anthropic-long-running-harness",
+          "name": "Anthropic: Effective harnesses for long-running agents",
+          "source_url": "https://www.anthropic.com/engineering/effective-harnesses-for-long-running-agents",
+          "org": "Anthropic",
+          "confidence": "fetched_verified",
+          "what_it_is": "Engineering post on harness architecture for agents that work across many sessions: initializer agent vs coding agent prompts, JSON feature list with pass/fail status, init.sh environment script, progress file, prescribed session-start sequence (verify dir, read git log and progress, baseline test, pick ONE feature), commit discipline, browser-automation verification.",
+          "why_high_leverage": "Directly upgrades DAD's agent-instruction and preflight harnesses; the failure modes it names (premature completion, undocumented half-work, state-rediscovery waste) match DAD postflight/lesson observations.",
+          "candidate_dad_target": "agent_instruction harness family; context-pack session-start guidance; candidate non-negotiable: one-feature-per-session with clean mergeable close.",
+          "adoption_gate": "Content lessons only, no code import; safe to adapt after human read-through."
+        },
+        {
+          "entry_id": "ext:fowler-harness-engineering",
+          "name": "Martin Fowler: Harness engineering for coding agent users",
+          "source_url": "https://martinfowler.com/articles/harness-engineering.html",
+          "org": "martinfowler.com",
+          "confidence": "fetched_verified",
+          "what_it_is": "Framework: harness = everything except the model; feedforward guides vs feedback sensors (governor model, both required); computational (fast, deterministic, pre-commit) vs inferential (LLM judges, post-integration) checks; timing distribution across change lifecycle incl. continuous drift monitoring; 'harnessability' as an environment property (strong typing, module boundaries); variety reduction via service topologies; approved-fixtures pattern; mutation testing to grade sensor quality; what a harness cannot externalize (org memory, aesthetic judgment, load-bearing conventions).",
+          "why_high_leverage": "The feedforward/feedback and computational/inferential taxonomy is a ready-made upgrade for DAD's coding-harness registry schema; 'harnessability' aligns with DAD's AI-legibility goals; mutation-testing-as-sensor-grading is a concrete new harness family.",
+          "candidate_dad_target": "coding-harness registry taxonomy fields (guide_or_sensor, computational_or_inferential, lifecycle_stage); new test_quality harness family; ai-legibility lint rationale.",
+          "adoption_gate": "Conceptual framework; no license issues; adapt vocabulary after human review."
+        },
+        {
+          "entry_id": "ext:openai-harness-engineering",
+          "name": "OpenAI: Harness engineering with Codex (+ App Server post)",
+          "source_url": "https://openai.com/index/harness-engineering/",
+          "org": "OpenAI",
+          "confidence": "search_summary",
+          "what_it_is": "OpenAI's own posts on leveraging Codex in an agent-first world and how the Codex harness/App Server is built. Fetch was 403-blocked this pass; read manually.",
+          "why_high_leverage": "Second frontier-lab primary source on harness design; comparing Anthropic vs OpenAI harness lessons separates universal patterns from vendor habits.",
+          "candidate_dad_target": "harness-discovery research packet; cross-check against Anthropic lessons before promoting either.",
+          "adoption_gate": "Read manually (fetch blocked); lessons only."
+        },
+        {
+          "entry_id": "ext:terminal-agent-lessons-paper",
+          "name": "arXiv: Building Effective AI Coding Agents for the Terminal (scaffolding, harness, context engineering, lessons)",
+          "source_url": "https://arxiv.org/pdf/2603.05344",
+          "org": "arXiv (2026)",
+          "confidence": "search_summary",
+          "what_it_is": "Paper on scaffolding/harness/context-engineering lessons for terminal coding agents; companion papers: HarnessBridge (learnable bidirectional harness controller, arxiv 2606.12882) and metaprogramming adaptation to unfamiliar languages (arxiv 2606.10933).",
+          "why_high_leverage": "Academic consolidation of harness lessons; HarnessBridge suggests harness parameters themselves are tunable objects - relevant to DAD's harness evaluation loop.",
+          "candidate_dad_target": "harness research packets for agent_instruction and research_radar families.",
+          "adoption_gate": "Papers are evidence, not benchmarks-as-truth; DAD rule against benchmark theater applies."
+        },
+        {
+          "entry_id": "ext:harness-half-the-score",
+          "name": "Finding: the harness is half the score",
+          "source_url": "https://www.digitalapplied.com/blog/swe-bench-terminal-bench-benchmark-guide-2026",
+          "org": "industry analysis of Anthropic system card",
+          "confidence": "search_summary",
+          "what_it_is": "Same model scored 57.5% vs 64.7% on Terminal-Bench depending only on which harness ran it (independent Terminus-2 vs vendor CLI) - a 7-point harness-only gap.",
+          "why_high_leverage": "Quantifies DAD's core bet: harness quality is worth roughly a model-generation upgrade. Useful as the one-line justification for DAD's existence in front-door docs.",
+          "candidate_dad_target": "docs/CODING_HARNESS_LIBRARY.md rationale; harness evaluation methodology (control for harness when comparing models).",
+          "adoption_gate": "Verify against the primary system card before quoting numbers downstream."
+        }
+      ]
+    },
+    {
+      "category_id": "benchmarks_and_evals",
+      "label": "Benchmarks and eval harnesses",
+      "entries": [
+        {
+          "entry_id": "ext:swe-bench-family",
+          "name": "SWE-bench family (Verified / Pro / Multilingual / Live)",
+          "source_url": "https://www.swebench.com/",
+          "org": "Princeton/community; variants by OpenAI (Verified) and Scale (Pro)",
+          "confidence": "search_summary",
+          "what_it_is": "De-facto coding-agent benchmark family; Verified = 500 human-validated Python issue tasks; Pro = harder contamination-resistant commercial-style codebases; Live = continuously refreshed.",
+          "why_high_leverage": "The task format (real repo, real issue, hidden tests) is the model for DAD's own harness evals - small local SWE-bench-style labeled cases per harness beat abstract rubrics.",
+          "candidate_dad_target": "coding-harness eval format (labeled-eval-cases.json already started for red-team harness); test_quality family evals.",
+          "adoption_gate": "Do not import task data wholesale; contamination and license review first."
+        },
+        {
+          "entry_id": "ext:terminal-bench-2",
+          "name": "Terminal-Bench 2.0",
+          "source_url": "https://www.tbench.ai/",
+          "org": "Stanford/Laude collaboration (community)",
+          "confidence": "search_summary",
+          "what_it_is": "Benchmark of multi-step terminal-native workflows: shell scripting, filesystem ops, environment setup, DevOps automation; 2.0 hardened tasks and eval reliability.",
+          "why_high_leverage": "Closest public analogue to what DAD agents actually do (CLI-driven repo operations); its task-isolation design is reusable for DAD harness evals.",
+          "candidate_dad_target": "test_quality and agent_instruction harness evals.",
+          "adoption_gate": "Study task design; running it locally is optional and heavy."
+        },
+        {
+          "entry_id": "ext:ai-harness-scorecard-action",
+          "name": "AI Harness Scorecard (GitHub Action)",
+          "source_url": "https://github.com/marketplace/actions/ai-harness-scorecard",
+          "org": "GitHub marketplace (community)",
+          "confidence": "search_summary",
+          "what_it_is": "CI action grading a repo's harness maturity: feature-matrix testing, coverage, mutation testing, property-based testing, fuzz testing, contract tests.",
+          "why_high_leverage": "A repo-level 'harnessability score' is exactly the missing metric Fowler names (harness quality coverage); could seed DAD's repo-enrollment freshness checks.",
+          "candidate_dad_target": "governance_safety / test_quality harness; enrollment weekly checks.",
+          "adoption_gate": "License + security review before running third-party action in any repo; prefer reimplementing the checklist as a DAD harness."
+        }
+      ]
+    },
+    {
+      "category_id": "skill_and_asset_libraries",
+      "label": "High-signal skill and asset libraries",
+      "entries": [
+        {
+          "entry_id": "ext:trailofbits-skills",
+          "name": "Trail of Bits security skills for Claude Code / Codex",
+          "source_url": "https://github.com/trailofbits/skills",
+          "org": "Trail of Bits",
+          "confidence": "search_summary",
+          "what_it_is": "Security-firm-authored skill marketplace: code-graph analysis for audits (functions/classes/calls as queryable graph), mutation-testing campaign configuration (mewt/muton), mutation-driven test-vector generation (Wycheproof-style), C/C++ security review from their Testing Handbook, differential review; supports Codex-native .codex/skills/ discovery.",
+          "why_high_leverage": "Highest-signal external skill source found: professional security auditors encoding their actual workflows as skills. Directly feeds DAD's red_team and public_private_release harness families and the agent-skill library.",
+          "candidate_dad_target": "agent-skill-library pointer records (pointer/wrapper only, never copied); red_team harness upgrade ideas; mutation-testing harness family seed.",
+          "adoption_gate": "License, provenance, and prompt-injection review REQUIRED before any skill checkout; skills are third-party instructions and must pass DAD's security-scanner/quarantine pattern first."
+        },
+        {
+          "entry_id": "ext:voltagent-awesome-skills",
+          "name": "VoltAgent/awesome-agent-skills",
+          "source_url": "https://github.com/VoltAgent/awesome-agent-skills",
+          "org": "community curation",
+          "confidence": "search_summary",
+          "what_it_is": "Curated index of 1000+ agent skills including official ones from Anthropic, Google Labs, Vercel, Stripe, Cloudflare, Netlify, Trail of Bits, Sentry, Expo, Hugging Face, Figma; cross-compatible (Claude Code, Codex, Gemini CLI, Cursor).",
+          "why_high_leverage": "One curated place to watch for official vendor skills; the 'official dev team' filter is the signal - community skill dumps are noise-heavy.",
+          "candidate_dad_target": "harness-discovery radar external input (watch list); skill-library candidate pointers.",
+          "adoption_gate": "Per-skill review; treat the index as a phone book, not an endorsement."
+        },
+        {
+          "entry_id": "ext:agents-md-standard",
+          "name": "AGENTS.md as Linux Foundation open standard",
+          "source_url": "https://www.morphllm.com/agents-md-guide",
+          "org": "Linux Foundation; agreed by Google, OpenAI, Sourcegraph, Cursor, Factory",
+          "confidence": "search_summary",
+          "what_it_is": "AGENTS.md formalized as the universal agent front-door standard, read natively by Codex, Cursor, Copilot, Gemini CLI, Aider, Windsurf, Zed; used in 60k+ repos. Recommended sections: build commands with exact flags, test procedures, non-default style rules, architectural constraints, boundaries.",
+          "why_high_leverage": "Validates DAD's AGENTS.md-first design and gives a spec to align section names with, so every future agent parses DAD-enrolled repos natively.",
+          "candidate_dad_target": "templates/downstream managed AGENTS.md block alignment; enrollment contract docs.",
+          "adoption_gate": "Compare spec sections with DAD's managed block; low risk."
+        },
+        {
+          "entry_id": "ext:claude-code-large-codebases",
+          "name": "Anthropic: Claude Code in large codebases (enterprise patterns)",
+          "source_url": "https://claude.com/blog/how-claude-code-works-in-large-codebases-best-practices-and-where-to-start",
+          "org": "Anthropic",
+          "confidence": "search_summary",
+          "what_it_is": "Enterprise-scale patterns: CLAUDE.md kept under ~200 lines, .claude/rules/*.md with path-scoped globs, write a skill for any workflow repeated twice; production use across multi-million-line monorepos.",
+          "why_high_leverage": "The 200-line front-door cap and path-scoped rules directly address DAD's known bureaucracy risk (governance surface exceeding content); 'skill after two repeats' is a crisp promotion rule for DAD's learning compiler.",
+          "candidate_dad_target": "non-negotiables candidate (front-door size cap); agent-skill-library promotion rule; context-map route design.",
+          "adoption_gate": "Read full post before adopting numbers."
+        }
+      ]
+    },
+    {
+      "category_id": "open_source_harnesses",
+      "label": "Open-source harnesses worth studying (not installing)",
+      "entries": [
+        {
+          "entry_id": "ext:openai-codex-cli",
+          "name": "OpenAI Codex CLI (Apache-2.0, Rust)",
+          "source_url": "https://github.com/openai/codex",
+          "org": "OpenAI",
+          "confidence": "search_summary",
+          "what_it_is": "Open-source terminal coding agent rewritten in Rust; sandboxed-by-default execution (containerized shell, explicit approval or --full-auto).",
+          "why_high_leverage": "Double relevance: (1) a readable production harness codebase to mine for patterns; (2) a flagship example of Rust as the language frontier labs choose for agent tooling - supports the Rust buildout thesis.",
+          "candidate_dad_target": "rust-buildout-guide exemplar list; harness architecture study notes.",
+          "adoption_gate": "Study code, do not vendor; Apache-2.0 permits learning freely."
+        },
+        {
+          "entry_id": "ext:opencode-openhands",
+          "name": "OpenCode (~165k stars) and OpenHands (~75k)",
+          "source_url": "https://github.com/sst/opencode",
+          "org": "community",
+          "confidence": "search_summary",
+          "what_it_is": "Largest provider-agnostic open-source coding harnesses; OpenHands focuses on autonomous sandboxed operation.",
+          "why_high_leverage": "Provider-agnostic harness design is where cross-agent conventions (like AGENTS.md consumption) get tested first; useful comparison set for DAD's own agent contract.",
+          "candidate_dad_target": "harness-discovery watch list.",
+          "adoption_gate": "Study only; no install."
+        }
+      ]
+    },
+    {
+      "category_id": "test_quality_harnesses",
+      "label": "Test-quality harness techniques (the biggest gap in DAD's current families)",
+      "entries": [
+        {
+          "entry_id": "ext:mutation-testing-stack",
+          "name": "Mutation testing as sensor-grading (cargo-mutants; ToB mewt/muton)",
+          "source_url": "https://lib.rs/crates/cargo-mutants",
+          "org": "community / Trail of Bits",
+          "confidence": "search_summary",
+          "what_it_is": "Inject bugs, check whether tests catch them. cargo-mutants for Rust; Trail of Bits skills configure mutation campaigns and generate test vectors from surviving mutants. Fowler frames mutation testing as the way to grade feedback-sensor quality; 2026 consensus is it becomes a default for AI-generated code because AI code volume outruns human review.",
+          "why_high_leverage": "DAD's harness registry has test_performance and test_parity but nothing measuring whether tests would actually catch bugs - the exact false-green risk DAD's red-team lane keeps flagging. Highest-value NEW harness family identified this pass.",
+          "candidate_dad_target": "NEW harness family test_quality: mutation score on changed surfaces, property-test coverage of contracts, approved-fixtures pattern.",
+          "adoption_gate": "Tool-by-tool license review; start with cargo-mutants (Rust) and evaluate Python mutation tools separately before recommending one."
+        },
+        {
+          "entry_id": "ext:property-based-testing",
+          "name": "Property-based testing for AI-written code (proptest / Hypothesis)",
+          "source_url": "https://hackernoon.com/property-based-testing-for-ai-written-code",
+          "org": "community practice",
+          "confidence": "search_summary",
+          "what_it_is": "Generate inputs against stated invariants instead of example cases; catches the bug classes AI-generated example tests miss (agents write tests that mirror their own implementation assumptions).",
+          "why_high_leverage": "Property tests are contracts-as-tests - AI-legible and drift-resistant; pairs with DAD's scoring/parity code where invariants are crisp (determinism, idempotence, threshold monotonicity).",
+          "candidate_dad_target": "test_quality harness family; DAD's own suite already has early property-style tests (scoring monotonicity) to build on.",
+          "adoption_gate": "Hypothesis (MPL-2.0) and proptest (MIT/Apache) are standard; low risk."
+        }
+      ]
+    },
+    {
+      "category_id": "python_to_rust",
+      "label": "Python-to-Rust migration resources",
+      "entries": [
+        {
+          "entry_id": "ext:pyo3-maturin-current",
+          "name": "PyO3 v0.28 + maturin 1.8 (current state)",
+          "source_url": "https://pyo3.rs/",
+          "org": "PyO3 project",
+          "confidence": "search_summary",
+          "what_it_is": "Rust bindings for Python + wheel build/publish tooling. Current floor: Rust 1.83+, Python 3.9+. Key 2026 development: py.allow_threads() plus free-threaded Python 3.14 support means Rust extensions can now use all cores without multiprocessing serialization.",
+          "why_high_leverage": "Free-threaded Python changes the Rust payoff math: parallel Rust hot paths no longer need process pools. Confirms and extends DAD's rust-buildout-guide stage 5.",
+          "candidate_dad_target": "rust-buildout-guide upgrade (known_upgrades entry): free-threading note, version floors, release-build benchmarking warning.",
+          "adoption_gate": "Update guide text after verifying version numbers on pyo3.rs; heuristic until checked."
+        },
+        {
+          "entry_id": "ext:call-boundary-lesson",
+          "name": "Lesson: batch at the call boundary",
+          "source_url": "https://www.nandann.com/blog/rust-pyo3-python-extensions-guide",
+          "org": "practitioner writeups",
+          "confidence": "search_summary",
+          "what_it_is": "Most common PyO3 performance failure: calling Rust functions inside a tight Python loop - boundary overhead dominates. Pass all data in one call, iterate in Rust. Also: benchmark release builds only (debug is 10-20x slower); profile first with py-spy/cProfile; move the 5% of code causing 95% of slowdown.",
+          "why_high_leverage": "The profile-first, 5%-of-code framing exactly matches the guide's staged path; the call-boundary rule is the missing gotcha in stage 5.",
+          "candidate_dad_target": "rust-buildout-guide stage 5 gotchas; candidate py-idiom pairing with cprofile card.",
+          "adoption_gate": "None beyond human read-through."
+        },
+        {
+          "entry_id": "ext:rust-python-exemplars",
+          "name": "Exemplars: Ruff, uv, Polars, Pydantic v2 core, HF tokenizers, orjson",
+          "source_url": "https://github.com/astral-sh/ruff",
+          "org": "various (Astral, Pola-rs, Pydantic, Hugging Face)",
+          "confidence": "search_summary",
+          "what_it_is": "Production Python-facing libraries with Rust cores via PyO3 - the proven shape of Python-to-Rust: Python API surface, Rust engine.",
+          "why_high_leverage": "Each is a readable case study of the exact migration DAD's guide stages; Astral's ruff/uv also demonstrate Rust CLI distribution killing Python environment drift - relevant to shipping asset-dir itself as a binary someday.",
+          "candidate_dad_target": "rust-buildout-guide exemplar section (already lists them; add repo links as source_refs).",
+          "adoption_gate": "Study only."
+        }
+      ]
+    },
+    {
+      "category_id": "rust_buildout",
+      "label": "Rust language buildout resources",
+      "entries": [
+        {
+          "entry_id": "ext:comprehensive-rust",
+          "name": "Comprehensive Rust (Google Android team course)",
+          "source_url": "https://google.github.io/comprehensive-rust/",
+          "org": "Google",
+          "confidence": "search_summary",
+          "what_it_is": "Free course used internally at Google for experienced engineers: fundamentals through concurrency, async, unsafe, FFI; dedicated 2-day Idiomatic Rust and 2-day Unsafe Rust modules; Android/Chromium/bare-metal deep dives.",
+          "why_high_leverage": "The canonical structured path for agents AND humans leveling up; the Idiomatic Rust module maps directly onto the guide's rs-idiom cards.",
+          "candidate_dad_target": "rust-buildout-guide learning-resources section (new); agent context-pack pointer for Rust tasks.",
+          "adoption_gate": "Apache-2.0 course; link freely, do not copy content into DAD."
+        },
+        {
+          "entry_id": "ext:cargo-quality-stack",
+          "name": "Cargo quality stack: nextest, semver-checks, miri, proptest, criterion, insta, cargo-mutants",
+          "source_url": "https://github.com/obi1kenobi/cargo-semver-checks",
+          "org": "Rust community",
+          "confidence": "search_summary",
+          "what_it_is": "The 2026 Rust quality toolchain: cargo-nextest (faster test runner), cargo-semver-checks (API-break linting, being merged into cargo itself, 10x perf improvements landed), miri (UB detection), proptest (property tests), criterion (benchmarks), insta (snapshot tests), cargo-mutants (mutation).",
+          "why_high_leverage": "This is the concrete answer to 'develop Rust out as a language': a repo with this stack wired is maximally harnessable in Fowler's sense - every check is a computational sensor an agent can run. semver-checks merging into cargo signals which tools are becoming platform.",
+          "candidate_dad_target": "rust-buildout-guide repo_conventions ci section upgrade; future rust repo template; test_quality harness family (Rust lane).",
+          "adoption_gate": "Standard OSS licenses; verify each before templating into downstream repos."
+        }
+      ]
+    }
+  ],
+  "top_promotion_candidates": [
+    {"rank": 1, "candidate": "NEW harness family test_quality (mutation testing + property-based testing + approved fixtures), seeded from cargo-mutants, ToB mutation skills, Hypothesis/proptest", "reason": "Directly attacks false-green risk, DAD's most-repeated red-team finding class; no current family covers it."},
+    {"rank": 2, "candidate": "Coding-harness registry taxonomy upgrade from Fowler: guide_or_sensor, computational_or_inferential, lifecycle_stage fields", "reason": "Makes the registry describe HOW each harness regulates, enabling coverage analysis of the harness library itself."},
+    {"rank": 3, "candidate": "Session-harness additions from Anthropic post: init script, progress file, JSON feature list, session-start sequence into agent_instruction harness and context-pack guidance", "reason": "Fetched-verified, low risk, matches observed DAD failure modes."},
+    {"rank": 4, "candidate": "rust-buildout-guide v0.2.0: free-threaded Python 3.14 note, call-boundary batching gotcha, learning-resources section (Comprehensive Rust), cargo quality stack in repo conventions", "reason": "Cheap known_upgrades entry; keeps the guide current with the 2026 payoff math."},
+    {"rank": 5, "candidate": "Trail of Bits skills as pointer records in agent-skill-library AFTER security/license/prompt-injection review", "reason": "Highest-signal external skill source; must pass quarantine pattern first."}
+  ],
+  "explicitly_not_recommended": [
+    "Installing any third-party GitHub Action or skill collection without per-item security review.",
+    "Importing benchmark task data (SWE-bench/Terminal-Bench) into DAD repos.",
+    "Treating leaderboard scores as model-choice truth; the 7-point harness gap finding shows scores are harness-confounded."
+  ],
+  "authority_boundary": "This report is central candidate metadata with external provenance. It does not authorize installation, skill checkout, template changes, or downstream delivery. Every entry requires the adoption gate stated on it before promotion."
+}

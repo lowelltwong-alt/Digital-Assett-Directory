@@ -20,10 +20,14 @@ when the task involves AI-assisted Python, Rust, mixed-language, or agent
 instruction work.
 
 For Python-specific work, also consult
-`assets/python-ai-advantage-preflight/`. For task-to-profile routing and
-midflight tactic selection, use `registry/preflight-profile-router.json` and
-`registry/coding-tactics-radar.json`. These are candidate guidance unless a
-record is explicitly reviewed or promoted.
+`assets/python-ai-advantage-preflight/` and the underused-idiom card in
+`assets/python-underused-idioms/idioms.json` (cite `py-idiom:*` ids in reviews
+and lessons). For performance, Rust, or Python-to-Rust migration work, consult
+`assets/rust-buildout-guide/rust-buildout.json` and follow its staged path;
+profiling evidence comes before any Rust proposal. For task-to-profile routing
+and midflight tactic selection, use `registry/preflight-profile-router.json`
+and `registry/coding-tactics-radar.json`. These are candidate guidance unless
+a record is explicitly reviewed or promoted.
 
 Use the asset's dry-run deployment and audit scripts before applying downstream
 repo changes. Installing or consulting the central asset does not authorize
@@ -138,7 +142,8 @@ python -m digital_asset_directory.cli roadmap check
 ## Digital Asset Directory enrollment contract
 
 Repo enrollment ID: `dad`
-Central DAD hub: `C:/Users/lowel/OneDrive/Desktop/Git Projects/04_Digital_Assett_Directory`
+Central DAD hub: `dad://hub/Digital-Assett-Directory` resolved by `--hub`,
+`DAD_HUB`, or `~/.dad/hub.json`.
 Contract: `.digital-asset/dad-integration.json`
 
 Before material AI-assisted work, read this repo's front door and run:
@@ -146,6 +151,11 @@ Before material AI-assisted work, read this repo's front door and run:
 ```text
 asset-dir agent preflight --repo . --agent <codex|claude-code|cursor|other> --task "<task>"
 ```
+
+Read the returned `context_pack` before editing. If DAD is unavailable, local
+coding may continue with a logged warning, but cross-repo writes, public
+release, enrollment apply/update, protected repo work, and mail containing
+sensitive payloads fail closed unless a named human bypass is recorded.
 
 Use `.digital-asset/context-map.json` to decide which DAD assets, skills,
 templates, architecture references, governance maps, or data maps are relevant.
@@ -161,4 +171,6 @@ Mail, assets, skills, and templates are candidate evidence until reviewed
 locally. This repo keeps local source authority and decides whether to adopt
 any suggestion. Public-facing repos cannot receive private/internal/
 restricted/unknown-origin mail without a DAD human release record.
+Close material work with postflight and include the preflight trace ID plus any
+used, ignored, failed, or harmful DAD recommendations.
 <!-- END DIGITAL_ASSET_DIRECTORY_GOVERNANCE -->

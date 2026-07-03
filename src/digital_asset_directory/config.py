@@ -4,6 +4,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 import os
+import json
 import yaml
 
 from .utils import find_repo_root
@@ -44,6 +45,21 @@ class MailRepoPolicy:
     public_facing: bool = False
     mail_enabled: bool = True
     delivery_allowed: bool = True
+    write_protected: bool = False
+    write_protection_reason: str = ""
+
+
+@dataclass
+class ExceptionRepoPolicy:
+    id: str
+    path: Path
+    alias: str
+    visibility: str = "unknown"
+    public_facing: bool = False
+    exceptions_enabled: bool = True
+    collect_allowed: bool = True
+    capture_audit_allowed: bool = True
+    backfill_allowed: bool = False
     write_protected: bool = False
     write_protection_reason: str = ""
 
@@ -98,6 +114,7 @@ class AppConfig:
     github_sources: list[GitHubSource]
     settings: Settings
     mail_repos: list[MailRepoPolicy] = field(default_factory=list)
+    exception_repos: list[ExceptionRepoPolicy] = field(default_factory=list)
     enrollment_repos: list[EnrollmentRepoPolicy] = field(default_factory=list)
 
 
@@ -108,8 +125,32 @@ def resolve_config_path(repo_root: Path, requested: Path | None = None) -> Path:
     return local if local.exists() else repo_root / "config" / "sources.example.yaml"
 
 
+def resolve_hub_root(repo_root: Path | None = None) -> Path:
+    if repo_root is not None:
+        return repo_root.resolve()
+    for env_name in ("DAD_HUB", "DAD_HUB_PATH"):
+        value = os.environ.get(env_name, "").strip()
+        if value:
+            return Path(os.path.expandvars(os.path.expanduser(value))).resolve()
+    locator = Path.home() / ".dad" / "hub.json"
+    if locator.exists():
+        payload = json.loads(locator.read_text(encoding="utf-8"))
+        value = str(payload.get("hub_path") or payload.get("path") or "").strip()
+        if value:
+            return Path(os.path.expandvars(os.path.expanduser(value))).resolve()
+    current = find_repo_root(Path.cwd()).resolve()
+    if (current / "registry" / "source-of-truth.json").exists() and (
+        current / "src" / "digital_asset_directory"
+    ).exists():
+        return current
+    raise FileNotFoundError(
+        "DAD hub unavailable. Set --hub, DAD_HUB, or ~/.dad/hub.json before "
+        "running DAD commands outside the hub repo."
+    )
+
+
 def load_config(path: Path | None = None, repo_root: Path | None = None) -> AppConfig:
-    root = (repo_root or find_repo_root(Path.cwd())).resolve()
+    root = resolve_hub_root(repo_root)
     cfg_path = resolve_config_path(root, path)
     if not cfg_path.exists():
         raise FileNotFoundError(f"Configuration file not found: {cfg_path}")
@@ -170,6 +211,28 @@ def load_config(path: Path | None = None, repo_root: Path | None = None) -> AppC
             )
         )
 
+    exception_repos: list[ExceptionRepoPolicy] = []
+    for item in raw.get("exceptions", {}).get("repos", []) or []:
+        raw_path = os.path.expandvars(os.path.expanduser(str(item.get("path", ""))))
+        path = Path(raw_path)
+        resolved_path = path if path.is_absolute() else root / path
+        repo_id = str(item["id"])
+        exception_repos.append(
+            ExceptionRepoPolicy(
+                id=repo_id,
+                path=resolved_path,
+                alias=str(item.get("alias") or repo_id),
+                visibility=str(item.get("visibility", "unknown")),
+                public_facing=bool(item.get("public_facing", False)),
+                exceptions_enabled=bool(item.get("exceptions_enabled", True)),
+                collect_allowed=bool(item.get("collect_allowed", True)),
+                capture_audit_allowed=bool(item.get("capture_audit_allowed", True)),
+                backfill_allowed=bool(item.get("backfill_allowed", False)),
+                write_protected=bool(item.get("write_protected", False)),
+                write_protection_reason=str(item.get("write_protection_reason", "")),
+            )
+        )
+
     enrollment_repos: list[EnrollmentRepoPolicy] = []
     for item in raw.get("enrollment", {}).get("repos", []) or []:
         raw_path = os.path.expandvars(os.path.expanduser(str(item.get("path", ""))))
@@ -220,5 +283,6 @@ def load_config(path: Path | None = None, repo_root: Path | None = None) -> AppC
         github_sources,
         settings,
         mail_repos,
+        exception_repos,
         enrollment_repos,
     )

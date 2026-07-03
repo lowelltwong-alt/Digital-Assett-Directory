@@ -1,0 +1,237 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://dad.local/schemas/exception-event.schema.json",
+  "title": "DAD Exception Event Record",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "event_id",
+    "event_time",
+    "source_repo",
+    "source_visibility",
+    "public_facing_source",
+    "source_provenance",
+    "origin_chain",
+    "return_address",
+    "agent",
+    "actor",
+    "task",
+    "stage",
+    "surface",
+    "evidence_kind",
+    "event_type",
+    "severity",
+    "status",
+    "outcome_status",
+    "context_refs",
+    "capture_contract",
+    "event_identity",
+    "command",
+    "safe_summary",
+    "symptoms",
+    "error_fingerprint",
+    "suspected_cause",
+    "fix_refs",
+    "validation_refs",
+    "asset_refs",
+    "harness_refs",
+    "trace_refs",
+    "sensitivity",
+    "retention_class",
+    "screening",
+    "public_release",
+    "dedupe_key",
+    "review_status"
+  ],
+  "properties": {
+    "schema_version": { "type": "string", "const": "0.1.0" },
+    "event_id": { "type": "string", "pattern": "^dad:exception-event:" },
+    "event_time": { "type": "string" },
+    "source_repo": { "type": "string", "minLength": 1 },
+    "source_visibility": {
+      "type": "string",
+      "enum": ["public", "internal", "private", "restricted", "unknown"]
+    },
+    "public_facing_source": { "type": "boolean" },
+    "source_provenance": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "canonical_repo_id",
+        "canonical_repo_path",
+        "source_visibility",
+        "origin_chain",
+        "return_address",
+        "composed_by",
+        "collected_by",
+        "collected_at",
+        "received_at"
+      ],
+      "properties": {
+        "canonical_repo_id": { "type": "string", "minLength": 1 },
+        "canonical_repo_path": { "type": "string" },
+        "source_visibility": {
+          "type": "string",
+          "enum": ["public", "internal", "private", "restricted", "unknown"]
+        },
+        "origin_chain": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": true,
+            "required": ["repo", "visibility"],
+            "properties": {
+              "repo": { "type": "string" },
+              "visibility": {
+                "type": "string",
+                "enum": ["public", "internal", "private", "restricted", "unknown"]
+              },
+              "observed_at": { "type": "string" }
+            }
+          }
+        },
+        "return_address": { "type": "string" },
+        "composed_by": { "type": "string" },
+        "collected_by": { "type": "string" },
+        "collected_at": { "type": "string" },
+        "received_at": { "type": "string" }
+      }
+    },
+    "origin_chain": { "type": "array" },
+    "return_address": { "type": "string" },
+    "agent": {
+      "type": "string",
+      "enum": ["codex", "claude", "cursor", "human", "ci", "runtime", "fable", "other"]
+    },
+    "actor": { "type": "string" },
+    "model": { "type": "string" },
+    "task": { "type": "string", "maxLength": 240 },
+    "stage": {
+      "type": "string",
+      "enum": ["preflight", "midflight", "postflight", "ci", "runtime", "review", "release", "backfill"]
+    },
+    "surface": { "type": "string", "minLength": 1 },
+    "evidence_kind": {
+      "type": "string",
+      "enum": ["metadata_pointer", "command_metadata", "validation_result", "review_note", "fix_outcome", "backfill_path_signal"]
+    },
+    "event_type": { "type": "string", "minLength": 1 },
+    "severity": { "type": "string", "enum": ["critical", "high", "medium", "low", "info"] },
+    "status": {
+      "type": "string",
+      "enum": [
+        "open",
+        "triaged",
+        "fix_planned",
+        "fixed_pending_validation",
+        "fixed",
+        "accepted",
+        "rejected",
+        "duplicate",
+        "regression_observed",
+        "archived"
+      ]
+    },
+    "outcome_status": {
+      "type": "string",
+      "enum": ["unresolved", "fixed", "accepted_risk", "duplicate", "rejected", "regressed"]
+    },
+    "context_refs": { "type": "array", "items": { "type": "string" }, "maxItems": 50 },
+    "capture_contract": {
+      "type": "string",
+      "enum": [
+        "failed_command",
+        "retry_or_plan_change",
+        "postflight_exception",
+        "ci_failure",
+        "governance_block",
+        "review_finding",
+        "fix_outcome",
+        "dad_recommendation_outcome",
+        "backfill_candidate"
+      ]
+    },
+    "event_identity": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["identity_version", "identity_inputs", "collision_policy"],
+      "properties": {
+        "identity_version": { "type": "string" },
+        "identity_inputs": { "type": "array", "items": { "type": "string" } },
+        "collision_policy": { "type": "string" }
+      }
+    },
+    "command": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "argv": { "type": "array", "items": { "type": "string" }, "maxItems": 80 },
+        "exit_code": { "type": "integer" },
+        "duration_ms": { "type": "integer", "minimum": 0 },
+        "redacted_output_ref": { "type": "string" }
+      }
+    },
+    "safe_summary": { "type": "string", "minLength": 1, "maxLength": 1200 },
+    "symptoms": { "type": "array", "items": { "type": "string", "maxLength": 300 }, "maxItems": 20 },
+    "error_fingerprint": { "type": "string", "maxLength": 512 },
+    "suspected_cause": { "type": "string", "maxLength": 600 },
+    "fix_refs": { "type": "array", "items": { "type": "string" }, "maxItems": 50 },
+    "validation_refs": { "type": "array", "items": { "type": "string" }, "maxItems": 50 },
+    "asset_refs": { "type": "array", "items": { "type": "string" }, "maxItems": 50 },
+    "harness_refs": { "type": "array", "items": { "type": "string" }, "maxItems": 50 },
+    "trace_refs": { "type": "array", "items": { "type": "string" }, "maxItems": 50 },
+    "sensitivity": {
+      "type": "string",
+      "enum": ["public_safe", "internal", "private", "restricted", "unknown"]
+    },
+    "retention_class": {
+      "type": "string",
+      "enum": ["candidate_metadata", "source_local_only", "central_quarantine", "reviewed_learning_seed"]
+    },
+    "screening": {
+      "type": "object",
+      "additionalProperties": true,
+      "required": ["credential_pii_screen", "raw_blob_policy", "public_release_required", "human_release_id"],
+      "properties": {
+        "credential_pii_screen": { "type": "string", "enum": ["pending", "pass", "blocked"] },
+        "raw_blob_policy": { "type": "string", "enum": ["pass", "blocked"] },
+        "public_release_required": { "type": "boolean" },
+        "human_release_id": { "type": "string" },
+        "redaction_count": { "type": "integer", "minimum": 0 },
+        "screened_at": { "type": "string" },
+        "screening_note": { "type": "string" },
+        "issues": { "type": "array", "items": { "type": "string" } }
+      }
+    },
+    "public_release": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "target_visibility",
+        "public_release_required",
+        "public_release_status",
+        "human_release_id",
+        "release_reason"
+      ],
+      "properties": {
+        "target_visibility": {
+          "type": "string",
+          "enum": ["public", "internal", "private", "restricted", "unknown"]
+        },
+        "public_release_required": { "type": "boolean" },
+        "public_release_status": {
+          "type": "string",
+          "enum": ["not_required", "required", "approved", "rejected", "held"]
+        },
+        "human_release_id": { "type": "string" },
+        "release_reason": { "type": "string" }
+      }
+    },
+    "dedupe_key": { "type": "string", "minLength": 1 },
+    "review_status": {
+      "type": "string",
+      "enum": ["candidate", "quarantine_candidate", "quarantined", "triaged", "reviewed", "promoted", "rejected"]
+    }
+  }
+}

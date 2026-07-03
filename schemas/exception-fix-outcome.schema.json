@@ -1,0 +1,145 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://dad.local/schemas/exception-fix-outcome.schema.json",
+  "title": "DAD Exception Fix Outcome Record",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "fix_id",
+    "event_id",
+    "recorded_at",
+    "source_repo",
+    "source_visibility",
+    "source_provenance",
+    "recorded_by",
+    "decision",
+    "summary",
+    "validation_status",
+    "validation_refs",
+    "regression_test_refs",
+    "fix_refs",
+    "asset_refs",
+    "lesson_refs",
+    "remaining_risks",
+    "owner_authority",
+    "canonical_event_id",
+    "canonical_event_lookup_status",
+    "expiry",
+    "event_lookup_status",
+    "capture_contract",
+    "dedupe_key",
+    "screening",
+    "review_status",
+    "authority_boundary"
+  ],
+  "properties": {
+    "schema_version": { "type": "string", "const": "0.1.0" },
+    "fix_id": { "type": "string", "pattern": "^dad:exception-fix:" },
+    "event_id": { "type": "string", "pattern": "^dad:exception-event:" },
+    "recorded_at": { "type": "string" },
+    "source_repo": { "type": "string", "minLength": 1 },
+    "source_visibility": {
+      "type": "string",
+      "enum": ["public", "internal", "private", "restricted", "unknown"]
+    },
+    "source_provenance": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "canonical_repo_id",
+        "canonical_repo_path",
+        "source_visibility",
+        "origin_chain",
+        "return_address",
+        "composed_by",
+        "collected_by",
+        "collected_at",
+        "received_at"
+      ],
+      "properties": {
+        "canonical_repo_id": { "type": "string", "minLength": 1 },
+        "canonical_repo_path": { "type": "string" },
+        "source_visibility": {
+          "type": "string",
+          "enum": ["public", "internal", "private", "restricted", "unknown"]
+        },
+        "origin_chain": { "type": "array", "items": { "type": "object" } },
+        "return_address": { "type": "string" },
+        "composed_by": { "type": "string" },
+        "collected_by": { "type": "string" },
+        "collected_at": { "type": "string" },
+        "received_at": { "type": "string" }
+      }
+    },
+    "recorded_by": { "type": "string", "minLength": 1 },
+    "decision": {
+      "type": "string",
+      "enum": ["fixed", "accepted_risk", "deferred", "duplicate", "rejected", "rollback"]
+    },
+    "summary": { "type": "string", "minLength": 1, "maxLength": 1200 },
+    "validation_status": {
+      "type": "string",
+      "enum": ["validated", "validation_missing", "not_applicable", "failed"]
+    },
+    "validation_refs": { "type": "array", "items": { "type": "string" }, "maxItems": 50 },
+    "regression_test_refs": { "type": "array", "items": { "type": "string" }, "maxItems": 50 },
+    "fix_refs": { "type": "array", "items": { "type": "string" }, "maxItems": 50 },
+    "asset_refs": { "type": "array", "items": { "type": "string" }, "maxItems": 50 },
+    "lesson_refs": { "type": "array", "items": { "type": "string" }, "maxItems": 50 },
+    "remaining_risks": { "type": "array", "items": { "type": "string" }, "maxItems": 50 },
+    "owner_authority": {
+      "type": "string",
+      "minLength": 1,
+      "description": "The source repo or named human/local authority that owns the fix status."
+    },
+    "canonical_event_id": {
+      "type": "string",
+      "description": "Required for duplicate decisions; empty otherwise."
+    },
+    "canonical_event_lookup_status": {
+      "type": "string",
+      "enum": ["found_in_lake", "missing_from_lake"]
+    },
+    "expiry": {
+      "type": "string",
+      "description": "Required by implementation policy for accepted-risk/deferred records; empty when not applicable."
+    },
+    "event_lookup_status": {
+      "type": "string",
+      "enum": ["found_in_lake", "missing_from_lake"]
+    },
+    "capture_contract": { "type": "string", "const": "fix_outcome" },
+    "dedupe_key": { "type": "string", "minLength": 1 },
+    "screening": {
+      "type": "object",
+      "additionalProperties": true,
+      "required": [
+        "credential_pii_screen",
+        "raw_blob_policy",
+        "redaction_count",
+        "screened_at",
+        "screening_note"
+      ],
+      "properties": {
+        "credential_pii_screen": { "type": "string", "enum": ["pending", "pass", "blocked"] },
+        "raw_blob_policy": { "type": "string", "enum": ["pass", "blocked"] },
+        "redaction_count": { "type": "integer", "minimum": 0 },
+        "screened_at": { "type": "string" },
+        "screening_note": { "type": "string" }
+      }
+    },
+    "review_status": {
+      "type": "string",
+      "enum": [
+        "candidate",
+        "source_repo_confirmed",
+        "human_reviewed",
+        "rejected",
+        "quarantine_candidate",
+        "quarantined"
+      ]
+    },
+    "authority_boundary": { "type": "string", "minLength": 1 }
+  }
+}

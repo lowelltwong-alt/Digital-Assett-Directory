@@ -1,0 +1,206 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://local.digital-asset-directory/schemas/exception-capture-scenarios.schema.json",
+  "title": "Exception Capture Synthetic Scenarios",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "scenario_set_id",
+    "target_registry",
+    "required_pattern_families",
+    "cases",
+    "authority_boundary"
+  ],
+  "properties": {
+    "schema_version": {"const": "0.1.0"},
+    "scenario_set_id": {"type": "string", "minLength": 1},
+    "target_registry": {"type": "string", "minLength": 1},
+    "required_pattern_families": {
+      "type": "array",
+      "items": {
+        "enum": [
+          "asset",
+          "harness",
+          "skill",
+          "template",
+          "workflow",
+          "architecture_reference",
+          "governance_map",
+          "data_map",
+          "mail_pattern",
+          "exception_pattern",
+          "review_finding",
+          "fix_outcome",
+          "learning_loop_candidate"
+        ]
+      },
+      "minItems": 1,
+      "uniqueItems": true
+    },
+    "cases": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+          "required": [
+            "scenario_id",
+            "pattern_family",
+            "description",
+            "repo_capture_surface_version",
+            "signals",
+            "covered_rule_ids",
+            "expected",
+            "negative_controls",
+            "source_context",
+            "review_status"
+          ],
+        "properties": {
+          "scenario_id": {"type": "string", "minLength": 1},
+          "pattern_family": {
+            "enum": [
+              "asset",
+              "harness",
+              "skill",
+              "template",
+              "workflow",
+              "architecture_reference",
+              "governance_map",
+              "data_map",
+              "mail_pattern",
+              "exception_pattern",
+              "review_finding",
+              "fix_outcome",
+              "learning_loop_candidate"
+            ]
+          },
+          "description": {"type": "string", "minLength": 1},
+          "repo_capture_surface_version": {"type": "string", "minLength": 1},
+          "signals": {
+            "type": "array",
+            "items": {"type": "string", "minLength": 1},
+            "uniqueItems": true
+          },
+          "covered_rule_ids": {
+            "type": "array",
+            "items": {"type": "string", "pattern": "^exception-capture-rule:[a-z0-9][a-z0-9:-]*$"},
+            "uniqueItems": true
+          },
+          "expected": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "packet_classes",
+              "event_types",
+              "mail_message_types",
+              "capture_contracts",
+              "required_fields",
+              "update_required",
+              "blocked"
+            ],
+            "properties": {
+              "packet_classes": {
+                "type": "array",
+                "items": {
+                  "enum": [
+                    "ordinary_mail",
+                    "exception_event",
+                    "fix_outcome",
+                    "local_usage_only",
+                    "no_packet"
+                  ]
+                },
+                "uniqueItems": true
+              },
+              "event_types": {
+                "type": "array",
+                "items": {"type": "string"},
+                "uniqueItems": true
+              },
+              "mail_message_types": {
+                "type": "array",
+                "items": {
+                  "enum": [
+                    "lesson_suggestion",
+                    "asset_suggestion",
+                    "workflow_suggestion",
+                    "taxonomy_suggestion",
+                    "capability_suggestion",
+                    "governance_notice",
+                    "inbox_ack",
+                    "review_decision"
+                  ]
+                },
+                "uniqueItems": true
+              },
+              "capture_contracts": {
+                "type": "array",
+                "items": {
+                  "enum": [
+                    "failed_command",
+                    "retry_or_plan_change",
+                    "postflight_exception",
+                    "ci_failure",
+                    "governance_block",
+                    "review_finding",
+                    "fix_outcome",
+                    "dad_recommendation_outcome",
+                    "backfill_candidate"
+                  ]
+                },
+                "uniqueItems": true
+              },
+              "required_fields": {
+                "type": "array",
+                "items": {"type": "string", "minLength": 1},
+                "uniqueItems": true
+              },
+              "update_required": {"type": "boolean"},
+              "blocked": {"type": "boolean"},
+              "blocked_reason": {"type": "string"}
+            }
+          },
+          "negative_controls": {
+            "type": "array",
+            "items": {"type": "string"},
+            "uniqueItems": true
+          },
+          "source_context": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["repo_visibility", "public_facing", "notes"],
+            "properties": {
+              "repo_visibility": {"enum": ["public", "internal", "private", "restricted", "unknown"]},
+              "public_facing": {"type": "boolean"},
+              "notes": {"type": "string"}
+            }
+          },
+          "payload_samples": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["field", "text"],
+              "properties": {
+                "field": {"type": "string", "minLength": 1},
+                "text": {"type": "string", "minLength": 1}
+              }
+            }
+          },
+          "observed": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "mail_outbox": {"type": "string", "minLength": 1},
+              "exception_outbox": {"type": "string", "minLength": 1},
+              "fix_outcomes": {"type": "string", "minLength": 1}
+            }
+          },
+          "review_status": {"enum": ["candidate", "reviewed", "rejected"]}
+        }
+      }
+    },
+    "authority_boundary": {"type": "string", "minLength": 1}
+  }
+}

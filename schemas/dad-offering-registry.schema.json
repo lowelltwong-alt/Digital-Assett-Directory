@@ -65,6 +65,7 @@
           "upgrade_channel": {"enum": ["dad_mail", "manual_review", "none"]},
           "known_upgrades": {"type": "array", "items": {"type": "object"}},
           "source_refs": {"type": "array", "items": {"type": "string", "minLength": 1}, "minItems": 1},
+          "harness_registry_ref": {"type": "string", "minLength": 1},
           "review_status": {"enum": ["candidate", "reviewed", "installed_for_local_reuse", "deprecated", "rejected"]},
           "authority_boundary": {"type": "string", "minLength": 1}
         },

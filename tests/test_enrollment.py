@@ -82,6 +82,17 @@ def _cfg(hub: Path, policies: list[EnrollmentRepoPolicy]) -> AppConfig:
     )
 
 
+def _copy_capture_registry(hub: Path) -> None:
+    target = hub / "registry" / "exception-capture-pattern-registry.json"
+    target.parent.mkdir(parents=True, exist_ok=True)
+    target.write_text(
+        (ROOT / "registry" / "exception-capture-pattern-registry.json").read_text(
+            encoding="utf-8"
+        ),
+        encoding="utf-8",
+    )
+
+
 def _load_schema(name: str) -> dict:
     registry = json.loads((ROOT / "registry" / "schema-registry.json").read_text())
     return json.loads((ROOT / registry["schemas"][name]).read_text())
@@ -166,6 +177,7 @@ def test_apply_requires_approval_and_writes_only_approved_paths(tmp_path: Path):
     repo = tmp_path / "repo-a"
     hub.mkdir()
     repo.mkdir()
+    _copy_capture_registry(hub)
     (repo / "AGENTS.md").write_text("# Local Rules\n\nKeep this line.\n", encoding="utf-8")
     policy = _policy(repo)
 
@@ -193,6 +205,16 @@ def test_apply_requires_approval_and_writes_only_approved_paths(tmp_path: Path):
     _validate("governance_map_adoption", governance_map)
     _validate("data_map_adoption", data_map)
     assert contract["enrollment"]["normal_write_boundary"] == ".digital-asset/mail/**"
+    capture_registry = json.loads(
+        (ROOT / "registry" / "exception-capture-pattern-registry.json").read_text(
+            encoding="utf-8"
+        )
+    )
+    assert contract["capture"]["surface_version"] == capture_registry["capture_surface_version"]
+    assert contract["capture"]["pattern_registry_ref"].endswith(
+        "/registry/exception-capture-pattern-registry.json"
+    )
+    assert contract["capture"]["mail_outbox"] == ".digital-asset/mail/outbox.jsonl"
     assert "software-work-preflight" in {route["route_id"] for route in context_map["routes"]}
 
 
@@ -257,6 +279,7 @@ def test_public_facing_enrollment_omits_local_absolute_paths(tmp_path: Path):
     contract = json.loads((repo / ".digital-asset" / "dad-integration.json").read_text())
     assert contract["dad_hub"]["hub_ref"] == "dad://hub/Digital-Assett-Directory"
     assert "repo_path" not in contract
+    assert "C:/Users/" not in json.dumps(contract)
     assert contract["return_address"].startswith("dad://repo/public-repo/")
 
 

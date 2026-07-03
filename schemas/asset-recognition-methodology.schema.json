@@ -9,6 +9,7 @@
     "methodology_id",
     "methodology_version",
     "authority_boundary",
+    "scoring_formula",
     "min_candidate_score",
     "candidate_locations",
     "recognition_signals",
@@ -22,6 +23,7 @@
     "methodology_id": {"type": "string", "minLength": 1},
     "methodology_version": {"type": "string", "minLength": 1},
     "authority_boundary": {"type": "string", "minLength": 1},
+    "scoring_formula": {"type": "string", "minLength": 1},
     "min_candidate_score": {"type": "number", "minimum": 0},
     "candidate_locations": {
       "type": "array",

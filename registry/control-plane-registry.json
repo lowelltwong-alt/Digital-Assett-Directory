@@ -30,6 +30,28 @@
       "review_status": "reviewed"
     },
     {
+      "control_plane_id": "exceptions_lake",
+      "name": "DAD Exceptions Lake",
+      "status": "active",
+      "cadence": "task-triggered",
+      "primary_surfaces": [
+        "raw/exceptions/**",
+        "processed/exceptions/**",
+        "registry/exception-event-type-registry.json",
+        "registry/exception-learning-methodology.json",
+        "registry/exception-capture-pattern-registry.json",
+        "schemas/exception-event.schema.json",
+        "schemas/exception-fix-outcome.schema.json",
+        "schemas/exception-capture-pattern-registry.schema.json",
+        "schemas/exception-capture-scenarios.schema.json",
+        "docs/DAD_EXCEPTIONS_LAKE_BUILDOUT.md",
+        "templates/downstream/EXCEPTIONS_README.md"
+      ],
+      "normal_write_boundary": ".digital-asset/exceptions/**; processed/exceptions/fix-outcomes/**",
+      "authority_boundary": "Exception records are append-only candidate evidence and safe metadata. DAD may classify, cluster, and recommend learning, but source repos or named humans own final fix status and promotion.",
+      "review_status": "reviewed"
+    },
+    {
       "control_plane_id": "reusable_assets",
       "name": "Reusable Asset Library",
       "status": "active",

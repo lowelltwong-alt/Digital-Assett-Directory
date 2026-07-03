@@ -1,0 +1,44 @@
+{
+  "harness_id": "dad:harness:exception-capture-completeness",
+  "name": "Exception Capture Completeness",
+  "version": "0.1.0",
+  "path": "assets/coding-harnesses/exception-capture-completeness",
+  "family": "learning_capture",
+  "status": "candidate",
+  "languages": ["python", "agent-instruction"],
+  "repo_types": ["control_plane", "governed_repo_family", "application", "library"],
+  "domains": ["governance", "learning_loop", "exceptions_lake", "mail_center"],
+  "context_tags": ["exception_capture", "mail_emission", "pattern_update", "synthetic_fixture", "observed_repo_audit"],
+  "task_types": ["testing", "governance_review", "learning_loop", "repo_enrollment"],
+  "capabilities": [
+    "capture_completeness_eval",
+    "pattern_update_simulation",
+    "required_field_contract_check",
+    "negative_payload_gate",
+    "observed_outbox_audit"
+  ],
+  "public_safe": true,
+  "entrypoints": [
+    "README.md",
+    "harness.json",
+    "examples/synthetic-capture-scenarios.json",
+    "prompts/fable5-exception-capture-and-backfill-red-team.prompt.md"
+  ],
+  "research_questions": [
+    "Would a repo emit the right DAD mail or exception packet without Lowell noticing the pattern manually?",
+    "Do updated DAD needs, offerings, mail, and exception patterns trigger capture-surface update requirements?",
+    "Would the repo emit the required metadata fields for the packet, not just the right packet type?"
+  ],
+  "validation_commands": [
+    "python -m pytest tests/test_exception_capture.py -q",
+    "python -m digital_asset_directory.cli exceptions capture-check --scenarios assets/coding-harnesses/exception-capture-completeness/examples/synthetic-capture-scenarios.json",
+    "python -m digital_asset_directory.cli exceptions capture-audit --repo all"
+  ],
+  "source_evidence": [
+    "docs/DAD_EXCEPTIONS_LAKE_BUILDOUT.md",
+    "registry/exception-capture-pattern-registry.json",
+    "templates/downstream/EXCEPTIONS_README.md"
+  ],
+  "review_status": "candidate",
+  "authority_boundary": "The harness proves synthetic capture-rule coverage and read-only observed outbox/path-signal audits. It does not prove real repo completeness, public safety, or source truth."
+}

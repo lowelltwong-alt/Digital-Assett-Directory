@@ -1,0 +1,227 @@
+{
+  "schema_version": "0.1.0",
+  "registry_id": "trusted-source-registry",
+  "authority_boundary": "Trust tiers lower intake friction only. Every external item still passes screening (prompt injection, license, provenance, compatibility) and a named human approval before promotion. A tier never authorizes copying external content into DAD or downstream repos.",
+  "trust_tiers": {
+    "high_signal": "Frontier labs, professional security firms, and language foundations with strong review culture; intake allowed without extra justification.",
+    "known": "Curated community sources with real editorial filtering; intake allowed without extra justification but screen skeptically.",
+    "unknown": "Everything else; intake requires an explicit written justification."
+  },
+  "sources": [
+    {
+      "source_id": "anthropic",
+      "label": "Anthropic (engineering blog, docs, official repos)",
+      "url_patterns": ["anthropic.com", "claude.com", "github.com/anthropics"],
+      "trust_tier": "high_signal",
+      "check_cadence": "monthly",
+      "frontier_watch": ["agent instruction design", "evaluation harnesses", "model behavior research"],
+      "intake_actions": ["Record pointer-only candidates; route coding-review ideas to harness discovery."],
+      "asset_kinds": ["skill", "harness", "doc", "lesson"],
+      "review_status": "reviewed"
+    },
+    {
+      "source_id": "openai",
+      "label": "OpenAI (blog, developers site, official repos)",
+      "url_patterns": ["openai.com", "developers.openai.com", "github.com/openai"],
+      "trust_tier": "high_signal",
+      "check_cadence": "monthly",
+      "frontier_watch": ["agent tooling", "evals", "model routing", "coding-agent workflows"],
+      "intake_actions": ["Record pointer-only candidates; cite official docs before OpenAI implementation changes."],
+      "asset_kinds": ["skill", "harness", "doc", "lesson"],
+      "review_status": "reviewed"
+    },
+    {
+      "source_id": "trailofbits",
+      "label": "Trail of Bits (security skills, Testing Handbook)",
+      "url_patterns": ["github.com/trailofbits", "trailofbits.com", "appsec.guide"],
+      "trust_tier": "high_signal",
+      "check_cadence": "monthly",
+      "frontier_watch": ["security testing", "fuzzing", "review harnesses", "supply-chain safety"],
+      "intake_actions": ["Prefer harness ideas and red-team rubrics; do not copy third-party skill bodies."],
+      "asset_kinds": ["skill", "harness", "doc"],
+      "review_status": "reviewed"
+    },
+    {
+      "source_id": "google",
+      "label": "Google (Comprehensive Rust, official org repos)",
+      "url_patterns": ["github.com/google", "google.github.io"],
+      "trust_tier": "high_signal",
+      "check_cadence": "quarterly",
+      "language_focus": ["rust", "python", "mixed"],
+      "frontier_watch": ["Rust teaching patterns", "AI-legible examples", "large-codebase engineering practices"],
+      "intake_actions": ["Route reusable language guidance through research intake as pointer-only docs."],
+      "asset_kinds": ["doc", "harness", "lesson"],
+      "review_status": "reviewed"
+    },
+    {
+      "source_id": "rust-lang",
+      "label": "Rust project (official docs, blogs, RFCs, crates, project goals)",
+      "url_patterns": [
+        "rust-lang.org",
+        "blog.rust-lang.org",
+        "blog.rust-lang.org/inside-rust",
+        "internals.rust-lang.org",
+        "rust-lang.github.io",
+        "doc.rust-lang.org",
+        "github.com/rust-lang",
+        "github.com/rust-lang/rfcs",
+        "crates.io",
+        "lib.rs"
+      ],
+      "trust_tier": "high_signal",
+      "check_cadence": "weekly",
+      "language_focus": ["rust"],
+      "frontier_watch": [
+        "new stabilized language and stdlib features",
+        "compiler and cargo roadmap changes",
+        "RFCs affecting API design, async, unsafe boundaries, or performance",
+        "crates that improve deterministic scanning, parsing, hashing, or static analysis"
+      ],
+      "intake_actions": [
+        "Update Rust buildout guidance only after screening and a human-reviewed DAD promotion.",
+        "Prefer small harness experiments before recommending Rust in downstream repos."
+      ],
+      "asset_kinds": ["doc", "harness", "asset", "lesson"],
+      "review_status": "reviewed"
+    },
+    {
+      "source_id": "rust-community-frontier",
+      "label": "Rust community frontier feeds (This Week in Rust, performance book, Tokio blog)",
+      "url_patterns": ["this-week-in-rust.org", "nnethercote.github.io/perf-book", "tokio.rs/blog"],
+      "trust_tier": "known",
+      "check_cadence": "weekly",
+      "language_focus": ["rust"],
+      "frontier_watch": [
+        "performance techniques",
+        "async runtime lessons",
+        "new crates worth evaluating",
+        "anti-patterns that AI agents may miss because they are underrepresented in generic code corpora"
+      ],
+      "intake_actions": [
+        "Create research-intake records for candidate crates or idioms; keep claims candidate-only until DAD evals exist.",
+        "Translate repeated patterns into harness research questions instead of direct style rules."
+      ],
+      "asset_kinds": ["doc", "harness", "lesson"],
+      "review_status": "reviewed"
+    },
+    {
+      "source_id": "rust-security",
+      "label": "RustSec and Rust security advisory sources",
+      "url_patterns": ["rustsec.org", "github.com/rustsec"],
+      "trust_tier": "high_signal",
+      "check_cadence": "weekly",
+      "language_focus": ["rust"],
+      "frontier_watch": ["dependency advisories", "unsafe-code hazards", "supply-chain controls"],
+      "intake_actions": ["Route security-relevant changes to governance notices or harness checks; never auto-upgrade dependencies by mail."],
+      "asset_kinds": ["doc", "lesson", "harness"],
+      "review_status": "reviewed"
+    },
+    {
+      "source_id": "pyo3",
+      "label": "PyO3 / maturin project",
+      "url_patterns": ["pyo3.rs", "maturin.rs", "github.com/pyo3"],
+      "trust_tier": "high_signal",
+      "check_cadence": "monthly",
+      "language_focus": ["python", "rust", "mixed"],
+      "frontier_watch": ["Python-to-Rust extension ergonomics", "ABI and wheel changes", "build tooling"],
+      "intake_actions": ["Update Python-to-Rust guidance only after parity and packaging checks."],
+      "asset_kinds": ["doc", "asset"],
+      "review_status": "reviewed"
+    },
+    {
+      "source_id": "python-core",
+      "label": "Python core project (PEPs, dev guide, core discussions, CPython)",
+      "url_patterns": [
+        "python.org",
+        "peps.python.org",
+        "devguide.python.org",
+        "discuss.python.org",
+        "blog.python.org",
+        "github.com/python/cpython"
+      ],
+      "trust_tier": "high_signal",
+      "check_cadence": "weekly",
+      "language_focus": ["python"],
+      "frontier_watch": [
+        "new or accepted PEPs affecting language features, typing, packaging, performance, or concurrency",
+        "stdlib features underused by AI agents",
+        "CPython performance or diagnostics work",
+        "deprecations that should update DAD Python guidance"
+      ],
+      "intake_actions": [
+        "Update Python idiom cards through screened pointer records and regression examples.",
+        "Do not treat a PEP draft as an adopted rule until status and target version are reviewed."
+      ],
+      "asset_kinds": ["doc", "asset", "lesson", "harness"],
+      "review_status": "reviewed"
+    },
+    {
+      "source_id": "python-packaging",
+      "label": "Python Packaging Authority and PyPI",
+      "url_patterns": ["packaging.python.org", "pypi.org", "blog.pypi.org", "github.com/pypa"],
+      "trust_tier": "high_signal",
+      "check_cadence": "monthly",
+      "language_focus": ["python"],
+      "frontier_watch": ["packaging standards", "build isolation", "dependency metadata", "supply-chain controls"],
+      "intake_actions": ["Route packaging changes to Python harnesses and repo template recommendations after screening."],
+      "asset_kinds": ["doc", "asset", "lesson"],
+      "review_status": "reviewed"
+    },
+    {
+      "source_id": "astral",
+      "label": "Astral (ruff, uv)",
+      "url_patterns": ["astral.sh", "github.com/astral-sh"],
+      "trust_tier": "high_signal",
+      "check_cadence": "monthly",
+      "language_focus": ["python"],
+      "frontier_watch": ["Python tooling speedups", "lint rules", "dependency and environment workflows"],
+      "intake_actions": ["Evaluate speed/tooling changes through DAD harnesses before recommending repo-wide adoption."],
+      "asset_kinds": ["asset", "doc"],
+      "review_status": "reviewed"
+    },
+    {
+      "source_id": "martinfowler",
+      "label": "martinfowler.com articles",
+      "url_patterns": ["martinfowler.com"],
+      "trust_tier": "high_signal",
+      "check_cadence": "quarterly",
+      "frontier_watch": ["architecture patterns", "refactoring language", "AI-assisted software design critique"],
+      "intake_actions": ["Promote only as pointer-only architecture or lesson candidates."],
+      "asset_kinds": ["doc", "lesson"],
+      "review_status": "reviewed"
+    },
+    {
+      "source_id": "arxiv",
+      "label": "arXiv preprints (evidence, not benchmarks-as-truth)",
+      "url_patterns": ["arxiv.org"],
+      "trust_tier": "known",
+      "check_cadence": "monthly",
+      "frontier_watch": ["software engineering agents", "program synthesis", "retrieval and evaluation methods"],
+      "intake_actions": ["Require explicit justification and local eval design before any coding-harness change."],
+      "asset_kinds": ["doc", "lesson"],
+      "review_status": "reviewed"
+    },
+    {
+      "source_id": "voltagent-index",
+      "label": "VoltAgent awesome-agent-skills (curated index; per-skill sources vary)",
+      "url_patterns": ["github.com/voltagent"],
+      "trust_tier": "known",
+      "check_cadence": "quarterly",
+      "frontier_watch": ["agent skill discovery", "skill packaging patterns"],
+      "intake_actions": ["Screen each downstream skill source separately; the index is not proof of safety."],
+      "asset_kinds": ["doc"],
+      "review_status": "reviewed"
+    },
+    {
+      "source_id": "simonwillison",
+      "label": "Simon Willison's weblog",
+      "url_patterns": ["simonwillison.net"],
+      "trust_tier": "known",
+      "check_cadence": "weekly",
+      "frontier_watch": ["AI tooling practice", "SQLite and CLI patterns", "practical agent limitations"],
+      "intake_actions": ["Treat as high-signal practitioner notes that still require screening and local validation."],
+      "asset_kinds": ["doc", "lesson"],
+      "review_status": "reviewed"
+    }
+  ]
+}

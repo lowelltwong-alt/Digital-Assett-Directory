@@ -1,0 +1,135 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://local.digital-asset-directory/schemas/lesson-graph.schema.json",
+  "title": "DAD Lesson Graph",
+  "description": "Rebuildable candidate node/edge compilation of lessons, patterns, offerings, repos, and usage. Raw lesson files stay the source of truth.",
+  "type": "object",
+  "additionalProperties": true,
+  "required": [
+    "schema_version",
+    "generated_at",
+    "edge_registry_version",
+    "manifest_path",
+    "pattern_library_version",
+    "lesson_count",
+    "node_count",
+    "edge_count",
+    "nodes_by_type",
+    "edges_by_type",
+    "nodes",
+    "edges",
+    "pattern_gap_candidates",
+    "unmatched_asset_refs",
+    "edge_rule",
+    "authority_boundary"
+  ],
+  "properties": {
+    "schema_version": {"const": "0.1.0"},
+    "generated_at": {"type": "string", "minLength": 1},
+    "edge_registry_version": {"type": "string", "minLength": 1},
+    "manifest_path": {"type": "string", "minLength": 1},
+    "pattern_library_version": {"type": "string"},
+    "lesson_count": {"type": "integer", "minimum": 0},
+    "node_count": {"type": "integer", "minimum": 0},
+    "edge_count": {"type": "integer", "minimum": 0},
+    "nodes_by_type": {"type": "object", "additionalProperties": {"type": "integer", "minimum": 0}},
+    "edges_by_type": {"type": "object", "additionalProperties": {"type": "integer", "minimum": 0}},
+    "nodes": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": true,
+        "required": ["node_id", "node_type", "label"],
+        "properties": {
+          "node_id": {"type": "string", "minLength": 1},
+          "node_type": {"enum": ["lesson", "repo", "pattern", "offering"]},
+          "label": {"type": "string"}
+        }
+      }
+    },
+    "edges": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "edge_id",
+          "source",
+          "target",
+          "edge_type",
+          "edge_class",
+          "edge_basis",
+          "method_version",
+          "created_at",
+          "evidence_refs",
+          "review_status"
+        ],
+        "properties": {
+          "edge_id": {"type": "string", "minLength": 1},
+          "source": {"type": "string", "minLength": 1},
+          "target": {"type": "string", "minLength": 1},
+          "edge_type": {
+            "enum": [
+              "learned_in",
+              "about_asset",
+              "matches_pattern",
+              "uses_asset",
+              "watches_asset",
+              "supersedes",
+              "promoted_from",
+              "sighting_of",
+              "validated_by",
+              "depends_on",
+              "similar_to",
+              "complements",
+              "co_used_with",
+              "gap_evidence_for",
+              "member_of"
+            ]
+          },
+          "edge_class": {"enum": ["join", "inference"]},
+          "edge_basis": {"type": "string", "minLength": 1},
+          "method_version": {"type": "string"},
+          "created_at": {"type": "string"},
+          "evidence_refs": {
+            "type": "array",
+            "items": {"type": "string", "minLength": 1}
+          },
+          "review_status": {"const": "candidate"}
+        },
+        "allOf": [
+          {
+            "if": {"properties": {"edge_class": {"const": "inference"}}},
+            "then": {"properties": {"method_version": {"type": "string", "minLength": 1}}}
+          }
+        ]
+      }
+    },
+    "pattern_gap_candidates": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["reusable_pattern", "lesson_mentions"],
+        "properties": {
+          "reusable_pattern": {"type": "string", "minLength": 1},
+          "lesson_mentions": {"type": "integer", "minimum": 1}
+        }
+      }
+    },
+    "unmatched_asset_refs": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["asset_id", "lesson_mentions"],
+        "properties": {
+          "asset_id": {"type": "string", "minLength": 1},
+          "lesson_mentions": {"type": "integer", "minimum": 1}
+        }
+      }
+    },
+    "edge_rule": {"type": "string", "minLength": 1},
+    "authority_boundary": {"type": "string", "minLength": 1}
+  }
+}

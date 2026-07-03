@@ -584,6 +584,26 @@
         "measured usefulness of surfaced connections",
         "human-reviewed promotion path from candidate connection to graph edge"
       ]
+    },
+    {
+      "id": "swe_review_feedback_loop",
+      "label": "SWE review feedback loop",
+      "description": "Red-team, premortem, audit, security-review, and code-review findings from any coding agent (Fable, Opus, Codex, Claude, Cursor, human) are captured as structured lessons with attribution, mined for repeated failure patterns, and routed back into non-negotiables, harness checks, and pattern cards.",
+      "leverage": "very_high",
+      "recognition_mode": "repository_composite",
+      "positive_signals": [
+        "DAD_REVIEW_FEEDBACK_V1 marker",
+        "red-team, premortem, audit, or code-review findings with agent and model attribution",
+        "severity and confirmed/unconfirmed labels on findings",
+        "review-lane records closed in postflights",
+        "repeated finding classes promoted to rules, harness checks, or pattern cards"
+      ],
+      "missing_evidence": [
+        "repeated finding classes observed across multiple repos",
+        "human-reviewed promotion of a finding class into a rule or harness check",
+        "false-positive review of agent-generated findings",
+        "calibrated severity labels against human judgments"
+      ]
     }
   ],
   "rule": "Pattern matches are generated candidate evidence. They guide review, scoring calibration, and composite-asset proposals; they do not prove value or source truth."

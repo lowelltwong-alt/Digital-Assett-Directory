@@ -3,11 +3,13 @@
   "$id": "https://local.digital-asset-directory/schemas/dad-usefulness-methodology.schema.json",
   "title": "DAD Usefulness Methodology",
   "type": "object",
-  "required": ["schema_version", "methodology_id", "authority_boundary", "weights", "thresholds", "decision_rules"],
+  "required": ["schema_version", "methodology_id", "methodology_version", "authority_boundary", "scoring_formula", "weights", "thresholds", "decision_rules"],
   "properties": {
     "schema_version": {"const": "0.1.0"},
     "methodology_id": {"type": "string", "minLength": 1},
+    "methodology_version": {"type": "string", "minLength": 1},
     "authority_boundary": {"type": "string", "minLength": 1},
+    "scoring_formula": {"type": "string", "minLength": 1},
     "weights": {
       "type": "object",
       "required": [

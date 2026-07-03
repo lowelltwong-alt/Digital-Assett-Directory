@@ -44,8 +44,10 @@ private rows, credentials, secrets, or large raw blobs into reports.
 ## Boundaries
 
 Scores are candidate evidence. They do not prove truth, value, safety,
-licensing, or compatibility. Secret-like paths are downgraded or excluded and
-must not be shared through public-facing mail.
+licensing, compatibility, or security relevance. File importance is separate
+from task relevance; task wording must not change importance tiers. Path names
+are cheap to game, so recognition scores must never gate security-sensitive
+actions or public/private release decisions.
 
 README-only harness folders and explicit `.stub.py` template files are useful
 navigation or scaffold evidence, but they are downgraded so they are not

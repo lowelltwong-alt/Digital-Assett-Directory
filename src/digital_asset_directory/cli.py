@@ -39,15 +39,19 @@ from .config import load_config
 from .context_pack import build_context_pack, write_context_pack
 from .dad_library import (
     build_dad_cadence_plan,
+    calibration_report,
+    check_offering_novelty,
     discover_harness_opportunities,
     harness_evaluate,
     harness_package,
     harness_research,
     list_harnesses,
+    load_asset_patterns,
     load_asset_recognition_methodology,
     load_harness_discovery_methodology,
     load_needs,
     load_offerings,
+    match_asset_patterns,
     match_repo_offerings,
     reconcile_repo_inventory,
     recommend_harnesses,
@@ -63,11 +67,29 @@ from .enrollment import (
     enrollment_status_all,
     select_enrollment_policies,
 )
+from .exceptions_lake import (
+    backfill_exception_candidates,
+    collect_exception_fix_outcomes,
+    collect_exception_events,
+    exception_lake_paths,
+    load_event_type_registry,
+    record_exception_fix_outcome,
+    record_exception_event,
+    write_exception_report,
+)
+from .exception_capture import (
+    discover_capture_audit_repos,
+    evaluate_capture_scenarios,
+    load_capture_pattern_registry,
+    write_observed_capture_audit,
+)
 from .governance import enforce_postflight, install_governance, scaffold_new_repo
 from .governance_map_scope import write_governance_map_adoption_scope_outputs
 from .learning import (
     add_asset_use_feedback,
     add_lesson,
+    add_review_feedback,
+    build_lesson_graph,
     midflight,
     postflight,
     preflight,
@@ -89,11 +111,15 @@ from .lesson_action_queue import (
 )
 from .manual_tasks import write_manual_task_queue
 from .mail_center import (
+    check_outbox_novelty,
     collect_mail,
+    compose_asset_suggestion,
     compose_mail,
     deliver_mail,
     digest_mail,
     release_mail,
+    resurface_deferred_mail,
+    review_central_mail,
     route_mail,
     review_mail,
     triage_mail,
@@ -134,6 +160,12 @@ from .recommendations import recommend_skills_and_agents, recommend_swarm
 from .readiness import write_downstream_pilot_candidates, write_phase45_readiness_reports
 from .reference_architectures import write_reference_architecture_outputs
 from .research import research_missing_parts
+from .research_intake import (
+    intake_external_candidate,
+    list_intake,
+    promote_intake,
+    record_screening,
+)
 from .repo_buildout import load_default_repo_buildout_artifacts, write_repo_buildout_outputs
 from .repo_completion import (
     write_repo_completion_dashboard_outputs,
@@ -157,7 +189,7 @@ from .workflow_parts import (
     write_workflow_part_review_template_outputs,
     write_workflow_part_usage_guidance,
 )
-from .utils import utc_now
+from .utils import append_jsonl, utc_now
 
 app = typer.Typer(no_args_is_help=True, help="Digital Asset Directory portfolio intelligence CLI.")
 lesson_app = typer.Typer(no_args_is_help=True)
@@ -186,6 +218,8 @@ usage_app = typer.Typer(no_args_is_help=True)
 app.add_typer(usage_app, name="usage")
 harness_app = typer.Typer(no_args_is_help=True)
 app.add_typer(harness_app, name="harness")
+exceptions_app = typer.Typer(no_args_is_help=True)
+app.add_typer(exceptions_app, name="exceptions")
 console = Console()
 
 
@@ -239,6 +273,10 @@ def _mail_repo_aliases(policy) -> set[str]:
     return aliases
 
 
+def _exception_repo_policies(cfg) -> list[object]:
+    return list(getattr(cfg, "exception_repos", []) or [])
+
+
 def _looks_like_repo_path(value: str) -> bool:
     if value in {".", ".."}:
         return True
@@ -266,12 +304,18 @@ def _resolve_mail_repo(raw_repo: str, cfg) -> Path:
     return Path(value).resolve()
 
 
-def _discover_mail_repos(raw_repos: list[str], cfg, *, delivery: bool = False) -> list[Path]:
+def _discover_mail_repos(
+    raw_repos: list[str],
+    cfg,
+    *,
+    delivery: bool = False,
+    reviewed: bool = False,
+) -> list[Path]:
     if not raw_repos:
         raise typer.BadParameter("Provide at least one --repo value, or --repo all.")
     if raw_repos != ["all"]:
         repos = [_resolve_mail_repo(repo, cfg) for repo in raw_repos]
-        if delivery:
+        if delivery or reviewed:
             protected: list[str] = []
             unreviewed: list[str] = []
             for repo in repos:
@@ -279,9 +323,9 @@ def _discover_mail_repos(raw_repos: list[str], cfg, *, delivery: bool = False) -
                 for policy in cfg.mail_repos:
                     if repo == policy.path.resolve():
                         matched_policy = policy
-                        if (
-                            not policy.mail_enabled
-                            or
+                        if not policy.mail_enabled:
+                            protected.append(policy.id)
+                        elif delivery and (
                             not policy.delivery_allowed
                             or getattr(policy, "write_protected", False)
                         ):
@@ -291,12 +335,12 @@ def _discover_mail_repos(raw_repos: list[str], cfg, *, delivery: bool = False) -
                     unreviewed.append(str(repo))
             if unreviewed:
                 raise typer.BadParameter(
-                    "Mail delivery can target only reviewed mail.repos entries: "
+                    "This operation can target only reviewed mail.repos entries: "
                     + ", ".join(unreviewed)
                 )
             if protected:
                 raise typer.BadParameter(
-                    "Mail delivery is blocked by reviewed policy for: "
+                    "This operation is blocked by reviewed policy for: "
                     + ", ".join(protected)
                 )
         return repos
@@ -316,6 +360,162 @@ def _discover_mail_repos(raw_repos: list[str], cfg, *, delivery: bool = False) -
             "or add enabled mail.repos entries."
         )
     return list(repos.values())
+
+
+def _resolve_exception_repo(raw_repo: str, cfg) -> Path:
+    value = raw_repo.strip()
+    if not value:
+        raise typer.BadParameter("Repo values cannot be empty.")
+    if _looks_like_repo_path(value):
+        return Path(value).resolve()
+    matches = [
+        policy
+        for policy in _exception_repo_policies(cfg)
+        if getattr(policy, "exceptions_enabled", True) and value in _mail_repo_aliases(policy)
+    ]
+    if len(matches) == 1:
+        return Path(getattr(matches[0], "path")).resolve()
+    if len(matches) > 1:
+        matched = ", ".join(sorted(str(Path(policy.path).resolve()) for policy in matches))
+        raise typer.BadParameter(
+            f"Repo value {value!r} is ambiguous in reviewed exceptions.repos policy: "
+            + matched
+        )
+    return Path(value).resolve()
+
+
+def _discover_exception_repos(
+    raw_repos: list[str],
+    cfg,
+    *,
+    collect: bool = False,
+    capture_audit: bool = False,
+    reviewed: bool = False,
+) -> list[Path]:
+    if not raw_repos:
+        raise typer.BadParameter("Provide at least one --repo value, or --repo all.")
+    policies = _exception_repo_policies(cfg)
+    if raw_repos != ["all"]:
+        repos = [_resolve_exception_repo(repo, cfg) for repo in raw_repos]
+        if collect or capture_audit or reviewed:
+            blocked: list[str] = []
+            unreviewed: list[str] = []
+            for repo in repos:
+                matched_policy = None
+                for policy in policies:
+                    if repo == Path(getattr(policy, "path")).resolve():
+                        matched_policy = policy
+                        if not getattr(policy, "exceptions_enabled", True):
+                            blocked.append(str(getattr(policy, "id", repo)))
+                        elif collect and (
+                            not getattr(policy, "collect_allowed", True)
+                            or getattr(policy, "write_protected", False)
+                        ):
+                            blocked.append(str(getattr(policy, "id", repo)))
+                        elif capture_audit and not getattr(
+                            policy,
+                            "capture_audit_allowed",
+                            True,
+                        ):
+                            blocked.append(str(getattr(policy, "id", repo)))
+                        break
+                if matched_policy is None:
+                    unreviewed.append(str(repo))
+            if unreviewed:
+                raise typer.BadParameter(
+                    "This operation can target only reviewed exceptions.repos entries: "
+                    + ", ".join(unreviewed)
+                )
+            if blocked:
+                raise typer.BadParameter(
+                    "This operation is blocked by reviewed exceptions policy for: "
+                    + ", ".join(blocked)
+                )
+        return repos
+
+    repos: dict[str, Path] = {}
+    for policy in policies:
+        if not getattr(policy, "exceptions_enabled", True):
+            continue
+        if collect and (
+            not getattr(policy, "collect_allowed", True)
+            or getattr(policy, "write_protected", False)
+        ):
+            continue
+        if capture_audit and not getattr(policy, "capture_audit_allowed", True):
+            continue
+        path = Path(getattr(policy, "path")).resolve()
+        repos[str(path)] = path
+    if not repos:
+        raise typer.BadParameter(
+            "--repo all uses reviewed exceptions.repos config only; add enabled "
+            "exceptions.repos entries before collecting or auditing exception mail."
+        )
+    return list(repos.values())
+
+
+def _path_is_relative_to(path: Path, base: Path) -> bool:
+    try:
+        return path.is_relative_to(base)
+    except AttributeError:
+        return str(path).startswith(str(base))
+
+
+def _exception_policy_for_path(cfg, path: Path):
+    resolved = path.resolve()
+    for policy in _exception_repo_policies(cfg):
+        policy_path = Path(getattr(policy, "path")).resolve()
+        if resolved == policy_path or _path_is_relative_to(resolved, policy_path):
+            return policy
+    return None
+
+
+def _exception_backfill_policy_block_reason(cfg, root: Path) -> str:
+    policy = _exception_policy_for_path(cfg, root)
+    if policy is None:
+        return ""
+    policy_id = str(getattr(policy, "id", root))
+    if not getattr(policy, "exceptions_enabled", True):
+        return f"{policy_id} has exceptions_enabled=false"
+    if getattr(policy, "write_protected", False):
+        return f"{policy_id} is write_protected for exception backfill"
+    if not getattr(policy, "backfill_allowed", False):
+        return f"{policy_id} has backfill_allowed=false"
+    return ""
+
+
+def _exception_record_policy_block_reason(cfg, repo: Path) -> str:
+    policy = _exception_policy_for_path(cfg, repo)
+    if policy is None:
+        return ""
+    policy_id = str(getattr(policy, "id", repo))
+    if not getattr(policy, "exceptions_enabled", True):
+        return f"{policy_id} has exceptions_enabled=false"
+    if getattr(policy, "write_protected", False):
+        return f"{policy_id} is write_protected for exception recording"
+    return ""
+
+
+def _capture_audit_gap_count(result: dict[str, object], *, strict: bool = False) -> int:
+    status_counts = result.get("status_counts", {})
+    if not isinstance(status_counts, dict):
+        return 0
+    flags = {
+        "missed_capture_candidate",
+        "mail_present_exception_gap_candidate",
+        "pattern_gap_candidate",
+        "malformed_jsonl",
+        "stale_capture_surface",
+        "capture_surface_version_unknown",
+    }
+    if strict:
+        flags.update(
+            {
+                "type_present_uncorrelated",
+                "emission_unverified",
+            }
+        )
+    return sum(int(status_counts.get(flag, 0) or 0) for flag in flags)
 
 
 def _mail_repo_candidates(cfg) -> list[dict[str, object]]:
@@ -526,6 +726,8 @@ def mail_compose(
     thread_id: Optional[str] = typer.Option(None, "--thread-id"),
     dedupe_key: Optional[str] = typer.Option(None, "--dedupe-key"),
     composed_by: str = typer.Option("unknown", "--composed-by"),
+    supersedes: str = typer.Option("", "--supersedes", help="Mail ID of a previously sent message this one upgrades; reuses its thread."),
+    allow_similar: bool = typer.Option(False, "--allow-similar", help="Send even when a near-duplicate was already sent."),
     hub: Optional[Path] = typer.Option(None),
 ) -> None:
     """Append a candidate mail packet to a repo-local outbox."""
@@ -544,6 +746,8 @@ def mail_compose(
             dedupe_key=dedupe_key,
             repo_policies=cfg.mail_repos,
             composed_by=composed_by,
+            supersedes=supersedes,
+            allow_similar=allow_similar,
         )
     except (ValueError, TypeError) as exc:
         console.print(str(exc))
@@ -638,6 +842,33 @@ def mail_review(
     console.print_json(data=result)
 
 
+@mail_app.command("central-review")
+def mail_central_review(
+    mail_id: str = typer.Option(..., "--mail-id"),
+    decision: str = typer.Option(..., "--decision"),
+    decided_by: str = typer.Option("unknown", "--decided-by"),
+    human_verified: bool = typer.Option(False, "--human-reviewed"),
+    notes: str = typer.Option("", "--notes"),
+    hub: Optional[Path] = typer.Option(None),
+) -> None:
+    """Append a DAD-central triage decision for collected or routed central mail."""
+    cfg = _cfg(hub=hub)
+    try:
+        result = review_central_mail(
+            cfg.repo_root,
+            mail_id=mail_id,
+            decision=decision,
+            decided_by=decided_by,
+            human_verified=human_verified,
+            notes=notes,
+            repo_policies=cfg.mail_repos,
+        )
+    except (ValueError, TypeError) as exc:
+        console.print(str(exc))
+        raise typer.Exit(2) from exc
+    console.print_json(data=result)
+
+
 @mail_app.command("triage")
 def mail_triage(
     repo: Path = typer.Option(Path("."), "--repo"),
@@ -688,8 +919,80 @@ def mail_release(
             decision=decision,
             human_reviewed_by=human_reviewed_by,
             notes=notes,
+            repo_policies=cfg.mail_repos,
         )
     except (ValueError, TypeError) as exc:
+        console.print(str(exc))
+        raise typer.Exit(2) from exc
+    console.print_json(data=result)
+
+
+@mail_app.command("compose-asset")
+def mail_compose_asset(
+    asset: str = typer.Option(..., "--asset", help="DAD offering ID, e.g. dad:offering:python-underused-idioms"),
+    target_repo: str = typer.Option(..., "--target-repo"),
+    note: str = typer.Option("", "--note"),
+    supersedes: str = typer.Option("", "--supersedes"),
+    allow_similar: bool = typer.Option(False, "--allow-similar"),
+    hub: Optional[Path] = typer.Option(None),
+) -> None:
+    """Compose the standard asset-suggestion mail: pointer, context, version, and graph edges - never a copy."""
+    cfg = _cfg(hub=hub)
+    try:
+        result = compose_asset_suggestion(
+            cfg.repo_root,
+            asset_id=asset,
+            target_repo=target_repo,
+            note=note,
+            repo_policies=cfg.mail_repos,
+            supersedes=supersedes,
+            allow_similar=allow_similar,
+        )
+    except (ValueError, TypeError) as exc:
+        console.print(str(exc))
+        raise typer.Exit(2) from exc
+    console.print_json(data=result)
+
+
+@mail_app.command("outbox-check")
+def mail_outbox_check(
+    repo: Path = typer.Option(Path("."), "--repo"),
+    message_type: str = typer.Option("", "--type"),
+    summary: str = typer.Option(..., "--summary"),
+    payload: list[str] = typer.Option([], "--payload"),
+    evidence: list[str] = typer.Option([], "--evidence"),
+    hub: Optional[Path] = typer.Option(None),
+) -> None:
+    """Check a proposed message against previously sent outbox mail before composing."""
+    _cfg(hub=hub)
+    try:
+        result = check_outbox_novelty(
+            repo.resolve(),
+            message_type=message_type,
+            summary=summary,
+            payload=_key_value_payload(payload),
+            evidence=evidence,
+        )
+    except (OSError, ValueError) as exc:
+        console.print(str(exc))
+        raise typer.Exit(2) from exc
+    console.print_json(data=result)
+
+
+@mail_app.command("resurface")
+def mail_resurface(
+    repo: Path = typer.Option(Path("."), "--repo"),
+    task: str = typer.Option(..., "--task"),
+    limit: int = typer.Option(3, min=1, max=10),
+    hub: Optional[Path] = typer.Option(None),
+) -> None:
+    """Bring back previously deferred/saved mail that matches the current task or watched assets."""
+    cfg = _cfg(hub=hub)
+    try:
+        result = resurface_deferred_mail(
+            repo.resolve(), task=task, hub_root=cfg.repo_root, limit=limit
+        )
+    except (OSError, ValueError) as exc:
         console.print(str(exc))
         raise typer.Exit(2) from exc
     console.print_json(data=result)
@@ -879,6 +1182,87 @@ def dad_asset_recognition(hub: Optional[Path] = typer.Option(None)) -> None:
     console.print_json(data=load_asset_recognition_methodology(cfg.repo_root))
 
 
+@dad_app.command("offer-check")
+def dad_offer_check(
+    name: str = typer.Option(..., "--name"),
+    path: str = typer.Option("", "--path"),
+    version: str = typer.Option("", "--version"),
+    capability: list[str] = typer.Option([], "--capability"),
+    hub: Optional[Path] = typer.Option(None),
+) -> None:
+    """Check a proposed offering against the registry for duplicate vs upgrade before registering."""
+    cfg = _cfg(hub=hub)
+    try:
+        result = check_offering_novelty(
+            cfg.repo_root,
+            name=name,
+            path=path,
+            version=version,
+            capabilities=capability,
+        )
+    except (OSError, ValueError, FileNotFoundError) as exc:
+        console.print(str(exc))
+        raise typer.Exit(2) from exc
+    console.print_json(data=result)
+
+
+@dad_app.command("patterns")
+def dad_patterns(
+    repo: Path = typer.Option(Path("."), "--repo"),
+    task: str = typer.Option("", "--task"),
+    limit: int = typer.Option(3, min=1, max=10),
+    full: bool = typer.Option(False, "--full", help="Print the full pattern registry instead of matches."),
+    hub: Optional[Path] = typer.Option(None),
+) -> None:
+    """Show high-value asset-pattern cards matched to a repo/task, or the full registry."""
+    cfg = _cfg(hub=hub)
+    try:
+        if full:
+            console.print_json(data=load_asset_patterns(cfg.repo_root))
+            return
+        result = match_asset_patterns(
+            cfg.repo_root,
+            task=task,
+            repo=repo.resolve(),
+            limit=limit,
+        )
+    except (OSError, ValueError, FileNotFoundError) as exc:
+        console.print(str(exc))
+        raise typer.Exit(2) from exc
+    console.print_json(data=result)
+
+
+@dad_app.command("calibration")
+def dad_calibration(
+    minimum_n: int = typer.Option(10, "--minimum-n", min=1),
+    hub: Optional[Path] = typer.Option(None),
+) -> None:
+    """Join preflight decision traces to postflight outcomes without overclaiming small samples."""
+    cfg = _cfg(hub=hub)
+    console.print_json(data=calibration_report(cfg.repo_root, minimum_n=minimum_n))
+
+
+@dad_app.command("unavailable-ack")
+def dad_unavailable_ack(
+    operation: str = typer.Option(..., "--operation"),
+    reason: str = typer.Option(..., "--reason"),
+    reviewed_by: str = typer.Option("human", "--reviewed-by"),
+    hub: Optional[Path] = typer.Option(None),
+) -> None:
+    """Record a named DAD-unavailable bypass for a hard-gated operation."""
+    cfg = _cfg(hub=hub)
+    record = {
+        "event_type": "dad_unavailable_ack",
+        "created_at": utc_now(),
+        "operation": operation,
+        "reason": reason,
+        "reviewed_by": reviewed_by,
+        "authority_boundary": "Bypass acknowledgement is an audit record, not blanket approval.",
+    }
+    append_jsonl(cfg.repo_root / "audit" / "events" / f"{record['created_at'][:10]}.jsonl", record)
+    console.print_json(data=record)
+
+
 @dad_app.command("asset-scout")
 def dad_asset_scout(
     repo: Path = typer.Option(Path("."), "--repo"),
@@ -1049,6 +1433,323 @@ def harness_package_command(
     console.print_json(data=result)
 
 
+@exceptions_app.command("paths")
+def exceptions_paths() -> None:
+    """Show repo-local and DAD-central exception lake paths."""
+    console.print_json(data=exception_lake_paths())
+
+
+@exceptions_app.command("taxonomy")
+def exceptions_taxonomy(hub: Optional[Path] = typer.Option(None)) -> None:
+    """Print the reviewed exception event type registry."""
+    cfg = _cfg(hub=hub)
+    console.print_json(data=load_event_type_registry(cfg.repo_root))
+
+
+@exceptions_app.command("capture-patterns")
+def exceptions_capture_patterns(hub: Optional[Path] = typer.Option(None)) -> None:
+    """Print DAD's deterministic exception/mail capture-pattern registry."""
+    cfg = _cfg(hub=hub)
+    console.print_json(data=load_capture_pattern_registry(cfg.repo_root))
+
+
+@exceptions_app.command("capture-check")
+def exceptions_capture_check(
+    scenarios: Path = typer.Option(..., "--scenarios"),
+    output: Optional[Path] = typer.Option(None, "--output"),
+    hub: Optional[Path] = typer.Option(None),
+) -> None:
+    """Run synthetic capture-completeness scenarios against DAD capture rules."""
+    cfg = _cfg(hub=hub)
+    scenario_path = scenarios if scenarios.is_absolute() else cfg.repo_root / scenarios
+    output_path = output if output is None or output.is_absolute() else output
+    try:
+        result = evaluate_capture_scenarios(
+            cfg.repo_root,
+            scenario_path,
+            output=output_path,
+        )
+    except (OSError, json.JSONDecodeError, KeyError, ValueError) as exc:
+        console.print(str(exc))
+        raise typer.Exit(2) from exc
+    console.print_json(data=result)
+    if (
+        result["failed_count"]
+        or result["missing_required_pattern_families"]
+        or result.get("missing_reviewed_rule_ids")
+        or result.get("undeclared_matched_rule_ids")
+        or result.get("unknown_declared_rule_ids")
+    ):
+        raise typer.Exit(1)
+
+
+@exceptions_app.command("capture-audit")
+def exceptions_capture_audit(
+    repo: list[str] = typer.Option([], "--repo"),
+    root: list[Path] = typer.Option([], "--root"),
+    limit: int = typer.Option(200, "--limit", min=1, max=1000),
+    candidate_limit: int = typer.Option(50, "--candidate-limit", min=1, max=500),
+    output: Optional[Path] = typer.Option(None, "--output"),
+    fail_on_gaps: bool = typer.Option(False, "--fail-on-gaps"),
+    strict: bool = typer.Option(
+        False,
+        "--strict",
+        help=(
+            "Also fail on type-present-but-uncorrelated and unverified emissions. "
+            "Stale or unknown capture surfaces already fail with --fail-on-gaps."
+        ),
+    ),
+    hub: Optional[Path] = typer.Option(None),
+) -> None:
+    """Read repo outboxes and report missed exception/mail capture candidates."""
+    cfg = _cfg(hub=hub)
+    repos: dict[str, Path] = {}
+    if repo:
+        selected = _discover_exception_repos(repo, cfg, capture_audit=True)
+        for item in selected:
+            repos[str(item.resolve())] = item.resolve()
+    for item in root:
+        for discovered in discover_capture_audit_repos([item], limit=limit):
+            repos[str(discovered.resolve())] = discovered.resolve()
+            if len(repos) >= limit:
+                break
+    if not repos:
+        current = Path(".").resolve()
+        repos[str(current)] = current
+    output_path = output if output is None or output.is_absolute() else output
+    try:
+        result = write_observed_capture_audit(
+            cfg.repo_root,
+            list(repos.values())[:limit],
+            repo_policies=_exception_repo_policies(cfg),
+            output=output_path,
+            candidate_limit=candidate_limit,
+        )
+    except (OSError, json.JSONDecodeError, KeyError, ValueError) as exc:
+        console.print(str(exc))
+        raise typer.Exit(2) from exc
+    console.print_json(data=result)
+    gap_count = _capture_audit_gap_count(result, strict=strict)
+    if fail_on_gaps and gap_count:
+        raise typer.Exit(1)
+    if strict and gap_count:
+        raise typer.Exit(1)
+
+
+@exceptions_app.command("record")
+def exceptions_record(
+    repo: Path = typer.Option(Path("."), "--repo"),
+    event_type: str = typer.Option(..., "--type"),
+    summary: str = typer.Option(..., "--summary"),
+    stage: str = typer.Option("midflight", "--stage"),
+    severity: str = typer.Option("medium", "--severity"),
+    capture_contract: str = typer.Option("failed_command", "--capture-contract"),
+    agent: str = typer.Option("codex", "--agent"),
+    source_visibility: Optional[str] = typer.Option(None, "--source-visibility"),
+    command_arg: list[str] = typer.Option([], "--command-arg"),
+    exit_code: Optional[int] = typer.Option(None, "--exit-code"),
+    duration_ms: Optional[int] = typer.Option(None, "--duration-ms"),
+    context_ref: list[str] = typer.Option([], "--context-ref"),
+    validation_ref: list[str] = typer.Option([], "--validation-ref"),
+    asset_ref: list[str] = typer.Option([], "--asset-ref"),
+    harness_ref: list[str] = typer.Option([], "--harness-ref"),
+    trace_ref: list[str] = typer.Option([], "--trace-ref"),
+    hub: Optional[Path] = typer.Option(None),
+) -> None:
+    """Append a safe candidate exception packet to a repo-local exceptions outbox."""
+    cfg = _cfg(hub=hub)
+    policy_block_reason = _exception_record_policy_block_reason(cfg, repo.resolve())
+    if policy_block_reason:
+        raise typer.BadParameter(
+            "exceptions record is blocked by reviewed exceptions.repos policy: "
+            + policy_block_reason
+        )
+    try:
+        result = record_exception_event(
+            cfg.repo_root,
+            repo.resolve(),
+            event_type=event_type,
+            summary=summary,
+            stage=stage,
+            severity=severity,
+            capture_contract=capture_contract,
+            agent=agent,
+            source_visibility=source_visibility,
+            command=command_arg,
+            exit_code=exit_code,
+            duration_ms=duration_ms,
+            context_refs=context_ref,
+            validation_refs=validation_ref,
+            asset_refs=asset_ref,
+            harness_refs=harness_ref,
+            trace_refs=trace_ref,
+            repo_policies=_exception_repo_policies(cfg),
+        )
+    except (ValueError, TypeError) as exc:
+        console.print(str(exc))
+        raise typer.Exit(2) from exc
+    console.print_json(data=result)
+
+
+@exceptions_app.command("fix")
+def exceptions_fix(
+    repo: Path = typer.Option(Path("."), "--repo"),
+    event_id: str = typer.Option(..., "--event-id"),
+    decision: str = typer.Option(..., "--decision"),
+    summary: str = typer.Option(..., "--summary"),
+    recorded_by: str = typer.Option("codex", "--recorded-by"),
+    validation_ref: list[str] = typer.Option([], "--validation-ref"),
+    regression_test_ref: list[str] = typer.Option([], "--regression-test-ref"),
+    fix_ref: list[str] = typer.Option([], "--fix-ref"),
+    asset_ref: list[str] = typer.Option([], "--asset-ref"),
+    lesson_ref: list[str] = typer.Option([], "--lesson-ref"),
+    owner_authority: str = typer.Option("", "--owner-authority"),
+    canonical_event_id: str = typer.Option("", "--canonical-event-id"),
+    expiry: str = typer.Option("", "--expiry"),
+    remaining_risk: list[str] = typer.Option([], "--remaining-risk"),
+    review_status: str = typer.Option("candidate", "--review-status"),
+    hub: Optional[Path] = typer.Option(None),
+) -> None:
+    """Append a safe candidate fix outcome to a repo-local fix-outcome ledger."""
+    cfg = _cfg(hub=hub)
+    policy_block_reason = _exception_record_policy_block_reason(cfg, repo.resolve())
+    if policy_block_reason:
+        raise typer.BadParameter(
+            "exceptions fix is blocked by reviewed exceptions.repos policy: "
+            + policy_block_reason
+        )
+    try:
+        result = record_exception_fix_outcome(
+            cfg.repo_root,
+            repo.resolve(),
+            event_id=event_id,
+            decision=decision,
+            summary=summary,
+            recorded_by=recorded_by,
+            validation_refs=validation_ref,
+            regression_test_refs=regression_test_ref,
+            fix_refs=fix_ref,
+            asset_refs=asset_ref,
+            lesson_refs=lesson_ref,
+            owner_authority=owner_authority,
+            canonical_event_id=canonical_event_id,
+            expiry=expiry,
+            remaining_risks=remaining_risk,
+            review_status=review_status,
+            repo_policies=_exception_repo_policies(cfg),
+        )
+    except (ValueError, TypeError) as exc:
+        console.print(str(exc))
+        raise typer.Exit(2) from exc
+    console.print_json(data=result)
+
+
+@exceptions_app.command("collect")
+def exceptions_collect(
+    repo: list[str] = typer.Option([], "--repo"),
+    hub: Optional[Path] = typer.Option(None),
+) -> None:
+    """Collect repo exception outboxes into DAD's central exception lake."""
+    cfg = _cfg(hub=hub)
+    repos = _discover_exception_repos(repo, cfg, collect=True, reviewed=True)
+    event_results = []
+    fix_outcome_results = []
+    for item in repos:
+        event_results.append(
+            collect_exception_events(
+                cfg.repo_root,
+                item,
+                repo_policies=_exception_repo_policies(cfg),
+            )
+        )
+        fix_outcome_results.append(
+            collect_exception_fix_outcomes(
+                cfg.repo_root,
+                item,
+                repo_policies=_exception_repo_policies(cfg),
+            )
+        )
+    report = write_exception_report(cfg.repo_root)
+    console.print_json(
+        data={
+            "results": event_results,
+            "fix_outcome_results": fix_outcome_results,
+            "report": report,
+            "authority_boundary": (
+                "Exception records are candidate evidence. Collection never proves a fix, "
+                "promotes a rule, or authorizes downstream repo mutation."
+            ),
+        }
+    )
+
+
+@exceptions_app.command("backfill")
+def exceptions_backfill(
+    root: Path = typer.Option(Path("."), "--root"),
+    limit: int = typer.Option(200, "--limit", min=1, max=1000),
+    per_repo_limit: int = typer.Option(50, "--per-repo-limit", min=1, max=1000),
+    max_scanned_files: int = typer.Option(
+        25_000,
+        "--max-scanned-files",
+        min=0,
+        help="Stop after scanning this many eligible files. Use 0 for an unbounded walk.",
+    ),
+    include_path_refs: bool = typer.Option(
+        False,
+        "--include-path-refs",
+        help=(
+            "Include readable repo-relative path refs in central backfill events. "
+            "Default is hash-only."
+        ),
+    ),
+    approval_id: str = typer.Option(
+        "",
+        "--approval-id",
+        help=(
+            "Reviewed approval id required for non-DAD backfill roots or readable "
+            "path refs."
+        ),
+    ),
+    hub: Optional[Path] = typer.Option(None),
+) -> None:
+    """Seed metadata-only historical exception candidates from path/name signals."""
+    cfg = _cfg(hub=hub)
+    root_resolved = root.resolve()
+    dad_root = cfg.repo_root.resolve()
+    try:
+        root_inside_dad = root_resolved == dad_root or root_resolved.is_relative_to(dad_root)
+    except AttributeError:
+        root_inside_dad = root_resolved == dad_root or str(root_resolved).startswith(str(dad_root))
+    if (include_path_refs or not root_inside_dad) and not approval_id.strip():
+        raise typer.BadParameter(
+            "exceptions backfill needs --approval-id for non-DAD roots or "
+            "--include-path-refs"
+        )
+    policy_block_reason = _exception_backfill_policy_block_reason(cfg, root_resolved)
+    if policy_block_reason and not approval_id.strip():
+        raise typer.BadParameter(
+            "exceptions backfill is blocked by reviewed exceptions.repos policy: "
+            + policy_block_reason
+        )
+    result = backfill_exception_candidates(
+        cfg.repo_root,
+        root_resolved,
+        limit=limit,
+        per_repo_limit=per_repo_limit,
+        include_path_refs=include_path_refs,
+        repo_policies=_exception_repo_policies(cfg),
+        max_scanned_files=max_scanned_files,
+    )
+    console.print_json(data=result)
+
+
+@exceptions_app.command("report")
+def exceptions_report(hub: Optional[Path] = typer.Option(None)) -> None:
+    """Regenerate and print the DAD exceptions lake report."""
+    cfg = _cfg(hub=hub)
+    console.print_json(data=write_exception_report(cfg.repo_root))
+
+
 @lesson_app.command("add")
 def lesson_add(
     repository: Path = typer.Option(Path("."), "--repo"),
@@ -1097,6 +1798,72 @@ def lesson_reindex(hub: Optional[Path] = typer.Option(None)) -> None:
     cfg = _cfg(hub=hub)
     result = rebuild_lesson_routes(cfg.repo_root)
     console.print_json(data=result)
+
+
+@lesson_app.command("review-feedback")
+def lesson_review_feedback(
+    repository: Path = typer.Option(Path("."), "--repo"),
+    task: str = typer.Option("", "--task"),
+    agent: str = typer.Option(..., "--agent", help="Reviewing agent, e.g. fable, opus, codex, claude-code, cursor, human."),
+    model: Optional[str] = typer.Option(None, "--model"),
+    review_type: str = typer.Option(..., "--review-type", help="red_team | premortem | audit | code_review | security_review | swe_feedback"),
+    severity: str = typer.Option("mixed", "--severity"),
+    finding: list[str] = typer.Option(..., "--finding", help="One finding summary per flag; pointers and paths, never source blobs."),
+    confirmed: list[str] = typer.Option([], "--confirmed"),
+    recommendation: list[str] = typer.Option([], "--recommendation"),
+    path: list[str] = typer.Option([], "--path"),
+    evidence: list[str] = typer.Option([], "--evidence"),
+    confidence: str = typer.Option("medium", "--confidence"),
+    hub: Optional[Path] = typer.Option(None),
+) -> None:
+    """Record red-team/premortem/audit/code-review findings from any agent for DAD pattern mining."""
+    cfg = _cfg(hub=hub)
+    try:
+        record = add_review_feedback(
+            cfg.repo_root,
+            cfg.database_path,
+            repository=str(repository.resolve()),
+            task=task,
+            agent=agent,
+            model=model,
+            review_type=review_type,
+            severity=severity,
+            findings=finding,
+            confirmed=confirmed,
+            recommendations=recommendation,
+            paths=path,
+            evidence=evidence,
+            confidence=confidence,
+        )
+    except ValueError as exc:
+        console.print(str(exc))
+        raise typer.Exit(2) from exc
+    console.print_json(data={"lesson_id": record.lesson_id, "summary": record.summary})
+
+
+@lesson_app.command("graph")
+def lesson_graph(hub: Optional[Path] = typer.Option(None)) -> None:
+    """Compile lessons, patterns, offerings, repos, and usage into a candidate node/edge graph."""
+    cfg = _cfg(hub=hub)
+    try:
+        result = build_lesson_graph(cfg.repo_root)
+    except (OSError, ValueError) as exc:
+        console.print(str(exc))
+        raise typer.Exit(2) from exc
+    graph = result["graph"]
+    summary = {
+        "path": result["path"],
+        "pattern_library_version": graph["pattern_library_version"],
+        "lesson_count": graph["lesson_count"],
+        "node_count": graph["node_count"],
+        "edge_count": graph["edge_count"],
+        "nodes_by_type": graph["nodes_by_type"],
+        "edges_by_type": graph["edges_by_type"],
+        "pattern_gap_candidates": graph["pattern_gap_candidates"][:10],
+        "unmatched_asset_refs": graph["unmatched_asset_refs"][:10],
+        "authority_boundary": graph["authority_boundary"],
+    }
+    console.print_json(data=summary)
 
 
 @lesson_app.command("asset-use")
@@ -1255,6 +2022,11 @@ def agent_postflight(
     reusable_pattern: list[str] = typer.Option([], "--reusable-pattern"),
     missing_capability: list[str] = typer.Option([], "--missing-capability"),
     evidence: list[str] = typer.Option([], "--evidence"),
+    trace: str = typer.Option("", "--trace"),
+    used: list[str] = typer.Option([], "--used"),
+    ignored: list[str] = typer.Option([], "--ignored"),
+    attempted_failed: list[str] = typer.Option([], "--attempted-failed"),
+    harmful: list[str] = typer.Option([], "--harmful"),
 ) -> None:
     cfg = _cfg(hub=hub)
     handoff, lesson_record = postflight(
@@ -1279,6 +2051,11 @@ def agent_postflight(
         reusable_patterns=reusable_pattern,
         missing_capabilities=missing_capability,
         evidence=evidence,
+        trace=trace,
+        used=used,
+        ignored=ignored,
+        attempted_failed=attempted_failed,
+        harmful=harmful,
     )
     console.print_json(
         data={"handoff_id": handoff.handoff_id, "lesson_id": lesson_record.lesson_id}
@@ -1360,6 +2137,100 @@ def agent_enforce(
     console.print(message)
     if not ok:
         raise typer.Exit(2)
+
+
+@research_app.command("intake")
+def research_intake(
+    name: str = typer.Option(..., "--name"),
+    kind: str = typer.Option(..., "--kind", help="skill | harness | asset | lesson | doc"),
+    source_url: str = typer.Option(..., "--source-url"),
+    research_ref: str = typer.Option("", "--research-ref", help="Pointer into a processed/research report entry."),
+    license_name: str = typer.Option("", "--license"),
+    notes: str = typer.Option("", "--notes"),
+    justification: str = typer.Option("", "--justification", help="Required when the source is not in the trusted-source registry."),
+    hub: Optional[Path] = typer.Option(None),
+) -> None:
+    """Quarantine an external research finding as a candidate skill/asset intake record."""
+    cfg = _cfg(hub=hub)
+    try:
+        result = intake_external_candidate(
+            cfg.repo_root,
+            name=name,
+            kind=kind,
+            source_url=source_url,
+            research_ref=research_ref,
+            license_name=license_name,
+            notes=notes,
+            justification=justification,
+        )
+    except (ValueError, FileNotFoundError) as exc:
+        console.print(str(exc))
+        raise typer.Exit(2) from exc
+    console.print_json(data=result)
+
+
+@research_app.command("screen")
+def research_screen(
+    intake_id: str = typer.Option(..., "--intake-id"),
+    check: str = typer.Option(..., "--check", help="prompt_injection | license | provenance | compatibility"),
+    result: str = typer.Option(..., "--result", help="pass | fail | not_applicable"),
+    notes: str = typer.Option("", "--notes"),
+    screened_by: str = typer.Option("agent", "--screened-by"),
+    hub: Optional[Path] = typer.Option(None),
+) -> None:
+    """Record one screening check on a quarantined intake record."""
+    cfg = _cfg(hub=hub)
+    try:
+        outcome = record_screening(
+            cfg.repo_root,
+            intake_id,
+            check=check,
+            result=result,
+            notes=notes,
+            screened_by=screened_by,
+        )
+    except ValueError as exc:
+        console.print(str(exc))
+        raise typer.Exit(2) from exc
+    console.print_json(data=outcome)
+
+
+@research_app.command("promote")
+def research_promote(
+    intake_id: str = typer.Option(..., "--intake-id"),
+    approved_by: str = typer.Option(..., "--approved-by", help="Named human approver; agent/unknown are rejected."),
+    approval_id: str = typer.Option(..., "--approval-id"),
+    target: str = typer.Option(..., "--target", help="offering | skill_pointer"),
+    capability: list[str] = typer.Option([], "--capability"),
+    task_type: list[str] = typer.Option([], "--task-type"),
+    hub: Optional[Path] = typer.Option(None),
+) -> None:
+    """Promote a fully screened intake record into the library as a pointer (human-approved)."""
+    cfg = _cfg(hub=hub)
+    try:
+        outcome = promote_intake(
+            cfg.repo_root,
+            intake_id,
+            approved_by=approved_by,
+            approval_id=approval_id,
+            target=target,
+            capabilities=capability or None,
+            task_types=task_type or None,
+        )
+    except (ValueError, FileNotFoundError) as exc:
+        console.print(str(exc))
+        raise typer.Exit(2) from exc
+    console.print_json(data=outcome)
+
+
+@research_app.command("intake-list")
+def research_intake_list(
+    status: str = typer.Option("", "--status", help="Filter: quarantined | screened | promoted | rejected"),
+    hub: Optional[Path] = typer.Option(None),
+) -> None:
+    """List external intake records and their screening status."""
+    cfg = _cfg(hub=hub)
+    console.print_json(data=list_intake(cfg.repo_root, status=status))
 
 
 @research_app.command("missing")

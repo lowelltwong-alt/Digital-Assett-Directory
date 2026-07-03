@@ -4,13 +4,15 @@ import json
 import fnmatch
 import os
 import re
+import subprocess
+import time
 import zipfile
 from collections.abc import Sequence
 from pathlib import Path
 from typing import Any
 
 from .ids import stable_id
-from .utils import append_jsonl, atomic_write_text, json_dumps, utc_now
+from .utils import append_jsonl, atomic_write_text, json_dumps, sha256_file, utc_now
 
 NEEDS_REGISTRY = Path("registry") / "dad-needs-registry.json"
 OFFERINGS_REGISTRY = Path("registry") / "dad-offerings-registry.json"
@@ -18,7 +20,11 @@ USEFULNESS_METHODOLOGY = Path("registry") / "dad-usefulness-methodology.json"
 ASSET_RECOGNITION_METHODOLOGY = Path("registry") / "asset-recognition-methodology.json"
 HARNESS_DISCOVERY_METHODOLOGY = Path("registry") / "harness-discovery-methodology.json"
 HARNESS_REGISTRY = Path("registry") / "coding-harness-registry.json"
+NON_NEGOTIABLES_REGISTRY = Path("registry") / "non-negotiables.json"
+ASSET_PATTERN_REGISTRY = Path("registry") / "asset-pattern-registry.json"
 CENTRAL_USAGE_LEDGER = Path("processed") / "usage" / "repo-asset-usage.jsonl"
+DECISION_TRACE_LEDGER = Path("processed") / "usage" / "decision-traces.jsonl"
+HARNESS_OUTCOME_LEDGER = Path("processed") / "usage" / "harness-outcomes.jsonl"
 HARNESS_REPORT_DIR = Path("processed") / "harnesses"
 REPO_INVENTORY_DIR = Path("processed") / "repo_inventory"
 CADENCE_REPORT_DIR = Path("processed") / "cadence"
@@ -86,6 +92,10 @@ def _load_json(path: Path) -> dict[str, Any]:
     if not path.exists():
         raise FileNotFoundError(path)
     return json.loads(path.read_text(encoding="utf-8"))
+
+
+def _methodology_hash(path: Path) -> str:
+    return f"sha256:{sha256_file(path)}"
 
 
 def _write_json(path: Path, payload: dict[str, Any]) -> None:
@@ -185,6 +195,14 @@ def _tokenize(value: Any) -> set[str]:
     return set()
 
 
+def _coverage(query_values: Any, target_values: Any) -> float:
+    query_tokens = _tokenize(query_values)
+    target_tokens = _tokenize(target_values)
+    if not query_tokens or not target_tokens:
+        return 0.0
+    return len(query_tokens & target_tokens) / len(target_tokens)
+
+
 def _repo_context(repo: Path) -> dict[str, Any]:
     context_path = repo / ".digital-asset" / "context-map.json"
     fallback = {
@@ -245,23 +263,95 @@ def load_harnesses(hub_root: Path) -> dict[str, Any]:
     return _load_json(hub_root / HARNESS_REGISTRY)
 
 
-def _score_overlap(repo_values: Any, offering_values: Any) -> float:
-    repo_tokens = _tokenize(repo_values)
-    offering_tokens = _tokenize(offering_values)
-    if not repo_tokens or not offering_tokens:
-        return 0.0
-    return len(repo_tokens & offering_tokens) / len(repo_tokens | offering_tokens)
+def load_non_negotiables(hub_root: Path) -> dict[str, Any]:
+    return _load_json(hub_root / NON_NEGOTIABLES_REGISTRY)
+
+
+def load_asset_patterns(hub_root: Path) -> dict[str, Any]:
+    return _load_json(hub_root / ASSET_PATTERN_REGISTRY)
+
+
+PATTERN_MATCH_STOPWORDS = {
+    "a", "an", "and", "are", "as", "be", "by", "for", "from", "in", "into",
+    "is", "it", "of", "on", "or", "that", "the", "this", "to", "with", "without",
+}
+PATTERN_MATCH_BASIS = (
+    "deterministic keyword overlap between task/context tokens and pattern "
+    "id/label/description/positive-signal tokens after stopword removal; "
+    "count-ranked routing aid, not a value score"
+)
+
+
+def match_asset_patterns(
+    hub_root: Path,
+    *,
+    task: str = "",
+    repo: Path | None = None,
+    repo_context: dict[str, Any] | None = None,
+    limit: int = 3,
+) -> dict[str, Any]:
+    """Match task/context tokens to asset-pattern cards so builds know what to watch for.
+
+    Matched terms are raw overlap observations used only for routing which pattern
+    cards to surface; they carry no value claim and no promotion authority.
+    """
+    registry = load_asset_patterns(hub_root)
+    context = repo_context or (_repo_context(repo) if repo else {})
+    context_tokens = _tokenize(
+        [
+            task,
+            context.get("languages", []),
+            context.get("repo_type", ""),
+            context.get("domains", []),
+            context.get("context_tags", []),
+        ]
+    ) - PATTERN_MATCH_STOPWORDS
+    matches: list[dict[str, Any]] = []
+    for pattern in registry.get("patterns", []):
+        pattern_tokens = _tokenize(
+            [
+                pattern.get("id", ""),
+                pattern.get("label", ""),
+                pattern.get("description", ""),
+                pattern.get("positive_signals", []),
+            ]
+        ) - PATTERN_MATCH_STOPWORDS
+        overlap = sorted(context_tokens & pattern_tokens)
+        if not overlap:
+            continue
+        matches.append(
+            {
+                "pattern_id": str(pattern.get("id", "")),
+                "label": str(pattern.get("label", "")),
+                "leverage": str(pattern.get("leverage", "")),
+                "matched_terms": overlap,
+                "watch_for": list(pattern.get("positive_signals", []))[:4],
+                "report_via": "dad:need:asset-pattern-sightings",
+            }
+        )
+    matches.sort(key=lambda item: (-len(item["matched_terms"]), item["pattern_id"]))
+    return {
+        "registry_version": str(registry.get("registry_version", "")),
+        "pattern_count": len(registry.get("patterns", [])),
+        "match_basis": PATTERN_MATCH_BASIS,
+        "matches": matches[:limit],
+        "authority_boundary": str(registry.get("rule", "")) or AUTHORITY_BOUNDARY,
+    }
 
 
 def _decision_for_score(score: float, needs_human_review: bool, methodology: dict[str, Any]) -> str:
     if needs_human_review:
         return "needs_human_review"
     thresholds = methodology.get("thresholds", {})
-    if score >= float(thresholds.get("use_now", 75)):
+    required = {"use_now", "save_for_future", "defer"}
+    missing = sorted(required - set(thresholds))
+    if missing:
+        raise ValueError("DAD usefulness methodology missing thresholds: " + ", ".join(missing))
+    if score >= float(thresholds["use_now"]):
         return "use_now"
-    if score >= float(thresholds.get("save_for_future", 45)):
+    if score >= float(thresholds["save_for_future"]):
         return "save_for_future"
-    if score >= float(thresholds.get("defer", 25)):
+    if score >= float(thresholds["defer"]):
         return "defer"
     return "reject"
 
@@ -282,14 +372,12 @@ def score_offering(
     task: str = "",
 ) -> dict[str, Any]:
     weights = methodology.get("weights", {})
-    language = _score_overlap(repo_context.get("languages", []), offering.get("languages", []))
-    repo_type = _score_overlap(repo_context.get("repo_type", ""), offering.get("repo_types", []))
-    domain = _score_overlap(repo_context.get("domains", []), offering.get("domains", []))
-    context_tags = _score_overlap(
-        repo_context.get("context_tags", []), offering.get("context_tags", [])
-    )
-    task_match = _score_overlap(task, offering.get("task_types", []))
-    capability = _score_overlap(task, offering.get("capabilities", []))
+    language = _coverage(offering.get("languages", []), repo_context.get("languages", []))
+    repo_type = _coverage(offering.get("repo_types", []), repo_context.get("repo_type", ""))
+    domain = _coverage(offering.get("domains", []), repo_context.get("domains", []))
+    context_tags = _coverage(offering.get("context_tags", []), repo_context.get("context_tags", []))
+    task_match = _coverage(task, offering.get("task_types", []))
+    capability = _coverage(task, offering.get("capabilities", []))
     component_scores = {
         "language_match": round(language * 100, 2),
         "repo_type_match": round(repo_type * 100, 2),
@@ -313,6 +401,7 @@ def score_offering(
         "usefulness_score": round(weighted, 2),
         "component_scores": component_scores,
         "methodology_id": methodology["methodology_id"],
+        "methodology_version": methodology.get("methodology_version", ""),
         "needs_human_review": needs_human_review,
         "reason": _decision_reason(decision, component_scores, offering),
         "authority_boundary": AUTHORITY_BOUNDARY,
@@ -343,7 +432,7 @@ def match_repo_offerings(
         score_offering(context, offering, methodology, task=task)
         for offering in offerings
     ]
-    matches.sort(key=lambda item: (item["decision"] == "needs_human_review", item["usefulness_score"]), reverse=True)
+    matches.sort(key=lambda item: item["usefulness_score"], reverse=True)
     return {
         "repo": _normalized_path(repo),
         "task": task,
@@ -352,6 +441,285 @@ def match_repo_offerings(
         "returned_match_count": len(matches[:limit]),
         "limit": limit,
         "matches": matches[:limit],
+        "authority_boundary": AUTHORITY_BOUNDARY,
+    }
+
+
+OFFER_CHECK_BASIS = (
+    "deterministic metadata comparison at thresholds 0.5: name token Jaccard "
+    "(|intersection|/|union|), capability token coverage in both directions "
+    "(|intersection|/|side|), and normalized path equality/prefix. Metadata-level "
+    "routing only; content-level deltas still require semantic-evolution grading "
+    "(registry/semantic-evolution-grade-registry.json) before merge or replacement."
+)
+OFFER_CHECK_VERDICT_ORDER = [
+    "duplicate",
+    "upgrade_candidate",
+    "possible_duplicate",
+    "possible_upgrade",
+    "new",
+]
+
+
+def check_offering_novelty(
+    hub_root: Path,
+    *,
+    name: str,
+    path: str = "",
+    version: str = "",
+    capabilities: Sequence[str] | None = None,
+) -> dict[str, Any]:
+    """Classify a proposed offering as new, duplicate, or upgrade against the registry.
+
+    All relations are candidate routing evidence for human review; a duplicate or
+    upgrade verdict never auto-merges, auto-replaces, or blocks registration by itself.
+    """
+    candidate_name_tokens = _tokenize(name)
+    candidate_caps = _tokenize(list(capabilities or []))
+    candidate_path = path.replace("\\", "/").strip().strip("/").lower()
+    matches: list[dict[str, Any]] = []
+    for offering in load_offerings(hub_root).get("offerings", []):
+        existing_name_tokens = _tokenize(offering.get("name", ""))
+        existing_caps = _tokenize(offering.get("capabilities", []))
+        existing_path = str(offering.get("path", "")).replace("\\", "/").strip().strip("/").lower()
+        union = candidate_name_tokens | existing_name_tokens
+        name_jaccard = len(candidate_name_tokens & existing_name_tokens) / len(union) if union else 0.0
+        cap_overlap = candidate_caps & existing_caps
+        existing_covered = len(cap_overlap) / len(existing_caps) if existing_caps else 0.0
+        candidate_covered = len(cap_overlap) / len(candidate_caps) if candidate_caps else 0.0
+        path_equal = bool(candidate_path) and candidate_path == existing_path
+        path_prefix = bool(candidate_path) and not path_equal and (
+            candidate_path.startswith(existing_path + "/")
+            or existing_path.startswith(candidate_path + "/")
+        )
+        relation = ""
+        if path_equal:
+            relation = (
+                "duplicate"
+                if version and version == str(offering.get("version", ""))
+                else "upgrade_candidate"
+            )
+        elif name_jaccard >= 0.5 or max(existing_covered, candidate_covered) >= 0.5:
+            new_capabilities = sorted(candidate_caps - existing_caps)
+            relation = "possible_upgrade" if new_capabilities else "possible_duplicate"
+        elif path_prefix:
+            relation = "possible_duplicate"
+        if not relation:
+            continue
+        matches.append(
+            {
+                "offering_id": offering["offering_id"],
+                "existing_name": offering.get("name", ""),
+                "existing_version": str(offering.get("version", "")),
+                "existing_path": offering.get("path", ""),
+                "relation": relation,
+                "name_token_jaccard": round(name_jaccard, 3),
+                "existing_capability_coverage": round(existing_covered, 3),
+                "candidate_capability_coverage": round(candidate_covered, 3),
+                "new_capabilities": sorted(candidate_caps - existing_caps),
+                "path_equal": path_equal,
+                "path_prefix_overlap": path_prefix,
+            }
+        )
+    matches.sort(key=lambda item: OFFER_CHECK_VERDICT_ORDER.index(item["relation"]))
+    verdict = matches[0]["relation"] if matches else "new"
+    return {
+        "schema_version": "0.1.0",
+        "candidate_name": name,
+        "candidate_path": path,
+        "candidate_version": version,
+        "verdict": verdict,
+        "check_basis": OFFER_CHECK_BASIS,
+        "matches": matches,
+        "next_steps": [
+            "Human review decides register, merge, upgrade, or reject; this check only routes.",
+            "For duplicate/upgrade verdicts, run semantic-evolution grading on content-level deltas before replacing or merging.",
+            "For upgrades, append a known_upgrades entry to the existing offering instead of registering a parallel one.",
+        ],
+        "authority_boundary": AUTHORITY_BOUNDARY,
+    }
+
+
+def compile_context_pack(
+    hub_root: Path,
+    target_repo: Path,
+    *,
+    session_id: str,
+    task: str,
+    mail_digest_status: dict[str, Any] | None = None,
+    deferred_mail: dict[str, Any] | None = None,
+    asset_limit: int = 5,
+) -> dict[str, Any]:
+    created = utc_now()
+    trace_id = stable_id("trace", session_id, created, _normalized_path(target_repo), task)
+    warnings: list[str] = []
+    try:
+        non_negotiables = load_non_negotiables(hub_root)
+        entries = non_negotiables.get("non_negotiables", [])[:10]
+    except (FileNotFoundError, json.JSONDecodeError, KeyError) as exc:
+        entries = []
+        warnings.append(f"non-negotiables unavailable: {exc}")
+    try:
+        match_payload = match_repo_offerings(hub_root, target_repo, task=task, limit=asset_limit)
+        raw_assets = match_payload["matches"][:asset_limit]
+    except (FileNotFoundError, json.JSONDecodeError, KeyError, ValueError) as exc:
+        raw_assets = []
+        warnings.append(f"DAD offerings unavailable: {exc}")
+    assets = [
+        {
+            "asset_id": item["offering_id"],
+            "decision": item["decision"],
+            "score": item["usefulness_score"],
+            "path": item["path"],
+            "use_when": item.get("reason", ""),
+            "needs_human_review": item.get("needs_human_review", False),
+        }
+        for item in raw_assets
+    ]
+    try:
+        pattern_payload = match_asset_patterns(
+            hub_root, task=task, repo_context=_repo_context(target_repo), limit=3
+        )
+        asset_patterns = pattern_payload["matches"]
+        pattern_library_version = pattern_payload["registry_version"]
+    except (FileNotFoundError, json.JSONDecodeError, KeyError) as exc:
+        asset_patterns = []
+        pattern_library_version = ""
+        warnings.append(f"asset pattern registry unavailable: {exc}")
+    registry_hashes = {}
+    for key, rel in {
+        "non_negotiables": NON_NEGOTIABLES_REGISTRY,
+        "dad_offerings": OFFERINGS_REGISTRY,
+        "dad_usefulness_methodology": USEFULNESS_METHODOLOGY,
+        "asset_pattern_registry": ASSET_PATTERN_REGISTRY,
+    }.items():
+        path = hub_root / rel
+        if path.exists():
+            registry_hashes[key] = _methodology_hash(path)
+    if mail_digest_status and mail_digest_status.get("stale"):
+        warnings.append("mail digest is stale or unavailable")
+    deferred_payload = deferred_mail or {}
+    deferred_items = list(deferred_payload.get("items") or [])[:3]
+    if deferred_items:
+        warnings.append(
+            f"{len(deferred_items)} previously deferred mail item(s) match this task; "
+            "re-triage before finishing"
+        )
+    pack = {
+        "schema_version": "0.1.0",
+        "trace_id": trace_id,
+        "session_id": session_id,
+        "generated_at": created,
+        "task": task,
+        "non_negotiables": entries,
+        "assets": assets,
+        "asset_patterns": asset_patterns,
+        "pattern_library_version": pattern_library_version,
+        "pattern_match_basis": PATTERN_MATCH_BASIS,
+        "deferred_mail": deferred_items,
+        "deferred_mail_basis": str(deferred_payload.get("match_basis", "")),
+        "deferred_backlog_count": int(deferred_payload.get("deferred_total", 0) or 0),
+        "stop_conditions": [
+            "Stop for a human when DAD recommendations conflict with local source authority.",
+            "Stop before cross-repo writes, public releases, enrollment writes, or protected repo writes when DAD is unavailable.",
+            "Stop when a recommendation requires human review and no reviewed local adoption decision exists.",
+        ],
+        "validation_commands": [
+            "python -m pytest",
+            "python -m digital_asset_directory.cli validate",
+            "python -m digital_asset_directory.cli roadmap check --no-update",
+        ],
+        "registry_hashes": registry_hashes,
+        "warnings": warnings,
+        "authority_boundary": AUTHORITY_BOUNDARY,
+    }
+    trace = {
+        "trace_id": trace_id,
+        "session_id": session_id,
+        "repo": _normalized_path(target_repo),
+        "task_hash": stable_id("task", task),
+        "created_at": created,
+        "recommended": assets,
+        "recommended_patterns": [item["pattern_id"] for item in asset_patterns],
+        "resurfaced_mail": [item["mail_id"] for item in deferred_items],
+        "registry_hashes": registry_hashes,
+        "outcomes": [],
+    }
+    append_jsonl(hub_root / DECISION_TRACE_LEDGER, trace)
+    return pack
+
+
+def record_trace_outcomes(
+    hub_root: Path,
+    *,
+    trace_id: str,
+    session_id: str,
+    outcomes: dict[str, list[str]],
+    summary: str,
+) -> dict[str, Any]:
+    if not trace_id:
+        return {"trace_id": "", "recorded_count": 0}
+    created = utc_now()
+    rows = _read_jsonl(hub_root / DECISION_TRACE_LEDGER)
+    trace_seen = any(row.get("trace_id") == trace_id for row in rows)
+    records: list[dict[str, Any]] = []
+    for outcome, asset_ids in outcomes.items():
+        for asset_id in asset_ids:
+            records.append(
+                {
+                    "trace_id": trace_id,
+                    "session_id": session_id,
+                    "asset_id": asset_id,
+                    "outcome": outcome,
+                    "summary": summary,
+                    "created_at": created,
+                    "trace_seen": trace_seen,
+                }
+            )
+    for record in records:
+        append_jsonl(hub_root / DECISION_TRACE_LEDGER, {"event_type": "trace_outcome", **record})
+    return {"trace_id": trace_id, "recorded_count": len(records), "trace_seen": trace_seen}
+
+
+def calibration_report(hub_root: Path, *, minimum_n: int = 10) -> dict[str, Any]:
+    recommendations: dict[str, dict[str, Any]] = {}
+    outcomes: list[dict[str, Any]] = []
+    for row in _read_jsonl(hub_root / DECISION_TRACE_LEDGER):
+        if row.get("event_type") == "trace_outcome":
+            outcomes.append(row)
+            continue
+        for item in row.get("recommended", []) or []:
+            key = f"{row.get('trace_id')}::{item.get('asset_id')}"
+            recommendations[key] = {
+                "decision": item.get("decision", "unknown"),
+                "asset_id": item.get("asset_id", ""),
+            }
+    grouped: dict[str, dict[str, int]] = {}
+    for outcome in outcomes:
+        key = f"{outcome.get('trace_id')}::{outcome.get('asset_id')}"
+        decision = recommendations.get(key, {}).get("decision", "unknown")
+        grouped.setdefault(decision, {})
+        grouped[decision][str(outcome.get("outcome", "unknown"))] = (
+            grouped[decision].get(str(outcome.get("outcome", "unknown")), 0) + 1
+        )
+    rows = []
+    for decision, counts in sorted(grouped.items()):
+        total = sum(counts.values())
+        rows.append(
+            {
+                "decision": decision,
+                "count": total,
+                "outcomes": counts,
+                "percentages_available": total >= minimum_n,
+            }
+        )
+    return {
+        "schema_version": "0.1.0",
+        "generated_at": utc_now(),
+        "minimum_n_for_percentages": minimum_n,
+        "decision_rows": rows,
+        "trace_count": len([row for row in _read_jsonl(hub_root / DECISION_TRACE_LEDGER) if row.get("trace_id")]),
+        "outcome_count": len(outcomes),
         "authority_boundary": AUTHORITY_BOUNDARY,
     }
 
@@ -551,20 +919,24 @@ def scout_asset_candidates(
     for path in _iter_repo_files(repo, max_files=max_files):
         scanned += 1
         rel = _safe_relative(path, repo)
-        score, signals = _score_asset_path(rel, methodology, task=task)
-        if score < float(methodology.get("min_candidate_score", 30)):
+        importance, relevance, signals = _score_asset_path(rel, methodology, task=task)
+        if importance < float(methodology.get("min_candidate_score", 30)):
             continue
         candidates.append(
             {
                 "candidate_id": stable_id("dad-asset-candidate", _normalized_path(repo), rel),
                 "path": rel,
-                "score": round(score, 2),
-                "importance_tier": _importance_tier(score, methodology),
+                "score": round(importance, 2),
+                "file_importance": round(importance, 2),
+                "task_relevance": round(relevance, 2),
+                "importance_tier": _importance_tier(importance, methodology),
                 "signals": signals,
+                "evidence": _asset_candidate_evidence(repo, rel),
+                "human_label": "plausible",
                 "source_policy": "path-and-metadata-only; file contents were not copied",
                 "score_interpretation": (
-                    "Deterministic candidate routing score from methodology weights; "
-                    "not proof of asset value or readiness."
+                    "File importance is deterministic path/metadata routing only; task relevance "
+                    "is separate and does not change importance tiers."
                 ),
                 "review_status": "candidate",
             }
@@ -578,10 +950,11 @@ def scout_asset_candidates(
         "methodology_id": methodology["methodology_id"],
         "methodology_version": methodology.get("methodology_version", ""),
         "methodology_ref": "registry/asset-recognition-methodology.json",
+        "methodology_hash": _methodology_hash(hub_root / ASSET_RECOGNITION_METHODOLOGY),
         "score_scale": "0-100+ candidate routing score; higher means inspect earlier, not promote automatically",
         "score_formula_summary": (
-            "Sum matching candidate location weights and recognition signal weights, "
-            "then subtract downgrade signal weights and clamp at zero."
+            "File importance sums path/location/extension weights, subtracts downgrade signals, "
+            "and clamps at zero. Task relevance is reported separately."
         ),
         "limit": limit,
         "files_scanned": scanned,
@@ -660,6 +1033,7 @@ def discover_harness_opportunities(
         "methodology_id": methodology["methodology_id"],
         "methodology_version": methodology.get("methodology_version", ""),
         "methodology_ref": "registry/harness-discovery-methodology.json",
+        "methodology_hash": _methodology_hash(hub_root / HARNESS_DISCOVERY_METHODOLOGY),
         "score_scale": "0-100+ opportunity routing score; higher means inspect earlier, not promote automatically",
         "score_formula_summary": (
             "Matched keyword count times signal weight, plus missing-family bonus when no existing "
@@ -699,13 +1073,15 @@ def record_usage(
     policy = _repo_policy(repo, mail_policies=mail_policies, enrollment_policies=enrollment_policies)
     protected, protection_reason = _repo_write_protection(policy)
     repo_ref = _repo_ref(repo, policy)
+    repo_id = str(getattr(policy, "id", "") if policy else "")
+    usage_repo_key = repo_id or repo_ref
     timestamp = utc_now()
-    usage_id = stable_id("dad-usage", repo_ref, asset_id, normalized_status, source_ref)
+    usage_id = stable_id("dad-usage", usage_repo_key, asset_id, normalized_status, source_ref)
     record = {
         "schema_version": "0.1.0",
         "usage_id": usage_id,
         "repo": repo_ref,
-        "repo_id": str(getattr(policy, "id", "") if policy else ""),
+        "repo_id": repo_id,
         "asset_id": asset_id,
         "status": normalized_status,
         "recorded_at": timestamp,
@@ -744,13 +1120,17 @@ def usage_upgrades(
 ) -> dict[str, Any]:
     policy = _repo_policy(repo, mail_policies=mail_policies, enrollment_policies=enrollment_policies)
     repo_ref = _repo_ref(repo, policy)
+    repo_id = str(getattr(policy, "id", "") if policy else "")
+    accepted_repo_keys = {repo_ref, _normalized_path(repo)}
+    if repo_id:
+        accepted_repo_keys.add(repo_id)
     rows = [
         item
         for item in [
             *_read_jsonl(hub_root / CENTRAL_USAGE_LEDGER),
             *_read_jsonl(repo / LOCAL_USAGE_LEDGER),
         ]
-        if str(item.get("repo")) in {repo_ref, _normalized_path(repo)}
+        if (str(item.get("repo_id") or "") in accepted_repo_keys or str(item.get("repo")) in accepted_repo_keys)
         and str(item.get("status")) in {"using", "watching"}
     ]
     by_asset = {item["offering_id"]: item for item in load_offerings(hub_root).get("offerings", [])}
@@ -776,11 +1156,15 @@ def usage_upgrades(
                     "authority_boundary": "Upgrade notice is candidate mail until reviewed locally.",
                 }
             )
+    notice_budget = 5
     return {
         "repo": repo_ref,
         "tracked_usage_count": len(rows),
         "upgrade_count": len(upgrades),
-        "upgrades": upgrades,
+        "notice_budget_period": "weekly",
+        "notice_budget": notice_budget,
+        "overflow_count": max(0, len(upgrades) - notice_budget),
+        "upgrades": upgrades[:notice_budget],
         "authority_boundary": AUTHORITY_BOUNDARY,
     }
 
@@ -857,14 +1241,61 @@ def harness_evaluate(hub_root: Path, harness_id: str, repo: Path) -> dict[str, A
         (item for item in recommendation["recommendations"] if item["harness_id"] == harness_id),
         None,
     )
+    command_results: list[dict[str, Any]] = []
+    for command in harness.get("validation_commands", []):
+        started = time.perf_counter()
+        try:
+            completed = subprocess.run(
+                str(command),
+                cwd=str(repo),
+                shell=True,
+                check=False,
+                capture_output=True,
+                text=True,
+                timeout=120,
+            )
+            exit_code = completed.returncode
+            status = "passed" if exit_code == 0 else "failed"
+        except subprocess.TimeoutExpired:
+            exit_code = 124
+            status = "timeout"
+        duration_ms = int((time.perf_counter() - started) * 1000)
+        command_results.append(
+            {
+                "command": str(command),
+                "exit_code": exit_code,
+                "status": status,
+                "duration_ms": duration_ms,
+            }
+        )
+    evaluation_status = (
+        "passed"
+        if command_results and all(item["status"] == "passed" for item in command_results)
+        else "failed"
+        if command_results
+        else "not_executed"
+    )
+    outcome = {
+        "schema_version": "0.1.0",
+        "outcome_id": stable_id("harness-outcome", harness_id, _normalized_path(repo), utc_now()),
+        "harness_id": harness_id,
+        "repo": _normalized_path(repo),
+        "created_at": utc_now(),
+        "evaluation_status": evaluation_status,
+        "command_results": command_results,
+        "authority_boundary": AUTHORITY_BOUNDARY,
+    }
+    append_jsonl(hub_root / HARNESS_OUTCOME_LEDGER, outcome)
     payload = {
         "schema_version": "0.1.0",
         "generated_at": utc_now(),
         "harness_id": harness_id,
         "repo": _normalized_path(repo),
-        "evaluation_status": "candidate_only",
+        "evaluation_status": evaluation_status,
         "match": match,
         "validation_commands": harness.get("validation_commands", []),
+        "command_results": command_results,
+        "outcome_ledger": str(hub_root / HARNESS_OUTCOME_LEDGER),
         "authority_boundary": AUTHORITY_BOUNDARY,
     }
     path = hub_root / HARNESS_REPORT_DIR / (
@@ -1152,41 +1583,110 @@ def _safe_relative(path: Path, root: Path) -> str:
         return path.name
 
 
-def _score_asset_path(rel_path: str, methodology: dict[str, Any], *, task: str) -> tuple[float, list[str]]:
+def _score_asset_path(
+    rel_path: str,
+    methodology: dict[str, Any],
+    *,
+    task: str,
+) -> tuple[float, float, list[str]]:
     lowered = rel_path.lower().replace("\\", "/")
-    score = 0.0
+    importance = 0.0
+    relevance = 0.0
     signals: list[str] = []
     for location in methodology.get("candidate_locations", []):
         patterns = [str(pattern).lower() for pattern in location.get("patterns", [])]
         if any(_glob_match(lowered, pattern) for pattern in patterns):
             weight = float(location.get("weight", 0))
-            score += weight
+            importance += weight
             signals.append(f"location:{location['location_id']}:+{weight:g}")
     path_tokens = _tokenize(lowered)
     task_tokens = _tokenize(task)
     suffix = Path(lowered).suffix
     for signal in methodology.get("recognition_signals", []):
-        matched = False
+        matched_importance = False
         keywords = _tokenize(signal.get("path_keywords", []))
         if keywords and path_tokens & keywords:
-            matched = True
+            matched_importance = True
         extensions = set(signal.get("extensions", []))
         if extensions and suffix in extensions:
-            matched = True
+            matched_importance = True
+        if matched_importance:
+            weight = float(signal.get("weight", 0))
+            importance += weight
+            signals.append(f"signal:{signal['signal_id']}:+{weight:g}")
         task_keywords = _tokenize(signal.get("task_keywords", []))
         if task_keywords and task_tokens & task_keywords:
-            matched = True
-        if matched:
             weight = float(signal.get("weight", 0))
-            score += weight
-            signals.append(f"signal:{signal['signal_id']}:+{weight:g}")
+            relevance += weight
+            signals.append(f"task_relevance:{signal['signal_id']}:+{weight:g}")
     for downgrade in methodology.get("downgrade_signals", []):
         patterns = [str(pattern).lower() for pattern in downgrade.get("patterns", [])]
         if any(_glob_match(lowered, pattern) for pattern in patterns):
             weight = float(downgrade.get("weight", 0))
-            score -= weight
+            importance -= weight
             signals.append(f"downgrade:{downgrade['signal_id']}:-{weight:g}")
-    return max(0.0, score), signals
+    return max(0.0, importance), max(0.0, relevance), signals
+
+
+def _asset_candidate_evidence(repo: Path, rel_path: str) -> dict[str, Any]:
+    inbound_refs = 0
+    front_door_refs = 0
+    paired = False
+    path = repo / rel_path
+    stem = Path(rel_path).stem.lower()
+    if stem:
+        front_doors = [
+            repo / "AGENTS.md",
+            repo / "CLAUDE.md",
+            repo / "AI_FRONT_DOOR.md",
+            repo / "AI_TABLE_OF_CONTENTS.md",
+            repo / "MACHINE_NAVIGATION_MANIFEST.json",
+        ]
+        for file_path in _iter_repo_files(repo, max_files=500):
+            if file_path == path or file_path.stat().st_size > 200_000:
+                continue
+            try:
+                text = file_path.read_text(encoding="utf-8", errors="ignore").lower()
+            except OSError:
+                continue
+            if rel_path.lower().replace("\\", "/") in text or stem in text:
+                inbound_refs += 1
+                if file_path in front_doors:
+                    front_door_refs += 1
+    if path.exists():
+        siblings = list(path.parent.glob(f"{path.stem}.*"))
+        paired = any(item != path and item.suffix.lower() in {".json", ".md", ".py", ".yaml", ".yml"} for item in siblings)
+    churn_commits = 0
+    git_age_days: int | None = None
+    try:
+        count = subprocess.run(
+            ["git", "-C", str(repo), "rev-list", "--count", "HEAD", "--", rel_path],
+            check=False,
+            capture_output=True,
+            text=True,
+            timeout=5,
+        )
+        if count.returncode == 0 and count.stdout.strip().isdigit():
+            churn_commits = int(count.stdout.strip())
+        first = subprocess.run(
+            ["git", "-C", str(repo), "log", "--follow", "--format=%ct", "--reverse", "--", rel_path],
+            check=False,
+            capture_output=True,
+            text=True,
+            timeout=5,
+        )
+        first_line = next((line for line in first.stdout.splitlines() if line.strip().isdigit()), "")
+        if first.returncode == 0 and first_line:
+            git_age_days = max(0, int((time.time() - int(first_line)) // 86400))
+    except (OSError, subprocess.SubprocessError, ValueError):
+        pass
+    return {
+        "inbound_refs": inbound_refs,
+        "git_age_days": git_age_days,
+        "churn_commits": churn_commits,
+        "has_paired_test_or_example": paired,
+        "front_door_refs": front_door_refs,
+    }
 
 
 def _glob_match(value: str, pattern: str) -> bool:

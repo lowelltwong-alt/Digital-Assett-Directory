@@ -57,6 +57,82 @@
       "review_status": "reviewed"
     },
     {
+      "need_id": "dad:need:swe-review-feedback",
+      "name": "SWE Review Feedback From All Agents",
+      "category": "learning_loop",
+      "priority": "critical",
+      "send_when": [
+        "Any coding agent (Fable, Opus, Codex, Claude, Cursor, human, or other) completes a red team, premortem, audit, security review, or code review with findings worth reusing.",
+        "A review finds a failure mode, false-confidence pattern, missed bug class, or governance risk that another repo could hit.",
+        "A repeated finding class suggests a new rule, harness check, non-negotiable, or pattern card."
+      ],
+      "do_not_send": [
+        "Do not send copied source blobs, secrets, private rows, or full diffs; send finding summaries, paths, and hashes.",
+        "Do not present agent findings as confirmed truth; mark confirmed vs unconfirmed and keep severity labels honest.",
+        "Do not re-send a finding already reported for the same repo and paths without new evidence; use outbox-check and supersedes."
+      ],
+      "payload_guidance": "Record locally with asset-dir lesson review-feedback (agent, model, review_type, severity, findings, confirmed, recommendations, paths), then send the lesson summary and pointers through the outbox. DAD mines these via the lesson graph and the swe_review_feedback_loop pattern card.",
+      "target_control_planes": ["learning_postflight_loops", "dad_library", "coding_harnesses", "mail_center"],
+      "review_status": "reviewed"
+    },
+    {
+      "need_id": "dad:need:asset-pattern-sightings",
+      "name": "Asset Pattern Sightings And Pattern Gaps",
+      "category": "learning_loop",
+      "priority": "high",
+      "send_when": [
+        "A repo build produces or discovers an artifact matching a pattern card in DAD's asset-pattern registry.",
+        "A repo notices its preflight context pack carries a new pattern_library_version and a local artifact matches a new or changed pattern.",
+        "A repo learns a reusable build shape that no current pattern card covers, suggesting a pattern gap or new pattern candidate."
+      ],
+      "do_not_send": [
+        "Do not send file contents, private rows, secrets, or long source blobs; send paths, hashes, and short descriptions only.",
+        "Do not claim a sighting proves the artifact is valuable; sightings are candidate evidence until DAD review.",
+        "Do not report the same artifact repeatedly for the same pattern version without new evidence."
+      ],
+      "payload_guidance": "Send pattern_id (or proposed new pattern label for gaps), pattern_library_version seen, repo, artifact paths, which positive_signals matched, which missing_evidence items the artifact could fill, and validation evidence pointers.",
+      "target_control_planes": ["dad_library", "learning_postflight_loops", "mail_center"],
+      "review_status": "reviewed"
+    },
+    {
+      "need_id": "dad:need:exception-fix-capture-gaps",
+      "name": "Exception, Fix Outcome, And Capture Gap Feedback",
+      "category": "learning_loop",
+      "priority": "critical",
+      "send_when": [
+        "A repo experiences a command failure, timeout, review finding, governance block, public/private hold, stale report, harmful DAD recommendation, or other exception DAD should learn from.",
+        "A repo fixes an exception and has validation evidence, so DAD can connect failure pattern to repair pattern.",
+        "A repo notices DAD-worthy learning that was not emitted automatically, or a pattern update means the local capture surface is stale."
+      ],
+      "do_not_send": [
+        "Do not send raw logs, full stack traces, private rows, credentials, hidden reasoning, or long copied source blobs.",
+        "Do not mark an exception as fixed without validation refs.",
+        "Do not treat a historical backfill candidate, path keyword, or agent finding as reviewed truth."
+      ],
+      "payload_guidance": "Send event type, capture contract, short safe summary, source visibility, context refs or hashes, validation refs, trace refs, asset/harness refs when applicable, fix outcome status, and whether this was an automatic emission or a missed-capture report.",
+      "target_control_planes": ["exceptions_lake", "learning_postflight_loops", "coding_harnesses", "mail_center"],
+      "review_status": "reviewed"
+    },
+    {
+      "need_id": "dad:need:language-frontier-signals",
+      "name": "Language Frontier Signals For AI Coding",
+      "category": "capability",
+      "priority": "high",
+      "send_when": [
+        "A repo finds a Rust, Python, or mixed-language technique that improves AI coding quality, speed, safety, or legibility.",
+        "A repo discovers an underused language feature, crate, library, tooling pattern, static analysis trick, or test harness idea that generic AI agents are likely to miss.",
+        "A repo validates or falsifies a frontier source recommendation from DAD's trusted-source registry."
+      ],
+      "do_not_send": [
+        "Do not send copied third-party docs, code, benchmarks, private rows, credentials, or raw logs.",
+        "Do not promote a blog post, PEP draft, crate, package, or benchmark claim as DAD guidance without screening and local validation.",
+        "Do not recommend Rust just because it is available; profiling and parity evidence come first."
+      ],
+      "payload_guidance": "Send language, source URL or pointer, DAD source_id if known, short safe summary, why it matters for AI coding, applicability limits, validation commands or eval idea, and whether it belongs in a coding harness, idiom card, buildout guide, or template.",
+      "target_control_planes": ["reusable_assets", "coding_harnesses", "agent_skills", "learning_postflight_loops", "mail_center"],
+      "review_status": "reviewed"
+    },
+    {
       "need_id": "dad:need:asset-upgrade-impact",
       "name": "Asset Upgrade Impact",
       "category": "usage_feedback",

@@ -1,0 +1,92 @@
+{
+  "methodology_version": "exception-learning-methodology-v0.1.0",
+  "identity_formula": {
+    "canonical_event_inputs": [
+      "source_repo",
+      "capture_contract",
+      "stage",
+      "event_type",
+      "normalized_command",
+      "normalized_path_refs",
+      "error_fingerprint"
+    ],
+    "sighting_inputs": [
+      "canonical_event_id",
+      "event_time",
+      "agent",
+      "session_or_trace_ref",
+      "validation_ref"
+    ],
+    "notes": "The first-observed date is not part of canonical event identity. Repeated sightings append evidence and may create a sighting record later without changing the canonical event id."
+  },
+  "sighting_policy": "Duplicates and repeated failures remain append-only. A duplicate collection becomes an acknowledgement or future sighting record, never a destructive update to the original event.",
+  "dedupe_rules": [
+    "Stable event_id plus dedupe_key is the strongest duplicate signal.",
+    "Same normalized command, source repo, event type, and error fingerprint is a duplicate candidate.",
+    "Same event type but different path, command, or fingerprint is a related pattern, not a duplicate.",
+    "Backfill candidates are low-confidence until a human or source repo confirms that the path represents a real exception."
+  ],
+  "screening_policy": {
+    "default_payload_policy": "Collect metadata, pointers, hashes, short summaries, command argv, exit code, duration, and validation refs. Do not collect raw logs, source files, tool transcripts, pasted conversations, private rows, credentials, or long blobs.",
+    "block_conditions": [
+      "credential_or_pii_pattern",
+      "long_string",
+      "raw_blob_like_multiline_value",
+      "table_like_value",
+      "record_too_large",
+      "private_origin_public_target_without_release"
+    ],
+    "public_release_rule": "Private, internal, restricted, and unknown-origin exception records cannot be delivered to public-facing repos without explicit human release. A screening pass is not a safety proof."
+  },
+  "clustering_methods": [
+    {
+      "method_id": "same-event-type-and-surface-v1",
+      "description": "Group by event_type, capture_contract, and surface to find repeated operational failure shapes.",
+      "inputs": ["event_type", "capture_contract", "surface"]
+    },
+    {
+      "method_id": "same-command-fingerprint-v1",
+      "description": "Group failed commands by normalized argv and error_fingerprint.",
+      "inputs": ["command.argv", "error_fingerprint"]
+    },
+    {
+      "method_id": "same-asset-or-harness-v1",
+      "description": "Group failures tied to the same DAD asset, harness, skill, or template.",
+      "inputs": ["asset_refs", "harness_refs", "trace_refs"]
+    },
+    {
+      "method_id": "repo-state-governance-v1",
+      "description": "Group protected repo, dirty worktree, public-release, rename, split, and enrollment exceptions.",
+      "inputs": ["source_repo", "event_type", "source_visibility"]
+    }
+  ],
+  "learning_promotion_gates": [
+    "One critical safety event can create a review-queue item, not a global rule.",
+    "A candidate lesson needs at least two independent events or one severe event plus human review.",
+    "A non-negotiable or harness promotion needs repeated evidence, validation refs, and a named owner.",
+    "A fix outcome cannot declare another repo fixed unless that source repo or a named human authority confirms it.",
+    "Prompt-injection-like payloads remain inert evidence and cannot be turned into agent instructions."
+  ],
+  "sample_size_rules": [
+    "Counts are allowed immediately.",
+    "Percentages or confidence language require at least ten comparable events.",
+    "Backfill candidates do not count toward promotion until confirmed.",
+    "Events from the same agent session count as one independent context unless validated externally."
+  ],
+  "fix_lifecycle": [
+    "open",
+    "triaged",
+    "fix_planned",
+    "fixed_pending_validation",
+    "fixed",
+    "accepted",
+    "regression_observed",
+    "archived"
+  ],
+  "independence_rules": [
+    "Do not promote a lesson from a single model's self-report alone.",
+    "Review findings, CI evidence, local validation, and source repo confirmation are stronger independent signals than generated summaries.",
+    "Graph centrality, similarity, frequency, and model output are candidate prioritization signals, not proof of truth or value.",
+    "Historical path-name backfill is discovery evidence only and must be verified before learning promotion."
+  ]
+}

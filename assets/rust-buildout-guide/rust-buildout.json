@@ -1,0 +1,80 @@
+{
+  "schema_version": "0.1.0",
+  "asset_id": "dad:offering:rust-buildout-guide",
+  "version": "0.1.0",
+  "purpose": "Give AI agents a decision guide for when and how to introduce Rust next to Python in this repo family: what Rust is good at, the staged Python-to-Rust migration path, and Rust idioms that keep Rust code legible to future agents.",
+  "decision_rule": "Rust enters a repo only through the staged path below, gated by profiling evidence and the existing Rust shadow-parity harness (dad:harness:rust-shadow-parity). A rewrite claim without a profile and a parity report is not evidence.",
+  "when_rust_pays_off": [
+    {"case": "cpu_bound_text_processing", "detail": "Parsing, chunking, tokenizing, hashing, or diffing large text/JSONL corpora where a profiled Python hot loop dominates wall time."},
+    {"case": "parallel_batch_work", "detail": "Embarrassingly parallel scans and scoring where rayon parallelism avoids Python multiprocessing serialization overhead."},
+    {"case": "long_running_watchers", "detail": "Daemons/watchers where memory footprint and startup latency matter; Rust binaries deploy as a single file with no interpreter."},
+    {"case": "correctness_critical_parsers", "detail": "Format parsers where exhaustive enums plus the type system remove whole classes of malformed-input bugs."},
+    {"case": "distributable_cli_tools", "detail": "Cross-repo helper CLIs delivered as static binaries, avoiding per-repo Python environment drift."}
+  ],
+  "when_rust_does_not_pay": [
+    {"case": "io_bound_glue", "detail": "Code waiting on disk/network/subprocesses; Rust cannot speed up waiting."},
+    {"case": "fast_changing_prototypes", "detail": "Exploratory logic still changing weekly; compile-and-borrow overhead slows iteration for no stable payoff."},
+    {"case": "thin_orchestration", "detail": "CLI plumbing, config handling, registry reads — the cost is elsewhere and Python readability wins."},
+    {"case": "no_profile_evidence", "detail": "Nobody has profiled; the hot spot is a guess. Profile first (py-idiom:cprofile-pstats)."}
+  ],
+  "python_to_rust_migration_path": {
+    "rule": "Stages are ordered and gated; skipping a stage requires a human-reviewed reason recorded in the repo's learning loop.",
+    "stages": [
+      {"stage": 1, "name": "profile", "action": "Profile the real workload (cProfile/py-spy). Identify the specific hot function(s) and record baseline timings as evidence, not memory."},
+      {"stage": 2, "name": "python_first_pass", "action": "Try the cheap wins in Python first: algorithmic fixes, stdlib data tools, caching. Many 'needs Rust' cases end here."},
+      {"stage": 3, "name": "rust_shadow", "action": "Build the Rust implementation as a shadow alongside Python using the rust-shadow-parity harness: same inputs, compared outputs, structured mismatch reports."},
+      {"stage": 4, "name": "parity_gate", "action": "Same-scope parity must pass on real corpus data before any timing claim is published. Timing claims are gated behind verified parity (harness timing_claim_gate)."},
+      {"stage": 5, "name": "pyo3_extension", "action": "Ship the hot path as a PyO3 + maturin extension module keeping the Python API surface unchanged; callers should not know the implementation moved."},
+      {"stage": 6, "name": "full_port_decision", "action": "Only if the extension boundary itself is the bottleneck, consider a full Rust port — a load-bearing decision requiring risk-tier review and human approval."}
+    ],
+    "tooling": {
+      "pyo3": "Rust bindings for Python; write #[pyfunction]/#[pymodule] and call from Python as a normal import.",
+      "maturin": "Builds/publishes PyO3 crates as wheels; `maturin develop` installs into the active venv for iteration.",
+      "harness_ref": "assets/coding-harnesses/rust-shadow-parity-harness"
+    }
+  },
+  "rust_idioms_for_ai_legibility": [
+    {"id": "rs-idiom:thiserror-errors", "construct": "thiserror-derived error enums", "what": "One error enum per crate/module with #[error] display strings.", "ai_note": "Typed error variants tell a future agent every failure mode of a function in one place; string errors hide them.", "avoid_when": "Application binaries where anyhow::Result with context() is simpler at the top level."},
+    {"id": "rs-idiom:newtype", "construct": "newtype wrappers over primitive ids", "what": "struct AssetId(String); prevents id-space mix-ups at compile time.", "ai_note": "Same guard as Python's NewType but enforced by the compiler, not an optional checker.", "avoid_when": "Single id space; ceremony without payoff."},
+    {"id": "rs-idiom:exhaustive-match", "construct": "exhaustive match without catch-all", "what": "Match every enum variant explicitly; adding a variant breaks every non-updated handler at compile time.", "ai_note": "The compiler generates the todo list when an agent adds a variant — reserve `_ =>` for truly open sets.", "avoid_when": "Matching foreign non_exhaustive enums (a wildcard arm is then required)."},
+    {"id": "rs-idiom:let-else", "construct": "let-else early return (1.65+)", "what": "let Some(x) = opt else { return ... }; binds or diverges.", "ai_note": "Flattens the nested-if pyramids generated code produces around Option/Result handling.", "avoid_when": "An if-let with a real else-body reads better."},
+    {"id": "rs-idiom:matches-macro", "construct": "matches!(value, Pattern)", "what": "Boolean pattern test in one expression.", "ai_note": "Replaces verbose match-to-bool blocks in filters and asserts.", "avoid_when": "You need data out of the pattern (use if-let)."},
+    {"id": "rs-idiom:must-use", "construct": "#[must_use] on results and builders", "what": "Compiler warns when a caller ignores the value.", "ai_note": "Catches the generated-code bug of computing a result and dropping it on the floor.", "avoid_when": "Values that are legitimately fire-and-forget."},
+    {"id": "rs-idiom:doc-tests", "construct": "/// examples as doc-tests", "what": "Examples in doc comments compile and run in CI.", "ai_note": "Executable examples are ground truth for agents reading an unfamiliar crate; they cannot drift from the API like prose docs.", "avoid_when": "Examples needing heavy setup — put those in tests/ instead."},
+    {"id": "rs-idiom:clippy-pedantic", "construct": "cargo clippy -- -W clippy::pedantic in CI", "what": "Lint level that teaches idiomatic Rust mechanically.", "ai_note": "Clippy fixes are the cheapest Rust education loop for agents; allow-list specific lints rather than lowering the level.", "avoid_when": "Adopting on a large existing crate all at once (stage the allow-list down)."},
+    {"id": "rs-idiom:include-str", "construct": "include_str!(\"fixture.json\")", "what": "Embed a fixture file at compile time.", "ai_note": "Keeps parity-test fixtures next to the code with zero runtime file-path fragility across platforms.", "avoid_when": "Large or frequently regenerated fixtures."},
+    {"id": "rs-idiom:cow-str", "construct": "Cow<'_, str> at transform boundaries", "what": "Borrow when unchanged, allocate only when modified.", "ai_note": "The honest signature for normalize/redact functions that usually change nothing — and a self-documenting perf contract.", "avoid_when": "Ownership is always required anyway; plain String is simpler."}
+  ],
+  "repo_conventions": {
+    "layout": "Rust crates live under rust/<crate-name>/ in mixed repos; one crate per concern, small public API, lib.rs re-exports the intended surface only.",
+    "ci": "cargo fmt --check, cargo clippy, cargo test run alongside pytest; parity jobs use the shadow-parity harness reports.",
+    "boundaries": "Python owns orchestration/config/registry semantics; Rust owns profiled hot paths behind stable function signatures."
+  },
+  "frontier_research_sources": [
+    {
+      "source_id": "rust-lang",
+      "cadence": "weekly",
+      "look_for": ["stabilized features", "RFCs", "cargo/compiler roadmap", "crates for deterministic tooling"],
+      "registry_ref": "registry/trusted-source-registry.json#rust-lang"
+    },
+    {
+      "source_id": "rust-community-frontier",
+      "cadence": "weekly",
+      "look_for": ["performance techniques", "async lessons", "AI-overlooked idioms", "candidate crates"],
+      "registry_ref": "registry/trusted-source-registry.json#rust-community-frontier"
+    },
+    {
+      "source_id": "rust-security",
+      "cadence": "weekly",
+      "look_for": ["RustSec advisories", "unsafe-code hazards", "dependency controls"],
+      "registry_ref": "registry/trusted-source-registry.json#rust-security"
+    },
+    {
+      "source_id": "pyo3",
+      "cadence": "monthly",
+      "look_for": ["PyO3/maturin bridge changes", "wheel/ABI shifts", "extension build workflows"],
+      "registry_ref": "registry/trusted-source-registry.json#pyo3"
+    }
+  ],
+  "authority_boundary": "This guide is installed candidate guidance for local reuse. Stage gates (profile evidence, parity reports, human review for full ports) are the enforceable part; language preference is not."
+}

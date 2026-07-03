@@ -1,0 +1,61 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://dad.local/schemas/exception-learning-methodology.schema.json",
+  "title": "DAD Exception Learning Methodology",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "methodology_version",
+    "identity_formula",
+    "sighting_policy",
+    "dedupe_rules",
+    "screening_policy",
+    "clustering_methods",
+    "learning_promotion_gates",
+    "sample_size_rules",
+    "fix_lifecycle",
+    "independence_rules"
+  ],
+  "properties": {
+    "methodology_version": { "type": "string", "minLength": 1 },
+    "identity_formula": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["canonical_event_inputs", "sighting_inputs", "notes"],
+      "properties": {
+        "canonical_event_inputs": { "type": "array", "items": { "type": "string" }, "minItems": 1 },
+        "sighting_inputs": { "type": "array", "items": { "type": "string" }, "minItems": 1 },
+        "notes": { "type": "string" }
+      }
+    },
+    "sighting_policy": { "type": "string", "minLength": 1 },
+    "dedupe_rules": { "type": "array", "items": { "type": "string" }, "minItems": 1 },
+    "screening_policy": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["default_payload_policy", "block_conditions", "public_release_rule"],
+      "properties": {
+        "default_payload_policy": { "type": "string" },
+        "block_conditions": { "type": "array", "items": { "type": "string" } },
+        "public_release_rule": { "type": "string" }
+      }
+    },
+    "clustering_methods": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["method_id", "description", "inputs"],
+        "properties": {
+          "method_id": { "type": "string" },
+          "description": { "type": "string" },
+          "inputs": { "type": "array", "items": { "type": "string" } }
+        }
+      }
+    },
+    "learning_promotion_gates": { "type": "array", "items": { "type": "string" }, "minItems": 1 },
+    "sample_size_rules": { "type": "array", "items": { "type": "string" }, "minItems": 1 },
+    "fix_lifecycle": { "type": "array", "items": { "type": "string" }, "minItems": 1 },
+    "independence_rules": { "type": "array", "items": { "type": "string" }, "minItems": 1 }
+  }
+}

@@ -1,0 +1,1451 @@
+from __future__ import annotations
+
+import json
+import os
+import re
+from collections import Counter
+from pathlib import Path
+from typing import Any
+
+from .exceptions_lake import (
+    BACKFILL_EXCLUDE_DIRS,
+    BACKFILL_SENSITIVE_PATH_TERMS,
+    EXCEPTION_OUTBOX,
+    backfill_path_signal_terms,
+    path_term_matches,
+    screen_exception_record,
+)
+from .mail_center import MAIL_MIRROR_DIR
+from .utils import safe_relative, sha256_bytes, sha256_file, write_json, utc_now
+
+CAPTURE_PATTERN_REGISTRY = Path("registry") / "exception-capture-pattern-registry.json"
+CAPTURE_REPORT_JSON = Path("processed") / "reports" / "exception_capture_completeness.json"
+CAPTURE_REPORT_MD = Path("processed") / "reports" / "exception_capture_completeness.md"
+OBSERVED_AUDIT_JSON = Path("processed") / "reports" / "exception_capture_observed_audit.json"
+OBSERVED_AUDIT_MD = Path("processed") / "reports" / "exception_capture_observed_audit.md"
+
+PACKET_CLASSES = {
+    "ordinary_mail",
+    "exception_event",
+    "fix_outcome",
+    "local_usage_only",
+    "no_packet",
+}
+PROMPT_INJECTION_PATTERNS = [
+    re.compile(r"(?i)\bignore (all )?(previous|prior|above) instructions\b"),
+    re.compile(r"(?i)\b(system|developer) prompt\b"),
+    re.compile(r"(?i)\bexecute (this )?(tool|command)\b"),
+]
+CAPTURE_AUDIT_EXCLUDE_DIRS = set(BACKFILL_EXCLUDE_DIRS) | {
+    ".digital-asset",
+    ".idea",
+    ".tmp",
+    ".vscode",
+    "coverage",
+    "htmlcov",
+}
+PLACEHOLDER_REQUIRED_VALUES = {
+    "",
+    "n/a",
+    "na",
+    "none",
+    "null",
+    "placeholder",
+    "metadata-only placeholder",
+    "tbd",
+    "todo",
+}
+PRIVATE_PATH_FRAGMENTS = (
+    "c:/users/",
+    "c:\\users\\",
+    "/users/",
+    "\\users\\",
+    "onedrive/",
+    "onedrive\\",
+    "git projects/",
+    "git projects\\",
+    "appdata/",
+    "appdata\\",
+)
+CAPTURE_AUDIT_PATH_TERMS: dict[str, dict[str, str]] = {
+    "red-team": {
+        "pattern_family": "harness",
+        "signal": "path_keyword:red-team",
+        "expected_review": "ordinary_mail_or_no_packet",
+        "suggested_event_type": "",
+    },
+    "red_team": {
+        "pattern_family": "harness",
+        "signal": "path_keyword:red_team",
+        "expected_review": "ordinary_mail_or_no_packet",
+        "suggested_event_type": "",
+    },
+    "review-finding": {
+        "pattern_family": "review_finding",
+        "signal": "path_keyword:review-finding",
+        "expected_review": "exception_event_or_no_packet",
+        "suggested_event_type": "review_finding",
+    },
+    "review_finding": {
+        "pattern_family": "review_finding",
+        "signal": "path_keyword:review_finding",
+        "expected_review": "exception_event_or_no_packet",
+        "suggested_event_type": "review_finding",
+    },
+    ".ai-assets": {
+        "pattern_family": "asset",
+        "signal": "path_keyword:.ai-assets",
+        "expected_review": "ordinary_mail_or_no_packet",
+        "suggested_event_type": "",
+    },
+    "asset-registry": {
+        "pattern_family": "asset",
+        "signal": "path_keyword:asset-registry",
+        "expected_review": "ordinary_mail_or_no_packet",
+        "suggested_event_type": "",
+    },
+    "asset.json": {
+        "pattern_family": "asset",
+        "signal": "path_keyword:asset.json",
+        "expected_review": "ordinary_mail_or_no_packet",
+        "suggested_event_type": "",
+    },
+    "harness": {
+        "pattern_family": "harness",
+        "signal": "path_keyword:harness",
+        "expected_review": "ordinary_mail_or_no_packet",
+        "suggested_event_type": "",
+    },
+    "skill": {
+        "pattern_family": "skill",
+        "signal": "path_keyword:skill",
+        "expected_review": "ordinary_mail_or_no_packet",
+        "suggested_event_type": "",
+    },
+    "template": {
+        "pattern_family": "template",
+        "signal": "path_keyword:template",
+        "expected_review": "ordinary_mail_or_no_packet",
+        "suggested_event_type": "",
+    },
+    "architecture": {
+        "pattern_family": "architecture_reference",
+        "signal": "path_keyword:architecture",
+        "expected_review": "ordinary_mail_or_no_packet",
+        "suggested_event_type": "",
+    },
+    "governance": {
+        "pattern_family": "governance_map",
+        "signal": "path_keyword:governance",
+        "expected_review": "ordinary_mail_exception_or_no_packet",
+        "suggested_event_type": "roadmap_gate_mismatch",
+    },
+    "data-map": {
+        "pattern_family": "data_map",
+        "signal": "path_keyword:data-map",
+        "expected_review": "ordinary_mail_exception_or_no_packet",
+        "suggested_event_type": "sensitive_boundary_block",
+    },
+    "data_map": {
+        "pattern_family": "data_map",
+        "signal": "path_keyword:data_map",
+        "expected_review": "ordinary_mail_exception_or_no_packet",
+        "suggested_event_type": "sensitive_boundary_block",
+    },
+    "lesson": {
+        "pattern_family": "learning_loop_candidate",
+        "signal": "path_keyword:lesson",
+        "expected_review": "ordinary_mail_or_local_usage",
+        "suggested_event_type": "",
+    },
+    "learning": {
+        "pattern_family": "learning_loop_candidate",
+        "signal": "path_keyword:learning",
+        "expected_review": "ordinary_mail_or_local_usage",
+        "suggested_event_type": "",
+    },
+    "workflow": {
+        "pattern_family": "workflow",
+        "signal": "path_keyword:workflow",
+        "expected_review": "ordinary_mail_or_no_packet",
+        "suggested_event_type": "review_finding",
+    },
+    "review-issue": {
+        "pattern_family": "workflow",
+        "signal": "path_keyword:review-issue",
+        "expected_review": "ordinary_mail_exception_or_no_packet",
+        "suggested_event_type": "review_finding",
+    },
+    "review_issue": {
+        "pattern_family": "workflow",
+        "signal": "path_keyword:review_issue",
+        "expected_review": "ordinary_mail_exception_or_no_packet",
+        "suggested_event_type": "review_finding",
+    },
+    "capture-gap": {
+        "pattern_family": "workflow",
+        "signal": "path_keyword:capture-gap",
+        "expected_review": "ordinary_mail_exception_or_no_packet",
+        "suggested_event_type": "review_finding",
+    },
+    "exception-lake": {
+        "pattern_family": "workflow",
+        "signal": "path_keyword:exception-lake",
+        "expected_review": "ordinary_mail_exception_or_no_packet",
+        "suggested_event_type": "review_finding",
+    },
+}
+
+
+def load_capture_pattern_registry(hub_root: Path) -> dict[str, Any]:
+    return json.loads((hub_root / CAPTURE_PATTERN_REGISTRY).read_text(encoding="utf-8"))
+
+
+def load_capture_scenarios(path: Path) -> dict[str, Any]:
+    return json.loads(path.read_text(encoding="utf-8"))
+
+
+def _version_tuple(value: str) -> tuple[int, ...]:
+    cleaned = value.strip().lstrip("v")
+    parts: list[int] = []
+    for item in cleaned.split("."):
+        try:
+            parts.append(int(item))
+        except ValueError:
+            parts.append(0)
+    return tuple(parts or [0])
+
+
+def _rule_matches(rule: dict[str, Any], signals: set[str]) -> bool:
+    required = set(rule.get("match_signals", []))
+    any_signals = set(rule.get("any_signals", []))
+    suppressed = set(rule.get("suppress_signals", []))
+    return (
+        required <= signals
+        and (not any_signals or bool(any_signals & signals))
+        and not bool(suppressed & signals)
+    )
+
+
+def _empty_actual(blocked: bool = False, blocked_reason: str = "") -> dict[str, Any]:
+    return {
+        "packet_classes": ["no_packet"] if blocked else [],
+        "event_types": [],
+        "mail_message_types": [],
+        "capture_contracts": [],
+        "required_fields": [],
+        "blocked": blocked,
+        "blocked_reason": blocked_reason,
+    }
+
+
+def _sorted(values: set[str]) -> list[str]:
+    return sorted(item for item in values if item)
+
+
+def _payload_sample_issues(case: dict[str, Any]) -> list[str]:
+    issues: set[str] = set()
+    for sample in case.get("payload_samples", []) or []:
+        text = str(sample.get("text", "") if isinstance(sample, dict) else sample)
+        if not text:
+            continue
+        _, screen_issues = screen_exception_record({"sample": text})
+        issues.update(screen_issues)
+        if any(pattern.search(text) for pattern in PROMPT_INJECTION_PATTERNS):
+            issues.add("prompt_injection_like_payload")
+    return sorted(issues)
+
+
+def _rule_actual(
+    case: dict[str, Any],
+    registry: dict[str, Any],
+) -> tuple[dict[str, Any], list[str], bool]:
+    signals = set(case.get("signals", []))
+    packet_classes: set[str] = set()
+    event_types: set[str] = set()
+    mail_message_types: set[str] = set()
+    capture_contracts: set[str] = set()
+    required_fields: set[str] = set()
+    matched_rules: list[str] = []
+    update_required = _version_tuple(case.get("repo_capture_surface_version", "0")) < _version_tuple(
+        registry.get("capture_surface_version", "0")
+    )
+    for rule in registry.get("rules", []):
+        if not _rule_matches(rule, signals):
+            continue
+        matched_rules.append(rule["rule_id"])
+        if _version_tuple(case.get("repo_capture_surface_version", "0")) < _version_tuple(
+            rule.get("min_capture_surface_version", "0")
+        ):
+            update_required = True
+        emit = rule.get("emit", {})
+        packet_classes.update(str(item) for item in emit.get("packet_classes", []))
+        if emit.get("exception_event_type"):
+            event_types.add(str(emit["exception_event_type"]))
+        if emit.get("mail_message_type"):
+            mail_message_types.add(str(emit["mail_message_type"]))
+        if emit.get("capture_contract"):
+            capture_contracts.add(str(emit["capture_contract"]))
+        required_fields.update(str(item) for item in emit.get("required_fields", []))
+    if not packet_classes:
+        packet_classes.add("no_packet")
+    return (
+        {
+            "packet_classes": _sorted(packet_classes),
+            "event_types": _sorted(event_types),
+            "mail_message_types": _sorted(mail_message_types),
+            "capture_contracts": _sorted(capture_contracts),
+            "required_fields": _sorted(required_fields),
+            "blocked": False,
+            "blocked_reason": "",
+        },
+        matched_rules,
+        update_required,
+    )
+
+
+def _compare_actual(actual: dict[str, Any], expected: dict[str, Any]) -> dict[str, bool]:
+    comparisons = {
+        "packet_classes": actual["packet_classes"] == sorted(expected.get("packet_classes", [])),
+        "event_types": actual["event_types"] == sorted(expected.get("event_types", [])),
+        "mail_message_types": actual["mail_message_types"]
+        == sorted(expected.get("mail_message_types", [])),
+        "capture_contracts": actual["capture_contracts"]
+        == sorted(expected.get("capture_contracts", [])),
+    }
+    if "required_fields" in expected:
+        comparisons["required_fields"] = actual.get("required_fields", []) == sorted(
+            expected.get("required_fields", [])
+        )
+    if "blocked" in actual:
+        comparisons["blocked"] = actual["blocked"] == bool(expected.get("blocked", False))
+    if expected.get("blocked_reason"):
+        comparisons["blocked_reason"] = actual.get("blocked_reason", "") == expected[
+            "blocked_reason"
+        ]
+    return comparisons
+
+
+def _declared_covered_rules(case: dict[str, Any]) -> list[str]:
+    return sorted(str(item) for item in case.get("covered_rule_ids", []) or [])
+
+
+def _reviewed_rule_ids(registry: dict[str, Any]) -> list[str]:
+    return sorted(
+        str(rule["rule_id"])
+        for rule in registry.get("rules", [])
+        if rule.get("review_status") == "reviewed"
+    )
+
+
+def evaluate_capture_case(
+    case: dict[str, Any],
+    registry: dict[str, Any],
+    *,
+    scenario_base: Path | None = None,
+) -> dict[str, Any]:
+    signals = set(case.get("signals", []))
+    rule_actual, matched_rules, update_required = _rule_actual(case, registry)
+    block_signals = set(registry.get("global_block_signals", []))
+    blocking_hits = sorted(block_signals & signals)
+    payload_issues = _payload_sample_issues(case)
+    if blocking_hits:
+        actual = _empty_actual(
+            blocked=True,
+            blocked_reason="global_block_signal:" + ",".join(blocking_hits),
+        )
+    elif payload_issues:
+        actual = _empty_actual(
+            blocked=True,
+            blocked_reason="payload_screen:" + ",".join(payload_issues),
+        )
+    else:
+        actual = rule_actual
+    coverage_declared = "covered_rule_ids" in case
+    declared_rules = _declared_covered_rules(case)
+    matched_rule_ids = sorted(matched_rules)
+    expected = case.get("expected", {})
+    comparisons = {
+        **_compare_actual(actual, expected),
+        "update_required": update_required == bool(expected.get("update_required", False)),
+        "covered_rule_ids": (declared_rules == matched_rule_ids) if coverage_declared else True,
+    }
+    passed = all(comparisons.values())
+    result = {
+        "scenario_id": case["scenario_id"],
+        "pattern_family": case["pattern_family"],
+        "covered_rule_ids": declared_rules,
+        "coverage_declared": coverage_declared,
+        "matched_rules": matched_rule_ids,
+        "payload_screen_issues": payload_issues,
+        "repo_capture_surface_version": case.get("repo_capture_surface_version"),
+        "registry_capture_surface_version": registry.get("capture_surface_version"),
+        "update_required": update_required,
+        "actual": actual,
+        "expected": expected,
+        "comparisons": comparisons,
+        "passed": passed,
+    }
+    if case.get("observed"):
+        observed = evaluate_observed_capture(
+            case["observed"],
+            scenario_base=scenario_base,
+            expected=expected,
+        )
+        observed_comparisons = _compare_actual(observed["actual"], expected)
+        observed["comparisons"] = observed_comparisons
+        observed["passed"] = all(observed_comparisons.values()) and not observed["errors"]
+        result["observed"] = observed
+        result["passed"] = bool(result["passed"] and observed["passed"])
+    return result
+
+
+def _resolve_observed_path(value: str, scenario_base: Path | None) -> Path:
+    path = Path(value)
+    if path.is_absolute():
+        return path
+    if scenario_base is not None:
+        return scenario_base / path
+    return path
+
+
+def _read_jsonl(path: Path, errors: list[str], *, path_label: str = "") -> list[dict[str, Any]]:
+    label = path_label or path.name
+    if not path.exists():
+        errors.append(f"missing_observed_file:{label}")
+        return []
+    records: list[dict[str, Any]] = []
+    for line_number, line in enumerate(path.read_text(encoding="utf-8").splitlines(), start=1):
+        if not line.strip():
+            continue
+        try:
+            payload = json.loads(line)
+        except json.JSONDecodeError as exc:
+            errors.append(f"malformed_jsonl:{label}:{line_number}:{exc.msg}")
+            continue
+        if not isinstance(payload, dict):
+            errors.append(f"non_object_jsonl:{label}:{line_number}")
+            continue
+        records.append(payload)
+    return records
+
+
+def _required_value_is_usable(value: Any) -> bool:
+    if value is None:
+        return False
+    if isinstance(value, str):
+        return value.strip().casefold() not in PLACEHOLDER_REQUIRED_VALUES
+    if isinstance(value, list):
+        return any(_required_value_is_usable(item) for item in value)
+    if isinstance(value, dict):
+        return any(_required_value_is_usable(item) for item in value.values())
+    return True
+
+
+def _usable_field_names(record: dict[str, Any]) -> set[str]:
+    fields = {str(key) for key, value in record.items() if _required_value_is_usable(value)}
+    payload = record.get("payload")
+    if isinstance(payload, dict):
+        fields.update(
+            str(key) for key, value in payload.items() if _required_value_is_usable(value)
+        )
+    return fields
+
+
+def _observed_record_matches_expected(
+    record: dict[str, Any],
+    outbox_key: str,
+    expected: dict[str, Any] | None,
+) -> bool:
+    if expected is None:
+        return False
+    if outbox_key == "mail_outbox":
+        expected_types = {str(item) for item in expected.get("mail_message_types", [])}
+        return bool(record.get("message_type") and str(record["message_type"]) in expected_types)
+    if outbox_key == "exception_outbox":
+        expected_events = {str(item) for item in expected.get("event_types", [])}
+        expected_contracts = {str(item) for item in expected.get("capture_contracts", [])}
+        return bool(
+            (record.get("event_type") and str(record["event_type"]) in expected_events)
+            or (
+                record.get("capture_contract")
+                and str(record["capture_contract"]) in expected_contracts
+            )
+        )
+    if outbox_key == "fix_outcomes":
+        expected_classes = {str(item) for item in expected.get("packet_classes", [])}
+        expected_contracts = {str(item) for item in expected.get("capture_contracts", [])}
+        return _is_fix_outcome_row(record) and (
+            "fix_outcome" in expected_classes or "fix_outcome" in expected_contracts
+        )
+    return False
+
+
+def _observed_payload_issues(record: dict[str, Any]) -> list[str]:
+    _, issues = screen_exception_record(record)
+    text = json.dumps(record, sort_keys=True, ensure_ascii=False, default=str)
+    if any(pattern.search(text) for pattern in PROMPT_INJECTION_PATTERNS):
+        issues.append("prompt_injection_like_text")
+    return sorted(set(issues))
+
+
+def _is_fix_outcome_row(record: dict[str, Any]) -> bool:
+    return (
+        str(record.get("fix_id", "")).startswith("dad:exception-fix:")
+        and str(record.get("event_id", "")).startswith("dad:exception-event:")
+        and str(record.get("capture_contract", "")) == "fix_outcome"
+        and bool(str(record.get("decision", "")).strip())
+    )
+
+
+def evaluate_observed_capture(
+    observed: dict[str, Any],
+    *,
+    scenario_base: Path | None = None,
+    expected: dict[str, Any] | None = None,
+) -> dict[str, Any]:
+    packet_classes: set[str] = set()
+    event_types: set[str] = set()
+    mail_message_types: set[str] = set()
+    capture_contracts: set[str] = set()
+    expected_required_fields = {
+        str(item) for item in (expected or {}).get("required_fields", []) or []
+    }
+    best_matching_required_fields: set[str] = set()
+    complete_required_row_found = not expected_required_fields
+    errors: list[str] = []
+    observed_paths: list[str] = []
+
+    for key, packet_class in [
+        ("mail_outbox", "ordinary_mail"),
+        ("exception_outbox", "exception_event"),
+        ("fix_outcomes", "fix_outcome"),
+    ]:
+        raw_path = observed.get(key)
+        if not raw_path:
+            continue
+        path = _resolve_observed_path(str(raw_path), scenario_base)
+        path_label = safe_relative(path, scenario_base) if scenario_base else path.name
+        observed_paths.append(path_label)
+        rows = _read_jsonl(path, errors, path_label=path_label)
+        has_valid_packet_row = False
+        if rows and key != "fix_outcomes":
+            has_valid_packet_row = True
+        elif key == "fix_outcomes":
+            has_valid_packet_row = any(_is_fix_outcome_row(row) for row in rows)
+        if has_valid_packet_row:
+            packet_classes.add(packet_class)
+        for row in rows:
+            for issue in _observed_payload_issues(row):
+                errors.append(f"unsafe_observed_payload:{path_label}:{issue}")
+            if _observed_record_matches_expected(row, key, expected):
+                usable_fields = _usable_field_names(row)
+                row_required_fields = usable_fields & expected_required_fields
+                if len(row_required_fields) > len(best_matching_required_fields):
+                    best_matching_required_fields = row_required_fields
+                if expected_required_fields <= usable_fields:
+                    complete_required_row_found = True
+            if key == "mail_outbox" and row.get("message_type"):
+                mail_message_types.add(str(row["message_type"]))
+            if key == "exception_outbox":
+                if row.get("event_type"):
+                    event_types.add(str(row["event_type"]))
+                if row.get("capture_contract"):
+                    capture_contracts.add(str(row["capture_contract"]))
+            if key == "fix_outcomes":
+                if _is_fix_outcome_row(row):
+                    capture_contracts.add("fix_outcome")
+    if not packet_classes:
+        packet_classes.add("no_packet")
+    return {
+        "paths": observed_paths,
+        "actual": {
+            "packet_classes": _sorted(packet_classes),
+            "event_types": _sorted(event_types),
+            "mail_message_types": _sorted(mail_message_types),
+            "capture_contracts": _sorted(capture_contracts),
+            "required_fields": sorted(expected_required_fields)
+            if complete_required_row_found
+            else sorted(best_matching_required_fields),
+            "blocked": False,
+            "blocked_reason": "",
+        },
+        "errors": errors,
+        "passed": False,
+    }
+
+
+def _policy_for_repo(repo: Path, repo_policies: list[Any] | None) -> Any | None:
+    resolved = repo.resolve()
+    for policy in repo_policies or []:
+        try:
+            if Path(policy.path).resolve() == resolved:
+                return policy
+        except OSError:
+            continue
+    return None
+
+
+def _policy_summary(repo: Path, repo_policies: list[Any] | None) -> dict[str, Any]:
+    policy = _policy_for_repo(repo, repo_policies)
+    if policy is None:
+        return {
+            "reviewed_policy": False,
+            "repo_id": repo.name,
+            "repo_alias": repo.name,
+            "visibility": "unknown",
+            "public_facing": False,
+            "write_protected": False,
+            "write_protection_reason": "",
+        }
+    return {
+        "reviewed_policy": True,
+        "repo_id": str(getattr(policy, "id", repo.name)),
+        "repo_alias": str(getattr(policy, "alias", getattr(policy, "id", repo.name))),
+        "visibility": str(getattr(policy, "visibility", "unknown")),
+        "public_facing": bool(getattr(policy, "public_facing", False)),
+        "write_protected": bool(getattr(policy, "write_protected", False)),
+        "write_protection_reason": str(getattr(policy, "write_protection_reason", "")),
+    }
+
+
+def _repo_ref(repo: Path, hub_root: Path) -> dict[str, Any]:
+    resolved = repo.resolve()
+    rel = safe_relative(resolved, hub_root)
+    return {
+        "path_hint": rel if rel != resolved.name else resolved.name,
+        "path_hash": f"sha256:{sha256_bytes(resolved.as_posix().encode('utf-8'))}",
+        "absolute_path_included": False,
+    }
+
+
+def _load_contract_summary(repo: Path) -> dict[str, Any]:
+    path = repo / ".digital-asset" / "dad-integration.json"
+    summary: dict[str, Any] = {
+        "exists": path.exists(),
+        "schema_version": "",
+        "enrollment_version": "",
+        "capture_surface_version": "",
+        "repo_id": "",
+        "read_error": "",
+    }
+    if not path.exists():
+        return summary
+    try:
+        payload = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError) as exc:
+        summary["read_error"] = f"{type(exc).__name__}:{exc}"
+        return summary
+    enrollment = payload.get("enrollment") if isinstance(payload.get("enrollment"), dict) else {}
+    capture = payload.get("capture") if isinstance(payload.get("capture"), dict) else {}
+    summary.update(
+        {
+            "schema_version": str(payload.get("schema_version", "")),
+            "enrollment_version": str(
+                payload.get("enrollment_version")
+                or enrollment.get("version")
+                or payload.get("version")
+                or ""
+            ),
+            "capture_surface_version": str(
+                payload.get("capture_surface_version")
+                or capture.get("surface_version")
+                or capture.get("version")
+                or ""
+            ),
+            "repo_id": str(payload.get("repo_id") or payload.get("id") or ""),
+        }
+    )
+    return summary
+
+
+def _correlation_ref_hashes(payload: dict[str, Any]) -> list[str]:
+    refs: set[str] = set()
+    for field in (
+        "context_refs",
+        "evidence",
+        "validation_refs",
+        "asset_refs",
+        "harness_refs",
+        "trace_refs",
+    ):
+        value = payload.get(field)
+        if isinstance(value, list):
+            refs.update(str(item).strip() for item in value if str(item).strip())
+        elif isinstance(value, str) and value.strip():
+            refs.add(value.strip())
+    hashes: set[str] = set()
+    for ref in refs:
+        hashes.add(f"sha256:{sha256_bytes(ref.encode('utf-8'))}")
+        if ref.startswith("sha256:"):
+            hashes.add(ref)
+        if ref.startswith("repo-relative-sha256:"):
+            digest = ref.removeprefix("repo-relative-sha256:")
+            if digest:
+                hashes.add(f"sha256:{digest}")
+        if ref.startswith("repo-relative:"):
+            bare = ref.removeprefix("repo-relative:")
+            if bare:
+                hashes.add(f"sha256:{sha256_bytes(bare.encode('utf-8'))}")
+    return sorted(hashes)
+
+
+def _jsonl_summary(path: Path, kind: str, *, repo: Path) -> dict[str, Any]:
+    summary: dict[str, Any] = {
+        "path": safe_relative(path, repo),
+        "kind": kind,
+        "exists": path.exists(),
+        "content_hash": "",
+        "mtime_ns": None,
+        "record_count": 0,
+        "valid_record_count": 0,
+        "malformed_count": 0,
+        "non_object_count": 0,
+        "message_types": [],
+        "event_types": [],
+        "capture_contracts": [],
+        "record_refs": [],
+        "errors": [],
+    }
+    if not path.exists():
+        return summary
+    try:
+        summary["content_hash"] = f"sha256:{sha256_file(path)}"
+        summary["mtime_ns"] = path.stat().st_mtime_ns
+    except OSError as exc:
+        summary["errors"].append(f"metadata_error:{type(exc).__name__}")
+    message_types: set[str] = set()
+    event_types: set[str] = set()
+    capture_contracts: set[str] = set()
+    try:
+        lines = path.read_text(encoding="utf-8").splitlines()
+    except OSError as exc:
+        summary["errors"].append(f"read_error:{type(exc).__name__}")
+        return summary
+    for line_number, line in enumerate(lines, start=1):
+        if not line.strip():
+            continue
+        try:
+            payload = json.loads(line)
+        except json.JSONDecodeError:
+            summary["malformed_count"] += 1
+            summary["errors"].append(f"malformed_jsonl:{line_number}")
+            continue
+        if not isinstance(payload, dict):
+            summary["non_object_count"] += 1
+            summary["errors"].append(f"non_object_jsonl:{line_number}")
+            continue
+        summary["record_count"] += 1
+        is_valid_kind_row = kind != "fix_outcome" or _is_fix_outcome_row(payload)
+        if is_valid_kind_row:
+            summary["valid_record_count"] += 1
+        if payload.get("message_type"):
+            message_types.add(str(payload["message_type"]))
+        if payload.get("event_type"):
+            event_types.add(str(payload["event_type"]))
+        if payload.get("capture_contract") and (kind != "fix_outcome" or is_valid_kind_row):
+            capture_contracts.add(str(payload["capture_contract"]))
+        elif kind == "fix_outcome" and is_valid_kind_row:
+            capture_contracts.add("fix_outcome")
+        summary["record_refs"].append(
+            {
+                "message_type": str(payload.get("message_type") or ""),
+                "event_type": str(payload.get("event_type") or ""),
+                "capture_contract": str(payload.get("capture_contract") or ""),
+                "correlation_ref_hashes": _correlation_ref_hashes(payload),
+            }
+        )
+    summary["message_types"] = sorted(message_types)
+    summary["event_types"] = sorted(event_types)
+    summary["capture_contracts"] = sorted(capture_contracts)
+    return summary
+
+
+def _is_capture_audit_excluded(path: Path, repo: Path) -> bool:
+    try:
+        scoped = path.resolve().relative_to(repo.resolve())
+    except (ValueError, OSError):
+        scoped = path
+    normalized = scoped.as_posix().casefold()
+    return (
+        any(part.casefold() in CAPTURE_AUDIT_EXCLUDE_DIRS for part in scoped.parts)
+        or any(part.casefold().startswith("pytest-of-") for part in scoped.parts)
+        or any(term in normalized for term in BACKFILL_SENSITIVE_PATH_TERMS)
+    )
+
+
+def _path_ref_looks_private(value: str) -> bool:
+    normalized = value.replace("\\", "/").casefold()
+    return any(fragment.replace("\\", "/") in normalized for fragment in PRIVATE_PATH_FRAGMENTS)
+
+
+def _report_path_ref(path: Path, root: Path) -> str:
+    try:
+        resolved = path.resolve()
+        root_resolved = root.resolve()
+        return resolved.relative_to(root_resolved).as_posix()
+    except (OSError, ValueError):
+        return f"path-sha256:{sha256_bytes(str(path).encode('utf-8'))}"
+
+
+def _path_signal_record(
+    path: Path,
+    repo: Path,
+    term: str,
+    metadata: dict[str, str],
+    *,
+    include_path: bool,
+) -> dict[str, str]:
+    rel = safe_relative(path, repo)
+    include_safe_path = include_path and not _path_ref_looks_private(rel)
+    record = {
+        "term": term,
+        "signal": metadata["signal"],
+        "pattern_family": metadata["pattern_family"],
+        "expected_review": metadata["expected_review"],
+        "suggested_event_type": metadata["suggested_event_type"],
+        "path_hash": f"sha256:{sha256_bytes(rel.encode('utf-8'))}",
+        "path_redacted": str(not include_safe_path).lower(),
+    }
+    if include_path and not include_safe_path:
+        record["path_redacted_reason"] = "private_path_fragment"
+    if include_safe_path:
+        record["path"] = rel
+    return record
+
+
+def _signal_correlation_ref_hashes(signal: dict[str, str]) -> set[str]:
+    refs: set[str] = set()
+    path = str(signal.get("path") or "").strip()
+    if path:
+        refs.update(
+            {
+                path,
+                f"repo-relative:{path}",
+                f"path:{path}",
+                f"evidence:{path}",
+            }
+        )
+    path_hash = str(signal.get("path_hash") or "").strip()
+    normalized_hashes: set[str] = set()
+    if path_hash:
+        normalized_hashes.add(path_hash)
+        if path_hash.startswith("sha256:"):
+            normalized_hashes.add(
+                f"repo-relative-sha256:{path_hash.removeprefix('sha256:')}"
+            )
+    hashed_refs = {f"sha256:{sha256_bytes(ref.encode('utf-8'))}" for ref in refs}
+    hashed_refs.update(normalized_hashes)
+    return hashed_refs
+
+
+def _candidate_capture_path_scan(
+    repo: Path,
+    *,
+    limit: int = 50,
+    include_paths: bool = False,
+    path_terms: dict[str, dict[str, str]] | None = None,
+) -> dict[str, Any]:
+    if not repo.exists() or not repo.is_dir():
+        return {"signals": [], "truncated": False, "scanned_file_count": 0, "limit": limit}
+    findings: list[dict[str, str]] = []
+    terms = path_terms or CAPTURE_AUDIT_PATH_TERMS
+    scanned_file_count = 0
+    truncated = False
+    for dirpath, dirnames, filenames in os.walk(repo):
+        dir_path = Path(dirpath)
+        dirnames[:] = [
+            name
+            for name in sorted(dirnames)
+            if not _is_capture_audit_excluded(dir_path / name, repo)
+        ]
+        for filename in sorted(filenames):
+            path = dir_path / filename
+            if _is_capture_audit_excluded(path, repo):
+                continue
+            scanned_file_count += 1
+            rel_path = safe_relative(path, repo)
+            for term, metadata in sorted(
+                terms.items(),
+                key=lambda item: len(item[0]),
+                reverse=True,
+            ):
+                if not path_term_matches(rel_path, term):
+                    continue
+                findings.append(_path_signal_record(path, repo, term, metadata, include_path=include_paths))
+                break
+            if len(findings) >= limit:
+                truncated = True
+                return {
+                    "signals": findings,
+                    "truncated": truncated,
+                    "scanned_file_count": scanned_file_count,
+                    "limit": limit,
+                }
+    return {
+        "signals": findings,
+        "truncated": truncated,
+        "scanned_file_count": scanned_file_count,
+        "limit": limit,
+    }
+
+
+def _packet_classes_from_outboxes(outboxes: dict[str, dict[str, Any]]) -> list[str]:
+    packet_classes: set[str] = set()
+    if outboxes["mail_outbox"]["record_count"]:
+        packet_classes.add("ordinary_mail")
+    if outboxes["exception_outbox"]["record_count"]:
+        packet_classes.add("exception_event")
+    if outboxes["fix_outcomes"].get("valid_record_count"):
+        packet_classes.add("fix_outcome")
+    if not packet_classes:
+        packet_classes.add("no_packet")
+    return sorted(packet_classes)
+
+
+def _expected_outputs_by_family(registry: dict[str, Any]) -> dict[str, dict[str, list[str]]]:
+    outputs: dict[str, dict[str, set[str]]] = {}
+    for rule in registry.get("rules", []):
+        family = str(rule.get("pattern_family", ""))
+        if not family:
+            continue
+        family_outputs = outputs.setdefault(
+            family,
+            {
+                "packet_classes": set(),
+                "mail_message_types": set(),
+                "event_types": set(),
+                "capture_contracts": set(),
+            },
+        )
+        emit = rule.get("emit", {})
+        family_outputs["packet_classes"].update(str(item) for item in emit.get("packet_classes", []))
+        if emit.get("mail_message_type"):
+            family_outputs["mail_message_types"].add(str(emit["mail_message_type"]))
+        if emit.get("exception_event_type"):
+            family_outputs["event_types"].add(str(emit["exception_event_type"]))
+        if emit.get("capture_contract"):
+            family_outputs["capture_contracts"].add(str(emit["capture_contract"]))
+    return {
+        family: {key: sorted(values) for key, values in family_outputs.items()}
+        for family, family_outputs in outputs.items()
+    }
+
+
+def _outbox_actual_outputs(outboxes: dict[str, dict[str, Any]]) -> dict[str, set[str]]:
+    contracts = set(outboxes["exception_outbox"].get("capture_contracts", []))
+    contracts.update(str(item) for item in outboxes["fix_outcomes"].get("capture_contracts", []))
+    return {
+        "mail_message_types": set(outboxes["mail_outbox"].get("message_types", [])),
+        "event_types": set(outboxes["exception_outbox"].get("event_types", [])),
+        "capture_contracts": contracts,
+    }
+
+
+def _record_matches_signal(record: dict[str, Any], signal: dict[str, str]) -> bool:
+    signal_hashes = _signal_correlation_ref_hashes(signal)
+    if not signal_hashes:
+        return False
+    record_hashes = {
+        str(item) for item in record.get("correlation_ref_hashes", []) if str(item).strip()
+    }
+    return bool(signal_hashes.intersection(record_hashes))
+
+
+def _has_correlated_record(
+    records: list[dict[str, Any]],
+    field: str,
+    expected_values: list[str],
+    signal: dict[str, str],
+) -> bool:
+    expected = set(expected_values)
+    return any(
+        str(record.get(field) or "") in expected and _record_matches_signal(record, signal)
+        for record in records
+    )
+
+
+def _annotate_candidate_signals(
+    signals: list[dict[str, str]],
+    registry: dict[str, Any],
+    outboxes: dict[str, dict[str, Any]],
+) -> list[dict[str, Any]]:
+    expected_by_family = _expected_outputs_by_family(registry)
+    actual = _outbox_actual_outputs(outboxes)
+    annotated: list[dict[str, Any]] = []
+    for signal in signals:
+        expected = expected_by_family.get(
+            signal["pattern_family"],
+            {
+                "packet_classes": [],
+                "mail_message_types": [],
+                "event_types": [],
+                "capture_contracts": [],
+            },
+        )
+        strict = signal["expected_review"] in {
+            "ordinary_mail_exception_or_no_packet",
+            "exception_event_or_no_packet",
+        }
+        missing_outputs: list[str] = []
+        matching_outputs: list[str] = []
+        uncorrelated_outputs: list[str] = []
+        if expected["mail_message_types"]:
+            if _has_correlated_record(
+                outboxes["mail_outbox"].get("record_refs", []),
+                "message_type",
+                expected["mail_message_types"],
+                signal,
+            ):
+                matching_outputs.append("mail_message_type")
+            elif actual["mail_message_types"].intersection(expected["mail_message_types"]):
+                uncorrelated_outputs.append("mail_message_type")
+                if strict:
+                    missing_outputs.append("mail_message_type")
+            elif strict:
+                missing_outputs.append("mail_message_type")
+        if expected["event_types"]:
+            if _has_correlated_record(
+                outboxes["exception_outbox"].get("record_refs", []),
+                "event_type",
+                expected["event_types"],
+                signal,
+            ):
+                matching_outputs.append("event_type")
+            elif actual["event_types"].intersection(expected["event_types"]):
+                uncorrelated_outputs.append("event_type")
+                if strict:
+                    missing_outputs.append("event_type")
+            elif strict:
+                missing_outputs.append("event_type")
+        if expected["capture_contracts"]:
+            exception_records = outboxes["exception_outbox"].get("record_refs", [])
+            fix_records = outboxes["fix_outcomes"].get("record_refs", [])
+            if _has_correlated_record(
+                [*exception_records, *fix_records],
+                "capture_contract",
+                expected["capture_contracts"],
+                signal,
+            ):
+                matching_outputs.append("capture_contract")
+            elif actual["capture_contracts"].intersection(expected["capture_contracts"]):
+                uncorrelated_outputs.append("capture_contract")
+                if strict:
+                    missing_outputs.append("capture_contract")
+            elif strict:
+                missing_outputs.append("capture_contract")
+        emission_status = "matched" if matching_outputs and not missing_outputs else "unverified"
+        if missing_outputs:
+            emission_status = "gap_candidate"
+        elif uncorrelated_outputs:
+            emission_status = "type_present_uncorrelated"
+        annotated.append(
+            {
+                **signal,
+                "expected_outputs": expected,
+                "matching_outputs": matching_outputs,
+                "missing_outputs": missing_outputs,
+                "uncorrelated_outputs": uncorrelated_outputs,
+                "emission_status": emission_status,
+            }
+        )
+    return annotated
+
+
+def audit_observed_capture_repo(
+    hub_root: Path,
+    repo: Path,
+    registry: dict[str, Any],
+    *,
+    repo_policies: list[Any] | None = None,
+    candidate_limit: int = 50,
+) -> dict[str, Any]:
+    resolved = repo.resolve()
+    policy = _policy_summary(resolved, repo_policies)
+    contract = _load_contract_summary(resolved)
+    outboxes = {
+        "mail_outbox": _jsonl_summary(
+            resolved / MAIL_MIRROR_DIR / "outbox.jsonl",
+            "mail",
+            repo=resolved,
+        ),
+        "exception_outbox": _jsonl_summary(
+            resolved / EXCEPTION_OUTBOX,
+            "exception",
+            repo=resolved,
+        ),
+        "fix_outcomes": _jsonl_summary(
+            resolved / "processed" / "exceptions" / "fix-outcomes" / "outcomes.jsonl",
+            "fix_outcome",
+            repo=resolved,
+        ),
+    }
+    include_candidate_paths = policy["reviewed_policy"] and policy["visibility"] in {
+        "public",
+        "internal",
+    }
+    path_terms = {
+        **backfill_path_signal_terms(hub_root),
+        **CAPTURE_AUDIT_PATH_TERMS,
+    }
+    candidate_scan = _candidate_capture_path_scan(
+        resolved,
+        limit=candidate_limit,
+        include_paths=include_candidate_paths,
+        path_terms=path_terms,
+    )
+    candidate_paths = _annotate_candidate_signals(
+        candidate_scan["signals"],
+        registry,
+        outboxes,
+    )
+    packet_classes = _packet_classes_from_outboxes(outboxes)
+    capture_surface_version = contract.get("capture_surface_version", "")
+    registry_version = str(registry.get("capture_surface_version", ""))
+    malformed_count = sum(int(item["malformed_count"]) for item in outboxes.values())
+    status_flags: list[str] = []
+    if not contract["exists"] and all(not item["exists"] for item in outboxes.values()):
+        status_flags.append("legacy_or_not_enrolled")
+    if contract.get("read_error"):
+        status_flags.append("contract_read_error")
+    if not capture_surface_version:
+        status_flags.append("capture_surface_version_unknown")
+    elif _version_tuple(capture_surface_version) < _version_tuple(registry_version):
+        status_flags.append("stale_capture_surface")
+    if "exception_event" in packet_classes or "ordinary_mail" in packet_classes:
+        status_flags.append("outbox_emission_present")
+    if any(item["emission_status"] == "gap_candidate" for item in candidate_paths):
+        status_flags.append("pattern_gap_candidate")
+    if any(item["emission_status"] == "type_present_uncorrelated" for item in candidate_paths):
+        status_flags.append("type_present_uncorrelated")
+    if any(item["emission_status"] == "unverified" for item in candidate_paths):
+        status_flags.append("emission_unverified")
+    if (
+        outboxes["mail_outbox"]["record_count"]
+        and not outboxes["exception_outbox"]["record_count"]
+        and any(
+            item["expected_review"] == "ordinary_mail_exception_or_no_packet"
+            for item in candidate_paths
+        )
+    ):
+        status_flags.append("mail_present_exception_gap_candidate")
+    if candidate_paths and packet_classes == ["no_packet"]:
+        status_flags.append("missed_capture_candidate")
+    if malformed_count:
+        status_flags.append("malformed_jsonl")
+    if policy["write_protected"]:
+        status_flags.append("protected_repo_central_only")
+    if not status_flags:
+        status_flags.append("no_capture_concern_detected")
+    return {
+        "repo": {
+            **_repo_ref(resolved, hub_root),
+            **policy,
+            "contract_repo_id": contract.get("repo_id", ""),
+        },
+        "contract": contract,
+        "registry_capture_surface_version": registry_version,
+        "packet_classes": packet_classes,
+        "outboxes": outboxes,
+        "candidate_path_signal_count": len(candidate_paths),
+        "candidate_path_scan": {
+            "truncated": candidate_scan["truncated"],
+            "scanned_file_count": candidate_scan["scanned_file_count"],
+            "limit": candidate_scan["limit"],
+            "path_hash_only": not include_candidate_paths,
+            "scan_hash": f"sha256:{sha256_bytes(json.dumps(candidate_paths, sort_keys=True).encode('utf-8'))}",
+        },
+        "candidate_path_signals": candidate_paths,
+        "status_flags": status_flags,
+        "authority_boundary": (
+            "Observed capture audit is read-only candidate evidence. Path signals do "
+            "not prove a DAD packet should be sent; they identify repos and patterns "
+            "that need deterministic repo-side capture review."
+        ),
+    }
+
+
+def discover_capture_audit_repos(
+    roots: list[Path],
+    *,
+    limit: int = 200,
+) -> list[Path]:
+    repos: dict[str, Path] = {}
+    for root in roots:
+        resolved_root = root.resolve()
+        if not resolved_root.exists():
+            continue
+        if (resolved_root / ".git").exists() or (resolved_root / ".digital-asset").exists():
+            repos[str(resolved_root)] = resolved_root
+        for dirpath, dirnames, _ in os.walk(resolved_root):
+            dir_path = Path(dirpath)
+            dirnames[:] = [
+                name
+                for name in sorted(dirnames)
+                if name.casefold() not in CAPTURE_AUDIT_EXCLUDE_DIRS
+                and not name.casefold().startswith("pytest-of-")
+            ]
+            if (dir_path / ".git").exists() or (dir_path / ".digital-asset").exists():
+                repos[str(dir_path.resolve())] = dir_path.resolve()
+                dirnames[:] = []
+                if len(repos) >= limit:
+                    return list(repos.values())
+    return list(repos.values())[:limit]
+
+
+def _observed_audit_input_hashes(hub_root: Path) -> dict[str, str]:
+    refs = [
+        CAPTURE_PATTERN_REGISTRY,
+        Path("registry") / "exception-event-type-registry.json",
+        Path("src") / "digital_asset_directory" / "exception_capture.py",
+    ]
+    hashes: dict[str, str] = {}
+    for ref in refs:
+        path = hub_root / ref
+        if path.exists() and path.is_file():
+            hashes[ref.as_posix()] = f"sha256:{sha256_file(path)}"
+    return hashes
+
+
+def write_observed_capture_audit(
+    hub_root: Path,
+    repos: list[Path],
+    *,
+    repo_policies: list[Any] | None = None,
+    output: Path | None = None,
+    candidate_limit: int = 50,
+) -> dict[str, Any]:
+    registry = load_capture_pattern_registry(hub_root)
+    rows = [
+        audit_observed_capture_repo(
+            hub_root,
+            repo,
+            registry,
+            repo_policies=repo_policies,
+            candidate_limit=candidate_limit,
+        )
+        for repo in repos
+    ]
+    status_counts = Counter(flag for row in rows for flag in row["status_flags"])
+    family_counts = Counter(
+        item["pattern_family"] for row in rows for item in row["candidate_path_signals"]
+    )
+    report = {
+        "generated_at": utc_now(),
+        "audit_id": "dad:exception-capture-observed-audit",
+        "repo_count": len(rows),
+        "registry_ref": CAPTURE_PATTERN_REGISTRY.as_posix(),
+        "methodology_ref": CAPTURE_PATTERN_REGISTRY.as_posix(),
+        "methodology_hash": f"sha256:{sha256_file(hub_root / CAPTURE_PATTERN_REGISTRY)}",
+        "input_hashes": _observed_audit_input_hashes(hub_root),
+        "capture_surface_version": registry.get("capture_surface_version"),
+        "status_counts": dict(sorted(status_counts.items())),
+        "candidate_path_family_counts": dict(sorted(family_counts.items())),
+        "repos": rows,
+        "authority_boundary": (
+            "This report reads repo-local mailbox, exception, and fix-outcome JSONL "
+            "metadata plus path names only. It is not source truth, does not copy raw "
+            "private content, and does not mutate target repos."
+        ),
+        "testing_purpose": (
+            "Catch cases where a repo had DAD-worthy patterns but no ordinary mail, "
+            "exception event, or fix-outcome packet was emitted, including after DAD "
+            "capture-pattern updates."
+        ),
+    }
+    output_path = hub_root / (output or OBSERVED_AUDIT_JSON)
+    write_json(output_path, report)
+    md_path = output_path.with_suffix(".md") if output else hub_root / OBSERVED_AUDIT_MD
+    lines = [
+        "# Exception Capture Observed Audit",
+        "",
+        f"- Generated: {report['generated_at']}",
+        f"- Repos audited: {report['repo_count']}",
+        f"- Capture surface version: `{report['capture_surface_version']}`",
+        f"- Methodology hash: `{report['methodology_hash']}`",
+        "",
+        "Boundary: read-only candidate evidence. Path signals are prompts for review, "
+        "not proof that a packet should have been sent.",
+        "",
+        "## Status Counts",
+        "",
+    ]
+    if status_counts:
+        lines.extend(f"- `{flag}`: {count}" for flag, count in sorted(status_counts.items()))
+    else:
+        lines.append("- No repos audited.")
+    if family_counts:
+        lines.extend(["", "## Candidate Path Families", ""])
+        lines.extend(f"- `{family}`: {count}" for family, count in sorted(family_counts.items()))
+    flagged = [
+        row
+        for row in rows
+        if any(
+            flag
+            in {
+                "missed_capture_candidate",
+                "mail_present_exception_gap_candidate",
+                "pattern_gap_candidate",
+                "emission_unverified",
+                "stale_capture_surface",
+                "capture_surface_version_unknown",
+                "malformed_jsonl",
+            }
+            for flag in row["status_flags"]
+        )
+    ]
+    if flagged:
+        lines.extend(["", "## Repos Needing Review", ""])
+        for row in flagged:
+            repo = row["repo"]
+            lines.append(
+                "- `"
+                + str(repo["repo_id"])
+                + "` "
+                + f"({repo['path_hint']}): "
+                + ", ".join(f"`{flag}`" for flag in row["status_flags"])
+            )
+    md_path.parent.mkdir(parents=True, exist_ok=True)
+    md_path.write_text("\n".join(lines) + "\n", encoding="utf-8")
+    return report
+
+
+def _input_hashes(hub_root: Path, scenarios_path: Path) -> dict[str, str]:
+    refs = [
+        CAPTURE_PATTERN_REGISTRY,
+        Path("src") / "digital_asset_directory" / "exception_capture.py",
+        Path("schemas") / "exception-capture-pattern-registry.schema.json",
+        Path("schemas") / "exception-capture-scenarios.schema.json",
+    ]
+    scenario_ref = Path(safe_relative(scenarios_path, hub_root))
+    if scenario_ref.as_posix() != scenarios_path.name or (hub_root / scenario_ref).exists():
+        refs.append(scenario_ref)
+    hashes: dict[str, str] = {}
+    for ref in refs:
+        path = hub_root / ref
+        if path.exists() and path.is_file():
+            hashes[ref.as_posix()] = f"sha256:{sha256_file(path)}"
+    return hashes
+
+
+def evaluate_capture_scenarios(
+    hub_root: Path,
+    scenarios_path: Path,
+    *,
+    output: Path | None = None,
+) -> dict[str, Any]:
+    registry = load_capture_pattern_registry(hub_root)
+    scenarios = load_capture_scenarios(scenarios_path)
+    cases = [
+        evaluate_capture_case(case, registry, scenario_base=scenarios_path.parent)
+        for case in scenarios.get("cases", [])
+    ]
+    by_family = Counter(case["pattern_family"] for case in cases)
+    missing_families = sorted(
+        set(scenarios.get("required_pattern_families", [])) - set(by_family)
+    )
+    reviewed_rule_ids = _reviewed_rule_ids(registry)
+    reviewed_rule_id_set = set(reviewed_rule_ids)
+    covered_rule_ids = sorted(
+        {
+            str(rule_id)
+            for case in cases
+            if case.get("passed")
+            for rule_id in case.get("covered_rule_ids", [])
+        }
+    )
+    missing_reviewed_rule_ids = sorted(reviewed_rule_id_set - set(covered_rule_ids))
+    undeclared_matched_rule_ids = sorted(
+        {
+            str(rule_id)
+            for case in cases
+            for rule_id in case.get("matched_rules", [])
+            if rule_id not in set(case.get("covered_rule_ids", []))
+        }
+    )
+    unknown_declared_rule_ids = sorted(
+        {
+            str(rule_id)
+            for case in cases
+            for rule_id in case.get("covered_rule_ids", [])
+            if rule_id not in reviewed_rule_id_set
+        }
+    )
+    failed = [case for case in cases if not case["passed"]]
+    observed_cases = [case for case in cases if "observed" in case]
+    observed_failed = [case for case in observed_cases if not case["observed"]["passed"]]
+    input_hashes = _input_hashes(hub_root, scenarios_path)
+    report = {
+        "generated_at": utc_now(),
+        "scenario_set_id": scenarios.get("scenario_set_id"),
+        "scenario_path": _report_path_ref(scenarios_path, hub_root),
+        "registry_ref": CAPTURE_PATTERN_REGISTRY.as_posix(),
+        "methodology_ref": CAPTURE_PATTERN_REGISTRY.as_posix(),
+        "methodology_hash": f"sha256:{sha256_file(hub_root / CAPTURE_PATTERN_REGISTRY)}",
+        "input_hashes": input_hashes,
+        "capture_surface_version": registry.get("capture_surface_version"),
+        "case_count": len(cases),
+        "passed_count": len(cases) - len(failed),
+        "failed_count": len(failed),
+        "observed_case_count": len(observed_cases),
+        "observed_failed_count": len(observed_failed),
+        "missing_required_pattern_families": missing_families,
+        "reviewed_rule_count": len(reviewed_rule_ids),
+        "covered_reviewed_rule_count": len(covered_rule_ids),
+        "covered_reviewed_rule_ids": covered_rule_ids,
+        "missing_reviewed_rule_ids": missing_reviewed_rule_ids,
+        "undeclared_matched_rule_ids": undeclared_matched_rule_ids,
+        "unknown_declared_rule_ids": unknown_declared_rule_ids,
+        "by_pattern_family": dict(sorted(by_family.items())),
+        "cases": cases,
+        "authority_boundary": (
+            "Capture-completeness output is a deterministic harness report. Synthetic "
+            "cases prove rule coverage only. Observed cases compare expected packets to "
+            "actual JSONL outboxes, but still do not prove all real repos are complete."
+        ),
+    }
+    output_path = hub_root / (output or CAPTURE_REPORT_JSON)
+    write_json(output_path, report)
+    md_path = output_path.with_suffix(".md") if output else hub_root / CAPTURE_REPORT_MD
+    lines = [
+        "# Exception Capture Completeness Report",
+        "",
+        f"- Generated: {report['generated_at']}",
+        f"- Scenario set: `{report['scenario_set_id']}`",
+        f"- Cases: {report['case_count']}",
+        f"- Passed: {report['passed_count']}",
+        f"- Failed: {report['failed_count']}",
+        f"- Reviewed rules covered: {report['covered_reviewed_rule_count']} / {report['reviewed_rule_count']}",
+        f"- Observed emission cases: {report['observed_case_count']}",
+        f"- Observed emission failures: {report['observed_failed_count']}",
+        f"- Capture surface version: `{report['capture_surface_version']}`",
+        f"- Methodology hash: `{report['methodology_hash']}`",
+        "",
+        "Boundary: synthetic cases prove rule coverage only. Observed cases compare "
+        "expected packets to actual JSONL outboxes, but this report is not proof that "
+        "all real repos are complete or public-safe.",
+        "",
+        "## Pattern Families",
+        "",
+    ]
+    for family, count in sorted(by_family.items()):
+        lines.append(f"- `{family}`: {count}")
+    if missing_families:
+        lines.extend(["", "## Missing Required Families", ""])
+        lines.extend(f"- `{family}`" for family in missing_families)
+    if missing_reviewed_rule_ids:
+        lines.extend(["", "## Missing Reviewed Rule Coverage", ""])
+        lines.extend(f"- `{rule_id}`" for rule_id in missing_reviewed_rule_ids)
+    if undeclared_matched_rule_ids:
+        lines.extend(["", "## Undeclared Matched Rules", ""])
+        lines.extend(f"- `{rule_id}`" for rule_id in undeclared_matched_rule_ids)
+    if unknown_declared_rule_ids:
+        lines.extend(["", "## Unknown Declared Rules", ""])
+        lines.extend(f"- `{rule_id}`" for rule_id in unknown_declared_rule_ids)
+    if failed:
+        lines.extend(["", "## Failed Cases", ""])
+        for case in failed:
+            lines.append(f"- `{case['scenario_id']}`")
+    md_path.parent.mkdir(parents=True, exist_ok=True)
+    md_path.write_text("\n".join(lines) + "\n", encoding="utf-8")
+    return report
