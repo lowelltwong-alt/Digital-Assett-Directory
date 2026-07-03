@@ -102,14 +102,15 @@
       "send_when": [
         "A repo experiences a command failure, timeout, review finding, governance block, public/private hold, stale report, harmful DAD recommendation, or other exception DAD should learn from.",
         "A repo fixes an exception and has validation evidence, so DAD can connect failure pattern to repair pattern.",
-        "A repo notices DAD-worthy learning that was not emitted automatically, or a pattern update means the local capture surface is stale."
+        "A repo notices DAD-worthy learning that was not emitted automatically, or a pattern update means the local capture surface is stale.",
+        "A repo uses `exceptions capture-suggest` and the suggestion prevented a missed capture, failed to match, blocked an unsafe packet, or showed the local capture surface was stale."
       ],
       "do_not_send": [
         "Do not send raw logs, full stack traces, private rows, credentials, hidden reasoning, or long copied source blobs.",
         "Do not mark an exception as fixed without validation refs.",
         "Do not treat a historical backfill candidate, path keyword, or agent finding as reviewed truth."
       ],
-      "payload_guidance": "Send event type, capture contract, short safe summary, source visibility, context refs or hashes, validation refs, trace refs, asset/harness refs when applicable, fix outcome status, and whether this was an automatic emission or a missed-capture report.",
+      "payload_guidance": "Send event type, capture contract, short safe summary, source visibility, context refs or hashes, validation refs, trace refs, asset/harness refs when applicable, fix outcome status, whether this was an automatic emission or a missed-capture report, and capture-suggest provenance when used: signal set, matched rule IDs, blocked reason, stale-surface state, packet emitted/not emitted, and whether it prevented a missed capture.",
       "target_control_planes": ["exceptions_lake", "learning_postflight_loops", "coding_harnesses", "mail_center"],
       "review_status": "reviewed"
     },

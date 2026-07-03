@@ -87,6 +87,7 @@ PACKET_CLASSES = {
     "local_usage_only",
     "no_packet",
 }
+CAPTURE_SIGNAL_RE = re.compile(r"^[a-z][a-z0-9_:-]{0,80}$")
 PROMPT_INJECTION_PATTERNS = [
     re.compile(r"(?i)\bignore (all )?(previous|prior|above) instructions\b"),
     re.compile(r"(?i)\b(system|developer) prompt\b"),
@@ -327,6 +328,8 @@ def _rule_actual(
         registry.get("capture_surface_version", "0")
     )
     for rule in registry.get("rules", []):
+        if rule.get("review_status") != "reviewed":
+            continue
         if not _rule_matches(rule, signals):
             continue
         matched_rules.append(rule["rule_id"])
@@ -458,6 +461,182 @@ def evaluate_capture_case(
         result["observed"] = observed
         result["passed"] = bool(result["passed"] and observed["passed"])
     return result
+
+
+def suggest_exception_capture(
+    hub_root: Path,
+    *,
+    signals: list[str],
+    repo_capture_surface_version: str = "",
+    payload_samples: list[dict[str, Any]] | None = None,
+) -> dict[str, Any]:
+    """Compile observable signals into a candidate capture plan.
+
+    This is the repo-agent-facing read path for the capture-pattern registry. It
+    does not prove the event occurred and does not authorize DAD or a repo to
+    emit anything unsafe.
+    """
+    registry = load_capture_pattern_registry(hub_root)
+    normalized_signals, signal_screen_issues = _normalized_capture_signals(signals)
+    capture_surface_unknown = not str(repo_capture_surface_version or "").strip()
+    surface_version = (
+        str(repo_capture_surface_version).strip() if not capture_surface_unknown else "unknown"
+    )
+    case = {
+        "signals": normalized_signals,
+        "repo_capture_surface_version": surface_version,
+        "payload_samples": payload_samples or [],
+    }
+    rule_actual, matched_rule_ids, update_required = _rule_actual(case, registry)
+    block_signals = set(registry.get("global_block_signals", []))
+    blocking_hits = sorted(block_signals & set(normalized_signals))
+    payload_issues = _payload_sample_issues(case)
+    if signal_screen_issues:
+        actual = _empty_actual(
+            blocked=True,
+            blocked_reason="signal_screen:" + ",".join(signal_screen_issues),
+        )
+    elif capture_surface_unknown:
+        actual = rule_actual
+        update_required = True
+    elif blocking_hits:
+        actual = _empty_actual(
+            blocked=True,
+            blocked_reason="global_block_signal:" + ",".join(blocking_hits),
+        )
+    elif payload_issues:
+        actual = _empty_actual(
+            blocked=True,
+            blocked_reason="payload_screen:" + ",".join(payload_issues),
+        )
+    else:
+        actual = rule_actual
+
+    reviewed_rules = {
+        str(rule.get("rule_id") or ""): rule
+        for rule in registry.get("rules", [])
+        if isinstance(rule, dict)
+    }
+    matched_rules: list[dict[str, Any]] = []
+    recommended_packets: list[dict[str, Any]] = []
+    for rule_id in matched_rule_ids:
+        rule = reviewed_rules.get(rule_id, {})
+        emit = rule.get("emit") if isinstance(rule.get("emit"), dict) else {}
+        matched_rules.append(
+            {
+                "rule_id": rule_id,
+                "pattern_family": str(rule.get("pattern_family") or ""),
+                "review_status": str(rule.get("review_status") or ""),
+                "min_capture_surface_version": str(
+                    rule.get("min_capture_surface_version") or ""
+                ),
+                "required_fields": sorted(str(item) for item in emit.get("required_fields", [])),
+                "danger_if_missed": str(rule.get("danger_if_missed") or ""),
+                "rationale": str(emit.get("rationale") or ""),
+            }
+        )
+        if actual["blocked"]:
+            continue
+        recommended_packets.append(
+            {
+                "rule_id": rule_id,
+                "packet_classes": sorted(str(item) for item in emit.get("packet_classes", [])),
+                "mail_message_type": str(emit.get("mail_message_type") or ""),
+                "exception_event_type": str(emit.get("exception_event_type") or ""),
+                "capture_contract": str(emit.get("capture_contract") or ""),
+                "severity": str(emit.get("severity") or ""),
+                "required_fields": sorted(str(item) for item in emit.get("required_fields", [])),
+            }
+        )
+
+    return {
+        "generated_at": utc_now(),
+        "suggestion_id": "dad:exception-capture-suggestion",
+        "registry_ref": CAPTURE_PATTERN_REGISTRY.as_posix(),
+        "methodology_ref": CAPTURE_PATTERN_REGISTRY.as_posix(),
+        "methodology_hash": f"sha256:{sha256_file(hub_root / CAPTURE_PATTERN_REGISTRY)}",
+        "repo_capture_surface_version": surface_version,
+        "capture_surface_version_unknown": capture_surface_unknown,
+        "registry_capture_surface_version": str(registry.get("capture_surface_version") or ""),
+        "update_required": update_required,
+        "signals": normalized_signals,
+        "signal_screen_issues": signal_screen_issues,
+        "matched_rule_ids": sorted(matched_rule_ids),
+        "matched_rules": matched_rules,
+        "payload_screen_issues": payload_issues,
+        "blocking_signals": blocking_hits,
+        "actual": actual,
+        "recommended_packets": recommended_packets,
+        "next_actions": _capture_suggest_next_actions(
+            actual=actual,
+            update_required=update_required,
+            matched_rule_ids=matched_rule_ids,
+            capture_surface_unknown=capture_surface_unknown,
+        ),
+        "authority_boundary": (
+            "Capture suggestions are deterministic candidate guidance compiled from "
+            "the reviewed capture-pattern registry. They do not prove source truth, "
+            "approve public release, authorize source mutation, or permit raw logs, "
+            "secrets, private rows, hidden reasoning, or copied source blobs."
+        ),
+    }
+
+
+def _capture_suggest_next_actions(
+    *,
+    actual: dict[str, Any],
+    update_required: bool,
+    matched_rule_ids: list[str],
+    capture_surface_unknown: bool = False,
+) -> list[str]:
+    actions: list[str] = []
+    if actual.get("blocked"):
+        actions.append(
+            "Do not emit outbound mail or exception packets until the blocked "
+            "payload/signal is reduced to safe metadata or reviewed locally."
+        )
+        return actions
+    if capture_surface_unknown:
+        actions.append(
+            "Read .digital-asset/dad-integration.json and pass the repo capture "
+            "surface version before treating this suggestion as complete."
+        )
+    if update_required:
+        actions.append(
+            "Refresh the repo capture surface before treating this suggestion as "
+            "complete; older surfaces may omit required fields."
+        )
+    if not matched_rule_ids:
+        actions.append(
+            "No reviewed capture rule matched. Use direct exception record guidance "
+            "or send a taxonomy_suggestion only if existing types cannot represent "
+            "the safe metadata."
+        )
+    else:
+        actions.append(
+            "Populate every required field with short safe metadata, pointers, or "
+            "hashes before appending candidate mail, exception, or fix-outcome JSONL."
+        )
+    actions.append("Keep the repo-local packet candidate-only until local review.")
+    return actions
+
+
+def _normalized_capture_signals(signals: list[str]) -> tuple[list[str], list[str]]:
+    normalized: set[str] = set()
+    issues: set[str] = set()
+    for value in signals:
+        text = str(value or "").strip()
+        if not text:
+            continue
+        if not CAPTURE_SIGNAL_RE.fullmatch(text):
+            issues.add("unsafe_signal_token")
+            continue
+        _, screen_issues = screen_exception_record({"signal": text})
+        if screen_issues:
+            issues.add("unsafe_signal_payload")
+            continue
+        normalized.add(text)
+    return sorted(normalized), sorted(issues)
 
 
 def _resolve_observed_path(value: str, scenario_base: Path | None) -> Path:

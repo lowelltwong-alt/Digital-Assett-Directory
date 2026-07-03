@@ -13,6 +13,7 @@
   "capabilities": [
     "capture_completeness_eval",
     "pattern_update_simulation",
+    "capture_suggest_decision_helper",
     "required_field_contract_check",
     "negative_payload_gate",
     "observed_outbox_audit"
@@ -31,6 +32,7 @@
   ],
   "validation_commands": [
     "python -m pytest tests/test_exception_capture.py -q",
+    "python -m digital_asset_directory.cli exceptions capture-suggest --signal tool_unavailable --signal dad_cli_unavailable --signal fallback_used --repo-capture-surface-version 0.2.0",
     "python -m digital_asset_directory.cli exceptions capture-check --scenarios assets/coding-harnesses/exception-capture-completeness/examples/synthetic-capture-scenarios.json",
     "python -m digital_asset_directory.cli exceptions capture-audit --repo all"
   ],

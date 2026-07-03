@@ -50,6 +50,27 @@ exception, or fix-outcome packet as short metadata. Required fields are part of
 the packet identity: a matching message type with missing, blank, placeholder, or
 unrelated-row fields is not a complete capture.
 
+The lightest deterministic check is:
+
+```text
+python -m digital_asset_directory.cli exceptions capture-suggest \
+  --signal tool_unavailable \
+  --signal dad_cli_unavailable \
+  --signal fallback_used \
+  --repo-capture-surface-version <version from .digital-asset/dad-integration.json>
+```
+
+The command returns matched capture rules, expected packet classes, event types,
+mail message types, capture contracts, and required fields. Treat the output as a
+candidate packet plan, not proof that an exception occurred. If you use
+`--payload-sample`, pass only short metadata-only text; never pass secrets, raw
+logs, private rows, copied conversations, hidden reasoning, or source blobs. The
+suggestion output reports screening issue labels and does not echo sample text.
+If you emit a packet from a suggestion, carry the suggestion provenance in safe
+metadata or `trace_refs`: `suggestion_id`, `methodology_hash`,
+`matched_rule_ids`, and `update_required`. These fields explain why the agent
+emitted the packet, but they are not source truth or local approval.
+
 If DAD's capture surface version is newer than this repo's contract, the next
 agent should treat that as an update notice: read the current registry, update
 packet fields as needed, and keep old packets as historical candidate evidence.

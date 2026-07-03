@@ -90,6 +90,7 @@ from .exception_capture import (
     evaluate_capture_scenarios,
     load_capture_pattern_registry,
     observed_capture_audit_gap_count,
+    suggest_exception_capture,
     write_exception_backfill_readiness,
     write_exception_backfill_wave_plan,
     write_observed_capture_audit,
@@ -1472,6 +1473,47 @@ def exceptions_capture_patterns(hub: Optional[Path] = typer.Option(None)) -> Non
     """Print DAD's deterministic exception/mail capture-pattern registry."""
     cfg = _cfg(hub=hub)
     console.print_json(data=load_capture_pattern_registry(cfg.repo_root))
+
+
+@exceptions_app.command("capture-suggest")
+def exceptions_capture_suggest(
+    signal: list[str] = typer.Option(
+        [],
+        "--signal",
+        help="Observable metadata signal, repeat for multiple signals.",
+    ),
+    repo_capture_surface_version: str = typer.Option(
+        "",
+        "--repo-capture-surface-version",
+        help="Capture surface version recorded in the source repo contract.",
+    ),
+    payload_sample: list[str] = typer.Option(
+        [],
+        "--payload-sample",
+        help=(
+            "Short metadata-only local sample to screen. Do not pass secrets, "
+            "raw logs, private rows, copied conversations, or source blobs."
+        ),
+    ),
+    hub: Optional[Path] = typer.Option(None),
+) -> None:
+    """Suggest candidate exception/mail/fix packets for observable signals."""
+    cfg = _cfg(hub=hub)
+    samples = [
+        {"field": f"cli_payload_sample_{index}", "text": text}
+        for index, text in enumerate(payload_sample, start=1)
+    ]
+    try:
+        result = suggest_exception_capture(
+            cfg.repo_root,
+            signals=signal,
+            repo_capture_surface_version=repo_capture_surface_version,
+            payload_samples=samples,
+        )
+    except (OSError, json.JSONDecodeError, KeyError, ValueError) as exc:
+        console.print(str(exc))
+        raise typer.Exit(2) from exc
+    console.print_json(data=result)
 
 
 @exceptions_app.command("taxonomy-coverage")

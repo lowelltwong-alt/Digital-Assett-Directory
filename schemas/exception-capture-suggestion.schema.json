@@ -1,0 +1,228 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://local.digital-asset-directory/schemas/exception-capture-suggestion.schema.json",
+  "title": "Exception Capture Suggestion",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "generated_at",
+    "suggestion_id",
+    "registry_ref",
+    "methodology_ref",
+    "methodology_hash",
+    "repo_capture_surface_version",
+    "capture_surface_version_unknown",
+    "registry_capture_surface_version",
+    "update_required",
+    "signals",
+    "signal_screen_issues",
+    "matched_rule_ids",
+    "matched_rules",
+    "payload_screen_issues",
+    "blocking_signals",
+    "actual",
+    "recommended_packets",
+    "next_actions",
+    "authority_boundary"
+  ],
+  "properties": {
+    "generated_at": {"type": "string", "format": "date-time"},
+    "suggestion_id": {"const": "dad:exception-capture-suggestion"},
+    "registry_ref": {"const": "registry/exception-capture-pattern-registry.json"},
+    "methodology_ref": {"const": "registry/exception-capture-pattern-registry.json"},
+    "methodology_hash": {"type": "string", "pattern": "^sha256:[a-f0-9]{64}$"},
+    "repo_capture_surface_version": {"type": "string", "minLength": 1},
+    "capture_surface_version_unknown": {"type": "boolean"},
+    "registry_capture_surface_version": {"type": "string", "minLength": 1},
+    "update_required": {"type": "boolean"},
+    "signals": {
+      "type": "array",
+      "items": {"type": "string", "pattern": "^[a-z][a-z0-9_:-]{0,80}$"},
+      "uniqueItems": true
+    },
+    "signal_screen_issues": {
+      "type": "array",
+      "items": {"type": "string", "minLength": 1},
+      "uniqueItems": true
+    },
+    "matched_rule_ids": {
+      "type": "array",
+      "items": {"type": "string", "pattern": "^exception-capture-rule:[a-z0-9][a-z0-9:-]*$"},
+      "uniqueItems": true
+    },
+    "matched_rules": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "rule_id",
+          "pattern_family",
+          "review_status",
+          "min_capture_surface_version",
+          "required_fields",
+          "danger_if_missed",
+          "rationale"
+        ],
+        "properties": {
+          "rule_id": {"type": "string", "pattern": "^exception-capture-rule:[a-z0-9][a-z0-9:-]*$"},
+          "pattern_family": {"type": "string", "minLength": 1},
+          "review_status": {"const": "reviewed"},
+          "min_capture_surface_version": {"type": "string", "minLength": 1},
+          "required_fields": {
+            "type": "array",
+            "items": {"type": "string", "minLength": 1},
+            "uniqueItems": true
+          },
+          "danger_if_missed": {"type": "string", "minLength": 1},
+          "rationale": {"type": "string", "minLength": 1}
+        }
+      }
+    },
+    "payload_screen_issues": {
+      "type": "array",
+      "items": {"type": "string", "minLength": 1},
+      "uniqueItems": true
+    },
+    "blocking_signals": {
+      "type": "array",
+      "items": {"type": "string", "minLength": 1},
+      "uniqueItems": true
+    },
+    "actual": {"$ref": "#/$defs/actual"},
+    "recommended_packets": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "rule_id",
+          "packet_classes",
+          "mail_message_type",
+          "exception_event_type",
+          "capture_contract",
+          "severity",
+          "required_fields"
+        ],
+        "properties": {
+          "rule_id": {"type": "string", "pattern": "^exception-capture-rule:[a-z0-9][a-z0-9:-]*$"},
+          "packet_classes": {
+            "type": "array",
+            "items": {
+              "enum": [
+                "ordinary_mail",
+                "exception_event",
+                "fix_outcome",
+                "local_usage_only",
+                "no_packet"
+              ]
+            },
+            "uniqueItems": true
+          },
+          "mail_message_type": {
+            "enum": [
+              "",
+              "lesson_suggestion",
+              "asset_suggestion",
+              "workflow_suggestion",
+              "taxonomy_suggestion",
+              "capability_suggestion",
+              "governance_notice",
+              "inbox_ack",
+              "review_decision"
+            ]
+          },
+          "exception_event_type": {"type": "string"},
+          "capture_contract": {"type": "string"},
+          "severity": {"enum": ["critical", "high", "medium", "low", "info", ""]},
+          "required_fields": {
+            "type": "array",
+            "items": {"type": "string", "minLength": 1},
+            "uniqueItems": true
+          }
+        }
+      }
+    },
+    "next_actions": {
+      "type": "array",
+      "items": {"type": "string", "minLength": 1},
+      "minItems": 1
+    },
+    "authority_boundary": {"type": "string", "minLength": 1}
+  },
+  "$defs": {
+    "actual": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "packet_classes",
+        "event_types",
+        "mail_message_types",
+        "capture_contracts",
+        "required_fields",
+        "blocked",
+        "blocked_reason"
+      ],
+      "properties": {
+        "packet_classes": {
+          "type": "array",
+          "items": {
+            "enum": [
+              "ordinary_mail",
+              "exception_event",
+              "fix_outcome",
+              "local_usage_only",
+              "no_packet"
+            ]
+          },
+          "uniqueItems": true
+        },
+        "event_types": {
+          "type": "array",
+          "items": {"type": "string"},
+          "uniqueItems": true
+        },
+        "mail_message_types": {
+          "type": "array",
+          "items": {
+            "enum": [
+              "lesson_suggestion",
+              "asset_suggestion",
+              "workflow_suggestion",
+              "taxonomy_suggestion",
+              "capability_suggestion",
+              "governance_notice",
+              "inbox_ack",
+              "review_decision"
+            ]
+          },
+          "uniqueItems": true
+        },
+        "capture_contracts": {
+          "type": "array",
+          "items": {
+            "enum": [
+              "failed_command",
+              "retry_or_plan_change",
+              "postflight_exception",
+              "ci_failure",
+              "governance_block",
+              "review_finding",
+              "fix_outcome",
+              "dad_recommendation_outcome",
+              "backfill_candidate"
+            ]
+          },
+          "uniqueItems": true
+        },
+        "required_fields": {
+          "type": "array",
+          "items": {"type": "string", "minLength": 1},
+          "uniqueItems": true
+        },
+        "blocked": {"type": "boolean"},
+        "blocked_reason": {"type": "string"}
+      }
+    }
+  }
+}

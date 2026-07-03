@@ -76,6 +76,7 @@
     "exception_event_type_registry": "schemas/exception-event-type-registry.schema.json",
     "exception_learning_methodology": "schemas/exception-learning-methodology.schema.json",
     "exception_capture_pattern_registry": "schemas/exception-capture-pattern-registry.schema.json",
+    "exception_capture_suggestion": "schemas/exception-capture-suggestion.schema.json",
     "exception_capture_scenarios": "schemas/exception-capture-scenarios.schema.json",
     "exception_learning_readiness_scenarios": "schemas/exception-learning-readiness-scenarios.schema.json",
     "proposal": "schemas/proposal.schema.json",

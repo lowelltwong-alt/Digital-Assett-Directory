@@ -7,6 +7,7 @@ from types import SimpleNamespace
 import pytest
 import typer
 from jsonschema.validators import validator_for
+from typer.testing import CliRunner
 
 from digital_asset_directory.cli import (
     _capture_audit_gap_count,
@@ -14,6 +15,7 @@ from digital_asset_directory.cli import (
     _discover_exception_repos,
     _exception_backfill_policy_block_reason,
     _exception_record_policy_block_reason,
+    app,
 )
 from digital_asset_directory.config import ExceptionRepoPolicy, MailRepoPolicy
 from digital_asset_directory.exception_capture import (
@@ -22,6 +24,7 @@ from digital_asset_directory.exception_capture import (
     evaluate_capture_scenarios,
     load_capture_pattern_registry,
     load_capture_scenarios,
+    suggest_exception_capture,
     write_exception_backfill_readiness,
     write_exception_backfill_wave_plan,
     write_observed_capture_audit,
@@ -38,6 +41,7 @@ SCENARIOS = (
     / "examples"
     / "synthetic-capture-scenarios.json"
 )
+RUNNER = CliRunner()
 
 
 def _phase6_gate(report: dict, gate_id: str) -> dict:
@@ -1235,6 +1239,167 @@ def test_report_hashes_scenario_and_evaluator_inputs(tmp_path: Path) -> None:
         in report["input_hashes"]
     )
     assert "src/digital_asset_directory/exception_capture.py" in report["input_hashes"]
+
+
+def test_capture_suggest_maps_tool_unavailable_to_required_packet() -> None:
+    suggestion = suggest_exception_capture(
+        ROOT,
+        signals=["tool_unavailable", "dad_cli_unavailable", "fallback_used"],
+        repo_capture_surface_version="0.2.0",
+    )
+
+    _validate("exception_capture_suggestion", suggestion)
+    assert suggestion["matched_rule_ids"] == ["exception-capture-rule:tool-unavailable-metadata"]
+    assert suggestion["update_required"] is False
+    assert suggestion["capture_surface_version_unknown"] is False
+    assert suggestion["actual"]["packet_classes"] == ["exception_event"]
+    assert suggestion["actual"]["event_types"] == ["tool_unavailable"]
+    assert suggestion["actual"]["capture_contracts"] == ["retry_or_plan_change"]
+    assert suggestion["actual"]["required_fields"] == [
+        "attempted_command",
+        "fallback_path",
+        "safe_summary",
+        "tool_name",
+    ]
+    assert suggestion["recommended_packets"][0]["exception_event_type"] == "tool_unavailable"
+    assert "source truth" in suggestion["authority_boundary"]
+
+
+def test_capture_suggest_flags_stale_capture_surface_for_new_rule() -> None:
+    suggestion = suggest_exception_capture(
+        ROOT,
+        signals=["tool_unavailable", "dad_cli_unavailable", "fallback_used"],
+        repo_capture_surface_version="0.1.0",
+    )
+
+    assert suggestion["update_required"] is True
+    assert "Refresh the repo capture surface" in suggestion["next_actions"][0]
+
+
+def test_capture_suggest_missing_capture_surface_version_fails_loud() -> None:
+    suggestion = suggest_exception_capture(
+        ROOT,
+        signals=["tool_unavailable", "dad_cli_unavailable", "fallback_used"],
+    )
+
+    _validate("exception_capture_suggestion", suggestion)
+    assert suggestion["repo_capture_surface_version"] == "unknown"
+    assert suggestion["capture_surface_version_unknown"] is True
+    assert suggestion["update_required"] is True
+    assert suggestion["next_actions"][0].startswith("Read .digital-asset/dad-integration.json")
+
+
+def test_capture_suggest_blocks_unsafe_payload_without_echoing_sample() -> None:
+    unsafe = "AWS key AKIAIOSFODNN7EXAMPLE should not leave the source repo"
+    suggestion = suggest_exception_capture(
+        ROOT,
+        signals=["new_reusable_asset", "cross_repo_reuse", "asset_docs"],
+        repo_capture_surface_version="0.2.0",
+        payload_samples=[{"field": "safe_summary", "text": unsafe}],
+    )
+    serialized = json.dumps(suggestion)
+
+    assert suggestion["actual"]["packet_classes"] == ["no_packet"]
+    assert suggestion["actual"]["blocked"] is True
+    assert suggestion["actual"]["blocked_reason"] == "payload_screen:credential_or_pii_pattern"
+    assert suggestion["recommended_packets"] == []
+    assert "credential_or_pii_pattern" in suggestion["payload_screen_issues"]
+    assert unsafe not in serialized
+    assert "AKIAIOSFODNN7EXAMPLE" not in serialized
+
+
+def test_capture_suggest_blocks_unsafe_signal_without_echoing_value() -> None:
+    unsafe_signal = "api_key=AKIAIOSFODNN7EXAMPLE"
+    suggestion = suggest_exception_capture(
+        ROOT,
+        signals=[unsafe_signal],
+        repo_capture_surface_version="0.2.0",
+    )
+    serialized = json.dumps(suggestion)
+
+    _validate("exception_capture_suggestion", suggestion)
+    assert suggestion["signals"] == []
+    assert suggestion["signal_screen_issues"] == ["unsafe_signal_token"]
+    assert suggestion["actual"]["packet_classes"] == ["no_packet"]
+    assert suggestion["actual"]["blocked"] is True
+    assert suggestion["actual"]["blocked_reason"] == "signal_screen:unsafe_signal_token"
+    assert suggestion["recommended_packets"] == []
+    assert unsafe_signal not in serialized
+    assert "AKIAIOSFODNN7EXAMPLE" not in serialized
+
+
+def test_capture_suggest_ignores_candidate_and_rejected_rules(tmp_path: Path) -> None:
+    registry = json.loads(
+        (ROOT / "registry" / "exception-capture-pattern-registry.json").read_text(
+            encoding="utf-8"
+        )
+    )
+    base_rule = registry["rules"][0]
+    candidate_rule = {
+        **base_rule,
+        "rule_id": "exception-capture-rule:candidate-only-test",
+        "match_signals": ["candidate_only_signal"],
+        "any_signals": [],
+        "review_status": "candidate",
+    }
+    rejected_rule = {
+        **base_rule,
+        "rule_id": "exception-capture-rule:rejected-test",
+        "match_signals": ["rejected_signal"],
+        "any_signals": [],
+        "review_status": "rejected",
+    }
+    registry["rules"] = [candidate_rule, rejected_rule]
+    registry_path = tmp_path / "registry" / "exception-capture-pattern-registry.json"
+    registry_path.parent.mkdir(parents=True)
+    registry_path.write_text(json.dumps(registry), encoding="utf-8")
+
+    suggestion = suggest_exception_capture(
+        tmp_path,
+        signals=["candidate_only_signal", "rejected_signal"],
+        repo_capture_surface_version="0.2.0",
+    )
+
+    _validate("exception_capture_suggestion", suggestion)
+    assert suggestion["matched_rule_ids"] == []
+    assert suggestion["actual"]["packet_classes"] == ["no_packet"]
+    assert suggestion["recommended_packets"] == []
+
+
+def test_capture_suggest_unknown_signals_stay_candidate_no_packet() -> None:
+    suggestion = suggest_exception_capture(
+        ROOT,
+        signals=["uncataloged_signal"],
+        repo_capture_surface_version="0.2.0",
+    )
+
+    assert suggestion["matched_rule_ids"] == []
+    assert suggestion["actual"]["packet_classes"] == ["no_packet"]
+    assert suggestion["recommended_packets"] == []
+    assert "No reviewed capture rule matched" in suggestion["next_actions"][0]
+
+
+def test_capture_suggest_cli_blocks_unsafe_signal_without_echoing_value() -> None:
+    unsafe_signal = "api_key=AKIAIOSFODNN7EXAMPLE"
+    result = RUNNER.invoke(
+        app,
+        [
+            "exceptions",
+            "capture-suggest",
+            "--signal",
+            unsafe_signal,
+            "--repo-capture-surface-version",
+            "0.2.0",
+        ],
+    )
+
+    assert result.exit_code == 0, result.output
+    assert unsafe_signal not in result.output
+    assert "AKIAIOSFODNN7EXAMPLE" not in result.output
+    payload = json.loads(result.output)
+    _validate("exception_capture_suggestion", payload)
+    assert payload["signal_screen_issues"] == ["unsafe_signal_token"]
+    assert payload["recommended_packets"] == []
 
 
 def test_observed_capture_audit_reports_existing_repo_outbox_emission(tmp_path: Path) -> None:

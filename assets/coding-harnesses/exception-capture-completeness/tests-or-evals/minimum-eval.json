@@ -11,6 +11,12 @@
   ],
   "cases": [
     {
+      "case_id": "capture-suggest-decision-helper",
+      "given": ["observable repo-side signals", "reviewed capture-pattern registry", "repo capture surface version"],
+      "expected": ["registered exception_capture_suggestion schema validates", "tool_unavailable signals produce retry_or_plan_change exception metadata fields", "unsafe signal values are blocked and not echoed", "omitted capture surface version reports update_required"],
+      "fail_if": ["candidate or rejected rules emit packet recommendations", "unsafe CLI args appear in stdout", "unknown capture surface silently looks current", "suggestion output is not schema-validated"]
+    },
+    {
       "case_id": "lawfirm-review-issue",
       "given": ["structured review workflow", "exception-lake mapping gap"],
       "expected": ["ordinary workflow_suggestion mail", "review_finding exception event", "update_required when old capture surface is present", "observed outbox fixture matches expected packet classes"],

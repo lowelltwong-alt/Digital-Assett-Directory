@@ -210,9 +210,10 @@ Implemented contract surfaces:
 - `templates/downstream/EXCEPTIONS_README.md`
 
 The CLI entrypoint is `asset-dir exceptions` with `paths`, `taxonomy`,
-`capture-patterns`, `capture-check`, `capture-audit`, `record`, `collect`,
-`backfill`, `backfill-review-queue`, `backfill-review-decision`,
-`backfill-review-decisions`, `source-packet-requests`, and `report` commands.
+`capture-patterns`, `capture-suggest`, `capture-check`, `capture-audit`,
+`record`, `collect`, `backfill`, `backfill-review-queue`,
+`backfill-review-decision`, `backfill-review-decisions`,
+`source-packet-requests`, and `report` commands.
 
 ## Packet Shape
 
@@ -780,6 +781,17 @@ Implemented starter harness:
   enrollment pointers, not raw logs or private rows.
 - `asset-dir exceptions capture-check --scenarios <file>` writes a methodology-hashed
   report under `processed/reports/exception_capture_completeness.*`.
+- `asset-dir exceptions capture-suggest --signal <signal> ...` compiles
+  observable repo-side signals into a candidate packet plan from the reviewed
+  capture-pattern registry. It reports matched rules, packet classes, event
+  types, mail message types, capture contracts, required fields, stale capture
+  surface warnings, and blocked payload/signal reasons. This is the lightweight
+  repo-agent decision helper: it does not prove the event happened, does not
+  authorize source mutation or public release, and does not echo payload samples.
+  Emitted packets should preserve pointer-safe suggestion provenance such as
+  `suggestion_id`, `methodology_hash`, `matched_rule_ids`, and
+  `update_required` in safe metadata or trace refs so later audits can
+  distinguish "agent emitted because registry suggested this" from source truth.
 - `asset-dir exceptions taxonomy-coverage --fail-on-unrouted --fail-on-missing-scenarios`
   writes `processed/reports/exception_taxonomy_coverage.*`. It maps every reviewed
   exception event type to direct record contracts, capture-rule routes, backfill
