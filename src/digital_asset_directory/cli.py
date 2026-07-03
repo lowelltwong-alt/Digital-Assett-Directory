@@ -1589,7 +1589,20 @@ def exceptions_capture_audit(
     repo: list[str] = typer.Option([], "--repo"),
     root: list[Path] = typer.Option([], "--root"),
     limit: int = typer.Option(200, "--limit", min=1, max=1000),
-    candidate_limit: int = typer.Option(50, "--candidate-limit", min=1, max=500),
+    candidate_limit: int = typer.Option(
+        50,
+        "--candidate-limit",
+        min=0,
+        max=500,
+        help="Maximum candidate path signals per repo; 0 means exhaustive metadata-only scan.",
+    ),
+    max_scanned_files: int = typer.Option(
+        50000,
+        "--max-scanned-files",
+        min=1,
+        max=1000000,
+        help="Maximum repo files to inspect by path name for capture candidates.",
+    ),
     output: Optional[Path] = typer.Option(None, "--output"),
     fail_on_gaps: bool = typer.Option(False, "--fail-on-gaps"),
     strict: bool = typer.Option(
@@ -1626,6 +1639,7 @@ def exceptions_capture_audit(
             repo_policies=_exception_repo_policies(cfg),
             output=output_path,
             candidate_limit=candidate_limit,
+            max_scanned_files=max_scanned_files,
             scope={
                 "scope_id": "exceptions.repos:all" if reviewed_policy_scope else "ad_hoc",
                 "scope_kind": "reviewed_exception_policy"
@@ -1650,7 +1664,20 @@ def exceptions_capture_audit(
 @exceptions_app.command("backfill-readiness")
 def exceptions_backfill_readiness(
     repo: list[str] = typer.Option([], "--repo"),
-    candidate_limit: int = typer.Option(50, "--candidate-limit", min=1, max=500),
+    candidate_limit: int = typer.Option(
+        50,
+        "--candidate-limit",
+        min=0,
+        max=500,
+        help="Maximum candidate path signals per repo; 0 means exhaustive metadata-only scan.",
+    ),
+    max_scanned_files: int = typer.Option(
+        50000,
+        "--max-scanned-files",
+        min=1,
+        max=1000000,
+        help="Maximum repo files to inspect by path name for capture candidates.",
+    ),
     output: Optional[Path] = typer.Option(None, "--output"),
     hub: Optional[Path] = typer.Option(None),
 ) -> None:
@@ -1670,6 +1697,7 @@ def exceptions_backfill_readiness(
             repo_policies=_exception_repo_policies(cfg),
             output=output_path,
             candidate_limit=candidate_limit,
+            max_scanned_files=max_scanned_files,
         )
     except (OSError, json.JSONDecodeError, KeyError, ValueError) as exc:
         console.print(str(exc))
@@ -1680,7 +1708,20 @@ def exceptions_backfill_readiness(
 @exceptions_app.command("backfill-plan")
 def exceptions_backfill_plan(
     repo: list[str] = typer.Option([], "--repo"),
-    candidate_limit: int = typer.Option(50, "--candidate-limit", min=1, max=500),
+    candidate_limit: int = typer.Option(
+        50,
+        "--candidate-limit",
+        min=0,
+        max=500,
+        help="Maximum candidate path signals per repo; 0 means exhaustive metadata-only scan.",
+    ),
+    max_scanned_files: int = typer.Option(
+        50000,
+        "--max-scanned-files",
+        min=1,
+        max=1000000,
+        help="Maximum repo files to inspect by path name for capture candidates.",
+    ),
     per_wave_repo_limit: int = typer.Option(25, "--per-wave-repo-limit", min=1, max=500),
     output: Optional[Path] = typer.Option(None, "--output"),
     hub: Optional[Path] = typer.Option(None),
@@ -1701,6 +1742,7 @@ def exceptions_backfill_plan(
             repo_policies=_exception_repo_policies(cfg),
             output=output_path,
             candidate_limit=candidate_limit,
+            max_scanned_files=max_scanned_files,
             per_wave_repo_limit=per_wave_repo_limit,
         )
     except (OSError, json.JSONDecodeError, KeyError, ValueError) as exc:

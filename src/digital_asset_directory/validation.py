@@ -11,6 +11,7 @@ from jsonschema.validators import validator_for
 from .config import load_config
 from .exception_capture import (
     audit_observed_capture_repo,
+    build_exception_backfill_wave_plan,
     load_capture_pattern_registry,
     observed_capture_audit_gap_count,
 )
@@ -694,20 +695,45 @@ def _candidate_path_scan_staleness_errors(
     )
     if audited_repo is None:
         return [f"Candidate path scan stale for {label}: {resolve_error}"]
-    try:
-        candidate_limit = int(expected_scan.get("limit") or 50)
-    except (TypeError, ValueError):
-        return [f"Candidate path scan stale for {label}: invalid candidate scan limit"]
+    raw_limit = expected_scan.get("limit", 50)
+    if raw_limit is None:
+        candidate_limit = None
+    else:
+        try:
+            parsed_limit = int(raw_limit)
+        except (TypeError, ValueError):
+            return [f"Candidate path scan stale for {label}: invalid candidate scan limit"]
+        candidate_limit = parsed_limit if parsed_limit > 0 else None
+    raw_max_scanned_files = expected_scan.get("max_scanned_files", 50_000)
+    if raw_max_scanned_files is None:
+        max_scanned_files = None
+    else:
+        try:
+            parsed_max_scanned_files = int(raw_max_scanned_files)
+        except (TypeError, ValueError):
+            return [f"Candidate path scan stale for {label}: invalid max scanned files"]
+        max_scanned_files = (
+            parsed_max_scanned_files if parsed_max_scanned_files > 0 else None
+        )
     current = audit_observed_capture_repo(
         repo_root,
         audited_repo,
         registry,
         repo_policies=repo_policies,
         candidate_limit=candidate_limit,
+        max_scanned_files=max_scanned_files,
     )
     current_scan = current.get("candidate_path_scan", {})
     errors: list[str] = []
-    for key in ["scan_hash", "scanned_file_count", "truncated", "path_hash_only"]:
+    for key in [
+        "scan_hash",
+        "scanned_file_count",
+        "truncated",
+        "path_hash_only",
+        "limit_mode",
+        "max_scanned_files",
+        "stopped_reason",
+    ]:
         expected = expected_scan.get(key)
         actual = current_scan.get(key)
         if expected != actual:
@@ -721,6 +747,65 @@ def _candidate_path_scan_staleness_errors(
             f"Candidate path scan stale for {label} candidate_path_signal_count: "
             f"{expected_count} != {actual_count}"
         )
+    return errors
+
+
+def _exception_wave_plan_readiness_path(report_path: Path) -> Path:
+    if report_path.name == "exception_backfill_wave_plan.json":
+        return report_path.with_name("exception_backfill_readiness.json")
+    return report_path.with_name(report_path.stem + "_readiness.json")
+
+
+def _json_stable(value: Any) -> str:
+    return json.dumps(value, sort_keys=True, separators=(",", ":"))
+
+
+def _exception_backfill_wave_plan_staleness_errors(
+    repo_root: Path,
+    report_path: Path,
+    payload: dict[str, Any],
+) -> list[str]:
+    readiness_path = _exception_wave_plan_readiness_path(report_path)
+    label = _report_path_label(report_path, repo_root)
+    if not readiness_path.exists():
+        return [
+            f"Exception backfill wave plan stale for {label}: missing readiness report "
+            f"{_report_path_label(readiness_path, repo_root)}"
+        ]
+    try:
+        readiness_payload = json.loads(readiness_path.read_text(encoding="utf-8"))
+    except json.JSONDecodeError as exc:
+        return [
+            f"Exception backfill wave plan stale for {label}: malformed readiness report "
+            f"{exc.msg}"
+        ]
+    try:
+        per_wave_repo_limit = int(payload.get("per_wave_repo_limit") or 25)
+    except (TypeError, ValueError):
+        return [f"Exception backfill wave plan stale for {label}: invalid per_wave_repo_limit"]
+    expected = build_exception_backfill_wave_plan(
+        readiness_payload,
+        per_wave_repo_limit=per_wave_repo_limit,
+    )
+    errors: list[str] = []
+    for key in [
+        "source_report_id",
+        "repo_count",
+        "per_wave_repo_limit",
+        "current_wave_id",
+        "wave_order",
+        "readiness_counts",
+        "status_counts",
+        "capture_surface_action_counts",
+        "candidate_path_signal_summary",
+        "input_hashes",
+        "methodology_ref",
+        "methodology_hash",
+        "waves",
+        "proof_backlogs",
+    ]:
+        if _json_stable(payload.get(key)) != _json_stable(expected.get(key)):
+            errors.append(f"Exception backfill wave plan stale for {label}: {key} mismatch")
     return errors
 
 
@@ -1578,6 +1663,14 @@ def validate_repo(repo_root: Path) -> dict[str, Any]:
                                 policy_paths=policy_paths,
                             )
                         )
+            elif payload.get("report_id") == "dad:exception-backfill-wave-plan":
+                errors.extend(
+                    _exception_backfill_wave_plan_staleness_errors(
+                        repo_root,
+                        report_path,
+                        payload,
+                    )
+                )
         _validate_lesson_graph_contract(repo_root, registry, errors, checked)
     except Exception as exc:
         errors.append(f"Invalid DAD library or harness registry: {exc}")

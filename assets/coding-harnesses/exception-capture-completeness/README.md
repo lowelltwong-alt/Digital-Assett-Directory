@@ -41,6 +41,7 @@ Run:
 python -m digital_asset_directory.cli exceptions capture-check --scenarios assets/coding-harnesses/exception-capture-completeness/examples/synthetic-capture-scenarios.json
 python -m digital_asset_directory.cli exceptions taxonomy-coverage --fail-on-unrouted --fail-on-missing-scenarios
 python -m digital_asset_directory.cli exceptions capture-audit --repo all
+python -m digital_asset_directory.cli exceptions capture-audit --repo all --candidate-limit 0
 ```
 
 The report is candidate evidence. It shows only that the supplied scenarios match
@@ -58,6 +59,11 @@ only. It is a packet plan, not proof that the path contains a real exception.
 Truncated candidate-path scans and strict-only mismatches such as
 `type_present_uncorrelated` are review gaps, not clean runs. No single report is
 proof that all real repos are complete.
+Use `--candidate-limit 0` when the review needs exhaustive metadata-only
+path-signal coverage for the selected repo scope; it does not authorize reading
+file contents, mutating repos, or promoting backfill candidates. Keep
+`--max-scanned-files` explicit for broad scopes; if that ceiling is reached, the
+audit remains a truncated review gap until rerun or bounded by a reviewed scope.
 
 The capture, taxonomy, and observed-audit reports emit
 `phase6_machine_gate_evidence`. Capture and taxonomy rows support the LawFirm

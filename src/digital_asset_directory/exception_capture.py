@@ -1232,6 +1232,16 @@ def _candidate_signal_summary(
     return summary
 
 
+def _normalize_candidate_limit(limit: int | None) -> int | None:
+    if limit is None:
+        return None
+    return limit if limit > 0 else None
+
+
+def _candidate_limit_label(limit: int | None) -> str:
+    return "exhaustive metadata-only scan" if _normalize_candidate_limit(limit) is None else str(limit)
+
+
 def _merge_candidate_signal_summaries(rows: list[dict[str, Any]]) -> dict[str, Any]:
     keys = [
         "by_pattern_family",
@@ -1340,12 +1350,25 @@ def _signal_correlation_ref_hashes(signal: dict[str, str]) -> set[str]:
 def _candidate_capture_path_scan(
     repo: Path,
     *,
-    limit: int = 50,
+    limit: int | None = 50,
+    max_scanned_files: int | None = 50_000,
     include_paths: bool = False,
     path_terms: dict[str, dict[str, str]] | None = None,
 ) -> dict[str, Any]:
+    normalized_limit = _normalize_candidate_limit(limit)
+    normalized_max_scanned = (
+        max_scanned_files if max_scanned_files is not None and max_scanned_files > 0 else None
+    )
     if not repo.exists() or not repo.is_dir():
-        return {"signals": [], "truncated": False, "scanned_file_count": 0, "limit": limit}
+        return {
+            "signals": [],
+            "truncated": False,
+            "scanned_file_count": 0,
+            "limit": normalized_limit,
+            "limit_mode": "exhaustive" if normalized_limit is None else "bounded",
+            "max_scanned_files": normalized_max_scanned,
+            "stopped_reason": "repo_missing",
+        }
     findings: list[dict[str, str]] = []
     terms = path_terms or CAPTURE_AUDIT_PATH_TERMS
     scanned_file_count = 0
@@ -1361,6 +1384,17 @@ def _candidate_capture_path_scan(
             path = dir_path / filename
             if _is_capture_audit_excluded(path, repo):
                 continue
+            if normalized_max_scanned is not None and scanned_file_count >= normalized_max_scanned:
+                truncated = True
+                return {
+                    "signals": findings,
+                    "truncated": truncated,
+                    "scanned_file_count": scanned_file_count,
+                    "limit": normalized_limit,
+                    "limit_mode": "exhaustive" if normalized_limit is None else "bounded",
+                    "max_scanned_files": normalized_max_scanned,
+                    "stopped_reason": "max_scanned_files_reached",
+                }
             scanned_file_count += 1
             rel_path = safe_relative(path, repo)
             for term, metadata in sorted(
@@ -1372,19 +1406,25 @@ def _candidate_capture_path_scan(
                     continue
                 findings.append(_path_signal_record(path, repo, term, metadata, include_path=include_paths))
                 break
-            if len(findings) >= limit:
+            if normalized_limit is not None and len(findings) >= normalized_limit:
                 truncated = True
                 return {
                     "signals": findings,
                     "truncated": truncated,
                     "scanned_file_count": scanned_file_count,
-                    "limit": limit,
+                    "limit": normalized_limit,
+                    "limit_mode": "bounded",
+                    "max_scanned_files": normalized_max_scanned,
+                    "stopped_reason": "candidate_limit_reached",
                 }
     return {
         "signals": findings,
         "truncated": truncated,
         "scanned_file_count": scanned_file_count,
-        "limit": limit,
+        "limit": normalized_limit,
+        "limit_mode": "exhaustive" if normalized_limit is None else "bounded",
+        "max_scanned_files": normalized_max_scanned,
+        "stopped_reason": "exhausted_walk",
     }
 
 
@@ -1684,7 +1724,8 @@ def audit_observed_capture_repo(
     registry: dict[str, Any],
     *,
     repo_policies: list[Any] | None = None,
-    candidate_limit: int = 50,
+    candidate_limit: int | None = 50,
+    max_scanned_files: int | None = 50_000,
 ) -> dict[str, Any]:
     resolved = repo.resolve()
     policy = _policy_summary(resolved, repo_policies)
@@ -1717,6 +1758,7 @@ def audit_observed_capture_repo(
     candidate_scan = _candidate_capture_path_scan(
         resolved,
         limit=candidate_limit,
+        max_scanned_files=max_scanned_files,
         include_paths=include_candidate_paths,
         path_terms=path_terms,
     )
@@ -1782,6 +1824,9 @@ def audit_observed_capture_repo(
             "truncated": candidate_scan["truncated"],
             "scanned_file_count": candidate_scan["scanned_file_count"],
             "limit": candidate_scan["limit"],
+            "limit_mode": candidate_scan["limit_mode"],
+            "max_scanned_files": candidate_scan["max_scanned_files"],
+            "stopped_reason": candidate_scan["stopped_reason"],
             "path_hash_only": not include_candidate_paths,
             "scan_hash": f"sha256:{sha256_bytes(json.dumps(candidate_paths, sort_keys=True).encode('utf-8'))}",
         },
@@ -2011,7 +2056,8 @@ def write_observed_capture_audit(
     *,
     repo_policies: list[Any] | None = None,
     output: Path | None = None,
-    candidate_limit: int = 50,
+    candidate_limit: int | None = 50,
+    max_scanned_files: int | None = 50_000,
     scope: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     registry = load_capture_pattern_registry(hub_root)
@@ -2022,6 +2068,7 @@ def write_observed_capture_audit(
             registry,
             repo_policies=repo_policies,
             candidate_limit=candidate_limit,
+            max_scanned_files=max_scanned_files,
         )
         for repo in repos
     ]
@@ -2232,10 +2279,12 @@ def _backfill_readiness_action(row: dict[str, Any]) -> tuple[str, list[str], lis
     if not repo.get("backfill_allowed"):
         reasons.append("backfill_allowed=false")
     if not row.get("candidate_path_signal_count"):
-        reasons.append("no candidate path signals in bounded audit")
+        reasons.append("no candidate path signals in observed audit")
     if "candidate_path_scan_truncated" in status_flags:
         evidence_blockers.append("candidate path scan truncated")
-        next_actions.append("rerun observed audit with a higher --candidate-limit before review")
+        next_actions.append(
+            "rerun observed audit with --candidate-limit 0 or a higher limit before review"
+        )
     if row.get("contract", {}).get("capture_surface_version") != row.get(
         "registry_capture_surface_version"
     ):
@@ -2283,8 +2332,9 @@ BACKFILL_WAVE_DEFINITIONS: list[dict[str, Any]] = [
         "label": "Rerun bounded historical scans",
         "human_gate": "No source write approval needed; this is central read-only evidence refresh.",
         "generated_next_step": (
-            "Run backfill-readiness or capture-audit with a higher --candidate-limit "
-            "before treating event/source-rule counts as representative."
+            "Run backfill-readiness or capture-audit with --candidate-limit 0, or "
+            "with a higher reviewed limit, before treating event/source-rule counts "
+            "as representative."
         ),
         "danger_if_misapplied": (
             "A first-N sample can hide dominant exception families and make a broad "
@@ -2439,6 +2489,38 @@ def _primary_backfill_wave(row: dict[str, Any]) -> str:
     return "watch_or_no_signal_wave"
 
 
+EMISSION_REVIEW_FLAGS = {
+    "missed_capture_candidate",
+    "pattern_gap_candidate",
+    "mail_present_exception_gap_candidate",
+    "emission_unverified",
+    "type_present_uncorrelated",
+}
+
+
+def _repo_proof_blockers(row: dict[str, Any]) -> list[str]:
+    blockers: list[str] = []
+    scan = row.get("candidate_path_scan", {})
+    summary = row.get("candidate_path_signal_summary", {})
+    status_flags = set(row.get("status_flags", []))
+    if row.get("capture_surface_action") != "current":
+        blockers.append("capture_surface_not_current")
+    if isinstance(scan, dict) and scan.get("truncated"):
+        blockers.append("observed_audit_truncated")
+    if isinstance(summary, dict) and summary.get("omitted_signal_count_unknown"):
+        blockers.append("observed_audit_omitted_signal_count_unknown")
+    if status_flags & EMISSION_REVIEW_FLAGS:
+        blockers.append("emissions_missing_unverified_or_uncorrelated")
+    if (
+        row.get("classifier_version_missing")
+        or row.get("classifier_version_stale")
+        or int(row.get("classifier_version_missing_count") or 0)
+        or int(row.get("classifier_version_stale_count") or 0)
+    ):
+        blockers.append("classifier_provenance_missing_or_stale")
+    return blockers
+
+
 def _repo_wave_ref(row: dict[str, Any]) -> dict[str, Any]:
     summary = row.get("candidate_path_signal_summary", {})
     return {
@@ -2450,6 +2532,9 @@ def _repo_wave_ref(row: dict[str, Any]) -> dict[str, Any]:
         "backfill_readiness": row.get("backfill_readiness"),
         "capture_surface_action": row.get("capture_surface_action"),
         "candidate_path_signal_count": row.get("candidate_path_signal_count"),
+        "proof_blockers": _repo_proof_blockers(row),
+        "classifier_version_missing_count": row.get("classifier_version_missing_count", 0),
+        "classifier_version_stale_count": row.get("classifier_version_stale_count", 0),
         "status_flags": row.get("status_flags", []),
         "blocked_reasons": row.get("blocked_reasons", []),
         "next_actions": row.get("next_actions", []),
@@ -2464,6 +2549,96 @@ def _repo_wave_ref(row: dict[str, Any]) -> dict[str, Any]:
             else {}
         ),
     }
+
+
+PROOF_BACKLOG_DEFINITIONS: list[dict[str, Any]] = [
+    {
+        "backlog_id": "capture_surface_refresh_backlog",
+        "label": "Capture surface refresh proof backlog",
+        "reason": "Repos need a current capture surface before no-packet or missing-packet evidence can be trusted.",
+    },
+    {
+        "backlog_id": "exhaustive_audit_backlog",
+        "label": "Exhaustive observed-audit proof backlog",
+        "reason": "Bounded first-N scans cannot prove historical exception-pattern coverage.",
+    },
+    {
+        "backlog_id": "emission_review_backlog",
+        "label": "Emission review proof backlog",
+        "reason": "Missing, unverified, or uncorrelated emissions need source/local review before backfill promotion.",
+    },
+    {
+        "backlog_id": "classifier_refresh_backlog",
+        "label": "Classifier refresh proof backlog",
+        "reason": "Backfill review evidence with missing or stale classifier provenance must be rerun or invalidated before source review.",
+    },
+    {
+        "backlog_id": "ready_for_source_packet_request",
+        "label": "Ready for source-packet request planning",
+        "reason": "Repos with current surfaces, complete scans, and no emission blockers can advance toward source confirmation or explicit rejection.",
+    },
+]
+
+
+def _proof_backlog_ids(row: dict[str, Any]) -> list[str]:
+    backlog_ids: list[str] = []
+    blockers = set(_repo_proof_blockers(row))
+    if "capture_surface_not_current" in blockers:
+        backlog_ids.append("capture_surface_refresh_backlog")
+    if blockers & {
+        "observed_audit_truncated",
+        "observed_audit_omitted_signal_count_unknown",
+    }:
+        backlog_ids.append("exhaustive_audit_backlog")
+    if "emissions_missing_unverified_or_uncorrelated" in blockers:
+        backlog_ids.append("emission_review_backlog")
+    if "classifier_provenance_missing_or_stale" in blockers:
+        backlog_ids.append("classifier_refresh_backlog")
+    if (
+        row.get("candidate_path_signal_count")
+        and row.get("capture_surface_action") == "current"
+        and not blockers
+        and row.get("backfill_readiness") in {"ready_now", "ready_with_reviewed_approval"}
+    ):
+        backlog_ids.append("ready_for_source_packet_request")
+    return backlog_ids
+
+
+def _build_proof_backlogs(
+    rows: list[dict[str, Any]],
+    *,
+    per_backlog_repo_limit: int,
+) -> list[dict[str, Any]]:
+    rows_by_backlog: dict[str, list[dict[str, Any]]] = {
+        definition["backlog_id"]: [] for definition in PROOF_BACKLOG_DEFINITIONS
+    }
+    for row in rows:
+        for backlog_id in _proof_backlog_ids(row):
+            rows_by_backlog.setdefault(backlog_id, []).append(row)
+    backlogs: list[dict[str, Any]] = []
+    for definition in PROOF_BACKLOG_DEFINITIONS:
+        backlog_rows = sorted(
+            rows_by_backlog.get(definition["backlog_id"], []),
+            key=lambda row: (
+                -int(row.get("candidate_path_signal_count") or 0),
+                str(row.get("repo_id") or ""),
+            ),
+        )
+        shown = backlog_rows[:per_backlog_repo_limit]
+        backlogs.append(
+            {
+                **definition,
+                "repo_count": len(backlog_rows),
+                "reported_repo_count": len(shown),
+                "omitted_repo_count": max(0, len(backlog_rows) - len(shown)),
+                "candidate_path_signal_summary": _merge_candidate_signal_summaries(
+                    backlog_rows
+                ),
+                "repos": [_repo_wave_ref(row) for row in shown],
+                "review_status": "planning_only",
+            }
+        )
+    return backlogs
 
 
 def build_exception_backfill_wave_plan(
@@ -2507,6 +2682,10 @@ def build_exception_backfill_wave_plan(
         (wave["wave_id"] for wave in waves if wave["repo_count"]),
         "watch_or_no_signal_wave",
     )
+    proof_backlogs = _build_proof_backlogs(
+        rows,
+        per_backlog_repo_limit=per_wave_repo_limit,
+    )
     return {
         "generated_at": utc_now(),
         "report_id": "dad:exception-backfill-wave-plan",
@@ -2525,6 +2704,7 @@ def build_exception_backfill_wave_plan(
             "candidate_path_signal_summary",
             {},
         ),
+        "proof_backlogs": proof_backlogs,
         "input_hashes": readiness_report.get("input_hashes", {}),
         "methodology_ref": readiness_report.get("methodology_ref"),
         "methodology_hash": readiness_report.get("methodology_hash"),
@@ -2553,6 +2733,27 @@ def _backfill_wave_plan_markdown(plan: dict[str, Any]) -> str:
         "",
     ]
     lines.extend(f"- `{wave_id}`" for wave_id in plan["wave_order"])
+    proof_backlogs = plan.get("proof_backlogs", [])
+    if proof_backlogs:
+        lines.extend(["", "## Proof Backlogs", ""])
+        lines.append(
+            "These backlogs are cross-cutting proof requirements. A repo can appear "
+            "here even when its primary wave is protected, policy-blocked, or waiting."
+        )
+        for backlog in proof_backlogs:
+            lines.extend(
+                [
+                    "",
+                    f"### {backlog['label']}",
+                    "",
+                    f"- Backlog id: `{backlog['backlog_id']}`",
+                    f"- Repo count: **{backlog['repo_count']}**",
+                    f"- Candidate path signals: **{backlog['candidate_path_signal_summary']['total']}**",
+                    f"- Reason: {backlog['reason']}",
+                ]
+            )
+            if backlog["repos"]:
+                lines.append("- Repos: " + ", ".join(f"`{repo['repo_id']}`" for repo in backlog["repos"]))
     for wave in plan["waves"]:
         lines.extend(
             [
@@ -2595,7 +2796,8 @@ def write_exception_backfill_wave_plan(
     *,
     repo_policies: list[Any] | None = None,
     output: Path | None = None,
-    candidate_limit: int = 50,
+    candidate_limit: int | None = 50,
+    max_scanned_files: int | None = 50_000,
     per_wave_repo_limit: int = 25,
 ) -> dict[str, Any]:
     readiness_output = None
@@ -2607,6 +2809,7 @@ def write_exception_backfill_wave_plan(
         repo_policies=repo_policies,
         output=readiness_output,
         candidate_limit=candidate_limit,
+        max_scanned_files=max_scanned_files,
     )
     plan = build_exception_backfill_wave_plan(
         readiness_report,
@@ -2626,7 +2829,8 @@ def write_exception_backfill_readiness(
     *,
     repo_policies: list[Any] | None = None,
     output: Path | None = None,
-    candidate_limit: int = 50,
+    candidate_limit: int | None = 50,
+    max_scanned_files: int | None = 50_000,
 ) -> dict[str, Any]:
     """Write a compact central plan for safe historical exception backfill.
 
@@ -2642,6 +2846,7 @@ def write_exception_backfill_readiness(
             registry,
             repo_policies=repo_policies,
             candidate_limit=candidate_limit,
+            max_scanned_files=max_scanned_files,
         )
         for repo in repos
     ]
@@ -2691,7 +2896,12 @@ def write_exception_backfill_readiness(
         "methodology_ref": CAPTURE_PATTERN_REGISTRY.as_posix(),
         "methodology_hash": f"sha256:{sha256_file(hub_root / CAPTURE_PATTERN_REGISTRY)}",
         "input_hashes": _observed_audit_input_hashes(hub_root),
-        "candidate_limit": candidate_limit,
+        "candidate_limit": _normalize_candidate_limit(candidate_limit),
+        "max_scanned_files": (
+            max_scanned_files
+            if max_scanned_files is not None and max_scanned_files > 0
+            else None
+        ),
         "readiness_counts": dict(sorted(readiness_counts.items())),
         "capture_surface_action_counts": dict(sorted(capture_surface_counts.items())),
         "status_counts": dict(sorted(status_counts.items())),
@@ -2711,7 +2921,10 @@ def write_exception_backfill_readiness(
         "",
         f"- Generated: {report['generated_at']}",
         f"- Repos evaluated: {report['repo_count']}",
-        f"- Candidate limit per repo: `{candidate_limit}`",
+        f"- Candidate limit per repo: `{_candidate_limit_label(candidate_limit)}`",
+        "- Max scanned files per repo: `"
+        + str(report["max_scanned_files"] if report["max_scanned_files"] is not None else "unbounded")
+        + "`",
         f"- Methodology hash: `{report['methodology_hash']}`",
         "",
         "Boundary: central planning evidence only. This report never approves or runs "

@@ -19,6 +19,7 @@ from digital_asset_directory.cli import (
 )
 from digital_asset_directory.config import ExceptionRepoPolicy, MailRepoPolicy
 from digital_asset_directory.exception_capture import (
+    build_exception_backfill_wave_plan,
     evaluate_exception_taxonomy_coverage,
     evaluate_capture_case,
     evaluate_capture_scenarios,
@@ -2351,6 +2352,38 @@ def test_observed_capture_audit_flags_truncated_candidate_scan(tmp_path: Path) -
     assert "bounded first-N samples" in audit_md
 
 
+def test_observed_capture_audit_candidate_limit_zero_exhausts_metadata_scan(
+    tmp_path: Path,
+) -> None:
+    repo = tmp_path / "repo-exhaustive-audit"
+    docs = repo / "docs"
+    docs.mkdir(parents=True)
+    for name in ["incident-one.md", "incident-two.md", "incident-three.md"]:
+        (docs / name).write_text("metadata-only placeholder", encoding="utf-8")
+
+    report = write_observed_capture_audit(
+        ROOT,
+        [repo],
+        output=tmp_path / "audit.json",
+        candidate_limit=0,
+    )
+    row = report["repos"][0]
+    audit_md = (tmp_path / "audit.md").read_text(encoding="utf-8")
+
+    assert row["candidate_path_scan"]["limit"] is None
+    assert row["candidate_path_scan"]["limit_mode"] == "exhaustive"
+    assert row["candidate_path_scan"]["max_scanned_files"] == 50000
+    assert row["candidate_path_scan"]["stopped_reason"] == "exhausted_walk"
+    assert row["candidate_path_scan"]["truncated"] is False
+    assert row["candidate_path_signal_count"] == 3
+    assert row["candidate_path_signal_summary"]["count_scope"] == "complete_for_scanned_paths"
+    assert row["candidate_path_signal_summary"]["omitted_signal_count_unknown"] is False
+    assert report["candidate_path_signal_summary"]["count_scope"] == "complete_for_scanned_paths"
+    assert report["candidate_path_signal_summary"]["truncated_repo_count"] == 0
+    assert "candidate_path_scan_truncated" not in row["status_flags"]
+    assert "bounded first-N samples" not in audit_md
+
+
 def test_exception_backfill_readiness_reports_policy_gates(tmp_path: Path) -> None:
     ready_repo = tmp_path / "ready-external"
     protected_repo = tmp_path / "protected-repo"
@@ -2503,8 +2536,214 @@ def test_exception_backfill_wave_plan_orders_review_gates(tmp_path: Path) -> Non
     assert waves["protected_central_only_review_wave"]["repos"][0]["repo_id"] == "protected"
     assert waves["policy_enablement_wave"]["repos"][0]["repo_id"] == "blocked"
     assert waves["metadata_backfill_candidate_wave"]["repo_count"] == 0
+    backlogs = {backlog["backlog_id"]: backlog for backlog in plan["proof_backlogs"]}
+    assert backlogs["capture_surface_refresh_backlog"]["repo_count"] == 3
+    assert {
+        repo["repo_id"]
+        for repo in backlogs["capture_surface_refresh_backlog"]["repos"]
+    } == {"refresh", "protected", "blocked"}
+    assert backlogs["emission_review_backlog"]["repo_count"] == 3
+    assert backlogs["classifier_refresh_backlog"]["repo_count"] == 0
+    assert backlogs["ready_for_source_packet_request"]["repo_count"] == 0
+    assert "capture_surface_not_current" in waves["protected_central_only_review_wave"][
+        "repos"
+    ][0]["proof_blockers"]
+    assert "## Proof Backlogs" in md_text
+    assert "Capture surface refresh proof backlog" in md_text
     assert "Boundary: central planning evidence only" in md_text
     assert "Run metadata-only candidate backfill" in md_text
     for repo in [refresh_repo, protected_repo, blocked_repo]:
         after = sorted(path.relative_to(repo).as_posix() for path in repo.rglob("*"))
         assert after == before[repo]
+
+
+def test_exception_backfill_wave_plan_keeps_metadata_wave_empty_until_proof_clears(
+    tmp_path: Path,
+) -> None:
+    blocked_repo = tmp_path / "blocked"
+    ready_repo = tmp_path / "ready"
+    for repo in [blocked_repo, ready_repo]:
+        docs = repo / "docs"
+        docs.mkdir(parents=True)
+        (docs / "postmortem.md").write_text("metadata-only placeholder", encoding="utf-8")
+    (ready_repo / ".digital-asset").mkdir()
+    (ready_repo / ".digital-asset" / "dad-integration.json").write_text(
+        json.dumps(
+            {
+                "repo_id": "ready",
+                "schema_version": "0.1.0",
+                "capture_surface_version": "0.2.0",
+            }
+        ),
+        encoding="utf-8",
+    )
+    record_exception_event(
+        ROOT,
+        ready_repo,
+        event_type="backfill_exception_candidate",
+        summary="Historical candidate needs source review.",
+        stage="discovery",
+        severity="low",
+        capture_contract="backfill_candidate",
+        source_visibility="internal",
+        context_refs=["docs/postmortem.md"],
+    )
+    policies = [
+        ExceptionRepoPolicy(
+            id="blocked",
+            path=blocked_repo,
+            alias="blocked",
+            visibility="internal",
+            exceptions_enabled=True,
+            collect_allowed=True,
+            capture_audit_allowed=True,
+            backfill_allowed=True,
+        ),
+        ExceptionRepoPolicy(
+            id="ready",
+            path=ready_repo,
+            alias="ready",
+            visibility="internal",
+            exceptions_enabled=True,
+            collect_allowed=True,
+            capture_audit_allowed=True,
+            backfill_allowed=True,
+            approved_approval_ids=["APPROVED-BACKFILL"],
+        ),
+    ]
+
+    plan = write_exception_backfill_wave_plan(
+        ROOT,
+        [blocked_repo, ready_repo],
+        repo_policies=policies,
+        output=tmp_path / "wave-plan.json",
+        candidate_limit=0,
+        per_wave_repo_limit=10,
+    )
+    waves = {wave["wave_id"]: wave for wave in plan["waves"]}
+    backlogs = {backlog["backlog_id"]: backlog for backlog in plan["proof_backlogs"]}
+
+    assert waves["metadata_backfill_candidate_wave"]["repo_count"] == 0
+    assert waves["capture_surface_refresh_wave"]["repo_count"] == 1
+    assert waves["capture_surface_refresh_wave"]["repos"][0]["repo_id"] == "blocked"
+    assert "capture_surface_not_current" in waves["capture_surface_refresh_wave"][
+        "repos"
+    ][0]["proof_blockers"]
+    assert waves["capture_gap_review_wave"]["repo_count"] == 1
+    assert waves["capture_gap_review_wave"]["repos"][0]["repo_id"] == "ready"
+    assert "emissions_missing_unverified_or_uncorrelated" in waves[
+        "capture_gap_review_wave"
+    ]["repos"][0]["proof_blockers"]
+    assert backlogs["capture_surface_refresh_backlog"]["repo_count"] == 1
+    assert backlogs["exhaustive_audit_backlog"]["repo_count"] == 0
+    assert backlogs["emission_review_backlog"]["repo_count"] == 2
+    assert backlogs["classifier_refresh_backlog"]["repo_count"] == 0
+    assert backlogs["ready_for_source_packet_request"]["repo_count"] == 0
+
+
+def test_exception_backfill_wave_plan_classifier_refresh_requires_stale_provenance() -> None:
+    report = {
+        "report_id": "dad:exception-backfill-readiness",
+        "repos": [
+            {
+                "repo_id": "current-classifier",
+                "repo_alias": "current-classifier",
+                "path_hash": "sha256:current",
+                "visibility": "internal",
+                "public_facing": False,
+                "backfill_readiness": "ready_with_reviewed_approval",
+                "capture_surface_action": "current",
+                "candidate_path_signal_count": 1,
+                "candidate_path_scan": {
+                    "truncated": False,
+                    "limit": None,
+                    "limit_mode": "exhaustive",
+                    "max_scanned_files": 50000,
+                    "stopped_reason": "exhausted_walk",
+                },
+                "candidate_path_signal_summary": {
+                    "total": 1,
+                    "count_scope": "complete_for_scanned_paths",
+                    "truncated_repo_count": 0,
+                    "omitted_signal_count_unknown": False,
+                    "redacted_path_count": 0,
+                    "unredacted_path_count": 1,
+                    "by_source_rule_id": {"backfill-rule:generic-exception": 1},
+                    "by_suggested_event_type": {"backfill_exception_candidate": 1},
+                },
+                "status_flags": [],
+                "blocked_reasons": [],
+                "next_actions": [],
+            },
+            {
+                "repo_id": "stale-classifier",
+                "repo_alias": "stale-classifier",
+                "path_hash": "sha256:stale",
+                "visibility": "internal",
+                "public_facing": False,
+                "backfill_readiness": "needs_full_scan_review",
+                "capture_surface_action": "current",
+                "candidate_path_signal_count": 1,
+                "candidate_path_scan": {
+                    "truncated": False,
+                    "limit": None,
+                    "limit_mode": "exhaustive",
+                    "max_scanned_files": 50000,
+                    "stopped_reason": "exhausted_walk",
+                },
+                "candidate_path_signal_summary": {
+                    "total": 1,
+                    "count_scope": "complete_for_scanned_paths",
+                    "truncated_repo_count": 0,
+                    "omitted_signal_count_unknown": False,
+                    "redacted_path_count": 0,
+                    "unredacted_path_count": 1,
+                    "by_source_rule_id": {"backfill-rule:generic-exception": 1},
+                    "by_suggested_event_type": {"backfill_exception_candidate": 1},
+                },
+                "classifier_version_stale": True,
+                "classifier_version_stale_count": 1,
+                "status_flags": [],
+                "blocked_reasons": [],
+                "next_actions": [],
+            },
+        ],
+    }
+
+    plan = build_exception_backfill_wave_plan(report, per_wave_repo_limit=10)
+    backlogs = {backlog["backlog_id"]: backlog for backlog in plan["proof_backlogs"]}
+
+    assert backlogs["classifier_refresh_backlog"]["repo_count"] == 1
+    assert backlogs["classifier_refresh_backlog"]["repos"][0]["repo_id"] == "stale-classifier"
+    assert "classifier_provenance_missing_or_stale" in backlogs[
+        "classifier_refresh_backlog"
+    ]["repos"][0]["proof_blockers"]
+    assert backlogs["ready_for_source_packet_request"]["repo_count"] == 1
+    assert backlogs["ready_for_source_packet_request"]["repos"][0]["repo_id"] == (
+        "current-classifier"
+    )
+
+
+def test_observed_capture_audit_exhaustive_scan_has_file_ceiling(tmp_path: Path) -> None:
+    repo = tmp_path / "repo-exhaustive-capped"
+    docs = repo / "docs"
+    docs.mkdir(parents=True)
+    for name in ["incident-one.md", "incident-two.md", "incident-three.md"]:
+        (docs / name).write_text("metadata-only placeholder", encoding="utf-8")
+
+    report = write_observed_capture_audit(
+        ROOT,
+        [repo],
+        output=tmp_path / "audit.json",
+        candidate_limit=0,
+        max_scanned_files=2,
+    )
+    row = report["repos"][0]
+
+    assert row["candidate_path_scan"]["limit"] is None
+    assert row["candidate_path_scan"]["limit_mode"] == "exhaustive"
+    assert row["candidate_path_scan"]["max_scanned_files"] == 2
+    assert row["candidate_path_scan"]["scanned_file_count"] == 2
+    assert row["candidate_path_scan"]["truncated"] is True
+    assert row["candidate_path_scan"]["stopped_reason"] == "max_scanned_files_reached"
+    assert "candidate_path_scan_truncated" in row["status_flags"]

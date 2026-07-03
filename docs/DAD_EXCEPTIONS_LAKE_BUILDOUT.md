@@ -931,6 +931,15 @@ Backfill safety and classification:
   capture-gap review, protected central-only review, policy enablement, approval
   review, metadata-only candidate backfill, and watch/no-signal. It still never
   writes target repos or runs backfill.
+- The wave plan also emits cross-cutting `proof_backlogs`:
+  `capture_surface_refresh_backlog`, `exhaustive_audit_backlog`,
+  `emission_review_backlog`, `classifier_refresh_backlog`, and
+  `ready_for_source_packet_request`. A repo can appear in one of these backlogs
+  even when its primary wave is protected or policy-blocked. This prevents
+  governance status from hiding missing capture proof.
+  `classifier_refresh_backlog` is only for missing or stale backfill classifier
+  provenance in existing review evidence; a current classifier-backed path signal
+  by itself is not a refresh blocker.
 - Readiness fails closed when path-signal scans are truncated, capture surfaces
   are stale or unknown, or emissions are missing, unverified, or uncorrelated.
   Those repos are not `ready_now`; they must clear the appropriate review wave
@@ -943,6 +952,13 @@ Backfill safety and classification:
   bounded first-N sample and records `truncated_repo_count` plus
   `omitted_signal_count_unknown:true`. These bounded counts are review-routing
   hints, not complete distributions.
+- Use `--candidate-limit 0` for an exhaustive metadata-only path-signal scan
+  when a reviewed scope needs stronger evidence that historical patterns were
+  not missed. Exhaustive mode still reads only repo-local outbox JSONL metadata
+  and path names, keeps private/unknown repo paths hash-only, and does not
+  approve source reads, repo writes, or backfill. It still has a scanned-file
+  ceiling through `--max-scanned-files` so broad repo-family runs stop with an
+  auditable `max_scanned_files_reached` reason instead of walking forever.
 - `candidate_path_signal_summary.by_source_rule_id` links reviewed
   backfill-classifier rules such as `backfill-rule:tool-unavailable` to the
   path signals they produced. Built-in audit-only path terms use
@@ -1036,6 +1052,8 @@ Observed repo audit add-on:
 - The audit also scans repo-relative path names for DAD-worthy capture signals such
   as postmortems, review findings, harnesses, skills, templates, architecture
   references, governance maps, data maps, workflows, and learning-loop artifacts.
+  `--candidate-limit 0` runs this path-name pass exhaustively for the selected
+  repos while preserving the same metadata-only and path-redaction boundaries.
 - The report flags `missed_capture_candidate`, `pattern_gap_candidate`,
   `emission_unverified`, `mail_present_exception_gap_candidate`,
   `stale_capture_surface`, `capture_surface_version_unknown`, and

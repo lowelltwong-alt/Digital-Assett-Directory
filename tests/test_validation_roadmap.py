@@ -8,6 +8,7 @@ from digital_asset_directory.config import ExceptionRepoPolicy
 from digital_asset_directory.exception_capture import (
     load_capture_pattern_registry,
     write_exception_backfill_readiness,
+    write_exception_backfill_wave_plan,
     write_observed_capture_audit,
 )
 from digital_asset_directory.learning import _hash_path as _lesson_graph_hash_path
@@ -16,6 +17,7 @@ from digital_asset_directory.validation import (
     _candidate_path_scan_staleness_errors,
     _contains_local_path_ref,
     _contains_readable_repo_relative_ref,
+    _exception_backfill_wave_plan_staleness_errors,
     _exception_event_taxonomy_by_type,
     _exception_lake_taxonomy_consistency_errors,
     _fix_outcome_semantic_errors,
@@ -397,6 +399,38 @@ def test_observed_audit_candidate_path_scan_staleness_detects_new_signal(
     assert any("scan_hash" in error for error in errors)
 
 
+def test_observed_audit_exhaustive_candidate_scan_staleness_recomputes_exhaustive(
+    tmp_path: Path,
+):
+    repo = tmp_path / "repo"
+    docs = repo / "docs"
+    docs.mkdir(parents=True)
+    (docs / "postmortem.md").write_text("metadata-only\n", encoding="utf-8")
+    policy = _exception_policy(repo)
+    report_path = tmp_path / "observed-audit.json"
+    report = write_observed_capture_audit(
+        ROOT,
+        [repo],
+        repo_policies=[policy],
+        output=report_path,
+        candidate_limit=0,
+    )
+
+    assert report["repos"][0]["candidate_path_scan"]["limit"] is None
+    (docs / "incident-review.md").write_text("metadata-only\n", encoding="utf-8")
+    errors = _candidate_path_scan_staleness_errors(
+        ROOT,
+        report_path,
+        report["repos"][0],
+        registry=load_capture_pattern_registry(ROOT),
+        repo_policies=[policy],
+        policy_paths={_path_identity_hash(repo): repo.resolve()},
+    )
+
+    assert any("Candidate path scan stale" in error for error in errors)
+    assert any("candidate_path_signal_count" in error for error in errors)
+
+
 def test_observed_audit_machine_evidence_validation_recomputes_gap_counts(
     tmp_path: Path,
 ) -> None:
@@ -465,6 +499,36 @@ def test_backfill_readiness_candidate_path_scan_staleness_detects_new_signal(
 
     assert any("Candidate path scan stale" in error for error in errors)
     assert any("scan_hash" in error for error in errors)
+
+
+def test_backfill_wave_plan_validation_detects_stale_proof_backlogs(tmp_path: Path):
+    repo = tmp_path / "repo"
+    docs = repo / "docs"
+    docs.mkdir(parents=True)
+    (docs / "postmortem.md").write_text("metadata-only\n", encoding="utf-8")
+    policy = _exception_policy(repo)
+    report_path = tmp_path / "backfill-wave-plan.json"
+    plan = write_exception_backfill_wave_plan(
+        ROOT,
+        [repo],
+        repo_policies=[policy],
+        output=report_path,
+        candidate_limit=0,
+        max_scanned_files=10,
+    )
+    mutated = deepcopy(plan)
+    mutated["proof_backlogs"] = []
+
+    errors = _exception_backfill_wave_plan_staleness_errors(
+        ROOT,
+        report_path,
+        mutated,
+    )
+
+    assert errors == [
+        "Exception backfill wave plan stale for backfill-wave-plan.json: "
+        "proof_backlogs mismatch"
+    ]
 
 
 def test_seed_roadmap_file_gate_is_complete():
