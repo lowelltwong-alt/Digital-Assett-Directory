@@ -655,6 +655,119 @@ def _observed_audit_machine_evidence_errors(
     return errors
 
 
+def _capture_emission_simulation_errors(
+    report_path: Path,
+    repo_root: Path,
+    payload: dict[str, Any],
+) -> list[str]:
+    label = _report_path_label(report_path, repo_root)
+    errors: list[str] = []
+    cases = payload.get("cases", [])
+    if not isinstance(cases, list):
+        return [f"Capture emission simulation cases must be a list: {label}"]
+    passed_count = sum(1 for case in cases if isinstance(case, dict) and case.get("passed"))
+    failed_count = sum(
+        1 for case in cases if isinstance(case, dict) and case.get("passed") is not True
+    )
+    if payload.get("case_count") != len(cases):
+        errors.append(f"Capture emission simulation case_count mismatch: {label}")
+    if payload.get("passed_count") != passed_count:
+        errors.append(f"Capture emission simulation passed_count mismatch: {label}")
+    if payload.get("failed_count") != failed_count:
+        errors.append(f"Capture emission simulation failed_count mismatch: {label}")
+    required_provenance = {
+        "suggestion_id",
+        "methodology_hash",
+        "matched_rule_ids",
+        "update_required",
+    }
+    if set(payload.get("required_provenance_fields", []) or []) != required_provenance:
+        errors.append(f"Capture emission simulation provenance contract mismatch: {label}")
+    update_required_count = sum(
+        1
+        for case in cases
+        if isinstance(case, dict) and case.get("initial_update_required") is True
+    )
+    if payload.get("initial_update_required_count") != update_required_count:
+        errors.append(
+            f"Capture emission simulation initial_update_required_count mismatch: {label}"
+        )
+    refreshed_count = sum(
+        1
+        for case in cases
+        if isinstance(case, dict)
+        and case.get("initial_repo_capture_surface_version")
+        != case.get("emission_repo_capture_surface_version")
+    )
+    if payload.get("refreshed_emission_count") != refreshed_count:
+        errors.append(f"Capture emission simulation refreshed_emission_count mismatch: {label}")
+    evidence = payload.get("phase6_machine_gate_evidence")
+    if not isinstance(evidence, dict):
+        errors.append(f"Capture emission simulation missing phase6 evidence: {label}")
+    else:
+        expected_status = "passed" if cases and failed_count == 0 else "failed"
+        if evidence.get("machine_status") != expected_status:
+            errors.append(f"Capture emission simulation machine_status mismatch: {label}")
+        if evidence.get("evidence_scope") != "machine_only_not_roadmap_gate_evidence":
+            errors.append(f"Capture emission simulation invalid evidence scope: {label}")
+        if evidence.get("human_gate_satisfied") is not False:
+            errors.append(f"Capture emission simulation may satisfy human gate: {label}")
+        gate_ids = set(evidence.get("supports_human_gate_ids", []) or [])
+        expected_gate_ids = {
+            "synthetic-harness-proves-dad-worthy-patterns-become-packets",
+            "pattern-update-simulation-proves-new-required-fields",
+        }
+        if not expected_gate_ids <= gate_ids:
+            errors.append(f"Capture emission simulation missing supported gate ids: {label}")
+    for case in cases:
+        if not isinstance(case, dict):
+            errors.append(f"Capture emission simulation case is not an object: {label}")
+            continue
+        case_id = case.get("scenario_id", "<unknown>")
+        suggestion_comparisons = case.get("suggestion_comparisons")
+        if not isinstance(suggestion_comparisons, dict) or not all(
+            suggestion_comparisons.values()
+        ):
+            errors.append(
+                "Capture emission simulation suggestion comparison failed: "
+                f"{label} {case_id}"
+            )
+        observed = case.get("observed")
+        if not isinstance(observed, dict) or observed.get("passed") is not True:
+            errors.append(
+                f"Capture emission simulation observed check failed: {label} {case_id}"
+            )
+        emitted_packets = case.get("emitted_packets", [])
+        if not isinstance(emitted_packets, list):
+            errors.append(
+                f"Capture emission simulation emitted_packets not list: {label} {case_id}"
+            )
+            emitted_packets = []
+        emitted_screening_issues = [
+            packet.get("screening_issues")
+            for packet in emitted_packets
+            if isinstance(packet, dict)
+        ]
+        if any(emitted_screening_issues):
+            errors.append(
+                f"Capture emission simulation emitted packet has screening issues: {label} {case_id}"
+            )
+        expected = case.get("expected") if isinstance(case.get("expected"), dict) else {}
+        expected_classes = set(expected.get("packet_classes", []) or [])
+        if "no_packet" not in expected_classes:
+            required = set(expected.get("required_fields", []) or [])
+            if not required_provenance <= required:
+                errors.append(
+                    "Capture emission simulation missing provenance fields in expected "
+                    f"required_fields: {label} {case_id}"
+                )
+        elif emitted_packets:
+            errors.append(
+                f"Capture emission simulation no-packet case emitted packets: {label} {case_id}"
+            )
+    return errors
+
+
 def _report_path_label(report_path: Path, repo_root: Path) -> str:
     try:
         return str(report_path.relative_to(repo_root))
@@ -1806,6 +1919,10 @@ def validate_repo(repo_root: Path) -> dict[str, Any]:
                         report_path,
                         payload,
                     )
+                )
+            elif payload.get("report_id") == "dad:exception-capture-emission-simulation":
+                errors.extend(
+                    _capture_emission_simulation_errors(report_path, repo_root, payload)
                 )
         _validate_lesson_graph_contract(repo_root, registry, errors, checked)
     except Exception as exc:

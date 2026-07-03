@@ -14,6 +14,7 @@
     "capture_completeness_eval",
     "pattern_update_simulation",
     "capture_suggest_decision_helper",
+    "capture_suggest_to_writer_simulation",
     "required_field_contract_check",
     "negative_payload_gate",
     "observed_outbox_audit"
@@ -34,6 +35,7 @@
     "python -m pytest tests/test_exception_capture.py -q",
     "python -m digital_asset_directory.cli exceptions capture-suggest --signal tool_unavailable --signal dad_cli_unavailable --signal fallback_used --repo-capture-surface-version 0.2.0",
     "python -m digital_asset_directory.cli exceptions capture-check --scenarios assets/coding-harnesses/exception-capture-completeness/examples/synthetic-capture-scenarios.json",
+    "python -m digital_asset_directory.cli exceptions capture-simulate-emission --scenarios assets/coding-harnesses/exception-capture-completeness/examples/synthetic-capture-scenarios.json",
     "python -m digital_asset_directory.cli exceptions capture-audit --repo all",
     "python -m digital_asset_directory.cli exceptions capture-audit --repo all --candidate-limit 0 --max-scanned-files 50000"
   ],
@@ -43,5 +45,5 @@
     "templates/downstream/EXCEPTIONS_README.md"
   ],
   "review_status": "candidate",
-  "authority_boundary": "The harness proves synthetic capture-rule coverage and read-only observed outbox/path-signal audits. It does not prove real repo completeness, public safety, or source truth."
+  "authority_boundary": "The harness proves synthetic capture-rule coverage, temp-repo writer emission, and read-only observed outbox/path-signal audits. It does not prove real repo completeness, public safety, or source truth."
 }

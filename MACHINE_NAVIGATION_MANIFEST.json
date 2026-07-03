@@ -72,6 +72,7 @@
     "assets/coding-harnesses/exception-learning-readiness/",
     "processed/reports/exceptions_lake.md",
     "processed/reports/exception_capture_completeness.md",
+    "processed/reports/exception_capture_emission_simulation.md",
     "processed/reports/exception_taxonomy_coverage.md",
     "processed/reports/exception_backfill_review_queue.md",
     "processed/reports/exception_backfill_classifier_refresh_plan.md",

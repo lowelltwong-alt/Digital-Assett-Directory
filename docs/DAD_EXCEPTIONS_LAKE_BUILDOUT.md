@@ -248,10 +248,10 @@ Implemented contract surfaces:
 - `templates/downstream/EXCEPTIONS_README.md`
 
 The CLI entrypoint is `asset-dir exceptions` with `paths`, `taxonomy`,
-`capture-patterns`, `capture-suggest`, `capture-check`, `capture-audit`,
-`record`, `collect`, `backfill`, `backfill-review-queue`,
-`backfill-review-decision`, `backfill-review-decisions`,
-`source-packet-requests`, and `report` commands.
+`capture-patterns`, `capture-suggest`, `capture-check`,
+`capture-simulate-emission`, `capture-audit`, `record`, `collect`, `backfill`,
+`backfill-review-queue`, `backfill-review-decision`,
+`backfill-review-decisions`, `source-packet-requests`, and `report` commands.
 
 ## Packet Shape
 
@@ -836,6 +836,14 @@ Implemented starter harness:
   `suggestion_id`, `methodology_hash`, `matched_rule_ids`, and
   `update_required` in safe metadata or trace refs so later audits can
   distinguish "agent emitted because registry suggested this" from source truth.
+- `asset-dir exceptions capture-simulate-emission --scenarios <file>` proves the
+  no-chat path in a temporary repo: reviewed synthetic signals flow through
+  `capture-suggest`, DAD's real mail/event/fix writers, and observed JSONL
+  checks. The simulation requires pointer-safe suggestion provenance fields
+  (`suggestion_id`, `methodology_hash`, `matched_rule_ids`, and
+  `update_required`) on emitted packets. Blocked unsafe cases pass only when the
+  suggestion proves the block reason and observed-check proves no packet was
+  emitted.
 - `asset-dir exceptions taxonomy-coverage --fail-on-unrouted --fail-on-missing-scenarios`
   writes `processed/reports/exception_taxonomy_coverage.*`. It maps every reviewed
   exception event type to direct record contracts, capture-rule routes, backfill
@@ -844,14 +852,16 @@ Implemented starter harness:
   which categories are capture-rule-backed, backfill-heavy, direct-record-only,
   or high/critical but still manual. These summaries are triage aids; they do
   not close the human gate or prove deterministic auto-detection.
-- Capture, taxonomy, and observed-audit reports emit
+- Capture, emission-simulation, taxonomy, and observed-audit reports emit
   `phase6_machine_gate_evidence`, which names the Phase 6 roadmap gates
   supported by the run through
   `evidence_scope: machine_only_not_roadmap_gate_evidence` and
   `supports_human_gate_id`, while keeping `human_gate_satisfied` false. Capture
   and taxonomy evidence supports capture completeness, pattern-update
   simulation, all pattern-family coverage, sensitive-payload negative tests,
-  LawFirm missed-capture regression, and taxonomy route coverage. The
+  LawFirm missed-capture regression, and taxonomy route coverage. Emission
+  simulation evidence supports the no-chat packet emission and pattern-update
+  field-refresh gates. The
   observed-audit report separately supports observed repo capture-audit coverage
   without pretending the human gate is closed. Observed-audit machine evidence
   fails closed while normal or strict capture gaps remain, and it only passes for
@@ -877,13 +887,16 @@ Implemented starter harness:
   candidates only.
 - The starter harness now supports observed-emission checks against actual JSONL
   outbox files. The canonical scenario set includes a metadata-only observed
-  LawFirm-style mail outbox and exception outbox fixture, and tests also generate a
-  temp repo outbox through DAD helpers.
+  LawFirm-style mail outbox and exception outbox fixture, and tests also generate
+  temp repo mail, exception, and fix-outcome outboxes through DAD helpers. The
+  emission-simulation command covers all reviewed synthetic cases through the
+  same real writer path.
 - Payload samples are screened by DAD's best-effort credential/PII policy and a small
   prompt-injection-like text detector before any packet class is considered emitted.
-- Current limitation: this exercises synthetic rule coverage plus fixture/temporary
-  observed outbox comparison. Later waves still need live repo exporters, enrollment
-  refresh checks, and observed-vs-expected verification across actual enrolled repos.
+- Current limitation: this exercises synthetic rule coverage, temp-repo real-writer
+  emission, plus fixture/temporary observed outbox comparison. Later waves still
+  need live repo exporters, enrollment refresh checks, and observed-vs-expected
+  verification across actual enrolled repos.
 - `assets/coding-harnesses/exception-capture-completeness/prompts/fable5-exception-capture-and-backfill-red-team.prompt.md`
   is the handoff prompt for Fable 5 to review this exact standard: would the repo
   have emitted the right packet without Lowell rescuing the miss from chat?

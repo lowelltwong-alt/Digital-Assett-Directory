@@ -24,12 +24,14 @@ from digital_asset_directory.exception_capture import (
     build_exception_backfill_wave_plan,
     evaluate_exception_taxonomy_coverage,
     evaluate_capture_case,
+    evaluate_observed_capture,
     evaluate_capture_scenarios,
     load_capture_pattern_registry,
     load_capture_scenarios,
     suggest_exception_capture,
     write_exception_backfill_readiness,
     write_exception_backfill_wave_plan,
+    write_exception_capture_emission_simulation,
     write_exception_capture_gap_review_queue,
     write_exception_capture_remediation_plan,
     write_observed_capture_audit,
@@ -74,6 +76,20 @@ def _validate(schema_name: str, payload: dict) -> None:
     validator_cls = validator_for(schema)
     validator_cls.check_schema(schema)
     validator_cls(schema).validate(payload)
+
+
+def _write_capture_scenario(tmp_path: Path, case: dict) -> Path:
+    scenario = {
+        "schema_version": "0.1.0",
+        "scenario_set_id": "capture-emission-simulation-test",
+        "target_registry": "registry/exception-capture-pattern-registry.json",
+        "required_pattern_families": [case["pattern_family"]],
+        "cases": [case],
+        "authority_boundary": "Synthetic unit-test scenario only.",
+    }
+    path = tmp_path / "capture-scenario.json"
+    path.write_text(json.dumps(scenario), encoding="utf-8")
+    return path
 
 
 def test_exception_repo_policy_is_separate_from_mail_policy(tmp_path: Path) -> None:
@@ -1569,6 +1585,248 @@ def test_capture_suggest_flags_stale_capture_surface_for_new_rule() -> None:
 
     assert suggestion["update_required"] is True
     assert "Refresh the repo capture surface" in suggestion["next_actions"][0]
+
+
+def test_capture_emission_simulation_writes_capability_mail_with_provenance(
+    tmp_path: Path,
+) -> None:
+    scenario_path = _write_capture_scenario(
+        tmp_path,
+        {
+            "scenario_id": "rust-frontier-mail-emission",
+            "pattern_family": "language_frontier",
+            "description": "Rust frontier evidence should become candidate DAD mail.",
+            "repo_capture_surface_version": "0.1.0",
+            "signals": [
+                "language_frontier_signal",
+                "rust_coding_advantage",
+                "ai_overlooked_operation",
+                "frontier_source_pointer",
+            ],
+            "covered_rule_ids": ["exception-capture-rule:language-frontier-signal"],
+            "expected": {
+                "packet_classes": ["ordinary_mail"],
+                "event_types": [],
+                "mail_message_types": ["capability_suggestion"],
+                "capture_contracts": [],
+                "required_fields": [
+                    "applicability_limits",
+                    "language",
+                    "proof_surface",
+                    "safe_summary",
+                    "source_id_or_url",
+                    "target_dad_surface",
+                    "validation_or_eval_idea",
+                    "why_ai_coding_may_improve",
+                ],
+                "update_required": True,
+                "blocked": False,
+            },
+            "negative_controls": ["contains_raw_log_blob"],
+            "source_context": {
+                "repo_visibility": "internal",
+                "public_facing": False,
+                "notes": "Safe metadata only.",
+            },
+            "review_status": "reviewed",
+        },
+    )
+
+    report = write_exception_capture_emission_simulation(
+        ROOT,
+        scenario_path,
+        output=tmp_path / "emission.json",
+    )
+    case = report["cases"][0]
+
+    assert report["failed_count"] == 0
+    assert case["initial_update_required"] is True
+    assert case["emission_repo_capture_surface_version"] == "0.2.0"
+    assert case["emitted_packet_classes"] == ["ordinary_mail"]
+    assert case["observed"]["actual"]["mail_message_types"] == ["capability_suggestion"]
+    for field in [
+        "suggestion_id",
+        "methodology_hash",
+        "matched_rule_ids",
+        "update_required",
+        "why_ai_coding_may_improve",
+    ]:
+        assert field in case["observed"]["actual"]["required_fields"]
+
+
+def test_capture_emission_simulation_writes_exception_event_trace_fields(
+    tmp_path: Path,
+) -> None:
+    scenario_path = _write_capture_scenario(
+        tmp_path,
+        {
+            "scenario_id": "tool-unavailable-exception-emission",
+            "pattern_family": "exception_pattern",
+            "description": "Tool-unavailable fallback should become exception metadata.",
+            "repo_capture_surface_version": "0.2.0",
+            "signals": ["tool_unavailable", "dad_cli_unavailable", "fallback_used"],
+            "covered_rule_ids": ["exception-capture-rule:tool-unavailable-metadata"],
+            "expected": {
+                "packet_classes": ["exception_event"],
+                "event_types": ["tool_unavailable"],
+                "mail_message_types": [],
+                "capture_contracts": ["retry_or_plan_change"],
+                "required_fields": [
+                    "attempted_command",
+                    "fallback_path",
+                    "safe_summary",
+                    "tool_name",
+                ],
+                "update_required": False,
+                "blocked": False,
+            },
+            "negative_controls": ["contains_raw_log_blob"],
+            "source_context": {
+                "repo_visibility": "internal",
+                "public_facing": False,
+                "notes": "Tool name and fallback only.",
+            },
+            "review_status": "reviewed",
+        },
+    )
+
+    report = write_exception_capture_emission_simulation(
+        ROOT,
+        scenario_path,
+        output=tmp_path / "emission.json",
+    )
+    case = report["cases"][0]
+
+    assert report["failed_count"] == 0
+    assert case["emitted_packet_classes"] == ["exception_event"]
+    assert case["observed"]["actual"]["event_types"] == ["tool_unavailable"]
+    assert case["observed"]["actual"]["capture_contracts"] == ["retry_or_plan_change"]
+    assert case["observed"]["comparisons"]["required_fields"] is True
+    for field in [
+        "attempted_command",
+        "fallback_path",
+        "tool_name",
+        "suggestion_id",
+        "methodology_hash",
+        "matched_rule_ids",
+        "update_required",
+    ]:
+        assert field in case["observed"]["actual"]["required_fields"]
+
+
+def test_capture_emission_simulation_writes_fix_outcome_with_writer_metadata(
+    tmp_path: Path,
+) -> None:
+    scenario_path = _write_capture_scenario(
+        tmp_path,
+        {
+            "scenario_id": "fix-outcome-emission",
+            "pattern_family": "fix_outcome",
+            "description": "Fix outcome should be written through the fix writer.",
+            "repo_capture_surface_version": "0.2.0",
+            "signals": ["fix_outcome_recorded", "validation_passed"],
+            "covered_rule_ids": ["exception-capture-rule:fix-outcome"],
+            "expected": {
+                "packet_classes": ["fix_outcome"],
+                "event_types": [],
+                "mail_message_types": [],
+                "capture_contracts": ["fix_outcome"],
+                "required_fields": [
+                    "event_id",
+                    "decision",
+                    "validation_status",
+                    "validation_refs",
+                    "regression_test_refs",
+                    "owner_authority",
+                    "event_lookup_status",
+                    "remaining_risks",
+                ],
+                "update_required": False,
+                "blocked": False,
+            },
+            "negative_controls": ["contains_raw_log_blob"],
+            "source_context": {
+                "repo_visibility": "internal",
+                "public_facing": False,
+                "notes": "Outcome metadata only.",
+            },
+            "review_status": "reviewed",
+        },
+    )
+
+    report = write_exception_capture_emission_simulation(
+        ROOT,
+        scenario_path,
+        output=tmp_path / "emission.json",
+    )
+    case = report["cases"][0]
+
+    assert report["failed_count"] == 0
+    assert case["emitted_packet_classes"] == ["fix_outcome"]
+    assert case["observed"]["actual"]["capture_contracts"] == ["fix_outcome"]
+    assert case["observed"]["comparisons"]["required_fields"] is True
+    assert case["emitted_packets"][0]["fix_ids"][0].startswith("dad:exception-fix:")
+
+
+def test_observed_capture_requires_suggestion_provenance_for_simulated_gate(
+    tmp_path: Path,
+) -> None:
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    compose_mail(
+        repo,
+        message_type="capability_suggestion",
+        target_repo="dad-central",
+        summary="Capability mail without capture-suggest provenance.",
+        payload={
+            "applicability_limits": "metadata-only limits",
+            "language": "rust",
+            "proof_surface": "synthetic-check",
+            "safe_summary": "safe metadata",
+            "source_id_or_url": "dad://source",
+            "target_dad_surface": "harness-library",
+            "validation_or_eval_idea": "run a small eval",
+            "why_ai_coding_may_improve": "metadata-only reason",
+        },
+        evidence=["dad://source"],
+        suggested_actions=["Review locally."],
+        allow_similar=True,
+    )
+    expected = {
+        "packet_classes": ["ordinary_mail"],
+        "event_types": [],
+        "mail_message_types": ["capability_suggestion"],
+        "capture_contracts": [],
+        "required_fields": [
+            "applicability_limits",
+            "language",
+            "methodology_hash",
+            "matched_rule_ids",
+            "proof_surface",
+            "safe_summary",
+            "source_id_or_url",
+            "suggestion_id",
+            "target_dad_surface",
+            "update_required",
+            "validation_or_eval_idea",
+            "why_ai_coding_may_improve",
+        ],
+        "blocked": False,
+    }
+
+    observed = evaluate_observed_capture(
+        {"mail_outbox": ".digital-asset/mail/outbox.jsonl"},
+        scenario_base=repo,
+        expected=expected,
+    )
+    observed["comparisons"] = {
+        "required_fields": observed["actual"]["required_fields"]
+        == sorted(expected["required_fields"])
+    }
+
+    assert "why_ai_coding_may_improve" in observed["actual"]["required_fields"]
+    assert "suggestion_id" not in observed["actual"]["required_fields"]
+    assert observed["comparisons"]["required_fields"] is False
 
 
 def test_capture_suggest_missing_capture_surface_version_fails_loud() -> None:

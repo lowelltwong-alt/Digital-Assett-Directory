@@ -9,8 +9,10 @@ but Lowell had to notice it and tell the agent to mail DAD. The target behavior 
 deterministic: future repos should know which patterns DAD wants, which packets to
 send, and when a pattern update means the repo capture surface is stale.
 
-The first layer is synthetic rule coverage. A stronger layer compares expected
-emissions to observed JSONL outboxes:
+The first layer is synthetic rule coverage. A second layer runs
+`capture-suggest` through DAD's real mail, exception-event, and fix-outcome
+writers in a temporary repo, then verifies those packets with observed-check.
+A third layer compares expected emissions to observed JSONL outboxes:
 
 ```text
 .digital-asset/mail/outbox.jsonl
@@ -19,8 +21,8 @@ processed/exceptions/fix-outcomes/outcomes.jsonl
 ```
 
 The canonical scenario set includes one observed LawFirm-style fixture. Unit tests
-also generate a temp repo's mail and exception outboxes through DAD helpers before
-evaluating them.
+also generate temp repo mail, exception, and fix-outcome outboxes through DAD
+helpers before evaluating them.
 
 Each positive scenario pins `expected.required_fields` from the matching capture
 rule. That means a pattern update must prove both the packet shape and the
@@ -39,6 +41,7 @@ Run:
 
 ```text
 python -m digital_asset_directory.cli exceptions capture-check --scenarios assets/coding-harnesses/exception-capture-completeness/examples/synthetic-capture-scenarios.json
+python -m digital_asset_directory.cli exceptions capture-simulate-emission --scenarios assets/coding-harnesses/exception-capture-completeness/examples/synthetic-capture-scenarios.json
 python -m digital_asset_directory.cli exceptions taxonomy-coverage --fail-on-unrouted --fail-on-missing-scenarios
 python -m digital_asset_directory.cli exceptions capture-audit --repo all
 python -m digital_asset_directory.cli exceptions capture-audit --repo all --candidate-limit 0
@@ -46,7 +49,13 @@ python -m digital_asset_directory.cli exceptions capture-audit --repo all --cand
 
 The report is candidate evidence. It shows only that the supplied scenarios match
 the reviewed capture-rule registry and any observed fixture paths supplied by the
-scenario. The observed audit adds a read-only check over repo outboxes and
+scenario. The emission simulation proves the same scenarios can flow from
+`capture-suggest` into real DAD packet writers with pointer-safe provenance
+fields (`suggestion_id`, `methodology_hash`, `matched_rule_ids`, and
+`update_required`) before observed-check accepts them. It writes only to a
+temporary repo and does not deliver mail, mutate source repos, approve public
+release, or prove source truth. The observed audit adds a read-only check over
+repo outboxes and
 path signals so DAD can find likely missed emissions in real repos. It compares
 candidate pattern families against observed message types, event types, and
 capture contracts, so unrelated old mail does not satisfy a missing workflow or
@@ -65,11 +74,13 @@ file contents, mutating repos, or promoting backfill candidates. Keep
 `--max-scanned-files` explicit for broad scopes; if that ceiling is reached, the
 audit remains a truncated review gap until rerun or bounded by a reviewed scope.
 
-The capture, taxonomy, and observed-audit reports emit
+The capture, emission-simulation, taxonomy, and observed-audit reports emit
 `phase6_machine_gate_evidence`. Capture and taxonomy rows support the LawFirm
 missed-capture regression, pattern-update simulation, all pattern-family
 coverage, sensitive-payload negative tests, and taxonomy route coverage. The
-observed-audit report separately supports observed repo capture-audit coverage.
+emission simulation supports the no-chat packet-emission and pattern-update
+field-refresh gates. The observed-audit report separately supports observed repo
+capture-audit coverage.
 They are machine evidence only: every row uses
 `evidence_scope: machine_only_not_roadmap_gate_evidence`, points to
 `supports_human_gate_id`, and keeps `human_gate_satisfied` false until a

@@ -95,6 +95,7 @@ from .exception_capture import (
     suggest_exception_capture,
     write_exception_backfill_readiness,
     write_exception_backfill_wave_plan,
+    write_exception_capture_emission_simulation,
     write_exception_capture_gap_review_queue,
     write_exception_capture_remediation_plan,
     write_observed_capture_audit,
@@ -1717,6 +1718,38 @@ def exceptions_capture_check(
         or result.get("undeclared_matched_rule_ids")
         or result.get("unknown_declared_rule_ids")
     ):
+        raise typer.Exit(1)
+
+
+@exceptions_app.command("capture-simulate-emission")
+def exceptions_capture_simulate_emission(
+    scenarios: Path = typer.Option(
+        Path(
+            "assets/coding-harnesses/exception-capture-completeness/examples/"
+            "synthetic-capture-scenarios.json"
+        ),
+        "--scenarios",
+    ),
+    output: Optional[Path] = typer.Option(None, "--output"),
+    limit: Optional[int] = typer.Option(None, "--limit", min=1),
+    hub: Optional[Path] = typer.Option(None),
+) -> None:
+    """Prove capture-suggest can emit real temp-repo packets observed-check accepts."""
+    cfg = _cfg(hub=hub)
+    scenario_path = scenarios if scenarios.is_absolute() else cfg.repo_root / scenarios
+    output_path = output if output is None or output.is_absolute() else output
+    try:
+        result = write_exception_capture_emission_simulation(
+            cfg.repo_root,
+            scenario_path,
+            output=output_path,
+            limit=limit,
+        )
+    except (OSError, json.JSONDecodeError, KeyError, ValueError) as exc:
+        console.print(str(exc))
+        raise typer.Exit(2) from exc
+    console.print_json(data=result)
+    if result["failed_count"] or result["case_count"] == 0:
         raise typer.Exit(1)
 
 

@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 import os
 import re
+import tempfile
 from collections import Counter
 from pathlib import Path
 from typing import Any
@@ -12,13 +13,16 @@ from .exceptions_lake import (
     BACKFILL_EXCLUDE_DIRS,
     BACKFILL_SENSITIVE_PATH_TERMS,
     EXCEPTION_OUTBOX,
+    FIX_OUTCOME_PATH,
     backfill_classifier_rules,
     backfill_path_signal_terms,
     load_event_type_registry,
     path_term_matches,
+    record_exception_event,
+    record_exception_fix_outcome,
     screen_exception_record,
 )
-from .mail_center import MAIL_MIRROR_DIR
+from .mail_center import MAIL_MIRROR_DIR, compose_mail
 from .utils import safe_relative, sha256_bytes, sha256_file, write_json, utc_now
 
 CAPTURE_PATTERN_REGISTRY = Path("registry") / "exception-capture-pattern-registry.json"
@@ -45,6 +49,12 @@ CAPTURE_GAP_REVIEW_QUEUE_JSON = (
 )
 CAPTURE_GAP_REVIEW_QUEUE_MD = (
     Path("processed") / "reports" / "exception_capture_gap_review_queue.md"
+)
+CAPTURE_EMISSION_SIMULATION_JSON = (
+    Path("processed") / "reports" / "exception_capture_emission_simulation.json"
+)
+CAPTURE_EMISSION_SIMULATION_MD = (
+    Path("processed") / "reports" / "exception_capture_emission_simulation.md"
 )
 PHASE6_LAWFIRM_MISSED_CAPTURE_SCENARIO_ID = "lawfirm-review-issue-missed-capture"
 PHASE6_REQUIRED_UPDATE_FAMILIES = {
@@ -129,6 +139,12 @@ PLACEHOLDER_REQUIRED_VALUES = {
     "metadata-only placeholder",
     "tbd",
     "todo",
+}
+SIMULATED_EMISSION_PROVENANCE_FIELDS = {
+    "suggestion_id",
+    "methodology_hash",
+    "matched_rule_ids",
+    "update_required",
 }
 PRIVATE_PATH_FRAGMENTS = (
     "c:/users/",
@@ -807,6 +823,25 @@ def _usable_field_names(record: dict[str, Any]) -> set[str]:
         fields.update(
             str(key) for key, value in payload.items() if _required_value_is_usable(value)
         )
+    for ref_key in [
+        "trace_refs",
+        "context_refs",
+        "validation_refs",
+        "asset_refs",
+        "harness_refs",
+        "lesson_refs",
+        "fix_refs",
+    ]:
+        for ref in record.get(ref_key, []) or []:
+            text = str(ref or "")
+            if text.startswith("capture-field:") and text.endswith(":present"):
+                field = text.removeprefix("capture-field:").removesuffix(":present")
+                if field:
+                    fields.add(field)
+            elif ":" in text:
+                field, value = text.split(":", 1)
+                if field and _required_value_is_usable(value):
+                    fields.add(field)
     return fields
 
 
@@ -931,6 +966,441 @@ def evaluate_observed_capture(
         "errors": errors,
         "passed": False,
     }
+
+
+def _simulation_expected(case: dict[str, Any]) -> dict[str, Any]:
+    expected = json.loads(json.dumps(case.get("expected", {})))
+    if expected.get("packet_classes") != ["no_packet"]:
+        required = set(str(item) for item in expected.get("required_fields", []) or [])
+        required.update(SIMULATED_EMISSION_PROVENANCE_FIELDS)
+        expected["required_fields"] = sorted(required)
+    return expected
+
+
+def _simulation_field_value(
+    field: str,
+    *,
+    scenario_id: str,
+    rule_id: str,
+    suggestion: dict[str, Any],
+    initial_update_required: bool,
+) -> Any:
+    values: dict[str, Any] = {
+        "suggestion_id": suggestion["suggestion_id"],
+        "methodology_hash": suggestion["methodology_hash"],
+        "matched_rule_ids": suggestion["matched_rule_ids"],
+        "update_required": bool(suggestion.get("update_required", False)),
+        "initial_update_required": initial_update_required,
+        "source_repo": "dad-capture-emission-simulation",
+        "source_visibility": "internal",
+        "safe_summary": f"Safe simulated metadata for {scenario_id}.",
+        "validation_refs": [f"simulated-validation:{scenario_id}"],
+        "regression_test_refs": [f"simulated-regression:{scenario_id}"],
+        "event_id": "created-by-simulation-writer",
+        "decision": "deferred",
+        "validation_status": "writer_computed",
+        "owner_authority": "source_repo_local_review",
+        "event_lookup_status": "writer_computed",
+        "remaining_risks": ["candidate_metadata_only"],
+        "language": "rust",
+        "proof_surface": "synthetic-capture-emission-simulation",
+        "source_id_or_url": f"dad://capture-scenario/{scenario_id}",
+        "target_dad_surface": "exception-capture-pattern-registry",
+        "validation_or_eval_idea": "Run capture-simulate-emission and observed-check.",
+        "why_ai_coding_may_improve": "Captures reusable language-frontier evidence as safe metadata.",
+        "applicability_limits": "Synthetic metadata only; local review decides adoption.",
+    }
+    if field in values:
+        return values[field]
+    return f"simulated-{field}-for-{scenario_id}-via-{rule_id.rsplit(':', 1)[-1]}"
+
+
+def _simulation_payload(
+    *,
+    required_fields: list[str],
+    scenario_id: str,
+    rule_id: str,
+    suggestion: dict[str, Any],
+    initial_update_required: bool,
+) -> dict[str, Any]:
+    payload = {
+        field: _simulation_field_value(
+            field,
+            scenario_id=scenario_id,
+            rule_id=rule_id,
+            suggestion=suggestion,
+            initial_update_required=initial_update_required,
+        )
+        for field in sorted(set(required_fields) | SIMULATED_EMISSION_PROVENANCE_FIELDS)
+    }
+    payload["source_scenario_id"] = scenario_id
+    payload["source_rule_id"] = rule_id
+    payload["emission_mode"] = "synthetic_temp_repo_real_writer"
+    return payload
+
+
+def _simulation_trace_refs(
+    *,
+    required_fields: list[str],
+    payload: dict[str, Any],
+    scenario_id: str,
+    rule_id: str,
+    initial_update_required: bool,
+) -> list[str]:
+    refs = [
+        f"suggestion_id:{payload['suggestion_id']}",
+        f"methodology_hash:{payload['methodology_hash']}",
+        "matched_rule_ids:" + ",".join(str(item) for item in payload["matched_rule_ids"]),
+        f"update_required:{str(payload['update_required']).lower()}",
+        f"initial_update_required:{str(initial_update_required).lower()}",
+        f"scenario_id:{scenario_id}",
+        f"matched_rule_id:{rule_id}",
+    ]
+    refs.extend(
+        f"capture-field:{field}:present"
+        for field in sorted(set(required_fields) | SIMULATED_EMISSION_PROVENANCE_FIELDS)
+    )
+    return refs
+
+
+def _emit_simulated_capture_packet(
+    hub_root: Path,
+    repo: Path,
+    *,
+    scenario_id: str,
+    packet: dict[str, Any],
+    suggestion: dict[str, Any],
+    initial_update_required: bool,
+) -> dict[str, Any]:
+    rule_id = str(packet.get("rule_id") or "")
+    packet_classes = {str(item) for item in packet.get("packet_classes", []) or []}
+    required_fields = [str(item) for item in packet.get("required_fields", []) or []]
+    payload = _simulation_payload(
+        required_fields=required_fields,
+        scenario_id=scenario_id,
+        rule_id=rule_id,
+        suggestion=suggestion,
+        initial_update_required=initial_update_required,
+    )
+    trace_refs = _simulation_trace_refs(
+        required_fields=required_fields,
+        payload=payload,
+        scenario_id=scenario_id,
+        rule_id=rule_id,
+        initial_update_required=initial_update_required,
+    )
+    emitted: dict[str, Any] = {
+        "rule_id": rule_id,
+        "packet_classes": sorted(packet_classes),
+        "outbox_paths": [],
+        "screening_issues": [],
+    }
+    if "ordinary_mail" in packet_classes:
+        result = compose_mail(
+            repo,
+            message_type=str(packet.get("mail_message_type") or "capability_suggestion"),
+            target_repo="dad-central",
+            summary=f"Simulated capture emission for {scenario_id}.",
+            payload=payload,
+            evidence=[f"dad://capture-scenario/{scenario_id}", rule_id],
+            suggested_actions=[
+                "Review as candidate exception-capture simulation evidence.",
+            ],
+            sensitivity="internal",
+            dedupe_key=f"dad-capture-emission:{scenario_id}:{rule_id}:mail",
+            composed_by="codex",
+            allow_similar=True,
+        )
+        emitted["outbox_paths"].append(MAIL_MIRROR_DIR.joinpath("outbox.jsonl").as_posix())
+        emitted.setdefault("mail_ids", []).append(result["record"]["mail_id"])
+    if "exception_event" in packet_classes:
+        result = record_exception_event(
+            hub_root,
+            repo,
+            event_type=str(packet.get("exception_event_type") or "failed_command"),
+            summary=f"Simulated capture emission for {scenario_id}.",
+            stage="postflight",
+            severity=str(packet.get("severity") or "medium"),
+            capture_contract=str(packet.get("capture_contract") or "postflight_exception"),
+            agent="codex",
+            source_visibility="internal",
+            command=["asset-dir", "exceptions", "capture-simulate-emission"],
+            exit_code=0,
+            duration_ms=1,
+            context_refs=[f"dad://capture-scenario/{scenario_id}", rule_id],
+            validation_refs=[f"simulated-validation:{scenario_id}"],
+            trace_refs=trace_refs,
+        )
+        emitted["outbox_paths"].append(EXCEPTION_OUTBOX.as_posix())
+        emitted["screening_issues"].extend(result.get("screening_issues", []))
+        emitted.setdefault("event_ids", []).append(result["event"]["event_id"])
+    if "fix_outcome" in packet_classes:
+        event = record_exception_event(
+            hub_root,
+            repo,
+            event_type="failed_command",
+            summary=f"Synthetic source event for fix outcome {scenario_id}.",
+            stage="postflight",
+            severity="medium",
+            capture_contract="failed_command",
+            agent="codex",
+            source_visibility="internal",
+            command=["asset-dir", "exceptions", "capture-simulate-emission"],
+            exit_code=1,
+            duration_ms=1,
+            context_refs=[f"dad://capture-scenario/{scenario_id}", rule_id],
+            validation_refs=[f"simulated-validation:{scenario_id}"],
+            trace_refs=trace_refs,
+        )
+        result = record_exception_fix_outcome(
+            hub_root,
+            repo,
+            event_id=str(event["event"]["event_id"]),
+            decision="deferred",
+            summary=f"Simulated fix outcome for {scenario_id}.",
+            recorded_by="codex",
+            validation_refs=[f"simulated-validation:{scenario_id}"],
+            regression_test_refs=[f"simulated-regression:{scenario_id}"],
+            fix_refs=[f"dad://capture-scenario/{scenario_id}/fix"],
+            asset_refs=trace_refs,
+            owner_authority="source_repo_local_review",
+            expiry=f"revisit-after:{scenario_id}",
+            remaining_risks=["candidate_metadata_only"],
+        )
+        emitted["outbox_paths"].append(FIX_OUTCOME_PATH.as_posix())
+        emitted["screening_issues"].extend(event.get("screening_issues", []))
+        emitted["screening_issues"].extend(result.get("screening_issues", []))
+        emitted.setdefault("event_ids", []).append(event["event"]["event_id"])
+        emitted.setdefault("fix_ids", []).append(result["fix_outcome"]["fix_id"])
+    return emitted
+
+
+def _case_emission_suggestion(
+    hub_root: Path,
+    case: dict[str, Any],
+    *,
+    repo_capture_surface_version: str,
+) -> dict[str, Any]:
+    return suggest_exception_capture(
+        hub_root,
+        signals=[str(item) for item in case.get("signals", []) or []],
+        repo_capture_surface_version=repo_capture_surface_version,
+        payload_samples=[
+            sample for sample in case.get("payload_samples", []) or [] if isinstance(sample, dict)
+        ],
+    )
+
+
+def _simulate_capture_case_emission(
+    hub_root: Path,
+    case: dict[str, Any],
+    registry: dict[str, Any],
+    workspace: Path,
+) -> dict[str, Any]:
+    scenario_id = str(case["scenario_id"])
+    repo = workspace / re.sub(r"[^a-zA-Z0-9_.-]+", "-", scenario_id).strip("-")
+    repo.mkdir(parents=True, exist_ok=True)
+    initial_suggestion = _case_emission_suggestion(
+        hub_root,
+        case,
+        repo_capture_surface_version=str(case.get("repo_capture_surface_version") or ""),
+    )
+    emission_surface_version = str(case.get("repo_capture_surface_version") or "")
+    if initial_suggestion["update_required"]:
+        emission_surface_version = str(registry.get("capture_surface_version") or "")
+    emission_suggestion = (
+        _case_emission_suggestion(
+            hub_root,
+            case,
+            repo_capture_surface_version=emission_surface_version,
+        )
+        if emission_surface_version != initial_suggestion["repo_capture_surface_version"]
+        else initial_suggestion
+    )
+    emitted_packets: list[dict[str, Any]] = []
+    for packet in emission_suggestion.get("recommended_packets", []):
+        emitted_packets.append(
+            _emit_simulated_capture_packet(
+                hub_root,
+                repo,
+                scenario_id=scenario_id,
+                packet=packet,
+                suggestion=emission_suggestion,
+                initial_update_required=bool(initial_suggestion["update_required"]),
+            )
+        )
+    emitted_packet_classes = {
+        packet_class
+        for packet in emitted_packets
+        for packet_class in packet.get("packet_classes", [])
+    }
+    candidate_observed_paths: dict[str, Path] = {}
+    if "ordinary_mail" in emitted_packet_classes:
+        candidate_observed_paths["mail_outbox"] = MAIL_MIRROR_DIR.joinpath("outbox.jsonl")
+    if "exception_event" in emitted_packet_classes:
+        candidate_observed_paths["exception_outbox"] = EXCEPTION_OUTBOX
+    if "fix_outcome" in emitted_packet_classes:
+        candidate_observed_paths["fix_outcomes"] = FIX_OUTCOME_PATH
+    observed_paths = {
+        key: path.as_posix()
+        for key, path in candidate_observed_paths.items()
+        if (repo / path).exists()
+    }
+    expected = _simulation_expected(case)
+    observed_expected = json.loads(json.dumps(expected))
+    if expected.get("blocked"):
+        observed_expected["blocked"] = False
+        observed_expected.pop("blocked_reason", None)
+    observed = evaluate_observed_capture(
+        observed_paths,
+        scenario_base=repo,
+        expected=observed_expected,
+    )
+    observed["comparisons"] = _compare_actual(observed["actual"], observed_expected)
+    observed["passed"] = all(observed["comparisons"].values()) and not observed["errors"]
+    suggestion_matches_expected = _compare_actual(emission_suggestion["actual"], case["expected"])
+    suggestion_matches_expected["update_required"] = (
+        bool(initial_suggestion["update_required"])
+        == bool(case.get("expected", {}).get("update_required", False))
+    )
+    passed = (
+        all(suggestion_matches_expected.values())
+        and observed["passed"]
+        and not any(item.get("screening_issues") for item in emitted_packets)
+    )
+    return {
+        "scenario_id": scenario_id,
+        "pattern_family": str(case.get("pattern_family") or ""),
+        "initial_repo_capture_surface_version": initial_suggestion[
+            "repo_capture_surface_version"
+        ],
+        "emission_repo_capture_surface_version": emission_surface_version,
+        "registry_capture_surface_version": initial_suggestion[
+            "registry_capture_surface_version"
+        ],
+        "initial_update_required": bool(initial_suggestion["update_required"]),
+        "emission_update_required": bool(emission_suggestion["update_required"]),
+        "matched_rule_ids": emission_suggestion["matched_rule_ids"],
+        "recommended_packet_count": len(emission_suggestion.get("recommended_packets", [])),
+        "emitted_packet_count": len(emitted_packets),
+        "emitted_packet_classes": sorted(
+            {
+                packet_class
+                for packet in emitted_packets
+                for packet_class in packet.get("packet_classes", [])
+            }
+        )
+        or ["no_packet"],
+        "emitted_packets": emitted_packets,
+        "expected": expected,
+        "observed_expected": observed_expected,
+        "suggestion_comparisons": suggestion_matches_expected,
+        "observed": observed,
+        "passed": passed,
+        "authority_boundary": (
+            "Simulation writes only to a temporary repo using DAD packet writers, "
+            "then validates observed JSONL output. It does not deliver mail, mutate "
+            "source repos, approve public release, or prove the synthetic event occurred."
+        ),
+    }
+
+
+def write_exception_capture_emission_simulation(
+    hub_root: Path,
+    scenarios_path: Path,
+    *,
+    output: Path | None = None,
+    limit: int | None = None,
+) -> dict[str, Any]:
+    scenarios = load_capture_scenarios(scenarios_path)
+    registry = load_capture_pattern_registry(hub_root)
+    cases = [
+        case
+        for case in scenarios.get("cases", [])
+        if isinstance(case, dict) and case.get("review_status") == "reviewed"
+    ]
+    if limit is not None and limit > 0:
+        cases = cases[:limit]
+    with tempfile.TemporaryDirectory(prefix="dad-capture-emission-") as tmp:
+        workspace = Path(tmp)
+        rows = [
+            _simulate_capture_case_emission(hub_root, case, registry, workspace)
+            for case in cases
+        ]
+    failed = [row for row in rows if not row["passed"]]
+    initial_update_required_count = sum(1 for row in rows if row["initial_update_required"])
+    report = {
+        "generated_at": utc_now(),
+        "report_id": "dad:exception-capture-emission-simulation",
+        "scenario_path": safe_relative(scenarios_path, hub_root),
+        "registry_ref": CAPTURE_PATTERN_REGISTRY.as_posix(),
+        "methodology_ref": CAPTURE_PATTERN_REGISTRY.as_posix(),
+        "methodology_hash": f"sha256:{sha256_file(hub_root / CAPTURE_PATTERN_REGISTRY)}",
+        "input_hashes": _input_hashes(hub_root, scenarios_path),
+        "case_count": len(rows),
+        "passed_count": len(rows) - len(failed),
+        "failed_count": len(failed),
+        "initial_update_required_count": initial_update_required_count,
+        "refreshed_emission_count": sum(
+            1
+            for row in rows
+            if row["initial_repo_capture_surface_version"]
+            != row["emission_repo_capture_surface_version"]
+        ),
+        "required_provenance_fields": sorted(SIMULATED_EMISSION_PROVENANCE_FIELDS),
+        "cases": rows,
+        "phase6_machine_gate_evidence": {
+            "evidence_scope": PHASE6_MACHINE_EVIDENCE_SCOPE,
+            "machine_status": "passed" if not failed and rows else "failed",
+            "human_review_required": True,
+            "human_gate_satisfied": False,
+            "supports_human_gate_ids": [
+                "synthetic-harness-proves-dad-worthy-patterns-become-packets",
+                "pattern-update-simulation-proves-new-required-fields",
+            ],
+        },
+        "authority_boundary": (
+            "Machine simulation evidence only. This gate proves reviewed synthetic "
+            "signals can flow through capture-suggest into real DAD packet writers "
+            "and back through observed JSONL checks in a temp repo. It does not "
+            "approve human roadmap gates, mutate target repos, or certify source truth."
+        ),
+    }
+    output_path = hub_root / (output or CAPTURE_EMISSION_SIMULATION_JSON)
+    write_json(output_path, report)
+    md_path = output_path.with_suffix(".md") if output else hub_root / CAPTURE_EMISSION_SIMULATION_MD
+    lines = [
+        "# Exception Capture Emission Simulation",
+        "",
+        f"- Generated: {report['generated_at']}",
+        f"- Cases: {report['case_count']}",
+        f"- Passed: {report['passed_count']}",
+        f"- Failed: {report['failed_count']}",
+        f"- Initial update-required cases: {report['initial_update_required_count']}",
+        f"- Refreshed before emission: {report['refreshed_emission_count']}",
+        f"- Methodology hash: `{report['methodology_hash']}`",
+        "",
+        "Boundary: temp-repo writer simulation only. This report does not deliver mail "
+        "or approve roadmap human gates.",
+        "",
+        "## Cases",
+        "",
+        "| Scenario | Pattern | Initial Update | Emitted | Observed | Result |",
+        "| --- | --- | --- | --- | --- | --- |",
+    ]
+    for row in rows:
+        emitted = ", ".join(f"`{item}`" for item in row["emitted_packet_classes"])
+        observed_status = "passed" if row["observed"]["passed"] else "failed"
+        result = "passed" if row["passed"] else "failed"
+        lines.append(
+            "| "
+            + f"`{row['scenario_id']}` | `{row['pattern_family']}` | "
+            + f"`{row['initial_update_required']}` | {emitted} | "
+            + f"`{observed_status}` | `{result}` |"
+        )
+    md_path.parent.mkdir(parents=True, exist_ok=True)
+    md_path.write_text("\n".join(lines) + "\n", encoding="utf-8")
+    return report
 
 
 def _policy_for_repo(repo: Path, repo_policies: list[Any] | None) -> Any | None:
