@@ -11,7 +11,15 @@ from jsonschema.exceptions import ValidationError
 from jsonschema.validators import validator_for
 
 from .ids import stable_id
-from .utils import append_jsonl, json_dumps, redact_sensitive_text, safe_relative, sha256_bytes, utc_now
+from .utils import (
+    append_jsonl,
+    json_dumps,
+    redact_sensitive_text,
+    safe_relative,
+    sha256_bytes,
+    sha256_file,
+    utc_now,
+)
 
 EXCEPTION_OUTBOX = Path(".digital-asset") / "exceptions" / "outbox.jsonl"
 RAW_EXCEPTION_DIR = Path("raw") / "exceptions" / "repo-events"
@@ -20,6 +28,8 @@ LAKE_PATH = Path("processed") / "exceptions" / "lake" / "events.jsonl"
 FIX_OUTCOME_PATH = Path("processed") / "exceptions" / "fix-outcomes" / "outcomes.jsonl"
 REPORT_JSON = Path("processed") / "reports" / "exceptions_lake.json"
 REPORT_MD = Path("processed") / "reports" / "exceptions_lake.md"
+LEARNING_QUEUE_JSON = Path("processed") / "reports" / "exception_learning_queue.json"
+LEARNING_QUEUE_MD = Path("processed") / "reports" / "exception_learning_queue.md"
 EXCEPTION_EVENT_SCHEMA = Path("schemas") / "exception-event.schema.json"
 EXCEPTION_FIX_SCHEMA = Path("schemas") / "exception-fix-outcome.schema.json"
 BACKFILL_RUNS_DIR = Path("processed") / "exceptions" / "backfill-runs"
@@ -2018,7 +2028,25 @@ def load_fix_outcomes(hub_root: Path) -> list[dict[str, Any]]:
                 **error,
             },
         )
-    return records
+    valid_records: list[dict[str, Any]] = []
+    for index, record in enumerate(records, start=1):
+        try:
+            validate_exception_fix_outcome_record(hub_root, record)
+        except ValueError as exc:
+            append_jsonl(
+                hub_root / QUARANTINE_DIR / "fix_outcome_report_invalid_records.jsonl",
+                {
+                    "event_type": "fix_outcome_report_invalid_record",
+                    "created_at": utc_now(),
+                    "path": FIX_OUTCOME_PATH.as_posix(),
+                    "line_number": index,
+                    "reason": str(exc),
+                    "record_sha256": sha256_bytes(json_dumps(record).encode("utf-8")),
+                },
+            )
+            continue
+        valid_records.append(record)
+    return valid_records
 
 
 def _is_backfill_candidate_event(event: dict[str, Any]) -> bool:
@@ -2029,13 +2057,18 @@ def _is_backfill_candidate_event(event: dict[str, Any]) -> bool:
     )
 
 
+def _non_empty_string_list(value: Any) -> bool:
+    return isinstance(value, list) and bool(value) and all(isinstance(item, str) and item for item in value)
+
+
 def _is_validated_fixed_outcome(row: dict[str, Any]) -> bool:
     return (
         row.get("decision") == "fixed"
         and row.get("validation_status") == "validated"
-        and bool(row.get("validation_refs"))
-        and bool(row.get("regression_test_refs"))
+        and _non_empty_string_list(row.get("validation_refs"))
+        and _non_empty_string_list(row.get("regression_test_refs"))
         and row.get("event_lookup_status") == "found_in_lake"
+        and row.get("review_status") not in {"quarantine_candidate", "quarantined", "rejected"}
     )
 
 
@@ -2220,6 +2253,296 @@ def write_exception_report(hub_root: Path) -> dict[str, Any]:
     return report
 
 
+def _exception_learning_queue_input_hashes(hub_root: Path) -> dict[str, str]:
+    refs = [
+        Path("registry") / "exception-event-type-registry.json",
+        Path("registry") / "exception-learning-methodology.json",
+        LAKE_PATH,
+        FIX_OUTCOME_PATH,
+        Path("src") / "digital_asset_directory" / "exceptions_lake.py",
+    ]
+    hashes: dict[str, str] = {}
+    repo_root = Path(__file__).resolve().parents[2]
+    for ref in refs:
+        path = hub_root / ref
+        if not path.exists() and ref.parts[:1] == ("src",):
+            path = repo_root / ref
+        hashes[ref.as_posix()] = f"sha256:{sha256_file(path)}" if path.exists() else "missing"
+    return hashes
+
+
+def _exception_learning_status(
+    *,
+    observed_count: int,
+    backfill_count: int,
+    validated_fix_count: int,
+    fixed_without_validation_count: int,
+    unresolved_observed_count: int,
+    public_release_required_count: int,
+    sample_below_threshold: bool,
+) -> tuple[str, list[str], str]:
+    blockers: list[str] = []
+    if fixed_without_validation_count:
+        blockers.append("fixed outcome lacks validated status, validation refs, or regression evidence")
+    if unresolved_observed_count:
+        blockers.append("observed exception lacks validated fix outcome")
+    if backfill_count:
+        blockers.append("same event-type cluster includes backfill path-signal candidates")
+    if public_release_required_count:
+        blockers.append("non-public origin evidence needs human release before public-facing reuse")
+    if sample_below_threshold:
+        blockers.append("sample size below comparable-event threshold; counts only")
+    if unresolved_observed_count:
+        return (
+            "needs_fix_outcome",
+            blockers,
+            "Ask source repo or owner to record a fix outcome, accepted risk, or rejection.",
+        )
+    if fixed_without_validation_count:
+        return (
+            "needs_fix_validation",
+            blockers,
+            "Add validation refs and regression evidence before learning from this fix.",
+        )
+    if public_release_required_count:
+        return (
+            "needs_human_release",
+            blockers,
+            "Record human release before public-facing reuse of non-public-origin evidence.",
+        )
+    if backfill_count and not observed_count:
+        blockers.append("backfill path-signal candidates are not source-reviewed incidents")
+        return (
+            "needs_source_review",
+            blockers,
+            "Review source context or ask source repo to confirm before learning promotion.",
+        )
+    if backfill_count:
+        return (
+            "needs_source_review",
+            blockers,
+            "Review or split backfill path-signal candidates before learning from this cluster.",
+        )
+    if sample_below_threshold:
+        return (
+            "needs_more_evidence",
+            blockers,
+            "Keep counts and examples until the comparable-event threshold is met.",
+        )
+    if validated_fix_count and observed_count:
+        return (
+            "validated_fix_review_candidate",
+            blockers,
+            "Review validated fix evidence and decide whether to promote a bounded lesson.",
+        )
+    return ("watch_only", blockers, "Keep counts only until stronger evidence exists.")
+
+
+def write_exception_learning_queue(
+    hub_root: Path,
+    *,
+    output: Path | None = None,
+    sample_size_threshold: int = 10,
+) -> dict[str, Any]:
+    """Write a candidate learning queue from exception events and fix outcomes.
+
+    The queue is deliberately conservative: backfill-only clusters are review
+    candidates, not lessons, and validated fixes are required before a cluster can
+    become a candidate lesson.
+    """
+    events = load_lake_events(hub_root)
+    fix_outcomes = load_fix_outcomes(hub_root)
+    taxonomy_by_type = event_type_taxonomy_dimensions(hub_root)
+    category_by_type = event_type_categories(hub_root)
+    fix_outcomes_by_event: dict[str, list[dict[str, Any]]] = {}
+    for outcome in fix_outcomes:
+        event_id = str(outcome.get("event_id") or "")
+        if event_id:
+            fix_outcomes_by_event.setdefault(event_id, []).append(outcome)
+
+    clusters: dict[str, dict[str, Any]] = {}
+    for event in events:
+        event_type = str(event.get("event_type") or "unknown")
+        cluster = clusters.setdefault(
+            event_type,
+            {
+                "event_type": event_type,
+                "category": category_by_type.get(event_type, "unknown"),
+                "taxonomy_dimensions": taxonomy_by_type.get(
+                    event_type,
+                    _unknown_taxonomy_dimensions(),
+                ),
+                "event_count": 0,
+                "observed_count": 0,
+                "backfill_candidate_count": 0,
+                "validated_fix_count": 0,
+                "fixed_without_validation_count": 0,
+                "unresolved_observed_count": 0,
+                "reviewed_exception_count": 0,
+                "public_release_required_count": 0,
+                "source_repo_count": 0,
+                "source_repos": set(),
+                "source_visibility_counts": Counter(),
+                "severity_counts": Counter(),
+                "example_event_ids": [],
+                "validated_fix_ids": [],
+            },
+        )
+        cluster["event_count"] += 1
+        cluster["source_repos"].add(str(event.get("source_repo") or "unknown"))
+        cluster["source_repo_count"] = len(cluster["source_repos"])
+        source_visibility = str(event.get("source_visibility") or "unknown")
+        cluster["source_visibility_counts"][source_visibility] += 1
+        cluster["severity_counts"][str(event.get("severity") or "unknown")] += 1
+        public_release = event.get("public_release") if isinstance(event.get("public_release"), dict) else {}
+        human_release_id = str(public_release.get("human_release_id") or "").strip()
+        if source_visibility in {"private", "internal", "restricted", "unknown"} and not human_release_id:
+            cluster["public_release_required_count"] += 1
+        if len(cluster["example_event_ids"]) < 5:
+            cluster["example_event_ids"].append(str(event.get("event_id") or ""))
+        event_fix_outcomes = fix_outcomes_by_event.get(str(event.get("event_id") or ""), [])
+        validated_fixes = [row for row in event_fix_outcomes if _is_validated_fixed_outcome(row)]
+        unvalidated_fixes = [
+            row
+            for row in event_fix_outcomes
+            if row.get("decision") == "fixed" and not _is_validated_fixed_outcome(row)
+        ]
+        cluster["validated_fix_count"] += len(validated_fixes)
+        cluster["fixed_without_validation_count"] += len(unvalidated_fixes)
+        for row in validated_fixes:
+            if len(cluster["validated_fix_ids"]) < 5:
+                cluster["validated_fix_ids"].append(str(row.get("fix_id") or ""))
+        if _is_backfill_candidate_event(event):
+            cluster["backfill_candidate_count"] += 1
+        else:
+            cluster["observed_count"] += 1
+            if event.get("review_status") in {"triaged", "reviewed", "promoted"}:
+                cluster["reviewed_exception_count"] += 1
+            if not event_fix_outcomes and event.get("outcome_status") not in {
+                "fixed",
+                "accepted_risk",
+                "duplicate",
+                "rejected",
+            }:
+                cluster["unresolved_observed_count"] += 1
+
+    queue_counts: Counter[str] = Counter()
+    rows: list[dict[str, Any]] = []
+    for cluster in clusters.values():
+        sample_below_threshold = (
+            int(cluster["observed_count"]) + int(cluster["backfill_candidate_count"])
+        ) < sample_size_threshold
+        status, blockers, next_action = _exception_learning_status(
+            observed_count=int(cluster["observed_count"]),
+            backfill_count=int(cluster["backfill_candidate_count"]),
+            validated_fix_count=int(cluster["validated_fix_count"]),
+            fixed_without_validation_count=int(cluster["fixed_without_validation_count"]),
+            unresolved_observed_count=int(cluster["unresolved_observed_count"]),
+            public_release_required_count=int(cluster["public_release_required_count"]),
+            sample_below_threshold=sample_below_threshold,
+        )
+        if sample_below_threshold:
+            blockers.append(
+                f"sample size below comparable-event threshold N={sample_size_threshold}; counts only"
+            )
+        queue_counts[status] += 1
+        severity_counts = dict(sorted(cluster["severity_counts"].items()))
+        source_visibility_counts = dict(sorted(cluster["source_visibility_counts"].items()))
+        row = {
+            "event_type": cluster["event_type"],
+            "category": cluster["category"],
+            "taxonomy_dimensions": cluster["taxonomy_dimensions"],
+            "event_count": cluster["event_count"],
+            "observed_count": cluster["observed_count"],
+            "backfill_candidate_count": cluster["backfill_candidate_count"],
+            "reviewed_exception_count": cluster["reviewed_exception_count"],
+            "validated_fix_count": cluster["validated_fix_count"],
+            "fixed_without_validation_count": cluster["fixed_without_validation_count"],
+            "unresolved_observed_count": cluster["unresolved_observed_count"],
+            "public_release_required_count": cluster["public_release_required_count"],
+            "source_repo_count": cluster["source_repo_count"],
+            "source_visibility_counts": source_visibility_counts,
+            "severity_counts": severity_counts,
+            "learning_status": status,
+            "promotion_blockers": sorted(set(blockers)),
+            "recommended_next_action": next_action,
+            "example_event_ids": [item for item in cluster["example_event_ids"] if item],
+            "validated_fix_ids": [item for item in cluster["validated_fix_ids"] if item],
+        }
+        rows.append(row)
+    status_rank = {
+        "validated_fix_review_candidate": 0,
+        "needs_fix_outcome": 1,
+        "needs_fix_validation": 2,
+        "needs_source_review": 3,
+        "needs_human_release": 4,
+        "needs_more_evidence": 5,
+        "watch_only": 6,
+    }
+    rows.sort(
+        key=lambda row: (
+            status_rank.get(str(row["learning_status"]), 9),
+            -int(row["observed_count"]),
+            -int(row["backfill_candidate_count"]),
+            str(row["event_type"]),
+        )
+    )
+    report = {
+        "generated_at": utc_now(),
+        "report_id": "dad:exception-learning-queue",
+        "input_hashes": _exception_learning_queue_input_hashes(hub_root),
+        "event_count": len(events),
+        "fix_outcome_count": len(fix_outcomes),
+        "cluster_count": len(rows),
+        "sample_size_threshold": sample_size_threshold,
+        "queue_counts": dict(sorted(queue_counts.items())),
+        "learning_queue": rows,
+        "promotion_policy_boundary": (
+            "This queue is candidate evidence. A clean cluster with validated fixes "
+            "may enter lesson review, but it does not become a global rule, harness, "
+            "or repo instruction without human review. Backfill-only and mixed "
+            "backfill clusters are path-signal review candidates and cannot promote "
+            "learning."
+        ),
+    }
+    output_path = hub_root / (output or LEARNING_QUEUE_JSON)
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    output_path.write_text(json_dumps(report, pretty=True) + "\n", encoding="utf-8")
+    md_path = output_path.with_suffix(".md") if output else hub_root / LEARNING_QUEUE_MD
+    lines = [
+        "# Exception Learning Queue",
+        "",
+        f"- Generated: {report['generated_at']}",
+        f"- Events: {report['event_count']}",
+        f"- Fix outcomes: {report['fix_outcome_count']}",
+        f"- Event-type clusters: {report['cluster_count']}",
+        f"- Sample-size threshold: N={sample_size_threshold}",
+        "",
+        "Boundary: candidate evidence only. Clean validated-fix clusters can enter "
+        "lesson review; backfill-only or mixed backfill clusters need source review "
+        "and cannot promote learning.",
+        "",
+        "## Queue Counts",
+        "",
+    ]
+    lines.extend(f"- `{status}`: {count}" for status, count in report["queue_counts"].items())
+    lines.extend(["", "## Clusters", ""])
+    lines.append("| Event Type | Status | Observed | Backfill | Validated Fixes | Learning Route | Next Action |")
+    lines.append("| --- | --- | ---: | ---: | ---: | --- | --- |")
+    for row in rows:
+        dimensions = row["taxonomy_dimensions"]
+        lines.append(
+            "| "
+            + f"`{row['event_type']}` | `{row['learning_status']}` | "
+            + f"{row['observed_count']} | {row['backfill_candidate_count']} | "
+            + f"{row['validated_fix_count']} | `{dimensions.get('learning_route', 'unknown')}` | "
+            + f"{row['recommended_next_action']} |"
+        )
+    md_path.parent.mkdir(parents=True, exist_ok=True)
+    md_path.write_text("\n".join(lines) + "\n", encoding="utf-8")
+    return report
+
+
 def exception_lake_paths() -> dict[str, str]:
     return {
         "repo_outbox": EXCEPTION_OUTBOX.as_posix(),
@@ -2227,6 +2550,8 @@ def exception_lake_paths() -> dict[str, str]:
         "canonical_lake": LAKE_PATH.as_posix(),
         "quarantine": QUARANTINE_DIR.as_posix(),
         "fix_outcomes": FIX_OUTCOME_PATH.as_posix(),
+        "learning_queue_json": LEARNING_QUEUE_JSON.as_posix(),
+        "learning_queue_markdown": LEARNING_QUEUE_MD.as_posix(),
         "report_json": REPORT_JSON.as_posix(),
         "report_markdown": REPORT_MD.as_posix(),
     }

@@ -474,6 +474,39 @@ Promotion gates:
 - no score, similarity, cluster confidence, or priority percentage without a named
   methodology and at least 10 reviewed samples for that family.
 
+Implemented queue:
+
+```text
+asset-dir exceptions learning-queue
+```
+
+The queue joins the canonical event lake, fix outcomes, event-type taxonomy
+dimensions, and methodology hashes. It writes:
+
+- `processed/reports/exception_learning_queue.json`;
+- `processed/reports/exception_learning_queue.md`.
+
+Queue statuses are intentionally conservative:
+
+- `validated_fix_review_candidate`: observed event type has validated fix evidence,
+  no unresolved siblings, no unvalidated fix claims, no source-review blockers, no
+  public-release blockers, and enough comparable events to enter human lesson review;
+- `needs_fix_outcome`: observed event type has an unresolved event with no fix,
+  accepted-risk, duplicate, rejection, or deferral record;
+- `needs_fix_validation`: a fixed claim exists but lacks validated status,
+  validation refs, or regression evidence;
+- `needs_source_review`: backfill-only or mixed backfill path signals need source
+  review and cannot promote learning;
+- `needs_human_release`: non-public-origin evidence needs human release before
+  public-facing reuse;
+- `needs_more_evidence`: counts exist but are below the comparable-event threshold;
+- `watch_only`: counts exist, but the evidence is not yet actionable.
+
+The report shows counts and example IDs. It does not show confidence percentages,
+does not read raw source content, and does not promote backfill-only, mixed-backfill,
+unreleased non-public-origin, or under-threshold clusters into lessons, harnesses,
+global rules, or repo instructions.
+
 ## Self-Learning Rules
 
 DAD should promote a pattern only when enough reviewed evidence exists.
@@ -520,6 +553,7 @@ asset-dir exceptions cluster --method <method-id>
 asset-dir exceptions learn --event-id <id>|--cluster <id>
 asset-dir exceptions digest --repo <repo>
 asset-dir exceptions report
+asset-dir exceptions learning-queue
 ```
 
 Repo agents should normally use `record` during postflight or after a failing

@@ -75,6 +75,7 @@ from .exceptions_lake import (
     load_event_type_registry,
     record_exception_fix_outcome,
     record_exception_event,
+    write_exception_learning_queue,
     write_exception_report,
 )
 from .exception_capture import (
@@ -1859,6 +1860,26 @@ def exceptions_report(hub: Optional[Path] = typer.Option(None)) -> None:
     """Regenerate and print the DAD exceptions lake report."""
     cfg = _cfg(hub=hub)
     console.print_json(data=write_exception_report(cfg.repo_root))
+
+
+@exceptions_app.command("learning-queue")
+def exceptions_learning_queue(
+    output: Optional[Path] = typer.Option(None, "--output"),
+    sample_size_threshold: int = typer.Option(10, "--sample-size-threshold", min=2),
+    hub: Optional[Path] = typer.Option(None),
+) -> None:
+    """Regenerate and print the candidate exception learning queue."""
+    cfg = _cfg(hub=hub)
+    try:
+        result = write_exception_learning_queue(
+            cfg.repo_root,
+            output=output,
+            sample_size_threshold=sample_size_threshold,
+        )
+    except (OSError, json.JSONDecodeError, KeyError, ValueError) as exc:
+        console.print(str(exc))
+        raise typer.Exit(2) from exc
+    console.print_json(data=result)
 
 
 @lesson_app.command("add")

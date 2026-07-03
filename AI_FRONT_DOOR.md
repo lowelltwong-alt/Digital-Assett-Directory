@@ -109,6 +109,7 @@ not prove source truth, value, authority, or promotion.
 | `processed/mail/` | Generated central mail inbox, outbox, archive, and delivery logs. | You need collected/routed candidate suggestions; never treat them as source truth. |
 | `processed/skills/` | Generated central skill-checkout ledger and future freshness reports. | You need candidate targets for skill update, retirement, replacement, or manual-review notices. |
 | `processed/reports/mail_center.md` | Generated mail-center summary report. | You need mail counts and message-type distribution. |
+| `processed/reports/exception_learning_queue.md` | Generated exception learning-readiness queue. | You need to prioritize exception clusters that need fix outcomes, fix validation, source review, or human lesson review. |
 | `processed/reports/scan_coverage_cycle.md` | Generated no-rescan coverage-cycle log. | You need to know what was checked, intentionally skipped, and should be scanned next without repeating broad passes. |
 | `processed/learning/scan_cycle_events.jsonl` | Generated append-only scan-cycle event trail. | You need the sequence of prior coverage passes, skipped signal families, gated next work, and cycle handoff context. |
 | `processed/reports/lesson_automation_next_actions.md` | Generated queue of human-gated next actions from existing scopes. | You need the safest next approval decision across priority content, repo learning loops, governance maps, CI/release artifacts, and external gates. |

@@ -19,6 +19,7 @@ from digital_asset_directory.exceptions_lake import (
     path_term_matches,
     record_exception_fix_outcome,
     record_exception_event,
+    write_exception_learning_queue,
     write_exception_report,
 )
 
@@ -648,6 +649,203 @@ def test_exception_report_summarizes_categories(tmp_path: Path) -> None:
     assert "`test_validation`: 2" in report_md
 
 
+def test_exception_learning_queue_separates_fix_ready_unresolved_and_backfill(
+    tmp_path: Path,
+) -> None:
+    hub = tmp_path / "hub"
+    repo = tmp_path / "repo"
+    (repo / ".git").mkdir(parents=True)
+    contract = repo / ".digital-asset" / "dad-integration.json"
+    contract.parent.mkdir(parents=True)
+    contract.write_text(
+        json.dumps({"repo_id": "repo", "visibility": "public", "public_facing": False}),
+        encoding="utf-8",
+    )
+    _copy_exception_contracts(hub)
+    clean_fixed_record = record_exception_event(
+        hub,
+        repo,
+        event_type="test_failure",
+        summary="Observed clean test failure that later receives a validated fix.",
+        stage="midflight",
+        severity="medium",
+        capture_contract="failed_command",
+        validation_refs=["python -m pytest tests/test_clean.py failed"],
+        context_refs=["tests/test_clean.py"],
+    )
+    fixed_record = record_exception_event(
+        hub,
+        repo,
+        event_type="review_finding",
+        summary="Observed review finding that later receives a validated fix.",
+        stage="review",
+        severity="medium",
+        capture_contract="review_finding",
+        source_visibility="internal",
+        validation_refs=["initial review finding"],
+    )
+    record_exception_event(
+        hub,
+        repo,
+        event_type="review_finding",
+        summary="Same event type also has an unresolved sibling.",
+        stage="review",
+        severity="medium",
+        capture_contract="review_finding",
+        source_visibility="internal",
+        context_refs=["docs/second-review-finding.md"],
+        validation_refs=["second review finding"],
+    )
+    unresolved_record = record_exception_event(
+        hub,
+        repo,
+        event_type="runtime_exception",
+        summary="Observed runtime exception without a fix outcome yet.",
+        stage="midflight",
+        severity="high",
+        capture_contract="postflight_exception",
+        source_visibility="internal",
+        validation_refs=["python -m pytest failed"],
+    )
+    unvalidated_record = record_exception_event(
+        hub,
+        repo,
+        event_type="schema_validation_failure",
+        summary="Legacy imported fixed claim exists without validation evidence.",
+        stage="postflight",
+        severity="medium",
+        capture_contract="postflight_exception",
+        source_visibility="internal",
+        validation_refs=["validation failure report"],
+    )
+    collect_exception_events(hub, repo)
+    record_exception_fix_outcome(
+        hub,
+        repo,
+        event_id=clean_fixed_record["event"]["event_id"],
+        decision="fixed",
+        summary="Added a regression test for the clean test failure.",
+        validation_refs=["python -m pytest tests/test_clean.py"],
+        regression_test_refs=["tests/test_clean.py::test_clean_failure_regression"],
+        fix_refs=["commit:def456"],
+        owner_authority="repo",
+    )
+    fix_result = record_exception_fix_outcome(
+        hub,
+        repo,
+        event_id=fixed_record["event"]["event_id"],
+        decision="fixed",
+        summary="Added a regression test for the review finding.",
+        validation_refs=["python -m pytest tests/test_example.py"],
+        regression_test_refs=["tests/test_example.py::test_review_finding_regression"],
+        fix_refs=["commit:abc123"],
+        owner_authority="repo",
+    )
+    collect_exception_fix_outcomes(hub, repo)
+    legacy_fix = dict(fix_result["fix_outcome"])
+    legacy_fix.update(
+        {
+            "fix_id": "dad:exception-fix:legacy-unvalidated",
+            "event_id": unvalidated_record["event"]["event_id"],
+            "summary": "Legacy imported fixed claim lacks validation and regression evidence.",
+            "validation_status": "validation_missing",
+            "fix_refs": ["legacy-import:unverified"],
+            "dedupe_key": "dad:exception-fix-dedupe:legacy-unvalidated",
+        }
+    )
+    central_fix_path = hub / "processed" / "exceptions" / "fix-outcomes" / "outcomes.jsonl"
+    with central_fix_path.open("a", encoding="utf-8") as handle:
+        handle.write(json.dumps(legacy_fix) + "\n")
+    target = repo / "docs" / "postmortem-note.md"
+    target.parent.mkdir(parents=True, exist_ok=True)
+    target.write_text("metadata-only backfill should not read this content\n", encoding="utf-8")
+    backfill_exception_candidates(hub, repo, limit=10)
+
+    report = write_exception_learning_queue(
+        hub,
+        output=tmp_path / "learning-queue.json",
+        sample_size_threshold=1,
+    )
+    rows = {row["event_type"]: row for row in report["learning_queue"]}
+
+    assert rows["test_failure"]["learning_status"] == "validated_fix_review_candidate"
+    assert rows["test_failure"]["validated_fix_count"] == 1
+    assert rows["test_failure"]["source_visibility_counts"] == {"public": 1}
+    assert rows["review_finding"]["learning_status"] == "needs_fix_outcome"
+    assert rows["review_finding"]["validated_fix_count"] == 1
+    assert rows["review_finding"]["unresolved_observed_count"] == 1
+    assert any(
+        "observed exception lacks validated fix outcome" in blocker
+        for blocker in rows["review_finding"]["promotion_blockers"]
+    )
+    assert rows["runtime_exception"]["learning_status"] == "needs_fix_outcome"
+    assert rows["runtime_exception"]["unresolved_observed_count"] == 1
+    assert unresolved_record["event"]["event_id"] in rows["runtime_exception"]["example_event_ids"]
+    assert rows["schema_validation_failure"]["learning_status"] == "needs_fix_validation"
+    assert rows["schema_validation_failure"]["fixed_without_validation_count"] == 1
+    assert rows["backfill_exception_candidate"]["learning_status"] == "needs_source_review"
+    assert rows["backfill_exception_candidate"]["backfill_candidate_count"] == 1
+    assert any(
+        "backfill path-signal candidates" in blocker
+        for blocker in rows["backfill_exception_candidate"]["promotion_blockers"]
+    )
+    assert report["queue_counts"] == {
+        "needs_fix_outcome": 2,
+        "needs_fix_validation": 1,
+        "needs_source_review": 1,
+        "validated_fix_review_candidate": 1,
+    }
+    assert report["input_hashes"]["processed/exceptions/lake/events.jsonl"].startswith("sha256:")
+    md_text = (tmp_path / "learning-queue.md").read_text(encoding="utf-8")
+    assert "Boundary: candidate evidence only" in md_text
+    assert "`review_finding`" in md_text
+
+
+def test_exception_learning_queue_blocks_non_public_origin_without_release(
+    tmp_path: Path,
+) -> None:
+    hub = tmp_path / "hub"
+    repo = tmp_path / "repo"
+    (repo / ".git").mkdir(parents=True)
+    _copy_exception_contracts(hub)
+    event_record = record_exception_event(
+        hub,
+        repo,
+        event_type="test_failure",
+        summary="Unknown-origin test failure later receives a validated fix.",
+        stage="midflight",
+        severity="medium",
+        capture_contract="failed_command",
+        validation_refs=["python -m pytest tests/test_unknown.py failed"],
+        context_refs=["tests/test_unknown.py"],
+    )
+    collect_exception_events(hub, repo)
+    record_exception_fix_outcome(
+        hub,
+        repo,
+        event_id=event_record["event"]["event_id"],
+        decision="fixed",
+        summary="Added a regression test for the unknown-origin failure.",
+        validation_refs=["python -m pytest tests/test_unknown.py"],
+        regression_test_refs=["tests/test_unknown.py::test_unknown_origin_regression"],
+        fix_refs=["commit:789abc"],
+        owner_authority="repo",
+    )
+    collect_exception_fix_outcomes(hub, repo)
+
+    report = write_exception_learning_queue(
+        hub,
+        output=tmp_path / "learning-queue.json",
+        sample_size_threshold=1,
+    )
+    row = {item["event_type"]: item for item in report["learning_queue"]}["test_failure"]
+
+    assert row["learning_status"] == "needs_human_release"
+    assert row["source_visibility_counts"] == {"unknown": 1}
+    assert row["public_release_required_count"] == 1
+    assert any("human release" in blocker for blocker in row["promotion_blockers"])
+
+
 def test_exception_report_separates_observed_from_backfill_candidates(
     tmp_path: Path,
 ) -> None:
@@ -751,35 +949,63 @@ def test_exception_report_does_not_count_status_only_fix_as_validated(
     tmp_path: Path,
 ) -> None:
     hub = tmp_path / "hub"
+    repo = tmp_path / "repo"
+    (repo / ".git").mkdir(parents=True)
+    contract = repo / ".digital-asset" / "dad-integration.json"
+    contract.parent.mkdir(parents=True)
+    contract.write_text(
+        json.dumps({"repo_id": "repo", "visibility": "public", "public_facing": False}),
+        encoding="utf-8",
+    )
     _copy_exception_contracts(hub)
+    event_record = record_exception_event(
+        hub,
+        repo,
+        event_type="review_finding",
+        summary="Observed review finding that receives a status-only fix claim.",
+        stage="review",
+        severity="medium",
+        capture_contract="review_finding",
+        validation_refs=["review finding"],
+    )
+    collect_exception_events(hub, repo)
+    fix_result = record_exception_fix_outcome(
+        hub,
+        repo,
+        event_id=event_record["event"]["event_id"],
+        decision="fixed",
+        summary="Fixed claim has refs but validation status was imported as missing.",
+        validation_refs=["python -m pytest tests/test_fix.py"],
+        regression_test_refs=["tests/test_fix.py::test_review_finding_regression"],
+        fix_refs=["commit:abc123"],
+        owner_authority="repo",
+    )
+    unvalidated = dict(fix_result["fix_outcome"])
+    unvalidated["validation_status"] = "validation_missing"
+    invalid_validated = dict(fix_result["fix_outcome"])
+    invalid_validated.update(
+        {
+            "fix_id": "dad:exception-fix:invalid-string-refs",
+            "validation_refs": "python -m pytest tests/test_fix.py",
+            "regression_test_refs": "tests/test_fix.py::test_review_finding_regression",
+            "dedupe_key": "dad:exception-fix-dedupe:invalid-string-refs",
+        }
+    )
     path = hub / "processed" / "exceptions" / "fix-outcomes" / "outcomes.jsonl"
     path.parent.mkdir(parents=True, exist_ok=True)
-    rows = [
-        {
-            "fix_id": "dad:exception-fix:status-only",
-            "event_id": "dad:exception-event:missing-1",
-            "decision": "fixed",
-            "validation_status": "validated",
-            "validation_refs": [],
-            "event_lookup_status": "found_in_lake",
-        },
-        {
-            "fix_id": "dad:exception-fix:missing-event",
-            "event_id": "dad:exception-event:missing-2",
-            "decision": "fixed",
-            "validation_status": "validated",
-            "validation_refs": ["python -m pytest tests/test_fix.py"],
-            "event_lookup_status": "missing_from_lake",
-        },
-    ]
+    rows = [unvalidated, invalid_validated]
     path.write_text("\n".join(json.dumps(row) for row in rows) + "\n", encoding="utf-8")
 
     report = write_exception_report(hub)
 
-    assert report["fix_outcome_count"] == 2
+    assert report["fix_outcome_count"] == 1
     assert report["validated_fixed_count"] == 0
-    assert report["fixed_without_validation_count"] == 2
-    assert report["fix_outcome_missing_event_link_count"] == 1
+    assert report["fixed_without_validation_count"] == 1
+    assert report["fix_outcome_missing_event_link_count"] == 0
+    quarantine = (
+        hub / "processed" / "exceptions" / "quarantine" / "fix_outcome_report_invalid_records.jsonl"
+    )
+    assert "validation_refs" in quarantine.read_text(encoding="utf-8")
 
 
 def test_fixed_outcome_without_validation_fails_closed(tmp_path: Path) -> None:
