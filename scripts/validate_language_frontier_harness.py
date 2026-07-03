@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 from pathlib import Path
 from typing import Any
+from urllib.parse import urlparse
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -28,25 +29,73 @@ def load_json(path: Path) -> dict[str, Any]:
     return json.loads(path.read_text(encoding="utf-8"))
 
 
-def classify_case(case: dict[str, Any], trusted_source_ids: set[str]) -> dict[str, Any]:
+def source_ref_matches_patterns(ref: str, url_patterns: list[str]) -> bool:
+    if not ref.startswith("https://"):
+        return False
+    parsed = urlparse(ref)
+    ref_host = (parsed.hostname or "").casefold()
+    ref_path = parsed.path.strip("/").casefold()
+    for pattern in url_patterns:
+        pattern_text = pattern.removeprefix("https://").strip("/").casefold()
+        pattern_host, _, pattern_path = pattern_text.partition("/")
+        host_matches = ref_host == pattern_host or ref_host.endswith(f".{pattern_host}")
+        if not host_matches:
+            continue
+        if pattern_path and not ref_path.startswith(pattern_path):
+            continue
+        return True
+    return False
+
+
+def is_trusted_source_ref(source: str, trusted_sources: dict[str, dict[str, Any]]) -> bool:
+    if source in trusted_sources:
+        return True
+    return any(
+        source_ref_matches_patterns(
+            source,
+            [str(pattern) for pattern in trusted_source.get("url_patterns", [])],
+        )
+        for trusted_source in trusted_sources.values()
+    )
+
+
+def classify_case(case: dict[str, Any], trusted_sources: dict[str, dict[str, Any]]) -> dict[str, Any]:
     source = str(case.get("source_id_or_url", "")).strip()
     language = str(case.get("language", "")).strip().lower()
+    known_language = language in {"python", "rust"}
     summary = str(case.get("safe_summary", "")).lower()
     validation = str(case.get("validation_or_eval_idea", "")).strip()
+    payload_text = " ".join(
+        str(case.get(field, ""))
+        for field in [
+            "safe_summary",
+            "why_ai_coding_may_improve",
+            "applicability_limits",
+            "validation_or_eval_idea",
+        ]
+    ).lower()
     routes: list[str] = []
     blocked_reasons: list[str] = []
+    review_reasons: list[str] = []
 
-    if source not in trusted_source_ids and not source.startswith("https://"):
+    trusted_source = is_trusted_source_ref(source, trusted_sources)
+    if not trusted_source and not source.startswith("https://"):
         blocked_reasons.append("unknown_source_without_url")
+    elif not trusted_source and known_language:
+        review_reasons.append("unknown_https_source_needs_review")
+    elif not trusted_source:
+        review_reasons.append("future_language_source_needs_review")
     if not validation:
         blocked_reasons.append("missing_validation_or_eval_idea")
-    if any(term in summary for term in FORBIDDEN_PAYLOAD_TERMS):
+    if any(term in payload_text for term in FORBIDDEN_PAYLOAD_TERMS):
         blocked_reasons.append("unsafe_or_copied_payload")
     if "benchmark" in summary and "same-workload" not in validation.lower():
         blocked_reasons.append("benchmark_without_same_workload_evidence")
 
     if blocked_reasons:
         routes.append("reject")
+    elif review_reasons and known_language:
+        routes.append("source_review_required")
     elif language == "python":
         routes.extend(
             [
@@ -70,14 +119,22 @@ def classify_case(case: dict[str, Any], trusted_source_ids: set[str]) -> dict[st
                 "dad:harness:language-frontier-research",
             ]
         )
+        if review_reasons:
+            routes.append("source_review_required")
 
-    return {"case_id": case.get("case_id"), "routes": routes, "blocked_reasons": blocked_reasons}
+    return {
+        "case_id": case.get("case_id"),
+        "routes": routes,
+        "blocked_reasons": blocked_reasons,
+        "review_reasons": review_reasons,
+    }
 
 
 def main() -> int:
     errors: list[str] = []
-    trusted_source_ids = {
-        source["source_id"] for source in load_json(TRUSTED_SOURCES).get("sources", [])
+    trusted_sources = {
+        source["source_id"]: source
+        for source in load_json(TRUSTED_SOURCES).get("sources", [])
     }
     harness = load_json(HARNESS_DIR / "harness.json")
     examples = load_json(EXAMPLES)
@@ -103,7 +160,7 @@ def main() -> int:
         errors.append(f"minimum eval missing required cases: {missing_eval_cases}")
 
     results = [
-        classify_case(case, trusted_source_ids)
+        classify_case(case, trusted_sources)
         for case in examples.get("cases", [])
     ]
     result_by_case = {str(result["case_id"]): result for result in results}

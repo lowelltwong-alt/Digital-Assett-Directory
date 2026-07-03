@@ -32,6 +32,7 @@
           "frontier_questions",
           "ai_advantages",
           "ai_overlooked_patterns",
+          "ai_overlooked_operations",
           "agent_coding_guidelines",
           "codebase_watch_targets",
           "frontier_promotion_policy",
@@ -114,6 +115,66 @@
                 "why_ai_may_miss_it": {"type": "string", "minLength": 1},
                 "detection_signals": {"type": "array", "items": {"type": "string", "minLength": 1}, "minItems": 1},
                 "route_to": {"type": "array", "items": {"type": "string", "minLength": 1}, "minItems": 1}
+              }
+            }
+          },
+          "ai_overlooked_operations": {
+            "type": "array",
+            "minItems": 1,
+            "items": {
+              "type": "object",
+              "required": [
+                "operation_id",
+                "summary",
+                "source_ids",
+                "review_status",
+                "maturity",
+                "cost_risk",
+                "candidate_only",
+                "run_or_inspect",
+                "use_when",
+                "proof_output",
+                "route_to",
+                "safety_limits"
+              ],
+              "additionalProperties": false,
+              "properties": {
+                "operation_id": {"type": "string", "pattern": "^[a-z0-9][a-z0-9:-]*$"},
+                "summary": {"type": "string", "minLength": 1},
+                "source_ids": {
+                  "type": "array",
+                  "items": {"type": "string", "pattern": "^[a-z0-9][a-z0-9-]*$"},
+                  "minItems": 1
+                },
+                "review_status": {"enum": ["candidate", "installed_for_local_reuse", "template"]},
+                "maturity": {"enum": ["proof_operation", "scout_operation", "template_operation"]},
+                "cost_risk": {"enum": ["low", "medium", "high", "unknown"]},
+                "candidate_only": {"type": "boolean"},
+                "run_or_inspect": {
+                  "type": "array",
+                  "items": {"type": "string", "minLength": 1},
+                  "minItems": 1
+                },
+                "use_when": {
+                  "type": "array",
+                  "items": {"type": "string", "minLength": 1},
+                  "minItems": 1
+                },
+                "proof_output": {
+                  "type": "array",
+                  "items": {"type": "string", "minLength": 1},
+                  "minItems": 1
+                },
+                "route_to": {
+                  "type": "array",
+                  "items": {"type": "string", "minLength": 1},
+                  "minItems": 1
+                },
+                "safety_limits": {
+                  "type": "array",
+                  "items": {"type": "string", "minLength": 1},
+                  "minItems": 1
+                }
               }
             }
           },

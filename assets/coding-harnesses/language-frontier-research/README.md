@@ -24,6 +24,8 @@ future agents write safer, faster, or easier-to-review code.
 
 - What proof surface does the language or tool add: compiler, linter, type
   checker, test runner, fuzzer, profiler, package auditor, or runtime tracer?
+- What concrete operation should an agent run or inspect before making the
+  claim, and what safe proof output should be recorded?
 - What pattern is AI likely to miss because it is underrepresented in generic
   examples but valuable in DAD repos?
 - What local command would falsify the benefit?

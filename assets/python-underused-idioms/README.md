@@ -6,7 +6,7 @@ Offering: `dad:offering:python-underused-idioms` — machine-readable card in [i
 
 AI coding agents write the Python they saw most often in training data. Constructs that are
 rare on public GitHub — because they are newer than most training code, or historically
-under-taught — get skipped even where they are the best tool. This card curates stdlib-only,
+under-taught — get skipped even where they may be a better fit. This card curates stdlib-only,
 stable constructs judged under-represented relative to their value for **writing**,
 **reading**, and **researching** code, so agents deliberately consider them.
 
@@ -40,7 +40,10 @@ changes this card.
 The stronger language control plane lives in
 `registry/language-coding-advantage-registry.json`. Its Python row lists
 internal guidelines, high-signal codebase watch targets, and promotion/rejection
-evidence for Python frontier ideas.
+evidence for Python frontier ideas. The `ai_overlooked_operations` section is
+the companion playbook for what agents should run or inspect before relying on
+generic Python examples: structural source queries, runtime-cost traces, pytest
+collection maps, invariant probes, and environment/tooling census.
 
 ## Boundary
 

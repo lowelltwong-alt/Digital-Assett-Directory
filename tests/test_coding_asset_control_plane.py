@@ -25,6 +25,68 @@ def validate(schema_rel: str, payload: dict) -> None:
     validator_cls(schema).validate(payload)
 
 
+def test_trusted_source_url_matching_rejects_redirect_spoof():
+    sys.path.insert(0, str(ROOT / "scripts"))
+    from validate_coding_asset_control_plane import source_ref_matches_patterns
+
+    patterns = ["github.com/obi1kenobi/cargo-semver-checks"]
+    assert source_ref_matches_patterns(
+        "https://github.com/obi1kenobi/cargo-semver-checks",
+        patterns,
+    )
+    assert not source_ref_matches_patterns(
+        "https://attacker.example/redirect?u=github.com/obi1kenobi/cargo-semver-checks",
+        patterns,
+    )
+    assert source_ref_matches_patterns(
+        "https://docs.python.org/3/whatsnew/",
+        ["python.org"],
+    )
+
+
+def test_language_frontier_harness_holds_untrusted_https_and_screens_all_fields():
+    sys.path.insert(0, str(ROOT / "scripts"))
+    from validate_language_frontier_harness import classify_case
+
+    trusted_sources = {
+        source["source_id"]: source
+        for source in load_json("registry/trusted-source-registry.json")["sources"]
+    }
+
+    spoofed_rust = classify_case(
+        {
+            "case_id": "spoofed-rust-source",
+            "language": "rust",
+            "source_id_or_url": (
+                "https://attacker.example/redirect?"
+                "u=github.com/obi1kenobi/cargo-semver-checks"
+            ),
+            "safe_summary": "A Rust API compatibility idea may help.",
+            "why_ai_coding_may_improve": "It may catch breakage.",
+            "applicability_limits": "Use only as candidate evidence.",
+            "validation_or_eval_idea": "Run cargo semver-checks on a reviewed crate.",
+        },
+        trusted_sources,
+    )
+    assert spoofed_rust["routes"] == ["source_review_required"]
+    assert "unknown_https_source_needs_review" in spoofed_rust["review_reasons"]
+
+    unsafe_payload = classify_case(
+        {
+            "case_id": "hidden-private-data",
+            "language": "python",
+            "source_id_or_url": "python-core",
+            "safe_summary": "A property-test idea may help.",
+            "why_ai_coding_may_improve": "It checks generated rows.",
+            "applicability_limits": "Do not include private rows.",
+            "validation_or_eval_idea": "Manual review.",
+        },
+        trusted_sources,
+    )
+    assert unsafe_payload["routes"] == ["reject"]
+    assert "unsafe_or_copied_payload" in unsafe_payload["blocked_reasons"]
+
+
 def test_coding_asset_control_plane_validator_passes():
     result = subprocess.run(
         [sys.executable, "scripts/validate_coding_asset_control_plane.py"],
@@ -141,6 +203,9 @@ def test_language_coding_advantage_registry_resolves_sources_and_assets():
     assert {"rust-ecosystem-curation", "rust-fuzz", "rust-test-frontier"}.issubset(
         languages["rust"]["trusted_source_ids"]
     )
+    assert {"rust-api-compatibility", "rust-mutation-testing"}.issubset(
+        languages["rust"]["trusted_source_ids"]
+    )
     assert "rust-high-signal-codebases" in languages["rust"]["trusted_source_ids"]
     harness_ids = {harness["harness_id"] for harness in harness_registry["harnesses"]}
     assert "dad:harness:language-frontier-research" in harness_ids
@@ -151,6 +216,10 @@ def test_language_coding_advantage_registry_resolves_sources_and_assets():
     }
     rust_ecosystem_patterns = set(trusted_sources["rust-ecosystem-curation"]["url_patterns"])
     assert {"lib.rs", "docs.rs", "blessed.rs"}.issubset(rust_ecosystem_patterns)
+    assert "mutants.rs" in set(trusted_sources["rust-mutation-testing"]["url_patterns"])
+    assert "github.com/obi1kenobi/cargo-semver-checks" in set(
+        trusted_sources["rust-api-compatibility"]["url_patterns"]
+    )
     python_patterns = {
         pattern["pattern_id"] for pattern in languages["python"]["ai_overlooked_patterns"]
     }
@@ -161,6 +230,32 @@ def test_language_coding_advantage_registry_resolves_sources_and_assets():
     assert "py-pattern:static-checker-negative-contract" in python_patterns
     assert "rs-pattern:fuzz-target-at-parser-boundary" in rust_patterns
     assert "rs-pattern:isolated-test-runner-before-speed-claim" in rust_patterns
+    python_operations = {
+        operation["operation_id"]
+        for operation in languages["python"]["ai_overlooked_operations"]
+    }
+    rust_operations = {
+        operation["operation_id"]
+        for operation in languages["rust"]["ai_overlooked_operations"]
+    }
+    future_operations = {
+        operation["operation_id"]
+        for operation in languages["future-language-template"]["ai_overlooked_operations"]
+    }
+    assert {
+        "py-operation:structural-source-query",
+        "py-operation:runtime-cost-and-failure-trace",
+        "py-operation:test-collection-and-invariant-map",
+        "py-operation:environment-and-tooling-census",
+    }.issubset(python_operations)
+    assert {
+        "rs-operation:cargo-metadata-and-dependency-graph",
+        "rs-operation:compiler-lint-doc-proof",
+        "rs-operation:structured-test-and-parity-run",
+        "rs-operation:fuzz-mutation-and-ub-scout",
+        "rs-operation:api-compatibility-gate",
+    }.issubset(rust_operations)
+    assert future_operations == {"future-operation:proof-surface-inventory"}
     python_guidelines = {
         item["guideline_id"] for item in languages["python"]["agent_coding_guidelines"]
     }
@@ -218,6 +313,22 @@ def test_language_coding_advantage_registry_resolves_sources_and_assets():
             for target in language["codebase_watch_targets"]
             for target_source_id in target["source_ids"]
         }.issubset(trusted_source_ids)
+        for operation in language["ai_overlooked_operations"]:
+            assert operation["candidate_only"] is True
+            assert set(operation["source_ids"]).issubset(trusted_source_ids)
+            assert not any(
+                route.startswith("registry/trusted-source-registry.json")
+                for route in operation["route_to"]
+            )
+            if language["language_id"] == "future-language-template":
+                assert operation["review_status"] == "template"
+                assert operation["maturity"] == "template_operation"
+            else:
+                assert operation["review_status"] in {
+                    "candidate",
+                    "installed_for_local_reuse",
+                }
+                assert operation["maturity"] in {"proof_operation", "scout_operation"}
         for target in language["codebase_watch_targets"]:
             for example in target["example_refs"]:
                 assert set(example) == {

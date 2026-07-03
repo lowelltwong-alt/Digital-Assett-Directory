@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 from pathlib import Path
 from typing import Any
+from urllib.parse import urlparse
 
 from jsonschema.validators import validator_for
 
@@ -61,8 +62,19 @@ def require_local_evidence_path(value: str, label: str, errors: list[str]) -> No
 def source_ref_matches_patterns(ref: str, url_patterns: list[str]) -> bool:
     if not ref.startswith("https://"):
         return False
-    normalized = ref.removeprefix("https://").strip("/").casefold()
-    return any(pattern.strip("/").casefold() in normalized for pattern in url_patterns)
+    parsed = urlparse(ref)
+    ref_host = (parsed.hostname or "").casefold()
+    ref_path = parsed.path.strip("/").casefold()
+    for pattern in url_patterns:
+        pattern_text = pattern.removeprefix("https://").strip("/").casefold()
+        pattern_host, _, pattern_path = pattern_text.partition("/")
+        host_matches = ref_host == pattern_host or ref_host.endswith(f".{pattern_host}")
+        if not host_matches:
+            continue
+        if pattern_path and not ref_path.startswith(pattern_path):
+            continue
+        return True
+    return False
 
 
 def require_language_output_channel(value: str, label: str, errors: list[str]) -> None:
@@ -241,10 +253,34 @@ def main() -> int:
             errors,
         )
         require_unique(
+            [item["operation_id"] for item in language["ai_overlooked_operations"]],
+            f"language {language_id} overlooked operations",
+            errors,
+        )
+        require_unique(
             [item["target_id"] for item in language["codebase_watch_targets"]],
             f"language {language_id} codebase watch targets",
             errors,
         )
+        for operation in language["ai_overlooked_operations"]:
+            for source_id in operation["source_ids"]:
+                if source_id not in trusted_source_ids:
+                    errors.append(
+                        f"language {language_id} operation {operation['operation_id']} "
+                        f"references unknown trusted source {source_id}"
+                    )
+            for route in operation["route_to"]:
+                if route.startswith("registry/trusted-source-registry.json"):
+                    errors.append(
+                        f"language {language_id} operation {operation['operation_id']} "
+                        "routes directly to trusted-source registry; use dad:need, harness, "
+                        "or reviewed asset docs instead"
+                    )
+                require_language_output_channel(
+                    route,
+                    f"language {language_id} operation {operation['operation_id']} route",
+                    errors,
+                )
         for target in language["codebase_watch_targets"]:
             target_source_ids = set(target["source_ids"])
             for source_id in target["source_ids"]:

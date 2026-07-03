@@ -146,6 +146,131 @@
           ]
         }
       ],
+      "ai_overlooked_operations": [
+        {
+          "operation_id": "py-operation:structural-source-query",
+          "summary": "Use Python's AST and inspection tools to ask structural questions before guessing from grep or memory.",
+          "source_ids": ["python-core"],
+          "review_status": "installed_for_local_reuse",
+          "maturity": "proof_operation",
+          "cost_risk": "low",
+          "candidate_only": true,
+          "run_or_inspect": [
+            "Small repo-local ast.parse or symtable script for definitions, decorators, imports, and repeated keys.",
+            "inspect.signature and importlib.metadata for real callable and entry-point surfaces.",
+            "python -m py_compile or python -m compileall for syntax/import-time proof on changed modules."
+          ],
+          "use_when": [
+            "A task changes registries, CLI surfaces, dynamic imports, generated modules, or repeated JSON keys.",
+            "Text search finds too many matches or misses runtime registration paths."
+          ],
+          "proof_output": [
+            "Counts, paths, symbol names, signatures, or compile results rather than copied source bodies.",
+            "A short note explaining which assumption the structural query confirmed or falsified."
+          ],
+          "route_to": [
+            "assets/python-underused-idioms/idioms.json",
+            "registry/coding-tactics-radar.json#python-typeddict-json-boundary",
+            "dad:need:language-frontier-signals"
+          ],
+          "safety_limits": [
+            "Do not send private source snippets through DAD mail.",
+            "Treat dynamic import results as repo-local evidence, not source authority for another repo."
+          ]
+        },
+        {
+          "operation_id": "py-operation:runtime-cost-and-failure-trace",
+          "summary": "Use cProfile, pstats, tracemalloc, and faulthandler before declaring a Python path slow, leaky, or stuck.",
+          "source_ids": ["python-core", "pytest-dev"],
+          "review_status": "installed_for_local_reuse",
+          "maturity": "proof_operation",
+          "cost_risk": "medium",
+          "candidate_only": true,
+          "run_or_inspect": [
+            "python -m cProfile -o profile.out <command> followed by pstats summaries.",
+            "tracemalloc snapshots around suspected allocation-heavy paths.",
+            "faulthandler.dump_traceback_later for hangs and deadlocks in local-only debugging."
+          ],
+          "use_when": [
+            "A task mentions slow tests, hot paths, memory growth, hangs, or possible Rust migration.",
+            "The suspected bottleneck might be fixture setup, subprocess waits, imports, or I/O rather than CPU."
+          ],
+          "proof_output": [
+            "Command, duration, top cumulative functions, allocation summary, or stack traces sanitized to paths and symbols.",
+            "Before/after evidence on the same workload before any speed claim."
+          ],
+          "route_to": [
+            "assets/coding-harnesses/python-test-performance-orchestration",
+            "assets/rust-buildout-guide/rust-buildout.json",
+            "dad:need:coding-harness-feedback"
+          ],
+          "safety_limits": [
+            "Do not publish raw traces if they contain private paths, arguments, secrets, or row contents.",
+            "Do not propose Rust from profiling until Python-first fixes and same-workload evidence are recorded."
+          ]
+        },
+        {
+          "operation_id": "py-operation:test-collection-and-invariant-map",
+          "summary": "Use pytest collection, durations, markers, and property-test probes to map what a change actually exercises.",
+          "source_ids": ["pytest-dev", "hypothesis"],
+          "review_status": "installed_for_local_reuse",
+          "maturity": "proof_operation",
+          "cost_risk": "medium",
+          "candidate_only": true,
+          "run_or_inspect": [
+            "python -m pytest --collect-only for candidate scope.",
+            "python -m pytest --durations=<n> on the relevant suite.",
+            "Small Hypothesis/property probes for parsers, normalizers, dedupe, IDs, and serializers when locally allowed."
+          ],
+          "use_when": [
+            "A test suite is too slow for every iteration.",
+            "A fix changes a class of inputs but only has example tests."
+          ],
+          "proof_output": [
+            "Collected node IDs, duration summary, selected-test rationale, and invariant name.",
+            "A regression that would fail on old behavior, or a recorded reason the property tool is not approved."
+          ],
+          "route_to": [
+            "assets/coding-harnesses/python-test-performance-orchestration",
+            "registry/coding-tactics-radar.json#python-property-based-invariants",
+            "dad:need:coding-harness-feedback"
+          ],
+          "safety_limits": [
+            "Selected tests are evidence only when scope is explained.",
+            "Generated counterexamples stay local unless sanitized and reviewed."
+          ]
+        },
+        {
+          "operation_id": "py-operation:environment-and-tooling-census",
+          "summary": "Inspect the repo's actual Python version, package metadata, entry points, lock files, and configured tools before recommending tactics.",
+          "source_ids": ["python-core", "python-packaging", "astral", "python-type-checkers"],
+          "review_status": "installed_for_local_reuse",
+          "maturity": "proof_operation",
+          "cost_risk": "low",
+          "candidate_only": true,
+          "run_or_inspect": [
+            "python --version and pyproject/tool sections.",
+            "importlib.metadata.version and entry_points for installed local packages.",
+            "Ruff, uv, pytest, mypy, or pyright config only when the repo already carries those tools."
+          ],
+          "use_when": [
+            "A guidance item depends on a Python version, optional checker, package manager, or test plugin.",
+            "An agent is about to suggest a new dependency or tool."
+          ],
+          "proof_output": [
+            "Version floor, configured tool list, and whether the repo already runs the needed command.",
+            "A local approval note before adding optional tooling."
+          ],
+          "route_to": [
+            "assets/python-ai-advantage-preflight",
+            "dad:need:language-frontier-signals"
+          ],
+          "safety_limits": [
+            "Do not treat available global tools as repo-approved tools.",
+            "Do not include full environment dumps or paths in public-facing mail."
+          ]
+        }
+      ],
       "agent_coding_guidelines": [
         {
           "guideline_id": "py-guideline:shape-first-boundaries",
@@ -428,6 +553,8 @@
         "rust-security",
         "rust-fuzz",
         "rust-test-frontier",
+        "rust-api-compatibility",
+        "rust-mutation-testing",
         "pyo3",
         "google"
       ],
@@ -567,6 +694,160 @@
             "registry/coding-tactics-radar.json#rust-nextest-isolated-runner",
             "assets/coding-harnesses/rust-shadow-parity-harness",
             "dad:need:language-frontier-signals"
+          ]
+        }
+      ],
+      "ai_overlooked_operations": [
+        {
+          "operation_id": "rs-operation:cargo-metadata-and-dependency-graph",
+          "summary": "Use Cargo metadata, cargo tree, and dependency audits to inspect the actual crate graph before adding or promoting Rust tooling.",
+          "source_ids": ["rust-lang", "rust-security"],
+          "review_status": "installed_for_local_reuse",
+          "maturity": "proof_operation",
+          "cost_risk": "medium",
+          "candidate_only": true,
+          "run_or_inspect": [
+            "cargo metadata --format-version 1 for workspace/package targets and feature surfaces.",
+            "cargo tree for dependency duplication, feature activation, and unexpected transitive crates.",
+            "cargo audit or RustSec review when security posture affects adoption."
+          ],
+          "use_when": [
+            "A Rust tool, crate, or PyO3 extension is proposed for DAD or a downstream repo.",
+            "A build or packaging issue might be caused by features, target triples, or dependency drift."
+          ],
+          "proof_output": [
+            "Workspace package IDs, enabled features, dependency-risk summary, and exact command results.",
+            "A license/provenance note before any crate becomes a DAD harness dependency."
+          ],
+          "route_to": [
+            "assets/rust-buildout-guide/rust-buildout.json",
+            "dad:need:coding-harness-feedback",
+            "dad:need:language-frontier-signals"
+          ],
+          "safety_limits": [
+            "Do not auto-upgrade or add crates by mail.",
+            "Do not publish private paths or internal crate names to public-facing repos without release review."
+          ]
+        },
+        {
+          "operation_id": "rs-operation:compiler-lint-doc-proof",
+          "summary": "Use cargo check, Clippy, rustfmt, doc tests, and rustdoc surfaces as executable proof, not optional polish.",
+          "source_ids": ["rust-lang"],
+          "review_status": "installed_for_local_reuse",
+          "maturity": "proof_operation",
+          "cost_risk": "low",
+          "candidate_only": true,
+          "run_or_inspect": [
+            "cargo fmt --check.",
+            "cargo clippy --all-targets --all-features with explicit lint exceptions.",
+            "cargo test --doc or cargo doc metadata when public APIs or examples changed."
+          ],
+          "use_when": [
+            "Rust source changes touch public APIs, error types, invariants, or examples.",
+            "An AI agent needs the compiler and linter to carry part of the review burden."
+          ],
+          "proof_output": [
+            "Command, exit code, warning/error class, and any intentionally allowed lint.",
+            "Doc-test or rustdoc evidence when examples are part of the contract."
+          ],
+          "route_to": [
+            "assets/rust-buildout-guide/rust-buildout.json",
+            "dad:need:coding-harness-feedback"
+          ],
+          "safety_limits": [
+            "Do not silence broad lint classes to make AI-generated Rust pass.",
+            "Do not claim compiler success proves behavioral parity with Python."
+          ]
+        },
+        {
+          "operation_id": "rs-operation:structured-test-and-parity-run",
+          "summary": "Use structured Rust test identity and parity records before comparing Rust to Python or promoting a shadow replacement.",
+          "source_ids": ["rust-test-frontier"],
+          "review_status": "candidate",
+          "maturity": "scout_operation",
+          "cost_risk": "medium",
+          "candidate_only": true,
+          "run_or_inspect": [
+            "cargo test with captured command, exit code, and duration.",
+            "cargo nextest list/run when isolated runner evidence matters.",
+            "DAD rust-shadow-parity report comparing non-empty same-scope Python and Rust cases."
+          ],
+          "use_when": [
+            "Rust is being evaluated as a shadow layer for Python behavior.",
+            "A speed claim could hide mismatched test scope."
+          ],
+          "proof_output": [
+            "Per-command timings, test identities, report paths, parity map, and mismatch log.",
+            "Explicit coverage-unverified status when structured same-scope reports are missing."
+          ],
+          "route_to": [
+            "assets/coding-harnesses/rust-shadow-parity-harness",
+            "dad:need:coding-harness-feedback"
+          ],
+          "safety_limits": [
+            "Timing savings are not reportable when parity is failed or unverified.",
+            "Rust test success alone is not equivalent to Python native behavior."
+          ]
+        },
+        {
+          "operation_id": "rs-operation:fuzz-mutation-and-ub-scout",
+          "summary": "Use fuzz, property, mutation, or undefined-behavior checks as scouts for pure Rust boundaries before sharing the tool.",
+          "source_ids": ["rust-lang", "rust-fuzz", "rust-mutation-testing"],
+          "review_status": "candidate",
+          "maturity": "scout_operation",
+          "cost_risk": "high",
+          "candidate_only": true,
+          "run_or_inspect": [
+            "cargo fuzz, proptest, or quickcheck around pure parser/chunker/scanner functions.",
+            "cargo mutants as a candidate mutation-testing source when the crate and license are reviewed.",
+            "cargo miri for unsafe or interpreter-checkable undefined-behavior concerns."
+          ],
+          "use_when": [
+            "Rust accepts untrusted text, bytes, source files, paths, JSONL, mail, or exception packets.",
+            "A parser, chunker, or classifier will become a DAD shared validator or scanner."
+          ],
+          "proof_output": [
+            "Fuzz/property target name, generated-input policy, survived/killed mutation summary, or Miri result.",
+            "A sanitization note for any minimized failure case before it can leave the repo."
+          ],
+          "route_to": [
+            "assets/rust-buildout-guide/rust-buildout.json",
+            "dad:need:coding-harness-feedback",
+            "dad:need:language-frontier-signals"
+          ],
+          "safety_limits": [
+            "Do not mail generated corpora, private crash inputs, or raw source snippets.",
+            "Treat mutation and fuzz outcomes as harness evidence, not automatic proof of correctness."
+          ]
+        },
+        {
+          "operation_id": "rs-operation:api-compatibility-gate",
+          "summary": "Use API compatibility checks before Rust leaf tools become shared dependencies across repos.",
+          "source_ids": ["rust-api-compatibility"],
+          "review_status": "candidate",
+          "maturity": "scout_operation",
+          "cost_risk": "medium",
+          "candidate_only": true,
+          "run_or_inspect": [
+            "cargo semver-checks as a candidate gate when a crate exposes a public Rust API.",
+            "Public API diff notes for binary or CLI tools whose output is consumed by agents.",
+            "Versioned JSON/report schema validation for Python-facing Rust CLIs."
+          ],
+          "use_when": [
+            "A Rust crate or CLI becomes a DAD-owned shared asset.",
+            "Downstream repos may depend on the Rust output format, command flags, or library API."
+          ],
+          "proof_output": [
+            "Compatibility command result, affected public items or output fields, and release-note pointer.",
+            "Human-reviewed migration note for breaking changes."
+          ],
+          "route_to": [
+            "assets/rust-buildout-guide/rust-buildout.json",
+            "dad:need:coding-harness-feedback"
+          ],
+          "safety_limits": [
+            "Do not treat API compatibility as semantic correctness.",
+            "Do not publish internal path examples in public release notes."
           ]
         }
       ],
@@ -957,6 +1238,38 @@
             "docs/LANGUAGE_CODING_ADVANTAGE.md",
             "dad:need:language-frontier-signals",
             "dad:need:coding-harness-feedback"
+          ]
+        }
+      ],
+      "ai_overlooked_operations": [
+        {
+          "operation_id": "future-operation:proof-surface-inventory",
+          "summary": "Before DAD adopts a new language, inventory the operations that make agents better at checking, running, and repairing code.",
+          "source_ids": ["openai", "anthropic"],
+          "review_status": "template",
+          "maturity": "template_operation",
+          "cost_risk": "unknown",
+          "candidate_only": true,
+          "run_or_inspect": [
+            "Compiler, formatter, linter, type checker, package auditor, test runner, fuzzer/property tool, profiler, runtime tracer, and documentation generator.",
+            "Reference implementation or official examples only as pointers until license/provenance is reviewed."
+          ],
+          "use_when": [
+            "A repo starts using a language not yet represented in DAD.",
+            "An external source claims a language or tool improves coding quality, speed, safety, or AI legibility."
+          ],
+          "proof_output": [
+            "Named proof commands or APIs, minimum version, failure example, and local adoption requirement.",
+            "A candidate harness route or explicit reason no harness exists yet."
+          ],
+          "route_to": [
+            "docs/LANGUAGE_CODING_ADVANTAGE.md",
+            "registry/language-coding-advantage-registry.json",
+            "dad:need:language-frontier-signals"
+          ],
+          "safety_limits": [
+            "Do not recommend the language broadly until official or reviewed sources exist.",
+            "Do not copy third-party examples, benchmarks, or private code into DAD."
           ]
         }
       ],

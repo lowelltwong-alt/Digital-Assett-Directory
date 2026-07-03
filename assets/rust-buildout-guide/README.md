@@ -29,7 +29,8 @@ Cite `rs-idiom:*` ids in reviews and lessons so adoption is traceable.
 
 Refresh candidates come from `registry/trusted-source-registry.json` entries for
 `rust-lang`, `rust-community-frontier`, `rust-ecosystem-curation`,
-`rust-security`, `rust-fuzz`, `rust-test-frontier`, `pyo3`, and `google`.
+`rust-security`, `rust-fuzz`, `rust-test-frontier`,
+`rust-api-compatibility`, `rust-mutation-testing`, `pyo3`, and `google`.
 Treat them as research pointers only. New Rust guidance needs screening, license
 and maintenance checks for crates, profile evidence where performance is
 claimed, and parity evidence before it changes downstream advice.
@@ -42,7 +43,10 @@ downstream rollout.
 The stronger language control plane lives in
 `registry/language-coding-advantage-registry.json`. Its Rust row lists internal
 guidelines, high-signal codebase watch targets, and promotion/rejection evidence
-for Rust frontier ideas.
+for Rust frontier ideas. The `ai_overlooked_operations` section is the
+companion playbook for proof operations agents should consider before broad Rust
+claims: Cargo graph inspection, compiler/lint/doc evidence, structured parity,
+fuzz or mutation scouts, and API compatibility checks.
 
 ## Boundary
 

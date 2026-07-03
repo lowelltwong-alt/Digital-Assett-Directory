@@ -23,6 +23,36 @@
       "expected_route": ["assets/rust-buildout-guide", "dad:harness:language-frontier-research", "dad:harness:rust-shadow-parity"]
     },
     {
+      "case_id": "python-runtime-proof-operation",
+      "language": "python",
+      "source_id_or_url": "python-core",
+      "safe_summary": "A runtime-cost trace operation could prove whether fixture setup or Python CPU work dominates a slow command.",
+      "why_ai_coding_may_improve": "Future agents often guess at performance causes instead of collecting local profiler evidence.",
+      "applicability_limits": "Use local commands and sanitized summaries only; do not mail raw traces or private arguments.",
+      "validation_or_eval_idea": "Run cProfile or pytest durations on the same workload and record top symbols plus before/after timing.",
+      "expected_route": ["assets/python-ai-advantage-preflight", "dad:harness:language-frontier-research"]
+    },
+    {
+      "case_id": "rust-api-mutation-proof-operation",
+      "language": "rust",
+      "source_id_or_url": "rust-api-compatibility",
+      "safe_summary": "A shared Rust CLI may need API compatibility and mutation-test scouting before DAD recommends it.",
+      "why_ai_coding_may_improve": "Future agents need executable proof that public outputs and tests are strong enough for cross-repo reuse.",
+      "applicability_limits": "Use only after crate license/provenance and local cost are reviewed; mutation outcomes are candidate evidence.",
+      "validation_or_eval_idea": "Run cargo semver-checks or cargo mutants on a small reviewed crate and record command, exit code, and limits.",
+      "expected_route": ["assets/rust-buildout-guide", "dad:harness:language-frontier-research"]
+    },
+    {
+      "case_id": "future-language-proof-surface-inventory",
+      "language": "zig",
+      "source_id_or_url": "https://ziglang.org/documentation/",
+      "safe_summary": "A future language candidate may help agents if its compiler, formatter, package tooling, and test runner create better proof surfaces.",
+      "why_ai_coding_may_improve": "Future agents need a proof-surface inventory before DAD makes a new language recommendable.",
+      "applicability_limits": "Keep as a candidate until official sources, local validation commands, avoid-when limits, and a failure example exist.",
+      "validation_or_eval_idea": "Create a proof-surface inventory with minimum commands, one negative example, and a small local harness route.",
+      "expected_route": ["registry/language-coding-advantage-registry.json", "dad:harness:language-frontier-research", "source_review_required"]
+    },
+    {
       "case_id": "benchmark-only-rust-rewrite",
       "language": "rust",
       "source_id_or_url": "unknown-blog",

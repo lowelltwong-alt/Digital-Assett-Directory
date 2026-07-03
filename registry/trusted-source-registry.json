@@ -195,6 +195,44 @@
       "review_status": "reviewed"
     },
     {
+      "source_id": "rust-api-compatibility",
+      "label": "Rust API compatibility and semver tooling",
+      "url_patterns": ["github.com/obi1kenobi/cargo-semver-checks", "crates.io/crates/cargo-semver-checks", "rust-lang.github.io/rust-semverver"],
+      "trust_tier": "known",
+      "check_cadence": "quarterly",
+      "language_focus": ["rust"],
+      "frontier_watch": [
+        "public API compatibility checks for shared Rust crates",
+        "semver breakage detection before DAD-owned Rust tools become dependencies",
+        "release discipline patterns that keep downstream agent wrappers stable"
+      ],
+      "intake_actions": [
+        "Route compatibility checks to harness outcomes before making them DAD defaults.",
+        "Treat API compatibility as one evidence type, not proof of semantic parity."
+      ],
+      "asset_kinds": ["doc", "harness", "lesson"],
+      "review_status": "reviewed"
+    },
+    {
+      "source_id": "rust-mutation-testing",
+      "label": "Rust mutation testing frontier",
+      "url_patterns": ["mutants.rs", "github.com/sourcefrog/cargo-mutants", "crates.io/crates/cargo-mutants"],
+      "trust_tier": "known",
+      "check_cadence": "quarterly",
+      "language_focus": ["rust"],
+      "frontier_watch": [
+        "mutation-testing signals that expose weak Rust tests",
+        "survived-mutant reports that can become harness improvement ideas",
+        "runtime and false-positive costs before recommending mutation testing broadly"
+      ],
+      "intake_actions": [
+        "Use mutation testing as candidate evidence for high-value crates only.",
+        "Do not require mutation testing in downstream repos without a local approval and cost review."
+      ],
+      "asset_kinds": ["doc", "harness", "lesson"],
+      "review_status": "reviewed"
+    },
+    {
       "source_id": "pyo3",
       "label": "PyO3 / maturin project",
       "url_patterns": ["pyo3.rs", "maturin.rs", "github.com/pyo3"],

@@ -70,6 +70,18 @@
       "registry_ref": "registry/trusted-source-registry.json#rust-security"
     },
     {
+      "source_id": "rust-api-compatibility",
+      "cadence": "quarterly",
+      "look_for": ["cargo semver checks", "public API compatibility", "shared crate release discipline"],
+      "registry_ref": "registry/trusted-source-registry.json#rust-api-compatibility"
+    },
+    {
+      "source_id": "rust-mutation-testing",
+      "cadence": "quarterly",
+      "look_for": ["cargo mutants", "survived-mutant reports", "test-strength signals"],
+      "registry_ref": "registry/trusted-source-registry.json#rust-mutation-testing"
+    },
+    {
       "source_id": "pyo3",
       "cadence": "monthly",
       "look_for": ["PyO3/maturin bridge changes", "wheel/ABI shifts", "extension build workflows"],
