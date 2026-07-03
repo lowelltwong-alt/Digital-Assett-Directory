@@ -1,0 +1,40 @@
+{
+  "dedupe_key": "dad:rust-rollout-dedupe:0f7d6c3b-daff-5528-92b3-a27e6a7f4d8d",
+  "evidence": [
+    "config/repo_rust_status.yaml",
+    "docs/rust/DAD_RUST_SCAN_CORE.md",
+    "lessons/rust_rollout/lesson_ledger.jsonl"
+  ],
+  "mail_id": "dad:rust-rollout-mail:35547477-e344-5b8d-b3af-f2a7f7d244ba",
+  "message_type": "capability_suggestion",
+  "payload": {
+    "block_reason": "logos repos are instruction-mail-only and cannot receive forced rollout",
+    "can_apply": false,
+    "contains_logos": true,
+    "destructive_write_authorized": false,
+    "external_send_performed": false,
+    "github_write_performed": false,
+    "python_stays_orchestrator": true,
+    "recommended_first_rust_slice": "None.",
+    "rollout_mode": "instruction_mail_only",
+    "rust_boundary": "deterministic leaf tooling only",
+    "rust_rollout_packet_type": "rust_logos_instruction_only",
+    "target_repo_owns_rust_files": true,
+    "validation_commands": [
+      "cargo fmt --check",
+      "cargo check",
+      "cargo test",
+      "cargo clippy --all-targets -- -D warnings"
+    ]
+  },
+  "review_status": "candidate",
+  "schema_version": "dad_rust_rollout_mail_packet.v1",
+  "sensitivity": "metadata_only",
+  "source_repo": "Digital-Assett-Directory",
+  "suggested_actions": [
+    "Do not accept DAD forced Rust writes.",
+    "Review DAD lessons and implement any Rust slice inside Logos governance.",
+    "Keep Rust as scanners, indexers, manifest validators, and JSONL validators only."
+  ],
+  "target_repo": "logos-governed-core"
+}

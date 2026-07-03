@@ -9,6 +9,7 @@ from digital_asset_directory.exception_capture import (
     load_capture_pattern_registry,
     write_exception_backfill_readiness,
     write_exception_backfill_wave_plan,
+    write_exception_capture_gap_review_queue,
     write_exception_capture_remediation_plan,
     write_observed_capture_audit,
 )
@@ -18,6 +19,7 @@ from digital_asset_directory.validation import (
     _candidate_path_scan_staleness_errors,
     _contains_local_path_ref,
     _contains_readable_repo_relative_ref,
+    _exception_capture_gap_review_queue_staleness_errors,
     _exception_capture_remediation_plan_staleness_errors,
     _exception_backfill_wave_plan_staleness_errors,
     _exception_event_taxonomy_by_type,
@@ -560,6 +562,68 @@ def test_capture_remediation_plan_validation_detects_stale_lanes(tmp_path: Path)
     assert errors == [
         "Exception capture remediation plan stale for capture-remediation.json: "
         "lanes mismatch"
+    ]
+
+
+def test_capture_gap_review_queue_validation_detects_stale_groups(tmp_path: Path):
+    repo = tmp_path / "repo"
+    docs = repo / "docs"
+    docs.mkdir(parents=True)
+    (docs / "postmortem.md").write_text("metadata-only\n", encoding="utf-8")
+    policy = _exception_policy(repo)
+    report_path = tmp_path / "capture-gap-queue.json"
+    report = write_exception_capture_gap_review_queue(
+        ROOT,
+        [repo],
+        repo_policies=[policy],
+        output=report_path,
+        candidate_limit=0,
+        max_scanned_files=10,
+    )
+    mutated = deepcopy(report)
+    mutated["groups"] = []
+
+    errors = _exception_capture_gap_review_queue_staleness_errors(
+        ROOT,
+        report_path,
+        mutated,
+    )
+
+    assert errors == [
+        "Exception capture gap review queue stale for capture-gap-queue.json: "
+        "groups mismatch"
+    ]
+
+
+def test_capture_gap_review_queue_validation_detects_authority_tampering(
+    tmp_path: Path,
+):
+    repo = tmp_path / "repo"
+    docs = repo / "docs"
+    docs.mkdir(parents=True)
+    (docs / "postmortem.md").write_text("metadata-only\n", encoding="utf-8")
+    policy = _exception_policy(repo)
+    report_path = tmp_path / "capture-gap-queue.json"
+    report = write_exception_capture_gap_review_queue(
+        ROOT,
+        [repo],
+        repo_policies=[policy],
+        output=report_path,
+        candidate_limit=0,
+        max_scanned_files=10,
+    )
+    mutated = deepcopy(report)
+    mutated["authority_boundary"] = "Approved to write target repos."
+
+    errors = _exception_capture_gap_review_queue_staleness_errors(
+        ROOT,
+        report_path,
+        mutated,
+    )
+
+    assert errors == [
+        "Exception capture gap review queue stale for capture-gap-queue.json: "
+        "authority_boundary mismatch"
     ]
 
 

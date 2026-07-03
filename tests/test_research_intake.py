@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 import json
+import shutil
+from copy import deepcopy
 from pathlib import Path
 
 from jsonschema.validators import validator_for
@@ -8,6 +10,7 @@ import pytest
 
 from digital_asset_directory.mail_center import compose_asset_suggestion
 from digital_asset_directory.research_intake import (
+    build_language_playbook_report,
     build_language_frontier_watchlist,
     intake_external_candidate,
     list_intake,
@@ -42,6 +45,22 @@ def _intake_hub(tmp_path: Path) -> Path:
         "registry/agent-skill-library.json",
     ):
         (hub / rel).write_text((ROOT / rel).read_text(encoding="utf-8"), encoding="utf-8")
+    return hub
+
+
+def _language_hub(tmp_path: Path) -> Path:
+    hub = tmp_path / "language-hub"
+    (hub / "registry").mkdir(parents=True)
+    (hub / "registry" / "language-coding-advantage-registry.json").write_text(
+        (ROOT / "registry" / "language-coding-advantage-registry.json").read_text(
+            encoding="utf-8"
+        ),
+        encoding="utf-8",
+    )
+    shutil.copytree(
+        ROOT / "assets" / "language-coding-playbooks",
+        hub / "assets" / "language-coding-playbooks",
+    )
     return hub
 
 
@@ -145,6 +164,80 @@ def test_language_frontier_watchlist_is_pointer_only_and_mail_safe():
 def test_language_frontier_watchlist_rejects_unknown_cadence():
     with pytest.raises(ValueError, match="cadence"):
         build_language_frontier_watchlist(ROOT, cadence="daily")
+
+
+def test_language_playbook_report_exposes_operational_guidance_without_copying_text():
+    python = build_language_playbook_report(ROOT, language="python")
+    assert python["report_id"] == "dad:language-coding-playbook"
+    assert python["language_id"] == "python"
+    assert python["recommendable"] is True
+    assert "playbook_text" not in python
+    assert "profile evidence before performance or Rust claims" in python["must_check"]
+    assert "dad:harness:language-frontier-research" in {
+        route["harness_id"] for route in python["harness_routes"]
+    }
+    assert "proof:property-fuzz" in {
+        proof["category_id"] for proof in python["proof_surfaces"]
+    }
+    assert "raw_private_rows" in python["research_intake_packet"]["forbidden_fields"]
+
+    rust = build_language_playbook_report(ROOT, language="rust", include_text=True)
+    assert rust["language_id"] == "rust"
+    assert "same-scope parity for replacement claims" in rust["must_check"]
+    assert "Python keeps orchestration and review authority" in rust["playbook_text"]
+    assert "rust-buildout-guide" in rust["primary_assets"]
+    assert "dad:harness:rust-shadow-parity" in {
+        route["harness_id"] for route in rust["harness_routes"]
+    }
+
+    future = build_language_playbook_report(ROOT, language="future-language-template")
+    assert future["recommendable"] is False
+    assert "official or reviewed source IDs" in future["must_check"]
+    assert "template" in future["status"]
+
+
+def test_language_playbook_report_rejects_unknown_language():
+    with pytest.raises(ValueError, match="Available language ids"):
+        build_language_playbook_report(ROOT, language="brainwave")
+
+
+def test_language_playbook_report_rejects_unsafe_manifest_paths(tmp_path: Path):
+    hub = _language_hub(tmp_path)
+    manifest_path = hub / "assets" / "language-coding-playbooks" / "playbooks.json"
+    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    manifest["playbooks"][0]["path"] = "../secret.md"
+    manifest_path.write_text(json.dumps(manifest), encoding="utf-8")
+
+    with pytest.raises(ValueError, match="Unsafe language playbook path"):
+        build_language_playbook_report(hub, language="python", include_text=True)
+
+    manifest["playbooks"][0]["path"] = "docs/secret.md"
+    manifest_path.write_text(json.dumps(manifest), encoding="utf-8")
+    with pytest.raises(ValueError, match="outside assets/language-coding-playbooks"):
+        build_language_playbook_report(hub, language="python", include_text=True)
+
+
+def test_language_playbook_report_rejects_duplicate_rows_and_missing_proofs(
+    tmp_path: Path,
+):
+    hub = _language_hub(tmp_path)
+    manifest_path = hub / "assets" / "language-coding-playbooks" / "playbooks.json"
+    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    manifest["playbooks"].append(deepcopy(manifest["playbooks"][0]))
+    manifest_path.write_text(json.dumps(manifest), encoding="utf-8")
+
+    with pytest.raises(ValueError, match="Duplicate language playbook row"):
+        build_language_playbook_report(hub, language="python")
+
+    shutil.rmtree(hub)
+    hub = _language_hub(tmp_path)
+    registry_path = hub / "registry" / "language-coding-advantage-registry.json"
+    registry = json.loads(registry_path.read_text(encoding="utf-8"))
+    registry["languages"][0]["proof_surface_refs"].append("proof:missing")
+    registry_path.write_text(json.dumps(registry), encoding="utf-8")
+
+    with pytest.raises(ValueError, match="unknown proof surfaces"):
+        build_language_playbook_report(hub, language=registry["languages"][0]["language_id"])
 
 
 def test_unknown_source_requires_justification(tmp_path: Path):

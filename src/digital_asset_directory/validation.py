@@ -11,6 +11,7 @@ from jsonschema.validators import validator_for
 from .config import load_config
 from .exception_capture import (
     audit_observed_capture_repo,
+    build_exception_capture_gap_review_queue,
     build_exception_capture_remediation_plan,
     build_exception_backfill_wave_plan,
     load_capture_pattern_registry,
@@ -865,6 +866,65 @@ def _exception_capture_remediation_plan_staleness_errors(
         if _json_stable(payload.get(key)) != _json_stable(expected.get(key)):
             errors.append(
                 f"Exception capture remediation plan stale for {label}: {key} mismatch"
+            )
+    return errors
+
+
+def _exception_capture_gap_review_queue_observed_path(report_path: Path) -> Path:
+    if report_path.name == "exception_capture_gap_review_queue.json":
+        return report_path.with_name("exception_capture_observed_audit.json")
+    return report_path.with_name(report_path.stem + "_observed_audit.json")
+
+
+def _exception_capture_gap_review_queue_staleness_errors(
+    repo_root: Path,
+    report_path: Path,
+    payload: dict[str, Any],
+) -> list[str]:
+    observed_path = _exception_capture_gap_review_queue_observed_path(report_path)
+    label = _report_path_label(report_path, repo_root)
+    if not observed_path.exists():
+        return [
+            f"Exception capture gap review queue stale for {label}: missing observed audit "
+            f"{_report_path_label(observed_path, repo_root)}"
+        ]
+    try:
+        observed_payload = json.loads(observed_path.read_text(encoding="utf-8"))
+    except json.JSONDecodeError as exc:
+        return [
+            f"Exception capture gap review queue stale for {label}: malformed observed audit "
+            f"{exc.msg}"
+        ]
+    try:
+        per_group_example_limit = int(payload.get("per_group_example_limit") or 5)
+    except (TypeError, ValueError):
+        return [
+            f"Exception capture gap review queue stale for {label}: invalid per_group_example_limit"
+        ]
+    expected = build_exception_capture_gap_review_queue(
+        observed_payload,
+        per_group_example_limit=per_group_example_limit,
+    )
+    errors: list[str] = []
+    for key in [
+        "report_id",
+        "source_report_id",
+        "repo_count",
+        "review_group_count",
+        "candidate_signal_count",
+        "per_group_example_limit",
+        "capture_surface_version",
+        "status_counts",
+        "candidate_path_signal_summary",
+        "input_hashes",
+        "methodology_ref",
+        "methodology_hash",
+        "groups",
+        "authority_boundary",
+    ]:
+        if _json_stable(payload.get(key)) != _json_stable(expected.get(key)):
+            errors.append(
+                f"Exception capture gap review queue stale for {label}: {key} mismatch"
             )
     return errors
 
@@ -1734,6 +1794,14 @@ def validate_repo(repo_root: Path) -> dict[str, Any]:
             elif payload.get("report_id") == "dad:exception-capture-remediation-plan":
                 errors.extend(
                     _exception_capture_remediation_plan_staleness_errors(
+                        repo_root,
+                        report_path,
+                        payload,
+                    )
+                )
+            elif payload.get("report_id") == "dad:exception-capture-gap-review-queue":
+                errors.extend(
+                    _exception_capture_gap_review_queue_staleness_errors(
                         repo_root,
                         report_path,
                         payload,

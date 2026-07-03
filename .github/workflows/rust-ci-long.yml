@@ -1,0 +1,89 @@
+name: rust-ci-long
+
+on:
+  workflow_dispatch:
+    inputs:
+      run_mutation:
+        description: "Run cargo-mutants"
+        required: false
+        default: "false"
+  schedule:
+    - cron: "17 7 * * 1"
+  pull_request:
+    paths:
+      - "tools/dad_scan_core/**"
+      - "src/digital_asset_directory/rust_bridge/**"
+      - "src/digital_asset_directory/rust_rollout/**"
+      - "tests/test_rust_*.py"
+      - "scripts/run_dad_scan_core.py"
+      - "docs/rust/**"
+      - "templates/**"
+      - ".github/workflows/rust-ci-long.yml"
+
+jobs:
+  long-rust:
+    name: long-rust-${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions-rust-lang/setup-rust-toolchain@v1
+        with:
+          toolchain: stable
+          components: rustfmt,clippy
+          rustflags: ""
+      - uses: taiki-e/install-action@nextest
+      - uses: taiki-e/install-action@cargo-deny
+      - uses: taiki-e/install-action@cargo-llvm-cov
+      - name: Install cargo-audit
+        run: cargo install cargo-audit --locked
+      - name: fmt/clippy/test
+        run: |
+          cargo fmt --manifest-path tools/dad_scan_core/Cargo.toml --check
+          cargo check --manifest-path tools/dad_scan_core/Cargo.toml
+          cargo clippy --manifest-path tools/dad_scan_core/Cargo.toml --all-targets --all-features -- -D warnings
+          cargo test --manifest-path tools/dad_scan_core/Cargo.toml
+      - name: nextest
+        run: cargo nextest run --manifest-path tools/dad_scan_core/Cargo.toml
+      - name: dependency license/advisory policy
+        if: matrix.os == 'ubuntu-latest'
+        run: cargo deny check --manifest-path tools/dad_scan_core/Cargo.toml
+      - name: audit advisories
+        if: matrix.os == 'ubuntu-latest'
+        run: cargo audit --file tools/dad_scan_core/Cargo.lock
+      - name: coverage
+        if: matrix.os == 'ubuntu-latest'
+        run: cargo llvm-cov --manifest-path tools/dad_scan_core/Cargo.toml --lcov --output-path tools/dad_scan_core/coverage/lcov.info
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install Python package
+        run: python -m pip install -e ".[dev]"
+      - name: wrapper help
+        run: python scripts/run_dad_scan_core.py --help
+      - name: Python Rust bridge tests
+        run: python -m pytest tests/test_rust_bridge_dad_scan_core.py tests/test_rust_rollout.py -q
+      - name: upload coverage
+        if: matrix.os == 'ubuntu-latest'
+        uses: actions/upload-artifact@v4
+        with:
+          name: rust-coverage
+          path: tools/dad_scan_core/coverage/lcov.info
+
+  mutation:
+    name: mutation-manual
+    if: github.event_name == 'workflow_dispatch' && inputs.run_mutation == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions-rust-lang/setup-rust-toolchain@v1
+        with:
+          toolchain: stable
+          rustflags: ""
+      - name: install cargo-mutants
+        run: cargo install cargo-mutants --locked
+      - name: cargo mutants
+        run: cargo mutants --manifest-path tools/dad_scan_core/Cargo.toml --timeout 60 --jobs 2

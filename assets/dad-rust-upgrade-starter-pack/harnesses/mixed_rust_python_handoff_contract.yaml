@@ -1,0 +1,16 @@
+schema_version: mixed_rust_python_handoff_contract.v1
+name: dad_rust_python_scan_handoff
+rust_outputs:
+  - raw/local/<scan_id>.jsonl
+  - processed/scans/<scan_id>.summary.json
+  - processed/quarantine/<scan_id>.quarantine.json
+python_consumes:
+  - validate JSONL shape
+  - convert observations to AssetRecord candidates
+  - compare with Python scanner on fixtures
+  - ingest into CatalogDB only after validation
+failure_policy:
+  - missing output: fail closed
+  - schema mismatch: fail closed
+  - source mutation detected: fail closed
+  - Rust scanner error: do not fall back silently; report fallback explicitly

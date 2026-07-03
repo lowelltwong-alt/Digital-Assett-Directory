@@ -1,0 +1,55 @@
+schema_version: multi_agent_task_graph.v1
+authority: candidate_planning_only
+goal: Upgrade DAD with a Rust scanner core without rewriting Python orchestration.
+agents:
+  rust_architect:
+    owns:
+      - crate boundary
+      - JSONL schema
+      - no-authority policy
+    outputs:
+      - docs/rust/DAD_RUST_SCAN_CORE.md
+      - tools/dad_scan_core/README.md
+  rust_implementer:
+    owns:
+      - Rust CLI
+      - unit tests
+      - fixture scan
+    commands:
+      - cargo check
+      - cargo test
+      - cargo fmt --check
+      - cargo clippy -- -D warnings
+  python_bridge:
+    owns:
+      - wrapper script
+      - JSONL validator
+      - adapter to AssetRecord candidates
+  ci_qa:
+    owns:
+      - PR workflow
+      - long workflow
+      - nextest/deny/audit/coverage config
+  security_reviewer:
+    owns:
+      - symlink/path traversal review
+      - no raw secret output review
+      - unsafe/dependency review
+  performance_reviewer:
+    owns:
+      - benchmark fixture design
+      - long CI perf reports
+sequence:
+  - rust_architect
+  - rust_implementer
+  - python_bridge
+  - ci_qa
+  - security_reviewer
+  - performance_reviewer
+merge_blockers:
+  - cargo_check_not_run
+  - cargo_test_not_run
+  - python_validator_missing
+  - no_mutation_test_missing
+  - unsafe_without_review
+  - output_schema_undocumented

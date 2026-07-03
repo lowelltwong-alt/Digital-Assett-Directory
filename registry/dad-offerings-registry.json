@@ -100,6 +100,56 @@
       "authority_boundary": "Stage gates (profile evidence, parity reports, human review for full ports) are the enforceable part; language preference is not."
     },
     {
+      "offering_id": "dad:offering:dad-rust-scan-core-and-rollout",
+      "name": "DAD Rust Scan Core And Rollout Control Plane",
+      "version": "0.1.0",
+      "offering_type": "control_plane",
+      "path": "tools/dad_scan_core",
+      "languages": ["rust", "python", "mixed"],
+      "repo_types": ["control_plane", "asset_catalog", "source_scanner", "test_suite"],
+      "domains": ["software_engineering", "asset_inventory", "cross_repo_governance"],
+      "context_tags": ["coding_asset", "rust_scan_core", "source_scan", "rollout", "governance"],
+      "task_types": ["rust", "source_scan", "performance", "rollout", "repo_enrollment", "coding"],
+      "capabilities": [
+        "bounded_local_file_scan",
+        "content_hashing",
+        "jsonl_observation_emission",
+        "quarantine_summary",
+        "python_rust_bridge",
+        "rust_rollout_policy",
+        "logos_rollout_exclusion"
+      ],
+      "applies_when": [
+        "DAD needs deterministic local source observations or hash manifests.",
+        "An agent is validating DAD's first Rust leaf tool.",
+        "A repo needs Rust rollout packets, target ownership rules, or Logos instruction-only boundaries."
+      ],
+      "does_not_apply_when": [
+        "The task needs governance meaning, final asset value scoring, legal judgment, theological judgment, or model orchestration.",
+        "A downstream repo lacks a reviewed local path or is Logos instruction-mail-only.",
+        "Rust output would be treated as canonical source truth instead of candidate evidence."
+      ],
+      "public_safe": false,
+      "upgrade_channel": "dad_mail",
+      "known_upgrades": [
+        {
+          "upgrade_id": "dad:upgrade:dad-rust-scan-core:0.1.0",
+          "summary": "Initial DAD-local Rust scan core, Python bridge, rollout policy, local instruction packets, and lesson ledger.",
+          "available_at": "tools/dad_scan_core"
+        }
+      ],
+      "source_refs": [
+        "assets/dad-rust-upgrade-starter-pack/manifest.json",
+        "docs/rust/DAD_RUST_SCAN_CORE.md",
+        "docs/rust/DAD_FORCED_RUST_ROLLOUT_POLICY.md",
+        "src/digital_asset_directory/rust_bridge/dad_scan_core.py",
+        "src/digital_asset_directory/rust_rollout/policy.py",
+        "lessons/rust_rollout/lesson_ledger.jsonl"
+      ],
+      "review_status": "installed_for_local_reuse",
+      "authority_boundary": "Rust emits candidate observations only. Python/DAD retains orchestration and review authority; downstream apply is policy gated and Logos repos are instruction-mail-only."
+    },
+    {
       "offering_id": "dad:offering:rust-shadow-parity-harness",
       "name": "Rust Shadow Parity Harness",
       "version": "0.1.0",

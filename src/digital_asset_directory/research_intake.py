@@ -18,6 +18,7 @@ from .ids import stable_id
 from .utils import append_jsonl, atomic_write_text, json_dumps, utc_now
 
 TRUSTED_SOURCE_REGISTRY = Path("registry") / "trusted-source-registry.json"
+LANGUAGE_PLAYBOOKS_MANIFEST = Path("assets") / "language-coding-playbooks" / "playbooks.json"
 INTAKE_DIR = Path("processed") / "research" / "intake"
 POINTER_ASSET_DIR = Path("assets") / "external"
 SCREENING_CHECKS = ("prompt_injection", "license", "provenance", "compatibility")
@@ -243,6 +244,123 @@ def build_language_frontier_watchlist(
         ),
         "authority_boundary": LANGUAGE_FRONTIER_WATCH_AUTHORITY_BOUNDARY,
     }
+
+
+def build_language_playbook_report(
+    hub_root: Path,
+    *,
+    language: str,
+    include_text: bool = False,
+) -> dict[str, Any]:
+    """Return the operational language coding playbook and matching registry route."""
+    requested_language = language.strip().lower()
+    if not requested_language:
+        raise ValueError("language is required")
+
+    manifest = _load_json(hub_root / LANGUAGE_PLAYBOOKS_MANIFEST)
+    registry = _load_language_registry(hub_root)
+    playbooks: dict[str, dict[str, Any]] = {}
+    for item in manifest.get("playbooks", []):
+        language_id = str(item.get("language_id") or "")
+        if not language_id:
+            raise ValueError("Language playbook manifest row missing language_id")
+        if language_id in playbooks:
+            raise ValueError(f"Duplicate language playbook row: {language_id}")
+        playbooks[language_id] = item
+    languages = {
+        str(item.get("language_id")): item
+        for item in registry.get("languages", [])
+    }
+    if requested_language not in playbooks or requested_language not in languages:
+        available = sorted(set(playbooks) & set(languages))
+        raise ValueError(
+            "Unknown language playbook. Available language ids: "
+            + ", ".join(available)
+        )
+
+    playbook = playbooks[requested_language]
+    language_record = languages[requested_language]
+    playbook_path = _resolve_language_playbook_path(hub_root, playbook)
+    proof_surfaces = {
+        str(item.get("category_id")): item
+        for item in registry.get("proof_surface_categories", [])
+    }
+    missing_proof_refs = [
+        str(proof_id)
+        for proof_id in language_record.get("proof_surface_refs", [])
+        if str(proof_id) not in proof_surfaces
+    ]
+    if missing_proof_refs:
+        raise ValueError(
+            f"Language {requested_language} references unknown proof surfaces: "
+            + ", ".join(sorted(missing_proof_refs))
+        )
+    selected_proofs = [
+        proof_surfaces[str(proof_id)]
+        for proof_id in language_record.get("proof_surface_refs", [])
+    ]
+    report: dict[str, Any] = {
+        "schema_version": "0.1.0",
+        "report_id": "dad:language-coding-playbook",
+        "generated_at": utc_now(),
+        "language_id": requested_language,
+        "label": language_record.get("label"),
+        "status": language_record.get("status"),
+        "recommendable": bool(language_record.get("recommendable")),
+        "playbook_path": playbook.get("path"),
+        "primary_question": playbook.get("primary_question"),
+        "preflight_triggers": playbook.get("preflight_triggers", []),
+        "must_check": playbook.get("must_check", []),
+        "mail_back_to_dad": playbook.get("mail_back_to_dad", []),
+        "primary_assets": language_record.get("primary_assets", []),
+        "trusted_source_ids": language_record.get("trusted_source_ids", []),
+        "check_cadence": language_record.get("check_cadence"),
+        "frontier_questions": language_record.get("frontier_questions", []),
+        "proof_surfaces": selected_proofs,
+        "ai_advantages": language_record.get("ai_advantages", []),
+        "ai_overlooked_patterns": language_record.get("ai_overlooked_patterns", []),
+        "ai_overlooked_operations": language_record.get("ai_overlooked_operations", []),
+        "agent_coding_guidelines": language_record.get("agent_coding_guidelines", []),
+        "codebase_watch_targets": language_record.get("codebase_watch_targets", []),
+        "frontier_promotion_policy": language_record.get("frontier_promotion_policy", {}),
+        "harness_routes": language_record.get("harness_routes", []),
+        "validation_gates": language_record.get("validation_gates", []),
+        "adoption_rules": language_record.get("adoption_rules", []),
+        "anti_patterns": language_record.get("anti_patterns", []),
+        "research_intake_packet": language_record.get("research_intake_packet", {}),
+        "next_agent_action": (
+            "Use this playbook before material language work, run the named proof "
+            "operations locally, then send only pointer-safe frontier or harness "
+            "feedback back to DAD when the result is reusable."
+        ),
+        "authority_boundary": manifest.get("authority_boundary")
+        or LANGUAGE_FRONTIER_WATCH_AUTHORITY_BOUNDARY,
+    }
+    if include_text:
+        report["playbook_text"] = playbook_path.read_text(encoding="utf-8")
+    return report
+
+
+def _resolve_language_playbook_path(hub_root: Path, playbook: dict[str, Any]) -> Path:
+    raw_path = str(playbook.get("path") or "")
+    if not raw_path:
+        raise ValueError("Language playbook manifest row missing path")
+    rel_path = Path(raw_path)
+    if rel_path.is_absolute() or ".." in rel_path.parts:
+        raise ValueError(f"Unsafe language playbook path: {raw_path}")
+    if rel_path.suffix.lower() != ".md":
+        raise ValueError(f"Language playbook path must be a markdown file: {raw_path}")
+    root = (hub_root / LANGUAGE_PLAYBOOKS_MANIFEST.parent).resolve()
+    candidate = (hub_root / rel_path).resolve()
+    try:
+        candidate.relative_to(root)
+    except ValueError as exc:
+        raise ValueError(
+            f"Language playbook path is outside assets/language-coding-playbooks: {raw_path}"
+        ) from exc
+    if not candidate.exists():
+        raise ValueError(f"Language playbook path does not exist: {raw_path}")
+    return candidate
 
 
 def _intake_path(hub_root: Path, intake_id: str, name: str) -> Path:

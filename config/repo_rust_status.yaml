@@ -1,0 +1,287 @@
+schema_version: dad_rust_adoption_matrix.v1
+generated_at: "2026-07-02T17:56:48.839505+00:00"
+authority: "Candidate planning artifact only; not canonical until adopted inside DAD."
+visible_repo_count_included: 27
+note: "User asked for all 26 repos; this pack includes 27 visible lowelltwong-alt entries so retired/empty repos are not silently omitted."
+repos:
+  - repo: Digital-Assett-Directory
+    repo_name: Digital-Assett-Directory
+    local_path: "."
+    active_status: active
+    rollout_enabled: true
+    target_repo_owns_rust_files: true
+    rust_status: immediate
+    priority: 1
+    plane: portfolio intelligence / asset graph runtime
+    reason: Local/GitHub scanning, hashing, duplicate detection, quarantine, bounded extraction, JSONL/SQLite/graph output are deterministic hot paths.
+    first_rust_slice: "tools/dad_scan_core: local source scanner emitting raw asset observation JSONL and quarantine report."
+    python_stays: Typer CLI, SQLite orchestration, graph/radar scoring, recommendations, context packs, lessons, mail/usage workflows.
+    ci_profile: PR smoke + long nightly/manual scanner regression.
+    validation_commands:
+      - cargo fmt --manifest-path tools/dad_scan_core/Cargo.toml --check
+      - cargo check --manifest-path tools/dad_scan_core/Cargo.toml
+      - cargo test --manifest-path tools/dad_scan_core/Cargo.toml
+      - cargo clippy --manifest-path tools/dad_scan_core/Cargo.toml --all-targets -- -D warnings
+      - python -m pytest tests/test_rust_bridge_dad_scan_core.py -q
+    confidence: high
+    risk: "medium: avoid replacing DAD orchestration before Rust observation contract is stable."
+  - repo: logos-scripture-graph
+    rust_status: immediate_already_started
+    priority: 2
+    plane: Logos deterministic Scripture data plane
+    reason: Existing Rust USFM observation scanner, large word-token artifacts, raw-source scan/ingest/chunk/index pipeline.
+    first_rust_slice: Split usfm_observation_scanner into modules; add cargo test/fmt/clippy; add manual/nightly full-scan workflow.
+    python_stays: Governance validation, theological decision registers, route/evaluator authority, reviewed-gold promotion.
+    ci_profile: PR contract-only + cargo tests; full scan only path-triggered/manual/nightly.
+    confidence: high
+    risk: "medium: must preserve no-text/non-authorizing boundaries."
+  - repo: LawFirm-os-intake
+    rust_status: immediate_narrow
+    priority: 3
+    plane: LawFirm OS vertical workflow composition/evaluation
+    reason: Long artifact chain with source inventory, provenance-preserving segmentation, ledgers, hashes, smoke demo, and long pytest/smoke gates.
+    first_rust_slice: "tools/intake_ingest_probe: source inventory, byte/line offsets, hashes, duplicate source candidates, JSONL ledger integrity."
+    python_stays: Legal/domain candidate generation, budget workflows, human gates, Excel/openpyxl, review packets.
+    ci_profile: PR smoke on synthetic fixture; full ingest probe on nightly/manual or input-path changes.
+    confidence: high
+    risk: "medium-high: legal workflow logic must not move into Rust evidence scanner."
+  - repo: Albert-Trial-Simulation-System
+    rust_status: high_next_case_scaling
+    priority: 4
+    plane: mock-trial KG / evidence / simulation system
+    reason: Evidence source inventory, OCR artifact checks, path isolation, chunk manifests, multi-case outputs, and simulation snapshots are repeatable data paths.
+    first_rust_slice: "tools/albert_evidence_indexer: raw/processed evidence hash inventory, OCR completeness, path-isolation and chunk-manifest outputs."
+    python_stays: Trial strategy, witness prep, case interpretation, Monte Carlo governance, human decision sessions.
+    ci_profile: PR path/hash smoke; full multi-case artifact audit as long CI/manual.
+    confidence: medium-high
+    risk: "medium-high: do not encode legal strategy or witness knowledge rules in early Rust."
+  - repo: LawFirm-os-skills-registry
+    rust_status: medium_high_after_dad
+    priority: 5
+    plane: skill supply chain / security scanner
+    reason: Static skill scanning, quarantine, secret/network/shell/prompt-injection rulepacks benefit from deterministic fast scanners.
+    first_rust_slice: "tools/skill_static_scanner: path, secret, shell/network/browser/tool declaration, encoded payload, rulepack safety checks."
+    python_stays: Semantic malicious-intent analysis, scoring policy, approvals, install gates, skill factory drafts.
+    ci_profile: PR static scanner unit tests + corpus fixtures; long malicious-fixture suite nightly/manual.
+    confidence: high
+    risk: "medium: rule severity must remain governed; scanner must not approve skills."
+  - repo: LawFirm-os-talent-intelligence
+    rust_status: medium_later_scaling
+    priority: 6
+    plane: talent intelligence runtime/state-by-state data system
+    reason: Bulk CSV/import normalization, SQLite loading, identity fingerprints, public-source snapshots become Rust candidates when scaling beyond Nevada.
+    first_rust_slice: "tools/talent_ingest_core: CSV normalization, snapshot hashes, identity-fingerprint candidate features, bulk SQLite import."
+    python_stays: Review queues, exports, CRM/ATS boundaries, attorney/firms interpretation, workbook/dashboard generation.
+    ci_profile: PR tiny fixture; long state import on manual/nightly.
+    confidence: medium
+    risk: "medium: identity resolution must remain review-gated."
+  - repo: LawFirm-Talent-Intel-ATS
+    rust_status: medium_later_shared_utility
+    priority: 7
+    plane: ATS/recruiting archive + shared UI workspaces
+    reason: SQLite, LinkedIn archive, Nevada workspace, UI app-state and exports may need a shared ingestion/fingerprint core later.
+    first_rust_slice: Reuse talent_ingest_core if workspace volume grows; no separate Rust crate first.
+    python_stays: UI state, outreach packet shaping, scoring policy, reviewed cross-workspace links.
+    ci_profile: No Rust until shared ingest contract exists.
+    confidence: medium-low
+    risk: "medium: source truth separation must not collapse LinkedIn and Nevada workspaces."
+  - repo: LawFirm-os-legal-knowledge-runtime
+    rust_status: medium_later
+    priority: 8
+    plane: legal document ingestion/retrieval context runtime
+    reason: Document preflight, hashes, offsets, chunk candidates, and Legal Context Bundle source refs are Rust-suitable after corpus volume grows.
+    first_rust_slice: "tools/legal_doc_preflight: source inventory, hash manifest, offset map, bounded text profile, chunk-boundary candidates."
+    python_stays: Legal Context Bundle assembly, legal workflow semantics, human-review/finality boundaries.
+    ci_profile: Synthetic fixture only at first.
+    confidence: medium
+    risk: "medium-high: retrieval/model output must not become legal truth."
+  - repo: orphan-radar
+    rust_status: medium_low_optional
+    priority: 9
+    plane: local note graph maintenance engine
+    reason: Fast markdown link extraction and note hash manifests may help large vaults; TF-IDF and graph logic can stay Python.
+    first_rust_slice: "tools/orphan_scan_core: markdown link extraction, note inventory, source hash manifest, edge list."
+    python_stays: NetworkX/scikit-learn scoring, report generation, calibration.
+    ci_profile: Only when vault size makes scan slow.
+    confidence: medium
+    risk: low-medium.
+  - repo: LawFirm-os-exceptions-lake-runtime
+    rust_status: low_medium_later
+    priority: 10
+    plane: LawFirm OS evidence plane / append-only runtime evidence
+    reason: Append-only JSONL event logs and hash-chain/idempotency verification become Rust candidates when event volume grows.
+    first_rust_slice: "tools/exceptions_ledger_verify: JSONL validation, hash-chain verify, idempotency-key scan, no raw-payload enforcement."
+    python_stays: Runtime facade, policy gates, synthetic/non-synthetic readiness, contract consumption.
+    ci_profile: PR fixture ledger; long ledger stress test manual/nightly.
+    confidence: medium
+    risk: "medium: runtime evidence must not become canon."
+  - repo: exceptions-lake-runtime
+    rust_status: low_medium_later_shared
+    priority: 11
+    plane: older/general Exceptions Lake runtime
+    reason: Could reuse the LawFirm OS ledger verifier if both runtimes remain active.
+    first_rust_slice: Shared exceptions_ledger_verify only if older FMG runtime remains maintained.
+    python_stays: Contract consumption and MVP runtime behavior.
+    ci_profile: Only after shared verifier exists.
+    confidence: medium-low
+    risk: low-medium.
+  - repo: LawFirm-os-orchestrator
+    rust_status: low_optional_verifier
+    priority: 12
+    plane: LawFirm OS execution plane
+    reason: Mostly orchestration, autonomy gates, harness selection, owner packets. Rust only for packet/ledger/hash verification later.
+    first_rust_slice: "tools/orchestrator_packet_verify: packet hash verification, contract pin drift check, JSONL evidence packet integrity."
+    python_stays: Autonomy classification, harness selection, human pauses, owner packet assembly.
+    ci_profile: Only after packet volumes grow.
+    confidence: medium
+    risk: "medium: Rust must not create route/event authority."
+  - repo: LawFirm-os-semantic-substrate
+    rust_status: low_control_plane_not_now
+    priority: 13
+    plane: LawFirm OS canonical control plane
+    reason: Governance, schema authority, registries, and meaning boundaries are human-readable control-plane surfaces; Python validators are sufficient unless slow.
+    first_rust_slice: "Optional lawfirm_contract_lint later: duplicate IDs, changed-path coverage, JSON registry coverage, link checks."
+    python_stays: All semantic authority, governance maps, schemas, SHACL, review processes.
+    ci_profile: Keep existing Python validation.
+    confidence: high
+    risk: medium-high if Rust is allowed to encode policy authority prematurely.
+  - repo: logos-governance-architecture
+    rust_status: low_control_plane_not_now
+    priority: 14
+    plane: Logos theological/governance source architecture
+    reason: Defines source-trust, derivation, authority, and review obligations; not the deterministic data plane.
+    first_rust_slice: Optional logos_gov_lint much later for link/frontmatter/dependency-map coverage.
+    python_stays: Governance semantics, theological derivation, authority boundaries, dependency map policy.
+    ci_profile: Keep Python validators.
+    confidence: high
+    risk: "medium-high: do not make tool output certify governance truth."
+  - repo: logos-boundary-literature
+    rust_status: low_wait_for_corpus
+    priority: 15
+    plane: Logos boundary/noncanonical literature scaffold
+    reason: Currently scaffold/no source text imported. Rust is premature until actual corpus/metadata ingest exists.
+    first_rust_slice: "Future boundary_source_audit after corpus import: source metadata, trust profile, contamination checks."
+    python_stays: Trust hierarchy, routing guardrails, review status, governance constraints.
+    ci_profile: No Rust until data/ corpus exists.
+    confidence: high
+    risk: "medium: boundary material must not contaminate canonical Scripture."
+  - repo: kirsten-dissertation-knowledge-graph
+    rust_status: low_later_if_citation_audit_slow
+    priority: 16
+    plane: dissertation citation/source KG
+    reason: Citation/source hash ledger validation could benefit later, but corpus is manageable and correctness/review matters more than speed.
+    first_rust_slice: "tools/citation_ledger_check: source-file hashes, citation registry integrity, PDF/source inventory."
+    python_stays: Citation judgment, APA/final-review logic, manual DOCX fixes, source verification decisions.
+    ci_profile: Only when citation validators slow down.
+    confidence: medium
+    risk: "medium: citation correctness cannot be inferred from structural checks alone."
+  - repo: fmg-fractal-capability-ontology
+    rust_status: low_control_plane_not_now
+    priority: 17
+    plane: FMG semantic control plane / contract repo
+    reason: Similar to LawFirm Semantic Substrate; Python/rdflib/pyshacl contract validation is appropriate now.
+    first_rust_slice: Optional shared contract linter if validation becomes slow.
+    python_stays: Ontology, governance, schemas, SHACL, audit wrappers.
+    ci_profile: No Rust now.
+    confidence: medium-high
+    risk: medium.
+  - repo: All-Law-Firm-Talent-Intel
+    rust_status: unknown_low
+    priority: 18
+    plane: unknown / possibly empty or legacy talent-intel surface
+    reason: README was not found in accessible path during inspection; treat as unknown until repo content is audited.
+    first_rust_slice: None until DAD scans it and identifies active data paths.
+    python_stays: Unknown.
+    ci_profile: No Rust now.
+    confidence: low
+    risk: unknown.
+  - repo: obsidian-foundry-vault
+    rust_status: low_optional_vault_scan
+    priority: 19
+    plane: Obsidian/vault content surface
+    reason: If it is a large markdown vault, a Rust note scanner could be useful, but Orphan Radar/DAD should own that first.
+    first_rust_slice: Reuse orphan_scan_core or DAD scanner; no custom crate first.
+    python_stays: Vault-specific curation and human review.
+    ci_profile: No Rust now.
+    confidence: low-medium
+    risk: low.
+  - repo: airca-fractal-decision-architecture
+    rust_status: none_now
+    priority: 20
+    plane: conceptual decision architecture
+    reason: Content/architecture repo, not a deterministic data runtime.
+    first_rust_slice: None; maybe future artifact validator if machine-readable artifacts grow.
+    python_stays: Docs, JSON artifacts, conceptual examples.
+    ci_profile: No Rust now.
+    confidence: high
+    risk: low.
+  - repo: noesis-atlas
+    rust_status: none_now
+    priority: 21
+    plane: worldview/philosophy/religion taxonomy control plane
+    reason: Skeletal control-plane; Rust should wait for large corpus/export adapters.
+    first_rust_slice: None now; future route/export validator possible.
+    python_stays: Governance, taxonomy, branch review, compatibility contracts.
+    ci_profile: No Rust now.
+    confidence: medium-high
+    risk: medium if Rust collapses worldview authority boundaries.
+  - repo: Bi-Test
+    rust_status: none_now
+    priority: 22
+    plane: Power BI candidate test package
+    reason: Small Python tooling and packaging workflow; candidate task is Power BI, not Rust.
+    first_rust_slice: None.
+    python_stays: Dataset generation, package validation, candidate zip build.
+    ci_profile: No Rust now.
+    confidence: high
+    risk: low.
+  - repo: lowell-career-os
+    rust_status: none_now
+    priority: 23
+    plane: career self-model / planning repo
+    reason: Personal context/docs repo.
+    first_rust_slice: None.
+    python_stays: Docs, prompts, evidence register.
+    ci_profile: No Rust now.
+    confidence: high
+    risk: low.
+  - repo: lowelltwong-alt
+    rust_status: none_now
+    priority: 24
+    plane: GitHub profile/routing repo
+    reason: Profile routing and public repo map; no Rust runtime surface.
+    first_rust_slice: None.
+    python_stays: Markdown/registry routing.
+    ci_profile: No Rust now.
+    confidence: high
+    risk: low.
+  - repo: Ryans-Project
+    rust_status: unknown_low
+    priority: 25
+    plane: cannabis operations AI foundation
+    reason: README is lightweight. Need DAD inventory before Rust recommendation.
+    first_rust_slice: None until real data/runtime hot path appears.
+    python_stays: Research, ontology, retrieval, decision-support prototypes.
+    ci_profile: No Rust now.
+    confidence: low
+    risk: unknown.
+  - repo: lairca-logos-grounded-theological-model
+    rust_status: none_now
+    priority: 26
+    plane: LAIRCA Logos theological model/license surface
+    reason: Only license-style README visible in inspection; no runtime surface found.
+    first_rust_slice: None.
+    python_stays: Docs/theological model.
+    ci_profile: No Rust now.
+    confidence: medium
+    risk: low.
+  - repo: logos-governed-core
+    rust_status: none_archived
+    priority: 27
+    plane: archived Logos scaffold
+    reason: README says superseded/archived by logos-governance-architecture.
+    first_rust_slice: None.
+    python_stays: No further updates.
+    ci_profile: No Rust.
+    confidence: high
+    risk: low.

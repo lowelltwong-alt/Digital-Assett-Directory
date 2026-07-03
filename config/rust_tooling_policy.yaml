@@ -1,0 +1,37 @@
+schema_version: rust_tooling_policy.v1
+authority: candidate_planning_only
+default_toolchain:
+  channel: stable
+  edition: "2024"
+minimum_pr_commands:
+  - cargo fmt --check
+  - cargo clippy --all-targets --all-features -- -D warnings
+  - cargo test
+long_ci_commands:
+  - cargo nextest run
+  - cargo test --doc
+  - cargo deny check
+  - cargo audit
+  - cargo llvm-cov
+  - cargo mutants
+  - large synthetic fixture scan
+unsafe_policy:
+  default: forbidden
+  exception_process:
+    - document why safe Rust cannot satisfy requirement
+    - isolate unsafe module
+    - add safety comments
+    - add tests around boundary
+    - require security reviewer
+output_policy:
+  default_format: jsonl
+  must_include:
+    - schema_version
+    - observation_type
+    - source_id
+    - no_mutation_performed
+  must_not_include:
+    - raw_secret_values
+    - raw_client_payloads
+    - legal_truth_claims
+    - governance_authority_claims

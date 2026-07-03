@@ -1,0 +1,40 @@
+{
+  "dedupe_key": "dad:rust-rollout-dedupe:55cdb0c0-d6b8-5438-8b1e-682b052df4f4",
+  "evidence": [
+    "config/repo_rust_status.yaml",
+    "docs/rust/DAD_RUST_SCAN_CORE.md",
+    "lessons/rust_rollout/lesson_ledger.jsonl"
+  ],
+  "mail_id": "dad:rust-rollout-mail:1b2fecee-76ee-54d5-9dd6-7cb529565cd8",
+  "message_type": "capability_suggestion",
+  "payload": {
+    "block_reason": "logos repos are instruction-mail-only and cannot receive forced rollout",
+    "can_apply": false,
+    "contains_logos": true,
+    "destructive_write_authorized": false,
+    "external_send_performed": false,
+    "github_write_performed": false,
+    "python_stays_orchestrator": true,
+    "recommended_first_rust_slice": "Split usfm_observation_scanner into modules; add cargo test/fmt/clippy; add manual/nightly full-scan workflow.",
+    "rollout_mode": "instruction_mail_only",
+    "rust_boundary": "deterministic leaf tooling only",
+    "rust_rollout_packet_type": "rust_logos_instruction_only",
+    "target_repo_owns_rust_files": true,
+    "validation_commands": [
+      "cargo fmt --check",
+      "cargo check",
+      "cargo test",
+      "cargo clippy --all-targets -- -D warnings"
+    ]
+  },
+  "review_status": "candidate",
+  "schema_version": "dad_rust_rollout_mail_packet.v1",
+  "sensitivity": "metadata_only",
+  "source_repo": "Digital-Assett-Directory",
+  "suggested_actions": [
+    "Do not accept DAD forced Rust writes.",
+    "Review DAD lessons and implement any Rust slice inside Logos governance.",
+    "Keep Rust as scanners, indexers, manifest validators, and JSONL validators only."
+  ],
+  "target_repo": "logos-scripture-graph"
+}

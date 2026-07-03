@@ -94,6 +94,7 @@ from .exception_capture import (
     suggest_exception_capture,
     write_exception_backfill_readiness,
     write_exception_backfill_wave_plan,
+    write_exception_capture_gap_review_queue,
     write_exception_capture_remediation_plan,
     write_observed_capture_audit,
 )
@@ -175,6 +176,7 @@ from .readiness import write_downstream_pilot_candidates, write_phase45_readines
 from .reference_architectures import write_reference_architecture_outputs
 from .research import research_missing_parts
 from .research_intake import (
+    build_language_playbook_report,
     build_language_frontier_watchlist,
     intake_external_candidate,
     list_intake,
@@ -189,6 +191,14 @@ from .repo_completion import (
 )
 from .repo_learning_scope import write_repo_learning_loop_install_scope_outputs
 from .roadmap import check_roadmap
+from .rust_bridge import run_dad_scan_core
+from .rust_rollout import (
+    apply_rust_rollout_scaffold,
+    build_rust_rollout_mail_packets,
+    load_rust_repo_records,
+    summarize_rust_rollout_lessons,
+    write_rust_rollout_plan,
+)
 from .semantic_evolution import write_semantic_evolution_outputs
 from .template_library import validate_template_registry, write_template_library_report
 from .test_parity import run_test_parity
@@ -235,6 +245,10 @@ harness_app = typer.Typer(no_args_is_help=True)
 app.add_typer(harness_app, name="harness")
 exceptions_app = typer.Typer(no_args_is_help=True)
 app.add_typer(exceptions_app, name="exceptions")
+rust_app = typer.Typer(no_args_is_help=True)
+app.add_typer(rust_app, name="rust")
+rust_rollout_app = typer.Typer(no_args_is_help=True)
+app.add_typer(rust_rollout_app, name="rust-rollout")
 console = Console()
 
 
@@ -622,6 +636,126 @@ def doctor(config: Optional[Path] = typer.Option(None), hub: Optional[Path] = ty
     console.print_json(data=result)
     if not result["ready"]:
         raise typer.Exit(2)
+
+
+@rust_app.command("scan-local")
+def rust_scan_local(
+    source: Path = typer.Option(..., "--source", help="Local source tree to scan."),
+    source_id: str = typer.Option(..., "--source-id", help="Stable DAD source identifier."),
+    path_alias: str = typer.Option(..., "--path-alias", help="Alias used instead of raw paths."),
+    out: Path = typer.Option(..., "--out", help="JSONL observation output path."),
+    summary_out: Path = typer.Option(..., "--summary-out", help="Scan summary JSON output path."),
+    quarantine_out: Path = typer.Option(
+        ..., "--quarantine-out", help="Quarantine/skip report JSON output path."
+    ),
+    max_files: Optional[int] = typer.Option(None, "--max-files", min=1),
+    max_content_hash_bytes: int = typer.Option(10_485_760, "--max-content-hash-bytes", min=1),
+    follow_symlinks: bool = typer.Option(False, "--follow-symlinks"),
+    exclude: list[str] = typer.Option([], "--exclude", help="Additional glob exclude pattern."),
+    manifest_path: Optional[Path] = typer.Option(None, "--manifest-path"),
+    cargo_bin: str = typer.Option("cargo", "--cargo-bin"),
+    include_output: bool = typer.Option(
+        False, "--include-output", help="Include raw Rust subprocess stdout/stderr."
+    ),
+    hub: Optional[Path] = typer.Option(None),
+) -> None:
+    """Run DAD's Rust leaf scanner through the Python orchestration boundary."""
+    cfg = _cfg(hub=hub)
+    result = run_dad_scan_core(
+        repo_root=cfg.repo_root,
+        source=source,
+        source_id=source_id,
+        path_alias=path_alias,
+        out=out,
+        summary_out=summary_out,
+        quarantine_out=quarantine_out,
+        max_files=max_files,
+        max_content_hash_bytes=max_content_hash_bytes,
+        follow_symlinks=follow_symlinks,
+        excludes=exclude,
+        cargo_bin=cargo_bin,
+        manifest_path=manifest_path,
+    )
+    console.print_json(data=result.to_dict(include_output=include_output))
+    if result.returncode != 0:
+        raise typer.Exit(result.returncode)
+
+
+@rust_rollout_app.command("plan")
+def rust_rollout_plan(
+    config_path: Path = typer.Option(
+        Path("config/repo_rust_status.yaml"), "--config", help="Rust repo status matrix."
+    ),
+    out_dir: Path = typer.Option(
+        Path("processed/reports/rust_rollout"), "--out-dir", help="DAD-local report output dir."
+    ),
+    hub: Optional[Path] = typer.Option(None),
+) -> None:
+    """Write DAD's Rust rollout plan without mutating target repos."""
+    cfg = _cfg(hub=hub)
+    result = write_rust_rollout_plan(
+        _repo_path(cfg.repo_root, config_path) or config_path,
+        _repo_path(cfg.repo_root, out_dir) or out_dir,
+    )
+    console.print_json(data=result)
+
+
+@rust_rollout_app.command("build-mail")
+def rust_rollout_build_mail(
+    config_path: Path = typer.Option(Path("config/repo_rust_status.yaml"), "--config"),
+    out_dir: Path = typer.Option(Path("mail/outbox/rust_rollout"), "--out-dir"),
+    hub: Optional[Path] = typer.Option(None),
+) -> None:
+    """Build deterministic local Rust rollout instruction packets."""
+    cfg = _cfg(hub=hub)
+    result = build_rust_rollout_mail_packets(
+        _repo_path(cfg.repo_root, config_path) or config_path,
+        _repo_path(cfg.repo_root, out_dir) or out_dir,
+    )
+    console.print_json(data=result)
+
+
+@rust_rollout_app.command("apply")
+def rust_rollout_apply(
+    repo: str = typer.Option(..., "--repo"),
+    approval_id: str = typer.Option(..., "--approval-id"),
+    force: bool = typer.Option(False, "--force"),
+    dry_run: bool = typer.Option(False, "--dry-run"),
+    config_path: Path = typer.Option(Path("config/repo_rust_status.yaml"), "--config"),
+    hub: Optional[Path] = typer.Option(None),
+) -> None:
+    """Apply a conservative target-repo Rust scaffold when policy allows it."""
+    cfg = _cfg(hub=hub)
+    records = load_rust_repo_records(_repo_path(cfg.repo_root, config_path) or config_path)
+    matches = [record for record in records if record.repo == repo or record.repo_name == repo]
+    if not matches:
+        console.print(f"Unknown Rust rollout repo: {repo}")
+        raise typer.Exit(2)
+    result = apply_rust_rollout_scaffold(
+        repo_root=cfg.repo_root,
+        record=matches[0],
+        approval_id=approval_id,
+        force=force,
+        dry_run=dry_run,
+    )
+    console.print_json(data=result.to_dict())
+    if result.status == "blocked":
+        raise typer.Exit(2)
+
+
+@rust_rollout_app.command("lessons-summarize")
+def rust_rollout_lessons_summarize(
+    ledger: Path = typer.Option(Path("lessons/rust_rollout/lesson_ledger.jsonl"), "--ledger"),
+    out_dir: Path = typer.Option(Path("processed/reports/rust_rollout"), "--out-dir"),
+    hub: Optional[Path] = typer.Option(None),
+) -> None:
+    """Rebuild Rust rollout lesson summaries from the append-only ledger."""
+    cfg = _cfg(hub=hub)
+    result = summarize_rust_rollout_lessons(
+        _repo_path(cfg.repo_root, ledger) or ledger,
+        _repo_path(cfg.repo_root, out_dir) or out_dir,
+    )
+    console.print_json(data=result)
 
 
 @template_app.command("check")
@@ -1798,6 +1932,52 @@ def exceptions_capture_remediation_plan(
     console.print_json(data=result)
 
 
+@exceptions_app.command("capture-gap-review-queue")
+def exceptions_capture_gap_review_queue(
+    repo: list[str] = typer.Option([], "--repo"),
+    candidate_limit: int = typer.Option(
+        50,
+        "--candidate-limit",
+        min=0,
+        max=500,
+        help="Maximum candidate path signals per repo; 0 means exhaustive metadata-only scan.",
+    ),
+    max_scanned_files: int = typer.Option(
+        50000,
+        "--max-scanned-files",
+        min=1,
+        max=1000000,
+        help="Maximum repo files to inspect by path name for capture candidates.",
+    ),
+    per_group_example_limit: int = typer.Option(5, "--per-group-example-limit", min=1, max=50),
+    output: Optional[Path] = typer.Option(None, "--output"),
+    hub: Optional[Path] = typer.Option(None),
+) -> None:
+    """Write a central-only review queue for observed capture gaps."""
+    cfg = _cfg(hub=hub)
+    selected = _discover_exception_repos(
+        repo or ["all"],
+        cfg,
+        capture_audit=True,
+        reviewed=True,
+    )
+    output_path = output if output is None or output.is_absolute() else output
+    try:
+        result = write_exception_capture_gap_review_queue(
+            cfg.repo_root,
+            selected,
+            repo_policies=_exception_repo_policies(cfg),
+            output=output_path,
+            candidate_limit=candidate_limit,
+            max_scanned_files=max_scanned_files,
+            per_group_example_limit=per_group_example_limit,
+        )
+    except (OSError, json.JSONDecodeError, KeyError, ValueError) as exc:
+        console.print(str(exc))
+        raise typer.Exit(2) from exc
+    console.print_json(data=result)
+
+
 @exceptions_app.command("record")
 def exceptions_record(
     repo: Path = typer.Option(Path("."), "--repo"),
@@ -2750,6 +2930,26 @@ def research_frontier_watch(
             cadence=cadence,
             include_manual=include_manual,
             limit=limit,
+        )
+    except (ValueError, FileNotFoundError) as exc:
+        console.print(str(exc))
+        raise typer.Exit(2) from exc
+    console.print_json(data=report)
+
+
+@research_app.command("language-playbook")
+def research_language_playbook(
+    language: str = typer.Option(..., "--language", help="Language id, e.g. python, rust, future-language-template."),
+    include_text: bool = typer.Option(False, "--include-text", help="Include the markdown playbook body in the JSON output."),
+    hub: Optional[Path] = typer.Option(None),
+) -> None:
+    """Show the operational DAD coding playbook for one language."""
+    cfg = _cfg(hub=hub)
+    try:
+        report = build_language_playbook_report(
+            cfg.repo_root,
+            language=language,
+            include_text=include_text,
         )
     except (ValueError, FileNotFoundError) as exc:
         console.print(str(exc))

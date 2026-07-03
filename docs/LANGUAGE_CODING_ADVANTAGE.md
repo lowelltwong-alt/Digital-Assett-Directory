@@ -107,6 +107,20 @@ Before material coding, preflight should route by language and task:
 - Unknown or new language work: use the future-language template record before
   creating any downstream recommendation.
 
+For the machine-readable operational view, run:
+
+```text
+asset-dir research language-playbook --language python
+asset-dir research language-playbook --language rust
+asset-dir research language-playbook --language future-language-template
+```
+
+The playbook command returns the language's proof surfaces, internal coding
+guidelines, AI-overlooked operations, codebase watch targets, harness routes,
+validation gates, and candidate-mail contract. It is the local DAD contract for
+how an agent should use the language before it writes code, proposes a Rust
+leaf tool, adds a Python checker, or promotes a frontier source.
+
 During midflight, agents should check this registry when code starts feeling
 generic, when a performance claim appears, when a language feature could make a
 contract safer, or when a toolchain check could turn a review concern into a

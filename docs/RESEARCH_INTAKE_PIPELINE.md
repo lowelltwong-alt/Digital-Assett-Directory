@@ -47,6 +47,7 @@ asset-dir research screen --intake-id <id> --check prompt_injection --result pas
 asset-dir research promote --intake-id <id> --approved-by <human> --approval-id <id> --target skill_pointer
 asset-dir research intake-list [--status screened]
 asset-dir research frontier-watch [--language python|rust] [--cadence weekly|monthly|quarterly]
+asset-dir research language-playbook --language python|rust|future-language-template
 ```
 
 ## Language Frontier Radar
@@ -85,3 +86,10 @@ source rows with cadence, URLs, watch topics, intake actions, language asset
 routes, harness routes, and the required candidate-mail fields. The command does
 not browse, claim freshness, or promote anything; it tells the next agent where
 to look and what proof surface must be named before DAD learns from the source.
+
+Use `asset-dir research language-playbook --language <id>` before material
+language-specific coding. It returns the operational playbook row, proof
+surfaces, internal coding guidelines, AI-overlooked operations, codebase watch
+targets, harness routes, validation gates, and the safe mail contract for that
+language. It does not browse or adopt anything; it gives the agent the local DAD
+contract before it writes code or recommends a frontier idea.

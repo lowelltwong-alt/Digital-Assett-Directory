@@ -1,0 +1,382 @@
+{
+  "schema_version": "dad_rust_upgrade_pack_manifest.v1",
+  "generated_at": "2026-07-02T17:57:31.694442+00:00",
+  "file_count_excluding_manifest": 75,
+  "files": [
+    {
+      "path": "DROP_IN_MAP.md",
+      "bytes": 1070,
+      "sha256": "218cb3e65270cac2d5a24232e0c69ce9161ef4c411d1c7515d5a79ce3047cfbd"
+    },
+    {
+      "path": "README.md",
+      "bytes": 2853,
+      "sha256": "af899053f1f25ca64e6d01dd3943bf856f54e212e053e192e63dd955f026a21c"
+    },
+    {
+      "path": "agents/multi_agent_task_graph.yaml",
+      "bytes": 1318,
+      "sha256": "bfeb896c66a6e481d538222d8b72095953b5c42c7f8fa22397551f80697981d1"
+    },
+    {
+      "path": "agents/prompts/dad_upgrade_task_prompt.md",
+      "bytes": 929,
+      "sha256": "93d26603f0f89e6743f3bf6e15a082b285887072ad69633d21941bcdedf1af0b"
+    },
+    {
+      "path": "agents/prompts/python_bridge_agent.md",
+      "bytes": 631,
+      "sha256": "737788d519ff68e13db540c1c9c32437bb57935091b085857788c4f9417cf7dc"
+    },
+    {
+      "path": "agents/prompts/rust_architect.md",
+      "bytes": 604,
+      "sha256": "8e6060948b0604bbb9e8e0a9c6259fd4c766fcea79f9fce594f7890158e2b48f"
+    },
+    {
+      "path": "agents/prompts/rust_ci_qa_agent.md",
+      "bytes": 567,
+      "sha256": "61e2ff25f557de33097ae037eafd3af6d4ff99205fd0e1cdeb2c2536fc4cecd3"
+    },
+    {
+      "path": "agents/prompts/rust_impl_agent_codex.md",
+      "bytes": 825,
+      "sha256": "06b9ed0a49ee1a49fab7f54029613912954b016b043d6409486f13db8cadcbef"
+    },
+    {
+      "path": "agents/prompts/security_unsafe_reviewer.md",
+      "bytes": 543,
+      "sha256": "6cfdcc1bc1ce73a73f4d2d92ff3d9e7151c0abcb2306f6800e3dd961ab7f8ec6"
+    },
+    {
+      "path": "config/repo_rust_status.yaml",
+      "bytes": 15747,
+      "sha256": "eaf518a1b803edb0f9b8fc0d5e1f9fcec3f05d4f52d52f25ad2ff30c8b2591a3"
+    },
+    {
+      "path": "config/rust_adoption_thresholds.yaml",
+      "bytes": 1147,
+      "sha256": "3d7ce40ce57f9ca5a9e13cdb78f52ca83786034a7d97757386aff5505c2f4509"
+    },
+    {
+      "path": "config/rust_tooling_policy.yaml",
+      "bytes": 919,
+      "sha256": "c687891eb7785f8d9426d6ab2a5146706cdff656a8aa9559c2e645c0a0c28221"
+    },
+    {
+      "path": "docs/00_EXECUTIVE_DECISION.md",
+      "bytes": 2021,
+      "sha256": "202d33092a115506a0521181b4808de93374e9e1e93b23a200739661845a4a3e"
+    },
+    {
+      "path": "docs/01_REPO_RUST_ADOPTION_MATRIX.md",
+      "bytes": 6653,
+      "sha256": "91a2260c893ed1f923d337508bbd2ad763f219d88f9eea138dc305fea604f5bb"
+    },
+    {
+      "path": "docs/02_DAD_FIRST_RUST_UPGRADE_PLAN.md",
+      "bytes": 3505,
+      "sha256": "c6d75c4286386e645ea5d84e0885e23de72c4c978dee66e7f56f6c34194d9b8f"
+    },
+    {
+      "path": "docs/03_RUST_ADOPTION_PLAYBOOK.md",
+      "bytes": 2113,
+      "sha256": "7a3030c2edbed24839d1d5687c9b1bff1c194ba5a90da1d294521fe056bda028"
+    },
+    {
+      "path": "docs/04_RUST_VS_PYTHON_HARNESSES.md",
+      "bytes": 2356,
+      "sha256": "15bc6ce93dfb34ebaa6aa1a391464ae8d5d746c6dbcda146c293c50a9a3d15df"
+    },
+    {
+      "path": "docs/05_LONG_RUST_CI_QA_PLAN.md",
+      "bytes": 2690,
+      "sha256": "3b90d4b1f0a2833160fb864c3e48d877820e4e3db42cc69dec5835f89ea99269"
+    },
+    {
+      "path": "docs/06_AGENT_AND_SKILL_SYSTEM.md",
+      "bytes": 2509,
+      "sha256": "c4f409facbfe8dc41646a1029e890bfc4e06aae4eb224cd9747ddd49a4035fff"
+    },
+    {
+      "path": "docs/07_GITHUB_RUST_REPO_SEARCH_GUIDE.md",
+      "bytes": 2641,
+      "sha256": "101f8d3f7dc774f11606ca401b8ae059736afb58e43b696dbb2ba0712fecfb09"
+    },
+    {
+      "path": "docs/08_RUST_LEARNING_AND_CRATE_RESOURCES.md",
+      "bytes": 2402,
+      "sha256": "23e53debe8563ad4befecbdde2c8aaed4143216e63005d4fd7d4f6fa19a548e7"
+    },
+    {
+      "path": "docs/09_MODEL_ROUTING_FOR_RUST.md",
+      "bytes": 1829,
+      "sha256": "4227c6aef0322b590b0eb1c34f02e424c55d7c4a336211dacd82919689a0bcfc"
+    },
+    {
+      "path": "docs/RESOURCE_REFERENCES.md",
+      "bytes": 1364,
+      "sha256": "4b18a73d0d7853fd95cac1bb553537d08e9e52bc8cc37fc7258ad30ac77cf6f2"
+    },
+    {
+      "path": "docs/repo_plans/airca_fractal_decision_architecture.md",
+      "bytes": 971,
+      "sha256": "f0b4da1eafe1033978caa0ee5c2111d86c36700972e09590645f9ba8c6bffa99"
+    },
+    {
+      "path": "docs/repo_plans/albert_trial_simulation_system.md",
+      "bytes": 1340,
+      "sha256": "442a27f35493f3ce0f27e031c32782771e7f1c3b667ec87258b2bd39075526ee"
+    },
+    {
+      "path": "docs/repo_plans/all_law_firm_talent_intel.md",
+      "bytes": 986,
+      "sha256": "70c80dc10cc871be6b5480549882945b1174d92af2a73dd0a2b79ec2ceb0d0bf"
+    },
+    {
+      "path": "docs/repo_plans/bi_test.md",
+      "bytes": 914,
+      "sha256": "340d0393d94d94b19eb59aefdb40ac3f1281838b0d51eabcfc5bfea6af31bb18"
+    },
+    {
+      "path": "docs/repo_plans/digital_assett_directory.md",
+      "bytes": 1272,
+      "sha256": "5f654dede4a6a13fab1c4b637781de75b10d1822e12227423576eedd54bd1a9e"
+    },
+    {
+      "path": "docs/repo_plans/exceptions_lake_runtime.md",
+      "bytes": 1036,
+      "sha256": "530ca54b67151e465720405a0b986fc0469156febf583b2ccf9e9fdc6ab25b75"
+    },
+    {
+      "path": "docs/repo_plans/fmg_fractal_capability_ontology.md",
+      "bytes": 1041,
+      "sha256": "9111a7f8c4a8d61b8e8715d37980c456c8d4cf16631ed50ea0725452c983e07a"
+    },
+    {
+      "path": "docs/repo_plans/kirsten_dissertation_knowledge_graph.md",
+      "bytes": 1246,
+      "sha256": "3ee612ad579c8b13be59152acea6d89930e65074afc526b35a2eb84dcdc2b205"
+    },
+    {
+      "path": "docs/repo_plans/lairca_logos_grounded_theological_model.md",
+      "bytes": 918,
+      "sha256": "01b1bb11281e7d23be479d2da0327a0c9d5531841f9e094807406d0a2c074064"
+    },
+    {
+      "path": "docs/repo_plans/lawfirm_os_exceptions_lake_runtime.md",
+      "bytes": 1238,
+      "sha256": "73d1409f174432050052d83a4a25fc6a6881df3433b5f0c877c16a2468c9d476"
+    },
+    {
+      "path": "docs/repo_plans/lawfirm_os_intake.md",
+      "bytes": 1309,
+      "sha256": "fd261fca4d5cee1e983896a67bcd630864ae50af57f0c470b3ffac0aa0601d84"
+    },
+    {
+      "path": "docs/repo_plans/lawfirm_os_legal_knowledge_runtime.md",
+      "bytes": 1244,
+      "sha256": "7a01e5a2a95d77ac90964876c02401f56d731549e1707a813de22836e101dd63"
+    },
+    {
+      "path": "docs/repo_plans/lawfirm_os_orchestrator.md",
+      "bytes": 1181,
+      "sha256": "508675192a24a4bef1b49a621f39d24817c6a9e146c5975cece370610b8ac799"
+    },
+    {
+      "path": "docs/repo_plans/lawfirm_os_semantic_substrate.md",
+      "bytes": 1234,
+      "sha256": "7253230d35f7c0b4e4f4d645ec7268ebb5f5a3cd78afeb37c1929e8f36a625cf"
+    },
+    {
+      "path": "docs/repo_plans/lawfirm_os_skills_registry.md",
+      "bytes": 1301,
+      "sha256": "f9e7b325f2b460689de0ffe7b5aaf919e5dc41d96c76685a11f258aa40731674"
+    },
+    {
+      "path": "docs/repo_plans/lawfirm_os_talent_intelligence.md",
+      "bytes": 1287,
+      "sha256": "658615452bd4746e4106abaddd0fb8010af1c86d003ec00f675b500cb246a829"
+    },
+    {
+      "path": "docs/repo_plans/lawfirm_talent_intel_ats.md",
+      "bytes": 1214,
+      "sha256": "43aff183ef344762e107f51888c2561071a3c4828cd55643b89b6cc5eb22f577"
+    },
+    {
+      "path": "docs/repo_plans/logos_boundary_literature.md",
+      "bytes": 1180,
+      "sha256": "8eb4dceaf68b518801ce4b0581370943f2a5efb6e53053650485586b765e450b"
+    },
+    {
+      "path": "docs/repo_plans/logos_governance_architecture.md",
+      "bytes": 1164,
+      "sha256": "6ffe6c1816fd98d3c93f40a9606164ab89ab4b8576515d726f7027ee6439dda7"
+    },
+    {
+      "path": "docs/repo_plans/logos_governed_core.md",
+      "bytes": 861,
+      "sha256": "d2a5ca61743404728eafdeb43bd7161011c4179f7742aa4a66f421de75af2f1f"
+    },
+    {
+      "path": "docs/repo_plans/logos_scripture_graph.md",
+      "bytes": 1252,
+      "sha256": "233c2ea74bed226786336b77455d65440aa093a8a05d30c006f15025fd09fd96"
+    },
+    {
+      "path": "docs/repo_plans/lowell_career_os.md",
+      "bytes": 843,
+      "sha256": "9d223f55e529ab36f10bd04833da48d2385bd357ef4f5d1cdd049ade02dcf75c"
+    },
+    {
+      "path": "docs/repo_plans/lowelltwong_alt.md",
+      "bytes": 863,
+      "sha256": "975fea8f44d838c50cffc0487eacf90ae5ab43311fc8a57e467dfe1e0004386a"
+    },
+    {
+      "path": "docs/repo_plans/noesis_atlas.md",
+      "bytes": 1036,
+      "sha256": "5de4bfc9354043f04fe8c1d144b90e9db30b859017934b3c9b087d8ba1fd85a8"
+    },
+    {
+      "path": "docs/repo_plans/obsidian_foundry_vault.md",
+      "bytes": 1017,
+      "sha256": "4b924eb851aa3221960365c9779ee89b8e2111298e7d2da2d6b91e19829d8a42"
+    },
+    {
+      "path": "docs/repo_plans/orphan_radar.md",
+      "bytes": 1096,
+      "sha256": "55346800089f51998ee56f07479f6703def2ef3157c794059bcb92c1f1220824"
+    },
+    {
+      "path": "docs/repo_plans/ryans_project.md",
+      "bytes": 955,
+      "sha256": "252ac5d5d43eb63d294eb05f80b7003ff61b232ec5895811f5ad6d53eb4b3884"
+    },
+    {
+      "path": "harnesses/mixed_rust_python_handoff_contract.yaml",
+      "bytes": 613,
+      "sha256": "d0c3dabb2c93b9f8d9a366a559f9fdb905d2856db19ea51ed306288deab76151"
+    },
+    {
+      "path": "harnesses/python_harness_contract.yaml",
+      "bytes": 899,
+      "sha256": "b2f1fa8b128fce2d3054b3c0bd339cb677feb945a6dc9f01f3611dc114dee7ab"
+    },
+    {
+      "path": "harnesses/rust_harness_contract.yaml",
+      "bytes": 1175,
+      "sha256": "c15b3d56675cda6aa7449685a7459948243cf55dd5f7e65daef6a608a6ea49d9"
+    },
+    {
+      "path": "overlay/docs/rust/DAD_RUST_SCAN_CORE.md",
+      "bytes": 1326,
+      "sha256": "507514544149290029f110fe4ee6eb46794f81f66d06e70ee2669c5ae4fa3e3e"
+    },
+    {
+      "path": "overlay/scripts/run_dad_scan_core.py",
+      "bytes": 2462,
+      "sha256": "8e800216211fca2238236a7ec6ec8b4e60cba19098e2ee492f26cfaf66b0a1b8"
+    },
+    {
+      "path": "overlay/tools/dad_scan_core/Cargo.toml",
+      "bytes": 401,
+      "sha256": "e1d56928ad0b322b86dc030ada4a1c61eb343fdea4af53567079e4e21b036f4c"
+    },
+    {
+      "path": "overlay/tools/dad_scan_core/README.md",
+      "bytes": 1057,
+      "sha256": "cf646d1361297cb0e8b079dd07e3909e8e902567fb68116a3af90dbf9f149bef"
+    },
+    {
+      "path": "overlay/tools/dad_scan_core/src/extract.rs",
+      "bytes": 745,
+      "sha256": "81d91e16c1cd86b027dfdc797e08042dd50ef5b6e4c9daab4d23106e4bd10b90"
+    },
+    {
+      "path": "overlay/tools/dad_scan_core/src/hash.rs",
+      "bytes": 1241,
+      "sha256": "1944c31a71946cad7675567779be22e6e815e0eb94303371a912343592ae5bda"
+    },
+    {
+      "path": "overlay/tools/dad_scan_core/src/lib.rs",
+      "bytes": 5119,
+      "sha256": "b7da7784ee4bc15633ac3e21803eb7e8193b93cee5171803682fb060aac4bf5a"
+    },
+    {
+      "path": "overlay/tools/dad_scan_core/src/main.rs",
+      "bytes": 682,
+      "sha256": "e8425edd26548bd757cbd231a83a94a44df2eb2a21ab328d1b8c59e8de83bcac"
+    },
+    {
+      "path": "overlay/tools/dad_scan_core/src/models.rs",
+      "bytes": 2483,
+      "sha256": "c2b486110a09570f7964f8bcd1e44e5673a3ae75a4db04e53710bd7214634e17"
+    },
+    {
+      "path": "overlay/tools/dad_scan_core/src/report.rs",
+      "bytes": 1004,
+      "sha256": "f6d1f98d3b90bb43afede0b89e1ebcd1f64e8d0da858acd45c94e596555398a4"
+    },
+    {
+      "path": "overlay/tools/dad_scan_core/src/walk.rs",
+      "bytes": 2861,
+      "sha256": "1a734b1fd5f270251aa924fe340df7836f5c359bb2eae891076dfe389f2b2668"
+    },
+    {
+      "path": "overlay/tools/dad_scan_core/tests/smoke.rs",
+      "bytes": 1233,
+      "sha256": "257afa13b111da466f13adb4090b9f31ebeac300f1682f58b5620b52d825e67e"
+    },
+    {
+      "path": "scripts/apply_overlay.py",
+      "bytes": 1374,
+      "sha256": "c468c650f8ed2371da4abf5189ac870af70c655ba914533c6c99dc5182ed226a"
+    },
+    {
+      "path": "skills/rust-ci-qa/SKILL.md",
+      "bytes": 445,
+      "sha256": "43e3c350732b95bf34d6a2f77e2ac6f9da9d5f2ed81043649c77aa4074b9eb30"
+    },
+    {
+      "path": "skills/rust-python-bridge/SKILL.md",
+      "bytes": 523,
+      "sha256": "4976723ec53523678375c17e1d37306e361016db4416d0ee3352c58a9cedf3cf"
+    },
+    {
+      "path": "skills/rust-scan-core/SKILL.md",
+      "bytes": 796,
+      "sha256": "4a4834180de6c80d56f1c01a264a5a27e1b441ca64c74006665eea915f1df46c"
+    },
+    {
+      "path": "templates/cargo/config.toml",
+      "bytes": 167,
+      "sha256": "c8f316dd7c6de6cc221cdcbde4faf47093ff4e0588ebd5c647bf37b3c58bbc12"
+    },
+    {
+      "path": "templates/deny.toml",
+      "bytes": 431,
+      "sha256": "073ff5b8b17b0a66bcaac8234223f91f061c04b5903f500f00d2489040d9b466"
+    },
+    {
+      "path": "templates/github/dependabot-rust.yml",
+      "bytes": 258,
+      "sha256": "c32666201c0c6c46408d3fa031d2eb540a23c006c954532af7bde15ff319d86e"
+    },
+    {
+      "path": "templates/github/workflows/rust-ci-long.yml",
+      "bytes": 2750,
+      "sha256": "c2834861a6a241b3e2843e2b0d60ebbaaee860eba7981cb3004105748a2f6c70"
+    },
+    {
+      "path": "templates/github/workflows/rust-ci-pr.yml",
+      "bytes": 1157,
+      "sha256": "581355656fc685c1585c336980f903cc58785f1a5582b9ced7c90df63a6689cb"
+    },
+    {
+      "path": "templates/nextest.toml",
+      "bytes": 266,
+      "sha256": "49711b1d8f41279734ad0a5374c42d095debc72b57e760bca6cbf246f3fa1d6b"
+    }
+  ]
+}

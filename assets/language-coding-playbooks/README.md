@@ -10,12 +10,15 @@ before it writes Python, Rust, mixed-language, or future-language code.
 ## Use
 
 1. Run DAD preflight and read the returned context pack.
-2. Pick the playbook for the language or boundary being changed.
-3. Use the proof operations before making claims about speed, safety, test
+2. Run `asset-dir research language-playbook --language <python|rust|future-language-template>`
+   to load the DAD playbook, proof surfaces, watch targets, harness routes, and
+   safe mail contract for the language.
+3. Pick the playbook for the language or boundary being changed.
+4. Use the proof operations before making claims about speed, safety, test
    coverage, or frontier techniques.
-4. Route new discoveries through `dad:need:language-frontier-signals` or
+5. Route new discoveries through `dad:need:language-frontier-signals` or
    `dad:need:coding-harness-feedback`.
-5. Keep third-party content, private rows, raw logs, secrets, and long source
+6. Keep third-party content, private rows, raw logs, secrets, and long source
    blobs out of DAD mail.
 
 ## Playbooks
@@ -32,4 +35,3 @@ before it writes Python, Rust, mixed-language, or future-language code.
 Frontier research is not adoption. A new language feature, crate, package, or
 paper becomes DAD guidance only after pointer-only intake, applicability limits,
 local validation, negative/failure evidence, and postflight or harness outcomes.
-

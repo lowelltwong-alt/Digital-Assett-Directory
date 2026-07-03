@@ -1,0 +1,39 @@
+{
+  "dedupe_key": "dad:rust-rollout-dedupe:6693c233-c1a8-569b-b37a-629233eef098",
+  "evidence": [
+    "config/repo_rust_status.yaml",
+    "docs/rust/DAD_RUST_SCAN_CORE.md",
+    "lessons/rust_rollout/lesson_ledger.jsonl"
+  ],
+  "mail_id": "dad:rust-rollout-mail:e1612100-ae68-56a2-93d0-bb5bc894c490",
+  "message_type": "capability_suggestion",
+  "payload": {
+    "block_reason": "missing configured local_path",
+    "can_apply": false,
+    "contains_logos": false,
+    "destructive_write_authorized": false,
+    "external_send_performed": false,
+    "github_write_performed": false,
+    "python_stays_orchestrator": true,
+    "recommended_first_rust_slice": "None until real data/runtime hot path appears.",
+    "rollout_mode": "dad_forced_implementation",
+    "rust_boundary": "deterministic leaf tooling only",
+    "rust_rollout_packet_type": "rust_forced_rollout_candidate",
+    "target_repo_owns_rust_files": true,
+    "validation_commands": [
+      "cargo fmt --check",
+      "cargo check",
+      "cargo test",
+      "cargo clippy --all-targets -- -D warnings"
+    ]
+  },
+  "review_status": "candidate",
+  "schema_version": "dad_rust_rollout_mail_packet.v1",
+  "sensitivity": "metadata_only",
+  "source_repo": "Digital-Assett-Directory",
+  "suggested_actions": [
+    "Keep this packet as a candidate notice.",
+    "Resolve the block before any local apply: missing configured local_path"
+  ],
+  "target_repo": "Ryans-Project"
+}

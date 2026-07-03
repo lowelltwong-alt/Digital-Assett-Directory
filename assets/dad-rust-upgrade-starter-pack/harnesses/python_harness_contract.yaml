@@ -1,0 +1,21 @@
+schema_version: python_harness_contract.v1
+name: python_orchestration_harness
+purpose: Validate Python workflow, schema, repo, and domain orchestration around Rust outputs.
+commands:
+  pr:
+    - python -m ruff check --no-cache src tests scripts
+    - python -m ruff format --check --no-cache src tests scripts
+    - python -m pytest -q
+    - python -m digital_asset_directory.cli validate
+  mixed:
+    - python scripts/run_dad_scan_core.py --fixture examples/demo_assets --out raw/local/demo.jsonl
+    - python scripts/validate_rust_observation_jsonl.py raw/local/demo.jsonl
+    - python scripts/compare_python_vs_rust_scan_fixture.py --fixture examples/demo_assets
+invariants:
+  - Python remains orchestrator
+  - Rust observations do not bypass DAD validation
+  - adapter failures fail closed
+  - existing DAD outputs remain compatible
+artifacts:
+  - reports/python/*.json
+  - reports/mixed/*.json

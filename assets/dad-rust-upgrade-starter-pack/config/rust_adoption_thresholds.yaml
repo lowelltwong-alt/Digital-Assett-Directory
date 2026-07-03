@@ -1,0 +1,34 @@
+schema_version: rust_adoption_thresholds.v1
+authority: candidate_planning_only
+minimum_conditions_to_start_rust:
+  required_count: 3
+  conditions:
+    - stable_input_output_contract
+    - deterministic_repeated_scan_parse_hash_validate_index_loop
+    - file_count_or_data_size_pressure
+    - ci_runtime_pressure_from_deterministic_processing
+    - source_safety_no_mutation_need
+    - reusable_across_repos
+    - json_jsonl_boundary_available
+must_not_start_rust_when:
+  - domain_logic_changes_daily
+  - governance_authority_is_the_primary_problem
+  - legal_theological_or_review_judgment_is_required
+  - tool_would_call_llms_or_external_apis_as_core_behavior
+  - no_test_harness_exists
+promotion_gates:
+  candidate_to_experimental:
+    - cargo_check_passes
+    - cargo_test_passes
+    - output_schema_documented
+    - python_validator_exists
+  experimental_to_default:
+    - parity_against_python_fixture
+    - no_mutation_test_passes
+    - pr_ci_stable
+    - failure_modes_documented
+  default_to_cross_repo_pattern:
+    - long_ci_passes_twice
+    - dependency_audit_reviewed
+    - security_review_completed
+    - docs_and_agent_prompts_updated

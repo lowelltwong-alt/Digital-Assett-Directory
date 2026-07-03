@@ -1,0 +1,41 @@
+{
+  "dedupe_key": "dad:rust-rollout-dedupe:1ef44040-28bd-59af-8d21-2c52dda9a649",
+  "evidence": [
+    "config/repo_rust_status.yaml",
+    "docs/rust/DAD_RUST_SCAN_CORE.md",
+    "lessons/rust_rollout/lesson_ledger.jsonl"
+  ],
+  "mail_id": "dad:rust-rollout-mail:6259ce5a-6ce1-5624-919f-2597dc231d23",
+  "message_type": "capability_suggestion",
+  "payload": {
+    "block_reason": "",
+    "can_apply": true,
+    "contains_logos": false,
+    "destructive_write_authorized": false,
+    "external_send_performed": false,
+    "github_write_performed": false,
+    "python_stays_orchestrator": true,
+    "recommended_first_rust_slice": "tools/dad_scan_core: local source scanner emitting raw asset observation JSONL and quarantine report.",
+    "rollout_mode": "dad_forced_implementation",
+    "rust_boundary": "deterministic leaf tooling only",
+    "rust_rollout_packet_type": "rust_forced_rollout_candidate",
+    "target_repo_owns_rust_files": true,
+    "validation_commands": [
+      "cargo fmt --manifest-path tools/dad_scan_core/Cargo.toml --check",
+      "cargo check --manifest-path tools/dad_scan_core/Cargo.toml",
+      "cargo test --manifest-path tools/dad_scan_core/Cargo.toml",
+      "cargo clippy --manifest-path tools/dad_scan_core/Cargo.toml --all-targets -- -D warnings",
+      "python -m pytest tests/test_rust_bridge_dad_scan_core.py -q"
+    ]
+  },
+  "review_status": "candidate",
+  "schema_version": "dad_rust_rollout_mail_packet.v1",
+  "sensitivity": "metadata_only",
+  "source_repo": "Digital-Assett-Directory",
+  "suggested_actions": [
+    "Review the DAD Rust rollout plan.",
+    "Keep Python as orchestrator and target repo as owner of Rust files.",
+    "Run the listed validation commands after any local apply."
+  ],
+  "target_repo": "Digital-Assett-Directory"
+}

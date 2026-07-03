@@ -20,6 +20,7 @@ from digital_asset_directory.cli import (
 from digital_asset_directory.config import ExceptionRepoPolicy, MailRepoPolicy
 from digital_asset_directory.exception_capture import (
     build_exception_capture_remediation_plan,
+    build_exception_capture_gap_review_queue,
     build_exception_backfill_wave_plan,
     evaluate_exception_taxonomy_coverage,
     evaluate_capture_case,
@@ -29,6 +30,7 @@ from digital_asset_directory.exception_capture import (
     suggest_exception_capture,
     write_exception_backfill_readiness,
     write_exception_backfill_wave_plan,
+    write_exception_capture_gap_review_queue,
     write_exception_capture_remediation_plan,
     write_observed_capture_audit,
 )
@@ -2738,6 +2740,197 @@ def test_build_exception_capture_remediation_plan_stays_ready_when_proof_clears(
     assert lanes["ready_for_source_packet_request"]["repos"][0]["top_pattern_families"] == {
         "workflow": 1
     }
+
+
+def test_exception_capture_gap_review_queue_groups_signals_without_readable_paths(
+    tmp_path: Path,
+) -> None:
+    repo = tmp_path / "repo"
+    docs = repo / "docs"
+    docs.mkdir(parents=True)
+    (docs / "postmortem.md").write_text("metadata-only placeholder", encoding="utf-8")
+    (docs / "governance-map.md").write_text("metadata-only placeholder", encoding="utf-8")
+    policy = ExceptionRepoPolicy(
+        id="gap-repo",
+        path=repo,
+        alias="gap-repo",
+        visibility="internal",
+        exceptions_enabled=True,
+        collect_allowed=True,
+        capture_audit_allowed=True,
+        backfill_allowed=True,
+    )
+    before = sorted(path.relative_to(repo).as_posix() for path in repo.rglob("*"))
+
+    report = write_exception_capture_gap_review_queue(
+        ROOT,
+        [repo],
+        repo_policies=[policy],
+        output=tmp_path / "gap-queue.json",
+        candidate_limit=0,
+        per_group_example_limit=2,
+    )
+    md_text = (tmp_path / "gap-queue.md").read_text(encoding="utf-8")
+
+    assert report["report_id"] == "dad:exception-capture-gap-review-queue"
+    assert report["review_group_count"] >= 1
+    assert report["candidate_signal_count"] >= 2
+    assert report["per_group_example_limit"] == 2
+    assert any(
+        group["suggested_event_type"] == "backfill_exception_candidate"
+        for group in report["groups"]
+    )
+    assert any(
+        "capture_surface_refresh_required" in group["remediation_lanes"]
+        for group in report["groups"]
+    )
+    for group in report["groups"]:
+        assert len(group["path_hashes"]) <= 2
+        assert all(path_hash.startswith("sha256:") for path_hash in group["path_hashes"])
+        assert "next_actions" in group
+        assert "path" not in group
+    assert "central-only candidate evidence" in report["authority_boundary"]
+    assert "Top Groups" in md_text
+    assert str(tmp_path) not in json.dumps(report)
+    assert str(tmp_path) not in md_text
+    after = sorted(path.relative_to(repo).as_posix() for path in repo.rglob("*"))
+    assert after == before
+
+
+def test_build_exception_capture_gap_review_queue_is_stable_and_actionable() -> None:
+    observed_report = {
+        "audit_id": "dad:exception-capture-observed-audit",
+        "repo_count": 1,
+        "capture_surface_version": "0.2.0",
+        "status_counts": {"pattern_gap_candidate": 1},
+        "input_hashes": {"registry/exception-capture-pattern-registry.json": "sha256:test"},
+        "methodology_ref": "registry/exception-capture-pattern-registry.json",
+        "methodology_hash": "sha256:test",
+        "candidate_path_signal_summary": {"total": 2},
+        "repos": [
+            {
+                "repo": {
+                    "repo_id": "repo",
+                    "repo_alias": "repo",
+                    "path_hash": "sha256:repo",
+                    "visibility": "internal",
+                    "public_facing": False,
+                    "reviewed_policy": True,
+                    "exceptions_enabled": True,
+                    "collect_allowed": True,
+                    "capture_audit_allowed": True,
+                    "backfill_allowed": True,
+                    "write_protected": False,
+                },
+                "contract": {"capture_surface_version": "0.2.0"},
+                "registry_capture_surface_version": "0.2.0",
+                "status_flags": ["pattern_gap_candidate"],
+                "candidate_path_scan": {"truncated": False},
+                "candidate_path_signals": [
+                    {
+                        "term": "postmortem",
+                        "pattern_family": "exception_pattern",
+                        "suggested_event_type": "backfill_exception_candidate",
+                        "source_rule_id": "backfill-rule:generic-exception",
+                        "expected_review": "exception_event_or_no_packet",
+                        "emission_status": "gap_candidate",
+                        "path_hash": "sha256:path-a",
+                        "path_redacted": "false",
+                        "capture_suggestion": {
+                            "matched_rule_ids": [
+                                "exception-capture-rule:runtime-exception-metadata"
+                            ]
+                        },
+                    },
+                    {
+                        "term": "postmortem",
+                        "pattern_family": "exception_pattern",
+                        "suggested_event_type": "backfill_exception_candidate",
+                        "source_rule_id": "backfill-rule:generic-exception",
+                        "expected_review": "exception_event_or_no_packet",
+                        "emission_status": "gap_candidate",
+                        "path_hash": "sha256:path-b",
+                        "path_redacted": "false",
+                        "capture_suggestion": {
+                            "matched_rule_ids": [
+                                "exception-capture-rule:runtime-exception-metadata"
+                            ]
+                        },
+                    },
+                ],
+            }
+        ],
+    }
+
+    first = build_exception_capture_gap_review_queue(observed_report)
+    second = build_exception_capture_gap_review_queue(observed_report)
+
+    assert first["groups"] == second["groups"]
+    group = first["groups"][0]
+    assert group["candidate_signal_count"] == 2
+    assert group["top_terms"] == {"postmortem": 2}
+    assert group["path_hashes"] == ["sha256:path-a", "sha256:path-b"]
+    assert any("route through `backfill_exception_candidate`" in action for action in group["next_actions"])
+
+
+def test_capture_gap_review_queue_separates_same_repo_id_by_path_hash() -> None:
+    def repo_row(path_hash: str, visibility: str) -> dict:
+        return {
+            "repo": {
+                "repo_id": "copied-repo",
+                "repo_alias": "copied-repo",
+                "path_hash": path_hash,
+                "visibility": visibility,
+                "public_facing": visibility == "public",
+                "reviewed_policy": True,
+                "exceptions_enabled": True,
+                "collect_allowed": True,
+                "capture_audit_allowed": True,
+                "backfill_allowed": True,
+                "write_protected": False,
+            },
+            "contract": {"capture_surface_version": "0.2.0"},
+            "registry_capture_surface_version": "0.2.0",
+            "status_flags": ["pattern_gap_candidate"],
+            "candidate_path_scan": {"truncated": False},
+            "candidate_path_signals": [
+                {
+                    "term": "postmortem",
+                    "pattern_family": "exception_pattern",
+                    "suggested_event_type": "backfill_exception_candidate",
+                    "source_rule_id": "backfill-rule:generic-exception",
+                    "expected_review": "exception_event_or_no_packet",
+                    "emission_status": "gap_candidate",
+                    "path_hash": f"sha256:path-{visibility}",
+                    "capture_suggestion": {"matched_rule_ids": []},
+                }
+            ],
+        }
+
+    report = build_exception_capture_gap_review_queue(
+        {
+            "audit_id": "dad:exception-capture-observed-audit",
+            "capture_surface_version": "0.2.0",
+            "status_counts": {"pattern_gap_candidate": 2},
+            "input_hashes": {},
+            "methodology_ref": "registry/exception-capture-pattern-registry.json",
+            "methodology_hash": "sha256:test",
+            "candidate_path_signal_summary": {"total": 2},
+            "repos": [
+                repo_row("sha256:path-private", "private"),
+                repo_row("sha256:path-public", "public"),
+            ],
+        }
+    )
+
+    assert report["review_group_count"] == 2
+    assert {group["path_hash"] for group in report["groups"]} == {
+        "sha256:path-private",
+        "sha256:path-public",
+    }
+    assert {group["visibility"] for group in report["groups"]} == {"private", "public"}
+    assert len({group["review_group_id"] for group in report["groups"]}) == 2
+    assert all(group["unknown_path_redaction_count"] == 1 for group in report["groups"])
 
 
 def test_exception_backfill_wave_plan_keeps_metadata_wave_empty_until_proof_clears(

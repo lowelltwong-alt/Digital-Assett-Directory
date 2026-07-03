@@ -944,6 +944,13 @@ Backfill safety and classification:
   exhaustive rescan, emission review, classifier provenance refresh, policy or
   approval review, source-packet request planning, and watch/no-action. The
   report writes only DAD-side planning evidence under `processed/reports/`.
+- `asset-dir exceptions capture-gap-review-queue --repo all` groups observed
+  capture-audit path signals into stable review groups by repo, pattern family,
+  suggested event type, source rule, expected review class, emission status, and
+  matched capture rule. It keeps examples as path hashes plus safe metadata, not
+  readable paths or raw source. This is the reviewer/source-repo work queue for
+  deciding whether a grouped gap should become candidate mail, an exception
+  event, a source-packet request, or an explicit no-packet decision.
 - The wave plan also emits cross-cutting `proof_backlogs`:
   `capture_surface_refresh_backlog`, `exhaustive_audit_backlog`,
   `emission_review_backlog`, `classifier_refresh_backlog`, and

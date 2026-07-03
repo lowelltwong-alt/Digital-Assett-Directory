@@ -1,0 +1,39 @@
+{
+  "dedupe_key": "dad:rust-rollout-dedupe:ec010fde-2718-5dfc-b5bc-e198ea35c13d",
+  "evidence": [
+    "config/repo_rust_status.yaml",
+    "docs/rust/DAD_RUST_SCAN_CORE.md",
+    "lessons/rust_rollout/lesson_ledger.jsonl"
+  ],
+  "mail_id": "dad:rust-rollout-mail:a98ee406-1f61-5b20-808a-9b2cad470439",
+  "message_type": "capability_suggestion",
+  "payload": {
+    "block_reason": "missing configured local_path",
+    "can_apply": false,
+    "contains_logos": false,
+    "destructive_write_authorized": false,
+    "external_send_performed": false,
+    "github_write_performed": false,
+    "python_stays_orchestrator": true,
+    "recommended_first_rust_slice": "tools/skill_static_scanner: path, secret, shell/network/browser/tool declaration, encoded payload, rulepack safety checks.",
+    "rollout_mode": "dad_forced_implementation",
+    "rust_boundary": "deterministic leaf tooling only",
+    "rust_rollout_packet_type": "rust_forced_rollout_candidate",
+    "target_repo_owns_rust_files": true,
+    "validation_commands": [
+      "cargo fmt --check",
+      "cargo check",
+      "cargo test",
+      "cargo clippy --all-targets -- -D warnings"
+    ]
+  },
+  "review_status": "candidate",
+  "schema_version": "dad_rust_rollout_mail_packet.v1",
+  "sensitivity": "metadata_only",
+  "source_repo": "Digital-Assett-Directory",
+  "suggested_actions": [
+    "Keep this packet as a candidate notice.",
+    "Resolve the block before any local apply: missing configured local_path"
+  ],
+  "target_repo": "LawFirm-os-skills-registry"
+}

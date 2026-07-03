@@ -1,0 +1,23 @@
+schema_version: dad_rust_rollout_policy.v1
+authority: reviewed_dad_local_policy
+default_scope: dad_local_control_plane
+rules:
+  python_stays_orchestrator: true
+  rust_is_deterministic_leaf_tooling: true
+  target_repo_owns_rust_files: true
+  logos_name_substring_exclusion: true
+  missing_local_path_blocks_apply: true
+  disabled_archived_inactive_unsafe_block_apply: true
+  force_does_not_bypass_logos: true
+  external_email_allowed: false
+  github_write_allowed: false
+  destructive_source_mutation_allowed: false
+outputs:
+  plan_reports: processed/reports/rust_rollout/
+  local_instruction_packets: mail/outbox/rust_rollout/
+  lessons_ledger: lessons/rust_rollout/lesson_ledger.jsonl
+  lesson_reports: processed/reports/rust_rollout/
+notes:
+  - DAD may install and validate its own Rust scanner core in this repository.
+  - Downstream rollout remains policy-controlled and local-path gated.
+  - Logos repos receive instruction packets only unless their own governance separately implements Rust.

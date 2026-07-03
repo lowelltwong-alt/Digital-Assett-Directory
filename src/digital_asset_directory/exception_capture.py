@@ -7,6 +7,7 @@ from collections import Counter
 from pathlib import Path
 from typing import Any
 
+from .ids import stable_id
 from .exceptions_lake import (
     BACKFILL_EXCLUDE_DIRS,
     BACKFILL_SENSITIVE_PATH_TERMS,
@@ -38,6 +39,12 @@ CAPTURE_REMEDIATION_PLAN_JSON = (
 )
 CAPTURE_REMEDIATION_PLAN_MD = (
     Path("processed") / "reports" / "exception_capture_remediation_plan.md"
+)
+CAPTURE_GAP_REVIEW_QUEUE_JSON = (
+    Path("processed") / "reports" / "exception_capture_gap_review_queue.json"
+)
+CAPTURE_GAP_REVIEW_QUEUE_MD = (
+    Path("processed") / "reports" / "exception_capture_gap_review_queue.md"
 )
 PHASE6_LAWFIRM_MISSED_CAPTURE_SCENARIO_ID = "lawfirm-review-issue-missed-capture"
 PHASE6_REQUIRED_UPDATE_FAMILIES = {
@@ -84,6 +91,11 @@ OBSERVED_CAPTURE_AUDIT_GAP_FLAGS = {
 OBSERVED_CAPTURE_AUDIT_STRICT_EXTRA_FLAGS = {
     "emission_unverified",
     "type_present_uncorrelated",
+}
+ACTIONABLE_CAPTURE_GAP_EMISSION_STATUSES = {
+    "gap_candidate",
+    "type_present_uncorrelated",
+    "unverified",
 }
 
 PACKET_CLASSES = {
@@ -2940,6 +2952,293 @@ def write_exception_capture_remediation_plan(
     md_path.parent.mkdir(parents=True, exist_ok=True)
     md_path.write_text(_capture_remediation_plan_markdown(plan), encoding="utf-8")
     return plan
+
+
+def _observed_row_write_policy(row: dict[str, Any]) -> str:
+    repo = row.get("repo", {})
+    if not isinstance(repo, dict):
+        repo = {}
+    if repo.get("write_protected"):
+        return "protected_central_only"
+    if repo.get("public_facing"):
+        return "public_safe_metadata_only"
+    if not repo.get("reviewed_policy") or not repo.get("exceptions_enabled"):
+        return "central_only_until_reviewed_policy"
+    if repo.get("collect_allowed") and repo.get("capture_audit_allowed", True):
+        return "mailbox_or_exception_candidate_only"
+    return "central_only_until_policy_allows_collection"
+
+
+def _observed_row_remediation_lanes(row: dict[str, Any]) -> list[str]:
+    repo = row.get("repo", {})
+    if not isinstance(repo, dict):
+        repo = {}
+    lane_ids: list[str] = []
+    if repo.get("write_protected") or "protected_repo_central_only" in row.get("status_flags", []):
+        lane_ids.append("protected_central_only_review")
+    if _capture_surface_action(row) != "current":
+        lane_ids.append("capture_surface_refresh_required")
+    scan = row.get("candidate_path_scan", {})
+    if isinstance(scan, dict) and scan.get("truncated"):
+        lane_ids.append("exhaustive_rescan_required")
+    if set(row.get("status_flags", [])) & EMISSION_REVIEW_FLAGS:
+        lane_ids.append("emission_review_required")
+    if (
+        not repo.get("reviewed_policy")
+        or not repo.get("exceptions_enabled")
+        or not repo.get("capture_audit_allowed", True)
+        or not repo.get("backfill_allowed", False)
+    ):
+        lane_ids.append("policy_or_approval_review_required")
+    return sorted(dict.fromkeys(lane_ids or ["watch_or_no_action"]))
+
+
+def _capture_gap_next_actions(
+    *,
+    capture_surface_action: str,
+    emission_status: str,
+    suggested_event_type: str,
+    expected_review: str,
+    remediation_lanes: list[str],
+) -> list[str]:
+    actions: list[str] = []
+    if capture_surface_action != "current":
+        actions.append("refresh or install the repo capture surface before treating the gap as current")
+    if "protected_central_only_review" in remediation_lanes:
+        actions.append("keep protected-repo evidence central-only unless explicit local-write approval exists")
+    if "policy_or_approval_review_required" in remediation_lanes:
+        actions.append("resolve reviewed exceptions policy or approval blockers before any source request")
+    if emission_status == "gap_candidate":
+        actions.append("decide whether this path signal should emit candidate mail, an exception event, or no packet")
+    elif emission_status == "type_present_uncorrelated":
+        actions.append("correlate existing packet type to this path signal or mark the signal as intentionally no-packet")
+    elif emission_status == "unverified":
+        actions.append("ask the source repo or reviewer to confirm whether the signal is real before backfill")
+    if suggested_event_type != "<none>":
+        actions.append(f"if confirmed, route through `{suggested_event_type}` with source-owned context")
+    elif "ordinary_mail" in expected_review:
+        actions.append("if useful but not an exception, route as candidate ordinary mail or local usage evidence")
+    return sorted(dict.fromkeys(actions))
+
+
+def build_exception_capture_gap_review_queue(
+    observed_report: dict[str, Any],
+    *,
+    per_group_example_limit: int = 5,
+) -> dict[str, Any]:
+    rows = [
+        row
+        for row in observed_report.get("repos", [])
+        if isinstance(row, dict)
+    ]
+    per_group_example_limit = max(1, per_group_example_limit)
+    grouped: dict[tuple[str, ...], dict[str, Any]] = {}
+    for row in rows:
+        repo = row.get("repo", {})
+        if not isinstance(repo, dict):
+            repo = {}
+        repo_id = str(repo.get("repo_id") or "")
+        repo_path_hash = str(repo.get("path_hash") or "<missing_path_hash>")
+        remediation_lanes = _observed_row_remediation_lanes(row)
+        capture_surface_action = _capture_surface_action(row)
+        write_policy = _observed_row_write_policy(row)
+        for signal in row.get("candidate_path_signals", []):
+            if not isinstance(signal, dict):
+                continue
+            emission_status = str(signal.get("emission_status") or "<unannotated>")
+            if emission_status not in ACTIONABLE_CAPTURE_GAP_EMISSION_STATUSES:
+                continue
+            pattern_family = str(signal.get("pattern_family") or "<unknown>")
+            suggested_event_type = str(signal.get("suggested_event_type") or "<none>")
+            source_rule_id = str(signal.get("source_rule_id") or "<builtin_path_term>")
+            expected_review = str(signal.get("expected_review") or "<unknown>")
+            capture_rule_ids = tuple(
+                sorted(
+                    str(rule_id)
+                    for rule_id in (signal.get("capture_suggestion") or {}).get(
+                        "matched_rule_ids",
+                        [],
+                    )
+                )
+            )
+            capture_rule_key = ",".join(capture_rule_ids) or "<none>"
+            key = (
+                repo_id,
+                repo_path_hash,
+                pattern_family,
+                suggested_event_type,
+                source_rule_id,
+                expected_review,
+                emission_status,
+                capture_rule_key,
+            )
+            group = grouped.setdefault(
+                key,
+                {
+                    "repo_id": repo_id,
+                    "repo_alias": repo.get("repo_alias"),
+                    "path_hash": repo_path_hash,
+                    "visibility": repo.get("visibility"),
+                    "public_facing": repo.get("public_facing"),
+                    "write_policy": write_policy,
+                    "capture_surface_action": capture_surface_action,
+                    "remediation_lanes": remediation_lanes,
+                    "pattern_family": pattern_family,
+                    "suggested_event_type": suggested_event_type,
+                    "source_rule_id": source_rule_id,
+                    "expected_review": expected_review,
+                    "emission_status": emission_status,
+                    "capture_rule_ids": list(capture_rule_ids),
+                    "candidate_signal_count": 0,
+                    "term_counts": Counter(),
+                    "path_hashes": [],
+                    "path_hash_seen": set(),
+                    "redacted_path_count": 0,
+                    "unredacted_path_count": 0,
+                    "unknown_path_redaction_count": 0,
+                },
+            )
+            group["candidate_signal_count"] += 1
+            group["term_counts"].update([str(signal.get("term") or "<unknown>")])
+            path_redacted = str(signal.get("path_redacted", "")).lower()
+            if path_redacted == "true":
+                group["redacted_path_count"] += 1
+            elif path_redacted == "false":
+                group["unredacted_path_count"] += 1
+            else:
+                group["unknown_path_redaction_count"] += 1
+            path_hash = str(signal.get("path_hash") or "")
+            if (
+                path_hash
+                and path_hash not in group["path_hash_seen"]
+                and len(group["path_hashes"]) < per_group_example_limit
+            ):
+                group["path_hash_seen"].add(path_hash)
+                group["path_hashes"].append(path_hash)
+    groups: list[dict[str, Any]] = []
+    for key, group in grouped.items():
+        term_counts = group.pop("term_counts")
+        group.pop("path_hash_seen", None)
+        group["review_group_id"] = stable_id("exception-capture-gap-review-group", *key)
+        group["top_terms"] = _top_counter_items(_counter_dict(term_counts))
+        group["next_actions"] = _capture_gap_next_actions(
+            capture_surface_action=str(group["capture_surface_action"]),
+            emission_status=str(group["emission_status"]),
+            suggested_event_type=str(group["suggested_event_type"]),
+            expected_review=str(group["expected_review"]),
+            remediation_lanes=[
+                str(item) for item in group.get("remediation_lanes", [])
+            ],
+        )
+        groups.append(group)
+    groups.sort(
+        key=lambda group: (
+            -int(group["candidate_signal_count"]),
+            str(group["repo_id"]),
+            str(group["pattern_family"]),
+            str(group["suggested_event_type"]),
+            str(group["emission_status"]),
+        )
+    )
+    return {
+        "generated_at": utc_now(),
+        "report_id": "dad:exception-capture-gap-review-queue",
+        "source_report_id": observed_report.get("audit_id"),
+        "repo_count": len(rows),
+        "review_group_count": len(groups),
+        "candidate_signal_count": sum(int(group["candidate_signal_count"]) for group in groups),
+        "per_group_example_limit": per_group_example_limit,
+        "capture_surface_version": observed_report.get("capture_surface_version"),
+        "status_counts": observed_report.get("status_counts", {}),
+        "candidate_path_signal_summary": observed_report.get(
+            "candidate_path_signal_summary",
+            {},
+        ),
+        "input_hashes": observed_report.get("input_hashes", {}),
+        "methodology_ref": observed_report.get("methodology_ref"),
+        "methodology_hash": observed_report.get("methodology_hash"),
+        "groups": groups,
+        "authority_boundary": (
+            "Capture gap review queues are central-only candidate evidence. "
+            "They group path-hash signals for source review, do not copy readable "
+            "paths or raw source content, and do not approve repo writes, delivery, "
+            "backfill, or learning promotion."
+        ),
+    }
+
+
+def _markdown_table_cell(value: Any) -> str:
+    return str(value).replace("\\", "\\\\").replace("|", "\\|").replace("\r", " ").replace("\n", " ")
+
+
+def _capture_gap_review_queue_markdown(report: dict[str, Any]) -> str:
+    lines = [
+        "# Exception Capture Gap Review Queue",
+        "",
+        f"- Generated: {report['generated_at']}",
+        f"- Repos: {report['repo_count']}",
+        f"- Review groups: {report['review_group_count']}",
+        f"- Candidate signals grouped: {report['candidate_signal_count']}",
+        f"- Methodology hash: `{report.get('methodology_hash', '')}`",
+        "",
+        "Boundary: central-only candidate evidence. This queue stores path hashes "
+        "and safe metadata for review; it does not write target repos, deliver "
+        "mail, run backfill, or promote learning.",
+        "",
+        "## Top Groups",
+        "",
+        "| Group | Repo | Family | Event Type | Status | Signals | Next Actions |",
+        "| --- | --- | --- | --- | --- | ---: | --- |",
+    ]
+    for group in report.get("groups", [])[:50]:
+        actions = "<br>".join(
+            _markdown_table_cell(item) for item in group.get("next_actions", [])
+        ) or "-"
+        lines.append(
+            "| "
+            + f"`{_markdown_table_cell(group['review_group_id'])}` | "
+            + f"`{_markdown_table_cell(group['repo_id'])}` | "
+            + f"`{_markdown_table_cell(group['pattern_family'])}` | "
+            + f"`{_markdown_table_cell(group['suggested_event_type'])}` | "
+            + f"`{_markdown_table_cell(group['emission_status'])}` | "
+            + f"{group['candidate_signal_count']} | "
+            + actions
+            + " |"
+        )
+    return "\n".join(lines) + "\n"
+
+
+def write_exception_capture_gap_review_queue(
+    hub_root: Path,
+    repos: list[Path],
+    *,
+    repo_policies: list[Any] | None = None,
+    output: Path | None = None,
+    candidate_limit: int | None = 50,
+    max_scanned_files: int | None = 50_000,
+    per_group_example_limit: int = 5,
+) -> dict[str, Any]:
+    observed_output = None
+    if output is not None:
+        observed_output = output.with_name(output.stem + "_observed_audit.json")
+    observed_report = write_observed_capture_audit(
+        hub_root,
+        repos,
+        repo_policies=repo_policies,
+        output=observed_output,
+        candidate_limit=candidate_limit,
+        max_scanned_files=max_scanned_files,
+    )
+    report = build_exception_capture_gap_review_queue(
+        observed_report,
+        per_group_example_limit=per_group_example_limit,
+    )
+    output_path = hub_root / (output or CAPTURE_GAP_REVIEW_QUEUE_JSON)
+    write_json(output_path, report)
+    md_path = output_path.with_suffix(".md") if output else hub_root / CAPTURE_GAP_REVIEW_QUEUE_MD
+    md_path.parent.mkdir(parents=True, exist_ok=True)
+    md_path.write_text(_capture_gap_review_queue_markdown(report), encoding="utf-8")
+    return report
 
 
 def _build_proof_backlogs(

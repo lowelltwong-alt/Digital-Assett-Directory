@@ -1,0 +1,30 @@
+schema_version: rust_harness_contract.v1
+name: rust_deterministic_leaf_tool_harness
+purpose: Validate Rust scanner/verifier tools before Python orchestration consumes outputs.
+inputs:
+  - tiny_fixture_directory
+  - expected_observation_schema
+  - exclude_patterns
+commands:
+  pr:
+    - cargo fmt --check --manifest-path tools/dad_scan_core/Cargo.toml
+    - cargo clippy --manifest-path tools/dad_scan_core/Cargo.toml --all-targets -- -D warnings
+    - cargo test --manifest-path tools/dad_scan_core/Cargo.toml
+    - python scripts/run_dad_scan_core.py --help
+  long:
+    - cargo nextest run --manifest-path tools/dad_scan_core/Cargo.toml
+    - cargo deny check --manifest-path tools/dad_scan_core/Cargo.toml
+    - cargo audit
+    - cargo llvm-cov --manifest-path tools/dad_scan_core/Cargo.toml --lcov --output-path coverage/lcov.info
+invariants:
+  - source_files_not_modified
+  - output_jsonl_parseable
+  - deterministic_order_except_scan_id_and_timestamp
+  - symlinks_not_followed_by_default
+  - no_raw_secret_or_payload_output
+  - no_unsafe_code_by_default
+artifacts:
+  - raw/local/*.jsonl
+  - processed/scans/*.json
+  - processed/quarantine/*.json
+  - reports/rust/*.json

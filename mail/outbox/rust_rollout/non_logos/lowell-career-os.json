@@ -1,0 +1,39 @@
+{
+  "dedupe_key": "dad:rust-rollout-dedupe:519d6fdc-3c33-594e-a59b-028695c4cafd",
+  "evidence": [
+    "config/repo_rust_status.yaml",
+    "docs/rust/DAD_RUST_SCAN_CORE.md",
+    "lessons/rust_rollout/lesson_ledger.jsonl"
+  ],
+  "mail_id": "dad:rust-rollout-mail:a9905f0e-e3ab-53e4-b571-12bd52268721",
+  "message_type": "capability_suggestion",
+  "payload": {
+    "block_reason": "missing configured local_path",
+    "can_apply": false,
+    "contains_logos": false,
+    "destructive_write_authorized": false,
+    "external_send_performed": false,
+    "github_write_performed": false,
+    "python_stays_orchestrator": true,
+    "recommended_first_rust_slice": "None.",
+    "rollout_mode": "dad_forced_implementation",
+    "rust_boundary": "deterministic leaf tooling only",
+    "rust_rollout_packet_type": "rust_forced_rollout_candidate",
+    "target_repo_owns_rust_files": true,
+    "validation_commands": [
+      "cargo fmt --check",
+      "cargo check",
+      "cargo test",
+      "cargo clippy --all-targets -- -D warnings"
+    ]
+  },
+  "review_status": "candidate",
+  "schema_version": "dad_rust_rollout_mail_packet.v1",
+  "sensitivity": "metadata_only",
+  "source_repo": "Digital-Assett-Directory",
+  "suggested_actions": [
+    "Keep this packet as a candidate notice.",
+    "Resolve the block before any local apply: missing configured local_path"
+  ],
+  "target_repo": "lowell-career-os"
+}

@@ -269,6 +269,44 @@
       ]
     },
     {
+      "asset_id": "dad-rust-scan-core-and-rollout-pack",
+      "name": "DAD Rust Scan Core And Rollout Pack",
+      "version": "0.1.0",
+      "path": "tools/dad_scan_core",
+      "asset_type": "coding_tool_and_rollout_asset",
+      "managed_block_id": "DAD_RUST_SCAN_CORE_ROLLOUT",
+      "profiles": [
+        "rust",
+        "python",
+        "mixed",
+        "source_scan",
+        "rollout"
+      ],
+      "use_when": [
+        "DAD needs deterministic local source inventory, hashing, JSONL observations, or quarantine summaries.",
+        "A repo needs DAD's Rust rollout policy, local instruction packet, or target ownership rules.",
+        "An agent is validating the first DAD Rust leaf tool before downstream recommendations."
+      ],
+      "does_not_apply_when": [
+        "The task needs governance meaning, legal judgment, theological judgment, or model orchestration.",
+        "A downstream repo lacks a reviewed local path or is Logos instruction-mail-only.",
+        "The Rust output would be treated as source truth rather than candidate observation."
+      ],
+      "install_path": "tools/dad_scan_core",
+      "source_package": {
+        "filename": "dad-rust-upgrade-starter-pack.zip",
+        "sha256": "ebb34070c5c416158f247f93ee3202313bd6bab37a4a09716591b0ecc1796ac0"
+      },
+      "installed_at": "2026-07-03",
+      "review_status": "installed_for_local_reuse",
+      "safety_notes": [
+        "Python remains the orchestrator.",
+        "Rust emits candidate observations only.",
+        "Downstream apply refuses Logos repos and missing local paths.",
+        "DAD lessons must be checked before advising target repos."
+      ]
+    },
+    {
       "asset_id": "exception-capture-completeness-harness",
       "name": "Exception Capture Completeness Harness",
       "version": "0.1.0",

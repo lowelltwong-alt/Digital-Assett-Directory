@@ -1,0 +1,8 @@
+schema_version: dad_target_rust_adoption.v1
+repo: Digital-Assett-Directory
+target_repo_owns_rust_files: true
+python_stays_orchestrator: true
+rust_boundary: deterministic_leaf_tooling_only
+external_send_allowed: false
+github_write_allowed: false
+destructive_write_allowed: false

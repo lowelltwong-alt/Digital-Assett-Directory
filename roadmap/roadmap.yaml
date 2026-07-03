@@ -198,6 +198,16 @@ phases:
         - assets/coding-harnesses/language-frontier-research/tests-or-evals/minimum-eval.json
         - assets/rust-buildout-guide/rust-buildout.json
         - assets/python-underused-idioms/idioms.json
+        - assets/dad-rust-upgrade-starter-pack/manifest.json
+        - tools/dad_scan_core/Cargo.toml
+        - tools/dad_scan_core/src/lib.rs
+        - src/digital_asset_directory/rust_bridge/dad_scan_core.py
+        - src/digital_asset_directory/rust_rollout/policy.py
+        - docs/rust/DAD_RUST_SCAN_CORE.md
+        - docs/rust/DAD_FORCED_RUST_ROLLOUT_POLICY.md
+        - config/repo_rust_status.yaml
+        - config/rust_rollout_policy.yaml
+        - lessons/rust_rollout/lesson_ledger.jsonl
       human_gates:
         - id: phase-7-rust-starter-pack-reviewed
           description: dad-rust-upgrade-starter-pack.zip manifest, license/provenance, security, and overlay map reviewed before any crate files are installed
@@ -207,4 +217,4 @@ phases:
           description: Rust and Python frontier source cadences, source terms, and pointer-only intake boundaries reviewed
         - id: phase-7-downstream-rust-rollout-boundary-reviewed
           description: non-Logos rollout remains candidate mail by default; Logos local writes require explicit separate approval
-    evidence_note: The starter pack's safe default is to preserve it as an asset and promote overlay files selectively after review. DAD must prove profile/parity value before recommending Rust in downstream repos.
+    evidence_note: The starter pack is preserved under assets and the DAD-local dad_scan_core overlay is installed with a Python bridge, rollout policy, local mail packet builder, and lesson ledger. Broader downstream rollout remains gated; DAD must prove profile/parity value before recommending Rust in downstream repos.
