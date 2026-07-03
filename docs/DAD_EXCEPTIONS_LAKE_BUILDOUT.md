@@ -164,6 +164,42 @@ lessons and are now first-class capture targets:
   review surface, routing gap, and acceptance gate; never hidden reasoning or raw
   review transcript.
 
+DAD also treats ordinary engineering and data-plane failures as first-class
+capture targets instead of collapsing them into generic command failures:
+
+- `ci_failure` for failed CI workflows, jobs, checks, and automation gates.
+  Capture provider, workflow, job/check ref, failure class, and a safe summary;
+  never logs or artifacts.
+- `environment_config_missing` and `permission_denied` for local setup and
+  policy/OS boundary failures. Capture config or operation classes and fallback
+  decisions; never environment values, private paths, or file contents.
+- `dependency_install_failure`, `generated_code_compile_failure`, and
+  `build_packaging_failure` for install, compile/typecheck/lint, and release
+  packaging failures. Capture package/build/runtime classes, command refs, and
+  validation refs; never resolver logs, compiler output blobs, artifacts, or
+  source files.
+- `external_service_failure` for connector, API, network, browser, GitHub,
+  cloud, email, or research service failures. Capture service class, operation,
+  failure class, retry/fallback decision, and safe summary; never request or
+  response payloads.
+- `data_ingestion_failure` and `identity_resolution_conflict` for parser,
+  extraction, normalization, source-mapping, entity, ID, alias, lineage, or
+  authority conflicts. Capture source class, parser/schema refs, hashes, candidate
+  refs, and authority boundaries; never raw rows or private identity data.
+- `fixture_or_synthetic_data_gap` for golden, fixture, mock, or synthetic cases
+  that missed required behavior or created false confidence. Capture the fixture
+  ref, missing behavior, false-confidence risk, and expected assertion or packet;
+  never real private rows.
+
+Capture-surface generations are intentionally explicit. Surface `0.2.0` covers
+repo lineage, protected-write, dirty-worktree, public/private, stale-report,
+malformed-JSONL, duplicate-mail, pytest-performance, validation-command, and
+DAD-recommendation outcome families. Surface `0.3.0` adds language-frontier,
+artifact-registration, and Albert-style semantic-lineage/review-routing families.
+Surface `0.4.0` adds the ordinary engineering and data-plane families above.
+Older repo surfaces should be treated as update-required before absence of a
+packet is trusted as current behavior.
+
 Capture can be lightweight. Repos do not need DAD Python internals for normal writes:
 they can append JSONL, use a tiny helper, export a CI artifact, or let the DAD CLI
 record events during preflight/midflight/postflight. Completeness is measured by

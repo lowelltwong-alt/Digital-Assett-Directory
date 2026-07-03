@@ -584,6 +584,36 @@ def test_exception_taxonomy_coverage_distinguishes_manual_and_signal_routes(
     assert "hard_problem_review_not_routed" in report["category_route_summary"][
         "review"
     ]["capture_rule_event_types"]
+    assert "ci_failure" in report["category_route_summary"]["ci"][
+        "capture_rule_event_types"
+    ]
+    assert "data_ingestion_failure" in report["category_route_summary"][
+        "data_ingestion"
+    ]["capture_rule_event_types"]
+    assert "dependency_install_failure" in report["category_route_summary"][
+        "dependency_io"
+    ]["capture_rule_event_types"]
+    assert "external_service_failure" in report["category_route_summary"][
+        "external_service"
+    ]["capture_rule_event_types"]
+    assert "identity_resolution_conflict" in report["category_route_summary"][
+        "identity_resolution"
+    ]["capture_rule_event_types"]
+    assert "generated_code_compile_failure" in report["category_route_summary"][
+        "release_packaging"
+    ]["capture_rule_event_types"]
+    assert "build_packaging_failure" in report["category_route_summary"][
+        "release_packaging"
+    ]["capture_rule_event_types"]
+    assert "fixture_or_synthetic_data_gap" in report["category_route_summary"]["test"][
+        "capture_rule_event_types"
+    ]
+    assert "environment_config_missing" in report["category_route_summary"][
+        "environment_tooling"
+    ]["capture_rule_event_types"]
+    assert "permission_denied" in report["category_route_summary"][
+        "environment_tooling"
+    ]["capture_rule_event_types"]
     assert "dirty_worktree_block" in report["category_route_summary"]["repo_state"][
         "capture_rule_event_types"
     ]
@@ -612,6 +642,12 @@ def test_exception_taxonomy_coverage_distinguishes_manual_and_signal_routes(
         "mail_enrollment",
         "roadmap_validation",
         "schema_config",
+        "ci",
+        "data_ingestion",
+        "dependency_io",
+        "external_service",
+        "identity_resolution",
+        "release_packaging",
     }.intersection(categories_without_capture)
     assert "failed_command" not in report["manual_only_event_types"]
     assert "tool_unavailable" not in report["manual_only_event_types"]
@@ -623,6 +659,16 @@ def test_exception_taxonomy_coverage_distinguishes_manual_and_signal_routes(
     assert "semantic_lineage_field_drop" not in report["manual_only_event_types"]
     assert "demo_case_as_parent_architecture" not in report["manual_only_event_types"]
     assert "hard_problem_review_not_routed" not in report["manual_only_event_types"]
+    assert "ci_failure" not in report["manual_only_event_types"]
+    assert "data_ingestion_failure" not in report["manual_only_event_types"]
+    assert "dependency_install_failure" not in report["manual_only_event_types"]
+    assert "external_service_failure" not in report["manual_only_event_types"]
+    assert "identity_resolution_conflict" not in report["manual_only_event_types"]
+    assert "generated_code_compile_failure" not in report["manual_only_event_types"]
+    assert "build_packaging_failure" not in report["manual_only_event_types"]
+    assert "fixture_or_synthetic_data_gap" not in report["manual_only_event_types"]
+    assert "environment_config_missing" not in report["manual_only_event_types"]
+    assert "permission_denied" not in report["manual_only_event_types"]
     taxonomy_gate = _phase6_gate(report, "phase-6-taxonomy-route-coverage-reviewed")
     assert taxonomy_gate["machine_status"] == "passed"
     assert taxonomy_gate["human_gate_satisfied"] is False
@@ -714,7 +760,7 @@ def test_global_block_signals_suppress_positive_matches() -> None:
     case = {
         "scenario_id": "secret-bearing-asset",
         "pattern_family": "asset",
-        "repo_capture_surface_version": "0.3.0",
+        "repo_capture_surface_version": "0.4.0",
         "signals": ["new_reusable_asset", "cross_repo_reuse", "asset_docs", "contains_secret_or_pii"],
         "expected": {
             "packet_classes": ["no_packet"],
@@ -741,7 +787,7 @@ def test_payload_screening_blocks_unsafe_sample_without_manual_signal() -> None:
     case = {
         "scenario_id": "unsafe-payload",
         "pattern_family": "asset",
-        "repo_capture_surface_version": "0.3.0",
+        "repo_capture_surface_version": "0.4.0",
         "signals": ["new_reusable_asset", "cross_repo_reuse", "asset_docs"],
         "payload_samples": [{"field": "safe_summary", "text": credential_like}],
         "expected": {
@@ -802,7 +848,7 @@ def test_observed_outboxes_are_compared_against_expected_packets(tmp_path: Path)
                 "scenario_id": "observed-lawfirm-style",
                 "pattern_family": "workflow",
                 "description": "Observed repo outboxes contain both workflow mail and review exception.",
-                "repo_capture_surface_version": "0.3.0",
+                "repo_capture_surface_version": "0.4.0",
                 "signals": [
                     "structured_review_issue_workflow",
                     "exception_lake_mapping_gap",
@@ -890,7 +936,7 @@ def test_observed_outboxes_fail_when_required_fields_are_missing(tmp_path: Path)
                 "scenario_id": "observed-missing-required-fields",
                 "pattern_family": "workflow",
                 "description": "Observed outboxes have the right packet labels but omit a required field.",
-                "repo_capture_surface_version": "0.3.0",
+                "repo_capture_surface_version": "0.4.0",
                 "signals": [
                     "structured_review_issue_workflow",
                     "exception_lake_mapping_gap",
@@ -989,7 +1035,7 @@ def test_observed_required_fields_must_be_on_one_matching_packet(tmp_path: Path)
                 "scenario_id": "observed-split-required-fields",
                 "pattern_family": "workflow",
                 "description": "Observed outboxes split required fields across matching rows.",
-                "repo_capture_surface_version": "0.3.0",
+                "repo_capture_surface_version": "0.4.0",
                 "signals": [
                     "structured_review_issue_workflow",
                     "exception_lake_mapping_gap",
@@ -1079,7 +1125,7 @@ def test_observed_required_fields_reject_blank_values(tmp_path: Path) -> None:
                 "scenario_id": "observed-blank-required-field",
                 "pattern_family": "workflow",
                 "description": "Observed outbox has a blank required field.",
-                "repo_capture_surface_version": "0.3.0",
+                "repo_capture_surface_version": "0.4.0",
                 "signals": [
                     "structured_review_issue_workflow",
                     "exception_lake_mapping_gap",
@@ -1165,7 +1211,7 @@ def test_observed_outbox_payload_screening_blocks_secret_like_text(tmp_path: Pat
                 "scenario_id": "observed-unsafe-payload",
                 "pattern_family": "workflow",
                 "description": "Observed outbox carries secret-like text.",
-                "repo_capture_surface_version": "0.3.0",
+                "repo_capture_surface_version": "0.4.0",
                 "signals": [
                     "structured_review_issue_workflow",
                     "exception_lake_mapping_gap",
@@ -1237,7 +1283,7 @@ def test_observed_fix_outcomes_require_valid_fix_outcome_row(tmp_path: Path) -> 
                 "scenario_id": "observed-invalid-fix-outcome",
                 "pattern_family": "fix_outcome",
                 "description": "A partial outcome-looking row is not a real fix outcome.",
-                "repo_capture_surface_version": "0.3.0",
+                "repo_capture_surface_version": "0.4.0",
                 "signals": ["fix_outcome_recorded", "validation_passed"],
                 "expected": {
                     "packet_classes": ["fix_outcome"],
@@ -1374,7 +1420,7 @@ def test_capture_suggest_maps_tool_unavailable_to_required_packet() -> None:
     suggestion = suggest_exception_capture(
         ROOT,
         signals=["tool_unavailable", "dad_cli_unavailable", "fallback_used"],
-        repo_capture_surface_version="0.3.0",
+        repo_capture_surface_version="0.4.0",
     )
 
     _validate("exception_capture_suggestion", suggestion)
@@ -1403,7 +1449,7 @@ def test_capture_suggest_maps_language_frontier_signal_to_capability_mail() -> N
             "ai_overlooked_operation",
             "frontier_source_pointer",
         ],
-        repo_capture_surface_version="0.3.0",
+        repo_capture_surface_version="0.4.0",
     )
 
     _validate("exception_capture_suggestion", suggestion)
@@ -1428,11 +1474,345 @@ def test_capture_suggest_maps_language_frontier_signal_to_capability_mail() -> N
     )
 
 
+@pytest.mark.parametrize(
+    (
+        "signals",
+        "rule_id",
+        "event_type",
+        "capture_contract",
+        "required_fields",
+    ),
+    [
+        (
+            ["ci_failure_observed", "workflow_run_failed", "ci_job_failed"],
+            "exception-capture-rule:ci-failure-metadata",
+            "ci_failure",
+            "ci_failure",
+            [
+                "ci_provider",
+                "failure_class",
+                "job_or_check_ref",
+                "safe_summary",
+                "workflow_ref",
+            ],
+        ),
+        (
+            [
+                "environment_config_missing",
+                "pythonpath_missing",
+                "runtime_config_missing",
+            ],
+            "exception-capture-rule:environment-config-missing",
+            "environment_config_missing",
+            "failed_command",
+            [
+                "config_class",
+                "fallback_or_blocker",
+                "operation_name",
+                "safe_summary",
+                "validation_ref",
+            ],
+        ),
+        (
+            ["permission_denied", "access_denied", "write_denied"],
+            "exception-capture-rule:permission-denied-metadata",
+            "permission_denied",
+            "governance_block",
+            [
+                "blocked_action",
+                "operation_class",
+                "policy_or_error_class",
+                "safe_summary",
+                "target_path_class",
+            ],
+        ),
+        (
+            ["dependency_install_failed", "package_install_failed", "resolver_failed"],
+            "exception-capture-rule:dependency-install-failure",
+            "dependency_install_failure",
+            "failed_command",
+            [
+                "command_ref",
+                "dependency_scope",
+                "failure_class",
+                "package_manager",
+                "safe_summary",
+            ],
+        ),
+        (
+            ["external_service_failure", "api_failure", "rate_limit_hit"],
+            "exception-capture-rule:external-service-failure",
+            "external_service_failure",
+            "retry_or_plan_change",
+            [
+                "failure_class",
+                "operation_name",
+                "retry_or_fallback",
+                "safe_summary",
+                "service_class",
+            ],
+        ),
+        (
+            ["data_ingestion_failure", "parse_error", "source_mapping_gap"],
+            "exception-capture-rule:data-ingestion-failure",
+            "data_ingestion_failure",
+            "postflight_exception",
+            [
+                "data_source_class",
+                "failure_class",
+                "parser_or_schema_ref",
+                "record_or_batch_ref",
+                "safe_summary",
+            ],
+        ),
+        (
+            ["identity_resolution_conflict", "id_collision", "lineage_conflict"],
+            "exception-capture-rule:identity-resolution-conflict",
+            "identity_resolution_conflict",
+            "governance_block",
+            [
+                "authority_boundary",
+                "candidate_refs",
+                "conflict_class",
+                "identity_namespace",
+                "safe_summary",
+            ],
+        ),
+        (
+            ["generated_code_compile_failure", "compile_error", "typecheck_failed"],
+            "exception-capture-rule:generated-code-compile-failure",
+            "generated_code_compile_failure",
+            "failed_command",
+            [
+                "failure_class",
+                "language_or_runtime",
+                "module_ref",
+                "safe_summary",
+                "validation_command",
+            ],
+        ),
+        (
+            ["build_packaging_failure", "package_build_failed", "bundle_failed"],
+            "exception-capture-rule:build-packaging-failure",
+            "build_packaging_failure",
+            "failed_command",
+            [
+                "artifact_class",
+                "build_command",
+                "failure_class",
+                "safe_summary",
+                "validation_ref",
+            ],
+        ),
+        (
+            [
+                "fixture_or_synthetic_data_gap",
+                "golden_case_missing",
+                "fixture_false_green",
+            ],
+            "exception-capture-rule:fixture-synthetic-data-gap",
+            "fixture_or_synthetic_data_gap",
+            "review_finding",
+            [
+                "expected_assertion_or_packet",
+                "false_confidence_risk",
+                "missing_behavior",
+                "safe_summary",
+                "test_or_fixture_ref",
+            ],
+        ),
+    ],
+)
+def test_capture_suggest_maps_ordinary_engineering_exception_families(
+    signals: list[str],
+    rule_id: str,
+    event_type: str,
+    capture_contract: str,
+    required_fields: list[str],
+) -> None:
+    suggestion = suggest_exception_capture(
+        ROOT,
+        signals=signals,
+        repo_capture_surface_version="0.4.0",
+    )
+
+    _validate("exception_capture_suggestion", suggestion)
+    assert suggestion["matched_rule_ids"] == [rule_id]
+    assert suggestion["update_required"] is False
+    assert suggestion["actual"]["packet_classes"] == ["exception_event"]
+    assert suggestion["actual"]["event_types"] == [event_type]
+    assert suggestion["actual"]["mail_message_types"] == []
+    assert suggestion["actual"]["capture_contracts"] == [capture_contract]
+    assert suggestion["actual"]["required_fields"] == required_fields
+
+
+@pytest.mark.parametrize(
+    ("signals", "field", "unsafe_text", "expected_issue"),
+    [
+        (
+            ["ci_failure_observed", "workflow_run_failed", "ci_job_failed"],
+            "workflow_ref",
+            r"C:\Users\lowel\OneDrive\Desktop\Git Projects\repo\.github\workflows\ci.yml",
+            "local_path_like_payload",
+        ),
+        (
+            ["permission_denied", "access_denied", "write_denied"],
+            "target_path_class",
+            r"C:\Users\lowel\OneDrive\Desktop\Git Projects\repo\private\client.txt",
+            "local_path_like_payload",
+        ),
+        (
+            ["data_ingestion_failure", "parse_error", "source_mapping_gap"],
+            "record_or_batch_ref",
+            (
+                "id|name|case|phone|email|notes|token|secret|value\n"
+                "1|Jane|A|555|jane@example.invalid|note|tok|sec|raw\n"
+                "2|John|B|555|john@example.invalid|note|tok|sec|raw"
+            ),
+            "table_like_value",
+        ),
+        (
+            ["identity_resolution_conflict", "id_collision", "lineage_conflict"],
+            "candidate_refs",
+            "candidate row mentions jane@example.invalid as the ambiguous identity",
+            "credential_or_pii_pattern",
+        ),
+        (
+            ["generated_code_compile_failure", "compile_error", "typecheck_failed"],
+            "safe_summary",
+            "\n".join(f"compiler output line {index}" for index in range(12)),
+            "raw_blob_like_multiline_value",
+        ),
+    ],
+)
+def test_capture_suggest_blocks_unsafe_values_in_v04_metadata_fields(
+    signals: list[str],
+    field: str,
+    unsafe_text: str,
+    expected_issue: str,
+) -> None:
+    suggestion = suggest_exception_capture(
+        ROOT,
+        signals=signals,
+        repo_capture_surface_version="0.4.0",
+        payload_samples=[{"field": field, "text": unsafe_text}],
+    )
+    serialized = json.dumps(suggestion)
+
+    _validate("exception_capture_suggestion", suggestion)
+    assert suggestion["actual"]["packet_classes"] == ["no_packet"]
+    assert suggestion["actual"]["blocked"] is True
+    assert suggestion["actual"]["blocked_reason"].startswith("payload_screen:")
+    assert expected_issue in suggestion["payload_screen_issues"]
+    assert suggestion["recommended_packets"] == []
+    assert suggestion["blocked_audit"]["should_record"] is True
+    assert unsafe_text not in serialized
+
+
+def test_observed_v04_packet_with_unsafe_metadata_field_fails_capture_check(
+    tmp_path: Path,
+) -> None:
+    repo = tmp_path / "repo"
+    outbox = repo / ".digital-asset" / "exceptions" / "outbox.jsonl"
+    outbox.parent.mkdir(parents=True)
+    unsafe_path = r"C:\Users\lowel\OneDrive\Desktop\Git Projects\repo\private\client.txt"
+    outbox.write_text(
+        json.dumps(
+            {
+                "event_type": "permission_denied",
+                "capture_contract": "governance_block",
+                "operation_class": "write",
+                "target_path_class": unsafe_path,
+                "policy_or_error_class": "os_permission_error",
+                "blocked_action": "write_file",
+                "safe_summary": "Permission denied while attempting a governed write.",
+            }
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+    scenario = {
+        "schema_version": "0.1.0",
+        "scenario_set_id": "observed-v04-unsafe-metadata",
+        "target_registry": "registry/exception-capture-pattern-registry.json",
+        "required_pattern_families": ["exception_pattern"],
+        "cases": [
+            {
+                "scenario_id": "observed-v04-unsafe-metadata",
+                "pattern_family": "exception_pattern",
+                "description": "Observed v0.4 packet uses an unsafe local path in a nominal metadata field.",
+                "repo_capture_surface_version": "0.4.0",
+                "signals": ["permission_denied", "access_denied", "write_denied"],
+                "covered_rule_ids": ["exception-capture-rule:permission-denied-metadata"],
+                "expected": {
+                    "packet_classes": ["exception_event"],
+                    "event_types": ["permission_denied"],
+                    "mail_message_types": [],
+                    "capture_contracts": ["governance_block"],
+                    "required_fields": [
+                        "blocked_action",
+                        "operation_class",
+                        "policy_or_error_class",
+                        "safe_summary",
+                        "target_path_class",
+                    ],
+                    "update_required": False,
+                    "blocked": False,
+                },
+                "observed": {
+                    "exception_outbox": "repo/.digital-asset/exceptions/outbox.jsonl"
+                },
+                "negative_controls": [
+                    "contains_private_rows",
+                    "contains_raw_log_blob",
+                    "contains_secret_or_pii",
+                ],
+                "review_status": "reviewed",
+            }
+        ],
+    }
+    scenario_path = tmp_path / "scenario.json"
+    scenario_path.write_text(json.dumps(scenario), encoding="utf-8")
+
+    report = evaluate_capture_scenarios(ROOT, scenario_path, output=tmp_path / "report.json")
+    case = report["cases"][0]
+
+    assert report["failed_count"] == 1
+    assert any("local_path_like_payload" in error for error in case["observed"]["errors"])
+    assert unsafe_path not in json.dumps(report)
+
+
+def test_capture_registry_versions_mark_rule_generations() -> None:
+    registry = load_capture_pattern_registry(ROOT)
+    rules = {rule["rule_id"]: rule for rule in registry["rules"]}
+
+    assert registry["capture_surface_version"] == "0.4.0"
+    for rule_id in [
+        "exception-capture-rule:ci-failure-metadata",
+        "exception-capture-rule:environment-config-missing",
+        "exception-capture-rule:permission-denied-metadata",
+        "exception-capture-rule:dependency-install-failure",
+        "exception-capture-rule:external-service-failure",
+        "exception-capture-rule:data-ingestion-failure",
+        "exception-capture-rule:identity-resolution-conflict",
+        "exception-capture-rule:generated-code-compile-failure",
+        "exception-capture-rule:build-packaging-failure",
+        "exception-capture-rule:fixture-synthetic-data-gap",
+    ]:
+        assert rules[rule_id]["min_capture_surface_version"] == "0.4.0"
+    for rule_id in [
+        "exception-capture-rule:semantic-lineage-field-drop",
+        "exception-capture-rule:demo-case-as-parent-architecture",
+        "exception-capture-rule:hard-problem-review-not-routed",
+    ]:
+        assert rules[rule_id]["min_capture_surface_version"] == "0.3.0"
+
+
 def test_capture_suggest_maps_harmful_dad_recommendation_to_exception() -> None:
     suggestion = suggest_exception_capture(
         ROOT,
         signals=["dad_recommendation_outcome", "harmful_recommendation"],
-        repo_capture_surface_version="0.3.0",
+        repo_capture_surface_version="0.4.0",
     )
 
     _validate("exception_capture_suggestion", suggestion)
@@ -1455,7 +1835,7 @@ def test_capture_suggest_maps_safe_security_block_metadata_to_exception() -> Non
     suggestion = suggest_exception_capture(
         ROOT,
         signals=["sensitive_payload_blocked", "credential_pii_screen_blocked"],
-        repo_capture_surface_version="0.3.0",
+        repo_capture_surface_version="0.4.0",
     )
 
     _validate("exception_capture_suggestion", suggestion)
@@ -1482,7 +1862,7 @@ def test_capture_suggest_still_blocks_unsafe_security_payload_signal() -> None:
             "credential_pii_screen_blocked",
             "contains_secret_or_pii",
         ],
-        repo_capture_surface_version="0.3.0",
+        repo_capture_surface_version="0.4.0",
     )
 
     _validate("exception_capture_suggestion", suggestion)
@@ -1577,7 +1957,7 @@ def test_capture_suggest_maps_high_priority_governance_and_freshness_blocks(
     suggestion = suggest_exception_capture(
         ROOT,
         signals=signals,
-        repo_capture_surface_version="0.3.0",
+        repo_capture_surface_version="0.4.0",
     )
 
     _validate("exception_capture_suggestion", suggestion)
@@ -1670,7 +2050,7 @@ def test_capture_suggest_maps_albert_followup_exception_families(
     suggestion = suggest_exception_capture(
         ROOT,
         signals=signals,
-        repo_capture_surface_version="0.3.0",
+        repo_capture_surface_version="0.4.0",
     )
 
     _validate("exception_capture_suggestion", suggestion)
@@ -1748,7 +2128,7 @@ def test_capture_emission_simulation_writes_capability_mail_with_provenance(
 
     assert report["failed_count"] == 0
     assert case["initial_update_required"] is True
-    assert case["emission_repo_capture_surface_version"] == "0.3.0"
+    assert case["emission_repo_capture_surface_version"] == "0.4.0"
     assert case["emitted_packet_classes"] == ["ordinary_mail"]
     assert case["observed"]["actual"]["mail_message_types"] == ["capability_suggestion"]
     for field in [
@@ -1770,7 +2150,7 @@ def test_capture_emission_simulation_writes_exception_event_trace_fields(
             "scenario_id": "tool-unavailable-exception-emission",
             "pattern_family": "exception_pattern",
             "description": "Tool-unavailable fallback should become exception metadata.",
-            "repo_capture_surface_version": "0.3.0",
+            "repo_capture_surface_version": "0.4.0",
             "signals": ["tool_unavailable", "dad_cli_unavailable", "fallback_used"],
             "covered_rule_ids": ["exception-capture-rule:tool-unavailable-metadata"],
             "expected": {
@@ -1830,7 +2210,7 @@ def test_capture_emission_simulation_writes_fix_outcome_with_writer_metadata(
             "scenario_id": "fix-outcome-emission",
             "pattern_family": "fix_outcome",
             "description": "Fix outcome should be written through the fix writer.",
-            "repo_capture_surface_version": "0.3.0",
+            "repo_capture_surface_version": "0.4.0",
             "signals": ["fix_outcome_recorded", "validation_passed"],
             "covered_rule_ids": ["exception-capture-rule:fix-outcome"],
             "expected": {
@@ -1954,7 +2334,7 @@ def test_capture_suggest_blocks_unsafe_payload_without_echoing_sample() -> None:
     suggestion = suggest_exception_capture(
         ROOT,
         signals=["new_reusable_asset", "cross_repo_reuse", "asset_docs"],
-        repo_capture_surface_version="0.3.0",
+        repo_capture_surface_version="0.4.0",
         payload_samples=[{"field": "safe_summary", "text": unsafe}],
     )
     serialized = json.dumps(suggestion)
@@ -1979,7 +2359,7 @@ def test_capture_suggest_sensitive_private_public_attempt_has_local_only_audit()
             "human_release_missing",
             "contains_secret_or_pii",
         ],
-        repo_capture_surface_version="0.3.0",
+        repo_capture_surface_version="0.4.0",
     )
 
     _validate("exception_capture_suggestion", suggestion)
@@ -2003,7 +2383,7 @@ def test_capture_suggest_blocks_unsafe_signal_without_echoing_value() -> None:
     suggestion = suggest_exception_capture(
         ROOT,
         signals=[unsafe_signal],
-        repo_capture_surface_version="0.3.0",
+        repo_capture_surface_version="0.4.0",
     )
     serialized = json.dumps(suggestion)
 
@@ -2047,7 +2427,7 @@ def test_capture_suggest_ignores_candidate_and_rejected_rules(tmp_path: Path) ->
     suggestion = suggest_exception_capture(
         tmp_path,
         signals=["candidate_only_signal", "rejected_signal"],
-        repo_capture_surface_version="0.3.0",
+        repo_capture_surface_version="0.4.0",
     )
 
     _validate("exception_capture_suggestion", suggestion)
@@ -2060,7 +2440,7 @@ def test_capture_suggest_unknown_signals_stay_candidate_no_packet() -> None:
     suggestion = suggest_exception_capture(
         ROOT,
         signals=["uncataloged_signal"],
-        repo_capture_surface_version="0.3.0",
+        repo_capture_surface_version="0.4.0",
     )
 
     assert suggestion["matched_rule_ids"] == []
@@ -2079,7 +2459,7 @@ def test_capture_suggest_cli_blocks_unsafe_signal_without_echoing_value() -> Non
             "--signal",
             unsafe_signal,
             "--repo-capture-surface-version",
-            "0.3.0",
+            "0.4.0",
         ],
     )
 
@@ -2102,7 +2482,7 @@ def test_observed_capture_audit_reports_existing_repo_outbox_emission(tmp_path: 
             {
                 "repo_id": "repo-with-outboxes",
                 "schema_version": "0.1.0",
-                "capture_surface_version": "0.3.0",
+                "capture_surface_version": "0.4.0",
             }
         ),
         encoding="utf-8",
@@ -2183,7 +2563,7 @@ def test_observed_capture_audit_clean_ad_hoc_scope_fails_machine_gate(
             {
                 "repo_id": "repo-with-outboxes",
                 "schema_version": "0.1.0",
-                "capture_surface_version": "0.3.0",
+                "capture_surface_version": "0.4.0",
             }
         ),
         encoding="utf-8",
@@ -2233,7 +2613,7 @@ def test_observed_capture_audit_scope_counts_come_from_rows(tmp_path: Path) -> N
             {
                 "repo_id": "repo-with-outboxes",
                 "schema_version": "0.1.0",
-                "capture_surface_version": "0.3.0",
+                "capture_surface_version": "0.4.0",
             }
         ),
         encoding="utf-8",
@@ -2464,7 +2844,7 @@ def test_observed_capture_audit_carries_reviewed_workflow_capture_suggestion(
             {
                 "repo_id": "repo-review-workflow",
                 "schema_version": "0.1.0",
-                "capture_surface_version": "0.3.0",
+                "capture_surface_version": "0.4.0",
             }
         ),
         encoding="utf-8",
@@ -2537,7 +2917,7 @@ def test_observed_capture_audit_flags_specific_gap_despite_unrelated_mail(
             {
                 "repo_id": "repo-unrelated-mail",
                 "schema_version": "0.1.0",
-                "capture_surface_version": "0.3.0",
+                "capture_surface_version": "0.4.0",
             }
         ),
         encoding="utf-8",
@@ -2683,7 +3063,7 @@ def test_observed_capture_audit_flags_stale_capture_surface(tmp_path: Path) -> N
 
     assert "stale_capture_surface" in row["status_flags"]
     assert row["contract"]["capture_surface_version"] == "0.1.0"
-    assert row["registry_capture_surface_version"] == "0.3.0"
+    assert row["registry_capture_surface_version"] == "0.4.0"
 
 
 def test_observed_capture_audit_tolerates_malformed_jsonl_without_raw_line(
@@ -2974,7 +3354,7 @@ def test_exception_capture_remediation_plan_routes_repair_lanes_without_repo_wri
             {
                 "repo_id": "ready",
                 "schema_version": "0.1.0",
-                "capture_surface_version": "0.3.0",
+                "capture_surface_version": "0.4.0",
             }
         ),
         encoding="utf-8",
@@ -3166,7 +3546,7 @@ def test_build_exception_capture_gap_review_queue_is_stable_and_actionable() -> 
     observed_report = {
         "audit_id": "dad:exception-capture-observed-audit",
         "repo_count": 1,
-        "capture_surface_version": "0.3.0",
+        "capture_surface_version": "0.4.0",
         "status_counts": {"pattern_gap_candidate": 1},
         "input_hashes": {"registry/exception-capture-pattern-registry.json": "sha256:test"},
         "methodology_ref": "registry/exception-capture-pattern-registry.json",
@@ -3187,8 +3567,8 @@ def test_build_exception_capture_gap_review_queue_is_stable_and_actionable() -> 
                     "backfill_allowed": True,
                     "write_protected": False,
                 },
-                "contract": {"capture_surface_version": "0.3.0"},
-                "registry_capture_surface_version": "0.3.0",
+                "contract": {"capture_surface_version": "0.4.0"},
+                "registry_capture_surface_version": "0.4.0",
                 "status_flags": ["pattern_gap_candidate"],
                 "candidate_path_scan": {"truncated": False},
                 "candidate_path_signals": [
@@ -3254,8 +3634,8 @@ def test_capture_gap_review_queue_separates_same_repo_id_by_path_hash() -> None:
                 "backfill_allowed": True,
                 "write_protected": False,
             },
-            "contract": {"capture_surface_version": "0.3.0"},
-            "registry_capture_surface_version": "0.3.0",
+            "contract": {"capture_surface_version": "0.4.0"},
+            "registry_capture_surface_version": "0.4.0",
             "status_flags": ["pattern_gap_candidate"],
             "candidate_path_scan": {"truncated": False},
             "candidate_path_signals": [
@@ -3275,7 +3655,7 @@ def test_capture_gap_review_queue_separates_same_repo_id_by_path_hash() -> None:
     report = build_exception_capture_gap_review_queue(
         {
             "audit_id": "dad:exception-capture-observed-audit",
-            "capture_surface_version": "0.3.0",
+            "capture_surface_version": "0.4.0",
             "status_counts": {"pattern_gap_candidate": 2},
             "input_hashes": {},
             "methodology_ref": "registry/exception-capture-pattern-registry.json",
@@ -3313,7 +3693,7 @@ def test_exception_backfill_wave_plan_keeps_metadata_wave_empty_until_proof_clea
             {
                 "repo_id": "ready",
                 "schema_version": "0.1.0",
-                "capture_surface_version": "0.3.0",
+                "capture_surface_version": "0.4.0",
             }
         ),
         encoding="utf-8",

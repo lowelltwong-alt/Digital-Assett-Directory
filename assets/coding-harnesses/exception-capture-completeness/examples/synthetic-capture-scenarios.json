@@ -48,7 +48,7 @@
       "scenario_id": "coding-harness-opportunity",
       "pattern_family": "harness",
       "description": "A repeated validation workflow becomes a harness candidate.",
-      "repo_capture_surface_version": "0.3.0",
+      "repo_capture_surface_version": "0.4.0",
       "signals": ["new_coding_harness", "cross_repo_reuse", "validation_command"],
       "covered_rule_ids": ["exception-capture-rule:harness-opportunity"],
       "expected": {
@@ -111,7 +111,7 @@
       "scenario_id": "agent-skill-update",
       "pattern_family": "skill",
       "description": "A repo updates an agent skill pointer that DAD should know about.",
-      "repo_capture_surface_version": "0.3.0",
+      "repo_capture_surface_version": "0.4.0",
       "signals": ["agent_skill_change", "skill_updated"],
       "covered_rule_ids": ["exception-capture-rule:skill-lifecycle"],
       "expected": {
@@ -194,7 +194,7 @@
       "scenario_id": "architecture-reference-created",
       "pattern_family": "architecture_reference",
       "description": "A repo creates a reusable control-plane architecture reference.",
-      "repo_capture_surface_version": "0.3.0",
+      "repo_capture_surface_version": "0.4.0",
       "signals": ["architecture_reference_created", "control_plane_design"],
       "covered_rule_ids": ["exception-capture-rule:architecture-reference"],
       "expected": {
@@ -218,7 +218,7 @@
       "scenario_id": "governance-map-drift",
       "pattern_family": "governance_map",
       "description": "A managed path or human gate drifts from reviewed policy.",
-      "repo_capture_surface_version": "0.3.0",
+      "repo_capture_surface_version": "0.4.0",
       "signals": ["governance_map_drift", "managed_path_drift"],
       "covered_rule_ids": ["exception-capture-rule:governance-map-drift"],
       "expected": {
@@ -242,7 +242,7 @@
       "scenario_id": "artifact-registration-drift",
       "pattern_family": "governance_map",
       "description": "A governed artifact was created correctly but was not registered in manifests, suites, generated snapshots, AI navigation, catalogs, or maps.",
-      "repo_capture_surface_version": "0.3.0",
+      "repo_capture_surface_version": "0.4.0",
       "signals": [
         "governed_artifact_changed",
         "registration_surface_gap",
@@ -274,7 +274,7 @@
       "scenario_id": "data-map-private-public-risk",
       "pattern_family": "data_map",
       "description": "A data movement boundary creates private-to-public release risk.",
-      "repo_capture_surface_version": "0.3.0",
+      "repo_capture_surface_version": "0.4.0",
       "signals": ["data_boundary_change", "private_to_public_risk"],
       "covered_rule_ids": ["exception-capture-rule:data-map-boundary"],
       "expected": {
@@ -323,7 +323,7 @@
       "scenario_id": "dad-cli-unavailable-mail-fallback-needed",
       "pattern_family": "mail_pattern",
       "description": "A repo agent cannot run asset-dir from PATH and needs the governed JSONL fallback to reach DAD.",
-      "repo_capture_surface_version": "0.3.0",
+      "repo_capture_surface_version": "0.4.0",
       "signals": ["mail_pattern_change", "dad_cli_unavailable"],
       "covered_rule_ids": ["exception-capture-rule:mail-pattern-change"],
       "expected": {
@@ -347,7 +347,7 @@
       "scenario_id": "failed-command-metadata",
       "pattern_family": "exception_pattern",
       "description": "A command exits non-zero and should emit safe metadata without stdout/stderr.",
-      "repo_capture_surface_version": "0.3.0",
+      "repo_capture_surface_version": "0.4.0",
       "signals": ["command_failed", "exit_code_nonzero", "validation_command"],
       "covered_rule_ids": ["exception-capture-rule:failed-command-metadata"],
       "expected": {
@@ -371,7 +371,7 @@
       "scenario_id": "test-failure-metadata",
       "pattern_family": "exception_pattern",
       "description": "A selected test fails and should emit suite/path metadata without assertion body.",
-      "repo_capture_surface_version": "0.3.0",
+      "repo_capture_surface_version": "0.4.0",
       "signals": ["test_failed", "test_path_ref", "test_command"],
       "covered_rule_ids": ["exception-capture-rule:test-failure-metadata"],
       "expected": {
@@ -395,7 +395,7 @@
       "scenario_id": "runtime-exception-metadata",
       "pattern_family": "exception_pattern",
       "description": "A CLI raises a runtime exception and should emit class/fingerprint/top-frame metadata.",
-      "repo_capture_surface_version": "0.3.0",
+      "repo_capture_surface_version": "0.4.0",
       "signals": ["runtime_exception_observed", "exception_class", "top_frame_ref"],
       "covered_rule_ids": ["exception-capture-rule:runtime-exception-metadata"],
       "expected": {
@@ -419,7 +419,7 @@
       "scenario_id": "tool-unavailable-metadata",
       "pattern_family": "exception_pattern",
       "description": "asset-dir or another required tool is unavailable and fallback metadata should be emitted.",
-      "repo_capture_surface_version": "0.3.0",
+      "repo_capture_surface_version": "0.4.0",
       "signals": ["tool_unavailable", "dad_cli_unavailable", "fallback_used"],
       "covered_rule_ids": ["exception-capture-rule:tool-unavailable-metadata"],
       "expected": {
@@ -440,10 +440,260 @@
       "review_status": "reviewed"
     },
     {
+      "scenario_id": "ci-failure-metadata",
+      "pattern_family": "exception_pattern",
+      "description": "A CI workflow or job fails and should emit safe run metadata without logs.",
+      "repo_capture_surface_version": "0.3.0",
+      "signals": ["ci_failure_observed", "workflow_run_failed", "ci_job_failed"],
+      "covered_rule_ids": ["exception-capture-rule:ci-failure-metadata"],
+      "phase6_update_vectors": ["exception_taxonomy", "downstream_template"],
+      "expected": {
+        "packet_classes": ["exception_event"],
+        "event_types": ["ci_failure"],
+        "mail_message_types": [],
+        "capture_contracts": ["ci_failure"],
+        "required_fields": ["ci_provider", "failure_class", "job_or_check_ref", "safe_summary", "workflow_ref"],
+        "update_required": true,
+        "blocked": false
+      },
+      "negative_controls": ["contains_private_rows", "contains_raw_log_blob", "contains_secret_or_pii"],
+      "source_context": {
+        "repo_visibility": "internal",
+        "public_facing": false,
+        "notes": "CI evidence is provider/run/job metadata only; logs and artifacts stay local."
+      },
+      "review_status": "reviewed"
+    },
+    {
+      "scenario_id": "environment-config-missing",
+      "pattern_family": "exception_pattern",
+      "description": "A required environment or local runtime config is missing and blocks validation.",
+      "repo_capture_surface_version": "0.3.0",
+      "signals": ["environment_config_missing", "pythonpath_missing", "runtime_config_missing"],
+      "covered_rule_ids": ["exception-capture-rule:environment-config-missing"],
+      "phase6_update_vectors": ["exception_taxonomy", "downstream_template"],
+      "expected": {
+        "packet_classes": ["exception_event"],
+        "event_types": ["environment_config_missing"],
+        "mail_message_types": [],
+        "capture_contracts": ["failed_command"],
+        "required_fields": ["config_class", "fallback_or_blocker", "operation_name", "safe_summary", "validation_ref"],
+        "update_required": true,
+        "blocked": false
+      },
+      "negative_controls": ["contains_private_rows", "contains_raw_log_blob", "contains_secret_or_pii"],
+      "source_context": {
+        "repo_visibility": "internal",
+        "public_facing": false,
+        "notes": "The packet names the config class and fallback; actual env values are not copied."
+      },
+      "review_status": "reviewed"
+    },
+    {
+      "scenario_id": "permission-denied-metadata",
+      "pattern_family": "exception_pattern",
+      "description": "A permission or policy boundary blocks an operation and should emit class-level metadata.",
+      "repo_capture_surface_version": "0.3.0",
+      "signals": ["permission_denied", "access_denied", "write_denied"],
+      "covered_rule_ids": ["exception-capture-rule:permission-denied-metadata"],
+      "phase6_update_vectors": ["exception_taxonomy", "downstream_template"],
+      "expected": {
+        "packet_classes": ["exception_event"],
+        "event_types": ["permission_denied"],
+        "mail_message_types": [],
+        "capture_contracts": ["governance_block"],
+        "required_fields": ["blocked_action", "operation_class", "policy_or_error_class", "safe_summary", "target_path_class"],
+        "update_required": true,
+        "blocked": false
+      },
+      "negative_controls": ["contains_private_rows", "contains_raw_log_blob", "contains_secret_or_pii"],
+      "source_context": {
+        "repo_visibility": "private",
+        "public_facing": false,
+        "notes": "Target path class is safe metadata; private path values and content stay local."
+      },
+      "review_status": "reviewed"
+    },
+    {
+      "scenario_id": "dependency-install-failure",
+      "pattern_family": "exception_pattern",
+      "description": "A dependency install or resolver step fails and should emit package-manager metadata.",
+      "repo_capture_surface_version": "0.3.0",
+      "signals": ["dependency_install_failed", "package_install_failed", "resolver_failed"],
+      "covered_rule_ids": ["exception-capture-rule:dependency-install-failure"],
+      "phase6_update_vectors": ["exception_taxonomy", "downstream_template"],
+      "expected": {
+        "packet_classes": ["exception_event"],
+        "event_types": ["dependency_install_failure"],
+        "mail_message_types": [],
+        "capture_contracts": ["failed_command"],
+        "required_fields": ["command_ref", "dependency_scope", "failure_class", "package_manager", "safe_summary"],
+        "update_required": true,
+        "blocked": false
+      },
+      "negative_controls": ["contains_private_rows", "contains_raw_log_blob", "contains_secret_or_pii"],
+      "source_context": {
+        "repo_visibility": "internal",
+        "public_facing": false,
+        "notes": "Resolver logs are replaced by command refs, package-manager class, and failure class."
+      },
+      "review_status": "reviewed"
+    },
+    {
+      "scenario_id": "external-service-failure",
+      "pattern_family": "exception_pattern",
+      "description": "A connector, API, network, or cloud service failure changes the plan.",
+      "repo_capture_surface_version": "0.3.0",
+      "signals": ["external_service_failure", "api_failure", "rate_limit_hit"],
+      "covered_rule_ids": ["exception-capture-rule:external-service-failure"],
+      "phase6_update_vectors": ["exception_taxonomy", "downstream_template"],
+      "expected": {
+        "packet_classes": ["exception_event"],
+        "event_types": ["external_service_failure"],
+        "mail_message_types": [],
+        "capture_contracts": ["retry_or_plan_change"],
+        "required_fields": ["failure_class", "operation_name", "retry_or_fallback", "safe_summary", "service_class"],
+        "update_required": true,
+        "blocked": false
+      },
+      "negative_controls": ["contains_private_rows", "contains_raw_log_blob", "contains_secret_or_pii"],
+      "source_context": {
+        "repo_visibility": "internal",
+        "public_facing": false,
+        "notes": "Service failure packets contain service class and fallback only, not request or response bodies."
+      },
+      "review_status": "reviewed"
+    },
+    {
+      "scenario_id": "data-ingestion-failure",
+      "pattern_family": "exception_pattern",
+      "description": "A parser, extraction, normalization, or source-mapping step fails without copying source rows.",
+      "repo_capture_surface_version": "0.3.0",
+      "signals": ["data_ingestion_failure", "parse_error", "source_mapping_gap"],
+      "covered_rule_ids": ["exception-capture-rule:data-ingestion-failure"],
+      "phase6_update_vectors": ["exception_taxonomy", "downstream_template"],
+      "expected": {
+        "packet_classes": ["exception_event"],
+        "event_types": ["data_ingestion_failure"],
+        "mail_message_types": [],
+        "capture_contracts": ["postflight_exception"],
+        "required_fields": ["data_source_class", "failure_class", "parser_or_schema_ref", "record_or_batch_ref", "safe_summary"],
+        "update_required": true,
+        "blocked": false
+      },
+      "negative_controls": ["contains_private_rows", "contains_raw_log_blob", "contains_secret_or_pii"],
+      "source_context": {
+        "repo_visibility": "private",
+        "public_facing": false,
+        "notes": "Source rows are represented only by class and safe row/batch refs."
+      },
+      "review_status": "reviewed"
+    },
+    {
+      "scenario_id": "identity-resolution-conflict",
+      "pattern_family": "exception_pattern",
+      "description": "Candidate IDs, entities, aliases, or lineage refs conflict and require review.",
+      "repo_capture_surface_version": "0.3.0",
+      "signals": ["identity_resolution_conflict", "id_collision", "lineage_conflict"],
+      "covered_rule_ids": ["exception-capture-rule:identity-resolution-conflict"],
+      "phase6_update_vectors": ["exception_taxonomy", "downstream_template"],
+      "expected": {
+        "packet_classes": ["exception_event"],
+        "event_types": ["identity_resolution_conflict"],
+        "mail_message_types": [],
+        "capture_contracts": ["governance_block"],
+        "required_fields": ["authority_boundary", "candidate_refs", "conflict_class", "identity_namespace", "safe_summary"],
+        "update_required": true,
+        "blocked": false
+      },
+      "negative_controls": ["contains_private_rows", "contains_raw_log_blob", "contains_secret_or_pii"],
+      "source_context": {
+        "repo_visibility": "private",
+        "public_facing": false,
+        "notes": "Candidate refs are hashes or IDs only; private identity rows are not copied."
+      },
+      "review_status": "reviewed"
+    },
+    {
+      "scenario_id": "generated-code-compile-failure",
+      "pattern_family": "exception_pattern",
+      "description": "Generated or AI-authored code fails compile, typecheck, lint, or static validation.",
+      "repo_capture_surface_version": "0.3.0",
+      "signals": ["generated_code_compile_failure", "compile_error", "typecheck_failed"],
+      "covered_rule_ids": ["exception-capture-rule:generated-code-compile-failure"],
+      "phase6_update_vectors": ["exception_taxonomy", "dad_offerings_registry"],
+      "expected": {
+        "packet_classes": ["exception_event"],
+        "event_types": ["generated_code_compile_failure"],
+        "mail_message_types": [],
+        "capture_contracts": ["failed_command"],
+        "required_fields": ["failure_class", "language_or_runtime", "module_ref", "safe_summary", "validation_command"],
+        "update_required": true,
+        "blocked": false
+      },
+      "negative_controls": ["contains_private_rows", "contains_raw_log_blob", "contains_secret_or_pii"],
+      "source_context": {
+        "repo_visibility": "internal",
+        "public_facing": false,
+        "notes": "Compiler details are summarized by language/runtime, module ref, and failure class."
+      },
+      "review_status": "reviewed"
+    },
+    {
+      "scenario_id": "build-packaging-failure",
+      "pattern_family": "exception_pattern",
+      "description": "A package, wheel, bundle, zip, image, deploy, or release build fails.",
+      "repo_capture_surface_version": "0.3.0",
+      "signals": ["build_packaging_failure", "package_build_failed", "bundle_failed"],
+      "covered_rule_ids": ["exception-capture-rule:build-packaging-failure"],
+      "phase6_update_vectors": ["exception_taxonomy", "downstream_template"],
+      "expected": {
+        "packet_classes": ["exception_event"],
+        "event_types": ["build_packaging_failure"],
+        "mail_message_types": [],
+        "capture_contracts": ["failed_command"],
+        "required_fields": ["artifact_class", "build_command", "failure_class", "safe_summary", "validation_ref"],
+        "update_required": true,
+        "blocked": false
+      },
+      "negative_controls": ["contains_private_rows", "contains_raw_log_blob", "contains_secret_or_pii"],
+      "source_context": {
+        "repo_visibility": "internal",
+        "public_facing": false,
+        "notes": "Artifacts and build logs are not copied; only artifact class and validation ref leave the repo."
+      },
+      "review_status": "reviewed"
+    },
+    {
+      "scenario_id": "fixture-synthetic-data-gap",
+      "pattern_family": "exception_pattern",
+      "description": "A fixture or synthetic/golden case misses a required behavior and creates false confidence.",
+      "repo_capture_surface_version": "0.3.0",
+      "signals": ["fixture_or_synthetic_data_gap", "golden_case_missing", "fixture_false_green"],
+      "covered_rule_ids": ["exception-capture-rule:fixture-synthetic-data-gap"],
+      "phase6_update_vectors": ["exception_taxonomy", "downstream_template"],
+      "expected": {
+        "packet_classes": ["exception_event"],
+        "event_types": ["fixture_or_synthetic_data_gap"],
+        "mail_message_types": [],
+        "capture_contracts": ["review_finding"],
+        "required_fields": ["expected_assertion_or_packet", "false_confidence_risk", "missing_behavior", "safe_summary", "test_or_fixture_ref"],
+        "update_required": true,
+        "blocked": false
+      },
+      "negative_controls": ["contains_private_rows", "contains_raw_log_blob", "contains_secret_or_pii"],
+      "source_context": {
+        "repo_visibility": "internal",
+        "public_facing": false,
+        "notes": "The packet names the missed behavior and expected assertion/packet, not real private fixture rows."
+      },
+      "review_status": "reviewed"
+    },
+    {
       "scenario_id": "repo-rename-lineage",
       "pattern_family": "exception_pattern",
       "description": "A persistent repo rename should emit lineage metadata so mail and usage history survive path changes.",
-      "repo_capture_surface_version": "0.3.0",
+      "repo_capture_surface_version": "0.4.0",
       "signals": ["repo_renamed", "repo_path_changed", "stable_repo_id_present"],
       "covered_rule_ids": ["exception-capture-rule:repo-rename-lineage"],
       "expected": {
@@ -467,7 +717,7 @@
       "scenario_id": "repo-split-lineage",
       "pattern_family": "exception_pattern",
       "description": "A persistent repo split should emit child lineage metadata and require new enrollment decisions.",
-      "repo_capture_surface_version": "0.3.0",
+      "repo_capture_surface_version": "0.4.0",
       "signals": ["repo_split", "repo_copied", "new_child_repo"],
       "covered_rule_ids": ["exception-capture-rule:repo-split-lineage"],
       "expected": {
@@ -491,7 +741,7 @@
       "scenario_id": "protected-repo-write-block",
       "pattern_family": "exception_pattern",
       "description": "A protected repo local-write attempt is blocked because explicit approval is missing.",
-      "repo_capture_surface_version": "0.3.0",
+      "repo_capture_surface_version": "0.4.0",
       "signals": ["protected_repo_write_block", "protected_repo_local_write_attempt", "approval_id_missing"],
       "covered_rule_ids": ["exception-capture-rule:protected-repo-write-block"],
       "phase6_update_vectors": ["exception_taxonomy", "downstream_template"],
@@ -516,7 +766,7 @@
       "scenario_id": "dirty-worktree-block",
       "pattern_family": "exception_pattern",
       "description": "A governance operation stops because the target repo has active uncommitted work.",
-      "repo_capture_surface_version": "0.3.0",
+      "repo_capture_surface_version": "0.4.0",
       "signals": ["dirty_worktree_block", "uncommitted_changes_present", "active_repo_blocked"],
       "covered_rule_ids": ["exception-capture-rule:dirty-worktree-block"],
       "phase6_update_vectors": ["exception_taxonomy", "downstream_template"],
@@ -541,7 +791,7 @@
       "scenario_id": "private-origin-public-target",
       "pattern_family": "exception_pattern",
       "description": "A non-public origin packet attempts to target a public-facing repo without human release.",
-      "repo_capture_surface_version": "0.3.0",
+      "repo_capture_surface_version": "0.4.0",
       "signals": ["private_origin_public_target", "public_facing_target", "human_release_missing"],
       "covered_rule_ids": ["exception-capture-rule:private-origin-public-target"],
       "phase6_update_vectors": ["exception_taxonomy", "downstream_template"],
@@ -566,7 +816,7 @@
       "scenario_id": "stale-report-freshness-failure",
       "pattern_family": "exception_pattern",
       "description": "A report freshness gate detects that a structured report is stale against its inputs or methodology hash.",
-      "repo_capture_surface_version": "0.3.0",
+      "repo_capture_surface_version": "0.4.0",
       "signals": ["stale_report_detected", "input_hash_mismatch", "freshness_check_failed"],
       "covered_rule_ids": ["exception-capture-rule:stale-report-freshness-failure"],
       "phase6_update_vectors": ["exception_taxonomy", "downstream_template"],
@@ -591,7 +841,7 @@
       "scenario_id": "malformed-jsonl-quarantine",
       "pattern_family": "exception_pattern",
       "description": "A mailbox, exception, or fix-outcome JSONL row is malformed and must be quarantined without copying the raw line.",
-      "repo_capture_surface_version": "0.3.0",
+      "repo_capture_surface_version": "0.4.0",
       "signals": ["malformed_jsonl_detected", "jsonl_parse_error", "line_quarantined", "raw_hash_recorded"],
       "covered_rule_ids": ["exception-capture-rule:malformed-jsonl-quarantine"],
       "phase6_update_vectors": ["exception_taxonomy", "downstream_template"],
@@ -616,7 +866,7 @@
       "scenario_id": "duplicate-mail-delivery-ack",
       "pattern_family": "exception_pattern",
       "description": "A repeated mail_id or dedupe_key is acknowledged instead of being delivered as a new inbox suggestion.",
-      "repo_capture_surface_version": "0.3.0",
+      "repo_capture_surface_version": "0.4.0",
       "signals": ["duplicate_mail_delivery", "dedupe_key_seen", "mail_id_already_seen", "inbox_ack_written"],
       "covered_rule_ids": ["exception-capture-rule:duplicate-mail-delivery-ack"],
       "phase6_update_vectors": ["exception_taxonomy", "downstream_template"],
@@ -641,7 +891,7 @@
       "scenario_id": "pytest-performance-hotspot",
       "pattern_family": "exception_pattern",
       "description": "Pytest duration evidence shows a slow full-battery or orchestration hotspot that should feed DAD harness learning.",
-      "repo_capture_surface_version": "0.3.0",
+      "repo_capture_surface_version": "0.4.0",
       "signals": ["pytest_performance_hotspot", "long_full_battery", "test_duration_inventory", "test_orchestration_candidate"],
       "covered_rule_ids": ["exception-capture-rule:pytest-performance-hotspot"],
       "phase6_update_vectors": ["exception_taxonomy", "dad_offerings_registry"],
@@ -666,7 +916,7 @@
       "scenario_id": "validation-command-missing",
       "pattern_family": "exception_pattern",
       "description": "A required validation command or dependency is unavailable, so the repo must record the validation gap explicitly.",
-      "repo_capture_surface_version": "0.3.0",
+      "repo_capture_surface_version": "0.4.0",
       "signals": ["validation_command_missing", "expected_validation_unavailable", "missing_dependency", "command_not_found"],
       "covered_rule_ids": ["exception-capture-rule:validation-command-missing"],
       "phase6_update_vectors": ["exception_taxonomy", "downstream_template"],
@@ -691,7 +941,7 @@
       "scenario_id": "harmful-dad-recommendation",
       "pattern_family": "exception_pattern",
       "description": "A repo found that a DAD recommendation was harmful, misleading, unsafe, or wasteful and should feed calibration.",
-      "repo_capture_surface_version": "0.3.0",
+      "repo_capture_surface_version": "0.4.0",
       "signals": ["dad_recommendation_outcome", "harmful_recommendation"],
       "covered_rule_ids": ["exception-capture-rule:harmful-dad-recommendation"],
       "phase6_update_vectors": ["dad_offerings_registry"],
@@ -716,7 +966,7 @@
       "scenario_id": "dad-asset-attempt-failed",
       "pattern_family": "exception_pattern",
       "description": "A repo tried a DAD asset or harness and the attempt failed validation.",
-      "repo_capture_surface_version": "0.3.0",
+      "repo_capture_surface_version": "0.4.0",
       "signals": ["dad_asset_attempt_failed", "harness_validation_failed"],
       "covered_rule_ids": ["exception-capture-rule:dad-asset-attempt-failed"],
       "phase6_update_vectors": ["dad_offerings_registry"],
@@ -741,7 +991,7 @@
       "scenario_id": "ignored-required-recommendation",
       "pattern_family": "exception_pattern",
       "description": "A required DAD stop condition, non-negotiable, or recommendation was skipped and needs explicit review evidence.",
-      "repo_capture_surface_version": "0.3.0",
+      "repo_capture_surface_version": "0.4.0",
       "signals": ["ignored_required_recommendation", "stop_condition_bypassed"],
       "covered_rule_ids": ["exception-capture-rule:ignored-required-recommendation"],
       "expected": {
@@ -765,7 +1015,7 @@
       "scenario_id": "secret-or-pii-blocked-metadata",
       "pattern_family": "exception_pattern",
       "description": "A source repo screening gate blocked sensitive content and emits only safe metadata about the block.",
-      "repo_capture_surface_version": "0.3.0",
+      "repo_capture_surface_version": "0.4.0",
       "signals": ["sensitive_payload_blocked", "credential_pii_screen_blocked"],
       "covered_rule_ids": ["exception-capture-rule:secret-or-pii-blocked-metadata"],
       "phase6_update_vectors": ["exception_taxonomy", "downstream_template"],
@@ -790,7 +1040,7 @@
       "scenario_id": "raw-blob-blocked-metadata",
       "pattern_family": "exception_pattern",
       "description": "A local gate rejected raw logs or long blobs and emits only class/hash/ref metadata.",
-      "repo_capture_surface_version": "0.3.0",
+      "repo_capture_surface_version": "0.4.0",
       "signals": ["raw_blob_screen_blocked", "stack_trace_blocked"],
       "covered_rule_ids": ["exception-capture-rule:raw-blob-blocked-metadata"],
       "phase6_update_vectors": ["exception_taxonomy", "downstream_template"],
@@ -815,7 +1065,7 @@
       "scenario_id": "prompt-injection-payload-blocked",
       "pattern_family": "exception_pattern",
       "description": "Instruction-like untrusted source text is detected and tracked as inert block metadata.",
-      "repo_capture_surface_version": "0.3.0",
+      "repo_capture_surface_version": "0.4.0",
       "signals": ["prompt_injection_payload_blocked", "data_prompt_injection_marker"],
       "covered_rule_ids": ["exception-capture-rule:prompt-injection-payload-blocked"],
       "phase6_update_vectors": ["exception_taxonomy", "downstream_template"],
@@ -940,7 +1190,7 @@
       "scenario_id": "material-red-team-finding",
       "pattern_family": "review_finding",
       "description": "A red-team or Fable review found a material governance defect.",
-      "repo_capture_surface_version": "0.3.0",
+      "repo_capture_surface_version": "0.4.0",
       "signals": ["material_review_finding", "red_team_finding"],
       "covered_rule_ids": ["exception-capture-rule:review-finding"],
       "expected": {
@@ -964,7 +1214,7 @@
       "scenario_id": "fix-outcome-validation-recorded",
       "pattern_family": "fix_outcome",
       "description": "A previously open exception receives a fix outcome with validation refs.",
-      "repo_capture_surface_version": "0.3.0",
+      "repo_capture_surface_version": "0.4.0",
       "signals": ["fix_outcome_recorded", "validation_passed"],
       "covered_rule_ids": ["exception-capture-rule:fix-outcome"],
       "expected": {
@@ -1021,7 +1271,7 @@
       "scenario_id": "secret-payload-suppressed",
       "pattern_family": "asset",
       "description": "A reusable asset signal includes credential-like text and must not be sent.",
-      "repo_capture_surface_version": "0.3.0",
+      "repo_capture_surface_version": "0.4.0",
       "signals": ["new_reusable_asset", "cross_repo_reuse", "asset_docs"],
       "covered_rule_ids": ["exception-capture-rule:asset-suggestion"],
       "expected": {
@@ -1052,7 +1302,7 @@
       "scenario_id": "private-row-payload-suppressed",
       "pattern_family": "asset",
       "description": "A reusable asset signal includes table-like private rows and must not be sent.",
-      "repo_capture_surface_version": "0.3.0",
+      "repo_capture_surface_version": "0.4.0",
       "signals": ["new_reusable_asset", "cross_repo_reuse", "asset_docs"],
       "covered_rule_ids": ["exception-capture-rule:asset-suggestion"],
       "expected": {
@@ -1083,7 +1333,7 @@
       "scenario_id": "raw-log-payload-suppressed",
       "pattern_family": "asset",
       "description": "A reusable asset signal includes a raw multiline log blob and must not be sent.",
-      "repo_capture_surface_version": "0.3.0",
+      "repo_capture_surface_version": "0.4.0",
       "signals": ["new_reusable_asset", "cross_repo_reuse", "asset_docs"],
       "covered_rule_ids": ["exception-capture-rule:asset-suggestion"],
       "expected": {
@@ -1114,7 +1364,7 @@
       "scenario_id": "hidden-reasoning-payload-suppressed",
       "pattern_family": "asset",
       "description": "A reusable asset signal includes hidden reasoning-like text and must not be sent.",
-      "repo_capture_surface_version": "0.3.0",
+      "repo_capture_surface_version": "0.4.0",
       "signals": ["new_reusable_asset", "cross_repo_reuse", "asset_docs"],
       "covered_rule_ids": ["exception-capture-rule:asset-suggestion"],
       "expected": {
@@ -1145,7 +1395,7 @@
       "scenario_id": "unsafe-positive-match-suppressed",
       "pattern_family": "asset",
       "description": "A reusable asset signal includes secret-like or private row content and must not be sent.",
-      "repo_capture_surface_version": "0.3.0",
+      "repo_capture_surface_version": "0.4.0",
       "signals": ["new_reusable_asset", "cross_repo_reuse", "asset_docs"],
       "covered_rule_ids": ["exception-capture-rule:asset-suggestion"],
       "expected": {

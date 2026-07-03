@@ -6,7 +6,7 @@ import re
 import tempfile
 from collections import Counter
 from pathlib import Path
-from typing import Any
+from typing import Any, Iterable
 
 from .ids import stable_id
 from .exceptions_lake import (
@@ -343,16 +343,48 @@ def _sorted(values: set[str]) -> list[str]:
     return sorted(item for item in values if item)
 
 
+def _looks_like_local_path_payload(text: str) -> bool:
+    normalized = text.casefold()
+    slash_normalized = normalized.replace("\\", "/")
+    return (
+        bool(re.search(r"(?:^|[\s\"'(\[])[a-z]:[\\/]", normalized))
+        or slash_normalized.startswith("/")
+        or any(fragment in normalized for fragment in PRIVATE_PATH_FRAGMENTS)
+        or any(fragment in slash_normalized for fragment in PRIVATE_PATH_FRAGMENTS)
+    )
+
+
+def _iter_payload_strings(value: Any) -> Iterable[str]:
+    if isinstance(value, str):
+        yield value
+        return
+    if isinstance(value, list):
+        for item in value:
+            yield from _iter_payload_strings(item)
+        return
+    if isinstance(value, dict):
+        for item in value.values():
+            yield from _iter_payload_strings(item)
+
+
+def _unsafe_capture_text_issues(text: str) -> set[str]:
+    issues: set[str] = set()
+    _, screen_issues = screen_exception_record({"sample": text})
+    issues.update(screen_issues)
+    if any(pattern.search(text) for pattern in PROMPT_INJECTION_PATTERNS):
+        issues.add("prompt_injection_like_payload")
+    if _looks_like_local_path_payload(text):
+        issues.add("local_path_like_payload")
+    return issues
+
+
 def _payload_sample_issues(case: dict[str, Any]) -> list[str]:
     issues: set[str] = set()
     for sample in case.get("payload_samples", []) or []:
         text = str(sample.get("text", "") if isinstance(sample, dict) else sample)
         if not text:
             continue
-        _, screen_issues = screen_exception_record({"sample": text})
-        issues.update(screen_issues)
-        if any(pattern.search(text) for pattern in PROMPT_INJECTION_PATTERNS):
-            issues.add("prompt_injection_like_payload")
+        issues.update(_unsafe_capture_text_issues(text))
     return sorted(issues)
 
 
@@ -874,11 +906,36 @@ def _observed_record_matches_expected(
     return False
 
 
-def _observed_payload_issues(record: dict[str, Any]) -> list[str]:
+def _observed_local_path_screen_values(
+    record: dict[str, Any],
+    expected_required_fields: set[str],
+) -> Iterable[str]:
+    payload = record.get("payload")
+    payload_fields: set[str] = set()
+    if isinstance(payload, dict):
+        payload_fields = set(str(key) for key in payload)
+        yield from _iter_payload_strings(payload)
+    for field in sorted(expected_required_fields):
+        if field in payload_fields:
+            continue
+        if field in record:
+            yield from _iter_payload_strings(record[field])
+    for field in ["safe_summary", "summary"]:
+        if field in record:
+            yield from _iter_payload_strings(record[field])
+
+
+def _observed_payload_issues(
+    record: dict[str, Any],
+    expected_required_fields: set[str],
+) -> list[str]:
     _, issues = screen_exception_record(record)
     text = json.dumps(record, sort_keys=True, ensure_ascii=False, default=str)
     if any(pattern.search(text) for pattern in PROMPT_INJECTION_PATTERNS):
         issues.append("prompt_injection_like_text")
+    for value in _observed_local_path_screen_values(record, expected_required_fields):
+        if _looks_like_local_path_payload(value):
+            issues.append("local_path_like_payload")
     return sorted(set(issues))
 
 
@@ -929,7 +986,7 @@ def evaluate_observed_capture(
         if has_valid_packet_row:
             packet_classes.add(packet_class)
         for row in rows:
-            for issue in _observed_payload_issues(row):
+            for issue in _observed_payload_issues(row, expected_required_fields):
                 errors.append(f"unsafe_observed_payload:{path_label}:{issue}")
             if _observed_record_matches_expected(row, key, expected):
                 usable_fields = _usable_field_names(row)

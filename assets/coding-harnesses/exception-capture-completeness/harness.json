@@ -1,14 +1,14 @@
 {
   "harness_id": "dad:harness:exception-capture-completeness",
   "name": "Exception Capture Completeness",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "path": "assets/coding-harnesses/exception-capture-completeness",
   "family": "learning_capture",
   "status": "candidate",
   "languages": ["python", "agent-instruction"],
   "repo_types": ["control_plane", "governed_repo_family", "application", "library"],
   "domains": ["governance", "learning_loop", "exceptions_lake", "mail_center"],
-  "context_tags": ["exception_capture", "mail_emission", "pattern_update", "synthetic_fixture", "observed_repo_audit"],
+  "context_tags": ["exception_capture", "mail_emission", "pattern_update", "synthetic_fixture", "observed_repo_audit", "ordinary_engineering_exception_capture"],
   "task_types": ["testing", "governance_review", "learning_loop", "repo_enrollment"],
   "capabilities": [
     "capture_completeness_eval",
@@ -17,7 +17,8 @@
     "capture_suggest_to_writer_simulation",
     "required_field_contract_check",
     "negative_payload_gate",
-    "observed_outbox_audit"
+    "observed_outbox_audit",
+    "ordinary_engineering_exception_capture"
   ],
   "public_safe": true,
   "entrypoints": [
@@ -33,9 +34,11 @@
   ],
   "validation_commands": [
     "python -m pytest tests/test_exception_capture.py -q",
-    "python -m digital_asset_directory.cli exceptions capture-suggest --signal tool_unavailable --signal dad_cli_unavailable --signal fallback_used --repo-capture-surface-version 0.3.0",
+    "python -m digital_asset_directory.cli exceptions capture-suggest --signal tool_unavailable --signal dad_cli_unavailable --signal fallback_used --repo-capture-surface-version 0.4.0",
+    "python -m digital_asset_directory.cli exceptions capture-suggest --signal ci_failure_observed --signal workflow_run_failed --signal ci_job_failed --repo-capture-surface-version 0.4.0",
     "python -m digital_asset_directory.cli exceptions capture-check --scenarios assets/coding-harnesses/exception-capture-completeness/examples/synthetic-capture-scenarios.json",
     "python -m digital_asset_directory.cli exceptions capture-simulate-emission --scenarios assets/coding-harnesses/exception-capture-completeness/examples/synthetic-capture-scenarios.json",
+    "python -m digital_asset_directory.cli templates validate",
     "python -m digital_asset_directory.cli exceptions capture-audit --repo all",
     "python -m digital_asset_directory.cli exceptions capture-audit --repo all --candidate-limit 0 --max-scanned-files 50000"
   ],

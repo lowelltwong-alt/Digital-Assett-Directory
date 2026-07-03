@@ -309,7 +309,7 @@
     {
       "asset_id": "exception-capture-completeness-harness",
       "name": "Exception Capture Completeness Harness",
-      "version": "0.1.0",
+      "version": "0.2.0",
       "path": "assets/coding-harnesses/exception-capture-completeness",
       "asset_type": "coding_harness",
       "managed_block_id": "EXCEPTION_CAPTURE_COMPLETENESS",
@@ -338,7 +338,8 @@
       "safety_notes": [
         "Scenario matches prove expected packet behavior, not source truth.",
         "Observed capture audit is read-only and path-hash-first.",
-        "Every reviewed capture rule needs at least one declared synthetic scenario."
+        "Every reviewed capture rule needs at least one declared synthetic scenario.",
+        "v0.2 adds ordinary engineering/data-plane exception capture and unsafe-field regression checks."
       ]
     },
     {
