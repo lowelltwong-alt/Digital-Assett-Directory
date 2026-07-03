@@ -6,6 +6,7 @@ import re
 import shutil
 import tempfile
 from collections import Counter
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Iterable
 
@@ -226,6 +227,21 @@ BACKFILL_TERMS = {
     for term in rule["terms"]
 }
 BACKFILL_CLASSIFIER_REF = "registry/exception-event-type-registry.json#backfill_classifier"
+
+
+@dataclass(frozen=True)
+class BackfillAuthorization:
+    """Reviewed authorization required before historical backfill writes events."""
+
+    root: Path
+    approval_id: str
+    include_path_refs: bool = False
+    repo_policies: Iterable[Any] | None = None
+    approved_by: str = "reviewed_policy"
+    reason: str = ""
+    allow_public_facing: bool = False
+
+
 BACKFILL_EXCLUDE_DIRS = {
     ".git",
     ".digital-asset",
@@ -351,8 +367,27 @@ def _repo_policy_for(repo: Path, repo_policies: Iterable[Any] | None) -> Any | N
     return None
 
 
+def _repo_policy_covering_path(repo: Path, repo_policies: Iterable[Any] | None) -> Any | None:
+    target = repo.resolve()
+    for policy in repo_policies or []:
+        try:
+            policy_path = Path(policy.path).resolve()
+        except OSError:
+            continue
+        try:
+            if target == policy_path or target.is_relative_to(policy_path):
+                return policy
+        except AttributeError:
+            if target == policy_path or str(target).startswith(str(policy_path)):
+                return policy
+    return None
+
+
 def _repo_identity(repo: Path, repo_policies: Iterable[Any] | None = None) -> tuple[str, str, bool]:
-    policy = _repo_policy_for(repo, repo_policies)
+    policy = _repo_policy_for(repo, repo_policies) or _repo_policy_covering_path(
+        repo,
+        repo_policies,
+    )
     if policy is not None:
         return str(policy.id), str(policy.visibility), bool(policy.public_facing)
     contract = repo / ".digital-asset" / "dad-integration.json"
@@ -367,6 +402,84 @@ def _repo_identity(repo: Path, repo_policies: Iterable[Any] | None = None) -> tu
         except (OSError, json.JSONDecodeError):
             pass
     return repo.name, "unknown", False
+
+
+def _is_path_relative_to(path: Path, base: Path) -> bool:
+    try:
+        return path.is_relative_to(base)
+    except AttributeError:
+        return path == base or str(path).startswith(str(base))
+
+
+def validate_backfill_authorization(
+    hub_root: Path,
+    search_root: Path,
+    *,
+    include_path_refs: bool,
+    authorization: BackfillAuthorization | None,
+) -> list[Any]:
+    """Validate historical backfill authorization before any lake writes happen."""
+
+    if authorization is None:
+        raise ValueError("Historical exception backfill requires BackfillAuthorization.")
+    root = search_root.resolve()
+    authorized_root = authorization.root.resolve()
+    if not (root == authorized_root or _is_path_relative_to(root, authorized_root)):
+        raise ValueError("BackfillAuthorization root does not cover requested search root.")
+    approval = str(authorization.approval_id or "").strip()
+    if not approval:
+        raise ValueError("BackfillAuthorization lacks reviewed approval_id.")
+    if include_path_refs and not authorization.include_path_refs:
+        raise ValueError("Readable path refs require explicit BackfillAuthorization.")
+    repo_policies = list(authorization.repo_policies or [])
+    hub_resolved = hub_root.resolve()
+    root_inside_dad = root == hub_resolved or _is_path_relative_to(root, hub_resolved)
+    if root_inside_dad and approval == "dad-self-backfill":
+        return repo_policies
+    policy = _repo_policy_covering_path(root, repo_policies)
+    if policy is None:
+        raise ValueError("Backfill root is not covered by reviewed exceptions.repos policy.")
+    policy_id = str(getattr(policy, "id", root))
+    if not getattr(policy, "exceptions_enabled", True):
+        raise ValueError(f"{policy_id} has exceptions_enabled=false.")
+    if getattr(policy, "write_protected", False):
+        raise ValueError(f"{policy_id} is write_protected for exception backfill.")
+    if getattr(policy, "public_facing", False) and not authorization.allow_public_facing:
+        raise ValueError(
+            f"{policy_id} is public_facing and requires explicit public-facing backfill authorization."
+        )
+    if not getattr(policy, "backfill_allowed", False):
+        raise ValueError(f"{policy_id} has backfill_allowed=false.")
+    approved_ids = [str(value) for value in getattr(policy, "approved_approval_ids", []) or []]
+    if approval not in approved_ids:
+        raise ValueError(f"{approval!r} is not approved for exceptions repo policy {policy_id}.")
+    if include_path_refs and getattr(policy, "visibility", "unknown") == "public":
+        raise ValueError("Readable path refs are blocked for public exception backfill.")
+    return repo_policies
+
+
+def _backfill_policy_snapshot(repo_policies: Iterable[Any] | None) -> list[dict[str, Any]]:
+    snapshot: list[dict[str, Any]] = []
+    for policy in repo_policies or []:
+        try:
+            path_ref = _safe_repo_path_ref(Path(policy.path))
+        except (AttributeError, OSError):
+            path_ref = "repo-path-sha256:unknown"
+        snapshot.append(
+            {
+                "id": str(getattr(policy, "id", "")),
+                "path_ref": path_ref,
+                "visibility": str(getattr(policy, "visibility", "unknown")),
+                "public_facing": bool(getattr(policy, "public_facing", False)),
+                "exceptions_enabled": bool(getattr(policy, "exceptions_enabled", True)),
+                "backfill_allowed": bool(getattr(policy, "backfill_allowed", False)),
+                "write_protected": bool(getattr(policy, "write_protected", False)),
+                "approved_approval_id_count": len(
+                    getattr(policy, "approved_approval_ids", []) or []
+                ),
+            }
+        )
+    return sorted(snapshot, key=lambda item: item["id"])
 
 
 def load_event_type_registry(hub_root: Path) -> dict[str, Any]:
@@ -1887,7 +2000,16 @@ def backfill_exception_candidates(
     include_path_refs: bool = False,
     repo_policies: Iterable[Any] | None = None,
     max_scanned_files: int = 0,
+    authorization: BackfillAuthorization | None = None,
 ) -> dict[str, Any]:
+    effective_repo_policies = validate_backfill_authorization(
+        hub_root,
+        search_root,
+        include_path_refs=include_path_refs,
+        authorization=authorization,
+    )
+    if repo_policies is None:
+        repo_policies = effective_repo_policies
     limit = max(1, min(limit, MAX_BACKFILL_EVENTS))
     per_repo_limit = max(1, min(per_repo_limit, limit))
     max_scanned_files = max(0, max_scanned_files)
@@ -1964,7 +2086,7 @@ def backfill_exception_candidates(
                 ],
                 error_fingerprint=stable_id(
                     "exception-backfill-path",
-                    source_root.name,
+                    source_repo,
                     rel_hash,
                     keyword,
                     event_type,
@@ -2004,6 +2126,8 @@ def backfill_exception_candidates(
         if stopped_reason:
             break
     stopped = stopped_reason or "walk_exhausted"
+    policy_snapshot = _backfill_policy_snapshot(repo_policies)
+    classifier_path = hub_root / "registry" / "exception-event-type-registry.json"
     run_record = {
         "schema_version": "0.1.0",
         "run_id": stable_id("exception-backfill-run", utc_now(), search_root.resolve().as_posix()),
@@ -2022,6 +2146,15 @@ def backfill_exception_candidates(
         "rule_counts": dict(sorted(rule_counts.items())),
         "classifier_ref": BACKFILL_CLASSIFIER_REF,
         "classifier_version": backfill_classifier_version(hub_root),
+        "classifier_hash": f"sha256:{sha256_file(classifier_path)}",
+        "exception_repo_policy_hash": f"sha256:{sha256_bytes(json_dumps(policy_snapshot).encode('utf-8'))}",
+        "authorization": {
+            "approval_id": authorization.approval_id,
+            "approved_by": authorization.approved_by,
+            "include_path_refs": authorization.include_path_refs,
+            "allow_public_facing": authorization.allow_public_facing,
+            "reason": authorization.reason,
+        },
         "lake_path": LAKE_PATH.as_posix(),
         "coverage_warning": "partial_backfill_wave" if stopped != "walk_exhausted" else "",
     }

@@ -849,6 +849,15 @@ Backfill safety and classification:
   surface freshness, observed path-signal counts, candidate signal summaries,
   and next actions. It is planning evidence only; it never approves or runs
   backfill.
+- `asset-dir exceptions backfill-plan --repo all` turns readiness evidence into
+  planning-only review waves: bounded-sample rescan, capture-surface refresh,
+  capture-gap review, protected central-only review, policy enablement, approval
+  review, metadata-only candidate backfill, and watch/no-signal. It still never
+  writes target repos or runs backfill.
+- Readiness fails closed when path-signal scans are truncated, capture surfaces
+  are stale or unknown, or emissions are missing, unverified, or uncorrelated.
+  Those repos are not `ready_now`; they must clear the appropriate review wave
+  first.
 - Candidate signal summaries group path-name-only findings by pattern family,
   suggested event type, source rule ID, matched term, expected-review class, and
   emission status. They help choose review waves and spot taxonomy drift. They

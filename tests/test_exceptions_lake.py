@@ -9,6 +9,7 @@ import pytest
 from jsonschema.validators import validator_for
 
 from digital_asset_directory.exceptions_lake import (
+    BackfillAuthorization,
     backfill_exception_candidates,
     backfill_classifier_rules,
     backfill_path_signal_terms,
@@ -36,6 +37,46 @@ def _copy_exception_contracts(hub: Path) -> None:
         target = hub / rel
         target.parent.mkdir(parents=True, exist_ok=True)
         shutil.copyfile(ROOT / rel, target)
+
+
+def _backfill_policy(
+    repo: Path,
+    *,
+    repo_id: str = "repo",
+    visibility: str = "internal",
+    public_facing: bool = False,
+    write_protected: bool = False,
+    backfill_allowed: bool = True,
+    approval_id: str = "APPROVED-BACKFILL",
+) -> SimpleNamespace:
+    return SimpleNamespace(
+        id=repo_id,
+        path=repo,
+        visibility=visibility,
+        public_facing=public_facing,
+        exceptions_enabled=True,
+        backfill_allowed=backfill_allowed,
+        approved_approval_ids=[approval_id],
+        write_protected=write_protected,
+    )
+
+
+def _backfill_auth(
+    repo: Path,
+    *,
+    include_path_refs: bool = False,
+    repo_policies: list[SimpleNamespace] | None = None,
+    approval_id: str = "APPROVED-BACKFILL",
+    allow_public_facing: bool = False,
+) -> BackfillAuthorization:
+    policies = repo_policies or [_backfill_policy(repo, approval_id=approval_id)]
+    return BackfillAuthorization(
+        root=repo,
+        approval_id=approval_id,
+        include_path_refs=include_path_refs,
+        repo_policies=policies,
+        allow_public_facing=allow_public_facing,
+    )
 
 
 def _jsonl(path: Path) -> list[dict]:
@@ -181,7 +222,12 @@ def test_backfill_fails_closed_without_reviewed_classifier(tmp_path: Path) -> No
     target.write_text("metadata-only backfill should not read content\n", encoding="utf-8")
 
     with pytest.raises(ValueError, match="backfill classifier registry"):
-        backfill_exception_candidates(hub, repo, limit=10)
+        backfill_exception_candidates(
+            hub,
+            repo,
+            limit=10,
+            authorization=_backfill_auth(repo),
+        )
 
 
 @pytest.mark.parametrize(
@@ -509,9 +555,17 @@ def test_backfill_emits_metadata_only_path_candidates(tmp_path: Path) -> None:
     target.parent.mkdir(parents=True)
     target.write_text("api_key=super-secret-value should never be copied\n", encoding="utf-8")
 
-    result = backfill_exception_candidates(hub, repo, limit=30)
+    result = backfill_exception_candidates(
+        hub,
+        repo,
+        limit=30,
+        authorization=_backfill_auth(repo),
+    )
 
     assert result["created_count"] == 1
+    assert result["authorization"]["approval_id"] == "APPROVED-BACKFILL"
+    assert result["classifier_hash"].startswith("sha256:")
+    assert result["exception_repo_policy_hash"].startswith("sha256:")
     lake_text = (hub / "processed" / "exceptions" / "lake" / "events.jsonl").read_text(
         encoding="utf-8"
     )
@@ -537,11 +591,73 @@ def test_backfill_readable_path_refs_require_explicit_opt_in(tmp_path: Path) -> 
         repo,
         limit=10,
         include_path_refs=True,
+        authorization=_backfill_auth(repo, include_path_refs=True),
     )
 
     assert result["created_count"] == 1
     lake = _jsonl(hub / "processed" / "exceptions" / "lake" / "events.jsonl")
     assert "repo-relative:docs/postmortem-note.md" in lake[0]["context_refs"]
+
+
+def test_backfill_rejects_direct_call_without_authorization(tmp_path: Path) -> None:
+    hub = tmp_path / "hub"
+    repo = tmp_path / "repo"
+    _copy_exception_contracts(hub)
+    (repo / "docs").mkdir(parents=True)
+
+    with pytest.raises(ValueError, match="requires BackfillAuthorization"):
+        backfill_exception_candidates(hub, repo, limit=10)
+
+
+def test_backfill_rejects_write_protected_authorization(tmp_path: Path) -> None:
+    hub = tmp_path / "hub"
+    repo = tmp_path / "repo"
+    _copy_exception_contracts(hub)
+    (repo / "docs" / "incident-note.md").parent.mkdir(parents=True)
+    (repo / "docs" / "incident-note.md").write_text("metadata-only\n", encoding="utf-8")
+    policy = _backfill_policy(repo, write_protected=True)
+
+    with pytest.raises(ValueError, match="write_protected"):
+        backfill_exception_candidates(
+            hub,
+            repo,
+            limit=10,
+            authorization=_backfill_auth(repo, repo_policies=[policy]),
+        )
+
+
+def test_backfill_rejects_public_facing_authorization_by_default(tmp_path: Path) -> None:
+    hub = tmp_path / "hub"
+    repo = tmp_path / "repo"
+    _copy_exception_contracts(hub)
+    (repo / "docs" / "incident-note.md").parent.mkdir(parents=True)
+    (repo / "docs" / "incident-note.md").write_text("metadata-only\n", encoding="utf-8")
+    policy = _backfill_policy(repo, visibility="public", public_facing=True)
+
+    with pytest.raises(ValueError, match="public_facing"):
+        backfill_exception_candidates(
+            hub,
+            repo,
+            limit=10,
+            authorization=_backfill_auth(repo, repo_policies=[policy]),
+        )
+
+
+def test_backfill_rejects_readable_paths_without_authorization_bit(tmp_path: Path) -> None:
+    hub = tmp_path / "hub"
+    repo = tmp_path / "repo"
+    _copy_exception_contracts(hub)
+    (repo / "docs" / "incident-note.md").parent.mkdir(parents=True)
+    (repo / "docs" / "incident-note.md").write_text("metadata-only\n", encoding="utf-8")
+
+    with pytest.raises(ValueError, match="Readable path refs require explicit"):
+        backfill_exception_candidates(
+            hub,
+            repo,
+            limit=10,
+            include_path_refs=True,
+            authorization=_backfill_auth(repo),
+        )
 
 
 def test_backfill_classifies_specific_exception_families(tmp_path: Path) -> None:
@@ -576,7 +692,12 @@ def test_backfill_classifies_specific_exception_families(tmp_path: Path) -> None
         path.parent.mkdir(parents=True, exist_ok=True)
         path.write_text("metadata-only backfill should not read this content\n", encoding="utf-8")
 
-    result = backfill_exception_candidates(hub, repo, limit=30)
+    result = backfill_exception_candidates(
+        hub,
+        repo,
+        limit=30,
+        authorization=_backfill_auth(repo),
+    )
 
     assert result["classification_counts"] == {
         "build_packaging_failure": 1,
@@ -642,7 +763,17 @@ def test_backfill_preserves_reviewed_repo_policy_visibility(tmp_path: Path) -> N
         public_facing=False,
     )
 
-    result = backfill_exception_candidates(hub, repo, limit=10, repo_policies=[policy])
+    policy.approved_approval_ids = ["APPROVED-BACKFILL"]
+    policy.exceptions_enabled = True
+    policy.backfill_allowed = True
+    policy.write_protected = False
+    result = backfill_exception_candidates(
+        hub,
+        repo,
+        limit=10,
+        repo_policies=[policy],
+        authorization=_backfill_auth(repo, repo_policies=[policy]),
+    )
 
     assert result["created_count"] == 1
     lake = _jsonl(hub / "processed" / "exceptions" / "lake" / "events.jsonl")
@@ -667,7 +798,15 @@ def test_exception_report_summarizes_categories(tmp_path: Path) -> None:
         path.parent.mkdir(parents=True, exist_ok=True)
         path.write_text("metadata-only backfill should not read this content\n", encoding="utf-8")
 
-    backfill_exception_candidates(hub, repo, limit=10)
+    backfill_exception_candidates(
+        hub,
+        repo,
+        limit=10,
+        authorization=_backfill_auth(
+            repo,
+            repo_policies=[_backfill_policy(repo, visibility="public")],
+        ),
+    )
     report = write_exception_report(hub)
 
     assert report["by_category"] == {
@@ -807,7 +946,15 @@ def test_exception_learning_queue_separates_fix_ready_unresolved_and_backfill(
     target = repo / "docs" / "postmortem-note.md"
     target.parent.mkdir(parents=True, exist_ok=True)
     target.write_text("metadata-only backfill should not read this content\n", encoding="utf-8")
-    backfill_exception_candidates(hub, repo, limit=10)
+    backfill_exception_candidates(
+        hub,
+        repo,
+        limit=10,
+        authorization=_backfill_auth(
+            repo,
+            repo_policies=[_backfill_policy(repo, visibility="public")],
+        ),
+    )
 
     report = write_exception_learning_queue(
         hub,
@@ -1029,7 +1176,12 @@ def test_exception_report_separates_observed_from_backfill_candidates(
     target.parent.mkdir(parents=True, exist_ok=True)
     target.write_text("metadata-only backfill should not read this content\n", encoding="utf-8")
 
-    backfill_exception_candidates(hub, repo, limit=10)
+    backfill_exception_candidates(
+        hub,
+        repo,
+        limit=10,
+        authorization=_backfill_auth(repo),
+    )
     report = write_exception_report(hub)
 
     assert report["event_count"] == 2
@@ -1431,7 +1583,12 @@ def test_backfill_skips_pytest_temp_and_sensitive_path_names(tmp_path: Path) -> 
         path.parent.mkdir(parents=True, exist_ok=True)
         path.write_text("metadata-only backfill should not read this content\n", encoding="utf-8")
 
-    result = backfill_exception_candidates(hub, root, limit=10)
+    result = backfill_exception_candidates(
+        hub,
+        root,
+        limit=10,
+        authorization=_backfill_auth(root),
+    )
 
     assert result["created_count"] == 1
     lake = _jsonl(hub / "processed" / "exceptions" / "lake" / "events.jsonl")
@@ -1451,7 +1608,13 @@ def test_backfill_per_repo_cap_prevents_one_repo_from_dominating(tmp_path: Path)
         path.parent.mkdir(parents=True, exist_ok=True)
         path.write_text("metadata-only backfill should not read this content\n", encoding="utf-8")
 
-    result = backfill_exception_candidates(hub, repo, limit=5, per_repo_limit=2)
+    result = backfill_exception_candidates(
+        hub,
+        repo,
+        limit=5,
+        per_repo_limit=2,
+        authorization=_backfill_auth(repo),
+    )
 
     assert result["created_count"] == 2
     assert result["skipped_repo_cap_count"] == 3
@@ -1473,6 +1636,7 @@ def test_backfill_wave_honors_scanned_file_limit(tmp_path: Path) -> None:
         repo,
         limit=10,
         max_scanned_files=3,
+        authorization=_backfill_auth(repo),
     )
 
     assert result["created_count"] == 0

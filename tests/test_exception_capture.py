@@ -23,6 +23,7 @@ from digital_asset_directory.exception_capture import (
     load_capture_pattern_registry,
     load_capture_scenarios,
     write_exception_backfill_readiness,
+    write_exception_backfill_wave_plan,
     write_observed_capture_audit,
 )
 from digital_asset_directory.exceptions_lake import record_exception_event
@@ -1511,15 +1512,15 @@ def test_exception_backfill_readiness_reports_policy_gates(tmp_path: Path) -> No
     rows = {row["repo_id"]: row for row in report["repos"]}
     md_text = (tmp_path / "readiness.md").read_text(encoding="utf-8")
 
-    assert rows["ready-external"]["backfill_readiness"] == "ready_with_reviewed_approval"
-    assert rows["ready-external"]["blocked_reasons"] == []
+    assert rows["ready-external"]["backfill_readiness"] == "needs_full_scan_review"
+    assert "capture surface is stale or unknown" in rows["ready-external"]["blocked_reasons"]
     assert rows["ready-external"]["candidate_path_signal_count"] == 1
     assert rows["ready-external"]["candidate_path_signal_summary"]["total"] == 1
     assert rows["protected"]["backfill_readiness"] == "central_only_or_blocked"
     assert any("write_protected" in reason for reason in rows["protected"]["blocked_reasons"])
     assert rows["blocked"]["backfill_readiness"] == "blocked_by_policy_or_no_signals"
     assert "backfill_allowed=false" in rows["blocked"]["blocked_reasons"]
-    assert report["readiness_counts"]["ready_with_reviewed_approval"] == 1
+    assert report["readiness_counts"]["needs_full_scan_review"] == 1
     assert report["candidate_path_signal_summary"]["total"] == 3
     assert (
         "registry/exception-event-type-registry.json"
@@ -1542,3 +1543,74 @@ def test_exception_backfill_readiness_reports_policy_gates(tmp_path: Path) -> No
     assert "`backfill_exception_candidate`: 3" in md_text
     assert str(tmp_path) not in json.dumps(report)
     assert str(tmp_path) not in md_text
+
+
+def test_exception_backfill_wave_plan_orders_review_gates(tmp_path: Path) -> None:
+    refresh_repo = tmp_path / "refresh-repo"
+    protected_repo = tmp_path / "protected-repo"
+    blocked_repo = tmp_path / "blocked-repo"
+    for repo in [refresh_repo, protected_repo, blocked_repo]:
+        docs = repo / "docs"
+        docs.mkdir(parents=True)
+        (docs / "postmortem.md").write_text("metadata-only placeholder", encoding="utf-8")
+    policies = [
+        ExceptionRepoPolicy(
+            id="refresh",
+            path=refresh_repo,
+            alias="refresh",
+            visibility="internal",
+            exceptions_enabled=True,
+            collect_allowed=True,
+            capture_audit_allowed=True,
+            backfill_allowed=True,
+            approved_approval_ids=["APPROVED-BACKFILL"],
+        ),
+        ExceptionRepoPolicy(
+            id="protected",
+            path=protected_repo,
+            alias="protected",
+            visibility="internal",
+            exceptions_enabled=True,
+            collect_allowed=False,
+            capture_audit_allowed=True,
+            backfill_allowed=True,
+            write_protected=True,
+        ),
+        ExceptionRepoPolicy(
+            id="blocked",
+            path=blocked_repo,
+            alias="blocked",
+            visibility="internal",
+            exceptions_enabled=True,
+            collect_allowed=True,
+            capture_audit_allowed=True,
+            backfill_allowed=False,
+        ),
+    ]
+    before = {
+        repo: sorted(path.relative_to(repo).as_posix() for path in repo.rglob("*"))
+        for repo in [refresh_repo, protected_repo, blocked_repo]
+    }
+
+    plan = write_exception_backfill_wave_plan(
+        ROOT,
+        [refresh_repo, protected_repo, blocked_repo],
+        repo_policies=policies,
+        output=tmp_path / "wave-plan.json",
+        candidate_limit=5,
+        per_wave_repo_limit=10,
+    )
+    waves = {wave["wave_id"]: wave for wave in plan["waves"]}
+    md_text = (tmp_path / "wave-plan.md").read_text(encoding="utf-8")
+
+    assert plan["report_id"] == "dad:exception-backfill-wave-plan"
+    assert plan["current_wave_id"] == "capture_surface_refresh_wave"
+    assert waves["capture_surface_refresh_wave"]["repos"][0]["repo_id"] == "refresh"
+    assert waves["protected_central_only_review_wave"]["repos"][0]["repo_id"] == "protected"
+    assert waves["policy_enablement_wave"]["repos"][0]["repo_id"] == "blocked"
+    assert waves["metadata_backfill_candidate_wave"]["repo_count"] == 0
+    assert "Boundary: central planning evidence only" in md_text
+    assert "Run metadata-only candidate backfill" in md_text
+    for repo in [refresh_repo, protected_repo, blocked_repo]:
+        after = sorted(path.relative_to(repo).as_posix() for path in repo.rglob("*"))
+        assert after == before[repo]

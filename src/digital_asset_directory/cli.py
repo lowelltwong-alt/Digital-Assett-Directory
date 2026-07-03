@@ -68,6 +68,7 @@ from .enrollment import (
     select_enrollment_policies,
 )
 from .exceptions_lake import (
+    BackfillAuthorization,
     backfill_exception_candidates,
     collect_exception_fix_outcomes,
     collect_exception_events,
@@ -85,6 +86,7 @@ from .exception_capture import (
     evaluate_capture_scenarios,
     load_capture_pattern_registry,
     write_exception_backfill_readiness,
+    write_exception_backfill_wave_plan,
     write_observed_capture_audit,
 )
 from .governance import enforce_postflight, install_governance, scaffold_new_repo
@@ -1634,6 +1636,38 @@ def exceptions_backfill_readiness(
     console.print_json(data=result)
 
 
+@exceptions_app.command("backfill-plan")
+def exceptions_backfill_plan(
+    repo: list[str] = typer.Option([], "--repo"),
+    candidate_limit: int = typer.Option(50, "--candidate-limit", min=1, max=500),
+    per_wave_repo_limit: int = typer.Option(25, "--per-wave-repo-limit", min=1, max=500),
+    output: Optional[Path] = typer.Option(None, "--output"),
+    hub: Optional[Path] = typer.Option(None),
+) -> None:
+    """Write a planning-only review wave plan before historical backfill."""
+    cfg = _cfg(hub=hub)
+    selected = _discover_exception_repos(
+        repo or ["all"],
+        cfg,
+        capture_audit=True,
+        reviewed=True,
+    )
+    output_path = output if output is None or output.is_absolute() else output
+    try:
+        result = write_exception_backfill_wave_plan(
+            cfg.repo_root,
+            selected,
+            repo_policies=_exception_repo_policies(cfg),
+            output=output_path,
+            candidate_limit=candidate_limit,
+            per_wave_repo_limit=per_wave_repo_limit,
+        )
+    except (OSError, json.JSONDecodeError, KeyError, ValueError) as exc:
+        console.print(str(exc))
+        raise typer.Exit(2) from exc
+    console.print_json(data=result)
+
+
 @exceptions_app.command("record")
 def exceptions_record(
     repo: Path = typer.Option(Path("."), "--repo"),
@@ -1844,14 +1878,24 @@ def exceptions_backfill(
                 + "; "
                 + approval_block_reason
             )
+    repo_policies = _exception_repo_policies(cfg)
+    authorization = BackfillAuthorization(
+        root=root_resolved,
+        approval_id=approval_id.strip() if approval_required else "dad-self-backfill",
+        include_path_refs=include_path_refs,
+        repo_policies=repo_policies,
+        approved_by="reviewed_policy" if approval_required else "dad_self",
+        reason="exceptions backfill CLI request",
+    )
     result = backfill_exception_candidates(
         cfg.repo_root,
         root_resolved,
         limit=limit,
         per_repo_limit=per_repo_limit,
         include_path_refs=include_path_refs,
-        repo_policies=_exception_repo_policies(cfg),
+        repo_policies=repo_policies,
         max_scanned_files=max_scanned_files,
+        authorization=authorization,
     )
     console.print_json(data=result)
 

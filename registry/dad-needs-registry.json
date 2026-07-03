@@ -114,6 +114,25 @@
       "review_status": "reviewed"
     },
     {
+      "need_id": "dad:need:exception-backfill-review-wave-planning",
+      "name": "Exception Backfill Review Wave Planning",
+      "category": "learning_loop",
+      "priority": "critical",
+      "send_when": [
+        "A repo or DAD audit finds historical exception path signals that need review before backfill.",
+        "A backfill readiness report is truncated, stale, unverified, blocked by policy, or includes protected repos.",
+        "A new exception pattern update changes which repos should be rescanned, refreshed, or reviewed before backfill."
+      ],
+      "do_not_send": [
+        "Do not send raw file contents, private rows, credentials, or readable local absolute paths.",
+        "Do not treat path-name backfill candidates as confirmed incidents or learning-ready evidence.",
+        "Do not request broad backfill execution without a reviewed policy, approval id, and bounded plan."
+      ],
+      "payload_guidance": "Send metadata-only summaries: repo ID, path hash, readiness state, truncation status, top source rule IDs, top suggested event types, blocked reasons, and the proposed review wave.",
+      "target_control_planes": ["exceptions_lake", "learning_postflight_loops", "mail_center"],
+      "review_status": "reviewed"
+    },
+    {
       "need_id": "dad:need:language-frontier-signals",
       "name": "Language Frontier Signals For AI Coding",
       "category": "capability",

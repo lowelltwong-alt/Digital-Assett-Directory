@@ -31,6 +31,8 @@ OBSERVED_AUDIT_JSON = Path("processed") / "reports" / "exception_capture_observe
 OBSERVED_AUDIT_MD = Path("processed") / "reports" / "exception_capture_observed_audit.md"
 BACKFILL_READINESS_JSON = Path("processed") / "reports" / "exception_backfill_readiness.json"
 BACKFILL_READINESS_MD = Path("processed") / "reports" / "exception_backfill_readiness.md"
+BACKFILL_WAVE_PLAN_JSON = Path("processed") / "reports" / "exception_backfill_wave_plan.json"
+BACKFILL_WAVE_PLAN_MD = Path("processed") / "reports" / "exception_backfill_wave_plan.md"
 
 PACKET_CLASSES = {
     "ordinary_mail",
@@ -845,6 +847,10 @@ def _counter_dict(counter: Counter[str]) -> dict[str, int]:
     return {key: counter[key] for key in sorted(counter)}
 
 
+def _top_counter_items(values: dict[str, int], *, limit: int = 5) -> dict[str, int]:
+    return dict(sorted(values.items(), key=lambda item: (-item[1], item[0]))[:limit])
+
+
 def _candidate_signal_summary(
     signals: list[dict[str, Any]],
     *,
@@ -888,6 +894,56 @@ def _candidate_signal_summary(
     if candidate_limit is not None:
         summary["candidate_limit"] = candidate_limit
     return summary
+
+
+def _merge_candidate_signal_summaries(rows: list[dict[str, Any]]) -> dict[str, Any]:
+    keys = [
+        "by_pattern_family",
+        "by_suggested_event_type",
+        "by_expected_review",
+        "by_emission_status",
+        "by_source_rule_id",
+        "by_term",
+    ]
+    counters = {key: Counter() for key in keys}
+    total = 0
+    redacted = 0
+    unredacted = 0
+    truncated_repo_count = 0
+    limits: set[int] = set()
+    for row in rows:
+        summary = row.get("candidate_path_signal_summary", {})
+        if not isinstance(summary, dict):
+            continue
+        total += int(summary.get("total") or 0)
+        redacted += int(summary.get("redacted_path_count") or 0)
+        unredacted += int(summary.get("unredacted_path_count") or 0)
+        truncated_repo_count += int(summary.get("truncated_repo_count") or 0)
+        if isinstance(summary.get("candidate_limit"), int):
+            limits.add(int(summary["candidate_limit"]))
+        for key in keys:
+            values = summary.get(key, {})
+            if isinstance(values, dict):
+                counters[key].update({str(name): int(count) for name, count in values.items()})
+    merged: dict[str, Any] = {
+        "total": total,
+        "count_scope": (
+            "bounded_first_n_path_matches"
+            if truncated_repo_count
+            else "complete_for_scanned_paths"
+        ),
+        "truncated_repo_count": truncated_repo_count,
+        "omitted_signal_count_unknown": bool(truncated_repo_count),
+        "redacted_path_count": redacted,
+        "unredacted_path_count": unredacted,
+    }
+    for key, counter in counters.items():
+        merged[key] = _counter_dict(counter)
+    if len(limits) == 1:
+        merged["candidate_limit"] = next(iter(limits))
+    elif len(limits) > 1:
+        merged["candidate_limits"] = sorted(limits)
+    return merged
 
 
 def _candidate_signal_summary_from_rows(
@@ -1463,6 +1519,7 @@ def _backfill_readiness_action(row: dict[str, Any]) -> tuple[str, list[str], lis
     repo = row["repo"]
     status_flags = set(row.get("status_flags", []))
     reasons: list[str] = []
+    evidence_blockers: list[str] = []
     next_actions: list[str] = []
     if not repo.get("reviewed_policy"):
         reasons.append("repo lacks reviewed exceptions.repos policy")
@@ -1475,26 +1532,29 @@ def _backfill_readiness_action(row: dict[str, Any]) -> tuple[str, list[str], lis
     if not row.get("candidate_path_signal_count"):
         reasons.append("no candidate path signals in bounded audit")
     if "candidate_path_scan_truncated" in status_flags:
+        evidence_blockers.append("candidate path scan truncated")
         next_actions.append("rerun observed audit with a higher --candidate-limit before review")
     if row.get("contract", {}).get("capture_surface_version") != row.get(
         "registry_capture_surface_version"
     ):
+        evidence_blockers.append("capture surface is stale or unknown")
         next_actions.append("refresh repo capture surface before treating no-packet results as current")
-    if any(
-        flag in status_flags
-        for flag in {
-            "missed_capture_candidate",
-            "pattern_gap_candidate",
-            "mail_present_exception_gap_candidate",
-            "emission_unverified",
-            "type_present_uncorrelated",
-        }
-    ):
+    gap_flags = {
+        "missed_capture_candidate",
+        "pattern_gap_candidate",
+        "mail_present_exception_gap_candidate",
+        "emission_unverified",
+        "type_present_uncorrelated",
+    }
+    if any(flag in status_flags for flag in gap_flags):
+        evidence_blockers.append("candidate emissions are missing, unverified, or uncorrelated")
         next_actions.append("review observed capture gaps and decide whether repo should emit mail or exception packets")
     if reasons:
         if repo.get("write_protected"):
             return "central_only_or_blocked", reasons, next_actions
         return "blocked_by_policy_or_no_signals", reasons, next_actions
+    if evidence_blockers:
+        return "needs_full_scan_review", evidence_blockers, sorted(set(next_actions))
     if str(repo.get("repo_id")) == "dad" and str(repo.get("path_hint")) == ".":
         next_actions.append("metadata-only backfill may run without non-DAD approval")
         return "ready_now", reasons, next_actions
@@ -1513,6 +1573,349 @@ def _capture_surface_action(row: dict[str, Any]) -> str:
     if _version_tuple(contract_version) < _version_tuple(registry_version):
         return "refresh_capture_surface"
     return "current"
+
+
+BACKFILL_WAVE_DEFINITIONS: list[dict[str, Any]] = [
+    {
+        "wave_id": "bounded_sample_rescan_wave",
+        "label": "Rerun bounded historical scans",
+        "human_gate": "No source write approval needed; this is central read-only evidence refresh.",
+        "generated_next_step": (
+            "Run backfill-readiness or capture-audit with a higher --candidate-limit "
+            "before treating event/source-rule counts as representative."
+        ),
+        "danger_if_misapplied": (
+            "A first-N sample can hide dominant exception families and make a broad "
+            "backfill wave look safer or more complete than it is."
+        ),
+        "proof_to_advance": [
+            "candidate_path_signal_summary.omitted_signal_count_unknown is false",
+            "candidate_path_scan.truncated is false for repos advancing to backfill",
+        ],
+    },
+    {
+        "wave_id": "capture_surface_refresh_wave",
+        "label": "Refresh repo exception capture surfaces",
+        "human_gate": "Requires reviewed enrollment/update approval before writing any target repo.",
+        "generated_next_step": (
+            "Refresh DAD exception/mail capture guidance before using no-packet "
+            "results as evidence that repo-side capture is current."
+        ),
+        "danger_if_misapplied": (
+            "Old or missing capture surfaces can make repos appear noncompliant "
+            "when they never received the current deterministic emit rules."
+        ),
+        "proof_to_advance": [
+            "repo contract capture_surface_version matches registry capture_surface_version",
+            "repo-local capture surface was updated through an approved enrollment/update path",
+        ],
+    },
+    {
+        "wave_id": "capture_gap_review_wave",
+        "label": "Review missing or unverified emissions",
+        "human_gate": "No backfill execution until source repo capture behavior is reviewed.",
+        "generated_next_step": (
+            "Inspect why candidate path signals did not correlate to exception, "
+            "fix-outcome, or mail packets; update repo capture rules if needed."
+        ),
+        "danger_if_misapplied": (
+            "DAD could backfill historical candidates when the current repo-side "
+            "automatic capture loop is still failing."
+        ),
+        "proof_to_advance": [
+            "candidate emissions are verified or intentionally rejected",
+            "source repo has current capture rules for the matched pattern families",
+        ],
+    },
+    {
+        "wave_id": "protected_central_only_review_wave",
+        "label": "Protected repo central-only review",
+        "human_gate": (
+            "Protected repo local writes require explicit repo-specific approval; "
+            "central-only analysis may continue."
+        ),
+        "generated_next_step": (
+            "Keep evidence central, summarize candidate signals, and request "
+            "repo-specific approval before any local enrollment or backfill action."
+        ),
+        "danger_if_misapplied": (
+            "A useful exception signal could become an unauthorized protected-repo write."
+        ),
+        "proof_to_advance": [
+            "protected repo approval id is recorded, or the action remains central-only",
+            "public/private release and write-protection gates are satisfied",
+        ],
+    },
+    {
+        "wave_id": "policy_enablement_wave",
+        "label": "Resolve reviewed policy blockers",
+        "human_gate": "Requires reviewed exceptions.repos policy change or explicit approval id.",
+        "generated_next_step": (
+            "Classify the repo, enable exception collection/backfill if appropriate, "
+            "or keep it blocked with a reason."
+        ),
+        "danger_if_misapplied": (
+            "DAD could backfill from repos that were never reviewed for visibility, "
+            "sensitivity, or source authority."
+        ),
+        "proof_to_advance": [
+            "exceptions.repos policy exists for the repo",
+            "exceptions_enabled, capture_audit_allowed, and backfill_allowed match the reviewed decision",
+        ],
+    },
+    {
+        "wave_id": "approval_review_wave",
+        "label": "Add reviewed backfill approval ids",
+        "human_gate": "Requires a specific reviewed approval id before non-DAD backfill.",
+        "generated_next_step": (
+            "Create or attach a reviewed approval id for repos that are otherwise "
+            "eligible but cannot run historical backfill yet."
+        ),
+        "danger_if_misapplied": (
+            "A generic or invented approval string could bypass the historical-backfill gate."
+        ),
+        "proof_to_advance": [
+            "approved_approval_ids includes the exact id used for backfill",
+            "approval scope names repo, visibility, path-ref policy, and candidate limits",
+        ],
+    },
+    {
+        "wave_id": "metadata_backfill_candidate_wave",
+        "label": "Run metadata-only candidate backfill",
+        "human_gate": "DAD self-backfill may run now; non-DAD repos need reviewed approval ids.",
+        "generated_next_step": (
+            "Run metadata-only backfill with hash-only path refs, bounded limits, "
+            "and reviewed approval ids where required."
+        ),
+        "danger_if_misapplied": (
+            "Path-name candidates could be mistaken for confirmed incidents or learning-ready data."
+        ),
+        "proof_to_advance": [
+            "backfill events remain capture_contract=backfill_candidate",
+            "learning queue keeps backfill-only clusters in source-review status",
+        ],
+    },
+    {
+        "wave_id": "watch_or_no_signal_wave",
+        "label": "Watch repos with no actionable historical signal",
+        "human_gate": "No action unless new evidence or policy changes appear.",
+        "generated_next_step": (
+            "Do not backfill now; revisit after capture-surface updates, new mail, "
+            "or a higher-signal scan."
+        ),
+        "danger_if_misapplied": "Low-signal repos can consume review time without improving the lake.",
+        "proof_to_advance": [
+            "new candidate signals appear",
+            "repo sends exception/fix packets through the current capture surface",
+        ],
+    },
+]
+
+
+def _primary_backfill_wave(row: dict[str, Any]) -> str:
+    if row.get("write_protected") or row.get("backfill_readiness") == "central_only_or_blocked":
+        return "protected_central_only_review_wave"
+    if (
+        not row.get("reviewed_policy")
+        or not row.get("exceptions_enabled")
+        or not row.get("backfill_allowed")
+    ):
+        return "policy_enablement_wave"
+    if not row.get("candidate_path_signal_count"):
+        return "watch_or_no_signal_wave"
+    scan = row.get("candidate_path_scan", {})
+    if isinstance(scan, dict) and scan.get("truncated"):
+        return "bounded_sample_rescan_wave"
+    if row.get("capture_surface_action") != "current":
+        return "capture_surface_refresh_wave"
+    if row.get("backfill_readiness") == "needs_full_scan_review":
+        return "capture_gap_review_wave"
+    if row.get("backfill_readiness") in {"ready_now", "ready_with_reviewed_approval"}:
+        return "metadata_backfill_candidate_wave"
+    if row.get("backfill_readiness") == "approval_needed":
+        return "approval_review_wave"
+    return "watch_or_no_signal_wave"
+
+
+def _repo_wave_ref(row: dict[str, Any]) -> dict[str, Any]:
+    summary = row.get("candidate_path_signal_summary", {})
+    return {
+        "repo_id": row.get("repo_id"),
+        "repo_alias": row.get("repo_alias"),
+        "path_hash": row.get("path_hash"),
+        "visibility": row.get("visibility"),
+        "public_facing": row.get("public_facing"),
+        "backfill_readiness": row.get("backfill_readiness"),
+        "capture_surface_action": row.get("capture_surface_action"),
+        "candidate_path_signal_count": row.get("candidate_path_signal_count"),
+        "status_flags": row.get("status_flags", []),
+        "blocked_reasons": row.get("blocked_reasons", []),
+        "next_actions": row.get("next_actions", []),
+        "top_suggested_event_types": _top_counter_items(
+            summary.get("by_suggested_event_type", {})
+            if isinstance(summary, dict)
+            else {}
+        ),
+        "top_source_rule_ids": _top_counter_items(
+            summary.get("by_source_rule_id", {})
+            if isinstance(summary, dict)
+            else {}
+        ),
+    }
+
+
+def build_exception_backfill_wave_plan(
+    readiness_report: dict[str, Any],
+    *,
+    per_wave_repo_limit: int = 25,
+) -> dict[str, Any]:
+    rows = [
+        row
+        for row in readiness_report.get("repos", [])
+        if isinstance(row, dict)
+    ]
+    per_wave_repo_limit = max(1, per_wave_repo_limit)
+    rows_by_wave: dict[str, list[dict[str, Any]]] = {wave["wave_id"]: [] for wave in BACKFILL_WAVE_DEFINITIONS}
+    for row in rows:
+        rows_by_wave.setdefault(_primary_backfill_wave(row), []).append(row)
+    waves: list[dict[str, Any]] = []
+    for order, definition in enumerate(BACKFILL_WAVE_DEFINITIONS, start=1):
+        wave_rows = sorted(
+            rows_by_wave.get(definition["wave_id"], []),
+            key=lambda row: (
+                -int(row.get("candidate_path_signal_count") or 0),
+                str(row.get("repo_id") or ""),
+            ),
+        )
+        shown = wave_rows[:per_wave_repo_limit]
+        wave_summary = _merge_candidate_signal_summaries(wave_rows)
+        waves.append(
+            {
+                **definition,
+                "sequence_order": order,
+                "repo_count": len(wave_rows),
+                "reported_repo_count": len(shown),
+                "omitted_repo_count": max(0, len(wave_rows) - len(shown)),
+                "candidate_path_signal_summary": wave_summary,
+                "repos": [_repo_wave_ref(row) for row in shown],
+                "review_status": "planning_only",
+            }
+        )
+    current_wave_id = next(
+        (wave["wave_id"] for wave in waves if wave["repo_count"]),
+        "watch_or_no_signal_wave",
+    )
+    return {
+        "generated_at": utc_now(),
+        "report_id": "dad:exception-backfill-wave-plan",
+        "source_report_id": readiness_report.get("report_id"),
+        "repo_count": len(rows),
+        "per_wave_repo_limit": per_wave_repo_limit,
+        "current_wave_id": current_wave_id,
+        "wave_order": [wave["wave_id"] for wave in waves],
+        "readiness_counts": readiness_report.get("readiness_counts", {}),
+        "status_counts": readiness_report.get("status_counts", {}),
+        "capture_surface_action_counts": readiness_report.get(
+            "capture_surface_action_counts",
+            {},
+        ),
+        "candidate_path_signal_summary": readiness_report.get(
+            "candidate_path_signal_summary",
+            {},
+        ),
+        "input_hashes": readiness_report.get("input_hashes", {}),
+        "methodology_ref": readiness_report.get("methodology_ref"),
+        "methodology_hash": readiness_report.get("methodology_hash"),
+        "waves": waves,
+        "authority_boundary": (
+            "Backfill wave planning is central planning evidence only. It does "
+            "not approve backfill, mutate target repos, promote learning, or "
+            "prove that path-name signals are real exceptions."
+        ),
+    }
+
+
+def _backfill_wave_plan_markdown(plan: dict[str, Any]) -> str:
+    lines = [
+        "# Exception Backfill Wave Plan",
+        "",
+        f"- Generated: {plan['generated_at']}",
+        f"- Repos planned: {plan['repo_count']}",
+        f"- Current wave: `{plan['current_wave_id']}`",
+        f"- Methodology hash: `{plan.get('methodology_hash', '')}`",
+        "",
+        "Boundary: central planning evidence only. This report does not approve "
+        "or run historical backfill.",
+        "",
+        "## Wave Order",
+        "",
+    ]
+    lines.extend(f"- `{wave_id}`" for wave_id in plan["wave_order"])
+    for wave in plan["waves"]:
+        lines.extend(
+            [
+                "",
+                f"## {wave['sequence_order']}. {wave['label']}",
+                "",
+                f"- Wave id: `{wave['wave_id']}`",
+                f"- Repo count: **{wave['repo_count']}**",
+                f"- Candidate path signals: **{wave['candidate_path_signal_summary']['total']}**",
+                f"- Human gate: {wave['human_gate']}",
+                f"- Danger if misapplied: {wave['danger_if_misapplied']}",
+                f"- Generated next step: {wave['generated_next_step']}",
+            ]
+        )
+        if wave["candidate_path_signal_summary"].get("omitted_signal_count_unknown"):
+            lines.append(
+                "- Count scope: bounded first-N sample; rerun before treating "
+                "counts as complete."
+            )
+        if wave["proof_to_advance"]:
+            lines.extend(["", "Proof to advance:"])
+            lines.extend(f"- {item}" for item in wave["proof_to_advance"])
+        if wave["repos"]:
+            lines.extend(["", "Repos in this wave:"])
+            for repo in wave["repos"]:
+                lines.append(
+                    "- `"
+                    + str(repo["repo_id"])
+                    + "` "
+                    + f"signals={repo['candidate_path_signal_count']} "
+                    + f"readiness=`{repo['backfill_readiness']}` "
+                    + f"surface=`{repo['capture_surface_action']}`"
+                )
+    return "\n".join(lines) + "\n"
+
+
+def write_exception_backfill_wave_plan(
+    hub_root: Path,
+    repos: list[Path],
+    *,
+    repo_policies: list[Any] | None = None,
+    output: Path | None = None,
+    candidate_limit: int = 50,
+    per_wave_repo_limit: int = 25,
+) -> dict[str, Any]:
+    readiness_output = None
+    if output is not None:
+        readiness_output = output.with_name(output.stem + "_readiness.json")
+    readiness_report = write_exception_backfill_readiness(
+        hub_root,
+        repos,
+        repo_policies=repo_policies,
+        output=readiness_output,
+        candidate_limit=candidate_limit,
+    )
+    plan = build_exception_backfill_wave_plan(
+        readiness_report,
+        per_wave_repo_limit=per_wave_repo_limit,
+    )
+    output_path = hub_root / (output or BACKFILL_WAVE_PLAN_JSON)
+    write_json(output_path, plan)
+    md_path = output_path.with_suffix(".md") if output else hub_root / BACKFILL_WAVE_PLAN_MD
+    md_path.parent.mkdir(parents=True, exist_ok=True)
+    md_path.write_text(_backfill_wave_plan_markdown(plan), encoding="utf-8")
+    return plan
 
 
 def write_exception_backfill_readiness(
