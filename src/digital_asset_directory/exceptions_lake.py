@@ -35,6 +35,9 @@ LEARNING_QUEUE_JSON = Path("processed") / "reports" / "exception_learning_queue.
 LEARNING_QUEUE_MD = Path("processed") / "reports" / "exception_learning_queue.md"
 BACKFILL_REVIEW_QUEUE_JSON = Path("processed") / "reports" / "exception_backfill_review_queue.json"
 BACKFILL_REVIEW_QUEUE_MD = Path("processed") / "reports" / "exception_backfill_review_queue.md"
+BACKFILL_REVIEW_DECISIONS = (
+    Path("processed") / "exceptions" / "review-queue" / "backfill_review_decisions.jsonl"
+)
 LEARNING_READINESS_JSON = Path("processed") / "reports" / "exception_learning_readiness_check.json"
 LEARNING_READINESS_MD = Path("processed") / "reports" / "exception_learning_readiness_check.md"
 LEARNING_READINESS_SCENARIOS_SCHEMA = (
@@ -344,10 +347,20 @@ def _safe_repo_path_ref(repo: Path) -> str:
 def _looks_like_local_path_ref(value: str) -> bool:
     normalized = value.replace("\\", "/").casefold()
     return (
-        bool(re.match(r"^[a-z]:/", normalized))
+        bool(re.search(r"(?:^|[\s\"'(\[])[a-z]:/", normalized))
         or normalized.startswith("/")
         or any(fragment in normalized for fragment in LOCAL_PATH_FRAGMENTS)
     )
+
+
+READABLE_REPO_RELATIVE_REF_RE = re.compile(
+    r"\brepo-relative:(?!sha256:)[^\s,;\"')\]]+",
+    re.IGNORECASE,
+)
+
+
+def _contains_readable_repo_relative_text(value: str) -> bool:
+    return bool(READABLE_REPO_RELATIVE_REF_RE.search(value))
 
 
 def _safe_external_ref(value: Any) -> Any:
@@ -2807,6 +2820,279 @@ def write_exception_backfill_review_queue(
     return report
 
 
+BACKFILL_REVIEW_DECISION_VALUES = {
+    "confirm",
+    "reject",
+    "needs_source_packet",
+    "needs_classifier_refresh",
+    "defer",
+    "archive",
+}
+BACKFILL_REVIEWER_TYPES = {"human", "agent", "source_repo", "unknown"}
+BACKFILL_DECISION_EFFECTS = {
+    "confirm": "source_review_confirmed_candidate_only",
+    "reject": "rejected_candidate_no_learning",
+    "needs_source_packet": "source_packet_requested_no_learning",
+    "needs_classifier_refresh": "classifier_refresh_required_no_learning",
+    "defer": "deferred_no_learning",
+    "archive": "archived_no_learning",
+}
+
+
+def _review_status_for_reviewer_type(reviewer_type: str) -> str:
+    if reviewer_type == "human":
+        return "human_reviewed"
+    if reviewer_type == "source_repo":
+        return "source_reviewed"
+    return "agent_triage"
+
+
+def _sanitize_backfill_decision_text(value: str, issues: list[str]) -> tuple[str, int]:
+    redacted, redaction_count = redact_sensitive_text(value)
+    if _contains_readable_repo_relative_text(redacted):
+        issues.append("readable_repo_relative_ref_rejected")
+        digest = sha256_bytes(redacted.encode("utf-8"))
+        return f"[READABLE_REPO_RELATIVE_REF_REJECTED_SHA256:{digest}]", redaction_count
+    if _looks_like_local_path_ref(redacted):
+        issues.append("local_path_like_ref_rejected")
+        digest = sha256_bytes(redacted.encode("utf-8"))
+        return f"[LOCAL_PATH_LIKE_REF_REJECTED_SHA256:{digest}]", redaction_count
+    limited, limit_redactions = _redact_and_limit(redacted, issues)
+    return str(limited), redaction_count + limit_redactions
+
+
+def _backfill_review_queue_fingerprint(
+    *,
+    review_group_id: str,
+    group: dict[str, Any],
+    input_hashes: dict[str, str],
+) -> str:
+    return stable_id(
+        "exception-backfill-review-queue-fingerprint",
+        review_group_id,
+        json_dumps(dict(sorted(input_hashes.items()))),
+        str(group.get("review_status", "")),
+        str(group.get("current_classifier_version", "")),
+        str(group.get("candidate_count", "")),
+        str(group.get("public_release_required_count", "")),
+        str(group.get("readable_path_ref_count", "")),
+        "|".join(str(item) for item in group.get("path_hash_refs", []) or []),
+        "|".join(str(item) for item in group.get("example_event_ids", []) or []),
+    )
+
+
+def _append_unique_backfill_review_decision(hub_root: Path, record: dict[str, Any]) -> bool:
+    path = hub_root / BACKFILL_REVIEW_DECISIONS
+    existing_ids: set[str] = set()
+    if path.exists():
+        for row in _read_jsonl_with_errors(path)[0]:
+            if isinstance(row, dict) and row.get("decision_id"):
+                existing_ids.add(str(row["decision_id"]))
+    if str(record["decision_id"]) in existing_ids:
+        return False
+    append_jsonl(path, record)
+    return True
+
+
+def load_exception_backfill_review_decisions(hub_root: Path) -> list[dict[str, Any]]:
+    path = hub_root / BACKFILL_REVIEW_DECISIONS
+    if not path.exists():
+        return []
+    records, errors = _read_jsonl_with_errors(path)
+    for error in errors:
+        append_jsonl(
+            hub_root / QUARANTINE_DIR / "backfill_review_decisions_malformed_jsonl.jsonl",
+            {
+                "event_type": "backfill_review_decision_malformed_jsonl",
+                "created_at": utc_now(),
+                "path": BACKFILL_REVIEW_DECISIONS.as_posix(),
+                **error,
+            },
+        )
+    return records
+
+
+def _find_backfill_review_group(report: dict[str, Any], review_group_id: str) -> dict[str, Any]:
+    for row in report.get("review_queue", []):
+        if str(row.get("review_group_id")) == review_group_id:
+            return row
+    raise ValueError(f"Unknown backfill review_group_id: {review_group_id}")
+
+
+def record_exception_backfill_review_decision(
+    hub_root: Path,
+    *,
+    review_group_id: str,
+    decision: str,
+    reviewer: str = "unknown",
+    reviewer_type: str = "agent",
+    approval_id: str = "",
+    source_packet_id: str = "",
+    notes: str = "",
+    evidence_refs: list[str] | None = None,
+) -> dict[str, Any]:
+    normalized_decision = decision.strip().lower()
+    if normalized_decision not in BACKFILL_REVIEW_DECISION_VALUES:
+        raise ValueError(
+            "decision must be one of: " + ", ".join(sorted(BACKFILL_REVIEW_DECISION_VALUES))
+        )
+    normalized_reviewer_type = reviewer_type.strip().lower() or "unknown"
+    if normalized_reviewer_type not in BACKFILL_REVIEWER_TYPES:
+        raise ValueError(
+            "reviewer_type must be one of: " + ", ".join(sorted(BACKFILL_REVIEWER_TYPES))
+        )
+    if normalized_reviewer_type == "human" and not approval_id.strip():
+        raise ValueError("Human backfill review decisions require --approval-id.")
+    if normalized_reviewer_type == "source_repo" and not source_packet_id.strip():
+        raise ValueError("Source-repo backfill review decisions require --source-packet-id.")
+    report = write_exception_backfill_review_queue(
+        hub_root,
+        limit=MAX_BACKFILL_EVENTS,
+        example_limit=5,
+    )
+    group = _find_backfill_review_group(report, review_group_id)
+    if normalized_decision == "confirm" and group.get("review_status") == "needs_classifier_refresh":
+        raise ValueError(
+            "Cannot confirm a backfill review group while classifier provenance needs refresh."
+        )
+    if (
+        normalized_decision == "confirm"
+        and int(group.get("readable_path_ref_count") or 0) > 0
+        and normalized_reviewer_type == "agent"
+    ):
+        raise ValueError(
+            "Agent triage cannot confirm a central-only readable-ref backfill group."
+    )
+
+    issues: list[str] = []
+    total_redactions = 0
+    safe_reviewer, count = _sanitize_backfill_decision_text(reviewer, issues)
+    total_redactions += count
+    raw_authority_ref = "agent_triage"
+    if normalized_reviewer_type == "human":
+        raw_authority_ref = f"human_approval:{approval_id.strip()}"
+    elif normalized_reviewer_type == "source_repo":
+        raw_authority_ref = f"source_packet:{source_packet_id.strip()}"
+    elif normalized_reviewer_type == "unknown":
+        raw_authority_ref = "unknown_triage"
+    safe_authority_ref, count = _sanitize_backfill_decision_text(raw_authority_ref, issues)
+    total_redactions += count
+    safe_notes, count = _sanitize_backfill_decision_text(notes, issues)
+    total_redactions += count
+    safe_evidence_refs: list[str] = []
+    for value in evidence_refs or []:
+        safe_value, count = _sanitize_backfill_decision_text(value, issues)
+        total_redactions += count
+        safe_evidence_refs.append(safe_value)
+    reviewed_at = utc_now()
+    source_queue_input_hashes = {
+        str(key): str(value) for key, value in report.get("input_hashes", {}).items()
+    }
+    source_queue_fingerprint = _backfill_review_queue_fingerprint(
+        review_group_id=review_group_id,
+        group=group,
+        input_hashes=source_queue_input_hashes,
+    )
+    decision_id = stable_id(
+        "exception-backfill-review-decision",
+        review_group_id,
+        source_queue_fingerprint,
+        normalized_decision,
+        safe_reviewer,
+        normalized_reviewer_type,
+        safe_authority_ref,
+        safe_notes,
+        "|".join(safe_evidence_refs),
+    )
+    record = {
+        "schema_version": "0.1.0",
+        "decision_id": decision_id,
+        "review_group_id": review_group_id,
+        "decision": normalized_decision,
+        "reviewer": safe_reviewer,
+        "reviewer_type": normalized_reviewer_type,
+        "review_authority_ref": safe_authority_ref,
+        "reviewed_at": reviewed_at,
+        "source_repo": group.get("source_repo", "unknown"),
+        "event_type": group.get("event_type", "unknown"),
+        "rule_id": group.get("rule_id", "unknown"),
+        "source_queue_status": group.get("review_status", "unknown"),
+        "current_classifier_version": group.get("current_classifier_version", ""),
+        "candidate_count": int(group.get("candidate_count") or 0),
+        "public_release_required_count": int(group.get("public_release_required_count") or 0),
+        "readable_path_ref_count": int(group.get("readable_path_ref_count") or 0),
+        "notes": safe_notes,
+        "evidence_refs": safe_evidence_refs,
+        "promotion_blockers_snapshot": group.get("promotion_blockers", []),
+        "recommended_next_action_snapshot": group.get("recommended_next_action", ""),
+        "source_queue_input_hashes": source_queue_input_hashes,
+        "source_queue_fingerprint": source_queue_fingerprint,
+        "result_effect": BACKFILL_DECISION_EFFECTS[normalized_decision],
+        "authority_boundary": (
+            "Backfill review decisions label candidate path-signal groups only. "
+            "They do not create observed exceptions, fix outcomes, lessons, rules, "
+            "public releases, or source-repo mutations."
+        ),
+        "screening": {
+            "screened_at": reviewed_at,
+            "credential_pii_screen": "best_effort",
+            "redaction_count": total_redactions,
+            "issues": sorted(set(issues)),
+            "screening_note": (
+                "Best-effort credential/PII screening only; absence of redactions "
+                "does not prove the decision text is safe."
+            ),
+        },
+        "review_status": _review_status_for_reviewer_type(normalized_reviewer_type),
+    }
+    appended = _append_unique_backfill_review_decision(hub_root, record)
+    return {
+        "decision": record,
+        "appended": appended,
+        "ledger": BACKFILL_REVIEW_DECISIONS.as_posix(),
+    }
+
+
+def summarize_exception_backfill_review_decisions(
+    hub_root: Path,
+    *,
+    review_group_id: str = "",
+) -> dict[str, Any]:
+    rows = load_exception_backfill_review_decisions(hub_root)
+    if review_group_id:
+        rows = [row for row in rows if str(row.get("review_group_id")) == review_group_id]
+    latest_by_group: dict[str, dict[str, Any]] = {}
+    for row in rows:
+        group_id = str(row.get("review_group_id") or "")
+        if not group_id:
+            continue
+        previous = latest_by_group.get(group_id)
+        if previous is None or str(row.get("reviewed_at", "")) >= str(
+            previous.get("reviewed_at", "")
+        ):
+            latest_by_group[group_id] = row
+    return {
+        "schema_version": "0.1.0",
+        "generated_at": utc_now(),
+        "ledger": BACKFILL_REVIEW_DECISIONS.as_posix(),
+        "review_group_id": review_group_id,
+        "decision_count": len(rows),
+        "review_group_count": len({str(row.get("review_group_id")) for row in rows}),
+        "decision_counts": dict(Counter(str(row.get("decision", "unknown")) for row in rows)),
+        "review_status_counts": dict(
+            Counter(str(row.get("review_status", "unknown")) for row in rows)
+        ),
+        "latest_decisions": sorted(
+            latest_by_group.values(),
+            key=lambda row: (str(row.get("review_group_id", "")), str(row.get("reviewed_at", ""))),
+        ),
+        "authority_boundary": (
+            "Decision summaries are review labels for backfill candidates only; "
+            "they do not promote lessons or prove incidents."
+        ),
+    }
+
+
 def _exception_learning_status(
     *,
     observed_count: int,
@@ -3477,6 +3763,7 @@ def exception_lake_paths() -> dict[str, str]:
         "canonical_lake": LAKE_PATH.as_posix(),
         "quarantine": QUARANTINE_DIR.as_posix(),
         "fix_outcomes": FIX_OUTCOME_PATH.as_posix(),
+        "backfill_review_decisions": BACKFILL_REVIEW_DECISIONS.as_posix(),
         "backfill_review_queue_json": BACKFILL_REVIEW_QUEUE_JSON.as_posix(),
         "backfill_review_queue_markdown": BACKFILL_REVIEW_QUEUE_MD.as_posix(),
         "learning_queue_json": LEARNING_QUEUE_JSON.as_posix(),

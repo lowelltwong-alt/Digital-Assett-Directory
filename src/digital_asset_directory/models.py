@@ -722,6 +722,51 @@ class LearningRulePromotionCandidateRecord(BaseModel):
     review_status: Literal["generated_candidate", "reviewed", "rejected"] = "generated_candidate"
 
 
+class ExceptionBackfillReviewDecisionRecord(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    schema_version: str = "0.1.0"
+    decision_id: str
+    review_group_id: str = Field(min_length=1)
+    decision: Literal[
+        "confirm",
+        "reject",
+        "needs_source_packet",
+        "needs_classifier_refresh",
+        "defer",
+        "archive",
+    ]
+    reviewer: str = "unknown"
+    reviewer_type: Literal["human", "agent", "source_repo", "unknown"] = "agent"
+    review_authority_ref: str = Field(min_length=1)
+    reviewed_at: str
+    source_repo: str = Field(min_length=1)
+    event_type: str = Field(min_length=1)
+    rule_id: str = Field(min_length=1)
+    source_queue_status: str = Field(min_length=1)
+    current_classifier_version: str = ""
+    candidate_count: int = Field(default=0, ge=0)
+    public_release_required_count: int = Field(default=0, ge=0)
+    readable_path_ref_count: int = Field(default=0, ge=0)
+    notes: str = ""
+    evidence_refs: list[str] = Field(default_factory=list)
+    promotion_blockers_snapshot: list[str] = Field(default_factory=list)
+    recommended_next_action_snapshot: str = ""
+    source_queue_input_hashes: dict[str, str] = Field(default_factory=dict)
+    source_queue_fingerprint: str = Field(min_length=1)
+    result_effect: Literal[
+        "source_review_confirmed_candidate_only",
+        "rejected_candidate_no_learning",
+        "source_packet_requested_no_learning",
+        "classifier_refresh_required_no_learning",
+        "deferred_no_learning",
+        "archived_no_learning",
+    ]
+    authority_boundary: str = Field(min_length=1)
+    screening: dict[str, Any] = Field(default_factory=dict)
+    review_status: Literal["agent_triage", "source_reviewed", "human_reviewed"] = "agent_triage"
+
+
 class ScanCycleEventRecord(BaseModel):
     schema_version: str = "0.1.0"
     event_id: str

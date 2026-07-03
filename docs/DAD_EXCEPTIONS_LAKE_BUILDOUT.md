@@ -198,6 +198,7 @@ Implemented contract surfaces:
 
 - `schemas/exception-event.schema.json`
 - `schemas/exception-fix-outcome.schema.json`
+- `schemas/exception-backfill-review-decision.schema.json`
 - `schemas/exception-event-type-registry.schema.json`
 - `schemas/exception-learning-methodology.schema.json`
 - `schemas/exception-capture-pattern-registry.schema.json`
@@ -210,7 +211,8 @@ Implemented contract surfaces:
 
 The CLI entrypoint is `asset-dir exceptions` with `paths`, `taxonomy`,
 `capture-patterns`, `capture-check`, `capture-audit`, `record`, `collect`,
-`backfill`, and `report` commands.
+`backfill`, `backfill-review-queue`, `backfill-review-decision`,
+`backfill-review-decisions`, and `report` commands.
 
 ## Packet Shape
 
@@ -903,6 +905,23 @@ Backfill safety and classification:
   omitted by default from the queue even if a reviewed local/private backfill run
   stored them centrally. Re-emitting readable path refs requires a reviewed
   `--approval-id`.
+- `asset-dir exceptions backfill-review-decision --review-group-id <id>
+  --decision confirm|reject|needs_source_packet|needs_classifier_refresh|defer|archive`
+  appends a review label to
+  `processed/exceptions/review-queue/backfill_review_decisions.jsonl`. The ledger
+  is append-only and candidate-only: a `confirm` label records source or human
+  review of a path-signal group, but it still does not create an observed
+  exception, fix outcome, lesson, DAD rule, public release, or source-repo
+  mutation. Agent triage cannot confirm a readable-ref central-only group, and
+  no group can be confirmed while classifier provenance is stale or missing.
+  Human decisions require `--approval-id`; source-repo decisions require
+  `--source-packet-id`. Idempotency is bound to the current queue fingerprint, so
+  a changed group can receive a new append-only decision instead of being
+  suppressed as a duplicate.
+- `asset-dir exceptions backfill-review-decisions` summarizes the appended
+  decision ledger by review group and decision type. This is audit and routing
+  evidence only; promotion still requires the downstream exception/fix/lesson
+  gates.
 - Old, stale, or mixed backfill rows whose `backfill-classifier-version`
   provenance is missing or no longer matches the current reviewed classifier are
   queued as `needs_classifier_refresh`. They should be rerun or invalidated

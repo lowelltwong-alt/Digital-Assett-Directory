@@ -75,8 +75,10 @@ from .exceptions_lake import (
     evaluate_exception_learning_readiness_scenarios,
     exception_lake_paths,
     load_event_type_registry,
+    record_exception_backfill_review_decision,
     record_exception_fix_outcome,
     record_exception_event,
+    summarize_exception_backfill_review_decisions,
     write_exception_backfill_review_queue,
     write_exception_learning_queue,
     write_exception_report,
@@ -1944,6 +1946,72 @@ def exceptions_backfill_review_queue(
             example_limit=example_limit,
             include_readable_path_refs=include_readable_path_refs,
             readable_path_refs_authorized=include_readable_path_refs,
+        )
+    except (OSError, json.JSONDecodeError, KeyError, ValueError) as exc:
+        console.print(str(exc))
+        raise typer.Exit(2) from exc
+    console.print_json(data=result)
+
+
+@exceptions_app.command("backfill-review-decision")
+def exceptions_backfill_review_decision(
+    review_group_id: str = typer.Option(..., "--review-group-id"),
+    decision: str = typer.Option(
+        ...,
+        "--decision",
+        help="confirm | reject | needs_source_packet | needs_classifier_refresh | defer | archive",
+    ),
+    reviewer: str = typer.Option("unknown", "--reviewer"),
+    reviewer_type: str = typer.Option(
+        "agent",
+        "--reviewer-type",
+        help="human | agent | source_repo | unknown",
+    ),
+    approval_id: str = typer.Option(
+        "",
+        "--approval-id",
+        help="Required when --reviewer-type human.",
+    ),
+    source_packet_id: str = typer.Option(
+        "",
+        "--source-packet-id",
+        help="Required when --reviewer-type source_repo.",
+    ),
+    notes: str = typer.Option("", "--notes"),
+    evidence_ref: list[str] = typer.Option([], "--evidence-ref"),
+    hub: Optional[Path] = typer.Option(None),
+) -> None:
+    """Append an audited source-review decision for a backfill review group."""
+    cfg = _cfg(hub=hub)
+    try:
+        result = record_exception_backfill_review_decision(
+            cfg.repo_root,
+            review_group_id=review_group_id,
+            decision=decision,
+            reviewer=reviewer,
+            reviewer_type=reviewer_type,
+            approval_id=approval_id,
+            source_packet_id=source_packet_id,
+            notes=notes,
+            evidence_refs=evidence_ref,
+        )
+    except (OSError, json.JSONDecodeError, KeyError, ValueError) as exc:
+        console.print(str(exc))
+        raise typer.Exit(2) from exc
+    console.print_json(data=result)
+
+
+@exceptions_app.command("backfill-review-decisions")
+def exceptions_backfill_review_decisions(
+    review_group_id: str = typer.Option("", "--review-group-id"),
+    hub: Optional[Path] = typer.Option(None),
+) -> None:
+    """Summarize appended backfill review decisions."""
+    cfg = _cfg(hub=hub)
+    try:
+        result = summarize_exception_backfill_review_decisions(
+            cfg.repo_root,
+            review_group_id=review_group_id,
         )
     except (OSError, json.JSONDecodeError, KeyError, ValueError) as exc:
         console.print(str(exc))

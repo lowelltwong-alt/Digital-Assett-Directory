@@ -23,6 +23,7 @@
         "pytest-dev",
         "hypothesis",
         "python-type-checkers",
+        "python-interface-boundary-codebases",
         "pyo3"
       ],
       "check_cadence": "weekly",
@@ -455,6 +456,47 @@
             "Assuming a Rust-backed tool is appropriate for every repo.",
             "Claiming speed or safety benefits without local workload evidence."
           ]
+        },
+        {
+          "target_id": "py-codebase:schema-cli-agent-interfaces",
+          "label": "Python schema, CLI, and agent-readable interfaces",
+          "source_ids": ["python-interface-boundary-codebases", "python-core"],
+          "example_refs": [
+            {
+              "source_id": "python-interface-boundary-codebases",
+              "ref": "https://docs.pydantic.dev/",
+              "review_status": "candidate",
+              "provenance_note": "Pydantic documentation; pointer-only data-boundary study source."
+            },
+            {
+              "source_id": "python-interface-boundary-codebases",
+              "ref": "https://typer.tiangolo.com/",
+              "review_status": "candidate",
+              "provenance_note": "Typer documentation; pointer-only CLI shape study source."
+            },
+            {
+              "source_id": "python-interface-boundary-codebases",
+              "ref": "https://rich.readthedocs.io/",
+              "review_status": "candidate",
+              "provenance_note": "Rich documentation; pointer-only human/agent-readable terminal output source."
+            },
+            {
+              "source_id": "python-core",
+              "ref": "https://docs.python.org/3/library/json.html",
+              "review_status": "reviewed",
+              "provenance_note": "Official Python JSON docs; pointer-only stdlib boundary source."
+            }
+          ],
+          "watch_for": [
+            "validated model boundaries that reduce raw JSON and dict drift",
+            "CLI and report structures that make automation output easy to parse and audit",
+            "error-message and rendering patterns that help agents diagnose without reading long raw logs"
+          ],
+          "why_ai_agents_should_study": "DAD lives on schemas, CLIs, JSONL, and reports; these sources show how Python interfaces can be both human-friendly and machine-checkable.",
+          "it_must_not_be_used_for": [
+            "Adding Pydantic, Typer, Rich, or Textual to a repo without local dependency approval.",
+            "Treating interface polish as proof that domain behavior is correct."
+          ]
         }
       ],
       "frontier_promotion_policy": {
@@ -563,6 +605,7 @@
         "rust-community-frontier",
         "rust-ecosystem-curation",
         "rust-high-signal-codebases",
+        "rust-parser-indexing-codebases",
         "rust-security",
         "rust-fuzz",
         "rust-test-frontier",
@@ -988,7 +1031,13 @@
         {
           "target_id": "rs-codebase:scanner-parser-cli-tools",
           "label": "High-signal Rust scanners, parsers, and CLI tools",
-          "source_ids": ["rust-community-frontier", "rust-ecosystem-curation", "rust-high-signal-codebases", "rust-lang"],
+          "source_ids": [
+            "rust-community-frontier",
+            "rust-ecosystem-curation",
+            "rust-high-signal-codebases",
+            "rust-parser-indexing-codebases",
+            "rust-lang"
+          ],
           "example_refs": [
             {
               "source_id": "rust-high-signal-codebases",
@@ -1019,11 +1068,30 @@
               "ref": "https://docs.rs/",
               "review_status": "reviewed",
               "provenance_note": "Rust crate documentation source; pointer-only API documentation target."
+            },
+            {
+              "source_id": "rust-parser-indexing-codebases",
+              "ref": "https://github.com/tree-sitter/tree-sitter",
+              "review_status": "candidate",
+              "provenance_note": "Tree-sitter repository; pointer-only incremental parsing and syntax tree study source."
+            },
+            {
+              "source_id": "rust-parser-indexing-codebases",
+              "ref": "https://github.com/quickwit-oss/tantivy",
+              "review_status": "candidate",
+              "provenance_note": "Tantivy repository; pointer-only full-text indexing study source."
+            },
+            {
+              "source_id": "rust-parser-indexing-codebases",
+              "ref": "https://github.com/serde-rs/json",
+              "review_status": "candidate",
+              "provenance_note": "serde_json repository; pointer-only JSON boundary and error-shape study source."
             }
           ],
           "watch_for": [
             "fast repository scanning and ignore-file handling patterns",
             "source offset, parser, syntax tree, and incremental analysis techniques",
+            "search-index and JSON boundary patterns that can become small DAD harness cases",
             "CLI output shapes that are easy for agents and validators to consume"
           ],
           "why_ai_agents_should_study": "DAD's likely Rust wins are scanners and validators, so these codebases are closer to the needed shape than generic application examples.",

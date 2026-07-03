@@ -19,9 +19,12 @@ from digital_asset_directory.exceptions_lake import (
     event_type_taxonomy_dimensions,
     exception_category_taxonomy_defaults,
     exception_taxonomy_dimension_axes,
+    load_exception_backfill_review_decisions,
     path_term_matches,
+    record_exception_backfill_review_decision,
     record_exception_fix_outcome,
     record_exception_event,
+    summarize_exception_backfill_review_decisions,
     write_exception_backfill_review_queue,
     write_exception_learning_queue,
     write_exception_report,
@@ -1075,6 +1078,272 @@ def test_backfill_review_queue_counts_only_approved_public_release_as_cleared(
     row = report["review_queue"][0]
     assert row["candidate_count"] == 2
     assert row["public_release_required_count"] == 1
+
+
+def test_backfill_review_decision_appends_candidate_only_label(tmp_path: Path) -> None:
+    hub = tmp_path / "hub"
+    repo = tmp_path / "repo"
+    (repo / ".git").mkdir(parents=True)
+    _copy_exception_contracts(hub)
+    target = repo / "docs" / "asset-dir-unavailable.md"
+    target.parent.mkdir(parents=True)
+    target.write_text("metadata-only backfill should not read content\n", encoding="utf-8")
+
+    backfill_exception_candidates(
+        hub,
+        repo,
+        limit=10,
+        authorization=_backfill_auth(
+            repo,
+            repo_policies=[_backfill_policy(repo, visibility="public")],
+        ),
+    )
+    queue = write_exception_backfill_review_queue(hub)
+    group_id = queue["review_queue"][0]["review_group_id"]
+
+    result = record_exception_backfill_review_decision(
+        hub,
+        review_group_id=group_id,
+        decision="confirm",
+        reviewer="Lowell",
+        reviewer_type="human",
+        approval_id="APPROVAL-BACKFILL-REVIEW",
+        notes="Confirmed against a source repo packet.",
+        evidence_refs=["dad://evidence/backfill-review/test"],
+    )
+
+    assert result["appended"] is True
+    decision = result["decision"]
+    assert decision["decision"] == "confirm"
+    assert decision["review_status"] == "human_reviewed"
+    assert decision["review_authority_ref"] == "human_approval:APPROVAL-BACKFILL-REVIEW"
+    assert decision["source_queue_fingerprint"].startswith("dad:exception-backfill-review")
+    assert decision["result_effect"] == "source_review_confirmed_candidate_only"
+    assert "do not create observed exceptions" in decision["authority_boundary"]
+    rows = load_exception_backfill_review_decisions(hub)
+    assert rows == [decision]
+    summary = summarize_exception_backfill_review_decisions(hub)
+    assert summary["decision_count"] == 1
+    assert summary["decision_counts"] == {"confirm": 1}
+
+
+def test_backfill_review_decision_blocks_confirm_when_classifier_refresh_needed(
+    tmp_path: Path,
+) -> None:
+    hub = tmp_path / "hub"
+    repo = tmp_path / "repo"
+    (repo / ".git").mkdir(parents=True)
+    _copy_exception_contracts(hub)
+    target = repo / "docs" / "pytest-timeout.md"
+    target.parent.mkdir(parents=True)
+    target.write_text("metadata-only backfill should not read content\n", encoding="utf-8")
+
+    backfill_exception_candidates(
+        hub,
+        repo,
+        limit=10,
+        authorization=_backfill_auth(repo),
+    )
+    lake_path = hub / "processed" / "exceptions" / "lake" / "events.jsonl"
+    rows = _jsonl(lake_path)
+    rows[0]["context_refs"] = ["backfill-classifier-version:old-version"]
+    lake_path.write_text("\n".join(json.dumps(row) for row in rows) + "\n", encoding="utf-8")
+    queue = write_exception_backfill_review_queue(hub)
+    group_id = queue["review_queue"][0]["review_group_id"]
+
+    with pytest.raises(ValueError, match="classifier provenance needs refresh"):
+        record_exception_backfill_review_decision(
+            hub,
+            review_group_id=group_id,
+            decision="confirm",
+            reviewer="agent",
+            reviewer_type="agent",
+        )
+
+    result = record_exception_backfill_review_decision(
+        hub,
+        review_group_id=group_id,
+        decision="needs_classifier_refresh",
+        reviewer="agent",
+        reviewer_type="agent",
+    )
+
+    assert result["appended"] is True
+    assert result["decision"]["result_effect"] == "classifier_refresh_required_no_learning"
+
+
+def test_backfill_review_decision_requires_human_or_source_authority(
+    tmp_path: Path,
+) -> None:
+    hub = tmp_path / "hub"
+    repo = tmp_path / "repo"
+    (repo / ".git").mkdir(parents=True)
+    _copy_exception_contracts(hub)
+    target = repo / "docs" / "asset-dir-unavailable.md"
+    target.parent.mkdir(parents=True)
+    target.write_text("metadata-only backfill should not read content\n", encoding="utf-8")
+
+    backfill_exception_candidates(
+        hub,
+        repo,
+        limit=10,
+        authorization=_backfill_auth(repo),
+    )
+    group_id = write_exception_backfill_review_queue(hub)["review_queue"][0]["review_group_id"]
+
+    with pytest.raises(ValueError, match="approval-id"):
+        record_exception_backfill_review_decision(
+            hub,
+            review_group_id=group_id,
+            decision="reject",
+            reviewer="Lowell",
+            reviewer_type="human",
+        )
+    with pytest.raises(ValueError, match="source-packet-id"):
+        record_exception_backfill_review_decision(
+            hub,
+            review_group_id=group_id,
+            decision="needs_source_packet",
+            reviewer="source",
+            reviewer_type="source_repo",
+        )
+
+    result = record_exception_backfill_review_decision(
+        hub,
+        review_group_id=group_id,
+        decision="needs_source_packet",
+        reviewer="source",
+        reviewer_type="source_repo",
+        source_packet_id="dad:mail:source-packet-test",
+    )
+
+    assert result["decision"]["review_status"] == "source_reviewed"
+    assert result["decision"]["review_authority_ref"] == "source_packet:dad:mail:source-packet-test"
+
+
+def test_backfill_review_decision_blocks_agent_confirm_for_readable_refs(
+    tmp_path: Path,
+) -> None:
+    hub = tmp_path / "hub"
+    repo = tmp_path / "repo"
+    (repo / ".git").mkdir(parents=True)
+    _copy_exception_contracts(hub)
+    target = repo / "docs" / "review-finding.md"
+    target.parent.mkdir(parents=True)
+    target.write_text("metadata-only backfill should not read content\n", encoding="utf-8")
+
+    backfill_exception_candidates(
+        hub,
+        repo,
+        limit=10,
+        include_path_refs=True,
+        authorization=_backfill_auth(repo, include_path_refs=True),
+    )
+    group_id = write_exception_backfill_review_queue(hub)["review_queue"][0]["review_group_id"]
+
+    with pytest.raises(ValueError, match="Agent triage cannot confirm"):
+        record_exception_backfill_review_decision(
+            hub,
+            review_group_id=group_id,
+            decision="confirm",
+            reviewer="agent",
+            reviewer_type="agent",
+        )
+
+
+def test_backfill_review_decision_redacts_private_refs_and_is_idempotent(
+    tmp_path: Path,
+) -> None:
+    hub = tmp_path / "hub"
+    repo = tmp_path / "repo"
+    (repo / ".git").mkdir(parents=True)
+    _copy_exception_contracts(hub)
+    target = repo / "docs" / "review-finding.md"
+    target.parent.mkdir(parents=True)
+    target.write_text("metadata-only backfill should not read content\n", encoding="utf-8")
+
+    backfill_exception_candidates(
+        hub,
+        repo,
+        limit=10,
+        authorization=_backfill_auth(repo),
+    )
+    queue = write_exception_backfill_review_queue(hub)
+    group_id = queue["review_queue"][0]["review_group_id"]
+
+    kwargs = {
+        "review_group_id": group_id,
+        "decision": "reject",
+        "reviewer": "agent",
+        "reviewer_type": "agent",
+        "notes": (
+            "Reject after seeing sk-abcdefghijklmnopqrstuvwxyz123456 and "
+            "Repo-Relative:docs/hidden.md in chat."
+        ),
+        "evidence_refs": [
+            "see repo-relative:docs/private-finding.md",
+            "private file C:/Users/lowel/private.txt",
+        ],
+    }
+    first = record_exception_backfill_review_decision(hub, **kwargs)
+    second = record_exception_backfill_review_decision(hub, **kwargs)
+
+    assert first["appended"] is True
+    assert second["appended"] is False
+    decision = first["decision"]
+    assert decision["screening"]["redaction_count"] >= 1
+    assert "readable_repo_relative_ref_rejected" in decision["screening"]["issues"]
+    assert "local_path_like_ref_rejected" in decision["screening"]["issues"]
+    assert all("repo-relative:docs/private-finding.md" not in ref for ref in decision["evidence_refs"])
+    assert all("C:/Users/lowel/private.txt" not in ref for ref in decision["evidence_refs"])
+    assert "Repo-Relative:docs/hidden.md" not in decision["notes"]
+
+
+def test_backfill_review_decision_appends_when_queue_fingerprint_changes(
+    tmp_path: Path,
+) -> None:
+    hub = tmp_path / "hub"
+    repo = tmp_path / "repo"
+    (repo / ".git").mkdir(parents=True)
+    _copy_exception_contracts(hub)
+    first_target = repo / "docs" / "review-finding-one.md"
+    first_target.parent.mkdir(parents=True)
+    first_target.write_text("metadata-only backfill should not read content\n", encoding="utf-8")
+
+    backfill_exception_candidates(
+        hub,
+        repo,
+        limit=10,
+        authorization=_backfill_auth(repo),
+    )
+    group_id = write_exception_backfill_review_queue(hub)["review_queue"][0]["review_group_id"]
+    kwargs = {
+        "review_group_id": group_id,
+        "decision": "defer",
+        "reviewer": "agent",
+        "reviewer_type": "agent",
+        "notes": "Defer pending source packet.",
+    }
+    first = record_exception_backfill_review_decision(hub, **kwargs)
+
+    second_target = repo / "docs" / "review-finding-two.md"
+    second_target.write_text("metadata-only backfill should not read content\n", encoding="utf-8")
+    backfill_exception_candidates(
+        hub,
+        repo,
+        limit=10,
+        authorization=_backfill_auth(repo),
+    )
+    second = record_exception_backfill_review_decision(hub, **kwargs)
+    third = record_exception_backfill_review_decision(hub, **kwargs)
+
+    assert first["appended"] is True
+    assert second["appended"] is True
+    assert third["appended"] is False
+    assert first["decision"]["source_queue_fingerprint"] != second["decision"][
+        "source_queue_fingerprint"
+    ]
+    assert first["decision"]["decision_id"] != second["decision"]["decision_id"]
 
 
 def test_exception_report_summarizes_categories(tmp_path: Path) -> None:

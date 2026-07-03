@@ -104,7 +104,7 @@
         "Translate repeated patterns into harness research questions instead of direct style rules."
       ],
       "asset_kinds": ["doc", "harness", "lesson"],
-      "review_status": "reviewed"
+      "review_status": "candidate"
     },
     {
       "source_id": "rust-ecosystem-curation",
@@ -143,6 +143,30 @@
       ],
       "asset_kinds": ["doc", "harness", "lesson"],
       "review_status": "reviewed"
+    },
+    {
+      "source_id": "rust-parser-indexing-codebases",
+      "label": "Rust parser, syntax-tree, and search/indexing codebases",
+      "url_patterns": [
+        "github.com/tree-sitter/tree-sitter",
+        "github.com/quickwit-oss/tantivy",
+        "github.com/serde-rs/json",
+        "github.com/rust-lang/rust-analyzer"
+      ],
+      "trust_tier": "known",
+      "check_cadence": "quarterly",
+      "language_focus": ["rust"],
+      "frontier_watch": [
+        "incremental parsing, syntax-tree, search-index, and JSON boundary techniques",
+        "deterministic offset, span, and token handling that could improve DAD chunking or source maps",
+        "machine-readable error and diagnostic shapes that future agents can validate"
+      ],
+      "intake_actions": [
+        "Study as pointer-only codebase references; do not vendor parser, index, corpus, or config code.",
+        "Translate candidate lessons into small DAD harness experiments for parser, chunker, offset, or search-index behavior before recommending adoption."
+      ],
+      "asset_kinds": ["doc", "harness", "lesson"],
+      "review_status": "candidate"
     },
     {
       "source_id": "rust-security",
@@ -363,6 +387,34 @@
       ],
       "asset_kinds": ["doc", "asset", "harness", "lesson"],
       "review_status": "reviewed"
+    },
+    {
+      "source_id": "python-interface-boundary-codebases",
+      "label": "Python schema, CLI, and agent-readable interface codebases",
+      "url_patterns": [
+        "docs.pydantic.dev",
+        "github.com/pydantic/pydantic",
+        "typer.tiangolo.com",
+        "github.com/fastapi/typer",
+        "rich.readthedocs.io",
+        "github.com/Textualize/rich",
+        "textual.textualize.io",
+        "github.com/Textualize/textual"
+      ],
+      "trust_tier": "known",
+      "check_cadence": "quarterly",
+      "language_focus": ["python"],
+      "frontier_watch": [
+        "validated data-boundary patterns that reduce raw dictionary drift",
+        "CLI and terminal-output conventions that make tools legible to humans and agents",
+        "structured errors, command surfaces, and reports that can feed DAD validation"
+      ],
+      "intake_actions": [
+        "Create pointer-only candidate notes for schema, CLI, and report-interface ideas.",
+        "Require local dependency policy, version floor, and validation evidence before recommending a tool to downstream repos."
+      ],
+      "asset_kinds": ["doc", "asset", "harness", "lesson"],
+      "review_status": "candidate"
     },
     {
       "source_id": "martinfowler",

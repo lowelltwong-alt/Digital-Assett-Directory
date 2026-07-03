@@ -16,6 +16,7 @@ from digital_asset_directory.models import (
     CounterfactualLessonRecord,
     DuplicateClusterRecord,
     EscalationPacketRecord,
+    ExceptionBackfillReviewDecisionRecord,
     ExpansionMapRecord,
     FailureSignalRecord,
     LessonAutomationDecisionRecord,
@@ -311,6 +312,47 @@ def test_learning_rule_promotion_candidate_model_dump_matches_registered_schema(
     )
 
     validate_registered_schema("learning_rule_promotion_candidate", record.model_dump(mode="json"))
+
+
+def test_exception_backfill_review_decision_model_dump_matches_registered_schema():
+    record = ExceptionBackfillReviewDecisionRecord(
+        decision_id="dad:exception-backfill-review-decision:test",
+        review_group_id="dad:exception-backfill-review-group:test",
+        decision="needs_source_packet",
+        reviewer="agent",
+        reviewer_type="agent",
+        review_authority_ref="agent_triage",
+        reviewed_at="2026-01-01T00:00:00+00:00",
+        source_repo="repo",
+        event_type="tool_unavailable",
+        rule_id="backfill-rule:tool-unavailable",
+        source_queue_status="source_review_required",
+        current_classifier_version="exception-backfill-classifier-v0.2.0",
+        candidate_count=1,
+        public_release_required_count=0,
+        readable_path_ref_count=0,
+        notes="Ask the source repo for a source-owned exception packet.",
+        evidence_refs=["dad://evidence/backfill-review/test"],
+        promotion_blockers_snapshot=["Path-signal candidate only."],
+        recommended_next_action_snapshot="Request source packet.",
+        source_queue_input_hashes={"events": "sha256:test"},
+        source_queue_fingerprint="dad:exception-backfill-review-queue-fingerprint:test",
+        result_effect="source_packet_requested_no_learning",
+        authority_boundary="Candidate label only; does not create observed exceptions.",
+        screening={
+            "screened_at": "2026-01-01T00:00:00+00:00",
+            "credential_pii_screen": "best_effort",
+            "redaction_count": 0,
+            "issues": [],
+            "screening_note": "Best-effort screening only.",
+        },
+        review_status="agent_triage",
+    )
+
+    validate_registered_schema(
+        "exception_backfill_review_decision",
+        record.model_dump(mode="json"),
+    )
 
 
 def test_scan_cycle_event_model_dump_matches_registered_schema():

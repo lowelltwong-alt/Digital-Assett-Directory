@@ -1,0 +1,112 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://local.digital-asset-directory/schemas/exception-backfill-review-decision.schema.json",
+  "title": "DAD Exception Backfill Review Decision",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "decision_id",
+    "review_group_id",
+    "decision",
+    "reviewer",
+    "reviewer_type",
+    "review_authority_ref",
+    "reviewed_at",
+    "source_repo",
+    "event_type",
+    "rule_id",
+    "source_queue_status",
+    "current_classifier_version",
+    "candidate_count",
+    "public_release_required_count",
+    "readable_path_ref_count",
+    "notes",
+    "evidence_refs",
+    "promotion_blockers_snapshot",
+    "recommended_next_action_snapshot",
+    "source_queue_input_hashes",
+    "source_queue_fingerprint",
+    "result_effect",
+    "authority_boundary",
+    "screening",
+    "review_status"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "schema_version": { "const": "0.1.0" },
+    "decision_id": { "type": "string", "minLength": 1 },
+    "review_group_id": { "type": "string", "minLength": 1 },
+    "decision": {
+      "enum": [
+        "confirm",
+        "reject",
+        "needs_source_packet",
+        "needs_classifier_refresh",
+        "defer",
+        "archive"
+      ]
+    },
+    "reviewer": { "type": "string" },
+    "reviewer_type": { "enum": ["human", "agent", "source_repo", "unknown"] },
+    "review_authority_ref": { "type": "string", "minLength": 1 },
+    "reviewed_at": { "type": "string", "minLength": 1 },
+    "source_repo": { "type": "string", "minLength": 1 },
+    "event_type": { "type": "string", "minLength": 1 },
+    "rule_id": { "type": "string", "minLength": 1 },
+    "source_queue_status": { "type": "string", "minLength": 1 },
+    "current_classifier_version": { "type": "string" },
+    "candidate_count": { "type": "integer", "minimum": 0 },
+    "public_release_required_count": { "type": "integer", "minimum": 0 },
+    "readable_path_ref_count": { "type": "integer", "minimum": 0 },
+    "notes": { "type": "string" },
+    "evidence_refs": {
+      "type": "array",
+      "items": { "type": "string" }
+    },
+    "promotion_blockers_snapshot": {
+      "type": "array",
+      "items": { "type": "string" }
+    },
+    "recommended_next_action_snapshot": { "type": "string" },
+    "source_queue_input_hashes": {
+      "type": "object",
+      "additionalProperties": { "type": "string" }
+    },
+    "source_queue_fingerprint": { "type": "string", "minLength": 1 },
+    "result_effect": {
+      "enum": [
+        "source_review_confirmed_candidate_only",
+        "rejected_candidate_no_learning",
+        "source_packet_requested_no_learning",
+        "classifier_refresh_required_no_learning",
+        "deferred_no_learning",
+        "archived_no_learning"
+      ]
+    },
+    "authority_boundary": { "type": "string", "minLength": 1 },
+    "screening": {
+      "type": "object",
+      "required": [
+        "screened_at",
+        "credential_pii_screen",
+        "redaction_count",
+        "issues",
+        "screening_note"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "screened_at": { "type": "string", "minLength": 1 },
+        "credential_pii_screen": { "const": "best_effort" },
+        "redaction_count": { "type": "integer", "minimum": 0 },
+        "issues": {
+          "type": "array",
+          "items": { "type": "string" }
+        },
+        "screening_note": { "type": "string", "minLength": 1 }
+      }
+    },
+    "review_status": {
+      "enum": ["agent_triage", "source_reviewed", "human_reviewed"]
+    }
+  }
+}

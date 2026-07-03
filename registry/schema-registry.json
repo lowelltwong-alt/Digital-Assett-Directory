@@ -72,6 +72,7 @@
     "trusted_source_registry": "schemas/trusted-source-registry.schema.json",
     "exception_event": "schemas/exception-event.schema.json",
     "exception_fix_outcome": "schemas/exception-fix-outcome.schema.json",
+    "exception_backfill_review_decision": "schemas/exception-backfill-review-decision.schema.json",
     "exception_event_type_registry": "schemas/exception-event-type-registry.schema.json",
     "exception_learning_methodology": "schemas/exception-learning-methodology.schema.json",
     "exception_capture_pattern_registry": "schemas/exception-capture-pattern-registry.schema.json",

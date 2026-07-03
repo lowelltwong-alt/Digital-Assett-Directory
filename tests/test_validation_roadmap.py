@@ -135,6 +135,9 @@ def test_exception_lake_validation_flags_readable_repo_relative_refs():
     assert _contains_readable_repo_relative_ref(
         {"context_refs": ["repo-relative:docs/private-postmortem.md"]}
     )
+    assert _contains_readable_repo_relative_ref(
+        {"notes": "See Repo-Relative:docs/private-postmortem.md before review."}
+    )
     assert not _contains_readable_repo_relative_ref(
         {"context_refs": ["repo-relative-sha256:abc123"]}
     )
@@ -162,6 +165,9 @@ def test_exception_fix_outcome_semantic_validation_flags_false_validated_fix():
 def test_exception_validation_rejects_repo_prefixed_absolute_paths():
     assert _contains_local_path_ref({"return_address": "repo:C:/Users/lowel/private"})
     assert _contains_local_path_ref({"context_refs": ["repo:C:\\Users\\lowel\\private"]})
+    assert _contains_local_path_ref(
+        {"notes": "private file is C:/Users/lowel/private/report.txt"}
+    )
     assert not _contains_local_path_ref(
         {"return_address": "repo:.digital-asset/exceptions/outbox.jsonl"}
     )

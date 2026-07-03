@@ -199,6 +199,7 @@ def test_language_coding_advantage_registry_resolves_sources_and_assets():
         "pytest-dev",
         "hypothesis",
         "python-type-checkers",
+        "python-interface-boundary-codebases",
     }.issubset(languages["python"]["trusted_source_ids"])
     assert {"rust-ecosystem-curation", "rust-fuzz", "rust-test-frontier"}.issubset(
         languages["rust"]["trusted_source_ids"]
@@ -207,6 +208,7 @@ def test_language_coding_advantage_registry_resolves_sources_and_assets():
         languages["rust"]["trusted_source_ids"]
     )
     assert "rust-high-signal-codebases" in languages["rust"]["trusted_source_ids"]
+    assert "rust-parser-indexing-codebases" in languages["rust"]["trusted_source_ids"]
     harness_ids = {harness["harness_id"] for harness in harness_registry["harnesses"]}
     assert "dad:harness:language-frontier-research" in harness_ids
     assert "dad:offering:language-frontier-research-harness" in offering_ids
@@ -219,6 +221,12 @@ def test_language_coding_advantage_registry_resolves_sources_and_assets():
     assert "mutants.rs" in set(trusted_sources["rust-mutation-testing"]["url_patterns"])
     assert "github.com/obi1kenobi/cargo-semver-checks" in set(
         trusted_sources["rust-api-compatibility"]["url_patterns"]
+    )
+    assert "github.com/tree-sitter/tree-sitter" in set(
+        trusted_sources["rust-parser-indexing-codebases"]["url_patterns"]
+    )
+    assert "docs.pydantic.dev" in set(
+        trusted_sources["python-interface-boundary-codebases"]["url_patterns"]
     )
     python_patterns = {
         pattern["pattern_id"] for pattern in languages["python"]["ai_overlooked_patterns"]
@@ -284,6 +292,7 @@ def test_language_coding_advantage_registry_resolves_sources_and_assets():
         "py-codebase:cpython-and-stdlib",
         "py-codebase:pytest-hypothesis-type-checkers",
         "py-codebase:rust-backed-python-tools",
+        "py-codebase:schema-cli-agent-interfaces",
     }.issubset(python_watch_targets)
     assert {
         "rs-codebase:compiler-cargo-clippy",

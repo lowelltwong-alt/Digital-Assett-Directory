@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import re
 from pathlib import Path
 from typing import Any
 
@@ -114,7 +115,7 @@ def _looks_like_local_path_text(text: str) -> bool:
     normalized = text.replace("\\", "/").casefold()
     return (
         bool(normalized.startswith("/"))
-        or bool(len(normalized) > 2 and normalized[1:3] == ":/")
+        or bool(re.search(r"(?:^|[\s\"'(\[])[a-z]:/", normalized))
         or any(fragment in normalized for fragment in LOCAL_PATH_FRAGMENTS)
     )
 
@@ -300,8 +301,12 @@ def _contains_readable_repo_relative_ref(value: Any) -> bool:
     if not isinstance(value, str):
         return False
     text = value.strip()
-    return text.startswith("repo-relative:") and not text.startswith(
-        "repo-relative-sha256:"
+    return bool(
+        re.search(
+            r"\brepo-relative:(?!sha256:)[^\s,;\"')\]]+",
+            text,
+            flags=re.IGNORECASE,
+        )
     )
 
 
@@ -1215,6 +1220,45 @@ def validate_repo(repo_root: Path) -> dict[str, Any]:
                     )
                     errors.extend(_fix_outcome_semantic_errors(fix, line_number))
                     checked.append("processed/exceptions/fix-outcomes/outcomes.jsonl")
+        backfill_decision_schema = _load_schema(
+            repo_root,
+            registry,
+            "exception_backfill_review_decision",
+        )
+        backfill_decision_validator_cls = validator_for(backfill_decision_schema)
+        backfill_decision_validator_cls.check_schema(backfill_decision_schema)
+        backfill_decision_validator = backfill_decision_validator_cls(
+            backfill_decision_schema
+        )
+        backfill_decisions_path = (
+            repo_root
+            / "processed"
+            / "exceptions"
+            / "review-queue"
+            / "backfill_review_decisions.jsonl"
+        )
+        if backfill_decisions_path.exists():
+            checked.append(
+                "processed/exceptions/review-queue/backfill_review_decisions.jsonl"
+            )
+            for line_number, line in enumerate(
+                backfill_decisions_path.read_text(encoding="utf-8").splitlines(),
+                start=1,
+            ):
+                if not line.strip():
+                    continue
+                decision = json.loads(line)
+                backfill_decision_validator.validate(decision)
+                if _contains_local_path_ref(decision):
+                    errors.append(
+                        "Exception backfill review decision contains local path-like "
+                        f"metadata on line {line_number}"
+                    )
+                if _contains_readable_repo_relative_ref(decision):
+                    errors.append(
+                        "Exception backfill review decision contains readable "
+                        f"repo-relative path metadata on line {line_number}"
+                    )
         harness_schema = _load_schema(repo_root, registry, "coding_harness")
         harness_validator_cls = validator_for(harness_schema)
         harness_validator_cls.check_schema(harness_schema)
