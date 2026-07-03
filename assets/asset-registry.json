@@ -412,6 +412,45 @@
         "Underuse and frontier labels are heuristic unless backed by measurement or repeated DAD outcomes.",
         "Adoption requires local validation and repo authority; source trust tiers never authorize copying content."
       ]
+    },
+    {
+      "asset_id": "language-frontier-research-harness",
+      "name": "Language Frontier Research Harness",
+      "version": "0.1.0",
+      "path": "assets/coding-harnesses/language-frontier-research",
+      "asset_type": "coding_harness",
+      "managed_block_id": "LANGUAGE_FRONTIER_RESEARCH_HARNESS",
+      "profiles": [
+        "python",
+        "rust",
+        "mixed",
+        "future-language",
+        "research-intake",
+        "coding-harness"
+      ],
+      "use_when": [
+        "A repo finds a Python, Rust, mixed-language, or future-language source that may improve AI coding.",
+        "DAD needs to decide whether a frontier coding idea belongs in an idiom card, buildout guide, tactic, or harness eval.",
+        "A coding agent wants to report an underused feature, tool, crate, package, or proof surface back to DAD."
+      ],
+      "does_not_apply_when": [
+        "The idea lacks a source pointer, safe summary, applicability limit, and validation idea.",
+        "The evidence is copied third-party docs, copied source, private rows, raw logs, credentials, or benchmark-only claims.",
+        "The target repo has not approved DAD pointers or local validation for the language/tool."
+      ],
+      "install_path": "assets/coding-harnesses/language-frontier-research",
+      "source_package": {
+        "filename": "repo-local",
+        "sha256": ""
+      },
+      "installed_at": "2026-07-03",
+      "review_status": "candidate",
+      "safety_notes": [
+        "This harness is a first-pass gate, not promotion authority.",
+        "repo-local source_package means this asset was created in DAD, not imported from a zip or external source.",
+        "Source pointers and trust tiers never authorize copying external content.",
+        "Language-frontier guidance requires local validation and repo authority before adoption."
+      ]
     }
   ]
 }

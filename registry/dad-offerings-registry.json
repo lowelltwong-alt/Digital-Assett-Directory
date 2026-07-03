@@ -283,6 +283,44 @@
       ],
       "review_status": "candidate",
       "authority_boundary": "Candidate language guidance only; local repo authority, validation, security policy, and human gates decide adoption."
+    },
+    {
+      "offering_id": "dad:offering:language-frontier-research-harness",
+      "name": "Language Frontier Research Harness",
+      "version": "0.1.0",
+      "offering_type": "harness",
+      "harness_registry_ref": "dad:harness:language-frontier-research",
+      "path": "assets/coding-harnesses/language-frontier-research",
+      "languages": ["python", "rust", "mixed", "agent-instruction"],
+      "repo_types": ["application", "library", "control_plane", "template_repo", "research_repo"],
+      "domains": ["software_engineering", "ai_engineering", "code_research"],
+      "context_tags": ["coding_asset", "language_frontier", "python", "rust", "harness_research"],
+      "task_types": ["coding", "refactor", "performance", "code_research", "harness_research", "python", "rust"],
+      "capabilities": [
+        "frontier_source_screening",
+        "language_pattern_triage",
+        "overlooked_pattern_capture",
+        "local_validation_gate",
+        "promotion_rejection_check"
+      ],
+      "applies_when": [
+        "A repo or agent finds a Python, Rust, mixed-language, or future-language technique that may improve AI coding.",
+        "DAD needs to decide whether a frontier language signal belongs in an idiom card, buildout guide, coding tactic, or harness eval."
+      ],
+      "does_not_apply_when": [
+        "The evidence is copied third-party docs, copied source, private rows, raw logs, credentials, or benchmark-only claims.",
+        "No proof surface, validation command, or applicability limit can be named."
+      ],
+      "public_safe": true,
+      "upgrade_channel": "dad_mail",
+      "known_upgrades": [],
+      "source_refs": [
+        "registry/coding-harness-registry.json#dad:harness:language-frontier-research",
+        "docs/LANGUAGE_CODING_ADVANTAGE.md",
+        "registry/trusted-source-registry.json"
+      ],
+      "review_status": "candidate",
+      "authority_boundary": "The harness routes language-frontier ideas as candidate evidence only; target repos retain local authority and must validate before adoption."
     }
   ]
 }

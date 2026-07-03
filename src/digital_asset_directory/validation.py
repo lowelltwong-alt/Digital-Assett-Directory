@@ -32,6 +32,14 @@ EXCEPTION_CAPTURE_CONTRACTS = {
     "dad_recommendation_outcome",
     "backfill_candidate",
 }
+EXCEPTION_TAXONOMY_AXIS_KEYS = (
+    "origin_surface",
+    "detection_mode",
+    "impact_domain",
+    "learning_route",
+    "default_handling",
+    "review_priority",
+)
 LOCAL_PATH_FRAGMENTS = (
     "c:/users/",
     "c__users__",
@@ -72,6 +80,26 @@ def _hash_path(path: Path) -> str:
         parts.append(f"{rel}\0{sha256_file(child)}")
     digest_input = "\n".join(parts).encode("utf-8")
     return f"sha256:{sha256_bytes(digest_input)}"
+
+
+def _stale_report_input_hash_errors(
+    repo_root: Path,
+    report_path: Path,
+    payload: dict[str, Any],
+) -> list[str]:
+    errors: list[str] = []
+    try:
+        report_label = report_path.relative_to(repo_root).as_posix()
+    except ValueError:
+        report_label = report_path.as_posix()
+    for input_ref, input_hash in payload.get("input_hashes", {}).items():
+        actual = _hash_path(repo_root / str(input_ref))
+        if actual != input_hash:
+            errors.append(
+                f"Stale report input hash {report_label} "
+                f"{input_ref}: {input_hash} != {actual}"
+            )
+    return errors
 
 
 def _path_identity_hash(path: Path) -> str:
@@ -351,6 +379,45 @@ def _source_provenance_consistency_errors(
             f"on line {line_number}"
         )
     return errors
+
+
+def _exception_event_taxonomy_by_type(
+    exception_type_registry: dict[str, Any],
+) -> dict[str, dict[str, str]]:
+    taxonomy_dimensions = exception_type_registry.get("taxonomy_dimensions", {})
+    category_defaults = (
+        taxonomy_dimensions.get("category_defaults", {})
+        if isinstance(taxonomy_dimensions, dict)
+        else {}
+    )
+    event_taxonomy: dict[str, dict[str, str]] = {}
+    for item in exception_type_registry.get("event_types", []):
+        if not isinstance(item, dict) or not item.get("event_type"):
+            continue
+        event_type = str(item["event_type"])
+        category = str(item.get("category") or "")
+        defaults = category_defaults.get(category, {})
+        if isinstance(defaults, dict):
+            event_taxonomy[event_type] = {
+                axis: str(defaults.get(axis, "unknown"))
+                for axis in EXCEPTION_TAXONOMY_AXIS_KEYS
+            }
+    return event_taxonomy
+
+
+def _exception_lake_taxonomy_consistency_errors(
+    event: dict[str, Any],
+    event_taxonomy_by_type: dict[str, dict[str, str]],
+    *,
+    line_number: int,
+) -> list[str]:
+    expected_dimensions = event_taxonomy_by_type.get(str(event.get("event_type")))
+    if expected_dimensions and event.get("taxonomy_dimensions") != expected_dimensions:
+        return [
+            "Exception lake event taxonomy_dimensions do not match "
+            f"registry defaults on line {line_number}: {event.get('event_type')}"
+        ]
+    return []
 
 
 def _capture_rule_matches_case(rule: dict[str, Any], case: dict[str, Any]) -> bool:
@@ -785,6 +852,9 @@ def validate_repo(repo_root: Path) -> dict[str, Any]:
                         "Exception taxonomy category default uses unknown "
                         f"{axis} value {value}: {category}"
                     )
+        event_taxonomy_by_type = _exception_event_taxonomy_by_type(
+            exception_type_registry
+        )
         classifier = exception_type_registry.get("backfill_classifier", {})
         backfill_rules = classifier.get("rules", []) if isinstance(classifier, dict) else []
         backfill_rule_ids: list[str] = []
@@ -1001,6 +1071,13 @@ def validate_repo(repo_root: Path) -> dict[str, Any]:
                         "Exception lake event uses unregistered event_type "
                         f"on line {line_number}: {event.get('event_type')}"
                     )
+                errors.extend(
+                    _exception_lake_taxonomy_consistency_errors(
+                        event,
+                        event_taxonomy_by_type,
+                        line_number=line_number,
+                    )
+                )
                 checked.append("processed/exceptions/lake/events.jsonl")
         exception_fix_schema = _load_schema(repo_root, registry, "exception_fix_outcome")
         exception_fix_validator_cls = validator_for(exception_fix_schema)
@@ -1147,15 +1224,8 @@ def validate_repo(repo_root: Path) -> dict[str, Any]:
                             f"{expected} != {actual}"
                         )
                 checked.append(str(report_path.relative_to(repo_root)))
-            for input_ref, input_hash in payload.get("input_hashes", {}).items():
-                input_path = repo_root / str(input_ref)
-                if input_path.exists():
-                    actual = f"sha256:{sha256_file(input_path)}"
-                    if actual != input_hash:
-                        errors.append(
-                            f"Stale report input hash {report_path.relative_to(repo_root)} "
-                            f"{input_ref}: {input_hash} != {actual}"
-                        )
+            if payload.get("input_hashes"):
+                errors.extend(_stale_report_input_hash_errors(repo_root, report_path, payload))
                 checked.append(str(report_path.relative_to(repo_root)))
             if payload.get("audit_id") == "dad:exception-capture-observed-audit":
                 policy_paths = _observed_audit_policy_paths(repo_root)

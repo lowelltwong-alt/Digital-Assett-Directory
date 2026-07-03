@@ -140,14 +140,15 @@
       "send_when": [
         "A repo finds a Rust, Python, or mixed-language technique that improves AI coding quality, speed, safety, or legibility.",
         "A repo discovers an underused language feature, crate, library, tooling pattern, static analysis trick, or test harness idea that generic AI agents are likely to miss.",
-        "A repo validates or falsifies a frontier source recommendation from DAD's trusted-source registry."
+        "A repo validates or falsifies a frontier source recommendation from DAD's trusted-source registry.",
+        "A repo can turn a language-frontier signal into a small `dad:harness:language-frontier-research` eval case or local validation command."
       ],
       "do_not_send": [
         "Do not send copied third-party docs, code, benchmarks, private rows, credentials, or raw logs.",
         "Do not promote a blog post, PEP draft, crate, package, or benchmark claim as DAD guidance without screening and local validation.",
         "Do not recommend Rust just because it is available; profiling and parity evidence come first."
       ],
-      "payload_guidance": "Send language, source URL or pointer, DAD source_id if known, short safe summary, why it matters for AI coding, applicability limits, validation commands or eval idea, and whether it belongs in a coding harness, idiom card, buildout guide, or template.",
+      "payload_guidance": "Send language, source URL or pointer, DAD source_id if known, short safe summary, why it matters for AI coding, applicability limits, proof surface, validation commands or eval idea, and whether it belongs in a coding harness, idiom card, buildout guide, tactic radar, or template.",
       "target_control_planes": ["reusable_assets", "coding_harnesses", "agent_skills", "learning_postflight_loops", "mail_center"],
       "review_status": "reviewed"
     },

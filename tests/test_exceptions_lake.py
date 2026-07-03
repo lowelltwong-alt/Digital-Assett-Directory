@@ -200,6 +200,97 @@ def test_exception_taxonomy_dimensions_cover_all_event_categories() -> None:
     )
 
 
+def test_record_exception_event_embeds_registry_taxonomy_dimensions(tmp_path: Path) -> None:
+    hub = tmp_path / "hub"
+    repo = tmp_path / "repo"
+    _copy_exception_contracts(hub)
+
+    result = record_exception_event(
+        hub,
+        repo,
+        event_type="private_origin_public_target",
+        summary="Synthetic private-to-public release gate exception.",
+        stage="release",
+        severity="critical",
+        capture_contract="governance_block",
+    )
+
+    assert result["event"]["taxonomy_dimensions"] == event_type_taxonomy_dimensions(hub)[
+        "private_origin_public_target"
+    ]
+    assert result["event"]["taxonomy_dimensions"]["default_handling"] == "release_gate"
+
+
+def test_collect_exception_event_overwrites_spoofed_taxonomy_dimensions(
+    tmp_path: Path,
+) -> None:
+    hub = tmp_path / "hub"
+    repo = tmp_path / "repo"
+    _copy_exception_contracts(hub)
+    event = record_exception_event(
+        hub,
+        repo,
+        event_type="secret_or_pii_detected",
+        summary="Synthetic secret screening exception.",
+        stage="review",
+        severity="critical",
+        capture_contract="governance_block",
+    )["event"]
+    event["taxonomy_dimensions"] = {
+        "origin_surface": "unknown",
+        "detection_mode": "unknown",
+        "impact_domain": "unknown",
+        "learning_route": "unknown",
+        "default_handling": "unknown",
+        "review_priority": "info",
+    }
+    outbox = repo / ".digital-asset" / "exceptions" / "outbox.jsonl"
+    outbox.write_text(json.dumps(event) + "\n", encoding="utf-8")
+
+    result = collect_exception_events(hub, repo)
+    collected = _jsonl(hub / "processed" / "exceptions" / "lake" / "events.jsonl")
+
+    assert result["collected_count"] == 1
+    assert collected[0]["taxonomy_dimensions"] == event_type_taxonomy_dimensions(hub)[
+        "secret_or_pii_detected"
+    ]
+    assert collected[0]["taxonomy_dimensions"]["default_handling"] == "central_quarantine"
+
+
+def test_collect_minimal_exception_packet_derives_taxonomy_dimensions(
+    tmp_path: Path,
+) -> None:
+    hub = tmp_path / "hub"
+    repo = tmp_path / "repo"
+    _copy_exception_contracts(hub)
+    outbox = repo / ".digital-asset" / "exceptions" / "outbox.jsonl"
+    outbox.parent.mkdir(parents=True)
+    outbox.write_text(
+        json.dumps(
+            {
+                "event_type": "review_finding",
+                "capture_contract": "review_finding",
+                "stage": "review",
+                "severity": "medium",
+                "agent": "codex",
+                "safe_summary": "Synthetic review finding from a lightweight repo packet.",
+                "context_refs": ["repo-relative-sha256:test"],
+                "dedupe_key": "repo:lightweight-review-finding",
+            }
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+
+    result = collect_exception_events(hub, repo)
+    collected = _jsonl(hub / "processed" / "exceptions" / "lake" / "events.jsonl")
+
+    assert result["collected_count"] == 1
+    assert collected[0]["taxonomy_dimensions"] == event_type_taxonomy_dimensions(hub)[
+        "review_finding"
+    ]
+
+
 def test_backfill_classifier_is_registry_backed_and_bounded() -> None:
     rules = backfill_classifier_rules(ROOT)
     by_rule = {rule["rule_id"]: rule for rule in rules}
@@ -1645,6 +1736,15 @@ def test_backfill_wave_honors_scanned_file_limit(tmp_path: Path) -> None:
     assert result["coverage_warning"] == "partial_backfill_wave"
     report = json.loads((hub / "processed" / "reports" / "exceptions_lake.json").read_text())
     assert report["latest_backfill_wave"]["stopped_reason"] == "scanned_file_limit_reached"
+    lake_hash = report["input_hashes"]["processed/exceptions/lake/events.jsonl"]
+    assert lake_hash == "missing" or lake_hash.startswith("sha256:")
+    assert report["input_hashes"]["registry/exception-event-type-registry.json"].startswith(
+        "sha256:"
+    )
+    assert (
+        report["input_hashes"]["processed/exceptions/fix-outcomes/outcomes.jsonl"]
+        == "missing"
+    )
     report_md = (hub / "processed" / "reports" / "exceptions_lake.md").read_text(
         encoding="utf-8"
     )

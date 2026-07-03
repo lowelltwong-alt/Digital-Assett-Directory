@@ -1,0 +1,36 @@
+{
+  "schema_version": "0.1.0",
+  "harness_id": "dad:harness:language-frontier-research",
+  "cases": [
+    {
+      "case_id": "python-property-test-boundary",
+      "language": "python",
+      "source_id_or_url": "hypothesis",
+      "safe_summary": "A property-based test pattern could cover JSON normalization invariants.",
+      "why_ai_coding_may_improve": "Future agents tend to write example-only tests for parser boundaries.",
+      "applicability_limits": "Use only where the repo accepts property-test dependencies or already has Hypothesis.",
+      "validation_or_eval_idea": "Add one sanitized round-trip invariant test for the parser boundary.",
+      "expected_route": ["assets/python-ai-advantage-preflight", "dad:harness:language-frontier-research"]
+    },
+    {
+      "case_id": "rust-parser-fuzz-boundary",
+      "language": "rust",
+      "source_id_or_url": "rust-fuzz",
+      "safe_summary": "A byte-oriented parser boundary could become a fuzz target before shared validator adoption.",
+      "why_ai_coding_may_improve": "Fuzzing can find malformed-input failures ordinary examples miss.",
+      "applicability_limits": "Use only for small pure parser/chunker/scanner boundaries with sanitized fixtures.",
+      "validation_or_eval_idea": "Create a minimal fuzz/property case and keep generated corpora local.",
+      "expected_route": ["assets/rust-buildout-guide", "dad:harness:language-frontier-research", "dad:harness:rust-shadow-parity"]
+    },
+    {
+      "case_id": "benchmark-only-rust-rewrite",
+      "language": "rust",
+      "source_id_or_url": "unknown-blog",
+      "safe_summary": "A blog claims a broad Rust rewrite is faster.",
+      "why_ai_coding_may_improve": "Unproven.",
+      "applicability_limits": "No source screening, profile evidence, or parity map.",
+      "validation_or_eval_idea": "",
+      "expected_route": ["reject"]
+    }
+  ]
+}

@@ -229,8 +229,16 @@ Initial `ExceptionEventRecord` fields:
   "agent": "codex|claude|cursor|human|ci|runtime",
   "model": "optional model name",
   "task": "short task summary",
-  "stage": "preflight|midflight|postflight|ci|runtime|review|release",
+  "stage": "preflight|midflight|postflight|ci|runtime|review|release|backfill",
   "event_type": "test_failure|runtime_exception|governance_block|review_finding|bypass|rollback|stale_artifact|harmful_recommendation|other",
+  "taxonomy_dimensions": {
+    "origin_surface": "command_runtime|test_validation|governance_control|...",
+    "detection_mode": "command_exit_or_timeout|schema_or_report_validation|...",
+    "impact_domain": "availability|correctness|security_privacy|...",
+    "learning_route": "fix_outcome_link|harness_update|policy_or_governance_update|...",
+    "default_handling": "direct_record_with_fix_outcome|manual_review|release_gate|...",
+    "review_priority": "critical|high|medium|low|info"
+  },
   "severity": "critical|high|medium|low|info",
   "status": "open|triaged|fixed|accepted|rejected|duplicate|archived",
   "context_refs": [],
@@ -877,6 +885,10 @@ Backfill safety and classification:
   learning route, default handling, and review priority. They are analytic triage
   labels only: they do not prove source truth, promote backfill candidates, or
   authorize cross-repo action.
+- Exception event packets also carry their registry-derived
+  `taxonomy_dimensions`. DAD overwrites repo-supplied dimensions during
+  collection and validation compares lake rows back to the reviewed registry, so
+  spoofed or stale classification labels cannot silently become source truth.
 
 Observed repo audit add-on:
 

@@ -38,6 +38,19 @@ def test_coding_asset_control_plane_validator_passes():
     assert "coding asset control plane valid" in result.stdout
 
 
+def test_language_frontier_harness_validator_passes():
+    result = subprocess.run(
+        [sys.executable, "scripts/validate_language_frontier_harness.py"],
+        cwd=ROOT,
+        text=True,
+        capture_output=True,
+        check=False,
+    )
+
+    assert result.returncode == 0, result.stdout + result.stderr
+    assert "language frontier harness valid" in result.stdout
+
+
 def test_suggest_coding_tactics_marks_output_candidate_only():
     result = subprocess.run(
         [
@@ -99,6 +112,7 @@ def test_coding_asset_schemas_are_registered_and_payloads_conform():
 
 def test_language_coding_advantage_registry_resolves_sources_and_assets():
     language_registry = load_json("registry/language-coding-advantage-registry.json")
+    harness_registry = load_json("registry/coding-harness-registry.json")
     trusted_source_ids = {
         source["source_id"] for source in load_json("registry/trusted-source-registry.json")["sources"]
     }
@@ -128,6 +142,9 @@ def test_language_coding_advantage_registry_resolves_sources_and_assets():
         languages["rust"]["trusted_source_ids"]
     )
     assert "rust-high-signal-codebases" in languages["rust"]["trusted_source_ids"]
+    harness_ids = {harness["harness_id"] for harness in harness_registry["harnesses"]}
+    assert "dad:harness:language-frontier-research" in harness_ids
+    assert "dad:offering:language-frontier-research-harness" in offering_ids
     trusted_sources = {
         source["source_id"]: source
         for source in load_json("registry/trusted-source-registry.json")["sources"]
@@ -177,6 +194,21 @@ def test_language_coding_advantage_registry_resolves_sources_and_assets():
         "rs-codebase:fuzz-security-test-frontier",
         "rs-codebase:mixed-python-rust-boundaries",
     }.issubset(rust_watch_targets)
+    for language_id in ("python", "rust", "future-language-template"):
+        route_ids = {
+            route["harness_id"] for route in languages[language_id]["harness_routes"]
+        }
+        assert "dad:harness:language-frontier-research" in route_ids
+    eval_payload = load_json(
+        "assets/coding-harnesses/language-frontier-research/tests-or-evals/minimum-eval.json"
+    )
+    assert eval_payload["harness_id"] == "dad:harness:language-frontier-research"
+    assert any("state of the art" in claim for claim in eval_payload["must_not_claim"])
+    assert any(
+        "copied docs" in item
+        for case in eval_payload["cases"]
+        for item in case["expected"] + case["fail_if"]
+    )
 
     for language in language_registry["languages"]:
         assert set(language["trusted_source_ids"]).issubset(trusted_source_ids)

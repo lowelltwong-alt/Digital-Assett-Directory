@@ -10,6 +10,8 @@ from jsonschema.validators import validator_for
 ROOT = Path(__file__).resolve().parents[1]
 REQUIRED_SCHEMA_KEYS = {
     "coding_asset_registry": "schemas/coding-asset-registry.schema.json",
+    "coding_harness": "schemas/coding-harness.schema.json",
+    "coding_harness_eval": "schemas/coding-harness-eval.schema.json",
     "coding_tactic": "schemas/coding-tactic.schema.json",
     "language_coding_advantage_registry": "schemas/language-coding-advantage-registry.schema.json",
     "preflight_profile_router": "schemas/preflight-profile-router.schema.json",
@@ -81,6 +83,7 @@ def main() -> int:
     router = load_json("registry/preflight-profile-router.json")
     trusted_sources = load_json("registry/trusted-source-registry.json")
     language_registry = load_json("registry/language-coding-advantage-registry.json")
+    harness_registry = load_json("registry/coding-harness-registry.json")
     dad_offerings = load_json("registry/dad-offerings-registry.json")
     reusable_assets = load_json("assets/asset-registry.json")
     feedback_template = load_json("templates/tactic-use-feedback.template.json")
@@ -123,18 +126,28 @@ def main() -> int:
 
     asset_ids = [asset["asset_id"] for asset in asset_registry.get("assets", [])]
     tactic_ids = [tactic["tactic_id"] for tactic in tactic_registry.get("tactics", [])]
+    harness_ids = [harness["harness_id"] for harness in harness_registry.get("harnesses", [])]
     route_ids = [route["route_id"] for route in router.get("routes", [])]
 
     require_unique(asset_ids, "coding asset registry", errors)
     require_unique(tactic_ids, "coding tactics radar", errors)
+    require_unique(harness_ids, "coding harness registry", errors)
     require_unique(route_ids, "preflight profile router", errors)
 
     known_assets = set(asset_ids)
     known_tactics = set(tactic_ids)
+    offering_ids = {offering["offering_id"] for offering in dad_offerings.get("offerings", [])}
+    reusable_asset_ids = {asset["asset_id"] for asset in reusable_assets.get("assets", [])}
+    known_related_assets = (
+        known_assets
+        | reusable_asset_ids
+        | offering_ids
+        | set(harness_ids)
+    )
     known_language_assets = (
         known_assets
-        | {asset["asset_id"] for asset in reusable_assets.get("assets", [])}
-        | {offering["offering_id"] for offering in dad_offerings.get("offerings", [])}
+        | reusable_asset_ids
+        | offering_ids
     )
     trusted_source_ids = {source["source_id"] for source in trusted_sources.get("sources", [])}
     trusted_sources_by_id = {
@@ -145,6 +158,59 @@ def main() -> int:
         require_path(asset["path"], f"asset {asset['asset_id']}", errors)
         for evidence in asset["source_evidence"]:
             require_local_evidence_path(evidence, f"asset {asset['asset_id']} evidence", errors)
+        for related_asset in asset.get("related_assets", []):
+            if related_asset not in known_related_assets:
+                errors.append(
+                    f"asset {asset['asset_id']} references unknown related asset "
+                    f"{related_asset}"
+                )
+
+    harness_schema_rel = "schemas/coding-harness.schema.json"
+    harness_eval_schema_rel = "schemas/coding-harness-eval.schema.json"
+    for harness in harness_registry.get("harnesses", []):
+        harness_id = harness["harness_id"]
+        validate_with_schema(harness, harness_schema_rel, f"harness {harness_id}", errors)
+        require_path(harness["path"], f"harness {harness_id}", errors)
+        harness_path = ROOT / harness["path"]
+        harness_json_path = harness_path / "harness.json"
+        if harness_json_path.exists():
+            harness_payload = load_json(str(harness_json_path.relative_to(ROOT)).replace("\\", "/"))
+            validate_with_schema(
+                harness_payload,
+                harness_schema_rel,
+                f"harness package {harness_id}",
+                errors,
+            )
+            if harness_payload.get("harness_id") != harness_id:
+                errors.append(
+                    f"harness package id mismatch: {harness_id} != "
+                    f"{harness_payload.get('harness_id')}"
+                )
+        else:
+            errors.append(f"harness {harness_id} missing harness.json")
+        for folder in ["scripts", "tests-or-evals", "examples"]:
+            folder_path = harness_path / folder
+            if not folder_path.exists():
+                errors.append(f"harness {harness_id} missing {folder}/")
+                continue
+            real_artifacts = [
+                item for item in folder_path.glob("*") if item.is_file() and item.name != "README.md"
+            ]
+            if not real_artifacts:
+                errors.append(f"harness {harness_id} has no real artifact in {folder}/")
+        for eval_path in sorted((harness_path / "tests-or-evals").glob("*.json")):
+            eval_payload = load_json(str(eval_path.relative_to(ROOT)).replace("\\", "/"))
+            validate_with_schema(
+                eval_payload,
+                harness_eval_schema_rel,
+                f"harness eval {harness_id} {eval_path.name}",
+                errors,
+            )
+            if eval_payload.get("harness_id") != harness_id:
+                errors.append(
+                    f"harness eval/id mismatch: {harness_id} != "
+                    f"{eval_payload.get('harness_id')}"
+                )
 
     for language in language_registry.get("languages", []):
         language_id = language["language_id"]
@@ -162,6 +228,12 @@ def main() -> int:
             if asset_id not in known_language_assets:
                 errors.append(
                     f"language {language_id} references unknown primary asset {asset_id}"
+                )
+        for harness_route in language.get("harness_routes", []):
+            harness_id = str(harness_route.get("harness_id", ""))
+            if harness_id != "candidate-required" and harness_id not in harness_ids:
+                errors.append(
+                    f"language {language_id} references unknown harness route {harness_id}"
                 )
         require_unique(
             [item["guideline_id"] for item in language["agent_coding_guidelines"]],

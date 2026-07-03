@@ -204,6 +204,27 @@ def test_harness_recommend_routes_to_rust_shadow_harness(tmp_path: Path):
     assert "dad:harness:rust-shadow-parity" in ids
 
 
+def test_harness_recommend_routes_language_frontier_research(tmp_path: Path):
+    repo = _context_repo(tmp_path)
+
+    result = recommend_harnesses(
+        ROOT,
+        repo,
+        task="python rust language frontier underused compiler typing fuzz tooling research",
+        limit=5,
+    )
+
+    ids = [item["harness_id"] for item in result["recommendations"]]
+    assert "dad:harness:language-frontier-research" in ids
+    match = next(
+        item
+        for item in result["recommendations"]
+        if item["harness_id"] == "dad:harness:language-frontier-research"
+    )
+    assert match["decision"] in {"save_for_future", "needs_human_review", "use_now"}
+    assert match["methodology_id"] == "dad-usefulness-methodology-v0.1"
+
+
 def test_usage_record_writes_local_and_central_ledgers_and_reports_upgrades(tmp_path: Path):
     hub = tmp_path / "hub"
     hub.mkdir()

@@ -242,6 +242,51 @@
       ],
       "review_status": "candidate",
       "authority_boundary": "The harness proves supplied synthetic learning-readiness cases only. It does not promote lessons, prove real repo completeness, or override source authority."
+    },
+    {
+      "harness_id": "dad:harness:language-frontier-research",
+      "name": "Language Frontier Research",
+      "version": "0.1.0",
+      "path": "assets/coding-harnesses/language-frontier-research",
+      "family": "language_frontier_research",
+      "status": "candidate",
+      "languages": ["python", "rust", "mixed", "agent-instruction"],
+      "repo_types": ["control_plane", "application", "library", "research_repo", "template_repo"],
+      "domains": ["software_engineering", "ai_engineering", "code_research"],
+      "context_tags": ["language_frontier", "python", "rust", "research_intake", "harness_research"],
+      "task_types": ["coding", "refactor", "performance", "code_research", "harness_research", "language_guidance"],
+      "capabilities": [
+        "frontier_source_screening",
+        "language_pattern_triage",
+        "overlooked_pattern_capture",
+        "local_validation_gate",
+        "promotion_rejection_check"
+      ],
+      "public_safe": true,
+      "entrypoints": [
+        "README.md",
+        "harness.json",
+        "examples/frontier-intake-cases.json",
+        "tests-or-evals/minimum-eval.json"
+      ],
+      "research_questions": [
+        "Can a Python, Rust, or future-language discovery be converted into pointer-only DAD guidance without copying external or private content?",
+        "Does the discovery name a proof tool, validation command, or harness case before DAD changes coding defaults?",
+        "Can DAD reject speed, safety, or novelty claims that lack local evidence or applicability limits?"
+      ],
+      "validation_commands": [
+        "python scripts/validate_language_frontier_harness.py",
+        "python scripts/validate_coding_asset_control_plane.py",
+        "python -m pytest tests/test_coding_asset_control_plane.py -q"
+      ],
+      "source_evidence": [
+        "docs/LANGUAGE_CODING_ADVANTAGE.md",
+        "registry/language-coding-advantage-registry.json",
+        "registry/trusted-source-registry.json",
+        "registry/harness-discovery-methodology.json"
+      ],
+      "review_status": "candidate",
+      "authority_boundary": "The harness screens language-frontier ideas into candidate DAD guidance only. It does not prove state-of-the-art status, install dependencies, copy third-party content, or authorize downstream repo mutation."
     }
   ]
 }

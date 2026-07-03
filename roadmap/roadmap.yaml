@@ -190,7 +190,12 @@ phases:
     acceptance:
       required_files:
         - docs/RESEARCH_INTAKE_PIPELINE.md
+        - docs/LANGUAGE_CODING_ADVANTAGE.md
         - registry/trusted-source-registry.json
+        - registry/language-coding-advantage-registry.json
+        - registry/coding-harness-registry.json
+        - assets/coding-harnesses/language-frontier-research/harness.json
+        - assets/coding-harnesses/language-frontier-research/tests-or-evals/minimum-eval.json
         - assets/rust-buildout-guide/rust-buildout.json
         - assets/python-underused-idioms/idioms.json
       human_gates:

@@ -1,7 +1,7 @@
 # Research Intake Pipeline
 
 How external research becomes actual library entries. External content never skips
-quarantine, screening, or a named human approval — trust tiers only lower intake
+quarantine, screening, or a named human approval -- trust tiers only lower intake
 friction.
 
 ## Flow
@@ -27,7 +27,7 @@ research report entry (processed/research/*.json)
   where to look for Rust, Python, mixed-language, and future-language coding
   improvements. They are watch instructions only; they do not promote content.
 - **Screening**: all four checks must be `pass`/`not_applicable` before promotion. A
-  `fail` returns the record to quarantine. Skills are third-party instructions — the
+  `fail` returns the record to quarantine. Skills are third-party instructions -- the
   prompt-injection check is not optional for them.
 - **Promotion**: requires `--approved-by <named human>` (agent/unknown rejected) and
   `--approval-id`. Runs `check_offering_novelty` first and blocks `duplicate` /
@@ -37,7 +37,7 @@ research report entry (processed/research/*.json)
   skill library as `pointer_only` format with checkout mode `pointer`, update policy
   `manual_review`, and a 90-day review due date.
 - **Re-screening**: if the upstream changes, the promoted row's `does_not_apply_when`
-  says so — re-run screening before continued reuse.
+  says so -- re-run screening before continued reuse.
 
 ## Commands
 
@@ -56,6 +56,7 @@ DAD currently watches Rust and Python frontier sources as candidate input for:
 - `assets/python-underused-idioms/`
 - `assets/coding-harnesses/rust-shadow-parity-harness/`
 - `assets/coding-harnesses/python-test-performance-orchestration/`
+- `assets/coding-harnesses/language-frontier-research/`
 - future coding harnesses and skill pointers
 
 Rust checks should prioritize official project updates, RFCs, compiler/cargo
@@ -70,6 +71,7 @@ to inspect. PEP drafts and benchmark claims stay candidate-only until reviewed.
 
 When a repo finds a language idea worth teaching DAD, it should send
 `dad:need:language-frontier-signals` mail with a source pointer, short safe
-summary, applicability limits, validation idea, and suggested destination
-(idiom card, buildout guide, harness, template, or skill pointer). Repos must not
-copy third-party content, private rows, raw logs, or source blobs into that mail.
+summary, applicability limits, proof surface, validation idea, and suggested
+destination (idiom card, buildout guide, harness, tactic radar, template, or
+skill pointer). Repos must not copy third-party content, private rows, raw logs,
+or source blobs into that mail.

@@ -57,9 +57,10 @@ files under `tests-or-evals/` must conform to
 - Public/private source provenance.
 - Exception learning readiness for mixed-evidence, fix-outcome, release, and
   backfill promotion boundaries.
-- Language frontier harnesses for Python, Rust, and future languages. These
-  convert source-watch discoveries into small validation cases before DAD
-  changes coding guidance or downstream recommendations.
+- `assets/coding-harnesses/language-frontier-research/` for Python, Rust,
+  mixed-language, and future-language frontier intake. It converts source-watch
+  discoveries into small validation cases before DAD changes coding guidance or
+  downstream recommendations.
 
 ## Language Frontier Harness Rule
 
@@ -76,6 +77,11 @@ DAD should ask whether it needs a harness before it becomes advice:
 
 If a discovery cannot name a validation command or eval idea, it stays as a
 pointer-only research note.
+
+The first-pass harness is
+`assets/coding-harnesses/language-frontier-research/`. Its minimum eval defines
+the routing, rejection, and proof-surface cases; the executable check is
+`python scripts/validate_language_frontier_harness.py`.
 
 ## Adoption Flow
 

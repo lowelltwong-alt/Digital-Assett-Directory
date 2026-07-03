@@ -63,6 +63,7 @@
         "internals.rust-lang.org",
         "rust-lang.github.io",
         "rust-lang.github.io/rust-project-goals",
+        "rustc-dev-guide.rust-lang.org",
         "doc.rust-lang.org",
         "github.com/rust-lang",
         "github.com/rust-lang/rfcs",

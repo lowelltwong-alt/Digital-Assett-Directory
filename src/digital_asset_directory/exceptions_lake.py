@@ -41,6 +41,8 @@ LEARNING_READINESS_SCENARIOS_SCHEMA = (
 EXCEPTION_EVENT_SCHEMA = Path("schemas") / "exception-event.schema.json"
 EXCEPTION_FIX_SCHEMA = Path("schemas") / "exception-fix-outcome.schema.json"
 BACKFILL_RUNS_DIR = Path("processed") / "exceptions" / "backfill-runs"
+EXCEPTION_EVENT_TYPE_REGISTRY = Path("registry") / "exception-event-type-registry.json"
+EXCEPTION_LEARNING_METHODOLOGY = Path("registry") / "exception-learning-methodology.json"
 
 SCHEMA_VERSION = "0.1.0"
 MAX_STRING_CHARS = 1200
@@ -688,6 +690,11 @@ def event_type_taxonomy_dimensions(hub_root: Path) -> dict[str, dict[str, str]]:
     }
 
 
+def taxonomy_dimensions_for_event_type(hub_root: Path, event_type: str) -> dict[str, str]:
+    taxonomy_by_type = event_type_taxonomy_dimensions(hub_root)
+    return dict(taxonomy_by_type.get(event_type, _unknown_taxonomy_dimensions()))
+
+
 def normalize_event_type(hub_root: Path, event_type: str) -> str:
     cleaned = _slug(event_type.replace(":", "_")).replace("-", "_")
     return cleaned if cleaned in event_type_set(hub_root) else FALLBACK_EVENT_TYPE
@@ -883,6 +890,10 @@ def build_exception_event(
         "surface": capture_contract,
         "evidence_kind": "metadata_pointer",
         "event_type": normalized_event_type,
+        "taxonomy_dimensions": taxonomy_dimensions_for_event_type(
+            hub_root,
+            normalized_event_type,
+        ),
         "severity": severity,
         "status": "open",
         "outcome_status": "unresolved",
@@ -1025,6 +1036,10 @@ def normalize_exception_packet(
         record = dict(packet)
         record = _canonicalize_normalized_packet(record, repo, repo_policies=repo_policies)
         record["event_type"] = normalize_event_type(hub_root, str(record.get("event_type", "")))
+        record["taxonomy_dimensions"] = taxonomy_dimensions_for_event_type(
+            hub_root,
+            str(record["event_type"]),
+        )
         record["event_id"] = stable_exception_event_id(record)
         if not record.get("dedupe_key"):
             record["dedupe_key"] = stable_id("exception-dedupe", str(record["event_id"]))
@@ -2349,6 +2364,7 @@ def write_exception_report(hub_root: Path) -> dict[str, Any]:
         "fix_outcomes_by_decision": dict(sorted(fix_by_decision.items())),
         "fix_outcomes_by_validation_status": dict(sorted(fix_by_validation.items())),
         "latest_backfill_wave": latest_backfill_wave,
+        "input_hashes": _exception_report_input_hashes(hub_root),
         "lake_path": LAKE_PATH.as_posix(),
         "fix_outcomes_path": FIX_OUTCOME_PATH.as_posix(),
         "quarantine_path": QUARANTINE_DIR.as_posix(),
@@ -2419,10 +2435,25 @@ def write_exception_report(hub_root: Path) -> dict[str, Any]:
     return report
 
 
+def _exception_report_input_hashes(hub_root: Path) -> dict[str, str]:
+    refs = [
+        LAKE_PATH,
+        FIX_OUTCOME_PATH,
+        EXCEPTION_EVENT_TYPE_REGISTRY,
+        EXCEPTION_LEARNING_METHODOLOGY,
+    ]
+    return {
+        ref.as_posix(): (
+            f"sha256:{sha256_file(hub_root / ref)}" if (hub_root / ref).exists() else "missing"
+        )
+        for ref in refs
+    }
+
+
 def _exception_learning_queue_input_hashes(hub_root: Path) -> dict[str, str]:
     refs = [
-        Path("registry") / "exception-event-type-registry.json",
-        Path("registry") / "exception-learning-methodology.json",
+        EXCEPTION_EVENT_TYPE_REGISTRY,
+        EXCEPTION_LEARNING_METHODOLOGY,
         LAKE_PATH,
         FIX_OUTCOME_PATH,
         Path("src") / "digital_asset_directory" / "exceptions_lake.py",

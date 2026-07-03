@@ -68,9 +68,21 @@
       "keywords": ["asset", "catalog", "orphan", "radar", "discover", "recognize", "graph", "library", "useful"],
       "weight": 14,
       "reason": "DAD needs repeatable methods for recognizing useful assets and preserving source pointers."
+    },
+    {
+      "signal_id": "language-frontier-research",
+      "candidate_family": "language_frontier_research",
+      "keywords": ["python", "rust", "language", "frontier", "crate", "package", "typing", "compiler", "fuzz", "lint", "tooling", "idiom", "underused"],
+      "weight": 15,
+      "reason": "Language and tooling discoveries need pointer-only screening, proof-surface identification, and local validation before they become DAD coding guidance."
     }
   ],
   "candidate_harness_families": [
+    {
+      "family": "language_frontier_research",
+      "goal": "Convert Python, Rust, mixed-language, and future-language research signals into candidate DAD guidance with source screening, proof tools, applicability limits, and validation cases.",
+      "first_pass_artifacts": ["harness.json", "README.md", "research-notes.md", "tests-or-evals/minimum-eval.json"]
+    },
     {
       "family": "asset_recognition",
       "goal": "Find high-value reusable digital assets from repo scans without copying sensitive content.",

@@ -302,7 +302,10 @@
       "recommended_for_repo_types": ["persistent_software_repo", "template_repo", "research_repo"],
       "recommended_for_task_types": ["coding", "refactor", "performance", "code_research", "harness_research"],
       "authority_boundary": "Candidate language guidance only; repo-local authority, validation, and human gates decide adoption.",
-      "validation_commands": ["python scripts/validate_coding_asset_control_plane.py"],
+      "validation_commands": [
+        "python scripts/validate_language_frontier_harness.py",
+        "python scripts/validate_coding_asset_control_plane.py"
+      ],
       "upgrade_policy": "candidate_then_human_reviewed_promotion",
       "review_status": "candidate",
       "last_reviewed_at": "2026-07-03",
@@ -315,7 +318,10 @@
       "related_assets": [
         "asset:python-ai-advantage-preflight",
         "asset:coding-tactics-radar",
-        "asset:preflight-profile-router"
+        "asset:preflight-profile-router",
+        "language-frontier-research-harness",
+        "dad:offering:language-frontier-research-harness",
+        "dad:harness:language-frontier-research"
       ]
     }
   ]

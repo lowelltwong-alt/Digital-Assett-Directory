@@ -1,0 +1,98 @@
+{
+  "schema_version": "0.1.0",
+  "eval_id": "dad:eval:language-frontier-research:minimum",
+  "harness_id": "dad:harness:language-frontier-research",
+  "status": "candidate",
+  "purpose": "Check whether Python, Rust, mixed-language, and future-language discoveries stay pointer-only, route to the right DAD asset, and require local proof before promotion.",
+  "input_contract": [
+    "language",
+    "source_id_or_url",
+    "safe_summary",
+    "why_ai_coding_may_improve",
+    "applicability_limits",
+    "validation_or_eval_idea"
+  ],
+  "cases": [
+    {
+      "case_id": "accept-python-property-boundary-as-candidate",
+      "given": [
+        "language=python",
+        "source_id_or_url=hypothesis",
+        "safe_summary=property test for JSON normalization",
+        "validation_or_eval_idea=round-trip invariant test"
+      ],
+      "expected": [
+        "candidate route includes Python advantage assets or coding tactics radar",
+        "requires repo-local dependency/tool approval",
+        "does not copy generated counterexamples into DAD mail"
+      ],
+      "fail_if": [
+        "the case is promoted as reviewed without local outcome evidence",
+        "the case omits applicability limits",
+        "the case stores raw private inputs"
+      ]
+    },
+    {
+      "case_id": "hold-rust-speed-claim-without-parity",
+      "given": [
+        "language=rust",
+        "source_id_or_url=unknown blog",
+        "safe_summary=Rust rewrite will be faster",
+        "validation_or_eval_idea=empty"
+      ],
+      "expected": [
+        "reject or defer as benchmark-only",
+        "requires profile evidence and same-scope parity before timing claims",
+        "routes to Rust buildout guide only as a cautionary candidate"
+      ],
+      "fail_if": [
+        "the case recommends a downstream Rust rewrite",
+        "the case claims speed without same-workload timing",
+        "the case treats popularity or novelty as proof"
+      ]
+    },
+    {
+      "case_id": "block-copied-docs-or-private-data",
+      "given": [
+        "language=mixed",
+        "source_id_or_url=python-core",
+        "safe_summary=contains copied documentation or private repo rows",
+        "validation_or_eval_idea=manual review"
+      ],
+      "expected": [
+        "reject copied docs, copied source blobs, private rows, secrets, raw logs, and long benchmark excerpts",
+        "allow only pointer, hash, short summary, applicability limits, and validation idea"
+      ],
+      "fail_if": [
+        "external text is stored as DAD source truth",
+        "private-origin content can flow to public-facing repos without human release",
+        "redaction count is treated as proof of safety"
+      ]
+    },
+    {
+      "case_id": "future-language-needs-proof-tool",
+      "given": [
+        "language=future-language",
+        "source_id_or_url=official language docs",
+        "safe_summary=new language may help AI coding",
+        "validation_or_eval_idea=missing proof tool"
+      ],
+      "expected": [
+        "create or keep candidate-only future-language row",
+        "require compiler, linter, type checker, test runner, fuzzer, profiler, package auditor, runtime tracer, or schema validator",
+        "require at least one negative or failure example"
+      ],
+      "fail_if": [
+        "the language becomes recommendable from popularity alone",
+        "the record lacks avoid-when limits",
+        "the record lacks a harness or validation route"
+      ]
+    }
+  ],
+  "must_not_claim": [
+    "This harness proves a technique is state of the art.",
+    "A trusted source tier authorizes copying docs or code.",
+    "A language-frontier candidate overrides repo-local style, tests, security, source authority, or human gates."
+  ],
+  "promotion_gate": "Promote only after source screening, local validation or harness outcome, applicability limits, rejection signals, and postflight/usage feedback."
+}

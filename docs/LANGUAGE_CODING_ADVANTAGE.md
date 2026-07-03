@@ -16,6 +16,7 @@ The source of truth is:
 - `schemas/language-coding-advantage-registry.schema.json`
 - `registry/trusted-source-registry.json`
 - `registry/coding-tactics-radar.json`
+- `assets/coding-harnesses/language-frontier-research/`
 - language assets such as `assets/python-ai-advantage-preflight/`,
   `assets/python-underused-idioms/`, and `assets/rust-buildout-guide/`
 
@@ -74,6 +75,12 @@ deterministic failure.
 Postflight should record what helped, failed, was ignored, or was harmful. Useful
 language discoveries go through `dad:need:language-frontier-signals`; harness
 outcomes go through `dad:need:coding-harness-feedback`.
+
+For new Python, Rust, mixed-language, or future-language ideas, route the first
+screen through `assets/coding-harnesses/language-frontier-research/`. That
+harness asks for a source pointer, safe summary, applicability limits, proof
+surface, and validation idea before DAD changes a tactic, idiom card, buildout
+guide, or downstream recommendation.
 
 ## Internal Guidelines And Codebase Study
 
@@ -210,7 +217,8 @@ code, examples, benchmarks, or generated corpora into DAD mail.
 
 | Topic | Starting URLs | Intake Rule |
 | --- | --- | --- |
-| Rust official direction | `https://blog.rust-lang.org/`, `https://blog.rust-lang.org/inside-rust/`, `https://rust-lang.github.io/rust-project-goals/`, `https://github.com/rust-lang/rfcs` | Capture stabilized features, project goals, RFCs, and toolchain shifts as candidates. Do not treat drafts as adopted rules. |
+| Rust official direction | `https://blog.rust-lang.org/`, `https://blog.rust-lang.org/inside-rust/`, `https://rust-lang.github.io/rust-project-goals/`, `https://github.com/rust-lang/rfcs`, `https://doc.rust-lang.org/reference/`, `https://doc.rust-lang.org/unstable-book/`, `https://rust-lang.github.io/api-guidelines/` | Capture stabilized features, project goals, RFCs, reference changes, API design guidance, and toolchain shifts as candidates. Do not treat drafts, nightly-only features, or unstable-book entries as adopted rules. |
+| Rust compiler and tooling practice | `https://rustc-dev-guide.rust-lang.org/`, `https://github.com/rust-lang/rust-analyzer`, `https://github.com/rust-lang/rust-clippy`, `https://github.com/rust-lang/miri`, `https://doc.rust-lang.org/cargo/` | Watch compiler diagnostics, source-analysis, lint, interpreter, and Cargo workflows that could become deterministic DAD checks or AI-legibility patterns. |
 | Rust implementation practice | `https://this-week-in-rust.org/`, `https://nnethercote.github.io/perf-book/`, `https://tokio.rs/blog`, `https://blessed.rs/`, `https://lib.rs/`, `https://docs.rs/` | Route crates and techniques to harness research first, especially scanners, parsers, chunkers, hashing, async boundaries, and CLI tooling. |
 | Rust safety/testing | `https://rustsec.org/`, `https://rust-fuzz.github.io/book/`, `https://nexte.st/`, `https://doc.rust-lang.org/clippy/` | Turn security, fuzzing, Clippy, and test-runner ideas into validation plans before changing defaults. |
 | Python official direction | `https://docs.python.org/3/whatsnew/`, `https://peps.python.org/`, `https://blog.python.org/`, `https://devguide.python.org/`, `https://typing.python.org/` | Capture version, typing, diagnostics, packaging, and stdlib changes with target Python version and checker/tool support. |

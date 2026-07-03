@@ -15,11 +15,14 @@ from digital_asset_directory.validation import (
     _candidate_path_scan_staleness_errors,
     _contains_local_path_ref,
     _contains_readable_repo_relative_ref,
+    _exception_event_taxonomy_by_type,
+    _exception_lake_taxonomy_consistency_errors,
     _fix_outcome_semantic_errors,
     _language_registry_semantic_errors,
     _path_identity_hash,
     _resolve_observed_audit_repo,
     _source_provenance_consistency_errors,
+    _stale_report_input_hash_errors,
     validate_repo,
 )
 
@@ -179,6 +182,63 @@ def test_exception_validation_flags_provenance_mismatch():
 
     assert any("source_repo does not match" in error for error in errors)
     assert any("source_visibility does not match" in error for error in errors)
+
+
+def test_exception_lake_taxonomy_validation_rejects_stale_dimensions():
+    registry = _load_json("registry/exception-event-type-registry.json")
+    event_taxonomy = _exception_event_taxonomy_by_type(registry)
+    event = {
+        "event_type": "secret_or_pii_detected",
+        "taxonomy_dimensions": {
+            "origin_surface": "unknown",
+            "detection_mode": "unknown",
+            "impact_domain": "unknown",
+            "learning_route": "unknown",
+            "default_handling": "unknown",
+            "review_priority": "info",
+        },
+    }
+
+    errors = _exception_lake_taxonomy_consistency_errors(
+        event,
+        event_taxonomy,
+        line_number=12,
+    )
+
+    assert errors == [
+        "Exception lake event taxonomy_dimensions do not match "
+        "registry defaults on line 12: secret_or_pii_detected"
+    ]
+
+
+def test_stale_report_input_hash_errors_detect_changed_exception_report_input(
+    tmp_path: Path,
+):
+    repo = tmp_path / "repo"
+    input_path = repo / "processed" / "exceptions" / "lake" / "events.jsonl"
+    report_path = repo / "processed" / "reports" / "exceptions_lake.json"
+    input_path.parent.mkdir(parents=True)
+    report_path.parent.mkdir(parents=True)
+    input_path.write_text("{}\n", encoding="utf-8")
+    report = {
+        "input_hashes": {
+            "processed/exceptions/lake/events.jsonl": "sha256:stale",
+        }
+    }
+
+    errors = _stale_report_input_hash_errors(repo, report_path, report)
+
+    assert errors == [
+        "Stale report input hash processed/reports/exceptions_lake.json "
+        "processed/exceptions/lake/events.jsonl: sha256:stale != "
+        f"{_load_current_hash(input_path)}"
+    ]
+
+
+def _load_current_hash(path: Path) -> str:
+    from digital_asset_directory.validation import _hash_path
+
+    return _hash_path(path)
 
 
 def test_observed_audit_external_repo_resolves_by_reviewed_path_hash(tmp_path: Path):

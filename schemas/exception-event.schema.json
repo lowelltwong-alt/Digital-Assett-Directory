@@ -21,6 +21,7 @@
     "surface",
     "evidence_kind",
     "event_type",
+    "taxonomy_dimensions",
     "severity",
     "status",
     "outcome_status",
@@ -117,6 +118,26 @@
       "enum": ["metadata_pointer", "command_metadata", "validation_result", "review_note", "fix_outcome", "backfill_path_signal"]
     },
     "event_type": { "type": "string", "minLength": 1 },
+    "taxonomy_dimensions": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "origin_surface",
+        "detection_mode",
+        "impact_domain",
+        "learning_route",
+        "default_handling",
+        "review_priority"
+      ],
+      "properties": {
+        "origin_surface": { "type": "string", "minLength": 1 },
+        "detection_mode": { "type": "string", "minLength": 1 },
+        "impact_domain": { "type": "string", "minLength": 1 },
+        "learning_route": { "type": "string", "minLength": 1 },
+        "default_handling": { "type": "string", "minLength": 1 },
+        "review_priority": { "type": "string", "minLength": 1 }
+      }
+    },
     "severity": { "type": "string", "enum": ["critical", "high", "medium", "low", "info"] },
     "status": {
       "type": "string",

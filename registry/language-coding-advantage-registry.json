@@ -359,6 +359,15 @@
             "same-input same-output parity report",
             "native Python validation result"
           ]
+        },
+        {
+          "harness_id": "dad:harness:language-frontier-research",
+          "use_when": "A Python source, idiom, package, typing feature, or testing technique might become DAD guidance.",
+          "evidence_required": [
+            "trusted source pointer or explicit source justification",
+            "safe summary with applicability limits",
+            "local validation idea or command before promotion"
+          ]
         }
       ],
       "validation_gates": [
@@ -641,6 +650,18 @@
             },
             {
               "source_id": "rust-lang",
+              "ref": "https://rustc-dev-guide.rust-lang.org/",
+              "review_status": "reviewed",
+              "provenance_note": "Official rustc development guide; pointer-only compiler implementation and diagnostics source."
+            },
+            {
+              "source_id": "rust-lang",
+              "ref": "https://github.com/rust-lang/miri",
+              "review_status": "reviewed",
+              "provenance_note": "Official Miri repository; pointer-only Rust interpreter and undefined-behavior checking source."
+            },
+            {
+              "source_id": "rust-lang",
               "ref": "https://rust-lang.github.io/rust-project-goals/",
               "review_status": "reviewed",
               "provenance_note": "Official Rust project goals; pointer-only planning source."
@@ -834,6 +855,15 @@
             "local repo authority check",
             "validation commands"
           ]
+        },
+        {
+          "harness_id": "dad:harness:language-frontier-research",
+          "use_when": "A Rust source, crate, tool, compiler feature, or parser/scanner/fuzzing pattern might become DAD guidance.",
+          "evidence_required": [
+            "trusted source pointer or explicit source justification",
+            "safe summary with avoid-when limits",
+            "profile, fuzz/property, clippy/test, or parity validation idea before promotion"
+          ]
         }
       ],
       "validation_gates": [
@@ -1018,6 +1048,15 @@
         ]
       },
       "harness_routes": [
+        {
+          "harness_id": "dad:harness:language-frontier-research",
+          "use_when": "A future language or toolchain is being considered for DAD guidance.",
+          "evidence_required": [
+            "official or reviewed source pointer",
+            "named proof tool such as compiler, linter, type checker, test runner, fuzzer, profiler, package auditor, runtime tracer, or schema validator",
+            "one negative or failure example"
+          ]
+        },
         {
           "harness_id": "candidate-required",
           "use_when": "A future language is proposed for DAD guidance.",

@@ -103,7 +103,12 @@ Send a safe pointer/hash or quarantine/defer for human review.
 ```
 
 DAD also accepts already-normalized `ExceptionEventRecord` rows conforming to
-`schemas/exception-event.schema.json`.
+`schemas/exception-event.schema.json`. Minimal packets may omit
+`taxonomy_dimensions`; DAD derives them from the reviewed
+`registry/exception-event-type-registry.json` during collection. If a repo sends
+an already-normalized row with `taxonomy_dimensions`, DAD still overwrites those
+dimensions from the reviewed registry so stale or spoofed labels cannot become
+source truth.
 
 ## Fix Outcomes
 
