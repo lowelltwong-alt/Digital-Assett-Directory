@@ -1165,6 +1165,38 @@ def test_observed_capture_audit_uses_registry_backfill_classifier(tmp_path: Path
     assert signal["suggested_event_type"] == "tool_unavailable"
     assert signal["pattern_family"] == "exception_pattern"
     assert signal["path_redacted"] == "true"
+    assert signal["source_rule_id"] == "backfill-rule:tool-unavailable"
+    assert signal["classification_source"] == "backfill_classifier"
+
+
+def test_observed_capture_audit_summarizes_candidate_signal_mix(tmp_path: Path) -> None:
+    repo = tmp_path / "repo-signal-summary"
+    docs = repo / "docs"
+    docs.mkdir(parents=True)
+    (docs / "asset-dir-unavailable.md").write_text(
+        "metadata-only pointer to DAD CLI fallback behavior",
+        encoding="utf-8",
+    )
+    (docs / "red-team-review.md").write_text("metadata-only review pointer", encoding="utf-8")
+
+    report = write_observed_capture_audit(ROOT, [repo], output=tmp_path / "audit.json")
+    row = report["repos"][0]
+    row_summary = row["candidate_path_signal_summary"]
+    report_summary = report["candidate_path_signal_summary"]
+    md_text = (tmp_path / "audit.md").read_text(encoding="utf-8")
+
+    assert row_summary["total"] == 2
+    assert row_summary["by_suggested_event_type"]["tool_unavailable"] == 1
+    assert row_summary["by_suggested_event_type"]["review_finding"] == 1
+    assert row_summary["by_source_rule_id"]["backfill-rule:tool-unavailable"] == 1
+    assert row_summary["by_source_rule_id"]["backfill-rule:review-finding"] == 1
+    assert row_summary["by_emission_status"]["gap_candidate"] == 2
+    assert report_summary == row_summary
+    assert "## Candidate Suggested Event Types" in md_text
+    assert "`tool_unavailable`: 1" in md_text
+    assert "`review_finding`: 1" in md_text
+    assert "`backfill-rule:tool-unavailable`: 1" in md_text
+    assert "`backfill-rule:review-finding`: 1" in md_text
 
 
 def test_observed_capture_audit_redacts_embedded_local_paths_even_internal(
@@ -1412,10 +1444,16 @@ def test_observed_capture_audit_flags_truncated_candidate_scan(tmp_path: Path) -
     audit_md = (tmp_path / "audit.md").read_text(encoding="utf-8")
 
     assert row["candidate_path_scan"]["truncated"] is True
+    assert row["candidate_path_signal_summary"]["count_scope"] == "bounded_first_n_path_matches"
+    assert row["candidate_path_signal_summary"]["truncated_repo_count"] == 1
+    assert row["candidate_path_signal_summary"]["omitted_signal_count_unknown"] is True
+    assert report["candidate_path_signal_summary"]["count_scope"] == "bounded_first_n_path_matches"
+    assert report["candidate_path_signal_summary"]["truncated_repo_count"] == 1
     assert "candidate_path_scan_truncated" in row["status_flags"]
     assert report["status_counts"]["candidate_path_scan_truncated"] == 1
     assert _capture_audit_gap_count(report, strict=False) >= 1
     assert "candidate_path_scan_truncated" in audit_md
+    assert "bounded first-N samples" in audit_md
 
 
 def test_exception_backfill_readiness_reports_policy_gates(tmp_path: Path) -> None:
@@ -1476,11 +1514,31 @@ def test_exception_backfill_readiness_reports_policy_gates(tmp_path: Path) -> No
     assert rows["ready-external"]["backfill_readiness"] == "ready_with_reviewed_approval"
     assert rows["ready-external"]["blocked_reasons"] == []
     assert rows["ready-external"]["candidate_path_signal_count"] == 1
+    assert rows["ready-external"]["candidate_path_signal_summary"]["total"] == 1
     assert rows["protected"]["backfill_readiness"] == "central_only_or_blocked"
     assert any("write_protected" in reason for reason in rows["protected"]["blocked_reasons"])
     assert rows["blocked"]["backfill_readiness"] == "blocked_by_policy_or_no_signals"
     assert "backfill_allowed=false" in rows["blocked"]["blocked_reasons"]
     assert report["readiness_counts"]["ready_with_reviewed_approval"] == 1
+    assert report["candidate_path_signal_summary"]["total"] == 3
+    assert (
+        "registry/exception-event-type-registry.json"
+        in report["input_hashes"]
+    )
+    assert (
+        report["candidate_path_signal_summary"]["by_suggested_event_type"][
+            "backfill_exception_candidate"
+        ]
+        == 3
+    )
+    assert (
+        report["candidate_path_signal_summary"]["by_source_rule_id"][
+            "backfill-rule:generic-exception"
+        ]
+        == 3
+    )
     assert "Boundary: central planning evidence only" in md_text
+    assert "## Candidate Suggested Event Types" in md_text
+    assert "`backfill_exception_candidate`: 3" in md_text
     assert str(tmp_path) not in json.dumps(report)
     assert str(tmp_path) not in md_text

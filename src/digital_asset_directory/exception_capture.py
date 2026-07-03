@@ -826,11 +826,97 @@ def _path_signal_record(
         "path_hash": f"sha256:{sha256_bytes(rel.encode('utf-8'))}",
         "path_redacted": str(not include_safe_path).lower(),
     }
+    for optional_key in (
+        "source_rule_id",
+        "source_registry",
+        "classification_source",
+    ):
+        value = str(metadata.get(optional_key, "")).strip()
+        if value:
+            record[optional_key] = value
     if include_path and not include_safe_path:
         record["path_redacted_reason"] = "private_path_fragment"
     if include_safe_path:
         record["path"] = rel
     return record
+
+
+def _counter_dict(counter: Counter[str]) -> dict[str, int]:
+    return {key: counter[key] for key in sorted(counter)}
+
+
+def _candidate_signal_summary(
+    signals: list[dict[str, Any]],
+    *,
+    candidate_limit: int | None = None,
+    truncated_repo_count: int = 0,
+) -> dict[str, Any]:
+    suggested_event_types = Counter(
+        str(item.get("suggested_event_type") or "<none>") for item in signals
+    )
+    source_rule_ids = Counter(
+        str(item.get("source_rule_id") or "<builtin_path_term>") for item in signals
+    )
+    summary: dict[str, Any] = {
+        "total": len(signals),
+        "count_scope": (
+            "bounded_first_n_path_matches"
+            if truncated_repo_count
+            else "complete_for_scanned_paths"
+        ),
+        "truncated_repo_count": truncated_repo_count,
+        "omitted_signal_count_unknown": bool(truncated_repo_count),
+        "by_pattern_family": _counter_dict(
+            Counter(str(item.get("pattern_family") or "<unknown>") for item in signals)
+        ),
+        "by_suggested_event_type": _counter_dict(suggested_event_types),
+        "by_expected_review": _counter_dict(
+            Counter(str(item.get("expected_review") or "<unknown>") for item in signals)
+        ),
+        "by_emission_status": _counter_dict(
+            Counter(str(item.get("emission_status") or "<unannotated>") for item in signals)
+        ),
+        "by_source_rule_id": _counter_dict(source_rule_ids),
+        "by_term": _counter_dict(Counter(str(item.get("term") or "<unknown>") for item in signals)),
+        "redacted_path_count": sum(
+            1 for item in signals if str(item.get("path_redacted", "")).lower() == "true"
+        ),
+        "unredacted_path_count": sum(
+            1 for item in signals if str(item.get("path_redacted", "")).lower() == "false"
+        ),
+    }
+    if candidate_limit is not None:
+        summary["candidate_limit"] = candidate_limit
+    return summary
+
+
+def _candidate_signal_summary_from_rows(
+    rows: list[dict[str, Any]],
+    *,
+    signal_key: str = "candidate_path_signals",
+) -> dict[str, Any]:
+    signals = [signal for row in rows for signal in row.get(signal_key, [])]
+    scan_rows = [
+        row.get("candidate_path_scan", {})
+        for row in rows
+        if isinstance(row.get("candidate_path_scan", {}), dict)
+    ]
+    truncated_repo_count = sum(1 for scan in scan_rows if scan.get("truncated"))
+    limits = sorted(
+        {
+            int(scan["limit"])
+            for scan in scan_rows
+            if isinstance(scan.get("limit"), int)
+        }
+    )
+    summary = _candidate_signal_summary(
+        signals,
+        candidate_limit=limits[0] if len(limits) == 1 else None,
+        truncated_repo_count=truncated_repo_count,
+    )
+    if len(limits) > 1:
+        summary["candidate_limits"] = limits
+    return summary
 
 
 def _signal_correlation_ref_hashes(signal: dict[str, str]) -> set[str]:
@@ -1104,8 +1190,8 @@ def audit_observed_capture_repo(
         "internal",
     }
     path_terms = {
-        **backfill_path_signal_terms(hub_root),
         **CAPTURE_AUDIT_PATH_TERMS,
+        **backfill_path_signal_terms(hub_root),
     }
     candidate_scan = _candidate_capture_path_scan(
         resolved,
@@ -1176,6 +1262,11 @@ def audit_observed_capture_repo(
             "path_hash_only": not include_candidate_paths,
             "scan_hash": f"sha256:{sha256_bytes(json.dumps(candidate_paths, sort_keys=True).encode('utf-8'))}",
         },
+        "candidate_path_signal_summary": _candidate_signal_summary(
+            candidate_paths,
+            candidate_limit=candidate_scan["limit"],
+            truncated_repo_count=1 if candidate_scan["truncated"] else 0,
+        ),
         "candidate_path_signals": candidate_paths,
         "status_flags": status_flags,
         "authority_boundary": (
@@ -1251,6 +1342,7 @@ def write_observed_capture_audit(
     family_counts = Counter(
         item["pattern_family"] for row in rows for item in row["candidate_path_signals"]
     )
+    signal_summary = _candidate_signal_summary_from_rows(rows)
     report = {
         "generated_at": utc_now(),
         "audit_id": "dad:exception-capture-observed-audit",
@@ -1262,6 +1354,7 @@ def write_observed_capture_audit(
         "capture_surface_version": registry.get("capture_surface_version"),
         "status_counts": dict(sorted(status_counts.items())),
         "candidate_path_family_counts": dict(sorted(family_counts.items())),
+        "candidate_path_signal_summary": signal_summary,
         "repos": rows,
         "authority_boundary": (
             "This report reads repo-local mailbox, exception, and fix-outcome JSONL "
@@ -1298,6 +1391,39 @@ def write_observed_capture_audit(
     if family_counts:
         lines.extend(["", "## Candidate Path Families", ""])
         lines.extend(f"- `{family}`: {count}" for family, count in sorted(family_counts.items()))
+    if signal_summary.get("omitted_signal_count_unknown"):
+        lines.extend(
+            [
+                "",
+                "Warning: candidate path counts are bounded first-N samples because "
+                f"{signal_summary['truncated_repo_count']} repo scan(s) hit the "
+                "candidate limit. Treat these counts as review-routing hints, not "
+                "complete distributions.",
+            ]
+        )
+    event_type_counts = signal_summary.get("by_suggested_event_type", {})
+    if event_type_counts:
+        heading = (
+            "## Candidate Suggested Event Types (Bounded Sample)"
+            if signal_summary.get("omitted_signal_count_unknown")
+            else "## Candidate Suggested Event Types"
+        )
+        lines.extend(["", heading, ""])
+        lines.extend(
+            f"- `{event_type}`: {count}"
+            for event_type, count in sorted(event_type_counts.items())
+        )
+    source_rule_counts = signal_summary.get("by_source_rule_id", {})
+    if source_rule_counts:
+        heading = (
+            "## Candidate Source Rules (Bounded Sample)"
+            if signal_summary.get("omitted_signal_count_unknown")
+            else "## Candidate Source Rules"
+        )
+        lines.extend(["", heading, ""])
+        lines.extend(
+            f"- `{rule_id}`: {count}" for rule_id, count in sorted(source_rule_counts.items())
+        )
     flagged = [
         row
         for row in rows
@@ -1435,6 +1561,7 @@ def write_exception_backfill_readiness(
                 "write_protected": repo["write_protected"],
                 "candidate_path_signal_count": audited["candidate_path_signal_count"],
                 "candidate_path_scan": audited["candidate_path_scan"],
+                "candidate_path_signal_summary": audited["candidate_path_signal_summary"],
                 "status_flags": audited["status_flags"],
                 "capture_surface_action": _capture_surface_action(audited),
                 "backfill_readiness": readiness,
@@ -1450,16 +1577,20 @@ def write_exception_backfill_readiness(
     readiness_counts = Counter(str(row["backfill_readiness"]) for row in rows)
     capture_surface_counts = Counter(str(row["capture_surface_action"]) for row in rows)
     status_counts = Counter(flag for audited in audited_rows for flag in audited["status_flags"])
+    signal_summary = _candidate_signal_summary_from_rows(audited_rows)
     report = {
         "generated_at": utc_now(),
         "report_id": "dad:exception-backfill-readiness",
         "repo_count": len(rows),
         "registry_ref": CAPTURE_PATTERN_REGISTRY.as_posix(),
+        "methodology_ref": CAPTURE_PATTERN_REGISTRY.as_posix(),
         "methodology_hash": f"sha256:{sha256_file(hub_root / CAPTURE_PATTERN_REGISTRY)}",
+        "input_hashes": _observed_audit_input_hashes(hub_root),
         "candidate_limit": candidate_limit,
         "readiness_counts": dict(sorted(readiness_counts.items())),
         "capture_surface_action_counts": dict(sorted(capture_surface_counts.items())),
         "status_counts": dict(sorted(status_counts.items())),
+        "candidate_path_signal_summary": signal_summary,
         "repos": rows,
         "authority_boundary": (
             "Backfill readiness is central planning evidence only. It does not run "
@@ -1485,6 +1616,39 @@ def write_exception_backfill_readiness(
         "",
     ]
     lines.extend(f"- `{key}`: {count}" for key, count in report["readiness_counts"].items())
+    if signal_summary.get("omitted_signal_count_unknown"):
+        lines.extend(
+            [
+                "",
+                "Warning: candidate path counts are bounded first-N samples because "
+                f"{signal_summary['truncated_repo_count']} repo scan(s) hit the "
+                "candidate limit. Treat these counts as review-routing hints, not "
+                "complete distributions.",
+            ]
+        )
+    event_type_counts = signal_summary.get("by_suggested_event_type", {})
+    if event_type_counts:
+        heading = (
+            "## Candidate Suggested Event Types (Bounded Sample)"
+            if signal_summary.get("omitted_signal_count_unknown")
+            else "## Candidate Suggested Event Types"
+        )
+        lines.extend(["", heading, ""])
+        lines.extend(
+            f"- `{event_type}`: {count}"
+            for event_type, count in sorted(event_type_counts.items())
+        )
+    source_rule_counts = signal_summary.get("by_source_rule_id", {})
+    if source_rule_counts:
+        heading = (
+            "## Candidate Source Rules (Bounded Sample)"
+            if signal_summary.get("omitted_signal_count_unknown")
+            else "## Candidate Source Rules"
+        )
+        lines.extend(["", heading, ""])
+        lines.extend(
+            f"- `{rule_id}`: {count}" for rule_id, count in sorted(source_rule_counts.items())
+        )
     lines.extend(["", "## Repo Matrix", ""])
     lines.append(
         "| Repo | Readiness | Capture Surface | Signals | Flags | Next Actions |"

@@ -413,15 +413,31 @@ def backfill_terms(hub_root: Path) -> dict[str, str]:
 
 
 def backfill_path_signal_terms(hub_root: Path) -> dict[str, dict[str, str]]:
-    return {
-        term: {
-            "pattern_family": "exception_pattern",
-            "signal": f"path_keyword:{term}",
-            "expected_review": "exception_event_or_no_packet",
-            "suggested_event_type": event_type,
-        }
-        for term, event_type in backfill_terms(hub_root).items()
-    }
+    terms: dict[str, dict[str, str]] = {}
+    for rule in backfill_classifier_rules(hub_root):
+        event_type = str(rule.get("event_type", "")).strip()
+        rule_id = str(rule.get("rule_id", "")).strip()
+        rule_terms = rule.get("terms", [])
+        if not rule_id:
+            raise ValueError("Exception backfill_classifier rule lacks rule_id.")
+        if not event_type:
+            raise ValueError(f"Exception backfill_classifier rule {rule_id} lacks event_type.")
+        if not isinstance(rule_terms, list) or not rule_terms:
+            raise ValueError(f"Exception backfill_classifier rule {rule_id} lacks terms.")
+        for term_value in rule_terms:
+            term = str(term_value)
+            if not term:
+                continue
+            terms[term] = {
+                "pattern_family": "exception_pattern",
+                "signal": f"path_keyword:{term}",
+                "expected_review": "exception_event_or_no_packet",
+                "suggested_event_type": event_type,
+                "source_rule_id": rule_id,
+                "source_registry": "registry/exception-event-type-registry.json#backfill_classifier",
+                "classification_source": "backfill_classifier",
+            }
+    return terms
 
 
 def load_learning_methodology(hub_root: Path) -> dict[str, Any]:

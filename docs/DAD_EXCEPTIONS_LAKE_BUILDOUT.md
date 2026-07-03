@@ -818,6 +818,10 @@ Backfill safety and classification:
   in agent memory. Rules are ordered, schema-validated, and include
   `classification_confidence`, `false_positive_risk`, `applies_when`, and
   `does_not_apply_when`.
+- Runtime audit and backfill planning fail closed when a reviewed classifier rule
+  lacks a rule ID, event type, or non-empty term list. Reviewed classifier terms
+  take precedence over generic built-in audit terms when both match the same path
+  signal, so provenance such as `backfill-rule:review-finding` is preserved.
 - Current reviewed path-signal families include parity, slow tests, command
   timeouts, tool unavailable, environment config gaps, permission blocks,
   external service failures, data ingestion failures, identity conflicts, source
@@ -842,8 +846,21 @@ Backfill safety and classification:
 - `asset-dir exceptions backfill-readiness --repo all` writes a central
   readiness matrix before any broad historical backfill wave. It summarizes
   reviewed repo policy, protected-repo blocks, approval requirements, capture
-  surface freshness, observed path-signal counts, and next actions. It is
-  planning evidence only; it never approves or runs backfill.
+  surface freshness, observed path-signal counts, candidate signal summaries,
+  and next actions. It is planning evidence only; it never approves or runs
+  backfill.
+- Candidate signal summaries group path-name-only findings by pattern family,
+  suggested event type, source rule ID, matched term, expected-review class, and
+  emission status. They help choose review waves and spot taxonomy drift. They
+  are not event counts and do not prove an exception occurred.
+- If any repo scan reaches its candidate limit, the summary is labeled as a
+  bounded first-N sample and records `truncated_repo_count` plus
+  `omitted_signal_count_unknown:true`. These bounded counts are review-routing
+  hints, not complete distributions.
+- `candidate_path_signal_summary.by_source_rule_id` links reviewed
+  backfill-classifier rules such as `backfill-rule:tool-unavailable` to the
+  path signals they produced. Built-in audit-only path terms use
+  `<builtin_path_term>` until promoted into reviewed registry rules.
 - Exception reports summarize event types, reviewed event categories, and
   taxonomy dimensions from
   `registry/exception-event-type-registry.json#taxonomy_dimensions`. The
@@ -867,6 +884,10 @@ Observed repo audit add-on:
   Existing unrelated mail is not enough to prove capture worked; candidate
   signals are compared against matching message types, event types, and capture
   contracts.
+- The report also writes aggregate and per-repo `candidate_path_signal_summary`
+  blocks so reviewers can see whether a repo's historical candidates are mostly
+  tool-unavailable, stale-report, review-finding, artifact-registration, or other
+  taxonomy-backed signals before opening a backfill wave.
 - `asset-dir exceptions capture-audit --strict --fail-on-gaps` also fails on
   `type_present_uncorrelated`, `emission_unverified`, stale capture surfaces,
   unknown capture surfaces, and truncated candidate scans. Use this in

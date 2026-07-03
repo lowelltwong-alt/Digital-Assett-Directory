@@ -11,6 +11,7 @@ from jsonschema.validators import validator_for
 from digital_asset_directory.exceptions_lake import (
     backfill_exception_candidates,
     backfill_classifier_rules,
+    backfill_path_signal_terms,
     collect_exception_fix_outcomes,
     collect_exception_events,
     evaluate_exception_learning_readiness_scenarios,
@@ -181,6 +182,39 @@ def test_backfill_fails_closed_without_reviewed_classifier(tmp_path: Path) -> No
 
     with pytest.raises(ValueError, match="backfill classifier registry"):
         backfill_exception_candidates(hub, repo, limit=10)
+
+
+@pytest.mark.parametrize(
+    ("rule", "message"),
+    [
+        (
+            {"rule_id": "", "event_type": "tool_unavailable", "terms": ["missing-cli"]},
+            "lacks rule_id",
+        ),
+        (
+            {"rule_id": "backfill-rule:test", "event_type": "", "terms": ["missing-cli"]},
+            "lacks event_type",
+        ),
+        (
+            {"rule_id": "backfill-rule:test", "event_type": "tool_unavailable", "terms": []},
+            "lacks terms",
+        ),
+    ],
+)
+def test_backfill_path_signal_terms_fail_closed_on_malformed_rules(
+    tmp_path: Path,
+    rule: dict[str, object],
+    message: str,
+) -> None:
+    registry_path = tmp_path / "hub" / "registry" / "exception-event-type-registry.json"
+    registry_path.parent.mkdir(parents=True)
+    registry_path.write_text(
+        json.dumps({"backfill_classifier": {"rules": [rule]}}),
+        encoding="utf-8",
+    )
+
+    with pytest.raises(ValueError, match=message):
+        backfill_path_signal_terms(tmp_path / "hub")
 
 
 def test_path_term_matching_uses_token_boundaries() -> None:
