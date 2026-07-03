@@ -54,6 +54,15 @@ Truncated candidate-path scans and strict-only mismatches such as
 `type_present_uncorrelated` are review gaps, not clean runs. Neither report is
 proof that all real repos are complete.
 
+The capture and taxonomy reports also emit `phase6_machine_gate_evidence`.
+Those rows name the Phase 6 roadmap gates they support, including the LawFirm
+missed-capture regression, pattern-update simulation, all pattern-family
+coverage, sensitive-payload negative tests, and taxonomy route coverage. They
+are machine evidence only: every row uses
+`evidence_scope: machine_only_not_roadmap_gate_evidence`, points to
+`supports_human_gate_id`, and keeps `human_gate_satisfied` false until a reviewed
+roadmap gate is explicitly approved.
+
 The taxonomy coverage report checks every reviewed exception event type against
 three route classes:
 

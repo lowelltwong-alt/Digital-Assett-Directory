@@ -40,6 +40,25 @@ SCENARIOS = (
 )
 
 
+def _phase6_gate(report: dict, gate_id: str) -> dict:
+    for gate in report["phase6_machine_gate_evidence"]["gates"].values():
+        if gate["supports_human_gate_id"] == gate_id:
+            return gate
+    raise KeyError(gate_id)
+
+
+def _assert_machine_only_phase6_evidence(report: dict) -> None:
+    for key, gate in report["phase6_machine_gate_evidence"]["gates"].items():
+        assert key.startswith("machine-evidence:")
+        assert gate["evidence_id"] == key
+        assert gate["evidence_scope"] == "machine_only_not_roadmap_gate_evidence"
+        assert gate["human_review_required"] is True
+        assert gate["human_gate_satisfied"] is False
+        assert "roadmap_gate_id" not in gate
+        assert "status" not in gate
+        assert gate["machine_status"] in {"passed", "failed"}
+
+
 def _validate(schema_name: str, payload: dict) -> None:
     registry = json.loads((ROOT / "registry" / "schema-registry.json").read_text(encoding="utf-8"))
     schema = json.loads((ROOT / registry["schemas"][schema_name]).read_text(encoding="utf-8"))
@@ -283,14 +302,173 @@ def test_synthetic_scenarios_pin_required_fields_for_emitted_packets() -> None:
 def test_capture_completeness_scenarios_all_pass(tmp_path: Path) -> None:
     report = evaluate_capture_scenarios(ROOT, SCENARIOS, output=tmp_path / "report.json")
 
+    _assert_machine_only_phase6_evidence(report)
     assert report["failed_count"] == 0
     assert report["missing_required_pattern_families"] == []
     assert report["missing_reviewed_rule_ids"] == []
     assert report["undeclared_matched_rule_ids"] == []
     assert report["unknown_declared_rule_ids"] == []
     assert report["covered_reviewed_rule_count"] == report["reviewed_rule_count"]
+    assert _phase6_gate(
+        report,
+        "phase-6-capture-completeness-harness-reviewed",
+    )["machine_status"] == "passed"
+    lawfirm_gate = _phase6_gate(
+        report,
+        "phase-6-lawfirm-intake-missed-capture-regression",
+    )
+    assert lawfirm_gate["machine_status"] == "passed"
+    assert lawfirm_gate["human_gate_satisfied"] is False
+    assert lawfirm_gate["evidence"]["observed_outbox_compared"]
+    pattern_gate = _phase6_gate(
+        report,
+        "phase-6-pattern-update-simulation-reviewed",
+    )
+    assert pattern_gate["machine_status"] == "passed"
+    assert pattern_gate["evidence"]["missing_update_pattern_families"] == []
+    assert pattern_gate["evidence"]["missing_update_vectors"] == []
+    assert {
+        "dad_needs_registry",
+        "dad_offerings_registry",
+        "downstream_template",
+        "exception_taxonomy",
+    } == set(pattern_gate["evidence"]["covered_update_vectors"])
+    assert {
+        "asset-pointer-created",
+        "lawfirm-review-issue-missed-capture",
+        "mail-pattern-update-required",
+        "new-exception-pattern-needed",
+        "template-managed-block-change",
+        "learning-loop-candidate",
+    } <= set(pattern_gate["evidence"]["update_required_scenario_ids"])
+    family_gate = _phase6_gate(
+        report,
+        "phase-6-all-asset-pattern-coverage-reviewed",
+    )
+    assert family_gate["machine_status"] == "passed"
+    assert family_gate["evidence"]["missing_required_pattern_families"] == []
+    assert family_gate["evidence"]["missing_passing_required_pattern_families"] == []
+    sensitive_gate = _phase6_gate(
+        report,
+        "phase-6-sensitive-payload-negative-tests-reviewed",
+    )
+    assert sensitive_gate["machine_status"] == "passed"
+    assert sensitive_gate["evidence"]["missing_negative_controls"] == []
+    assert sensitive_gate["evidence"]["missing_negative_control_blocks"] == []
+    assert {
+        "contains_hidden_chain_of_thought",
+        "contains_private_rows",
+        "contains_prompt_injection_like_text",
+        "contains_raw_log_blob",
+        "contains_secret_or_pii",
+    } <= set(sensitive_gate["evidence"]["covered_negative_controls"])
+    blocked_by_control = sensitive_gate["evidence"]["blocked_negative_control_coverage"]
+    assert blocked_by_control["contains_secret_or_pii"][0]["scenario_id"] == (
+        "secret-payload-suppressed"
+    )
+    assert blocked_by_control["contains_private_rows"][0]["scenario_id"] == (
+        "private-row-payload-suppressed"
+    )
+    assert blocked_by_control["contains_raw_log_blob"][0]["scenario_id"] == (
+        "raw-log-payload-suppressed"
+    )
+    assert blocked_by_control["contains_hidden_chain_of_thought"][0]["scenario_id"] == (
+        "hidden-reasoning-payload-suppressed"
+    )
+    assert blocked_by_control["contains_prompt_injection_like_text"][0]["scenario_id"] == (
+        "unsafe-positive-match-suppressed"
+    )
     assert (tmp_path / "report.json").exists()
     assert (tmp_path / "report.md").exists()
+
+
+def test_phase6_pattern_update_gate_fails_without_update_scenarios(
+    tmp_path: Path,
+) -> None:
+    scenarios = load_capture_scenarios(SCENARIOS)
+    scenarios["cases"] = [
+        case for case in scenarios["cases"] if not case["expected"].get("update_required")
+    ]
+    scenario_path = tmp_path / "no-update-scenarios.json"
+    scenario_path.write_text(json.dumps(scenarios), encoding="utf-8")
+
+    report = evaluate_capture_scenarios(ROOT, scenario_path, output=tmp_path / "report.json")
+    gate = _phase6_gate(report, "phase-6-pattern-update-simulation-reviewed")
+
+    assert gate["machine_status"] == "failed"
+    assert set(gate["evidence"]["missing_update_pattern_families"]) == {
+        "workflow",
+        "mail_pattern",
+        "exception_pattern",
+        "learning_loop_candidate",
+    }
+    assert set(gate["evidence"]["missing_update_vectors"]) == {
+        "dad_needs_registry",
+        "dad_offerings_registry",
+        "downstream_template",
+        "exception_taxonomy",
+    }
+    assert gate["evidence"]["update_required_scenario_ids"] == []
+
+
+def test_phase6_family_gate_requires_passing_family_case(tmp_path: Path) -> None:
+    scenarios = load_capture_scenarios(SCENARIOS)
+    for case in scenarios["cases"]:
+        if case.get("observed"):
+            case.pop("observed")
+    bad_case = next(
+        case for case in scenarios["cases"] if case["pattern_family"] == "harness"
+    )
+    bad_case["expected"]["required_fields"] = ["missing_required_field"]
+    scenario_path = tmp_path / "bad-family-scenarios.json"
+    scenario_path.write_text(json.dumps(scenarios), encoding="utf-8")
+
+    report = evaluate_capture_scenarios(ROOT, scenario_path, output=tmp_path / "report.json")
+    gate = _phase6_gate(report, "phase-6-all-asset-pattern-coverage-reviewed")
+
+    assert report["missing_required_pattern_families"] == []
+    assert gate["machine_status"] == "failed"
+    assert gate["evidence"]["missing_passing_required_pattern_families"] == ["harness"]
+
+
+def test_phase6_sensitive_gate_requires_declared_negative_control_set(
+    tmp_path: Path,
+) -> None:
+    scenarios = load_capture_scenarios(SCENARIOS)
+    for case in scenarios["cases"]:
+        case["negative_controls"] = [
+            control
+            for control in case.get("negative_controls", [])
+            if control != "contains_raw_log_blob"
+        ]
+    scenario_path = tmp_path / "missing-negative-control.json"
+    scenario_path.write_text(json.dumps(scenarios), encoding="utf-8")
+
+    report = evaluate_capture_scenarios(ROOT, scenario_path, output=tmp_path / "report.json")
+    gate = _phase6_gate(report, "phase-6-sensitive-payload-negative-tests-reviewed")
+
+    assert gate["machine_status"] == "failed"
+    assert gate["evidence"]["missing_negative_controls"] == ["contains_raw_log_blob"]
+    assert gate["evidence"]["missing_negative_control_blocks"] == ["contains_raw_log_blob"]
+
+
+def test_phase6_sensitive_gate_requires_blocked_case_per_negative_control(
+    tmp_path: Path,
+) -> None:
+    scenarios = load_capture_scenarios(SCENARIOS)
+    raw_log_case = next(
+        case for case in scenarios["cases"] if case["scenario_id"] == "raw-log-payload-suppressed"
+    )
+    raw_log_case.pop("payload_samples")
+    scenario_path = tmp_path / "missing-raw-log-block.json"
+    scenario_path.write_text(json.dumps(scenarios), encoding="utf-8")
+
+    report = evaluate_capture_scenarios(ROOT, scenario_path, output=tmp_path / "report.json")
+    gate = _phase6_gate(report, "phase-6-sensitive-payload-negative-tests-reviewed")
+
+    assert gate["machine_status"] == "failed"
+    assert gate["evidence"]["missing_negative_controls"] == []
+    assert gate["evidence"]["missing_negative_control_blocks"] == ["contains_raw_log_blob"]
 
 
 def test_exception_taxonomy_coverage_distinguishes_manual_and_signal_routes(
@@ -302,6 +480,9 @@ def test_exception_taxonomy_coverage_distinguishes_manual_and_signal_routes(
         output=tmp_path / "taxonomy-coverage.json",
     )
 
+    _assert_machine_only_phase6_evidence(report)
+    assert report["methodology_ref"] == "registry/exception-event-type-registry.json"
+    assert report["methodology_hash"].startswith("sha256:")
     assert report["event_type_count"] >= 50
     assert report["reviewed_unrouted_event_types"] == []
     assert report["learnable_unrouted_event_types"] == []
@@ -309,6 +490,10 @@ def test_exception_taxonomy_coverage_distinguishes_manual_and_signal_routes(
     assert "failed_command" not in report["manual_only_event_types"]
     assert "tool_unavailable" not in report["manual_only_event_types"]
     assert "validation_command_missing" in report["manual_only_event_types"]
+    taxonomy_gate = _phase6_gate(report, "phase-6-taxonomy-route-coverage-reviewed")
+    assert taxonomy_gate["machine_status"] == "passed"
+    assert taxonomy_gate["human_gate_satisfied"] is False
+    assert taxonomy_gate["evidence"]["unrouted_event_types"] == []
     assert (tmp_path / "taxonomy-coverage.json").exists()
     assert (tmp_path / "taxonomy-coverage.md").exists()
 

@@ -54,6 +54,10 @@ PROMPT_INJECTION_PATTERNS = [
     re.compile(r"(?i)\bexecute (this )?(tool|command)\b"),
     re.compile(r"(?i)\bdo not (tell|show) (the )?(user|developer)\b"),
 ]
+HIDDEN_REASONING_PATTERNS = [
+    re.compile(r"(?i)\b(hidden|private|internal) (chain[- ]of[- ]thought|reasoning)\b"),
+    re.compile(r"(?i)\b(chain[- ]of[- ]thought|scratchpad) (transcript|notes|dump)\b"),
+]
 
 SOURCE_VISIBILITIES = {"public", "internal", "private", "restricted", "unknown"}
 SEVERITIES = {"critical", "high", "medium", "low", "info"}
@@ -737,6 +741,10 @@ def _redact_and_limit(value: Any, issues: list[str]) -> tuple[Any, int]:
             issues.append("prompt_injection_like_payload")
             digest = sha256_bytes(redacted.encode("utf-8"))
             redacted = f"[PROMPT_INJECTION_LIKE_TEXT_REJECTED_SHA256:{digest}]"
+        if any(pattern.search(redacted) for pattern in HIDDEN_REASONING_PATTERNS):
+            issues.append("hidden_reasoning_like_payload")
+            digest = sha256_bytes(redacted.encode("utf-8"))
+            redacted = f"[HIDDEN_REASONING_LIKE_TEXT_REJECTED_SHA256:{digest}]"
         if len(redacted) > MAX_STRING_CHARS:
             issues.append("long_string")
             digest = sha256_bytes(redacted.encode("utf-8"))

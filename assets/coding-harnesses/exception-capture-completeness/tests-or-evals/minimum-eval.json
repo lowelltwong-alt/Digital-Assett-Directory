@@ -21,6 +21,30 @@
       "given": ["reusable asset signal", "unsafe payload sample"],
       "expected": ["no outbound packet", "blocked reason points to executable payload screening"],
       "fail_if": ["ordinary mail is emitted", "exception event copies private context", "unsafe payload is only simulated by a pre-labeled signal"]
+    },
+    {
+      "case_id": "pattern-update-simulation",
+      "given": ["old repo capture surface", "new DAD mail or exception pattern requirement"],
+      "expected": ["machine gate phase-6-pattern-update-simulation-reviewed reports passed", "update-required scenarios cover workflow, mail_pattern, exception_pattern, and learning_loop_candidate"],
+      "fail_if": ["an update-required scenario is missing", "the gate is treated as human approval", "a stale repo surface is reported clean"]
+    },
+    {
+      "case_id": "all-asset-pattern-family-coverage",
+      "given": ["reviewed required_pattern_families", "synthetic capture scenarios"],
+      "expected": ["machine gate phase-6-all-asset-pattern-coverage-reviewed reports passed", "every required family has at least one passing scenario"],
+      "fail_if": ["a required family is absent", "a reviewed capture rule has no passing scenario", "broad unrelated signals satisfy the wrong family"]
+    },
+    {
+      "case_id": "taxonomy-route-coverage",
+      "given": ["reviewed exception event registry", "capture rules", "backfill route signals", "direct record contracts"],
+      "expected": ["machine gate phase-6-taxonomy-route-coverage-reviewed reports passed", "reviewed and learnable event types have at least one safe route"],
+      "fail_if": ["a reviewed event type is unrouted", "a capture-rule event type lacks a synthetic scenario", "direct-record-only routes are described as automatic detection"]
+    },
+    {
+      "case_id": "observed-audit-gap",
+      "given": ["real or fixture outboxes", "path-signal candidate files", "expected packet classes"],
+      "expected": ["observed comparisons require usable metadata fields", "uncorrelated old mail does not satisfy a missing capture pattern", "this is documented as observed-audit evidence and is not covered by capture/taxonomy machine-gate rows until the observed-audit report emits its own evidence"],
+      "fail_if": ["a packet type passes without required fields", "stale or unrelated outbox rows satisfy current expectations", "private path evidence is exposed in public-safe output"]
     }
   ],
   "must_not_claim": [

@@ -33,6 +33,39 @@ BACKFILL_READINESS_JSON = Path("processed") / "reports" / "exception_backfill_re
 BACKFILL_READINESS_MD = Path("processed") / "reports" / "exception_backfill_readiness.md"
 BACKFILL_WAVE_PLAN_JSON = Path("processed") / "reports" / "exception_backfill_wave_plan.json"
 BACKFILL_WAVE_PLAN_MD = Path("processed") / "reports" / "exception_backfill_wave_plan.md"
+PHASE6_LAWFIRM_MISSED_CAPTURE_SCENARIO_ID = "lawfirm-review-issue-missed-capture"
+PHASE6_REQUIRED_UPDATE_FAMILIES = {
+    "workflow",
+    "mail_pattern",
+    "exception_pattern",
+    "learning_loop_candidate",
+}
+PHASE6_REQUIRED_UPDATE_VECTORS = {
+    "dad_needs_registry",
+    "dad_offerings_registry",
+    "downstream_template",
+    "exception_taxonomy",
+}
+PHASE6_REQUIRED_NEGATIVE_CONTROLS = {
+    "contains_hidden_chain_of_thought",
+    "contains_private_rows",
+    "contains_prompt_injection_like_text",
+    "contains_raw_log_blob",
+    "contains_secret_or_pii",
+}
+PHASE6_NEGATIVE_CONTROL_ISSUES = {
+    "contains_hidden_chain_of_thought": {"hidden_reasoning_like_payload"},
+    "contains_private_rows": {"table_like_value"},
+    "contains_prompt_injection_like_text": {"prompt_injection_like_payload"},
+    "contains_raw_log_blob": {"long_string", "raw_blob_like_multiline_value"},
+    "contains_secret_or_pii": {"credential_or_pii_pattern"},
+}
+PHASE6_MACHINE_EVIDENCE_SCOPE = "machine_only_not_roadmap_gate_evidence"
+PHASE6_GATE_BOUNDARY = (
+    "Machine evidence only. These statuses show whether deterministic reports "
+    "contain the expected support for Phase 6 gates; they do not satisfy the "
+    "separate human-reviewed roadmap gates."
+)
 
 PACKET_CLASSES = {
     "ordinary_mail",
@@ -387,6 +420,10 @@ def evaluate_capture_case(
         "covered_rule_ids": declared_rules,
         "coverage_declared": coverage_declared,
         "matched_rules": matched_rule_ids,
+        "negative_controls": sorted(str(item) for item in case.get("negative_controls", [])),
+        "phase6_update_vectors": sorted(
+            str(item) for item in case.get("phase6_update_vectors", [])
+        ),
         "payload_screen_issues": payload_issues,
         "repo_capture_surface_version": case.get("repo_capture_surface_version"),
         "registry_capture_surface_version": registry.get("capture_surface_version"),
@@ -2125,6 +2162,284 @@ def _event_route_status(
     return "unrouted"
 
 
+def _phase6_gate_row(
+    gate_id: str,
+    *,
+    passed: bool,
+    evidence: dict[str, Any],
+) -> dict[str, Any]:
+    return {
+        "evidence_id": f"machine-evidence:{gate_id}",
+        "evidence_scope": PHASE6_MACHINE_EVIDENCE_SCOPE,
+        "supports_human_gate_id": gate_id,
+        "machine_status": "passed" if passed else "failed",
+        "human_review_required": True,
+        "human_gate_satisfied": False,
+        "evidence": evidence,
+    }
+
+
+def _phase6_machine_evidence_key(gate_id: str) -> str:
+    return f"machine-evidence:{gate_id}"
+
+
+def _case_payload_issue_set(case: dict[str, Any]) -> set[str]:
+    issues = {str(issue) for issue in case.get("payload_screen_issues", []) if issue}
+    blocked_reason = str((case.get("actual") or {}).get("blocked_reason") or "")
+    if blocked_reason.startswith("payload_screen:"):
+        issues.update(
+            item.strip()
+            for item in blocked_reason.removeprefix("payload_screen:").split(",")
+            if item.strip()
+        )
+    return issues
+
+
+def _capture_phase6_machine_gate_evidence(
+    *,
+    cases: list[dict[str, Any]],
+    failed: list[dict[str, Any]],
+    observed_failed: list[dict[str, Any]],
+    missing_families: list[str],
+    missing_reviewed_rule_ids: list[str],
+    undeclared_matched_rule_ids: list[str],
+    unknown_declared_rule_ids: list[str],
+    by_family: Counter[str],
+    required_families: list[str],
+    covered_rule_ids: list[str],
+    reviewed_rule_ids: list[str],
+) -> dict[str, Any]:
+    case_by_id = {str(case.get("scenario_id")): case for case in cases}
+    update_cases = [case for case in cases if case.get("update_required")]
+    update_failed = [case for case in update_cases if not case.get("passed")]
+    update_families = sorted(
+        {str(case.get("pattern_family")) for case in update_cases if case.get("passed")}
+    )
+    missing_update_families = sorted(
+        PHASE6_REQUIRED_UPDATE_FAMILIES - set(update_families)
+    )
+    update_vectors = sorted(
+        {
+            str(vector)
+            for case in update_cases
+            if case.get("passed")
+            for vector in case.get("phase6_update_vectors", [])
+            if vector
+        }
+    )
+    missing_update_vectors = sorted(PHASE6_REQUIRED_UPDATE_VECTORS - set(update_vectors))
+    passing_by_family = Counter(
+        str(case.get("pattern_family")) for case in cases if case.get("passed")
+    )
+    missing_passing_families = sorted(set(required_families) - set(passing_by_family))
+    negative_controls = sorted(
+        {
+            str(control)
+            for case in cases
+            for control in case.get("negative_controls", [])
+            if control
+        }
+    )
+    missing_negative_controls = sorted(
+        PHASE6_REQUIRED_NEGATIVE_CONTROLS - set(negative_controls)
+    )
+    blocked_cases = [
+        case
+        for case in cases
+        if case.get("passed")
+        and (case.get("expected") or {}).get("blocked")
+        and (case.get("actual") or {}).get("blocked")
+        and str((case.get("actual") or {}).get("blocked_reason") or "").startswith(
+            ("payload_screen:", "global_block_signal:")
+        )
+    ]
+    blocked_negative_control_coverage: dict[str, list[dict[str, Any]]] = {
+        control: [] for control in sorted(PHASE6_REQUIRED_NEGATIVE_CONTROLS)
+    }
+    for case in blocked_cases:
+        issue_set = _case_payload_issue_set(case)
+        for control in case.get("negative_controls", []):
+            control = str(control)
+            expected_issues = PHASE6_NEGATIVE_CONTROL_ISSUES.get(control, set())
+            matched_issues = sorted(issue_set & expected_issues)
+            if matched_issues:
+                blocked_negative_control_coverage.setdefault(control, []).append(
+                    {
+                        "scenario_id": str(case.get("scenario_id")),
+                        "matched_issues": matched_issues,
+                    }
+                )
+    missing_negative_control_blocks = sorted(
+        control
+        for control in PHASE6_REQUIRED_NEGATIVE_CONTROLS
+        if not blocked_negative_control_coverage.get(control)
+    )
+    lawfirm_case = case_by_id.get(PHASE6_LAWFIRM_MISSED_CAPTURE_SCENARIO_ID)
+    lawfirm_observed = (
+        lawfirm_case.get("observed")
+        if isinstance(lawfirm_case, dict) and isinstance(lawfirm_case.get("observed"), dict)
+        else {}
+    )
+    capture_clean = (
+        not failed
+        and not observed_failed
+        and not missing_families
+        and not missing_reviewed_rule_ids
+        and not undeclared_matched_rule_ids
+        and not unknown_declared_rule_ids
+        and len(covered_rule_ids) == len(reviewed_rule_ids)
+    )
+    lawfirm_passed = bool(
+        lawfirm_case
+        and lawfirm_case.get("passed")
+        and lawfirm_case.get("update_required")
+        and lawfirm_observed.get("passed")
+    )
+    pattern_update_passed = bool(
+        update_cases
+        and not update_failed
+        and not missing_update_families
+        and not missing_update_vectors
+    )
+    all_family_passed = not missing_families and not missing_passing_families
+    sensitive_payload_passed = (
+        bool(blocked_cases)
+        and not missing_negative_controls
+        and not missing_negative_control_blocks
+    )
+    return {
+        "authority_boundary": PHASE6_GATE_BOUNDARY,
+        "gates": {
+            _phase6_machine_evidence_key(
+                "phase-6-capture-completeness-harness-reviewed"
+            ): _phase6_gate_row(
+                "phase-6-capture-completeness-harness-reviewed",
+                passed=capture_clean,
+                evidence={
+                    "case_count": len(cases),
+                    "failed_scenario_ids": [
+                        str(case.get("scenario_id")) for case in failed
+                    ],
+                    "observed_failed_scenario_ids": [
+                        str(case.get("scenario_id")) for case in observed_failed
+                    ],
+                    "covered_reviewed_rule_count": len(covered_rule_ids),
+                    "reviewed_rule_count": len(reviewed_rule_ids),
+                    "missing_reviewed_rule_ids": missing_reviewed_rule_ids,
+                    "undeclared_matched_rule_ids": undeclared_matched_rule_ids,
+                    "unknown_declared_rule_ids": unknown_declared_rule_ids,
+                },
+            ),
+            _phase6_machine_evidence_key(
+                "phase-6-lawfirm-intake-missed-capture-regression"
+            ): _phase6_gate_row(
+                "phase-6-lawfirm-intake-missed-capture-regression",
+                passed=lawfirm_passed,
+                evidence={
+                    "scenario_id": PHASE6_LAWFIRM_MISSED_CAPTURE_SCENARIO_ID,
+                    "scenario_present": bool(lawfirm_case),
+                    "scenario_passed": bool(lawfirm_case and lawfirm_case.get("passed")),
+                    "update_required": bool(
+                        lawfirm_case and lawfirm_case.get("update_required")
+                    ),
+                    "observed_outbox_compared": bool(lawfirm_observed),
+                    "observed_passed": bool(lawfirm_observed.get("passed")),
+                },
+            ),
+            _phase6_machine_evidence_key(
+                "phase-6-pattern-update-simulation-reviewed"
+            ): _phase6_gate_row(
+                "phase-6-pattern-update-simulation-reviewed",
+                passed=pattern_update_passed,
+                evidence={
+                    "required_update_pattern_families": sorted(
+                        PHASE6_REQUIRED_UPDATE_FAMILIES
+                    ),
+                    "covered_update_pattern_families": update_families,
+                    "missing_update_pattern_families": missing_update_families,
+                    "required_update_vectors": sorted(PHASE6_REQUIRED_UPDATE_VECTORS),
+                    "covered_update_vectors": update_vectors,
+                    "missing_update_vectors": missing_update_vectors,
+                    "update_required_scenario_ids": [
+                        str(case.get("scenario_id")) for case in update_cases
+                    ],
+                    "failed_update_required_scenario_ids": [
+                        str(case.get("scenario_id")) for case in update_failed
+                    ],
+                },
+            ),
+            _phase6_machine_evidence_key(
+                "phase-6-all-asset-pattern-coverage-reviewed"
+            ): _phase6_gate_row(
+                "phase-6-all-asset-pattern-coverage-reviewed",
+                passed=all_family_passed,
+                evidence={
+                    "required_pattern_family_count": len(required_families),
+                    "required_pattern_families": required_families,
+                    "covered_pattern_families": dict(sorted(by_family.items())),
+                    "passing_pattern_families": dict(sorted(passing_by_family.items())),
+                    "missing_required_pattern_families": missing_families,
+                    "missing_passing_required_pattern_families": missing_passing_families,
+                },
+            ),
+            _phase6_machine_evidence_key(
+                "phase-6-sensitive-payload-negative-tests-reviewed"
+            ): _phase6_gate_row(
+                "phase-6-sensitive-payload-negative-tests-reviewed",
+                passed=sensitive_payload_passed,
+                evidence={
+                    "required_negative_controls": sorted(PHASE6_REQUIRED_NEGATIVE_CONTROLS),
+                    "covered_negative_controls": negative_controls,
+                    "missing_negative_controls": missing_negative_controls,
+                    "blocked_negative_control_coverage": blocked_negative_control_coverage,
+                    "missing_negative_control_blocks": missing_negative_control_blocks,
+                    "blocked_negative_scenario_ids": [
+                        str(case.get("scenario_id")) for case in blocked_cases
+                    ],
+                    "blocked_reasons": sorted(
+                        {
+                            str((case.get("actual") or {}).get("blocked_reason") or "")
+                            for case in blocked_cases
+                        }
+                    ),
+                },
+            ),
+        },
+    }
+
+
+def _taxonomy_phase6_machine_gate_evidence(
+    *,
+    reviewed_unrouted: list[str],
+    learnable_unrouted: list[str],
+    missing_scenarios: list[str],
+    unrouted: list[str],
+) -> dict[str, Any]:
+    passed = (
+        not reviewed_unrouted
+        and not learnable_unrouted
+        and not missing_scenarios
+        and not unrouted
+    )
+    return {
+        "authority_boundary": PHASE6_GATE_BOUNDARY,
+        "gates": {
+            _phase6_machine_evidence_key(
+                "phase-6-taxonomy-route-coverage-reviewed"
+            ): _phase6_gate_row(
+                "phase-6-taxonomy-route-coverage-reviewed",
+                passed=passed,
+                evidence={
+                    "unrouted_event_types": unrouted,
+                    "reviewed_unrouted_event_types": reviewed_unrouted,
+                    "learnable_unrouted_event_types": learnable_unrouted,
+                    "capture_rule_events_missing_synthetic_cases": missing_scenarios,
+                },
+            )
+        },
+    }
+
+
 def evaluate_exception_taxonomy_coverage(
     hub_root: Path,
     scenarios_path: Path,
@@ -2218,6 +2533,10 @@ def evaluate_exception_taxonomy_coverage(
         "generated_at": utc_now(),
         "event_registry_ref": "registry/exception-event-type-registry.json",
         "capture_registry_ref": CAPTURE_PATTERN_REGISTRY.as_posix(),
+        "methodology_ref": "registry/exception-event-type-registry.json",
+        "methodology_hash": (
+            f"sha256:{sha256_file(hub_root / 'registry' / 'exception-event-type-registry.json')}"
+        ),
         "scenario_path": _report_path_ref(scenarios_path, hub_root),
         "input_hashes": _taxonomy_coverage_input_hashes(hub_root, scenarios_path),
         "event_type_count": len(records),
@@ -2231,6 +2550,12 @@ def evaluate_exception_taxonomy_coverage(
         "reviewed_unrouted_event_types": reviewed_unrouted,
         "learnable_unrouted_event_types": learnable_unrouted,
         "capture_rule_events_missing_synthetic_cases": missing_scenarios,
+        "phase6_machine_gate_evidence": _taxonomy_phase6_machine_gate_evidence(
+            reviewed_unrouted=reviewed_unrouted,
+            learnable_unrouted=learnable_unrouted,
+            missing_scenarios=missing_scenarios,
+            unrouted=unrouted,
+        ),
         "events": records,
         "authority_boundary": (
             "Taxonomy coverage shows available capture routes. A direct record "
@@ -2251,13 +2576,26 @@ def evaluate_exception_taxonomy_coverage(
         f"- Direct-record-only event types: {report['manual_only_count']}",
         f"- Unrouted event types: {report['unrouted_count']}",
         f"- Capture-rule event types missing synthetic cases: {report['missing_synthetic_case_count']}",
+        f"- Methodology hash: `{report['methodology_hash']}`",
         "",
         "Boundary: direct-record coverage is a safe manual emission route, not an "
         "automatic detector. Backfill routes are path-signal candidates only.",
         "",
-        "## Coverage Status Counts",
+        "## Phase 6 Machine Gate Evidence",
         "",
     ]
+    for gate in report["phase6_machine_gate_evidence"]["gates"].values():
+        lines.append(
+            f"- `{gate['supports_human_gate_id']}`: `{gate['machine_status']}` "
+            "(human review still required)"
+        )
+    lines.extend(
+        [
+            "",
+            "## Coverage Status Counts",
+            "",
+        ]
+    )
     for status, count in sorted(status_counts.items()):
         lines.append(f"- `{status}`: {count}")
     if manual_only:
@@ -2286,10 +2624,9 @@ def evaluate_capture_scenarios(
         evaluate_capture_case(case, registry, scenario_base=scenarios_path.parent)
         for case in scenarios.get("cases", [])
     ]
+    required_families = sorted(str(item) for item in scenarios.get("required_pattern_families", []))
     by_family = Counter(case["pattern_family"] for case in cases)
-    missing_families = sorted(
-        set(scenarios.get("required_pattern_families", [])) - set(by_family)
-    )
+    missing_families = sorted(set(required_families) - set(by_family))
     reviewed_rule_ids = _reviewed_rule_ids(registry)
     reviewed_rule_id_set = set(reviewed_rule_ids)
     covered_rule_ids = sorted(
@@ -2321,6 +2658,19 @@ def evaluate_capture_scenarios(
     observed_cases = [case for case in cases if "observed" in case]
     observed_failed = [case for case in observed_cases if not case["observed"]["passed"]]
     input_hashes = _input_hashes(hub_root, scenarios_path)
+    phase6_machine_gate_evidence = _capture_phase6_machine_gate_evidence(
+        cases=cases,
+        failed=failed,
+        observed_failed=observed_failed,
+        missing_families=missing_families,
+        missing_reviewed_rule_ids=missing_reviewed_rule_ids,
+        undeclared_matched_rule_ids=undeclared_matched_rule_ids,
+        unknown_declared_rule_ids=unknown_declared_rule_ids,
+        by_family=by_family,
+        required_families=required_families,
+        covered_rule_ids=covered_rule_ids,
+        reviewed_rule_ids=reviewed_rule_ids,
+    )
     report = {
         "generated_at": utc_now(),
         "scenario_set_id": scenarios.get("scenario_set_id"),
@@ -2343,6 +2693,7 @@ def evaluate_capture_scenarios(
         "undeclared_matched_rule_ids": undeclared_matched_rule_ids,
         "unknown_declared_rule_ids": unknown_declared_rule_ids,
         "by_pattern_family": dict(sorted(by_family.items())),
+        "phase6_machine_gate_evidence": phase6_machine_gate_evidence,
         "cases": cases,
         "authority_boundary": (
             "Capture-completeness output is a deterministic harness report. Synthetic "
@@ -2371,9 +2722,21 @@ def evaluate_capture_scenarios(
         "expected packets to actual JSONL outboxes, but this report is not proof that "
         "all real repos are complete or public-safe.",
         "",
-        "## Pattern Families",
+        "## Phase 6 Machine Gate Evidence",
         "",
     ]
+    for gate in report["phase6_machine_gate_evidence"]["gates"].values():
+        lines.append(
+            f"- `{gate['supports_human_gate_id']}`: `{gate['machine_status']}` "
+            "(human review still required)"
+        )
+    lines.extend(
+        [
+            "",
+            "## Pattern Families",
+            "",
+        ]
+    )
     for family, count in sorted(by_family.items()):
         lines.append(f"- `{family}`: {count}")
     if missing_families:

@@ -22,16 +22,17 @@
       "scenario_id": "asset-pointer-created",
       "pattern_family": "asset",
       "description": "A repo creates a reusable asset with docs and cross-repo relevance.",
-      "repo_capture_surface_version": "0.2.0",
+      "repo_capture_surface_version": "0.1.0",
       "signals": ["new_reusable_asset", "cross_repo_reuse", "asset_docs"],
       "covered_rule_ids": ["exception-capture-rule:asset-suggestion"],
+      "phase6_update_vectors": ["dad_offerings_registry"],
       "expected": {
         "packet_classes": ["ordinary_mail"],
         "event_types": [],
         "mail_message_types": ["asset_suggestion"],
         "capture_contracts": [],
         "required_fields": ["asset_id_or_path", "safe_summary", "source_repo", "upgrade_channel"],
-        "update_required": false,
+        "update_required": true,
         "blocked": false
       },
       "negative_controls": ["contains_secret_or_pii", "contains_private_rows"],
@@ -94,16 +95,17 @@
       "scenario_id": "template-managed-block-change",
       "pattern_family": "template",
       "description": "A downstream managed block contract changes and should produce upgrade mail.",
-      "repo_capture_surface_version": "0.2.0",
+      "repo_capture_surface_version": "0.1.0",
       "signals": ["template_contract_change", "managed_block_change"],
       "covered_rule_ids": ["exception-capture-rule:template-update"],
+      "phase6_update_vectors": ["downstream_template"],
       "expected": {
         "packet_classes": ["ordinary_mail"],
         "event_types": [],
         "mail_message_types": ["workflow_suggestion"],
         "capture_contracts": [],
         "required_fields": ["changed_contract", "template_id", "upgrade_policy", "validation_refs"],
-        "update_required": false,
+        "update_required": true,
         "blocked": false
       },
       "negative_controls": ["contains_private_rows"],
@@ -259,6 +261,7 @@
       "repo_capture_surface_version": "0.1.0",
       "signals": ["mail_pattern_change", "new_mail_field_required"],
       "covered_rule_ids": ["exception-capture-rule:mail-pattern-change"],
+      "phase6_update_vectors": ["dad_needs_registry"],
       "expected": {
         "packet_classes": ["exception_event", "ordinary_mail"],
         "event_types": ["review_finding"],
@@ -451,6 +454,7 @@
       "repo_capture_surface_version": "0.1.0",
       "signals": ["exception_pattern_change", "new_exception_type_needed"],
       "covered_rule_ids": ["exception-capture-rule:exception-pattern-change"],
+      "phase6_update_vectors": ["exception_taxonomy"],
       "expected": {
         "packet_classes": ["exception_event", "ordinary_mail"],
         "event_types": ["other"],
@@ -546,6 +550,130 @@
         "repo_visibility": "private",
         "public_facing": false,
         "notes": "Lesson must include applies_when, does_not_apply_when, and danger."
+      },
+      "review_status": "reviewed"
+    },
+    {
+      "scenario_id": "secret-payload-suppressed",
+      "pattern_family": "asset",
+      "description": "A reusable asset signal includes credential-like text and must not be sent.",
+      "repo_capture_surface_version": "0.2.0",
+      "signals": ["new_reusable_asset", "cross_repo_reuse", "asset_docs"],
+      "covered_rule_ids": ["exception-capture-rule:asset-suggestion"],
+      "expected": {
+        "packet_classes": ["no_packet"],
+        "event_types": [],
+        "mail_message_types": [],
+        "capture_contracts": [],
+        "required_fields": [],
+        "update_required": false,
+        "blocked": true,
+        "blocked_reason": "payload_screen:credential_or_pii_pattern"
+      },
+      "negative_controls": ["contains_secret_or_pii"],
+      "payload_samples": [
+        {
+          "field": "safe_summary",
+          "text": "api_key=example-value"
+        }
+      ],
+      "source_context": {
+        "repo_visibility": "private",
+        "public_facing": false,
+        "notes": "Synthetic credential-like text is rejected before any packet is emitted."
+      },
+      "review_status": "reviewed"
+    },
+    {
+      "scenario_id": "private-row-payload-suppressed",
+      "pattern_family": "asset",
+      "description": "A reusable asset signal includes table-like private rows and must not be sent.",
+      "repo_capture_surface_version": "0.2.0",
+      "signals": ["new_reusable_asset", "cross_repo_reuse", "asset_docs"],
+      "covered_rule_ids": ["exception-capture-rule:asset-suggestion"],
+      "expected": {
+        "packet_classes": ["no_packet"],
+        "event_types": [],
+        "mail_message_types": [],
+        "capture_contracts": [],
+        "required_fields": [],
+        "update_required": false,
+        "blocked": true,
+        "blocked_reason": "payload_screen:table_like_value"
+      },
+      "negative_controls": ["contains_private_rows"],
+      "payload_samples": [
+        {
+          "field": "safe_summary",
+          "text": "case|client|matter|status|notes|owner|amount|date|risk\nrow1|alpha|matter1|open|synthetic private row|team|100|2026-01-01|high\nrow2|beta|matter2|closed|synthetic private row|team|200|2026-01-02|low"
+        }
+      ],
+      "source_context": {
+        "repo_visibility": "private",
+        "public_facing": false,
+        "notes": "Synthetic table-like rows stand in for copied private rows and are blocked."
+      },
+      "review_status": "reviewed"
+    },
+    {
+      "scenario_id": "raw-log-payload-suppressed",
+      "pattern_family": "asset",
+      "description": "A reusable asset signal includes a raw multiline log blob and must not be sent.",
+      "repo_capture_surface_version": "0.2.0",
+      "signals": ["new_reusable_asset", "cross_repo_reuse", "asset_docs"],
+      "covered_rule_ids": ["exception-capture-rule:asset-suggestion"],
+      "expected": {
+        "packet_classes": ["no_packet"],
+        "event_types": [],
+        "mail_message_types": [],
+        "capture_contracts": [],
+        "required_fields": [],
+        "update_required": false,
+        "blocked": true,
+        "blocked_reason": "payload_screen:raw_blob_like_multiline_value"
+      },
+      "negative_controls": ["contains_raw_log_blob"],
+      "payload_samples": [
+        {
+          "field": "safe_summary",
+          "text": "line 01 synthetic log\nline 02 synthetic log\nline 03 synthetic log\nline 04 synthetic log\nline 05 synthetic log\nline 06 synthetic log\nline 07 synthetic log\nline 08 synthetic log\nline 09 synthetic log\nline 10 synthetic log"
+        }
+      ],
+      "source_context": {
+        "repo_visibility": "internal",
+        "public_facing": false,
+        "notes": "Raw logs should become hashes or refs, not copied payloads."
+      },
+      "review_status": "reviewed"
+    },
+    {
+      "scenario_id": "hidden-reasoning-payload-suppressed",
+      "pattern_family": "asset",
+      "description": "A reusable asset signal includes hidden reasoning-like text and must not be sent.",
+      "repo_capture_surface_version": "0.2.0",
+      "signals": ["new_reusable_asset", "cross_repo_reuse", "asset_docs"],
+      "covered_rule_ids": ["exception-capture-rule:asset-suggestion"],
+      "expected": {
+        "packet_classes": ["no_packet"],
+        "event_types": [],
+        "mail_message_types": [],
+        "capture_contracts": [],
+        "required_fields": [],
+        "update_required": false,
+        "blocked": true,
+        "blocked_reason": "payload_screen:hidden_reasoning_like_payload"
+      },
+      "negative_controls": ["contains_hidden_chain_of_thought"],
+      "payload_samples": [
+        {
+          "field": "safe_summary",
+          "text": "Hidden chain-of-thought transcript should never be copied into DAD mail."
+        }
+      ],
+      "source_context": {
+        "repo_visibility": "private",
+        "public_facing": false,
+        "notes": "Hidden reasoning-like text is represented by a synthetic marker and blocked."
       },
       "review_status": "reviewed"
     },
