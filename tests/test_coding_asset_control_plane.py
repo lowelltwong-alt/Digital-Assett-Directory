@@ -251,6 +251,8 @@ def test_language_coding_advantage_registry_resolves_sources_and_assets():
         "pytest-dev",
         "hypothesis",
         "python-type-checkers",
+        "python-test-quality-frontier",
+        "python-performance-profiling",
         "python-interface-boundary-codebases",
     }.issubset(languages["python"]["trusted_source_ids"])
     assert {"rust-ecosystem-curation", "rust-fuzz", "rust-test-frontier"}.issubset(
@@ -261,6 +263,7 @@ def test_language_coding_advantage_registry_resolves_sources_and_assets():
     )
     assert "rust-high-signal-codebases" in languages["rust"]["trusted_source_ids"]
     assert "rust-parser-indexing-codebases" in languages["rust"]["trusted_source_ids"]
+    assert "rust-performance-measurement" in languages["rust"]["trusted_source_ids"]
     harness_ids = {harness["harness_id"] for harness in harness_registry["harnesses"]}
     assert "dad:harness:language-frontier-research" in harness_ids
     assert "dad:offering:language-frontier-research-harness" in offering_ids
@@ -279,8 +282,17 @@ def test_language_coding_advantage_registry_resolves_sources_and_assets():
     assert "github.com/tree-sitter/tree-sitter" in set(
         trusted_sources["rust-parser-indexing-codebases"]["url_patterns"]
     )
+    assert "github.com/flamegraph-rs/flamegraph" in set(
+        trusted_sources["rust-performance-measurement"]["url_patterns"]
+    )
     assert "docs.pydantic.dev" in set(
         trusted_sources["python-interface-boundary-codebases"]["url_patterns"]
+    )
+    assert "coverage.readthedocs.io" in set(
+        trusted_sources["python-test-quality-frontier"]["url_patterns"]
+    )
+    assert "github.com/psf/pyperf" in set(
+        trusted_sources["python-performance-profiling"]["url_patterns"]
     )
     assert {
         "proof:structured-data-boundary",
@@ -325,6 +337,7 @@ def test_language_coding_advantage_registry_resolves_sources_and_assets():
         "py-operation:runtime-cost-and-failure-trace",
         "py-operation:test-collection-and-invariant-map",
         "py-operation:environment-and-tooling-census",
+        "py-operation:test-strength-and-measurement-scout",
     }.issubset(python_operations)
     assert {
         "rs-operation:cargo-metadata-and-dependency-graph",
@@ -332,6 +345,7 @@ def test_language_coding_advantage_registry_resolves_sources_and_assets():
         "rs-operation:structured-test-and-parity-run",
         "rs-operation:fuzz-mutation-and-ub-scout",
         "rs-operation:api-compatibility-gate",
+        "rs-operation:profile-before-parallelism",
     }.issubset(rust_operations)
     assert future_operations == {"future-operation:proof-surface-inventory"}
     python_guidelines = {
@@ -363,12 +377,14 @@ def test_language_coding_advantage_registry_resolves_sources_and_assets():
         "py-codebase:pytest-hypothesis-type-checkers",
         "py-codebase:rust-backed-python-tools",
         "py-codebase:schema-cli-agent-interfaces",
+        "py-codebase:test-quality-and-profiling-tools",
     }.issubset(python_watch_targets)
     assert {
         "rs-codebase:compiler-cargo-clippy",
         "rs-codebase:scanner-parser-cli-tools",
         "rs-codebase:fuzz-security-test-frontier",
         "rs-codebase:mixed-python-rust-boundaries",
+        "rs-codebase:performance-measurement-tools",
     }.issubset(rust_watch_targets)
     for language_id in ("python", "rust", "future-language-template"):
         route_ids = {

@@ -241,7 +241,9 @@ Python operations DAD now expects agents to consider:
 - pytest collection, durations, markers, and small invariant/property probes
   before trimming a slow suite;
 - environment and tooling census before suggesting a Python version feature,
-  checker, package manager, or dependency.
+  checker, package manager, or dependency;
+- coverage, mutation-test, and repeatable profiling scouts when a passing suite
+  may be falsely green or a speed claim may be measurement noise;
 - AI-legible change surfaces: named parsers, schemas, stable commands, safe
   summaries, and negative tests around shared JSONL/report/CLI boundaries.
 
@@ -295,7 +297,9 @@ Rust operations DAD now expects agents to consider:
 - fuzz, property, mutation, and Miri-style scouts around pure parser, chunker,
   scanner, serializer, and unsafe-sensitive boundaries;
 - API compatibility checks before a Rust crate or CLI becomes a DAD-owned shared
-  dependency.
+  dependency;
+- benchmark and profiler scouts before adding parallelism, async, unsafe
+  optimization, or a broader Rust port;
 - AI-legible leaf contracts: schema-versioned JSON/JSONL, deterministic ordering,
   typed errors, and Python-side validators that can prove what the Rust tool
   emitted.
@@ -324,8 +328,8 @@ records. Useful starting groups:
 
 | Language | Source IDs | Watch For |
 | --- | --- | --- |
-| Python | `python-core`, `python-packaging`, `python-typing`, `pytest-dev`, `hypothesis`, `python-type-checkers`, `python-interface-boundary-codebases`, `astral` | PEP/version changes, typing and diagnostics, pytest orchestration, property tests, schema/CLI/report interface patterns, fast tooling, packaging/security shifts. |
-| Rust | `rust-lang`, `rust-community-frontier`, `rust-ecosystem-curation`, `rust-high-signal-codebases`, `rust-parser-indexing-codebases`, `rust-security`, `rust-fuzz`, `rust-test-frontier`, `rust-api-compatibility`, `rust-mutation-testing`, `pyo3`, `google` | Stabilized features, project goals, Cargo/Clippy, scanners, parsers, syntax trees, search indexes, parser/fuzz patterns, RustSec, test orchestration, API compatibility, mutation testing, PyO3/maturin boundary changes, and crates worth local harness evaluation. |
+| Python | `python-core`, `python-packaging`, `python-typing`, `pytest-dev`, `hypothesis`, `python-type-checkers`, `python-test-quality-frontier`, `python-performance-profiling`, `python-interface-boundary-codebases`, `astral` | PEP/version changes, typing and diagnostics, pytest orchestration, property tests, coverage/mutation-test signals, profiling and benchmark design, schema/CLI/report interface patterns, fast tooling, packaging/security shifts. |
+| Rust | `rust-lang`, `rust-community-frontier`, `rust-performance-measurement`, `rust-ecosystem-curation`, `rust-high-signal-codebases`, `rust-parser-indexing-codebases`, `rust-security`, `rust-fuzz`, `rust-test-frontier`, `rust-api-compatibility`, `rust-mutation-testing`, `pyo3`, `google` | Stabilized features, project goals, Cargo/Clippy, benchmarks/profilers, scanners, parsers, syntax trees, search indexes, parser/fuzz patterns, RustSec, test orchestration, API compatibility, mutation testing, PyO3/maturin boundary changes, and crates worth local harness evaluation. |
 | Future languages | `openai`, `anthropic`, plus a reviewed language-specific source before use | New proof tools, compiler/linter/test contracts, and harness ideas before any downstream recommendation. |
 
 Concrete URLs belong in the trusted source registry or research-intake records.
@@ -344,8 +348,10 @@ code, examples, benchmarks, or generated corpora into DAD mail.
 | Rust parser/search/indexing codebases | `https://github.com/tree-sitter/tree-sitter`, `https://github.com/quickwit-oss/tantivy`, `https://github.com/serde-rs/json`, `https://github.com/rust-lang/rust-analyzer` | Study pointer-only patterns for syntax trees, offsets, search indexes, JSON boundaries, and diagnostics. Convert observations into tiny DAD harness cases before guidance changes. |
 | Rust safety/testing | `https://rustsec.org/`, `https://rust-fuzz.github.io/book/`, `https://nexte.st/`, `https://doc.rust-lang.org/clippy/` | Turn security, fuzzing, Clippy, and test-runner ideas into validation plans before changing defaults. |
 | Rust API and mutation proof | `https://github.com/obi1kenobi/cargo-semver-checks`, `https://mutants.rs/`, `https://github.com/sourcefrog/cargo-mutants` | Treat API compatibility and mutation testing as candidate harness evidence for shared Rust tools; review cost, false positives, license, and local fit before adoption. |
+| Rust benchmarking/profiling | `https://bheisler.github.io/criterion.rs/book/`, `https://github.com/flamegraph-rs/flamegraph`, `https://github.com/rust-lang/rustc-perf` | Use benchmark and profiler sources to design same-workload local measurements. Do not promote microbenchmark wins as repo-level savings without parity and wall-clock evidence. |
 | Python official direction | `https://docs.python.org/3/whatsnew/`, `https://peps.python.org/`, `https://blog.python.org/`, `https://devguide.python.org/`, `https://typing.python.org/` | Capture version, typing, diagnostics, packaging, and stdlib changes with target Python version and checker/tool support. |
 | Python tooling/testing | `https://docs.astral.sh/ruff/`, `https://docs.astral.sh/uv/`, `https://docs.astral.sh/ty/`, `https://docs.pytest.org/`, `https://hypothesis.readthedocs.io/`, `https://mypy.readthedocs.io/`, `https://microsoft.github.io/pyright/` | Route speed, lint, type, fixture, property, and test-selection ideas through local validation before broad guidance. Treat beta or fast-moving checker behavior as candidate-only until the target repo opts in and local evidence exists. |
+| Python test-strength/profiling | `https://coverage.readthedocs.io/`, `https://github.com/boxed/mutmut`, `https://pyperf.readthedocs.io/`, `https://github.com/benfred/py-spy`, `https://github.com/plasma-umass/scalene` | Use coverage, mutation, and profiling sources to expose false-green tests and noisy speed claims. Keep raw reports, private paths, traces, and generated inputs local unless sanitized and approved. |
 | Python schema/CLI/interface codebases | `https://docs.pydantic.dev/`, `https://typer.tiangolo.com/`, `https://rich.readthedocs.io/`, `https://textual.textualize.io/` | Study pointer-only patterns for validated boundaries, command UX, structured errors, and agent-readable output. Local dependency approval and tests are required before adoption. |
 | Python runtime proof operations | `https://docs.python.org/3/library/ast.html`, `https://docs.python.org/3/library/inspect.html`, `https://docs.python.org/3/library/profile.html`, `https://docs.python.org/3/library/tracemalloc.html`, `https://docs.python.org/3/library/faulthandler.html` | Use structural and runtime introspection to prove what the repo does before changing design, performance, test, or Rust-migration guidance. |
 | AI coding research | `https://developers.openai.com/codex/`, `https://docs.anthropic.com/en/docs/claude-code/overview`, `https://cursor.com/docs/rules`, `https://arxiv.org/` | Extract only agent-workflow or eval ideas that can become deterministic DAD checks or harness cases. |

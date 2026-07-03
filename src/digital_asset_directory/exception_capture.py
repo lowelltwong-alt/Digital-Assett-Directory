@@ -3004,6 +3004,166 @@ def _taxonomy_phase6_machine_gate_evidence(
     }
 
 
+def _taxonomy_route_review_summaries(
+    records: list[dict[str, Any]],
+    status_counts: Counter[str],
+) -> tuple[dict[str, Any], dict[str, Any]]:
+    route_kind_counts: Counter[str] = Counter(
+        route_kind
+        for record in records
+        for route_kind in record["route_kinds"]
+    )
+    category_summary: dict[str, Any] = {}
+    high_or_critical_direct_only: list[str] = []
+    for category in sorted({record["category"] for record in records}):
+        category_records = [
+            record for record in records if record["category"] == category
+        ]
+        category_status_counts: Counter[str] = Counter(
+            record["coverage_status"] for record in category_records
+        )
+        category_route_counts: Counter[str] = Counter(
+            route_kind
+            for record in category_records
+            for route_kind in record["route_kinds"]
+        )
+        direct_only_event_types = sorted(
+            record["event_type"]
+            for record in category_records
+            if record["coverage_status"] == "direct_record_contract_only"
+        )
+        backfill_signal_event_types = sorted(
+            record["event_type"]
+            for record in category_records
+            if "backfill_path_signal" in record["route_kinds"]
+        )
+        capture_rule_event_types = sorted(
+            record["event_type"]
+            for record in category_records
+            if record["capture_rule_ids"]
+        )
+        learnable_direct_only_event_types = sorted(
+            record["event_type"]
+            for record in category_records
+            if record["coverage_status"] == "direct_record_contract_only"
+            and record["learnable"]
+        )
+        high_or_critical_category_direct_only = sorted(
+            record["event_type"]
+            for record in category_records
+            if record["coverage_status"] == "direct_record_contract_only"
+            and record["default_severity"] in {"high", "critical"}
+        )
+        high_or_critical_direct_only.extend(high_or_critical_category_direct_only)
+        category_summary[category] = {
+            "event_type_count": len(category_records),
+            "event_types": sorted(record["event_type"] for record in category_records),
+            "coverage_status_counts": dict(sorted(category_status_counts.items())),
+            "route_kind_counts": dict(sorted(category_route_counts.items())),
+            "capture_rule_count": len(capture_rule_event_types),
+            "backfill_path_signal_count": len(backfill_signal_event_types),
+            "direct_record_only_count": len(direct_only_event_types),
+            "unrouted_count": sum(1 for record in category_records if record["unrouted"]),
+            "capture_rule_event_types": capture_rule_event_types,
+            "backfill_path_signal_event_types": backfill_signal_event_types,
+            "direct_record_only_event_types": direct_only_event_types,
+            "learnable_direct_record_only_event_types": learnable_direct_only_event_types,
+            "high_or_critical_direct_record_only_event_types": (
+                high_or_critical_category_direct_only
+            ),
+        }
+
+    categories_without_capture_rules = sorted(
+        category
+        for category, row in category_summary.items()
+        if row["capture_rule_count"] == 0
+    )
+    categories_without_detector_or_backfill = sorted(
+        category
+        for category, row in category_summary.items()
+        if row["capture_rule_count"] == 0 and row["backfill_path_signal_count"] == 0
+    )
+    backfill_heavy_categories = sorted(
+        category
+        for category, row in category_summary.items()
+        if row["backfill_path_signal_count"] > row["capture_rule_count"]
+    )
+    direct_only_by_category = {
+        category: row["direct_record_only_event_types"]
+        for category, row in category_summary.items()
+        if row["direct_record_only_event_types"]
+    }
+    backfill_signal_by_category = {
+        category: row["backfill_path_signal_event_types"]
+        for category, row in category_summary.items()
+        if row["backfill_path_signal_event_types"]
+    }
+    review_attention: list[dict[str, Any]] = []
+    high_or_critical_direct_only = sorted(high_or_critical_direct_only)
+    if high_or_critical_direct_only:
+        review_attention.append(
+            {
+                "attention_id": "high_or_critical_direct_record_only",
+                "event_types": high_or_critical_direct_only,
+                "why": (
+                    "High or critical event types currently rely on intentional "
+                    "direct records rather than reviewed automatic capture rules."
+                ),
+            }
+        )
+    if categories_without_capture_rules:
+        review_attention.append(
+            {
+                "attention_id": "categories_without_capture_rules",
+                "categories": categories_without_capture_rules,
+                "why": (
+                    "These categories have no reviewed automatic capture rule; "
+                    "manual records or backfill signals may still exist."
+                ),
+            }
+        )
+    if categories_without_detector_or_backfill:
+        review_attention.append(
+            {
+                "attention_id": "categories_without_detector_or_backfill",
+                "categories": categories_without_detector_or_backfill,
+                "why": (
+                    "These categories have no reviewed capture rule and no "
+                    "backfill path-signal route."
+                ),
+            }
+        )
+    if backfill_heavy_categories:
+        review_attention.append(
+            {
+                "attention_id": "backfill_path_signal_heavy_categories",
+                "categories": backfill_heavy_categories,
+                "why": (
+                    "Backfill path-signal routes outnumber reviewed capture "
+                    "rules in these categories; source review is still required."
+                ),
+            }
+        )
+
+    review_summary = {
+        "category_count": len(category_summary),
+        "route_kind_counts": dict(sorted(route_kind_counts.items())),
+        "coverage_status_counts": dict(sorted(status_counts.items())),
+        "categories_without_capture_rules": categories_without_capture_rules,
+        "categories_without_detector_or_backfill": categories_without_detector_or_backfill,
+        "backfill_path_signal_heavy_categories": backfill_heavy_categories,
+        "direct_record_only_event_types_by_category": direct_only_by_category,
+        "backfill_path_signal_event_types_by_category": backfill_signal_by_category,
+        "high_or_critical_direct_record_only_event_types": high_or_critical_direct_only,
+        "review_attention": review_attention,
+        "authority_boundary": (
+            "Review attention fields are triage aids. They do not fail or pass "
+            "the human gate, promote lessons, or prove automatic capture."
+        ),
+    }
+    return category_summary, review_summary
+
+
 def evaluate_exception_taxonomy_coverage(
     hub_root: Path,
     scenarios_path: Path,
@@ -3093,6 +3253,10 @@ def evaluate_exception_taxonomy_coverage(
         for record in records
         if record["capture_rule_ids"] or record["backfill_rule_ids"]
     )
+    category_route_summary, taxonomy_review_summary = _taxonomy_route_review_summaries(
+        records,
+        status_counts,
+    )
     report = {
         "generated_at": utc_now(),
         "event_registry_ref": "registry/exception-event-type-registry.json",
@@ -3109,6 +3273,9 @@ def evaluate_exception_taxonomy_coverage(
         "unrouted_count": len(unrouted),
         "missing_synthetic_case_count": len(missing_scenarios),
         "coverage_status_counts": dict(sorted(status_counts.items())),
+        "route_kind_counts": taxonomy_review_summary["route_kind_counts"],
+        "taxonomy_review_summary": taxonomy_review_summary,
+        "category_route_summary": category_route_summary,
         "manual_only_event_types": manual_only,
         "unrouted_event_types": unrouted,
         "reviewed_unrouted_event_types": reviewed_unrouted,
@@ -3162,6 +3329,32 @@ def evaluate_exception_taxonomy_coverage(
     )
     for status, count in sorted(status_counts.items()):
         lines.append(f"- `{status}`: {count}")
+    lines.extend(["", "## Route Kind Counts", ""])
+    for route_kind, count in taxonomy_review_summary["route_kind_counts"].items():
+        lines.append(f"- `{route_kind}`: {count}")
+    if taxonomy_review_summary["review_attention"]:
+        lines.extend(["", "## Review Attention", ""])
+        for item in taxonomy_review_summary["review_attention"]:
+            label = item["attention_id"].replace("_", " ")
+            values = item.get("event_types") or item.get("categories") or []
+            lines.append(f"### {label.title()}")
+            lines.append("")
+            lines.append(item["why"])
+            lines.append("")
+            for value in values:
+                lines.append(f"- `{value}`")
+            lines.append("")
+    lines.extend(["", "## Category Route Summary", ""])
+    lines.append(
+        "| Category | Events | Capture Rules | Backfill Signals | Direct Only | Unrouted |"
+    )
+    lines.append("| --- | ---: | ---: | ---: | ---: | ---: |")
+    for category, row in category_route_summary.items():
+        lines.append(
+            f"| `{category}` | {row['event_type_count']} | {row['capture_rule_count']} | "
+            f"{row['backfill_path_signal_count']} | {row['direct_record_only_count']} | "
+            f"{row['unrouted_count']} |"
+        )
     if manual_only:
         lines.extend(["", "## Direct Record Only", ""])
         lines.extend(f"- `{event_type}`" for event_type in manual_only)

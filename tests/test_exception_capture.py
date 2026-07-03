@@ -493,6 +493,38 @@ def test_exception_taxonomy_coverage_distinguishes_manual_and_signal_routes(
     assert report["reviewed_unrouted_event_types"] == []
     assert report["learnable_unrouted_event_types"] == []
     assert report["capture_rule_events_missing_synthetic_cases"] == []
+    assert report["route_kind_counts"]["capture_rule"] >= 1
+    assert report["route_kind_counts"]["backfill_path_signal"] >= 1
+    assert report["taxonomy_review_summary"]["category_count"] >= 10
+    assert report["taxonomy_review_summary"]["coverage_status_counts"] == (
+        report["coverage_status_counts"]
+    )
+    category_backfill_count = sum(
+        row["backfill_path_signal_count"]
+        for row in report["category_route_summary"].values()
+    )
+    assert category_backfill_count == report["route_kind_counts"]["backfill_path_signal"]
+    category_backfill_events = {
+        event_type
+        for row in report["category_route_summary"].values()
+        for event_type in row["backfill_path_signal_event_types"]
+    }
+    assert "artifact_registration_drift" in category_backfill_events
+    assert "security_privacy" in report["category_route_summary"]
+    security_privacy = report["category_route_summary"]["security_privacy"]
+    assert security_privacy["direct_record_only_count"] >= 1
+    assert "secret_or_pii_detected" in (
+        security_privacy["high_or_critical_direct_record_only_event_types"]
+    )
+    attention_ids = {
+        item["attention_id"]
+        for item in report["taxonomy_review_summary"]["review_attention"]
+    }
+    assert "high_or_critical_direct_record_only" in attention_ids
+    assert "categories_without_capture_rules" in attention_ids
+    assert "private_origin_public_target" in report["taxonomy_review_summary"][
+        "high_or_critical_direct_record_only_event_types"
+    ]
     assert "failed_command" not in report["manual_only_event_types"]
     assert "tool_unavailable" not in report["manual_only_event_types"]
     assert "validation_command_missing" in report["manual_only_event_types"]

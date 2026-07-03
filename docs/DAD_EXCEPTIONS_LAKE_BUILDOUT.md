@@ -796,7 +796,11 @@ Implemented starter harness:
 - `asset-dir exceptions taxonomy-coverage --fail-on-unrouted --fail-on-missing-scenarios`
   writes `processed/reports/exception_taxonomy_coverage.*`. It maps every reviewed
   exception event type to direct record contracts, capture-rule routes, backfill
-  path-signal routes, and synthetic scenarios.
+  path-signal routes, and synthetic scenarios. The report also includes
+  `taxonomy_review_summary` and `category_route_summary` so reviewers can see
+  which categories are capture-rule-backed, backfill-heavy, direct-record-only,
+  or high/critical but still manual. These summaries are triage aids; they do
+  not close the human gate or prove deterministic auto-detection.
 - Capture, taxonomy, and observed-audit reports emit
   `phase6_machine_gate_evidence`, which names the Phase 6 roadmap gates
   supported by the run through

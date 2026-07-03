@@ -153,6 +153,8 @@
         "pytest-dev",
         "hypothesis",
         "python-type-checkers",
+        "python-test-quality-frontier",
+        "python-performance-profiling",
         "python-interface-boundary-codebases",
         "pyo3"
       ],
@@ -412,6 +414,37 @@
             "Do not treat available global tools as repo-approved tools.",
             "Do not include full environment dumps or paths in public-facing mail."
           ]
+        },
+        {
+          "operation_id": "py-operation:test-strength-and-measurement-scout",
+          "summary": "Use coverage, mutation-test, and repeatable profiling scouts to detect false-green Python tests and unmeasured speed claims.",
+          "source_ids": ["pytest-dev", "hypothesis", "python-test-quality-frontier", "python-performance-profiling"],
+          "review_status": "candidate",
+          "maturity": "scout_operation",
+          "cost_risk": "high",
+          "candidate_only": true,
+          "run_or_inspect": [
+            "Coverage or branch-coverage summaries when a selected test slice may look greener than it is.",
+            "A tiny mutation-test pilot for high-value pure functions when local policy allows the tool.",
+            "pyperf, py-spy, Scalene, or repo-approved profiler output before speed claims or Rust migration proposals."
+          ],
+          "use_when": [
+            "A test suite passes but a review suspects weak assertions, missing branches, or overfit generated tests.",
+            "A performance claim could be distorted by fixture setup, I/O, import cost, subprocesses, or noisy timing."
+          ],
+          "proof_output": [
+            "Command, exit code, duration, covered/missed branch summary, survived-mutant count, or sanitized profiler summary.",
+            "A cost note explaining why the scout should or should not become a recurring check."
+          ],
+          "route_to": [
+            "assets/coding-harnesses/python-test-performance-orchestration",
+            "dad:need:coding-harness-feedback",
+            "dad:need:language-frontier-signals"
+          ],
+          "safety_limits": [
+            "Do not send raw coverage HTML, mutation diffs, traces, private paths, or private inputs through DAD mail.",
+            "Do not fail a downstream repo on coverage or mutation evidence until local policy adopts the gate."
+          ]
         }
       ],
       "agent_coding_guidelines": [
@@ -639,6 +672,47 @@
             "Adding Pydantic, Typer, Rich, or Textual to a repo without local dependency approval.",
             "Treating interface polish as proof that domain behavior is correct."
           ]
+        },
+        {
+          "target_id": "py-codebase:test-quality-and-profiling-tools",
+          "label": "Python test-strength and profiling tools",
+          "source_ids": ["python-test-quality-frontier", "python-performance-profiling", "pytest-dev"],
+          "example_refs": [
+            {
+              "source_id": "python-test-quality-frontier",
+              "ref": "https://coverage.readthedocs.io/",
+              "review_status": "reviewed",
+              "provenance_note": "Coverage.py documentation; pointer-only test-strength signal source."
+            },
+            {
+              "source_id": "python-test-quality-frontier",
+              "ref": "https://github.com/boxed/mutmut",
+              "review_status": "candidate",
+              "provenance_note": "Mutmut repository; candidate pointer for small mutation-test pilots only."
+            },
+            {
+              "source_id": "python-performance-profiling",
+              "ref": "https://github.com/psf/pyperf",
+              "review_status": "reviewed",
+              "provenance_note": "Python pyperf repository; pointer-only repeatable benchmark source."
+            },
+            {
+              "source_id": "python-performance-profiling",
+              "ref": "https://github.com/benfred/py-spy",
+              "review_status": "candidate",
+              "provenance_note": "py-spy repository; candidate pointer for low-overhead local profiling."
+            }
+          ],
+          "watch_for": [
+            "coverage and branch signals that expose selected-test blind spots",
+            "mutation-test outputs that reveal weak assertions in small pure boundaries",
+            "profiling practices that separate Python CPU cost from fixtures, subprocesses, I/O, and imports"
+          ],
+          "why_ai_agents_should_study": "These tools help agents avoid false green tests and fake speed claims by making test strength and measurement quality explicit.",
+          "it_must_not_be_used_for": [
+            "Imposing coverage or mutation thresholds on downstream repos without local approval.",
+            "Publishing raw traces, coverage artifacts, mutation diffs, or private file paths through DAD mail."
+          ]
         }
       ],
       "frontier_promotion_policy": {
@@ -745,6 +819,7 @@
       "trusted_source_ids": [
         "rust-lang",
         "rust-community-frontier",
+        "rust-performance-measurement",
         "rust-ecosystem-curation",
         "rust-high-signal-codebases",
         "rust-parser-indexing-codebases",
@@ -1060,6 +1135,37 @@
             "Do not treat API compatibility as semantic correctness.",
             "Do not publish internal path examples in public release notes."
           ]
+        },
+        {
+          "operation_id": "rs-operation:profile-before-parallelism",
+          "summary": "Use Rust benchmark and profiler scouts before adding Rayon, async, unsafe optimizations, or broader Rust ports.",
+          "source_ids": ["rust-performance-measurement", "rust-community-frontier"],
+          "review_status": "candidate",
+          "maturity": "scout_operation",
+          "cost_risk": "medium",
+          "candidate_only": true,
+          "run_or_inspect": [
+            "Criterion or repo-approved benchmark harness on the same workload before and after a change.",
+            "cargo flamegraph or equivalent local profiling when a hot path is not obvious.",
+            "Perf-book or Tokio notes only as pointer-only scout inputs, never as direct downstream rules."
+          ],
+          "use_when": [
+            "A Rust proposal claims speed from parallelism, async, allocation reduction, or lower-level data structures.",
+            "A Python-to-Rust shadow path might be CPU-bound but the exact cost center is still unclear."
+          ],
+          "proof_output": [
+            "Benchmark command, duration/statistical summary, workload identity, profiler top symbols, and applicability limits.",
+            "A note proving the compared commands exercised the same behavior or declaring coverage unverified."
+          ],
+          "route_to": [
+            "assets/rust-buildout-guide/rust-buildout.json",
+            "assets/coding-harnesses/rust-shadow-parity-harness",
+            "dad:need:coding-harness-feedback"
+          ],
+          "safety_limits": [
+            "Do not use synthetic microbenchmarks as proof of downstream wall-clock savings.",
+            "Do not introduce unsafe, parallel, or async complexity without a named local bottleneck and rollback path."
+          ]
         }
       ],
       "agent_coding_guidelines": [
@@ -1341,6 +1447,47 @@
           "it_must_not_be_used_for": [
             "Assuming a successful public tool proves a private repo should port.",
             "Skipping Python native validation when a Rust extension exists."
+          ]
+        },
+        {
+          "target_id": "rs-codebase:performance-measurement-tools",
+          "label": "Rust benchmarking and profiling proof surfaces",
+          "source_ids": ["rust-performance-measurement", "rust-community-frontier"],
+          "example_refs": [
+            {
+              "source_id": "rust-performance-measurement",
+              "ref": "https://bheisler.github.io/criterion.rs/book/",
+              "review_status": "reviewed",
+              "provenance_note": "Criterion.rs book; pointer-only Rust benchmark-harness source."
+            },
+            {
+              "source_id": "rust-performance-measurement",
+              "ref": "https://github.com/flamegraph-rs/flamegraph",
+              "review_status": "candidate",
+              "provenance_note": "cargo-flamegraph repository; candidate pointer for local profiling only."
+            },
+            {
+              "source_id": "rust-performance-measurement",
+              "ref": "https://github.com/rust-lang/rustc-perf",
+              "review_status": "candidate",
+              "provenance_note": "Official rustc-perf repository; pointer-only performance measurement study target."
+            },
+            {
+              "source_id": "rust-community-frontier",
+              "ref": "https://nnethercote.github.io/perf-book/",
+              "review_status": "candidate",
+              "provenance_note": "Rust Performance Book; pointer-only optimization scout source."
+            }
+          ],
+          "watch_for": [
+            "benchmark setup patterns that reduce noisy timing claims",
+            "profiling workflows that distinguish CPU hot paths from I/O or orchestration cost",
+            "optimization techniques that include when-not-to-use limits and local proof requirements"
+          ],
+          "why_ai_agents_should_study": "Rust is only a DAD advantage when the measurement surface is better than the guesswork it replaces.",
+          "it_must_not_be_used_for": [
+            "Promoting microbenchmark wins as repo-level savings without same-workload parity.",
+            "Turning low-level optimization techniques into defaults for ordinary governance or orchestration code."
           ]
         }
       ],

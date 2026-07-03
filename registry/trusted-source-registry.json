@@ -107,6 +107,30 @@
       "review_status": "candidate"
     },
     {
+      "source_id": "rust-performance-measurement",
+      "label": "Rust performance measurement and profiling tools",
+      "url_patterns": [
+        "bheisler.github.io/criterion.rs",
+        "github.com/bheisler/criterion.rs",
+        "github.com/flamegraph-rs/flamegraph",
+        "github.com/rust-lang/rustc-perf"
+      ],
+      "trust_tier": "known",
+      "check_cadence": "quarterly",
+      "language_focus": ["rust"],
+      "frontier_watch": [
+        "criterion and benchmark-harness patterns that compare the same workload",
+        "profiling and flamegraph practices that reveal whether Rust work is CPU-bound",
+        "compiler performance evidence that affects DAD Rust toolchain expectations"
+      ],
+      "intake_actions": [
+        "Use as candidate evidence for measurement design, not as standalone proof that Rust should be adopted.",
+        "Require same-workload local timings and parity before any speed recommendation reaches downstream repos."
+      ],
+      "asset_kinds": ["doc", "harness", "lesson"],
+      "review_status": "reviewed"
+    },
+    {
       "source_id": "rust-ecosystem-curation",
       "label": "Rust ecosystem curation and crate discovery",
       "url_patterns": ["lib.rs", "docs.rs", "blessed.rs", "github.com/rust-unofficial/awesome-rust"],
@@ -420,6 +444,56 @@
       ],
       "asset_kinds": ["doc", "asset", "harness", "lesson"],
       "review_status": "candidate"
+    },
+    {
+      "source_id": "python-test-quality-frontier",
+      "label": "Python coverage and mutation-test frontier",
+      "url_patterns": [
+        "coverage.readthedocs.io",
+        "github.com/nedbat/coveragepy",
+        "mutmut.readthedocs.io",
+        "github.com/boxed/mutmut",
+        "cosmic-ray.readthedocs.io",
+        "github.com/sixty-north/cosmic-ray"
+      ],
+      "trust_tier": "known",
+      "check_cadence": "quarterly",
+      "language_focus": ["python"],
+      "frontier_watch": [
+        "coverage contexts and branch-coverage signals that expose untested behavior",
+        "mutation-testing reports that show tests pass without asserting important logic",
+        "cost and false-positive limits before recommending test-strength tools"
+      ],
+      "intake_actions": [
+        "Route test-strength ideas to harness candidates with explicit cost limits.",
+        "Do not require coverage or mutation tools downstream without local approval and a small pilot."
+      ],
+      "asset_kinds": ["doc", "harness", "lesson"],
+      "review_status": "reviewed"
+    },
+    {
+      "source_id": "python-performance-profiling",
+      "label": "Python performance measurement and profiling tools",
+      "url_patterns": [
+        "pyperf.readthedocs.io",
+        "github.com/psf/pyperf",
+        "github.com/benfred/py-spy",
+        "github.com/plasma-umass/scalene"
+      ],
+      "trust_tier": "known",
+      "check_cadence": "quarterly",
+      "language_focus": ["python"],
+      "frontier_watch": [
+        "repeatable Python benchmark design",
+        "low-overhead profiling for CPU, allocation, and wall-time bottlenecks",
+        "measurement patterns that separate fixture, subprocess, I/O, and Python CPU cost"
+      ],
+      "intake_actions": [
+        "Use as candidate evidence for measurement design before Rust proposals.",
+        "Record commands, durations, symbols, and applicability limits; do not copy raw traces or private arguments into DAD."
+      ],
+      "asset_kinds": ["doc", "harness", "lesson"],
+      "review_status": "reviewed"
     },
     {
       "source_id": "martinfowler",
