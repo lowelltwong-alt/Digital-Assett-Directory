@@ -2,8 +2,17 @@ from copy import deepcopy
 import json
 from pathlib import Path
 
+import pytest
+
+from digital_asset_directory.config import ExceptionRepoPolicy
+from digital_asset_directory.exception_capture import (
+    load_capture_pattern_registry,
+    write_exception_backfill_readiness,
+    write_observed_capture_audit,
+)
 from digital_asset_directory.roadmap import check_roadmap, record_human_gate_evidence
 from digital_asset_directory.validation import (
+    _candidate_path_scan_staleness_errors,
     _contains_local_path_ref,
     _contains_readable_repo_relative_ref,
     _fix_outcome_semantic_errors,
@@ -13,8 +22,6 @@ from digital_asset_directory.validation import (
     _source_provenance_consistency_errors,
     validate_repo,
 )
-
-import pytest
 
 pytestmark = pytest.mark.integration
 
@@ -40,6 +47,20 @@ def _language_semantic_errors_for(payload: dict) -> list[str]:
         payload,
         trusted,
         coding_assets | reusable_assets | offerings,
+    )
+
+
+def _exception_policy(repo: Path) -> ExceptionRepoPolicy:
+    return ExceptionRepoPolicy(
+        id="repo",
+        path=repo,
+        alias="repo",
+        visibility="internal",
+        exceptions_enabled=True,
+        collect_allowed=True,
+        capture_audit_allowed=True,
+        backfill_allowed=True,
+        approved_approval_ids=["APPROVED"],
     )
 
 
@@ -182,6 +203,68 @@ def test_observed_audit_external_repo_resolves_by_reviewed_path_hash(tmp_path: P
     assert error == ""
     assert unresolved is None
     assert unresolved_error == "unresolved external audited repo"
+
+
+def test_observed_audit_candidate_path_scan_staleness_detects_new_signal(
+    tmp_path: Path,
+):
+    repo = tmp_path / "repo"
+    docs = repo / "docs"
+    docs.mkdir(parents=True)
+    (docs / "postmortem.md").write_text("metadata-only\n", encoding="utf-8")
+    policy = _exception_policy(repo)
+    report_path = tmp_path / "observed-audit.json"
+    report = write_observed_capture_audit(
+        ROOT,
+        [repo],
+        repo_policies=[policy],
+        output=report_path,
+        candidate_limit=10,
+    )
+
+    (docs / "incident-review.md").write_text("metadata-only\n", encoding="utf-8")
+    errors = _candidate_path_scan_staleness_errors(
+        ROOT,
+        report_path,
+        report["repos"][0],
+        registry=load_capture_pattern_registry(ROOT),
+        repo_policies=[policy],
+        policy_paths={_path_identity_hash(repo): repo.resolve()},
+    )
+
+    assert any("Candidate path scan stale" in error for error in errors)
+    assert any("scan_hash" in error for error in errors)
+
+
+def test_backfill_readiness_candidate_path_scan_staleness_detects_new_signal(
+    tmp_path: Path,
+):
+    repo = tmp_path / "repo"
+    docs = repo / "docs"
+    docs.mkdir(parents=True)
+    (docs / "postmortem.md").write_text("metadata-only\n", encoding="utf-8")
+    policy = _exception_policy(repo)
+    report_path = tmp_path / "backfill-readiness.json"
+    report = write_exception_backfill_readiness(
+        ROOT,
+        [repo],
+        repo_policies=[policy],
+        output=report_path,
+        candidate_limit=10,
+    )
+
+    (docs / "governance-block.md").write_text("metadata-only\n", encoding="utf-8")
+    errors = _candidate_path_scan_staleness_errors(
+        ROOT,
+        report_path,
+        report["repos"][0],
+        registry=load_capture_pattern_registry(ROOT),
+        repo_policies=[policy],
+        policy_paths={_path_identity_hash(repo): repo.resolve()},
+    )
+
+    assert any("Candidate path scan stale" in error for error in errors)
+    assert any("scan_hash" in error for error in errors)
 
 
 def test_seed_roadmap_file_gate_is_complete():

@@ -8,6 +8,7 @@ import yaml
 from jsonschema.validators import validator_for
 
 from .config import load_config
+from .exception_capture import audit_observed_capture_repo, load_capture_pattern_registry
 from .utils import sha256_bytes, sha256_file
 
 MAIL_MESSAGE_TYPES = {
@@ -408,6 +409,78 @@ def _observed_audit_label(report_path: Path, repo_root: Path, row: dict[str, Any
     repo_info = row.get("repo", {}) if isinstance(row.get("repo"), dict) else {}
     repo_id = str(repo_info.get("repo_id") or repo_info.get("path_hint") or "unknown")
     return f"{report_path.relative_to(repo_root)} {repo_id}:{outbox.get('path', '')}"
+
+
+def _report_path_label(report_path: Path, repo_root: Path) -> str:
+    try:
+        return str(report_path.relative_to(repo_root))
+    except ValueError:
+        return report_path.name
+
+
+def _candidate_scan_repo_info(row: dict[str, Any]) -> dict[str, Any]:
+    repo_info = row.get("repo")
+    if isinstance(repo_info, dict):
+        return repo_info
+    return {
+        "repo_id": row.get("repo_id"),
+        "path_hint": row.get("path_hint"),
+        "path_hash": row.get("path_hash"),
+    }
+
+
+def _candidate_path_scan_staleness_errors(
+    repo_root: Path,
+    report_path: Path,
+    row: dict[str, Any],
+    *,
+    registry: dict[str, Any],
+    repo_policies: list[Any],
+    policy_paths: dict[str, Path],
+) -> list[str]:
+    expected_scan = row.get("candidate_path_scan", {})
+    if not isinstance(expected_scan, dict):
+        return []
+    repo_info = _candidate_scan_repo_info(row)
+    audited_repo, resolve_error = _resolve_observed_audit_repo(
+        repo_root,
+        repo_info,
+        policy_paths,
+    )
+    label = (
+        f"{_report_path_label(report_path, repo_root)} "
+        f"{repo_info.get('repo_id') or repo_info.get('path_hint') or 'unknown'}"
+    )
+    if audited_repo is None:
+        return [f"Candidate path scan stale for {label}: {resolve_error}"]
+    try:
+        candidate_limit = int(expected_scan.get("limit") or 50)
+    except (TypeError, ValueError):
+        return [f"Candidate path scan stale for {label}: invalid candidate scan limit"]
+    current = audit_observed_capture_repo(
+        repo_root,
+        audited_repo,
+        registry,
+        repo_policies=repo_policies,
+        candidate_limit=candidate_limit,
+    )
+    current_scan = current.get("candidate_path_scan", {})
+    errors: list[str] = []
+    for key in ["scan_hash", "scanned_file_count", "truncated", "path_hash_only"]:
+        expected = expected_scan.get(key)
+        actual = current_scan.get(key)
+        if expected != actual:
+            errors.append(
+                f"Candidate path scan stale for {label} {key}: {expected} != {actual}"
+            )
+    expected_count = row.get("candidate_path_signal_count")
+    actual_count = current.get("candidate_path_signal_count")
+    if expected_count != actual_count:
+        errors.append(
+            f"Candidate path scan stale for {label} candidate_path_signal_count: "
+            f"{expected_count} != {actual_count}"
+        )
+    return errors
 
 
 def _validate_lesson_graph_contract(
@@ -1046,6 +1119,12 @@ def validate_repo(repo_root: Path) -> dict[str, Any]:
             if "context_pack" in session:
                 context_pack_validator.validate(session["context_pack"])
                 checked.append(str(session_path.relative_to(repo_root)))
+        try:
+            exception_cfg = load_config(repo_root=repo_root)
+            exception_repo_policies = exception_cfg.exception_repos
+        except Exception:
+            exception_repo_policies = []
+        capture_registry = load_capture_pattern_registry(repo_root)
         for report_path in [
             *sorted((repo_root / "processed" / "reports").glob("*.json")),
             *sorted((repo_root / "processed" / "harnesses").glob("*.json")),
@@ -1113,6 +1192,30 @@ def validate_repo(repo_root: Path) -> dict[str, Any]:
                                 f"{_observed_audit_label(report_path, repo_root, row, outbox)}: "
                                 f"{outbox.get('content_hash')} != {actual}"
                             )
+                    errors.extend(
+                        _candidate_path_scan_staleness_errors(
+                            repo_root,
+                            report_path,
+                            row,
+                            registry=capture_registry,
+                            repo_policies=exception_repo_policies,
+                            policy_paths=policy_paths,
+                        )
+                    )
+            elif payload.get("report_id") == "dad:exception-backfill-readiness":
+                policy_paths = _observed_audit_policy_paths(repo_root)
+                for row in payload.get("repos", []):
+                    if isinstance(row, dict):
+                        errors.extend(
+                            _candidate_path_scan_staleness_errors(
+                                repo_root,
+                                report_path,
+                                row,
+                                registry=capture_registry,
+                                repo_policies=exception_repo_policies,
+                                policy_paths=policy_paths,
+                            )
+                        )
         _validate_lesson_graph_contract(repo_root, registry, errors, checked)
     except Exception as exc:
         errors.append(f"Invalid DAD library or harness registry: {exc}")
