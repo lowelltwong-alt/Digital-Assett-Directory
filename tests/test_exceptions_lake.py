@@ -22,6 +22,7 @@ from digital_asset_directory.exceptions_lake import (
     path_term_matches,
     record_exception_fix_outcome,
     record_exception_event,
+    write_exception_backfill_review_queue,
     write_exception_learning_queue,
     write_exception_report,
 )
@@ -871,6 +872,209 @@ def test_backfill_preserves_reviewed_repo_policy_visibility(tmp_path: Path) -> N
     assert lake[0]["source_repo"] == "mock-trial-4-26"
     assert lake[0]["source_visibility"] == "internal"
     assert lake[0]["public_facing_source"] is False
+
+
+def test_backfill_review_queue_groups_source_review_candidates(tmp_path: Path) -> None:
+    hub = tmp_path / "hub"
+    repo = tmp_path / "repo"
+    (repo / ".git").mkdir(parents=True)
+    _copy_exception_contracts(hub)
+    for name in ["pytest-timeout-one.md", "pytest-timeout-two.md", "asset-dir-unavailable.md"]:
+        target = repo / "docs" / name
+        target.parent.mkdir(parents=True, exist_ok=True)
+        target.write_text("api_key=secret-value must not be copied\n", encoding="utf-8")
+
+    backfill_exception_candidates(
+        hub,
+        repo,
+        limit=10,
+        authorization=_backfill_auth(repo),
+    )
+    report = write_exception_backfill_review_queue(hub, example_limit=2)
+
+    assert report["report_id"] == "dad:exception-backfill-review-queue"
+    assert report["backfill_candidate_count"] == 3
+    assert report["review_group_count"] == 2
+    by_type = {row["event_type"]: row for row in report["review_queue"]}
+    timeout = by_type["test_timeout"]
+    assert timeout["candidate_count"] == 2
+    assert timeout["rule_id"] == "backfill-rule:test-timeout"
+    assert timeout["review_status"] == "source_review_required"
+    assert timeout["public_release_required_count"] == 2
+    assert timeout["classifier_version_missing"] is False
+    assert len(timeout["path_hash_refs"]) == 2
+    assert all(ref.startswith("repo-relative-sha256:") for ref in timeout["path_hash_refs"])
+    assert timeout["readable_path_refs"] == []
+    assert any("path/name metadata only" in blocker for blocker in timeout["promotion_blockers"])
+    assert any("source review" in blocker for blocker in timeout["promotion_blockers"])
+    assert any("human release" in blocker for blocker in timeout["promotion_blockers"])
+    report_text = (hub / "processed" / "reports" / "exception_backfill_review_queue.json").read_text(
+        encoding="utf-8"
+    )
+    assert "pytest-timeout-one.md" not in report_text
+    assert "secret-value" not in report_text
+
+
+def test_backfill_review_queue_omits_readable_path_refs_by_default(tmp_path: Path) -> None:
+    hub = tmp_path / "hub"
+    repo = tmp_path / "repo"
+    (repo / ".git").mkdir(parents=True)
+    _copy_exception_contracts(hub)
+    target = repo / "docs" / "review-finding.md"
+    target.parent.mkdir(parents=True)
+    target.write_text("metadata-only backfill should not read content\n", encoding="utf-8")
+
+    backfill_exception_candidates(
+        hub,
+        repo,
+        limit=10,
+        include_path_refs=True,
+        authorization=_backfill_auth(repo, include_path_refs=True),
+    )
+    default_report = write_exception_backfill_review_queue(hub)
+    readable_report = write_exception_backfill_review_queue(
+        hub,
+        output=Path("processed/reports/readable_backfill_review_queue.json"),
+        include_readable_path_refs=True,
+        readable_path_refs_authorized=True,
+    )
+
+    default_row = default_report["review_queue"][0]
+    readable_row = readable_report["review_queue"][0]
+    assert default_row["readable_path_ref_count"] == 1
+    assert default_row["readable_path_refs"] == []
+    assert readable_row["readable_path_refs"] == ["repo-relative:docs/review-finding.md"]
+    assert readable_row["review_status"] == "source_review_central_only"
+
+
+def test_backfill_review_queue_requires_authorization_for_readable_path_refs(tmp_path: Path) -> None:
+    hub = tmp_path / "hub"
+    repo = tmp_path / "repo"
+    (repo / ".git").mkdir(parents=True)
+    _copy_exception_contracts(hub)
+    target = repo / "docs" / "review-finding.md"
+    target.parent.mkdir(parents=True)
+    target.write_text("metadata-only backfill should not read content\n", encoding="utf-8")
+
+    backfill_exception_candidates(
+        hub,
+        repo,
+        limit=10,
+        include_path_refs=True,
+        authorization=_backfill_auth(repo, include_path_refs=True),
+    )
+
+    with pytest.raises(ValueError, match="requires a reviewed approval gate"):
+        write_exception_backfill_review_queue(hub, include_readable_path_refs=True)
+
+
+def test_backfill_review_queue_flags_missing_classifier_version(tmp_path: Path) -> None:
+    hub = tmp_path / "hub"
+    repo = tmp_path / "repo"
+    (repo / ".git").mkdir(parents=True)
+    _copy_exception_contracts(hub)
+    for name in ["pytest-timeout-one.md", "pytest-timeout-two.md"]:
+        target = repo / "docs" / name
+        target.parent.mkdir(parents=True, exist_ok=True)
+        target.write_text("metadata-only backfill should not read content\n", encoding="utf-8")
+
+    backfill_exception_candidates(
+        hub,
+        repo,
+        limit=10,
+        authorization=_backfill_auth(repo),
+    )
+    lake_path = hub / "processed" / "exceptions" / "lake" / "events.jsonl"
+    rows = _jsonl(lake_path)
+    rows[0]["context_refs"] = [
+        ref
+        for ref in rows[0]["context_refs"]
+        if not ref.startswith("backfill-classifier-version:")
+    ]
+    lake_path.write_text("\n".join(json.dumps(row) for row in rows) + "\n", encoding="utf-8")
+
+    report = write_exception_backfill_review_queue(hub)
+
+    row = report["review_queue"][0]
+    assert row["review_status"] == "needs_classifier_refresh"
+    assert row["classifier_version_missing"] is True
+    assert row["classifier_version_missing_count"] == 1
+    assert row["classifier_versions"] == ["exception-backfill-classifier-v0.2.0"]
+    assert row["classifier_version_stale"] is False
+    assert any("classifier version provenance is missing" in blocker for blocker in row["promotion_blockers"])
+
+
+def test_backfill_review_queue_flags_stale_classifier_version(tmp_path: Path) -> None:
+    hub = tmp_path / "hub"
+    repo = tmp_path / "repo"
+    (repo / ".git").mkdir(parents=True)
+    _copy_exception_contracts(hub)
+    target = repo / "docs" / "pytest-timeout.md"
+    target.parent.mkdir(parents=True)
+    target.write_text("metadata-only backfill should not read content\n", encoding="utf-8")
+
+    backfill_exception_candidates(
+        hub,
+        repo,
+        limit=10,
+        authorization=_backfill_auth(repo),
+    )
+    lake_path = hub / "processed" / "exceptions" / "lake" / "events.jsonl"
+    rows = _jsonl(lake_path)
+    rows[0]["context_refs"] = [
+        "backfill-classifier-version:exception-backfill-classifier-v0.1.0"
+        if ref.startswith("backfill-classifier-version:")
+        else ref
+        for ref in rows[0]["context_refs"]
+    ]
+    lake_path.write_text("\n".join(json.dumps(row) for row in rows) + "\n", encoding="utf-8")
+
+    report = write_exception_backfill_review_queue(hub)
+
+    row = report["review_queue"][0]
+    assert row["review_status"] == "needs_classifier_refresh"
+    assert row["classifier_version_missing"] is False
+    assert row["classifier_version_stale"] is True
+    assert row["classifier_version_stale_count"] == 1
+    assert row["current_classifier_version"] == "exception-backfill-classifier-v0.2.0"
+    assert any("classifier version provenance is stale" in blocker for blocker in row["promotion_blockers"])
+
+
+def test_backfill_review_queue_counts_only_approved_public_release_as_cleared(
+    tmp_path: Path,
+) -> None:
+    hub = tmp_path / "hub"
+    repo = tmp_path / "repo"
+    (repo / ".git").mkdir(parents=True)
+    _copy_exception_contracts(hub)
+    for name in ["pytest-timeout-rejected.md", "pytest-timeout-approved.md"]:
+        target = repo / "docs" / name
+        target.parent.mkdir(parents=True, exist_ok=True)
+        target.write_text("metadata-only backfill should not read content\n", encoding="utf-8")
+
+    backfill_exception_candidates(
+        hub,
+        repo,
+        limit=10,
+        authorization=_backfill_auth(repo),
+    )
+    lake_path = hub / "processed" / "exceptions" / "lake" / "events.jsonl"
+    rows = _jsonl(lake_path)
+    rows[0]["public_release"] = {
+        "human_release_id": "REL-REJECTED",
+        "public_release_status": "rejected",
+    }
+    rows[1]["public_release"] = {
+        "human_release_id": "REL-APPROVED",
+        "public_release_status": "approved",
+    }
+    lake_path.write_text("\n".join(json.dumps(row) for row in rows) + "\n", encoding="utf-8")
+
+    report = write_exception_backfill_review_queue(hub)
+
+    row = report["review_queue"][0]
+    assert row["candidate_count"] == 2
+    assert row["public_release_required_count"] == 1
 
 
 def test_exception_report_summarizes_categories(tmp_path: Path) -> None:

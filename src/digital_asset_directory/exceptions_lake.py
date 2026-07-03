@@ -33,6 +33,8 @@ REPORT_JSON = Path("processed") / "reports" / "exceptions_lake.json"
 REPORT_MD = Path("processed") / "reports" / "exceptions_lake.md"
 LEARNING_QUEUE_JSON = Path("processed") / "reports" / "exception_learning_queue.json"
 LEARNING_QUEUE_MD = Path("processed") / "reports" / "exception_learning_queue.md"
+BACKFILL_REVIEW_QUEUE_JSON = Path("processed") / "reports" / "exception_backfill_review_queue.json"
+BACKFILL_REVIEW_QUEUE_MD = Path("processed") / "reports" / "exception_backfill_review_queue.md"
 LEARNING_READINESS_JSON = Path("processed") / "reports" / "exception_learning_readiness_check.json"
 LEARNING_READINESS_MD = Path("processed") / "reports" / "exception_learning_readiness_check.md"
 LEARNING_READINESS_SCENARIOS_SCHEMA = (
@@ -2476,6 +2478,335 @@ def _exception_learning_queue_input_hashes(hub_root: Path) -> dict[str, str]:
     return hashes
 
 
+def _exception_backfill_review_queue_input_hashes(hub_root: Path) -> dict[str, str]:
+    refs = [
+        EXCEPTION_EVENT_TYPE_REGISTRY,
+        LAKE_PATH,
+        BACKFILL_RUNS_DIR / "latest.json",
+        Path("src") / "digital_asset_directory" / "exceptions_lake.py",
+    ]
+    hashes: dict[str, str] = {}
+    repo_root = Path(__file__).resolve().parents[2]
+    for ref in refs:
+        path = hub_root / ref
+        if not path.exists() and ref.parts[:1] == ("src",):
+            path = repo_root / ref
+        hashes[ref.as_posix()] = f"sha256:{sha256_file(path)}" if path.exists() else "missing"
+    return hashes
+
+
+def _latest_backfill_run_summary(hub_root: Path) -> dict[str, Any]:
+    path = hub_root / BACKFILL_RUNS_DIR / "latest.json"
+    if not path.exists():
+        return {
+            "available": False,
+            "path": (BACKFILL_RUNS_DIR / "latest.json").as_posix(),
+            "coverage_warning": "missing_latest_backfill_run",
+        }
+    try:
+        latest = json.loads(path.read_text(encoding="utf-8"))
+    except json.JSONDecodeError:
+        return {
+            "available": False,
+            "path": (BACKFILL_RUNS_DIR / "latest.json").as_posix(),
+            "coverage_warning": "malformed_latest_backfill_run",
+        }
+    return {
+        "available": True,
+        "path": (BACKFILL_RUNS_DIR / "latest.json").as_posix(),
+        "run_id": latest.get("run_id", ""),
+        "created_at": latest.get("created_at", ""),
+        "classifier_version": latest.get("classifier_version", ""),
+        "created_count": latest.get("created_count", 0),
+        "scanned_file_count": latest.get("scanned_file_count", 0),
+        "max_scanned_files": latest.get("max_scanned_files", 0),
+        "stopped_reason": latest.get("stopped_reason", ""),
+        "coverage_warning": latest.get("coverage_warning", ""),
+        "include_path_refs": latest.get("include_path_refs", False),
+    }
+
+
+def _context_ref_values(event: dict[str, Any], prefix: str) -> list[str]:
+    refs = event.get("context_refs", [])
+    if not isinstance(refs, list):
+        return []
+    values: list[str] = []
+    for ref in refs:
+        if isinstance(ref, str) and ref.startswith(prefix):
+            values.append(ref.removeprefix(prefix))
+    return values
+
+
+def _public_release_is_approved(public_release: dict[str, Any]) -> bool:
+    return (
+        str(public_release.get("human_release_id") or "").strip() != ""
+        and str(public_release.get("public_release_status") or "").strip() == "approved"
+    )
+
+
+def _backfill_group_status(
+    *,
+    missing_classifier_version: bool,
+    stale_classifier_version: bool,
+    public_release_required_count: int,
+    readable_path_ref_count: int,
+    source_visibility_counts: dict[str, int],
+) -> tuple[str, list[str], str]:
+    blockers = [
+        "backfill rows are path/name metadata only, not confirmed incidents",
+        "source review or source-repo confirmation is required before learning promotion",
+    ]
+    if public_release_required_count:
+        blockers.append(
+            "non-public or unknown origin requires human release before public-facing reuse"
+        )
+    if missing_classifier_version:
+        blockers.append("classifier version provenance is missing; rerun or invalidate old candidate rows")
+    if stale_classifier_version:
+        blockers.append("classifier version provenance is stale or mixed; rerun or invalidate old candidate rows")
+    if readable_path_ref_count:
+        blockers.append("readable path refs exist in source evidence and require central-only handling")
+    if source_visibility_counts.get("unknown"):
+        blockers.append("source visibility is unknown for at least one candidate")
+    if missing_classifier_version or stale_classifier_version:
+        return (
+            "needs_classifier_refresh",
+            blockers,
+            "Rerun bounded backfill or invalidate old rows before source-reviewing this group.",
+        )
+    if readable_path_ref_count:
+        return (
+            "source_review_central_only",
+            blockers,
+            "Review central-only path refs, then confirm, reject, or ask the source repo to emit an observed packet.",
+        )
+    return (
+        "source_review_required",
+        blockers,
+        "Confirm or reject the source path signals; if confirmed, ask the source repo to emit an observed exception or fix outcome.",
+    )
+
+
+def write_exception_backfill_review_queue(
+    hub_root: Path,
+    *,
+    output: Path | None = None,
+    limit: int = 100,
+    example_limit: int = 5,
+    include_readable_path_refs: bool = False,
+    readable_path_refs_authorized: bool = False,
+) -> dict[str, Any]:
+    """Write a source-review queue for historical path-signal backfill candidates.
+
+    Backfill candidates are intentionally separated from the learning queue so a
+    path/name hit cannot look like a confirmed incident or validated lesson.
+    """
+    if include_readable_path_refs and not readable_path_refs_authorized:
+        raise ValueError(
+            "include_readable_path_refs requires a reviewed approval gate; "
+            "default backfill review queue output is hash-only."
+        )
+    events = [event for event in load_lake_events(hub_root) if _is_backfill_candidate_event(event)]
+    taxonomy_by_type = event_type_taxonomy_dimensions(hub_root)
+    category_by_type = event_type_categories(hub_root)
+    current_classifier_version = backfill_classifier_version(hub_root)
+    latest_backfill_run = _latest_backfill_run_summary(hub_root)
+    limit = max(1, min(limit, MAX_BACKFILL_EVENTS))
+    example_limit = max(1, min(example_limit, 25))
+    groups: dict[tuple[str, str, str], dict[str, Any]] = {}
+    for event in events:
+        event_type = str(event.get("event_type") or "unknown")
+        source_repo = str(event.get("source_repo") or "unknown")
+        rule_ids = _context_ref_values(event, "backfill-rule-id:")
+        rule_id = rule_ids[0] if rule_ids else "unknown"
+        group_key = (source_repo, event_type, rule_id)
+        group = groups.setdefault(
+            group_key,
+            {
+                "review_group_id": stable_id(
+                    "exception-backfill-review-group",
+                    source_repo,
+                    event_type,
+                    rule_id,
+                ),
+                "source_repo": source_repo,
+                "event_type": event_type,
+                "rule_id": rule_id,
+                "category": category_by_type.get(event_type, "unknown"),
+                "taxonomy_dimensions": taxonomy_by_type.get(
+                    event_type,
+                    _unknown_taxonomy_dimensions(),
+                ),
+                "candidate_count": 0,
+                "source_visibility_counts": Counter(),
+                "severity_counts": Counter(),
+                "keyword_counts": Counter(),
+                "classifier_versions": set(),
+                "classifier_version_missing_count": 0,
+                "classifier_version_stale_count": 0,
+                "event_ids": [],
+                "path_hash_refs": [],
+                "readable_path_ref_count": 0,
+                "readable_path_refs": [],
+                "public_release_required_count": 0,
+            },
+        )
+        group["candidate_count"] += 1
+        visibility = str(event.get("source_visibility") or "unknown")
+        group["source_visibility_counts"][visibility] += 1
+        group["severity_counts"][str(event.get("severity") or "unknown")] += 1
+        for keyword in _context_ref_values(event, "path-keyword:"):
+            group["keyword_counts"][keyword] += 1
+        classifier_versions = _context_ref_values(event, "backfill-classifier-version:")
+        if not classifier_versions:
+            group["classifier_version_missing_count"] += 1
+        elif any(version != current_classifier_version for version in classifier_versions):
+            group["classifier_version_stale_count"] += 1
+        for version in classifier_versions:
+            group["classifier_versions"].add(version)
+        public_release = event.get("public_release") if isinstance(event.get("public_release"), dict) else {}
+        if (
+            visibility in {"private", "internal", "restricted", "unknown"}
+            and not _public_release_is_approved(public_release)
+        ):
+            group["public_release_required_count"] += 1
+        for rel_hash in _context_ref_values(event, "repo-relative-sha256:"):
+            if len(group["path_hash_refs"]) < example_limit:
+                group["path_hash_refs"].append(f"repo-relative-sha256:{rel_hash}")
+        readable_refs = [
+            f"repo-relative:{value}" for value in _context_ref_values(event, "repo-relative:")
+        ]
+        group["readable_path_ref_count"] += len(readable_refs)
+        if include_readable_path_refs:
+            for ref in readable_refs:
+                if len(group["readable_path_refs"]) < example_limit:
+                    group["readable_path_refs"].append(ref)
+        if len(group["event_ids"]) < example_limit:
+            event_id = str(event.get("event_id") or "")
+            if event_id:
+                group["event_ids"].append(event_id)
+
+    queue_counts: Counter[str] = Counter()
+    rows: list[dict[str, Any]] = []
+    priority_rank = {"critical": 0, "high": 1, "medium": 2, "low": 3, "info": 4}
+    for group in groups.values():
+        source_visibility_counts = dict(sorted(group["source_visibility_counts"].items()))
+        classifier_versions = sorted(group["classifier_versions"])
+        classifier_version_missing_count = int(group["classifier_version_missing_count"])
+        classifier_version_stale_count = int(group["classifier_version_stale_count"])
+        status, blockers, next_action = _backfill_group_status(
+            missing_classifier_version=classifier_version_missing_count > 0,
+            stale_classifier_version=classifier_version_stale_count > 0,
+            public_release_required_count=int(group["public_release_required_count"]),
+            readable_path_ref_count=int(group["readable_path_ref_count"]),
+            source_visibility_counts=source_visibility_counts,
+        )
+        queue_counts[status] += 1
+        severity_counts = dict(sorted(group["severity_counts"].items()))
+        review_priority = str(group["taxonomy_dimensions"].get("review_priority") or "info")
+        row = {
+            "review_group_id": group["review_group_id"],
+            "source_repo": group["source_repo"],
+            "event_type": group["event_type"],
+            "rule_id": group["rule_id"],
+            "category": group["category"],
+            "taxonomy_dimensions": group["taxonomy_dimensions"],
+            "review_priority": review_priority,
+            "review_status": status,
+            "candidate_count": group["candidate_count"],
+            "source_visibility_counts": source_visibility_counts,
+            "severity_counts": severity_counts,
+            "keyword_counts": dict(sorted(group["keyword_counts"].items())),
+            "classifier_versions": classifier_versions,
+            "current_classifier_version": current_classifier_version,
+            "classifier_version_missing": classifier_version_missing_count > 0,
+            "classifier_version_missing_count": classifier_version_missing_count,
+            "classifier_version_stale": classifier_version_stale_count > 0,
+            "classifier_version_stale_count": classifier_version_stale_count,
+            "public_release_required_count": group["public_release_required_count"],
+            "readable_path_ref_count": group["readable_path_ref_count"],
+            "path_hash_refs": group["path_hash_refs"],
+            "readable_path_refs": group["readable_path_refs"],
+            "example_event_ids": group["event_ids"],
+            "promotion_blockers": sorted(set(blockers)),
+            "recommended_next_action": next_action,
+            "authority_boundary": (
+                "Backfill review groups are source-review candidates only. They do not "
+                "confirm incidents, promote lessons, or authorize source repo mutation."
+            ),
+        }
+        rows.append(row)
+    rows.sort(
+        key=lambda row: (
+            priority_rank.get(str(row["review_priority"]), 9),
+            str(row["review_status"]),
+            -int(row["candidate_count"]),
+            str(row["source_repo"]),
+            str(row["event_type"]),
+            str(row["rule_id"]),
+        )
+    )
+    rows = rows[:limit]
+    report = {
+        "generated_at": utc_now(),
+        "report_id": "dad:exception-backfill-review-queue",
+        "input_hashes": _exception_backfill_review_queue_input_hashes(hub_root),
+        "backfill_candidate_count": len(events),
+        "review_group_count": len(groups),
+        "reported_group_count": len(rows),
+        "omitted_group_count": max(0, len(groups) - len(rows)),
+        "queue_counts": dict(sorted(queue_counts.items())),
+        "current_classifier_version": current_classifier_version,
+        "latest_backfill_run": latest_backfill_run,
+        "include_readable_path_refs": include_readable_path_refs,
+        "example_limit": example_limit,
+        "review_queue": rows,
+        "promotion_policy_boundary": (
+            "Backfill candidates are path/name metadata only. They require source "
+            "review or source-repo confirmation before they can become observed "
+            "exceptions, fix-outcome evidence, lessons, harness cases, or DAD rules."
+        ),
+    }
+    output_path = hub_root / (output or BACKFILL_REVIEW_QUEUE_JSON)
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    output_path.write_text(json_dumps(report, pretty=True) + "\n", encoding="utf-8")
+    md_path = output_path.with_suffix(".md") if output else hub_root / BACKFILL_REVIEW_QUEUE_MD
+    lines = [
+        "# Exception Backfill Review Queue",
+        "",
+        f"- Generated: {report['generated_at']}",
+        f"- Path-signal backfill candidates: {report['backfill_candidate_count']}",
+        f"- Review groups: {report['review_group_count']}",
+        f"- Reported groups: {report['reported_group_count']}",
+        f"- Omitted groups: {report['omitted_group_count']}",
+        f"- Current classifier version: `{current_classifier_version}`",
+        f"- Latest backfill stopped reason: `{latest_backfill_run.get('stopped_reason', '')}`",
+        f"- Latest backfill coverage warning: `{latest_backfill_run.get('coverage_warning', '')}`",
+        "",
+        "Boundary: backfill rows are candidate metadata only. Source review or "
+        "source-repo confirmation is required before learning promotion.",
+        "",
+        "## Queue Counts",
+        "",
+    ]
+    lines.extend(f"- `{status}`: {count}" for status, count in report["queue_counts"].items())
+    lines.extend(["", "## Review Groups", ""])
+    lines.append(
+        "| Source Repo | Event Type | Rule | Status | Candidates | Priority | Next Action |"
+    )
+    lines.append("| --- | --- | --- | --- | ---: | --- | --- |")
+    for row in rows:
+        lines.append(
+            "| "
+            + f"`{row['source_repo']}` | `{row['event_type']}` | `{row['rule_id']}` | "
+            + f"`{row['review_status']}` | {row['candidate_count']} | "
+            + f"`{row['review_priority']}` | {row['recommended_next_action']} |"
+        )
+    md_path.parent.mkdir(parents=True, exist_ok=True)
+    md_path.write_text("\n".join(lines) + "\n", encoding="utf-8")
+    return report
+
+
 def _exception_learning_status(
     *,
     observed_count: int,
@@ -2598,8 +2929,10 @@ def write_exception_learning_queue(
         cluster["source_visibility_counts"][source_visibility] += 1
         cluster["severity_counts"][str(event.get("severity") or "unknown")] += 1
         public_release = event.get("public_release") if isinstance(event.get("public_release"), dict) else {}
-        human_release_id = str(public_release.get("human_release_id") or "").strip()
-        if source_visibility in {"private", "internal", "restricted", "unknown"} and not human_release_id:
+        if (
+            source_visibility in {"private", "internal", "restricted", "unknown"}
+            and not _public_release_is_approved(public_release)
+        ):
             cluster["public_release_required_count"] += 1
         if len(cluster["example_event_ids"]) < 5:
             cluster["example_event_ids"].append(str(event.get("event_id") or ""))
@@ -3144,6 +3477,8 @@ def exception_lake_paths() -> dict[str, str]:
         "canonical_lake": LAKE_PATH.as_posix(),
         "quarantine": QUARANTINE_DIR.as_posix(),
         "fix_outcomes": FIX_OUTCOME_PATH.as_posix(),
+        "backfill_review_queue_json": BACKFILL_REVIEW_QUEUE_JSON.as_posix(),
+        "backfill_review_queue_markdown": BACKFILL_REVIEW_QUEUE_MD.as_posix(),
         "learning_queue_json": LEARNING_QUEUE_JSON.as_posix(),
         "learning_queue_markdown": LEARNING_QUEUE_MD.as_posix(),
         "learning_readiness_json": LEARNING_READINESS_JSON.as_posix(),

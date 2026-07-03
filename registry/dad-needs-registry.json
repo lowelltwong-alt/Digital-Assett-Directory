@@ -128,7 +128,7 @@
         "Do not treat path-name backfill candidates as confirmed incidents or learning-ready evidence.",
         "Do not request broad backfill execution without a reviewed policy, approval id, and bounded plan."
       ],
-      "payload_guidance": "Send metadata-only summaries: repo ID, path hash, readiness state, truncation status, top source rule IDs, top suggested event types, blocked reasons, and the proposed review wave.",
+      "payload_guidance": "Send metadata-only summaries: repo ID, path hash, readiness state, truncation status, top source rule IDs, top suggested event types, blocked reasons, proposed review wave, and when available backfill review queue fields such as review_group_id, classifier_versions, review_status, public_release_required_count, readable_path_ref_count, and example_event_ids.",
       "target_control_planes": ["exceptions_lake", "learning_postflight_loops", "mail_center"],
       "review_status": "reviewed"
     },

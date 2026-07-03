@@ -77,6 +77,7 @@ from .exceptions_lake import (
     load_event_type_registry,
     record_exception_fix_outcome,
     record_exception_event,
+    write_exception_backfill_review_queue,
     write_exception_learning_queue,
     write_exception_report,
 )
@@ -502,6 +503,20 @@ def _exception_backfill_approval_block_reason(cfg, root: Path, approval_id: str)
     if approval not in approved_ids:
         policy_id = str(getattr(policy, "id", root))
         return f"{approval!r} is not approved for exceptions repo policy {policy_id}"
+    return ""
+
+
+def _exception_backfill_review_queue_approval_block_reason(cfg, approval_id: str) -> str:
+    approval = approval_id.strip()
+    if not approval:
+        return "missing reviewed exception backfill review-queue approval id"
+    matching_policies = [
+        str(getattr(policy, "id", "unknown"))
+        for policy in _exception_repo_policies(cfg)
+        if approval in [str(value) for value in getattr(policy, "approved_approval_ids", []) or []]
+    ]
+    if not matching_policies:
+        return f"{approval!r} is not approved by any reviewed exceptions.repos policy"
     return ""
 
 
@@ -1884,6 +1899,56 @@ def exceptions_report(hub: Optional[Path] = typer.Option(None)) -> None:
     """Regenerate and print the DAD exceptions lake report."""
     cfg = _cfg(hub=hub)
     console.print_json(data=write_exception_report(cfg.repo_root))
+
+
+@exceptions_app.command("backfill-review-queue")
+def exceptions_backfill_review_queue(
+    output: Optional[Path] = typer.Option(None, "--output"),
+    limit: int = typer.Option(100, "--limit", min=1, max=1000),
+    example_limit: int = typer.Option(5, "--example-limit", min=1, max=25),
+    include_readable_path_refs: bool = typer.Option(
+        False,
+        "--include-readable-path-refs",
+        help=(
+            "Include readable repo-relative path refs that already exist in central "
+            "backfill events. Default output remains hash-only."
+        ),
+    ),
+    approval_id: str = typer.Option(
+        "",
+        "--approval-id",
+        help=(
+            "Reviewed exceptions.repos approval id required when emitting readable "
+            "repo-relative path refs."
+        ),
+    ),
+    hub: Optional[Path] = typer.Option(None),
+) -> None:
+    """Regenerate and print the source-review queue for backfill candidates."""
+    cfg = _cfg(hub=hub)
+    if include_readable_path_refs:
+        approval_block_reason = _exception_backfill_review_queue_approval_block_reason(
+            cfg,
+            approval_id,
+        )
+        if approval_block_reason:
+            raise typer.BadParameter(
+                "exceptions backfill-review-queue needs a reviewed --approval-id: "
+                + approval_block_reason
+            )
+    try:
+        result = write_exception_backfill_review_queue(
+            cfg.repo_root,
+            output=output,
+            limit=limit,
+            example_limit=example_limit,
+            include_readable_path_refs=include_readable_path_refs,
+            readable_path_refs_authorized=include_readable_path_refs,
+        )
+    except (OSError, json.JSONDecodeError, KeyError, ValueError) as exc:
+        console.print(str(exc))
+        raise typer.Exit(2) from exc
+    console.print_json(data=result)
 
 
 @exceptions_app.command("learning-queue")

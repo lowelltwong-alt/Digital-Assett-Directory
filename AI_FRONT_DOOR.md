@@ -110,6 +110,7 @@ not prove source truth, value, authority, or promotion.
 | `processed/mail/` | Generated central mail inbox, outbox, archive, and delivery logs. | You need collected/routed candidate suggestions; never treat them as source truth. |
 | `processed/skills/` | Generated central skill-checkout ledger and future freshness reports. | You need candidate targets for skill update, retirement, replacement, or manual-review notices. |
 | `processed/reports/mail_center.md` | Generated mail-center summary report. | You need mail counts and message-type distribution. |
+| `processed/reports/exception_backfill_review_queue.md` | Generated source-review queue for historical path-signal exception backfill groups. | You need to review backfill candidates by source repo, classifier rule, status, hashes, release blockers, and classifier provenance before any learning promotion. |
 | `processed/reports/exception_learning_queue.md` | Generated exception learning-readiness queue. | You need to prioritize exception clusters that need fix outcomes, fix validation, source review, or human lesson review. |
 | `processed/reports/exception_learning_readiness_check.md` | Generated synthetic readiness-check report for the exception learning queue. | You need pass/fail evidence that the learning queue did not over-learn from weak or mixed evidence. |
 | `processed/reports/scan_coverage_cycle.md` | Generated no-rescan coverage-cycle log. | You need to know what was checked, intentionally skipped, and should be scanned next without repeating broad passes. |

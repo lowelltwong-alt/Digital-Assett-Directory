@@ -76,6 +76,31 @@ Postflight should record what helped, failed, was ignored, or was harmful. Usefu
 language discoveries go through `dad:need:language-frontier-signals`; harness
 outcomes go through `dad:need:coding-harness-feedback`.
 
+## Language Improvement Loop
+
+This is the deterministic loop for Python, Rust, and any later language DAD
+adopts:
+
+1. Preflight routes by language, task, repo context, and risk to the language
+   registry, coding tactics radar, and the matching harness.
+2. Midflight checks the registry again when a claim appears about speed, safety,
+   parser/chunker correctness, test selection, static analysis, package tooling,
+   or a language feature that could change the proof surface.
+3. The agent records only pointer-safe source refs, safe summaries, validation
+   ideas, and applicability limits. It does not copy third-party code, private
+   repo content, generated corpora, logs, or benchmark tables into DAD.
+4. A local proof command or harness outcome is required before any language
+   discovery becomes DAD guidance. For Python, that often means schema/type/test
+   evidence, profiling, or pytest orchestration. For Rust, that means compiler,
+   Clippy, test, doctest, fuzz/property, parity, or same-workload performance
+   evidence.
+5. Postflight records whether the tactic helped, failed, was ignored, or was
+   harmful. DAD then updates assets, harnesses, or watchlists through reviewed
+   promotion rather than by agent enthusiasm.
+
+The high-value pattern is not "use a fancier language feature." It is "add a
+machine-checkable proof surface future agents can run, inspect, and falsify."
+
 For new Python, Rust, mixed-language, or future-language ideas, route the first
 screen through `assets/coding-harnesses/language-frontier-research/`. That
 harness asks for a source pointer, safe summary, applicability limits, proof

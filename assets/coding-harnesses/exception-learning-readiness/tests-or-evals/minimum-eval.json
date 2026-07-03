@@ -45,6 +45,24 @@
       "given": ["one backfill-only path-signal event"],
       "expected": ["learning status is needs_source_review", "promotion blockers mention backfill path-signal candidates"],
       "fail_if": ["backfill-only evidence becomes learnable"]
+    },
+    {
+      "case_id": "backfill_review_queue_statuses",
+      "given": [
+        "path-signal backfill events with current classifier provenance",
+        "a backfill event with readable repo-relative refs",
+        "a backfill event with missing or stale classifier provenance"
+      ],
+      "expected": [
+        "backfill review queue emits source_review_required for current hash-only groups",
+        "backfill review queue emits source_review_central_only for readable-ref groups",
+        "backfill review queue emits needs_classifier_refresh for missing or stale classifier provenance"
+      ],
+      "fail_if": [
+        "readable path refs are emitted without an approval gate",
+        "stale classifier provenance is grouped as source_review_required",
+        "any backfill review queue status promotes a lesson or observed exception"
+      ]
     }
   ],
   "must_not_claim": [

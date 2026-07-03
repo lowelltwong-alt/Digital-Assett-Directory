@@ -64,6 +64,7 @@
     "processed/reports/exceptions_lake.md",
     "processed/reports/exception_capture_completeness.md",
     "processed/reports/exception_taxonomy_coverage.md",
+    "processed/reports/exception_backfill_review_queue.md",
     "processed/reports/exception_learning_queue.md",
     "processed/reports/exception_learning_readiness_check.md",
     "processed/reports/exception_capture_observed_audit.md",

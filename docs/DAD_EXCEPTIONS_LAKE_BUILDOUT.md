@@ -891,6 +891,26 @@ Backfill safety and classification:
   backfill-classifier rules such as `backfill-rule:tool-unavailable` to the
   path signals they produced. Built-in audit-only path terms use
   `<builtin_path_term>` until promoted into reviewed registry rules.
+- `asset-dir exceptions backfill-review-queue` groups already-created
+  path-signal backfill candidates by source repo, event type, and classifier
+  rule. This is the safe handoff from historical scan output to human/source
+  review. Each group records candidate counts, source visibility counts,
+  taxonomy dimensions, classifier versions, path hashes, example event IDs,
+  release-gate blockers, and the next source-review action.
+- Backfill review groups are not promotion evidence. They are explicitly blocked
+  from learning until a source repo or human confirms the candidate and, when
+  needed, records an observed exception or fix outcome. Readable path refs are
+  omitted by default from the queue even if a reviewed local/private backfill run
+  stored them centrally. Re-emitting readable path refs requires a reviewed
+  `--approval-id`.
+- Old, stale, or mixed backfill rows whose `backfill-classifier-version`
+  provenance is missing or no longer matches the current reviewed classifier are
+  queued as `needs_classifier_refresh`. They should be rerun or invalidated
+  before source review so DAD does not review candidates under an unknown or
+  outdated classifier contract.
+- The generated review queue surfaces the latest backfill run's stopped reason
+  and coverage warning, so bounded first-N backfill waves do not look complete
+  unless the latest run actually exhausted the walk.
 - Exception reports summarize event types, reviewed event categories, and
   taxonomy dimensions from
   `registry/exception-event-type-registry.json#taxonomy_dimensions`. The
