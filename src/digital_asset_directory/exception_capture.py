@@ -1126,6 +1126,8 @@ def audit_observed_capture_repo(
         status_flags.append("type_present_uncorrelated")
     if any(item["emission_status"] == "unverified" for item in candidate_paths):
         status_flags.append("emission_unverified")
+    if candidate_scan["truncated"]:
+        status_flags.append("candidate_path_scan_truncated")
     if (
         outboxes["mail_outbox"]["record_count"]
         and not outboxes["exception_outbox"]["record_count"]
@@ -1292,7 +1294,9 @@ def write_observed_capture_audit(
                 "missed_capture_candidate",
                 "mail_present_exception_gap_candidate",
                 "pattern_gap_candidate",
+                "type_present_uncorrelated",
                 "emission_unverified",
+                "candidate_path_scan_truncated",
                 "stale_capture_surface",
                 "capture_surface_version_unknown",
                 "malformed_jsonl",

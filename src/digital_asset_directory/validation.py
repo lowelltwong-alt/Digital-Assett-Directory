@@ -77,6 +77,22 @@ def _path_identity_hash(path: Path) -> str:
     return f"sha256:{sha256_bytes(path.resolve().as_posix().encode('utf-8'))}"
 
 
+def _looks_like_local_path_text(text: str) -> bool:
+    normalized = text.replace("\\", "/").casefold()
+    return (
+        bool(normalized.startswith("/"))
+        or bool(len(normalized) > 2 and normalized[1:3] == ":/")
+        or any(fragment in normalized for fragment in LOCAL_PATH_FRAGMENTS)
+    )
+
+
+def _repo_prefixed_value_contains_local_path(text: str) -> bool:
+    if not text.startswith("repo:"):
+        return False
+    tail = text.removeprefix("repo:").strip()
+    return bool(tail) and _looks_like_local_path_text(tail)
+
+
 def _contains_local_path_ref(value: Any) -> bool:
     if isinstance(value, dict):
         return any(_contains_local_path_ref(item) for item in value.values())
@@ -85,26 +101,20 @@ def _contains_local_path_ref(value: Any) -> bool:
     if not isinstance(value, str):
         return False
     text = value.strip()
+    if _repo_prefixed_value_contains_local_path(text):
+        return True
     if text.startswith(("repo-path-sha256:", "path-ref-sha256:", "path-sha256:", "dad://", "repo:")):
         return False
-    normalized = text.replace("\\", "/").casefold()
-    return (
-        bool(normalized.startswith("/"))
-        or bool(len(normalized) > 2 and normalized[1:3] == ":/")
-        or any(fragment in normalized for fragment in LOCAL_PATH_FRAGMENTS)
-    )
+    return _looks_like_local_path_text(text)
 
 
 def _is_local_absolute_ref(value: str) -> bool:
     text = value.strip()
+    if _repo_prefixed_value_contains_local_path(text):
+        return True
     if text.startswith(("http://", "https://", "dad://", "repo:", "source-archive-sha256:")):
         return False
-    normalized = text.replace("\\", "/").casefold()
-    return (
-        bool(normalized.startswith("/"))
-        or bool(len(normalized) > 2 and normalized[1:3] == ":/")
-        or any(fragment in normalized for fragment in LOCAL_PATH_FRAGMENTS)
-    )
+    return _looks_like_local_path_text(text)
 
 
 def _validate_public_safe_source_ref(
@@ -139,6 +149,7 @@ def _fix_outcome_semantic_errors(fix: dict[str, Any], line_number: int) -> list[
     canonical_lookup = str(fix.get("canonical_event_lookup_status") or "")
     owner = str(fix.get("owner_authority") or "").strip()
     validation_refs = fix.get("validation_refs") or []
+    regression_test_refs = fix.get("regression_test_refs") or []
     if not owner:
         errors.append(f"Exception fix outcome missing owner_authority on line {line_number}")
     if decision in {"fixed", "rollback"}:
@@ -152,10 +163,17 @@ def _fix_outcome_semantic_errors(fix: dict[str, Any], line_number: int) -> list[
                 "Exception fix outcome fixed/rollback row lacks validation_refs "
                 f"on line {line_number}"
             )
-        if fix.get("validation_status") == "validated" and event_lookup != "found_in_lake":
+        if not regression_test_refs:
             errors.append(
-                "Exception fix outcome validation_status is validated but event link "
-                f"is missing on line {line_number}"
+                "Exception fix outcome fixed/rollback row lacks regression_test_refs "
+                f"on line {line_number}"
+            )
+        if fix.get("validation_status") == "validated" and (
+            event_lookup != "found_in_lake" or not validation_refs or not regression_test_refs
+        ):
+            errors.append(
+                "Exception fix outcome validation_status is validated without complete "
+                f"event, validation, and regression evidence on line {line_number}"
             )
     if decision == "duplicate":
         if not canonical_event_id.startswith("dad:exception-event:"):
@@ -171,6 +189,33 @@ def _fix_outcome_semantic_errors(fix: dict[str, Any], line_number: int) -> list[
     if decision in {"accepted_risk", "deferred"} and not str(fix.get("expiry") or "").strip():
         errors.append(
             "Exception fix outcome accepted-risk/deferred row lacks expiry "
+            f"on line {line_number}"
+        )
+    return errors
+
+
+def _source_provenance_consistency_errors(
+    record: dict[str, Any],
+    *,
+    label: str,
+    line_number: int,
+) -> list[str]:
+    errors: list[str] = []
+    provenance = record.get("source_provenance")
+    if not isinstance(provenance, dict):
+        return errors
+    source_repo = str(record.get("source_repo") or "")
+    provenance_repo = str(provenance.get("canonical_repo_id") or "")
+    if source_repo and provenance_repo and source_repo != provenance_repo:
+        errors.append(
+            f"{label} source_repo does not match source_provenance.canonical_repo_id "
+            f"on line {line_number}"
+        )
+    source_visibility = str(record.get("source_visibility") or "")
+    provenance_visibility = str(provenance.get("source_visibility") or "")
+    if source_visibility and provenance_visibility and source_visibility != provenance_visibility:
+        errors.append(
+            f"{label} source_visibility does not match source_provenance.source_visibility "
             f"on line {line_number}"
         )
     return errors
@@ -698,6 +743,13 @@ def validate_repo(repo_root: Path) -> dict[str, Any]:
                         "Exception lake event contains readable repo-relative path "
                         f"metadata on line {line_number}"
                     )
+                errors.extend(
+                    _source_provenance_consistency_errors(
+                        event,
+                        label="Exception lake event",
+                        line_number=line_number,
+                    )
+                )
                 if event.get("event_type") not in set(exception_types):
                     errors.append(
                         "Exception lake event uses unregistered event_type "
@@ -726,6 +778,13 @@ def validate_repo(repo_root: Path) -> dict[str, Any]:
                             "Exception fix outcome contains readable repo-relative path "
                             f"metadata on line {line_number}"
                         )
+                    errors.extend(
+                        _source_provenance_consistency_errors(
+                            fix,
+                            label="Exception fix outcome",
+                            line_number=line_number,
+                        )
+                    )
                     errors.extend(_fix_outcome_semantic_errors(fix, line_number))
                     checked.append("processed/exceptions/fix-outcomes/outcomes.jsonl")
         harness_schema = _load_schema(repo_root, registry, "coding_harness")

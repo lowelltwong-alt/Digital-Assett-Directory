@@ -2,10 +2,12 @@ from pathlib import Path
 
 from digital_asset_directory.roadmap import check_roadmap, record_human_gate_evidence
 from digital_asset_directory.validation import (
+    _contains_local_path_ref,
     _contains_readable_repo_relative_ref,
     _fix_outcome_semantic_errors,
     _path_identity_hash,
     _resolve_observed_audit_repo,
+    _source_provenance_consistency_errors,
     validate_repo,
 )
 
@@ -45,7 +47,34 @@ def test_exception_fix_outcome_semantic_validation_flags_false_validated_fix():
     )
 
     assert any("missing event" in error for error in errors)
-    assert any("validated but event link" in error for error in errors)
+    assert any("lacks regression_test_refs" in error for error in errors)
+    assert any("validated without complete" in error for error in errors)
+
+
+def test_exception_validation_rejects_repo_prefixed_absolute_paths():
+    assert _contains_local_path_ref({"return_address": "repo:C:/Users/lowel/private"})
+    assert _contains_local_path_ref({"context_refs": ["repo:C:\\Users\\lowel\\private"]})
+    assert not _contains_local_path_ref(
+        {"return_address": "repo:.digital-asset/exceptions/outbox.jsonl"}
+    )
+
+
+def test_exception_validation_flags_provenance_mismatch():
+    errors = _source_provenance_consistency_errors(
+        {
+            "source_repo": "repo-a",
+            "source_visibility": "private",
+            "source_provenance": {
+                "canonical_repo_id": "repo-b",
+                "source_visibility": "public",
+            },
+        },
+        label="Exception lake event",
+        line_number=3,
+    )
+
+    assert any("source_repo does not match" in error for error in errors)
+    assert any("source_visibility does not match" in error for error in errors)
 
 
 def test_observed_audit_external_repo_resolves_by_reviewed_path_hash(tmp_path: Path):

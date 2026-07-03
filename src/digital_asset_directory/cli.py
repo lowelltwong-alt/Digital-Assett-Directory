@@ -514,7 +514,7 @@ def _exception_record_policy_block_reason(cfg, repo: Path) -> str:
 def _capture_audit_gap_count(result: dict[str, object], *, strict: bool = False) -> int:
     status_counts = result.get("status_counts", {})
     if not isinstance(status_counts, dict):
-        return 0
+        status_counts = {}
     flags = {
         "missed_capture_candidate",
         "mail_present_exception_gap_candidate",
@@ -522,6 +522,7 @@ def _capture_audit_gap_count(result: dict[str, object], *, strict: bool = False)
         "malformed_jsonl",
         "stale_capture_surface",
         "capture_surface_version_unknown",
+        "candidate_path_scan_truncated",
     }
     if strict:
         flags.update(
@@ -530,7 +531,20 @@ def _capture_audit_gap_count(result: dict[str, object], *, strict: bool = False)
                 "emission_unverified",
             }
         )
-    return sum(int(status_counts.get(flag, 0) or 0) for flag in flags)
+    status_gap_count = sum(int(status_counts.get(flag, 0) or 0) for flag in flags)
+    repos = result.get("repos", [])
+    truncated_scan_count = 0
+    if isinstance(repos, list):
+        for row in repos:
+            if not isinstance(row, dict):
+                continue
+            scan = row.get("candidate_path_scan") or row.get("candidate_scan")
+            if isinstance(scan, dict) and scan.get("truncated") is True:
+                truncated_scan_count += 1
+    recorded_truncation_count = int(
+        status_counts.get("candidate_path_scan_truncated", 0) or 0
+    )
+    return status_gap_count + max(0, truncated_scan_count - recorded_truncation_count)
 
 
 def _mail_repo_candidates(cfg) -> list[dict[str, object]]:

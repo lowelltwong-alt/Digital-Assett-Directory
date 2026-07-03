@@ -237,6 +237,24 @@ def test_strict_capture_audit_counts_uncorrelated_and_unverified_statuses() -> N
     assert _capture_audit_gap_count(result, strict=True) == 6
 
 
+def test_capture_audit_gap_count_fails_closed_on_truncated_scan() -> None:
+    result = {
+        "status_counts": {},
+        "repos": [
+            {
+                "candidate_path_scan": {
+                    "truncated": True,
+                    "scanned_file_count": 50,
+                    "limit": 50,
+                }
+            }
+        ],
+    }
+
+    assert _capture_audit_gap_count(result, strict=False) == 1
+    assert _capture_audit_gap_count(result, strict=True) == 1
+
+
 def test_capture_registry_and_scenarios_validate() -> None:
     _validate("exception_capture_pattern_registry", load_capture_pattern_registry(ROOT))
     _validate("exception_capture_scenarios", load_capture_scenarios(SCENARIOS))
@@ -1374,3 +1392,26 @@ def test_observed_capture_audit_does_not_write_target_repo(tmp_path: Path) -> No
     after = sorted(path.relative_to(repo).as_posix() for path in repo.rglob("*"))
 
     assert after == before
+
+
+def test_observed_capture_audit_flags_truncated_candidate_scan(tmp_path: Path) -> None:
+    repo = tmp_path / "repo-truncated-audit"
+    docs = repo / "docs"
+    docs.mkdir(parents=True)
+    (docs / "incident-one.md").write_text("metadata-only placeholder", encoding="utf-8")
+    (docs / "incident-two.md").write_text("metadata-only placeholder", encoding="utf-8")
+
+    report = write_observed_capture_audit(
+        ROOT,
+        [repo],
+        output=tmp_path / "audit.json",
+        candidate_limit=1,
+    )
+    row = report["repos"][0]
+    audit_md = (tmp_path / "audit.md").read_text(encoding="utf-8")
+
+    assert row["candidate_path_scan"]["truncated"] is True
+    assert "candidate_path_scan_truncated" in row["status_flags"]
+    assert report["status_counts"]["candidate_path_scan_truncated"] == 1
+    assert _capture_audit_gap_count(report, strict=False) >= 1
+    assert "candidate_path_scan_truncated" in audit_md

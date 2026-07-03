@@ -4,6 +4,27 @@
   "title": "DAD Exception Fix Outcome Record",
   "type": "object",
   "additionalProperties": false,
+  "allOf": [
+    {
+      "if": {
+        "properties": { "decision": { "enum": ["fixed", "rollback"] } },
+        "required": ["decision"]
+      },
+      "then": {
+        "properties": {
+          "validation_refs": { "minItems": 1 },
+          "regression_test_refs": { "minItems": 1 }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": { "decision": { "enum": ["accepted_risk", "deferred"] } },
+        "required": ["decision"]
+      },
+      "then": { "properties": { "expiry": { "minLength": 1 } } }
+    }
+  ],
   "required": [
     "schema_version",
     "fix_id",
@@ -83,7 +104,12 @@
       "enum": ["validated", "validation_missing", "not_applicable", "failed"]
     },
     "validation_refs": { "type": "array", "items": { "type": "string" }, "maxItems": 50 },
-    "regression_test_refs": { "type": "array", "items": { "type": "string" }, "maxItems": 50 },
+    "regression_test_refs": {
+      "type": "array",
+      "items": { "type": "string" },
+      "maxItems": 50,
+      "description": "Required for fixed/rollback decisions so DAD can learn how the failure will be prevented."
+    },
     "fix_refs": { "type": "array", "items": { "type": "string" }, "maxItems": 50 },
     "asset_refs": { "type": "array", "items": { "type": "string" }, "maxItems": 50 },
     "lesson_refs": { "type": "array", "items": { "type": "string" }, "maxItems": 50 },

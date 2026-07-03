@@ -617,7 +617,9 @@ def build_exception_event(
     repo_policies: Iterable[Any] | None = None,
 ) -> dict[str, Any]:
     source_repo, policy_visibility, public_facing = _repo_identity(repo, repo_policies)
-    visibility = source_visibility or policy_visibility
+    # Packet-supplied source_visibility is advisory only. Reviewed policy or the
+    # repo-local DAD contract decides visibility; unreviewed packets stay unknown.
+    visibility = policy_visibility
     if visibility not in SOURCE_VISIBILITIES:
         visibility = "unknown"
     normalized_event_type = normalize_event_type(hub_root, event_type)
@@ -736,13 +738,11 @@ def _canonicalize_normalized_packet(
         raise ValueError(
             "Normalized exception packet source_visibility does not match reviewed repo policy."
         )
-    visibility = (
-        policy_visibility
-        if policy is not None
-        else submitted_visibility
-        if submitted_visibility in SOURCE_VISIBILITIES
-        else "unknown"
-    )
+    # Packet-supplied source_visibility is advisory only. Reviewed policy or the
+    # repo-local DAD contract decides visibility; unreviewed packets stay unknown.
+    visibility = policy_visibility
+    if visibility not in SOURCE_VISIBILITIES:
+        visibility = "unknown"
     record["source_repo"] = source_repo
     record["source_visibility"] = visibility
     record["public_facing_source"] = public_facing
@@ -957,7 +957,9 @@ def _fix_validation_status(
     if decision in {"fixed", "rollback"}:
         return (
             "validated"
-            if validation_refs and event_lookup_status == "found_in_lake"
+            if validation_refs
+            and regression_test_refs
+            and event_lookup_status == "found_in_lake"
             else "validation_missing"
         )
     if decision in {"accepted_risk", "deferred", "duplicate", "rejected"}:
@@ -969,6 +971,7 @@ def _validate_fix_outcome_policy(
     *,
     decision: str,
     validation_refs: list[str],
+    regression_test_refs: list[str],
     expiry: str,
     owner_authority: str,
     event_lookup_status: str,
@@ -981,6 +984,10 @@ def _validate_fix_outcome_policy(
         if not validation_refs:
             raise ValueError(
                 f"Exception fix outcome decision '{decision}' requires at least one validation_ref."
+            )
+        if not regression_test_refs:
+            raise ValueError(
+                f"Exception fix outcome decision '{decision}' requires at least one regression_test_ref."
             )
         if event_lookup_status != "found_in_lake":
             raise ValueError(
@@ -1049,6 +1056,7 @@ def build_exception_fix_outcome(
     _validate_fix_outcome_policy(
         decision=normalized_decision,
         validation_refs=refs_validation,
+        regression_test_refs=refs_regression,
         expiry=expiry,
         owner_authority=owner_authority,
         event_lookup_status=event_status,
@@ -1114,8 +1122,9 @@ def build_exception_fix_outcome(
         },
         "review_status": normalized_review,
         "authority_boundary": (
-            "Fix outcome records are candidate metadata. A fixed decision requires validation refs "
-            "but still does not override the source repo or prove factual truth outside that evidence."
+            "Fix outcome records are candidate metadata. A fixed decision requires validation "
+            "refs and regression test refs but still does not override the source repo or "
+            "prove factual truth outside that evidence."
         ),
     }
     record["fix_id"] = stable_exception_fix_id(record)
@@ -1192,6 +1201,9 @@ def _canonicalize_fix_outcome_packet(
     _validate_fix_outcome_policy(
         decision=decision,
         validation_refs=[str(item) for item in normalized.get("validation_refs", [])],
+        regression_test_refs=[
+            str(item) for item in normalized.get("regression_test_refs", [])
+        ],
         expiry=str(normalized.get("expiry") or ""),
         owner_authority=str(normalized.get("owner_authority") or ""),
         event_lookup_status=str(normalized.get("event_lookup_status") or ""),
@@ -1234,8 +1246,9 @@ def _canonicalize_fix_outcome_packet(
     normalized.setdefault(
         "authority_boundary",
         (
-            "Fix outcome records are candidate metadata. A fixed decision requires validation refs "
-            "but still does not override the source repo or prove factual truth outside that evidence."
+            "Fix outcome records are candidate metadata. A fixed decision requires validation "
+            "refs and regression test refs but still does not override the source repo or "
+            "prove factual truth outside that evidence."
         ),
     )
     return normalized
@@ -1960,6 +1973,7 @@ def _is_validated_fixed_outcome(row: dict[str, Any]) -> bool:
         row.get("decision") == "fixed"
         and row.get("validation_status") == "validated"
         and bool(row.get("validation_refs"))
+        and bool(row.get("regression_test_refs"))
         and row.get("event_lookup_status") == "found_in_lake"
     )
 
@@ -1998,7 +2012,7 @@ def write_exception_report(hub_root: Path) -> dict[str, Any]:
     fixed_without_validation_count = sum(
         1
         for row in fix_outcomes
-        if row.get("decision") == "fixed" and row.get("validation_status") != "validated"
+        if row.get("decision") == "fixed" and not _is_validated_fixed_outcome(row)
     )
     missing_event_link_count = sum(
         1 for row in fix_outcomes if row.get("event_lookup_status") == "missing_from_lake"
@@ -2041,9 +2055,9 @@ def write_exception_report(hub_root: Path) -> dict[str, Any]:
             ),
             "fix_outcome_boundary": (
                 "Fix outcomes are append-only candidate metadata. Only fixed outcomes "
-                "with validation_status=validated, validation_refs, and "
-                "event_lookup_status=found_in_lake count as validated fixes; they still "
-                "do not override source-repo authority."
+                "with validation_status=validated, validation_refs, regression_test_refs, "
+                "and event_lookup_status=found_in_lake count as validated fixes; they "
+                "still do not override source-repo authority."
             ),
         },
         "fix_outcome_count": len(fix_outcomes),

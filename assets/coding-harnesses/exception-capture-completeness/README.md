@@ -50,7 +50,9 @@ path signals so DAD can find likely missed emissions in real repos. It compares
 candidate pattern families against observed message types, event types, and
 capture contracts, so unrelated old mail does not satisfy a missing workflow or
 exception capture. Private and unknown repo path signals are hash-only by default.
-Neither report is proof that all real repos are complete.
+Truncated candidate-path scans and strict-only mismatches such as
+`type_present_uncorrelated` are review gaps, not clean runs. Neither report is
+proof that all real repos are complete.
 
 The taxonomy coverage report checks every reviewed exception event type against
 three route classes:

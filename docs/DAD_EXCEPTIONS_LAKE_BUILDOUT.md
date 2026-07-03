@@ -308,13 +308,15 @@ Implementation policy:
 
 - every fix outcome requires explicit `owner_authority`; DAD must not silently
   infer ownership from the source repo.
-- `fixed` and `rollback` outcomes require at least one `validation_ref` and the
-  linked `event_id` must already exist in the central lake.
+- `fixed` and `rollback` outcomes require at least one `validation_ref`, at
+  least one `regression_test_ref`, and the linked `event_id` must already exist
+  in the central lake.
 - `accepted_risk` and `deferred` outcomes require an `expiry` or revisit marker.
 - `duplicate` outcomes require `canonical_event_id`, and that canonical event
   must already exist in the central lake.
-- `fixed` outcomes only count as validated when `validation_status=validated` and
-  validation refs are present and `event_lookup_status=found_in_lake`.
+- `fixed` outcomes only count as validated when `validation_status=validated`,
+  validation refs and regression-test refs are present, and
+  `event_lookup_status=found_in_lake`.
 - A missing event link is allowed as candidate metadata (`missing_from_lake`), but
   reports surface it separately and it cannot prove the original event was fixed,
   rolled back, or duplicated.
@@ -791,13 +793,16 @@ Observed repo audit add-on:
 - The report flags `missed_capture_candidate`, `pattern_gap_candidate`,
   `emission_unverified`, `mail_present_exception_gap_candidate`,
   `stale_capture_surface`, `capture_surface_version_unknown`, and
-  `malformed_jsonl` for review. Existing unrelated mail is not enough to prove
-  capture worked; candidate signals are compared against matching message types,
-  event types, and capture contracts.
+  `malformed_jsonl` for review. It also records
+  `candidate_path_scan_truncated` when the bounded path scan hits its ceiling.
+  Existing unrelated mail is not enough to prove capture worked; candidate
+  signals are compared against matching message types, event types, and capture
+  contracts.
 - `asset-dir exceptions capture-audit --strict --fail-on-gaps` also fails on
-  `type_present_uncorrelated`, `emission_unverified`, stale capture surfaces, and
-  unknown capture surfaces. Use this in hardening runs, not as proof that every
-  candidate path signal is a real exception.
+  `type_present_uncorrelated`, `emission_unverified`, stale capture surfaces,
+  unknown capture surfaces, and truncated candidate scans. Use this in
+  hardening runs, not as proof that every candidate path signal is a real
+  exception.
 - Private or unknown repo path signals are hash-only by default. Reviewed public
   or internal repos may include repo-relative path hints for local audit use.
 - Acceptance criterion for this layer: running the observed audit over reviewed

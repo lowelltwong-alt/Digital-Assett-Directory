@@ -355,6 +355,36 @@ def test_collect_sanitizes_normalized_packet_local_paths(tmp_path: Path) -> None
     assert lake[0]["return_address"] == "repo:.digital-asset/exceptions/outbox.jsonl"
 
 
+def test_collect_downgrades_unreviewed_source_visibility_claim(tmp_path: Path) -> None:
+    hub = tmp_path / "hub"
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    _copy_exception_contracts(hub)
+    outbox = repo / ".digital-asset" / "exceptions" / "outbox.jsonl"
+    outbox.parent.mkdir(parents=True)
+    outbox.write_text(
+        json.dumps(
+            {
+                "event_type": "review_finding",
+                "summary": "Packet claims public visibility without reviewed source authority.",
+                "stage": "review",
+                "severity": "medium",
+                "capture_contract": "review_finding",
+                "source_visibility": "public",
+            }
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+
+    result = collect_exception_events(hub, repo)
+    lake = _jsonl(hub / "processed" / "exceptions" / "lake" / "events.jsonl")
+
+    assert result["collected_count"] == 1
+    assert lake[0]["source_visibility"] == "unknown"
+    assert lake[0]["source_provenance"]["source_visibility"] == "unknown"
+
+
 def test_duplicate_event_identity_collision_is_quarantined(tmp_path: Path) -> None:
     hub = tmp_path / "hub"
     repo = tmp_path / "repo"
@@ -703,6 +733,7 @@ def test_exception_report_does_not_count_status_only_fix_as_validated(
 
     assert report["fix_outcome_count"] == 2
     assert report["validated_fixed_count"] == 0
+    assert report["fixed_without_validation_count"] == 2
     assert report["fix_outcome_missing_event_link_count"] == 1
 
 
@@ -725,6 +756,37 @@ def test_fixed_outcome_without_validation_fails_closed(tmp_path: Path) -> None:
     assert not (repo / "processed" / "exceptions" / "fix-outcomes" / "outcomes.jsonl").exists()
 
 
+def test_fixed_outcome_without_regression_ref_fails_closed(tmp_path: Path) -> None:
+    hub = tmp_path / "hub"
+    repo = tmp_path / "repo"
+    (repo / ".git").mkdir(parents=True)
+    _copy_exception_contracts(hub)
+    record_exception_event(
+        hub,
+        repo,
+        event_type="review_finding",
+        summary="Observed event that needs a regression-backed fix.",
+        stage="review",
+        severity="medium",
+        capture_contract="review_finding",
+    )
+    collect_exception_events(hub, repo)
+    event = _jsonl(hub / "processed" / "exceptions" / "lake" / "events.jsonl")[0]
+
+    with pytest.raises(ValueError, match="requires at least one regression_test_ref"):
+        record_exception_fix_outcome(
+            hub,
+            repo,
+            event_id=event["event_id"],
+            decision="fixed",
+            summary="Claimed fixed with command validation but no regression pointer.",
+            validation_refs=["python -m pytest tests/test_fix.py"],
+            owner_authority="repo",
+        )
+
+    assert not (repo / "processed" / "exceptions" / "fix-outcomes" / "outcomes.jsonl").exists()
+
+
 def test_fixed_outcome_for_missing_event_fails_closed_even_with_validation(
     tmp_path: Path,
 ) -> None:
@@ -741,6 +803,7 @@ def test_fixed_outcome_for_missing_event_fails_closed_even_with_validation(
             decision="fixed",
             summary="Claimed fixed for an event that is not in the lake.",
             validation_refs=["python -m pytest tests/test_fix.py"],
+            regression_test_refs=["tests/test_fix.py::test_missing_event_regression"],
             owner_authority="repo",
         )
 
@@ -906,6 +969,7 @@ def test_collect_fix_outcomes_sanitizes_normalized_origin_chain(
         decision="fixed",
         summary="Fixed with sanitized provenance.",
         validation_refs=["python -m pytest tests/test_fix.py"],
+        regression_test_refs=["tests/test_fix.py::test_sanitized_provenance_regression"],
         owner_authority="repo",
     )
     outbox = repo / "processed" / "exceptions" / "fix-outcomes" / "outcomes.jsonl"
