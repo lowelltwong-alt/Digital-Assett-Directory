@@ -1,0 +1,411 @@
+{
+  "schema_version": "0.1.0",
+  "registry_id": "language-coding-advantage-registry",
+  "authority_boundary": "This registry is candidate language guidance for AI coding agents. It does not override repo-local style, tests, security policy, source authority, or human gates. Frontier source intake is pointer-only until screened and validated.",
+  "evidence_methodology": "Language advantages are promoted only from official or reviewed source pointers plus local validation evidence. Underuse and frontier labels are heuristic unless backed by measurement or repeated DAD outcomes; they must not gate security-sensitive actions.",
+  "languages": [
+    {
+      "language_id": "python",
+      "label": "Python",
+      "status": "installed_for_local_reuse",
+      "primary_assets": [
+        "asset:python-ai-advantage-preflight",
+        "python-underused-idioms-ai-coding-card",
+        "dad:offering:python-test-performance-harness",
+        "asset:coding-tactics-radar"
+      ],
+      "trusted_source_ids": [
+        "python-core",
+        "python-packaging",
+        "python-typing",
+        "astral",
+        "pyo3"
+      ],
+      "check_cadence": "weekly",
+      "frontier_questions": [
+        "Which new Python versions, PEPs, typing features, diagnostics, or stdlib tools should change AI coding defaults?",
+        "Which Python idioms make code easier for future agents to inspect, validate, and safely edit?",
+        "Which slow Python workflows should be improved through orchestration, profiling, vectorized libraries, or a Rust shadow path?"
+      ],
+      "ai_advantages": [
+        {
+          "advantage_id": "py-advantage:boundary-rich-stdlib",
+          "summary": "Use Python's stdlib and type tools to make JSON, resource, state, and side-effect boundaries explicit before code sprawls.",
+          "use_when": [
+            "A repo has schemas, JSONL, config, CLI, file I/O, or public API surfaces.",
+            "An AI agent is writing broad dictionary-heavy Python."
+          ],
+          "avoid_when": [
+            "The task is a tiny disposable script.",
+            "A framework-specific model is already the local authority."
+          ],
+          "verification": [
+            "Run affected tests or py_compile.",
+            "Validate JSON/schema boundaries when structured records change.",
+            "Cite py-idiom IDs when a review recommendation relies on an idiom."
+          ]
+        },
+        {
+          "advantage_id": "py-advantage:fast-feedback-tests",
+          "summary": "Use profiling and test orchestration before proposing rewrites or skipping broad pytest runs.",
+          "use_when": [
+            "A Python test suite is slow or full-battery runs block iteration.",
+            "A change touches isolated modules with measurable coverage boundaries."
+          ],
+          "avoid_when": [
+            "A shared behavior or public contract changed and a smaller suite cannot prove coverage.",
+            "There is no structured evidence that selected tests cover the change."
+          ],
+          "verification": [
+            "Record slow-test inventory and selection rationale.",
+            "Run native pytest for the selected scope and full validation before promotion.",
+            "Gate timing claims behind verified coverage evidence."
+          ]
+        }
+      ],
+      "ai_overlooked_patterns": [
+        {
+          "pattern_id": "py-pattern:typed-json-boundary",
+          "summary": "TypedDict, dataclasses, schemas, or small parser functions should mark where raw JSON becomes domain data.",
+          "why_ai_may_miss_it": "Agents often keep nested dictionaries because they are quick to write and pass smoke tests.",
+          "detection_signals": [
+            "Nested dict access across multiple functions.",
+            "JSONL or config loaders without validation or domain conversion.",
+            "Repeated string keys in CLI, mail, schema, or registry code."
+          ],
+          "route_to": [
+            "registry/coding-tactics-radar.json#python-typeddict-json-boundary",
+            "assets/python-ai-advantage-preflight",
+            "dad:need:language-frontier-signals"
+          ]
+        },
+        {
+          "pattern_id": "py-pattern:side-effect-port",
+          "summary": "Filesystem, subprocess, clock, network, and mail writes should be isolated when tests or replay matter.",
+          "why_ai_may_miss_it": "Direct side-effect calls make generated code shorter at first and hide test cost until later.",
+          "detection_signals": [
+            "Business logic directly calls subprocess, Path.write_text, datetime.now, requests, or environment reads.",
+            "Tests require real files, network, or wall clock to exercise ordinary logic."
+          ],
+          "route_to": [
+            "registry/coding-tactics-radar.json#python-protocol-side-effect-port",
+            "assets/coding-harnesses/python-test-performance-orchestration",
+            "dad:need:coding-harness-feedback"
+          ]
+        }
+      ],
+      "harness_routes": [
+        {
+          "harness_id": "dad:harness:python-test-performance-orchestration",
+          "use_when": "Full pytest is slow, flaky, or not targeted enough for the active change.",
+          "evidence_required": [
+            "timed native pytest command",
+            "slow test or fixture inventory",
+            "change-to-test scope explanation"
+          ]
+        },
+        {
+          "harness_id": "dad:harness:rust-shadow-parity",
+          "use_when": "A profiled Python hot path may be replaced by Rust while keeping the Python API stable.",
+          "evidence_required": [
+            "profile evidence",
+            "same-input same-output parity report",
+            "native Python validation result"
+          ]
+        }
+      ],
+      "validation_gates": [
+        "Run repo-local Python tests or explain why they are unavailable.",
+        "Run schema validation when JSON, JSONL, or registry contracts change.",
+        "Run lint/type checks only when the repo already uses them or adoption is explicitly planned.",
+        "Do not claim performance savings without baseline and after timings from the same workload."
+      ],
+      "adoption_rules": [
+        "Use the smallest Python feature that clarifies data shape, boundary, or validation.",
+        "Treat underused idioms as citable review prompts, not rewrite mandates.",
+        "Send useful or harmful outcomes back through dad:need:language-frontier-signals or dad:need:coding-harness-feedback."
+      ],
+      "anti_patterns": [
+        "Clever Python solely to look advanced.",
+        "Skipping tests because a selected suite was fast.",
+        "Replacing Python with Rust before profiling and parity evidence exist."
+      ],
+      "research_intake_packet": {
+        "message_type": "capability_suggestion",
+        "dad_need_id": "dad:need:language-frontier-signals",
+        "required_fields": [
+          "language",
+          "source_id_or_url",
+          "safe_summary",
+          "why_ai_coding_may_improve",
+          "applicability_limits",
+          "validation_or_eval_idea"
+        ],
+        "forbidden_fields": [
+          "copied_third_party_docs",
+          "raw_private_rows",
+          "credentials_or_tokens",
+          "long_source_blobs",
+          "unverified_benchmark_claims_as_truth"
+        ]
+      },
+      "review_status": "installed_for_local_reuse",
+      "last_reviewed_at": "2026-07-03",
+      "next_review_due_at": "2026-08-03"
+    },
+    {
+      "language_id": "rust",
+      "label": "Rust",
+      "status": "installed_for_local_reuse",
+      "primary_assets": [
+        "rust-buildout-guide",
+        "dad:offering:rust-shadow-parity-harness",
+        "asset:coding-tactics-radar",
+        "asset:ai-engineering-preflight"
+      ],
+      "trusted_source_ids": [
+        "rust-lang",
+        "rust-community-frontier",
+        "rust-security",
+        "pyo3",
+        "google"
+      ],
+      "check_cadence": "weekly",
+      "frontier_questions": [
+        "Which newly stabilized Rust, Cargo, Clippy, or stdlib changes make code easier for agents to verify?",
+        "Which crates or patterns improve deterministic scanning, parsing, chunking, hashing, and static analysis for DAD?",
+        "Which Python hot paths deserve a Rust shadow experiment rather than a full rewrite?"
+      ],
+      "ai_advantages": [
+        {
+          "advantage_id": "rs-advantage:compiler-backed-invariants",
+          "summary": "Use Rust where enums, newtypes, ownership, and exhaustive matching can turn future-agent mistakes into compiler errors.",
+          "use_when": [
+            "A parser, classifier, or route table has closed variants and correctness-critical transitions.",
+            "Stringly typed IDs or statuses are causing drift across boundaries."
+          ],
+          "avoid_when": [
+            "The code is fast-changing orchestration where Python readability and iteration speed matter more.",
+            "A local team cannot validate or maintain Rust yet."
+          ],
+          "verification": [
+            "Run cargo fmt --check, cargo clippy --all-targets, cargo test, and doc tests where applicable.",
+            "Add parity tests for behavior formerly owned by Python.",
+            "Keep public API changes behind semver or human review."
+          ]
+        },
+        {
+          "advantage_id": "rs-advantage:fast-safe-hot-path",
+          "summary": "Use Rust for profiled CPU-bound chunking, parsing, hashing, diffing, or scoring hot paths while Python keeps orchestration.",
+          "use_when": [
+            "Profiling shows a real Python CPU hot loop.",
+            "The boundary can be expressed as small deterministic input/output functions."
+          ],
+          "avoid_when": [
+            "The workload is I/O-bound or dominated by subprocess time.",
+            "Parity cannot be proven with structured reports."
+          ],
+          "verification": [
+            "Record Python baseline timings and Rust shadow timings on the same inputs.",
+            "Require same-scope structured parity before timing claims.",
+            "Use PyO3/maturin only after the boundary is stable."
+          ]
+        }
+      ],
+      "ai_overlooked_patterns": [
+        {
+          "pattern_id": "rs-pattern:closed-enum-route-table",
+          "summary": "Represent closed packet, event, status, or parser states as enums with exhaustive matches instead of strings.",
+          "why_ai_may_miss_it": "String constants are easier to generate and look familiar from Python/JSON examples.",
+          "detection_signals": [
+            "Repeated status strings in Rust or mixed Python/Rust code.",
+            "Wildcard match arms hiding unhandled variants.",
+            "JSON schema enum values manually mirrored in code."
+          ],
+          "route_to": [
+            "registry/coding-tactics-radar.json#rust-enums-not-magic-strings",
+            "assets/rust-buildout-guide/rust-buildout.json",
+            "dad:need:language-frontier-signals"
+          ]
+        },
+        {
+          "pattern_id": "rs-pattern:single-binary-cross-repo-tool",
+          "summary": "For stable cross-repo scanners or validators, a Rust CLI can avoid per-repo Python environment drift.",
+          "why_ai_may_miss_it": "Agents default to Python scripts inside each repo because they are easy to write locally.",
+          "detection_signals": [
+            "The same Python helper is copied across repos.",
+            "Validation fails because virtual environments or Python dependencies differ.",
+            "A tool does deterministic file scanning, hashing, or JSONL processing."
+          ],
+          "route_to": [
+            "assets/rust-buildout-guide",
+            "assets/coding-harnesses/rust-shadow-parity-harness",
+            "dad:need:coding-harness-feedback"
+          ]
+        }
+      ],
+      "harness_routes": [
+        {
+          "harness_id": "dad:harness:rust-shadow-parity",
+          "use_when": "Rust might replace or accelerate Python behavior.",
+          "evidence_required": [
+            "profile evidence",
+            "native Python command and report",
+            "Rust command and report",
+            "same-scope parity map"
+          ]
+        },
+        {
+          "harness_id": "dad:harness:ai-engineering-preflight",
+          "use_when": "A new Rust crate, mixed-language boundary, or downstream Rust agent instruction block is being planned.",
+          "evidence_required": [
+            "risk tier",
+            "local repo authority check",
+            "validation commands"
+          ]
+        }
+      ],
+      "validation_gates": [
+        "Profile before proposing Rust for speed.",
+        "Run Rust fmt, clippy, tests, and doc tests when Rust source changes.",
+        "Run native Python validation and Rust parity validation when replacing Python behavior.",
+        "Full Rust ports require load-bearing decision review and human approval."
+      ],
+      "adoption_rules": [
+        "Prefer small Rust hot-path crates under stable Python-facing boundaries.",
+        "Use Rust idioms that make future-agent edits safer: newtypes, typed errors, exhaustive matches, doc tests, and must_use.",
+        "Send frontier crate/tooling discoveries through pointer-only DAD mail before changing guidance."
+      ],
+      "anti_patterns": [
+        "Rust as prestige rewrite without measured bottleneck.",
+        "Tiny Rust suite treated as equivalent to broad Python tests.",
+        "Unsafe code or complex async introduced without an explicit need and review."
+      ],
+      "research_intake_packet": {
+        "message_type": "capability_suggestion",
+        "dad_need_id": "dad:need:language-frontier-signals",
+        "required_fields": [
+          "language",
+          "source_id_or_url",
+          "safe_summary",
+          "why_ai_coding_may_improve",
+          "applicability_limits",
+          "validation_or_eval_idea"
+        ],
+        "forbidden_fields": [
+          "copied_third_party_docs",
+          "raw_private_rows",
+          "credentials_or_tokens",
+          "long_source_blobs",
+          "unverified_benchmark_claims_as_truth"
+        ]
+      },
+      "review_status": "installed_for_local_reuse",
+      "last_reviewed_at": "2026-07-03",
+      "next_review_due_at": "2026-08-03"
+    },
+    {
+      "language_id": "future-language-template",
+      "label": "Future Language Template",
+      "status": "template",
+      "primary_assets": [
+        "asset:coding-tactics-radar",
+        "asset:ai-engineering-preflight"
+      ],
+      "trusted_source_ids": [
+        "openai",
+        "anthropic"
+      ],
+      "check_cadence": "manual",
+      "frontier_questions": [
+        "What does this language let agents prove, test, or safely refactor better than default code?",
+        "What official sources and toolchains should DAD watch before giving advice?",
+        "What harness proves the language actually improves the target repo instead of adding novelty?"
+      ],
+      "ai_advantages": [
+        {
+          "advantage_id": "future-advantage:prove-before-promote",
+          "summary": "Every future language gets a local proof path before becoming DAD guidance.",
+          "use_when": [
+            "A repo starts using a new language or toolchain.",
+            "A source suggests a coding improvement that could generalize."
+          ],
+          "avoid_when": [
+            "The language is only mentioned in passing.",
+            "No official or reviewed source pointer exists."
+          ],
+          "verification": [
+            "Add a schema-valid language record.",
+            "Add at least one source_id with intake cadence.",
+            "Add a harness or validation route before downstream recommendations."
+          ]
+        }
+      ],
+      "ai_overlooked_patterns": [
+        {
+          "pattern_id": "future-pattern:toolchain-proof-gap",
+          "summary": "New language advice must identify the exact compiler, formatter, linter, typechecker, test, or runtime proof it depends on.",
+          "why_ai_may_miss_it": "Agents may recommend a shiny language pattern without naming the proof tool that makes it safe.",
+          "detection_signals": [
+            "Guidance mentions a language benefit but no validation command.",
+            "A repo adds generated code without toolchain or CI checks.",
+            "A benchmark or blog claim is repeated without local workload evidence."
+          ],
+          "route_to": [
+            "docs/LANGUAGE_CODING_ADVANTAGE.md",
+            "dad:need:language-frontier-signals",
+            "dad:need:coding-harness-feedback"
+          ]
+        }
+      ],
+      "harness_routes": [
+        {
+          "harness_id": "candidate-required",
+          "use_when": "A future language is proposed for DAD guidance.",
+          "evidence_required": [
+            "official or reviewed source pointer",
+            "minimum validation command",
+            "local applicability and avoid-when notes"
+          ]
+        }
+      ],
+      "validation_gates": [
+        "Do not add a future language as reviewed until official sources, local examples, and validation commands exist.",
+        "Do not send language advice to public-facing repos if it includes private-origin source context.",
+        "Do not copy third-party code or docs into DAD; record pointers and safe summaries only."
+      ],
+      "adoption_rules": [
+        "Start as a candidate record.",
+        "Use one small harness experiment before broad downstream guidance.",
+        "Track what helped, failed, or was harmful through postflight and DAD mail."
+      ],
+      "anti_patterns": [
+        "Adding a language because it is fashionable.",
+        "Treating ecosystem popularity as proof of fit.",
+        "Letting one agent's preference become a DAD default without evidence."
+      ],
+      "research_intake_packet": {
+        "message_type": "capability_suggestion",
+        "dad_need_id": "dad:need:language-frontier-signals",
+        "required_fields": [
+          "language",
+          "source_id_or_url",
+          "safe_summary",
+          "why_ai_coding_may_improve",
+          "applicability_limits",
+          "validation_or_eval_idea"
+        ],
+        "forbidden_fields": [
+          "copied_third_party_docs",
+          "raw_private_rows",
+          "credentials_or_tokens",
+          "long_source_blobs",
+          "unverified_benchmark_claims_as_truth"
+        ]
+      },
+      "review_status": "candidate",
+      "last_reviewed_at": "2026-07-03",
+      "next_review_due_at": "2026-10-03"
+    }
+  ]
+}

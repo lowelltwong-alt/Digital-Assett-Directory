@@ -66,9 +66,10 @@ def load_trusted_sources(hub_root: Path) -> dict[str, Any]:
 def match_trusted_source(hub_root: Path, source_url: str) -> tuple[dict[str, Any] | None, str]:
     """Match a URL against the trusted-source registry by domain/prefix patterns."""
     normalized = source_url.lower().strip()
-    for scheme in ("https://", "http://"):
-        if normalized.startswith(scheme):
-            normalized = normalized[len(scheme):]
+    if normalized.startswith("http://"):
+        return None, "unknown"
+    if normalized.startswith("https://"):
+        normalized = normalized[len("https://"):]
     normalized = normalized.rstrip("/")
     try:
         registry = load_trusted_sources(hub_root)

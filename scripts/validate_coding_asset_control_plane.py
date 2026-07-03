@@ -11,6 +11,7 @@ ROOT = Path(__file__).resolve().parents[1]
 REQUIRED_SCHEMA_KEYS = {
     "coding_asset_registry": "schemas/coding-asset-registry.schema.json",
     "coding_tactic": "schemas/coding-tactic.schema.json",
+    "language_coding_advantage_registry": "schemas/language-coding-advantage-registry.schema.json",
     "preflight_profile_router": "schemas/preflight-profile-router.schema.json",
     "tactic_use_feedback": "schemas/tactic-use-feedback.schema.json",
 }
@@ -42,9 +43,13 @@ def require_path(rel: str, label: str, errors: list[str]) -> None:
 
 
 def require_local_evidence_path(value: str, label: str, errors: list[str]) -> None:
-    if value.startswith(("http://", "https://")):
+    if value.startswith(("dad://", "source-archive-sha256:", "https://")):
+        return
+    if value.startswith("http://"):
+        errors.append(f"{label} evidence must use https or dad:// refs, not http: {value}")
         return
     if len(value) > 2 and value[1:3] in {":/", ":\\"}:
+        errors.append(f"{label} evidence contains local absolute path: {value}")
         return
     rel = value.split("#", 1)[0]
     if rel.startswith(("docs/", "registry/", "schemas/", "templates/", "assets/", "examples/", "scripts/")):
@@ -58,6 +63,10 @@ def main() -> int:
     asset_registry = load_json("registry/coding-asset-registry.json")
     tactic_registry = load_json("registry/coding-tactics-radar.json")
     router = load_json("registry/preflight-profile-router.json")
+    trusted_sources = load_json("registry/trusted-source-registry.json")
+    language_registry = load_json("registry/language-coding-advantage-registry.json")
+    dad_offerings = load_json("registry/dad-offerings-registry.json")
+    reusable_assets = load_json("assets/asset-registry.json")
     feedback_template = load_json("templates/tactic-use-feedback.template.json")
 
     registered_schemas = schema_registry.get("schemas", {})
@@ -78,6 +87,18 @@ def main() -> int:
         errors,
     )
     validate_with_schema(
+        trusted_sources,
+        "schemas/trusted-source-registry.schema.json",
+        "trusted source registry",
+        errors,
+    )
+    validate_with_schema(
+        language_registry,
+        "schemas/language-coding-advantage-registry.schema.json",
+        "language coding advantage registry",
+        errors,
+    )
+    validate_with_schema(
         feedback_template,
         "schemas/tactic-use-feedback.schema.json",
         "tactic use feedback template",
@@ -94,11 +115,29 @@ def main() -> int:
 
     known_assets = set(asset_ids)
     known_tactics = set(tactic_ids)
+    known_language_assets = (
+        known_assets
+        | {asset["asset_id"] for asset in reusable_assets.get("assets", [])}
+        | {offering["offering_id"] for offering in dad_offerings.get("offerings", [])}
+    )
+    trusted_source_ids = {source["source_id"] for source in trusted_sources.get("sources", [])}
 
     for asset in asset_registry.get("assets", []):
         require_path(asset["path"], f"asset {asset['asset_id']}", errors)
         for evidence in asset["source_evidence"]:
             require_local_evidence_path(evidence, f"asset {asset['asset_id']} evidence", errors)
+
+    for language in language_registry.get("languages", []):
+        for source_id in language["trusted_source_ids"]:
+            if source_id not in trusted_source_ids:
+                errors.append(
+                    f"language {language['language_id']} references unknown trusted source {source_id}"
+                )
+        for asset_id in language["primary_assets"]:
+            if asset_id not in known_language_assets:
+                errors.append(
+                    f"language {language['language_id']} references unknown primary asset {asset_id}"
+                )
 
     for tactic in tactic_registry.get("tactics", []):
         validate_with_schema(
@@ -161,7 +200,8 @@ def main() -> int:
 
     print(
         "coding asset control plane valid: "
-        f"{len(asset_ids)} assets, {len(tactic_ids)} tactics, {len(route_ids)} routes"
+        f"{len(asset_ids)} assets, {len(tactic_ids)} tactics, "
+        f"{len(route_ids)} routes, {len(language_registry.get('languages', []))} languages"
     )
     return 0
 

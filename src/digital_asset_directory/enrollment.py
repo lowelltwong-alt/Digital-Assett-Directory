@@ -472,7 +472,7 @@ def _existing_installed_at(repo_root: Path) -> str:
     return str(payload.get("enrollment", {}).get("installed_at") or utc_now())
 
 
-def _capture_surface_payload(hub_root: Path) -> dict[str, str]:
+def _capture_surface_payload(hub_root: Path) -> dict[str, Any]:
     surface_version = "unknown"
     registry_path = hub_root / CAPTURE_PATTERN_REGISTRY
     if registry_path.exists():
@@ -490,6 +490,12 @@ def _capture_surface_payload(hub_root: Path) -> dict[str, str]:
         "mail_outbox": ".digital-asset/mail/outbox.jsonl",
         "exceptions_outbox": ".digital-asset/exceptions/outbox.jsonl",
         "fix_outcomes": "processed/exceptions/fix-outcomes/outcomes.jsonl",
+        "repo_local_only_paths": [
+            ".digital-asset/exceptions/outbox.jsonl",
+            ".digital-asset/exceptions/inbox.jsonl",
+            ".digital-asset/exceptions/archive.jsonl",
+            "processed/exceptions/fix-outcomes/outcomes.jsonl",
+        ],
         "cli_fallback": (
             "If asset-dir is unavailable, try PYTHONPATH=src python -m "
             "digital_asset_directory.cli from the DAD checkout; otherwise append "

@@ -28,6 +28,12 @@ SCHEMA_VERSION = "0.1.0"
 MAX_STRING_CHARS = 1200
 MAX_RECORD_BYTES = 16_000
 MAX_BACKFILL_EVENTS = 1000
+PROMPT_INJECTION_PATTERNS = [
+    re.compile(r"(?i)\bignore (all )?(previous|prior|above) instructions\b"),
+    re.compile(r"(?i)\b(system|developer) prompt\b"),
+    re.compile(r"(?i)\bexecute (this )?(tool|command)\b"),
+    re.compile(r"(?i)\bdo not (tell|show) (the )?(user|developer)\b"),
+]
 
 SOURCE_VISIBILITIES = {"public", "internal", "private", "restricted", "unknown"}
 SEVERITIES = {"critical", "high", "medium", "low", "info"}
@@ -503,6 +509,10 @@ def stable_exception_fix_id(record: dict[str, Any]) -> str:
 def _redact_and_limit(value: Any, issues: list[str]) -> tuple[Any, int]:
     if isinstance(value, str):
         redacted, count = redact_sensitive_text(value)
+        if any(pattern.search(redacted) for pattern in PROMPT_INJECTION_PATTERNS):
+            issues.append("prompt_injection_like_payload")
+            digest = sha256_bytes(redacted.encode("utf-8"))
+            redacted = f"[PROMPT_INJECTION_LIKE_TEXT_REJECTED_SHA256:{digest}]"
         if len(redacted) > MAX_STRING_CHARS:
             issues.append("long_string")
             digest = sha256_bytes(redacted.encode("utf-8"))
@@ -535,11 +545,26 @@ def _redact_and_limit(value: Any, issues: list[str]) -> tuple[Any, int]:
     return value, 0
 
 
+def _append_prompt_injection_issues(value: Any, issues: list[str], *, path: str = "record") -> None:
+    if isinstance(value, str):
+        if any(pattern.search(value) for pattern in PROMPT_INJECTION_PATTERNS):
+            issues.append(f"prompt_injection_like_payload:{path}")
+        return
+    if isinstance(value, list):
+        for index, item in enumerate(value):
+            _append_prompt_injection_issues(item, issues, path=f"{path}[{index}]")
+        return
+    if isinstance(value, dict):
+        for key, item in value.items():
+            _append_prompt_injection_issues(item, issues, path=f"{path}.{key}")
+
+
 def screen_exception_record(record: dict[str, Any]) -> tuple[dict[str, Any], list[str]]:
     issues: list[str] = []
     cleaned, redaction_count = _redact_and_limit(record, issues)
     if not isinstance(cleaned, dict):
         raise TypeError("Exception record must be a JSON object.")
+    _append_prompt_injection_issues(cleaned, issues)
     screening = dict(cleaned.get("screening") or {})
     if redaction_count:
         issues.append("credential_or_pii_pattern")

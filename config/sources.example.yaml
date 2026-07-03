@@ -151,6 +151,7 @@ exceptions:
       collect_allowed: true
       capture_audit_allowed: true
       backfill_allowed: true
+      approved_approval_ids: []
     # Add reviewed downstream repos here before using
     # `exceptions collect --repo all` or `exceptions capture-audit --repo all`.
     # Mail enrollment does not authorize exception collection.
@@ -163,6 +164,7 @@ exceptions:
     #   collect_allowed: true
     #   capture_audit_allowed: true
     #   backfill_allowed: false
+    #   approved_approval_ids: []
 
 enrollment:
   repos:

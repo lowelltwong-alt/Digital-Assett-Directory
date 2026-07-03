@@ -60,6 +60,7 @@ class ExceptionRepoPolicy:
     collect_allowed: bool = True
     capture_audit_allowed: bool = True
     backfill_allowed: bool = False
+    approved_approval_ids: list[str] = field(default_factory=list)
     write_protected: bool = False
     write_protection_reason: str = ""
 
@@ -228,6 +229,9 @@ def load_config(path: Path | None = None, repo_root: Path | None = None) -> AppC
                 collect_allowed=bool(item.get("collect_allowed", True)),
                 capture_audit_allowed=bool(item.get("capture_audit_allowed", True)),
                 backfill_allowed=bool(item.get("backfill_allowed", False)),
+                approved_approval_ids=[
+                    str(value) for value in item.get("approved_approval_ids", []) or []
+                ],
                 write_protected=bool(item.get("write_protected", False)),
                 write_protection_reason=str(item.get("write_protection_reason", "")),
             )

@@ -20,6 +20,12 @@
       "items": {
         "type": "object",
         "required": ["source_id", "label", "url_patterns", "trust_tier", "asset_kinds", "review_status"],
+        "allOf": [
+          {
+            "if": {"required": ["language_focus"]},
+            "then": {"required": ["check_cadence", "frontier_watch", "intake_actions"]}
+          }
+        ],
         "additionalProperties": false,
         "properties": {
           "source_id": {"type": "string", "pattern": "^[a-z0-9][a-z0-9-]*$"},

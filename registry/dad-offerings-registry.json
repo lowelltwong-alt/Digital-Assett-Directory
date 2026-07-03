@@ -209,6 +209,42 @@
       ],
       "review_status": "candidate",
       "authority_boundary": "Capture-completeness results are candidate evidence; they prove scenario coverage and observed outbox comparisons, not source truth or public safety."
+    },
+    {
+      "offering_id": "dad:offering:language-coding-advantage",
+      "name": "Language Coding Advantage Registry",
+      "version": "0.1.0",
+      "offering_type": "best_practice",
+      "path": "docs/LANGUAGE_CODING_ADVANTAGE.md",
+      "languages": ["python", "rust", "mixed", "agent-instruction"],
+      "repo_types": ["application", "library", "control_plane", "template_repo", "research_repo"],
+      "domains": ["software_engineering", "ai_engineering", "code_research"],
+      "context_tags": ["coding_asset", "language_frontier", "python", "rust", "harness_research"],
+      "task_types": ["coding", "refactor", "performance", "code_research", "harness_research", "python", "rust"],
+      "capabilities": [
+        "language_specific_guidance",
+        "frontier_source_refresh",
+        "overlooked_pattern_routing",
+        "harness_route_selection"
+      ],
+      "applies_when": [
+        "A coding agent needs Python, Rust, or future-language guidance before implementation.",
+        "A repo discovers a language technique, library, crate, tool, or validation idea that might improve AI coding."
+      ],
+      "does_not_apply_when": [
+        "The target repo's local language authority conflicts with the suggestion.",
+        "The evidence is only a benchmark, blog claim, or agent preference with no local validation idea."
+      ],
+      "public_safe": true,
+      "upgrade_channel": "dad_mail",
+      "known_upgrades": [],
+      "source_refs": [
+        "docs/LANGUAGE_CODING_ADVANTAGE.md",
+        "registry/language-coding-advantage-registry.json",
+        "registry/trusted-source-registry.json"
+      ],
+      "review_status": "candidate",
+      "authority_boundary": "Candidate language guidance only; local repo authority, validation, security policy, and human gates decide adoption."
     }
   ]
 }

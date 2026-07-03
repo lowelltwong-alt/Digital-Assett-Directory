@@ -10,12 +10,14 @@ from jsonschema.validators import validator_for
 
 from digital_asset_directory.cli import (
     _capture_audit_gap_count,
+    _exception_backfill_approval_block_reason,
     _discover_exception_repos,
     _exception_backfill_policy_block_reason,
     _exception_record_policy_block_reason,
 )
 from digital_asset_directory.config import ExceptionRepoPolicy, MailRepoPolicy
 from digital_asset_directory.exception_capture import (
+    evaluate_exception_taxonomy_coverage,
     evaluate_capture_case,
     evaluate_capture_scenarios,
     load_capture_pattern_registry,
@@ -164,6 +166,44 @@ def test_exception_backfill_policy_blocks_write_protected_repo(tmp_path: Path) -
     assert reason == "protected is write_protected for exception backfill"
 
 
+def test_exception_backfill_approval_requires_reviewed_policy_id(tmp_path: Path) -> None:
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    cfg = SimpleNamespace(
+        exception_repos=[
+            ExceptionRepoPolicy(
+                id="protected",
+                path=repo,
+                alias="repo",
+                exceptions_enabled=True,
+                backfill_allowed=False,
+                write_protected=True,
+                approved_approval_ids=["APPROVED-EXCEPTION-BACKFILL"],
+            )
+        ],
+    )
+
+    fake_reason = _exception_backfill_approval_block_reason(cfg, repo, "FAKE")
+    approved_reason = _exception_backfill_approval_block_reason(
+        cfg,
+        repo,
+        "APPROVED-EXCEPTION-BACKFILL",
+    )
+
+    assert "not approved" in fake_reason
+    assert approved_reason == ""
+
+
+def test_exception_backfill_approval_rejects_unreviewed_roots(tmp_path: Path) -> None:
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    cfg = SimpleNamespace(exception_repos=[])
+
+    reason = _exception_backfill_approval_block_reason(cfg, repo, "APPROVED")
+
+    assert reason == "root is not covered by reviewed exceptions.repos policy"
+
+
 def test_exception_record_policy_blocks_write_protected_repo(tmp_path: Path) -> None:
     repo = tmp_path / "repo"
     repo.mkdir()
@@ -231,6 +271,49 @@ def test_capture_completeness_scenarios_all_pass(tmp_path: Path) -> None:
     assert report["covered_reviewed_rule_count"] == report["reviewed_rule_count"]
     assert (tmp_path / "report.json").exists()
     assert (tmp_path / "report.md").exists()
+
+
+def test_exception_taxonomy_coverage_distinguishes_manual_and_signal_routes(
+    tmp_path: Path,
+) -> None:
+    report = evaluate_exception_taxonomy_coverage(
+        ROOT,
+        SCENARIOS,
+        output=tmp_path / "taxonomy-coverage.json",
+    )
+
+    assert report["event_type_count"] >= 50
+    assert report["reviewed_unrouted_event_types"] == []
+    assert report["learnable_unrouted_event_types"] == []
+    assert report["capture_rule_events_missing_synthetic_cases"] == []
+    assert "failed_command" not in report["manual_only_event_types"]
+    assert "tool_unavailable" not in report["manual_only_event_types"]
+    assert "validation_command_missing" in report["manual_only_event_types"]
+    assert (tmp_path / "taxonomy-coverage.json").exists()
+    assert (tmp_path / "taxonomy-coverage.md").exists()
+
+
+def test_taxonomy_coverage_reports_capture_rule_without_scenario(
+    tmp_path: Path,
+) -> None:
+    scenarios = load_capture_scenarios(SCENARIOS)
+    scenarios["cases"] = [
+        case for case in scenarios["cases"] if case["scenario_id"] != "tool-unavailable-metadata"
+    ]
+    scenario_path = tmp_path / "missing-tool-scenario.json"
+    scenario_path.write_text(json.dumps(scenarios), encoding="utf-8")
+
+    report = evaluate_exception_taxonomy_coverage(
+        ROOT,
+        scenario_path,
+        output=tmp_path / "taxonomy-coverage.json",
+    )
+
+    assert "tool_unavailable" in report["capture_rule_events_missing_synthetic_cases"]
+    tool_row = next(
+        row for row in report["events"] if row["event_type"] == "tool_unavailable"
+    )
+    assert tool_row["coverage_status"] == "capture_rule_missing_synthetic_case"
 
 
 def test_capture_completeness_fails_when_reviewed_rule_has_no_scenario(

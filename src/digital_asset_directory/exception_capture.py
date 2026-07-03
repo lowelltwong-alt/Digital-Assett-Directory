@@ -11,7 +11,9 @@ from .exceptions_lake import (
     BACKFILL_EXCLUDE_DIRS,
     BACKFILL_SENSITIVE_PATH_TERMS,
     EXCEPTION_OUTBOX,
+    backfill_classifier_rules,
     backfill_path_signal_terms,
+    load_event_type_registry,
     path_term_matches,
     screen_exception_record,
 )
@@ -21,6 +23,10 @@ from .utils import safe_relative, sha256_bytes, sha256_file, write_json, utc_now
 CAPTURE_PATTERN_REGISTRY = Path("registry") / "exception-capture-pattern-registry.json"
 CAPTURE_REPORT_JSON = Path("processed") / "reports" / "exception_capture_completeness.json"
 CAPTURE_REPORT_MD = Path("processed") / "reports" / "exception_capture_completeness.md"
+TAXONOMY_COVERAGE_REPORT_JSON = (
+    Path("processed") / "reports" / "exception_taxonomy_coverage.json"
+)
+TAXONOMY_COVERAGE_REPORT_MD = Path("processed") / "reports" / "exception_taxonomy_coverage.md"
 OBSERVED_AUDIT_JSON = Path("processed") / "reports" / "exception_capture_observed_audit.json"
 OBSERVED_AUDIT_MD = Path("processed") / "reports" / "exception_capture_observed_audit.md"
 
@@ -1326,6 +1332,191 @@ def _input_hashes(hub_root: Path, scenarios_path: Path) -> dict[str, str]:
         if path.exists() and path.is_file():
             hashes[ref.as_posix()] = f"sha256:{sha256_file(path)}"
     return hashes
+
+
+def _taxonomy_coverage_input_hashes(hub_root: Path, scenarios_path: Path) -> dict[str, str]:
+    refs = [
+        Path("registry") / "exception-event-type-registry.json",
+        CAPTURE_PATTERN_REGISTRY,
+        Path("src") / "digital_asset_directory" / "exception_capture.py",
+        Path("src") / "digital_asset_directory" / "exceptions_lake.py",
+    ]
+    scenario_ref = Path(safe_relative(scenarios_path, hub_root))
+    if scenario_ref.as_posix() != scenarios_path.name or (hub_root / scenario_ref).exists():
+        refs.append(scenario_ref)
+    hashes: dict[str, str] = {}
+    for ref in refs:
+        path = hub_root / ref
+        if path.exists() and path.is_file():
+            hashes[ref.as_posix()] = f"sha256:{sha256_file(path)}"
+    return hashes
+
+
+def _event_route_status(
+    *,
+    capture_rule_ids: list[str],
+    backfill_rule_ids: list[str],
+    direct_record_contracts: list[str],
+    scenario_ids: list[str],
+) -> str:
+    if capture_rule_ids and scenario_ids:
+        return "capture_rule_with_synthetic_case"
+    if capture_rule_ids:
+        return "capture_rule_missing_synthetic_case"
+    if backfill_rule_ids:
+        return "backfill_path_signal"
+    if direct_record_contracts:
+        return "direct_record_contract_only"
+    return "unrouted"
+
+
+def evaluate_exception_taxonomy_coverage(
+    hub_root: Path,
+    scenarios_path: Path,
+    *,
+    output: Path | None = None,
+) -> dict[str, Any]:
+    event_registry = load_event_type_registry(hub_root)
+    capture_registry = load_capture_pattern_registry(hub_root)
+    scenarios = load_capture_scenarios(scenarios_path)
+    capture_rules_by_event: dict[str, list[str]] = {}
+    for rule in capture_registry.get("rules", []):
+        event_type = str((rule.get("emit") or {}).get("exception_event_type") or "")
+        rule_id = str(rule.get("rule_id") or "")
+        if event_type and rule_id and rule.get("review_status") == "reviewed":
+            capture_rules_by_event.setdefault(event_type, []).append(rule_id)
+    backfill_rules_by_event: dict[str, list[str]] = {}
+    for rule in backfill_classifier_rules(hub_root):
+        event_type = str(rule.get("event_type") or "")
+        rule_id = str(rule.get("rule_id") or "")
+        if event_type and rule_id:
+            backfill_rules_by_event.setdefault(event_type, []).append(rule_id)
+    scenarios_by_event: dict[str, list[str]] = {}
+    for case in scenarios.get("cases", []):
+        scenario_id = str(case.get("scenario_id") or "")
+        for event_type in (case.get("expected") or {}).get("event_types", []):
+            scenarios_by_event.setdefault(str(event_type), []).append(scenario_id)
+
+    records: list[dict[str, Any]] = []
+    for event in event_registry.get("event_types", []):
+        if not isinstance(event, dict) or not event.get("event_type"):
+            continue
+        event_type = str(event["event_type"])
+        capture_rule_ids = sorted(capture_rules_by_event.get(event_type, []))
+        backfill_rule_ids = sorted(backfill_rules_by_event.get(event_type, []))
+        scenario_ids = sorted(scenarios_by_event.get(event_type, []))
+        direct_record_contracts = sorted(str(item) for item in event.get("capture_contracts", []))
+        route_kinds = []
+        if direct_record_contracts:
+            route_kinds.append("direct_record_contract")
+        if capture_rule_ids:
+            route_kinds.append("capture_rule")
+        if backfill_rule_ids:
+            route_kinds.append("backfill_path_signal")
+        status = _event_route_status(
+            capture_rule_ids=capture_rule_ids,
+            backfill_rule_ids=backfill_rule_ids,
+            direct_record_contracts=direct_record_contracts,
+            scenario_ids=scenario_ids,
+        )
+        records.append(
+            {
+                "event_type": event_type,
+                "category": str(event.get("category") or "unknown"),
+                "review_status": str(event.get("review_status") or "unknown"),
+                "learnable": bool(event.get("learnable", False)),
+                "default_severity": str(event.get("default_severity") or ""),
+                "direct_record_contracts": direct_record_contracts,
+                "capture_rule_ids": capture_rule_ids,
+                "backfill_rule_ids": backfill_rule_ids,
+                "synthetic_scenario_ids": scenario_ids,
+                "route_kinds": route_kinds,
+                "coverage_status": status,
+                "missing_synthetic_case": bool(capture_rule_ids and not scenario_ids),
+                "manual_only": status == "direct_record_contract_only",
+                "unrouted": status == "unrouted",
+            }
+        )
+
+    status_counts = Counter(record["coverage_status"] for record in records)
+    manual_only = sorted(record["event_type"] for record in records if record["manual_only"])
+    unrouted = sorted(record["event_type"] for record in records if record["unrouted"])
+    missing_scenarios = sorted(
+        record["event_type"] for record in records if record["missing_synthetic_case"]
+    )
+    reviewed_unrouted = sorted(
+        record["event_type"]
+        for record in records
+        if record["unrouted"] and record["review_status"] == "reviewed"
+    )
+    learnable_unrouted = sorted(
+        record["event_type"]
+        for record in records
+        if record["unrouted"] and record["learnable"]
+    )
+    automated_route_count = sum(
+        1
+        for record in records
+        if record["capture_rule_ids"] or record["backfill_rule_ids"]
+    )
+    report = {
+        "generated_at": utc_now(),
+        "event_registry_ref": "registry/exception-event-type-registry.json",
+        "capture_registry_ref": CAPTURE_PATTERN_REGISTRY.as_posix(),
+        "scenario_path": _report_path_ref(scenarios_path, hub_root),
+        "input_hashes": _taxonomy_coverage_input_hashes(hub_root, scenarios_path),
+        "event_type_count": len(records),
+        "automated_route_count": automated_route_count,
+        "manual_only_count": len(manual_only),
+        "unrouted_count": len(unrouted),
+        "missing_synthetic_case_count": len(missing_scenarios),
+        "coverage_status_counts": dict(sorted(status_counts.items())),
+        "manual_only_event_types": manual_only,
+        "unrouted_event_types": unrouted,
+        "reviewed_unrouted_event_types": reviewed_unrouted,
+        "learnable_unrouted_event_types": learnable_unrouted,
+        "capture_rule_events_missing_synthetic_cases": missing_scenarios,
+        "events": records,
+        "authority_boundary": (
+            "Taxonomy coverage shows available capture routes. A direct record "
+            "contract means an agent can intentionally emit safe metadata; it is "
+            "not proof of deterministic auto-detection. Backfill path signals are "
+            "candidate-only and do not prove source truth."
+        ),
+    }
+    output_path = hub_root / (output or TAXONOMY_COVERAGE_REPORT_JSON)
+    write_json(output_path, report)
+    md_path = output_path.with_suffix(".md") if output else hub_root / TAXONOMY_COVERAGE_REPORT_MD
+    lines = [
+        "# Exception Taxonomy Coverage",
+        "",
+        f"- Generated: {report['generated_at']}",
+        f"- Event types: {report['event_type_count']}",
+        f"- Event types with detector/backfill routes: {report['automated_route_count']}",
+        f"- Direct-record-only event types: {report['manual_only_count']}",
+        f"- Unrouted event types: {report['unrouted_count']}",
+        f"- Capture-rule event types missing synthetic cases: {report['missing_synthetic_case_count']}",
+        "",
+        "Boundary: direct-record coverage is a safe manual emission route, not an "
+        "automatic detector. Backfill routes are path-signal candidates only.",
+        "",
+        "## Coverage Status Counts",
+        "",
+    ]
+    for status, count in sorted(status_counts.items()):
+        lines.append(f"- `{status}`: {count}")
+    if manual_only:
+        lines.extend(["", "## Direct Record Only", ""])
+        lines.extend(f"- `{event_type}`" for event_type in manual_only)
+    if missing_scenarios:
+        lines.extend(["", "## Capture Rules Missing Synthetic Cases", ""])
+        lines.extend(f"- `{event_type}`" for event_type in missing_scenarios)
+    if unrouted:
+        lines.extend(["", "## Unrouted Event Types", ""])
+        lines.extend(f"- `{event_type}`" for event_type in unrouted)
+    md_path.parent.mkdir(parents=True, exist_ok=True)
+    md_path.write_text("\n".join(lines) + "\n", encoding="utf-8")
+    return report
 
 
 def evaluate_capture_scenarios(

@@ -71,6 +71,9 @@ def test_trusted_source_registry_validates_and_matches():
     assert "python" in python_source["language_focus"]
     _, unknown_tier = match_trusted_source(ROOT, "https://random-blog.example.com/skill")
     assert unknown_tier == "unknown"
+    insecure_source, insecure_tier = match_trusted_source(ROOT, "http://peps.python.org/pep-0703/")
+    assert insecure_source is None
+    assert insecure_tier == "unknown"
 
 
 def test_unknown_source_requires_justification(tmp_path: Path):

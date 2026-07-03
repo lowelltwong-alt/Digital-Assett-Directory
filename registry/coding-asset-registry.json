@@ -74,7 +74,7 @@
       "source_evidence": [
         "assets/python-ai-advantage-preflight/asset.json",
         "assets/python-ai-advantage-preflight/SOURCES.md",
-        "C:/Users/lowel/Downloads/python-ai-advantage-preflight-asset-v0.1.0.zip#sha256=324b66b23015c46fde818fcc4758505f29d231de9989884ffbc4a0b233b09673",
+        "dad://source-archive/python-ai-advantage-preflight-asset-v0.1.0.zip#sha256=324b66b23015c46fde818fcc4758505f29d231de9989884ffbc4a0b233b09673",
         "https://docs.python.org/3/library/dataclasses.html",
         "https://docs.python.org/3/library/typing.html"
       ],
@@ -279,6 +279,44 @@
         "docs/CODING_TACTIC_PROMOTION_POLICY.md"
       ],
       "related_assets": ["asset:coding-tactics-radar"]
+    },
+    {
+      "asset_id": "asset:language-coding-advantage-registry",
+      "name": "Language Coding Advantage Registry",
+      "version": "0.1.0",
+      "asset_type": "research_packet",
+      "path": "registry/language-coding-advantage-registry.json",
+      "profiles": ["python", "rust", "mixed", "future-language", "research-intake"],
+      "languages": ["python", "rust", "mixed", "agent-instruction"],
+      "applies_when": [
+        "An AI coding task needs language-specific guidance before implementation.",
+        "DAD is evaluating a Python, Rust, or future-language technique, tool, crate, package, or harness idea.",
+        "A repo should report a language-frontier signal through candidate mail."
+      ],
+      "does_not_apply_when": [
+        "A repo-local language style guide or toolchain policy conflicts with the suggestion.",
+        "The source is untrusted and lacks justification.",
+        "The finding would require copying third-party docs, private rows, credentials, or long source blobs."
+      ],
+      "danger_if_misapplied": "Language guidance can become cargo-culted into repos if candidate patterns are treated as universal rules or performance proof.",
+      "recommended_for_repo_types": ["persistent_software_repo", "template_repo", "research_repo"],
+      "recommended_for_task_types": ["coding", "refactor", "performance", "code_research", "harness_research"],
+      "authority_boundary": "Candidate language guidance only; repo-local authority, validation, and human gates decide adoption.",
+      "validation_commands": ["python scripts/validate_coding_asset_control_plane.py"],
+      "upgrade_policy": "candidate_then_human_reviewed_promotion",
+      "review_status": "candidate",
+      "last_reviewed_at": "2026-07-03",
+      "next_review_due_at": "2026-08-03",
+      "source_evidence": [
+        "docs/LANGUAGE_CODING_ADVANTAGE.md",
+        "registry/language-coding-advantage-registry.json",
+        "registry/trusted-source-registry.json"
+      ],
+      "related_assets": [
+        "asset:python-ai-advantage-preflight",
+        "asset:coding-tactics-radar",
+        "asset:preflight-profile-router"
+      ]
     }
   ]
 }

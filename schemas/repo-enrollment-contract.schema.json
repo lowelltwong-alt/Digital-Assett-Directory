@@ -96,6 +96,7 @@
         "mail_outbox",
         "exceptions_outbox",
         "fix_outcomes",
+        "repo_local_only_paths",
         "cli_fallback"
       ],
       "properties": {
@@ -104,6 +105,12 @@
         "mail_outbox": {"const": ".digital-asset/mail/outbox.jsonl"},
         "exceptions_outbox": {"const": ".digital-asset/exceptions/outbox.jsonl"},
         "fix_outcomes": {"const": "processed/exceptions/fix-outcomes/outcomes.jsonl"},
+        "repo_local_only_paths": {
+          "type": "array",
+          "items": {"type": "string", "minLength": 1},
+          "contains": {"const": ".digital-asset/exceptions/outbox.jsonl"},
+          "uniqueItems": true
+        },
         "cli_fallback": {"type": "string", "minLength": 1}
       },
       "additionalProperties": false

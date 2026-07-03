@@ -252,6 +252,138 @@
       "review_status": "reviewed"
     },
     {
+      "rule_id": "exception-capture-rule:failed-command-metadata",
+      "pattern_family": "exception_pattern",
+      "description": "A command failed and the repo can emit safe command metadata without raw output.",
+      "min_capture_surface_version": "0.2.0",
+      "match_signals": ["command_failed"],
+      "any_signals": ["exit_code_nonzero", "validation_command", "command_ref"],
+      "suppress_signals": ["contains_raw_log_blob", "contains_secret_or_pii"],
+      "emit": {
+        "packet_classes": ["exception_event"],
+        "mail_message_type": "",
+        "exception_event_type": "failed_command",
+        "capture_contract": "failed_command",
+        "severity": "medium",
+        "required_fields": ["command_argv", "exit_code", "safe_summary", "context_refs"],
+        "rationale": "Failed commands are useful learning seeds when captured as argv, exit code, and safe refs instead of stdout/stderr."
+      },
+      "applies_when": ["A command exits non-zero or is explicitly treated as failed by the repo workflow."],
+      "does_not_apply_when": ["The command output would be the only evidence or safe metadata cannot identify the failure class."],
+      "danger_if_missed": "Repeated command failures stay trapped in chat or terminal output and DAD cannot learn fixes.",
+      "review_status": "reviewed"
+    },
+    {
+      "rule_id": "exception-capture-rule:test-failure-metadata",
+      "pattern_family": "exception_pattern",
+      "description": "A test failed or timed out and the repo can emit suite/test metadata without raw assertions.",
+      "min_capture_surface_version": "0.2.0",
+      "match_signals": ["test_failed"],
+      "any_signals": ["test_path_ref", "test_command", "timeout_budget"],
+      "suppress_signals": ["contains_private_rows", "contains_raw_log_blob"],
+      "emit": {
+        "packet_classes": ["exception_event"],
+        "mail_message_type": "",
+        "exception_event_type": "test_failure",
+        "capture_contract": "failed_command",
+        "severity": "medium",
+        "required_fields": ["test_command", "test_path_ref", "exit_code", "safe_summary"],
+        "rationale": "DAD needs test-failure metadata to learn orchestration and harness gaps without collecting private fixtures or assertion bodies."
+      },
+      "applies_when": ["A unit, integration, parity, or validation test fails and can be referenced safely by path or test id."],
+      "does_not_apply_when": ["The failure evidence requires private row data, raw snapshots, or long assertion bodies."],
+      "danger_if_missed": "Test failures repeat across repos and slow-test/parity harness opportunities are lost.",
+      "review_status": "reviewed"
+    },
+    {
+      "rule_id": "exception-capture-rule:runtime-exception-metadata",
+      "pattern_family": "exception_pattern",
+      "description": "A CLI, script, service, or app raised a runtime exception and safe top-frame metadata is available.",
+      "min_capture_surface_version": "0.2.0",
+      "match_signals": ["runtime_exception_observed"],
+      "any_signals": ["exception_class", "top_frame_ref", "error_fingerprint"],
+      "suppress_signals": ["contains_raw_log_blob", "contains_secret_or_pii"],
+      "emit": {
+        "packet_classes": ["exception_event"],
+        "mail_message_type": "",
+        "exception_event_type": "runtime_exception",
+        "capture_contract": "postflight_exception",
+        "severity": "high",
+        "required_fields": ["exception_class", "top_frame_ref", "error_fingerprint", "safe_summary"],
+        "rationale": "Runtime exceptions are high-value learning seeds when represented by class, fingerprint, and safe code refs instead of full stack traces."
+      },
+      "applies_when": ["An uncaught or material runtime exception interrupts work and can be summarized by class and path pointer."],
+      "does_not_apply_when": ["The stack trace or request payload contains sensitive data that cannot be reduced to safe refs."],
+      "danger_if_missed": "DAD cannot connect runtime failures to fixes, tests, or harness improvements.",
+      "review_status": "reviewed"
+    },
+    {
+      "rule_id": "exception-capture-rule:tool-unavailable-metadata",
+      "pattern_family": "exception_pattern",
+      "description": "A required local CLI, tool, plugin, or skill was unavailable and a governed fallback was used.",
+      "min_capture_surface_version": "0.2.0",
+      "match_signals": ["tool_unavailable"],
+      "any_signals": ["dad_cli_unavailable", "command_not_found", "fallback_used"],
+      "suppress_signals": ["contains_secret_or_pii"],
+      "emit": {
+        "packet_classes": ["exception_event"],
+        "mail_message_type": "",
+        "exception_event_type": "tool_unavailable",
+        "capture_contract": "retry_or_plan_change",
+        "severity": "medium",
+        "required_fields": ["tool_name", "attempted_command", "fallback_path", "safe_summary"],
+        "rationale": "Missing tools such as asset-dir not on PATH should become exception metadata so DAD can improve enrollment and fallback guidance."
+      },
+      "applies_when": ["A repo agent cannot run a required tool and must use a fallback path or alter the plan."],
+      "does_not_apply_when": ["The tool is optional and no workflow changed."],
+      "danger_if_missed": "Fallbacks stay invisible and DAD cannot repair install, PATH, or enrollment guidance.",
+      "review_status": "reviewed"
+    },
+    {
+      "rule_id": "exception-capture-rule:repo-rename-lineage",
+      "pattern_family": "exception_pattern",
+      "description": "A repo rename or path move may affect DAD return addresses, usage ledgers, mail routing, or enrollment identity.",
+      "min_capture_surface_version": "0.2.0",
+      "match_signals": ["repo_renamed"],
+      "any_signals": ["repo_path_changed", "return_address_changed", "stable_repo_id_present"],
+      "suppress_signals": ["contains_private_rows"],
+      "emit": {
+        "packet_classes": ["exception_event", "ordinary_mail"],
+        "mail_message_type": "governance_notice",
+        "exception_event_type": "repo_rename_lineage",
+        "capture_contract": "governance_block",
+        "severity": "medium",
+        "required_fields": ["stable_repo_id", "old_repo_ref", "new_repo_ref", "return_address"],
+        "rationale": "Repo renames must preserve stable repo identity and mail return addresses so DAD does not fork history by path."
+      },
+      "applies_when": ["A persistent repo is renamed, moved, or changes its DAD return address."],
+      "does_not_apply_when": ["A temporary clone, archive copy, or throwaway path changes without DAD enrollment or usage history."],
+      "danger_if_missed": "DAD can misdeliver mail, lose usage history, or duplicate a repo after a rename.",
+      "review_status": "reviewed"
+    },
+    {
+      "rule_id": "exception-capture-rule:repo-split-lineage",
+      "pattern_family": "exception_pattern",
+      "description": "A repo split, copy, or extraction creates multiple descendant repos that need separate DAD enrollment and lineage.",
+      "min_capture_surface_version": "0.2.0",
+      "match_signals": ["repo_split"],
+      "any_signals": ["repo_copied", "new_child_repo", "lineage_boundary_changed"],
+      "suppress_signals": ["contains_private_rows"],
+      "emit": {
+        "packet_classes": ["exception_event", "ordinary_mail"],
+        "mail_message_type": "governance_notice",
+        "exception_event_type": "repo_split_lineage",
+        "capture_contract": "governance_block",
+        "severity": "high",
+        "required_fields": ["parent_repo_id", "child_repo_refs", "lineage_decision", "enrollment_plan_ref"],
+        "rationale": "Repo splits must not silently reuse one repo identity across multiple source authorities."
+      },
+      "applies_when": ["A persistent repo is split, copied into a new persistent repo, or extracted into child repos."],
+      "does_not_apply_when": ["A disposable worktree, temp clone, or backup copy is explicitly outside DAD enrollment."],
+      "danger_if_missed": "Mail, usage history, and exception fixes can cross source-authority boundaries after a split.",
+      "review_status": "reviewed"
+    },
+    {
       "rule_id": "exception-capture-rule:exception-pattern-change",
       "pattern_family": "exception_pattern",
       "description": "A new exception type or capture contract is needed.",

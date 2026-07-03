@@ -95,6 +95,29 @@ def _contains_local_path_ref(value: Any) -> bool:
     )
 
 
+def _is_local_absolute_ref(value: str) -> bool:
+    text = value.strip()
+    if text.startswith(("http://", "https://", "dad://", "repo:", "source-archive-sha256:")):
+        return False
+    normalized = text.replace("\\", "/").casefold()
+    return (
+        bool(normalized.startswith("/"))
+        or bool(len(normalized) > 2 and normalized[1:3] == ":/")
+        or any(fragment in normalized for fragment in LOCAL_PATH_FRAGMENTS)
+    )
+
+
+def _validate_public_safe_source_ref(
+    value: str,
+    label: str,
+    errors: list[str],
+) -> None:
+    if value.startswith("http://"):
+        errors.append(f"{label} uses non-HTTPS source reference: {value}")
+    if _is_local_absolute_ref(value):
+        errors.append(f"{label} contains local absolute source reference: {value}")
+
+
 def _contains_readable_repo_relative_ref(value: Any) -> bool:
     if isinstance(value, dict):
         return any(_contains_readable_repo_relative_ref(item) for item in value.values())
@@ -341,6 +364,13 @@ def validate_repo(repo_root: Path) -> dict[str, Any]:
             ("dad_usefulness_methodology", "registry/dad-usefulness-methodology.json"),
             ("asset_recognition_methodology", "registry/asset-recognition-methodology.json"),
             ("harness_discovery_methodology", "registry/harness-discovery-methodology.json"),
+            ("trusted_source_registry", "registry/trusted-source-registry.json"),
+            ("coding_asset_registry", "registry/coding-asset-registry.json"),
+            ("preflight_profile_router", "registry/preflight-profile-router.json"),
+            (
+                "language_coding_advantage_registry",
+                "registry/language-coding-advantage-registry.json",
+            ),
             ("non_negotiables", "registry/non-negotiables.json"),
             ("graph_edge_registry", "registry/graph-edge-registry.json"),
             ("exception_event_type_registry", "registry/exception-event-type-registry.json"),
@@ -354,6 +384,106 @@ def validate_repo(repo_root: Path) -> dict[str, Any]:
             payload = json.loads((repo_root / rel).read_text(encoding="utf-8"))
             _validate_payload(repo_root, registry, schema_name, payload)
             checked.append(rel)
+        trusted_source_registry = json.loads(
+            (repo_root / "registry" / "trusted-source-registry.json").read_text(
+                encoding="utf-8"
+            )
+        )
+        trusted_source_ids = [
+            str(item.get("source_id", ""))
+            for item in trusted_source_registry.get("sources", [])
+        ]
+        if len(trusted_source_ids) != len(set(trusted_source_ids)):
+            errors.append("Trusted source registry has duplicate source_id values")
+        for source in trusted_source_registry.get("sources", []):
+            if source.get("language_focus"):
+                for field in ["check_cadence", "frontier_watch", "intake_actions"]:
+                    if not source.get(field):
+                        errors.append(
+                            "Language-focused trusted source lacks "
+                            f"{field}: {source.get('source_id')}"
+                        )
+        coding_asset_registry = json.loads(
+            (repo_root / "registry" / "coding-asset-registry.json").read_text(
+                encoding="utf-8"
+            )
+        )
+        coding_asset_ids = [
+            str(item.get("asset_id", ""))
+            for item in coding_asset_registry.get("assets", [])
+        ]
+        if len(coding_asset_ids) != len(set(coding_asset_ids)):
+            errors.append("Coding asset registry has duplicate asset_id values")
+        for asset in coding_asset_registry.get("assets", []):
+            for evidence in asset.get("source_evidence", []):
+                _validate_public_safe_source_ref(
+                    str(evidence),
+                    f"Coding asset {asset.get('asset_id')} source_evidence",
+                    errors,
+                )
+        tactic_schema = _load_schema(repo_root, registry, "coding_tactic")
+        tactic_validator_cls = validator_for(tactic_schema)
+        tactic_validator_cls.check_schema(tactic_schema)
+        tactic_validator = tactic_validator_cls(tactic_schema)
+        tactic_registry = json.loads(
+            (repo_root / "registry" / "coding-tactics-radar.json").read_text(
+                encoding="utf-8"
+            )
+        )
+        tactic_ids: list[str] = []
+        for tactic in tactic_registry.get("tactics", []):
+            tactic_validator.validate(tactic)
+            tactic_ids.append(str(tactic.get("tactic_id", "")))
+            for evidence in tactic.get("source_evidence", []):
+                _validate_public_safe_source_ref(
+                    str(evidence),
+                    f"Coding tactic {tactic.get('tactic_id')} source_evidence",
+                    errors,
+                )
+        if len(tactic_ids) != len(set(tactic_ids)):
+            errors.append("Coding tactics radar has duplicate tactic_id values")
+        checked.append("registry/coding-tactics-radar.json")
+        reusable_asset_registry = json.loads(
+            (repo_root / "assets" / "asset-registry.json").read_text(encoding="utf-8")
+        )
+        reusable_asset_ids = {
+            str(item.get("asset_id", "")) for item in reusable_asset_registry.get("assets", [])
+        }
+        offering_registry = json.loads(
+            (repo_root / "registry" / "dad-offerings-registry.json").read_text(
+                encoding="utf-8"
+            )
+        )
+        offering_ids = {
+            str(item.get("offering_id", ""))
+            for item in offering_registry.get("offerings", [])
+        }
+        language_registry = json.loads(
+            (repo_root / "registry" / "language-coding-advantage-registry.json").read_text(
+                encoding="utf-8"
+            )
+        )
+        known_language_assets = set(coding_asset_ids) | reusable_asset_ids | offering_ids
+        language_ids = [
+            str(item.get("language_id", ""))
+            for item in language_registry.get("languages", [])
+        ]
+        if len(language_ids) != len(set(language_ids)):
+            errors.append("Language coding advantage registry has duplicate language_id values")
+        for language in language_registry.get("languages", []):
+            language_id = language.get("language_id")
+            for source_id in language.get("trusted_source_ids", []):
+                if source_id not in set(trusted_source_ids):
+                    errors.append(
+                        "Language coding advantage registry references unknown "
+                        f"trusted source {source_id}: {language_id}"
+                    )
+            for asset_id in language.get("primary_assets", []):
+                if asset_id not in known_language_assets:
+                    errors.append(
+                        "Language coding advantage registry references unknown "
+                        f"primary asset {asset_id}: {language_id}"
+                    )
         exception_type_registry = json.loads(
             (repo_root / "registry" / "exception-event-type-registry.json").read_text(
                 encoding="utf-8"

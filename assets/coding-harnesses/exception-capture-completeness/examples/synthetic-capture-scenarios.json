@@ -301,6 +301,150 @@
       "review_status": "reviewed"
     },
     {
+      "scenario_id": "failed-command-metadata",
+      "pattern_family": "exception_pattern",
+      "description": "A command exits non-zero and should emit safe metadata without stdout/stderr.",
+      "repo_capture_surface_version": "0.2.0",
+      "signals": ["command_failed", "exit_code_nonzero", "validation_command"],
+      "covered_rule_ids": ["exception-capture-rule:failed-command-metadata"],
+      "expected": {
+        "packet_classes": ["exception_event"],
+        "event_types": ["failed_command"],
+        "mail_message_types": [],
+        "capture_contracts": ["failed_command"],
+        "required_fields": ["command_argv", "context_refs", "exit_code", "safe_summary"],
+        "update_required": false,
+        "blocked": false
+      },
+      "negative_controls": ["contains_raw_log_blob", "contains_secret_or_pii"],
+      "source_context": {
+        "repo_visibility": "internal",
+        "public_facing": false,
+        "notes": "Command metadata only: argv, exit code, duration, and safe refs."
+      },
+      "review_status": "reviewed"
+    },
+    {
+      "scenario_id": "test-failure-metadata",
+      "pattern_family": "exception_pattern",
+      "description": "A selected test fails and should emit suite/path metadata without assertion body.",
+      "repo_capture_surface_version": "0.2.0",
+      "signals": ["test_failed", "test_path_ref", "test_command"],
+      "covered_rule_ids": ["exception-capture-rule:test-failure-metadata"],
+      "expected": {
+        "packet_classes": ["exception_event"],
+        "event_types": ["test_failure"],
+        "mail_message_types": [],
+        "capture_contracts": ["failed_command"],
+        "required_fields": ["exit_code", "safe_summary", "test_command", "test_path_ref"],
+        "update_required": false,
+        "blocked": false
+      },
+      "negative_controls": ["contains_private_rows", "contains_raw_log_blob"],
+      "source_context": {
+        "repo_visibility": "private",
+        "public_facing": false,
+        "notes": "The packet names the test path/id, not private fixture values."
+      },
+      "review_status": "reviewed"
+    },
+    {
+      "scenario_id": "runtime-exception-metadata",
+      "pattern_family": "exception_pattern",
+      "description": "A CLI raises a runtime exception and should emit class/fingerprint/top-frame metadata.",
+      "repo_capture_surface_version": "0.2.0",
+      "signals": ["runtime_exception_observed", "exception_class", "top_frame_ref"],
+      "covered_rule_ids": ["exception-capture-rule:runtime-exception-metadata"],
+      "expected": {
+        "packet_classes": ["exception_event"],
+        "event_types": ["runtime_exception"],
+        "mail_message_types": [],
+        "capture_contracts": ["postflight_exception"],
+        "required_fields": ["error_fingerprint", "exception_class", "safe_summary", "top_frame_ref"],
+        "update_required": false,
+        "blocked": false
+      },
+      "negative_controls": ["contains_raw_log_blob", "contains_secret_or_pii"],
+      "source_context": {
+        "repo_visibility": "internal",
+        "public_facing": false,
+        "notes": "Top frame and fingerprint only; no full stack trace."
+      },
+      "review_status": "reviewed"
+    },
+    {
+      "scenario_id": "tool-unavailable-metadata",
+      "pattern_family": "exception_pattern",
+      "description": "asset-dir or another required tool is unavailable and fallback metadata should be emitted.",
+      "repo_capture_surface_version": "0.2.0",
+      "signals": ["tool_unavailable", "dad_cli_unavailable", "fallback_used"],
+      "covered_rule_ids": ["exception-capture-rule:tool-unavailable-metadata"],
+      "expected": {
+        "packet_classes": ["exception_event"],
+        "event_types": ["tool_unavailable"],
+        "mail_message_types": [],
+        "capture_contracts": ["retry_or_plan_change"],
+        "required_fields": ["attempted_command", "fallback_path", "safe_summary", "tool_name"],
+        "update_required": false,
+        "blocked": false
+      },
+      "negative_controls": ["contains_secret_or_pii"],
+      "source_context": {
+        "repo_visibility": "internal",
+        "public_facing": false,
+        "notes": "Golden pattern from repo outbox fallback when asset-dir was unavailable on PATH."
+      },
+      "review_status": "reviewed"
+    },
+    {
+      "scenario_id": "repo-rename-lineage",
+      "pattern_family": "exception_pattern",
+      "description": "A persistent repo rename should emit lineage metadata so mail and usage history survive path changes.",
+      "repo_capture_surface_version": "0.2.0",
+      "signals": ["repo_renamed", "repo_path_changed", "stable_repo_id_present"],
+      "covered_rule_ids": ["exception-capture-rule:repo-rename-lineage"],
+      "expected": {
+        "packet_classes": ["exception_event", "ordinary_mail"],
+        "event_types": ["repo_rename_lineage"],
+        "mail_message_types": ["governance_notice"],
+        "capture_contracts": ["governance_block"],
+        "required_fields": ["new_repo_ref", "old_repo_ref", "return_address", "stable_repo_id"],
+        "update_required": false,
+        "blocked": false
+      },
+      "negative_controls": ["contains_private_rows"],
+      "source_context": {
+        "repo_visibility": "private",
+        "public_facing": false,
+        "notes": "Safe lineage refs only; no local absolute paths for public-facing targets."
+      },
+      "review_status": "reviewed"
+    },
+    {
+      "scenario_id": "repo-split-lineage",
+      "pattern_family": "exception_pattern",
+      "description": "A persistent repo split should emit child lineage metadata and require new enrollment decisions.",
+      "repo_capture_surface_version": "0.2.0",
+      "signals": ["repo_split", "repo_copied", "new_child_repo"],
+      "covered_rule_ids": ["exception-capture-rule:repo-split-lineage"],
+      "expected": {
+        "packet_classes": ["exception_event", "ordinary_mail"],
+        "event_types": ["repo_split_lineage"],
+        "mail_message_types": ["governance_notice"],
+        "capture_contracts": ["governance_block"],
+        "required_fields": ["child_repo_refs", "enrollment_plan_ref", "lineage_decision", "parent_repo_id"],
+        "update_required": false,
+        "blocked": false
+      },
+      "negative_controls": ["contains_private_rows"],
+      "source_context": {
+        "repo_visibility": "private",
+        "public_facing": false,
+        "notes": "This simulates split/copy without sharing source data across authorities."
+      },
+      "review_status": "reviewed"
+    },
+    {
       "scenario_id": "new-exception-pattern-needed",
       "pattern_family": "exception_pattern",
       "description": "A repo sees a novel exception class that current taxonomy cannot express.",

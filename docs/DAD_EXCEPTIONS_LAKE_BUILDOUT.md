@@ -701,8 +701,17 @@ Implemented starter harness:
   includes one reviewed synthetic fixture for each required family, the
   LawFirm-os-intake missed-capture case, pattern-update simulations, and unsafe
   positive-match negative controls.
+- The scenario set also includes operational exception fixtures for failed command,
+  test failure, runtime exception, tool unavailable / `asset-dir` fallback, repo
+  rename lineage, and repo split lineage. These are metadata-only: command argv,
+  exit code, safe path/test refs, top-frame refs, tool names, stable repo IDs, and
+  enrollment pointers, not raw logs or private rows.
 - `asset-dir exceptions capture-check --scenarios <file>` writes a methodology-hashed
   report under `processed/reports/exception_capture_completeness.*`.
+- `asset-dir exceptions taxonomy-coverage --fail-on-unrouted --fail-on-missing-scenarios`
+  writes `processed/reports/exception_taxonomy_coverage.*`. It maps every reviewed
+  exception event type to direct record contracts, capture-rule routes, backfill
+  path-signal routes, and synthetic scenarios.
 - Positive synthetic cases compare required metadata fields from the capture
   registry, and observed fixture checks verify those fields are present in actual
   JSONL outbox rows. This prevents a false green where a repo emits
@@ -716,6 +725,11 @@ Implemented starter harness:
 - Observed checks require one matching packet row to contain all required fields
   with usable values, and they fail on best-effort credential/PII, raw blob, or
   prompt-injection-like payload issues.
+- Named invariant: `taxonomy_route_coverage_boundary`. Every reviewed/learnable
+  exception type must have at least one safe route. A direct-record contract is a
+  valid manual emission route, but it is not deterministic detector coverage.
+  Capture rules must have synthetic cases; backfill routes are path-signal
+  candidates only.
 - The starter harness now supports observed-emission checks against actual JSONL
   outbox files. The canonical scenario set includes a metadata-only observed
   LawFirm-style mail outbox and exception outbox fixture, and tests also generate a
@@ -733,6 +747,10 @@ Backfill safety and classification:
 
 - Historical `exceptions backfill` is path/name-signal-only. It does not read file
   contents for evidence, and every generated event remains candidate evidence.
+- Readable path refs, non-DAD roots, and policy-block overrides require an
+  exception-specific approval ID listed in reviewed
+  `exceptions.repos[*].approved_approval_ids`. A random non-empty `--approval-id`
+  is not an approval.
 - Backfill uses the reviewed classifier in
   `registry/exception-event-type-registry.json#backfill_classifier`, not hidden
   in agent memory. Rules are ordered, schema-validated, and include

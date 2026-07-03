@@ -39,6 +39,7 @@ Run:
 
 ```text
 python -m digital_asset_directory.cli exceptions capture-check --scenarios assets/coding-harnesses/exception-capture-completeness/examples/synthetic-capture-scenarios.json
+python -m digital_asset_directory.cli exceptions taxonomy-coverage --fail-on-unrouted --fail-on-missing-scenarios
 python -m digital_asset_directory.cli exceptions capture-audit --repo all
 ```
 
@@ -50,6 +51,19 @@ candidate pattern families against observed message types, event types, and
 capture contracts, so unrelated old mail does not satisfy a missing workflow or
 exception capture. Private and unknown repo path signals are hash-only by default.
 Neither report is proof that all real repos are complete.
+
+The taxonomy coverage report checks every reviewed exception event type against
+three route classes:
+
+- direct record contracts, meaning a repo agent can intentionally emit safe
+  metadata with `asset-dir exceptions record`;
+- capture rules with synthetic cases, meaning DAD has an explicit scenario-tested
+  detector pattern;
+- backfill path-signal rules, meaning DAD can seed candidate historical metadata
+  from reviewed path/name terms.
+
+`direct_record_contract_only` is allowed, but it is deliberately visible. It is
+not automatic capture coverage.
 
 For outside review, use
 `prompts/fable5-exception-capture-and-backfill-red-team.prompt.md`. It asks

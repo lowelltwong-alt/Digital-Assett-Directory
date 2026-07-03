@@ -35,7 +35,8 @@ python -m digital_asset_directory.cli exceptions record --repo . --type <type> -
 If no DAD CLI entrypoint is available, append one metadata-only JSONL row to the
 repo-local outbox and include `dad_cli_unavailable`, the attempted command, and
 safe refs or hashes. Do not paste raw output. DAD should later collect the row and
-record a mail/exception-pattern gap if the fallback itself was unclear.
+record a `tool_unavailable` exception plus a mail/exception-pattern gap if the
+fallback itself was unclear.
 
 ## Capture Surface Contract
 
@@ -58,6 +59,20 @@ classifier in `registry/exception-event-type-registry.json#backfill_classifier`.
 Those signals are path/name metadata only. They can tell DAD that a repo may have
 an exception pattern to review, but they do not prove the file contains an
 exception and they do not authorize learning promotion or source mutation.
+Readable path refs, non-DAD roots, and policy-block overrides require an
+exception-specific approval ID listed in reviewed `exceptions.repos[*].approved_approval_ids`;
+an arbitrary non-empty `--approval-id` is not enough.
+
+DAD also publishes a taxonomy coverage report with:
+
+```text
+python -m digital_asset_directory.cli exceptions taxonomy-coverage --fail-on-unrouted --fail-on-missing-scenarios
+```
+
+That report distinguishes explicit direct-record contracts from deterministic
+capture rules and backfill path signals. A direct-record-only event type is still
+valid to emit, but it is not proof that future agents will notice it
+automatically.
 
 If a required field would require secrets, private rows, raw logs, full stack
 traces, copied source blobs, or private case facts, do not send the content.
@@ -175,6 +190,11 @@ Use these common event types when they fit:
 - `license_or_provenance_review_gap`
 - `model_instruction_drift`
 - `backfill_exception_candidate`
+
+For repo renames, copies, or splits, prefer `repo_rename_lineage` or
+`repo_split_lineage` with stable repo IDs, old/new safe refs, return address, and
+enrollment-plan pointers. Do not reuse one DAD repo ID for two persistent source
+authorities after a split.
 
 If no type fits, use `other` and include a short taxonomy suggestion in
 `symptoms`.

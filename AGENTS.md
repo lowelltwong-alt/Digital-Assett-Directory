@@ -26,8 +26,11 @@ and lessons). For performance, Rust, or Python-to-Rust migration work, consult
 `assets/rust-buildout-guide/rust-buildout.json` and follow its staged path;
 profiling evidence comes before any Rust proposal. For task-to-profile routing
 and midflight tactic selection, use `registry/preflight-profile-router.json`
-and `registry/coding-tactics-radar.json`. These are candidate guidance unless
-a record is explicitly reviewed or promoted.
+and `registry/coding-tactics-radar.json`. For Python, Rust, mixed-language, or
+future-language frontier work, consult
+`registry/language-coding-advantage-registry.json`; it routes trusted sources,
+overlooked patterns, harnesses, and validation gates. These are candidate
+guidance unless a record is explicitly reviewed or promoted.
 
 Use the asset's dry-run deployment and audit scripts before applying downstream
 repo changes. Installing or consulting the central asset does not authorize

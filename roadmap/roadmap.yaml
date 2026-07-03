@@ -165,6 +165,7 @@ phases:
         - processed/exceptions/lake/events.jsonl
         - processed/reports/exceptions_lake.json
         - processed/reports/exception_capture_completeness.json
+        - processed/reports/exception_taxonomy_coverage.json
         - processed/reports/exception_capture_observed_audit.json
       human_gates:
         - id: phase-6-capture-completeness-harness-reviewed
@@ -179,6 +180,8 @@ phases:
           description: synthetic secrets, raw private data, hidden reasoning, long logs, real-case rows, and prompt-injection-like text are blocked or quarantined
         - id: phase-6-observed-repo-capture-audit-reviewed
           description: observed repo audit checks real mail, exception, and fix-outcome outboxes plus path signals for missed emissions without mutating target repos
+        - id: phase-6-taxonomy-route-coverage-reviewed
+          description: every reviewed learnable exception event type has an explicit route classification across direct record, capture-rule, backfill, or unrouted status
     evidence_note: Historical repos may have missed DAD-worthy exceptions before the new enrollment/capture surface existed; evidence must distinguish expected legacy misses from current capture failures.
 
   - id: phase-7-language-frontier-and-rust-core

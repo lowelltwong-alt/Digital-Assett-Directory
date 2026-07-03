@@ -79,6 +79,7 @@ from .exceptions_lake import (
 )
 from .exception_capture import (
     discover_capture_audit_repos,
+    evaluate_exception_taxonomy_coverage,
     evaluate_capture_scenarios,
     load_capture_pattern_registry,
     write_observed_capture_audit,
@@ -481,6 +482,20 @@ def _exception_backfill_policy_block_reason(cfg, root: Path) -> str:
         return f"{policy_id} is write_protected for exception backfill"
     if not getattr(policy, "backfill_allowed", False):
         return f"{policy_id} has backfill_allowed=false"
+    return ""
+
+
+def _exception_backfill_approval_block_reason(cfg, root: Path, approval_id: str) -> str:
+    approval = approval_id.strip()
+    if not approval:
+        return "missing reviewed exception backfill approval id"
+    policy = _exception_policy_for_path(cfg, root)
+    if policy is None:
+        return "root is not covered by reviewed exceptions.repos policy"
+    approved_ids = [str(value) for value in getattr(policy, "approved_approval_ids", []) or []]
+    if approval not in approved_ids:
+        policy_id = str(getattr(policy, "id", root))
+        return f"{approval!r} is not approved for exceptions repo policy {policy_id}"
     return ""
 
 
@@ -1453,6 +1468,42 @@ def exceptions_capture_patterns(hub: Optional[Path] = typer.Option(None)) -> Non
     console.print_json(data=load_capture_pattern_registry(cfg.repo_root))
 
 
+@exceptions_app.command("taxonomy-coverage")
+def exceptions_taxonomy_coverage(
+    scenarios: Path = typer.Option(
+        Path(
+            "assets/coding-harnesses/exception-capture-completeness/examples/"
+            "synthetic-capture-scenarios.json"
+        ),
+        "--scenarios",
+    ),
+    output: Optional[Path] = typer.Option(None, "--output"),
+    fail_on_unrouted: bool = typer.Option(False, "--fail-on-unrouted"),
+    fail_on_missing_scenarios: bool = typer.Option(False, "--fail-on-missing-scenarios"),
+    hub: Optional[Path] = typer.Option(None),
+) -> None:
+    """Report event taxonomy coverage by direct, capture-rule, and backfill routes."""
+    cfg = _cfg(hub=hub)
+    scenario_path = scenarios if scenarios.is_absolute() else cfg.repo_root / scenarios
+    try:
+        result = evaluate_exception_taxonomy_coverage(
+            cfg.repo_root,
+            scenario_path,
+            output=output,
+        )
+    except (OSError, json.JSONDecodeError, KeyError, ValueError) as exc:
+        console.print(str(exc))
+        raise typer.Exit(2) from exc
+    console.print_json(data=result)
+    if fail_on_unrouted and (
+        result.get("reviewed_unrouted_event_types")
+        or result.get("learnable_unrouted_event_types")
+    ):
+        raise typer.Exit(1)
+    if fail_on_missing_scenarios and result.get("capture_rule_events_missing_synthetic_cases"):
+        raise typer.Exit(1)
+
+
 @exceptions_app.command("capture-check")
 def exceptions_capture_check(
     scenarios: Path = typer.Option(..., "--scenarios"),
@@ -1720,17 +1771,32 @@ def exceptions_backfill(
         root_inside_dad = root_resolved == dad_root or root_resolved.is_relative_to(dad_root)
     except AttributeError:
         root_inside_dad = root_resolved == dad_root or str(root_resolved).startswith(str(dad_root))
-    if (include_path_refs or not root_inside_dad) and not approval_id.strip():
-        raise typer.BadParameter(
-            "exceptions backfill needs --approval-id for non-DAD roots or "
-            "--include-path-refs"
+    approval_required = include_path_refs or not root_inside_dad
+    if approval_required:
+        approval_block_reason = _exception_backfill_approval_block_reason(
+            cfg,
+            root_resolved,
+            approval_id,
         )
+        if approval_block_reason:
+            raise typer.BadParameter(
+                "exceptions backfill needs a reviewed --approval-id: "
+                + approval_block_reason
+            )
     policy_block_reason = _exception_backfill_policy_block_reason(cfg, root_resolved)
-    if policy_block_reason and not approval_id.strip():
-        raise typer.BadParameter(
-            "exceptions backfill is blocked by reviewed exceptions.repos policy: "
-            + policy_block_reason
+    if policy_block_reason:
+        approval_block_reason = _exception_backfill_approval_block_reason(
+            cfg,
+            root_resolved,
+            approval_id,
         )
+        if approval_block_reason:
+            raise typer.BadParameter(
+                "exceptions backfill is blocked by reviewed exceptions.repos policy: "
+                + policy_block_reason
+                + "; "
+                + approval_block_reason
+            )
     result = backfill_exception_candidates(
         cfg.repo_root,
         root_resolved,

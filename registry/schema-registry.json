@@ -55,6 +55,7 @@
     "dad_usefulness_methodology": "schemas/dad-usefulness-methodology.schema.json",
     "asset_recognition_methodology": "schemas/asset-recognition-methodology.schema.json",
     "harness_discovery_methodology": "schemas/harness-discovery-methodology.schema.json",
+    "language_coding_advantage_registry": "schemas/language-coding-advantage-registry.schema.json",
     "repo_asset_usage": "schemas/repo-asset-usage.schema.json",
     "coding_harness": "schemas/coding-harness.schema.json",
     "coding_harness_eval": "schemas/coding-harness-eval.schema.json",

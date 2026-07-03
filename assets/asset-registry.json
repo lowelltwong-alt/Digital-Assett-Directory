@@ -339,6 +339,44 @@
         "All external content still requires screening and human approval before promotion.",
         "Language-frontier mail uses safe summaries, URLs, hashes, and validation ideas only."
       ]
+    },
+    {
+      "asset_id": "language-coding-advantage-registry",
+      "name": "Language Coding Advantage Registry",
+      "version": "0.1.0",
+      "path": "registry/language-coding-advantage-registry.json",
+      "asset_type": "coding_guidance_asset",
+      "managed_block_id": "LANGUAGE_CODING_ADVANTAGE",
+      "profiles": [
+        "python",
+        "rust",
+        "mixed",
+        "future-language",
+        "coding-harness",
+        "research-intake"
+      ],
+      "use_when": [
+        "A coding agent needs Python, Rust, or future-language guidance before implementation.",
+        "DAD is refreshing frontier language sources or evaluating an overlooked language pattern.",
+        "A repo wants to send a language technique, crate, package, or validation idea back to DAD."
+      ],
+      "does_not_apply_when": [
+        "The target repo's local style or toolchain authority conflicts with the guidance.",
+        "The language idea has no trusted source pointer, validation gate, or applicability limit.",
+        "The packet would copy third-party docs, private rows, credentials, logs, or long source blobs."
+      ],
+      "install_path": "registry/language-coding-advantage-registry.json",
+      "source_package": {
+        "filename": "repo-local",
+        "sha256": ""
+      },
+      "installed_at": "2026-07-03",
+      "review_status": "candidate",
+      "safety_notes": [
+        "Language guidance is candidate evidence until reviewed locally.",
+        "Underuse and frontier labels are heuristic unless backed by measurement or repeated DAD outcomes.",
+        "Adoption requires local validation and repo authority; source trust tiers never authorize copying content."
+      ]
     }
   ]
 }

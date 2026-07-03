@@ -168,6 +168,18 @@
       "review_status": "reviewed"
     },
     {
+      "source_id": "python-typing",
+      "label": "Python typing documentation and typing-sig discussions",
+      "url_patterns": ["typing.python.org", "github.com/python/typing", "mail.python.org/archives/list/typing-sig@python.org"],
+      "trust_tier": "high_signal",
+      "check_cadence": "monthly",
+      "language_focus": ["python"],
+      "frontier_watch": ["typing feature changes", "type-system guidance", "static-analysis ergonomics for AI-readable Python"],
+      "intake_actions": ["Route typing changes to Python idiom cards only after version and checker support are reviewed."],
+      "asset_kinds": ["doc", "asset", "lesson"],
+      "review_status": "reviewed"
+    },
+    {
       "source_id": "astral",
       "label": "Astral (ruff, uv)",
       "url_patterns": ["astral.sh", "github.com/astral-sh"],

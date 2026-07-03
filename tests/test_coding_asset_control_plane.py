@@ -38,11 +38,38 @@ def test_coding_asset_control_plane_validator_passes():
     assert "coding asset control plane valid" in result.stdout
 
 
+def test_suggest_coding_tactics_marks_output_candidate_only():
+    result = subprocess.run(
+        [
+            sys.executable,
+            "scripts/suggest_coding_tactics.py",
+            "--task",
+            "python json boundary refactor",
+            "--language",
+            "python",
+            "--json",
+        ],
+        cwd=ROOT,
+        text=True,
+        capture_output=True,
+        check=False,
+    )
+
+    assert result.returncode == 0, result.stdout + result.stderr
+    payload = json.loads(result.stdout)
+    assert payload["candidate_only"] is True
+    assert "not a governed preflight context pack" in payload["match_basis"]
+    assert "Repo-local authority" in payload["authority_boundary"]
+
+
 def test_coding_asset_schemas_are_registered_and_payloads_conform():
     schema_registry = load_json("registry/schema-registry.json")["schemas"]
     expected = {
         "coding_asset_registry": "schemas/coding-asset-registry.schema.json",
         "coding_tactic": "schemas/coding-tactic.schema.json",
+        "language_coding_advantage_registry": (
+            "schemas/language-coding-advantage-registry.schema.json"
+        ),
         "preflight_profile_router": "schemas/preflight-profile-router.schema.json",
         "tactic_use_feedback": "schemas/tactic-use-feedback.schema.json",
     }
@@ -61,9 +88,43 @@ def test_coding_asset_schemas_are_registered_and_payloads_conform():
         "schemas/tactic-use-feedback.schema.json",
         load_json("templates/tactic-use-feedback.template.json"),
     )
+    validate(
+        "schemas/language-coding-advantage-registry.schema.json",
+        load_json("registry/language-coding-advantage-registry.json"),
+    )
     tactic_schema = "schemas/coding-tactic.schema.json"
     for tactic in load_json("registry/coding-tactics-radar.json")["tactics"]:
         validate(tactic_schema, tactic)
+
+
+def test_language_coding_advantage_registry_resolves_sources_and_assets():
+    language_registry = load_json("registry/language-coding-advantage-registry.json")
+    trusted_source_ids = {
+        source["source_id"] for source in load_json("registry/trusted-source-registry.json")["sources"]
+    }
+    coding_asset_ids = {
+        asset["asset_id"] for asset in load_json("registry/coding-asset-registry.json")["assets"]
+    }
+    reusable_asset_ids = {
+        asset["asset_id"] for asset in load_json("assets/asset-registry.json")["assets"]
+    }
+    offering_ids = {
+        offering["offering_id"]
+        for offering in load_json("registry/dad-offerings-registry.json")["offerings"]
+    }
+    known_assets = coding_asset_ids | reusable_asset_ids | offering_ids
+
+    languages = {item["language_id"]: item for item in language_registry["languages"]}
+    assert {"python", "rust", "future-language-template"}.issubset(languages)
+
+    for language in language_registry["languages"]:
+        assert set(language["trusted_source_ids"]).issubset(trusted_source_ids)
+        assert set(language["primary_assets"]).issubset(known_assets)
+        assert language["research_intake_packet"]["dad_need_id"] == (
+            "dad:need:language-frontier-signals"
+        )
+        assert "copied_third_party_docs" in language["research_intake_packet"]["forbidden_fields"]
+        assert "does not override repo-local style" in language_registry["authority_boundary"].lower()
 
 
 def test_router_references_registered_assets_and_tactics():

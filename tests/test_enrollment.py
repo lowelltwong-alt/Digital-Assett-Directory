@@ -215,6 +215,15 @@ def test_apply_requires_approval_and_writes_only_approved_paths(tmp_path: Path):
         "/registry/exception-capture-pattern-registry.json"
     )
     assert contract["capture"]["mail_outbox"] == ".digital-asset/mail/outbox.jsonl"
+    assert ".digital-asset/exceptions/outbox.jsonl" in contract["capture"][
+        "repo_local_only_paths"
+    ]
+    assert "processed/exceptions/fix-outcomes/outcomes.jsonl" in contract["capture"][
+        "repo_local_only_paths"
+    ]
+    assert ".digital-asset/exceptions/outbox.jsonl" not in contract[
+        "approved_dad_managed_paths"
+    ]
     assert "software-work-preflight" in {route["route_id"] for route in context_map["routes"]}
 
 

@@ -79,6 +79,16 @@ def main() -> int:
         "task": args.task,
         "language": args.language,
         "risk": args.risk,
+        "candidate_only": True,
+        "match_basis": (
+            "Simple substring overlap over route task_context, task_types, repo_types, "
+            "and risk_tags plus exact language/risk bonuses. This helper is not a "
+            "governed preflight context pack."
+        ),
+        "authority_boundary": (
+            "Coding tactics are candidate guidance. Repo-local authority, tests, "
+            "security policy, and human gates decide adoption."
+        ),
         "routes": [
             {
                 "route_id": route["route_id"],

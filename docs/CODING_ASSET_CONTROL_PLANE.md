@@ -64,6 +64,7 @@ Bytecode and `__pycache__` files from the zip were intentionally excluded.
 | Surface | Role |
 | --- | --- |
 | `registry/coding-asset-registry.json` | Catalog of reusable coding assets, profiles, validation, authority boundaries, review cadence, and evidence. |
+| `registry/language-coding-advantage-registry.json` | Python, Rust, and future-language advantage contracts with trusted sources, overlooked patterns, harness routes, validation gates, and candidate-only adoption rules. |
 | `registry/coding-tactics-radar.json` | Candidate tactics with applicability, non-applicability, danger, examples, verification, evidence, and promotion status. |
 | `registry/preflight-profile-router.json` | Task/context to profile/tactic/validation routing. |
 | `templates/downstream/AI_ASSETS_POINTER.template.json` | Lightweight pointer file for target repos. |
