@@ -817,6 +817,11 @@ Implemented starter harness:
   rename lineage, and repo split lineage. These are metadata-only: command argv,
   exit code, safe path/test refs, top-frame refs, tool names, stable repo IDs, and
   enrollment pointers, not raw logs or private rows.
+- The operational fixture set now also covers formerly direct-record-only gaps:
+  malformed JSONL quarantine, duplicate mail delivery acknowledgement, pytest
+  performance hotspots, and missing validation commands. These have reviewed
+  capture rules because they are common repo-agent failure surfaces where waiting
+  for a human to remember a manual exception record would lose learning.
 - `asset-dir exceptions capture-check --scenarios <file>` writes a methodology-hashed
   report under `processed/reports/exception_capture_completeness.*`.
 - `asset-dir exceptions capture-suggest --signal <signal> ...` compiles

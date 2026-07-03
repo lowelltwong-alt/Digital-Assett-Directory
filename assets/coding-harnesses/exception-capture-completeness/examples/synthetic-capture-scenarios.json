@@ -588,6 +588,106 @@
       "review_status": "reviewed"
     },
     {
+      "scenario_id": "malformed-jsonl-quarantine",
+      "pattern_family": "exception_pattern",
+      "description": "A mailbox, exception, or fix-outcome JSONL row is malformed and must be quarantined without copying the raw line.",
+      "repo_capture_surface_version": "0.2.0",
+      "signals": ["malformed_jsonl_detected", "jsonl_parse_error", "line_quarantined", "raw_hash_recorded"],
+      "covered_rule_ids": ["exception-capture-rule:malformed-jsonl-quarantine"],
+      "phase6_update_vectors": ["exception_taxonomy", "downstream_template"],
+      "expected": {
+        "packet_classes": ["exception_event"],
+        "event_types": ["malformed_jsonl"],
+        "mail_message_types": [],
+        "capture_contracts": ["governance_block"],
+        "required_fields": ["jsonl_path_ref", "line_number", "quarantine_ref", "raw_hash", "safe_summary"],
+        "update_required": false,
+        "blocked": false
+      },
+      "negative_controls": ["contains_private_rows", "contains_raw_log_blob", "contains_secret_or_pii"],
+      "source_context": {
+        "repo_visibility": "internal",
+        "public_facing": false,
+        "notes": "Only path, line, hash, and quarantine refs leave the repo; the malformed row stays local."
+      },
+      "review_status": "reviewed"
+    },
+    {
+      "scenario_id": "duplicate-mail-delivery-ack",
+      "pattern_family": "exception_pattern",
+      "description": "A repeated mail_id or dedupe_key is acknowledged instead of being delivered as a new inbox suggestion.",
+      "repo_capture_surface_version": "0.2.0",
+      "signals": ["duplicate_mail_delivery", "dedupe_key_seen", "mail_id_already_seen", "inbox_ack_written"],
+      "covered_rule_ids": ["exception-capture-rule:duplicate-mail-delivery-ack"],
+      "phase6_update_vectors": ["exception_taxonomy", "downstream_template"],
+      "expected": {
+        "packet_classes": ["exception_event"],
+        "event_types": ["duplicate_mail_delivery"],
+        "mail_message_types": [],
+        "capture_contracts": ["postflight_exception"],
+        "required_fields": ["ack_ref", "dedupe_key", "mail_id", "safe_summary", "target_repo_ref"],
+        "update_required": false,
+        "blocked": false
+      },
+      "negative_controls": ["contains_private_rows", "contains_raw_log_blob", "contains_secret_or_pii"],
+      "source_context": {
+        "repo_visibility": "internal",
+        "public_facing": false,
+        "notes": "Duplicate handling records ids and ack refs, not copied mail payloads."
+      },
+      "review_status": "reviewed"
+    },
+    {
+      "scenario_id": "pytest-performance-hotspot",
+      "pattern_family": "exception_pattern",
+      "description": "Pytest duration evidence shows a slow full-battery or orchestration hotspot that should feed DAD harness learning.",
+      "repo_capture_surface_version": "0.2.0",
+      "signals": ["pytest_performance_hotspot", "long_full_battery", "test_duration_inventory", "test_orchestration_candidate"],
+      "covered_rule_ids": ["exception-capture-rule:pytest-performance-hotspot"],
+      "phase6_update_vectors": ["exception_taxonomy", "dad_offerings_registry"],
+      "expected": {
+        "packet_classes": ["exception_event"],
+        "event_types": ["pytest_performance_hotspot"],
+        "mail_message_types": [],
+        "capture_contracts": ["dad_recommendation_outcome"],
+        "required_fields": ["baseline_duration", "candidate_orchestration", "safe_summary", "test_scope", "timing_ref"],
+        "update_required": false,
+        "blocked": false
+      },
+      "negative_controls": ["contains_private_rows", "contains_raw_log_blob", "contains_secret_or_pii"],
+      "source_context": {
+        "repo_visibility": "internal",
+        "public_facing": false,
+        "notes": "Timing refs and scope summaries are safe; raw private fixture output is not."
+      },
+      "review_status": "reviewed"
+    },
+    {
+      "scenario_id": "validation-command-missing",
+      "pattern_family": "exception_pattern",
+      "description": "A required validation command or dependency is unavailable, so the repo must record the validation gap explicitly.",
+      "repo_capture_surface_version": "0.2.0",
+      "signals": ["validation_command_missing", "expected_validation_unavailable", "missing_dependency", "command_not_found"],
+      "covered_rule_ids": ["exception-capture-rule:validation-command-missing"],
+      "phase6_update_vectors": ["exception_taxonomy", "downstream_template"],
+      "expected": {
+        "packet_classes": ["exception_event"],
+        "event_types": ["validation_command_missing"],
+        "mail_message_types": [],
+        "capture_contracts": ["postflight_exception"],
+        "required_fields": ["expected_command", "fallback_or_blocker", "missing_dependency", "safe_summary", "validation_scope"],
+        "update_required": false,
+        "blocked": false
+      },
+      "negative_controls": ["contains_private_rows", "contains_raw_log_blob", "contains_secret_or_pii"],
+      "source_context": {
+        "repo_visibility": "internal",
+        "public_facing": false,
+        "notes": "The packet records the missing command/dependency class and fallback, never private environment values."
+      },
+      "review_status": "reviewed"
+    },
+    {
       "scenario_id": "harmful-dad-recommendation",
       "pattern_family": "exception_pattern",
       "description": "A repo found that a DAD recommendation was harmful, misleading, unsafe, or wasteful and should feed calibration.",

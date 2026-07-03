@@ -520,6 +520,94 @@
       "review_status": "reviewed"
     },
     {
+      "rule_id": "exception-capture-rule:malformed-jsonl-quarantine",
+      "pattern_family": "exception_pattern",
+      "description": "A JSONL row failed parsing and was quarantined or skipped with only safe location and hash metadata.",
+      "min_capture_surface_version": "0.2.0",
+      "match_signals": ["malformed_jsonl_detected"],
+      "any_signals": ["jsonl_parse_error", "line_quarantined", "raw_hash_recorded", "inbox_malformed_row"],
+      "suppress_signals": ["contains_private_rows", "contains_raw_log_blob", "contains_secret_or_pii"],
+      "emit": {
+        "packet_classes": ["exception_event"],
+        "mail_message_type": "",
+        "exception_event_type": "malformed_jsonl",
+        "capture_contract": "governance_block",
+        "severity": "medium",
+        "required_fields": ["jsonl_path_ref", "line_number", "quarantine_ref", "raw_hash", "safe_summary"],
+        "rationale": "Malformed mailbox, exception, or fix-outcome rows should be learnable without copying the raw broken line."
+      },
+      "applies_when": ["A repo, DAD collector, digest, archive, or validator detects a malformed JSONL row and can record safe path, line, hash, and quarantine refs."],
+      "does_not_apply_when": ["The only useful evidence would require copying the malformed raw line, private row, credential, or long payload into DAD."],
+      "danger_if_missed": "Malformed rows can silently remove repo learning, mail, or exception events from DAD while validators appear healthy.",
+      "review_status": "reviewed"
+    },
+    {
+      "rule_id": "exception-capture-rule:duplicate-mail-delivery-ack",
+      "pattern_family": "exception_pattern",
+      "description": "A duplicate mail delivery was detected and acknowledged instead of being delivered as a new suggestion.",
+      "min_capture_surface_version": "0.2.0",
+      "match_signals": ["duplicate_mail_delivery"],
+      "any_signals": ["dedupe_key_seen", "mail_id_already_seen", "inbox_ack_written"],
+      "suppress_signals": ["contains_private_rows", "contains_raw_log_blob", "contains_secret_or_pii"],
+      "emit": {
+        "packet_classes": ["exception_event"],
+        "mail_message_type": "",
+        "exception_event_type": "duplicate_mail_delivery",
+        "capture_contract": "postflight_exception",
+        "severity": "low",
+        "required_fields": ["ack_ref", "dedupe_key", "mail_id", "safe_summary", "target_repo_ref"],
+        "rationale": "Duplicate mail is usually benign, but repeated duplicates reveal routing, dedupe, or retry behavior DAD should calibrate."
+      },
+      "applies_when": ["A DAD mail collect, route, deliver, digest, or repo-local mailbox process observes a repeated mail_id or dedupe_key and writes an ack/archive instead of a new inbox item."],
+      "does_not_apply_when": ["The delivery is a legitimate follow-up thread message, a new dedupe key, or the payload itself would need to be copied to prove duplication."],
+      "danger_if_missed": "DAD can spam repos or hide delivery-loop defects because duplicate handling never enters the exception lake.",
+      "review_status": "reviewed"
+    },
+    {
+      "rule_id": "exception-capture-rule:pytest-performance-hotspot",
+      "pattern_family": "exception_pattern",
+      "description": "Pytest timing, collection, or orchestration evidence shows a slow-test hotspot or improvement candidate.",
+      "min_capture_surface_version": "0.2.0",
+      "match_signals": ["pytest_performance_hotspot"],
+      "any_signals": ["long_full_battery", "slow_pytest_suite", "test_duration_inventory", "test_orchestration_candidate"],
+      "suppress_signals": ["contains_private_rows", "contains_raw_log_blob", "contains_secret_or_pii"],
+      "emit": {
+        "packet_classes": ["exception_event"],
+        "mail_message_type": "",
+        "exception_event_type": "pytest_performance_hotspot",
+        "capture_contract": "dad_recommendation_outcome",
+        "severity": "medium",
+        "required_fields": ["baseline_duration", "candidate_orchestration", "safe_summary", "test_scope", "timing_ref"],
+        "rationale": "Slow pytest evidence should feed the Python test orchestration and Rust-shadow harnesses without pretending speed claims are proven."
+      },
+      "applies_when": ["A repo observes slow pytest runs, expensive full batteries, fixture bottlenecks, or candidate selection/sharding opportunities with safe timing refs."],
+      "does_not_apply_when": ["There is no timing evidence, no stable test scope, or the report would require raw private fixture data or long logs."],
+      "danger_if_missed": "Agents may keep running expensive suites blindly or propose Rust without profiling and same-scope validation evidence.",
+      "review_status": "reviewed"
+    },
+    {
+      "rule_id": "exception-capture-rule:validation-command-missing",
+      "pattern_family": "exception_pattern",
+      "description": "A required validation command, dependency, tool, or environment capability was missing for the attempted change.",
+      "min_capture_surface_version": "0.2.0",
+      "match_signals": ["validation_command_missing"],
+      "any_signals": ["expected_validation_unavailable", "missing_dependency", "command_not_found", "environment_missing"],
+      "suppress_signals": ["contains_private_rows", "contains_raw_log_blob", "contains_secret_or_pii"],
+      "emit": {
+        "packet_classes": ["exception_event"],
+        "mail_message_type": "",
+        "exception_event_type": "validation_command_missing",
+        "capture_contract": "postflight_exception",
+        "severity": "medium",
+        "required_fields": ["expected_command", "fallback_or_blocker", "missing_dependency", "safe_summary", "validation_scope"],
+        "rationale": "Missing validation commands should become DAD learning so enrollment, templates, dependencies, and fallback guidance can improve."
+      },
+      "applies_when": ["An agent cannot run a required validation command or expected checker because the command, dependency, tool, plugin, or environment capability is unavailable."],
+      "does_not_apply_when": ["The command is optional, not relevant to the changed surface, or a safe equivalent validation command was already run and recorded."],
+      "danger_if_missed": "Repos may appear validated when the key command never ran, and DAD cannot repair templates or dependency guidance.",
+      "review_status": "reviewed"
+    },
+    {
       "rule_id": "exception-capture-rule:harmful-dad-recommendation",
       "pattern_family": "exception_pattern",
       "description": "A DAD recommendation, context-pack item, mail suggestion, asset, skill, template, or harness advice was harmful, misleading, unsafe, or wasteful.",

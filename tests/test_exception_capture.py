@@ -523,17 +523,38 @@ def test_exception_taxonomy_coverage_distinguishes_manual_and_signal_routes(
     dad_recommendation = report["category_route_summary"]["dad_recommendation"]
     assert dad_recommendation["capture_rule_count"] == 3
     assert dad_recommendation["direct_record_only_count"] == 0
-    assert report["automated_route_count"] >= 47
-    assert report["coverage_status_counts"]["capture_rule_with_synthetic_case"] >= 22
+    assert report["automated_route_count"] >= 51
+    assert report["coverage_status_counts"]["capture_rule_with_synthetic_case"] >= 26
     assert report["taxonomy_review_summary"][
         "high_or_critical_direct_record_only_event_types"
     ] == []
-    assert set(report["manual_only_event_types"]) == {
+    newly_covered_event_types = {
         "duplicate_mail_delivery",
         "malformed_jsonl",
         "pytest_performance_hotspot",
         "validation_command_missing",
     }
+    assert not newly_covered_event_types.intersection(report["manual_only_event_types"])
+    assert report["manual_only_event_types"] == []
+    assert "malformed_jsonl" in report["category_route_summary"]["schema_config"][
+        "capture_rule_event_types"
+    ]
+    assert report["category_route_summary"]["schema_config"]["direct_record_only_count"] == 0
+    assert "duplicate_mail_delivery" in report["category_route_summary"]["mail_enrollment"][
+        "capture_rule_event_types"
+    ]
+    assert report["category_route_summary"]["mail_enrollment"]["direct_record_only_count"] == 0
+    assert "pytest_performance_hotspot" in report["category_route_summary"]["harness_parity"][
+        "capture_rule_event_types"
+    ]
+    assert report["category_route_summary"]["harness_parity"]["direct_record_only_count"] == 0
+    assert "validation_command_missing" in report["category_route_summary"]["roadmap_validation"][
+        "capture_rule_event_types"
+    ]
+    assert (
+        report["category_route_summary"]["roadmap_validation"]["direct_record_only_count"]
+        == 0
+    )
     assert "dirty_worktree_block" in report["category_route_summary"]["repo_state"][
         "capture_rule_event_types"
     ]
@@ -552,13 +573,24 @@ def test_exception_taxonomy_coverage_distinguishes_manual_and_signal_routes(
     }
     assert "high_or_critical_direct_record_only" not in attention_ids
     assert "categories_without_capture_rules" in attention_ids
+    categories_without_capture = next(
+        item["categories"]
+        for item in report["taxonomy_review_summary"]["review_attention"]
+        if item["attention_id"] == "categories_without_capture_rules"
+    )
+    assert not {
+        "harness_parity",
+        "mail_enrollment",
+        "roadmap_validation",
+        "schema_config",
+    }.intersection(categories_without_capture)
     assert "failed_command" not in report["manual_only_event_types"]
     assert "tool_unavailable" not in report["manual_only_event_types"]
     assert "dirty_worktree_block" not in report["manual_only_event_types"]
     assert "private_origin_public_target" not in report["manual_only_event_types"]
     assert "protected_repo_write_block" not in report["manual_only_event_types"]
     assert "stale_report" not in report["manual_only_event_types"]
-    assert "validation_command_missing" in report["manual_only_event_types"]
+    assert "validation_command_missing" not in report["manual_only_event_types"]
     taxonomy_gate = _phase6_gate(report, "phase-6-taxonomy-route-coverage-reviewed")
     assert taxonomy_gate["machine_status"] == "passed"
     assert taxonomy_gate["human_gate_satisfied"] is False
