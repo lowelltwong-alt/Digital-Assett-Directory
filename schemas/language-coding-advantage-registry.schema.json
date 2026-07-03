@@ -25,12 +25,16 @@
           "language_id",
           "label",
           "status",
+          "recommendable",
           "primary_assets",
           "trusted_source_ids",
           "check_cadence",
           "frontier_questions",
           "ai_advantages",
           "ai_overlooked_patterns",
+          "agent_coding_guidelines",
+          "codebase_watch_targets",
+          "frontier_promotion_policy",
           "harness_routes",
           "validation_gates",
           "adoption_rules",
@@ -52,6 +56,7 @@
               "deprecated"
             ]
           },
+          "recommendable": {"type": "boolean"},
           "primary_assets": {
             "type": "array",
             "minItems": 1,
@@ -109,6 +114,133 @@
                 "why_ai_may_miss_it": {"type": "string", "minLength": 1},
                 "detection_signals": {"type": "array", "items": {"type": "string", "minLength": 1}, "minItems": 1},
                 "route_to": {"type": "array", "items": {"type": "string", "minLength": 1}, "minItems": 1}
+              }
+            }
+          },
+          "agent_coding_guidelines": {
+            "type": "array",
+            "minItems": 1,
+            "items": {
+              "type": "object",
+              "required": [
+                "guideline_id",
+                "rule",
+                "use_when",
+                "proof_required",
+                "failure_mode"
+              ],
+              "additionalProperties": false,
+              "properties": {
+                "guideline_id": {"type": "string", "pattern": "^[a-z0-9][a-z0-9:-]*$"},
+                "rule": {"type": "string", "minLength": 1},
+                "use_when": {
+                  "type": "array",
+                  "items": {"type": "string", "minLength": 1},
+                  "minItems": 1
+                },
+                "proof_required": {
+                  "type": "array",
+                  "items": {"type": "string", "minLength": 1},
+                  "minItems": 1
+                },
+                "failure_mode": {"type": "string", "minLength": 1}
+              }
+            }
+          },
+          "codebase_watch_targets": {
+            "type": "array",
+            "minItems": 1,
+            "items": {
+              "type": "object",
+              "required": [
+                "target_id",
+                "label",
+                "source_ids",
+                "example_refs",
+                "watch_for",
+                "why_ai_agents_should_study",
+                "it_must_not_be_used_for"
+              ],
+              "additionalProperties": false,
+              "properties": {
+                "target_id": {"type": "string", "pattern": "^[a-z0-9][a-z0-9:-]*$"},
+                "label": {"type": "string", "minLength": 1},
+                "source_ids": {
+                  "type": "array",
+                  "items": {"type": "string", "pattern": "^[a-z0-9][a-z0-9-]*$"},
+                  "minItems": 1
+                },
+                "example_refs": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "required": [
+                      "source_id",
+                      "ref",
+                      "review_status",
+                      "provenance_note"
+                    ],
+                    "additionalProperties": false,
+                    "properties": {
+                      "source_id": {
+                        "type": "string",
+                        "pattern": "^[a-z0-9][a-z0-9-]*$"
+                      },
+                      "ref": {"type": "string", "minLength": 1},
+                      "review_status": {
+                        "enum": ["reviewed", "candidate", "template_placeholder"]
+                      },
+                      "provenance_note": {"type": "string", "minLength": 1}
+                    }
+                  },
+                  "minItems": 1
+                },
+                "watch_for": {
+                  "type": "array",
+                  "items": {"type": "string", "minLength": 1},
+                  "minItems": 1
+                },
+                "why_ai_agents_should_study": {"type": "string", "minLength": 1},
+                "it_must_not_be_used_for": {
+                  "type": "array",
+                  "items": {"type": "string", "minLength": 1},
+                  "minItems": 1
+                }
+              }
+            }
+          },
+          "frontier_promotion_policy": {
+            "type": "object",
+            "required": [
+              "intake_gate",
+              "promotion_evidence",
+              "rejection_signals",
+              "output_channels"
+            ],
+            "additionalProperties": false,
+            "properties": {
+              "intake_gate": {
+                "type": "array",
+                "items": {"type": "string", "minLength": 1},
+                "minItems": 1
+              },
+              "promotion_evidence": {
+                "type": "array",
+                "items": {"type": "string", "minLength": 1},
+                "minItems": 1
+              },
+              "rejection_signals": {
+                "type": "array",
+                "items": {"type": "string", "minLength": 1},
+                "minItems": 1
+              },
+              "output_channels": {
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "pattern": "^(dad:need:[a-z0-9:-]+|(registry|assets|docs|templates)/[A-Za-z0-9._/#:-]+)$"
+                },
+                "minItems": 1
               }
             }
           },

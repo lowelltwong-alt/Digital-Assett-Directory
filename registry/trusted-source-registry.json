@@ -125,6 +125,25 @@
       "review_status": "reviewed"
     },
     {
+      "source_id": "rust-high-signal-codebases",
+      "label": "Reviewed Rust scanner and CLI codebases",
+      "url_patterns": ["github.com/BurntSushi/ripgrep", "github.com/sharkdp/fd"],
+      "trust_tier": "known",
+      "check_cadence": "quarterly",
+      "language_focus": ["rust"],
+      "frontier_watch": [
+        "repository scanning, ignore handling, and fast deterministic CLI patterns",
+        "source traversal and output formats that may inspire DAD harness experiments",
+        "maintenance, license, and dependency signals before any local adoption"
+      ],
+      "intake_actions": [
+        "Study as pointer-only codebase references; do not vendor source or configs.",
+        "Translate lessons into DAD harness research questions before recommending downstream use."
+      ],
+      "asset_kinds": ["doc", "harness", "lesson"],
+      "review_status": "reviewed"
+    },
+    {
       "source_id": "rust-security",
       "label": "RustSec and Rust security advisory sources",
       "url_patterns": ["rustsec.org", "github.com/rustsec"],

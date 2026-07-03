@@ -1,3 +1,5 @@
+from copy import deepcopy
+import json
 from pathlib import Path
 
 from digital_asset_directory.roadmap import check_roadmap, record_human_gate_evidence
@@ -5,6 +7,7 @@ from digital_asset_directory.validation import (
     _contains_local_path_ref,
     _contains_readable_repo_relative_ref,
     _fix_outcome_semantic_errors,
+    _language_registry_semantic_errors,
     _path_identity_hash,
     _resolve_observed_audit_repo,
     _source_provenance_consistency_errors,
@@ -18,9 +21,89 @@ pytestmark = pytest.mark.integration
 ROOT = Path(__file__).resolve().parents[1]
 
 
+def _load_json(rel: str) -> dict:
+    return json.loads((ROOT / rel).read_text(encoding="utf-8"))
+
+
+def _language_semantic_errors_for(payload: dict) -> list[str]:
+    trusted = _load_json("registry/trusted-source-registry.json")
+    coding_assets = {
+        item["asset_id"] for item in _load_json("registry/coding-asset-registry.json")["assets"]
+    }
+    reusable_assets = {
+        item["asset_id"] for item in _load_json("assets/asset-registry.json")["assets"]
+    }
+    offerings = {
+        item["offering_id"] for item in _load_json("registry/dad-offerings-registry.json")["offerings"]
+    }
+    return _language_registry_semantic_errors(
+        payload,
+        trusted,
+        coding_assets | reusable_assets | offerings,
+    )
+
+
 def test_repo_contracts_validate():
     result = validate_repo(ROOT)
     assert result["valid"], result["errors"]
+
+
+def test_language_registry_semantics_reject_unknown_watch_source():
+    payload = deepcopy(_load_json("registry/language-coding-advantage-registry.json"))
+    target = payload["languages"][0]["codebase_watch_targets"][0]
+    target["source_ids"].append("unknown-frontier-source")
+
+    errors = _language_semantic_errors_for(payload)
+
+    assert any("unknown trusted source unknown-frontier-source" in error for error in errors)
+
+
+def test_language_registry_semantics_reject_source_url_mismatch():
+    payload = deepcopy(_load_json("registry/language-coding-advantage-registry.json"))
+    example = payload["languages"][0]["codebase_watch_targets"][0]["example_refs"][0]
+    example["source_id"] = "python-core"
+    example["ref"] = "https://github.com/astral-sh/ruff"
+
+    errors = _language_semantic_errors_for(payload)
+
+    assert any("does not match trusted source python-core" in error for error in errors)
+
+
+def test_language_registry_semantics_reject_template_placeholder_leak():
+    payload = deepcopy(_load_json("registry/language-coding-advantage-registry.json"))
+    example = payload["languages"][0]["codebase_watch_targets"][0]["example_refs"][0]
+    example["review_status"] = "template_placeholder"
+    example["ref"] = "replace-with-language-official-docs"
+
+    errors = _language_semantic_errors_for(payload)
+
+    assert any("placeholder leaked into non-template row" in error for error in errors)
+
+
+def test_language_registry_semantics_reject_disallowed_output_channel():
+    payload = deepcopy(_load_json("registry/language-coding-advantage-registry.json"))
+    payload["languages"][0]["frontier_promotion_policy"]["output_channels"].append(
+        "C:/Users/lowel/private"
+    )
+
+    errors = _language_semantic_errors_for(payload)
+
+    assert any("disallowed output channel" in error for error in errors)
+    assert any("local absolute source reference" in error for error in errors)
+
+
+def test_language_registry_semantics_reject_recommendable_template():
+    payload = deepcopy(_load_json("registry/language-coding-advantage-registry.json"))
+    template = next(
+        language
+        for language in payload["languages"]
+        if language["language_id"] == "future-language-template"
+    )
+    template["recommendable"] = True
+
+    errors = _language_semantic_errors_for(payload)
+
+    assert any("template row must be recommendable=false" in error for error in errors)
 
 
 def test_exception_lake_validation_flags_readable_repo_relative_refs():

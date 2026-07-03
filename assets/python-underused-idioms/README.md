@@ -37,6 +37,11 @@ only. New Python guidance needs screening, target-version review, checker or
 tool support notes when relevant, and a small regression or example before it
 changes this card.
 
+The stronger language control plane lives in
+`registry/language-coding-advantage-registry.json`. Its Python row lists
+internal guidelines, high-signal codebase watch targets, and promotion/rejection
+evidence for Python frontier ideas.
+
 ## Boundary
 
 Installed candidate guidance for local reuse. Local repo style authority wins on conflict.

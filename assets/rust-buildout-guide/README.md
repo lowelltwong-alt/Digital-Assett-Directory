@@ -39,6 +39,11 @@ Do not apply a full Rust overlay merely because a zip or source pack exists.
 Prefer one DAD-owned read-only Rust leaf tool first, then record lessons before
 downstream rollout.
 
+The stronger language control plane lives in
+`registry/language-coding-advantage-registry.json`. Its Rust row lists internal
+guidelines, high-signal codebase watch targets, and promotion/rejection evidence
+for Rust frontier ideas.
+
 ## Boundary
 
 Installed candidate guidance for local reuse. The enforceable part is the stage gates

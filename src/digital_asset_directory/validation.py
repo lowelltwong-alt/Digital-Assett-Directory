@@ -128,6 +128,137 @@ def _validate_public_safe_source_ref(
         errors.append(f"{label} contains local absolute source reference: {value}")
 
 
+def _source_ref_matches_patterns(ref: str, url_patterns: list[str]) -> bool:
+    if not ref.startswith("https://"):
+        return False
+    normalized = ref.removeprefix("https://").strip("/").casefold()
+    return any(pattern.strip("/").casefold() in normalized for pattern in url_patterns)
+
+
+def _validate_language_frontier_channel(
+    value: str,
+    label: str,
+    errors: list[str],
+) -> None:
+    if not (
+        value.startswith("dad:need:")
+        or value.startswith(("registry/", "assets/", "docs/", "templates/"))
+    ):
+        errors.append(f"{label} uses disallowed output channel: {value}")
+    _validate_public_safe_source_ref(value, label, errors)
+
+
+def _language_registry_semantic_errors(
+    language_registry: dict[str, Any],
+    trusted_source_registry: dict[str, Any],
+    known_language_assets: set[str],
+) -> list[str]:
+    errors: list[str] = []
+    trusted_source_ids = {
+        str(item.get("source_id", "")) for item in trusted_source_registry.get("sources", [])
+    }
+    trusted_sources_by_id = {
+        str(item.get("source_id", "")): item
+        for item in trusted_source_registry.get("sources", [])
+    }
+    language_ids = [
+        str(item.get("language_id", ""))
+        for item in language_registry.get("languages", [])
+    ]
+    if len(language_ids) != len(set(language_ids)):
+        errors.append("Language coding advantage registry has duplicate language_id values")
+    for language in language_registry.get("languages", []):
+        language_id = str(language.get("language_id", ""))
+        language_status = str(language.get("status", ""))
+        if language_status == "template" and language.get("recommendable") is not False:
+            errors.append(
+                "Language coding advantage template row must be recommendable=false: "
+                f"{language_id}"
+            )
+        if language_status != "template" and language.get("recommendable") is not True:
+            errors.append(
+                "Language coding advantage non-template row must be recommendable=true: "
+                f"{language_id}"
+            )
+        for source_id in language.get("trusted_source_ids", []):
+            if source_id not in trusted_source_ids:
+                errors.append(
+                    "Language coding advantage registry references unknown "
+                    f"trusted source {source_id}: {language_id}"
+                )
+        for asset_id in language.get("primary_assets", []):
+            if asset_id not in known_language_assets:
+                errors.append(
+                    "Language coding advantage registry references unknown "
+                    f"primary asset {asset_id}: {language_id}"
+                )
+        guideline_ids = [
+            str(item.get("guideline_id", ""))
+            for item in language.get("agent_coding_guidelines", [])
+        ]
+        if len(guideline_ids) != len(set(guideline_ids)):
+            errors.append(
+                "Language coding advantage registry has duplicate "
+                f"agent_coding_guidelines guideline_id values: {language_id}"
+            )
+        target_ids = [
+            str(item.get("target_id", ""))
+            for item in language.get("codebase_watch_targets", [])
+        ]
+        if len(target_ids) != len(set(target_ids)):
+            errors.append(
+                "Language coding advantage registry has duplicate "
+                f"codebase_watch_targets target_id values: {language_id}"
+            )
+        for target in language.get("codebase_watch_targets", []):
+            target_id = str(target.get("target_id", ""))
+            target_source_ids = {str(item) for item in target.get("source_ids", [])}
+            for source_id in target_source_ids:
+                if source_id not in trusted_source_ids:
+                    errors.append(
+                        "Language coding advantage watch target references unknown "
+                        f"trusted source {source_id}: {language_id}/{target_id}"
+                    )
+            for ref_record in target.get("example_refs", []):
+                ref_source_id = str(ref_record.get("source_id", ""))
+                ref = str(ref_record.get("ref", ""))
+                review_status = str(ref_record.get("review_status", ""))
+                label = (
+                    "Language coding advantage watch target "
+                    f"{language_id}/{target_id} example_ref"
+                )
+                if ref_source_id not in target_source_ids:
+                    errors.append(f"{label} source {ref_source_id} is not declared on target")
+                if ref_source_id not in trusted_sources_by_id:
+                    errors.append(f"{label} references unknown trusted source {ref_source_id}")
+                    continue
+                if language_status == "template":
+                    if review_status != "template_placeholder":
+                        errors.append(f"{label} template ref must be template_placeholder")
+                    if not ref.startswith("replace-with-"):
+                        errors.append(f"{label} template ref must use replace-with-* placeholder")
+                    continue
+                if review_status == "template_placeholder":
+                    errors.append(f"{label} placeholder leaked into non-template row: {ref}")
+                _validate_public_safe_source_ref(ref, label, errors)
+                source = trusted_sources_by_id[ref_source_id]
+                patterns = [str(item) for item in source.get("url_patterns", [])]
+                if not _source_ref_matches_patterns(ref, patterns):
+                    errors.append(
+                        f"{label} does not match trusted source {ref_source_id} "
+                        f"url_patterns: {ref}"
+                    )
+        for channel in language.get("frontier_promotion_policy", {}).get(
+            "output_channels", []
+        ):
+            _validate_language_frontier_channel(
+                str(channel),
+                f"Language coding advantage {language_id} output_channel",
+                errors,
+            )
+    return errors
+
+
 def _contains_readable_repo_relative_ref(value: Any) -> bool:
     if isinstance(value, dict):
         return any(_contains_readable_repo_relative_ref(item) for item in value.values())
@@ -509,26 +640,13 @@ def validate_repo(repo_root: Path) -> dict[str, Any]:
             )
         )
         known_language_assets = set(coding_asset_ids) | reusable_asset_ids | offering_ids
-        language_ids = [
-            str(item.get("language_id", ""))
-            for item in language_registry.get("languages", [])
-        ]
-        if len(language_ids) != len(set(language_ids)):
-            errors.append("Language coding advantage registry has duplicate language_id values")
-        for language in language_registry.get("languages", []):
-            language_id = language.get("language_id")
-            for source_id in language.get("trusted_source_ids", []):
-                if source_id not in set(trusted_source_ids):
-                    errors.append(
-                        "Language coding advantage registry references unknown "
-                        f"trusted source {source_id}: {language_id}"
-                    )
-            for asset_id in language.get("primary_assets", []):
-                if asset_id not in known_language_assets:
-                    errors.append(
-                        "Language coding advantage registry references unknown "
-                        f"primary asset {asset_id}: {language_id}"
-                    )
+        errors.extend(
+            _language_registry_semantic_errors(
+                language_registry,
+                trusted_source_registry,
+                known_language_assets,
+            )
+        )
         exception_type_registry = json.loads(
             (repo_root / "registry" / "exception-event-type-registry.json").read_text(
                 encoding="utf-8"

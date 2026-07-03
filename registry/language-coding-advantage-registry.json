@@ -8,6 +8,7 @@
       "language_id": "python",
       "label": "Python",
       "status": "installed_for_local_reuse",
+      "recommendable": true,
       "primary_assets": [
         "asset:python-ai-advantage-preflight",
         "python-underused-idioms-ai-coding-card",
@@ -145,6 +146,201 @@
           ]
         }
       ],
+      "agent_coding_guidelines": [
+        {
+          "guideline_id": "py-guideline:shape-first-boundaries",
+          "rule": "Turn raw dictionaries, JSONL rows, CLI payloads, and config blobs into named boundary objects or validated records before business logic spreads.",
+          "use_when": [
+            "Code repeats string keys across functions.",
+            "A future agent must know which fields are required, optional, public-safe, or source-owned."
+          ],
+          "proof_required": [
+            "A schema, TypedDict, dataclass, pydantic model, or parser function owns the boundary.",
+            "Tests or validation commands cover malformed input and missing fields."
+          ],
+          "failure_mode": "The agent keeps adding dict access until local tests pass, but later changes silently drift field names or source authority."
+        },
+        {
+          "guideline_id": "py-guideline:measure-before-rust",
+          "rule": "Use Python profiling, algorithmic fixes, fixture trimming, and test orchestration before proposing Rust for speed.",
+          "use_when": [
+            "The task says slow, performance, full battery, parser, chunker, or hot path.",
+            "The workload may be I/O-bound, subprocess-bound, or fixture-bound rather than CPU-bound."
+          ],
+          "proof_required": [
+            "A baseline command, duration, scope, and profile or slow-test inventory.",
+            "A same-workload after measurement before claiming improvement."
+          ],
+          "failure_mode": "Rust looks faster only because the comparison was a tiny Rust path against a broad Python suite."
+        },
+        {
+          "guideline_id": "py-guideline:contracts-as-executable-checks",
+          "rule": "Prefer checks that fail deterministically: schema validation, property tests, static checker contracts, py_compile, and small negative tests.",
+          "use_when": [
+            "An API has invariants examples do not fully enumerate.",
+            "A bug fix describes a class of malformed inputs, not just one sample."
+          ],
+          "proof_required": [
+            "At least one executable check that would fail on the old behavior.",
+            "A note about the repo's Python version and whether optional type/property tools are already accepted."
+          ],
+          "failure_mode": "The agent writes explanatory comments or type hints that look rigorous but are never executed."
+        },
+        {
+          "guideline_id": "py-guideline:research-with-stdlib-introspection",
+          "rule": "Use ast, inspect, importlib.metadata, cProfile, pstats, tracemalloc, and faulthandler before guessing how unfamiliar Python behaves.",
+          "use_when": [
+            "A task asks why code is slow, hanging, leaking, dynamically registered, or hard to search.",
+            "Grep gives too many false positives or misses generated/runtime registrations."
+          ],
+          "proof_required": [
+            "Record the exact introspection/profiling command and what it proved.",
+            "Keep private source snippets out of DAD mail; send paths, counts, hashes, and safe summaries only."
+          ],
+          "failure_mode": "The agent relies on training-data assumptions instead of inspecting the repo's real callable signatures, imports, and runtime costs."
+        }
+      ],
+      "codebase_watch_targets": [
+        {
+          "target_id": "py-codebase:cpython-and-stdlib",
+          "label": "CPython, stdlib, and PEP evolution",
+          "source_ids": ["python-core", "python-typing"],
+          "example_refs": [
+            {
+              "source_id": "python-core",
+              "ref": "https://github.com/python/cpython",
+              "review_status": "reviewed",
+              "provenance_note": "Official CPython source repository; pointer-only study target."
+            },
+            {
+              "source_id": "python-core",
+              "ref": "https://docs.python.org/3/whatsnew/",
+              "review_status": "reviewed",
+              "provenance_note": "Official Python release notes; pointer-only version-change source."
+            },
+            {
+              "source_id": "python-core",
+              "ref": "https://peps.python.org/",
+              "review_status": "reviewed",
+              "provenance_note": "Official PEP index; draft status must be checked before adoption."
+            }
+          ],
+          "watch_for": [
+            "stdlib tools that replace hand-rolled helper code",
+            "diagnostics, typing, concurrency, and performance changes that alter good AI defaults",
+            "deprecations or version floors that should remove stale guidance"
+          ],
+          "why_ai_agents_should_study": "Core Python shows stable primitives and version-gated features that generated code often misses because public examples lag new releases.",
+          "it_must_not_be_used_for": [
+            "Copying CPython internals into application code.",
+            "Treating draft PEPs as adopted rules."
+          ]
+        },
+        {
+          "target_id": "py-codebase:pytest-hypothesis-type-checkers",
+          "label": "Executable Python correctness tools",
+          "source_ids": ["pytest-dev", "hypothesis", "python-type-checkers"],
+          "example_refs": [
+            {
+              "source_id": "pytest-dev",
+              "ref": "https://github.com/pytest-dev/pytest",
+              "review_status": "reviewed",
+              "provenance_note": "Official pytest project repository; pointer-only test orchestration source."
+            },
+            {
+              "source_id": "hypothesis",
+              "ref": "https://github.com/HypothesisWorks/hypothesis",
+              "review_status": "reviewed",
+              "provenance_note": "Official Hypothesis project repository; pointer-only property-testing source."
+            },
+            {
+              "source_id": "python-type-checkers",
+              "ref": "https://github.com/python/mypy",
+              "review_status": "reviewed",
+              "provenance_note": "Mypy project repository; pointer-only static checker source."
+            },
+            {
+              "source_id": "python-type-checkers",
+              "ref": "https://github.com/microsoft/pyright",
+              "review_status": "reviewed",
+              "provenance_note": "Pyright project repository; pointer-only static checker source."
+            }
+          ],
+          "watch_for": [
+            "fixture and collection patterns that reduce slow-suite cost",
+            "property strategies and stateful tests that expose edge cases",
+            "negative type-check patterns for APIs, Protocols, and TypedDict boundaries"
+          ],
+          "why_ai_agents_should_study": "These codebases and docs turn review opinions into executable failures, which is exactly what future agents need.",
+          "it_must_not_be_used_for": [
+            "Adding dependencies to downstream repos without local approval.",
+            "Sending generated counterexamples or private test inputs through DAD mail."
+          ]
+        },
+        {
+          "target_id": "py-codebase:rust-backed-python-tools",
+          "label": "Fast Python tooling implemented with Rust",
+          "source_ids": ["astral", "pyo3"],
+          "example_refs": [
+            {
+              "source_id": "astral",
+              "ref": "https://github.com/astral-sh/ruff",
+              "review_status": "reviewed",
+              "provenance_note": "Official Ruff repository; pointer-only fast Python tooling source."
+            },
+            {
+              "source_id": "astral",
+              "ref": "https://github.com/astral-sh/uv",
+              "review_status": "reviewed",
+              "provenance_note": "Official uv repository; pointer-only Python environment tooling source."
+            },
+            {
+              "source_id": "pyo3",
+              "ref": "https://www.maturin.rs/",
+              "review_status": "reviewed",
+              "provenance_note": "Official maturin documentation; pointer-only Python/Rust packaging source."
+            },
+            {
+              "source_id": "pyo3",
+              "ref": "https://pyo3.rs/",
+              "review_status": "reviewed",
+              "provenance_note": "Official PyO3 documentation; pointer-only Python/Rust boundary source."
+            }
+          ],
+          "watch_for": [
+            "CLI UX and report formats that make tooling agent-readable",
+            "Python/Rust boundary patterns that keep Python orchestration while Rust owns deterministic leaf work",
+            "packaging and environment workflows that reduce per-repo drift"
+          ],
+          "why_ai_agents_should_study": "These tools demonstrate how Rust can improve Python workflows without forcing every repo to become a Rust repo.",
+          "it_must_not_be_used_for": [
+            "Assuming a Rust-backed tool is appropriate for every repo.",
+            "Claiming speed or safety benefits without local workload evidence."
+          ]
+        }
+      ],
+      "frontier_promotion_policy": {
+        "intake_gate": [
+          "Record pointer-only source refs, target Python version, applicability limits, and a validation idea.",
+          "Screen for copied docs, private data, licenses, dependency policy, and tool availability."
+        ],
+        "promotion_evidence": [
+          "A local example, regression test, property test, type-check case, profile, or harness outcome shows the tactic helped.",
+          "At least one avoid-when or counterexample is documented.",
+          "Postflight or usage feedback records whether the tactic was used, ignored, failed, or harmful."
+        ],
+        "rejection_signals": [
+          "The tactic is clever but makes code less readable under local style.",
+          "The benefit depends on optional tools the repo does not run.",
+          "The source is a draft, benchmark claim, or popularity signal with no local proof path."
+        ],
+        "output_channels": [
+          "assets/python-underused-idioms/idioms.json",
+          "registry/coding-tactics-radar.json",
+          "assets/coding-harnesses/",
+          "dad:need:language-frontier-signals"
+        ]
+      },
       "harness_routes": [
         {
           "harness_id": "dad:harness:python-test-performance-orchestration",
@@ -208,6 +404,7 @@
       "language_id": "rust",
       "label": "Rust",
       "status": "installed_for_local_reuse",
+      "recommendable": true,
       "primary_assets": [
         "rust-buildout-guide",
         "dad:offering:rust-shadow-parity-harness",
@@ -218,6 +415,7 @@
         "rust-lang",
         "rust-community-frontier",
         "rust-ecosystem-curation",
+        "rust-high-signal-codebases",
         "rust-security",
         "rust-fuzz",
         "rust-test-frontier",
@@ -363,6 +561,260 @@
           ]
         }
       ],
+      "agent_coding_guidelines": [
+        {
+          "guideline_id": "rs-guideline:compiler-owns-closed-worlds",
+          "rule": "Use Rust enums, newtypes, typed errors, and exhaustive matches for closed states, IDs, packets, and route tables.",
+          "use_when": [
+            "A boundary has a finite set of statuses, event types, parser states, or ID spaces.",
+            "Python or JSON string constants are being mirrored manually across files."
+          ],
+          "proof_required": [
+            "The Rust API exposes typed variants rather than loose strings.",
+            "cargo test or compile failure demonstrates a new variant would force handler updates."
+          ],
+          "failure_mode": "The agent writes Rust that looks safe but still passes untyped strings and catch-all matches through the critical boundary."
+        },
+        {
+          "guideline_id": "rs-guideline:leaf-tool-before-platform",
+          "rule": "Prefer one small Rust leaf tool or crate before any full platform rewrite.",
+          "use_when": [
+            "A repo needs deterministic scanning, parsing, chunking, hashing, source-offset mapping, or single-binary validation.",
+            "Python environment drift is hurting cross-repo tooling."
+          ],
+          "proof_required": [
+            "A narrow input/output contract and same-input tests exist.",
+            "The Python orchestration boundary remains stable unless human review approves broader movement."
+          ],
+          "failure_mode": "Rust spreads into orchestration, governance, and review surfaces before the first leaf tool has proved value."
+        },
+        {
+          "guideline_id": "rs-guideline:fuzz-before-shared-parser",
+          "rule": "Parser, chunker, scanner, and serializer boundaries that accept untrusted text or bytes need fuzz/property thinking before becoming shared tools.",
+          "use_when": [
+            "Rust handles mail packets, JSONL, markdown, source text, logs, paths, or repo metadata.",
+            "A bug class involves malformed input, panic risk, truncation, or offset drift."
+          ],
+          "proof_required": [
+            "A pure deterministic function can be fuzzed or property-tested.",
+            "Crash artifacts, corpora, and minimized cases stay local unless sanitized and approved."
+          ],
+          "failure_mode": "Examples pass, but adversarial inputs panic or corrupt offsets after the tool is shared across repos."
+        },
+        {
+          "guideline_id": "rs-guideline:structured-evidence-for-speed",
+          "rule": "Rust speed claims require comparable scope, command identity, exit code, duration, and parity evidence.",
+          "use_when": [
+            "A change claims Rust saves time versus Python.",
+            "A test runner, CLI, or shadow layer produces reports agents may use for promotion decisions."
+          ],
+          "proof_required": [
+            "Native baseline and Rust command ran on the same workload or a declared equivalent map.",
+            "Structured reports prove non-empty same-scope coverage before timing is described as savings."
+          ],
+          "failure_mode": "A tiny Rust suite creates a false green and convinces DAD to promote a replacement that misses Python-only behavior."
+        }
+      ],
+      "codebase_watch_targets": [
+        {
+          "target_id": "rs-codebase:compiler-cargo-clippy",
+          "label": "Rust compiler, Cargo, Clippy, and official project direction",
+          "source_ids": ["rust-lang"],
+          "example_refs": [
+            {
+              "source_id": "rust-lang",
+              "ref": "https://github.com/rust-lang/rust",
+              "review_status": "reviewed",
+              "provenance_note": "Official Rust compiler repository; pointer-only compiler proof-surface source."
+            },
+            {
+              "source_id": "rust-lang",
+              "ref": "https://github.com/rust-lang/cargo",
+              "review_status": "reviewed",
+              "provenance_note": "Official Cargo repository; pointer-only build/toolchain source."
+            },
+            {
+              "source_id": "rust-lang",
+              "ref": "https://github.com/rust-lang/rust-clippy",
+              "review_status": "reviewed",
+              "provenance_note": "Official Clippy repository; pointer-only lint proof-surface source."
+            },
+            {
+              "source_id": "rust-lang",
+              "ref": "https://rust-lang.github.io/rust-project-goals/",
+              "review_status": "reviewed",
+              "provenance_note": "Official Rust project goals; pointer-only planning source."
+            }
+          ],
+          "watch_for": [
+            "stabilized language and stdlib features that improve AI-legible invariants",
+            "Cargo, Clippy, rustdoc, and diagnostics changes that can become deterministic checks",
+            "project goals that affect async, compile times, unsafe boundaries, or tooling"
+          ],
+          "why_ai_agents_should_study": "Official Rust tooling is the proof surface; it can turn future-agent mistakes into compile, lint, test, or documentation failures.",
+          "it_must_not_be_used_for": [
+            "Treating nightly or draft goals as stable requirements.",
+            "Copying compiler internals into DAD tools without a reviewed need."
+          ]
+        },
+        {
+          "target_id": "rs-codebase:scanner-parser-cli-tools",
+          "label": "High-signal Rust scanners, parsers, and CLI tools",
+          "source_ids": ["rust-community-frontier", "rust-ecosystem-curation", "rust-high-signal-codebases", "rust-lang"],
+          "example_refs": [
+            {
+              "source_id": "rust-high-signal-codebases",
+              "ref": "https://github.com/BurntSushi/ripgrep",
+              "review_status": "candidate",
+              "provenance_note": "High-signal Rust scanner repository; candidate pointer for study only."
+            },
+            {
+              "source_id": "rust-lang",
+              "ref": "https://github.com/rust-lang/rust-analyzer",
+              "review_status": "reviewed",
+              "provenance_note": "Official Rust analyzer repository; pointer-only source-analysis study target."
+            },
+            {
+              "source_id": "rust-high-signal-codebases",
+              "ref": "https://github.com/sharkdp/fd",
+              "review_status": "candidate",
+              "provenance_note": "High-signal Rust file-finder repository; candidate pointer for CLI scanning study."
+            },
+            {
+              "source_id": "rust-ecosystem-curation",
+              "ref": "https://lib.rs/",
+              "review_status": "reviewed",
+              "provenance_note": "Curated Rust crate discovery source; pointer-only ecosystem scan target."
+            },
+            {
+              "source_id": "rust-ecosystem-curation",
+              "ref": "https://docs.rs/",
+              "review_status": "reviewed",
+              "provenance_note": "Rust crate documentation source; pointer-only API documentation target."
+            }
+          ],
+          "watch_for": [
+            "fast repository scanning and ignore-file handling patterns",
+            "source offset, parser, syntax tree, and incremental analysis techniques",
+            "CLI output shapes that are easy for agents and validators to consume"
+          ],
+          "why_ai_agents_should_study": "DAD's likely Rust wins are scanners and validators, so these codebases are closer to the needed shape than generic application examples.",
+          "it_must_not_be_used_for": [
+            "Vendor-copying external code or configs.",
+            "Selecting a crate solely because it is popular."
+          ]
+        },
+        {
+          "target_id": "rs-codebase:fuzz-security-test-frontier",
+          "label": "Rust fuzzing, security, and isolated test execution",
+          "source_ids": ["rust-fuzz", "rust-security", "rust-test-frontier"],
+          "example_refs": [
+            {
+              "source_id": "rust-fuzz",
+              "ref": "https://rust-fuzz.github.io/book/",
+              "review_status": "reviewed",
+              "provenance_note": "Rust Fuzz Book; pointer-only fuzz target design source."
+            },
+            {
+              "source_id": "rust-security",
+              "ref": "https://rustsec.org/",
+              "review_status": "reviewed",
+              "provenance_note": "RustSec advisory source; pointer-only dependency risk source."
+            },
+            {
+              "source_id": "rust-test-frontier",
+              "ref": "https://nexte.st/",
+              "review_status": "reviewed",
+              "provenance_note": "Nextest documentation source; pointer-only test orchestration source."
+            },
+            {
+              "source_id": "rust-test-frontier",
+              "ref": "https://github.com/nextest-rs/nextest",
+              "review_status": "reviewed",
+              "provenance_note": "Nextest repository; pointer-only structured test-runner source."
+            }
+          ],
+          "watch_for": [
+            "fuzz target layout for parsers and serializers",
+            "supply-chain and unsafe-code hazards relevant to DAD tools",
+            "machine-readable isolated test results for parity and audit"
+          ],
+          "why_ai_agents_should_study": "These sources convert Rust's safety promise into concrete tests, reports, and advisory gates.",
+          "it_must_not_be_used_for": [
+            "Auto-upgrading dependencies by mail.",
+            "Publishing private crash inputs or generated corpora."
+          ]
+        },
+        {
+          "target_id": "rs-codebase:mixed-python-rust-boundaries",
+          "label": "Mixed Python/Rust boundary examples",
+          "source_ids": ["pyo3", "astral", "google"],
+          "example_refs": [
+            {
+              "source_id": "pyo3",
+              "ref": "https://pyo3.rs/",
+              "review_status": "reviewed",
+              "provenance_note": "Official PyO3 documentation; pointer-only mixed-boundary source."
+            },
+            {
+              "source_id": "pyo3",
+              "ref": "https://www.maturin.rs/",
+              "review_status": "reviewed",
+              "provenance_note": "Official maturin documentation; pointer-only packaging source."
+            },
+            {
+              "source_id": "astral",
+              "ref": "https://github.com/astral-sh/ruff",
+              "review_status": "reviewed",
+              "provenance_note": "Official Ruff repository; pointer-only Rust-backed Python tooling source."
+            },
+            {
+              "source_id": "astral",
+              "ref": "https://github.com/astral-sh/uv",
+              "review_status": "reviewed",
+              "provenance_note": "Official uv repository; pointer-only Rust-backed Python tooling source."
+            },
+            {
+              "source_id": "google",
+              "ref": "https://google.github.io/comprehensive-rust/",
+              "review_status": "reviewed",
+              "provenance_note": "Google Comprehensive Rust; pointer-only teaching-pattern source."
+            }
+          ],
+          "watch_for": [
+            "thin Python-facing APIs over Rust leaf implementations",
+            "wheel, ABI, and packaging changes that affect downstream adoption",
+            "teaching patterns that make Rust readable to agents coming from Python"
+          ],
+          "why_ai_agents_should_study": "DAD needs mixed-language boundaries that feel boring and auditable, not glamorous rewrites.",
+          "it_must_not_be_used_for": [
+            "Assuming a successful public tool proves a private repo should port.",
+            "Skipping Python native validation when a Rust extension exists."
+          ]
+        }
+      ],
+      "frontier_promotion_policy": {
+        "intake_gate": [
+          "Record pointer-only source refs, crate/tool version, license and maintenance notes, applicability limits, and a harness idea.",
+          "Screen unsafe code, dependency risk, public/private source movement, and whether Python-first fixes were attempted."
+        ],
+        "promotion_evidence": [
+          "A profile, fuzz/property result, cargo/clippy/test report, or parity outcome proves the Rust tactic on a local workload.",
+          "The Rust boundary is narrow enough for Python orchestration and local review to stay authoritative.",
+          "At least one failure mode describes when Rust should not be used."
+        ],
+        "rejection_signals": [
+          "The idea depends on novelty, prestige, or ecosystem popularity rather than a measured bottleneck or checkable invariant.",
+          "The crate/tool would add supply-chain or maintenance risk without reducing DAD risk.",
+          "Parity, fuzz, or native validation cannot be made structured and auditable."
+        ],
+        "output_channels": [
+          "assets/rust-buildout-guide/rust-buildout.json",
+          "assets/coding-harnesses/rust-shadow-parity-harness",
+          "registry/coding-tactics-radar.json",
+          "dad:need:language-frontier-signals"
+        ]
+      },
       "harness_routes": [
         {
           "harness_id": "dad:harness:rust-shadow-parity",
@@ -427,6 +879,7 @@
       "language_id": "future-language-template",
       "label": "Future Language Template",
       "status": "template",
+      "recommendable": false,
       "primary_assets": [
         "asset:coding-tactics-radar",
         "asset:ai-engineering-preflight"
@@ -477,6 +930,93 @@
           ]
         }
       ],
+      "agent_coding_guidelines": [
+        {
+          "guideline_id": "future-guideline:proof-tool-first",
+          "rule": "A new language becomes DAD guidance only after naming the proof tools that make agents better: compiler, formatter, linter, type checker, test runner, fuzz/property tool, runtime tracer, or package auditor.",
+          "use_when": [
+            "A repo starts using a language not yet represented in DAD.",
+            "An external source claims a language or tool improves coding quality, performance, or safety."
+          ],
+          "proof_required": [
+            "A minimum validation command and one negative or failure example.",
+            "A source pointer with version or maturity notes."
+          ],
+          "failure_mode": "The language record becomes a style preference instead of an executable advantage."
+        },
+        {
+          "guideline_id": "future-guideline:small-harness-before-broad-advice",
+          "rule": "Start with one small harness or repo-local eval before DAD recommends a future language broadly.",
+          "use_when": [
+            "The idea could affect many repos or agent defaults.",
+            "The language benefit is a performance, safety, or maintainability claim."
+          ],
+          "proof_required": [
+            "A candidate harness, validation script, or before/after trace exists.",
+            "The harness records applicability limits and what would falsify the claim."
+          ],
+          "failure_mode": "DAD broadcasts fashionable advice before any local repo proves it helps."
+        }
+      ],
+      "codebase_watch_targets": [
+        {
+          "target_id": "future-codebase:official-and-reference-implementations",
+          "label": "Official docs, reference implementations, and mature standard tooling",
+          "source_ids": ["openai", "anthropic"],
+          "example_refs": [
+            {
+              "source_id": "openai",
+              "ref": "replace-with-language-official-docs",
+              "review_status": "template_placeholder",
+              "provenance_note": "Template placeholder; replace with reviewed language-specific official docs before recommendation."
+            },
+            {
+              "source_id": "openai",
+              "ref": "replace-with-language-reference-implementation",
+              "review_status": "template_placeholder",
+              "provenance_note": "Template placeholder; replace with reviewed reference implementation before recommendation."
+            },
+            {
+              "source_id": "anthropic",
+              "ref": "replace-with-toolchain-docs",
+              "review_status": "template_placeholder",
+              "provenance_note": "Template placeholder; replace with reviewed toolchain docs before recommendation."
+            }
+          ],
+          "watch_for": [
+            "proof tools that can fail deterministically",
+            "code organization patterns that make future-agent edits safer",
+            "version and compatibility limits"
+          ],
+          "why_ai_agents_should_study": "A future language should enter DAD through its strongest executable proof surfaces, not through vibes or social popularity.",
+          "it_must_not_be_used_for": [
+            "Treating generic AI vendor docs as a substitute for language-specific sources.",
+            "Copying third-party examples into DAD without license and provenance review."
+          ]
+        }
+      ],
+      "frontier_promotion_policy": {
+        "intake_gate": [
+          "Create a candidate language row with source pointers, local repo context, proof tools, and avoid-when limits.",
+          "Block downstream recommendations until at least one language-specific trusted source is reviewed."
+        ],
+        "promotion_evidence": [
+          "A local validation command or harness result proves the language helped the stated task.",
+          "A failure case or rejection criterion is recorded.",
+          "A DAD postflight or usage record captures whether the advice was useful, ignored, failed, or harmful."
+        ],
+        "rejection_signals": [
+          "The language benefit is only ecosystem popularity, benchmark marketing, or agent preference.",
+          "No local maintainer/toolchain path exists.",
+          "The proposed advice would weaken source authority, public/private gates, or test evidence."
+        ],
+        "output_channels": [
+          "registry/language-coding-advantage-registry.json",
+          "registry/trusted-source-registry.json",
+          "registry/coding-tactics-radar.json",
+          "assets/coding-harnesses/"
+        ]
+      },
       "harness_routes": [
         {
           "harness_id": "candidate-required",

@@ -26,6 +26,11 @@ Every language DAD adopts should have the same minimum control surface:
 - a registry row in `registry/language-coding-advantage-registry.json`;
 - reviewed or candidate source IDs in `registry/trusted-source-registry.json`;
 - an internal playbook or asset that explains why the language helps agents;
+- internal agent coding guidelines with proof requirements and failure modes;
+- codebase watch targets that tell agents which high-signal projects or tools to
+  study for patterns, not copy from;
+- a frontier promotion policy that says what evidence promotes or rejects an
+  idea;
 - harness routes that test or falsify the proposed benefit;
 - overlooked-pattern records that tell agents what to look for in code scans;
 - postflight feedback paths so DAD learns what helped, failed, or was harmful.
@@ -70,6 +75,30 @@ Postflight should record what helped, failed, was ignored, or was harmful. Usefu
 language discoveries go through `dad:need:language-frontier-signals`; harness
 outcomes go through `dad:need:coding-harness-feedback`.
 
+## Internal Guidelines And Codebase Study
+
+The language registry now separates three things agents often blur together:
+
+- `agent_coding_guidelines`: DAD's internal rules for using the language better,
+  each with proof requirements and a failure story.
+- `codebase_watch_targets`: high-signal codebases, tools, or official projects
+  worth studying for patterns. These are pointers for research intake, not
+  license to copy source, docs, fixtures, or configs.
+- `frontier_promotion_policy`: the evidence required before a frontier idea
+  becomes DAD guidance, plus rejection signals that stop cargo-cult adoption.
+- `recommendable`: whether an agent-facing matcher may use the row directly.
+  Template rows must set this to `false`.
+
+This is how DAD gets better than generic AI coding: it watches places where
+strong engineers encode proof in compilers, linters, test runners, profilers,
+fuzzers, and release processes, then converts only validated lessons into local
+assets or harness cases.
+
+Codebase watch targets use structured `example_refs` with `source_id`, `ref`,
+`review_status`, and `provenance_note`. For real language rows, refs must be
+HTTPS pointers matching the trusted source's reviewed URL patterns. Template
+rows may use `replace-with-*` placeholders only while `recommendable` is false.
+
 ## Python
 
 Python guidance focuses on:
@@ -100,6 +129,9 @@ Good Python frontier candidates usually answer at least one of these questions:
   into a deterministic failure?
 - Can pytest collection, markers, fixtures, or report plugins reduce feedback
   time without hiding shared-contract coverage?
+- Can CPython, stdlib, pytest, Hypothesis, type-checker, Ruff, uv, PyO3, or
+  maturin patterns make the next agent's Python easier to inspect, validate, or
+  safely speed up?
 
 ## Rust
 
@@ -136,6 +168,25 @@ Good Rust frontier candidates usually answer at least one of these questions:
   orchestration logic that Python should keep?
 - Can test-runner output show the same tests ran before anyone claims a speed
   win?
+- Can high-signal Rust codebases such as compiler tooling, scanners, parser
+  infrastructure, fuzz targets, or Python/Rust tooling suggest a small DAD
+  harness experiment instead of a broad rewrite?
+
+## Adding Another Language
+
+For Go, TypeScript, Zig, or any later language, start from
+`future-language-template` in the registry. A future language needs:
+
+- official or reviewed source IDs;
+- at least one codebase watch target;
+- proof tools and minimum validation commands;
+- a harness route or small local eval;
+- avoid-when and rejection signals;
+- a postflight/usage loop so DAD learns whether the advice helped.
+
+Do not add a language because it is popular or because an agent prefers it. Add
+it when it gives agents a new deterministic proof surface or makes code easier
+to inspect, run, repair, or validate in your repo family.
 
 ## Source Watch Groups
 

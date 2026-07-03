@@ -116,6 +116,9 @@ def test_language_coding_advantage_registry_resolves_sources_and_assets():
 
     languages = {item["language_id"]: item for item in language_registry["languages"]}
     assert {"python", "rust", "future-language-template"}.issubset(languages)
+    assert languages["python"]["recommendable"] is True
+    assert languages["rust"]["recommendable"] is True
+    assert languages["future-language-template"]["recommendable"] is False
     assert {
         "pytest-dev",
         "hypothesis",
@@ -124,6 +127,7 @@ def test_language_coding_advantage_registry_resolves_sources_and_assets():
     assert {"rust-ecosystem-curation", "rust-fuzz", "rust-test-frontier"}.issubset(
         languages["rust"]["trusted_source_ids"]
     )
+    assert "rust-high-signal-codebases" in languages["rust"]["trusted_source_ids"]
     trusted_sources = {
         source["source_id"]: source
         for source in load_json("registry/trusted-source-registry.json")["sources"]
@@ -140,10 +144,58 @@ def test_language_coding_advantage_registry_resolves_sources_and_assets():
     assert "py-pattern:static-checker-negative-contract" in python_patterns
     assert "rs-pattern:fuzz-target-at-parser-boundary" in rust_patterns
     assert "rs-pattern:isolated-test-runner-before-speed-claim" in rust_patterns
+    python_guidelines = {
+        item["guideline_id"] for item in languages["python"]["agent_coding_guidelines"]
+    }
+    rust_guidelines = {
+        item["guideline_id"] for item in languages["rust"]["agent_coding_guidelines"]
+    }
+    assert {
+        "py-guideline:shape-first-boundaries",
+        "py-guideline:measure-before-rust",
+        "py-guideline:contracts-as-executable-checks",
+    }.issubset(python_guidelines)
+    assert {
+        "rs-guideline:compiler-owns-closed-worlds",
+        "rs-guideline:leaf-tool-before-platform",
+        "rs-guideline:structured-evidence-for-speed",
+    }.issubset(rust_guidelines)
+    python_watch_targets = {
+        target["target_id"] for target in languages["python"]["codebase_watch_targets"]
+    }
+    rust_watch_targets = {
+        target["target_id"] for target in languages["rust"]["codebase_watch_targets"]
+    }
+    assert {
+        "py-codebase:cpython-and-stdlib",
+        "py-codebase:pytest-hypothesis-type-checkers",
+        "py-codebase:rust-backed-python-tools",
+    }.issubset(python_watch_targets)
+    assert {
+        "rs-codebase:compiler-cargo-clippy",
+        "rs-codebase:scanner-parser-cli-tools",
+        "rs-codebase:fuzz-security-test-frontier",
+        "rs-codebase:mixed-python-rust-boundaries",
+    }.issubset(rust_watch_targets)
 
     for language in language_registry["languages"]:
         assert set(language["trusted_source_ids"]).issubset(trusted_source_ids)
         assert set(language["primary_assets"]).issubset(known_assets)
+        assert {
+            target_source_id
+            for target in language["codebase_watch_targets"]
+            for target_source_id in target["source_ids"]
+        }.issubset(trusted_source_ids)
+        for target in language["codebase_watch_targets"]:
+            for example in target["example_refs"]:
+                assert set(example) == {
+                    "source_id",
+                    "ref",
+                    "review_status",
+                    "provenance_note",
+                }
+        assert "promotion_evidence" in language["frontier_promotion_policy"]
+        assert "rejection_signals" in language["frontier_promotion_policy"]
         assert language["research_intake_packet"]["dad_need_id"] == (
             "dad:need:language-frontier-signals"
         )

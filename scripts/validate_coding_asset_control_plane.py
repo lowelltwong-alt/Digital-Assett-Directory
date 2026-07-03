@@ -56,6 +56,22 @@ def require_local_evidence_path(value: str, label: str, errors: list[str]) -> No
         require_path(rel, label, errors)
 
 
+def source_ref_matches_patterns(ref: str, url_patterns: list[str]) -> bool:
+    if not ref.startswith("https://"):
+        return False
+    normalized = ref.removeprefix("https://").strip("/").casefold()
+    return any(pattern.strip("/").casefold() in normalized for pattern in url_patterns)
+
+
+def require_language_output_channel(value: str, label: str, errors: list[str]) -> None:
+    if not (
+        value.startswith("dad:need:")
+        or value.startswith(("registry/", "assets/", "docs/", "templates/"))
+    ):
+        errors.append(f"{label} uses disallowed output channel: {value}")
+    require_local_evidence_path(value, label, errors)
+
+
 def main() -> int:
     errors: list[str] = []
 
@@ -121,6 +137,9 @@ def main() -> int:
         | {offering["offering_id"] for offering in dad_offerings.get("offerings", [])}
     )
     trusted_source_ids = {source["source_id"] for source in trusted_sources.get("sources", [])}
+    trusted_sources_by_id = {
+        source["source_id"]: source for source in trusted_sources.get("sources", [])
+    }
 
     for asset in asset_registry.get("assets", []):
         require_path(asset["path"], f"asset {asset['asset_id']}", errors)
@@ -128,16 +147,78 @@ def main() -> int:
             require_local_evidence_path(evidence, f"asset {asset['asset_id']} evidence", errors)
 
     for language in language_registry.get("languages", []):
+        language_id = language["language_id"]
+        language_status = language["status"]
+        if language_status == "template" and language.get("recommendable") is not False:
+            errors.append(f"language {language_id} template row must be recommendable=false")
+        if language_status != "template" and language.get("recommendable") is not True:
+            errors.append(f"language {language_id} non-template row must be recommendable=true")
         for source_id in language["trusted_source_ids"]:
             if source_id not in trusted_source_ids:
                 errors.append(
-                    f"language {language['language_id']} references unknown trusted source {source_id}"
+                    f"language {language_id} references unknown trusted source {source_id}"
                 )
         for asset_id in language["primary_assets"]:
             if asset_id not in known_language_assets:
                 errors.append(
-                    f"language {language['language_id']} references unknown primary asset {asset_id}"
+                    f"language {language_id} references unknown primary asset {asset_id}"
                 )
+        require_unique(
+            [item["guideline_id"] for item in language["agent_coding_guidelines"]],
+            f"language {language_id} agent coding guidelines",
+            errors,
+        )
+        require_unique(
+            [item["target_id"] for item in language["codebase_watch_targets"]],
+            f"language {language_id} codebase watch targets",
+            errors,
+        )
+        for target in language["codebase_watch_targets"]:
+            target_source_ids = set(target["source_ids"])
+            for source_id in target["source_ids"]:
+                if source_id not in trusted_source_ids:
+                    errors.append(
+                        f"language {language_id} watch target {target['target_id']} "
+                        f"references unknown trusted source {source_id}"
+                    )
+            for example in target["example_refs"]:
+                ref_source_id = example["source_id"]
+                ref = example["ref"]
+                label = (
+                    f"language {language_id} watch target {target['target_id']} "
+                    f"example ref"
+                )
+                if ref_source_id not in target_source_ids:
+                    errors.append(
+                        f"{label} source {ref_source_id} is not declared on target"
+                    )
+                if ref_source_id not in trusted_sources_by_id:
+                    errors.append(f"{label} references unknown trusted source {ref_source_id}")
+                    continue
+                if language_status == "template":
+                    if example["review_status"] != "template_placeholder":
+                        errors.append(f"{label} template ref must be template_placeholder")
+                    if not ref.startswith("replace-with-"):
+                        errors.append(f"{label} template ref must use replace-with-* placeholder")
+                    continue
+                if example["review_status"] == "template_placeholder":
+                    errors.append(f"{label} placeholder leaked into non-template row: {ref}")
+                require_local_evidence_path(ref, label, errors)
+                source = trusted_sources_by_id[ref_source_id]
+                if not source_ref_matches_patterns(
+                    ref,
+                    [str(item) for item in source.get("url_patterns", [])],
+                ):
+                    errors.append(
+                        f"{label} does not match trusted source {ref_source_id} "
+                        f"url_patterns: {ref}"
+                    )
+        for channel in language["frontier_promotion_policy"]["output_channels"]:
+            require_language_output_channel(
+                channel,
+                f"language {language_id} output_channel",
+                errors,
+            )
 
     for tactic in tactic_registry.get("tactics", []):
         validate_with_schema(
