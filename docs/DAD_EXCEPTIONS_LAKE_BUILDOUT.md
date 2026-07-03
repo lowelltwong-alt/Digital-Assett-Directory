@@ -91,6 +91,25 @@ Each enrolled repo should emit exception packets from these sources:
   protected repo write block, dirty worktree block;
 - asset usage: DAD recommendation used, ignored, harmful, failed, or later upgraded.
 
+Security/privacy capture uses a two-signal model. Signals that imply unsafe
+content is present, such as `contains_secret_or_pii`, `contains_private_rows`,
+`contains_raw_log_blob`, or `contains_prompt_injection_like_text`, suppress
+outbound packets. Repos may separately emit safe block metadata when a local gate
+fires:
+
+- `sensitive_payload_blocked` with `credential_pii_screen_blocked`,
+  `private_row_screen_blocked`, or `secret_screen_blocked` for
+  `secret_or_pii_detected`;
+- `raw_blob_screen_blocked` with `stack_trace_blocked`,
+  `table_like_payload_blocked`, or `source_blob_blocked` for
+  `raw_blob_rejected`;
+- `prompt_injection_payload_blocked` with `data_prompt_injection_marker` or
+  `untrusted_text_quarantined` for `prompt_injection_like_payload`.
+
+Those packets carry only gate names, field classes, hashes, refs, source
+visibility, and remediation paths. They must not quote the sensitive or
+instruction-like content.
+
 ## Capture Completeness Contract
 
 The lake cannot learn if repos only send memorable failures. Each enrolled repo needs a
@@ -106,10 +125,12 @@ small deterministic capture contract:
   missing approval ID, dirty worktree block, or failed policy gate;
 - `review_finding`: red-team, premortem, security, code-review, Fable, Claude, Codex,
   Cursor, or human finding with severity;
+- `dad_recommendation_outcome`: harmful, failed, ignored, bypassed, or
+  attempted-and-failed DAD recommendations, context-pack entries, assets,
+  harnesses, skills, templates, mail advice, or saved-for-future recommendations
+  whose later outcome matters;
 - `fix_outcome`: the fix, accepted-risk decision, rollback, or duplicate decision
-  that resolves or closes an event;
-- `dad_recommendation_outcome`: DAD asset, harness, skill, template, or mail advice
-  used, ignored, attempted-and-failed, harmful, or saved for future.
+  that resolves or closes an event.
 
 Capture can be lightweight. Repos do not need DAD Python internals for normal writes:
 they can append JSONL, use a tiny helper, export a CI artifact, or let the DAD CLI

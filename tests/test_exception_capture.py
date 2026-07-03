@@ -512,10 +512,16 @@ def test_exception_taxonomy_coverage_distinguishes_manual_and_signal_routes(
     assert "artifact_registration_drift" in category_backfill_events
     assert "security_privacy" in report["category_route_summary"]
     security_privacy = report["category_route_summary"]["security_privacy"]
-    assert security_privacy["direct_record_only_count"] >= 1
-    assert "secret_or_pii_detected" in (
-        security_privacy["high_or_critical_direct_record_only_event_types"]
-    )
+    assert security_privacy["capture_rule_count"] == 3
+    assert security_privacy["direct_record_only_count"] == 0
+    assert security_privacy["capture_rule_event_types"] == [
+        "prompt_injection_like_payload",
+        "raw_blob_rejected",
+        "secret_or_pii_detected",
+    ]
+    dad_recommendation = report["category_route_summary"]["dad_recommendation"]
+    assert dad_recommendation["capture_rule_count"] == 3
+    assert dad_recommendation["direct_record_only_count"] == 0
     attention_ids = {
         item["attention_id"]
         for item in report["taxonomy_review_summary"]["review_attention"]
@@ -1331,6 +1337,72 @@ def test_capture_suggest_maps_language_frontier_signal_to_capability_mail() -> N
     assert suggestion["recommended_packets"][0]["mail_message_type"] == (
         "capability_suggestion"
     )
+
+
+def test_capture_suggest_maps_harmful_dad_recommendation_to_exception() -> None:
+    suggestion = suggest_exception_capture(
+        ROOT,
+        signals=["dad_recommendation_outcome", "harmful_recommendation"],
+        repo_capture_surface_version="0.2.0",
+    )
+
+    _validate("exception_capture_suggestion", suggestion)
+    assert suggestion["matched_rule_ids"] == [
+        "exception-capture-rule:harmful-dad-recommendation"
+    ]
+    assert suggestion["actual"]["packet_classes"] == ["exception_event"]
+    assert suggestion["actual"]["event_types"] == ["harmful_dad_recommendation"]
+    assert suggestion["actual"]["capture_contracts"] == ["dad_recommendation_outcome"]
+    assert suggestion["actual"]["required_fields"] == [
+        "harm_summary",
+        "outcome_note",
+        "recommendation_id",
+        "trace_id",
+        "validation_or_review_ref",
+    ]
+
+
+def test_capture_suggest_maps_safe_security_block_metadata_to_exception() -> None:
+    suggestion = suggest_exception_capture(
+        ROOT,
+        signals=["sensitive_payload_blocked", "credential_pii_screen_blocked"],
+        repo_capture_surface_version="0.2.0",
+    )
+
+    _validate("exception_capture_suggestion", suggestion)
+    assert suggestion["matched_rule_ids"] == [
+        "exception-capture-rule:secret-or-pii-blocked-metadata"
+    ]
+    assert suggestion["actual"]["packet_classes"] == ["exception_event"]
+    assert suggestion["actual"]["event_types"] == ["secret_or_pii_detected"]
+    assert suggestion["actual"]["capture_contracts"] == ["governance_block"]
+    assert suggestion["actual"]["required_fields"] == [
+        "blocked_field",
+        "remediation_path",
+        "safe_pointer",
+        "screening_gate",
+        "source_visibility",
+    ]
+
+
+def test_capture_suggest_still_blocks_unsafe_security_payload_signal() -> None:
+    suggestion = suggest_exception_capture(
+        ROOT,
+        signals=[
+            "sensitive_payload_blocked",
+            "credential_pii_screen_blocked",
+            "contains_secret_or_pii",
+        ],
+        repo_capture_surface_version="0.2.0",
+    )
+
+    _validate("exception_capture_suggestion", suggestion)
+    assert suggestion["actual"]["packet_classes"] == ["no_packet"]
+    assert suggestion["actual"]["blocked"] is True
+    assert suggestion["actual"]["blocked_reason"] == (
+        "global_block_signal:contains_secret_or_pii"
+    )
+    assert suggestion["recommended_packets"] == []
 
 
 def test_capture_suggest_flags_stale_capture_surface_for_new_rule() -> None:

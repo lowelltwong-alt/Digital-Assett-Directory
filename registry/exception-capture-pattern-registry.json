@@ -432,6 +432,138 @@
       "review_status": "reviewed"
     },
     {
+      "rule_id": "exception-capture-rule:harmful-dad-recommendation",
+      "pattern_family": "exception_pattern",
+      "description": "A DAD recommendation, context-pack item, mail suggestion, asset, skill, template, or harness advice was harmful, misleading, unsafe, or wasteful.",
+      "min_capture_surface_version": "0.2.0",
+      "match_signals": ["dad_recommendation_outcome"],
+      "any_signals": ["harmful_recommendation", "misleading_recommendation", "unsafe_recommendation", "wasteful_recommendation"],
+      "suppress_signals": ["contains_private_rows", "contains_raw_log_blob", "contains_secret_or_pii"],
+      "emit": {
+        "packet_classes": ["exception_event"],
+        "mail_message_type": "",
+        "exception_event_type": "harmful_dad_recommendation",
+        "capture_contract": "dad_recommendation_outcome",
+        "severity": "high",
+        "required_fields": ["trace_id", "recommendation_id", "outcome_note", "harm_summary", "validation_or_review_ref"],
+        "rationale": "Harmful DAD advice must feed the calibration ledger and exception lake so context packs and offerings can be corrected."
+      },
+      "applies_when": ["A repo tried, followed, or seriously evaluated a DAD recommendation and found it harmful, unsafe, misleading, or wasteful."],
+      "does_not_apply_when": ["The recommendation was merely irrelevant, saved for future, or safely ignored without adverse effect."],
+      "danger_if_missed": "DAD keeps recommending harmful guidance because negative outcomes never enter calibration.",
+      "review_status": "reviewed"
+    },
+    {
+      "rule_id": "exception-capture-rule:dad-asset-attempt-failed",
+      "pattern_family": "exception_pattern",
+      "description": "A repo attempted to use a DAD asset, harness, skill, or template and the attempt failed or could not be validated.",
+      "min_capture_surface_version": "0.2.0",
+      "match_signals": ["dad_asset_attempt_failed"],
+      "any_signals": ["asset_validation_failed", "harness_validation_failed", "template_install_blocked", "skill_checkout_failed"],
+      "suppress_signals": ["contains_private_rows", "contains_raw_log_blob", "contains_secret_or_pii"],
+      "emit": {
+        "packet_classes": ["exception_event"],
+        "mail_message_type": "",
+        "exception_event_type": "dad_asset_attempt_failed",
+        "capture_contract": "dad_recommendation_outcome",
+        "severity": "medium",
+        "required_fields": ["asset_id", "trace_id", "attempt_summary", "failure_mode", "validation_ref"],
+        "rationale": "Failed asset attempts show where DAD guidance, harnesses, templates, or checkout instructions need repair."
+      },
+      "applies_when": ["A DAD asset, harness, skill, or template was selected for current use and failed validation, install, checkout, or adoption."],
+      "does_not_apply_when": ["The repo only saved the asset for future, rejected it before trying it, or the failure was unrelated to the DAD surface."],
+      "danger_if_missed": "DAD assets look useful in catalogs but fail silently when repos actually try them.",
+      "review_status": "reviewed"
+    },
+    {
+      "rule_id": "exception-capture-rule:ignored-required-recommendation",
+      "pattern_family": "exception_pattern",
+      "description": "A required or high-priority DAD recommendation, stop condition, learning-rule acknowledgement, or non-negotiable was ignored or bypassed.",
+      "min_capture_surface_version": "0.2.0",
+      "match_signals": ["ignored_required_recommendation"],
+      "any_signals": ["required_rule_ignored", "recommendation_bypassed", "stop_condition_bypassed", "learning_rule_ack_missing"],
+      "suppress_signals": ["contains_private_rows", "contains_raw_log_blob", "contains_secret_or_pii"],
+      "emit": {
+        "packet_classes": ["exception_event"],
+        "mail_message_type": "",
+        "exception_event_type": "ignored_required_recommendation",
+        "capture_contract": "dad_recommendation_outcome",
+        "severity": "medium",
+        "required_fields": ["trace_id", "rule_or_recommendation_id", "bypass_reason", "risk_summary", "review_ref"],
+        "rationale": "Ignored hard guidance needs explicit evidence so DAD can distinguish justified local authority from agent drift."
+      },
+      "applies_when": ["A required DAD rule, context-pack recommendation, stop condition, or acknowledgement was skipped, bypassed, or left unresolved."],
+      "does_not_apply_when": ["A candidate-only optional recommendation was locally rejected with ordinary adoption tracking."],
+      "danger_if_missed": "Agents can drift around hard gates and DAD cannot calibrate which rules are unrealistic or being ignored.",
+      "review_status": "reviewed"
+    },
+    {
+      "rule_id": "exception-capture-rule:secret-or-pii-blocked-metadata",
+      "pattern_family": "exception_pattern",
+      "description": "A local screening gate detected credential-like, PII-like, or private-row content and only safe block metadata may leave the repo.",
+      "min_capture_surface_version": "0.2.0",
+      "match_signals": ["sensitive_payload_blocked"],
+      "any_signals": ["credential_pii_screen_blocked", "private_row_screen_blocked", "secret_screen_blocked"],
+      "suppress_signals": ["contains_private_rows", "contains_raw_log_blob", "contains_secret_or_pii"],
+      "emit": {
+        "packet_classes": ["exception_event"],
+        "mail_message_type": "",
+        "exception_event_type": "secret_or_pii_detected",
+        "capture_contract": "governance_block",
+        "severity": "critical",
+        "required_fields": ["screening_gate", "blocked_field", "safe_pointer", "remediation_path", "source_visibility"],
+        "rationale": "DAD needs to know that a safety gate fired without receiving the sensitive payload that triggered it."
+      },
+      "applies_when": ["A local screening gate blocks outbound exception, mail, lesson, harness, or report content because the payload appears sensitive."],
+      "does_not_apply_when": ["The packet contains the sensitive value itself, raw rows, logs, credentials, or source blobs; those signals must be suppressed or quarantined locally."],
+      "danger_if_missed": "Sensitive-data prevention events stay invisible and DAD cannot improve public/private gates or downstream guidance.",
+      "review_status": "reviewed"
+    },
+    {
+      "rule_id": "exception-capture-rule:raw-blob-blocked-metadata",
+      "pattern_family": "exception_pattern",
+      "description": "A local screening gate rejected raw logs, stack traces, tables, diffs, source blobs, transcripts, or other oversized content.",
+      "min_capture_surface_version": "0.2.0",
+      "match_signals": ["raw_blob_screen_blocked"],
+      "any_signals": ["long_blob_blocked", "stack_trace_blocked", "table_like_payload_blocked", "source_blob_blocked"],
+      "suppress_signals": ["contains_private_rows", "contains_raw_log_blob", "contains_secret_or_pii"],
+      "emit": {
+        "packet_classes": ["exception_event"],
+        "mail_message_type": "",
+        "exception_event_type": "raw_blob_rejected",
+        "capture_contract": "governance_block",
+        "severity": "high",
+        "required_fields": ["screening_gate", "blocked_content_class", "safe_hash_or_ref", "replacement_summary", "source_visibility"],
+        "rationale": "Raw blob rejection is a useful capture-quality signal when represented by class, hash/ref, and replacement summary only."
+      },
+      "applies_when": ["A local packet or review tried to include raw logs, stack traces, table-like rows, diffs, source blobs, or transcripts and the gate replaced them with metadata."],
+      "does_not_apply_when": ["The raw content is still present in the outbound packet or the payload is a short safe metadata field."],
+      "danger_if_missed": "Agents may repeatedly try to move raw evidence into DAD, creating privacy and noise risks without a learning signal.",
+      "review_status": "reviewed"
+    },
+    {
+      "rule_id": "exception-capture-rule:prompt-injection-payload-blocked",
+      "pattern_family": "exception_pattern",
+      "description": "A data-only payload included prompt-injection-like text and was kept inert as safe block metadata.",
+      "min_capture_surface_version": "0.2.0",
+      "match_signals": ["prompt_injection_payload_blocked"],
+      "any_signals": ["data_prompt_injection_marker", "instruction_like_payload_blocked", "untrusted_text_quarantined"],
+      "suppress_signals": ["contains_prompt_injection_like_text", "contains_private_rows", "contains_secret_or_pii"],
+      "emit": {
+        "packet_classes": ["exception_event"],
+        "mail_message_type": "",
+        "exception_event_type": "prompt_injection_like_payload",
+        "capture_contract": "governance_block",
+        "severity": "critical",
+        "required_fields": ["screening_gate", "payload_source_ref", "inert_handling", "safe_hash_or_ref", "review_ref"],
+        "rationale": "Prompt-injection-like source content should be tracked as inert evidence without ever becoming executable agent instruction."
+      },
+      "applies_when": ["A repo-local gate detects instruction-like text inside data, review payloads, mail, exception packets, or source material."],
+      "does_not_apply_when": ["The outbound record would quote the instruction-like text itself or ask another agent to follow it."],
+      "danger_if_missed": "Untrusted source text may be copied into DAD surfaces without an explicit inert-data boundary.",
+      "review_status": "reviewed"
+    },
+    {
       "rule_id": "exception-capture-rule:exception-pattern-change",
       "pattern_family": "exception_pattern",
       "description": "A new exception type or capture contract is needed.",

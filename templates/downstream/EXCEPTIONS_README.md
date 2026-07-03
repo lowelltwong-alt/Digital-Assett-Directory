@@ -99,6 +99,24 @@ If a required field would require secrets, private rows, raw logs, full stack
 traces, copied source blobs, or private case facts, do not send the content.
 Send a safe pointer/hash or quarantine/defer for human review.
 
+Security/privacy blocks use safe metadata signals, not copied evidence. If a
+gate sees the unsafe content itself, signals such as `contains_secret_or_pii`,
+`contains_private_rows`, `contains_raw_log_blob`, or
+`contains_prompt_injection_like_text` suppress outbound packets. If the repo
+needs DAD to know the gate fired, send only a safe block-metadata signal:
+
+- `sensitive_payload_blocked` plus `credential_pii_screen_blocked`,
+  `private_row_screen_blocked`, or `secret_screen_blocked`;
+- `raw_blob_screen_blocked` plus `stack_trace_blocked`,
+  `table_like_payload_blocked`, or `source_blob_blocked`;
+- `prompt_injection_payload_blocked` plus `data_prompt_injection_marker` or
+  `untrusted_text_quarantined`.
+
+The packet should include gate name, blocked field/content class, safe hash or
+pointer, source visibility, remediation path, and review ref. It must not quote
+the secret, private row, raw log, stack trace, source blob, or
+instruction-like text.
+
 ## Minimal Packet
 
 ```json
