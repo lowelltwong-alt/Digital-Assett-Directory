@@ -2348,6 +2348,77 @@ def write_exception_report(hub_root: Path) -> dict[str, Any]:
         for event in events
         if event.get("source_visibility") in {"private", "internal", "restricted", "unknown"}
     )
+    current_classifier_version = backfill_classifier_version(hub_root)
+    backfill_classifier_missing_count = 0
+    backfill_classifier_stale_count = 0
+    backfill_public_release_required_count = 0
+    for event in events:
+        if not _is_backfill_candidate_event(event):
+            continue
+        classifier_versions = _context_ref_values(event, "backfill-classifier-version:")
+        if not classifier_versions:
+            backfill_classifier_missing_count += 1
+        elif any(version != current_classifier_version for version in classifier_versions):
+            backfill_classifier_stale_count += 1
+        visibility = str(event.get("source_visibility") or "unknown")
+        public_release = (
+            event.get("public_release") if isinstance(event.get("public_release"), dict) else {}
+        )
+        if (
+            visibility in {"private", "internal", "restricted", "unknown"}
+            and not _public_release_is_approved(public_release)
+        ):
+            backfill_public_release_required_count += 1
+    backfill_refresh_required_count = (
+        backfill_classifier_missing_count + backfill_classifier_stale_count
+    )
+    backfill_current_classifier_count = max(
+        0,
+        backfill_candidate_count - backfill_refresh_required_count,
+    )
+    next_actions: list[str] = []
+    if backfill_refresh_required_count:
+        next_actions.append(
+            "Refresh or invalidate backfill candidates with missing/stale classifier provenance before source review."
+        )
+    if backfill_current_classifier_count:
+        next_actions.append(
+            "Review current-classifier backfill groups and request source packets for confirmed candidates."
+        )
+    if backfill_public_release_required_count:
+        next_actions.append(
+            "Keep non-public or unknown-origin backfill evidence behind human release before public-facing reuse."
+        )
+    if unresolved_observed_count:
+        next_actions.append(
+            "Record fix outcomes or accepted-risk decisions for observed exceptions that remain unresolved."
+        )
+    if missing_event_link_count:
+        next_actions.append(
+            "Repair or reject fix outcomes whose linked event is missing from the canonical lake."
+        )
+    if not next_actions:
+        next_actions.append(
+            "No exception-lake action blockers were detected from current candidate metadata."
+        )
+    next_action_summary = {
+        "current_classifier_version": current_classifier_version,
+        "backfill_candidate_count": backfill_candidate_count,
+        "backfill_current_classifier_count": backfill_current_classifier_count,
+        "backfill_classifier_missing_count": backfill_classifier_missing_count,
+        "backfill_classifier_stale_count": backfill_classifier_stale_count,
+        "backfill_refresh_required_count": backfill_refresh_required_count,
+        "backfill_public_release_required_count": backfill_public_release_required_count,
+        "unresolved_observed_without_fix_outcome_count": unresolved_observed_count,
+        "fix_outcome_missing_event_link_count": missing_event_link_count,
+        "validated_fixed_count": validated_fixed_count,
+        "recommended_next_actions": next_actions,
+        "authority_boundary": (
+            "Next-action counts are routing evidence only. They do not confirm "
+            "backfill incidents, promote lessons, approve public release, or mutate "
+            "source repos."
+        ),
+    }
     latest_backfill_wave: dict[str, Any] = {}
     latest_path = hub_root / BACKFILL_RUNS_DIR / "latest.json"
     if latest_path.exists():
@@ -2393,6 +2464,7 @@ def write_exception_report(hub_root: Path) -> dict[str, Any]:
         "by_severity": dict(sorted(by_severity.items())),
         "fix_outcomes_by_decision": dict(sorted(fix_by_decision.items())),
         "fix_outcomes_by_validation_status": dict(sorted(fix_by_validation.items())),
+        "next_action_summary": next_action_summary,
         "latest_backfill_wave": latest_backfill_wave,
         "input_hashes": _exception_report_input_hashes(hub_root),
         "lake_path": LAKE_PATH.as_posix(),
@@ -2420,6 +2492,9 @@ def write_exception_report(hub_root: Path) -> dict[str, Any]:
         f"- Fix outcomes missing event link: {missing_event_link_count}",
         f"- Observed exceptions without fix outcome: {unresolved_observed_count}",
         f"- Private/internal/restricted/unknown origin: {private_origin}",
+        f"- Backfill current classifier candidates: {backfill_current_classifier_count}",
+        f"- Backfill classifier refresh required: {backfill_refresh_required_count}",
+        f"- Backfill public release required: {backfill_public_release_required_count}",
         f"- Lake: `{LAKE_PATH.as_posix()}`",
         f"- Fix outcomes: `{FIX_OUTCOME_PATH.as_posix()}`",
         f"- Quarantine: `{QUARANTINE_DIR.as_posix()}`",
@@ -2461,6 +2536,26 @@ def write_exception_report(hub_root: Path) -> dict[str, Any]:
     lines.extend(["", "### By Validation Status", ""])
     for status, count in sorted(fix_by_validation.items()):
         lines.append(f"- `{status}`: {count}")
+    lines.extend(["", "## Next Action Summary", ""])
+    lines.append(
+        "These counts route review work. They do not confirm backfill incidents, "
+        "promote lessons, approve release, or mutate source repos."
+    )
+    lines.extend(
+        [
+            "",
+            f"- Current classifier version: `{current_classifier_version}`",
+            f"- Backfill candidates with current classifier: {backfill_current_classifier_count}",
+            f"- Backfill candidates needing classifier refresh: {backfill_refresh_required_count}",
+            f"- Backfill candidates requiring public release: {backfill_public_release_required_count}",
+            f"- Observed exceptions without fix outcome: {unresolved_observed_count}",
+            f"- Fix outcomes missing event link: {missing_event_link_count}",
+            "",
+            "### Recommended Next Actions",
+            "",
+        ]
+    )
+    lines.extend(f"- {action}" for action in next_actions)
     (hub_root / REPORT_MD).write_text("\n".join(lines) + "\n", encoding="utf-8")
     return report
 

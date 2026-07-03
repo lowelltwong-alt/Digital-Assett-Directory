@@ -336,10 +336,12 @@ def test_capture_completeness_scenarios_all_pass(tmp_path: Path) -> None:
         "dad_offerings_registry",
         "downstream_template",
         "exception_taxonomy",
+        "language_coding_advantage_registry",
     } == set(pattern_gate["evidence"]["covered_update_vectors"])
     assert {
         "asset-pointer-created",
         "lawfirm-review-issue-missed-capture",
+        "language-frontier-signal",
         "mail-pattern-update-required",
         "new-exception-pattern-needed",
         "template-managed-block-change",
@@ -1263,6 +1265,40 @@ def test_capture_suggest_maps_tool_unavailable_to_required_packet() -> None:
     ]
     assert suggestion["recommended_packets"][0]["exception_event_type"] == "tool_unavailable"
     assert "source truth" in suggestion["authority_boundary"]
+
+
+def test_capture_suggest_maps_language_frontier_signal_to_capability_mail() -> None:
+    suggestion = suggest_exception_capture(
+        ROOT,
+        signals=[
+            "language_frontier_signal",
+            "rust_coding_advantage",
+            "ai_overlooked_operation",
+            "frontier_source_pointer",
+        ],
+        repo_capture_surface_version="0.2.0",
+    )
+
+    _validate("exception_capture_suggestion", suggestion)
+    assert suggestion["matched_rule_ids"] == [
+        "exception-capture-rule:language-frontier-signal"
+    ]
+    assert suggestion["update_required"] is False
+    assert suggestion["actual"]["packet_classes"] == ["ordinary_mail"]
+    assert suggestion["actual"]["mail_message_types"] == ["capability_suggestion"]
+    assert suggestion["actual"]["required_fields"] == [
+        "applicability_limits",
+        "language",
+        "proof_surface",
+        "safe_summary",
+        "source_id_or_url",
+        "target_dad_surface",
+        "validation_or_eval_idea",
+        "why_ai_coding_may_improve",
+    ]
+    assert suggestion["recommended_packets"][0]["mail_message_type"] == (
+        "capability_suggestion"
+    )
 
 
 def test_capture_suggest_flags_stale_capture_surface_for_new_rule() -> None:

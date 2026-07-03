@@ -31,6 +31,7 @@ from digital_asset_directory.exceptions_lake import (
     write_exception_report,
     write_exception_source_packet_requests,
 )
+from digital_asset_directory.utils import append_jsonl
 
 ROOT = Path(__file__).resolve().parents[1]
 
@@ -1659,13 +1660,70 @@ def test_exception_report_summarizes_categories(tmp_path: Path) -> None:
         "harness_update": 3,
         "taxonomy_update": 1,
     }
+    assert report["next_action_summary"]["backfill_candidate_count"] == 5
+    assert report["next_action_summary"]["backfill_current_classifier_count"] == 5
+    assert report["next_action_summary"]["backfill_refresh_required_count"] == 0
+    assert report["next_action_summary"]["backfill_public_release_required_count"] == 0
+    assert report["next_action_summary"]["recommended_next_actions"] == [
+        "Review current-classifier backfill groups and request source packets for confirmed candidates."
+    ]
     report_md = (hub / "processed" / "reports" / "exceptions_lake.md").read_text(
         encoding="utf-8"
     )
     assert "## By Category" in report_md
     assert "## By Taxonomy Dimension" in report_md
+    assert "## Next Action Summary" in report_md
     assert "`harness_parity`: 1" in report_md
     assert "`test_validation`: 2" in report_md
+    assert "Backfill candidates with current classifier: 5" in report_md
+    assert "Backfill candidates needing classifier refresh: 0" in report_md
+
+
+def test_exception_report_next_actions_surface_stale_and_unresolved_work(
+    tmp_path: Path,
+) -> None:
+    hub = tmp_path / "hub"
+    repo = tmp_path / "repo"
+    (repo / ".git").mkdir(parents=True)
+    _copy_exception_contracts(hub)
+    stale_record = record_exception_event(
+        hub,
+        repo,
+        event_type="test_timeout",
+        capture_contract="backfill_candidate",
+        stage="backfill",
+        summary="Old path-signal candidate with stale classifier provenance.",
+        context_refs=[
+            "backfill-rule-id:backfill-rule:test-timeout",
+            "backfill-classifier-version:exception-backfill-classifier-v0.0.1",
+            "repo-relative-sha256:old-timeout",
+            "path-keyword:pytest-timeout",
+        ],
+        source_visibility="unknown",
+    )
+    observed_record = record_exception_event(
+        hub,
+        repo,
+        event_type="runtime_exception",
+        capture_contract="postflight_exception",
+        stage="midflight",
+        summary="Observed runtime exception without fix outcome.",
+        source_visibility="internal",
+    )
+    lake_path = hub / "processed" / "exceptions" / "lake" / "events.jsonl"
+    append_jsonl(lake_path, stale_record["event"])
+    append_jsonl(lake_path, observed_record["event"])
+
+    report = write_exception_report(hub)
+    summary = report["next_action_summary"]
+
+    assert summary["backfill_classifier_stale_count"] == 1
+    assert summary["backfill_refresh_required_count"] == 1
+    assert summary["backfill_public_release_required_count"] == 1
+    assert summary["unresolved_observed_without_fix_outcome_count"] == 1
+    assert any("missing/stale classifier" in item for item in summary["recommended_next_actions"])
+    assert any("human release" in item for item in summary["recommended_next_actions"])
+    assert any("Record fix outcomes" in item for item in summary["recommended_next_actions"])
 
 
 def test_exception_learning_queue_separates_fix_ready_unresolved_and_backfill(

@@ -76,6 +76,16 @@ Postflight should record what helped, failed, was ignored, or was harmful. Usefu
 language discoveries go through `dad:need:language-frontier-signals`; harness
 outcomes go through `dad:need:coding-harness-feedback`.
 
+When a repo notices a language-frontier signal during ordinary work, it should
+also pass the observable signals through the exception-capture surface. The
+reviewed rule `exception-capture-rule:language-frontier-signal` maps safe
+Python, Rust, mixed-language, and future-language discoveries to
+`capability_suggestion` mail with these required fields: `language`,
+`source_id_or_url`, `safe_summary`, `why_ai_coding_may_improve`,
+`applicability_limits`, `proof_surface`, `validation_or_eval_idea`, and
+`target_dad_surface`. Older repo capture surfaces should refresh before treating
+that packet as complete.
+
 ## Language Improvement Loop
 
 This is the deterministic loop for Python, Rust, and any later language DAD

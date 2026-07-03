@@ -5,6 +5,7 @@
   "required_pattern_families": [
     "asset",
     "harness",
+    "language_frontier",
     "skill",
     "template",
     "workflow",
@@ -64,6 +65,45 @@
         "repo_visibility": "internal",
         "public_facing": false,
         "notes": "Harness recommendation uses command refs, not logs."
+      },
+      "review_status": "reviewed"
+    },
+    {
+      "scenario_id": "language-frontier-signal",
+      "pattern_family": "language_frontier",
+      "description": "A repo discovers a Python/Rust/future-language coding advantage, proof operation, or overlooked pattern that should be routed to DAD without copying external or private content.",
+      "repo_capture_surface_version": "0.1.0",
+      "signals": [
+        "language_frontier_signal",
+        "python_coding_advantage",
+        "ai_overlooked_operation",
+        "frontier_source_pointer"
+      ],
+      "covered_rule_ids": ["exception-capture-rule:language-frontier-signal"],
+      "phase6_update_vectors": ["dad_needs_registry", "language_coding_advantage_registry"],
+      "expected": {
+        "packet_classes": ["ordinary_mail"],
+        "event_types": [],
+        "mail_message_types": ["capability_suggestion"],
+        "capture_contracts": [],
+        "required_fields": [
+          "applicability_limits",
+          "language",
+          "proof_surface",
+          "safe_summary",
+          "source_id_or_url",
+          "target_dad_surface",
+          "validation_or_eval_idea",
+          "why_ai_coding_may_improve"
+        ],
+        "update_required": true,
+        "blocked": false
+      },
+      "negative_controls": ["contains_private_rows", "contains_raw_log_blob", "contains_secret_or_pii"],
+      "source_context": {
+        "repo_visibility": "internal",
+        "public_facing": false,
+        "notes": "Language-frontier mail is pointer-only and routes to dad:need:language-frontier-signals."
       },
       "review_status": "reviewed"
     },

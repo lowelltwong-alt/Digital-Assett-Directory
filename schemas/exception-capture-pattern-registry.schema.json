@@ -47,6 +47,7 @@
             "enum": [
               "asset",
               "harness",
+              "language_frontier",
               "skill",
               "template",
               "workflow",

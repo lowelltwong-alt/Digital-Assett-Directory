@@ -55,6 +55,54 @@
       "review_status": "reviewed"
     },
     {
+      "rule_id": "exception-capture-rule:language-frontier-signal",
+      "pattern_family": "language_frontier",
+      "description": "A repo found a Python, Rust, mixed-language, or future-language coding technique, tool, library, codebase pattern, or proof operation that may improve AI coding.",
+      "min_capture_surface_version": "0.2.0",
+      "match_signals": ["language_frontier_signal"],
+      "any_signals": [
+        "python_coding_advantage",
+        "rust_coding_advantage",
+        "mixed_language_boundary",
+        "future_language_proof_surface",
+        "ai_overlooked_operation",
+        "frontier_source_pointer"
+      ],
+      "suppress_signals": [
+        "contains_private_rows",
+        "contains_raw_log_blob",
+        "contains_secret_or_pii"
+      ],
+      "emit": {
+        "packet_classes": ["ordinary_mail"],
+        "mail_message_type": "capability_suggestion",
+        "exception_event_type": "",
+        "capture_contract": "",
+        "severity": "info",
+        "required_fields": [
+          "applicability_limits",
+          "language",
+          "proof_surface",
+          "safe_summary",
+          "source_id_or_url",
+          "target_dad_surface",
+          "validation_or_eval_idea",
+          "why_ai_coding_may_improve"
+        ],
+        "rationale": "Language-frontier signals should enter DAD as pointer-only candidate evidence routed to language assets, coding harnesses, or tactic radar before any guidance changes."
+      },
+      "applies_when": [
+        "A repo validates, falsifies, or discovers a Python, Rust, mixed-language, or future-language coding improvement that could help other AI coding agents.",
+        "A codebase or source-watch pass finds an underused operation or proof surface that generic AI agents are likely to miss."
+      ],
+      "does_not_apply_when": [
+        "The evidence is copied third-party docs, copied source, raw benchmark tables, raw logs, private rows, or credentials.",
+        "The finding cannot name a source pointer, applicability limit, proof surface, and local validation or eval idea."
+      ],
+      "danger_if_missed": "DAD's language guidance and harness library fall behind real repo learning, and future agents keep coding from generic GitHub-shaped habits instead of local proof surfaces.",
+      "review_status": "reviewed"
+    },
+    {
       "rule_id": "exception-capture-rule:skill-lifecycle",
       "pattern_family": "skill",
       "description": "A repo created, updated, retired, or replaced an agent skill or skill pointer.",

@@ -767,9 +767,10 @@ Wave 2.5: Capture-Completeness Harness
 Implemented starter harness:
 
 - `registry/exception-capture-pattern-registry.json` defines deterministic capture
-  rules for asset, harness, skill, template, workflow, architecture-reference,
-  governance-map, data-map, mail-pattern, exception-pattern, review-finding,
-  fix-outcome, and learning-loop-candidate families.
+  rules for asset, harness, language-frontier, skill, template, workflow,
+  architecture-reference, governance-map, data-map, mail-pattern,
+  exception-pattern, review-finding, fix-outcome, and learning-loop-candidate
+  families.
 - `assets/coding-harnesses/exception-capture-completeness/examples/synthetic-capture-scenarios.json`
   includes one reviewed synthetic fixture for each required family, the
   LawFirm-os-intake missed-capture case, pattern-update simulations, and unsafe
@@ -970,6 +971,10 @@ Backfill safety and classification:
   learning route, default handling, and review priority. They are analytic triage
   labels only: they do not prove source truth, promote backfill candidates, or
   authorize cross-repo action.
+- Exception reports also include `next_action_summary`, which separates
+  current-classifier backfill candidates, stale or missing classifier
+  provenance, public-release holds, unresolved observed events, and missing
+  fix-outcome links.
 - Exception event packets also carry their registry-derived
   `taxonomy_dimensions`. DAD overwrites repo-supplied dimensions during
   collection and validation compares lake rows back to the reviewed registry, so

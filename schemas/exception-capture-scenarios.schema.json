@@ -22,6 +22,7 @@
         "enum": [
           "asset",
           "harness",
+          "language_frontier",
           "skill",
           "template",
           "workflow",
@@ -62,6 +63,7 @@
             "enum": [
               "asset",
               "harness",
+              "language_frontier",
               "skill",
               "template",
               "workflow",
@@ -94,7 +96,8 @@
                 "dad_needs_registry",
                 "dad_offerings_registry",
                 "exception_taxonomy",
-                "downstream_template"
+                "downstream_template",
+                "language_coding_advantage_registry"
               ]
             },
             "uniqueItems": true
