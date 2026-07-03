@@ -3,6 +3,8 @@ from __future__ import annotations
 import json
 import os
 import re
+import shutil
+import tempfile
 from collections import Counter
 from pathlib import Path
 from typing import Any, Iterable
@@ -30,6 +32,11 @@ REPORT_JSON = Path("processed") / "reports" / "exceptions_lake.json"
 REPORT_MD = Path("processed") / "reports" / "exceptions_lake.md"
 LEARNING_QUEUE_JSON = Path("processed") / "reports" / "exception_learning_queue.json"
 LEARNING_QUEUE_MD = Path("processed") / "reports" / "exception_learning_queue.md"
+LEARNING_READINESS_JSON = Path("processed") / "reports" / "exception_learning_readiness_check.json"
+LEARNING_READINESS_MD = Path("processed") / "reports" / "exception_learning_readiness_check.md"
+LEARNING_READINESS_SCENARIOS_SCHEMA = (
+    Path("schemas") / "exception-learning-readiness-scenarios.schema.json"
+)
 EXCEPTION_EVENT_SCHEMA = Path("schemas") / "exception-event.schema.json"
 EXCEPTION_FIX_SCHEMA = Path("schemas") / "exception-fix-outcome.schema.json"
 BACKFILL_RUNS_DIR = Path("processed") / "exceptions" / "backfill-runs"
@@ -436,6 +443,16 @@ def _exception_fix_schema_path(hub_root: Path) -> Path:
     if hub_schema.exists():
         return hub_schema
     repo_schema = Path(__file__).resolve().parents[2] / EXCEPTION_FIX_SCHEMA
+    if repo_schema.exists():
+        return repo_schema
+    return hub_schema
+
+
+def _learning_readiness_scenarios_schema_path(hub_root: Path) -> Path:
+    hub_schema = hub_root / LEARNING_READINESS_SCENARIOS_SCHEMA
+    if hub_schema.exists():
+        return hub_schema
+    repo_schema = Path(__file__).resolve().parents[2] / LEARNING_READINESS_SCENARIOS_SCHEMA
     if repo_schema.exists():
         return repo_schema
     return hub_schema
@@ -2290,8 +2307,6 @@ def _exception_learning_status(
         blockers.append("same event-type cluster includes backfill path-signal candidates")
     if public_release_required_count:
         blockers.append("non-public origin evidence needs human release before public-facing reuse")
-    if sample_below_threshold:
-        blockers.append("sample size below comparable-event threshold; counts only")
     if unresolved_observed_count:
         return (
             "needs_fix_outcome",
@@ -2543,6 +2558,397 @@ def write_exception_learning_queue(
     return report
 
 
+def _copy_learning_check_contracts(source_hub: Path, target_hub: Path) -> None:
+    for ref in [
+        Path("registry") / "exception-event-type-registry.json",
+        Path("registry") / "exception-learning-methodology.json",
+    ]:
+        source = source_hub / ref
+        target = target_hub / ref
+        target.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copyfile(source, target)
+
+
+def _write_learning_check_contract(
+    repo: Path,
+    *,
+    repo_id: str,
+    visibility: str,
+    public_facing: bool,
+) -> None:
+    contract = repo / ".digital-asset" / "dad-integration.json"
+    contract.parent.mkdir(parents=True, exist_ok=True)
+    contract.write_text(
+        json_dumps(
+            {
+                "repo_id": repo_id,
+                "visibility": visibility,
+                "public_facing": public_facing,
+            },
+            pretty=True,
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+
+
+def _learning_case_repo(case: dict[str, Any], workspace: Path) -> Path:
+    repo_config = case.get("repo") if isinstance(case.get("repo"), dict) else {}
+    repo_id = str(repo_config.get("repo_id") or case["case_id"])
+    repo = workspace / _slug(repo_id)
+    (repo / ".git").mkdir(parents=True, exist_ok=True)
+    _write_learning_check_contract(
+        repo,
+        repo_id=repo_id,
+        visibility=str(repo_config.get("visibility") or "unknown"),
+        public_facing=bool(repo_config.get("public_facing", False)),
+    )
+    return repo
+
+
+def _record_learning_check_event(
+    hub_root: Path,
+    repo: Path,
+    spec: dict[str, Any],
+) -> dict[str, Any]:
+    return record_exception_event(
+        hub_root,
+        repo,
+        event_type=str(spec.get("event_type") or "other"),
+        summary=str(spec.get("summary") or spec.get("event_key") or "Synthetic exception event."),
+        stage=str(spec.get("stage") or "midflight"),
+        severity=str(spec.get("severity") or "medium"),
+        capture_contract=str(spec.get("capture_contract") or "failed_command"),
+        agent=str(spec.get("agent") or "codex"),
+        source_visibility=str(spec.get("source_visibility") or "unknown"),
+        command=[str(item) for item in spec.get("command", []) or []],
+        exit_code=spec.get("exit_code"),
+        duration_ms=spec.get("duration_ms"),
+        context_refs=[str(item) for item in spec.get("context_refs", []) or []],
+        validation_refs=[str(item) for item in spec.get("validation_refs", []) or []],
+        asset_refs=[str(item) for item in spec.get("asset_refs", []) or []],
+        harness_refs=[str(item) for item in spec.get("harness_refs", []) or []],
+        trace_refs=[str(item) for item in spec.get("trace_refs", []) or []],
+    )
+
+
+def _record_learning_check_fix(
+    hub_root: Path,
+    repo: Path,
+    event_by_key: dict[str, dict[str, Any]],
+    spec: dict[str, Any],
+) -> None:
+    event_key = str(spec.get("event_key") or "")
+    event = event_by_key.get(event_key, {})
+    event_id = str(event.get("event", {}).get("event_id") or spec.get("event_id") or "")
+    fix_kwargs = {
+        "event_id": event_id,
+        "decision": str(spec.get("decision") or "fixed"),
+        "summary": str(spec.get("summary") or "Synthetic fix outcome."),
+        "recorded_by": str(spec.get("recorded_by") or "codex"),
+        "validation_refs": [str(item) for item in spec.get("validation_refs", []) or []],
+        "regression_test_refs": [
+            str(item) for item in spec.get("regression_test_refs", []) or []
+        ],
+        "fix_refs": [str(item) for item in spec.get("fix_refs", []) or []],
+        "asset_refs": [str(item) for item in spec.get("asset_refs", []) or []],
+        "lesson_refs": [str(item) for item in spec.get("lesson_refs", []) or []],
+        "owner_authority": str(spec.get("owner_authority") or "repo"),
+        "canonical_event_id": str(spec.get("canonical_event_id") or ""),
+        "expiry": str(spec.get("expiry") or ""),
+        "remaining_risks": [str(item) for item in spec.get("remaining_risks", []) or []],
+        "review_status": str(spec.get("review_status") or "candidate"),
+    }
+    if spec.get("append_direct"):
+        record = build_exception_fix_outcome(hub_root, repo, **fix_kwargs)
+        mutations = spec.get("mutations") if isinstance(spec.get("mutations"), dict) else {}
+        record.update(mutations)
+        append_jsonl(hub_root / FIX_OUTCOME_PATH, record)
+        return
+    record_exception_fix_outcome(hub_root, repo, **fix_kwargs)
+
+
+def _queue_rows_by_event_type(queue_report: dict[str, Any]) -> dict[str, dict[str, Any]]:
+    return {
+        str(row.get("event_type")): row
+        for row in queue_report.get("learning_queue", [])
+        if isinstance(row, dict) and row.get("event_type")
+    }
+
+
+def _substring_checks(actual_values: list[str], expected_substrings: list[str]) -> bool:
+    return all(
+        any(substring in value for value in actual_values)
+        for substring in expected_substrings
+    )
+
+
+def _validate_learning_readiness_scenarios(
+    hub_root: Path,
+    scenarios: dict[str, Any],
+    scenarios_path: Path,
+) -> None:
+    schema = _load_json(_learning_readiness_scenarios_schema_path(hub_root))
+    validator_cls = validator_for(schema)
+    validator_cls.check_schema(schema)
+    try:
+        validator_cls(schema).validate(scenarios)
+    except ValidationError as exc:
+        path = ".".join(str(part) for part in exc.path)
+        location = path or "<scenario-set>"
+        raise ValueError(
+            f"Exception learning-readiness scenario validation failed at {location}: "
+            f"{exc.message}"
+        ) from exc
+
+    case_ids: list[str] = []
+    for index, case in enumerate(scenarios.get("cases", [])):
+        case_id = str(case.get("case_id") or "").strip()
+        case_ids.append(case_id)
+        expected = case.get("expected") if isinstance(case.get("expected"), dict) else {}
+        assertion_keys = {
+            "status_by_event_type",
+            "blocker_substrings_by_event_type",
+            "row_fields_by_event_type",
+            "queue_counts",
+            "quarantine_event_types",
+        }
+        if not any(expected.get(key) for key in assertion_keys):
+            raise ValueError(
+                "Exception learning-readiness scenario "
+                f"{case_id or index} in {scenarios_path} has no expected assertions."
+            )
+    duplicates = sorted({case_id for case_id in case_ids if case_ids.count(case_id) > 1})
+    if duplicates:
+        raise ValueError(
+            "Exception learning-readiness scenarios contain duplicate case_id values: "
+            + ", ".join(duplicates)
+        )
+
+
+def _evaluate_learning_check_case(
+    source_hub: Path,
+    case: dict[str, Any],
+    *,
+    sample_size_threshold: int,
+) -> dict[str, Any]:
+    with tempfile.TemporaryDirectory(prefix="dad-exception-learning-check-") as tmp:
+        workspace = Path(tmp)
+        hub = workspace / "hub"
+        _copy_learning_check_contracts(source_hub, hub)
+        repo = _learning_case_repo(case, workspace)
+        event_by_key: dict[str, dict[str, Any]] = {}
+        for event_spec in case.get("events", []) or []:
+            if not isinstance(event_spec, dict):
+                continue
+            event_key = str(event_spec.get("event_key") or len(event_by_key))
+            event_by_key[event_key] = _record_learning_check_event(hub, repo, event_spec)
+        collect_exception_events(hub, repo)
+        for fix_spec in case.get("fix_outcomes", []) or []:
+            if isinstance(fix_spec, dict):
+                _record_learning_check_fix(hub, repo, event_by_key, fix_spec)
+        collect_exception_fix_outcomes(hub, repo)
+        queue = write_exception_learning_queue(
+            hub,
+            output=workspace / "learning-queue.json",
+            sample_size_threshold=sample_size_threshold,
+        )
+        rows_by_type = _queue_rows_by_event_type(queue)
+        expected = case.get("expected") if isinstance(case.get("expected"), dict) else {}
+        status_expected = {
+            str(key): str(value)
+            for key, value in (expected.get("status_by_event_type") or {}).items()
+        }
+        blocker_expected = {
+            str(key): [str(item) for item in value or []]
+            for key, value in (expected.get("blocker_substrings_by_event_type") or {}).items()
+        }
+        row_fields_expected = {
+            str(key): value
+            for key, value in (expected.get("row_fields_by_event_type") or {}).items()
+            if isinstance(value, dict)
+        }
+        comparisons: dict[str, bool] = {}
+        for event_type, expected_status in status_expected.items():
+            actual_status = str(rows_by_type.get(event_type, {}).get("learning_status") or "")
+            comparisons[f"status:{event_type}"] = actual_status == expected_status
+        for event_type, substrings in blocker_expected.items():
+            blockers = [
+                str(item)
+                for item in rows_by_type.get(event_type, {}).get("promotion_blockers", [])
+            ]
+            comparisons[f"blockers:{event_type}"] = _substring_checks(blockers, substrings)
+        for event_type, fields in row_fields_expected.items():
+            row = rows_by_type.get(event_type, {})
+            for field, expected_value in fields.items():
+                comparisons[f"row:{event_type}:{field}"] = row.get(field) == expected_value
+        if isinstance(expected.get("queue_counts"), dict):
+            comparisons["queue_counts"] = queue.get("queue_counts") == expected["queue_counts"]
+        quarantine_expectations = expected.get("quarantine_event_types") or []
+        if quarantine_expectations:
+            quarantine_text = ""
+            quarantine_dir = hub / QUARANTINE_DIR
+            if quarantine_dir.exists():
+                quarantine_text = "\n".join(
+                    path.read_text(encoding="utf-8")
+                    for path in quarantine_dir.glob("*.jsonl")
+                )
+            for event_type in quarantine_expectations:
+                comparisons[f"quarantine:{event_type}"] = str(event_type) in quarantine_text
+        passed = bool(comparisons) and all(comparisons.values())
+        actual_rows = {
+            event_type: {
+                "learning_status": row.get("learning_status"),
+                "promotion_blockers": row.get("promotion_blockers", []),
+                "observed_count": row.get("observed_count"),
+                "backfill_candidate_count": row.get("backfill_candidate_count"),
+                "validated_fix_count": row.get("validated_fix_count"),
+                "fixed_without_validation_count": row.get("fixed_without_validation_count"),
+                "public_release_required_count": row.get("public_release_required_count"),
+                "source_visibility_counts": row.get("source_visibility_counts", {}),
+            }
+            for event_type, row in rows_by_type.items()
+        }
+        return {
+            "case_id": str(case.get("case_id") or case.get("scenario_id") or "unknown"),
+            "description": str(case.get("description") or ""),
+            "passed": passed,
+            "comparisons": comparisons,
+            "expected": expected,
+            "actual_rows_by_event_type": actual_rows,
+            "queue_counts": queue.get("queue_counts", {}),
+        }
+
+
+def _learning_readiness_scenario_ref(hub_root: Path, scenarios_path: Path) -> str:
+    try:
+        return scenarios_path.resolve().relative_to(hub_root.resolve()).as_posix()
+    except (OSError, ValueError):
+        path_hash = sha256_bytes(str(scenarios_path.resolve()).encode("utf-8"))[:16]
+        return f"external-scenario:{path_hash}:{scenarios_path.name}"
+
+
+def _learning_readiness_input_hashes(hub_root: Path, scenarios_path: Path) -> dict[str, str]:
+    refs = [
+        Path("registry") / "exception-event-type-registry.json",
+        Path("registry") / "exception-learning-methodology.json",
+        Path("schemas") / "exception-event.schema.json",
+        Path("schemas") / "exception-fix-outcome.schema.json",
+        Path("schemas") / "exception-event-type-registry.schema.json",
+        Path("schemas") / "exception-learning-methodology.schema.json",
+        LEARNING_READINESS_SCENARIOS_SCHEMA,
+        Path("schemas") / "coding-harness.schema.json",
+        Path("schemas") / "coding-harness-eval.schema.json",
+        Path("src") / "digital_asset_directory" / "exceptions_lake.py",
+        Path("src") / "digital_asset_directory" / "cli.py",
+        Path("assets")
+        / "coding-harnesses"
+        / "exception-learning-readiness"
+        / "harness.json",
+        Path("assets")
+        / "coding-harnesses"
+        / "exception-learning-readiness"
+        / "tests-or-evals"
+        / "minimum-eval.json",
+    ]
+    hashes: dict[str, str] = {}
+    repo_root = Path(__file__).resolve().parents[2]
+    for ref in refs:
+        path = hub_root / ref
+        if not path.exists() and ref.parts[:1] in {
+            ("src",),
+            ("schemas",),
+            ("assets",),
+        }:
+            path = repo_root / ref
+        if path.exists() and path.is_file():
+            hashes[ref.as_posix()] = f"sha256:{sha256_file(path)}"
+    if scenarios_path.exists() and scenarios_path.is_file():
+        hashes[_learning_readiness_scenario_ref(hub_root, scenarios_path)] = (
+            f"sha256:{sha256_file(scenarios_path)}"
+        )
+    return hashes
+
+
+def evaluate_exception_learning_readiness_scenarios(
+    hub_root: Path,
+    scenarios_path: Path,
+    *,
+    output: Path | None = None,
+    sample_size_threshold: int | None = None,
+) -> dict[str, Any]:
+    """Run synthetic learning-readiness cases against the exception learning queue."""
+    scenarios = _load_json(scenarios_path)
+    if not isinstance(scenarios, dict):
+        raise ValueError("Exception learning-readiness scenario file must contain a JSON object.")
+    _validate_learning_readiness_scenarios(hub_root, scenarios, scenarios_path)
+    effective_threshold = int(
+        sample_size_threshold
+        if sample_size_threshold is not None
+        else scenarios.get("sample_size_threshold", 10)
+    )
+    if effective_threshold < 1:
+        raise ValueError("sample_size_threshold must be at least 1.")
+    cases = [case for case in scenarios.get("cases", []) if isinstance(case, dict)]
+    results = [
+        _evaluate_learning_check_case(
+            hub_root,
+            case,
+            sample_size_threshold=effective_threshold,
+        )
+        for case in cases
+    ]
+    failed = [case for case in results if not case["passed"]]
+    report = {
+        "generated_at": utc_now(),
+        "report_id": "dad:exception-learning-readiness-check",
+        "scenario_set_id": scenarios.get("scenario_set_id", scenarios_path.stem),
+        "scenario_count": len(results),
+        "passed_count": len(results) - len(failed),
+        "failed_count": len(failed),
+        "sample_size_threshold": effective_threshold,
+        "scenario_path_ref": _learning_readiness_scenario_ref(hub_root, scenarios_path),
+        "input_hashes": _learning_readiness_input_hashes(hub_root, scenarios_path),
+        "cases": results,
+        "authority_boundary": (
+            "This generated report checks only that supplied synthetic learning-queue "
+            "cases produce expected conservative statuses. It does not promote a "
+            "lesson, prove real repo completeness, or override source authority."
+        ),
+    }
+    output_path = hub_root / (output or LEARNING_READINESS_JSON)
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    output_path.write_text(json_dumps(report, pretty=True) + "\n", encoding="utf-8")
+    md_path = output_path.with_suffix(".md") if output else hub_root / LEARNING_READINESS_MD
+    lines = [
+        "# Exception Learning Readiness Check",
+        "",
+        f"- Generated: {report['generated_at']}",
+        f"- Scenario set: `{report['scenario_set_id']}`",
+        f"- Scenarios: {report['scenario_count']}",
+        f"- Passed: {report['passed_count']}",
+        f"- Failed: {report['failed_count']}",
+        "",
+        "Boundary: synthetic generated evidence only. This check gives evidence "
+        "against false-green learning-queue readiness; it does not promote "
+        "lessons or prove real repo completeness.",
+        "",
+        "## Cases",
+        "",
+    ]
+    lines.append("| Case | Result | Expected Statuses |")
+    lines.append("| --- | --- | --- |")
+    for case in results:
+        expected_statuses = (case.get("expected") or {}).get("status_by_event_type", {})
+        lines.append(
+            "| "
+            + f"`{case['case_id']}` | {'passed' if case['passed'] else 'failed'} | "
+            + f"`{expected_statuses}` |"
+        )
+    md_path.write_text("\n".join(lines) + "\n", encoding="utf-8")
+    return report
+
+
 def exception_lake_paths() -> dict[str, str]:
     return {
         "repo_outbox": EXCEPTION_OUTBOX.as_posix(),
@@ -2552,6 +2958,8 @@ def exception_lake_paths() -> dict[str, str]:
         "fix_outcomes": FIX_OUTCOME_PATH.as_posix(),
         "learning_queue_json": LEARNING_QUEUE_JSON.as_posix(),
         "learning_queue_markdown": LEARNING_QUEUE_MD.as_posix(),
+        "learning_readiness_json": LEARNING_READINESS_JSON.as_posix(),
+        "learning_readiness_markdown": LEARNING_READINESS_MD.as_posix(),
         "report_json": REPORT_JSON.as_posix(),
         "report_markdown": REPORT_MD.as_posix(),
     }

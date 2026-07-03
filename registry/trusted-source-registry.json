@@ -62,20 +62,21 @@
         "blog.rust-lang.org/inside-rust",
         "internals.rust-lang.org",
         "rust-lang.github.io",
+        "rust-lang.github.io/rust-project-goals",
         "doc.rust-lang.org",
         "github.com/rust-lang",
         "github.com/rust-lang/rfcs",
-        "crates.io",
-        "lib.rs"
+        "crates.io"
       ],
       "trust_tier": "high_signal",
       "check_cadence": "weekly",
       "language_focus": ["rust"],
       "frontier_watch": [
         "new stabilized language and stdlib features",
+        "annual and initiative-level project goals that may change DAD's Rust roadmap",
         "compiler and cargo roadmap changes",
         "RFCs affecting API design, async, unsafe boundaries, or performance",
-        "crates that improve deterministic scanning, parsing, hashing, or static analysis"
+        "official crate and toolchain changes that improve deterministic scanning, parsing, hashing, or static analysis"
       ],
       "intake_actions": [
         "Update Rust buildout guidance only after screening and a human-reviewed DAD promotion.",
@@ -102,6 +103,25 @@
         "Translate repeated patterns into harness research questions instead of direct style rules."
       ],
       "asset_kinds": ["doc", "harness", "lesson"],
+      "review_status": "reviewed"
+    },
+    {
+      "source_id": "rust-ecosystem-curation",
+      "label": "Rust ecosystem curation and crate discovery",
+      "url_patterns": ["lib.rs", "docs.rs", "blessed.rs", "github.com/rust-unofficial/awesome-rust"],
+      "trust_tier": "known",
+      "check_cadence": "monthly",
+      "language_focus": ["rust"],
+      "frontier_watch": [
+        "crates that may improve DAD scanning, parsing, chunking, hashing, static analysis, or single-binary validation",
+        "ecosystem patterns that are common among experienced Rust developers but underrepresented in generic AI-generated code",
+        "maintenance, license, security, and compatibility signals before any crate enters a DAD harness"
+      ],
+      "intake_actions": [
+        "Create pointer-only research intake records; do not vendor crate code or docs into DAD.",
+        "Require a local harness experiment, license check, and maintenance note before recommending a crate to downstream repos."
+      ],
+      "asset_kinds": ["doc", "harness", "asset", "lesson"],
       "review_status": "reviewed"
     },
     {

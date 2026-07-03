@@ -1,0 +1,144 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://local.digital-asset-directory/schemas/exception-learning-readiness-scenarios.schema.json",
+  "title": "DAD Exception Learning Readiness Scenarios",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "scenario_set_id",
+    "authority_boundary",
+    "sample_size_threshold",
+    "cases"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "schema_version": {"const": "0.1.0"},
+    "scenario_set_id": {"type": "string", "minLength": 1},
+    "authority_boundary": {"type": "string", "minLength": 1},
+    "sample_size_threshold": {"type": "integer", "minimum": 1},
+    "cases": {
+      "type": "array",
+      "minItems": 1,
+      "items": {"$ref": "#/$defs/case"}
+    }
+  },
+  "$defs": {
+    "string_list": {
+      "type": "array",
+      "items": {"type": "string"},
+      "default": []
+    },
+    "repo": {
+      "type": "object",
+      "required": ["repo_id", "visibility", "public_facing"],
+      "additionalProperties": false,
+      "properties": {
+        "repo_id": {"type": "string", "minLength": 1},
+        "visibility": {
+          "enum": ["public", "internal", "private", "restricted", "unknown"]
+        },
+        "public_facing": {"type": "boolean"}
+      }
+    },
+    "event": {
+      "type": "object",
+      "required": ["event_key", "event_type", "summary"],
+      "additionalProperties": false,
+      "properties": {
+        "event_key": {"type": "string", "minLength": 1},
+        "event_type": {"type": "string", "minLength": 1},
+        "stage": {"type": "string"},
+        "severity": {"type": "string"},
+        "capture_contract": {"type": "string"},
+        "summary": {"type": "string", "minLength": 1},
+        "agent": {"type": "string"},
+        "source_visibility": {"type": "string"},
+        "command": {"$ref": "#/$defs/string_list"},
+        "exit_code": {"type": "integer"},
+        "duration_ms": {"type": "integer", "minimum": 0},
+        "context_refs": {"$ref": "#/$defs/string_list"},
+        "validation_refs": {"$ref": "#/$defs/string_list"},
+        "asset_refs": {"$ref": "#/$defs/string_list"},
+        "harness_refs": {"$ref": "#/$defs/string_list"},
+        "trace_refs": {"$ref": "#/$defs/string_list"}
+      }
+    },
+    "fix_outcome": {
+      "type": "object",
+      "required": ["event_key", "decision", "summary"],
+      "additionalProperties": false,
+      "properties": {
+        "event_key": {"type": "string", "minLength": 1},
+        "event_id": {"type": "string"},
+        "decision": {"type": "string"},
+        "summary": {"type": "string", "minLength": 1},
+        "recorded_by": {"type": "string"},
+        "validation_refs": {"$ref": "#/$defs/string_list"},
+        "regression_test_refs": {"$ref": "#/$defs/string_list"},
+        "fix_refs": {"$ref": "#/$defs/string_list"},
+        "asset_refs": {"$ref": "#/$defs/string_list"},
+        "lesson_refs": {"$ref": "#/$defs/string_list"},
+        "owner_authority": {"type": "string"},
+        "canonical_event_id": {"type": "string"},
+        "expiry": {"type": "string"},
+        "remaining_risks": {"$ref": "#/$defs/string_list"},
+        "review_status": {"type": "string"},
+        "append_direct": {"type": "boolean"},
+        "mutations": {"type": "object"}
+      }
+    },
+    "expected": {
+      "type": "object",
+      "additionalProperties": false,
+      "anyOf": [
+        {"required": ["status_by_event_type"]},
+        {"required": ["blocker_substrings_by_event_type"]},
+        {"required": ["row_fields_by_event_type"]},
+        {"required": ["queue_counts"]},
+        {"required": ["quarantine_event_types"]}
+      ],
+      "properties": {
+        "status_by_event_type": {
+          "type": "object",
+          "additionalProperties": {"type": "string"}
+        },
+        "blocker_substrings_by_event_type": {
+          "type": "object",
+          "additionalProperties": {"$ref": "#/$defs/string_list"}
+        },
+        "row_fields_by_event_type": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "object"
+          }
+        },
+        "queue_counts": {
+          "type": "object",
+          "additionalProperties": {"type": "integer", "minimum": 0}
+        },
+        "quarantine_event_types": {"$ref": "#/$defs/string_list"}
+      }
+    },
+    "case": {
+      "type": "object",
+      "required": ["case_id", "description", "repo", "events", "expected"],
+      "additionalProperties": false,
+      "properties": {
+        "case_id": {"type": "string", "minLength": 1},
+        "description": {"type": "string", "minLength": 1},
+        "repo": {"$ref": "#/$defs/repo"},
+        "events": {
+          "type": "array",
+          "minItems": 1,
+          "items": {"$ref": "#/$defs/event"}
+        },
+        "fix_outcomes": {
+          "type": "array",
+          "items": {"$ref": "#/$defs/fix_outcome"},
+          "default": []
+        },
+        "expected": {"$ref": "#/$defs/expected"}
+      }
+    }
+  }
+}

@@ -13,6 +13,7 @@ from digital_asset_directory.exceptions_lake import (
     backfill_classifier_rules,
     collect_exception_fix_outcomes,
     collect_exception_events,
+    evaluate_exception_learning_readiness_scenarios,
     event_type_taxonomy_dimensions,
     exception_category_taxonomy_defaults,
     exception_taxonomy_dimension_axes,
@@ -63,6 +64,19 @@ def test_exception_registries_validate_against_schemas() -> None:
             (ROOT / "registry" / "exception-learning-methodology.json").read_text(
                 encoding="utf-8"
             )
+        ),
+    )
+    _validate(
+        "exception_learning_readiness_scenarios",
+        json.loads(
+            (
+                ROOT
+                / "assets"
+                / "coding-harnesses"
+                / "exception-learning-readiness"
+                / "examples"
+                / "synthetic-learning-readiness-scenarios.json"
+            ).read_text(encoding="utf-8")
         ),
     )
     _validate(
@@ -799,6 +813,115 @@ def test_exception_learning_queue_separates_fix_ready_unresolved_and_backfill(
     md_text = (tmp_path / "learning-queue.md").read_text(encoding="utf-8")
     assert "Boundary: candidate evidence only" in md_text
     assert "`review_finding`" in md_text
+
+
+def test_exception_learning_readiness_scenarios_pass(tmp_path: Path) -> None:
+    scenario_path = (
+        ROOT
+        / "assets"
+        / "coding-harnesses"
+        / "exception-learning-readiness"
+        / "examples"
+        / "synthetic-learning-readiness-scenarios.json"
+    )
+
+    report = evaluate_exception_learning_readiness_scenarios(
+        ROOT,
+        scenario_path,
+        output=tmp_path / "learning-readiness.json",
+    )
+
+    assert report["scenario_count"] == 6
+    assert report["failed_count"] == 0
+    assert report["passed_count"] == 6
+    assert report["sample_size_threshold"] == 10
+    case_ids = {case["case_id"] for case in report["cases"]}
+    assert {
+        "clean-public-validated-fix",
+        "small-sample-validated-fix-blocker",
+        "mixed-validated-and-unresolved",
+        "invalid-legacy-fix-row",
+        "unknown-origin-release-gate",
+        "backfill-only-source-review",
+    }.issubset(case_ids)
+    small_sample = {
+        case["case_id"]: case for case in report["cases"]
+    }["small-sample-validated-fix-blocker"]
+    assert small_sample["actual_rows_by_event_type"]["test_failure"]["learning_status"] == (
+        "needs_more_evidence"
+    )
+    assert (tmp_path / "learning-readiness.md").exists()
+
+
+def test_exception_learning_readiness_rejects_empty_scenario_file(tmp_path: Path) -> None:
+    scenario_path = tmp_path / "empty-scenarios.json"
+    scenario_path.write_text(
+        json.dumps(
+            {
+                "schema_version": "0.1.0",
+                "scenario_set_id": "empty",
+                "authority_boundary": "test",
+                "sample_size_threshold": 10,
+                "cases": [],
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    with pytest.raises(ValueError, match="scenario validation failed"):
+        evaluate_exception_learning_readiness_scenarios(
+            ROOT,
+            scenario_path,
+            output=tmp_path / "out.json",
+        )
+
+
+def test_exception_learning_readiness_rejects_duplicate_case_ids(tmp_path: Path) -> None:
+    scenario_path = (
+        ROOT
+        / "assets"
+        / "coding-harnesses"
+        / "exception-learning-readiness"
+        / "examples"
+        / "synthetic-learning-readiness-scenarios.json"
+    )
+    payload = json.loads(scenario_path.read_text(encoding="utf-8"))
+    payload["cases"] = [payload["cases"][0], payload["cases"][0]]
+    duplicate_path = tmp_path / "duplicate-scenarios.json"
+    duplicate_path.write_text(json.dumps(payload), encoding="utf-8")
+
+    with pytest.raises(ValueError, match="duplicate case_id"):
+        evaluate_exception_learning_readiness_scenarios(
+            ROOT,
+            duplicate_path,
+            output=tmp_path / "out.json",
+        )
+
+
+def test_exception_learning_readiness_hashes_external_scenario_file(tmp_path: Path) -> None:
+    scenario_path = (
+        ROOT
+        / "assets"
+        / "coding-harnesses"
+        / "exception-learning-readiness"
+        / "examples"
+        / "synthetic-learning-readiness-scenarios.json"
+    )
+    external_path = tmp_path / "external-scenarios.json"
+    external_path.write_text(scenario_path.read_text(encoding="utf-8"), encoding="utf-8")
+
+    report = evaluate_exception_learning_readiness_scenarios(
+        ROOT,
+        external_path,
+        output=tmp_path / "learning-readiness.json",
+    )
+
+    external_keys = [
+        key for key in report["input_hashes"] if key.startswith("external-scenario:")
+    ]
+    assert external_keys
+    assert str(tmp_path) not in json.dumps(report["input_hashes"])
+    assert report["input_hashes"][external_keys[0]].startswith("sha256:")
 
 
 def test_exception_learning_queue_blocks_non_public_origin_without_release(

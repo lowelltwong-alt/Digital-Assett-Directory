@@ -1,0 +1,485 @@
+{
+  "schema_version": "0.1.0",
+  "scenario_set_id": "exception-learning-readiness-synthetic-v0.1.0",
+  "authority_boundary": "Synthetic metadata-only scenarios for checking DAD exception learning queue conservatism. These cases do not promote lessons or prove real repo completeness.",
+  "sample_size_threshold": 10,
+  "cases": [
+    {
+      "case_id": "clean-public-validated-fix",
+      "description": "A clean public event type with ten validated fixes is a human review candidate.",
+      "repo": {
+        "repo_id": "synthetic-public-clean",
+        "visibility": "public",
+        "public_facing": false
+      },
+      "events": [
+        {
+          "event_key": "clean-test-01",
+          "event_type": "test_failure",
+          "stage": "midflight",
+          "severity": "medium",
+          "capture_contract": "failed_command",
+          "summary": "Synthetic test failure 01 with a verified fix.",
+          "context_refs": ["tests/test_clean_01.py"],
+          "validation_refs": ["python -m pytest tests/test_clean.py failed"]
+        },
+        {
+          "event_key": "clean-test-02",
+          "event_type": "test_failure",
+          "stage": "midflight",
+          "severity": "medium",
+          "capture_contract": "failed_command",
+          "summary": "Synthetic test failure 02 with a verified fix.",
+          "context_refs": ["tests/test_clean_02.py"],
+          "validation_refs": ["python -m pytest tests/test_clean.py failed"]
+        },
+        {
+          "event_key": "clean-test-03",
+          "event_type": "test_failure",
+          "stage": "midflight",
+          "severity": "medium",
+          "capture_contract": "failed_command",
+          "summary": "Synthetic test failure 03 with a verified fix.",
+          "context_refs": ["tests/test_clean_03.py"],
+          "validation_refs": ["python -m pytest tests/test_clean.py failed"]
+        },
+        {
+          "event_key": "clean-test-04",
+          "event_type": "test_failure",
+          "stage": "midflight",
+          "severity": "medium",
+          "capture_contract": "failed_command",
+          "summary": "Synthetic test failure 04 with a verified fix.",
+          "context_refs": ["tests/test_clean_04.py"],
+          "validation_refs": ["python -m pytest tests/test_clean.py failed"]
+        },
+        {
+          "event_key": "clean-test-05",
+          "event_type": "test_failure",
+          "stage": "midflight",
+          "severity": "medium",
+          "capture_contract": "failed_command",
+          "summary": "Synthetic test failure 05 with a verified fix.",
+          "context_refs": ["tests/test_clean_05.py"],
+          "validation_refs": ["python -m pytest tests/test_clean.py failed"]
+        },
+        {
+          "event_key": "clean-test-06",
+          "event_type": "test_failure",
+          "stage": "midflight",
+          "severity": "medium",
+          "capture_contract": "failed_command",
+          "summary": "Synthetic test failure 06 with a verified fix.",
+          "context_refs": ["tests/test_clean_06.py"],
+          "validation_refs": ["python -m pytest tests/test_clean.py failed"]
+        },
+        {
+          "event_key": "clean-test-07",
+          "event_type": "test_failure",
+          "stage": "midflight",
+          "severity": "medium",
+          "capture_contract": "failed_command",
+          "summary": "Synthetic test failure 07 with a verified fix.",
+          "context_refs": ["tests/test_clean_07.py"],
+          "validation_refs": ["python -m pytest tests/test_clean.py failed"]
+        },
+        {
+          "event_key": "clean-test-08",
+          "event_type": "test_failure",
+          "stage": "midflight",
+          "severity": "medium",
+          "capture_contract": "failed_command",
+          "summary": "Synthetic test failure 08 with a verified fix.",
+          "context_refs": ["tests/test_clean_08.py"],
+          "validation_refs": ["python -m pytest tests/test_clean.py failed"]
+        },
+        {
+          "event_key": "clean-test-09",
+          "event_type": "test_failure",
+          "stage": "midflight",
+          "severity": "medium",
+          "capture_contract": "failed_command",
+          "summary": "Synthetic test failure 09 with a verified fix.",
+          "context_refs": ["tests/test_clean_09.py"],
+          "validation_refs": ["python -m pytest tests/test_clean.py failed"]
+        },
+        {
+          "event_key": "clean-test-10",
+          "event_type": "test_failure",
+          "stage": "midflight",
+          "severity": "medium",
+          "capture_contract": "failed_command",
+          "summary": "Synthetic test failure 10 with a verified fix.",
+          "context_refs": ["tests/test_clean_10.py"],
+          "validation_refs": ["python -m pytest tests/test_clean.py failed"]
+        }
+      ],
+      "fix_outcomes": [
+        {
+          "event_key": "clean-test-01",
+          "decision": "fixed",
+          "summary": "Added regression coverage for clean synthetic failure 01.",
+          "validation_refs": ["python -m pytest tests/test_clean.py"],
+          "regression_test_refs": ["tests/test_clean.py::test_clean_failure_01"],
+          "fix_refs": ["commit:clean-01"],
+          "owner_authority": "repo"
+        },
+        {
+          "event_key": "clean-test-02",
+          "decision": "fixed",
+          "summary": "Added regression coverage for clean synthetic failure 02.",
+          "validation_refs": ["python -m pytest tests/test_clean.py"],
+          "regression_test_refs": ["tests/test_clean.py::test_clean_failure_02"],
+          "fix_refs": ["commit:clean-02"],
+          "owner_authority": "repo"
+        },
+        {
+          "event_key": "clean-test-03",
+          "decision": "fixed",
+          "summary": "Added regression coverage for clean synthetic failure 03.",
+          "validation_refs": ["python -m pytest tests/test_clean.py"],
+          "regression_test_refs": ["tests/test_clean.py::test_clean_failure_03"],
+          "fix_refs": ["commit:clean-03"],
+          "owner_authority": "repo"
+        },
+        {
+          "event_key": "clean-test-04",
+          "decision": "fixed",
+          "summary": "Added regression coverage for clean synthetic failure 04.",
+          "validation_refs": ["python -m pytest tests/test_clean.py"],
+          "regression_test_refs": ["tests/test_clean.py::test_clean_failure_04"],
+          "fix_refs": ["commit:clean-04"],
+          "owner_authority": "repo"
+        },
+        {
+          "event_key": "clean-test-05",
+          "decision": "fixed",
+          "summary": "Added regression coverage for clean synthetic failure 05.",
+          "validation_refs": ["python -m pytest tests/test_clean.py"],
+          "regression_test_refs": ["tests/test_clean.py::test_clean_failure_05"],
+          "fix_refs": ["commit:clean-05"],
+          "owner_authority": "repo"
+        },
+        {
+          "event_key": "clean-test-06",
+          "decision": "fixed",
+          "summary": "Added regression coverage for clean synthetic failure 06.",
+          "validation_refs": ["python -m pytest tests/test_clean.py"],
+          "regression_test_refs": ["tests/test_clean.py::test_clean_failure_06"],
+          "fix_refs": ["commit:clean-06"],
+          "owner_authority": "repo"
+        },
+        {
+          "event_key": "clean-test-07",
+          "decision": "fixed",
+          "summary": "Added regression coverage for clean synthetic failure 07.",
+          "validation_refs": ["python -m pytest tests/test_clean.py"],
+          "regression_test_refs": ["tests/test_clean.py::test_clean_failure_07"],
+          "fix_refs": ["commit:clean-07"],
+          "owner_authority": "repo"
+        },
+        {
+          "event_key": "clean-test-08",
+          "decision": "fixed",
+          "summary": "Added regression coverage for clean synthetic failure 08.",
+          "validation_refs": ["python -m pytest tests/test_clean.py"],
+          "regression_test_refs": ["tests/test_clean.py::test_clean_failure_08"],
+          "fix_refs": ["commit:clean-08"],
+          "owner_authority": "repo"
+        },
+        {
+          "event_key": "clean-test-09",
+          "decision": "fixed",
+          "summary": "Added regression coverage for clean synthetic failure 09.",
+          "validation_refs": ["python -m pytest tests/test_clean.py"],
+          "regression_test_refs": ["tests/test_clean.py::test_clean_failure_09"],
+          "fix_refs": ["commit:clean-09"],
+          "owner_authority": "repo"
+        },
+        {
+          "event_key": "clean-test-10",
+          "decision": "fixed",
+          "summary": "Added regression coverage for clean synthetic failure 10.",
+          "validation_refs": ["python -m pytest tests/test_clean.py"],
+          "regression_test_refs": ["tests/test_clean.py::test_clean_failure_10"],
+          "fix_refs": ["commit:clean-10"],
+          "owner_authority": "repo"
+        }
+      ],
+      "expected": {
+        "status_by_event_type": {
+          "test_failure": "validated_fix_review_candidate"
+        },
+        "blocker_substrings_by_event_type": {
+          "test_failure": []
+        },
+        "row_fields_by_event_type": {
+          "test_failure": {
+            "observed_count": 10,
+            "validated_fix_count": 10,
+            "unresolved_observed_count": 0,
+            "public_release_required_count": 0,
+            "source_visibility_counts": {
+              "public": 10
+            }
+          }
+        }
+      }
+    },
+    {
+      "case_id": "small-sample-validated-fix-blocker",
+      "description": "A single public event with a validated fix stays counts-only under the production threshold.",
+      "repo": {
+        "repo_id": "synthetic-public-small-sample",
+        "visibility": "public",
+        "public_facing": false
+      },
+      "events": [
+        {
+          "event_key": "small-test",
+          "event_type": "test_failure",
+          "stage": "midflight",
+          "severity": "medium",
+          "capture_contract": "failed_command",
+          "summary": "Synthetic small-sample test failure with a verified fix.",
+          "context_refs": ["tests/test_small_sample.py"],
+          "validation_refs": ["python -m pytest tests/test_small_sample.py failed"]
+        }
+      ],
+      "fix_outcomes": [
+        {
+          "event_key": "small-test",
+          "decision": "fixed",
+          "summary": "Added regression coverage for the small-sample synthetic failure.",
+          "validation_refs": ["python -m pytest tests/test_small_sample.py"],
+          "regression_test_refs": ["tests/test_small_sample.py::test_small_sample_regression"],
+          "fix_refs": ["commit:small-sample"],
+          "owner_authority": "repo"
+        }
+      ],
+      "expected": {
+        "status_by_event_type": {
+          "test_failure": "needs_more_evidence"
+        },
+        "blocker_substrings_by_event_type": {
+          "test_failure": ["N=10"]
+        },
+        "row_fields_by_event_type": {
+          "test_failure": {
+            "observed_count": 1,
+            "validated_fix_count": 1,
+            "source_visibility_counts": {
+              "public": 1
+            }
+          }
+        }
+      }
+    },
+    {
+      "case_id": "mixed-validated-and-unresolved",
+      "description": "A validated fix must not hide unresolved siblings in the same event-type cluster.",
+      "repo": {
+        "repo_id": "synthetic-public-mixed",
+        "visibility": "public",
+        "public_facing": false
+      },
+      "events": [
+        {
+          "event_key": "fixed-review",
+          "event_type": "review_finding",
+          "stage": "review",
+          "severity": "medium",
+          "capture_contract": "review_finding",
+          "summary": "Synthetic review finding with a verified fix.",
+          "context_refs": ["docs/fixed-review.md"],
+          "validation_refs": ["review found issue"]
+        },
+        {
+          "event_key": "unresolved-review",
+          "event_type": "review_finding",
+          "stage": "review",
+          "severity": "medium",
+          "capture_contract": "review_finding",
+          "summary": "Synthetic review finding still unresolved.",
+          "context_refs": ["docs/unresolved-review.md"],
+          "validation_refs": ["review found second issue"]
+        }
+      ],
+      "fix_outcomes": [
+        {
+          "event_key": "fixed-review",
+          "decision": "fixed",
+          "summary": "Added regression coverage for one review finding only.",
+          "validation_refs": ["python -m pytest tests/test_review.py"],
+          "regression_test_refs": ["tests/test_review.py::test_fixed_review_regression"],
+          "fix_refs": ["commit:mixed"],
+          "owner_authority": "repo"
+        }
+      ],
+      "expected": {
+        "status_by_event_type": {
+          "review_finding": "needs_fix_outcome"
+        },
+        "blocker_substrings_by_event_type": {
+          "review_finding": ["observed exception lacks validated fix outcome"]
+        },
+        "row_fields_by_event_type": {
+          "review_finding": {
+            "observed_count": 2,
+            "validated_fix_count": 1,
+            "unresolved_observed_count": 1,
+            "source_visibility_counts": {
+              "public": 2
+            }
+          }
+        }
+      }
+    },
+    {
+      "case_id": "invalid-legacy-fix-row",
+      "description": "A legacy fix row with string refs is invalid and cannot count as a validated fix.",
+      "repo": {
+        "repo_id": "synthetic-public-invalid-fix",
+        "visibility": "public",
+        "public_facing": false
+      },
+      "events": [
+        {
+          "event_key": "invalid-fix-test",
+          "event_type": "test_failure",
+          "stage": "midflight",
+          "severity": "medium",
+          "capture_contract": "failed_command",
+          "summary": "Synthetic test failure with an invalid legacy fix row.",
+          "context_refs": ["tests/test_invalid_fix.py"],
+          "validation_refs": ["python -m pytest tests/test_invalid_fix.py failed"]
+        }
+      ],
+      "fix_outcomes": [
+        {
+          "event_key": "invalid-fix-test",
+          "decision": "fixed",
+          "summary": "Legacy row claims validated fix with invalid string ref fields.",
+          "validation_refs": ["python -m pytest tests/test_invalid_fix.py"],
+          "regression_test_refs": ["tests/test_invalid_fix.py::test_invalid_fix_regression"],
+          "fix_refs": ["legacy-import:invalid"],
+          "owner_authority": "repo",
+          "append_direct": true,
+          "mutations": {
+            "fix_id": "dad:exception-fix:synthetic-invalid-string-refs",
+            "validation_refs": "python -m pytest tests/test_invalid_fix.py",
+            "regression_test_refs": "tests/test_invalid_fix.py::test_invalid_fix_regression"
+          }
+        }
+      ],
+      "expected": {
+        "status_by_event_type": {
+          "test_failure": "needs_fix_outcome"
+        },
+        "blocker_substrings_by_event_type": {
+          "test_failure": ["observed exception lacks validated fix outcome"]
+        },
+        "row_fields_by_event_type": {
+          "test_failure": {
+            "observed_count": 1,
+            "validated_fix_count": 0,
+            "unresolved_observed_count": 1,
+            "source_visibility_counts": {
+              "public": 1
+            }
+          }
+        },
+        "quarantine_event_types": ["fix_outcome_report_invalid_record"]
+      }
+    },
+    {
+      "case_id": "unknown-origin-release-gate",
+      "description": "Unknown-origin evidence with a validated fix still needs release before public-facing reuse.",
+      "repo": {
+        "repo_id": "synthetic-unknown-origin",
+        "visibility": "unknown",
+        "public_facing": false
+      },
+      "events": [
+        {
+          "event_key": "unknown-origin-test",
+          "event_type": "test_failure",
+          "stage": "midflight",
+          "severity": "medium",
+          "capture_contract": "failed_command",
+          "summary": "Synthetic unknown-origin test failure with a verified fix.",
+          "context_refs": ["tests/test_unknown_origin.py"],
+          "validation_refs": ["python -m pytest tests/test_unknown_origin.py failed"]
+        }
+      ],
+      "fix_outcomes": [
+        {
+          "event_key": "unknown-origin-test",
+          "decision": "fixed",
+          "summary": "Added regression coverage for unknown-origin failure.",
+          "validation_refs": ["python -m pytest tests/test_unknown_origin.py"],
+          "regression_test_refs": ["tests/test_unknown_origin.py::test_unknown_origin_regression"],
+          "fix_refs": ["commit:unknown-origin"],
+          "owner_authority": "repo"
+        }
+      ],
+      "expected": {
+        "status_by_event_type": {
+          "test_failure": "needs_human_release"
+        },
+        "blocker_substrings_by_event_type": {
+          "test_failure": ["human release"]
+        },
+        "row_fields_by_event_type": {
+          "test_failure": {
+            "observed_count": 1,
+            "validated_fix_count": 1,
+            "public_release_required_count": 1,
+            "source_visibility_counts": {
+              "unknown": 1
+            }
+          }
+        }
+      }
+    },
+    {
+      "case_id": "backfill-only-source-review",
+      "description": "Backfill-only path-signal candidates stay in source review.",
+      "repo": {
+        "repo_id": "synthetic-public-backfill",
+        "visibility": "public",
+        "public_facing": false
+      },
+      "events": [
+        {
+          "event_key": "backfill-path-signal",
+          "event_type": "backfill_exception_candidate",
+          "stage": "backfill",
+          "severity": "info",
+          "capture_contract": "backfill_candidate",
+          "summary": "Synthetic backfill path signal only.",
+          "context_refs": ["path-ref-sha256:synthetic-backfill"],
+          "validation_refs": ["metadata-only path signal"]
+        }
+      ],
+      "expected": {
+        "status_by_event_type": {
+          "backfill_exception_candidate": "needs_source_review"
+        },
+        "blocker_substrings_by_event_type": {
+          "backfill_exception_candidate": ["backfill path-signal candidates"]
+        },
+        "row_fields_by_event_type": {
+          "backfill_exception_candidate": {
+            "observed_count": 0,
+            "backfill_candidate_count": 1,
+            "validated_fix_count": 0,
+            "source_visibility_counts": {
+              "public": 1
+            }
+          }
+        }
+      }
+    }
+  ]
+}

@@ -55,6 +55,27 @@ files under `tests-or-evals/` must conform to
 - Agent-instruction and code-review red-team.
 - Repo enrollment/mail/governance safety.
 - Public/private source provenance.
+- Exception learning readiness for mixed-evidence, fix-outcome, release, and
+  backfill promotion boundaries.
+- Language frontier harnesses for Python, Rust, and future languages. These
+  convert source-watch discoveries into small validation cases before DAD
+  changes coding guidance or downstream recommendations.
+
+## Language Frontier Harness Rule
+
+When a Python, Rust, or future-language source suggests a coding improvement,
+DAD should ask whether it needs a harness before it becomes advice:
+
+- performance claims need same-workload timing and correctness evidence;
+- parsing, chunking, scanning, routing, hashing, and serialization claims need
+  malformed-input or property/fuzz cases;
+- type, lint, compiler, and test-runner claims need commands that future agents
+  can run and audit;
+- crate, package, or tool recommendations need license, maintenance, and
+  compatibility screening.
+
+If a discovery cannot name a validation command or eval idea, it stays as a
+pointer-only research note.
 
 ## Adoption Flow
 

@@ -71,6 +71,7 @@ from .exceptions_lake import (
     backfill_exception_candidates,
     collect_exception_fix_outcomes,
     collect_exception_events,
+    evaluate_exception_learning_readiness_scenarios,
     exception_lake_paths,
     load_event_type_registry,
     record_exception_fix_outcome,
@@ -1880,6 +1881,37 @@ def exceptions_learning_queue(
         console.print(str(exc))
         raise typer.Exit(2) from exc
     console.print_json(data=result)
+
+
+@exceptions_app.command("learning-check")
+def exceptions_learning_check(
+    scenarios: Path = typer.Option(
+        Path(
+            "assets/coding-harnesses/exception-learning-readiness/examples/"
+            "synthetic-learning-readiness-scenarios.json"
+        ),
+        "--scenarios",
+    ),
+    output: Optional[Path] = typer.Option(None, "--output"),
+    sample_size_threshold: Optional[int] = typer.Option(None, "--sample-size-threshold"),
+    hub: Optional[Path] = typer.Option(None),
+) -> None:
+    """Run synthetic learning-readiness scenarios against the exception queue."""
+    cfg = _cfg(hub=hub)
+    scenario_path = scenarios if scenarios.is_absolute() else cfg.repo_root / scenarios
+    try:
+        result = evaluate_exception_learning_readiness_scenarios(
+            cfg.repo_root,
+            scenario_path,
+            output=output,
+            sample_size_threshold=sample_size_threshold,
+        )
+    except (OSError, json.JSONDecodeError, KeyError, ValueError) as exc:
+        console.print(str(exc))
+        raise typer.Exit(2) from exc
+    console.print_json(data=result)
+    if result.get("failed_count"):
+        raise typer.Exit(1)
 
 
 @lesson_app.command("add")

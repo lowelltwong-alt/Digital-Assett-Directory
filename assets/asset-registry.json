@@ -304,6 +304,41 @@
       ]
     },
     {
+      "asset_id": "exception-learning-readiness-harness",
+      "name": "Exception Learning Readiness Harness",
+      "version": "0.1.0",
+      "path": "assets/coding-harnesses/exception-learning-readiness",
+      "asset_type": "coding_harness",
+      "managed_block_id": "EXCEPTION_LEARNING_READINESS",
+      "profiles": [
+        "exceptions-lake",
+        "learning-loop",
+        "governance-review",
+        "promotion-boundary"
+      ],
+      "use_when": [
+        "DAD changes exception learning queue statuses, blockers, fix-outcome validation, or release gates.",
+        "A future agent needs proof that weak, mixed, or backfill-only evidence does not become promotion-ready.",
+        "The exception lake needs synthetic guardrails before learning from fix outcomes."
+      ],
+      "does_not_apply_when": [
+        "The question is whether a repo would emit a packet at all; use the exception capture completeness harness.",
+        "The evidence would require copying raw private data, secrets, long logs, or source blobs."
+      ],
+      "install_path": "assets/coding-harnesses/exception-learning-readiness",
+      "source_package": {
+        "filename": "repo-local",
+        "sha256": ""
+      },
+      "installed_at": "2026-07-03",
+      "review_status": "candidate",
+      "safety_notes": [
+        "Synthetic readiness checks protect against known false-green queue states.",
+        "Passing scenarios do not prove real repo completeness or authorize lesson promotion.",
+        "Non-public-origin evidence remains human-release gated for public-facing reuse."
+      ]
+    },
+    {
       "asset_id": "language-frontier-source-radar",
       "name": "Language Frontier Source Radar",
       "version": "0.1.0",

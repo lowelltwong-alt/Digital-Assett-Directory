@@ -63,8 +63,13 @@ AI-agent configuration:
 
 Python:
 
+- Python What's New: https://docs.python.org/3/whatsnew/
+- PEP index: https://peps.python.org/
+- Python Insider: https://blog.python.org/
+- Python developer guide: https://devguide.python.org/
 - Dataclasses: https://docs.python.org/3/library/dataclasses.html
 - Typing: https://docs.python.org/3/library/typing.html
+- Python typing site: https://typing.python.org/
 - Enum: https://docs.python.org/3/library/enum.html
 - Contextlib: https://docs.python.org/3/library/contextlib.html
 - Importlib resources: https://docs.python.org/3/library/importlib.resources.html
@@ -72,9 +77,18 @@ Python:
 - Context variables: https://docs.python.org/3/library/contextvars.html
 - Functools: https://docs.python.org/3/library/functools.html
 - Exceptions: https://docs.python.org/3/tutorial/errors.html
+- Python packaging guide: https://packaging.python.org/
+- pytest docs: https://docs.pytest.org/
+- Hypothesis docs: https://hypothesis.readthedocs.io/
+- Ruff docs: https://docs.astral.sh/ruff/
+- uv docs: https://docs.astral.sh/uv/
 
 Rust:
 
+- Rust blog: https://blog.rust-lang.org/
+- Inside Rust blog: https://blog.rust-lang.org/inside-rust/
+- Rust project goals: https://rust-lang.github.io/rust-project-goals/
+- Rust RFCs: https://github.com/rust-lang/rfcs
 - Rust Book modules: https://doc.rust-lang.org/book/ch07-00-managing-growing-projects-with-packages-crates-and-modules.html
 - Rust Reference visibility: https://doc.rust-lang.org/reference/visibility-and-privacy.html
 - Rust API Guidelines: https://rust-lang.github.io/api-guidelines/about.html
@@ -82,6 +96,12 @@ Rust:
 - Clippy: https://doc.rust-lang.org/clippy/
 - Cargo test: https://doc.rust-lang.org/cargo/commands/cargo-test.html
 - Rustdoc tests: https://doc.rust-lang.org/rustdoc/documentation-tests.html
+- Rust Performance Book: https://nnethercote.github.io/perf-book/
+- This Week in Rust: https://this-week-in-rust.org/
+- RustSec: https://rustsec.org/
+- Rust Fuzz Book: https://rust-fuzz.github.io/book/
+- cargo-nextest: https://nexte.st/
+- crates/docs discovery: https://crates.io/, https://docs.rs/, https://lib.rs/
 
 AI-code security:
 

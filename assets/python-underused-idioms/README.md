@@ -31,9 +31,11 @@ Under-representation claims are heuristic judgments, not measured GitHub frequen
 ## Frontier refresh
 
 Refresh candidates come from `registry/trusted-source-registry.json` entries for
-`python-core`, `python-packaging`, `astral`, and `pyo3`. Treat them as research
-pointers only. New Python guidance needs screening, target-version review, and a
-small regression or example before it changes this card.
+`python-core`, `python-packaging`, `python-typing`, `pytest-dev`, `hypothesis`,
+`python-type-checkers`, `astral`, and `pyo3`. Treat them as research pointers
+only. New Python guidance needs screening, target-version review, checker or
+tool support notes when relevant, and a small regression or example before it
+changes this card.
 
 ## Boundary
 

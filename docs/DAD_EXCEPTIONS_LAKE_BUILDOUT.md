@@ -507,6 +507,31 @@ does not read raw source content, and does not promote backfill-only, mixed-back
 unreleased non-public-origin, or under-threshold clusters into lessons, harnesses,
 global rules, or repo instructions.
 
+Implemented readiness harness:
+
+```text
+asset-dir exceptions learning-check --scenarios assets/coding-harnesses/exception-learning-readiness/examples/synthetic-learning-readiness-scenarios.json
+```
+
+The harness writes:
+
+- `processed/reports/exception_learning_readiness_check.json`;
+- `processed/reports/exception_learning_readiness_check.md`.
+
+It creates temporary synthetic hubs and repos, records safe metadata-only
+exception events and fix outcomes through the real DAD APIs, runs the learning
+queue, and compares expected statuses and blockers. Current scenarios cover:
+
+- clean public validated fix;
+- mixed validated and unresolved evidence;
+- schema-invalid legacy fix rows;
+- unknown-origin release blocker;
+- backfill-only source-review blocker.
+
+This is synthetic generated evidence only. It prevents known false-green learning
+states from returning, but it does not prove real repo completeness or promote a
+lesson.
+
 ## Self-Learning Rules
 
 DAD should promote a pattern only when enough reviewed evidence exists.
@@ -554,6 +579,7 @@ asset-dir exceptions learn --event-id <id>|--cluster <id>
 asset-dir exceptions digest --repo <repo>
 asset-dir exceptions report
 asset-dir exceptions learning-queue
+asset-dir exceptions learning-check --scenarios <path>
 ```
 
 Repo agents should normally use `record` during postflight or after a failing

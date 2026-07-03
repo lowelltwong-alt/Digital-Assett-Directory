@@ -44,6 +44,17 @@ Use:
 - security-sensitive Python code
 - filesystem/config/data-pipeline code
 
+## Frontier refresh
+
+Use this asset with `docs/LANGUAGE_CODING_ADVANTAGE.md` and
+`registry/trusted-source-registry.json`. Watch Python core, PEPs, typing,
+packaging, pytest, Hypothesis, type checker, Ruff, and uv sources for changes
+that could make Python code easier for agents to inspect, verify, or run.
+
+Do not promote a new Python tactic from a blog post or release note alone. Add
+an applicability limit, a small validation idea, and postflight evidence before
+it becomes durable DAD guidance.
+
 ## Do not use as
 
 - a mandate to use every advanced feature;

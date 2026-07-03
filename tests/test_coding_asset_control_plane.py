@@ -121,9 +121,15 @@ def test_language_coding_advantage_registry_resolves_sources_and_assets():
         "hypothesis",
         "python-type-checkers",
     }.issubset(languages["python"]["trusted_source_ids"])
-    assert {"rust-fuzz", "rust-test-frontier"}.issubset(
+    assert {"rust-ecosystem-curation", "rust-fuzz", "rust-test-frontier"}.issubset(
         languages["rust"]["trusted_source_ids"]
     )
+    trusted_sources = {
+        source["source_id"]: source
+        for source in load_json("registry/trusted-source-registry.json")["sources"]
+    }
+    rust_ecosystem_patterns = set(trusted_sources["rust-ecosystem-curation"]["url_patterns"])
+    assert {"lib.rs", "docs.rs", "blessed.rs"}.issubset(rust_ecosystem_patterns)
     python_patterns = {
         pattern["pattern_id"] for pattern in languages["python"]["ai_overlooked_patterns"]
     }

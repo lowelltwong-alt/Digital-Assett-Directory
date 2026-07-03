@@ -1,0 +1,56 @@
+{
+  "schema_version": "0.1.0",
+  "eval_id": "exception-learning-readiness-minimum-eval-v0.1.0",
+  "harness_id": "dad:harness:exception-learning-readiness",
+  "status": "candidate",
+  "purpose": "Verify that DAD's exception learning queue stays conservative for clean, small-sample, mixed, invalid, non-public-origin, and backfill-only synthetic cases.",
+  "input_contract": [
+    "A scenario file contains metadata-only events, fix outcomes, expected learning statuses, expected blocker substrings, and optional quarantine expectations.",
+    "The evaluator creates temporary synthetic hubs and repos, then uses the real exception event, fix outcome, collect, and learning-queue APIs.",
+    "The evaluator writes generated candidate reports only under processed/reports or the requested output path."
+  ],
+  "cases": [
+    {
+      "case_id": "clean_public_validated_fix_status",
+      "given": ["ten public observed events", "ten schema-valid fixed outcomes with validation and regression refs"],
+      "expected": ["learning status is validated_fix_review_candidate", "no promotion blockers are present"],
+      "fail_if": ["the clean case is blocked", "the case requires private/public release"]
+    },
+    {
+      "case_id": "small_sample_validated_fix_blocker",
+      "given": ["one public observed event", "one schema-valid fixed outcome with validation and regression refs", "scenario threshold is ten"],
+      "expected": ["learning status is needs_more_evidence", "promotion blockers mention N=10"],
+      "fail_if": ["the one-off fix becomes validated_fix_review_candidate", "the sample-size blocker is hidden"]
+    },
+    {
+      "case_id": "mixed_validated_unresolved_blocker",
+      "given": ["one validated fix", "one unresolved sibling in the same event-type cluster"],
+      "expected": ["learning status is needs_fix_outcome", "promotion blockers mention missing validated fix outcome"],
+      "fail_if": ["the cluster is marked validated_fix_review_candidate", "the unresolved sibling is hidden"]
+    },
+    {
+      "case_id": "invalid_fix_row_quarantine",
+      "given": ["one observed event", "one direct legacy fix row with string validation refs"],
+      "expected": ["learning status is needs_fix_outcome", "invalid fix row is quarantined"],
+      "fail_if": ["the invalid row counts as validated", "quarantine evidence is missing"]
+    },
+    {
+      "case_id": "non_public_origin_release_blocker",
+      "given": ["one unknown-origin observed event", "one validated fixed outcome"],
+      "expected": ["learning status is needs_human_release", "promotion blockers mention human release"],
+      "fail_if": ["the row becomes a public-facing review candidate without release"]
+    },
+    {
+      "case_id": "backfill_only_source_review",
+      "given": ["one backfill-only path-signal event"],
+      "expected": ["learning status is needs_source_review", "promotion blockers mention backfill path-signal candidates"],
+      "fail_if": ["backfill-only evidence becomes learnable"]
+    }
+  ],
+  "must_not_claim": [
+    "A passing synthetic eval proves real repo completeness.",
+    "A passing synthetic eval promotes a lesson or global rule.",
+    "A validated fix overrides source repo authority."
+  ],
+  "promotion_gate": "Promote only after synthetic readiness cases, real repo fix-outcome backfill examples, and human-reviewed lesson promotion samples all pass without false-green statuses."
+}

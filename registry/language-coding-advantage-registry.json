@@ -217,6 +217,7 @@
       "trusted_source_ids": [
         "rust-lang",
         "rust-community-frontier",
+        "rust-ecosystem-curation",
         "rust-security",
         "rust-fuzz",
         "rust-test-frontier",

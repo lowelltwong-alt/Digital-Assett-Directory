@@ -28,9 +28,16 @@ Cite `rs-idiom:*` ids in reviews and lessons so adoption is traceable.
 ## Frontier refresh
 
 Refresh candidates come from `registry/trusted-source-registry.json` entries for
-`rust-lang`, `rust-community-frontier`, `rust-security`, and `pyo3`. Treat them as
-research pointers only. New Rust guidance needs screening, profile evidence where
-performance is claimed, and parity evidence before it changes downstream advice.
+`rust-lang`, `rust-community-frontier`, `rust-ecosystem-curation`,
+`rust-security`, `rust-fuzz`, `rust-test-frontier`, `pyo3`, and `google`.
+Treat them as research pointers only. New Rust guidance needs screening, license
+and maintenance checks for crates, profile evidence where performance is
+claimed, and parity evidence before it changes downstream advice.
+
+Rust starter packs, overlays, and rollout plans are candidates until reviewed.
+Do not apply a full Rust overlay merely because a zip or source pack exists.
+Prefer one DAD-owned read-only Rust leaf tool first, then record lessons before
+downstream rollout.
 
 ## Boundary
 

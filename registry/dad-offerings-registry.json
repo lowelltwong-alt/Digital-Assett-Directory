@@ -211,6 +211,44 @@
       "authority_boundary": "Capture-completeness results are candidate evidence; they prove scenario coverage and observed outbox comparisons, not source truth or public safety."
     },
     {
+      "offering_id": "dad:offering:exception-learning-readiness-harness",
+      "name": "Exception Learning Readiness Harness",
+      "version": "0.1.0",
+      "offering_type": "harness",
+      "harness_registry_ref": "dad:harness:exception-learning-readiness",
+      "path": "assets/coding-harnesses/exception-learning-readiness",
+      "languages": ["python", "agent-instruction"],
+      "repo_types": ["control_plane", "governed_repo_family", "application", "library"],
+      "domains": ["governance", "learning_loop", "exceptions_lake"],
+      "context_tags": ["exception_learning", "fix_outcome", "promotion_gate", "synthetic_fixture"],
+      "task_types": ["testing", "governance_review", "learning_loop", "exception_review"],
+      "capabilities": [
+        "learning_readiness_eval",
+        "mixed_evidence_false_green_check",
+        "fix_outcome_validation_gate",
+        "public_private_release_gate",
+        "backfill_promotion_boundary"
+      ],
+      "applies_when": [
+        "DAD changes exception learning queue statuses, blockers, fix-outcome validation, public/private release gates, or backfill promotion boundaries.",
+        "A future agent wants proof that exception clusters do not become learnable from weak or mixed evidence."
+      ],
+      "does_not_apply_when": [
+        "The question is whether a repo emitted a packet at all; use the exception capture completeness harness instead.",
+        "The evidence requires raw logs, private rows, secrets, or copied source blobs instead of pointer-safe metadata."
+      ],
+      "public_safe": true,
+      "upgrade_channel": "dad_mail",
+      "known_upgrades": [],
+      "source_refs": [
+        "registry/coding-harness-registry.json#dad:harness:exception-learning-readiness",
+        "docs/DAD_EXCEPTIONS_LAKE_BUILDOUT.md",
+        "src/digital_asset_directory/exceptions_lake.py"
+      ],
+      "review_status": "candidate",
+      "authority_boundary": "Learning-readiness results are synthetic candidate evidence; they do not promote lessons, prove real repo completeness, or override source authority."
+    },
+    {
       "offering_id": "dad:offering:language-coding-advantage",
       "name": "Language Coding Advantage Registry",
       "version": "0.1.0",
