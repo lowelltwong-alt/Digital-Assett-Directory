@@ -539,6 +539,61 @@ def validate_repo(repo_root: Path) -> dict[str, Any]:
         ]
         if len(exception_types) != len(set(exception_types)):
             errors.append("Exception event type registry has duplicate event_type values")
+        event_categories = {
+            str(item.get("category", ""))
+            for item in exception_type_registry.get("event_types", [])
+            if isinstance(item, dict) and item.get("category")
+        }
+        taxonomy_dimensions = exception_type_registry.get("taxonomy_dimensions", {})
+        taxonomy_axes = taxonomy_dimensions.get("axes", {}) if isinstance(taxonomy_dimensions, dict) else {}
+        required_taxonomy_axes = {
+            "origin_surface",
+            "detection_mode",
+            "impact_domain",
+            "learning_route",
+            "default_handling",
+            "review_priority",
+        }
+        missing_axes = sorted(required_taxonomy_axes - set(taxonomy_axes))
+        if missing_axes:
+            errors.append(f"Exception taxonomy dimensions missing axes: {missing_axes}")
+        axis_values: dict[str, set[str]] = {
+            axis: {str(value) for value in meta.get("values", [])}
+            for axis, meta in taxonomy_axes.items()
+            if isinstance(meta, dict)
+        }
+        category_defaults = (
+            taxonomy_dimensions.get("category_defaults", {})
+            if isinstance(taxonomy_dimensions, dict)
+            else {}
+        )
+        missing_category_defaults = sorted(event_categories - set(category_defaults))
+        if missing_category_defaults:
+            errors.append(
+                "Exception taxonomy dimensions missing category defaults: "
+                f"{missing_category_defaults}"
+            )
+        for category, defaults in category_defaults.items():
+            if category not in event_categories:
+                errors.append(
+                    "Exception taxonomy dimensions define unused category default: "
+                    f"{category}"
+                )
+            if not isinstance(defaults, dict):
+                continue
+            for axis in required_taxonomy_axes:
+                value = str(defaults.get(axis, ""))
+                if not value:
+                    errors.append(
+                        "Exception taxonomy category default lacks "
+                        f"{axis}: {category}"
+                    )
+                    continue
+                if axis_values.get(axis) and value not in axis_values[axis]:
+                    errors.append(
+                        "Exception taxonomy category default uses unknown "
+                        f"{axis} value {value}: {category}"
+                    )
         classifier = exception_type_registry.get("backfill_classifier", {})
         backfill_rules = classifier.get("rules", []) if isinstance(classifier, dict) else []
         backfill_rule_ids: list[str] = []

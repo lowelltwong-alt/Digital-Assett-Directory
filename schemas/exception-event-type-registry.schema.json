@@ -4,9 +4,59 @@
   "title": "DAD Exception Event Type Registry",
   "type": "object",
   "additionalProperties": false,
-  "required": ["registry_version", "event_types", "backfill_classifier"],
+  "required": ["registry_version", "taxonomy_dimensions", "event_types", "backfill_classifier"],
   "properties": {
     "registry_version": { "type": "string" },
+    "taxonomy_dimensions": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["methodology_version", "authority_boundary", "axes", "category_defaults"],
+      "properties": {
+        "methodology_version": { "type": "string", "minLength": 1 },
+        "authority_boundary": { "type": "string", "minLength": 1 },
+        "axes": {
+          "type": "object",
+          "minProperties": 1,
+          "additionalProperties": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["description", "values"],
+            "properties": {
+              "description": { "type": "string", "minLength": 1 },
+              "values": {
+                "type": "array",
+                "minItems": 1,
+                "items": { "type": "string", "minLength": 1 }
+              }
+            }
+          }
+        },
+        "category_defaults": {
+          "type": "object",
+          "minProperties": 1,
+          "additionalProperties": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "origin_surface",
+              "detection_mode",
+              "impact_domain",
+              "learning_route",
+              "default_handling",
+              "review_priority"
+            ],
+            "properties": {
+              "origin_surface": { "type": "string", "minLength": 1 },
+              "detection_mode": { "type": "string", "minLength": 1 },
+              "impact_domain": { "type": "string", "minLength": 1 },
+              "learning_route": { "type": "string", "minLength": 1 },
+              "default_handling": { "type": "string", "minLength": 1 },
+              "review_priority": { "type": "string", "minLength": 1 }
+            }
+          }
+        }
+      }
+    },
     "event_types": {
       "type": "array",
       "minItems": 1,

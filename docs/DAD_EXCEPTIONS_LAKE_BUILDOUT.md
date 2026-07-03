@@ -784,9 +784,13 @@ Backfill safety and classification:
   reviewed repo policy, protected-repo blocks, approval requirements, capture
   surface freshness, observed path-signal counts, and next actions. It is
   planning evidence only; it never approves or runs backfill.
-- Exception reports summarize both event types and reviewed event categories, so
-  DAD can detect repeated families of failure without treating raw path keywords
-  as proof.
+- Exception reports summarize event types, reviewed event categories, and
+  taxonomy dimensions from
+  `registry/exception-event-type-registry.json#taxonomy_dimensions`. The
+  dimensions group exceptions by origin surface, detection mode, impact domain,
+  learning route, default handling, and review priority. They are analytic triage
+  labels only: they do not prove source truth, promote backfill candidates, or
+  authorize cross-repo action.
 
 Observed repo audit add-on:
 

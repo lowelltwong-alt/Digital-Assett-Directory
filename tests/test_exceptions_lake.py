@@ -13,6 +13,9 @@ from digital_asset_directory.exceptions_lake import (
     backfill_classifier_rules,
     collect_exception_fix_outcomes,
     collect_exception_events,
+    event_type_taxonomy_dimensions,
+    exception_category_taxonomy_defaults,
+    exception_taxonomy_dimension_axes,
     path_term_matches,
     record_exception_fix_outcome,
     record_exception_event,
@@ -108,6 +111,35 @@ def test_exception_registries_validate_against_schemas() -> None:
             "review_status": "candidate",
             "authority_boundary": "Candidate metadata only.",
         },
+    )
+
+
+def test_exception_taxonomy_dimensions_cover_all_event_categories() -> None:
+    registry = json.loads(
+        (ROOT / "registry" / "exception-event-type-registry.json").read_text(encoding="utf-8")
+    )
+    categories = {row["category"] for row in registry["event_types"]}
+    axes = exception_taxonomy_dimension_axes(ROOT)
+    defaults = exception_category_taxonomy_defaults(ROOT)
+    by_event_type = event_type_taxonomy_dimensions(ROOT)
+
+    assert categories <= set(defaults)
+    assert {
+        "origin_surface",
+        "detection_mode",
+        "impact_domain",
+        "learning_route",
+        "default_handling",
+        "review_priority",
+    } <= set(axes)
+    for category, category_defaults in defaults.items():
+        assert category in categories
+        for axis, value in category_defaults.items():
+            assert value in set(axes[axis]["values"]), (category, axis, value)
+    assert by_event_type["private_origin_public_target"]["default_handling"] == "release_gate"
+    assert by_event_type["secret_or_pii_detected"]["default_handling"] == "central_quarantine"
+    assert by_event_type["backfill_exception_candidate"]["detection_mode"] == (
+        "backfill_path_signal"
     )
 
 
@@ -596,11 +628,24 @@ def test_exception_report_summarizes_categories(tmp_path: Path) -> None:
         "schema_config": 1,
         "test": 1,
     }
+    assert report["by_taxonomy_dimension"]["origin_surface"] == {
+        "data_pipeline": 1,
+        "mail_transport": 1,
+        "review_process": 1,
+        "test_validation": 2,
+    }
+    assert report["by_taxonomy_dimension"]["learning_route"] == {
+        "capture_surface_update": 1,
+        "harness_update": 3,
+        "taxonomy_update": 1,
+    }
     report_md = (hub / "processed" / "reports" / "exceptions_lake.md").read_text(
         encoding="utf-8"
     )
     assert "## By Category" in report_md
+    assert "## By Taxonomy Dimension" in report_md
     assert "`harness_parity`: 1" in report_md
+    assert "`test_validation`: 2" in report_md
 
 
 def test_exception_report_separates_observed_from_backfill_candidates(

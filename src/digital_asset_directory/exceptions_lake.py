@@ -471,6 +471,67 @@ def event_type_categories(hub_root: Path) -> dict[str, str]:
     }
 
 
+TAXONOMY_AXIS_KEYS = [
+    "origin_surface",
+    "detection_mode",
+    "impact_domain",
+    "learning_route",
+    "default_handling",
+    "review_priority",
+]
+
+
+def _unknown_taxonomy_dimensions() -> dict[str, str]:
+    return {
+        "origin_surface": "unknown",
+        "detection_mode": "unknown",
+        "impact_domain": "unknown",
+        "learning_route": "unknown",
+        "default_handling": "unknown",
+        "review_priority": "info",
+    }
+
+
+def exception_taxonomy_dimension_axes(hub_root: Path) -> dict[str, Any]:
+    registry = load_event_type_registry(hub_root)
+    taxonomy = registry.get("taxonomy_dimensions")
+    if not isinstance(taxonomy, dict):
+        return {}
+    axes = taxonomy.get("axes")
+    return axes if isinstance(axes, dict) else {}
+
+
+def exception_category_taxonomy_defaults(hub_root: Path) -> dict[str, dict[str, str]]:
+    registry = load_event_type_registry(hub_root)
+    taxonomy = registry.get("taxonomy_dimensions")
+    if not isinstance(taxonomy, dict):
+        return {}
+    defaults = taxonomy.get("category_defaults")
+    if not isinstance(defaults, dict):
+        return {}
+    return {
+        str(category): {
+            axis: str(values.get(axis, _unknown_taxonomy_dimensions()[axis]))
+            for axis in TAXONOMY_AXIS_KEYS
+        }
+        for category, values in defaults.items()
+        if isinstance(values, dict)
+    }
+
+
+def event_type_taxonomy_dimensions(hub_root: Path) -> dict[str, dict[str, str]]:
+    category_by_type = event_type_categories(hub_root)
+    defaults_by_category = exception_category_taxonomy_defaults(hub_root)
+    unknown = _unknown_taxonomy_dimensions()
+    return {
+        event_type: {
+            **unknown,
+            **defaults_by_category.get(category, {}),
+        }
+        for event_type, category in category_by_type.items()
+    }
+
+
 def normalize_event_type(hub_root: Path, event_type: str) -> str:
     cleaned = _slug(event_type.replace(":", "_")).replace("-", "_")
     return cleaned if cleaned in event_type_set(hub_root) else FALLBACK_EVENT_TYPE
@@ -1991,10 +2052,24 @@ def write_exception_report(hub_root: Path) -> dict[str, Any]:
     )
     by_type = Counter(str(event.get("event_type", "unknown")) for event in events)
     category_by_type = event_type_categories(hub_root)
+    taxonomy_by_type = event_type_taxonomy_dimensions(hub_root)
     by_category = Counter(
         category_by_type.get(str(event.get("event_type", "unknown")), "unknown")
         for event in events
     )
+    by_taxonomy_dimension: dict[str, dict[str, int]] = {}
+    for axis in TAXONOMY_AXIS_KEYS:
+        by_taxonomy_dimension[axis] = dict(
+            sorted(
+                Counter(
+                    taxonomy_by_type.get(
+                        str(event.get("event_type", "unknown")),
+                        _unknown_taxonomy_dimensions(),
+                    ).get(axis, _unknown_taxonomy_dimensions()[axis])
+                    for event in events
+                ).items()
+            )
+        )
     by_repo = Counter(str(event.get("source_repo", "unknown")) for event in events)
     by_severity = Counter(str(event.get("severity", "unknown")) for event in events)
     fix_by_decision = Counter(str(row.get("decision", "unknown")) for row in fix_outcomes)
@@ -2069,6 +2144,7 @@ def write_exception_report(hub_root: Path) -> dict[str, Any]:
         "private_or_unknown_origin_count": private_origin,
         "by_event_type": dict(sorted(by_type.items())),
         "by_category": dict(sorted(by_category.items())),
+        "by_taxonomy_dimension": by_taxonomy_dimension,
         "by_source_repo": dict(sorted(by_repo.items())),
         "by_severity": dict(sorted(by_severity.items())),
         "fix_outcomes_by_decision": dict(sorted(fix_by_decision.items())),
@@ -2120,6 +2196,15 @@ def write_exception_report(hub_root: Path) -> dict[str, Any]:
     lines.extend(["", "## By Category", ""])
     for category, count in sorted(by_category.items()):
         lines.append(f"- `{category}`: {count}")
+    lines.extend(["", "## By Taxonomy Dimension", ""])
+    lines.append(
+        "Taxonomy dimensions are analytic groupings for triage and learning routes; "
+        "they do not prove source truth or promote backfill candidates."
+    )
+    for axis in TAXONOMY_AXIS_KEYS:
+        lines.extend(["", f"### {axis}", ""])
+        for value, count in by_taxonomy_dimension.get(axis, {}).items():
+            lines.append(f"- `{value}`: {count}")
     lines.extend(["", "## Fix Outcomes", ""])
     lines.append(
         "Fix outcomes are candidate metadata. Validated fixes require validation refs "

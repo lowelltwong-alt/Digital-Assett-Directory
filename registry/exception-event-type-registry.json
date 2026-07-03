@@ -1,5 +1,283 @@
 {
   "registry_version": "0.1.0",
+  "taxonomy_dimensions": {
+    "methodology_version": "exception-taxonomy-dimensions-v0.1.0",
+    "authority_boundary": "Taxonomy dimensions are analytic labels for grouping candidate exception evidence. They do not prove an incident occurred, authorize learning promotion, or override event_type policy. Backfill classifications remain path-signal candidates until source-reviewed or human-confirmed.",
+    "axes": {
+      "origin_surface": {
+        "description": "Where the exception primarily emerged.",
+        "values": [
+          "agent_behavior",
+          "backfill_discovery",
+          "command_runtime",
+          "data_pipeline",
+          "external_dependency",
+          "governance_control",
+          "mail_transport",
+          "release_packaging",
+          "repo_state",
+          "review_process",
+          "security_boundary",
+          "test_validation",
+          "unknown"
+        ]
+      },
+      "detection_mode": {
+        "description": "How the exception is usually detected without collecting raw private evidence.",
+        "values": [
+          "backfill_path_signal",
+          "ci_or_hook_signal",
+          "command_exit_or_timeout",
+          "governance_gate",
+          "human_or_agent_review",
+          "postflight_trace",
+          "runtime_observation",
+          "schema_or_report_validation",
+          "screening_gate",
+          "test_result",
+          "unknown"
+        ]
+      },
+      "impact_domain": {
+        "description": "The main risk created if the exception is ignored.",
+        "values": [
+          "availability",
+          "correctness",
+          "data_integrity",
+          "delivery",
+          "governance_authority",
+          "learning_quality",
+          "performance",
+          "security_privacy",
+          "unknown"
+        ]
+      },
+      "learning_route": {
+        "description": "The safest first route for turning the exception into durable learning.",
+        "values": [
+          "capture_surface_update",
+          "fix_outcome_link",
+          "harness_update",
+          "human_review_queue",
+          "policy_or_governance_update",
+          "research_or_asset_update",
+          "taxonomy_update",
+          "watch_only",
+          "unknown"
+        ]
+      },
+      "default_handling": {
+        "description": "The default operational handling before local source authority decides a fix.",
+        "values": [
+          "append_observed_event",
+          "candidate_backfill_only",
+          "central_quarantine",
+          "direct_record_with_fix_outcome",
+          "manual_review",
+          "release_gate",
+          "unknown"
+        ]
+      },
+      "review_priority": {
+        "description": "Default urgency for triage queues before severity-specific overrides.",
+        "values": ["critical", "high", "medium", "low", "info"]
+      }
+    },
+    "category_defaults": {
+      "agent_behavior": {
+        "origin_surface": "agent_behavior",
+        "detection_mode": "postflight_trace",
+        "impact_domain": "learning_quality",
+        "learning_route": "policy_or_governance_update",
+        "default_handling": "manual_review",
+        "review_priority": "high"
+      },
+      "backfill_candidate": {
+        "origin_surface": "backfill_discovery",
+        "detection_mode": "backfill_path_signal",
+        "impact_domain": "learning_quality",
+        "learning_route": "human_review_queue",
+        "default_handling": "candidate_backfill_only",
+        "review_priority": "info"
+      },
+      "ci": {
+        "origin_surface": "test_validation",
+        "detection_mode": "ci_or_hook_signal",
+        "impact_domain": "delivery",
+        "learning_route": "fix_outcome_link",
+        "default_handling": "direct_record_with_fix_outcome",
+        "review_priority": "medium"
+      },
+      "command": {
+        "origin_surface": "command_runtime",
+        "detection_mode": "command_exit_or_timeout",
+        "impact_domain": "availability",
+        "learning_route": "fix_outcome_link",
+        "default_handling": "direct_record_with_fix_outcome",
+        "review_priority": "medium"
+      },
+      "dad_recommendation": {
+        "origin_surface": "review_process",
+        "detection_mode": "postflight_trace",
+        "impact_domain": "learning_quality",
+        "learning_route": "research_or_asset_update",
+        "default_handling": "manual_review",
+        "review_priority": "high"
+      },
+      "data_ingestion": {
+        "origin_surface": "data_pipeline",
+        "detection_mode": "schema_or_report_validation",
+        "impact_domain": "data_integrity",
+        "learning_route": "harness_update",
+        "default_handling": "manual_review",
+        "review_priority": "high"
+      },
+      "data_integrity": {
+        "origin_surface": "data_pipeline",
+        "detection_mode": "schema_or_report_validation",
+        "impact_domain": "data_integrity",
+        "learning_route": "capture_surface_update",
+        "default_handling": "manual_review",
+        "review_priority": "high"
+      },
+      "dependency_io": {
+        "origin_surface": "external_dependency",
+        "detection_mode": "command_exit_or_timeout",
+        "impact_domain": "delivery",
+        "learning_route": "fix_outcome_link",
+        "default_handling": "direct_record_with_fix_outcome",
+        "review_priority": "medium"
+      },
+      "environment_tooling": {
+        "origin_surface": "command_runtime",
+        "detection_mode": "command_exit_or_timeout",
+        "impact_domain": "availability",
+        "learning_route": "policy_or_governance_update",
+        "default_handling": "manual_review",
+        "review_priority": "medium"
+      },
+      "external_service": {
+        "origin_surface": "external_dependency",
+        "detection_mode": "command_exit_or_timeout",
+        "impact_domain": "availability",
+        "learning_route": "fix_outcome_link",
+        "default_handling": "manual_review",
+        "review_priority": "medium"
+      },
+      "governance": {
+        "origin_surface": "governance_control",
+        "detection_mode": "governance_gate",
+        "impact_domain": "governance_authority",
+        "learning_route": "policy_or_governance_update",
+        "default_handling": "manual_review",
+        "review_priority": "high"
+      },
+      "harness_parity": {
+        "origin_surface": "test_validation",
+        "detection_mode": "test_result",
+        "impact_domain": "correctness",
+        "learning_route": "harness_update",
+        "default_handling": "direct_record_with_fix_outcome",
+        "review_priority": "critical"
+      },
+      "identity_resolution": {
+        "origin_surface": "data_pipeline",
+        "detection_mode": "human_or_agent_review",
+        "impact_domain": "data_integrity",
+        "learning_route": "human_review_queue",
+        "default_handling": "manual_review",
+        "review_priority": "high"
+      },
+      "mail_enrollment": {
+        "origin_surface": "mail_transport",
+        "detection_mode": "governance_gate",
+        "impact_domain": "governance_authority",
+        "learning_route": "capture_surface_update",
+        "default_handling": "manual_review",
+        "review_priority": "medium"
+      },
+      "other": {
+        "origin_surface": "unknown",
+        "detection_mode": "unknown",
+        "impact_domain": "unknown",
+        "learning_route": "human_review_queue",
+        "default_handling": "manual_review",
+        "review_priority": "info"
+      },
+      "public_private": {
+        "origin_surface": "security_boundary",
+        "detection_mode": "governance_gate",
+        "impact_domain": "security_privacy",
+        "learning_route": "policy_or_governance_update",
+        "default_handling": "release_gate",
+        "review_priority": "critical"
+      },
+      "release_packaging": {
+        "origin_surface": "release_packaging",
+        "detection_mode": "schema_or_report_validation",
+        "impact_domain": "delivery",
+        "learning_route": "fix_outcome_link",
+        "default_handling": "manual_review",
+        "review_priority": "high"
+      },
+      "repo_state": {
+        "origin_surface": "repo_state",
+        "detection_mode": "governance_gate",
+        "impact_domain": "governance_authority",
+        "learning_route": "policy_or_governance_update",
+        "default_handling": "manual_review",
+        "review_priority": "high"
+      },
+      "review": {
+        "origin_surface": "review_process",
+        "detection_mode": "human_or_agent_review",
+        "impact_domain": "learning_quality",
+        "learning_route": "harness_update",
+        "default_handling": "manual_review",
+        "review_priority": "medium"
+      },
+      "roadmap_validation": {
+        "origin_surface": "governance_control",
+        "detection_mode": "schema_or_report_validation",
+        "impact_domain": "governance_authority",
+        "learning_route": "policy_or_governance_update",
+        "default_handling": "manual_review",
+        "review_priority": "high"
+      },
+      "runtime": {
+        "origin_surface": "command_runtime",
+        "detection_mode": "runtime_observation",
+        "impact_domain": "correctness",
+        "learning_route": "fix_outcome_link",
+        "default_handling": "direct_record_with_fix_outcome",
+        "review_priority": "high"
+      },
+      "schema_config": {
+        "origin_surface": "data_pipeline",
+        "detection_mode": "schema_or_report_validation",
+        "impact_domain": "data_integrity",
+        "learning_route": "taxonomy_update",
+        "default_handling": "manual_review",
+        "review_priority": "high"
+      },
+      "security_privacy": {
+        "origin_surface": "security_boundary",
+        "detection_mode": "screening_gate",
+        "impact_domain": "security_privacy",
+        "learning_route": "policy_or_governance_update",
+        "default_handling": "central_quarantine",
+        "review_priority": "critical"
+      },
+      "test": {
+        "origin_surface": "test_validation",
+        "detection_mode": "test_result",
+        "impact_domain": "correctness",
+        "learning_route": "harness_update",
+        "default_handling": "direct_record_with_fix_outcome",
+        "review_priority": "medium"
+      }
+    }
+  },
   "event_types": [
     {
       "event_type": "failed_command",
