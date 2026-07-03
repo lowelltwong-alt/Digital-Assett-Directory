@@ -33,6 +33,7 @@ from digital_asset_directory.exceptions_lake import (
     write_exception_backfill_review_queue,
     write_exception_learning_queue,
     write_exception_report,
+    write_exception_source_packet_opportunities,
     write_exception_source_packet_requests,
 )
 from digital_asset_directory.utils import append_jsonl
@@ -1310,6 +1311,14 @@ def test_exception_lake_paths_exposes_backfill_refresh_plan() -> None:
         paths["backfill_refresh_plan_markdown"]
         == "processed/reports/exception_backfill_classifier_refresh_plan.md"
     )
+    assert (
+        paths["source_packet_opportunities_json"]
+        == "processed/reports/exception_source_packet_opportunities.json"
+    )
+    assert (
+        paths["source_packet_opportunities_markdown"]
+        == "processed/reports/exception_source_packet_opportunities.md"
+    )
 
 
 def test_backfill_refresh_plan_cli_smoke(tmp_path: Path) -> None:
@@ -1639,6 +1648,147 @@ def test_backfill_review_decision_appends_when_queue_fingerprint_changes(
         "source_queue_fingerprint"
     ]
     assert first["decision"]["decision_id"] != second["decision"]["decision_id"]
+
+
+def test_source_packet_opportunities_report_decision_ready_groups(
+    tmp_path: Path,
+) -> None:
+    hub = tmp_path / "hub"
+    repo = tmp_path / "repo"
+    (repo / ".git").mkdir(parents=True)
+    _copy_exception_contracts(hub)
+    target = repo / "docs" / "asset-dir-unavailable.md"
+    target.parent.mkdir(parents=True)
+    target.write_text("metadata-only backfill should not read content\n", encoding="utf-8")
+    policy = _backfill_policy(repo, repo_id="source|repo", visibility="public")
+
+    backfill_exception_candidates(
+        hub,
+        repo,
+        limit=10,
+        authorization=_backfill_auth(repo, repo_policies=[policy]),
+    )
+    report = write_exception_source_packet_opportunities(hub)
+
+    assert report["report_id"] == "dad:exception-source-packet-opportunities"
+    assert report["status_counts"] == {"source_packet_decision_recommended": 1}
+    assert report["decision_ledger"] == (
+        "processed/exceptions/review-queue/backfill_review_decisions.jsonl"
+    )
+    opportunity = report["opportunities"][0]
+    assert opportunity["source_repo"] == "source|repo"
+    assert opportunity["source_packet_opportunity_status"] == (
+        "source_packet_decision_recommended"
+    )
+    assert opportunity["source_queue_fingerprint"].startswith(
+        "dad:exception-backfill-review"
+    )
+    assert "needs_source_packet" in opportunity["command_hints"][0]
+    assert "raw" not in json.dumps(opportunity["path_hash_refs"]).lower()
+    assert not (hub / "processed" / "mail" / "staged" / "source_packet_requests.jsonl").exists()
+    assert (hub / "processed" / "reports" / "exception_source_packet_opportunities.json").exists()
+    assert (hub / "processed" / "reports" / "exception_source_packet_opportunities.md").exists()
+    markdown = (
+        hub / "processed" / "reports" / "exception_source_packet_opportunities.md"
+    ).read_text(encoding="utf-8")
+    assert "`source\\|repo`" in markdown
+
+
+def test_source_packet_opportunities_show_existing_request_decision(
+    tmp_path: Path,
+) -> None:
+    hub = tmp_path / "hub"
+    repo = tmp_path / "repo"
+    (repo / ".git").mkdir(parents=True)
+    _copy_exception_contracts(hub)
+    target = repo / "docs" / "asset-dir-unavailable.md"
+    target.parent.mkdir(parents=True)
+    target.write_text("metadata-only backfill should not read content\n", encoding="utf-8")
+    policy = _backfill_policy(repo, repo_id="source-repo", visibility="public")
+
+    backfill_exception_candidates(
+        hub,
+        repo,
+        limit=10,
+        authorization=_backfill_auth(repo, repo_policies=[policy]),
+    )
+    group_id = write_exception_backfill_review_queue(hub)["review_queue"][0][
+        "review_group_id"
+    ]
+    decision = record_exception_backfill_review_decision(
+        hub,
+        review_group_id=group_id,
+        decision="needs_source_packet",
+        reviewer="codex",
+        reviewer_type="agent",
+        notes="Ask source repo to confirm or reject the path signal.",
+    )["decision"]
+
+    report = write_exception_source_packet_opportunities(hub)
+
+    assert report["status_counts"] == {"decision_exists_request_compilable": 1}
+    opportunity = report["opportunities"][0]
+    assert opportunity["latest_decision"] == "needs_source_packet"
+    assert opportunity["latest_decision_id"] == decision["decision_id"]
+    assert opportunity["command_hints"] == []
+    assert "source-packet-requests" in opportunity["next_actions"][0]
+
+
+def test_source_packet_opportunities_block_stale_classifier_groups(
+    tmp_path: Path,
+) -> None:
+    hub = tmp_path / "hub"
+    repo = tmp_path / "repo"
+    (repo / ".git").mkdir(parents=True)
+    _copy_exception_contracts(hub)
+    target = repo / "docs" / "pytest-timeout.md"
+    target.parent.mkdir(parents=True)
+    target.write_text("metadata-only backfill should not read content\n", encoding="utf-8")
+
+    backfill_exception_candidates(
+        hub,
+        repo,
+        limit=10,
+        authorization=_backfill_auth(repo),
+    )
+    lake_path = hub / "processed" / "exceptions" / "lake" / "events.jsonl"
+    rows = _jsonl(lake_path)
+    rows[0]["context_refs"] = ["backfill-classifier-version:old-version"]
+    lake_path.write_text("\n".join(json.dumps(row) for row in rows) + "\n", encoding="utf-8")
+
+    report = write_exception_source_packet_opportunities(hub)
+
+    assert report["status_counts"] == {"blocked_classifier_refresh": 1}
+    opportunity = report["opportunities"][0]
+    assert opportunity["command_hints"] == []
+    assert "classifier provenance stale" in opportunity["blockers"]
+    assert "Rerun bounded backfill" in opportunity["next_actions"][0]
+
+
+def test_source_packet_opportunities_cli(tmp_path: Path) -> None:
+    hub = tmp_path / "hub"
+    repo = tmp_path / "repo"
+    (repo / ".git").mkdir(parents=True)
+    _copy_exception_contracts(hub)
+    target = repo / "docs" / "asset-dir-unavailable.md"
+    target.parent.mkdir(parents=True)
+    target.write_text("metadata-only backfill should not read content\n", encoding="utf-8")
+
+    backfill_exception_candidates(
+        hub,
+        repo,
+        limit=10,
+        authorization=_backfill_auth(repo),
+    )
+    result = RUNNER.invoke(
+        app,
+        ["exceptions", "source-packet-opportunities", "--hub", str(hub)],
+    )
+
+    assert result.exit_code == 0
+    payload = json.loads(result.stdout)
+    assert payload["report_id"] == "dad:exception-source-packet-opportunities"
+    assert payload["reported_opportunity_count"] == 1
 
 
 def test_source_packet_requests_compile_needs_source_packet_to_central_mail(

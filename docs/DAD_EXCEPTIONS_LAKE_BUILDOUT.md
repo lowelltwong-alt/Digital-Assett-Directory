@@ -1013,6 +1013,14 @@ Backfill safety and classification:
   decision ledger by review group and decision type. This is audit and routing
   evidence only; promotion still requires the downstream exception/fix/lesson
   gates.
+- `asset-dir exceptions source-packet-opportunities` reads the current backfill
+  review queue plus the latest decision ledger and writes
+  `processed/reports/exception_source_packet_opportunities.json` and `.md`. It
+  shows which groups are blocked by classifier refresh, central readable-ref
+  review, or a latest non-request decision, and which groups can safely receive a
+  `needs_source_packet` decision. It is read-only planning evidence and does not
+  append decisions, stage mail, deliver mail, confirm incidents, approve public
+  release, or mutate source repos.
 - `asset-dir exceptions source-packet-requests` compiles the latest
   `needs_source_packet` decisions into DAD-authored staged candidate mail at
   `processed/mail/staged/source_packet_requests.jsonl` plus

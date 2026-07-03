@@ -83,6 +83,7 @@ from .exceptions_lake import (
     write_exception_backfill_review_queue,
     write_exception_learning_queue,
     write_exception_report,
+    write_exception_source_packet_opportunities,
     write_exception_source_packet_requests,
 )
 from .exception_capture import (
@@ -2348,6 +2349,28 @@ def exceptions_backfill_review_decisions(
         result = summarize_exception_backfill_review_decisions(
             cfg.repo_root,
             review_group_id=review_group_id,
+        )
+    except (OSError, json.JSONDecodeError, KeyError, ValueError) as exc:
+        console.print(str(exc))
+        raise typer.Exit(2) from exc
+    console.print_json(data=result)
+
+
+@exceptions_app.command("source-packet-opportunities")
+def exceptions_source_packet_opportunities(
+    output: Optional[Path] = typer.Option(None, "--output"),
+    limit: int = typer.Option(100, "--limit", min=1, max=1000),
+    example_limit: int = typer.Option(5, "--example-limit", min=1, max=25),
+    hub: Optional[Path] = typer.Option(None),
+) -> None:
+    """Report backfill groups that are eligible or blocked for source packets."""
+    cfg = _cfg(hub=hub)
+    try:
+        result = write_exception_source_packet_opportunities(
+            cfg.repo_root,
+            output=output,
+            limit=limit,
+            example_limit=example_limit,
         )
     except (OSError, json.JSONDecodeError, KeyError, ValueError) as exc:
         console.print(str(exc))

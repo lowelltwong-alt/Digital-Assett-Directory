@@ -45,6 +45,12 @@ BACKFILL_REFRESH_PLAN_MD = (
 BACKFILL_REVIEW_DECISIONS = (
     Path("processed") / "exceptions" / "review-queue" / "backfill_review_decisions.jsonl"
 )
+SOURCE_PACKET_OPPORTUNITIES_JSON = (
+    Path("processed") / "reports" / "exception_source_packet_opportunities.json"
+)
+SOURCE_PACKET_OPPORTUNITIES_MD = (
+    Path("processed") / "reports" / "exception_source_packet_opportunities.md"
+)
 SOURCE_PACKET_REQUESTS_JSON = Path("processed") / "reports" / "exception_source_packet_requests.json"
 SOURCE_PACKET_REQUESTS_MD = Path("processed") / "reports" / "exception_source_packet_requests.md"
 SOURCE_PACKET_REQUESTS_STAGED = (
@@ -2616,6 +2622,15 @@ def _exception_backfill_review_queue_input_hashes(hub_root: Path) -> dict[str, s
     return hashes
 
 
+def _exception_source_packet_opportunity_input_hashes(hub_root: Path) -> dict[str, str]:
+    hashes = _exception_backfill_review_queue_input_hashes(hub_root)
+    decisions_path = hub_root / BACKFILL_REVIEW_DECISIONS
+    hashes[BACKFILL_REVIEW_DECISIONS.as_posix()] = (
+        f"sha256:{sha256_file(decisions_path)}" if decisions_path.exists() else "missing"
+    )
+    return hashes
+
+
 def _latest_backfill_run_summary(hub_root: Path) -> dict[str, Any]:
     path = hub_root / BACKFILL_RUNS_DIR / "latest.json"
     if not path.exists():
@@ -3903,6 +3918,242 @@ def _source_packet_request_decision_matches_current_group(
     return mismatches
 
 
+def _source_packet_opportunity_for_group(
+    group: dict[str, Any],
+    *,
+    latest_decision: dict[str, Any] | None,
+    source_queue_fingerprint: str,
+) -> dict[str, Any]:
+    group_id = str(group.get("review_group_id") or "")
+    missing_count = int(group.get("classifier_version_missing_count") or 0)
+    stale_count = int(group.get("classifier_version_stale_count") or 0)
+    readable_path_ref_count = int(group.get("readable_path_ref_count") or 0)
+    public_release_required_count = int(group.get("public_release_required_count") or 0)
+    blockers: list[str] = []
+    warnings: list[str] = []
+    next_actions: list[str] = []
+    command_hints: list[str] = []
+    latest_decision_value = str((latest_decision or {}).get("decision") or "")
+    latest_decision_id = str((latest_decision or {}).get("decision_id") or "")
+
+    if missing_count or stale_count:
+        status = "blocked_classifier_refresh"
+        if missing_count:
+            blockers.append("classifier provenance missing")
+        if stale_count:
+            blockers.append("classifier provenance stale")
+        next_actions.append(
+            "Rerun bounded backfill or append a reject/archive decision before requesting source packets."
+        )
+    elif readable_path_ref_count:
+        status = "blocked_central_readable_ref_review"
+        blockers.append("readable path refs require central-only review before source-packet planning")
+        next_actions.append(
+            "Regenerate the review queue without readable refs or complete central-only path review."
+        )
+    elif latest_decision_value == "needs_source_packet":
+        status = "decision_exists_request_compilable"
+        next_actions.append(
+            "Run asset-dir exceptions source-packet-requests to compile this latest decision into staged candidate mail."
+        )
+    elif latest_decision_value:
+        status = f"blocked_latest_decision_{latest_decision_value}"
+        blockers.append("latest review decision is not needs_source_packet")
+        next_actions.append(
+            "Append a newer decision only if the source review state materially changed."
+        )
+    elif str(group.get("review_status") or "") == "source_review_required":
+        status = "source_packet_decision_recommended"
+        next_actions.append(
+            "Append a needs_source_packet decision if source-repo confirmation is needed."
+        )
+        command_hints.append(
+            "asset-dir exceptions backfill-review-decision "
+            f"--review-group-id {group_id} "
+            "--decision needs_source_packet "
+            "--reviewer <agent-or-human> "
+            "--reviewer-type agent "
+            '--notes "<safe metadata-only rationale>"'
+        )
+    else:
+        status = "central_review_required_first"
+        blockers.append("review group is not currently in source_review_required status")
+        next_actions.append(
+            "Resolve queue status blockers before deciding whether a source packet is appropriate."
+        )
+
+    if public_release_required_count:
+        warnings.append(
+            "non-public or unknown-origin backfill evidence remains public-release gated"
+        )
+
+    return {
+        "opportunity_id": stable_id(
+            "exception-source-packet-opportunity",
+            group_id,
+            source_queue_fingerprint,
+            status,
+            latest_decision_id,
+        ),
+        "review_group_id": group_id,
+        "source_repo": group.get("source_repo", ""),
+        "event_type": group.get("event_type", ""),
+        "rule_id": group.get("rule_id", ""),
+        "review_priority": group.get("review_priority", "info"),
+        "review_status": group.get("review_status", ""),
+        "candidate_count": int(group.get("candidate_count") or 0),
+        "classifier_version_missing_count": missing_count,
+        "classifier_version_stale_count": stale_count,
+        "public_release_required_count": public_release_required_count,
+        "readable_path_ref_count": readable_path_ref_count,
+        "path_hash_refs": group.get("path_hash_refs", []),
+        "example_event_ids": group.get("example_event_ids", []),
+        "source_queue_fingerprint": source_queue_fingerprint,
+        "latest_decision": latest_decision_value,
+        "latest_decision_id": latest_decision_id,
+        "latest_decision_review_status": str((latest_decision or {}).get("review_status") or ""),
+        "source_packet_opportunity_status": status,
+        "blockers": sorted(set(blockers)),
+        "warnings": sorted(set(warnings)),
+        "command_hints": command_hints,
+        "next_actions": next_actions,
+        "authority_boundary": (
+            "This opportunity is planning evidence only. It does not append review "
+            "decisions, stage mail, deliver mail, confirm incidents, approve public "
+            "release, or mutate any source repo."
+        ),
+    }
+
+
+def _source_packet_opportunity_md_cell(value: Any) -> str:
+    text = str(value or "").replace("\r", " ").replace("\n", " ")
+    return text.replace("|", "\\|")
+
+
+def write_exception_source_packet_opportunities(
+    hub_root: Path,
+    *,
+    output: Path | None = None,
+    limit: int = 100,
+    example_limit: int = 5,
+) -> dict[str, Any]:
+    """Report which backfill groups are ready or blocked for source packets."""
+    queue = write_exception_backfill_review_queue(
+        hub_root,
+        limit=MAX_BACKFILL_EVENTS,
+        example_limit=example_limit,
+        write_outputs=False,
+    )
+    latest = _latest_backfill_review_decisions_by_group(hub_root)
+    input_hashes = {
+        str(key): str(value)
+        for key, value in _exception_source_packet_opportunity_input_hashes(
+            hub_root
+        ).items()
+    }
+    rows: list[dict[str, Any]] = []
+    status_counts: Counter[str] = Counter()
+    priority_rank = {"critical": 0, "high": 1, "medium": 2, "low": 3, "info": 4}
+    status_rank = {
+        "source_packet_decision_recommended": 0,
+        "decision_exists_request_compilable": 1,
+        "blocked_classifier_refresh": 2,
+        "blocked_central_readable_ref_review": 3,
+        "central_review_required_first": 4,
+    }
+    for group in queue.get("review_queue", []):
+        if not isinstance(group, dict):
+            continue
+        group_id = str(group.get("review_group_id") or "")
+        if not group_id:
+            continue
+        fingerprint = _backfill_review_queue_fingerprint(
+            review_group_id=group_id,
+            group=group,
+            input_hashes={
+                str(key): str(value) for key, value in queue.get("input_hashes", {}).items()
+            },
+        )
+        row = _source_packet_opportunity_for_group(
+            group,
+            latest_decision=latest.get(group_id),
+            source_queue_fingerprint=fingerprint,
+        )
+        status_counts[str(row["source_packet_opportunity_status"])] += 1
+        rows.append(row)
+
+    rows.sort(
+        key=lambda row: (
+            status_rank.get(str(row.get("source_packet_opportunity_status") or ""), 9),
+            priority_rank.get(str(row.get("review_priority") or ""), 9),
+            -int(row.get("candidate_count") or 0),
+            str(row.get("source_repo") or ""),
+            str(row.get("event_type") or ""),
+        )
+    )
+    limit = max(1, min(limit, MAX_BACKFILL_EVENTS))
+    reported_rows = rows[:limit]
+    report = {
+        "schema_version": "0.1.0",
+        "generated_at": utc_now(),
+        "report_id": "dad:exception-source-packet-opportunities",
+        "input_hashes": input_hashes,
+        "backfill_candidate_count": queue.get("backfill_candidate_count", 0),
+        "review_group_count": len(rows),
+        "reported_opportunity_count": len(reported_rows),
+        "omitted_opportunity_count": max(0, len(rows) - len(reported_rows)),
+        "status_counts": dict(sorted(status_counts.items())),
+        "current_classifier_version": queue.get("current_classifier_version", ""),
+        "decision_ledger": BACKFILL_REVIEW_DECISIONS.as_posix(),
+        "source_packet_request_report": SOURCE_PACKET_REQUESTS_JSON.as_posix(),
+        "opportunities": reported_rows,
+        "authority_boundary": (
+            "Source-packet opportunities are read-only planning evidence. They "
+            "do not append decisions, stage mail, deliver mail, confirm incidents, "
+            "approve public release, promote learning, or mutate source repos."
+        ),
+    }
+    output_path = hub_root / (output or SOURCE_PACKET_OPPORTUNITIES_JSON)
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    output_path.write_text(json_dumps(report, pretty=True) + "\n", encoding="utf-8")
+    md_path = output_path.with_suffix(".md") if output else hub_root / SOURCE_PACKET_OPPORTUNITIES_MD
+    lines = [
+        "# Exception Source Packet Opportunities",
+        "",
+        f"- Generated: {report['generated_at']}",
+        f"- Review groups: {report['review_group_count']}",
+        f"- Reported opportunities: {report['reported_opportunity_count']}",
+        f"- Current classifier version: `{report['current_classifier_version']}`",
+        "",
+        "Boundary: read-only planning evidence. This report does not append review "
+        "decisions, stage mail, deliver mail, confirm incidents, or mutate source repos.",
+        "",
+        "## Status Counts",
+        "",
+    ]
+    lines.extend(f"- `{status}`: {count}" for status, count in report["status_counts"].items())
+    lines.extend(["", "## Opportunities", ""])
+    lines.append(
+        "| Source Repo | Event Type | Status | Candidates | Priority | Next Action |"
+    )
+    lines.append("| --- | --- | --- | ---: | --- | --- |")
+    for row in reported_rows:
+        next_action = _source_packet_opportunity_md_cell(
+            "; ".join(str(action) for action in row.get("next_actions", []))
+        )
+        lines.append(
+            "| "
+            + f"`{_source_packet_opportunity_md_cell(row['source_repo'])}` | "
+            + f"`{_source_packet_opportunity_md_cell(row['event_type'])}` | "
+            + f"`{_source_packet_opportunity_md_cell(row['source_packet_opportunity_status'])}` | "
+            + f"{row['candidate_count']} | "
+            + f"`{_source_packet_opportunity_md_cell(row['review_priority'])}` | "
+            + f"{next_action} |"
+        )
+    md_path.write_text("\n".join(lines) + "\n", encoding="utf-8")
+    return report
+
+
 def _append_source_packet_request_cancellations(
     hub_root: Path,
     *,
@@ -4852,6 +5103,8 @@ def exception_lake_paths() -> dict[str, str]:
         "quarantine": QUARANTINE_DIR.as_posix(),
         "fix_outcomes": FIX_OUTCOME_PATH.as_posix(),
         "backfill_review_decisions": BACKFILL_REVIEW_DECISIONS.as_posix(),
+        "source_packet_opportunities_json": SOURCE_PACKET_OPPORTUNITIES_JSON.as_posix(),
+        "source_packet_opportunities_markdown": SOURCE_PACKET_OPPORTUNITIES_MD.as_posix(),
         "source_packet_requests_json": SOURCE_PACKET_REQUESTS_JSON.as_posix(),
         "source_packet_requests_markdown": SOURCE_PACKET_REQUESTS_MD.as_posix(),
         "source_packet_requests_mail_stage": SOURCE_PACKET_REQUESTS_STAGED.as_posix(),
