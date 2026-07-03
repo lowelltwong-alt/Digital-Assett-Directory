@@ -1092,6 +1092,11 @@ def _candidate_signal_summary(
     source_rule_ids = Counter(
         str(item.get("source_rule_id") or "<builtin_path_term>") for item in signals
     )
+    capture_suggest_rule_ids = Counter(
+        str(rule_id)
+        for item in signals
+        for rule_id in (item.get("capture_suggestion") or {}).get("matched_rule_ids", [])
+    )
     summary: dict[str, Any] = {
         "total": len(signals),
         "count_scope": (
@@ -1112,6 +1117,7 @@ def _candidate_signal_summary(
             Counter(str(item.get("emission_status") or "<unannotated>") for item in signals)
         ),
         "by_source_rule_id": _counter_dict(source_rule_ids),
+        "by_capture_suggest_rule_id": _counter_dict(capture_suggest_rule_ids),
         "by_term": _counter_dict(Counter(str(item.get("term") or "<unknown>") for item in signals)),
         "redacted_path_count": sum(
             1 for item in signals if str(item.get("path_redacted", "")).lower() == "true"
@@ -1132,6 +1138,7 @@ def _merge_candidate_signal_summaries(rows: list[dict[str, Any]]) -> dict[str, A
         "by_expected_review",
         "by_emission_status",
         "by_source_rule_id",
+        "by_capture_suggest_rule_id",
         "by_term",
     ]
     counters = {key: Counter() for key in keys}
@@ -1322,6 +1329,125 @@ def _expected_outputs_by_family(registry: dict[str, Any]) -> dict[str, dict[str,
     }
 
 
+def _reviewed_capture_rules_for_signal(
+    signal: dict[str, str],
+    registry: dict[str, Any],
+) -> list[dict[str, Any]]:
+    pattern_family = str(signal.get("pattern_family") or "")
+    event_type = str(signal.get("suggested_event_type") or "")
+    reviewed_rules = [
+        rule
+        for rule in registry.get("rules", [])
+        if isinstance(rule, dict) and rule.get("review_status") == "reviewed"
+    ]
+    family_rules = [
+        rule for rule in reviewed_rules if str(rule.get("pattern_family") or "") == pattern_family
+    ]
+    if pattern_family == "exception_pattern":
+        event_rules = [
+            rule
+            for rule in reviewed_rules
+            if str((rule.get("emit") or {}).get("exception_event_type") or "") == event_type
+        ]
+        if len(event_rules) <= 1:
+            return sorted(event_rules, key=lambda item: str(item.get("rule_id") or ""))
+        preferred_rules = [
+            rule for rule in event_rules if str(rule.get("pattern_family") or "") == event_type
+        ]
+        if len(preferred_rules) == 1:
+            return preferred_rules
+        return []
+    scoped_rules = family_rules or reviewed_rules
+    event_rules = [
+        rule
+        for rule in scoped_rules
+        if str((rule.get("emit") or {}).get("exception_event_type") or "") == event_type
+    ]
+    if event_rules:
+        return sorted(event_rules, key=lambda item: str(item.get("rule_id") or ""))
+    if len(family_rules) == 1:
+        return sorted(family_rules, key=lambda item: str(item.get("rule_id") or ""))
+    return []
+
+
+def _capture_suggest_signals_for_path_signal(
+    signal: dict[str, str],
+    registry: dict[str, Any],
+) -> list[str]:
+    selected_signals: list[str] = []
+    selected_set: set[str] = set()
+    signal_text = json.dumps(signal, sort_keys=True).replace("-", "_").casefold()
+    for rule in _reviewed_capture_rules_for_signal(signal, registry):
+        for item in rule.get("match_signals", []) or []:
+            text = str(item).strip()
+            if text and text not in selected_set:
+                selected_set.add(text)
+                selected_signals.append(text)
+        any_signals = [str(item).strip() for item in rule.get("any_signals", []) or [] if str(item).strip()]
+        preferred = ""
+        for item in any_signals:
+            if item.replace("-", "_").casefold() in signal_text:
+                preferred = item
+                break
+        if not preferred and any_signals:
+            preferred = any_signals[0]
+        if preferred and preferred not in selected_set:
+            selected_set.add(preferred)
+            selected_signals.append(preferred)
+    if selected_signals:
+        return selected_signals
+    fallback = str(signal.get("signal") or "").strip()
+    return [fallback] if fallback else []
+
+
+def _candidate_signal_capture_suggestion(
+    hub_root: Path,
+    signal: dict[str, str],
+    registry: dict[str, Any],
+    *,
+    repo_capture_surface_version: str,
+) -> dict[str, Any]:
+    suggestion = suggest_exception_capture(
+        hub_root,
+        signals=_capture_suggest_signals_for_path_signal(signal, registry),
+        repo_capture_surface_version=repo_capture_surface_version,
+    )
+    suggested_event_type = str(signal.get("suggested_event_type") or "")
+    actual_event_types = set(suggestion["actual"]["event_types"])
+    ambiguous_exception_signal = (
+        signal.get("pattern_family") == "exception_pattern"
+        and suggested_event_type not in actual_event_types
+        and not suggestion["matched_rule_ids"]
+    )
+    next_actions = list(suggestion["next_actions"])
+    if ambiguous_exception_signal:
+        next_actions.insert(
+            0,
+            "Treat this as a broad exception path signal only. Add event-specific "
+            "safe metadata before choosing a concrete capture rule.",
+        )
+    return {
+        "suggestion_id": suggestion["suggestion_id"],
+        "methodology_hash": suggestion["methodology_hash"],
+        "repo_capture_surface_version": suggestion["repo_capture_surface_version"],
+        "capture_surface_version_unknown": suggestion["capture_surface_version_unknown"],
+        "registry_capture_surface_version": suggestion["registry_capture_surface_version"],
+        "update_required": suggestion["update_required"],
+        "signals": suggestion["signals"],
+        "signal_screen_issues": suggestion["signal_screen_issues"],
+        "matched_rule_ids": suggestion["matched_rule_ids"],
+        "ambiguous_exception_signal": ambiguous_exception_signal,
+        "actual": suggestion["actual"],
+        "recommended_packets": suggestion["recommended_packets"],
+        "next_actions": next_actions,
+        "authority_boundary": (
+            "Nested capture suggestions are candidate packet plans for the path "
+            "signal only. They do not prove the file contains an exception and do "
+            "not authorize source mutation, delivery, or promotion."
+        ),
+    }
+
+
 def _outbox_actual_outputs(outboxes: dict[str, dict[str, Any]]) -> dict[str, set[str]]:
     contracts = set(outboxes["exception_outbox"].get("capture_contracts", []))
     contracts.update(str(item) for item in outboxes["fix_outcomes"].get("capture_contracts", []))
@@ -1356,9 +1482,12 @@ def _has_correlated_record(
 
 
 def _annotate_candidate_signals(
+    hub_root: Path,
     signals: list[dict[str, str]],
     registry: dict[str, Any],
     outboxes: dict[str, dict[str, Any]],
+    *,
+    repo_capture_surface_version: str,
 ) -> list[dict[str, Any]]:
     expected_by_family = _expected_outputs_by_family(registry)
     actual = _outbox_actual_outputs(outboxes)
@@ -1433,6 +1562,12 @@ def _annotate_candidate_signals(
             {
                 **signal,
                 "expected_outputs": expected,
+                "capture_suggestion": _candidate_signal_capture_suggestion(
+                    hub_root,
+                    signal,
+                    registry,
+                    repo_capture_surface_version=repo_capture_surface_version,
+                ),
                 "matching_outputs": matching_outputs,
                 "missing_outputs": missing_outputs,
                 "uncorrelated_outputs": uncorrelated_outputs,
@@ -1485,9 +1620,11 @@ def audit_observed_capture_repo(
         path_terms=path_terms,
     )
     candidate_paths = _annotate_candidate_signals(
+        hub_root,
         candidate_scan["signals"],
         registry,
         outboxes,
+        repo_capture_surface_version=contract.get("capture_surface_version", ""),
     )
     packet_classes = _packet_classes_from_outboxes(outboxes)
     capture_surface_version = contract.get("capture_surface_version", "")
@@ -1931,6 +2068,18 @@ def write_observed_capture_audit(
         lines.extend(["", heading, ""])
         lines.extend(
             f"- `{rule_id}`: {count}" for rule_id, count in sorted(source_rule_counts.items())
+        )
+    capture_suggest_rule_counts = signal_summary.get("by_capture_suggest_rule_id", {})
+    if capture_suggest_rule_counts:
+        heading = (
+            "## Candidate Capture-Suggest Rules (Bounded Sample)"
+            if signal_summary.get("omitted_signal_count_unknown")
+            else "## Candidate Capture-Suggest Rules"
+        )
+        lines.extend(["", heading, ""])
+        lines.extend(
+            f"- `{rule_id}`: {count}"
+            for rule_id, count in sorted(capture_suggest_rule_counts.items())
         )
     flagged = [
         row

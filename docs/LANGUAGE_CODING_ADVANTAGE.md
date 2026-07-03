@@ -107,6 +107,13 @@ harness asks for a source pointer, safe summary, applicability limits, proof
 surface, and validation idea before DAD changes a tactic, idiom card, buildout
 guide, or downstream recommendation.
 
+For a scheduled frontier refresh, use
+`assets/coding-harnesses/language-frontier-research/prompts/language-frontier-refresh.prompt.md`.
+That prompt is the standard way to turn a source watch item into candidate DAD
+evidence. It requires a trusted-source check, proof surface, falsification idea,
+AI-overlooked pattern, and target DAD surface while blocking copied docs, copied
+source, private rows, raw logs, long blobs, and benchmark-only claims.
+
 ## Internal Guidelines And Codebase Study
 
 The language registry now separates three things agents often blur together:
@@ -291,7 +298,7 @@ code, examples, benchmarks, or generated corpora into DAD mail.
 | Rust safety/testing | `https://rustsec.org/`, `https://rust-fuzz.github.io/book/`, `https://nexte.st/`, `https://doc.rust-lang.org/clippy/` | Turn security, fuzzing, Clippy, and test-runner ideas into validation plans before changing defaults. |
 | Rust API and mutation proof | `https://github.com/obi1kenobi/cargo-semver-checks`, `https://mutants.rs/`, `https://github.com/sourcefrog/cargo-mutants` | Treat API compatibility and mutation testing as candidate harness evidence for shared Rust tools; review cost, false positives, license, and local fit before adoption. |
 | Python official direction | `https://docs.python.org/3/whatsnew/`, `https://peps.python.org/`, `https://blog.python.org/`, `https://devguide.python.org/`, `https://typing.python.org/` | Capture version, typing, diagnostics, packaging, and stdlib changes with target Python version and checker/tool support. |
-| Python tooling/testing | `https://docs.astral.sh/ruff/`, `https://docs.astral.sh/uv/`, `https://docs.pytest.org/`, `https://hypothesis.readthedocs.io/`, `https://mypy.readthedocs.io/`, `https://microsoft.github.io/pyright/` | Route speed, lint, type, fixture, property, and test-selection ideas through local validation before broad guidance. |
+| Python tooling/testing | `https://docs.astral.sh/ruff/`, `https://docs.astral.sh/uv/`, `https://docs.astral.sh/ty/`, `https://docs.pytest.org/`, `https://hypothesis.readthedocs.io/`, `https://mypy.readthedocs.io/`, `https://microsoft.github.io/pyright/` | Route speed, lint, type, fixture, property, and test-selection ideas through local validation before broad guidance. Treat beta or fast-moving checker behavior as candidate-only until the target repo opts in and local evidence exists. |
 | Python schema/CLI/interface codebases | `https://docs.pydantic.dev/`, `https://typer.tiangolo.com/`, `https://rich.readthedocs.io/`, `https://textual.textualize.io/` | Study pointer-only patterns for validated boundaries, command UX, structured errors, and agent-readable output. Local dependency approval and tests are required before adoption. |
 | Python runtime proof operations | `https://docs.python.org/3/library/ast.html`, `https://docs.python.org/3/library/inspect.html`, `https://docs.python.org/3/library/profile.html`, `https://docs.python.org/3/library/tracemalloc.html`, `https://docs.python.org/3/library/faulthandler.html` | Use structural and runtime introspection to prove what the repo does before changing design, performance, test, or Rust-migration guidance. |
 | AI coding research | `https://developers.openai.com/codex/`, `https://docs.anthropic.com/en/docs/claude-code/overview`, `https://cursor.com/docs/rules`, `https://arxiv.org/` | Extract only agent-workflow or eval ideas that can become deterministic DAD checks or harness cases. |

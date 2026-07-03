@@ -21,6 +21,7 @@
   "entrypoints": [
     "README.md",
     "harness.json",
+    "prompts/language-frontier-refresh.prompt.md",
     "examples/frontier-intake-cases.json",
     "tests-or-evals/minimum-eval.json"
   ],

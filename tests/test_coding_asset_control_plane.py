@@ -113,6 +113,31 @@ def test_language_frontier_harness_validator_passes():
     assert "language frontier harness valid" in result.stdout
 
 
+def test_language_frontier_refresh_prompt_is_pointer_only_and_operational():
+    harness = load_json("assets/coding-harnesses/language-frontier-research/harness.json")
+    prompt_path = ROOT / "assets/coding-harnesses/language-frontier-research/prompts/language-frontier-refresh.prompt.md"
+    prompt = prompt_path.read_text(encoding="utf-8").lower()
+
+    assert "prompts/language-frontier-refresh.prompt.md" in harness["entrypoints"]
+    for required in [
+        "trusted-source",
+        "proof surface",
+        "falsify",
+        "python",
+        "rust",
+        "future-language",
+        "target_dad_surface",
+    ]:
+        assert required in prompt
+    for forbidden in [
+        "do not copy third-party docs",
+        "do not include private repo data",
+        "do not claim state of the art",
+        "do not recommend downstream adoption without local validation evidence",
+    ]:
+        assert forbidden in prompt
+
+
 def test_suggest_coding_tactics_marks_output_candidate_only():
     result = subprocess.run(
         [
@@ -218,6 +243,8 @@ def test_language_coding_advantage_registry_resolves_sources_and_assets():
     }
     rust_ecosystem_patterns = set(trusted_sources["rust-ecosystem-curation"]["url_patterns"])
     assert {"lib.rs", "docs.rs", "blessed.rs"}.issubset(rust_ecosystem_patterns)
+    assert "ty" in trusted_sources["astral"]["label"].lower()
+    assert any("type-checking" in item for item in trusted_sources["astral"]["frontier_watch"])
     assert "mutants.rs" in set(trusted_sources["rust-mutation-testing"]["url_patterns"])
     assert "github.com/obi1kenobi/cargo-semver-checks" in set(
         trusted_sources["rust-api-compatibility"]["url_patterns"]

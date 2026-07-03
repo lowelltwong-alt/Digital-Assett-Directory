@@ -11,4 +11,8 @@
      `assets/python-underused-idioms/`, or Python test performance harness.
    - Rust: `assets/rust-buildout-guide/` or Rust shadow parity harness.
    - Future language: candidate language row plus a proof-tool note.
-6. Add or update a harness eval case before broad downstream guidance.
+6. For scheduled refreshes, run the review through
+   `prompts/language-frontier-refresh.prompt.md` so the output includes a
+   trusted-source match, proof surface, AI-overlooked pattern, falsification
+   idea, and target DAD surface.
+7. Add or update a harness eval case before broad downstream guidance.

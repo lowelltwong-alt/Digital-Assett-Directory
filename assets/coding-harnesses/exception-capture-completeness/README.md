@@ -43,13 +43,18 @@ python -m digital_asset_directory.cli exceptions taxonomy-coverage --fail-on-unr
 python -m digital_asset_directory.cli exceptions capture-audit --repo all
 ```
 
-The report is candidate evidence. It proves only that the supplied scenarios match
+The report is candidate evidence. It shows only that the supplied scenarios match
 the reviewed capture-rule registry and any observed fixture paths supplied by the
 scenario. The observed audit adds a read-only check over repo outboxes and
 path signals so DAD can find likely missed emissions in real repos. It compares
 candidate pattern families against observed message types, event types, and
 capture contracts, so unrelated old mail does not satisfy a missing workflow or
 exception capture. Private and unknown repo path signals are hash-only by default.
+Each candidate path signal also carries a nested `capture_suggestion` compiled
+from the reviewed capture-pattern registry. That nested block gives the exact
+candidate packet classes, event types, capture contracts, and required fields a
+repo-side agent should consider emitting, while remaining path-signal evidence
+only. It is a packet plan, not proof that the path contains a real exception.
 Truncated candidate-path scans and strict-only mismatches such as
 `type_present_uncorrelated` are review gaps, not clean runs. No single report is
 proof that all real repos are complete.

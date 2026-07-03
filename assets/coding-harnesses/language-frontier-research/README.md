@@ -36,3 +36,15 @@ future agents write safer, faster, or easier-to-review code.
 A frontier idea can become durable guidance only after screened source pointers,
 local validation, applicability limits, and postflight or harness feedback.
 This harness is the first-pass gate; it is not promotion authority.
+
+## Refresh Prompt
+
+Use `prompts/language-frontier-refresh.prompt.md` for weekly or monthly source
+refreshes. It turns high-signal Python, Rust, mixed-language, and future-language
+discoveries into a small candidate packet with source, safe summary, proof
+surface, local falsification idea, AI-overlooked pattern, target DAD surface,
+and rejection reason when needed.
+
+The prompt exists because language research is tempting to overclaim. DAD wants
+the boring useful part: executable proof surfaces and local harness cases that
+make future agents better at reading, writing, running, and repairing code.

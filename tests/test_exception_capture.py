@@ -1683,6 +1683,39 @@ def test_observed_capture_audit_uses_registry_backfill_classifier(tmp_path: Path
     assert signal["path_redacted"] == "true"
     assert signal["source_rule_id"] == "backfill-rule:tool-unavailable"
     assert signal["classification_source"] == "backfill_classifier"
+    suggestion = signal["capture_suggestion"]
+    assert suggestion["matched_rule_ids"] == ["exception-capture-rule:tool-unavailable-metadata"]
+    assert suggestion["actual"]["event_types"] == ["tool_unavailable"]
+    assert suggestion["actual"]["capture_contracts"] == ["retry_or_plan_change"]
+    assert suggestion["actual"]["required_fields"] == [
+        "attempted_command",
+        "fallback_path",
+        "safe_summary",
+        "tool_name",
+    ]
+    assert suggestion["capture_surface_version_unknown"] is True
+    assert suggestion["update_required"] is True
+
+
+def test_observed_capture_audit_does_not_expand_broad_exception_signal(
+    tmp_path: Path,
+) -> None:
+    repo = tmp_path / "repo-generic-exception"
+    docs = repo / "docs"
+    docs.mkdir(parents=True)
+    (docs / "postmortem.md").write_text("metadata-only placeholder", encoding="utf-8")
+
+    report = write_observed_capture_audit(ROOT, [repo], output=tmp_path / "audit.json")
+    signal = report["repos"][0]["candidate_path_signals"][0]
+    suggestion = signal["capture_suggestion"]
+
+    assert signal["pattern_family"] == "exception_pattern"
+    assert signal["suggested_event_type"] == "backfill_exception_candidate"
+    assert suggestion["ambiguous_exception_signal"] is True
+    assert suggestion["matched_rule_ids"] == []
+    assert suggestion["actual"]["packet_classes"] == ["no_packet"]
+    assert suggestion["recommended_packets"] == []
+    assert "broad exception path signal" in suggestion["next_actions"][0]
 
 
 def test_observed_capture_audit_summarizes_candidate_signal_mix(tmp_path: Path) -> None:
@@ -1706,6 +1739,16 @@ def test_observed_capture_audit_summarizes_candidate_signal_mix(tmp_path: Path) 
     assert row_summary["by_suggested_event_type"]["review_finding"] == 1
     assert row_summary["by_source_rule_id"]["backfill-rule:tool-unavailable"] == 1
     assert row_summary["by_source_rule_id"]["backfill-rule:review-finding"] == 1
+    assert (
+        row_summary["by_capture_suggest_rule_id"][
+            "exception-capture-rule:tool-unavailable-metadata"
+        ]
+        == 1
+    )
+    assert (
+        row_summary["by_capture_suggest_rule_id"]["exception-capture-rule:review-finding"]
+        == 1
+    )
     assert row_summary["by_emission_status"]["gap_candidate"] == 2
     assert report_summary == row_summary
     assert "## Candidate Suggested Event Types" in md_text
@@ -1713,6 +1756,48 @@ def test_observed_capture_audit_summarizes_candidate_signal_mix(tmp_path: Path) 
     assert "`review_finding`: 1" in md_text
     assert "`backfill-rule:tool-unavailable`: 1" in md_text
     assert "`backfill-rule:review-finding`: 1" in md_text
+
+
+def test_observed_capture_audit_carries_reviewed_workflow_capture_suggestion(
+    tmp_path: Path,
+) -> None:
+    repo = tmp_path / "repo-review-workflow"
+    docs = repo / "docs"
+    docs.mkdir(parents=True)
+    (docs / "review-issue-workflow.md").write_text(
+        "metadata-only pointer to a structured review issue workflow",
+        encoding="utf-8",
+    )
+    (repo / ".digital-asset").mkdir()
+    (repo / ".digital-asset" / "dad-integration.json").write_text(
+        json.dumps(
+            {
+                "repo_id": "repo-review-workflow",
+                "schema_version": "0.1.0",
+                "capture_surface_version": "0.2.0",
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    report = write_observed_capture_audit(ROOT, [repo], output=tmp_path / "audit.json")
+    signal = report["repos"][0]["candidate_path_signals"][0]
+    suggestion = signal["capture_suggestion"]
+
+    assert signal["pattern_family"] == "workflow"
+    assert suggestion["matched_rule_ids"] == [
+        "exception-capture-rule:structured-workflow-review-gap"
+    ]
+    assert suggestion["update_required"] is False
+    assert suggestion["actual"]["packet_classes"] == ["exception_event", "ordinary_mail"]
+    assert suggestion["actual"]["mail_message_types"] == ["workflow_suggestion"]
+    assert suggestion["actual"]["event_types"] == ["review_finding"]
+    assert suggestion["actual"]["required_fields"] == [
+        "exception_mapping_gap",
+        "issue_classes",
+        "validation_refs",
+        "workflow_summary",
+    ]
 
 
 def test_observed_capture_audit_redacts_embedded_local_paths_even_internal(

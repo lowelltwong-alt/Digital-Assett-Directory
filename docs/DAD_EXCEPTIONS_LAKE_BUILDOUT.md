@@ -718,7 +718,7 @@ Wave 2: Local Capture And Central Collection
 
 Wave 2.5: Capture-Completeness Harness
 
-- Build a synthetic cross-repo capture harness that proves repos emit candidate mail
+- Build a synthetic cross-repo capture harness that checks whether repos emit candidate mail
   and exception packets for the things DAD wants, without Lowell having to notice the
   pattern in chat.
 - Use the LawFirm-os-intake specimen as a golden missed-capture case:
@@ -833,7 +833,7 @@ Implemented starter harness:
   temp repo outbox through DAD helpers.
 - Payload samples are screened by DAD's best-effort credential/PII policy and a small
   prompt-injection-like text detector before any packet class is considered emitted.
-- Current limitation: this proves synthetic rule coverage plus fixture/temporary
+- Current limitation: this exercises synthetic rule coverage plus fixture/temporary
   observed outbox comparison. Later waves still need live repo exporters, enrollment
   refresh checks, and observed-vs-expected verification across actual enrolled repos.
 - `assets/coding-harnesses/exception-capture-completeness/prompts/fable5-exception-capture-and-backfill-red-team.prompt.md`
@@ -994,6 +994,12 @@ Observed repo audit add-on:
   blocks so reviewers can see whether a repo's historical candidates are mostly
   tool-unavailable, stale-report, review-finding, artifact-registration, or other
   taxonomy-backed signals before opening a backfill wave.
+- Each observed-audit candidate path signal includes a nested
+  `capture_suggestion` compiled from the reviewed capture-pattern registry. It
+  carries matched capture rule IDs, candidate packet classes, event types, mail
+  message types, capture contracts, required fields, and stale capture-surface
+  state. This tells the source repo what packet it should consider emitting
+  without claiming the path signal is a confirmed exception.
 - `asset-dir exceptions capture-audit --strict --fail-on-gaps` also fails on
   `type_present_uncorrelated`, `emission_unverified`, stale capture surfaces,
   unknown capture surfaces, and truncated candidate scans. Use this in

@@ -20,3 +20,10 @@ Return:
 Do not promote the idea. Keep it candidate-only unless reviewed local evidence
 exists.
 ```
+
+For scheduled or deeper research refreshes, use
+`language-frontier-refresh.prompt.md`. It asks for a trusted-source match,
+proof surface, local falsification idea, AI-overlooked pattern, and target DAD
+surface. The prompt is pointer-only by design: it screens candidates into DAD
+without copying external docs, code, benchmark tables, private rows, raw logs,
+or long source blobs.

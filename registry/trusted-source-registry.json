@@ -321,12 +321,17 @@
     },
     {
       "source_id": "astral",
-      "label": "Astral (ruff, uv)",
+      "label": "Astral (ruff, uv, ty)",
       "url_patterns": ["astral.sh", "github.com/astral-sh"],
       "trust_tier": "high_signal",
       "check_cadence": "monthly",
       "language_focus": ["python"],
-      "frontier_watch": ["Python tooling speedups", "lint rules", "dependency and environment workflows"],
+      "frontier_watch": [
+        "Python tooling speedups",
+        "lint rules",
+        "dependency and environment workflows",
+        "Rust-backed Python type-checking and language-server diagnostics that may improve agent feedback loops"
+      ],
       "intake_actions": ["Evaluate speed/tooling changes through DAD harnesses before recommending repo-wide adoption."],
       "asset_kinds": ["asset", "doc"],
       "review_status": "reviewed"
