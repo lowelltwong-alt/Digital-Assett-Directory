@@ -779,6 +779,11 @@ Backfill safety and classification:
   `--max-scanned-files`. The scanned-file ceiling prevents a "safe" historical
   pass from walking indefinitely when many repos are already at cap or only
   produce duplicate candidates.
+- `asset-dir exceptions backfill-readiness --repo all` writes a central
+  readiness matrix before any broad historical backfill wave. It summarizes
+  reviewed repo policy, protected-repo blocks, approval requirements, capture
+  surface freshness, observed path-signal counts, and next actions. It is
+  planning evidence only; it never approves or runs backfill.
 - Exception reports summarize both event types and reviewed event categories, so
   DAD can detect repeated families of failure without treating raw path keywords
   as proof.

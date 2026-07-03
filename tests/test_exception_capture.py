@@ -22,6 +22,7 @@ from digital_asset_directory.exception_capture import (
     evaluate_capture_scenarios,
     load_capture_pattern_registry,
     load_capture_scenarios,
+    write_exception_backfill_readiness,
     write_observed_capture_audit,
 )
 from digital_asset_directory.exceptions_lake import record_exception_event
@@ -1415,3 +1416,71 @@ def test_observed_capture_audit_flags_truncated_candidate_scan(tmp_path: Path) -
     assert report["status_counts"]["candidate_path_scan_truncated"] == 1
     assert _capture_audit_gap_count(report, strict=False) >= 1
     assert "candidate_path_scan_truncated" in audit_md
+
+
+def test_exception_backfill_readiness_reports_policy_gates(tmp_path: Path) -> None:
+    ready_repo = tmp_path / "ready-external"
+    protected_repo = tmp_path / "protected-repo"
+    blocked_repo = tmp_path / "blocked-repo"
+    for repo in [ready_repo, protected_repo, blocked_repo]:
+        docs = repo / "docs"
+        docs.mkdir(parents=True)
+        (docs / "postmortem.md").write_text("metadata-only placeholder", encoding="utf-8")
+    policies = [
+        ExceptionRepoPolicy(
+            id="ready-external",
+            path=ready_repo,
+            alias="ready",
+            visibility="internal",
+            exceptions_enabled=True,
+            collect_allowed=True,
+            capture_audit_allowed=True,
+            backfill_allowed=True,
+            approved_approval_ids=["APPROVED-BACKFILL"],
+        ),
+        ExceptionRepoPolicy(
+            id="protected",
+            path=protected_repo,
+            alias="protected",
+            visibility="public",
+            public_facing=True,
+            exceptions_enabled=True,
+            collect_allowed=False,
+            capture_audit_allowed=True,
+            backfill_allowed=True,
+            write_protected=True,
+        ),
+        ExceptionRepoPolicy(
+            id="blocked",
+            path=blocked_repo,
+            alias="blocked",
+            visibility="public",
+            public_facing=True,
+            exceptions_enabled=True,
+            collect_allowed=True,
+            capture_audit_allowed=True,
+            backfill_allowed=False,
+        ),
+    ]
+
+    report = write_exception_backfill_readiness(
+        ROOT,
+        [ready_repo, protected_repo, blocked_repo],
+        repo_policies=policies,
+        output=tmp_path / "readiness.json",
+        candidate_limit=5,
+    )
+    rows = {row["repo_id"]: row for row in report["repos"]}
+    md_text = (tmp_path / "readiness.md").read_text(encoding="utf-8")
+
+    assert rows["ready-external"]["backfill_readiness"] == "ready_with_reviewed_approval"
+    assert rows["ready-external"]["blocked_reasons"] == []
+    assert rows["ready-external"]["candidate_path_signal_count"] == 1
+    assert rows["protected"]["backfill_readiness"] == "central_only_or_blocked"
+    assert any("write_protected" in reason for reason in rows["protected"]["blocked_reasons"])
+    assert rows["blocked"]["backfill_readiness"] == "blocked_by_policy_or_no_signals"
+    assert "backfill_allowed=false" in rows["blocked"]["blocked_reasons"]
+    assert report["readiness_counts"]["ready_with_reviewed_approval"] == 1
+    assert "Boundary: central planning evidence only" in md_text
+    assert str(tmp_path) not in json.dumps(report)
+    assert str(tmp_path) not in md_text

@@ -29,6 +29,8 @@ TAXONOMY_COVERAGE_REPORT_JSON = (
 TAXONOMY_COVERAGE_REPORT_MD = Path("processed") / "reports" / "exception_taxonomy_coverage.md"
 OBSERVED_AUDIT_JSON = Path("processed") / "reports" / "exception_capture_observed_audit.json"
 OBSERVED_AUDIT_MD = Path("processed") / "reports" / "exception_capture_observed_audit.md"
+BACKFILL_READINESS_JSON = Path("processed") / "reports" / "exception_backfill_readiness.json"
+BACKFILL_READINESS_MD = Path("processed") / "reports" / "exception_backfill_readiness.md"
 
 PACKET_CLASSES = {
     "ordinary_mail",
@@ -601,15 +603,26 @@ def _policy_summary(repo: Path, repo_policies: list[Any] | None) -> dict[str, An
             "repo_alias": repo.name,
             "visibility": "unknown",
             "public_facing": False,
+            "exceptions_enabled": False,
+            "collect_allowed": False,
+            "capture_audit_allowed": False,
+            "backfill_allowed": False,
+            "approved_approval_id_count": 0,
             "write_protected": False,
             "write_protection_reason": "",
         }
+    approved_ids = [str(item) for item in getattr(policy, "approved_approval_ids", []) or []]
     return {
         "reviewed_policy": True,
         "repo_id": str(getattr(policy, "id", repo.name)),
         "repo_alias": str(getattr(policy, "alias", getattr(policy, "id", repo.name))),
         "visibility": str(getattr(policy, "visibility", "unknown")),
         "public_facing": bool(getattr(policy, "public_facing", False)),
+        "exceptions_enabled": bool(getattr(policy, "exceptions_enabled", True)),
+        "collect_allowed": bool(getattr(policy, "collect_allowed", False)),
+        "capture_audit_allowed": bool(getattr(policy, "capture_audit_allowed", False)),
+        "backfill_allowed": bool(getattr(policy, "backfill_allowed", False)),
+        "approved_approval_id_count": len(approved_ids),
         "write_protected": bool(getattr(policy, "write_protected", False)),
         "write_protection_reason": str(getattr(policy, "write_protection_reason", "")),
     }
@@ -1315,6 +1328,177 @@ def write_observed_capture_audit(
                 + f"({repo['path_hint']}): "
                 + ", ".join(f"`{flag}`" for flag in row["status_flags"])
             )
+    md_path.parent.mkdir(parents=True, exist_ok=True)
+    md_path.write_text("\n".join(lines) + "\n", encoding="utf-8")
+    return report
+
+
+def _backfill_readiness_action(row: dict[str, Any]) -> tuple[str, list[str], list[str]]:
+    repo = row["repo"]
+    status_flags = set(row.get("status_flags", []))
+    reasons: list[str] = []
+    next_actions: list[str] = []
+    if not repo.get("reviewed_policy"):
+        reasons.append("repo lacks reviewed exceptions.repos policy")
+    if not repo.get("exceptions_enabled"):
+        reasons.append("exceptions_enabled=false")
+    if repo.get("write_protected"):
+        reasons.append("write_protected repo; keep central-only unless explicitly approved")
+    if not repo.get("backfill_allowed"):
+        reasons.append("backfill_allowed=false")
+    if not row.get("candidate_path_signal_count"):
+        reasons.append("no candidate path signals in bounded audit")
+    if "candidate_path_scan_truncated" in status_flags:
+        next_actions.append("rerun observed audit with a higher --candidate-limit before review")
+    if row.get("contract", {}).get("capture_surface_version") != row.get(
+        "registry_capture_surface_version"
+    ):
+        next_actions.append("refresh repo capture surface before treating no-packet results as current")
+    if any(
+        flag in status_flags
+        for flag in {
+            "missed_capture_candidate",
+            "pattern_gap_candidate",
+            "mail_present_exception_gap_candidate",
+            "emission_unverified",
+            "type_present_uncorrelated",
+        }
+    ):
+        next_actions.append("review observed capture gaps and decide whether repo should emit mail or exception packets")
+    if reasons:
+        if repo.get("write_protected"):
+            return "central_only_or_blocked", reasons, next_actions
+        return "blocked_by_policy_or_no_signals", reasons, next_actions
+    if str(repo.get("repo_id")) == "dad" and str(repo.get("path_hint")) == ".":
+        next_actions.append("metadata-only backfill may run without non-DAD approval")
+        return "ready_now", reasons, next_actions
+    if int(repo.get("approved_approval_id_count", 0) or 0) > 0:
+        next_actions.append("run metadata-only backfill only with a reviewed approval id from policy")
+        return "ready_with_reviewed_approval", reasons, next_actions
+    next_actions.append("add a reviewed exception backfill approval id before running backfill")
+    return "approval_needed", reasons, next_actions
+
+
+def _capture_surface_action(row: dict[str, Any]) -> str:
+    contract_version = str(row.get("contract", {}).get("capture_surface_version") or "")
+    registry_version = str(row.get("registry_capture_surface_version") or "")
+    if not contract_version:
+        return "install_or_refresh_capture_surface"
+    if _version_tuple(contract_version) < _version_tuple(registry_version):
+        return "refresh_capture_surface"
+    return "current"
+
+
+def write_exception_backfill_readiness(
+    hub_root: Path,
+    repos: list[Path],
+    *,
+    repo_policies: list[Any] | None = None,
+    output: Path | None = None,
+    candidate_limit: int = 50,
+) -> dict[str, Any]:
+    """Write a compact central plan for safe historical exception backfill.
+
+    This is intentionally read-only with respect to target repos. It summarizes
+    what the observed audit saw and which reviewed policy gates still block a
+    metadata-only backfill wave.
+    """
+    registry = load_capture_pattern_registry(hub_root)
+    audited_rows = [
+        audit_observed_capture_repo(
+            hub_root,
+            repo,
+            registry,
+            repo_policies=repo_policies,
+            candidate_limit=candidate_limit,
+        )
+        for repo in repos
+    ]
+    rows: list[dict[str, Any]] = []
+    for audited in audited_rows:
+        readiness, blocked_reasons, next_actions = _backfill_readiness_action(audited)
+        repo = audited["repo"]
+        outboxes = audited["outboxes"]
+        rows.append(
+            {
+                "repo_id": repo["repo_id"],
+                "repo_alias": repo["repo_alias"],
+                "path_hint": repo["path_hint"],
+                "path_hash": repo["path_hash"],
+                "visibility": repo["visibility"],
+                "public_facing": repo["public_facing"],
+                "reviewed_policy": repo["reviewed_policy"],
+                "exceptions_enabled": repo["exceptions_enabled"],
+                "collect_allowed": repo["collect_allowed"],
+                "capture_audit_allowed": repo["capture_audit_allowed"],
+                "backfill_allowed": repo["backfill_allowed"],
+                "write_protected": repo["write_protected"],
+                "candidate_path_signal_count": audited["candidate_path_signal_count"],
+                "candidate_path_scan": audited["candidate_path_scan"],
+                "status_flags": audited["status_flags"],
+                "capture_surface_action": _capture_surface_action(audited),
+                "backfill_readiness": readiness,
+                "blocked_reasons": blocked_reasons,
+                "next_actions": sorted(set(next_actions)),
+                "packet_counts": {
+                    "mail": outboxes["mail_outbox"]["record_count"],
+                    "exception": outboxes["exception_outbox"]["record_count"],
+                    "fix_outcome": outboxes["fix_outcomes"]["record_count"],
+                },
+            }
+        )
+    readiness_counts = Counter(str(row["backfill_readiness"]) for row in rows)
+    capture_surface_counts = Counter(str(row["capture_surface_action"]) for row in rows)
+    status_counts = Counter(flag for audited in audited_rows for flag in audited["status_flags"])
+    report = {
+        "generated_at": utc_now(),
+        "report_id": "dad:exception-backfill-readiness",
+        "repo_count": len(rows),
+        "registry_ref": CAPTURE_PATTERN_REGISTRY.as_posix(),
+        "methodology_hash": f"sha256:{sha256_file(hub_root / CAPTURE_PATTERN_REGISTRY)}",
+        "candidate_limit": candidate_limit,
+        "readiness_counts": dict(sorted(readiness_counts.items())),
+        "capture_surface_action_counts": dict(sorted(capture_surface_counts.items())),
+        "status_counts": dict(sorted(status_counts.items())),
+        "repos": rows,
+        "authority_boundary": (
+            "Backfill readiness is central planning evidence only. It does not run "
+            "backfill, approve a repo, write target repos, promote candidate events, "
+            "or prove path-signal truth."
+        ),
+    }
+    output_path = hub_root / (output or BACKFILL_READINESS_JSON)
+    write_json(output_path, report)
+    md_path = output_path.with_suffix(".md") if output else hub_root / BACKFILL_READINESS_MD
+    lines = [
+        "# Exception Backfill Readiness",
+        "",
+        f"- Generated: {report['generated_at']}",
+        f"- Repos evaluated: {report['repo_count']}",
+        f"- Candidate limit per repo: `{candidate_limit}`",
+        f"- Methodology hash: `{report['methodology_hash']}`",
+        "",
+        "Boundary: central planning evidence only. This report never approves or runs "
+        "historical backfill.",
+        "",
+        "## Readiness Counts",
+        "",
+    ]
+    lines.extend(f"- `{key}`: {count}" for key, count in report["readiness_counts"].items())
+    lines.extend(["", "## Repo Matrix", ""])
+    lines.append(
+        "| Repo | Readiness | Capture Surface | Signals | Flags | Next Actions |"
+    )
+    lines.append("| --- | --- | --- | ---: | --- | --- |")
+    for row in rows:
+        flags = ", ".join(f"`{flag}`" for flag in row["status_flags"]) or "-"
+        actions = "<br>".join(row["next_actions"]) or "-"
+        lines.append(
+            "| "
+            + f"`{row['repo_id']}` | `{row['backfill_readiness']}` | "
+            + f"`{row['capture_surface_action']}` | {row['candidate_path_signal_count']} | "
+            + f"{flags} | {actions} |"
+        )
     md_path.parent.mkdir(parents=True, exist_ok=True)
     md_path.write_text("\n".join(lines) + "\n", encoding="utf-8")
     return report
