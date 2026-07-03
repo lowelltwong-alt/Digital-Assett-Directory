@@ -116,6 +116,24 @@ def test_language_coding_advantage_registry_resolves_sources_and_assets():
 
     languages = {item["language_id"]: item for item in language_registry["languages"]}
     assert {"python", "rust", "future-language-template"}.issubset(languages)
+    assert {
+        "pytest-dev",
+        "hypothesis",
+        "python-type-checkers",
+    }.issubset(languages["python"]["trusted_source_ids"])
+    assert {"rust-fuzz", "rust-test-frontier"}.issubset(
+        languages["rust"]["trusted_source_ids"]
+    )
+    python_patterns = {
+        pattern["pattern_id"] for pattern in languages["python"]["ai_overlooked_patterns"]
+    }
+    rust_patterns = {
+        pattern["pattern_id"] for pattern in languages["rust"]["ai_overlooked_patterns"]
+    }
+    assert "py-pattern:property-based-invariant" in python_patterns
+    assert "py-pattern:static-checker-negative-contract" in python_patterns
+    assert "rs-pattern:fuzz-target-at-parser-boundary" in rust_patterns
+    assert "rs-pattern:isolated-test-runner-before-speed-claim" in rust_patterns
 
     for language in language_registry["languages"]:
         assert set(language["trusted_source_ids"]).issubset(trusted_source_ids)
@@ -134,6 +152,12 @@ def test_router_references_registered_assets_and_tactics():
     tactic_ids = {
         tactic["tactic_id"] for tactic in load_json("registry/coding-tactics-radar.json")["tactics"]
     }
+    assert {
+        "python-property-based-invariants",
+        "python-static-checker-negative-contract",
+        "rust-fuzz-parser-boundary",
+        "rust-nextest-isolated-runner",
+    }.issubset(tactic_ids)
 
     for route in load_json("registry/preflight-profile-router.json")["routes"]:
         assert set(route["required_preflight_profiles"]).issubset(asset_ids)

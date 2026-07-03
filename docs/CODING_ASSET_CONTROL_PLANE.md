@@ -129,6 +129,10 @@ bounded implementation reduces blast radius by:
 - Cursor rules: https://cursor.com/docs/rules
 - GitHub Copilot custom instructions: https://docs.github.com/copilot/customizing-copilot/adding-custom-instructions-for-github-copilot
 - Python docs: https://docs.python.org/3/
+- pytest docs: https://docs.pytest.org/
+- Hypothesis docs: https://hypothesis.readthedocs.io/
 - Rust docs: https://doc.rust-lang.org/
 - Rust API Guidelines: https://rust-lang.github.io/api-guidelines/about.html
+- Rust Fuzz Book: https://rust-fuzz.github.io/book/
+- cargo-nextest: https://nexte.st/
 - AI-code security study: https://arxiv.org/abs/2211.03622

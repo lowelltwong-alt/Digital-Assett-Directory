@@ -19,12 +19,16 @@
         "python-packaging",
         "python-typing",
         "astral",
+        "pytest-dev",
+        "hypothesis",
+        "python-type-checkers",
         "pyo3"
       ],
       "check_cadence": "weekly",
       "frontier_questions": [
         "Which new Python versions, PEPs, typing features, diagnostics, or stdlib tools should change AI coding defaults?",
         "Which Python idioms make code easier for future agents to inspect, validate, and safely edit?",
+        "Which property-based, static-analysis, or fixture patterns catch AI-authored edge cases before review?",
         "Which slow Python workflows should be improved through orchestration, profiling, vectorized libraries, or a Rust shadow path?"
       ],
       "ai_advantages": [
@@ -61,6 +65,23 @@
             "Run native pytest for the selected scope and full validation before promotion.",
             "Gate timing claims behind verified coverage evidence."
           ]
+        },
+        {
+          "advantage_id": "py-advantage:property-and-static-contracts",
+          "summary": "Use property-based tests and static checker contracts to make agent-written edge cases fail deterministically before broad review.",
+          "use_when": [
+            "A function parses, normalizes, routes, deduplicates, hashes, or transforms structured records.",
+            "A public API, Protocol, TypedDict, or dataclass boundary has invariants that examples alone may miss."
+          ],
+          "avoid_when": [
+            "The repo has no test budget or dependency policy for property-based tools.",
+            "The desired guarantee is runtime validation but the proposed check is only a type hint."
+          ],
+          "verification": [
+            "Add at least one small invariant test or negative type-check case before promoting the tactic.",
+            "Keep generated counterexamples sanitized and local unless approved for DAD mail.",
+            "Record whether the checker or property test actually caught a defect in postflight."
+          ]
         }
       ],
       "ai_overlooked_patterns": [
@@ -91,6 +112,36 @@
             "registry/coding-tactics-radar.json#python-protocol-side-effect-port",
             "assets/coding-harnesses/python-test-performance-orchestration",
             "dad:need:coding-harness-feedback"
+          ]
+        },
+        {
+          "pattern_id": "py-pattern:property-based-invariant",
+          "summary": "Small property tests can protect parsers, serializers, IDs, and dedupe logic from edge cases agents do not enumerate.",
+          "why_ai_may_miss_it": "Agents usually write example tests that mirror the happy path they just implemented.",
+          "detection_signals": [
+            "Round-trip, normalize, split, merge, sort, hash, or dedupe functions with only example tests.",
+            "A bug fix mentions an edge input but the regression test covers only that single input.",
+            "Mail, exception, schema, or registry code has invariants independent of specific sample records."
+          ],
+          "route_to": [
+            "registry/coding-tactics-radar.json#python-property-based-invariants",
+            "dad:need:language-frontier-signals",
+            "dad:need:coding-harness-feedback"
+          ]
+        },
+        {
+          "pattern_id": "py-pattern:static-checker-negative-contract",
+          "summary": "When a repo already runs mypy, pyright, or similar, negative type tests can freeze API and Protocol expectations.",
+          "why_ai_may_miss_it": "AI agents tend to treat type hints as documentation and do not ask whether the type checker is an executable contract.",
+          "detection_signals": [
+            "Protocols, NewType IDs, overloads, or TypedDict boundaries with no checker command.",
+            "A public API migration where wrong caller shapes should fail before runtime.",
+            "A repo has type-checker config but new guidance omits it from validation."
+          ],
+          "route_to": [
+            "registry/coding-tactics-radar.json#python-static-checker-negative-contract",
+            "dad:need:language-frontier-signals",
+            "asset:python-ai-advantage-preflight"
           ]
         }
       ],
@@ -167,6 +218,8 @@
         "rust-lang",
         "rust-community-frontier",
         "rust-security",
+        "rust-fuzz",
+        "rust-test-frontier",
         "pyo3",
         "google"
       ],
@@ -174,6 +227,7 @@
       "frontier_questions": [
         "Which newly stabilized Rust, Cargo, Clippy, or stdlib changes make code easier for agents to verify?",
         "Which crates or patterns improve deterministic scanning, parsing, chunking, hashing, and static analysis for DAD?",
+        "Which fuzzing, property, or isolated test-runner patterns expose parser and parity mistakes faster than ordinary examples?",
         "Which Python hot paths deserve a Rust shadow experiment rather than a full rewrite?"
       ],
       "ai_advantages": [
@@ -210,6 +264,40 @@
             "Require same-scope structured parity before timing claims.",
             "Use PyO3/maturin only after the boundary is stable."
           ]
+        },
+        {
+          "advantage_id": "rs-advantage:fuzzable-boundaries",
+          "summary": "Design Rust parser, scanner, chunker, and serializer boundaries so fuzzing and property tests can attack them without repo-specific side effects.",
+          "use_when": [
+            "A Rust module accepts untrusted text, bytes, paths, JSONL, or cross-repo metadata.",
+            "A bug class depends on edge inputs that example tests are unlikely to cover."
+          ],
+          "avoid_when": [
+            "The boundary still depends on filesystem, network, clock, or Python interpreter state.",
+            "Generated corpora could contain private-source data and no sanitization plan exists."
+          ],
+          "verification": [
+            "Keep the fuzz target or property test around a pure deterministic function.",
+            "Store crash or minimized examples locally unless sanitized and approved for DAD.",
+            "Record fuzz/property outcomes as harness evidence before promotion."
+          ]
+        },
+        {
+          "advantage_id": "rs-advantage:machine-readable-test-orchestration",
+          "summary": "Use Rust test runner and Clippy output as structured evidence when parity, speed, or safety claims need audit trails.",
+          "use_when": [
+            "A Rust shadow layer, CLI validator, or cross-repo tool needs repeatable pass/fail evidence.",
+            "A repo has many Rust tests where isolation or machine-readable output would improve triage."
+          ],
+          "avoid_when": [
+            "The ordinary cargo test output is already sufficient and no audit claim depends on structure.",
+            "The test-runner dependency would add more maintenance cost than signal."
+          ],
+          "verification": [
+            "Compare native cargo test and alternate runner results before changing defaults.",
+            "Capture command, exit code, duration, and report path in harness outcomes.",
+            "Do not call a run faster unless the same workload and same scope were measured."
+          ]
         }
       ],
       "ai_overlooked_patterns": [
@@ -241,6 +329,36 @@
             "assets/rust-buildout-guide",
             "assets/coding-harnesses/rust-shadow-parity-harness",
             "dad:need:coding-harness-feedback"
+          ]
+        },
+        {
+          "pattern_id": "rs-pattern:fuzz-target-at-parser-boundary",
+          "summary": "A small pure parser or chunker boundary should often get a fuzz/property harness before it becomes a shared Rust tool.",
+          "why_ai_may_miss_it": "Agents often stop after table-driven examples pass and do not create adversarial input generation.",
+          "detection_signals": [
+            "Rust code parses paths, JSONL, markdown, logs, mail packets, or registry records.",
+            "A function accepts bytes or strings from another repo or untrusted source.",
+            "A review finding mentions malformed input or panic risk."
+          ],
+          "route_to": [
+            "registry/coding-tactics-radar.json#rust-fuzz-parser-boundary",
+            "assets/coding-harnesses/rust-shadow-parity-harness",
+            "dad:need:coding-harness-feedback"
+          ]
+        },
+        {
+          "pattern_id": "rs-pattern:isolated-test-runner-before-speed-claim",
+          "summary": "When Rust test speed or reliability matters, isolated runner evidence should precede claims that Rust made a workflow faster.",
+          "why_ai_may_miss_it": "AI agents may compare a tiny Rust command to a full Python suite and miss scope or isolation differences.",
+          "detection_signals": [
+            "A Rust timing claim lacks command, scope, exit code, and structured report evidence.",
+            "Rust tests share global state or pass locally but not in CI.",
+            "A parity harness needs per-test identity and duration records."
+          ],
+          "route_to": [
+            "registry/coding-tactics-radar.json#rust-nextest-isolated-runner",
+            "assets/coding-harnesses/rust-shadow-parity-harness",
+            "dad:need:language-frontier-signals"
           ]
         }
       ],

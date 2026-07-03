@@ -69,6 +69,22 @@ def test_trusted_source_registry_validates_and_matches():
     assert python_source["source_id"] == "python-core"
     assert python_source["check_cadence"] == "weekly"
     assert "python" in python_source["language_focus"]
+    pytest_source, pytest_tier = match_trusted_source(ROOT, "https://docs.pytest.org/en/stable/")
+    assert pytest_tier == "high_signal"
+    assert pytest_source["source_id"] == "pytest-dev"
+    hypothesis_source, hypothesis_tier = match_trusted_source(
+        ROOT, "https://hypothesis.readthedocs.io/en/latest/"
+    )
+    assert hypothesis_tier == "known"
+    assert hypothesis_source["source_id"] == "hypothesis"
+    rust_fuzz_source, rust_fuzz_tier = match_trusted_source(
+        ROOT, "https://rust-fuzz.github.io/book/"
+    )
+    assert rust_fuzz_tier == "known"
+    assert rust_fuzz_source["source_id"] == "rust-fuzz"
+    nextest_source, nextest_tier = match_trusted_source(ROOT, "https://nexte.st/")
+    assert nextest_tier == "known"
+    assert nextest_source["source_id"] == "rust-test-frontier"
     _, unknown_tier = match_trusted_source(ROOT, "https://random-blog.example.com/skill")
     assert unknown_tier == "unknown"
     insecure_source, insecure_tier = match_trusted_source(ROOT, "http://peps.python.org/pep-0703/")

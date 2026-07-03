@@ -117,6 +117,44 @@
       "review_status": "reviewed"
     },
     {
+      "source_id": "rust-fuzz",
+      "label": "Rust fuzzing and property-test projects",
+      "url_patterns": ["rust-fuzz.github.io", "github.com/rust-fuzz", "github.com/BurntSushi/quickcheck", "github.com/proptest-rs"],
+      "trust_tier": "known",
+      "check_cadence": "monthly",
+      "language_focus": ["rust"],
+      "frontier_watch": [
+        "fuzz target patterns for parsers, scanners, serializers, and chunkers",
+        "property-based invariant tests that catch edge cases ordinary examples miss",
+        "coverage-guided regression corpus management that stays pointer-only in DAD"
+      ],
+      "intake_actions": [
+        "Route fuzzing ideas to harness candidates with minimized public-safe examples.",
+        "Do not copy generated corpora, private inputs, or crash artifacts into DAD mail."
+      ],
+      "asset_kinds": ["doc", "harness", "lesson"],
+      "review_status": "reviewed"
+    },
+    {
+      "source_id": "rust-test-frontier",
+      "label": "Rust test orchestration frontier",
+      "url_patterns": ["nexte.st", "github.com/nextest-rs"],
+      "trust_tier": "known",
+      "check_cadence": "monthly",
+      "language_focus": ["rust"],
+      "frontier_watch": [
+        "isolated and partitioned Rust test execution",
+        "machine-readable test output that can feed parity and governance reports",
+        "test-runner configuration patterns that reduce false green reports"
+      ],
+      "intake_actions": [
+        "Evaluate test-runner ideas through local harness outcomes before recommending defaults.",
+        "Keep timing claims behind same-workload and same-scope evidence."
+      ],
+      "asset_kinds": ["doc", "harness", "lesson"],
+      "review_status": "reviewed"
+    },
+    {
       "source_id": "pyo3",
       "label": "PyO3 / maturin project",
       "url_patterns": ["pyo3.rs", "maturin.rs", "github.com/pyo3"],
@@ -189,6 +227,63 @@
       "frontier_watch": ["Python tooling speedups", "lint rules", "dependency and environment workflows"],
       "intake_actions": ["Evaluate speed/tooling changes through DAD harnesses before recommending repo-wide adoption."],
       "asset_kinds": ["asset", "doc"],
+      "review_status": "reviewed"
+    },
+    {
+      "source_id": "pytest-dev",
+      "label": "pytest project and pytest-dev plugins",
+      "url_patterns": ["docs.pytest.org", "pytest.org", "github.com/pytest-dev"],
+      "trust_tier": "high_signal",
+      "check_cadence": "monthly",
+      "language_focus": ["python"],
+      "frontier_watch": [
+        "test selection, marker, fixture, and collection patterns",
+        "machine-readable report plugins and failure triage hooks",
+        "parallel and distributed test execution practices worth validating locally"
+      ],
+      "intake_actions": [
+        "Route pytest discoveries through the Python test performance harness before downstream recommendation.",
+        "Do not turn plugin availability into a DAD default unless the target repo opts in."
+      ],
+      "asset_kinds": ["doc", "harness", "lesson"],
+      "review_status": "reviewed"
+    },
+    {
+      "source_id": "hypothesis",
+      "label": "Hypothesis property-based testing",
+      "url_patterns": ["hypothesis.works", "hypothesis.readthedocs.io", "github.com/HypothesisWorks"],
+      "trust_tier": "known",
+      "check_cadence": "monthly",
+      "language_focus": ["python"],
+      "frontier_watch": [
+        "property-based tests for parsers, serializers, schemas, and ID transformations",
+        "stateful testing patterns that can find agent-authored edge cases",
+        "shrinking and counterexample preservation practices"
+      ],
+      "intake_actions": [
+        "Convert useful property ideas into small repo-local tests or harness eval cases.",
+        "Keep generated examples and failure inputs local unless sanitized and approved."
+      ],
+      "asset_kinds": ["doc", "harness", "lesson"],
+      "review_status": "reviewed"
+    },
+    {
+      "source_id": "python-type-checkers",
+      "label": "Python static type checker projects",
+      "url_patterns": ["mypy.readthedocs.io", "github.com/python/mypy", "microsoft.github.io/pyright", "github.com/microsoft/pyright"],
+      "trust_tier": "known",
+      "check_cadence": "monthly",
+      "language_focus": ["python"],
+      "frontier_watch": [
+        "type-checker diagnostics that catch AI-generated boundary mistakes",
+        "strictness settings that are useful without overwhelming small repos",
+        "negative type-test patterns for public API and protocol contracts"
+      ],
+      "intake_actions": [
+        "Recommend type-checker tactics only where a repo has or explicitly plans a checker.",
+        "Capture checker failures as DAD learning without treating annotations as runtime validation."
+      ],
+      "asset_kinds": ["doc", "asset", "harness", "lesson"],
       "review_status": "reviewed"
     },
     {
