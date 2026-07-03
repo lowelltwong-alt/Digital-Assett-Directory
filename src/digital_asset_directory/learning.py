@@ -30,6 +30,7 @@ REVIEW_FEEDBACK_TYPES = {
 }
 REVIEW_FEEDBACK_SEVERITIES = {"critical", "high", "medium", "low", "info", "mixed"}
 ACK_REQUIRED_LEVELS = {"require_ack", "human_gate"}
+GENERATED_LESSON_INDEX_DIRS = {"by-repo", "by-capability"}
 
 
 def git_changed_files(repo: Path) -> list[str]:
@@ -303,6 +304,8 @@ def _hash_path(path: Path) -> str:
             rel = child.relative_to(path).as_posix()
         except ValueError:
             rel = child.name
+        if path.name == "lessons" and rel.split("/", 1)[0] in GENERATED_LESSON_INDEX_DIRS:
+            continue
         parts.append(f"{rel}\0{sha256_file(child)}")
     digest_input = "\n".join(parts).encode("utf-8")
     return f"sha256:{sha256_bytes(digest_input)}"

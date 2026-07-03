@@ -8,6 +8,7 @@ import pytest
 
 from digital_asset_directory.mail_center import compose_asset_suggestion
 from digital_asset_directory.research_intake import (
+    build_language_frontier_watchlist,
     intake_external_candidate,
     list_intake,
     match_trusted_source,
@@ -90,6 +91,60 @@ def test_trusted_source_registry_validates_and_matches():
     insecure_source, insecure_tier = match_trusted_source(ROOT, "http://peps.python.org/pep-0703/")
     assert insecure_source is None
     assert insecure_tier == "unknown"
+
+
+def test_language_frontier_watchlist_routes_python_and_rust_sources():
+    rust = build_language_frontier_watchlist(ROOT, language="rust", cadence="weekly")
+    rust_rows = {row["source_id"]: row for row in rust["rows"]}
+    assert rust["report_id"] == "dad:language-frontier-watchlist"
+    assert rust["filters"]["language"] == "rust"
+    assert rust_rows["rust-lang"]["cadence_days"] == 7
+    assert "blog.rust-lang.org" in rust_rows["rust-lang"]["url_patterns"]
+    assert any(
+        "rust-buildout-guide" in route["primary_assets"]
+        for route in rust_rows["rust-lang"]["language_routes"]
+    )
+    assert any(
+        "dad:harness:language-frontier-research" in route["harness_routes"]
+        for route in rust_rows["rust-lang"]["language_routes"]
+    )
+
+    python = build_language_frontier_watchlist(ROOT, language="python", cadence="weekly")
+    python_rows = {row["source_id"]: row for row in python["rows"]}
+    assert python_rows["python-core"]["cadence_days"] == 7
+    assert "peps.python.org" in python_rows["python-core"]["url_patterns"]
+    assert any(
+        "asset:python-ai-advantage-preflight" in route["primary_assets"]
+        for route in python_rows["python-core"]["language_routes"]
+    )
+    assert any(
+        "dad:harness:language-frontier-research" in route["harness_routes"]
+        for route in python_rows["python-core"]["language_routes"]
+    )
+
+
+def test_language_frontier_watchlist_is_pointer_only_and_mail_safe():
+    report = build_language_frontier_watchlist(ROOT, language="rust", limit=3)
+
+    assert report["source_count"] == 3
+    assert "pointer-only" in report["authority_boundary"]
+    assert "not prove" in report["authority_boundary"]
+    for row in report["rows"]:
+        assert row["url_patterns"]
+        contract = row["candidate_mail_contract"]
+        assert contract["dad_need_id"] == "dad:need:language-frontier-signals"
+        assert "proof_surface" in contract["required_fields"]
+        assert "proof_surface_refs" in contract["required_fields"]
+        assert "validation_or_eval_idea" in contract["required_fields"]
+        assert "target_dad_surface" in contract["required_fields"]
+        assert "copied_third_party_docs" in contract["forbidden_fields"]
+        assert "raw_private_rows" in contract["forbidden_fields"]
+        assert "benchmark_claim_without_same_workload_evidence" in contract["forbidden_fields"]
+
+
+def test_language_frontier_watchlist_rejects_unknown_cadence():
+    with pytest.raises(ValueError, match="cadence"):
+        build_language_frontier_watchlist(ROOT, cadence="daily")
 
 
 def test_unknown_source_requires_justification(tmp_path: Path):

@@ -64,6 +64,7 @@ def test_language_frontier_harness_holds_untrusted_https_and_screens_all_fields(
             "safe_summary": "A Rust API compatibility idea may help.",
             "why_ai_coding_may_improve": "It may catch breakage.",
             "applicability_limits": "Use only as candidate evidence.",
+            "proof_surface_refs": ["proof:api-compatibility"],
             "validation_or_eval_idea": "Run cargo semver-checks on a reviewed crate.",
         },
         trusted_sources,
@@ -79,12 +80,63 @@ def test_language_frontier_harness_holds_untrusted_https_and_screens_all_fields(
             "safe_summary": "A property-test idea may help.",
             "why_ai_coding_may_improve": "It checks generated rows.",
             "applicability_limits": "Do not include private rows.",
+            "proof_surface_refs": ["proof:property-fuzz"],
             "validation_or_eval_idea": "Manual review.",
         },
         trusted_sources,
     )
     assert unsafe_payload["routes"] == ["reject"]
     assert "unsafe_or_copied_payload" in unsafe_payload["blocked_reasons"]
+
+    missing_proof = classify_case(
+        {
+            "case_id": "missing-proof-surface",
+            "language": "python",
+            "source_id_or_url": "python-core",
+            "safe_summary": "A Python parser idea may help.",
+            "why_ai_coding_may_improve": "It may catch parser bugs.",
+            "applicability_limits": "Use only as candidate evidence.",
+            "validation_or_eval_idea": "Add a parser invariant test.",
+        },
+        trusted_sources,
+    )
+    assert missing_proof["routes"] == ["reject"]
+    assert "missing_proof_surface_refs" in missing_proof["blocked_reasons"]
+
+    token_url = classify_case(
+        {
+            "case_id": "credential-url",
+            "language": "rust",
+            "source_id_or_url": "https://github.com/rust-lang/rust?token=secret",
+            "safe_summary": "A Rust diagnostics idea may help.",
+            "why_ai_coding_may_improve": "It may improve deterministic checks.",
+            "applicability_limits": "Use only as candidate evidence.",
+            "proof_surface_refs": ["proof:compiler-type-system"],
+            "validation_or_eval_idea": "Run cargo check on a local example.",
+        },
+        trusted_sources,
+    )
+    assert token_url["routes"] == ["reject"]
+    assert "unsafe_source_pointer" in token_url["blocked_reasons"]
+
+    rust_speed_claim = classify_case(
+        {
+            "case_id": "trusted-rust-speed-claim",
+            "language": "rust",
+            "source_id_or_url": "rust-lang",
+            "safe_summary": "A Rust rewrite is faster for this parser.",
+            "why_ai_coding_may_improve": "It may improve performance.",
+            "applicability_limits": "Use only after local review.",
+            "proof_surface_refs": ["proof:runtime-profile-trace", "proof:interop-boundary"],
+            "validation_or_eval_idea": "Run a benchmark later.",
+        },
+        trusted_sources,
+    )
+    assert rust_speed_claim["routes"] == ["reject"]
+    assert (
+        "rust_performance_claim_without_profile_same_workload_parity"
+        in rust_speed_claim["blocked_reasons"]
+    )
 
 
 def test_coding_asset_control_plane_validator_passes():
@@ -442,6 +494,17 @@ def test_language_coding_advantage_registry_resolves_sources_and_assets():
         assert language["research_intake_packet"]["dad_need_id"] == (
             "dad:need:language-frontier-signals"
         )
+        assert {
+            "language",
+            "source_id_or_url",
+            "safe_summary",
+            "why_ai_coding_may_improve",
+            "applicability_limits",
+            "proof_surface",
+            "proof_surface_refs",
+            "validation_or_eval_idea",
+            "target_dad_surface",
+        }.issubset(language["research_intake_packet"]["required_fields"])
         assert "copied_third_party_docs" in language["research_intake_packet"]["forbidden_fields"]
         assert "does not override repo-local style" in language_registry["authority_boundary"].lower()
 

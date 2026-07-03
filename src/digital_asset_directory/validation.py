@@ -53,6 +53,7 @@ LOCAL_PATH_FRAGMENTS = (
     "git projects/",
     "onedrive/",
 )
+GENERATED_LESSON_INDEX_DIRS = {"by-repo", "by-capability"}
 
 
 def _load_schema(repo_root: Path, registry: dict[str, Any], name: str) -> dict[str, Any]:
@@ -82,6 +83,8 @@ def _hash_path(path: Path) -> str:
             rel = child.relative_to(path).as_posix()
         except ValueError:
             rel = child.name
+        if path.name == "lessons" and rel.split("/", 1)[0] in GENERATED_LESSON_INDEX_DIRS:
+            continue
         parts.append(f"{rel}\0{sha256_file(child)}")
     digest_input = "\n".join(parts).encode("utf-8")
     return f"sha256:{sha256_bytes(digest_input)}"

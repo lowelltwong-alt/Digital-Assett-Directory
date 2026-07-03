@@ -24,10 +24,21 @@ SCREENING_CHECKS = ("prompt_injection", "license", "provenance", "compatibility"
 SCREENING_RESULTS = {"pass", "fail", "not_applicable", "not_run"}
 INTAKE_KINDS = {"skill", "harness", "asset", "lesson", "doc"}
 PROMOTION_TARGETS = {"offering", "skill_pointer"}
+CADENCE_DAYS = {
+    "weekly": 7,
+    "monthly": 30,
+    "quarterly": 90,
+}
 INTAKE_AUTHORITY_BOUNDARY = (
     "Intake records are quarantined candidate metadata about external sources. "
     "They carry links, provenance, and screening state only - never external file "
     "contents - and do not authorize checkout, install, or downstream delivery."
+)
+LANGUAGE_FRONTIER_WATCH_AUTHORITY_BOUNDARY = (
+    "Language frontier watch rows are source pointers and cadence hints only. "
+    "They do not prove a technique is current, safe, useful, or adopted DAD guidance. "
+    "Every candidate still needs pointer-only intake, screening, local validation, "
+    "and human-reviewed promotion before downstream recommendation."
 )
 KIND_TO_OFFERING_TYPE = {
     "harness": "harness",
@@ -63,6 +74,10 @@ def load_trusted_sources(hub_root: Path) -> dict[str, Any]:
     return _load_json(hub_root / TRUSTED_SOURCE_REGISTRY)
 
 
+def _load_language_registry(hub_root: Path) -> dict[str, Any]:
+    return _load_json(hub_root / "registry" / "language-coding-advantage-registry.json")
+
+
 def match_trusted_source(hub_root: Path, source_url: str) -> tuple[dict[str, Any] | None, str]:
     """Match a URL against the trusted-source registry by domain/prefix patterns."""
     normalized = source_url.lower().strip()
@@ -81,6 +96,153 @@ def match_trusted_source(hub_root: Path, source_url: str) -> tuple[dict[str, Any
             if normalized == cleaned or normalized.startswith(cleaned + "/"):
                 return source, str(source.get("trust_tier", "known"))
     return None, "unknown"
+
+
+def build_language_frontier_watchlist(
+    hub_root: Path,
+    *,
+    language: str = "",
+    cadence: str = "",
+    include_manual: bool = False,
+    limit: int = 0,
+) -> dict[str, Any]:
+    """Return a pointer-only plan for language frontier source refreshes."""
+    requested_language = language.strip().lower()
+    requested_cadence = cadence.strip().lower()
+    if requested_cadence and requested_cadence not in {
+        "weekly",
+        "monthly",
+        "quarterly",
+        "manual",
+    }:
+        raise ValueError("cadence must be one of: weekly, monthly, quarterly, manual")
+
+    trusted = load_trusted_sources(hub_root)
+    language_registry = _load_language_registry(hub_root)
+    language_records = {
+        str(item.get("language_id")): item
+        for item in language_registry.get("languages", [])
+    }
+    source_to_languages: dict[str, list[str]] = {}
+    for language_id, record in language_records.items():
+        for source_id in record.get("trusted_source_ids", []):
+            source_to_languages.setdefault(str(source_id), []).append(language_id)
+
+    rows: list[dict[str, Any]] = []
+    for source in trusted.get("sources", []):
+        source_id = str(source.get("source_id") or "")
+        source_languages = [
+            str(item).lower()
+            for item in source.get("language_focus", [])
+        ] or sorted(source_to_languages.get(source_id, []))
+        if not source_languages:
+            continue
+        source_cadence = str(source.get("check_cadence") or "manual")
+        if source_cadence == "manual" and not include_manual:
+            continue
+        if requested_language and requested_language not in source_languages:
+            continue
+        if requested_cadence and requested_cadence != source_cadence:
+            continue
+        language_routes = [
+            {
+                "language_id": language_id,
+                "recommendable": bool(language_records.get(language_id, {}).get("recommendable")),
+                "primary_assets": language_records.get(language_id, {}).get("primary_assets", []),
+                "harness_routes": [
+                    item.get("harness_id")
+                    for item in language_records.get(language_id, {}).get(
+                        "harness_routes",
+                        [],
+                    )
+                    if item.get("harness_id")
+                ],
+            }
+            for language_id in source_languages
+            if language_id in language_records
+        ]
+        rows.append(
+            {
+                "source_id": source_id,
+                "label": source.get("label"),
+                "trust_tier": source.get("trust_tier"),
+                "review_status": source.get("review_status"),
+                "language_focus": source_languages,
+                "check_cadence": source_cadence,
+                "cadence_days": CADENCE_DAYS.get(source_cadence),
+                "due_hint": (
+                    "manual_only"
+                    if source_cadence == "manual"
+                    else f"refresh_every_{CADENCE_DAYS[source_cadence]}_days"
+                ),
+                "url_patterns": source.get("url_patterns", []),
+                "frontier_watch": source.get("frontier_watch", []),
+                "intake_actions": source.get("intake_actions", []),
+                "asset_kinds": source.get("asset_kinds", []),
+                "language_routes": language_routes,
+                "candidate_mail_contract": {
+                    "message_type": "capability_suggestion",
+                    "dad_need_id": "dad:need:language-frontier-signals",
+                    "required_fields": [
+                        "language",
+                        "source_id_or_url",
+                        "safe_summary",
+                        "why_ai_coding_may_improve",
+                        "applicability_limits",
+                        "proof_surface",
+                        "proof_surface_refs",
+                        "validation_or_eval_idea",
+                        "target_dad_surface",
+                    ],
+                    "forbidden_fields": [
+                        "copied_third_party_docs",
+                        "copied_source",
+                        "raw_private_rows",
+                        "credentials_or_tokens",
+                        "raw_logs",
+                        "long_source_blobs",
+                        "benchmark_claim_without_same_workload_evidence",
+                    ],
+                },
+            }
+        )
+
+    rows.sort(
+        key=lambda item: (
+            item["cadence_days"] if item["cadence_days"] is not None else 9999,
+            item["source_id"],
+        )
+    )
+    if limit > 0:
+        rows = rows[:limit]
+
+    languages = sorted(
+        {
+            language_id
+            for row in rows
+            for language_id in row.get("language_focus", [])
+        }
+    )
+    return {
+        "schema_version": "0.1.0",
+        "report_id": "dad:language-frontier-watchlist",
+        "generated_at": utc_now(),
+        "filters": {
+            "language": requested_language or "all",
+            "cadence": requested_cadence or "all",
+            "include_manual": include_manual,
+            "limit": limit,
+        },
+        "source_count": len(rows),
+        "languages": languages,
+        "rows": rows,
+        "next_agent_action": (
+            "Pick one row, review the source pointer directly, then create a "
+            "pointer-only research intake or DAD mail packet only if it names "
+            "a proof surface, applicability limits, and a local validation idea."
+        ),
+        "authority_boundary": LANGUAGE_FRONTIER_WATCH_AUTHORITY_BOUNDARY,
+    }
 
 
 def _intake_path(hub_root: Path, intake_id: str, name: str) -> Path:

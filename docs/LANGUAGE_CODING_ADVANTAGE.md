@@ -119,9 +119,9 @@ reviewed rule `exception-capture-rule:language-frontier-signal` maps safe
 Python, Rust, mixed-language, and future-language discoveries to
 `capability_suggestion` mail with these required fields: `language`,
 `source_id_or_url`, `safe_summary`, `why_ai_coding_may_improve`,
-`applicability_limits`, `proof_surface`, `validation_or_eval_idea`, and
-`target_dad_surface`. Older repo capture surfaces should refresh before treating
-that packet as complete.
+`applicability_limits`, `proof_surface`, `proof_surface_refs`,
+`validation_or_eval_idea`, and `target_dad_surface`. Older repo capture
+surfaces should refresh before treating that packet as complete.
 
 ## Language Improvement Loop
 
@@ -325,6 +325,17 @@ to inspect, run, repair, or validate in your repo family.
 The machine-readable watchlist is `registry/trusted-source-registry.json`.
 Agents should refresh from reviewed source IDs, then create pointer-only intake
 records. Useful starting groups:
+
+For the current operational watch plan, run:
+
+```text
+asset-dir research frontier-watch --language python
+asset-dir research frontier-watch --language rust
+```
+
+The output is a source-cadence plan and candidate mail contract. It is not a
+claim that DAD has checked those sources today and it does not promote any
+technique by itself.
 
 | Language | Source IDs | Watch For |
 | --- | --- | --- |

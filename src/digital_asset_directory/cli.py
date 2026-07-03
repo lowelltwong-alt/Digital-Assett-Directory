@@ -174,6 +174,7 @@ from .readiness import write_downstream_pilot_candidates, write_phase45_readines
 from .reference_architectures import write_reference_architecture_outputs
 from .research import research_missing_parts
 from .research_intake import (
+    build_language_frontier_watchlist,
     intake_external_candidate,
     list_intake,
     promote_intake,
@@ -2641,6 +2642,30 @@ def research_intake_list(
     """List external intake records and their screening status."""
     cfg = _cfg(hub=hub)
     console.print_json(data=list_intake(cfg.repo_root, status=status))
+
+
+@research_app.command("frontier-watch")
+def research_frontier_watch(
+    language: str = typer.Option("", "--language", help="Filter to python, rust, or another language id."),
+    cadence: str = typer.Option("", "--cadence", help="Filter to weekly | monthly | quarterly | manual."),
+    include_manual: bool = typer.Option(False, "--include-manual", help="Include manual-only source rows."),
+    limit: int = typer.Option(0, "--limit", min=0, max=100),
+    hub: Optional[Path] = typer.Option(None),
+) -> None:
+    """List pointer-only language-frontier sources that agents should check."""
+    cfg = _cfg(hub=hub)
+    try:
+        report = build_language_frontier_watchlist(
+            cfg.repo_root,
+            language=language,
+            cadence=cadence,
+            include_manual=include_manual,
+            limit=limit,
+        )
+    except (ValueError, FileNotFoundError) as exc:
+        console.print(str(exc))
+        raise typer.Exit(2) from exc
+    console.print_json(data=report)
 
 
 @research_app.command("missing")

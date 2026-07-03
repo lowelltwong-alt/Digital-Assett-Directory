@@ -791,7 +791,10 @@
           "safe_summary",
           "why_ai_coding_may_improve",
           "applicability_limits",
-          "validation_or_eval_idea"
+          "proof_surface",
+          "proof_surface_refs",
+          "validation_or_eval_idea",
+          "target_dad_surface"
         ],
         "forbidden_fields": [
           "copied_third_party_docs",
@@ -1568,7 +1571,10 @@
           "safe_summary",
           "why_ai_coding_may_improve",
           "applicability_limits",
-          "validation_or_eval_idea"
+          "proof_surface",
+          "proof_surface_refs",
+          "validation_or_eval_idea",
+          "target_dad_surface"
         ],
         "forbidden_fields": [
           "copied_third_party_docs",
@@ -1813,7 +1819,10 @@
           "safe_summary",
           "why_ai_coding_may_improve",
           "applicability_limits",
-          "validation_or_eval_idea"
+          "proof_surface",
+          "proof_surface_refs",
+          "validation_or_eval_idea",
+          "target_dad_surface"
         ],
         "forbidden_fields": [
           "copied_third_party_docs",

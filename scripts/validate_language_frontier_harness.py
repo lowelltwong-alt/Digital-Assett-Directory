@@ -3,7 +3,7 @@ from __future__ import annotations
 import json
 from pathlib import Path
 from typing import Any
-from urllib.parse import urlparse
+from urllib.parse import unquote, urlparse
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -18,11 +18,32 @@ FORBIDDEN_PAYLOAD_TERMS = {
     "copied documentation",
     "copied docs",
     "copied source",
+    "credential",
+    "credentials",
+    "password",
     "private repo rows",
     "private rows",
-    "credentials",
     "raw logs",
+    "secret",
+    "token",
     "long source",
+}
+PERFORMANCE_CLAIM_TERMS = {
+    "10x",
+    "benchmark",
+    "faster",
+    "latency",
+    "optimize",
+    "performance",
+    "rewrite is faster",
+    "speed",
+    "throughput",
+}
+WEAK_VALIDATION_PHRASES = {
+    "manual review",
+    "missing proof tool",
+    "none",
+    "tbd",
 }
 
 
@@ -60,15 +81,47 @@ def is_trusted_source_ref(source: str, trusted_sources: dict[str, dict[str, Any]
     )
 
 
+def unsafe_source_pointer(source: str) -> bool:
+    if not source.startswith("https://"):
+        return False
+    parsed = urlparse(source)
+    if parsed.username or parsed.password:
+        return True
+    sensitive_tail = unquote(f"{parsed.query} {parsed.fragment}").lower()
+    return any(term in sensitive_tail for term in FORBIDDEN_PAYLOAD_TERMS)
+
+
+def has_rust_performance_overclaim(
+    *,
+    language: str,
+    summary: str,
+    why: str,
+    validation: str,
+) -> bool:
+    if language != "rust":
+        return False
+    claim_text = f"{summary} {why}".lower()
+    if not any(term in claim_text for term in PERFORMANCE_CLAIM_TERMS):
+        return False
+    validation_text = validation.lower()
+    has_profile = any(term in validation_text for term in ("profile", "profiling", "trace"))
+    has_same_workload = "same-workload" in validation_text or "same workload" in validation_text
+    has_parity = "parity" in validation_text or "same-scope" in validation_text
+    return not (has_profile and has_same_workload and has_parity)
+
+
 def classify_case(case: dict[str, Any], trusted_sources: dict[str, dict[str, Any]]) -> dict[str, Any]:
     source = str(case.get("source_id_or_url", "")).strip()
     language = str(case.get("language", "")).strip().lower()
     known_language = language in {"python", "rust"}
     summary = str(case.get("safe_summary", "")).lower()
+    why = str(case.get("why_ai_coding_may_improve", "")).lower()
     validation = str(case.get("validation_or_eval_idea", "")).strip()
+    proof_refs = [str(item).strip() for item in case.get("proof_surface_refs", []) if str(item).strip()]
     payload_text = " ".join(
         str(case.get(field, ""))
         for field in [
+            "source_id_or_url",
             "safe_summary",
             "why_ai_coding_may_improve",
             "applicability_limits",
@@ -80,18 +133,29 @@ def classify_case(case: dict[str, Any], trusted_sources: dict[str, dict[str, Any
     review_reasons: list[str] = []
 
     trusted_source = is_trusted_source_ref(source, trusted_sources)
+    if unsafe_source_pointer(source):
+        blocked_reasons.append("unsafe_source_pointer")
     if not trusted_source and not source.startswith("https://"):
         blocked_reasons.append("unknown_source_without_url")
     elif not trusted_source and known_language:
         review_reasons.append("unknown_https_source_needs_review")
     elif not trusted_source:
         review_reasons.append("future_language_source_needs_review")
+    if not proof_refs:
+        blocked_reasons.append("missing_proof_surface_refs")
     if not validation:
         blocked_reasons.append("missing_validation_or_eval_idea")
+    elif any(phrase in validation.lower() for phrase in WEAK_VALIDATION_PHRASES):
+        blocked_reasons.append("weak_validation_or_eval_idea")
     if any(term in payload_text for term in FORBIDDEN_PAYLOAD_TERMS):
         blocked_reasons.append("unsafe_or_copied_payload")
-    if "benchmark" in summary and "same-workload" not in validation.lower():
-        blocked_reasons.append("benchmark_without_same_workload_evidence")
+    if has_rust_performance_overclaim(
+        language=language,
+        summary=summary,
+        why=why,
+        validation=validation,
+    ):
+        blocked_reasons.append("rust_performance_claim_without_profile_same_workload_parity")
 
     if blocked_reasons:
         routes.append("reject")
@@ -192,6 +256,7 @@ def main() -> int:
     if result_by_case.get("benchmark-only-rust-rewrite", {}).get("blocked_reasons") != [
         "unknown_source_without_url",
         "missing_validation_or_eval_idea",
+        "rust_performance_claim_without_profile_same_workload_parity",
     ]:
         errors.append("benchmark-only-rust-rewrite rejection reasons changed")
 

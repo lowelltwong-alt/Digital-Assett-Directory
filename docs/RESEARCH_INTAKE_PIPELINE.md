@@ -46,6 +46,7 @@ asset-dir research intake --name "<name>" --kind skill --source-url <url> [--jus
 asset-dir research screen --intake-id <id> --check prompt_injection --result pass
 asset-dir research promote --intake-id <id> --approved-by <human> --approval-id <id> --target skill_pointer
 asset-dir research intake-list [--status screened]
+asset-dir research frontier-watch [--language python|rust] [--cadence weekly|monthly|quarterly]
 ```
 
 ## Language Frontier Radar
@@ -71,7 +72,16 @@ to inspect. PEP drafts and benchmark claims stay candidate-only until reviewed.
 
 When a repo finds a language idea worth teaching DAD, it should send
 `dad:need:language-frontier-signals` mail with a source pointer, short safe
-summary, applicability limits, proof surface, validation idea, and suggested
-destination (idiom card, buildout guide, harness, tactic radar, template, or
-skill pointer). Repos must not copy third-party content, private rows, raw logs,
-or source blobs into that mail.
+summary, applicability limits, proof surface, `proof_surface_refs`, validation
+idea, and suggested destination (idiom card, buildout guide, harness, tactic
+radar, template, or skill pointer). Repos must not copy third-party content,
+private rows, raw logs, or source blobs into that mail.
+
+Use `asset-dir research frontier-watch` as the operational first step for
+Python, Rust, mixed-language, and future-language refreshes. It reads
+`registry/trusted-source-registry.json` and
+`registry/language-coding-advantage-registry.json`, then returns pointer-only
+source rows with cadence, URLs, watch topics, intake actions, language asset
+routes, harness routes, and the required candidate-mail fields. The command does
+not browse, claim freshness, or promote anything; it tells the next agent where
+to look and what proof surface must be named before DAD learns from the source.

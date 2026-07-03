@@ -10,6 +10,7 @@ from digital_asset_directory.exception_capture import (
     write_exception_backfill_readiness,
     write_observed_capture_audit,
 )
+from digital_asset_directory.learning import _hash_path as _lesson_graph_hash_path
 from digital_asset_directory.roadmap import check_roadmap, record_human_gate_evidence
 from digital_asset_directory.validation import (
     _candidate_path_scan_staleness_errors,
@@ -18,6 +19,7 @@ from digital_asset_directory.validation import (
     _exception_event_taxonomy_by_type,
     _exception_lake_taxonomy_consistency_errors,
     _fix_outcome_semantic_errors,
+    _hash_path as _validation_hash_path,
     _language_registry_semantic_errors,
     _observed_audit_machine_evidence_errors,
     _path_identity_hash,
@@ -271,6 +273,25 @@ def test_stale_report_input_hash_errors_detect_changed_exception_report_input(
         "processed/exceptions/lake/events.jsonl: sha256:stale != "
         f"{_load_current_hash(input_path)}"
     ]
+
+
+def test_lesson_graph_hash_ignores_generated_lesson_indexes(tmp_path: Path):
+    lessons = tmp_path / "raw" / "lessons"
+    dated = lessons / "2026-07-03"
+    by_repo = lessons / "by-repo"
+    by_capability = lessons / "by-capability"
+    dated.mkdir(parents=True)
+    by_repo.mkdir(parents=True)
+    by_capability.mkdir(parents=True)
+    (dated / "canonical.json").write_text('{"lesson_id":"dad:lesson:x"}\n', encoding="utf-8")
+    (by_repo / "repo.jsonl").write_text('{"lesson_id":"dad:lesson:x"}\n', encoding="utf-8")
+    (by_capability / "cap.jsonl").write_text('{"lesson_id":"dad:lesson:x"}\n', encoding="utf-8")
+
+    before = (_lesson_graph_hash_path(lessons), _validation_hash_path(lessons))
+    (by_repo / "repo.jsonl").write_text('{"lesson_id":"dad:lesson:y"}\n', encoding="utf-8")
+    (by_capability / "cap.jsonl").write_text('{"lesson_id":"dad:lesson:y"}\n', encoding="utf-8")
+
+    assert (_lesson_graph_hash_path(lessons), _validation_hash_path(lessons)) == before
 
 
 def _load_current_hash(path: Path) -> str:
