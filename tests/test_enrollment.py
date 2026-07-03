@@ -11,6 +11,7 @@ import yaml
 from digital_asset_directory.config import AppConfig, EnrollmentRepoPolicy, Settings
 from digital_asset_directory.enrollment import (
     APPROVED_RELATIVE_PATHS,
+    REPO_LOCAL_ONLY_PATHS,
     apply_enrollment,
     build_enrollment_plan,
     enrollment_status,
@@ -189,11 +190,19 @@ def test_apply_requires_approval_and_writes_only_approved_paths(tmp_path: Path):
     after = _all_files(repo)
     created = after - before
 
-    assert set(result["changed_paths"]) <= set(APPROVED_RELATIVE_PATHS)
-    assert created <= set(APPROVED_RELATIVE_PATHS)
+    allowed_enrollment_bootstrap = set(APPROVED_RELATIVE_PATHS) | set(REPO_LOCAL_ONLY_PATHS)
+    assert set(result["changed_paths"]) <= allowed_enrollment_bootstrap
+    assert created <= allowed_enrollment_bootstrap
     assert "Keep this line." in (repo / "AGENTS.md").read_text(encoding="utf-8")
     assert result["hook_install_disclosed"] is True
+    assert result["repo_local_only_paths"] == REPO_LOCAL_ONLY_PATHS
     assert (repo / ".githooks" / "pre-push").exists()
+    assert "~/.dad/hub.json" in (repo / ".githooks" / "pre-push").read_text(
+        encoding="utf-8"
+    )
+    assert "~/.dad/hub.json" in (repo / ".githooks" / "pre-push.ps1").read_text(
+        encoding="utf-8"
+    )
     assert (hub / "processed" / "enrollment" / "audit.jsonl").exists()
 
     contract = json.loads((repo / ".digital-asset" / "dad-integration.json").read_text())
@@ -215,15 +224,19 @@ def test_apply_requires_approval_and_writes_only_approved_paths(tmp_path: Path):
         "/registry/exception-capture-pattern-registry.json"
     )
     assert contract["capture"]["mail_outbox"] == ".digital-asset/mail/outbox.jsonl"
-    assert ".digital-asset/exceptions/outbox.jsonl" in contract["capture"][
-        "repo_local_only_paths"
-    ]
+    assert contract["capture"]["repo_local_only_paths"] == REPO_LOCAL_ONLY_PATHS
     assert "processed/exceptions/fix-outcomes/outcomes.jsonl" in contract["capture"][
         "repo_local_only_paths"
     ]
-    assert ".digital-asset/exceptions/outbox.jsonl" not in contract[
-        "approved_dad_managed_paths"
-    ]
+    assert not (set(REPO_LOCAL_ONLY_PATHS) & set(contract["approved_dad_managed_paths"]))
+    assert (repo / ".digital-asset" / "exceptions" / "README.md").exists()
+    assert (repo / ".digital-asset" / "exceptions" / ".gitignore").exists()
+    assert (repo / ".digital-asset" / "exceptions" / "outbox.jsonl").exists()
+    assert (repo / ".digital-asset" / "exceptions" / "inbox.jsonl").exists()
+    assert (repo / ".digital-asset" / "exceptions" / "archive.jsonl").exists()
+    assert "Never Send" in (
+        repo / ".digital-asset" / "exceptions" / "README.md"
+    ).read_text(encoding="utf-8")
     assert "software-work-preflight" in {route["route_id"] for route in context_map["routes"]}
 
 
@@ -263,6 +276,43 @@ def test_update_apply_is_idempotent(tmp_path: Path):
     assert update["changed_paths"] == [
         ".digital-asset/dad-integration.json",
     ]
+
+
+def test_enrollment_status_reports_schema_stale_contract(tmp_path: Path):
+    hub = tmp_path / "hub"
+    repo = tmp_path / "repo-a"
+    hub.mkdir()
+    repo.mkdir()
+    policy = _policy(repo)
+    apply_enrollment(hub, policy, approval_id="APPROVED-1")
+
+    contract_path = repo / ".digital-asset" / "dad-integration.json"
+    contract = json.loads(contract_path.read_text(encoding="utf-8"))
+    del contract["capture"]["repo_local_only_paths"]
+    contract_path.write_text(json.dumps(contract), encoding="utf-8")
+
+    status = enrollment_status(policy)
+
+    assert status["update_available"] is True
+    assert any("schema validation failed" in error for error in status["errors"])
+
+
+def test_enrollment_status_reports_missing_exception_surface(tmp_path: Path):
+    hub = tmp_path / "hub"
+    repo = tmp_path / "repo-a"
+    hub.mkdir()
+    repo.mkdir()
+    policy = _policy(repo)
+    apply_enrollment(hub, policy, approval_id="APPROVED-1")
+
+    (repo / ".digital-asset" / "exceptions" / "inbox.jsonl").unlink()
+    status = enrollment_status(policy)
+
+    assert status["update_available"] is True
+    assert (
+        "Missing repo-local exception surface path: "
+        ".digital-asset/exceptions/inbox.jsonl"
+    ) in status["errors"]
 
 
 def test_public_facing_enrollment_omits_local_absolute_paths(tmp_path: Path):

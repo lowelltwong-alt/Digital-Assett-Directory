@@ -1,4 +1,11 @@
 #!/usr/bin/env sh
 set -eu
-DAD_HUB="C:/Users/lowel/OneDrive/Desktop/Git Projects/04_Digital_Assett_Directory"
+DAD_HUB="${DAD_HUB:-${DAD_HUB_PATH:-}}"
+if [ -z "$DAD_HUB" ] && [ -f "$HOME/.dad/hub.json" ]; then
+  DAD_HUB="$(python -c 'import json,pathlib; p=pathlib.Path.home()/".dad"/"hub.json"; d=json.loads(p.read_text(encoding="utf-8")); print(d.get("hub_path") or d.get("path") or "")')"
+fi
+if [ -z "$DAD_HUB" ]; then
+  echo "DAD_HUB, DAD_HUB_PATH, or ~/.dad/hub.json is required before this DAD hook can enforce postflight." >&2
+  exit 1
+fi
 python "$DAD_HUB/scripts/enforce_postflight.py" --hub "$DAD_HUB" --repo "$(pwd)"

@@ -46,7 +46,7 @@
     "preflight_behavior": "warn_only_when_stale"
   },
   "do_not_copy_full_assets_without_approval": true,
-  "hub": "C:/Users/lowel/OneDrive/Desktop/Git Projects/04_Digital_Assett_Directory",
+  "hub": "dad://hub/Digital-Assett-Directory",
   "local_adoption_required": true,
   "pointer_type": "dad_coding_assets",
   "repo_id": "dad",

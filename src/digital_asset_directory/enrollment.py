@@ -6,6 +6,8 @@ import subprocess
 from pathlib import Path
 from typing import Any, Sequence
 
+from jsonschema.exceptions import ValidationError
+from jsonschema.validators import validator_for
 import yaml
 
 from .config import AppConfig, EnrollmentRepoPolicy
@@ -17,6 +19,8 @@ ENROLLMENT_SCHEMA_VERSION = "0.1.0"
 ENROLLMENT_DIR = Path("processed") / "enrollment"
 AUDIT_PATH = ENROLLMENT_DIR / "audit.jsonl"
 CAPTURE_PATTERN_REGISTRY = Path("registry") / "exception-capture-pattern-registry.json"
+REPO_ENROLLMENT_SCHEMA = Path("schemas") / "repo-enrollment-contract.schema.json"
+DOWNSTREAM_EXCEPTION_README = Path("templates") / "downstream" / "EXCEPTIONS_README.md"
 
 GOVERNANCE_BEGIN = "<!-- BEGIN DIGITAL_ASSET_DIRECTORY_GOVERNANCE -->"
 GOVERNANCE_END = "<!-- END DIGITAL_ASSET_DIRECTORY_GOVERNANCE -->"
@@ -73,10 +77,25 @@ APPROVED_RELATIVE_PATHS = [
     ".githooks/pre-push.ps1",
 ]
 
+REPO_LOCAL_ONLY_PATHS = [
+    ".digital-asset/exceptions/README.md",
+    ".digital-asset/exceptions/.gitignore",
+    ".digital-asset/exceptions/outbox.jsonl",
+    ".digital-asset/exceptions/inbox.jsonl",
+    ".digital-asset/exceptions/archive.jsonl",
+    "processed/exceptions/fix-outcomes/outcomes.jsonl",
+]
+
 AUTHORITY_BOUNDARY = (
     "DAD enrollment installs or updates only reviewed, marker-bounded governance "
     "surfaces after a human approval ID. Normal recurring DAD operation remains "
     "mailbox-only under .digital-asset/mail/**."
+)
+
+REPO_LOCAL_ONLY_BOUNDARY = (
+    "Repo-local exception and fix-outcome paths are bootstrapped for the source "
+    "repo to append safe metadata packets. They are not DAD-managed authority "
+    "surfaces and normal DAD operation may not mutate them."
 )
 
 
@@ -313,6 +332,8 @@ def _plan_item(policy: EnrollmentRepoPolicy, hub_root: Path, *, update: bool) ->
         "hook_install_disclosed": True,
         "dad_hub_ref": _hub_ref(hub_root, policy),
         "approved_dad_managed_paths": APPROVED_RELATIVE_PATHS,
+        "repo_local_only_paths": REPO_LOCAL_ONLY_PATHS,
+        "repo_local_only_boundary": REPO_LOCAL_ONLY_BOUNDARY,
         "normal_operation_write_boundary": ".digital-asset/mail/**",
         "cadence": {
             "mail": "daily",
@@ -370,6 +391,8 @@ def build_enrollment_plan(
                 "repo_ref": item["repo_ref"],
                 "wave": wave,
                 "approved_dad_managed_paths": APPROVED_RELATIVE_PATHS,
+                "repo_local_only_paths": REPO_LOCAL_ONLY_PATHS,
+                "repo_local_only_boundary": REPO_LOCAL_ONLY_BOUNDARY,
                 "hook_install_disclosed": True,
                 "git_state": item["git_state"],
                 "hold_reasons": item["hold_reasons"],
@@ -419,14 +442,23 @@ def _plan_markdown(payload: dict[str, Any]) -> str:
             "",
             *[f"- `{path}`" for path in APPROVED_RELATIVE_PATHS],
             "",
+            "Repo-local exception bootstrap paths:",
+            "",
+            REPO_LOCAL_ONLY_BOUNDARY,
+            "",
+            *[f"- `{path}`" for path in REPO_LOCAL_ONLY_PATHS],
+            "",
             "Normal recurring operation after enrollment writes only to `.digital-asset/mail/**`.",
         ]
     )
     return "\n".join(lines) + "\n"
 
 
-def _target_path(repo_root: Path, rel: str) -> Path:
-    if rel not in APPROVED_RELATIVE_PATHS:
+def _target_path(repo_root: Path, rel: str, *, allow_local_only: bool = False) -> Path:
+    allowed = set(APPROVED_RELATIVE_PATHS)
+    if allow_local_only:
+        allowed.update(REPO_LOCAL_ONLY_PATHS)
+    if rel not in allowed:
         raise ValueError(f"Enrollment attempted to write an unapproved path: {rel}")
     root = repo_root.resolve()
     path = root / rel
@@ -490,12 +522,7 @@ def _capture_surface_payload(hub_root: Path) -> dict[str, Any]:
         "mail_outbox": ".digital-asset/mail/outbox.jsonl",
         "exceptions_outbox": ".digital-asset/exceptions/outbox.jsonl",
         "fix_outcomes": "processed/exceptions/fix-outcomes/outcomes.jsonl",
-        "repo_local_only_paths": [
-            ".digital-asset/exceptions/outbox.jsonl",
-            ".digital-asset/exceptions/inbox.jsonl",
-            ".digital-asset/exceptions/archive.jsonl",
-            "processed/exceptions/fix-outcomes/outcomes.jsonl",
-        ],
+        "repo_local_only_paths": REPO_LOCAL_ONLY_PATHS,
         "cli_fallback": (
             "If asset-dir is unavailable, try PYTHONPATH=src python -m "
             "digital_asset_directory.cli from the DAD checkout; otherwise append "
@@ -842,9 +869,18 @@ approval gates remain separate.
 
 def _hook_text(hub_root: Path, policy: EnrollmentRepoPolicy) -> str:
     hub_line = 'DAD_HUB="${DAD_HUB:-${DAD_HUB_PATH:-}}"'
+    locator = (
+        'if [ -z "$DAD_HUB" ] && [ -f "$HOME/.dad/hub.json" ]; then\n'
+        "  DAD_HUB=\"$(python -c 'import json,pathlib; "
+        'p=pathlib.Path.home()/".dad"/"hub.json"; '
+        'd=json.loads(p.read_text(encoding="utf-8")); '
+        'print(d.get("hub_path") or d.get("path") or "")'
+        "')\"\n"
+        "fi\n"
+    )
     missing = (
         'if [ -z "$DAD_HUB" ]; then\n'
-        '  echo "DAD_HUB or DAD_HUB_PATH is required before this DAD hook can enforce postflight." >&2\n'
+        '  echo "DAD_HUB, DAD_HUB_PATH, or ~/.dad/hub.json is required before this DAD hook can enforce postflight." >&2\n'
         "  exit 1\n"
         "fi\n"
     )
@@ -852,6 +888,7 @@ def _hook_text(hub_root: Path, policy: EnrollmentRepoPolicy) -> str:
         "#!/usr/bin/env sh\n"
         "set -eu\n"
         f"{hub_line}\n"
+        f"{locator}"
         f"{missing}"
         'python "$DAD_HUB/scripts/enforce_postflight.py" --hub "$DAD_HUB" --repo "$(pwd)"\n'
     )
@@ -859,15 +896,25 @@ def _hook_text(hub_root: Path, policy: EnrollmentRepoPolicy) -> str:
 
 def _ps_hook_text(hub_root: Path, policy: EnrollmentRepoPolicy) -> str:
     hub_line = "$DadHub = if ($env:DAD_HUB) { $env:DAD_HUB } else { $env:DAD_HUB_PATH }"
+    locator = (
+        "if (-not $DadHub) {\n"
+        "  $Locator = Join-Path $HOME '.dad/hub.json'\n"
+        "  if (Test-Path $Locator) {\n"
+        "    $Payload = Get-Content $Locator -Raw | ConvertFrom-Json\n"
+        "    $DadHub = if ($Payload.hub_path) { $Payload.hub_path } else { $Payload.path }\n"
+        "  }\n"
+        "}\n"
+    )
     missing = (
         "if (-not $DadHub) {\n"
-        "  Write-Error 'DAD_HUB or DAD_HUB_PATH is required before this DAD hook can enforce postflight.'\n"
+        "  Write-Error 'DAD_HUB, DAD_HUB_PATH, or ~/.dad/hub.json is required before this DAD hook can enforce postflight.'\n"
         "  exit 1\n"
         "}\n"
     )
     return (
         "$ErrorActionPreference = 'Stop'\n"
         f"{hub_line}\n"
+        f"{locator}"
         f"{missing}"
         "python \"$DadHub/scripts/enforce_postflight.py\" --hub \"$DadHub\" --repo (Get-Location).Path\n"
     )
@@ -887,6 +934,44 @@ def _write_mailbox(repo_root: Path, changed: list[str]) -> None:
         ".digital-asset/mail/adoption.jsonl",
     ):
         path = _target_path(repo_root, rel)
+        if not path.exists():
+            atomic_write_text(path, "")
+            changed.append(rel)
+
+
+def _exception_gitignore_text() -> str:
+    return "*.jsonl\n*.lock\nlast_*.json\n"
+
+
+def _exception_readme_text(hub_root: Path) -> str:
+    template = hub_root / DOWNSTREAM_EXCEPTION_README
+    if template.exists():
+        return template.read_text(encoding="utf-8")
+    return (
+        "# DAD Exceptions Outbox\n\n"
+        "Append metadata-only exception packets to `outbox.jsonl`. Do not copy "
+        "secrets, raw logs, private rows, source blobs, or hidden reasoning. "
+        "DAD treats these rows as candidate evidence until locally reviewed.\n\n"
+        "## Never Send\n\n"
+        "Do not send credentials, tokens, cookies, private keys, raw logs, full "
+        "stack traces, copied private rows, complete source files, generated "
+        "diffs, hidden reasoning, or long pasted payloads.\n"
+    )
+
+
+def _write_exception_surface(repo_root: Path, hub_root: Path, changed: list[str]) -> None:
+    for rel, text in {
+        ".digital-asset/exceptions/README.md": _exception_readme_text(hub_root),
+        ".digital-asset/exceptions/.gitignore": _exception_gitignore_text(),
+    }.items():
+        if _write_text_if_changed(_target_path(repo_root, rel, allow_local_only=True), text):
+            changed.append(rel)
+    for rel in (
+        ".digital-asset/exceptions/outbox.jsonl",
+        ".digital-asset/exceptions/inbox.jsonl",
+        ".digital-asset/exceptions/archive.jsonl",
+    ):
+        path = _target_path(repo_root, rel, allow_local_only=True)
         if not path.exists():
             atomic_write_text(path, "")
             changed.append(rel)
@@ -924,6 +1009,7 @@ def _apply_payloads(
             changed.append(rel)
 
     _write_mailbox(repo_root, changed)
+    _write_exception_surface(repo_root, hub_root, changed)
 
     if _write_managed_block(
         _target_path(repo_root, "AGENTS.md"),
@@ -1064,6 +1150,8 @@ def apply_enrollment(
             "approval_id": approval_id,
             "changed_paths": changed_paths,
             "approved_dad_managed_paths": APPROVED_RELATIVE_PATHS,
+            "repo_local_only_paths": REPO_LOCAL_ONLY_PATHS,
+            "repo_local_only_boundary": REPO_LOCAL_ONLY_BOUNDARY,
             "normal_operation_write_boundary": ".digital-asset/mail/**",
             "hook_install_disclosed": True,
             "git_state": git_state,
@@ -1078,6 +1166,8 @@ def apply_enrollment(
         "approval_id": approval_id,
         "hook_install_disclosed": True,
         "hook_activation_command": "git config core.hooksPath .githooks",
+        "repo_local_only_paths": REPO_LOCAL_ONLY_PATHS,
+        "repo_local_only_boundary": REPO_LOCAL_ONLY_BOUNDARY,
         "normal_operation_write_boundary": ".digital-asset/mail/**",
         "git_state": git_state,
         "audit_path": AUDIT_PATH.as_posix(),
@@ -1095,8 +1185,25 @@ def enrollment_status(
     if contract_path.exists():
         try:
             contract = json.loads(contract_path.read_text(encoding="utf-8"))
+            schema_path = Path(__file__).resolve().parents[2] / REPO_ENROLLMENT_SCHEMA
+            schema = json.loads(schema_path.read_text(encoding="utf-8"))
+            validator_cls = validator_for(schema)
+            validator_cls.check_schema(schema)
+            validator_cls(schema).validate(contract)
         except (OSError, json.JSONDecodeError) as exc:
             errors.append(f"Invalid enrollment contract: {exc}")
+        except ValidationError as exc:
+            errors.append(f"Enrollment contract schema validation failed: {exc.message}")
+    if contract:
+        for rel in (
+            ".digital-asset/exceptions/README.md",
+            ".digital-asset/exceptions/.gitignore",
+            ".digital-asset/exceptions/outbox.jsonl",
+            ".digital-asset/exceptions/inbox.jsonl",
+            ".digital-asset/exceptions/archive.jsonl",
+        ):
+            if not _target_path(repo_root, rel, allow_local_only=True).exists():
+                errors.append(f"Missing repo-local exception surface path: {rel}")
     mail_status = mail_digest_status(repo_root, stale_hours=stale_hours)
     contract_version = (
         str(contract.get("enrollment", {}).get("version", "")) if contract else ""
@@ -1108,11 +1215,13 @@ def enrollment_status(
         "configured": True,
         "enrolled": contract is not None,
         "contract_version": contract_version,
-        "update_available": contract_version != ENROLLMENT_VERSION,
+        "update_available": contract_version != ENROLLMENT_VERSION or bool(errors),
         "policy_wave": policy.wave,
         "mail_digest": mail_status,
         "weekly_check_stale": True,
         "enabled_control_planes": enabled_planes,
+        "repo_local_only_paths": REPO_LOCAL_ONLY_PATHS,
+        "repo_local_only_boundary": REPO_LOCAL_ONLY_BOUNDARY,
         "errors": errors,
         "authority_boundary": AUTHORITY_BOUNDARY,
     }

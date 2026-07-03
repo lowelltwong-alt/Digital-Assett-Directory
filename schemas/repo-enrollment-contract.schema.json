@@ -108,7 +108,14 @@
         "repo_local_only_paths": {
           "type": "array",
           "items": {"type": "string", "minLength": 1},
-          "contains": {"const": ".digital-asset/exceptions/outbox.jsonl"},
+          "allOf": [
+            {"contains": {"const": ".digital-asset/exceptions/README.md"}},
+            {"contains": {"const": ".digital-asset/exceptions/.gitignore"}},
+            {"contains": {"const": ".digital-asset/exceptions/outbox.jsonl"}},
+            {"contains": {"const": ".digital-asset/exceptions/inbox.jsonl"}},
+            {"contains": {"const": ".digital-asset/exceptions/archive.jsonl"}},
+            {"contains": {"const": "processed/exceptions/fix-outcomes/outcomes.jsonl"}}
+          ],
           "uniqueItems": true
         },
         "cli_fallback": {"type": "string", "minLength": 1}

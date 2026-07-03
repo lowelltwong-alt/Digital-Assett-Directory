@@ -145,8 +145,8 @@ python -m digital_asset_directory.cli roadmap check
 ## Digital Asset Directory enrollment contract
 
 Repo enrollment ID: `dad`
-Central DAD hub: `dad://hub/Digital-Assett-Directory` resolved by `--hub`,
-`DAD_HUB`, or `~/.dad/hub.json`.
+Central DAD hub: `dad://hub/Digital-Assett-Directory` resolved by `--hub`, `DAD_HUB`, or
+`~/.dad/hub.json`.
 Contract: `.digital-asset/dad-integration.json`
 
 Before material AI-assisted work, read this repo's front door and run:

@@ -162,6 +162,7 @@ Normal recurring operation writes only inside the repo's mailbox/control surface
 .digital-asset/exceptions/inbox.jsonl
 .digital-asset/exceptions/archive.jsonl
 .digital-asset/exceptions/README.md
+.digital-asset/exceptions/.gitignore
 ```
 
 If a repo has not received the exceptions-lake enrollment surface yet, it can send

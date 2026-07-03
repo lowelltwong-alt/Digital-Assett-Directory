@@ -47,6 +47,8 @@
     "exceptions_outbox": ".digital-asset/exceptions/outbox.jsonl",
     "fix_outcomes": "processed/exceptions/fix-outcomes/outcomes.jsonl",
     "repo_local_only_paths": [
+      ".digital-asset/exceptions/README.md",
+      ".digital-asset/exceptions/.gitignore",
       ".digital-asset/exceptions/outbox.jsonl",
       ".digital-asset/exceptions/inbox.jsonl",
       ".digital-asset/exceptions/archive.jsonl",

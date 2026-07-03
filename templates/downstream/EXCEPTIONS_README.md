@@ -12,6 +12,7 @@ budgets, open matters, ship fixes, or override this repo's source authority.
 .digital-asset/exceptions/inbox.jsonl
 .digital-asset/exceptions/archive.jsonl
 .digital-asset/exceptions/README.md
+.digital-asset/exceptions/.gitignore
 processed/exceptions/fix-outcomes/outcomes.jsonl
 ```
 
