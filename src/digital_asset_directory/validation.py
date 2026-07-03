@@ -237,6 +237,16 @@ def _language_registry_semantic_errors(
     ]
     if len(language_ids) != len(set(language_ids)):
         errors.append("Language coding advantage registry has duplicate language_id values")
+    proof_surface_ids = [
+        str(item.get("category_id", ""))
+        for item in language_registry.get("proof_surface_categories", [])
+    ]
+    if len(proof_surface_ids) != len(set(proof_surface_ids)):
+        errors.append(
+            "Language coding advantage registry has duplicate "
+            "proof_surface_categories category_id values"
+        )
+    known_proof_surface_ids = set(proof_surface_ids)
     for language in language_registry.get("languages", []):
         language_id = str(language.get("language_id", ""))
         language_status = str(language.get("status", ""))
@@ -261,6 +271,21 @@ def _language_registry_semantic_errors(
                 errors.append(
                     "Language coding advantage registry references unknown "
                     f"primary asset {asset_id}: {language_id}"
+                )
+        proof_refs = [
+            str(item)
+            for item in language.get("proof_surface_refs", [])
+        ]
+        if len(proof_refs) != len(set(proof_refs)):
+            errors.append(
+                "Language coding advantage registry has duplicate "
+                f"proof_surface_refs values: {language_id}"
+            )
+        for proof_ref in proof_refs:
+            if proof_ref not in known_proof_surface_ids:
+                errors.append(
+                    "Language coding advantage registry references unknown "
+                    f"proof surface {proof_ref}: {language_id}"
                 )
         guideline_ids = [
             str(item.get("guideline_id", ""))

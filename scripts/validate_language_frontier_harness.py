@@ -12,6 +12,7 @@ HARNESS_DIR = ROOT / "assets" / "coding-harnesses" / "language-frontier-research
 EXAMPLES = HARNESS_DIR / "examples" / "frontier-intake-cases.json"
 MINIMUM_EVAL = HARNESS_DIR / "tests-or-evals" / "minimum-eval.json"
 TRUSTED_SOURCES = ROOT / "registry" / "trusted-source-registry.json"
+LANGUAGE_REGISTRY = ROOT / "registry" / "language-coding-advantage-registry.json"
 
 FORBIDDEN_PAYLOAD_TERMS = {
     "copied documentation",
@@ -136,6 +137,10 @@ def main() -> int:
         source["source_id"]: source
         for source in load_json(TRUSTED_SOURCES).get("sources", [])
     }
+    proof_surface_ids = {
+        item["category_id"]
+        for item in load_json(LANGUAGE_REGISTRY).get("proof_surface_categories", [])
+    }
     harness = load_json(HARNESS_DIR / "harness.json")
     examples = load_json(EXAMPLES)
     minimum_eval = load_json(MINIMUM_EVAL)
@@ -158,6 +163,8 @@ def main() -> int:
     missing_eval_cases = sorted(required_eval_cases - eval_case_ids)
     if missing_eval_cases:
         errors.append(f"minimum eval missing required cases: {missing_eval_cases}")
+    if "proof_surface_refs" not in minimum_eval.get("input_contract", []):
+        errors.append("minimum eval input_contract missing proof_surface_refs")
 
     results = [
         classify_case(case, trusted_sources)
@@ -166,6 +173,12 @@ def main() -> int:
     result_by_case = {str(result["case_id"]): result for result in results}
     for case in examples.get("cases", []):
         case_id = str(case.get("case_id"))
+        proof_refs = [str(item) for item in case.get("proof_surface_refs", [])]
+        if not proof_refs:
+            errors.append(f"{case_id} missing proof_surface_refs")
+        unknown_proof_refs = sorted(set(proof_refs) - proof_surface_ids)
+        if unknown_proof_refs:
+            errors.append(f"{case_id} has unknown proof_surface_refs: {unknown_proof_refs}")
         expected_routes = set(case.get("expected_route", []))
         actual_routes = set(result_by_case[case_id]["routes"])
         if not expected_routes.issubset(actual_routes):

@@ -122,6 +122,7 @@ def test_language_frontier_refresh_prompt_is_pointer_only_and_operational():
     for required in [
         "trusted-source",
         "proof surface",
+        "proof_surface_refs",
         "falsify",
         "python",
         "rust",
@@ -215,6 +216,32 @@ def test_language_coding_advantage_registry_resolves_sources_and_assets():
     }
     known_assets = coding_asset_ids | reusable_asset_ids | offering_ids
 
+    proof_surface_ids = [
+        item["category_id"]
+        for item in language_registry["proof_surface_categories"]
+    ]
+    assert len(proof_surface_ids) == len(set(proof_surface_ids))
+    proof_surfaces = {
+        item["category_id"]: item
+        for item in language_registry["proof_surface_categories"]
+    }
+    assert {
+        "proof:syntax-compile",
+        "proof:compiler-type-system",
+        "proof:formatter-linter",
+        "proof:structured-data-boundary",
+        "proof:test-orchestration",
+        "proof:property-fuzz",
+        "proof:runtime-profile-trace",
+        "proof:package-security",
+        "proof:api-compatibility",
+        "proof:agent-readable-output",
+        "proof:interop-boundary",
+    }.issubset(proof_surfaces)
+    for proof_surface in proof_surfaces.values():
+        assert proof_surface["candidate_evidence"]
+        assert proof_surface["promotion_gate"]
+
     languages = {item["language_id"]: item for item in language_registry["languages"]}
     assert {"python", "rust", "future-language-template"}.issubset(languages)
     assert languages["python"]["recommendable"] is True
@@ -255,6 +282,22 @@ def test_language_coding_advantage_registry_resolves_sources_and_assets():
     assert "docs.pydantic.dev" in set(
         trusted_sources["python-interface-boundary-codebases"]["url_patterns"]
     )
+    assert {
+        "proof:structured-data-boundary",
+        "proof:test-orchestration",
+        "proof:runtime-profile-trace",
+    }.issubset(languages["python"]["proof_surface_refs"])
+    assert {
+        "proof:compiler-type-system",
+        "proof:property-fuzz",
+        "proof:api-compatibility",
+        "proof:interop-boundary",
+    }.issubset(languages["rust"]["proof_surface_refs"])
+    assert {
+        "proof:syntax-compile",
+        "proof:agent-readable-output",
+        "proof:package-security",
+    }.issubset(languages["future-language-template"]["proof_surface_refs"])
     python_patterns = {
         pattern["pattern_id"] for pattern in languages["python"]["ai_overlooked_patterns"]
     }
@@ -336,6 +379,7 @@ def test_language_coding_advantage_registry_resolves_sources_and_assets():
         "assets/coding-harnesses/language-frontier-research/tests-or-evals/minimum-eval.json"
     )
     assert eval_payload["harness_id"] == "dad:harness:language-frontier-research"
+    assert "proof_surface_refs" in eval_payload["input_contract"]
     assert any("state of the art" in claim for claim in eval_payload["must_not_claim"])
     assert any(
         "copied docs" in item
@@ -344,6 +388,8 @@ def test_language_coding_advantage_registry_resolves_sources_and_assets():
     )
 
     for language in language_registry["languages"]:
+        assert len(language["proof_surface_refs"]) == len(set(language["proof_surface_refs"]))
+        assert set(language["proof_surface_refs"]).issubset(proof_surfaces)
         assert set(language["trusted_source_ids"]).issubset(trusted_source_ids)
         assert set(language["primary_assets"]).issubset(known_assets)
         assert {

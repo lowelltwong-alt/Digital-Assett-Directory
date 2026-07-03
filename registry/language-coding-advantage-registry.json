@@ -3,6 +3,136 @@
   "registry_id": "language-coding-advantage-registry",
   "authority_boundary": "This registry is candidate language guidance for AI coding agents. It does not override repo-local style, tests, security policy, source authority, or human gates. Frontier source intake is pointer-only until screened and validated.",
   "evidence_methodology": "Language advantages are promoted only from official or reviewed source pointers plus local validation evidence. Underuse and frontier labels are heuristic unless backed by measurement or repeated DAD outcomes; they must not gate security-sensitive actions.",
+  "proof_surface_categories": [
+    {
+      "category_id": "proof:syntax-compile",
+      "label": "Syntax and compile/load proof",
+      "why_it_matters": "Future agents need a cheap command that proves changed code still parses, loads, or builds before deeper reasoning starts.",
+      "candidate_evidence": [
+        "python -m py_compile or compileall",
+        "language compiler/build command",
+        "minimal import or entry-point load check"
+      ],
+      "promotion_gate": "The command must run locally in the target repo and report failures without requiring copied private content."
+    },
+    {
+      "category_id": "proof:compiler-type-system",
+      "label": "Compiler and type-system proof",
+      "why_it_matters": "Closed variants, typed IDs, ownership, and checked interfaces can turn future-agent mistakes into deterministic failures.",
+      "candidate_evidence": [
+        "cargo check or equivalent compiler/type check",
+        "mypy, pyright, ty, or another repo-approved checker",
+        "negative type or exhaustiveness case"
+      ],
+      "promotion_gate": "The language row must name when the checker is authoritative and when runtime validation is still required."
+    },
+    {
+      "category_id": "proof:formatter-linter",
+      "label": "Formatter and linter proof",
+      "why_it_matters": "Formatters and linters reduce style drift and catch mechanical mistakes that agents often miss while editing quickly.",
+      "candidate_evidence": [
+        "ruff, clippy, gofmt, prettier, eslint, or language-native formatter/linter output",
+        "repo-local config reference",
+        "allow-list note for noisy rules"
+      ],
+      "promotion_gate": "The tool must already be repo-approved or explicitly proposed as candidate-only with local adoption steps."
+    },
+    {
+      "category_id": "proof:structured-data-boundary",
+      "label": "Structured data boundary proof",
+      "why_it_matters": "Schemas, typed records, and parser boundaries keep agents from inventing fields, mixing ID spaces, or treating raw JSON as domain truth.",
+      "candidate_evidence": [
+        "JSON Schema, TypedDict, dataclass, pydantic, serde, or parser validation",
+        "malformed-input regression",
+        "stable machine-readable report shape"
+      ],
+      "promotion_gate": "The boundary must include at least one negative or malformed-input path when the output feeds another repo, agent, or report."
+    },
+    {
+      "category_id": "proof:test-orchestration",
+      "label": "Test orchestration proof",
+      "why_it_matters": "Agents need fast scoped feedback without pretending a small selection proves more than it does.",
+      "candidate_evidence": [
+        "collection report",
+        "duration inventory",
+        "selected-test rationale",
+        "machine-readable pass/fail report"
+      ],
+      "promotion_gate": "Timing or replacement claims require same-scope coverage evidence and a full-validation path before promotion."
+    },
+    {
+      "category_id": "proof:property-fuzz",
+      "label": "Property and fuzz proof",
+      "why_it_matters": "Parsers, chunkers, normalizers, IDs, and serializers often fail outside the examples an agent thinks to write.",
+      "candidate_evidence": [
+        "property invariant",
+        "fuzz target",
+        "shrunk or minimized counterexample kept local",
+        "sanitized regression case"
+      ],
+      "promotion_gate": "Generated inputs, crash corpora, and private examples stay local unless sanitized and explicitly released."
+    },
+    {
+      "category_id": "proof:runtime-profile-trace",
+      "label": "Runtime profile and trace proof",
+      "why_it_matters": "Optimization, leak, hang, and rewrite claims need evidence from the real workload rather than model intuition.",
+      "candidate_evidence": [
+        "profile summary",
+        "allocation trace",
+        "hang stack trace",
+        "before/after duration on the same command"
+      ],
+      "promotion_gate": "Only sanitized summaries, commands, symbols, durations, and applicability limits may leave the repo."
+    },
+    {
+      "category_id": "proof:package-security",
+      "label": "Package and supply-chain proof",
+      "why_it_matters": "A language ecosystem advantage can become a liability if dependencies, licenses, advisories, or build tooling are not reviewed.",
+      "candidate_evidence": [
+        "dependency tree or metadata",
+        "advisory check",
+        "license and maintenance note",
+        "lockfile or build-backend summary"
+      ],
+      "promotion_gate": "Dependency recommendations remain candidate-only until local policy, license, security, and compatibility checks pass."
+    },
+    {
+      "category_id": "proof:api-compatibility",
+      "label": "API and compatibility proof",
+      "why_it_matters": "Shared assets, crates, CLIs, and generated reports need stable contracts so downstream repos do not break silently.",
+      "candidate_evidence": [
+        "semver or compatibility check",
+        "golden output",
+        "schema-version migration test",
+        "public API diff"
+      ],
+      "promotion_gate": "Compatibility proof supplements but never replaces semantic parity and local validation."
+    },
+    {
+      "category_id": "proof:agent-readable-output",
+      "label": "Agent-readable output proof",
+      "why_it_matters": "DAD assets should produce outputs that future agents can parse, diff, audit, and feed back into postflight without chat context.",
+      "candidate_evidence": [
+        "JSON or JSONL report",
+        "stable IDs and versions",
+        "source pointers",
+        "warnings and failure states"
+      ],
+      "promotion_gate": "Outputs must preserve provenance, avoid false certainty, and stay public/private safe for their target route."
+    },
+    {
+      "category_id": "proof:interop-boundary",
+      "label": "Interop and mixed-language proof",
+      "why_it_matters": "Python/Rust or other mixed-language boundaries can add speed and proof surfaces, but also packaging, parity, and ownership risk.",
+      "candidate_evidence": [
+        "stable foreign-function or CLI boundary",
+        "same-input/same-output parity report",
+        "packaging and version floor",
+        "fallback or rollback path"
+      ],
+      "promotion_gate": "The boundary must keep repo-local source authority clear and must not replace native validation until parity is verified."
+    }
+  ],
   "languages": [
     {
       "language_id": "python",
@@ -32,6 +162,18 @@
         "Which Python idioms make code easier for future agents to inspect, validate, and safely edit?",
         "Which property-based, static-analysis, or fixture patterns catch AI-authored edge cases before review?",
         "Which slow Python workflows should be improved through orchestration, profiling, vectorized libraries, or a Rust shadow path?"
+      ],
+      "proof_surface_refs": [
+        "proof:syntax-compile",
+        "proof:compiler-type-system",
+        "proof:formatter-linter",
+        "proof:structured-data-boundary",
+        "proof:test-orchestration",
+        "proof:property-fuzz",
+        "proof:runtime-profile-trace",
+        "proof:package-security",
+        "proof:agent-readable-output",
+        "proof:interop-boundary"
       ],
       "ai_advantages": [
         {
@@ -620,6 +762,19 @@
         "Which crates or patterns improve deterministic scanning, parsing, chunking, hashing, and static analysis for DAD?",
         "Which fuzzing, property, or isolated test-runner patterns expose parser and parity mistakes faster than ordinary examples?",
         "Which Python hot paths deserve a Rust shadow experiment rather than a full rewrite?"
+      ],
+      "proof_surface_refs": [
+        "proof:syntax-compile",
+        "proof:compiler-type-system",
+        "proof:formatter-linter",
+        "proof:structured-data-boundary",
+        "proof:test-orchestration",
+        "proof:property-fuzz",
+        "proof:runtime-profile-trace",
+        "proof:package-security",
+        "proof:api-compatibility",
+        "proof:agent-readable-output",
+        "proof:interop-boundary"
       ],
       "ai_advantages": [
         {
@@ -1298,6 +1453,19 @@
         "What does this language let agents prove, test, or safely refactor better than default code?",
         "What official sources and toolchains should DAD watch before giving advice?",
         "What harness proves the language actually improves the target repo instead of adding novelty?"
+      ],
+      "proof_surface_refs": [
+        "proof:syntax-compile",
+        "proof:compiler-type-system",
+        "proof:formatter-linter",
+        "proof:structured-data-boundary",
+        "proof:test-orchestration",
+        "proof:property-fuzz",
+        "proof:runtime-profile-trace",
+        "proof:package-security",
+        "proof:api-compatibility",
+        "proof:agent-readable-output",
+        "proof:interop-boundary"
       ],
       "ai_advantages": [
         {

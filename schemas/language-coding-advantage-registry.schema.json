@@ -8,6 +8,7 @@
     "registry_id",
     "authority_boundary",
     "evidence_methodology",
+    "proof_surface_categories",
     "languages"
   ],
   "additionalProperties": false,
@@ -16,6 +17,33 @@
     "registry_id": {"const": "language-coding-advantage-registry"},
     "authority_boundary": {"type": "string", "minLength": 1},
     "evidence_methodology": {"type": "string", "minLength": 1},
+    "proof_surface_categories": {
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": {
+        "type": "object",
+        "required": [
+          "category_id",
+          "label",
+          "why_it_matters",
+          "candidate_evidence",
+          "promotion_gate"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "category_id": {"type": "string", "pattern": "^proof:[a-z0-9-]+$"},
+          "label": {"type": "string", "minLength": 1},
+          "why_it_matters": {"type": "string", "minLength": 1},
+          "candidate_evidence": {
+            "type": "array",
+            "items": {"type": "string", "minLength": 1},
+            "minItems": 1
+          },
+          "promotion_gate": {"type": "string", "minLength": 1}
+        }
+      }
+    },
     "languages": {
       "type": "array",
       "minItems": 1,
@@ -30,6 +58,7 @@
           "trusted_source_ids",
           "check_cadence",
           "frontier_questions",
+          "proof_surface_refs",
           "ai_advantages",
           "ai_overlooked_patterns",
           "ai_overlooked_operations",
@@ -73,6 +102,12 @@
             "type": "array",
             "minItems": 1,
             "items": {"type": "string", "minLength": 1}
+          },
+          "proof_surface_refs": {
+            "type": "array",
+            "minItems": 1,
+            "uniqueItems": true,
+            "items": {"type": "string", "pattern": "^proof:[a-z0-9-]+$"}
           },
           "ai_advantages": {
             "type": "array",

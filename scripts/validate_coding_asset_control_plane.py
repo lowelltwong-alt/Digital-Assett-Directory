@@ -165,6 +165,16 @@ def main() -> int:
     trusted_sources_by_id = {
         source["source_id"]: source for source in trusted_sources.get("sources", [])
     }
+    proof_surface_ids = [
+        item["category_id"]
+        for item in language_registry.get("proof_surface_categories", [])
+    ]
+    require_unique(
+        proof_surface_ids,
+        "language coding advantage proof surface categories",
+        errors,
+    )
+    known_proof_surface_ids = set(proof_surface_ids)
 
     for asset in asset_registry.get("assets", []):
         require_path(asset["path"], f"asset {asset['asset_id']}", errors)
@@ -240,6 +250,18 @@ def main() -> int:
             if asset_id not in known_language_assets:
                 errors.append(
                     f"language {language_id} references unknown primary asset {asset_id}"
+                )
+        proof_surface_refs = language.get("proof_surface_refs", [])
+        require_unique(
+            proof_surface_refs,
+            f"language {language_id} proof surface refs",
+            errors,
+        )
+        for proof_surface_ref in proof_surface_refs:
+            if proof_surface_ref not in known_proof_surface_ids:
+                errors.append(
+                    f"language {language_id} references unknown proof surface "
+                    f"{proof_surface_ref}"
                 )
         for harness_route in language.get("harness_routes", []):
             harness_id = str(harness_route.get("harness_id", ""))

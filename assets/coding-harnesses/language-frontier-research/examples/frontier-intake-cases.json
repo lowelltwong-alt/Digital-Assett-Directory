@@ -9,6 +9,7 @@
       "safe_summary": "A property-based test pattern could cover JSON normalization invariants.",
       "why_ai_coding_may_improve": "Future agents tend to write example-only tests for parser boundaries.",
       "applicability_limits": "Use only where the repo accepts property-test dependencies or already has Hypothesis.",
+      "proof_surface_refs": ["proof:property-fuzz", "proof:structured-data-boundary"],
       "validation_or_eval_idea": "Add one sanitized round-trip invariant test for the parser boundary.",
       "expected_route": ["assets/python-ai-advantage-preflight", "dad:harness:language-frontier-research"]
     },
@@ -19,6 +20,7 @@
       "safe_summary": "A byte-oriented parser boundary could become a fuzz target before shared validator adoption.",
       "why_ai_coding_may_improve": "Fuzzing can find malformed-input failures ordinary examples miss.",
       "applicability_limits": "Use only for small pure parser/chunker/scanner boundaries with sanitized fixtures.",
+      "proof_surface_refs": ["proof:property-fuzz", "proof:structured-data-boundary"],
       "validation_or_eval_idea": "Create a minimal fuzz/property case and keep generated corpora local.",
       "expected_route": ["assets/rust-buildout-guide", "dad:harness:language-frontier-research", "dad:harness:rust-shadow-parity"]
     },
@@ -29,6 +31,7 @@
       "safe_summary": "A runtime-cost trace operation could prove whether fixture setup or Python CPU work dominates a slow command.",
       "why_ai_coding_may_improve": "Future agents often guess at performance causes instead of collecting local profiler evidence.",
       "applicability_limits": "Use local commands and sanitized summaries only; do not mail raw traces or private arguments.",
+      "proof_surface_refs": ["proof:runtime-profile-trace", "proof:test-orchestration"],
       "validation_or_eval_idea": "Run cProfile or pytest durations on the same workload and record top symbols plus before/after timing.",
       "expected_route": ["assets/python-ai-advantage-preflight", "dad:harness:language-frontier-research"]
     },
@@ -39,6 +42,7 @@
       "safe_summary": "A shared Rust CLI may need API compatibility and mutation-test scouting before DAD recommends it.",
       "why_ai_coding_may_improve": "Future agents need executable proof that public outputs and tests are strong enough for cross-repo reuse.",
       "applicability_limits": "Use only after crate license/provenance and local cost are reviewed; mutation outcomes are candidate evidence.",
+      "proof_surface_refs": ["proof:api-compatibility", "proof:property-fuzz", "proof:test-orchestration"],
       "validation_or_eval_idea": "Run cargo semver-checks or cargo mutants on a small reviewed crate and record command, exit code, and limits.",
       "expected_route": ["assets/rust-buildout-guide", "dad:harness:language-frontier-research"]
     },
@@ -49,6 +53,7 @@
       "safe_summary": "A future language candidate may help agents if its compiler, formatter, package tooling, and test runner create better proof surfaces.",
       "why_ai_coding_may_improve": "Future agents need a proof-surface inventory before DAD makes a new language recommendable.",
       "applicability_limits": "Keep as a candidate until official sources, local validation commands, avoid-when limits, and a failure example exist.",
+      "proof_surface_refs": ["proof:syntax-compile", "proof:formatter-linter", "proof:test-orchestration", "proof:package-security"],
       "validation_or_eval_idea": "Create a proof-surface inventory with minimum commands, one negative example, and a small local harness route.",
       "expected_route": ["registry/language-coding-advantage-registry.json", "dad:harness:language-frontier-research", "source_review_required"]
     },
@@ -59,6 +64,7 @@
       "safe_summary": "A blog claims a broad Rust rewrite is faster.",
       "why_ai_coding_may_improve": "Unproven.",
       "applicability_limits": "No source screening, profile evidence, or parity map.",
+      "proof_surface_refs": ["proof:runtime-profile-trace", "proof:interop-boundary"],
       "validation_or_eval_idea": "",
       "expected_route": ["reject"]
     }

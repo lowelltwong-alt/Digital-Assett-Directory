@@ -20,9 +20,12 @@ candidate evidence.
 1. Check whether the source matches `registry/trusted-source-registry.json`.
 2. Reject copied documentation, copied code, private rows, credentials, raw logs,
    long source blobs, and benchmark-only claims.
-3. Name the proof surface: compiler, formatter, linter, type checker, test
-   runner, property/fuzz tool, profiler, package auditor, runtime tracer, schema
-   validator, or structured report.
+3. Name the proof surface and map it to one or more
+   `proof_surface_categories` IDs from
+   `registry/language-coding-advantage-registry.json`: compiler, formatter,
+   linter, type checker, test runner, property/fuzz tool, profiler, package
+   auditor, runtime tracer, schema validator, interop boundary, or structured
+   report.
 4. Decide whether the idea is:
    - `python_candidate`
    - `rust_candidate`
@@ -60,6 +63,7 @@ Return concise JSON-compatible fields:
   "why_ai_may_miss_it": "<one sentence>",
   "applicability_limits": "<where not to use it>",
   "proof_surface": "<named executable check or inspection>",
+  "proof_surface_refs": ["<proof:category-id>"],
   "validation_or_eval_idea": "<local command or harness case>",
   "target_dad_surface": ["<asset-or-registry-path>"],
   "decision": "<candidate|source_review_required|reject>",

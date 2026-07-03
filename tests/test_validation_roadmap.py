@@ -117,6 +117,37 @@ def test_language_registry_semantics_reject_disallowed_output_channel():
     assert any("local absolute source reference" in error for error in errors)
 
 
+def test_language_registry_semantics_reject_duplicate_proof_surface_categories():
+    payload = deepcopy(_load_json("registry/language-coding-advantage-registry.json"))
+    duplicate = deepcopy(payload["proof_surface_categories"][0])
+    duplicate["label"] = "Duplicate proof surface with same id"
+    payload["proof_surface_categories"].append(duplicate)
+
+    errors = _language_semantic_errors_for(payload)
+
+    assert any("duplicate proof_surface_categories category_id" in error for error in errors)
+
+
+def test_language_registry_semantics_reject_unknown_proof_surface_ref():
+    payload = deepcopy(_load_json("registry/language-coding-advantage-registry.json"))
+    payload["languages"][0]["proof_surface_refs"].append("proof:does-not-exist")
+
+    errors = _language_semantic_errors_for(payload)
+
+    assert any("unknown proof surface proof:does-not-exist" in error for error in errors)
+
+
+def test_language_registry_semantics_reject_duplicate_proof_surface_ref():
+    payload = deepcopy(_load_json("registry/language-coding-advantage-registry.json"))
+    payload["languages"][0]["proof_surface_refs"].append(
+        payload["languages"][0]["proof_surface_refs"][0]
+    )
+
+    errors = _language_semantic_errors_for(payload)
+
+    assert any("duplicate proof_surface_refs values" in error for error in errors)
+
+
 def test_language_registry_semantics_reject_recommendable_template():
     payload = deepcopy(_load_json("registry/language-coding-advantage-registry.json"))
     template = next(

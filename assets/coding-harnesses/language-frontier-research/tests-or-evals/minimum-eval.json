@@ -10,6 +10,7 @@
     "safe_summary",
     "why_ai_coding_may_improve",
     "applicability_limits",
+    "proof_surface_refs",
     "validation_or_eval_idea"
   ],
   "cases": [
@@ -19,6 +20,7 @@
         "language=python",
         "source_id_or_url=hypothesis",
         "safe_summary=property test for JSON normalization",
+        "proof_surface_refs=proof:property-fuzz,proof:structured-data-boundary",
         "validation_or_eval_idea=round-trip invariant test"
       ],
       "expected": [
@@ -38,6 +40,7 @@
         "language=rust",
         "source_id_or_url=unknown blog",
         "safe_summary=Rust rewrite will be faster",
+        "proof_surface_refs=proof:runtime-profile-trace,proof:interop-boundary",
         "validation_or_eval_idea=empty"
       ],
       "expected": [
@@ -57,6 +60,7 @@
         "language=mixed",
         "source_id_or_url=python-core",
         "safe_summary=contains copied documentation or private repo rows",
+        "proof_surface_refs=proof:agent-readable-output",
         "validation_or_eval_idea=manual review"
       ],
       "expected": [
@@ -75,6 +79,7 @@
         "language=future-language",
         "source_id_or_url=official language docs",
         "safe_summary=new language may help AI coding",
+        "proof_surface_refs=proof:syntax-compile,proof:test-orchestration",
         "validation_or_eval_idea=missing proof tool"
       ],
       "expected": [

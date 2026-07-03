@@ -26,6 +26,8 @@ Every language DAD adopts should have the same minimum control surface:
 
 - a registry row in `registry/language-coding-advantage-registry.json`;
 - reviewed or candidate source IDs in `registry/trusted-source-registry.json`;
+- proof-surface refs that point to the shared categories in
+  `proof_surface_categories`;
 - an internal playbook or asset that explains why the language helps agents;
 - internal agent coding guidelines with proof requirements and failure modes;
 - codebase watch targets that tell agents which high-signal projects or tools to
@@ -39,6 +41,41 @@ Every language DAD adopts should have the same minimum control surface:
 The repeatable question is: what does this language, runtime, compiler,
 toolchain, or ecosystem let an agent check, inspect, refactor, or run better
 than an average generated-code workflow?
+
+## Proof Surface Matrix
+
+`registry/language-coding-advantage-registry.json` now carries a shared
+`proof_surface_categories` matrix. Python, Rust, and every future language row
+must reference the proof surfaces it can route to as a common checklist. A
+reference is not a claim that the proof surface is authoritative in every repo;
+the row's validation gates, local tool configuration, and repo authority decide
+that. This gives agents a deterministic checklist before they promote a tactic:
+
+- syntax/load proof before deeper analysis;
+- compiler, type-checker, formatter, or linter proof when the repo already
+  accepts that tool or the proposal is candidate-only;
+- structured boundary proof for JSON, reports, schemas, and parser outputs;
+- test orchestration proof when feedback speed or selected suites matter;
+- property or fuzz proof for parsers, chunkers, normalizers, IDs, and
+  serializers;
+- profile or trace proof before optimization, hang, leak, or Rust-migration
+  claims;
+- package, license, advisory, and compatibility proof before a tool becomes a
+  shared dependency;
+- agent-readable output proof so future agents can parse, diff, audit, and
+  postflight the result.
+
+This matrix is intentionally language-neutral. Python maps to runtime
+introspection, schema boundaries, pytest, property tests, static checkers, and
+profiling. Rust maps to compiler/type-system checks, Clippy, cargo metadata,
+doc tests, fuzz/property tests, API compatibility, and narrow interop
+boundaries. A future language such as Go, TypeScript, or Zig starts as a
+template row until its official sources, proof commands, failure examples, and
+harness route are named.
+
+The matrix is not security evidence by itself. It is a routing aid and
+promotion checklist. Security-sensitive, public/private, cross-repo, and
+protected-repo actions still use the harder governance gates elsewhere in DAD.
 
 ## Boundary
 
