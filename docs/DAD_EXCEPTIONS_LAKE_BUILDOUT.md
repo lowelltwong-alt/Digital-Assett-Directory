@@ -148,6 +148,22 @@ remembering to use direct records. They have deterministic capture signals:
   hash evidence, and regeneration command, never raw report bodies that may
   contain private output.
 
+Three additional reviewed exception families came from Mock Trial / Albert mail
+lessons and are now first-class capture targets:
+
+- `semantic_lineage_field_drop` for derived artifacts that keep an upstream ID
+  but drop semantic fields later layers need. Capture upstream/downstream refs,
+  dropped field names, and validation refs; never copied private rows.
+- `demo_case_as_parent_architecture` for a first demo, case, client, dataset, or
+  prototype leaking into reusable architecture or future intake defaults. Capture
+  the reusable surface, case-specific surface, isolation plan, and validation ref;
+  never case facts.
+- `hard_problem_review_not_routed` for Fable, Claude, human, ethics, realism,
+  strategy, or other judgment-heavy review that stays in chat or mutates source
+  without a governed advisory intake and acceptance gate. Capture reviewer type,
+  review surface, routing gap, and acceptance gate; never hidden reasoning or raw
+  review transcript.
+
 Capture can be lightweight. Repos do not need DAD Python internals for normal writes:
 they can append JSONL, use a tiny helper, export a CI artifact, or let the DAD CLI
 record events during preflight/midflight/postflight. Completeness is measured by
@@ -823,6 +839,10 @@ Implemented starter harness:
   performance hotspots, and missing validation commands. These have reviewed
   capture rules because they are common repo-agent failure surfaces where waiting
   for a human to remember a manual exception record would lose learning.
+- The Albert follow-up fixture set covers semantic lineage field drops, demo-case
+  parent architecture contamination, and unrouted hard-problem review. These
+  convert real inbound DAD mail into reviewed taxonomy, capture, backfill, and
+  synthetic no-chat coverage without copying case facts or raw review content.
 - `asset-dir exceptions capture-check --scenarios <file>` writes a methodology-hashed
   report under `processed/reports/exception_capture_completeness.*`.
 - `asset-dir exceptions capture-suggest --signal <signal> ...` compiles

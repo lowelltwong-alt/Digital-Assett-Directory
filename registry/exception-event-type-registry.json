@@ -886,6 +886,45 @@
       "review_status": "reviewed"
     },
     {
+      "event_type": "semantic_lineage_field_drop",
+      "category": "data_integrity",
+      "description": "A derived artifact kept an upstream id but dropped semantic fields needed by later safety, coaching, scoring, review, or control-plane layers.",
+      "capture_contracts": ["postflight_exception", "review_finding"],
+      "default_severity": "high",
+      "sensitivity_default": "internal",
+      "learnable": true,
+      "examples": ["selected answer metadata missing from trial-state event", "chunk/fact support refs dropped downstream", "validator checks object existence but not field equality"],
+      "required_context_refs": ["upstream ref", "downstream ref", "dropped field names", "validation ref"],
+      "never_collect": ["raw private row values", "full derived artifact bodies", "private transcript text"],
+      "review_status": "reviewed"
+    },
+    {
+      "event_type": "demo_case_as_parent_architecture",
+      "category": "repo_state",
+      "description": "A first demo, matter, case, client, dataset, or prototype contaminated reusable architecture, defaults, docs, configs, or output paths.",
+      "capture_contracts": ["postflight_exception", "governance_block", "review_finding"],
+      "default_severity": "medium",
+      "sensitivity_default": "internal",
+      "learnable": true,
+      "examples": ["case-specific names in reusable root config", "new-case workflow defaults to the first matter", "case output not isolated under case_id output root"],
+      "required_context_refs": ["case-specific surface", "reusable surface", "isolation plan", "validation ref"],
+      "never_collect": ["raw case facts", "client data", "witness packet contents"],
+      "review_status": "reviewed"
+    },
+    {
+      "event_type": "hard_problem_review_not_routed",
+      "category": "review",
+      "description": "Judgment-heavy external review, red-team, Fable, Claude, human, ethics, realism, strategy, or readiness feedback stayed in chat or mutated work without a governed advisory intake and acceptance gate.",
+      "capture_contracts": ["postflight_exception", "review_finding"],
+      "default_severity": "medium",
+      "sensitivity_default": "internal",
+      "learnable": true,
+      "examples": ["Fable feedback left in chat only", "external review changed source claims without acceptance evidence", "judgment-heavy review had no advisory boundary"],
+      "required_context_refs": ["reviewer type", "review surface", "routing gap", "acceptance gate"],
+      "never_collect": ["hidden reasoning", "raw private review transcript", "private source payload"],
+      "review_status": "reviewed"
+    },
+    {
       "event_type": "roadmap_gate_mismatch",
       "category": "roadmap_validation",
       "description": "Roadmap state, acceptance evidence, or validation gate disagreed with reality.",
@@ -952,7 +991,7 @@
     }
   ],
   "backfill_classifier": {
-    "methodology_version": "exception-backfill-classifier-v0.2.0",
+    "methodology_version": "exception-backfill-classifier-v0.3.0",
     "authority_boundary": "Backfill classification is path/name-signal-only candidate evidence. It never reads file contents, never proves an exception occurred, and never promotes learning without review or source-repo confirmation.",
     "rules": [
       {
@@ -1251,6 +1290,39 @@
         "false_positive_risk": "Workflow-failure paths can be workflow tests or examples.",
         "applies_when": ["Path names mention CI, workflow, or GitHub Actions failures."],
         "does_not_apply_when": ["The path is a normal workflow file without failure language."]
+      },
+      {
+        "rule_id": "backfill-rule:semantic-lineage-field-drop",
+        "terms": ["semantic-lineage-field-drop", "semantic_lineage_field_drop", "lineage-field-drop", "lineage_field_drop", "field-lineage-gap", "field_lineage_gap", "downstream-field-drop", "downstream_field_drop"],
+        "event_type": "semantic_lineage_field_drop",
+        "severity": "high",
+        "capture_contract": "backfill_candidate",
+        "classification_confidence": "path_name_signal_only",
+        "false_positive_risk": "Lineage-gap paths can be design docs or validators rather than observed drops.",
+        "applies_when": ["Path names mention dropped semantic lineage fields, upstream/downstream field gaps, or lineage field validation misses."],
+        "does_not_apply_when": ["The path is a normal lineage schema or validator with no drop, gap, or missing-field signal."]
+      },
+      {
+        "rule_id": "backfill-rule:demo-case-as-parent-architecture",
+        "terms": ["demo-case-parent-architecture", "demo_case_parent_architecture", "demo-case-as-parent", "demo_case_as_parent", "case-output-leakage", "case_output_leakage", "case-specific-leakage", "case_specific_leakage", "first-case-contamination", "first_case_contamination"],
+        "event_type": "demo_case_as_parent_architecture",
+        "severity": "medium",
+        "capture_contract": "backfill_candidate",
+        "classification_confidence": "path_name_signal_only",
+        "false_positive_risk": "Case-output language can describe a correct isolated output instead of reusable architecture contamination.",
+        "applies_when": ["Path names mention demo-case parent architecture, case-output leakage, case-specific reusable surfaces, or first-case contamination."],
+        "does_not_apply_when": ["The path is an intentionally case-scoped output folder with no reusable/root architecture implication."]
+      },
+      {
+        "rule_id": "backfill-rule:hard-problem-review-not-routed",
+        "terms": ["hard-problem-review-not-routed", "hard_problem_review_not_routed", "external-review-not-routed", "external_review_not_routed", "fable-review-not-routed", "fable_review_not_routed", "advisory-intake-gap", "advisory_intake_gap", "review-intake-gap", "review_intake_gap"],
+        "event_type": "hard_problem_review_not_routed",
+        "severity": "medium",
+        "capture_contract": "backfill_candidate",
+        "classification_confidence": "path_name_signal_only",
+        "false_positive_risk": "Review-intake paths may be normal templates or desired future process rather than a missed routed review.",
+        "applies_when": ["Path names mention external/Fable/hard-problem review staying unrouted, missing advisory intake, or missing acceptance gate."],
+        "does_not_apply_when": ["The path is a reviewed intake template or prompt with no missed routing evidence."]
       },
       {
         "rule_id": "backfill-rule:generic-exception",

@@ -3,7 +3,7 @@
   "eval_id": "exception-learning-readiness-minimum-eval-v0.1.0",
   "harness_id": "dad:harness:exception-learning-readiness",
   "status": "candidate",
-  "purpose": "Verify that DAD's exception learning queue stays conservative for clean, small-sample, mixed, invalid, non-public-origin, backfill-only, and confirmed-backfill synthetic cases.",
+  "purpose": "Verify that DAD's exception learning queue stays conservative for clean, small-sample, mail-derived family, mixed, invalid, non-public-origin, backfill-only, and confirmed-backfill synthetic cases.",
   "input_contract": [
     "A scenario file contains metadata-only events, fix outcomes, optional backfill review decisions, expected learning statuses, expected blocker substrings, and optional quarantine expectations.",
     "The evaluator creates temporary synthetic hubs and repos, then uses the real exception event, fix outcome, collect, and learning-queue APIs.",
@@ -21,6 +21,23 @@
       "given": ["one public observed event", "one schema-valid fixed outcome with validation and regression refs", "scenario threshold is ten"],
       "expected": ["learning status is needs_more_evidence", "promotion blockers mention N=10"],
       "fail_if": ["the one-off fix becomes validated_fix_review_candidate", "the sample-size blocker is hidden"]
+    },
+    {
+      "case_id": "mail_derived_family_small_sample_blockers",
+      "given": [
+        "one semantic_lineage_field_drop event with a validated fix",
+        "one demo_case_as_parent_architecture event with a validated fix",
+        "one hard_problem_review_not_routed event with a validated fix",
+        "scenario threshold is ten"
+      ],
+      "expected": [
+        "each mail-derived family stays needs_more_evidence",
+        "promotion blockers mention N=10 for each family"
+      ],
+      "fail_if": [
+        "a single Albert or Mock Trial derived family becomes validated_fix_review_candidate",
+        "sample-size blockers are hidden for new families"
+      ]
     },
     {
       "case_id": "mixed_validated_unresolved_blocker",

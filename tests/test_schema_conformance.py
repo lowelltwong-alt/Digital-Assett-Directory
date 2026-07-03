@@ -327,7 +327,7 @@ def test_exception_backfill_review_decision_model_dump_matches_registered_schema
         event_type="tool_unavailable",
         rule_id="backfill-rule:tool-unavailable",
         source_queue_status="source_review_required",
-        current_classifier_version="exception-backfill-classifier-v0.2.0",
+        current_classifier_version="exception-backfill-classifier-v0.3.0",
         candidate_count=1,
         public_release_required_count=0,
         readable_path_ref_count=0,

@@ -575,6 +575,15 @@ def test_exception_taxonomy_coverage_distinguishes_manual_and_signal_routes(
         report["category_route_summary"]["roadmap_validation"]["direct_record_only_count"]
         == 0
     )
+    assert "semantic_lineage_field_drop" in report["category_route_summary"][
+        "data_integrity"
+    ]["capture_rule_event_types"]
+    assert "demo_case_as_parent_architecture" in report["category_route_summary"][
+        "repo_state"
+    ]["capture_rule_event_types"]
+    assert "hard_problem_review_not_routed" in report["category_route_summary"][
+        "review"
+    ]["capture_rule_event_types"]
     assert "dirty_worktree_block" in report["category_route_summary"]["repo_state"][
         "capture_rule_event_types"
     ]
@@ -611,6 +620,9 @@ def test_exception_taxonomy_coverage_distinguishes_manual_and_signal_routes(
     assert "protected_repo_write_block" not in report["manual_only_event_types"]
     assert "stale_report" not in report["manual_only_event_types"]
     assert "validation_command_missing" not in report["manual_only_event_types"]
+    assert "semantic_lineage_field_drop" not in report["manual_only_event_types"]
+    assert "demo_case_as_parent_architecture" not in report["manual_only_event_types"]
+    assert "hard_problem_review_not_routed" not in report["manual_only_event_types"]
     taxonomy_gate = _phase6_gate(report, "phase-6-taxonomy-route-coverage-reviewed")
     assert taxonomy_gate["machine_status"] == "passed"
     assert taxonomy_gate["human_gate_satisfied"] is False
@@ -702,7 +714,7 @@ def test_global_block_signals_suppress_positive_matches() -> None:
     case = {
         "scenario_id": "secret-bearing-asset",
         "pattern_family": "asset",
-        "repo_capture_surface_version": "0.2.0",
+        "repo_capture_surface_version": "0.3.0",
         "signals": ["new_reusable_asset", "cross_repo_reuse", "asset_docs", "contains_secret_or_pii"],
         "expected": {
             "packet_classes": ["no_packet"],
@@ -729,7 +741,7 @@ def test_payload_screening_blocks_unsafe_sample_without_manual_signal() -> None:
     case = {
         "scenario_id": "unsafe-payload",
         "pattern_family": "asset",
-        "repo_capture_surface_version": "0.2.0",
+        "repo_capture_surface_version": "0.3.0",
         "signals": ["new_reusable_asset", "cross_repo_reuse", "asset_docs"],
         "payload_samples": [{"field": "safe_summary", "text": credential_like}],
         "expected": {
@@ -790,7 +802,7 @@ def test_observed_outboxes_are_compared_against_expected_packets(tmp_path: Path)
                 "scenario_id": "observed-lawfirm-style",
                 "pattern_family": "workflow",
                 "description": "Observed repo outboxes contain both workflow mail and review exception.",
-                "repo_capture_surface_version": "0.2.0",
+                "repo_capture_surface_version": "0.3.0",
                 "signals": [
                     "structured_review_issue_workflow",
                     "exception_lake_mapping_gap",
@@ -878,7 +890,7 @@ def test_observed_outboxes_fail_when_required_fields_are_missing(tmp_path: Path)
                 "scenario_id": "observed-missing-required-fields",
                 "pattern_family": "workflow",
                 "description": "Observed outboxes have the right packet labels but omit a required field.",
-                "repo_capture_surface_version": "0.2.0",
+                "repo_capture_surface_version": "0.3.0",
                 "signals": [
                     "structured_review_issue_workflow",
                     "exception_lake_mapping_gap",
@@ -977,7 +989,7 @@ def test_observed_required_fields_must_be_on_one_matching_packet(tmp_path: Path)
                 "scenario_id": "observed-split-required-fields",
                 "pattern_family": "workflow",
                 "description": "Observed outboxes split required fields across matching rows.",
-                "repo_capture_surface_version": "0.2.0",
+                "repo_capture_surface_version": "0.3.0",
                 "signals": [
                     "structured_review_issue_workflow",
                     "exception_lake_mapping_gap",
@@ -1067,7 +1079,7 @@ def test_observed_required_fields_reject_blank_values(tmp_path: Path) -> None:
                 "scenario_id": "observed-blank-required-field",
                 "pattern_family": "workflow",
                 "description": "Observed outbox has a blank required field.",
-                "repo_capture_surface_version": "0.2.0",
+                "repo_capture_surface_version": "0.3.0",
                 "signals": [
                     "structured_review_issue_workflow",
                     "exception_lake_mapping_gap",
@@ -1153,7 +1165,7 @@ def test_observed_outbox_payload_screening_blocks_secret_like_text(tmp_path: Pat
                 "scenario_id": "observed-unsafe-payload",
                 "pattern_family": "workflow",
                 "description": "Observed outbox carries secret-like text.",
-                "repo_capture_surface_version": "0.2.0",
+                "repo_capture_surface_version": "0.3.0",
                 "signals": [
                     "structured_review_issue_workflow",
                     "exception_lake_mapping_gap",
@@ -1225,7 +1237,7 @@ def test_observed_fix_outcomes_require_valid_fix_outcome_row(tmp_path: Path) -> 
                 "scenario_id": "observed-invalid-fix-outcome",
                 "pattern_family": "fix_outcome",
                 "description": "A partial outcome-looking row is not a real fix outcome.",
-                "repo_capture_surface_version": "0.2.0",
+                "repo_capture_surface_version": "0.3.0",
                 "signals": ["fix_outcome_recorded", "validation_passed"],
                 "expected": {
                     "packet_classes": ["fix_outcome"],
@@ -1362,7 +1374,7 @@ def test_capture_suggest_maps_tool_unavailable_to_required_packet() -> None:
     suggestion = suggest_exception_capture(
         ROOT,
         signals=["tool_unavailable", "dad_cli_unavailable", "fallback_used"],
-        repo_capture_surface_version="0.2.0",
+        repo_capture_surface_version="0.3.0",
     )
 
     _validate("exception_capture_suggestion", suggestion)
@@ -1391,7 +1403,7 @@ def test_capture_suggest_maps_language_frontier_signal_to_capability_mail() -> N
             "ai_overlooked_operation",
             "frontier_source_pointer",
         ],
-        repo_capture_surface_version="0.2.0",
+        repo_capture_surface_version="0.3.0",
     )
 
     _validate("exception_capture_suggestion", suggestion)
@@ -1420,7 +1432,7 @@ def test_capture_suggest_maps_harmful_dad_recommendation_to_exception() -> None:
     suggestion = suggest_exception_capture(
         ROOT,
         signals=["dad_recommendation_outcome", "harmful_recommendation"],
-        repo_capture_surface_version="0.2.0",
+        repo_capture_surface_version="0.3.0",
     )
 
     _validate("exception_capture_suggestion", suggestion)
@@ -1443,7 +1455,7 @@ def test_capture_suggest_maps_safe_security_block_metadata_to_exception() -> Non
     suggestion = suggest_exception_capture(
         ROOT,
         signals=["sensitive_payload_blocked", "credential_pii_screen_blocked"],
-        repo_capture_surface_version="0.2.0",
+        repo_capture_surface_version="0.3.0",
     )
 
     _validate("exception_capture_suggestion", suggestion)
@@ -1470,7 +1482,7 @@ def test_capture_suggest_still_blocks_unsafe_security_payload_signal() -> None:
             "credential_pii_screen_blocked",
             "contains_secret_or_pii",
         ],
-        repo_capture_surface_version="0.2.0",
+        repo_capture_surface_version="0.3.0",
     )
 
     _validate("exception_capture_suggestion", suggestion)
@@ -1565,7 +1577,7 @@ def test_capture_suggest_maps_high_priority_governance_and_freshness_blocks(
     suggestion = suggest_exception_capture(
         ROOT,
         signals=signals,
-        repo_capture_surface_version="0.2.0",
+        repo_capture_surface_version="0.3.0",
     )
 
     _validate("exception_capture_suggestion", suggestion)
@@ -1574,6 +1586,101 @@ def test_capture_suggest_maps_high_priority_governance_and_freshness_blocks(
     assert suggestion["actual"]["event_types"] == [event_type]
     assert suggestion["actual"]["capture_contracts"] == [capture_contract]
     assert suggestion["actual"]["required_fields"] == required_fields
+
+
+@pytest.mark.parametrize(
+    (
+        "signals",
+        "rule_id",
+        "packet_classes",
+        "event_type",
+        "mail_message_types",
+        "capture_contract",
+        "required_fields",
+    ),
+    [
+        (
+            [
+                "semantic_lineage_field_drop",
+                "downstream_field_missing",
+                "lineage_validator_gap",
+            ],
+            "exception-capture-rule:semantic-lineage-field-drop",
+            ["exception_event"],
+            "semantic_lineage_field_drop",
+            [],
+            "review_finding",
+            [
+                "downstream_ref",
+                "dropped_fields",
+                "safe_summary",
+                "upstream_ref",
+                "validation_ref",
+            ],
+        ),
+        (
+            [
+                "demo_case_as_parent_architecture",
+                "case_specific_root_config",
+                "case_output_not_isolated",
+            ],
+            "exception-capture-rule:demo-case-as-parent-architecture",
+            ["exception_event", "ordinary_mail"],
+            "demo_case_as_parent_architecture",
+            ["governance_notice"],
+            "governance_block",
+            [
+                "case_specific_surface",
+                "isolation_plan",
+                "reusable_surface",
+                "safe_summary",
+                "validation_ref",
+            ],
+        ),
+        (
+            [
+                "hard_problem_review_not_routed",
+                "external_review_in_chat_only",
+                "advisory_intake_missing",
+            ],
+            "exception-capture-rule:hard-problem-review-not-routed",
+            ["exception_event", "ordinary_mail"],
+            "hard_problem_review_not_routed",
+            ["workflow_suggestion"],
+            "review_finding",
+            [
+                "acceptance_gate",
+                "review_surface",
+                "reviewer_type",
+                "routing_gap",
+                "safe_summary",
+            ],
+        ),
+    ],
+)
+def test_capture_suggest_maps_albert_followup_exception_families(
+    signals: list[str],
+    rule_id: str,
+    packet_classes: list[str],
+    event_type: str,
+    mail_message_types: list[str],
+    capture_contract: str,
+    required_fields: list[str],
+) -> None:
+    suggestion = suggest_exception_capture(
+        ROOT,
+        signals=signals,
+        repo_capture_surface_version="0.3.0",
+    )
+
+    _validate("exception_capture_suggestion", suggestion)
+    assert suggestion["matched_rule_ids"] == [rule_id]
+    assert suggestion["actual"]["packet_classes"] == packet_classes
+    assert suggestion["actual"]["event_types"] == [event_type]
+    assert suggestion["actual"]["mail_message_types"] == mail_message_types
+    assert suggestion["actual"]["capture_contracts"] == [capture_contract]
+    assert suggestion["actual"]["required_fields"] == required_fields
+    assert suggestion["update_required"] is False
 
 
 def test_capture_suggest_flags_stale_capture_surface_for_new_rule() -> None:
@@ -1641,7 +1748,7 @@ def test_capture_emission_simulation_writes_capability_mail_with_provenance(
 
     assert report["failed_count"] == 0
     assert case["initial_update_required"] is True
-    assert case["emission_repo_capture_surface_version"] == "0.2.0"
+    assert case["emission_repo_capture_surface_version"] == "0.3.0"
     assert case["emitted_packet_classes"] == ["ordinary_mail"]
     assert case["observed"]["actual"]["mail_message_types"] == ["capability_suggestion"]
     for field in [
@@ -1663,7 +1770,7 @@ def test_capture_emission_simulation_writes_exception_event_trace_fields(
             "scenario_id": "tool-unavailable-exception-emission",
             "pattern_family": "exception_pattern",
             "description": "Tool-unavailable fallback should become exception metadata.",
-            "repo_capture_surface_version": "0.2.0",
+            "repo_capture_surface_version": "0.3.0",
             "signals": ["tool_unavailable", "dad_cli_unavailable", "fallback_used"],
             "covered_rule_ids": ["exception-capture-rule:tool-unavailable-metadata"],
             "expected": {
@@ -1723,7 +1830,7 @@ def test_capture_emission_simulation_writes_fix_outcome_with_writer_metadata(
             "scenario_id": "fix-outcome-emission",
             "pattern_family": "fix_outcome",
             "description": "Fix outcome should be written through the fix writer.",
-            "repo_capture_surface_version": "0.2.0",
+            "repo_capture_surface_version": "0.3.0",
             "signals": ["fix_outcome_recorded", "validation_passed"],
             "covered_rule_ids": ["exception-capture-rule:fix-outcome"],
             "expected": {
@@ -1847,7 +1954,7 @@ def test_capture_suggest_blocks_unsafe_payload_without_echoing_sample() -> None:
     suggestion = suggest_exception_capture(
         ROOT,
         signals=["new_reusable_asset", "cross_repo_reuse", "asset_docs"],
-        repo_capture_surface_version="0.2.0",
+        repo_capture_surface_version="0.3.0",
         payload_samples=[{"field": "safe_summary", "text": unsafe}],
     )
     serialized = json.dumps(suggestion)
@@ -1872,7 +1979,7 @@ def test_capture_suggest_sensitive_private_public_attempt_has_local_only_audit()
             "human_release_missing",
             "contains_secret_or_pii",
         ],
-        repo_capture_surface_version="0.2.0",
+        repo_capture_surface_version="0.3.0",
     )
 
     _validate("exception_capture_suggestion", suggestion)
@@ -1896,7 +2003,7 @@ def test_capture_suggest_blocks_unsafe_signal_without_echoing_value() -> None:
     suggestion = suggest_exception_capture(
         ROOT,
         signals=[unsafe_signal],
-        repo_capture_surface_version="0.2.0",
+        repo_capture_surface_version="0.3.0",
     )
     serialized = json.dumps(suggestion)
 
@@ -1940,7 +2047,7 @@ def test_capture_suggest_ignores_candidate_and_rejected_rules(tmp_path: Path) ->
     suggestion = suggest_exception_capture(
         tmp_path,
         signals=["candidate_only_signal", "rejected_signal"],
-        repo_capture_surface_version="0.2.0",
+        repo_capture_surface_version="0.3.0",
     )
 
     _validate("exception_capture_suggestion", suggestion)
@@ -1953,7 +2060,7 @@ def test_capture_suggest_unknown_signals_stay_candidate_no_packet() -> None:
     suggestion = suggest_exception_capture(
         ROOT,
         signals=["uncataloged_signal"],
-        repo_capture_surface_version="0.2.0",
+        repo_capture_surface_version="0.3.0",
     )
 
     assert suggestion["matched_rule_ids"] == []
@@ -1972,7 +2079,7 @@ def test_capture_suggest_cli_blocks_unsafe_signal_without_echoing_value() -> Non
             "--signal",
             unsafe_signal,
             "--repo-capture-surface-version",
-            "0.2.0",
+            "0.3.0",
         ],
     )
 
@@ -1995,7 +2102,7 @@ def test_observed_capture_audit_reports_existing_repo_outbox_emission(tmp_path: 
             {
                 "repo_id": "repo-with-outboxes",
                 "schema_version": "0.1.0",
-                "capture_surface_version": "0.2.0",
+                "capture_surface_version": "0.3.0",
             }
         ),
         encoding="utf-8",
@@ -2076,7 +2183,7 @@ def test_observed_capture_audit_clean_ad_hoc_scope_fails_machine_gate(
             {
                 "repo_id": "repo-with-outboxes",
                 "schema_version": "0.1.0",
-                "capture_surface_version": "0.2.0",
+                "capture_surface_version": "0.3.0",
             }
         ),
         encoding="utf-8",
@@ -2126,7 +2233,7 @@ def test_observed_capture_audit_scope_counts_come_from_rows(tmp_path: Path) -> N
             {
                 "repo_id": "repo-with-outboxes",
                 "schema_version": "0.1.0",
-                "capture_surface_version": "0.2.0",
+                "capture_surface_version": "0.3.0",
             }
         ),
         encoding="utf-8",
@@ -2357,7 +2464,7 @@ def test_observed_capture_audit_carries_reviewed_workflow_capture_suggestion(
             {
                 "repo_id": "repo-review-workflow",
                 "schema_version": "0.1.0",
-                "capture_surface_version": "0.2.0",
+                "capture_surface_version": "0.3.0",
             }
         ),
         encoding="utf-8",
@@ -2430,7 +2537,7 @@ def test_observed_capture_audit_flags_specific_gap_despite_unrelated_mail(
             {
                 "repo_id": "repo-unrelated-mail",
                 "schema_version": "0.1.0",
-                "capture_surface_version": "0.2.0",
+                "capture_surface_version": "0.3.0",
             }
         ),
         encoding="utf-8",
@@ -2576,7 +2683,7 @@ def test_observed_capture_audit_flags_stale_capture_surface(tmp_path: Path) -> N
 
     assert "stale_capture_surface" in row["status_flags"]
     assert row["contract"]["capture_surface_version"] == "0.1.0"
-    assert row["registry_capture_surface_version"] == "0.2.0"
+    assert row["registry_capture_surface_version"] == "0.3.0"
 
 
 def test_observed_capture_audit_tolerates_malformed_jsonl_without_raw_line(
@@ -2867,7 +2974,7 @@ def test_exception_capture_remediation_plan_routes_repair_lanes_without_repo_wri
             {
                 "repo_id": "ready",
                 "schema_version": "0.1.0",
-                "capture_surface_version": "0.2.0",
+                "capture_surface_version": "0.3.0",
             }
         ),
         encoding="utf-8",
@@ -3059,7 +3166,7 @@ def test_build_exception_capture_gap_review_queue_is_stable_and_actionable() -> 
     observed_report = {
         "audit_id": "dad:exception-capture-observed-audit",
         "repo_count": 1,
-        "capture_surface_version": "0.2.0",
+        "capture_surface_version": "0.3.0",
         "status_counts": {"pattern_gap_candidate": 1},
         "input_hashes": {"registry/exception-capture-pattern-registry.json": "sha256:test"},
         "methodology_ref": "registry/exception-capture-pattern-registry.json",
@@ -3080,8 +3187,8 @@ def test_build_exception_capture_gap_review_queue_is_stable_and_actionable() -> 
                     "backfill_allowed": True,
                     "write_protected": False,
                 },
-                "contract": {"capture_surface_version": "0.2.0"},
-                "registry_capture_surface_version": "0.2.0",
+                "contract": {"capture_surface_version": "0.3.0"},
+                "registry_capture_surface_version": "0.3.0",
                 "status_flags": ["pattern_gap_candidate"],
                 "candidate_path_scan": {"truncated": False},
                 "candidate_path_signals": [
@@ -3147,8 +3254,8 @@ def test_capture_gap_review_queue_separates_same_repo_id_by_path_hash() -> None:
                 "backfill_allowed": True,
                 "write_protected": False,
             },
-            "contract": {"capture_surface_version": "0.2.0"},
-            "registry_capture_surface_version": "0.2.0",
+            "contract": {"capture_surface_version": "0.3.0"},
+            "registry_capture_surface_version": "0.3.0",
             "status_flags": ["pattern_gap_candidate"],
             "candidate_path_scan": {"truncated": False},
             "candidate_path_signals": [
@@ -3168,7 +3275,7 @@ def test_capture_gap_review_queue_separates_same_repo_id_by_path_hash() -> None:
     report = build_exception_capture_gap_review_queue(
         {
             "audit_id": "dad:exception-capture-observed-audit",
-            "capture_surface_version": "0.2.0",
+            "capture_surface_version": "0.3.0",
             "status_counts": {"pattern_gap_candidate": 2},
             "input_hashes": {},
             "methodology_ref": "registry/exception-capture-pattern-registry.json",
@@ -3206,7 +3313,7 @@ def test_exception_backfill_wave_plan_keeps_metadata_wave_empty_until_proof_clea
             {
                 "repo_id": "ready",
                 "schema_version": "0.1.0",
-                "capture_surface_version": "0.2.0",
+                "capture_surface_version": "0.3.0",
             }
         ),
         encoding="utf-8",

@@ -276,6 +276,153 @@
       }
     },
     {
+      "case_id": "semantic-lineage-field-drop-small-sample",
+      "description": "A single mail-derived semantic lineage field drop with a validated fix remains counts-only until comparable evidence reaches threshold.",
+      "repo": {
+        "repo_id": "synthetic-public-semantic-lineage-small-sample",
+        "visibility": "public",
+        "public_facing": false
+      },
+      "events": [
+        {
+          "event_key": "semantic-lineage-field-drop-one",
+          "event_type": "semantic_lineage_field_drop",
+          "stage": "review",
+          "severity": "high",
+          "capture_contract": "review_finding",
+          "summary": "Synthetic downstream artifact kept an upstream id but dropped fields later layers needed.",
+          "context_refs": ["dad://synthetic/albert/semantic-lineage-field-drop"],
+          "validation_refs": ["lineage validator reproduced missing required fields"]
+        }
+      ],
+      "fix_outcomes": [
+        {
+          "event_key": "semantic-lineage-field-drop-one",
+          "decision": "fixed",
+          "summary": "Added field equality validation and downstream regression coverage.",
+          "validation_refs": ["python -m pytest tests/test_semantic_lineage.py"],
+          "regression_test_refs": ["tests/test_semantic_lineage.py::test_fields_survive_downstream"],
+          "fix_refs": ["commit:semantic-lineage-field-drop"],
+          "owner_authority": "repo"
+        }
+      ],
+      "expected": {
+        "status_by_event_type": {
+          "semantic_lineage_field_drop": "needs_more_evidence"
+        },
+        "blocker_substrings_by_event_type": {
+          "semantic_lineage_field_drop": ["N=10"]
+        },
+        "row_fields_by_event_type": {
+          "semantic_lineage_field_drop": {
+            "observed_count": 1,
+            "validated_fix_count": 1,
+            "source_visibility_counts": {
+              "public": 1
+            }
+          }
+        }
+      }
+    },
+    {
+      "case_id": "demo-case-as-parent-architecture-small-sample",
+      "description": "A single validated demo-case architecture contamination remains counts-only rather than becoming a reusable design lesson.",
+      "repo": {
+        "repo_id": "synthetic-public-demo-case-small-sample",
+        "visibility": "public",
+        "public_facing": false
+      },
+      "events": [
+        {
+          "event_key": "demo-case-parent-one",
+          "event_type": "demo_case_as_parent_architecture",
+          "stage": "postflight",
+          "severity": "medium",
+          "capture_contract": "governance_block",
+          "summary": "Synthetic first-case default leaked into reusable architecture.",
+          "context_refs": ["dad://synthetic/albert/demo-case-parent"],
+          "validation_refs": ["architecture review found reusable root default"]
+        }
+      ],
+      "fix_outcomes": [
+        {
+          "event_key": "demo-case-parent-one",
+          "decision": "fixed",
+          "summary": "Moved case-specific defaults behind an isolated case_id surface.",
+          "validation_refs": ["python -m pytest tests/test_case_isolation.py"],
+          "regression_test_refs": ["tests/test_case_isolation.py::test_default_case_not_root_architecture"],
+          "fix_refs": ["commit:demo-case-parent-architecture"],
+          "owner_authority": "repo"
+        }
+      ],
+      "expected": {
+        "status_by_event_type": {
+          "demo_case_as_parent_architecture": "needs_more_evidence"
+        },
+        "blocker_substrings_by_event_type": {
+          "demo_case_as_parent_architecture": ["N=10"]
+        },
+        "row_fields_by_event_type": {
+          "demo_case_as_parent_architecture": {
+            "observed_count": 1,
+            "validated_fix_count": 1,
+            "source_visibility_counts": {
+              "public": 1
+            }
+          }
+        }
+      }
+    },
+    {
+      "case_id": "hard-problem-review-not-routed-small-sample",
+      "description": "A single validated unrouted hard-problem review remains counts-only until enough comparable routed-review fixes exist.",
+      "repo": {
+        "repo_id": "synthetic-public-hard-review-small-sample",
+        "visibility": "public",
+        "public_facing": false
+      },
+      "events": [
+        {
+          "event_key": "hard-review-routing-one",
+          "event_type": "hard_problem_review_not_routed",
+          "stage": "review",
+          "severity": "medium",
+          "capture_contract": "review_finding",
+          "summary": "Synthetic external review stayed in chat without advisory intake.",
+          "context_refs": ["dad://synthetic/albert/hard-problem-review-routing"],
+          "validation_refs": ["postflight audit found missing advisory record"]
+        }
+      ],
+      "fix_outcomes": [
+        {
+          "event_key": "hard-review-routing-one",
+          "decision": "fixed",
+          "summary": "Added advisory intake and acceptance gate for hard-problem review.",
+          "validation_refs": ["python -m pytest tests/test_advisory_intake.py"],
+          "regression_test_refs": ["tests/test_advisory_intake.py::test_external_review_requires_acceptance_gate"],
+          "fix_refs": ["commit:hard-problem-review-routing"],
+          "owner_authority": "repo"
+        }
+      ],
+      "expected": {
+        "status_by_event_type": {
+          "hard_problem_review_not_routed": "needs_more_evidence"
+        },
+        "blocker_substrings_by_event_type": {
+          "hard_problem_review_not_routed": ["N=10"]
+        },
+        "row_fields_by_event_type": {
+          "hard_problem_review_not_routed": {
+            "observed_count": 1,
+            "validated_fix_count": 1,
+            "source_visibility_counts": {
+              "public": 1
+            }
+          }
+        }
+      }
+    },
+    {
       "case_id": "mixed-validated-and-unresolved",
       "description": "A validated fix must not hide unresolved siblings in the same event-type cluster.",
       "repo": {
@@ -499,7 +646,7 @@
           "summary": "Synthetic pytest timeout path signal that a reviewer confirmed as worth source follow-up.",
           "context_refs": [
             "backfill-rule-id:backfill-rule:test-timeout",
-            "backfill-classifier-version:exception-backfill-classifier-v0.2.0",
+            "backfill-classifier-version:exception-backfill-classifier-v0.3.0",
             "repo-relative-sha256:synthetic-confirmed-timeout",
             "path-keyword:pytest-timeout"
           ],

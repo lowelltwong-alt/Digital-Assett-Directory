@@ -827,7 +827,7 @@ def test_backfill_classifies_specific_exception_families(tmp_path: Path) -> None
         "test_timeout": 1,
         "tool_unavailable": 1,
     }
-    assert result["classifier_version"] == "exception-backfill-classifier-v0.2.0"
+    assert result["classifier_version"] == "exception-backfill-classifier-v0.3.0"
     assert result["classifier_ref"].endswith("#backfill_classifier")
     lake = _jsonl(hub / "processed" / "exceptions" / "lake" / "events.jsonl")
     by_type = {event["event_type"]: event for event in lake}
@@ -1019,7 +1019,7 @@ def test_backfill_review_queue_reconciles_missing_classifier_version(
     )
     assert row["classifier_version_reconciled_count"] == 1
     assert row["classifier_version_unreconciled_count"] == 0
-    assert row["classifier_versions"] == ["exception-backfill-classifier-v0.2.0"]
+    assert row["classifier_versions"] == ["exception-backfill-classifier-v0.3.0"]
     assert row["classifier_version_stale"] is False
     assert any(
         "classifier provenance was reconciled" in blocker
@@ -2410,14 +2410,17 @@ def test_exception_learning_readiness_scenarios_pass(tmp_path: Path) -> None:
         output=tmp_path / "learning-readiness.json",
     )
 
-    assert report["scenario_count"] == 7
+    assert report["scenario_count"] == 10
     assert report["failed_count"] == 0
-    assert report["passed_count"] == 7
+    assert report["passed_count"] == 10
     assert report["sample_size_threshold"] == 10
     case_ids = {case["case_id"] for case in report["cases"]}
     assert {
         "clean-public-validated-fix",
         "small-sample-validated-fix-blocker",
+        "semantic-lineage-field-drop-small-sample",
+        "demo-case-as-parent-architecture-small-sample",
+        "hard-problem-review-not-routed-small-sample",
         "mixed-validated-and-unresolved",
         "invalid-legacy-fix-row",
         "unknown-origin-release-gate",
