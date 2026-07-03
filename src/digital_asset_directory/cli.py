@@ -85,6 +85,7 @@ from .exception_capture import (
     evaluate_exception_taxonomy_coverage,
     evaluate_capture_scenarios,
     load_capture_pattern_registry,
+    observed_capture_audit_gap_count,
     write_exception_backfill_readiness,
     write_exception_backfill_wave_plan,
     write_observed_capture_audit,
@@ -517,39 +518,7 @@ def _exception_record_policy_block_reason(cfg, repo: Path) -> str:
 
 
 def _capture_audit_gap_count(result: dict[str, object], *, strict: bool = False) -> int:
-    status_counts = result.get("status_counts", {})
-    if not isinstance(status_counts, dict):
-        status_counts = {}
-    flags = {
-        "missed_capture_candidate",
-        "mail_present_exception_gap_candidate",
-        "pattern_gap_candidate",
-        "malformed_jsonl",
-        "stale_capture_surface",
-        "capture_surface_version_unknown",
-        "candidate_path_scan_truncated",
-    }
-    if strict:
-        flags.update(
-            {
-                "type_present_uncorrelated",
-                "emission_unverified",
-            }
-        )
-    status_gap_count = sum(int(status_counts.get(flag, 0) or 0) for flag in flags)
-    repos = result.get("repos", [])
-    truncated_scan_count = 0
-    if isinstance(repos, list):
-        for row in repos:
-            if not isinstance(row, dict):
-                continue
-            scan = row.get("candidate_path_scan") or row.get("candidate_scan")
-            if isinstance(scan, dict) and scan.get("truncated") is True:
-                truncated_scan_count += 1
-    recorded_truncation_count = int(
-        status_counts.get("candidate_path_scan_truncated", 0) or 0
-    )
-    return status_gap_count + max(0, truncated_scan_count - recorded_truncation_count)
+    return observed_capture_audit_gap_count(result, strict=strict)
 
 
 def _mail_repo_candidates(cfg) -> list[dict[str, object]]:
@@ -1574,6 +1543,7 @@ def exceptions_capture_audit(
     """Read repo outboxes and report missed exception/mail capture candidates."""
     cfg = _cfg(hub=hub)
     repos: dict[str, Path] = {}
+    reviewed_policy_scope = bool(repo == ["all"] and not root)
     if repo:
         selected = _discover_exception_repos(repo, cfg, capture_audit=True)
         for item in selected:
@@ -1594,6 +1564,15 @@ def exceptions_capture_audit(
             repo_policies=_exception_repo_policies(cfg),
             output=output_path,
             candidate_limit=candidate_limit,
+            scope={
+                "scope_id": "exceptions.repos:all" if reviewed_policy_scope else "ad_hoc",
+                "scope_kind": "reviewed_exception_policy"
+                if reviewed_policy_scope
+                else "ad_hoc",
+                "reviewed_policy_scope": reviewed_policy_scope,
+                "expected_repo_count": len(repos),
+                "audited_repo_count": min(len(repos), limit),
+            },
         )
     except (OSError, json.JSONDecodeError, KeyError, ValueError) as exc:
         console.print(str(exc))

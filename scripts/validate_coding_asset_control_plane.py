@@ -358,6 +358,9 @@ def main() -> int:
         for tactic_id in route["recommended_tactic_ids"]:
             if tactic_id not in known_tactics:
                 errors.append(f"{route['route_id']} references unknown tactic {tactic_id}")
+        for harness_id in route.get("recommended_harness_ids", []):
+            if harness_id not in harness_ids:
+                errors.append(f"{route['route_id']} references unknown harness {harness_id}")
 
     pointer = load_json("templates/downstream/AI_ASSETS_POINTER.template.json")
     for asset in pointer.get("assets", []):

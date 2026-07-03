@@ -782,14 +782,19 @@ Implemented starter harness:
   writes `processed/reports/exception_taxonomy_coverage.*`. It maps every reviewed
   exception event type to direct record contracts, capture-rule routes, backfill
   path-signal routes, and synthetic scenarios.
-- Both reports emit `phase6_machine_gate_evidence`, which names the Phase 6
-  roadmap gates supported by the run through
+- Capture, taxonomy, and observed-audit reports emit
+  `phase6_machine_gate_evidence`, which names the Phase 6 roadmap gates
+  supported by the run through
   `evidence_scope: machine_only_not_roadmap_gate_evidence` and
-  `supports_human_gate_id`, while keeping `human_gate_satisfied` false.
-  This gives reviewers machine-readable evidence for capture completeness,
-  pattern-update simulation, all pattern-family coverage, sensitive-payload
-  negative tests, LawFirm missed-capture regression, and taxonomy route coverage
-  without pretending the human gate is closed.
+  `supports_human_gate_id`, while keeping `human_gate_satisfied` false. Capture
+  and taxonomy evidence supports capture completeness, pattern-update
+  simulation, all pattern-family coverage, sensitive-payload negative tests,
+  LawFirm missed-capture regression, and taxonomy route coverage. The
+  observed-audit report separately supports observed repo capture-audit coverage
+  without pretending the human gate is closed. Observed-audit machine evidence
+  fails closed while normal or strict capture gaps remain, and it only passes for
+  a satisfied reviewed scope. An ad hoc clean scan is still useful review input,
+  but it must not be treated as all-repo coverage.
 - Positive synthetic cases compare required metadata fields from the capture
   registry, and observed fixture checks verify those fields are present in actual
   JSONL outbox rows. This prevents a false green where a repo emits

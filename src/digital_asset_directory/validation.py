@@ -8,7 +8,11 @@ import yaml
 from jsonschema.validators import validator_for
 
 from .config import load_config
-from .exception_capture import audit_observed_capture_repo, load_capture_pattern_registry
+from .exception_capture import (
+    audit_observed_capture_repo,
+    load_capture_pattern_registry,
+    observed_capture_audit_gap_count,
+)
 from .utils import sha256_bytes, sha256_file
 
 MAIL_MESSAGE_TYPES = {
@@ -472,10 +476,111 @@ def _resolve_observed_audit_repo(
     return None, "unresolved external audited repo"
 
 
-def _observed_audit_label(report_path: Path, repo_root: Path, row: dict[str, Any], outbox: dict[str, Any]) -> str:
+def _observed_audit_label(
+    report_path: Path,
+    repo_root: Path,
+    row: dict[str, Any],
+    outbox: dict[str, Any],
+) -> str:
     repo_info = row.get("repo", {}) if isinstance(row.get("repo"), dict) else {}
     repo_id = str(repo_info.get("repo_id") or repo_info.get("path_hint") or "unknown")
     return f"{report_path.relative_to(repo_root)} {repo_id}:{outbox.get('path', '')}"
+
+
+def _observed_audit_int(value: Any, default: int = -1) -> int:
+    try:
+        return int(value)
+    except (TypeError, ValueError):
+        return default
+
+
+def _observed_audit_machine_evidence_errors(
+    report_path: Path,
+    repo_root: Path,
+    payload: dict[str, Any],
+) -> list[str]:
+    label = str(report_path.relative_to(repo_root))
+    errors: list[str] = []
+    recomputed_gap = observed_capture_audit_gap_count(payload, strict=False)
+    recomputed_strict_gap = observed_capture_audit_gap_count(payload, strict=True)
+    if (
+        _observed_audit_int(payload.get("gap_flag_count", payload.get("gap_count")))
+        != recomputed_gap
+    ):
+        errors.append(f"Observed audit gap_flag_count mismatch: {label}")
+    if (
+        _observed_audit_int(
+            payload.get("strict_gap_flag_count", payload.get("strict_gap_count"))
+        )
+        != recomputed_strict_gap
+    ):
+        errors.append(f"Observed audit strict_gap_flag_count mismatch: {label}")
+    rows = payload.get("repos", [])
+    if not isinstance(rows, list):
+        rows = []
+    repo_count = _observed_audit_int(payload.get("repo_count"), 0)
+    actual_reviewed_repo_count = sum(
+        1
+        for row in rows
+        if isinstance(row, dict)
+        and isinstance(row.get("repo"), dict)
+        and row["repo"].get("reviewed_policy")
+    )
+    payload_scope = payload.get("audit_scope") if isinstance(payload.get("audit_scope"), dict) else {}
+    expected_repo_count = _observed_audit_int(payload_scope.get("expected_repo_count"))
+    audited_repo_count = _observed_audit_int(payload_scope.get("audited_repo_count"))
+    reviewed_policy_repo_count = _observed_audit_int(
+        payload_scope.get("reviewed_policy_repo_count")
+    )
+    reviewed_policy_scope = bool(payload_scope.get("reviewed_policy_scope"))
+    recomputed_scope_satisfied = (
+        reviewed_policy_scope
+        and expected_repo_count > 0
+        and audited_repo_count == expected_repo_count
+        and reviewed_policy_repo_count == expected_repo_count
+        and repo_count == expected_repo_count
+    )
+    if audited_repo_count != repo_count:
+        errors.append(f"Observed audit scope audited count mismatch: {label}")
+    if reviewed_policy_repo_count != actual_reviewed_repo_count:
+        errors.append(f"Observed audit scope reviewed policy count mismatch: {label}")
+    if bool(payload_scope.get("scope_satisfied")) != recomputed_scope_satisfied:
+        errors.append(f"Observed audit scope_satisfied mismatch: {label}")
+    evidence = payload.get("phase6_machine_gate_evidence")
+    if not isinstance(evidence, dict):
+        return [*errors, f"Observed audit missing phase6_machine_gate_evidence: {label}"]
+    gates = evidence.get("gates")
+    if not isinstance(gates, dict):
+        return [*errors, f"Observed audit missing machine evidence gates: {label}"]
+    gate = gates.get("machine-evidence:phase-6-observed-repo-capture-audit-reviewed")
+    if not isinstance(gate, dict):
+        return [
+            *errors,
+            f"Observed audit missing observed-repo capture machine evidence gate: {label}",
+        ]
+    if gate.get("evidence_scope") != "machine_only_not_roadmap_gate_evidence":
+        errors.append(f"Observed audit machine evidence has invalid scope: {label}")
+    if gate.get("human_gate_satisfied") is not False:
+        errors.append(f"Observed audit machine evidence may satisfy human gate: {label}")
+    if "roadmap_gate_id" in gate or "status" in gate:
+        errors.append(f"Observed audit machine evidence is human-gate shaped: {label}")
+    gate_evidence = gate.get("evidence") if isinstance(gate.get("evidence"), dict) else {}
+    if _observed_audit_int(gate_evidence.get("strict_gap_flag_count")) != recomputed_strict_gap:
+        errors.append(f"Observed audit machine strict gap mismatch: {label}")
+    gate_scope = gate_evidence.get("scope") if isinstance(gate_evidence, dict) else {}
+    if isinstance(gate_scope, dict) and gate_scope != payload_scope:
+        errors.append(f"Observed audit machine scope mismatch: {label}")
+    expected_status = (
+        "passed"
+        if repo_count and recomputed_scope_satisfied and recomputed_strict_gap == 0
+        else "failed"
+    )
+    if gate.get("machine_status") != expected_status:
+        errors.append(
+            f"Observed audit machine_status mismatch: {label} "
+            f"{gate.get('machine_status')} != {expected_status}"
+        )
+    return errors
 
 
 def _report_path_label(report_path: Path, repo_root: Path) -> str:
@@ -1228,6 +1333,9 @@ def validate_repo(repo_root: Path) -> dict[str, Any]:
                 errors.extend(_stale_report_input_hash_errors(repo_root, report_path, payload))
                 checked.append(str(report_path.relative_to(repo_root)))
             if payload.get("audit_id") == "dad:exception-capture-observed-audit":
+                errors.extend(
+                    _observed_audit_machine_evidence_errors(report_path, repo_root, payload)
+                )
                 policy_paths = _observed_audit_policy_paths(repo_root)
                 for row in payload.get("repos", []):
                     repo_info = row.get("repo", {})

@@ -51,17 +51,24 @@ candidate pattern families against observed message types, event types, and
 capture contracts, so unrelated old mail does not satisfy a missing workflow or
 exception capture. Private and unknown repo path signals are hash-only by default.
 Truncated candidate-path scans and strict-only mismatches such as
-`type_present_uncorrelated` are review gaps, not clean runs. Neither report is
+`type_present_uncorrelated` are review gaps, not clean runs. No single report is
 proof that all real repos are complete.
 
-The capture and taxonomy reports also emit `phase6_machine_gate_evidence`.
-Those rows name the Phase 6 roadmap gates they support, including the LawFirm
+The capture, taxonomy, and observed-audit reports emit
+`phase6_machine_gate_evidence`. Capture and taxonomy rows support the LawFirm
 missed-capture regression, pattern-update simulation, all pattern-family
-coverage, sensitive-payload negative tests, and taxonomy route coverage. They
-are machine evidence only: every row uses
+coverage, sensitive-payload negative tests, and taxonomy route coverage. The
+observed-audit report separately supports observed repo capture-audit coverage.
+They are machine evidence only: every row uses
 `evidence_scope: machine_only_not_roadmap_gate_evidence`, points to
-`supports_human_gate_id`, and keeps `human_gate_satisfied` false until a reviewed
-roadmap gate is explicitly approved.
+`supports_human_gate_id`, and keeps `human_gate_satisfied` false until a
+reviewed roadmap gate is explicitly approved.
+The observed-audit evidence fails closed when strict gaps remain, including
+unknown capture surfaces, truncated scans, missed-capture candidates,
+uncorrelated packet types, or unverified emissions.
+A passing observed-audit row only covers the report's declared reviewed scope.
+Ad hoc or partial clean scans remain failed for Phase 6 machine evidence, so a
+single clean repo cannot masquerade as estate-wide capture coverage.
 
 The taxonomy coverage report checks every reviewed exception event type against
 three route classes:

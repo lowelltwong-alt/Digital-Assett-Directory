@@ -66,6 +66,19 @@ PHASE6_GATE_BOUNDARY = (
     "contain the expected support for Phase 6 gates; they do not satisfy the "
     "separate human-reviewed roadmap gates."
 )
+OBSERVED_CAPTURE_AUDIT_GAP_FLAGS = {
+    "capture_surface_version_unknown",
+    "candidate_path_scan_truncated",
+    "mail_present_exception_gap_candidate",
+    "malformed_jsonl",
+    "missed_capture_candidate",
+    "pattern_gap_candidate",
+    "stale_capture_surface",
+}
+OBSERVED_CAPTURE_AUDIT_STRICT_EXTRA_FLAGS = {
+    "emission_unverified",
+    "type_present_uncorrelated",
+}
 
 PACKET_CLASSES = {
     "ordinary_mail",
@@ -1412,6 +1425,169 @@ def _observed_audit_input_hashes(hub_root: Path) -> dict[str, str]:
     return hashes
 
 
+def _observed_audit_status_flags(row: dict[str, Any]) -> set[str]:
+    flags = row.get("status_flags", [])
+    if not isinstance(flags, list):
+        return set()
+    return {str(flag) for flag in flags}
+
+
+def observed_capture_audit_gap_count(report: dict[str, Any], *, strict: bool = False) -> int:
+    rows = report.get("repos", [])
+    if isinstance(rows, list) and rows:
+        status_counts = Counter(
+            str(flag)
+            for row in rows
+            if isinstance(row, dict)
+            for flag in _observed_audit_status_flags(row)
+        )
+    else:
+        raw_status_counts = report.get("status_counts", {})
+        status_counts = raw_status_counts if isinstance(raw_status_counts, dict) else {}
+    flags = set(OBSERVED_CAPTURE_AUDIT_GAP_FLAGS)
+    if strict:
+        flags.update(OBSERVED_CAPTURE_AUDIT_STRICT_EXTRA_FLAGS)
+    status_gap_count = sum(int(status_counts.get(flag, 0) or 0) for flag in flags)
+    repos = report.get("repos", [])
+    truncated_scan_count = 0
+    if isinstance(repos, list):
+        for row in repos:
+            if not isinstance(row, dict):
+                continue
+            scan = row.get("candidate_path_scan") or row.get("candidate_scan")
+            if isinstance(scan, dict) and scan.get("truncated") is True:
+                truncated_scan_count += 1
+    recorded_truncation_count = int(
+        status_counts.get("candidate_path_scan_truncated", 0) or 0
+    )
+    return status_gap_count + max(0, truncated_scan_count - recorded_truncation_count)
+
+
+def _normalized_observed_audit_scope(
+    scope: dict[str, Any] | None,
+    *,
+    rows: list[dict[str, Any]],
+) -> dict[str, Any]:
+    reviewed_repo_count = sum(
+        1 for row in rows if (row.get("repo") or {}).get("reviewed_policy")
+    )
+    normalized = {
+        "scope_id": "ad_hoc",
+        "scope_kind": "ad_hoc",
+        "reviewed_policy_scope": False,
+        "expected_repo_count": len(rows),
+        "audited_repo_count": len(rows),
+        "reviewed_policy_repo_count": reviewed_repo_count,
+    }
+    if isinstance(scope, dict):
+        normalized.update(
+            {
+                key: value
+                for key, value in scope.items()
+                if key
+                in {
+                    "scope_id",
+                    "scope_kind",
+                    "reviewed_policy_scope",
+                    "expected_repo_count",
+                }
+            }
+        )
+    try:
+        expected_repo_count = int(normalized.get("expected_repo_count") or 0)
+    except (TypeError, ValueError):
+        expected_repo_count = 0
+    audited_repo_count = len(rows)
+    reviewed_scope = bool(normalized.get("reviewed_policy_scope"))
+    scope_satisfied = (
+        reviewed_scope
+        and expected_repo_count > 0
+        and audited_repo_count == expected_repo_count
+        and reviewed_repo_count == expected_repo_count
+    )
+    normalized.update(
+        {
+            "expected_repo_count": expected_repo_count,
+            "audited_repo_count": audited_repo_count,
+            "reviewed_policy_repo_count": reviewed_repo_count,
+            "scope_satisfied": scope_satisfied,
+        }
+    )
+    return normalized
+
+
+def _observed_audit_phase6_machine_gate_evidence(
+    *,
+    rows: list[dict[str, Any]],
+    status_counts: Counter[str],
+    signal_summary: dict[str, Any],
+    gap_flag_count: int,
+    strict_gap_flag_count: int,
+    gap_repo_count: int,
+    strict_gap_repo_count: int,
+    gap_signal_count: int,
+    scope: dict[str, Any],
+) -> dict[str, Any]:
+    reviewed_policy_count = sum(
+        1 for row in rows if (row.get("repo") or {}).get("reviewed_policy")
+    )
+    write_protected_count = sum(
+        1 for row in rows if (row.get("repo") or {}).get("write_protected")
+    )
+    gap_flags = sorted(
+        flag
+        for flag in OBSERVED_CAPTURE_AUDIT_GAP_FLAGS
+        if int(status_counts.get(flag, 0) or 0)
+    )
+    strict_extra_flags = sorted(
+        flag
+        for flag in OBSERVED_CAPTURE_AUDIT_STRICT_EXTRA_FLAGS
+        if int(status_counts.get(flag, 0) or 0)
+    )
+    passed = bool(rows) and scope["scope_satisfied"] and strict_gap_flag_count == 0
+    return {
+        "authority_boundary": PHASE6_GATE_BOUNDARY,
+        "gates": {
+            _phase6_machine_evidence_key(
+                "phase-6-observed-repo-capture-audit-reviewed"
+            ): _phase6_gate_row(
+                "phase-6-observed-repo-capture-audit-reviewed",
+                passed=passed,
+                evidence={
+                    "repo_count": len(rows),
+                    "reviewed_policy_repo_count": reviewed_policy_count,
+                    "write_protected_repo_count": write_protected_count,
+                    "scope": scope,
+                    "gap_flag_count": gap_flag_count,
+                    "strict_gap_flag_count": strict_gap_flag_count,
+                    "gap_repo_count": gap_repo_count,
+                    "strict_gap_repo_count": strict_gap_repo_count,
+                    "gap_signal_count": gap_signal_count,
+                    "gap_flags_present": gap_flags,
+                    "strict_extra_flags_present": strict_extra_flags,
+                    "status_counts": dict(sorted(status_counts.items())),
+                    "candidate_path_signal_total": signal_summary.get("total", 0),
+                    "candidate_path_count_scope": signal_summary.get("count_scope", ""),
+                    "truncated_repo_count": signal_summary.get("truncated_repo_count", 0),
+                    "omitted_signal_count_unknown": bool(
+                        signal_summary.get("omitted_signal_count_unknown")
+                    ),
+                    "outbox_surfaces_checked": [
+                        "mail_outbox",
+                        "exception_outbox",
+                        "fix_outcomes",
+                    ],
+                    "non_mutating_audit": True,
+                    "pass_condition": (
+                        "repo_count > 0, reviewed policy scope satisfied, "
+                        "and strict_gap_flag_count == 0"
+                    ),
+                },
+            )
+        },
+    }
+
+
 def write_observed_capture_audit(
     hub_root: Path,
     repos: list[Path],
@@ -1419,6 +1595,7 @@ def write_observed_capture_audit(
     repo_policies: list[Any] | None = None,
     output: Path | None = None,
     candidate_limit: int = 50,
+    scope: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     registry = load_capture_pattern_registry(hub_root)
     rows = [
@@ -1436,6 +1613,36 @@ def write_observed_capture_audit(
         item["pattern_family"] for row in rows for item in row["candidate_path_signals"]
     )
     signal_summary = _candidate_signal_summary_from_rows(rows)
+    partial_report = {
+        "status_counts": dict(sorted(status_counts.items())),
+        "repos": rows,
+    }
+    gap_flag_count = observed_capture_audit_gap_count(partial_report, strict=False)
+    strict_gap_flag_count = observed_capture_audit_gap_count(partial_report, strict=True)
+    gap_flags = OBSERVED_CAPTURE_AUDIT_GAP_FLAGS
+    strict_flags = gap_flags | OBSERVED_CAPTURE_AUDIT_STRICT_EXTRA_FLAGS
+    gap_repo_count = sum(1 for row in rows if bool(_observed_audit_status_flags(row) & gap_flags))
+    strict_gap_repo_count = sum(
+        1 for row in rows if bool(_observed_audit_status_flags(row) & strict_flags)
+    )
+    gap_signal_count = sum(
+        1
+        for row in rows
+        for signal in row.get("candidate_path_signals", [])
+        if signal.get("emission_status") in {"gap_candidate", "type_present_uncorrelated"}
+    )
+    normalized_scope = _normalized_observed_audit_scope(scope, rows=rows)
+    phase6_machine_gate_evidence = _observed_audit_phase6_machine_gate_evidence(
+        rows=rows,
+        status_counts=status_counts,
+        signal_summary=signal_summary,
+        gap_flag_count=gap_flag_count,
+        strict_gap_flag_count=strict_gap_flag_count,
+        gap_repo_count=gap_repo_count,
+        strict_gap_repo_count=strict_gap_repo_count,
+        gap_signal_count=gap_signal_count,
+        scope=normalized_scope,
+    )
     report = {
         "generated_at": utc_now(),
         "audit_id": "dad:exception-capture-observed-audit",
@@ -1446,8 +1653,18 @@ def write_observed_capture_audit(
         "input_hashes": _observed_audit_input_hashes(hub_root),
         "capture_surface_version": registry.get("capture_surface_version"),
         "status_counts": dict(sorted(status_counts.items())),
+        "gap_count": gap_flag_count,
+        "strict_gap_count": strict_gap_flag_count,
+        "gap_count_semantics": "status_flag_count",
+        "gap_flag_count": gap_flag_count,
+        "strict_gap_flag_count": strict_gap_flag_count,
+        "gap_repo_count": gap_repo_count,
+        "strict_gap_repo_count": strict_gap_repo_count,
+        "gap_signal_count": gap_signal_count,
+        "audit_scope": normalized_scope,
         "candidate_path_family_counts": dict(sorted(family_counts.items())),
         "candidate_path_signal_summary": signal_summary,
+        "phase6_machine_gate_evidence": phase6_machine_gate_evidence,
         "repos": rows,
         "authority_boundary": (
             "This report reads repo-local mailbox, exception, and fix-outcome JSONL "
@@ -1470,13 +1687,32 @@ def write_observed_capture_audit(
         f"- Repos audited: {report['repo_count']}",
         f"- Capture surface version: `{report['capture_surface_version']}`",
         f"- Methodology hash: `{report['methodology_hash']}`",
+        f"- Gap flag count: {report['gap_flag_count']}",
+        f"- Strict gap flag count: {report['strict_gap_flag_count']}",
+        f"- Gap repo count: {report['gap_repo_count']}",
+        f"- Gap signal count: {report['gap_signal_count']}",
+        f"- Scope: `{report['audit_scope']['scope_id']}` "
+        f"({report['audit_scope']['scope_kind']}, "
+        f"satisfied={report['audit_scope']['scope_satisfied']})",
         "",
         "Boundary: read-only candidate evidence. Path signals are prompts for review, "
         "not proof that a packet should have been sent.",
         "",
-        "## Status Counts",
+        "## Phase 6 Machine Gate Evidence",
         "",
     ]
+    for gate in report["phase6_machine_gate_evidence"]["gates"].values():
+        lines.append(
+            f"- `{gate['supports_human_gate_id']}`: `{gate['machine_status']}` "
+            "(human review still required)"
+        )
+    lines.extend(
+        [
+            "",
+            "## Status Counts",
+            "",
+        ]
+    )
     if status_counts:
         lines.extend(f"- `{flag}`: {count}" for flag, count in sorted(status_counts.items()))
     else:

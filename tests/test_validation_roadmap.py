@@ -19,6 +19,7 @@ from digital_asset_directory.validation import (
     _exception_lake_taxonomy_consistency_errors,
     _fix_outcome_semantic_errors,
     _language_registry_semantic_errors,
+    _observed_audit_machine_evidence_errors,
     _path_identity_hash,
     _resolve_observed_audit_repo,
     _source_provenance_consistency_errors,
@@ -294,6 +295,45 @@ def test_observed_audit_candidate_path_scan_staleness_detects_new_signal(
 
     assert any("Candidate path scan stale" in error for error in errors)
     assert any("scan_hash" in error for error in errors)
+
+
+def test_observed_audit_machine_evidence_validation_recomputes_gap_counts(
+    tmp_path: Path,
+) -> None:
+    report_path = tmp_path / "observed-audit.json"
+    payload = {
+        "audit_id": "dad:exception-capture-observed-audit",
+        "repo_count": 1,
+        "gap_count": 0,
+        "gap_flag_count": 0,
+        "strict_gap_count": 0,
+        "strict_gap_flag_count": 0,
+        "audit_scope": {"scope_satisfied": True},
+        "repos": [
+            {
+                "status_flags": ["missed_capture_candidate"],
+                "candidate_path_scan": {"truncated": False},
+            }
+        ],
+        "phase6_machine_gate_evidence": {
+            "gates": {
+                "machine-evidence:phase-6-observed-repo-capture-audit-reviewed": {
+                    "evidence_scope": "machine_only_not_roadmap_gate_evidence",
+                    "human_gate_satisfied": False,
+                    "machine_status": "passed",
+                    "evidence": {"strict_gap_flag_count": 0},
+                }
+            }
+        },
+    }
+
+    errors = _observed_audit_machine_evidence_errors(report_path, tmp_path, payload)
+
+    assert any("gap_flag_count mismatch" in error for error in errors)
+    assert any("strict_gap_flag_count mismatch" in error for error in errors)
+    assert any("machine strict gap mismatch" in error for error in errors)
+    assert any("machine_status mismatch" in error for error in errors)
+    assert any("scope_satisfied mismatch" in error for error in errors)
 
 
 def test_backfill_readiness_candidate_path_scan_staleness_detects_new_signal(

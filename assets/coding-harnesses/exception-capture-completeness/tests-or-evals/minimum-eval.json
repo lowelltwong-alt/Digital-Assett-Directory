@@ -43,8 +43,8 @@
     {
       "case_id": "observed-audit-gap",
       "given": ["real or fixture outboxes", "path-signal candidate files", "expected packet classes"],
-      "expected": ["observed comparisons require usable metadata fields", "uncorrelated old mail does not satisfy a missing capture pattern", "this is documented as observed-audit evidence and is not covered by capture/taxonomy machine-gate rows until the observed-audit report emits its own evidence"],
-      "fail_if": ["a packet type passes without required fields", "stale or unrelated outbox rows satisfy current expectations", "private path evidence is exposed in public-safe output"]
+      "expected": ["observed comparisons require usable metadata fields", "uncorrelated old mail does not satisfy a missing capture pattern", "the observed-audit report emits its own machine-only gate evidence", "normal and strict gap counts fail closed when review gaps remain"],
+      "fail_if": ["a packet type passes without required fields", "stale or unrelated outbox rows satisfy current expectations", "private path evidence is exposed in public-safe output", "observed-audit machine evidence passes while strict gaps remain"]
     }
   ],
   "must_not_claim": [

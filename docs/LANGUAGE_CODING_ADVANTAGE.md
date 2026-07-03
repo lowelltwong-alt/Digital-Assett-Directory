@@ -105,10 +105,19 @@ strong engineers encode proof in compilers, linters, test runners, profilers,
 fuzzers, and release processes, then converts only validated lessons into local
 assets or harness cases.
 
+The default coding style is AI-legible rather than merely clever. A useful
+language advantage should leave future agents with named boundaries,
+machine-readable outputs, stable commands, negative cases, source pointers, and
+local validation hooks. If a technique makes code shorter but harder to inspect,
+route, replay, or falsify, DAD treats it as a candidate at best.
+
 Codebase watch targets use structured `example_refs` with `source_id`, `ref`,
 `review_status`, and `provenance_note`. For real language rows, refs must be
 HTTPS pointers matching the trusted source's reviewed URL patterns. Template
 rows may use `replace-with-*` placeholders only while `recommendable` is false.
+`reviewed` on a source pointer means the address pattern is approved for intake;
+it does not mean every technique, crate, benchmark, or claim from that source is
+adopted DAD guidance.
 
 ## Python
 
@@ -154,6 +163,8 @@ Python operations DAD now expects agents to consider:
   before trimming a slow suite;
 - environment and tooling census before suggesting a Python version feature,
   checker, package manager, or dependency.
+- AI-legible change surfaces: named parsers, schemas, stable commands, safe
+  summaries, and negative tests around shared JSONL/report/CLI boundaries.
 
 ## Rust
 
@@ -206,6 +217,9 @@ Rust operations DAD now expects agents to consider:
   scanner, serializer, and unsafe-sensitive boundaries;
 - API compatibility checks before a Rust crate or CLI becomes a DAD-owned shared
   dependency.
+- AI-legible leaf contracts: schema-versioned JSON/JSONL, deterministic ordering,
+  typed errors, and Python-side validators that can prove what the Rust tool
+  emitted.
 
 ## Adding Another Language
 

@@ -8,74 +8,177 @@
       "route_id": "route:default-ai-engineering-preflight",
       "task_context": "General AI-assisted coding, refactoring, testing, or repo-template work.",
       "match": {
-        "task_types": ["coding", "refactor", "testing", "repo_template_creation", "agent_instruction_design"],
-        "languages": ["python", "rust", "mixed", "unknown"],
-        "risk_tags": ["default", "medium", "unknown"],
-        "repo_types": ["persistent_software_repo", "template_repo", "unknown"]
+        "task_types": [
+          "coding",
+          "refactor",
+          "testing",
+          "repo_template_creation",
+          "agent_instruction_design"
+        ],
+        "languages": [
+          "python",
+          "rust",
+          "mixed",
+          "unknown"
+        ],
+        "risk_tags": [
+          "default",
+          "medium",
+          "unknown"
+        ],
+        "repo_types": [
+          "persistent_software_repo",
+          "template_repo",
+          "unknown"
+        ]
       },
-      "required_preflight_profiles": ["asset:ai-engineering-preflight"],
-      "optional_tactic_bundles": ["asset:coding-tactics-radar"],
-      "recommended_tactic_ids": ["agent-goal-context-constraints-donewhen", "agent-verifiable-goals"],
-      "validation_expectations": ["Run repo-local tests or explain why they are not available.", "Run DAD postflight for material work."],
+      "required_preflight_profiles": [
+        "asset:ai-engineering-preflight"
+      ],
+      "optional_tactic_bundles": [
+        "asset:coding-tactics-radar"
+      ],
+      "recommended_tactic_ids": [
+        "agent-goal-context-constraints-donewhen",
+        "agent-verifiable-goals"
+      ],
+      "validation_expectations": [
+        "Run repo-local tests or explain why they are not available.",
+        "Run DAD postflight for material work."
+      ],
       "authority_boundary": "Local repo guidance remains authoritative for local code decisions.",
-      "stop_conditions": ["Local authority files conflict with DAD guidance.", "The task would mutate a downstream repo without explicit approval."]
+      "stop_conditions": [
+        "Local authority files conflict with DAD guidance.",
+        "The task would mutate a downstream repo without explicit approval."
+      ]
     },
     {
       "route_id": "route:python-long-script-refactor",
       "task_context": "Python long script refactor with behavior preservation.",
       "match": {
-        "task_types": ["python_refactor", "long_script_refactor"],
-        "languages": ["python"],
-        "risk_tags": ["behavior_preservation", "test_gap", "medium"],
-        "repo_types": ["python_cli", "etl_repo", "legacy_script_repo"]
+        "task_types": [
+          "python_refactor",
+          "long_script_refactor"
+        ],
+        "languages": [
+          "python"
+        ],
+        "risk_tags": [
+          "behavior_preservation",
+          "test_gap",
+          "medium"
+        ],
+        "repo_types": [
+          "python_cli",
+          "etl_repo",
+          "legacy_script_repo"
+        ]
       },
-      "required_preflight_profiles": ["asset:ai-engineering-preflight", "asset:python-ai-advantage-preflight"],
-      "optional_tactic_bundles": ["asset:coding-tactics-radar"],
+      "required_preflight_profiles": [
+        "asset:ai-engineering-preflight",
+        "asset:python-ai-advantage-preflight"
+      ],
+      "optional_tactic_bundles": [
+        "asset:coding-tactics-radar"
+      ],
       "recommended_tactic_ids": [
         "python-characterization-before-refactor",
         "python-functional-core-imperative-shell",
         "python-dataclass-value-object",
         "python-protocol-side-effect-port",
-        "python-raise-from-causal-errors"
+        "python-raise-from-causal-errors",
+        "python-property-based-invariants"
       ],
-      "validation_expectations": ["Add or run characterization tests before changing behavior.", "Run python -m pytest for affected tests.", "Run py_compile for changed scripts if no tests exist."],
+      "validation_expectations": [
+        "Add or run characterization tests before changing behavior.",
+        "Run python -m pytest for affected tests.",
+        "Run py_compile for changed scripts if no tests exist."
+      ],
       "authority_boundary": "Characterization tests preserve observed behavior but do not prove the behavior is correct.",
-      "stop_conditions": ["No behavior oracle exists and the requested change is high impact.", "Refactor begins changing output without a new acceptance criterion."]
+      "stop_conditions": [
+        "No behavior oracle exists and the requested change is high impact.",
+        "Refactor begins changing output without a new acceptance criterion."
+      ]
     },
     {
       "route_id": "route:python-library-api-design",
       "task_context": "Python package, library, CLI support module, or reusable API design.",
       "match": {
-        "task_types": ["python_coding", "python_api_design", "package_api"],
-        "languages": ["python"],
-        "risk_tags": ["public_api", "schema_contract", "medium"],
-        "repo_types": ["python_library", "python_cli", "repo_template"]
+        "task_types": [
+          "python_coding",
+          "python_api_design",
+          "package_api"
+        ],
+        "languages": [
+          "python"
+        ],
+        "risk_tags": [
+          "public_api",
+          "schema_contract",
+          "medium"
+        ],
+        "repo_types": [
+          "python_library",
+          "python_cli",
+          "repo_template"
+        ]
       },
-      "required_preflight_profiles": ["asset:ai-engineering-preflight", "asset:python-ai-advantage-preflight"],
-      "optional_tactic_bundles": ["asset:coding-tactics-radar"],
+      "required_preflight_profiles": [
+        "asset:ai-engineering-preflight",
+        "asset:python-ai-advantage-preflight"
+      ],
+      "optional_tactic_bundles": [
+        "asset:coding-tactics-radar"
+      ],
       "recommended_tactic_ids": [
         "python-public-api-boundary",
         "python-dataclass-value-object",
         "python-newtype-ids",
         "python-typeddict-json-boundary",
         "python-enum-literal-closed-state",
-        "python-importlib-resources"
+        "python-importlib-resources",
+        "python-property-based-invariants",
+        "python-static-checker-negative-contract"
       ],
-      "validation_expectations": ["Run affected pytest tests.", "Validate schemas when public JSON contracts change.", "Run type checking if the repo has it configured."],
+      "validation_expectations": [
+        "Run affected pytest tests.",
+        "Validate schemas when public JSON contracts change.",
+        "Run type checking if the repo has it configured."
+      ],
       "authority_boundary": "Public API changes require target repo review and compatibility expectations.",
-      "stop_conditions": ["A public API change lacks migration or compatibility notes.", "The tactic conflicts with local package style."]
+      "stop_conditions": [
+        "A public API change lacks migration or compatibility notes.",
+        "The tactic conflicts with local package style."
+      ]
     },
     {
       "route_id": "route:rust-library-api-design",
       "task_context": "Rust crate or library API design.",
       "match": {
-        "task_types": ["rust_coding", "rust_api_design", "rust_library"],
-        "languages": ["rust"],
-        "risk_tags": ["public_api", "semver", "medium"],
-        "repo_types": ["rust_library", "mixed_language_repo"]
+        "task_types": [
+          "rust_coding",
+          "rust_api_design",
+          "rust_library"
+        ],
+        "languages": [
+          "rust"
+        ],
+        "risk_tags": [
+          "public_api",
+          "semver",
+          "medium"
+        ],
+        "repo_types": [
+          "rust_library",
+          "mixed_language_repo"
+        ]
       },
-      "required_preflight_profiles": ["asset:ai-engineering-preflight"],
-      "optional_tactic_bundles": ["asset:coding-tactics-radar"],
+      "required_preflight_profiles": [
+        "asset:ai-engineering-preflight"
+      ],
+      "optional_tactic_bundles": [
+        "asset:coding-tactics-radar"
+      ],
       "recommended_tactic_ids": [
         "rust-private-by-default",
         "rust-public-facade-pub-use",
@@ -85,23 +188,60 @@
         "rust-private-struct-fields",
         "rust-builder-for-complex-values",
         "rust-sealed-trait-for-future-proofing",
-        "rust-clippy-and-doc-tests"
+        "rust-clippy-and-doc-tests",
+        "rust-fuzz-parser-boundary",
+        "rust-nextest-isolated-runner"
       ],
-      "validation_expectations": ["Run cargo fmt --check.", "Run cargo clippy --all-targets where available.", "Run cargo test and cargo test --doc for library APIs."],
+      "validation_expectations": [
+        "Run cargo fmt --check.",
+        "Run cargo clippy --all-targets where available.",
+        "Run cargo test and cargo test --doc for library APIs."
+      ],
       "authority_boundary": "Rust tactic recommendations do not prove parity with Python or target repo expectations.",
-      "stop_conditions": ["The Rust suite is smaller than the native suite and no parity map exists.", "A sealed/public API decision lacks semver review."]
+      "stop_conditions": [
+        "The Rust suite is smaller than the native suite and no parity map exists.",
+        "A sealed/public API decision lacks semver review."
+      ],
+      "recommended_harness_ids": [
+        "dad:harness:language-frontier-research"
+      ]
     },
     {
       "route_id": "route:security-sensitive-token-session",
       "task_context": "Security-sensitive token, session, credential, permission, or private-to-public movement work.",
       "match": {
-        "task_types": ["security_sensitive", "token_work", "session_work", "public_release_gate", "mail_provenance"],
-        "languages": ["python", "rust", "mixed"],
-        "risk_tags": ["security_privacy", "public_safe", "human_gate", "high"],
-        "repo_types": ["public_facing_repo", "internal_repo", "private_repo", "governed_repo_family"]
+        "task_types": [
+          "security_sensitive",
+          "token_work",
+          "session_work",
+          "public_release_gate",
+          "mail_provenance"
+        ],
+        "languages": [
+          "python",
+          "rust",
+          "mixed"
+        ],
+        "risk_tags": [
+          "security_privacy",
+          "public_safe",
+          "human_gate",
+          "high"
+        ],
+        "repo_types": [
+          "public_facing_repo",
+          "internal_repo",
+          "private_repo",
+          "governed_repo_family"
+        ]
       },
-      "required_preflight_profiles": ["asset:ai-engineering-preflight"],
-      "optional_tactic_bundles": ["asset:coding-tactics-radar", "asset:mail-coding-asset-packets"],
+      "required_preflight_profiles": [
+        "asset:ai-engineering-preflight"
+      ],
+      "optional_tactic_bundles": [
+        "asset:coding-tactics-radar",
+        "asset:mail-coding-asset-packets"
+      ],
       "recommended_tactic_ids": [
         "python-secrets-not-random",
         "agent-sandbox-and-permission-minimum",
@@ -109,94 +249,296 @@
         "rust-newtype-domain-ids",
         "rust-result-error-types"
       ],
-      "validation_expectations": ["Run secret/PII screening where data crosses repo or public boundaries.", "Require human release for private/internal/restricted/unknown-origin mail headed to public-facing repos.", "Report tests not run and residual security risk."],
+      "validation_expectations": [
+        "Run secret/PII screening where data crosses repo or public boundaries.",
+        "Require human release for private/internal/restricted/unknown-origin mail headed to public-facing repos.",
+        "Report tests not run and residual security risk."
+      ],
       "authority_boundary": "Agent review is triage only; human review is required for public release gates.",
-      "stop_conditions": ["Potential secret, private row, token, credential, or raw sensitive content appears.", "Source visibility is private/internal/restricted/unknown and target is public-facing without human release."]
+      "stop_conditions": [
+        "Potential secret, private row, token, credential, or raw sensitive content appears.",
+        "Source visibility is private/internal/restricted/unknown and target is public-facing without human release."
+      ]
     },
     {
       "route_id": "route:repo-template-and-downstream-pointer",
       "task_context": "Repo template creation or downstream DAD coding asset pointer install.",
       "match": {
-        "task_types": ["repo_template_creation", "downstream_pointer_install", "agent_instruction_design"],
-        "languages": ["agent-instruction", "python", "rust", "mixed"],
-        "risk_tags": ["governance", "managed_block", "cross_repo", "high"],
-        "repo_types": ["template_repo", "persistent_software_repo", "governed_repo_family"]
+        "task_types": [
+          "repo_template_creation",
+          "downstream_pointer_install",
+          "agent_instruction_design"
+        ],
+        "languages": [
+          "agent-instruction",
+          "python",
+          "rust",
+          "mixed"
+        ],
+        "risk_tags": [
+          "governance",
+          "managed_block",
+          "cross_repo",
+          "high"
+        ],
+        "repo_types": [
+          "template_repo",
+          "persistent_software_repo",
+          "governed_repo_family"
+        ]
       },
-      "required_preflight_profiles": ["asset:ai-engineering-preflight", "asset:downstream-coding-asset-pointer"],
-      "optional_tactic_bundles": ["asset:coding-tactics-radar", "asset:mail-coding-asset-packets", "asset:agent-skill-library"],
+      "required_preflight_profiles": [
+        "asset:ai-engineering-preflight",
+        "asset:downstream-coding-asset-pointer"
+      ],
+      "optional_tactic_bundles": [
+        "asset:coding-tactics-radar",
+        "asset:mail-coding-asset-packets",
+        "asset:agent-skill-library"
+      ],
       "recommended_tactic_ids": [
         "agent-short-root-instructions-linked-profiles",
         "agent-goal-context-constraints-donewhen",
         "agent-instruction-smell-check",
         "agent-postflight-pay-forward"
       ],
-      "validation_expectations": ["Render pointer dry-run before installing.", "Preserve target repo content outside managed markers.", "Run target repo validation after local adoption."],
+      "validation_expectations": [
+        "Render pointer dry-run before installing.",
+        "Preserve target repo content outside managed markers.",
+        "Run target repo validation after local adoption."
+      ],
       "authority_boundary": "DAD pointer templates are advisory until target repo explicitly approves installation.",
-      "stop_conditions": ["The target repo is not in reviewed mail/governance policy.", "The pointer would copy full DAD assets into the target repo."]
+      "stop_conditions": [
+        "The target repo is not in reviewed mail/governance policy.",
+        "The pointer would copy full DAD assets into the target repo."
+      ]
     },
     {
       "route_id": "route:governance-sensitive-lawfirm-os",
       "task_context": "Governance-sensitive LawFirm OS or multi-repo authority work.",
       "match": {
-        "task_types": ["governance_change", "lawfirm_os", "cross_repo_contract", "schema_contract"],
-        "languages": ["python", "agent-instruction", "mixed"],
-        "risk_tags": ["source_authority", "load_bearing_decision", "human_gate", "high"],
-        "repo_types": ["governed_repo_family", "control_plane", "downstream_repo"]
+        "task_types": [
+          "governance_change",
+          "lawfirm_os",
+          "cross_repo_contract",
+          "schema_contract"
+        ],
+        "languages": [
+          "python",
+          "agent-instruction",
+          "mixed"
+        ],
+        "risk_tags": [
+          "source_authority",
+          "load_bearing_decision",
+          "human_gate",
+          "high"
+        ],
+        "repo_types": [
+          "governed_repo_family",
+          "control_plane",
+          "downstream_repo"
+        ]
       },
-      "required_preflight_profiles": ["asset:ai-engineering-preflight"],
-      "optional_tactic_bundles": ["asset:coding-tactics-radar", "asset:mail-coding-asset-packets"],
+      "required_preflight_profiles": [
+        "asset:ai-engineering-preflight"
+      ],
+      "optional_tactic_bundles": [
+        "asset:coding-tactics-radar",
+        "asset:mail-coding-asset-packets"
+      ],
       "recommended_tactic_ids": [
         "agent-plan-before-multi-file-change",
         "agent-sandbox-and-permission-minimum",
         "agent-verifiable-goals",
         "agent-postflight-pay-forward"
       ],
-      "validation_expectations": ["Run load-bearing decision review for shared contracts.", "Run governance/template tests relevant to changed files.", "Do not mutate downstream authority outside approved managed blocks."],
+      "validation_expectations": [
+        "Run load-bearing decision review for shared contracts.",
+        "Run governance/template tests relevant to changed files.",
+        "Do not mutate downstream authority outside approved managed blocks."
+      ],
       "authority_boundary": "DAD may recommend but cannot redefine downstream source authority or LawFirm family canon.",
-      "stop_conditions": ["Authority source is unclear.", "A generated candidate would be promoted without acceptance evidence."]
+      "stop_conditions": [
+        "Authority source is unclear.",
+        "A generated candidate would be promoted without acceptance evidence."
+      ]
     },
     {
       "route_id": "route:test-validation-orchestration",
       "task_context": "Testing, validation, slow test selection, or parity/shadow-layer work.",
       "match": {
-        "task_types": ["testing", "validation_strategy", "test_orchestration", "parity_shadow_layer"],
-        "languages": ["python", "rust", "mixed"],
-        "risk_tags": ["test_gap", "parity", "performance", "medium"],
-        "repo_types": ["python_repo", "rust_repo", "mixed_language_repo"]
+        "task_types": [
+          "testing",
+          "validation_strategy",
+          "test_orchestration",
+          "parity_shadow_layer"
+        ],
+        "languages": [
+          "python",
+          "rust",
+          "mixed"
+        ],
+        "risk_tags": [
+          "test_gap",
+          "parity",
+          "performance",
+          "medium"
+        ],
+        "repo_types": [
+          "python_repo",
+          "rust_repo",
+          "mixed_language_repo"
+        ]
       },
-      "required_preflight_profiles": ["asset:ai-engineering-preflight"],
-      "optional_tactic_bundles": ["asset:coding-tactics-radar"],
+      "required_preflight_profiles": [
+        "asset:ai-engineering-preflight"
+      ],
+      "optional_tactic_bundles": [
+        "asset:coding-tactics-radar"
+      ],
       "recommended_tactic_ids": [
         "python-characterization-before-refactor",
         "rust-clippy-and-doc-tests",
         "agent-verifiable-goals",
-        "agent-midflight-when-stuck"
+        "agent-midflight-when-stuck",
+        "python-property-based-invariants",
+        "python-static-checker-negative-contract",
+        "rust-fuzz-parser-boundary",
+        "rust-nextest-isolated-runner"
       ],
-      "validation_expectations": ["Select tests by changed scope when safe.", "Do not claim Rust replacement savings until parity is verified.", "Keep native and shadow results auditable."],
+      "validation_expectations": [
+        "Select tests by changed scope when safe.",
+        "Do not claim Rust replacement savings until parity is verified.",
+        "Keep native and shadow results auditable."
+      ],
       "authority_boundary": "Fast tests are optimization evidence, not proof that a smaller suite covers native behavior.",
-      "stop_conditions": ["Structured reports are missing for parity claims.", "A timing claim is made before verified same-scope coverage."]
+      "stop_conditions": [
+        "Structured reports are missing for parity claims.",
+        "A timing claim is made before verified same-scope coverage."
+      ],
+      "recommended_harness_ids": [
+        "dad:harness:python-test-performance-orchestration",
+        "dad:harness:rust-shadow-parity",
+        "dad:harness:language-frontier-research"
+      ]
     },
     {
       "route_id": "route:data-etl-cli-work",
       "task_context": "Data, ETL, CLI, or file-processing implementation.",
       "match": {
-        "task_types": ["data_etl", "cli", "file_processing", "registry_loader"],
-        "languages": ["python", "rust", "mixed"],
-        "risk_tags": ["data_boundary", "validation", "medium"],
-        "repo_types": ["etl_repo", "cli_repo", "catalog_repo"]
+        "task_types": [
+          "data_etl",
+          "cli",
+          "file_processing",
+          "registry_loader"
+        ],
+        "languages": [
+          "python",
+          "rust",
+          "mixed"
+        ],
+        "risk_tags": [
+          "data_boundary",
+          "validation",
+          "medium"
+        ],
+        "repo_types": [
+          "etl_repo",
+          "cli_repo",
+          "catalog_repo"
+        ]
       },
-      "required_preflight_profiles": ["asset:ai-engineering-preflight"],
-      "optional_tactic_bundles": ["asset:python-ai-advantage-preflight", "asset:coding-tactics-radar"],
+      "required_preflight_profiles": [
+        "asset:ai-engineering-preflight"
+      ],
+      "optional_tactic_bundles": [
+        "asset:python-ai-advantage-preflight",
+        "asset:coding-tactics-radar"
+      ],
       "recommended_tactic_ids": [
         "python-functional-core-imperative-shell",
         "python-typeddict-json-boundary",
         "python-exitstack-dynamic-cleanup",
         "python-raise-from-causal-errors",
-        "rust-result-error-types"
+        "rust-result-error-types",
+        "python-property-based-invariants",
+        "rust-fuzz-parser-boundary"
       ],
-      "validation_expectations": ["Validate input/output schemas.", "Test malformed data and partial failure paths.", "Avoid storing private raw data in generated outputs."],
+      "validation_expectations": [
+        "Validate input/output schemas.",
+        "Test malformed data and partial failure paths.",
+        "Avoid storing private raw data in generated outputs."
+      ],
       "authority_boundary": "ETL outputs are candidate evidence unless promoted by the owning repo's process.",
-      "stop_conditions": ["Input contains secrets or private rows beyond approved scope.", "Malformed rows would stop processing without quarantine or audit."]
+      "stop_conditions": [
+        "Input contains secrets or private rows beyond approved scope.",
+        "Malformed rows would stop processing without quarantine or audit."
+      ],
+      "recommended_harness_ids": [
+        "dad:harness:language-frontier-research"
+      ]
+    },
+    {
+      "route_id": "route:language-frontier-research",
+      "task_context": "Python, Rust, mixed-language, or future-language frontier research, codebase study, overlooked operations, and harness discovery.",
+      "match": {
+        "task_types": [
+          "language_guidance",
+          "code_research",
+          "harness_research",
+          "frontier_research",
+          "coding_improvement"
+        ],
+        "languages": [
+          "python",
+          "rust",
+          "mixed",
+          "future-language",
+          "unknown"
+        ],
+        "risk_tags": [
+          "candidate_only",
+          "source_review",
+          "harness_research",
+          "medium"
+        ],
+        "repo_types": [
+          "control_plane",
+          "research_repo",
+          "template_repo",
+          "persistent_software_repo",
+          "unknown"
+        ]
+      },
+      "required_preflight_profiles": [
+        "asset:ai-engineering-preflight"
+      ],
+      "optional_tactic_bundles": [
+        "asset:coding-tactics-radar",
+        "asset:language-coding-advantage-registry"
+      ],
+      "recommended_tactic_ids": [
+        "python-property-based-invariants",
+        "python-static-checker-negative-contract",
+        "rust-fuzz-parser-boundary",
+        "rust-nextest-isolated-runner",
+        "agent-postflight-pay-forward"
+      ],
+      "recommended_harness_ids": [
+        "dad:harness:language-frontier-research"
+      ],
+      "validation_expectations": [
+        "Keep external source intake pointer-only with safe summaries and provenance.",
+        "Name the proof surface before changing DAD guidance: compiler, linter, type checker, test runner, fuzzer, profiler, package auditor, runtime tracer, or schema validator.",
+        "Use local harness outcomes before promoting a language-frontier idea to downstream guidance."
+      ],
+      "authority_boundary": "Language-frontier routing is candidate evidence only; it does not authorize copying external code/docs or mutating downstream repos.",
+      "stop_conditions": [
+        "The source cannot be matched to a reviewed source ID or needs unknown-source review.",
+        "The candidate includes copied third-party docs, code, benchmark blobs, private rows, raw logs, or secrets.",
+        "A technique would become a default without local validation, applicability limits, and a rejection signal."
+      ]
     }
   ]
 }

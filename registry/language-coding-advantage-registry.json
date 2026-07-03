@@ -323,6 +323,19 @@
             "Keep private source snippets out of DAD mail; send paths, counts, hashes, and safe summaries only."
           ],
           "failure_mode": "The agent relies on training-data assumptions instead of inspecting the repo's real callable signatures, imports, and runtime costs."
+        },
+        {
+          "guideline_id": "py-guideline:ai-legible-change-surfaces",
+          "rule": "Prefer Python changes that expose named boundaries, deterministic commands, safe summaries, and small negative cases for future agents.",
+          "use_when": [
+            "A future agent will need to extend, audit, or repair the code without chat context.",
+            "A module emits JSONL, reports, CLI output, schemas, exceptions, or cross-repo candidate evidence."
+          ],
+          "proof_required": [
+            "The changed surface has a stable command, schema, parser, or test fixture that can be inspected without reading long raw content.",
+            "At least one negative or malformed-input path is covered when the boundary is shared."
+          ],
+          "failure_mode": "The code is readable to the author but leaves future agents with hidden conventions, untestable prose, or output that looks authoritative without proof."
         }
       ],
       "codebase_watch_targets": [
@@ -903,6 +916,19 @@
             "Structured reports prove non-empty same-scope coverage before timing is described as savings."
           ],
           "failure_mode": "A tiny Rust suite creates a false green and convinces DAD to promote a replacement that misses Python-only behavior."
+        },
+        {
+          "guideline_id": "rs-guideline:ai-legible-leaf-contract",
+          "rule": "Rust leaf tools should expose stable, schema-versioned machine outputs and narrow typed inputs that Python can validate independently.",
+          "use_when": [
+            "A Rust scanner, chunker, parser, hasher, or validator will feed DAD or another repo.",
+            "A Rust CLI may later be reused, wrapped by Python, or compared against a native Python path."
+          ],
+          "proof_required": [
+            "The Rust tool emits versioned JSON or JSONL with deterministic ordering and typed errors.",
+            "Python-side validation or parity tests can fail independently of Rust's own tests."
+          ],
+          "failure_mode": "Rust compiles and passes its own tests, but future agents cannot prove what changed, whether Python consumed the same scope, or whether downstream outputs stayed compatible."
         }
       ],
       "codebase_watch_targets": [

@@ -266,11 +266,13 @@ def test_language_coding_advantage_registry_resolves_sources_and_assets():
         "py-guideline:shape-first-boundaries",
         "py-guideline:measure-before-rust",
         "py-guideline:contracts-as-executable-checks",
+        "py-guideline:ai-legible-change-surfaces",
     }.issubset(python_guidelines)
     assert {
         "rs-guideline:compiler-owns-closed-worlds",
         "rs-guideline:leaf-tool-before-platform",
         "rs-guideline:structured-evidence-for-speed",
+        "rs-guideline:ai-legible-leaf-contract",
     }.issubset(rust_guidelines)
     python_watch_targets = {
         target["target_id"] for target in languages["python"]["codebase_watch_targets"]
@@ -353,6 +355,9 @@ def test_router_references_registered_assets_and_tactics():
     tactic_ids = {
         tactic["tactic_id"] for tactic in load_json("registry/coding-tactics-radar.json")["tactics"]
     }
+    harness_ids = {
+        harness["harness_id"] for harness in load_json("registry/coding-harness-registry.json")["harnesses"]
+    }
     assert {
         "python-property-based-invariants",
         "python-static-checker-negative-contract",
@@ -360,10 +365,34 @@ def test_router_references_registered_assets_and_tactics():
         "rust-nextest-isolated-runner",
     }.issubset(tactic_ids)
 
-    for route in load_json("registry/preflight-profile-router.json")["routes"]:
+    routes = {
+        route["route_id"]: route for route in load_json("registry/preflight-profile-router.json")["routes"]
+    }
+    assert "route:language-frontier-research" in routes
+    language_route = routes["route:language-frontier-research"]
+    assert "dad:harness:language-frontier-research" in language_route["recommended_harness_ids"]
+    assert {
+        "language_guidance",
+        "code_research",
+        "harness_research",
+    }.issubset(language_route["match"]["task_types"])
+    assert {
+        "python-property-based-invariants",
+        "python-static-checker-negative-contract",
+        "rust-fuzz-parser-boundary",
+        "rust-nextest-isolated-runner",
+    }.issubset(routes["route:test-validation-orchestration"]["recommended_tactic_ids"])
+    assert {
+        "dad:harness:python-test-performance-orchestration",
+        "dad:harness:rust-shadow-parity",
+        "dad:harness:language-frontier-research",
+    }.issubset(routes["route:test-validation-orchestration"]["recommended_harness_ids"])
+
+    for route in routes.values():
         assert set(route["required_preflight_profiles"]).issubset(asset_ids)
         assert set(route["optional_tactic_bundles"]).issubset(asset_ids)
         assert set(route["recommended_tactic_ids"]).issubset(tactic_ids)
+        assert set(route.get("recommended_harness_ids", [])).issubset(harness_ids)
 
 
 def test_control_plane_paths_and_templates_exist():

@@ -48,6 +48,7 @@
           "required_preflight_profiles": {"type": "array", "items": {"type": "string"}, "minItems": 1},
           "optional_tactic_bundles": {"type": "array", "items": {"type": "string"}},
           "recommended_tactic_ids": {"type": "array", "items": {"type": "string"}},
+          "recommended_harness_ids": {"type": "array", "items": {"type": "string"}},
           "validation_expectations": {"type": "array", "items": {"type": "string"}, "minItems": 1},
           "authority_boundary": {"type": "string", "minLength": 1},
           "stop_conditions": {"type": "array", "items": {"type": "string"}, "minItems": 1}

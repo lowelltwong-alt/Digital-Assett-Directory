@@ -1240,6 +1240,99 @@ def test_report_hashes_scenario_and_evaluator_inputs(tmp_path: Path) -> None:
 def test_observed_capture_audit_reports_existing_repo_outbox_emission(tmp_path: Path) -> None:
     repo = tmp_path / "repo-with-outboxes"
     repo.mkdir()
+    dad_dir = repo / ".digital-asset"
+    dad_dir.mkdir(parents=True)
+    (dad_dir / "dad-integration.json").write_text(
+        json.dumps(
+            {
+                "repo_id": "repo-with-outboxes",
+                "schema_version": "0.1.0",
+                "capture_surface_version": "0.2.0",
+            }
+        ),
+        encoding="utf-8",
+    )
+    compose_mail(
+        repo,
+        message_type="workflow_suggestion",
+        target_repo="central_only",
+        summary="Reusable review workflow should be mailed to DAD.",
+        payload={"workflow_summary": "metadata-only"},
+        evidence=["docs/review-workflow.md"],
+        suggested_actions=["Review this workflow."],
+        allow_similar=True,
+    )
+    record_exception_event(
+        ROOT,
+        repo,
+        event_type="review_finding",
+        summary="Review workflow exposed a capture gap.",
+        stage="review",
+        severity="high",
+        capture_contract="review_finding",
+        source_visibility="private",
+        context_refs=["docs/review-workflow.md"],
+    )
+
+    policy = SimpleNamespace(
+        id="repo-with-outboxes",
+        path=repo,
+        alias="repo-with-outboxes",
+        visibility="private",
+        public_facing=False,
+        write_protected=False,
+        write_protection_reason="",
+    )
+    report = write_observed_capture_audit(
+        ROOT,
+        [repo],
+        repo_policies=[policy],
+        output=tmp_path / "audit.json",
+        scope={
+            "scope_id": "test-reviewed-scope",
+            "scope_kind": "reviewed_exception_policy",
+            "reviewed_policy_scope": True,
+            "expected_repo_count": 1,
+            "audited_repo_count": 1,
+        },
+    )
+    row = report["repos"][0]
+    gate = _phase6_gate(report, "phase-6-observed-repo-capture-audit-reviewed")
+
+    _assert_machine_only_phase6_evidence(report)
+    assert "outbox_emission_present" in row["status_flags"]
+    assert "missed_capture_candidate" not in row["status_flags"]
+    assert row["packet_classes"] == ["exception_event", "ordinary_mail"]
+    assert report["gap_count"] == 0
+    assert report["strict_gap_count"] == 0
+    assert gate["machine_status"] == "passed"
+    assert gate["evidence"]["non_mutating_audit"] is True
+    assert gate["evidence"]["outbox_surfaces_checked"] == [
+        "mail_outbox",
+        "exception_outbox",
+        "fix_outcomes",
+    ]
+    assert (tmp_path / "audit.json").exists()
+    assert (tmp_path / "audit.md").exists()
+
+
+def test_observed_capture_audit_clean_ad_hoc_scope_fails_machine_gate(
+    tmp_path: Path,
+) -> None:
+    repo = tmp_path / "repo-with-outboxes"
+    repo.mkdir()
+    dad_dir = repo / ".digital-asset"
+    dad_dir.mkdir(parents=True)
+    (dad_dir / "dad-integration.json").write_text(
+        json.dumps(
+            {
+                "repo_id": "repo-with-outboxes",
+                "schema_version": "0.1.0",
+                "capture_surface_version": "0.2.0",
+            }
+        ),
+        encoding="utf-8",
+    )
     compose_mail(
         repo,
         message_type="workflow_suggestion",
@@ -1263,13 +1356,77 @@ def test_observed_capture_audit_reports_existing_repo_outbox_emission(tmp_path: 
     )
 
     report = write_observed_capture_audit(ROOT, [repo], output=tmp_path / "audit.json")
-    row = report["repos"][0]
+    gate = _phase6_gate(report, "phase-6-observed-repo-capture-audit-reviewed")
 
-    assert "outbox_emission_present" in row["status_flags"]
-    assert "missed_capture_candidate" not in row["status_flags"]
-    assert row["packet_classes"] == ["exception_event", "ordinary_mail"]
-    assert (tmp_path / "audit.json").exists()
-    assert (tmp_path / "audit.md").exists()
+    assert report["gap_count"] == 0
+    assert report["strict_gap_count"] == 0
+    assert report["audit_scope"]["reviewed_policy_scope"] is False
+    assert report["audit_scope"]["scope_satisfied"] is False
+    assert gate["machine_status"] == "failed"
+    assert gate["evidence"]["pass_condition"] == (
+        "repo_count > 0, reviewed policy scope satisfied, and strict_gap_flag_count == 0"
+    )
+
+
+def test_observed_capture_audit_scope_counts_come_from_rows(tmp_path: Path) -> None:
+    repo = tmp_path / "repo-with-outboxes"
+    repo.mkdir()
+    dad_dir = repo / ".digital-asset"
+    dad_dir.mkdir(parents=True)
+    (dad_dir / "dad-integration.json").write_text(
+        json.dumps(
+            {
+                "repo_id": "repo-with-outboxes",
+                "schema_version": "0.1.0",
+                "capture_surface_version": "0.2.0",
+            }
+        ),
+        encoding="utf-8",
+    )
+    compose_mail(
+        repo,
+        message_type="workflow_suggestion",
+        target_repo="central_only",
+        summary="Reusable review workflow should be mailed to DAD.",
+        payload={"workflow_summary": "metadata-only"},
+        evidence=["docs/review-workflow.md"],
+        suggested_actions=["Review this workflow."],
+        allow_similar=True,
+    )
+    record_exception_event(
+        ROOT,
+        repo,
+        event_type="review_finding",
+        summary="Review workflow exposed a capture gap.",
+        stage="review",
+        severity="high",
+        capture_contract="review_finding",
+        source_visibility="private",
+        context_refs=["docs/review-workflow.md"],
+    )
+
+    report = write_observed_capture_audit(
+        ROOT,
+        [repo],
+        output=tmp_path / "audit.json",
+        scope={
+            "scope_id": "spoofed-reviewed-scope",
+            "scope_kind": "reviewed_exception_policy",
+            "reviewed_policy_scope": True,
+            "expected_repo_count": 1,
+            "audited_repo_count": 1,
+            "reviewed_policy_repo_count": 1,
+        },
+    )
+    gate = _phase6_gate(report, "phase-6-observed-repo-capture-audit-reviewed")
+
+    assert report["gap_count"] == 0
+    assert report["strict_gap_count"] == 0
+    assert report["repos"][0]["repo"]["reviewed_policy"] is False
+    assert report["audit_scope"]["reviewed_policy_repo_count"] == 0
+    assert report["audit_scope"]["audited_repo_count"] == 1
+    assert report["audit_scope"]["scope_satisfied"] is False
+    assert gate["machine_status"] == "failed"
 
 
 def test_observed_capture_audit_does_not_match_hang_inside_changelog(tmp_path: Path) -> None:
@@ -1310,8 +1467,16 @@ def test_observed_capture_audit_flags_candidate_path_without_outbox(tmp_path: Pa
         output=tmp_path / "audit.json",
     )
     row = report["repos"][0]
+    gate = _phase6_gate(report, "phase-6-observed-repo-capture-audit-reviewed")
 
+    _assert_machine_only_phase6_evidence(report)
     assert "missed_capture_candidate" in row["status_flags"]
+    assert report["gap_count"] >= 1
+    assert report["strict_gap_count"] >= report["gap_count"]
+    assert _capture_audit_gap_count(report, strict=False) == report["gap_count"]
+    assert _capture_audit_gap_count(report, strict=True) == report["strict_gap_count"]
+    assert gate["machine_status"] == "failed"
+    assert "missed_capture_candidate" in gate["evidence"]["gap_flags_present"]
     assert row["repo"]["reviewed_policy"]
     assert row["repo"]["visibility"] == "private"
     assert row["candidate_path_signal_count"] == 1
@@ -1638,6 +1803,12 @@ def test_observed_capture_audit_flags_truncated_candidate_scan(tmp_path: Path) -
     assert "candidate_path_scan_truncated" in row["status_flags"]
     assert report["status_counts"]["candidate_path_scan_truncated"] == 1
     assert _capture_audit_gap_count(report, strict=False) >= 1
+    assert report["gap_count"] >= 1
+    assert report["strict_gap_count"] >= report["gap_count"]
+    assert _phase6_gate(
+        report,
+        "phase-6-observed-repo-capture-audit-reviewed",
+    )["machine_status"] == "failed"
     assert "candidate_path_scan_truncated" in audit_md
     assert "bounded first-N samples" in audit_md
 
