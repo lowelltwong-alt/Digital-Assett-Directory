@@ -33,6 +33,12 @@ BACKFILL_READINESS_JSON = Path("processed") / "reports" / "exception_backfill_re
 BACKFILL_READINESS_MD = Path("processed") / "reports" / "exception_backfill_readiness.md"
 BACKFILL_WAVE_PLAN_JSON = Path("processed") / "reports" / "exception_backfill_wave_plan.json"
 BACKFILL_WAVE_PLAN_MD = Path("processed") / "reports" / "exception_backfill_wave_plan.md"
+CAPTURE_REMEDIATION_PLAN_JSON = (
+    Path("processed") / "reports" / "exception_capture_remediation_plan.json"
+)
+CAPTURE_REMEDIATION_PLAN_MD = (
+    Path("processed") / "reports" / "exception_capture_remediation_plan.md"
+)
 PHASE6_LAWFIRM_MISSED_CAPTURE_SCENARIO_ID = "lawfirm-review-issue-missed-capture"
 PHASE6_REQUIRED_UPDATE_FAMILIES = {
     "workflow",
@@ -2580,6 +2586,90 @@ PROOF_BACKLOG_DEFINITIONS: list[dict[str, Any]] = [
 ]
 
 
+CAPTURE_REMEDIATION_LANE_DEFINITIONS: list[dict[str, Any]] = [
+    {
+        "lane_id": "protected_central_only_review",
+        "label": "Protected or central-only repo review",
+        "why_it_exists": "Protected repos can be audited centrally, but local repair or enrollment writes need explicit repo-specific approval.",
+        "safe_next_actions": [
+            "Keep the candidate evidence in DAD reports only.",
+            "Request explicit protected-repo approval before local capture-surface repair.",
+        ],
+        "write_policy": "central_only_until_explicit_approval",
+    },
+    {
+        "lane_id": "capture_surface_refresh_required",
+        "label": "Capture surface refresh required",
+        "why_it_exists": "A repo cannot be judged for missing packets until it has the current DAD capture rules.",
+        "safe_next_actions": [
+            "Plan a reviewed enrollment/update repair for the repo capture surface.",
+            "Rerun observed audit after the repo reports the current capture surface version.",
+        ],
+        "write_policy": "enrollment_update_requires_approval",
+    },
+    {
+        "lane_id": "exhaustive_rescan_required",
+        "label": "Exhaustive metadata rescan required",
+        "why_it_exists": "Bounded first-N path scans can hide important exception families and create false confidence.",
+        "safe_next_actions": [
+            "Rerun capture-audit or backfill-readiness with --candidate-limit 0.",
+            "Treat existing counts as routing hints, not complete evidence.",
+        ],
+        "write_policy": "central_only_read_only",
+    },
+    {
+        "lane_id": "emission_review_required",
+        "label": "Emission review required",
+        "why_it_exists": "Candidate path signals are not correlated to current mail, exception, or fix-outcome packets.",
+        "safe_next_actions": [
+            "Review whether the source repo should emit ordinary mail, exception events, or fix outcomes for the matched families.",
+            "Add or update synthetic capture scenarios before declaring the pattern fixed.",
+        ],
+        "write_policy": "central_only_until_repo_capture_policy_is_current",
+    },
+    {
+        "lane_id": "classifier_provenance_refresh_required",
+        "label": "Classifier provenance refresh required",
+        "why_it_exists": "Historical backfill evidence with missing or stale classifier provenance is not promotion-ready.",
+        "safe_next_actions": [
+            "Refresh or invalidate stale classifier outputs.",
+            "Keep learning-queue promotion blocked until classifier provenance is current.",
+        ],
+        "write_policy": "central_only_read_only",
+    },
+    {
+        "lane_id": "policy_or_approval_review_required",
+        "label": "Policy or approval review required",
+        "why_it_exists": "The repo is not allowed to collect, audit, or backfill exceptions under reviewed policy yet.",
+        "safe_next_actions": [
+            "Classify the repo in reviewed exceptions policy.",
+            "Add a scoped approval id only if metadata backfill is intentional.",
+        ],
+        "write_policy": "central_only_until_reviewed_policy",
+    },
+    {
+        "lane_id": "ready_for_source_packet_request",
+        "label": "Ready for source-packet request planning",
+        "why_it_exists": "Current capture surfaces and clean proof blockers allow DAD to ask for source-confirmation packets instead of guessing.",
+        "safe_next_actions": [
+            "Generate source-packet requests through DAD's reviewed request report.",
+            "Keep source content local; DAD should receive safe summaries, paths, hashes, and review decisions.",
+        ],
+        "write_policy": "mailbox_candidate_only_when_policy_allows",
+    },
+    {
+        "lane_id": "watch_or_no_action",
+        "label": "Watch or no action",
+        "why_it_exists": "No current candidate signals require a repair lane.",
+        "safe_next_actions": [
+            "Leave the repo in daily/weekly watch.",
+            "Revisit when capture patterns, repo mail, or exception events change.",
+        ],
+        "write_policy": "no_target_repo_write",
+    },
+]
+
+
 def _proof_backlog_ids(row: dict[str, Any]) -> list[str]:
     backlog_ids: list[str] = []
     blockers = set(_repo_proof_blockers(row))
@@ -2602,6 +2692,254 @@ def _proof_backlog_ids(row: dict[str, Any]) -> list[str]:
     ):
         backlog_ids.append("ready_for_source_packet_request")
     return backlog_ids
+
+
+def _capture_remediation_lane_ids(row: dict[str, Any]) -> list[str]:
+    lane_ids: list[str] = []
+    blockers = set(_repo_proof_blockers(row))
+    if row.get("write_protected") or row.get("backfill_readiness") == "central_only_or_blocked":
+        lane_ids.append("protected_central_only_review")
+    if "capture_surface_not_current" in blockers:
+        lane_ids.append("capture_surface_refresh_required")
+    if blockers & {
+        "observed_audit_truncated",
+        "observed_audit_omitted_signal_count_unknown",
+    }:
+        lane_ids.append("exhaustive_rescan_required")
+    if "emissions_missing_unverified_or_uncorrelated" in blockers:
+        lane_ids.append("emission_review_required")
+    if "classifier_provenance_missing_or_stale" in blockers:
+        lane_ids.append("classifier_provenance_refresh_required")
+    if (
+        not row.get("reviewed_policy")
+        or not row.get("exceptions_enabled")
+        or not row.get("capture_audit_allowed", True)
+        or not row.get("backfill_allowed")
+        or row.get("backfill_readiness") == "approval_needed"
+    ):
+        lane_ids.append("policy_or_approval_review_required")
+    if _proof_backlog_ids(row) == ["ready_for_source_packet_request"]:
+        lane_ids.append("ready_for_source_packet_request")
+    if not lane_ids:
+        lane_ids.append("watch_or_no_action")
+    return sorted(dict.fromkeys(lane_ids))
+
+
+def _repo_write_policy(row: dict[str, Any]) -> str:
+    if row.get("write_protected") or row.get("backfill_readiness") == "central_only_or_blocked":
+        return "protected_central_only"
+    if row.get("public_facing"):
+        return "public_safe_metadata_only"
+    if not row.get("reviewed_policy") or not row.get("exceptions_enabled"):
+        return "central_only_until_reviewed_policy"
+    if row.get("collect_allowed") and row.get("capture_audit_allowed", True):
+        return "mailbox_or_exception_candidate_only"
+    return "central_only_until_policy_allows_collection"
+
+
+def _repo_capture_remediation_ref(row: dict[str, Any]) -> dict[str, Any]:
+    summary = row.get("candidate_path_signal_summary", {})
+    if not isinstance(summary, dict):
+        summary = {}
+    return {
+        "repo_id": row.get("repo_id"),
+        "repo_alias": row.get("repo_alias"),
+        "path_hash": row.get("path_hash"),
+        "visibility": row.get("visibility"),
+        "public_facing": row.get("public_facing"),
+        "write_policy": _repo_write_policy(row),
+        "remediation_lanes": _capture_remediation_lane_ids(row),
+        "backfill_readiness": row.get("backfill_readiness"),
+        "capture_surface_action": row.get("capture_surface_action"),
+        "candidate_path_signal_count": row.get("candidate_path_signal_count"),
+        "candidate_path_scan": row.get("candidate_path_scan", {}),
+        "proof_blockers": _repo_proof_blockers(row),
+        "status_flags": row.get("status_flags", []),
+        "blocked_reasons": row.get("blocked_reasons", []),
+        "next_actions": sorted(set(row.get("next_actions", []))),
+        "top_pattern_families": _top_counter_items(
+            summary.get("by_pattern_family", {}),
+        ),
+        "top_suggested_event_types": _top_counter_items(
+            summary.get("by_suggested_event_type", {}),
+        ),
+        "top_source_rule_ids": _top_counter_items(
+            summary.get("by_source_rule_id", {}),
+        ),
+    }
+
+
+def build_exception_capture_remediation_plan(
+    readiness_report: dict[str, Any],
+    *,
+    per_lane_repo_limit: int = 25,
+) -> dict[str, Any]:
+    rows = [
+        row
+        for row in readiness_report.get("repos", [])
+        if isinstance(row, dict)
+    ]
+    per_lane_repo_limit = max(1, per_lane_repo_limit)
+    rows_by_lane: dict[str, list[dict[str, Any]]] = {
+        lane["lane_id"]: [] for lane in CAPTURE_REMEDIATION_LANE_DEFINITIONS
+    }
+    for row in rows:
+        for lane_id in _capture_remediation_lane_ids(row):
+            rows_by_lane.setdefault(lane_id, []).append(row)
+    lanes: list[dict[str, Any]] = []
+    for order, definition in enumerate(CAPTURE_REMEDIATION_LANE_DEFINITIONS, start=1):
+        lane_rows = sorted(
+            rows_by_lane.get(definition["lane_id"], []),
+            key=lambda row: (
+                -int(row.get("candidate_path_signal_count") or 0),
+                str(row.get("repo_id") or ""),
+            ),
+        )
+        shown = lane_rows[:per_lane_repo_limit]
+        lanes.append(
+            {
+                **definition,
+                "sequence_order": order,
+                "repo_count": len(lane_rows),
+                "reported_repo_count": len(shown),
+                "omitted_repo_count": max(0, len(lane_rows) - len(shown)),
+                "candidate_path_signal_summary": _merge_candidate_signal_summaries(
+                    lane_rows,
+                ),
+                "repos": [_repo_capture_remediation_ref(row) for row in shown],
+                "review_status": "planning_only",
+            }
+        )
+    return {
+        "generated_at": utc_now(),
+        "report_id": "dad:exception-capture-remediation-plan",
+        "source_report_id": readiness_report.get("report_id"),
+        "repo_count": len(rows),
+        "per_lane_repo_limit": per_lane_repo_limit,
+        "current_lane_id": next(
+            (lane["lane_id"] for lane in lanes if lane["repo_count"]),
+            "watch_or_no_action",
+        ),
+        "lane_order": [lane["lane_id"] for lane in lanes],
+        "readiness_counts": readiness_report.get("readiness_counts", {}),
+        "status_counts": readiness_report.get("status_counts", {}),
+        "capture_surface_action_counts": readiness_report.get(
+            "capture_surface_action_counts",
+            {},
+        ),
+        "candidate_path_signal_summary": readiness_report.get(
+            "candidate_path_signal_summary",
+            {},
+        ),
+        "input_hashes": readiness_report.get("input_hashes", {}),
+        "methodology_ref": readiness_report.get("methodology_ref"),
+        "methodology_hash": readiness_report.get("methodology_hash"),
+        "lanes": lanes,
+        "pass_condition": (
+            "No repos in capture_surface_refresh_required, exhaustive_rescan_required, "
+            "emission_review_required, classifier_provenance_refresh_required, or "
+            "policy_or_approval_review_required; protected repos remain central-only "
+            "unless explicitly approved."
+        ),
+        "authority_boundary": (
+            "Capture remediation planning is central-only candidate evidence. It "
+            "does not mutate target repos, approve protected-repo writes, copy raw "
+            "private content, or prove that path-name signals are real exceptions."
+        ),
+    }
+
+
+def _capture_remediation_plan_markdown(plan: dict[str, Any]) -> str:
+    lines = [
+        "# Exception Capture Remediation Plan",
+        "",
+        f"- Generated: {plan['generated_at']}",
+        f"- Repos planned: {plan['repo_count']}",
+        f"- Current lane: `{plan['current_lane_id']}`",
+        f"- Methodology hash: `{plan.get('methodology_hash', '')}`",
+        "",
+        "Boundary: central-only candidate evidence. This report does not write "
+        "target repos or approve historical backfill.",
+        "",
+        "Purpose: identify what must be repaired so repo agents emit the right "
+        "mail, exception, or fix-outcome packets without human rescue from chat.",
+        "",
+        "## Lane Order",
+        "",
+    ]
+    lines.extend(f"- `{lane_id}`" for lane_id in plan["lane_order"])
+    for lane in plan["lanes"]:
+        lines.extend(
+            [
+                "",
+                f"## {lane['sequence_order']}. {lane['label']}",
+                "",
+                f"- Lane id: `{lane['lane_id']}`",
+                f"- Repo count: **{lane['repo_count']}**",
+                f"- Candidate path signals: **{lane['candidate_path_signal_summary']['total']}**",
+                f"- Write policy: `{lane['write_policy']}`",
+                f"- Why: {lane['why_it_exists']}",
+                "",
+                "Safe next actions:",
+            ]
+        )
+        lines.extend(f"- {action}" for action in lane["safe_next_actions"])
+        if lane["candidate_path_signal_summary"].get("omitted_signal_count_unknown"):
+            lines.append(
+                "- Count scope: bounded first-N sample; rerun before treating "
+                "counts as complete."
+            )
+        if lane["repos"]:
+            lines.extend(["", "Repos in this lane:"])
+            for repo in lane["repos"]:
+                blockers = ", ".join(f"`{item}`" for item in repo["proof_blockers"]) or "-"
+                lines.append(
+                    "- `"
+                    + str(repo["repo_id"])
+                    + "` "
+                    + f"signals={repo['candidate_path_signal_count']} "
+                    + f"surface=`{repo['capture_surface_action']}` "
+                    + f"write_policy=`{repo['write_policy']}` "
+                    + f"blockers={blockers}"
+                )
+    return "\n".join(lines) + "\n"
+
+
+def write_exception_capture_remediation_plan(
+    hub_root: Path,
+    repos: list[Path],
+    *,
+    repo_policies: list[Any] | None = None,
+    output: Path | None = None,
+    candidate_limit: int | None = 50,
+    max_scanned_files: int | None = 50_000,
+    per_lane_repo_limit: int = 25,
+) -> dict[str, Any]:
+    readiness_output = None
+    if output is not None:
+        readiness_output = output.with_name(output.stem + "_readiness.json")
+    readiness_report = write_exception_backfill_readiness(
+        hub_root,
+        repos,
+        repo_policies=repo_policies,
+        output=readiness_output,
+        candidate_limit=candidate_limit,
+        max_scanned_files=max_scanned_files,
+    )
+    plan = build_exception_capture_remediation_plan(
+        readiness_report,
+        per_lane_repo_limit=per_lane_repo_limit,
+    )
+    output_path = hub_root / (output or CAPTURE_REMEDIATION_PLAN_JSON)
+    write_json(output_path, plan)
+    md_path = (
+        output_path.with_suffix(".md")
+        if output
+        else hub_root / CAPTURE_REMEDIATION_PLAN_MD
+    )
+    md_path.parent.mkdir(parents=True, exist_ok=True)
+    md_path.write_text(_capture_remediation_plan_markdown(plan), encoding="utf-8")
+    return plan
 
 
 def _build_proof_backlogs(

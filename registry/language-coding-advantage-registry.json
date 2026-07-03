@@ -142,6 +142,7 @@
       "primary_assets": [
         "asset:python-ai-advantage-preflight",
         "python-underused-idioms-ai-coding-card",
+        "dad:offering:language-coding-playbooks",
         "dad:offering:python-test-performance-harness",
         "asset:coding-tactics-radar"
       ],
@@ -815,6 +816,7 @@
       "recommendable": true,
       "primary_assets": [
         "rust-buildout-guide",
+        "dad:offering:language-coding-playbooks",
         "dad:offering:rust-shadow-parity-harness",
         "asset:coding-tactics-radar",
         "asset:ai-engineering-preflight"

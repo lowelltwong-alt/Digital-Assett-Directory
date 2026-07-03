@@ -312,6 +312,7 @@
       "next_review_due_at": "2026-08-03",
       "source_evidence": [
         "docs/LANGUAGE_CODING_ADVANTAGE.md",
+        "assets/language-coding-playbooks/playbooks.json",
         "registry/language-coding-advantage-registry.json",
         "registry/trusted-source-registry.json"
       ],
@@ -320,6 +321,50 @@
         "asset:coding-tactics-radar",
         "asset:preflight-profile-router",
         "language-frontier-research-harness",
+        "dad:offering:language-frontier-research-harness",
+        "dad:harness:language-frontier-research"
+      ]
+    },
+    {
+      "asset_id": "asset:language-coding-playbooks",
+      "name": "Language Coding Playbooks",
+      "version": "0.1.0",
+      "asset_type": "research_packet",
+      "path": "assets/language-coding-playbooks",
+      "profiles": ["python", "rust", "mixed", "future-language", "preflight"],
+      "languages": ["python", "rust", "mixed", "agent-instruction"],
+      "applies_when": [
+        "An agent needs a compact operational Python, Rust, or future-language checklist before coding.",
+        "DAD is routing a language-frontier idea into a playbook, harness, tactic, or registry update."
+      ],
+      "does_not_apply_when": [
+        "The target repo's local language guidance conflicts with the playbook.",
+        "The proposed technique has no proof surface, avoid-when limit, or local validation idea."
+      ],
+      "danger_if_misapplied": "A short playbook can be mistaken for promotion authority unless agents follow the registry, harness, and local validation gates.",
+      "recommended_for_repo_types": ["persistent_software_repo", "template_repo", "research_repo"],
+      "recommended_for_task_types": ["coding", "refactor", "performance", "code_research", "preflight"],
+      "authority_boundary": "Candidate operational guidance only; repo-local authority and validation decide adoption.",
+      "validation_commands": [
+        "python scripts/validate_coding_asset_control_plane.py"
+      ],
+      "upgrade_policy": "candidate_then_human_reviewed_promotion",
+      "review_status": "candidate",
+      "last_reviewed_at": "2026-07-03",
+      "next_review_due_at": "2026-08-03",
+      "source_evidence": [
+        "assets/language-coding-playbooks/README.md",
+        "assets/language-coding-playbooks/playbooks.json",
+        "assets/language-coding-playbooks/python/PLAYBOOK.md",
+        "assets/language-coding-playbooks/rust/PLAYBOOK.md",
+        "assets/language-coding-playbooks/future-language-template/PLAYBOOK.md",
+        "registry/language-coding-advantage-registry.json"
+      ],
+      "related_assets": [
+        "asset:language-coding-advantage-registry",
+        "asset:python-ai-advantage-preflight",
+        "asset:coding-tactics-radar",
+        "dad:offering:language-coding-playbooks",
         "dad:offering:language-frontier-research-harness",
         "dad:harness:language-frontier-research"
       ]

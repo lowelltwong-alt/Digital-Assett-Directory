@@ -17,6 +17,7 @@ The source of truth is:
 - `registry/trusted-source-registry.json`
 - `registry/coding-tactics-radar.json`
 - `assets/coding-harnesses/language-frontier-research/`
+- `assets/language-coding-playbooks/`
 - language assets such as `assets/python-ai-advantage-preflight/`,
   `assets/python-underused-idioms/`, and `assets/rust-buildout-guide/`
 
@@ -29,6 +30,8 @@ Every language DAD adopts should have the same minimum control surface:
 - proof-surface refs that point to the shared categories in
   `proof_surface_categories`;
 - an internal playbook or asset that explains why the language helps agents;
+- a short operational playbook under `assets/language-coding-playbooks/` that
+  tells agents what to check before coding;
 - internal agent coding guidelines with proof requirements and failure modes;
 - codebase watch targets that tell agents which high-signal projects or tools to
   study for patterns, not copy from;

@@ -19,6 +19,7 @@ from digital_asset_directory.cli import (
 )
 from digital_asset_directory.config import ExceptionRepoPolicy, MailRepoPolicy
 from digital_asset_directory.exception_capture import (
+    build_exception_capture_remediation_plan,
     build_exception_backfill_wave_plan,
     evaluate_exception_taxonomy_coverage,
     evaluate_capture_case,
@@ -28,6 +29,7 @@ from digital_asset_directory.exception_capture import (
     suggest_exception_capture,
     write_exception_backfill_readiness,
     write_exception_backfill_wave_plan,
+    write_exception_capture_remediation_plan,
     write_observed_capture_audit,
 )
 from digital_asset_directory.exceptions_lake import record_exception_event
@@ -2587,6 +2589,155 @@ def test_exception_backfill_wave_plan_orders_review_gates(tmp_path: Path) -> Non
     for repo in [refresh_repo, protected_repo, blocked_repo]:
         after = sorted(path.relative_to(repo).as_posix() for path in repo.rglob("*"))
         assert after == before[repo]
+
+
+def test_exception_capture_remediation_plan_routes_repair_lanes_without_repo_writes(
+    tmp_path: Path,
+) -> None:
+    stale_repo = tmp_path / "stale-repo"
+    protected_repo = tmp_path / "protected-repo"
+    ready_repo = tmp_path / "ready-repo"
+    for repo in [stale_repo, protected_repo, ready_repo]:
+        docs = repo / "docs"
+        docs.mkdir(parents=True)
+        (docs / "postmortem.md").write_text("metadata-only placeholder", encoding="utf-8")
+    (ready_repo / ".digital-asset").mkdir()
+    (ready_repo / ".digital-asset" / "dad-integration.json").write_text(
+        json.dumps(
+            {
+                "repo_id": "ready",
+                "schema_version": "0.1.0",
+                "capture_surface_version": "0.2.0",
+            }
+        ),
+        encoding="utf-8",
+    )
+    record_exception_event(
+        ROOT,
+        ready_repo,
+        event_type="backfill_exception_candidate",
+        summary="Historical candidate needs source review.",
+        stage="discovery",
+        severity="low",
+        capture_contract="backfill_candidate",
+        source_visibility="internal",
+        context_refs=["docs/postmortem.md"],
+    )
+    policies = [
+        ExceptionRepoPolicy(
+            id="stale",
+            path=stale_repo,
+            alias="stale",
+            visibility="internal",
+            exceptions_enabled=True,
+            collect_allowed=True,
+            capture_audit_allowed=True,
+            backfill_allowed=True,
+        ),
+        ExceptionRepoPolicy(
+            id="protected",
+            path=protected_repo,
+            alias="protected",
+            visibility="internal",
+            exceptions_enabled=True,
+            collect_allowed=False,
+            capture_audit_allowed=True,
+            backfill_allowed=True,
+            write_protected=True,
+        ),
+        ExceptionRepoPolicy(
+            id="ready",
+            path=ready_repo,
+            alias="ready",
+            visibility="internal",
+            exceptions_enabled=True,
+            collect_allowed=True,
+            capture_audit_allowed=True,
+            backfill_allowed=True,
+            approved_approval_ids=["APPROVED-BACKFILL"],
+        ),
+    ]
+    before = {
+        repo: sorted(path.relative_to(repo).as_posix() for path in repo.rglob("*"))
+        for repo in [stale_repo, protected_repo, ready_repo]
+    }
+
+    plan = write_exception_capture_remediation_plan(
+        ROOT,
+        [stale_repo, protected_repo, ready_repo],
+        repo_policies=policies,
+        output=tmp_path / "capture-remediation.json",
+        candidate_limit=0,
+        per_lane_repo_limit=10,
+    )
+    lanes = {lane["lane_id"]: lane for lane in plan["lanes"]}
+    md_text = (tmp_path / "capture-remediation.md").read_text(encoding="utf-8")
+
+    assert plan["report_id"] == "dad:exception-capture-remediation-plan"
+    assert plan["current_lane_id"] == "protected_central_only_review"
+    assert lanes["protected_central_only_review"]["repos"][0]["repo_id"] == "protected"
+    assert lanes["protected_central_only_review"]["repos"][0]["write_policy"] == (
+        "protected_central_only"
+    )
+    assert {
+        repo["repo_id"]
+        for repo in lanes["capture_surface_refresh_required"]["repos"]
+    } == {"stale", "protected"}
+    assert {
+        repo["repo_id"]
+        for repo in lanes["emission_review_required"]["repos"]
+    } == {"stale", "protected", "ready"}
+    assert lanes["ready_for_source_packet_request"]["repo_count"] == 0
+    assert "central-only candidate evidence" in plan["authority_boundary"]
+    assert "without human rescue from chat" in md_text
+    assert str(tmp_path) not in json.dumps(plan)
+    assert str(tmp_path) not in md_text
+    for repo in [stale_repo, protected_repo, ready_repo]:
+        after = sorted(path.relative_to(repo).as_posix() for path in repo.rglob("*"))
+        assert after == before[repo]
+
+
+def test_build_exception_capture_remediation_plan_stays_ready_when_proof_clears() -> None:
+    readiness = {
+        "report_id": "dad:exception-backfill-readiness",
+        "repos": [
+            {
+                "repo_id": "ready",
+                "repo_alias": "ready",
+                "path_hash": "sha256:ready",
+                "visibility": "internal",
+                "public_facing": False,
+                "reviewed_policy": True,
+                "exceptions_enabled": True,
+                "collect_allowed": True,
+                "capture_audit_allowed": True,
+                "backfill_allowed": True,
+                "write_protected": False,
+                "backfill_readiness": "ready_with_reviewed_approval",
+                "capture_surface_action": "current",
+                "candidate_path_signal_count": 1,
+                "candidate_path_scan": {"truncated": False},
+                "candidate_path_signal_summary": {
+                    "total": 1,
+                    "by_pattern_family": {"workflow": 1},
+                    "by_source_rule_id": {"backfill-rule:generic-exception": 1},
+                    "by_suggested_event_type": {"backfill_exception_candidate": 1},
+                },
+                "status_flags": [],
+                "blocked_reasons": [],
+                "next_actions": [],
+            }
+        ],
+    }
+
+    plan = build_exception_capture_remediation_plan(readiness)
+    lanes = {lane["lane_id"]: lane for lane in plan["lanes"]}
+
+    assert lanes["ready_for_source_packet_request"]["repo_count"] == 1
+    assert lanes["watch_or_no_action"]["repo_count"] == 0
+    assert lanes["ready_for_source_packet_request"]["repos"][0]["top_pattern_families"] == {
+        "workflow": 1
+    }
 
 
 def test_exception_backfill_wave_plan_keeps_metadata_wave_empty_until_proof_clears(

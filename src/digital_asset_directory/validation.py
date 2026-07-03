@@ -11,6 +11,7 @@ from jsonschema.validators import validator_for
 from .config import load_config
 from .exception_capture import (
     audit_observed_capture_repo,
+    build_exception_capture_remediation_plan,
     build_exception_backfill_wave_plan,
     load_capture_pattern_registry,
     observed_capture_audit_gap_count,
@@ -806,6 +807,65 @@ def _exception_backfill_wave_plan_staleness_errors(
     ]:
         if _json_stable(payload.get(key)) != _json_stable(expected.get(key)):
             errors.append(f"Exception backfill wave plan stale for {label}: {key} mismatch")
+    return errors
+
+
+def _exception_capture_remediation_plan_readiness_path(report_path: Path) -> Path:
+    if report_path.name == "exception_capture_remediation_plan.json":
+        return report_path.with_name("exception_backfill_readiness.json")
+    return report_path.with_name(report_path.stem + "_readiness.json")
+
+
+def _exception_capture_remediation_plan_staleness_errors(
+    repo_root: Path,
+    report_path: Path,
+    payload: dict[str, Any],
+) -> list[str]:
+    readiness_path = _exception_capture_remediation_plan_readiness_path(report_path)
+    label = _report_path_label(report_path, repo_root)
+    if not readiness_path.exists():
+        return [
+            f"Exception capture remediation plan stale for {label}: missing readiness report "
+            f"{_report_path_label(readiness_path, repo_root)}"
+        ]
+    try:
+        readiness_payload = json.loads(readiness_path.read_text(encoding="utf-8"))
+    except json.JSONDecodeError as exc:
+        return [
+            f"Exception capture remediation plan stale for {label}: malformed readiness report "
+            f"{exc.msg}"
+        ]
+    try:
+        per_lane_repo_limit = int(payload.get("per_lane_repo_limit") or 25)
+    except (TypeError, ValueError):
+        return [
+            f"Exception capture remediation plan stale for {label}: invalid per_lane_repo_limit"
+        ]
+    expected = build_exception_capture_remediation_plan(
+        readiness_payload,
+        per_lane_repo_limit=per_lane_repo_limit,
+    )
+    errors: list[str] = []
+    for key in [
+        "source_report_id",
+        "repo_count",
+        "per_lane_repo_limit",
+        "current_lane_id",
+        "lane_order",
+        "readiness_counts",
+        "status_counts",
+        "capture_surface_action_counts",
+        "candidate_path_signal_summary",
+        "input_hashes",
+        "methodology_ref",
+        "methodology_hash",
+        "lanes",
+        "pass_condition",
+    ]:
+        if _json_stable(payload.get(key)) != _json_stable(expected.get(key)):
+            errors.append(
+                f"Exception capture remediation plan stale for {label}: {key} mismatch"
+            )
     return errors
 
 
@@ -1666,6 +1726,14 @@ def validate_repo(repo_root: Path) -> dict[str, Any]:
             elif payload.get("report_id") == "dad:exception-backfill-wave-plan":
                 errors.extend(
                     _exception_backfill_wave_plan_staleness_errors(
+                        repo_root,
+                        report_path,
+                        payload,
+                    )
+                )
+            elif payload.get("report_id") == "dad:exception-capture-remediation-plan":
+                errors.extend(
+                    _exception_capture_remediation_plan_staleness_errors(
                         repo_root,
                         report_path,
                         payload,

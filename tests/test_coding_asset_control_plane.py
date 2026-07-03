@@ -307,6 +307,7 @@ def test_language_coding_advantage_registry_resolves_sources_and_assets():
         "python-performance-profiling",
         "python-interface-boundary-codebases",
     }.issubset(languages["python"]["trusted_source_ids"])
+    assert "dad:offering:language-coding-playbooks" in languages["python"]["primary_assets"]
     assert {"rust-ecosystem-curation", "rust-fuzz", "rust-test-frontier"}.issubset(
         languages["rust"]["trusted_source_ids"]
     )
@@ -316,9 +317,11 @@ def test_language_coding_advantage_registry_resolves_sources_and_assets():
     assert "rust-high-signal-codebases" in languages["rust"]["trusted_source_ids"]
     assert "rust-parser-indexing-codebases" in languages["rust"]["trusted_source_ids"]
     assert "rust-performance-measurement" in languages["rust"]["trusted_source_ids"]
+    assert "dad:offering:language-coding-playbooks" in languages["rust"]["primary_assets"]
     harness_ids = {harness["harness_id"] for harness in harness_registry["harnesses"]}
     assert "dad:harness:language-frontier-research" in harness_ids
     assert "dad:offering:language-frontier-research-harness" in offering_ids
+    assert "dad:offering:language-coding-playbooks" in offering_ids
     trusted_sources = {
         source["source_id"]: source
         for source in load_json("registry/trusted-source-registry.json")["sources"]
@@ -507,6 +510,40 @@ def test_language_coding_advantage_registry_resolves_sources_and_assets():
         }.issubset(language["research_intake_packet"]["required_fields"])
         assert "copied_third_party_docs" in language["research_intake_packet"]["forbidden_fields"]
         assert "does not override repo-local style" in language_registry["authority_boundary"].lower()
+
+
+def test_language_coding_playbooks_are_operational_and_pointer_safe():
+    playbook_manifest = load_json("assets/language-coding-playbooks/playbooks.json")
+    assert playbook_manifest["asset_id"] == "dad:offering:language-coding-playbooks"
+    assert "do not override repo-local source authority" in playbook_manifest[
+        "authority_boundary"
+    ]
+    rows = {item["language_id"]: item for item in playbook_manifest["playbooks"]}
+    assert {"python", "rust", "future-language-template"} == set(rows)
+    assert "profile evidence before performance or Rust claims" in rows["python"][
+        "must_check"
+    ]
+    assert "same-scope parity for replacement claims" in rows["rust"]["must_check"]
+    assert "official or reviewed source IDs" in rows["future-language-template"][
+        "must_check"
+    ]
+    for row in rows.values():
+        assert (ROOT / row["path"]).exists(), row["path"]
+        assert row["mail_back_to_dad"]
+        assert row["preflight_triggers"]
+        assert row["must_check"]
+
+    python_text = (ROOT / rows["python"]["path"]).read_text(encoding="utf-8")
+    rust_text = (ROOT / rows["rust"]["path"]).read_text(encoding="utf-8")
+    future_text = (ROOT / rows["future-language-template"]["path"]).read_text(
+        encoding="utf-8"
+    )
+    assert "Do not propose Rust from intuition" in python_text
+    assert "Python keeps orchestration and review authority" in rust_text
+    assert "The reason is popularity, novelty, or agent preference" in future_text
+    forbidden = ["C:/Users/", "state of the art", "guaranteed", "always use"]
+    combined = "\n".join([python_text, rust_text, future_text])
+    assert not any(item in combined for item in forbidden)
 
 
 def test_router_references_registered_assets_and_tactics():

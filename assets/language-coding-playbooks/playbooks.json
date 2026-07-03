@@ -1,0 +1,83 @@
+{
+  "schema_version": "0.1.0",
+  "asset_id": "dad:offering:language-coding-playbooks",
+  "status": "candidate",
+  "authority_boundary": "Language playbooks are operational guidance for agents. They do not override repo-local source authority, validation policy, security gates, or human review.",
+  "source_of_truth_refs": [
+    "registry/language-coding-advantage-registry.json",
+    "registry/trusted-source-registry.json",
+    "registry/coding-tactics-radar.json",
+    "assets/coding-harnesses/language-frontier-research"
+  ],
+  "playbooks": [
+    {
+      "language_id": "python",
+      "path": "assets/language-coding-playbooks/python/PLAYBOOK.md",
+      "primary_question": "What proof surface can Python expose before the agent guesses from examples?",
+      "preflight_triggers": [
+        "Python code, tests, CLIs, registries, JSONL, schemas, mail, reports, or governance files change.",
+        "The task mentions slow tests, profiling, fixture cost, type checks, or possible Rust migration."
+      ],
+      "must_check": [
+        "repo Python version and configured tools",
+        "structured data boundaries",
+        "pytest collection and durations when tests are slow",
+        "profile evidence before performance or Rust claims",
+        "property/static/negative tests for shared invariants"
+      ],
+      "mail_back_to_dad": [
+        "new useful idiom with avoid-when",
+        "test orchestration improvement",
+        "frontier source pointer",
+        "coding harness outcome",
+        "AI-overlooked failure pattern"
+      ]
+    },
+    {
+      "language_id": "rust",
+      "path": "assets/language-coding-playbooks/rust/PLAYBOOK.md",
+      "primary_question": "What should Rust prove as a small leaf tool before it is trusted or promoted?",
+      "preflight_triggers": [
+        "The task mentions Rust, performance, parser, scanner, chunker, hashing, static analysis, or mixed Python/Rust.",
+        "A Python hot path is suspected but not yet measured."
+      ],
+      "must_check": [
+        "profile evidence and Python-first alternatives",
+        "cargo check, fmt, clippy, tests, and doctests",
+        "same-scope parity for replacement claims",
+        "fuzz/property/mutation scout for pure parser or serializer boundaries",
+        "dependency, license, advisory, and API compatibility evidence for shared tools"
+      ],
+      "mail_back_to_dad": [
+        "validated Rust leaf-tool candidate",
+        "failed Rust migration or parity mismatch",
+        "frontier crate/tool pointer",
+        "fuzz/property harness case",
+        "Python/Rust boundary lesson"
+      ]
+    },
+    {
+      "language_id": "future-language-template",
+      "path": "assets/language-coding-playbooks/future-language-template/PLAYBOOK.md",
+      "primary_question": "Does this language add a deterministic proof surface DAD does not already have?",
+      "preflight_triggers": [
+        "A repo or agent proposes Go, TypeScript, Zig, or another language as a new DAD guidance target.",
+        "A frontier source suggests a toolchain or proof operation that may improve AI coding."
+      ],
+      "must_check": [
+        "official or reviewed source IDs",
+        "local validation command",
+        "avoid-when limits",
+        "codebase watch target",
+        "harness route or small eval case"
+      ],
+      "mail_back_to_dad": [
+        "pointer-only language-frontier signal",
+        "candidate proof operation",
+        "new harness family suggestion",
+        "negative evidence or rejection reason"
+      ]
+    }
+  ],
+  "promotion_gate": "A playbook change needs pointer-only source evidence, a local proof command or eval idea, explicit avoid-when limits, and postflight or harness feedback before it becomes reviewed guidance."
+}

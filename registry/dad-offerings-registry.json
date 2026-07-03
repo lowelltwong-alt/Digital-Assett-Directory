@@ -261,6 +261,7 @@
       "task_types": ["coding", "refactor", "performance", "code_research", "harness_research", "python", "rust"],
       "capabilities": [
         "language_specific_guidance",
+        "language_playbook_routing",
         "frontier_source_refresh",
         "overlooked_pattern_routing",
         "harness_route_selection"
@@ -278,11 +279,52 @@
       "known_upgrades": [],
       "source_refs": [
         "docs/LANGUAGE_CODING_ADVANTAGE.md",
+        "assets/language-coding-playbooks/playbooks.json",
         "registry/language-coding-advantage-registry.json",
         "registry/trusted-source-registry.json"
       ],
       "review_status": "candidate",
       "authority_boundary": "Candidate language guidance only; local repo authority, validation, security policy, and human gates decide adoption."
+    },
+    {
+      "offering_id": "dad:offering:language-coding-playbooks",
+      "name": "Language Coding Playbooks",
+      "version": "0.1.0",
+      "offering_type": "best_practice",
+      "path": "assets/language-coding-playbooks",
+      "languages": ["python", "rust", "mixed", "agent-instruction"],
+      "repo_types": ["application", "library", "control_plane", "template_repo", "research_repo"],
+      "domains": ["software_engineering", "ai_engineering", "code_research"],
+      "context_tags": ["coding_asset", "language_frontier", "python", "rust", "future_language"],
+      "task_types": ["coding", "refactor", "performance", "code_research", "harness_research", "python", "rust"],
+      "capabilities": [
+        "agent_language_preflight",
+        "python_operational_guidance",
+        "rust_operational_guidance",
+        "future_language_gate",
+        "frontier_research_routing"
+      ],
+      "applies_when": [
+        "An agent is about to write Python, Rust, mixed-language, or new-language code.",
+        "A repo or agent needs the short operational rules before consulting the full language registry."
+      ],
+      "does_not_apply_when": [
+        "The target repo's local language authority conflicts with the playbook.",
+        "The agent wants to promote a frontier technique without local validation and postflight evidence."
+      ],
+      "public_safe": true,
+      "upgrade_channel": "dad_mail",
+      "known_upgrades": [],
+      "source_refs": [
+        "assets/language-coding-playbooks/README.md",
+        "assets/language-coding-playbooks/playbooks.json",
+        "assets/language-coding-playbooks/python/PLAYBOOK.md",
+        "assets/language-coding-playbooks/rust/PLAYBOOK.md",
+        "assets/language-coding-playbooks/future-language-template/PLAYBOOK.md",
+        "registry/language-coding-advantage-registry.json"
+      ],
+      "review_status": "candidate",
+      "authority_boundary": "Candidate language playbooks only; repo-local authority, validation, security policy, and human gates decide adoption."
     },
     {
       "offering_id": "dad:offering:language-frontier-research-harness",

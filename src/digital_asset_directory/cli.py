@@ -94,6 +94,7 @@ from .exception_capture import (
     suggest_exception_capture,
     write_exception_backfill_readiness,
     write_exception_backfill_wave_plan,
+    write_exception_capture_remediation_plan,
     write_observed_capture_audit,
 )
 from .governance import enforce_postflight, install_governance, scaffold_new_repo
@@ -1744,6 +1745,52 @@ def exceptions_backfill_plan(
             candidate_limit=candidate_limit,
             max_scanned_files=max_scanned_files,
             per_wave_repo_limit=per_wave_repo_limit,
+        )
+    except (OSError, json.JSONDecodeError, KeyError, ValueError) as exc:
+        console.print(str(exc))
+        raise typer.Exit(2) from exc
+    console.print_json(data=result)
+
+
+@exceptions_app.command("capture-remediation-plan")
+def exceptions_capture_remediation_plan(
+    repo: list[str] = typer.Option([], "--repo"),
+    candidate_limit: int = typer.Option(
+        50,
+        "--candidate-limit",
+        min=0,
+        max=500,
+        help="Maximum candidate path signals per repo; 0 means exhaustive metadata-only scan.",
+    ),
+    max_scanned_files: int = typer.Option(
+        50000,
+        "--max-scanned-files",
+        min=1,
+        max=1000000,
+        help="Maximum repo files to inspect by path name for capture candidates.",
+    ),
+    per_lane_repo_limit: int = typer.Option(25, "--per-lane-repo-limit", min=1, max=500),
+    output: Optional[Path] = typer.Option(None, "--output"),
+    hub: Optional[Path] = typer.Option(None),
+) -> None:
+    """Write a central-only remediation plan for exception capture gaps."""
+    cfg = _cfg(hub=hub)
+    selected = _discover_exception_repos(
+        repo or ["all"],
+        cfg,
+        capture_audit=True,
+        reviewed=True,
+    )
+    output_path = output if output is None or output.is_absolute() else output
+    try:
+        result = write_exception_capture_remediation_plan(
+            cfg.repo_root,
+            selected,
+            repo_policies=_exception_repo_policies(cfg),
+            output=output_path,
+            candidate_limit=candidate_limit,
+            max_scanned_files=max_scanned_files,
+            per_lane_repo_limit=per_lane_repo_limit,
         )
     except (OSError, json.JSONDecodeError, KeyError, ValueError) as exc:
         console.print(str(exc))

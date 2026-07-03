@@ -936,6 +936,14 @@ Backfill safety and classification:
   capture-gap review, protected central-only review, policy enablement, approval
   review, metadata-only candidate backfill, and watch/no-signal. It still never
   writes target repos or runs backfill.
+- `asset-dir exceptions capture-remediation-plan --repo all` turns the same
+  readiness evidence into central-only remediation lanes. Its question is not
+  "can DAD backfill yet?" but "what must be repaired so repo agents emit the
+  right mail, exception, or fix-outcome packets without human rescue from chat?"
+  Lanes include protected central-only review, capture-surface refresh,
+  exhaustive rescan, emission review, classifier provenance refresh, policy or
+  approval review, source-packet request planning, and watch/no-action. The
+  report writes only DAD-side planning evidence under `processed/reports/`.
 - The wave plan also emits cross-cutting `proof_backlogs`:
   `capture_surface_refresh_backlog`, `exhaustive_audit_backlog`,
   `emission_review_backlog`, `classifier_refresh_backlog`, and

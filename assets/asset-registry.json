@@ -414,6 +414,43 @@
       ]
     },
     {
+      "asset_id": "language-coding-playbooks",
+      "name": "Language Coding Playbooks",
+      "version": "0.1.0",
+      "path": "assets/language-coding-playbooks",
+      "asset_type": "coding_guidance_asset",
+      "managed_block_id": "LANGUAGE_CODING_PLAYBOOKS",
+      "profiles": [
+        "python",
+        "rust",
+        "mixed",
+        "future-language",
+        "preflight"
+      ],
+      "use_when": [
+        "An agent needs a compact Python, Rust, or future-language operational checklist before coding.",
+        "DAD is routing frontier language research into a playbook, tactic, asset, or harness eval.",
+        "A repo wants to report an overlooked language operation or coding advantage back to DAD."
+      ],
+      "does_not_apply_when": [
+        "The target repo's local style or toolchain authority conflicts with the playbook.",
+        "The language idea has no proof surface, avoid-when limit, or local validation idea.",
+        "The packet would copy third-party docs, private rows, credentials, logs, or long source blobs."
+      ],
+      "install_path": "assets/language-coding-playbooks",
+      "source_package": {
+        "filename": "repo-local",
+        "sha256": ""
+      },
+      "installed_at": "2026-07-03",
+      "review_status": "candidate",
+      "safety_notes": [
+        "Playbooks are operational guidance, not promotion authority.",
+        "Frontier findings remain pointer-only until screened and validated.",
+        "Repos keep local authority and decide whether to adopt suggestions."
+      ]
+    },
+    {
       "asset_id": "language-frontier-research-harness",
       "name": "Language Frontier Research Harness",
       "version": "0.1.0",
