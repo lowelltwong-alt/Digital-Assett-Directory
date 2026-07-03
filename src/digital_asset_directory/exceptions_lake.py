@@ -2684,6 +2684,7 @@ def _backfill_group_status(
     *,
     missing_classifier_version: bool,
     stale_classifier_version: bool,
+    classifier_version_unreconciled_count: int,
     public_release_required_count: int,
     readable_path_ref_count: int,
     source_visibility_counts: dict[str, int],
@@ -2696,19 +2697,26 @@ def _backfill_group_status(
         blockers.append(
             "non-public or unknown origin requires human release before public-facing reuse"
         )
-    if missing_classifier_version:
+    if missing_classifier_version and classifier_version_unreconciled_count:
         blockers.append("classifier version provenance is missing; rerun or invalidate old candidate rows")
-    if stale_classifier_version:
+    if stale_classifier_version and classifier_version_unreconciled_count:
         blockers.append("classifier version provenance is stale or mixed; rerun or invalidate old candidate rows")
+    if (missing_classifier_version or stale_classifier_version) and not classifier_version_unreconciled_count:
+        blockers.append(
+            "classifier provenance was reconciled from immutable backfill rule and keyword metadata"
+        )
     if readable_path_ref_count:
         blockers.append("readable path refs exist in source evidence and require central-only handling")
     if source_visibility_counts.get("unknown"):
         blockers.append("source visibility is unknown for at least one candidate")
-    if missing_classifier_version or stale_classifier_version:
+    if classifier_version_unreconciled_count:
         return (
             "needs_classifier_refresh",
             blockers,
-            "Rerun bounded backfill or invalidate old rows before source-reviewing this group.",
+            (
+                "Rerun bounded backfill, reconcile classifier metadata, or invalidate old "
+                "rows before source-reviewing this group."
+            ),
         )
     if readable_path_ref_count:
         return (
@@ -2721,6 +2729,121 @@ def _backfill_group_status(
         blockers,
         "Confirm or reject the source path signals; if confirmed, ask the source repo to emit an observed exception or fix outcome.",
     )
+
+
+def _backfill_rule_lookup(hub_root: Path) -> dict[str, dict[str, Any]]:
+    return {
+        str(rule.get("rule_id") or ""): rule
+        for rule in backfill_classifier_rules(hub_root)
+        if str(rule.get("rule_id") or "")
+    }
+
+
+def _backfill_classifier_reconciliation(
+    group: dict[str, Any],
+    *,
+    current_classifier_version: str,
+    rules_by_id: dict[str, dict[str, Any]],
+) -> dict[str, Any]:
+    candidate_count = int(group.get("candidate_count") or 0)
+    missing_count = int(group.get("classifier_version_missing_count") or 0)
+    stale_count = int(group.get("classifier_version_stale_count") or 0)
+    old_count = missing_count + stale_count
+    if not old_count:
+        return {
+            "classifier_reconciliation_status": "not_needed",
+            "classifier_version_reconciled_count": 0,
+            "classifier_version_unreconciled_count": 0,
+            "classifier_reconciliation_reasons": [
+                "all backfill rows already cite the current classifier version"
+            ],
+            "classifier_reconciliation_blockers": [],
+            "classifier_reconciliation_evidence": {
+                "current_classifier_version": current_classifier_version,
+            },
+        }
+
+    reasons: list[str] = []
+    blockers: list[str] = []
+    rule_id = str(group.get("rule_id") or "")
+    event_type = str(group.get("event_type") or "")
+    keyword_counts = {
+        str(key): int(value)
+        for key, value in (group.get("keyword_counts") or {}).items()
+    }
+    severity_counts = {
+        str(key): int(value)
+        for key, value in (group.get("severity_counts") or {}).items()
+    }
+    capture_contract_counts = {
+        str(key): int(value)
+        for key, value in (group.get("capture_contract_counts") or {}).items()
+    }
+    keyword_total = sum(keyword_counts.values())
+    if keyword_total < candidate_count:
+        blockers.append("not every candidate has path keyword metadata")
+    rule = rules_by_id.get(rule_id)
+    if rule is None:
+        blockers.append("current classifier rule id is missing or unknown")
+    else:
+        rule_terms = {str(term) for term in rule.get("terms", []) if str(term)}
+        unknown_terms = sorted(term for term in keyword_counts if term not in rule_terms)
+        if unknown_terms:
+            blockers.append("candidate path keyword is not in the current classifier rule")
+        if str(rule.get("event_type") or "") != event_type:
+            blockers.append("current classifier rule maps to a different event_type")
+        rule_severity = str(rule.get("severity") or "")
+        if rule_severity and any(severity != rule_severity for severity in severity_counts):
+            blockers.append("candidate severity no longer matches the current classifier rule")
+        rule_capture_contract = str(rule.get("capture_contract") or "")
+        if rule_capture_contract and any(
+            capture_contract != rule_capture_contract
+            for capture_contract in capture_contract_counts
+        ):
+            blockers.append(
+                "candidate capture_contract no longer matches the current classifier rule"
+            )
+        reasons.append(
+            "stored backfill rule id, path keyword, event type, severity, and "
+            "capture contract match the current classifier"
+        )
+
+    if blockers:
+        return {
+            "classifier_reconciliation_status": "unreconciled",
+            "classifier_version_reconciled_count": 0,
+            "classifier_version_unreconciled_count": old_count,
+            "classifier_reconciliation_reasons": sorted(set(reasons)),
+            "classifier_reconciliation_blockers": sorted(set(blockers)),
+            "classifier_reconciliation_evidence": {
+                "current_classifier_version": current_classifier_version,
+                "rule_id": rule_id,
+                "event_type": event_type,
+                "keyword_count": keyword_total,
+                "candidate_count": candidate_count,
+            },
+        }
+
+    status = (
+        "mixed_current_and_reconciled_classifier"
+        if old_count < candidate_count
+        else "reconciled_to_current_classifier"
+    )
+    return {
+        "classifier_reconciliation_status": status,
+        "classifier_version_reconciled_count": old_count,
+        "classifier_version_unreconciled_count": 0,
+        "classifier_reconciliation_reasons": sorted(set(reasons)),
+        "classifier_reconciliation_blockers": [],
+        "classifier_reconciliation_evidence": {
+            "current_classifier_version": current_classifier_version,
+            "rule_id": rule_id,
+            "event_type": event_type,
+            "keyword_count": keyword_total,
+            "candidate_count": candidate_count,
+            "reconciled_without_lake_rewrite": True,
+        },
+    }
 
 
 def write_exception_backfill_review_queue(
@@ -2747,6 +2870,7 @@ def write_exception_backfill_review_queue(
     taxonomy_by_type = event_type_taxonomy_dimensions(hub_root)
     category_by_type = event_type_categories(hub_root)
     current_classifier_version = backfill_classifier_version(hub_root)
+    classifier_rules_by_id = _backfill_rule_lookup(hub_root)
     latest_backfill_run = _latest_backfill_run_summary(hub_root)
     limit = max(1, min(limit, MAX_BACKFILL_EVENTS))
     example_limit = max(1, min(example_limit, 25))
@@ -2777,6 +2901,7 @@ def write_exception_backfill_review_queue(
                 "candidate_count": 0,
                 "source_visibility_counts": Counter(),
                 "severity_counts": Counter(),
+                "capture_contract_counts": Counter(),
                 "keyword_counts": Counter(),
                 "classifier_versions": set(),
                 "classifier_version_missing_count": 0,
@@ -2792,6 +2917,9 @@ def write_exception_backfill_review_queue(
         visibility = str(event.get("source_visibility") or "unknown")
         group["source_visibility_counts"][visibility] += 1
         group["severity_counts"][str(event.get("severity") or "unknown")] += 1
+        group["capture_contract_counts"][
+            str(event.get("capture_contract") or "unknown")
+        ] += 1
         for keyword in _context_ref_values(event, "path-keyword:"):
             group["keyword_counts"][keyword] += 1
         classifier_versions = _context_ref_values(event, "backfill-classifier-version:")
@@ -2831,15 +2959,24 @@ def write_exception_backfill_review_queue(
         classifier_versions = sorted(group["classifier_versions"])
         classifier_version_missing_count = int(group["classifier_version_missing_count"])
         classifier_version_stale_count = int(group["classifier_version_stale_count"])
+        classifier_reconciliation = _backfill_classifier_reconciliation(
+            group,
+            current_classifier_version=current_classifier_version,
+            rules_by_id=classifier_rules_by_id,
+        )
         status, blockers, next_action = _backfill_group_status(
             missing_classifier_version=classifier_version_missing_count > 0,
             stale_classifier_version=classifier_version_stale_count > 0,
+            classifier_version_unreconciled_count=int(
+                classifier_reconciliation["classifier_version_unreconciled_count"]
+            ),
             public_release_required_count=int(group["public_release_required_count"]),
             readable_path_ref_count=int(group["readable_path_ref_count"]),
             source_visibility_counts=source_visibility_counts,
         )
         queue_counts[status] += 1
         severity_counts = dict(sorted(group["severity_counts"].items()))
+        capture_contract_counts = dict(sorted(group["capture_contract_counts"].items()))
         review_priority = str(group["taxonomy_dimensions"].get("review_priority") or "info")
         row = {
             "review_group_id": group["review_group_id"],
@@ -2853,6 +2990,7 @@ def write_exception_backfill_review_queue(
             "candidate_count": group["candidate_count"],
             "source_visibility_counts": source_visibility_counts,
             "severity_counts": severity_counts,
+            "capture_contract_counts": capture_contract_counts,
             "keyword_counts": dict(sorted(group["keyword_counts"].items())),
             "classifier_versions": classifier_versions,
             "current_classifier_version": current_classifier_version,
@@ -2860,6 +2998,7 @@ def write_exception_backfill_review_queue(
             "classifier_version_missing_count": classifier_version_missing_count,
             "classifier_version_stale": classifier_version_stale_count > 0,
             "classifier_version_stale_count": classifier_version_stale_count,
+            **classifier_reconciliation,
             "public_release_required_count": group["public_release_required_count"],
             "readable_path_ref_count": group["readable_path_ref_count"],
             "path_hash_refs": group["path_hash_refs"],
@@ -2952,6 +3091,12 @@ def _backfill_refresh_plan_action(
     candidate_count = int(row.get("candidate_count") or 0)
     missing_count = int(row.get("classifier_version_missing_count") or 0)
     stale_count = int(row.get("classifier_version_stale_count") or 0)
+    unreconciled_count = int(
+        row.get("classifier_version_unreconciled_count")
+        if row.get("classifier_version_unreconciled_count") is not None
+        else missing_count + stale_count
+    )
+    reconciled_count = int(row.get("classifier_version_reconciled_count") or 0)
     current_count = max(0, candidate_count - missing_count - stale_count)
     readable_path_ref_count = int(row.get("readable_path_ref_count") or 0)
     public_release_required_count = int(row.get("public_release_required_count") or 0)
@@ -2967,7 +3112,7 @@ def _backfill_refresh_plan_action(
     if public_release_required_count:
         reasons.append("non-public or unknown origin remains human-release gated")
     review_group_id = str(row.get("review_group_id") or "")
-    if missing_count or stale_count:
+    if unreconciled_count:
         if current_count:
             action = "split_current_subset_then_rerun_old_subset"
             reasons.append(
@@ -2986,6 +3131,10 @@ def _backfill_refresh_plan_action(
             ]
         )
         return action, reasons, commands, operator_next_steps
+    if reconciled_count:
+        reasons.append(
+            "old classifier provenance was reconciled from stored rule and keyword metadata"
+        )
     if str(row.get("review_status") or "") == "source_review_required":
         action = "source_packet_possible"
         reasons.append("classifier provenance matches the current reviewed classifier")
@@ -3108,6 +3257,22 @@ def write_exception_backfill_refresh_plan(
                 ),
                 "classifier_version_missing_count": missing_count,
                 "classifier_version_stale_count": stale_count,
+                "classifier_version_reconciled_count": queue_row.get(
+                    "classifier_version_reconciled_count",
+                    0,
+                ),
+                "classifier_version_unreconciled_count": queue_row.get(
+                    "classifier_version_unreconciled_count",
+                    missing_count + stale_count,
+                ),
+                "classifier_reconciliation_status": queue_row.get(
+                    "classifier_reconciliation_status",
+                    "",
+                ),
+                "classifier_reconciliation_blockers": queue_row.get(
+                    "classifier_reconciliation_blockers",
+                    [],
+                ),
                 "public_release_required_count": queue_row.get(
                     "public_release_required_count",
                     0,
@@ -3222,9 +3387,9 @@ def write_exception_backfill_refresh_plan(
         )
     lines.extend(["", "## Plan Items", ""])
     lines.append(
-        "| Source Repo | Event Type | Rule | Action | Candidates | Current | Missing | Stale |"
+        "| Source Repo | Event Type | Rule | Action | Candidates | Current | Missing | Stale | Reconciled | Unreconciled |"
     )
-    lines.append("| --- | --- | --- | --- | ---: | ---: | ---: | ---: |")
+    lines.append("| --- | --- | --- | --- | ---: | ---: | ---: | ---: | ---: | ---: |")
     for row in rows:
         lines.append(
             "| "
@@ -3232,7 +3397,9 @@ def write_exception_backfill_refresh_plan(
             + f"`{row['recommended_refresh_action']}` | {row['candidate_count']} | "
             + f"{row['current_classifier_candidate_count']} | "
             + f"{row['classifier_version_missing_count']} | "
-            + f"{row['classifier_version_stale_count']} |"
+            + f"{row['classifier_version_stale_count']} | "
+            + f"{row['classifier_version_reconciled_count']} | "
+            + f"{row['classifier_version_unreconciled_count']} |"
         )
     md_path.parent.mkdir(parents=True, exist_ok=True)
     md_path.write_text("\n".join(lines) + "\n", encoding="utf-8")
@@ -3927,6 +4094,11 @@ def _source_packet_opportunity_for_group(
     group_id = str(group.get("review_group_id") or "")
     missing_count = int(group.get("classifier_version_missing_count") or 0)
     stale_count = int(group.get("classifier_version_stale_count") or 0)
+    unreconciled_count = int(
+        group.get("classifier_version_unreconciled_count")
+        if group.get("classifier_version_unreconciled_count") is not None
+        else missing_count + stale_count
+    )
     readable_path_ref_count = int(group.get("readable_path_ref_count") or 0)
     public_release_required_count = int(group.get("public_release_required_count") or 0)
     blockers: list[str] = []
@@ -3936,14 +4108,16 @@ def _source_packet_opportunity_for_group(
     latest_decision_value = str((latest_decision or {}).get("decision") or "")
     latest_decision_id = str((latest_decision or {}).get("decision_id") or "")
 
-    if missing_count or stale_count:
+    if unreconciled_count:
         status = "blocked_classifier_refresh"
         if missing_count:
             blockers.append("classifier provenance missing")
         if stale_count:
             blockers.append("classifier provenance stale")
+        for blocker in group.get("classifier_reconciliation_blockers", []) or []:
+            blockers.append(str(blocker))
         next_actions.append(
-            "Rerun bounded backfill or append a reject/archive decision before requesting source packets."
+            "Rerun bounded backfill, reconcile classifier metadata, or append a reject/archive decision before requesting source packets."
         )
     elif readable_path_ref_count:
         status = "blocked_central_readable_ref_review"
@@ -4004,6 +4178,14 @@ def _source_packet_opportunity_for_group(
         "candidate_count": int(group.get("candidate_count") or 0),
         "classifier_version_missing_count": missing_count,
         "classifier_version_stale_count": stale_count,
+        "classifier_version_reconciled_count": int(
+            group.get("classifier_version_reconciled_count") or 0
+        ),
+        "classifier_version_unreconciled_count": unreconciled_count,
+        "classifier_reconciliation_status": group.get(
+            "classifier_reconciliation_status",
+            "",
+        ),
         "public_release_required_count": public_release_required_count,
         "readable_path_ref_count": readable_path_ref_count,
         "path_hash_refs": group.get("path_hash_refs", []),

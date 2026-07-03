@@ -1047,14 +1047,21 @@ Backfill safety and classification:
   queued as `needs_classifier_refresh`. They should be rerun or invalidated
   before source review so DAD does not review candidates under an unknown or
   outdated classifier contract.
+- Some older backfill rows have enough immutable metadata to be reconciled
+  without rewriting the lake: stored `backfill-rule-id`, `path-keyword`,
+  `event_type`, severity, and capture contract must still match the current
+  reviewed classifier. Reconciliation changes only generated queue/report
+  routing fields such as `classifier_reconciliation_status`; it does not add a
+  classifier version to historical lake rows and does not confirm an incident.
+  Rows missing those metadata still fail closed as `needs_classifier_refresh`.
 - `asset-dir exceptions backfill-refresh-plan` turns those blocked review groups
   into an explicit generated plan at
   `processed/reports/exception_backfill_classifier_refresh_plan.json` and
-  `.md`. It separates all-old groups that need bounded rerun or append-only
-  invalidation from mixed groups where current-classifier rows can be handled
-  separately. Path refs in the plan are hash-only by default, while source repo
-  IDs are central/internal identifiers and not public-safe exports. The plan is
-  candidate-only and does not rewrite the immutable lake.
+  `.md`. It separates unreconciled old groups that need bounded rerun or
+  append-only invalidation from reconciled/current groups that may proceed to
+  source-packet review. Path refs in the plan are hash-only by default, while
+  source repo IDs are central/internal identifiers and not public-safe exports.
+  The plan is candidate-only and does not rewrite the immutable lake.
 - The generated review queue surfaces the latest backfill run's stopped reason
   and coverage warning, so bounded first-N backfill waves do not look complete
   unless the latest run actually exhausted the walk.

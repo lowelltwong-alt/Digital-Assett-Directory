@@ -981,7 +981,9 @@ def test_backfill_review_queue_requires_authorization_for_readable_path_refs(tmp
         write_exception_backfill_review_queue(hub, include_readable_path_refs=True)
 
 
-def test_backfill_review_queue_flags_missing_classifier_version(tmp_path: Path) -> None:
+def test_backfill_review_queue_reconciles_missing_classifier_version(
+    tmp_path: Path,
+) -> None:
     hub = tmp_path / "hub"
     repo = tmp_path / "repo"
     (repo / ".git").mkdir(parents=True)
@@ -1009,15 +1011,25 @@ def test_backfill_review_queue_flags_missing_classifier_version(tmp_path: Path) 
     report = write_exception_backfill_review_queue(hub)
 
     row = report["review_queue"][0]
-    assert row["review_status"] == "needs_classifier_refresh"
+    assert row["review_status"] == "source_review_required"
     assert row["classifier_version_missing"] is True
     assert row["classifier_version_missing_count"] == 1
+    assert row["classifier_reconciliation_status"] == (
+        "mixed_current_and_reconciled_classifier"
+    )
+    assert row["classifier_version_reconciled_count"] == 1
+    assert row["classifier_version_unreconciled_count"] == 0
     assert row["classifier_versions"] == ["exception-backfill-classifier-v0.2.0"]
     assert row["classifier_version_stale"] is False
-    assert any("classifier version provenance is missing" in blocker for blocker in row["promotion_blockers"])
+    assert any(
+        "classifier provenance was reconciled" in blocker
+        for blocker in row["promotion_blockers"]
+    )
 
 
-def test_backfill_review_queue_flags_stale_classifier_version(tmp_path: Path) -> None:
+def test_backfill_review_queue_blocks_missing_unreconciled_classifier_metadata(
+    tmp_path: Path,
+) -> None:
     hub = tmp_path / "hub"
     repo = tmp_path / "repo"
     (repo / ".git").mkdir(parents=True)
@@ -1035,10 +1047,11 @@ def test_backfill_review_queue_flags_stale_classifier_version(tmp_path: Path) ->
     lake_path = hub / "processed" / "exceptions" / "lake" / "events.jsonl"
     rows = _jsonl(lake_path)
     rows[0]["context_refs"] = [
-        "backfill-classifier-version:exception-backfill-classifier-v0.1.0"
-        if ref.startswith("backfill-classifier-version:")
-        else ref
+        ref
         for ref in rows[0]["context_refs"]
+        if not ref.startswith("backfill-classifier-version:")
+        and not ref.startswith("backfill-rule-id:")
+        and not ref.startswith("path-keyword:")
     ]
     lake_path.write_text("\n".join(json.dumps(row) for row in rows) + "\n", encoding="utf-8")
 
@@ -1046,11 +1059,15 @@ def test_backfill_review_queue_flags_stale_classifier_version(tmp_path: Path) ->
 
     row = report["review_queue"][0]
     assert row["review_status"] == "needs_classifier_refresh"
-    assert row["classifier_version_missing"] is False
-    assert row["classifier_version_stale"] is True
-    assert row["classifier_version_stale_count"] == 1
-    assert row["current_classifier_version"] == "exception-backfill-classifier-v0.2.0"
-    assert any("classifier version provenance is stale" in blocker for blocker in row["promotion_blockers"])
+    assert row["classifier_version_missing"] is True
+    assert row["classifier_version_unreconciled_count"] == 1
+    assert "not every candidate has path keyword metadata" in row[
+        "classifier_reconciliation_blockers"
+    ]
+    assert any(
+        "classifier version provenance is missing" in blocker
+        for blocker in row["promotion_blockers"]
+    )
 
 
 def test_backfill_refresh_plan_routes_all_old_groups_to_rerun_or_invalidate(
@@ -1076,6 +1093,8 @@ def test_backfill_refresh_plan_routes_all_old_groups_to_rerun_or_invalidate(
         ref
         for ref in rows[0]["context_refs"]
         if not ref.startswith("backfill-classifier-version:")
+        and not ref.startswith("backfill-rule-id:")
+        and not ref.startswith("path-keyword:")
     ]
     lake_path.write_text("\n".join(json.dumps(row) for row in rows) + "\n", encoding="utf-8")
 
@@ -1087,6 +1106,7 @@ def test_backfill_refresh_plan_routes_all_old_groups_to_rerun_or_invalidate(
     assert item["recommended_refresh_action"] == "rerun_or_invalidate_old_group"
     assert item["current_classifier_candidate_count"] == 0
     assert item["classifier_version_missing_count"] == 1
+    assert item["classifier_version_unreconciled_count"] == 1
     assert item["path_hash_refs"][0].startswith("repo-relative-sha256:")
     assert item["command_hints"] == []
     assert "bounded backfill" in " ".join(item["operator_next_steps"])
@@ -1100,7 +1120,9 @@ def test_backfill_refresh_plan_routes_all_old_groups_to_rerun_or_invalidate(
     assert "pytest-timeout.md" not in report_text
 
 
-def test_backfill_refresh_plan_splits_mixed_current_and_old_groups(tmp_path: Path) -> None:
+def test_backfill_refresh_plan_reconciles_mixed_current_and_old_groups(
+    tmp_path: Path,
+) -> None:
     hub = tmp_path / "hub"
     repo = tmp_path / "repo"
     (repo / ".git").mkdir(parents=True)
@@ -1129,14 +1151,15 @@ def test_backfill_refresh_plan_splits_mixed_current_and_old_groups(tmp_path: Pat
     report = write_exception_backfill_refresh_plan(hub)
 
     item = report["plan_items"][0]
-    assert report["action_counts"] == {"split_current_subset_then_rerun_old_subset": 1}
-    assert item["recommended_refresh_action"] == "split_current_subset_then_rerun_old_subset"
+    assert report["action_counts"] == {"source_packet_possible": 1}
+    assert item["recommended_refresh_action"] == "source_packet_possible"
     assert item["candidate_count"] == 2
     assert item["current_classifier_candidate_count"] == 1
     assert item["classifier_version_stale_count"] == 1
-    assert "current-classifier rows exist" in " ".join(item["reasons"])
-    assert item["command_hints"] == []
-    assert "current-classifier subset" in " ".join(item["operator_next_steps"])
+    assert item["classifier_version_reconciled_count"] == 1
+    assert item["classifier_version_unreconciled_count"] == 0
+    assert "old classifier provenance was reconciled" in " ".join(item["reasons"])
+    assert "needs_source_packet" in item["command_hints"][0]
 
 
 def test_backfill_refresh_plan_routes_current_groups_to_source_packets(
@@ -1269,12 +1292,16 @@ def test_backfill_refresh_plan_limited_output_keeps_one_example_per_action(
             ref
             for ref in row["context_refs"]
             if not ref.startswith("backfill-classifier-version:")
+            and not ref.startswith("backfill-rule-id:")
+            and not ref.startswith("path-keyword:")
         ]
     for row in by_repo["repo-1"]:
         row["context_refs"] = [
             ref
             for ref in row["context_refs"]
             if not ref.startswith("backfill-classifier-version:")
+            and not ref.startswith("backfill-rule-id:")
+            and not ref.startswith("path-keyword:")
         ]
     by_repo["split-repo"][0]["context_refs"] = [
         "backfill-classifier-version:exception-backfill-classifier-v0.1.0"
@@ -1291,11 +1318,11 @@ def test_backfill_refresh_plan_limited_output_keeps_one_example_per_action(
     }
     assert reported_actions == {
         "rerun_or_invalidate_old_group",
-        "split_current_subset_then_rerun_old_subset",
+        "source_packet_possible",
     }
     assert report["reported_action_counts"] == {
         "rerun_or_invalidate_old_group": 1,
-        "split_current_subset_then_rerun_old_subset": 1,
+        "source_packet_possible": 1,
     }
     assert report["omitted_action_counts"] == {"rerun_or_invalidate_old_group": 1}
 
@@ -1763,6 +1790,45 @@ def test_source_packet_opportunities_block_stale_classifier_groups(
     assert opportunity["command_hints"] == []
     assert "classifier provenance stale" in opportunity["blockers"]
     assert "Rerun bounded backfill" in opportunity["next_actions"][0]
+
+
+def test_source_packet_opportunities_allow_reconciled_old_classifier_metadata(
+    tmp_path: Path,
+) -> None:
+    hub = tmp_path / "hub"
+    repo = tmp_path / "repo"
+    (repo / ".git").mkdir(parents=True)
+    _copy_exception_contracts(hub)
+    target = repo / "docs" / "pytest-timeout.md"
+    target.parent.mkdir(parents=True)
+    target.write_text("metadata-only backfill should not read content\n", encoding="utf-8")
+
+    backfill_exception_candidates(
+        hub,
+        repo,
+        limit=10,
+        authorization=_backfill_auth(repo),
+    )
+    lake_path = hub / "processed" / "exceptions" / "lake" / "events.jsonl"
+    rows = _jsonl(lake_path)
+    rows[0]["context_refs"] = [
+        "backfill-classifier-version:exception-backfill-classifier-v0.1.0"
+        if ref.startswith("backfill-classifier-version:")
+        else ref
+        for ref in rows[0]["context_refs"]
+    ]
+    lake_path.write_text("\n".join(json.dumps(row) for row in rows) + "\n", encoding="utf-8")
+
+    report = write_exception_source_packet_opportunities(hub)
+
+    assert report["status_counts"] == {"source_packet_decision_recommended": 1}
+    opportunity = report["opportunities"][0]
+    assert opportunity["classifier_version_reconciled_count"] == 1
+    assert opportunity["classifier_version_unreconciled_count"] == 0
+    assert opportunity["classifier_reconciliation_status"] == (
+        "reconciled_to_current_classifier"
+    )
+    assert "needs_source_packet" in opportunity["command_hints"][0]
 
 
 def test_source_packet_opportunities_cli(tmp_path: Path) -> None:
