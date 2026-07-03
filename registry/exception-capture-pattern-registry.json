@@ -432,6 +432,94 @@
       "review_status": "reviewed"
     },
     {
+      "rule_id": "exception-capture-rule:protected-repo-write-block",
+      "pattern_family": "exception_pattern",
+      "description": "A write to a protected repo was blocked, or should have been blocked, because explicit local-write approval was missing.",
+      "min_capture_surface_version": "0.2.0",
+      "match_signals": ["protected_repo_write_block"],
+      "any_signals": ["protected_repo_local_write_attempt", "local_write_not_approved", "protected_repo_policy_block", "approval_id_missing"],
+      "suppress_signals": ["contains_private_rows", "contains_raw_log_blob", "contains_secret_or_pii"],
+      "emit": {
+        "packet_classes": ["exception_event"],
+        "mail_message_type": "",
+        "exception_event_type": "protected_repo_write_block",
+        "capture_contract": "governance_block",
+        "severity": "critical",
+        "required_fields": ["protected_repo_id", "attempted_write_surface", "approval_state", "block_reason", "review_ref"],
+        "rationale": "Protected repo write blocks must be first-class exception evidence so DAD cannot quietly normalize unsafe local writes."
+      },
+      "applies_when": ["DAD, an agent, hook, enrollment update, or mail delivery attempted or considered a write outside the approved protected-repo boundary."],
+      "does_not_apply_when": ["The repo is not protected, the write is ordinary mailbox-only delivery allowed by policy, or a reviewed approval explicitly authorizes the write."],
+      "danger_if_missed": "DAD can accidentally mutate Logos or another protected repo without leaving a reviewable safety record.",
+      "review_status": "reviewed"
+    },
+    {
+      "rule_id": "exception-capture-rule:dirty-worktree-block",
+      "pattern_family": "exception_pattern",
+      "description": "Enrollment, update, delivery, release, or repair work was blocked because the target repo had uncommitted work or an unsafe branch state.",
+      "min_capture_surface_version": "0.2.0",
+      "match_signals": ["dirty_worktree_block"],
+      "any_signals": ["uncommitted_changes_present", "unsafe_branch_state", "active_repo_blocked", "worktree_not_clean"],
+      "suppress_signals": ["contains_private_rows", "contains_raw_log_blob", "contains_secret_or_pii"],
+      "emit": {
+        "packet_classes": ["exception_event"],
+        "mail_message_type": "",
+        "exception_event_type": "dirty_worktree_block",
+        "capture_contract": "governance_block",
+        "severity": "high",
+        "required_fields": ["repo_id", "branch_ref", "dirty_state_summary", "blocked_operation", "next_safe_action"],
+        "rationale": "Dirty worktree blocks protect active source-authority work and should be visible without copying diffs."
+      },
+      "applies_when": ["A DAD enrollment, update, public release, protected repair, mail delivery, or other governance operation stops because the repo is dirty or on an unsafe branch."],
+      "does_not_apply_when": ["The operation is read-only, the repo policy explicitly allows the dirty state, or the dirty state is unrelated to the blocked operation."],
+      "danger_if_missed": "Agents may overwrite active work or repeatedly retry blocked governance operations without understanding why.",
+      "review_status": "reviewed"
+    },
+    {
+      "rule_id": "exception-capture-rule:private-origin-public-target",
+      "pattern_family": "exception_pattern",
+      "description": "Private, internal, restricted, or unknown-origin data tried to move toward a public-facing target without explicit human release.",
+      "min_capture_surface_version": "0.2.0",
+      "match_signals": ["private_origin_public_target"],
+      "any_signals": ["public_facing_target", "non_public_source_origin", "human_release_missing", "release_gate_block"],
+      "suppress_signals": ["contains_private_rows", "contains_raw_log_blob", "contains_secret_or_pii"],
+      "emit": {
+        "packet_classes": ["exception_event"],
+        "mail_message_type": "",
+        "exception_event_type": "private_origin_public_target",
+        "capture_contract": "governance_block",
+        "severity": "critical",
+        "required_fields": ["source_provenance_ref", "source_visibility", "target_repo_ref", "target_visibility", "release_status"],
+        "rationale": "Private-to-public movement attempts must be captured as blocked metadata so release gates can be audited without copying the private payload."
+      },
+      "applies_when": ["Any mail, exception, lesson, asset, harness, template, enrollment notice, or source-packet candidate from a non-public origin targets a public-facing repo without human release."],
+      "does_not_apply_when": ["The target is not public-facing, the source is reviewed public-safe, or an explicit human release record authorizes the movement."],
+      "danger_if_missed": "Private-origin metadata or context could reach public-facing repos without a release audit trail.",
+      "review_status": "reviewed"
+    },
+    {
+      "rule_id": "exception-capture-rule:stale-report-freshness-failure",
+      "pattern_family": "exception_pattern",
+      "description": "A generated report, structured test report, audit artifact, or methodology-dependent output failed freshness checks.",
+      "min_capture_surface_version": "0.2.0",
+      "match_signals": ["stale_report_detected"],
+      "any_signals": ["input_hash_mismatch", "methodology_hash_mismatch", "generated_report_stale", "freshness_check_failed"],
+      "suppress_signals": ["contains_private_rows", "contains_raw_log_blob", "contains_secret_or_pii"],
+      "emit": {
+        "packet_classes": ["exception_event"],
+        "mail_message_type": "",
+        "exception_event_type": "stale_report",
+        "capture_contract": "postflight_exception",
+        "severity": "high",
+        "required_fields": ["report_ref", "freshness_evidence_ref", "expected_hash", "actual_hash", "regeneration_command"],
+        "rationale": "Stale report failures are a false-confidence risk and should be captured with hash refs rather than report bodies."
+      },
+      "applies_when": ["A validator, parity checker, report freshness gate, or audit finds that a report predates its inputs, run start time, methodology, or expected hash."],
+      "does_not_apply_when": ["The report is intentionally historical, clearly labeled stale candidate evidence, or has already been regenerated and validated."],
+      "danger_if_missed": "Agents can trust stale reports, old test output, or outdated methodology evidence and make false-green decisions.",
+      "review_status": "reviewed"
+    },
+    {
       "rule_id": "exception-capture-rule:harmful-dad-recommendation",
       "pattern_family": "exception_pattern",
       "description": "A DAD recommendation, context-pack item, mail suggestion, asset, skill, template, or harness advice was harmful, misleading, unsafe, or wasteful.",

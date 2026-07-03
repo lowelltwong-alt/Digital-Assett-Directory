@@ -488,6 +488,106 @@
       "review_status": "reviewed"
     },
     {
+      "scenario_id": "protected-repo-write-block",
+      "pattern_family": "exception_pattern",
+      "description": "A protected repo local-write attempt is blocked because explicit approval is missing.",
+      "repo_capture_surface_version": "0.2.0",
+      "signals": ["protected_repo_write_block", "protected_repo_local_write_attempt", "approval_id_missing"],
+      "covered_rule_ids": ["exception-capture-rule:protected-repo-write-block"],
+      "phase6_update_vectors": ["exception_taxonomy", "downstream_template"],
+      "expected": {
+        "packet_classes": ["exception_event"],
+        "event_types": ["protected_repo_write_block"],
+        "mail_message_types": [],
+        "capture_contracts": ["governance_block"],
+        "required_fields": ["approval_state", "attempted_write_surface", "block_reason", "protected_repo_id", "review_ref"],
+        "update_required": false,
+        "blocked": false
+      },
+      "negative_controls": ["contains_private_rows", "contains_raw_log_blob", "contains_secret_or_pii"],
+      "source_context": {
+        "repo_visibility": "private",
+        "public_facing": false,
+        "notes": "Protected repos emit metadata about the block, not file content or diffs."
+      },
+      "review_status": "reviewed"
+    },
+    {
+      "scenario_id": "dirty-worktree-block",
+      "pattern_family": "exception_pattern",
+      "description": "A governance operation stops because the target repo has active uncommitted work.",
+      "repo_capture_surface_version": "0.2.0",
+      "signals": ["dirty_worktree_block", "uncommitted_changes_present", "active_repo_blocked"],
+      "covered_rule_ids": ["exception-capture-rule:dirty-worktree-block"],
+      "phase6_update_vectors": ["exception_taxonomy", "downstream_template"],
+      "expected": {
+        "packet_classes": ["exception_event"],
+        "event_types": ["dirty_worktree_block"],
+        "mail_message_types": [],
+        "capture_contracts": ["governance_block"],
+        "required_fields": ["blocked_operation", "branch_ref", "dirty_state_summary", "next_safe_action", "repo_id"],
+        "update_required": false,
+        "blocked": false
+      },
+      "negative_controls": ["contains_private_rows", "contains_raw_log_blob", "contains_secret_or_pii"],
+      "source_context": {
+        "repo_visibility": "internal",
+        "public_facing": false,
+        "notes": "Dirty state summaries should be counts/classes, never git diff contents."
+      },
+      "review_status": "reviewed"
+    },
+    {
+      "scenario_id": "private-origin-public-target",
+      "pattern_family": "exception_pattern",
+      "description": "A non-public origin packet attempts to target a public-facing repo without human release.",
+      "repo_capture_surface_version": "0.2.0",
+      "signals": ["private_origin_public_target", "public_facing_target", "human_release_missing"],
+      "covered_rule_ids": ["exception-capture-rule:private-origin-public-target"],
+      "phase6_update_vectors": ["exception_taxonomy", "downstream_template"],
+      "expected": {
+        "packet_classes": ["exception_event"],
+        "event_types": ["private_origin_public_target"],
+        "mail_message_types": [],
+        "capture_contracts": ["governance_block"],
+        "required_fields": ["release_status", "source_provenance_ref", "source_visibility", "target_repo_ref", "target_visibility"],
+        "update_required": false,
+        "blocked": false
+      },
+      "negative_controls": ["contains_private_rows", "contains_raw_log_blob", "contains_secret_or_pii"],
+      "source_context": {
+        "repo_visibility": "private",
+        "public_facing": true,
+        "notes": "The private payload is never included; only provenance and release-gate refs are allowed."
+      },
+      "review_status": "reviewed"
+    },
+    {
+      "scenario_id": "stale-report-freshness-failure",
+      "pattern_family": "exception_pattern",
+      "description": "A report freshness gate detects that a structured report is stale against its inputs or methodology hash.",
+      "repo_capture_surface_version": "0.2.0",
+      "signals": ["stale_report_detected", "input_hash_mismatch", "freshness_check_failed"],
+      "covered_rule_ids": ["exception-capture-rule:stale-report-freshness-failure"],
+      "phase6_update_vectors": ["exception_taxonomy", "downstream_template"],
+      "expected": {
+        "packet_classes": ["exception_event"],
+        "event_types": ["stale_report"],
+        "mail_message_types": [],
+        "capture_contracts": ["postflight_exception"],
+        "required_fields": ["actual_hash", "expected_hash", "freshness_evidence_ref", "regeneration_command", "report_ref"],
+        "update_required": false,
+        "blocked": false
+      },
+      "negative_controls": ["contains_private_rows", "contains_raw_log_blob", "contains_secret_or_pii"],
+      "source_context": {
+        "repo_visibility": "internal",
+        "public_facing": false,
+        "notes": "Staleness evidence uses refs and hashes, not raw report bodies."
+      },
+      "review_status": "reviewed"
+    },
+    {
       "scenario_id": "harmful-dad-recommendation",
       "pattern_family": "exception_pattern",
       "description": "A repo found that a DAD recommendation was harmful, misleading, unsafe, or wasteful and should feed calibration.",

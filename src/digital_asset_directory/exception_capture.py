@@ -284,6 +284,15 @@ def _rule_matches(rule: dict[str, Any], signals: set[str]) -> bool:
     )
 
 
+def _rule_would_match_without_suppression(
+    rule: dict[str, Any],
+    signals: set[str],
+) -> bool:
+    required = set(rule.get("match_signals", []))
+    any_signals = set(rule.get("any_signals", []))
+    return required <= signals and (not any_signals or bool(any_signals & signals))
+
+
 def _empty_actual(blocked: bool = False, blocked_reason: str = "") -> dict[str, Any]:
     return {
         "packet_classes": ["no_packet"] if blocked else [],
@@ -363,6 +372,48 @@ def _rule_actual(
     )
 
 
+def _suppressed_rule_actual(
+    case: dict[str, Any],
+    registry: dict[str, Any],
+) -> tuple[dict[str, Any], list[str]]:
+    signals = set(case.get("signals", []))
+    packet_classes: set[str] = set()
+    event_types: set[str] = set()
+    capture_contracts: set[str] = set()
+    required_fields: set[str] = set()
+    suppressed_rule_ids: list[str] = []
+    for rule in registry.get("rules", []):
+        if rule.get("review_status") != "reviewed":
+            continue
+        suppressed = set(rule.get("suppress_signals", []))
+        if not suppressed or not bool(suppressed & signals):
+            continue
+        if not _rule_would_match_without_suppression(rule, signals):
+            continue
+        suppressed_rule_ids.append(str(rule["rule_id"]))
+        emit = rule.get("emit", {})
+        packet_classes.update(str(item) for item in emit.get("packet_classes", []))
+        if emit.get("exception_event_type"):
+            event_types.add(str(emit["exception_event_type"]))
+        if emit.get("capture_contract"):
+            capture_contracts.add(str(emit["capture_contract"]))
+        required_fields.update(str(item) for item in emit.get("required_fields", []))
+    if not packet_classes:
+        packet_classes.add("no_packet")
+    return (
+        {
+            "packet_classes": _sorted(packet_classes),
+            "event_types": _sorted(event_types),
+            "mail_message_types": [],
+            "capture_contracts": _sorted(capture_contracts),
+            "required_fields": _sorted(required_fields),
+            "blocked": False,
+            "blocked_reason": "",
+        },
+        sorted(suppressed_rule_ids),
+    )
+
+
 def _compare_actual(actual: dict[str, Any], expected: dict[str, Any]) -> dict[str, bool]:
     comparisons = {
         "packet_classes": actual["packet_classes"] == sorted(expected.get("packet_classes", [])),
@@ -383,6 +434,44 @@ def _compare_actual(actual: dict[str, Any], expected: dict[str, Any]) -> dict[st
             "blocked_reason"
         ]
     return comparisons
+
+
+def _blocked_audit_plan(
+    *,
+    actual: dict[str, Any],
+    audit_actual: dict[str, Any],
+    suppressed_rule_ids: list[str],
+) -> dict[str, Any]:
+    if not actual.get("blocked"):
+        return {
+            "should_record": False,
+            "audit_scope": "none",
+            "blocked_reason": "",
+            "safe_packet_classes": [],
+            "event_types": [],
+            "capture_contracts": [],
+            "required_fields": [],
+            "suppressed_rule_ids": [],
+            "instructions": [],
+        }
+    return {
+        "should_record": True,
+        "audit_scope": "repo_local_quarantine_or_audit",
+        "blocked_reason": str(actual.get("blocked_reason") or ""),
+        "safe_packet_classes": ["local_usage_only"],
+        "event_types": sorted(str(item) for item in audit_actual.get("event_types", [])),
+        "capture_contracts": sorted(
+            str(item) for item in audit_actual.get("capture_contracts", [])
+        ),
+        "required_fields": sorted(str(item) for item in audit_actual.get("required_fields", [])),
+        "suppressed_rule_ids": sorted(suppressed_rule_ids),
+        "instructions": [
+            "Record only blocker class, source repo id, reviewed rule ids, safe refs, "
+            "hashes, gate states, and review ids in a repo-local quarantine/audit record.",
+            "Do not emit outbound mail, exception packets, raw payloads, raw signals, "
+            "private rows, logs, credentials, or copied source blobs.",
+        ],
+    }
 
 
 def _declared_covered_rules(case: dict[str, Any]) -> list[str]:
@@ -488,6 +577,7 @@ def suggest_exception_capture(
         "payload_samples": payload_samples or [],
     }
     rule_actual, matched_rule_ids, update_required = _rule_actual(case, registry)
+    suppressed_actual, suppressed_rule_ids = _suppressed_rule_actual(case, registry)
     block_signals = set(registry.get("global_block_signals", []))
     blocking_hits = sorted(block_signals & set(normalized_signals))
     payload_issues = _payload_sample_issues(case)
@@ -511,6 +601,7 @@ def suggest_exception_capture(
         )
     else:
         actual = rule_actual
+    audit_actual = rule_actual if matched_rule_ids else suppressed_actual
 
     reviewed_rules = {
         str(rule.get("rule_id") or ""): rule
@@ -562,11 +653,17 @@ def suggest_exception_capture(
         "signals": normalized_signals,
         "signal_screen_issues": signal_screen_issues,
         "matched_rule_ids": sorted(matched_rule_ids),
+        "suppressed_rule_ids": suppressed_rule_ids,
         "matched_rules": matched_rules,
         "payload_screen_issues": payload_issues,
         "blocking_signals": blocking_hits,
         "actual": actual,
         "recommended_packets": recommended_packets,
+        "blocked_audit": _blocked_audit_plan(
+            actual=actual,
+            audit_actual=audit_actual,
+            suppressed_rule_ids=suppressed_rule_ids,
+        ),
         "next_actions": _capture_suggest_next_actions(
             actual=actual,
             update_required=update_required,
@@ -594,6 +691,10 @@ def _capture_suggest_next_actions(
         actions.append(
             "Do not emit outbound mail or exception packets until the blocked "
             "payload/signal is reduced to safe metadata or reviewed locally."
+        )
+        actions.append(
+            "Write only a repo-local quarantine/audit metadata record with blocker "
+            "class, safe refs, hashes, gate states, and review ids."
         )
         return actions
     if capture_surface_unknown:

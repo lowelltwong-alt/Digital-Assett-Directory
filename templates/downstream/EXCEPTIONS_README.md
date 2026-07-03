@@ -206,13 +206,17 @@ Use these common event types when they fit:
 - `schema_validation_failure`
 - `stale_report`
 - `protected_repo_write_block`
+- `dirty_worktree_block`
 - `public_release_hold`
+- `private_origin_public_target`
 - `secret_or_pii_detected`
 - `raw_blob_rejected`
+- `prompt_injection_like_payload`
 - `review_finding`
 - `premortem_failure_story`
 - `harmful_dad_recommendation`
 - `dad_asset_attempt_failed`
+- `ignored_required_recommendation`
 - `rust_shadow_parity_mismatch`
 - `pytest_performance_hotspot`
 - `repo_rename_lineage`
@@ -234,6 +238,14 @@ Use these common event types when they fit:
 - `license_or_provenance_review_gap`
 - `model_instruction_drift`
 - `backfill_exception_candidate`
+
+For protected-repo, dirty-worktree, private-origin/public-target, and stale-report
+events, send refs, counts, hashes, gate states, and review IDs only. Do not send
+diffs, private payloads, raw report bodies, or local absolute paths intended for
+public-facing repos.
+If sensitive content blocks outbound capture, record a repo-local quarantine or
+audit metadata entry with the blocker class and safe refs only; do not drop the
+attempt silently.
 
 For repo renames, copies, or splits, prefer `repo_rename_lineage` or
 `repo_split_lineage` with stable repo IDs, old/new safe refs, return address, and

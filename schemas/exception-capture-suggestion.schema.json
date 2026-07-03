@@ -17,11 +17,13 @@
     "signals",
     "signal_screen_issues",
     "matched_rule_ids",
+    "suppressed_rule_ids",
     "matched_rules",
     "payload_screen_issues",
     "blocking_signals",
     "actual",
     "recommended_packets",
+    "blocked_audit",
     "next_actions",
     "authority_boundary"
   ],
@@ -46,6 +48,11 @@
       "uniqueItems": true
     },
     "matched_rule_ids": {
+      "type": "array",
+      "items": {"type": "string", "pattern": "^exception-capture-rule:[a-z0-9][a-z0-9:-]*$"},
+      "uniqueItems": true
+    },
+    "suppressed_rule_ids": {
       "type": "array",
       "items": {"type": "string", "pattern": "^exception-capture-rule:[a-z0-9][a-z0-9:-]*$"},
       "uniqueItems": true
@@ -143,6 +150,7 @@
         }
       }
     },
+    "blocked_audit": {"$ref": "#/$defs/blocked_audit"},
     "next_actions": {
       "type": "array",
       "items": {"type": "string", "minLength": 1},
@@ -222,6 +230,68 @@
         },
         "blocked": {"type": "boolean"},
         "blocked_reason": {"type": "string"}
+      }
+    },
+    "blocked_audit": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "should_record",
+        "audit_scope",
+        "blocked_reason",
+        "safe_packet_classes",
+        "event_types",
+        "capture_contracts",
+        "required_fields",
+        "suppressed_rule_ids",
+        "instructions"
+      ],
+      "properties": {
+        "should_record": {"type": "boolean"},
+        "audit_scope": {"enum": ["none", "repo_local_quarantine_or_audit"]},
+        "blocked_reason": {"type": "string"},
+        "safe_packet_classes": {
+          "type": "array",
+          "items": {"enum": ["local_usage_only"]},
+          "uniqueItems": true
+        },
+        "event_types": {
+          "type": "array",
+          "items": {"type": "string"},
+          "uniqueItems": true
+        },
+        "capture_contracts": {
+          "type": "array",
+          "items": {
+            "enum": [
+              "failed_command",
+              "retry_or_plan_change",
+              "postflight_exception",
+              "ci_failure",
+              "governance_block",
+              "review_finding",
+              "fix_outcome",
+              "dad_recommendation_outcome",
+              "backfill_candidate"
+            ]
+          },
+          "uniqueItems": true
+        },
+        "required_fields": {
+          "type": "array",
+          "items": {"type": "string", "minLength": 1},
+          "uniqueItems": true
+        },
+        "suppressed_rule_ids": {
+          "type": "array",
+          "items": {"type": "string", "pattern": "^exception-capture-rule:[a-z0-9][a-z0-9:-]*$"},
+          "uniqueItems": true
+        },
+        "instructions": {
+          "type": "array",
+          "items": {"type": "string", "minLength": 1},
+          "uniqueItems": true
+        }
       }
     }
   }

@@ -132,6 +132,22 @@ small deterministic capture contract:
 - `fix_outcome`: the fix, accepted-risk decision, rollback, or duplicate decision
   that resolves or closes an event.
 
+Four high-priority governance/freshness exceptions should not rely on agents
+remembering to use direct records. They have deterministic capture signals:
+
+- `protected_repo_write_block` for attempted protected-repo writes without
+  explicit approval. Capture repo ID, attempted surface, approval state, block
+  reason, and review ref, never file contents.
+- `dirty_worktree_block` for blocked governance operations on active or unsafe
+  worktrees. Capture branch ref, dirty-state summary, blocked operation, and
+  next safe action, never diffs.
+- `private_origin_public_target` for non-public-origin packets targeting
+  public-facing repos without human release. Capture provenance and release
+  status refs, never the private payload.
+- `stale_report` for freshness failures. Capture report refs, input/methodology
+  hash evidence, and regeneration command, never raw report bodies that may
+  contain private output.
+
 Capture can be lightweight. Repos do not need DAD Python internals for normal writes:
 they can append JSONL, use a tiny helper, export a CI artifact, or let the DAD CLI
 record events during preflight/midflight/postflight. Completeness is measured by

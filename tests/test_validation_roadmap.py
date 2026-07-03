@@ -26,6 +26,7 @@ from digital_asset_directory.validation import (
     _resolve_observed_audit_repo,
     _source_provenance_consistency_errors,
     _stale_report_input_hash_errors,
+    _validate_lesson_graph_contract,
     validate_repo,
 )
 
@@ -292,6 +293,47 @@ def test_lesson_graph_hash_ignores_generated_lesson_indexes(tmp_path: Path):
     (by_capability / "cap.jsonl").write_text('{"lesson_id":"dad:lesson:y"}\n', encoding="utf-8")
 
     assert (_lesson_graph_hash_path(lessons), _validation_hash_path(lessons)) == before
+
+
+def test_lesson_graph_manifest_validation_fails_closed_on_stale_input_hash(
+    tmp_path: Path,
+):
+    repo = tmp_path / "repo"
+    (repo / "registry").mkdir(parents=True)
+    (repo / "schemas").mkdir()
+    for rel in [
+        "registry/graph-edge-registry.json",
+        "schemas/graph-edge-registry.schema.json",
+        "schemas/lesson-graph.schema.json",
+    ]:
+        target = repo / rel
+        target.parent.mkdir(parents=True, exist_ok=True)
+        target.write_text((ROOT / rel).read_text(encoding="utf-8"), encoding="utf-8")
+    registry = {
+        "schemas": {
+            "graph_edge_registry": "schemas/graph-edge-registry.schema.json",
+            "lesson_graph": "schemas/lesson-graph.schema.json",
+        }
+    }
+    lessons = repo / "raw" / "lessons" / "2026-07-03"
+    lessons.mkdir(parents=True)
+    (lessons / "lesson.json").write_text('{"lesson_id":"dad:lesson:test"}\n', encoding="utf-8")
+    manifest_path = repo / "processed" / "learning" / "lesson-graph-manifest.json"
+    manifest_path.parent.mkdir(parents=True)
+    manifest_path.write_text(
+        json.dumps({"input_hashes": {"raw/lessons": "sha256:stale"}}),
+        encoding="utf-8",
+    )
+    errors: list[str] = []
+    checked: list[str] = []
+
+    _validate_lesson_graph_contract(repo, registry, errors, checked)
+
+    assert "processed/learning/lesson-graph-manifest.json" in checked
+    assert errors == [
+        "Stale lesson graph manifest input hash raw/lessons: "
+        f"sha256:stale != {_validation_hash_path(repo / 'raw' / 'lessons')}"
+    ]
 
 
 def _load_current_hash(path: Path) -> str:

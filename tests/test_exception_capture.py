@@ -522,17 +522,41 @@ def test_exception_taxonomy_coverage_distinguishes_manual_and_signal_routes(
     dad_recommendation = report["category_route_summary"]["dad_recommendation"]
     assert dad_recommendation["capture_rule_count"] == 3
     assert dad_recommendation["direct_record_only_count"] == 0
+    assert report["automated_route_count"] >= 47
+    assert report["coverage_status_counts"]["capture_rule_with_synthetic_case"] >= 22
+    assert report["taxonomy_review_summary"][
+        "high_or_critical_direct_record_only_event_types"
+    ] == []
+    assert set(report["manual_only_event_types"]) == {
+        "duplicate_mail_delivery",
+        "malformed_jsonl",
+        "pytest_performance_hotspot",
+        "validation_command_missing",
+    }
+    assert "dirty_worktree_block" in report["category_route_summary"]["repo_state"][
+        "capture_rule_event_types"
+    ]
+    assert "protected_repo_write_block" in report["category_route_summary"]["governance"][
+        "capture_rule_event_types"
+    ]
+    assert "private_origin_public_target" in report["category_route_summary"][
+        "public_private"
+    ]["capture_rule_event_types"]
+    assert "stale_report" in report["category_route_summary"]["data_integrity"][
+        "capture_rule_event_types"
+    ]
     attention_ids = {
         item["attention_id"]
         for item in report["taxonomy_review_summary"]["review_attention"]
     }
-    assert "high_or_critical_direct_record_only" in attention_ids
+    assert "high_or_critical_direct_record_only" not in attention_ids
     assert "categories_without_capture_rules" in attention_ids
-    assert "private_origin_public_target" in report["taxonomy_review_summary"][
-        "high_or_critical_direct_record_only_event_types"
-    ]
     assert "failed_command" not in report["manual_only_event_types"]
     assert "tool_unavailable" not in report["manual_only_event_types"]
+    assert "dirty_worktree_block" not in report["manual_only_event_types"]
+    assert "private_origin_public_target" not in report["manual_only_event_types"]
+    assert "protected_repo_write_block" not in report["manual_only_event_types"]
+    assert "stale_report" not in report["manual_only_event_types"]
     assert "validation_command_missing" in report["manual_only_event_types"]
     taxonomy_gate = _phase6_gate(report, "phase-6-taxonomy-route-coverage-reviewed")
     assert taxonomy_gate["machine_status"] == "passed"
@@ -1405,6 +1429,100 @@ def test_capture_suggest_still_blocks_unsafe_security_payload_signal() -> None:
     assert suggestion["recommended_packets"] == []
 
 
+@pytest.mark.parametrize(
+    ("signals", "rule_id", "event_type", "capture_contract", "required_fields"),
+    [
+        (
+            [
+                "protected_repo_write_block",
+                "protected_repo_local_write_attempt",
+                "approval_id_missing",
+            ],
+            "exception-capture-rule:protected-repo-write-block",
+            "protected_repo_write_block",
+            "governance_block",
+            [
+                "approval_state",
+                "attempted_write_surface",
+                "block_reason",
+                "protected_repo_id",
+                "review_ref",
+            ],
+        ),
+        (
+            [
+                "dirty_worktree_block",
+                "uncommitted_changes_present",
+                "active_repo_blocked",
+            ],
+            "exception-capture-rule:dirty-worktree-block",
+            "dirty_worktree_block",
+            "governance_block",
+            [
+                "blocked_operation",
+                "branch_ref",
+                "dirty_state_summary",
+                "next_safe_action",
+                "repo_id",
+            ],
+        ),
+        (
+            [
+                "private_origin_public_target",
+                "public_facing_target",
+                "human_release_missing",
+            ],
+            "exception-capture-rule:private-origin-public-target",
+            "private_origin_public_target",
+            "governance_block",
+            [
+                "release_status",
+                "source_provenance_ref",
+                "source_visibility",
+                "target_repo_ref",
+                "target_visibility",
+            ],
+        ),
+        (
+            [
+                "stale_report_detected",
+                "input_hash_mismatch",
+                "freshness_check_failed",
+            ],
+            "exception-capture-rule:stale-report-freshness-failure",
+            "stale_report",
+            "postflight_exception",
+            [
+                "actual_hash",
+                "expected_hash",
+                "freshness_evidence_ref",
+                "regeneration_command",
+                "report_ref",
+            ],
+        ),
+    ],
+)
+def test_capture_suggest_maps_high_priority_governance_and_freshness_blocks(
+    signals: list[str],
+    rule_id: str,
+    event_type: str,
+    capture_contract: str,
+    required_fields: list[str],
+) -> None:
+    suggestion = suggest_exception_capture(
+        ROOT,
+        signals=signals,
+        repo_capture_surface_version="0.2.0",
+    )
+
+    _validate("exception_capture_suggestion", suggestion)
+    assert suggestion["matched_rule_ids"] == [rule_id]
+    assert suggestion["actual"]["packet_classes"] == ["exception_event"]
+    assert suggestion["actual"]["event_types"] == [event_type]
+    assert suggestion["actual"]["capture_contracts"] == [capture_contract]
+    assert suggestion["actual"]["required_fields"] == required_fields
+
+
 def test_capture_suggest_flags_stale_capture_surface_for_new_rule() -> None:
     suggestion = suggest_exception_capture(
         ROOT,
@@ -1444,8 +1562,38 @@ def test_capture_suggest_blocks_unsafe_payload_without_echoing_sample() -> None:
     assert suggestion["actual"]["blocked_reason"] == "payload_screen:credential_or_pii_pattern"
     assert suggestion["recommended_packets"] == []
     assert "credential_or_pii_pattern" in suggestion["payload_screen_issues"]
+    assert suggestion["blocked_audit"]["should_record"] is True
+    assert suggestion["blocked_audit"]["safe_packet_classes"] == ["local_usage_only"]
     assert unsafe not in serialized
     assert "AKIAIOSFODNN7EXAMPLE" not in serialized
+
+
+def test_capture_suggest_sensitive_private_public_attempt_has_local_only_audit() -> None:
+    suggestion = suggest_exception_capture(
+        ROOT,
+        signals=[
+            "private_origin_public_target",
+            "public_facing_target",
+            "human_release_missing",
+            "contains_secret_or_pii",
+        ],
+        repo_capture_surface_version="0.2.0",
+    )
+
+    _validate("exception_capture_suggestion", suggestion)
+    assert suggestion["actual"]["blocked"] is True
+    assert suggestion["actual"]["packet_classes"] == ["no_packet"]
+    assert suggestion["recommended_packets"] == []
+    assert suggestion["suppressed_rule_ids"] == [
+        "exception-capture-rule:private-origin-public-target"
+    ]
+    assert suggestion["blocked_audit"]["should_record"] is True
+    assert suggestion["blocked_audit"]["audit_scope"] == "repo_local_quarantine_or_audit"
+    assert suggestion["blocked_audit"]["safe_packet_classes"] == ["local_usage_only"]
+    assert suggestion["blocked_audit"]["event_types"] == ["private_origin_public_target"]
+    assert suggestion["blocked_audit"]["capture_contracts"] == ["governance_block"]
+    assert "release_status" in suggestion["blocked_audit"]["required_fields"]
+    assert any("repo-local quarantine/audit" in item for item in suggestion["next_actions"])
 
 
 def test_capture_suggest_blocks_unsafe_signal_without_echoing_value() -> None:
