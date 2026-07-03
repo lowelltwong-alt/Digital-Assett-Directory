@@ -87,6 +87,53 @@
         "mutations": {"type": "object"}
       }
     },
+    "backfill_review_decision": {
+      "type": "object",
+      "required": ["event_type", "decision", "reviewer", "reviewer_type"],
+      "additionalProperties": false,
+      "allOf": [
+        {
+          "if": {
+            "properties": {"reviewer_type": {"const": "human"}},
+            "required": ["reviewer_type"]
+          },
+          "then": {
+            "required": ["approval_id"],
+            "properties": {"approval_id": {"type": "string", "minLength": 1}}
+          }
+        },
+        {
+          "if": {
+            "properties": {"reviewer_type": {"const": "source_repo"}},
+            "required": ["reviewer_type"]
+          },
+          "then": {
+            "required": ["source_packet_id"],
+            "properties": {"source_packet_id": {"type": "string", "minLength": 1}}
+          }
+        }
+      ],
+      "properties": {
+        "event_type": {"type": "string", "minLength": 1},
+        "rule_id": {"type": "string"},
+        "decision": {
+          "enum": [
+            "confirm",
+            "reject",
+            "needs_source_packet",
+            "needs_classifier_refresh",
+            "defer",
+            "archive"
+          ]
+        },
+        "reviewer": {"type": "string"},
+        "reviewer_type": {"enum": ["human", "agent", "source_repo", "unknown"]},
+        "approval_id": {"type": "string"},
+        "source_packet_id": {"type": "string"},
+        "notes": {"type": "string"},
+        "evidence_refs": {"$ref": "#/$defs/string_list"}
+      }
+    },
     "expected": {
       "type": "object",
       "additionalProperties": false,
@@ -95,6 +142,7 @@
         {"required": ["blocker_substrings_by_event_type"]},
         {"required": ["row_fields_by_event_type"]},
         {"required": ["queue_counts"]},
+        {"required": ["backfill_decision_counts"]},
         {"required": ["quarantine_event_types"]}
       ],
       "properties": {
@@ -113,6 +161,10 @@
           }
         },
         "queue_counts": {
+          "type": "object",
+          "additionalProperties": {"type": "integer", "minimum": 0}
+        },
+        "backfill_decision_counts": {
           "type": "object",
           "additionalProperties": {"type": "integer", "minimum": 0}
         },
@@ -135,6 +187,11 @@
         "fix_outcomes": {
           "type": "array",
           "items": {"$ref": "#/$defs/fix_outcome"},
+          "default": []
+        },
+        "backfill_review_decisions": {
+          "type": "array",
+          "items": {"$ref": "#/$defs/backfill_review_decision"},
           "default": []
         },
         "expected": {"$ref": "#/$defs/expected"}

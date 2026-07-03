@@ -87,6 +87,42 @@ def _hash_path(path: Path) -> str:
     return f"sha256:{sha256_bytes(digest_input)}"
 
 
+def _read_jsonl_records_with_errors(
+    path: Path,
+) -> tuple[list[tuple[int, dict[str, Any]]], list[dict[str, Any]]]:
+    records: list[tuple[int, dict[str, Any]]] = []
+    errors: list[dict[str, Any]] = []
+    if not path.exists():
+        return records, errors
+    with path.open("rb") as handle:
+        for line_number, raw_line in enumerate(handle, start=1):
+            stripped_bytes = raw_line.strip()
+            if not stripped_bytes:
+                continue
+            try:
+                payload = json.loads(stripped_bytes.decode("utf-8"))
+            except (UnicodeDecodeError, json.JSONDecodeError) as exc:
+                errors.append(
+                    {
+                        "line": line_number,
+                        "error": str(exc),
+                        "raw_sha256": sha256_bytes(stripped_bytes),
+                    }
+                )
+                continue
+            if isinstance(payload, dict):
+                records.append((line_number, payload))
+            else:
+                errors.append(
+                    {
+                        "line": line_number,
+                        "error": "JSONL row is not an object",
+                        "raw_sha256": sha256_bytes(stripped_bytes),
+                    }
+                )
+    return records, errors
+
+
 def _stale_report_input_hash_errors(
     repo_root: Path,
     report_path: Path,
@@ -1259,6 +1295,82 @@ def validate_repo(repo_root: Path) -> dict[str, Any]:
                         "Exception backfill review decision contains readable "
                         f"repo-relative path metadata on line {line_number}"
                     )
+        mail_message_schema = _load_schema(repo_root, registry, "mail_message")
+        mail_message_validator_cls = validator_for(mail_message_schema)
+        mail_message_validator_cls.check_schema(mail_message_schema)
+        mail_message_validator = mail_message_validator_cls(mail_message_schema)
+        source_packet_requests_path = (
+            repo_root / "processed" / "mail" / "staged" / "source_packet_requests.jsonl"
+        )
+        if source_packet_requests_path.exists():
+            checked.append("processed/mail/staged/source_packet_requests.jsonl")
+            packets, packet_errors = _read_jsonl_records_with_errors(source_packet_requests_path)
+            for error in packet_errors:
+                errors.append(
+                    "Exception source-packet request staged mail has malformed "
+                    f"JSONL on line {error['line']}: {error['error']}"
+                )
+            active_report_mail_ids: set[str] = set()
+            source_packet_report_path = (
+                repo_root / "processed" / "reports" / "exception_source_packet_requests.json"
+            )
+            if source_packet_report_path.exists():
+                try:
+                    source_packet_report = json.loads(
+                        source_packet_report_path.read_text(encoding="utf-8")
+                    )
+                    active_report_mail_ids = {
+                        str(request.get("mail_id") or "")
+                        for request in source_packet_report.get("requests", [])
+                        if str(request.get("mail_id") or "")
+                    }
+                except json.JSONDecodeError as exc:
+                    errors.append(
+                        "Invalid JSON processed/reports/exception_source_packet_requests.json: "
+                        f"{exc}"
+                    )
+            else:
+                errors.append(
+                    "processed/mail/staged/source_packet_requests.jsonl exists but "
+                    "processed/reports/exception_source_packet_requests.json is missing"
+                )
+            canceled_mail_ids: set[str] = set()
+            for _line_number, packet in packets:
+                payload = packet.get("payload") if isinstance(packet.get("payload"), dict) else {}
+                if (
+                    str(packet.get("message_type") or "") == "review_decision"
+                    and str(payload.get("superseded_reason") or "").startswith(
+                        "source_packet_request_"
+                    )
+                    and str(payload.get("superseded_mail_id") or "")
+                ):
+                    canceled_mail_ids.add(str(payload.get("superseded_mail_id") or ""))
+            for line_number, packet in packets:
+                mail_message_validator.validate(packet)
+                if _contains_local_path_ref(packet):
+                    errors.append(
+                        "Exception source-packet request mail contains local path-like "
+                        f"metadata on line {line_number}"
+                    )
+                if _contains_readable_repo_relative_ref(packet):
+                    errors.append(
+                        "Exception source-packet request mail contains readable "
+                        f"repo-relative path metadata on line {line_number}"
+                    )
+                payload = packet.get("payload") if isinstance(packet.get("payload"), dict) else {}
+                if (
+                    str(packet.get("message_type") or "") == "governance_notice"
+                    and str(payload.get("source_ref") or "").startswith(
+                        "dad://exceptions/backfill-review-groups/"
+                    )
+                ):
+                    mail_id = str(packet.get("mail_id") or "")
+                    if mail_id not in canceled_mail_ids and mail_id not in active_report_mail_ids:
+                        errors.append(
+                            "Exception source-packet request staged mail is not active "
+                            "in the current request report and has no cancellation: "
+                            f"{mail_id}"
+                        )
         harness_schema = _load_schema(repo_root, registry, "coding_harness")
         harness_validator_cls = validator_for(harness_schema)
         harness_validator_cls.check_schema(harness_schema)

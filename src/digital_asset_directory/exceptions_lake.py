@@ -14,6 +14,7 @@ from jsonschema.exceptions import ValidationError
 from jsonschema.validators import validator_for
 
 from .ids import stable_id
+from .models import MailMessageRecord
 from .utils import (
     append_jsonl,
     json_dumps,
@@ -37,6 +38,11 @@ BACKFILL_REVIEW_QUEUE_JSON = Path("processed") / "reports" / "exception_backfill
 BACKFILL_REVIEW_QUEUE_MD = Path("processed") / "reports" / "exception_backfill_review_queue.md"
 BACKFILL_REVIEW_DECISIONS = (
     Path("processed") / "exceptions" / "review-queue" / "backfill_review_decisions.jsonl"
+)
+SOURCE_PACKET_REQUESTS_JSON = Path("processed") / "reports" / "exception_source_packet_requests.json"
+SOURCE_PACKET_REQUESTS_MD = Path("processed") / "reports" / "exception_source_packet_requests.md"
+SOURCE_PACKET_REQUESTS_STAGED = (
+    Path("processed") / "mail" / "staged" / "source_packet_requests.jsonl"
 )
 LEARNING_READINESS_JSON = Path("processed") / "reports" / "exception_learning_readiness_check.json"
 LEARNING_READINESS_MD = Path("processed") / "reports" / "exception_learning_readiness_check.md"
@@ -357,6 +363,7 @@ READABLE_REPO_RELATIVE_REF_RE = re.compile(
     r"\brepo-relative:(?!sha256:)[^\s,;\"')\]]+",
     re.IGNORECASE,
 )
+SOURCE_PACKET_SAFE_TARGET_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._:/#-]{0,180}$")
 
 
 def _contains_readable_repo_relative_text(value: str) -> bool:
@@ -3093,6 +3100,617 @@ def summarize_exception_backfill_review_decisions(
     }
 
 
+def _latest_backfill_review_decisions_by_group(
+    hub_root: Path,
+    *,
+    rows: list[dict[str, Any]] | None = None,
+) -> dict[str, dict[str, Any]]:
+    latest: dict[str, dict[str, Any]] = {}
+    source_rows = rows if rows is not None else load_exception_backfill_review_decisions(hub_root)
+    for row in source_rows:
+        group_id = str(row.get("review_group_id") or "")
+        if not group_id:
+            continue
+        previous = latest.get(group_id)
+        if previous is None or str(row.get("reviewed_at", "")) >= str(
+            previous.get("reviewed_at", "")
+        ):
+            latest[group_id] = row
+    return latest
+
+
+def _mail_record_identity(record: dict[str, Any]) -> tuple[str, str]:
+    return str(record.get("mail_id", "")), str(record.get("dedupe_key", ""))
+
+
+def _source_packet_request_group_id(record: dict[str, Any]) -> str:
+    payload = record.get("payload") if isinstance(record.get("payload"), dict) else {}
+    source_ref = str(payload.get("source_ref") or "")
+    prefix = "dad://exceptions/backfill-review-groups/"
+    if source_ref.startswith(prefix):
+        return source_ref.removeprefix(prefix)
+    return ""
+
+
+def _source_packet_request_is_cancellation(record: dict[str, Any]) -> bool:
+    payload = record.get("payload") if isinstance(record.get("payload"), dict) else {}
+    return (
+        str(record.get("message_type") or "") == "review_decision"
+        and bool(payload.get("superseded_mail_id"))
+        and str(payload.get("superseded_reason") or "").startswith("source_packet_request_")
+    )
+
+
+def _safe_source_packet_target_ref(value: Any, issues: list[str]) -> str:
+    text = str(_safe_external_ref(str(value or "unknown")) or "unknown").strip()
+    redacted, redaction_count = redact_sensitive_text(text)
+    if redaction_count:
+        issues.append("target_ref_credential_or_pii_hashed")
+        return f"target-ref-sha256:{sha256_bytes(text.encode('utf-8'))}"
+    if _contains_readable_repo_relative_text(redacted):
+        issues.append("target_ref_readable_repo_relative_hashed")
+        return f"target-ref-sha256:{sha256_bytes(text.encode('utf-8'))}"
+    if not SOURCE_PACKET_SAFE_TARGET_RE.fullmatch(redacted):
+        issues.append("target_ref_unsafe_shape_hashed")
+        return f"target-ref-sha256:{sha256_bytes(text.encode('utf-8'))}"
+    return redacted
+
+
+def _source_packet_mail_semantic_issues(record: dict[str, Any]) -> list[str]:
+    issues: list[str] = []
+    text = json_dumps(record)
+    if _looks_like_local_path_ref(text):
+        issues.append("local_path_like_ref")
+    if _contains_readable_repo_relative_text(text):
+        issues.append("readable_repo_relative_ref")
+    _, redaction_count = redact_sensitive_text(text)
+    if redaction_count:
+        issues.append("credential_or_pii_pattern")
+    cleaned, _ = _redact_and_limit(record, issues)
+    if len(json_dumps(cleaned).encode("utf-8")) > 64_000:
+        issues.append("record_too_large")
+    return sorted(set(issues))
+
+
+def _quarantine_source_packet_request_decision(
+    hub_root: Path,
+    *,
+    event_type: str,
+    decision: dict[str, Any],
+    reason: str,
+    current_fingerprint: str = "",
+    current_group: dict[str, Any] | None = None,
+) -> None:
+    append_jsonl(
+        hub_root / QUARANTINE_DIR / "source_packet_request_decision_mismatches.jsonl",
+        {
+            "event_type": event_type,
+            "created_at": utc_now(),
+            "reason": reason,
+            "decision_id": str(decision.get("decision_id") or ""),
+            "review_group_id": str(decision.get("review_group_id") or ""),
+            "decision": str(decision.get("decision") or ""),
+            "decision_line_number": int(decision.get("_dad_line_number") or 0),
+            "decision_source_queue_fingerprint": str(
+                decision.get("source_queue_fingerprint") or ""
+            ),
+            "current_source_queue_fingerprint": current_fingerprint,
+            "current_review_status": str((current_group or {}).get("review_status") or ""),
+            "record_sha256": sha256_bytes(json_dumps(decision).encode("utf-8")),
+            "authority_boundary": (
+                "Rejected source-packet request decisions are not source truth, "
+                "not deliverable mail, and not learning-promotion evidence."
+            ),
+        },
+    )
+
+
+def _validate_backfill_review_decision_for_request(
+    hub_root: Path,
+    row: dict[str, Any],
+    *,
+    line_number: int,
+) -> bool:
+    schema_path = hub_root / "schemas" / "exception-backfill-review-decision.schema.json"
+    if not schema_path.exists():
+        schema_path = Path(__file__).resolve().parents[2] / "schemas" / "exception-backfill-review-decision.schema.json"
+    try:
+        schema = _load_json(schema_path)
+        validator_cls = validator_for(schema)
+        validator_cls.check_schema(schema)
+        validator_cls(schema).validate(row)
+    except (OSError, json.JSONDecodeError, ValidationError) as exc:
+        append_jsonl(
+            hub_root / QUARANTINE_DIR / "source_packet_request_invalid_decisions.jsonl",
+            {
+                "event_type": "source_packet_request_invalid_decision",
+                "created_at": utc_now(),
+                "path": BACKFILL_REVIEW_DECISIONS.as_posix(),
+                "line_number": line_number,
+                "reason": str(exc),
+                "record_sha256": sha256_bytes(json_dumps(row).encode("utf-8")),
+            },
+        )
+        return False
+    return True
+
+
+def _load_valid_backfill_review_decisions_for_requests(hub_root: Path) -> list[dict[str, Any]]:
+    path = hub_root / BACKFILL_REVIEW_DECISIONS
+    if not path.exists():
+        return []
+    valid_rows: list[dict[str, Any]] = []
+    with path.open("rb") as handle:
+        for line_number, raw_line in enumerate(handle, start=1):
+            stripped_bytes = raw_line.strip()
+            if not stripped_bytes:
+                continue
+            try:
+                row = json.loads(stripped_bytes.decode("utf-8"))
+            except (UnicodeDecodeError, json.JSONDecodeError) as exc:
+                append_jsonl(
+                    hub_root / QUARANTINE_DIR / "source_packet_request_malformed_decisions.jsonl",
+                    {
+                        "event_type": "source_packet_request_malformed_decision_jsonl",
+                        "created_at": utc_now(),
+                        "path": BACKFILL_REVIEW_DECISIONS.as_posix(),
+                        "line": line_number,
+                        "error": str(exc),
+                        "raw_sha256": sha256_bytes(stripped_bytes),
+                    },
+                )
+                continue
+            if not isinstance(row, dict):
+                append_jsonl(
+                    hub_root / QUARANTINE_DIR / "source_packet_request_invalid_decisions.jsonl",
+                    {
+                        "event_type": "source_packet_request_invalid_decision",
+                        "created_at": utc_now(),
+                        "path": BACKFILL_REVIEW_DECISIONS.as_posix(),
+                        "line_number": line_number,
+                        "reason": "JSONL row is not an object",
+                        "record_sha256": sha256_bytes(json_dumps(row).encode("utf-8")),
+                    },
+                )
+                continue
+            if _validate_backfill_review_decision_for_request(
+                hub_root,
+                row,
+                line_number=line_number,
+            ):
+                row["_dad_line_number"] = line_number
+                valid_rows.append(row)
+    return valid_rows
+
+
+def _append_unique_source_packet_mail(hub_root: Path, record: dict[str, Any]) -> str:
+    path = hub_root / SOURCE_PACKET_REQUESTS_STAGED
+    mail_record = MailMessageRecord(**record)
+    payload = mail_record.model_dump(mode="json")
+    issues = _source_packet_mail_semantic_issues(payload)
+    if issues:
+        append_jsonl(
+            hub_root / QUARANTINE_DIR / "source_packet_request_mail_rejected.jsonl",
+            {
+                "event_type": "source_packet_request_mail_rejected",
+                "created_at": utc_now(),
+                "mail_id": str(payload.get("mail_id") or ""),
+                "dedupe_key": str(payload.get("dedupe_key") or ""),
+                "issues": issues,
+                "record_sha256": sha256_bytes(json_dumps(payload).encode("utf-8")),
+            },
+        )
+        return "rejected"
+    new_identity = _mail_record_identity(record)
+    if path.exists():
+        rows, errors = _read_jsonl_with_errors(path)
+        for error in errors:
+            append_jsonl(
+                hub_root / QUARANTINE_DIR / "source_packet_requests_malformed_jsonl.jsonl",
+                {
+                    "event_type": "source_packet_request_malformed_jsonl",
+                    "created_at": utc_now(),
+                    "path": SOURCE_PACKET_REQUESTS_STAGED.as_posix(),
+                    **error,
+                },
+            )
+        for row in rows:
+            if _mail_record_identity(row) == new_identity:
+                return "duplicate"
+    append_jsonl(path, payload)
+    return "appended"
+
+
+def _source_packet_request_mail(
+    decision: dict[str, Any],
+    current_group: dict[str, Any],
+) -> dict[str, Any]:
+    issues: list[str] = []
+    source_repo = _safe_source_packet_target_ref(
+        current_group.get("source_repo") or "unknown",
+        issues,
+    )
+    group_id = str(decision.get("review_group_id") or "unknown")
+    created_at = utc_now()
+    dedupe_key = stable_id(
+        "exception-source-packet-request",
+        group_id,
+        str(decision.get("source_queue_fingerprint") or ""),
+        str(decision.get("decision_id") or ""),
+    )
+    payload = {
+        "summary": "DAD needs source-repo evidence before learning from an exception backfill group.",
+        "source_ref": f"dad://exceptions/backfill-review-groups/{group_id}",
+        "hash": str(decision.get("source_queue_fingerprint") or ""),
+        "note": (
+            "Send a safe exception packet or review decision if this path-signal "
+            "group is a real incident; do not include secrets, private rows, raw "
+            "logs, or long source snippets."
+        ),
+        "taxonomy": str(current_group.get("event_type") or "unknown"),
+    }
+    if issues:
+        payload["screening_issues"] = sorted(set(issues))
+    evidence = [
+        f"decision_id:{decision.get('decision_id', '')}",
+        f"review_group_id:{group_id}",
+        f"rule_id:{current_group.get('rule_id', '')}",
+        f"source_queue_fingerprint:{decision.get('source_queue_fingerprint', '')}",
+    ]
+    record = MailMessageRecord(
+        mail_id=stable_id("mail", "governance_notice", "dad", source_repo, dedupe_key),
+        thread_id=stable_id("mail-thread", "dad", source_repo, group_id),
+        message_type="governance_notice",
+        source_repo="dad",
+        target_repo=source_repo,
+        created_at=created_at,
+        dedupe_key=dedupe_key,
+        sensitivity="internal",
+        review_status="routed_candidate",
+        payload=payload,
+        evidence=evidence,
+        suggested_actions=[
+            "Review the source context locally.",
+            "If real, send a public-safe exception packet or a source_repo backfill review decision.",
+            "If not real, reject or archive the backfill review group.",
+        ],
+        source_provenance={
+            "canonical_source_repo": "dad://hub/Digital-Assett-Directory",
+            "source_repo_id": "dad",
+            "source_repo_alias": "dad",
+            "source_visibility": "internal",
+            "original_source_chain": ["dad://hub/Digital-Assett-Directory"],
+            "return_address": "dad://exceptions/source-packet-requests",
+            "original_mail_id": "",
+            "composed_by": "dad-exceptions-lake",
+            "collected_by": "dad",
+            "collected_at": "",
+            "received_at": created_at,
+        },
+        public_release={
+            "target_visibility": "unknown",
+            "target_public_facing": False,
+            "public_release_required": False,
+            "public_release_status": "not_required",
+            "human_release_id": "",
+            "release_reason": "central_source_packet_request_only",
+        },
+    )
+    return record.model_dump(mode="json")
+
+
+def _source_packet_request_cancellation_mail(
+    original: dict[str, Any],
+    *,
+    reason: str,
+    latest_decision: dict[str, Any] | None,
+) -> dict[str, Any]:
+    created_at = utc_now()
+    group_id = _source_packet_request_group_id(original)
+    latest_decision_id = str((latest_decision or {}).get("decision_id") or "")
+    original_mail_id = str(original.get("mail_id") or "")
+    target_repo = str(original.get("target_repo") or "central_only")
+    dedupe_key = stable_id(
+        "exception-source-packet-request-cancellation",
+        original_mail_id,
+        latest_decision_id,
+        reason,
+    )
+    return MailMessageRecord(
+        mail_id=stable_id("mail", "review_decision", "dad", target_repo, dedupe_key),
+        thread_id=str(original.get("thread_id") or stable_id("mail-thread", "dad", target_repo, group_id)),
+        message_type="review_decision",
+        source_repo="dad",
+        target_repo=target_repo,
+        created_at=created_at,
+        dedupe_key=dedupe_key,
+        sensitivity="internal",
+        review_status="archived",
+        payload={
+            "summary": "Staged source-packet request was superseded before delivery.",
+            "source_ref": f"dad://exceptions/backfill-review-groups/{group_id}",
+            "hash": str((original.get("payload") or {}).get("hash") or ""),
+            "superseded_mail_id": original_mail_id,
+            "superseded_reason": f"source_packet_request_{reason}",
+            "latest_decision_id": latest_decision_id,
+            "latest_decision": str((latest_decision or {}).get("decision") or ""),
+        },
+        evidence=[
+            f"superseded_mail_id:{original_mail_id}",
+            f"review_group_id:{group_id}",
+            f"latest_decision_id:{latest_decision_id}",
+        ],
+        suggested_actions=[
+            "Do not promote the superseded staged request into deliverable mail.",
+            "Regenerate source-packet requests from the latest backfill review decision ledger.",
+        ],
+        source_provenance={
+            "canonical_source_repo": "dad://hub/Digital-Assett-Directory",
+            "source_repo_id": "dad",
+            "source_repo_alias": "dad",
+            "source_visibility": "internal",
+            "original_source_chain": ["dad://hub/Digital-Assett-Directory"],
+            "return_address": "dad://exceptions/source-packet-requests",
+            "original_mail_id": original_mail_id,
+            "composed_by": "dad-exceptions-lake",
+            "collected_by": "dad",
+            "collected_at": "",
+            "received_at": created_at,
+        },
+        public_release={
+            "target_visibility": "unknown",
+            "target_public_facing": False,
+            "public_release_required": False,
+            "public_release_status": "not_required",
+            "human_release_id": "",
+            "release_reason": "superseded_staged_request",
+        },
+    ).model_dump(mode="json")
+
+
+def _current_backfill_review_group_state(
+    hub_root: Path,
+) -> tuple[dict[str, Any], dict[str, dict[str, Any]], dict[str, str]]:
+    report = write_exception_backfill_review_queue(hub_root, limit=MAX_BACKFILL_EVENTS)
+    groups = {
+        str(row.get("review_group_id") or ""): row
+        for row in report.get("review_queue", [])
+        if str(row.get("review_group_id") or "")
+    }
+    input_hashes = report.get("input_hashes", {})
+    fingerprints = {
+        group_id: _backfill_review_queue_fingerprint(
+            review_group_id=group_id,
+            group=group,
+            input_hashes=input_hashes,
+        )
+        for group_id, group in groups.items()
+    }
+    return report, groups, fingerprints
+
+
+def _source_packet_request_decision_matches_current_group(
+    decision: dict[str, Any],
+    current_group: dict[str, Any],
+) -> list[str]:
+    mismatches: list[str] = []
+    for field in ("source_repo", "event_type", "rule_id"):
+        decision_value = str(decision.get(field) or "")
+        current_value = str(current_group.get(field) or "")
+        if decision_value != current_value:
+            mismatches.append(field)
+    if str(decision.get("source_queue_status") or "") != str(
+        current_group.get("review_status") or ""
+    ):
+        mismatches.append("source_queue_status")
+    return mismatches
+
+
+def _append_source_packet_request_cancellations(
+    hub_root: Path,
+    *,
+    latest_decisions: dict[str, dict[str, Any]],
+    active_mail_ids: set[str],
+) -> int:
+    path = hub_root / SOURCE_PACKET_REQUESTS_STAGED
+    if not path.exists():
+        return 0
+    rows, errors = _read_jsonl_with_errors(path)
+    for error in errors:
+        append_jsonl(
+            hub_root / QUARANTINE_DIR / "source_packet_requests_malformed_jsonl.jsonl",
+            {
+                "event_type": "source_packet_request_malformed_jsonl",
+                "created_at": utc_now(),
+                "path": SOURCE_PACKET_REQUESTS_STAGED.as_posix(),
+                **error,
+            },
+        )
+    canceled = {
+        str((row.get("payload") or {}).get("superseded_mail_id") or "")
+        for row in rows
+        if isinstance(row, dict) and _source_packet_request_is_cancellation(row)
+    }
+    appended = 0
+    for row in rows:
+        if not isinstance(row, dict):
+            continue
+        if str(row.get("message_type") or "") != "governance_notice":
+            continue
+        mail_id = str(row.get("mail_id") or "")
+        if not mail_id or mail_id in active_mail_ids or mail_id in canceled:
+            continue
+        group_id = _source_packet_request_group_id(row)
+        latest_decision = latest_decisions.get(group_id)
+        reason = (
+            "latest_decision_changed"
+            if latest_decision is not None
+            else "no_current_needs_source_packet_decision"
+        )
+        result = _append_unique_source_packet_mail(
+            hub_root,
+            _source_packet_request_cancellation_mail(
+                row,
+                reason=reason,
+                latest_decision=latest_decision,
+            ),
+        )
+        if result == "appended":
+            appended += 1
+    return appended
+
+
+def write_exception_source_packet_requests(
+    hub_root: Path,
+    *,
+    output: Path | None = None,
+    write_mail: bool = True,
+) -> dict[str, Any]:
+    valid_decisions = _load_valid_backfill_review_decisions_for_requests(hub_root)
+    latest = _latest_backfill_review_decisions_by_group(hub_root, rows=valid_decisions)
+    _, current_groups, current_fingerprints = _current_backfill_review_group_state(hub_root)
+    request_decisions: list[tuple[dict[str, Any], dict[str, Any]]] = []
+    skipped_decision_count = 0
+    for row in latest.values():
+        if str(row.get("decision") or "") != "needs_source_packet":
+            continue
+        group_id = str(row.get("review_group_id") or "")
+        current_group = current_groups.get(group_id)
+        if current_group is None:
+            skipped_decision_count += 1
+            _quarantine_source_packet_request_decision(
+                hub_root,
+                event_type="source_packet_request_unknown_group",
+                decision=row,
+                reason="decision review_group_id is absent from the current backfill review queue",
+            )
+            continue
+        mismatches = _source_packet_request_decision_matches_current_group(row, current_group)
+        if mismatches:
+            skipped_decision_count += 1
+            _quarantine_source_packet_request_decision(
+                hub_root,
+                event_type="source_packet_request_stale_decision",
+                decision=row,
+                reason="decision fields no longer match current queue group: "
+                + ",".join(sorted(mismatches)),
+                current_fingerprint=current_fingerprints.get(group_id, ""),
+                current_group=current_group,
+            )
+            continue
+        current_fingerprint = current_fingerprints.get(group_id, "")
+        if str(row.get("source_queue_fingerprint") or "") != current_fingerprint:
+            skipped_decision_count += 1
+            _quarantine_source_packet_request_decision(
+                hub_root,
+                event_type="source_packet_request_fingerprint_mismatch",
+                decision=row,
+                reason="decision source_queue_fingerprint does not match current queue evidence",
+                current_fingerprint=current_fingerprint,
+                current_group=current_group,
+            )
+            continue
+        request_decisions.append((row, current_group))
+    request_decisions.sort(key=lambda item: str(item[0].get("review_group_id", "")))
+    requests: list[dict[str, Any]] = []
+    appended_count = 0
+    duplicate_count = 0
+    rejected_mail_count = 0
+    active_mail_ids: set[str] = set()
+    for decision, current_group in request_decisions:
+        mail_record = _source_packet_request_mail(decision, current_group)
+        appended = False
+        if write_mail:
+            append_status = _append_unique_source_packet_mail(hub_root, mail_record)
+            if append_status == "appended":
+                appended = True
+                appended_count += 1
+            elif append_status == "duplicate":
+                duplicate_count += 1
+            else:
+                rejected_mail_count += 1
+        active_mail_ids.add(mail_record["mail_id"])
+        requests.append(
+            {
+                "review_group_id": decision.get("review_group_id"),
+                "decision_id": decision.get("decision_id"),
+                "source_repo": mail_record["target_repo"],
+                "event_type": decision.get("event_type"),
+                "rule_id": decision.get("rule_id"),
+                "mail_id": mail_record["mail_id"],
+                "target_repo": mail_record["target_repo"],
+                "dedupe_key": mail_record["dedupe_key"],
+                "mail_appended": appended,
+                "source_queue_fingerprint": decision.get("source_queue_fingerprint"),
+            }
+        )
+    superseded_count = (
+        _append_source_packet_request_cancellations(
+            hub_root,
+            latest_decisions=latest,
+            active_mail_ids=active_mail_ids,
+        )
+        if write_mail
+        else 0
+    )
+    report = {
+        "schema_version": "0.1.0",
+        "generated_at": utc_now(),
+        "report_id": "dad:exception-source-packet-requests",
+        "decision_count": len(load_exception_backfill_review_decisions(hub_root)),
+        "valid_decision_count": len(valid_decisions),
+        "latest_group_count": len(latest),
+        "request_count": len(requests),
+        "skipped_decision_count": skipped_decision_count,
+        "mail_appended_count": appended_count,
+        "duplicate_mail_count": duplicate_count,
+        "rejected_mail_count": rejected_mail_count,
+        "superseded_mail_count": superseded_count,
+        "mail_stage": SOURCE_PACKET_REQUESTS_STAGED.as_posix(),
+        "requests": requests,
+        "authority_boundary": (
+            "Source-packet requests are DAD-authored staged candidate mail asking a "
+            "source repo to confirm, reject, or replace backfill path-signal evidence. "
+            "They are intentionally not written to processed/mail/outbox and therefore "
+            "are not deliverable by mail deliver until a separate reviewed promotion "
+            "step exists. They do not mutate the source repo, create observed "
+            "exceptions, or promote lessons."
+        ),
+    }
+    output_path = hub_root / (output or SOURCE_PACKET_REQUESTS_JSON)
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    output_path.write_text(json_dumps(report, pretty=True) + "\n", encoding="utf-8")
+    md_path = output_path.with_suffix(".md") if output else hub_root / SOURCE_PACKET_REQUESTS_MD
+    lines = [
+        "# Exception Source Packet Requests",
+        "",
+        f"- Generated: {report['generated_at']}",
+        f"- Requests: {report['request_count']}",
+        f"- Mail appended: {report['mail_appended_count']}",
+        f"- Duplicate mail: {report['duplicate_mail_count']}",
+        f"- Mail stage: `{report['mail_stage']}`",
+        "",
+        "Boundary: staged central candidate mail only. These requests ask for "
+        "source confirmation; they are not under processed/mail/outbox, do not "
+        "deliver mail, mutate source repos, create observed exceptions, or promote "
+        "lessons.",
+        "",
+        "## Requests",
+        "",
+        "| Review Group | Source Repo | Event Type | Mail | Appended |",
+        "| --- | --- | --- | --- | --- |",
+    ]
+    for request in requests:
+        lines.append(
+            "| "
+            + f"`{request['review_group_id']}` | `{request['source_repo']}` | "
+            + f"`{request['event_type']}` | `{request['mail_id']}` | "
+            + f"{request['mail_appended']} |"
+        )
+    md_path.write_text("\n".join(lines) + "\n", encoding="utf-8")
+    return report
+
+
 def _exception_learning_status(
     *,
     observed_count: int,
@@ -3475,6 +4093,41 @@ def _record_learning_check_fix(
     record_exception_fix_outcome(hub_root, repo, **fix_kwargs)
 
 
+def _record_learning_check_backfill_decision(
+    hub_root: Path,
+    spec: dict[str, Any],
+) -> dict[str, Any]:
+    queue = write_exception_backfill_review_queue(
+        hub_root,
+        output=Path("processed") / "reports" / "synthetic-backfill-review-queue.json",
+    )
+    event_type = str(spec.get("event_type") or "")
+    rule_id = str(spec.get("rule_id") or "")
+    matches = [
+        row
+        for row in queue.get("review_queue", [])
+        if isinstance(row, dict)
+        and str(row.get("event_type") or "") == event_type
+        and (not rule_id or str(row.get("rule_id") or "") == rule_id)
+    ]
+    if len(matches) != 1:
+        raise ValueError(
+            "Synthetic backfill review decision expected exactly one matching "
+            f"group for event_type={event_type!r}, rule_id={rule_id!r}; found {len(matches)}."
+        )
+    return record_exception_backfill_review_decision(
+        hub_root,
+        review_group_id=str(matches[0]["review_group_id"]),
+        decision=str(spec.get("decision") or "defer"),
+        reviewer=str(spec.get("reviewer") or "synthetic"),
+        reviewer_type=str(spec.get("reviewer_type") or "agent"),
+        approval_id=str(spec.get("approval_id") or ""),
+        source_packet_id=str(spec.get("source_packet_id") or ""),
+        notes=str(spec.get("notes") or ""),
+        evidence_refs=[str(item) for item in spec.get("evidence_refs", []) or []],
+    )
+
+
 def _queue_rows_by_event_type(queue_report: dict[str, Any]) -> dict[str, dict[str, Any]]:
     return {
         str(row.get("event_type")): row
@@ -3518,6 +4171,7 @@ def _validate_learning_readiness_scenarios(
             "blocker_substrings_by_event_type",
             "row_fields_by_event_type",
             "queue_counts",
+            "backfill_decision_counts",
             "quarantine_event_types",
         }
         if not any(expected.get(key) for key in assertion_keys):
@@ -3525,6 +4179,34 @@ def _validate_learning_readiness_scenarios(
                 "Exception learning-readiness scenario "
                 f"{case_id or index} in {scenarios_path} has no expected assertions."
             )
+        decision_event_types = {
+            str(item.get("event_type") or "")
+            for item in case.get("backfill_review_decisions", []) or []
+            if isinstance(item, dict)
+        } - {""}
+        if decision_event_types:
+            status_expected = expected.get("status_by_event_type")
+            blocker_expected = expected.get("blocker_substrings_by_event_type")
+            if not isinstance(status_expected, dict) or not isinstance(
+                blocker_expected,
+                dict,
+            ):
+                raise ValueError(
+                    "Exception learning-readiness scenario "
+                    f"{case_id or index} with backfill_review_decisions must assert "
+                    "status_by_event_type and blocker_substrings_by_event_type."
+                )
+            missing = sorted(
+                event_type
+                for event_type in decision_event_types
+                if event_type not in status_expected or event_type not in blocker_expected
+            )
+            if missing:
+                raise ValueError(
+                    "Exception learning-readiness scenario "
+                    f"{case_id or index} lacks promotion-boundary assertions for: "
+                    + ", ".join(missing)
+                )
     duplicates = sorted({case_id for case_id in case_ids if case_ids.count(case_id) > 1})
     if duplicates:
         raise ValueError(
@@ -3555,11 +4237,15 @@ def _evaluate_learning_check_case(
             if isinstance(fix_spec, dict):
                 _record_learning_check_fix(hub, repo, event_by_key, fix_spec)
         collect_exception_fix_outcomes(hub, repo)
+        for decision_spec in case.get("backfill_review_decisions", []) or []:
+            if isinstance(decision_spec, dict):
+                _record_learning_check_backfill_decision(hub, decision_spec)
         queue = write_exception_learning_queue(
             hub,
             output=workspace / "learning-queue.json",
             sample_size_threshold=sample_size_threshold,
         )
+        decision_summary = summarize_exception_backfill_review_decisions(hub)
         rows_by_type = _queue_rows_by_event_type(queue)
         expected = case.get("expected") if isinstance(case.get("expected"), dict) else {}
         status_expected = {
@@ -3591,6 +4277,10 @@ def _evaluate_learning_check_case(
                 comparisons[f"row:{event_type}:{field}"] = row.get(field) == expected_value
         if isinstance(expected.get("queue_counts"), dict):
             comparisons["queue_counts"] = queue.get("queue_counts") == expected["queue_counts"]
+        if isinstance(expected.get("backfill_decision_counts"), dict):
+            comparisons["backfill_decision_counts"] = (
+                decision_summary.get("decision_counts") == expected["backfill_decision_counts"]
+            )
         quarantine_expectations = expected.get("quarantine_event_types") or []
         if quarantine_expectations:
             quarantine_text = ""
@@ -3624,6 +4314,7 @@ def _evaluate_learning_check_case(
             "expected": expected,
             "actual_rows_by_event_type": actual_rows,
             "queue_counts": queue.get("queue_counts", {}),
+            "backfill_decision_counts": decision_summary.get("decision_counts", {}),
         }
 
 
@@ -3764,6 +4455,9 @@ def exception_lake_paths() -> dict[str, str]:
         "quarantine": QUARANTINE_DIR.as_posix(),
         "fix_outcomes": FIX_OUTCOME_PATH.as_posix(),
         "backfill_review_decisions": BACKFILL_REVIEW_DECISIONS.as_posix(),
+        "source_packet_requests_json": SOURCE_PACKET_REQUESTS_JSON.as_posix(),
+        "source_packet_requests_markdown": SOURCE_PACKET_REQUESTS_MD.as_posix(),
+        "source_packet_requests_mail_stage": SOURCE_PACKET_REQUESTS_STAGED.as_posix(),
         "backfill_review_queue_json": BACKFILL_REVIEW_QUEUE_JSON.as_posix(),
         "backfill_review_queue_markdown": BACKFILL_REVIEW_QUEUE_MD.as_posix(),
         "learning_queue_json": LEARNING_QUEUE_JSON.as_posix(),

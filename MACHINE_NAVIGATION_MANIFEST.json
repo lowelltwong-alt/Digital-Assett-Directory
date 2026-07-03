@@ -66,6 +66,8 @@
     "processed/reports/exception_taxonomy_coverage.md",
     "processed/reports/exception_backfill_review_queue.md",
     "processed/exceptions/review-queue/backfill_review_decisions.jsonl",
+    "processed/reports/exception_source_packet_requests.md",
+    "processed/mail/staged/source_packet_requests.jsonl",
     "processed/reports/exception_learning_queue.md",
     "processed/reports/exception_learning_readiness_check.md",
     "processed/reports/exception_capture_observed_audit.md",

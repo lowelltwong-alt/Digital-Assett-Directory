@@ -480,6 +480,65 @@
           }
         }
       }
+    },
+    {
+      "case_id": "human-confirmed-backfill-still-not-learnable",
+      "description": "A human-confirmed backfill review decision labels the group but must not promote path-signal evidence into learning readiness.",
+      "repo": {
+        "repo_id": "synthetic-public-confirmed-backfill",
+        "visibility": "public",
+        "public_facing": false
+      },
+      "events": [
+        {
+          "event_key": "confirmed-backfill-timeout",
+          "event_type": "test_timeout",
+          "stage": "backfill",
+          "severity": "medium",
+          "capture_contract": "backfill_candidate",
+          "summary": "Synthetic pytest timeout path signal that a reviewer confirmed as worth source follow-up.",
+          "context_refs": [
+            "backfill-rule-id:backfill-rule:test-timeout",
+            "backfill-classifier-version:exception-backfill-classifier-v0.2.0",
+            "repo-relative-sha256:synthetic-confirmed-timeout",
+            "path-keyword:pytest-timeout"
+          ],
+          "validation_refs": ["metadata-only path signal"]
+        }
+      ],
+      "backfill_review_decisions": [
+        {
+          "event_type": "test_timeout",
+          "rule_id": "backfill-rule:test-timeout",
+          "decision": "confirm",
+          "reviewer": "Lowell",
+          "reviewer_type": "human",
+          "approval_id": "SYNTHETIC-BACKFILL-CONFIRM",
+          "notes": "Confirmed as a candidate for source packet request, not as learnable evidence.",
+          "evidence_refs": ["dad://synthetic/backfill-confirmation"]
+        }
+      ],
+      "expected": {
+        "status_by_event_type": {
+          "test_timeout": "needs_source_review"
+        },
+        "blocker_substrings_by_event_type": {
+          "test_timeout": ["backfill path-signal candidates"]
+        },
+        "row_fields_by_event_type": {
+          "test_timeout": {
+            "observed_count": 0,
+            "backfill_candidate_count": 1,
+            "validated_fix_count": 0,
+            "source_visibility_counts": {
+              "public": 1
+            }
+          }
+        },
+        "backfill_decision_counts": {
+          "confirm": 1
+        }
+      }
     }
   ]
 }

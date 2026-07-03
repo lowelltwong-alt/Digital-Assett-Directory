@@ -34,4 +34,6 @@ Current case families:
 - schema-invalid legacy fix rows are quarantined and do not count as fixes;
 - unknown or non-public origin evidence requires human release before
   public-facing reuse;
-- backfill-only path signals need source review and cannot promote learning.
+- backfill-only path signals need source review and cannot promote learning;
+- human-confirmed backfill review decisions remain labels only until source
+  packets or observed exception/fix evidence exist.

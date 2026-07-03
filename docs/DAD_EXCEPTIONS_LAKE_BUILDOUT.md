@@ -212,7 +212,7 @@ Implemented contract surfaces:
 The CLI entrypoint is `asset-dir exceptions` with `paths`, `taxonomy`,
 `capture-patterns`, `capture-check`, `capture-audit`, `record`, `collect`,
 `backfill`, `backfill-review-queue`, `backfill-review-decision`,
-`backfill-review-decisions`, and `report` commands.
+`backfill-review-decisions`, `source-packet-requests`, and `report` commands.
 
 ## Packet Shape
 
@@ -922,6 +922,27 @@ Backfill safety and classification:
   decision ledger by review group and decision type. This is audit and routing
   evidence only; promotion still requires the downstream exception/fix/lesson
   gates.
+- `asset-dir exceptions source-packet-requests` compiles the latest
+  `needs_source_packet` decisions into DAD-authored staged candidate mail at
+  `processed/mail/staged/source_packet_requests.jsonl` plus
+  `processed/reports/exception_source_packet_requests.json`. It does not deliver
+  to target repo inboxes, does not sit under deliverable `processed/mail/outbox`,
+  and does not mutate source repos. A later reviewed promotion/revalidation path
+  must exist before staged requests can become deliverable mail.
+- Source-packet request compilation rejoins every latest decision to the current
+  backfill review queue and requires the queue fingerprint to match current
+  generated evidence. Unknown groups, field mismatches, and stale fingerprints
+  are quarantined instead of staged.
+- If an older staged request is no longer backed by the latest
+  `needs_source_packet` decision, DAD appends a staged `review_decision`
+  cancellation row. It does not delete the original request, so the history stays
+  append-only while future promotion code can see that the request is
+  superseded.
+- The exception learning-readiness harness includes a synthetic
+  human-confirmed-backfill case. A human `confirm` decision is still only a
+  label on path-signal evidence; the learning queue must remain
+  `needs_source_review` until source packets or observed exception/fix evidence
+  exist.
 - Old, stale, or mixed backfill rows whose `backfill-classifier-version`
   provenance is missing or no longer matches the current reviewed classifier are
   queued as `needs_classifier_refresh`. They should be rerun or invalidated

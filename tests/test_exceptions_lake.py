@@ -8,6 +8,7 @@ from types import SimpleNamespace
 import pytest
 from jsonschema.validators import validator_for
 
+from digital_asset_directory.mail_center import deliver_mail
 from digital_asset_directory.exceptions_lake import (
     BackfillAuthorization,
     backfill_exception_candidates,
@@ -28,6 +29,7 @@ from digital_asset_directory.exceptions_lake import (
     write_exception_backfill_review_queue,
     write_exception_learning_queue,
     write_exception_report,
+    write_exception_source_packet_requests,
 )
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -1346,6 +1348,272 @@ def test_backfill_review_decision_appends_when_queue_fingerprint_changes(
     assert first["decision"]["decision_id"] != second["decision"]["decision_id"]
 
 
+def test_source_packet_requests_compile_needs_source_packet_to_central_mail(
+    tmp_path: Path,
+) -> None:
+    hub = tmp_path / "hub"
+    repo = tmp_path / "repo"
+    (repo / ".git").mkdir(parents=True)
+    _copy_exception_contracts(hub)
+    target = repo / "docs" / "asset-dir-unavailable.md"
+    target.parent.mkdir(parents=True)
+    target.write_text("metadata-only backfill should not read content\n", encoding="utf-8")
+    policy = _backfill_policy(repo, repo_id="source-repo", visibility="public")
+
+    backfill_exception_candidates(
+        hub,
+        repo,
+        limit=10,
+        authorization=_backfill_auth(repo, repo_policies=[policy]),
+    )
+    group_id = write_exception_backfill_review_queue(hub)["review_queue"][0][
+        "review_group_id"
+    ]
+    decision = record_exception_backfill_review_decision(
+        hub,
+        review_group_id=group_id,
+        decision="needs_source_packet",
+        reviewer="codex",
+        reviewer_type="agent",
+        notes="Ask source repo to confirm or reject the path signal.",
+    )["decision"]
+
+    first = write_exception_source_packet_requests(hub)
+    second = write_exception_source_packet_requests(hub)
+
+    assert first["request_count"] == 1
+    assert first["mail_appended_count"] == 1
+    assert first["mail_stage"] == "processed/mail/staged/source_packet_requests.jsonl"
+    assert second["request_count"] == 1
+    assert second["duplicate_mail_count"] == 1
+    request = first["requests"][0]
+    assert request["review_group_id"] == group_id
+    assert request["decision_id"] == decision["decision_id"]
+    assert request["target_repo"] == "source-repo"
+    staged_rows = _jsonl(hub / "processed" / "mail" / "staged" / "source_packet_requests.jsonl")
+    assert len(staged_rows) == 1
+    mail = staged_rows[0]
+    _validate("mail_message", mail)
+    assert mail["message_type"] == "governance_notice"
+    assert mail["source_repo"] == "dad"
+    assert mail["target_repo"] == "source-repo"
+    assert mail["payload"]["hash"] == decision["source_queue_fingerprint"]
+    assert "raw logs" in mail["payload"]["note"]
+    assert not (hub / "processed" / "mail" / "outbox" / "source_packet_requests.jsonl").exists()
+    delivered = deliver_mail(
+        hub,
+        [repo],
+        repo_policies=[
+            SimpleNamespace(
+                path=str(repo),
+                id="source-repo",
+                alias="source-repo",
+                visibility="public",
+                public_facing=False,
+                mail_enabled=True,
+                delivery_allowed=True,
+                write_protected=False,
+            )
+        ],
+    )
+    assert delivered["delivered_count"] == 0
+    assert not (repo / ".digital-asset" / "mail" / "outbox.jsonl").exists()
+    assert not (repo / ".digital-asset" / "mail" / "inbox.jsonl").exists()
+
+
+def test_source_packet_requests_ignore_invalid_backfill_decision_rows(
+    tmp_path: Path,
+) -> None:
+    hub = tmp_path / "hub"
+    _copy_exception_contracts(hub)
+    ledger = hub / "processed" / "exceptions" / "review-queue" / "backfill_review_decisions.jsonl"
+    ledger.parent.mkdir(parents=True)
+    ledger.write_text(
+        json.dumps(
+            {
+                "schema_version": "0.1.0",
+                "decision_id": "dad:decision:spoof",
+                "review_group_id": "dad:group:spoof",
+                "decision": "needs_source_packet",
+                "source_repo": "C:/Users/lowel/private-repo",
+                "source_queue_fingerprint": "dad:queue:spoof",
+            }
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+
+    report = write_exception_source_packet_requests(hub)
+
+    assert report["request_count"] == 0
+    assert report["mail_appended_count"] == 0
+    assert not (hub / "processed" / "mail" / "staged" / "source_packet_requests.jsonl").exists()
+    quarantine = _jsonl(
+        hub
+        / "processed"
+        / "exceptions"
+        / "quarantine"
+        / "source_packet_request_invalid_decisions.jsonl"
+    )
+    assert quarantine
+    assert quarantine[-1]["event_type"] == "source_packet_request_invalid_decision"
+
+
+def test_source_packet_requests_reject_schema_valid_spoofed_source_repo(
+    tmp_path: Path,
+) -> None:
+    hub = tmp_path / "hub"
+    repo = tmp_path / "repo"
+    (repo / ".git").mkdir(parents=True)
+    _copy_exception_contracts(hub)
+    target = repo / "docs" / "asset-dir-unavailable.md"
+    target.parent.mkdir(parents=True)
+    target.write_text("metadata-only backfill should not read content\n", encoding="utf-8")
+    policy = _backfill_policy(repo, repo_id="source-repo", visibility="private")
+
+    backfill_exception_candidates(
+        hub,
+        repo,
+        limit=10,
+        authorization=_backfill_auth(repo, repo_policies=[policy]),
+    )
+    group_id = write_exception_backfill_review_queue(hub)["review_queue"][0][
+        "review_group_id"
+    ]
+    result = record_exception_backfill_review_decision(
+        hub,
+        review_group_id=group_id,
+        decision="needs_source_packet",
+        reviewer="codex",
+        reviewer_type="agent",
+        notes="Ask source repo to confirm or reject the path signal.",
+    )
+    decision = dict(result["decision"])
+    decision["source_repo"] = "C:/Users/lowel/private-source-repo"
+    ledger = hub / "processed" / "exceptions" / "review-queue" / "backfill_review_decisions.jsonl"
+    ledger.write_text(json.dumps(decision) + "\n", encoding="utf-8")
+
+    report = write_exception_source_packet_requests(hub)
+
+    assert report["request_count"] == 0
+    assert report["skipped_decision_count"] == 1
+    assert "C:/Users/lowel" not in json.dumps(report)
+    assert not (hub / "processed" / "mail" / "staged" / "source_packet_requests.jsonl").exists()
+    quarantine = _jsonl(
+        hub
+        / "processed"
+        / "exceptions"
+        / "quarantine"
+        / "source_packet_request_decision_mismatches.jsonl"
+    )
+    assert quarantine[-1]["event_type"] == "source_packet_request_stale_decision"
+    assert "source_repo" in quarantine[-1]["reason"]
+
+
+def test_source_packet_requests_reject_schema_valid_stale_fingerprint(
+    tmp_path: Path,
+) -> None:
+    hub = tmp_path / "hub"
+    repo = tmp_path / "repo"
+    (repo / ".git").mkdir(parents=True)
+    _copy_exception_contracts(hub)
+    target = repo / "docs" / "asset-dir-unavailable.md"
+    target.parent.mkdir(parents=True)
+    target.write_text("metadata-only backfill should not read content\n", encoding="utf-8")
+    policy = _backfill_policy(repo, repo_id="source-repo", visibility="public")
+
+    backfill_exception_candidates(
+        hub,
+        repo,
+        limit=10,
+        authorization=_backfill_auth(repo, repo_policies=[policy]),
+    )
+    group_id = write_exception_backfill_review_queue(hub)["review_queue"][0][
+        "review_group_id"
+    ]
+    result = record_exception_backfill_review_decision(
+        hub,
+        review_group_id=group_id,
+        decision="needs_source_packet",
+        reviewer="codex",
+        reviewer_type="agent",
+        notes="Ask source repo to confirm or reject the path signal.",
+    )
+    decision = dict(result["decision"])
+    decision["source_queue_fingerprint"] = "dad:queue:stale"
+    ledger = hub / "processed" / "exceptions" / "review-queue" / "backfill_review_decisions.jsonl"
+    ledger.write_text(json.dumps(decision) + "\n", encoding="utf-8")
+
+    report = write_exception_source_packet_requests(hub)
+
+    assert report["request_count"] == 0
+    assert report["skipped_decision_count"] == 1
+    quarantine = _jsonl(
+        hub
+        / "processed"
+        / "exceptions"
+        / "quarantine"
+        / "source_packet_request_decision_mismatches.jsonl"
+    )
+    assert quarantine[-1]["event_type"] == "source_packet_request_fingerprint_mismatch"
+    assert not (hub / "processed" / "mail" / "staged" / "source_packet_requests.jsonl").exists()
+
+
+def test_source_packet_requests_append_cancellation_when_later_decision_rejects(
+    tmp_path: Path,
+) -> None:
+    hub = tmp_path / "hub"
+    repo = tmp_path / "repo"
+    (repo / ".git").mkdir(parents=True)
+    _copy_exception_contracts(hub)
+    target = repo / "docs" / "asset-dir-unavailable.md"
+    target.parent.mkdir(parents=True)
+    target.write_text("metadata-only backfill should not read content\n", encoding="utf-8")
+    policy = _backfill_policy(repo, repo_id="source-repo", visibility="public")
+
+    backfill_exception_candidates(
+        hub,
+        repo,
+        limit=10,
+        authorization=_backfill_auth(repo, repo_policies=[policy]),
+    )
+    group_id = write_exception_backfill_review_queue(hub)["review_queue"][0][
+        "review_group_id"
+    ]
+    record_exception_backfill_review_decision(
+        hub,
+        review_group_id=group_id,
+        decision="needs_source_packet",
+        reviewer="codex",
+        reviewer_type="agent",
+        notes="Ask source repo to confirm or reject the path signal.",
+    )
+    first = write_exception_source_packet_requests(hub)
+    original_mail_id = first["requests"][0]["mail_id"]
+    record_exception_backfill_review_decision(
+        hub,
+        review_group_id=group_id,
+        decision="reject",
+        reviewer="codex",
+        reviewer_type="agent",
+        notes="Rejected after source review.",
+    )
+
+    second = write_exception_source_packet_requests(hub)
+
+    assert second["request_count"] == 0
+    assert second["superseded_mail_count"] == 1
+    rows = _jsonl(hub / "processed" / "mail" / "staged" / "source_packet_requests.jsonl")
+    assert [row["message_type"] for row in rows] == ["governance_notice", "review_decision"]
+    cancellation = rows[1]
+    _validate("mail_message", cancellation)
+    assert cancellation["review_status"] == "archived"
+    assert cancellation["payload"]["superseded_mail_id"] == original_mail_id
+    assert cancellation["payload"]["superseded_reason"] == (
+        "source_packet_request_latest_decision_changed"
+    )
+
+
 def test_exception_report_summarizes_categories(tmp_path: Path) -> None:
     hub = tmp_path / "hub"
     repo = tmp_path / "repo"
@@ -1576,9 +1844,9 @@ def test_exception_learning_readiness_scenarios_pass(tmp_path: Path) -> None:
         output=tmp_path / "learning-readiness.json",
     )
 
-    assert report["scenario_count"] == 6
+    assert report["scenario_count"] == 7
     assert report["failed_count"] == 0
-    assert report["passed_count"] == 6
+    assert report["passed_count"] == 7
     assert report["sample_size_threshold"] == 10
     case_ids = {case["case_id"] for case in report["cases"]}
     assert {
@@ -1588,12 +1856,20 @@ def test_exception_learning_readiness_scenarios_pass(tmp_path: Path) -> None:
         "invalid-legacy-fix-row",
         "unknown-origin-release-gate",
         "backfill-only-source-review",
+        "human-confirmed-backfill-still-not-learnable",
     }.issubset(case_ids)
     small_sample = {
         case["case_id"]: case for case in report["cases"]
     }["small-sample-validated-fix-blocker"]
     assert small_sample["actual_rows_by_event_type"]["test_failure"]["learning_status"] == (
         "needs_more_evidence"
+    )
+    confirmed_backfill = {
+        case["case_id"]: case for case in report["cases"]
+    }["human-confirmed-backfill-still-not-learnable"]
+    assert confirmed_backfill["backfill_decision_counts"] == {"confirm": 1}
+    assert confirmed_backfill["actual_rows_by_event_type"]["test_timeout"]["learning_status"] == (
+        "needs_source_review"
     )
     assert (tmp_path / "learning-readiness.md").exists()
 

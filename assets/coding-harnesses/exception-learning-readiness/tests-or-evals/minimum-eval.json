@@ -3,9 +3,9 @@
   "eval_id": "exception-learning-readiness-minimum-eval-v0.1.0",
   "harness_id": "dad:harness:exception-learning-readiness",
   "status": "candidate",
-  "purpose": "Verify that DAD's exception learning queue stays conservative for clean, small-sample, mixed, invalid, non-public-origin, and backfill-only synthetic cases.",
+  "purpose": "Verify that DAD's exception learning queue stays conservative for clean, small-sample, mixed, invalid, non-public-origin, backfill-only, and confirmed-backfill synthetic cases.",
   "input_contract": [
-    "A scenario file contains metadata-only events, fix outcomes, expected learning statuses, expected blocker substrings, and optional quarantine expectations.",
+    "A scenario file contains metadata-only events, fix outcomes, optional backfill review decisions, expected learning statuses, expected blocker substrings, and optional quarantine expectations.",
     "The evaluator creates temporary synthetic hubs and repos, then uses the real exception event, fix outcome, collect, and learning-queue APIs.",
     "The evaluator writes generated candidate reports only under processed/reports or the requested output path."
   ],
@@ -45,6 +45,12 @@
       "given": ["one backfill-only path-signal event"],
       "expected": ["learning status is needs_source_review", "promotion blockers mention backfill path-signal candidates"],
       "fail_if": ["backfill-only evidence becomes learnable"]
+    },
+    {
+      "case_id": "human_confirmed_backfill_still_not_learnable",
+      "given": ["one backfill-only path-signal event", "one human-confirmed backfill review decision"],
+      "expected": ["learning status is still needs_source_review", "backfill decision count records the confirm label"],
+      "fail_if": ["a backfill review decision counts as observed evidence", "a confirmed backfill group becomes validated_fix_review_candidate"]
     },
     {
       "case_id": "backfill_review_queue_statuses",
