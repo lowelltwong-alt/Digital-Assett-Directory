@@ -10,6 +10,11 @@ feedback -> inference -> proposal -> reviewed asset -> promoted baseline
 
 A lesson captured by an AI is initially a candidate. Repetition may justify a skill or workflow proposal, but not automatic promotion.
 
+Lifecycle review is a separate overlay. Use
+`docs/LESSON_LIFECYCLE_GOVERNANCE.md` for the candidate design covering lesson
+upgrade, downgrade, improvement, supersession, archive status, and review clocks.
+Do not rewrite raw lesson records to express lifecycle decisions.
+
 ## Asset use feedback
 
 Whenever an agent materially uses an asset, it should record deterministic feedback instead

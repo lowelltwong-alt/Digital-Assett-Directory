@@ -44,6 +44,12 @@ from the library alone.
 
 ## Before material work
 
+CLI examples use `asset-dir` when DAD is installed. If `asset-dir` is not on
+`PATH`, first try the stable user shim at `$HOME/.dad/bin/asset-dir` or
+`$HOME\.dad\bin\asset-dir.ps1`. In a raw source checkout, use
+`PYTHONPATH=src python -m digital_asset_directory.cli ...` instead; in
+PowerShell, set `$env:PYTHONPATH='src'` before running the command.
+
 Run a preflight:
 
 ```text
@@ -136,9 +142,10 @@ If a lane was not run, record `not_run` or let postflight default it to
 ## Validation baseline
 
 ```bash
+$env:PYTHONPATH='src'
 python -m pytest
 python -m digital_asset_directory.cli validate
-python -m digital_asset_directory.cli roadmap check
+python -m digital_asset_directory.cli roadmap check --no-update
 ```
 
 <!-- BEGIN DIGITAL_ASSET_DIRECTORY_GOVERNANCE -->

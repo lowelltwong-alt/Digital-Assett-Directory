@@ -27,17 +27,30 @@ AI navigation files follow `docs/AI_ENTRYPOINT_AND_TOC_ROUTING_STANDARD.md`.
 Every AI table-of-contents row must give the path, what it is, routing tags,
 and when to look further.
 
+## Navigation freshness
+
+DAD changes quickly. Do not compare this repo to memory of an older table of
+contents. After this front door, check `registry/ai-navigation-registry.json`
+for `navigation_version`, `updated_at`, `recent_changes`, and affected
+`branch_map` rows.
+
+The mailbox, library catalog, graph reports, and generated evidence are
+branches from this front door, not competing entrypoints. Dates and version
+signals live in the navigation registry so the AI table of contents can stay
+shallow and descriptive instead of becoming a bulky change log.
+
 ## Required read order
 
 1. `AGENTS.md`
 2. `MACHINE_NAVIGATION_MANIFEST.json`
-3. `registry/source-of-truth.json`
-4. `registry/design-authority.json`
-5. `registry/identity-layer-registry.json`
-6. `AI_TABLE_OF_CONTENTS.md`
-7. `docs/ARCHITECTURE.md`
-8. `docs/ASSET_IDENTITY_AND_SIMILARITY_LADDER.md`
-9. task-relevant schemas, registries, and roadmap gates
+3. `registry/ai-navigation-registry.json`
+4. `registry/source-of-truth.json`
+5. `registry/design-authority.json`
+6. `registry/identity-layer-registry.json`
+7. `AI_TABLE_OF_CONTENTS.md`
+8. `docs/ARCHITECTURE.md`
+9. `docs/ASSET_IDENTITY_AND_SIMILARITY_LADDER.md`
+10. task-relevant schemas, registries, and roadmap gates
 
 ## AI TOC branches
 
@@ -62,6 +75,9 @@ not prove source truth, value, authority, or promotion.
 | Entrypoint | What it is | Use when |
 |---|---|---|
 | `docs/KNOWLEDGE_GRAPH_MODEL.md` | Conceptual model for asset nodes, edges, authority posture, and graph use. | You need to understand what graph facts can and cannot mean. |
+| `docs/DAD_ADDRESS_MODEL.md` | DAD's adopted 9-layer address model, compact fill policy, workflow-card encoding, and evolution rules. | You need to decide how an asset, workflow, exception, or lesson should be addressed without bloating records or replacing graph edges. |
+| `registry/dad-address-model-registry.json` | Machine-readable DAD address model with layer definitions, tuple segments, source inspirations, and frontier review policy. | You need the exact layer model for repo-local asset cards, learning loops, workflow/orchestration pointers, or validation. |
+| `docs/FABLE_DAD_ADDRESS_MODEL_PROMPT.md` | Prompt for Fable/frontier AI to red-team and improve the DAD address model. | You want a high-leverage critique of layer 9, compact workflow encoding, tests, and evolution policy. |
 | `registry/edge-type-registry.json` | Controlled edge vocabulary. | You create, interpret, or validate graph relationships. |
 | `registry/asset-pattern-registry.json` | Controlled high-leverage pattern vocabulary. | You classify workflows, composite assets, or reusable systems. |
 | `registry/template-registry.json` | Controlled template library with forward and reverse dependencies. | You create, update, validate, or reuse templates. |
@@ -69,30 +85,40 @@ not prove source truth, value, authority, or promotion.
 | `assets/ai-engineering-preflight/` | Installed AI engineering preflight asset with Python/Rust agent guidance, templates, prompts, and dry-run rollout scripts. | You are planning AI-assisted software changes, refactors, or repo instruction/template deployment. |
 | `assets/python-ai-advantage-preflight/` | Installed Python preflight asset with candidate high-leverage Python tactics, examples, and an agent instruction block. | You are planning Python implementation, API design, or long-script refactor work and need Python-specific tactic guidance. |
 | `docs/LANGUAGE_CODING_ADVANTAGE.md` | DAD language-specific AI coding advantage playbook for Python, Rust, and future languages, with source-intake and promotion boundaries. | You add or refresh Python/Rust guidance, evaluate a frontier language technique, or decide whether a language asset should become DAD guidance. |
-| `tools/dad_scan_core/` | DAD's first installed Rust leaf scanner crate, with bounded local file observations, JSONL output, and quarantine summary. | You need fast deterministic source inventory, hashing, or Rust scanner validation inside DAD. |
+| `assets/dad-rust-upgrade-starter-pack/README.md` | First-stop guide for understanding DAD's Rust system, rollout packet, and where the Rust assets point. | Another repo or AI asks where to start for DAD Rust guidance. |
+| `docs/rust/RUST_ADOPTION_PLAN.md` | DAD Rust adoption plan after the starter pack, with staged adoption context and validation expectations. | You need to understand when DAD should use Rust, how adoption is staged, or what gates apply before more Rust work. |
+| `tools/dad_scan_core/` | DAD's first installed Rust leaf scanner crate, with bounded local file observations, JSONL output, and quarantine summary. | You need the actual Rust code for deterministic source inventory, hashing, or scanner validation inside DAD. |
+| `src/digital_asset_directory/rust_bridge/` | Python-to-Rust orchestration bridge for invoking DAD Rust tools without giving Rust governance authority. | You need to see how Python calls DAD's Rust scan core or where mixed-language boundaries live. |
 | `docs/rust/DAD_FORCED_RUST_ROLLOUT_POLICY.md` | DAD Rust rollout policy, Logos exclusion, target ownership model, and local apply boundaries. | You plan Rust rollout, mail packets, target scaffolds, or DAD-first Rust lessons. |
+| `docs/rust/RUST_ROLLOUT_LESSON_CAPTURE_PROTOCOL.md` | Rust rollout lesson-capture protocol, ledger shape, summary command, and append-only update rule. | You need to send, review, or validate Rust rollout lessons from DAD or another repo. |
 | `docs/CODING_ASSET_CONTROL_PLANE.md` | DAD-side control-plane design for coding assets, tactics, routers, mail packets, and downstream pointers. | You are adding, routing, validating, or reusing AI coding assets. |
 | `docs/CODING_HARNESS_LIBRARY.md` | DAD-side coding harness library for test performance, Rust parity, preflight, red-team, governance safety, and provenance workflows. | You create, recommend, evaluate, package, or adopt coding-improvement harnesses. |
+| `docs/HARNESS_VS_DETERMINISTIC_ENFORCEMENT.md` | DAD decision model for choosing harnesses, advisory checks, or deterministic enforcement using risk, data sensitivity, and maturity. | You are deciding whether a discovered issue should become a harness, warning, report, or hard gate. |
 | `docs/AGENT_SKILL_LIBRARY.md` | DAD-side library for agent skills, lifecycle notices, checkout pointers, and replacement policy. | You are creating, checking out, updating, retiring, or replacing agent skills across repos. |
 | `docs/DAD_REPO_ENROLLMENT.md` | Reviewed-wave repo enrollment and control-plane contract for persistent repos. | You plan, apply, update, audit, or explain DAD full governance enrollment. |
+| `docs/REPO_LOCAL_DIGITAL_ASSET_DIRECTORY.md` | Repo-local `.digital-asset/assets/` memory standard, compatibility inputs, and fractal placement guidance. | You need a repo to log its own digital assets, compare an existing asset directory to DAD convention, or collect metadata-only asset sightings without mutating the source repo. |
 | `registry/control-plane-registry.json` | Reviewed DAD control-plane registry with cadence, surfaces, and normal write boundaries. | You need to know what DAD can advise, update by approval, or touch during recurring operation. |
 | `registry/dad-needs-registry.json` | DAD request list for lessons, assets, harness feedback, usage feedback, skill updates, and governance drift repos should send back through mail. | A repo needs to know what DAD is looking for. |
 | `registry/dad-offerings-registry.json` | Rich DAD card catalog of assets, skills, templates, harnesses, architecture refs, maps, workflows, and known upgrades. | A repo needs to match context to DAD offerings or decide whether to use now, save for future, defer, reject, or ask for human review. |
 | `registry/dad-usefulness-methodology.json` | Deterministic scoring method for DAD offering recommendations. | You need to explain why DAD suggested an offering without claiming the score proves truth or value. |
 | `registry/asset-recognition-methodology.json` | Candidate scoring method for recognizing useful digital assets from repo paths and metadata without copying private contents. | You need to find high-value assets, instructions, harnesses, schemas, prompts, or maps in a repo scan. |
 | `docs/ASSET_RECOGNITION_METHODOLOGY.md` | Human-readable asset-recognition loop and source-boundary rules. | You are deciding what DAD should save, promote, ignore, or ask a repo to send back. |
+| `docs/LESSON_LIFECYCLE_GOVERNANCE.md` | Candidate design for lesson review clocks, upgrade, downgrade, improvement, supersession, and archive overlays. | You need to decide whether an old lesson is still useful, stale, harmful, superseded, or ready for promotion review. |
 | `registry/agent-skill-library.json` | Governed skill registry with DAD skill IDs, versions, formats, source paths, checkout modes, and lifecycle state. | You need to select or validate a DAD-managed skill before a downstream repo checks it out. |
 | `registry/coding-asset-registry.json` | Reusable coding asset registry with applicability, validation, authority boundaries, and source evidence. | You need to select a DAD coding asset before AI-assisted implementation. |
 | `registry/language-coding-advantage-registry.json` | Python, Rust, and future-language coding advantage registry with trusted sources, overlooked patterns, harness routes, and adoption gates. | You need language-specific coding guidance or want to route a new language-frontier signal into DAD. |
 | `registry/coding-harness-registry.json` | Coding-improvement harness registry with context routing, evidence, prompts, scripts, evals, examples, and package paths. | You need a reusable harness for AI coding improvement or test acceleration research. |
 | `registry/harness-discovery-methodology.json` | Candidate radar method for finding missing or underpowered coding harnesses from orphan assets, tactics, lessons, and research leads. | You need to turn repeated coding pain or research opportunities into a reusable harness candidate. |
 | `docs/HARNESS_DISCOVERY_RADAR.md` | Human-readable orphan/radar/research-to-harness workflow. | You are asking Fable, Claude, Codex, or another agent to improve DAD's coding harness library. |
+| `docs/CLAUDE_ARCHITECTURAL_ROOT_CAUSE_REVIEW.md` | Claude-readable packet guidance for integration and implementation issue patterns that may have architectural root causes. | You see repeated integration failures, boundary mismatch, implementation drift, or a review finding that may need architectural root-cause analysis. |
 | `assets/coding-harnesses/exception-capture-completeness/` | Harness for proving DAD-worthy repo patterns become mail, exception, fix, or no-packet decisions with required metadata. | You changed DAD capture patterns, downstream exception guidance, or need the no-chat emission regression. |
 | `assets/coding-harnesses/exception-learning-readiness/` | Synthetic harness for checking conservative exception learning queue statuses. | You changed exception learning, fix outcomes, release blockers, sample thresholds, or backfill promotion boundaries. |
 | `registry/coding-tactics-radar.json` | Candidate Python, Rust, and agent-instruction tactics with examples, risks, and promotion status. | You need tactic recommendations or postflight tactic feedback targets. |
 | `registry/preflight-profile-router.json` | Task/context router from repo/language/risk signals to DAD profiles, tactics, validation, and stop conditions. | You need to choose the right preflight profile or run a midflight tactic recommendation. |
 | `docs/CROSS_REPO_GOVERNANCE_DEPENDENCY_MAP_PATTERN.md` | Reusable cross-repo governance map and child-mirror template pattern. | You design a repo family where upstream governance and child repo mirrors must stay aligned. |
-| `docs/MAIL_CENTER.md` | Governed DAD mail hub and repo-local inbox/outbox mirror. | You need candidate lessons, workflows, assets, taxonomy, capabilities, or governance notices to move across repos without mutating source authority. |
+| `docs/MAIL_CENTER.md` | Governed DAD mail hub, repo-local inbox/outbox mirror, and dirty-spool doctor protocol. | You need candidate lessons, workflows, assets, taxonomy, capabilities, or governance notices to move across repos, or Rust rollout/concurrent repo mail looks dirty. |
+| `docs/DAD_MAIL_STORM_AND_DIRTY_STATE_RUNBOOK.md` | Operator runbook for distinguishing true mailbox/staged-packet dirt from ordinary dirty worktree or Rust reference-snapshot churn. | Multiple repos or branches are sending DAD mail, Rust rollout lessons, or learning-loop packets and the tree looks very dirty. |
+| `assets/coding-harnesses/repo-enrollment-mail-governance-safety/` | Reusable harness and eval cases for enrollment/mail write boundaries, dirty-spool gates, source-outbox storms, Rust rollout snapshot churn, and public/private release safety. | You need to test or red-team DAD mail/enrollment behavior during concurrent repo mail, Rust rollout, or very dirty worktree states. |
 | `ontology/digital-asset-ontology.ttl` | Ontology layer for graph concepts. | You need semantic graph structure or external graph alignment. |
 | `ontology/taxonomy.skos.ttl` | Taxonomy layer for broader/narrower concept navigation. | You need controlled concept hierarchy. |
 | `processed/graph/graph.json` | Generated graph output. | You need candidate edges from the latest processed catalog; treat as generated evidence. |
@@ -110,7 +136,7 @@ not prove source truth, value, authority, or promotion.
 | `processed/reports/repo_completion_wave_plan.md` | Generated ordered wave plan for completing repo lesson automation. | You need the safest order for content-read approval, lesson synthesis, learning-loop installs, governance maps, and final reviews. |
 | `processed/reports/repo_completion_proof_check.md` | Generated proof check for repo-completion wave advancement. | You need to know which wave is actually blocked, what proof is missing, and whether it is safe to advance. |
 | `processed/reports/template_library.md` | Generated template dependency and review-cadence report. | You need to know what templates depend on and what depends on them. |
-| `processed/mail/` | Generated central mail inbox, outbox, archive, and delivery logs. | You need collected/routed candidate suggestions; never treat them as source truth. |
+| `processed/mail/` | Generated central mail inbox, outbox, archive, collection/delivery logs, release logs, and quarantine. | You need collected/routed candidate suggestions or audit proof for mailbox movement; never treat mail as source truth. |
 | `processed/skills/` | Generated central skill-checkout ledger and future freshness reports. | You need candidate targets for skill update, retirement, replacement, or manual-review notices. |
 | `processed/reports/mail_center.md` | Generated mail-center summary report. | You need mail counts and message-type distribution. |
 | `processed/reports/exception_backfill_review_queue.md` | Generated source-review queue for historical path-signal exception backfill groups. | You need to review backfill candidates by source repo, classifier rule, status, hashes, release blockers, and classifier provenance before any learning promotion. |
@@ -159,6 +185,7 @@ Discovery output is evidence and recommendation, not source-repository authority
 - candidate value, staleness, orphan, missing-part, and synergy scoring;
 - lessons and AI handoff capture;
 - DAD mail-center candidate suggestion transport;
+- candidate DAD event/data pipeline design that can keep mailboxes as edge adapters while tracking repo responses and learning-loop outcomes;
 - reviewed-wave DAD repo enrollment, control-plane registry, and mailbox-only recurring operation;
 - DAD-managed agent skill library, pointer checkouts, and lifecycle notices;
 - tracked reusable asset packages and their local discovery index;
@@ -187,6 +214,7 @@ Discovery output is evidence and recommendation, not source-repository authority
 | Change identity or similarity rules | `identity_change` | ladder doc, identity-layer registry, schema/edge updates, validation |
 | Add a learning record | `lesson_capture` | lesson JSONL, provenance, confidence, reuse candidates |
 | Move repo suggestions | `mail_center` | compose/collect/route/deliver/digest/review, append-only JSONL, local review decision |
+| Design repo event flow | `event_pipeline` | roadmap evidence, event contract, response-state semantics, local-first/cloud-deferred boundaries, validation plan |
 | Enroll a persistent repo | `repo_enrollment` | reviewed enrollment policy, plan report, approval ID, allowlisted managed surfaces, audit event |
 | Manage skill library | `agent_skill_library` | registry/schema update, checkout template, update/retirement mail, validator, local-review boundary |
 | Build a feature | `implementation` | preflight, changed files, tests, postflight, lessons |
@@ -214,6 +242,12 @@ Run:
 ```text
 asset-dir agent preflight --repo <repo> --agent <agent> --task "<task>"
 ```
+
+If `asset-dir` is not on `PATH`, first try the stable DAD user shim at
+`$HOME/.dad/bin/asset-dir` or `$HOME\.dad\bin\asset-dir.ps1`. If the shim is
+unavailable too, run the same command from a raw DAD source checkout as
+`python -m digital_asset_directory.cli ...` with `PYTHONPATH=src` set first
+(`$env:PYTHONPATH='src'` in PowerShell).
 
 If the preflight includes `required_learning_rule_acknowledgements`, run a midflight
 acknowledgement before proceeding through the matching work:
@@ -267,7 +301,7 @@ Stop rather than guess when:
 ```text
 python -m pytest
 python -m digital_asset_directory.cli validate
-python -m digital_asset_directory.cli roadmap check
+python -m digital_asset_directory.cli roadmap check --no-update
 ```
 
 <!-- BEGIN DIGITAL_ASSET_DIRECTORY_ENROLLMENT -->

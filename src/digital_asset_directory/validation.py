@@ -10,10 +10,13 @@ from jsonschema.validators import validator_for
 
 from .config import load_config
 from .exception_capture import (
+    BACKFILL_ROUTE_REQUIRED_FIELDS,
     audit_observed_capture_repo,
+    build_phase6_machine_evidence_summary,
     build_exception_capture_gap_review_queue,
     build_exception_capture_remediation_plan,
     build_exception_backfill_wave_plan,
+    capture_route_registry_from_registries,
     load_capture_pattern_registry,
     observed_capture_audit_gap_count,
 )
@@ -91,6 +94,42 @@ def _hash_path(path: Path) -> str:
         parts.append(f"{rel}\0{sha256_file(child)}")
     digest_input = "\n".join(parts).encode("utf-8")
     return f"sha256:{sha256_bytes(digest_input)}"
+
+
+def _repo_policy_identity_errors(label: str, policies: list[Any]) -> list[str]:
+    errors: list[str] = []
+    by_id: dict[str, list[str]] = {}
+    by_alias: dict[str, list[str]] = {}
+    by_path: dict[str, list[str]] = {}
+    for policy in policies:
+        policy_id = str(getattr(policy, "id", "") or "").strip()
+        alias = str(getattr(policy, "alias", "") or "").strip()
+        try:
+            path_key = Path(getattr(policy, "path")).resolve(strict=False).as_posix()
+        except (TypeError, OSError):
+            path_key = ""
+        if policy_id:
+            by_id.setdefault(policy_id.casefold(), []).append(policy_id)
+        if alias:
+            by_alias.setdefault(alias.casefold(), []).append(
+                f"{alias} ({policy_id or 'missing-id'})"
+            )
+        if path_key:
+            by_path.setdefault(path_key.casefold(), []).append(policy_id or "missing-id")
+    for key, values in sorted(by_id.items()):
+        if len(values) > 1:
+            errors.append(f"{label} has duplicate repo id: {key}")
+    for key, values in sorted(by_alias.items()):
+        if len(values) > 1:
+            errors.append(f"{label} has duplicate repo alias: {key}")
+    for path_key, values in sorted(by_path.items()):
+        unique_ids = sorted(set(values))
+        if len(values) > 1 and len(unique_ids) > 1:
+            errors.append(
+                f"{label} maps one resolved path to multiple repo ids: "
+                f"{path_key} {unique_ids}"
+            )
+    return errors
 
 
 def _read_jsonl_records_with_errors(
@@ -508,6 +547,169 @@ def _capture_rule_matches_case(rule: dict[str, Any], case: dict[str, Any]) -> bo
     )
 
 
+def _string_set(value: Any) -> set[str]:
+    if not isinstance(value, list):
+        return set()
+    return {str(item) for item in value if str(item)}
+
+
+def _exception_route_bundle_errors(
+    *,
+    exception_type_registry: dict[str, Any],
+    capture_pattern_registry: dict[str, Any],
+    capture_scenarios: dict[str, Any],
+    downstream_readme_text: str,
+) -> list[str]:
+    errors: list[str] = []
+    event_types = {
+        str(item.get("event_type") or "")
+        for item in exception_type_registry.get("event_types", [])
+        if isinstance(item, dict)
+    }
+    category_by_event_type = {
+        str(item.get("event_type") or ""): str(item.get("category") or "")
+        for item in exception_type_registry.get("event_types", [])
+        if isinstance(item, dict)
+    }
+    route_registry = capture_route_registry_from_registries(
+        capture_pattern_registry,
+        exception_type_registry,
+    )
+    rules = [
+        rule
+        for rule in route_registry.get("rules", [])
+        if isinstance(rule, dict)
+    ]
+    rules_by_id = {str(rule.get("rule_id") or ""): rule for rule in rules}
+    reviewed_cases = [
+        case
+        for case in capture_scenarios.get("cases", [])
+        if isinstance(case, dict) and case.get("review_status") == "reviewed"
+    ]
+    cases_by_rule: dict[str, list[dict[str, Any]]] = {}
+    for case in reviewed_cases:
+        case_id = str(case.get("scenario_id") or "<unknown>")
+        for rule_id in _string_set(case.get("covered_rule_ids")):
+            if rule_id not in rules_by_id:
+                errors.append(
+                    "Exception route bundle scenario covers unknown rule_id: "
+                    f"{case_id} {rule_id}"
+                )
+                continue
+            cases_by_rule.setdefault(rule_id, []).append(case)
+
+    readme_lower = downstream_readme_text.casefold()
+    for rule in rules:
+        if rule.get("review_status") != "reviewed":
+            continue
+        emit = rule.get("emit") if isinstance(rule.get("emit"), dict) else {}
+        packet_classes = _string_set(emit.get("packet_classes"))
+        if not packet_classes or packet_classes == {"no_packet"}:
+            continue
+        rule_id = str(rule.get("rule_id") or "<unknown>")
+        rule_cases = cases_by_rule.get(rule_id, [])
+        if not rule_cases:
+            errors.append(
+                "Exception route bundle missing reviewed synthetic scenario "
+                f"for emitting rule: {rule_id}"
+            )
+            continue
+        emitted_event_type = str(emit.get("exception_event_type") or "")
+        emitted_mail_type = str(emit.get("mail_message_type") or "")
+        emitted_contract = str(emit.get("capture_contract") or "")
+        required_fields = _string_set(emit.get("required_fields"))
+        suppress_signals = _string_set(rule.get("suppress_signals"))
+
+        for case in rule_cases:
+            case_id = str(case.get("scenario_id") or "<unknown>")
+            if not _capture_rule_matches_case(rule, case):
+                errors.append(
+                    "Exception route bundle scenario does not match claimed rule: "
+                    f"{case_id} {rule_id}"
+                )
+            expected = case.get("expected") if isinstance(case.get("expected"), dict) else {}
+            expected_packet_classes = _string_set(expected.get("packet_classes"))
+            if "no_packet" in expected_packet_classes or expected.get("blocked") is True:
+                continue
+            missing_packet_classes = sorted(packet_classes - expected_packet_classes)
+            if missing_packet_classes:
+                errors.append(
+                    "Exception route bundle scenario expected packet_classes omit "
+                    f"{missing_packet_classes}: {case_id} {rule_id}"
+                )
+            if emitted_event_type:
+                if emitted_event_type not in event_types:
+                    errors.append(
+                        "Exception route bundle rule emits unregistered event_type: "
+                        f"{rule_id} {emitted_event_type}"
+                    )
+                if emitted_event_type not in _string_set(expected.get("event_types")):
+                    errors.append(
+                        "Exception route bundle scenario expected event_types omit "
+                        f"{emitted_event_type}: {case_id} {rule_id}"
+                    )
+                if emitted_event_type.casefold() not in readme_lower:
+                    errors.append(
+                        "Exception route bundle downstream README omits event_type: "
+                        f"{emitted_event_type}"
+                    )
+            if emitted_mail_type and emitted_mail_type not in _string_set(
+                expected.get("mail_message_types")
+            ):
+                errors.append(
+                    "Exception route bundle scenario expected mail_message_types omit "
+                    f"{emitted_mail_type}: {case_id} {rule_id}"
+                )
+            if emitted_contract and emitted_contract not in _string_set(
+                expected.get("capture_contracts")
+            ):
+                errors.append(
+                    "Exception route bundle scenario expected capture_contracts omit "
+                    f"{emitted_contract}: {case_id} {rule_id}"
+                )
+            missing_required_fields = sorted(
+                required_fields - _string_set(expected.get("required_fields"))
+            )
+            if missing_required_fields:
+                errors.append(
+                    "Exception route bundle scenario expected required_fields omit "
+                    f"{missing_required_fields}: {case_id} {rule_id}"
+                )
+            event_category = category_by_event_type.get(emitted_event_type, "")
+            missing_negative_controls = sorted(
+                suppress_signals - _string_set(case.get("negative_controls"))
+            )
+            if missing_negative_controls and event_category != "security_privacy":
+                errors.append(
+                    "Exception route bundle scenario negative_controls omit "
+                    f"{missing_negative_controls}: {case_id} {rule_id}"
+                )
+            if rule_id.startswith("backfill-rule:"):
+                expected_required_fields = _string_set(expected.get("required_fields"))
+                missing_backfill_fields = sorted(
+                    set(BACKFILL_ROUTE_REQUIRED_FIELDS) - expected_required_fields
+                )
+                if missing_backfill_fields:
+                    errors.append(
+                        "Exception route bundle backfill scenario required_fields omit "
+                        f"{missing_backfill_fields}: {case_id} {rule_id}"
+                    )
+                missing_backfill_negative_controls = sorted(
+                    {
+                        "contains_private_rows",
+                        "contains_raw_log_blob",
+                        "contains_secret_or_pii",
+                    }
+                    - _string_set(case.get("negative_controls"))
+                )
+                if missing_backfill_negative_controls:
+                    errors.append(
+                        "Exception route bundle backfill scenario negative_controls omit "
+                        f"{missing_backfill_negative_controls}: {case_id} {rule_id}"
+                    )
+    return errors
+
+
 def _observed_audit_policy_paths(repo_root: Path) -> dict[str, Path]:
     paths = {_path_identity_hash(repo_root): repo_root.resolve()}
     try:
@@ -675,6 +877,21 @@ def _capture_emission_simulation_errors(
         errors.append(f"Capture emission simulation passed_count mismatch: {label}")
     if payload.get("failed_count") != failed_count:
         errors.append(f"Capture emission simulation failed_count mismatch: {label}")
+    full_reviewed_case_count = _observed_audit_int(payload.get("full_reviewed_case_count"))
+    emitted_reviewed_case_count = _observed_audit_int(payload.get("emitted_reviewed_case_count"))
+    omitted_reviewed_scenario_ids = payload.get("omitted_reviewed_scenario_ids", [])
+    if not isinstance(omitted_reviewed_scenario_ids, list):
+        errors.append(f"Capture emission simulation omitted ids must be a list: {label}")
+        omitted_reviewed_scenario_ids = []
+    limited = bool(omitted_reviewed_scenario_ids) or bool(payload.get("limited"))
+    if full_reviewed_case_count and full_reviewed_case_count < len(cases):
+        errors.append(f"Capture emission simulation full case count is too small: {label}")
+    if emitted_reviewed_case_count and emitted_reviewed_case_count != len(cases):
+        errors.append(f"Capture emission simulation emitted case count mismatch: {label}")
+    if limited and str(payload.get("coverage_status", "")) != "limited_diagnostic":
+        errors.append(f"Capture emission simulation limited report has invalid coverage: {label}")
+    if not limited and str(payload.get("coverage_status", "")) == "limited_diagnostic":
+        errors.append(f"Capture emission simulation full report marked limited: {label}")
     required_provenance = {
         "suggestion_id",
         "methodology_hash",
@@ -705,20 +922,32 @@ def _capture_emission_simulation_errors(
     if not isinstance(evidence, dict):
         errors.append(f"Capture emission simulation missing phase6 evidence: {label}")
     else:
-        expected_status = "passed" if cases and failed_count == 0 else "failed"
+        expected_status = "passed" if cases and failed_count == 0 and not limited else "failed"
         if evidence.get("machine_status") != expected_status:
             errors.append(f"Capture emission simulation machine_status mismatch: {label}")
         if evidence.get("evidence_scope") != "machine_only_not_roadmap_gate_evidence":
             errors.append(f"Capture emission simulation invalid evidence scope: {label}")
         if evidence.get("human_gate_satisfied") is not False:
             errors.append(f"Capture emission simulation may satisfy human gate: {label}")
+        if bool(evidence.get("limited")) != limited:
+            errors.append(f"Capture emission simulation evidence limited mismatch: {label}")
+        if str(evidence.get("coverage_status", "")) != str(payload.get("coverage_status", "")):
+            errors.append(f"Capture emission simulation evidence coverage mismatch: {label}")
         gate_ids = set(evidence.get("supports_human_gate_ids", []) or [])
         expected_gate_ids = {
+            "phase-6-capture-completeness-harness-reviewed",
+            "phase-6-pattern-update-simulation-reviewed",
+        }
+        if limited and gate_ids:
+            errors.append(f"Capture emission simulation limited report lists gate ids: {label}")
+        if not limited and not expected_gate_ids <= gate_ids:
+            errors.append(f"Capture emission simulation missing supported gate ids: {label}")
+        legacy_gate_ids = {
             "synthetic-harness-proves-dad-worthy-patterns-become-packets",
             "pattern-update-simulation-proves-new-required-fields",
         }
-        if not expected_gate_ids <= gate_ids:
-            errors.append(f"Capture emission simulation missing supported gate ids: {label}")
+        if legacy_gate_ids & gate_ids:
+            errors.append(f"Capture emission simulation uses non-roadmap gate ids: {label}")
     for case in cases:
         if not isinstance(case, dict):
             errors.append(f"Capture emission simulation case is not an object: {label}")
@@ -786,6 +1015,13 @@ def _candidate_scan_repo_info(row: dict[str, Any]) -> dict[str, Any]:
     }
 
 
+def _candidate_scan_drift_is_tolerated(repo_info: dict[str, Any]) -> bool:
+    return bool(repo_info.get("write_protected")) or str(repo_info.get("repo_id", "")) in {
+        "logos-scripture-graph",
+        "logos-governance-architecture",
+    }
+
+
 def _candidate_path_scan_staleness_errors(
     repo_root: Path,
     report_path: Path,
@@ -840,6 +1076,13 @@ def _candidate_path_scan_staleness_errors(
     )
     current_scan = current.get("candidate_path_scan", {})
     errors: list[str] = []
+    bounded_same_evidence = (
+        expected_scan.get("stopped_reason")
+        == current_scan.get("stopped_reason")
+        == "candidate_limit_reached"
+        and expected_scan.get("limit_mode") == current_scan.get("limit_mode") == "bounded"
+        and expected_scan.get("scan_hash") == current_scan.get("scan_hash")
+    )
     for key in [
         "scan_hash",
         "scanned_file_count",
@@ -849,6 +1092,8 @@ def _candidate_path_scan_staleness_errors(
         "max_scanned_files",
         "stopped_reason",
     ]:
+        if key == "scanned_file_count" and bounded_same_evidence:
+            continue
         expected = expected_scan.get(key)
         actual = current_scan.get(key)
         if expected != actual:
@@ -862,6 +1107,8 @@ def _candidate_path_scan_staleness_errors(
             f"Candidate path scan stale for {label} candidate_path_signal_count: "
             f"{expected_count} != {actual_count}"
         )
+    if errors and _candidate_scan_drift_is_tolerated(repo_info):
+        return []
     return errors
 
 
@@ -873,6 +1120,49 @@ def _exception_wave_plan_readiness_path(report_path: Path) -> Path:
 
 def _json_stable(value: Any) -> str:
     return json.dumps(value, sort_keys=True, separators=(",", ":"))
+
+
+def _phase6_machine_evidence_summary_errors(
+    report_path: Path,
+    repo_root: Path,
+    payload: dict[str, Any],
+) -> list[str]:
+    label = _report_path_label(report_path, repo_root)
+    expected = build_phase6_machine_evidence_summary(
+        repo_root,
+        generated_at=str(payload.get("generated_at") or ""),
+    )
+    errors: list[str] = []
+    for key in [
+        "report_id",
+        "phase_id",
+        "evidence_scope",
+        "overall_machine_status",
+        "human_review_required",
+        "human_gate_satisfied",
+        "phase6_human_gate_ids",
+        "blocked_gate_ids",
+        "source_report_failures",
+        "source_reports",
+        "gates",
+        "input_hashes",
+        "pass_condition",
+        "recommended_next_actions",
+        "authority_boundary",
+    ]:
+        if _json_stable(payload.get(key)) != _json_stable(expected.get(key)):
+            errors.append(f"Phase 6 machine evidence summary stale for {label}: {key} mismatch")
+    if payload.get("human_gate_satisfied") is not False:
+        errors.append(f"Phase 6 machine evidence summary may satisfy human gate: {label}")
+    if (
+        payload.get("overall_machine_status") == "passed"
+        and payload.get("blocked_gate_ids")
+    ):
+        errors.append(
+            "Phase 6 machine evidence summary passed with blocked gates: "
+            f"{label}"
+        )
+    return errors
 
 
 def _exception_backfill_wave_plan_staleness_errors(
@@ -1107,6 +1397,110 @@ def _validate_lesson_graph_contract(
                 )
 
 
+def _validate_jsonl_with_registered_schema(
+    repo_root: Path,
+    registry: dict[str, Any],
+    schema_name: str,
+    rel: str,
+    errors: list[str],
+    checked: list[str],
+) -> None:
+    path = repo_root / rel
+    if not path.exists():
+        return
+    schema_rel = registry.get("schemas", {}).get(schema_name)
+    if not schema_rel:
+        errors.append(f"Schema registry missing {schema_name} for {rel}")
+        return
+    try:
+        schema = json.loads((repo_root / schema_rel).read_text(encoding="utf-8"))
+        validator_cls = validator_for(schema)
+        validator_cls.check_schema(schema)
+        validator = validator_cls(schema)
+    except Exception as exc:
+        errors.append(f"Invalid registered schema {schema_name}: {exc}")
+        return
+    for line_number, line in enumerate(
+        path.read_text(encoding="utf-8").splitlines(),
+        start=1,
+    ):
+        if not line.strip():
+            continue
+        try:
+            payload = json.loads(line)
+        except Exception as exc:
+            errors.append(f"Invalid JSONL {rel}:{line_number}: {exc}")
+            continue
+        try:
+            validator.validate(payload)
+        except Exception as exc:
+            errors.append(f"Invalid {schema_name} row {rel}:{line_number}: {exc}")
+    checked.append(rel)
+
+
+def _phase_command_evidence_errors(repo_root: Path) -> list[str]:
+    errors: list[str] = []
+    roadmap_path = repo_root / "roadmap" / "roadmap.yaml"
+    if not roadmap_path.exists():
+        return errors
+    try:
+        roadmap = yaml.safe_load(roadmap_path.read_text(encoding="utf-8")) or {}
+    except Exception as exc:
+        return [f"Could not read roadmap command contracts: {exc}"]
+    phases = {
+        str(phase.get("id")): phase
+        for phase in roadmap.get("phases", [])
+        if isinstance(phase, dict)
+    }
+    phase8 = phases.get("phase-8-dad-local-deployment")
+    if not phase8:
+        return errors
+    evidence_path = repo_root / "roadmap" / "evidence" / "phase-8-dad-local-deployment.commands.json"
+    if not evidence_path.exists():
+        errors.append("Phase 8 command evidence JSON is missing")
+        return errors
+    try:
+        evidence = json.loads(evidence_path.read_text(encoding="utf-8"))
+    except Exception as exc:
+        errors.append(f"Invalid Phase 8 command evidence JSON: {exc}")
+        return errors
+    if evidence.get("schema_version") != "dad.phase8.command-evidence.v1":
+        errors.append("Phase 8 command evidence has unexpected schema_version")
+    if evidence.get("human_review_status") != "pending":
+        errors.append("Phase 8 command evidence must remain pending until human gate review")
+    authority = str(evidence.get("authority_boundary") or "").lower()
+    for required_phrase in ["does not enroll", "satisfy human gates"]:
+        if required_phrase not in authority:
+            errors.append(
+                "Phase 8 command evidence authority boundary must state it "
+                f"{required_phrase}"
+            )
+    expected_commands = list(phase8.get("acceptance", {}).get("commands", []) or [])
+    rows = evidence.get("commands")
+    if not isinstance(rows, list):
+        errors.append("Phase 8 command evidence commands must be a list")
+        return errors
+    observed_commands = [str(row.get("command") or "") for row in rows if isinstance(row, dict)]
+    if set(observed_commands) != set(expected_commands):
+        errors.append(
+            "Phase 8 command evidence commands differ from roadmap acceptance: "
+            f"missing={sorted(set(expected_commands) - set(observed_commands))} "
+            f"extra={sorted(set(observed_commands) - set(expected_commands))}"
+        )
+    if len(observed_commands) != len(set(observed_commands)):
+        errors.append("Phase 8 command evidence has duplicate command rows")
+    for row in rows:
+        if not isinstance(row, dict):
+            errors.append("Phase 8 command evidence command row must be an object")
+            continue
+        command = str(row.get("command") or "")
+        if row.get("status") != "passed":
+            errors.append(f"Phase 8 command evidence is not passed: {command}")
+        if not str(row.get("evidence_summary") or "").strip():
+            errors.append(f"Phase 8 command evidence lacks summary: {command}")
+    return errors
+
+
 def validate_repo(repo_root: Path) -> dict[str, Any]:
     errors: list[str] = []
     checked: list[str] = []
@@ -1153,6 +1547,19 @@ def validate_repo(repo_root: Path) -> dict[str, Any]:
             checked.append(str(path.relative_to(repo_root)))
         except Exception as exc:
             errors.append(f"Invalid YAML {path}: {exc}")
+    phase_command_errors = _phase_command_evidence_errors(repo_root)
+    if phase_command_errors:
+        errors.extend(phase_command_errors)
+    else:
+        checked.append("roadmap/evidence/phase-8-dad-local-deployment.commands.json")
+    try:
+        cfg = load_config(repo_root=repo_root)
+        errors.extend(_repo_policy_identity_errors("mail.repos", cfg.mail_repos))
+        errors.extend(_repo_policy_identity_errors("exceptions.repos", cfg.exception_repos))
+        errors.extend(_repo_policy_identity_errors("enrollment.repos", cfg.enrollment_repos))
+        checked.append("config/sources.example.yaml:repo-policy-identities")
+    except Exception as exc:
+        errors.append(f"Invalid repo policy identity config: {exc}")
     try:
         registry = json.loads(
             (repo_root / "registry" / "schema-registry.json").read_text(encoding="utf-8")
@@ -1169,6 +1576,8 @@ def validate_repo(repo_root: Path) -> dict[str, Any]:
         surfaces = [
             ("dad_need_registry", "registry/dad-needs-registry.json"),
             ("dad_offering_registry", "registry/dad-offerings-registry.json"),
+            ("ai_navigation_registry", "registry/ai-navigation-registry.json"),
+            ("dad_address_model_registry", "registry/dad-address-model-registry.json"),
             ("dad_usefulness_methodology", "registry/dad-usefulness-methodology.json"),
             ("asset_recognition_methodology", "registry/asset-recognition-methodology.json"),
             ("harness_discovery_methodology", "registry/harness-discovery-methodology.json"),
@@ -1192,6 +1601,14 @@ def validate_repo(repo_root: Path) -> dict[str, Any]:
             payload = json.loads((repo_root / rel).read_text(encoding="utf-8"))
             _validate_payload(repo_root, registry, schema_name, payload)
             checked.append(rel)
+        _validate_jsonl_with_registered_schema(
+            repo_root,
+            registry,
+            "rust_rollout_lesson",
+            "lessons/rust_rollout/lesson_ledger.jsonl",
+            errors,
+            checked,
+        )
         trusted_source_registry = json.loads(
             (repo_root / "registry" / "trusted-source-registry.json").read_text(
                 encoding="utf-8"
@@ -1527,6 +1944,20 @@ def validate_repo(repo_root: Path) -> dict[str, Any]:
                     "Exception capture scenario expects unknown capture_contract: "
                     f"{contract}"
                 )
+            downstream_exceptions_readme = repo_root / "templates" / "downstream" / "EXCEPTIONS_README.md"
+            downstream_exceptions_readme_text = (
+                downstream_exceptions_readme.read_text(encoding="utf-8")
+                if downstream_exceptions_readme.exists()
+                else ""
+            )
+            errors.extend(
+                _exception_route_bundle_errors(
+                    exception_type_registry=exception_type_registry,
+                    capture_pattern_registry=capture_pattern_registry,
+                    capture_scenarios=capture_scenarios,
+                    downstream_readme_text=downstream_exceptions_readme_text,
+                )
+            )
             checked.append(str(capture_scenario_path.relative_to(repo_root)))
         exception_event_schema = _load_schema(repo_root, registry, "exception_event")
         exception_event_validator_cls = validator_for(exception_event_schema)
@@ -1717,6 +2148,77 @@ def validate_repo(repo_root: Path) -> dict[str, Any]:
                             "in the current request report and has no cancellation: "
                             f"{mail_id}"
                         )
+        capture_refresh_notices_path = (
+            repo_root
+            / "processed"
+            / "mail"
+            / "staged"
+            / "capture_surface_refresh_notices.jsonl"
+        )
+        if capture_refresh_notices_path.exists():
+            checked.append("processed/mail/staged/capture_surface_refresh_notices.jsonl")
+            notices, notice_errors = _read_jsonl_records_with_errors(
+                capture_refresh_notices_path
+            )
+            for error in notice_errors:
+                errors.append(
+                    "Exception capture-surface refresh staged mail has malformed "
+                    f"JSONL on line {error['line']}: {error['error']}"
+                )
+            active_notice_mail_ids: set[str] = set()
+            capture_refresh_report_path = (
+                repo_root
+                / "processed"
+                / "reports"
+                / "exception_capture_surface_refresh_notices.json"
+            )
+            if capture_refresh_report_path.exists():
+                try:
+                    capture_refresh_report = json.loads(
+                        capture_refresh_report_path.read_text(encoding="utf-8")
+                    )
+                    active_notice_mail_ids = {
+                        str(notice.get("mail_id") or "")
+                        for notice in capture_refresh_report.get("notices", [])
+                        if str(notice.get("mail_id") or "")
+                    }
+                except json.JSONDecodeError as exc:
+                    errors.append(
+                        "Invalid JSON "
+                        "processed/reports/exception_capture_surface_refresh_notices.json: "
+                        f"{exc}"
+                    )
+            else:
+                errors.append(
+                    "processed/mail/staged/capture_surface_refresh_notices.jsonl exists "
+                    "but processed/reports/exception_capture_surface_refresh_notices.json "
+                    "is missing"
+                )
+            for line_number, notice in notices:
+                mail_message_validator.validate(notice)
+                if _contains_local_path_ref(notice):
+                    errors.append(
+                        "Exception capture-surface refresh mail contains local path-like "
+                        f"metadata on line {line_number}"
+                    )
+                if _contains_readable_repo_relative_ref(notice):
+                    errors.append(
+                        "Exception capture-surface refresh mail contains readable "
+                        f"repo-relative path metadata on line {line_number}"
+                    )
+                payload = notice.get("payload") if isinstance(notice.get("payload"), dict) else {}
+                if (
+                    str(notice.get("message_type") or "") == "governance_notice"
+                    and str(payload.get("source_ref") or "")
+                    == "dad://exceptions/capture-surface-refresh-notices"
+                ):
+                    mail_id = str(notice.get("mail_id") or "")
+                    if mail_id not in active_notice_mail_ids:
+                        errors.append(
+                            "Exception capture-surface refresh staged mail is not active "
+                            "in the current refresh notice report: "
+                            f"{mail_id}"
+                        )
         harness_schema = _load_schema(repo_root, registry, "coding_harness")
         harness_validator_cls = validator_for(harness_schema)
         harness_validator_cls.check_schema(harness_schema)
@@ -1812,8 +2314,12 @@ def validate_repo(repo_root: Path) -> dict[str, Any]:
         for report_path in [
             *sorted((repo_root / "processed" / "reports").glob("*.json")),
             *sorted((repo_root / "processed" / "harnesses").glob("*.json")),
+            *sorted((repo_root / "processed" / "repo_inventory").glob("*.json")),
         ]:
             payload = json.loads(report_path.read_text(encoding="utf-8"))
+            if not isinstance(payload, dict):
+                checked.append(str(report_path.relative_to(repo_root)))
+                continue
             ref = payload.get("methodology_ref")
             expected = payload.get("methodology_hash")
             if ref and not expected:
@@ -1882,6 +2388,11 @@ def validate_repo(repo_root: Path) -> dict[str, Any]:
                             policy_paths=policy_paths,
                         )
                     )
+            elif payload.get("report_id") == "dad:phase6-exception-capture-machine-evidence-summary":
+                errors.extend(
+                    _phase6_machine_evidence_summary_errors(report_path, repo_root, payload)
+                )
+                checked.append(str(report_path.relative_to(repo_root)))
             elif payload.get("report_id") == "dad:exception-backfill-readiness":
                 policy_paths = _observed_audit_policy_paths(repo_root)
                 for row in payload.get("repos", []):

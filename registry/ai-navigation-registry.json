@@ -1,0 +1,434 @@
+{
+  "schema_version": "0.1.0",
+  "registry_id": "ai-navigation-registry",
+  "navigation_version": "2026.07.05.2",
+  "updated_at": "2026-07-05T07:45:00Z",
+  "singular_entrypoint": {
+    "path": "AI_FRONT_DOOR.md",
+    "rule": "All agents start at AI_FRONT_DOOR.md, then follow the required read order and task-specific branches.",
+    "competing_entrypoints_policy": "Mailboxes, generated reports, registries, and the library card catalog are routed branches, not alternate start-here surfaces."
+  },
+  "entrypoint_policy": {
+    "start_rule": "Open AI_FRONT_DOOR.md first for DAD work, then use this registry for current navigation version and freshness.",
+    "memory_rule": "Do not rely on memory of remembered TOC structure; compare current navigation_version, updated_at, recent_changes, and branch_map before using old mental routes.",
+    "branch_rule": "Use AI_TABLE_OF_CONTENTS.md for semantic routing, MACHINE_NAVIGATION_MANIFEST.json for tool routing, and branch_map entries for freshness hints.",
+    "mailbox_rule": "Mail is a candidate suggestion transport surface; it does not replace the front door or local source authority."
+  },
+  "branch_depth_policy": {
+    "max_default_hops": 3,
+    "rule": "Default navigation should be front door -> TOC or manifest or navigation registry -> task-relevant surface.",
+    "anti_bloat_rule": "Do not add date/version columns to every TOC row; add material freshness here and keep TOC rows descriptive."
+  },
+  "freshness_policy": {
+    "version_check": "Agents and enrolled repos should record the navigation_version they used and re-read recent_changes when the version differs.",
+    "date_policy": "Material navigation changes update updated_at and either branch_map.last_material_change_at or recent_changes; minor typo fixes do not need a new branch row.",
+    "recent_changes_limit": 20,
+    "stale_memory_action": "If the current navigation_version or updated_at differs from memory, inspect recent_changes first, then read only the affected branch rows.",
+    "toc_row_policy": "AI_TABLE_OF_CONTENTS.md remains a routing map with path, role, tags, and use-when triggers; this registry carries freshness metadata."
+  },
+  "change_classes": [
+    {
+      "change_class": "navigation_contract",
+      "meaning": "A front door, TOC, manifest, or navigation rule changed.",
+      "agent_action": "Re-read the front door, this registry, and affected TOC rows before material work."
+    },
+    {
+      "change_class": "library_catalog",
+      "meaning": "DAD needs, offerings, assets, skills, harnesses, or language guidance changed.",
+      "agent_action": "Re-run preflight or DAD matching before choosing assets, harnesses, or coding tactics."
+    },
+    {
+      "change_class": "mail_surface",
+      "meaning": "Mail, outbox, inbox, digest, provenance, release, or triage behavior changed.",
+      "agent_action": "Use the current mail docs and schema before composing, collecting, routing, delivering, or reviewing mail."
+    },
+    {
+      "change_class": "learning_loop",
+      "meaning": "Lessons, exception capture, hard-issue lookup, or postflight feedback changed.",
+      "agent_action": "Search current learning and exception surfaces before debugging hard issues or recording reusable lessons."
+    },
+    {
+      "change_class": "generated_report",
+      "meaning": "Generated candidate evidence changed without becoming source truth.",
+      "agent_action": "Treat the report as candidate evidence and check source methodology, hashes, and freshness before relying on it."
+    }
+  ],
+  "branch_map": [
+    {
+      "branch_id": "front_door",
+      "path": "AI_FRONT_DOOR.md",
+      "role": "Singular human- and AI-readable start point for DAD work.",
+      "tags": ["front_door", "authority", "navigation_freshness"],
+      "use_when": "Always start here before material work.",
+      "current_version": "2026.07.04.3",
+      "last_material_change_at": "2026-07-04T17:22:39Z",
+      "change_class": "navigation_contract",
+      "route_after": ["registry/ai-navigation-registry.json", "MACHINE_NAVIGATION_MANIFEST.json", "AI_TABLE_OF_CONTENTS.md"],
+      "freshness_hint": "Read the navigation freshness section before relying on remembered DAD paths."
+    },
+    {
+      "branch_id": "navigation_registry",
+      "path": "registry/ai-navigation-registry.json",
+      "role": "Machine-readable navigation version, branch freshness, and recent material changes.",
+      "tags": ["front_door", "registry", "navigation_freshness", "validation"],
+      "use_when": "You need to know what changed since the last DAD visit without bloating the TOC.",
+      "current_version": "2026.07.04.3",
+      "last_material_change_at": "2026-07-04T17:22:39Z",
+      "change_class": "navigation_contract",
+      "route_after": ["AI_FRONT_DOOR.md"],
+      "freshness_hint": "Compare navigation_version and updated_at to any cached or repo-local last-seen value."
+    },
+    {
+      "branch_id": "ai_toc",
+      "path": "AI_TABLE_OF_CONTENTS.md",
+      "role": "Semantic branching map with path, role, tags, and use-when triggers.",
+      "tags": ["front_door", "workflow", "navigation_freshness"],
+      "use_when": "You know the task class and need the smallest matching branch.",
+      "current_version": "2026.07.04.3",
+      "last_material_change_at": "2026-07-04T17:22:39Z",
+      "change_class": "navigation_contract",
+      "route_after": ["AI_FRONT_DOOR.md", "registry/ai-navigation-registry.json"],
+      "freshness_hint": "Use the TOC for routing meaning; use this registry for freshness."
+    },
+    {
+      "branch_id": "machine_manifest",
+      "path": "MACHINE_NAVIGATION_MANIFEST.json",
+      "role": "Machine-readable start files, registries, generated surfaces, and validation commands.",
+      "tags": ["front_door", "registry", "validation", "navigation_freshness"],
+      "use_when": "A tool or agent needs deterministic paths rather than prose routing.",
+      "current_version": "2026.07.04.3",
+      "last_material_change_at": "2026-07-04T17:22:39Z",
+      "change_class": "navigation_contract",
+      "route_after": ["AI_FRONT_DOOR.md", "registry/ai-navigation-registry.json"],
+      "freshness_hint": "Manifest freshness mirrors the navigation registry version for DAD entrypoint changes."
+    },
+    {
+      "branch_id": "deployment_verification_roadmap",
+      "path": "roadmap/evidence/dad-deployment-and-all-repo-verification-roadmap.md",
+      "role": "Ordered proof ladder for DAD local deployment, all-repo inventory, mail trials, exception capture, Rust production slice, catalog routes, and reviewed enrollment waves.",
+      "tags": ["roadmap", "deployment", "cross_repo", "mail_center", "rust", "validation"],
+      "use_when": "You are continuing DAD deployment/all-repo verification or deciding which phase must happen next.",
+      "current_version": "0.1.0",
+      "last_material_change_at": "2026-07-05T04:20:00Z",
+      "change_class": "generated_report",
+      "route_after": [
+        "roadmap/evidence/phase-8-dad-local-deployment.md",
+        "roadmap/evidence/phase-9-all-repo-read-only-inventory.md",
+        "roadmap/evidence/phase-10-mail-end-to-end-trial.md"
+      ],
+      "freshness_hint": "Machine evidence does not satisfy human gates; check roadmap/gate-evidence.json before marking phases complete."
+    },
+    {
+      "branch_id": "local_deployment",
+      "path": "docs/DAD_LOCAL_DEPLOYMENT.md",
+      "role": "Local bootstrap, hub locator, stable invocation, doctor scopes, and unavailable-hub policy.",
+      "tags": ["deployment", "workflow", "validation", "front_door"],
+      "use_when": "DAD needs to be callable from a non-DAD repo without manual PYTHONPATH knowledge.",
+      "current_version": "0.1.0",
+      "last_material_change_at": "2026-07-04T18:20:00Z",
+      "change_class": "navigation_contract",
+      "route_after": ["docs/OPERATIONS.md", "asset-dir doctor"],
+      "freshness_hint": "Use deployment-scope doctor for hub/install proof; operational-scope doctor remains the stricter generated-surface readiness check."
+    },
+    {
+      "branch_id": "library_catalog",
+      "path": "registry/dad-offerings-registry.json",
+      "role": "Rich card catalog of DAD assets, skills, harnesses, architecture refs, maps, workflows, and known upgrades.",
+      "tags": ["registry", "control_plane", "learning_loop", "coding_asset"],
+      "use_when": "A repo or agent needs to match context to DAD offerings, use now, save for future, or watch an upgrade channel.",
+      "current_version": "0.1.0",
+      "last_material_change_at": "2026-07-04T17:05:24Z",
+      "change_class": "library_catalog",
+      "route_after": ["AI_FRONT_DOOR.md", "AI_TABLE_OF_CONTENTS.md"],
+      "freshness_hint": "Use with dad-usefulness methodology; catalog changes may require a new context pack."
+    },
+    {
+      "branch_id": "dad_needs",
+      "path": "registry/dad-needs-registry.json",
+      "role": "DAD request list for what repos should send back through candidate mail.",
+      "tags": ["registry", "mail_center", "learning_loop"],
+      "use_when": "A repo needs to decide whether a lesson, asset, harness result, exception, or governance drift should be sent to DAD.",
+      "current_version": "0.1.0",
+      "last_material_change_at": "2026-07-04T17:05:24Z",
+      "change_class": "library_catalog",
+      "route_after": ["AI_FRONT_DOOR.md", "docs/MAIL_CENTER.md"],
+      "freshness_hint": "A needs change can alter outbox emission expectations; check recent_changes before assuming old packet rules."
+    },
+    {
+      "branch_id": "dad_rust_system",
+      "path": "assets/dad-rust-upgrade-starter-pack/README.md",
+      "role": "First-stop route for understanding DAD's Rust system before reading adoption plans or implementation code.",
+      "tags": ["rust", "coding_asset", "reusable_asset", "navigation_freshness"],
+      "use_when": "Another repo or AI asks where to look to understand DAD's Rust system.",
+      "current_version": "0.1.0",
+      "last_material_change_at": "2026-07-04T17:05:24Z",
+      "change_class": "library_catalog",
+      "route_after": [
+        "docs/rust/RUST_ADOPTION_PLAN.md",
+        "tools/dad_scan_core/",
+        "src/digital_asset_directory/rust_bridge/"
+      ],
+      "freshness_hint": "Read in order: starter-pack README, Rust adoption plan, then Rust code and Python bridge directories."
+    },
+    {
+      "branch_id": "rust_rollout_lesson_capture",
+      "path": "docs/rust/RUST_ROLLOUT_LESSON_CAPTURE_PROTOCOL.md",
+      "role": "Rust rollout lesson-capture protocol for append-only ledger rows, schema expectations, summary regeneration, and repo feedback packets.",
+      "tags": ["rust", "learning_loop", "schema", "mail_center", "validation"],
+      "use_when": "A repo needs to send, process, validate, or summarize Rust rollout lessons during Rust deployment or mail storms.",
+      "current_version": "0.1.0",
+      "last_material_change_at": "2026-07-05T07:45:00Z",
+      "change_class": "learning_loop",
+      "route_after": [
+        "lessons/rust_rollout/lesson_ledger.jsonl",
+        "schemas/rust-rollout-lesson.schema.json",
+        "asset-dir rust-rollout lessons-summarize"
+      ],
+      "freshness_hint": "Use this protocol before accepting ad hoc Rust lesson blobs; validate the ledger rows and regenerate summaries after appends."
+    },
+    {
+      "branch_id": "harness_vs_enforcement",
+      "path": "docs/HARNESS_VS_DETERMINISTIC_ENFORCEMENT.md",
+      "role": "Decision model for choosing harnesses, advisory reporting, warnings, or deterministic enforcement.",
+      "tags": ["harness_decision", "coding_asset", "governance", "learning_loop"],
+      "use_when": "A repo or agent discovers an issue and must decide whether it belongs in a harness, subharness, report, warning, validator, CI gate, or hard stop.",
+      "current_version": "0.1.0",
+      "last_material_change_at": "2026-07-04T17:16:04Z",
+      "change_class": "library_catalog",
+      "route_after": [
+        "docs/CODING_HARNESS_LIBRARY.md",
+        "docs/HARNESS_DISCOVERY_RADAR.md",
+        "registry/dad-offerings-registry.json"
+      ],
+      "freshness_hint": "Start harness-first for learning and ambiguity; enforce only stable, objective, high-risk boundaries."
+    },
+    {
+      "branch_id": "claude_architectural_root_cause_review",
+      "path": "docs/CLAUDE_ARCHITECTURAL_ROOT_CAUSE_REVIEW.md",
+      "role": "Claude-readable packet guidance for integration and implementation issue patterns that may have architectural root causes.",
+      "tags": ["root_cause_review", "learning_loop", "governance", "coding_asset"],
+      "use_when": "Repeated integration failures, implementation drift, boundary mismatch, ownership ambiguity, or review findings suggest architecture rather than a single local bug.",
+      "current_version": "0.1.0",
+      "last_material_change_at": "2026-07-04T17:22:39Z",
+      "change_class": "learning_loop",
+      "route_after": [
+        "docs/DAD_EXCEPTIONS_LAKE_BUILDOUT.md",
+        "templates/downstream/EXCEPTIONS_README.md",
+        "registry/dad-needs-registry.json"
+      ],
+      "freshness_hint": "Use safe metadata packets for Claude root-cause review; never raw logs, private rows, copied source, or hidden reasoning."
+    },
+    {
+      "branch_id": "lesson_lifecycle_governance",
+      "path": "docs/LESSON_LIFECYCLE_GOVERNANCE.md",
+      "role": "Candidate design for lesson lifecycle review overlays, review clocks, upgrades, downgrades, supersession, and archive status.",
+      "tags": ["learning_loop", "calibration", "governance"],
+      "use_when": "A repo or agent needs to decide whether an old lesson is still useful, stale, harmful, superseded, or ready for promotion review.",
+      "current_version": "0.1.0",
+      "last_material_change_at": "2026-07-04T17:42:00Z",
+      "change_class": "learning_loop",
+      "route_after": [
+        "docs/LESSONS_AND_HANDOFF_LOOP.md",
+        "docs/LESSON_GRAPH.md",
+        "registry/dad-needs-registry.json"
+      ],
+      "freshness_hint": "Lifecycle metadata is an overlay on immutable lessons; do not rewrite raw lesson records or enforce this before reviewed examples exist."
+    },
+    {
+      "branch_id": "mail_center",
+      "path": "docs/MAIL_CENTER.md",
+      "role": "Governed DAD mail hub and repo-local inbox/outbox mirror design.",
+      "tags": ["mail_center", "cross_repo", "learning_loop", "security_privacy"],
+      "use_when": "You compose, collect, route, deliver, digest, review, or explain DAD mail.",
+      "current_version": "0.1.0",
+      "last_material_change_at": "2026-07-04T17:05:24Z",
+      "change_class": "mail_surface",
+      "route_after": ["AI_FRONT_DOOR.md", "registry/ai-navigation-registry.json"],
+      "freshness_hint": "Mail remains candidate-only and must not become a competing entrypoint."
+    },
+    {
+      "branch_id": "mail_dirty_state_runbook",
+      "path": "docs/DAD_MAIL_STORM_AND_DIRTY_STATE_RUNBOOK.md",
+      "role": "Operator runbook for concurrent repo mail storms, wrong-box inbox writes, source-outbox duplicate retries, Rust rollout staging, and dirty-worktree separation.",
+      "tags": ["mail_center", "cross_repo", "rust", "validation", "workflow"],
+      "use_when": "Many repos or branches are writing DAD mail, Rust rollout lessons, or learning-loop packets and the DAD tree looks very dirty.",
+      "current_version": "0.1.0",
+      "last_material_change_at": "2026-07-05T04:20:00Z",
+      "change_class": "mail_surface",
+      "route_after": ["docs/MAIL_CENTER.md", "asset-dir mail doctor"],
+      "freshness_hint": "Use mail doctor safe_to_collect/safe_to_route/safe_to_deliver instead of treating git worktree dirt as mailbox corruption."
+    },
+    {
+      "branch_id": "repo_enrollment_mail_governance_safety_harness",
+      "path": "assets/coding-harnesses/repo-enrollment-mail-governance-safety/",
+      "role": "Reusable harness and eval cases for enrollment/mail write boundaries, dirty-spool gates, source-outbox retry storms, cross-source provenance conflicts, Rust rollout snapshot churn, and worktree-dirt separation.",
+      "tags": ["mail_center", "dirty_state", "rust", "repo_enrollment", "validation"],
+      "use_when": "You need to test or red-team DAD mail/enrollment behavior during concurrent repo mail, Rust rollout, or very dirty worktree states.",
+      "current_version": "0.1.0",
+      "last_material_change_at": "2026-07-05T04:55:00Z",
+      "change_class": "coding_harness",
+      "route_after": ["docs/DAD_MAIL_STORM_AND_DIRTY_STATE_RUNBOOK.md", "tests/test_mail_center.py"],
+      "freshness_hint": "Run or inspect this harness when mail doctor behavior changes; retry duplicates are observations, but reviewed cross-source identity conflicts block."
+    },
+    {
+      "branch_id": "address_model",
+      "path": "docs/DAD_ADDRESS_MODEL.md",
+      "role": "DAD 9-layer address model for compact asset, workflow, exception, and learning coordinates.",
+      "tags": ["address_model", "knowledge_graph", "learning_loop"],
+      "use_when": "You need compact context or graph-compatible coordinates without storing bulky workflow text inline.",
+      "current_version": "0.1.0",
+      "last_material_change_at": "2026-07-04T17:05:24Z",
+      "change_class": "library_catalog",
+      "route_after": ["AI_FRONT_DOOR.md", "AI_TABLE_OF_CONTENTS.md"],
+      "freshness_hint": "Layer-model changes are semantic; compare registry version before using old address assumptions."
+    },
+    {
+      "branch_id": "exceptions_lake",
+      "path": "docs/DAD_EXCEPTIONS_LAKE_BUILDOUT.md",
+      "role": "Cross-repo exceptions lake, fix-outcome ledger, and exception-to-learning compiler plan.",
+      "tags": ["learning_loop", "cross_repo", "security_privacy", "validation"],
+      "use_when": "You capture or learn from failures, bypasses, review findings, fix outcomes, or missed DAD mail patterns.",
+      "current_version": "0.1.0",
+      "last_material_change_at": "2026-07-04T17:05:24Z",
+      "change_class": "learning_loop",
+      "route_after": ["AI_FRONT_DOOR.md", "AI_TABLE_OF_CONTENTS.md"],
+      "freshness_hint": "Exception capture patterns change quickly; inspect recent changes before judging whether a repo should have emitted mail."
+    }
+  ],
+  "recent_changes": [
+    {
+      "change_id": "nav-change:2026-07-05:rust-rollout-lesson-capture-route",
+      "changed_at": "2026-07-05T07:45:00Z",
+      "change_type": "added_rust_rollout_lesson_capture_route",
+      "paths": [
+        "docs/rust/RUST_ROLLOUT_LESSON_CAPTURE_PROTOCOL.md",
+        "schemas/rust-rollout-lesson.schema.json",
+        "lessons/rust_rollout/lesson_ledger.jsonl",
+        "registry/dad-needs-registry.json",
+        "AI_FRONT_DOOR.md",
+        "AI_TABLE_OF_CONTENTS.md",
+        "MACHINE_NAVIGATION_MANIFEST.json"
+      ],
+      "summary": "Added first-class navigation and schema coverage for Rust rollout lesson capture so repo feedback during Rust mail storms is structured, append-only, and validation-backed.",
+      "agent_action": "Use the Rust lesson-capture protocol and schema before sending or accepting Rust rollout feedback; run lessons-summarize after ledger appends.",
+      "route_tags": ["rust", "learning_loop", "schema", "mail_center"]
+    },
+    {
+      "change_id": "nav-change:2026-07-05:mail-storm-dirty-state-runbook",
+      "changed_at": "2026-07-05T04:20:00Z",
+      "change_type": "added_mail_storm_dirty_state_route",
+      "paths": [
+        "docs/DAD_MAIL_STORM_AND_DIRTY_STATE_RUNBOOK.md",
+        "assets/coding-harnesses/repo-enrollment-mail-governance-safety/",
+        "docs/MAIL_CENTER.md",
+        "AI_FRONT_DOOR.md",
+        "AI_TABLE_OF_CONTENTS.md",
+        "MACHINE_NAVIGATION_MANIFEST.json",
+        "roadmap/evidence/phase-10-mail-end-to-end-trial.md"
+      ],
+      "summary": "Added a dedicated runbook and navigation route for separating true dirty mail spools from ordinary dirty worktrees and Rust rollout reference-snapshot churn during concurrent repo mail storms.",
+      "agent_action": "Run mail doctor with --repo all during multi-repo storms; use safe_to_collect/safe_to_route/safe_to_deliver for mail and --fail-on-worktree-dirty only when a clean git tree is required.",
+      "route_tags": ["mail_center", "cross_repo", "rust", "validation"]
+    },
+    {
+      "change_id": "nav-change:2026-07-04:local-deployment-route",
+      "changed_at": "2026-07-04T18:20:00Z",
+      "change_type": "added_local_deployment_route",
+      "paths": [
+        "docs/DAD_LOCAL_DEPLOYMENT.md",
+        "docs/OPERATIONS.md",
+        "AI_TABLE_OF_CONTENTS.md",
+        "scripts/bootstrap.ps1",
+        "scripts/bootstrap.sh"
+      ],
+      "summary": "Added a local deployment route for bootstrap, user hub locator, stable asset-dir shims, deployment-scope doctor, and unavailable-hub policy.",
+      "agent_action": "Use this route before assuming DAD is callable from non-DAD repos; deployment readiness is separate from full operational readiness.",
+      "route_tags": ["deployment", "workflow", "validation"]
+    },
+    {
+      "change_id": "nav-change:2026-07-04:lesson-lifecycle-governance",
+      "changed_at": "2026-07-04T17:42:00Z",
+      "change_type": "added_lesson_lifecycle_governance_branch",
+      "paths": [
+        "docs/LESSON_LIFECYCLE_GOVERNANCE.md",
+        "docs/LESSONS_AND_HANDOFF_LOOP.md",
+        "registry/dad-needs-registry.json"
+      ],
+      "summary": "Added non-enforced lesson lifecycle design so DAD can later review lessons for upgrade, downgrade, improvement, supersession, archive, and next-review cadence.",
+      "agent_action": "Use this branch when an old lesson might be stale, noisy, harmful, superseded, or ready for promotion review; keep raw lessons immutable.",
+      "route_tags": ["learning_loop", "calibration", "governance"]
+    },
+    {
+      "change_id": "nav-change:2026-07-04:claude-architectural-root-cause-packets",
+      "changed_at": "2026-07-04T17:22:39Z",
+      "change_type": "added_claude_architectural_root_cause_packet_guidance",
+      "paths": [
+        "docs/CLAUDE_ARCHITECTURAL_ROOT_CAUSE_REVIEW.md",
+        "docs/DAD_EXCEPTIONS_LAKE_BUILDOUT.md",
+        "templates/downstream/EXCEPTIONS_README.md",
+        "registry/dad-offerings-registry.json",
+        "registry/dad-needs-registry.json"
+      ],
+      "summary": "Added Claude-readable root-cause packet guidance for integration and implementation patterns that may be architectural.",
+      "agent_action": "Use this route when repeated failures suggest boundary, sequencing, ownership, contract, generated-evidence, or harness/enforcement root causes.",
+      "route_tags": ["root_cause_review", "learning_loop", "governance"]
+    },
+    {
+      "change_id": "nav-change:2026-07-04:harness-vs-enforcement-model",
+      "changed_at": "2026-07-04T17:16:04Z",
+      "change_type": "added_harness_vs_enforcement_decision_model",
+      "paths": [
+        "docs/HARNESS_VS_DETERMINISTIC_ENFORCEMENT.md",
+        "docs/CODING_HARNESS_LIBRARY.md",
+        "docs/HARNESS_DISCOVERY_RADAR.md",
+        "registry/dad-offerings-registry.json",
+        "registry/dad-needs-registry.json"
+      ],
+      "summary": "Added DAD's harness-first decision model so agents avoid turning every useful pattern into bulky deterministic enforcement.",
+      "agent_action": "Consult this model before promoting a finding to a hard check; use harnesses and subharnesses for learning-heavy or noisy issues.",
+      "route_tags": ["harness_decision", "coding_asset", "learning_loop"]
+    },
+    {
+      "change_id": "nav-change:2026-07-04:ai-navigation-freshness-registry",
+      "changed_at": "2026-07-04T17:05:24Z",
+      "change_type": "added_navigation_freshness_registry",
+      "paths": [
+        "registry/ai-navigation-registry.json",
+        "schemas/ai-navigation-registry.schema.json",
+        "AI_FRONT_DOOR.md",
+        "AI_TABLE_OF_CONTENTS.md",
+        "MACHINE_NAVIGATION_MANIFEST.json"
+      ],
+      "summary": "Added compact version/date navigation freshness so agents can detect rapid DAD changes without making the TOC deep or bulky.",
+      "agent_action": "Start at AI_FRONT_DOOR.md, compare navigation_version and updated_at, then inspect affected branch_map rows instead of relying on memory.",
+      "route_tags": ["front_door", "navigation_freshness", "registry"]
+    },
+    {
+      "change_id": "nav-change:2026-07-04:dad-address-model",
+      "changed_at": "2026-07-04T16:20:00Z",
+      "change_type": "added_address_model_branch",
+      "paths": [
+        "docs/DAD_ADDRESS_MODEL.md",
+        "registry/dad-address-model-registry.json",
+        "schemas/dad-address-model-registry.schema.json"
+      ],
+      "summary": "Added DAD's 9-layer address model and source-inspired layer 9 handling for compact learning and workflow coordinates.",
+      "agent_action": "Read the address model branch when designing repo-local assets, exception records, workflow cards, or learning-loop coordinates.",
+      "route_tags": ["address_model", "learning_loop", "knowledge_graph"]
+    },
+    {
+      "change_id": "nav-change:2026-07-04:repo-local-asset-memory",
+      "changed_at": "2026-07-04T16:25:00Z",
+      "change_type": "added_repo_local_asset_memory_branch",
+      "paths": [
+        "docs/REPO_LOCAL_DIGITAL_ASSET_DIRECTORY.md",
+        "schemas/repo-local-digital-asset-record.schema.json",
+        "templates/downstream/DAD_ASSETS_README.md"
+      ],
+      "summary": "Added a repo-local digital asset memory standard so repos can log their own assets and DAD can collect metadata-only sightings.",
+      "agent_action": "Use this branch before enrolling or comparing repo-local `.digital-asset/assets/` directories.",
+      "route_tags": ["repo_local_asset_memory", "reusable_asset", "cross_repo"]
+    }
+  ],
+  "authority_boundary": "This registry only governs DAD navigation freshness and routing. It does not make generated reports source truth, authorize downstream repo writes, or override source-repository authority."
+}

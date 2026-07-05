@@ -119,6 +119,19 @@ sources:
         - 'governance/**'
         - 'docs/**/*.md'
         - '.github/workflows/**'
+      # Optional reviewed connector export for read-only inventory reconciliation.
+      # Rows here create central candidate records only; they do not authorize
+      # content scanning, mailbox delivery, enrollment, or writes to any repo.
+      # For durable Phase 9 evidence, prefer a reviewed metadata file written
+      # under processed/repo_inventory/ and pass it to:
+      #   asset-dir dad inventory --github-repositories-file processed/repo_inventory/github_repos_<owner>.json
+      # Or set:
+      # repositories_file: processed/repo_inventory/github_repos_<owner>.json
+      # repositories:
+      #   - name: example-repo
+      #     full_name: lowelltwong-alt/example-repo
+      #     visibility: public
+      #     archived: false
 
 mail:
   repos:

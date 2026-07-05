@@ -1,4 +1,5 @@
 {
+  "created_at": "2026-07-02T17:56:48.839505+00:00",
   "dedupe_key": "dad:rust-rollout-dedupe:1ef44040-28bd-59af-8d21-2c52dda9a649",
   "evidence": [
     "config/repo_rust_status.yaml",
@@ -11,11 +12,14 @@
     "block_reason": "",
     "can_apply": true,
     "contains_logos": false,
+    "delivery_status": "staged_not_deliverable",
     "destructive_write_authorized": false,
     "external_send_performed": false,
     "github_write_performed": false,
+    "instruction_artifact_kind": "rust_rollout_local_instruction_packet",
     "python_stays_orchestrator": true,
     "recommended_first_rust_slice": "tools/dad_scan_core: local source scanner emitting raw asset observation JSONL and quarantine report.",
+    "requires_target_policy_review": true,
     "rollout_mode": "dad_forced_implementation",
     "rust_boundary": "deterministic leaf tooling only",
     "rust_rollout_packet_type": "rust_forced_rollout_candidate",
@@ -28,14 +32,39 @@
       "python -m pytest tests/test_rust_bridge_dad_scan_core.py -q"
     ]
   },
-  "review_status": "candidate",
-  "schema_version": "dad_rust_rollout_mail_packet.v1",
-  "sensitivity": "metadata_only",
-  "source_repo": "Digital-Assett-Directory",
+  "public_release": {
+    "human_release_id": "",
+    "public_release_required": true,
+    "public_release_status": "pending_human",
+    "release_reason": "internal DAD-origin Rust rollout packet targets unknown repo visibility; keep staged until target policy and release posture are reviewed",
+    "target_public_facing": false,
+    "target_visibility": "unknown"
+  },
+  "review_status": "generated_candidate",
+  "schema_version": "0.1.0",
+  "sensitivity": "internal",
+  "source_provenance": {
+    "canonical_source_repo": "dad://hub/Digital-Assett-Directory",
+    "collected_at": "",
+    "collected_by": "dad",
+    "composed_by": "dad-rust-rollout",
+    "original_mail_id": "",
+    "original_source_chain": [
+      "dad://hub/Digital-Assett-Directory"
+    ],
+    "received_at": "2026-07-02T17:56:48.839505+00:00",
+    "return_address": "dad://rust-rollout/local-instruction-packets",
+    "source_repo_alias": "dad",
+    "source_repo_id": "dad",
+    "source_visibility": "internal"
+  },
+  "source_repo": "dad",
   "suggested_actions": [
+    "Do not deliver or apply this packet until target visibility and local policy are reviewed.",
     "Review the DAD Rust rollout plan.",
     "Keep Python as orchestrator and target repo as owner of Rust files.",
     "Run the listed validation commands after any local apply."
   ],
-  "target_repo": "Digital-Assett-Directory"
+  "target_repo": "Digital-Assett-Directory",
+  "thread_id": "dad:rust-rollout-thread:896b3ec8-069d-5ab6-9a30-a250171143d0"
 }

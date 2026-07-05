@@ -78,6 +78,23 @@
       "review_status": "reviewed"
     },
     {
+      "control_plane_id": "professional_research_layer",
+      "name": "Professional Research Layer",
+      "status": "candidate",
+      "cadence": "task-triggered",
+      "primary_surfaces": [
+        "docs/DAD_PROFESSIONAL_RESEARCH_LAYER.md",
+        "docs/RESEARCH_INTAKE_PIPELINE.md",
+        "docs/HARNESS_DISCOVERY_RADAR.md",
+        "registry/trusted-source-registry.json",
+        "registry/preflight-profile-router.json",
+        "assets/coding-harnesses/language-frontier-research/**"
+      ],
+      "normal_write_boundary": ".digital-asset/mail/**; processed/research/intake/**; processed/harnesses/**",
+      "authority_boundary": "Professional research is fallback candidate evidence after DAD lookup. It may create pointer-only intake, harness candidates, or fix-outcome records, but it cannot promote external content, copy leaked material, or mutate downstream repos without review.",
+      "review_status": "candidate"
+    },
+    {
       "control_plane_id": "agent_skills",
       "name": "Agent Skill Library",
       "status": "active",
@@ -106,7 +123,12 @@
       "name": "Architecture References",
       "status": "active",
       "cadence": "weekly",
-      "primary_surfaces": ["docs/ARCHITECTURE_CONSULT.md", "registry/template-registry.json"],
+      "primary_surfaces": [
+        "docs/ARCHITECTURE_CONSULT.md",
+        "docs/DAD_ADDRESS_MODEL.md",
+        "registry/dad-address-model-registry.json",
+        "registry/template-registry.json"
+      ],
       "normal_write_boundary": ".digital-asset/mail/**",
       "authority_boundary": "Architecture recommendations are advisory and must be checked against local repo constraints.",
       "review_status": "reviewed"

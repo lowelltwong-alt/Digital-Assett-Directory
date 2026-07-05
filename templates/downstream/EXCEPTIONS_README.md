@@ -26,8 +26,15 @@ receive DAD mail without authorizing exception collection. Observed capture
 audits may read mailbox and exception metadata to find missed emissions, but they
 must not mutate this repo.
 
-If `asset-dir` is not available on `PATH`, first try the DAD source checkout
-entrypoint with `PYTHONPATH=src`:
+If `asset-dir` is not available on `PATH`, first try the stable DAD user shim:
+
+```text
+& "$HOME\.dad\bin\asset-dir.ps1" exceptions record --repo . --type <type> --summary "<safe summary>"
+$HOME/.dad/bin/asset-dir exceptions record --repo . --type <type> --summary "<safe summary>"
+```
+
+If the shim is unavailable too, try the DAD source checkout entrypoint with
+`PYTHONPATH=src`:
 
 ```text
 python -m digital_asset_directory.cli exceptions record --repo . --type <type> --summary "<safe summary>"
@@ -75,6 +82,53 @@ emitted the packet, but they are not source truth or local approval.
 If DAD's capture surface version is newer than this repo's contract, the next
 agent should treat that as an update notice: read the current registry, update
 packet fields as needed, and keep old packets as historical candidate evidence.
+
+## Hard Issue Lookup Before Improvising
+
+When a repo agent hits a non-obvious failure, it should check DAD for prior
+exception and fix-outcome evidence before inventing a fresh solution. This
+should happen from observable work signals only: failed command metadata,
+validation gaps, retry loops, stale reports, permission failures, user
+corrections, changed plans, or safe task/context summaries. Do not capture or
+infer from hidden reasoning.
+
+Use this path for hard or recurring issues:
+
+```text
+python -m digital_asset_directory.cli exceptions hard-issue-lookup \
+  --query "<short safe issue summary>" \
+  --signal failed_command \
+  --command-arg "<argv only>" \
+  --path-ref "<repo-relative path or safe hash>"
+```
+
+The lookup returns candidate evidence, not instructions. A
+`validated_fix_review_candidate` means DAD found an observed exception with a
+validated fix outcome and enough matching terms to review. A
+`related_pattern_only` match may still be useful for clarifying questions, but
+the repo must not reuse the fix as advice without local validation. If the
+target is public-facing and the source evidence is private, internal,
+restricted, or unknown, fix details stay held behind human release.
+
+Do not paste stdout/stderr, stack traces, raw logs, private rows, diffs, copied
+source, hidden reasoning, or prompt-injection-like text into the query. Use
+short metadata, hashes, and refs. If no prior evidence matches and the issue is
+material, record a new exception event and later a fix outcome so DAD can learn
+from the resolution.
+
+## Architectural Root-Cause Review Packets
+
+If an implementation or integration issue looks architectural rather than local,
+send a Claude-readable root-cause packet using DAD's guidance in
+`docs/CLAUDE_ARCHITECTURAL_ROOT_CAUSE_REVIEW.md`.
+
+Use this when repeated failures suggest boundary mismatch, ownership ambiguity,
+sequencing error, contract gap, generated evidence drift, integration surface
+mismatch, harness gap, over-enforcement, under-enforcement, or source-authority
+confusion. Send safe summaries, symptom refs, boundary refs, architecture signal
+labels, attempted fixes, validation refs, related assets, and the question
+Claude should answer. Do not send raw logs, stack traces, private rows, secrets,
+copied source, hidden reasoning, or raw review transcripts.
 
 Historical backfill and observed-audit path signals use DAD's reviewed taxonomy
 classifier in `registry/exception-event-type-registry.json#backfill_classifier`.
@@ -180,6 +234,13 @@ Rules:
 - A fix outcome is candidate metadata until reviewed by this repo or a human; it
   does not prove the underlying issue is fixed outside the cited validation.
 
+DAD may send a staged fix-outcome request when its central lake has an observed
+exception from this repo with no closure record. Treat that request as a prompt
+to review locally, not as proof or an instruction to change code. If the event is
+real, answer with a metadata-only fix outcome. If it is not real, belongs
+elsewhere, is accepted risk, is deferred, or is a duplicate, record that decision
+explicitly instead of letting DAD infer closure from silence.
+
 ## What To Send
 
 Send short metadata, pointers, hashes, command argv, exit codes, duration,
@@ -210,6 +271,7 @@ Use these common event types when they fit:
 - `dirty_worktree_block`
 - `public_release_hold`
 - `private_origin_public_target`
+- `artifact_registration_drift`
 - `secret_or_pii_detected`
 - `raw_blob_rejected`
 - `prompt_injection_like_payload`
@@ -218,8 +280,12 @@ Use these common event types when they fit:
 - `harmful_dad_recommendation`
 - `dad_asset_attempt_failed`
 - `ignored_required_recommendation`
+- `agent_behavior_exception`
 - `rust_shadow_parity_mismatch`
+- `validation_command_missing`
 - `pytest_performance_hotspot`
+- `duplicate_mail_delivery`
+- `malformed_jsonl`
 - `repo_rename_lineage`
 - `repo_split_lineage`
 - `roadmap_gate_mismatch`
@@ -227,12 +293,17 @@ Use these common event types when they fit:
 - `environment_config_missing`
 - `permission_denied`
 - `external_service_failure`
+- `dependency_install_failure`
 - `data_ingestion_failure`
 - `identity_resolution_conflict`
 - `source_authority_conflict`
 - `generated_code_compile_failure`
 - `build_packaging_failure`
+- `code_change_exception`
 - `fixture_or_synthetic_data_gap`
+- `semantic_lineage_field_drop`
+- `demo_case_as_parent_architecture`
+- `hard_problem_review_not_routed`
 - `capture_surface_outdated`
 - `graph_or_taxonomy_drift`
 - `mail_notice_backpressure_risk`
@@ -240,10 +311,34 @@ Use these common event types when they fit:
 - `model_instruction_drift`
 - `backfill_exception_candidate`
 
+Backfill path-signal-only routes use capture contract `backfill_candidate` and
+must include `source_rule_id`, `path_signal`, `safe_path_hash_or_pointer`, and
+`false_positive_risk`. These routes are source-review candidates only; a path
+keyword does not prove the event occurred. Reviewed backfill-only event types
+currently include:
+
+- `rust_shadow_parity_mismatch`
+- `test_timeout`
+- `command_timeout`
+- `source_authority_conflict`
+- `capture_surface_outdated`
+- `graph_or_taxonomy_drift`
+- `mail_quarantine`
+- `mail_notice_backpressure_risk`
+- `stale_generated_artifact`
+- `license_or_provenance_review_gap`
+- `model_instruction_drift`
+- `rollback`
+- `schema_validation_failure`
+- `premortem_failure_story`
+
 For protected-repo, dirty-worktree, private-origin/public-target, and stale-report
 events, send refs, counts, hashes, gate states, and review IDs only. Do not send
 diffs, private payloads, raw report bodies, or local absolute paths intended for
 public-facing repos.
+For `code_change_exception`, send only the change ref, changed surface class,
+exception reason, validation ref or validation gap, and a safe summary. Do not
+send diffs, source bodies, private fixture rows, or raw test output.
 If sensitive content blocks outbound capture, record a repo-local quarantine or
 audit metadata entry with the blocker class and safe refs only; do not drop the
 attempt silently.

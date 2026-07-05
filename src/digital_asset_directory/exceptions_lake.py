@@ -4,11 +4,12 @@ import json
 import os
 import re
 import shutil
-import tempfile
 from collections import Counter
+from contextlib import nullcontext
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Iterable
+from uuid import uuid4
 
 from jsonschema.exceptions import ValidationError
 from jsonschema.validators import validator_for
@@ -34,6 +35,11 @@ REPORT_JSON = Path("processed") / "reports" / "exceptions_lake.json"
 REPORT_MD = Path("processed") / "reports" / "exceptions_lake.md"
 LEARNING_QUEUE_JSON = Path("processed") / "reports" / "exception_learning_queue.json"
 LEARNING_QUEUE_MD = Path("processed") / "reports" / "exception_learning_queue.md"
+FIX_OUTCOME_REQUESTS_JSON = Path("processed") / "reports" / "exception_fix_outcome_requests.json"
+FIX_OUTCOME_REQUESTS_MD = Path("processed") / "reports" / "exception_fix_outcome_requests.md"
+FIX_OUTCOME_REQUESTS_STAGED = (
+    Path("processed") / "mail" / "staged" / "fix_outcome_requests.jsonl"
+)
 BACKFILL_REVIEW_QUEUE_JSON = Path("processed") / "reports" / "exception_backfill_review_queue.json"
 BACKFILL_REVIEW_QUEUE_MD = Path("processed") / "reports" / "exception_backfill_review_queue.md"
 BACKFILL_REFRESH_PLAN_JSON = (
@@ -68,9 +74,17 @@ EXCEPTION_EVENT_TYPE_REGISTRY = Path("registry") / "exception-event-type-registr
 EXCEPTION_LEARNING_METHODOLOGY = Path("registry") / "exception-learning-methodology.json"
 
 SCHEMA_VERSION = "0.1.0"
+HARD_ISSUE_LOOKUP_BASIS = (
+    "Deterministic candidate lookup over exception events and validated fix outcomes. "
+    "Ranking uses event-type/signal matches and token overlap only; it is not confidence, "
+    "truth, source authority, or approval to apply a fix."
+)
 MAX_STRING_CHARS = 1200
 MAX_RECORD_BYTES = 16_000
 MAX_BACKFILL_EVENTS = 1000
+LOCAL_ABSOLUTE_PATH_PATTERN = re.compile(
+    r"(?i)(?:\b[A-Z]:[\\/]|\\\\[A-Za-z0-9_.-]+[\\/]|/Users/|/home/|/var/folders/)"
+)
 PROMPT_INJECTION_PATTERNS = [
     re.compile(r"(?i)\bignore (all )?(previous|prior|above) instructions\b"),
     re.compile(r"(?i)\b(system|developer) prompt\b"),
@@ -81,6 +95,20 @@ HIDDEN_REASONING_PATTERNS = [
     re.compile(r"(?i)\b(hidden|private|internal) (chain[- ]of[- ]thought|reasoning)\b"),
     re.compile(r"(?i)\b(chain[- ]of[- ]thought|scratchpad) (transcript|notes|dump)\b"),
 ]
+SOURCE_OR_DIFF_PATTERNS = [
+    re.compile(r"(?im)^\s*diff --git\b"),
+    re.compile(r"(?m)^\s*@@\s+-\d+(?:,\d+)?\s+\+\d+(?:,\d+)?\s+@@"),
+    re.compile(r"(?im)^\s*```(?:python|py|rust|rs|javascript|js|typescript|ts|go|java|c|cpp|csharp|cs|sql)?\s*$"),
+]
+SOURCE_LINE_PATTERN = re.compile(
+    r"(?m)^\s*(?:"
+    r"def\s+\w+\s*\(|class\s+\w+|"
+    r"pub\s+(?:async\s+)?fn\s+\w+\s*\(|fn\s+\w+\s*\(|impl(?:\s+|\<)|"
+    r"(?:from\s+\S+\s+)?import\s+\S+|use\s+\S+::|"
+    r"(?:const|let|var)\s+[$A-Za-z_][\w$]*\s*=|"
+    r"return\s+.+[;)]?$"
+    r")"
+)
 
 SOURCE_VISIBILITIES = {"public", "internal", "private", "restricted", "unknown"}
 SEVERITIES = {"critical", "high", "medium", "low", "info"}
@@ -111,6 +139,49 @@ FIX_REVIEW_STATUSES = {
 FIX_VALIDATION_STATUSES = {"validated", "validation_missing", "not_applicable", "failed"}
 FIX_EVENT_LOOKUP_STATUSES = {"found_in_lake", "missing_from_lake"}
 FALLBACK_EVENT_TYPE = "other"
+HARD_ISSUE_LOOKUP_TRIGGER_TERMS = {
+    "blocked",
+    "blocker",
+    "bug",
+    "conflict",
+    "debug",
+    "denied",
+    "error",
+    "exception",
+    "fail",
+    "failed",
+    "failure",
+    "flaky",
+    "hard",
+    "issue",
+    "malformed",
+    "non-obvious",
+    "os.replace",
+    "permission",
+    "regression",
+    "retry",
+    "stale",
+    "timeout",
+    "unavailable",
+    "validation",
+    "winerror",
+}
+HARD_ISSUE_SIGNAL_EVENT_TYPES = {
+    "failed_command": {"failed_command", "runtime_exception", "validation_command_missing"},
+    "runtime_exception": {"runtime_exception"},
+    "permission_denied": {"permission_denied", "runtime_exception", "environment_config_missing"},
+    "permission_error": {"permission_denied", "runtime_exception", "environment_config_missing"},
+    "stale_report": {"stale_report", "stale_generated_artifact"},
+    "stale_generated_artifact": {"stale_report", "stale_generated_artifact"},
+    "malformed_jsonl": {"malformed_jsonl", "runtime_exception"},
+    "lock_timeout": {"runtime_exception", "command_timeout", "permission_denied"},
+    "retry_loop": {"command_timeout", "runtime_exception", "external_service_failure"},
+    "test_failure": {"test_failure", "test_timeout", "pytest_performance_hotspot"},
+    "tool_unavailable": {"tool_unavailable", "environment_config_missing"},
+    "review_finding": {"review_finding", "premortem_failure_story"},
+    "artifact_registration_drift": {"artifact_registration_drift", "stale_generated_artifact"},
+    "validation_failure": {"schema_validation_failure", "validation_command_missing", "test_failure"},
+}
 BACKFILL_RULES = [
     {
         "rule_id": "backfill-rule:rust-shadow-parity",
@@ -394,6 +465,45 @@ def _safe_ref_list(value: Any) -> list[Any]:
     if not isinstance(value, list):
         return []
     return [_safe_external_ref(item) for item in value]
+
+
+def _safe_change_context_value(value: Any, *, limit: int) -> str:
+    if value is None:
+        return ""
+    cleaned = _safe_external_ref(str(value).strip())
+    return str(cleaned)[:limit]
+
+
+def _normalize_change_context(value: Any) -> dict[str, str]:
+    if not isinstance(value, dict):
+        return {}
+    limits = {
+        "change_ref": 240,
+        "changed_surface": 160,
+        "exception_reason": 600,
+        "validation_ref_or_gap": 300,
+    }
+    normalized: dict[str, str] = {}
+    for field, limit in limits.items():
+        cleaned = _safe_change_context_value(value.get(field), limit=limit)
+        if cleaned:
+            normalized[field] = cleaned
+    return normalized
+
+
+def _change_context_from_packet(packet: dict[str, Any]) -> dict[str, str]:
+    candidate: dict[str, Any] = {}
+    if isinstance(packet.get("change_context"), dict):
+        candidate.update(packet["change_context"])
+    for field in (
+        "change_ref",
+        "changed_surface",
+        "exception_reason",
+        "validation_ref_or_gap",
+    ):
+        if field in packet:
+            candidate[field] = packet[field]
+    return _normalize_change_context(candidate)
 
 
 def _repo_policy_for(repo: Path, repo_policies: Iterable[Any] | None) -> Any | None:
@@ -741,6 +851,7 @@ def normalize_event_type(hub_root: Path, event_type: str) -> str:
 def stable_exception_event_id(record: dict[str, Any]) -> str:
     command = record.get("command") or {}
     argv = command.get("argv") if isinstance(command, dict) else []
+    change_context = json.dumps(record.get("change_context") or {}, sort_keys=True)
     identity = [
         str(record.get("source_repo", "")),
         str(record.get("capture_contract", "")),
@@ -749,6 +860,7 @@ def stable_exception_event_id(record: dict[str, Any]) -> str:
         _normal(" ".join(str(item) for item in argv or [])),
         _normal("|".join(str(item) for item in record.get("context_refs", []) or [])),
         _normal(str(record.get("error_fingerprint", ""))),
+        _normal(change_context),
     ]
     return stable_id("exception-event", *identity)
 
@@ -779,6 +891,10 @@ def _redact_and_limit(value: Any, issues: list[str]) -> tuple[Any, int]:
             issues.append("hidden_reasoning_like_payload")
             digest = sha256_bytes(redacted.encode("utf-8"))
             redacted = f"[HIDDEN_REASONING_LIKE_TEXT_REJECTED_SHA256:{digest}]"
+        if _looks_like_source_or_diff(redacted):
+            issues.append("source_or_diff_like_payload")
+            digest = sha256_bytes(redacted.encode("utf-8"))
+            redacted = f"[SOURCE_OR_DIFF_LIKE_TEXT_REJECTED_SHA256:{digest}]"
         if len(redacted) > MAX_STRING_CHARS:
             issues.append("long_string")
             digest = sha256_bytes(redacted.encode("utf-8"))
@@ -811,6 +927,15 @@ def _redact_and_limit(value: Any, issues: list[str]) -> tuple[Any, int]:
     return value, 0
 
 
+def _looks_like_source_or_diff(value: str) -> bool:
+    if any(pattern.search(value) for pattern in SOURCE_OR_DIFF_PATTERNS):
+        return True
+    source_line_count = sum(1 for line in value.splitlines() if SOURCE_LINE_PATTERN.search(line))
+    if source_line_count >= 2:
+        return True
+    return source_line_count == 1 and ("\n" in value or "{" in value or ";" in value)
+
+
 def _append_prompt_injection_issues(value: Any, issues: list[str], *, path: str = "record") -> None:
     if isinstance(value, str):
         if any(pattern.search(value) for pattern in PROMPT_INJECTION_PATTERNS):
@@ -835,7 +960,12 @@ def screen_exception_record(record: dict[str, Any]) -> tuple[dict[str, Any], lis
     if redaction_count:
         issues.append("credential_or_pii_pattern")
     raw_blob_blocked = any(
-        issue in {"long_string", "raw_blob_like_multiline_value", "table_like_value"}
+        issue in {
+            "long_string",
+            "raw_blob_like_multiline_value",
+            "source_or_diff_like_payload",
+            "table_like_value",
+        }
         for issue in issues
     )
     screening.update(
@@ -880,6 +1010,7 @@ def build_exception_event(
     error_fingerprint: str = "",
     suspected_cause: str = "",
     dedupe_key: str = "",
+    change_context: dict[str, Any] | None = None,
     repo_policies: Iterable[Any] | None = None,
 ) -> dict[str, Any]:
     source_repo, policy_visibility, public_facing = _repo_identity(repo, repo_policies)
@@ -985,6 +1116,9 @@ def build_exception_event(
         "dedupe_key": dedupe_key,
         "review_status": "candidate",
     }
+    normalized_change_context = _normalize_change_context(change_context)
+    if normalized_change_context:
+        record["change_context"] = normalized_change_context
     record["event_id"] = stable_exception_event_id(record)
     record["dedupe_key"] = dedupe_key or stable_id("exception-dedupe", record["event_id"])
     return record
@@ -1064,6 +1198,8 @@ def _canonicalize_normalized_packet(
         command = dict(command)
         command["argv"] = [_safe_external_ref(item) for item in command["argv"]]
         record["command"] = command
+    if isinstance(record.get("change_context"), dict):
+        record["change_context"] = _normalize_change_context(record.get("change_context"))
     return record
 
 
@@ -1089,6 +1225,7 @@ def normalize_exception_packet(
     summary = str(packet.get("safe_summary") or packet.get("summary") or "").strip()
     if not summary:
         raise ValueError("Exception packet requires safe_summary or summary.")
+    event_type = str(packet.get("event_type") or packet.get("type") or FALLBACK_EVENT_TYPE)
     command = packet.get("command", {})
     argv = command.get("argv", []) if isinstance(command, dict) else []
     exit_code = command.get("exit_code") if isinstance(command, dict) else None
@@ -1096,7 +1233,7 @@ def normalize_exception_packet(
     return build_exception_event(
         hub_root,
         repo,
-        event_type=str(packet.get("event_type") or packet.get("type") or FALLBACK_EVENT_TYPE),
+        event_type=event_type,
         summary=summary,
         stage=str(packet.get("stage") or "midflight"),
         severity=str(packet.get("severity") or "medium"),
@@ -1116,6 +1253,9 @@ def normalize_exception_packet(
         error_fingerprint=str(packet.get("error_fingerprint") or ""),
         suspected_cause=str(packet.get("suspected_cause") or ""),
         dedupe_key=str(packet.get("dedupe_key") or ""),
+        change_context=_change_context_from_packet(packet)
+        if event_type.replace("-", "_") == "code_change_exception"
+        else None,
         repo_policies=repo_policies,
     )
 
@@ -1139,6 +1279,7 @@ def record_exception_event(
     asset_refs: list[str] | None = None,
     harness_refs: list[str] | None = None,
     trace_refs: list[str] | None = None,
+    change_context: dict[str, Any] | None = None,
     repo_policies: Iterable[Any] | None = None,
 ) -> dict[str, Any]:
     record = build_exception_event(
@@ -1159,6 +1300,7 @@ def record_exception_event(
         asset_refs=asset_refs,
         harness_refs=harness_refs,
         trace_refs=trace_refs,
+        change_context=change_context,
         repo_policies=repo_policies,
     )
     screened, issues = screen_exception_record(record)
@@ -1239,6 +1381,11 @@ def _fix_validation_status(
     if decision in {"accepted_risk", "deferred", "duplicate", "rejected"}:
         return "not_applicable"
     return "validation_missing"
+
+
+def _source_repo_report_key(value: Any) -> str:
+    text = str(value or "unknown").strip()
+    return text.casefold() if text else "unknown"
 
 
 def _validate_fix_outcome_policy(
@@ -2295,6 +2442,429 @@ def _is_validated_fixed_outcome(row: dict[str, Any]) -> bool:
     )
 
 
+def _lookup_tokens(*values: Any) -> set[str]:
+    text_parts: list[str] = []
+    for value in values:
+        if value is None:
+            continue
+        if isinstance(value, dict):
+            text_parts.extend(str(item) for item in value.values())
+        elif isinstance(value, (list, tuple, set)):
+            text_parts.extend(str(item) for item in value)
+        else:
+            text_parts.append(str(value))
+    text = " ".join(text_parts).lower()
+    tokens = {
+        token.strip("/\\.:_-")
+        for token in re.findall(r"[a-z][a-z0-9_.+-]{1,63}", text)
+        if len(token.strip("/\\.:_-")) > 1
+    }
+    stopwords = {
+        "and",
+        "are",
+        "command",
+        "dad",
+        "file",
+        "files",
+        "for",
+        "from",
+        "into",
+        "local",
+        "path",
+        "paths",
+        "repo",
+        "repository",
+        "run",
+        "that",
+        "the",
+        "this",
+        "with",
+    }
+    return tokens - stopwords
+
+
+def looks_like_hard_issue_lookup_context(*values: Any) -> bool:
+    tokens = _lookup_tokens(*values)
+    if tokens & HARD_ISSUE_LOOKUP_TRIGGER_TERMS:
+        return True
+    text = " ".join(str(value) for value in values if value is not None).lower()
+    return any(
+        phrase in text
+        for phrase in (
+            "hard issue",
+            "non obvious",
+            "non-obvious",
+            "test failed",
+            "tests failed",
+            "validation failed",
+            "tool unavailable",
+            "permissionerror",
+            "permission error",
+            "winerror",
+        )
+    )
+
+
+def _safe_lookup_text(value: Any, *, max_chars: int = 320) -> tuple[str, int]:
+    text = " ".join(str(value or "").split())
+    redacted, redaction_count = redact_sensitive_text(text)
+    if len(redacted) > max_chars:
+        digest = sha256_bytes(redacted.encode("utf-8"))
+        redacted = f"{redacted[: max_chars - 28].rstrip()}... sha256:{digest[:16]}"
+    return redacted, redaction_count
+
+
+def _safe_lookup_ref(value: Any) -> tuple[str, int]:
+    text, redaction_count = _safe_lookup_text(value, max_chars=240)
+    if not text:
+        return "", redaction_count
+    if LOCAL_ABSOLUTE_PATH_PATTERN.search(text) or _lookup_screening_issues(text):
+        return f"ref-sha256:{sha256_bytes(text.encode('utf-8'))}", redaction_count
+    return text, redaction_count
+
+
+def _safe_lookup_refs(values: Any, *, limit: int = 8) -> tuple[list[str], int]:
+    refs: list[str] = []
+    redactions = 0
+    if not isinstance(values, list):
+        values = [] if values in (None, "") else [values]
+    for value in values[:limit]:
+        ref, count = _safe_lookup_ref(value)
+        redactions += count
+        if ref:
+            refs.append(ref)
+    return refs, redactions
+
+
+def _lookup_screening_issues(*values: Any) -> list[str]:
+    text = "\n".join(str(value or "") for value in values)
+    issues: set[str] = set()
+    if not text.strip():
+        return []
+    if LOCAL_ABSOLUTE_PATH_PATTERN.search(text):
+        issues.add("local_absolute_path_hashed")
+    if any(pattern.search(text) for pattern in PROMPT_INJECTION_PATTERNS):
+        issues.add("prompt_injection_like_text_suppressed")
+    if any(pattern.search(text) for pattern in HIDDEN_REASONING_PATTERNS):
+        issues.add("hidden_reasoning_reference_suppressed")
+    if any(pattern.search(text) for pattern in SOURCE_OR_DIFF_PATTERNS):
+        issues.add("source_or_diff_blob_suppressed")
+    if SOURCE_LINE_PATTERN.search(text):
+        issues.add("source_like_text_suppressed")
+    if len([line for line in text.splitlines() if "|" in line]) >= 3:
+        issues.add("table_like_payload_suppressed")
+    if re.search(r"(?m)^\s*(?:traceback|at\s+\S+\(|file\s+\".+\", line \d+)", text, re.I):
+        issues.add("stack_trace_like_text_suppressed")
+    return sorted(issues)
+
+
+def _lookup_query_summary(value: Any, issues: list[str]) -> tuple[str, int]:
+    text = " ".join(str(value or "").split())
+    if issues:
+        return f"text-sha256:{sha256_bytes(text.encode('utf-8'))}", 0
+    return _safe_lookup_text(value, max_chars=240)
+
+
+def _load_lake_events_for_lookup(hub_root: Path) -> tuple[list[dict[str, Any]], list[str]]:
+    records, errors = _read_jsonl_with_errors(hub_root / LAKE_PATH)
+    warnings: list[str] = []
+    if errors:
+        warnings.append("malformed exception lake rows were skipped during lookup")
+    valid_records: list[dict[str, Any]] = []
+    for record in records:
+        try:
+            validate_exception_event_record(hub_root, record)
+        except (FileNotFoundError, json.JSONDecodeError, ValueError):
+            warnings.append("invalid exception lake rows were skipped during lookup")
+            continue
+        valid_records.append(record)
+    return valid_records, sorted(set(warnings))
+
+
+def _load_fix_outcomes_for_lookup(hub_root: Path) -> tuple[list[dict[str, Any]], list[str]]:
+    records, errors = _read_jsonl_with_errors(hub_root / FIX_OUTCOME_PATH)
+    warnings: list[str] = []
+    if errors:
+        warnings.append("malformed fix-outcome rows were skipped during lookup")
+    valid_records: list[dict[str, Any]] = []
+    for record in records:
+        try:
+            validate_exception_fix_outcome_record(hub_root, record)
+        except (FileNotFoundError, json.JSONDecodeError, ValueError):
+            warnings.append("invalid fix-outcome rows were skipped during lookup")
+            continue
+        valid_records.append(record)
+    return valid_records, sorted(set(warnings))
+
+
+def _event_lookup_text(event: dict[str, Any]) -> str:
+    command = event.get("command") if isinstance(event.get("command"), dict) else {}
+    taxonomy = event.get("taxonomy_dimensions") if isinstance(event.get("taxonomy_dimensions"), dict) else {}
+    values: list[Any] = [
+        event.get("event_id"),
+        event.get("event_type"),
+        event.get("capture_contract"),
+        event.get("stage"),
+        event.get("severity"),
+        event.get("safe_summary"),
+        event.get("symptoms"),
+        event.get("error_fingerprint"),
+        event.get("suspected_cause"),
+        event.get("task"),
+        event.get("context_refs"),
+        event.get("validation_refs"),
+        event.get("asset_refs"),
+        event.get("harness_refs"),
+        taxonomy,
+        command.get("argv") if isinstance(command, dict) else [],
+    ]
+    return " ".join(str(value) for value in values if value)
+
+
+def _fix_lookup_text(outcome: dict[str, Any]) -> str:
+    values: list[Any] = [
+        outcome.get("fix_id"),
+        outcome.get("summary"),
+        outcome.get("validation_refs"),
+        outcome.get("regression_test_refs"),
+        outcome.get("fix_refs"),
+        outcome.get("asset_refs"),
+        outcome.get("lesson_refs"),
+        outcome.get("remaining_risks"),
+    ]
+    return " ".join(str(value) for value in values if value)
+
+
+def _expanded_lookup_event_types(signals: Iterable[str], event_types: Iterable[str]) -> set[str]:
+    expanded = {str(value).strip() for value in event_types if str(value).strip()}
+    for signal in signals:
+        key = str(signal).strip().lower().replace("-", "_")
+        if not key:
+            continue
+        mapped = HARD_ISSUE_SIGNAL_EVENT_TYPES.get(key)
+        if mapped:
+            expanded.update(mapped)
+        else:
+            expanded.add(key)
+    return expanded
+
+
+def _severity_sort_value(value: Any) -> int:
+    return {"critical": 5, "high": 4, "medium": 3, "low": 2, "info": 1}.get(str(value), 0)
+
+
+def _lookup_fix_summary(outcome: dict[str, Any]) -> tuple[dict[str, Any], int]:
+    redactions = 0
+    summary, count = _safe_lookup_text(outcome.get("summary"))
+    redactions += count
+    validation_refs, count = _safe_lookup_refs(outcome.get("validation_refs"))
+    redactions += count
+    regression_refs, count = _safe_lookup_refs(outcome.get("regression_test_refs"))
+    redactions += count
+    fix_refs, count = _safe_lookup_refs(outcome.get("fix_refs"))
+    redactions += count
+    asset_refs, count = _safe_lookup_refs(outcome.get("asset_refs"))
+    redactions += count
+    lesson_refs, count = _safe_lookup_refs(outcome.get("lesson_refs"))
+    redactions += count
+    remaining_risks, count = _safe_lookup_refs(outcome.get("remaining_risks"))
+    redactions += count
+    return (
+        {
+            "fix_id": outcome.get("fix_id", ""),
+            "event_id": outcome.get("event_id", ""),
+            "decision": outcome.get("decision", ""),
+            "validation_status": outcome.get("validation_status", ""),
+            "review_status": outcome.get("review_status", ""),
+            "summary": summary,
+            "validation_refs": validation_refs,
+            "regression_test_refs": regression_refs,
+            "fix_refs": fix_refs,
+            "asset_refs": asset_refs,
+            "lesson_refs": lesson_refs,
+            "remaining_risks": remaining_risks,
+            "owner_authority": outcome.get("owner_authority", ""),
+        },
+        redactions,
+    )
+
+
+def hard_issue_lookup(
+    hub_root: Path,
+    *,
+    query: str = "",
+    signals: Iterable[str] | None = None,
+    event_types: Iterable[str] | None = None,
+    command: Iterable[str] | None = None,
+    path_refs: Iterable[str] | None = None,
+    limit: int = 5,
+    include_backfill: bool = False,
+    target_public_facing: bool = False,
+) -> dict[str, Any]:
+    signal_values = [str(value) for value in (signals or []) if str(value).strip()]
+    event_type_values = [str(value) for value in (event_types or []) if str(value).strip()]
+    command_values = [str(value) for value in (command or []) if str(value).strip()]
+    path_values = [str(value) for value in (path_refs or []) if str(value).strip()]
+    expanded_event_types = _expanded_lookup_event_types(signal_values, event_type_values)
+    query_tokens = _lookup_tokens(query, signal_values, event_type_values, command_values, path_values)
+
+    screening_issues = _lookup_screening_issues(query, command_values, path_values)
+    query_summary, redaction_count = _lookup_query_summary(query, screening_issues)
+    safe_command, count = _safe_lookup_refs(command_values)
+    redaction_count += count
+    safe_paths, count = _safe_lookup_refs(path_values)
+    redaction_count += count
+
+    events, event_warnings = _load_lake_events_for_lookup(hub_root)
+    fix_outcomes, fix_warnings = _load_fix_outcomes_for_lookup(hub_root)
+    fix_by_event: dict[str, list[dict[str, Any]]] = {}
+    for outcome in fix_outcomes:
+        if not _is_validated_fixed_outcome(outcome):
+            continue
+        event_id = str(outcome.get("event_id") or "")
+        if event_id:
+            fix_by_event.setdefault(event_id, []).append(outcome)
+
+    matches: list[dict[str, Any]] = []
+    for event in events:
+        if _is_backfill_candidate_event(event) and not include_backfill:
+            continue
+        event_type = str(event.get("event_type") or "")
+        event_tokens = _lookup_tokens(_event_lookup_text(event))
+        fix_tokens = set()
+        for fix in fix_by_event.get(str(event.get("event_id") or ""), []):
+            fix_tokens.update(_lookup_tokens(_fix_lookup_text(fix)))
+        overlap = sorted(query_tokens & (event_tokens | fix_tokens))
+        event_type_match = bool(expanded_event_types and event_type in expanded_event_types)
+        if not event_type_match and not overlap:
+            continue
+        public_release_gate = "not_required"
+        source_visibility = str(event.get("source_visibility") or "unknown")
+        if target_public_facing and source_visibility in {"private", "internal", "restricted", "unknown"}:
+            public_release_gate = "needs_human_release"
+        event_screening_issues = _lookup_screening_issues(event.get("safe_summary"), event.get("validation_refs"))
+        if public_release_gate == "needs_human_release" or event_screening_issues:
+            event_summary = f"event-summary-sha256:{sha256_bytes(str(event.get('safe_summary') or '').encode('utf-8'))}"
+            count = 0
+        else:
+            event_summary, count = _safe_lookup_text(event.get("safe_summary"))
+        redaction_count += count
+        if public_release_gate == "needs_human_release":
+            validation_refs = []
+            asset_refs = []
+        else:
+            validation_refs, count = _safe_lookup_refs(event.get("validation_refs"), limit=4)
+            redaction_count += count
+            asset_refs, count = _safe_lookup_refs(event.get("asset_refs"), limit=4)
+            redaction_count += count
+        fix_summaries: list[dict[str, Any]] = []
+        held_fix_count = len(fix_by_event.get(str(event.get("event_id") or ""), []))
+        if public_release_gate != "needs_human_release":
+            for fix in fix_by_event.get(str(event.get("event_id") or ""), []):
+                fix_summary, count = _lookup_fix_summary(fix)
+                redaction_count += count
+                fix_summaries.append(fix_summary)
+        lookup_review_status = "prior_exception_only"
+        if held_fix_count:
+            if public_release_gate == "needs_human_release":
+                lookup_review_status = "held_pending_human_release"
+            elif len(overlap) >= 2:
+                lookup_review_status = "validated_fix_review_candidate"
+            else:
+                lookup_review_status = "related_pattern_only"
+        matches.append(
+            {
+                "event_id": event.get("event_id", ""),
+                "event_type": event_type,
+                "source_repo": event.get("source_repo", ""),
+                "source_visibility": source_visibility,
+                "stage": event.get("stage", ""),
+                "capture_contract": event.get("capture_contract", ""),
+                "severity": event.get("severity", ""),
+                "status": event.get("status", ""),
+                "review_status": event.get("review_status", ""),
+                "lookup_review_status": lookup_review_status,
+                "public_release_gate": public_release_gate,
+                "screening_issues": event_screening_issues,
+                "safe_summary": event_summary,
+                "validation_refs": validation_refs,
+                "asset_refs": asset_refs,
+                "match_basis": {
+                    "event_type_signal_match": event_type_match,
+                    "token_overlap_terms": overlap[:12],
+                    "token_overlap_count": len(overlap),
+                    "validated_fix_count": held_fix_count,
+                    "validated_fix_details_held": public_release_gate == "needs_human_release",
+                },
+                "validated_fix_outcomes": fix_summaries,
+                "revalidation_status": (
+                    "human_release_required_before_public_target_delivery"
+                    if public_release_gate == "needs_human_release"
+                    else "requires_local_revalidation_before_adoption"
+                ),
+                "candidate_use": (
+                    "Review the event and validated fix refs before improvising. "
+                    "Apply only when the local repo context matches and local authority agrees."
+                    if lookup_review_status == "validated_fix_review_candidate"
+                    else "Use as related candidate evidence only; do not reuse fix details as instructions."
+                ),
+                "non_applicability_check": (
+                    "Do not reuse this fix when event type, failing surface, validation refs, "
+                    "or owner authority differ in a material way."
+                ),
+                "_sort": (
+                    1 if event_type_match else 0,
+                    held_fix_count,
+                    len(overlap),
+                    _severity_sort_value(event.get("severity")),
+                    str(event.get("event_time") or ""),
+                ),
+            }
+        )
+    matches.sort(key=lambda item: item["_sort"], reverse=True)
+    limited_matches = []
+    for item in matches[: max(0, limit)]:
+        item.pop("_sort", None)
+        limited_matches.append(item)
+
+    warnings: list[str] = [*event_warnings, *fix_warnings]
+    if include_backfill:
+        warnings.append("backfill candidates are path-signal evidence only and are not observed exceptions")
+    if redaction_count:
+        warnings.append("lookup input or refs had best-effort credential/PII redactions or path hashing")
+    if screening_issues:
+        warnings.append("lookup input contained suppressible sensitive or raw-context signals")
+    if limited_matches and not any(item["validated_fix_outcomes"] for item in limited_matches):
+        warnings.append("matched prior exception events but no validated fixed outcomes in the returned window")
+    if not limited_matches:
+        warnings.append("no prior matching exception evidence found; record a new exception/fix outcome if material")
+
+    return {
+        "schema_version": SCHEMA_VERSION,
+        "generated_at": utc_now(),
+        "lookup_basis": HARD_ISSUE_LOOKUP_BASIS,
+        "query": query_summary,
+        "signals": signal_values,
+        "requested_event_types": event_type_values,
+        "expanded_event_types": sorted(expanded_event_types),
+        "command_refs": safe_command,
+        "path_refs": safe_paths,
+        "target_public_facing": target_public_facing,
+        "include_backfill": include_backfill,
+        "event_count_considered": len(events),
+        "validated_fix_outcome_count": sum(len(values) for values in fix_by_event.values()),
+        "match_count": len(matches),
+        "returned_count": len(limited_matches),
+        "matches": limited_matches,
+        "screening_issues": screening_issues,
+        "warnings": warnings,
+        "authority_boundary": (
+            "Exception lookup output is candidate evidence. It must not override local source "
+            "authority, human release gates, protected-repo policies, or validation requirements."
+        ),
+    }
+
+
 def write_exception_report(hub_root: Path) -> dict[str, Any]:
     events = load_lake_events(hub_root)
     fix_outcomes = load_fix_outcomes(hub_root)
@@ -2326,7 +2896,23 @@ def write_exception_report(hub_root: Path) -> dict[str, Any]:
                 ).items()
             )
         )
-    by_repo = Counter(str(event.get("source_repo", "unknown")) for event in events)
+    by_repo = Counter(_source_repo_report_key(event.get("source_repo")) for event in events)
+    source_repo_alias_counts: dict[str, Counter[str]] = {}
+    for event in events:
+        source_repo = str(event.get("source_repo") or "unknown").strip() or "unknown"
+        source_key = _source_repo_report_key(source_repo)
+        source_repo_alias_counts.setdefault(source_key, Counter())[source_repo] += 1
+    by_source_repo_aliases = [
+        {
+            "source_repo": source_repo,
+            "count": sum(alias_counts.values()),
+            "observed_aliases": [
+                {"alias": alias, "count": count}
+                for alias, count in sorted(alias_counts.items())
+            ],
+        }
+        for source_repo, alias_counts in sorted(source_repo_alias_counts.items())
+    ]
     by_severity = Counter(str(event.get("severity", "unknown")) for event in events)
     fix_by_decision = Counter(str(row.get("decision", "unknown")) for row in fix_outcomes)
     fix_by_validation = Counter(
@@ -2473,6 +3059,7 @@ def write_exception_report(hub_root: Path) -> dict[str, Any]:
         "by_category": dict(sorted(by_category.items())),
         "by_taxonomy_dimension": by_taxonomy_dimension,
         "by_source_repo": dict(sorted(by_repo.items())),
+        "by_source_repo_aliases": by_source_repo_aliases,
         "by_severity": dict(sorted(by_severity.items())),
         "fix_outcomes_by_decision": dict(sorted(fix_by_decision.items())),
         "fix_outcomes_by_validation_status": dict(sorted(fix_by_validation.items())),
@@ -4813,6 +5400,441 @@ def write_exception_learning_queue(
     return report
 
 
+def _exception_fix_outcome_request_input_hashes(hub_root: Path) -> dict[str, str]:
+    refs = [
+        LAKE_PATH,
+        FIX_OUTCOME_PATH,
+        EXCEPTION_EVENT_TYPE_REGISTRY,
+        EXCEPTION_LEARNING_METHODOLOGY,
+        Path("schemas") / "exception-event.schema.json",
+        Path("schemas") / "exception-fix-outcome.schema.json",
+        Path("src") / "digital_asset_directory" / "exceptions_lake.py",
+    ]
+    hashes: dict[str, str] = {}
+    repo_root = Path(__file__).resolve().parents[2]
+    for ref in refs:
+        path = hub_root / ref
+        if not path.exists() and ref.parts[:1] in {("src",), ("schemas",)}:
+            path = repo_root / ref
+        if path.exists() and path.is_file():
+            hashes[ref.as_posix()] = f"sha256:{sha256_file(path)}"
+    return hashes
+
+
+def _fix_outcomes_by_event_id(fix_outcomes: list[dict[str, Any]]) -> dict[str, list[dict[str, Any]]]:
+    by_event: dict[str, list[dict[str, Any]]] = {}
+    for outcome in fix_outcomes:
+        event_id = str(outcome.get("event_id") or "")
+        if event_id:
+            by_event.setdefault(event_id, []).append(outcome)
+    return by_event
+
+
+def _event_needs_fix_outcome_request(
+    event: dict[str, Any],
+    fix_outcomes_by_event: dict[str, list[dict[str, Any]]],
+) -> bool:
+    event_id = str(event.get("event_id") or "")
+    if not event_id or _is_backfill_candidate_event(event):
+        return False
+    if fix_outcomes_by_event.get(event_id):
+        return False
+    return str(event.get("outcome_status") or "unresolved") not in {
+        "fixed",
+        "accepted_risk",
+        "duplicate",
+        "rejected",
+    }
+
+
+def _fix_outcome_request_event_id(record: dict[str, Any]) -> str:
+    payload = record.get("payload") if isinstance(record.get("payload"), dict) else {}
+    source_ref = str(payload.get("source_ref") or "")
+    prefix = "dad://exceptions/lake/events/"
+    if source_ref.startswith(prefix):
+        return source_ref.removeprefix(prefix)
+    return str(payload.get("event_id") or "")
+
+
+def _fix_outcome_request_is_cancellation(record: dict[str, Any]) -> bool:
+    payload = record.get("payload") if isinstance(record.get("payload"), dict) else {}
+    return (
+        str(record.get("message_type") or "") == "review_decision"
+        and bool(payload.get("superseded_mail_id"))
+        and str(payload.get("superseded_reason") or "").startswith("fix_outcome_request_")
+    )
+
+
+def _append_unique_fix_outcome_request_mail(hub_root: Path, record: dict[str, Any]) -> str:
+    path = hub_root / FIX_OUTCOME_REQUESTS_STAGED
+    mail_record = MailMessageRecord(**record)
+    payload = mail_record.model_dump(mode="json")
+    issues = _source_packet_mail_semantic_issues(payload)
+    if issues:
+        append_jsonl(
+            hub_root / QUARANTINE_DIR / "fix_outcome_request_mail_rejected.jsonl",
+            {
+                "event_type": "fix_outcome_request_mail_rejected",
+                "created_at": utc_now(),
+                "mail_id": str(payload.get("mail_id") or ""),
+                "dedupe_key": str(payload.get("dedupe_key") or ""),
+                "issues": issues,
+                "record_sha256": sha256_bytes(json_dumps(payload).encode("utf-8")),
+            },
+        )
+        return "rejected"
+    new_identity = _mail_record_identity(payload)
+    if path.exists():
+        rows, errors = _read_jsonl_with_errors(path)
+        for error in errors:
+            append_jsonl(
+                hub_root / QUARANTINE_DIR / "fix_outcome_requests_malformed_jsonl.jsonl",
+                {
+                    "event_type": "fix_outcome_request_malformed_jsonl",
+                    "created_at": utc_now(),
+                    "path": FIX_OUTCOME_REQUESTS_STAGED.as_posix(),
+                    **error,
+                },
+            )
+        for row in rows:
+            if _mail_record_identity(row) == new_identity:
+                return "duplicate"
+    append_jsonl(path, payload)
+    return "appended"
+
+
+def _fix_outcome_request_mail(event: dict[str, Any]) -> dict[str, Any]:
+    issues: list[str] = []
+    raw_source_repo = str(event.get("source_repo") or "unknown")
+    source_repo = _safe_source_packet_target_ref(raw_source_repo, issues)
+    if source_repo != raw_source_repo:
+        issues.append("target_ref_redacted_to_hash")
+    event_id = str(event.get("event_id") or "unknown")
+    event_type = str(event.get("event_type") or "unknown")
+    created_at = utc_now()
+    event_hash = sha256_bytes(json_dumps(_collision_fields(event)).encode("utf-8"))
+    dedupe_key = stable_id(
+        "exception-fix-outcome-request",
+        event_id,
+        event_hash,
+    )
+    safe_summary = str(event.get("safe_summary") or "")[:300]
+    payload = {
+        "summary": "DAD needs the source repo or owner to record how this exception was resolved.",
+        "source_ref": f"dad://exceptions/lake/events/{event_id}",
+        "hash": f"sha256:{event_hash}",
+        "event_id": event_id,
+        "event_type": event_type,
+        "capture_contract": str(event.get("capture_contract") or ""),
+        "stage": str(event.get("stage") or ""),
+        "severity": str(event.get("severity") or ""),
+        "source_visibility": str(event.get("source_visibility") or "unknown"),
+        "safe_summary": safe_summary,
+        "expected_response_path": FIX_OUTCOME_PATH.as_posix(),
+        "allowed_decisions": ["fixed", "rollback", "accepted_risk", "deferred", "duplicate", "rejected"],
+        "note": (
+            "Record a metadata-only fix outcome, accepted risk, deferral, duplicate, "
+            "rejection, or rollback. Do not include diffs, raw logs, private rows, "
+            "credentials, or source bodies."
+        ),
+        "authority_boundary": (
+            "This is a staged DAD request for source-owned closure evidence. It does "
+            "not prove the exception is fixed and does not authorize repo mutation."
+        ),
+    }
+    if issues:
+        payload["screening_issues"] = sorted(set(issues))
+    record = MailMessageRecord(
+        mail_id=stable_id("mail", "governance_notice", "dad", source_repo, dedupe_key),
+        thread_id=stable_id("mail-thread", "dad", source_repo, "fix-outcome", event_id),
+        message_type="governance_notice",
+        source_repo="dad",
+        target_repo=source_repo,
+        created_at=created_at,
+        dedupe_key=dedupe_key,
+        sensitivity="internal",
+        review_status="routed_candidate",
+        payload=payload,
+        evidence=[
+            f"event_id:{event_id}",
+            f"event_type:{event_type}",
+            f"event_hash:sha256:{event_hash}",
+            LEARNING_QUEUE_JSON.as_posix(),
+            REPORT_JSON.as_posix(),
+        ],
+        suggested_actions=[
+            "Review the event locally in the source repo or with the named owner.",
+            "If resolved, append a metadata-only fix outcome with validation and regression refs.",
+            "If accepted, deferred, duplicate, or rejected, append that decision with owner authority and expiry where required.",
+            "If the event is not real or belongs elsewhere, record a rejection or duplicate outcome rather than editing lake history.",
+        ],
+        source_provenance={
+            "canonical_source_repo": "dad://hub/Digital-Assett-Directory",
+            "source_repo_id": "dad",
+            "source_repo_alias": "dad",
+            "source_visibility": "internal",
+            "original_source_chain": ["dad://hub/Digital-Assett-Directory"],
+            "return_address": "dad://exceptions/fix-outcome-requests",
+            "original_mail_id": "",
+            "composed_by": "dad-exceptions-lake",
+            "collected_by": "dad",
+            "collected_at": "",
+            "received_at": created_at,
+        },
+        public_release={
+            "target_visibility": "unknown",
+            "target_public_facing": False,
+            "public_release_required": False,
+            "public_release_status": "not_required",
+            "human_release_id": "",
+            "release_reason": "central_fix_outcome_request_only",
+        },
+    )
+    return record.model_dump(mode="json")
+
+
+def _fix_outcome_request_cancellation_mail(
+    original: dict[str, Any],
+    *,
+    reason: str,
+) -> dict[str, Any]:
+    created_at = utc_now()
+    event_id = _fix_outcome_request_event_id(original)
+    original_mail_id = str(original.get("mail_id") or "")
+    target_repo = str(original.get("target_repo") or "central_only")
+    dedupe_key = stable_id(
+        "exception-fix-outcome-request-cancellation",
+        original_mail_id,
+        event_id,
+        reason,
+    )
+    return MailMessageRecord(
+        mail_id=stable_id("mail", "review_decision", "dad", target_repo, dedupe_key),
+        thread_id=str(
+            original.get("thread_id")
+            or stable_id("mail-thread", "dad", target_repo, "fix-outcome", event_id)
+        ),
+        message_type="review_decision",
+        source_repo="dad",
+        target_repo=target_repo,
+        created_at=created_at,
+        dedupe_key=dedupe_key,
+        sensitivity="internal",
+        review_status="archived",
+        payload={
+            "summary": "Staged fix-outcome request was superseded before delivery.",
+            "source_ref": f"dad://exceptions/lake/events/{event_id}",
+            "hash": str((original.get("payload") or {}).get("hash") or ""),
+            "superseded_mail_id": original_mail_id,
+            "superseded_reason": f"fix_outcome_request_{reason}",
+        },
+        evidence=[
+            f"superseded_mail_id:{original_mail_id}",
+            f"event_id:{event_id}",
+        ],
+        suggested_actions=[
+            "Do not promote the superseded staged request into deliverable mail.",
+            "Regenerate fix-outcome requests from the current exception lake and fix-outcome ledger.",
+        ],
+        source_provenance={
+            "canonical_source_repo": "dad://hub/Digital-Assett-Directory",
+            "source_repo_id": "dad",
+            "source_repo_alias": "dad",
+            "source_visibility": "internal",
+            "original_source_chain": ["dad://hub/Digital-Assett-Directory"],
+            "return_address": "dad://exceptions/fix-outcome-requests",
+            "original_mail_id": original_mail_id,
+            "composed_by": "dad-exceptions-lake",
+            "collected_by": "dad",
+            "collected_at": "",
+            "received_at": created_at,
+        },
+        public_release={
+            "target_visibility": "unknown",
+            "target_public_facing": False,
+            "public_release_required": False,
+            "public_release_status": "not_required",
+            "human_release_id": "",
+            "release_reason": "superseded_staged_fix_outcome_request",
+        },
+    ).model_dump(mode="json")
+
+
+def _append_fix_outcome_request_cancellations(
+    hub_root: Path,
+    *,
+    active_mail_ids: set[str],
+) -> int:
+    path = hub_root / FIX_OUTCOME_REQUESTS_STAGED
+    if not path.exists():
+        return 0
+    rows, errors = _read_jsonl_with_errors(path)
+    for error in errors:
+        append_jsonl(
+            hub_root / QUARANTINE_DIR / "fix_outcome_requests_malformed_jsonl.jsonl",
+            {
+                "event_type": "fix_outcome_request_malformed_jsonl",
+                "created_at": utc_now(),
+                "path": FIX_OUTCOME_REQUESTS_STAGED.as_posix(),
+                **error,
+            },
+        )
+    canceled = {
+        str((row.get("payload") or {}).get("superseded_mail_id") or "")
+        for row in rows
+        if isinstance(row, dict) and _fix_outcome_request_is_cancellation(row)
+    }
+    appended = 0
+    for row in rows:
+        if not isinstance(row, dict):
+            continue
+        if str(row.get("message_type") or "") != "governance_notice":
+            continue
+        mail_id = str(row.get("mail_id") or "")
+        if not mail_id or mail_id in active_mail_ids or mail_id in canceled:
+            continue
+        result = _append_unique_fix_outcome_request_mail(
+            hub_root,
+            _fix_outcome_request_cancellation_mail(
+                row,
+                reason="event_now_has_fix_outcome_or_terminal_status",
+            ),
+        )
+        if result == "appended":
+            appended += 1
+    return appended
+
+
+def write_exception_fix_outcome_requests(
+    hub_root: Path,
+    *,
+    output: Path | None = None,
+    write_mail: bool = True,
+    limit: int = 100,
+) -> dict[str, Any]:
+    """Stage candidate mail asking source repos to close observed exception events."""
+    events = load_lake_events(hub_root)
+    fix_outcomes = load_fix_outcomes(hub_root)
+    fix_outcomes_by_event = _fix_outcomes_by_event_id(fix_outcomes)
+    unresolved_events = [
+        event
+        for event in events
+        if _event_needs_fix_outcome_request(event, fix_outcomes_by_event)
+    ]
+    severity_rank = {"critical": 0, "high": 1, "medium": 2, "low": 3, "info": 4}
+    unresolved_events.sort(
+        key=lambda event: (
+            severity_rank.get(str(event.get("severity") or ""), 9),
+            str(event.get("source_repo") or ""),
+            str(event.get("event_type") or ""),
+            str(event.get("event_id") or ""),
+        )
+    )
+    limit = max(1, min(limit, MAX_BACKFILL_EVENTS))
+    reported_events = unresolved_events[:limit]
+    requests: list[dict[str, Any]] = []
+    appended_count = 0
+    duplicate_count = 0
+    rejected_mail_count = 0
+    active_mail_ids = {
+        str(_fix_outcome_request_mail(event).get("mail_id") or "")
+        for event in unresolved_events
+    }
+    for event in reported_events:
+        mail_record = _fix_outcome_request_mail(event)
+        appended = False
+        if write_mail:
+            append_status = _append_unique_fix_outcome_request_mail(hub_root, mail_record)
+            if append_status == "appended":
+                appended = True
+                appended_count += 1
+            elif append_status == "duplicate":
+                duplicate_count += 1
+            else:
+                rejected_mail_count += 1
+        requests.append(
+            {
+                "event_id": event.get("event_id", ""),
+                "event_type": event.get("event_type", ""),
+                "source_repo": mail_record["target_repo"],
+                "source_visibility": event.get("source_visibility", "unknown"),
+                "severity": event.get("severity", "unknown"),
+                "mail_id": mail_record["mail_id"],
+                "target_repo": mail_record["target_repo"],
+                "dedupe_key": mail_record["dedupe_key"],
+                "mail_appended": appended,
+            }
+        )
+    superseded_count = (
+        _append_fix_outcome_request_cancellations(
+            hub_root,
+            active_mail_ids=active_mail_ids,
+        )
+        if write_mail
+        else 0
+    )
+    report = {
+        "schema_version": "0.1.0",
+        "generated_at": utc_now(),
+        "report_id": "dad:exception-fix-outcome-requests",
+        "input_hashes": _exception_fix_outcome_request_input_hashes(hub_root),
+        "observed_event_count": sum(1 for event in events if not _is_backfill_candidate_event(event)),
+        "fix_outcome_count": len(fix_outcomes),
+        "unresolved_event_count": len(unresolved_events),
+        "reported_request_count": len(requests),
+        "omitted_request_count": max(0, len(unresolved_events) - len(requests)),
+        "mail_appended_count": appended_count,
+        "duplicate_mail_count": duplicate_count,
+        "rejected_mail_count": rejected_mail_count,
+        "superseded_mail_count": superseded_count,
+        "mail_stage": FIX_OUTCOME_REQUESTS_STAGED.as_posix(),
+        "requests": requests,
+        "authority_boundary": (
+            "Fix-outcome requests are staged central candidate mail asking the source "
+            "repo or owner to record closure evidence. They are not deliverable mail, "
+            "not fix outcomes, not proof of repair, and not authorization to mutate "
+            "any source repo."
+        ),
+    }
+    output_path = hub_root / (output or FIX_OUTCOME_REQUESTS_JSON)
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    output_path.write_text(json_dumps(report, pretty=True) + "\n", encoding="utf-8")
+    md_path = output_path.with_suffix(".md") if output else hub_root / FIX_OUTCOME_REQUESTS_MD
+    lines = [
+        "# Exception Fix Outcome Requests",
+        "",
+        f"- Generated: {report['generated_at']}",
+        f"- Observed events: {report['observed_event_count']}",
+        f"- Fix outcomes: {report['fix_outcome_count']}",
+        f"- Unresolved events: {report['unresolved_event_count']}",
+        f"- Reported requests: {report['reported_request_count']}",
+        f"- Omitted requests: {report['omitted_request_count']}",
+        f"- Mail appended: {report['mail_appended_count']}",
+        f"- Duplicate mail: {report['duplicate_mail_count']}",
+        f"- Superseded mail: {report['superseded_mail_count']}",
+        f"- Mail stage: `{report['mail_stage']}`",
+        "",
+        "Boundary: staged central candidate mail only. These requests ask for "
+        "source-owned closure evidence; they do not deliver mail, mutate source "
+        "repos, create fix outcomes, or promote lessons.",
+        "",
+        "## Requests",
+        "",
+        "| Event | Source Repo | Type | Severity | Mail | Appended |",
+        "| --- | --- | --- | --- | --- | --- |",
+    ]
+    for request in requests:
+        lines.append(
+            "| "
+            + f"`{request['event_id']}` | `{request['source_repo']}` | "
+            + f"`{request['event_type']}` | `{request['severity']}` | "
+            + f"`{request['mail_id']}` | {request['mail_appended']} |"
+        )
+    md_path.parent.mkdir(parents=True, exist_ok=True)
+    md_path.write_text("\n".join(lines) + "\n", encoding="utf-8")
+    return report
+
+
 def _copy_learning_check_contracts(source_hub: Path, target_hub: Path) -> None:
     for ref in [
         Path("registry") / "exception-event-type-registry.json",
@@ -5051,7 +6073,11 @@ def _evaluate_learning_check_case(
     *,
     sample_size_threshold: int,
 ) -> dict[str, Any]:
-    with tempfile.TemporaryDirectory(prefix="dad-exception-learning-check-") as tmp:
+    temp_parent = source_hub / ".tmp" / "exception-learning-check"
+    temp_parent.mkdir(parents=True, exist_ok=True)
+    workspace_dir = temp_parent / f"dad-exception-learning-check-{uuid4().hex[:12]}"
+    workspace_dir.mkdir(parents=True, exist_ok=False)
+    with nullcontext(workspace_dir) as tmp:
         workspace = Path(tmp)
         hub = workspace / "hub"
         _copy_learning_check_contracts(source_hub, hub)
@@ -5290,6 +6316,9 @@ def exception_lake_paths() -> dict[str, str]:
         "source_packet_requests_json": SOURCE_PACKET_REQUESTS_JSON.as_posix(),
         "source_packet_requests_markdown": SOURCE_PACKET_REQUESTS_MD.as_posix(),
         "source_packet_requests_mail_stage": SOURCE_PACKET_REQUESTS_STAGED.as_posix(),
+        "fix_outcome_requests_json": FIX_OUTCOME_REQUESTS_JSON.as_posix(),
+        "fix_outcome_requests_markdown": FIX_OUTCOME_REQUESTS_MD.as_posix(),
+        "fix_outcome_requests_mail_stage": FIX_OUTCOME_REQUESTS_STAGED.as_posix(),
         "backfill_review_queue_json": BACKFILL_REVIEW_QUEUE_JSON.as_posix(),
         "backfill_review_queue_markdown": BACKFILL_REVIEW_QUEUE_MD.as_posix(),
         "backfill_refresh_plan_json": BACKFILL_REFRESH_PLAN_JSON.as_posix(),

@@ -1,11 +1,14 @@
 from copy import deepcopy
 import json
 from pathlib import Path
+from types import SimpleNamespace
 
 import pytest
+import yaml
 
 from digital_asset_directory.config import ExceptionRepoPolicy
 from digital_asset_directory.exception_capture import (
+    build_phase6_machine_evidence_summary,
     load_capture_pattern_registry,
     write_exception_backfill_readiness,
     write_exception_backfill_wave_plan,
@@ -17,6 +20,7 @@ from digital_asset_directory.learning import _hash_path as _lesson_graph_hash_pa
 from digital_asset_directory.roadmap import check_roadmap, record_human_gate_evidence
 from digital_asset_directory.validation import (
     _candidate_path_scan_staleness_errors,
+    _capture_emission_simulation_errors,
     _contains_local_path_ref,
     _contains_readable_repo_relative_ref,
     _exception_capture_gap_review_queue_staleness_errors,
@@ -24,11 +28,15 @@ from digital_asset_directory.validation import (
     _exception_backfill_wave_plan_staleness_errors,
     _exception_event_taxonomy_by_type,
     _exception_lake_taxonomy_consistency_errors,
+    _exception_route_bundle_errors,
     _fix_outcome_semantic_errors,
     _hash_path as _validation_hash_path,
     _language_registry_semantic_errors,
     _observed_audit_machine_evidence_errors,
     _path_identity_hash,
+    _phase6_machine_evidence_summary_errors,
+    _phase_command_evidence_errors,
+    _repo_policy_identity_errors,
     _resolve_observed_audit_repo,
     _source_provenance_consistency_errors,
     _stale_report_input_hash_errors,
@@ -77,9 +85,168 @@ def _exception_policy(repo: Path) -> ExceptionRepoPolicy:
     )
 
 
+def _phase6_validation_gate(gate_id: str, status: str = "passed") -> dict:
+    return {
+        "evidence_id": f"machine-evidence:{gate_id}",
+        "supports_human_gate_id": gate_id,
+        "machine_status": status,
+        "evidence_scope": "machine_only_not_roadmap_gate_evidence",
+        "human_review_required": True,
+        "human_gate_satisfied": False,
+        "evidence": {},
+    }
+
+
+def _write_phase6_validation_sources(
+    hub: Path,
+    *,
+    observed_status: str = "failed",
+) -> None:
+    reports = hub / "processed" / "reports"
+    reports.mkdir(parents=True, exist_ok=True)
+    capture_gate_ids = [
+        "phase-6-capture-completeness-harness-reviewed",
+        "phase-6-lawfirm-intake-missed-capture-regression",
+        "phase-6-pattern-update-simulation-reviewed",
+        "phase-6-all-asset-pattern-coverage-reviewed",
+        "phase-6-sensitive-payload-negative-tests-reviewed",
+    ]
+    taxonomy_gate_id = "phase-6-taxonomy-route-coverage-reviewed"
+    observed_gate_id = "phase-6-observed-repo-capture-audit-reviewed"
+    payloads = {
+        "exception_capture_completeness.json": {
+            "generated_at": "2026-07-05T00:00:00+00:00",
+            "report_id": "dad:exception-capture-completeness",
+            "phase6_machine_gate_evidence": {
+                "gates": {
+                    gate["evidence_id"]: gate
+                    for gate in [
+                        _phase6_validation_gate(gate_id) for gate_id in capture_gate_ids
+                    ]
+                }
+            },
+        },
+        "exception_capture_emission_simulation.json": {
+            "generated_at": "2026-07-05T00:00:00+00:00",
+            "report_id": "dad:exception-capture-emission-simulation",
+            "limited": False,
+            "coverage_status": "full_reviewed_case_set",
+            "phase6_machine_gate_evidence": {
+                "machine_status": "passed",
+                "coverage_status": "full_reviewed_case_set",
+                "limited": False,
+                "human_gate_satisfied": False,
+                "evidence_scope": "machine_only_not_roadmap_gate_evidence",
+                "supports_human_gate_ids": [
+                    "phase-6-capture-completeness-harness-reviewed",
+                    "phase-6-pattern-update-simulation-reviewed",
+                ],
+            },
+        },
+        "exception_taxonomy_coverage.json": {
+            "generated_at": "2026-07-05T00:00:00+00:00",
+            "report_id": "dad:exception-taxonomy-coverage",
+            "phase6_machine_gate_evidence": {
+                "gates": {
+                    f"machine-evidence:{taxonomy_gate_id}": _phase6_validation_gate(
+                        taxonomy_gate_id
+                    )
+                }
+            },
+        },
+        "exception_capture_observed_audit.json": {
+            "generated_at": "2026-07-05T00:00:00+00:00",
+            "audit_id": "dad:exception-capture-observed-audit",
+            "phase6_machine_gate_evidence": {
+                "gates": {
+                    f"machine-evidence:{observed_gate_id}": _phase6_validation_gate(
+                        observed_gate_id,
+                        observed_status,
+                    )
+                }
+            },
+        },
+    }
+    for filename, payload in payloads.items():
+        (reports / filename).write_text(
+            json.dumps(payload, indent=2, sort_keys=True) + "\n",
+            encoding="utf-8",
+        )
+
+
 def test_repo_contracts_validate():
     result = validate_repo(ROOT)
     assert result["valid"], result["errors"]
+
+
+def test_phase8_requires_goal1_command_evidence():
+    roadmap = yaml.safe_load((ROOT / "roadmap" / "roadmap.yaml").read_text(encoding="utf-8"))
+    phase8 = next(
+        phase for phase in roadmap["phases"] if phase["id"] == "phase-8-dad-local-deployment"
+    )
+    command_evidence = _load_json("roadmap/evidence/phase-8-dad-local-deployment.commands.json")
+    evidence_commands = {item["command"] for item in command_evidence["commands"]}
+
+    required_commands = {
+        "python -m pytest tests/test_dad_local_deployment.py -q",
+        "python -m digital_asset_directory.cli doctor --hub . --scope deployment",
+        "user-shim asset-dir doctor --scope deployment from two non-DAD repos",
+        (
+            "user-shim asset-dir doctor --scope deployment from Mock Trial4.26 "
+            "and LawFirm-os-intake without target worktree changes"
+        ),
+        (
+            'user-shim asset-dir agent preflight --repo . --agent codex --task '
+            '"Goal 1 deployment smoke from outside DAD"'
+        ),
+    }
+    assert set(phase8["acceptance"]["required_files"]) >= {
+        "roadmap/evidence/phase-8-dad-local-deployment.commands.json",
+    }
+    assert set(phase8["acceptance"]["commands"]) >= required_commands
+    assert evidence_commands >= required_commands
+    assert command_evidence["human_review_status"] == "pending"
+
+
+def test_phase8_command_evidence_validation_rejects_stale_or_promoted_packet(tmp_path: Path):
+    repo = tmp_path / "repo"
+    (repo / "roadmap" / "evidence").mkdir(parents=True)
+    roadmap = yaml.safe_load((ROOT / "roadmap" / "roadmap.yaml").read_text(encoding="utf-8"))
+    command_evidence = _load_json("roadmap/evidence/phase-8-dad-local-deployment.commands.json")
+    mutated = deepcopy(command_evidence)
+    mutated["human_review_status"] = "approved_by_agent"
+    mutated["commands"] = mutated["commands"][:-1]
+    (repo / "roadmap" / "roadmap.yaml").write_text(
+        yaml.safe_dump(roadmap, sort_keys=False),
+        encoding="utf-8",
+    )
+    (repo / "roadmap" / "evidence" / "phase-8-dad-local-deployment.commands.json").write_text(
+        json.dumps(mutated, indent=2, sort_keys=True) + "\n",
+        encoding="utf-8",
+    )
+
+    errors = _phase_command_evidence_errors(repo)
+
+    assert any("commands differ from roadmap acceptance" in error for error in errors)
+    assert any("must remain pending" in error for error in errors)
+
+
+def test_repo_policy_identity_validation_rejects_duplicate_ids_aliases_and_paths(
+    tmp_path: Path,
+) -> None:
+    shared_path = tmp_path / "same"
+    policies = [
+        SimpleNamespace(id="repo-a", alias="shared", path=shared_path),
+        SimpleNamespace(id="repo-a", alias="unique-a", path=tmp_path / "other"),
+        SimpleNamespace(id="repo-b", alias="shared", path=tmp_path / "third"),
+        SimpleNamespace(id="repo-c", alias="unique-c", path=shared_path),
+    ]
+
+    errors = _repo_policy_identity_errors("mail.repos", policies)
+
+    assert any("duplicate repo id: repo-a" in error for error in errors)
+    assert any("duplicate repo alias: shared" in error for error in errors)
+    assert any("maps one resolved path to multiple repo ids" in error for error in errors)
 
 
 def test_language_registry_semantics_reject_unknown_watch_source():
@@ -258,6 +425,137 @@ def test_exception_lake_taxonomy_validation_rejects_stale_dimensions():
     ]
 
 
+def _exception_route_bundle_inputs() -> tuple[dict, dict, dict, str]:
+    return (
+        _load_json("registry/exception-event-type-registry.json"),
+        _load_json("registry/exception-capture-pattern-registry.json"),
+        _load_json(
+            "assets/coding-harnesses/exception-capture-completeness/examples/"
+            "synthetic-capture-scenarios.json"
+        ),
+        (ROOT / "templates" / "downstream" / "EXCEPTIONS_README.md").read_text(
+            encoding="utf-8"
+        ),
+    )
+
+
+def test_exception_route_bundle_validation_accepts_current_bundle():
+    event_registry, capture_registry, scenarios, readme = _exception_route_bundle_inputs()
+
+    errors = _exception_route_bundle_errors(
+        exception_type_registry=event_registry,
+        capture_pattern_registry=capture_registry,
+        capture_scenarios=scenarios,
+        downstream_readme_text=readme,
+    )
+
+    assert errors == []
+    assert "$HOME/.dad/bin/asset-dir" in readme
+    assert "$HOME\\.dad\\bin\\asset-dir.ps1" in readme
+
+
+def test_exception_route_bundle_validation_rejects_missing_required_field():
+    event_registry, capture_registry, scenarios, readme = _exception_route_bundle_inputs()
+    case = next(
+        item for item in scenarios["cases"] if item["scenario_id"] == "code-change-exception"
+    )
+    case["expected"]["required_fields"].remove("validation_ref_or_gap")
+
+    errors = _exception_route_bundle_errors(
+        exception_type_registry=event_registry,
+        capture_pattern_registry=capture_registry,
+        capture_scenarios=scenarios,
+        downstream_readme_text=readme,
+    )
+
+    assert any(
+        "expected required_fields omit ['validation_ref_or_gap']" in error
+        for error in errors
+    )
+
+
+def test_exception_route_bundle_validation_rejects_claimed_rule_signal_mismatch():
+    event_registry, capture_registry, scenarios, readme = _exception_route_bundle_inputs()
+    case = next(
+        item for item in scenarios["cases"] if item["scenario_id"] == "code-change-exception"
+    )
+    case["signals"].remove("code_change_exception")
+
+    errors = _exception_route_bundle_errors(
+        exception_type_registry=event_registry,
+        capture_pattern_registry=capture_registry,
+        capture_scenarios=scenarios,
+        downstream_readme_text=readme,
+    )
+
+    assert any(
+        "scenario does not match claimed rule: code-change-exception "
+        "exception-capture-rule:code-change-exception" in error
+        for error in errors
+    )
+
+
+def test_exception_route_bundle_validation_rejects_missing_downstream_event_guidance():
+    event_registry, capture_registry, scenarios, readme = _exception_route_bundle_inputs()
+    readme = readme.replace("code_change_exception", "removed_code_change_route")
+
+    errors = _exception_route_bundle_errors(
+        exception_type_registry=event_registry,
+        capture_pattern_registry=capture_registry,
+        capture_scenarios=scenarios,
+        downstream_readme_text=readme,
+    )
+
+    assert any(
+        "downstream README omits event_type: code_change_exception" in error
+        for error in errors
+    )
+
+
+def test_exception_route_bundle_validation_rejects_missing_backfill_only_scenario():
+    event_registry, capture_registry, scenarios, readme = _exception_route_bundle_inputs()
+    scenarios["cases"] = [
+        case
+        for case in scenarios["cases"]
+        if case["scenario_id"] != "backfill-command-timeout"
+    ]
+
+    errors = _exception_route_bundle_errors(
+        exception_type_registry=event_registry,
+        capture_pattern_registry=capture_registry,
+        capture_scenarios=scenarios,
+        downstream_readme_text=readme,
+    )
+
+    assert any(
+        "missing reviewed synthetic scenario for emitting rule: "
+        "backfill-rule:command-timeout" in error
+        for error in errors
+    )
+
+
+def test_exception_route_bundle_validation_rejects_backfill_missing_required_field():
+    event_registry, capture_registry, scenarios, readme = _exception_route_bundle_inputs()
+    case = next(
+        item
+        for item in scenarios["cases"]
+        if item["scenario_id"] == "backfill-command-timeout"
+    )
+    case["expected"]["required_fields"].remove("source_rule_id")
+
+    errors = _exception_route_bundle_errors(
+        exception_type_registry=event_registry,
+        capture_pattern_registry=capture_registry,
+        capture_scenarios=scenarios,
+        downstream_readme_text=readme,
+    )
+
+    assert any(
+        "backfill scenario required_fields omit ['source_rule_id']" in error
+        for error in errors
+    )
+
+
 def test_stale_report_input_hash_errors_detect_changed_exception_report_input(
     tmp_path: Path,
 ):
@@ -342,6 +640,38 @@ def test_lesson_graph_manifest_validation_fails_closed_on_stale_input_hash(
     ]
 
 
+def test_repo_inventory_report_input_hashes_are_validated(tmp_path: Path):
+    repo = tmp_path / "repo"
+    input_path = repo / "src" / "digital_asset_directory" / "dad_library.py"
+    report_path = repo / "processed" / "repo_inventory" / "reconciled_inventory.json"
+    input_path.parent.mkdir(parents=True)
+    report_path.parent.mkdir(parents=True)
+    input_path.write_text("print('changed')\n", encoding="utf-8")
+    report_path.write_text(
+        json.dumps(
+            {
+                "schema_version": "0.1.0",
+                "input_hashes": {
+                    "src/digital_asset_directory/dad_library.py": "sha256:stale"
+                },
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    errors = _stale_report_input_hash_errors(
+        repo,
+        report_path,
+        json.loads(report_path.read_text(encoding="utf-8")),
+    )
+
+    assert errors == [
+        "Stale report input hash processed/repo_inventory/reconciled_inventory.json "
+        "src/digital_asset_directory/dad_library.py: sha256:stale != "
+        f"{_load_current_hash(input_path)}"
+    ]
+
+
 def _load_current_hash(path: Path) -> str:
     from digital_asset_directory.validation import _hash_path
 
@@ -401,6 +731,72 @@ def test_observed_audit_candidate_path_scan_staleness_detects_new_signal(
 
     assert any("Candidate path scan stale" in error for error in errors)
     assert any("scan_hash" in error for error in errors)
+
+
+def test_observed_audit_candidate_path_scan_tolerates_protected_repo_drift(
+    tmp_path: Path,
+):
+    repo = tmp_path / "repo"
+    docs = repo / "docs"
+    docs.mkdir(parents=True)
+    (docs / "postmortem.md").write_text("metadata-only\n", encoding="utf-8")
+    policy = _exception_policy(repo)
+    report_path = tmp_path / "observed-audit.json"
+    report = write_observed_capture_audit(
+        ROOT,
+        [repo],
+        repo_policies=[policy],
+        output=report_path,
+        candidate_limit=10,
+    )
+    row = report["repos"][0]
+    row["repo"]["repo_id"] = "logos-scripture-graph"
+    row["repo"]["write_protected"] = True
+
+    (docs / "incident-review.md").write_text("metadata-only\n", encoding="utf-8")
+    errors = _candidate_path_scan_staleness_errors(
+        ROOT,
+        report_path,
+        row,
+        registry=load_capture_pattern_registry(ROOT),
+        repo_policies=[policy],
+        policy_paths={_path_identity_hash(repo): repo.resolve()},
+    )
+
+    assert errors == []
+
+
+def test_observed_audit_bounded_scan_tolerates_same_evidence_file_count_drift(
+    tmp_path: Path,
+):
+    repo = tmp_path / "repo"
+    docs = repo / "docs"
+    docs.mkdir(parents=True)
+    (docs / "postmortem.md").write_text("metadata-only\n", encoding="utf-8")
+    policy = _exception_policy(repo)
+    report_path = tmp_path / "observed-audit.json"
+    report = write_observed_capture_audit(
+        ROOT,
+        [repo],
+        repo_policies=[policy],
+        output=report_path,
+        candidate_limit=1,
+    )
+
+    assert report["repos"][0]["candidate_path_scan"]["stopped_reason"] == (
+        "candidate_limit_reached"
+    )
+    (docs / "aaa-note.txt").write_text("metadata-only\n", encoding="utf-8")
+    errors = _candidate_path_scan_staleness_errors(
+        ROOT,
+        report_path,
+        report["repos"][0],
+        registry=load_capture_pattern_registry(ROOT),
+        repo_policies=[policy],
+        policy_paths={_path_identity_hash(repo): repo.resolve()},
+    )
+
+    assert errors == []
 
 
 def test_observed_audit_exhaustive_candidate_scan_staleness_recomputes_exhaustive(
@@ -474,6 +870,136 @@ def test_observed_audit_machine_evidence_validation_recomputes_gap_counts(
     assert any("scope_satisfied mismatch" in error for error in errors)
 
 
+def test_phase6_machine_evidence_summary_validation_recomputes_source_reports(
+    tmp_path: Path,
+) -> None:
+    _write_phase6_validation_sources(tmp_path, observed_status="failed")
+    summary = build_phase6_machine_evidence_summary(
+        tmp_path,
+        generated_at="2026-07-05T01:00:00+00:00",
+    )
+    report_path = (
+        tmp_path
+        / "processed"
+        / "reports"
+        / "phase6_exception_capture_machine_evidence_summary.json"
+    )
+    report_path.write_text(
+        json.dumps(summary, indent=2, sort_keys=True) + "\n",
+        encoding="utf-8",
+    )
+
+    _write_phase6_validation_sources(tmp_path, observed_status="passed")
+    errors = _phase6_machine_evidence_summary_errors(report_path, tmp_path, summary)
+
+    assert any("overall_machine_status mismatch" in error for error in errors)
+    assert any("blocked_gate_ids mismatch" in error for error in errors)
+    assert any("source_reports mismatch" in error for error in errors)
+
+
+def test_capture_emission_simulation_validation_rejects_legacy_gate_slugs(
+    tmp_path: Path,
+) -> None:
+    payload = {
+        "case_count": 1,
+        "passed_count": 1,
+        "failed_count": 0,
+        "required_provenance_fields": [
+            "matched_rule_ids",
+            "methodology_hash",
+            "suggestion_id",
+            "update_required",
+        ],
+        "initial_update_required_count": 0,
+        "refreshed_emission_count": 0,
+        "cases": [
+            {
+                "scenario_id": "legacy-gate-slug",
+                "passed": True,
+                "initial_update_required": False,
+                "initial_repo_capture_surface_version": "0.4.0",
+                "emission_repo_capture_surface_version": "0.4.0",
+                "suggestion_comparisons": {"packet_classes": True},
+                "observed": {"passed": True},
+                "emitted_packets": [],
+            }
+        ],
+        "phase6_machine_gate_evidence": {
+            "evidence_scope": "machine_only_not_roadmap_gate_evidence",
+            "machine_status": "passed",
+            "human_gate_satisfied": False,
+            "supports_human_gate_ids": [
+                "synthetic-harness-proves-dad-worthy-patterns-become-packets",
+                "pattern-update-simulation-proves-new-required-fields",
+            ],
+        },
+    }
+
+    errors = _capture_emission_simulation_errors(
+        tmp_path / "emission.json",
+        tmp_path,
+        payload,
+    )
+
+    assert any("missing supported gate ids" in error for error in errors)
+    assert any("non-roadmap gate ids" in error for error in errors)
+
+
+def test_capture_emission_simulation_validation_rejects_partial_gate_support(
+    tmp_path: Path,
+) -> None:
+    payload = {
+        "coverage_status": "limited_diagnostic",
+        "limited": True,
+        "full_reviewed_case_count": 70,
+        "emitted_reviewed_case_count": 1,
+        "omitted_reviewed_scenario_ids": ["omitted-scenario"],
+        "case_count": 1,
+        "passed_count": 1,
+        "failed_count": 0,
+        "required_provenance_fields": [
+            "matched_rule_ids",
+            "methodology_hash",
+            "suggestion_id",
+            "update_required",
+        ],
+        "initial_update_required_count": 0,
+        "refreshed_emission_count": 0,
+        "cases": [
+            {
+                "scenario_id": "partial-run",
+                "passed": True,
+                "initial_update_required": False,
+                "initial_repo_capture_surface_version": "0.4.0",
+                "emission_repo_capture_surface_version": "0.4.0",
+                "suggestion_comparisons": {"packet_classes": True},
+                "observed": {"passed": True},
+                "emitted_packets": [],
+            }
+        ],
+        "phase6_machine_gate_evidence": {
+            "evidence_scope": "machine_only_not_roadmap_gate_evidence",
+            "coverage_status": "limited_diagnostic",
+            "limited": True,
+            "machine_status": "passed",
+            "human_gate_satisfied": False,
+            "supports_human_gate_ids": [
+                "phase-6-capture-completeness-harness-reviewed",
+                "phase-6-pattern-update-simulation-reviewed",
+            ],
+        },
+    }
+
+    errors = _capture_emission_simulation_errors(
+        tmp_path / "emission.json",
+        tmp_path,
+        payload,
+    )
+
+    assert any("machine_status mismatch" in error for error in errors)
+    assert any("limited report lists gate ids" in error for error in errors)
+
+
 def test_backfill_readiness_candidate_path_scan_staleness_detects_new_signal(
     tmp_path: Path,
 ):
@@ -529,10 +1055,8 @@ def test_backfill_wave_plan_validation_detects_stale_proof_backlogs(tmp_path: Pa
         mutated,
     )
 
-    assert errors == [
-        "Exception backfill wave plan stale for backfill-wave-plan.json: "
-        "proof_backlogs mismatch"
-    ]
+    assert len(errors) == 1
+    assert errors[0].endswith("backfill-wave-plan.json: proof_backlogs mismatch")
 
 
 def test_capture_remediation_plan_validation_detects_stale_lanes(tmp_path: Path):
@@ -559,10 +1083,8 @@ def test_capture_remediation_plan_validation_detects_stale_lanes(tmp_path: Path)
         mutated,
     )
 
-    assert errors == [
-        "Exception capture remediation plan stale for capture-remediation.json: "
-        "lanes mismatch"
-    ]
+    assert len(errors) == 1
+    assert errors[0].endswith("capture-remediation.json: lanes mismatch")
 
 
 def test_capture_gap_review_queue_validation_detects_stale_groups(tmp_path: Path):
@@ -589,10 +1111,8 @@ def test_capture_gap_review_queue_validation_detects_stale_groups(tmp_path: Path
         mutated,
     )
 
-    assert errors == [
-        "Exception capture gap review queue stale for capture-gap-queue.json: "
-        "groups mismatch"
-    ]
+    assert len(errors) == 1
+    assert errors[0].endswith("capture-gap-queue.json: groups mismatch")
 
 
 def test_capture_gap_review_queue_validation_detects_authority_tampering(
@@ -621,10 +1141,8 @@ def test_capture_gap_review_queue_validation_detects_authority_tampering(
         mutated,
     )
 
-    assert errors == [
-        "Exception capture gap review queue stale for capture-gap-queue.json: "
-        "authority_boundary mismatch"
-    ]
+    assert len(errors) == 1
+    assert errors[0].endswith("capture-gap-queue.json: authority_boundary mismatch")
 
 
 def test_seed_roadmap_file_gate_is_complete():

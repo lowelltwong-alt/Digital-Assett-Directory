@@ -23,8 +23,10 @@
   "cadence": {
     "mail": {
       "frequency": "daily",
+      "first_step": "check_mail_digest_before_material_dad_guided_work_when_stale",
       "preflight_behavior": "warn_only_when_stale",
-      "stale_after_hours": 24
+      "stale_after_hours": 24,
+      "source_outbox_collection": "dad_reads_by_stable_snapshot; source repos write only their own outbox; active source locks mean retry later"
     },
     "weekly_checks": {
       "frequency": "weekly",
@@ -54,7 +56,7 @@
       ".digital-asset/exceptions/archive.jsonl",
       "processed/exceptions/fix-outcomes/outcomes.jsonl"
     ],
-    "cli_fallback": "If asset-dir is unavailable, try PYTHONPATH=src python -m digital_asset_directory.cli from the DAD checkout; otherwise append metadata-only JSONL with dad_cli_unavailable and safe refs."
+    "cli_fallback": "If asset-dir is unavailable, first try the stable DAD user shim at ~/.dad/bin/asset-dir or ~/.dad/bin/asset-dir.ps1; if the shim is unavailable too, try PYTHONPATH=src python -m digital_asset_directory.cli from the DAD checkout; otherwise append metadata-only JSONL with dad_cli_unavailable and safe refs."
   },
   "enabled_control_planes": [
     "dad_library",
@@ -73,6 +75,10 @@
   "local_validation_commands": [],
   "approved_dad_managed_paths": [
     ".digital-asset/mail/**",
+    ".digital-asset/assets/README.md",
+    ".digital-asset/assets/index.jsonl",
+    ".digital-asset/assets/adoption.jsonl",
+    ".digital-asset/learning/events.jsonl",
     ".digital-asset/skills/checkout.json",
     ".digital-asset/context-map.json",
     ".digital-asset/governance-map.yaml",

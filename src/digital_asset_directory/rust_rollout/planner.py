@@ -18,7 +18,7 @@ def build_rust_rollout_plan(config_path: Path) -> dict[str, Any]:
     )
     return {
         "schema_version": "dad_rust_rollout_plan.v1",
-        "config_path": str(config_path),
+        "config_path": _display_path(config_path),
         "repo_count": len(decisions),
         "counts_by_rollout_mode": dict(sorted(counts.items())),
         "counts_by_block_reason": dict(sorted(block_counts.items())),
@@ -137,3 +137,10 @@ def _eligibility_markdown(plan: dict[str, Any]) -> str:
 
 def _cell(value: object) -> str:
     return str(value).replace("\\", "\\\\").replace("|", "\\|").replace("\n", " ")
+
+
+def _display_path(path: Path) -> str:
+    try:
+        return path.resolve().relative_to(Path.cwd().resolve()).as_posix()
+    except ValueError:
+        return path.name

@@ -22,6 +22,7 @@
     "README.md",
     "harness.json",
     "prompts/language-frontier-refresh.prompt.md",
+    "prompts/fable5-rust-full-install-audit.prompt.md",
     "examples/frontier-intake-cases.json",
     "tests-or-evals/minimum-eval.json"
   ],

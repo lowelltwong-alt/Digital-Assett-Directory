@@ -1,9 +1,11 @@
 from __future__ import annotations
 
 import json
+import os
 import re
+import tempfile
 from pathlib import Path
-from typing import Optional, cast
+from typing import Any, Optional, cast
 
 import typer
 from rich.console import Console
@@ -35,7 +37,14 @@ from .calibration import (
 )
 from .catalog import catalog_status, run_scan
 from .ci_release_scope import write_ci_release_artifact_scope_outputs
-from .config import load_config
+from .config import (
+    GitHubSource,
+    describe_hub_resolution,
+    hub_locator_path,
+    load_config,
+    load_github_repositories_file,
+    write_hub_locator,
+)
 from .context_pack import build_context_pack, write_context_pack
 from .dad_library import (
     build_dad_cadence_plan,
@@ -46,6 +55,7 @@ from .dad_library import (
     harness_package,
     harness_research,
     list_harnesses,
+    load_address_model_registry,
     load_asset_patterns,
     load_asset_recognition_methodology,
     load_harness_discovery_methodology,
@@ -53,11 +63,14 @@ from .dad_library import (
     load_offerings,
     match_asset_patterns,
     match_repo_offerings,
+    collect_repo_local_assets,
     reconcile_repo_inventory,
     recommend_harnesses,
     record_usage,
+    repo_local_asset_surface_standard,
     scout_asset_candidates,
     usage_upgrades,
+    write_repo_inventory_rust_probe_parity,
 )
 from .database import CatalogDB
 from .enrollment import (
@@ -74,6 +87,7 @@ from .exceptions_lake import (
     collect_exception_events,
     evaluate_exception_learning_readiness_scenarios,
     exception_lake_paths,
+    hard_issue_lookup,
     load_event_type_registry,
     record_exception_backfill_review_decision,
     record_exception_fix_outcome,
@@ -81,6 +95,7 @@ from .exceptions_lake import (
     summarize_exception_backfill_review_decisions,
     write_exception_backfill_refresh_plan,
     write_exception_backfill_review_queue,
+    write_exception_fix_outcome_requests,
     write_exception_learning_queue,
     write_exception_report,
     write_exception_source_packet_opportunities,
@@ -97,7 +112,9 @@ from .exception_capture import (
     write_exception_backfill_wave_plan,
     write_exception_capture_emission_simulation,
     write_exception_capture_gap_review_queue,
+    write_phase6_machine_evidence_summary,
     write_exception_capture_remediation_plan,
+    write_exception_capture_surface_refresh_notices,
     write_observed_capture_audit,
 )
 from .governance import enforce_postflight, install_governance, scaffold_new_repo
@@ -128,12 +145,20 @@ from .lesson_action_queue import (
 )
 from .manual_tasks import write_manual_task_queue
 from .mail_center import (
+    CENTRAL_MAIL_DIR,
+    MAIL_MIRROR_DIR,
+    MAX_MAIL_RECORD_BYTES,
     check_outbox_novelty,
+    append_jsonl_locked,
     collect_mail,
     compose_asset_suggestion,
     compose_mail,
     deliver_mail,
+    diagnose_mail_dirty_state,
     digest_mail,
+    invalid_mail_quarantine_path,
+    legacy_delivery_allowlist_path,
+    repair_route_audit_gaps,
     release_mail,
     resurface_deferred_mail,
     review_central_mail,
@@ -142,7 +167,12 @@ from .mail_center import (
     triage_mail,
 )
 from .orphan_adapter import run_orphan_radar
-from .operational import write_operational_readiness_report
+from .operational import (
+    DOCTOR_CHILD_PROBE_ENV,
+    UNAVAILABLE_HUB_POLICY,
+    build_deployment_status,
+    write_operational_readiness_report,
+)
 from .priority_content_lessons import (
     build_priority_content_lesson_review_queue,
     load_priority_content_lesson_candidates,
@@ -193,7 +223,11 @@ from .repo_completion import (
 )
 from .repo_learning_scope import write_repo_learning_loop_install_scope_outputs
 from .roadmap import check_roadmap
-from .rust_bridge import run_dad_scan_core
+from .rust_bridge import (
+    run_dad_mail_spool_check,
+    run_dad_repo_inventory_probe,
+    run_dad_scan_core,
+)
 from .rust_rollout import (
     apply_rust_rollout_scaffold,
     build_rust_rollout_mail_packets,
@@ -216,7 +250,7 @@ from .workflow_parts import (
     write_workflow_part_review_template_outputs,
     write_workflow_part_usage_guidance,
 )
-from .utils import append_jsonl, utc_now
+from .utils import append_jsonl, find_repo_root, safe_relative, sha256_bytes, utc_now
 
 app = typer.Typer(no_args_is_help=True, help="Digital Asset Directory portfolio intelligence CLI.")
 lesson_app = typer.Typer(no_args_is_help=True)
@@ -255,13 +289,1025 @@ console = Console()
 
 
 def _cfg(config: Optional[Path] = None, hub: Optional[Path] = None):
-    return load_config(config, repo_root=hub)
+    try:
+        return load_config(config, repo_root=hub)
+    except FileNotFoundError as exc:
+        console.print_json(
+            data={
+                "schema": "dad_command_error.v1",
+                "status": "blocked_dad_hub_unavailable",
+                "error": "DAD hub unavailable. Set --hub, DAD_HUB, or ~/.dad/hub.json.",
+                "detail": str(exc),
+                "authority_boundary": (
+                    "This controlled failure does not authorize cross-repo writes, "
+                    "public release, enrollment apply/update, protected repo work, "
+                    "or mail containing sensitive payloads."
+                ),
+            }
+        )
+        raise typer.Exit(2) from None
 
 
 def _repo_path(repo_root: Path, path: Path | None) -> Path | None:
     if path is None:
         return None
     return path if path.is_absolute() else repo_root / path
+
+
+def _rust_rollout_snapshot_promotion_log(repo_root: Path) -> Path:
+    return repo_root / "processed" / "mail" / "archive" / "rust_rollout_snapshot_promotion.jsonl"
+
+
+def _rust_rollout_snapshot_promotion_record(
+    *,
+    repo_root: Path,
+    out_dir: Path,
+    ack: str,
+    packet_count: int,
+) -> dict[str, object]:
+    packet_manifest = []
+    for path in sorted(out_dir.rglob("*.json")):
+        if not path.is_file():
+            continue
+        packet_manifest.append(
+            {
+                "path": safe_relative(path, repo_root),
+                "sha256": f"sha256:{sha256_bytes(path.read_bytes())}",
+            }
+        )
+    return {
+        "schema_version": "dad_rust_rollout_snapshot_promotion.v1",
+        "event_type": "rust_rollout_reference_snapshot_promoted",
+        "created_at": utc_now(),
+        "operation": "rust-rollout build-mail",
+        "out_dir": safe_relative(out_dir, repo_root),
+        "acknowledgement": ack,
+        "packet_count": packet_count,
+        "snapshot_json_file_count": len(packet_manifest),
+        "packet_manifest": packet_manifest,
+        "authority_boundary": (
+            "This audit row records intentional promotion of tracked "
+            "mail/outbox/rust_rollout reference snapshots. It is not delivery, "
+            "release approval, target repo adoption, or live mail routing evidence."
+        ),
+    }
+
+
+def _is_under_or_equal(path: Path, root: Path) -> bool:
+    resolved_path = path.resolve(strict=False)
+    resolved_root = root.resolve(strict=False)
+    return resolved_path == resolved_root or resolved_path.is_relative_to(resolved_root)
+
+
+def _system_temp_root() -> Path:
+    return Path(tempfile.gettempdir()).resolve(strict=False)
+
+
+def _local_path_ref(path: Path, root: Path) -> str:
+    try:
+        resolved_path = path.resolve(strict=False)
+        resolved_root = root.resolve(strict=False)
+        if resolved_path == resolved_root or resolved_path.is_relative_to(resolved_root):
+            return safe_relative(resolved_path, resolved_root)
+    except OSError:
+        pass
+    normalized = str(path).replace("\\", "/")
+    return f"path-sha256:{sha256_bytes(normalized.encode('utf-8'))}"
+
+
+def _annotate_mail_storm_scope(result: dict, *, requested_all: bool) -> None:
+    coverage = result.get("mailbox_coverage")
+    if not isinstance(coverage, dict):
+        coverage = {}
+    repo_scope = result.setdefault("repo_scope", {})
+    if not isinstance(repo_scope, dict):
+        repo_scope = {}
+        result["repo_scope"] = repo_scope
+    action_summary = result.setdefault("action_summary", {})
+    if not isinstance(action_summary, dict):
+        action_summary = {}
+        result["action_summary"] = action_summary
+    storm_scope_verified = (
+        requested_all
+        and bool(repo_scope.get("external_repo_mailboxes_checked"))
+        and int(coverage.get("unreviewed_mailbox_candidate_count", 0) or 0) == 0
+        and int(coverage.get("reviewed_enabled_not_checked_count", 0) or 0) == 0
+        and not str(coverage.get("warning", "")).strip()
+    )
+    repo_scope["storm_scope_verified"] = storm_scope_verified
+    repo_scope["storm_scope_basis"] = (
+        "--repo all checked reviewed mail.repos and mailbox coverage"
+        if storm_scope_verified
+        else "not storm-verified; use --repo all with reviewed mail.repos coverage"
+    )
+    action_summary["safe_for_mail_storm_operations"] = (
+        storm_scope_verified
+        and bool(action_summary.get("safe_to_collect"))
+        and bool(action_summary.get("safe_to_route"))
+        and bool(action_summary.get("safe_to_deliver"))
+    )
+    action_summary["safe_for_ingest_operations"] = (
+        storm_scope_verified
+        and bool(action_summary.get("safe_to_collect"))
+        and bool(action_summary.get("safe_to_route"))
+    )
+    action_summary["safe_for_delivery_operations"] = bool(
+        action_summary.get("safe_for_mail_storm_operations")
+    )
+
+
+_MAIL_STORM_OPERATION_GATES = {
+    "all": "safe_for_mail_storm_operations",
+    "ingest": "safe_for_ingest_operations",
+    "delivery": "safe_for_delivery_operations",
+}
+
+
+def _mail_storm_operation_key(operation: str) -> str:
+    normalized = operation.strip().lower()
+    if normalized not in _MAIL_STORM_OPERATION_GATES:
+        allowed = ", ".join(sorted(_MAIL_STORM_OPERATION_GATES))
+        raise typer.BadParameter(f"--operation must be one of: {allowed}")
+    return normalized
+
+
+def _mail_storm_operation_safe(gate: dict[str, Any], operation: str) -> bool:
+    key = _MAIL_STORM_OPERATION_GATES[_mail_storm_operation_key(operation)]
+    return bool(gate.get(key))
+
+
+def _mail_delivery_policy_summary(
+    selected: list[Path],
+    policies: list[Any],
+) -> dict[str, Any]:
+    policies_by_path = {str(policy.path.resolve()): policy for policy in policies}
+    blocked: list[dict[str, Any]] = []
+    for repo in selected:
+        policy = policies_by_path.get(str(repo.resolve()))
+        if policy is None:
+            continue
+        reasons: list[str] = []
+        if not getattr(policy, "delivery_allowed", True):
+            reasons.append("delivery_allowed=false")
+        if getattr(policy, "write_protected", False):
+            reasons.append("write_protected=true")
+        if reasons:
+            blocked.append(
+                {
+                    "repo_id": str(getattr(policy, "id", "unknown")),
+                    "repo_ref": f"repo:{getattr(policy, 'id', 'unknown')}",
+                    "reasons": reasons,
+                    "write_protection_reason": _mail_repair_plan_safe_value(
+                        str(getattr(policy, "write_protection_reason", ""))
+                    ),
+                }
+            )
+    return {
+        "schema_version": "dad_mail_delivery_policy_summary.v1",
+        "evaluated_repo_count": len(selected),
+        "blocked_delivery_repo_count": len(blocked),
+        "all_selected_delivery_allowed": not blocked,
+        "blocked_delivery_repos": blocked,
+        "authority_boundary": (
+            "Delivery policy is separate from mailbox cleanliness. A clean storm "
+            "gate does not authorize delivery to repos whose reviewed policy blocks "
+            "delivery or marks the mailbox write-protected."
+        ),
+    }
+
+
+def _mail_storm_gate_report(
+    result: dict,
+    *,
+    repo_args: list[str],
+    requested_operation: str = "all",
+) -> dict:
+    operation = _mail_storm_operation_key(requested_operation)
+    action_summary = result.get("action_summary", {})
+    if not isinstance(action_summary, dict):
+        action_summary = {}
+    summary = result.get("summary", {})
+    if not isinstance(summary, dict):
+        summary = {}
+    repo_scope = result.get("repo_scope", {})
+    if not isinstance(repo_scope, dict):
+        repo_scope = {}
+    mailbox_coverage = result.get("mailbox_coverage", {})
+    if not isinstance(mailbox_coverage, dict):
+        mailbox_coverage = {}
+    delivery_policy = result.get("delivery_policy", {})
+    if not isinstance(delivery_policy, dict):
+        delivery_policy = {}
+    worktree_state = result.get("worktree_state", {})
+    if not isinstance(worktree_state, dict):
+        worktree_state = {}
+
+    coverage_blocked = bool(
+        int(mailbox_coverage.get("unreviewed_mailbox_candidate_count", 0) or 0)
+        or int(mailbox_coverage.get("reviewed_enabled_not_checked_count", 0) or 0)
+        or str(mailbox_coverage.get("warning", "")).strip()
+    )
+    mail_blocked = bool(result.get("dirty")) or not (
+        bool(action_summary.get("safe_to_collect"))
+        and bool(action_summary.get("safe_to_route"))
+        and bool(action_summary.get("safe_to_deliver"))
+    )
+    delivery_policy_blocked = not bool(
+        delivery_policy.get("all_selected_delivery_allowed", True)
+    )
+    storm_scope_verified = bool(repo_scope.get("storm_scope_verified"))
+    worktree_dirty = bool(result.get("worktree_dirty"))
+
+    if mail_blocked and coverage_blocked:
+        gate_status = "blocked_mail_dirty_and_coverage_gap"
+    elif mail_blocked:
+        gate_status = "blocked_mail_dirty"
+    elif coverage_blocked:
+        gate_status = "blocked_coverage_gap"
+    elif not storm_scope_verified:
+        gate_status = "hub_or_partial_scope_only"
+    elif delivery_policy_blocked:
+        gate_status = "mail_safe_delivery_policy_hold"
+    elif worktree_dirty:
+        gate_status = "mail_safe_worktree_dirty"
+    elif str(result.get("status", "")) != "clean":
+        gate_status = "mail_safe_with_observations"
+    else:
+        gate_status = "mail_safe"
+
+    safe_for_selected_scope = not mail_blocked and not coverage_blocked
+    collect_route_safe = safe_for_selected_scope and storm_scope_verified
+    deliver_safe = collect_route_safe and not delivery_policy_blocked
+    safe_for_ingest_operations = collect_route_safe
+    safe_for_delivery_operations = deliver_safe
+    safe_for_mail_storm_operations = collect_route_safe and deliver_safe
+    blocked_operation_classes = [
+        operation
+        for operation, allowed in (
+            ("collect", collect_route_safe),
+            ("route", collect_route_safe),
+            ("deliver", deliver_safe),
+        )
+        if not allowed
+    ]
+    blocking_reasons: list[str] = []
+    if mail_blocked:
+        blocking_reasons.append("mail_dirty")
+    if coverage_blocked:
+        blocking_reasons.append("coverage_gap")
+    if not storm_scope_verified and not coverage_blocked:
+        blocking_reasons.append("partial_or_hub_local_scope")
+    if delivery_policy_blocked:
+        blocking_reasons.append("delivery_policy_hold")
+
+    next_actions = list(action_summary.get("next_actions", []))
+    if gate_status == "hub_or_partial_scope_only":
+        next_actions.append(
+            "Rerun `mail storm-gate --repo all` before multi-repo collection, routing, or delivery."
+        )
+    if coverage_blocked:
+        next_actions.append(
+            "Run `mail discover-repos`; classify unreviewed mailboxes before moving mail."
+        )
+    if delivery_policy_blocked:
+        next_actions.append(
+            "Do not deliver to selected repos blocked by reviewed mail policy; narrow scope "
+            "or change policy with human review."
+        )
+    if mail_blocked:
+        next_actions.append(
+            "Run full `mail doctor --repo all` and repair or quarantine mailbox issues before collect/route/deliver."
+        )
+    if worktree_dirty and safe_for_selected_scope:
+        next_actions.append(
+            "Review git status before push/merge; worktree dirt is not mailbox corruption by itself."
+        )
+
+    return {
+        "schema_version": "dad_mail_storm_gate.v1",
+        "generated_at": result.get("generated_at", utc_now()),
+        "gate_status": gate_status,
+        "dirty_state_fingerprint": str(
+            result.get("dirty_state_fingerprint") or _mail_dirty_state_fingerprint(result)
+        ),
+        "requested_repos": repo_args,
+        "requested_operation": operation,
+        "safe_for_selected_scope": safe_for_selected_scope,
+        "safe_for_mail_storm_operations": safe_for_mail_storm_operations,
+        "safe_for_ingest_operations": safe_for_ingest_operations,
+        "safe_for_delivery_operations": safe_for_delivery_operations,
+        "selected_operation_safe": _mail_storm_operation_safe(
+            {
+                "safe_for_mail_storm_operations": safe_for_mail_storm_operations,
+                "safe_for_ingest_operations": safe_for_ingest_operations,
+                "safe_for_delivery_operations": safe_for_delivery_operations,
+            },
+            operation,
+        ),
+        "safe_to_collect": collect_route_safe,
+        "safe_to_route": collect_route_safe,
+        "safe_to_deliver": deliver_safe,
+        "blocked_operation_classes": blocked_operation_classes,
+        "blocking_reasons": blocking_reasons,
+        "operation_safety_contract": (
+            "Use safe_for_ingest_operations for collect/route decisions and "
+            "safe_for_delivery_operations for repo inbox writes. "
+            "safe_for_mail_storm_operations remains the all-operations gate."
+        ),
+        "requires_human_review": bool(
+            coverage_blocked or mail_blocked or delivery_policy_blocked
+        ),
+        "spool_dirty": bool(result.get("spool_dirty", result.get("dirty", False))),
+        "worktree_dirty": worktree_dirty,
+        "worktree_dirty_does_not_change_mail_dirty": bool(
+            result.get("worktree_dirty_does_not_change_mail_dirty", True)
+        ),
+        "doctor_status": result.get("status"),
+        "mail_summary": {
+            "issue_count": int(summary.get("issue_count", 0) or 0),
+            "blocking_issue_count": int(action_summary.get("blocking_issue_count", 0) or 0),
+            "repairable_issue_count": int(action_summary.get("repairable_issue_count", 0) or 0),
+            "legacy_observation_count": int(
+                action_summary.get("legacy_observation_count", 0) or 0
+            ),
+            "lifecycle_observation_count": int(
+                action_summary.get("lifecycle_observation_count", 0) or 0
+            ),
+            "rust_packet_count": int(summary.get("rust_packet_count", 0) or 0),
+            "source_outbox_duplicate_identity_count": int(
+                summary.get("source_outbox_duplicate_identity_count", 0) or 0
+            ),
+            "cross_source_outbox_duplicate_identity_count": int(
+                summary.get("cross_source_outbox_duplicate_identity_count", 0) or 0
+            ),
+            "unknown_source_outbox_duplicate_identity_count": int(
+                summary.get("unknown_source_outbox_duplicate_identity_count", 0) or 0
+            ),
+            "invalid_mail_packet_count": int(
+                summary.get("invalid_mail_packet_count", 0) or 0
+            ),
+            "invalid_mail_packet_quarantine_count": int(
+                summary.get("invalid_mail_packet_quarantine_count", 0) or 0
+            ),
+        },
+        "repo_scope": repo_scope,
+        "mailbox_coverage": mailbox_coverage,
+        "delivery_policy": delivery_policy,
+        "worktree_state": {
+            "evaluated": worktree_state.get("evaluated", False),
+            "is_git_worktree": worktree_state.get("is_git_worktree", False),
+            "status": worktree_state.get("status", "unknown"),
+            "changed_count": int(worktree_state.get("changed_count", 0) or 0),
+            "counts_by_category": worktree_state.get("counts_by_category", {}),
+            "guidance": worktree_state.get("guidance", []),
+        },
+        "write_target_guidance": result.get("write_target_guidance", {}),
+        "operator_commands": {
+            "authoritative_doctor": (
+                "python -m digital_asset_directory.cli mail doctor --repo all "
+                "--summary-only --fail-on-dirty --fail-on-coverage-gap"
+            ),
+            "coverage_discovery": "python -m digital_asset_directory.cli mail discover-repos",
+            "rust_leaf_probe": "python -m digital_asset_directory.cli rust mail-spool-check",
+        },
+        "next_actions": next_actions,
+        "authority_boundary": (
+            "This storm gate is read-only. It does not collect, route, deliver, repair, "
+            "promote Rust rollout snapshots, approve public release, or authorize repo writes."
+        ),
+    }
+
+
+_REPAIR_PLAN_LOCAL_PATH_RE = re.compile(
+    r"(?i)(^[a-z]:[\\/]|^\\\\|[\\/]users[\\/]|onedrive|git projects)"
+)
+
+
+def _mail_repair_issue_severity(issue_type: str) -> str:
+    if issue_type in {
+        "central_inbox_uncollected_row",
+        "central_inbox_missing_collection_audit",
+        "central_inbox_missing_collection_provenance",
+        "central_outbox_missing_route_audit",
+        "central_outbox_unrouted_row",
+        "repo_inbox_without_delivery_log",
+        "rust_rollout_packet_write_claim",
+    }:
+        return "critical"
+    if issue_type in {
+        "central_inbox_duplicate_logical_identity",
+        "central_outbox_route_hash_mismatch",
+        "central_outbox_missing_source_inbox",
+        "unknown_source_outbox_duplicate_identity",
+        "source_outbox_unstable",
+        "invalid_mail_packet",
+        "malformed_jsonl",
+        "oversized_jsonl_record",
+        "duplicate_jsonl_identity",
+        "cross_file_same_stage_duplicate_identity",
+        "cross_source_outbox_duplicate_identity",
+        "repo_inbox_delivery_hash_mismatch",
+        "rust_rollout_packet_invalid",
+        "rust_rollout_packet_delivery_status",
+        "rust_rollout_duplicate_packet_identity",
+        "rust_rollout_semantic_identity_conflict",
+    }:
+        return "high"
+    if issue_type in {"jsonl_lock", "atomic_temp_fragment"}:
+        return "medium"
+    return "low"
+
+
+def _mail_repair_plan_safe_value(value: Any) -> Any:
+    if isinstance(value, str):
+        if _REPAIR_PLAN_LOCAL_PATH_RE.search(value):
+            normalized = value.replace("\\", "/")
+            return f"path-sha256:{sha256_bytes(normalized.encode('utf-8'))}"
+        return value
+    if isinstance(value, list):
+        return [_mail_repair_plan_safe_value(item) for item in value]
+    if isinstance(value, dict):
+        return {
+            str(key): _mail_repair_plan_safe_value(item)
+            for key, item in value.items()
+            if str(key) not in {"payload", "raw", "raw_value", "raw_text", "stdout", "stderr"}
+        }
+    return value
+
+
+def _mail_repair_issue_sample(issue: dict[str, Any]) -> dict[str, Any]:
+    allowed_keys = {
+        "issue_type",
+        "path",
+        "mail_id",
+        "dedupe_key",
+        "record_hash",
+        "message_type",
+        "expected_target_repo",
+        "legacy_delivery_log_present",
+        "legacy_allowlist",
+        "identity",
+        "semantic_identity",
+        "path_classes",
+        "revision_ids",
+        "path_count",
+        "status",
+        "age_seconds",
+        "line",
+        "bytes",
+        "max_bytes",
+        "delivery_status",
+        "review_status",
+        "source_policy_keys",
+    }
+    sample = {
+        key: _mail_repair_plan_safe_value(issue[key])
+        for key in sorted(allowed_keys)
+        if key in issue
+    }
+    if isinstance(issue.get("paths"), list):
+        sample["paths"] = _mail_repair_plan_safe_value(issue["paths"][:5])
+    if isinstance(issue.get("rows"), list):
+        rows = []
+        for row in issue["rows"][:5]:
+            if not isinstance(row, dict):
+                continue
+            rows.append(
+                {
+                    key: _mail_repair_plan_safe_value(row[key])
+                    for key in ("path", "mail_id", "dedupe_key", "record_hash")
+                    if key in row
+                }
+            )
+        if rows:
+            sample["rows"] = rows
+    return sample
+
+
+def _mail_repair_review_queue(issues: list[dict[str, Any]], *, limit: int = 200) -> dict[str, Any]:
+    rows = []
+    for issue in issues[:limit]:
+        if not isinstance(issue, dict):
+            continue
+        item = _mail_repair_issue_sample(issue)
+        item["raw_payload_copied"] = False
+        item["review_required"] = _mail_repair_issue_severity(
+            str(issue.get("issue_type", ""))
+        ) in {"critical", "high"}
+        item["authority_boundary"] = (
+            "Sanitized operator review evidence only; use the authoritative DAD "
+            "mail lifecycle for repair, replay, delivery, or quarantine."
+        )
+        rows.append(item)
+    return {
+        "schema_version": "dad_mail_storm_repair_review_queue.v1",
+        "item_count": len(issues),
+        "items_emitted": len(rows),
+        "truncated": len(issues) > limit,
+        "raw_payload_copied": False,
+        "items": rows,
+    }
+
+
+def _mail_repair_lane_priority(issue_type: str) -> int:
+    if issue_type == "mailbox_coverage_gap":
+        return 0
+    if issue_type == "delivery_policy_hold":
+        return 5
+    if issue_type in {
+        "central_inbox_uncollected_row",
+        "central_inbox_missing_collection_audit",
+        "central_inbox_missing_collection_provenance",
+    }:
+        return 10
+    if issue_type == "repo_inbox_without_delivery_log":
+        return 20
+    if issue_type in {
+        "central_outbox_missing_route_audit",
+        "central_outbox_unrouted_row",
+        "central_outbox_route_hash_mismatch",
+        "central_outbox_missing_source_inbox",
+    }:
+        return 30
+    if issue_type in {
+        "malformed_jsonl",
+        "oversized_jsonl_record",
+        "duplicate_jsonl_identity",
+        "cross_file_same_stage_duplicate_identity",
+        "central_inbox_duplicate_logical_identity",
+        "repo_inbox_delivery_hash_mismatch",
+        "cross_source_outbox_duplicate_identity",
+        "unknown_source_outbox_duplicate_identity",
+        "source_outbox_unstable",
+        "invalid_mail_packet",
+    }:
+        return 40
+    if issue_type.startswith("rust_rollout_"):
+        return 70
+    if issue_type in {"jsonl_lock", "atomic_temp_fragment"}:
+        return 80
+    return 90
+
+
+def _mail_repair_lane(issue_type: str, issues: list[dict[str, Any]]) -> dict[str, Any]:
+    severity = _mail_repair_issue_severity(issue_type)
+    lane = {
+        "lane_id": issue_type.replace("_", "-"),
+        "issue_type": issue_type,
+        "issue_count": len(issues),
+        "severity": severity,
+        "automated_default": "blocked",
+        "allowed_now": "read_only_review",
+        "requires_human_review": severity in {"critical", "high"},
+        "samples": [_mail_repair_issue_sample(issue) for issue in issues[:5]],
+        "forbidden_actions": [
+            "do_not_collect_route_or_deliver_while_lane_is_open",
+            "do_not_edit_target_repo_inbox_as_cleanup",
+            "do_not_treat_this_plan_as_delivery_or_release_approval",
+        ],
+    }
+    if issue_type == "repo_inbox_without_delivery_log":
+        lane.update(
+            {
+                "lane_id": "repo-inbox-delivery-audit-repair",
+                "title": "Repo inbox rows without DAD delivery-log evidence",
+                "allowed_now": "review_only_then_replay_through_dad_delivery",
+                "repair_strategy": (
+                    "Verify whether each inbox row was delivered by DAD. If not, treat it "
+                    "as a wrong-box candidate: move the source decision back through the "
+                    "source repo outbox, DAD collect, route, and deliver after review. "
+                    "For pre-enforcement rows that have only legacy unhashed delivery-log "
+                    "evidence, use --allowlist-legacy-repo-inbox with a reviewer note; "
+                    "the allowlist is keyed by mail_id, dedupe_key, current row hash, and "
+                    "target repo."
+                ),
+                "danger_if_rushed": (
+                    "A direct inbox write can look like delivered mail and make agents act "
+                    "on unreviewed or spoofed recommendations."
+                ),
+            }
+        )
+    elif issue_type in {
+        "central_inbox_uncollected_row",
+        "central_inbox_missing_collection_audit",
+        "central_inbox_missing_collection_provenance",
+    }:
+        lane.update(
+            {
+                "lane_id": "central-inbox-collection-audit-repair",
+                "title": "Central inbox rows without collection authority",
+                "allowed_now": "review_only_then_recollect_or_quarantine",
+                "repair_strategy": (
+                    "Re-collect from the source repo outbox when available, or quarantine "
+                    "the central row by metadata/hash after human review. Do not trust packet "
+                    "contents alone as collection evidence."
+                ),
+            }
+        )
+    elif issue_type in {
+        "central_outbox_missing_route_audit",
+        "central_outbox_unrouted_row",
+        "central_outbox_route_hash_mismatch",
+        "central_outbox_missing_source_inbox",
+    }:
+        lane.update(
+            {
+                "lane_id": "central-outbox-route-audit-repair",
+                "title": "Central outbox rows without route authority",
+                "allowed_now": "review_only_then_reroute_from_collected_inbox",
+                "repair_strategy": (
+                    "Reroute only from current collected central inbox rows with matching "
+                    "collection evidence, or quarantine stale/mutated routed rows."
+                ),
+            }
+        )
+    elif issue_type in {
+        "malformed_jsonl",
+        "oversized_jsonl_record",
+        "duplicate_jsonl_identity",
+        "cross_file_same_stage_duplicate_identity",
+        "central_inbox_duplicate_logical_identity",
+        "repo_inbox_delivery_hash_mismatch",
+        "cross_source_outbox_duplicate_identity",
+        "unknown_source_outbox_duplicate_identity",
+        "source_outbox_unstable",
+        "invalid_mail_packet",
+    }:
+        lane.update(
+            {
+                "lane_id": "mailbox-integrity-and-provenance-repair",
+                "title": "Mailbox integrity or provenance blocker",
+                "allowed_now": "review_only_then_metadata_quarantine_or_source_retry",
+                "repair_strategy": (
+                    "Quarantine malformed/oversized rows by metadata, retry unstable "
+                    "source outboxes after writers finish, and resolve provenance conflicts "
+                    "before collection."
+                ),
+            }
+        )
+    elif issue_type.startswith("rust_rollout_"):
+        lane.update(
+            {
+                "lane_id": "rust-rollout-packet-resync",
+                "title": "Rust rollout staged/tracked packet drift",
+                "allowed_now": "review_only_then_staged_regeneration",
+                "repair_strategy": (
+                    "Resolve higher-priority live mailbox blockers first. Then regenerate "
+                    "Rust rollout packets into ignored staging; promote tracked reference "
+                    "snapshots only with a reviewed promotion acknowledgement."
+                ),
+                "review_required_before_running_examples": True,
+                "post_review_execution_examples": [
+                    (
+                        "python -m digital_asset_directory.cli rust-rollout build-mail "
+                        "--out-dir processed/mail/staged/rust_rollout "
+                        "--dirty-state-ack \"reviewed Rust rollout packet resync\" "
+                        "--dirty-state-fingerprint <fingerprint-from-storm-gate-or-doctor>"
+                    ),
+                    (
+                        "python -m digital_asset_directory.cli rust-rollout build-mail "
+                        "--out-dir mail/outbox/rust_rollout "
+                        "--dirty-state-ack \"reviewed Rust rollout packet resync\" "
+                        "--dirty-state-fingerprint <fingerprint-from-storm-gate-or-doctor> "
+                        "--promote-reference-snapshot-ack \"reviewed tracked snapshot promotion\""
+                    ),
+                ],
+                "example_command_authority": (
+                    "Examples are not approval. Run only after the lane is selected by "
+                    "a human/operator review and higher-priority live mailbox blockers "
+                    "are cleared or explicitly accounted for."
+                ),
+                "danger_if_rushed": (
+                    "Rust rollout reference packets are not delivered mail. Promoting them "
+                    "while inbox or route authority is dirty can make stale rollout advice "
+                    "look current."
+                ),
+            }
+        )
+    elif issue_type in {"jsonl_lock", "atomic_temp_fragment"}:
+        lane.update(
+            {
+                "lane_id": "stale-lock-and-temp-fragment-repair",
+                "title": "Mailbox lock or atomic temp debris",
+                "allowed_now": "repair_only_when_stale_or_dead",
+                "repair_strategy": (
+                    "Use mail doctor repair flags only for stale/dead locks or stale temp "
+                    "fragments. Active locks mean another writer may still be appending."
+                ),
+            }
+        )
+    else:
+        lane.update(
+            {
+                "title": "Generic mail doctor issue",
+                "repair_strategy": (
+                    "Review the authoritative mail doctor issue and repair through the "
+                    "documented DAD lifecycle before moving mail."
+                ),
+            }
+        )
+    return lane
+
+
+def _mail_storm_repair_plan_report(
+    result: dict[str, Any],
+    *,
+    gate: dict[str, Any],
+    repo_args: list[str],
+    requested_operation: str = "all",
+) -> dict[str, Any]:
+    operation = _mail_storm_operation_key(requested_operation)
+    issues = [issue for issue in result.get("issues", []) if isinstance(issue, dict)]
+    issue_groups: dict[str, list[dict[str, Any]]] = {}
+    for issue in issues:
+        issue_type = str(issue.get("issue_type", "") or "unknown_issue")
+        issue_groups.setdefault(issue_type, []).append(issue)
+    issue_counts = {
+        issue_type: len(group) for issue_type, group in sorted(issue_groups.items())
+    }
+    lanes: list[dict[str, Any]] = []
+    mailbox_coverage = result.get("mailbox_coverage", {})
+    if not isinstance(mailbox_coverage, dict):
+        mailbox_coverage = {}
+    delivery_policy = result.get("delivery_policy", {})
+    if not isinstance(delivery_policy, dict):
+        delivery_policy = {}
+    coverage_gap_count = int(mailbox_coverage.get("unreviewed_mailbox_candidate_count", 0) or 0)
+    coverage_gap_count += int(mailbox_coverage.get("reviewed_enabled_not_checked_count", 0) or 0)
+    if coverage_gap_count or str(mailbox_coverage.get("warning", "")).strip():
+        lanes.append(
+            {
+                "lane_id": "mailbox-coverage-review",
+                "issue_type": "mailbox_coverage_gap",
+                "issue_count": coverage_gap_count,
+                "severity": "critical",
+                "title": "Mailbox coverage is not reviewed complete",
+                "automated_default": "blocked",
+                "allowed_now": "read_only_discovery_and_policy_review",
+                "requires_human_review": True,
+                "samples": {
+                    "unreviewed_mailbox_candidate_samples": mailbox_coverage.get(
+                        "unreviewed_mailbox_candidate_samples", []
+                    ),
+                    "reviewed_enabled_not_checked_samples": mailbox_coverage.get(
+                        "reviewed_enabled_not_checked_samples", []
+                    ),
+                },
+                "repair_strategy": (
+                    "Classify discovered mailbox candidates into reviewed mail.repos policy "
+                    "or explicitly ignore/archive them before treating --repo all as complete."
+                ),
+                "forbidden_actions": [
+                    "do_not_collect_from_unreviewed_mailboxes",
+                    "do_not_deliver_to_unchecked_reviewed_repos",
+                ],
+            }
+        )
+    delivery_policy_blocked = int(
+        delivery_policy.get("blocked_delivery_repo_count", 0) or 0
+    )
+    if delivery_policy_blocked:
+        lanes.append(
+            {
+                "lane_id": "delivery-policy-hold-review",
+                "issue_type": "delivery_policy_hold",
+                "issue_count": delivery_policy_blocked,
+                "severity": "critical",
+                "title": "Reviewed repo policy blocks delivery",
+                "automated_default": "blocked",
+                "allowed_now": "narrow_scope_or_human_policy_review",
+                "requires_human_review": True,
+                "samples": delivery_policy.get("blocked_delivery_repos", [])[:10],
+                "repair_strategy": (
+                    "Do not deliver to write-protected or delivery-disallowed repos. "
+                    "Narrow the command scope or change reviewed mail policy only after "
+                    "repo-specific human review."
+                ),
+                "forbidden_actions": [
+                    "do_not_deliver_to_write_protected_repos",
+                    "do_not_use_clean_mail_spool_as_delivery_approval",
+                ],
+            }
+        )
+    for issue_type, group in issue_groups.items():
+        lanes.append(_mail_repair_lane(issue_type, group))
+    lanes.sort(
+        key=lambda lane: (
+            _mail_repair_lane_priority(str(lane.get("issue_type", ""))),
+            str(lane.get("lane_id", "")),
+        )
+    )
+    status = "repair_plan_required" if lanes else "no_repair_needed"
+    if not lanes and not gate.get("safe_for_mail_storm_operations"):
+        status = "scope_review_required"
+    review_queue = _mail_repair_review_queue(issues)
+    return {
+        "schema_version": "dad_mail_storm_repair_plan.v1",
+        "generated_at": result.get("generated_at", utc_now()),
+        "status": status,
+        "requested_repos": repo_args,
+        "gate_status": gate.get("gate_status"),
+        "dirty_state_fingerprint": gate.get("dirty_state_fingerprint", ""),
+        "doctor_status": result.get("status"),
+        "writes_performed": False,
+        "repair_execution_performed": False,
+        "repair_automation_allowed": False,
+        "requested_operation": operation,
+        "operator_review_required": bool(lanes or gate.get("requires_human_review")),
+        "safe_for_selected_scope": bool(gate.get("safe_for_selected_scope")),
+        "safe_for_mail_storm_operations": bool(gate.get("safe_for_mail_storm_operations")),
+        "safe_for_ingest_operations": bool(gate.get("safe_for_ingest_operations")),
+        "safe_for_delivery_operations": bool(gate.get("safe_for_delivery_operations")),
+        "selected_operation_safe": _mail_storm_operation_safe(gate, operation),
+        "safe_to_collect": bool(gate.get("safe_to_collect")),
+        "safe_to_route": bool(gate.get("safe_to_route")),
+        "safe_to_deliver": bool(gate.get("safe_to_deliver")),
+        "blocked_operation_classes": gate.get("blocked_operation_classes", []),
+        "blocking_reasons": gate.get("blocking_reasons", []),
+        "operation_safety_contract": gate.get("operation_safety_contract", ""),
+        "issue_counts_by_type": issue_counts,
+        "mail_summary": gate.get("mail_summary", {}),
+        "repo_scope": gate.get("repo_scope", {}),
+        "mailbox_coverage": mailbox_coverage,
+        "delivery_policy": delivery_policy,
+        "worktree_state": gate.get("worktree_state", {}),
+        "repair_lanes": lanes,
+        "review_queue": review_queue,
+        "recommended_order": [str(lane.get("lane_id", "")) for lane in lanes],
+        "operator_commands": {
+            **dict(gate.get("operator_commands", {})),
+            "repair_plan": "python -m digital_asset_directory.cli mail repair-plan --repo all",
+            "diagnostic_doctor_summary_only_not_an_exit_gate": (
+                "python -m digital_asset_directory.cli mail doctor --repo all "
+                "--summary-only"
+            ),
+            "fail_closed_doctor": (
+                "python -m digital_asset_directory.cli mail doctor --repo all "
+                "--summary-only --fail-on-dirty --fail-on-coverage-gap"
+            ),
+        },
+        "next_actions": gate.get("next_actions", []),
+        "safety_rules": [
+            "This report is read-only and cannot approve repair, delivery, public release, or repo writes.",
+            "Repo inbox rows are trusted only when backed by matching DAD delivery-log evidence.",
+            "Rust rollout packets are reference/staging instructions, not delivered inbox mail.",
+            (
+                "Use the operation-specific storm gate before moving mail: ingest for "
+                "collect/route, delivery or all before target repo inbox writes."
+            ),
+        ],
+        "authority_boundary": (
+            "The repair plan classifies dirty-state blockers and proposes review lanes. It does "
+            "not collect, route, deliver, quarantine, allowlist, repair, promote Rust snapshots, "
+            "approve public release, or authorize writes to target repos."
+        ),
+    }
+
+
+def _mail_repair_report_slug(plan: dict[str, Any]) -> str:
+    generated_at = str(plan.get("generated_at", utc_now()))
+    slug = re.sub(r"[^0-9a-zA-Z]+", "-", generated_at).strip("-").lower()
+    return slug[:80] or "latest"
+
+
+def _mail_repair_plan_markdown(plan: dict[str, Any]) -> str:
+    lines = [
+        "# DAD Mail Storm Repair Packet",
+        "",
+        f"Generated: `{plan.get('generated_at', '')}`",
+        f"Status: `{plan.get('status', '')}`",
+        f"Gate: `{plan.get('gate_status', '')}`",
+        f"Doctor status: `{plan.get('doctor_status', '')}`",
+        "",
+        "## Authority Boundary",
+        "",
+        str(plan.get("authority_boundary", "")),
+        "",
+        "This packet is operator evidence only. It does not collect, route, deliver, "
+        "quarantine, repair, promote Rust snapshots, approve public release, or authorize "
+        "writes to target repositories.",
+        "",
+        "## Safety Summary",
+        "",
+        f"- Requested operation: `{plan.get('requested_operation', 'all')}`",
+        f"- Selected operation safe: `{bool(plan.get('selected_operation_safe'))}`",
+        f"- Safe for selected scope: `{bool(plan.get('safe_for_selected_scope'))}`",
+        f"- Safe for mail-storm operations: `{bool(plan.get('safe_for_mail_storm_operations'))}`",
+        f"- Safe for ingest operations: `{bool(plan.get('safe_for_ingest_operations'))}`",
+        f"- Safe for delivery operations: `{bool(plan.get('safe_for_delivery_operations'))}`",
+        f"- Safe to collect: `{bool(plan.get('safe_to_collect'))}`",
+        f"- Safe to route: `{bool(plan.get('safe_to_route'))}`",
+        f"- Safe to deliver: `{bool(plan.get('safe_to_deliver'))}`",
+        f"- Blocked operation classes: `{', '.join(plan.get('blocked_operation_classes', []))}`",
+        f"- Blocking reasons: `{', '.join(plan.get('blocking_reasons', []))}`",
+        f"- Operator review required: `{bool(plan.get('operator_review_required'))}`",
+        "",
+        "## Recommended Order",
+        "",
+    ]
+    recommended = plan.get("recommended_order", [])
+    if isinstance(recommended, list) and recommended:
+        lines.extend(f"- `{item}`" for item in recommended)
+    else:
+        lines.append("- No repair lanes were generated.")
+    lines.extend(["", "## Repair Lanes", ""])
+    lanes = plan.get("repair_lanes", [])
+    if isinstance(lanes, list) and lanes:
+        for lane in lanes:
+            if not isinstance(lane, dict):
+                continue
+            lines.extend(
+                [
+                    f"### {lane.get('title', lane.get('lane_id', 'Untitled lane'))}",
+                    "",
+                    f"- Lane ID: `{lane.get('lane_id', '')}`",
+                    f"- Issue type: `{lane.get('issue_type', '')}`",
+                    f"- Severity: `{lane.get('severity', '')}`",
+                    f"- Count: `{lane.get('issue_count', 0)}`",
+                    f"- Allowed now: `{lane.get('allowed_now', '')}`",
+                    f"- Requires human review: `{bool(lane.get('requires_human_review'))}`",
+                    "",
+                    str(lane.get("repair_strategy", "")),
+                    "",
+                ]
+            )
+    else:
+        lines.append("No repair lanes were generated.")
+        lines.append("")
+    commands = plan.get("operator_commands", {})
+    if isinstance(commands, dict):
+        lines.extend(["## Operator Commands", ""])
+        for key, value in sorted(commands.items()):
+            lines.append(f"- `{key}`: `{value}`")
+        lines.append("")
+    lines.extend(["## Safety Rules", ""])
+    for rule in plan.get("safety_rules", []):
+        lines.append(f"- {rule}")
+    lines.append("")
+    return "\n".join(lines)
+
+
+def _write_mail_repair_plan_packet(repo_root: Path, plan: dict[str, Any]) -> dict[str, Any]:
+    output_dir = repo_root / "processed" / "reports" / "mail_storm_repair"
+    output_dir.mkdir(parents=True, exist_ok=True)
+    slug = _mail_repair_report_slug(plan)
+    json_path = output_dir / f"{slug}.json"
+    md_path = output_dir / f"{slug}.md"
+    latest_json_path = output_dir / "latest.json"
+    latest_md_path = output_dir / "latest.md"
+    packet = {
+        **plan,
+        "report_packet": {
+            "schema_version": "dad_mail_storm_repair_packet.v1",
+            "created_at": utc_now(),
+            "report_writes_performed": True,
+            "report_write_scope": "DAD-local processed/reports/mail_storm_repair only",
+            "authority_boundary": (
+                "This report packet is durable operator evidence only. It does not "
+                "repair mail, collect, route, deliver, approve public release, or "
+                "authorize target repo writes."
+            ),
+        },
+    }
+    json_path.write_text(json.dumps(packet, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+    markdown = _mail_repair_plan_markdown(packet)
+    md_path.write_text(markdown, encoding="utf-8")
+    latest_json_path.write_text(
+        json.dumps(
+            {
+                **packet,
+                "latest_pointer": {
+                    "schema_version": "dad_mail_storm_repair_latest_pointer.v1",
+                    "source_report": safe_relative(json_path, repo_root),
+                    "source_markdown": safe_relative(md_path, repo_root),
+                    "updated_at": utc_now(),
+                    "authority_boundary": (
+                        "This stable pointer only mirrors the latest DAD-local "
+                        "operator repair plan. It does not approve repair, mail "
+                        "delivery, public release, or target-repo writes."
+                    ),
+                },
+            },
+            indent=2,
+            sort_keys=True,
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+    latest_md_path.write_text(markdown, encoding="utf-8")
+    return {
+        "schema_version": "dad_mail_storm_repair_packet_write.v1",
+        "json": safe_relative(json_path, repo_root),
+        "markdown": safe_relative(md_path, repo_root),
+        "latest_json": safe_relative(latest_json_path, repo_root),
+        "latest_markdown": safe_relative(latest_md_path, repo_root),
+        "report_writes_performed": True,
+        "repair_execution_performed": False,
+        "authority_boundary": (
+            "Only DAD-local report files were written; no mail lifecycle or target repo "
+            "state was changed."
+        ),
+    }
 
 
 def _json_command(value: Optional[str], option_name: str) -> list[str] | None:
@@ -377,6 +1423,23 @@ def _discover_mail_repos(
         return repos
 
     repos: dict[str, Path] = {}
+    if delivery:
+        blocked_delivery = [
+            policy.id
+            for policy in cfg.mail_repos
+            if policy.mail_enabled
+            and (
+                not policy.delivery_allowed
+                or getattr(policy, "write_protected", False)
+            )
+        ]
+        if blocked_delivery:
+            raise typer.BadParameter(
+                "--repo all delivery is blocked by reviewed mail.repos policy for: "
+                + ", ".join(sorted(blocked_delivery))
+                + ". Narrow --repo to explicitly reviewed deliverable repos, or run "
+                "mail storm-gate --operation delivery for the full hold report."
+            )
     for policy in cfg.mail_repos:
         if not policy.mail_enabled:
             continue
@@ -391,6 +1454,232 @@ def _discover_mail_repos(
             "or add enabled mail.repos entries."
         )
     return list(repos.values())
+
+
+def _mail_dirty_gate_payload(
+    *,
+    operation: str,
+    result: dict,
+    dirty_state_ack: str | None = None,
+) -> dict:
+    payload = {
+        "schema_version": "dad_mail_dirty_gate.v1",
+        "operation": operation,
+        "dirty": bool(result.get("dirty")),
+        "status": result.get("status"),
+        "action_summary": result.get("action_summary", {}),
+        "summary": result.get("summary", {}),
+        "worktree_state": result.get("worktree_state", {}),
+        "write_target_guidance": result.get("write_target_guidance", {}),
+        "authority_boundary": result.get("authority_boundary", ""),
+    }
+    if dirty_state_ack:
+        payload["dirty_state_ack"] = dirty_state_ack
+    payload["dirty_state_fingerprint"] = _mail_dirty_state_fingerprint(result)
+    return payload
+
+
+_MAIL_DIRTY_FINGERPRINT_FIELDS = (
+    "issue_type",
+    "path",
+    "stage",
+    "mail_id",
+    "dedupe_key",
+    "record_hash",
+    "identity",
+    "line",
+    "filename",
+    "root_class",
+    "packet_path",
+    "expected_target_repo",
+)
+
+
+def _mail_dirty_state_fingerprint(result: dict[str, Any]) -> str:
+    """Return a stable fingerprint for the currently observed mail-storm blockers.
+
+    The fingerprint intentionally ignores volatile timestamps and lock ages, but it
+    includes issue identity, paths, hashes, and summary counts so a reviewed bypass
+    cannot silently apply after a different repo appends new mail.
+    """
+
+    issues: list[dict[str, Any]] = []
+    for issue in result.get("issues", []):
+        if not isinstance(issue, dict):
+            continue
+        issues.append(
+            {
+                key: str(issue.get(key, ""))
+                for key in _MAIL_DIRTY_FINGERPRINT_FIELDS
+                if str(issue.get(key, "")) != ""
+            }
+        )
+    issues.sort(key=lambda item: json.dumps(item, sort_keys=True, separators=(",", ":")))
+    summary = result.get("summary", {})
+    if not isinstance(summary, dict):
+        summary = {}
+    basis = {
+        "schema_version": "dad_mail_dirty_state_fingerprint.v1",
+        "dirty": bool(result.get("dirty")),
+        "spool_dirty": bool(result.get("spool_dirty", result.get("dirty"))),
+        "status": str(result.get("status", "")),
+        "issue_count": len(issues),
+        "summary_counts": {
+            key: int(value)
+            for key, value in sorted(summary.items())
+            if key.endswith("_count") and type(value) is int
+        },
+        "issues": issues,
+    }
+    encoded = json.dumps(basis, sort_keys=True, separators=(",", ":")).encode("utf-8")
+    return f"sha256:{sha256_bytes(encoded)}"
+
+
+def _ensure_mail_clean_for_operation(
+    cfg,
+    repos: list[Path],
+    *,
+    operation: str,
+    dirty_state_ack: str | None = None,
+    dirty_state_fingerprint: str | None = None,
+    allow_dirty_ack: bool = False,
+    dirty_ack_issue_types: set[str] | None = None,
+) -> dict:
+    result = diagnose_mail_dirty_state(cfg.repo_root, repos, repo_policies=cfg.mail_repos)
+    if not result.get("dirty"):
+        return _mail_dirty_gate_payload(operation=operation, result=result)
+    payload = _mail_dirty_gate_payload(
+        operation=operation,
+        result=result,
+        dirty_state_ack=dirty_state_ack,
+    )
+    if allow_dirty_ack and dirty_state_ack and dirty_state_ack.strip():
+        allowed_issue_types = dirty_ack_issue_types or set()
+        issue_types = {
+            str(issue.get("issue_type", ""))
+            for issue in result.get("issues", [])
+            if isinstance(issue, dict)
+        }
+        disallowed_issue_types = sorted(issue_types - allowed_issue_types)
+        if disallowed_issue_types:
+            payload["blocked"] = True
+            payload["dirty_ack_rejected"] = True
+            payload["disallowed_issue_types"] = disallowed_issue_types
+            payload["allowed_dirty_ack_issue_types"] = sorted(allowed_issue_types)
+            console.print_json(data=payload)
+            raise typer.Exit(2)
+        expected_fingerprint = str(payload.get("dirty_state_fingerprint", ""))
+        provided_fingerprint = (dirty_state_fingerprint or "").strip()
+        if not provided_fingerprint or provided_fingerprint != expected_fingerprint:
+            payload["blocked"] = True
+            payload["dirty_ack_rejected"] = True
+            payload["dirty_state_fingerprint_required"] = True
+            payload["provided_dirty_state_fingerprint"] = provided_fingerprint
+            payload["expected_dirty_state_fingerprint"] = expected_fingerprint
+            payload["allowed_dirty_ack_issue_types"] = sorted(allowed_issue_types)
+            payload["recommendation"] = (
+                "Run mail storm-gate or mail doctor, review the current dirty-state "
+                "fingerprint, then retry with --dirty-state-fingerprint only if the "
+                "same allowed Rust packet dirt is still present."
+            )
+            console.print_json(data=payload)
+            raise typer.Exit(2)
+        payload["bypassed"] = True
+        payload["allowed_dirty_ack_issue_types"] = sorted(allowed_issue_types)
+        append_jsonl_locked(
+            cfg.repo_root / "processed" / "mail" / "archive" / "dirty_gate_bypass.jsonl",
+            {"event_type": "mail_dirty_gate_bypass", "created_at": utc_now(), **payload},
+        )
+        return payload
+    payload["blocked"] = True
+    console.print_json(data=payload)
+    raise typer.Exit(2)
+
+
+def _mailbox_coverage_gate_payload(*, operation: str, coverage: dict) -> dict:
+    return {
+        "schema_version": "dad_mailbox_coverage_gate.v1",
+        "operation": operation,
+        "blocked": True,
+        "mailbox_coverage": coverage,
+        "authority_boundary": (
+            "Mailbox coverage is read-only discovery evidence. It does not authorize "
+            "collection, delivery, enrollment, or repo writes. Add reviewed mail.repos "
+            "policy before using --repo all for newly discovered mailboxes."
+        ),
+    }
+
+
+def _mailbox_coverage_for_repo_all(
+    repo_args: list[str],
+    cfg,
+    selected: list[Path],
+    *,
+    include_local_paths: bool = False,
+) -> dict | None:
+    return (
+        _mailbox_coverage_summary(
+            cfg,
+            selected,
+            include_local_paths=include_local_paths,
+        )
+        if repo_args == ["all"]
+        else None
+    )
+
+
+def _record_mailbox_coverage_gap_ack(
+    cfg,
+    *,
+    operation: str,
+    coverage: dict,
+    ack: str,
+) -> None:
+    append_jsonl_locked(
+        cfg.repo_root / "processed" / "mail" / "archive" / "coverage_gap_ack.jsonl",
+        {
+            "event_type": "mailbox_coverage_gap_ack",
+            "created_at": utc_now(),
+            "operation": operation,
+            "ack": ack,
+            "mailbox_coverage": coverage,
+            "authority_boundary": (
+                "Coverage-gap acknowledgement permits this operator run to continue "
+                "with reviewed mail.repos only. It does not enroll, collect from, or "
+                "deliver to unreviewed mailbox candidates."
+            ),
+        },
+    )
+
+
+def _block_on_mailbox_coverage_gap(
+    cfg,
+    coverage: dict | None,
+    *,
+    operation: str,
+    allow_coverage_gap_ack: str | None = None,
+) -> None:
+    if coverage is None:
+        return
+    coverage_blocked = bool(
+        int(coverage.get("unreviewed_mailbox_candidate_count", 0) or 0)
+        or int(coverage.get("reviewed_enabled_not_checked_count", 0) or 0)
+        or str(coverage.get("warning", "")).strip()
+    )
+    if coverage_blocked:
+        ack = (allow_coverage_gap_ack or "").strip()
+        if ack:
+            _record_mailbox_coverage_gap_ack(
+                cfg,
+                operation=operation,
+                coverage=coverage,
+                ack=ack,
+            )
+            return
+        console.print_json(
+            data=_mailbox_coverage_gate_payload(operation=operation, coverage=coverage)
+        )
+        raise typer.Exit(1)
 
 
 def _resolve_exception_repo(raw_repo: str, cfg) -> Path:
@@ -559,6 +1848,89 @@ def _capture_audit_gap_count(result: dict[str, object], *, strict: bool = False)
     return observed_capture_audit_gap_count(result, strict=strict)
 
 
+MAIL_CANDIDATE_SCAN_MAX_DEPTH = 6
+MAIL_CANDIDATE_PRUNE_DIRS = {
+    ".git",
+    ".hg",
+    ".svn",
+    ".venv",
+    "venv",
+    "node_modules",
+    "target",
+    "dist",
+    "build",
+    ".next",
+    "coverage",
+    "__pycache__",
+    ".pytest_cache",
+    ".ruff_cache",
+    ".mypy_cache",
+    ".nox",
+    ".tox",
+    ".tmp",
+    ".tmp-codex",
+    ".tmp_pytest",
+    ".cache",
+    "_codex_worktrees",
+    ".worktrees",
+    ".pytest-tmp-root",
+    "processed",
+    "raw",
+    "state",
+    "audit",
+}
+
+
+def _iter_mailbox_candidate_roots(base: Path, *, max_depth: int = MAIL_CANDIDATE_SCAN_MAX_DEPTH):
+    if not base.exists() or not base.is_dir():
+        return
+    try:
+        root = base.resolve()
+    except OSError:
+        return
+    stack: list[tuple[Path, int]] = [(root, 0)]
+    seen: set[Path] = set()
+    while stack:
+        current, depth = stack.pop()
+        try:
+            resolved = current.resolve()
+        except OSError:
+            continue
+        if resolved in seen:
+            continue
+        seen.add(resolved)
+        mail_dir = current / ".digital-asset" / "mail"
+        if (mail_dir / "outbox.jsonl").exists() or (mail_dir / "inbox.jsonl").exists():
+            yield current
+        if depth >= max_depth:
+            continue
+        try:
+            children = sorted(current.iterdir(), key=lambda item: item.name.casefold())
+        except OSError:
+            continue
+        for child in reversed(children):
+            name = child.name
+            lowered = name.casefold()
+            if (
+                name in MAIL_CANDIDATE_PRUNE_DIRS
+                or lowered.startswith("pytest-of-")
+                or lowered.startswith(".pytest_tmp")
+                or lowered.startswith("pytest_tmp")
+                or lowered.startswith("pytest-tmp")
+                or lowered.startswith("tmp_pytest")
+                or lowered.startswith("tmp-pytest")
+                or lowered.startswith("dad-capture-emission-")
+                or lowered.startswith("dad-exception-learning-check-")
+            ):
+                continue
+            try:
+                if child.is_symlink() or not child.is_dir():
+                    continue
+            except OSError:
+                continue
+            stack.append((child, depth + 1))
+
+
 def _mail_repo_candidates(cfg) -> list[dict[str, object]]:
     configured = {str(policy.path.resolve()): policy for policy in cfg.mail_repos}
     discovered: dict[str, Path] = {str(cfg.repo_root.resolve()): cfg.repo_root.resolve()}
@@ -568,13 +1940,8 @@ def _mail_repo_candidates(cfg) -> list[dict[str, object]]:
         if not source.enabled:
             continue
         base = source.path.resolve()
-        source_candidates = (
-            [base, *(item for item in base.iterdir() if item.is_dir())] if base.exists() else []
-        )
-        for candidate in source_candidates:
-            mail_dir = candidate / ".digital-asset" / "mail"
-            if (mail_dir / "outbox.jsonl").exists() or (mail_dir / "inbox.jsonl").exists():
-                discovered[str(candidate.resolve())] = candidate.resolve()
+        for candidate in _iter_mailbox_candidate_roots(base):
+            discovered[str(candidate.resolve())] = candidate.resolve()
     rows: list[dict[str, object]] = []
     for path in sorted(discovered.values(), key=lambda item: str(item).lower()):
         mail_dir = path / ".digital-asset" / "mail"
@@ -590,8 +1957,8 @@ def _mail_repo_candidates(cfg) -> list[dict[str, object]]:
                 "write_protected": bool(getattr(policy, "write_protected", False))
                 if policy
                 else False,
-                "write_protection_reason": str(
-                    getattr(policy, "write_protection_reason", "")
+                "write_protection_reason": _mail_repair_plan_safe_value(
+                    str(getattr(policy, "write_protection_reason", ""))
                 )
                 if policy
                 else "",
@@ -600,6 +1967,84 @@ def _mail_repo_candidates(cfg) -> list[dict[str, object]]:
             }
         )
     return rows
+
+
+def _safe_coverage_path_ref(path: Path) -> str:
+    normalized = str(path.resolve()).replace("\\", "/")
+    return f"repo-path-sha256:{sha256_bytes(normalized.encode('utf-8'))}"
+
+
+def _mailbox_coverage_row_for_output(
+    row: dict[str, object],
+    *,
+    include_local_paths: bool = False,
+) -> dict[str, object]:
+    output = dict(row)
+    raw_path = str(output.pop("path", "") or "")
+    output["path_ref"] = (
+        raw_path
+        if include_local_paths and raw_path
+        else (_safe_coverage_path_ref(Path(raw_path)) if raw_path else "")
+    )
+    if include_local_paths and raw_path:
+        output["path"] = raw_path
+    return output
+
+
+def _mailbox_coverage_summary(
+    cfg,
+    selected: list[Path],
+    *,
+    include_local_paths: bool = False,
+) -> dict[str, object]:
+    candidate_rows = _mail_repo_candidates(cfg)
+    selected_paths = {str(path.resolve()) for path in selected}
+    unreviewed = [
+        row
+        for row in candidate_rows
+        if not row["configured"] and (row["has_inbox"] or row["has_outbox"])
+    ]
+    reviewed_unchecked = [
+        row
+        for row in candidate_rows
+        if row["configured"]
+        and row["mail_enabled"]
+        and str(Path(str(row["path"])).resolve()) not in selected_paths
+    ]
+    warning = ""
+    if unreviewed:
+        warning = (
+            "Read-only discovery found mailbox candidates outside reviewed mail.repos. "
+            "DAD will not collect or deliver for them until they are reviewed, but they "
+            "may explain a visible Rust/mail learning storm."
+        )
+    elif reviewed_unchecked:
+        warning = (
+            "Reviewed enabled mail.repos were not included in the selected mailbox "
+            "coverage set. Treat the run as partial until those repos are checked or "
+            "explicitly scoped out by operator review."
+        )
+    return {
+        "schema_version": "dad_mailbox_coverage.v1",
+        "candidate_count": len(candidate_rows),
+        "reviewed_checked_count": len(selected_paths),
+        "unreviewed_mailbox_candidate_count": len(unreviewed),
+        "reviewed_enabled_not_checked_count": len(reviewed_unchecked),
+        "unreviewed_mailbox_candidate_samples": [
+            _mailbox_coverage_row_for_output(row, include_local_paths=include_local_paths)
+            for row in unreviewed[:10]
+        ],
+        "reviewed_enabled_not_checked_samples": [
+            _mailbox_coverage_row_for_output(row, include_local_paths=include_local_paths)
+            for row in reviewed_unchecked[:10]
+        ],
+        "local_paths_included": include_local_paths,
+        "warning": warning,
+        "authority_boundary": (
+            "Mailbox discovery is read-only coverage evidence. It does not authorize "
+            "collection, delivery, enrollment, or repo writes."
+        ),
+    }
 
 
 def _select_enrollment(repo: list[str], cfg, *, wave: str | None = None):
@@ -631,12 +2076,152 @@ def status(
     console.print_json(data=catalog_status(_cfg(config, hub)))
 
 
+def _path_contains_path(parent: Path, child: Path) -> bool:
+    try:
+        child.resolve().relative_to(parent.resolve())
+        return True
+    except (OSError, RuntimeError, ValueError):
+        return False
+
+
+def _validate_hub_locator_write_target(
+    locator: Path | None,
+    *,
+    repo_root: Path,
+    cwd: Path,
+) -> None:
+    """Keep doctor locator repair out of caller repos and arbitrary paths."""
+    if locator is None:
+        return
+    resolved = locator.expanduser().resolve()
+    temp_root = Path(tempfile.gettempdir()).resolve()
+    is_probe_locator = (
+        os.environ.get(DOCTOR_CHILD_PROBE_ENV) == "1"
+        and _path_contains_path(temp_root, resolved)
+        and any(part.startswith("dad-doctor-probe-") for part in resolved.parts)
+    )
+    if is_probe_locator:
+        return
+    caller_repo = find_repo_root(cwd).resolve()
+    if _path_contains_path(caller_repo, resolved):
+        raise ValueError(
+            "Refusing to write a DAD hub locator inside the caller repository. "
+            "Use the user-level ~/.dad/hub.json locator or run bootstrap from the DAD hub."
+        )
+    is_user_style_locator = resolved.name == "hub.json" and resolved.parent.name == ".dad"
+    if is_user_style_locator:
+        return
+    default_locator = hub_locator_path().expanduser().resolve()
+    if resolved == default_locator:
+        return
+    raise ValueError(
+        "Refusing to write DAD hub locator to an arbitrary path. "
+        "Locator writes are limited to ~/.dad/hub.json or DAD child-probe temp locators."
+    )
+
+
 @app.command()
-def doctor(config: Optional[Path] = typer.Option(None), hub: Optional[Path] = typer.Option(None)) -> None:
+def doctor(
+    config: Optional[Path] = typer.Option(None),
+    hub: Optional[Path] = typer.Option(None),
+    scope: str = typer.Option(
+        "operational",
+        "--scope",
+        help="Readiness scope to enforce: operational or deployment.",
+    ),
+    write_locator: bool = typer.Option(
+        False,
+        "--write-hub-locator",
+        help="Write ~/.dad/hub.json for this DAD hub before running the check.",
+    ),
+    locator: Optional[Path] = typer.Option(
+        None,
+        "--locator",
+        help="Alternate hub locator path for tests or custom local installs.",
+    ),
+    skip_invocation_probes: bool = typer.Option(
+        False,
+        "--skip-invocation-probes",
+        help="Internal deployment doctor probe mode; avoids recursive wrapper verification.",
+    ),
+) -> None:
     """Check whether the local DAD hub is operational without rescanning or mutating sources."""
-    result = write_operational_readiness_report(_cfg(config, hub))
+    if scope not in {"operational", "deployment"}:
+        raise typer.BadParameter("scope must be operational or deployment")
+    hub_resolution = describe_hub_resolution(explicit_hub=hub, locator=locator)
+    if not hub_resolution["resolved"]:
+        console.print_json(
+            data={
+                "schema": (
+                    "deployment_readiness.v1"
+                    if scope == "deployment"
+                    else "operational_readiness.v1"
+                ),
+                "generated_at": utc_now(),
+                "ready": False,
+                "deployment_ready": False,
+                "candidate_only": True,
+                "authority_boundary": (
+                    "Deployment readiness reports local DAD callability only. It does not scan, "
+                    "mutate target repositories, approve public release, or satisfy enrollment gates."
+                ),
+                "deployment": {
+                    "hub_resolution": hub_resolution,
+                    "unavailable_hub_policy": UNAVAILABLE_HUB_POLICY,
+                },
+                "warnings": [hub_resolution.get("error", "DAD hub unavailable.")],
+            }
+        )
+        raise typer.Exit(2)
+    resolved_hub = Path(str(hub_resolution["hub_path"]))
+    cfg = _cfg(config, resolved_hub)
+    if write_locator:
+        try:
+            _validate_hub_locator_write_target(
+                locator,
+                repo_root=cfg.repo_root,
+                cwd=Path.cwd(),
+            )
+        except ValueError as exc:
+            console.print(str(exc))
+            raise typer.Exit(2) from exc
+    locator_write = write_hub_locator(cfg.repo_root, locator) if write_locator else None
+    if scope == "deployment":
+        deployment = build_deployment_status(
+            cfg,
+            hub_resolution=hub_resolution,
+            locator_write=locator_write,
+            locator_path=locator,
+            cwd=Path.cwd(),
+            skip_invocation_probes=skip_invocation_probes,
+        )
+        result = {
+            "schema": "deployment_readiness.v1",
+            "generated_at": utc_now(),
+            "ready": deployment["ready"],
+            "deployment_ready": deployment["ready"],
+            "candidate_only": True,
+            "authority_boundary": (
+                "Deployment readiness reports local DAD callability only. It does not scan, "
+                "mutate target repositories, approve public release, or satisfy enrollment gates."
+            ),
+            "deployment": deployment,
+            "warnings": deployment["warnings"],
+        }
+        console.print_json(data=result)
+        if not result["deployment_ready"]:
+            raise typer.Exit(2)
+        return
+    result = write_operational_readiness_report(
+        cfg,
+        hub_resolution=hub_resolution,
+        locator_write=locator_write,
+        locator_path=locator,
+        cwd=Path.cwd(),
+    )
     console.print_json(data=result)
-    if not result["ready"]:
+    ready_key = "deployment_ready" if scope == "deployment" else "ready"
+    if not result[ready_key]:
         raise typer.Exit(2)
 
 
@@ -656,6 +2241,7 @@ def rust_scan_local(
     exclude: list[str] = typer.Option([], "--exclude", help="Additional glob exclude pattern."),
     manifest_path: Optional[Path] = typer.Option(None, "--manifest-path"),
     cargo_bin: str = typer.Option("cargo", "--cargo-bin"),
+    timeout_seconds: int = typer.Option(300, "--timeout-seconds", min=1),
     include_output: bool = typer.Option(
         False, "--include-output", help="Include raw Rust subprocess stdout/stderr."
     ),
@@ -677,10 +2263,253 @@ def rust_scan_local(
         excludes=exclude,
         cargo_bin=cargo_bin,
         manifest_path=manifest_path,
+        timeout_seconds=timeout_seconds,
     )
     console.print_json(data=result.to_dict(include_output=include_output))
     if result.returncode != 0:
         raise typer.Exit(result.returncode)
+
+
+def _default_rust_mail_spool_roots(repo_root: Path) -> tuple[list[Path], list[str]]:
+    return (
+        [
+            repo_root / ".digital-asset" / "mail",
+            repo_root / "processed" / "mail",
+            repo_root / "mail" / "outbox" / "rust_rollout",
+            repo_root / "processed" / "mail" / "staged" / "rust_rollout",
+        ],
+        [
+            "dad/repo-mail-mirror",
+            "dad/central-mail",
+            "dad/rust-rollout-reference",
+            "dad/rust-rollout-staging",
+        ],
+    )
+
+
+def _rust_safe_alias_fragment(value: str, fallback: str) -> str:
+    slug = re.sub(r"[^a-zA-Z0-9._-]+", "-", value.strip()).strip("-._")
+    return slug or fallback
+
+
+def _default_rust_repo_inventory_roots(cfg) -> tuple[list[Path], list[str]]:
+    roots: list[Path] = []
+    aliases: list[str] = []
+    for index, source in enumerate(getattr(cfg, "local_sources", []) or [], start=1):
+        if not bool(getattr(source, "enabled", True)):
+            continue
+        roots.append(Path(getattr(source, "path")))
+        source_id = _rust_safe_alias_fragment(str(getattr(source, "id", "") or ""), f"source-{index}")
+        aliases.append(f"dad-local-source/{source_id}")
+    if not roots:
+        roots.append(cfg.repo_root)
+        aliases.append("dad-local-source/dad")
+    return roots, aliases
+
+
+def _infer_github_owner(rows: list[dict[str, Any]]) -> str:
+    for row in rows:
+        full_name = str(row.get("full_name") or row.get("nameWithOwner") or "")
+        if "/" in full_name:
+            return full_name.split("/", 1)[0]
+    return "unknown"
+
+
+def _github_sources_with_reviewed_file(
+    cfg,
+    *,
+    repositories_file: Path,
+    source_id: str,
+    owner: str,
+) -> list[GitHubSource]:
+    resolved_file = repositories_file if repositories_file.is_absolute() else cfg.repo_root / repositories_file
+    rows = load_github_repositories_file(resolved_file)
+    inferred_owner = owner or _infer_github_owner(rows)
+    existing_sources = list(cfg.github_sources)
+    template = next((source for source in existing_sources if source.id == source_id), None)
+    reviewed_source = GitHubSource(
+        id=source_id,
+        owner=inferred_owner if inferred_owner != "unknown" else (template.owner if template else inferred_owner),
+        enabled=True,
+        token_env=template.token_env if template else "GITHUB_TOKEN",
+        include_private=template.include_private if template else True,
+        include_archived=template.include_archived if template else True,
+        content_mode=template.content_mode if template else "priority",
+        max_file_bytes=template.max_file_bytes if template else 1_000_000,
+        priority_patterns=list(template.priority_patterns) if template else [],
+        repositories=rows,
+        repositories_file=resolved_file,
+    )
+    replaced = False
+    updated: list[GitHubSource] = []
+    for source in existing_sources:
+        if source.id == source_id:
+            updated.append(reviewed_source)
+            replaced = True
+        else:
+            updated.append(source)
+    if not replaced:
+        updated.append(reviewed_source)
+    return updated
+
+
+@rust_app.command("mail-spool-check")
+def rust_mail_spool_check(
+    root: list[Path] = typer.Option([], "--root", help="Mail root to inspect."),
+    root_alias: list[str] = typer.Option(
+        [],
+        "--root-alias",
+        help="Public-safe alias for the matching --root. Required when --root is provided.",
+    ),
+    max_jsonl_row_bytes: int = typer.Option(MAX_MAIL_RECORD_BYTES, "--max-jsonl-row-bytes", min=1),
+    max_samples: int = typer.Option(25, "--max-samples", min=0),
+    manifest_path: Optional[Path] = typer.Option(None, "--manifest-path"),
+    cargo_bin: str = typer.Option("cargo", "--cargo-bin"),
+    timeout_seconds: int = typer.Option(120, "--timeout-seconds", min=1),
+    include_output: bool = typer.Option(
+        False, "--include-output", help="Include raw Rust subprocess stdout/stderr."
+    ),
+    hub: Optional[Path] = typer.Option(None),
+) -> None:
+    """Run the Rust read-only mail-spool probe through the Python boundary."""
+    cfg = _cfg(hub=hub)
+    roots, aliases = (list(root), list(root_alias))
+    default_roots_used = not roots and not aliases
+    if roots or aliases:
+        if len(roots) != len(aliases):
+            raise typer.BadParameter("Provide exactly one --root-alias for each --root.")
+    else:
+        roots, aliases = _default_rust_mail_spool_roots(cfg.repo_root)
+    result = run_dad_mail_spool_check(
+        repo_root=cfg.repo_root,
+        roots=roots,
+        root_aliases=aliases,
+        max_jsonl_row_bytes=max_jsonl_row_bytes,
+        max_samples=max_samples,
+        cargo_bin=cargo_bin,
+        manifest_path=manifest_path,
+        timeout_seconds=timeout_seconds,
+    )
+    payload = result.to_dict(include_output=include_output)
+    payload["scope"] = {
+        "schema_version": "dad_rust_mail_spool_probe_scope.v1",
+        "hub_local_default_roots": default_roots_used,
+        "structural_spool_check_only": True,
+        "mail_storm_gate_satisfied": False,
+        "authoritative_gate": (
+            "python -m digital_asset_directory.cli mail doctor --repo all "
+            "--summary-only --fail-on-dirty --fail-on-coverage-gap"
+        ),
+        "authority_boundary": (
+            "Rust mail-spool-check is structural evidence only. It does not prove "
+            "reviewed repo coverage and cannot authorize collect, route, deliver, "
+            "public release, or adoption."
+        ),
+    }
+    if isinstance(payload.get("summary"), dict):
+        payload["summary"]["mail_spool_structural_clean"] = (
+            int(payload["summary"].get("issue_count", 0) or 0) == 0
+        )
+        payload["summary"]["structural_spool_check_only"] = True
+        payload["summary"]["mail_storm_gate_satisfied"] = False
+    console.print_json(data=payload)
+    if result.returncode != 0:
+        raise typer.Exit(result.returncode)
+
+
+@rust_app.command("repo-inventory-probe")
+def rust_repo_inventory_probe(
+    root: list[Path] = typer.Option([], "--root", help="Local root to inspect for Git repos."),
+    root_alias: list[str] = typer.Option(
+        [],
+        "--root-alias",
+        help="Public-safe alias for the matching --root. Required when --root is provided.",
+    ),
+    max_depth: int = typer.Option(5, "--max-depth", min=1, max=12),
+    follow_symlinks: bool = typer.Option(False, "--follow-symlinks"),
+    manifest_path: Optional[Path] = typer.Option(None, "--manifest-path"),
+    cargo_bin: str = typer.Option("cargo", "--cargo-bin"),
+    timeout_seconds: int = typer.Option(120, "--timeout-seconds", min=1),
+    include_output: bool = typer.Option(
+        False, "--include-output", help="Include raw Rust subprocess stdout/stderr."
+    ),
+    config: Optional[Path] = typer.Option(None),
+    hub: Optional[Path] = typer.Option(None),
+) -> None:
+    """Run the Rust read-only repo-root probe through the Python boundary."""
+    cfg = _cfg(config, hub)
+    roots, aliases = (list(root), list(root_alias))
+    if roots or aliases:
+        if len(roots) != len(aliases):
+            raise typer.BadParameter("Provide exactly one --root-alias for each --root.")
+    else:
+        roots, aliases = _default_rust_repo_inventory_roots(cfg)
+    result = run_dad_repo_inventory_probe(
+        repo_root=cfg.repo_root,
+        roots=roots,
+        root_aliases=aliases,
+        max_depth=max_depth,
+        follow_symlinks=follow_symlinks,
+        cargo_bin=cargo_bin,
+        manifest_path=manifest_path,
+        timeout_seconds=timeout_seconds,
+    )
+    console.print_json(data=result.to_dict(include_output=include_output))
+    if result.returncode != 0:
+        raise typer.Exit(result.returncode)
+
+
+@rust_app.command("repo-inventory-parity")
+def rust_repo_inventory_parity(
+    root: list[Path] = typer.Option([], "--root", help="Local root to inspect for Git repos."),
+    root_alias: list[str] = typer.Option(
+        [],
+        "--root-alias",
+        help="Public-safe alias for the matching --root. Required when --root is provided.",
+    ),
+    max_depth: int = typer.Option(5, "--max-depth", min=1, max=12),
+    manifest_path: Optional[Path] = typer.Option(None, "--manifest-path"),
+    cargo_bin: str = typer.Option("cargo", "--cargo-bin"),
+    timeout_seconds: int = typer.Option(120, "--timeout-seconds", min=1),
+    config: Optional[Path] = typer.Option(None),
+    hub: Optional[Path] = typer.Option(None),
+) -> None:
+    """Compare Rust and Python read-only local Git-root discovery."""
+    cfg = _cfg(config, hub)
+    roots, aliases = (list(root), list(root_alias))
+    if roots or aliases:
+        if len(roots) != len(aliases):
+            raise typer.BadParameter("Provide exactly one --root-alias for each --root.")
+    else:
+        roots, aliases = _default_rust_repo_inventory_roots(cfg)
+    rust_result = run_dad_repo_inventory_probe(
+        repo_root=cfg.repo_root,
+        roots=roots,
+        root_aliases=aliases,
+        max_depth=max_depth,
+        follow_symlinks=False,
+        cargo_bin=cargo_bin,
+        manifest_path=manifest_path,
+        timeout_seconds=timeout_seconds,
+    )
+    if rust_result.returncode != 0 or not rust_result.summary or not rust_result.summary_valid:
+        console.print_json(data=rust_result.to_dict())
+        raise typer.Exit(rust_result.returncode or 2)
+    parity = write_repo_inventory_rust_probe_parity(
+        cfg.repo_root,
+        roots=roots,
+        root_aliases=aliases,
+        rust_summary=rust_result.summary,
+        max_depth=max_depth,
+        follow_symlinks=False,
+    )
+    console.print_json(
+        data={
+            "schema_version": "dad_repo_inventory_rust_probe_parity_command.v0_1",
+            "rust_probe": rust_result.to_dict(),
+            **parity,
+        }
+    )
 
 
 @rust_rollout_app.command("plan")
@@ -705,15 +2534,215 @@ def rust_rollout_plan(
 @rust_rollout_app.command("build-mail")
 def rust_rollout_build_mail(
     config_path: Path = typer.Option(Path("config/repo_rust_status.yaml"), "--config"),
-    out_dir: Path = typer.Option(Path("mail/outbox/rust_rollout"), "--out-dir"),
+    out_dir: Path = typer.Option(Path("processed/mail/staged/rust_rollout"), "--out-dir"),
+    dirty_state_ack: Optional[str] = typer.Option(
+        None,
+        "--dirty-state-ack",
+        help=(
+            "Allow staged Rust packet regeneration after reviewing a dirty mail doctor "
+            "report; normal mail collect/route/deliver still fail closed."
+        ),
+    ),
+    dirty_state_fingerprint: Optional[str] = typer.Option(
+        None,
+        "--dirty-state-fingerprint",
+        help=(
+            "Required with --dirty-state-ack. Copy the fingerprint from the current "
+            "blocked dirty gate so the bypass is tied to the exact reviewed storm state."
+        ),
+    ),
+    promote_reference_snapshot_ack: Optional[str] = typer.Option(
+        None,
+        "--promote-reference-snapshot-ack",
+        help=(
+            "Required when --out-dir targets tracked mail/outbox/rust_rollout. "
+            "Use only after reviewing staged packet diffs and promotion evidence."
+        ),
+    ),
     hub: Optional[Path] = typer.Option(None),
 ) -> None:
     """Build deterministic local Rust rollout instruction packets."""
     cfg = _cfg(hub=hub)
-    result = build_rust_rollout_mail_packets(
-        _repo_path(cfg.repo_root, config_path) or config_path,
-        _repo_path(cfg.repo_root, out_dir) or out_dir,
+    resolved_out_dir = _repo_path(cfg.repo_root, out_dir) or out_dir
+    live_mail_roots = [
+        cfg.repo_root / MAIL_MIRROR_DIR,
+        cfg.repo_root / CENTRAL_MAIL_DIR / "inbox",
+        cfg.repo_root / CENTRAL_MAIL_DIR / "outbox",
+        cfg.repo_root / CENTRAL_MAIL_DIR / "archive",
+        cfg.repo_root / CENTRAL_MAIL_DIR / "quarantine",
+        cfg.repo_root / CENTRAL_MAIL_DIR / "releases",
+    ]
+    live_mail_root = next(
+        (root for root in live_mail_roots if _is_under_or_equal(resolved_out_dir, root)),
+        None,
     )
+    if live_mail_root is not None:
+        console.print_json(
+            data={
+                "schema_version": "dad_rust_rollout_live_mail_target_gate.v1",
+                "blocked": True,
+                "operation": "rust-rollout build-mail",
+                "out_dir": _local_path_ref(resolved_out_dir, cfg.repo_root),
+                "live_mail_root": safe_relative(live_mail_root, cfg.repo_root),
+                "required_out_dir": "processed/mail/staged/rust_rollout",
+                "authority_boundary": (
+                    "Rust rollout packet generation may write only to ignored staging "
+                    "or to the tracked reference snapshot with explicit promotion ack. "
+                    "It must not write generated packets directly into live mailboxes, "
+                    "audit logs, quarantine, or release records."
+                ),
+            }
+        )
+        raise typer.Exit(2)
+    tracked_snapshot_dir = (cfg.repo_root / "mail" / "outbox" / "rust_rollout").resolve(
+        strict=False
+    )
+    default_staging_dir = (
+        cfg.repo_root / "processed" / "mail" / "staged" / "rust_rollout"
+    ).resolve(strict=False)
+    temp_root = _system_temp_root()
+    if _is_under_or_equal(resolved_out_dir, tracked_snapshot_dir) and not (
+        promote_reference_snapshot_ack or ""
+    ).strip():
+        console.print_json(
+            data={
+                "schema_version": "dad_rust_rollout_snapshot_promotion_gate.v1",
+                "blocked": True,
+                "operation": "rust-rollout build-mail",
+                "out_dir": _local_path_ref(resolved_out_dir, cfg.repo_root),
+                "tracked_reference_snapshot": safe_relative(tracked_snapshot_dir, cfg.repo_root),
+                "required_ack": "--promote-reference-snapshot-ack",
+                "authority_boundary": (
+                    "Routine Rust rollout packet generation writes to ignored staging. "
+                    "Tracked mail/outbox/rust_rollout snapshots are promoted deliberately "
+                    "after review and are not delivered inbox mail."
+                ),
+            }
+        )
+        raise typer.Exit(2)
+    if promote_reference_snapshot_ack and not _is_under_or_equal(
+        resolved_out_dir, tracked_snapshot_dir
+    ):
+        console.print_json(
+            data={
+                "schema_version": "dad_rust_rollout_snapshot_promotion_scope_gate.v1",
+                "blocked": True,
+                "operation": "rust-rollout build-mail",
+                "out_dir": _local_path_ref(resolved_out_dir, cfg.repo_root),
+                "tracked_reference_snapshot": safe_relative(
+                    tracked_snapshot_dir,
+                    cfg.repo_root,
+                ),
+                "authority_boundary": (
+                    "The promotion acknowledgement is valid only when --out-dir targets "
+                    "mail/outbox/rust_rollout. Staging or ad hoc output must not create "
+                    "tracked reference snapshot promotion evidence."
+                ),
+            }
+        )
+        raise typer.Exit(2)
+    if not _is_under_or_equal(resolved_out_dir, cfg.repo_root) and not _is_under_or_equal(
+        resolved_out_dir,
+        temp_root,
+    ):
+        console.print_json(
+            data={
+                "schema_version": "dad_rust_rollout_external_output_gate.v1",
+                "blocked": True,
+                "operation": "rust-rollout build-mail",
+                "out_dir": _local_path_ref(resolved_out_dir, cfg.repo_root),
+                "allowed_output_roots": [
+                    safe_relative(default_staging_dir, cfg.repo_root),
+                    safe_relative(tracked_snapshot_dir, cfg.repo_root),
+                    "system-temp",
+                ],
+                "authority_boundary": (
+                    "Rust rollout packet generation may not write to arbitrary "
+                    "absolute paths because those paths may be another repo's "
+                    "mailbox or source tree. Use DAD ignored staging, the tracked "
+                    "reference snapshot with promotion ack, or a system temp "
+                    "directory for ad hoc review."
+                ),
+            }
+        )
+        raise typer.Exit(2)
+    if (
+        _is_under_or_equal(resolved_out_dir, cfg.repo_root)
+        and not _is_under_or_equal(resolved_out_dir, default_staging_dir)
+        and not _is_under_or_equal(resolved_out_dir, tracked_snapshot_dir)
+    ):
+        console.print_json(
+            data={
+                "schema_version": "dad_rust_rollout_output_root_gate.v1",
+                "blocked": True,
+                "operation": "rust-rollout build-mail",
+                "out_dir": _local_path_ref(resolved_out_dir, cfg.repo_root),
+                "allowed_in_repo_output_roots": [
+                    safe_relative(default_staging_dir, cfg.repo_root),
+                    safe_relative(tracked_snapshot_dir, cfg.repo_root),
+                ],
+                "authority_boundary": (
+                    "In-repo Rust rollout packet output is restricted to ignored staging "
+                    "or the tracked reference snapshot with explicit promotion ack. Use an "
+                    "out-of-repo temporary directory for ad hoc packet review."
+                ),
+            }
+        )
+        raise typer.Exit(2)
+    dirty_check = _ensure_mail_clean_for_operation(
+        cfg,
+        [],
+        operation="rust-rollout build-mail",
+        dirty_state_ack=dirty_state_ack,
+        dirty_state_fingerprint=dirty_state_fingerprint,
+        allow_dirty_ack=True,
+        dirty_ack_issue_types={
+            "rust_rollout_packet_invalid",
+            "rust_rollout_packet_delivery_status",
+            "rust_rollout_duplicate_packet_identity",
+            "rust_rollout_semantic_identity_conflict",
+        },
+    )
+    try:
+        result = build_rust_rollout_mail_packets(
+            _repo_path(cfg.repo_root, config_path) or config_path,
+            resolved_out_dir,
+        )
+    except ValueError as exc:
+        console.print_json(
+            data={
+                "schema_version": "dad_rust_rollout_stale_output_gate.v1",
+                "blocked": True,
+                "operation": "rust-rollout build-mail",
+                "out_dir": _local_path_ref(resolved_out_dir, cfg.repo_root),
+                "error": str(exc),
+                "authority_boundary": (
+                    "Rust rollout packet directories must not keep stale packet files. "
+                    "Remove or quarantine obsolete generated packets before rebuilding."
+                ),
+            }
+        )
+        raise typer.Exit(2) from exc
+    if promote_reference_snapshot_ack:
+        promotion_record = _rust_rollout_snapshot_promotion_record(
+            repo_root=cfg.repo_root,
+            out_dir=resolved_out_dir,
+            ack=promote_reference_snapshot_ack,
+            packet_count=int(result.get("packet_count", 0)),
+        )
+        append_jsonl_locked(_rust_rollout_snapshot_promotion_log(cfg.repo_root), promotion_record)
+        result["tracked_reference_snapshot_promotion"] = {
+            "acknowledged": True,
+            "ack": promote_reference_snapshot_ack,
+            "tracked_reference_snapshot": safe_relative(tracked_snapshot_dir, cfg.repo_root),
+            "audit_log": safe_relative(
+                _rust_rollout_snapshot_promotion_log(cfg.repo_root),
+                cfg.repo_root,
+            ),
+            "snapshot_json_file_count": promotion_record["snapshot_json_file_count"],
+        }
+    if dirty_check.get("bypassed"):
+        result["mail_dirty_check"] = dirty_check
     console.print_json(data=result)
 
 
@@ -917,12 +2946,31 @@ def mail_compose(
 
 
 @mail_app.command("discover-repos")
-def mail_discover_repos(hub: Optional[Path] = typer.Option(None)) -> None:
+def mail_discover_repos(
+    include_local_paths: bool = typer.Option(
+        False,
+        "--include-local-paths",
+        help="Include exact local paths for local operator debugging.",
+    ),
+    hub: Optional[Path] = typer.Option(None),
+) -> None:
     """Report candidate repo mailboxes without delivering to them."""
     cfg = _cfg(hub=hub)
+    candidates = [
+        _mailbox_coverage_row_for_output(row, include_local_paths=include_local_paths)
+        for row in _mail_repo_candidates(cfg)
+    ]
+    unreviewed_count = sum(
+        1
+        for row in candidates
+        if not row["configured"] and (row["has_inbox"] or row["has_outbox"])
+    )
     console.print_json(
         data={
-            "candidates": _mail_repo_candidates(cfg),
+            "schema_version": "dad_mail_repo_discovery.v1",
+            "candidate_count": len(candidates),
+            "unreviewed_mailbox_candidate_count": unreviewed_count,
+            "candidates": candidates,
             "authority_boundary": (
                 "Discovery is read-only. Add reviewed mail.repos policy before using --repo all."
             ),
@@ -933,16 +2981,47 @@ def mail_discover_repos(hub: Optional[Path] = typer.Option(None)) -> None:
 @mail_app.command("collect")
 def mail_collect(
     repo: list[str] = typer.Option([], "--repo"),
+    allow_coverage_gap_ack: Optional[str] = typer.Option(
+        None,
+        "--allow-coverage-gap-ack",
+        help=(
+            "Permit --repo all collection to continue with reviewed mail.repos only "
+            "when read-only discovery found unreviewed mailbox candidates."
+        ),
+    ),
+    include_local_paths: bool = typer.Option(
+        False,
+        "--include-local-paths",
+        help="Include exact local paths in mailbox coverage output for local operator debugging.",
+    ),
     hub: Optional[Path] = typer.Option(None),
 ) -> None:
     """Collect repo outboxes into DAD's central mail inbox."""
     cfg = _cfg(hub=hub)
+    selected = _discover_mail_repos(repo, cfg, reviewed=True)
+    coverage = _mailbox_coverage_for_repo_all(
+        repo,
+        cfg,
+        selected,
+        include_local_paths=include_local_paths,
+    )
+    _block_on_mailbox_coverage_gap(
+        cfg,
+        coverage,
+        operation="mail collect",
+        allow_coverage_gap_ack=allow_coverage_gap_ack,
+    )
+    _ensure_mail_clean_for_operation(cfg, selected, operation="mail collect")
     result = collect_mail(
         cfg.repo_root,
-        _discover_mail_repos(repo, cfg),
+        selected,
         repo_policies=cfg.mail_repos,
     )
+    if coverage is not None:
+        result["mailbox_coverage"] = coverage
     console.print_json(data=result)
+    if bool(result.get("blocked")) or int(result.get("error_count", 0) or 0):
+        raise typer.Exit(2)
 
 
 @mail_app.command("route")
@@ -952,28 +3031,163 @@ def mail_route(
 ) -> None:
     """Categorize central inbox mail and stage delivery candidates."""
     cfg = _cfg(hub=hub)
+    _ensure_mail_clean_for_operation(cfg, [], operation="mail route")
     result = route_mail(
         cfg.repo_root,
         default_target_repo=default_target_repo,
         repo_policies=cfg.mail_repos,
     )
     console.print_json(data=result)
+    if bool(result.get("blocked")) or int(result.get("error_count", 0) or 0):
+        raise typer.Exit(2)
+
+
+@mail_app.command("ingest")
+def mail_ingest(
+    repo: list[str] = typer.Option(
+        [],
+        "--repo",
+        help="Repos to collect from. Defaults to all reviewed mail.repos.",
+    ),
+    default_target_repo: str = typer.Option("central_only", "--default-target-repo"),
+    allow_coverage_gap_ack: Optional[str] = typer.Option(
+        None,
+        "--allow-coverage-gap-ack",
+        help=(
+            "Permit --repo all ingest to continue with reviewed mail.repos only "
+            "when read-only discovery found unreviewed mailbox candidates."
+        ),
+    ),
+    include_local_paths: bool = typer.Option(
+        False,
+        "--include-local-paths",
+        help="Include exact local paths in mailbox coverage output for local operator debugging.",
+    ),
+    hub: Optional[Path] = typer.Option(None),
+) -> None:
+    """Collect reviewed repo outboxes and route centrally without delivering inbox mail."""
+    cfg = _cfg(hub=hub)
+    repo_args = repo or ["all"]
+    selected = _discover_mail_repos(repo_args, cfg, reviewed=True)
+    coverage = _mailbox_coverage_for_repo_all(
+        repo_args,
+        cfg,
+        selected,
+        include_local_paths=include_local_paths,
+    )
+    _block_on_mailbox_coverage_gap(
+        cfg,
+        coverage,
+        operation="mail ingest",
+        allow_coverage_gap_ack=allow_coverage_gap_ack,
+    )
+    ingest_gate = _ensure_mail_clean_for_operation(cfg, selected, operation="mail ingest")
+    collect_result = collect_mail(
+        cfg.repo_root,
+        selected,
+        repo_policies=cfg.mail_repos,
+    )
+    if coverage is not None:
+        collect_result["mailbox_coverage"] = coverage
+    if bool(collect_result.get("blocked")) or int(collect_result.get("error_count", 0) or 0):
+        console.print_json(
+            data={
+                "schema_version": "dad_mail_ingest_result.v1",
+                "requested_repos": repo_args,
+                "selected_repo_count": len(selected),
+                "ingest_gate": ingest_gate,
+                "collect": collect_result,
+                "route": None,
+                "delivery_performed": False,
+                "authority_boundary": (
+                    "mail ingest collects source repo outboxes into DAD and routes "
+                    "central candidates only. It never writes target repo inboxes."
+                ),
+            }
+        )
+        raise typer.Exit(2)
+
+    route_gate = _ensure_mail_clean_for_operation(cfg, [], operation="mail ingest route")
+    route_result = route_mail(
+        cfg.repo_root,
+        default_target_repo=default_target_repo,
+        repo_policies=cfg.mail_repos,
+    )
+    route_result_for_output = dict(route_result)
+    if route_result_for_output.get("outbox"):
+        route_result_for_output["outbox"] = _local_path_ref(
+            Path(str(route_result_for_output["outbox"])),
+            cfg.repo_root,
+        )
+    result = {
+        "schema_version": "dad_mail_ingest_result.v1",
+        "requested_repos": repo_args,
+        "selected_repo_count": len(selected),
+        "ingest_gate": ingest_gate,
+        "route_gate": route_gate,
+        "collect": collect_result,
+        "route": route_result_for_output,
+        "delivery_policy": _mail_delivery_policy_summary(selected, cfg.mail_repos),
+        "delivery_performed": False,
+        "next_command_for_delivery": (
+            "python -m digital_asset_directory.cli mail storm-gate --operation delivery"
+        ),
+        "authority_boundary": (
+            "mail ingest is the safe receive path for concurrent repo mail storms: "
+            "repos write their own outboxes, DAD collects and routes centrally, and "
+            "target repo inbox delivery remains a separate policy-gated operation."
+        ),
+    }
+    console.print_json(data=result)
+    if bool(route_result.get("blocked")) or int(route_result.get("error_count", 0) or 0):
+        raise typer.Exit(2)
 
 
 @mail_app.command("deliver")
 def mail_deliver(
     repo: list[str] = typer.Option([], "--repo"),
+    allow_coverage_gap_ack: Optional[str] = typer.Option(
+        None,
+        "--allow-coverage-gap-ack",
+        help=(
+            "Permit --repo all delivery to continue to reviewed mail.repos only "
+            "when read-only discovery found unreviewed mailbox candidates."
+        ),
+    ),
+    include_local_paths: bool = typer.Option(
+        False,
+        "--include-local-paths",
+        help="Include exact local paths in mailbox coverage output for local operator debugging.",
+    ),
     hub: Optional[Path] = typer.Option(None),
 ) -> None:
     """Deliver staged central outbox mail only into target repo mailboxes."""
     cfg = _cfg(hub=hub)
+    selected = _discover_mail_repos(repo, cfg, delivery=True)
+    coverage = _mailbox_coverage_for_repo_all(
+        repo,
+        cfg,
+        selected,
+        include_local_paths=include_local_paths,
+    )
+    _block_on_mailbox_coverage_gap(
+        cfg,
+        coverage,
+        operation="mail deliver",
+        allow_coverage_gap_ack=allow_coverage_gap_ack,
+    )
+    _ensure_mail_clean_for_operation(cfg, selected, operation="mail deliver")
     result = deliver_mail(
         cfg.repo_root,
-        _discover_mail_repos(repo, cfg, delivery=True),
+        selected,
         repo_policies=cfg.mail_repos,
         require_target_policy=True,
     )
+    if coverage is not None:
+        result["mailbox_coverage"] = coverage
     console.print_json(data=result)
+    if bool(result.get("blocked")) or int(result.get("error_count", 0) or 0):
+        raise typer.Exit(2)
 
 
 @mail_app.command("review")
@@ -1167,6 +3381,625 @@ def mail_digest(repo: str = typer.Option(".", "--repo"), hub: Optional[Path] = t
     console.print_json(data=result)
 
 
+@mail_app.command("storm-gate")
+def mail_storm_gate(
+    repo: list[str] = typer.Option(
+        [],
+        "--repo",
+        help="Repos to include. Defaults to all reviewed mail.repos for storm-safe checks.",
+    ),
+    include_local_paths: bool = typer.Option(
+        False,
+        "--include-local-paths",
+        help="Include exact local paths in mailbox coverage output for local operator debugging.",
+    ),
+    fail_on_blocked: bool = typer.Option(
+        True,
+        "--fail-on-blocked/--no-fail-on-blocked",
+        help="Exit non-zero when the selected mail-storm operation is not safe.",
+    ),
+    operation: str = typer.Option(
+        "all",
+        "--operation",
+        help="Gate to use for exit status: all, ingest, or delivery.",
+    ),
+    fail_on_worktree_dirty: bool = typer.Option(
+        False,
+        "--fail-on-worktree-dirty",
+        help="Also exit non-zero when the DAD git worktree is dirty.",
+    ),
+    hub: Optional[Path] = typer.Option(None),
+) -> None:
+    """Read-only go/no-go gate for concurrent repo mail and Rust rollout storms."""
+    cfg = _cfg(hub=hub)
+    repo_args = repo or ["all"]
+    selected = _discover_mail_repos(repo_args, cfg)
+    result = diagnose_mail_dirty_state(
+        cfg.repo_root,
+        selected,
+        repo_policies=cfg.mail_repos,
+    )
+    result["delivery_policy"] = _mail_delivery_policy_summary(selected, cfg.mail_repos)
+    if repo_args == ["all"]:
+        coverage = _mailbox_coverage_summary(
+            cfg,
+            selected,
+            include_local_paths=include_local_paths,
+        )
+        result["mailbox_coverage"] = coverage
+        if isinstance(result.get("repo_scope"), dict):
+            result["repo_scope"]["mailbox_coverage_warning"] = coverage["warning"]
+            result["repo_scope"]["unreviewed_mailbox_candidate_count"] = coverage[
+                "unreviewed_mailbox_candidate_count"
+            ]
+            result["repo_scope"]["reviewed_enabled_not_checked_count"] = coverage[
+                "reviewed_enabled_not_checked_count"
+            ]
+        if coverage["warning"]:
+            result["action_summary"]["next_actions"].append(
+                "Classify unreviewed mailbox candidates before treating --repo all as complete."
+            )
+    _annotate_mail_storm_scope(result, requested_all=repo_args == ["all"])
+    result["dirty_state_fingerprint"] = _mail_dirty_state_fingerprint(result)
+    operation_key = _mail_storm_operation_key(operation)
+    gate = _mail_storm_gate_report(
+        result,
+        repo_args=repo_args,
+        requested_operation=operation_key,
+    )
+    console.print_json(data=gate)
+    if fail_on_blocked and not gate["selected_operation_safe"]:
+        raise typer.Exit(1)
+    if fail_on_worktree_dirty and gate["worktree_dirty"]:
+        raise typer.Exit(1)
+
+
+@mail_app.command("repair-plan")
+def mail_repair_plan(
+    repo: list[str] = typer.Option(
+        [],
+        "--repo",
+        help="Repos to include. Defaults to all reviewed mail.repos for storm-safe planning.",
+    ),
+    include_local_paths: bool = typer.Option(
+        False,
+        "--include-local-paths",
+        help="Include exact local paths in mailbox coverage output for local operator debugging.",
+    ),
+    fail_on_blocked: bool = typer.Option(
+        False,
+        "--fail-on-blocked/--no-fail-on-blocked",
+        help="Exit non-zero when the selected mail-storm operation is not safe.",
+    ),
+    operation: str = typer.Option(
+        "all",
+        "--operation",
+        help="Gate to use for exit status: all, ingest, or delivery.",
+    ),
+    write_report: bool = typer.Option(
+        False,
+        "--write-report",
+        help=(
+            "Persist a DAD-local JSON and Markdown operator packet under "
+            "processed/reports/mail_storm_repair without executing repairs."
+        ),
+    ),
+    hub: Optional[Path] = typer.Option(None),
+) -> None:
+    """Read-only ordered repair plan for blocked mail/Rust rollout storm states."""
+    cfg = _cfg(hub=hub)
+    repo_args = repo or ["all"]
+    selected = _discover_mail_repos(repo_args, cfg)
+    result = diagnose_mail_dirty_state(
+        cfg.repo_root,
+        selected,
+        repo_policies=cfg.mail_repos,
+    )
+    result["delivery_policy"] = _mail_delivery_policy_summary(selected, cfg.mail_repos)
+    if repo_args == ["all"]:
+        coverage = _mailbox_coverage_summary(
+            cfg,
+            selected,
+            include_local_paths=include_local_paths,
+        )
+        result["mailbox_coverage"] = coverage
+        if isinstance(result.get("repo_scope"), dict):
+            result["repo_scope"]["mailbox_coverage_warning"] = coverage["warning"]
+            result["repo_scope"]["unreviewed_mailbox_candidate_count"] = coverage[
+                "unreviewed_mailbox_candidate_count"
+            ]
+            result["repo_scope"]["reviewed_enabled_not_checked_count"] = coverage[
+                "reviewed_enabled_not_checked_count"
+            ]
+        if coverage["warning"]:
+            result["action_summary"]["next_actions"].append(
+                "Classify unreviewed mailbox candidates before treating --repo all as complete."
+            )
+    _annotate_mail_storm_scope(result, requested_all=repo_args == ["all"])
+    result["dirty_state_fingerprint"] = _mail_dirty_state_fingerprint(result)
+    operation_key = _mail_storm_operation_key(operation)
+    gate = _mail_storm_gate_report(
+        result,
+        repo_args=repo_args,
+        requested_operation=operation_key,
+    )
+    plan = _mail_storm_repair_plan_report(
+        result,
+        gate=gate,
+        repo_args=repo_args,
+        requested_operation=operation_key,
+    )
+    if write_report:
+        plan["report_write"] = _write_mail_repair_plan_packet(cfg.repo_root, plan)
+    console.print_json(data=plan)
+    if fail_on_blocked and not plan["selected_operation_safe"]:
+        raise typer.Exit(1)
+
+
+@mail_app.command("doctor")
+def mail_doctor(
+    repo: list[str] = typer.Option([], "--repo"),
+    repair_stale_locks: bool = typer.Option(
+        False,
+        "--repair-stale-locks",
+        help="Remove only stale, dead-owner, or same-process leftover JSONL locks.",
+    ),
+    repair_temp_fragments: bool = typer.Option(
+        False,
+        "--repair-temp-fragments",
+        help="Remove stale atomic JSON temp fragments from mail spools.",
+    ),
+    stale_lock_seconds: float = typer.Option(300.0, "--stale-lock-seconds", min=1.0),
+    fail_on_dirty: bool = typer.Option(False, "--fail-on-dirty"),
+    fail_on_worktree_dirty: bool = typer.Option(
+        False,
+        "--fail-on-worktree-dirty",
+        help=(
+            "Exit non-zero when the DAD git worktree has changes. This is separate from "
+            "--fail-on-dirty, which only covers mail spool and staged-packet hazards."
+        ),
+    ),
+    fail_on_coverage_gap: bool = typer.Option(
+        False,
+        "--fail-on-coverage-gap",
+        help=(
+            "Exit non-zero when --repo all finds unreviewed mailbox candidates outside "
+            "reviewed mail.repos coverage. This is stricter than --fail-on-dirty."
+        ),
+    ),
+    summary_only: bool = typer.Option(
+        False,
+        "--summary-only",
+        help="Print compact operator status without long issue/observation arrays.",
+    ),
+    include_local_paths: bool = typer.Option(
+        False,
+        "--include-local-paths",
+        help="Include exact local paths in mailbox coverage output for local operator debugging.",
+    ),
+    allowlist_legacy_central_inbox: bool = typer.Option(
+        False,
+        "--allowlist-legacy-central-inbox",
+        help=(
+            "Write reviewed legacy allowlist rows for pre-enforcement central inbox "
+            "records that lack collection-audit hashes."
+        ),
+    ),
+    allowlist_legacy_repo_inbox: bool = typer.Option(
+        False,
+        "--allowlist-legacy-repo-inbox",
+        help=(
+            "Write reviewed legacy allowlist rows for repo inbox records that have only "
+            "pre-hash delivery-log evidence. Rows are keyed by mail_id, dedupe_key, "
+            "current record hash, and target repo."
+        ),
+    ),
+    quarantine_invalid_packets: bool = typer.Option(
+        False,
+        "--quarantine-invalid-packets",
+        help=(
+            "Write hash-bound quarantine acknowledgements for invalid source outbox rows "
+            "reported by the doctor. Does not validate, deliver, or delete the rows."
+        ),
+    ),
+    legacy_allowlist_ack: Optional[str] = typer.Option(
+        None,
+        "--legacy-allowlist-ack",
+        help=(
+            "Required reason/reviewer note when --allowlist-legacy-central-inbox or "
+            "--allowlist-legacy-repo-inbox is used."
+        ),
+    ),
+    invalid_quarantine_ack: Optional[str] = typer.Option(
+        None,
+        "--invalid-quarantine-ack",
+        help="Required reason/reviewer note when --quarantine-invalid-packets is used.",
+    ),
+    repair_route_audit: bool = typer.Option(
+        False,
+        "--repair-route-audit",
+        help=(
+            "Write route audit repair rows only when an existing routed row exactly "
+            "matches a derived route from a collected central inbox row."
+        ),
+    ),
+    route_audit_repair_ack: Optional[str] = typer.Option(
+        None,
+        "--route-audit-repair-ack",
+        help="Required reason/reviewer note when --repair-route-audit is used.",
+    ),
+    hub: Optional[Path] = typer.Option(None),
+) -> None:
+    """Diagnose dirty DAD mail spools and staged Rust rollout packets."""
+    cfg = _cfg(hub=hub)
+    selected = _discover_mail_repos(repo, cfg) if repo else []
+    result = diagnose_mail_dirty_state(
+        cfg.repo_root,
+        selected,
+        repo_policies=cfg.mail_repos,
+        repair_stale_locks=repair_stale_locks,
+        repair_temp_fragments=repair_temp_fragments,
+        stale_lock_seconds=stale_lock_seconds,
+    )
+    if repo == ["all"]:
+        coverage = _mailbox_coverage_summary(
+            cfg,
+            selected,
+            include_local_paths=include_local_paths,
+        )
+        result["mailbox_coverage"] = coverage
+        if isinstance(result.get("repo_scope"), dict):
+            result["repo_scope"]["mailbox_coverage_warning"] = coverage["warning"]
+            result["repo_scope"]["unreviewed_mailbox_candidate_count"] = coverage[
+                "unreviewed_mailbox_candidate_count"
+            ]
+            result["repo_scope"]["reviewed_enabled_not_checked_count"] = coverage[
+                "reviewed_enabled_not_checked_count"
+            ]
+        if coverage["warning"]:
+            result["action_summary"]["next_actions"].append(
+                "Run mail discover-repos and add reviewed mail.repos entries for any "
+                "persistent repos whose outboxes DAD should collect."
+            )
+    legacy_allowlist_result: dict[str, object] | None = None
+    if allowlist_legacy_central_inbox:
+        ack = (legacy_allowlist_ack or "").strip()
+        if not ack:
+            console.print_json(
+                data={
+                    "schema_version": "dad_mail_legacy_allowlist_gate.v1",
+                    "blocked": True,
+                    "required_ack": "--legacy-allowlist-ack",
+                    "authority_boundary": (
+                        "Legacy central inbox allowlisting is an operator migration action. "
+                        "It does not approve delivery, adoption, or public release."
+                    ),
+                }
+            )
+            raise typer.Exit(2)
+        allowlist_path = cfg.repo_root / "processed" / "mail" / "archive" / "legacy_collection_allowlist.jsonl"
+        allowlisted = 0
+        for issue in result.get("issues", []):
+            if issue.get("issue_type") != "central_inbox_missing_collection_audit":
+                continue
+            if not issue.get("collected_at"):
+                continue
+            append_jsonl_locked(
+                allowlist_path,
+                {
+                    "schema_version": "dad_mail_legacy_collection_allowlist.v1",
+                    "event_type": "legacy_collection_allowlisted",
+                    "created_at": utc_now(),
+                    "mail_id": str(issue.get("mail_id", "")),
+                    "dedupe_key": str(issue.get("dedupe_key", "")),
+                    "record_hash": str(issue.get("record_hash", "")),
+                    "review_status": "reviewed_legacy",
+                    "reviewed_by": "operator",
+                    "reason": ack,
+                    "source_issue_path": str(issue.get("path", "")),
+                    "authority_boundary": (
+                        "Allowlist only preserves pre-enforcement central inbox evidence. "
+                        "It does not approve delivery, adoption, or public release."
+                    ),
+                },
+            )
+            allowlisted += 1
+        legacy_allowlist_result = {
+            "schema_version": "dad_mail_legacy_allowlist_result.v1",
+            "allowlisted_count": allowlisted,
+            "allowlist_path": str(allowlist_path),
+            "ack": ack,
+        }
+        result = diagnose_mail_dirty_state(
+            cfg.repo_root,
+            selected,
+            repo_policies=cfg.mail_repos,
+            repair_stale_locks=False,
+            repair_temp_fragments=False,
+            stale_lock_seconds=stale_lock_seconds,
+        )
+        if repo == ["all"]:
+            coverage = _mailbox_coverage_summary(
+                cfg,
+                selected,
+                include_local_paths=include_local_paths,
+            )
+            result["mailbox_coverage"] = coverage
+            if isinstance(result.get("repo_scope"), dict):
+                result["repo_scope"]["mailbox_coverage_warning"] = coverage["warning"]
+                result["repo_scope"]["unreviewed_mailbox_candidate_count"] = coverage[
+                    "unreviewed_mailbox_candidate_count"
+                ]
+                result["repo_scope"]["reviewed_enabled_not_checked_count"] = coverage[
+                    "reviewed_enabled_not_checked_count"
+                ]
+        result["legacy_allowlist_result"] = legacy_allowlist_result
+    legacy_delivery_allowlist_result: dict[str, object] | None = None
+    if allowlist_legacy_repo_inbox:
+        ack = (legacy_allowlist_ack or "").strip()
+        if not ack:
+            console.print_json(
+                data={
+                    "schema_version": "dad_mail_legacy_delivery_allowlist_gate.v1",
+                    "blocked": True,
+                    "required_ack": "--legacy-allowlist-ack",
+                    "authority_boundary": (
+                        "Legacy repo inbox delivery allowlisting is an operator migration "
+                        "action. It does not approve delivery, adoption, public release, or "
+                        "future direct inbox writes."
+                    ),
+                }
+            )
+            raise typer.Exit(2)
+        allowlist_path = legacy_delivery_allowlist_path(cfg.repo_root)
+        allowlisted = 0
+        skipped = 0
+        for issue in result.get("issues", []):
+            if issue.get("issue_type") != "repo_inbox_without_delivery_log":
+                continue
+            if not issue.get("legacy_delivery_log_present"):
+                skipped += 1
+                continue
+            append_jsonl_locked(
+                allowlist_path,
+                {
+                    "schema_version": "dad_mail_legacy_delivery_allowlist.v1",
+                    "event_type": "legacy_delivery_allowlisted",
+                    "created_at": utc_now(),
+                    "mail_id": str(issue.get("mail_id", "")),
+                    "dedupe_key": str(issue.get("dedupe_key", "")),
+                    "record_hash": str(issue.get("record_hash", "")),
+                    "target_repo": str(issue.get("expected_target_repo", "")),
+                    "review_status": "reviewed_legacy",
+                    "reviewed_by": "operator",
+                    "reason": ack,
+                    "source_issue_path": str(issue.get("path", "")),
+                    "authority_boundary": (
+                        "Allowlist only preserves reviewed pre-hash repo inbox delivery "
+                        "evidence for this exact row hash and target repo. It does not "
+                        "approve adoption, public release, or future direct inbox writes."
+                    ),
+                },
+            )
+            allowlisted += 1
+        legacy_delivery_allowlist_result = {
+            "schema_version": "dad_mail_legacy_delivery_allowlist_result.v1",
+            "allowlisted_count": allowlisted,
+            "skipped_non_legacy_count": skipped,
+            "allowlist_path": str(allowlist_path),
+            "ack": ack,
+        }
+        result = diagnose_mail_dirty_state(
+            cfg.repo_root,
+            selected,
+            repo_policies=cfg.mail_repos,
+            repair_stale_locks=False,
+            repair_temp_fragments=False,
+            stale_lock_seconds=stale_lock_seconds,
+        )
+        if repo == ["all"]:
+            coverage = _mailbox_coverage_summary(
+                cfg,
+                selected,
+                include_local_paths=include_local_paths,
+            )
+            result["mailbox_coverage"] = coverage
+            if isinstance(result.get("repo_scope"), dict):
+                result["repo_scope"]["mailbox_coverage_warning"] = coverage["warning"]
+                result["repo_scope"]["unreviewed_mailbox_candidate_count"] = coverage[
+                    "unreviewed_mailbox_candidate_count"
+                ]
+                result["repo_scope"]["reviewed_enabled_not_checked_count"] = coverage[
+                    "reviewed_enabled_not_checked_count"
+                ]
+        if legacy_allowlist_result:
+            result["legacy_allowlist_result"] = legacy_allowlist_result
+        result["legacy_delivery_allowlist_result"] = legacy_delivery_allowlist_result
+    invalid_quarantine_result: dict[str, object] | None = None
+    if quarantine_invalid_packets:
+        ack = (invalid_quarantine_ack or "").strip()
+        if not ack:
+            console.print_json(
+                data={
+                    "schema_version": "dad_mail_invalid_packet_quarantine_gate.v1",
+                    "blocked": True,
+                    "required_ack": "--invalid-quarantine-ack",
+                    "authority_boundary": (
+                        "Invalid source-outbox quarantine is an operator triage action. "
+                        "It does not validate the row, deliver it, adopt it, or delete it "
+                        "from the source repo outbox."
+                    ),
+                }
+            )
+            raise typer.Exit(2)
+        quarantine_path = invalid_mail_quarantine_path(cfg.repo_root)
+        quarantined = 0
+        skipped = 0
+        for issue in result.get("issues", []):
+            if issue.get("issue_type") != "invalid_mail_packet":
+                continue
+            if issue.get("stage") != "repo_mirror_outbox":
+                skipped += 1
+                continue
+            append_jsonl_locked(
+                quarantine_path,
+                {
+                    "schema_version": "dad_mail_invalid_packet_quarantine.v1",
+                    "event_type": "invalid_mail_packet",
+                    "created_at": utc_now(),
+                    "path": str(issue.get("path", "")),
+                    "stage": str(issue.get("stage", "")),
+                    "mail_id": str(issue.get("mail_id", "")),
+                    "dedupe_key": str(issue.get("dedupe_key", "")),
+                    "record_hash": str(issue.get("record_hash", "")),
+                    "review_status": "reviewed_quarantine",
+                    "reviewed_by": "operator",
+                    "reason": ack,
+                    "raw_payload_copied": False,
+                    "authority_boundary": (
+                        "This hash-bound quarantine isolates an invalid source-outbox row "
+                        "without copying raw payload content. It does not make the row valid "
+                        "mail and does not authorize delivery, adoption, or public release."
+                    ),
+                },
+            )
+            quarantined += 1
+        invalid_quarantine_result = {
+            "schema_version": "dad_mail_invalid_packet_quarantine_result.v1",
+            "quarantined_count": quarantined,
+            "skipped_non_source_outbox_count": skipped,
+            "quarantine_path": str(quarantine_path),
+            "ack": ack,
+        }
+        result = diagnose_mail_dirty_state(
+            cfg.repo_root,
+            selected,
+            repo_policies=cfg.mail_repos,
+            repair_stale_locks=False,
+            repair_temp_fragments=False,
+            stale_lock_seconds=stale_lock_seconds,
+        )
+        if repo == ["all"]:
+            coverage = _mailbox_coverage_summary(
+                cfg,
+                selected,
+                include_local_paths=include_local_paths,
+            )
+            result["mailbox_coverage"] = coverage
+            if isinstance(result.get("repo_scope"), dict):
+                result["repo_scope"]["mailbox_coverage_warning"] = coverage["warning"]
+                result["repo_scope"]["unreviewed_mailbox_candidate_count"] = coverage[
+                    "unreviewed_mailbox_candidate_count"
+                ]
+                result["repo_scope"]["reviewed_enabled_not_checked_count"] = coverage[
+                    "reviewed_enabled_not_checked_count"
+                ]
+        if legacy_allowlist_result:
+            result["legacy_allowlist_result"] = legacy_allowlist_result
+        if legacy_delivery_allowlist_result:
+            result["legacy_delivery_allowlist_result"] = legacy_delivery_allowlist_result
+        result["invalid_quarantine_result"] = invalid_quarantine_result
+    route_audit_repair_result: dict[str, object] | None = None
+    if repair_route_audit:
+        ack = (route_audit_repair_ack or "").strip()
+        if not ack:
+            console.print_json(
+                data={
+                    "schema_version": "dad_mail_route_audit_repair_gate.v1",
+                    "blocked": True,
+                    "required_ack": "--route-audit-repair-ack",
+                    "authority_boundary": (
+                        "Route audit repair is an operator migration action. It does not "
+                        "approve delivery, adoption, or public release."
+                    ),
+                }
+            )
+            raise typer.Exit(2)
+        route_audit_repair_result = repair_route_audit_gaps(
+            cfg.repo_root,
+            repo_policies=cfg.mail_repos,
+            operator_ack=ack,
+        )
+        result = diagnose_mail_dirty_state(
+            cfg.repo_root,
+            selected,
+            repo_policies=cfg.mail_repos,
+            repair_stale_locks=False,
+            repair_temp_fragments=False,
+            stale_lock_seconds=stale_lock_seconds,
+        )
+        if repo == ["all"]:
+            coverage = _mailbox_coverage_summary(
+                cfg,
+                selected,
+                include_local_paths=include_local_paths,
+            )
+            result["mailbox_coverage"] = coverage
+            if isinstance(result.get("repo_scope"), dict):
+                result["repo_scope"]["mailbox_coverage_warning"] = coverage["warning"]
+                result["repo_scope"]["unreviewed_mailbox_candidate_count"] = coverage[
+                    "unreviewed_mailbox_candidate_count"
+                ]
+                result["repo_scope"]["reviewed_enabled_not_checked_count"] = coverage[
+                    "reviewed_enabled_not_checked_count"
+                ]
+        if legacy_allowlist_result:
+            result["legacy_allowlist_result"] = legacy_allowlist_result
+        if legacy_delivery_allowlist_result:
+            result["legacy_delivery_allowlist_result"] = legacy_delivery_allowlist_result
+        if invalid_quarantine_result:
+            result["invalid_quarantine_result"] = invalid_quarantine_result
+        result["route_audit_repair_result"] = route_audit_repair_result
+    _annotate_mail_storm_scope(result, requested_all=repo == ["all"])
+    result["dirty_state_fingerprint"] = _mail_dirty_state_fingerprint(result)
+    if summary_only:
+        result = {
+            "schema_version": "dad_mail_dirty_state_summary.v1",
+            "generated_at": result["generated_at"],
+            "status": result["status"],
+            "dirty": result["dirty"],
+            "dirty_state_fingerprint": result["dirty_state_fingerprint"],
+            "spool_dirty": result.get("spool_dirty", result["dirty"]),
+            "worktree_dirty": result.get("worktree_dirty", False),
+            "action_summary": result["action_summary"],
+            "summary": result["summary"],
+            "repo_scope": result.get("repo_scope", {}),
+            "mailbox_coverage": result.get("mailbox_coverage", {}),
+            "worktree_state": result.get("worktree_state", {}),
+            "write_target_guidance": result["write_target_guidance"],
+            "authority_boundary": result["authority_boundary"],
+        }
+        if legacy_allowlist_result:
+            result["legacy_allowlist_result"] = legacy_allowlist_result
+        if legacy_delivery_allowlist_result:
+            result["legacy_delivery_allowlist_result"] = legacy_delivery_allowlist_result
+        if invalid_quarantine_result:
+            result["invalid_quarantine_result"] = invalid_quarantine_result
+        if route_audit_repair_result:
+            result["route_audit_repair_result"] = route_audit_repair_result
+    console.print_json(data=result)
+    if fail_on_dirty and result["dirty"]:
+        raise typer.Exit(1)
+    if fail_on_coverage_gap:
+        coverage = result.get("mailbox_coverage", {})
+        coverage_blocked = bool(
+            int(coverage.get("unreviewed_mailbox_candidate_count", 0) or 0)
+            or int(coverage.get("reviewed_enabled_not_checked_count", 0) or 0)
+            or str(coverage.get("warning", "")).strip()
+        )
+        if coverage_blocked:
+            raise typer.Exit(1)
+    if fail_on_worktree_dirty:
+        worktree = result.get("worktree_state", {})
+        clean_verified = (
+            bool(worktree.get("evaluated"))
+            and bool(worktree.get("is_git_worktree"))
+            and str(worktree.get("status", "")) == "clean"
+        )
+        if not clean_verified:
+            raise typer.Exit(1)
+
+
 @enroll_app.command("discover")
 def enroll_discover(
     config: Optional[Path] = typer.Option(None),
@@ -1299,14 +4132,54 @@ def dad_inventory(
     config: Optional[Path] = typer.Option(None),
     hub: Optional[Path] = typer.Option(None),
     max_depth: int = typer.Option(5, "--max-depth", min=1, max=12),
+    github_repositories_file: Optional[Path] = typer.Option(
+        None,
+        "--github-repositories-file",
+        help=(
+            "Reviewed GitHub metadata JSON/YAML file to use for this inventory run. "
+            "Rows are central candidate records only."
+        ),
+    ),
+    github_source_id: str = typer.Option(
+        "",
+        "--github-source-id",
+        help=(
+            "Source id to attach to --github-repositories-file; defaults to the "
+            "only configured GitHub source or github-reviewed-export."
+        ),
+    ),
+    github_owner: str = typer.Option(
+        "",
+        "--github-owner",
+        help="Owner for --github-repositories-file when it cannot be inferred from rows.",
+    ),
 ) -> None:
     """Write central-only repo inventory reconciliation reports."""
     cfg = _cfg(config, hub)
+    github_sources = cfg.github_sources
+    if github_repositories_file is not None:
+        source_id = github_source_id.strip()
+        if not source_id:
+            source_id = (
+                cfg.github_sources[0].id
+                if len(cfg.github_sources) == 1
+                else "github-reviewed-export"
+            )
+        try:
+            github_sources = _github_sources_with_reviewed_file(
+                cfg,
+                repositories_file=github_repositories_file,
+                source_id=source_id,
+                owner=github_owner.strip(),
+            )
+        except (OSError, ValueError, json.JSONDecodeError) as exc:
+            console.print(str(exc))
+            raise typer.Exit(2) from exc
     try:
         result = reconcile_repo_inventory(
             cfg.repo_root,
             local_sources=cfg.local_sources,
-            github_sources=cfg.github_sources,
+            github_sources=github_sources,
             mail_policies=cfg.mail_repos,
             enrollment_policies=cfg.enrollment_repos,
             max_depth=max_depth,
@@ -1341,6 +4214,47 @@ def dad_asset_recognition(hub: Optional[Path] = typer.Option(None)) -> None:
     """Show the methodology DAD uses to recognize useful digital assets."""
     cfg = _cfg(hub=hub)
     console.print_json(data=load_asset_recognition_methodology(cfg.repo_root))
+
+
+@dad_app.command("address-model")
+def dad_address_model(hub: Optional[Path] = typer.Option(None)) -> None:
+    """Show DAD's adopted 9-layer address model and source inspirations."""
+    cfg = _cfg(hub=hub)
+    console.print_json(data=load_address_model_registry(cfg.repo_root))
+
+
+@dad_app.command("repo-asset-standard")
+def dad_repo_asset_standard(hub: Optional[Path] = typer.Option(None)) -> None:
+    """Show the canonical repo-local digital asset directory/log standard."""
+    _cfg(hub=hub)
+    console.print_json(data=repo_local_asset_surface_standard())
+
+
+@dad_app.command("repo-assets")
+def dad_repo_assets(
+    repo: Path = typer.Option(Path("."), "--repo"),
+    task: str = typer.Option("", "--task"),
+    limit: int = typer.Option(25, min=1, max=100),
+    include_legacy: bool = typer.Option(True, "--include-legacy/--no-legacy"),
+    config: Optional[Path] = typer.Option(None),
+    hub: Optional[Path] = typer.Option(None),
+) -> None:
+    """Collect repo-local digital asset memory as metadata-only candidate evidence."""
+    cfg = _cfg(config, hub)
+    try:
+        result = collect_repo_local_assets(
+            cfg.repo_root,
+            repo.resolve(),
+            task=task,
+            limit=limit,
+            include_legacy=include_legacy,
+            mail_policies=cfg.mail_repos,
+            enrollment_policies=cfg.enrollment_repos,
+        )
+    except (OSError, ValueError, FileNotFoundError) as exc:
+        console.print(str(exc))
+        raise typer.Exit(2) from exc
+    console.print_json(data=result)
 
 
 @dad_app.command("offer-check")
@@ -1408,19 +4322,39 @@ def dad_unavailable_ack(
     operation: str = typer.Option(..., "--operation"),
     reason: str = typer.Option(..., "--reason"),
     reviewed_by: str = typer.Option("human", "--reviewed-by"),
+    audit_output: Optional[Path] = typer.Option(
+        None,
+        "--audit-output",
+        help=(
+            "Optional local JSONL audit output. Used directly when the DAD hub "
+            "cannot be resolved."
+        ),
+    ),
     hub: Optional[Path] = typer.Option(None),
 ) -> None:
     """Record a named DAD-unavailable bypass for a hard-gated operation."""
-    cfg = _cfg(hub=hub)
+    reviewer = reviewed_by.strip()
+    if reviewer.casefold() in {"", "human", "unknown", "agent", "codex", "claude", "ai"}:
+        console.print("--reviewed-by must name the human who approved this bypass.")
+        raise typer.Exit(2)
+    hub_resolution = describe_hub_resolution(explicit_hub=hub)
     record = {
         "event_type": "dad_unavailable_ack",
         "created_at": utc_now(),
         "operation": operation,
         "reason": reason,
-        "reviewed_by": reviewed_by,
+        "reviewed_by": reviewer,
+        "hub_available": bool(hub_resolution.get("resolved")),
+        "audit_scope": "hub" if hub_resolution.get("resolved") else "user_local",
         "authority_boundary": "Bypass acknowledgement is an audit record, not blanket approval.",
     }
-    append_jsonl(cfg.repo_root / "audit" / "events" / f"{record['created_at'][:10]}.jsonl", record)
+    if hub_resolution.get("resolved"):
+        cfg = _cfg(hub=Path(str(hub_resolution["hub_path"])))
+        audit_path = cfg.repo_root / "audit" / "events" / f"{record['created_at'][:10]}.jsonl"
+    else:
+        audit_path = audit_output or Path.home() / ".dad" / "audit" / "unavailable-acks.jsonl"
+        record["hub_error"] = hub_resolution.get("error", "DAD hub unavailable.")
+    append_jsonl(audit_path, record)
     console.print_json(data=record)
 
 
@@ -1687,7 +4621,10 @@ def exceptions_taxonomy_coverage(
         or result.get("learnable_unrouted_event_types")
     ):
         raise typer.Exit(1)
-    if fail_on_missing_scenarios and result.get("capture_rule_events_missing_synthetic_cases"):
+    missing_scenarios = result.get("routed_events_missing_synthetic_cases") or result.get(
+        "capture_rule_events_missing_synthetic_cases"
+    )
+    if fail_on_missing_scenarios and missing_scenarios:
         raise typer.Exit(1)
 
 
@@ -1751,6 +4688,25 @@ def exceptions_capture_simulate_emission(
     console.print_json(data=result)
     if result["failed_count"] or result["case_count"] == 0:
         raise typer.Exit(1)
+
+
+@exceptions_app.command("phase6-summary")
+def exceptions_phase6_summary(
+    output: Optional[Path] = typer.Option(None, "--output"),
+    hub: Optional[Path] = typer.Option(None),
+) -> None:
+    """Compile Phase 6 machine evidence into one human-review summary."""
+    cfg = _cfg(hub=hub)
+    output_path = output if output is None or output.is_absolute() else output
+    try:
+        result = write_phase6_machine_evidence_summary(
+            cfg.repo_root,
+            output=output_path,
+        )
+    except (OSError, json.JSONDecodeError, KeyError, ValueError) as exc:
+        console.print(str(exc))
+        raise typer.Exit(2) from exc
+    console.print_json(data=result)
 
 
 @exceptions_app.command("capture-audit")
@@ -1959,6 +4915,61 @@ def exceptions_capture_remediation_plan(
             candidate_limit=candidate_limit,
             max_scanned_files=max_scanned_files,
             per_lane_repo_limit=per_lane_repo_limit,
+        )
+    except (OSError, json.JSONDecodeError, KeyError, ValueError) as exc:
+        console.print(str(exc))
+        raise typer.Exit(2) from exc
+    console.print_json(data=result)
+
+
+@exceptions_app.command("capture-surface-refresh-notices")
+def exceptions_capture_surface_refresh_notices(
+    repo: list[str] = typer.Option([], "--repo"),
+    candidate_limit: int = typer.Option(
+        50,
+        "--candidate-limit",
+        min=0,
+        max=500,
+        help="Maximum candidate path signals per repo; 0 means exhaustive metadata-only scan.",
+    ),
+    max_scanned_files: int = typer.Option(
+        50000,
+        "--max-scanned-files",
+        min=1,
+        max=1000000,
+        help="Maximum repo files to inspect by path name for capture candidates.",
+    ),
+    per_lane_repo_limit: int = typer.Option(500, "--per-lane-repo-limit", min=1, max=500),
+    output: Optional[Path] = typer.Option(None, "--output"),
+    write_mail: bool = typer.Option(
+        True,
+        "--write-mail/--no-write-mail",
+        help=(
+            "Write staged candidate mail to "
+            "processed/mail/staged/capture_surface_refresh_notices.jsonl."
+        ),
+    ),
+    hub: Optional[Path] = typer.Option(None),
+) -> None:
+    """Stage central candidate notices for repos with stale exception capture surfaces."""
+    cfg = _cfg(hub=hub)
+    selected = _discover_exception_repos(
+        repo or ["all"],
+        cfg,
+        capture_audit=True,
+        reviewed=True,
+    )
+    output_path = output if output is None or output.is_absolute() else output
+    try:
+        result = write_exception_capture_surface_refresh_notices(
+            cfg.repo_root,
+            selected,
+            repo_policies=_exception_repo_policies(cfg),
+            output=output_path,
+            candidate_limit=candidate_limit,
+            max_scanned_files=max_scanned_files,
+            per_lane_repo_limit=per_lane_repo_limit,
+            write_mail=write_mail,
         )
     except (OSError, json.JSONDecodeError, KeyError, ValueError) as exc:
         console.print(str(exc))
@@ -2428,6 +5439,64 @@ def exceptions_source_packet_requests(
             cfg.repo_root,
             output=output,
             write_mail=write_mail,
+        )
+    except (OSError, json.JSONDecodeError, KeyError, ValueError) as exc:
+        console.print(str(exc))
+        raise typer.Exit(2) from exc
+    console.print_json(data=result)
+
+
+@exceptions_app.command("fix-outcome-requests")
+def exceptions_fix_outcome_requests(
+    output: Optional[Path] = typer.Option(None, "--output"),
+    write_mail: bool = typer.Option(
+        True,
+        "--write-mail/--no-write-mail",
+        help="Write staged candidate mail to processed/mail/staged/fix_outcome_requests.jsonl.",
+    ),
+    limit: int = typer.Option(100, "--limit", min=1, max=1000),
+    hub: Optional[Path] = typer.Option(None),
+) -> None:
+    """Compile unresolved observed exceptions into staged fix-outcome request mail."""
+    cfg = _cfg(hub=hub)
+    try:
+        result = write_exception_fix_outcome_requests(
+            cfg.repo_root,
+            output=output,
+            write_mail=write_mail,
+            limit=limit,
+        )
+    except (OSError, json.JSONDecodeError, KeyError, ValueError) as exc:
+        console.print(str(exc))
+        raise typer.Exit(2) from exc
+    console.print_json(data=result)
+
+
+@exceptions_app.command("hard-issue-lookup")
+def exceptions_hard_issue_lookup(
+    query: str = typer.Option("", "--query", help="Short safe issue summary. Do not paste raw logs."),
+    signal: list[str] = typer.Option([], "--signal"),
+    event_type: list[str] = typer.Option([], "--event-type"),
+    command_arg: list[str] = typer.Option([], "--command-arg", help="Command argv only; no stdout/stderr."),
+    path_ref: list[str] = typer.Option([], "--path-ref", help="Repo-relative path refs or safe hashes."),
+    limit: int = typer.Option(5, "--limit", min=1, max=20),
+    include_backfill: bool = typer.Option(False, "--include-backfill"),
+    target_public_facing: bool = typer.Option(False, "--target-public-facing"),
+    hub: Optional[Path] = typer.Option(None),
+) -> None:
+    """Look up prior exception/fix evidence before a non-obvious fix."""
+    cfg = _cfg(hub=hub)
+    try:
+        result = hard_issue_lookup(
+            cfg.repo_root,
+            query=query,
+            signals=signal,
+            event_types=event_type,
+            command=command_arg,
+            path_refs=path_ref,
+            limit=limit,
+            include_backfill=include_backfill,
+            target_public_facing=target_public_facing,
         )
     except (OSError, json.JSONDecodeError, KeyError, ValueError) as exc:
         console.print(str(exc))

@@ -54,6 +54,42 @@
       "review_status": "reviewed"
     },
     {
+      "source_id": "google-sre",
+      "label": "Google SRE books and official SRE guidance",
+      "url_patterns": ["sre.google"],
+      "trust_tier": "high_signal",
+      "check_cadence": "quarterly",
+      "frontier_watch": [
+        "postmortem triggers and learning culture",
+        "metadata fields for incident analysis",
+        "reliability practices that can become AI-first exception and fix-outcome records"
+      ],
+      "intake_actions": [
+        "Translate SRE practices into exception-lake schemas, triggers, review gates, and recurrence tests.",
+        "Do not treat incident/postmortem practices as direct proof for coding guidance without local validation."
+      ],
+      "asset_kinds": ["doc", "lesson", "harness"],
+      "review_status": "reviewed"
+    },
+    {
+      "source_id": "serviceinnovation-kcs",
+      "label": "Consortium for Service Innovation KCS guidance",
+      "url_patterns": ["library.serviceinnovation.org", "serviceinnovation.org"],
+      "trust_tier": "high_signal",
+      "check_cadence": "quarterly",
+      "frontier_watch": [
+        "search early/search often patterns",
+        "reuse-is-review and demand-driven knowledge quality",
+        "closed-loop feedback practices that can become DAD lookup and postflight learning rules"
+      ],
+      "intake_actions": [
+        "Adapt KCS practices into DAD lookup-first, reuse-review, and candidate-capture workflows.",
+        "Keep KCS content pointer-only and translate only the operational pattern into DAD-specific tests."
+      ],
+      "asset_kinds": ["doc", "lesson", "harness"],
+      "review_status": "reviewed"
+    },
+    {
       "source_id": "rust-lang",
       "label": "Rust project (official docs, blogs, RFCs, crates, project goals)",
       "url_patterns": [

@@ -31,7 +31,9 @@
     "generated_at": {"type": "string", "format": "date-time"},
     "suggestion_id": {"const": "dad:exception-capture-suggestion"},
     "registry_ref": {"const": "registry/exception-capture-pattern-registry.json"},
-    "methodology_ref": {"const": "registry/exception-capture-pattern-registry.json"},
+    "methodology_ref": {
+      "const": "registry/exception-capture-pattern-registry.json + registry/exception-event-type-registry.json#backfill_classifier"
+    },
     "methodology_hash": {"type": "string", "pattern": "^sha256:[a-f0-9]{64}$"},
     "repo_capture_surface_version": {"type": "string", "minLength": 1},
     "capture_surface_version_unknown": {"type": "boolean"},
@@ -49,12 +51,12 @@
     },
     "matched_rule_ids": {
       "type": "array",
-      "items": {"type": "string", "pattern": "^exception-capture-rule:[a-z0-9][a-z0-9:-]*$"},
+      "items": {"type": "string", "pattern": "^(exception-capture-rule|backfill-rule):[a-z0-9][a-z0-9:-]*$"},
       "uniqueItems": true
     },
     "suppressed_rule_ids": {
       "type": "array",
-      "items": {"type": "string", "pattern": "^exception-capture-rule:[a-z0-9][a-z0-9:-]*$"},
+      "items": {"type": "string", "pattern": "^(exception-capture-rule|backfill-rule):[a-z0-9][a-z0-9:-]*$"},
       "uniqueItems": true
     },
     "matched_rules": {
@@ -72,7 +74,7 @@
           "rationale"
         ],
         "properties": {
-          "rule_id": {"type": "string", "pattern": "^exception-capture-rule:[a-z0-9][a-z0-9:-]*$"},
+          "rule_id": {"type": "string", "pattern": "^(exception-capture-rule|backfill-rule):[a-z0-9][a-z0-9:-]*$"},
           "pattern_family": {"type": "string", "minLength": 1},
           "review_status": {"const": "reviewed"},
           "min_capture_surface_version": {"type": "string", "minLength": 1},
@@ -112,7 +114,7 @@
           "required_fields"
         ],
         "properties": {
-          "rule_id": {"type": "string", "pattern": "^exception-capture-rule:[a-z0-9][a-z0-9:-]*$"},
+          "rule_id": {"type": "string", "pattern": "^(exception-capture-rule|backfill-rule):[a-z0-9][a-z0-9:-]*$"},
           "packet_classes": {
             "type": "array",
             "items": {
@@ -284,7 +286,7 @@
         },
         "suppressed_rule_ids": {
           "type": "array",
-          "items": {"type": "string", "pattern": "^exception-capture-rule:[a-z0-9][a-z0-9:-]*$"},
+          "items": {"type": "string", "pattern": "^(exception-capture-rule|backfill-rule):[a-z0-9][a-z0-9:-]*$"},
           "uniqueItems": true
         },
         "instructions": {

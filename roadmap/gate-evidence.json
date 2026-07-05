@@ -15,6 +15,48 @@
         "recorded_at": "2026-06-24",
         "status": "passed"
       }
+    },
+    "phase-8-dad-local-deployment": {
+      "python -m digital_asset_directory.cli doctor --hub . --scope deployment": {
+        "evidence": [
+          "roadmap/evidence/phase-8-dad-local-deployment.md",
+          "roadmap/evidence/phase-8-dad-local-deployment.commands.json"
+        ],
+        "recorded_at": "2026-07-05",
+        "status": "passed"
+      },
+      "python -m pytest tests/test_dad_local_deployment.py -q": {
+        "evidence": [
+          "roadmap/evidence/phase-8-dad-local-deployment.md",
+          "roadmap/evidence/phase-8-dad-local-deployment.commands.json"
+        ],
+        "recorded_at": "2026-07-05",
+        "status": "passed"
+      },
+      "user-shim asset-dir agent preflight --repo . --agent codex --task \"Goal 1 deployment smoke from outside DAD\"": {
+        "evidence": [
+          "roadmap/evidence/phase-8-dad-local-deployment.md",
+          "roadmap/evidence/phase-8-dad-local-deployment.commands.json"
+        ],
+        "recorded_at": "2026-07-05",
+        "status": "passed"
+      },
+      "user-shim asset-dir doctor --scope deployment from two non-DAD repos": {
+        "evidence": [
+          "roadmap/evidence/phase-8-dad-local-deployment.md",
+          "roadmap/evidence/phase-8-dad-local-deployment.commands.json"
+        ],
+        "recorded_at": "2026-07-05",
+        "status": "passed"
+      },
+      "user-shim asset-dir doctor --scope deployment from Mock Trial4.26 and LawFirm-os-intake without target worktree changes": {
+        "evidence": [
+          "roadmap/evidence/phase-8-dad-local-deployment.md",
+          "roadmap/evidence/phase-8-dad-local-deployment.commands.json"
+        ],
+        "recorded_at": "2026-07-05",
+        "status": "passed"
+      }
     }
   },
   "human_gates": {

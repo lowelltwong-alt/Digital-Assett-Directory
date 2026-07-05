@@ -1,20 +1,25 @@
 from __future__ import annotations
 
 import json
+import subprocess
 from pathlib import Path
 from types import SimpleNamespace
 
 from jsonschema.validators import validator_for
 import pytest
+from typer.testing import CliRunner
 
-from digital_asset_directory.config import EnrollmentRepoPolicy, MailRepoPolicy
+from digital_asset_directory.cli import app
+from digital_asset_directory.config import EnrollmentRepoPolicy, MailRepoPolicy, load_config
 from digital_asset_directory.dad_library import (
     build_dad_cadence_plan,
     calibration_report,
     check_offering_novelty,
+    collect_repo_local_assets,
     compile_context_pack,
     discover_harness_opportunities,
     harness_evaluate,
+    load_address_model_registry,
     load_asset_patterns,
     load_asset_recognition_methodology,
     load_harness_discovery_methodology,
@@ -28,14 +33,42 @@ from digital_asset_directory.dad_library import (
     reconcile_repo_inventory,
     record_usage,
     record_trace_outcomes,
+    repo_local_asset_surface_standard,
     scout_asset_candidates,
     score_offering,
     usage_upgrades,
+    write_repo_inventory_rust_probe_parity,
 )
+
+RUNNER = CliRunner()
 
 pytestmark = pytest.mark.integration
 
 ROOT = Path(__file__).resolve().parents[1]
+
+
+def _write_minimal_hub_markers(hub: Path) -> None:
+    (hub / "registry").mkdir(parents=True, exist_ok=True)
+    (hub / "registry" / "source-of-truth.json").write_text("{}\n", encoding="utf-8")
+    (hub / "src" / "digital_asset_directory").mkdir(parents=True, exist_ok=True)
+    (hub / "src" / "digital_asset_directory" / "cli.py").write_text("", encoding="utf-8")
+    (hub / "AI_FRONT_DOOR.md").write_text("# AI Front Door\n", encoding="utf-8")
+    (hub / "MACHINE_NAVIGATION_MANIFEST.json").write_text(
+        '{"manifest_version":"test"}\n', encoding="utf-8"
+    )
+    (hub / "pyproject.toml").write_text(
+        "\n".join(
+            [
+                "[project]",
+                'name = "digital-asset-directory"',
+                'version = "0.1.0"',
+                "[project.scripts]",
+                'asset-dir = "digital_asset_directory.cli:app"',
+                "",
+            ]
+        ),
+        encoding="utf-8",
+    )
 
 
 def _schema(name: str) -> dict:
@@ -79,6 +112,7 @@ def _context_repo(tmp_path: Path, *, public_facing: bool = False) -> Path:
 def test_dad_library_registries_validate_against_schemas():
     _validate("dad_need_registry", load_needs(ROOT))
     _validate("dad_offering_registry", load_offerings(ROOT))
+    _validate("dad_address_model_registry", load_address_model_registry(ROOT))
     _validate("dad_usefulness_methodology", load_usefulness_methodology(ROOT))
     _validate("asset_recognition_methodology", load_asset_recognition_methodology(ROOT))
     _validate("harness_discovery_methodology", load_harness_discovery_methodology(ROOT))
@@ -109,6 +143,102 @@ def test_dad_library_registries_validate_against_schemas():
         assert any(
             item.name != "README.md" for item in (harness_path / "examples").iterdir()
         )
+
+
+def test_harness_vs_enforcement_decision_model_is_cataloged():
+    offerings = load_offerings(ROOT)["offerings"]
+    needs = load_needs(ROOT)["needs"]
+
+    offering = next(
+        item
+        for item in offerings
+        if item["offering_id"] == "dad:offering:harness-vs-deterministic-enforcement"
+    )
+    need = next(
+        item
+        for item in needs
+        if item["need_id"] == "dad:need:harness-enforcement-tradeoff-feedback"
+    )
+
+    assert offering["path"] == "docs/HARNESS_VS_DETERMINISTIC_ENFORCEMENT.md"
+    assert offering["review_status"] == "reviewed"
+    assert "harness_first_decision_model" in offering["capabilities"]
+    assert "red_amber_green_data_sensitivity_routing" in offering["capabilities"]
+    assert need["priority"] == "critical"
+    assert "coding_harnesses" in need["target_control_planes"]
+
+
+def test_claude_architectural_root_cause_review_is_cataloged():
+    offerings = load_offerings(ROOT)["offerings"]
+    needs = load_needs(ROOT)["needs"]
+
+    offering = next(
+        item
+        for item in offerings
+        if item["offering_id"] == "dad:offering:claude-architectural-root-cause-review"
+    )
+    need = next(
+        item
+        for item in needs
+        if item["need_id"] == "dad:need:integration-implementation-root-cause-patterns"
+    )
+
+    assert offering["path"] == "docs/CLAUDE_ARCHITECTURAL_ROOT_CAUSE_REVIEW.md"
+    assert offering["review_status"] == "reviewed"
+    assert "claude_review_packet" in offering["capabilities"]
+    assert "architectural_root_cause_questions" in offering["capabilities"]
+    assert need["priority"] == "critical"
+    assert "architecture_references" in need["target_control_planes"]
+
+
+def test_address_model_is_compact_nine_layer_learning_model():
+    registry = load_address_model_registry(ROOT)
+    standard = repo_local_asset_surface_standard()
+
+    assert registry["adopted_layer_count"] == 9
+    assert registry["layers"][8]["name"] == "learning_adaptation"
+    assert registry["layers"][8]["status"] == "dad_adopted"
+    assert registry["compact_encoding"]["max_inline_summary_chars"] <= 400
+    assert "workflow_card_fields" in registry["workflow_encoding_policy"]
+    assert "full prompts" in registry["workflow_encoding_policy"]["do_not_inline"]
+    assert registry["evolution_policy"]["status"] == "evolving"
+    assert "frontier ai" in " ".join(registry["frontier_review_policy"]["who_to_ask"]).lower()
+    assert standard["adopted_layer_count"] == 9
+    assert standard["dad_layer_9"]["name"] == "learning_adaptation"
+    assert standard["address_model_ref"] == "registry/dad-address-model-registry.json"
+
+
+def test_repo_local_asset_record_schema_allows_compact_refs():
+    payload = {
+        "schema_version": "0.1.0",
+        "asset_id": "repo:asset:nine-layer-address",
+        "asset_type": "architecture_reference",
+        "title": "Nine-layer address card",
+        "summary": "Compact address-model pointer for repo-local asset memory.",
+        "source_paths": ["docs/address-model.md"],
+        "tags": ["address_model"],
+        "context_tags": ["learning_loop", "repo_local_asset_memory"],
+        "graph_tags": ["nine_layer_address", "learning_adaptation"],
+        "applies_when": ["A future agent needs compact placement."],
+        "does_not_apply_when": ["A one-off note has no reuse value."],
+        "novelty_claim": "Keeps learning outcomes separate from object identity.",
+        "usefulness_context": "Useful for DAD lookup, validation, and upgrade routing.",
+        "workflow_ref": "workflow:address-card-fill",
+        "learning_ref": "learning:address-model-delta",
+        "fractal_address": {
+            "layer": 9,
+            "layer_name": "learning_adaptation",
+            "optional_layer_9_variant": "learning_adaptation",
+            "address_ref": "local/source/layer/domain/module/object/id/v0.1",
+        },
+        "validation_commands": ["python -m digital_asset_directory.cli dad address-model"],
+        "source_refs": ["registry/dad-address-model-registry.json"],
+        "sensitivity": "internal",
+        "review_status": "candidate",
+        "authority_boundary": "Source repo candidate metadata only.",
+    }
+
+    _validate("repo_local_digital_asset_record", payload)
 
 
 def test_dad_match_recommends_rust_parity_for_slow_python_test_task(tmp_path: Path):
@@ -379,6 +509,67 @@ def _git_repo(path: Path) -> Path:
     return path
 
 
+def _rust_repo_probe_summary(
+    repos: list[dict[str, object]],
+    *,
+    root_alias: str = "dad-local-source/workspace",
+    skipped_dirs: list[dict[str, object]] | None = None,
+) -> dict[str, object]:
+    skipped_dirs = skipped_dirs or []
+    repos = [_rust_repo_probe_record_with_defaults(repo) for repo in repos]
+    return {
+        "schema_version": "dad_repo_inventory_probe.v0_2",
+        "root_count": 1,
+        "repo_count": len(repos),
+        "skipped_dir_count": len(skipped_dirs),
+        "roots": [
+            {
+                "root_alias": root_alias,
+                "status": "checked",
+                "repo_count": len(repos),
+                "skipped_dir_count": len(skipped_dirs),
+            }
+        ],
+        "repos": repos,
+        "skipped_dirs": skipped_dirs,
+        "no_mutation_performed": True,
+        "authority_boundary": "Rust repo-inventory probing is read-only structural evidence.",
+    }
+
+
+def _rust_repo_probe_record_with_defaults(record: dict[str, object]) -> dict[str, object]:
+    if "contract_present" not in record:
+        return record
+    contract_present = bool(record["contract_present"])
+    contract_structural_pass = bool(record.get("contract_structural_pass", False))
+    if contract_structural_pass:
+        default_issue_codes: list[str] = []
+    elif contract_present:
+        default_issue_codes = ["contract_missing_schema_version"]
+    else:
+        default_issue_codes = ["contract_missing"]
+    defaults: dict[str, object] = {
+        "contract_parse_status": "present_parseable" if contract_present else "missing",
+        "contract_schema_version_present": contract_structural_pass,
+        "contract_repo_id_present": contract_structural_pass,
+        "contract_capture_surface_version_present": contract_structural_pass,
+        "contract_cli_fallback_present": contract_structural_pass,
+        "contract_stable_user_shim_present": contract_structural_pass,
+        "contract_windows_user_shim_present": contract_structural_pass,
+        "contract_raw_checkout_fallback_present": contract_structural_pass,
+        "contract_stable_shim_before_raw_checkout": contract_structural_pass,
+        "contract_structural_pass": contract_structural_pass,
+        "contract_issue_codes": default_issue_codes,
+    }
+    return {**defaults, **record}
+
+
+def _real_git_repo(path: Path, *, branch: str = "main") -> Path:
+    path.mkdir(parents=True)
+    subprocess.run(["git", "init", "-b", branch], cwd=path, check=True, capture_output=True)
+    return path
+
+
 def test_inventory_reconciliation_is_central_only_and_classifies_special_repos(
     tmp_path: Path,
 ):
@@ -415,11 +606,508 @@ def test_inventory_reconciliation_is_central_only_and_classifies_special_repos(
     assert records[duplicate.name]["classification"] == "duplicate-ignore"
     assert Path(result["json_path"]) == hub / "processed" / "repo_inventory" / "reconciled_inventory.json"
     assert Path(result["markdown_path"]).is_file()
+    assert "input_hashes" in result["inventory"]
+    assert (
+        "src/digital_asset_directory/dad_library.py"
+        in result["inventory"]["input_hashes"]
+        or result["inventory"]["input_hashes"] == {}
+    )
     for repo in [logos, mocktrial, intake, duplicate]:
         assert not (repo / ".digital-asset").exists()
 
 
-def test_inventory_public_policy_uses_public_safe_repo_ref(tmp_path: Path):
+def test_inventory_report_id_changes_for_same_count_content_change(tmp_path: Path):
+    hub = tmp_path / "hub"
+    workspace_a = tmp_path / "workspace-a"
+    workspace_b = tmp_path / "workspace-b"
+    hub.mkdir()
+    workspace_a.mkdir()
+    workspace_b.mkdir()
+    _git_repo(workspace_a / "alpha-repo")
+    _git_repo(workspace_b / "beta-repo")
+    source_a = SimpleNamespace(
+        id="workspace-a",
+        path=workspace_a,
+        enabled=True,
+        follow_symlinks=False,
+    )
+    source_b = SimpleNamespace(
+        id="workspace-b",
+        path=workspace_b,
+        enabled=True,
+        follow_symlinks=False,
+    )
+
+    first = reconcile_repo_inventory(hub, local_sources=[source_a], max_depth=2)["inventory"]
+    second = reconcile_repo_inventory(hub, local_sources=[source_b], max_depth=2)["inventory"]
+
+    assert first["repo_count"] == second["repo_count"] == 1
+    assert first["records"][0]["repo_name"] == "alpha-repo"
+    assert second["records"][0]["repo_name"] == "beta-repo"
+    assert first["content_fingerprint"].startswith("sha256:")
+    assert second["content_fingerprint"].startswith("sha256:")
+    assert first["content_fingerprint"] != second["content_fingerprint"]
+    assert first["report_id"] != second["report_id"]
+
+
+def test_inventory_active_hold_is_active_no_write_but_logos_stays_protected(
+    tmp_path: Path,
+):
+    hub = tmp_path / "hub"
+    held = _git_repo(tmp_path / "active-repo")
+    logos = _git_repo(tmp_path / "logos-scripture-graph")
+    hub.mkdir()
+    held_policy = EnrollmentRepoPolicy(
+        id="active-repo",
+        path=held,
+        alias="active",
+        visibility="internal",
+        enrollment_enabled=True,
+        active_hold=True,
+        active_hold_reason="actively being worked on",
+    )
+    logos_policy = EnrollmentRepoPolicy(
+        id="logos-scripture-graph",
+        path=logos,
+        alias="logos",
+        visibility="public",
+        public_facing=True,
+        enrollment_enabled=True,
+        active_hold=True,
+    )
+
+    result = reconcile_repo_inventory(
+        hub,
+        enrollment_policies=[held_policy, logos_policy],
+        max_depth=1,
+    )
+    records = {record["repo_name"]: record for record in result["inventory"]["records"]}
+
+    assert records[held.name]["classification"] == "active-no-write"
+    assert records[held.name]["write_boundary"] == "central_only"
+    assert "active_hold" in "; ".join(records[held.name]["classification_reasons"])
+    assert records[logos.name]["classification"] == "protected-central-only"
+
+
+def test_inventory_enrollment_hold_wins_when_mail_policy_also_matches(tmp_path: Path):
+    hub = tmp_path / "hub"
+    repo = _git_repo(tmp_path / "active-repo")
+    hub.mkdir()
+    mail_policy = MailRepoPolicy(
+        id="active-mail",
+        path=repo,
+        alias="active",
+        visibility="internal",
+    )
+    enrollment_policy = EnrollmentRepoPolicy(
+        id="active-enrollment",
+        path=repo,
+        alias="active",
+        visibility="internal",
+        enrollment_enabled=True,
+        active_hold=True,
+        active_hold_reason="actively being worked on",
+    )
+
+    result = reconcile_repo_inventory(
+        hub,
+        mail_policies=[mail_policy],
+        enrollment_policies=[enrollment_policy],
+        max_depth=1,
+    )
+    record = result["inventory"]["records"][0]
+
+    assert record["repo_id"] == "active-enrollment"
+    assert record["classification"] == "active-no-write"
+    assert "active_hold" in "; ".join(record["classification_reasons"])
+    assert record["mail_policy_present"] is True
+    assert record["enrollment_policy_present"] is True
+
+
+def test_inventory_dirty_or_non_main_policy_repo_is_active_no_write(tmp_path: Path):
+    hub = tmp_path / "hub"
+    dirty = _real_git_repo(tmp_path / "dirty-repo")
+    feature = _real_git_repo(tmp_path / "feature-repo", branch="feature/inventory")
+    hub.mkdir()
+    (dirty / "untracked.txt").write_text("work in progress", encoding="utf-8")
+    policies = [
+        EnrollmentRepoPolicy(
+            id="dirty-repo",
+            path=dirty,
+            alias="dirty",
+            visibility="internal",
+            enrollment_enabled=True,
+        ),
+        EnrollmentRepoPolicy(
+            id="feature-repo",
+            path=feature,
+            alias="feature",
+            visibility="internal",
+            enrollment_enabled=True,
+        ),
+    ]
+
+    result = reconcile_repo_inventory(hub, enrollment_policies=policies, max_depth=1)
+    records = {record["repo_name"]: record for record in result["inventory"]["records"]}
+
+    assert records[dirty.name]["classification"] == "active-no-write"
+    assert "dirty_worktree" in "; ".join(records[dirty.name]["classification_reasons"])
+    assert records[dirty.name]["git_state"]["is_dirty"] is True
+    assert records[feature.name]["classification"] == "active-no-write"
+    assert "non_main_branch" in "; ".join(records[feature.name]["classification_reasons"])
+    assert records[feature.name]["git_state"]["branch_status"] == "non_main"
+
+
+def test_inventory_duplicate_contract_lineage_is_not_enrolled_by_default(
+    tmp_path: Path,
+):
+    hub = tmp_path / "hub"
+    workspace = tmp_path / "workspace"
+    first = _git_repo(workspace / "renamed-a")
+    second = _git_repo(workspace / "copied-b")
+    hub.mkdir()
+    for repo in (first, second):
+        contract_path = repo / ".digital-asset" / "dad-integration.json"
+        contract_path.parent.mkdir(parents=True)
+        contract_path.write_text(
+            json.dumps({"repo_id": "stable-repo-id", "repo_alias": repo.name}),
+            encoding="utf-8",
+        )
+    local_source = SimpleNamespace(
+        id="workspace",
+        path=workspace,
+        enabled=True,
+        follow_symlinks=False,
+    )
+
+    result = reconcile_repo_inventory(hub, local_sources=[local_source], max_depth=2)
+    records = {record["repo_name"]: record for record in result["inventory"]["records"]}
+
+    assert records[first.name]["repo_id"] == "stable-repo-id"
+    assert records[second.name]["repo_id"] == "stable-repo-id"
+    assert records[first.name]["repo_id_source"] == "contract"
+    assert records[first.name]["classification"] == "duplicate-ignore"
+    assert records[second.name]["classification"] == "duplicate-ignore"
+    assert records[first.name]["duplicate_lineage"] is True
+    assert not (first / "processed").exists()
+    assert not (second / "processed").exists()
+
+
+def test_inventory_github_rows_are_central_records_without_local_writes(
+    tmp_path: Path,
+):
+    hub = tmp_path / "hub"
+    local = _git_repo(tmp_path / "workspace" / "local-repo")
+    hub.mkdir()
+    source = SimpleNamespace(
+        id="github-lowelltwong-alt",
+        owner="lowelltwong-alt",
+        enabled=True,
+        include_private=True,
+        repositories=[
+            {"name": "local-repo", "full_name": "lowelltwong-alt/local-repo", "visibility": "public"},
+            {"name": "remote-only", "full_name": "lowelltwong-alt/remote-only", "private": True},
+            {"name": "old-archive", "full_name": "lowelltwong-alt/old-archive", "archived": True},
+        ],
+    )
+    local_source = SimpleNamespace(
+        id="workspace",
+        path=local.parent,
+        enabled=True,
+        follow_symlinks=False,
+    )
+
+    result = reconcile_repo_inventory(
+        hub,
+        local_sources=[local_source],
+        github_sources=[source],
+        max_depth=2,
+    )
+    records = {record["repo_name"]: record for record in result["inventory"]["records"]}
+    github_source = result["inventory"]["github_sources"][0]
+
+    assert github_source["inventory_status"] == "imported_repo_list"
+    assert github_source["repo_count"] == 3
+    assert len([record for record in result["inventory"]["records"] if record["repo_name"] == "local-repo"]) == 2
+    assert records["remote-only"]["path_ref"] == "dad://github/lowelltwong-alt/remote-only"
+    assert records["remote-only"]["classification"] == "needs-human-classification"
+    assert records["old-archive"]["classification"] == "archive-ignore"
+    assert not (local / ".digital-asset").exists()
+
+
+def test_inventory_github_only_protected_logos_repo_stays_protected(tmp_path: Path):
+    hub = tmp_path / "hub"
+    hub.mkdir()
+    source = SimpleNamespace(
+        id="github-lowelltwong-alt",
+        owner="lowelltwong-alt",
+        enabled=True,
+        include_private=True,
+        repositories=[
+            {
+                "name": "logos-governance-architecture",
+                "full_name": "lowelltwong-alt/logos-governance-architecture",
+                "visibility": "private",
+            },
+        ],
+    )
+
+    result = reconcile_repo_inventory(hub, github_sources=[source], max_depth=1)
+    record = result["inventory"]["records"][0]
+
+    assert record["classification"] == "protected-central-only"
+    assert record["write_boundary"] == "central_only"
+    assert "protected Logos" in "; ".join(record["classification_reasons"])
+    assert record["path_ref"] == "dad://github/lowelltwong-alt/logos-governance-architecture"
+
+
+def test_inventory_github_remote_origin_match_can_attach_to_local_record(tmp_path: Path):
+    hub = tmp_path / "hub"
+    local = _real_git_repo(tmp_path / "workspace" / "local-repo")
+    hub.mkdir()
+    subprocess.run(
+        ["git", "remote", "add", "origin", "https://github.com/lowelltwong-alt/local-repo.git"],
+        cwd=local,
+        check=True,
+        capture_output=True,
+    )
+    source = SimpleNamespace(
+        id="github-lowelltwong-alt",
+        owner="lowelltwong-alt",
+        enabled=True,
+        include_private=True,
+        repositories=[
+            {"name": "local-repo", "full_name": "lowelltwong-alt/local-repo", "visibility": "public"},
+        ],
+    )
+    local_source = SimpleNamespace(
+        id="workspace",
+        path=local.parent,
+        enabled=True,
+        follow_symlinks=False,
+    )
+
+    result = reconcile_repo_inventory(
+        hub,
+        local_sources=[local_source],
+        github_sources=[source],
+        max_depth=2,
+    )
+    records = [record for record in result["inventory"]["records"] if record["repo_name"] == "local-repo"]
+
+    assert len(records) == 1
+    assert records[0]["github_inventory_status"] == "matched_by_remote_origin"
+    assert "github_source:github-lowelltwong-alt" in records[0]["source_signals"]
+
+
+def test_inventory_enabled_github_source_without_rows_is_incomplete(tmp_path: Path):
+    hub = tmp_path / "hub"
+    hub.mkdir()
+    source = SimpleNamespace(
+        id="github-lowelltwong-alt",
+        owner="lowelltwong-alt",
+        enabled=True,
+        include_private=True,
+    )
+
+    result = reconcile_repo_inventory(hub, github_sources=[source], max_depth=1)
+    inventory = result["inventory"]
+
+    assert inventory["github_coverage_status"] == "incomplete_import_required"
+    assert inventory["github_coverage_complete"] is False
+    assert any("GitHub source lacks imported repo rows" in warning for warning in inventory["source_warnings"])
+
+
+def test_load_config_preserves_reviewed_github_repo_rows_for_inventory(
+    tmp_path: Path,
+):
+    hub = tmp_path / "hub"
+    hub.mkdir()
+    _write_minimal_hub_markers(hub)
+    config_dir = hub / "config"
+    config_dir.mkdir()
+    config_path = config_dir / "sources.example.yaml"
+    config_path.write_text(
+        "\n".join(
+            [
+                "project:",
+                "  database: state/catalog.sqlite3",
+                "sources:",
+                "  local: []",
+                "  github:",
+                "    - id: github-lowelltwong-alt",
+                "      owner: lowelltwong-alt",
+                "      enabled: true",
+                "      include_private: true",
+                "      include_archived: true",
+                "      repositories:",
+                "        - name: remote-only",
+                "          full_name: lowelltwong-alt/remote-only",
+                "          visibility: private",
+                "          archived: false",
+                "        - name: public-archive",
+                "          full_name: lowelltwong-alt/public-archive",
+                "          visibility: public",
+                "          archived: true",
+                "",
+            ]
+        ),
+        encoding="utf-8",
+    )
+
+    cfg = load_config(repo_root=hub)
+    result = reconcile_repo_inventory(
+        hub,
+        github_sources=cfg.github_sources,
+        max_depth=1,
+    )
+    inventory = result["inventory"]
+    records = {record["repo_name"]: record for record in inventory["records"]}
+
+    assert cfg.github_sources[0].repositories[0]["full_name"] == "lowelltwong-alt/remote-only"
+    assert inventory["github_coverage_status"] == "imported_repo_list"
+    assert inventory["github_coverage_complete"] is True
+    assert records["remote-only"]["path_ref"] == "dad://github/lowelltwong-alt/remote-only"
+    assert records["remote-only"]["classification"] == "needs-human-classification"
+    assert records["public-archive"]["classification"] == "archive-ignore"
+    assert not (tmp_path / "remote-only").exists()
+
+
+def test_load_config_preserves_reviewed_github_repo_rows_from_file_for_inventory(
+    tmp_path: Path,
+):
+    hub = tmp_path / "hub"
+    hub.mkdir()
+    _write_minimal_hub_markers(hub)
+    repo_file = hub / "processed" / "repo_inventory" / "github_repos.json"
+    repo_file.parent.mkdir(parents=True)
+    repo_file.write_text(
+        json.dumps(
+            [
+                {
+                    "name": "remote-only",
+                    "nameWithOwner": "lowelltwong-alt/remote-only",
+                    "visibility": "PRIVATE",
+                    "isArchived": False,
+                },
+                {
+                    "name": "logos-governance-architecture",
+                    "nameWithOwner": "lowelltwong-alt/logos-governance-architecture",
+                    "visibility": "PUBLIC",
+                    "isArchived": False,
+                },
+            ]
+        ),
+        encoding="utf-8-sig",
+    )
+    config_dir = hub / "config"
+    config_dir.mkdir()
+    (config_dir / "sources.example.yaml").write_text(
+        "\n".join(
+            [
+                "project:",
+                "  database: state/catalog.sqlite3",
+                "sources:",
+                "  local: []",
+                "  github:",
+                "    - id: github-lowelltwong-alt",
+                "      owner: lowelltwong-alt",
+                "      enabled: true",
+                "      include_private: true",
+                "      include_archived: true",
+                "      repositories_file: processed/repo_inventory/github_repos.json",
+                "",
+            ]
+        ),
+        encoding="utf-8",
+    )
+
+    cfg = load_config(repo_root=hub)
+    result = reconcile_repo_inventory(hub, github_sources=cfg.github_sources, max_depth=1)
+    inventory = result["inventory"]
+    records = {record["repo_name"]: record for record in inventory["records"]}
+    source = inventory["github_sources"][0]
+
+    assert cfg.github_sources[0].repositories_file == repo_file
+    assert len(cfg.github_sources[0].repositories) == 2
+    assert inventory["github_coverage_status"] == "imported_repo_list"
+    assert inventory["github_coverage_complete"] is True
+    assert source["metadata_source"] == "repositories_file"
+    assert source["repositories_file_ref"] == "processed/repo_inventory/github_repos.json"
+    assert source["repositories_file_sha256"].startswith("sha256:")
+    assert inventory["input_hashes"]["processed/repo_inventory/github_repos.json"] == source[
+        "repositories_file_sha256"
+    ]
+    assert records["remote-only"]["path_ref"] == "dad://github/lowelltwong-alt/remote-only"
+    assert records["logos-governance-architecture"]["classification"] == "protected-central-only"
+    assert not (tmp_path / "remote-only").exists()
+
+
+def test_dad_inventory_cli_can_use_reviewed_github_repository_file(
+    tmp_path: Path,
+):
+    hub = tmp_path / "hub"
+    hub.mkdir()
+    _write_minimal_hub_markers(hub)
+    repo_file = hub / "processed" / "repo_inventory" / "github_repos.json"
+    repo_file.parent.mkdir(parents=True)
+    repo_file.write_text(
+        json.dumps(
+            [
+                {
+                    "name": "remote-only",
+                    "full_name": "lowelltwong-alt/remote-only",
+                    "visibility": "private",
+                    "archived": False,
+                }
+            ]
+        ),
+        encoding="utf-8",
+    )
+    config_dir = hub / "config"
+    config_dir.mkdir()
+    (config_dir / "sources.example.yaml").write_text(
+        "\n".join(
+            [
+                "project:",
+                "  database: state/catalog.sqlite3",
+                "sources:",
+                "  local: []",
+                "  github:",
+                "    - id: github-lowelltwong-alt",
+                "      owner: lowelltwong-alt",
+                "      enabled: false",
+                "",
+            ]
+        ),
+        encoding="utf-8",
+    )
+
+    result = RUNNER.invoke(
+        app,
+        [
+            "dad",
+            "inventory",
+            "--hub",
+            str(hub),
+            "--github-repositories-file",
+            "processed/repo_inventory/github_repos.json",
+        ],
+    )
+
+    assert result.exit_code == 0
+    payload = json.loads(result.output)
+    inventory = payload["inventory"]
+    source = inventory["github_sources"][0]
+    assert inventory["github_coverage_status"] == "imported_repo_list"
+    assert source["source_id"] == "github-lowelltwong-alt"
+    assert source["metadata_source"] == "repositories_file"
+    assert source["repositories_file_ref"] == "processed/repo_inventory/github_repos.json"
+    assert source["repo_count"] == 1
+    assert not (tmp_path / "remote-only").exists()
+
+
+def test_inventory_mail_policy_is_public_safe_but_not_enrollment(tmp_path: Path):
     hub = tmp_path / "hub"
     workspace = tmp_path / "workspace"
     public_repo = _git_repo(workspace / "Public Repo With Spaces")
@@ -435,10 +1123,868 @@ def test_inventory_public_policy_uses_public_safe_repo_ref(tmp_path: Path):
     result = reconcile_repo_inventory(hub, mail_policies=[policy], max_depth=1)
     record = result["inventory"]["records"][0]
 
-    assert record["classification"] == "enroll"
+    assert record["classification"] == "needs-human-classification"
+    assert "mail policy" in "; ".join(record["classification_reasons"])
     assert record["path_ref"] == "dad://repo/public-repo"
     assert record["path_public_safe"] == "dad://repo/public-repo"
     assert str(public_repo) not in json.dumps(record)
+
+
+def test_inventory_remote_matched_public_github_repo_redacts_local_path(tmp_path: Path):
+    hub = tmp_path / "hub"
+    workspace = tmp_path / "workspace"
+    public_repo = _real_git_repo(workspace / "Sensitive Local Clone")
+    hub.mkdir()
+    subprocess.run(
+        [
+            "git",
+            "remote",
+            "add",
+            "origin",
+            "https://github.com/lowelltwong-alt/public-repo.git",
+        ],
+        cwd=public_repo,
+        check=True,
+        capture_output=True,
+    )
+    local_source = SimpleNamespace(
+        id="workspace",
+        path=workspace,
+        enabled=True,
+        follow_symlinks=False,
+    )
+    github_source = SimpleNamespace(
+        id="github-lowelltwong-alt",
+        owner="lowelltwong-alt",
+        enabled=True,
+        include_private=True,
+        repositories=[
+            {
+                "name": "public-repo",
+                "full_name": "lowelltwong-alt/public-repo",
+                "visibility": "public",
+                "archived": False,
+            }
+        ],
+    )
+
+    result = reconcile_repo_inventory(
+        hub,
+        local_sources=[local_source],
+        github_sources=[github_source],
+        max_depth=2,
+    )
+    record = result["inventory"]["records"][0]
+    serialized = json.dumps(record)
+
+    assert record["github_inventory_status"] == "matched_by_remote_origin"
+    assert record["github_visibility"] == "public"
+    assert record["public_facing"] is True
+    assert record["visibility"] == "public"
+    assert record["path_ref"] == "dad://github/lowelltwong-alt/public-repo"
+    assert record["path_public_safe"] == "dad://github/lowelltwong-alt/public-repo"
+    assert record["git_state"]["remote_origin"] == "redacted-public-facing"
+    assert str(public_repo) not in serialized
+    assert "Sensitive Local Clone" not in serialized
+
+
+def test_inventory_remote_matched_github_protected_repo_overrides_local_classification(
+    tmp_path: Path,
+):
+    hub = tmp_path / "hub"
+    workspace = tmp_path / "workspace"
+    local_clone = _real_git_repo(workspace / "renamed-local-clone")
+    hub.mkdir()
+    subprocess.run(
+        [
+            "git",
+            "remote",
+            "add",
+            "origin",
+            "https://github.com/lowelltwong-alt/logos-governance-architecture.git",
+        ],
+        cwd=local_clone,
+        check=True,
+        capture_output=True,
+    )
+    local_source = SimpleNamespace(
+        id="workspace",
+        path=workspace,
+        enabled=True,
+        follow_symlinks=False,
+    )
+    github_source = SimpleNamespace(
+        id="github-lowelltwong-alt",
+        owner="lowelltwong-alt",
+        enabled=True,
+        include_private=True,
+        repositories=[
+            {
+                "name": "logos-governance-architecture",
+                "full_name": "lowelltwong-alt/logos-governance-architecture",
+                "visibility": "public",
+                "archived": False,
+            }
+        ],
+    )
+
+    result = reconcile_repo_inventory(
+        hub,
+        local_sources=[local_source],
+        github_sources=[github_source],
+        max_depth=2,
+    )
+    record = result["inventory"]["records"][0]
+    serialized = json.dumps(record)
+
+    assert record["github_inventory_status"] == "matched_by_remote_origin"
+    assert record["classification"] == "protected-central-only"
+    assert record["write_boundary"] == "central_only"
+    assert "GitHub remote-origin match" in "; ".join(record["classification_reasons"])
+    assert record["path_ref"] == "dad://github/lowelltwong-alt/logos-governance-architecture"
+    assert str(local_clone) not in serialized
+    assert "renamed-local-clone" not in serialized
+
+
+def test_inventory_remote_matched_github_archived_repo_overrides_unreviewed_local_clone(
+    tmp_path: Path,
+):
+    hub = tmp_path / "hub"
+    workspace = tmp_path / "workspace"
+    local_clone = _real_git_repo(workspace / "old-local-tool")
+    hub.mkdir()
+    subprocess.run(
+        [
+            "git",
+            "remote",
+            "add",
+            "origin",
+            "https://github.com/lowelltwong-alt/archived-tool.git",
+        ],
+        cwd=local_clone,
+        check=True,
+        capture_output=True,
+    )
+    local_source = SimpleNamespace(
+        id="workspace",
+        path=workspace,
+        enabled=True,
+        follow_symlinks=False,
+    )
+    github_source = SimpleNamespace(
+        id="github-lowelltwong-alt",
+        owner="lowelltwong-alt",
+        enabled=True,
+        include_private=True,
+        repositories=[
+            {
+                "name": "archived-tool",
+                "full_name": "lowelltwong-alt/archived-tool",
+                "visibility": "private",
+                "archived": True,
+            }
+        ],
+    )
+
+    result = reconcile_repo_inventory(
+        hub,
+        local_sources=[local_source],
+        github_sources=[github_source],
+        max_depth=2,
+    )
+    record = result["inventory"]["records"][0]
+
+    assert record["github_inventory_status"] == "matched_by_remote_origin"
+    assert record["github_archived"] is True
+    assert record["classification"] == "archive-ignore"
+    assert record["write_boundary"] == "central_only"
+    assert "GitHub remote-origin match" in "; ".join(record["classification_reasons"])
+
+
+def test_inventory_mail_policy_does_not_promote_archive_path(tmp_path: Path):
+    hub = tmp_path / "hub"
+    repo = _git_repo(tmp_path / "archive" / "repo")
+    hub.mkdir()
+    policy = MailRepoPolicy(
+        id="repo-mail",
+        path=repo,
+        alias="repo",
+        visibility="internal",
+    )
+
+    result = reconcile_repo_inventory(hub, mail_policies=[policy], max_depth=2)
+    record = result["inventory"]["records"][0]
+
+    assert record["classification"] == "archive-ignore"
+    assert record["mail_policy_present"] is True
+    assert record["enrollment_policy_present"] is False
+
+
+def test_inventory_prefers_enrollment_policy_when_mail_policy_also_matches(
+    tmp_path: Path,
+):
+    hub = tmp_path / "hub"
+    repo = _git_repo(tmp_path / "repo")
+    hub.mkdir()
+    mail_policy = MailRepoPolicy(
+        id="repo-mail",
+        path=repo,
+        alias="repo",
+        visibility="internal",
+    )
+    enrollment_policy = EnrollmentRepoPolicy(
+        id="repo-enrollment",
+        path=repo,
+        alias="repo",
+        visibility="internal",
+        enrollment_enabled=True,
+        local_paths_allowed=True,
+    )
+
+    result = reconcile_repo_inventory(
+        hub,
+        mail_policies=[mail_policy],
+        enrollment_policies=[enrollment_policy],
+        max_depth=1,
+    )
+    record = result["inventory"]["records"][0]
+
+    assert record["repo_id"] == "repo-enrollment"
+    assert record["repo_id_source"] == "policy"
+    assert record["local_paths_allowed"] is True
+    assert record["mail_policy_present"] is True
+    assert record["enrollment_policy_present"] is True
+
+
+def test_inventory_public_contract_without_policy_redacts_local_path(tmp_path: Path):
+    hub = tmp_path / "hub"
+    repo = _git_repo(tmp_path / "Public Contract Repo")
+    hub.mkdir()
+    contract = repo / ".digital-asset" / "dad-integration.json"
+    contract.parent.mkdir(parents=True)
+    contract.write_text(
+        json.dumps(
+            {
+                "repo_id": "public-contract",
+                "repo_alias": "public-contract",
+                "visibility": "public",
+                "public_facing": True,
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    result = reconcile_repo_inventory(
+        hub,
+        local_sources=[
+            SimpleNamespace(id="workspace", path=repo.parent, enabled=True, follow_symlinks=False)
+        ],
+        max_depth=1,
+    )
+    record = result["inventory"]["records"][0]
+    serialized = json.dumps(record)
+
+    assert record["public_facing"] is True
+    assert record["repo_id"] == "public-contract"
+    assert record["repo_id_source"] == "contract"
+    assert record["path_ref"] == "dad://repo/public-contract"
+    assert str(repo) not in serialized
+
+
+def test_inventory_public_facing_git_state_redacts_branch_and_head(tmp_path: Path):
+    hub = tmp_path / "hub"
+    public_repo = _real_git_repo(tmp_path / "Public Repo", branch="feature/private-branch")
+    hub.mkdir()
+    policy = EnrollmentRepoPolicy(
+        id="public-repo",
+        path=public_repo,
+        alias="public-repo",
+        visibility="public",
+        public_facing=True,
+        enrollment_enabled=True,
+        allow_non_main_branch=True,
+        local_paths_allowed=False,
+    )
+
+    result = reconcile_repo_inventory(hub, enrollment_policies=[policy], max_depth=1)
+    record = result["inventory"]["records"][0]
+    serialized = json.dumps(record)
+
+    assert record["classification"] == "enroll"
+    assert record["git_state"]["branch_status"] == "non_main"
+    assert record["git_state"]["branch"] == "redacted-public-facing"
+    assert "feature/private-branch" not in serialized
+    assert str(public_repo) not in serialized
+
+
+def test_inventory_nested_git_root_is_reported_duplicate_ignore(tmp_path: Path):
+    hub = tmp_path / "hub"
+    parent = _git_repo(tmp_path / "workspace" / "parent")
+    _git_repo(parent / "vendor" / "child")
+    hub.mkdir()
+    source = SimpleNamespace(
+        id="workspace",
+        path=parent.parent,
+        enabled=True,
+        follow_symlinks=False,
+    )
+
+    result = reconcile_repo_inventory(hub, local_sources=[source], max_depth=4)
+    records = {record["repo_name"]: record for record in result["inventory"]["records"]}
+
+    assert "child" in records
+    assert records["child"]["nested_repo"] is True
+    assert records["child"]["classification"] == "duplicate-ignore"
+    assert records["child"]["addressing_status"] == "nested_repo"
+
+
+def test_inventory_workspace_root_git_metadata_does_not_make_children_nested(
+    tmp_path: Path,
+):
+    hub = tmp_path / "hub"
+    workspace = _git_repo(tmp_path / "git-projects")
+    child = _git_repo(workspace / "child")
+    hub.mkdir()
+    source = SimpleNamespace(
+        id="workspace",
+        path=workspace,
+        enabled=True,
+        follow_symlinks=False,
+    )
+
+    result = reconcile_repo_inventory(hub, local_sources=[source], max_depth=2)
+    records = {record["repo_name"]: record for record in result["inventory"]["records"]}
+
+    assert records[workspace.name]["classification"] == "duplicate-ignore"
+    assert records[child.name]["nested_repo"] is False
+    assert records[child.name]["classification"] == "needs-human-classification"
+
+
+def test_inventory_nested_bare_name_does_not_match_unrelated_policy(tmp_path: Path):
+    hub = tmp_path / "hub"
+    policy_repo = _git_repo(tmp_path / "workspace" / "dad")
+    parent = _git_repo(tmp_path / "workspace" / "parent")
+    nested = _git_repo(parent / "vendor" / "dad")
+    hub.mkdir()
+    policy = EnrollmentRepoPolicy(
+        id="dad-policy",
+        path=policy_repo,
+        alias="dad",
+        visibility="internal",
+        enrollment_enabled=True,
+    )
+    source = SimpleNamespace(
+        id="workspace",
+        path=tmp_path / "workspace",
+        enabled=True,
+        follow_symlinks=False,
+    )
+
+    result = reconcile_repo_inventory(
+        hub,
+        local_sources=[source],
+        enrollment_policies=[policy],
+        max_depth=4,
+    )
+    nested_record = next(
+        record
+        for record in result["inventory"]["records"]
+        if record["path_ref"].endswith("parent/vendor/dad")
+    )
+
+    assert nested_record["repo_name"] == nested.name
+    assert nested_record["repo_id"] == ""
+    assert nested_record["classification"] == "duplicate-ignore"
+    assert nested_record["enrollment_policy_present"] is False
+
+
+def test_inventory_skips_pytest_temp_workspaces(tmp_path: Path):
+    hub = tmp_path / "hub"
+    workspace = tmp_path / "workspace"
+    _git_repo(workspace / "pytest_tmp_dirty_mail" / "repo")
+    _git_repo(workspace / "keep-me")
+    hub.mkdir()
+    source = SimpleNamespace(
+        id="workspace",
+        path=workspace,
+        enabled=True,
+        follow_symlinks=False,
+    )
+
+    result = reconcile_repo_inventory(hub, local_sources=[source], max_depth=3)
+    names = {record["repo_name"] for record in result["inventory"]["records"]}
+
+    assert "repo" not in names
+    assert "keep-me" in names
+
+
+def test_inventory_skips_rust_target_build_roots(tmp_path: Path):
+    hub = tmp_path / "hub"
+    workspace = tmp_path / "workspace"
+    _git_repo(workspace / "target" / "generated")
+    _git_repo(workspace / "keep-me")
+    hub.mkdir()
+    source = SimpleNamespace(
+        id="workspace",
+        path=workspace,
+        enabled=True,
+        follow_symlinks=False,
+    )
+
+    result = reconcile_repo_inventory(hub, local_sources=[source], max_depth=3)
+    names = {record["repo_name"] for record in result["inventory"]["records"]}
+
+    assert "generated" not in names
+    assert "keep-me" in names
+
+
+def test_inventory_does_not_descend_symlinked_repo_without_followlinks(tmp_path: Path):
+    hub = tmp_path / "hub"
+    workspace = tmp_path / "workspace"
+    outside = _git_repo(tmp_path / "outside-repo")
+    workspace.mkdir()
+    hub.mkdir()
+    link = workspace / "linked-repo"
+    try:
+        link.symlink_to(outside, target_is_directory=True)
+    except OSError as exc:
+        pytest.skip(f"symlink creation unavailable: {exc}")
+    source = SimpleNamespace(
+        id="workspace",
+        path=workspace,
+        enabled=True,
+        follow_symlinks=False,
+    )
+
+    result = reconcile_repo_inventory(hub, local_sources=[source], max_depth=3)
+    names = {record["repo_name"] for record in result["inventory"]["records"]}
+
+    assert "linked-repo" not in names
+    assert "outside-repo" not in names
+
+
+def test_repo_inventory_rust_probe_parity_is_candidate_only(tmp_path: Path):
+    hub = tmp_path / "hub"
+    workspace = tmp_path / "workspace"
+    repo = _git_repo(workspace / "repo")
+    _git_repo(workspace / "pytest_tmp_dirty_mail" / "hidden")
+    hub.mkdir()
+    rust_summary = _rust_repo_probe_summary(
+        [
+            {
+                "root_alias": "dad-local-source/workspace",
+                "logical_path": "dad-local-source/workspace/repo",
+                "depth": 1,
+                "git_marker_type": "directory",
+                "contract_present": False,
+                "no_mutation_performed": True,
+            }
+        ],
+        skipped_dirs=[
+            {
+                "root_alias": "dad-local-source/workspace",
+                "logical_path": "dad-local-source/workspace/pytest_tmp_dirty_mail",
+                "reason": "pytest temp workspace",
+            },
+            {
+                "root_alias": "dad-local-source/workspace",
+                "logical_path": "dad-local-source/workspace/repo/.git",
+                "reason": "repo discovery skip directory",
+            },
+        ],
+    )
+
+    result = write_repo_inventory_rust_probe_parity(
+        hub,
+        roots=[workspace],
+        root_aliases=["dad-local-source/workspace"],
+        rust_summary=rust_summary,
+        max_depth=3,
+    )
+    parity = result["parity"]
+
+    assert parity["parity_status"] == "matched"
+    assert parity["python_repo_count"] == 1
+    assert parity["rust_repo_count"] == 1
+    assert parity["duplicate_logical_path_count"] == 0
+    assert parity["contract_present_mismatch_count"] == 0
+    assert parity["rust_unknown_contract_field_count"] == 0
+    assert parity["rust_contract_structural_pass_count"] == 0
+    assert parity["rust_contract_structural_fail_count"] == 1
+    assert parity["rust_contract_issue_code_count"] == 1
+    assert parity["rust_contract_parse_status_counts"] == {"missing": 1}
+    assert "deployment-doctor inputs only" in parity["contract_structural_scope"]
+    assert parity["duplicate_logical_paths"] == []
+    assert parity["contract_present_mismatches"] == []
+    assert parity["rust_unknown_contract_fields"] == []
+    assert parity["python_records"][0]["logical_path"] == "dad-local-source/workspace/repo"
+    assert "input_hashes" in parity
+    assert "candidate machine evidence only" in parity["authority_boundary"]
+    assert not (repo / "processed").exists()
+    assert Path(result["json_path"]) == hub / "processed" / "repo_inventory" / "rust_probe_shadow_parity.json"
+
+
+def test_repo_inventory_rust_probe_parity_normalizes_public_safe_logical_paths(
+    tmp_path: Path,
+):
+    hub = tmp_path / "hub"
+    workspace = tmp_path / "workspace"
+    _git_repo(workspace / "Mock Trial4.26 (active)")
+    hub.mkdir()
+    rust_summary = _rust_repo_probe_summary(
+        [
+            {
+                "root_alias": "dad-local-source/workspace",
+                "logical_path": "dad-local-source/workspace/mock-trial4.26-active",
+                "depth": 1,
+                "git_marker_type": "directory",
+                "contract_present": False,
+                "no_mutation_performed": True,
+            }
+        ],
+        skipped_dirs=[
+            {
+                "root_alias": "dad-local-source/workspace",
+                "logical_path": "dad-local-source/workspace/mock-trial4.26-active/.git",
+                "reason": "repo discovery skip directory",
+            }
+        ],
+    )
+
+    result = write_repo_inventory_rust_probe_parity(
+        hub,
+        roots=[workspace],
+        root_aliases=["dad-local-source/workspace"],
+        rust_summary=rust_summary,
+        max_depth=3,
+    )
+    parity = result["parity"]
+
+    assert parity["parity_status"] == "matched"
+    assert parity["python_records"][0]["logical_path"] == (
+        "dad-local-source/workspace/mock-trial4.26-active"
+    )
+    assert parity["only_python_logical_paths"] == []
+    assert parity["only_rust_logical_paths"] == []
+
+
+def test_repo_inventory_rust_probe_parity_rejects_duplicate_root_aliases(
+    tmp_path: Path,
+):
+    hub = tmp_path / "hub"
+    workspace = tmp_path / "workspace"
+    other = tmp_path / "other-workspace"
+    _git_repo(workspace / "repo")
+    _git_repo(other / "repo")
+    hub.mkdir()
+    rust_summary = _rust_repo_probe_summary([])
+
+    with pytest.raises(ValueError, match="root_alias values must be unique"):
+        write_repo_inventory_rust_probe_parity(
+            hub,
+            roots=[workspace, other],
+            root_aliases=["dad-local-source/workspace", "dad-local-source/workspace"],
+            rust_summary=rust_summary,
+            max_depth=3,
+        )
+
+
+def test_repo_inventory_rust_probe_parity_flags_skipped_dir_policy_drift(
+    tmp_path: Path,
+):
+    hub = tmp_path / "hub"
+    workspace = tmp_path / "workspace"
+    repo = _git_repo(workspace / "repo")
+    fs_target = repo / "target" / "generated"
+    fs_target.mkdir(parents=True)
+    (fs_target / ".git").mkdir()
+    hub.mkdir()
+    rust_summary = _rust_repo_probe_summary(
+        [
+            {
+                "root_alias": "dad-local-source/workspace",
+                "logical_path": "dad-local-source/workspace/repo",
+                "depth": 1,
+                "git_marker_type": "directory",
+                "contract_present": False,
+                "no_mutation_performed": True,
+            }
+        ],
+        skipped_dirs=[
+            {
+                "root_alias": "dad-local-source/workspace",
+                "logical_path": "dad-local-source/workspace/repo/.git",
+                "reason": "repo discovery skip directory",
+            }
+        ],
+    )
+
+    result = write_repo_inventory_rust_probe_parity(
+        hub,
+        roots=[workspace],
+        root_aliases=["dad-local-source/workspace"],
+        rust_summary=rust_summary,
+        max_depth=3,
+    )
+    parity = result["parity"]
+
+    assert parity["parity_status"] == "mismatch_candidate"
+    assert parity["skip_policy_mismatch_count"] == 1
+    assert parity["only_python_skipped_dirs"] == [
+        {
+            "logical_path": "dad-local-source/workspace/repo/target",
+            "reason": "repo discovery skip directory",
+            "source": "python_inventory_discovery",
+        }
+    ]
+
+
+def test_repo_inventory_rust_probe_parity_flags_contract_presence_drift(
+    tmp_path: Path,
+):
+    hub = tmp_path / "hub"
+    workspace = tmp_path / "workspace"
+    repo = _git_repo(workspace / "repo")
+    contract_path = repo / ".digital-asset" / "dad-integration.json"
+    contract_path.parent.mkdir(parents=True)
+    contract_path.write_text('{"repo_id":"repo"}', encoding="utf-8")
+    hub.mkdir()
+    rust_summary = _rust_repo_probe_summary(
+        [
+            {
+                "root_alias": "dad-local-source/workspace",
+                "logical_path": "dad-local-source/workspace/repo",
+                "depth": 1,
+                "git_marker_type": "directory",
+                "contract_present": False,
+                "no_mutation_performed": True,
+            }
+        ]
+    )
+
+    result = write_repo_inventory_rust_probe_parity(
+        hub,
+        roots=[workspace],
+        root_aliases=["dad-local-source/workspace"],
+        rust_summary=rust_summary,
+        max_depth=3,
+    )
+    parity = result["parity"]
+
+    assert parity["parity_status"] == "mismatch_candidate"
+    assert parity["only_python_logical_paths"] == []
+    assert parity["only_rust_logical_paths"] == []
+    assert parity["contract_present_mismatch_count"] == 1
+    assert parity["contract_present_mismatches"] == [
+        {
+            "logical_path": "dad-local-source/workspace/repo",
+            "python_contract_present": True,
+            "rust_contract_present": False,
+        }
+    ]
+    assert "candidate machine evidence only" in Path(result["markdown_path"]).read_text(
+        encoding="utf-8"
+    )
+
+
+def test_repo_inventory_rust_probe_parity_flags_reverse_contract_presence_drift(
+    tmp_path: Path,
+):
+    hub = tmp_path / "hub"
+    workspace = tmp_path / "workspace"
+    _git_repo(workspace / "repo")
+    hub.mkdir()
+    rust_summary = _rust_repo_probe_summary(
+        [
+            {
+                "root_alias": "dad-local-source/workspace",
+                "logical_path": "dad-local-source/workspace/repo",
+                "depth": 1,
+                "git_marker_type": "directory",
+                "contract_present": True,
+                "no_mutation_performed": True,
+            }
+        ]
+    )
+
+    result = write_repo_inventory_rust_probe_parity(
+        hub,
+        roots=[workspace],
+        root_aliases=["dad-local-source/workspace"],
+        rust_summary=rust_summary,
+        max_depth=3,
+    )
+    parity = result["parity"]
+
+    assert parity["parity_status"] == "mismatch_candidate"
+    assert parity["contract_present_mismatch_count"] == 1
+    assert parity["contract_present_mismatches"] == [
+        {
+            "logical_path": "dad-local-source/workspace/repo",
+            "python_contract_present": False,
+            "rust_contract_present": True,
+        }
+    ]
+
+
+def test_repo_inventory_rust_probe_parity_flags_missing_contract_probe_field(
+    tmp_path: Path,
+):
+    hub = tmp_path / "hub"
+    workspace = tmp_path / "workspace"
+    _git_repo(workspace / "repo")
+    hub.mkdir()
+    rust_summary = _rust_repo_probe_summary(
+        [
+            {
+                "root_alias": "dad-local-source/workspace",
+                "logical_path": "dad-local-source/workspace/repo",
+                "depth": 1,
+                "git_marker_type": "directory",
+                "no_mutation_performed": True,
+            }
+        ]
+    )
+
+    result = write_repo_inventory_rust_probe_parity(
+        hub,
+        roots=[workspace],
+        root_aliases=["dad-local-source/workspace"],
+        rust_summary=rust_summary,
+        max_depth=3,
+    )
+    parity = result["parity"]
+
+    assert parity["parity_status"] == "mismatch_candidate"
+    assert parity["contract_present_mismatch_count"] == 0
+    assert parity["rust_unknown_contract_field_count"] == 1
+    assert parity["rust_unknown_contract_fields"] == [
+        {
+            "logical_path": "dad-local-source/workspace/repo",
+            "root_alias": "dad-local-source/workspace",
+            "field_status": "missing",
+        }
+    ]
+    assert parity["rust_records"][0]["contract_present"] is None
+    assert parity["rust_records"][0]["contract_present_field_status"] == "missing"
+
+
+def test_repo_inventory_rust_probe_parity_flags_invalid_probe_summary(
+    tmp_path: Path,
+):
+    hub = tmp_path / "hub"
+    workspace = tmp_path / "workspace"
+    _git_repo(workspace / "repo")
+    hub.mkdir()
+    rust_summary = {
+        "schema_version": "old_probe",
+        "repo_count": 1,
+        "repos": [
+            {
+                "root_alias": "dad-local-source/workspace",
+                "logical_path": "dad-local-source/workspace/repo",
+                "contract_present": False,
+            }
+        ],
+    }
+
+    result = write_repo_inventory_rust_probe_parity(
+        hub,
+        roots=[workspace],
+        root_aliases=["dad-local-source/workspace"],
+        rust_summary=rust_summary,
+        max_depth=3,
+    )
+    parity = result["parity"]
+
+    assert parity["parity_status"] == "mismatch_candidate"
+    assert parity["rust_summary_valid"] is False
+    assert any("schema_version" in issue for issue in parity["rust_summary_validation_errors"])
+
+
+def test_repo_inventory_rust_probe_parity_flags_duplicate_logical_paths(
+    tmp_path: Path,
+):
+    hub = tmp_path / "hub"
+    workspace = tmp_path / "workspace"
+    _git_repo(workspace / "repo")
+    hub.mkdir()
+    rust_summary = _rust_repo_probe_summary(
+        [
+            {
+                "root_alias": "dad-local-source/workspace",
+                "logical_path": "dad-local-source/workspace/repo",
+                "depth": 1,
+                "git_marker_type": "directory",
+                "contract_present": False,
+                "no_mutation_performed": True,
+            },
+            {
+                "root_alias": "dad-local-source/workspace",
+                "logical_path": "dad-local-source/workspace/repo",
+                "depth": 1,
+                "git_marker_type": "directory",
+                "contract_present": False,
+                "no_mutation_performed": True,
+            },
+        ]
+    )
+
+    result = write_repo_inventory_rust_probe_parity(
+        hub,
+        roots=[workspace],
+        root_aliases=["dad-local-source/workspace"],
+        rust_summary=rust_summary,
+        max_depth=3,
+    )
+    parity = result["parity"]
+
+    assert parity["parity_status"] == "mismatch_candidate"
+    assert parity["python_repo_count"] == 1
+    assert parity["rust_repo_count"] == 2
+    assert parity["duplicate_logical_path_count"] == 1
+    assert parity["duplicate_logical_paths"] == [
+        {
+            "source": "rust_repo_inventory_probe",
+            "logical_path": "dad-local-source/workspace/repo",
+            "count": 2,
+        }
+    ]
+
+
+def test_repo_inventory_rust_probe_parity_reports_mismatch_without_classifying(
+    tmp_path: Path,
+):
+    hub = tmp_path / "hub"
+    workspace = tmp_path / "workspace"
+    _git_repo(workspace / "repo")
+    hub.mkdir()
+    rust_summary = _rust_repo_probe_summary(
+        [
+            {
+                "root_alias": "dad-local-source/workspace",
+                "logical_path": "dad-local-source/workspace/other",
+                "depth": 1,
+                "git_marker_type": "directory",
+                "contract_present": False,
+                "no_mutation_performed": True,
+            }
+        ]
+    )
+
+    result = write_repo_inventory_rust_probe_parity(
+        hub,
+        roots=[workspace],
+        root_aliases=["dad-local-source/workspace"],
+        rust_summary=rust_summary,
+        max_depth=3,
+    )
+    parity = result["parity"]
+
+    assert parity["parity_status"] == "mismatch_candidate"
+    assert parity["only_python_logical_paths"] == ["dad-local-source/workspace/repo"]
+    assert parity["only_rust_logical_paths"] == ["dad-local-source/workspace/other"]
+    assert "does not classify repos" in parity["authority_boundary"]
 
 
 def test_mocktrial_policy_can_classify_as_normal_enrollment(tmp_path: Path):
@@ -501,6 +2047,99 @@ def test_asset_scout_is_path_metadata_only_and_writes_central_report(tmp_path: P
     assert Path(result["path"]).parent == hub / "processed" / "reports"
     assert Path(result["path"]).name.startswith("asset-recognition-repo-")
     assert not (repo / "processed").exists()
+
+
+def test_collect_repo_local_assets_reads_canonical_and_legacy_metadata_only(tmp_path: Path):
+    hub = tmp_path / "hub"
+    repo = tmp_path / "repo"
+    hub.mkdir()
+    (hub / "registry").mkdir()
+    (hub / "registry" / "asset-recognition-methodology.json").write_text(
+        (ROOT / "registry" / "asset-recognition-methodology.json").read_text(encoding="utf-8"),
+        encoding="utf-8",
+    )
+    asset_dir = repo / ".digital-asset" / "assets"
+    ingest_dir = repo / ".digital-asset" / "dad-ingest"
+    asset_dir.mkdir(parents=True)
+    ingest_dir.mkdir(parents=True)
+    (asset_dir / "index.jsonl").write_text(
+        json.dumps(
+            {
+                "schema_version": "0.1.0",
+                "asset_id": "repo:asset:address",
+                "asset_type": "architecture_reference",
+                "title": "Address model",
+                "summary": "Metadata-only address model pointer.",
+                "source_paths": ["docs/address.md"],
+                "sensitivity": "internal",
+                "review_status": "candidate",
+                "fractal_address": {"layer": 9, "layer_name": "learning_adaptation"},
+                "graph_tags": ["address_model"],
+                "raw_blob": "do-not-copy",
+            }
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+    (ingest_dir / "asset_manifest.json").write_text(
+        json.dumps(
+            {
+                "manifest_id": "legacy",
+                "assets": [
+                    {
+                        "asset_id": "legacy:asset:workflow",
+                        "asset_type": "workflow",
+                        "title": "Legacy workflow",
+                        "summary": "Legacy workflow pointer.",
+                        "path": "docs/workflow.md",
+                        "sensitivity": "internal",
+                        "review_status": "candidate",
+                        "large_private_rows": "do-not-copy",
+                    }
+                ],
+            }
+        ),
+        encoding="utf-8",
+    )
+    (repo / "docs").mkdir()
+    (repo / "docs" / "address.md").write_text("secret=do-not-copy", encoding="utf-8")
+
+    result = collect_repo_local_assets(hub, repo, task="address workflow asset", limit=10)
+    payload = result["repo_assets"]
+
+    assert payload["declared_assets"]["record_count"] == 2
+    assert payload["standard"]["adopted_layer_count"] == 9
+    assert payload["declared_assets"]["records"][0]["fractal_address"]["layer"] == 9
+    assert "raw_blob" in payload["declared_assets"]["records"][0]["dropped_fields"]
+    assert "large_private_rows" in payload["declared_assets"]["records"][1]["dropped_fields"]
+    assert "do-not-copy" not in json.dumps(payload)
+    assert Path(result["path"]).parent == hub / "processed" / "reports" / "repo_local_assets"
+    assert not (repo / "processed").exists()
+
+
+def test_collect_repo_local_assets_tolerates_malformed_index_row(tmp_path: Path):
+    hub = tmp_path / "hub"
+    repo = tmp_path / "repo"
+    hub.mkdir()
+    (hub / "registry").mkdir()
+    (hub / "registry" / "asset-recognition-methodology.json").write_text(
+        (ROOT / "registry" / "asset-recognition-methodology.json").read_text(encoding="utf-8"),
+        encoding="utf-8",
+    )
+    asset_dir = repo / ".digital-asset" / "assets"
+    asset_dir.mkdir(parents=True)
+    (asset_dir / "index.jsonl").write_text(
+        '{"asset_id":"good","asset_type":"note","title":"Good","summary":"ok","source_paths":["a"],"sensitivity":"internal","review_status":"candidate"}\n'
+        "{not-json}\n",
+        encoding="utf-8",
+    )
+
+    result = collect_repo_local_assets(hub, repo, task="asset", limit=5)
+    canonical = result["repo_assets"]["declared_assets"]["canonical_index"]
+
+    assert canonical["record_count"] == 1
+    assert canonical["malformed_count"] == 1
+    assert result["repo_assets"]["declared_assets"]["record_count"] == 1
 
 
 def test_asset_scout_importance_tier_is_independent_of_task_wording(tmp_path: Path):

@@ -1,4 +1,5 @@
 import json
+import shutil
 from pathlib import Path
 
 from digital_asset_directory.database import CatalogDB
@@ -9,10 +10,60 @@ from digital_asset_directory.learning import (
     postflight,
     preflight,
 )
+from digital_asset_directory.exceptions_lake import (
+    collect_exception_events,
+    collect_exception_fix_outcomes,
+    record_exception_event,
+    record_exception_fix_outcome,
+)
 
 import pytest
 
 pytestmark = pytest.mark.integration
+ROOT = Path(__file__).resolve().parents[1]
+
+
+def _copy_exception_contracts(hub: Path) -> None:
+    for rel in [
+        "registry/exception-event-type-registry.json",
+        "registry/exception-learning-methodology.json",
+        "config/sources.example.yaml",
+    ]:
+        target = hub / rel
+        target.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copyfile(ROOT / rel, target)
+
+
+def _seed_permission_fix(hub: Path, repo: Path) -> str:
+    _copy_exception_contracts(hub)
+    record_exception_event(
+        hub,
+        repo,
+        event_type="permission_denied",
+        summary="PermissionError while replacing a generated mail archive file.",
+        stage="midflight",
+        severity="medium",
+        capture_contract="failed_command",
+        source_visibility="internal",
+    )
+    collect_exception_events(hub, repo)
+    event = json.loads(
+        (hub / "processed" / "exceptions" / "lake" / "events.jsonl")
+        .read_text(encoding="utf-8")
+        .splitlines()[0]
+    )
+    record_exception_fix_outcome(
+        hub,
+        repo,
+        event_id=event["event_id"],
+        decision="fixed",
+        summary="Added retry and fallback handling for Windows PermissionError.",
+        validation_refs=["python -m pytest tests/test_utils.py"],
+        regression_test_refs=["tests/test_utils.py::test_atomic_write_retries_permission_error"],
+        owner_authority="repo",
+    )
+    collect_exception_fix_outcomes(hub, repo)
+    return event["event_id"]
 
 
 def test_preflight_postflight_closes_session_and_persists(tmp_path: Path):
@@ -157,6 +208,47 @@ def test_preflight_surfaces_matching_learning_rules(tmp_path: Path):
     assert session["learning_rule_matches"][0]["matched_terms"] == ["calibration", "temp copy"]
 
 
+def test_preflight_surfaces_hard_issue_lookup_for_non_obvious_failures(tmp_path: Path):
+    hub = tmp_path / "hub"
+    hub.mkdir()
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    event_id = _seed_permission_fix(hub, repo)
+
+    session = preflight(
+        hub,
+        repo,
+        hub / "state" / "catalog.sqlite3",
+        "codex",
+        "hard issue: PermissionError while replacing generated mail archive",
+    )
+
+    lookup = session["hard_issue_lookup"]
+    assert lookup["match_count"] >= 1
+    assert lookup["matches"][0]["event_id"] == event_id
+    assert session["context_pack"]["hard_issue_lookup"]["matches"][0]["event_id"] == event_id
+    assert any("hard issue lookup" in warning for warning in session["context_pack"]["warnings"])
+
+
+def test_preflight_keeps_trivial_tasks_quiet(tmp_path: Path):
+    hub = tmp_path / "hub"
+    hub.mkdir()
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    _seed_permission_fix(hub, repo)
+
+    session = preflight(
+        hub,
+        repo,
+        hub / "state" / "catalog.sqlite3",
+        "codex",
+        "rename a local variable",
+    )
+
+    assert "hard_issue_lookup" not in session
+    assert "hard_issue_lookup" not in session["context_pack"]
+
+
 def test_midflight_blocks_until_learning_rule_acknowledged(tmp_path: Path):
     hub = tmp_path / "hub"
     hub.mkdir()
@@ -196,6 +288,29 @@ def test_midflight_blocks_until_learning_rule_acknowledged(tmp_path: Path):
     ]
     assert ok["status"] == "ok"
     assert ok["missing_learning_rule_acknowledgements"] == []
+
+
+def test_midflight_runs_hard_issue_lookup_when_failure_appears_later(tmp_path: Path):
+    hub = tmp_path / "hub"
+    hub.mkdir()
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    event_id = _seed_permission_fix(hub, repo)
+    session = preflight(
+        hub,
+        repo,
+        hub / "state" / "catalog.sqlite3",
+        "codex",
+        "normal implementation work",
+    )
+
+    result = midflight(
+        hub,
+        session["session_id"],
+        context=["PermissionError on os.replace while updating generated mail archive"],
+    )
+
+    assert result["hard_issue_lookup"]["matches"][0]["event_id"] == event_id
 
 
 def test_learning_rule_registry_loads_and_matches_real_seed_rules():

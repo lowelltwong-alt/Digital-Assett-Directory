@@ -86,7 +86,10 @@
           },
           "covered_rule_ids": {
             "type": "array",
-            "items": {"type": "string", "pattern": "^exception-capture-rule:[a-z0-9][a-z0-9:-]*$"},
+            "items": {
+              "type": "string",
+              "pattern": "^(exception-capture-rule|backfill-rule):[a-z0-9][a-z0-9:-]*$"
+            },
             "uniqueItems": true
           },
           "phase6_update_vectors": {

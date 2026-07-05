@@ -4,6 +4,19 @@
   "title": "DAD Exception Event Record",
   "type": "object",
   "additionalProperties": false,
+  "allOf": [
+    {
+      "if": {
+        "required": ["event_type"],
+        "properties": {
+          "event_type": { "const": "code_change_exception" }
+        }
+      },
+      "then": {
+        "required": ["change_context"]
+      }
+    }
+  ],
   "required": [
     "schema_version",
     "event_id",
@@ -191,6 +204,22 @@
         "exit_code": { "type": "integer" },
         "duration_ms": { "type": "integer", "minimum": 0 },
         "redacted_output_ref": { "type": "string" }
+      }
+    },
+    "change_context": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "change_ref",
+        "changed_surface",
+        "exception_reason",
+        "validation_ref_or_gap"
+      ],
+      "properties": {
+        "change_ref": { "type": "string", "minLength": 1, "maxLength": 240 },
+        "changed_surface": { "type": "string", "minLength": 1, "maxLength": 160 },
+        "exception_reason": { "type": "string", "minLength": 1, "maxLength": 600 },
+        "validation_ref_or_gap": { "type": "string", "minLength": 1, "maxLength": 300 }
       }
     },
     "safe_summary": { "type": "string", "minLength": 1, "maxLength": 1200 },

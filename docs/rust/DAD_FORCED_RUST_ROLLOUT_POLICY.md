@@ -31,3 +31,37 @@ asset-dir rust-rollout build-mail
 asset-dir rust-rollout apply --repo Digital-Assett-Directory --approval-id dad:approval:<id> --force
 asset-dir rust-rollout lessons-summarize
 ```
+
+`rust-rollout build-mail` runs DAD's mail dirty-state gate before regenerating
+staged instruction packets under `processed/mail/staged/rust_rollout/`. If DAD
+is dirty and packet regeneration itself is a reviewed repair action, use
+`--dirty-state-ack "<reason>"` with the current
+`--dirty-state-fingerprint "<fingerprint>"` reported by `mail storm-gate` or
+`mail doctor`; normal mail collect, route, and deliver commands still fail
+closed on dirty state.
+
+During a multi-repo Rust mail storm, run the authoritative gate first:
+
+```powershell
+python -m digital_asset_directory.cli mail storm-gate
+python -m digital_asset_directory.cli mail doctor --repo all --summary-only --fail-on-dirty --fail-on-coverage-gap
+```
+
+For a fast read-only Rust leaf probe of hub-local mail roots, run:
+
+```powershell
+python -m digital_asset_directory.cli rust mail-spool-check
+```
+
+The Rust probe reports structural evidence only. Python `mail storm-gate` gives
+the first go/no-go answer, and `mail doctor` remains the detailed authority for
+collect, route, deliver, public release, and adoption.
+
+The tracked `mail/outbox/rust_rollout/` tree is a reviewed reference snapshot,
+not the routine build target. Writing there requires
+`--promote-reference-snapshot-ack "<reason>"` after reviewing the staged packet
+diff and promotion evidence. Promotion appends metadata-only evidence to
+`processed/mail/archive/rust_rollout_snapshot_promotion.jsonl`, including packet
+hashes and the acknowledgement. That log is audit evidence only; it does not
+authorize inbox delivery, target repo adoption, public release, or cross-repo
+writes.

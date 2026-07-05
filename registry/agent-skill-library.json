@@ -212,6 +212,62 @@
       "review_status": "candidate",
       "last_reviewed_at": "2026-07-01",
       "next_review_due_at": "2026-10-01"
+    },
+    {
+      "skill_id": "skill:rust-qa-subagent-pack",
+      "name": "Rust QA Subagent Pack",
+      "version": "0.1.0",
+      "status": "candidate",
+      "skill_format": "generic_agent_skill",
+      "path": "assets/agent-skills/rust-qa-subagent-pack",
+      "entrypoint": "assets/agent-skills/rust-qa-subagent-pack/README.md",
+      "description": "AI-agnostic Rust architecture, QA, boundary, frontier, learning, and red-team subagent roles for DAD Rust work and downstream pointer checkout.",
+      "trigger_examples": [
+        "Review Rust scanner, parser, hasher, or CLI behavior before promotion.",
+        "Check a Python/Rust boundary for privacy, parity, and orchestration ownership.",
+        "Use a frontier scout to convert high-signal Rust practice into DAD candidate assets or harnesses."
+      ],
+      "does_not_apply_when": [
+        "The task is a trivial non-Rust edit.",
+        "Rust is proposed without a stable leaf boundary or profiling evidence.",
+        "The target repo has stricter local Rust guidance that supersedes this candidate pack."
+      ],
+      "capabilities": [
+        "rust_architecture_boundary_review",
+        "rust_leaf_test_hardening",
+        "rust_qa_gauntlet",
+        "python_rust_boundary_review",
+        "rust_frontier_scouting",
+        "rust_learning_capture",
+        "rust_red_team_premortem"
+      ],
+      "checkout_modes": ["pointer", "wrapper"],
+      "update_policy": "dad_mail_notice",
+      "lifecycle": {
+        "supersedes": [],
+        "superseded_by": [],
+        "retirement_reason": "",
+        "replacement_skill_id": "",
+        "change_notice_templates": [
+          "templates/mail/skill-update-available.mail.template.json",
+          "templates/mail/skill-retirement-notice.mail.template.json"
+        ]
+      },
+      "dependencies": [
+        "docs/rust/RUST_QA_SUBAGENTS.md",
+        "assets/rust-buildout-guide/rust-buildout.json",
+        "assets/dad-rust-upgrade-starter-pack/README.md",
+        "tools/dad_scan_core/tests/smoke.rs"
+      ],
+      "source_evidence": [
+        "docs/rust/RUST_QA_SUBAGENTS.md",
+        "assets/agent-skills/rust-qa-subagent-pack/subagents.yaml",
+        "lessons/rust_rollout/lesson_ledger.jsonl"
+      ],
+      "authority_boundary": "Candidate subagent roles guide review and testing only; target repos retain local authority and Rust adoption still requires profiling, parity, and validation evidence.",
+      "review_status": "candidate",
+      "last_reviewed_at": "2026-07-04",
+      "next_review_due_at": "2026-10-04"
     }
   ]
 }

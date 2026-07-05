@@ -7,7 +7,8 @@
     "contains_private_rows",
     "contains_prompt_injection_like_text",
     "contains_raw_log_blob",
-    "contains_secret_or_pii"
+    "contains_secret_or_pii",
+    "contains_source_or_diff"
   ],
   "rules": [
     {
@@ -1045,6 +1046,34 @@
       "applies_when": ["Existing exception taxonomy cannot represent the observed safe metadata."],
       "does_not_apply_when": ["A reviewed event type already fits."],
       "danger_if_missed": "Novel failure classes collapse into `other` and cannot be learned from.",
+      "review_status": "reviewed"
+    },
+    {
+      "rule_id": "exception-capture-rule:code-change-exception",
+      "pattern_family": "exception_pattern",
+      "description": "A material code change was made under exception conditions, caused unexpected behavior drift, or carried an explicit validation gap.",
+      "min_capture_surface_version": "0.4.0",
+      "match_signals": ["code_change_exception"],
+      "any_signals": [
+        "behavior_regression_from_change",
+        "change_risk_accepted",
+        "hotfix_without_full_validation",
+        "partial_fix_or_workaround",
+        "unexpected_side_effect"
+      ],
+      "suppress_signals": ["contains_private_rows", "contains_raw_log_blob", "contains_secret_or_pii", "contains_source_or_diff"],
+      "emit": {
+        "packet_classes": ["exception_event"],
+        "mail_message_type": "",
+        "exception_event_type": "code_change_exception",
+        "capture_contract": "postflight_exception",
+        "severity": "high",
+        "required_fields": ["changed_surface", "change_ref", "exception_reason", "safe_summary", "validation_ref_or_gap"],
+        "rationale": "The lake needs metadata-only records for risky, hotfix, partial, or side-effecting code changes so future agents learn from the fix path without receiving diffs or source bodies."
+      },
+      "applies_when": ["A code change materially deviates from the normal plan, lands as a hotfix or partial workaround, causes behavior drift, or cannot be fully validated before handoff."],
+      "does_not_apply_when": ["The code edit is routine, fully validated, and has no exception, side effect, accepted risk, or future-learning value."],
+      "danger_if_missed": "Code-change risks stay hidden in chat or commit context, so DAD sees only later failures and cannot connect the risky change to its fix outcome.",
       "review_status": "reviewed"
     },
     {

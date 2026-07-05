@@ -21,6 +21,25 @@
       "review_status": "reviewed"
     },
     {
+      "need_id": "dad:need:lesson-lifecycle-review-signals",
+      "name": "Lesson Lifecycle Review Signals",
+      "category": "lesson",
+      "priority": "high",
+      "send_when": [
+        "A repo reuses a DAD lesson and finds that it should be upgraded, downgraded, improved, superseded, archived, or checked again later.",
+        "A lesson becomes stale because a tool, schema, prompt, repo shape, source, or DAD asset changed.",
+        "A lesson is repeatedly helpful, repeatedly noisy, harmful, contradicted by new evidence, or too broad for its original context."
+      ],
+      "do_not_send": [
+        "Do not rewrite or delete the original lesson; send lifecycle evidence as an overlay.",
+        "Do not promote a lesson into a rule, harness, template, skill, or non-negotiable without a separate reviewed gate.",
+        "Do not send secrets, private rows, raw logs, hidden reasoning, or long source blobs."
+      ],
+      "payload_guidance": "Send lesson ID, lifecycle signal, reuse outcome, source or asset version context, applies/does-not-apply changes, superseding lesson or asset refs, suggested next_review_due_at, and evidence pointers or hashes.",
+      "target_control_planes": ["learning_postflight_loops", "dad_library", "mail_center"],
+      "review_status": "reviewed"
+    },
+    {
       "need_id": "dad:need:coding-harness-feedback",
       "name": "Coding Harness Feedback",
       "category": "coding_harness",
@@ -35,6 +54,26 @@
       ],
       "payload_guidance": "Send harness ID, repo context, task type, observed benefit or failure, timing if available, and validation commands.",
       "target_control_planes": ["coding_test_parity", "reusable_assets", "agent_skills"],
+      "review_status": "reviewed"
+    },
+    {
+      "need_id": "dad:need:harness-enforcement-tradeoff-feedback",
+      "name": "Harness Vs Enforcement Tradeoff Feedback",
+      "category": "coding_harness",
+      "priority": "critical",
+      "send_when": [
+        "A repo finds an issue that would be more useful as a harness or subharness than as another hard deterministic rule.",
+        "A deterministic check was too noisy, too bulky, or too expensive and should be downgraded to a harness, warning, or report.",
+        "A hard gate prevented a high-risk red-tier failure and should remain deterministic.",
+        "A repo discovers that the right answer changes by red/amber/green data sensitivity, blast radius, reversibility, or public-release posture."
+      ],
+      "do_not_send": [
+        "Do not send secrets, raw private rows, copied source blobs, full logs, or confidential examples.",
+        "Do not claim that a harness candidate is reviewed guidance before DAD review.",
+        "Do not use this feedback to bypass a required security, public-release, source-authority, or human-approval gate."
+      ],
+      "payload_guidance": "Send issue summary, proposed parent harness family, why harness/advisory/enforcement is preferred, risk tier, data-sensitivity tier, false-positive or false-negative notes, example pointers or hashes, and validation or synthetic-case ideas.",
+      "target_control_planes": ["coding_harnesses", "learning_postflight_loops", "mail_center", "governance_maps"],
       "review_status": "reviewed"
     },
     {
@@ -73,6 +112,25 @@
       ],
       "payload_guidance": "Record locally with asset-dir lesson review-feedback (agent, model, review_type, severity, findings, confirmed, recommendations, paths), then send the lesson summary and pointers through the outbox. DAD mines these via the lesson graph and the swe_review_feedback_loop pattern card.",
       "target_control_planes": ["learning_postflight_loops", "dad_library", "coding_harnesses", "mail_center"],
+      "review_status": "reviewed"
+    },
+    {
+      "need_id": "dad:need:integration-implementation-root-cause-patterns",
+      "name": "Integration And Implementation Root-Cause Patterns",
+      "category": "learning_loop",
+      "priority": "critical",
+      "send_when": [
+        "A repo sees repeated integration failures, implementation drift, boundary mismatch, ownership ambiguity, sequencing errors, or stale generated evidence that may have an architectural root cause.",
+        "Claude, Fable, Codex, Cursor, a reviewer, or a human suspects a pattern is architectural rather than a single local bug.",
+        "A fix moves across layers, changes ownership, reveals a missing schema/contract, or suggests a harness/enforcement tradeoff."
+      ],
+      "do_not_send": [
+        "Do not send raw logs, stack traces, private rows, secrets, copied source blobs, hidden reasoning, or raw review transcripts.",
+        "Do not treat Claude root-cause analysis as human approval or source truth.",
+        "Do not turn a single isolated typo or obvious local fix into a root-cause packet unless it repeats or reveals a boundary issue."
+      ],
+      "payload_guidance": "Send a Claude architectural root-cause packet: safe summary, symptom refs, boundary refs, architecture signal labels, suspected root causes, attempted fixes, validation refs, related assets/harnesses, and the harness-or-enforcement question.",
+      "target_control_planes": ["exceptions_lake", "learning_postflight_loops", "coding_harnesses", "architecture_references", "mail_center"],
       "review_status": "reviewed"
     },
     {
@@ -154,6 +212,27 @@
       "review_status": "reviewed"
     },
     {
+      "need_id": "dad:need:rust-rollout-feedback",
+      "name": "Rust Rollout, Mail Storm, And Scanner Feedback",
+      "category": "learning_loop",
+      "priority": "critical",
+      "send_when": [
+        "A repo deploys or evaluates Rust for scanners, validators, parity checks, performance work, or mixed Python/Rust boundaries.",
+        "A Rust rollout creates lessons about when Rust is appropriate, when Python should keep governance, or how parity failed or improved.",
+        "Concurrent Rust work makes DAD or a repo look dirty, creates duplicate source-outbox rows, exposes wrong-box writes, or reveals missing collection/routing/delivery audit evidence.",
+        "A repo discovers a Rust safety, determinism, no-write, path-alias, secret-fingerprint, corpus-semantics, or scanner-contract pattern that should update DAD's Rust assets."
+      ],
+      "do_not_send": [
+        "Do not send source file contents, corpus text, raw private logs, secrets, credentials, stack traces, or long copied code.",
+        "Do not write directly to DAD central inbox or another repo inbox; write only to the source repo's own `.digital-asset/mail/outbox.jsonl` unless a reviewed DAD command is collecting.",
+        "Do not claim Rust is promoted because it is faster; send profiling, parity, validation, and governance-boundary evidence.",
+        "Do not treat tracked Rust rollout reference snapshots as live mail delivery."
+      ],
+      "payload_guidance": "Send a Rust rollout lesson packet with source_repo, phase, problem, observed_failure_or_friction, fix_or_workaround, reusable_pattern, applies_to_repo_types, applies_when/does_not_apply_when when known, danger_if_misapplied, prompt/template-change flags, confidence, and safe evidence refs. Use docs/rust/RUST_ROLLOUT_LESSON_CAPTURE_PROTOCOL.md and schemas/rust-rollout-lesson.schema.json for the ledger shape.",
+      "target_control_planes": ["learning_postflight_loops", "coding_harnesses", "reusable_assets", "mail_center"],
+      "review_status": "reviewed"
+    },
+    {
       "need_id": "dad:need:asset-upgrade-impact",
       "name": "Asset Upgrade Impact",
       "category": "usage_feedback",
@@ -202,6 +281,26 @@
       ],
       "payload_guidance": "Send metadata-only drift summaries, stable repo IDs, source provenance, and requested human gate.",
       "target_control_planes": ["governance_maps", "data_maps", "mail_center", "repo_enrollment"],
+      "review_status": "reviewed"
+    },
+    {
+      "need_id": "dad:need:address-model-and-workflow-card-feedback",
+      "name": "Address Model And Workflow Card Feedback",
+      "category": "architecture",
+      "priority": "high",
+      "send_when": [
+        "A repo cannot compactly place an asset, exception, lesson, workflow, or orchestration record into DAD's 9-layer address model.",
+        "A workflow card needs a missing field, clearer step encoding, or a better ref pattern.",
+        "A frontier AI, architecture reviewer, or coding agent proposes a simpler or more powerful address model.",
+        "An asset card becomes bulky, ambiguous, or hard for preflight/context-pack routing to use."
+      ],
+      "do_not_send": [
+        "Do not send full workflow prose, copied prompts, raw logs, private rows, secrets, or long source blobs.",
+        "Do not treat a proposed address-model change as promoted without versioning, migration tests, and review.",
+        "Do not overwrite a source repo's local address canon; send DAD a candidate mapping or gap."
+      ],
+      "payload_guidance": "Send the affected layer or tuple segment, compact before/after proposal, workflow_card or step_card field gap, source refs, context tags, validation or synthetic fixture idea, and whether the issue is bloat, ambiguity, retrieval failure, provenance gap, or learning-loop failure.",
+      "target_control_planes": ["architecture_references", "dad_library", "learning_postflight_loops", "mail_center"],
       "review_status": "reviewed"
     }
   ]

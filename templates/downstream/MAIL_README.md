@@ -20,14 +20,26 @@ Skill checkout, update, retirement, and replacement notices are also candidate
 mail. They do not install a skill, plugin, hook, MCP server, or automation.
 Adopt DAD-managed skills only by local pointer or wrapper review.
 
+Before material DAD-guided coding, governance, enrollment, exception-capture,
+asset, skill, harness, or cross-repo work, check this mailbox first when the
+daily digest is stale. Normal preflight should warn when the digest is older
+than the repo cadence; a human can still ask for an immediate check.
+
 Run a digest at most once per day unless a human asks for an immediate check:
 
 ```text
 asset-dir mail digest --repo .
 ```
 
-If `asset-dir` is not available on `PATH`, run the same command from the DAD
-source checkout with `PYTHONPATH=src`:
+If `asset-dir` is not available on `PATH`, first try the stable DAD user shim:
+
+```text
+& "$HOME\.dad\bin\asset-dir.ps1" mail digest --repo .
+$HOME/.dad/bin/asset-dir mail digest --repo .
+```
+
+If the shim is unavailable too, run the same command from the DAD source
+checkout with `PYTHONPATH=src`:
 
 ```text
 python -m digital_asset_directory.cli mail digest --repo .
@@ -62,6 +74,37 @@ so it joins the original thread instead of duplicating it:
 asset-dir mail outbox-check --repo . --summary "<proposed summary>"
 asset-dir mail compose --repo . --type asset_suggestion --summary "<upgrade>" --supersedes <mail-id>
 ```
+
+During concurrent work, multiple agents may retry the same outbox candidate.
+That is acceptable as a source-outbox storm signal: DAD collection canonicalizes
+one row and records duplicate audit evidence. Do not write directly to DAD's
+`processed/mail/inbox/*.jsonl` or any repo's `.digital-asset/mail/inbox.jsonl`;
+DAD collection and delivery own those files.
+
+DAD collection reads source repo `outbox.jsonl` by stable snapshot. Source repos
+own their own outbox writes; DAD should not need to create source-outbox lock
+files during central collection. Active source locks still mean "try again
+later," because another agent may be appending candidate mail.
+
+Mailboxes are the current DAD edge adapter, not a promise that mail JSONL will
+remain the only communication layer. If this repo discovers that a DAD notice
+requires stronger response tracking, append pointer-safe candidate mail today
+and describe the needed event/response state in the payload. DAD may later
+promote that pattern into a reviewed event pipeline; until then, do not invent
+new cross-repo event files or bypass the mailbox/public-release gates.
+
+If DAD or a repo looks "very dirty" during Rust rollout or cross-repo learning
+work, use the DAD runbook at
+`dad://hub/docs/DAD_MAIL_STORM_AND_DIRTY_STATE_RUNBOOK.md`. The key distinction
+is that dirty git worktree state is not automatically mailbox corruption; DAD
+mail decisions use `asset-dir mail storm-gate` for the first go/no-go answer
+and `asset-dir mail doctor --repo all --summary-only --fail-on-dirty --fail-on-coverage-gap`
+for full diagnostics.
+
+Only `inbox.jsonl`, `outbox.jsonl`, `archive.jsonl`, and `adoption.jsonl` are
+live mailbox streams. Keep backup, damaged, or repair files outside this
+directory, or rename them without a `.jsonl` suffix, so they do not look like
+mail streams during DAD storm diagnostics.
 
 Send red-team, premortem, audit, security-review, and code-review findings from
 any agent (Fable, Opus, Codex, Claude, Cursor, human) back to DAD as structured

@@ -16,11 +16,78 @@
       "given": ["A user passes an explicit filesystem repo path to mail deliver.", "The path is not in reviewed mail.repos policy."],
       "expected": ["Block delivery.", "Explain that reviewed mail.repos policy is required."],
       "fail_if": ["Writes to the repo mailbox.", "Treats discovery as authorization."]
+    },
+    {
+      "case_id": "mail-spool-dirty-blocks-collect-route-deliver",
+      "given": ["A repo or agent writes directly to DAD processed/mail/inbox or a target .digital-asset/mail/inbox.", "No matching DAD collection or delivery audit exists."],
+      "expected": ["mail doctor reports dirty=true and safe_to_collect/safe_to_route/safe_to_deliver=false.", "The command explains that repo agents write only to their own .digital-asset/mail/outbox.jsonl."],
+      "fail_if": ["DAD routes or delivers the wrong-box row.", "The row is treated as ordinary git dirt.", "The payload is promoted without collection provenance."]
+    },
+    {
+      "case_id": "dad-inbound-mail-uses-source-outbox",
+      "given": ["A repo needs to send a Rust lesson, exception candidate, asset-use result, or learning-loop packet to DAD.", "The repo cannot run asset-dir or the DAD Python module locally."],
+      "expected": ["The repo appends metadata-only candidate mail to its own .digital-asset/mail/outbox.jsonl with target_repo=central_only.", "The row records dad_cli_unavailable and the attempted command when relevant.", "DAD collect later creates the central inbox row, collection audit, duplicate_seen evidence for retries, and normal route output."],
+      "fail_if": ["The repo writes directly to Digital-Assett-Directory/.digital-asset/mail/inbox.jsonl.", "The repo writes directly to processed/mail/inbox/*.jsonl or any target repo inbox.", "The fallback row includes raw logs, secrets, private rows, copied source blobs, or hidden reasoning.", "A direct central-only row is treated as delivered mail."]
+    },
+    {
+      "case_id": "invalid-source-outbox-row-quarantine-is-hash-bound",
+      "given": ["A repo outbox contains valid JSON that fails the DAD mail packet schema.", "The row has not been collected, routed, or delivered."],
+      "expected": ["mail doctor blocks before quarantine.", "mail doctor --quarantine-invalid-packets requires --invalid-quarantine-ack.", "After quarantine, the same path/hash is an observation and the source repo must still fix or replay the bad row.", "If the row changes after quarantine, mail doctor blocks again."],
+      "fail_if": ["DAD edits or deletes the source outbox row.", "The quarantine copies raw payload content.", "A central inbox, central outbox, or repo inbox invalid row is treated as safe.", "The quarantined invalid row is delivered or adopted."]
+    },
+    {
+      "case_id": "dirty-worktree-is-not-mail-corruption",
+      "given": ["DAD has ordinary source, docs, or Rust rollout reference-snapshot changes in git status.", "mail doctor finds no malformed JSONL, locks, wrong-box inbox rows, or invalid Rust rollout packets."],
+      "expected": ["mail doctor reports dirty=false, spool_dirty=false, worktree_dirty=true.", "--fail-on-dirty exits successfully.", "--fail-on-worktree-dirty exits non-zero when clean-tree enforcement is explicitly requested."],
+      "fail_if": ["Normal collection/routing is blocked only because git status is dirty.", "worktree_dirty is used as proof that mail spools are corrupt.", "Rust rollout reference-snapshot churn is treated as delivered mail."]
+    },
+    {
+      "case_id": "mail-storm-gate-classifies-very-dirty-state",
+      "given": ["DAD has reviewed mail.repos coverage, clean mail spools, and a dirty git worktree with Rust rollout reference-snapshot churn.", "No unreviewed mailbox candidates, wrong-box writes, active locks, malformed rows, or invalid Rust rollout packets are present."],
+      "expected": ["mail storm-gate reports gate_status=mail_safe_worktree_dirty.", "safe_for_ingest_operations=true, safe_for_delivery_operations=true, and safe_for_mail_storm_operations=true.", "safe_to_collect, safe_to_route, and safe_to_deliver are true.", "--operation ingest and --operation delivery both pass.", "worktree_dirty is still surfaced for push/merge review."],
+      "fail_if": ["A clean spool plus dirty worktree blocks mail movement.", "storm-gate hides worktree dirty state.", "storm-gate treats tracked Rust reference snapshots as delivered mail."]
+    },
+    {
+      "case_id": "protected-delivery-hold-does-not-block-ingest",
+      "given": ["DAD has clean reviewed source outboxes and central spools.", "At least one selected repo is write-protected or delivery_allowed=false."],
+      "expected": ["mail storm-gate reports gate_status=mail_safe_delivery_policy_hold.", "safe_for_ingest_operations=true and safe_for_delivery_operations=false.", "blocked_operation_classes contains only deliver.", "mail storm-gate --operation ingest exits successfully.", "mail storm-gate --operation delivery fails closed unless --no-fail-on-blocked is used."],
+      "fail_if": ["Collect or route is blocked only because a protected repo cannot receive delivery.", "Delivery proceeds to a write-protected repo.", "The report calls the spool dirty when only delivery policy is held."]
+    },
+    {
+      "case_id": "source-outbox-duplicate-storm-is-observed-not-blocking",
+      "given": ["A source repo outbox contains repeated rows for the same mail identity.", "No malformed JSONL, active lock, wrong-box central row, or delivery spoof exists."],
+      "expected": ["mail doctor reports dirty=false with source_outbox_duplicate_identity observations.", "mail collect writes one central row and records duplicate_seen audit evidence."],
+      "fail_if": ["Collection is blocked only because a source outbox retried a row.", "Duplicate source rows create repeated central inbox candidates.", "No duplicate_seen audit row is written."]
+    },
+    {
+      "case_id": "cross-source-outbox-identity-conflict-blocks",
+      "given": ["Two reviewed mail.repos entries with different repo IDs contain the same source-outbox packet identity.", "No collection audit proves which source owns the candidate."],
+      "expected": ["mail doctor reports dirty=true with cross_source_outbox_duplicate_identity.", "mail collect reports cross_source_original_identity_conflict rather than silently deduping the second source."],
+      "fail_if": ["A packet copied into another reviewed repo outbox is treated as a harmless retry.", "The central inbox records duplicate_seen without showing the source conflict.", "Routing or delivery proceeds before provenance review."]
+    },
+    {
+      "case_id": "multi-repo-storm-docs-use-storm-gate",
+      "given": ["A downstream agent reads DAD Rust rollout or mail-governance guidance during a real multi-repo storm.", "Reviewed mail.repos policy exists for external repo mailboxes."],
+      "expected": ["Docs, prompts, and manual runbooks name mail storm-gate as the first go/no-go command.", "They tell agents to inspect safe_for_ingest_operations, safe_for_delivery_operations, safe_for_mail_storm_operations, safe_to_collect, safe_to_route, safe_to_deliver, and worktree_dirty.", "They route blocked gates to mail doctor --repo all --summary-only --fail-on-dirty --fail-on-coverage-gap for full diagnostics."],
+      "fail_if": ["Guidance only shows the hub-local mail doctor command.", "A clean Rust structural probe is described as enough to authorize collect, route, deliver, public release, or adoption.", "The storm gate is described as a repair, release, delivery, or snapshot promotion command."]
+    },
+    {
+      "case_id": "backdated-central-inbox-row-requires-legacy-allowlist",
+      "given": ["A central inbox row lacks a collection audit and self-declares an old source_provenance.collected_at timestamp."],
+      "expected": ["mail doctor blocks until a separate legacy allowlist row matches mail_id, dedupe_key, and record_hash.", "The allowlist states candidate evidence only and does not approve delivery, adoption, or public release."],
+      "fail_if": ["Backdated packet content is trusted by itself.", "A stale filesystem timestamp is enough to mark the row clean.", "The row can route without collection audit or reviewed legacy allowlist."]
+    },
+    {
+      "case_id": "rust-rollout-tracked-snapshot-requires-promotion-ack",
+      "given": ["rust-rollout build-mail is pointed at tracked mail/outbox/rust_rollout instead of ignored processed/mail/staged/rust_rollout."],
+      "expected": ["The command blocks unless --promote-reference-snapshot-ack is present.", "Default build-mail output stays under ignored staging."],
+      "fail_if": ["Routine branch work churns tracked Rust rollout reference snapshots.", "Tracked snapshots are treated as delivered mail.", "Staged-vs-tracked promotion is invisible in command output."]
     }
   ],
   "must_not_claim": [
     "Do not claim discovery authorizes enrollment.",
-    "Do not write outside mailbox paths during recurring operation."
+    "Do not write outside mailbox paths during recurring operation.",
+    "Do not treat ordinary DAD git worktree dirt as mailbox corruption."
   ],
   "promotion_gate": "Promote only after tests cover unreviewed, protected, dirty, non-main, public-facing, and private-origin cases."
 }

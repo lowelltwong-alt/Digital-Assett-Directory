@@ -151,6 +151,7 @@ phases:
     status: active
     acceptance:
       required_files:
+        - roadmap/evidence/dad-deployment-and-all-repo-verification-roadmap.md
         - docs/DAD_EXCEPTIONS_LAKE_BUILDOUT.md
         - schemas/exception-event.schema.json
         - schemas/exception-fix-outcome.schema.json
@@ -165,8 +166,10 @@ phases:
         - processed/exceptions/lake/events.jsonl
         - processed/reports/exceptions_lake.json
         - processed/reports/exception_capture_completeness.json
+        - processed/reports/exception_capture_emission_simulation.json
         - processed/reports/exception_taxonomy_coverage.json
         - processed/reports/exception_capture_observed_audit.json
+        - processed/reports/phase6_exception_capture_machine_evidence_summary.json
       human_gates:
         - id: phase-6-capture-completeness-harness-reviewed
           description: synthetic harness proves DAD-worthy patterns become mail or exception packets without human chat intervention
@@ -189,6 +192,7 @@ phases:
     status: planned
     acceptance:
       required_files:
+        - roadmap/evidence/dad-deployment-and-all-repo-verification-roadmap.md
         - docs/RESEARCH_INTAKE_PIPELINE.md
         - docs/LANGUAGE_CODING_ADVANTAGE.md
         - registry/trusted-source-registry.json
@@ -218,3 +222,149 @@ phases:
         - id: phase-7-downstream-rust-rollout-boundary-reviewed
           description: non-Logos rollout remains candidate mail by default; Logos local writes require explicit separate approval
     evidence_note: The starter pack is preserved under assets and the DAD-local dad_scan_core overlay is installed with a Python bridge, rollout policy, local mail packet builder, and lesson ledger. Broader downstream rollout remains gated; DAD must prove profile/parity value before recommending Rust in downstream repos.
+
+  - id: phase-8-dad-local-deployment
+    title: Local DAD deployment and hub resolution
+    status: planned
+    acceptance:
+      required_files:
+        - roadmap/evidence/dad-deployment-and-all-repo-verification-roadmap.md
+        - roadmap/evidence/phase-8-dad-local-deployment.md
+        - roadmap/evidence/phase-8-dad-local-deployment.commands.json
+        - AGENTS.md
+        - AI_FRONT_DOOR.md
+        - .digital-asset/dad-integration.json
+      commands:
+        - python -m pytest tests/test_dad_local_deployment.py -q
+        - python -m digital_asset_directory.cli doctor --hub . --scope deployment
+        - user-shim asset-dir doctor --scope deployment from two non-DAD repos
+        - user-shim asset-dir doctor --scope deployment from Mock Trial4.26 and LawFirm-os-intake without target worktree changes
+        - user-shim asset-dir agent preflight --repo . --agent codex --task "Goal 1 deployment smoke from outside DAD"
+      human_gates:
+        - id: phase-8-local-install-reviewed
+          description: DAD can be installed or wrapped so asset-dir works from outside the DAD checkout without manual PYTHONPATH knowledge
+        - id: phase-8-hub-locator-reviewed
+          description: --hub, DAD_HUB, and user-level hub config resolve the same canonical DAD hub from non-DAD repos
+        - id: phase-8-doctor-smoke-reviewed
+          description: asset-dir doctor passes from DAD and at least two non-DAD repos
+        - id: phase-8-unavailable-policy-reviewed
+          description: unavailable DAD warns for ordinary local coding and fails closed for cross-repo writes, protected repo work, public release, and sensitive mail
+    evidence_note: This phase proves DAD is reachable as a local tool before any broad repo enrollment or daily recurring operation is trusted.
+
+  - id: phase-9-all-repo-read-only-inventory
+    title: All-repo read-only inventory and classification proof
+    status: planned
+    acceptance:
+      depends_on:
+        - phase-8-dad-local-deployment
+      required_files:
+        - roadmap/evidence/dad-deployment-and-all-repo-verification-roadmap.md
+        - roadmap/evidence/phase-9-all-repo-read-only-inventory.md
+        - docs/DAD_REPO_ENROLLMENT.md
+      human_gates:
+        - id: phase-9-inventory-scope-reviewed
+          description: GitHub-visible repos, local Git roots, reviewed policies, and existing contracts are reconciled without writing to target repos
+        - id: phase-9-classification-reviewed
+          description: repos are classified as enroll, protected-central-only, active-no-write, side-project, archive-ignore, duplicate-ignore, or needs-human-classification
+        - id: phase-9-protected-active-rules-reviewed
+          description: Logos Scripture Graph and Logos Governance remain protected-central-only while Mock Trial/Albert is active but not extra-protected
+        - id: phase-9-public-safe-report-reviewed
+          description: public-facing inventory output does not expose local absolute paths unless explicitly approved
+    evidence_note: This phase answers whether DAD understands the whole repo world before it is allowed to mutate any repo.
+
+  - id: phase-10-mail-end-to-end-trial
+    title: End-to-end DAD mail trial across synthetic repos
+    status: planned
+    acceptance:
+      depends_on:
+        - phase-8-dad-local-deployment
+        - phase-9-all-repo-read-only-inventory
+      required_files:
+        - roadmap/evidence/dad-deployment-and-all-repo-verification-roadmap.md
+        - roadmap/evidence/phase-10-mail-end-to-end-trial.md
+        - docs/MAIL_CENTER.md
+      human_gates:
+        - id: phase-10-two-repo-mail-harness-reviewed
+          description: temp repo A sends mail, DAD collects/routes/dedupes it, and temp repo B receives candidate inbox mail
+        - id: phase-10-mailbox-write-boundary-reviewed
+          description: delivery writes only .digital-asset/mail paths unless a separate enrollment approval exists
+        - id: phase-10-private-public-release-reviewed
+          description: private, internal, restricted, or unknown source mail to public-facing target is quarantined until human release
+        - id: phase-10-duplicate-delivery-reviewed
+          description: duplicate mail delivery becomes acknowledgement/archive evidence and does not spam target inboxes
+    evidence_note: This phase tests the repo nervous system before real repo waves depend on mail.
+
+  - id: phase-10a-mailbox-event-pipeline
+    title: Mailbox-backed event/data pipeline design and proof
+    status: planned
+    acceptance:
+      depends_on:
+        - phase-8-dad-local-deployment
+        - phase-9-all-repo-read-only-inventory
+        - phase-10-mail-end-to-end-trial
+      required_files:
+        - roadmap/evidence/dad-deployment-and-all-repo-verification-roadmap.md
+        - docs/MAIL_CENTER.md
+        - templates/downstream/MAIL_README.md
+      human_gates:
+        - id: phase-10a-event-contract-reviewed
+          description: repo-local event outbox, central event log, provenance, dedupe, quarantine, and response-state contracts are reviewed
+        - id: phase-10a-mailbox-edge-boundary-reviewed
+          description: mailboxes remain safe repo-local edge adapters while DAD event logs become central candidate state
+        - id: phase-10a-response-loop-reviewed
+          description: actionable notices require explicit repo response events such as acknowledged, saved_for_future, implemented, rejected, deferred, or needs_human_review
+        - id: phase-10a-rust-leaf-checker-reviewed
+          description: Rust is evaluated only for deterministic leaf validation, scanning, hashing, dedupe, and freshness checks with Python/DAD retaining policy authority
+        - id: phase-10a-cloud-boundary-reviewed
+          description: any Cloudflare mirror is public-safe metadata only until local-first gates and human release rules are satisfied
+    evidence_note: This phase records the pivot from mail-as-system to event pipeline with mailbox presentation, without authorizing cloud deployment or broad repo writes.
+
+  - id: phase-11-dad-library-card-catalog-upgrade
+    title: DAD library card catalog and context-pack route upgrade
+    status: planned
+    acceptance:
+      depends_on:
+        - phase-8-dad-local-deployment
+      required_files:
+        - roadmap/evidence/dad-deployment-and-all-repo-verification-roadmap.md
+        - AI_FRONT_DOOR.md
+        - AI_TABLE_OF_CONTENTS.md
+        - MACHINE_NAVIGATION_MANIFEST.json
+        - docs/CODING_HARNESS_LIBRARY.md
+      human_gates:
+        - id: phase-11-offering-routes-reviewed
+          description: important DAD assets, harnesses, skills, templates, Rust assets, mail, exceptions, and enrollment routes have exact AI front-door and TOC entries
+        - id: phase-11-context-pack-golden-tasks-reviewed
+          description: preflight/context-pack output returns compact, task-relevant recommendations for golden coding, governance, mail, Rust, and enrollment tasks
+        - id: phase-11-offering-authority-reviewed
+          description: offerings record use_when, do_not_use_when, validation, owner authority, update channel, and adoption semantics
+        - id: phase-11-usage-ledger-reviewed
+          description: DAD can report which repos use, watch, reject, or depend on DAD assets without treating match scores as proof of value
+    evidence_note: This phase makes DAD readable by agents so deployment does not become a scavenger hunt.
+
+  - id: phase-12-reviewed-enrollment-waves
+    title: Reviewed enrollment waves for persistent repos
+    status: planned
+    acceptance:
+      depends_on:
+        - phase-8-dad-local-deployment
+        - phase-9-all-repo-read-only-inventory
+        - phase-10-mail-end-to-end-trial
+        - phase-10a-mailbox-event-pipeline
+        - phase-11-dad-library-card-catalog-upgrade
+      required_files:
+        - roadmap/evidence/dad-deployment-and-all-repo-verification-roadmap.md
+        - docs/DAD_REPO_ENROLLMENT.md
+        - templates/downstream/DAD_INTEGRATION.template.json
+      human_gates:
+        - id: phase-12-wave-policy-reviewed
+          description: every repo in a wave appears in reviewed enrollment policy with approval id, visibility, branch, dirty-worktree status, and allowed write paths
+        - id: phase-12-apply-boundary-reviewed
+          description: enrollment apply/update writes only approved DAD-managed surfaces and preserves local repo authority outside markers
+        - id: phase-12-cadence-reviewed
+          description: daily mail and weekly asset/skill/template/architecture/governance/data-map checks are configured without heavy preflight work
+        - id: phase-12-protected-repo-wave-reviewed
+          description: protected Logos repos remain central-only unless explicit repo-specific local-write approval is recorded
+        - id: phase-12-rename-copy-split-reviewed
+          description: renamed/copied repos preserve stable repo ID where valid, while split repos require new enrollment records
+    evidence_note: "This phase is intentionally last: broad enrollment starts only after deployment, inventory, mail, event pipeline, catalog routes, exception capture, and Rust boundaries have evidence."

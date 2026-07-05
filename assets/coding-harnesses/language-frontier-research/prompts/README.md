@@ -27,3 +27,9 @@ proof surface, local falsification idea, AI-overlooked pattern, and target DAD
 surface. The prompt is pointer-only by design: it screens candidates into DAD
 without copying external docs, code, benchmark tables, private rows, raw logs,
 or long source blobs.
+
+For a scarce-credit Fable 5 audit of the July 2026 DAD buildout, start with
+`processed/fable5/deep-dives/2026-07-04-dad-last-48h/fable5-master-prompt.md`.
+It ranks exception capture, mail, Rust rollout, navigation drift, and frontier
+research risks, then asks Fable to solve the hardest problems and delegate
+mechanical fixes to Codex.

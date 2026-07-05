@@ -7,12 +7,14 @@ import re
 import subprocess
 import time
 import zipfile
+from collections import Counter
 from collections.abc import Sequence
 from pathlib import Path
 from typing import Any
 
 from .ids import stable_id
-from .utils import append_jsonl, atomic_write_text, json_dumps, sha256_file, utc_now
+from .rust_bridge.dad_scan_core import validate_repo_inventory_probe_summary
+from .utils import append_jsonl, atomic_write_text, json_dumps, sha256_bytes, sha256_file, utc_now
 
 NEEDS_REGISTRY = Path("registry") / "dad-needs-registry.json"
 OFFERINGS_REGISTRY = Path("registry") / "dad-offerings-registry.json"
@@ -22,6 +24,7 @@ HARNESS_DISCOVERY_METHODOLOGY = Path("registry") / "harness-discovery-methodolog
 HARNESS_REGISTRY = Path("registry") / "coding-harness-registry.json"
 NON_NEGOTIABLES_REGISTRY = Path("registry") / "non-negotiables.json"
 ASSET_PATTERN_REGISTRY = Path("registry") / "asset-pattern-registry.json"
+ADDRESS_MODEL_REGISTRY = Path("registry") / "dad-address-model-registry.json"
 CENTRAL_USAGE_LEDGER = Path("processed") / "usage" / "repo-asset-usage.jsonl"
 DECISION_TRACE_LEDGER = Path("processed") / "usage" / "decision-traces.jsonl"
 HARNESS_OUTCOME_LEDGER = Path("processed") / "usage" / "harness-outcomes.jsonl"
@@ -29,6 +32,24 @@ HARNESS_REPORT_DIR = Path("processed") / "harnesses"
 REPO_INVENTORY_DIR = Path("processed") / "repo_inventory"
 CADENCE_REPORT_DIR = Path("processed") / "cadence"
 LOCAL_USAGE_LEDGER = Path(".digital-asset") / "dad-usage.jsonl"
+LOCAL_ASSET_INDEX = Path(".digital-asset") / "assets" / "index.jsonl"
+LOCAL_ASSET_ADOPTION = Path(".digital-asset") / "assets" / "adoption.jsonl"
+LOCAL_ASSET_README = Path(".digital-asset") / "assets" / "README.md"
+LOCAL_LEARNING_LEDGER = Path(".digital-asset") / "learning" / "events.jsonl"
+LEGACY_LEARNING_LEDGER = Path(".digital-asset-directory") / "learning" / "events.jsonl"
+LEGACY_DAD_INGEST_MANIFEST = Path(".digital-asset") / "dad-ingest" / "asset_manifest.json"
+REPO_ASSET_REPORT_DIR = Path("processed") / "reports" / "repo_local_assets"
+REPO_INVENTORY_METHODOLOGY = Path("src") / "digital_asset_directory" / "dad_library.py"
+REPO_INVENTORY_INPUT_REFS = (
+    REPO_INVENTORY_METHODOLOGY,
+    Path("src") / "digital_asset_directory" / "config.py",
+)
+REPO_INVENTORY_RUST_PARITY_INPUT_REFS = (
+    REPO_INVENTORY_METHODOLOGY,
+    Path("src") / "digital_asset_directory" / "rust_bridge" / "dad_scan_core.py",
+    Path("tools") / "dad_scan_core" / "src" / "repo_probe.rs",
+    Path("tools") / "dad_scan_core" / "src" / "models.rs",
+)
 
 USAGE_STATUSES = {"using", "watching", "rejected", "retired"}
 TRIAGE_DECISIONS = {"use_now", "save_for_future", "defer", "reject", "needs_human_review"}
@@ -41,6 +62,46 @@ CENTRAL_ONLY_BOUNDARY = (
     "This DAD report is central candidate metadata only. It does not authorize "
     "enrollment, delivery, hooks, source edits, or writes to downstream repos."
 )
+REPO_ASSET_SURFACE_BOUNDARY = (
+    "Repo-local digital asset directories are source-repo owned candidate memory. "
+    "DAD collection reads metadata pointers only; it does not copy private rows, "
+    "raw source blobs, secrets, generated databases, or source authority."
+)
+LOCAL_ASSET_STANDARD_VERSION = "0.1.0"
+LOCAL_ASSET_ALLOWED_FIELDS = {
+    "asset_id",
+    "title",
+    "name",
+    "asset_type",
+    "local_path",
+    "path",
+    "source_paths",
+    "summary",
+    "problem_solved",
+    "tags",
+    "context_tags",
+    "pattern_id",
+    "pattern_ids",
+    "validation_commands",
+    "source_refs",
+    "sensitivity",
+    "review_status",
+    "lifecycle_status",
+    "leverage",
+    "fractal_address",
+    "upgrade_channel",
+    "applies_when",
+    "does_not_apply_when",
+    "graph_tags",
+    "novelty_claim",
+    "usefulness_context",
+    "parent_asset_id",
+    "derived_from",
+    "workflow_ref",
+    "learning_ref",
+    "updated_at",
+    "created_at",
+}
 REPO_SKIP_DIRS = {
     ".git",
     ".hg",
@@ -62,6 +123,7 @@ REPO_SKIP_DIRS = {
     ".pytest-tmp-root",
     "_codex_worktrees",
     ".worktrees",
+    "target",
 }
 ARCHIVE_MARKERS = {"99_archive", "archive", "archives", "snapshot", "snapshots"}
 DUPLICATE_MARKERS = {"repos", "ss", "temp", "tmp", "reference", "references"}
@@ -88,6 +150,19 @@ LAW_FIRM_KERNEL_MARKERS = {
 LAW_FIRM_SIDE_MARKERS = {"intake", "talent", "intelligence"}
 
 
+def _is_repo_skip_dir_name(name: str) -> bool:
+    return _repo_inventory_skip_reason(name) is not None
+
+
+def _repo_inventory_skip_reason(name: str) -> str | None:
+    lowered = name.lower()
+    if lowered.startswith(("pytest-of-", "pytest_tmp", "pytest-tmp")):
+        return "pytest temp workspace"
+    if lowered in REPO_SKIP_DIRS:
+        return "repo discovery skip directory"
+    return None
+
+
 def _load_json(path: Path) -> dict[str, Any]:
     if not path.exists():
         raise FileNotFoundError(path)
@@ -96,6 +171,25 @@ def _load_json(path: Path) -> dict[str, Any]:
 
 def _methodology_hash(path: Path) -> str:
     return f"sha256:{sha256_file(path)}"
+
+
+def _existing_input_hashes(hub_root: Path, refs: Sequence[Path]) -> dict[str, str]:
+    hashes: dict[str, str] = {}
+    for ref in refs:
+        path = hub_root / ref
+        if path.exists():
+            hashes[ref.as_posix()] = _methodology_hash(path)
+    return hashes
+
+
+def _methodology_metadata(hub_root: Path, ref: Path) -> dict[str, str]:
+    path = hub_root / ref
+    if not path.exists():
+        return {}
+    return {
+        "methodology_ref": ref.as_posix(),
+        "methodology_hash": _methodology_hash(path),
+    }
 
 
 def _write_json(path: Path, payload: dict[str, Any]) -> None:
@@ -112,6 +206,44 @@ def _read_jsonl(path: Path) -> list[dict[str, Any]]:
     return records
 
 
+def _read_jsonl_tolerant(path: Path) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
+    if not path.exists():
+        return [], []
+    records: list[dict[str, Any]] = []
+    malformed: list[dict[str, Any]] = []
+    for line_number, line in enumerate(path.read_text(encoding="utf-8").splitlines(), start=1):
+        if not line.strip():
+            continue
+        try:
+            parsed = json.loads(line)
+        except json.JSONDecodeError as exc:
+            malformed.append(
+                {
+                    "path": str(path),
+                    "line": line_number,
+                    "error": exc.msg,
+                }
+            )
+            continue
+        if isinstance(parsed, dict):
+            records.append(parsed)
+        else:
+            malformed.append(
+                {
+                    "path": str(path),
+                    "line": line_number,
+                    "error": "row is not a JSON object",
+                }
+            )
+    return records, malformed
+
+
+def _field(value: Any, name: str, default: Any = None) -> Any:
+    if isinstance(value, dict):
+        return value.get(name, default)
+    return getattr(value, name, default)
+
+
 def _append_unique(path: Path, record: dict[str, Any], key: str) -> bool:
     path.parent.mkdir(parents=True, exist_ok=True)
     existing = {str(item.get(key, "")) for item in _read_jsonl(path)}
@@ -125,6 +257,14 @@ def _normalized_path(value: str | Path) -> str:
     return str(Path(value).resolve()).replace("\\", "/")
 
 
+def _inventory_file_ref(path: Path, root: Path) -> str:
+    try:
+        return path.resolve().relative_to(root.resolve()).as_posix()
+    except ValueError:
+        normalized = str(path.resolve()).replace("\\", "/")
+        return f"path-sha256:{sha256_bytes(normalized.encode('utf-8'))}"
+
+
 def _policy_path(policy: Any) -> str:
     try:
         return _normalized_path(getattr(policy, "path"))
@@ -134,13 +274,7 @@ def _policy_path(policy: Any) -> str:
 
 def _policy_matches(repo: Path, policy: Any) -> bool:
     normalized = _normalized_path(repo)
-    aliases = {
-        str(getattr(policy, "id", "") or ""),
-        str(getattr(policy, "alias", "") or ""),
-        Path(_policy_path(policy)).name,
-        _policy_path(policy),
-    }
-    return normalized in aliases or repo.name in aliases
+    return normalized == _policy_path(policy)
 
 
 def _repo_policy(
@@ -148,10 +282,16 @@ def _repo_policy(
     *,
     mail_policies: Sequence[Any] | None = None,
     enrollment_policies: Sequence[Any] | None = None,
+    prefer_enrollment: bool = False,
 ) -> Any | None:
+    ordered = (
+        [*(enrollment_policies or []), *(mail_policies or [])]
+        if prefer_enrollment
+        else [*(mail_policies or []), *(enrollment_policies or [])]
+    )
     matches = [
         policy
-        for policy in [*(mail_policies or []), *(enrollment_policies or [])]
+        for policy in ordered
         if _policy_matches(repo, policy)
     ]
     return matches[0] if matches else None
@@ -161,6 +301,46 @@ def _repo_ref(repo: Path, policy: Any | None = None) -> str:
     if policy and bool(getattr(policy, "public_facing", False)):
         return f"dad://repo/{getattr(policy, 'id', repo.name)}"
     return _normalized_path(repo)
+
+
+def _inventory_repo_ref(
+    repo: Path,
+    *,
+    repo_id: str,
+    policy: Any | None,
+    public_facing: bool,
+    local_paths_allowed: bool,
+) -> str:
+    if public_facing and not local_paths_allowed:
+        return f"dad://repo/{repo_id or _slug(repo.name)}"
+    return _repo_ref(repo, policy)
+
+
+def _force_public_safe_inventory_record(
+    record: dict[str, Any],
+    *,
+    public_ref: str,
+    public_name: str = "",
+) -> None:
+    """Redact local-path fields after late evidence proves the repo is public-facing."""
+
+    local_paths_allowed = bool(record.get("local_paths_allowed", False))
+    if public_name and not local_paths_allowed:
+        record["repo_name"] = public_name
+    record["public_facing"] = True
+    record["visibility"] = "public"
+    if not local_paths_allowed:
+        record["path_ref"] = public_ref
+    record["path_public_safe"] = public_ref
+    record["git_state"] = _inventory_report_git_state(
+        record.get("git_state", {}),
+        public_facing=True,
+        local_paths_allowed=local_paths_allowed,
+    )
+
+
+def _policy_local_paths_allowed(policy: Any | None) -> bool:
+    return bool(getattr(policy, "local_paths_allowed", False)) if policy else False
 
 
 def _repo_write_protection(policy: Any | None) -> tuple[bool, str]:
@@ -269,6 +449,10 @@ def load_non_negotiables(hub_root: Path) -> dict[str, Any]:
 
 def load_asset_patterns(hub_root: Path) -> dict[str, Any]:
     return _load_json(hub_root / ASSET_PATTERN_REGISTRY)
+
+
+def load_address_model_registry(hub_root: Path) -> dict[str, Any]:
+    return _load_json(hub_root / ADDRESS_MODEL_REGISTRY)
 
 
 PATTERN_MATCH_STOPWORDS = {
@@ -735,6 +919,7 @@ def reconcile_repo_inventory(
 ) -> dict[str, Any]:
     records_by_path: dict[str, dict[str, Any]] = {}
     source_warnings: list[str] = []
+    workspace_container_paths: set[Path] = set()
     for source in local_sources or []:
         if not bool(getattr(source, "enabled", True)):
             continue
@@ -742,6 +927,9 @@ def reconcile_repo_inventory(
         if not base.exists():
             source_warnings.append(f"local source missing: {getattr(source, 'id', base)}")
             continue
+        resolved_base = base.resolve()
+        if _normalize_name(resolved_base.name) in WORKSPACE_ROOT_NAMES:
+            workspace_container_paths.add(resolved_base)
         for repo in _discover_git_roots(
             base,
             max_depth=max_depth,
@@ -760,77 +948,266 @@ def reconcile_repo_inventory(
         _add_inventory_signal(records_by_path, repo, "mail_policy")
 
     basename_counts: dict[str, int] = {}
+    contract_summaries_by_path: dict[str, dict[str, Any]] = {}
+    stable_id_counts: dict[str, int] = {}
     for record in records_by_path.values():
         basename = _normalize_name(record["repo_name"])
         basename_counts[basename] = basename_counts.get(basename, 0) + 1
+        repo = Path(record["local_path"])
+        contract = _read_repo_contract_summary(repo)
+        contract_summaries_by_path[record["local_path"]] = contract
+        stable_repo_id = str(contract.get("repo_id", "") or "")
+        if stable_repo_id:
+            stable_id_counts[stable_repo_id] = stable_id_counts.get(stable_repo_id, 0) + 1
 
     records: list[dict[str, Any]] = []
+    local_records_by_basename: dict[str, list[dict[str, Any]]] = {}
+    local_records_by_github_full_name: dict[str, list[dict[str, Any]]] = {}
+    local_repo_paths = [Path(record["local_path"]).resolve() for record in records_by_path.values()]
+    nesting_parent_paths = [
+        path for path in local_repo_paths if path not in workspace_container_paths
+    ]
     for record in records_by_path.values():
         repo = Path(record["local_path"])
         policy = _repo_policy(
             repo,
             mail_policies=mail_policies,
             enrollment_policies=enrollment_policies,
+            prefer_enrollment=True,
         )
+        mail_policy_present = _policy_matches_any(repo, mail_policies)
+        enrollment_policy_present = _policy_matches_any(repo, enrollment_policies)
         duplicate_basename = basename_counts.get(_normalize_name(record["repo_name"]), 0) > 1
+        contract = contract_summaries_by_path.get(record["local_path"], {})
+        policy_repo_id = str(getattr(policy, "id", "") or "") if policy else ""
+        contract_repo_id = str(contract.get("repo_id", "") or "")
+        stable_repo_id = policy_repo_id or contract_repo_id
+        duplicate_lineage = bool(
+            contract_repo_id and stable_id_counts.get(contract_repo_id, 0) > 1
+        )
+        git_state = _inventory_git_state(repo)
+        repo_resolved = repo.resolve()
+        nested_repo = any(
+            parent != repo_resolved and repo_resolved.is_relative_to(parent)
+            for parent in nesting_parent_paths
+        )
         classification, reasons, next_action = _classify_inventory_repo(
             repo,
             policy=policy,
+            enrollment_policy_present=enrollment_policy_present,
             duplicate_basename=duplicate_basename,
+            duplicate_lineage=duplicate_lineage,
+            nested_repo=nested_repo,
+            git_state=git_state,
         )
-        public_facing = bool(getattr(policy, "public_facing", False)) if policy else False
+        public_facing = (
+            bool(getattr(policy, "public_facing", False))
+            if policy
+            else bool(contract.get("public_facing", False))
+        )
+        local_paths_allowed = _policy_local_paths_allowed(policy)
+        visibility = (
+            str(getattr(policy, "visibility", "unknown"))
+            if policy
+            else str(contract.get("visibility", "") or "unknown")
+        )
+        alias = str(getattr(policy, "alias", "") if policy else contract.get("repo_alias", "") or "")
+        path_ref = _inventory_repo_ref(
+            repo,
+            repo_id=stable_repo_id,
+            policy=policy,
+            public_facing=public_facing,
+            local_paths_allowed=local_paths_allowed,
+        )
+        path_public_safe = (
+            f"dad://repo/{stable_repo_id or _slug(repo.name)}"
+            if public_facing
+            else _normalized_path(repo)
+        )
         record.update(
             {
-                "repo_id": str(getattr(policy, "id", "")) if policy else "",
-                "alias": str(getattr(policy, "alias", "")) if policy else "",
-                "visibility": str(getattr(policy, "visibility", "unknown")) if policy else "unknown",
+                "repo_id": stable_repo_id,
+                "repo_id_source": (
+                    "policy"
+                    if policy_repo_id
+                    else "contract"
+                    if contract_repo_id
+                    else ""
+                ),
+                "alias": alias,
+                "visibility": visibility,
                 "public_facing": public_facing,
-                "path_ref": _repo_ref(repo, policy),
-                "path_public_safe": _repo_ref(repo, policy) if public_facing else _normalized_path(repo),
+                "local_paths_allowed": local_paths_allowed,
+                "path_ref": path_ref,
+                "path_public_safe": path_public_safe,
                 "classification": classification,
                 "classification_reasons": reasons,
                 "next_action": next_action,
                 "write_boundary": (
                     "central_only"
-                    if classification == "protected-central-only"
+                    if classification
+                    in {"protected-central-only", "active-no-write", "archive-ignore", "duplicate-ignore"}
                     else "reviewed_policy_required"
                 ),
-                "mail_policy_present": _policy_matches_any(repo, mail_policies),
-                "enrollment_policy_present": _policy_matches_any(repo, enrollment_policies),
-                "contract_present": (repo / ".digital-asset" / "dad-integration.json").exists(),
+                "mail_policy_present": mail_policy_present,
+                "enrollment_policy_present": enrollment_policy_present,
+                "contract_present": bool(contract.get("present", False)),
+                "contract_error": str(contract.get("error", "")),
+                "duplicate_basename": duplicate_basename,
+                "duplicate_lineage": duplicate_lineage,
+                "nested_repo": nested_repo,
+                "same_basename_count": basename_counts.get(_normalize_name(record["repo_name"]), 0),
+                "addressing_status": (
+                    "ambiguous_bare_name"
+                    if duplicate_basename
+                    else "nested_repo"
+                    if nested_repo
+                    else "bare_name_unambiguous"
+                ),
+                "git_state": _inventory_report_git_state(
+                    git_state,
+                    public_facing=public_facing,
+                    local_paths_allowed=local_paths_allowed,
+                ),
                 "authority_boundary": CENTRAL_ONLY_BOUNDARY,
             }
         )
         record.pop("local_path")
         records.append(record)
+        local_records_by_basename.setdefault(_normalize_name(record["repo_name"]), []).append(record)
+        remote_full_name = _github_full_name_from_remote(str(git_state.get("remote_origin", "")))
+        if remote_full_name:
+            local_records_by_github_full_name.setdefault(remote_full_name, []).append(record)
 
-    github_summary = [
-        {
-            "source_id": str(getattr(source, "id", "")),
-            "owner": str(getattr(source, "owner", "")),
-            "enabled": bool(getattr(source, "enabled", True)),
-            "include_private": bool(getattr(source, "include_private", True)),
-            "inventory_status": "configured_source_only",
-            "next_action": (
-                "Import reviewed GitHub repository list or connector output before delivery. "
-                "Discovery does not authorize local writes."
-            ),
-        }
-        for source in github_sources or []
-    ]
+    github_summary: list[dict[str, Any]] = []
+    dynamic_input_hashes: dict[str, str] = {}
+    for source in github_sources or []:
+        repo_items = _github_repo_items(source)
+        repositories_file = _field(source, "repositories_file", None)
+        repositories_file_ref = ""
+        repositories_file_hash = ""
+        if repositories_file:
+            repositories_file_path = Path(repositories_file)
+            repositories_file_ref = _inventory_file_ref(repositories_file_path, hub_root)
+            if repositories_file_path.exists() and repositories_file_path.is_file():
+                repositories_file_hash = f"sha256:{sha256_file(repositories_file_path)}"
+                dynamic_input_hashes[repositories_file_ref] = repositories_file_hash
+        github_summary.append(
+            {
+                "source_id": str(_field(source, "id", "")),
+                "owner": str(_field(source, "owner", "")),
+                "enabled": bool(_field(source, "enabled", True)),
+                "include_private": bool(_field(source, "include_private", True)),
+                "inventory_status": (
+                    "imported_repo_list" if repo_items else "configured_source_only"
+                ),
+                "repo_count": len(repo_items),
+                "metadata_source": (
+                    "repositories_file"
+                    if repositories_file_ref
+                    else "inline_rows"
+                    if repo_items
+                    else "configured_source_only"
+                ),
+                "repositories_file_ref": repositories_file_ref,
+                "repositories_file_sha256": repositories_file_hash,
+                "next_action": (
+                    "Review imported GitHub repository rows against local inventory before delivery."
+                    if repo_items
+                    else "Import reviewed GitHub repository list or connector output before delivery. "
+                    "Discovery does not authorize local writes."
+                ),
+            }
+        )
+        for item in repo_items:
+            github_record = _github_inventory_record(source, item)
+            github_full_name = str(github_record.get("github_full_name", "")).lower()
+            basename = _normalize_name(github_record["repo_name"])
+            local_matches = local_records_by_basename.get(basename, [])
+            remote_matches = local_records_by_github_full_name.get(github_full_name, [])
+            if len(remote_matches) == 1:
+                matched = remote_matches[0]
+                signals = matched.setdefault("source_signals", [])
+                signal = f"github_source:{github_record['github_source_id']}"
+                if signal not in signals:
+                    signals.append(signal)
+                matched["github_ref"] = github_record["github_ref"]
+                matched["github_full_name"] = github_record["github_full_name"]
+                matched["github_source_id"] = github_record["github_source_id"]
+                matched["github_visibility"] = github_record["visibility"]
+                matched["github_archived"] = bool(github_record.get("github_archived", False))
+                matched["github_inventory_status"] = "matched_by_remote_origin"
+                _tighten_remote_matched_github_classification(matched, github_record)
+                if github_record["visibility"] == "public":
+                    _force_public_safe_inventory_record(
+                        matched,
+                        public_ref=str(github_record["github_ref"]),
+                        public_name=str(github_record.get("repo_name", "")),
+                    )
+                continue
+            if len(local_matches) >= 1:
+                github_record["classification"] = "needs-human-classification"
+                github_record["classification_reasons"].append(
+                    "GitHub repo name has local basename matches but no verified remote-origin match."
+                )
+                github_record["addressing_status"] = (
+                    "ambiguous_bare_name"
+                    if len(local_matches) > 1
+                    else "unverified_basename_match"
+                )
+            records.append(github_record)
+
+    enabled_github_sources = [source for source in github_summary if source["enabled"]]
+    if not github_summary:
+        github_coverage_status = "not_configured"
+    elif not enabled_github_sources:
+        github_coverage_status = "configured_disabled"
+    elif all(int(source.get("repo_count", 0)) > 0 for source in enabled_github_sources):
+        github_coverage_status = "imported_repo_list"
+    else:
+        github_coverage_status = "incomplete_import_required"
+        source_warnings.append(
+            "enabled GitHub source lacks imported repo rows; all-GitHub coverage is incomplete"
+        )
+
     records.sort(key=lambda item: (item["classification"], item["repo_name"].lower()))
     counts: dict[str, int] = {}
     for record in records:
         counts[record["classification"]] = counts.get(record["classification"], 0) + 1
 
-    payload = {
+    methodology_metadata = _methodology_metadata(hub_root, REPO_INVENTORY_METHODOLOGY)
+    input_hashes = _existing_input_hashes(hub_root, REPO_INVENTORY_INPUT_REFS)
+    input_hashes.update(dynamic_input_hashes)
+    report_identity_basis = {
         "schema_version": "0.1.0",
-        "generated_at": utc_now(),
-        "report_id": stable_id("dad-repo-inventory", str(hub_root), str(len(records))),
+        "methodology": methodology_metadata,
+        "input_hashes": input_hashes,
         "repo_count": len(records),
         "classification_counts": counts,
         "records": records,
         "github_sources": github_summary,
+        "github_coverage_status": github_coverage_status,
+        "github_coverage_complete": github_coverage_status == "imported_repo_list",
+        "source_warnings": source_warnings,
+        "authority_boundary": CENTRAL_ONLY_BOUNDARY,
+    }
+    content_fingerprint = "sha256:" + sha256_bytes(
+        json_dumps(report_identity_basis).encode("utf-8")
+    )
+
+    payload = {
+        "schema_version": "0.1.0",
+        "generated_at": utc_now(),
+        "report_id": stable_id("dad-repo-inventory", content_fingerprint),
+        "content_fingerprint": content_fingerprint,
+        **methodology_metadata,
+        "input_hashes": input_hashes,
+        "repo_count": len(records),
+        "classification_counts": counts,
+        "records": records,
+        "github_sources": github_summary,
+        "github_coverage_status": github_coverage_status,
+        "github_coverage_complete": github_coverage_status == "imported_repo_list",
         "source_warnings": source_warnings,
         "authority_boundary": CENTRAL_ONLY_BOUNDARY,
     }
@@ -841,6 +1218,382 @@ def reconcile_repo_inventory(
     _write_json(json_path, payload)
     atomic_write_text(md_path, _inventory_markdown(payload))
     return {"inventory": payload, "json_path": str(json_path), "markdown_path": str(md_path)}
+
+
+def write_repo_inventory_rust_probe_parity(
+    hub_root: Path,
+    *,
+    roots: Sequence[Path],
+    root_aliases: Sequence[str],
+    rust_summary: dict[str, Any],
+    max_depth: int = 5,
+    follow_symlinks: bool = False,
+) -> dict[str, Any]:
+    if len(roots) != len(root_aliases):
+        raise ValueError("roots and root_aliases must have the same length")
+    alias_counts = Counter(root_aliases)
+    duplicate_aliases = sorted(alias for alias, count in alias_counts.items() if count > 1)
+    if duplicate_aliases:
+        raise ValueError(
+            "root_alias values must be unique: " + ", ".join(duplicate_aliases)
+        )
+    rust_summary_validation_errors = validate_repo_inventory_probe_summary(
+        rust_summary,
+        root_aliases=root_aliases,
+    )
+    python_records: list[dict[str, Any]] = []
+    python_skipped_dirs: list[dict[str, Any]] = []
+    for root, alias in zip(roots, root_aliases):
+        base = Path(root).resolve()
+        if not base.exists() or not base.is_dir():
+            continue
+        discovered_roots, discovered_skips = _discover_git_roots_with_skips(
+            base,
+            max_depth=max_depth,
+            follow_symlinks=follow_symlinks,
+            root_alias=alias,
+        )
+        python_skipped_dirs.extend(discovered_skips)
+        for repo in discovered_roots:
+            python_records.append(
+                {
+                    "root_alias": alias,
+                    "logical_path": _repo_probe_logical_path(base, alias, repo),
+                    "contract_present": (
+                        repo / ".digital-asset" / "dad-integration.json"
+                    ).is_file(),
+                    "source": "python_inventory_discovery",
+                }
+            )
+    python_records.sort(key=lambda item: str(item["logical_path"]))
+    python_skipped_dirs.sort(
+        key=lambda item: (str(item["logical_path"]), str(item["reason"]))
+    )
+    rust_records: list[dict[str, Any]] = []
+    rust_unknown_contract_fields: list[dict[str, Any]] = []
+    for item in rust_summary.get("repos", []):
+        logical_path = str(item.get("logical_path", ""))
+        if not logical_path:
+            continue
+        contract_value = item.get("contract_present")
+        if "contract_present" not in item:
+            contract_present_field_status = "missing"
+        elif not isinstance(contract_value, bool):
+            contract_present_field_status = "non_boolean"
+        else:
+            contract_present_field_status = "ok"
+        structural_value = item.get("contract_structural_pass")
+        if "contract_structural_pass" not in item:
+            contract_structural_field_status = "missing"
+        elif not isinstance(structural_value, bool):
+            contract_structural_field_status = "non_boolean"
+        else:
+            contract_structural_field_status = "ok"
+        issue_codes = item.get("contract_issue_codes")
+        safe_issue_codes = (
+            sorted(str(code) for code in issue_codes)
+            if isinstance(issue_codes, list)
+            and all(isinstance(code, str) for code in issue_codes)
+            else []
+        )
+        record = {
+            "root_alias": str(item.get("root_alias", "")),
+            "logical_path": logical_path,
+            "contract_present": (
+                bool(contract_value) if contract_present_field_status == "ok" else None
+            ),
+            "contract_present_field_status": contract_present_field_status,
+            "contract_parse_status": str(item.get("contract_parse_status", "unknown")),
+            "contract_structural_pass": (
+                bool(structural_value)
+                if contract_structural_field_status == "ok"
+                else None
+            ),
+            "contract_structural_field_status": contract_structural_field_status,
+            "contract_issue_codes": safe_issue_codes,
+            "source": "rust_repo_inventory_probe",
+        }
+        rust_records.append(record)
+        if contract_present_field_status != "ok":
+            rust_unknown_contract_fields.append(
+                {
+                    "logical_path": logical_path,
+                    "root_alias": record["root_alias"],
+                    "field_status": contract_present_field_status,
+                }
+            )
+    rust_records.sort(key=lambda item: str(item["logical_path"]))
+    rust_skipped_dirs = [
+        {
+            "root_alias": str(item.get("root_alias", "")),
+            "logical_path": str(item.get("logical_path", "")),
+            "reason": str(item.get("reason", "")),
+            "source": "rust_repo_inventory_probe",
+        }
+        for item in rust_summary.get("skipped_dirs", [])
+        if isinstance(item, dict) and str(item.get("logical_path", ""))
+    ]
+    rust_skipped_dirs.sort(
+        key=lambda item: (str(item["logical_path"]), str(item["reason"]))
+    )
+    python_paths = {str(item["logical_path"]) for item in python_records}
+    rust_paths = {str(item["logical_path"]) for item in rust_records}
+    only_python = sorted(python_paths - rust_paths)
+    only_rust = sorted(rust_paths - python_paths)
+    python_skipped_keys = {
+        (str(item["logical_path"]), str(item["reason"])) for item in python_skipped_dirs
+    }
+    rust_skipped_keys = {
+        (str(item["logical_path"]), str(item["reason"])) for item in rust_skipped_dirs
+    }
+    only_python_skipped_dirs = [
+        {
+            "logical_path": logical_path,
+            "reason": reason,
+            "source": "python_inventory_discovery",
+        }
+        for logical_path, reason in sorted(python_skipped_keys - rust_skipped_keys)
+    ]
+    only_rust_skipped_dirs = [
+        {
+            "logical_path": logical_path,
+            "reason": reason,
+            "source": "rust_repo_inventory_probe",
+        }
+        for logical_path, reason in sorted(rust_skipped_keys - python_skipped_keys)
+    ]
+    duplicate_logical_paths: list[dict[str, Any]] = []
+    for source, records in (
+        ("python_inventory_discovery", python_records),
+        ("rust_repo_inventory_probe", rust_records),
+    ):
+        path_counts = Counter(str(item["logical_path"]) for item in records)
+        duplicate_logical_paths.extend(
+            {
+                "source": source,
+                "logical_path": logical_path,
+                "count": count,
+            }
+            for logical_path, count in sorted(path_counts.items())
+            if count > 1
+        )
+    python_by_path = {str(item["logical_path"]): item for item in python_records}
+    rust_by_path = {str(item["logical_path"]): item for item in rust_records}
+    contract_present_mismatches = []
+    for logical_path in sorted(python_paths & rust_paths):
+        if rust_by_path[logical_path]["contract_present_field_status"] != "ok":
+            continue
+        python_contract_present = bool(python_by_path[logical_path]["contract_present"])
+        rust_contract_present = bool(rust_by_path[logical_path]["contract_present"])
+        if python_contract_present != rust_contract_present:
+            contract_present_mismatches.append(
+                {
+                    "logical_path": logical_path,
+                    "python_contract_present": python_contract_present,
+                    "rust_contract_present": rust_contract_present,
+                }
+            )
+    parity_status = (
+        "matched"
+        if not only_python
+        and not only_rust
+        and not duplicate_logical_paths
+        and not contract_present_mismatches
+        and not rust_unknown_contract_fields
+        and not rust_summary_validation_errors
+        and not only_python_skipped_dirs
+        and not only_rust_skipped_dirs
+        else "mismatch_candidate"
+    )
+    rust_contract_parse_status_counts = dict(
+        sorted(Counter(str(item["contract_parse_status"]) for item in rust_records).items())
+    )
+    rust_contract_structural_pass_count = sum(
+        1 for item in rust_records if item["contract_structural_pass"] is True
+    )
+    rust_contract_structural_fail_count = sum(
+        1 for item in rust_records if item["contract_structural_pass"] is False
+    )
+    rust_unknown_contract_structural_field_count = sum(
+        1
+        for item in rust_records
+        if item["contract_structural_field_status"] != "ok"
+    )
+    rust_contract_issue_code_count = sum(
+        len(item["contract_issue_codes"]) for item in rust_records
+    )
+    payload = {
+        "schema_version": "dad_repo_inventory_rust_probe_parity.v0_1",
+        "generated_at": utc_now(),
+        **_methodology_metadata(hub_root, REPO_INVENTORY_METHODOLOGY),
+        "input_hashes": _existing_input_hashes(
+            hub_root,
+            REPO_INVENTORY_RUST_PARITY_INPUT_REFS,
+        ),
+        "max_depth": max_depth,
+        "follow_symlinks": follow_symlinks,
+        "rust_summary_valid": not rust_summary_validation_errors,
+        "rust_summary_validation_errors": rust_summary_validation_errors,
+        "python_repo_count": len(python_records),
+        "rust_repo_count": len(rust_records),
+        "matched_repo_count": len(python_paths & rust_paths),
+        "python_skipped_dir_count": len(python_skipped_dirs),
+        "rust_skipped_dir_count": len(rust_skipped_dirs),
+        "skip_policy_mismatch_count": len(only_python_skipped_dirs)
+        + len(only_rust_skipped_dirs),
+        "duplicate_logical_path_count": len(duplicate_logical_paths),
+        "contract_present_mismatch_count": len(contract_present_mismatches),
+        "rust_unknown_contract_field_count": len(rust_unknown_contract_fields),
+        "rust_contract_structural_pass_count": rust_contract_structural_pass_count,
+        "rust_contract_structural_fail_count": rust_contract_structural_fail_count,
+        "rust_unknown_contract_structural_field_count": (
+            rust_unknown_contract_structural_field_count
+        ),
+        "rust_contract_issue_code_count": rust_contract_issue_code_count,
+        "rust_contract_parse_status_counts": rust_contract_parse_status_counts,
+        "contract_structural_scope": (
+            "Rust contract structural fields are deployment-doctor inputs only; "
+            "inventory parity status is not enrollment readiness."
+        ),
+        "parity_status": parity_status,
+        "only_python_logical_paths": only_python,
+        "only_rust_logical_paths": only_rust,
+        "only_python_skipped_dirs": only_python_skipped_dirs,
+        "only_rust_skipped_dirs": only_rust_skipped_dirs,
+        "duplicate_logical_paths": duplicate_logical_paths,
+        "contract_present_mismatches": contract_present_mismatches,
+        "rust_unknown_contract_fields": rust_unknown_contract_fields,
+        "python_records": python_records,
+        "rust_records": rust_records,
+        "python_skipped_dirs": python_skipped_dirs,
+        "rust_skipped_dirs": rust_skipped_dirs,
+        "rust_summary_schema_version": str(rust_summary.get("schema_version", "")),
+        "authority_boundary": (
+            "This report compares Python and Rust local Git-root discovery as "
+            "candidate machine evidence only. It does not classify repos, satisfy "
+            "Phase 8/9 human gates, authorize enrollment, or write to target repos."
+        ),
+    }
+    out_dir = hub_root / REPO_INVENTORY_DIR
+    out_dir.mkdir(parents=True, exist_ok=True)
+    json_path = out_dir / "rust_probe_shadow_parity.json"
+    md_path = out_dir / "rust_probe_shadow_parity.md"
+    _write_json(json_path, payload)
+    atomic_write_text(md_path, _repo_inventory_probe_parity_markdown(payload))
+    return {"parity": payload, "json_path": str(json_path), "markdown_path": str(md_path)}
+
+
+def _repo_probe_logical_path(base: Path, alias: str, repo: Path) -> str:
+    base_path = Path(base).absolute()
+    repo_path = Path(repo).absolute()
+    try:
+        rel = repo_path.relative_to(base_path).as_posix()
+    except ValueError:
+        rel = repo.name
+    if not rel or rel == ".":
+        return alias
+    segments = [
+        _repo_probe_public_safe_segment(segment)
+        for segment in rel.replace("\\", "/").split("/")
+        if segment and segment not in {".", ".."}
+    ]
+    if not segments:
+        return alias
+    return f"{alias.rstrip('/')}/{'/'.join(segments)}"
+
+
+def _repo_probe_public_safe_segment(value: str) -> str:
+    text = "".join(
+        character.lower()
+        if character.isascii() and (character.isalnum() or character in {"-", "_", "."})
+        else "-"
+        for character in value
+    )
+    cleaned = re.sub("-+", "-", text).strip("-")
+    if cleaned in {"", ".", ".."}:
+        return "unnamed"
+    return cleaned
+
+
+def _repo_inventory_probe_parity_markdown(payload: dict[str, Any]) -> str:
+    lines = [
+        "# Rust Repo Inventory Probe Shadow Parity",
+        "",
+        f"Generated: {payload['generated_at']}",
+        f"Status: `{payload['parity_status']}`",
+        "",
+        "This is candidate machine evidence only. Python remains the authority for Phase 9 classification.",
+        "",
+        "## Counts",
+        "",
+        f"- Python repo roots: `{payload['python_repo_count']}`",
+        f"- Rust repo roots: `{payload['rust_repo_count']}`",
+        f"- Matched repo roots: `{payload['matched_repo_count']}`",
+        f"- Python skipped dirs: `{payload['python_skipped_dir_count']}`",
+        f"- Rust skipped dirs: `{payload['rust_skipped_dir_count']}`",
+        f"- Skip-policy mismatches: `{payload['skip_policy_mismatch_count']}`",
+        f"- Duplicate logical paths: `{payload['duplicate_logical_path_count']}`",
+        f"- Contract-present mismatches: `{payload['contract_present_mismatch_count']}`",
+        f"- Rust unknown contract-present fields: `{payload['rust_unknown_contract_field_count']}`",
+        f"- Rust contract structural pass: `{payload['rust_contract_structural_pass_count']}`",
+        f"- Rust contract structural fail: `{payload['rust_contract_structural_fail_count']}`",
+        "- Rust unknown contract-structural fields: "
+        f"`{payload['rust_unknown_contract_structural_field_count']}`",
+        f"- Rust contract issue codes: `{payload['rust_contract_issue_code_count']}`",
+        "",
+        payload["contract_structural_scope"],
+        "",
+    ]
+    if (
+        payload["only_python_logical_paths"]
+        or payload["only_rust_logical_paths"]
+        or payload["only_python_skipped_dirs"]
+        or payload["only_rust_skipped_dirs"]
+        or payload["duplicate_logical_paths"]
+        or payload["contract_present_mismatches"]
+        or payload["rust_unknown_contract_fields"]
+    ):
+        lines.extend(["## Mismatches", ""])
+        for path in payload["only_python_logical_paths"]:
+            lines.append(f"- Python only: `{path}`")
+        for path in payload["only_rust_logical_paths"]:
+            lines.append(f"- Rust only: `{path}`")
+        for item in payload["only_python_skipped_dirs"]:
+            lines.append(
+                "- Python-only skipped dir: "
+                f"`{item['logical_path']}` "
+                f"({item['reason']})"
+            )
+        for item in payload["only_rust_skipped_dirs"]:
+            lines.append(
+                "- Rust-only skipped dir: "
+                f"`{item['logical_path']}` "
+                f"({item['reason']})"
+            )
+        for duplicate in payload["duplicate_logical_paths"]:
+            lines.append(
+                "- Duplicate logical path: "
+                f"`{duplicate['logical_path']}` "
+                f"from `{duplicate['source']}` "
+                f"(count `{duplicate['count']}`)"
+            )
+        for mismatch in payload["contract_present_mismatches"]:
+            lines.append(
+                "- Contract-present mismatch: "
+                f"`{mismatch['logical_path']}` "
+                f"(Python `{mismatch['python_contract_present']}`, "
+                f"Rust `{mismatch['rust_contract_present']}`)"
+            )
+        for unknown in payload["rust_unknown_contract_fields"]:
+            lines.append(
+                "- Rust unknown contract-present field: "
+                f"`{unknown['logical_path']}` "
+                f"({unknown['field_status']})"
+            )
+    else:
+        lines.append("- No Python/Rust logical-path or contract-present mismatches.")
+    lines.extend(["", payload["authority_boundary"], ""])
+    return "\n".join(lines)
 
 
 def build_dad_cadence_plan(
@@ -903,6 +1656,353 @@ def build_dad_cadence_plan(
     _write_json(json_path, payload)
     atomic_write_text(md_path, _cadence_markdown(payload))
     return {"cadence": payload, "json_path": str(json_path), "markdown_path": str(md_path)}
+
+
+def repo_local_asset_surface_standard() -> dict[str, Any]:
+    """Return the canonical repo-local DAD asset-memory surface."""
+    layers = [
+        {
+            "layer": 1,
+            "name": "identity",
+            "purpose": "Stable asset IDs, repo IDs, source refs, and return addresses.",
+        },
+        {
+            "layer": 2,
+            "name": "object",
+            "purpose": "The asset card itself: type, title, local path, summary, tags.",
+        },
+        {
+            "layer": 3,
+            "name": "claim",
+            "purpose": "Candidate claims about usefulness, leverage, and applicability limits.",
+        },
+        {
+            "layer": 4,
+            "name": "relationship",
+            "purpose": "Pattern IDs, parent/derived links, upgrade channels, and related assets.",
+        },
+        {
+            "layer": 5,
+            "name": "validation",
+            "purpose": "Validation commands, evidence pointers, review status, and false-confidence notes.",
+        },
+        {
+            "layer": 6,
+            "name": "retrieval",
+            "purpose": "Context tags, use-when routes, and how future agents should find it.",
+        },
+        {
+            "layer": 7,
+            "name": "fractal_address",
+            "purpose": "Repo-local placement discipline compatible with source-owned address systems.",
+        },
+        {
+            "layer": 8,
+            "name": "artifact_evidence",
+            "purpose": "Source paths, hashes, provenance, and privacy/sensitivity boundaries.",
+        },
+        {
+            "layer": 9,
+            "name": "learning_adaptation",
+            "adoption_status": "dad_adopted",
+            "purpose": (
+                "Recursive improvement loop: postflight outcomes, hard-issue fixes, "
+                "variant/delta learning, calibration, upgrade notices, and asset "
+                "promotion or retirement signals."
+            ),
+            "dad_rule": (
+                "DAD treats layer 9 as a real layer for learning and adaptation, "
+                "not as an optional afterthought. Source repos may still label "
+                "orchestration/workflow as a ninth-layer variant when their local "
+                "address model uses that meaning."
+            ),
+            "observed_variants": [
+                "learning_adaptation",
+                "orchestration_workflow",
+            ],
+        },
+    ]
+    return {
+        "schema_version": "0.1.0",
+        "standard_id": "dad:standard:repo-local-digital-asset-directory",
+        "standard_version": LOCAL_ASSET_STANDARD_VERSION,
+        "canonical_root": ".digital-asset/",
+        "required_paths": [
+            str(LOCAL_ASSET_README.as_posix()),
+            str(LOCAL_ASSET_INDEX.as_posix()),
+            ".digital-asset/mail/outbox.jsonl",
+            ".digital-asset/mail/inbox.jsonl",
+            ".digital-asset/dad-usage.jsonl",
+        ],
+        "recommended_paths": [
+            str(LOCAL_ASSET_ADOPTION.as_posix()),
+            str(LOCAL_LEARNING_LEDGER.as_posix()),
+            ".digital-asset/context-map.json",
+            ".digital-asset/governance-map.yaml",
+            ".digital-asset/data-map.yaml",
+            ".digital-asset/exceptions/outbox.jsonl",
+        ],
+        "legacy_or_compatibility_inputs": [
+            str(LEGACY_DAD_INGEST_MANIFEST.as_posix()),
+            str(LEGACY_LEARNING_LEDGER.as_posix()),
+        ],
+        "record_schema": "schemas/repo-local-digital-asset-record.schema.json",
+        "address_model_ref": "registry/dad-address-model-registry.json",
+        "fractal_layers": layers,
+        "adopted_layer_count": 9,
+        "dad_layer_9": {
+            "name": "learning_adaptation",
+            "required_for_dad_assets": True,
+            "records": [
+                "what was learned",
+                "what changed after validation",
+                "which prior asset or fix this derived from",
+                "what context delta made the variant useful",
+                "when to upgrade, retire, or re-check the asset",
+            ],
+        },
+        "compact_fill_policy": {
+            "default": "Use IDs, paths, hashes, refs, and short labels instead of copied prose.",
+            "workflow_depth": (
+                "Represent workflows as workflow cards with step IDs and refs; "
+                "do not inline full workflow text in asset cards."
+            ),
+            "evolution": (
+                "The address model is versioned and expected to evolve; breaking "
+                "changes need migration notes and tests."
+            ),
+        },
+        "source_inspiration": [
+            {
+                "source_repo": "LawFirm-os-semantic-substrate",
+                "source_ref": "docs/architecture/8_LAYER_DNA_ADDRESS_MODEL.md",
+                "role": "pointer-only inspiration for address discipline; not DAD canon",
+            },
+            {
+                "source_repo": "LawFirm-os-semantic-substrate",
+                "source_ref": "governance/TALENT_INTELLIGENCE_LAYER_PLACEMENT.md",
+                "role": "pointer-only example of layers 1-8 plus optional orchestration/workflow layer 9",
+            },
+            {
+                "source_repo": "LawFirm-os-semantic-substrate",
+                "source_ref": "docs/learning-loop-layer.md",
+                "role": "pointer-only example of learning/adaptation as optional layer 9",
+            },
+            {
+                "source_repo": "LawFirm-os-semantic-substrate",
+                "source_ref": "schemas/address_struct.schema.json",
+                "role": "pointer-only structured address pattern",
+            },
+            {
+                "source_repo": "LawFirm-os-semantic-substrate",
+                "source_ref": "schemas/skill-agent-metadata.schema.json",
+                "role": "pointer-only schema using the phrase nine-layer LawFirm OS address without defining the segments there",
+            },
+        ],
+        "collection_policy": {
+            "default": "metadata_pointer_only",
+            "copy_file_contents": False,
+            "copy_private_rows": False,
+            "copy_secrets_or_credentials": False,
+            "cross_repo_writes": "blocked unless enrollment/update approval explicitly allows them",
+        },
+        "authority_boundary": REPO_ASSET_SURFACE_BOUNDARY,
+    }
+
+
+def _truncate_metadata_value(value: Any, *, max_string: int = 500) -> Any:
+    if isinstance(value, str):
+        return value if len(value) <= max_string else value[: max_string - 15] + "...[truncated]"
+    if isinstance(value, list):
+        safe: list[Any] = []
+        for item in value[:50]:
+            safe.append(_truncate_metadata_value(item, max_string=200))
+        return safe
+    if isinstance(value, dict):
+        return {
+            str(key): _truncate_metadata_value(item, max_string=200)
+            for key, item in list(value.items())[:30]
+            if isinstance(key, str)
+        }
+    if isinstance(value, (int, float, bool)) or value is None:
+        return value
+    return str(value)[:max_string]
+
+
+def _safe_repo_asset_record(record: dict[str, Any], *, source_surface: str) -> dict[str, Any]:
+    safe = {
+        key: _truncate_metadata_value(record.get(key))
+        for key in sorted(LOCAL_ASSET_ALLOWED_FIELDS)
+        if key in record and record.get(key) not in (None, "")
+    }
+    source_paths = safe.get("source_paths")
+    path = safe.get("path") or safe.get("local_path")
+    if not source_paths and path:
+        safe["source_paths"] = [str(path)]
+    safe.setdefault("asset_id", stable_id("repo-local-asset", source_surface, json.dumps(safe, sort_keys=True)))
+    safe.setdefault("review_status", "candidate")
+    safe["source_surface"] = source_surface
+    safe["payload_policy"] = "metadata_pointer_only"
+    dropped = sorted(set(record) - LOCAL_ASSET_ALLOWED_FIELDS)
+    if dropped:
+        safe["dropped_fields"] = dropped[:25]
+    return safe
+
+
+def _load_repo_asset_index(repo: Path) -> dict[str, Any]:
+    path = repo / LOCAL_ASSET_INDEX
+    records, malformed = _read_jsonl_tolerant(path)
+    return {
+        "path": str(LOCAL_ASSET_INDEX.as_posix()),
+        "exists": path.exists(),
+        "record_count": len(records),
+        "malformed_count": len(malformed),
+        "malformed_rows": malformed[:10],
+        "records": [
+            _safe_repo_asset_record(record, source_surface=str(LOCAL_ASSET_INDEX.as_posix()))
+            for record in records
+        ],
+    }
+
+
+def _load_legacy_dad_ingest(repo: Path) -> dict[str, Any]:
+    path = repo / LEGACY_DAD_INGEST_MANIFEST
+    if not path.exists():
+        return {
+            "path": str(LEGACY_DAD_INGEST_MANIFEST.as_posix()),
+            "exists": False,
+            "record_count": 0,
+            "records": [],
+        }
+    try:
+        payload = _load_json(path)
+    except (OSError, json.JSONDecodeError) as exc:
+        return {
+            "path": str(LEGACY_DAD_INGEST_MANIFEST.as_posix()),
+            "exists": True,
+            "record_count": 0,
+            "records": [],
+            "error": str(exc),
+        }
+    assets = payload.get("assets", [])
+    if not isinstance(assets, list):
+        assets = []
+    records = [
+        _safe_repo_asset_record(record, source_surface=str(LEGACY_DAD_INGEST_MANIFEST.as_posix()))
+        for record in assets
+        if isinstance(record, dict)
+    ]
+    return {
+        "path": str(LEGACY_DAD_INGEST_MANIFEST.as_posix()),
+        "exists": True,
+        "manifest_id": str(payload.get("manifest_id", "")),
+        "record_count": len(records),
+        "primary_pattern_id": str(payload.get("primary_pattern_id", "")),
+        "dad_needs_addressed": list(payload.get("dad_needs_addressed", []) or []),
+        "authority_boundary": str(payload.get("authority_boundary", "")),
+        "records": records,
+    }
+
+
+def _load_legacy_learning_summary(repo: Path) -> dict[str, Any]:
+    summaries: list[dict[str, Any]] = []
+    for rel in (LOCAL_LEARNING_LEDGER, LEGACY_LEARNING_LEDGER):
+        path = repo / rel
+        records, malformed = _read_jsonl_tolerant(path)
+        summaries.append(
+            {
+                "path": rel.as_posix(),
+                "exists": path.exists(),
+                "record_count": len(records),
+                "malformed_count": len(malformed),
+            }
+        )
+    return {"learning_surfaces": summaries}
+
+
+def collect_repo_local_assets(
+    hub_root: Path,
+    repo: Path,
+    *,
+    task: str = "",
+    limit: int = 25,
+    include_legacy: bool = True,
+    mail_policies: Sequence[Any] | None = None,
+    enrollment_policies: Sequence[Any] | None = None,
+) -> dict[str, Any]:
+    if not repo.exists() or not repo.is_dir():
+        raise ValueError(f"Repo path does not exist: {repo}")
+    policy = _repo_policy(repo, mail_policies=mail_policies, enrollment_policies=enrollment_policies)
+    repo_ref = _repo_ref(repo, policy)
+    repo_id = str(getattr(policy, "id", "") if policy else "")
+    standard = repo_local_asset_surface_standard()
+    present_paths = [
+        rel
+        for rel in [*standard["required_paths"], *standard["recommended_paths"]]
+        if (repo / rel).exists()
+    ]
+    missing_required = [
+        rel for rel in standard["required_paths"] if not (repo / rel).exists()
+    ]
+    index_payload = _load_repo_asset_index(repo)
+    legacy_ingest = _load_legacy_dad_ingest(repo) if include_legacy else {
+        "path": str(LEGACY_DAD_INGEST_MANIFEST.as_posix()),
+        "exists": False,
+        "record_count": 0,
+        "records": [],
+        "skipped": True,
+    }
+    learning_summary = _load_legacy_learning_summary(repo)
+    declared_records = [
+        *index_payload.get("records", []),
+        *legacy_ingest.get("records", []),
+    ]
+    scout = scout_asset_candidates(hub_root, repo, task=task, limit=limit)
+    payload = {
+        "schema_version": "0.1.0",
+        "generated_at": utc_now(),
+        "report_id": stable_id("repo-local-assets", _normalized_path(repo), task),
+        "repo": repo_ref,
+        "repo_id": repo_id,
+        "repo_name": repo.name,
+        "task": task,
+        "standard": standard,
+        "surface_status": {
+            "canonical_root_exists": (repo / ".digital-asset").exists(),
+            "present_paths": present_paths,
+            "missing_required_paths": missing_required,
+            "legacy_inputs_detected": [
+                item
+                for item in standard["legacy_or_compatibility_inputs"]
+                if (repo / item).exists()
+            ],
+        },
+        "declared_assets": {
+            "canonical_index": {
+                key: value for key, value in index_payload.items() if key != "records"
+            },
+            "legacy_dad_ingest": {
+                key: value for key, value in legacy_ingest.items() if key != "records"
+            },
+            "record_count": len(declared_records),
+            "records": declared_records[:limit],
+        },
+        "learning_surfaces": learning_summary["learning_surfaces"],
+        "asset_scout_report": scout["path"],
+        "asset_scout_returned_count": scout["asset_candidates"]["returned_candidate_count"],
+        "asset_scout_top_candidates": scout["asset_candidates"]["candidates"][: min(10, limit)],
+        "next_actions": [
+            "If missing required paths, plan a reviewed enrollment/update wave before writing them.",
+            "If legacy dad-ingest exists, migrate future records to .digital-asset/assets/index.jsonl while keeping the legacy packet as evidence.",
+            "Route useful records to DAD mail with metadata pointers only; do not copy private rows or source blobs.",
+        ],
+        "authority_boundary": REPO_ASSET_SURFACE_BOUNDARY,
+    }
+    out_dir = hub_root / REPO_ASSET_REPORT_DIR
+    out_dir.mkdir(parents=True, exist_ok=True)
+    path = out_dir / f"{_repo_report_slug(repo)}.json"
+    _write_json(path, payload)
+    return {"repo_assets": payload, "path": str(path)}
 
 
 def scout_asset_candidates(
@@ -1329,28 +2429,79 @@ def harness_package(hub_root: Path, harness_id: str) -> dict[str, Any]:
 
 
 def _discover_git_roots(base: Path, *, max_depth: int, follow_symlinks: bool) -> list[Path]:
+    roots, _skipped_dirs = _discover_git_roots_with_skips(
+        base,
+        max_depth=max_depth,
+        follow_symlinks=follow_symlinks,
+    )
+    return roots
+
+
+def _discover_git_roots_with_skips(
+    base: Path,
+    *,
+    max_depth: int,
+    follow_symlinks: bool,
+    root_alias: str | None = None,
+) -> tuple[list[Path], list[dict[str, Any]]]:
     roots: list[Path] = []
+    skipped_dirs: list[dict[str, Any]] = []
     base = base.resolve()
-    base_is_workspace_root = _normalize_name(base.name) in WORKSPACE_ROOT_NAMES
     for current_raw, dirs, files in os.walk(base, topdown=True, followlinks=follow_symlinks):
         current = Path(current_raw)
-        dirs[:] = [
-            item
-            for item in dirs
-            if item.lower() not in REPO_SKIP_DIRS
-            and not item.lower().startswith("pytest-of-")
-        ]
         try:
             depth = len(current.relative_to(base).parts)
         except ValueError:
             depth = 0
-        if depth >= max_depth:
+        if depth > max_depth:
             dirs[:] = []
+            continue
+        retained_dirs: list[str] = []
+        for item in sorted(dirs, key=str.lower):
+            child = current / item
+            if not _should_descend_repo_inventory_dir(
+                child, follow_symlinks=follow_symlinks
+            ):
+                continue
+            reason = _repo_inventory_skip_reason(item)
+            if reason:
+                if root_alias:
+                    skipped_dirs.append(
+                        {
+                            "root_alias": root_alias,
+                            "logical_path": _repo_probe_logical_path(
+                                base, root_alias, child
+                            ),
+                            "reason": reason,
+                            "source": "python_inventory_discovery",
+                        }
+                    )
+                continue
+            retained_dirs.append(item)
+        dirs[:] = retained_dirs
         if ".git" in dirs or ".git" in files or (current / ".git").exists():
             roots.append(current)
-            if not (current == base and base_is_workspace_root):
-                dirs[:] = []
-    return sorted(set(roots), key=lambda item: str(item).lower())
+    return (
+        sorted(set(roots), key=lambda item: str(item).lower()),
+        sorted(
+            skipped_dirs,
+            key=lambda item: (str(item["logical_path"]), str(item["reason"])),
+        ),
+    )
+
+
+def _should_descend_repo_inventory_dir(path: Path, *, follow_symlinks: bool) -> bool:
+    if follow_symlinks:
+        return True
+    try:
+        if path.is_symlink():
+            return False
+        is_junction = getattr(path, "is_junction", None)
+        if callable(is_junction) and is_junction():
+            return False
+    except OSError:
+        return False
+    return True
 
 
 def _inventory_seed(repo: Path, *, source_signal: str) -> dict[str, Any]:
@@ -1396,15 +2547,304 @@ def _path_marker_match(
     )
 
 
+def _name_marker_match(value: str, markers: set[str], *, contains: bool = False) -> bool:
+    normalized = _normalize_name(value)
+    return any(marker == normalized or (contains and marker in normalized) for marker in markers)
+
+
 def _policy_matches_any(repo: Path, policies: Sequence[Any] | None) -> bool:
     return any(_policy_matches(repo, policy) for policy in policies or [])
+
+
+def _inventory_git_stdout(repo: Path, args: Sequence[str]) -> str | None:
+    try:
+        result = subprocess.run(
+            ["git", "-C", str(repo), *args],
+            check=False,
+            capture_output=True,
+            text=True,
+            timeout=5,
+        )
+    except (OSError, subprocess.SubprocessError):
+        return None
+    if result.returncode != 0:
+        return None
+    return result.stdout.strip()
+
+
+def _inventory_git_state(repo: Path) -> dict[str, Any]:
+    state: dict[str, Any] = {
+        "git_detected": False,
+        "branch": "",
+        "branch_status": "unknown",
+        "head": "",
+        "remote_origin": "",
+        "dirty_count": 0,
+        "is_dirty": False,
+    }
+    if not repo.exists() or not repo.is_dir():
+        return state
+    inside = _inventory_git_stdout(repo, ["rev-parse", "--is-inside-work-tree"])
+    if inside != "true":
+        return state
+    status = _inventory_git_stdout(repo, ["status", "--porcelain=v1"]) or ""
+    dirty_lines = [line for line in status.splitlines() if line.strip()]
+    branch = _inventory_git_stdout(repo, ["branch", "--show-current"]) or ""
+    state.update(
+        {
+            "git_detected": True,
+            "branch": branch,
+            "branch_status": (
+                "mainline"
+                if branch in {"main", "master"}
+                else "non_main"
+                if branch
+                else "detached_or_unknown"
+            ),
+            "head": _inventory_git_stdout(repo, ["rev-parse", "--short", "HEAD"]) or "",
+            "remote_origin": _inventory_git_stdout(repo, ["remote", "get-url", "origin"]) or "",
+            "dirty_count": len(dirty_lines),
+            "is_dirty": bool(dirty_lines),
+        }
+    )
+    return state
+
+
+def _inventory_report_git_state(
+    git_state: dict[str, Any],
+    *,
+    public_facing: bool,
+    local_paths_allowed: bool,
+) -> dict[str, Any]:
+    if public_facing and not local_paths_allowed:
+        return {
+            "git_detected": bool(git_state.get("git_detected", False)),
+            "branch_status": str(git_state.get("branch_status", "unknown")),
+            "dirty_count": int(git_state.get("dirty_count", 0) or 0),
+            "is_dirty": bool(git_state.get("is_dirty", False)),
+            "branch": "redacted-public-facing" if git_state.get("branch") else "",
+            "head": "redacted-public-facing" if git_state.get("head") else "",
+            "remote_origin": "redacted-public-facing" if git_state.get("remote_origin") else "",
+            "public_safe_redaction": True,
+        }
+    return dict(git_state)
+
+
+def _github_full_name_from_remote(remote_origin: str) -> str:
+    value = remote_origin.strip()
+    if not value:
+        return ""
+    patterns = [
+        r"github\.com[:/](?P<owner>[^/\s]+)/(?P<name>[^/\s]+?)(?:\.git)?$",
+        r"^git@github\.com:(?P<owner>[^/\s]+)/(?P<name>[^/\s]+?)(?:\.git)?$",
+    ]
+    for pattern in patterns:
+        match = re.search(pattern, value, flags=re.IGNORECASE)
+        if match:
+            owner = match.group("owner")
+            name = match.group("name")
+            return f"{owner}/{name}".lower()
+    return ""
+
+
+def _tighten_remote_matched_github_classification(
+    matched: dict[str, Any],
+    github_record: dict[str, Any],
+) -> None:
+    github_classification = str(github_record.get("classification", ""))
+    if github_classification == "protected-central-only":
+        _apply_inventory_classification_tightening(
+            matched,
+            classification="protected-central-only",
+            reasons=[
+                "Verified GitHub remote-origin match is protected-central-only: "
+                + str(reason)
+                for reason in github_record.get("classification_reasons", [])
+            ],
+            next_action=str(github_record.get("next_action", "")),
+        )
+        return
+    if (
+        github_classification == "archive-ignore"
+        and not bool(matched.get("enrollment_policy_present", False))
+        and str(matched.get("classification", "")) != "protected-central-only"
+    ):
+        _apply_inventory_classification_tightening(
+            matched,
+            classification="archive-ignore",
+            reasons=[
+                "Verified GitHub remote-origin match is archive-ignore: "
+                + str(reason)
+                for reason in github_record.get("classification_reasons", [])
+            ],
+            next_action=str(github_record.get("next_action", "")),
+        )
+
+
+def _apply_inventory_classification_tightening(
+    record: dict[str, Any],
+    *,
+    classification: str,
+    reasons: list[str],
+    next_action: str,
+) -> None:
+    if str(record.get("classification", "")) == classification:
+        existing_reasons = record.setdefault("classification_reasons", [])
+        for reason in reasons:
+            if reason and reason not in existing_reasons:
+                existing_reasons.append(reason)
+    else:
+        record["classification"] = classification
+        existing_reasons = list(record.get("classification_reasons", []))
+        for reason in reasons:
+            if reason and reason not in existing_reasons:
+                existing_reasons.append(reason)
+        record["classification_reasons"] = existing_reasons
+    if next_action:
+        record["next_action"] = next_action
+    if classification in {
+        "protected-central-only",
+        "active-no-write",
+        "archive-ignore",
+        "duplicate-ignore",
+    }:
+        record["write_boundary"] = "central_only"
+
+
+def _inventory_hold_reasons(policy: Any | None, git_state: dict[str, Any]) -> list[str]:
+    if not policy:
+        return []
+    reasons: list[str] = []
+    if bool(getattr(policy, "active_hold", False)):
+        reason = str(getattr(policy, "active_hold_reason", "") or "policy active_hold")
+        reasons.append(f"active_hold: {reason}")
+    if (
+        bool(git_state.get("git_detected", False))
+        and bool(git_state.get("is_dirty", False))
+        and not bool(getattr(policy, "allow_dirty_worktree", False))
+    ):
+        reasons.append("dirty_worktree: reviewed policy does not allow dirty enrollment.")
+    if (
+        bool(git_state.get("git_detected", False))
+        and str(git_state.get("branch_status", "")) == "non_main"
+        and not bool(getattr(policy, "allow_non_main_branch", False))
+    ):
+        reasons.append("non_main_branch: reviewed policy does not allow non-main enrollment.")
+    return reasons
+
+
+def _read_repo_contract_summary(repo: Path) -> dict[str, Any]:
+    path = repo / ".digital-asset" / "dad-integration.json"
+    if not path.exists():
+        return {"present": False}
+    try:
+        payload = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError) as exc:
+        return {"present": True, "error": str(exc)}
+    return {
+        "present": True,
+        "repo_id": str(payload.get("repo_id", "") or ""),
+        "repo_alias": str(payload.get("repo_alias", "") or ""),
+        "repo_ref": str(payload.get("repo_ref", "") or ""),
+        "visibility": str(payload.get("visibility", "") or ""),
+        "public_facing": bool(payload.get("public_facing", False)),
+    }
+
+
+def _github_repo_items(source: Any) -> list[Any]:
+    items = _field(source, "repositories", None)
+    if items is None:
+        items = _field(source, "repos", None)
+    if items is None:
+        return []
+    if isinstance(items, Sequence) and not isinstance(items, (str, bytes, bytearray)):
+        return list(items)
+    return []
+
+
+def _github_inventory_record(source: Any, item: Any) -> dict[str, Any]:
+    owner = str(_field(item, "owner", "") or _field(source, "owner", "") or "")
+    full_name = str(
+        _field(item, "full_name", "")
+        or _field(item, "nameWithOwner", "")
+        or ""
+    )
+    name = str(_field(item, "name", "") or "")
+    if not name and "/" in full_name:
+        name = full_name.rsplit("/", 1)[-1]
+    if not full_name:
+        full_name = f"{owner}/{name}".strip("/")
+    visibility = str(_field(item, "visibility", "") or "").lower()
+    private = bool(_field(item, "private", _field(item, "isPrivate", False)))
+    if not visibility:
+        visibility = "private" if private else "public"
+    archived = bool(_field(item, "archived", _field(item, "isArchived", False)))
+    public_facing = visibility == "public" and not private
+    repo_id = _slug(full_name.replace("/", "-")) or _slug(name)
+    if _name_marker_match(f"{full_name} {name}", PROTECTED_REPO_MARKERS, contains=True):
+        classification = "protected-central-only"
+        reasons = ["GitHub repo name matches protected Logos marker; keep central-only."]
+        next_action = "Require explicit Logos local-write approval before any repair or enrollment write."
+    elif archived:
+        classification = "archive-ignore"
+        reasons = ["GitHub source reports archived repo; keep central-only unless policy promotes it."]
+        next_action = "Reconcile with local inventory and reviewed policy before delivery or enrollment."
+    else:
+        classification = "needs-human-classification"
+        reasons = ["GitHub source row has no reviewed local enrollment policy match."]
+        next_action = "Reconcile with local inventory and reviewed policy before delivery or enrollment."
+    return {
+        "repo_record_id": stable_id("dad-github-repo-record", full_name),
+        "repo_name": name or full_name,
+        "repo_id": repo_id,
+        "repo_id_source": "github",
+        "alias": full_name,
+        "visibility": visibility if visibility in {"public", "internal", "private", "restricted", "unknown"} else "unknown",
+        "public_facing": public_facing,
+        "local_paths_allowed": False,
+        "path_ref": f"dad://github/{full_name}",
+        "path_public_safe": f"dad://github/{full_name}",
+        "classification": classification,
+        "classification_reasons": reasons,
+        "next_action": next_action,
+        "write_boundary": "central_only",
+        "source_signals": [f"github_source:{_field(source, 'id', '')}"],
+        "mail_policy_present": False,
+        "enrollment_policy_present": False,
+        "contract_present": False,
+        "contract_error": "",
+        "duplicate_basename": False,
+        "duplicate_lineage": False,
+        "same_basename_count": 1,
+        "addressing_status": "bare_name_unambiguous",
+        "local_presence": False,
+        "github_ref": f"dad://github/{full_name}",
+        "github_full_name": full_name,
+        "github_source_id": str(_field(source, "id", "")),
+        "github_visibility": visibility,
+        "github_archived": archived,
+        "git_state": {
+            "git_detected": False,
+            "branch_status": "unknown",
+            "dirty_count": 0,
+            "is_dirty": False,
+            "branch": "",
+            "head": "",
+            "public_safe_redaction": True,
+        },
+        "authority_boundary": CENTRAL_ONLY_BOUNDARY,
+    }
 
 
 def _classify_inventory_repo(
     repo: Path,
     *,
     policy: Any | None,
+    enrollment_policy_present: bool,
     duplicate_basename: bool,
+    duplicate_lineage: bool,
+    nested_repo: bool,
+    git_state: dict[str, Any],
 ) -> tuple[str, list[str], str]:
     reasons: list[str] = []
     if _path_marker_match(repo, PROTECTED_REPO_MARKERS, repo_name_contains=True):
@@ -1421,29 +2861,42 @@ def _classify_inventory_repo(
             reasons,
             "Keep central-only unless a human-approved policy changes write protection.",
         )
-    if policy and bool(getattr(policy, "active_hold", False)):
-        reasons.append(str(getattr(policy, "active_hold_reason", "")) or "policy active_hold")
-        return (
-            "protected-central-only",
-            reasons,
-            "Do not apply enrollment updates while the active hold remains.",
-        )
-    if _path_marker_match(repo, ARCHIVE_MARKERS) and not policy:
+    hold_reasons = _inventory_hold_reasons(policy, git_state)
+    if hold_reasons:
+        reasons.extend(hold_reasons)
+        return "active-no-write", reasons, "Keep central-only until the active/dirty/non-main hold is reviewed."
+    if _path_marker_match(repo, ARCHIVE_MARKERS) and not enrollment_policy_present:
         reasons.append("Archive/snapshot path marker and no reviewed policy.")
         return "archive-ignore", reasons, "Leave out of enrollment unless policy promotes it."
-    if (duplicate_basename or _path_marker_match(repo, DUPLICATE_MARKERS)) and not policy:
+    if duplicate_lineage and not enrollment_policy_present:
+        reasons.append("Duplicate DAD contract repo_id appears in more than one local repo path.")
+        return "duplicate-ignore", reasons, "Review lineage before choosing one canonical enrolled repo."
+    if nested_repo and not enrollment_policy_present:
+        reasons.append("Nested Git repo discovered inside another local Git root.")
+        return "duplicate-ignore", reasons, "Review nested repo lineage before enrollment or delivery."
+    if (
+        duplicate_basename
+        or _path_marker_match(repo, DUPLICATE_MARKERS)
+    ) and not enrollment_policy_present:
         reasons.append("Duplicate/reference/temp path marker or duplicate basename without policy.")
         return "duplicate-ignore", reasons, "Keep central record only; avoid mailbox delivery."
-    if _normalize_name(repo.name) in WORKSPACE_ROOT_NAMES and not policy:
+    if _normalize_name(repo.name) in WORKSPACE_ROOT_NAMES and not enrollment_policy_present:
         reasons.append("Workspace/container root marker and no reviewed repo policy.")
         return (
             "duplicate-ignore",
             reasons,
             "Track child repos through inventory; do not enroll the workspace container.",
         )
-    if policy and bool(getattr(policy, "enrollment_enabled", True)):
-        reasons.append("Reviewed enrollment/mail policy is present.")
+    if policy and enrollment_policy_present and bool(getattr(policy, "enrollment_enabled", False)):
+        reasons.append("Reviewed enrollment policy is present.")
         return "enroll", reasons, "Use reviewed waves and approval IDs for any broad writes."
+    if policy and not enrollment_policy_present:
+        reasons.append("Reviewed mail policy is present, but no reviewed enrollment policy is present.")
+        return (
+            "needs-human-classification",
+            reasons,
+            "Mail delivery may be reviewed separately; enrollment still requires reviewed enrollment policy.",
+        )
     if _path_marker_match(repo, LAW_FIRM_SIDE_MARKERS, repo_name_contains=True):
         reasons.append("LawFirm side/candidate marker such as intake, talent, or intelligence.")
         return "side-project", reasons, "Track centrally; enroll only after explicit classification."
@@ -1485,6 +2938,8 @@ def _inventory_markdown(payload: dict[str, Any]) -> str:
         "# DAD Repo Inventory Reconciliation",
         "",
         f"Generated: {payload['generated_at']}",
+        f"Report ID: `{payload.get('report_id', '')}`",
+        f"Content fingerprint: `{payload.get('content_fingerprint', '')}`",
         "",
         CENTRAL_ONLY_BOUNDARY,
         "",
@@ -1502,10 +2957,19 @@ def _inventory_markdown(payload: dict[str, Any]) -> str:
             f"{reasons} | {record['next_action']} |"
         )
     if payload.get("github_sources"):
-        lines.extend(["", "## GitHub Sources", ""])
+        lines.extend(
+            [
+                "",
+                "## GitHub Sources",
+                "",
+                f"Coverage status: `{payload.get('github_coverage_status', 'unknown')}`",
+                "",
+            ]
+        )
         for source in payload["github_sources"]:
             lines.append(
-                f"- {source['source_id']} ({source['owner']}): {source['inventory_status']}"
+                f"- {source['source_id']} ({source['owner']}): "
+                f"{source['inventory_status']} ({source.get('repo_count', 0)} rows)"
             )
     if payload.get("source_warnings"):
         lines.extend(["", "## Warnings", ""])
@@ -1564,8 +3028,7 @@ def _iter_repo_files(repo: Path, *, max_files: int) -> list[Path]:
         dirs[:] = [
             item
             for item in dirs
-            if item.lower() not in REPO_SKIP_DIRS
-            and not item.lower().startswith("pytest-of-")
+            if not _is_repo_skip_dir_name(item)
         ]
         for filename in filenames:
             path = Path(current_raw) / filename

@@ -7,7 +7,11 @@ import os
 import json
 import yaml
 
-from .utils import find_repo_root
+from .utils import atomic_write_text, find_repo_root
+
+
+HUB_ENV_NAMES = ("DAD_HUB", "DAD_HUB_PATH")
+HUB_LOCATOR_RELATIVE_PATH = Path(".dad") / "hub.json"
 
 
 @dataclass
@@ -34,6 +38,8 @@ class GitHubSource:
     content_mode: str = "priority"
     max_file_bytes: int = 1_000_000
     priority_patterns: list[str] = field(default_factory=list)
+    repositories: list[dict[str, Any]] = field(default_factory=list)
+    repositories_file: Path | None = None
 
 
 @dataclass
@@ -126,28 +132,213 @@ def resolve_config_path(repo_root: Path, requested: Path | None = None) -> Path:
     return local if local.exists() else repo_root / "config" / "sources.example.yaml"
 
 
-def resolve_hub_root(repo_root: Path | None = None) -> Path:
-    if repo_root is not None:
-        return repo_root.resolve()
-    for env_name in ("DAD_HUB", "DAD_HUB_PATH"):
-        value = os.environ.get(env_name, "").strip()
-        if value:
-            return Path(os.path.expandvars(os.path.expanduser(value))).resolve()
-    locator = Path.home() / ".dad" / "hub.json"
-    if locator.exists():
-        payload = json.loads(locator.read_text(encoding="utf-8"))
-        value = str(payload.get("hub_path") or payload.get("path") or "").strip()
-        if value:
-            return Path(os.path.expandvars(os.path.expanduser(value))).resolve()
-    current = find_repo_root(Path.cwd()).resolve()
-    if (current / "registry" / "source-of-truth.json").exists() and (
-        current / "src" / "digital_asset_directory"
-    ).exists():
-        return current
-    raise FileNotFoundError(
-        "DAD hub unavailable. Set --hub, DAD_HUB, or ~/.dad/hub.json before "
-        "running DAD commands outside the hub repo."
+def is_dad_hub_root(path: Path) -> bool:
+    root = path.resolve()
+    required_files = [
+        root / "AI_FRONT_DOOR.md",
+        root / "MACHINE_NAVIGATION_MANIFEST.json",
+        root / "registry" / "source-of-truth.json",
+        root / "pyproject.toml",
+        root / "src" / "digital_asset_directory" / "cli.py",
+    ]
+    if not all(path.exists() and path.is_file() for path in required_files):
+        return False
+    try:
+        pyproject_text = (root / "pyproject.toml").read_text(encoding="utf-8")
+    except OSError:
+        return False
+    return (
+        'name = "digital-asset-directory"' in pyproject_text
+        and 'asset-dir = "digital_asset_directory.cli:app"' in pyproject_text
     )
+
+
+def hub_locator_path(home: Path | None = None) -> Path:
+    return (home or Path.home()) / HUB_LOCATOR_RELATIVE_PATH
+
+
+def _expand_path(value: str) -> Path:
+    return Path(os.path.expandvars(os.path.expanduser(value))).resolve()
+
+
+def _resolve_config_path_value(root: Path, value: Any) -> Path:
+    raw_path = os.path.expandvars(os.path.expanduser(str(value)))
+    path = Path(raw_path)
+    return path if path.is_absolute() else root / path
+
+
+def _github_repository_rows_from_payload(payload: Any) -> list[dict[str, Any]]:
+    rows = payload
+    if isinstance(payload, dict):
+        rows = payload.get("repositories", payload.get("repos", []))
+    if not isinstance(rows, list):
+        return []
+    return [dict(value) for value in rows if isinstance(value, dict)]
+
+
+def load_github_repositories_file(path: Path) -> list[dict[str, Any]]:
+    if not path.exists() or not path.is_file():
+        raise FileNotFoundError(f"GitHub repository metadata file not found: {path}")
+    text = path.read_text(encoding="utf-8-sig")
+    payload = json.loads(text) if path.suffix.lower() == ".json" else yaml.safe_load(text)
+    return _github_repository_rows_from_payload(payload)
+
+
+def read_hub_locator(locator: Path | None = None) -> dict[str, Any]:
+    locator_path = locator or hub_locator_path()
+    if not locator_path.exists():
+        return {
+            "exists": False,
+            "path": str(locator_path),
+            "hub_path": "",
+            "error": "",
+        }
+    try:
+        payload = json.loads(locator_path.read_text(encoding="utf-8"))
+    except json.JSONDecodeError as exc:
+        return {
+            "exists": True,
+            "path": str(locator_path),
+            "hub_path": "",
+            "error": f"invalid JSON: {exc}",
+        }
+    value = str(payload.get("hub_path") or payload.get("path") or "").strip()
+    if not value:
+        return {
+            "exists": True,
+            "path": str(locator_path),
+            "hub_path": "",
+            "error": "missing hub_path",
+        }
+    resolved = _expand_path(value)
+    return {
+        "exists": True,
+        "path": str(locator_path),
+        "hub_path": str(resolved),
+        "is_dad_hub": is_dad_hub_root(resolved),
+        "error": "",
+    }
+
+
+def write_hub_locator(hub_root: Path, locator: Path | None = None) -> dict[str, Any]:
+    root = hub_root.resolve()
+    if not is_dad_hub_root(root):
+        raise ValueError(f"Refusing to write DAD hub locator for non-DAD path: {root}")
+    locator_path = locator or hub_locator_path()
+    locator_path.parent.mkdir(parents=True, exist_ok=True)
+    payload = {
+        "schema_version": "dad.hub-locator.v1",
+        "hub_path": str(root),
+        "hub_ref": "dad://hub/Digital-Assett-Directory",
+    }
+    atomic_write_text(locator_path, json.dumps(payload, indent=2, sort_keys=True) + "\n")
+    return {
+        "path": str(locator_path),
+        "hub_path": str(root),
+        "schema_version": payload["schema_version"],
+        "written": True,
+    }
+
+
+def describe_hub_resolution(
+    explicit_hub: Path | None = None,
+    *,
+    cwd: Path | None = None,
+    environ: dict[str, str] | None = None,
+    locator: Path | None = None,
+    allow_current_fallback: bool = True,
+) -> dict[str, Any]:
+    env = environ if environ is not None else os.environ
+    attempts: list[dict[str, Any]] = []
+
+    def candidate(source: str, raw_value: str, *, detail: str = "") -> dict[str, Any]:
+        try:
+            resolved = _expand_path(raw_value)
+            error = ""
+        except RuntimeError as exc:
+            resolved = Path(raw_value)
+            error = str(exc)
+        record = {
+            "source": source,
+            "value": raw_value,
+            "path": str(resolved),
+            "exists": resolved.exists(),
+            "is_dad_hub": error == "" and resolved.exists() and is_dad_hub_root(resolved),
+            "error": error,
+        }
+        if detail:
+            record["detail"] = detail
+        attempts.append(record)
+        return record
+
+    if explicit_hub is not None:
+        record = candidate("explicit_hub", str(explicit_hub))
+        if record["is_dad_hub"]:
+            return {"resolved": True, "source": "explicit_hub", "hub_path": record["path"], "attempts": attempts}
+        return {
+            "resolved": False,
+            "source": "",
+            "hub_path": "",
+            "attempts": attempts,
+            "error": f"Explicit DAD hub is not a valid DAD hub: {record['path']}",
+        }
+
+    for env_name in HUB_ENV_NAMES:
+        value = env.get(env_name, "").strip()
+        if value:
+            record = candidate(env_name, value)
+            if record["is_dad_hub"]:
+                return {"resolved": True, "source": env_name, "hub_path": record["path"], "attempts": attempts}
+            return {
+                "resolved": False,
+                "source": "",
+                "hub_path": "",
+                "attempts": attempts,
+                "error": f"{env_name} is set but is not a valid DAD hub: {record['path']}",
+            }
+
+    locator_info = read_hub_locator(locator)
+    locator_attempt = {
+        "source": "user_locator",
+        "path": locator_info["path"],
+        "exists": locator_info["exists"],
+        "hub_path": locator_info.get("hub_path", ""),
+        "is_dad_hub": bool(locator_info.get("is_dad_hub")),
+        "error": locator_info.get("error", ""),
+    }
+    attempts.append(locator_attempt)
+    if locator_attempt["is_dad_hub"]:
+        return {
+            "resolved": True,
+            "source": "user_locator",
+            "hub_path": str(locator_info["hub_path"]),
+            "locator_path": locator_info["path"],
+            "attempts": attempts,
+        }
+
+    if allow_current_fallback:
+        current = find_repo_root((cwd or Path.cwd()).resolve()).resolve()
+        record = candidate("current_dad_repo", str(current))
+        if record["is_dad_hub"]:
+            return {"resolved": True, "source": "current_dad_repo", "hub_path": record["path"], "attempts": attempts}
+
+    return {
+        "resolved": False,
+        "source": "",
+        "hub_path": "",
+        "attempts": attempts,
+        "error": (
+            "DAD hub unavailable. Set --hub, DAD_HUB, or ~/.dad/hub.json before "
+            "running DAD commands outside the hub repo."
+        ),
+    }
+
+
+def resolve_hub_root(repo_root: Path | None = None) -> Path:
+    resolution = describe_hub_resolution(explicit_hub=repo_root)
+    if resolution["resolved"]:
+        return Path(str(resolution["hub_path"]))
+    raise FileNotFoundError(str(resolution["error"]))
 
 
 def load_config(path: Path | None = None, repo_root: Path | None = None) -> AppConfig:
@@ -177,20 +368,32 @@ def load_config(path: Path | None = None, repo_root: Path | None = None) -> AppC
             )
         )
 
-    github_sources = [
-        GitHubSource(
-            id=str(item["id"]),
-            owner=str(item["owner"]),
-            enabled=bool(item.get("enabled", True)),
-            token_env=str(item.get("token_env", "GITHUB_TOKEN")),
-            include_private=bool(item.get("include_private", True)),
-            include_archived=bool(item.get("include_archived", True)),
-            content_mode=str(item.get("content_mode", "priority")),
-            max_file_bytes=int(item.get("max_file_bytes", 1_000_000)),
-            priority_patterns=list(item.get("priority_patterns", [])),
+    github_sources: list[GitHubSource] = []
+    for item in raw.get("sources", {}).get("github", []) or []:
+        enabled = bool(item.get("enabled", True))
+        repositories = _github_repository_rows_from_payload(
+            item.get("repositories", item.get("repos", [])) or []
         )
-        for item in raw.get("sources", {}).get("github", []) or []
-    ]
+        repositories_file: Path | None = None
+        repositories_file_raw = item.get("repositories_file", item.get("repos_file"))
+        if repositories_file_raw and enabled:
+            repositories_file = _resolve_config_path_value(root, repositories_file_raw)
+            repositories.extend(load_github_repositories_file(repositories_file))
+        github_sources.append(
+            GitHubSource(
+                id=str(item["id"]),
+                owner=str(item["owner"]),
+                enabled=enabled,
+                token_env=str(item.get("token_env", "GITHUB_TOKEN")),
+                include_private=bool(item.get("include_private", True)),
+                include_archived=bool(item.get("include_archived", True)),
+                content_mode=str(item.get("content_mode", "priority")),
+                max_file_bytes=int(item.get("max_file_bytes", 1_000_000)),
+                priority_patterns=list(item.get("priority_patterns", [])),
+                repositories=repositories,
+                repositories_file=repositories_file,
+            )
+        )
 
     mail_repos: list[MailRepoPolicy] = []
     for item in raw.get("mail", {}).get("repos", []) or []:

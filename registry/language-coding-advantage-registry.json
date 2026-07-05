@@ -817,7 +817,9 @@
       "primary_assets": [
         "rust-buildout-guide",
         "dad:offering:language-coding-playbooks",
+        "dad:offering:dad-rust-scan-core-and-rollout",
         "dad:offering:rust-shadow-parity-harness",
+        "dad:offering:repo-enrollment-mail-governance-safety-harness",
         "asset:coding-tactics-radar",
         "asset:ai-engineering-preflight"
       ],
@@ -1539,6 +1541,17 @@
           ]
         },
         {
+          "harness_id": "dad:harness:repo-enrollment-mail-governance-safety",
+          "use_when": "Rust rollout packets, Rust lessons, or Rust-related DAD mail are being collected, routed, delivered, or reviewed across repos.",
+          "evidence_required": [
+            "python -m digital_asset_directory.cli mail storm-gate",
+            "safe_for_mail_storm_operations and safe_to_collect/safe_to_route/safe_to_deliver decision",
+            "doctor detail when storm-gate blocks",
+            "worktree_dirty reported separately from spool_dirty",
+            "source-outbox retry versus cross-source provenance conflict classification"
+          ]
+        },
+        {
           "harness_id": "dad:harness:language-frontier-research",
           "use_when": "A Rust source, crate, tool, compiler feature, or parser/scanner/fuzzing pattern might become DAD guidance.",
           "evidence_required": [
@@ -1552,6 +1565,7 @@
         "Profile before proposing Rust for speed.",
         "Run Rust fmt, clippy, tests, and doc tests when Rust source changes.",
         "Run native Python validation and Rust parity validation when replacing Python behavior.",
+        "Run mail storm-gate before Rust rollout mail collection, routing, or delivery in a multi-repo storm; use mail doctor --repo all --summary-only --fail-on-dirty --fail-on-coverage-gap for blocked gates and detail.",
         "Full Rust ports require load-bearing decision review and human approval."
       ],
       "adoption_rules": [

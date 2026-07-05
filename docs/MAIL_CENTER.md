@@ -112,9 +112,11 @@ release status.
 ## Commands
 
 DAD docs use `python -m digital_asset_directory.cli` because some enrolled repo
-shells may not have the `asset-dir` console script on `PATH`. When working from
-the source checkout, set `PYTHONPATH=src` first. If neither entrypoint is
-available in a downstream repo, append metadata-only fallback mail to
+shells may not have the `asset-dir` console script on `PATH`. If `asset-dir`
+is missing, first try the stable DAD user shim at `$HOME/.dad/bin/asset-dir` or
+`$HOME\.dad\bin\asset-dir.ps1`. When working from the source checkout, set
+`PYTHONPATH=src` first. If none of those entrypoints are available in a
+downstream repo, append metadata-only fallback mail to
 `.digital-asset/mail/outbox.jsonl` with `dad_cli_unavailable` and the attempted
 command; do not include raw logs, secrets, private rows, hidden reasoning, or
 copied source blobs.
@@ -132,13 +134,146 @@ python -m digital_asset_directory.cli mail compose `
 Collect repo outboxes into DAD:
 
 ```powershell
+python -m digital_asset_directory.cli mail ingest
 python -m digital_asset_directory.cli mail collect --repo C:\path\to\repo
 python -m digital_asset_directory.cli mail collect --repo all
 python -m digital_asset_directory.cli mail discover-repos
 ```
 
-`--repo all` uses only reviewed `mail.repos` config entries. `discover-repos`
-is read-only and reports mailbox candidates; it does not authorize delivery.
+`mail ingest` is the preferred storm-safe receive command. It defaults to all
+reviewed `mail.repos`, collects source outboxes into DAD, routes central
+candidates, and never writes target repo inboxes. Use it when many repos are
+sending Rust rollout lessons or learning-loop packets and you want DAD to
+receive the mail without crossing protected-repo delivery boundaries.
+
+Central collection reads repo source outboxes by stable snapshot. DAD should
+not need to create lock files inside source repos just to collect their
+outbound candidate mail. If a source outbox has an active lock, collection
+waits for the next pass; if the lock owner is gone and the filesystem refuses
+cleanup, the dead lock is recorded as a tombstone observation instead of
+blocking ingest.
+
+`--repo all` uses only reviewed `mail.repos` config entries. If bounded
+discovery finds unreviewed mailbox candidates nearby, `mail collect --repo all`
+and `mail deliver --repo all` fail closed unless a named
+`--allow-coverage-gap-ack` is provided. `discover-repos` is read-only and
+reports mailbox candidates; it does not authorize delivery. Delivery to
+`--repo all` also fails closed when any enabled reviewed repo is
+write-protected or delivery-disallowed; narrow delivery to explicit reviewed
+targets instead of letting protected repos disappear from "all."
+Discovery walks configured local source roots with bounded recursion and prunes
+build, cache, archive-worktree, and test-temp directories so nested persistent
+repos such as LawFirm OS subrepos can be surfaced without turning discovery
+into a broad source scan.
+
+Collection, routing, and delivery run a dirty-spool gate before writing. During
+concurrent repo work, you can run the same diagnostic yourself to see the
+operator summary before attempting a write:
+
+```powershell
+python -m digital_asset_directory.cli mail doctor --summary-only --fail-on-dirty
+python -m digital_asset_directory.cli mail doctor --repo all --summary-only --fail-on-dirty --fail-on-coverage-gap
+python -m digital_asset_directory.cli rust mail-spool-check
+```
+
+For the short operator playbook on "very dirty" DAD states, mail storms, Rust
+rollout reference snapshots, wrong-box writes, and worktree-dirt separation,
+read `docs/DAD_MAIL_STORM_AND_DIRTY_STATE_RUNBOOK.md`.
+
+`mail doctor` is read-only unless `--repair-stale-locks` or
+`--repair-temp-fragments` is provided. It checks JSONL lock debris, interrupted
+atomic-write fragments, malformed rows, oversized rows, same-stage duplicates,
+repo inbox rows without delivery-log evidence, central inbox rows that bypassed
+collection, and staged Rust rollout instruction packets. Repos should write
+candidate messages only to their own `.digital-asset/mail/outbox.jsonl`; DAD
+collects those into `processed/mail/inbox/*.jsonl` and now writes a hash-backed
+collection audit row under `processed/mail/archive/collection_log.jsonl`.
+Lifecycle copies across outbox, central inbox, routed outbox, delivered inbox,
+and archive are normal audit observations unless the same lifecycle stage
+repeats.
+
+Use `--repo all` when you are checking a real multi-repo mail storm. Without a
+repo argument, doctor inspects DAD's hub-local mailbox, central spools, staged
+mail, and Rust rollout packets; with `--repo all`, it also inspects reviewed
+repo outboxes/inboxes from `mail.repos`. When `--repo all` is used, the doctor
+also includes read-only `mailbox_coverage` evidence. If it reports unreviewed
+mailbox candidates, DAD has found repo-local inbox/outbox files outside reviewed
+mail policy. Those candidates are not collected or delivered, but they explain
+why the workspace may look busy during a Rust or learning-loop storm. Doctor
+uses `--fail-on-coverage-gap` for strict investigations; collect/deliver
+`--repo all` fail closed by default and require `--allow-coverage-gap-ack` to
+continue with reviewed repos only.
+
+`rust mail-spool-check` is a read-only Rust leaf probe for fast structural
+evidence about DAD mail roots. It reports public-safe aliases and row/file
+counts only. It does not replace `mail doctor`, and it cannot authorize collect,
+route, deliver, public release, or adoption.
+
+Duplicate rows in a source repo's own outbox are treated as storm/backpressure
+observations, not dirty-spool blockers. Collection canonicalizes one row into
+central mail and records duplicate sightings as audit evidence. Duplicates in
+central inbox/outbox, delivered inboxes, or Rust rollout packet snapshots still
+block because those can create false delivery confidence or repeated inbox
+spam.
+
+When reviewed `mail.repos` policy identifies two different source repo IDs for
+the same source-outbox packet identity, DAD treats that as a provenance
+conflict, not a harmless retry. Collection, routing, and delivery pause until a
+human or agent review determines which source repo owns the candidate message.
+
+The doctor also reports a separate `worktree_state`. That answers a different
+question: "does the DAD git tree have ordinary code, docs, registry, or Rust
+snapshot changes?" A dirty worktree is not automatically a dirty mailbox.
+`--fail-on-dirty` fails only for mail spool or staged-packet hazards. Use
+`--fail-on-worktree-dirty` when a script truly requires a clean DAD git tree.
+
+Collection also requires a stable source-outbox snapshot. If a repo or branch
+is still appending to `.digital-asset/mail/outbox.jsonl`, DAD reports
+`source_outbox_unstable`, treats the doctor result as not safe to collect, writes
+no central inbox row for that moving snapshot, and expects the next collection
+pass to retry after the repo agent finishes. The Rust mail-spool probe uses the
+same 64 KB default row-size ceiling as Python mail validation so it does not
+report a structurally clean spool for rows Python will reject as oversized.
+
+Use the `action_summary` before deciding what to do next:
+
+- `clean` or `clean_with_legacy_observations`: normal collection/routing may
+  proceed when repo policy allows. Legacy collection-audit observations are not
+  permission to rewrite old central inbox rows.
+- `dirty_repairable`: pause collection and repair only active/stale lock or
+  live JSONL temp hazards that are still blocking safe operations. Dead-owner
+  lock tombstones are non-blocking hygiene observations when DAD can prove the
+  owner is gone.
+- `dirty_needs_review` or `blocked`: pause collection, routing, and delivery.
+  Quarantine malformed/oversized rows by hash and metadata only; wrong-box
+  central inbox or repo inbox rows must be re-collected or delivered through the
+  governed DAD flow.
+
+Backdated central inbox rows are not trusted just because the packet says it is
+old. A pre-enforcement central inbox row is treated as clean legacy evidence
+only when a separate allowlist row matches its `mail_id`, `dedupe_key`, and
+record hash. For a reviewed migration of old DAD rows:
+
+```powershell
+python -m digital_asset_directory.cli mail doctor `
+  --repo all `
+  --summary-only `
+  --allowlist-legacy-central-inbox `
+  --legacy-allowlist-ack "reviewed pre-enforcement rows as candidate evidence only"
+```
+
+This allowlist does not approve delivery, local adoption, or public release.
+
+Rust rollout packet builds default to ignored staging under
+`processed/mail/staged/rust_rollout/`. The tracked
+`mail/outbox/rust_rollout/` folder is a reviewed reference snapshot, not the
+normal write target for every branch. `rust-rollout build-mail` also runs the
+dirty-spool gate; if you are intentionally regenerating staged Rust packets as
+part of a reviewed repair, pass `--dirty-state-ack "<reason>"` and the current
+`--dirty-state-fingerprint "<fingerprint>"` from `mail storm-gate` or
+`mail doctor` so the bypass is tied to the exact reviewed dirty state. If you
+intentionally promote the tracked reference snapshot, also pass
+`--promote-reference-snapshot-ack "<reason>"`.
 
 Route and deliver:
 
@@ -234,11 +369,33 @@ collect mail on every preflight.
 
 Preflight only reads `.digital-asset/mail/last_checked.json`. If the digest is
 missing, invalid, in the future, or older than 24 hours, preflight surfaces a
-stale mail-digest warning. The fix is to run:
+stale mail-digest warning. Before material DAD-guided work, read the digest
+when this warning appears so new DAD lessons, harnesses, asset updates, and
+governance notices are not missed. The fix is to run:
 
 ```powershell
 python -m digital_asset_directory.cli mail digest --repo C:\path\to\repo
 ```
+
+## Event Pipeline Direction
+
+Mailboxes are the current safe repo-local edge adapter. They are not intended
+to carry every long-term pipeline responsibility by themselves.
+
+The planned direction is:
+
+```text
+repo-local event outbox -> DAD read-only collection -> central event log
+central event log -> routing and notice generation -> repo mailbox digest
+repo response event -> DAD learning, usage, exception, and upgrade ledgers
+```
+
+Until the event/data pipeline phase is implemented and reviewed, agents should
+keep using mail commands and mailbox JSONL. The pipeline plan is recorded in
+`roadmap/evidence/dad-deployment-and-all-repo-verification-roadmap.md` as a
+planning gate, not as permission to write new repo-local event files broadly.
+Future pipeline work must preserve the same source-authority, provenance,
+public-release, and sensitive-payload gates as mail.
 
 ## Deduplication
 

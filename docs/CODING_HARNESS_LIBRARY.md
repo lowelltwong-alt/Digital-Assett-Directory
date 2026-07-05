@@ -21,6 +21,7 @@ proof.
 | `registry/coding-harness-registry.json` | Index of harnesses, capabilities, context, and evidence. |
 | `schemas/coding-harness.schema.json` | Contract for each harness record and `harness.json`. |
 | `schemas/coding-harness-eval.schema.json` | Contract for candidate eval records under `tests-or-evals/`. |
+| `docs/HARNESS_VS_DETERMINISTIC_ENFORCEMENT.md` | Decision model for choosing a harness, advisory report, warning, or hard deterministic check. |
 | `registry/harness-discovery-methodology.json` | Radar method for discovering missing or underpowered coding harnesses. |
 | `docs/HARNESS_DISCOVERY_RADAR.md` | Human-readable discovery loop for orphan/radar/research-to-harness work. |
 | `registry/dad-offerings-registry.json` | Rich card catalog that exposes harnesses next to assets, skills, templates, and maps. |
@@ -62,6 +63,22 @@ files under `tests-or-evals/` must conform to
   discoveries into small validation cases before DAD changes coding guidance or
   downstream recommendations.
 
+## Harness First, Enforcement Second
+
+Before turning a finding into a validator, consult
+`docs/HARNESS_VS_DETERMINISTIC_ENFORCEMENT.md`.
+
+Default to a harness when the issue is new, ambiguous, repeated across repos,
+useful for agent learning, or likely to produce noisy false positives. Link the
+new case to an existing parent harness family when possible instead of creating
+an isolated folder.
+
+Use deterministic enforcement for stable, objective, high-blast-radius checks:
+secret/public-release gates, source-authority boundaries, protected-repo writes,
+stale generated evidence, schema contracts, exact route contracts, and other
+false-green risks. The best pattern is often both: a hard gate protects the
+boundary, while a harness learns better fixes and examples around it.
+
 ## Language Frontier Harness Rule
 
 When a Python, Rust, or future-language source suggests a coding improvement,
@@ -77,6 +94,12 @@ DAD should ask whether it needs a harness before it becomes advice:
 
 If a discovery cannot name a validation command or eval idea, it stays as a
 pointer-only research note.
+
+The professional research layer is the upstream filter for this work. It tells
+agents to search DAD first, use professional/public research only when DAD lacks
+a good answer, and capture any researched improvement back into DAD as a
+pointer-only candidate with a proof surface. See
+`docs/DAD_PROFESSIONAL_RESEARCH_LAYER.md`.
 
 The first-pass harness is
 `assets/coding-harnesses/language-frontier-research/`. Its minimum eval defines

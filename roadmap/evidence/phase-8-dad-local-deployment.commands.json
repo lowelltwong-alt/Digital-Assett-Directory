@@ -1,0 +1,33 @@
+{
+  "authority_boundary": "Phase 8 command evidence proves local DAD callability only. It does not enroll repos, deliver mail, approve public release, or satisfy human gates.",
+  "commands": [
+    {
+      "command": "python -m pytest tests/test_dad_local_deployment.py -q",
+      "evidence_summary": "Focused deployment suite passed with wrapper subprocess, hub locator, fail-closed, raw-fallback, machine-readable recovery guidance contract, operational recovery redaction, controlled unavailable-hub errors, user-local unavailable-ack audit fallback, and false-green probe regressions.",
+      "status": "passed"
+    },
+    {
+      "command": "python -m digital_asset_directory.cli doctor --hub . --scope deployment",
+      "evidence_summary": "DAD repo deployment doctor returned deployment_ready=true with external invocation verified, probe locator writeback verified, recovery guidance available, and locator pointing to this hub.",
+      "status": "passed"
+    },
+    {
+      "command": "user-shim asset-dir doctor --scope deployment from two non-DAD repos",
+      "evidence_summary": "Stable user shim resolved the DAD hub through the user locator from two temporary non-DAD repos, with inside_hub=false and no target processed writes.",
+      "status": "passed"
+    },
+    {
+      "command": "user-shim asset-dir doctor --scope deployment from Mock Trial4.26 and LawFirm-os-intake without target worktree changes",
+      "evidence_summary": "Stable user shim resolved the DAD hub through the user locator from two real local repos, reported inside_hub=false and external_invocation_ready=true, and redacted git-status hashes were unchanged before/after: mock-trial-4-26 ff3536ed377d29e799e43404e344ead6b26c04801bc089d4cfc6d8eaf40658ac, lawfirm-os-intake 160db6b45087726a018c473f4a4a625de3bbd745f32e94e154cd19e4f80d9c32.",
+      "status": "passed"
+    },
+    {
+      "command": "user-shim asset-dir agent preflight --repo . --agent codex --task \"Goal 1 deployment smoke from outside DAD\"",
+      "evidence_summary": "Stable user shim ran agent preflight from a temporary non-DAD repo, returned a context pack, and did not create target processed or state directories.",
+      "status": "passed"
+    }
+  ],
+  "created_at": "2026-07-05",
+  "human_review_status": "pending",
+  "schema_version": "dad.phase8.command-evidence.v1"
+}

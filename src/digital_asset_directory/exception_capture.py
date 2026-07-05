@@ -3,10 +3,10 @@ from __future__ import annotations
 import json
 import os
 import re
-import tempfile
 from collections import Counter
 from pathlib import Path
 from typing import Any, Iterable
+from uuid import uuid4
 
 from .ids import stable_id
 from .exceptions_lake import (
@@ -23,9 +23,24 @@ from .exceptions_lake import (
     screen_exception_record,
 )
 from .mail_center import MAIL_MIRROR_DIR, compose_mail
-from .utils import safe_relative, sha256_bytes, sha256_file, write_json, utc_now
+from .mail_center import _build_mail_record, _jsonl_lock
+from .models import MailMessageRecord
+from .utils import (
+    append_jsonl,
+    safe_relative,
+    sha256_bytes,
+    sha256_file,
+    write_json,
+    write_jsonl,
+    utc_now,
+)
 
 CAPTURE_PATTERN_REGISTRY = Path("registry") / "exception-capture-pattern-registry.json"
+EVENT_TYPE_REGISTRY = Path("registry") / "exception-event-type-registry.json"
+CAPTURE_ROUTE_METHODOLOGY_REF = (
+    f"{CAPTURE_PATTERN_REGISTRY.as_posix()} + "
+    f"{EVENT_TYPE_REGISTRY.as_posix()}#backfill_classifier"
+)
 CAPTURE_REPORT_JSON = Path("processed") / "reports" / "exception_capture_completeness.json"
 CAPTURE_REPORT_MD = Path("processed") / "reports" / "exception_capture_completeness.md"
 TAXONOMY_COVERAGE_REPORT_JSON = (
@@ -44,6 +59,21 @@ CAPTURE_REMEDIATION_PLAN_JSON = (
 CAPTURE_REMEDIATION_PLAN_MD = (
     Path("processed") / "reports" / "exception_capture_remediation_plan.md"
 )
+CAPTURE_SURFACE_REFRESH_NOTICES_JSON = (
+    Path("processed") / "reports" / "exception_capture_surface_refresh_notices.json"
+)
+CAPTURE_SURFACE_REFRESH_NOTICES_MD = (
+    Path("processed") / "reports" / "exception_capture_surface_refresh_notices.md"
+)
+CAPTURE_SURFACE_REFRESH_NOTICES_STAGED = (
+    Path("processed") / "mail" / "staged" / "capture_surface_refresh_notices.jsonl"
+)
+CAPTURE_SURFACE_REFRESH_NOTICE_QUARANTINE = (
+    Path("processed")
+    / "exceptions"
+    / "quarantine"
+    / "capture_surface_refresh_notices_malformed_jsonl.jsonl"
+)
 CAPTURE_GAP_REVIEW_QUEUE_JSON = (
     Path("processed") / "reports" / "exception_capture_gap_review_queue.json"
 )
@@ -56,7 +86,22 @@ CAPTURE_EMISSION_SIMULATION_JSON = (
 CAPTURE_EMISSION_SIMULATION_MD = (
     Path("processed") / "reports" / "exception_capture_emission_simulation.md"
 )
+PHASE6_MACHINE_EVIDENCE_SUMMARY_JSON = (
+    Path("processed") / "reports" / "phase6_exception_capture_machine_evidence_summary.json"
+)
+PHASE6_MACHINE_EVIDENCE_SUMMARY_MD = (
+    Path("processed") / "reports" / "phase6_exception_capture_machine_evidence_summary.md"
+)
 PHASE6_LAWFIRM_MISSED_CAPTURE_SCENARIO_ID = "lawfirm-review-issue-missed-capture"
+PHASE6_HUMAN_GATE_IDS = (
+    "phase-6-capture-completeness-harness-reviewed",
+    "phase-6-lawfirm-intake-missed-capture-regression",
+    "phase-6-pattern-update-simulation-reviewed",
+    "phase-6-all-asset-pattern-coverage-reviewed",
+    "phase-6-sensitive-payload-negative-tests-reviewed",
+    "phase-6-observed-repo-capture-audit-reviewed",
+    "phase-6-taxonomy-route-coverage-reviewed",
+)
 PHASE6_REQUIRED_UPDATE_FAMILIES = {
     "workflow",
     "mail_pattern",
@@ -75,6 +120,7 @@ PHASE6_REQUIRED_NEGATIVE_CONTROLS = {
     "contains_prompt_injection_like_text",
     "contains_raw_log_blob",
     "contains_secret_or_pii",
+    "contains_source_or_diff",
 }
 PHASE6_NEGATIVE_CONTROL_ISSUES = {
     "contains_hidden_chain_of_thought": {"hidden_reasoning_like_payload"},
@@ -82,6 +128,7 @@ PHASE6_NEGATIVE_CONTROL_ISSUES = {
     "contains_prompt_injection_like_text": {"prompt_injection_like_payload"},
     "contains_raw_log_blob": {"long_string", "raw_blob_like_multiline_value"},
     "contains_secret_or_pii": {"credential_or_pii_pattern"},
+    "contains_source_or_diff": {"source_or_diff_like_payload"},
 }
 PHASE6_MACHINE_EVIDENCE_SCOPE = "machine_only_not_roadmap_gate_evidence"
 PHASE6_GATE_BOUNDARY = (
@@ -89,6 +136,37 @@ PHASE6_GATE_BOUNDARY = (
     "contain the expected support for Phase 6 gates; they do not satisfy the "
     "separate human-reviewed roadmap gates."
 )
+PHASE6_SUMMARY_REPORTS = {
+    "capture_completeness": CAPTURE_REPORT_JSON,
+    "emission_simulation": CAPTURE_EMISSION_SIMULATION_JSON,
+    "taxonomy_coverage": TAXONOMY_COVERAGE_REPORT_JSON,
+    "observed_audit": OBSERVED_AUDIT_JSON,
+}
+PHASE6_SUMMARY_REQUIRED_CONTRIBUTORS = {
+    "phase-6-capture-completeness-harness-reviewed": (
+        ("capture_completeness", "gate"),
+        ("emission_simulation", "support"),
+    ),
+    "phase-6-lawfirm-intake-missed-capture-regression": (
+        ("capture_completeness", "gate"),
+    ),
+    "phase-6-pattern-update-simulation-reviewed": (
+        ("capture_completeness", "gate"),
+        ("emission_simulation", "support"),
+    ),
+    "phase-6-all-asset-pattern-coverage-reviewed": (
+        ("capture_completeness", "gate"),
+    ),
+    "phase-6-sensitive-payload-negative-tests-reviewed": (
+        ("capture_completeness", "gate"),
+    ),
+    "phase-6-observed-repo-capture-audit-reviewed": (
+        ("observed_audit", "gate"),
+    ),
+    "phase-6-taxonomy-route-coverage-reviewed": (
+        ("taxonomy_coverage", "gate"),
+    ),
+}
 OBSERVED_CAPTURE_AUDIT_GAP_FLAGS = {
     "capture_surface_version_unknown",
     "candidate_path_scan_truncated",
@@ -116,6 +194,7 @@ PACKET_CLASSES = {
     "no_packet",
 }
 CAPTURE_SIGNAL_RE = re.compile(r"^[a-z][a-z0-9_:-]{0,80}$")
+CAPTURE_NOTICE_SAFE_REF_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._:-]{0,180}$")
 PROMPT_INJECTION_PATTERNS = [
     re.compile(r"(?i)\bignore (all )?(previous|prior|above) instructions\b"),
     re.compile(r"(?i)\b(system|developer) prompt\b"),
@@ -146,6 +225,12 @@ SIMULATED_EMISSION_PROVENANCE_FIELDS = {
     "matched_rule_ids",
     "update_required",
 }
+BACKFILL_ROUTE_REQUIRED_FIELDS = [
+    "false_positive_risk",
+    "path_signal",
+    "safe_path_hash_or_pointer",
+    "source_rule_id",
+]
 PRIVATE_PATH_FRAGMENTS = (
     "c:/users/",
     "c:\\users\\",
@@ -290,6 +375,112 @@ CAPTURE_AUDIT_PATH_TERMS: dict[str, dict[str, str]] = {
 
 def load_capture_pattern_registry(hub_root: Path) -> dict[str, Any]:
     return json.loads((hub_root / CAPTURE_PATTERN_REGISTRY).read_text(encoding="utf-8"))
+
+
+def capture_route_registry_from_registries(
+    capture_registry: dict[str, Any],
+    event_registry: dict[str, Any],
+) -> dict[str, Any]:
+    """Return capture rules plus backfill-only reviewed learnable route rules."""
+    capture_events = {
+        str((rule.get("emit") or {}).get("exception_event_type") or "")
+        for rule in capture_registry.get("rules", [])
+        if isinstance(rule, dict)
+        and rule.get("review_status") == "reviewed"
+        and str((rule.get("emit") or {}).get("exception_event_type") or "")
+    }
+    events_by_type = {
+        str(event.get("event_type") or ""): event
+        for event in event_registry.get("event_types", [])
+        if isinstance(event, dict)
+    }
+    route_rules = list(capture_registry.get("rules", []))
+    classifier = event_registry.get("backfill_classifier")
+    classifier_rules = classifier.get("rules", []) if isinstance(classifier, dict) else []
+    for backfill_rule in classifier_rules:
+        if not isinstance(backfill_rule, dict):
+            continue
+        event_type = str(backfill_rule.get("event_type") or "")
+        event = events_by_type.get(event_type, {})
+        if event_type in capture_events:
+            continue
+        if event.get("review_status") != "reviewed" or not bool(event.get("learnable")):
+            continue
+        rule_id = str(backfill_rule.get("rule_id") or "")
+        terms = [str(term) for term in backfill_rule.get("terms", []) if str(term)]
+        if not rule_id or not event_type or not terms:
+            continue
+        route_rules.append(
+            {
+                "rule_id": rule_id,
+                "pattern_family": "exception_pattern",
+                "description": (
+                    "Backfill-only path-signal route for reviewed learnable "
+                    f"exception event `{event_type}`."
+                ),
+                "min_capture_surface_version": str(
+                    capture_registry.get("capture_surface_version") or "0.4.0"
+                ),
+                "match_signals": [],
+                "any_signals": [f"path_keyword:{term}" for term in terms],
+                "suppress_signals": [],
+                "emit": {
+                    "packet_classes": ["exception_event"],
+                    "mail_message_type": "",
+                    "exception_event_type": event_type,
+                    "capture_contract": str(
+                        backfill_rule.get("capture_contract") or "backfill_candidate"
+                    ),
+                    "severity": str(backfill_rule.get("severity") or ""),
+                    "required_fields": BACKFILL_ROUTE_REQUIRED_FIELDS,
+                    "rationale": (
+                        "Backfill path-signal candidates use safe metadata only "
+                        "and require source review before learning promotion."
+                    ),
+                },
+                "applies_when": list(backfill_rule.get("applies_when", [])),
+                "does_not_apply_when": list(backfill_rule.get("does_not_apply_when", [])),
+                "danger_if_missed": (
+                    "Backfill-only exception evidence can appear covered by taxonomy "
+                    "while no deterministic scenario proves the route."
+                ),
+                "review_status": "reviewed",
+                "route_kind": "backfill_path_signal",
+                "classification_confidence": str(
+                    backfill_rule.get("classification_confidence")
+                    or "path_name_signal_only"
+                ),
+                "false_positive_risk": str(backfill_rule.get("false_positive_risk") or ""),
+            }
+        )
+    return {
+        **capture_registry,
+        "rules": route_rules,
+    }
+
+
+def load_capture_route_registry(hub_root: Path) -> dict[str, Any]:
+    capture_registry = load_capture_pattern_registry(hub_root)
+    try:
+        event_registry = load_event_type_registry(hub_root)
+    except FileNotFoundError:
+        return capture_registry
+    return capture_route_registry_from_registries(capture_registry, event_registry)
+
+
+def capture_route_methodology_hash(hub_root: Path) -> str:
+    refs = [CAPTURE_PATTERN_REGISTRY]
+    if (hub_root / EVENT_TYPE_REGISTRY).exists():
+        refs.append(EVENT_TYPE_REGISTRY)
+    payload = [
+        {
+            "path": ref.as_posix(),
+            "sha256": sha256_file(hub_root / ref),
+        }
+        for ref in refs
+    ]
+    encoded = json.dumps(payload, sort_keys=True, separators=(",", ":")).encode("utf-8")
+    return f"sha256:{sha256_bytes(encoded)}"
 
 
 def load_capture_scenarios(path: Path) -> dict[str, Any]:
@@ -631,7 +822,7 @@ def suggest_exception_capture(
     does not prove the event occurred and does not authorize DAD or a repo to
     emit anything unsafe.
     """
-    registry = load_capture_pattern_registry(hub_root)
+    registry = load_capture_route_registry(hub_root)
     normalized_signals, signal_screen_issues = _normalized_capture_signals(signals)
     capture_surface_unknown = not str(repo_capture_surface_version or "").strip()
     surface_version = (
@@ -710,8 +901,8 @@ def suggest_exception_capture(
         "generated_at": utc_now(),
         "suggestion_id": "dad:exception-capture-suggestion",
         "registry_ref": CAPTURE_PATTERN_REGISTRY.as_posix(),
-        "methodology_ref": CAPTURE_PATTERN_REGISTRY.as_posix(),
-        "methodology_hash": f"sha256:{sha256_file(hub_root / CAPTURE_PATTERN_REGISTRY)}",
+        "methodology_ref": CAPTURE_ROUTE_METHODOLOGY_REF,
+        "methodology_hash": capture_route_methodology_hash(hub_root),
         "repo_capture_surface_version": surface_version,
         "capture_surface_version_unknown": capture_surface_unknown,
         "registry_capture_surface_version": str(registry.get("capture_surface_version") or ""),
@@ -1171,6 +1362,14 @@ def _emit_simulated_capture_packet(
         emitted["outbox_paths"].append(MAIL_MIRROR_DIR.joinpath("outbox.jsonl").as_posix())
         emitted.setdefault("mail_ids", []).append(result["record"]["mail_id"])
     if "exception_event" in packet_classes:
+        change_context = None
+        if str(packet.get("exception_event_type") or "") == "code_change_exception":
+            change_context = {
+                "change_ref": payload.get("change_ref"),
+                "changed_surface": payload.get("changed_surface"),
+                "exception_reason": payload.get("exception_reason"),
+                "validation_ref_or_gap": payload.get("validation_ref_or_gap"),
+            }
         result = record_exception_event(
             hub_root,
             repo,
@@ -1187,6 +1386,7 @@ def _emit_simulated_capture_packet(
             context_refs=[f"dad://capture-scenario/{scenario_id}", rule_id],
             validation_refs=[f"simulated-validation:{scenario_id}"],
             trace_refs=trace_refs,
+            change_context=change_context,
         )
         emitted["outbox_paths"].append(EXCEPTION_OUTBOX.as_posix())
         emitted["screening_issues"].extend(result.get("screening_issues", []))
@@ -1370,30 +1570,48 @@ def write_exception_capture_emission_simulation(
     limit: int | None = None,
 ) -> dict[str, Any]:
     scenarios = load_capture_scenarios(scenarios_path)
-    registry = load_capture_pattern_registry(hub_root)
+    registry = load_capture_route_registry(hub_root)
     cases = [
         case
         for case in scenarios.get("cases", [])
         if isinstance(case, dict) and case.get("review_status") == "reviewed"
     ]
+    full_reviewed_case_count = len(cases)
+    full_reviewed_scenario_ids = [str(case.get("scenario_id", "")) for case in cases]
     if limit is not None and limit > 0:
         cases = cases[:limit]
-    with tempfile.TemporaryDirectory(prefix="dad-capture-emission-") as tmp:
-        workspace = Path(tmp)
-        rows = [
-            _simulate_capture_case_emission(hub_root, case, registry, workspace)
-            for case in cases
-        ]
+    emitted_scenario_ids = [str(case.get("scenario_id", "")) for case in cases]
+    emitted_scenario_id_set = set(emitted_scenario_ids)
+    omitted_reviewed_scenario_ids = [
+        scenario_id
+        for scenario_id in full_reviewed_scenario_ids
+        if scenario_id and scenario_id not in emitted_scenario_id_set
+    ]
+    limited = bool(omitted_reviewed_scenario_ids)
+    temp_parent = hub_root / ".tmp" / "capture-emission"
+    temp_parent.mkdir(parents=True, exist_ok=True)
+    workspace = temp_parent / f"dad-capture-emission-{uuid4().hex[:12]}"
+    workspace.mkdir(parents=True, exist_ok=False)
+    rows = [
+        _simulate_capture_case_emission(hub_root, case, registry, workspace)
+        for case in cases
+    ]
     failed = [row for row in rows if not row["passed"]]
     initial_update_required_count = sum(1 for row in rows if row["initial_update_required"])
+    gate_supporting = bool(rows) and not failed and not limited
     report = {
         "generated_at": utc_now(),
         "report_id": "dad:exception-capture-emission-simulation",
         "scenario_path": safe_relative(scenarios_path, hub_root),
         "registry_ref": CAPTURE_PATTERN_REGISTRY.as_posix(),
-        "methodology_ref": CAPTURE_PATTERN_REGISTRY.as_posix(),
-        "methodology_hash": f"sha256:{sha256_file(hub_root / CAPTURE_PATTERN_REGISTRY)}",
+        "methodology_ref": CAPTURE_ROUTE_METHODOLOGY_REF,
+        "methodology_hash": capture_route_methodology_hash(hub_root),
         "input_hashes": _input_hashes(hub_root, scenarios_path),
+        "coverage_status": "limited_diagnostic" if limited else "full_reviewed_scenario_set",
+        "limited": limited,
+        "full_reviewed_case_count": full_reviewed_case_count,
+        "emitted_reviewed_case_count": len(rows),
+        "omitted_reviewed_scenario_ids": omitted_reviewed_scenario_ids,
         "case_count": len(rows),
         "passed_count": len(rows) - len(failed),
         "failed_count": len(failed),
@@ -1408,13 +1626,20 @@ def write_exception_capture_emission_simulation(
         "cases": rows,
         "phase6_machine_gate_evidence": {
             "evidence_scope": PHASE6_MACHINE_EVIDENCE_SCOPE,
-            "machine_status": "passed" if not failed and rows else "failed",
+            "machine_status": "passed" if gate_supporting else "failed",
+            "coverage_status": "limited_diagnostic"
+            if limited
+            else "full_reviewed_scenario_set",
+            "limited": limited,
             "human_review_required": True,
             "human_gate_satisfied": False,
             "supports_human_gate_ids": [
-                "synthetic-harness-proves-dad-worthy-patterns-become-packets",
-                "pattern-update-simulation-proves-new-required-fields",
-            ],
+                "phase-6-capture-completeness-harness-reviewed",
+                "phase-6-pattern-update-simulation-reviewed",
+            ]
+            if gate_supporting
+            else [],
+            "missing_reviewed_scenario_ids": omitted_reviewed_scenario_ids,
         },
         "authority_boundary": (
             "Machine simulation evidence only. This gate proves reviewed synthetic "
@@ -1457,6 +1682,221 @@ def write_exception_capture_emission_simulation(
         )
     md_path.parent.mkdir(parents=True, exist_ok=True)
     md_path.write_text("\n".join(lines) + "\n", encoding="utf-8")
+    return report
+
+
+def _phase6_source_report(
+    hub_root: Path,
+    key: str,
+    rel_path: Path,
+) -> tuple[dict[str, Any], dict[str, Any] | None]:
+    path = hub_root / rel_path
+    row: dict[str, Any] = {
+        "report_key": key,
+        "path": rel_path.as_posix(),
+        "exists": path.exists(),
+        "content_hash": "",
+        "generated_at": "",
+        "report_id": "",
+        "audit_id": "",
+        "read_status": "missing",
+        "error": "",
+    }
+    if not path.exists():
+        return row, None
+    try:
+        row["content_hash"] = f"sha256:{sha256_file(path)}"
+        payload = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError) as exc:
+        row["read_status"] = "malformed"
+        row["error"] = f"{type(exc).__name__}:{exc}"
+        return row, None
+    row["read_status"] = "loaded"
+    row["generated_at"] = str(payload.get("generated_at", ""))
+    row["report_id"] = str(payload.get("report_id", ""))
+    row["audit_id"] = str(payload.get("audit_id", ""))
+    return row, payload
+
+
+def _phase6_gate_status_from_report(
+    payload: dict[str, Any] | None,
+    gate_id: str,
+) -> tuple[str, dict[str, Any]]:
+    if not isinstance(payload, dict):
+        return "missing_report", {}
+    evidence = payload.get("phase6_machine_gate_evidence")
+    if not isinstance(evidence, dict):
+        return "missing_phase6_evidence", {}
+    gates = evidence.get("gates")
+    if not isinstance(gates, dict):
+        return "missing_gate_map", {}
+    gate = gates.get(_phase6_machine_evidence_key(gate_id))
+    if not isinstance(gate, dict):
+        return "missing_gate", {}
+    return str(gate.get("machine_status") or "unknown"), {
+        "evidence_id": str(gate.get("evidence_id", "")),
+        "human_gate_satisfied": bool(gate.get("human_gate_satisfied", False)),
+        "evidence_scope": str(gate.get("evidence_scope", "")),
+    }
+
+
+def _phase6_emission_support_status(
+    payload: dict[str, Any] | None,
+    gate_id: str,
+) -> tuple[str, dict[str, Any]]:
+    if not isinstance(payload, dict):
+        return "missing_report", {}
+    evidence = payload.get("phase6_machine_gate_evidence")
+    if not isinstance(evidence, dict):
+        return "missing_phase6_evidence", {}
+    gate_ids = {str(item) for item in evidence.get("supports_human_gate_ids", []) or []}
+    machine_status = str(evidence.get("machine_status") or "unknown")
+    limited = bool(evidence.get("limited") or payload.get("limited"))
+    status = "passed" if machine_status == "passed" and gate_id in gate_ids and not limited else "failed"
+    if gate_id not in gate_ids:
+        status = "missing_gate_support"
+    if limited:
+        status = "limited_diagnostic"
+    return status, {
+        "machine_status": machine_status,
+        "coverage_status": str(evidence.get("coverage_status") or payload.get("coverage_status") or ""),
+        "limited": limited,
+        "human_gate_satisfied": bool(evidence.get("human_gate_satisfied", False)),
+        "evidence_scope": str(evidence.get("evidence_scope", "")),
+    }
+
+
+def build_phase6_machine_evidence_summary(
+    hub_root: Path,
+    *,
+    generated_at: str | None = None,
+) -> dict[str, Any]:
+    source_reports: list[dict[str, Any]] = []
+    payloads: dict[str, dict[str, Any] | None] = {}
+    input_hashes: dict[str, str] = {}
+    for key, rel_path in PHASE6_SUMMARY_REPORTS.items():
+        row, payload = _phase6_source_report(hub_root, key, rel_path)
+        source_reports.append(row)
+        payloads[key] = payload
+        if row["content_hash"]:
+            input_hashes[row["path"]] = str(row["content_hash"])
+
+    gates: list[dict[str, Any]] = []
+    for gate_id in PHASE6_HUMAN_GATE_IDS:
+        contributors: list[dict[str, Any]] = []
+        for report_key, contributor_kind in PHASE6_SUMMARY_REQUIRED_CONTRIBUTORS[gate_id]:
+            if contributor_kind == "support":
+                status, details = _phase6_emission_support_status(payloads.get(report_key), gate_id)
+            else:
+                status, details = _phase6_gate_status_from_report(payloads.get(report_key), gate_id)
+            contributors.append(
+                {
+                    "report_key": report_key,
+                    "report_path": PHASE6_SUMMARY_REPORTS[report_key].as_posix(),
+                    "contributor_kind": contributor_kind,
+                    "machine_status": status,
+                    "details": details,
+                }
+            )
+        effective_status = (
+            "passed"
+            if contributors and all(row["machine_status"] == "passed" for row in contributors)
+            else "failed"
+        )
+        gates.append(
+            {
+                "gate_id": gate_id,
+                "machine_status": effective_status,
+                "human_review_required": True,
+                "human_gate_satisfied": False,
+                "contributors": contributors,
+            }
+        )
+
+    blocked_gate_ids = [row["gate_id"] for row in gates if row["machine_status"] != "passed"]
+    source_report_failures = [
+        row["report_key"] for row in source_reports if row["read_status"] != "loaded"
+    ]
+    overall_machine_status = (
+        "passed" if not blocked_gate_ids and not source_report_failures else "failed"
+    )
+    return {
+        "generated_at": generated_at or utc_now(),
+        "report_id": "dad:phase6-exception-capture-machine-evidence-summary",
+        "phase_id": "phase-6-exceptions-lake-and-capture-completeness",
+        "evidence_scope": PHASE6_MACHINE_EVIDENCE_SCOPE,
+        "overall_machine_status": overall_machine_status,
+        "human_review_required": True,
+        "human_gate_satisfied": False,
+        "phase6_human_gate_ids": list(PHASE6_HUMAN_GATE_IDS),
+        "blocked_gate_ids": blocked_gate_ids,
+        "source_report_failures": source_report_failures,
+        "source_reports": source_reports,
+        "gates": gates,
+        "input_hashes": input_hashes,
+        "pass_condition": (
+            "All required Phase 6 source reports load successfully and every Phase 6 "
+            "human gate has all required machine contributors with machine_status=passed. "
+            "This remains machine evidence only and never satisfies human gates."
+        ),
+        "recommended_next_actions": [
+            "Review blocked_gate_ids before any Phase 6 human gate decision.",
+            "If observed-audit is blocked, resolve current-surface gaps or document protected/policy-blocked status before claiming all-repo capture completeness.",
+        ],
+        "authority_boundary": (
+            "This summary compiles machine evidence from Phase 6 reports. It does not "
+            "satisfy roadmap human gates, mutate repos, deliver mail, approve public "
+            "release, or certify source truth."
+        ),
+    }
+
+
+def _phase6_machine_evidence_summary_markdown(report: dict[str, Any]) -> str:
+    lines = [
+        "# Phase 6 Exception Capture Machine Evidence Summary",
+        "",
+        f"- Generated: {report['generated_at']}",
+        f"- Overall machine status: `{report['overall_machine_status']}`",
+        f"- Human gate satisfied: `{report['human_gate_satisfied']}`",
+        "",
+        "Boundary: this is machine evidence only. It does not satisfy roadmap human gates.",
+        "",
+        "## Gates",
+        "",
+        "| Gate | Machine status | Contributors |",
+        "| --- | --- | --- |",
+    ]
+    for gate in report["gates"]:
+        contributors = ", ".join(
+            f"{row['report_key']}:{row['machine_status']}" for row in gate["contributors"]
+        )
+        lines.append(
+            f"| `{gate['gate_id']}` | `{gate['machine_status']}` | {contributors} |"
+        )
+    lines.extend(["", "## Source Reports", "", "| Report | Status | Generated |", "| --- | --- | --- |"])
+    for row in report["source_reports"]:
+        lines.append(
+            f"| `{row['path']}` | `{row['read_status']}` | `{row['generated_at']}` |"
+        )
+    if report["blocked_gate_ids"]:
+        lines.extend(["", "## Blocked Gates", ""])
+        for gate_id in report["blocked_gate_ids"]:
+            lines.append(f"- `{gate_id}`")
+    lines.extend(["", "## Authority Boundary", "", str(report["authority_boundary"]), ""])
+    return "\n".join(lines)
+
+
+def write_phase6_machine_evidence_summary(
+    hub_root: Path,
+    *,
+    output: Path | None = None,
+) -> dict[str, Any]:
+    report = build_phase6_machine_evidence_summary(hub_root)
+    output_path = hub_root / (output or PHASE6_MACHINE_EVIDENCE_SUMMARY_JSON)
+    write_json(output_path, report)
+    md_path = output_path.with_suffix(".md") if output else hub_root / PHASE6_MACHINE_EVIDENCE_SUMMARY_MD
+    md_path.parent.mkdir(parents=True, exist_ok=True)
+    md_path.write_text(_phase6_machine_evidence_summary_markdown(report), encoding="utf-8")
     return report
 
 
@@ -1665,6 +2105,7 @@ def _is_capture_audit_excluded(path: Path, repo: Path) -> bool:
     normalized = scoped.as_posix().casefold()
     return (
         any(part.casefold() in CAPTURE_AUDIT_EXCLUDE_DIRS for part in scoped.parts)
+        or any(part.casefold().startswith(".tmp") for part in scoped.parts)
         or any(part.casefold().startswith("pytest-of-") for part in scoped.parts)
         or any(term in normalized for term in BACKFILL_SENSITIVE_PATH_TERMS)
     )
@@ -2657,8 +3098,8 @@ def write_observed_capture_audit(
         "audit_id": "dad:exception-capture-observed-audit",
         "repo_count": len(rows),
         "registry_ref": CAPTURE_PATTERN_REGISTRY.as_posix(),
-        "methodology_ref": CAPTURE_PATTERN_REGISTRY.as_posix(),
-        "methodology_hash": f"sha256:{sha256_file(hub_root / CAPTURE_PATTERN_REGISTRY)}",
+        "methodology_ref": CAPTURE_ROUTE_METHODOLOGY_REF,
+        "methodology_hash": capture_route_methodology_hash(hub_root),
         "input_hashes": _observed_audit_input_hashes(hub_root),
         "capture_surface_version": registry.get("capture_surface_version"),
         "status_counts": dict(sorted(status_counts.items())),
@@ -3481,6 +3922,475 @@ def write_exception_capture_remediation_plan(
     return plan
 
 
+def _staged_mail_identity(record: dict[str, Any]) -> tuple[str, str]:
+    return str(record.get("mail_id") or ""), str(record.get("dedupe_key") or "")
+
+
+def _safe_capture_notice_ref(value: Any, issues: list[str], *, field: str) -> str:
+    text = str(value or "").strip()
+    if text and CAPTURE_NOTICE_SAFE_REF_RE.fullmatch(text):
+        return text
+    digest = sha256_bytes(text.encode("utf-8"))
+    issues.append(f"{field}_redacted_to_hash_ref")
+    return f"path-ref-sha256:{digest}"
+
+
+def _safe_capture_notice_list(values: Any, issues: list[str], *, field: str) -> list[str]:
+    safe: list[str] = []
+    for index, item in enumerate(values or []):
+        text = str(item or "").strip()
+        if text and CAPTURE_SIGNAL_RE.fullmatch(text):
+            safe.append(text)
+        elif text:
+            issues.append(f"{field}_{index}_redacted")
+            safe.append(f"redacted-signal-sha256:{sha256_bytes(text.encode('utf-8'))}")
+    return safe
+
+
+def _safe_capture_notice_counter(values: Any, issues: list[str], *, field: str) -> dict[str, int]:
+    if not isinstance(values, dict):
+        return {}
+    safe: Counter[str] = Counter()
+    for key, value in values.items():
+        text = str(key or "").strip()
+        try:
+            count = int(value or 0)
+        except (TypeError, ValueError):
+            count = 0
+        if not count:
+            continue
+        if text and CAPTURE_SIGNAL_RE.fullmatch(text):
+            safe[text] += count
+        else:
+            issues.append(f"{field}_redacted_key")
+            safe[f"redacted-key-sha256:{sha256_bytes(text.encode('utf-8'))}"] += count
+    return dict(sorted(safe.items()))
+
+
+def _append_unique_capture_surface_refresh_notice(
+    hub_root: Path,
+    record: dict[str, Any],
+) -> str:
+    payload = MailMessageRecord(**record).model_dump(mode="json")
+    identity = _staged_mail_identity(payload)
+    dedupe_key = identity[1]
+    stage_path = hub_root / CAPTURE_SURFACE_REFRESH_NOTICES_STAGED
+    with _jsonl_lock(stage_path):
+        rows: list[dict[str, Any]] = []
+        replaced = False
+        exact_found = False
+        if stage_path.exists():
+            for line_number, line in enumerate(
+                stage_path.read_text(encoding="utf-8").splitlines(),
+                start=1,
+            ):
+                if not line.strip():
+                    continue
+                try:
+                    existing = json.loads(line)
+                except json.JSONDecodeError as exc:
+                    append_jsonl(
+                        hub_root / CAPTURE_SURFACE_REFRESH_NOTICE_QUARANTINE,
+                        {
+                            "event_type": "capture_surface_refresh_notice_malformed_jsonl",
+                            "created_at": utc_now(),
+                            "path": CAPTURE_SURFACE_REFRESH_NOTICES_STAGED.as_posix(),
+                            "line_number": line_number,
+                            "error": exc.msg,
+                        },
+                    )
+                    continue
+                if not isinstance(existing, dict):
+                    continue
+                existing_identity = _staged_mail_identity(existing)
+                if existing_identity == identity:
+                    if not exact_found:
+                        rows.append(existing)
+                        exact_found = True
+                    continue
+                if dedupe_key and existing_identity[1] == dedupe_key:
+                    replaced = True
+                    continue
+                rows.append(existing)
+        if exact_found:
+            if replaced:
+                write_jsonl(stage_path, rows, allow_direct_fallback=True)
+                return "replaced"
+            return "duplicate"
+        if replaced:
+            rows.append(payload)
+            write_jsonl(stage_path, rows, allow_direct_fallback=True)
+            return "replaced"
+        append_jsonl(stage_path, payload)
+    return "appended"
+
+
+def _prune_inactive_capture_surface_refresh_notices(
+    hub_root: Path,
+    active_identities: set[tuple[str, str]],
+) -> int:
+    stage_path = hub_root / CAPTURE_SURFACE_REFRESH_NOTICES_STAGED
+    if not stage_path.exists():
+        return 0
+    with _jsonl_lock(stage_path):
+        rows: list[dict[str, Any]] = []
+        pruned = 0
+        seen: set[tuple[str, str]] = set()
+        for line_number, line in enumerate(
+            stage_path.read_text(encoding="utf-8").splitlines(),
+            start=1,
+        ):
+            if not line.strip():
+                continue
+            try:
+                existing = json.loads(line)
+            except json.JSONDecodeError as exc:
+                append_jsonl(
+                    hub_root / CAPTURE_SURFACE_REFRESH_NOTICE_QUARANTINE,
+                    {
+                        "event_type": "capture_surface_refresh_notice_malformed_jsonl",
+                        "created_at": utc_now(),
+                        "path": CAPTURE_SURFACE_REFRESH_NOTICES_STAGED.as_posix(),
+                        "line_number": line_number,
+                        "error": exc.msg,
+                    },
+                )
+                pruned += 1
+                continue
+            if not isinstance(existing, dict):
+                pruned += 1
+                continue
+            identity = _staged_mail_identity(existing)
+            if identity not in active_identities or identity in seen:
+                pruned += 1
+                continue
+            rows.append(existing)
+            seen.add(identity)
+        write_jsonl(stage_path, rows, allow_direct_fallback=True)
+    return pruned
+
+
+def _capture_surface_refresh_notice_mail(
+    repo: dict[str, Any],
+    plan: dict[str, Any],
+    *,
+    registry_capture_surface_version: str,
+) -> dict[str, Any]:
+    created_at = utc_now()
+    screening_issues: list[str] = []
+    repo_id = _safe_capture_notice_ref(
+        repo.get("repo_id") or repo.get("path_hash") or "unknown",
+        screening_issues,
+        field="repo_id",
+    )
+    repo_alias = _safe_capture_notice_ref(
+        repo.get("repo_alias") or repo_id,
+        screening_issues,
+        field="repo_alias",
+    )
+    target_visibility = str(repo.get("visibility") or "unknown")
+    target_public_facing = bool(repo.get("public_facing"))
+    public_release_required = target_public_facing
+    dedupe_key = stable_id(
+        "exception-capture-surface-refresh",
+        repo_id,
+        str(repo.get("path_hash") or ""),
+        registry_capture_surface_version,
+    )
+    payload = {
+        "summary": "DAD exception capture surface is stale or missing for this repo.",
+        "notice_type": "capture_surface_refresh_required",
+        "source_ref": "dad://exceptions/capture-surface-refresh-notices",
+        "repo_id": repo_id,
+        "repo_alias": repo_alias,
+        "visibility": target_visibility,
+        "public_facing": target_public_facing,
+        "write_policy": str(repo.get("write_policy") or ""),
+        "capture_surface_action": str(repo.get("capture_surface_action") or ""),
+        "registry_capture_surface_version": registry_capture_surface_version,
+        "candidate_path_signal_count": int(repo.get("candidate_path_signal_count") or 0),
+        "proof_blockers": _safe_capture_notice_list(
+            repo.get("proof_blockers", [])[:12],
+            screening_issues,
+            field="proof_blockers",
+        ),
+        "status_flags": _safe_capture_notice_list(
+            repo.get("status_flags", [])[:12],
+            screening_issues,
+            field="status_flags",
+        ),
+        "top_pattern_families": _safe_capture_notice_counter(
+            repo.get("top_pattern_families"),
+            screening_issues,
+            field="top_pattern_families",
+        ),
+        "top_source_rule_ids": _safe_capture_notice_counter(
+            repo.get("top_source_rule_ids"),
+            screening_issues,
+            field="top_source_rule_ids",
+        ),
+        "top_suggested_event_types": _safe_capture_notice_counter(
+            repo.get("top_suggested_event_types"),
+            screening_issues,
+            field="top_suggested_event_types",
+        ),
+        "hash": str(plan.get("methodology_hash") or ""),
+        "authority_boundary": "staged_central_candidate_only_no_target_repo_write",
+        "promotion_boundary": "requires_reviewed_public_safe_transform_before_delivery",
+    }
+    if screening_issues:
+        payload["screening_issues"] = sorted(set(screening_issues))
+    record = _build_mail_record(
+        message_type="governance_notice",
+        source_repo="dad://hub/Digital-Assett-Directory",
+        target_repo=repo_id,
+        payload=payload,
+        dedupe_key=dedupe_key,
+        thread_id=stable_id("mail-thread", "dad", repo_id, "capture-surface-refresh"),
+        sensitivity="internal",
+        review_status="routed_candidate",
+        evidence=[
+            CAPTURE_REMEDIATION_PLAN_JSON.as_posix(),
+            BACKFILL_WAVE_PLAN_JSON.as_posix(),
+            CAPTURE_PATTERN_REGISTRY.as_posix(),
+            f"repo_path_hash:{repo.get('path_hash', '')}",
+            f"methodology_hash:{plan.get('methodology_hash', '')}",
+        ],
+        suggested_actions=[
+            "Plan a reviewed enrollment/update repair before writing the repo.",
+            "Refresh the repo capture surface to the current registry version.",
+            "Rerun observed capture audit after the repo reports the current surface.",
+            "Do not treat existing no-packet evidence as complete until this refresh is done.",
+        ],
+        source_provenance={
+            "canonical_source_repo": "dad://hub/Digital-Assett-Directory",
+            "source_repo_id": "dad",
+            "source_repo_alias": "dad",
+            "source_visibility": "internal",
+            "original_source_chain": ["dad://hub/Digital-Assett-Directory"],
+            "return_address": "dad://exceptions/capture-surface-refresh-notices",
+            "original_mail_id": "",
+            "composed_by": "dad-exception-capture",
+            "collected_by": "dad",
+            "collected_at": "",
+            "received_at": created_at,
+        },
+        public_release={
+            "target_visibility": target_visibility
+            if target_visibility in {"public", "internal", "private", "restricted", "unknown"}
+            else "unknown",
+            "target_public_facing": target_public_facing,
+            "public_release_required": public_release_required,
+            "public_release_status": "pending_human"
+            if public_release_required
+            else "not_required",
+            "human_release_id": "",
+            "release_reason": "staged_capture_surface_refresh_notice",
+        },
+    )
+    return record.model_copy(update={"source_repo": "dad"}).model_dump(mode="json")
+
+
+def _capture_surface_refresh_notice_target_selection(
+    remediation_plan: dict[str, Any],
+) -> tuple[list[dict[str, Any]], dict[str, Any]]:
+    targets: dict[tuple[str, str], dict[str, Any]] = {}
+    coverage = {
+        "source_lane_repo_count": 0,
+        "reported_repo_count": 0,
+        "omitted_repo_count": 0,
+        "partial": False,
+    }
+    for lane in remediation_plan.get("lanes", []):
+        if not isinstance(lane, dict):
+            continue
+        if lane.get("lane_id") != "capture_surface_refresh_required":
+            continue
+        coverage = {
+            "source_lane_repo_count": int(lane.get("repo_count") or 0),
+            "reported_repo_count": int(lane.get("reported_repo_count") or 0),
+            "omitted_repo_count": int(lane.get("omitted_repo_count") or 0),
+            "partial": bool(int(lane.get("omitted_repo_count") or 0)),
+        }
+        for repo in lane.get("repos", []) or []:
+            if not isinstance(repo, dict):
+                continue
+            key = (
+                str(repo.get("repo_id") or ""),
+                str(repo.get("path_hash") or ""),
+            )
+            targets[key] = repo
+    return (
+        sorted(
+            targets.values(),
+            key=lambda repo: (
+                str(repo.get("repo_id") or ""),
+                str(repo.get("path_hash") or ""),
+            ),
+        ),
+        coverage,
+    )
+
+
+def _capture_surface_refresh_notices_markdown(report: dict[str, Any]) -> str:
+    lines = [
+        "# Exception Capture Surface Refresh Notices",
+        "",
+        f"- Generated: {report['generated_at']}",
+        f"- Target repos staged: {report['target_repo_count']}",
+        f"- Source lane repos: {report['source_lane_repo_count']}",
+        f"- Omitted repos: {report['omitted_repo_count']}",
+        f"- Mail appended: {report['mail_appended_count']}",
+        f"- Duplicate mail: {report['duplicate_mail_count']}",
+        f"- Mail stage: `{report['mail_stage']}`",
+        "",
+        "Boundary: staged central candidate mail only. These notices are not under "
+        "`processed/mail/outbox`, do not deliver mail, do not mutate target repos, "
+        "and do not approve enrollment updates.",
+        "",
+    ]
+    if report["partial"]:
+        lines.extend(
+            [
+                "Warning: notice coverage is partial because the remediation lane "
+                "was capped. Increase `--per-lane-repo-limit` and rerun before "
+                "treating the staged notice set as complete.",
+                "",
+            ]
+        )
+    lines.extend(
+        [
+            "## Notices",
+            "",
+            "| Repo | Surface Action | Signals | Public Gate | Mail | Appended |",
+            "| --- | --- | ---: | --- | --- | --- |",
+        ]
+    )
+    for notice in report["notices"]:
+        lines.append(
+            "| "
+            + f"`{notice['repo_id']}` | "
+            + f"`{notice['capture_surface_action']}` | "
+            + f"{notice['candidate_path_signal_count']} | "
+            + f"`{notice['public_release_status']}` | "
+            + f"`{notice['mail_id']}` | "
+            + f"{notice['mail_appended']} |"
+        )
+    if not report["notices"]:
+        lines.append("| _none_ |  |  |  |  |  |")
+    return "\n".join(lines) + "\n"
+
+
+def write_exception_capture_surface_refresh_notices(
+    hub_root: Path,
+    repos: list[Path],
+    *,
+    repo_policies: list[Any] | None = None,
+    output: Path | None = None,
+    candidate_limit: int | None = 50,
+    max_scanned_files: int | None = 50_000,
+    per_lane_repo_limit: int = 500,
+    write_mail: bool = True,
+) -> dict[str, Any]:
+    registry = load_capture_pattern_registry(hub_root)
+    remediation_plan = write_exception_capture_remediation_plan(
+        hub_root,
+        repos,
+        repo_policies=repo_policies,
+        candidate_limit=candidate_limit,
+        max_scanned_files=max_scanned_files,
+        per_lane_repo_limit=per_lane_repo_limit,
+    )
+    registry_capture_surface_version = str(registry.get("capture_surface_version") or "")
+    targets, coverage = _capture_surface_refresh_notice_target_selection(remediation_plan)
+    notices: list[dict[str, Any]] = []
+    appended_count = 0
+    duplicate_count = 0
+    replaced_count = 0
+    active_identities: set[tuple[str, str]] = set()
+    for repo in targets:
+        mail_record = _capture_surface_refresh_notice_mail(
+            repo,
+            remediation_plan,
+            registry_capture_surface_version=registry_capture_surface_version,
+        )
+        active_identities.add(_staged_mail_identity(mail_record))
+        append_status = "not_written"
+        if write_mail:
+            append_status = _append_unique_capture_surface_refresh_notice(hub_root, mail_record)
+            if append_status == "appended":
+                appended_count += 1
+            elif append_status == "duplicate":
+                duplicate_count += 1
+            elif append_status == "replaced":
+                replaced_count += 1
+        public_release = mail_record["public_release"]
+        notices.append(
+            {
+                "repo_id": mail_record["target_repo"],
+                "mail_id": mail_record["mail_id"],
+                "dedupe_key": mail_record["dedupe_key"],
+                "mail_appended": append_status == "appended",
+                "append_status": append_status,
+                "capture_surface_action": str(repo.get("capture_surface_action") or ""),
+                "candidate_path_signal_count": int(
+                    repo.get("candidate_path_signal_count") or 0
+                ),
+                "write_policy": str(repo.get("write_policy") or ""),
+                "public_release_required": public_release["public_release_required"],
+                "public_release_status": public_release["public_release_status"],
+            }
+        )
+    stale_pruned_count = (
+        _prune_inactive_capture_surface_refresh_notices(hub_root, active_identities)
+        if write_mail
+        else 0
+    )
+    report = {
+        "schema_version": "0.1.0",
+        "generated_at": utc_now(),
+        "report_id": "dad:exception-capture-surface-refresh-notices",
+        "source_report_id": remediation_plan.get("report_id"),
+        "target_repo_count": len(targets),
+        "source_lane_repo_count": coverage["source_lane_repo_count"],
+        "reported_repo_count": coverage["reported_repo_count"],
+        "omitted_repo_count": coverage["omitted_repo_count"],
+        "partial": coverage["partial"],
+        "coverage_status": (
+            "partial_bounded_lane"
+            if coverage["partial"]
+            else "complete_for_reported_remediation_lane"
+        ),
+        "mail_appended_count": appended_count,
+        "duplicate_mail_count": duplicate_count,
+        "mail_replaced_count": replaced_count,
+        "stale_mail_pruned_count": stale_pruned_count,
+        "mail_stage": CAPTURE_SURFACE_REFRESH_NOTICES_STAGED.as_posix(),
+        "registry_capture_surface_version": registry_capture_surface_version,
+        "methodology_ref": remediation_plan.get("methodology_ref"),
+        "methodology_hash": remediation_plan.get("methodology_hash"),
+        "input_hashes": remediation_plan.get("input_hashes", {}),
+        "notices": notices,
+        "authority_boundary": (
+            "Capture-surface refresh notices are DAD-authored staged candidate mail. "
+            "They are intentionally not written to processed/mail/outbox and are not "
+            "deliverable until a separate reviewed promotion path exists. They do not "
+            "mutate target repos, approve enrollment updates, or prove that path-name "
+            "signals are real exceptions."
+        ),
+    }
+    output_path = hub_root / (output or CAPTURE_SURFACE_REFRESH_NOTICES_JSON)
+    write_json(output_path, report)
+    md_path = (
+        output_path.with_suffix(".md")
+        if output
+        else hub_root / CAPTURE_SURFACE_REFRESH_NOTICES_MD
+    )
+    md_path.parent.mkdir(parents=True, exist_ok=True)
+    md_path.write_text(_capture_surface_refresh_notices_markdown(report), encoding="utf-8")
+    return report
+
+
 def _observed_row_write_policy(row: dict[str, Any]) -> str:
     repo = row.get("repo", {})
     if not isinstance(repo, dict):
@@ -4057,8 +4967,8 @@ def write_exception_backfill_readiness(
         "report_id": "dad:exception-backfill-readiness",
         "repo_count": len(rows),
         "registry_ref": CAPTURE_PATTERN_REGISTRY.as_posix(),
-        "methodology_ref": CAPTURE_PATTERN_REGISTRY.as_posix(),
-        "methodology_hash": f"sha256:{sha256_file(hub_root / CAPTURE_PATTERN_REGISTRY)}",
+        "methodology_ref": CAPTURE_ROUTE_METHODOLOGY_REF,
+        "methodology_hash": capture_route_methodology_hash(hub_root),
         "input_hashes": _observed_audit_input_hashes(hub_root),
         "candidate_limit": _normalize_candidate_limit(candidate_limit),
         "max_scanned_files": (
@@ -4153,7 +5063,9 @@ def write_exception_backfill_readiness(
 def _input_hashes(hub_root: Path, scenarios_path: Path) -> dict[str, str]:
     refs = [
         CAPTURE_PATTERN_REGISTRY,
+        Path("registry") / "exception-event-type-registry.json",
         Path("src") / "digital_asset_directory" / "exception_capture.py",
+        Path("src") / "digital_asset_directory" / "exceptions_lake.py",
         Path("schemas") / "exception-capture-pattern-registry.schema.json",
         Path("schemas") / "exception-capture-scenarios.schema.json",
     ]
@@ -4685,6 +5597,14 @@ def evaluate_exception_taxonomy_coverage(
             route_kinds.append("capture_rule")
         if backfill_rule_ids:
             route_kinds.append("backfill_path_signal")
+        route_bundle_required = bool(
+            capture_rule_ids
+            or (
+                backfill_rule_ids
+                and str(event.get("review_status") or "") == "reviewed"
+                and bool(event.get("learnable", False))
+            )
+        )
         status = _event_route_status(
             capture_rule_ids=capture_rule_ids,
             backfill_rule_ids=backfill_rule_ids,
@@ -4704,7 +5624,8 @@ def evaluate_exception_taxonomy_coverage(
                 "synthetic_scenario_ids": scenario_ids,
                 "route_kinds": route_kinds,
                 "coverage_status": status,
-                "missing_synthetic_case": bool(capture_rule_ids and not scenario_ids),
+                "route_bundle_required": route_bundle_required,
+                "missing_synthetic_case": bool(route_bundle_required and not scenario_ids),
                 "manual_only": status == "direct_record_contract_only",
                 "unrouted": status == "unrouted",
             }
@@ -4739,10 +5660,8 @@ def evaluate_exception_taxonomy_coverage(
         "generated_at": utc_now(),
         "event_registry_ref": "registry/exception-event-type-registry.json",
         "capture_registry_ref": CAPTURE_PATTERN_REGISTRY.as_posix(),
-        "methodology_ref": "registry/exception-event-type-registry.json",
-        "methodology_hash": (
-            f"sha256:{sha256_file(hub_root / 'registry' / 'exception-event-type-registry.json')}"
-        ),
+        "methodology_ref": CAPTURE_ROUTE_METHODOLOGY_REF,
+        "methodology_hash": capture_route_methodology_hash(hub_root),
         "scenario_path": _report_path_ref(scenarios_path, hub_root),
         "input_hashes": _taxonomy_coverage_input_hashes(hub_root, scenarios_path),
         "event_type_count": len(records),
@@ -4759,6 +5678,7 @@ def evaluate_exception_taxonomy_coverage(
         "reviewed_unrouted_event_types": reviewed_unrouted,
         "learnable_unrouted_event_types": learnable_unrouted,
         "capture_rule_events_missing_synthetic_cases": missing_scenarios,
+        "routed_events_missing_synthetic_cases": missing_scenarios,
         "phase6_machine_gate_evidence": _taxonomy_phase6_machine_gate_evidence(
             reviewed_unrouted=reviewed_unrouted,
             learnable_unrouted=learnable_unrouted,
@@ -4784,7 +5704,7 @@ def evaluate_exception_taxonomy_coverage(
         f"- Event types with detector/backfill routes: {report['automated_route_count']}",
         f"- Direct-record-only event types: {report['manual_only_count']}",
         f"- Unrouted event types: {report['unrouted_count']}",
-        f"- Capture-rule event types missing synthetic cases: {report['missing_synthetic_case_count']}",
+        f"- Routed event types missing synthetic cases: {report['missing_synthetic_case_count']}",
         f"- Methodology hash: `{report['methodology_hash']}`",
         "",
         "Boundary: direct-record coverage is a safe manual emission route, not an "
@@ -4853,7 +5773,7 @@ def evaluate_capture_scenarios(
     *,
     output: Path | None = None,
 ) -> dict[str, Any]:
-    registry = load_capture_pattern_registry(hub_root)
+    registry = load_capture_route_registry(hub_root)
     scenarios = load_capture_scenarios(scenarios_path)
     cases = [
         evaluate_capture_case(case, registry, scenario_base=scenarios_path.parent)
@@ -4911,8 +5831,8 @@ def evaluate_capture_scenarios(
         "scenario_set_id": scenarios.get("scenario_set_id"),
         "scenario_path": _report_path_ref(scenarios_path, hub_root),
         "registry_ref": CAPTURE_PATTERN_REGISTRY.as_posix(),
-        "methodology_ref": CAPTURE_PATTERN_REGISTRY.as_posix(),
-        "methodology_hash": f"sha256:{sha256_file(hub_root / CAPTURE_PATTERN_REGISTRY)}",
+        "methodology_ref": CAPTURE_ROUTE_METHODOLOGY_REF,
+        "methodology_hash": capture_route_methodology_hash(hub_root),
         "input_hashes": input_hashes,
         "capture_surface_version": registry.get("capture_surface_version"),
         "case_count": len(cases),

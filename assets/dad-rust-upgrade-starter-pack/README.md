@@ -20,7 +20,9 @@ This pack contains:
 
 - It is not canonical DAD policy until copied into the DAD repo and reviewed.
 - It does not rewrite DAD.
-- It does not claim the Rust scaffold compiles yet. I generated it without a local Rust toolchain in this environment, so `cargo check` must be the first real verification step.
+- It does not promote Rust broadly. The DAD scanner overlay has been compiled
+  and tested locally in DAD, but every downstream rollout still needs local
+  `cargo fmt --check`, `cargo check`, `cargo test`, and `cargo clippy` evidence.
 - It does not move governance, legal judgment, theology, budget generation, or review authority into Rust.
 
 ## Drop-in path

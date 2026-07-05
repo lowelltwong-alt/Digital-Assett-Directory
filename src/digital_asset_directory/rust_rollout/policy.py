@@ -50,6 +50,9 @@ def can_apply_forced_rollout(record: RustRepoRecord) -> RustRolloutDecision:
     elif not record.rollout_enabled:
         can_apply = False
         block_reason = "rollout disabled in config"
+    elif not record.target_repo_owns_rust_files:
+        can_apply = False
+        block_reason = "target_repo_owns_rust_files must be true for rollout apply"
     elif _active_status(record) in BLOCKED_ACTIVE_STATUSES and not record.allow_inactive_override:
         can_apply = False
         block_reason = f"active_status blocks rollout: {record.active_status}"

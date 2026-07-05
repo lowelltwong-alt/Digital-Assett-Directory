@@ -86,7 +86,8 @@ Each enrolled repo should emit exception packets from these sources:
 - review: red-team finding, premortem failure story, security finding, false
   confidence, missing test, Claude/Fable/Codex disagreement;
 - code change: rollback, hotfix, unexpected side effect, schema migration failure,
-  generated file drift, roadmap gate mismatch;
+  generated file drift, roadmap gate mismatch, risky partial workaround, or
+  validation gap after a material edit;
 - mail and enrollment: duplicate delivery, quarantine, human-release hold,
   protected repo write block, dirty worktree block;
 - asset usage: DAD recommendation used, ignored, harmful, failed, or later upgraded.
@@ -190,6 +191,19 @@ capture targets instead of collapsing them into generic command failures:
   that missed required behavior or created false confidence. Capture the fixture
   ref, missing behavior, false-confidence risk, and expected assertion or packet;
   never real private rows.
+- `code_change_exception` for hotfixes, partial workarounds, side-effecting
+  edits, behavior drift, or material validation gaps. Capture the change ref,
+  changed surface class, exception reason, validation ref or validation gap, and
+  safe summary; never diffs, source bodies, private fixture rows, or raw test
+  output.
+
+Integration and implementation issue patterns that may indicate architecture
+drift should also be packaged for Claude root-cause review. Use
+`docs/CLAUDE_ARCHITECTURAL_ROOT_CAUSE_REVIEW.md` when repeated failures point to
+boundary mismatch, ownership ambiguity, sequencing errors, contract gaps,
+generated evidence drift, or harness/enforcement tradeoffs. These packets are
+safe metadata only and remain candidate analysis requests; Claude review is not
+human approval or source truth.
 
 Capture-surface generations are intentionally explicit. Surface `0.2.0` covers
 repo lineage, protected-write, dirty-worktree, public/private, stale-report,
@@ -204,6 +218,69 @@ Capture can be lightweight. Repos do not need DAD Python internals for normal wr
 they can append JSONL, use a tiny helper, export a CI artifact, or let the DAD CLI
 record events during preflight/midflight/postflight. Completeness is measured by
 expected capture surfaces, not by raw volume.
+
+## Hard-Issue Lookup And Solution Lineage
+
+The next Phase 6 behavior is "search DAD before improvising" for hard issues.
+This is modeled on two professional patterns:
+
+- SRE postmortem systems: significant incidents get written records, root-cause
+  analysis, action items, review, publication, metadata, and repository search so
+  future teams can learn from past failures.
+- Knowledge-Centered Service: search early and often, capture knowledge while
+  solving, treat reuse as review, and improve only the knowledge people actually
+  touch.
+
+DAD should not read hidden reasoning or try to infer from model internals. It
+uses observable work signals only:
+
+- failed command argv, exit code, timeout, or tool error;
+- repeated retry, changed plan, workaround, or user correction;
+- stale generated report, malformed JSONL, lock timeout, permission denial, or
+  unavailable tool;
+- validation gap, test failure, CI failure, review finding, or postflight risk;
+- safe task/context summaries written by the agent.
+
+The routing ladder should be:
+
+1. `easy_local_fix`: obvious low-risk local issue; no lookup required, but
+   postflight may still mention a reusable template or small repo hygiene idea.
+2. `known_template_or_common_fix`: common repo-maintenance pattern; route to DAD
+   templates/assets, not the exception lake, unless validation fails.
+3. `hard_issue_lookup_required`: non-obvious, repeated, high-risk, cross-repo,
+   governance, public/private, schema, validation, or generated-evidence issue;
+   run `asset-dir exceptions hard-issue-lookup` or rely on preflight/midflight
+   context-pack surfacing.
+4. `new_exception_and_fix_outcome_required`: no suitable prior evidence exists
+   and the issue mattered; record the event and later a fix outcome.
+5. `solution_lineage_review`: a new fix solved a known problem differently;
+   compare to parent solutions before adding another full article.
+
+Solution lineage should prevent sprawl. A second solution is not automatically a
+new lesson. Postflight should record a safe delta:
+
+- parent exception event and parent fix IDs;
+- same/fresh context tags;
+- what changed in the failing surface, command, repo type, data boundary, or
+  validation command;
+- why the old fix was insufficient or non-applicable;
+- the minimum reusable delta, not the whole patch or raw log;
+- validation and regression refs;
+- novelty verdict: `duplicate`, `parameterized_variant`, `context_delta`,
+  `derivative_solution`, `new_pattern_candidate`, or `dangerous/noise`.
+
+DAD should store only the difference when possible:
+
+```text
+parent solution -> context delta -> minimal adaptation -> validation refs
+```
+
+The graph should connect events, fixes, assets, harnesses, repos, and deltas.
+The important node is not every fix attempt; it is the reviewed solution family
+with enough context to choose the right variant. Until this is implemented, the
+current hard-issue lookup deliberately returns candidate evidence only:
+`validated_fix_review_candidate`, `related_pattern_only`,
+`held_pending_human_release`, or `prior_exception_only`.
 
 ## Repo-Local Capture
 
@@ -303,7 +380,9 @@ The CLI entrypoint is `asset-dir exceptions` with `paths`, `taxonomy`,
 `capture-patterns`, `capture-suggest`, `capture-check`,
 `capture-simulate-emission`, `capture-audit`, `record`, `collect`, `backfill`,
 `backfill-review-queue`, `backfill-review-decision`,
-`backfill-review-decisions`, `source-packet-requests`, and `report` commands.
+`backfill-review-decisions`, `source-packet-requests`,
+`fix-outcome-requests`, `learning-queue`, `learning-check`, and `report`
+commands.
 
 ## Packet Shape
 
@@ -421,6 +500,12 @@ Implementation policy:
 - A missing event link is allowed as candidate metadata (`missing_from_lake`), but
   reports surface it separately and it cannot prove the original event was fixed,
   rolled back, or duplicated.
+- `asset-dir exceptions fix-outcome-requests` stages central candidate mail for
+  observed exception events that have no linked fix outcome. These rows live
+  under `processed/mail/staged/fix_outcome_requests.jsonl`; they are not
+  deliverable outbox mail, not proof of repair, and not permission to mutate the
+  source repo. When a valid fix outcome later arrives, the old staged request is
+  archived with a superseding `review_decision` row instead of editing history.
 
 ## Event Identity And Dedupe
 
@@ -899,7 +984,11 @@ Implemented starter harness:
   (`suggestion_id`, `methodology_hash`, `matched_rule_ids`, and
   `update_required`) on emitted packets. Blocked unsafe cases pass only when the
   suggestion proves the block reason and observed-check proves no packet was
-  emitted.
+  emitted. Its `supports_human_gate_ids` must name exact Phase 6 roadmap gate
+  IDs, not descriptive slugs, so reviewers can tie machine evidence back to the
+  roadmap without guesswork. Runs with `--limit` are diagnostic-only: they must
+  report `coverage_status=limited_diagnostic`, list omitted reviewed scenarios,
+  and carry no Phase 6 gate-support IDs.
 - `asset-dir exceptions taxonomy-coverage --fail-on-unrouted --fail-on-missing-scenarios`
   writes `processed/reports/exception_taxonomy_coverage.*`. It maps every reviewed
   exception event type to direct record contracts, capture-rule routes, backfill
@@ -923,6 +1012,13 @@ Implemented starter harness:
   fails closed while normal or strict capture gaps remain, and it only passes for
   a satisfied reviewed scope. An ad hoc clean scan is still useful review input,
   but it must not be treated as all-repo coverage.
+- `asset-dir exceptions phase6-summary` writes
+  `processed/reports/phase6_exception_capture_machine_evidence_summary.*`. It
+  compiles capture completeness, emission simulation, taxonomy coverage, and
+  observed-audit machine evidence into one report. The combined status fails if
+  any required source report is missing/stale or any gate contributor is red, so
+  a green synthetic/emission report cannot hide a red observed-audit gate. This
+  summary is still machine-only evidence and keeps `human_gate_satisfied=false`.
 - Positive synthetic cases compare required metadata fields from the capture
   registry, and observed fixture checks verify those fields are present in actual
   JSONL outbox rows. This prevents a false green where a repo emits
@@ -933,14 +1029,25 @@ Implemented starter harness:
   prevents a reviewed rule from being added to the registry without a harness
   case, and prevents broad signals from silently exercising a different rule than
   the scenario claims to cover.
+- `asset-dir validate` enforces route-bundle completeness across the event
+  taxonomy, capture registry, synthetic scenarios, and downstream exception
+  README. A reviewed emitting rule must have a reviewed scenario that actually
+  matches the rule, carries the emitted packet class/type/contract, includes the
+  rule's required fields, and lists the event type in downstream guidance. This
+  catches half-installed event routes before generated reports can look green.
+- Reviewed learnable event types that only have `backfill_path_signal` routing
+  are compiled into synthetic route rules for capture completeness. Their
+  scenario bundle must prove `backfill_candidate` output with `source_rule_id`,
+  `path_signal`, `safe_path_hash_or_pointer`, and `false_positive_risk`; the
+  downstream README must teach the same event type and source-review boundary.
 - Observed checks require one matching packet row to contain all required fields
   with usable values, and they fail on best-effort credential/PII, raw blob, or
   prompt-injection-like payload issues.
 - Named invariant: `taxonomy_route_coverage_boundary`. Every reviewed/learnable
   exception type must have at least one safe route. A direct-record contract is a
   valid manual emission route, but it is not deterministic detector coverage.
-  Capture rules must have synthetic cases; backfill routes are path-signal
-  candidates only.
+  Capture rules and reviewed learnable backfill-only routes must have synthetic
+  cases; backfill routes remain path-signal candidates only.
 - The starter harness now supports observed-emission checks against actual JSONL
   outbox files. The canonical scenario set includes a metadata-only observed
   LawFirm-style mail outbox and exception outbox fixture, and tests also generate
@@ -1097,6 +1204,19 @@ Backfill safety and classification:
   to target repo inboxes, does not sit under deliverable `processed/mail/outbox`,
   and does not mutate source repos. A later reviewed promotion/revalidation path
   must exist before staged requests can become deliverable mail.
+- `asset-dir exceptions capture-surface-refresh-notices --repo all` compiles
+  the current capture-remediation lane for stale or missing repo capture surfaces
+  into DAD-authored staged candidate mail at
+  `processed/mail/staged/capture_surface_refresh_notices.jsonl` plus
+  `processed/reports/exception_capture_surface_refresh_notices.json`. It only
+  uses safe metadata such as repo IDs, path hashes, surface version, proof
+  blockers, and top pattern-family counters. It does not deliver to target repo
+  inboxes, does not sit under deliverable `processed/mail/outbox`, does not
+  mutate target repos, and does not approve enrollment or protected-repo repairs.
+  If the remediation lane is capped, the report must mark `partial: true` and
+  show omitted repo counts. Public-facing targets remain `pending_human`; a later
+  promotion path still needs a reviewed public-safe payload transform before any
+  inbox delivery.
 - Source-packet request compilation rejoins every latest decision to the current
   backfill review queue and requires the queue fingerprint to match current
   generated evidence. Unknown groups, field mismatches, and stale fingerprints

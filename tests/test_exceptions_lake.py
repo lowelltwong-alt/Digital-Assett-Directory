@@ -23,6 +23,7 @@ from digital_asset_directory.exceptions_lake import (
     exception_lake_paths,
     exception_category_taxonomy_defaults,
     exception_taxonomy_dimension_axes,
+    hard_issue_lookup,
     load_exception_backfill_review_decisions,
     path_term_matches,
     record_exception_backfill_review_decision,
@@ -31,6 +32,7 @@ from digital_asset_directory.exceptions_lake import (
     summarize_exception_backfill_review_decisions,
     write_exception_backfill_refresh_plan,
     write_exception_backfill_review_queue,
+    write_exception_fix_outcome_requests,
     write_exception_learning_queue,
     write_exception_report,
     write_exception_source_packet_opportunities,
@@ -43,7 +45,29 @@ RUNNER = CliRunner()
 
 
 def _copy_exception_contracts(hub: Path) -> None:
+    hub.mkdir(parents=True, exist_ok=True)
+    (hub / "AI_FRONT_DOOR.md").write_text("# AI Front Door\n", encoding="utf-8")
+    (hub / "MACHINE_NAVIGATION_MANIFEST.json").write_text(
+        '{"manifest_version":"test"}\n',
+        encoding="utf-8",
+    )
+    (hub / "pyproject.toml").write_text(
+        "\n".join(
+            [
+                "[project]",
+                'name = "digital-asset-directory"',
+                'version = "0.1.0"',
+                "[project.scripts]",
+                'asset-dir = "digital_asset_directory.cli:app"',
+                "",
+            ]
+        ),
+        encoding="utf-8",
+    )
+    (hub / "src" / "digital_asset_directory").mkdir(parents=True, exist_ok=True)
+    (hub / "src" / "digital_asset_directory" / "cli.py").write_text("", encoding="utf-8")
     for rel in [
+        "registry/source-of-truth.json",
         "registry/exception-event-type-registry.json",
         "registry/exception-learning-methodology.json",
         "config/sources.example.yaml",
@@ -303,6 +327,101 @@ def test_collect_minimal_exception_packet_derives_taxonomy_dimensions(
     assert collected[0]["taxonomy_dimensions"] == event_type_taxonomy_dimensions(hub)[
         "review_finding"
     ]
+
+
+def test_code_change_exception_packet_requires_and_preserves_change_context(
+    tmp_path: Path,
+) -> None:
+    hub = tmp_path / "hub"
+    repo = tmp_path / "repo"
+    _copy_exception_contracts(hub)
+    outbox = repo / ".digital-asset" / "exceptions" / "outbox.jsonl"
+    outbox.parent.mkdir(parents=True)
+    outbox.write_text(
+        json.dumps(
+            {
+                "event_type": "code_change_exception",
+                "capture_contract": "postflight_exception",
+                "stage": "postflight",
+                "severity": "high",
+                "agent": "codex",
+                "safe_summary": "Hotfix landed with a known validation gap.",
+                "change_ref": "commit:abc123",
+                "changed_surface": "test_orchestration",
+                "exception_reason": "partial workaround accepted to unblock validation",
+                "validation_ref_or_gap": "full suite not run; focused pytest passed",
+                "validation_refs": ["python -m pytest tests/test_exception_capture.py"],
+                "dedupe_key": "repo:code-change-exception",
+            }
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+
+    result = collect_exception_events(hub, repo)
+    collected = _jsonl(hub / "processed" / "exceptions" / "lake" / "events.jsonl")
+
+    assert result["collected_count"] == 1
+    assert collected[0]["event_type"] == "code_change_exception"
+    assert collected[0]["change_context"] == {
+        "change_ref": "commit:abc123",
+        "changed_surface": "test_orchestration",
+        "exception_reason": "partial workaround accepted to unblock validation",
+        "validation_ref_or_gap": "full suite not run; focused pytest passed",
+    }
+    assert collected[0]["taxonomy_dimensions"] == event_type_taxonomy_dimensions(hub)[
+        "code_change_exception"
+    ]
+
+
+def test_code_change_exception_without_change_context_fails_closed(
+    tmp_path: Path,
+) -> None:
+    hub = tmp_path / "hub"
+    repo = tmp_path / "repo"
+    _copy_exception_contracts(hub)
+
+    with pytest.raises(ValueError, match="change_context"):
+        record_exception_event(
+            hub,
+            repo,
+            event_type="code_change_exception",
+            summary="Hotfix landed with no structured change context.",
+            stage="postflight",
+            severity="high",
+            capture_contract="postflight_exception",
+        )
+
+
+def test_code_change_exception_rejects_source_or_diff_payload_without_echo(
+    tmp_path: Path,
+) -> None:
+    hub = tmp_path / "hub"
+    repo = tmp_path / "repo"
+    _copy_exception_contracts(hub)
+    unsafe_diff = "diff --git a/src/app.py b/src/app.py\n@@ -1 +1 @@\n-print(secret)\n+return token"
+
+    result = record_exception_event(
+        hub,
+        repo,
+        event_type="code_change_exception",
+        summary=unsafe_diff,
+        stage="postflight",
+        severity="high",
+        capture_contract="postflight_exception",
+        change_context={
+            "change_ref": "commit:abc123",
+            "changed_surface": "runtime_behavior",
+            "exception_reason": "unexpected side effect after hotfix",
+            "validation_ref_or_gap": "full suite not run",
+        },
+    )
+    serialized = json.dumps(result)
+
+    assert "source_or_diff_like_payload" in result["screening_issues"]
+    assert result["event"]["screening"]["raw_blob_policy"] == "blocked"
+    assert result["event"]["review_status"] == "quarantine_candidate"
+    assert unsafe_diff not in serialized
 
 
 def test_backfill_classifier_is_registry_backed_and_bounded() -> None:
@@ -2123,6 +2242,209 @@ def test_source_packet_requests_append_cancellation_when_later_decision_rejects(
     )
 
 
+def test_fix_outcome_requests_stage_metadata_only_mail_and_dedupe(
+    tmp_path: Path,
+) -> None:
+    hub = tmp_path / "hub"
+    repo = tmp_path / "repo"
+    (repo / ".git").mkdir(parents=True)
+    contract = repo / ".digital-asset" / "dad-integration.json"
+    contract.parent.mkdir(parents=True)
+    contract.write_text(
+        json.dumps({"repo_id": "source-repo", "visibility": "internal"}),
+        encoding="utf-8",
+    )
+    _copy_exception_contracts(hub)
+    event = record_exception_event(
+        hub,
+        repo,
+        event_type="runtime_exception",
+        summary="Observed runtime exception still needs owner closure evidence.",
+        stage="postflight",
+        severity="high",
+        capture_contract="postflight_exception",
+        validation_refs=["python -m pytest failed"],
+    )
+    collect_exception_events(hub, repo)
+
+    first = write_exception_fix_outcome_requests(hub)
+    second = write_exception_fix_outcome_requests(hub)
+
+    assert first["report_id"] == "dad:exception-fix-outcome-requests"
+    assert first["unresolved_event_count"] == 1
+    assert first["reported_request_count"] == 1
+    assert first["mail_appended_count"] == 1
+    assert second["duplicate_mail_count"] == 1
+    request = first["requests"][0]
+    assert request["event_id"] == event["event"]["event_id"]
+    assert request["target_repo"] == "source-repo"
+    staged_rows = _jsonl(hub / "processed" / "mail" / "staged" / "fix_outcome_requests.jsonl")
+    assert len(staged_rows) == 1
+    staged = staged_rows[0]
+    _validate("mail_message", staged)
+    assert staged["message_type"] == "governance_notice"
+    assert staged["review_status"] == "routed_candidate"
+    assert staged["payload"]["expected_response_path"] == (
+        "processed/exceptions/fix-outcomes/outcomes.jsonl"
+    )
+    assert staged["payload"]["event_id"] == event["event"]["event_id"]
+    assert staged["public_release"]["public_release_required"] is False
+    assert not (hub / "processed" / "mail" / "outbox").exists()
+    assert not (repo / ".digital-asset" / "mail").exists()
+
+
+def test_fix_outcome_requests_cancel_after_valid_fix_outcome_arrives(
+    tmp_path: Path,
+) -> None:
+    hub = tmp_path / "hub"
+    repo = tmp_path / "repo"
+    (repo / ".git").mkdir(parents=True)
+    _copy_exception_contracts(hub)
+    event = record_exception_event(
+        hub,
+        repo,
+        event_type="runtime_exception",
+        summary="Observed runtime exception still needs owner closure evidence.",
+        stage="postflight",
+        severity="high",
+        capture_contract="postflight_exception",
+        validation_refs=["python -m pytest failed"],
+    )
+    collect_exception_events(hub, repo)
+    first = write_exception_fix_outcome_requests(hub)
+    original_mail_id = first["requests"][0]["mail_id"]
+    record_exception_fix_outcome(
+        hub,
+        repo,
+        event_id=event["event"]["event_id"],
+        decision="fixed",
+        summary="Added regression test and verified the fix.",
+        validation_refs=["python -m pytest tests/test_fix.py"],
+        regression_test_refs=["tests/test_fix.py::test_regression"],
+        fix_refs=["commit:abc123"],
+        owner_authority="repo",
+    )
+    collect_exception_fix_outcomes(hub, repo)
+
+    second = write_exception_fix_outcome_requests(hub)
+
+    assert second["reported_request_count"] == 0
+    assert second["superseded_mail_count"] == 1
+    rows = _jsonl(hub / "processed" / "mail" / "staged" / "fix_outcome_requests.jsonl")
+    assert [row["message_type"] for row in rows] == ["governance_notice", "review_decision"]
+    cancellation = rows[1]
+    _validate("mail_message", cancellation)
+    assert cancellation["review_status"] == "archived"
+    assert cancellation["payload"]["superseded_mail_id"] == original_mail_id
+    assert cancellation["payload"]["superseded_reason"] == (
+        "fix_outcome_request_event_now_has_fix_outcome_or_terminal_status"
+    )
+
+
+def test_fix_outcome_requests_limit_does_not_cancel_unreported_active_requests(
+    tmp_path: Path,
+) -> None:
+    hub = tmp_path / "hub"
+    repo = tmp_path / "repo"
+    (repo / ".git").mkdir(parents=True)
+    _copy_exception_contracts(hub)
+    for index, summary in enumerate(
+        [
+            "First unresolved observed exception needs owner closure evidence.",
+            "Second unresolved observed exception needs owner closure evidence.",
+        ],
+        start=1,
+    ):
+        record_exception_event(
+            hub,
+            repo,
+            event_type="runtime_exception",
+            summary=summary,
+            stage="postflight",
+            severity="medium",
+            capture_contract="postflight_exception",
+            validation_refs=["python -m pytest failed"],
+            command=["python", "-m", "pytest", f"case-{index}"],
+        )
+    collect_exception_events(hub, repo)
+    first = write_exception_fix_outcome_requests(hub)
+
+    second = write_exception_fix_outcome_requests(hub, limit=1)
+
+    assert first["reported_request_count"] == 2
+    assert second["reported_request_count"] == 1
+    assert second["omitted_request_count"] == 1
+    assert second["duplicate_mail_count"] == 1
+    assert second["superseded_mail_count"] == 0
+    rows = _jsonl(hub / "processed" / "mail" / "staged" / "fix_outcome_requests.jsonl")
+    assert [row["message_type"] for row in rows] == [
+        "governance_notice",
+        "governance_notice",
+    ]
+
+
+def test_fix_outcome_requests_do_not_target_backfill_only_candidates(
+    tmp_path: Path,
+) -> None:
+    hub = tmp_path / "hub"
+    repo = tmp_path / "repo"
+    (repo / ".git").mkdir(parents=True)
+    _copy_exception_contracts(hub)
+    record_exception_event(
+        hub,
+        repo,
+        event_type="review_finding",
+        summary="Backfill path-signal candidate is not an observed exception.",
+        stage="backfill",
+        severity="medium",
+        capture_contract="backfill_candidate",
+        context_refs=["path-keyword:red-team"],
+    )
+    collect_exception_events(hub, repo)
+
+    report = write_exception_fix_outcome_requests(hub)
+
+    assert report["observed_event_count"] == 0
+    assert report["unresolved_event_count"] == 0
+    assert report["reported_request_count"] == 0
+    assert not (hub / "processed" / "mail" / "staged" / "fix_outcome_requests.jsonl").exists()
+
+
+def test_fix_outcome_requests_hash_unsafe_source_repo_refs(
+    tmp_path: Path,
+) -> None:
+    hub = tmp_path / "hub"
+    repo = tmp_path / "repo"
+    (repo / ".git").mkdir(parents=True)
+    contract = repo / ".digital-asset" / "dad-integration.json"
+    contract.parent.mkdir(parents=True)
+    unsafe_repo_id = r"C:\Users\lowel\private\client-repo"
+    contract.write_text(
+        json.dumps({"repo_id": unsafe_repo_id, "visibility": "internal"}),
+        encoding="utf-8",
+    )
+    _copy_exception_contracts(hub)
+    record_exception_event(
+        hub,
+        repo,
+        event_type="runtime_exception",
+        summary="Observed runtime exception still needs owner closure evidence.",
+        stage="postflight",
+        severity="high",
+        capture_contract="postflight_exception",
+    )
+    collect_exception_events(hub, repo)
+
+    report = write_exception_fix_outcome_requests(hub)
+    staged_rows = _jsonl(hub / "processed" / "mail" / "staged" / "fix_outcome_requests.jsonl")
+    serialized = json.dumps({"report": report, "staged": staged_rows})
+
+    assert report["requests"][0]["target_repo"].startswith("path-ref-sha256:")
+    assert staged_rows[0]["target_repo"].startswith("path-ref-sha256:")
+    assert "screening_issues" in staged_rows[0]["payload"]
+    assert unsafe_repo_id not in serialized
+
+
 def test_exception_report_summarizes_categories(tmp_path: Path) -> None:
     hub = tmp_path / "hub"
     repo = tmp_path / "repo"
@@ -2607,6 +2929,43 @@ def test_exception_report_separates_observed_from_backfill_candidates(
     assert "Path-signal backfill candidates: 1" in report_md
 
 
+def test_exception_report_casefolds_source_repo_object_keys(tmp_path: Path) -> None:
+    hub = tmp_path / "hub"
+    _copy_exception_contracts(hub)
+    lake = hub / "processed" / "exceptions" / "lake" / "events.jsonl"
+    lake.parent.mkdir(parents=True)
+    for index, source_repo in enumerate(
+        ["LawFirm-os-exceptions-lake-runtime", "lawfirm-os-exceptions-lake-runtime"],
+        start=1,
+    ):
+        append_jsonl(
+            lake,
+            {
+                "event_id": f"dad:exception-event:casefold-{index}",
+                "source_repo": source_repo,
+                "source_visibility": "internal",
+                "event_type": "runtime_exception",
+                "severity": "medium",
+                "capture_contract": "failed_command",
+                "review_status": "candidate",
+            },
+        )
+
+    report = write_exception_report(hub)
+
+    assert report["by_source_repo"] == {"lawfirm-os-exceptions-lake-runtime": 2}
+    assert report["by_source_repo_aliases"] == [
+        {
+            "source_repo": "lawfirm-os-exceptions-lake-runtime",
+            "count": 2,
+            "observed_aliases": [
+                {"alias": "LawFirm-os-exceptions-lake-runtime", "count": 1},
+                {"alias": "lawfirm-os-exceptions-lake-runtime", "count": 1},
+            ],
+        }
+    ]
+
+
 def test_fix_outcome_records_validated_fix_and_report_counts(tmp_path: Path) -> None:
     hub = tmp_path / "hub"
     repo = tmp_path / "repo"
@@ -2724,6 +3083,159 @@ def test_exception_report_does_not_count_status_only_fix_as_validated(
         hub / "processed" / "exceptions" / "quarantine" / "fix_outcome_report_invalid_records.jsonl"
     )
     assert "validation_refs" in quarantine.read_text(encoding="utf-8")
+
+
+def test_hard_issue_lookup_surfaces_validated_fix_candidate(tmp_path: Path) -> None:
+    hub = tmp_path / "hub"
+    repo = tmp_path / "repo"
+    (repo / ".git").mkdir(parents=True)
+    _copy_exception_contracts(hub)
+    record_exception_event(
+        hub,
+        repo,
+        event_type="permission_denied",
+        summary="os.replace PermissionError while writing a DAD mail archive on Windows.",
+        stage="midflight",
+        severity="medium",
+        capture_contract="failed_command",
+        source_visibility="internal",
+        command=["python", "-m", "digital_asset_directory.cli", "mail", "digest"],
+        validation_refs=["python -m pytest tests/test_mail_center.py"],
+    )
+    collect_exception_events(hub, repo)
+    event = _jsonl(hub / "processed" / "exceptions" / "lake" / "events.jsonl")[0]
+    record_exception_fix_outcome(
+        hub,
+        repo,
+        event_id=event["event_id"],
+        decision="fixed",
+        summary="Added atomic-write retry and fallback handling for Windows PermissionError.",
+        validation_refs=["python -m pytest tests/test_utils.py tests/test_mail_center.py"],
+        regression_test_refs=["tests/test_utils.py::test_atomic_write_retries_permission_error"],
+        fix_refs=["repo-relative:src/digital_asset_directory/utils.py"],
+        owner_authority="repo",
+    )
+    collect_exception_fix_outcomes(hub, repo)
+
+    result = hard_issue_lookup(
+        hub,
+        query="hard issue: os.replace PermissionError while updating mail archive",
+        signals=["permission_denied"],
+        limit=3,
+    )
+
+    assert result["match_count"] >= 1
+    assert not (hub / "processed" / "reports" / "exception_hard_issue_lookup.json").exists()
+    match = result["matches"][0]
+    assert match["event_id"] == event["event_id"]
+    assert match["lookup_review_status"] == "validated_fix_review_candidate"
+    assert match["validated_fix_outcomes"][0]["validation_status"] == "validated"
+    assert "not confidence" in result["lookup_basis"]
+    assert "confidence_score" not in json.dumps(result).lower()
+    assert "best_fix" not in json.dumps(result).lower()
+
+
+def test_hard_issue_lookup_excludes_unvalidated_fixes_and_backfill_by_default(
+    tmp_path: Path,
+) -> None:
+    hub = tmp_path / "hub"
+    repo = tmp_path / "repo"
+    (repo / ".git").mkdir(parents=True)
+    _copy_exception_contracts(hub)
+    record_exception_event(
+        hub,
+        repo,
+        event_type="runtime_exception",
+        summary="Runtime exception from a command that only has an unvalidated fix claim.",
+        stage="midflight",
+        severity="medium",
+        capture_contract="failed_command",
+        source_visibility="internal",
+    )
+    record_exception_event(
+        hub,
+        repo,
+        event_type="runtime_exception",
+        summary="Backfill candidate runtime exception from path-name evidence only.",
+        stage="backfill",
+        severity="low",
+        capture_contract="backfill_candidate",
+        source_visibility="internal",
+    )
+    collect_exception_events(hub, repo)
+    events = _jsonl(hub / "processed" / "exceptions" / "lake" / "events.jsonl")
+    observed_event = next(row for row in events if row["capture_contract"] == "failed_command")
+    record_exception_fix_outcome(
+        hub,
+        repo,
+        event_id=observed_event["event_id"],
+        decision="fixed",
+        summary="Claimed fix is intentionally downgraded to unvalidated central evidence.",
+        validation_refs=["python -m pytest tests/test_runtime.py"],
+        regression_test_refs=["tests/test_runtime.py::test_runtime_regression"],
+        owner_authority="repo",
+    )
+    collect_exception_fix_outcomes(hub, repo)
+    outcome_path = hub / "processed" / "exceptions" / "fix-outcomes" / "outcomes.jsonl"
+    outcome = _jsonl(outcome_path)[0]
+    outcome["validation_status"] = "validation_missing"
+    outcome_path.write_text(json.dumps(outcome) + "\n", encoding="utf-8")
+
+    result = hard_issue_lookup(hub, query="runtime exception unvalidated fix", limit=10)
+
+    assert observed_event["event_id"] in {item["event_id"] for item in result["matches"]}
+    assert all(not item["validated_fix_outcomes"] for item in result["matches"])
+    assert all(item["capture_contract"] != "backfill_candidate" for item in result["matches"])
+
+
+def test_hard_issue_lookup_holds_private_fix_details_for_public_targets(
+    tmp_path: Path,
+) -> None:
+    hub = tmp_path / "hub"
+    repo = tmp_path / "repo"
+    (repo / ".git").mkdir(parents=True)
+    _copy_exception_contracts(hub)
+    record_exception_event(
+        hub,
+        repo,
+        event_type="permission_denied",
+        summary="Private repo PermissionError fix context from C:\\Users\\lowel\\secret\\mail.jsonl.",
+        stage="midflight",
+        severity="medium",
+        capture_contract="failed_command",
+        source_visibility="private",
+        validation_refs=["C:\\Users\\lowel\\private\\tests\\test_lock.py"],
+    )
+    collect_exception_events(hub, repo)
+    event = _jsonl(hub / "processed" / "exceptions" / "lake" / "events.jsonl")[0]
+    record_exception_fix_outcome(
+        hub,
+        repo,
+        event_id=event["event_id"],
+        decision="fixed",
+        summary="Private fix details should not be exposed to public-facing targets.",
+        validation_refs=["python -m pytest tests/test_lock.py"],
+        regression_test_refs=["tests/test_lock.py::test_private_permission_fix"],
+        fix_refs=["C:\\Users\\lowel\\private\\src\\lock.py"],
+        owner_authority="repo",
+    )
+    collect_exception_fix_outcomes(hub, repo)
+
+    result = hard_issue_lookup(
+        hub,
+        query="permission denied C:\\Users\\lowel\\private\\mail.jsonl",
+        signals=["permission_denied"],
+        target_public_facing=True,
+    )
+    text = json.dumps(result)
+
+    assert result["screening_issues"] == ["local_absolute_path_hashed"]
+    assert "C:\\Users" not in text
+    match = result["matches"][0]
+    assert match["lookup_review_status"] == "held_pending_human_release"
+    assert match["public_release_gate"] == "needs_human_release"
+    assert match["validated_fix_outcomes"] == []
+    assert match["match_basis"]["validated_fix_details_held"] is True
 
 
 def test_fixed_outcome_without_validation_fails_closed(tmp_path: Path) -> None:

@@ -108,8 +108,8 @@
       "languages": ["rust", "python", "mixed"],
       "repo_types": ["control_plane", "asset_catalog", "source_scanner", "test_suite"],
       "domains": ["software_engineering", "asset_inventory", "cross_repo_governance"],
-      "context_tags": ["coding_asset", "rust_scan_core", "source_scan", "rollout", "governance"],
-      "task_types": ["rust", "source_scan", "performance", "rollout", "repo_enrollment", "coding"],
+      "context_tags": ["coding_asset", "rust_scan_core", "source_scan", "rollout", "governance", "mail_spool_integrity", "dirty_state"],
+      "task_types": ["rust", "source_scan", "performance", "rollout", "repo_enrollment", "mail_delivery", "coding"],
       "capabilities": [
         "bounded_local_file_scan",
         "content_hashing",
@@ -117,17 +117,24 @@
         "quarantine_summary",
         "python_rust_bridge",
         "rust_rollout_policy",
-        "logos_rollout_exclusion"
+        "logos_rollout_exclusion",
+        "mail_spool_dirty_probe",
+        "mail_storm_dirty_state_classifier",
+        "route_audit_gate",
+        "source_outbox_only_feedback",
+        "rust_rollout_reference_snapshot_gate"
       ],
       "applies_when": [
         "DAD needs deterministic local source observations or hash manifests.",
         "An agent is validating DAD's first Rust leaf tool.",
-        "A repo needs Rust rollout packets, target ownership rules, or Logos instruction-only boundaries."
+        "A repo needs Rust rollout packets, target ownership rules, or Logos instruction-only boundaries.",
+        "Multiple repos are sending Rust rollout feedback and DAD must distinguish source outbox traffic from central collection/routing/delivery audit."
       ],
       "does_not_apply_when": [
         "The task needs governance meaning, final asset value scoring, legal judgment, theological judgment, or model orchestration.",
         "A downstream repo lacks a reviewed local path or is Logos instruction-mail-only.",
-        "Rust output would be treated as canonical source truth instead of candidate evidence."
+        "Rust output would be treated as canonical source truth instead of candidate evidence.",
+        "A clean Rust mail-spool probe is being used as all-repo delivery approval instead of running mail doctor with reviewed repo coverage."
       ],
       "public_safe": false,
       "upgrade_channel": "dad_mail",
@@ -142,12 +149,14 @@
         "assets/dad-rust-upgrade-starter-pack/manifest.json",
         "docs/rust/DAD_RUST_SCAN_CORE.md",
         "docs/rust/DAD_FORCED_RUST_ROLLOUT_POLICY.md",
+        "docs/DAD_MAIL_STORM_AND_DIRTY_STATE_RUNBOOK.md",
+        "assets/coding-harnesses/repo-enrollment-mail-governance-safety/",
         "src/digital_asset_directory/rust_bridge/dad_scan_core.py",
         "src/digital_asset_directory/rust_rollout/policy.py",
         "lessons/rust_rollout/lesson_ledger.jsonl"
       ],
       "review_status": "installed_for_local_reuse",
-      "authority_boundary": "Rust emits candidate observations only. Python/DAD retains orchestration and review authority; downstream apply is policy gated and Logos repos are instruction-mail-only."
+      "authority_boundary": "Rust emits candidate observations only. Python/DAD retains orchestration and review authority; downstream apply is policy gated and Logos repos are instruction-mail-only. Rust rollout feedback originates in source repo outboxes; DAD central inbox/outbox rows require collection and route audit."
     },
     {
       "offering_id": "dad:offering:rust-shadow-parity-harness",
@@ -209,15 +218,15 @@
       "languages": ["python", "agent-instruction"],
       "repo_types": ["control_plane", "governed_repo_family", "application"],
       "domains": ["governance", "mail_center"],
-      "context_tags": ["repo_enrollment", "mail_center", "public_safe", "protected_repo"],
-      "task_types": ["enrollment", "mail_delivery", "governance_review", "public_release"],
-      "capabilities": ["protected_repo_gate", "mail_write_boundary_check", "public_release_gate"],
-      "applies_when": ["DAD is planning or applying enrollment, mail delivery, or governance updates."],
+      "context_tags": ["repo_enrollment", "mail_center", "mail_spool_integrity", "dirty_state", "worktree_dirty", "rust_rollout", "public_safe", "protected_repo"],
+      "task_types": ["enrollment", "mail_delivery", "governance_review", "public_release", "rust_rollout"],
+      "capabilities": ["protected_repo_gate", "mail_write_boundary_check", "public_release_gate", "mail_spool_dirty_doctor", "mail_storm_gate", "mail_storm_dirty_state_classifier", "worktree_dirty_separation", "source_outbox_storm_dedupe", "cross_source_outbox_conflict_gate", "unknown_source_outbox_conflict_gate", "route_audit_gate", "legacy_collection_allowlist_gate", "rust_snapshot_promotion_gate"],
+      "applies_when": ["DAD is planning or applying enrollment, mail delivery, Rust rollout packets, or governance updates.", "Multiple repos or branches are sending DAD mail and the worktree looks very dirty."],
       "does_not_apply_when": ["A repo is not in reviewed policy or lacks a human approval ID for broad writes."],
       "public_safe": true,
       "upgrade_channel": "dad_mail",
       "known_upgrades": [],
-      "source_refs": ["registry/coding-harness-registry.json#dad:harness:repo-enrollment-mail-governance-safety", "docs/DAD_REPO_ENROLLMENT.md", "docs/MAIL_CENTER.md"],
+      "source_refs": ["registry/coding-harness-registry.json#dad:harness:repo-enrollment-mail-governance-safety", "docs/DAD_REPO_ENROLLMENT.md", "docs/MAIL_CENTER.md", "docs/DAD_MAIL_STORM_AND_DIRTY_STATE_RUNBOOK.md", "assets/coding-harnesses/repo-enrollment-mail-governance-safety/tests-or-evals/minimum-eval.json"],
       "review_status": "candidate",
       "authority_boundary": "Normal recurring DAD operation writes only mailbox files; broader changes require approval."
     },
@@ -297,6 +306,73 @@
       ],
       "review_status": "candidate",
       "authority_boundary": "Learning-readiness results are synthetic candidate evidence; they do not promote lessons, prove real repo completeness, or override source authority."
+    },
+    {
+      "offering_id": "dad:offering:harness-vs-deterministic-enforcement",
+      "name": "Harness Vs Deterministic Enforcement Decision Model",
+      "version": "0.1.0",
+      "offering_type": "workflow",
+      "path": "docs/HARNESS_VS_DETERMINISTIC_ENFORCEMENT.md",
+      "languages": ["python", "rust", "mixed", "agent-instruction"],
+      "repo_types": ["application", "library", "control_plane", "template_repo", "governed_repo_family", "research_repo"],
+      "domains": ["software_engineering", "ai_engineering", "governance", "learning_loop"],
+      "context_tags": ["harness_decision", "coding_asset", "governance", "risk_tiering", "learning_loop"],
+      "task_types": ["coding", "testing", "governance_review", "agent_instruction_design", "harness_research", "risk_review", "repo_template_creation"],
+      "capabilities": [
+        "harness_first_decision_model",
+        "deterministic_enforcement_tiebreakers",
+        "red_amber_green_data_sensitivity_routing",
+        "subharness_linking_guidance",
+        "enforcement_downgrade_guidance"
+      ],
+      "applies_when": [
+        "An agent discovers an issue, pattern, review finding, or coding improvement and must decide whether it belongs in a harness, advisory report, warning, or deterministic gate.",
+        "A repo is accumulating too many hard checks and needs to separate learning surfaces from non-negotiable safety boundaries.",
+        "A finding has uneven risk across public-safe, internal, confidential, protected, or public-release contexts."
+      ],
+      "does_not_apply_when": [
+        "A non-negotiable security, privacy, public-release, source-authority, or human-approval gate already clearly requires deterministic enforcement.",
+        "The task is a trivial local edit with no repeated pattern, no learning value, and no downstream consumer."
+      ],
+      "public_safe": true,
+      "upgrade_channel": "dad_mail",
+      "known_upgrades": [],
+      "source_refs": ["docs/HARNESS_VS_DETERMINISTIC_ENFORCEMENT.md", "docs/CODING_HARNESS_LIBRARY.md", "docs/HARNESS_DISCOVERY_RADAR.md"],
+      "review_status": "reviewed",
+      "authority_boundary": "Advisory routing only. It does not override local repo authority, required validation, human gates, public/private release gates, or source-of-truth rules."
+    },
+    {
+      "offering_id": "dad:offering:claude-architectural-root-cause-review",
+      "name": "Claude Architectural Root-Cause Review Packets",
+      "version": "0.1.0",
+      "offering_type": "workflow",
+      "path": "docs/CLAUDE_ARCHITECTURAL_ROOT_CAUSE_REVIEW.md",
+      "languages": ["python", "rust", "mixed", "agent-instruction"],
+      "repo_types": ["application", "library", "control_plane", "template_repo", "governed_repo_family"],
+      "domains": ["software_engineering", "ai_engineering", "governance", "architecture"],
+      "context_tags": ["root_cause_review", "integration_issue", "implementation_drift", "architecture_review", "learning_loop"],
+      "task_types": ["debugging", "integration", "implementation", "architecture_review", "code_review", "postflight", "harness_research"],
+      "capabilities": [
+        "claude_review_packet",
+        "integration_issue_pattern_capture",
+        "architectural_root_cause_questions",
+        "boundary_contract_signal_tags",
+        "harness_or_enforcement_routing"
+      ],
+      "applies_when": [
+        "A repo sees repeated integration failures, implementation drift, boundary mismatch, ownership ambiguity, sequencing errors, or review findings that may have an architectural root cause.",
+        "A coding agent wants Claude to analyze root cause from safe metadata instead of raw logs, private rows, copied source, or chat transcripts."
+      ],
+      "does_not_apply_when": [
+        "The issue is a trivial isolated local typo or obvious one-command fix with no repeated pattern, boundary concern, or learning value.",
+        "The packet would require copying secrets, raw logs, stack traces, private rows, full source files, hidden reasoning, or raw review transcripts."
+      ],
+      "public_safe": true,
+      "upgrade_channel": "dad_mail",
+      "known_upgrades": [],
+      "source_refs": ["docs/CLAUDE_ARCHITECTURAL_ROOT_CAUSE_REVIEW.md", "docs/DAD_EXCEPTIONS_LAKE_BUILDOUT.md", "templates/downstream/EXCEPTIONS_README.md"],
+      "review_status": "reviewed",
+      "authority_boundary": "Claude review packets are candidate analysis requests. They do not approve fixes, override local source authority, or bypass human gates."
     },
     {
       "offering_id": "dad:offering:language-coding-advantage",
@@ -413,6 +489,47 @@
       ],
       "review_status": "candidate",
       "authority_boundary": "The harness routes language-frontier ideas as candidate evidence only; target repos retain local authority and must validate before adoption."
+    },
+    {
+      "offering_id": "dad:offering:nine-layer-address-model",
+      "name": "DAD 9-Layer Learning Address Model",
+      "version": "0.1.0",
+      "offering_type": "architecture_ref",
+      "path": "docs/DAD_ADDRESS_MODEL.md",
+      "languages": ["agent-instruction", "python", "rust", "mixed"],
+      "repo_types": ["application", "library", "control_plane", "template_repo", "research_repo", "governed_repo_family"],
+      "domains": ["ai_engineering", "governance", "knowledge_graph", "learning_loop", "architecture"],
+      "context_tags": ["address_model", "nine_layer_address", "repo_local_asset_memory", "learning_adaptation", "workflow", "exception_learning"],
+      "task_types": ["asset_discovery", "repo_enrollment", "learning_loop", "exception_review", "architecture_consult", "workflow_design", "repo_template_creation"],
+      "capabilities": [
+        "compact_asset_addressing",
+        "layered_learning_records",
+        "workflow_card_encoding",
+        "source_authority_boundary",
+        "graph_coordinate_system",
+        "frontier_review_evolution"
+      ],
+      "applies_when": [
+        "A repo needs to log digital assets without copying private source content.",
+        "DAD needs to connect prior fixes, derivative solutions, validation deltas, and future lookup triggers.",
+        "A workflow or orchestration asset needs compact representation through refs instead of copied long prose.",
+        "An architecture or learning-loop change needs stable address placement alongside graph edges."
+      ],
+      "does_not_apply_when": [
+        "The task is a tiny one-off change with no future-agent reuse value.",
+        "The model would add ceremony without improving identity, retrieval, validation, provenance, or learning.",
+        "A source repo has stronger local address authority and DAD is only collecting pointer metadata."
+      ],
+      "public_safe": true,
+      "upgrade_channel": "dad_mail",
+      "known_upgrades": [],
+      "source_refs": [
+        "docs/DAD_ADDRESS_MODEL.md",
+        "registry/dad-address-model-registry.json",
+        "docs/REPO_LOCAL_DIGITAL_ASSET_DIRECTORY.md"
+      ],
+      "review_status": "candidate",
+      "authority_boundary": "DAD address-model guidance is a compact coordinate system for candidate records. It does not replace graph edges, prove truth or value, import LawFirm OS canon, or authorize source mutation."
     }
   ]
 }

@@ -224,6 +224,8 @@ def test_apply_requires_approval_and_writes_only_approved_paths(tmp_path: Path):
         "/registry/exception-capture-pattern-registry.json"
     )
     assert contract["capture"]["mail_outbox"] == ".digital-asset/mail/outbox.jsonl"
+    assert "~/.dad/bin/asset-dir" in contract["capture"]["cli_fallback"]
+    assert "~/.dad/bin/asset-dir.ps1" in contract["capture"]["cli_fallback"]
     assert contract["capture"]["repo_local_only_paths"] == REPO_LOCAL_ONLY_PATHS
     assert "processed/exceptions/fix-outcomes/outcomes.jsonl" in contract["capture"][
         "repo_local_only_paths"

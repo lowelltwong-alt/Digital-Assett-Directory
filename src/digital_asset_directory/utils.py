@@ -32,6 +32,9 @@ SECRET_PATTERNS = [
     re.compile(r"(?<!\d)(?:\+?1[-.\s]?)?\(?\d{3}\)?[-.\s]\d{3}[-.\s]\d{4}(?!\d)"),
 ]
 
+ATOMIC_WRITE_REPLACE_ATTEMPTS = 10
+ATOMIC_WRITE_CLEANUP_ATTEMPTS = 5
+
 
 def utc_now() -> str:
     return datetime.now(timezone.utc).isoformat()
@@ -59,23 +62,49 @@ def json_dumps(value: Any, *, pretty: bool = False) -> str:
     )
 
 
-def atomic_write_text(path: Path, text: str) -> None:
+def _direct_overwrite_text(path: Path, text: str) -> None:
+    with path.open("w", encoding="utf-8", newline="\n") as handle:
+        handle.write(text)
+        handle.flush()
+        os.fsync(handle.fileno())
+
+
+def atomic_write_text(path: Path, text: str, *, allow_direct_fallback: bool = False) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     fd, tmp_name = tempfile.mkstemp(prefix=f".{path.name}.", dir=str(path.parent))
     try:
         with os.fdopen(fd, "w", encoding="utf-8", newline="\n") as handle:
             handle.write(text)
-        for attempt in range(5):
+        replace_error: PermissionError | None = None
+        for attempt in range(ATOMIC_WRITE_REPLACE_ATTEMPTS):
             try:
                 os.replace(tmp_name, path)
+                replace_error = None
+                break
+            except PermissionError as exc:
+                replace_error = exc
+                if attempt == ATOMIC_WRITE_REPLACE_ATTEMPTS - 1:
+                    break
+                time.sleep(0.05 * (attempt + 1))
+        if replace_error is not None and allow_direct_fallback:
+            try:
+                _direct_overwrite_text(path, text)
+            except OSError as fallback_error:
+                raise replace_error from fallback_error
+        elif replace_error is not None:
+            raise replace_error
+    finally:
+        for attempt in range(ATOMIC_WRITE_CLEANUP_ATTEMPTS):
+            try:
+                if os.path.exists(tmp_name):
+                    os.unlink(tmp_name)
                 break
             except PermissionError:
-                if attempt == 4:
-                    raise
+                if attempt == ATOMIC_WRITE_CLEANUP_ATTEMPTS - 1:
+                    break
                 time.sleep(0.05 * (attempt + 1))
-    finally:
-        if os.path.exists(tmp_name):
-            os.unlink(tmp_name)
+            except OSError:
+                break
 
 
 def append_jsonl(path: Path, value: Any) -> None:
@@ -84,13 +113,17 @@ def append_jsonl(path: Path, value: Any) -> None:
         handle.write(json_dumps(value) + "\n")
 
 
-def write_json(path: Path, value: Any) -> None:
-    atomic_write_text(path, json_dumps(value, pretty=True) + "\n")
+def write_json(path: Path, value: Any, *, allow_direct_fallback: bool = False) -> None:
+    atomic_write_text(
+        path,
+        json_dumps(value, pretty=True) + "\n",
+        allow_direct_fallback=allow_direct_fallback,
+    )
 
 
-def write_jsonl(path: Path, values: Iterable[Any]) -> None:
+def write_jsonl(path: Path, values: Iterable[Any], *, allow_direct_fallback: bool = False) -> None:
     text = "".join(json_dumps(value) + "\n" for value in values)
-    atomic_write_text(path, text)
+    atomic_write_text(path, text, allow_direct_fallback=allow_direct_fallback)
 
 
 def redact_sensitive_text(text: str) -> tuple[str, int]:

@@ -116,6 +116,14 @@
         "default_handling": "direct_record_with_fix_outcome",
         "review_priority": "medium"
       },
+      "code_change": {
+        "origin_surface": "agent_behavior",
+        "detection_mode": "postflight_trace",
+        "impact_domain": "correctness",
+        "learning_route": "fix_outcome_link",
+        "default_handling": "manual_review",
+        "review_priority": "high"
+      },
       "dad_recommendation": {
         "origin_surface": "review_process",
         "detection_mode": "postflight_trace",
@@ -964,6 +972,19 @@
       "review_status": "reviewed"
     },
     {
+      "event_type": "code_change_exception",
+      "category": "code_change",
+      "description": "A material code change was made under exception conditions, caused an unexpected side effect, or carried a validation gap that future agents should learn from.",
+      "capture_contracts": ["postflight_exception", "review_finding"],
+      "default_severity": "high",
+      "sensitivity_default": "internal",
+      "learnable": true,
+      "examples": ["hotfix without full validation", "generated change introduced behavior drift", "partial workaround accepted with follow-up risk"],
+      "required_context_refs": ["change ref", "changed surface class", "exception reason", "validation ref or validation gap"],
+      "never_collect": ["diff contents", "source file bodies", "raw private test output"],
+      "review_status": "reviewed"
+    },
+    {
       "event_type": "backfill_exception_candidate",
       "category": "backfill_candidate",
       "description": "A metadata-only historical candidate discovered by path/name keyword scan.",
@@ -1224,6 +1245,17 @@
         "false_positive_risk": "Instruction-drift docs may be intentional migration plans.",
         "applies_when": ["Path names mention prompt, instruction, managed-block, or skill drift."],
         "does_not_apply_when": ["The path is a current instruction source with no drift or mismatch signal."]
+      },
+      {
+        "rule_id": "backfill-rule:code-change-exception",
+        "terms": ["code-change-exception", "code_change_exception", "hotfix-risk", "hotfix_risk", "side-effect-change", "side_effect_change", "unvalidated-change", "unvalidated_change", "behavior-drift-change", "behavior_drift_change"],
+        "event_type": "code_change_exception",
+        "severity": "high",
+        "capture_contract": "backfill_candidate",
+        "classification_confidence": "path_name_signal_only",
+        "false_positive_risk": "Hotfix or side-effect paths can describe planned safeguards rather than an observed code-change exception.",
+        "applies_when": ["Path names mention code-change exceptions, hotfix risk, side-effect changes, behavior drift, or unvalidated changes."],
+        "does_not_apply_when": ["The path is a normal changelog, release note, or code review without exception, risk, drift, or validation-gap language."]
       },
       {
         "rule_id": "backfill-rule:rollback",

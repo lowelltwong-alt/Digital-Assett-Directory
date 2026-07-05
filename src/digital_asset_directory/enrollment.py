@@ -21,6 +21,7 @@ AUDIT_PATH = ENROLLMENT_DIR / "audit.jsonl"
 CAPTURE_PATTERN_REGISTRY = Path("registry") / "exception-capture-pattern-registry.json"
 REPO_ENROLLMENT_SCHEMA = Path("schemas") / "repo-enrollment-contract.schema.json"
 DOWNSTREAM_EXCEPTION_README = Path("templates") / "downstream" / "EXCEPTIONS_README.md"
+DOWNSTREAM_ASSETS_README = Path("templates") / "downstream" / "DAD_ASSETS_README.md"
 
 GOVERNANCE_BEGIN = "<!-- BEGIN DIGITAL_ASSET_DIRECTORY_GOVERNANCE -->"
 GOVERNANCE_END = "<!-- END DIGITAL_ASSET_DIRECTORY_GOVERNANCE -->"
@@ -64,6 +65,10 @@ APPROVED_RELATIVE_PATHS = [
     ".digital-asset/mail/outbox.jsonl",
     ".digital-asset/mail/archive.jsonl",
     ".digital-asset/mail/adoption.jsonl",
+    ".digital-asset/assets/README.md",
+    ".digital-asset/assets/index.jsonl",
+    ".digital-asset/assets/adoption.jsonl",
+    ".digital-asset/learning/events.jsonl",
     ".digital-asset/skills/checkout.json",
     ".digital-asset/context-map.json",
     ".digital-asset/governance-map.yaml",
@@ -524,9 +529,11 @@ def _capture_surface_payload(hub_root: Path) -> dict[str, Any]:
         "fix_outcomes": "processed/exceptions/fix-outcomes/outcomes.jsonl",
         "repo_local_only_paths": REPO_LOCAL_ONLY_PATHS,
         "cli_fallback": (
-            "If asset-dir is unavailable, try PYTHONPATH=src python -m "
-            "digital_asset_directory.cli from the DAD checkout; otherwise append "
-            "metadata-only JSONL with dad_cli_unavailable and safe refs."
+            "If asset-dir is unavailable, first try the stable DAD user shim at "
+            "~/.dad/bin/asset-dir or ~/.dad/bin/asset-dir.ps1; if the shim is "
+            "unavailable too, try PYTHONPATH=src python -m digital_asset_directory.cli "
+            "from the DAD checkout; otherwise append metadata-only JSONL with "
+            "dad_cli_unavailable and safe refs."
         ),
     }
 
@@ -840,10 +847,14 @@ def _front_door_body(policy: EnrollmentRepoPolicy) -> str:
 - Data map: `.digital-asset/data-map.yaml`
 - Skill checkout: `.digital-asset/skills/checkout.json`
 - Coding asset pointer: `.ai-assets.json`
+- Asset memory: `.digital-asset/assets/index.jsonl`
 
 Use these surfaces when work involves AI-assisted coding, repo governance,
 lessons, reusable assets, templates, agent skills, or cross-repo suggestions.
 DAD mail is candidate-only and local review controls adoption for `{policy.id}`.
+Use `.digital-asset/assets/` for compact metadata-only asset cards. DAD's
+address model uses 9 compact layers with layer 9 as learning/adaptation; put
+long workflow details in workflow cards or source docs and reference them.
 """
 
 
@@ -855,6 +866,7 @@ def _toc_body() -> str:
 | `.digital-asset/governance-map.yaml` | Repo-local governance dependency mirror. | governance, authority, dependencies | Check local authority boundaries and DAD-managed surfaces. |
 | `.digital-asset/data-map.yaml` | Repo-local sensitive-boundary and data-movement map. | data-map, privacy, release | Check what data can move through DAD mail or public-facing release paths. |
 | `.digital-asset/mail/` | Candidate-only DAD inbox/outbox/archive. | mail, suggestions, daily | Read or send cross-repo suggestions without mutating source authority. |
+| `.digital-asset/assets/index.jsonl` | Repo-local metadata-only digital asset cards using compact DAD address layers. | assets, address-model, learning | Record source-owned asset pointers, workflow refs, validation refs, and learning deltas without copying private content. |
 """
 
 
@@ -977,6 +989,36 @@ def _write_exception_surface(repo_root: Path, hub_root: Path, changed: list[str]
             changed.append(rel)
 
 
+def _asset_memory_readme_text(hub_root: Path) -> str:
+    template = hub_root / DOWNSTREAM_ASSETS_README
+    if template.exists():
+        return template.read_text(encoding="utf-8")
+    return (
+        "# DAD Repo-Local Digital Asset Memory\n\n"
+        "This directory stores source-repo owned candidate asset cards for DAD. "
+        "Rows are metadata pointers only. Do not copy secrets, private rows, raw "
+        "source blobs, large generated outputs, or governed source authority into "
+        "`index.jsonl`.\n"
+    )
+
+
+def _write_asset_memory_surface(repo_root: Path, hub_root: Path, changed: list[str]) -> None:
+    if _write_text_if_changed(
+        _target_path(repo_root, ".digital-asset/assets/README.md"),
+        _asset_memory_readme_text(hub_root),
+    ):
+        changed.append(".digital-asset/assets/README.md")
+    for rel in (
+        ".digital-asset/assets/index.jsonl",
+        ".digital-asset/assets/adoption.jsonl",
+        ".digital-asset/learning/events.jsonl",
+    ):
+        path = _target_path(repo_root, rel)
+        if not path.exists():
+            atomic_write_text(path, "")
+            changed.append(rel)
+
+
 def _apply_payloads(
     policy: EnrollmentRepoPolicy, hub_root: Path, approval_id: str, *, update: bool
 ) -> list[str]:
@@ -1009,6 +1051,7 @@ def _apply_payloads(
             changed.append(rel)
 
     _write_mailbox(repo_root, changed)
+    _write_asset_memory_surface(repo_root, hub_root, changed)
     _write_exception_surface(repo_root, hub_root, changed)
 
     if _write_managed_block(

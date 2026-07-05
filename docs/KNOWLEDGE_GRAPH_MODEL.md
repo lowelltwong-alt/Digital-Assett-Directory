@@ -21,6 +21,13 @@ Every generated edge carries:
 - scan ID;
 - review status.
 
+DAD's 9-layer address model is complementary to this edge model. The address
+model is a compact coordinate system for where an object belongs, what layer of
+meaning it occupies, and which authority boundary governs it. Graph edges model
+relationships between addressed objects. Do not use an address as proof of a
+relationship, and do not use an edge as a replacement for provenance, layer
+placement, or source authority.
+
 A `related_to` edge means bounded IDF-weighted token similarity, not sameness. A
 `semantically_similar_to` edge is reserved for a later approved semantic layer. A
 `plays_same_architecture_role_as` edge means candidate role similarity, not content

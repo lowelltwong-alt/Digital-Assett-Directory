@@ -8,6 +8,7 @@ import pytest
 
 from digital_asset_directory.cli import _json_command
 from digital_asset_directory.test_parity import (
+    build_timing_analysis,
     compare_structured_reports,
     infer_native_authority,
     load_structured_observations,
@@ -114,46 +115,21 @@ def test_parity_distinguishes_exit_code_only_from_verified_parity(tmp_path: Path
     assert result["structured_comparison"]["status"] == "not_provided"
 
 
-def test_timing_analysis_reports_burn_in_cost_and_replacement_savings(
-    tmp_path: Path,
-) -> None:
-    native_report = tmp_path / "native.json"
-    shadow_report = tmp_path / "shadow.json"
-    result = run_test_parity(
-        tmp_path,
-        native_command=[
-            sys.executable,
-            "-c",
-            (
-                "import pathlib, time; time.sleep(0.5); "
-                f"pathlib.Path({json.dumps(str(native_report))}).write_text("
-                f"{json.dumps(json.dumps({'tests': [{'test_id': 'tests/test_shadow.py::test_equivalent', 'outcome': 'passed', 'duration_seconds': 0.5}]}))}, "
-                "encoding='utf-8')"
-            ),
-        ],
-        shadow_command=[
-            sys.executable,
-            "-c",
-            (
-                "import pathlib, time; time.sleep(0.01); "
-                f"pathlib.Path({json.dumps(str(shadow_report))}).write_text("
-                f"{json.dumps(json.dumps({'tests': [{'test_id': 'tests/test_shadow.py::test_equivalent', 'outcome': 'passed', 'duration_seconds': 0.01}]}))}, "
-                "encoding='utf-8')"
-            ),
-        ],
-        timeout_seconds=10,
-        native_report=native_report,
-        shadow_report=shadow_report,
-        audit=False,
+def test_timing_analysis_reports_burn_in_cost_and_replacement_savings() -> None:
+    timing = build_timing_analysis(
+        {"duration_seconds": 2.0},
+        {"duration_seconds": 0.25},
+        replacement_comparable=True,
     )
 
-    timing = result["timing_analysis"]
     assert timing["measurement_mode"] == "sequential"
-    assert timing["sequential_burn_in_seconds"] >= timing["native_seconds"]
-    assert timing["sequential_burn_in_overhead_seconds"] == timing["shadow_seconds"]
+    assert timing["native_seconds"] == 2.0
+    assert timing["shadow_seconds"] == 0.25
+    assert timing["sequential_burn_in_seconds"] == 2.25
+    assert timing["sequential_burn_in_overhead_seconds"] == 0.25
     assert timing["replacement_estimate_status"] == "compared"
-    assert timing["estimated_replacement_savings_seconds"] > 0
-    assert timing["estimated_replacement_savings_percent"] > 0
+    assert timing["estimated_replacement_savings_seconds"] == 1.75
+    assert timing["estimated_replacement_savings_percent"] == 87.5
     assert timing["replacement_would_be_faster"] is True
 
 

@@ -4,6 +4,12 @@ How external research becomes actual library entries. External content never ski
 quarantine, screening, or a named human approval -- trust tiers only lower intake
 friction.
 
+Use `docs/DAD_PROFESSIONAL_RESEARCH_LAYER.md` before broad external research.
+The required order is DAD lookup first, bounded professional/public research
+second, and pointer-only candidate capture afterward. Research must improve an
+AI coding, AI code-reading, validation, harness, exception, or governance loop;
+otherwise it stays as an ordinary note and should not become a DAD offering.
+
 ## Flow
 
 ```text

@@ -1,0 +1,62 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://local.digital-asset-directory/schemas/repo-local-digital-asset-record.schema.json",
+  "title": "DAD Repo-Local Digital Asset Record",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "asset_id",
+    "asset_type",
+    "title",
+    "summary",
+    "source_paths",
+    "sensitivity",
+    "review_status",
+    "authority_boundary"
+  ],
+  "properties": {
+    "schema_version": {"const": "0.1.0"},
+    "asset_id": {"type": "string", "minLength": 1},
+    "asset_type": {"type": "string", "minLength": 1},
+    "title": {"type": "string", "minLength": 1, "maxLength": 160},
+    "summary": {"type": "string", "minLength": 1, "maxLength": 1000},
+    "source_paths": {
+      "type": "array",
+      "items": {"type": "string", "minLength": 1},
+      "minItems": 1,
+      "uniqueItems": true
+    },
+    "tags": {"type": "array", "items": {"type": "string", "minLength": 1}, "uniqueItems": true},
+    "context_tags": {"type": "array", "items": {"type": "string", "minLength": 1}, "uniqueItems": true},
+    "pattern_ids": {"type": "array", "items": {"type": "string", "minLength": 1}, "uniqueItems": true},
+    "graph_tags": {"type": "array", "items": {"type": "string", "minLength": 1}, "uniqueItems": true},
+    "applies_when": {"type": "array", "items": {"type": "string", "minLength": 1}},
+    "does_not_apply_when": {"type": "array", "items": {"type": "string", "minLength": 1}},
+    "novelty_claim": {"type": "string", "maxLength": 500},
+    "usefulness_context": {"type": "string", "maxLength": 500},
+    "parent_asset_id": {"type": "string"},
+    "derived_from": {"type": "array", "items": {"type": "string", "minLength": 1}},
+    "workflow_ref": {"type": "string"},
+    "learning_ref": {"type": "string"},
+    "fractal_address": {
+      "type": "object",
+      "properties": {
+        "layer": {"type": "integer", "minimum": 1, "maximum": 9},
+        "layer_name": {"type": "string"},
+        "optional_layer_9_variant": {"enum": ["", "learning_adaptation", "orchestration_workflow", "other"]},
+        "address_ref": {"type": "string"}
+      },
+      "additionalProperties": false
+    },
+    "validation_commands": {"type": "array", "items": {"type": "string", "minLength": 1}},
+    "source_refs": {"type": "array", "items": {"type": "string", "minLength": 1}},
+    "sensitivity": {"enum": ["public", "internal", "private", "restricted", "unknown"]},
+    "review_status": {"enum": ["candidate", "reviewed", "adopted", "rejected", "retired"]},
+    "lifecycle_status": {"enum": ["active", "watching", "deferred", "retired"]},
+    "upgrade_channel": {"type": "string"},
+    "created_at": {"type": "string"},
+    "updated_at": {"type": "string"},
+    "authority_boundary": {"type": "string", "minLength": 1}
+  },
+  "additionalProperties": false
+}

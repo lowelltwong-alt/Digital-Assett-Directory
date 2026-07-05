@@ -45,6 +45,10 @@ Full governance enrollment may install or update only:
 
 ```text
 .digital-asset/mail/**
+.digital-asset/assets/README.md
+.digital-asset/assets/index.jsonl
+.digital-asset/assets/adoption.jsonl
+.digital-asset/learning/events.jsonl
 .digital-asset/skills/checkout.json
 .digital-asset/context-map.json
 .digital-asset/governance-map.yaml
@@ -74,8 +78,17 @@ retirement notices, template updates, governance-map drift, data-map drift, and
 new best-practice recommendations. They do not mutate target repos.
 
 Repos that use or watch DAD assets should keep `.digital-asset/dad-usage.jsonl`
-and send usage feedback to DAD. DAD uses that ledger to target future upgrade
-notices rather than spamming every repo.
+and source-owned asset cards in `.digital-asset/assets/index.jsonl`, then send
+usage feedback to DAD. DAD uses those ledgers to target future upgrade notices
+rather than spamming every repo.
+
+Repo-local asset memory is not a second DAD database. It is a small,
+metadata-only, source-repo owned surface for paths, summaries, tags, hashes,
+validation commands, adoption notes, and upgrade pointers. DAD can collect it
+with `asset-dir dad repo-assets --repo <repo>` without mutating the source repo.
+Asset cards should use DAD's compact 9-layer address model. Layer 9 is
+`learning_adaptation`; workflow/orchestration depth belongs in workflow-card
+refs or source docs, not pasted into the asset card.
 
 ## Public Safety
 

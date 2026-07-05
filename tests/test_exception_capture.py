@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import shutil
 from pathlib import Path
 from types import SimpleNamespace
 
@@ -19,6 +20,8 @@ from digital_asset_directory.cli import (
 )
 from digital_asset_directory.config import ExceptionRepoPolicy, MailRepoPolicy
 from digital_asset_directory.exception_capture import (
+    _is_capture_audit_excluded,
+    build_phase6_machine_evidence_summary,
     build_exception_capture_remediation_plan,
     build_exception_capture_gap_review_queue,
     build_exception_backfill_wave_plan,
@@ -34,6 +37,8 @@ from digital_asset_directory.exception_capture import (
     write_exception_capture_emission_simulation,
     write_exception_capture_gap_review_queue,
     write_exception_capture_remediation_plan,
+    write_exception_capture_surface_refresh_notices,
+    write_phase6_machine_evidence_summary,
     write_observed_capture_audit,
 )
 from digital_asset_directory.exceptions_lake import record_exception_event
@@ -78,6 +83,112 @@ def _validate(schema_name: str, payload: dict) -> None:
     validator_cls(schema).validate(payload)
 
 
+def _copy_capture_registry(hub: Path) -> None:
+    for rel in [
+        "registry/exception-capture-pattern-registry.json",
+        "registry/exception-event-type-registry.json",
+    ]:
+        target = hub / rel
+        target.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copyfile(ROOT / rel, target)
+
+
+def _phase6_machine_gate(gate_id: str, status: str = "passed") -> dict:
+    return {
+        "evidence_id": f"machine-evidence:{gate_id}",
+        "supports_human_gate_id": gate_id,
+        "machine_status": status,
+        "evidence_scope": "machine_only_not_roadmap_gate_evidence",
+        "human_review_required": True,
+        "human_gate_satisfied": False,
+        "evidence": {},
+    }
+
+
+def _write_phase6_source_reports(
+    hub: Path,
+    *,
+    observed_status: str = "failed",
+    emission_support: bool = True,
+) -> None:
+    reports = hub / "processed" / "reports"
+    reports.mkdir(parents=True, exist_ok=True)
+    capture_gate_ids = [
+        "phase-6-capture-completeness-harness-reviewed",
+        "phase-6-lawfirm-intake-missed-capture-regression",
+        "phase-6-pattern-update-simulation-reviewed",
+        "phase-6-all-asset-pattern-coverage-reviewed",
+        "phase-6-sensitive-payload-negative-tests-reviewed",
+    ]
+    taxonomy_gate_id = "phase-6-taxonomy-route-coverage-reviewed"
+    observed_gate_id = "phase-6-observed-repo-capture-audit-reviewed"
+    source_payloads = {
+        "exception_capture_completeness.json": {
+            "generated_at": "2026-07-05T00:00:00+00:00",
+            "report_id": "dad:exception-capture-completeness",
+            "phase6_machine_gate_evidence": {
+                "gates": {
+                    gate["evidence_id"]: gate
+                    for gate in [_phase6_machine_gate(gate_id) for gate_id in capture_gate_ids]
+                }
+            },
+        },
+        "exception_capture_emission_simulation.json": {
+            "generated_at": "2026-07-05T00:00:00+00:00",
+            "report_id": "dad:exception-capture-emission-simulation",
+            "limited": False,
+            "coverage_status": "full_reviewed_case_set",
+            "phase6_machine_gate_evidence": {
+                "machine_status": "passed",
+                "coverage_status": "full_reviewed_case_set",
+                "limited": False,
+                "human_gate_satisfied": False,
+                "evidence_scope": "machine_only_not_roadmap_gate_evidence",
+                "supports_human_gate_ids": (
+                    [
+                        "phase-6-capture-completeness-harness-reviewed",
+                        "phase-6-pattern-update-simulation-reviewed",
+                    ]
+                    if emission_support
+                    else []
+                ),
+            },
+        },
+        "exception_taxonomy_coverage.json": {
+            "generated_at": "2026-07-05T00:00:00+00:00",
+            "report_id": "dad:exception-taxonomy-coverage",
+            "phase6_machine_gate_evidence": {
+                "gates": {
+                    f"machine-evidence:{taxonomy_gate_id}": _phase6_machine_gate(
+                        taxonomy_gate_id
+                    )
+                }
+            },
+        },
+        "exception_capture_observed_audit.json": {
+            "generated_at": "2026-07-05T00:00:00+00:00",
+            "audit_id": "dad:exception-capture-observed-audit",
+            "phase6_machine_gate_evidence": {
+                "gates": {
+                    f"machine-evidence:{observed_gate_id}": _phase6_machine_gate(
+                        observed_gate_id,
+                        status=observed_status,
+                    )
+                }
+            },
+        },
+    }
+    for filename, payload in source_payloads.items():
+        (reports / filename).write_text(
+            json.dumps(payload, indent=2, sort_keys=True) + "\n",
+            encoding="utf-8",
+        )
+
+
+def _jsonl(path: Path) -> list[dict]:
+    return [json.loads(line) for line in path.read_text(encoding="utf-8").splitlines()]
+
+
 def _write_capture_scenario(tmp_path: Path, case: dict) -> Path:
     scenario = {
         "schema_version": "0.1.0",
@@ -90,6 +201,64 @@ def _write_capture_scenario(tmp_path: Path, case: dict) -> Path:
     path = tmp_path / "capture-scenario.json"
     path.write_text(json.dumps(scenario), encoding="utf-8")
     return path
+
+
+def test_phase6_machine_evidence_summary_keeps_observed_audit_red_visible(
+    tmp_path: Path,
+) -> None:
+    _write_phase6_source_reports(tmp_path, observed_status="failed")
+
+    report = build_phase6_machine_evidence_summary(tmp_path)
+    gate_statuses = {row["gate_id"]: row["machine_status"] for row in report["gates"]}
+
+    assert report["report_id"] == "dad:phase6-exception-capture-machine-evidence-summary"
+    assert report["overall_machine_status"] == "failed"
+    assert report["human_gate_satisfied"] is False
+    assert report["blocked_gate_ids"] == ["phase-6-observed-repo-capture-audit-reviewed"]
+    assert gate_statuses["phase-6-pattern-update-simulation-reviewed"] == "passed"
+    assert gate_statuses["phase-6-capture-completeness-harness-reviewed"] == "passed"
+    assert len(report["input_hashes"]) == 4
+
+
+def test_phase6_machine_evidence_summary_requires_emission_support(
+    tmp_path: Path,
+) -> None:
+    _write_phase6_source_reports(
+        tmp_path,
+        observed_status="passed",
+        emission_support=False,
+    )
+
+    report = build_phase6_machine_evidence_summary(tmp_path)
+
+    assert report["overall_machine_status"] == "failed"
+    assert set(report["blocked_gate_ids"]) == {
+        "phase-6-capture-completeness-harness-reviewed",
+        "phase-6-pattern-update-simulation-reviewed",
+    }
+
+
+def test_phase6_machine_evidence_summary_writer_creates_json_and_markdown(
+    tmp_path: Path,
+) -> None:
+    _write_phase6_source_reports(tmp_path)
+
+    report = write_phase6_machine_evidence_summary(tmp_path)
+
+    assert report["overall_machine_status"] == "failed"
+    assert (
+        tmp_path
+        / "processed"
+        / "reports"
+        / "phase6_exception_capture_machine_evidence_summary.json"
+    ).exists()
+    markdown = (
+        tmp_path
+        / "processed"
+        / "reports"
+        / "phase6_exception_capture_machine_evidence_summary.md"
+    ).read_text(encoding="utf-8")
+    assert "machine evidence only" in markdown
 
 
 def test_exception_repo_policy_is_separate_from_mail_policy(tmp_path: Path) -> None:
@@ -388,6 +557,7 @@ def test_capture_completeness_scenarios_all_pass(tmp_path: Path) -> None:
         "contains_prompt_injection_like_text",
         "contains_raw_log_blob",
         "contains_secret_or_pii",
+        "contains_source_or_diff",
     } <= set(sensitive_gate["evidence"]["covered_negative_controls"])
     blocked_by_control = sensitive_gate["evidence"]["blocked_negative_control_coverage"]
     assert blocked_by_control["contains_secret_or_pii"][0]["scenario_id"] == (
@@ -404,6 +574,9 @@ def test_capture_completeness_scenarios_all_pass(tmp_path: Path) -> None:
     )
     assert blocked_by_control["contains_prompt_injection_like_text"][0]["scenario_id"] == (
         "unsafe-positive-match-suppressed"
+    )
+    assert blocked_by_control["contains_source_or_diff"][0]["scenario_id"] == (
+        "source-or-diff-payload-suppressed"
     )
     assert (tmp_path / "report.json").exists()
     assert (tmp_path / "report.md").exists()
@@ -508,7 +681,10 @@ def test_exception_taxonomy_coverage_distinguishes_manual_and_signal_routes(
     )
 
     _assert_machine_only_phase6_evidence(report)
-    assert report["methodology_ref"] == "registry/exception-event-type-registry.json"
+    assert report["methodology_ref"] == (
+        "registry/exception-capture-pattern-registry.json + "
+        "registry/exception-event-type-registry.json#backfill_classifier"
+    )
     assert report["methodology_hash"].startswith("sha256:")
     assert report["event_type_count"] >= 50
     assert report["reviewed_unrouted_event_types"] == []
@@ -556,6 +732,7 @@ def test_exception_taxonomy_coverage_distinguishes_manual_and_signal_routes(
     }
     assert not newly_covered_event_types.intersection(report["manual_only_event_types"])
     assert report["manual_only_event_types"] == []
+    assert "code_change_exception" in category_backfill_events
     assert "malformed_jsonl" in report["category_route_summary"]["schema_config"][
         "capture_rule_event_types"
     ]
@@ -677,6 +854,51 @@ def test_exception_taxonomy_coverage_distinguishes_manual_and_signal_routes(
     assert (tmp_path / "taxonomy-coverage.md").exists()
 
 
+def test_capture_audit_excludes_repo_local_tmp_dirs() -> None:
+    assert _is_capture_audit_excluded(ROOT / ".tmp_pytest" / "case.json", ROOT)
+    assert _is_capture_audit_excluded(ROOT / ".tmp-codex" / "case.json", ROOT)
+
+
+def test_code_change_exception_route_is_first_class_and_metadata_only(
+    tmp_path: Path,
+) -> None:
+    scenarios = load_capture_scenarios(SCENARIOS)
+    registry = load_capture_pattern_registry(ROOT)
+    case = next(
+        case for case in scenarios["cases"] if case["scenario_id"] == "code-change-exception"
+    )
+
+    evaluated = evaluate_capture_case(case, registry, scenario_base=SCENARIOS.parent)
+    taxonomy = evaluate_exception_taxonomy_coverage(
+        ROOT,
+        SCENARIOS,
+        output=tmp_path / "taxonomy.json",
+    )
+    code_change_route = next(
+        event for event in taxonomy["events"] if event["event_type"] == "code_change_exception"
+    )
+
+    assert evaluated["passed"] is True
+    assert evaluated["actual"]["event_types"] == ["code_change_exception"]
+    assert evaluated["actual"]["capture_contracts"] == ["postflight_exception"]
+    assert evaluated["actual"]["required_fields"] == [
+        "change_ref",
+        "changed_surface",
+        "exception_reason",
+        "safe_summary",
+        "validation_ref_or_gap",
+    ]
+    assert "contains_raw_log_blob" in case["negative_controls"]
+    assert "contains_source_or_diff" in case["negative_controls"]
+    assert code_change_route["coverage_status"] == "capture_rule_with_synthetic_case"
+    assert code_change_route["capture_rule_ids"] == [
+        "exception-capture-rule:code-change-exception"
+    ]
+    assert code_change_route["backfill_rule_ids"] == [
+        "backfill-rule:code-change-exception"
+    ]
+
+
 def test_taxonomy_coverage_reports_capture_rule_without_scenario(
     tmp_path: Path,
 ) -> None:
@@ -700,6 +922,33 @@ def test_taxonomy_coverage_reports_capture_rule_without_scenario(
     assert tool_row["coverage_status"] == "capture_rule_missing_synthetic_case"
 
 
+def test_taxonomy_coverage_reports_backfill_route_without_scenario(
+    tmp_path: Path,
+) -> None:
+    scenarios = load_capture_scenarios(SCENARIOS)
+    scenarios["cases"] = [
+        case
+        for case in scenarios["cases"]
+        if case["scenario_id"] != "backfill-command-timeout"
+    ]
+    scenario_path = tmp_path / "missing-backfill-scenario.json"
+    scenario_path.write_text(json.dumps(scenarios), encoding="utf-8")
+
+    report = evaluate_exception_taxonomy_coverage(
+        ROOT,
+        scenario_path,
+        output=tmp_path / "taxonomy-coverage.json",
+    )
+
+    assert "command_timeout" in report["capture_rule_events_missing_synthetic_cases"]
+    command_timeout = next(
+        row for row in report["events"] if row["event_type"] == "command_timeout"
+    )
+    assert command_timeout["route_bundle_required"] is True
+    assert command_timeout["missing_synthetic_case"] is True
+    assert command_timeout["coverage_status"] == "backfill_path_signal"
+
+
 def test_capture_completeness_fails_when_reviewed_rule_has_no_scenario(
     tmp_path: Path,
 ) -> None:
@@ -718,6 +967,16 @@ def test_capture_completeness_fails_when_reviewed_rule_has_no_scenario(
         "missing_reviewed_rule_ids"
     ]
     assert report["missing_required_pattern_families"] == []
+
+
+def test_capture_completeness_includes_backfill_only_reviewed_routes(
+    tmp_path: Path,
+) -> None:
+    report = evaluate_capture_scenarios(ROOT, SCENARIOS, output=tmp_path / "report.json")
+
+    assert "backfill-rule:command-timeout" in report["covered_reviewed_rule_ids"]
+    assert "backfill-rule:stale-report" in report["covered_reviewed_rule_ids"]
+    assert report["missing_reviewed_rule_ids"] == []
 
 
 def test_capture_case_fails_when_declared_rule_coverage_does_not_match() -> None:
@@ -779,6 +1038,33 @@ def test_global_block_signals_suppress_positive_matches() -> None:
     assert result["passed"]
     assert result["actual"]["blocked"]
     assert result["actual"]["packet_classes"] == ["no_packet"]
+
+    source_diff_case = {
+        "scenario_id": "source-bearing-code-change",
+        "pattern_family": "exception_pattern",
+        "repo_capture_surface_version": "0.4.0",
+        "signals": [
+            "code_change_exception",
+            "hotfix_without_full_validation",
+            "contains_source_or_diff",
+        ],
+        "expected": {
+            "packet_classes": ["no_packet"],
+            "event_types": [],
+            "mail_message_types": [],
+            "capture_contracts": [],
+            "required_fields": [],
+            "update_required": False,
+            "blocked": True,
+            "blocked_reason": "global_block_signal:contains_source_or_diff",
+        },
+    }
+
+    source_diff_result = evaluate_capture_case(source_diff_case, registry)
+
+    assert source_diff_result["passed"]
+    assert source_diff_result["actual"]["blocked"]
+    assert source_diff_result["actual"]["packet_classes"] == ["no_packet"]
 
 
 def test_payload_screening_blocks_unsafe_sample_without_manual_signal() -> None:
@@ -1683,6 +1969,18 @@ def test_capture_suggest_maps_ordinary_engineering_exception_families(
             "\n".join(f"compiler output line {index}" for index in range(12)),
             "raw_blob_like_multiline_value",
         ),
+        (
+            ["code_change_exception", "hotfix_without_full_validation"],
+            "safe_summary",
+            "diff --git a/src/app.py b/src/app.py\n@@ -1 +1 @@\n-print(secret)\n+return token",
+            "source_or_diff_like_payload",
+        ),
+        (
+            ["code_change_exception", "unexpected_side_effect"],
+            "exception_reason",
+            "def leaked_fix(value):\n    return value.secret\n",
+            "source_or_diff_like_payload",
+        ),
     ],
 )
 def test_capture_suggest_blocks_unsafe_values_in_v04_metadata_fields(
@@ -2125,8 +2423,17 @@ def test_capture_emission_simulation_writes_capability_mail_with_provenance(
         output=tmp_path / "emission.json",
     )
     case = report["cases"][0]
+    phase6_evidence = report["phase6_machine_gate_evidence"]
 
     assert report["failed_count"] == 0
+    assert set(phase6_evidence["supports_human_gate_ids"]) == {
+        "phase-6-capture-completeness-harness-reviewed",
+        "phase-6-pattern-update-simulation-reviewed",
+    }
+    assert "synthetic-harness-proves-dad-worthy-patterns-become-packets" not in (
+        phase6_evidence["supports_human_gate_ids"]
+    )
+    assert phase6_evidence["human_gate_satisfied"] is False
     assert case["initial_update_required"] is True
     assert case["emission_repo_capture_surface_version"] == "0.4.0"
     assert case["emitted_packet_classes"] == ["ordinary_mail"]
@@ -2199,6 +2506,35 @@ def test_capture_emission_simulation_writes_exception_event_trace_fields(
         "update_required",
     ]:
         assert field in case["observed"]["actual"]["required_fields"]
+
+
+def test_capture_emission_simulation_limit_is_diagnostic_not_gate_supporting(
+    tmp_path: Path,
+) -> None:
+    result = RUNNER.invoke(
+        app,
+        [
+            "exceptions",
+            "capture-simulate-emission",
+            "--limit",
+            "1",
+            "--output",
+            str(tmp_path / "limited-emission.json"),
+        ],
+    )
+
+    assert result.exit_code == 0, result.output
+    report = json.loads(result.output)
+    phase6_evidence = report["phase6_machine_gate_evidence"]
+    assert report["limited"] is True
+    assert report["coverage_status"] == "limited_diagnostic"
+    assert report["full_reviewed_case_count"] > report["emitted_reviewed_case_count"]
+    assert report["omitted_reviewed_scenario_ids"]
+    assert phase6_evidence["machine_status"] == "failed"
+    assert phase6_evidence["coverage_status"] == "limited_diagnostic"
+    assert phase6_evidence["limited"] is True
+    assert phase6_evidence["supports_human_gate_ids"] == []
+    assert phase6_evidence["human_gate_satisfied"] is False
 
 
 def test_capture_emission_simulation_writes_fix_outcome_with_writer_metadata(
@@ -3442,6 +3778,335 @@ def test_exception_capture_remediation_plan_routes_repair_lanes_without_repo_wri
     for repo in [stale_repo, protected_repo, ready_repo]:
         after = sorted(path.relative_to(repo).as_posix() for path in repo.rglob("*"))
         assert after == before[repo]
+
+
+def test_capture_surface_refresh_notices_stage_metadata_only_mail(
+    tmp_path: Path,
+) -> None:
+    hub = tmp_path / "hub"
+    _copy_capture_registry(hub)
+    stale_repo = tmp_path / "stale repo with spaces"
+    public_repo = tmp_path / "public-repo"
+    ready_repo = tmp_path / "ready-repo"
+    for repo in [stale_repo, public_repo]:
+        docs = repo / "docs"
+        docs.mkdir(parents=True)
+        (docs / "postmortem.md").write_text("metadata-only placeholder", encoding="utf-8")
+    (ready_repo / ".digital-asset").mkdir(parents=True)
+    (ready_repo / ".digital-asset" / "dad-integration.json").write_text(
+        json.dumps(
+            {
+                "repo_id": "ready",
+                "schema_version": "0.1.0",
+                "capture_surface_version": "0.4.0",
+            }
+        ),
+        encoding="utf-8",
+    )
+    policies = [
+        ExceptionRepoPolicy(
+            id="stale",
+            path=stale_repo,
+            alias="stale",
+            visibility="internal",
+            exceptions_enabled=True,
+            collect_allowed=True,
+            capture_audit_allowed=True,
+            backfill_allowed=True,
+        ),
+        ExceptionRepoPolicy(
+            id="public",
+            path=public_repo,
+            alias="public",
+            visibility="public",
+            public_facing=True,
+            exceptions_enabled=True,
+            collect_allowed=True,
+            capture_audit_allowed=True,
+            backfill_allowed=True,
+        ),
+        ExceptionRepoPolicy(
+            id="ready",
+            path=ready_repo,
+            alias="ready",
+            visibility="internal",
+            exceptions_enabled=True,
+            collect_allowed=True,
+            capture_audit_allowed=True,
+            backfill_allowed=True,
+        ),
+    ]
+    before = {
+        repo: sorted(path.relative_to(repo).as_posix() for path in repo.rglob("*"))
+        for repo in [stale_repo, public_repo, ready_repo]
+    }
+
+    first = write_exception_capture_surface_refresh_notices(
+        hub,
+        [stale_repo, public_repo, ready_repo],
+        repo_policies=policies,
+        output=tmp_path / "refresh-notices.json",
+        candidate_limit=0,
+        per_lane_repo_limit=10,
+    )
+    second = write_exception_capture_surface_refresh_notices(
+        hub,
+        [stale_repo, public_repo, ready_repo],
+        repo_policies=policies,
+        output=tmp_path / "refresh-notices-2.json",
+        candidate_limit=0,
+        per_lane_repo_limit=10,
+    )
+
+    assert first["report_id"] == "dad:exception-capture-surface-refresh-notices"
+    assert first["target_repo_count"] == 2
+    assert first["mail_appended_count"] == 2
+    assert second["duplicate_mail_count"] == 2
+    assert first["mail_stage"] == (
+        "processed/mail/staged/capture_surface_refresh_notices.jsonl"
+    )
+    staged_path = hub / "processed" / "mail" / "staged" / "capture_surface_refresh_notices.jsonl"
+    staged_rows = _jsonl(staged_path)
+    assert len(staged_rows) == 2
+    for row in staged_rows:
+        _validate("mail_message", row)
+        assert row["message_type"] == "governance_notice"
+        assert row["source_repo"] == "dad"
+        assert row["payload"]["notice_type"] == "capture_surface_refresh_required"
+        assert row["payload"]["authority_boundary"] == (
+            "staged_central_candidate_only_no_target_repo_write"
+        )
+    by_target = {row["target_repo"]: row for row in staged_rows}
+    assert by_target["public"]["public_release"]["public_release_required"] is True
+    assert by_target["public"]["public_release"]["public_release_status"] == "pending_human"
+    assert by_target["stale"]["public_release"]["public_release_required"] is False
+    assert str(tmp_path) not in json.dumps(first)
+    assert str(tmp_path) not in json.dumps(staged_rows)
+    assert not (hub / "processed" / "mail" / "outbox").exists()
+    for repo in [stale_repo, public_repo, ready_repo]:
+        after = sorted(path.relative_to(repo).as_posix() for path in repo.rglob("*"))
+        assert after == before[repo]
+
+
+def test_capture_surface_refresh_notices_replace_stale_same_dedupe_mail(
+    tmp_path: Path,
+) -> None:
+    hub = tmp_path / "hub"
+    _copy_capture_registry(hub)
+    repo = tmp_path / "stale"
+    (repo / "docs").mkdir(parents=True)
+    (repo / "docs" / "postmortem.md").write_text(
+        "metadata-only placeholder",
+        encoding="utf-8",
+    )
+    policy = ExceptionRepoPolicy(
+        id="stale",
+        path=repo,
+        alias="stale",
+        visibility="internal",
+        exceptions_enabled=True,
+        collect_allowed=True,
+        capture_audit_allowed=True,
+        backfill_allowed=True,
+    )
+    first = write_exception_capture_surface_refresh_notices(
+        hub,
+        [repo],
+        repo_policies=[policy],
+        output=tmp_path / "refresh-notices.json",
+        candidate_limit=0,
+    )
+    staged_path = hub / "processed" / "mail" / "staged" / "capture_surface_refresh_notices.jsonl"
+    stale_row = _jsonl(staged_path)[0]
+    stale_row["mail_id"] = "dad:mail:stale-same-dedupe"
+    staged_path.write_text(json.dumps(stale_row, sort_keys=True) + "\n", encoding="utf-8")
+
+    second = write_exception_capture_surface_refresh_notices(
+        hub,
+        [repo],
+        repo_policies=[policy],
+        output=tmp_path / "refresh-notices-2.json",
+        candidate_limit=0,
+    )
+    staged_rows = _jsonl(staged_path)
+
+    assert first["notices"][0]["dedupe_key"] == second["notices"][0]["dedupe_key"]
+    assert second["mail_replaced_count"] == 1
+    assert len(staged_rows) == 1
+    assert staged_rows[0]["mail_id"] == second["notices"][0]["mail_id"]
+
+
+def test_capture_surface_refresh_notices_sanitize_untrusted_policy_metadata(
+    tmp_path: Path,
+) -> None:
+    hub = tmp_path / "hub"
+    _copy_capture_registry(hub)
+    repo = tmp_path / "unsafe-policy-repo"
+    (repo / "docs").mkdir(parents=True)
+    (repo / "docs" / "postmortem.md").write_text(
+        "metadata-only placeholder",
+        encoding="utf-8",
+    )
+    unsafe_id = "C:/Users/lowel/private/customer-repo"
+    unsafe_alias = "owner@example.com AKIAABCDEFGHIJKLMNOP"
+    policy = ExceptionRepoPolicy(
+        id=unsafe_id,
+        path=repo,
+        alias=unsafe_alias,
+        visibility="internal",
+        exceptions_enabled=True,
+        collect_allowed=True,
+        capture_audit_allowed=True,
+        backfill_allowed=True,
+    )
+
+    report = write_exception_capture_surface_refresh_notices(
+        hub,
+        [repo],
+        repo_policies=[policy],
+        output=tmp_path / "unsafe-refresh-notices.json",
+        candidate_limit=0,
+    )
+
+    staged_rows = _jsonl(
+        hub / "processed" / "mail" / "staged" / "capture_surface_refresh_notices.jsonl"
+    )
+    assert report["notices"][0]["repo_id"].startswith("path-ref-sha256:")
+    assert staged_rows[0]["target_repo"].startswith("path-ref-sha256:")
+    assert "screening_issues" in staged_rows[0]["payload"]
+    serialized = json.dumps({"report": report, "staged": staged_rows})
+    assert "C:/Users/lowel" not in serialized
+    assert "owner@example.com" not in serialized
+    assert "AKIAABCDEFGHIJKLMNOP" not in serialized
+
+
+def test_capture_surface_refresh_notices_disclose_bounded_lane_coverage(
+    tmp_path: Path,
+) -> None:
+    hub = tmp_path / "hub"
+    _copy_capture_registry(hub)
+    repos = [tmp_path / "stale-a", tmp_path / "stale-b"]
+    policies = []
+    for index, repo in enumerate(repos):
+        (repo / "docs").mkdir(parents=True)
+        (repo / "docs" / "postmortem.md").write_text(
+            "metadata-only placeholder",
+            encoding="utf-8",
+        )
+        policies.append(
+            ExceptionRepoPolicy(
+                id=f"stale-{index}",
+                path=repo,
+                alias=f"stale-{index}",
+                visibility="internal",
+                exceptions_enabled=True,
+                collect_allowed=True,
+                capture_audit_allowed=True,
+                backfill_allowed=True,
+            )
+        )
+
+    report = write_exception_capture_surface_refresh_notices(
+        hub,
+        repos,
+        repo_policies=policies,
+        output=tmp_path / "partial-refresh-notices.json",
+        candidate_limit=0,
+        per_lane_repo_limit=1,
+    )
+    md_text = (tmp_path / "partial-refresh-notices.md").read_text(encoding="utf-8")
+
+    assert report["source_lane_repo_count"] == 2
+    assert report["reported_repo_count"] == 1
+    assert report["target_repo_count"] == 1
+    assert report["omitted_repo_count"] == 1
+    assert report["partial"] is True
+    assert report["coverage_status"] == "partial_bounded_lane"
+    assert "notice coverage is partial" in md_text
+
+
+def test_capture_surface_refresh_notices_quarantine_malformed_existing_stage(
+    tmp_path: Path,
+) -> None:
+    hub = tmp_path / "hub"
+    _copy_capture_registry(hub)
+    repo = tmp_path / "stale"
+    (repo / "docs").mkdir(parents=True)
+    (repo / "docs" / "postmortem.md").write_text(
+        "metadata-only placeholder",
+        encoding="utf-8",
+    )
+    staged_path = hub / "processed" / "mail" / "staged" / "capture_surface_refresh_notices.jsonl"
+    staged_path.parent.mkdir(parents=True)
+    staged_path.write_text("{not-json\n", encoding="utf-8")
+
+    report = write_exception_capture_surface_refresh_notices(
+        hub,
+        [repo],
+        repo_policies=[
+            ExceptionRepoPolicy(
+                id="stale",
+                path=repo,
+                alias="stale",
+                visibility="internal",
+                exceptions_enabled=True,
+                collect_allowed=True,
+                capture_audit_allowed=True,
+                backfill_allowed=True,
+            )
+        ],
+        output=tmp_path / "malformed-refresh-notices.json",
+        candidate_limit=0,
+    )
+
+    assert report["mail_appended_count"] == 1
+    quarantine = _jsonl(
+        hub
+        / "processed"
+        / "exceptions"
+        / "quarantine"
+        / "capture_surface_refresh_notices_malformed_jsonl.jsonl"
+    )
+    assert quarantine[0]["event_type"] == "capture_surface_refresh_notice_malformed_jsonl"
+
+
+def test_capture_surface_refresh_notices_no_write_mail_stays_dry(
+    tmp_path: Path,
+) -> None:
+    hub = tmp_path / "hub"
+    _copy_capture_registry(hub)
+    repo = tmp_path / "stale"
+    (repo / "docs").mkdir(parents=True)
+    (repo / "docs" / "postmortem.md").write_text(
+        "metadata-only placeholder",
+        encoding="utf-8",
+    )
+
+    report = write_exception_capture_surface_refresh_notices(
+        hub,
+        [repo],
+        repo_policies=[
+            ExceptionRepoPolicy(
+                id="stale",
+                path=repo,
+                alias="stale",
+                visibility="internal",
+                exceptions_enabled=True,
+                collect_allowed=True,
+                capture_audit_allowed=True,
+                backfill_allowed=True,
+            )
+        ],
+        output=tmp_path / "dry-refresh-notices.json",
+        candidate_limit=0,
+        write_mail=False,
+    )
+
+    assert report["notices"][0]["append_status"] == "not_written"
+    assert report["mail_appended_count"] == 0
+    assert not (
+        hub / "processed" / "mail" / "staged" / "capture_surface_refresh_notices.jsonl"
+    ).exists()
 
 
 def test_build_exception_capture_remediation_plan_stays_ready_when_proof_clears() -> None:

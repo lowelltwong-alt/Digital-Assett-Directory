@@ -17,6 +17,7 @@ from .dad_library import (
     record_trace_outcomes,
 )
 from .utils import append_jsonl, sha256_bytes, sha256_file, split_multi, utc_now, write_json
+from .exceptions_lake import hard_issue_lookup, looks_like_hard_issue_lookup_context
 
 ASSET_USE_FEEDBACK_CODE = "DAD_ASSET_USE_FEEDBACK_V1"
 REVIEW_FEEDBACK_CODE = "DAD_REVIEW_FEEDBACK_V1"
@@ -31,6 +32,72 @@ REVIEW_FEEDBACK_TYPES = {
 REVIEW_FEEDBACK_SEVERITIES = {"critical", "high", "medium", "low", "info", "mixed"}
 ACK_REQUIRED_LEVELS = {"require_ack", "human_gate"}
 GENERATED_LESSON_INDEX_DIRS = {"by-repo", "by-capability"}
+
+
+def _repo_public_facing(repo: Path) -> bool:
+    contract = repo / ".digital-asset" / "dad-integration.json"
+    if not contract.exists():
+        return False
+    try:
+        payload = json.loads(contract.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return False
+    return bool(payload.get("public_facing"))
+
+
+def _hard_issue_signals(*values: Any) -> list[str]:
+    text = " ".join(str(value or "") for value in values).lower()
+    signals: set[str] = set()
+    if any(term in text for term in ("permission", "winerror", "access denied", "os.replace")):
+        signals.add("permission_denied")
+    if "stale" in text or "outdated" in text:
+        signals.add("stale_report")
+    if "malformed" in text or "jsonl" in text:
+        signals.add("malformed_jsonl")
+    if "timeout" in text:
+        signals.add("command_timeout")
+    if "tool unavailable" in text or "not available on path" in text:
+        signals.add("tool_unavailable")
+    if "test" in text and any(term in text for term in ("fail", "failed", "failure")):
+        signals.add("test_failure")
+    if any(term in text for term in ("fail", "failed", "failure", "exception", "error")):
+        signals.add("failed_command")
+    return sorted(signals)
+
+
+def _maybe_hard_issue_lookup(
+    hub_root: Path,
+    target_repo: Path,
+    *,
+    task: str,
+    context: list[str] | None = None,
+    paths: list[str] | None = None,
+    limit: int = 3,
+) -> dict[str, Any] | None:
+    context_values = context or []
+    path_values = paths or []
+    if not looks_like_hard_issue_lookup_context(task, context_values, path_values):
+        return None
+    query = " ".join([task, *context_values])
+    try:
+        return hard_issue_lookup(
+            hub_root,
+            query=query,
+            signals=_hard_issue_signals(task, context_values, path_values),
+            path_refs=path_values,
+            limit=limit,
+            target_public_facing=_repo_public_facing(target_repo),
+        )
+    except Exception as exc:
+        return {
+            "schema_version": "0.1.0",
+            "status": "unavailable",
+            "error": str(exc),
+            "match_count": 0,
+            "matches": [],
+            "warnings": ["hard issue lookup unavailable; record exception/fix outcome if material"],
+            "authority_boundary": "Unavailable lookup does not authorize skipping local validation or source authority.",
+        }
 
 
 def git_changed_files(repo: Path) -> list[str]:
@@ -523,7 +590,7 @@ def build_lesson_graph(repo_root: Path) -> dict[str, Any]:
         ),
     }
     out_path = repo_root / LESSON_GRAPH_PATH
-    write_json(out_path, payload)
+    write_json(out_path, payload, allow_direct_fallback=True)
     input_hashes = {
         "raw/lessons": _hash_path(repo_root / "raw" / "lessons"),
         "registry/asset-pattern-registry.json": _hash_path(
@@ -576,7 +643,7 @@ def build_lesson_graph(repo_root: Path) -> dict[str, Any]:
         "authority_boundary": payload["authority_boundary"],
     }
     manifest_path = repo_root / LESSON_GRAPH_MANIFEST_PATH
-    write_json(manifest_path, manifest)
+    write_json(manifest_path, manifest, allow_direct_fallback=True)
     return {"graph": payload, "path": str(out_path), "manifest_path": str(manifest_path)}
 
 
@@ -996,6 +1063,36 @@ def preflight(
         mail_digest_status=digest_status,
         deferred_mail=deferred_mail,
     )
+    hard_lookup = _maybe_hard_issue_lookup(
+        hub_root,
+        target_repo,
+        task=task,
+        paths=baseline_changed_files,
+    )
+    if hard_lookup is not None:
+        payload["hard_issue_lookup"] = hard_lookup
+        payload["context_pack"]["hard_issue_lookup"] = {
+            "match_count": hard_lookup.get("match_count", 0),
+            "returned_count": hard_lookup.get("returned_count", 0),
+            "lookup_basis": hard_lookup.get("lookup_basis", ""),
+            "matches": [
+                {
+                    "event_id": item.get("event_id", ""),
+                    "event_type": item.get("event_type", ""),
+                    "lookup_review_status": item.get("lookup_review_status", ""),
+                    "public_release_gate": item.get("public_release_gate", ""),
+                    "match_basis": item.get("match_basis", {}),
+                }
+                for item in list(hard_lookup.get("matches") or [])[:3]
+                if isinstance(item, dict)
+            ],
+            "warnings": list(hard_lookup.get("warnings") or [])[:5],
+            "authority_boundary": hard_lookup.get("authority_boundary", ""),
+        }
+        if hard_lookup.get("match_count"):
+            payload["context_pack"].setdefault("warnings", []).append(
+                "hard issue lookup found prior exception/fix evidence; review before improvising"
+            )
     write_json(hub_root / "state" / "agent_sessions" / f"{sid.split(':')[-1]}.json", payload)
     append_jsonl(
         hub_root / "audit" / "events" / f"{payload['created_at'][:10]}.jsonl",
@@ -1041,6 +1138,15 @@ def midflight(
             path_values,
         ),
     }
+    hard_lookup = _maybe_hard_issue_lookup(
+        hub_root,
+        Path(session["repository"]),
+        task=str(session.get("task", "")),
+        context=context or [],
+        paths=path_values,
+    )
+    if hard_lookup is not None:
+        result["hard_issue_lookup"] = hard_lookup
     session["learning_rule_matches"] = matches
     session["required_learning_rule_acknowledgements"] = required
     session["learning_rule_acknowledgements"] = acknowledged

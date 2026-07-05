@@ -32,6 +32,34 @@ Do not create competing start-here files unless `AI_FRONT_DOOR.md` points to
 them as branches. A branch can specialize navigation, but it cannot replace the
 front door.
 
+## Freshness And Versioning
+
+Fast-moving repos should not turn the AI TOC into a giant dated changelog. Keep
+the TOC semantic: path, role, tags, and use-when. Put freshness metadata in a
+compact machine-readable registry such as `registry/ai-navigation-registry.json`.
+
+The freshness registry should include:
+
+- the current `navigation_version`;
+- `updated_at`;
+- the singular entrypoint path;
+- branch freshness rows for first-class navigation surfaces;
+- a capped `recent_changes` list for material changes that future agents should
+  notice before relying on memory.
+
+Agents should treat memory of an older TOC as stale when the current
+`navigation_version` or `updated_at` differs from the value they last used. They
+should inspect `recent_changes`, then open only the affected branch rows and
+task-relevant files.
+
+Dates belong on material branches and recent changes, not every TOC row. This
+keeps navigation shallow while still making rapid DAD changes visible.
+
+Load-bearing exact routes should be regression-tested. For example, if DAD says
+Rust navigation starts at a starter-pack README, then an adoption plan, then
+implementation directories, tests should assert that those paths remain present
+in the front door, TOC, manifest, and navigation registry.
+
 ## AI TOC Row Contract
 
 Every first-class AI TOC entry should use this row shape:
@@ -113,13 +141,16 @@ When adding this standard to another repo:
 2. Add the required read order and authority boundary.
 3. Create or update `AI_TABLE_OF_CONTENTS.md`.
 4. Convert first-class entries to the row contract.
-5. Add a tag index with the repo's accepted routing tags.
-6. Add knowledge-graph entrypoints if the repo has graph, ontology, taxonomy,
+5. Add or update a compact navigation freshness registry when the repo changes
+   quickly or has multiple first-class AI surfaces.
+6. Add a tag index with the repo's accepted routing tags.
+7. Add knowledge-graph entrypoints if the repo has graph, ontology, taxonomy,
    registry, or generated relationship outputs.
-7. Add a machine-readable manifest if agents or tools need structured routing.
-8. Record a lesson or evidence note explaining why the navigation standard was
+8. Add a machine-readable manifest if agents or tools need structured routing.
+9. Add regression tests for load-bearing exact routes.
+10. Record a lesson or evidence note explaining why the navigation standard was
    added.
-9. Validate links, schemas, registries, and repo-specific tests.
+11. Validate links, schemas, registries, and repo-specific tests.
 
 ## Applies When
 

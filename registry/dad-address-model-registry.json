@@ -1,0 +1,340 @@
+{
+  "schema_version": "0.1.0",
+  "registry_id": "dad-address-model-registry",
+  "model_id": "dad:address-model:nine-layer-learning-address",
+  "name": "DAD 9-Layer Learning Address Model",
+  "adopted_layer_count": 9,
+  "adoption_status": "dad_adopted",
+  "source_position": "DAD adopts a 9-layer model inspired by LawFirm OS substrate address research. Layers 1-8 provide stable placement and authority discipline; layer 9 is DAD's learning/adaptation layer for recursive AI improvement.",
+  "relation_to_knowledge_graph": "The address model is a coordinate system, not a replacement for graph edges. It answers where an object belongs, what layer of meaning it occupies, and which authority boundary governs it. Knowledge graph edges answer how objects relate, derive, compose, conflict, or update each other.",
+  "compact_encoding": {
+    "principle": "Asset cards should carry compact address slots and refs, not full layer essays. Put reusable explanations in registries/docs and put large details in referenced workflow, evidence, validation, or learning records.",
+    "preferred_tuple": [
+      "environment",
+      "authority_zone",
+      "layer",
+      "domain",
+      "module",
+      "object_type",
+      "object_id",
+      "version"
+    ],
+    "max_inline_summary_chars": 400,
+    "max_inline_tags": 12,
+    "externalize_large_fields_to": [
+      "docs or README section",
+      "schema or registry row",
+      "workflow card",
+      "validation report",
+      "exception/fix outcome",
+      "decision trace",
+      "knowledge graph edge records"
+    ]
+  },
+  "layer_fill_policy": {
+    "default_rule": "Fill only the layers that add routing, evidence, provenance, validation, or learning value for the asset. Empty or unknown slots should remain omitted or explicitly unknown rather than padded.",
+    "minimum_fields_for_asset_card": [
+      "asset_id",
+      "asset_type",
+      "title",
+      "summary",
+      "source_paths",
+      "sensitivity",
+      "review_status",
+      "authority_boundary",
+      "fractal_address.layer",
+      "context_tags"
+    ],
+    "ref_fields": [
+      "source_refs",
+      "validation_commands",
+      "upgrade_channel",
+      "graph_tags",
+      "parent_asset_id",
+      "derived_from",
+      "workflow_ref",
+      "learning_ref"
+    ],
+    "anti_bloat_rules": [
+      "Prefer IDs, hashes, paths, refs, and short labels over copied prose.",
+      "Do not duplicate the registry explanation in every asset card.",
+      "Do not store raw logs, source blobs, private rows, or full workflow text in the address slot.",
+      "If a field needs more than a short summary, create or reference a separate card."
+    ]
+  },
+  "workflow_encoding_policy": {
+    "principle": "Represent workflows as small workflow cards and step cards. The address points to the workflow; the workflow card points to detailed docs, scripts, schemas, and validation reports.",
+    "workflow_card_fields": [
+      "workflow_id",
+      "title",
+      "trigger",
+      "owner_authority",
+      "cadence",
+      "inputs_ref",
+      "outputs_ref",
+      "steps",
+      "gate_refs",
+      "failure_modes",
+      "validation_ref",
+      "learning_ref"
+    ],
+    "step_card_fields": [
+      "step_id",
+      "verb",
+      "input_ref",
+      "output_ref",
+      "tool_or_command_ref",
+      "gate_ref",
+      "failure_mode_ref"
+    ],
+    "do_not_inline": [
+      "full prompts",
+      "long scripts",
+      "raw logs",
+      "private data",
+      "complete generated outputs",
+      "large orchestration diagrams"
+    ]
+  },
+  "evolution_policy": {
+    "status": "evolving",
+    "versioning_rule": "Breaking layer or segment changes require a new model version and a migration note; additive tags, refs, or workflow-card fields may stay within v0.1 when backward compatible.",
+    "change_gate": "Address-model changes require validation, red-team/premortem review, and at least one synthetic repo-local asset-card fixture showing old and new records remain readable.",
+    "compatibility_rule": "Existing asset cards must remain parseable. New readers should tolerate older layer-9 labels and map orchestration_workflow as a related variant, not as DAD's adopted layer 9.",
+    "review_triggers": [
+      "frontier AI or architecture review proposes a better compact encoding",
+      "asset cards become too bulky for context packs",
+      "agents cannot find relevant prior fixes or workflow cards",
+      "repo-local asset scans produce ambiguous layer placement",
+      "workflow/orchestration records need richer structure"
+    ]
+  },
+  "frontier_review_policy": {
+    "cadence": "quarterly or after any major DAD learning-loop failure",
+    "who_to_ask": [
+      "frontier AI architecture reviewer",
+      "Fable-style creative systems reviewer",
+      "Claude/Codex red-team reviewer",
+      "human reviewer for source-authority and governance tradeoffs"
+    ],
+    "questions": [
+      "Can the layer model be compressed further without losing retrieval, provenance, validation, or learning value?",
+      "Are layers 1-9 the right decomposition for recursive AI coding and repo governance?",
+      "Should workflow/orchestration become a first-class layer, a card type, or graph edge family?",
+      "Which synthetic fixtures would prove agents can fill and use the model deterministically?",
+      "What failure modes show the model is ceremony instead of useful structure?"
+    ],
+    "promotion_gate": "Frontier recommendations remain candidate-only until DAD has a versioned migration plan, tests, and reviewed examples."
+  },
+  "address_segments": [
+    {
+      "segment": "environment",
+      "meaning": "The operating environment or deployment/review context where the object belongs.",
+      "dad_mapping": "repo visibility, public/private release posture, and local-vs-central execution context."
+    },
+    {
+      "segment": "authority_zone",
+      "meaning": "The owner or governance zone that can promote, modify, or reject the object.",
+      "dad_mapping": "source repo authority, DAD candidate authority, human release gate, or local repo adoption authority."
+    },
+    {
+      "segment": "layer",
+      "meaning": "The semantic layer of the object: identity, object, claim, relationship, validation, retrieval, address, artifact, or learning.",
+      "dad_mapping": "DAD layer number 1-9."
+    },
+    {
+      "segment": "domain",
+      "meaning": "The subject domain or control-plane area.",
+      "dad_mapping": "mail, exceptions_lake, coding_harnesses, rust_guidance, governance_maps, asset_library, agent_skills, templates, or architecture_references."
+    },
+    {
+      "segment": "module",
+      "meaning": "The subsystem, package, library, workflow, or asset family.",
+      "dad_mapping": "DAD registry, harness family, repo-local asset directory, exception pattern family, or managed template family."
+    },
+    {
+      "segment": "object_type",
+      "meaning": "The kind of thing being addressed.",
+      "dad_mapping": "asset, lesson, harness, schema, registry, mail_packet, exception_event, fix_outcome, template, skill, or decision_trace."
+    },
+    {
+      "segment": "object_id",
+      "meaning": "The stable identity of the object within its authority zone.",
+      "dad_mapping": "stable DAD ID, source repo asset ID, mail ID, trace ID, pattern ID, or schema ID."
+    },
+    {
+      "segment": "version",
+      "meaning": "The version or revision identity of the object.",
+      "dad_mapping": "schema version, asset version, source hash, generated-at hash, or review/promotion version."
+    }
+  ],
+  "layers": [
+    {
+      "layer": 1,
+      "name": "identity",
+      "status": "core",
+      "purpose": "Give each object a stable identity before it enters mail, graphs, scans, or learning loops.",
+      "captures": ["asset IDs", "repo IDs", "trace IDs", "return addresses", "canonical source refs"],
+      "graph_role": "Creates stable node identity; does not define relationships by itself.",
+      "use_when": ["A repo creates an asset card, mail packet, exception event, schema, harness, or lesson."],
+      "do_not_use_as": ["Proof that two similar objects are the same asset."]
+    },
+    {
+      "layer": 2,
+      "name": "object",
+      "status": "core",
+      "purpose": "Describe the thing itself without promoting its claims.",
+      "captures": ["asset type", "title", "summary", "local path", "source surface"],
+      "graph_role": "Defines node family and basic metadata.",
+      "use_when": ["DAD needs to catalog what kind of artifact was discovered."],
+      "do_not_use_as": ["Evidence that the object is valuable or safe."]
+    },
+    {
+      "layer": 3,
+      "name": "claim",
+      "status": "core",
+      "purpose": "Separate usefulness, novelty, risk, and applicability claims from the object itself.",
+      "captures": ["usefulness claims", "novelty claims", "applicability limits", "risk notes"],
+      "graph_role": "Creates reviewable candidate claims about nodes.",
+      "use_when": ["A repo says an asset may help DAD, future agents, or another repo."],
+      "do_not_use_as": ["Reviewed truth or promotion authority."]
+    },
+    {
+      "layer": 4,
+      "name": "relationship",
+      "status": "core",
+      "purpose": "Place the object among parents, derivatives, variants, dependencies, and upgrade channels.",
+      "captures": ["derived_from", "supersedes", "related_to", "uses", "watches", "upgrade channel"],
+      "graph_role": "Routes candidate graph edges and lineage links.",
+      "use_when": ["A fix, lesson, asset, or harness is a variant of a prior one."],
+      "do_not_use_as": ["A reason to merge or delete variants without review."]
+    },
+    {
+      "layer": 5,
+      "name": "validation",
+      "status": "core",
+      "purpose": "Bind assets and lessons to tests, checks, proof surfaces, and false-confidence warnings.",
+      "captures": ["validation commands", "exit status", "evidence refs", "review status", "known failure modes"],
+      "graph_role": "Attaches evidence and confidence calibration to nodes and claims.",
+      "use_when": ["A repo wants DAD to learn from a fix or recommend an asset."],
+      "do_not_use_as": ["A substitute for running the target repo's local validation."]
+    },
+    {
+      "layer": 6,
+      "name": "retrieval",
+      "status": "core",
+      "purpose": "Make the object findable by future agents at the right time.",
+      "captures": ["context tags", "use-when triggers", "task routes", "front-door pointers"],
+      "graph_role": "Improves search and context-pack matching without proving value.",
+      "use_when": ["A future agent should look this up during preflight, midflight, or architecture planning."],
+      "do_not_use_as": ["A security gate or source-of-truth decision."]
+    },
+    {
+      "layer": 7,
+      "name": "fractal_address",
+      "status": "core",
+      "purpose": "Give the object a repeatable address shape that can be used within a repo and across DAD without flattening source authority.",
+      "captures": ["layer placement", "domain", "module", "object type", "object id", "version"],
+      "graph_role": "Coordinates graph nodes across repos and registries so similar surfaces can be compared without becoming the same source.",
+      "use_when": ["DAD needs a consistent address for repo-local assets, lessons, exception events, or architecture references."],
+      "do_not_use_as": ["A second source-of-truth system that overrides local repo structure."]
+    },
+    {
+      "layer": 8,
+      "name": "artifact_evidence",
+      "status": "core",
+      "purpose": "Preserve provenance, hashes, source paths, sensitivity, and evidence boundaries.",
+      "captures": ["source paths", "hashes", "provenance", "sensitivity", "public/private movement limits"],
+      "graph_role": "Keeps graph nodes auditable and source-boundary aware.",
+      "use_when": ["A DAD packet points to source-owned material or a public/private release gate."],
+      "do_not_use_as": ["Permission to copy private rows, raw logs, secrets, or source blobs."]
+    },
+    {
+      "layer": 9,
+      "name": "learning_adaptation",
+      "status": "dad_adopted",
+      "purpose": "Turn validated outcomes, hard-issue fixes, deltas, calibration, and postflight evidence into future reusable guidance.",
+      "captures": ["what changed", "why the original asset was insufficient", "context delta", "fix outcome", "promotion/retirement signal", "next lookup trigger"],
+      "graph_role": "Creates lineage between prior assets, derivative fixes, outcome evidence, and future context-pack recommendations.",
+      "use_when": ["A fix is novel, a prior DAD asset needed adaptation, a recommendation helped or failed, or a repo found a reusable learning pattern."],
+      "do_not_use_as": ["Unsafe self-modification, automatic source mutation, or a reason to promote unvalidated agent output."]
+    }
+  ],
+  "observed_layer_9_variants": [
+    {
+      "variant": "learning_adaptation",
+      "source_refs": [
+        "LawFirm-os-semantic-substrate/docs/learning-loop-layer.md",
+        "LawFirm-os-semantic-substrate/docs/architecture/LEARNING_LOOP_MODEL.md"
+      ],
+      "dad_handling": "Adopted as DAD's ninth layer because DAD is explicitly a learning/control-plane system for AI agents and repos."
+    },
+    {
+      "variant": "orchestration_workflow",
+      "source_refs": [
+        "LawFirm-os-semantic-substrate/governance/TALENT_INTELLIGENCE_LAYER_PLACEMENT.md",
+        "LawFirm-os-semantic-substrate/governance/ATTORNEY_IDENTITY_RESOLUTION.md",
+        "LawFirm-os-semantic-substrate/governance/INTAKE_LAYER_PATTERN.md"
+      ],
+      "dad_handling": "Preserved as a source-repo variant and operational tag. DAD can route orchestration/workflow assets there when a source repo uses that meaning, but DAD's own layer 9 remains learning_adaptation."
+    }
+  ],
+  "usefulness_contexts": [
+    "Repo-local digital asset directories need the same fractal shape across many repos without forcing identical source trees.",
+    "DAD needs to distinguish object identity, claims, evidence, retrieval tags, and learning outcomes instead of mixing them in one asset note.",
+    "Exception/fix learning needs to connect parent solutions, derivative solutions, validation deltas, and future lookup triggers.",
+    "Architecture references need stable placement while remaining candidate-only and source-boundary aware.",
+    "Recursive AI workflows need a deterministic place for postflight learning, calibration, upgrade notices, and retirement signals."
+  ],
+  "does_not_apply_when": [
+    "A tiny one-off task only needs a local note and has no future-agent reuse value.",
+    "The model would become ceremony without improving identity, retrieval, validation, provenance, or learning.",
+    "A source repo has its own stronger address authority and DAD is only collecting pointer metadata.",
+    "The user or repo needs graph relationship analysis; use the knowledge graph edge model alongside this address model."
+  ],
+  "graph_tags": [
+    "address_model",
+    "nine_layer_address",
+    "learning_adaptation",
+    "recursive_ai",
+    "fractal_asset_placement",
+    "source_authority_boundary",
+    "knowledge_graph_coordinate_system",
+    "asset_lineage",
+    "exception_learning",
+    "repo_local_asset_memory"
+  ],
+  "source_inspiration": [
+    {
+      "source_repo": "LawFirm-os-semantic-substrate",
+      "source_ref": "docs/architecture/8_LAYER_DNA_ADDRESS_MODEL.md",
+      "role": "Base 8-layer address discipline: stable routing and structural identity."
+    },
+    {
+      "source_repo": "LawFirm-os-semantic-substrate",
+      "source_ref": "schemas/address_struct.schema.json",
+      "role": "Structured address segments: environment, authority_zone, layer, domain, module, object_type, object_id, version."
+    },
+    {
+      "source_repo": "LawFirm-os-semantic-substrate",
+      "source_ref": "docs/learning-loop-layer.md",
+      "role": "Learning/adaptation described as an optional ninth layer."
+    },
+    {
+      "source_repo": "LawFirm-os-semantic-substrate",
+      "source_ref": "docs/architecture/LEARNING_LOOP_MODEL.md",
+      "role": "Learning and adaptation layer for teaching and architecture communication."
+    },
+    {
+      "source_repo": "LawFirm-os-semantic-substrate",
+      "source_ref": "governance/TALENT_INTELLIGENCE_LAYER_PLACEMENT.md",
+      "role": "Orchestration/workflow described as an optional ninth layer for sync, pipelines, and workflow movement."
+    },
+    {
+      "source_repo": "LawFirm-os-semantic-substrate",
+      "source_ref": "schemas/skill-agent-metadata.schema.json",
+      "role": "Evidence that some substrate skill metadata already refers to a nine-layer LawFirm OS address."
+    }
+  ],
+  "authority_boundary": "DAD adopts the 9-layer address model as DAD guidance for cataloging assets, lessons, exceptions, and learning loops. It does not import LawFirm OS ontology as DAD canon, does not prove graph truth, and does not authorize source mutation."
+}

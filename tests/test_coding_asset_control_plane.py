@@ -318,10 +318,17 @@ def test_language_coding_advantage_registry_resolves_sources_and_assets():
     assert "rust-parser-indexing-codebases" in languages["rust"]["trusted_source_ids"]
     assert "rust-performance-measurement" in languages["rust"]["trusted_source_ids"]
     assert "dad:offering:language-coding-playbooks" in languages["rust"]["primary_assets"]
+    assert "dad:offering:dad-rust-scan-core-and-rollout" in languages["rust"]["primary_assets"]
+    assert (
+        "dad:offering:repo-enrollment-mail-governance-safety-harness"
+        in languages["rust"]["primary_assets"]
+    )
     harness_ids = {harness["harness_id"] for harness in harness_registry["harnesses"]}
     assert "dad:harness:language-frontier-research" in harness_ids
+    assert "dad:harness:repo-enrollment-mail-governance-safety" in harness_ids
     assert "dad:offering:language-frontier-research-harness" in offering_ids
     assert "dad:offering:language-coding-playbooks" in offering_ids
+    assert "dad:offering:repo-enrollment-mail-governance-safety-harness" in offering_ids
     trusted_sources = {
         source["source_id"]: source
         for source in load_json("registry/trusted-source-registry.json")["sources"]
@@ -446,6 +453,11 @@ def test_language_coding_advantage_registry_resolves_sources_and_assets():
             route["harness_id"] for route in languages[language_id]["harness_routes"]
         }
         assert "dad:harness:language-frontier-research" in route_ids
+    rust_route_ids = {
+        route["harness_id"] for route in languages["rust"]["harness_routes"]
+    }
+    assert "dad:harness:repo-enrollment-mail-governance-safety" in rust_route_ids
+    assert any("mail storm-gate" in gate for gate in languages["rust"]["validation_gates"])
     eval_payload = load_json(
         "assets/coding-harnesses/language-frontier-research/tests-or-evals/minimum-eval.json"
     )
@@ -510,6 +522,71 @@ def test_language_coding_advantage_registry_resolves_sources_and_assets():
         }.issubset(language["research_intake_packet"]["required_fields"])
         assert "copied_third_party_docs" in language["research_intake_packet"]["forbidden_fields"]
         assert "does not override repo-local style" in language_registry["authority_boundary"].lower()
+
+
+def test_mail_governance_harness_is_discoverable_and_synced():
+    harness_registry = load_json("registry/coding-harness-registry.json")
+    offerings = load_json("registry/dad-offerings-registry.json")["offerings"]
+    harness = next(
+        item
+        for item in harness_registry["harnesses"]
+        if item["harness_id"] == "dad:harness:repo-enrollment-mail-governance-safety"
+    )
+    offering = next(
+        item
+        for item in offerings
+        if item["offering_id"] == "dad:offering:repo-enrollment-mail-governance-safety-harness"
+    )
+    rust_offering = next(
+        item
+        for item in offerings
+        if item["offering_id"] == "dad:offering:dad-rust-scan-core-and-rollout"
+    )
+    harness_readme = (
+        ROOT / "assets" / "coding-harnesses" / "repo-enrollment-mail-governance-safety" / "README.md"
+    ).read_text(encoding="utf-8")
+    eval_payload = load_json(
+        "assets/coding-harnesses/repo-enrollment-mail-governance-safety/tests-or-evals/minimum-eval.json"
+    )
+
+    required_capabilities = {
+        "mail_spool_dirty_doctor",
+        "mail_storm_gate",
+        "worktree_dirty_separation",
+        "source_outbox_storm_dedupe",
+        "cross_source_outbox_conflict_gate",
+        "legacy_collection_allowlist_gate",
+        "rust_snapshot_promotion_gate",
+    }
+    assert required_capabilities.issubset(harness["capabilities"])
+    assert required_capabilities.issubset(offering["capabilities"])
+    assert "mail_spool_dirty_probe" in rust_offering["capabilities"]
+    assert "docs/DAD_MAIL_STORM_AND_DIRTY_STATE_RUNBOOK.md" in harness["source_evidence"]
+    assert "docs/DAD_MAIL_STORM_AND_DIRTY_STATE_RUNBOOK.md" in offering["source_refs"]
+    assert (
+        "assets/coding-harnesses/repo-enrollment-mail-governance-safety/"
+        in rust_offering["source_refs"]
+    )
+    assert any("mail storm-gate" in command for command in harness["validation_commands"])
+    assert any(
+        "mail doctor --repo all --summary-only --fail-on-dirty --fail-on-coverage-gap"
+        in command
+        for command in harness["validation_commands"]
+    )
+    assert "mail storm-gate" in harness_readme
+    assert "safe_for_mail_storm_operations" in harness_readme
+    assert "safe_for_ingest_operations" in harness_readme
+    assert "safe_for_delivery_operations" in harness_readme
+    assert "safe_to_collect" in harness_readme
+    assert "--operation ingest" in harness_readme
+    assert "--operation delivery" in harness_readme
+    assert "cross_source_outbox_duplicate_identity" in json.dumps(eval_payload)
+    assert "multi-repo-storm-docs-use-storm-gate" in {
+        case["case_id"] for case in eval_payload["cases"]
+    }
+    assert "dad-inbound-mail-uses-source-outbox" in {
+        case["case_id"] for case in eval_payload["cases"]
+    }
 
 
 def test_language_coding_playbooks_are_operational_and_pointer_safe():
@@ -606,6 +683,8 @@ def test_control_plane_paths_and_templates_exist():
     assert "--test " in managed_block
     assert "--tests" not in managed_block
     assert "Do not copy full DAD assets" in managed_block
+    assert "$HOME/.dad/bin/asset-dir" in managed_block
+    assert "$HOME\\.dad\\bin\\asset-dir.ps1" in managed_block
 
 
 def test_mail_templates_conform_to_mail_schema_and_stay_candidate_only():

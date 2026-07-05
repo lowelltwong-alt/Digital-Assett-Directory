@@ -23,6 +23,7 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--quarantine-out", type=Path)
     parser.add_argument("--max-files", type=int, default=None)
     parser.add_argument("--max-content-hash-bytes", type=int, default=10_485_760)
+    parser.add_argument("--timeout-seconds", type=int, default=300)
     parser.add_argument("--print-command", action="store_true")
     return parser
 
@@ -69,10 +70,16 @@ def main(argv: list[str] | None = None) -> int:
         print(" ".join(cmd))
 
     try:
-        return subprocess.run(cmd, check=False).returncode
+        return subprocess.run(cmd, check=False, timeout=args.timeout_seconds).returncode
     except FileNotFoundError:
         print("cargo was not found on PATH. Install Rust via rustup before running this wrapper.", file=sys.stderr)
         return 127
+    except subprocess.TimeoutExpired:
+        print(
+            f"dad_scan_core timed out after {args.timeout_seconds} seconds.",
+            file=sys.stderr,
+        )
+        return 124
 
 
 if __name__ == "__main__":

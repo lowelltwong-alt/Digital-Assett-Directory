@@ -10,9 +10,35 @@ from digital_asset_directory.config import load_config
 pytestmark = pytest.mark.integration
 
 
+def _write_minimal_dad_hub_markers(hub: Path) -> None:
+    (hub / "AI_FRONT_DOOR.md").write_text("# AI Front Door\n", encoding="utf-8")
+    (hub / "MACHINE_NAVIGATION_MANIFEST.json").write_text(
+        '{"manifest_version":"test"}\n',
+        encoding="utf-8",
+    )
+    (hub / "registry").mkdir(parents=True, exist_ok=True)
+    (hub / "registry" / "source-of-truth.json").write_text("{}\n", encoding="utf-8")
+    (hub / "src" / "digital_asset_directory").mkdir(parents=True, exist_ok=True)
+    (hub / "src" / "digital_asset_directory" / "cli.py").write_text("", encoding="utf-8")
+    (hub / "pyproject.toml").write_text(
+        "\n".join(
+            [
+                "[project]",
+                'name = "digital-asset-directory"',
+                'version = "0.1.0"',
+                "[project.scripts]",
+                'asset-dir = "digital_asset_directory.cli:app"',
+                "",
+            ]
+        ),
+        encoding="utf-8",
+    )
+
+
 def test_local_catalog_pipeline_writes_outputs(tmp_path: Path):
     hub = tmp_path / "hub"
     hub.mkdir()
+    _write_minimal_dad_hub_markers(hub)
     for rel in [
         "config",
         "processed/catalog",

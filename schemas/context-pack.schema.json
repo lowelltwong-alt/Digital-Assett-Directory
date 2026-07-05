@@ -49,6 +49,17 @@
     },
     "deferred_mail_basis": {"type": "string"},
     "deferred_backlog_count": {"type": "integer", "minimum": 0},
+    "hard_issue_lookup": {
+      "type": "object",
+      "properties": {
+        "match_count": {"type": "integer", "minimum": 0},
+        "returned_count": {"type": "integer", "minimum": 0},
+        "lookup_basis": {"type": "string"},
+        "matches": {"type": "array", "maxItems": 3},
+        "warnings": {"type": "array", "maxItems": 5, "items": {"type": "string"}},
+        "authority_boundary": {"type": "string"}
+      }
+    },
     "stop_conditions": {"type": "array", "items": {"type": "string"}},
     "validation_commands": {"type": "array", "items": {"type": "string"}},
     "registry_hashes": {"type": "object"},

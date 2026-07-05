@@ -100,6 +100,7 @@
               "dad_recommendation",
               "data_integrity",
               "dependency_io",
+              "code_change",
               "repo_state",
               "roadmap_validation",
               "harness_parity",

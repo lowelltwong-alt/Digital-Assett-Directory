@@ -527,6 +527,45 @@
         "Source pointers and trust tiers never authorize copying external content.",
         "Language-frontier guidance requires local validation and repo authority before adoption."
       ]
+    },
+    {
+      "asset_id": "dad-nine-layer-address-model",
+      "name": "DAD 9-Layer Learning Address Model",
+      "version": "0.1.0",
+      "path": "docs/DAD_ADDRESS_MODEL.md",
+      "asset_type": "architecture_reference_asset",
+      "managed_block_id": "DAD_NINE_LAYER_ADDRESS_MODEL",
+      "profiles": [
+        "address-model",
+        "learning-loop",
+        "repo-local-assets",
+        "workflow-card",
+        "architecture"
+      ],
+      "use_when": [
+        "A repo needs a compact way to record digital asset identity, claims, validation, provenance, retrieval tags, and learning outcomes.",
+        "DAD needs to connect original fixes, derivative fixes, context deltas, and future lookup triggers.",
+        "A workflow or orchestration asset needs to be represented by a small card and refs instead of pasted long-form instructions.",
+        "An agent needs to understand why addresses complement graph edges."
+      ],
+      "does_not_apply_when": [
+        "The record is one-off and does not need future-agent retrieval.",
+        "The address model would add ceremony without improving routing, evidence, provenance, validation, or learning.",
+        "A source repo has its own address canon and DAD should only store pointer metadata."
+      ],
+      "install_path": "docs/DAD_ADDRESS_MODEL.md",
+      "source_package": {
+        "filename": "repo-local",
+        "sha256": ""
+      },
+      "installed_at": "2026-07-04",
+      "review_status": "candidate",
+      "safety_notes": [
+        "Use compact refs and IDs; do not inline raw logs, private rows, or long workflow text.",
+        "Layer 9 is DAD's learning/adaptation layer and remains subject to versioned evolution.",
+        "The model is a coordinate system for graph nodes and records, not proof of graph truth or source authority.",
+        "Frontier AI recommendations are candidate-only until migration tests and review pass."
+      ]
     }
   ]
 }

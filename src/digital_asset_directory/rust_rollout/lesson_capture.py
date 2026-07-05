@@ -5,6 +5,7 @@ from pathlib import Path
 from typing import Any
 
 from ..ids import stable_id
+from ..mail_center import _jsonl_lock
 from ..utils import append_jsonl, utc_now, write_json
 
 
@@ -40,8 +41,13 @@ def append_rust_rollout_lesson(ledger_path: Path, lesson: dict[str, Any]) -> dic
         "timestamp": lesson.get("timestamp") or utc_now(),
         **lesson,
     }
-    append_jsonl(ledger_path, record)
-    return record
+    with _jsonl_lock(ledger_path):
+        existing = load_rust_rollout_lessons(ledger_path)
+        for row in existing:
+            if row.get("lesson_id") == record["lesson_id"]:
+                return {**row, "append_status": "already_present"}
+        append_jsonl(ledger_path, record)
+    return {**record, "append_status": "appended"}
 
 
 def load_rust_rollout_lessons(ledger_path: Path) -> list[dict[str, Any]]:

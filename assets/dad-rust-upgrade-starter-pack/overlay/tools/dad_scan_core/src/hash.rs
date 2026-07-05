@@ -24,11 +24,11 @@ pub fn sha256_file(path: &Path) -> Result<String> {
 pub fn metadata_fingerprint(metadata: &std::fs::Metadata) -> String {
     let mut hasher = Sha256::new();
     hasher.update(metadata.len().to_le_bytes());
-    if let Ok(modified) = metadata.modified() {
-        if let Ok(duration) = modified.duration_since(std::time::UNIX_EPOCH) {
-            hasher.update(duration.as_secs().to_le_bytes());
-            hasher.update(duration.subsec_nanos().to_le_bytes());
-        }
+    if let Ok(modified) = metadata.modified()
+        && let Ok(duration) = modified.duration_since(std::time::UNIX_EPOCH)
+    {
+        hasher.update(duration.as_secs().to_le_bytes());
+        hasher.update(duration.subsec_nanos().to_le_bytes());
     }
     #[cfg(unix)]
     {

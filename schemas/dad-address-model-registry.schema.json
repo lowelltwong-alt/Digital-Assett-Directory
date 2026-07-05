@@ -1,0 +1,169 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://local.digital-asset-directory/schemas/dad-address-model-registry.schema.json",
+  "title": "DAD Address Model Registry",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "registry_id",
+    "model_id",
+    "name",
+    "adopted_layer_count",
+    "adoption_status",
+    "source_position",
+    "relation_to_knowledge_graph",
+    "compact_encoding",
+    "layer_fill_policy",
+    "workflow_encoding_policy",
+    "evolution_policy",
+    "frontier_review_policy",
+    "address_segments",
+    "layers",
+    "usefulness_contexts",
+    "does_not_apply_when",
+    "graph_tags",
+    "source_inspiration",
+    "authority_boundary"
+  ],
+  "properties": {
+    "schema_version": {"const": "0.1.0"},
+    "registry_id": {"const": "dad-address-model-registry"},
+    "model_id": {"type": "string", "pattern": "^dad:address-model:[a-z0-9][a-z0-9:-]*$"},
+    "name": {"type": "string", "minLength": 1},
+    "adopted_layer_count": {"const": 9},
+    "adoption_status": {"enum": ["candidate", "dad_adopted", "deprecated", "rejected"]},
+    "source_position": {"type": "string", "minLength": 1},
+    "relation_to_knowledge_graph": {"type": "string", "minLength": 1},
+    "compact_encoding": {
+      "type": "object",
+      "required": ["principle", "preferred_tuple", "max_inline_summary_chars", "max_inline_tags", "externalize_large_fields_to"],
+      "properties": {
+        "principle": {"type": "string", "minLength": 1},
+        "preferred_tuple": {"type": "array", "items": {"type": "string", "minLength": 1}, "minItems": 1},
+        "max_inline_summary_chars": {"type": "integer", "minimum": 80, "maximum": 1000},
+        "max_inline_tags": {"type": "integer", "minimum": 3, "maximum": 30},
+        "externalize_large_fields_to": {"type": "array", "items": {"type": "string", "minLength": 1}}
+      },
+      "additionalProperties": false
+    },
+    "layer_fill_policy": {
+      "type": "object",
+      "required": ["default_rule", "minimum_fields_for_asset_card", "ref_fields", "anti_bloat_rules"],
+      "properties": {
+        "default_rule": {"type": "string", "minLength": 1},
+        "minimum_fields_for_asset_card": {"type": "array", "items": {"type": "string", "minLength": 1}, "minItems": 1},
+        "ref_fields": {"type": "array", "items": {"type": "string", "minLength": 1}, "minItems": 1},
+        "anti_bloat_rules": {"type": "array", "items": {"type": "string", "minLength": 1}, "minItems": 1}
+      },
+      "additionalProperties": false
+    },
+    "workflow_encoding_policy": {
+      "type": "object",
+      "required": ["principle", "workflow_card_fields", "step_card_fields", "do_not_inline"],
+      "properties": {
+        "principle": {"type": "string", "minLength": 1},
+        "workflow_card_fields": {"type": "array", "items": {"type": "string", "minLength": 1}, "minItems": 1},
+        "step_card_fields": {"type": "array", "items": {"type": "string", "minLength": 1}, "minItems": 1},
+        "do_not_inline": {"type": "array", "items": {"type": "string", "minLength": 1}, "minItems": 1}
+      },
+      "additionalProperties": false
+    },
+    "evolution_policy": {
+      "type": "object",
+      "required": ["status", "versioning_rule", "change_gate", "compatibility_rule", "review_triggers"],
+      "properties": {
+        "status": {"enum": ["evolving", "stable", "deprecated"]},
+        "versioning_rule": {"type": "string", "minLength": 1},
+        "change_gate": {"type": "string", "minLength": 1},
+        "compatibility_rule": {"type": "string", "minLength": 1},
+        "review_triggers": {"type": "array", "items": {"type": "string", "minLength": 1}, "minItems": 1}
+      },
+      "additionalProperties": false
+    },
+    "frontier_review_policy": {
+      "type": "object",
+      "required": ["cadence", "who_to_ask", "questions", "promotion_gate"],
+      "properties": {
+        "cadence": {"type": "string", "minLength": 1},
+        "who_to_ask": {"type": "array", "items": {"type": "string", "minLength": 1}, "minItems": 1},
+        "questions": {"type": "array", "items": {"type": "string", "minLength": 1}, "minItems": 1},
+        "promotion_gate": {"type": "string", "minLength": 1}
+      },
+      "additionalProperties": false
+    },
+    "address_segments": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": ["segment", "meaning"],
+        "properties": {
+          "segment": {"type": "string", "minLength": 1},
+          "meaning": {"type": "string", "minLength": 1},
+          "dad_mapping": {"type": "string"}
+        },
+        "additionalProperties": false
+      }
+    },
+    "layers": {
+      "type": "array",
+      "minItems": 9,
+      "maxItems": 9,
+      "items": {
+        "type": "object",
+        "required": [
+          "layer",
+          "name",
+          "status",
+          "purpose",
+          "captures",
+          "graph_role",
+          "use_when",
+          "do_not_use_as"
+        ],
+        "properties": {
+          "layer": {"type": "integer", "minimum": 1, "maximum": 9},
+          "name": {"type": "string", "minLength": 1},
+          "status": {"enum": ["core", "dad_adopted"]},
+          "purpose": {"type": "string", "minLength": 1},
+          "captures": {"type": "array", "items": {"type": "string", "minLength": 1}},
+          "graph_role": {"type": "string", "minLength": 1},
+          "use_when": {"type": "array", "items": {"type": "string", "minLength": 1}},
+          "do_not_use_as": {"type": "array", "items": {"type": "string", "minLength": 1}}
+        },
+        "additionalProperties": false
+      }
+    },
+    "observed_layer_9_variants": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["variant", "source_refs", "dad_handling"],
+        "properties": {
+          "variant": {"enum": ["learning_adaptation", "orchestration_workflow"]},
+          "source_refs": {"type": "array", "items": {"type": "string", "minLength": 1}},
+          "dad_handling": {"type": "string", "minLength": 1}
+        },
+        "additionalProperties": false
+      }
+    },
+    "usefulness_contexts": {"type": "array", "items": {"type": "string", "minLength": 1}},
+    "does_not_apply_when": {"type": "array", "items": {"type": "string", "minLength": 1}},
+    "graph_tags": {"type": "array", "items": {"type": "string", "minLength": 1}},
+    "source_inspiration": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["source_repo", "source_ref", "role"],
+        "properties": {
+          "source_repo": {"type": "string", "minLength": 1},
+          "source_ref": {"type": "string", "minLength": 1},
+          "role": {"type": "string", "minLength": 1}
+        },
+        "additionalProperties": false
+      }
+    },
+    "authority_boundary": {"type": "string", "minLength": 1}
+  },
+  "additionalProperties": false
+}

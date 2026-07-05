@@ -92,3 +92,131 @@ pub struct ScanSummary {
     pub bounded: bool,
     pub no_mutation_performed: bool,
 }
+
+#[derive(Debug, Args, Clone)]
+pub struct MailSpoolCheckArgs {
+    /// Mail spool root to inspect. Repeat with one matching --root-alias per root.
+    #[arg(long = "root", required = true)]
+    pub roots: Vec<PathBuf>,
+
+    /// Public-safe alias for the matching --root value.
+    #[arg(long = "root-alias", required = true)]
+    pub root_aliases: Vec<String>,
+
+    /// Maximum JSONL row size before the row is treated as oversized.
+    #[arg(long, default_value_t = 64_000)]
+    pub max_jsonl_row_bytes: usize,
+
+    /// Maximum issue samples to include in the JSON output.
+    #[arg(long, default_value_t = 25)]
+    pub max_samples: usize,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct MailSpoolIssueSample {
+    pub issue_type: String,
+    pub logical_path: String,
+    pub line_number: Option<usize>,
+    pub detail: String,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct MailSpoolRootSummary {
+    pub root_alias: String,
+    pub status: String,
+    pub checked_file_count: usize,
+    pub jsonl_file_count: usize,
+    pub lock_file_count: usize,
+    pub temp_fragment_count: usize,
+    pub rust_packet_count: usize,
+    pub malformed_jsonl_row_count: usize,
+    pub oversized_jsonl_row_count: usize,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct MailSpoolCheckSummary {
+    pub schema_version: String,
+    pub root_count: usize,
+    pub checked_file_count: usize,
+    pub jsonl_file_count: usize,
+    pub lock_file_count: usize,
+    pub temp_fragment_count: usize,
+    pub rust_packet_count: usize,
+    pub malformed_jsonl_row_count: usize,
+    pub oversized_jsonl_row_count: usize,
+    pub issue_count: usize,
+    pub roots: Vec<MailSpoolRootSummary>,
+    pub issue_samples: Vec<MailSpoolIssueSample>,
+    pub no_mutation_performed: bool,
+    pub authority_boundary: String,
+    pub authoritative_gate: String,
+    pub semantic_checks_not_performed: Vec<String>,
+}
+
+#[derive(Debug, Args, Clone)]
+pub struct RepoInventoryProbeArgs {
+    /// Local root to inspect for Git repositories. Repeat with one --root-alias per root.
+    #[arg(long = "root", required = true)]
+    pub roots: Vec<PathBuf>,
+
+    /// Public-safe alias for the matching --root value.
+    #[arg(long = "root-alias", required = true)]
+    pub root_aliases: Vec<String>,
+
+    /// Maximum directory depth under each root to inspect.
+    #[arg(long, default_value_t = 5)]
+    pub max_depth: usize,
+
+    /// Follow symlinks. Disabled until external target provenance exists.
+    #[arg(long, default_value_t = false)]
+    pub follow_symlinks: bool,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct RepoInventoryProbeRecord {
+    pub root_alias: String,
+    pub logical_path: String,
+    pub depth: usize,
+    pub git_marker_type: String,
+    pub contract_present: bool,
+    pub contract_parse_status: String,
+    pub contract_schema_version_present: bool,
+    pub contract_repo_id_present: bool,
+    pub contract_capture_surface_version_present: bool,
+    pub contract_cli_fallback_present: bool,
+    pub contract_stable_user_shim_present: bool,
+    pub contract_windows_user_shim_present: bool,
+    pub contract_raw_checkout_fallback_present: bool,
+    pub contract_stable_shim_before_raw_checkout: bool,
+    pub contract_structural_pass: bool,
+    pub contract_issue_codes: Vec<String>,
+    pub no_mutation_performed: bool,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct RepoInventorySkippedDir {
+    pub root_alias: String,
+    pub logical_path: String,
+    pub reason: String,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct RepoInventoryProbeRootSummary {
+    pub root_alias: String,
+    pub status: String,
+    pub repo_count: usize,
+    pub skipped_dir_count: usize,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct RepoInventoryProbeSummary {
+    pub schema_version: String,
+    pub root_count: usize,
+    pub repo_count: usize,
+    pub skipped_dir_count: usize,
+    pub roots: Vec<RepoInventoryProbeRootSummary>,
+    pub repos: Vec<RepoInventoryProbeRecord>,
+    pub skipped_dirs: Vec<RepoInventorySkippedDir>,
+    pub no_mutation_performed: bool,
+    pub authority_boundary: String,
+}

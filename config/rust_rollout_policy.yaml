@@ -14,7 +14,8 @@ rules:
   destructive_source_mutation_allowed: false
 outputs:
   plan_reports: processed/reports/rust_rollout/
-  local_instruction_packets: mail/outbox/rust_rollout/
+  staged_instruction_packets: processed/mail/staged/rust_rollout/
+  tracked_reference_snapshot: mail/outbox/rust_rollout/
   lessons_ledger: lessons/rust_rollout/lesson_ledger.jsonl
   lesson_reports: processed/reports/rust_rollout/
 notes:

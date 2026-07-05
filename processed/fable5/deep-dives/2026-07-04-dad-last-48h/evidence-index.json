@@ -1,0 +1,80 @@
+{
+  "schema_version": "dad_fable_deep_dive_evidence.v0_1",
+  "packet_id": "dad:fable-deep-dive:2026-07-04-last-48h",
+  "created_at": "2026-07-04T18:45:00Z",
+  "status": "candidate_internal",
+  "commit_window": {
+    "since": "2026-07-02",
+    "notable_commits": [
+      {"commit": "605b7f3", "subject": "Install exception capture surface 0.4"},
+      {"commit": "9d7864e", "subject": "Install exception capture emission simulation"},
+      {"commit": "b5ff346", "subject": "Add exception source packet opportunity report"},
+      {"commit": "3f7be2c", "subject": "Harden DAD self enrollment exception surface"},
+      {"commit": "ac95998", "subject": "Install DAD Rust scan core and rollout controls"},
+      {"commit": "bfa8129", "subject": "Add language frontier watchlist"},
+      {"commit": "0c02d13", "subject": "Add exception learning readiness harness"},
+      {"commit": "aa7cc24", "subject": "Harden exceptions lake and add language coding advantages"}
+    ]
+  },
+  "rust_validation": {
+    "commands_passed": [
+      "cargo fmt --manifest-path tools/dad_scan_core/Cargo.toml --check",
+      "cargo check --manifest-path tools/dad_scan_core/Cargo.toml",
+      "cargo test --manifest-path tools/dad_scan_core/Cargo.toml",
+      "cargo clippy --manifest-path tools/dad_scan_core/Cargo.toml --all-targets -- -D warnings",
+      "PYTHONPATH=src python -m pytest tests/test_rust_bridge_dad_scan_core.py tests/test_rust_rollout.py -q"
+    ],
+    "real_scan": {
+      "observation_jsonl": "raw/local/rust/dad_scan_core_20260704_142903.jsonl",
+      "summary": "processed/reports/rust/dad_scan_core_20260704_142903_summary.json",
+      "quarantine": "processed/quarantine/rust/dad_scan_core_20260704_142903_quarantine.json",
+      "included_count": 11,
+      "skipped_count": 1,
+      "quarantine_contract": "excluded directory recorded once and pruned"
+    },
+    "lessons": [
+      "dad:rust-rollout-lesson:cfd7ad21-208d-5a30-ba28-f86b82c9d4d6",
+      "dad:rust-rollout-lesson:346c1ce4-21bb-5e3c-852e-62a59b39fb39"
+    ]
+  },
+  "exception_patterns_to_review": [
+    {
+      "event_id": "dad:exception-event:bff4a3cb-6950-5f22-9583-0f185bad6d3e",
+      "pattern": "Windows/OneDrive atomic replace denied during mail digest"
+    },
+    {
+      "event_id": "dad:exception-event:02bd7f7f-b0b0-5d1a-b532-ac5b9a1e8412",
+      "pattern": "stale JSONL mailbox lock with dead owner PID"
+    },
+    {
+      "event_id": "dad:exception-event:713ae8d1-ee57-543e-b2c9-b06f76c4dd1c",
+      "pattern": "dead JSONL lock during capture-surface refresh notices"
+    },
+    {
+      "event_id": "dad:exception-event:8a45eee1-3d92-537b-bbc3-0e5838585c05",
+      "pattern": "artifact registration drift"
+    },
+    {
+      "event_id": "dad:exception-event:606de014-fa3c-526f-bdcf-3336efddc844",
+      "pattern": "asset-dir unavailable on PATH fallback"
+    },
+    {
+      "event_id": "dad:exception-event:45e05e06-a9e7-513d-8446-72ed7245f948",
+      "pattern": "pytest faulthandler access-violation banner despite exit 0"
+    }
+  ],
+  "primary_paths": [
+    "docs/DAD_EXCEPTIONS_LAKE_BUILDOUT.md",
+    "assets/coding-harnesses/exception-capture-completeness/",
+    "src/digital_asset_directory/exception_capture.py",
+    "src/digital_asset_directory/exceptions_lake.py",
+    "src/digital_asset_directory/mail_center.py",
+    "tools/dad_scan_core/",
+    "src/digital_asset_directory/rust_bridge/",
+    "assets/dad-rust-upgrade-starter-pack/",
+    "docs/DAD_PROFESSIONAL_RESEARCH_LAYER.md",
+    "registry/trusted-source-registry.json",
+    "docs/LESSON_LIFECYCLE_GOVERNANCE.md"
+  ],
+  "authority_boundary": "This packet is candidate evidence for Fable review. It does not promote features, approve public release, or override local source authority."
+}

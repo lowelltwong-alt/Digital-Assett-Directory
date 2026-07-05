@@ -1162,6 +1162,675 @@
       "review_status": "reviewed"
     },
     {
+      "scenario_id": "code-change-exception",
+      "pattern_family": "exception_pattern",
+      "description": "A repo lands a hotfix, partial workaround, or side-effecting code change that needs DAD learning metadata without sending a diff.",
+      "repo_capture_surface_version": "0.4.0",
+      "signals": ["code_change_exception", "hotfix_without_full_validation", "unexpected_side_effect"],
+      "covered_rule_ids": ["exception-capture-rule:code-change-exception"],
+      "phase6_update_vectors": ["exception_taxonomy", "downstream_template"],
+      "expected": {
+        "packet_classes": ["exception_event"],
+        "event_types": ["code_change_exception"],
+        "mail_message_types": [],
+        "capture_contracts": ["postflight_exception"],
+        "required_fields": ["changed_surface", "change_ref", "exception_reason", "safe_summary", "validation_ref_or_gap"],
+        "update_required": false,
+        "blocked": false
+      },
+      "negative_controls": ["contains_private_rows", "contains_raw_log_blob", "contains_secret_or_pii", "contains_source_or_diff"],
+      "source_context": {
+        "repo_visibility": "internal",
+        "public_facing": false,
+        "notes": "The packet records changed surface class, reason, and validation gap only; diffs and source bodies stay out."
+      },
+      "review_status": "reviewed"
+    },
+    {
+      "scenario_id": "backfill-rust-shadow-parity-mismatch",
+      "pattern_family": "exception_pattern",
+      "description": "Backfill path-signal route for rust_shadow_parity_mismatch; proves DAD can recognize the historical path pattern without treating it as source truth.",
+      "repo_capture_surface_version": "0.4.0",
+      "signals": [
+        "path_keyword:rust-shadow"
+      ],
+      "covered_rule_ids": [
+        "backfill-rule:rust-shadow-parity"
+      ],
+      "phase6_update_vectors": [
+        "exception_taxonomy"
+      ],
+      "expected": {
+        "packet_classes": [
+          "exception_event"
+        ],
+        "event_types": [
+          "rust_shadow_parity_mismatch"
+        ],
+        "mail_message_types": [],
+        "capture_contracts": [
+          "backfill_candidate"
+        ],
+        "required_fields": [
+          "false_positive_risk",
+          "path_signal",
+          "safe_path_hash_or_pointer",
+          "source_rule_id"
+        ],
+        "update_required": false,
+        "blocked": false
+      },
+      "negative_controls": [
+        "contains_private_rows",
+        "contains_raw_log_blob",
+        "contains_secret_or_pii"
+      ],
+      "source_context": {
+        "repo_visibility": "internal",
+        "public_facing": false,
+        "notes": "Backfill path-signal candidates are metadata-only and require source review before promotion."
+      },
+      "review_status": "reviewed"
+    },
+    {
+      "scenario_id": "backfill-test-timeout",
+      "pattern_family": "exception_pattern",
+      "description": "Backfill path-signal route for test_timeout; proves DAD can recognize the historical path pattern without treating it as source truth.",
+      "repo_capture_surface_version": "0.4.0",
+      "signals": [
+        "path_keyword:test-timeout"
+      ],
+      "covered_rule_ids": [
+        "backfill-rule:test-timeout"
+      ],
+      "phase6_update_vectors": [
+        "exception_taxonomy"
+      ],
+      "expected": {
+        "packet_classes": [
+          "exception_event"
+        ],
+        "event_types": [
+          "test_timeout"
+        ],
+        "mail_message_types": [],
+        "capture_contracts": [
+          "backfill_candidate"
+        ],
+        "required_fields": [
+          "false_positive_risk",
+          "path_signal",
+          "safe_path_hash_or_pointer",
+          "source_rule_id"
+        ],
+        "update_required": false,
+        "blocked": false
+      },
+      "negative_controls": [
+        "contains_private_rows",
+        "contains_raw_log_blob",
+        "contains_secret_or_pii"
+      ],
+      "source_context": {
+        "repo_visibility": "internal",
+        "public_facing": false,
+        "notes": "Backfill path-signal candidates are metadata-only and require source review before promotion."
+      },
+      "review_status": "reviewed"
+    },
+    {
+      "scenario_id": "backfill-command-timeout",
+      "pattern_family": "exception_pattern",
+      "description": "Backfill path-signal route for command_timeout; proves DAD can recognize the historical path pattern without treating it as source truth.",
+      "repo_capture_surface_version": "0.4.0",
+      "signals": [
+        "path_keyword:timeout"
+      ],
+      "covered_rule_ids": [
+        "backfill-rule:command-timeout"
+      ],
+      "phase6_update_vectors": [
+        "exception_taxonomy"
+      ],
+      "expected": {
+        "packet_classes": [
+          "exception_event"
+        ],
+        "event_types": [
+          "command_timeout"
+        ],
+        "mail_message_types": [],
+        "capture_contracts": [
+          "backfill_candidate"
+        ],
+        "required_fields": [
+          "false_positive_risk",
+          "path_signal",
+          "safe_path_hash_or_pointer",
+          "source_rule_id"
+        ],
+        "update_required": false,
+        "blocked": false
+      },
+      "negative_controls": [
+        "contains_private_rows",
+        "contains_raw_log_blob",
+        "contains_secret_or_pii"
+      ],
+      "source_context": {
+        "repo_visibility": "internal",
+        "public_facing": false,
+        "notes": "Backfill path-signal candidates are metadata-only and require source review before promotion."
+      },
+      "review_status": "reviewed"
+    },
+    {
+      "scenario_id": "backfill-source-authority-conflict",
+      "pattern_family": "exception_pattern",
+      "description": "Backfill path-signal route for source_authority_conflict; proves DAD can recognize the historical path pattern without treating it as source truth.",
+      "repo_capture_surface_version": "0.4.0",
+      "signals": [
+        "path_keyword:source-authority-conflict"
+      ],
+      "covered_rule_ids": [
+        "backfill-rule:source-authority"
+      ],
+      "phase6_update_vectors": [
+        "exception_taxonomy"
+      ],
+      "expected": {
+        "packet_classes": [
+          "exception_event"
+        ],
+        "event_types": [
+          "source_authority_conflict"
+        ],
+        "mail_message_types": [],
+        "capture_contracts": [
+          "backfill_candidate"
+        ],
+        "required_fields": [
+          "false_positive_risk",
+          "path_signal",
+          "safe_path_hash_or_pointer",
+          "source_rule_id"
+        ],
+        "update_required": false,
+        "blocked": false
+      },
+      "negative_controls": [
+        "contains_private_rows",
+        "contains_raw_log_blob",
+        "contains_secret_or_pii"
+      ],
+      "source_context": {
+        "repo_visibility": "internal",
+        "public_facing": false,
+        "notes": "Backfill path-signal candidates are metadata-only and require source review before promotion."
+      },
+      "review_status": "reviewed"
+    },
+    {
+      "scenario_id": "backfill-capture-surface-outdated",
+      "pattern_family": "exception_pattern",
+      "description": "Backfill path-signal route for capture_surface_outdated; proves DAD can recognize the historical path pattern without treating it as source truth.",
+      "repo_capture_surface_version": "0.4.0",
+      "signals": [
+        "path_keyword:capture-surface-outdated"
+      ],
+      "covered_rule_ids": [
+        "backfill-rule:capture-surface"
+      ],
+      "phase6_update_vectors": [
+        "exception_taxonomy"
+      ],
+      "expected": {
+        "packet_classes": [
+          "exception_event"
+        ],
+        "event_types": [
+          "capture_surface_outdated"
+        ],
+        "mail_message_types": [],
+        "capture_contracts": [
+          "backfill_candidate"
+        ],
+        "required_fields": [
+          "false_positive_risk",
+          "path_signal",
+          "safe_path_hash_or_pointer",
+          "source_rule_id"
+        ],
+        "update_required": false,
+        "blocked": false
+      },
+      "negative_controls": [
+        "contains_private_rows",
+        "contains_raw_log_blob",
+        "contains_secret_or_pii"
+      ],
+      "source_context": {
+        "repo_visibility": "internal",
+        "public_facing": false,
+        "notes": "Backfill path-signal candidates are metadata-only and require source review before promotion."
+      },
+      "review_status": "reviewed"
+    },
+    {
+      "scenario_id": "backfill-graph-or-taxonomy-drift",
+      "pattern_family": "exception_pattern",
+      "description": "Backfill path-signal route for graph_or_taxonomy_drift; proves DAD can recognize the historical path pattern without treating it as source truth.",
+      "repo_capture_surface_version": "0.4.0",
+      "signals": [
+        "path_keyword:taxonomy-drift"
+      ],
+      "covered_rule_ids": [
+        "backfill-rule:graph-taxonomy-drift"
+      ],
+      "phase6_update_vectors": [
+        "exception_taxonomy"
+      ],
+      "expected": {
+        "packet_classes": [
+          "exception_event"
+        ],
+        "event_types": [
+          "graph_or_taxonomy_drift"
+        ],
+        "mail_message_types": [],
+        "capture_contracts": [
+          "backfill_candidate"
+        ],
+        "required_fields": [
+          "false_positive_risk",
+          "path_signal",
+          "safe_path_hash_or_pointer",
+          "source_rule_id"
+        ],
+        "update_required": false,
+        "blocked": false
+      },
+      "negative_controls": [
+        "contains_private_rows",
+        "contains_raw_log_blob",
+        "contains_secret_or_pii"
+      ],
+      "source_context": {
+        "repo_visibility": "internal",
+        "public_facing": false,
+        "notes": "Backfill path-signal candidates are metadata-only and require source review before promotion."
+      },
+      "review_status": "reviewed"
+    },
+    {
+      "scenario_id": "backfill-mail-quarantine",
+      "pattern_family": "exception_pattern",
+      "description": "Backfill path-signal route for mail_quarantine; proves DAD can recognize the historical path pattern without treating it as source truth.",
+      "repo_capture_surface_version": "0.4.0",
+      "signals": [
+        "path_keyword:mail-quarantine"
+      ],
+      "covered_rule_ids": [
+        "backfill-rule:mail-quarantine"
+      ],
+      "phase6_update_vectors": [
+        "exception_taxonomy"
+      ],
+      "expected": {
+        "packet_classes": [
+          "exception_event"
+        ],
+        "event_types": [
+          "mail_quarantine"
+        ],
+        "mail_message_types": [],
+        "capture_contracts": [
+          "backfill_candidate"
+        ],
+        "required_fields": [
+          "false_positive_risk",
+          "path_signal",
+          "safe_path_hash_or_pointer",
+          "source_rule_id"
+        ],
+        "update_required": false,
+        "blocked": false
+      },
+      "negative_controls": [
+        "contains_private_rows",
+        "contains_raw_log_blob",
+        "contains_secret_or_pii"
+      ],
+      "source_context": {
+        "repo_visibility": "internal",
+        "public_facing": false,
+        "notes": "Backfill path-signal candidates are metadata-only and require source review before promotion."
+      },
+      "review_status": "reviewed"
+    },
+    {
+      "scenario_id": "backfill-mail-notice-backpressure-risk",
+      "pattern_family": "exception_pattern",
+      "description": "Backfill path-signal route for mail_notice_backpressure_risk; proves DAD can recognize the historical path pattern without treating it as source truth.",
+      "repo_capture_surface_version": "0.4.0",
+      "signals": [
+        "path_keyword:mail-spam"
+      ],
+      "covered_rule_ids": [
+        "backfill-rule:mail-backpressure"
+      ],
+      "phase6_update_vectors": [
+        "exception_taxonomy"
+      ],
+      "expected": {
+        "packet_classes": [
+          "exception_event"
+        ],
+        "event_types": [
+          "mail_notice_backpressure_risk"
+        ],
+        "mail_message_types": [],
+        "capture_contracts": [
+          "backfill_candidate"
+        ],
+        "required_fields": [
+          "false_positive_risk",
+          "path_signal",
+          "safe_path_hash_or_pointer",
+          "source_rule_id"
+        ],
+        "update_required": false,
+        "blocked": false
+      },
+      "negative_controls": [
+        "contains_private_rows",
+        "contains_raw_log_blob",
+        "contains_secret_or_pii"
+      ],
+      "source_context": {
+        "repo_visibility": "internal",
+        "public_facing": false,
+        "notes": "Backfill path-signal candidates are metadata-only and require source review before promotion."
+      },
+      "review_status": "reviewed"
+    },
+    {
+      "scenario_id": "backfill-stale-generated-artifact",
+      "pattern_family": "exception_pattern",
+      "description": "Backfill path-signal route for stale_generated_artifact; proves DAD can recognize the historical path pattern without treating it as source truth.",
+      "repo_capture_surface_version": "0.4.0",
+      "signals": [
+        "path_keyword:stale-report"
+      ],
+      "covered_rule_ids": [
+        "backfill-rule:stale-report"
+      ],
+      "phase6_update_vectors": [
+        "exception_taxonomy"
+      ],
+      "expected": {
+        "packet_classes": [
+          "exception_event"
+        ],
+        "event_types": [
+          "stale_generated_artifact"
+        ],
+        "mail_message_types": [],
+        "capture_contracts": [
+          "backfill_candidate"
+        ],
+        "required_fields": [
+          "false_positive_risk",
+          "path_signal",
+          "safe_path_hash_or_pointer",
+          "source_rule_id"
+        ],
+        "update_required": false,
+        "blocked": false
+      },
+      "negative_controls": [
+        "contains_private_rows",
+        "contains_raw_log_blob",
+        "contains_secret_or_pii"
+      ],
+      "source_context": {
+        "repo_visibility": "internal",
+        "public_facing": false,
+        "notes": "Backfill path-signal candidates are metadata-only and require source review before promotion."
+      },
+      "review_status": "reviewed"
+    },
+    {
+      "scenario_id": "backfill-license-or-provenance-review-gap",
+      "pattern_family": "exception_pattern",
+      "description": "Backfill path-signal route for license_or_provenance_review_gap; proves DAD can recognize the historical path pattern without treating it as source truth.",
+      "repo_capture_surface_version": "0.4.0",
+      "signals": [
+        "path_keyword:license-review"
+      ],
+      "covered_rule_ids": [
+        "backfill-rule:license-provenance"
+      ],
+      "phase6_update_vectors": [
+        "exception_taxonomy"
+      ],
+      "expected": {
+        "packet_classes": [
+          "exception_event"
+        ],
+        "event_types": [
+          "license_or_provenance_review_gap"
+        ],
+        "mail_message_types": [],
+        "capture_contracts": [
+          "backfill_candidate"
+        ],
+        "required_fields": [
+          "false_positive_risk",
+          "path_signal",
+          "safe_path_hash_or_pointer",
+          "source_rule_id"
+        ],
+        "update_required": false,
+        "blocked": false
+      },
+      "negative_controls": [
+        "contains_private_rows",
+        "contains_raw_log_blob",
+        "contains_secret_or_pii"
+      ],
+      "source_context": {
+        "repo_visibility": "internal",
+        "public_facing": false,
+        "notes": "Backfill path-signal candidates are metadata-only and require source review before promotion."
+      },
+      "review_status": "reviewed"
+    },
+    {
+      "scenario_id": "backfill-model-instruction-drift",
+      "pattern_family": "exception_pattern",
+      "description": "Backfill path-signal route for model_instruction_drift; proves DAD can recognize the historical path pattern without treating it as source truth.",
+      "repo_capture_surface_version": "0.4.0",
+      "signals": [
+        "path_keyword:prompt-drift"
+      ],
+      "covered_rule_ids": [
+        "backfill-rule:model-instruction-drift"
+      ],
+      "phase6_update_vectors": [
+        "exception_taxonomy"
+      ],
+      "expected": {
+        "packet_classes": [
+          "exception_event"
+        ],
+        "event_types": [
+          "model_instruction_drift"
+        ],
+        "mail_message_types": [],
+        "capture_contracts": [
+          "backfill_candidate"
+        ],
+        "required_fields": [
+          "false_positive_risk",
+          "path_signal",
+          "safe_path_hash_or_pointer",
+          "source_rule_id"
+        ],
+        "update_required": false,
+        "blocked": false
+      },
+      "negative_controls": [
+        "contains_private_rows",
+        "contains_raw_log_blob",
+        "contains_secret_or_pii"
+      ],
+      "source_context": {
+        "repo_visibility": "internal",
+        "public_facing": false,
+        "notes": "Backfill path-signal candidates are metadata-only and require source review before promotion."
+      },
+      "review_status": "reviewed"
+    },
+    {
+      "scenario_id": "backfill-rollback",
+      "pattern_family": "exception_pattern",
+      "description": "Backfill path-signal route for rollback; proves DAD can recognize the historical path pattern without treating it as source truth.",
+      "repo_capture_surface_version": "0.4.0",
+      "signals": [
+        "path_keyword:rollback"
+      ],
+      "covered_rule_ids": [
+        "backfill-rule:rollback"
+      ],
+      "phase6_update_vectors": [
+        "exception_taxonomy"
+      ],
+      "expected": {
+        "packet_classes": [
+          "exception_event"
+        ],
+        "event_types": [
+          "rollback"
+        ],
+        "mail_message_types": [],
+        "capture_contracts": [
+          "backfill_candidate"
+        ],
+        "required_fields": [
+          "false_positive_risk",
+          "path_signal",
+          "safe_path_hash_or_pointer",
+          "source_rule_id"
+        ],
+        "update_required": false,
+        "blocked": false
+      },
+      "negative_controls": [
+        "contains_private_rows",
+        "contains_raw_log_blob",
+        "contains_secret_or_pii"
+      ],
+      "source_context": {
+        "repo_visibility": "internal",
+        "public_facing": false,
+        "notes": "Backfill path-signal candidates are metadata-only and require source review before promotion."
+      },
+      "review_status": "reviewed"
+    },
+    {
+      "scenario_id": "backfill-schema-validation-failure",
+      "pattern_family": "exception_pattern",
+      "description": "Backfill path-signal route for schema_validation_failure; proves DAD can recognize the historical path pattern without treating it as source truth.",
+      "repo_capture_surface_version": "0.4.0",
+      "signals": [
+        "path_keyword:schema-validation"
+      ],
+      "covered_rule_ids": [
+        "backfill-rule:schema-validation"
+      ],
+      "phase6_update_vectors": [
+        "exception_taxonomy"
+      ],
+      "expected": {
+        "packet_classes": [
+          "exception_event"
+        ],
+        "event_types": [
+          "schema_validation_failure"
+        ],
+        "mail_message_types": [],
+        "capture_contracts": [
+          "backfill_candidate"
+        ],
+        "required_fields": [
+          "false_positive_risk",
+          "path_signal",
+          "safe_path_hash_or_pointer",
+          "source_rule_id"
+        ],
+        "update_required": false,
+        "blocked": false
+      },
+      "negative_controls": [
+        "contains_private_rows",
+        "contains_raw_log_blob",
+        "contains_secret_or_pii"
+      ],
+      "source_context": {
+        "repo_visibility": "internal",
+        "public_facing": false,
+        "notes": "Backfill path-signal candidates are metadata-only and require source review before promotion."
+      },
+      "review_status": "reviewed"
+    },
+    {
+      "scenario_id": "backfill-premortem-failure-story",
+      "pattern_family": "exception_pattern",
+      "description": "Backfill path-signal route for premortem_failure_story; proves DAD can recognize the historical path pattern without treating it as source truth.",
+      "repo_capture_surface_version": "0.4.0",
+      "signals": [
+        "path_keyword:premortem"
+      ],
+      "covered_rule_ids": [
+        "backfill-rule:premortem"
+      ],
+      "phase6_update_vectors": [
+        "exception_taxonomy"
+      ],
+      "expected": {
+        "packet_classes": [
+          "exception_event"
+        ],
+        "event_types": [
+          "premortem_failure_story"
+        ],
+        "mail_message_types": [],
+        "capture_contracts": [
+          "backfill_candidate"
+        ],
+        "required_fields": [
+          "false_positive_risk",
+          "path_signal",
+          "safe_path_hash_or_pointer",
+          "source_rule_id"
+        ],
+        "update_required": false,
+        "blocked": false
+      },
+      "negative_controls": [
+        "contains_private_rows",
+        "contains_raw_log_blob",
+        "contains_secret_or_pii"
+      ],
+      "source_context": {
+        "repo_visibility": "internal",
+        "public_facing": false,
+        "notes": "Backfill path-signal candidates are metadata-only and require source review before promotion."
+      },
+      "review_status": "reviewed"
+    },
+    {
       "scenario_id": "new-exception-pattern-needed",
       "pattern_family": "exception_pattern",
       "description": "A repo sees a novel exception class that current taxonomy cannot express.",
@@ -1419,6 +2088,37 @@
         "repo_visibility": "private",
         "public_facing": false,
         "notes": "Negative control: no outbound packet even when the asset pattern matches."
+      },
+      "review_status": "reviewed"
+    },
+    {
+      "scenario_id": "source-or-diff-payload-suppressed",
+      "pattern_family": "exception_pattern",
+      "description": "A code-change exception signal includes copied source or diff text and must not be sent.",
+      "repo_capture_surface_version": "0.4.0",
+      "signals": ["code_change_exception", "hotfix_without_full_validation"],
+      "covered_rule_ids": ["exception-capture-rule:code-change-exception"],
+      "expected": {
+        "packet_classes": ["no_packet"],
+        "event_types": [],
+        "mail_message_types": [],
+        "capture_contracts": [],
+        "required_fields": [],
+        "update_required": false,
+        "blocked": true,
+        "blocked_reason": "payload_screen:source_or_diff_like_payload"
+      },
+      "negative_controls": ["contains_source_or_diff"],
+      "payload_samples": [
+        {
+          "field": "safe_summary",
+          "text": "diff --git a/src/app.py b/src/app.py\n@@ -1 +1 @@\n-print(secret)\n+return token"
+        }
+      ],
+      "source_context": {
+        "repo_visibility": "internal",
+        "public_facing": false,
+        "notes": "Diff/source bodies must become safe change refs and validation gaps, never copied payloads."
       },
       "review_status": "reviewed"
     }

@@ -1,0 +1,99 @@
+schema_version: dad_subagent_pack.v0_1
+pack_id: dad:subagent-pack:rust-qa
+status: candidate
+ai_agnostic: true
+authority_boundary: >
+  These roles are review and implementation aids. They do not authorize Rust
+  adoption, downstream repo mutation, public release, or replacement of Python
+  behavior without local validation and repo authority.
+roles:
+  - role_id: rust-architecture-boundary-reviewer
+    mission: Keep Rust scoped to deterministic leaf tooling unless evidence justifies expansion.
+    inputs:
+      - task summary
+      - Rust/Python boundary files
+      - profiling or parity evidence
+    output:
+      - boundary decision
+      - stop conditions
+      - tests required before promotion
+    reject_when:
+      - no profiled hot path
+      - no stable leaf boundary
+      - governance or orchestration would move to Rust
+  - role_id: rust-leaf-test-hardener
+    mission: Turn scanner/parser/hash/CLI behavior into Rust-owned anti-brittleness tests.
+    inputs:
+      - Rust source files
+      - existing Rust tests
+      - known platform risks
+    output:
+      - failing or missing tests
+      - no-write guard cases
+      - deterministic ordering cases
+    watch_for:
+      - path traversal
+      - root and nested excludes
+      - duplicate output normalization
+      - max-file limits
+      - symlink refusal
+      - exact JSONL shape
+  - role_id: rust-qa-gauntlet-runner
+    mission: Run validation and report exact commands, pass/fail status, and skipped gates.
+    required_commands:
+      - cargo fmt --manifest-path tools/dad_scan_core/Cargo.toml --check
+      - cargo check --manifest-path tools/dad_scan_core/Cargo.toml
+      - cargo test --manifest-path tools/dad_scan_core/Cargo.toml
+      - cargo clippy --manifest-path tools/dad_scan_core/Cargo.toml --all-targets -- -D warnings
+  - role_id: python-rust-boundary-and-parity-reviewer
+    mission: Verify Python keeps orchestration while Rust emits structured leaf evidence only.
+    watch_for:
+      - absolute local paths in default output
+      - raw stdout or stderr in audit records
+      - speed claims without profiling
+      - replacement claims without same-scope parity
+  - role_id: rust-boundary-frontier-scout
+    mission: Convert high-signal Rust and Python-to-Rust discoveries into pointer-only DAD candidates.
+    source_filters:
+      - official Rust project sources
+      - tool documentation
+      - high-signal reference codebases
+      - reviewed ecosystem security and QA sources
+    reject_when:
+      - source is hype-only
+      - finding lacks proof surface
+      - finding would copy third-party or private content
+  - role_id: dad-learning-and-asset-scout
+    mission: Capture reusable Rust lessons, asset updates, and harness ideas with applicability limits.
+    output:
+      - lesson candidate
+      - asset or harness update candidate
+      - applies_when and does_not_apply_when
+  - role_id: mail-storm-dirty-state-classifier
+    mission: Separate mailbox corruption, Rust rollout reference-snapshot churn, ignored staging churn, and ordinary DAD worktree dirt before collect/route/deliver.
+    inputs:
+      - mail doctor output
+      - Rust mail-spool probe output
+      - git status category counts
+      - reviewed mail.repos coverage
+    output:
+      - dirty-state classification
+      - safe_to_collect/safe_to_route/safe_to_deliver recommendation
+      - wrong-box or provenance-conflict findings
+      - exact next command
+    watch_for:
+      - direct writes to processed/mail/inbox
+      - direct writes to processed/mail/outbox/routed.jsonl
+      - repo inbox rows without delivery logs
+      - same packet identity across unknown source outboxes
+      - clean Rust structural probe mistaken for all-repo mail approval
+    reject_when:
+      - asked to approve delivery from Rust probe output alone
+      - source repo identity is unknown during duplicate outbox storms
+      - route, collection, or delivery audit is missing
+  - role_id: red-team-premortem-reviewer
+    mission: Find false confidence, privacy leaks, stale overlays, and brittle Rust rollout assumptions.
+    output:
+      - critical/high/medium/low findings
+      - premortem failure story
+      - validation commands

@@ -1,0 +1,64 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://local.digital-asset-directory/schemas/rust-rollout-lesson.schema.json",
+  "title": "DAD Rust Rollout Lesson",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "lesson_id",
+    "timestamp",
+    "source_repo",
+    "phase",
+    "problem",
+    "observed_failure_or_friction",
+    "fix_or_workaround",
+    "reusable_pattern",
+    "applies_to_repo_types",
+    "should_change_future_prompt",
+    "should_change_future_template",
+    "confidence",
+    "evidence_refs"
+  ],
+  "properties": {
+    "schema_version": { "const": "dad_rust_rollout_lesson.v1" },
+    "lesson_id": {
+      "type": "string",
+      "pattern": "^dad:rust-rollout-lesson:"
+    },
+    "timestamp": { "type": "string", "minLength": 10 },
+    "source_repo": { "type": "string", "minLength": 1, "maxLength": 160 },
+    "phase": { "type": "string", "minLength": 1, "maxLength": 200 },
+    "problem": { "type": "string", "minLength": 1, "maxLength": 1000 },
+    "observed_failure_or_friction": { "type": "string", "minLength": 1, "maxLength": 2000 },
+    "fix_or_workaround": { "type": "string", "minLength": 1, "maxLength": 2000 },
+    "reusable_pattern": { "type": "string", "minLength": 1, "maxLength": 2000 },
+    "applies_to_repo_types": {
+      "type": "array",
+      "items": { "type": "string", "minLength": 1, "maxLength": 120 },
+      "minItems": 1,
+      "uniqueItems": true
+    },
+    "applies_when": {
+      "type": "array",
+      "items": { "type": "string", "minLength": 1, "maxLength": 500 },
+      "uniqueItems": true
+    },
+    "does_not_apply_when": {
+      "type": "array",
+      "items": { "type": "string", "minLength": 1, "maxLength": 500 },
+      "uniqueItems": true
+    },
+    "danger_if_misapplied": { "type": "string", "maxLength": 1200 },
+    "extra_context": { "type": "string", "maxLength": 1200 },
+    "should_change_future_prompt": { "type": "boolean" },
+    "should_change_future_template": { "type": "boolean" },
+    "confidence": { "type": "string", "minLength": 1, "maxLength": 80 },
+    "evidence_refs": {
+      "type": "array",
+      "items": { "type": "string", "minLength": 1, "maxLength": 500 },
+      "minItems": 1,
+      "uniqueItems": true
+    }
+  },
+  "additionalProperties": false
+}

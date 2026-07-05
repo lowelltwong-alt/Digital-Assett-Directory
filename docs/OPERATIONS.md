@@ -33,6 +33,11 @@ audit/events/audit.jsonl
 
 ## Operational readiness
 
+For first-time local setup or cross-repo invocation, start with
+`docs/DAD_LOCAL_DEPLOYMENT.md`. Bootstrap writes `~/.dad/hub.json` and creates
+stable shims under `~/.dad/bin` so DAD can be called from non-DAD repos without
+manual `PYTHONPATH` setup.
+
 Use `doctor` when you need one local check that DAD is wired up and has the
 generated surfaces needed by future agents:
 
@@ -142,9 +147,14 @@ $env:PYTHONPATH='src'; python -m digital_asset_directory.cli mail deliver --repo
 
 `--repo all` uses only reviewed `mail.repos` config entries. Use
 `mail discover-repos` for read-only candidate discovery; discovery does not
-authorize collection or delivery. `mail deliver` also requires reviewed
+authorize collection or delivery. When bounded discovery finds unreviewed
+mailbox candidates, collect/deliver `--repo all` fail closed unless a named
+`--allow-coverage-gap-ack` is recorded. `mail deliver` also requires reviewed
 `mail.repos` target policy for explicit `--repo` paths so target visibility and
-public-facing status are known before DAD writes to another repo mailbox.
+public-facing status are known before DAD writes to another repo mailbox. If
+any enabled reviewed repo is write-protected or delivery-disallowed,
+`mail deliver --repo all` fails closed; use explicit reviewed target repos for
+narrowed delivery after checking `mail storm-gate --operation delivery`.
 
 Repo-local checks are light:
 

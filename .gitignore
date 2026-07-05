@@ -1,8 +1,14 @@
 .venv/
 __pycache__/
 *.py[cod]
+*.egg-info/
 .pytest_cache/
+.pytest-tmp*/
+.pytest_tmp*/
 .pytest-tmp-root/
+.tmp/
+pytest_tmp*/
+tmp_pytest*/
 .ruff_cache/
 .mypy_cache/
 **/target/
