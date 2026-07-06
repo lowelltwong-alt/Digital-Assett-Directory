@@ -94,6 +94,21 @@ Result: passed. The preflight command used the DAD hub and returned a normal
 context pack for the outside repo. The temp repo did not receive `processed/`
 or `state/` writes.
 
+Run from the DAD repo:
+
+```powershell
+$env:PYTHONPATH='src'
+python -m digital_asset_directory.cli rust phase8-evidence-check
+```
+
+Result: passed. The Rust leaf checker reported
+`phase8_evidence_structural_clean=true`, `issue_count=0`,
+`required_command_count=5`, `observed_command_count=6`,
+`human_review_status=pending`, and `phase8_human_gate_satisfied=false`. This is
+only a structural check of the command-evidence JSON; it does not rerun the
+deployment smoke tests, prove bare `asset-dir` is on PATH, or approve human
+gates.
+
 Roadmap command evidence is recorded in `roadmap/gate-evidence.json` for:
 
 - `python -m pytest tests/test_dad_local_deployment.py -q`;
@@ -101,7 +116,8 @@ Roadmap command evidence is recorded in `roadmap/gate-evidence.json` for:
 - user-shim `asset-dir doctor --scope deployment` from two non-DAD repos;
 - user-shim `asset-dir doctor --scope deployment` from Mock Trial4.26 and
   LawFirm-os-intake without target worktree changes;
-- user-shim `asset-dir agent preflight --repo . --agent codex --task "Goal 1 deployment smoke from outside DAD"` from a non-DAD repo.
+- user-shim `asset-dir agent preflight --repo . --agent codex --task "Goal 1 deployment smoke from outside DAD"` from a non-DAD repo;
+- `python -m digital_asset_directory.cli rust phase8-evidence-check`.
 
 The same command set is mirrored in
 `roadmap/evidence/phase-8-dad-local-deployment.commands.json` so future agents

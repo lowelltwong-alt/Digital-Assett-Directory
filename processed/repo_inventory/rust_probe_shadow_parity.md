@@ -1,6 +1,6 @@
 # Rust Repo Inventory Probe Shadow Parity
 
-Generated: 2026-07-06T06:28:02.932574+00:00
+Generated: 2026-07-06T14:35:36.673620+00:00
 Status: `matched`
 
 This is candidate machine evidence only. Python remains the authority for Phase 9 classification.

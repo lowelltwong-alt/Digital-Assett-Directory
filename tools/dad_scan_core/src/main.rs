@@ -18,6 +18,8 @@ enum Command {
     EventLogCheck(dad_scan_core::EventLogCheckArgs),
     /// Read-only probe for local Git repository roots.
     RepoInventoryProbe(dad_scan_core::RepoInventoryProbeArgs),
+    /// Read-only structural check for Phase 8 local-deployment command evidence.
+    Phase8EvidenceCheck(dad_scan_core::Phase8EvidenceCheckArgs),
 }
 
 fn main() -> Result<()> {
@@ -37,6 +39,10 @@ fn main() -> Result<()> {
         }
         Command::RepoInventoryProbe(args) => {
             let summary = dad_scan_core::probe_repo_inventory(args)?;
+            println!("{}", serde_json::to_string_pretty(&summary)?);
+        }
+        Command::Phase8EvidenceCheck(args) => {
+            let summary = dad_scan_core::check_phase8_evidence(args)?;
             println!("{}", serde_json::to_string_pretty(&summary)?);
         }
     }

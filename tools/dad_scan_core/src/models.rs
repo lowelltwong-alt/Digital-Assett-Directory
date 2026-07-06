@@ -290,3 +290,49 @@ pub struct RepoInventoryProbeSummary {
     pub no_mutation_performed: bool,
     pub authority_boundary: String,
 }
+
+#[derive(Debug, Args, Clone)]
+pub struct Phase8EvidenceCheckArgs {
+    /// Phase 8 command evidence JSON file to inspect.
+    #[arg(long)]
+    pub commands: PathBuf,
+
+    /// Public-safe alias for the command evidence file.
+    #[arg(long = "commands-alias")]
+    pub commands_alias: String,
+
+    /// Maximum issue samples to include in the JSON output.
+    #[arg(long, default_value_t = 25)]
+    pub max_samples: usize,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct Phase8EvidenceIssueSample {
+    pub issue_type: String,
+    pub logical_path: String,
+    pub detail: String,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct Phase8EvidenceCheckSummary {
+    pub schema_version: String,
+    pub checked_file_alias: String,
+    pub checked_file_status: String,
+    pub required_command_count: usize,
+    pub observed_command_count: usize,
+    pub passed_required_command_count: usize,
+    pub missing_required_command_count: usize,
+    pub non_passed_required_command_count: usize,
+    pub schema_issue_count: usize,
+    pub unsafe_string_count: usize,
+    pub issue_count: usize,
+    pub human_review_status: String,
+    pub human_review_pending: bool,
+    pub phase8_evidence_structural_clean: bool,
+    pub phase8_human_gate_satisfied: bool,
+    pub issue_samples: Vec<Phase8EvidenceIssueSample>,
+    pub no_mutation_performed: bool,
+    pub authority_boundary: String,
+    pub authoritative_gate: String,
+    pub semantic_checks_not_performed: Vec<String>,
+}

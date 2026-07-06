@@ -12,6 +12,7 @@ from digital_asset_directory.cli import app
 from digital_asset_directory.rust_bridge import (
     DadEventLogCheckResult,
     DadMailSpoolCheckResult,
+    DadPhase8EvidenceCheckResult,
     DadRepoInventoryProbeResult,
     DadScanCoreResult,
 )
@@ -518,6 +519,220 @@ def test_run_dad_event_log_check_rejects_mismatched_root_aliases_before_cargo(
             roots=[Path("processed/events"), Path(".digital-asset/events")],
             root_aliases=["dad/central-events"],
         )
+
+
+def _phase8_summary(**overrides: object) -> dict[str, object]:
+    summary: dict[str, object] = {
+        "schema_version": "dad_phase8_evidence_check.v0_1",
+        "checked_file_alias": "dad/phase8/command-evidence",
+        "checked_file_status": "checked",
+        "required_command_count": 5,
+        "observed_command_count": 5,
+        "passed_required_command_count": 5,
+        "missing_required_command_count": 0,
+        "non_passed_required_command_count": 0,
+        "schema_issue_count": 0,
+        "unsafe_string_count": 0,
+        "issue_count": 0,
+        "human_review_status": "pending",
+        "human_review_pending": True,
+        "phase8_evidence_structural_clean": True,
+        "phase8_human_gate_satisfied": False,
+        "issue_samples": [],
+        "no_mutation_performed": True,
+        "authority_boundary": (
+            "Rust Phase 8 evidence check is read-only structural evidence. "
+            "Python roadmap validation and human gate review remain authoritative."
+        ),
+        "authoritative_gate": "roadmap check plus human gate review",
+        "semantic_checks_not_performed": [
+            "human gate approval",
+            "live command rerun",
+        ],
+    }
+    summary.update(overrides)
+    return summary
+
+
+def test_run_dad_phase8_evidence_check_builds_alias_only_command_and_summary(
+    monkeypatch, tmp_path: Path
+) -> None:
+    summary = _phase8_summary()
+    completed = subprocess.CompletedProcess(
+        args=["cargo"],
+        returncode=0,
+        stdout=json.dumps(summary) + "\n",
+        stderr="",
+    )
+    calls: list[dict[str, object]] = []
+
+    def fake_run(command, **kwargs):
+        calls.append({"command": command, **kwargs})
+        return completed
+
+    monkeypatch.setattr(bridge.shutil, "which", lambda value: "C:/Rust/bin/cargo.exe")
+    monkeypatch.setattr(bridge.subprocess, "run", fake_run)
+
+    result = bridge.run_dad_phase8_evidence_check(
+        repo_root=tmp_path,
+        commands=Path("roadmap/evidence/phase-8-dad-local-deployment.commands.json"),
+    )
+
+    assert result.returncode == 0
+    assert result.summary == summary
+    assert result.summary_valid is True
+    assert result.summary_validation_errors == []
+    default_payload = result.to_dict()
+    assert default_payload["stdout"] == ""
+    assert default_payload["output_suppressed"] is True
+    assert default_payload["command"][:5] == [
+        "cargo",
+        "run",
+        "--manifest-path",
+        "tools/dad_scan_core/Cargo.toml",
+        "--",
+    ]
+    assert "phase8-evidence-check" in default_payload["command"]
+    assert str(tmp_path) not in repr(default_payload)
+    command = calls[0]["command"]
+    assert "--commands" in command
+    assert str(
+        tmp_path / "roadmap" / "evidence" / "phase-8-dad-local-deployment.commands.json"
+    ) in command
+    assert "--commands-alias" in command
+    assert "dad/phase8/command-evidence" in command
+
+
+def test_run_dad_phase8_evidence_check_rejects_local_path_leaking_summary(
+    monkeypatch, tmp_path: Path
+) -> None:
+    summary = _phase8_summary(
+        checked_file_alias="C:/Users/lowel/phase8",
+        unsafe_string_count=1,
+        issue_count=1,
+        issue_samples=[
+            {
+                "issue_type": "unsafe_string",
+                "logical_path": "C:/Users/lowel/phase8",
+                "detail": "root.commands[0].evidence_summary",
+            }
+        ],
+        authority_boundary="C:/Users/lowel/path leaked",
+    )
+    completed = subprocess.CompletedProcess(
+        args=["cargo"],
+        returncode=0,
+        stdout=json.dumps(summary) + "\n",
+        stderr="",
+    )
+    monkeypatch.setattr(bridge.shutil, "which", lambda value: "C:/Rust/bin/cargo.exe")
+    monkeypatch.setattr(bridge.subprocess, "run", lambda *_args, **_kwargs: completed)
+
+    result = bridge.run_dad_phase8_evidence_check(
+        repo_root=tmp_path,
+        commands=Path("roadmap/evidence/phase-8-dad-local-deployment.commands.json"),
+    )
+
+    assert result.returncode == 2
+    assert result.summary_valid is False
+    errors = result.summary_validation_errors or []
+    assert any("checked_file_alias" in error for error in errors)
+    assert any("authority_boundary" in error for error in errors)
+    assert any("logical_path" in error for error in errors)
+    assert result.to_dict()["summary"] is None
+
+
+def test_run_dad_phase8_evidence_check_fails_when_structural_issues_reported(
+    monkeypatch, tmp_path: Path
+) -> None:
+    summary = _phase8_summary(
+        missing_required_command_count=1,
+        passed_required_command_count=4,
+        issue_count=1,
+        phase8_evidence_structural_clean=False,
+        issue_samples=[
+            {
+                "issue_type": "missing_required_command",
+                "logical_path": "dad/phase8/command-evidence",
+                "detail": "user-shim asset-dir agent preflight --repo . --agent codex --task",
+            }
+        ],
+    )
+    completed = subprocess.CompletedProcess(
+        args=["cargo"],
+        returncode=0,
+        stdout=json.dumps(summary) + "\n",
+        stderr="",
+    )
+    monkeypatch.setattr(bridge.shutil, "which", lambda value: "C:/Rust/bin/cargo.exe")
+    monkeypatch.setattr(bridge.subprocess, "run", lambda *_args, **_kwargs: completed)
+
+    result = bridge.run_dad_phase8_evidence_check(
+        repo_root=tmp_path,
+        commands=Path("roadmap/evidence/phase-8-dad-local-deployment.commands.json"),
+    )
+
+    assert result.returncode == 2
+    assert result.summary_valid is True
+    payload = result.to_dict()
+    assert payload["summary_suppressed"] is False
+    assert "structural issues" in payload["failure_summary"]
+
+
+def test_validate_phase8_evidence_check_summary_rejects_boolean_and_negative_counts() -> None:
+    errors = bridge.validate_phase8_evidence_check_summary(
+        _phase8_summary(required_command_count=True, issue_count=-1),
+        commands_alias="dad/phase8/command-evidence",
+    )
+
+    assert "required_command_count must be an integer" in errors
+    assert "issue_count must be non-negative" in errors
+
+
+def test_rust_phase8_evidence_check_cli_wraps_scope_and_never_satisfies_gate(
+    monkeypatch,
+) -> None:
+    def fake_check(**kwargs):
+        assert kwargs["commands"].as_posix().endswith(
+            "roadmap/evidence/phase-8-dad-local-deployment.commands.json"
+        )
+        assert kwargs["commands_alias"] == "dad/phase8/command-evidence"
+        return DadPhase8EvidenceCheckResult(
+            command=["cargo", "run", "--manifest-path", "C:/private/Cargo.toml"],
+            returncode=0,
+            stdout=json.dumps(_phase8_summary()),
+            stderr="",
+            cargo_found=True,
+            commands_alias=kwargs["commands_alias"],
+            display_command=[
+                "cargo",
+                "run",
+                "--manifest-path",
+                "tools/dad_scan_core/Cargo.toml",
+                "--",
+                "phase8-evidence-check",
+            ],
+            summary=_phase8_summary(),
+            summary_valid=True,
+            summary_validation_errors=[],
+        )
+
+    monkeypatch.setattr("digital_asset_directory.cli.run_dad_phase8_evidence_check", fake_check)
+
+    result = RUNNER.invoke(app, ["rust", "phase8-evidence-check"])
+
+    assert result.exit_code == 0
+    payload = json.loads(result.stdout)
+    assert payload["summary"]["phase8_evidence_structural_clean"] is True
+    assert payload["summary"]["phase8_human_gate_satisfied"] is False
+    assert payload["summary"]["structural_phase8_evidence_check_only"] is True
+    assert payload["scope"]["hub_local_default_commands"] is True
+    assert payload["scope"]["structural_phase8_evidence_check_only"] is True
+    assert payload["scope"]["phase8_human_gate_satisfied"] is False
+    assert "recorded human gate review" in payload["scope"]["authoritative_gate"]
+    assert payload["stdout"] == ""
+    assert payload["output_suppressed"] is True
+    assert payload["local_command_suppressed"] is True
 
 
 def test_rust_event_log_check_cli_wraps_scope_and_never_satisfies_gate(

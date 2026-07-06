@@ -6,10 +6,11 @@ use std::sync::Mutex;
 
 use dad_scan_core::{
     EventLogCheckArgs, EventLogCheckSummary, MailSpoolCheckArgs, MailSpoolCheckSummary,
-    Observation, QuarantineReport, RepoInventoryProbeArgs, RepoInventoryProbeSummary,
-    ScanLocalArgs, ScanSummary,
+    Observation, Phase8EvidenceCheckArgs, Phase8EvidenceCheckSummary, QuarantineReport,
+    RepoInventoryProbeArgs, RepoInventoryProbeSummary, ScanLocalArgs, ScanSummary,
 };
 use serde::de::DeserializeOwned;
+use serde_json::json;
 
 static CWD_LOCK: Mutex<()> = Mutex::new(());
 
@@ -81,6 +82,59 @@ fn repo_probe_args(root: impl Into<PathBuf>, alias: &str) -> RepoInventoryProbeA
         max_depth: 5,
         follow_symlinks: false,
     }
+}
+
+fn phase8_args(commands: impl Into<PathBuf>) -> Phase8EvidenceCheckArgs {
+    Phase8EvidenceCheckArgs {
+        commands: commands.into(),
+        commands_alias: "dad/phase8/command-evidence".to_string(),
+        max_samples: 25,
+    }
+}
+
+fn phase8_command_rows() -> Vec<serde_json::Value> {
+    vec![
+        json!({
+            "command": "python -m pytest tests/test_dad_local_deployment.py -q",
+            "evidence_summary": "Focused deployment suite passed.",
+            "status": "passed"
+        }),
+        json!({
+            "command": "python -m digital_asset_directory.cli doctor --hub . --scope deployment",
+            "evidence_summary": "DAD repo deployment doctor returned deployment_ready=true.",
+            "status": "passed"
+        }),
+        json!({
+            "command": "user-shim asset-dir doctor --scope deployment from two non-DAD repos",
+            "evidence_summary": "Stable user shim resolved the DAD hub from two temp non-DAD repos.",
+            "status": "passed"
+        }),
+        json!({
+            "command": "user-shim asset-dir doctor --scope deployment from Mock Trial4.26 and LawFirm-os-intake without target worktree changes",
+            "evidence_summary": "Stable user shim resolved the DAD hub from two real local repos and status hashes were unchanged.",
+            "status": "passed"
+        }),
+        json!({
+            "command": "user-shim asset-dir agent preflight --repo . --agent codex --task \"Goal 1 deployment smoke from outside DAD\"",
+            "evidence_summary": "Stable user shim ran agent preflight from a temporary non-DAD repo.",
+            "status": "passed"
+        }),
+    ]
+}
+
+fn write_phase8_commands(path: &Path, commands: Vec<serde_json::Value>, review_status: &str) {
+    let payload = json!({
+        "authority_boundary": "Phase 8 command evidence proves local DAD callability only. It does not enroll repos, deliver mail, approve public release, or satisfy human gates.",
+        "commands": commands,
+        "created_at": "2026-07-05",
+        "human_review_status": review_status,
+        "schema_version": "dad.phase8.command-evidence.v1"
+    });
+    fs::write(
+        path,
+        serde_json::to_string_pretty(&payload).expect("payload"),
+    )
+    .expect("phase8");
 }
 
 #[cfg(unix)]
@@ -1227,6 +1281,104 @@ fn repo_inventory_probe_sorts_roots_and_reports_missing_roots() {
         vec![("a/root", "missing"), ("z/root", "checked")]
     );
     assert_eq!(summary.repos[0].logical_path, "z/root/repo");
+}
+
+#[test]
+fn phase8_evidence_check_accepts_current_command_contract_without_gate_satisfaction() {
+    let temp = tempfile::tempdir().expect("tempdir");
+    let commands_path = temp.path().join("phase8.commands.json");
+    write_phase8_commands(&commands_path, phase8_command_rows(), "pending");
+
+    let summary: Phase8EvidenceCheckSummary =
+        dad_scan_core::check_phase8_evidence(phase8_args(&commands_path)).expect("phase8 check");
+    let text = serde_json::to_string_pretty(&summary).expect("summary json");
+
+    assert_eq!(summary.schema_version, "dad_phase8_evidence_check.v0_1");
+    assert_eq!(summary.checked_file_alias, "dad/phase8/command-evidence");
+    assert_eq!(summary.checked_file_status, "checked");
+    assert_eq!(summary.required_command_count, 5);
+    assert_eq!(summary.observed_command_count, 5);
+    assert_eq!(summary.passed_required_command_count, 5);
+    assert_eq!(summary.issue_count, 0);
+    assert!(summary.human_review_pending);
+    assert!(summary.phase8_evidence_structural_clean);
+    assert!(!summary.phase8_human_gate_satisfied);
+    assert!(summary.no_mutation_performed);
+    assert_eq!(
+        summary.authoritative_gate,
+        "roadmap check plus human gate review"
+    );
+    assert!(!text.contains(temp.path().to_string_lossy().as_ref()));
+}
+
+#[test]
+fn phase8_evidence_check_flags_missing_required_command() {
+    let temp = tempfile::tempdir().expect("tempdir");
+    let commands_path = temp.path().join("phase8.commands.json");
+    let mut commands = phase8_command_rows();
+    commands.pop();
+    write_phase8_commands(&commands_path, commands, "pending");
+
+    let summary =
+        dad_scan_core::check_phase8_evidence(phase8_args(&commands_path)).expect("phase8 check");
+
+    assert_eq!(summary.observed_command_count, 4);
+    assert_eq!(summary.passed_required_command_count, 4);
+    assert_eq!(summary.missing_required_command_count, 1);
+    assert_eq!(summary.issue_count, 1);
+    assert!(!summary.phase8_evidence_structural_clean);
+    assert!(
+        summary
+            .issue_samples
+            .iter()
+            .any(|item| item.issue_type == "missing_required_command"
+                && item.detail.contains("agent preflight"))
+    );
+}
+
+#[test]
+fn phase8_evidence_check_flags_local_path_leakage() {
+    let temp = tempfile::tempdir().expect("tempdir");
+    let commands_path = temp.path().join("phase8.commands.json");
+    let mut commands = phase8_command_rows();
+    commands[0]["evidence_summary"] =
+        json!("Passed while reading C:/Users/lowel/OneDrive/Desktop/Git Projects/private");
+    write_phase8_commands(&commands_path, commands, "pending");
+
+    let summary =
+        dad_scan_core::check_phase8_evidence(phase8_args(&commands_path)).expect("phase8 check");
+
+    assert_eq!(summary.unsafe_string_count, 1);
+    assert_eq!(summary.issue_count, 1);
+    assert!(!summary.phase8_evidence_structural_clean);
+    assert!(
+        summary
+            .issue_samples
+            .iter()
+            .any(|item| item.issue_type == "unsafe_string"
+                && item.detail == "root.commands[0].evidence_summary")
+    );
+}
+
+#[test]
+fn phase8_evidence_check_rejects_premature_human_gate_status() {
+    let temp = tempfile::tempdir().expect("tempdir");
+    let commands_path = temp.path().join("phase8.commands.json");
+    write_phase8_commands(&commands_path, phase8_command_rows(), "approved");
+
+    let summary =
+        dad_scan_core::check_phase8_evidence(phase8_args(&commands_path)).expect("phase8 check");
+
+    assert_eq!(summary.human_review_status, "approved");
+    assert!(!summary.human_review_pending);
+    assert!(!summary.phase8_human_gate_satisfied);
+    assert_eq!(summary.schema_issue_count, 1);
+    assert!(
+        summary
+            .issue_samples
+            .iter()
+            .any(|item| item.issue_type == "unexpected_human_review_status")
+    );
 }
 
 #[test]

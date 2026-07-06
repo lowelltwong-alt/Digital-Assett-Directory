@@ -3,6 +3,7 @@ mod extract;
 mod hash;
 mod mail_spool;
 mod models;
+mod phase8_evidence;
 mod repo_probe;
 mod report;
 mod walk;
@@ -12,10 +13,12 @@ pub use mail_spool::check_mail_spools;
 pub use models::{
     EventLogCheckArgs, EventLogCheckSummary, EventLogIssueSample, EventLogRootSummary,
     MailSpoolCheckArgs, MailSpoolCheckSummary, MailSpoolIssueSample, MailSpoolRootSummary,
-    Observation, QuarantineReport, RepoInventoryProbeArgs, RepoInventoryProbeRecord,
+    Observation, Phase8EvidenceCheckArgs, Phase8EvidenceCheckSummary, Phase8EvidenceIssueSample,
+    QuarantineReport, RepoInventoryProbeArgs, RepoInventoryProbeRecord,
     RepoInventoryProbeRootSummary, RepoInventoryProbeSummary, RepoInventorySkippedDir,
     ScanLocalArgs, ScanSummary,
 };
+pub use phase8_evidence::check_phase8_evidence;
 pub use repo_probe::probe_repo_inventory;
 
 use anyhow::{Context, Result, bail};

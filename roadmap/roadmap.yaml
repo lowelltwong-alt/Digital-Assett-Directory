@@ -239,6 +239,7 @@ phases:
         - user-shim asset-dir doctor --scope deployment from two non-DAD repos
         - user-shim asset-dir doctor --scope deployment from Mock Trial4.26 and LawFirm-os-intake without target worktree changes
         - user-shim asset-dir agent preflight --repo . --agent codex --task "Goal 1 deployment smoke from outside DAD"
+        - python -m digital_asset_directory.cli rust phase8-evidence-check
       human_gates:
         - id: phase-8-local-install-reviewed
           description: DAD can be installed or wrapped so asset-dir works from outside the DAD checkout without manual PYTHONPATH knowledge

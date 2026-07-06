@@ -234,6 +234,7 @@ from .roadmap import check_roadmap, write_human_gate_review_packet
 from .rust_bridge import (
     run_dad_event_log_check,
     run_dad_mail_spool_check,
+    run_dad_phase8_evidence_check,
     run_dad_repo_inventory_probe,
     run_dad_scan_core,
 )
@@ -2620,6 +2621,66 @@ def rust_event_log_check(
         payload["summary"]["event_log_all_roots_checked"] = all_roots_checked
         payload["summary"]["structural_event_check_only"] = True
         payload["summary"]["event_pipeline_gate_satisfied"] = False
+    console.print_json(data=payload)
+    if result.returncode != 0:
+        raise typer.Exit(result.returncode)
+
+
+@rust_app.command("phase8-evidence-check")
+def rust_phase8_evidence_check(
+    commands: Optional[Path] = typer.Option(
+        None,
+        "--commands",
+        help="Phase 8 command-evidence JSON file to inspect.",
+    ),
+    commands_alias: str = typer.Option(
+        "dad/phase8/command-evidence",
+        "--commands-alias",
+        help="Public-safe alias for the command evidence file.",
+    ),
+    max_samples: int = typer.Option(25, "--max-samples", min=0),
+    manifest_path: Optional[Path] = typer.Option(None, "--manifest-path"),
+    cargo_bin: str = typer.Option("cargo", "--cargo-bin"),
+    timeout_seconds: int = typer.Option(120, "--timeout-seconds", min=1),
+    include_output: bool = typer.Option(
+        False, "--include-output", help="Include raw Rust subprocess stdout/stderr."
+    ),
+    hub: Optional[Path] = typer.Option(None),
+) -> None:
+    """Run the Rust read-only Phase 8 command-evidence structural checker."""
+    cfg = _cfg(hub=hub)
+    default_commands_used = commands is None
+    commands_path = commands or (
+        cfg.repo_root / "roadmap" / "evidence" / "phase-8-dad-local-deployment.commands.json"
+    )
+    result = run_dad_phase8_evidence_check(
+        repo_root=cfg.repo_root,
+        commands=commands_path,
+        commands_alias=commands_alias,
+        max_samples=max_samples,
+        cargo_bin=cargo_bin,
+        manifest_path=manifest_path,
+        timeout_seconds=timeout_seconds,
+    )
+    payload = result.to_dict(include_output=include_output)
+    payload["scope"] = {
+        "schema_version": "dad_rust_phase8_evidence_probe_scope.v1",
+        "hub_local_default_commands": default_commands_used,
+        "structural_phase8_evidence_check_only": True,
+        "phase8_human_gate_satisfied": False,
+        "authoritative_gate": (
+            "python -m digital_asset_directory.cli roadmap check --no-update "
+            "plus recorded human gate review"
+        ),
+        "authority_boundary": (
+            "Rust phase8-evidence-check validates command evidence structure only. "
+            "It does not run deployment smoke tests, approve human gates, authorize "
+            "enrollment, deliver mail, or promote Rust to deployment policy authority."
+        ),
+    }
+    if isinstance(payload.get("summary"), dict):
+        payload["summary"]["structural_phase8_evidence_check_only"] = True
+        payload["summary"]["phase8_human_gate_satisfied"] = False
     console.print_json(data=payload)
     if result.returncode != 0:
         raise typer.Exit(result.returncode)

@@ -13,6 +13,7 @@ It currently provides these read-only probes:
 - `scan-local`: scans local source trees and emits raw, non-authorizing observations for Python to validate and ingest.
 - `mail-spool-check`: checks DAD mail spool roots for JSONL, lock/temp, malformed-row, oversized-row, and Rust rollout packet signals using public-safe aliases.
 - `event-log-check`: checks DAD event JSONL roots for malformed/invalid UTF-8/oversized rows, invalid field values, duplicate event ids and dedupe keys, obvious unsafe strings, and alias-only output.
+- `phase8-evidence-check`: checks Phase 8 local-deployment command-evidence JSON for required proof rows, pending human-review status, unsafe strings, and false authority claims.
 - `repo-inventory-probe`: discovers local Git repository roots under configured roots using public-safe aliases and emits `dad_repo_inventory_probe.v0_2` contract-surface facts for Phase 9 inventory/deployment-doctor evidence.
 
 ## Boundary
@@ -32,6 +33,8 @@ Rust may:
 - report whether `.digital-asset/dad-integration.json` has the required
   capture fields, stable user shim pointers, raw-checkout fallback, and
   issue-code-only structural failures.
+- check that Phase 8 command-evidence JSON is structurally clean while reporting
+  `phase8_human_gate_satisfied=false`.
 
 Rust may not:
 
@@ -111,6 +114,23 @@ review.
 Do not treat `issue_count: 0` alone as green. The Python wrapper also reports
 whether every requested root was actually checked; missing roots are not event
 pipeline readiness evidence.
+
+## Phase 8 Evidence Probe
+
+For Phase 8 local-deployment evidence, use:
+
+```bash
+python -m digital_asset_directory.cli rust phase8-evidence-check
+```
+
+The command checks the Phase 8 command-evidence JSON for the original five
+deployment proof rows, `status: passed`, `human_review_status: pending`,
+alias-only issue samples, and obvious local path or credential markers.
+
+This is intentionally not a deployment doctor. It does not invoke `asset-dir`
+from non-DAD repos, prove module attestation, inspect live PATH state, authorize
+repo enrollment, or satisfy human gates. Python `roadmap check --no-update`,
+`validate`, and recorded human gate review remain authoritative.
 
 ## Repo Inventory Probe
 

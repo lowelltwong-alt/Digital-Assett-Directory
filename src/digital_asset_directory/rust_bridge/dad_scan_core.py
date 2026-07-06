@@ -11,6 +11,7 @@ DEFAULT_MAIL_MAX_JSONL_ROW_BYTES = 64_000
 MAIL_SPOOL_CHECK_SCHEMA_VERSION = "dad_mail_spool_check.v0_1"
 EVENT_LOG_CHECK_SCHEMA_VERSION = "dad_event_log_check.v0_1"
 REPO_INVENTORY_PROBE_SCHEMA_VERSION = "dad_repo_inventory_probe.v0_2"
+PHASE8_EVIDENCE_CHECK_SCHEMA_VERSION = "dad_phase8_evidence_check.v0_1"
 
 
 @dataclass(frozen=True)
@@ -188,6 +189,61 @@ class DadRepoInventoryProbeResult:
             return "Rust repo-inventory summary failed validation; see summary_validation_errors."
         return (
             "Rust repo-inventory probe failed; raw subprocess output is suppressed by "
+            "default because it may contain local paths."
+        )
+
+
+@dataclass(frozen=True)
+class DadPhase8EvidenceCheckResult:
+    """Structured result from DAD's Rust Phase 8 command-evidence checker."""
+
+    command: list[str]
+    returncode: int
+    stdout: str
+    stderr: str
+    cargo_found: bool
+    commands_alias: str
+    display_command: list[str] | None = None
+    summary: dict[str, object] | None = None
+    summary_valid: bool = False
+    summary_validation_errors: list[str] | None = None
+    timed_out: bool = False
+
+    def to_dict(
+        self, *, include_output: bool = False, include_local_paths: bool = False
+    ) -> dict[str, object]:
+        payload = asdict(self)
+        if not include_local_paths and self.display_command is not None:
+            payload["command"] = self.display_command
+            payload["local_command_suppressed"] = True
+        else:
+            payload["local_command_suppressed"] = False
+        if not include_local_paths and self.summary is not None and not self.summary_valid:
+            payload["summary"] = None
+            payload["summary_suppressed"] = True
+        else:
+            payload["summary_suppressed"] = False
+        if self.returncode != 0:
+            payload["failure_summary"] = self._failure_summary()
+        if not include_output:
+            payload["stdout"] = ""
+            payload["stderr"] = ""
+            payload["output_suppressed"] = True
+        else:
+            payload["output_suppressed"] = False
+        return payload
+
+    def _failure_summary(self) -> str:
+        if not self.cargo_found:
+            return "cargo was not found on PATH. Install Rust via rustup."
+        if self.timed_out:
+            return "dad_scan_core phase8-evidence-check timed out."
+        if self.summary_validation_errors:
+            return "Rust Phase 8 evidence summary failed validation; see summary_validation_errors."
+        if self.summary and self.summary.get("phase8_evidence_structural_clean") is not True:
+            return "Rust Phase 8 evidence check found structural issues; inspect summary issue counts."
+        return (
+            "Rust Phase 8 evidence check failed; raw subprocess output is suppressed by "
             "default because it may contain local paths."
         )
 
@@ -735,6 +791,133 @@ def run_dad_repo_inventory_probe(
         )
 
 
+def run_dad_phase8_evidence_check(
+    *,
+    repo_root: Path,
+    commands: Path,
+    commands_alias: str = "dad/phase8/command-evidence",
+    max_samples: int = 25,
+    cargo_bin: str = "cargo",
+    manifest_path: Path | None = None,
+    timeout_seconds: int = 120,
+) -> DadPhase8EvidenceCheckResult:
+    """Run the Rust read-only Phase 8 command-evidence checker through Cargo."""
+
+    repo_root = repo_root.resolve()
+    if not _is_public_safe_alias_path(commands_alias):
+        raise ValueError("phase8-evidence-check commands_alias must be a public-safe alias")
+    commands = _resolve(repo_root, commands)
+    manifest_path = (
+        _resolve(repo_root, manifest_path)
+        if manifest_path is not None
+        else repo_root / "tools" / "dad_scan_core" / "Cargo.toml"
+    )
+    command = [
+        cargo_bin,
+        "run",
+        "--manifest-path",
+        str(manifest_path),
+        "--",
+        "phase8-evidence-check",
+        "--commands",
+        str(commands),
+        "--commands-alias",
+        commands_alias,
+        "--max-samples",
+        str(max_samples),
+    ]
+    display_command = [
+        cargo_bin,
+        "run",
+        "--manifest-path",
+        _display_path(repo_root, manifest_path),
+        "--",
+        "phase8-evidence-check",
+        "--commands",
+        _display_path(repo_root, commands),
+        "--commands-alias",
+        commands_alias,
+        "--max-samples",
+        str(max_samples),
+    ]
+    cargo_path = shutil.which(cargo_bin)
+    if cargo_path is None:
+        return DadPhase8EvidenceCheckResult(
+            command=command,
+            returncode=127,
+            stdout="",
+            stderr=f"{cargo_bin} was not found on PATH. Install Rust via rustup.",
+            cargo_found=False,
+            commands_alias=commands_alias,
+            display_command=display_command,
+        )
+    try:
+        completed = subprocess.run(
+            command,
+            check=False,
+            capture_output=True,
+            text=True,
+            cwd=repo_root,
+            timeout=timeout_seconds,
+        )
+        summary = _parse_json_object(completed.stdout)
+        summary_validation_errors = validate_phase8_evidence_check_summary(
+            summary,
+            commands_alias=commands_alias,
+        )
+        structural_clean = (
+            isinstance(summary, dict)
+            and summary.get("phase8_evidence_structural_clean") is True
+        )
+        returncode = (
+            2
+            if completed.returncode == 0 and (summary_validation_errors or not structural_clean)
+            else completed.returncode
+        )
+        return DadPhase8EvidenceCheckResult(
+            command=command,
+            returncode=returncode,
+            stdout=completed.stdout,
+            stderr=completed.stderr,
+            cargo_found=True,
+            commands_alias=commands_alias,
+            display_command=display_command,
+            summary=summary,
+            summary_valid=not summary_validation_errors,
+            summary_validation_errors=summary_validation_errors,
+        )
+    except subprocess.TimeoutExpired as exc:
+        stdout = (
+            exc.stdout.decode("utf-8", errors="replace")
+            if isinstance(exc.stdout, bytes)
+            else (exc.stdout or "")
+        )
+        stderr = (
+            exc.stderr.decode("utf-8", errors="replace")
+            if isinstance(exc.stderr, bytes)
+            else (exc.stderr or "")
+        )
+        summary = _parse_json_object(stdout)
+        summary_validation_errors = validate_phase8_evidence_check_summary(
+            summary,
+            commands_alias=commands_alias,
+        )
+        return DadPhase8EvidenceCheckResult(
+            command=command,
+            returncode=124,
+            stdout=stdout,
+            stderr=stderr
+            or f"dad_scan_core phase8-evidence-check timed out after {timeout_seconds} seconds.",
+            cargo_found=True,
+            commands_alias=commands_alias,
+            display_command=display_command,
+            summary=summary,
+            summary_valid=False,
+            summary_validation_errors=summary_validation_errors,
+            timed_out=True,
+        )
+
+
 def _parse_json_object(text: str) -> dict[str, object] | None:
     try:
         value = json.loads(text)
@@ -1052,6 +1235,150 @@ def validate_repo_inventory_probe_summary(
     ):
         if summary.get(count_field) != len(records):
             errors.append(f"{count_field} must equal len({count_field.removesuffix('_count')}s)")
+    return errors
+
+
+def validate_phase8_evidence_check_summary(
+    summary: dict[str, object] | None,
+    *,
+    commands_alias: str,
+) -> list[str]:
+    if summary is None:
+        return ["stdout did not contain a JSON object summary"]
+    errors: list[str] = []
+    count_fields = {
+        "required_command_count",
+        "observed_command_count",
+        "passed_required_command_count",
+        "missing_required_command_count",
+        "non_passed_required_command_count",
+        "schema_issue_count",
+        "unsafe_string_count",
+        "issue_count",
+    }
+    allowed_top_level_fields = {
+        "schema_version",
+        "checked_file_alias",
+        "checked_file_status",
+        *count_fields,
+        "human_review_status",
+        "human_review_pending",
+        "phase8_evidence_structural_clean",
+        "phase8_human_gate_satisfied",
+        "issue_samples",
+        "no_mutation_performed",
+        "authority_boundary",
+        "authoritative_gate",
+        "semantic_checks_not_performed",
+    }
+    unknown_top_level_fields = sorted(set(summary) - allowed_top_level_fields)
+    if unknown_top_level_fields:
+        errors.append(
+            "summary contains unknown fields: " + ", ".join(unknown_top_level_fields)
+        )
+    if summary.get("schema_version") != PHASE8_EVIDENCE_CHECK_SCHEMA_VERSION:
+        errors.append(
+            "schema_version must be "
+            f"{PHASE8_EVIDENCE_CHECK_SCHEMA_VERSION!r}; got {summary.get('schema_version')!r}"
+        )
+    if summary.get("no_mutation_performed") is not True:
+        errors.append("no_mutation_performed must be true")
+    if summary.get("authoritative_gate") != "roadmap check plus human gate review":
+        errors.append("authoritative_gate must be 'roadmap check plus human gate review'")
+    if summary.get("phase8_human_gate_satisfied") is not False:
+        errors.append("phase8_human_gate_satisfied must be false")
+
+    checked_file_alias = summary.get("checked_file_alias")
+    if checked_file_alias != commands_alias:
+        errors.append("checked_file_alias must equal requested commands_alias")
+    if not isinstance(checked_file_alias, str) or not _is_public_safe_alias_path(
+        checked_file_alias
+    ):
+        errors.append("checked_file_alias must be a public-safe alias")
+    if summary.get("checked_file_status") not in {"checked", "missing", "not_file"}:
+        errors.append("checked_file_status must be checked, missing, or not_file")
+
+    authority_boundary = summary.get("authority_boundary")
+    if not isinstance(authority_boundary, str) or not authority_boundary.strip():
+        errors.append("authority_boundary must be a non-empty string")
+    elif _contains_local_path_marker(authority_boundary):
+        errors.append("authority_boundary must not contain local path markers")
+
+    human_review_status = summary.get("human_review_status")
+    if not isinstance(human_review_status, str):
+        errors.append("human_review_status must be a string")
+    if not isinstance(summary.get("human_review_pending"), bool):
+        errors.append("human_review_pending must be a boolean")
+    if not isinstance(summary.get("phase8_evidence_structural_clean"), bool):
+        errors.append("phase8_evidence_structural_clean must be a boolean")
+
+    for field in count_fields:
+        value = summary.get(field)
+        if not isinstance(value, int) or isinstance(value, bool):
+            errors.append(f"{field} must be an integer")
+        elif value < 0:
+            errors.append(f"{field} must be non-negative")
+
+    issue_samples = summary.get("issue_samples")
+    semantic_checks = summary.get("semantic_checks_not_performed")
+    if not isinstance(issue_samples, list):
+        errors.append("issue_samples must be a list")
+        issue_samples = []
+    if not isinstance(semantic_checks, list) or not all(
+        isinstance(item, str) and item.strip() for item in semantic_checks
+    ):
+        errors.append("semantic_checks_not_performed must be a list of non-empty strings")
+    elif any(_contains_local_path_marker(item) for item in semantic_checks):
+        errors.append("semantic_checks_not_performed must not contain local path markers")
+
+    allowed_issue_fields = {"issue_type", "logical_path", "detail"}
+    allowed_issue_types = {
+        "false_authority_claim",
+        "invalid_field_value",
+        "malformed_json",
+        "missing_file",
+        "missing_required_command",
+        "missing_required_field",
+        "non_object_json",
+        "non_passed_required_command",
+        "not_file",
+        "unexpected_human_review_status",
+        "unsafe_string",
+    }
+    for index, record in enumerate(issue_samples):
+        if not isinstance(record, dict):
+            errors.append(f"issue_samples[{index}] must be an object")
+            continue
+        unknown_fields = sorted(set(record) - allowed_issue_fields)
+        if unknown_fields:
+            errors.append(
+                f"issue_samples[{index}] contains unknown fields: "
+                + ", ".join(unknown_fields)
+            )
+        if record.get("issue_type") not in allowed_issue_types:
+            errors.append(f"issue_samples[{index}].issue_type is not recognized")
+        logical_path = record.get("logical_path")
+        if not isinstance(logical_path, str) or not _is_public_safe_alias_path(logical_path):
+            errors.append(f"issue_samples[{index}].logical_path must be a public-safe alias path")
+        detail = record.get("detail")
+        if not isinstance(detail, str) or not detail.strip():
+            errors.append(f"issue_samples[{index}].detail must be a non-empty string")
+        elif _contains_local_path_marker(detail):
+            errors.append(f"issue_samples[{index}].detail must not contain local path markers")
+
+    expected_issue_count = (
+        int(summary.get("missing_required_command_count") or 0)
+        + int(summary.get("non_passed_required_command_count") or 0)
+        + int(summary.get("schema_issue_count") or 0)
+        + int(summary.get("unsafe_string_count") or 0)
+    )
+    if summary.get("issue_count") != expected_issue_count:
+        errors.append("issue_count must equal command/schema/unsafe issue counts")
+    if (
+        summary.get("phase8_evidence_structural_clean") is True
+        and summary.get("issue_count") != 0
+    ):
+        errors.append("phase8_evidence_structural_clean cannot be true with issues")
     return errors
 
 

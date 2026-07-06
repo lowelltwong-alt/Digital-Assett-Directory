@@ -41,6 +41,14 @@
         "recorded_at": "2026-07-05",
         "status": "passed"
       },
+      "python -m digital_asset_directory.cli rust phase8-evidence-check": {
+        "evidence": [
+          "roadmap/evidence/phase-8-dad-local-deployment.md",
+          "roadmap/evidence/phase-8-dad-local-deployment.commands.json"
+        ],
+        "recorded_at": "2026-07-06",
+        "status": "passed"
+      },
       "user-shim asset-dir doctor --scope deployment from two non-DAD repos": {
         "evidence": [
           "roadmap/evidence/phase-8-dad-local-deployment.md",

@@ -25,6 +25,11 @@
       "command": "user-shim asset-dir agent preflight --repo . --agent codex --task \"Goal 1 deployment smoke from outside DAD\"",
       "evidence_summary": "Stable user shim ran agent preflight from a temporary non-DAD repo, returned a context pack, and did not create target processed or state directories.",
       "status": "passed"
+    },
+    {
+      "command": "python -m digital_asset_directory.cli rust phase8-evidence-check",
+      "evidence_summary": "Rust read-only Phase 8 command-evidence checker returned phase8_evidence_structural_clean=true, issue_count=0, required_command_count=5, observed_command_count=6, human_review_status=pending, and phase8_human_gate_satisfied=false. This is structural evidence only; it does not rerun live deployment smoke tests or approve human gates.",
+      "status": "passed"
     }
   ],
   "created_at": "2026-07-05",
