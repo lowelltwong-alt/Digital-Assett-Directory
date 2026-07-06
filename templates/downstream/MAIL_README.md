@@ -75,6 +75,12 @@ asset-dir mail outbox-check --repo . --summary "<proposed summary>"
 asset-dir mail compose --repo . --type asset_suggestion --summary "<upgrade>" --supersedes <mail-id>
 ```
 
+For structured lesson packs or nested payloads, write a metadata-only JSON
+object to a small payload file and pass `--payload-file path/to/payload.json` to
+both `mail outbox-check` and `mail compose`. Use `--payload key=value` only for
+small flat fields; raw JSON passed to `--payload` is rejected so it cannot be
+silently split at the first `=`.
+
 During concurrent work, multiple agents may retry the same outbox candidate.
 That is acceptable as a source-outbox storm signal: DAD collection canonicalizes
 one row and records duplicate audit evidence. Do not write directly to DAD's

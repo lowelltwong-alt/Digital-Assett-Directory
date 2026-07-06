@@ -1324,17 +1324,61 @@ def _json_command(value: Optional[str], option_name: str) -> list[str] | None:
     return [str(item) for item in parsed]
 
 
-def _key_value_payload(values: list[str]) -> dict[str, str]:
-    payload: dict[str, str] = {}
+def _parse_payload_json(value: str, *, option_name: str) -> dict[str, Any]:
+    try:
+        parsed = json.loads(value)
+    except json.JSONDecodeError as exc:
+        raise typer.BadParameter(f"{option_name} must be a JSON object.") from exc
+    if not isinstance(parsed, dict):
+        raise typer.BadParameter(f"{option_name} must be a JSON object.")
+    return parsed
+
+
+def _payload_file_text(path: Path) -> str:
+    try:
+        return path.read_text(encoding="utf-8-sig")
+    except OSError as exc:
+        raise typer.BadParameter(f"--payload-file could not be read: {exc}") from exc
+
+
+def _key_value_payload(values: list[str]) -> dict[str, Any]:
+    payload: dict[str, Any] = {}
     for value in values:
+        stripped = value.lstrip()
+        if stripped.startswith(("{", "[")):
+            raise typer.BadParameter(
+                "--payload is key=value convenience mode only; use --payload-json "
+                "or --payload-file for structured JSON payloads."
+            )
         if "=" not in value:
-            raise typer.BadParameter("Mail payload values must use key=value form.")
+            raise typer.BadParameter(
+                "Mail payload values must use key=value form, or use --payload-json/"
+                "--payload-file for structured JSON payloads."
+            )
         key, item = value.split("=", 1)
         key = key.strip()
         if not key:
             raise typer.BadParameter("Mail payload keys cannot be empty.")
         payload[key] = item.strip()
     return payload
+
+
+def _mail_payload_options(
+    payload: list[str],
+    *,
+    payload_json: str | None = None,
+    payload_file: Path | None = None,
+) -> dict[str, Any]:
+    source_count = int(bool(payload)) + int(bool(payload_json)) + int(payload_file is not None)
+    if source_count > 1:
+        raise typer.BadParameter(
+            "Use only one payload source: --payload key=value, --payload-json, or --payload-file."
+        )
+    if payload_file is not None:
+        return _parse_payload_json(_payload_file_text(payload_file), option_name="--payload-file")
+    if payload_json:
+        return _parse_payload_json(payload_json, option_name="--payload-json")
+    return _key_value_payload(payload)
 
 
 def _mail_repo_aliases(policy) -> set[str]:
@@ -2909,7 +2953,21 @@ def mail_compose(
     message_type: str = typer.Option(..., "--type"),
     target_repo: str = typer.Option("central_only", "--target-repo"),
     summary: str = typer.Option(..., "--summary"),
-    payload: list[str] = typer.Option([], "--payload"),
+    payload: list[str] = typer.Option(
+        [],
+        "--payload",
+        help="Simple payload field in key=value form. Use --payload-file for structured JSON.",
+    ),
+    payload_json: Optional[str] = typer.Option(
+        None,
+        "--payload-json",
+        help="Structured payload JSON object. Prefer --payload-file for large lesson packs.",
+    ),
+    payload_file: Optional[Path] = typer.Option(
+        None,
+        "--payload-file",
+        help="Path to a structured payload JSON object; UTF-8 BOM is tolerated.",
+    ),
     evidence: list[str] = typer.Option([], "--evidence"),
     suggested_action: list[str] = typer.Option([], "--suggested-action"),
     sensitivity: str = typer.Option("internal", "--sensitivity"),
@@ -2928,7 +2986,11 @@ def mail_compose(
             message_type=message_type,
             target_repo=target_repo,
             summary=summary,
-            payload=_key_value_payload(payload),
+            payload=_mail_payload_options(
+                payload,
+                payload_json=payload_json,
+                payload_file=payload_file,
+            ),
             evidence=evidence,
             suggested_actions=suggested_action,
             sensitivity=sensitivity,
@@ -3334,7 +3396,21 @@ def mail_outbox_check(
     repo: Path = typer.Option(Path("."), "--repo"),
     message_type: str = typer.Option("", "--type"),
     summary: str = typer.Option(..., "--summary"),
-    payload: list[str] = typer.Option([], "--payload"),
+    payload: list[str] = typer.Option(
+        [],
+        "--payload",
+        help="Simple payload field in key=value form. Use --payload-file for structured JSON.",
+    ),
+    payload_json: Optional[str] = typer.Option(
+        None,
+        "--payload-json",
+        help="Structured payload JSON object. Prefer --payload-file for large lesson packs.",
+    ),
+    payload_file: Optional[Path] = typer.Option(
+        None,
+        "--payload-file",
+        help="Path to a structured payload JSON object; UTF-8 BOM is tolerated.",
+    ),
     evidence: list[str] = typer.Option([], "--evidence"),
     hub: Optional[Path] = typer.Option(None),
 ) -> None:
@@ -3345,7 +3421,11 @@ def mail_outbox_check(
             repo.resolve(),
             message_type=message_type,
             summary=summary,
-            payload=_key_value_payload(payload),
+            payload=_mail_payload_options(
+                payload,
+                payload_json=payload_json,
+                payload_file=payload_file,
+            ),
             evidence=evidence,
         )
     except (OSError, ValueError) as exc:
