@@ -6,16 +6,16 @@
   "duplicate_logical_path_count": 0,
   "duplicate_logical_paths": [],
   "follow_symlinks": false,
-  "generated_at": "2026-07-05T18:19:14.957086+00:00",
+  "generated_at": "2026-07-06T02:07:27.661194+00:00",
   "input_hashes": {
-    "src/digital_asset_directory/dad_library.py": "sha256:0225ef2593ffcbce6d5ee576a9eaa70a979aa21f41a84e6810fa8058046cd125",
-    "src/digital_asset_directory/rust_bridge/dad_scan_core.py": "sha256:a8ab90b5fac8f5568b25edf21d1425e7c6922fa3bcdee72bd398dc006125ad0d",
-    "tools/dad_scan_core/src/models.rs": "sha256:db4c7a9ab78cf2b4aa0c57fb99d00ae7a6c259604973191ab9f20e0fa717c492",
-    "tools/dad_scan_core/src/repo_probe.rs": "sha256:7e5a72a2ec009c06b7a120c6816f5347e11ddaf1b912106baffdfee54f1b7353"
+    "src/digital_asset_directory/dad_library.py": "sha256:dd59946cbaf1dde83be28a463ca930111ecd3e874981d9d69960298b19d8cf23",
+    "src/digital_asset_directory/rust_bridge/dad_scan_core.py": "sha256:a41f8daa8872d7b4c6b17b4e8ecff942e5631684a106afb6596052342705c04a",
+    "tools/dad_scan_core/src/models.rs": "sha256:cde6dc7b5ad3be5c599cbc7b3e32d132e82ae97403dd06141db72a9443e0d5f8",
+    "tools/dad_scan_core/src/repo_probe.rs": "sha256:52c66eea95a4a347c9a959483df64d8bf43a648e763fed34c18a86762cbe11fc"
   },
-  "matched_repo_count": 48,
+  "matched_repo_count": 78,
   "max_depth": 5,
-  "methodology_hash": "sha256:0225ef2593ffcbce6d5ee576a9eaa70a979aa21f41a84e6810fa8058046cd125",
+  "methodology_hash": "sha256:dd59946cbaf1dde83be28a463ca930111ecd3e874981d9d69960298b19d8cf23",
   "methodology_ref": "src/digital_asset_directory/dad_library.py",
   "only_python_logical_paths": [],
   "only_python_skipped_dirs": [],
@@ -282,6 +282,186 @@
       "source": "python_inventory_discovery"
     },
     {
+      "contract_present": true,
+      "logical_path": "dad-local-source/git-projects/04_digital_assett_directory/.tmp/exception-learning-check/dad-exception-learning-check-094fa3d0d8dd/synthetic-public-backfill",
+      "root_alias": "dad-local-source/git-projects",
+      "source": "python_inventory_discovery"
+    },
+    {
+      "contract_present": true,
+      "logical_path": "dad-local-source/git-projects/04_digital_assett_directory/.tmp/exception-learning-check/dad-exception-learning-check-0b47636833c8/synthetic-public-mixed",
+      "root_alias": "dad-local-source/git-projects",
+      "source": "python_inventory_discovery"
+    },
+    {
+      "contract_present": true,
+      "logical_path": "dad-local-source/git-projects/04_digital_assett_directory/.tmp/exception-learning-check/dad-exception-learning-check-0f8aedd784d0/synthetic-public-small-sample",
+      "root_alias": "dad-local-source/git-projects",
+      "source": "python_inventory_discovery"
+    },
+    {
+      "contract_present": true,
+      "logical_path": "dad-local-source/git-projects/04_digital_assett_directory/.tmp/exception-learning-check/dad-exception-learning-check-14bd0a6e0534/synthetic-public-confirmed-backfill",
+      "root_alias": "dad-local-source/git-projects",
+      "source": "python_inventory_discovery"
+    },
+    {
+      "contract_present": true,
+      "logical_path": "dad-local-source/git-projects/04_digital_assett_directory/.tmp/exception-learning-check/dad-exception-learning-check-1a843bc1c16e/synthetic-public-mixed",
+      "root_alias": "dad-local-source/git-projects",
+      "source": "python_inventory_discovery"
+    },
+    {
+      "contract_present": true,
+      "logical_path": "dad-local-source/git-projects/04_digital_assett_directory/.tmp/exception-learning-check/dad-exception-learning-check-2678c300c830/synthetic-public-hard-review-small-sample",
+      "root_alias": "dad-local-source/git-projects",
+      "source": "python_inventory_discovery"
+    },
+    {
+      "contract_present": true,
+      "logical_path": "dad-local-source/git-projects/04_digital_assett_directory/.tmp/exception-learning-check/dad-exception-learning-check-28e1e8f3c03b/synthetic-public-invalid-fix",
+      "root_alias": "dad-local-source/git-projects",
+      "source": "python_inventory_discovery"
+    },
+    {
+      "contract_present": true,
+      "logical_path": "dad-local-source/git-projects/04_digital_assett_directory/.tmp/exception-learning-check/dad-exception-learning-check-33625d294cc0/synthetic-public-backfill",
+      "root_alias": "dad-local-source/git-projects",
+      "source": "python_inventory_discovery"
+    },
+    {
+      "contract_present": true,
+      "logical_path": "dad-local-source/git-projects/04_digital_assett_directory/.tmp/exception-learning-check/dad-exception-learning-check-3c659ebf8556/synthetic-public-invalid-fix",
+      "root_alias": "dad-local-source/git-projects",
+      "source": "python_inventory_discovery"
+    },
+    {
+      "contract_present": true,
+      "logical_path": "dad-local-source/git-projects/04_digital_assett_directory/.tmp/exception-learning-check/dad-exception-learning-check-436277e611ae/synthetic-public-demo-case-small-sample",
+      "root_alias": "dad-local-source/git-projects",
+      "source": "python_inventory_discovery"
+    },
+    {
+      "contract_present": true,
+      "logical_path": "dad-local-source/git-projects/04_digital_assett_directory/.tmp/exception-learning-check/dad-exception-learning-check-52726795ce6c/synthetic-public-demo-case-small-sample",
+      "root_alias": "dad-local-source/git-projects",
+      "source": "python_inventory_discovery"
+    },
+    {
+      "contract_present": true,
+      "logical_path": "dad-local-source/git-projects/04_digital_assett_directory/.tmp/exception-learning-check/dad-exception-learning-check-57091297a4bc/synthetic-public-clean",
+      "root_alias": "dad-local-source/git-projects",
+      "source": "python_inventory_discovery"
+    },
+    {
+      "contract_present": true,
+      "logical_path": "dad-local-source/git-projects/04_digital_assett_directory/.tmp/exception-learning-check/dad-exception-learning-check-620e916547da/synthetic-unknown-origin",
+      "root_alias": "dad-local-source/git-projects",
+      "source": "python_inventory_discovery"
+    },
+    {
+      "contract_present": true,
+      "logical_path": "dad-local-source/git-projects/04_digital_assett_directory/.tmp/exception-learning-check/dad-exception-learning-check-69e30f1ca10f/synthetic-public-small-sample",
+      "root_alias": "dad-local-source/git-projects",
+      "source": "python_inventory_discovery"
+    },
+    {
+      "contract_present": true,
+      "logical_path": "dad-local-source/git-projects/04_digital_assett_directory/.tmp/exception-learning-check/dad-exception-learning-check-8262e7d18df5/synthetic-public-semantic-lineage-small-sample",
+      "root_alias": "dad-local-source/git-projects",
+      "source": "python_inventory_discovery"
+    },
+    {
+      "contract_present": true,
+      "logical_path": "dad-local-source/git-projects/04_digital_assett_directory/.tmp/exception-learning-check/dad-exception-learning-check-8bc22bb515c9/synthetic-public-semantic-lineage-small-sample",
+      "root_alias": "dad-local-source/git-projects",
+      "source": "python_inventory_discovery"
+    },
+    {
+      "contract_present": true,
+      "logical_path": "dad-local-source/git-projects/04_digital_assett_directory/.tmp/exception-learning-check/dad-exception-learning-check-90487fcdbc7d/synthetic-unknown-origin",
+      "root_alias": "dad-local-source/git-projects",
+      "source": "python_inventory_discovery"
+    },
+    {
+      "contract_present": true,
+      "logical_path": "dad-local-source/git-projects/04_digital_assett_directory/.tmp/exception-learning-check/dad-exception-learning-check-93d6f8bdf972/synthetic-unknown-origin",
+      "root_alias": "dad-local-source/git-projects",
+      "source": "python_inventory_discovery"
+    },
+    {
+      "contract_present": true,
+      "logical_path": "dad-local-source/git-projects/04_digital_assett_directory/.tmp/exception-learning-check/dad-exception-learning-check-9a881b450221/synthetic-public-confirmed-backfill",
+      "root_alias": "dad-local-source/git-projects",
+      "source": "python_inventory_discovery"
+    },
+    {
+      "contract_present": true,
+      "logical_path": "dad-local-source/git-projects/04_digital_assett_directory/.tmp/exception-learning-check/dad-exception-learning-check-9c50745233a8/synthetic-public-hard-review-small-sample",
+      "root_alias": "dad-local-source/git-projects",
+      "source": "python_inventory_discovery"
+    },
+    {
+      "contract_present": true,
+      "logical_path": "dad-local-source/git-projects/04_digital_assett_directory/.tmp/exception-learning-check/dad-exception-learning-check-affc1c9a4956/synthetic-public-confirmed-backfill",
+      "root_alias": "dad-local-source/git-projects",
+      "source": "python_inventory_discovery"
+    },
+    {
+      "contract_present": true,
+      "logical_path": "dad-local-source/git-projects/04_digital_assett_directory/.tmp/exception-learning-check/dad-exception-learning-check-b9442a234f2a/synthetic-public-clean",
+      "root_alias": "dad-local-source/git-projects",
+      "source": "python_inventory_discovery"
+    },
+    {
+      "contract_present": true,
+      "logical_path": "dad-local-source/git-projects/04_digital_assett_directory/.tmp/exception-learning-check/dad-exception-learning-check-bfac1f723c20/synthetic-public-hard-review-small-sample",
+      "root_alias": "dad-local-source/git-projects",
+      "source": "python_inventory_discovery"
+    },
+    {
+      "contract_present": true,
+      "logical_path": "dad-local-source/git-projects/04_digital_assett_directory/.tmp/exception-learning-check/dad-exception-learning-check-d285e1114dda/synthetic-public-clean",
+      "root_alias": "dad-local-source/git-projects",
+      "source": "python_inventory_discovery"
+    },
+    {
+      "contract_present": true,
+      "logical_path": "dad-local-source/git-projects/04_digital_assett_directory/.tmp/exception-learning-check/dad-exception-learning-check-d4711446ec72/synthetic-public-small-sample",
+      "root_alias": "dad-local-source/git-projects",
+      "source": "python_inventory_discovery"
+    },
+    {
+      "contract_present": true,
+      "logical_path": "dad-local-source/git-projects/04_digital_assett_directory/.tmp/exception-learning-check/dad-exception-learning-check-db3055378e3b/synthetic-public-invalid-fix",
+      "root_alias": "dad-local-source/git-projects",
+      "source": "python_inventory_discovery"
+    },
+    {
+      "contract_present": true,
+      "logical_path": "dad-local-source/git-projects/04_digital_assett_directory/.tmp/exception-learning-check/dad-exception-learning-check-de1ffffcf718/synthetic-public-backfill",
+      "root_alias": "dad-local-source/git-projects",
+      "source": "python_inventory_discovery"
+    },
+    {
+      "contract_present": true,
+      "logical_path": "dad-local-source/git-projects/04_digital_assett_directory/.tmp/exception-learning-check/dad-exception-learning-check-e45cf4b41128/synthetic-public-semantic-lineage-small-sample",
+      "root_alias": "dad-local-source/git-projects",
+      "source": "python_inventory_discovery"
+    },
+    {
+      "contract_present": true,
+      "logical_path": "dad-local-source/git-projects/04_digital_assett_directory/.tmp/exception-learning-check/dad-exception-learning-check-f6273b6460fa/synthetic-public-mixed",
+      "root_alias": "dad-local-source/git-projects",
+      "source": "python_inventory_discovery"
+    },
+    {
+      "contract_present": true,
+      "logical_path": "dad-local-source/git-projects/04_digital_assett_directory/.tmp/exception-learning-check/dad-exception-learning-check-f81f3a46f971/synthetic-public-demo-case-small-sample",
+      "root_alias": "dad-local-source/git-projects",
+      "source": "python_inventory_discovery"
+    },
+    {
       "contract_present": false,
       "logical_path": "dad-local-source/git-projects/90_ai_tooling_and_temp/.ci-contracts/fmg-fractal-capability-ontology-pinned",
       "root_alias": "dad-local-source/git-projects",
@@ -312,8 +492,8 @@
       "source": "python_inventory_discovery"
     }
   ],
-  "python_repo_count": 48,
-  "python_skipped_dir_count": 255,
+  "python_repo_count": 78,
+  "python_skipped_dir_count": 281,
   "python_skipped_dirs": [
     {
       "logical_path": "dad-local-source/git-projects/.git",
@@ -916,30 +1096,6 @@
       "source": "python_inventory_discovery"
     },
     {
-      "logical_path": "dad-local-source/git-projects/00_lawfirm_os/repos/lawfirm-os-intake-seed-clean-20260623/.ruff_cache",
-      "reason": "repo discovery skip directory",
-      "root_alias": "dad-local-source/git-projects",
-      "source": "python_inventory_discovery"
-    },
-    {
-      "logical_path": "dad-local-source/git-projects/00_lawfirm_os/repos/lawfirm-os-intake-seed-clean-20260623/apps/legal-intake-budget/dist",
-      "reason": "repo discovery skip directory",
-      "root_alias": "dad-local-source/git-projects",
-      "source": "python_inventory_discovery"
-    },
-    {
-      "logical_path": "dad-local-source/git-projects/00_lawfirm_os/repos/lawfirm-os-intake-seed-clean-20260623/apps/legal-intake-budget/node_modules",
-      "reason": "repo discovery skip directory",
-      "root_alias": "dad-local-source/git-projects",
-      "source": "python_inventory_discovery"
-    },
-    {
-      "logical_path": "dad-local-source/git-projects/00_lawfirm_os/repos/lawfirm-os-intake-seed-clean-20260623/src/lawfirm_os_intake/__pycache__",
-      "reason": "repo discovery skip directory",
-      "root_alias": "dad-local-source/git-projects",
-      "source": "python_inventory_discovery"
-    },
-    {
       "logical_path": "dad-local-source/git-projects/00_lawfirm_os/repos/lawfirm-os-orchestrator/.git",
       "reason": "repo discovery skip directory",
       "root_alias": "dad-local-source/git-projects",
@@ -1564,6 +1720,186 @@
       "source": "python_inventory_discovery"
     },
     {
+      "logical_path": "dad-local-source/git-projects/04_digital_assett_directory/.tmp/exception-learning-check/dad-exception-learning-check-094fa3d0d8dd/synthetic-public-backfill/.git",
+      "reason": "repo discovery skip directory",
+      "root_alias": "dad-local-source/git-projects",
+      "source": "python_inventory_discovery"
+    },
+    {
+      "logical_path": "dad-local-source/git-projects/04_digital_assett_directory/.tmp/exception-learning-check/dad-exception-learning-check-0b47636833c8/synthetic-public-mixed/.git",
+      "reason": "repo discovery skip directory",
+      "root_alias": "dad-local-source/git-projects",
+      "source": "python_inventory_discovery"
+    },
+    {
+      "logical_path": "dad-local-source/git-projects/04_digital_assett_directory/.tmp/exception-learning-check/dad-exception-learning-check-0f8aedd784d0/synthetic-public-small-sample/.git",
+      "reason": "repo discovery skip directory",
+      "root_alias": "dad-local-source/git-projects",
+      "source": "python_inventory_discovery"
+    },
+    {
+      "logical_path": "dad-local-source/git-projects/04_digital_assett_directory/.tmp/exception-learning-check/dad-exception-learning-check-14bd0a6e0534/synthetic-public-confirmed-backfill/.git",
+      "reason": "repo discovery skip directory",
+      "root_alias": "dad-local-source/git-projects",
+      "source": "python_inventory_discovery"
+    },
+    {
+      "logical_path": "dad-local-source/git-projects/04_digital_assett_directory/.tmp/exception-learning-check/dad-exception-learning-check-1a843bc1c16e/synthetic-public-mixed/.git",
+      "reason": "repo discovery skip directory",
+      "root_alias": "dad-local-source/git-projects",
+      "source": "python_inventory_discovery"
+    },
+    {
+      "logical_path": "dad-local-source/git-projects/04_digital_assett_directory/.tmp/exception-learning-check/dad-exception-learning-check-2678c300c830/synthetic-public-hard-review-small-sample/.git",
+      "reason": "repo discovery skip directory",
+      "root_alias": "dad-local-source/git-projects",
+      "source": "python_inventory_discovery"
+    },
+    {
+      "logical_path": "dad-local-source/git-projects/04_digital_assett_directory/.tmp/exception-learning-check/dad-exception-learning-check-28e1e8f3c03b/synthetic-public-invalid-fix/.git",
+      "reason": "repo discovery skip directory",
+      "root_alias": "dad-local-source/git-projects",
+      "source": "python_inventory_discovery"
+    },
+    {
+      "logical_path": "dad-local-source/git-projects/04_digital_assett_directory/.tmp/exception-learning-check/dad-exception-learning-check-33625d294cc0/synthetic-public-backfill/.git",
+      "reason": "repo discovery skip directory",
+      "root_alias": "dad-local-source/git-projects",
+      "source": "python_inventory_discovery"
+    },
+    {
+      "logical_path": "dad-local-source/git-projects/04_digital_assett_directory/.tmp/exception-learning-check/dad-exception-learning-check-3c659ebf8556/synthetic-public-invalid-fix/.git",
+      "reason": "repo discovery skip directory",
+      "root_alias": "dad-local-source/git-projects",
+      "source": "python_inventory_discovery"
+    },
+    {
+      "logical_path": "dad-local-source/git-projects/04_digital_assett_directory/.tmp/exception-learning-check/dad-exception-learning-check-436277e611ae/synthetic-public-demo-case-small-sample/.git",
+      "reason": "repo discovery skip directory",
+      "root_alias": "dad-local-source/git-projects",
+      "source": "python_inventory_discovery"
+    },
+    {
+      "logical_path": "dad-local-source/git-projects/04_digital_assett_directory/.tmp/exception-learning-check/dad-exception-learning-check-52726795ce6c/synthetic-public-demo-case-small-sample/.git",
+      "reason": "repo discovery skip directory",
+      "root_alias": "dad-local-source/git-projects",
+      "source": "python_inventory_discovery"
+    },
+    {
+      "logical_path": "dad-local-source/git-projects/04_digital_assett_directory/.tmp/exception-learning-check/dad-exception-learning-check-57091297a4bc/synthetic-public-clean/.git",
+      "reason": "repo discovery skip directory",
+      "root_alias": "dad-local-source/git-projects",
+      "source": "python_inventory_discovery"
+    },
+    {
+      "logical_path": "dad-local-source/git-projects/04_digital_assett_directory/.tmp/exception-learning-check/dad-exception-learning-check-620e916547da/synthetic-unknown-origin/.git",
+      "reason": "repo discovery skip directory",
+      "root_alias": "dad-local-source/git-projects",
+      "source": "python_inventory_discovery"
+    },
+    {
+      "logical_path": "dad-local-source/git-projects/04_digital_assett_directory/.tmp/exception-learning-check/dad-exception-learning-check-69e30f1ca10f/synthetic-public-small-sample/.git",
+      "reason": "repo discovery skip directory",
+      "root_alias": "dad-local-source/git-projects",
+      "source": "python_inventory_discovery"
+    },
+    {
+      "logical_path": "dad-local-source/git-projects/04_digital_assett_directory/.tmp/exception-learning-check/dad-exception-learning-check-8262e7d18df5/synthetic-public-semantic-lineage-small-sample/.git",
+      "reason": "repo discovery skip directory",
+      "root_alias": "dad-local-source/git-projects",
+      "source": "python_inventory_discovery"
+    },
+    {
+      "logical_path": "dad-local-source/git-projects/04_digital_assett_directory/.tmp/exception-learning-check/dad-exception-learning-check-8bc22bb515c9/synthetic-public-semantic-lineage-small-sample/.git",
+      "reason": "repo discovery skip directory",
+      "root_alias": "dad-local-source/git-projects",
+      "source": "python_inventory_discovery"
+    },
+    {
+      "logical_path": "dad-local-source/git-projects/04_digital_assett_directory/.tmp/exception-learning-check/dad-exception-learning-check-90487fcdbc7d/synthetic-unknown-origin/.git",
+      "reason": "repo discovery skip directory",
+      "root_alias": "dad-local-source/git-projects",
+      "source": "python_inventory_discovery"
+    },
+    {
+      "logical_path": "dad-local-source/git-projects/04_digital_assett_directory/.tmp/exception-learning-check/dad-exception-learning-check-93d6f8bdf972/synthetic-unknown-origin/.git",
+      "reason": "repo discovery skip directory",
+      "root_alias": "dad-local-source/git-projects",
+      "source": "python_inventory_discovery"
+    },
+    {
+      "logical_path": "dad-local-source/git-projects/04_digital_assett_directory/.tmp/exception-learning-check/dad-exception-learning-check-9a881b450221/synthetic-public-confirmed-backfill/.git",
+      "reason": "repo discovery skip directory",
+      "root_alias": "dad-local-source/git-projects",
+      "source": "python_inventory_discovery"
+    },
+    {
+      "logical_path": "dad-local-source/git-projects/04_digital_assett_directory/.tmp/exception-learning-check/dad-exception-learning-check-9c50745233a8/synthetic-public-hard-review-small-sample/.git",
+      "reason": "repo discovery skip directory",
+      "root_alias": "dad-local-source/git-projects",
+      "source": "python_inventory_discovery"
+    },
+    {
+      "logical_path": "dad-local-source/git-projects/04_digital_assett_directory/.tmp/exception-learning-check/dad-exception-learning-check-affc1c9a4956/synthetic-public-confirmed-backfill/.git",
+      "reason": "repo discovery skip directory",
+      "root_alias": "dad-local-source/git-projects",
+      "source": "python_inventory_discovery"
+    },
+    {
+      "logical_path": "dad-local-source/git-projects/04_digital_assett_directory/.tmp/exception-learning-check/dad-exception-learning-check-b9442a234f2a/synthetic-public-clean/.git",
+      "reason": "repo discovery skip directory",
+      "root_alias": "dad-local-source/git-projects",
+      "source": "python_inventory_discovery"
+    },
+    {
+      "logical_path": "dad-local-source/git-projects/04_digital_assett_directory/.tmp/exception-learning-check/dad-exception-learning-check-bfac1f723c20/synthetic-public-hard-review-small-sample/.git",
+      "reason": "repo discovery skip directory",
+      "root_alias": "dad-local-source/git-projects",
+      "source": "python_inventory_discovery"
+    },
+    {
+      "logical_path": "dad-local-source/git-projects/04_digital_assett_directory/.tmp/exception-learning-check/dad-exception-learning-check-d285e1114dda/synthetic-public-clean/.git",
+      "reason": "repo discovery skip directory",
+      "root_alias": "dad-local-source/git-projects",
+      "source": "python_inventory_discovery"
+    },
+    {
+      "logical_path": "dad-local-source/git-projects/04_digital_assett_directory/.tmp/exception-learning-check/dad-exception-learning-check-d4711446ec72/synthetic-public-small-sample/.git",
+      "reason": "repo discovery skip directory",
+      "root_alias": "dad-local-source/git-projects",
+      "source": "python_inventory_discovery"
+    },
+    {
+      "logical_path": "dad-local-source/git-projects/04_digital_assett_directory/.tmp/exception-learning-check/dad-exception-learning-check-db3055378e3b/synthetic-public-invalid-fix/.git",
+      "reason": "repo discovery skip directory",
+      "root_alias": "dad-local-source/git-projects",
+      "source": "python_inventory_discovery"
+    },
+    {
+      "logical_path": "dad-local-source/git-projects/04_digital_assett_directory/.tmp/exception-learning-check/dad-exception-learning-check-de1ffffcf718/synthetic-public-backfill/.git",
+      "reason": "repo discovery skip directory",
+      "root_alias": "dad-local-source/git-projects",
+      "source": "python_inventory_discovery"
+    },
+    {
+      "logical_path": "dad-local-source/git-projects/04_digital_assett_directory/.tmp/exception-learning-check/dad-exception-learning-check-e45cf4b41128/synthetic-public-semantic-lineage-small-sample/.git",
+      "reason": "repo discovery skip directory",
+      "root_alias": "dad-local-source/git-projects",
+      "source": "python_inventory_discovery"
+    },
+    {
+      "logical_path": "dad-local-source/git-projects/04_digital_assett_directory/.tmp/exception-learning-check/dad-exception-learning-check-f6273b6460fa/synthetic-public-mixed/.git",
+      "reason": "repo discovery skip directory",
+      "root_alias": "dad-local-source/git-projects",
+      "source": "python_inventory_discovery"
+    },
+    {
+      "logical_path": "dad-local-source/git-projects/04_digital_assett_directory/.tmp/exception-learning-check/dad-exception-learning-check-f81f3a46f971/synthetic-public-demo-case-small-sample/.git",
+      "reason": "repo discovery skip directory",
+      "root_alias": "dad-local-source/git-projects",
+      "source": "python_inventory_discovery"
+    },
+    {
       "logical_path": "dad-local-source/git-projects/04_digital_assett_directory/.venv",
       "reason": "repo discovery skip directory",
       "root_alias": "dad-local-source/git-projects",
@@ -1846,12 +2182,12 @@
       "source": "python_inventory_discovery"
     }
   ],
-  "rust_contract_issue_code_count": 82,
+  "rust_contract_issue_code_count": 292,
   "rust_contract_parse_status_counts": {
     "missing": 40,
-    "present_parseable": 8
+    "present_parseable": 38
   },
-  "rust_contract_structural_fail_count": 47,
+  "rust_contract_structural_fail_count": 77,
   "rust_contract_structural_pass_count": 1,
   "rust_records": [
     {
@@ -2448,6 +2784,576 @@
     },
     {
       "contract_issue_codes": [
+        "contract_missing_capture_surface_version",
+        "contract_missing_cli_fallback",
+        "contract_missing_raw_checkout_fallback",
+        "contract_missing_schema_version",
+        "contract_missing_stable_user_shim",
+        "contract_missing_windows_user_shim",
+        "contract_stable_shim_not_before_raw_checkout"
+      ],
+      "contract_parse_status": "present_parseable",
+      "contract_present": true,
+      "contract_present_field_status": "ok",
+      "contract_structural_field_status": "ok",
+      "contract_structural_pass": false,
+      "logical_path": "dad-local-source/git-projects/04_digital_assett_directory/.tmp/exception-learning-check/dad-exception-learning-check-094fa3d0d8dd/synthetic-public-backfill",
+      "root_alias": "dad-local-source/git-projects",
+      "source": "rust_repo_inventory_probe"
+    },
+    {
+      "contract_issue_codes": [
+        "contract_missing_capture_surface_version",
+        "contract_missing_cli_fallback",
+        "contract_missing_raw_checkout_fallback",
+        "contract_missing_schema_version",
+        "contract_missing_stable_user_shim",
+        "contract_missing_windows_user_shim",
+        "contract_stable_shim_not_before_raw_checkout"
+      ],
+      "contract_parse_status": "present_parseable",
+      "contract_present": true,
+      "contract_present_field_status": "ok",
+      "contract_structural_field_status": "ok",
+      "contract_structural_pass": false,
+      "logical_path": "dad-local-source/git-projects/04_digital_assett_directory/.tmp/exception-learning-check/dad-exception-learning-check-0b47636833c8/synthetic-public-mixed",
+      "root_alias": "dad-local-source/git-projects",
+      "source": "rust_repo_inventory_probe"
+    },
+    {
+      "contract_issue_codes": [
+        "contract_missing_capture_surface_version",
+        "contract_missing_cli_fallback",
+        "contract_missing_raw_checkout_fallback",
+        "contract_missing_schema_version",
+        "contract_missing_stable_user_shim",
+        "contract_missing_windows_user_shim",
+        "contract_stable_shim_not_before_raw_checkout"
+      ],
+      "contract_parse_status": "present_parseable",
+      "contract_present": true,
+      "contract_present_field_status": "ok",
+      "contract_structural_field_status": "ok",
+      "contract_structural_pass": false,
+      "logical_path": "dad-local-source/git-projects/04_digital_assett_directory/.tmp/exception-learning-check/dad-exception-learning-check-0f8aedd784d0/synthetic-public-small-sample",
+      "root_alias": "dad-local-source/git-projects",
+      "source": "rust_repo_inventory_probe"
+    },
+    {
+      "contract_issue_codes": [
+        "contract_missing_capture_surface_version",
+        "contract_missing_cli_fallback",
+        "contract_missing_raw_checkout_fallback",
+        "contract_missing_schema_version",
+        "contract_missing_stable_user_shim",
+        "contract_missing_windows_user_shim",
+        "contract_stable_shim_not_before_raw_checkout"
+      ],
+      "contract_parse_status": "present_parseable",
+      "contract_present": true,
+      "contract_present_field_status": "ok",
+      "contract_structural_field_status": "ok",
+      "contract_structural_pass": false,
+      "logical_path": "dad-local-source/git-projects/04_digital_assett_directory/.tmp/exception-learning-check/dad-exception-learning-check-14bd0a6e0534/synthetic-public-confirmed-backfill",
+      "root_alias": "dad-local-source/git-projects",
+      "source": "rust_repo_inventory_probe"
+    },
+    {
+      "contract_issue_codes": [
+        "contract_missing_capture_surface_version",
+        "contract_missing_cli_fallback",
+        "contract_missing_raw_checkout_fallback",
+        "contract_missing_schema_version",
+        "contract_missing_stable_user_shim",
+        "contract_missing_windows_user_shim",
+        "contract_stable_shim_not_before_raw_checkout"
+      ],
+      "contract_parse_status": "present_parseable",
+      "contract_present": true,
+      "contract_present_field_status": "ok",
+      "contract_structural_field_status": "ok",
+      "contract_structural_pass": false,
+      "logical_path": "dad-local-source/git-projects/04_digital_assett_directory/.tmp/exception-learning-check/dad-exception-learning-check-1a843bc1c16e/synthetic-public-mixed",
+      "root_alias": "dad-local-source/git-projects",
+      "source": "rust_repo_inventory_probe"
+    },
+    {
+      "contract_issue_codes": [
+        "contract_missing_capture_surface_version",
+        "contract_missing_cli_fallback",
+        "contract_missing_raw_checkout_fallback",
+        "contract_missing_schema_version",
+        "contract_missing_stable_user_shim",
+        "contract_missing_windows_user_shim",
+        "contract_stable_shim_not_before_raw_checkout"
+      ],
+      "contract_parse_status": "present_parseable",
+      "contract_present": true,
+      "contract_present_field_status": "ok",
+      "contract_structural_field_status": "ok",
+      "contract_structural_pass": false,
+      "logical_path": "dad-local-source/git-projects/04_digital_assett_directory/.tmp/exception-learning-check/dad-exception-learning-check-2678c300c830/synthetic-public-hard-review-small-sample",
+      "root_alias": "dad-local-source/git-projects",
+      "source": "rust_repo_inventory_probe"
+    },
+    {
+      "contract_issue_codes": [
+        "contract_missing_capture_surface_version",
+        "contract_missing_cli_fallback",
+        "contract_missing_raw_checkout_fallback",
+        "contract_missing_schema_version",
+        "contract_missing_stable_user_shim",
+        "contract_missing_windows_user_shim",
+        "contract_stable_shim_not_before_raw_checkout"
+      ],
+      "contract_parse_status": "present_parseable",
+      "contract_present": true,
+      "contract_present_field_status": "ok",
+      "contract_structural_field_status": "ok",
+      "contract_structural_pass": false,
+      "logical_path": "dad-local-source/git-projects/04_digital_assett_directory/.tmp/exception-learning-check/dad-exception-learning-check-28e1e8f3c03b/synthetic-public-invalid-fix",
+      "root_alias": "dad-local-source/git-projects",
+      "source": "rust_repo_inventory_probe"
+    },
+    {
+      "contract_issue_codes": [
+        "contract_missing_capture_surface_version",
+        "contract_missing_cli_fallback",
+        "contract_missing_raw_checkout_fallback",
+        "contract_missing_schema_version",
+        "contract_missing_stable_user_shim",
+        "contract_missing_windows_user_shim",
+        "contract_stable_shim_not_before_raw_checkout"
+      ],
+      "contract_parse_status": "present_parseable",
+      "contract_present": true,
+      "contract_present_field_status": "ok",
+      "contract_structural_field_status": "ok",
+      "contract_structural_pass": false,
+      "logical_path": "dad-local-source/git-projects/04_digital_assett_directory/.tmp/exception-learning-check/dad-exception-learning-check-33625d294cc0/synthetic-public-backfill",
+      "root_alias": "dad-local-source/git-projects",
+      "source": "rust_repo_inventory_probe"
+    },
+    {
+      "contract_issue_codes": [
+        "contract_missing_capture_surface_version",
+        "contract_missing_cli_fallback",
+        "contract_missing_raw_checkout_fallback",
+        "contract_missing_schema_version",
+        "contract_missing_stable_user_shim",
+        "contract_missing_windows_user_shim",
+        "contract_stable_shim_not_before_raw_checkout"
+      ],
+      "contract_parse_status": "present_parseable",
+      "contract_present": true,
+      "contract_present_field_status": "ok",
+      "contract_structural_field_status": "ok",
+      "contract_structural_pass": false,
+      "logical_path": "dad-local-source/git-projects/04_digital_assett_directory/.tmp/exception-learning-check/dad-exception-learning-check-3c659ebf8556/synthetic-public-invalid-fix",
+      "root_alias": "dad-local-source/git-projects",
+      "source": "rust_repo_inventory_probe"
+    },
+    {
+      "contract_issue_codes": [
+        "contract_missing_capture_surface_version",
+        "contract_missing_cli_fallback",
+        "contract_missing_raw_checkout_fallback",
+        "contract_missing_schema_version",
+        "contract_missing_stable_user_shim",
+        "contract_missing_windows_user_shim",
+        "contract_stable_shim_not_before_raw_checkout"
+      ],
+      "contract_parse_status": "present_parseable",
+      "contract_present": true,
+      "contract_present_field_status": "ok",
+      "contract_structural_field_status": "ok",
+      "contract_structural_pass": false,
+      "logical_path": "dad-local-source/git-projects/04_digital_assett_directory/.tmp/exception-learning-check/dad-exception-learning-check-436277e611ae/synthetic-public-demo-case-small-sample",
+      "root_alias": "dad-local-source/git-projects",
+      "source": "rust_repo_inventory_probe"
+    },
+    {
+      "contract_issue_codes": [
+        "contract_missing_capture_surface_version",
+        "contract_missing_cli_fallback",
+        "contract_missing_raw_checkout_fallback",
+        "contract_missing_schema_version",
+        "contract_missing_stable_user_shim",
+        "contract_missing_windows_user_shim",
+        "contract_stable_shim_not_before_raw_checkout"
+      ],
+      "contract_parse_status": "present_parseable",
+      "contract_present": true,
+      "contract_present_field_status": "ok",
+      "contract_structural_field_status": "ok",
+      "contract_structural_pass": false,
+      "logical_path": "dad-local-source/git-projects/04_digital_assett_directory/.tmp/exception-learning-check/dad-exception-learning-check-52726795ce6c/synthetic-public-demo-case-small-sample",
+      "root_alias": "dad-local-source/git-projects",
+      "source": "rust_repo_inventory_probe"
+    },
+    {
+      "contract_issue_codes": [
+        "contract_missing_capture_surface_version",
+        "contract_missing_cli_fallback",
+        "contract_missing_raw_checkout_fallback",
+        "contract_missing_schema_version",
+        "contract_missing_stable_user_shim",
+        "contract_missing_windows_user_shim",
+        "contract_stable_shim_not_before_raw_checkout"
+      ],
+      "contract_parse_status": "present_parseable",
+      "contract_present": true,
+      "contract_present_field_status": "ok",
+      "contract_structural_field_status": "ok",
+      "contract_structural_pass": false,
+      "logical_path": "dad-local-source/git-projects/04_digital_assett_directory/.tmp/exception-learning-check/dad-exception-learning-check-57091297a4bc/synthetic-public-clean",
+      "root_alias": "dad-local-source/git-projects",
+      "source": "rust_repo_inventory_probe"
+    },
+    {
+      "contract_issue_codes": [
+        "contract_missing_capture_surface_version",
+        "contract_missing_cli_fallback",
+        "contract_missing_raw_checkout_fallback",
+        "contract_missing_schema_version",
+        "contract_missing_stable_user_shim",
+        "contract_missing_windows_user_shim",
+        "contract_stable_shim_not_before_raw_checkout"
+      ],
+      "contract_parse_status": "present_parseable",
+      "contract_present": true,
+      "contract_present_field_status": "ok",
+      "contract_structural_field_status": "ok",
+      "contract_structural_pass": false,
+      "logical_path": "dad-local-source/git-projects/04_digital_assett_directory/.tmp/exception-learning-check/dad-exception-learning-check-620e916547da/synthetic-unknown-origin",
+      "root_alias": "dad-local-source/git-projects",
+      "source": "rust_repo_inventory_probe"
+    },
+    {
+      "contract_issue_codes": [
+        "contract_missing_capture_surface_version",
+        "contract_missing_cli_fallback",
+        "contract_missing_raw_checkout_fallback",
+        "contract_missing_schema_version",
+        "contract_missing_stable_user_shim",
+        "contract_missing_windows_user_shim",
+        "contract_stable_shim_not_before_raw_checkout"
+      ],
+      "contract_parse_status": "present_parseable",
+      "contract_present": true,
+      "contract_present_field_status": "ok",
+      "contract_structural_field_status": "ok",
+      "contract_structural_pass": false,
+      "logical_path": "dad-local-source/git-projects/04_digital_assett_directory/.tmp/exception-learning-check/dad-exception-learning-check-69e30f1ca10f/synthetic-public-small-sample",
+      "root_alias": "dad-local-source/git-projects",
+      "source": "rust_repo_inventory_probe"
+    },
+    {
+      "contract_issue_codes": [
+        "contract_missing_capture_surface_version",
+        "contract_missing_cli_fallback",
+        "contract_missing_raw_checkout_fallback",
+        "contract_missing_schema_version",
+        "contract_missing_stable_user_shim",
+        "contract_missing_windows_user_shim",
+        "contract_stable_shim_not_before_raw_checkout"
+      ],
+      "contract_parse_status": "present_parseable",
+      "contract_present": true,
+      "contract_present_field_status": "ok",
+      "contract_structural_field_status": "ok",
+      "contract_structural_pass": false,
+      "logical_path": "dad-local-source/git-projects/04_digital_assett_directory/.tmp/exception-learning-check/dad-exception-learning-check-8262e7d18df5/synthetic-public-semantic-lineage-small-sample",
+      "root_alias": "dad-local-source/git-projects",
+      "source": "rust_repo_inventory_probe"
+    },
+    {
+      "contract_issue_codes": [
+        "contract_missing_capture_surface_version",
+        "contract_missing_cli_fallback",
+        "contract_missing_raw_checkout_fallback",
+        "contract_missing_schema_version",
+        "contract_missing_stable_user_shim",
+        "contract_missing_windows_user_shim",
+        "contract_stable_shim_not_before_raw_checkout"
+      ],
+      "contract_parse_status": "present_parseable",
+      "contract_present": true,
+      "contract_present_field_status": "ok",
+      "contract_structural_field_status": "ok",
+      "contract_structural_pass": false,
+      "logical_path": "dad-local-source/git-projects/04_digital_assett_directory/.tmp/exception-learning-check/dad-exception-learning-check-8bc22bb515c9/synthetic-public-semantic-lineage-small-sample",
+      "root_alias": "dad-local-source/git-projects",
+      "source": "rust_repo_inventory_probe"
+    },
+    {
+      "contract_issue_codes": [
+        "contract_missing_capture_surface_version",
+        "contract_missing_cli_fallback",
+        "contract_missing_raw_checkout_fallback",
+        "contract_missing_schema_version",
+        "contract_missing_stable_user_shim",
+        "contract_missing_windows_user_shim",
+        "contract_stable_shim_not_before_raw_checkout"
+      ],
+      "contract_parse_status": "present_parseable",
+      "contract_present": true,
+      "contract_present_field_status": "ok",
+      "contract_structural_field_status": "ok",
+      "contract_structural_pass": false,
+      "logical_path": "dad-local-source/git-projects/04_digital_assett_directory/.tmp/exception-learning-check/dad-exception-learning-check-90487fcdbc7d/synthetic-unknown-origin",
+      "root_alias": "dad-local-source/git-projects",
+      "source": "rust_repo_inventory_probe"
+    },
+    {
+      "contract_issue_codes": [
+        "contract_missing_capture_surface_version",
+        "contract_missing_cli_fallback",
+        "contract_missing_raw_checkout_fallback",
+        "contract_missing_schema_version",
+        "contract_missing_stable_user_shim",
+        "contract_missing_windows_user_shim",
+        "contract_stable_shim_not_before_raw_checkout"
+      ],
+      "contract_parse_status": "present_parseable",
+      "contract_present": true,
+      "contract_present_field_status": "ok",
+      "contract_structural_field_status": "ok",
+      "contract_structural_pass": false,
+      "logical_path": "dad-local-source/git-projects/04_digital_assett_directory/.tmp/exception-learning-check/dad-exception-learning-check-93d6f8bdf972/synthetic-unknown-origin",
+      "root_alias": "dad-local-source/git-projects",
+      "source": "rust_repo_inventory_probe"
+    },
+    {
+      "contract_issue_codes": [
+        "contract_missing_capture_surface_version",
+        "contract_missing_cli_fallback",
+        "contract_missing_raw_checkout_fallback",
+        "contract_missing_schema_version",
+        "contract_missing_stable_user_shim",
+        "contract_missing_windows_user_shim",
+        "contract_stable_shim_not_before_raw_checkout"
+      ],
+      "contract_parse_status": "present_parseable",
+      "contract_present": true,
+      "contract_present_field_status": "ok",
+      "contract_structural_field_status": "ok",
+      "contract_structural_pass": false,
+      "logical_path": "dad-local-source/git-projects/04_digital_assett_directory/.tmp/exception-learning-check/dad-exception-learning-check-9a881b450221/synthetic-public-confirmed-backfill",
+      "root_alias": "dad-local-source/git-projects",
+      "source": "rust_repo_inventory_probe"
+    },
+    {
+      "contract_issue_codes": [
+        "contract_missing_capture_surface_version",
+        "contract_missing_cli_fallback",
+        "contract_missing_raw_checkout_fallback",
+        "contract_missing_schema_version",
+        "contract_missing_stable_user_shim",
+        "contract_missing_windows_user_shim",
+        "contract_stable_shim_not_before_raw_checkout"
+      ],
+      "contract_parse_status": "present_parseable",
+      "contract_present": true,
+      "contract_present_field_status": "ok",
+      "contract_structural_field_status": "ok",
+      "contract_structural_pass": false,
+      "logical_path": "dad-local-source/git-projects/04_digital_assett_directory/.tmp/exception-learning-check/dad-exception-learning-check-9c50745233a8/synthetic-public-hard-review-small-sample",
+      "root_alias": "dad-local-source/git-projects",
+      "source": "rust_repo_inventory_probe"
+    },
+    {
+      "contract_issue_codes": [
+        "contract_missing_capture_surface_version",
+        "contract_missing_cli_fallback",
+        "contract_missing_raw_checkout_fallback",
+        "contract_missing_schema_version",
+        "contract_missing_stable_user_shim",
+        "contract_missing_windows_user_shim",
+        "contract_stable_shim_not_before_raw_checkout"
+      ],
+      "contract_parse_status": "present_parseable",
+      "contract_present": true,
+      "contract_present_field_status": "ok",
+      "contract_structural_field_status": "ok",
+      "contract_structural_pass": false,
+      "logical_path": "dad-local-source/git-projects/04_digital_assett_directory/.tmp/exception-learning-check/dad-exception-learning-check-affc1c9a4956/synthetic-public-confirmed-backfill",
+      "root_alias": "dad-local-source/git-projects",
+      "source": "rust_repo_inventory_probe"
+    },
+    {
+      "contract_issue_codes": [
+        "contract_missing_capture_surface_version",
+        "contract_missing_cli_fallback",
+        "contract_missing_raw_checkout_fallback",
+        "contract_missing_schema_version",
+        "contract_missing_stable_user_shim",
+        "contract_missing_windows_user_shim",
+        "contract_stable_shim_not_before_raw_checkout"
+      ],
+      "contract_parse_status": "present_parseable",
+      "contract_present": true,
+      "contract_present_field_status": "ok",
+      "contract_structural_field_status": "ok",
+      "contract_structural_pass": false,
+      "logical_path": "dad-local-source/git-projects/04_digital_assett_directory/.tmp/exception-learning-check/dad-exception-learning-check-b9442a234f2a/synthetic-public-clean",
+      "root_alias": "dad-local-source/git-projects",
+      "source": "rust_repo_inventory_probe"
+    },
+    {
+      "contract_issue_codes": [
+        "contract_missing_capture_surface_version",
+        "contract_missing_cli_fallback",
+        "contract_missing_raw_checkout_fallback",
+        "contract_missing_schema_version",
+        "contract_missing_stable_user_shim",
+        "contract_missing_windows_user_shim",
+        "contract_stable_shim_not_before_raw_checkout"
+      ],
+      "contract_parse_status": "present_parseable",
+      "contract_present": true,
+      "contract_present_field_status": "ok",
+      "contract_structural_field_status": "ok",
+      "contract_structural_pass": false,
+      "logical_path": "dad-local-source/git-projects/04_digital_assett_directory/.tmp/exception-learning-check/dad-exception-learning-check-bfac1f723c20/synthetic-public-hard-review-small-sample",
+      "root_alias": "dad-local-source/git-projects",
+      "source": "rust_repo_inventory_probe"
+    },
+    {
+      "contract_issue_codes": [
+        "contract_missing_capture_surface_version",
+        "contract_missing_cli_fallback",
+        "contract_missing_raw_checkout_fallback",
+        "contract_missing_schema_version",
+        "contract_missing_stable_user_shim",
+        "contract_missing_windows_user_shim",
+        "contract_stable_shim_not_before_raw_checkout"
+      ],
+      "contract_parse_status": "present_parseable",
+      "contract_present": true,
+      "contract_present_field_status": "ok",
+      "contract_structural_field_status": "ok",
+      "contract_structural_pass": false,
+      "logical_path": "dad-local-source/git-projects/04_digital_assett_directory/.tmp/exception-learning-check/dad-exception-learning-check-d285e1114dda/synthetic-public-clean",
+      "root_alias": "dad-local-source/git-projects",
+      "source": "rust_repo_inventory_probe"
+    },
+    {
+      "contract_issue_codes": [
+        "contract_missing_capture_surface_version",
+        "contract_missing_cli_fallback",
+        "contract_missing_raw_checkout_fallback",
+        "contract_missing_schema_version",
+        "contract_missing_stable_user_shim",
+        "contract_missing_windows_user_shim",
+        "contract_stable_shim_not_before_raw_checkout"
+      ],
+      "contract_parse_status": "present_parseable",
+      "contract_present": true,
+      "contract_present_field_status": "ok",
+      "contract_structural_field_status": "ok",
+      "contract_structural_pass": false,
+      "logical_path": "dad-local-source/git-projects/04_digital_assett_directory/.tmp/exception-learning-check/dad-exception-learning-check-d4711446ec72/synthetic-public-small-sample",
+      "root_alias": "dad-local-source/git-projects",
+      "source": "rust_repo_inventory_probe"
+    },
+    {
+      "contract_issue_codes": [
+        "contract_missing_capture_surface_version",
+        "contract_missing_cli_fallback",
+        "contract_missing_raw_checkout_fallback",
+        "contract_missing_schema_version",
+        "contract_missing_stable_user_shim",
+        "contract_missing_windows_user_shim",
+        "contract_stable_shim_not_before_raw_checkout"
+      ],
+      "contract_parse_status": "present_parseable",
+      "contract_present": true,
+      "contract_present_field_status": "ok",
+      "contract_structural_field_status": "ok",
+      "contract_structural_pass": false,
+      "logical_path": "dad-local-source/git-projects/04_digital_assett_directory/.tmp/exception-learning-check/dad-exception-learning-check-db3055378e3b/synthetic-public-invalid-fix",
+      "root_alias": "dad-local-source/git-projects",
+      "source": "rust_repo_inventory_probe"
+    },
+    {
+      "contract_issue_codes": [
+        "contract_missing_capture_surface_version",
+        "contract_missing_cli_fallback",
+        "contract_missing_raw_checkout_fallback",
+        "contract_missing_schema_version",
+        "contract_missing_stable_user_shim",
+        "contract_missing_windows_user_shim",
+        "contract_stable_shim_not_before_raw_checkout"
+      ],
+      "contract_parse_status": "present_parseable",
+      "contract_present": true,
+      "contract_present_field_status": "ok",
+      "contract_structural_field_status": "ok",
+      "contract_structural_pass": false,
+      "logical_path": "dad-local-source/git-projects/04_digital_assett_directory/.tmp/exception-learning-check/dad-exception-learning-check-de1ffffcf718/synthetic-public-backfill",
+      "root_alias": "dad-local-source/git-projects",
+      "source": "rust_repo_inventory_probe"
+    },
+    {
+      "contract_issue_codes": [
+        "contract_missing_capture_surface_version",
+        "contract_missing_cli_fallback",
+        "contract_missing_raw_checkout_fallback",
+        "contract_missing_schema_version",
+        "contract_missing_stable_user_shim",
+        "contract_missing_windows_user_shim",
+        "contract_stable_shim_not_before_raw_checkout"
+      ],
+      "contract_parse_status": "present_parseable",
+      "contract_present": true,
+      "contract_present_field_status": "ok",
+      "contract_structural_field_status": "ok",
+      "contract_structural_pass": false,
+      "logical_path": "dad-local-source/git-projects/04_digital_assett_directory/.tmp/exception-learning-check/dad-exception-learning-check-e45cf4b41128/synthetic-public-semantic-lineage-small-sample",
+      "root_alias": "dad-local-source/git-projects",
+      "source": "rust_repo_inventory_probe"
+    },
+    {
+      "contract_issue_codes": [
+        "contract_missing_capture_surface_version",
+        "contract_missing_cli_fallback",
+        "contract_missing_raw_checkout_fallback",
+        "contract_missing_schema_version",
+        "contract_missing_stable_user_shim",
+        "contract_missing_windows_user_shim",
+        "contract_stable_shim_not_before_raw_checkout"
+      ],
+      "contract_parse_status": "present_parseable",
+      "contract_present": true,
+      "contract_present_field_status": "ok",
+      "contract_structural_field_status": "ok",
+      "contract_structural_pass": false,
+      "logical_path": "dad-local-source/git-projects/04_digital_assett_directory/.tmp/exception-learning-check/dad-exception-learning-check-f6273b6460fa/synthetic-public-mixed",
+      "root_alias": "dad-local-source/git-projects",
+      "source": "rust_repo_inventory_probe"
+    },
+    {
+      "contract_issue_codes": [
+        "contract_missing_capture_surface_version",
+        "contract_missing_cli_fallback",
+        "contract_missing_raw_checkout_fallback",
+        "contract_missing_schema_version",
+        "contract_missing_stable_user_shim",
+        "contract_missing_windows_user_shim",
+        "contract_stable_shim_not_before_raw_checkout"
+      ],
+      "contract_parse_status": "present_parseable",
+      "contract_present": true,
+      "contract_present_field_status": "ok",
+      "contract_structural_field_status": "ok",
+      "contract_structural_pass": false,
+      "logical_path": "dad-local-source/git-projects/04_digital_assett_directory/.tmp/exception-learning-check/dad-exception-learning-check-f81f3a46f971/synthetic-public-demo-case-small-sample",
+      "root_alias": "dad-local-source/git-projects",
+      "source": "rust_repo_inventory_probe"
+    },
+    {
+      "contract_issue_codes": [
         "contract_missing"
       ],
       "contract_parse_status": "missing",
@@ -2512,8 +3418,8 @@
       "source": "rust_repo_inventory_probe"
     }
   ],
-  "rust_repo_count": 48,
-  "rust_skipped_dir_count": 255,
+  "rust_repo_count": 78,
+  "rust_skipped_dir_count": 281,
   "rust_skipped_dirs": [
     {
       "logical_path": "dad-local-source/git-projects/.git",
@@ -3116,30 +4022,6 @@
       "source": "rust_repo_inventory_probe"
     },
     {
-      "logical_path": "dad-local-source/git-projects/00_lawfirm_os/repos/lawfirm-os-intake-seed-clean-20260623/.ruff_cache",
-      "reason": "repo discovery skip directory",
-      "root_alias": "dad-local-source/git-projects",
-      "source": "rust_repo_inventory_probe"
-    },
-    {
-      "logical_path": "dad-local-source/git-projects/00_lawfirm_os/repos/lawfirm-os-intake-seed-clean-20260623/apps/legal-intake-budget/dist",
-      "reason": "repo discovery skip directory",
-      "root_alias": "dad-local-source/git-projects",
-      "source": "rust_repo_inventory_probe"
-    },
-    {
-      "logical_path": "dad-local-source/git-projects/00_lawfirm_os/repos/lawfirm-os-intake-seed-clean-20260623/apps/legal-intake-budget/node_modules",
-      "reason": "repo discovery skip directory",
-      "root_alias": "dad-local-source/git-projects",
-      "source": "rust_repo_inventory_probe"
-    },
-    {
-      "logical_path": "dad-local-source/git-projects/00_lawfirm_os/repos/lawfirm-os-intake-seed-clean-20260623/src/lawfirm_os_intake/__pycache__",
-      "reason": "repo discovery skip directory",
-      "root_alias": "dad-local-source/git-projects",
-      "source": "rust_repo_inventory_probe"
-    },
-    {
       "logical_path": "dad-local-source/git-projects/00_lawfirm_os/repos/lawfirm-os-orchestrator/.git",
       "reason": "repo discovery skip directory",
       "root_alias": "dad-local-source/git-projects",
@@ -3759,6 +4641,186 @@
     },
     {
       "logical_path": "dad-local-source/git-projects/04_digital_assett_directory/.ruff_cache",
+      "reason": "repo discovery skip directory",
+      "root_alias": "dad-local-source/git-projects",
+      "source": "rust_repo_inventory_probe"
+    },
+    {
+      "logical_path": "dad-local-source/git-projects/04_digital_assett_directory/.tmp/exception-learning-check/dad-exception-learning-check-094fa3d0d8dd/synthetic-public-backfill/.git",
+      "reason": "repo discovery skip directory",
+      "root_alias": "dad-local-source/git-projects",
+      "source": "rust_repo_inventory_probe"
+    },
+    {
+      "logical_path": "dad-local-source/git-projects/04_digital_assett_directory/.tmp/exception-learning-check/dad-exception-learning-check-0b47636833c8/synthetic-public-mixed/.git",
+      "reason": "repo discovery skip directory",
+      "root_alias": "dad-local-source/git-projects",
+      "source": "rust_repo_inventory_probe"
+    },
+    {
+      "logical_path": "dad-local-source/git-projects/04_digital_assett_directory/.tmp/exception-learning-check/dad-exception-learning-check-0f8aedd784d0/synthetic-public-small-sample/.git",
+      "reason": "repo discovery skip directory",
+      "root_alias": "dad-local-source/git-projects",
+      "source": "rust_repo_inventory_probe"
+    },
+    {
+      "logical_path": "dad-local-source/git-projects/04_digital_assett_directory/.tmp/exception-learning-check/dad-exception-learning-check-14bd0a6e0534/synthetic-public-confirmed-backfill/.git",
+      "reason": "repo discovery skip directory",
+      "root_alias": "dad-local-source/git-projects",
+      "source": "rust_repo_inventory_probe"
+    },
+    {
+      "logical_path": "dad-local-source/git-projects/04_digital_assett_directory/.tmp/exception-learning-check/dad-exception-learning-check-1a843bc1c16e/synthetic-public-mixed/.git",
+      "reason": "repo discovery skip directory",
+      "root_alias": "dad-local-source/git-projects",
+      "source": "rust_repo_inventory_probe"
+    },
+    {
+      "logical_path": "dad-local-source/git-projects/04_digital_assett_directory/.tmp/exception-learning-check/dad-exception-learning-check-2678c300c830/synthetic-public-hard-review-small-sample/.git",
+      "reason": "repo discovery skip directory",
+      "root_alias": "dad-local-source/git-projects",
+      "source": "rust_repo_inventory_probe"
+    },
+    {
+      "logical_path": "dad-local-source/git-projects/04_digital_assett_directory/.tmp/exception-learning-check/dad-exception-learning-check-28e1e8f3c03b/synthetic-public-invalid-fix/.git",
+      "reason": "repo discovery skip directory",
+      "root_alias": "dad-local-source/git-projects",
+      "source": "rust_repo_inventory_probe"
+    },
+    {
+      "logical_path": "dad-local-source/git-projects/04_digital_assett_directory/.tmp/exception-learning-check/dad-exception-learning-check-33625d294cc0/synthetic-public-backfill/.git",
+      "reason": "repo discovery skip directory",
+      "root_alias": "dad-local-source/git-projects",
+      "source": "rust_repo_inventory_probe"
+    },
+    {
+      "logical_path": "dad-local-source/git-projects/04_digital_assett_directory/.tmp/exception-learning-check/dad-exception-learning-check-3c659ebf8556/synthetic-public-invalid-fix/.git",
+      "reason": "repo discovery skip directory",
+      "root_alias": "dad-local-source/git-projects",
+      "source": "rust_repo_inventory_probe"
+    },
+    {
+      "logical_path": "dad-local-source/git-projects/04_digital_assett_directory/.tmp/exception-learning-check/dad-exception-learning-check-436277e611ae/synthetic-public-demo-case-small-sample/.git",
+      "reason": "repo discovery skip directory",
+      "root_alias": "dad-local-source/git-projects",
+      "source": "rust_repo_inventory_probe"
+    },
+    {
+      "logical_path": "dad-local-source/git-projects/04_digital_assett_directory/.tmp/exception-learning-check/dad-exception-learning-check-52726795ce6c/synthetic-public-demo-case-small-sample/.git",
+      "reason": "repo discovery skip directory",
+      "root_alias": "dad-local-source/git-projects",
+      "source": "rust_repo_inventory_probe"
+    },
+    {
+      "logical_path": "dad-local-source/git-projects/04_digital_assett_directory/.tmp/exception-learning-check/dad-exception-learning-check-57091297a4bc/synthetic-public-clean/.git",
+      "reason": "repo discovery skip directory",
+      "root_alias": "dad-local-source/git-projects",
+      "source": "rust_repo_inventory_probe"
+    },
+    {
+      "logical_path": "dad-local-source/git-projects/04_digital_assett_directory/.tmp/exception-learning-check/dad-exception-learning-check-620e916547da/synthetic-unknown-origin/.git",
+      "reason": "repo discovery skip directory",
+      "root_alias": "dad-local-source/git-projects",
+      "source": "rust_repo_inventory_probe"
+    },
+    {
+      "logical_path": "dad-local-source/git-projects/04_digital_assett_directory/.tmp/exception-learning-check/dad-exception-learning-check-69e30f1ca10f/synthetic-public-small-sample/.git",
+      "reason": "repo discovery skip directory",
+      "root_alias": "dad-local-source/git-projects",
+      "source": "rust_repo_inventory_probe"
+    },
+    {
+      "logical_path": "dad-local-source/git-projects/04_digital_assett_directory/.tmp/exception-learning-check/dad-exception-learning-check-8262e7d18df5/synthetic-public-semantic-lineage-small-sample/.git",
+      "reason": "repo discovery skip directory",
+      "root_alias": "dad-local-source/git-projects",
+      "source": "rust_repo_inventory_probe"
+    },
+    {
+      "logical_path": "dad-local-source/git-projects/04_digital_assett_directory/.tmp/exception-learning-check/dad-exception-learning-check-8bc22bb515c9/synthetic-public-semantic-lineage-small-sample/.git",
+      "reason": "repo discovery skip directory",
+      "root_alias": "dad-local-source/git-projects",
+      "source": "rust_repo_inventory_probe"
+    },
+    {
+      "logical_path": "dad-local-source/git-projects/04_digital_assett_directory/.tmp/exception-learning-check/dad-exception-learning-check-90487fcdbc7d/synthetic-unknown-origin/.git",
+      "reason": "repo discovery skip directory",
+      "root_alias": "dad-local-source/git-projects",
+      "source": "rust_repo_inventory_probe"
+    },
+    {
+      "logical_path": "dad-local-source/git-projects/04_digital_assett_directory/.tmp/exception-learning-check/dad-exception-learning-check-93d6f8bdf972/synthetic-unknown-origin/.git",
+      "reason": "repo discovery skip directory",
+      "root_alias": "dad-local-source/git-projects",
+      "source": "rust_repo_inventory_probe"
+    },
+    {
+      "logical_path": "dad-local-source/git-projects/04_digital_assett_directory/.tmp/exception-learning-check/dad-exception-learning-check-9a881b450221/synthetic-public-confirmed-backfill/.git",
+      "reason": "repo discovery skip directory",
+      "root_alias": "dad-local-source/git-projects",
+      "source": "rust_repo_inventory_probe"
+    },
+    {
+      "logical_path": "dad-local-source/git-projects/04_digital_assett_directory/.tmp/exception-learning-check/dad-exception-learning-check-9c50745233a8/synthetic-public-hard-review-small-sample/.git",
+      "reason": "repo discovery skip directory",
+      "root_alias": "dad-local-source/git-projects",
+      "source": "rust_repo_inventory_probe"
+    },
+    {
+      "logical_path": "dad-local-source/git-projects/04_digital_assett_directory/.tmp/exception-learning-check/dad-exception-learning-check-affc1c9a4956/synthetic-public-confirmed-backfill/.git",
+      "reason": "repo discovery skip directory",
+      "root_alias": "dad-local-source/git-projects",
+      "source": "rust_repo_inventory_probe"
+    },
+    {
+      "logical_path": "dad-local-source/git-projects/04_digital_assett_directory/.tmp/exception-learning-check/dad-exception-learning-check-b9442a234f2a/synthetic-public-clean/.git",
+      "reason": "repo discovery skip directory",
+      "root_alias": "dad-local-source/git-projects",
+      "source": "rust_repo_inventory_probe"
+    },
+    {
+      "logical_path": "dad-local-source/git-projects/04_digital_assett_directory/.tmp/exception-learning-check/dad-exception-learning-check-bfac1f723c20/synthetic-public-hard-review-small-sample/.git",
+      "reason": "repo discovery skip directory",
+      "root_alias": "dad-local-source/git-projects",
+      "source": "rust_repo_inventory_probe"
+    },
+    {
+      "logical_path": "dad-local-source/git-projects/04_digital_assett_directory/.tmp/exception-learning-check/dad-exception-learning-check-d285e1114dda/synthetic-public-clean/.git",
+      "reason": "repo discovery skip directory",
+      "root_alias": "dad-local-source/git-projects",
+      "source": "rust_repo_inventory_probe"
+    },
+    {
+      "logical_path": "dad-local-source/git-projects/04_digital_assett_directory/.tmp/exception-learning-check/dad-exception-learning-check-d4711446ec72/synthetic-public-small-sample/.git",
+      "reason": "repo discovery skip directory",
+      "root_alias": "dad-local-source/git-projects",
+      "source": "rust_repo_inventory_probe"
+    },
+    {
+      "logical_path": "dad-local-source/git-projects/04_digital_assett_directory/.tmp/exception-learning-check/dad-exception-learning-check-db3055378e3b/synthetic-public-invalid-fix/.git",
+      "reason": "repo discovery skip directory",
+      "root_alias": "dad-local-source/git-projects",
+      "source": "rust_repo_inventory_probe"
+    },
+    {
+      "logical_path": "dad-local-source/git-projects/04_digital_assett_directory/.tmp/exception-learning-check/dad-exception-learning-check-de1ffffcf718/synthetic-public-backfill/.git",
+      "reason": "repo discovery skip directory",
+      "root_alias": "dad-local-source/git-projects",
+      "source": "rust_repo_inventory_probe"
+    },
+    {
+      "logical_path": "dad-local-source/git-projects/04_digital_assett_directory/.tmp/exception-learning-check/dad-exception-learning-check-e45cf4b41128/synthetic-public-semantic-lineage-small-sample/.git",
+      "reason": "repo discovery skip directory",
+      "root_alias": "dad-local-source/git-projects",
+      "source": "rust_repo_inventory_probe"
+    },
+    {
+      "logical_path": "dad-local-source/git-projects/04_digital_assett_directory/.tmp/exception-learning-check/dad-exception-learning-check-f6273b6460fa/synthetic-public-mixed/.git",
+      "reason": "repo discovery skip directory",
+      "root_alias": "dad-local-source/git-projects",
+      "source": "rust_repo_inventory_probe"
+    },
+    {
+      "logical_path": "dad-local-source/git-projects/04_digital_assett_directory/.tmp/exception-learning-check/dad-exception-learning-check-f81f3a46f971/synthetic-public-demo-case-small-sample/.git",
       "reason": "repo discovery skip directory",
       "root_alias": "dad-local-source/git-projects",
       "source": "rust_repo_inventory_probe"

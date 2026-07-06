@@ -293,12 +293,14 @@ def _cfg(config: Optional[Path] = None, hub: Optional[Path] = None):
     try:
         return load_config(config, repo_root=hub)
     except FileNotFoundError as exc:
+        detail_hash = f"sha256:{sha256_bytes(str(exc).encode('utf-8'))}"
         console.print_json(
             data={
                 "schema": "dad_command_error.v1",
                 "status": "blocked_dad_hub_unavailable",
                 "error": "DAD hub unavailable. Set --hub, DAD_HUB, or ~/.dad/hub.json.",
-                "detail": str(exc),
+                "detail": "DAD hub could not be resolved or validated.",
+                "detail_hash": detail_hash,
                 "authority_boundary": (
                     "This controlled failure does not authorize cross-repo writes, "
                     "public release, enrollment apply/update, protected repo work, "
@@ -672,7 +674,8 @@ def _mail_storm_gate_report(
 
 
 _REPAIR_PLAN_LOCAL_PATH_RE = re.compile(
-    r"(?i)(^[a-z]:[\\/]|^\\\\|[\\/]users[\\/]|onedrive|git projects)"
+    r"(?i)(^[a-z]:[\\/]|^\\\\|^/tmp[\\/]|/tmp[\\/]|^/home/runner[\\/]|"
+    r"^/users[\\/]|[\\/]users[\\/]|[\\/]pytest-of-|onedrive|git projects)"
 )
 
 
@@ -713,6 +716,9 @@ def _mail_repair_issue_severity(issue_type: str) -> str:
 
 def _mail_repair_plan_safe_value(value: Any) -> Any:
     if isinstance(value, str):
+        if "|" in value:
+            parts = [_mail_repair_plan_safe_value(part) for part in value.split("|")]
+            return "|".join(str(part) for part in parts)
         if _REPAIR_PLAN_LOCAL_PATH_RE.search(value):
             normalized = value.replace("\\", "/")
             return f"path-sha256:{sha256_bytes(normalized.encode('utf-8'))}"

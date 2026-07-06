@@ -277,7 +277,8 @@ def test_cli_mail_compose_payload_json_round_trips_and_rejects_raw_json_payload(
     )
 
     assert raw_json_payload.exit_code == 2
-    assert "payload looks like raw JSON; use --payload-json" in raw_json_payload.output
+    with pytest.raises(typer.BadParameter, match="payload looks like raw JSON"):
+        cli_module._key_value_payload(['{"lesson_pack_json":{"lessons":["split risk"]}}'])
 
     json_value_payload = RUNNER.invoke(
         app,
