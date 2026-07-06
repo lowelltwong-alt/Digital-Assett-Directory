@@ -66,6 +66,21 @@
           "known_upgrades": {"type": "array", "items": {"type": "object"}},
           "source_refs": {"type": "array", "items": {"type": "string", "minLength": 1}, "minItems": 1},
           "harness_registry_ref": {"type": "string", "minLength": 1},
+          "workflow_stages": {
+            "type": "array",
+            "items": {"enum": ["orient", "gather_context", "plan", "generate", "validate", "review", "ship", "learn"]},
+            "uniqueItems": true
+          },
+          "produces": {
+            "type": "array",
+            "items": {"enum": ["report", "registry_row", "eval_case", "lesson", "mail_packet", "pointer", "score", "test", "profile_evidence", "fix_outcome", "context_pack", "code_change", "review_finding"]},
+            "uniqueItems": true
+          },
+          "consumes": {
+            "type": "array",
+            "items": {"enum": ["report", "registry_row", "eval_case", "lesson", "mail_packet", "pointer", "score", "test", "profile_evidence", "fix_outcome", "context_pack", "code_change", "review_finding"]},
+            "uniqueItems": true
+          },
           "review_status": {"enum": ["candidate", "reviewed", "installed_for_local_reuse", "deprecated", "rejected"]},
           "authority_boundary": {"type": "string", "minLength": 1}
         },

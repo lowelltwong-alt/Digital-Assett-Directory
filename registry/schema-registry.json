@@ -73,6 +73,7 @@
     "context_pack": "schemas/context-pack.schema.json",
     "lesson_graph": "schemas/lesson-graph.schema.json",
     "graph_edge_registry": "schemas/graph-edge-registry.schema.json",
+    "graph_inference_methodology": "schemas/graph-inference-methodology.schema.json",
     "trusted_source_registry": "schemas/trusted-source-registry.schema.json",
     "rust_rollout_lesson": "schemas/rust-rollout-lesson.schema.json",
     "exception_event": "schemas/exception-event.schema.json",

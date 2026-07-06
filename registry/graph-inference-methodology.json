@@ -1,0 +1,155 @@
+{
+  "methodology_id": "dad:methodology:graph-inference:v0.1.0",
+  "methodology_version": "0.1.0",
+  "status": "reviewed",
+  "authority_boundary": "Inference edges and combination candidates are generated candidate evidence. They are deterministic structural signals, not proof of value. A human or the combination review queue promotes; nothing here promotes itself. No percentage or confidence value is emitted until a family has at least min_reviewed_for_percentages labeled combinations.",
+  "workflow_stages": {
+    "description": "Closed, ordered vocabulary of the stages an asset acts in. Adjacency is defined by position in this list. Do not add stages without review; renumbering changes every complements edge.",
+    "ordered": [
+      "orient",
+      "gather_context",
+      "plan",
+      "generate",
+      "validate",
+      "review",
+      "ship",
+      "learn"
+    ]
+  },
+  "artifact_kinds": {
+    "description": "Closed vocabulary for produces/consumes facets. A produces->consumes match on a shared kind is the atom of a workflow chain.",
+    "values": [
+      "report",
+      "registry_row",
+      "eval_case",
+      "lesson",
+      "mail_packet",
+      "pointer",
+      "score",
+      "test",
+      "profile_evidence",
+      "fix_outcome",
+      "context_pack",
+      "code_change",
+      "review_finding"
+    ]
+  },
+  "rules": [
+    {
+      "rule_id": "complements-stage-adjacency-v1",
+      "produces_edge_type": "complements",
+      "method_version": "workflow-stage-adjacency-v1",
+      "description": "Two assets complement when they share task context and cover adjacent but disjoint workflow stages, so together they cover more of a task than either alone.",
+      "preconditions": [
+        "both assets declare at least one workflow_stage",
+        "the two assets' workflow_stage sets are disjoint (no shared stage)",
+        "the minimum absolute distance between any stage of A and any stage of B in the ordered stage list equals 1 (strictly adjacent)",
+        "the assets share at least min_shared_task_tokens task_type tokens"
+      ],
+      "evidence_fields": [
+        "shared_task_tokens",
+        "stage_pair",
+        "method_version"
+      ],
+      "symmetric": true,
+      "danger_if_wrong": "False complements pollute combination discovery and waste review time.",
+      "engine_enabled": true
+    },
+    {
+      "rule_id": "complements-need-coverage-v1",
+      "produces_edge_type": "complements",
+      "method_version": "need-coverage-v1",
+      "description": "Two assets complement when both are evidenced against the same DAD need through different capabilities, covering that need from two angles. Reserved for v0.2; not emitted by the v0.1 engine.",
+      "preconditions": [
+        "both assets link to the same need id (via lesson gap_evidence_for or declared need coverage)",
+        "the capability token sets the two assets contribute to that need are not identical"
+      ],
+      "evidence_fields": [
+        "shared_need_id",
+        "distinct_capabilities",
+        "method_version"
+      ],
+      "symmetric": true,
+      "danger_if_wrong": "Research and build effort can be misdirected toward redundant coverage.",
+      "engine_enabled": false
+    },
+    {
+      "rule_id": "co-used-cooccurrence-v1",
+      "produces_edge_type": "co_used_with",
+      "method_version": "usage-cooccurrence-v1",
+      "description": "Two assets are co-used when the usage ledger shows both used or watched in the same repo. Strength is the count of DISTINCT repos, never a percentage.",
+      "preconditions": [
+        "both assets have a usage row (status using or watching) for the same repo",
+        "distinct repo count >= min_distinct_repos_for_co_use"
+      ],
+      "evidence_fields": [
+        "distinct_repo_count",
+        "repo_node_ids",
+        "method_version"
+      ],
+      "symmetric": true,
+      "danger_if_wrong": "DAD can spam bundled recommendations based on accidental co-use.",
+      "engine_enabled": true
+    },
+    {
+      "rule_id": "combination-produces-consumes-chain-v1",
+      "produces_edge_type": "member_of",
+      "creates_node_type": "combination_candidate",
+      "method_version": "combination-candidate-v1",
+      "description": "A workflow combination is a directed chain A->B->C where each asset produces an artifact_kind the next asset consumes. Chains of at least min_chain_length distinct assets become a combination_candidate hypernode; members attach via member_of edges. This is the strongest whole-workflow signal because the handoff artifact is explicit.",
+      "preconditions": [
+        "a directed edge A->B exists iff A.produces intersect B.consumes is non-empty",
+        "the chain is a simple path (no repeated asset) of length >= min_chain_length",
+        "chain length is capped at max_chain_length to bound enumeration"
+      ],
+      "evidence_fields": [
+        "ordered_member_ids",
+        "artifact_handoffs",
+        "chain_length",
+        "method_version"
+      ],
+      "symmetric": false,
+      "danger_if_wrong": "Workflow recommendations can bundle unrelated assets into a false pipeline.",
+      "engine_enabled": true
+    },
+    {
+      "rule_id": "combination-stage-coverage-v1",
+      "produces_edge_type": "member_of",
+      "creates_node_type": "combination_candidate",
+      "method_version": "combination-candidate-v1",
+      "description": "A secondary combination signal: a set of at least min_chain_length assets that share a task_type token and whose combined workflow_stages cover a contiguous run of at least min_contiguous_stages stages. Weaker than produces/consumes chaining; used when handoff artifacts are not declared. Reserved for v0.2; not emitted by the v0.1 engine.",
+      "preconditions": [
+        "assets share at least one task_type token pairwise-connected through the group",
+        "the union of the group's workflow_stages forms a contiguous run of length >= min_contiguous_stages in the ordered stage list",
+        "group size >= min_chain_length"
+      ],
+      "evidence_fields": [
+        "member_ids",
+        "covered_stage_run",
+        "shared_task_token",
+        "method_version"
+      ],
+      "symmetric": false,
+      "danger_if_wrong": "Stage coverage without an artifact handoff can group assets that never actually feed each other.",
+      "engine_enabled": false
+    }
+  ],
+  "thresholds": {
+    "min_shared_task_tokens": 1,
+    "min_distinct_repos_for_co_use": 1,
+    "min_chain_length": 3,
+    "max_chain_length": 4,
+    "min_contiguous_stages": 3,
+    "min_reviewed_for_percentages": 10
+  },
+  "output_labels": {
+    "combination_status": [
+      "hypothesized",
+      "trialed",
+      "adopted",
+      "rejected"
+    ],
+    "note": "New combinations start hypothesized. Only the review queue moves them. Rejected combinations are kept as negative evidence so the same pair is not re-proposed as novel."
+  },
+  "determinism": "All rules use set membership, integer counts, and ordered-list index arithmetic only. No randomness, no floats-as-truth, no wall-clock input. Same registries + usage ledger produce a byte-identical candidate set after sorting."
+}
