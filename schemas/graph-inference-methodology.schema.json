@@ -1,0 +1,76 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://local.digital-asset-directory/schemas/graph-inference-methodology.schema.json",
+  "title": "DAD Graph Inference Methodology",
+  "type": "object",
+  "required": ["methodology_id", "methodology_version", "status", "authority_boundary", "workflow_stages", "artifact_kinds", "rules", "thresholds", "output_labels", "determinism"],
+  "additionalProperties": false,
+  "properties": {
+    "methodology_id": {"type": "string", "minLength": 1},
+    "methodology_version": {"type": "string", "minLength": 1},
+    "status": {"enum": ["candidate", "reviewed"]},
+    "authority_boundary": {"type": "string", "minLength": 1},
+    "workflow_stages": {
+      "type": "object",
+      "required": ["description", "ordered"],
+      "additionalProperties": false,
+      "properties": {
+        "description": {"type": "string", "minLength": 1},
+        "ordered": {"type": "array", "minItems": 2, "items": {"type": "string", "minLength": 1}, "uniqueItems": true}
+      }
+    },
+    "artifact_kinds": {
+      "type": "object",
+      "required": ["description", "values"],
+      "additionalProperties": false,
+      "properties": {
+        "description": {"type": "string", "minLength": 1},
+        "values": {"type": "array", "minItems": 1, "items": {"type": "string", "minLength": 1}, "uniqueItems": true}
+      }
+    },
+    "rules": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": ["rule_id", "produces_edge_type", "method_version", "engine_enabled", "description", "preconditions", "evidence_fields", "symmetric", "danger_if_wrong"],
+        "additionalProperties": false,
+        "properties": {
+          "rule_id": {"type": "string", "minLength": 1},
+          "produces_edge_type": {"enum": ["complements", "co_used_with", "member_of"]},
+          "creates_node_type": {"enum": ["combination_candidate"]},
+          "method_version": {"type": "string", "minLength": 1},
+          "engine_enabled": {"type": "boolean"},
+          "description": {"type": "string", "minLength": 1},
+          "preconditions": {"type": "array", "minItems": 1, "items": {"type": "string", "minLength": 1}},
+          "evidence_fields": {"type": "array", "minItems": 1, "items": {"type": "string", "minLength": 1}},
+          "symmetric": {"type": "boolean"},
+          "danger_if_wrong": {"type": "string", "minLength": 1}
+        }
+      }
+    },
+    "thresholds": {
+      "type": "object",
+      "required": ["min_shared_task_tokens", "min_distinct_repos_for_co_use", "min_chain_length", "max_chain_length", "min_contiguous_stages", "min_reviewed_for_percentages"],
+      "additionalProperties": false,
+      "properties": {
+        "min_shared_task_tokens": {"type": "integer", "minimum": 1},
+        "min_distinct_repos_for_co_use": {"type": "integer", "minimum": 1},
+        "min_chain_length": {"type": "integer", "minimum": 2},
+        "max_chain_length": {"type": "integer", "minimum": 2},
+        "min_contiguous_stages": {"type": "integer", "minimum": 2},
+        "min_reviewed_for_percentages": {"type": "integer", "minimum": 1}
+      }
+    },
+    "output_labels": {
+      "type": "object",
+      "required": ["combination_status", "note"],
+      "additionalProperties": false,
+      "properties": {
+        "combination_status": {"type": "array", "minItems": 1, "items": {"type": "string", "minLength": 1}},
+        "note": {"type": "string", "minLength": 1}
+      }
+    },
+    "determinism": {"type": "string", "minLength": 1}
+  }
+}
