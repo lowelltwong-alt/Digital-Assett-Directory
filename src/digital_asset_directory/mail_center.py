@@ -69,6 +69,7 @@ STALE_LOCK_SECONDS = 300.0
 COLLECTION_AUDIT_ENFORCED_AT = "2026-07-05T00:00:00+00:00"
 VISIBILITIES = {"public", "internal", "private", "restricted", "unknown"}
 NON_PUBLIC_VISIBILITIES = {"internal", "private", "restricted", "unknown"}
+UTF8_BOM = b"\xef\xbb\xbf"
 PUBLIC_SAFE_PAYLOAD_KEYS = {
     "summary",
     "note",
@@ -446,7 +447,9 @@ reviews the packet provenance and public-release status.
 """
 
 
-def _parse_jsonl_bytes(path: Path, content: bytes) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
+def _parse_jsonl_bytes(
+    path: Path, content: bytes
+) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
     records: list[dict[str, Any]] = []
     errors: list[dict[str, Any]] = []
     for line_number, line in enumerate(content.splitlines(), start=1):
@@ -454,7 +457,7 @@ def _parse_jsonl_bytes(path: Path, content: bytes) -> tuple[list[dict[str, Any]]
         if not stripped_bytes:
             continue
         try:
-            stripped = stripped_bytes.decode("utf-8")
+            stripped = stripped_bytes.decode("utf-8-sig")
         except UnicodeDecodeError as exc:
             errors.append(
                 {
@@ -490,6 +493,31 @@ def _read_jsonl_with_errors(path: Path) -> tuple[list[dict[str, Any]], list[dict
     if not path.exists():
         return [], []
     return _parse_jsonl_bytes(path, path.read_bytes())
+
+
+def _jsonl_bom_observation(hub_root: Path, path: Path, content: bytes) -> dict[str, Any] | None:
+    bom_lines = [
+        line_number
+        for line_number, line in enumerate(content.splitlines(), start=1)
+        if line.startswith(UTF8_BOM)
+    ]
+    if not bom_lines:
+        return None
+    embedded_bom_lines = [line_number for line_number in bom_lines if line_number != 1]
+    return {
+        "observation_type": "jsonl_utf8_bom",
+        "path": _relative_path_ref(hub_root, path),
+        "line_numbers": bom_lines[:20],
+        "line_count": len(bom_lines),
+        "embedded_bom_line_numbers": embedded_bom_lines[:20],
+        "embedded_bom_count": len(embedded_bom_lines),
+        "status": "report_only",
+        "meaning": (
+            "This JSONL file contains UTF-8 BOM bytes. DAD reads the file with "
+            "utf-8-sig and appends future rows as plain UTF-8; this observation is "
+            "mailbox hygiene evidence and does not by itself make the spool dirty."
+        ),
+    }
 
 
 def _jsonl_file_signature(path: Path) -> tuple[int, int] | None:
@@ -836,7 +864,9 @@ def _source_provenance(
         "source_repo_alias": str(getattr(policy, "alias", "") if policy else Path(canonical).name),
         "source_visibility": visibility,
         "original_source_chain": chain,
-        "return_address": str(existing.get("return_address") or f"{canonical}/.digital-asset/mail/inbox.jsonl"),
+        "return_address": str(
+            existing.get("return_address") or f"{canonical}/.digital-asset/mail/inbox.jsonl"
+        ),
         "original_mail_id": str(existing.get("original_mail_id") or ""),
         "composed_by": str(existing.get("composed_by") or composed_by),
         "collected_by": str(existing.get("collected_by") or collected_by),
@@ -858,9 +888,7 @@ def _public_release_envelope(
     status = "pending_human" if required else "not_required"
     human_release_id = ""
     release_reason = (
-        "non_public_source_to_public_target"
-        if required
-        else "public_release_not_required"
+        "non_public_source_to_public_target" if required else "public_release_not_required"
     )
     if release_decision:
         if release_decision.get("decision") == "approve":
@@ -1119,14 +1147,17 @@ def _message_tokens(
 ) -> set[str]:
     from .dad_library import PATTERN_MATCH_STOPWORDS, _tokenize
 
-    return _tokenize(
-        [
-            message_type,
-            summary,
-            _payload_value_strings(payload or {}),
-            list(evidence or []),
-        ]
-    ) - PATTERN_MATCH_STOPWORDS
+    return (
+        _tokenize(
+            [
+                message_type,
+                summary,
+                _payload_value_strings(payload or {}),
+                list(evidence or []),
+            ]
+        )
+        - PATTERN_MATCH_STOPWORDS
+    )
 
 
 def check_outbox_novelty(
@@ -1174,9 +1205,7 @@ def check_outbox_novelty(
                 "created_at": str(row.get("created_at", "")),
                 "similarity": round(similarity, 3),
                 "relation": (
-                    "near_duplicate"
-                    if similarity >= NEAR_DUPLICATE_THRESHOLD
-                    else "related"
+                    "near_duplicate" if similarity >= NEAR_DUPLICATE_THRESHOLD else "related"
                 ),
                 "new_terms": sorted(candidate_tokens - sent_tokens)[:12],
             }
@@ -1246,11 +1275,7 @@ def compose_mail(
         evidence=evidence,
         exclude_mail_ids={supersedes} if supersedes else None,
     )
-    if (
-        novelty["verdict"] == "already_sent_similar"
-        and not supersedes
-        and not allow_similar
-    ):
+    if novelty["verdict"] == "already_sent_similar" and not supersedes and not allow_similar:
         top = novelty["matches"][0]
         raise ValueError(
             f"Near-duplicate of previously sent mail {top['mail_id']} "
@@ -1383,9 +1408,7 @@ def compose_asset_suggestion(
         "capabilities": list(offering.get("capabilities", []))[:6],
         "use_when": list(offering.get("applies_when", []))[:3],
         "avoid_when": list(offering.get("does_not_apply_when", []))[:2],
-        "latest_upgrade": (
-            str(known_upgrades[-1].get("upgrade_id", "")) if known_upgrades else ""
-        ),
+        "latest_upgrade": (str(known_upgrades[-1].get("upgrade_id", "")) if known_upgrades else ""),
         "graph_context": _asset_graph_context(hub_root, asset_id),
         "note": note,
         "delivery_model": ASSET_SUGGESTION_DELIVERY_MODEL,
@@ -1599,9 +1622,7 @@ def _route_audit_match_status(
         and str(row.get("dedupe_key", "")) == record.dedupe_key
     ]
     exact_rows = [
-        row
-        for row in identity_rows
-        if str(row.get("routed_record_hash", "")) == record_hash
+        row for row in identity_rows if str(row.get("routed_record_hash", "")) == record_hash
     ]
     if not exact_rows:
         return ("route_hash_mismatch" if identity_rows else "missing_route_audit"), None
@@ -1754,8 +1775,7 @@ def _raise_if_source_outbox_has_active_lock(outbox: Path) -> None:
     if _lock_diagnostic_allows_tombstone_takeover(diagnostic):
         return
     raise TimeoutError(
-        f"Timed out waiting for JSONL lock: {lock_path} "
-        f"(status={diagnostic.get('status')})"
+        f"Timed out waiting for JSONL lock: {lock_path} (status={diagnostic.get('status')})"
     )
 
 
@@ -1893,7 +1913,9 @@ def collect_mail(
                                         "A central inbox row already exists for this original mail "
                                         "identity from a different reviewed source repo."
                                     ),
-                                    "existing_central_inbox": _relative_path_ref(hub_root, stored_path),
+                                    "existing_central_inbox": _relative_path_ref(
+                                        hub_root, stored_path
+                                    ),
                                     "existing_source": stored_source_key,
                                     "incoming_source": incoming_source_key,
                                     "logical_identity": _collection_logical_identity(record),
@@ -1916,7 +1938,9 @@ def collect_mail(
                                         "A central inbox row already exists for this logical original "
                                         "mail identity but has different canonical content."
                                     ),
-                                    "existing_central_inbox": _relative_path_ref(hub_root, stored_path),
+                                    "existing_central_inbox": _relative_path_ref(
+                                        hub_root, stored_path
+                                    ),
                                     "logical_identity": _collection_logical_identity(record),
                                     "recommendation": (
                                         "Review as a possible conflicting branch/worktree variant before "
@@ -1946,7 +1970,9 @@ def collect_mail(
                         )
                     else:
                         duplicates += 1
-                        stored_record = _stored_mail_record_by_identity(central_path, record) or record
+                        stored_record = (
+                            _stored_mail_record_by_identity(central_path, record) or record
+                        )
                         _append_collection_audit(
                             hub_root,
                             repo,
@@ -2423,9 +2449,7 @@ def deliver_mail(
                     "mail_id": record.mail_id,
                     "dedupe_key": record.dedupe_key,
                     "route_status": route_status,
-                    "route_audit_id": str(route_row.get("route_audit_id", ""))
-                    if route_row
-                    else "",
+                    "route_audit_id": str(route_row.get("route_audit_id", "")) if route_row else "",
                     "target_repo": record.target_repo,
                     "source_provenance": record.source_provenance,
                     "public_release": record.public_release,
@@ -2525,7 +2549,10 @@ def deliver_mail(
             )
             rejected_release += 1
             continue
-        if release.get("public_release_required") and release.get("public_release_status") != "approved":
+        if (
+            release.get("public_release_required")
+            and release.get("public_release_status") != "approved"
+        ):
             _quarantine_public_hold(
                 hub_root,
                 policy_record,
@@ -2994,7 +3021,9 @@ def digest_mail(
     }
 
 
-def mail_digest_status(repo: Path, *, now: str | None = None, stale_hours: int = 24) -> dict[str, Any]:
+def mail_digest_status(
+    repo: Path, *, now: str | None = None, stale_hours: int = 24
+) -> dict[str, Any]:
     from datetime import datetime, timezone
 
     try:
@@ -3050,7 +3079,9 @@ def _latest_adoption_by_mail(repo: Path) -> dict[str, dict[str, Any]]:
         if not mail_id:
             continue
         current = latest.get(mail_id)
-        if current is None or str(row.get("recorded_at", "")) >= str(current.get("recorded_at", "")):
+        if current is None or str(row.get("recorded_at", "")) >= str(
+            current.get("recorded_at", "")
+        ):
             latest[mail_id] = row
     return latest
 
@@ -3127,17 +3158,20 @@ def resurface_deferred_mail(
                 if str(value)
             }
         )
-        message_tokens = _tokenize(
-            [
-                str(message.get("message_type", "")),
-                *[payload.get(key) for key in DEFERRED_MAIL_PAYLOAD_KEYS],
-                message.get("evidence", []),
-                message.get("suggested_actions", []),
-                str(row.get("planned_use", "")),
-                str(row.get("notes", "")),
-                asset_refs,
-            ]
-        ) - PATTERN_MATCH_STOPWORDS
+        message_tokens = (
+            _tokenize(
+                [
+                    str(message.get("message_type", "")),
+                    *[payload.get(key) for key in DEFERRED_MAIL_PAYLOAD_KEYS],
+                    message.get("evidence", []),
+                    message.get("suggested_actions", []),
+                    str(row.get("planned_use", "")),
+                    str(row.get("notes", "")),
+                    asset_refs,
+                ]
+            )
+            - PATTERN_MATCH_STOPWORDS
+        )
         matched = sorted(task_tokens & message_tokens)
         repo_watches_asset = bool(watched & set(asset_refs))
         if not matched and not repo_watches_asset:
@@ -3202,11 +3236,23 @@ def _mail_packet_identity(record: dict[str, Any]) -> str | None:
 
 
 def _mail_path_stage(hub_root: Path, path: Path) -> str:
-    if path.name == "outbox.jsonl" and path.parent.name == "mail" and path.parent.parent.name == ".digital-asset":
+    if (
+        path.name == "outbox.jsonl"
+        and path.parent.name == "mail"
+        and path.parent.parent.name == ".digital-asset"
+    ):
         return "repo_mirror_outbox"
-    if path.name == "inbox.jsonl" and path.parent.name == "mail" and path.parent.parent.name == ".digital-asset":
+    if (
+        path.name == "inbox.jsonl"
+        and path.parent.name == "mail"
+        and path.parent.parent.name == ".digital-asset"
+    ):
         return "repo_mirror_inbox"
-    if path.name == "archive.jsonl" and path.parent.name == "mail" and path.parent.parent.name == ".digital-asset":
+    if (
+        path.name == "archive.jsonl"
+        and path.parent.name == "mail"
+        and path.parent.parent.name == ".digital-asset"
+    ):
         return "repo_mirror_archive"
     rel = _relative_path_ref(hub_root, path)
     normalized = rel.replace("\\", "/")
@@ -3993,9 +4039,7 @@ def diagnose_mail_dirty_state(
                 temp_age_seconds = None
             temp_record = {
                 "path": _relative_path_ref(hub_root, temp_path),
-                "age_seconds": round(temp_age_seconds, 3)
-                if temp_age_seconds is not None
-                else None,
+                "age_seconds": round(temp_age_seconds, 3) if temp_age_seconds is not None else None,
             }
             if "jsonl" not in name:
                 observations.append(
@@ -4075,6 +4119,8 @@ def diagnose_mail_dirty_state(
     source_outbox_unstable_count = 0
     invalid_mail_packet_count = 0
     invalid_mail_packet_quarantine_count = 0
+    bom_jsonl_count = 0
+    embedded_bom_jsonl_count = 0
     central_inbox_logical_identities: dict[str, list[dict[str, str]]] = {}
     collection_audit_keys = _collection_audit_index(hub_root)
     legacy_collection_allowlist_keys = _legacy_collection_allowlist_index(hub_root)
@@ -4113,6 +4159,16 @@ def diagnose_mail_dirty_state(
             )
             continue
         stage = _mail_path_stage(hub_root, path)
+        try:
+            raw_content = path.read_bytes()
+        except OSError:
+            raw_content = b""
+        bom_observation = _jsonl_bom_observation(hub_root, path, raw_content)
+        if bom_observation is not None:
+            bom_jsonl_count += 1
+            if int(bom_observation.get("embedded_bom_count", 0)):
+                embedded_bom_jsonl_count += 1
+            observations.append(bom_observation)
         if stage == "repo_mirror_outbox":
             try:
                 records, parse_errors, _source_signature = _read_stable_jsonl_snapshot(path)
@@ -4171,10 +4227,14 @@ def diagnose_mail_dirty_state(
                 }:
                     record_hash = _invalid_mail_record_hash(record)
                     path_ref = _relative_path_ref(hub_root, path)
-                    if stage == "repo_mirror_outbox" and (
-                        path_ref,
-                        record_hash,
-                    ) in invalid_mail_quarantine_keys:
+                    if (
+                        stage == "repo_mirror_outbox"
+                        and (
+                            path_ref,
+                            record_hash,
+                        )
+                        in invalid_mail_quarantine_keys
+                    ):
                         invalid_mail_packet_quarantine_count += 1
                         observations.append(
                             {
@@ -4381,7 +4441,9 @@ def diagnose_mail_dirty_state(
                                 "mail_id": central_outbox_record.mail_id,
                                 "dedupe_key": central_outbox_record.dedupe_key,
                                 "record_hash": _mail_record_hash(central_outbox_record),
-                                "audit_log": _relative_path_ref(hub_root, _route_log_path(hub_root)),
+                                "audit_log": _relative_path_ref(
+                                    hub_root, _route_log_path(hub_root)
+                                ),
                                 "recommendation": (
                                     "Rerun DAD route from collected central inbox rows or quarantine "
                                     "this direct central outbox row before delivery."
@@ -4397,7 +4459,9 @@ def diagnose_mail_dirty_state(
                                 "mail_id": central_outbox_record.mail_id,
                                 "dedupe_key": central_outbox_record.dedupe_key,
                                 "record_hash": _mail_record_hash(central_outbox_record),
-                                "audit_log": _relative_path_ref(hub_root, _route_log_path(hub_root)),
+                                "audit_log": _relative_path_ref(
+                                    hub_root, _route_log_path(hub_root)
+                                ),
                                 "recommendation": (
                                     "A route audit exists for this identity but not this row hash. "
                                     "Treat the central outbox row as mutated or stale until rerouted."
@@ -4784,7 +4848,9 @@ def diagnose_mail_dirty_state(
                     "delivery_status": payload_dict.get("delivery_status"),
                 }
             )
-        if payload_dict.get("external_send_performed") or payload_dict.get("github_write_performed"):
+        if payload_dict.get("external_send_performed") or payload_dict.get(
+            "github_write_performed"
+        ):
             issues.append(
                 {
                     "issue_type": "rust_rollout_packet_write_claim",
@@ -4827,9 +4893,7 @@ def diagnose_mail_dirty_state(
             continue
         path_classes = sorted({entry["path_class"] for entry in entries})
         revision_ids = sorted({entry["revision_id"] for entry in entries if entry["revision_id"]})
-        semantic_content_hashes = sorted(
-            {entry["semantic_content_hash"] for entry in entries}
-        )
+        semantic_content_hashes = sorted({entry["semantic_content_hash"] for entry in entries})
         class_counts = {
             path_class: sum(1 for entry in entries if entry["path_class"] == path_class)
             for path_class in path_classes
@@ -4883,7 +4947,9 @@ def diagnose_mail_dirty_state(
         1 for issue in issues if issue["issue_type"] == "atomic_temp_fragment"
     )
     active_lock_count = sum(
-        1 for issue in issues if issue["issue_type"] == "jsonl_lock" and issue.get("status") == "active"
+        1
+        for issue in issues
+        if issue["issue_type"] == "jsonl_lock" and issue.get("status") == "active"
     )
     stale_repairable_lock_count = sum(
         1
@@ -4939,6 +5005,8 @@ def diagnose_mail_dirty_state(
         "source_outbox_unstable_count": source_outbox_unstable_count,
         "invalid_mail_packet_count": invalid_mail_packet_count,
         "invalid_mail_packet_quarantine_count": invalid_mail_packet_quarantine_count,
+        "bom_jsonl_count": bom_jsonl_count,
+        "embedded_bom_jsonl_count": embedded_bom_jsonl_count,
         "rust_invalid_packet_count": rust_invalid_count,
         "unexpected_repo_mail_jsonl_count": unexpected_repo_mail_jsonl_count,
         "lifecycle_observation_count": len(observations),
@@ -5020,9 +5088,7 @@ def write_mail_center_report(hub_root: Path) -> dict[str, str]:
         if record.source_provenance.get("source_visibility") in NON_PUBLIC_VISIBILITIES
     )
     release_required_count = sum(
-        1
-        for record in all_messages
-        if record.public_release.get("public_release_required") is True
+        1 for record in all_messages if record.public_release.get("public_release_required") is True
     )
     summary = {
         "schema_version": "0.1.0",

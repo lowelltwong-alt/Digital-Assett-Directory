@@ -12,6 +12,13 @@ ROOT = Path(__file__).resolve().parents[1]
 def test_front_door_declares_single_entrypoint_and_graph_routes() -> None:
     front_door = (ROOT / "AI_FRONT_DOOR.md").read_text(encoding="utf-8")
 
+    assert "## Concurrent Work Default" in front_door
+    assert "Assume concurrent work is happening" in front_door
+    assert "git fetch origin" in front_door
+    assert "git worktree add -b" in front_door
+    assert "origin/main" in front_door
+    assert "--hub <isolated-worktree-path>" in front_door
+    assert "Never overwrite, reset, merge, rebase, or clean another agent's" in front_door
     assert "## Single AI entrypoint" in front_door
     assert "## Navigation freshness" in front_door
     assert "registry/ai-navigation-registry.json" in front_door
@@ -65,8 +72,7 @@ def test_manifest_exposes_navigation_and_graph_entrypoints() -> None:
     )
     assert "docs/LESSON_LIFECYCLE_GOVERNANCE.md" in manifest["knowledge_graph_entrypoints"]
     assert (
-        "docs/DAD_MAIL_STORM_AND_DIRTY_STATE_RUNBOOK.md"
-        in manifest["knowledge_graph_entrypoints"]
+        "docs/DAD_MAIL_STORM_AND_DIRTY_STATE_RUNBOOK.md" in manifest["knowledge_graph_entrypoints"]
     )
     assert (
         "docs/rust/RUST_ROLLOUT_LESSON_CAPTURE_PROTOCOL.md"
@@ -97,8 +103,9 @@ def test_navigation_registry_keeps_front_door_singular_and_fresh() -> None:
     assert registry["updated_at"]
     assert "memory" in registry["entrypoint_policy"]["memory_rule"].lower()
     assert registry["freshness_policy"]["recent_changes_limit"] <= 20
-    assert "Do not add date/version columns to every TOC row" in (
-        registry["branch_depth_policy"]["anti_bloat_rule"]
+    assert (
+        "Do not add date/version columns to every TOC row"
+        in (registry["branch_depth_policy"]["anti_bloat_rule"])
     )
 
     branches = {branch["path"]: branch for branch in registry["branch_map"]}
@@ -111,19 +118,12 @@ def test_navigation_registry_keeps_front_door_singular_and_fresh() -> None:
     assert "docs/DAD_MAIL_STORM_AND_DIRTY_STATE_RUNBOOK.md" in branches
     assert "docs/rust/RUST_ROLLOUT_LESSON_CAPTURE_PROTOCOL.md" in branches
     assert "assets/coding-harnesses/repo-enrollment-mail-governance-safety/" in branches
-    assert (
-        "roadmap/evidence/dad-deployment-and-all-repo-verification-roadmap.md"
-        in branches
-    )
+    assert "roadmap/evidence/dad-deployment-and-all-repo-verification-roadmap.md" in branches
     assert "docs/HARNESS_VS_DETERMINISTIC_ENFORCEMENT.md" in branches
     assert "docs/CLAUDE_ARCHITECTURAL_ROOT_CAUSE_REVIEW.md" in branches
     assert "docs/LESSON_LIFECYCLE_GOVERNANCE.md" in branches
 
-    change_paths = {
-        path
-        for change in registry["recent_changes"]
-        for path in change["paths"]
-    }
+    change_paths = {path for change in registry["recent_changes"] for path in change["paths"]}
     assert "registry/ai-navigation-registry.json" in change_paths
     assert "docs/DAD_ADDRESS_MODEL.md" in change_paths
     assert "docs/HARNESS_VS_DETERMINISTIC_ENFORCEMENT.md" in change_paths
@@ -142,14 +142,15 @@ def test_mail_storm_runbook_distinguishes_spool_and_worktree_dirt() -> None:
     front_door = (ROOT / "AI_FRONT_DOOR.md").read_text(encoding="utf-8")
     toc = (ROOT / "AI_TABLE_OF_CONTENTS.md").read_text(encoding="utf-8")
     harness_readme = (
-        ROOT / "assets" / "coding-harnesses" / "repo-enrollment-mail-governance-safety" / "README.md"
+        ROOT
+        / "assets"
+        / "coding-harnesses"
+        / "repo-enrollment-mail-governance-safety"
+        / "README.md"
     ).read_text(encoding="utf-8")
 
     assert "mail storm-gate" in runbook
-    assert (
-        "mail doctor --repo all --summary-only --fail-on-dirty --fail-on-coverage-gap"
-        in runbook
-    )
+    assert "mail doctor --repo all --summary-only --fail-on-dirty --fail-on-coverage-gap" in runbook
     assert "`dirty` and `spool_dirty`" in runbook
     assert "`worktree_dirty`" in runbook
     assert "safe_for_mail_storm_operations" in runbook

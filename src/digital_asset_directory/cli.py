@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 import os
 import re
+import sys
 import tempfile
 from pathlib import Path
 from typing import Any, Optional, cast
@@ -512,9 +513,7 @@ def _mail_storm_gate_report(
         and bool(action_summary.get("safe_to_route"))
         and bool(action_summary.get("safe_to_deliver"))
     )
-    delivery_policy_blocked = not bool(
-        delivery_policy.get("all_selected_delivery_allowed", True)
-    )
+    delivery_policy_blocked = not bool(delivery_policy.get("all_selected_delivery_allowed", True))
     storm_scope_verified = bool(repo_scope.get("storm_scope_verified"))
     worktree_dirty = bool(result.get("worktree_dirty"))
 
@@ -614,9 +613,7 @@ def _mail_storm_gate_report(
             "safe_for_delivery_operations for repo inbox writes. "
             "safe_for_mail_storm_operations remains the all-operations gate."
         ),
-        "requires_human_review": bool(
-            coverage_blocked or mail_blocked or delivery_policy_blocked
-        ),
+        "requires_human_review": bool(coverage_blocked or mail_blocked or delivery_policy_blocked),
         "spool_dirty": bool(result.get("spool_dirty", result.get("dirty", False))),
         "worktree_dirty": worktree_dirty,
         "worktree_dirty_does_not_change_mail_dirty": bool(
@@ -627,9 +624,7 @@ def _mail_storm_gate_report(
             "issue_count": int(summary.get("issue_count", 0) or 0),
             "blocking_issue_count": int(action_summary.get("blocking_issue_count", 0) or 0),
             "repairable_issue_count": int(action_summary.get("repairable_issue_count", 0) or 0),
-            "legacy_observation_count": int(
-                action_summary.get("legacy_observation_count", 0) or 0
-            ),
+            "legacy_observation_count": int(action_summary.get("legacy_observation_count", 0) or 0),
             "lifecycle_observation_count": int(
                 action_summary.get("lifecycle_observation_count", 0) or 0
             ),
@@ -643,9 +638,7 @@ def _mail_storm_gate_report(
             "unknown_source_outbox_duplicate_identity_count": int(
                 summary.get("unknown_source_outbox_duplicate_identity_count", 0) or 0
             ),
-            "invalid_mail_packet_count": int(
-                summary.get("invalid_mail_packet_count", 0) or 0
-            ),
+            "invalid_mail_packet_count": int(summary.get("invalid_mail_packet_count", 0) or 0),
             "invalid_mail_packet_quarantine_count": int(
                 summary.get("invalid_mail_packet_quarantine_count", 0) or 0
             ),
@@ -791,9 +784,10 @@ def _mail_repair_review_queue(issues: list[dict[str, Any]], *, limit: int = 200)
             continue
         item = _mail_repair_issue_sample(issue)
         item["raw_payload_copied"] = False
-        item["review_required"] = _mail_repair_issue_severity(
-            str(issue.get("issue_type", ""))
-        ) in {"critical", "high"}
+        item["review_required"] = _mail_repair_issue_severity(str(issue.get("issue_type", ""))) in {
+            "critical",
+            "high",
+        }
         item["authority_boundary"] = (
             "Sanitized operator review evidence only; use the authoritative DAD "
             "mail lifecycle for repair, replay, delivery, or quarantine."
@@ -961,15 +955,15 @@ def _mail_repair_lane(issue_type: str, issues: list[dict[str, Any]]) -> dict[str
                     (
                         "python -m digital_asset_directory.cli rust-rollout build-mail "
                         "--out-dir processed/mail/staged/rust_rollout "
-                        "--dirty-state-ack \"reviewed Rust rollout packet resync\" "
+                        '--dirty-state-ack "reviewed Rust rollout packet resync" '
                         "--dirty-state-fingerprint <fingerprint-from-storm-gate-or-doctor>"
                     ),
                     (
                         "python -m digital_asset_directory.cli rust-rollout build-mail "
                         "--out-dir mail/outbox/rust_rollout "
-                        "--dirty-state-ack \"reviewed Rust rollout packet resync\" "
+                        '--dirty-state-ack "reviewed Rust rollout packet resync" '
                         "--dirty-state-fingerprint <fingerprint-from-storm-gate-or-doctor> "
-                        "--promote-reference-snapshot-ack \"reviewed tracked snapshot promotion\""
+                        '--promote-reference-snapshot-ack "reviewed tracked snapshot promotion"'
                     ),
                 ],
                 "example_command_authority": (
@@ -1022,9 +1016,7 @@ def _mail_storm_repair_plan_report(
     for issue in issues:
         issue_type = str(issue.get("issue_type", "") or "unknown_issue")
         issue_groups.setdefault(issue_type, []).append(issue)
-    issue_counts = {
-        issue_type: len(group) for issue_type, group in sorted(issue_groups.items())
-    }
+    issue_counts = {issue_type: len(group) for issue_type, group in sorted(issue_groups.items())}
     lanes: list[dict[str, Any]] = []
     mailbox_coverage = result.get("mailbox_coverage", {})
     if not isinstance(mailbox_coverage, dict):
@@ -1063,9 +1055,7 @@ def _mail_storm_repair_plan_report(
                 ],
             }
         )
-    delivery_policy_blocked = int(
-        delivery_policy.get("blocked_delivery_repo_count", 0) or 0
-    )
+    delivery_policy_blocked = int(delivery_policy.get("blocked_delivery_repo_count", 0) or 0)
     if delivery_policy_blocked:
         lanes.append(
             {
@@ -1138,8 +1128,7 @@ def _mail_storm_repair_plan_report(
             **dict(gate.get("operator_commands", {})),
             "repair_plan": "python -m digital_asset_directory.cli mail repair-plan --repo all",
             "diagnostic_doctor_summary_only_not_an_exit_gate": (
-                "python -m digital_asset_directory.cli mail doctor --repo all "
-                "--summary-only"
+                "python -m digital_asset_directory.cli mail doctor --repo all --summary-only"
             ),
             "fail_closed_doctor": (
                 "python -m digital_asset_directory.cli mail doctor --repo all "
@@ -1324,17 +1313,56 @@ def _json_command(value: Optional[str], option_name: str) -> list[str] | None:
     return [str(item) for item in parsed]
 
 
+RAW_JSON_PAYLOAD_MESSAGE = "payload looks like raw JSON; use --payload-json"
+
+
+def _payload_key_looks_like_raw_json(key: str) -> bool:
+    return "{" in key or "}" in key or "\n" in key or "\r" in key or len(key) > 128
+
+
 def _key_value_payload(values: list[str]) -> dict[str, str]:
     payload: dict[str, str] = {}
     for value in values:
+        stripped_value = value.strip()
         if "=" not in value:
+            if stripped_value.startswith(("{", "[")):
+                raise typer.BadParameter(RAW_JSON_PAYLOAD_MESSAGE)
             raise typer.BadParameter("Mail payload values must use key=value form.")
         key, item = value.split("=", 1)
         key = key.strip()
+        if _payload_key_looks_like_raw_json(key):
+            raise typer.BadParameter(RAW_JSON_PAYLOAD_MESSAGE)
         if not key:
             raise typer.BadParameter("Mail payload keys cannot be empty.")
         payload[key] = item.strip()
     return payload
+
+
+def _json_payload(payload_json: str | None) -> dict[str, Any]:
+    if payload_json is None:
+        return {}
+    source = payload_json.strip()
+    if not source:
+        raise typer.BadParameter("--payload-json requires a path or '-' for stdin.")
+    try:
+        text = sys.stdin.read() if source == "-" else Path(source).read_text(encoding="utf-8-sig")
+    except OSError as exc:
+        raise typer.BadParameter(f"--payload-json could not be read: {exc}") from exc
+    try:
+        parsed = json.loads(text)
+    except json.JSONDecodeError as exc:
+        raise typer.BadParameter("--payload-json must contain a JSON object.") from exc
+    if not isinstance(parsed, dict):
+        raise typer.BadParameter("--payload-json must contain a JSON object.")
+    return parsed
+
+
+def _mail_payload(payload: list[str], payload_json: str | None) -> dict[str, Any]:
+    if payload and payload_json is not None:
+        raise typer.BadParameter("Use either --payload key=value or --payload-json, not both.")
+    if payload_json is not None:
+        return _json_payload(payload_json)
+    return _key_value_payload(payload)
 
 
 def _mail_repo_aliases(policy) -> set[str]:
@@ -1403,8 +1431,7 @@ def _discover_mail_repos(
                         if not policy.mail_enabled:
                             protected.append(policy.id)
                         elif delivery and (
-                            not policy.delivery_allowed
-                            or getattr(policy, "write_protected", False)
+                            not policy.delivery_allowed or getattr(policy, "write_protected", False)
                         ):
                             protected.append(policy.id)
                         break
@@ -1417,8 +1444,7 @@ def _discover_mail_repos(
                 )
             if protected:
                 raise typer.BadParameter(
-                    "This operation is blocked by reviewed policy for: "
-                    + ", ".join(protected)
+                    "This operation is blocked by reviewed policy for: " + ", ".join(protected)
                 )
         return repos
 
@@ -1428,10 +1454,7 @@ def _discover_mail_repos(
             policy.id
             for policy in cfg.mail_repos
             if policy.mail_enabled
-            and (
-                not policy.delivery_allowed
-                or getattr(policy, "write_protected", False)
-            )
+            and (not policy.delivery_allowed or getattr(policy, "write_protected", False))
         ]
         if blocked_delivery:
             raise typer.BadParameter(
@@ -1443,9 +1466,7 @@ def _discover_mail_repos(
     for policy in cfg.mail_repos:
         if not policy.mail_enabled:
             continue
-        if delivery and (
-            not policy.delivery_allowed or getattr(policy, "write_protected", False)
-        ):
+        if delivery and (not policy.delivery_allowed or getattr(policy, "write_protected", False)):
             continue
         repos[str(policy.path.resolve())] = policy.path.resolve()
     if not repos:
@@ -1698,8 +1719,7 @@ def _resolve_exception_repo(raw_repo: str, cfg) -> Path:
     if len(matches) > 1:
         matched = ", ".join(sorted(str(Path(policy.path).resolve()) for policy in matches))
         raise typer.BadParameter(
-            f"Repo value {value!r} is ambiguous in reviewed exceptions.repos policy: "
-            + matched
+            f"Repo value {value!r} is ambiguous in reviewed exceptions.repos policy: " + matched
         )
     return Path(value).resolve()
 
@@ -2299,7 +2319,9 @@ def _default_rust_repo_inventory_roots(cfg) -> tuple[list[Path], list[str]]:
         if not bool(getattr(source, "enabled", True)):
             continue
         roots.append(Path(getattr(source, "path")))
-        source_id = _rust_safe_alias_fragment(str(getattr(source, "id", "") or ""), f"source-{index}")
+        source_id = _rust_safe_alias_fragment(
+            str(getattr(source, "id", "") or ""), f"source-{index}"
+        )
         aliases.append(f"dad-local-source/{source_id}")
     if not roots:
         roots.append(cfg.repo_root)
@@ -2322,14 +2344,18 @@ def _github_sources_with_reviewed_file(
     source_id: str,
     owner: str,
 ) -> list[GitHubSource]:
-    resolved_file = repositories_file if repositories_file.is_absolute() else cfg.repo_root / repositories_file
+    resolved_file = (
+        repositories_file if repositories_file.is_absolute() else cfg.repo_root / repositories_file
+    )
     rows = load_github_repositories_file(resolved_file)
     inferred_owner = owner or _infer_github_owner(rows)
     existing_sources = list(cfg.github_sources)
     template = next((source for source in existing_sources if source.id == source_id), None)
     reviewed_source = GitHubSource(
         id=source_id,
-        owner=inferred_owner if inferred_owner != "unknown" else (template.owner if template else inferred_owner),
+        owner=inferred_owner
+        if inferred_owner != "unknown"
+        else (template.owner if template else inferred_owner),
         enabled=True,
         token_env=template.token_env if template else "GITHUB_TOKEN",
         include_private=template.include_private if template else True,
@@ -2601,9 +2627,10 @@ def rust_rollout_build_mail(
         cfg.repo_root / "processed" / "mail" / "staged" / "rust_rollout"
     ).resolve(strict=False)
     temp_root = _system_temp_root()
-    if _is_under_or_equal(resolved_out_dir, tracked_snapshot_dir) and not (
-        promote_reference_snapshot_ack or ""
-    ).strip():
+    if (
+        _is_under_or_equal(resolved_out_dir, tracked_snapshot_dir)
+        and not (promote_reference_snapshot_ack or "").strip()
+    ):
         console.print_json(
             data={
                 "schema_version": "dad_rust_rollout_snapshot_promotion_gate.v1",
@@ -2910,14 +2937,25 @@ def mail_compose(
     target_repo: str = typer.Option("central_only", "--target-repo"),
     summary: str = typer.Option(..., "--summary"),
     payload: list[str] = typer.Option([], "--payload"),
+    payload_json: Optional[str] = typer.Option(
+        None,
+        "--payload-json",
+        help="Read the full mail payload object from a JSON file, or '-' for stdin.",
+    ),
     evidence: list[str] = typer.Option([], "--evidence"),
     suggested_action: list[str] = typer.Option([], "--suggested-action"),
     sensitivity: str = typer.Option("internal", "--sensitivity"),
     thread_id: Optional[str] = typer.Option(None, "--thread-id"),
     dedupe_key: Optional[str] = typer.Option(None, "--dedupe-key"),
     composed_by: str = typer.Option("unknown", "--composed-by"),
-    supersedes: str = typer.Option("", "--supersedes", help="Mail ID of a previously sent message this one upgrades; reuses its thread."),
-    allow_similar: bool = typer.Option(False, "--allow-similar", help="Send even when a near-duplicate was already sent."),
+    supersedes: str = typer.Option(
+        "",
+        "--supersedes",
+        help="Mail ID of a previously sent message this one upgrades; reuses its thread.",
+    ),
+    allow_similar: bool = typer.Option(
+        False, "--allow-similar", help="Send even when a near-duplicate was already sent."
+    ),
     hub: Optional[Path] = typer.Option(None),
 ) -> None:
     """Append a candidate mail packet to a repo-local outbox."""
@@ -2928,7 +2966,7 @@ def mail_compose(
             message_type=message_type,
             target_repo=target_repo,
             summary=summary,
-            payload=_key_value_payload(payload),
+            payload=_mail_payload(payload, payload_json),
             evidence=evidence,
             suggested_actions=suggested_action,
             sensitivity=sensitivity,
@@ -2961,9 +2999,7 @@ def mail_discover_repos(
         for row in _mail_repo_candidates(cfg)
     ]
     unreviewed_count = sum(
-        1
-        for row in candidates
-        if not row["configured"] and (row["has_inbox"] or row["has_outbox"])
+        1 for row in candidates if not row["configured"] and (row["has_inbox"] or row["has_outbox"])
     )
     console.print_json(
         data={
@@ -3304,7 +3340,9 @@ def mail_release(
 
 @mail_app.command("compose-asset")
 def mail_compose_asset(
-    asset: str = typer.Option(..., "--asset", help="DAD offering ID, e.g. dad:offering:python-underused-idioms"),
+    asset: str = typer.Option(
+        ..., "--asset", help="DAD offering ID, e.g. dad:offering:python-underused-idioms"
+    ),
     target_repo: str = typer.Option(..., "--target-repo"),
     note: str = typer.Option("", "--note"),
     supersedes: str = typer.Option("", "--supersedes"),
@@ -3335,6 +3373,11 @@ def mail_outbox_check(
     message_type: str = typer.Option("", "--type"),
     summary: str = typer.Option(..., "--summary"),
     payload: list[str] = typer.Option([], "--payload"),
+    payload_json: Optional[str] = typer.Option(
+        None,
+        "--payload-json",
+        help="Read the proposed mail payload object from a JSON file, or '-' for stdin.",
+    ),
     evidence: list[str] = typer.Option([], "--evidence"),
     hub: Optional[Path] = typer.Option(None),
 ) -> None:
@@ -3345,7 +3388,7 @@ def mail_outbox_check(
             repo.resolve(),
             message_type=message_type,
             summary=summary,
-            payload=_key_value_payload(payload),
+            payload=_mail_payload(payload, payload_json),
             evidence=evidence,
         )
     except (OSError, ValueError) as exc:
@@ -3374,7 +3417,9 @@ def mail_resurface(
 
 
 @mail_app.command("digest")
-def mail_digest(repo: str = typer.Option(".", "--repo"), hub: Optional[Path] = typer.Option(None)) -> None:
+def mail_digest(
+    repo: str = typer.Option(".", "--repo"), hub: Optional[Path] = typer.Option(None)
+) -> None:
     """Show unread mail and mark the repo mailbox as checked."""
     cfg = _cfg(hub=hub)
     result = digest_mail(_resolve_mail_repo(repo, cfg), repo_policies=cfg.mail_repos)
@@ -3677,7 +3722,9 @@ def mail_doctor(
                 }
             )
             raise typer.Exit(2)
-        allowlist_path = cfg.repo_root / "processed" / "mail" / "archive" / "legacy_collection_allowlist.jsonl"
+        allowlist_path = (
+            cfg.repo_root / "processed" / "mail" / "archive" / "legacy_collection_allowlist.jsonl"
+        )
         allowlisted = 0
         for issue in result.get("issues", []):
             if issue.get("issue_type") != "central_inbox_missing_collection_audit":
@@ -4286,7 +4333,9 @@ def dad_patterns(
     repo: Path = typer.Option(Path("."), "--repo"),
     task: str = typer.Option("", "--task"),
     limit: int = typer.Option(3, min=1, max=10),
-    full: bool = typer.Option(False, "--full", help="Print the full pattern registry instead of matches."),
+    full: bool = typer.Option(
+        False, "--full", help="Print the full pattern registry instead of matches."
+    ),
     hub: Optional[Path] = typer.Option(None),
 ) -> None:
     """Show high-value asset-pattern cards matched to a repo/task, or the full registry."""
@@ -4326,8 +4375,7 @@ def dad_unavailable_ack(
         None,
         "--audit-output",
         help=(
-            "Optional local JSONL audit output. Used directly when the DAD hub "
-            "cannot be resolved."
+            "Optional local JSONL audit output. Used directly when the DAD hub cannot be resolved."
         ),
     ),
     hub: Optional[Path] = typer.Option(None),
@@ -4617,8 +4665,7 @@ def exceptions_taxonomy_coverage(
         raise typer.Exit(2) from exc
     console.print_json(data=result)
     if fail_on_unrouted and (
-        result.get("reviewed_unrouted_event_types")
-        or result.get("learnable_unrouted_event_types")
+        result.get("reviewed_unrouted_event_types") or result.get("learnable_unrouted_event_types")
     ):
         raise typer.Exit(1)
     missing_scenarios = result.get("routed_events_missing_synthetic_cases") or result.get(
@@ -4767,9 +4814,7 @@ def exceptions_capture_audit(
             max_scanned_files=max_scanned_files,
             scope={
                 "scope_id": "exceptions.repos:all" if reviewed_policy_scope else "ad_hoc",
-                "scope_kind": "reviewed_exception_policy"
-                if reviewed_policy_scope
-                else "ad_hoc",
+                "scope_kind": "reviewed_exception_policy" if reviewed_policy_scope else "ad_hoc",
                 "reviewed_policy_scope": reviewed_policy_scope,
                 "expected_repo_count": len(repos),
                 "audited_repo_count": min(len(repos), limit),
@@ -5102,8 +5147,7 @@ def exceptions_fix(
     policy_block_reason = _exception_record_policy_block_reason(cfg, repo.resolve())
     if policy_block_reason:
         raise typer.BadParameter(
-            "exceptions fix is blocked by reviewed exceptions.repos policy: "
-            + policy_block_reason
+            "exceptions fix is blocked by reviewed exceptions.repos policy: " + policy_block_reason
         )
     try:
         result = record_exception_fix_outcome(
@@ -5192,10 +5236,7 @@ def exceptions_backfill(
     approval_id: str = typer.Option(
         "",
         "--approval-id",
-        help=(
-            "Reviewed approval id required for non-DAD backfill roots or readable "
-            "path refs."
-        ),
+        help=("Reviewed approval id required for non-DAD backfill roots or readable path refs."),
     ),
     hub: Optional[Path] = typer.Option(None),
 ) -> None:
@@ -5216,8 +5257,7 @@ def exceptions_backfill(
         )
         if approval_block_reason:
             raise typer.BadParameter(
-                "exceptions backfill needs a reviewed --approval-id: "
-                + approval_block_reason
+                "exceptions backfill needs a reviewed --approval-id: " + approval_block_reason
             )
     policy_block_reason = _exception_backfill_policy_block_reason(cfg, root_resolved)
     if policy_block_reason:
@@ -5474,11 +5514,17 @@ def exceptions_fix_outcome_requests(
 
 @exceptions_app.command("hard-issue-lookup")
 def exceptions_hard_issue_lookup(
-    query: str = typer.Option("", "--query", help="Short safe issue summary. Do not paste raw logs."),
+    query: str = typer.Option(
+        "", "--query", help="Short safe issue summary. Do not paste raw logs."
+    ),
     signal: list[str] = typer.Option([], "--signal"),
     event_type: list[str] = typer.Option([], "--event-type"),
-    command_arg: list[str] = typer.Option([], "--command-arg", help="Command argv only; no stdout/stderr."),
-    path_ref: list[str] = typer.Option([], "--path-ref", help="Repo-relative path refs or safe hashes."),
+    command_arg: list[str] = typer.Option(
+        [], "--command-arg", help="Command argv only; no stdout/stderr."
+    ),
+    path_ref: list[str] = typer.Option(
+        [], "--path-ref", help="Repo-relative path refs or safe hashes."
+    ),
     limit: int = typer.Option(5, "--limit", min=1, max=20),
     include_backfill: bool = typer.Option(False, "--include-backfill"),
     target_public_facing: bool = typer.Option(False, "--target-public-facing"),
@@ -5609,11 +5655,21 @@ def lesson_reindex(hub: Optional[Path] = typer.Option(None)) -> None:
 def lesson_review_feedback(
     repository: Path = typer.Option(Path("."), "--repo"),
     task: str = typer.Option("", "--task"),
-    agent: str = typer.Option(..., "--agent", help="Reviewing agent, e.g. fable, opus, codex, claude-code, cursor, human."),
+    agent: str = typer.Option(
+        ..., "--agent", help="Reviewing agent, e.g. fable, opus, codex, claude-code, cursor, human."
+    ),
     model: Optional[str] = typer.Option(None, "--model"),
-    review_type: str = typer.Option(..., "--review-type", help="red_team | premortem | audit | code_review | security_review | swe_feedback"),
+    review_type: str = typer.Option(
+        ...,
+        "--review-type",
+        help="red_team | premortem | audit | code_review | security_review | swe_feedback",
+    ),
     severity: str = typer.Option("mixed", "--severity"),
-    finding: list[str] = typer.Option(..., "--finding", help="One finding summary per flag; pointers and paths, never source blobs."),
+    finding: list[str] = typer.Option(
+        ...,
+        "--finding",
+        help="One finding summary per flag; pointers and paths, never source blobs.",
+    ),
     confirmed: list[str] = typer.Option([], "--confirmed"),
     recommendation: list[str] = typer.Option([], "--recommendation"),
     path: list[str] = typer.Option([], "--path"),
@@ -5949,10 +6005,16 @@ def research_intake(
     name: str = typer.Option(..., "--name"),
     kind: str = typer.Option(..., "--kind", help="skill | harness | asset | lesson | doc"),
     source_url: str = typer.Option(..., "--source-url"),
-    research_ref: str = typer.Option("", "--research-ref", help="Pointer into a processed/research report entry."),
+    research_ref: str = typer.Option(
+        "", "--research-ref", help="Pointer into a processed/research report entry."
+    ),
     license_name: str = typer.Option("", "--license"),
     notes: str = typer.Option("", "--notes"),
-    justification: str = typer.Option("", "--justification", help="Required when the source is not in the trusted-source registry."),
+    justification: str = typer.Option(
+        "",
+        "--justification",
+        help="Required when the source is not in the trusted-source registry.",
+    ),
     hub: Optional[Path] = typer.Option(None),
 ) -> None:
     """Quarantine an external research finding as a candidate skill/asset intake record."""
@@ -5977,7 +6039,9 @@ def research_intake(
 @research_app.command("screen")
 def research_screen(
     intake_id: str = typer.Option(..., "--intake-id"),
-    check: str = typer.Option(..., "--check", help="prompt_injection | license | provenance | compatibility"),
+    check: str = typer.Option(
+        ..., "--check", help="prompt_injection | license | provenance | compatibility"
+    ),
     result: str = typer.Option(..., "--result", help="pass | fail | not_applicable"),
     notes: str = typer.Option("", "--notes"),
     screened_by: str = typer.Option("agent", "--screened-by"),
@@ -6003,7 +6067,9 @@ def research_screen(
 @research_app.command("promote")
 def research_promote(
     intake_id: str = typer.Option(..., "--intake-id"),
-    approved_by: str = typer.Option(..., "--approved-by", help="Named human approver; agent/unknown are rejected."),
+    approved_by: str = typer.Option(
+        ..., "--approved-by", help="Named human approver; agent/unknown are rejected."
+    ),
     approval_id: str = typer.Option(..., "--approval-id"),
     target: str = typer.Option(..., "--target", help="offering | skill_pointer"),
     capability: list[str] = typer.Option([], "--capability"),
@@ -6030,7 +6096,9 @@ def research_promote(
 
 @research_app.command("intake-list")
 def research_intake_list(
-    status: str = typer.Option("", "--status", help="Filter: quarantined | screened | promoted | rejected"),
+    status: str = typer.Option(
+        "", "--status", help="Filter: quarantined | screened | promoted | rejected"
+    ),
     hub: Optional[Path] = typer.Option(None),
 ) -> None:
     """List external intake records and their screening status."""
@@ -6040,9 +6108,15 @@ def research_intake_list(
 
 @research_app.command("frontier-watch")
 def research_frontier_watch(
-    language: str = typer.Option("", "--language", help="Filter to python, rust, or another language id."),
-    cadence: str = typer.Option("", "--cadence", help="Filter to weekly | monthly | quarterly | manual."),
-    include_manual: bool = typer.Option(False, "--include-manual", help="Include manual-only source rows."),
+    language: str = typer.Option(
+        "", "--language", help="Filter to python, rust, or another language id."
+    ),
+    cadence: str = typer.Option(
+        "", "--cadence", help="Filter to weekly | monthly | quarterly | manual."
+    ),
+    include_manual: bool = typer.Option(
+        False, "--include-manual", help="Include manual-only source rows."
+    ),
     limit: int = typer.Option(0, "--limit", min=0, max=100),
     hub: Optional[Path] = typer.Option(None),
 ) -> None:
@@ -6064,8 +6138,12 @@ def research_frontier_watch(
 
 @research_app.command("language-playbook")
 def research_language_playbook(
-    language: str = typer.Option(..., "--language", help="Language id, e.g. python, rust, future-language-template."),
-    include_text: bool = typer.Option(False, "--include-text", help="Include the markdown playbook body in the JSON output."),
+    language: str = typer.Option(
+        ..., "--language", help="Language id, e.g. python, rust, future-language-template."
+    ),
+    include_text: bool = typer.Option(
+        False, "--include-text", help="Include the markdown playbook body in the JSON output."
+    ),
     hub: Optional[Path] = typer.Option(None),
 ) -> None:
     """Show the operational DAD coding playbook for one language."""
@@ -6247,9 +6325,7 @@ def recommend_workflow_part_review_summary(
         path = cfg.repo_root / path
     try:
         reviews = load_workflow_part_reviews(path)
-        summary, output = write_workflow_part_review_results_summary(
-            cfg.repo_root, reviews, path
-        )
+        summary, output = write_workflow_part_review_results_summary(cfg.repo_root, reviews, path)
     except (FileNotFoundError, ValueError) as exc:
         console.print(str(exc))
         raise typer.Exit(2) from exc
@@ -6271,7 +6347,9 @@ def recommend_workflow_part_review_queue(
         review_file
         or cfg.repo_root / "processed" / "workflow_parts" / "workflow_part_review_template.jsonl"
     )
-    parts_path = workflow_parts_file or cfg.repo_root / "processed" / "learning" / "workflow_parts.jsonl"
+    parts_path = (
+        workflow_parts_file or cfg.repo_root / "processed" / "learning" / "workflow_parts.jsonl"
+    )
     if not review_path.is_absolute():
         review_path = cfg.repo_root / review_path
     if not parts_path.is_absolute():
@@ -7148,7 +7226,11 @@ def recommend_priority_content_lesson_review_label(
         console.print(str(exc))
         raise typer.Exit(2) from exc
     console.print_json(
-        data={"review_file": str(path), "updated": updated.model_dump(mode="json"), "summary": summary}
+        data={
+            "review_file": str(path),
+            "updated": updated.model_dump(mode="json"),
+            "summary": summary,
+        }
     )
 
 
