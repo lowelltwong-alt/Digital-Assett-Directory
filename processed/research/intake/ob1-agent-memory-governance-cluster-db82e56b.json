@@ -1,0 +1,45 @@
+{
+  "approval": {
+    "approval_id": "",
+    "approved_by": "",
+    "decided_at": ""
+  },
+  "authority_boundary": "Intake records are quarantined candidate metadata about external sources. They carry links, provenance, and screening state only - never external file contents - and do not authorize checkout, install, or downstream delivery.",
+  "created_at": "2026-07-06T02:44:54.266510+00:00",
+  "intake_id": "dad:research-intake:db82e56b-8d01-5fcf-b9d1-94a82d247c60",
+  "justification": "Public GitHub repository NateBJones-Projects/OB1 was mapped read-only for DAD candidate discovery on 2026-07-06. Intake is pointer-only metadata for possible harness/skill/architecture review; no upstream source body is copied. Observed commit during review: 677910600de98067f61c120d65956b23f360aedb.",
+  "kind": "asset",
+  "license": "FSL-1.1-MIT",
+  "name": "OB1 Agent Memory Governance Cluster",
+  "notes": "Candidate memory governance pattern spanning schemas/agent-memory, integrations/agent-memory-api, integrations/openclaw-agent-memory, skills/openclaw-agent-memory, and related OpenClaw memory/taskflow recipes. Compare to DAD lesson, mail, and provenance boundaries before any adoption.",
+  "promotion": {},
+  "research_ref": "dad:lesson:f1a333da-e7dd-5483-94f6-13ac9835f90c",
+  "schema_version": "0.1.0",
+  "screening": {
+    "compatibility": {
+      "notes": "Candidate-only DAD fit recorded in notes. Does not replace DAD canon, registries, schemas, or local validation gates.",
+      "result": "pass",
+      "screened_by": "codex"
+    },
+    "license": {
+      "notes": "FSL-1.1-MIT identified. Pass is only for quarantine/pointer metadata; copying, vendoring, redistribution, or promotion still requires named human license and compatibility review.",
+      "result": "pass",
+      "screened_by": "codex"
+    },
+    "prompt_injection": {
+      "notes": "Pointer-only metadata; upstream skill/recipe text is treated as untrusted external instruction until human review, and no upstream body was copied into DAD.",
+      "result": "pass",
+      "screened_by": "codex"
+    },
+    "provenance": {
+      "notes": "Public GitHub source URL recorded with observed review commit 677910600de98067f61c120d65956b23f360aedb and read-only sparse checkout provenance.",
+      "result": "pass",
+      "screened_by": "codex"
+    }
+  },
+  "source_id": "",
+  "source_url": "https://github.com/NateBJones-Projects/OB1/tree/main/schemas/agent-memory",
+  "status": "screened",
+  "trust_note": "Trust tier lowers intake friction only; screening and human approval are still required before promotion.",
+  "trust_tier": "unknown"
+}
