@@ -82,6 +82,23 @@ The pattern registry is `registry/asset-pattern-registry.json`. Pattern matches 
 metadata as candidate evidence until human review promotes a bundle, cluster, workflow, or
 instance.
 
+## Research Intake Pointers
+
+External repositories, standards, and tool references enter DAD through
+`processed/research/intake/*.json`. The generated research intake graph at
+`processed/research/intake-graph.json` plus
+`processed/research/intake-graph-edges.jsonl` makes those pointers graph-visible
+without copying source material. It records local metadata about the other side
+of the pointer: source URL, trust tier, license, screening state, safe notes,
+candidate capability group, DAD need, and suggested DAD surface.
+
+This graph is intentionally not the promoted asset graph. It may use reviewed
+candidate edge types such as `gap_evidence_for` and `member_of`, and it may also
+include local research-context relationships such as a source pointer. Those
+local relationships remain confined to the research intake surface until the
+graph-edge registry is updated through review or a named human promotion creates
+an offering or skill pointer.
+
 ## Duplicate and variant handling
 
 When two assets are nearly the same because similar work was recreated in different repos,

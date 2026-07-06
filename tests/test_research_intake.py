@@ -12,6 +12,7 @@ from digital_asset_directory.mail_center import compose_asset_suggestion
 from digital_asset_directory.research_intake import (
     build_language_playbook_report,
     build_language_frontier_watchlist,
+    build_research_intake_graph,
     intake_external_candidate,
     list_intake,
     match_trusted_source,
@@ -284,6 +285,52 @@ def test_screening_gates_promotion_and_failed_check_holds(tmp_path: Path):
     record_screening(hub, intake["intake_id"], check="prompt_injection", result="pass")
     _screen_all(hub, intake["intake_id"])
     assert list_intake(hub, status="screened")["intake_count"] == 1
+
+
+def test_research_intake_graph_explains_external_pointers_without_promotion(
+    tmp_path: Path,
+):
+    hub = _intake_hub(tmp_path)
+    intake = intake_external_candidate(
+        hub,
+        name="Pytest Hypothesis Coverage Harness",
+        kind="harness",
+        source_url="https://docs.pytest.org/en/stable/",
+        license_name="MIT",
+        notes="Python test harness candidate that composes pytest, Hypothesis, and coverage.",
+    )["intake"]
+    _screen_all(hub, intake["intake_id"])
+
+    graph = build_research_intake_graph(hub)
+
+    graph_path = hub / "processed" / "research" / "intake-graph.json"
+    edges_path = hub / "processed" / "research" / "intake-graph-edges.jsonl"
+    assert graph_path.exists()
+    assert edges_path.exists()
+    assert graph["graph_id"] == "dad:research-intake-graph"
+    assert graph["intake_count"] == 1
+    assert "candidate context surface" in graph["authority_boundary"]
+    assert graph["edge_registry_alignment"]["promotion_required_for_main_graph"] is True
+
+    intake_node_id = f"research-intake:{intake['intake_id']}"
+    intake_node = next(node for node in graph["nodes"] if node["node_id"] == intake_node_id)
+    assert intake_node["review_status"] == "candidate"
+    assert intake_node["external_side_summary"]["source_pointer"] == "https://docs.pytest.org/en/stable/"
+    assert "external source contents" in intake_node["authority_boundary"]
+    assert "dad-surface:python-test-performance-orchestration" in intake_node["suggested_surfaces"]
+    assert "capability:python-testing" in intake_node["capability_tags"]
+
+    relationships = {edge["relationship"] for edge in graph["edges"]}
+    assert "points_to_external_source" in relationships
+    assert "routes_to_dad_surface" in relationships
+    assert "supports_capability_candidate" in relationships
+    assert "intake_suggests_need" in relationships
+    assert any(
+        edge["edge_type"] == "gap_evidence_for"
+        and edge["target"] == "need:dad:need:coding-harness-feedback"
+        for edge in graph["edges"]
+    )
+    assert all(edge["review_status"] == "candidate" for edge in graph["edges"])
 
 
 def test_promotion_requires_named_human_and_blocks_duplicates(tmp_path: Path):

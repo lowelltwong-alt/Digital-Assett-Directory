@@ -210,6 +210,7 @@ from .research import research_missing_parts
 from .research_intake import (
     build_language_playbook_report,
     build_language_frontier_watchlist,
+    build_research_intake_graph,
     intake_external_candidate,
     list_intake,
     promote_intake,
@@ -6116,6 +6117,20 @@ def research_intake_list(
     """List external intake records and their screening status."""
     cfg = _cfg(hub=hub)
     console.print_json(data=list_intake(cfg.repo_root, status=status))
+
+
+@research_app.command("intake-graph")
+def research_intake_graph(
+    hub: Optional[Path] = typer.Option(None),
+) -> None:
+    """Build a pointer-only candidate graph over external research intake records."""
+    cfg = _cfg(hub=hub)
+    try:
+        report = build_research_intake_graph(cfg.repo_root)
+    except (ValueError, FileNotFoundError) as exc:
+        console.print(str(exc))
+        raise typer.Exit(2) from exc
+    console.print_json(data=report)
 
 
 @research_app.command("frontier-watch")
