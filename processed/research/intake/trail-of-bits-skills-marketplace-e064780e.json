@@ -1,0 +1,45 @@
+{
+  "approval": {
+    "approval_id": "",
+    "approved_by": "",
+    "decided_at": ""
+  },
+  "authority_boundary": "Intake records are quarantined candidate metadata about external sources. They carry links, provenance, and screening state only - never external file contents - and do not authorize checkout, install, or downstream delivery.",
+  "created_at": "2026-07-06T03:15:22.322586+00:00",
+  "intake_id": "dad:research-intake:e064780e-b1fe-52aa-81b2-9634cc720cba",
+  "justification": "",
+  "kind": "skill",
+  "license": "CC-BY-SA-4.0",
+  "name": "Trail of Bits Skills Marketplace",
+  "notes": "Trusted Trail of Bits source. Pointer-only security skill reference; CC-BY-SA means no copying or derivative skill adoption without license review. Route to security review harness ideas.",
+  "promotion": {},
+  "research_ref": "",
+  "schema_version": "0.1.0",
+  "screening": {
+    "compatibility": {
+      "notes": "Trusted Trail of Bits source. Pointer-only security skill reference; CC-BY-SA means no copying or derivative skill adoption without license review. Route to security review harness ideas.",
+      "result": "pass",
+      "screened_by": "codex"
+    },
+    "license": {
+      "notes": "Recorded license/terms as CC-BY-SA-4.0. Pointer-only; no source copying or dependency adoption authorized.",
+      "result": "pass",
+      "screened_by": "codex"
+    },
+    "prompt_injection": {
+      "notes": "Pointer-only intake. No external instructions copied, installed, or executed; any checkout or plugin use must be re-screened.",
+      "result": "pass",
+      "screened_by": "codex"
+    },
+    "provenance": {
+      "notes": "Source pointer and trust/justification recorded on intake. Provenance is candidate metadata, not source truth.",
+      "result": "pass",
+      "screened_by": "codex"
+    }
+  },
+  "source_id": "trailofbits",
+  "source_url": "https://github.com/trailofbits/skills",
+  "status": "screened",
+  "trust_note": "Trust tier lowers intake friction only; screening and human approval are still required before promotion.",
+  "trust_tier": "high_signal"
+}
