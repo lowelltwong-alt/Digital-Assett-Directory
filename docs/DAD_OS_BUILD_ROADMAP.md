@@ -270,3 +270,25 @@ and reverts uncommitted edits to shared registries/schemas on `main`. Work on a
 branch and commit early. The Track A kernel is committed on branch
 `dad-graph-inference-kernel` (commit "Add graph inference & combination discovery
 kernel"). Rebase/cherry-pick it forward rather than rebuilding.
+
+## Track H — Transport & communications (three-plane) `[HARD kernel done]`
+
+Design: `docs/DAD_TRANSPORT_AND_COMMS_REDESIGN.md` (+ Implementation Manifest).
+Roadmap gate: `roadmap/roadmap.yaml` phase-13-transport-data-plane.
+
+- [x] **H1. Transport kernel** — `src/digital_asset_directory/transport.py`:
+      fail-safe DAD_DATA_ROOT resolver, copy-verify-activate migration (never
+      deletes/never runs git), OneDrive guard, read-only legacy-transport
+      auditor + deduped upgrade queue. Proof: `tests/test_transport.py` (5
+      golden tests, green). Branch fable/transport-kernel.
+- [x] **H2. First live audit** — hub upgrade_required (161 tracked data files);
+      8/10 enrolled repos queued; logos-scripture-graph has tracked spool JSONL
+      (protected, central-only). Output: processed/reports/transport_audit.json.
+- [ ] **H3. M0a reroute writers through data_path** — CODEX (manifest list).
+- [ ] **H4. M0b CLI (data init/migrate/status, transport audit) + detector
+      v1.1 contract_missing signal** — CODEX.
+- [ ] **H5. M1 daemon run-cycle + Task Scheduler + heartbeat** — CODEX.
+- [ ] **H6. M2 dad-journal checkpoint + remote-outbox ingest** — CODEX.
+- [ ] **H7. Doc/template wave (9-item list in manifest) + enrollment upgrade
+      wave from the queue** — CODEX + human wave approval.
+- [ ] **H8. M3 Cloudflare relay** — DEFERRED (phase-10a cloud gate).
