@@ -12,8 +12,8 @@
     "AI_TABLE_OF_CONTENTS.md"
   ],
   "navigation_standards": {
-    "navigation_version": "2026.07.05.2",
-    "updated_at": "2026-07-05T07:45:00Z",
+    "navigation_version": "2026.07.06.1",
+    "updated_at": "2026-07-06T04:30:06Z",
     "single_ai_entrypoint": "AI_FRONT_DOOR.md",
     "ai_table_of_contents": "AI_TABLE_OF_CONTENTS.md",
     "navigation_registry": "registry/ai-navigation-registry.json",
@@ -144,6 +144,7 @@
     "mail/outbox/rust_rollout/",
     "roadmap/evidence/dad-deployment-and-all-repo-verification-roadmap.md",
     "roadmap/evidence/phase-8-dad-local-deployment.md",
+    "roadmap/evidence/phase-8-dad-local-deployment.human-review-packet.json",
     "roadmap/evidence/phase-9-all-repo-read-only-inventory.md",
     "roadmap/evidence/phase-10-mail-end-to-end-trial.md"
   ],

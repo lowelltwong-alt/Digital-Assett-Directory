@@ -4,8 +4,10 @@ from pathlib import Path
 from types import SimpleNamespace
 
 import pytest
+from typer.testing import CliRunner
 import yaml
 
+from digital_asset_directory.cli import app
 from digital_asset_directory.config import ExceptionRepoPolicy
 from digital_asset_directory.exception_capture import (
     build_phase6_machine_evidence_summary,
@@ -17,7 +19,11 @@ from digital_asset_directory.exception_capture import (
     write_observed_capture_audit,
 )
 from digital_asset_directory.learning import _hash_path as _lesson_graph_hash_path
-from digital_asset_directory.roadmap import check_roadmap, record_human_gate_evidence
+from digital_asset_directory.roadmap import (
+    build_human_gate_review_packet,
+    check_roadmap,
+    record_human_gate_evidence,
+)
 from digital_asset_directory.validation import (
     _candidate_path_scan_staleness_errors,
     _capture_emission_simulation_errors,
@@ -47,6 +53,7 @@ from digital_asset_directory.validation import (
 pytestmark = pytest.mark.integration
 
 ROOT = Path(__file__).resolve().parents[1]
+RUNNER = CliRunner()
 
 
 def _load_json(rel: str) -> dict:
@@ -206,6 +213,62 @@ def test_phase8_requires_goal1_command_evidence():
     assert set(phase8["acceptance"]["commands"]) >= required_commands
     assert evidence_commands >= required_commands
     assert command_evidence["human_review_status"] == "pending"
+
+
+def test_phase8_human_gate_review_packet_is_review_only():
+    packet = build_human_gate_review_packet(ROOT, "phase-8-dad-local-deployment")
+
+    assert packet["schema_version"] == "dad.roadmap.human-gate-review-packet.v1"
+    assert packet["phase_id"] == "phase-8-dad-local-deployment"
+    assert packet["packet_status"] == "review_input_only"
+    assert packet["recommended_declared_status"] == "awaiting_human_gate"
+    assert packet["computed_status"] == "awaiting_human_gate"
+    assert packet["human_gate_satisfied"] is False
+    assert packet["agent_review_satisfies_gate"] is False
+    assert any("cannot approve a human gate" in risk for risk in packet["false_confidence_risks"])
+    assert "roadmap/gate-evidence.json" in packet["human_recording_instructions"]
+    assert "approve public release" in packet["authority_boundary"]
+    assert "authorize enrollment" in packet["authority_boundary"]
+    assert "cross-repo writes" in packet["authority_boundary"]
+    assert all(gate["current_status"] == "unverified" for gate in packet["human_gates"])
+    assert all(gate["human_review_required"] is True for gate in packet["human_gates"])
+    assert all(gate["agent_review_satisfies_gate"] is False for gate in packet["human_gates"])
+    assert all(
+        gate["recommended_gate_evidence_if_verified"]["status"] == "verified"
+        for gate in packet["human_gates"]
+    )
+    assert {
+        "phase-8-local-install-reviewed",
+        "phase-8-hub-locator-reviewed",
+        "phase-8-doctor-smoke-reviewed",
+        "phase-8-unavailable-policy-reviewed",
+    } == {gate["gate_id"] for gate in packet["human_gates"]}
+
+
+def test_roadmap_human_gate_review_packet_cli_writes_review_only_packet(tmp_path: Path):
+    output = tmp_path / "phase8.packet.json"
+
+    result = RUNNER.invoke(
+        app,
+        [
+            "roadmap",
+            "human-gate-review-packet",
+            "phase-8-dad-local-deployment",
+            "--output",
+            str(output),
+            "--hub",
+            str(ROOT),
+        ],
+    )
+
+    assert result.exit_code == 0, result.output
+    packet = json.loads(output.read_text(encoding="utf-8"))
+    assert packet["phase_id"] == "phase-8-dad-local-deployment"
+    assert packet["packet_status"] == "review_input_only"
+    assert packet["human_gate_satisfied"] is False
+    assert packet["agent_review_satisfies_gate"] is False
+    gate_evidence = _load_json("roadmap/gate-evidence.json")
+    assert "phase-8-local-install-reviewed" not in gate_evidence["human_gates"]
 
 
 def test_phase8_command_evidence_validation_rejects_stale_or_promoted_packet(tmp_path: Path):

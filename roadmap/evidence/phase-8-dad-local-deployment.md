@@ -1,8 +1,8 @@
 # Phase 8 DAD Local Deployment Evidence
 
 Created: 2026-07-04
-Updated: 2026-07-05
-Status: machine evidence captured; human gates still require review
+Updated: 2026-07-06
+Status: machine evidence captured; queued for human gate review
 
 ## Scope
 
@@ -106,6 +106,23 @@ Roadmap command evidence is recorded in `roadmap/gate-evidence.json` for:
 The same command set is mirrored in
 `roadmap/evidence/phase-8-dad-local-deployment.commands.json` so future agents
 can verify the machine-evidence contract without scraping prose.
+
+## Human Review Packet
+
+`roadmap/evidence/phase-8-dad-local-deployment.human-review-packet.json` is the
+generated review packet for the four open Phase 8 human gates. It was produced
+with:
+
+```powershell
+$env:PYTHONPATH='src'
+python -m digital_asset_directory.cli roadmap human-gate-review-packet phase-8-dad-local-deployment --output roadmap/evidence/phase-8-dad-local-deployment.human-review-packet.json
+```
+
+The packet aligns the declared and computed roadmap state at
+`awaiting_human_gate`, lists the exact machine evidence for human review, and
+includes false-confidence warnings. It is review input only: it does not write
+`roadmap/gate-evidence.json`, satisfy any human gate, approve public release,
+authorize enrollment, deliver mail, or permit cross-repo writes.
 
 ## Focused Tests
 

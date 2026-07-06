@@ -121,6 +121,16 @@ def build_human_gate_review_packet(repo_root: Path, phase_id: str) -> dict[str, 
                     "Only a human reviewer record in roadmap/gate-evidence.json can satisfy "
                     "this gate. This packet is review input, not approval evidence."
                 ),
+                "recommended_gate_evidence_if_verified": {
+                    "phase_id": phase_id,
+                    "status": "verified",
+                    "reviewer": "<Lowell|user|human>",
+                    "reviewed_at": "<ISO-8601 timestamp>",
+                    "summary": "<human decision summary>",
+                    "evidence": [
+                        path for path in required_files if (repo_root / path).exists()
+                    ],
+                },
             }
         )
     return {
@@ -129,6 +139,7 @@ def build_human_gate_review_packet(repo_root: Path, phase_id: str) -> dict[str, 
         "phase_id": phase_id,
         "phase_title": str(phase.get("title", "")),
         "declared_status": roadmap_state.get("declared_status"),
+        "recommended_declared_status": roadmap_state.get("computed_status"),
         "computed_status": roadmap_state.get("computed_status"),
         "packet_status": "review_input_only",
         "no_roadmap_state_mutation": True,
@@ -158,6 +169,16 @@ def build_human_gate_review_packet(repo_root: Path, phase_id: str) -> dict[str, 
             "Record verified gate evidence separately in roadmap/gate-evidence.json only after human review.",
             "Run roadmap check after any human gate evidence is recorded.",
         ],
+        "false_confidence_risks": [
+            "This packet can compile machine evidence but cannot approve a human gate.",
+            "Agent, automation, bot, Codex, or Claude reviewer records do not satisfy roadmap gates.",
+            "Command evidence can become stale; a human reviewer must check current local relevance.",
+            "Gate approval must not broaden enrollment, mail delivery, public release, protected-repo writes, or source-repo mutation.",
+        ],
+        "human_recording_instructions": (
+            "If approved, record each verified gate separately in roadmap/gate-evidence.json "
+            "with reviewer=Lowell, user, human, or human_verified=true and status=verified."
+        ),
         "authority_boundary": (
             "This packet compiles candidate review evidence only. It does not record a "
             "human gate, complete a roadmap phase, approve public release, authorize "

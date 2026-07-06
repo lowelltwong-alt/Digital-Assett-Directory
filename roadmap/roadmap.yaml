@@ -225,7 +225,7 @@ phases:
 
   - id: phase-8-dad-local-deployment
     title: Local DAD deployment and hub resolution
-    status: planned
+    status: awaiting_human_gate
     acceptance:
       required_files:
         - roadmap/evidence/dad-deployment-and-all-repo-verification-roadmap.md
