@@ -58,7 +58,7 @@ def test_manifest_exposes_navigation_and_graph_entrypoints() -> None:
     assert manifest["navigation_standards"]["navigation_registry"] == (
         "registry/ai-navigation-registry.json"
     )
-    assert manifest["navigation_standards"]["navigation_version"] == "2026.07.06.2"
+    assert manifest["navigation_standards"]["navigation_version"] == "2026.07.06.3"
     assert manifest["navigation_standards"]["routing_standard"] == (
         "docs/AI_ENTRYPOINT_AND_TOC_ROUTING_STANDARD.md"
     )
@@ -75,6 +75,7 @@ def test_manifest_exposes_navigation_and_graph_entrypoints() -> None:
         "docs/DAD_MAIL_STORM_AND_DIRTY_STATE_RUNBOOK.md" in manifest["knowledge_graph_entrypoints"]
     )
     assert "docs/DAD_EVENT_PIPELINE.md" in manifest["knowledge_graph_entrypoints"]
+    assert "tools/dad_scan_core/src/event_log.rs" in manifest["knowledge_graph_entrypoints"]
     assert "processed/events/" in manifest["knowledge_graph_entrypoints"]
     assert (
         "processed/events/reports/event_pipeline.md"
@@ -112,7 +113,7 @@ def test_navigation_registry_keeps_front_door_singular_and_fresh() -> None:
     registry = json.loads((ROOT / "registry" / "ai-navigation-registry.json").read_text())
 
     assert registry["singular_entrypoint"]["path"] == "AI_FRONT_DOOR.md"
-    assert registry["navigation_version"] == "2026.07.06.2"
+    assert registry["navigation_version"] == "2026.07.06.3"
     assert registry["updated_at"]
     assert "memory" in registry["entrypoint_policy"]["memory_rule"].lower()
     assert registry["freshness_policy"]["recent_changes_limit"] <= 20
@@ -254,12 +255,16 @@ def test_dad_rust_route_is_explicit_and_ordered() -> None:
 
     for path in rust_route:
         assert path in manifest["knowledge_graph_entrypoints"]
+    assert "tools/dad_scan_core/src/event_log.rs" in manifest["knowledge_graph_entrypoints"]
 
     rust_branch = next(
         branch for branch in registry["branch_map"] if branch["branch_id"] == "dad_rust_system"
     )
     assert rust_branch["path"] == rust_route[0]
-    assert rust_branch["route_after"] == rust_route[1:]
+    for path in rust_route[1:]:
+        assert path in rust_branch["route_after"]
+    assert "tools/dad_scan_core/src/event_log.rs" in rust_branch["route_after"]
+    assert "asset-dir rust event-log-check" in rust_branch["route_after"]
     assert "starter-pack README" in rust_branch["freshness_hint"]
 
 

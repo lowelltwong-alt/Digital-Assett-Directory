@@ -6,164 +6,23 @@
   "duplicate_logical_path_count": 0,
   "duplicate_logical_paths": [],
   "follow_symlinks": false,
-  "generated_at": "2026-07-06T04:46:01.869083+00:00",
+  "generated_at": "2026-07-06T06:28:02.932574+00:00",
   "hash_policy": "text-lf-normalized-v1",
   "input_hashes": {
     "src/digital_asset_directory/dad_library.py": "sha256:f054d75414737be11f9e1bd768959204aad6608ac4d5af9dd9a48848e9e44f30",
-    "src/digital_asset_directory/rust_bridge/dad_scan_core.py": "sha256:a8ab90b5fac8f5568b25edf21d1425e7c6922fa3bcdee72bd398dc006125ad0d",
-    "tools/dad_scan_core/src/models.rs": "sha256:db4c7a9ab78cf2b4aa0c57fb99d00ae7a6c259604973191ab9f20e0fa717c492",
+    "src/digital_asset_directory/rust_bridge/dad_scan_core.py": "sha256:d0625ba4c1b5104844db02184fbe7c223a826126bf5f58686b3cef45a405d811",
+    "tools/dad_scan_core/src/models.rs": "sha256:21eaf135648ad42a1c7e51ed08fc17e2ebda0cb08a1f1dc58bf57bb43e25fe88",
     "tools/dad_scan_core/src/repo_probe.rs": "sha256:f62cc2518cd1580d0d25ab1237d920f8edfa4811e7f07f5f885db38bf7994d9c"
   },
-  "matched_repo_count": 49,
+  "matched_repo_count": 48,
   "max_depth": 5,
   "methodology_hash": "sha256:f054d75414737be11f9e1bd768959204aad6608ac4d5af9dd9a48848e9e44f30",
   "methodology_ref": "src/digital_asset_directory/dad_library.py",
   "only_python_logical_paths": [],
   "only_python_skipped_dirs": [],
   "only_rust_logical_paths": [],
-  "only_rust_skipped_dirs": [
-    {
-      "logical_path": "dad-local-source/git-projects/00_lawfirm_os/lawfirm-os-intake/mode-test-700",
-      "reason": "walk error",
-      "source": "rust_repo_inventory_probe"
-    },
-    {
-      "logical_path": "dad-local-source/git-projects/03_world_view/logos-scripture-graph-repo/.codex_pytest_tmp_t451",
-      "reason": "walk error",
-      "source": "rust_repo_inventory_probe"
-    },
-    {
-      "logical_path": "dad-local-source/git-projects/04_digital_assett_directory/.pytest-tmp",
-      "reason": "walk error",
-      "source": "rust_repo_inventory_probe"
-    },
-    {
-      "logical_path": "dad-local-source/git-projects/04_digital_assett_directory/.pytest-tmp-codex/mail-center-targeted",
-      "reason": "walk error",
-      "source": "rust_repo_inventory_probe"
-    },
-    {
-      "logical_path": "dad-local-source/git-projects/04_digital_assett_directory/.pytest-tmp-root-run-20260701-2005",
-      "reason": "walk error",
-      "source": "rust_repo_inventory_probe"
-    },
-    {
-      "logical_path": "dad-local-source/git-projects/04_digital_assett_directory/.pytest_tmp_exception_code_change",
-      "reason": "walk error",
-      "source": "rust_repo_inventory_probe"
-    },
-    {
-      "logical_path": "dad-local-source/git-projects/04_digital_assett_directory/.pytest_tmp_exception_single",
-      "reason": "walk error",
-      "source": "rust_repo_inventory_probe"
-    },
-    {
-      "logical_path": "dad-local-source/git-projects/04_digital_assett_directory/tmp_pytest_mail_center_targeted",
-      "reason": "walk error",
-      "source": "rust_repo_inventory_probe"
-    },
-    {
-      "logical_path": "dad-local-source/git-projects/90_ai_tooling_and_temp/.pytest-tmp-lawfirm-os-orchestrator/basetemp/test_build_upgrade_proposal_sc0",
-      "reason": "walk error",
-      "source": "rust_repo_inventory_probe"
-    },
-    {
-      "logical_path": "dad-local-source/git-projects/90_ai_tooling_and_temp/.pytest-tmp-lawfirm-os-orchestrator/basetemp/test_dry_run_lake_writes_recei0",
-      "reason": "walk error",
-      "source": "rust_repo_inventory_probe"
-    },
-    {
-      "logical_path": "dad-local-source/git-projects/90_ai_tooling_and_temp/.pytest-tmp-lawfirm-os-orchestrator/basetemp/test_end_to_end_disabled_lake0",
-      "reason": "walk error",
-      "source": "rust_repo_inventory_probe"
-    },
-    {
-      "logical_path": "dad-local-source/git-projects/90_ai_tooling_and_temp/.pytest-tmp-lawfirm-os-orchestrator/basetemp/test_eval_suite_computes_requi0",
-      "reason": "walk error",
-      "source": "rust_repo_inventory_probe"
-    },
-    {
-      "logical_path": "dad-local-source/git-projects/90_ai_tooling_and_temp/.pytest-tmp-lawfirm-os-orchestrator/basetemp/test_eval_suite_model_call_met0",
-      "reason": "walk error",
-      "source": "rust_repo_inventory_probe"
-    },
-    {
-      "logical_path": "dad-local-source/git-projects/90_ai_tooling_and_temp/.pytest-tmp-lawfirm-os-orchestrator/basetemp/test_import_does_not_require_n0",
-      "reason": "walk error",
-      "source": "rust_repo_inventory_probe"
-    },
-    {
-      "logical_path": "dad-local-source/git-projects/90_ai_tooling_and_temp/.pytest-tmp-lawfirm-os-orchestrator/basetemp/test_import_is_append_only_jso0",
-      "reason": "walk error",
-      "source": "rust_repo_inventory_probe"
-    },
-    {
-      "logical_path": "dad-local-source/git-projects/90_ai_tooling_and_temp/.pytest-tmp-lawfirm-os-orchestrator/basetemp/test_import_rejects_invalid_sc0",
-      "reason": "walk error",
-      "source": "rust_repo_inventory_probe"
-    },
-    {
-      "logical_path": "dad-local-source/git-projects/90_ai_tooling_and_temp/.pytest-tmp-lawfirm-os-orchestrator/basetemp/test_import_valid_json_signal_0",
-      "reason": "walk error",
-      "source": "rust_repo_inventory_probe"
-    },
-    {
-      "logical_path": "dad-local-source/git-projects/90_ai_tooling_and_temp/.pytest-tmp-lawfirm-os-orchestrator/basetemp/test_import_valid_markdown_sig0",
-      "reason": "walk error",
-      "source": "rust_repo_inventory_probe"
-    },
-    {
-      "logical_path": "dad-local-source/git-projects/90_ai_tooling_and_temp/.pytest-tmp-lawfirm-os-orchestrator/basetemp/test_reject_real_data_flags0",
-      "reason": "walk error",
-      "source": "rust_repo_inventory_probe"
-    },
-    {
-      "logical_path": "dad-local-source/git-projects/90_ai_tooling_and_temp/.pytest-tmp-lawfirm-os-orchestrator/basetemp/test_research_radar_import_loc0",
-      "reason": "walk error",
-      "source": "rust_repo_inventory_probe"
-    },
-    {
-      "logical_path": "dad-local-source/git-projects/90_ai_tooling_and_temp/.pytest-tmp-lawfirm-os-orchestrator/basetemp/test_run_evals_script_outputs_0",
-      "reason": "walk error",
-      "source": "rust_repo_inventory_probe"
-    },
-    {
-      "logical_path": "dad-local-source/git-projects/90_ai_tooling_and_temp/.pytest-tmp-lawfirm-os-orchestrator/basetemp/test_run_shadow_eval_script_ou0",
-      "reason": "walk error",
-      "source": "rust_repo_inventory_probe"
-    },
-    {
-      "logical_path": "dad-local-source/git-projects/90_ai_tooling_and_temp/.pytest-tmp-lawfirm-os-orchestrator/basetemp/test_shadow_eval_detects_regre0",
-      "reason": "walk error",
-      "source": "rust_repo_inventory_probe"
-    },
-    {
-      "logical_path": "dad-local-source/git-projects/90_ai_tooling_and_temp/.pytest-tmp-lawfirm-os-orchestrator/basetemp/test_shadow_eval_fails_closed_0",
-      "reason": "walk error",
-      "source": "rust_repo_inventory_probe"
-    },
-    {
-      "logical_path": "dad-local-source/git-projects/90_ai_tooling_and_temp/.pytest-tmp-lawfirm-os-orchestrator/basetemp/test_shadow_eval_returns_propo0",
-      "reason": "walk error",
-      "source": "rust_repo_inventory_probe"
-    },
-    {
-      "logical_path": "dad-local-source/git-projects/90_ai_tooling_and_temp/.pytest-tmp-lawfirm-os-orchestrator/basetemp/test_unknown_predicted_route_f0",
-      "reason": "walk error",
-      "source": "rust_repo_inventory_probe"
-    },
-    {
-      "logical_path": "dad-local-source/git-projects/90_ai_tooling_and_temp/.pytest-tmp-lawfirm-os-orchestrator/basetemp/test_upgrade_proposal_packet_m0",
-      "reason": "walk error",
-      "source": "rust_repo_inventory_probe"
-    },
-    {
-      "logical_path": "dad-local-source/git-projects/90_ai_tooling_and_temp/.pytest-tmp-lawfirm-os-orchestrator/basetemp/test_upgrade_proposal_packet_w0",
-      "reason": "walk error",
-      "source": "rust_repo_inventory_probe"
-    }
-  ],
-  "parity_status": "mismatch_candidate",
+  "only_rust_skipped_dirs": [],
+  "parity_status": "matched",
   "python_records": [
     {
       "contract_present": false,
@@ -431,12 +290,6 @@
     },
     {
       "contract_present": false,
-      "logical_path": "dad-local-source/git-projects/_codex_pr_worktrees/dad-pr12-merge-review",
-      "root_alias": "dad-local-source/git-projects",
-      "source": "python_inventory_discovery"
-    },
-    {
-      "contract_present": false,
       "logical_path": "dad-local-source/git-projects/lawfirm-skills-merge-workspace/lawfirm-os-skills-registry",
       "root_alias": "dad-local-source/git-projects",
       "source": "python_inventory_discovery"
@@ -460,8 +313,8 @@
       "source": "python_inventory_discovery"
     }
   ],
-  "python_repo_count": 49,
-  "python_skipped_dir_count": 264,
+  "python_repo_count": 48,
+  "python_skipped_dir_count": 258,
   "python_skipped_dirs": [
     {
       "logical_path": "dad-local-source/git-projects/.git",
@@ -1880,42 +1733,6 @@
       "source": "python_inventory_discovery"
     },
     {
-      "logical_path": "dad-local-source/git-projects/_codex_pr_worktrees/dad-pr12-merge-review/.pytest_cache",
-      "reason": "repo discovery skip directory",
-      "root_alias": "dad-local-source/git-projects",
-      "source": "python_inventory_discovery"
-    },
-    {
-      "logical_path": "dad-local-source/git-projects/_codex_pr_worktrees/dad-pr12-merge-review/.ruff_cache",
-      "reason": "repo discovery skip directory",
-      "root_alias": "dad-local-source/git-projects",
-      "source": "python_inventory_discovery"
-    },
-    {
-      "logical_path": "dad-local-source/git-projects/_codex_pr_worktrees/dad-pr12-merge-review/src/digital_asset_directory/__pycache__",
-      "reason": "repo discovery skip directory",
-      "root_alias": "dad-local-source/git-projects",
-      "source": "python_inventory_discovery"
-    },
-    {
-      "logical_path": "dad-local-source/git-projects/_codex_pr_worktrees/dad-pr12-merge-review/src/digital_asset_directory/rust_bridge/__pycache__",
-      "reason": "repo discovery skip directory",
-      "root_alias": "dad-local-source/git-projects",
-      "source": "python_inventory_discovery"
-    },
-    {
-      "logical_path": "dad-local-source/git-projects/_codex_pr_worktrees/dad-pr12-merge-review/src/digital_asset_directory/rust_rollout/__pycache__",
-      "reason": "repo discovery skip directory",
-      "root_alias": "dad-local-source/git-projects",
-      "source": "python_inventory_discovery"
-    },
-    {
-      "logical_path": "dad-local-source/git-projects/_codex_pr_worktrees/dad-pr12-merge-review/tests/__pycache__",
-      "reason": "repo discovery skip directory",
-      "root_alias": "dad-local-source/git-projects",
-      "source": "python_inventory_discovery"
-    },
-    {
       "logical_path": "dad-local-source/git-projects/_codex_worktrees",
       "reason": "repo discovery skip directory",
       "root_alias": "dad-local-source/git-projects",
@@ -2048,12 +1865,12 @@
       "source": "python_inventory_discovery"
     }
   ],
-  "rust_contract_issue_code_count": 83,
+  "rust_contract_issue_code_count": 82,
   "rust_contract_parse_status_counts": {
-    "missing": 41,
+    "missing": 40,
     "present_parseable": 8
   },
-  "rust_contract_structural_fail_count": 48,
+  "rust_contract_structural_fail_count": 47,
   "rust_contract_structural_pass_count": 1,
   "rust_records": [
     {
@@ -2670,19 +2487,6 @@
       "contract_present_field_status": "ok",
       "contract_structural_field_status": "ok",
       "contract_structural_pass": false,
-      "logical_path": "dad-local-source/git-projects/_codex_pr_worktrees/dad-pr12-merge-review",
-      "root_alias": "dad-local-source/git-projects",
-      "source": "rust_repo_inventory_probe"
-    },
-    {
-      "contract_issue_codes": [
-        "contract_missing"
-      ],
-      "contract_parse_status": "missing",
-      "contract_present": false,
-      "contract_present_field_status": "ok",
-      "contract_structural_field_status": "ok",
-      "contract_structural_pass": false,
       "logical_path": "dad-local-source/git-projects/lawfirm-skills-merge-workspace/lawfirm-os-skills-registry",
       "root_alias": "dad-local-source/git-projects",
       "source": "rust_repo_inventory_probe"
@@ -2727,8 +2531,8 @@
       "source": "rust_repo_inventory_probe"
     }
   ],
-  "rust_repo_count": 49,
-  "rust_skipped_dir_count": 292,
+  "rust_repo_count": 48,
+  "rust_skipped_dir_count": 258,
   "rust_skipped_dirs": [
     {
       "logical_path": "dad-local-source/git-projects/.git",
@@ -2859,12 +2663,6 @@
     {
       "logical_path": "dad-local-source/git-projects/00_lawfirm_os/lawfirm-os-intake/apps/legal-intake-budget/node_modules",
       "reason": "repo discovery skip directory",
-      "root_alias": "dad-local-source/git-projects",
-      "source": "rust_repo_inventory_probe"
-    },
-    {
-      "logical_path": "dad-local-source/git-projects/00_lawfirm_os/lawfirm-os-intake/mode-test-700",
-      "reason": "walk error",
       "root_alias": "dad-local-source/git-projects",
       "source": "rust_repo_inventory_probe"
     },
@@ -3865,12 +3663,6 @@
       "source": "rust_repo_inventory_probe"
     },
     {
-      "logical_path": "dad-local-source/git-projects/03_world_view/logos-scripture-graph-repo/.codex_pytest_tmp_t451",
-      "reason": "walk error",
-      "root_alias": "dad-local-source/git-projects",
-      "source": "rust_repo_inventory_probe"
-    },
-    {
       "logical_path": "dad-local-source/git-projects/03_world_view/logos-scripture-graph-repo/.git",
       "reason": "repo discovery skip directory",
       "root_alias": "dad-local-source/git-projects",
@@ -3985,44 +3777,14 @@
       "source": "rust_repo_inventory_probe"
     },
     {
-      "logical_path": "dad-local-source/git-projects/04_digital_assett_directory/.pytest-tmp",
-      "reason": "walk error",
-      "root_alias": "dad-local-source/git-projects",
-      "source": "rust_repo_inventory_probe"
-    },
-    {
-      "logical_path": "dad-local-source/git-projects/04_digital_assett_directory/.pytest-tmp-codex/mail-center-targeted",
-      "reason": "walk error",
-      "root_alias": "dad-local-source/git-projects",
-      "source": "rust_repo_inventory_probe"
-    },
-    {
       "logical_path": "dad-local-source/git-projects/04_digital_assett_directory/.pytest-tmp-root",
       "reason": "repo discovery skip directory",
       "root_alias": "dad-local-source/git-projects",
       "source": "rust_repo_inventory_probe"
     },
     {
-      "logical_path": "dad-local-source/git-projects/04_digital_assett_directory/.pytest-tmp-root-run-20260701-2005",
-      "reason": "walk error",
-      "root_alias": "dad-local-source/git-projects",
-      "source": "rust_repo_inventory_probe"
-    },
-    {
       "logical_path": "dad-local-source/git-projects/04_digital_assett_directory/.pytest_cache",
       "reason": "repo discovery skip directory",
-      "root_alias": "dad-local-source/git-projects",
-      "source": "rust_repo_inventory_probe"
-    },
-    {
-      "logical_path": "dad-local-source/git-projects/04_digital_assett_directory/.pytest_tmp_exception_code_change",
-      "reason": "walk error",
-      "root_alias": "dad-local-source/git-projects",
-      "source": "rust_repo_inventory_probe"
-    },
-    {
-      "logical_path": "dad-local-source/git-projects/04_digital_assett_directory/.pytest_tmp_exception_single",
-      "reason": "walk error",
       "root_alias": "dad-local-source/git-projects",
       "source": "rust_repo_inventory_probe"
     },
@@ -4147,12 +3909,6 @@
       "source": "rust_repo_inventory_probe"
     },
     {
-      "logical_path": "dad-local-source/git-projects/04_digital_assett_directory/tmp_pytest_mail_center_targeted",
-      "reason": "walk error",
-      "root_alias": "dad-local-source/git-projects",
-      "source": "rust_repo_inventory_probe"
-    },
-    {
       "logical_path": "dad-local-source/git-projects/04_digital_assett_directory/tools/dad_scan_core/target",
       "reason": "repo discovery skip directory",
       "root_alias": "dad-local-source/git-projects",
@@ -4161,126 +3917,6 @@
     {
       "logical_path": "dad-local-source/git-projects/90_ai_tooling_and_temp/.ci-contracts/fmg-fractal-capability-ontology-pinned/.git",
       "reason": "repo discovery skip directory",
-      "root_alias": "dad-local-source/git-projects",
-      "source": "rust_repo_inventory_probe"
-    },
-    {
-      "logical_path": "dad-local-source/git-projects/90_ai_tooling_and_temp/.pytest-tmp-lawfirm-os-orchestrator/basetemp/test_build_upgrade_proposal_sc0",
-      "reason": "walk error",
-      "root_alias": "dad-local-source/git-projects",
-      "source": "rust_repo_inventory_probe"
-    },
-    {
-      "logical_path": "dad-local-source/git-projects/90_ai_tooling_and_temp/.pytest-tmp-lawfirm-os-orchestrator/basetemp/test_dry_run_lake_writes_recei0",
-      "reason": "walk error",
-      "root_alias": "dad-local-source/git-projects",
-      "source": "rust_repo_inventory_probe"
-    },
-    {
-      "logical_path": "dad-local-source/git-projects/90_ai_tooling_and_temp/.pytest-tmp-lawfirm-os-orchestrator/basetemp/test_end_to_end_disabled_lake0",
-      "reason": "walk error",
-      "root_alias": "dad-local-source/git-projects",
-      "source": "rust_repo_inventory_probe"
-    },
-    {
-      "logical_path": "dad-local-source/git-projects/90_ai_tooling_and_temp/.pytest-tmp-lawfirm-os-orchestrator/basetemp/test_eval_suite_computes_requi0",
-      "reason": "walk error",
-      "root_alias": "dad-local-source/git-projects",
-      "source": "rust_repo_inventory_probe"
-    },
-    {
-      "logical_path": "dad-local-source/git-projects/90_ai_tooling_and_temp/.pytest-tmp-lawfirm-os-orchestrator/basetemp/test_eval_suite_model_call_met0",
-      "reason": "walk error",
-      "root_alias": "dad-local-source/git-projects",
-      "source": "rust_repo_inventory_probe"
-    },
-    {
-      "logical_path": "dad-local-source/git-projects/90_ai_tooling_and_temp/.pytest-tmp-lawfirm-os-orchestrator/basetemp/test_import_does_not_require_n0",
-      "reason": "walk error",
-      "root_alias": "dad-local-source/git-projects",
-      "source": "rust_repo_inventory_probe"
-    },
-    {
-      "logical_path": "dad-local-source/git-projects/90_ai_tooling_and_temp/.pytest-tmp-lawfirm-os-orchestrator/basetemp/test_import_is_append_only_jso0",
-      "reason": "walk error",
-      "root_alias": "dad-local-source/git-projects",
-      "source": "rust_repo_inventory_probe"
-    },
-    {
-      "logical_path": "dad-local-source/git-projects/90_ai_tooling_and_temp/.pytest-tmp-lawfirm-os-orchestrator/basetemp/test_import_rejects_invalid_sc0",
-      "reason": "walk error",
-      "root_alias": "dad-local-source/git-projects",
-      "source": "rust_repo_inventory_probe"
-    },
-    {
-      "logical_path": "dad-local-source/git-projects/90_ai_tooling_and_temp/.pytest-tmp-lawfirm-os-orchestrator/basetemp/test_import_valid_json_signal_0",
-      "reason": "walk error",
-      "root_alias": "dad-local-source/git-projects",
-      "source": "rust_repo_inventory_probe"
-    },
-    {
-      "logical_path": "dad-local-source/git-projects/90_ai_tooling_and_temp/.pytest-tmp-lawfirm-os-orchestrator/basetemp/test_import_valid_markdown_sig0",
-      "reason": "walk error",
-      "root_alias": "dad-local-source/git-projects",
-      "source": "rust_repo_inventory_probe"
-    },
-    {
-      "logical_path": "dad-local-source/git-projects/90_ai_tooling_and_temp/.pytest-tmp-lawfirm-os-orchestrator/basetemp/test_reject_real_data_flags0",
-      "reason": "walk error",
-      "root_alias": "dad-local-source/git-projects",
-      "source": "rust_repo_inventory_probe"
-    },
-    {
-      "logical_path": "dad-local-source/git-projects/90_ai_tooling_and_temp/.pytest-tmp-lawfirm-os-orchestrator/basetemp/test_research_radar_import_loc0",
-      "reason": "walk error",
-      "root_alias": "dad-local-source/git-projects",
-      "source": "rust_repo_inventory_probe"
-    },
-    {
-      "logical_path": "dad-local-source/git-projects/90_ai_tooling_and_temp/.pytest-tmp-lawfirm-os-orchestrator/basetemp/test_run_evals_script_outputs_0",
-      "reason": "walk error",
-      "root_alias": "dad-local-source/git-projects",
-      "source": "rust_repo_inventory_probe"
-    },
-    {
-      "logical_path": "dad-local-source/git-projects/90_ai_tooling_and_temp/.pytest-tmp-lawfirm-os-orchestrator/basetemp/test_run_shadow_eval_script_ou0",
-      "reason": "walk error",
-      "root_alias": "dad-local-source/git-projects",
-      "source": "rust_repo_inventory_probe"
-    },
-    {
-      "logical_path": "dad-local-source/git-projects/90_ai_tooling_and_temp/.pytest-tmp-lawfirm-os-orchestrator/basetemp/test_shadow_eval_detects_regre0",
-      "reason": "walk error",
-      "root_alias": "dad-local-source/git-projects",
-      "source": "rust_repo_inventory_probe"
-    },
-    {
-      "logical_path": "dad-local-source/git-projects/90_ai_tooling_and_temp/.pytest-tmp-lawfirm-os-orchestrator/basetemp/test_shadow_eval_fails_closed_0",
-      "reason": "walk error",
-      "root_alias": "dad-local-source/git-projects",
-      "source": "rust_repo_inventory_probe"
-    },
-    {
-      "logical_path": "dad-local-source/git-projects/90_ai_tooling_and_temp/.pytest-tmp-lawfirm-os-orchestrator/basetemp/test_shadow_eval_returns_propo0",
-      "reason": "walk error",
-      "root_alias": "dad-local-source/git-projects",
-      "source": "rust_repo_inventory_probe"
-    },
-    {
-      "logical_path": "dad-local-source/git-projects/90_ai_tooling_and_temp/.pytest-tmp-lawfirm-os-orchestrator/basetemp/test_unknown_predicted_route_f0",
-      "reason": "walk error",
-      "root_alias": "dad-local-source/git-projects",
-      "source": "rust_repo_inventory_probe"
-    },
-    {
-      "logical_path": "dad-local-source/git-projects/90_ai_tooling_and_temp/.pytest-tmp-lawfirm-os-orchestrator/basetemp/test_upgrade_proposal_packet_m0",
-      "reason": "walk error",
-      "root_alias": "dad-local-source/git-projects",
-      "source": "rust_repo_inventory_probe"
-    },
-    {
-      "logical_path": "dad-local-source/git-projects/90_ai_tooling_and_temp/.pytest-tmp-lawfirm-os-orchestrator/basetemp/test_upgrade_proposal_packet_w0",
-      "reason": "walk error",
       "root_alias": "dad-local-source/git-projects",
       "source": "rust_repo_inventory_probe"
     },
@@ -4310,42 +3946,6 @@
     },
     {
       "logical_path": "dad-local-source/git-projects/99_archive/patches/lawfirm-os-managed-patch-preservation-gate-patch-v2/lawfirm-os-managed-patch-preservation-gate-patch-v2/.pytest_cache",
-      "reason": "repo discovery skip directory",
-      "root_alias": "dad-local-source/git-projects",
-      "source": "rust_repo_inventory_probe"
-    },
-    {
-      "logical_path": "dad-local-source/git-projects/_codex_pr_worktrees/dad-pr12-merge-review/.pytest_cache",
-      "reason": "repo discovery skip directory",
-      "root_alias": "dad-local-source/git-projects",
-      "source": "rust_repo_inventory_probe"
-    },
-    {
-      "logical_path": "dad-local-source/git-projects/_codex_pr_worktrees/dad-pr12-merge-review/.ruff_cache",
-      "reason": "repo discovery skip directory",
-      "root_alias": "dad-local-source/git-projects",
-      "source": "rust_repo_inventory_probe"
-    },
-    {
-      "logical_path": "dad-local-source/git-projects/_codex_pr_worktrees/dad-pr12-merge-review/src/digital_asset_directory/__pycache__",
-      "reason": "repo discovery skip directory",
-      "root_alias": "dad-local-source/git-projects",
-      "source": "rust_repo_inventory_probe"
-    },
-    {
-      "logical_path": "dad-local-source/git-projects/_codex_pr_worktrees/dad-pr12-merge-review/src/digital_asset_directory/rust_bridge/__pycache__",
-      "reason": "repo discovery skip directory",
-      "root_alias": "dad-local-source/git-projects",
-      "source": "rust_repo_inventory_probe"
-    },
-    {
-      "logical_path": "dad-local-source/git-projects/_codex_pr_worktrees/dad-pr12-merge-review/src/digital_asset_directory/rust_rollout/__pycache__",
-      "reason": "repo discovery skip directory",
-      "root_alias": "dad-local-source/git-projects",
-      "source": "rust_repo_inventory_probe"
-    },
-    {
-      "logical_path": "dad-local-source/git-projects/_codex_pr_worktrees/dad-pr12-merge-review/tests/__pycache__",
       "reason": "repo discovery skip directory",
       "root_alias": "dad-local-source/git-projects",
       "source": "rust_repo_inventory_probe"
@@ -4490,5 +4090,5 @@
   "rust_unknown_contract_fields": [],
   "rust_unknown_contract_structural_field_count": 0,
   "schema_version": "dad_repo_inventory_rust_probe_parity.v0_1",
-  "skip_policy_mismatch_count": 28
+  "skip_policy_mismatch_count": 0
 }

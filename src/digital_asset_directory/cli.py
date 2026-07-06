@@ -232,6 +232,7 @@ from .repo_completion import (
 from .repo_learning_scope import write_repo_learning_loop_install_scope_outputs
 from .roadmap import check_roadmap, write_human_gate_review_packet
 from .rust_bridge import (
+    run_dad_event_log_check,
     run_dad_mail_spool_check,
     run_dad_repo_inventory_probe,
     run_dad_scan_core,
@@ -2406,6 +2407,19 @@ def _default_rust_mail_spool_roots(repo_root: Path) -> tuple[list[Path], list[st
     )
 
 
+def _default_rust_event_log_roots(repo_root: Path) -> tuple[list[Path], list[str]]:
+    return (
+        [
+            repo_root / ".digital-asset" / "events",
+            repo_root / "processed" / "events",
+        ],
+        [
+            "dad/repo-event-mirror",
+            "dad/central-events",
+        ],
+    )
+
+
 def _rust_safe_alias_fragment(value: str, fallback: str) -> str:
     slug = re.sub(r"[^a-zA-Z0-9._-]+", "-", value.strip()).strip("-._")
     return slug or fallback
@@ -2537,6 +2551,75 @@ def rust_mail_spool_check(
         )
         payload["summary"]["structural_spool_check_only"] = True
         payload["summary"]["mail_storm_gate_satisfied"] = False
+    console.print_json(data=payload)
+    if result.returncode != 0:
+        raise typer.Exit(result.returncode)
+
+
+@rust_app.command("event-log-check")
+def rust_event_log_check(
+    root: list[Path] = typer.Option([], "--root", help="Event JSONL root to inspect."),
+    root_alias: list[str] = typer.Option(
+        [],
+        "--root-alias",
+        help="Public-safe alias for the matching --root. Required when --root is provided.",
+    ),
+    max_jsonl_row_bytes: int = typer.Option(MAX_MAIL_RECORD_BYTES, "--max-jsonl-row-bytes", min=1),
+    max_samples: int = typer.Option(25, "--max-samples", min=0),
+    manifest_path: Optional[Path] = typer.Option(None, "--manifest-path"),
+    cargo_bin: str = typer.Option("cargo", "--cargo-bin"),
+    timeout_seconds: int = typer.Option(120, "--timeout-seconds", min=1),
+    include_output: bool = typer.Option(
+        False, "--include-output", help="Include raw Rust subprocess stdout/stderr."
+    ),
+    hub: Optional[Path] = typer.Option(None),
+) -> None:
+    """Run the Rust read-only event-log probe through the Python boundary."""
+    cfg = _cfg(hub=hub)
+    roots, aliases = (list(root), list(root_alias))
+    default_roots_used = not roots and not aliases
+    if roots or aliases:
+        if len(roots) != len(aliases):
+            raise typer.BadParameter("Provide exactly one --root-alias for each --root.")
+    else:
+        roots, aliases = _default_rust_event_log_roots(cfg.repo_root)
+    result = run_dad_event_log_check(
+        repo_root=cfg.repo_root,
+        roots=roots,
+        root_aliases=aliases,
+        max_jsonl_row_bytes=max_jsonl_row_bytes,
+        max_samples=max_samples,
+        cargo_bin=cargo_bin,
+        manifest_path=manifest_path,
+        timeout_seconds=timeout_seconds,
+    )
+    payload = result.to_dict(include_output=include_output)
+    payload["scope"] = {
+        "schema_version": "dad_rust_event_log_probe_scope.v1",
+        "hub_local_default_roots": default_roots_used,
+        "structural_event_check_only": True,
+        "event_pipeline_gate_satisfied": False,
+        "authoritative_gate": (
+            "python -m digital_asset_directory.cli events collect/report "
+            "plus python -m digital_asset_directory.cli validate"
+        ),
+        "authority_boundary": (
+            "Rust event-log-check is structural evidence only. It does not collect, "
+            "route, release, infer adoption, update response state, or satisfy "
+            "Phase 10A human gates."
+        ),
+    }
+    if isinstance(payload.get("summary"), dict):
+        roots_summary = payload["summary"].get("roots", [])
+        all_roots_checked = isinstance(roots_summary, list) and all(
+            isinstance(row, dict) and row.get("status") == "checked" for row in roots_summary
+        )
+        payload["summary"]["event_log_structural_clean"] = (
+            all_roots_checked and int(payload["summary"].get("issue_count", 0) or 0) == 0
+        )
+        payload["summary"]["event_log_all_roots_checked"] = all_roots_checked
+        payload["summary"]["structural_event_check_only"] = True
+        payload["summary"]["event_pipeline_gate_satisfied"] = False
     console.print_json(data=payload)
     if result.returncode != 0:
         raise typer.Exit(result.returncode)

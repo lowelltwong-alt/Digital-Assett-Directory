@@ -13,6 +13,8 @@ cargo run --manifest-path tools/dad_scan_core/Cargo.toml -- scan-local   --sourc
 
 cargo run --manifest-path tools/dad_scan_core/Cargo.toml -- mail-spool-check   --root processed/mail   --root-alias dad/central-mail   --root mail/outbox/rust_rollout   --root-alias dad/rust-rollout-reference
 
+cargo run --manifest-path tools/dad_scan_core/Cargo.toml -- event-log-check   --root processed/events   --root-alias dad/central-events   --root .digital-asset/events   --root-alias dad/repo-event-mirror
+
 cargo run --manifest-path tools/dad_scan_core/Cargo.toml -- repo-inventory-probe   --root "C:/path/to/workspace"   --root-alias dad-local-source/workspace   --max-depth 6
 ```
 
@@ -20,6 +22,13 @@ cargo run --manifest-path tools/dad_scan_core/Cargo.toml -- repo-inventory-probe
 fragments, Rust rollout packet JSON files, malformed JSONL rows, and oversized
 JSONL rows using public-safe root aliases. It does not collect, route, deliver,
 release, adopt, or mutate mail.
+
+`event-log-check` is read-only. It counts JSONL files, malformed JSONL rows,
+invalid UTF-8 rows, oversized rows, non-object rows, missing required structural
+fields, invalid field values, duplicate `event_id` / `dedupe_key` values, and
+obvious unsafe strings using public-safe root aliases. It is structural evidence
+only. It does not collect events, route notices, approve public release, infer
+adoption, update response state, satisfy roadmap gates, or mutate event logs.
 
 `repo-inventory-probe` is read-only. It discovers Git repository roots under
 configured roots, skips caches/temp workspaces/build outputs, reports

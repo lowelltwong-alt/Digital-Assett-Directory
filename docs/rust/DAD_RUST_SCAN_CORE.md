@@ -8,10 +8,11 @@ Candidate implementation scaffold. Not canonical until reviewed and adopted.
 
 `tools/dad_scan_core` is the first Rust leaf-tool crate for Digital Asset Directory.
 
-It currently provides two read-only probes:
+It currently provides these read-only probes:
 
 - `scan-local`: scans local source trees and emits raw, non-authorizing observations for Python to validate and ingest.
 - `mail-spool-check`: checks DAD mail spool roots for JSONL, lock/temp, malformed-row, oversized-row, and Rust rollout packet signals using public-safe aliases.
+- `event-log-check`: checks DAD event JSONL roots for malformed/invalid UTF-8/oversized rows, invalid field values, duplicate event ids and dedupe keys, obvious unsafe strings, and alias-only output.
 - `repo-inventory-probe`: discovers local Git repository roots under configured roots using public-safe aliases and emits `dad_repo_inventory_probe.v0_2` contract-surface facts for Phase 9 inventory/deployment-doctor evidence.
 
 ## Boundary
@@ -25,6 +26,8 @@ Rust may:
 - emit JSONL observations;
 - emit quarantine and summary JSON.
 - count mail-spool lock/temp fragments and malformed/oversized JSONL rows.
+- count event-log malformed, invalid UTF-8, oversized, invalid field value,
+  duplicate identity, and obvious unsafe-string structural issues.
 - discover Git repository root markers under configured local roots.
 - report whether `.digital-asset/dad-integration.json` has the required
   capture fields, stable user shim pointers, raw-checkout fallback, and
@@ -88,6 +91,26 @@ read-only. `asset-dir rust-rollout build-mail` may write to DAD's ignored
 acknowledgement, or to a system temp directory for ad hoc review. It must not
 write generated packets into another repo's `.digital-asset/mail/` or source
 tree.
+
+## Event Log Probe
+
+For Phase 10A event-pipeline evidence, use:
+
+```bash
+python -m digital_asset_directory.cli rust event-log-check
+```
+
+The command defaults to DAD's repo-local event mirror and central
+`processed/events/` storage. It emits alias-only structural evidence for JSONL
+shape, invalid UTF-8, oversized rows, invalid field values, duplicate `event_id`
+/ `dedupe_key`, and obvious unsafe strings. Python `events collect`, `events report`, and
+`validate` remain authoritative for collection, policy canonicalization, public
+release, response-state acceptance, stale report detection, and Phase 10A gate
+review.
+
+Do not treat `issue_count: 0` alone as green. The Python wrapper also reports
+whether every requested root was actually checked; missing roots are not event
+pipeline readiness evidence.
 
 ## Repo Inventory Probe
 

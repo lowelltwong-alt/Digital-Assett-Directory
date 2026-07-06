@@ -5,8 +5,9 @@ use std::path::{Path, PathBuf};
 use std::sync::Mutex;
 
 use dad_scan_core::{
-    MailSpoolCheckArgs, MailSpoolCheckSummary, Observation, QuarantineReport,
-    RepoInventoryProbeArgs, RepoInventoryProbeSummary, ScanLocalArgs, ScanSummary,
+    EventLogCheckArgs, EventLogCheckSummary, MailSpoolCheckArgs, MailSpoolCheckSummary,
+    Observation, QuarantineReport, RepoInventoryProbeArgs, RepoInventoryProbeSummary,
+    ScanLocalArgs, ScanSummary,
 };
 use serde::de::DeserializeOwned;
 
@@ -57,6 +58,15 @@ fn read_observation_values(path: &Path) -> Vec<serde_json::Value> {
 
 fn mail_spool_args(root: impl Into<PathBuf>, alias: &str) -> MailSpoolCheckArgs {
     MailSpoolCheckArgs {
+        roots: vec![root.into()],
+        root_aliases: vec![alias.to_string()],
+        max_jsonl_row_bytes: 1024,
+        max_samples: 25,
+    }
+}
+
+fn event_log_args(root: impl Into<PathBuf>, alias: &str) -> EventLogCheckArgs {
+    EventLogCheckArgs {
         roots: vec![root.into()],
         root_aliases: vec![alias.to_string()],
         max_jsonl_row_bytes: 1024,
@@ -569,6 +579,214 @@ fn mail_spool_check_counts_overlapping_roots_once() {
 
     assert_eq!(summary.rust_packet_count, 1);
     assert_eq!(summary.checked_file_count, 1);
+}
+
+#[test]
+fn event_log_check_reports_alias_only_structural_issues() {
+    let temp = tempfile::tempdir().expect("tempdir");
+    let root = temp.path().join("events");
+    fs::create_dir_all(&root).expect("event dir");
+    let good = serde_json::json!({
+        "schema_version": "0.1.0",
+        "event_id": "event-1",
+        "event_type": "asset_used",
+        "dedupe_key": "repo|asset|1",
+        "source_repo": "repo-a",
+        "source_visibility": "internal",
+        "target_repo": "",
+        "target_visibility": "unknown",
+        "notice_id": "",
+        "actionable": false,
+        "response_state": "not_applicable",
+        "sensitivity": "internal_metadata",
+        "payload": {"summary": "safe metadata"},
+        "evidence": ["dad://hub/tools/dad_scan_core"],
+        "created_at": "2026-07-06T00:00:00Z",
+        "authority_boundary": "candidate metadata only"
+    });
+    let duplicate = serde_json::json!({
+        "schema_version": "0.1.0",
+        "event_id": "event-1",
+        "event_type": "asset_used",
+        "dedupe_key": "repo|asset|1",
+        "source_repo": "repo-a",
+        "source_visibility": "internal",
+        "created_at": "2026-07-06T00:00:01Z",
+        "payload": {"summary": "second row"},
+        "authority_boundary": "candidate metadata only"
+    });
+    let unsafe_row = serde_json::json!({
+        "schema_version": "0.1.0",
+        "event_id": "event-2",
+        "event_type": "harness_needed",
+        "dedupe_key": "repo|harness|1",
+        "source_repo": "repo-a",
+        "source_visibility": "internal",
+        "created_at": "2026-07-06T00:00:02Z",
+        "payload": {"summary": "C:/Users/lowel/private"},
+        "authority_boundary": "candidate metadata only"
+    });
+    let unsafe_secret = serde_json::json!({
+        "schema_version": "0.1.0",
+        "event_id": "event-3",
+        "event_type": "harness_needed",
+        "dedupe_key": "repo|harness|2",
+        "source_repo": "repo-a",
+        "source_visibility": "internal",
+        "created_at": "2026-07-06T00:00:03Z",
+        "payload": {"summary": "token=redacted-test-marker"},
+        "authority_boundary": "candidate metadata only"
+    });
+    let long_value = "x".repeat(520);
+    let unsafe_long = serde_json::json!({
+        "schema_version": "0.1.0",
+        "event_id": "event-4",
+        "event_type": "harness_needed",
+        "dedupe_key": "repo|harness|3",
+        "source_repo": "repo-a",
+        "source_visibility": "internal",
+        "created_at": "2026-07-06T00:00:04Z",
+        "payload": {"summary": long_value},
+        "authority_boundary": "candidate metadata only"
+    });
+    let invalid_value = serde_json::json!({
+        "schema_version": "0.1.0",
+        "event_id": "event-5",
+        "event_type": "unknown_event_type",
+        "dedupe_key": "repo|harness|4",
+        "source_repo": "repo-a",
+        "source_visibility": "internal",
+        "created_at": "2026-07-06T00:00:05Z",
+        "payload": {"summary": "short candidate metadata"},
+        "authority_boundary": "candidate metadata only"
+    });
+    let jsonl = [
+        good.to_string(),
+        duplicate.to_string(),
+        unsafe_row.to_string(),
+        unsafe_secret.to_string(),
+        unsafe_long.to_string(),
+        invalid_value.to_string(),
+        "{\"bad\"".to_string(),
+    ]
+    .join("\n")
+        + "\n";
+    fs::write(root.join("event_log.jsonl"), jsonl).expect("event jsonl");
+
+    let summary = dad_scan_core::check_event_logs(event_log_args(&root, "dad/events"))
+        .expect("event log check");
+    let text = serde_json::to_string_pretty(&summary).expect("summary json");
+
+    assert_eq!(summary.schema_version, "dad_event_log_check.v0_1");
+    assert_eq!(summary.root_count, 1);
+    assert_eq!(summary.jsonl_file_count, 1);
+    assert_eq!(summary.event_record_count, 6);
+    assert_eq!(summary.malformed_jsonl_row_count, 1);
+    assert_eq!(summary.invalid_field_value_count, 1);
+    assert_eq!(summary.duplicate_event_id_count, 1);
+    assert_eq!(summary.duplicate_dedupe_key_count, 1);
+    assert_eq!(summary.unsafe_string_count, 3);
+    assert!(summary.issue_count >= 7);
+    assert!(summary.no_mutation_performed);
+    assert_eq!(
+        summary.authoritative_gate,
+        "events collect/report plus validate"
+    );
+    assert!(
+        summary
+            .semantic_checks_not_performed
+            .contains(&"public release approval".to_string())
+    );
+    assert!(summary.issue_samples.iter().any(|sample| {
+        sample.issue_type == "malformed_jsonl"
+            && sample.logical_path == "dad/events/event_log.jsonl"
+            && sample.line_number == Some(7)
+    }));
+    assert!(summary.issue_samples.iter().any(|sample| {
+        sample.issue_type == "invalid_field_value"
+            && sample.logical_path == "dad/events/event_log.jsonl"
+            && sample.line_number == Some(6)
+            && sample.detail == "event_type"
+    }));
+    assert!(summary.issue_samples.iter().any(|sample| {
+        sample.issue_type == "duplicate_event_id"
+            && sample.logical_path == "dad/events/event_log.jsonl"
+            && sample.line_number == Some(2)
+    }));
+    assert!(!text.contains(temp.path().to_string_lossy().as_ref()));
+    assert!(!text.contains("C:/Users/lowel/private"));
+    assert!(!text.contains("redacted-test-marker"));
+    assert!(!text.contains(&"x".repeat(80)));
+}
+
+#[test]
+fn event_log_check_flags_invalid_utf8_and_oversized_rows_without_raw_content() {
+    let temp = tempfile::tempdir().expect("tempdir");
+    let root = temp.path().join("events");
+    fs::create_dir_all(&root).expect("event dir");
+    fs::write(
+        root.join("outbox.jsonl"),
+        b"\xff\xfe\xfa\n{\"long\":\"abcdef\"}\n",
+    )
+    .expect("jsonl");
+
+    let mut args = event_log_args(&root, "repo/events");
+    args.max_jsonl_row_bytes = 8;
+    let summary = dad_scan_core::check_event_logs(args).expect("event log check");
+    let text = serde_json::to_string_pretty(&summary).expect("summary json");
+
+    assert_eq!(summary.invalid_utf8_row_count, 1);
+    assert_eq!(summary.oversized_jsonl_row_count, 1);
+    assert!(summary.issue_samples.iter().any(|sample| {
+        sample.issue_type == "invalid_utf8_row"
+            && sample.logical_path == "repo/events/outbox.jsonl"
+            && sample.line_number == Some(1)
+    }));
+    assert!(!text.contains("abcdef"));
+}
+
+#[test]
+fn event_log_check_rejects_unsafe_aliases_and_mismatched_roots() {
+    let temp = tempfile::tempdir().expect("tempdir");
+    let root = temp.path().join("events");
+    fs::create_dir_all(&root).expect("event dir");
+
+    let mut unsafe_alias = event_log_args(&root, "../events");
+    assert!(dad_scan_core::check_event_logs(unsafe_alias.clone()).is_err());
+
+    unsafe_alias.root_aliases = vec!["C:/events".to_string()];
+    assert!(dad_scan_core::check_event_logs(unsafe_alias.clone()).is_err());
+
+    unsafe_alias.root_aliases = vec![];
+    assert!(dad_scan_core::check_event_logs(unsafe_alias).is_err());
+}
+
+#[test]
+fn event_log_check_is_deterministic_and_reports_missing_roots() {
+    let temp = tempfile::tempdir().expect("tempdir");
+    let first = temp.path().join("z-root");
+    let second = temp.path().join("a-root");
+    fs::create_dir_all(&first).expect("first root");
+    fs::write(first.join("z.jsonl"), "{\"z\": true}\n").expect("z");
+    fs::write(first.join("a.jsonl"), "not json\n").expect("a");
+
+    let summary: EventLogCheckSummary = dad_scan_core::check_event_logs(EventLogCheckArgs {
+        roots: vec![first, second],
+        root_aliases: vec!["z/root".to_string(), "a/root".to_string()],
+        max_jsonl_row_bytes: 1024,
+        max_samples: 25,
+    })
+    .expect("event log check");
+
+    assert_eq!(
+        summary
+            .roots
+            .iter()
+            .map(|root| (root.root_alias.as_str(), root.status.as_str()))
+            .collect::<Vec<_>>(),
+        vec![("a/root", "missing"), ("z/root", "checked")]
+    );
+    assert_eq!(summary.issue_samples[0].logical_path, "z/root/a.jsonl");
 }
 
 #[test]

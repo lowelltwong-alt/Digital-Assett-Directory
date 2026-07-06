@@ -12,8 +12,8 @@
     "AI_TABLE_OF_CONTENTS.md"
   ],
   "navigation_standards": {
-    "navigation_version": "2026.07.06.2",
-    "updated_at": "2026-07-06T04:57:17Z",
+    "navigation_version": "2026.07.06.3",
+    "updated_at": "2026-07-06T05:58:00Z",
     "single_ai_entrypoint": "AI_FRONT_DOOR.md",
     "ai_table_of_contents": "AI_TABLE_OF_CONTENTS.md",
     "navigation_registry": "registry/ai-navigation-registry.json",
@@ -38,6 +38,7 @@
     "assets/dad-rust-upgrade-starter-pack/README.md",
     "docs/rust/RUST_ADOPTION_PLAN.md",
     "tools/dad_scan_core/",
+    "tools/dad_scan_core/src/event_log.rs",
     "src/digital_asset_directory/rust_bridge/",
     "src/digital_asset_directory/rust_bridge/dad_scan_core.py",
     "src/digital_asset_directory/rust_rollout/",

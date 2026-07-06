@@ -7,8 +7,10 @@ from pathlib import Path
 import pytest
 from typer.testing import CliRunner
 
+import digital_asset_directory.cli as cli_module
 from digital_asset_directory.cli import app
 from digital_asset_directory.rust_bridge import (
+    DadEventLogCheckResult,
     DadMailSpoolCheckResult,
     DadRepoInventoryProbeResult,
     DadScanCoreResult,
@@ -339,6 +341,263 @@ def test_run_dad_mail_spool_check_rejects_mismatched_root_aliases_before_cargo(
             roots=[Path("processed/mail"), Path("processed/mail/staged/rust_rollout")],
             root_aliases=["dad/central-mail"],
         )
+
+
+def test_run_dad_event_log_check_builds_alias_only_command_and_summary(
+    monkeypatch, tmp_path: Path
+) -> None:
+    summary = {
+        "schema_version": "dad_event_log_check.v0_1",
+        "root_count": 1,
+        "checked_file_count": 1,
+        "jsonl_file_count": 1,
+        "event_record_count": 1,
+        "malformed_jsonl_row_count": 0,
+        "invalid_utf8_row_count": 0,
+        "oversized_jsonl_row_count": 0,
+        "non_object_row_count": 0,
+        "missing_required_field_count": 0,
+        "invalid_field_value_count": 0,
+        "duplicate_event_id_count": 0,
+        "duplicate_dedupe_key_count": 0,
+        "unsafe_string_count": 0,
+        "issue_count": 0,
+        "roots": [
+            {
+                "root_alias": "dad/central-events",
+                "status": "checked",
+                "checked_file_count": 1,
+                "jsonl_file_count": 1,
+                "event_record_count": 1,
+                "malformed_jsonl_row_count": 0,
+                "invalid_utf8_row_count": 0,
+                "oversized_jsonl_row_count": 0,
+                "non_object_row_count": 0,
+                "missing_required_field_count": 0,
+                "invalid_field_value_count": 0,
+                "duplicate_event_id_count": 0,
+                "duplicate_dedupe_key_count": 0,
+                "unsafe_string_count": 0,
+            }
+        ],
+        "issue_samples": [],
+        "no_mutation_performed": True,
+        "authority_boundary": "Python DAD event pipeline remains authoritative.",
+        "authoritative_gate": "events collect/report plus validate",
+        "semantic_checks_not_performed": ["public release approval"],
+    }
+    completed = subprocess.CompletedProcess(
+        args=["cargo"],
+        returncode=0,
+        stdout=json.dumps(summary) + "\n",
+        stderr="",
+    )
+    calls: list[dict[str, object]] = []
+
+    def fake_run(command, **kwargs):
+        calls.append({"command": command, **kwargs})
+        return completed
+
+    monkeypatch.setattr(bridge.shutil, "which", lambda value: "C:/Rust/bin/cargo.exe")
+    monkeypatch.setattr(bridge.subprocess, "run", fake_run)
+
+    result = bridge.run_dad_event_log_check(
+        repo_root=tmp_path,
+        roots=[Path("processed/events")],
+        root_aliases=["dad/central-events"],
+    )
+
+    assert result.returncode == 0
+    assert result.summary == summary
+    assert result.summary_valid is True
+    assert result.summary_validation_errors == []
+    default_payload = result.to_dict()
+    assert default_payload["stdout"] == ""
+    assert default_payload["output_suppressed"] is True
+    assert default_payload["command"][:5] == [
+        "cargo",
+        "run",
+        "--manifest-path",
+        "tools/dad_scan_core/Cargo.toml",
+        "--",
+    ]
+    assert "event-log-check" in default_payload["command"]
+    assert str(tmp_path) not in repr(default_payload)
+    command = calls[0]["command"]
+    assert "--root" in command
+    assert str(tmp_path / "processed" / "events") in command
+    assert "--root-alias" in command
+    assert "dad/central-events" in command
+
+
+def test_run_dad_event_log_check_rejects_local_path_leaking_summary(
+    monkeypatch, tmp_path: Path
+) -> None:
+    summary = {
+        "schema_version": "dad_event_log_check.v0_1",
+        "root_count": 1,
+        "checked_file_count": 1,
+        "jsonl_file_count": 1,
+        "event_record_count": 1,
+        "malformed_jsonl_row_count": 0,
+        "invalid_utf8_row_count": 0,
+        "oversized_jsonl_row_count": 0,
+        "non_object_row_count": 0,
+        "missing_required_field_count": 0,
+        "invalid_field_value_count": 0,
+        "duplicate_event_id_count": 0,
+        "duplicate_dedupe_key_count": 0,
+        "unsafe_string_count": 1,
+        "issue_count": 1,
+        "roots": [
+            {
+                "root_alias": "C:/Users/lowel/events",
+                "status": "checked",
+                "checked_file_count": 1,
+                "jsonl_file_count": 1,
+                "event_record_count": 1,
+                "malformed_jsonl_row_count": 0,
+                "invalid_utf8_row_count": 0,
+                "oversized_jsonl_row_count": 0,
+                "non_object_row_count": 0,
+                "missing_required_field_count": 0,
+                "invalid_field_value_count": 0,
+                "duplicate_event_id_count": 0,
+                "duplicate_dedupe_key_count": 0,
+                "unsafe_string_count": 1,
+            }
+        ],
+        "issue_samples": [
+            {
+                "issue_type": "unsafe_string",
+                "logical_path": "C:/Users/lowel/events/outbox.jsonl",
+                "line_number": 1,
+                "detail": "payload.summary",
+            }
+        ],
+        "no_mutation_performed": True,
+        "authority_boundary": "C:/Users/lowel/path leaked",
+        "authoritative_gate": "events collect/report plus validate",
+        "semantic_checks_not_performed": ["public release approval"],
+    }
+    completed = subprocess.CompletedProcess(
+        args=["cargo"],
+        returncode=0,
+        stdout=json.dumps(summary) + "\n",
+        stderr="",
+    )
+    monkeypatch.setattr(bridge.shutil, "which", lambda value: "C:/Rust/bin/cargo.exe")
+    monkeypatch.setattr(bridge.subprocess, "run", lambda *_args, **_kwargs: completed)
+
+    result = bridge.run_dad_event_log_check(
+        repo_root=tmp_path,
+        roots=[Path("processed/events")],
+        root_aliases=["dad/central-events"],
+    )
+
+    assert result.returncode == 2
+    assert result.summary_valid is False
+    errors = result.summary_validation_errors or []
+    assert any("authority_boundary" in error for error in errors)
+    assert any("root_alias" in error for error in errors)
+    assert any("logical_path" in error for error in errors)
+    assert result.to_dict()["summary"] is None
+
+
+def test_run_dad_event_log_check_rejects_mismatched_root_aliases_before_cargo(
+    monkeypatch, tmp_path: Path
+) -> None:
+    def fail_run(*_args, **_kwargs):
+        raise AssertionError("cargo should not run when root aliases are mismatched")
+
+    monkeypatch.setattr(bridge.subprocess, "run", fail_run)
+
+    with pytest.raises(ValueError, match="exactly one root_alias"):
+        bridge.run_dad_event_log_check(
+            repo_root=tmp_path,
+            roots=[Path("processed/events"), Path(".digital-asset/events")],
+            root_aliases=["dad/central-events"],
+        )
+
+
+def test_rust_event_log_check_cli_wraps_scope_and_never_satisfies_gate(
+    monkeypatch, tmp_path: Path
+) -> None:
+    summary = {
+        "schema_version": "dad_event_log_check.v0_1",
+        "root_count": 1,
+        "checked_file_count": 0,
+        "jsonl_file_count": 0,
+        "event_record_count": 0,
+        "malformed_jsonl_row_count": 0,
+        "invalid_utf8_row_count": 0,
+        "oversized_jsonl_row_count": 0,
+        "non_object_row_count": 0,
+        "missing_required_field_count": 0,
+        "invalid_field_value_count": 0,
+        "duplicate_event_id_count": 0,
+        "duplicate_dedupe_key_count": 0,
+        "unsafe_string_count": 0,
+        "issue_count": 0,
+        "roots": [
+            {
+                "root_alias": "dad/central-events",
+                "status": "missing",
+                "checked_file_count": 0,
+                "jsonl_file_count": 0,
+                "event_record_count": 0,
+                "malformed_jsonl_row_count": 0,
+                "invalid_utf8_row_count": 0,
+                "oversized_jsonl_row_count": 0,
+                "non_object_row_count": 0,
+                "missing_required_field_count": 0,
+                "invalid_field_value_count": 0,
+                "duplicate_event_id_count": 0,
+                "duplicate_dedupe_key_count": 0,
+                "unsafe_string_count": 0,
+            }
+        ],
+        "issue_samples": [],
+        "no_mutation_performed": True,
+        "authority_boundary": "Python DAD event pipeline remains authoritative.",
+        "authoritative_gate": "events collect/report plus validate",
+        "semantic_checks_not_performed": ["public release approval"],
+    }
+
+    def fake_run(**kwargs):
+        return DadEventLogCheckResult(
+            command=["cargo"],
+            returncode=0,
+            stdout=json.dumps(summary),
+            stderr="",
+            cargo_found=True,
+            root_aliases=kwargs["root_aliases"],
+            display_command=["cargo"],
+            summary=summary,
+            summary_valid=True,
+            summary_validation_errors=[],
+        )
+
+    monkeypatch.setattr(cli_module, "run_dad_event_log_check", fake_run)
+    result = RUNNER.invoke(
+        app,
+        [
+            "rust",
+            "event-log-check",
+            "--root",
+            str(tmp_path / "processed" / "events"),
+            "--root-alias",
+            "dad/central-events",
+        ],
+    )
+
+    assert result.exit_code == 0, result.output
+    payload = json.loads(result.output)
+    assert payload["scope"]["structural_event_check_only"] is True
+    assert payload["scope"]["event_pipeline_gate_satisfied"] is False
+    assert payload["summary"]["event_log_structural_clean"] is False
+    assert payload["summary"]["event_log_all_roots_checked"] is False
+    assert payload["summary"]["event_pipeline_gate_satisfied"] is False
 
 
 def test_run_dad_repo_inventory_probe_builds_alias_only_command_and_summary(

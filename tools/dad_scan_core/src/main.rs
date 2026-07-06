@@ -14,6 +14,8 @@ enum Command {
     ScanLocal(dad_scan_core::ScanLocalArgs),
     /// Read-only probe for DAD mail spools, locks, temp fragments, and JSONL health.
     MailSpoolCheck(dad_scan_core::MailSpoolCheckArgs),
+    /// Read-only structural check for DAD event JSONL logs/outboxes.
+    EventLogCheck(dad_scan_core::EventLogCheckArgs),
     /// Read-only probe for local Git repository roots.
     RepoInventoryProbe(dad_scan_core::RepoInventoryProbeArgs),
 }
@@ -27,6 +29,10 @@ fn main() -> Result<()> {
         }
         Command::MailSpoolCheck(args) => {
             let summary = dad_scan_core::check_mail_spools(args)?;
+            println!("{}", serde_json::to_string_pretty(&summary)?);
+        }
+        Command::EventLogCheck(args) => {
+            let summary = dad_scan_core::check_event_logs(args)?;
             println!("{}", serde_json::to_string_pretty(&summary)?);
         }
         Command::RepoInventoryProbe(args) => {

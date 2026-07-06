@@ -30,6 +30,10 @@ Cloudflare, or write target repo source/governance files.
 - Registered central event-log validation in `asset-dir validate`.
 - Added `docs/DAD_EVENT_PIPELINE.md` and downstream mailbox guidance.
 - Added AI front-door, TOC, manifest, and navigation-registry routes.
+- Added Rust leaf checker:
+  - `tools/dad_scan_core/src/event_log.rs`;
+  - `asset-dir rust event-log-check`;
+  - Python bridge validation in `src/digital_asset_directory/rust_bridge/`.
 
 ## Machine Evidence
 
@@ -70,11 +74,37 @@ PYTHONPATH=src python -m ruff check src/digital_asset_directory/event_pipeline.p
 
 Result: passed.
 
+Rust leaf checker:
+
+```text
+cargo check --manifest-path tools/dad_scan_core/Cargo.toml
+cargo test --manifest-path tools/dad_scan_core/Cargo.toml
+cargo fmt --manifest-path tools/dad_scan_core/Cargo.toml --check
+cargo clippy --manifest-path tools/dad_scan_core/Cargo.toml --all-targets -- -D warnings
+PYTHONPATH=src python -m pytest tests/test_rust_bridge_dad_scan_core.py -q
+PYTHONPATH=src python -m ruff check src/digital_asset_directory/cli.py src/digital_asset_directory/rust_bridge tests/test_rust_bridge_dad_scan_core.py
+```
+
+Result: focused Rust and Python checks passed while this evidence packet was
+updated. The Rust checker reports structural event JSONL observations only:
+malformed JSON, invalid UTF-8, oversized rows, non-object rows, missing required
+fields, invalid field values, duplicate `event_id` / `dedupe_key`, unsafe string markers, and
+alias-only issue samples. It does not collect events, route notices, approve
+public release, infer adoption, or update response state.
+The wrapper treats missing roots as not structurally clean even when
+`issue_count` is zero; reviewers must inspect root status before relying on a
+Rust structural check.
+
 ## Rust Boundary
 
-Rust was evaluated for this slice and intentionally kept out of the policy path.
-The correct next Rust use is a deterministic leaf checker that shadows the
-Python event validator for:
+Rust was evaluated for this slice and kept out of the policy path. The first
+event-pipeline Rust use is now a deterministic leaf checker:
+
+```text
+asset-dir rust event-log-check
+```
+
+It shadows structural parts of the Python event validator for:
 
 - JSONL shape and malformed/oversized row scans;
 - event/dedupe identity conflicts;
@@ -83,6 +113,10 @@ Python event validator for:
 
 Rust must not decide response states, public release, source visibility, human
 gates, repo adoption, mail delivery, or learning promotion.
+
+`phase-10a-rust-leaf-checker-reviewed` remains a human gate. The existence of a
+green Rust checker is review input, not approval of Phase 10A or promotion of
+Rust to governance authority.
 
 ## Human Gates Still Pending
 

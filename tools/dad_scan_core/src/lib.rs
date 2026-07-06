@@ -1,3 +1,4 @@
+mod event_log;
 mod extract;
 mod hash;
 mod mail_spool;
@@ -6,8 +7,10 @@ mod repo_probe;
 mod report;
 mod walk;
 
+pub use event_log::check_event_logs;
 pub use mail_spool::check_mail_spools;
 pub use models::{
+    EventLogCheckArgs, EventLogCheckSummary, EventLogIssueSample, EventLogRootSummary,
     MailSpoolCheckArgs, MailSpoolCheckSummary, MailSpoolIssueSample, MailSpoolRootSummary,
     Observation, QuarantineReport, RepoInventoryProbeArgs, RepoInventoryProbeRecord,
     RepoInventoryProbeRootSummary, RepoInventoryProbeSummary, RepoInventorySkippedDir,

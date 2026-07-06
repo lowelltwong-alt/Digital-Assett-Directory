@@ -308,6 +308,7 @@ phases:
         - docs/DAD_EVENT_PIPELINE.md
         - schemas/dad-pipeline-event.schema.json
         - templates/downstream/MAIL_README.md
+        - tools/dad_scan_core/src/event_log.rs
       human_gates:
         - id: phase-10a-event-contract-reviewed
           description: repo-local event outbox, central event log, provenance, dedupe, quarantine, and response-state contracts are reviewed

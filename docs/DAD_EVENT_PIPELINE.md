@@ -71,6 +71,17 @@ Refresh the central report:
 asset-dir events report
 ```
 
+Run the Rust structural leaf checker for event JSONL roots:
+
+```text
+asset-dir rust event-log-check
+```
+
+By default this checks DAD's repo-local event mirror and central event storage
+using public-safe aliases. It reports JSONL shape, UTF-8, oversized rows,
+duplicate `event_id` / `dedupe_key`, and obvious unsafe strings. It does not
+collect events or update response state.
+
 ## Safety
 
 Events are append-only candidate metadata. They do not override source repo
@@ -92,7 +103,16 @@ and does not mirror private/internal data to cloud storage.
 
 ## Rust Boundary
 
-Rust is a good later fit for deterministic leaf checks such as JSONL shape,
-oversized-row scans, duplicate-key scans, path hashing, and dependency
-freshness checks. Rust must not become the policy authority for collection,
-public release, source visibility, human gates, or repo adoption.
+Rust is now used as a deterministic leaf checker for event JSONL shape,
+oversized-row scans, invalid field values, duplicate-key scans, alias/path
+hygiene, and obvious unsafe string screening:
+
+```text
+asset-dir rust event-log-check
+```
+
+The Rust report is structural evidence only. Python/DAD remains the policy
+authority for collection, public release, source visibility, human gates,
+response-state acceptance, repo adoption, and event report validation.
+Inspect root statuses as well as `issue_count`: missing roots are not a green
+event-pipeline signal even when there are no malformed rows.
