@@ -81,6 +81,12 @@ both `mail outbox-check` and `mail compose`. Use `--payload key=value` only for
 small flat fields; raw JSON passed to `--payload` is rejected so it cannot be
 silently split at the first `=`.
 
+Read the compose result. If it reports `source_policy_status:
+unreviewed_source_repo`, the local outbox row is valid candidate mail but DAD
+will not collect it in `--repo all` mode until that repo or clone is reviewed in
+`mail.repos`. Usually send from the reviewed canonical repo path instead of a
+duplicate `repos/`, `seed-clean`, temp, or scratch clone.
+
 During concurrent work, multiple agents may retry the same outbox candidate.
 That is acceptable as a source-outbox storm signal: DAD collection canonicalizes
 one row and records duplicate audit evidence. Do not write directly to DAD's

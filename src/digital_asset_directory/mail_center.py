@@ -420,6 +420,12 @@ both `mail outbox-check` and `mail compose`. Use `--payload key=value` only for
 small flat fields; raw JSON passed to `--payload` is rejected so it cannot be
 silently split at the first `=`.
 
+Read the compose result. If it reports `source_policy_status:
+unreviewed_source_repo`, the local outbox row is valid candidate mail but DAD
+will not collect it in `--repo all` mode until that repo or clone is reviewed in
+`mail.repos`. Usually send from the reviewed canonical repo path instead of a
+duplicate `repos/`, `seed-clean`, temp, or scratch clone.
+
 During concurrent work, multiple agents may retry the same outbox candidate.
 That is acceptable as a source-outbox storm signal: DAD collection canonicalizes
 one row and records duplicate audit evidence. Do not write directly to DAD's
@@ -1291,10 +1297,21 @@ def compose_mail(
         ),
     )
     appended = _append_unique(_mail_file(repo, "outbox.jsonl"), record)
+    source_policy_status = "reviewed_mail_repo" if policy is not None else "unreviewed_source_repo"
+    collection_warning = ""
+    if policy is None:
+        collection_warning = (
+            "This source repo is not in reviewed DAD mail.repos. The outbox row was "
+            "written locally, but DAD will not collect it via --repo all until the "
+            "repo is reviewed in mail policy. Use the reviewed repo path/alias or "
+            "request policy enrollment for this clone if it is persistent."
+        )
     return {
         "record": record.model_dump(mode="json"),
         "appended": appended,
         "outbox": str(mail_dir / "outbox.jsonl"),
+        "source_policy_status": source_policy_status,
+        "collection_warning": collection_warning,
         "novelty_check": {
             "verdict": novelty["verdict"],
             "matches": novelty["matches"][:3],

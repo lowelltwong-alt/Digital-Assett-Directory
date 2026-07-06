@@ -199,6 +199,38 @@ def test_compose_redacts_secret_like_payload_and_rejects_restricted_mail(tmp_pat
         )
 
 
+def test_compose_warns_when_source_repo_is_not_in_reviewed_mail_policy(tmp_path: Path):
+    repo = tmp_path / "seed-clean-clone"
+    repo.mkdir()
+
+    result = compose_mail(
+        repo,
+        message_type="lesson_suggestion",
+        target_repo="central_only",
+        summary="A clone outbox should warn when DAD will not collect it by --repo all.",
+        repo_policies=[],
+    )
+
+    assert result["source_policy_status"] == "unreviewed_source_repo"
+    assert "will not collect it via --repo all" in result["collection_warning"]
+
+
+def test_compose_reviewed_source_repo_has_no_collection_warning(tmp_path: Path):
+    repo = tmp_path / "repo-a"
+    repo.mkdir()
+
+    result = compose_mail(
+        repo,
+        message_type="lesson_suggestion",
+        target_repo="central_only",
+        summary="A reviewed source repo can be collected by policy.",
+        repo_policies=[_policy(repo, "repo-a")],
+    )
+
+    assert result["source_policy_status"] == "reviewed_mail_repo"
+    assert result["collection_warning"] == ""
+
+
 def test_cli_mail_compose_payload_file_round_trips_structured_json_with_bom_and_equals(
     tmp_path: Path,
 ):

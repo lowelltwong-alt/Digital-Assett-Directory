@@ -137,6 +137,12 @@ be UTF-8 or UTF-8 with BOM. Use `--payload key=value` only for small flat
 metadata fields; raw JSON passed to `--payload` is rejected so it cannot be
 silently split at the first `=`.
 
+Read the compose result. If it reports `source_policy_status:
+unreviewed_source_repo`, the local outbox row is valid candidate mail but DAD
+will not collect it in `--repo all` mode until that repo or clone is reviewed in
+`mail.repos`. Agents should usually send from the reviewed canonical repo path
+instead of a duplicate `repos/`, `seed-clean`, temp, or scratch clone.
+
 Use the same payload source for the novelty check before composing:
 
 ```powershell
