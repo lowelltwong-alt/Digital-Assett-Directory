@@ -320,8 +320,8 @@
                   },
                   {
                       "path":  "overlay/tools/dad_scan_core/src/repo_probe.rs",
-                      "bytes":  16966,
-                      "sha256":  "7e5a72a2ec009c06b7a120c6816f5347e11ddaf1b912106baffdfee54f1b7353"
+                      "bytes":  16987,
+                      "sha256":  "f62cc2518cd1580d0d25ab1237d920f8edfa4811e7f07f5f885db38bf7994d9c"
                   },
                   {
                       "path":  "overlay/tools/dad_scan_core/src/report.rs",
@@ -4605,8 +4605,8 @@
                   },
                   {
                       "path":  "overlay/tools/dad_scan_core/tests/smoke.rs",
-                      "bytes":  48000,
-                      "sha256":  "a6736d244e5c9f65cde86807a88b7e331c1538e5f968567cab60ad2ddfe7b3d2"
+                      "bytes":  48348,
+                      "sha256":  "9365385c1eb7e7348324f895ffcbd24933aa74a538a22d35ca588bbced532887"
                   },
                   {
                       "path":  "README.md",

@@ -587,6 +587,13 @@ fn repo_inventory_probe_discovers_git_roots_alias_only() {
     fs::create_dir_all(nested.join(".git")).expect("nested git");
     fs::create_dir_all(root.join("node_modules").join("hidden").join(".git")).expect("node git");
     fs::create_dir_all(
+        root.join(".tmp")
+            .join("exception-learning-check")
+            .join("synthetic-public-clean")
+            .join(".git"),
+    )
+    .expect("tmp git");
+    fs::create_dir_all(
         root.join("pytest_tmp_dirty_mail")
             .join("hidden")
             .join(".git"),
@@ -624,6 +631,12 @@ fn repo_inventory_probe_discovers_git_roots_alias_only() {
             .skipped_dirs
             .iter()
             .any(|item| item.logical_path == "local/workspace/node_modules")
+    );
+    assert!(
+        summary
+            .skipped_dirs
+            .iter()
+            .any(|item| item.logical_path == "local/workspace/.tmp")
     );
     assert!(
         summary

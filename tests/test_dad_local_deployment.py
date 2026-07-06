@@ -299,6 +299,41 @@ def test_write_and_read_hub_locator(tmp_path: Path) -> None:
     assert readback["hub_path"] == str(hub.resolve())
 
 
+def test_read_hub_locator_tolerates_utf8_bom(tmp_path: Path) -> None:
+    hub = _make_hub(tmp_path / "dad")
+    locator = tmp_path / "home" / ".dad" / "hub.json"
+    locator.parent.mkdir(parents=True)
+    locator.write_text(
+        "\ufeff" + json.dumps({"hub_path": str(hub.resolve())}) + "\n",
+        encoding="utf-8",
+    )
+
+    readback = read_hub_locator(locator)
+
+    assert readback["error"] == ""
+    assert readback["is_dad_hub"] is True
+    assert readback["hub_path"] == str(hub.resolve())
+
+
+def test_non_object_hub_locator_fails_closed(tmp_path: Path) -> None:
+    outside_repo = tmp_path / "other-repo"
+    outside_repo.mkdir()
+    locator = tmp_path / "home" / ".dad" / "hub.json"
+    locator.parent.mkdir(parents=True)
+    locator.write_text(json.dumps([{"hub_path": str(tmp_path / "dad")}]), encoding="utf-8")
+
+    result = describe_hub_resolution(
+        environ={},
+        locator=locator,
+        cwd=outside_repo,
+        allow_current_fallback=False,
+    )
+
+    assert result["resolved"] is False
+    assert "DAD hub unavailable" in result["error"]
+    assert result["attempts"][0]["error"] == "invalid locator payload: expected JSON object"
+
+
 def test_skeleton_directory_is_not_valid_dad_hub(tmp_path: Path) -> None:
     skeleton = tmp_path / "skeleton"
     (skeleton / "registry").mkdir(parents=True)
@@ -497,6 +532,45 @@ def test_doctor_can_write_custom_locator_for_deployment_scope(tmp_path: Path) ->
     assert payload["hub_path"] == str(ROOT.resolve())
     assert is_dad_hub_root(Path(payload["hub_path"]))
     assert '"schema": "deployment_readiness.v1"' in result.output
+
+
+def test_doctor_locator_write_permission_error_fails_clean_without_target_write_or_path_leak(
+    tmp_path: Path, monkeypatch
+) -> None:
+    outside_repo = tmp_path / "OneDrive" / "Desktop" / "Git Projects" / "caller repo"
+    outside_repo.mkdir(parents=True)
+    denied_path = tmp_path / "home" / ".dad" / "hub.json"
+
+    def deny_locator_write(*_args, **_kwargs):
+        raise PermissionError(f"access denied while writing {denied_path}")
+
+    monkeypatch.setattr("digital_asset_directory.cli.write_hub_locator", deny_locator_write)
+    monkeypatch.chdir(outside_repo)
+
+    result = RUNNER.invoke(
+        app,
+        [
+            "doctor",
+            "--hub",
+            str(ROOT),
+            "--scope",
+            "deployment",
+            "--write-hub-locator",
+            "--locator",
+            str(denied_path),
+        ],
+        env={"DAD_HUB": "", "DAD_HUB_PATH": ""},
+    )
+
+    assert result.exit_code == 2
+    assert "Traceback" not in result.output
+    assert str(denied_path) not in result.output
+    payload = json.loads(result.output)
+    assert payload["deployment_ready"] is False
+    assert payload["deployment"]["locator_write"]["written"] is False
+    assert payload["deployment"]["locator_write"]["error_type"] == "PermissionError"
+    assert payload["deployment"]["locator_write"]["error"] == "hub locator write failed: PermissionError"
+    _assert_no_target_dad_writes(outside_repo)
 
 
 def test_doctor_distinguishes_raw_checkout_from_external_invocation(

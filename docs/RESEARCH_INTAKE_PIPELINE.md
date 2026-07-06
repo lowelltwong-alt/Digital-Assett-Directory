@@ -16,6 +16,7 @@ otherwise it stays as an ordinary note and should not become a DAD offering.
 research report entry (processed/research/*.json)
   -> asset-dir research intake        # quarantine record in processed/research/intake/
   -> asset-dir research screen  x4    # prompt_injection, license, provenance, compatibility
+  -> asset-dir research intake-graph  # candidate graph over pointers, routes, needs
   -> asset-dir research promote       # named human + approval ID required
        -> assets/external/<slug>/POINTER.md            (pointer artifact, never a copy)
        -> registry/dad-offerings-registry.json row     (--target offering)
@@ -42,6 +43,13 @@ research report entry (processed/research/*.json)
   intake and approval IDs. DAD stores no external content. External skills enter the
   skill library as `pointer_only` format with checkout mode `pointer`, update policy
   `manual_review`, and a 90-day review due date.
+- **Intake graph**: `asset-dir research intake-graph` writes
+  `processed/research/intake-graph.json` and
+  `processed/research/intake-graph-edges.jsonl`. These outputs explain what DAD
+  knows about each external pointer: source URL, trust tier, license, screening
+  state, safe notes, candidate capabilities, DAD needs, and suggested surfaces.
+  They stay candidate-only and do not add entries to the promoted graph or copy
+  external repository content.
 - **Re-screening**: if the upstream changes, the promoted row's `does_not_apply_when`
   says so -- re-run screening before continued reuse.
 
@@ -52,6 +60,7 @@ asset-dir research intake --name "<name>" --kind skill --source-url <url> [--jus
 asset-dir research screen --intake-id <id> --check prompt_injection --result pass
 asset-dir research promote --intake-id <id> --approved-by <human> --approval-id <id> --target skill_pointer
 asset-dir research intake-list [--status screened]
+asset-dir research intake-graph
 asset-dir research frontier-watch [--language python|rust] [--cadence weekly|monthly|quarterly]
 asset-dir research language-playbook --language python|rust|future-language-template
 ```

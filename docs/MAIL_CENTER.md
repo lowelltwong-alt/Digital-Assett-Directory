@@ -131,6 +131,28 @@ python -m digital_asset_directory.cli mail compose `
   --summary "Use daily mail digest before adopting cross-repo suggestions."
 ```
 
+For a structured lesson pack or other nested payload, write the JSON object to a
+small payload file and pass `--payload-file path\to\payload.json`. The file may
+be UTF-8 or UTF-8 with BOM. Use `--payload key=value` only for small flat
+metadata fields; raw JSON passed to `--payload` is rejected so it cannot be
+silently split at the first `=`.
+
+Read the compose result. If it reports `source_policy_status:
+unreviewed_source_repo`, the local outbox row is valid candidate mail but DAD
+will not collect it in `--repo all` mode until that repo or clone is reviewed in
+`mail.repos`. Agents should usually send from the reviewed canonical repo path
+instead of a duplicate `repos/`, `seed-clean`, temp, or scratch clone.
+
+Use the same payload source for the novelty check before composing:
+
+```powershell
+python -m digital_asset_directory.cli mail outbox-check `
+  --repo C:\path\to\repo `
+  --type lesson_suggestion `
+  --summary "Structured lesson pack delivery." `
+  --payload-file path\to\payload.json
+```
+
 Collect repo outboxes into DAD:
 
 ```powershell

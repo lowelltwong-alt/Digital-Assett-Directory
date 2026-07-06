@@ -211,6 +211,7 @@ from .research import research_missing_parts
 from .research_intake import (
     build_language_playbook_report,
     build_language_frontier_watchlist,
+    build_research_intake_graph,
     intake_external_candidate,
     list_intake,
     promote_intake,
@@ -1319,21 +1320,65 @@ def _json_command(value: Optional[str], option_name: str) -> list[str] | None:
     return [str(item) for item in parsed]
 
 
-RAW_JSON_PAYLOAD_MESSAGE = "payload looks like raw JSON; use --payload-json"
+RAW_JSON_PAYLOAD_MESSAGE = (
+    "--payload is key=value convenience mode only; use --payload-json or "
+    "--payload-file for structured JSON payloads."
+)
 
 
 def _payload_key_looks_like_raw_json(key: str) -> bool:
     return "{" in key or "}" in key or "\n" in key or "\r" in key or len(key) > 128
 
 
-def _key_value_payload(values: list[str]) -> dict[str, str]:
-    payload: dict[str, str] = {}
+def _parse_payload_json(value: str, *, option_name: str) -> dict[str, Any]:
+    try:
+        parsed = json.loads(value)
+    except json.JSONDecodeError as exc:
+        raise typer.BadParameter(f"{option_name} must be a JSON object.") from exc
+    if not isinstance(parsed, dict):
+        raise typer.BadParameter(f"{option_name} must be a JSON object.")
+    return parsed
+
+
+def _payload_file_text(path: Path) -> str:
+    try:
+        return path.read_text(encoding="utf-8-sig")
+    except OSError as exc:
+        raise typer.BadParameter(f"--payload-file could not be read: {exc}") from exc
+
+
+def _payload_json_text(value: str) -> str:
+    source = value.strip()
+    if not source:
+        raise typer.BadParameter("--payload-json requires a JSON object, file path, or '-' for stdin.")
+    if source == "-":
+        return sys.stdin.read()
+    if source.startswith(("{", "[")):
+        return source
+    candidate = Path(source)
+    try:
+        if candidate.exists():
+            return _payload_file_text(candidate)
+    except OSError:
+        pass
+    return source
+
+
+def _key_value_payload(values: list[str]) -> dict[str, Any]:
+    payload: dict[str, Any] = {}
     for value in values:
-        stripped_value = value.strip()
+        stripped = value.lstrip()
+        bracketed_key = bool(re.match(r"^\[[^\]]+\]\s*=", stripped))
+        if stripped.startswith("{") or (stripped.startswith("[") and not bracketed_key):
+            raise typer.BadParameter(
+                "--payload is key=value convenience mode only; use --payload-json "
+                "or --payload-file for structured JSON payloads."
+            )
         if "=" not in value:
-            if stripped_value.startswith(("{", "[")):
-                raise typer.BadParameter(RAW_JSON_PAYLOAD_MESSAGE)
-            raise typer.BadParameter("Mail payload values must use key=value form.")
+            raise typer.BadParameter(
+                "Mail payload values must use key=value form, or use --payload-json/"
+                "--payload-file for structured JSON payloads."
+            )
         key, item = value.split("=", 1)
         key = key.strip()
         if _payload_key_looks_like_raw_json(key):
@@ -1344,30 +1389,21 @@ def _key_value_payload(values: list[str]) -> dict[str, str]:
     return payload
 
 
-def _json_payload(payload_json: str | None) -> dict[str, Any]:
-    if payload_json is None:
-        return {}
-    source = payload_json.strip()
-    if not source:
-        raise typer.BadParameter("--payload-json requires a path or '-' for stdin.")
-    try:
-        text = sys.stdin.read() if source == "-" else Path(source).read_text(encoding="utf-8-sig")
-    except OSError as exc:
-        raise typer.BadParameter(f"--payload-json could not be read: {exc}") from exc
-    try:
-        parsed = json.loads(text)
-    except json.JSONDecodeError as exc:
-        raise typer.BadParameter("--payload-json must contain a JSON object.") from exc
-    if not isinstance(parsed, dict):
-        raise typer.BadParameter("--payload-json must contain a JSON object.")
-    return parsed
-
-
-def _mail_payload(payload: list[str], payload_json: str | None) -> dict[str, Any]:
-    if payload and payload_json is not None:
-        raise typer.BadParameter("Use either --payload key=value or --payload-json, not both.")
+def _mail_payload_options(
+    payload: list[str],
+    *,
+    payload_json: str | None = None,
+    payload_file: Path | None = None,
+) -> dict[str, Any]:
+    source_count = int(bool(payload)) + int(bool(payload_json)) + int(payload_file is not None)
+    if source_count > 1:
+        raise typer.BadParameter(
+            "Use only one payload source: --payload key=value, --payload-json, or --payload-file."
+        )
+    if payload_file is not None:
+        return _parse_payload_json(_payload_file_text(payload_file), option_name="--payload-file")
     if payload_json is not None:
-        return _json_payload(payload_json)
+        return _parse_payload_json(_payload_json_text(payload_json), option_name="--payload-json")
     return _key_value_payload(payload)
 
 
@@ -2211,7 +2247,39 @@ def doctor(
         except ValueError as exc:
             console.print(str(exc))
             raise typer.Exit(2) from exc
-    locator_write = write_hub_locator(cfg.repo_root, locator) if write_locator else None
+    locator_write = None
+    if write_locator:
+        try:
+            locator_write = write_hub_locator(cfg.repo_root, locator)
+        except OSError as exc:
+            error = f"hub locator write failed: {type(exc).__name__}"
+            result = {
+                "schema": (
+                    "deployment_readiness.v1"
+                    if scope == "deployment"
+                    else "operational_readiness.v1"
+                ),
+                "generated_at": utc_now(),
+                "ready": False,
+                "deployment_ready": False,
+                "candidate_only": True,
+                "authority_boundary": (
+                    "Deployment readiness reports local DAD callability only. It does not scan, "
+                    "mutate target repositories, approve public release, or satisfy enrollment gates."
+                ),
+                "deployment": {
+                    "hub_resolution": hub_resolution,
+                    "unavailable_hub_policy": UNAVAILABLE_HUB_POLICY,
+                    "locator_write": {
+                        "written": False,
+                        "error": error,
+                        "error_type": type(exc).__name__,
+                    },
+                },
+                "warnings": [error],
+            }
+            console.print_json(data=result)
+            raise typer.Exit(2) from exc
     if scope == "deployment":
         deployment = build_deployment_status(
             cfg,
@@ -2942,11 +3010,20 @@ def mail_compose(
     message_type: str = typer.Option(..., "--type"),
     target_repo: str = typer.Option("central_only", "--target-repo"),
     summary: str = typer.Option(..., "--summary"),
-    payload: list[str] = typer.Option([], "--payload"),
+    payload: list[str] = typer.Option(
+        [],
+        "--payload",
+        help="Simple payload field in key=value form. Use --payload-file for structured JSON.",
+    ),
     payload_json: Optional[str] = typer.Option(
         None,
         "--payload-json",
-        help="Read the full mail payload object from a JSON file, or '-' for stdin.",
+        help="Structured payload JSON object. Prefer --payload-file for large lesson packs.",
+    ),
+    payload_file: Optional[Path] = typer.Option(
+        None,
+        "--payload-file",
+        help="Path to a structured payload JSON object; UTF-8 BOM is tolerated.",
     ),
     evidence: list[str] = typer.Option([], "--evidence"),
     suggested_action: list[str] = typer.Option([], "--suggested-action"),
@@ -2972,7 +3049,11 @@ def mail_compose(
             message_type=message_type,
             target_repo=target_repo,
             summary=summary,
-            payload=_mail_payload(payload, payload_json),
+            payload=_mail_payload_options(
+                payload,
+                payload_json=payload_json,
+                payload_file=payload_file,
+            ),
             evidence=evidence,
             suggested_actions=suggested_action,
             sensitivity=sensitivity,
@@ -3378,11 +3459,20 @@ def mail_outbox_check(
     repo: Path = typer.Option(Path("."), "--repo"),
     message_type: str = typer.Option("", "--type"),
     summary: str = typer.Option(..., "--summary"),
-    payload: list[str] = typer.Option([], "--payload"),
+    payload: list[str] = typer.Option(
+        [],
+        "--payload",
+        help="Simple payload field in key=value form. Use --payload-file for structured JSON.",
+    ),
     payload_json: Optional[str] = typer.Option(
         None,
         "--payload-json",
-        help="Read the proposed mail payload object from a JSON file, or '-' for stdin.",
+        help="Structured payload JSON object. Prefer --payload-file for large lesson packs.",
+    ),
+    payload_file: Optional[Path] = typer.Option(
+        None,
+        "--payload-file",
+        help="Path to a structured payload JSON object; UTF-8 BOM is tolerated.",
     ),
     evidence: list[str] = typer.Option([], "--evidence"),
     hub: Optional[Path] = typer.Option(None),
@@ -3394,7 +3484,11 @@ def mail_outbox_check(
             repo.resolve(),
             message_type=message_type,
             summary=summary,
-            payload=_mail_payload(payload, payload_json),
+            payload=_mail_payload_options(
+                payload,
+                payload_json=payload_json,
+                payload_file=payload_file,
+            ),
             evidence=evidence,
         )
     except (OSError, ValueError) as exc:
@@ -6110,6 +6204,20 @@ def research_intake_list(
     """List external intake records and their screening status."""
     cfg = _cfg(hub=hub)
     console.print_json(data=list_intake(cfg.repo_root, status=status))
+
+
+@research_app.command("intake-graph")
+def research_intake_graph(
+    hub: Optional[Path] = typer.Option(None),
+) -> None:
+    """Build a pointer-only candidate graph over external research intake records."""
+    cfg = _cfg(hub=hub)
+    try:
+        report = build_research_intake_graph(cfg.repo_root)
+    except (ValueError, FileNotFoundError) as exc:
+        console.print(str(exc))
+        raise typer.Exit(2) from exc
+    console.print_json(data=report)
 
 
 @research_app.command("frontier-watch")

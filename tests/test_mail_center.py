@@ -191,7 +191,120 @@ def test_compose_redacts_secret_like_payload_and_rejects_restricted_mail(tmp_pat
         )
 
 
-def test_cli_mail_compose_payload_json_round_trips_and_rejects_raw_json_payload(
+def test_compose_warns_when_source_repo_is_not_in_reviewed_mail_policy(tmp_path: Path):
+    repo = tmp_path / "seed-clean-clone"
+    repo.mkdir()
+
+    result = compose_mail(
+        repo,
+        message_type="lesson_suggestion",
+        target_repo="central_only",
+        summary="A clone outbox should warn when DAD will not collect it by --repo all.",
+        repo_policies=[],
+    )
+
+    assert result["source_policy_status"] == "unreviewed_source_repo"
+    assert "will not collect it via --repo all" in result["collection_warning"]
+
+
+def test_compose_reviewed_source_repo_has_no_collection_warning(tmp_path: Path):
+    repo = tmp_path / "repo-a"
+    repo.mkdir()
+
+    result = compose_mail(
+        repo,
+        message_type="lesson_suggestion",
+        target_repo="central_only",
+        summary="A reviewed source repo can be collected by policy.",
+        repo_policies=[_policy(repo, "repo-a")],
+    )
+
+    assert result["source_policy_status"] == "reviewed_mail_repo"
+    assert result["collection_warning"] == ""
+
+
+def test_cli_mail_compose_payload_file_round_trips_structured_json_with_bom_and_equals(
+    tmp_path: Path,
+):
+    hub = _make_hub(tmp_path / "dad")
+    repo = tmp_path / "repo-a"
+    repo.mkdir()
+    payload_file = tmp_path / "lesson-pack.json"
+    payload = {
+        "lesson_pack_json": {
+            "kernel_lessons": [
+                {
+                    "lesson_id": "lesson:fable-payload-file",
+                    "fix": "preserve a=b inside structured JSON",
+                }
+            ],
+            "flags": {"candidate_only": True},
+        },
+        "supersedes_reason": "corrected structured payload delivery path",
+    }
+    payload_file.write_bytes(
+        b"\xef\xbb\xbf" + json.dumps(payload, sort_keys=True).encode("utf-8")
+    )
+
+    result = RUNNER.invoke(
+        app,
+        [
+            "mail",
+            "compose",
+            "--hub",
+            str(hub),
+            "--repo",
+            str(repo),
+            "--type",
+            "lesson_suggestion",
+            "--summary",
+            "Structured lesson pack delivery should not use key-value mode.",
+            "--payload-file",
+            str(payload_file),
+            "--evidence",
+            "synthetic Fable payload-file regression",
+        ],
+    )
+
+    assert result.exit_code == 0, result.output
+    rows = _jsonl(repo / ".digital-asset" / "mail" / "outbox.jsonl")
+    assert rows[0]["payload"]["lesson_pack_json"]["kernel_lessons"][0]["fix"] == (
+        "preserve a=b inside structured JSON"
+    )
+    assert rows[0]["payload"]["supersedes_reason"] == (
+        "corrected structured payload delivery path"
+    )
+
+
+def test_cli_mail_compose_rejects_raw_json_in_key_value_payload_mode(tmp_path: Path):
+    hub = _make_hub(tmp_path / "dad")
+    repo = tmp_path / "repo-a"
+    repo.mkdir()
+
+    result = RUNNER.invoke(
+        app,
+        [
+            "mail",
+            "compose",
+            "--hub",
+            str(hub),
+            "--repo",
+            str(repo),
+            "--type",
+            "lesson_suggestion",
+            "--summary",
+            "Raw JSON in --payload should fail closed.",
+            "--payload",
+            '{"lesson_pack_json":{"fix":"a=b"}}',
+        ],
+    )
+
+    assert result.exit_code == 2
+    assert "--payload is key=value convenience mode only" in result.output
+    assert not (repo / ".digital-asset" / "mail" / "outbox.jsonl").exists()
+
+
+def test_cli_mail_compose_payload_json_path_round_trips_and_rejects_raw_json_payload(
     tmp_path: Path,
 ):
     hub = _make_hub(tmp_path / "hub")
@@ -258,26 +371,7 @@ def test_cli_mail_compose_payload_json_round_trips_and_rejects_raw_json_payload(
     assert outbox_check.exit_code == 0, outbox_check.output
     assert json.loads(outbox_check.output)["sent_count"] == 1
 
-    raw_json_payload = RUNNER.invoke(
-        app,
-        [
-            "mail",
-            "compose",
-            "--repo",
-            str(repo),
-            "--type",
-            "lesson_suggestion",
-            "--summary",
-            "Raw JSON should use the structured lane.",
-            "--payload",
-            '{"lesson_pack_json":{"lessons":["split risk"]}}',
-            "--hub",
-            str(hub),
-        ],
-    )
-
-    assert raw_json_payload.exit_code == 2
-    with pytest.raises(typer.BadParameter, match="payload looks like raw JSON"):
+    with pytest.raises(typer.BadParameter, match="key=value convenience mode"):
         cli_module._key_value_payload(['{"lesson_pack_json":{"lessons":["split risk"]}}'])
 
     json_value_payload = RUNNER.invoke(
@@ -319,8 +413,8 @@ def test_cli_mail_compose_payload_json_round_trips_and_rejects_raw_json_payload(
     )
 
     assert mixed_payload_modes.exit_code == 2
-    with pytest.raises(typer.BadParameter, match="Use either --payload key=value"):
-        cli_module._mail_payload(["note=value"], payload_path)
+    with pytest.raises(typer.BadParameter, match="Use only one payload source"):
+        cli_module._mail_payload_options(["note=value"], payload_json=str(payload_path))
 
     list_payload_path = tmp_path / "payload-list.json"
     list_payload_path.write_text(json.dumps(["not", "an", "object"]), encoding="utf-8")
@@ -342,8 +436,53 @@ def test_cli_mail_compose_payload_json_round_trips_and_rejects_raw_json_payload(
 
     assert non_object_payload_json.exit_code == 2
     with pytest.raises(typer.BadParameter, match="JSON object"):
-        cli_module._json_payload(str(list_payload_path))
+        cli_module._parse_payload_json(
+            cli_module._payload_json_text(str(list_payload_path)),
+            option_name="--payload-json",
+        )
 
+
+def test_cli_mail_outbox_check_accepts_payload_file_for_structured_novelty(
+    tmp_path: Path,
+):
+    hub = _make_hub(tmp_path / "dad")
+    repo = tmp_path / "repo-a"
+    repo.mkdir()
+    payload_file = tmp_path / "lesson-pack.json"
+    payload_file.write_text(
+        json.dumps(
+            {
+                "lesson_pack_json": {
+                    "lesson_id": "lesson:fable-outbox-check",
+                    "fix": "check the same structured payload before compose",
+                }
+            },
+            sort_keys=True,
+        ),
+        encoding="utf-8",
+    )
+
+    result = RUNNER.invoke(
+        app,
+        [
+            "mail",
+            "outbox-check",
+            "--hub",
+            str(hub),
+            "--repo",
+            str(repo),
+            "--type",
+            "lesson_suggestion",
+            "--summary",
+            "Structured novelty check should use the same payload file.",
+            "--payload-file",
+            str(payload_file),
+        ],
+    )
+
+    assert result.exit_code == 0, result.output
+    payload = json.loads(result.output)
+    assert payload["verdict"] == "new"
 
 def test_bom_prefixed_jsonl_reads_and_reports_nonblocking_observation(tmp_path: Path):
     hub = _make_hub(tmp_path / "hub")
@@ -3424,6 +3563,28 @@ def test_malformed_jsonl_quarantine_uses_safe_path_refs(tmp_path: Path):
     assert "Git Projects" not in quarantine_text
 
 
+def test_collect_accepts_bom_prefixed_source_outbox(tmp_path: Path):
+    hub = tmp_path / "dad"
+    repo = tmp_path / "repo-a"
+    hub.mkdir()
+    repo.mkdir()
+    compose_mail(
+        repo,
+        message_type="lesson_suggestion",
+        target_repo="central_only",
+        summary="BOM-prefixed source outboxes should still collect.",
+    )
+    outbox = repo / ".digital-asset" / "mail" / "outbox.jsonl"
+    outbox.write_bytes(b"\xef\xbb\xbf" + outbox.read_bytes())
+
+    result = collect_mail(hub, [repo])
+
+    assert result["collected_count"] == 1
+    assert result["error_count"] == 0
+    central = _jsonl(central_inbox_path(hub, repo))
+    assert central[0]["payload"]["summary"] == "BOM-prefixed source outboxes should still collect."
+
+
 def test_digest_tolerates_malformed_rows_and_updates_last_checked(tmp_path: Path):
     repo = tmp_path / "repo"
     repo.mkdir()
@@ -3451,6 +3612,26 @@ def test_digest_tolerates_invalid_utf8_rows_and_updates_last_checked(tmp_path: P
     assert "Invalid UTF-8" in digest["parse_warnings"][0]["error"]
     assert digest["unread_count"] == 0
     assert (mailbox / "last_checked.json").exists()
+
+
+def test_digest_tolerates_bom_prefixed_inbox_and_updates_last_checked(tmp_path: Path):
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    packet = compose_mail(
+        repo,
+        message_type="lesson_suggestion",
+        target_repo=str(repo),
+        summary="BOM-prefixed inbox should still digest.",
+    )["record"]
+    inbox = repo / ".digital-asset" / "mail" / "inbox.jsonl"
+    inbox.write_bytes(b"\xef\xbb\xbf" + json.dumps(packet).encode("utf-8") + b"\n")
+
+    digest = digest_mail(repo, checked_at="2026-06-30T10:00:00+00:00")
+
+    assert digest["parse_warning_count"] == 0
+    assert digest["inbox_count"] == 1
+    assert digest["unread_count"] == 1
+    assert (repo / ".digital-asset" / "mail" / "last_checked.json").exists()
 
 
 def test_stale_jsonl_lock_is_recovered(tmp_path: Path, monkeypatch: pytest.MonkeyPatch):

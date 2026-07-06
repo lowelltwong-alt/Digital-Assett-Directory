@@ -1,23 +1,23 @@
 # DAD Repo Inventory Reconciliation
 
-Generated: 2026-07-06T02:25:30.370556+00:00
-Report ID: `dad:dad-repo-inventory:279ac239-2dd1-570b-a02e-d450996bc977`
-Content fingerprint: `sha256:d12b7b3be1c12a3dee39c80460a97ecadd0f6f84d566e664bd1f0818fca5eaa8`
+Generated: 2026-07-06T04:45:09.500772+00:00
+Report ID: `dad:dad-repo-inventory:eb70ac00-3e75-5137-94f9-1d36fddef753`
+Content fingerprint: `sha256:2c78924515c865ef72f7497e1398363d9ab6eac401c3065706c0d49233ce1dbb`
 
 This DAD report is central candidate metadata only. It does not authorize enrollment, delivery, hooks, source edits, or writes to downstream repos.
 
 ## Counts
 
 - active-no-write: 1
-- duplicate-ignore: 62
-- needs-human-classification: 13
+- duplicate-ignore: 32
+- needs-human-classification: 14
 - protected-central-only: 3
 
 ## Repos
 
 | Repo | Classification | Reasons | Next action |
 | --- | --- | --- | --- |
-| dad-dadm1-compose-input-safety | active-no-write | dirty_worktree: reviewed policy does not allow dirty enrollment.; non_main_branch: reviewed policy does not allow non-main enrollment. | Keep central-only until the active/dirty/non-main hold is reviewed. |
+| dad-pr12-resolve-20260706-01 | active-no-write | dirty_worktree: reviewed policy does not allow dirty enrollment.; non_main_branch: reviewed policy does not allow non-main enrollment. | Keep central-only until the active/dirty/non-main hold is reviewed. |
 | all-law-firm-talent-intel-clean-20260618 | duplicate-ignore | Nested Git repo discovered inside another local Git root. | Review nested repo lineage before enrollment or delivery. |
 | exceptions-lake-intake-adoption-20260630 | duplicate-ignore | Nested Git repo discovered inside another local Git root. | Review nested repo lineage before enrollment or delivery. |
 | Git Projects | duplicate-ignore | Workspace/container root marker and no reviewed repo policy. | Track child repos through inventory; do not enroll the workspace container. |
@@ -49,40 +49,11 @@ This DAD report is central candidate metadata only. It does not authorize enroll
 | semantic-substrate-phase3-20260630 | duplicate-ignore | Nested Git repo discovered inside another local Git root. | Review nested repo lineage before enrollment or delivery. |
 | skills-intake-specialists-20260630 | duplicate-ignore | Nested Git repo discovered inside another local Git root. | Review nested repo lineage before enrollment or delivery. |
 | ss | duplicate-ignore | Nested Git repo discovered inside another local Git root. | Review nested repo lineage before enrollment or delivery. |
-| synthetic-public-backfill | duplicate-ignore | Duplicate DAD contract repo_id appears in more than one local repo path. | Review lineage before choosing one canonical enrolled repo. |
-| synthetic-public-backfill | duplicate-ignore | Duplicate DAD contract repo_id appears in more than one local repo path. | Review lineage before choosing one canonical enrolled repo. |
-| synthetic-public-backfill | duplicate-ignore | Duplicate DAD contract repo_id appears in more than one local repo path. | Review lineage before choosing one canonical enrolled repo. |
-| synthetic-public-clean | duplicate-ignore | Duplicate DAD contract repo_id appears in more than one local repo path. | Review lineage before choosing one canonical enrolled repo. |
-| synthetic-public-clean | duplicate-ignore | Duplicate DAD contract repo_id appears in more than one local repo path. | Review lineage before choosing one canonical enrolled repo. |
-| synthetic-public-clean | duplicate-ignore | Duplicate DAD contract repo_id appears in more than one local repo path. | Review lineage before choosing one canonical enrolled repo. |
-| synthetic-public-confirmed-backfill | duplicate-ignore | Duplicate DAD contract repo_id appears in more than one local repo path. | Review lineage before choosing one canonical enrolled repo. |
-| synthetic-public-confirmed-backfill | duplicate-ignore | Duplicate DAD contract repo_id appears in more than one local repo path. | Review lineage before choosing one canonical enrolled repo. |
-| synthetic-public-confirmed-backfill | duplicate-ignore | Duplicate DAD contract repo_id appears in more than one local repo path. | Review lineage before choosing one canonical enrolled repo. |
-| synthetic-public-demo-case-small-sample | duplicate-ignore | Duplicate DAD contract repo_id appears in more than one local repo path. | Review lineage before choosing one canonical enrolled repo. |
-| synthetic-public-demo-case-small-sample | duplicate-ignore | Duplicate DAD contract repo_id appears in more than one local repo path. | Review lineage before choosing one canonical enrolled repo. |
-| synthetic-public-demo-case-small-sample | duplicate-ignore | Duplicate DAD contract repo_id appears in more than one local repo path. | Review lineage before choosing one canonical enrolled repo. |
-| synthetic-public-hard-review-small-sample | duplicate-ignore | Duplicate DAD contract repo_id appears in more than one local repo path. | Review lineage before choosing one canonical enrolled repo. |
-| synthetic-public-hard-review-small-sample | duplicate-ignore | Duplicate DAD contract repo_id appears in more than one local repo path. | Review lineage before choosing one canonical enrolled repo. |
-| synthetic-public-hard-review-small-sample | duplicate-ignore | Duplicate DAD contract repo_id appears in more than one local repo path. | Review lineage before choosing one canonical enrolled repo. |
-| synthetic-public-invalid-fix | duplicate-ignore | Duplicate DAD contract repo_id appears in more than one local repo path. | Review lineage before choosing one canonical enrolled repo. |
-| synthetic-public-invalid-fix | duplicate-ignore | Duplicate DAD contract repo_id appears in more than one local repo path. | Review lineage before choosing one canonical enrolled repo. |
-| synthetic-public-invalid-fix | duplicate-ignore | Duplicate DAD contract repo_id appears in more than one local repo path. | Review lineage before choosing one canonical enrolled repo. |
-| synthetic-public-mixed | duplicate-ignore | Duplicate DAD contract repo_id appears in more than one local repo path. | Review lineage before choosing one canonical enrolled repo. |
-| synthetic-public-mixed | duplicate-ignore | Duplicate DAD contract repo_id appears in more than one local repo path. | Review lineage before choosing one canonical enrolled repo. |
-| synthetic-public-mixed | duplicate-ignore | Duplicate DAD contract repo_id appears in more than one local repo path. | Review lineage before choosing one canonical enrolled repo. |
-| synthetic-public-semantic-lineage-small-sample | duplicate-ignore | Duplicate DAD contract repo_id appears in more than one local repo path. | Review lineage before choosing one canonical enrolled repo. |
-| synthetic-public-semantic-lineage-small-sample | duplicate-ignore | Duplicate DAD contract repo_id appears in more than one local repo path. | Review lineage before choosing one canonical enrolled repo. |
-| synthetic-public-semantic-lineage-small-sample | duplicate-ignore | Duplicate DAD contract repo_id appears in more than one local repo path. | Review lineage before choosing one canonical enrolled repo. |
-| synthetic-public-small-sample | duplicate-ignore | Duplicate DAD contract repo_id appears in more than one local repo path. | Review lineage before choosing one canonical enrolled repo. |
-| synthetic-public-small-sample | duplicate-ignore | Duplicate DAD contract repo_id appears in more than one local repo path. | Review lineage before choosing one canonical enrolled repo. |
-| synthetic-public-small-sample | duplicate-ignore | Duplicate DAD contract repo_id appears in more than one local repo path. | Review lineage before choosing one canonical enrolled repo. |
-| synthetic-unknown-origin | duplicate-ignore | Duplicate DAD contract repo_id appears in more than one local repo path. | Review lineage before choosing one canonical enrolled repo. |
-| synthetic-unknown-origin | duplicate-ignore | Duplicate DAD contract repo_id appears in more than one local repo path. | Review lineage before choosing one canonical enrolled repo. |
-| synthetic-unknown-origin | duplicate-ignore | Duplicate DAD contract repo_id appears in more than one local repo path. | Review lineage before choosing one canonical enrolled repo. |
 | talent-intelligence-clean-20260618 | duplicate-ignore | Nested Git repo discovered inside another local Git root. | Review nested repo lineage before enrollment or delivery. |
 | 00_LawFirm_OS | needs-human-classification | No reviewed policy or special classification marker. | Add to reviewed policy or explicitly ignore before DAD delivery/enrollment. |
 | 04_Digital_Assett_Directory | needs-human-classification | Existing DAD contract found without reviewed policy match. | Reconcile the existing contract into reviewed policy before updates. |
 | airca-fractal-decision-architecture | needs-human-classification | No reviewed policy or special classification marker. | Add to reviewed policy or explicitly ignore before DAD delivery/enrollment. |
+| dad-pr12-merge-review | needs-human-classification | No reviewed policy or special classification marker. | Add to reviewed policy or explicitly ignore before DAD delivery/enrollment. |
 | fmg-fractal-capability-ontology | needs-human-classification | No reviewed policy or special classification marker. | Add to reviewed policy or explicitly ignore before DAD delivery/enrollment. |
 | fmg-fractal-capability-ontology-pinned | needs-human-classification | No reviewed policy or special classification marker. | Add to reviewed policy or explicitly ignore before DAD delivery/enrollment. |
 | kirsten-dissertation-knowledge-graph | needs-human-classification | No reviewed policy or special classification marker. | Add to reviewed policy or explicitly ignore before DAD delivery/enrollment. |

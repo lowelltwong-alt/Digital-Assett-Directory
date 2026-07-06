@@ -2,12 +2,12 @@
   "authority_boundary": "This DAD report is central candidate metadata only. It does not authorize enrollment, delivery, hooks, source edits, or writes to downstream repos.",
   "classification_counts": {
     "active-no-write": 1,
-    "duplicate-ignore": 62,
-    "needs-human-classification": 13,
+    "duplicate-ignore": 32,
+    "needs-human-classification": 14,
     "protected-central-only": 3
   },
-  "content_fingerprint": "sha256:d12b7b3be1c12a3dee39c80460a97ecadd0f6f84d566e664bd1f0818fca5eaa8",
-  "generated_at": "2026-07-06T02:25:30.370556+00:00",
+  "content_fingerprint": "sha256:2c78924515c865ef72f7497e1398363d9ab6eac401c3065706c0d49233ce1dbb",
+  "generated_at": "2026-07-06T04:45:09.500772+00:00",
   "github_coverage_complete": false,
   "github_coverage_status": "configured_disabled",
   "github_sources": [
@@ -26,10 +26,10 @@
   ],
   "hash_policy": "text-lf-normalized-v1",
   "input_hashes": {
-    "src/digital_asset_directory/config.py": "sha256:82a088fdc86022d323d6a4babd46c4410968c8f0ca5614822488b601ddab07c2",
-    "src/digital_asset_directory/dad_library.py": "sha256:c28f9fc999b9968f5b327392c443a3f5c0b5b34b2babc3cf6bf804c1277dcc4b"
+    "src/digital_asset_directory/config.py": "sha256:27e3d080861c87c451d1f68af3c28ba3779020117dd0c115667522e0942b4e29",
+    "src/digital_asset_directory/dad_library.py": "sha256:f054d75414737be11f9e1bd768959204aad6608ac4d5af9dd9a48848e9e44f30"
   },
-  "methodology_hash": "sha256:c28f9fc999b9968f5b327392c443a3f5c0b5b34b2babc3cf6bf804c1277dcc4b",
+  "methodology_hash": "sha256:f054d75414737be11f9e1bd768959204aad6608ac4d5af9dd9a48848e9e44f30",
   "methodology_ref": "src/digital_asset_directory/dad_library.py",
   "records": [
     {
@@ -49,9 +49,9 @@
       "git_state": {
         "branch": "codex/dadm1-compose-input-safety",
         "branch_status": "non_main",
-        "dirty_count": 9,
+        "dirty_count": 68,
         "git_detected": true,
-        "head": "9224055",
+        "head": "111a1b2",
         "is_dirty": true,
         "remote_origin": "https://github.com/lowelltwong-alt/Digital-Assett-Directory.git"
       },
@@ -59,13 +59,13 @@
       "mail_policy_present": true,
       "nested_repo": false,
       "next_action": "Keep central-only until the active/dirty/non-main hold is reviewed.",
-      "path_public_safe": "C:/Users/lowel/OneDrive/Desktop/Git Projects/_codex_worktrees/dad-dadm1-compose-input-safety",
-      "path_ref": "C:/Users/lowel/OneDrive/Desktop/Git Projects/_codex_worktrees/dad-dadm1-compose-input-safety",
+      "path_public_safe": "C:/Users/lowel/AppData/Local/Temp/dad-pr12-resolve-20260706-01",
+      "path_ref": "C:/Users/lowel/AppData/Local/Temp/dad-pr12-resolve-20260706-01",
       "public_facing": false,
       "repo_id": "dad",
       "repo_id_source": "policy",
-      "repo_name": "dad-dadm1-compose-input-safety",
-      "repo_record_id": "dad:dad-repo-record:0f79e3e6-6dcd-5c8e-aed3-b6b35ca959b6",
+      "repo_name": "dad-pr12-resolve-20260706-01",
+      "repo_record_id": "dad:dad-repo-record:6d29588c-cfbc-5bca-8069-ad639a790a4d",
       "same_basename_count": 1,
       "source_signals": [
         "enrollment_policy",
@@ -170,7 +170,7 @@
       "git_state": {
         "branch": "citation-audit-frontdoor",
         "branch_status": "non_main",
-        "dirty_count": 12,
+        "dirty_count": 13,
         "git_detected": true,
         "head": "",
         "is_dirty": true,
@@ -409,11 +409,11 @@
       "duplicate_lineage": false,
       "enrollment_policy_present": false,
       "git_state": {
-        "branch": "main",
-        "branch_status": "mainline",
+        "branch": "codex/bk4-bk7-rate-projection-guardrails",
+        "branch_status": "non_main",
         "dirty_count": 0,
         "git_detected": true,
-        "head": "d12c662",
+        "head": "9a8fa5f",
         "is_dirty": false,
         "remote_origin": "https://github.com/lowelltwong-alt/LawFirm-os-intake.git"
       },
@@ -1320,1206 +1320,6 @@
       "write_boundary": "central_only"
     },
     {
-      "addressing_status": "ambiguous_bare_name",
-      "alias": "",
-      "authority_boundary": "This DAD report is central candidate metadata only. It does not authorize enrollment, delivery, hooks, source edits, or writes to downstream repos.",
-      "classification": "duplicate-ignore",
-      "classification_reasons": [
-        "Duplicate DAD contract repo_id appears in more than one local repo path."
-      ],
-      "contract_error": "",
-      "contract_present": true,
-      "duplicate_basename": true,
-      "duplicate_lineage": true,
-      "enrollment_policy_present": false,
-      "git_state": {
-        "branch": "main",
-        "branch_status": "mainline",
-        "dirty_count": 0,
-        "git_detected": true,
-        "head": "a9c8d0f",
-        "is_dirty": false,
-        "remote_origin": "https://github.com/lowelltwong-alt/Digital-Assett-Directory.git"
-      },
-      "local_paths_allowed": false,
-      "mail_policy_present": false,
-      "nested_repo": true,
-      "next_action": "Review lineage before choosing one canonical enrolled repo.",
-      "path_public_safe": "C:/Users/lowel/OneDrive/Desktop/Git Projects/04_Digital_Assett_Directory/.tmp/exception-learning-check/dad-exception-learning-check-094fa3d0d8dd/synthetic-public-backfill",
-      "path_ref": "C:/Users/lowel/OneDrive/Desktop/Git Projects/04_Digital_Assett_Directory/.tmp/exception-learning-check/dad-exception-learning-check-094fa3d0d8dd/synthetic-public-backfill",
-      "public_facing": false,
-      "repo_id": "synthetic-public-backfill",
-      "repo_id_source": "contract",
-      "repo_name": "synthetic-public-backfill",
-      "repo_record_id": "dad:dad-repo-record:5f27645a-bc7a-5bda-9fa6-1300c6c0c2e6",
-      "same_basename_count": 3,
-      "source_signals": [
-        "local_source:git-projects"
-      ],
-      "visibility": "public",
-      "write_boundary": "central_only"
-    },
-    {
-      "addressing_status": "ambiguous_bare_name",
-      "alias": "",
-      "authority_boundary": "This DAD report is central candidate metadata only. It does not authorize enrollment, delivery, hooks, source edits, or writes to downstream repos.",
-      "classification": "duplicate-ignore",
-      "classification_reasons": [
-        "Duplicate DAD contract repo_id appears in more than one local repo path."
-      ],
-      "contract_error": "",
-      "contract_present": true,
-      "duplicate_basename": true,
-      "duplicate_lineage": true,
-      "enrollment_policy_present": false,
-      "git_state": {
-        "branch": "main",
-        "branch_status": "mainline",
-        "dirty_count": 0,
-        "git_detected": true,
-        "head": "a9c8d0f",
-        "is_dirty": false,
-        "remote_origin": "https://github.com/lowelltwong-alt/Digital-Assett-Directory.git"
-      },
-      "local_paths_allowed": false,
-      "mail_policy_present": false,
-      "nested_repo": true,
-      "next_action": "Review lineage before choosing one canonical enrolled repo.",
-      "path_public_safe": "C:/Users/lowel/OneDrive/Desktop/Git Projects/04_Digital_Assett_Directory/.tmp/exception-learning-check/dad-exception-learning-check-33625d294cc0/synthetic-public-backfill",
-      "path_ref": "C:/Users/lowel/OneDrive/Desktop/Git Projects/04_Digital_Assett_Directory/.tmp/exception-learning-check/dad-exception-learning-check-33625d294cc0/synthetic-public-backfill",
-      "public_facing": false,
-      "repo_id": "synthetic-public-backfill",
-      "repo_id_source": "contract",
-      "repo_name": "synthetic-public-backfill",
-      "repo_record_id": "dad:dad-repo-record:e8be6b11-9087-5930-aa18-61a8a9359926",
-      "same_basename_count": 3,
-      "source_signals": [
-        "local_source:git-projects"
-      ],
-      "visibility": "public",
-      "write_boundary": "central_only"
-    },
-    {
-      "addressing_status": "ambiguous_bare_name",
-      "alias": "",
-      "authority_boundary": "This DAD report is central candidate metadata only. It does not authorize enrollment, delivery, hooks, source edits, or writes to downstream repos.",
-      "classification": "duplicate-ignore",
-      "classification_reasons": [
-        "Duplicate DAD contract repo_id appears in more than one local repo path."
-      ],
-      "contract_error": "",
-      "contract_present": true,
-      "duplicate_basename": true,
-      "duplicate_lineage": true,
-      "enrollment_policy_present": false,
-      "git_state": {
-        "branch": "main",
-        "branch_status": "mainline",
-        "dirty_count": 0,
-        "git_detected": true,
-        "head": "a9c8d0f",
-        "is_dirty": false,
-        "remote_origin": "https://github.com/lowelltwong-alt/Digital-Assett-Directory.git"
-      },
-      "local_paths_allowed": false,
-      "mail_policy_present": false,
-      "nested_repo": true,
-      "next_action": "Review lineage before choosing one canonical enrolled repo.",
-      "path_public_safe": "C:/Users/lowel/OneDrive/Desktop/Git Projects/04_Digital_Assett_Directory/.tmp/exception-learning-check/dad-exception-learning-check-de1ffffcf718/synthetic-public-backfill",
-      "path_ref": "C:/Users/lowel/OneDrive/Desktop/Git Projects/04_Digital_Assett_Directory/.tmp/exception-learning-check/dad-exception-learning-check-de1ffffcf718/synthetic-public-backfill",
-      "public_facing": false,
-      "repo_id": "synthetic-public-backfill",
-      "repo_id_source": "contract",
-      "repo_name": "synthetic-public-backfill",
-      "repo_record_id": "dad:dad-repo-record:24261fab-f951-57f8-890b-120cc8848565",
-      "same_basename_count": 3,
-      "source_signals": [
-        "local_source:git-projects"
-      ],
-      "visibility": "public",
-      "write_boundary": "central_only"
-    },
-    {
-      "addressing_status": "ambiguous_bare_name",
-      "alias": "",
-      "authority_boundary": "This DAD report is central candidate metadata only. It does not authorize enrollment, delivery, hooks, source edits, or writes to downstream repos.",
-      "classification": "duplicate-ignore",
-      "classification_reasons": [
-        "Duplicate DAD contract repo_id appears in more than one local repo path."
-      ],
-      "contract_error": "",
-      "contract_present": true,
-      "duplicate_basename": true,
-      "duplicate_lineage": true,
-      "enrollment_policy_present": false,
-      "git_state": {
-        "branch": "main",
-        "branch_status": "mainline",
-        "dirty_count": 0,
-        "git_detected": true,
-        "head": "a9c8d0f",
-        "is_dirty": false,
-        "remote_origin": "https://github.com/lowelltwong-alt/Digital-Assett-Directory.git"
-      },
-      "local_paths_allowed": false,
-      "mail_policy_present": false,
-      "nested_repo": true,
-      "next_action": "Review lineage before choosing one canonical enrolled repo.",
-      "path_public_safe": "C:/Users/lowel/OneDrive/Desktop/Git Projects/04_Digital_Assett_Directory/.tmp/exception-learning-check/dad-exception-learning-check-57091297a4bc/synthetic-public-clean",
-      "path_ref": "C:/Users/lowel/OneDrive/Desktop/Git Projects/04_Digital_Assett_Directory/.tmp/exception-learning-check/dad-exception-learning-check-57091297a4bc/synthetic-public-clean",
-      "public_facing": false,
-      "repo_id": "synthetic-public-clean",
-      "repo_id_source": "contract",
-      "repo_name": "synthetic-public-clean",
-      "repo_record_id": "dad:dad-repo-record:a10ebe19-b690-53dd-b3ac-5076120fa672",
-      "same_basename_count": 3,
-      "source_signals": [
-        "local_source:git-projects"
-      ],
-      "visibility": "public",
-      "write_boundary": "central_only"
-    },
-    {
-      "addressing_status": "ambiguous_bare_name",
-      "alias": "",
-      "authority_boundary": "This DAD report is central candidate metadata only. It does not authorize enrollment, delivery, hooks, source edits, or writes to downstream repos.",
-      "classification": "duplicate-ignore",
-      "classification_reasons": [
-        "Duplicate DAD contract repo_id appears in more than one local repo path."
-      ],
-      "contract_error": "",
-      "contract_present": true,
-      "duplicate_basename": true,
-      "duplicate_lineage": true,
-      "enrollment_policy_present": false,
-      "git_state": {
-        "branch": "main",
-        "branch_status": "mainline",
-        "dirty_count": 0,
-        "git_detected": true,
-        "head": "a9c8d0f",
-        "is_dirty": false,
-        "remote_origin": "https://github.com/lowelltwong-alt/Digital-Assett-Directory.git"
-      },
-      "local_paths_allowed": false,
-      "mail_policy_present": false,
-      "nested_repo": true,
-      "next_action": "Review lineage before choosing one canonical enrolled repo.",
-      "path_public_safe": "C:/Users/lowel/OneDrive/Desktop/Git Projects/04_Digital_Assett_Directory/.tmp/exception-learning-check/dad-exception-learning-check-b9442a234f2a/synthetic-public-clean",
-      "path_ref": "C:/Users/lowel/OneDrive/Desktop/Git Projects/04_Digital_Assett_Directory/.tmp/exception-learning-check/dad-exception-learning-check-b9442a234f2a/synthetic-public-clean",
-      "public_facing": false,
-      "repo_id": "synthetic-public-clean",
-      "repo_id_source": "contract",
-      "repo_name": "synthetic-public-clean",
-      "repo_record_id": "dad:dad-repo-record:3d9dee78-0271-5ad6-8e1f-13a5cc096d33",
-      "same_basename_count": 3,
-      "source_signals": [
-        "local_source:git-projects"
-      ],
-      "visibility": "public",
-      "write_boundary": "central_only"
-    },
-    {
-      "addressing_status": "ambiguous_bare_name",
-      "alias": "",
-      "authority_boundary": "This DAD report is central candidate metadata only. It does not authorize enrollment, delivery, hooks, source edits, or writes to downstream repos.",
-      "classification": "duplicate-ignore",
-      "classification_reasons": [
-        "Duplicate DAD contract repo_id appears in more than one local repo path."
-      ],
-      "contract_error": "",
-      "contract_present": true,
-      "duplicate_basename": true,
-      "duplicate_lineage": true,
-      "enrollment_policy_present": false,
-      "git_state": {
-        "branch": "main",
-        "branch_status": "mainline",
-        "dirty_count": 0,
-        "git_detected": true,
-        "head": "a9c8d0f",
-        "is_dirty": false,
-        "remote_origin": "https://github.com/lowelltwong-alt/Digital-Assett-Directory.git"
-      },
-      "local_paths_allowed": false,
-      "mail_policy_present": false,
-      "nested_repo": true,
-      "next_action": "Review lineage before choosing one canonical enrolled repo.",
-      "path_public_safe": "C:/Users/lowel/OneDrive/Desktop/Git Projects/04_Digital_Assett_Directory/.tmp/exception-learning-check/dad-exception-learning-check-d285e1114dda/synthetic-public-clean",
-      "path_ref": "C:/Users/lowel/OneDrive/Desktop/Git Projects/04_Digital_Assett_Directory/.tmp/exception-learning-check/dad-exception-learning-check-d285e1114dda/synthetic-public-clean",
-      "public_facing": false,
-      "repo_id": "synthetic-public-clean",
-      "repo_id_source": "contract",
-      "repo_name": "synthetic-public-clean",
-      "repo_record_id": "dad:dad-repo-record:b8109a74-ee34-5da3-ab88-13187c9f1ca3",
-      "same_basename_count": 3,
-      "source_signals": [
-        "local_source:git-projects"
-      ],
-      "visibility": "public",
-      "write_boundary": "central_only"
-    },
-    {
-      "addressing_status": "ambiguous_bare_name",
-      "alias": "",
-      "authority_boundary": "This DAD report is central candidate metadata only. It does not authorize enrollment, delivery, hooks, source edits, or writes to downstream repos.",
-      "classification": "duplicate-ignore",
-      "classification_reasons": [
-        "Duplicate DAD contract repo_id appears in more than one local repo path."
-      ],
-      "contract_error": "",
-      "contract_present": true,
-      "duplicate_basename": true,
-      "duplicate_lineage": true,
-      "enrollment_policy_present": false,
-      "git_state": {
-        "branch": "main",
-        "branch_status": "mainline",
-        "dirty_count": 0,
-        "git_detected": true,
-        "head": "a9c8d0f",
-        "is_dirty": false,
-        "remote_origin": "https://github.com/lowelltwong-alt/Digital-Assett-Directory.git"
-      },
-      "local_paths_allowed": false,
-      "mail_policy_present": false,
-      "nested_repo": true,
-      "next_action": "Review lineage before choosing one canonical enrolled repo.",
-      "path_public_safe": "C:/Users/lowel/OneDrive/Desktop/Git Projects/04_Digital_Assett_Directory/.tmp/exception-learning-check/dad-exception-learning-check-14bd0a6e0534/synthetic-public-confirmed-backfill",
-      "path_ref": "C:/Users/lowel/OneDrive/Desktop/Git Projects/04_Digital_Assett_Directory/.tmp/exception-learning-check/dad-exception-learning-check-14bd0a6e0534/synthetic-public-confirmed-backfill",
-      "public_facing": false,
-      "repo_id": "synthetic-public-confirmed-backfill",
-      "repo_id_source": "contract",
-      "repo_name": "synthetic-public-confirmed-backfill",
-      "repo_record_id": "dad:dad-repo-record:2eaff187-d6ee-5c54-87b3-170c2b67f5a0",
-      "same_basename_count": 3,
-      "source_signals": [
-        "local_source:git-projects"
-      ],
-      "visibility": "public",
-      "write_boundary": "central_only"
-    },
-    {
-      "addressing_status": "ambiguous_bare_name",
-      "alias": "",
-      "authority_boundary": "This DAD report is central candidate metadata only. It does not authorize enrollment, delivery, hooks, source edits, or writes to downstream repos.",
-      "classification": "duplicate-ignore",
-      "classification_reasons": [
-        "Duplicate DAD contract repo_id appears in more than one local repo path."
-      ],
-      "contract_error": "",
-      "contract_present": true,
-      "duplicate_basename": true,
-      "duplicate_lineage": true,
-      "enrollment_policy_present": false,
-      "git_state": {
-        "branch": "main",
-        "branch_status": "mainline",
-        "dirty_count": 0,
-        "git_detected": true,
-        "head": "a9c8d0f",
-        "is_dirty": false,
-        "remote_origin": "https://github.com/lowelltwong-alt/Digital-Assett-Directory.git"
-      },
-      "local_paths_allowed": false,
-      "mail_policy_present": false,
-      "nested_repo": true,
-      "next_action": "Review lineage before choosing one canonical enrolled repo.",
-      "path_public_safe": "C:/Users/lowel/OneDrive/Desktop/Git Projects/04_Digital_Assett_Directory/.tmp/exception-learning-check/dad-exception-learning-check-9a881b450221/synthetic-public-confirmed-backfill",
-      "path_ref": "C:/Users/lowel/OneDrive/Desktop/Git Projects/04_Digital_Assett_Directory/.tmp/exception-learning-check/dad-exception-learning-check-9a881b450221/synthetic-public-confirmed-backfill",
-      "public_facing": false,
-      "repo_id": "synthetic-public-confirmed-backfill",
-      "repo_id_source": "contract",
-      "repo_name": "synthetic-public-confirmed-backfill",
-      "repo_record_id": "dad:dad-repo-record:3d294622-14d4-599a-8384-db34c22b2dba",
-      "same_basename_count": 3,
-      "source_signals": [
-        "local_source:git-projects"
-      ],
-      "visibility": "public",
-      "write_boundary": "central_only"
-    },
-    {
-      "addressing_status": "ambiguous_bare_name",
-      "alias": "",
-      "authority_boundary": "This DAD report is central candidate metadata only. It does not authorize enrollment, delivery, hooks, source edits, or writes to downstream repos.",
-      "classification": "duplicate-ignore",
-      "classification_reasons": [
-        "Duplicate DAD contract repo_id appears in more than one local repo path."
-      ],
-      "contract_error": "",
-      "contract_present": true,
-      "duplicate_basename": true,
-      "duplicate_lineage": true,
-      "enrollment_policy_present": false,
-      "git_state": {
-        "branch": "main",
-        "branch_status": "mainline",
-        "dirty_count": 0,
-        "git_detected": true,
-        "head": "a9c8d0f",
-        "is_dirty": false,
-        "remote_origin": "https://github.com/lowelltwong-alt/Digital-Assett-Directory.git"
-      },
-      "local_paths_allowed": false,
-      "mail_policy_present": false,
-      "nested_repo": true,
-      "next_action": "Review lineage before choosing one canonical enrolled repo.",
-      "path_public_safe": "C:/Users/lowel/OneDrive/Desktop/Git Projects/04_Digital_Assett_Directory/.tmp/exception-learning-check/dad-exception-learning-check-affc1c9a4956/synthetic-public-confirmed-backfill",
-      "path_ref": "C:/Users/lowel/OneDrive/Desktop/Git Projects/04_Digital_Assett_Directory/.tmp/exception-learning-check/dad-exception-learning-check-affc1c9a4956/synthetic-public-confirmed-backfill",
-      "public_facing": false,
-      "repo_id": "synthetic-public-confirmed-backfill",
-      "repo_id_source": "contract",
-      "repo_name": "synthetic-public-confirmed-backfill",
-      "repo_record_id": "dad:dad-repo-record:5efe4139-d518-5f0f-8353-017d08f23cbf",
-      "same_basename_count": 3,
-      "source_signals": [
-        "local_source:git-projects"
-      ],
-      "visibility": "public",
-      "write_boundary": "central_only"
-    },
-    {
-      "addressing_status": "ambiguous_bare_name",
-      "alias": "",
-      "authority_boundary": "This DAD report is central candidate metadata only. It does not authorize enrollment, delivery, hooks, source edits, or writes to downstream repos.",
-      "classification": "duplicate-ignore",
-      "classification_reasons": [
-        "Duplicate DAD contract repo_id appears in more than one local repo path."
-      ],
-      "contract_error": "",
-      "contract_present": true,
-      "duplicate_basename": true,
-      "duplicate_lineage": true,
-      "enrollment_policy_present": false,
-      "git_state": {
-        "branch": "main",
-        "branch_status": "mainline",
-        "dirty_count": 0,
-        "git_detected": true,
-        "head": "a9c8d0f",
-        "is_dirty": false,
-        "remote_origin": "https://github.com/lowelltwong-alt/Digital-Assett-Directory.git"
-      },
-      "local_paths_allowed": false,
-      "mail_policy_present": false,
-      "nested_repo": true,
-      "next_action": "Review lineage before choosing one canonical enrolled repo.",
-      "path_public_safe": "C:/Users/lowel/OneDrive/Desktop/Git Projects/04_Digital_Assett_Directory/.tmp/exception-learning-check/dad-exception-learning-check-436277e611ae/synthetic-public-demo-case-small-sample",
-      "path_ref": "C:/Users/lowel/OneDrive/Desktop/Git Projects/04_Digital_Assett_Directory/.tmp/exception-learning-check/dad-exception-learning-check-436277e611ae/synthetic-public-demo-case-small-sample",
-      "public_facing": false,
-      "repo_id": "synthetic-public-demo-case-small-sample",
-      "repo_id_source": "contract",
-      "repo_name": "synthetic-public-demo-case-small-sample",
-      "repo_record_id": "dad:dad-repo-record:1b95b432-b302-53ab-8204-b0deff05aae4",
-      "same_basename_count": 3,
-      "source_signals": [
-        "local_source:git-projects"
-      ],
-      "visibility": "public",
-      "write_boundary": "central_only"
-    },
-    {
-      "addressing_status": "ambiguous_bare_name",
-      "alias": "",
-      "authority_boundary": "This DAD report is central candidate metadata only. It does not authorize enrollment, delivery, hooks, source edits, or writes to downstream repos.",
-      "classification": "duplicate-ignore",
-      "classification_reasons": [
-        "Duplicate DAD contract repo_id appears in more than one local repo path."
-      ],
-      "contract_error": "",
-      "contract_present": true,
-      "duplicate_basename": true,
-      "duplicate_lineage": true,
-      "enrollment_policy_present": false,
-      "git_state": {
-        "branch": "main",
-        "branch_status": "mainline",
-        "dirty_count": 0,
-        "git_detected": true,
-        "head": "a9c8d0f",
-        "is_dirty": false,
-        "remote_origin": "https://github.com/lowelltwong-alt/Digital-Assett-Directory.git"
-      },
-      "local_paths_allowed": false,
-      "mail_policy_present": false,
-      "nested_repo": true,
-      "next_action": "Review lineage before choosing one canonical enrolled repo.",
-      "path_public_safe": "C:/Users/lowel/OneDrive/Desktop/Git Projects/04_Digital_Assett_Directory/.tmp/exception-learning-check/dad-exception-learning-check-52726795ce6c/synthetic-public-demo-case-small-sample",
-      "path_ref": "C:/Users/lowel/OneDrive/Desktop/Git Projects/04_Digital_Assett_Directory/.tmp/exception-learning-check/dad-exception-learning-check-52726795ce6c/synthetic-public-demo-case-small-sample",
-      "public_facing": false,
-      "repo_id": "synthetic-public-demo-case-small-sample",
-      "repo_id_source": "contract",
-      "repo_name": "synthetic-public-demo-case-small-sample",
-      "repo_record_id": "dad:dad-repo-record:9761fa4d-ee4c-5475-a5bc-472cbfc0a290",
-      "same_basename_count": 3,
-      "source_signals": [
-        "local_source:git-projects"
-      ],
-      "visibility": "public",
-      "write_boundary": "central_only"
-    },
-    {
-      "addressing_status": "ambiguous_bare_name",
-      "alias": "",
-      "authority_boundary": "This DAD report is central candidate metadata only. It does not authorize enrollment, delivery, hooks, source edits, or writes to downstream repos.",
-      "classification": "duplicate-ignore",
-      "classification_reasons": [
-        "Duplicate DAD contract repo_id appears in more than one local repo path."
-      ],
-      "contract_error": "",
-      "contract_present": true,
-      "duplicate_basename": true,
-      "duplicate_lineage": true,
-      "enrollment_policy_present": false,
-      "git_state": {
-        "branch": "main",
-        "branch_status": "mainline",
-        "dirty_count": 0,
-        "git_detected": true,
-        "head": "a9c8d0f",
-        "is_dirty": false,
-        "remote_origin": "https://github.com/lowelltwong-alt/Digital-Assett-Directory.git"
-      },
-      "local_paths_allowed": false,
-      "mail_policy_present": false,
-      "nested_repo": true,
-      "next_action": "Review lineage before choosing one canonical enrolled repo.",
-      "path_public_safe": "C:/Users/lowel/OneDrive/Desktop/Git Projects/04_Digital_Assett_Directory/.tmp/exception-learning-check/dad-exception-learning-check-f81f3a46f971/synthetic-public-demo-case-small-sample",
-      "path_ref": "C:/Users/lowel/OneDrive/Desktop/Git Projects/04_Digital_Assett_Directory/.tmp/exception-learning-check/dad-exception-learning-check-f81f3a46f971/synthetic-public-demo-case-small-sample",
-      "public_facing": false,
-      "repo_id": "synthetic-public-demo-case-small-sample",
-      "repo_id_source": "contract",
-      "repo_name": "synthetic-public-demo-case-small-sample",
-      "repo_record_id": "dad:dad-repo-record:49b17ae1-b8e7-51ad-8b18-2bf2d715fe78",
-      "same_basename_count": 3,
-      "source_signals": [
-        "local_source:git-projects"
-      ],
-      "visibility": "public",
-      "write_boundary": "central_only"
-    },
-    {
-      "addressing_status": "ambiguous_bare_name",
-      "alias": "",
-      "authority_boundary": "This DAD report is central candidate metadata only. It does not authorize enrollment, delivery, hooks, source edits, or writes to downstream repos.",
-      "classification": "duplicate-ignore",
-      "classification_reasons": [
-        "Duplicate DAD contract repo_id appears in more than one local repo path."
-      ],
-      "contract_error": "",
-      "contract_present": true,
-      "duplicate_basename": true,
-      "duplicate_lineage": true,
-      "enrollment_policy_present": false,
-      "git_state": {
-        "branch": "main",
-        "branch_status": "mainline",
-        "dirty_count": 0,
-        "git_detected": true,
-        "head": "a9c8d0f",
-        "is_dirty": false,
-        "remote_origin": "https://github.com/lowelltwong-alt/Digital-Assett-Directory.git"
-      },
-      "local_paths_allowed": false,
-      "mail_policy_present": false,
-      "nested_repo": true,
-      "next_action": "Review lineage before choosing one canonical enrolled repo.",
-      "path_public_safe": "C:/Users/lowel/OneDrive/Desktop/Git Projects/04_Digital_Assett_Directory/.tmp/exception-learning-check/dad-exception-learning-check-2678c300c830/synthetic-public-hard-review-small-sample",
-      "path_ref": "C:/Users/lowel/OneDrive/Desktop/Git Projects/04_Digital_Assett_Directory/.tmp/exception-learning-check/dad-exception-learning-check-2678c300c830/synthetic-public-hard-review-small-sample",
-      "public_facing": false,
-      "repo_id": "synthetic-public-hard-review-small-sample",
-      "repo_id_source": "contract",
-      "repo_name": "synthetic-public-hard-review-small-sample",
-      "repo_record_id": "dad:dad-repo-record:70337309-2765-5b70-8628-be41eff6d9a8",
-      "same_basename_count": 3,
-      "source_signals": [
-        "local_source:git-projects"
-      ],
-      "visibility": "public",
-      "write_boundary": "central_only"
-    },
-    {
-      "addressing_status": "ambiguous_bare_name",
-      "alias": "",
-      "authority_boundary": "This DAD report is central candidate metadata only. It does not authorize enrollment, delivery, hooks, source edits, or writes to downstream repos.",
-      "classification": "duplicate-ignore",
-      "classification_reasons": [
-        "Duplicate DAD contract repo_id appears in more than one local repo path."
-      ],
-      "contract_error": "",
-      "contract_present": true,
-      "duplicate_basename": true,
-      "duplicate_lineage": true,
-      "enrollment_policy_present": false,
-      "git_state": {
-        "branch": "main",
-        "branch_status": "mainline",
-        "dirty_count": 0,
-        "git_detected": true,
-        "head": "a9c8d0f",
-        "is_dirty": false,
-        "remote_origin": "https://github.com/lowelltwong-alt/Digital-Assett-Directory.git"
-      },
-      "local_paths_allowed": false,
-      "mail_policy_present": false,
-      "nested_repo": true,
-      "next_action": "Review lineage before choosing one canonical enrolled repo.",
-      "path_public_safe": "C:/Users/lowel/OneDrive/Desktop/Git Projects/04_Digital_Assett_Directory/.tmp/exception-learning-check/dad-exception-learning-check-9c50745233a8/synthetic-public-hard-review-small-sample",
-      "path_ref": "C:/Users/lowel/OneDrive/Desktop/Git Projects/04_Digital_Assett_Directory/.tmp/exception-learning-check/dad-exception-learning-check-9c50745233a8/synthetic-public-hard-review-small-sample",
-      "public_facing": false,
-      "repo_id": "synthetic-public-hard-review-small-sample",
-      "repo_id_source": "contract",
-      "repo_name": "synthetic-public-hard-review-small-sample",
-      "repo_record_id": "dad:dad-repo-record:d03475b1-9649-52bd-96ec-6a4f83b0e116",
-      "same_basename_count": 3,
-      "source_signals": [
-        "local_source:git-projects"
-      ],
-      "visibility": "public",
-      "write_boundary": "central_only"
-    },
-    {
-      "addressing_status": "ambiguous_bare_name",
-      "alias": "",
-      "authority_boundary": "This DAD report is central candidate metadata only. It does not authorize enrollment, delivery, hooks, source edits, or writes to downstream repos.",
-      "classification": "duplicate-ignore",
-      "classification_reasons": [
-        "Duplicate DAD contract repo_id appears in more than one local repo path."
-      ],
-      "contract_error": "",
-      "contract_present": true,
-      "duplicate_basename": true,
-      "duplicate_lineage": true,
-      "enrollment_policy_present": false,
-      "git_state": {
-        "branch": "main",
-        "branch_status": "mainline",
-        "dirty_count": 0,
-        "git_detected": true,
-        "head": "a9c8d0f",
-        "is_dirty": false,
-        "remote_origin": "https://github.com/lowelltwong-alt/Digital-Assett-Directory.git"
-      },
-      "local_paths_allowed": false,
-      "mail_policy_present": false,
-      "nested_repo": true,
-      "next_action": "Review lineage before choosing one canonical enrolled repo.",
-      "path_public_safe": "C:/Users/lowel/OneDrive/Desktop/Git Projects/04_Digital_Assett_Directory/.tmp/exception-learning-check/dad-exception-learning-check-bfac1f723c20/synthetic-public-hard-review-small-sample",
-      "path_ref": "C:/Users/lowel/OneDrive/Desktop/Git Projects/04_Digital_Assett_Directory/.tmp/exception-learning-check/dad-exception-learning-check-bfac1f723c20/synthetic-public-hard-review-small-sample",
-      "public_facing": false,
-      "repo_id": "synthetic-public-hard-review-small-sample",
-      "repo_id_source": "contract",
-      "repo_name": "synthetic-public-hard-review-small-sample",
-      "repo_record_id": "dad:dad-repo-record:250cc94c-0f9c-5272-a6b3-12473704b546",
-      "same_basename_count": 3,
-      "source_signals": [
-        "local_source:git-projects"
-      ],
-      "visibility": "public",
-      "write_boundary": "central_only"
-    },
-    {
-      "addressing_status": "ambiguous_bare_name",
-      "alias": "",
-      "authority_boundary": "This DAD report is central candidate metadata only. It does not authorize enrollment, delivery, hooks, source edits, or writes to downstream repos.",
-      "classification": "duplicate-ignore",
-      "classification_reasons": [
-        "Duplicate DAD contract repo_id appears in more than one local repo path."
-      ],
-      "contract_error": "",
-      "contract_present": true,
-      "duplicate_basename": true,
-      "duplicate_lineage": true,
-      "enrollment_policy_present": false,
-      "git_state": {
-        "branch": "main",
-        "branch_status": "mainline",
-        "dirty_count": 0,
-        "git_detected": true,
-        "head": "a9c8d0f",
-        "is_dirty": false,
-        "remote_origin": "https://github.com/lowelltwong-alt/Digital-Assett-Directory.git"
-      },
-      "local_paths_allowed": false,
-      "mail_policy_present": false,
-      "nested_repo": true,
-      "next_action": "Review lineage before choosing one canonical enrolled repo.",
-      "path_public_safe": "C:/Users/lowel/OneDrive/Desktop/Git Projects/04_Digital_Assett_Directory/.tmp/exception-learning-check/dad-exception-learning-check-28e1e8f3c03b/synthetic-public-invalid-fix",
-      "path_ref": "C:/Users/lowel/OneDrive/Desktop/Git Projects/04_Digital_Assett_Directory/.tmp/exception-learning-check/dad-exception-learning-check-28e1e8f3c03b/synthetic-public-invalid-fix",
-      "public_facing": false,
-      "repo_id": "synthetic-public-invalid-fix",
-      "repo_id_source": "contract",
-      "repo_name": "synthetic-public-invalid-fix",
-      "repo_record_id": "dad:dad-repo-record:0e911fa2-0db5-5d5e-b77e-e452ecd88109",
-      "same_basename_count": 3,
-      "source_signals": [
-        "local_source:git-projects"
-      ],
-      "visibility": "public",
-      "write_boundary": "central_only"
-    },
-    {
-      "addressing_status": "ambiguous_bare_name",
-      "alias": "",
-      "authority_boundary": "This DAD report is central candidate metadata only. It does not authorize enrollment, delivery, hooks, source edits, or writes to downstream repos.",
-      "classification": "duplicate-ignore",
-      "classification_reasons": [
-        "Duplicate DAD contract repo_id appears in more than one local repo path."
-      ],
-      "contract_error": "",
-      "contract_present": true,
-      "duplicate_basename": true,
-      "duplicate_lineage": true,
-      "enrollment_policy_present": false,
-      "git_state": {
-        "branch": "main",
-        "branch_status": "mainline",
-        "dirty_count": 0,
-        "git_detected": true,
-        "head": "a9c8d0f",
-        "is_dirty": false,
-        "remote_origin": "https://github.com/lowelltwong-alt/Digital-Assett-Directory.git"
-      },
-      "local_paths_allowed": false,
-      "mail_policy_present": false,
-      "nested_repo": true,
-      "next_action": "Review lineage before choosing one canonical enrolled repo.",
-      "path_public_safe": "C:/Users/lowel/OneDrive/Desktop/Git Projects/04_Digital_Assett_Directory/.tmp/exception-learning-check/dad-exception-learning-check-3c659ebf8556/synthetic-public-invalid-fix",
-      "path_ref": "C:/Users/lowel/OneDrive/Desktop/Git Projects/04_Digital_Assett_Directory/.tmp/exception-learning-check/dad-exception-learning-check-3c659ebf8556/synthetic-public-invalid-fix",
-      "public_facing": false,
-      "repo_id": "synthetic-public-invalid-fix",
-      "repo_id_source": "contract",
-      "repo_name": "synthetic-public-invalid-fix",
-      "repo_record_id": "dad:dad-repo-record:46f02b25-94aa-505f-990d-b26654e55000",
-      "same_basename_count": 3,
-      "source_signals": [
-        "local_source:git-projects"
-      ],
-      "visibility": "public",
-      "write_boundary": "central_only"
-    },
-    {
-      "addressing_status": "ambiguous_bare_name",
-      "alias": "",
-      "authority_boundary": "This DAD report is central candidate metadata only. It does not authorize enrollment, delivery, hooks, source edits, or writes to downstream repos.",
-      "classification": "duplicate-ignore",
-      "classification_reasons": [
-        "Duplicate DAD contract repo_id appears in more than one local repo path."
-      ],
-      "contract_error": "",
-      "contract_present": true,
-      "duplicate_basename": true,
-      "duplicate_lineage": true,
-      "enrollment_policy_present": false,
-      "git_state": {
-        "branch": "main",
-        "branch_status": "mainline",
-        "dirty_count": 0,
-        "git_detected": true,
-        "head": "a9c8d0f",
-        "is_dirty": false,
-        "remote_origin": "https://github.com/lowelltwong-alt/Digital-Assett-Directory.git"
-      },
-      "local_paths_allowed": false,
-      "mail_policy_present": false,
-      "nested_repo": true,
-      "next_action": "Review lineage before choosing one canonical enrolled repo.",
-      "path_public_safe": "C:/Users/lowel/OneDrive/Desktop/Git Projects/04_Digital_Assett_Directory/.tmp/exception-learning-check/dad-exception-learning-check-db3055378e3b/synthetic-public-invalid-fix",
-      "path_ref": "C:/Users/lowel/OneDrive/Desktop/Git Projects/04_Digital_Assett_Directory/.tmp/exception-learning-check/dad-exception-learning-check-db3055378e3b/synthetic-public-invalid-fix",
-      "public_facing": false,
-      "repo_id": "synthetic-public-invalid-fix",
-      "repo_id_source": "contract",
-      "repo_name": "synthetic-public-invalid-fix",
-      "repo_record_id": "dad:dad-repo-record:3df6873e-b640-5b8a-a626-86c7ce2898c4",
-      "same_basename_count": 3,
-      "source_signals": [
-        "local_source:git-projects"
-      ],
-      "visibility": "public",
-      "write_boundary": "central_only"
-    },
-    {
-      "addressing_status": "ambiguous_bare_name",
-      "alias": "",
-      "authority_boundary": "This DAD report is central candidate metadata only. It does not authorize enrollment, delivery, hooks, source edits, or writes to downstream repos.",
-      "classification": "duplicate-ignore",
-      "classification_reasons": [
-        "Duplicate DAD contract repo_id appears in more than one local repo path."
-      ],
-      "contract_error": "",
-      "contract_present": true,
-      "duplicate_basename": true,
-      "duplicate_lineage": true,
-      "enrollment_policy_present": false,
-      "git_state": {
-        "branch": "main",
-        "branch_status": "mainline",
-        "dirty_count": 0,
-        "git_detected": true,
-        "head": "a9c8d0f",
-        "is_dirty": false,
-        "remote_origin": "https://github.com/lowelltwong-alt/Digital-Assett-Directory.git"
-      },
-      "local_paths_allowed": false,
-      "mail_policy_present": false,
-      "nested_repo": true,
-      "next_action": "Review lineage before choosing one canonical enrolled repo.",
-      "path_public_safe": "C:/Users/lowel/OneDrive/Desktop/Git Projects/04_Digital_Assett_Directory/.tmp/exception-learning-check/dad-exception-learning-check-0b47636833c8/synthetic-public-mixed",
-      "path_ref": "C:/Users/lowel/OneDrive/Desktop/Git Projects/04_Digital_Assett_Directory/.tmp/exception-learning-check/dad-exception-learning-check-0b47636833c8/synthetic-public-mixed",
-      "public_facing": false,
-      "repo_id": "synthetic-public-mixed",
-      "repo_id_source": "contract",
-      "repo_name": "synthetic-public-mixed",
-      "repo_record_id": "dad:dad-repo-record:7e35be77-c112-5d9a-a82d-c17dfb15bc54",
-      "same_basename_count": 3,
-      "source_signals": [
-        "local_source:git-projects"
-      ],
-      "visibility": "public",
-      "write_boundary": "central_only"
-    },
-    {
-      "addressing_status": "ambiguous_bare_name",
-      "alias": "",
-      "authority_boundary": "This DAD report is central candidate metadata only. It does not authorize enrollment, delivery, hooks, source edits, or writes to downstream repos.",
-      "classification": "duplicate-ignore",
-      "classification_reasons": [
-        "Duplicate DAD contract repo_id appears in more than one local repo path."
-      ],
-      "contract_error": "",
-      "contract_present": true,
-      "duplicate_basename": true,
-      "duplicate_lineage": true,
-      "enrollment_policy_present": false,
-      "git_state": {
-        "branch": "main",
-        "branch_status": "mainline",
-        "dirty_count": 0,
-        "git_detected": true,
-        "head": "a9c8d0f",
-        "is_dirty": false,
-        "remote_origin": "https://github.com/lowelltwong-alt/Digital-Assett-Directory.git"
-      },
-      "local_paths_allowed": false,
-      "mail_policy_present": false,
-      "nested_repo": true,
-      "next_action": "Review lineage before choosing one canonical enrolled repo.",
-      "path_public_safe": "C:/Users/lowel/OneDrive/Desktop/Git Projects/04_Digital_Assett_Directory/.tmp/exception-learning-check/dad-exception-learning-check-1a843bc1c16e/synthetic-public-mixed",
-      "path_ref": "C:/Users/lowel/OneDrive/Desktop/Git Projects/04_Digital_Assett_Directory/.tmp/exception-learning-check/dad-exception-learning-check-1a843bc1c16e/synthetic-public-mixed",
-      "public_facing": false,
-      "repo_id": "synthetic-public-mixed",
-      "repo_id_source": "contract",
-      "repo_name": "synthetic-public-mixed",
-      "repo_record_id": "dad:dad-repo-record:549ddf07-b9b5-5618-8e57-1bdc04ec003a",
-      "same_basename_count": 3,
-      "source_signals": [
-        "local_source:git-projects"
-      ],
-      "visibility": "public",
-      "write_boundary": "central_only"
-    },
-    {
-      "addressing_status": "ambiguous_bare_name",
-      "alias": "",
-      "authority_boundary": "This DAD report is central candidate metadata only. It does not authorize enrollment, delivery, hooks, source edits, or writes to downstream repos.",
-      "classification": "duplicate-ignore",
-      "classification_reasons": [
-        "Duplicate DAD contract repo_id appears in more than one local repo path."
-      ],
-      "contract_error": "",
-      "contract_present": true,
-      "duplicate_basename": true,
-      "duplicate_lineage": true,
-      "enrollment_policy_present": false,
-      "git_state": {
-        "branch": "main",
-        "branch_status": "mainline",
-        "dirty_count": 0,
-        "git_detected": true,
-        "head": "a9c8d0f",
-        "is_dirty": false,
-        "remote_origin": "https://github.com/lowelltwong-alt/Digital-Assett-Directory.git"
-      },
-      "local_paths_allowed": false,
-      "mail_policy_present": false,
-      "nested_repo": true,
-      "next_action": "Review lineage before choosing one canonical enrolled repo.",
-      "path_public_safe": "C:/Users/lowel/OneDrive/Desktop/Git Projects/04_Digital_Assett_Directory/.tmp/exception-learning-check/dad-exception-learning-check-f6273b6460fa/synthetic-public-mixed",
-      "path_ref": "C:/Users/lowel/OneDrive/Desktop/Git Projects/04_Digital_Assett_Directory/.tmp/exception-learning-check/dad-exception-learning-check-f6273b6460fa/synthetic-public-mixed",
-      "public_facing": false,
-      "repo_id": "synthetic-public-mixed",
-      "repo_id_source": "contract",
-      "repo_name": "synthetic-public-mixed",
-      "repo_record_id": "dad:dad-repo-record:c702d7c6-9bf8-5e37-8de5-753e64f82f9d",
-      "same_basename_count": 3,
-      "source_signals": [
-        "local_source:git-projects"
-      ],
-      "visibility": "public",
-      "write_boundary": "central_only"
-    },
-    {
-      "addressing_status": "ambiguous_bare_name",
-      "alias": "",
-      "authority_boundary": "This DAD report is central candidate metadata only. It does not authorize enrollment, delivery, hooks, source edits, or writes to downstream repos.",
-      "classification": "duplicate-ignore",
-      "classification_reasons": [
-        "Duplicate DAD contract repo_id appears in more than one local repo path."
-      ],
-      "contract_error": "",
-      "contract_present": true,
-      "duplicate_basename": true,
-      "duplicate_lineage": true,
-      "enrollment_policy_present": false,
-      "git_state": {
-        "branch": "main",
-        "branch_status": "mainline",
-        "dirty_count": 0,
-        "git_detected": true,
-        "head": "a9c8d0f",
-        "is_dirty": false,
-        "remote_origin": "https://github.com/lowelltwong-alt/Digital-Assett-Directory.git"
-      },
-      "local_paths_allowed": false,
-      "mail_policy_present": false,
-      "nested_repo": true,
-      "next_action": "Review lineage before choosing one canonical enrolled repo.",
-      "path_public_safe": "C:/Users/lowel/OneDrive/Desktop/Git Projects/04_Digital_Assett_Directory/.tmp/exception-learning-check/dad-exception-learning-check-8262e7d18df5/synthetic-public-semantic-lineage-small-sample",
-      "path_ref": "C:/Users/lowel/OneDrive/Desktop/Git Projects/04_Digital_Assett_Directory/.tmp/exception-learning-check/dad-exception-learning-check-8262e7d18df5/synthetic-public-semantic-lineage-small-sample",
-      "public_facing": false,
-      "repo_id": "synthetic-public-semantic-lineage-small-sample",
-      "repo_id_source": "contract",
-      "repo_name": "synthetic-public-semantic-lineage-small-sample",
-      "repo_record_id": "dad:dad-repo-record:84a1fb86-241d-5f28-9b5f-d79ea6c4eefc",
-      "same_basename_count": 3,
-      "source_signals": [
-        "local_source:git-projects"
-      ],
-      "visibility": "public",
-      "write_boundary": "central_only"
-    },
-    {
-      "addressing_status": "ambiguous_bare_name",
-      "alias": "",
-      "authority_boundary": "This DAD report is central candidate metadata only. It does not authorize enrollment, delivery, hooks, source edits, or writes to downstream repos.",
-      "classification": "duplicate-ignore",
-      "classification_reasons": [
-        "Duplicate DAD contract repo_id appears in more than one local repo path."
-      ],
-      "contract_error": "",
-      "contract_present": true,
-      "duplicate_basename": true,
-      "duplicate_lineage": true,
-      "enrollment_policy_present": false,
-      "git_state": {
-        "branch": "main",
-        "branch_status": "mainline",
-        "dirty_count": 0,
-        "git_detected": true,
-        "head": "a9c8d0f",
-        "is_dirty": false,
-        "remote_origin": "https://github.com/lowelltwong-alt/Digital-Assett-Directory.git"
-      },
-      "local_paths_allowed": false,
-      "mail_policy_present": false,
-      "nested_repo": true,
-      "next_action": "Review lineage before choosing one canonical enrolled repo.",
-      "path_public_safe": "C:/Users/lowel/OneDrive/Desktop/Git Projects/04_Digital_Assett_Directory/.tmp/exception-learning-check/dad-exception-learning-check-8bc22bb515c9/synthetic-public-semantic-lineage-small-sample",
-      "path_ref": "C:/Users/lowel/OneDrive/Desktop/Git Projects/04_Digital_Assett_Directory/.tmp/exception-learning-check/dad-exception-learning-check-8bc22bb515c9/synthetic-public-semantic-lineage-small-sample",
-      "public_facing": false,
-      "repo_id": "synthetic-public-semantic-lineage-small-sample",
-      "repo_id_source": "contract",
-      "repo_name": "synthetic-public-semantic-lineage-small-sample",
-      "repo_record_id": "dad:dad-repo-record:a75a92ff-b4f7-54a4-90c8-7a9b2218694b",
-      "same_basename_count": 3,
-      "source_signals": [
-        "local_source:git-projects"
-      ],
-      "visibility": "public",
-      "write_boundary": "central_only"
-    },
-    {
-      "addressing_status": "ambiguous_bare_name",
-      "alias": "",
-      "authority_boundary": "This DAD report is central candidate metadata only. It does not authorize enrollment, delivery, hooks, source edits, or writes to downstream repos.",
-      "classification": "duplicate-ignore",
-      "classification_reasons": [
-        "Duplicate DAD contract repo_id appears in more than one local repo path."
-      ],
-      "contract_error": "",
-      "contract_present": true,
-      "duplicate_basename": true,
-      "duplicate_lineage": true,
-      "enrollment_policy_present": false,
-      "git_state": {
-        "branch": "main",
-        "branch_status": "mainline",
-        "dirty_count": 0,
-        "git_detected": true,
-        "head": "a9c8d0f",
-        "is_dirty": false,
-        "remote_origin": "https://github.com/lowelltwong-alt/Digital-Assett-Directory.git"
-      },
-      "local_paths_allowed": false,
-      "mail_policy_present": false,
-      "nested_repo": true,
-      "next_action": "Review lineage before choosing one canonical enrolled repo.",
-      "path_public_safe": "C:/Users/lowel/OneDrive/Desktop/Git Projects/04_Digital_Assett_Directory/.tmp/exception-learning-check/dad-exception-learning-check-e45cf4b41128/synthetic-public-semantic-lineage-small-sample",
-      "path_ref": "C:/Users/lowel/OneDrive/Desktop/Git Projects/04_Digital_Assett_Directory/.tmp/exception-learning-check/dad-exception-learning-check-e45cf4b41128/synthetic-public-semantic-lineage-small-sample",
-      "public_facing": false,
-      "repo_id": "synthetic-public-semantic-lineage-small-sample",
-      "repo_id_source": "contract",
-      "repo_name": "synthetic-public-semantic-lineage-small-sample",
-      "repo_record_id": "dad:dad-repo-record:b2074b26-6ea8-50ef-bf57-84b30304e6cd",
-      "same_basename_count": 3,
-      "source_signals": [
-        "local_source:git-projects"
-      ],
-      "visibility": "public",
-      "write_boundary": "central_only"
-    },
-    {
-      "addressing_status": "ambiguous_bare_name",
-      "alias": "",
-      "authority_boundary": "This DAD report is central candidate metadata only. It does not authorize enrollment, delivery, hooks, source edits, or writes to downstream repos.",
-      "classification": "duplicate-ignore",
-      "classification_reasons": [
-        "Duplicate DAD contract repo_id appears in more than one local repo path."
-      ],
-      "contract_error": "",
-      "contract_present": true,
-      "duplicate_basename": true,
-      "duplicate_lineage": true,
-      "enrollment_policy_present": false,
-      "git_state": {
-        "branch": "main",
-        "branch_status": "mainline",
-        "dirty_count": 0,
-        "git_detected": true,
-        "head": "a9c8d0f",
-        "is_dirty": false,
-        "remote_origin": "https://github.com/lowelltwong-alt/Digital-Assett-Directory.git"
-      },
-      "local_paths_allowed": false,
-      "mail_policy_present": false,
-      "nested_repo": true,
-      "next_action": "Review lineage before choosing one canonical enrolled repo.",
-      "path_public_safe": "C:/Users/lowel/OneDrive/Desktop/Git Projects/04_Digital_Assett_Directory/.tmp/exception-learning-check/dad-exception-learning-check-0f8aedd784d0/synthetic-public-small-sample",
-      "path_ref": "C:/Users/lowel/OneDrive/Desktop/Git Projects/04_Digital_Assett_Directory/.tmp/exception-learning-check/dad-exception-learning-check-0f8aedd784d0/synthetic-public-small-sample",
-      "public_facing": false,
-      "repo_id": "synthetic-public-small-sample",
-      "repo_id_source": "contract",
-      "repo_name": "synthetic-public-small-sample",
-      "repo_record_id": "dad:dad-repo-record:1783334a-4f79-56c7-903a-9698b045aff6",
-      "same_basename_count": 3,
-      "source_signals": [
-        "local_source:git-projects"
-      ],
-      "visibility": "public",
-      "write_boundary": "central_only"
-    },
-    {
-      "addressing_status": "ambiguous_bare_name",
-      "alias": "",
-      "authority_boundary": "This DAD report is central candidate metadata only. It does not authorize enrollment, delivery, hooks, source edits, or writes to downstream repos.",
-      "classification": "duplicate-ignore",
-      "classification_reasons": [
-        "Duplicate DAD contract repo_id appears in more than one local repo path."
-      ],
-      "contract_error": "",
-      "contract_present": true,
-      "duplicate_basename": true,
-      "duplicate_lineage": true,
-      "enrollment_policy_present": false,
-      "git_state": {
-        "branch": "main",
-        "branch_status": "mainline",
-        "dirty_count": 0,
-        "git_detected": true,
-        "head": "a9c8d0f",
-        "is_dirty": false,
-        "remote_origin": "https://github.com/lowelltwong-alt/Digital-Assett-Directory.git"
-      },
-      "local_paths_allowed": false,
-      "mail_policy_present": false,
-      "nested_repo": true,
-      "next_action": "Review lineage before choosing one canonical enrolled repo.",
-      "path_public_safe": "C:/Users/lowel/OneDrive/Desktop/Git Projects/04_Digital_Assett_Directory/.tmp/exception-learning-check/dad-exception-learning-check-69e30f1ca10f/synthetic-public-small-sample",
-      "path_ref": "C:/Users/lowel/OneDrive/Desktop/Git Projects/04_Digital_Assett_Directory/.tmp/exception-learning-check/dad-exception-learning-check-69e30f1ca10f/synthetic-public-small-sample",
-      "public_facing": false,
-      "repo_id": "synthetic-public-small-sample",
-      "repo_id_source": "contract",
-      "repo_name": "synthetic-public-small-sample",
-      "repo_record_id": "dad:dad-repo-record:4e0f22b3-22b2-5f13-9c9d-9896c8024191",
-      "same_basename_count": 3,
-      "source_signals": [
-        "local_source:git-projects"
-      ],
-      "visibility": "public",
-      "write_boundary": "central_only"
-    },
-    {
-      "addressing_status": "ambiguous_bare_name",
-      "alias": "",
-      "authority_boundary": "This DAD report is central candidate metadata only. It does not authorize enrollment, delivery, hooks, source edits, or writes to downstream repos.",
-      "classification": "duplicate-ignore",
-      "classification_reasons": [
-        "Duplicate DAD contract repo_id appears in more than one local repo path."
-      ],
-      "contract_error": "",
-      "contract_present": true,
-      "duplicate_basename": true,
-      "duplicate_lineage": true,
-      "enrollment_policy_present": false,
-      "git_state": {
-        "branch": "main",
-        "branch_status": "mainline",
-        "dirty_count": 0,
-        "git_detected": true,
-        "head": "a9c8d0f",
-        "is_dirty": false,
-        "remote_origin": "https://github.com/lowelltwong-alt/Digital-Assett-Directory.git"
-      },
-      "local_paths_allowed": false,
-      "mail_policy_present": false,
-      "nested_repo": true,
-      "next_action": "Review lineage before choosing one canonical enrolled repo.",
-      "path_public_safe": "C:/Users/lowel/OneDrive/Desktop/Git Projects/04_Digital_Assett_Directory/.tmp/exception-learning-check/dad-exception-learning-check-d4711446ec72/synthetic-public-small-sample",
-      "path_ref": "C:/Users/lowel/OneDrive/Desktop/Git Projects/04_Digital_Assett_Directory/.tmp/exception-learning-check/dad-exception-learning-check-d4711446ec72/synthetic-public-small-sample",
-      "public_facing": false,
-      "repo_id": "synthetic-public-small-sample",
-      "repo_id_source": "contract",
-      "repo_name": "synthetic-public-small-sample",
-      "repo_record_id": "dad:dad-repo-record:ee384d6d-a015-5efa-9eea-d1f0a8940579",
-      "same_basename_count": 3,
-      "source_signals": [
-        "local_source:git-projects"
-      ],
-      "visibility": "public",
-      "write_boundary": "central_only"
-    },
-    {
-      "addressing_status": "ambiguous_bare_name",
-      "alias": "",
-      "authority_boundary": "This DAD report is central candidate metadata only. It does not authorize enrollment, delivery, hooks, source edits, or writes to downstream repos.",
-      "classification": "duplicate-ignore",
-      "classification_reasons": [
-        "Duplicate DAD contract repo_id appears in more than one local repo path."
-      ],
-      "contract_error": "",
-      "contract_present": true,
-      "duplicate_basename": true,
-      "duplicate_lineage": true,
-      "enrollment_policy_present": false,
-      "git_state": {
-        "branch": "main",
-        "branch_status": "mainline",
-        "dirty_count": 0,
-        "git_detected": true,
-        "head": "a9c8d0f",
-        "is_dirty": false,
-        "remote_origin": "https://github.com/lowelltwong-alt/Digital-Assett-Directory.git"
-      },
-      "local_paths_allowed": false,
-      "mail_policy_present": false,
-      "nested_repo": true,
-      "next_action": "Review lineage before choosing one canonical enrolled repo.",
-      "path_public_safe": "C:/Users/lowel/OneDrive/Desktop/Git Projects/04_Digital_Assett_Directory/.tmp/exception-learning-check/dad-exception-learning-check-620e916547da/synthetic-unknown-origin",
-      "path_ref": "C:/Users/lowel/OneDrive/Desktop/Git Projects/04_Digital_Assett_Directory/.tmp/exception-learning-check/dad-exception-learning-check-620e916547da/synthetic-unknown-origin",
-      "public_facing": false,
-      "repo_id": "synthetic-unknown-origin",
-      "repo_id_source": "contract",
-      "repo_name": "synthetic-unknown-origin",
-      "repo_record_id": "dad:dad-repo-record:d8b7bd78-6c15-5d4e-8dfe-82d181f85c10",
-      "same_basename_count": 3,
-      "source_signals": [
-        "local_source:git-projects"
-      ],
-      "visibility": "unknown",
-      "write_boundary": "central_only"
-    },
-    {
-      "addressing_status": "ambiguous_bare_name",
-      "alias": "",
-      "authority_boundary": "This DAD report is central candidate metadata only. It does not authorize enrollment, delivery, hooks, source edits, or writes to downstream repos.",
-      "classification": "duplicate-ignore",
-      "classification_reasons": [
-        "Duplicate DAD contract repo_id appears in more than one local repo path."
-      ],
-      "contract_error": "",
-      "contract_present": true,
-      "duplicate_basename": true,
-      "duplicate_lineage": true,
-      "enrollment_policy_present": false,
-      "git_state": {
-        "branch": "main",
-        "branch_status": "mainline",
-        "dirty_count": 0,
-        "git_detected": true,
-        "head": "a9c8d0f",
-        "is_dirty": false,
-        "remote_origin": "https://github.com/lowelltwong-alt/Digital-Assett-Directory.git"
-      },
-      "local_paths_allowed": false,
-      "mail_policy_present": false,
-      "nested_repo": true,
-      "next_action": "Review lineage before choosing one canonical enrolled repo.",
-      "path_public_safe": "C:/Users/lowel/OneDrive/Desktop/Git Projects/04_Digital_Assett_Directory/.tmp/exception-learning-check/dad-exception-learning-check-90487fcdbc7d/synthetic-unknown-origin",
-      "path_ref": "C:/Users/lowel/OneDrive/Desktop/Git Projects/04_Digital_Assett_Directory/.tmp/exception-learning-check/dad-exception-learning-check-90487fcdbc7d/synthetic-unknown-origin",
-      "public_facing": false,
-      "repo_id": "synthetic-unknown-origin",
-      "repo_id_source": "contract",
-      "repo_name": "synthetic-unknown-origin",
-      "repo_record_id": "dad:dad-repo-record:71ec216d-d3e7-5034-b2d8-df57f6c80ef3",
-      "same_basename_count": 3,
-      "source_signals": [
-        "local_source:git-projects"
-      ],
-      "visibility": "unknown",
-      "write_boundary": "central_only"
-    },
-    {
-      "addressing_status": "ambiguous_bare_name",
-      "alias": "",
-      "authority_boundary": "This DAD report is central candidate metadata only. It does not authorize enrollment, delivery, hooks, source edits, or writes to downstream repos.",
-      "classification": "duplicate-ignore",
-      "classification_reasons": [
-        "Duplicate DAD contract repo_id appears in more than one local repo path."
-      ],
-      "contract_error": "",
-      "contract_present": true,
-      "duplicate_basename": true,
-      "duplicate_lineage": true,
-      "enrollment_policy_present": false,
-      "git_state": {
-        "branch": "main",
-        "branch_status": "mainline",
-        "dirty_count": 0,
-        "git_detected": true,
-        "head": "a9c8d0f",
-        "is_dirty": false,
-        "remote_origin": "https://github.com/lowelltwong-alt/Digital-Assett-Directory.git"
-      },
-      "local_paths_allowed": false,
-      "mail_policy_present": false,
-      "nested_repo": true,
-      "next_action": "Review lineage before choosing one canonical enrolled repo.",
-      "path_public_safe": "C:/Users/lowel/OneDrive/Desktop/Git Projects/04_Digital_Assett_Directory/.tmp/exception-learning-check/dad-exception-learning-check-93d6f8bdf972/synthetic-unknown-origin",
-      "path_ref": "C:/Users/lowel/OneDrive/Desktop/Git Projects/04_Digital_Assett_Directory/.tmp/exception-learning-check/dad-exception-learning-check-93d6f8bdf972/synthetic-unknown-origin",
-      "public_facing": false,
-      "repo_id": "synthetic-unknown-origin",
-      "repo_id_source": "contract",
-      "repo_name": "synthetic-unknown-origin",
-      "repo_record_id": "dad:dad-repo-record:52b839eb-eb8d-5866-ad60-15343f4d20fa",
-      "same_basename_count": 3,
-      "source_signals": [
-        "local_source:git-projects"
-      ],
-      "visibility": "unknown",
-      "write_boundary": "central_only"
-    },
-    {
       "addressing_status": "nested_repo",
       "alias": "",
       "authority_boundary": "This DAD report is central candidate metadata only. It does not authorize enrollment, delivery, hooks, source edits, or writes to downstream repos.",
@@ -2617,7 +1417,7 @@
         "branch_status": "mainline",
         "dirty_count": 0,
         "git_detected": true,
-        "head": "a9c8d0f",
+        "head": "5d5d49a",
         "is_dirty": false,
         "remote_origin": "https://github.com/lowelltwong-alt/Digital-Assett-Directory.git"
       },
@@ -2672,6 +1472,46 @@
       "repo_id_source": "",
       "repo_name": "airca-fractal-decision-architecture",
       "repo_record_id": "dad:dad-repo-record:ee569709-e407-541f-99f0-f771e9b3f793",
+      "same_basename_count": 1,
+      "source_signals": [
+        "local_source:git-projects"
+      ],
+      "visibility": "unknown",
+      "write_boundary": "reviewed_policy_required"
+    },
+    {
+      "addressing_status": "bare_name_unambiguous",
+      "alias": "",
+      "authority_boundary": "This DAD report is central candidate metadata only. It does not authorize enrollment, delivery, hooks, source edits, or writes to downstream repos.",
+      "classification": "needs-human-classification",
+      "classification_reasons": [
+        "No reviewed policy or special classification marker."
+      ],
+      "contract_error": "",
+      "contract_present": false,
+      "duplicate_basename": false,
+      "duplicate_lineage": false,
+      "enrollment_policy_present": false,
+      "git_state": {
+        "branch": "codex/pr12-merge-review",
+        "branch_status": "non_main",
+        "dirty_count": 10,
+        "git_detected": true,
+        "head": "797927c",
+        "is_dirty": true,
+        "remote_origin": "https://github.com/lowelltwong-alt/Digital-Assett-Directory.git"
+      },
+      "local_paths_allowed": false,
+      "mail_policy_present": false,
+      "nested_repo": false,
+      "next_action": "Add to reviewed policy or explicitly ignore before DAD delivery/enrollment.",
+      "path_public_safe": "C:/Users/lowel/OneDrive/Desktop/Git Projects/_codex_pr_worktrees/dad-pr12-merge-review",
+      "path_ref": "C:/Users/lowel/OneDrive/Desktop/Git Projects/_codex_pr_worktrees/dad-pr12-merge-review",
+      "public_facing": false,
+      "repo_id": "",
+      "repo_id_source": "",
+      "repo_name": "dad-pr12-merge-review",
+      "repo_record_id": "dad:dad-repo-record:7b7b8387-cbdf-5f7a-a1be-8b98c0343392",
       "same_basename_count": 1,
       "source_signals": [
         "local_source:git-projects"
@@ -3200,8 +2040,8 @@
       "write_boundary": "central_only"
     }
   ],
-  "repo_count": 79,
-  "report_id": "dad:dad-repo-inventory:279ac239-2dd1-570b-a02e-d450996bc977",
+  "repo_count": 50,
+  "report_id": "dad:dad-repo-inventory:eb70ac00-3e75-5137-94f9-1d36fddef753",
   "schema_version": "0.1.0",
   "source_warnings": []
 }
