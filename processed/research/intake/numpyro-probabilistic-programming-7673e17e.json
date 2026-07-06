@@ -1,0 +1,45 @@
+{
+  "approval": {
+    "approval_id": "",
+    "approved_by": "",
+    "decided_at": ""
+  },
+  "authority_boundary": "Intake records are quarantined candidate metadata about external sources. They carry links, provenance, and screening state only - never external file contents - and do not authorize checkout, install, or downstream delivery.",
+  "created_at": "2026-07-06T03:23:22.880129+00:00",
+  "intake_id": "dad:research-intake:7673e17e-26b2-595f-b55c-515745441d2c",
+  "justification": "High-signal probabilistic programming project using JAX for MCMC and inference; not currently in DAD trusted-source registry.",
+  "kind": "asset",
+  "license": "Apache-2.0",
+  "name": "NumPyro Probabilistic Programming",
+  "notes": "Pointer-only reference for probabilistic programs and simulation workflows. Use only after local model shape and validation metrics exist.",
+  "promotion": {},
+  "research_ref": "",
+  "schema_version": "0.1.0",
+  "screening": {
+    "compatibility": {
+      "notes": "Pointer-only reference for probabilistic programs and simulation workflows. Use only after local model shape and validation metrics exist.",
+      "result": "pass",
+      "screened_by": "codex"
+    },
+    "license": {
+      "notes": "Recorded license/terms as Apache-2.0. Pointer-only; no source copying or dependency adoption authorized.",
+      "result": "pass",
+      "screened_by": "codex"
+    },
+    "prompt_injection": {
+      "notes": "Pointer-only intake. No external instructions copied, installed, or executed; any local tool adoption must be re-screened.",
+      "result": "not_applicable",
+      "screened_by": "codex"
+    },
+    "provenance": {
+      "notes": "Source pointer recorded: https://github.com/pyro-ppl/numpyro. Trust tier follows current trusted-source registry or explicit justification.",
+      "result": "pass",
+      "screened_by": "codex"
+    }
+  },
+  "source_id": "",
+  "source_url": "https://github.com/pyro-ppl/numpyro",
+  "status": "screened",
+  "trust_note": "Trust tier lowers intake friction only; screening and human approval are still required before promotion.",
+  "trust_tier": "unknown"
+}

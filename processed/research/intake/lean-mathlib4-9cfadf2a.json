@@ -1,0 +1,45 @@
+{
+  "approval": {
+    "approval_id": "",
+    "approved_by": "",
+    "decided_at": ""
+  },
+  "authority_boundary": "Intake records are quarantined candidate metadata about external sources. They carry links, provenance, and screening state only - never external file contents - and do not authorize checkout, install, or downstream delivery.",
+  "created_at": "2026-07-06T03:24:31.418582+00:00",
+  "intake_id": "dad:research-intake:9cfadf2a-91af-5cfe-b730-bbd8286395f9",
+  "justification": "High-signal Lean mathematics library and formalized math corpus; not currently in DAD trusted-source registry.",
+  "kind": "asset",
+  "license": "Apache-2.0",
+  "name": "Lean mathlib4",
+  "notes": "Pointer-only reference for frontier math and formal proof library patterns. Route to math/formal-methods research and proof-surface design.",
+  "promotion": {},
+  "research_ref": "",
+  "schema_version": "0.1.0",
+  "screening": {
+    "compatibility": {
+      "notes": "Pointer-only reference for frontier math and formal proof library patterns. Route to math/formal-methods research and proof-surface design.",
+      "result": "pass",
+      "screened_by": "codex"
+    },
+    "license": {
+      "notes": "Recorded license/terms as Apache-2.0. Pointer-only; no source copying or dependency adoption authorized.",
+      "result": "pass",
+      "screened_by": "codex"
+    },
+    "prompt_injection": {
+      "notes": "Pointer-only intake. No external instructions copied, installed, or executed; any local tool adoption must be re-screened.",
+      "result": "not_applicable",
+      "screened_by": "codex"
+    },
+    "provenance": {
+      "notes": "Source pointer recorded: https://github.com/leanprover-community/mathlib4. Trust tier follows current trusted-source registry or explicit justification.",
+      "result": "pass",
+      "screened_by": "codex"
+    }
+  },
+  "source_id": "",
+  "source_url": "https://github.com/leanprover-community/mathlib4",
+  "status": "screened",
+  "trust_note": "Trust tier lowers intake friction only; screening and human approval are still required before promotion.",
+  "trust_tier": "unknown"
+}
