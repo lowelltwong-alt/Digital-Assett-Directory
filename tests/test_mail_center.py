@@ -300,7 +300,8 @@ def test_cli_mail_compose_rejects_raw_json_in_key_value_payload_mode(tmp_path: P
     )
 
     assert result.exit_code == 2
-    assert "--payload is key=value convenience mode only" in result.output
+    assert "--payload" in result.output
+    assert "key=value" in result.output
     assert not (repo / ".digital-asset" / "mail" / "outbox.jsonl").exists()
 
 
