@@ -1518,6 +1518,26 @@ def test_inventory_skips_pytest_temp_workspaces(tmp_path: Path):
     assert "keep-me" in names
 
 
+def test_inventory_skips_dad_tmp_workspaces(tmp_path: Path):
+    hub = tmp_path / "hub"
+    workspace = tmp_path / "workspace"
+    _git_repo(workspace / ".tmp" / "exception-learning-check" / "synthetic-public-clean")
+    _git_repo(workspace / "keep-me")
+    hub.mkdir()
+    source = SimpleNamespace(
+        id="workspace",
+        path=workspace,
+        enabled=True,
+        follow_symlinks=False,
+    )
+
+    result = reconcile_repo_inventory(hub, local_sources=[source], max_depth=4)
+    names = {record["repo_name"] for record in result["inventory"]["records"]}
+
+    assert "synthetic-public-clean" not in names
+    assert "keep-me" in names
+
+
 def test_inventory_skips_rust_target_build_roots(tmp_path: Path):
     hub = tmp_path / "hub"
     workspace = tmp_path / "workspace"

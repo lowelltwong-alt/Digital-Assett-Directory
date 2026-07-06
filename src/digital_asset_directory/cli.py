@@ -2230,7 +2230,39 @@ def doctor(
         except ValueError as exc:
             console.print(str(exc))
             raise typer.Exit(2) from exc
-    locator_write = write_hub_locator(cfg.repo_root, locator) if write_locator else None
+    locator_write = None
+    if write_locator:
+        try:
+            locator_write = write_hub_locator(cfg.repo_root, locator)
+        except OSError as exc:
+            error = f"hub locator write failed: {type(exc).__name__}"
+            result = {
+                "schema": (
+                    "deployment_readiness.v1"
+                    if scope == "deployment"
+                    else "operational_readiness.v1"
+                ),
+                "generated_at": utc_now(),
+                "ready": False,
+                "deployment_ready": False,
+                "candidate_only": True,
+                "authority_boundary": (
+                    "Deployment readiness reports local DAD callability only. It does not scan, "
+                    "mutate target repositories, approve public release, or satisfy enrollment gates."
+                ),
+                "deployment": {
+                    "hub_resolution": hub_resolution,
+                    "unavailable_hub_policy": UNAVAILABLE_HUB_POLICY,
+                    "locator_write": {
+                        "written": False,
+                        "error": error,
+                        "error_type": type(exc).__name__,
+                    },
+                },
+                "warnings": [error],
+            }
+            console.print_json(data=result)
+            raise typer.Exit(2) from exc
     if scope == "deployment":
         deployment = build_deployment_status(
             cfg,

@@ -420,6 +420,7 @@ fn skip_dir_reason(name: &str) -> Option<&'static str> {
             | ".nox"
             | ".tox"
             | ".pytest-tmp-root"
+            | ".tmp"
             | "_codex_worktrees"
             | ".worktrees"
             | "target"

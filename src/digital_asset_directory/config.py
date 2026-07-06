@@ -194,13 +194,20 @@ def read_hub_locator(locator: Path | None = None) -> dict[str, Any]:
             "error": "",
         }
     try:
-        payload = json.loads(locator_path.read_text(encoding="utf-8"))
+        payload = json.loads(locator_path.read_text(encoding="utf-8-sig"))
     except json.JSONDecodeError as exc:
         return {
             "exists": True,
             "path": str(locator_path),
             "hub_path": "",
             "error": f"invalid JSON: {exc}",
+        }
+    if not isinstance(payload, dict):
+        return {
+            "exists": True,
+            "path": str(locator_path),
+            "hub_path": "",
+            "error": "invalid locator payload: expected JSON object",
         }
     value = str(payload.get("hub_path") or payload.get("path") or "").strip()
     if not value:

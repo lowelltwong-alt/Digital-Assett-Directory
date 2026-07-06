@@ -1,6 +1,6 @@
 # Rust Repo Inventory Probe Shadow Parity
 
-Generated: 2026-07-05T18:19:14.957086+00:00
+Generated: 2026-07-06T04:16:14.450571+00:00
 Status: `matched`
 
 This is candidate machine evidence only. Python remains the authority for Phase 9 classification.
@@ -10,8 +10,8 @@ This is candidate machine evidence only. Python remains the authority for Phase 
 - Python repo roots: `48`
 - Rust repo roots: `48`
 - Matched repo roots: `48`
-- Python skipped dirs: `255`
-- Rust skipped dirs: `255`
+- Python skipped dirs: `258`
+- Rust skipped dirs: `258`
 - Skip-policy mismatches: `0`
 - Duplicate logical paths: `0`
 - Contract-present mismatches: `0`

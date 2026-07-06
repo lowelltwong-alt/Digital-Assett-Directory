@@ -121,6 +121,7 @@ REPO_SKIP_DIRS = {
     ".nox",
     ".tox",
     ".pytest-tmp-root",
+    ".tmp",
     "_codex_worktrees",
     ".worktrees",
     "target",

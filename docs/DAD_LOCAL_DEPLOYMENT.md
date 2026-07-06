@@ -27,6 +27,10 @@ The user hub locator has this shape:
 }
 ```
 
+The locator is read as UTF-8, with a UTF-8 BOM tolerated for Windows/editor
+compatibility. It must parse to a JSON object; arrays, strings, malformed JSON,
+or locator targets that are not a valid DAD hub fail closed.
+
 ## Resolution Order
 
 DAD resolves the hub in this order:
@@ -96,6 +100,11 @@ not write locator files inside a caller repo or arbitrary target path. External
 invocation probes must also attest that the imported DAD operational module came
 from the resolved hub; green-looking wrapper output alone is not deployment
 proof.
+
+If the locator write itself fails because the user-level `.dad` folder is
+locked, denied, offline, or otherwise unavailable, deployment doctor fails
+closed with a structured `locator_write` error and does not write into the
+caller repo as a fallback.
 
 Use operational scope when you also want the stricter local readiness check for
 catalog, roadmap, generated surfaces, and validation state:

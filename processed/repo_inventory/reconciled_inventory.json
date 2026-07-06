@@ -1,13 +1,14 @@
 {
   "authority_boundary": "This DAD report is central candidate metadata only. It does not authorize enrollment, delivery, hooks, source edits, or writes to downstream repos.",
   "classification_counts": {
-    "active-no-write": 8,
+    "active-no-write": 7,
     "duplicate-ignore": 26,
+    "enroll": 1,
     "needs-human-classification": 11,
     "protected-central-only": 3
   },
-  "content_fingerprint": "sha256:ad19db79068bd8e6bfd640321e759fca9c392ffe123ac0029a45dfc892ce3636",
-  "generated_at": "2026-07-05T18:28:31.307660+00:00",
+  "content_fingerprint": "sha256:9fa6ed41ed277a873831a2c013c07763612cc0781491eb4d520f79768a858b80",
+  "generated_at": "2026-07-06T04:11:16.763762+00:00",
   "github_coverage_complete": false,
   "github_coverage_status": "configured_disabled",
   "github_sources": [
@@ -25,10 +26,10 @@
     }
   ],
   "input_hashes": {
-    "src/digital_asset_directory/config.py": "sha256:a933cb4f20345d4b4f61b6f933c50ff09af4a6ea4a3cadaf677a60a2ea980a76",
-    "src/digital_asset_directory/dad_library.py": "sha256:0225ef2593ffcbce6d5ee576a9eaa70a979aa21f41a84e6810fa8058046cd125"
+    "src/digital_asset_directory/config.py": "sha256:40b4bc2f24e450a9a6ea5af4a2add4a789d96a052160fc45303237472a27fd0c",
+    "src/digital_asset_directory/dad_library.py": "sha256:c470d9aa3d0040c12df44d58f39f360948b77f160b51c3b497ca0d61074b8443"
   },
-  "methodology_hash": "sha256:0225ef2593ffcbce6d5ee576a9eaa70a979aa21f41a84e6810fa8058046cd125",
+  "methodology_hash": "sha256:c470d9aa3d0040c12df44d58f39f360948b77f160b51c3b497ca0d61074b8443",
   "methodology_ref": "src/digital_asset_directory/dad_library.py",
   "records": [
     {
@@ -47,9 +48,9 @@
       "git_state": {
         "branch": "main",
         "branch_status": "mainline",
-        "dirty_count": 177,
+        "dirty_count": 14,
         "git_detected": true,
-        "head": "605b7f3",
+        "head": "87b6663",
         "is_dirty": true,
         "remote_origin": "https://github.com/lowelltwong-alt/Digital-Assett-Directory.git"
       },
@@ -336,49 +337,6 @@
       "write_boundary": "central_only"
     },
     {
-      "addressing_status": "bare_name_unambiguous",
-      "alias": "mock-trial",
-      "authority_boundary": "This DAD report is central candidate metadata only. It does not authorize enrollment, delivery, hooks, source edits, or writes to downstream repos.",
-      "classification": "active-no-write",
-      "classification_reasons": [
-        "dirty_worktree: reviewed policy does not allow dirty enrollment.",
-        "non_main_branch: reviewed policy does not allow non-main enrollment."
-      ],
-      "contract_error": "",
-      "contract_present": true,
-      "duplicate_basename": false,
-      "duplicate_lineage": false,
-      "enrollment_policy_present": true,
-      "git_state": {
-        "branch": "codex/ocr-scenario-sweep-mvp",
-        "branch_status": "non_main",
-        "dirty_count": 41,
-        "git_detected": true,
-        "head": "dea9baef",
-        "is_dirty": true,
-        "remote_origin": "https://github.com/lowelltwong-alt/Albert-Trial-Simulation-System.git"
-      },
-      "local_paths_allowed": true,
-      "mail_policy_present": true,
-      "nested_repo": false,
-      "next_action": "Keep central-only until the active/dirty/non-main hold is reviewed.",
-      "path_public_safe": "C:/Users/lowel/OneDrive/Desktop/Git Projects/02_Other_Git_Projects/Mock Trial4.26",
-      "path_ref": "C:/Users/lowel/OneDrive/Desktop/Git Projects/02_Other_Git_Projects/Mock Trial4.26",
-      "public_facing": false,
-      "repo_id": "mock-trial-4-26",
-      "repo_id_source": "policy",
-      "repo_name": "Mock Trial4.26",
-      "repo_record_id": "dad:dad-repo-record:8adc5448-6081-5a58-b314-6b4f005912e7",
-      "same_basename_count": 1,
-      "source_signals": [
-        "local_source:git-projects",
-        "enrollment_policy",
-        "mail_policy"
-      ],
-      "visibility": "internal",
-      "write_boundary": "central_only"
-    },
-    {
       "addressing_status": "nested_repo",
       "alias": "",
       "authority_boundary": "This DAD report is central candidate metadata only. It does not authorize enrollment, delivery, hooks, source edits, or writes to downstream repos.",
@@ -632,12 +590,12 @@
       "duplicate_lineage": false,
       "enrollment_policy_present": false,
       "git_state": {
-        "branch": "codex/confidence-public-data-ui-foundation",
+        "branch": "codex/ex1-ex2-exception-metadata",
         "branch_status": "non_main",
-        "dirty_count": 0,
+        "dirty_count": 11,
         "git_detected": true,
-        "head": "143f286",
-        "is_dirty": false,
+        "head": "acef305",
+        "is_dirty": true,
         "remote_origin": "https://github.com/lowelltwong-alt/LawFirm-os-intake.git"
       },
       "local_paths_allowed": false,
@@ -1420,6 +1378,48 @@
     },
     {
       "addressing_status": "bare_name_unambiguous",
+      "alias": "mock-trial",
+      "authority_boundary": "This DAD report is central candidate metadata only. It does not authorize enrollment, delivery, hooks, source edits, or writes to downstream repos.",
+      "classification": "enroll",
+      "classification_reasons": [
+        "Reviewed enrollment policy is present."
+      ],
+      "contract_error": "",
+      "contract_present": true,
+      "duplicate_basename": false,
+      "duplicate_lineage": false,
+      "enrollment_policy_present": true,
+      "git_state": {
+        "branch": "main",
+        "branch_status": "mainline",
+        "dirty_count": 0,
+        "git_detected": true,
+        "head": "ea46d439",
+        "is_dirty": false,
+        "remote_origin": "https://github.com/lowelltwong-alt/Albert-Trial-Simulation-System.git"
+      },
+      "local_paths_allowed": true,
+      "mail_policy_present": true,
+      "nested_repo": false,
+      "next_action": "Use reviewed waves and approval IDs for any broad writes.",
+      "path_public_safe": "C:/Users/lowel/OneDrive/Desktop/Git Projects/02_Other_Git_Projects/Mock Trial4.26",
+      "path_ref": "C:/Users/lowel/OneDrive/Desktop/Git Projects/02_Other_Git_Projects/Mock Trial4.26",
+      "public_facing": false,
+      "repo_id": "mock-trial-4-26",
+      "repo_id_source": "policy",
+      "repo_name": "Mock Trial4.26",
+      "repo_record_id": "dad:dad-repo-record:8adc5448-6081-5a58-b314-6b4f005912e7",
+      "same_basename_count": 1,
+      "source_signals": [
+        "local_source:git-projects",
+        "enrollment_policy",
+        "mail_policy"
+      ],
+      "visibility": "internal",
+      "write_boundary": "reviewed_policy_required"
+    },
+    {
+      "addressing_status": "bare_name_unambiguous",
       "alias": "",
       "authority_boundary": "This DAD report is central candidate metadata only. It does not authorize enrollment, delivery, hooks, source edits, or writes to downstream repos.",
       "classification": "needs-human-classification",
@@ -1986,7 +1986,7 @@
     }
   ],
   "repo_count": 48,
-  "report_id": "dad:dad-repo-inventory:f40d5ea9-3419-569f-b580-cbce46e4bdbb",
+  "report_id": "dad:dad-repo-inventory:0c0100c1-5f79-5599-abe9-1b0fed5ac95e",
   "schema_version": "0.1.0",
   "source_warnings": []
 }

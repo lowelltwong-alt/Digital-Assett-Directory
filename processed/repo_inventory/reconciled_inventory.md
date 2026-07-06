@@ -1,15 +1,16 @@
 # DAD Repo Inventory Reconciliation
 
-Generated: 2026-07-05T18:28:31.307660+00:00
-Report ID: `dad:dad-repo-inventory:f40d5ea9-3419-569f-b580-cbce46e4bdbb`
-Content fingerprint: `sha256:ad19db79068bd8e6bfd640321e759fca9c392ffe123ac0029a45dfc892ce3636`
+Generated: 2026-07-06T04:11:16.763762+00:00
+Report ID: `dad:dad-repo-inventory:0c0100c1-5f79-5599-abe9-1b0fed5ac95e`
+Content fingerprint: `sha256:9fa6ed41ed277a873831a2c013c07763612cc0781491eb4d520f79768a858b80`
 
 This DAD report is central candidate metadata only. It does not authorize enrollment, delivery, hooks, source edits, or writes to downstream repos.
 
 ## Counts
 
-- active-no-write: 8
+- active-no-write: 7
 - duplicate-ignore: 26
+- enroll: 1
 - needs-human-classification: 11
 - protected-central-only: 3
 
@@ -24,7 +25,6 @@ This DAD report is central candidate metadata only. It does not authorize enroll
 | LawFirm-os-orchestrator | active-no-write | dirty_worktree: reviewed policy does not allow dirty enrollment.; non_main_branch: reviewed policy does not allow non-main enrollment. | Keep central-only until the active/dirty/non-main hold is reviewed. |
 | LawFirm-os-semantic-substrate | active-no-write | dirty_worktree: reviewed policy does not allow dirty enrollment.; non_main_branch: reviewed policy does not allow non-main enrollment. | Keep central-only until the active/dirty/non-main hold is reviewed. |
 | LawFirm-os-skills-registry | active-no-write | dirty_worktree: reviewed policy does not allow dirty enrollment.; non_main_branch: reviewed policy does not allow non-main enrollment. | Keep central-only until the active/dirty/non-main hold is reviewed. |
-| Mock Trial4.26 | active-no-write | dirty_worktree: reviewed policy does not allow dirty enrollment.; non_main_branch: reviewed policy does not allow non-main enrollment. | Keep central-only until the active/dirty/non-main hold is reviewed. |
 | all-law-firm-talent-intel-clean-20260618 | duplicate-ignore | Nested Git repo discovered inside another local Git root. | Review nested repo lineage before enrollment or delivery. |
 | exceptions-lake-intake-adoption-20260630 | duplicate-ignore | Nested Git repo discovered inside another local Git root. | Review nested repo lineage before enrollment or delivery. |
 | Git Projects | duplicate-ignore | Workspace/container root marker and no reviewed repo policy. | Track child repos through inventory; do not enroll the workspace container. |
@@ -51,6 +51,7 @@ This DAD report is central candidate metadata only. It does not authorize enroll
 | skills-intake-specialists-20260630 | duplicate-ignore | Nested Git repo discovered inside another local Git root. | Review nested repo lineage before enrollment or delivery. |
 | ss | duplicate-ignore | Nested Git repo discovered inside another local Git root. | Review nested repo lineage before enrollment or delivery. |
 | talent-intelligence-clean-20260618 | duplicate-ignore | Nested Git repo discovered inside another local Git root. | Review nested repo lineage before enrollment or delivery. |
+| Mock Trial4.26 | enroll | Reviewed enrollment policy is present. | Use reviewed waves and approval IDs for any broad writes. |
 | 00_LawFirm_OS | needs-human-classification | No reviewed policy or special classification marker. | Add to reviewed policy or explicitly ignore before DAD delivery/enrollment. |
 | airca-fractal-decision-architecture | needs-human-classification | No reviewed policy or special classification marker. | Add to reviewed policy or explicitly ignore before DAD delivery/enrollment. |
 | fmg-fractal-capability-ontology | needs-human-classification | No reviewed policy or special classification marker. | Add to reviewed policy or explicitly ignore before DAD delivery/enrollment. |
