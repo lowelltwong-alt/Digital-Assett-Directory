@@ -37,6 +37,7 @@ processed/calibration/**
 processed/context_packs/**
 processed/learning/**
 processed/mail/**
+processed/events/**
 processed/harnesses/**
 processed/proposals/**
 processed/quarantine/**

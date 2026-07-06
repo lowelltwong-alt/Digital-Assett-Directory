@@ -1,0 +1,149 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://local.digital-asset-directory/schemas/dad-pipeline-event.schema.json",
+  "title": "DAD Pipeline Event Record",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "event_id",
+    "event_type",
+    "dedupe_key",
+    "source_repo",
+    "source_repo_id",
+    "source_visibility",
+    "target_repo",
+    "target_repo_id",
+    "target_visibility",
+    "notice_id",
+    "actionable",
+    "response_state",
+    "sensitivity",
+    "payload",
+    "evidence",
+    "created_at",
+    "collected_at",
+    "collection_provenance",
+    "public_release",
+    "review_status",
+    "authority_boundary"
+  ],
+  "properties": {
+    "schema_version": { "const": "0.1.0" },
+    "event_id": { "type": "string", "minLength": 1 },
+    "event_type": {
+      "enum": [
+        "lesson_found",
+        "exception_seen",
+        "fix_outcome",
+        "asset_used",
+        "asset_rejected",
+        "harness_needed",
+        "dad_notice_ack",
+        "dad_notice_saved_for_future",
+        "dad_notice_implemented",
+        "dad_notice_rejected",
+        "governance_drift",
+        "pipeline_health"
+      ]
+    },
+    "dedupe_key": { "type": "string", "minLength": 1 },
+    "source_repo": { "type": "string", "minLength": 1 },
+    "source_repo_id": { "type": "string" },
+    "source_visibility": {
+      "enum": ["public", "internal", "private", "restricted", "unknown"]
+    },
+    "target_repo": { "type": "string" },
+    "target_repo_id": { "type": "string" },
+    "target_visibility": {
+      "enum": ["public", "internal", "private", "restricted", "unknown"]
+    },
+    "notice_id": { "type": "string" },
+    "actionable": { "type": "boolean" },
+    "response_state": {
+      "enum": [
+        "not_applicable",
+        "acknowledged",
+        "saved_for_future",
+        "implementing",
+        "implemented",
+        "rejected",
+        "deferred",
+        "needs_human_review"
+      ]
+    },
+    "sensitivity": {
+      "enum": ["public_metadata", "internal_metadata", "private_metadata"]
+    },
+    "payload": {
+      "type": "object",
+      "additionalProperties": true
+    },
+    "evidence": {
+      "type": "array",
+      "items": { "type": "string" }
+    },
+    "created_at": { "type": "string", "minLength": 1 },
+    "collected_at": {
+      "anyOf": [{ "type": "string", "minLength": 1 }, { "type": "null" }]
+    },
+    "collection_provenance": {
+      "type": "object",
+      "additionalProperties": true
+    },
+    "public_release": {
+      "type": "object",
+      "required": [
+        "target_visibility",
+        "public_release_required",
+        "public_release_status",
+        "human_release_id",
+        "release_reason"
+      ],
+      "properties": {
+        "target_visibility": {
+          "enum": ["public", "internal", "private", "restricted", "unknown"]
+        },
+        "public_release_required": { "type": "boolean" },
+        "public_release_status": {
+          "enum": ["not_required", "pending_human", "approved", "rejected"]
+        },
+        "human_release_id": { "type": "string" },
+        "release_reason": { "type": "string", "minLength": 1 }
+      },
+      "additionalProperties": false
+    },
+    "review_status": {
+      "enum": [
+        "candidate",
+        "collected_candidate",
+        "reviewed",
+        "rejected",
+        "quarantined"
+      ]
+    },
+    "authority_boundary": { "type": "string", "minLength": 1 }
+  },
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "event_type": {
+            "enum": [
+              "dad_notice_ack",
+              "dad_notice_saved_for_future",
+              "dad_notice_implemented",
+              "dad_notice_rejected"
+            ]
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "notice_id": { "type": "string", "minLength": 1 },
+          "actionable": { "const": true }
+        }
+      }
+    }
+  ],
+  "additionalProperties": false
+}

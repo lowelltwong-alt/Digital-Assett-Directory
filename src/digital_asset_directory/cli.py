@@ -81,6 +81,12 @@ from .enrollment import (
     enrollment_status_all,
     select_enrollment_policies,
 )
+from .event_pipeline import (
+    build_event_record,
+    collect_events,
+    record_repo_event,
+    write_event_pipeline_report,
+)
 from .exceptions_lake import (
     BackfillAuthorization,
     backfill_exception_candidates,
@@ -252,7 +258,7 @@ from .workflow_parts import (
     write_workflow_part_review_template_outputs,
     write_workflow_part_usage_guidance,
 )
-from .utils import append_jsonl, find_repo_root, safe_relative, sha256_bytes, utc_now
+from .utils import append_jsonl, find_repo_root, json_dumps, safe_relative, sha256_bytes, utc_now
 
 app = typer.Typer(no_args_is_help=True, help="Digital Asset Directory portfolio intelligence CLI.")
 lesson_app = typer.Typer(no_args_is_help=True)
@@ -273,6 +279,8 @@ recommend_app = typer.Typer(no_args_is_help=True)
 app.add_typer(recommend_app, name="recommend")
 mail_app = typer.Typer(no_args_is_help=True)
 app.add_typer(mail_app, name="mail")
+event_app = typer.Typer(no_args_is_help=True)
+app.add_typer(event_app, name="events")
 enroll_app = typer.Typer(no_args_is_help=True)
 app.add_typer(enroll_app, name="enroll")
 dad_app = typer.Typer(no_args_is_help=True)
@@ -1405,6 +1413,23 @@ def _mail_payload_options(
     if payload_json is not None:
         return _parse_payload_json(_payload_json_text(payload_json), option_name="--payload-json")
     return _key_value_payload(payload)
+
+
+def _event_payload_options(
+    payload: list[str],
+    *,
+    payload_json: str | None = None,
+    payload_file: Path | None = None,
+) -> dict[str, Any]:
+    try:
+        return _mail_payload_options(
+            payload,
+            payload_json=payload_json,
+            payload_file=payload_file,
+        )
+    except typer.BadParameter as exc:
+        detail = str(exc).replace("Mail payload", "Event payload")
+        raise typer.BadParameter(detail) from exc
 
 
 def _mail_repo_aliases(policy) -> set[str]:
@@ -4162,6 +4187,92 @@ def mail_doctor(
         )
         if not clean_verified:
             raise typer.Exit(1)
+
+
+@event_app.command("record")
+def events_record(
+    config: Optional[Path] = typer.Option(None),
+    hub: Optional[Path] = typer.Option(None),
+    repo: Path = typer.Option(Path("."), "--repo"),
+    event_type: str = typer.Option(..., "--type"),
+    summary: Optional[str] = typer.Option(None, "--summary"),
+    dedupe_key: Optional[str] = typer.Option(None, "--dedupe-key"),
+    source_repo: Optional[str] = typer.Option(None, "--source-repo"),
+    source_repo_id: str = typer.Option("", "--source-repo-id"),
+    source_visibility: str = typer.Option("unknown", "--source-visibility"),
+    target_repo: str = typer.Option("", "--target-repo"),
+    target_repo_id: str = typer.Option("", "--target-repo-id"),
+    target_visibility: str = typer.Option("unknown", "--target-visibility"),
+    notice_id: str = typer.Option("", "--notice-id"),
+    actionable: bool = typer.Option(False, "--actionable/--not-actionable"),
+    response_state: str = typer.Option("not_applicable", "--response-state"),
+    sensitivity: str = typer.Option("internal_metadata", "--sensitivity"),
+    payload: list[str] = typer.Option([], "--payload"),
+    payload_json: Optional[str] = typer.Option(None, "--payload-json"),
+    payload_file: Optional[Path] = typer.Option(None, "--payload-file"),
+    evidence: list[str] = typer.Option([], "--evidence"),
+) -> None:
+    """Append a repo-owned candidate event to .digital-asset/events/outbox.jsonl."""
+    _cfg(config, hub)
+    repo_path = repo.resolve()
+    event_payload = _event_payload_options(
+        payload,
+        payload_json=payload_json,
+        payload_file=payload_file,
+    )
+    if summary:
+        event_payload.setdefault("summary", summary)
+    source_label = source_repo or repo_path.name
+    dedupe = dedupe_key or "|".join(
+        [
+            source_label,
+            event_type,
+            notice_id,
+            summary or json_dumps(event_payload),
+        ]
+    )
+    record = build_event_record(
+        event_type=event_type,
+        source_repo=source_label,
+        source_repo_id=source_repo_id,
+        source_visibility=source_visibility,
+        target_repo=target_repo,
+        target_repo_id=target_repo_id,
+        target_visibility=target_visibility,
+        notice_id=notice_id,
+        actionable=actionable,
+        response_state=response_state,
+        sensitivity=sensitivity,
+        dedupe_key=dedupe,
+        payload=event_payload,
+        evidence=evidence,
+    )
+    console.print_json(data=record_repo_event(repo_path, record))
+
+
+@event_app.command("collect")
+def events_collect(
+    config: Optional[Path] = typer.Option(None),
+    hub: Optional[Path] = typer.Option(None),
+    repo: list[str] = typer.Option(..., "--repo"),
+) -> None:
+    """Collect repo-local event outboxes into DAD central candidate state."""
+    cfg = _cfg(config, hub)
+    if repo == ["all"]:
+        selected = _discover_mail_repos(repo, cfg, reviewed=True)
+    else:
+        selected = [_resolve_mail_repo(raw_repo, cfg) for raw_repo in repo]
+    console.print_json(data=collect_events(cfg.repo_root, selected, repo_policies=cfg.mail_repos))
+
+
+@event_app.command("report")
+def events_report(
+    config: Optional[Path] = typer.Option(None),
+    hub: Optional[Path] = typer.Option(None),
+) -> None:
+    """Refresh and print the central event pipeline report."""
+    cfg = _cfg(config, hub)
+    console.print_json(data=write_event_pipeline_report(cfg.repo_root))
 
 
 @enroll_app.command("discover")

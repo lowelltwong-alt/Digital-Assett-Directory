@@ -105,6 +105,17 @@ and describe the needed event/response state in the payload. DAD may later
 promote that pattern into a reviewed event pipeline; until then, do not invent
 new cross-repo event files or bypass the mailbox/public-release gates.
 
+When this repo has DAD event-pipeline support, repo-owned event records belong
+in `.digital-asset/events/outbox.jsonl`. Use them for short metadata signals
+such as `asset_used`, `harness_needed`, `exception_seen`, `fix_outcome`, and
+`dad_notice_*` response states. Events are still candidate metadata; they must
+not include secrets, private rows, long logs, hidden reasoning, copied source
+blobs, or local absolute paths. DAD collection reads this outbox and writes
+only central DAD event files. Source-authored visibility is advisory; DAD uses
+reviewed policy or conservative `unknown` for public-release decisions.
+`dad_notice_*` response events should reference a real DAD notice ID already
+delivered or recorded for this repo.
+
 If DAD or a repo looks "very dirty" during Rust rollout or cross-repo learning
 work, use the DAD runbook at
 `dad://hub/docs/DAD_MAIL_STORM_AND_DIRTY_STATE_RUNBOOK.md`. The key distinction

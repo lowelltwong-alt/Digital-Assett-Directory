@@ -303,7 +303,10 @@ phases:
         - phase-10-mail-end-to-end-trial
       required_files:
         - roadmap/evidence/dad-deployment-and-all-repo-verification-roadmap.md
+        - roadmap/evidence/phase-10a-mailbox-event-pipeline.md
         - docs/MAIL_CENTER.md
+        - docs/DAD_EVENT_PIPELINE.md
+        - schemas/dad-pipeline-event.schema.json
         - templates/downstream/MAIL_README.md
       human_gates:
         - id: phase-10a-event-contract-reviewed

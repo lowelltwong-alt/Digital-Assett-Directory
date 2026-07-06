@@ -1619,6 +1619,14 @@ def validate_repo(repo_root: Path) -> dict[str, Any]:
             errors,
             checked,
         )
+        _validate_jsonl_with_registered_schema(
+            repo_root,
+            registry,
+            "dad_pipeline_event",
+            "processed/events/event_log.jsonl",
+            errors,
+            checked,
+        )
         trusted_source_registry = json.loads(
             (repo_root / "registry" / "trusted-source-registry.json").read_text(
                 encoding="utf-8"
@@ -2323,6 +2331,7 @@ def validate_repo(repo_root: Path) -> dict[str, Any]:
         capture_registry = load_capture_pattern_registry(repo_root)
         for report_path in [
             *sorted((repo_root / "processed" / "reports").glob("*.json")),
+            *sorted((repo_root / "processed" / "events" / "reports").glob("*.json")),
             *sorted((repo_root / "processed" / "harnesses").glob("*.json")),
             *sorted((repo_root / "processed" / "repo_inventory").glob("*.json")),
         ]:
@@ -2352,6 +2361,12 @@ def validate_repo(repo_root: Path) -> dict[str, Any]:
                 checked.append(str(report_path.relative_to(repo_root)))
             if payload.get("input_hashes"):
                 errors.extend(_stale_report_input_hash_errors(repo_root, report_path, payload))
+                checked.append(str(report_path.relative_to(repo_root)))
+            elif report_path.is_relative_to(repo_root / "processed" / "events" / "reports"):
+                errors.append(
+                    f"Event pipeline report missing input_hashes: "
+                    f"{report_path.relative_to(repo_root)}"
+                )
                 checked.append(str(report_path.relative_to(repo_root)))
             if payload.get("audit_id") == "dad:exception-capture-observed-audit":
                 errors.extend(

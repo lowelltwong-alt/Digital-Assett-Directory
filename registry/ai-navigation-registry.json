@@ -1,8 +1,8 @@
 {
   "schema_version": "0.1.0",
   "registry_id": "ai-navigation-registry",
-  "navigation_version": "2026.07.06.1",
-  "updated_at": "2026-07-06T04:30:06Z",
+  "navigation_version": "2026.07.06.2",
+  "updated_at": "2026-07-06T04:57:17Z",
   "singular_entrypoint": {
     "path": "AI_FRONT_DOOR.md",
     "rule": "All agents start at AI_FRONT_DOOR.md, then follow the required read order and task-specific branches.",
@@ -84,8 +84,8 @@
       "role": "Semantic branching map with path, role, tags, and use-when triggers.",
       "tags": ["front_door", "workflow", "navigation_freshness"],
       "use_when": "You know the task class and need the smallest matching branch.",
-      "current_version": "2026.07.06.1",
-      "last_material_change_at": "2026-07-06T04:30:06Z",
+      "current_version": "2026.07.06.2",
+      "last_material_change_at": "2026-07-06T04:57:17Z",
       "change_class": "navigation_contract",
       "route_after": ["AI_FRONT_DOOR.md", "registry/ai-navigation-registry.json"],
       "freshness_hint": "Use the TOC for routing meaning; use this registry for freshness."
@@ -96,8 +96,8 @@
       "role": "Machine-readable start files, registries, generated surfaces, and validation commands.",
       "tags": ["front_door", "registry", "validation", "navigation_freshness"],
       "use_when": "A tool or agent needs deterministic paths rather than prose routing.",
-      "current_version": "2026.07.06.1",
-      "last_material_change_at": "2026-07-06T04:30:06Z",
+      "current_version": "2026.07.06.2",
+      "last_material_change_at": "2026-07-06T04:57:17Z",
       "change_class": "navigation_contract",
       "route_after": ["AI_FRONT_DOOR.md", "registry/ai-navigation-registry.json"],
       "freshness_hint": "Manifest freshness mirrors the navigation registry version for DAD entrypoint changes."
@@ -108,14 +108,15 @@
       "role": "Ordered proof ladder for DAD local deployment, all-repo inventory, mail trials, exception capture, Rust production slice, catalog routes, and reviewed enrollment waves.",
       "tags": ["roadmap", "deployment", "cross_repo", "mail_center", "rust", "validation"],
       "use_when": "You are continuing DAD deployment/all-repo verification or deciding which phase must happen next.",
-      "current_version": "0.1.1",
-      "last_material_change_at": "2026-07-06T04:30:06Z",
+      "current_version": "0.1.2",
+      "last_material_change_at": "2026-07-06T04:57:17Z",
       "change_class": "generated_report",
       "route_after": [
         "roadmap/evidence/phase-8-dad-local-deployment.md",
         "roadmap/evidence/phase-8-dad-local-deployment.human-review-packet.json",
         "roadmap/evidence/phase-9-all-repo-read-only-inventory.md",
-        "roadmap/evidence/phase-10-mail-end-to-end-trial.md"
+        "roadmap/evidence/phase-10-mail-end-to-end-trial.md",
+        "roadmap/evidence/phase-10a-mailbox-event-pipeline.md"
       ],
       "freshness_hint": "Machine evidence does not satisfy human gates; check roadmap/gate-evidence.json before marking phases complete."
     },
@@ -242,10 +243,28 @@
       "tags": ["mail_center", "cross_repo", "learning_loop", "security_privacy"],
       "use_when": "You compose, collect, route, deliver, digest, review, or explain DAD mail.",
       "current_version": "0.1.0",
-      "last_material_change_at": "2026-07-04T17:05:24Z",
+      "last_material_change_at": "2026-07-06T04:57:17Z",
       "change_class": "mail_surface",
-      "route_after": ["AI_FRONT_DOOR.md", "registry/ai-navigation-registry.json"],
-      "freshness_hint": "Mail remains candidate-only and must not become a competing entrypoint."
+      "route_after": ["docs/DAD_EVENT_PIPELINE.md", "AI_FRONT_DOOR.md", "registry/ai-navigation-registry.json"],
+      "freshness_hint": "Mail remains candidate-only and repo-facing; event pipeline rows provide explicit response-state candidate metadata."
+    },
+    {
+      "branch_id": "event_pipeline",
+      "path": "docs/DAD_EVENT_PIPELINE.md",
+      "role": "Local-first event/data pipeline contract beneath mail, including repo event outboxes, central event logs, response-state rows, quarantine, and Rust leaf-check boundaries.",
+      "tags": ["event_pipeline", "mail_center", "learning_loop", "cross_repo", "validation"],
+      "use_when": "You need repo responses, asset-use feedback, exception/fix outcomes, or DAD notice adoption to be explicit instead of inferred from mail presence.",
+      "current_version": "0.1.0",
+      "last_material_change_at": "2026-07-06T04:57:17Z",
+      "change_class": "mail_surface",
+      "route_after": [
+        "schemas/dad-pipeline-event.schema.json",
+        "processed/events/event_log.jsonl",
+        "processed/events/response_state.jsonl",
+        "processed/events/reports/event_pipeline.md",
+        "tests/test_event_pipeline.py"
+      ],
+      "freshness_hint": "Events are candidate metadata only; Rust may shadow-check structure later, but Python/DAD retains policy authority."
     },
     {
       "branch_id": "mail_dirty_state_runbook",
@@ -297,6 +316,24 @@
     }
   ],
   "recent_changes": [
+    {
+      "change_id": "nav-change:2026-07-06:event-pipeline-initial-slice",
+      "changed_at": "2026-07-06T04:57:17Z",
+      "change_type": "added_event_pipeline_initial_route",
+      "paths": [
+        "docs/DAD_EVENT_PIPELINE.md",
+        "schemas/dad-pipeline-event.schema.json",
+        "src/digital_asset_directory/event_pipeline.py",
+        "tests/test_event_pipeline.py",
+        "AI_FRONT_DOOR.md",
+        "AI_TABLE_OF_CONTENTS.md",
+        "MACHINE_NAVIGATION_MANIFEST.json",
+        "roadmap/evidence/phase-10a-mailbox-event-pipeline.md"
+      ],
+      "summary": "Added the first local-first event pipeline slice beneath mail: repo event outboxes, central event log, response-state rows, malformed/unsafe quarantine, report output, and explicit Rust leaf-check boundaries.",
+      "agent_action": "Use events for explicit repo response and learning-loop state; do not infer adoption from mail absence, and do not let Rust structural checks satisfy DAD policy gates.",
+      "route_tags": ["event_pipeline", "mail_center", "learning_loop", "validation", "rust"]
+    },
     {
       "change_id": "nav-change:2026-07-06:phase-8-human-gate-review-packet",
       "changed_at": "2026-07-06T04:30:06Z",

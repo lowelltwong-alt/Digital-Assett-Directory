@@ -9,6 +9,12 @@ mirror under `.digital-asset/mail/`. The mirror is intentionally small: JSONL
 files plus a README. A repo does not need to vendor DAD's Python test suite just
 to receive or send suggestions.
 
+Mail is the repo-facing presentation and delivery adapter. DAD's newer
+local-first event pipeline in `docs/DAD_EVENT_PIPELINE.md` is the candidate
+state layer for deterministic response tracking, learning-loop signals, and
+future mailbox-backed dataflow. Mail absence must never be interpreted as repo
+adoption; actionable notices need explicit response events.
+
 ## Authority Boundary
 
 Mail packets are append-only candidate evidence. They are not source truth,

@@ -58,7 +58,7 @@ def test_manifest_exposes_navigation_and_graph_entrypoints() -> None:
     assert manifest["navigation_standards"]["navigation_registry"] == (
         "registry/ai-navigation-registry.json"
     )
-    assert manifest["navigation_standards"]["navigation_version"] == "2026.07.06.1"
+    assert manifest["navigation_standards"]["navigation_version"] == "2026.07.06.2"
     assert manifest["navigation_standards"]["routing_standard"] == (
         "docs/AI_ENTRYPOINT_AND_TOC_ROUTING_STANDARD.md"
     )
@@ -73,6 +73,12 @@ def test_manifest_exposes_navigation_and_graph_entrypoints() -> None:
     assert "docs/LESSON_LIFECYCLE_GOVERNANCE.md" in manifest["knowledge_graph_entrypoints"]
     assert (
         "docs/DAD_MAIL_STORM_AND_DIRTY_STATE_RUNBOOK.md" in manifest["knowledge_graph_entrypoints"]
+    )
+    assert "docs/DAD_EVENT_PIPELINE.md" in manifest["knowledge_graph_entrypoints"]
+    assert "processed/events/" in manifest["knowledge_graph_entrypoints"]
+    assert (
+        "processed/events/reports/event_pipeline.md"
+        in manifest["knowledge_graph_entrypoints"]
     )
     assert (
         "docs/rust/RUST_ROLLOUT_LESSON_CAPTURE_PROTOCOL.md"
@@ -97,13 +103,16 @@ def test_manifest_exposes_navigation_and_graph_entrypoints() -> None:
     assert manifest["registries"]["rust_rollout_lesson_schema"] == (
         "schemas/rust-rollout-lesson.schema.json"
     )
+    assert manifest["registries"]["dad_pipeline_event_schema"] == (
+        "schemas/dad-pipeline-event.schema.json"
+    )
 
 
 def test_navigation_registry_keeps_front_door_singular_and_fresh() -> None:
     registry = json.loads((ROOT / "registry" / "ai-navigation-registry.json").read_text())
 
     assert registry["singular_entrypoint"]["path"] == "AI_FRONT_DOOR.md"
-    assert registry["navigation_version"] == "2026.07.06.1"
+    assert registry["navigation_version"] == "2026.07.06.2"
     assert registry["updated_at"]
     assert "memory" in registry["entrypoint_policy"]["memory_rule"].lower()
     assert registry["freshness_policy"]["recent_changes_limit"] <= 20
@@ -119,6 +128,7 @@ def test_navigation_registry_keeps_front_door_singular_and_fresh() -> None:
     assert "registry/ai-navigation-registry.json" in branches
     assert "registry/dad-offerings-registry.json" in branches
     assert "docs/MAIL_CENTER.md" in branches
+    assert "docs/DAD_EVENT_PIPELINE.md" in branches
     assert "docs/DAD_MAIL_STORM_AND_DIRTY_STATE_RUNBOOK.md" in branches
     assert "docs/rust/RUST_ROLLOUT_LESSON_CAPTURE_PROTOCOL.md" in branches
     assert "assets/coding-harnesses/repo-enrollment-mail-governance-safety/" in branches
@@ -131,6 +141,10 @@ def test_navigation_registry_keeps_front_door_singular_and_fresh() -> None:
     ]
     assert (
         "roadmap/evidence/phase-8-dad-local-deployment.human-review-packet.json"
+        in deployment_branch["route_after"]
+    )
+    assert (
+        "roadmap/evidence/phase-10a-mailbox-event-pipeline.md"
         in deployment_branch["route_after"]
     )
     assert "docs/HARNESS_VS_DETERMINISTIC_ENFORCEMENT.md" in branches
@@ -146,6 +160,8 @@ def test_navigation_registry_keeps_front_door_singular_and_fresh() -> None:
         "roadmap/evidence/phase-8-dad-local-deployment.human-review-packet.json"
         in change_paths
     )
+    assert "docs/DAD_EVENT_PIPELINE.md" in change_paths
+    assert "schemas/dad-pipeline-event.schema.json" in change_paths
     assert "docs/LESSON_LIFECYCLE_GOVERNANCE.md" in change_paths
     assert "docs/DAD_MAIL_STORM_AND_DIRTY_STATE_RUNBOOK.md" in change_paths
     assert "docs/rust/RUST_ROLLOUT_LESSON_CAPTURE_PROTOCOL.md" in change_paths
