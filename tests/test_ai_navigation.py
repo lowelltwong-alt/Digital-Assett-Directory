@@ -58,7 +58,7 @@ def test_manifest_exposes_navigation_and_graph_entrypoints() -> None:
     assert manifest["navigation_standards"]["navigation_registry"] == (
         "registry/ai-navigation-registry.json"
     )
-    assert manifest["navigation_standards"]["navigation_version"] == "2026.07.06.3"
+    assert manifest["navigation_standards"]["navigation_version"] == "2026.07.06.4"
     assert manifest["navigation_standards"]["routing_standard"] == (
         "docs/AI_ENTRYPOINT_AND_TOC_ROUTING_STANDARD.md"
     )
@@ -97,6 +97,10 @@ def test_manifest_exposes_navigation_and_graph_entrypoints() -> None:
         "roadmap/evidence/phase-8-dad-local-deployment.human-review-packet.json"
         in manifest["knowledge_graph_entrypoints"]
     )
+    assert (
+        "processed/fable5/deep-dives/2026-07-06-dad-deployment-rust-handoff/fable5-master-prompt.md"
+        in manifest["knowledge_graph_entrypoints"]
+    )
     assert manifest["registries"]["ai_navigation"] == "registry/ai-navigation-registry.json"
     assert manifest["registries"]["ai_navigation_registry_schema"] == (
         "schemas/ai-navigation-registry.schema.json"
@@ -113,7 +117,7 @@ def test_navigation_registry_keeps_front_door_singular_and_fresh() -> None:
     registry = json.loads((ROOT / "registry" / "ai-navigation-registry.json").read_text())
 
     assert registry["singular_entrypoint"]["path"] == "AI_FRONT_DOOR.md"
-    assert registry["navigation_version"] == "2026.07.06.3"
+    assert registry["navigation_version"] == "2026.07.06.4"
     assert registry["updated_at"]
     assert "memory" in registry["entrypoint_policy"]["memory_rule"].lower()
     assert registry["freshness_policy"]["recent_changes_limit"] <= 20
@@ -148,6 +152,10 @@ def test_navigation_registry_keeps_front_door_singular_and_fresh() -> None:
         "roadmap/evidence/phase-10a-mailbox-event-pipeline.md"
         in deployment_branch["route_after"]
     )
+    assert (
+        "processed/fable5/deep-dives/2026-07-06-dad-deployment-rust-handoff/fable5-master-prompt.md"
+        in deployment_branch["route_after"]
+    )
     assert "docs/HARNESS_VS_DETERMINISTIC_ENFORCEMENT.md" in branches
     assert "docs/CLAUDE_ARCHITECTURAL_ROOT_CAUSE_REVIEW.md" in branches
     assert "docs/LESSON_LIFECYCLE_GOVERNANCE.md" in branches
@@ -162,6 +170,10 @@ def test_navigation_registry_keeps_front_door_singular_and_fresh() -> None:
         in change_paths
     )
     assert "docs/DAD_EVENT_PIPELINE.md" in change_paths
+    assert (
+        "processed/fable5/deep-dives/2026-07-06-dad-deployment-rust-handoff/fable5-master-prompt.md"
+        in change_paths
+    )
     assert "schemas/dad-pipeline-event.schema.json" in change_paths
     assert "docs/LESSON_LIFECYCLE_GOVERNANCE.md" in change_paths
     assert "docs/DAD_MAIL_STORM_AND_DIRTY_STATE_RUNBOOK.md" in change_paths

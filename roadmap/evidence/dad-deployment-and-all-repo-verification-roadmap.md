@@ -49,6 +49,20 @@ writes require reviewed policy and explicit phase gates.
 Phase 6 and Phase 7 already exist in `roadmap/roadmap.yaml`; this document
 adds the execution plan and adds downstream phases that depend on them.
 
+## Fable Review Checkpoint
+
+Current Fable packet:
+`processed/fable5/deep-dives/2026-07-06-dad-deployment-rust-handoff/`.
+
+Use it before making the next high-leverage roadmap or Rust-boundary change if
+Fable is available. The packet focuses on Phase 8 deployment false confidence,
+roadmap ordering, the Phase 10A Rust event-log checker, and whether DAD's
+front-door/TOC registration is coherent enough for future agents.
+
+This packet is review input only. It does not approve human gates, enroll
+repos, authorize cross-repo writes, approve public release, or promote Rust to
+governance authority.
+
 ## Goal 1: DAD Local Deployment
 
 Objective: make DAD callable from any local repo without manual `PYTHONPATH`
