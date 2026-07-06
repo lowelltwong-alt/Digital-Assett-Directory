@@ -1,8 +1,8 @@
 {
   "schema_version": "0.1.0",
   "registry_id": "ai-navigation-registry",
-  "navigation_version": "2026.07.05.2",
-  "updated_at": "2026-07-05T07:45:00Z",
+  "navigation_version": "2026.07.06.1",
+  "updated_at": "2026-07-06T04:30:06Z",
   "singular_entrypoint": {
     "path": "AI_FRONT_DOOR.md",
     "rule": "All agents start at AI_FRONT_DOOR.md, then follow the required read order and task-specific branches.",
@@ -84,8 +84,8 @@
       "role": "Semantic branching map with path, role, tags, and use-when triggers.",
       "tags": ["front_door", "workflow", "navigation_freshness"],
       "use_when": "You know the task class and need the smallest matching branch.",
-      "current_version": "2026.07.04.3",
-      "last_material_change_at": "2026-07-04T17:22:39Z",
+      "current_version": "2026.07.06.1",
+      "last_material_change_at": "2026-07-06T04:30:06Z",
       "change_class": "navigation_contract",
       "route_after": ["AI_FRONT_DOOR.md", "registry/ai-navigation-registry.json"],
       "freshness_hint": "Use the TOC for routing meaning; use this registry for freshness."
@@ -96,8 +96,8 @@
       "role": "Machine-readable start files, registries, generated surfaces, and validation commands.",
       "tags": ["front_door", "registry", "validation", "navigation_freshness"],
       "use_when": "A tool or agent needs deterministic paths rather than prose routing.",
-      "current_version": "2026.07.04.3",
-      "last_material_change_at": "2026-07-04T17:22:39Z",
+      "current_version": "2026.07.06.1",
+      "last_material_change_at": "2026-07-06T04:30:06Z",
       "change_class": "navigation_contract",
       "route_after": ["AI_FRONT_DOOR.md", "registry/ai-navigation-registry.json"],
       "freshness_hint": "Manifest freshness mirrors the navigation registry version for DAD entrypoint changes."
@@ -108,11 +108,12 @@
       "role": "Ordered proof ladder for DAD local deployment, all-repo inventory, mail trials, exception capture, Rust production slice, catalog routes, and reviewed enrollment waves.",
       "tags": ["roadmap", "deployment", "cross_repo", "mail_center", "rust", "validation"],
       "use_when": "You are continuing DAD deployment/all-repo verification or deciding which phase must happen next.",
-      "current_version": "0.1.0",
-      "last_material_change_at": "2026-07-05T04:20:00Z",
+      "current_version": "0.1.1",
+      "last_material_change_at": "2026-07-06T04:30:06Z",
       "change_class": "generated_report",
       "route_after": [
         "roadmap/evidence/phase-8-dad-local-deployment.md",
+        "roadmap/evidence/phase-8-dad-local-deployment.human-review-packet.json",
         "roadmap/evidence/phase-9-all-repo-read-only-inventory.md",
         "roadmap/evidence/phase-10-mail-end-to-end-trial.md"
       ],
@@ -296,6 +297,21 @@
     }
   ],
   "recent_changes": [
+    {
+      "change_id": "nav-change:2026-07-06:phase-8-human-gate-review-packet",
+      "changed_at": "2026-07-06T04:30:06Z",
+      "change_type": "added_phase8_human_gate_review_packet_route",
+      "paths": [
+        "roadmap/evidence/phase-8-dad-local-deployment.human-review-packet.json",
+        "roadmap/evidence/phase-8-dad-local-deployment.md",
+        "roadmap/roadmap.yaml",
+        "AI_TABLE_OF_CONTENTS.md",
+        "MACHINE_NAVIGATION_MANIFEST.json"
+      ],
+      "summary": "Added a generated review-only packet and navigation route for the four open Phase 8 human gates; Phase 8 now declares awaiting_human_gate while command evidence remains pending human review.",
+      "agent_action": "Use the packet to review Phase 8 gates, but do not treat it as approval or write roadmap/gate-evidence.json without explicit human review.",
+      "route_tags": ["roadmap", "deployment", "human_gate", "validation"]
+    },
     {
       "change_id": "nav-change:2026-07-05:rust-rollout-lesson-capture-route",
       "changed_at": "2026-07-05T07:45:00Z",

@@ -1,0 +1,237 @@
+{
+  "agent_review_satisfies_gate": false,
+  "authority_boundary": "This packet compiles candidate review evidence only. It does not record a human gate, complete a roadmap phase, approve public release, authorize enrollment, or permit cross-repo writes.",
+  "command_evidence_files": [
+    "roadmap/evidence/phase-8-dad-local-deployment.commands.json"
+  ],
+  "commands": [
+    {
+      "command": "python -m pytest tests/test_dad_local_deployment.py -q",
+      "evidence": [
+        "roadmap/evidence/phase-8-dad-local-deployment.md",
+        "roadmap/evidence/phase-8-dad-local-deployment.commands.json"
+      ],
+      "gate_evidence_status": "passed",
+      "recorded_at": "2026-07-05"
+    },
+    {
+      "command": "python -m digital_asset_directory.cli doctor --hub . --scope deployment",
+      "evidence": [
+        "roadmap/evidence/phase-8-dad-local-deployment.md",
+        "roadmap/evidence/phase-8-dad-local-deployment.commands.json"
+      ],
+      "gate_evidence_status": "passed",
+      "recorded_at": "2026-07-05"
+    },
+    {
+      "command": "user-shim asset-dir doctor --scope deployment from two non-DAD repos",
+      "evidence": [
+        "roadmap/evidence/phase-8-dad-local-deployment.md",
+        "roadmap/evidence/phase-8-dad-local-deployment.commands.json"
+      ],
+      "gate_evidence_status": "passed",
+      "recorded_at": "2026-07-05"
+    },
+    {
+      "command": "user-shim asset-dir doctor --scope deployment from Mock Trial4.26 and LawFirm-os-intake without target worktree changes",
+      "evidence": [
+        "roadmap/evidence/phase-8-dad-local-deployment.md",
+        "roadmap/evidence/phase-8-dad-local-deployment.commands.json"
+      ],
+      "gate_evidence_status": "passed",
+      "recorded_at": "2026-07-05"
+    },
+    {
+      "command": "user-shim asset-dir agent preflight --repo . --agent codex --task \"Goal 1 deployment smoke from outside DAD\"",
+      "evidence": [
+        "roadmap/evidence/phase-8-dad-local-deployment.md",
+        "roadmap/evidence/phase-8-dad-local-deployment.commands.json"
+      ],
+      "gate_evidence_status": "passed",
+      "recorded_at": "2026-07-05"
+    }
+  ],
+  "computed_status": "awaiting_human_gate",
+  "declared_status": "awaiting_human_gate",
+  "false_confidence_risks": [
+    "This packet can compile machine evidence but cannot approve a human gate.",
+    "Agent, automation, bot, Codex, or Claude reviewer records do not satisfy roadmap gates.",
+    "Command evidence can become stale; a human reviewer must check current local relevance.",
+    "Gate approval must not broaden enrollment, mail delivery, public release, protected-repo writes, or source-repo mutation."
+  ],
+  "generated_at": "2026-07-06T04:55:26.470315+00:00",
+  "human_gate_satisfied": false,
+  "human_gates": [
+    {
+      "acceptable_decisions": [
+        "verified",
+        "leave_unverified"
+      ],
+      "agent_review_satisfies_gate": false,
+      "current_status": "unverified",
+      "description": "DAD can be installed or wrapped so asset-dir works from outside the DAD checkout without manual PYTHONPATH knowledge",
+      "existing_record": null,
+      "gate_id": "phase-8-local-install-reviewed",
+      "human_review_required": true,
+      "reason": "missing_gate_evidence",
+      "recommended_gate_evidence_if_verified": {
+        "evidence": [
+          "roadmap/evidence/dad-deployment-and-all-repo-verification-roadmap.md",
+          "roadmap/evidence/phase-8-dad-local-deployment.md",
+          "roadmap/evidence/phase-8-dad-local-deployment.commands.json",
+          "AGENTS.md",
+          "AI_FRONT_DOOR.md"
+        ],
+        "phase_id": "phase-8-dad-local-deployment",
+        "reviewed_at": "<ISO-8601 timestamp>",
+        "reviewer": "<Lowell|user|human>",
+        "status": "verified",
+        "summary": "<human decision summary>"
+      },
+      "recording_note": "Only a human reviewer record in roadmap/gate-evidence.json can satisfy this gate. This packet is review input, not approval evidence.",
+      "review_questions": [
+        "Does the cited evidence prove this exact gate in the current local environment?",
+        "Is the evidence fresh enough for a human to trust today?",
+        "Does approving this gate avoid broad enrollment, repo mutation, mail delivery, public release, or protected-repo writes?",
+        "If any evidence is missing, stale, ambiguous, or agent-only, should this gate remain unverified?"
+      ]
+    },
+    {
+      "acceptable_decisions": [
+        "verified",
+        "leave_unverified"
+      ],
+      "agent_review_satisfies_gate": false,
+      "current_status": "unverified",
+      "description": "--hub, DAD_HUB, and user-level hub config resolve the same canonical DAD hub from non-DAD repos",
+      "existing_record": null,
+      "gate_id": "phase-8-hub-locator-reviewed",
+      "human_review_required": true,
+      "reason": "missing_gate_evidence",
+      "recommended_gate_evidence_if_verified": {
+        "evidence": [
+          "roadmap/evidence/dad-deployment-and-all-repo-verification-roadmap.md",
+          "roadmap/evidence/phase-8-dad-local-deployment.md",
+          "roadmap/evidence/phase-8-dad-local-deployment.commands.json",
+          "AGENTS.md",
+          "AI_FRONT_DOOR.md"
+        ],
+        "phase_id": "phase-8-dad-local-deployment",
+        "reviewed_at": "<ISO-8601 timestamp>",
+        "reviewer": "<Lowell|user|human>",
+        "status": "verified",
+        "summary": "<human decision summary>"
+      },
+      "recording_note": "Only a human reviewer record in roadmap/gate-evidence.json can satisfy this gate. This packet is review input, not approval evidence.",
+      "review_questions": [
+        "Does the cited evidence prove this exact gate in the current local environment?",
+        "Is the evidence fresh enough for a human to trust today?",
+        "Does approving this gate avoid broad enrollment, repo mutation, mail delivery, public release, or protected-repo writes?",
+        "If any evidence is missing, stale, ambiguous, or agent-only, should this gate remain unverified?"
+      ]
+    },
+    {
+      "acceptable_decisions": [
+        "verified",
+        "leave_unverified"
+      ],
+      "agent_review_satisfies_gate": false,
+      "current_status": "unverified",
+      "description": "asset-dir doctor passes from DAD and at least two non-DAD repos",
+      "existing_record": null,
+      "gate_id": "phase-8-doctor-smoke-reviewed",
+      "human_review_required": true,
+      "reason": "missing_gate_evidence",
+      "recommended_gate_evidence_if_verified": {
+        "evidence": [
+          "roadmap/evidence/dad-deployment-and-all-repo-verification-roadmap.md",
+          "roadmap/evidence/phase-8-dad-local-deployment.md",
+          "roadmap/evidence/phase-8-dad-local-deployment.commands.json",
+          "AGENTS.md",
+          "AI_FRONT_DOOR.md"
+        ],
+        "phase_id": "phase-8-dad-local-deployment",
+        "reviewed_at": "<ISO-8601 timestamp>",
+        "reviewer": "<Lowell|user|human>",
+        "status": "verified",
+        "summary": "<human decision summary>"
+      },
+      "recording_note": "Only a human reviewer record in roadmap/gate-evidence.json can satisfy this gate. This packet is review input, not approval evidence.",
+      "review_questions": [
+        "Does the cited evidence prove this exact gate in the current local environment?",
+        "Is the evidence fresh enough for a human to trust today?",
+        "Does approving this gate avoid broad enrollment, repo mutation, mail delivery, public release, or protected-repo writes?",
+        "If any evidence is missing, stale, ambiguous, or agent-only, should this gate remain unverified?"
+      ]
+    },
+    {
+      "acceptable_decisions": [
+        "verified",
+        "leave_unverified"
+      ],
+      "agent_review_satisfies_gate": false,
+      "current_status": "unverified",
+      "description": "unavailable DAD warns for ordinary local coding and fails closed for cross-repo writes, protected repo work, public release, and sensitive mail",
+      "existing_record": null,
+      "gate_id": "phase-8-unavailable-policy-reviewed",
+      "human_review_required": true,
+      "reason": "missing_gate_evidence",
+      "recommended_gate_evidence_if_verified": {
+        "evidence": [
+          "roadmap/evidence/dad-deployment-and-all-repo-verification-roadmap.md",
+          "roadmap/evidence/phase-8-dad-local-deployment.md",
+          "roadmap/evidence/phase-8-dad-local-deployment.commands.json",
+          "AGENTS.md",
+          "AI_FRONT_DOOR.md"
+        ],
+        "phase_id": "phase-8-dad-local-deployment",
+        "reviewed_at": "<ISO-8601 timestamp>",
+        "reviewer": "<Lowell|user|human>",
+        "status": "verified",
+        "summary": "<human decision summary>"
+      },
+      "recording_note": "Only a human reviewer record in roadmap/gate-evidence.json can satisfy this gate. This packet is review input, not approval evidence.",
+      "review_questions": [
+        "Does the cited evidence prove this exact gate in the current local environment?",
+        "Is the evidence fresh enough for a human to trust today?",
+        "Does approving this gate avoid broad enrollment, repo mutation, mail delivery, public release, or protected-repo writes?",
+        "If any evidence is missing, stale, ambiguous, or agent-only, should this gate remain unverified?"
+      ]
+    }
+  ],
+  "human_recording_instructions": "If approved, record each verified gate separately in roadmap/gate-evidence.json with reviewer=Lowell, user, human, or human_verified=true and status=verified.",
+  "next_actions": [
+    "Human reviews each gate against the cited evidence.",
+    "Leave a gate unverified when proof is missing, stale, ambiguous, or agent-only.",
+    "Record verified gate evidence separately in roadmap/gate-evidence.json only after human review.",
+    "Run roadmap check after any human gate evidence is recorded."
+  ],
+  "no_roadmap_state_mutation": true,
+  "packet_status": "review_input_only",
+  "phase_id": "phase-8-dad-local-deployment",
+  "phase_title": "Local DAD deployment and hub resolution",
+  "recommended_declared_status": "awaiting_human_gate",
+  "required_files": [
+    {
+      "exists": true,
+      "path": "roadmap/evidence/dad-deployment-and-all-repo-verification-roadmap.md"
+    },
+    {
+      "exists": true,
+      "path": "roadmap/evidence/phase-8-dad-local-deployment.md"
+    },
+    {
+      "exists": true,
+      "path": "roadmap/evidence/phase-8-dad-local-deployment.commands.json"
+    },
+    {
+      "exists": true,
+      "path": "AGENTS.md"
+    },
+    {
+      "exists": true,
+      "path": "AI_FRONT_DOOR.md"
+    }
+  ],
+  "schema_version": "dad.roadmap.human-gate-review-packet.v1"
+}

@@ -1,0 +1,45 @@
+{
+  "approval": {
+    "approval_id": "",
+    "approved_by": "",
+    "decided_at": ""
+  },
+  "authority_boundary": "Intake records are quarantined candidate metadata about external sources. They carry links, provenance, and screening state only - never external file contents - and do not authorize checkout, install, or downstream delivery.",
+  "created_at": "2026-07-06T04:22:18.272437+00:00",
+  "intake_id": "dad:research-intake:980d068b-35ce-53aa-9b14-03f7e590a7ab",
+  "justification": "Official OpenHands sibling repository; GitHub metadata verified MIT; chosen over core OpenHands for cleaner license signal.",
+  "kind": "harness",
+  "license": "MIT",
+  "name": "OpenHands Software Agent SDK",
+  "notes": "Pointer-only intake. Clean modular SDK surface from the OpenHands ecosystem. Prefer this SDK as the allowed reusable reference because the core OpenHands repo has mixed/NOASSERTION license metadata in GitHub API. Graph tags: software-agent-sdk, API-surface, agent-runtime, OpenHands-sibling. Sibling pointers: OpenHands-CLI, agent-canvas, extensions.",
+  "promotion": {},
+  "research_ref": "",
+  "schema_version": "0.1.0",
+  "screening": {
+    "compatibility": {
+      "notes": "Compatible as DAD candidate metadata pointer. Any checkout, install, code import, or downstream adoption requires separate local approval.",
+      "result": "pass",
+      "screened_by": "codex-weekly-scout-bootstrap"
+    },
+    "license": {
+      "notes": "Permissive license recorded as MIT from official source metadata; candidate pointer only.",
+      "result": "pass",
+      "screened_by": "codex-weekly-scout-bootstrap"
+    },
+    "prompt_injection": {
+      "notes": "Pointer-only metadata intake. No external prompts, tools, code, or skill bodies imported; prompt-bearing downstream use requires separate review.",
+      "result": "pass",
+      "screened_by": "codex-weekly-scout-bootstrap"
+    },
+    "provenance": {
+      "notes": "Official repository/source URL and trust context verified during scout; social chatter used only as discovery signal.",
+      "result": "pass",
+      "screened_by": "codex-weekly-scout-bootstrap"
+    }
+  },
+  "source_id": "",
+  "source_url": "https://github.com/OpenHands/software-agent-sdk",
+  "status": "screened",
+  "trust_note": "Trust tier lowers intake friction only; screening and human approval are still required before promotion.",
+  "trust_tier": "unknown"
+}

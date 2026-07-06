@@ -224,7 +224,7 @@ from .repo_completion import (
     write_repo_completion_wave_plan_outputs,
 )
 from .repo_learning_scope import write_repo_learning_loop_install_scope_outputs
-from .roadmap import check_roadmap
+from .roadmap import check_roadmap, write_human_gate_review_packet
 from .rust_bridge import (
     run_dad_mail_spool_check,
     run_dad_repo_inventory_probe,
@@ -3001,6 +3001,23 @@ def test_parity_command(
 def roadmap_check(hub: Optional[Path] = typer.Option(None), no_update: bool = False) -> None:
     cfg = _cfg(hub=hub)
     result = check_roadmap(cfg.repo_root, update=not no_update)
+    console.print_json(data=result)
+
+
+@roadmap_app.command("human-gate-review-packet")
+def roadmap_human_gate_review_packet(
+    phase_id: str = typer.Argument(..., help="Roadmap phase id to compile for human review."),
+    output: Optional[Path] = typer.Option(
+        None,
+        "--output",
+        "-o",
+        help="Optional output path. Defaults to roadmap/evidence/<phase-id>.human-review-packet.json.",
+    ),
+    hub: Optional[Path] = typer.Option(None),
+) -> None:
+    """Write a review-only packet for roadmap human gates."""
+    cfg = _cfg(hub=hub)
+    result = write_human_gate_review_packet(cfg.repo_root, phase_id, output=output)
     console.print_json(data=result)
 
 

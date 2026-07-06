@@ -1,0 +1,45 @@
+{
+  "approval": {
+    "approval_id": "",
+    "approved_by": "",
+    "decided_at": ""
+  },
+  "authority_boundary": "Intake records are quarantined candidate metadata about external sources. They carry links, provenance, and screening state only - never external file contents - and do not authorize checkout, install, or downstream delivery.",
+  "created_at": "2026-07-06T04:25:30.724186+00:00",
+  "intake_id": "dad:research-intake:a3a73dd7-5d36-51e5-8f72-75ff6551c2cb",
+  "justification": "Official SWE-agent repository; GitHub metadata verified MIT and high-star academic/project signal.",
+  "kind": "harness",
+  "license": "MIT",
+  "name": "SWE-agent Issue-Fixing Harness",
+  "notes": "Pointer-only intake. Academic/open-source software engineering agent harness for GitHub issue fixing and SWE-bench workflows. Graph tags: issue-fixing, SWE-bench, academic-agent, benchmark-runner, software-engineering-agent. Sibling pointers: mini-swe-agent, SWE-ReX, SWE-smith.",
+  "promotion": {},
+  "research_ref": "",
+  "schema_version": "0.1.0",
+  "screening": {
+    "compatibility": {
+      "notes": "Compatible as DAD candidate metadata pointer. Any checkout, install, code import, or downstream adoption requires separate local approval.",
+      "result": "pass",
+      "screened_by": "codex-weekly-scout-bootstrap"
+    },
+    "license": {
+      "notes": "Permissive license recorded as MIT from official source metadata; candidate pointer only.",
+      "result": "pass",
+      "screened_by": "codex-weekly-scout-bootstrap"
+    },
+    "prompt_injection": {
+      "notes": "Pointer-only metadata intake. No external prompts, tools, code, or skill bodies imported; prompt-bearing downstream use requires separate review.",
+      "result": "pass",
+      "screened_by": "codex-weekly-scout-bootstrap"
+    },
+    "provenance": {
+      "notes": "Official repository/source URL and trust context verified during scout; social chatter used only as discovery signal.",
+      "result": "pass",
+      "screened_by": "codex-weekly-scout-bootstrap"
+    }
+  },
+  "source_id": "",
+  "source_url": "https://github.com/swe-agent/swe-agent",
+  "status": "screened",
+  "trust_note": "Trust tier lowers intake friction only; screening and human approval are still required before promotion.",
+  "trust_tier": "unknown"
+}

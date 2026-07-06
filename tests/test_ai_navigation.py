@@ -58,7 +58,7 @@ def test_manifest_exposes_navigation_and_graph_entrypoints() -> None:
     assert manifest["navigation_standards"]["navigation_registry"] == (
         "registry/ai-navigation-registry.json"
     )
-    assert manifest["navigation_standards"]["navigation_version"] == "2026.07.05.2"
+    assert manifest["navigation_standards"]["navigation_version"] == "2026.07.06.1"
     assert manifest["navigation_standards"]["routing_standard"] == (
         "docs/AI_ENTRYPOINT_AND_TOC_ROUTING_STANDARD.md"
     )
@@ -86,6 +86,10 @@ def test_manifest_exposes_navigation_and_graph_entrypoints() -> None:
         "roadmap/evidence/phase-10-mail-end-to-end-trial.md"
         in manifest["knowledge_graph_entrypoints"]
     )
+    assert (
+        "roadmap/evidence/phase-8-dad-local-deployment.human-review-packet.json"
+        in manifest["knowledge_graph_entrypoints"]
+    )
     assert manifest["registries"]["ai_navigation"] == "registry/ai-navigation-registry.json"
     assert manifest["registries"]["ai_navigation_registry_schema"] == (
         "schemas/ai-navigation-registry.schema.json"
@@ -99,7 +103,7 @@ def test_navigation_registry_keeps_front_door_singular_and_fresh() -> None:
     registry = json.loads((ROOT / "registry" / "ai-navigation-registry.json").read_text())
 
     assert registry["singular_entrypoint"]["path"] == "AI_FRONT_DOOR.md"
-    assert registry["navigation_version"] == "2026.07.05.2"
+    assert registry["navigation_version"] == "2026.07.06.1"
     assert registry["updated_at"]
     assert "memory" in registry["entrypoint_policy"]["memory_rule"].lower()
     assert registry["freshness_policy"]["recent_changes_limit"] <= 20
@@ -118,7 +122,17 @@ def test_navigation_registry_keeps_front_door_singular_and_fresh() -> None:
     assert "docs/DAD_MAIL_STORM_AND_DIRTY_STATE_RUNBOOK.md" in branches
     assert "docs/rust/RUST_ROLLOUT_LESSON_CAPTURE_PROTOCOL.md" in branches
     assert "assets/coding-harnesses/repo-enrollment-mail-governance-safety/" in branches
-    assert "roadmap/evidence/dad-deployment-and-all-repo-verification-roadmap.md" in branches
+    assert (
+        "roadmap/evidence/dad-deployment-and-all-repo-verification-roadmap.md"
+        in branches
+    )
+    deployment_branch = branches[
+        "roadmap/evidence/dad-deployment-and-all-repo-verification-roadmap.md"
+    ]
+    assert (
+        "roadmap/evidence/phase-8-dad-local-deployment.human-review-packet.json"
+        in deployment_branch["route_after"]
+    )
     assert "docs/HARNESS_VS_DETERMINISTIC_ENFORCEMENT.md" in branches
     assert "docs/CLAUDE_ARCHITECTURAL_ROOT_CAUSE_REVIEW.md" in branches
     assert "docs/LESSON_LIFECYCLE_GOVERNANCE.md" in branches
@@ -128,6 +142,10 @@ def test_navigation_registry_keeps_front_door_singular_and_fresh() -> None:
     assert "docs/DAD_ADDRESS_MODEL.md" in change_paths
     assert "docs/HARNESS_VS_DETERMINISTIC_ENFORCEMENT.md" in change_paths
     assert "docs/CLAUDE_ARCHITECTURAL_ROOT_CAUSE_REVIEW.md" in change_paths
+    assert (
+        "roadmap/evidence/phase-8-dad-local-deployment.human-review-packet.json"
+        in change_paths
+    )
     assert "docs/LESSON_LIFECYCLE_GOVERNANCE.md" in change_paths
     assert "docs/DAD_MAIL_STORM_AND_DIRTY_STATE_RUNBOOK.md" in change_paths
     assert "docs/rust/RUST_ROLLOUT_LESSON_CAPTURE_PROTOCOL.md" in change_paths
