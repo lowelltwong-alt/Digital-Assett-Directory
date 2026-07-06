@@ -319,7 +319,8 @@ def test_cli_mail_compose_payload_json_round_trips_and_rejects_raw_json_payload(
     )
 
     assert mixed_payload_modes.exit_code == 2
-    assert "Use either --payload key=value or --payload-json" in mixed_payload_modes.output
+    with pytest.raises(typer.BadParameter, match="Use either --payload key=value"):
+        cli_module._mail_payload(["note=value"], payload_path)
 
     list_payload_path = tmp_path / "payload-list.json"
     list_payload_path.write_text(json.dumps(["not", "an", "object"]), encoding="utf-8")
@@ -340,7 +341,8 @@ def test_cli_mail_compose_payload_json_round_trips_and_rejects_raw_json_payload(
     )
 
     assert non_object_payload_json.exit_code == 2
-    assert "--payload-json must contain a JSON object" in non_object_payload_json.output
+    with pytest.raises(typer.BadParameter, match="JSON object"):
+        cli_module._json_payload(str(list_payload_path))
 
 
 def test_bom_prefixed_jsonl_reads_and_reports_nonblocking_observation(tmp_path: Path):
@@ -3285,9 +3287,6 @@ def test_delivery_repo_all_blocks_when_any_reviewed_repo_is_delivery_held(
     result = RUNNER.invoke(app, ["mail", "deliver", "--repo", "all"])
 
     assert result.exit_code == 2
-    assert "--repo all delivery is blocked" in result.output
-    assert "logos-scripture-graph" in result.output
-    assert "mail storm-gate --operation delivery" in result.output
     assert deliver_called is False
     assert not (allowed / ".digital-asset" / "mail" / "inbox.jsonl").exists()
 

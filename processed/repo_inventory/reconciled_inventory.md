@@ -1,8 +1,8 @@
 # DAD Repo Inventory Reconciliation
 
-Generated: 2026-07-06T02:07:22.136156+00:00
-Report ID: `dad:dad-repo-inventory:c47e78ac-bf7c-5f7d-9be6-6c4aec202f53`
-Content fingerprint: `sha256:a61a9634cd410dd961e2489132275eebcaa12555ca943aa1745dbb0d50ec7ed4`
+Generated: 2026-07-06T02:25:30.370556+00:00
+Report ID: `dad:dad-repo-inventory:279ac239-2dd1-570b-a02e-d450996bc977`
+Content fingerprint: `sha256:d12b7b3be1c12a3dee39c80460a97ecadd0f6f84d566e664bd1f0818fca5eaa8`
 
 This DAD report is central candidate metadata only. It does not authorize enrollment, delivery, hooks, source edits, or writes to downstream repos.
 

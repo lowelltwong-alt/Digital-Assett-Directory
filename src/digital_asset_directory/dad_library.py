@@ -14,7 +14,7 @@ from typing import Any
 
 from .ids import stable_id
 from .rust_bridge.dad_scan_core import validate_repo_inventory_probe_summary
-from .utils import append_jsonl, atomic_write_text, json_dumps, sha256_bytes, sha256_file, utc_now
+from .utils import append_jsonl, atomic_write_text, json_dumps, sha256_bytes, sha256_file, sha256_text_file_lf, utc_now
 
 NEEDS_REGISTRY = Path("registry") / "dad-needs-registry.json"
 OFFERINGS_REGISTRY = Path("registry") / "dad-offerings-registry.json"
@@ -50,6 +50,7 @@ REPO_INVENTORY_RUST_PARITY_INPUT_REFS = (
     Path("tools") / "dad_scan_core" / "src" / "repo_probe.rs",
     Path("tools") / "dad_scan_core" / "src" / "models.rs",
 )
+REPO_INVENTORY_HASH_POLICY = "text-lf-normalized-v1"
 
 USAGE_STATUSES = {"using", "watching", "rejected", "retired"}
 TRIAGE_DECISIONS = {"use_now", "save_for_future", "defer", "reject", "needs_human_review"}
@@ -173,22 +174,40 @@ def _methodology_hash(path: Path) -> str:
     return f"sha256:{sha256_file(path)}"
 
 
-def _existing_input_hashes(hub_root: Path, refs: Sequence[Path]) -> dict[str, str]:
+def _repo_inventory_hash(path: Path) -> str:
+    return f"sha256:{sha256_text_file_lf(path)}"
+
+
+def _existing_input_hashes(
+    hub_root: Path,
+    refs: Sequence[Path],
+    *,
+    repo_inventory_policy: bool = False,
+) -> dict[str, str]:
     hashes: dict[str, str] = {}
     for ref in refs:
         path = hub_root / ref
         if path.exists():
-            hashes[ref.as_posix()] = _methodology_hash(path)
+            hashes[ref.as_posix()] = (
+                _repo_inventory_hash(path) if repo_inventory_policy else _methodology_hash(path)
+            )
     return hashes
 
 
-def _methodology_metadata(hub_root: Path, ref: Path) -> dict[str, str]:
+def _methodology_metadata(
+    hub_root: Path,
+    ref: Path,
+    *,
+    repo_inventory_policy: bool = False,
+) -> dict[str, str]:
     path = hub_root / ref
     if not path.exists():
         return {}
     return {
         "methodology_ref": ref.as_posix(),
-        "methodology_hash": _methodology_hash(path),
+        "methodology_hash": (
+            _repo_inventory_hash(path) if repo_inventory_policy else _methodology_hash(path)
+        ),
     }
 
 
@@ -1175,11 +1194,20 @@ def reconcile_repo_inventory(
     for record in records:
         counts[record["classification"]] = counts.get(record["classification"], 0) + 1
 
-    methodology_metadata = _methodology_metadata(hub_root, REPO_INVENTORY_METHODOLOGY)
-    input_hashes = _existing_input_hashes(hub_root, REPO_INVENTORY_INPUT_REFS)
+    methodology_metadata = _methodology_metadata(
+        hub_root,
+        REPO_INVENTORY_METHODOLOGY,
+        repo_inventory_policy=True,
+    )
+    input_hashes = _existing_input_hashes(
+        hub_root,
+        REPO_INVENTORY_INPUT_REFS,
+        repo_inventory_policy=True,
+    )
     input_hashes.update(dynamic_input_hashes)
     report_identity_basis = {
         "schema_version": "0.1.0",
+        "hash_policy": REPO_INVENTORY_HASH_POLICY,
         "methodology": methodology_metadata,
         "input_hashes": input_hashes,
         "repo_count": len(records),
@@ -1200,6 +1228,7 @@ def reconcile_repo_inventory(
         "generated_at": utc_now(),
         "report_id": stable_id("dad-repo-inventory", content_fingerprint),
         "content_fingerprint": content_fingerprint,
+        "hash_policy": REPO_INVENTORY_HASH_POLICY,
         **methodology_metadata,
         "input_hashes": input_hashes,
         "repo_count": len(records),
@@ -1425,10 +1454,16 @@ def write_repo_inventory_rust_probe_parity(
     payload = {
         "schema_version": "dad_repo_inventory_rust_probe_parity.v0_1",
         "generated_at": utc_now(),
-        **_methodology_metadata(hub_root, REPO_INVENTORY_METHODOLOGY),
+        "hash_policy": REPO_INVENTORY_HASH_POLICY,
+        **_methodology_metadata(
+            hub_root,
+            REPO_INVENTORY_METHODOLOGY,
+            repo_inventory_policy=True,
+        ),
         "input_hashes": _existing_input_hashes(
             hub_root,
             REPO_INVENTORY_RUST_PARITY_INPUT_REFS,
+            repo_inventory_policy=True,
         ),
         "max_depth": max_depth,
         "follow_symlinks": follow_symlinks,

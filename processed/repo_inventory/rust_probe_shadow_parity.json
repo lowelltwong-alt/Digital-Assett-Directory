@@ -6,16 +6,17 @@
   "duplicate_logical_path_count": 0,
   "duplicate_logical_paths": [],
   "follow_symlinks": false,
-  "generated_at": "2026-07-06T02:07:27.661194+00:00",
+  "generated_at": "2026-07-06T02:25:05.479066+00:00",
+  "hash_policy": "text-lf-normalized-v1",
   "input_hashes": {
-    "src/digital_asset_directory/dad_library.py": "sha256:dd59946cbaf1dde83be28a463ca930111ecd3e874981d9d69960298b19d8cf23",
-    "src/digital_asset_directory/rust_bridge/dad_scan_core.py": "sha256:a41f8daa8872d7b4c6b17b4e8ecff942e5631684a106afb6596052342705c04a",
-    "tools/dad_scan_core/src/models.rs": "sha256:cde6dc7b5ad3be5c599cbc7b3e32d132e82ae97403dd06141db72a9443e0d5f8",
-    "tools/dad_scan_core/src/repo_probe.rs": "sha256:52c66eea95a4a347c9a959483df64d8bf43a648e763fed34c18a86762cbe11fc"
+    "src/digital_asset_directory/dad_library.py": "sha256:c28f9fc999b9968f5b327392c443a3f5c0b5b34b2babc3cf6bf804c1277dcc4b",
+    "src/digital_asset_directory/rust_bridge/dad_scan_core.py": "sha256:a8ab90b5fac8f5568b25edf21d1425e7c6922fa3bcdee72bd398dc006125ad0d",
+    "tools/dad_scan_core/src/models.rs": "sha256:db4c7a9ab78cf2b4aa0c57fb99d00ae7a6c259604973191ab9f20e0fa717c492",
+    "tools/dad_scan_core/src/repo_probe.rs": "sha256:7e5a72a2ec009c06b7a120c6816f5347e11ddaf1b912106baffdfee54f1b7353"
   },
   "matched_repo_count": 78,
   "max_depth": 5,
-  "methodology_hash": "sha256:dd59946cbaf1dde83be28a463ca930111ecd3e874981d9d69960298b19d8cf23",
+  "methodology_hash": "sha256:c28f9fc999b9968f5b327392c443a3f5c0b5b34b2babc3cf6bf804c1277dcc4b",
   "methodology_ref": "src/digital_asset_directory/dad_library.py",
   "only_python_logical_paths": [],
   "only_python_skipped_dirs": [],

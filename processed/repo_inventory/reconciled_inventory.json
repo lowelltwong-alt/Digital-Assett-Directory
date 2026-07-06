@@ -6,8 +6,8 @@
     "needs-human-classification": 13,
     "protected-central-only": 3
   },
-  "content_fingerprint": "sha256:a61a9634cd410dd961e2489132275eebcaa12555ca943aa1745dbb0d50ec7ed4",
-  "generated_at": "2026-07-06T02:07:22.136156+00:00",
+  "content_fingerprint": "sha256:d12b7b3be1c12a3dee39c80460a97ecadd0f6f84d566e664bd1f0818fca5eaa8",
+  "generated_at": "2026-07-06T02:25:30.370556+00:00",
   "github_coverage_complete": false,
   "github_coverage_status": "configured_disabled",
   "github_sources": [
@@ -24,11 +24,12 @@
       "source_id": "github-lowelltwong-alt"
     }
   ],
+  "hash_policy": "text-lf-normalized-v1",
   "input_hashes": {
-    "src/digital_asset_directory/config.py": "sha256:d3d426b39752d5b95427c4203290ee3b77f8b2bb79928179f14758770ee5337f",
-    "src/digital_asset_directory/dad_library.py": "sha256:dd59946cbaf1dde83be28a463ca930111ecd3e874981d9d69960298b19d8cf23"
+    "src/digital_asset_directory/config.py": "sha256:82a088fdc86022d323d6a4babd46c4410968c8f0ca5614822488b601ddab07c2",
+    "src/digital_asset_directory/dad_library.py": "sha256:c28f9fc999b9968f5b327392c443a3f5c0b5b34b2babc3cf6bf804c1277dcc4b"
   },
-  "methodology_hash": "sha256:dd59946cbaf1dde83be28a463ca930111ecd3e874981d9d69960298b19d8cf23",
+  "methodology_hash": "sha256:c28f9fc999b9968f5b327392c443a3f5c0b5b34b2babc3cf6bf804c1277dcc4b",
   "methodology_ref": "src/digital_asset_directory/dad_library.py",
   "records": [
     {
@@ -48,9 +49,9 @@
       "git_state": {
         "branch": "codex/dadm1-compose-input-safety",
         "branch_status": "non_main",
-        "dirty_count": 3,
+        "dirty_count": 9,
         "git_detected": true,
-        "head": "51e1a14",
+        "head": "9224055",
         "is_dirty": true,
         "remote_origin": "https://github.com/lowelltwong-alt/Digital-Assett-Directory.git"
       },
@@ -3200,7 +3201,7 @@
     }
   ],
   "repo_count": 79,
-  "report_id": "dad:dad-repo-inventory:c47e78ac-bf7c-5f7d-9be6-6c4aec202f53",
+  "report_id": "dad:dad-repo-inventory:279ac239-2dd1-570b-a02e-d450996bc977",
   "schema_version": "0.1.0",
   "source_warnings": []
 }
