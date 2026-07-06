@@ -1,8 +1,8 @@
 {
   "schema_version": "0.1.0",
   "registry_id": "ai-navigation-registry",
-  "navigation_version": "2026.07.06.4",
-  "updated_at": "2026-07-06T13:50:00Z",
+  "navigation_version": "2026.07.06.5",
+  "updated_at": "2026-07-06T14:30:00Z",
   "singular_entrypoint": {
     "path": "AI_FRONT_DOOR.md",
     "rule": "All agents start at AI_FRONT_DOOR.md, then follow the required read order and task-specific branches.",
@@ -60,8 +60,8 @@
       "role": "Singular human- and AI-readable start point for DAD work.",
       "tags": ["front_door", "authority", "navigation_freshness"],
       "use_when": "Always start here before material work.",
-      "current_version": "2026.07.06.4",
-      "last_material_change_at": "2026-07-06T13:50:00Z",
+      "current_version": "2026.07.06.5",
+      "last_material_change_at": "2026-07-06T14:30:00Z",
       "change_class": "navigation_contract",
       "route_after": ["registry/ai-navigation-registry.json", "MACHINE_NAVIGATION_MANIFEST.json", "AI_TABLE_OF_CONTENTS.md"],
       "freshness_hint": "Read the navigation freshness section before relying on remembered DAD paths."
@@ -72,8 +72,8 @@
       "role": "Machine-readable navigation version, branch freshness, and recent material changes.",
       "tags": ["front_door", "registry", "navigation_freshness", "validation"],
       "use_when": "You need to know what changed since the last DAD visit without bloating the TOC.",
-      "current_version": "2026.07.06.4",
-      "last_material_change_at": "2026-07-06T13:50:00Z",
+      "current_version": "2026.07.06.5",
+      "last_material_change_at": "2026-07-06T14:30:00Z",
       "change_class": "navigation_contract",
       "route_after": ["AI_FRONT_DOOR.md"],
       "freshness_hint": "Compare navigation_version and updated_at to any cached or repo-local last-seen value."
@@ -84,8 +84,8 @@
       "role": "Semantic branching map with path, role, tags, and use-when triggers.",
       "tags": ["front_door", "workflow", "navigation_freshness"],
       "use_when": "You know the task class and need the smallest matching branch.",
-      "current_version": "2026.07.06.4",
-      "last_material_change_at": "2026-07-06T13:50:00Z",
+      "current_version": "2026.07.06.5",
+      "last_material_change_at": "2026-07-06T14:30:00Z",
       "change_class": "navigation_contract",
       "route_after": ["AI_FRONT_DOOR.md", "registry/ai-navigation-registry.json"],
       "freshness_hint": "Use the TOC for routing meaning; use this registry for freshness."
@@ -96,8 +96,8 @@
       "role": "Machine-readable start files, registries, generated surfaces, and validation commands.",
       "tags": ["front_door", "registry", "validation", "navigation_freshness"],
       "use_when": "A tool or agent needs deterministic paths rather than prose routing.",
-      "current_version": "2026.07.06.4",
-      "last_material_change_at": "2026-07-06T13:50:00Z",
+      "current_version": "2026.07.06.5",
+      "last_material_change_at": "2026-07-06T14:30:00Z",
       "change_class": "navigation_contract",
       "route_after": ["AI_FRONT_DOOR.md", "registry/ai-navigation-registry.json"],
       "freshness_hint": "Manifest freshness mirrors the navigation registry version for DAD entrypoint changes."
@@ -286,6 +286,18 @@
       "freshness_hint": "Use mail doctor safe_to_collect/safe_to_route/safe_to_deliver instead of treating git worktree dirt as mailbox corruption."
     },
     {
+      "branch_id": "pr_branch_lifecycle_governance",
+      "path": "docs/PR_BRANCH_LIFECYCLE_GOVERNANCE.md",
+      "role": "DAD lesson and repo-facing governance pattern for preventing PR-ready branches and open PRs from becoming stale conflict debt.",
+      "tags": ["branch_lifecycle", "governance", "learning_loop", "cross_repo", "workflow"],
+      "use_when": "A branch is PR-ready, a PR is open, branch queues are accumulating, or handoff needs owner, next action, validation refs, and escalation-clock evidence.",
+      "current_version": "0.1.0",
+      "last_material_change_at": "2026-07-06T14:30:00Z",
+      "change_class": "learning_loop",
+      "route_after": ["registry/dad-needs-registry.json", "docs/DAD_MAIL_STORM_AND_DIRTY_STATE_RUNBOOK.md", "AI_FRONT_DOOR.md"],
+      "freshness_hint": "Use metadata-only PR/branch state and escalation clocks; DAD records do not merge, approve, close, delete, rebase, or supersede source branches by themselves."
+    },
+    {
       "branch_id": "repo_enrollment_mail_governance_safety_harness",
       "path": "assets/coding-harnesses/repo-enrollment-mail-governance-safety/",
       "role": "Reusable harness and eval cases for enrollment/mail write boundaries, dirty-spool gates, source-outbox retry storms, cross-source provenance conflicts, Rust rollout snapshot churn, and worktree-dirt separation.",
@@ -323,6 +335,21 @@
     }
   ],
   "recent_changes": [
+    {
+      "change_id": "nav-change:2026-07-06:pr-branch-lifecycle-governance",
+      "changed_at": "2026-07-06T14:30:00Z",
+      "change_type": "added_pr_branch_lifecycle_governance_route",
+      "paths": [
+        "docs/PR_BRANCH_LIFECYCLE_GOVERNANCE.md",
+        "registry/dad-needs-registry.json",
+        "AI_FRONT_DOOR.md",
+        "AI_TABLE_OF_CONTENTS.md",
+        "MACHINE_NAVIGATION_MANIFEST.json"
+      ],
+      "summary": "Added a DAD-wide lesson and repo-facing governance route so PR-ready branches and open PRs carry owner, next-action, validation, and escalation-clock evidence instead of becoming stale conflict debt.",
+      "agent_action": "When work is PR-ready, a PR is open, or branch queues are accumulating, record lifecycle status and send metadata-only DAD mail if the work could get stuck or needs human attention.",
+      "route_tags": ["branch_lifecycle", "governance", "learning_loop", "cross_repo"]
+    },
     {
       "change_id": "nav-change:2026-07-06:fable-deployment-rust-handoff",
       "changed_at": "2026-07-06T13:50:00Z",

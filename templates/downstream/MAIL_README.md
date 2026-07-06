@@ -137,5 +137,11 @@ lessons so repeated failure patterns can be mined:
 asset-dir lesson review-feedback --repo . --agent <agent> --review-type red_team --finding "<summary>"
 ```
 
+Send PR/branch lifecycle signals when a PR-ready branch or open PR could get
+stuck. Use metadata only: branch, base branch, PR URL or no-PR status, owner or
+next reviewer, status, validation refs, next action, escalation date, and
+superseded or duplicate evidence. Do not send full diffs, source blobs, raw
+logs, private rows, secrets, or hidden reasoning.
+
 Do not commit mailbox JSONL to a public-facing repo unless a human explicitly
 reviews the packet provenance and public-release status.

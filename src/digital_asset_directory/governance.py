@@ -33,6 +33,12 @@ Before reporting completion or pushing material changes:
 2. Run `asset-dir agent postflight --session <SESSION_ID> --repo . --summary \"<summary>\" --hub \"{hub}\"`.
 3. Capture lessons, discoveries, failures, reusable patterns, missing capabilities, risks, and unknowns.
 
+If work is PR-ready, an actual PR is open, or a branch is intentionally left after
+a work session, record branch/PR status, owner or next reviewer, validation refs,
+next action, and escalation date. Send metadata-only DAD mail for stuck,
+superseded, duplicate, conflict-heavy, or stale PR/branch queues when local
+policy allows.
+
 The central directory catalogs evidence and candidates. It does not override this repository's local canon or authority boundaries.
 {END}
 """

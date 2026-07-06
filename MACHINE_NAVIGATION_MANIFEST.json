@@ -12,8 +12,8 @@
     "AI_TABLE_OF_CONTENTS.md"
   ],
   "navigation_standards": {
-    "navigation_version": "2026.07.06.4",
-    "updated_at": "2026-07-06T13:50:00Z",
+    "navigation_version": "2026.07.06.5",
+    "updated_at": "2026-07-06T14:30:00Z",
     "single_ai_entrypoint": "AI_FRONT_DOOR.md",
     "ai_table_of_contents": "AI_TABLE_OF_CONTENTS.md",
     "navigation_registry": "registry/ai-navigation-registry.json",
@@ -81,6 +81,7 @@
     "docs/MAIL_CENTER.md",
     "docs/DAD_EVENT_PIPELINE.md",
     "docs/DAD_MAIL_STORM_AND_DIRTY_STATE_RUNBOOK.md",
+    "docs/PR_BRANCH_LIFECYCLE_GOVERNANCE.md",
     "assets/coding-harnesses/repo-enrollment-mail-governance-safety/",
     "docs/DAD_PROFESSIONAL_RESEARCH_LAYER.md",
     "docs/FABLE_PROFESSIONAL_RESEARCH_LAYER_PROMPT.md",

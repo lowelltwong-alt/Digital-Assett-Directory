@@ -58,7 +58,7 @@ def test_manifest_exposes_navigation_and_graph_entrypoints() -> None:
     assert manifest["navigation_standards"]["navigation_registry"] == (
         "registry/ai-navigation-registry.json"
     )
-    assert manifest["navigation_standards"]["navigation_version"] == "2026.07.06.4"
+    assert manifest["navigation_standards"]["navigation_version"] == "2026.07.06.5"
     assert manifest["navigation_standards"]["routing_standard"] == (
         "docs/AI_ENTRYPOINT_AND_TOC_ROUTING_STANDARD.md"
     )
@@ -74,6 +74,7 @@ def test_manifest_exposes_navigation_and_graph_entrypoints() -> None:
     assert (
         "docs/DAD_MAIL_STORM_AND_DIRTY_STATE_RUNBOOK.md" in manifest["knowledge_graph_entrypoints"]
     )
+    assert "docs/PR_BRANCH_LIFECYCLE_GOVERNANCE.md" in manifest["knowledge_graph_entrypoints"]
     assert "docs/DAD_EVENT_PIPELINE.md" in manifest["knowledge_graph_entrypoints"]
     assert "tools/dad_scan_core/src/event_log.rs" in manifest["knowledge_graph_entrypoints"]
     assert "processed/events/" in manifest["knowledge_graph_entrypoints"]
@@ -117,7 +118,7 @@ def test_navigation_registry_keeps_front_door_singular_and_fresh() -> None:
     registry = json.loads((ROOT / "registry" / "ai-navigation-registry.json").read_text())
 
     assert registry["singular_entrypoint"]["path"] == "AI_FRONT_DOOR.md"
-    assert registry["navigation_version"] == "2026.07.06.4"
+    assert registry["navigation_version"] == "2026.07.06.5"
     assert registry["updated_at"]
     assert "memory" in registry["entrypoint_policy"]["memory_rule"].lower()
     assert registry["freshness_policy"]["recent_changes_limit"] <= 20
@@ -135,6 +136,7 @@ def test_navigation_registry_keeps_front_door_singular_and_fresh() -> None:
     assert "docs/MAIL_CENTER.md" in branches
     assert "docs/DAD_EVENT_PIPELINE.md" in branches
     assert "docs/DAD_MAIL_STORM_AND_DIRTY_STATE_RUNBOOK.md" in branches
+    assert "docs/PR_BRANCH_LIFECYCLE_GOVERNANCE.md" in branches
     assert "docs/rust/RUST_ROLLOUT_LESSON_CAPTURE_PROTOCOL.md" in branches
     assert "assets/coding-harnesses/repo-enrollment-mail-governance-safety/" in branches
     assert (
@@ -177,6 +179,7 @@ def test_navigation_registry_keeps_front_door_singular_and_fresh() -> None:
     assert "schemas/dad-pipeline-event.schema.json" in change_paths
     assert "docs/LESSON_LIFECYCLE_GOVERNANCE.md" in change_paths
     assert "docs/DAD_MAIL_STORM_AND_DIRTY_STATE_RUNBOOK.md" in change_paths
+    assert "docs/PR_BRANCH_LIFECYCLE_GOVERNANCE.md" in change_paths
     assert "docs/rust/RUST_ROLLOUT_LESSON_CAPTURE_PROTOCOL.md" in change_paths
     assert "schemas/rust-rollout-lesson.schema.json" in change_paths
     assert "assets/coding-harnesses/repo-enrollment-mail-governance-safety/" in change_paths
@@ -223,6 +226,41 @@ def test_mail_storm_runbook_distinguishes_spool_and_worktree_dirt() -> None:
     assert "--operation delivery" in harness_readme
     assert "safe_to_collect" in harness_readme
     assert "--dirty-state-fingerprint" in harness_readme
+
+
+def test_pr_branch_lifecycle_governance_route_is_discoverable() -> None:
+    front_door = (ROOT / "AI_FRONT_DOOR.md").read_text(encoding="utf-8")
+    toc = (ROOT / "AI_TABLE_OF_CONTENTS.md").read_text(encoding="utf-8")
+    manifest = json.loads((ROOT / "MACHINE_NAVIGATION_MANIFEST.json").read_text())
+    registry = json.loads((ROOT / "registry" / "ai-navigation-registry.json").read_text())
+    needs = json.loads((ROOT / "registry" / "dad-needs-registry.json").read_text())
+    runbook = (ROOT / "docs" / "PR_BRANCH_LIFECYCLE_GOVERNANCE.md").read_text(
+        encoding="utf-8"
+    )
+
+    route = "docs/PR_BRANCH_LIFECYCLE_GOVERNANCE.md"
+
+    assert route in front_door
+    assert route in toc
+    assert route in manifest["knowledge_graph_entrypoints"]
+    assert "owner, next action" in front_door
+    assert "branch_lifecycle" in toc
+    assert "escalation clock" in runbook
+    assert "gh pr list --state open" in runbook
+    assert "git cherry -v" in runbook
+    assert "metadata-only" in runbook
+    assert "Do not send source blobs" in runbook
+
+    branch = next(
+        row
+        for row in registry["branch_map"]
+        if row["branch_id"] == "pr_branch_lifecycle_governance"
+    )
+    assert branch["path"] == route
+    assert "registry/dad-needs-registry.json" in branch["route_after"]
+
+    need_ids = {need["need_id"] for need in needs["needs"]}
+    assert "dad:need:pr-branch-lifecycle-escalation" in need_ids
 
 
 def test_rust_rollout_lesson_capture_route_is_discoverable() -> None:

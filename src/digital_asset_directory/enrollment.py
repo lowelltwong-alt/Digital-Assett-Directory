@@ -832,6 +832,13 @@ Mail, assets, skills, and templates are candidate evidence until reviewed
 locally. This repo keeps local source authority and decides whether to adopt
 any suggestion. Public-facing repos cannot receive private/internal/
 restricted/unknown-origin mail without a DAD human release record.
+
+If work is PR-ready, an actual PR is open, or a branch is intentionally left
+after a work session, record branch/PR status, owner or next reviewer,
+validation refs, next action, and escalation date. Send metadata-only DAD mail
+for stuck, superseded, duplicate, conflict-heavy, or stale PR/branch queues when
+local policy allows.
+
 Close material work with postflight and include the preflight trace ID plus any
 used, ignored, failed, or harmful DAD recommendations.
 """

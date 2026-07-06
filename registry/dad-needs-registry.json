@@ -233,6 +233,26 @@
       "review_status": "reviewed"
     },
     {
+      "need_id": "dad:need:pr-branch-lifecycle-escalation",
+      "name": "PR And Branch Lifecycle Escalation Signals",
+      "category": "governance",
+      "priority": "critical",
+      "send_when": [
+        "A repo leaves work in a PR-ready branch, draft branch, or open pull request after a work session.",
+        "A PR-ready branch or open PR has no owner, next action, validation refs, or escalation date.",
+        "A branch becomes patch-equivalent, superseded, conflict-heavy, stale, duplicate, or blocked by generated-evidence drift.",
+        "Several agents are building in parallel and branch or PR queue risk could create merge conflicts, duplicate fixes, or unreviewed stale work."
+      ],
+      "do_not_send": [
+        "Do not send full diffs, source blobs, private rows, secrets, raw logs, hidden reasoning, or copied PR transcripts.",
+        "Do not treat a branch or PR as merged, approved, or safe because DAD recorded a lifecycle packet.",
+        "Do not delete, close, merge, or rebase another agent's branch from this packet alone."
+      ],
+      "payload_guidance": "Send repo_id, branch, base_branch, PR URL or no-PR status, intent, owner_or_next_reviewer, lifecycle status, last_reviewed_at, next_action, escalate_after, validation refs, supersedes_or_depends_on, and metadata-only conflict or patch-equivalence evidence.",
+      "target_control_planes": ["learning_postflight_loops", "repo_enrollment", "governance_maps", "mail_center"],
+      "review_status": "reviewed"
+    },
+    {
       "need_id": "dad:need:asset-upgrade-impact",
       "name": "Asset Upgrade Impact",
       "category": "usage_feedback",
