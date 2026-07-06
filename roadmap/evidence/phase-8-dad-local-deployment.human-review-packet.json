@@ -59,7 +59,7 @@
     "Command evidence can become stale; a human reviewer must check current local relevance.",
     "Gate approval must not broaden enrollment, mail delivery, public release, protected-repo writes, or source-repo mutation."
   ],
-  "generated_at": "2026-07-06T04:30:06.185705+00:00",
+  "generated_at": "2026-07-06T04:55:26.470315+00:00",
   "human_gate_satisfied": false,
   "human_gates": [
     {
@@ -80,8 +80,7 @@
           "roadmap/evidence/phase-8-dad-local-deployment.md",
           "roadmap/evidence/phase-8-dad-local-deployment.commands.json",
           "AGENTS.md",
-          "AI_FRONT_DOOR.md",
-          ".digital-asset/dad-integration.json"
+          "AI_FRONT_DOOR.md"
         ],
         "phase_id": "phase-8-dad-local-deployment",
         "reviewed_at": "<ISO-8601 timestamp>",
@@ -115,8 +114,7 @@
           "roadmap/evidence/phase-8-dad-local-deployment.md",
           "roadmap/evidence/phase-8-dad-local-deployment.commands.json",
           "AGENTS.md",
-          "AI_FRONT_DOOR.md",
-          ".digital-asset/dad-integration.json"
+          "AI_FRONT_DOOR.md"
         ],
         "phase_id": "phase-8-dad-local-deployment",
         "reviewed_at": "<ISO-8601 timestamp>",
@@ -150,8 +148,7 @@
           "roadmap/evidence/phase-8-dad-local-deployment.md",
           "roadmap/evidence/phase-8-dad-local-deployment.commands.json",
           "AGENTS.md",
-          "AI_FRONT_DOOR.md",
-          ".digital-asset/dad-integration.json"
+          "AI_FRONT_DOOR.md"
         ],
         "phase_id": "phase-8-dad-local-deployment",
         "reviewed_at": "<ISO-8601 timestamp>",
@@ -185,8 +182,7 @@
           "roadmap/evidence/phase-8-dad-local-deployment.md",
           "roadmap/evidence/phase-8-dad-local-deployment.commands.json",
           "AGENTS.md",
-          "AI_FRONT_DOOR.md",
-          ".digital-asset/dad-integration.json"
+          "AI_FRONT_DOOR.md"
         ],
         "phase_id": "phase-8-dad-local-deployment",
         "reviewed_at": "<ISO-8601 timestamp>",
@@ -235,10 +231,6 @@
     {
       "exists": true,
       "path": "AI_FRONT_DOOR.md"
-    },
-    {
-      "exists": true,
-      "path": ".digital-asset/dad-integration.json"
     }
   ],
   "schema_version": "dad.roadmap.human-gate-review-packet.v1"

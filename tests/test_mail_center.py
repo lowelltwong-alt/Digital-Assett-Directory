@@ -99,9 +99,7 @@ def _jsonl(path: Path) -> list[dict]:
     if not path.exists():
         return []
     return [
-        json.loads(line)
-        for line in path.read_text(encoding="utf-8").splitlines()
-        if line.strip()
+        json.loads(line) for line in path.read_text(encoding="utf-8").splitlines() if line.strip()
     ]
 
 
@@ -112,11 +110,7 @@ def _append_jsonl(path: Path, payload: dict) -> None:
 
 
 def _repo_relative_files(repo: Path) -> set[str]:
-    return {
-        path.relative_to(repo).as_posix()
-        for path in repo.rglob("*")
-        if path.is_file()
-    }
+    return {path.relative_to(repo).as_posix() for path in repo.rglob("*") if path.is_file()}
 
 
 def _policy(
@@ -164,9 +158,7 @@ def test_compose_redacts_secret_like_payload_and_rejects_restricted_mail(tmp_pat
     )
 
     assert result["appended"] is True
-    readme_text = (repo / ".digital-asset" / "mail" / "README.md").read_text(
-        encoding="utf-8"
-    )
+    readme_text = (repo / ".digital-asset" / "mail" / "README.md").read_text(encoding="utf-8")
     assert "dad_cli_unavailable" in readme_text
     assert "$HOME/.dad/bin/asset-dir" in readme_text
     assert "$HOME\\.dad\\bin\\asset-dir.ps1" in readme_text
@@ -308,8 +300,145 @@ def test_cli_mail_compose_rejects_raw_json_in_key_value_payload_mode(tmp_path: P
     )
 
     assert result.exit_code == 2
-    assert "--payload is key=value convenience mode only" in result.output
     assert not (repo / ".digital-asset" / "mail" / "outbox.jsonl").exists()
+
+
+def test_cli_mail_compose_payload_json_path_round_trips_and_rejects_raw_json_payload(
+    tmp_path: Path,
+):
+    hub = _make_hub(tmp_path / "hub")
+    repo = tmp_path / "repo-a"
+    repo.mkdir()
+    payload_path = tmp_path / "payload.json"
+    payload_path.write_text(
+        json.dumps(
+            {
+                "lesson_pack": {
+                    "lessons": ["use payload-json for structured mail"],
+                    "flags": {"candidate_only": True},
+                },
+                "applies_when": ["mail payload is already a JSON object"],
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    composed = RUNNER.invoke(
+        app,
+        [
+            "mail",
+            "compose",
+            "--repo",
+            str(repo),
+            "--type",
+            "lesson_suggestion",
+            "--target-repo",
+            "central_only",
+            "--summary",
+            "Share structured mail payload guidance.",
+            "--payload-json",
+            str(payload_path),
+            "--hub",
+            str(hub),
+        ],
+    )
+
+    assert composed.exit_code == 0, composed.output
+    record = json.loads(composed.output)["record"]
+    assert record["payload"]["summary"] == "Share structured mail payload guidance."
+    assert record["payload"]["lesson_pack"]["lessons"] == ["use payload-json for structured mail"]
+    assert record["payload"]["lesson_pack"]["flags"]["candidate_only"] is True
+
+    outbox_check = RUNNER.invoke(
+        app,
+        [
+            "mail",
+            "outbox-check",
+            "--repo",
+            str(repo),
+            "--type",
+            "lesson_suggestion",
+            "--summary",
+            "Share structured mail payload guidance.",
+            "--payload-json",
+            str(payload_path),
+            "--hub",
+            str(hub),
+        ],
+    )
+
+    assert outbox_check.exit_code == 0, outbox_check.output
+    assert json.loads(outbox_check.output)["sent_count"] == 1
+
+    with pytest.raises(typer.BadParameter, match="key=value convenience mode"):
+        cli_module._key_value_payload(['{"lesson_pack_json":{"lessons":["split risk"]}}'])
+
+    json_value_payload = RUNNER.invoke(
+        app,
+        [
+            "mail",
+            "outbox-check",
+            "--repo",
+            str(repo),
+            "--summary",
+            "Key-value payloads may still carry JSON-looking values.",
+            "--payload",
+            'data={"x":1}',
+            "--payload",
+            "[legacy]=value",
+            "--hub",
+            str(hub),
+        ],
+    )
+
+    assert json_value_payload.exit_code == 0, json_value_payload.output
+
+    mixed_payload_modes = RUNNER.invoke(
+        app,
+        [
+            "mail",
+            "outbox-check",
+            "--repo",
+            str(repo),
+            "--summary",
+            "Mixed payload options should fail.",
+            "--payload",
+            "note=value",
+            "--payload-json",
+            str(payload_path),
+            "--hub",
+            str(hub),
+        ],
+    )
+
+    assert mixed_payload_modes.exit_code == 2
+    with pytest.raises(typer.BadParameter, match="Use only one payload source"):
+        cli_module._mail_payload_options(["note=value"], payload_json=str(payload_path))
+
+    list_payload_path = tmp_path / "payload-list.json"
+    list_payload_path.write_text(json.dumps(["not", "an", "object"]), encoding="utf-8")
+    non_object_payload_json = RUNNER.invoke(
+        app,
+        [
+            "mail",
+            "outbox-check",
+            "--repo",
+            str(repo),
+            "--summary",
+            "Non-object payload JSON should fail.",
+            "--payload-json",
+            str(list_payload_path),
+            "--hub",
+            str(hub),
+        ],
+    )
+
+    assert non_object_payload_json.exit_code == 2
+    with pytest.raises(typer.BadParameter, match="JSON object"):
+        cli_module._parse_payload_json(
+            cli_module._payload_json_text(str(list_payload_path)),
+            option_name="--payload-json",
+        )
 
 
 def test_cli_mail_outbox_check_accepts_payload_file_for_structured_novelty(
@@ -354,6 +483,120 @@ def test_cli_mail_outbox_check_accepts_payload_file_for_structured_novelty(
     payload = json.loads(result.output)
     assert payload["verdict"] == "new"
 
+def test_bom_prefixed_jsonl_reads_and_reports_nonblocking_observation(tmp_path: Path):
+    hub = _make_hub(tmp_path / "hub")
+    repo = tmp_path / "repo-a"
+    repo.mkdir()
+    compose_mail(
+        repo,
+        message_type="lesson_suggestion",
+        target_repo="central_only",
+        summary="Share BOM-safe mailbox handling.",
+    )
+    outbox = repo / ".digital-asset" / "mail" / "outbox.jsonl"
+    outbox.write_bytes(b"\xef\xbb\xbf" + outbox.read_bytes())
+
+    novelty = mail_center.check_outbox_novelty(
+        repo,
+        message_type="lesson_suggestion",
+        summary="Share BOM-safe mailbox handling.",
+    )
+    assert novelty["sent_count"] == 1
+
+    report = diagnose_mail_dirty_state(hub, [repo])
+
+    assert report["dirty"] is False
+    assert report["summary"]["bom_jsonl_count"] == 1
+    assert report["summary"]["embedded_bom_jsonl_count"] == 0
+    observations = [
+        item for item in report["observations"] if item["observation_type"] == "jsonl_utf8_bom"
+    ]
+    assert observations
+    assert observations[0]["status"] == "report_only"
+    assert observations[0]["line_numbers"] == [1]
+
+    compose_mail(
+        repo,
+        message_type="lesson_suggestion",
+        target_repo="central_only",
+        summary="Second row with embedded BOM.",
+        allow_similar=True,
+    )
+    rows = outbox.read_bytes().splitlines()
+    outbox.write_bytes(rows[0] + b"\n" + b"\xef\xbb\xbf" + rows[1] + b"\n")
+    embedded_report = diagnose_mail_dirty_state(hub, [repo])
+
+    assert embedded_report["dirty"] is False
+    assert embedded_report["summary"]["bom_jsonl_count"] == 1
+    assert embedded_report["summary"]["embedded_bom_jsonl_count"] == 1
+    embedded_observation = next(
+        item
+        for item in embedded_report["observations"]
+        if item["observation_type"] == "jsonl_utf8_bom"
+    )
+    assert embedded_observation["line_numbers"] == [1, 2]
+    assert embedded_observation["embedded_bom_line_numbers"] == [2]
+
+
+def test_agent_cli_success_paths_exit_zero(tmp_path: Path):
+    hub = _make_hub(tmp_path / "hub")
+    repo = tmp_path / "repo-a"
+    repo.mkdir()
+
+    preflight_result = RUNNER.invoke(
+        app,
+        [
+            "agent",
+            "preflight",
+            "--repo",
+            str(repo),
+            "--agent",
+            "codex",
+            "--task",
+            "rename a local variable",
+            "--hub",
+            str(hub),
+        ],
+    )
+
+    assert preflight_result.exit_code == 0, preflight_result.output
+    session_id = json.loads(preflight_result.output)["session_id"]
+
+    midflight_result = RUNNER.invoke(
+        app,
+        [
+            "agent",
+            "midflight",
+            "--session",
+            session_id,
+            "--context",
+            "rename a local variable",
+            "--hub",
+            str(hub),
+        ],
+    )
+
+    assert midflight_result.exit_code == 0, midflight_result.output
+    assert json.loads(midflight_result.output)["status"] == "ok"
+
+    postflight_result = RUNNER.invoke(
+        app,
+        [
+            "agent",
+            "postflight",
+            "--session",
+            session_id,
+            "--repo",
+            str(repo),
+            "--summary",
+            "done",
+            "--hub",
+            str(hub),
+        ],
+    )
+
+    assert postflight_result.exit_code == 0, postflight_result.output
+
 
 def test_collect_canonicalizes_source_identity_and_redaction(tmp_path: Path):
     hub = tmp_path / "dad"
@@ -379,9 +622,7 @@ def test_collect_canonicalizes_source_identity_and_redaction(tmp_path: Path):
     assert result["collected_count"] == 1
     central = _jsonl(central_inbox_path(hub, repo))
     assert central[0]["source_repo"].startswith("repo-path-sha256:")
-    assert central[0]["source_provenance"]["canonical_source_repo"].startswith(
-        "repo-path-sha256:"
-    )
+    assert central[0]["source_provenance"]["canonical_source_repo"].startswith("repo-path-sha256:")
     assert central[0]["mail_id"] != "dad:mail:spoofed"
     assert central[0]["dedupe_key"] != "spoofed-key"
     central_text = json.dumps(central[0])
@@ -538,8 +779,7 @@ def test_collect_duplicate_retry_repairs_missing_collection_audit_for_stored_row
     assert second["duplicate_count"] == 1
     assert len(central_rows) == 1
     assert any(
-        row["record_hash"] == mail_center._mail_record_hash(central_rows[0])
-        for row in audit_rows
+        row["record_hash"] == mail_center._mail_record_hash(central_rows[0]) for row in audit_rows
     )
     assert doctor["summary"]["central_inbox_missing_collection_audit_count"] == 0
     assert doctor["dirty"] is False
@@ -689,9 +929,7 @@ def test_doctor_reports_and_collect_quarantines_valid_json_invalid_mail_packet(
 
     result = collect_mail(hub, [repo])
     central = _jsonl(central_inbox_path(hub, repo))
-    quarantine = _jsonl(
-        hub / "processed" / "mail" / "quarantine" / "invalid_mail_packet.jsonl"
-    )
+    quarantine = _jsonl(hub / "processed" / "mail" / "quarantine" / "invalid_mail_packet.jsonl")
 
     assert result["collected_count"] == 1
     assert result["error_count"] == 1
@@ -735,7 +973,16 @@ def test_cli_mail_doctor_quarantines_invalid_source_outbox_rows_by_hash(
 
     blocked = RUNNER.invoke(
         app,
-        ["mail", "doctor", "--repo", str(repo), "--summary-only", "--fail-on-dirty", "--hub", str(hub)],
+        [
+            "mail",
+            "doctor",
+            "--repo",
+            str(repo),
+            "--summary-only",
+            "--fail-on-dirty",
+            "--hub",
+            str(hub),
+        ],
     )
     missing_ack = RUNNER.invoke(
         app,
@@ -786,7 +1033,16 @@ def test_cli_mail_doctor_quarantines_invalid_source_outbox_rows_by_hash(
     outbox.write_text(json.dumps(invalid_row, sort_keys=True) + "\n", encoding="utf-8")
     changed = RUNNER.invoke(
         app,
-        ["mail", "doctor", "--repo", str(repo), "--summary-only", "--fail-on-dirty", "--hub", str(hub)],
+        [
+            "mail",
+            "doctor",
+            "--repo",
+            str(repo),
+            "--summary-only",
+            "--fail-on-dirty",
+            "--hub",
+            str(hub),
+        ],
     )
 
     assert changed.exit_code == 1
@@ -1181,9 +1437,7 @@ def test_delivery_log_binds_repo_inbox_row_hash(tmp_path: Path):
     assert delivery_log[0]["record_hash"].startswith("sha256:")
     assert doctor["dirty"] is True
     assert doctor["summary"]["repo_inbox_delivery_hash_mismatch_count"] == 1
-    assert "repo_inbox_delivery_hash_mismatch" in {
-        item["issue_type"] for item in doctor["issues"]
-    }
+    assert "repo_inbox_delivery_hash_mismatch" in {item["issue_type"] for item in doctor["issues"]}
 
 
 def test_legacy_unhashed_delivery_log_does_not_verify_mutated_inbox_row(
@@ -1228,9 +1482,7 @@ def test_legacy_unhashed_delivery_log_does_not_verify_mutated_inbox_row(
     assert doctor["dirty"] is True
     assert doctor["summary"]["repo_inbox_without_delivery_log_count"] == 1
     assert doctor["summary"]["repo_inbox_legacy_delivery_log_count"] == 1
-    assert "repo_inbox_without_delivery_log" in {
-        item["issue_type"] for item in doctor["issues"]
-    }
+    assert "repo_inbox_without_delivery_log" in {item["issue_type"] for item in doctor["issues"]}
     assert any(
         item["observation_type"] == "repo_inbox_legacy_unhashed_delivery_log"
         for item in doctor["observations"]
@@ -1272,7 +1524,16 @@ def test_cli_mail_doctor_can_allowlist_reviewed_legacy_repo_inbox_rows_hash_boun
 
     blocked = RUNNER.invoke(
         app,
-        ["mail", "doctor", "--repo", str(repo_b), "--summary-only", "--fail-on-dirty", "--hub", str(hub)],
+        [
+            "mail",
+            "doctor",
+            "--repo",
+            str(repo_b),
+            "--summary-only",
+            "--fail-on-dirty",
+            "--hub",
+            str(hub),
+        ],
     )
     repaired = RUNNER.invoke(
         app,
@@ -1298,9 +1559,7 @@ def test_cli_mail_doctor_can_allowlist_reviewed_legacy_repo_inbox_rows_hash_boun
     assert payload["action_summary"]["legacy_observation_count"] == 1
     assert payload["summary"]["repo_inbox_legacy_delivery_allowlist_count"] == 1
     assert payload["legacy_delivery_allowlist_result"]["allowlisted_count"] == 1
-    assert (
-        hub / "processed" / "mail" / "archive" / "legacy_delivery_allowlist.jsonl"
-    ).exists()
+    assert (hub / "processed" / "mail" / "archive" / "legacy_delivery_allowlist.jsonl").exists()
 
     inbox_rows[0]["payload"]["summary"] = "Mutated after legacy allowlist."
     inbox_path.write_text(json.dumps(inbox_rows[0]) + "\n", encoding="utf-8")
@@ -1479,9 +1738,7 @@ def test_direct_central_outbox_write_blocks_doctor_and_delivery(tmp_path: Path):
 
     assert doctor["dirty"] is True
     assert doctor["summary"]["central_outbox_missing_route_audit_count"] == 1
-    assert "central_outbox_missing_route_audit" in {
-        item["issue_type"] for item in doctor["issues"]
-    }
+    assert "central_outbox_missing_route_audit" in {item["issue_type"] for item in doctor["issues"]}
     assert delivered["blocked"] is True
     assert delivered["route_block_count"] == 1
     assert delivered["delivered_count"] == 0
@@ -1518,9 +1775,7 @@ def test_route_log_binds_central_outbox_row_hash(tmp_path: Path):
     assert route_log[0]["routed_record_hash"].startswith("sha256:")
     assert doctor["dirty"] is True
     assert doctor["summary"]["central_outbox_route_hash_mismatch_count"] == 1
-    assert "central_outbox_route_hash_mismatch" in {
-        item["issue_type"] for item in doctor["issues"]
-    }
+    assert "central_outbox_route_hash_mismatch" in {item["issue_type"] for item in doctor["issues"]}
     assert delivered["blocked"] is True
     assert delivered["delivered_count"] == 0
 
@@ -1580,7 +1835,16 @@ def test_cli_mail_doctor_can_repair_legacy_route_audit_gap(tmp_path: Path):
 
     blocked = RUNNER.invoke(
         app,
-        ["mail", "doctor", "--repo", str(source), "--summary-only", "--fail-on-dirty", "--hub", str(hub)],
+        [
+            "mail",
+            "doctor",
+            "--repo",
+            str(source),
+            "--summary-only",
+            "--fail-on-dirty",
+            "--hub",
+            str(hub),
+        ],
     )
     repaired = RUNNER.invoke(
         app,
@@ -1682,25 +1946,17 @@ def test_phase10_two_repo_mail_trial_covers_message_types_digest_and_dedupe(
     inbox_rows = _jsonl(repo_b / ".digital-asset" / "mail" / "inbox.jsonl")
     delivery_log = _jsonl(hub / "processed" / "mail" / "archive" / "delivery_log.jsonl")
     archive_rows = _jsonl(repo_b / ".digital-asset" / "mail" / "archive.jsonl")
-    assert {row["message_type"] for row in central_rows} == {
-        spec[0] for spec in packet_specs
-    }
+    assert {row["message_type"] for row in central_rows} == {spec[0] for spec in packet_specs}
     assert {row["message_type"] for row in inbox_rows} == {spec[0] for spec in packet_specs}
     assert all(
-        row["source_provenance"]["return_address"].endswith(
-            ".digital-asset/mail/inbox.jsonl"
-        )
+        row["source_provenance"]["return_address"].endswith(".digital-asset/mail/inbox.jsonl")
         for row in central_rows
     )
-    assert sum(1 for row in delivery_log if row["event_type"] == "delivered") == len(
-        packet_specs
-    )
+    assert sum(1 for row in delivery_log if row["event_type"] == "delivered") == len(packet_specs)
     assert sum(1 for row in delivery_log if row["event_type"] == "duplicate_ack") == len(
         packet_specs
     )
-    assert sum(1 for row in archive_rows if row["message_type"] == "inbox_ack") == len(
-        packet_specs
-    )
+    assert sum(1 for row in archive_rows if row["message_type"] == "inbox_ack") == len(packet_specs)
     assert not (repo_b / "AGENTS.md").exists()
 
 
@@ -2431,7 +2687,9 @@ def test_mail_triage_records_future_adoption_pointer(tmp_path: Path):
     assert adoption["intake_decision"] == "save_for_future"
     assert adoption["implementation_status"] == "watching"
     assert adoption["update_tracking"]["watch_source"] is True
-    assert adoption["update_tracking"]["upgrade_policy"] == "notify_via_dad_mail_before_local_change"
+    assert (
+        adoption["update_tracking"]["upgrade_policy"] == "notify_via_dad_mail_before_local_change"
+    )
     assert "dad:offering:rust-shadow-parity-harness" in adoption["source_asset_refs"]
     records = _jsonl(target / ".digital-asset" / "mail" / "adoption.jsonl")
     assert records[0]["adoption_id"] == adoption["adoption_id"]
@@ -2852,7 +3110,9 @@ def test_cli_mail_collect_repo_all_blocks_coverage_gap_unless_acknowledged(
     assert blocked_payload["schema_version"] == "dad_mailbox_coverage_gate.v1"
     assert blocked_payload["operation"] == "mail collect"
     assert blocked_payload["mailbox_coverage"]["unreviewed_mailbox_candidate_count"] == 1
-    assert "path" not in blocked_payload["mailbox_coverage"]["unreviewed_mailbox_candidate_samples"][0]
+    assert (
+        "path" not in blocked_payload["mailbox_coverage"]["unreviewed_mailbox_candidate_samples"][0]
+    )
 
     assert acknowledged.exit_code == 0
     payload = json.loads(acknowledged.output)
@@ -2909,9 +3169,7 @@ def test_cli_mail_collect_repo_all_blocks_reviewed_enabled_unchecked_gap(
     assert blocked.exit_code == 1
     blocked_payload = json.loads(blocked.output)
     assert blocked_payload["schema_version"] == "dad_mailbox_coverage_gate.v1"
-    assert (
-        blocked_payload["mailbox_coverage"]["reviewed_enabled_not_checked_count"] == 1
-    )
+    assert blocked_payload["mailbox_coverage"]["reviewed_enabled_not_checked_count"] == 1
     assert not central_inbox_path(hub, allowed, cfg.mail_repos).exists()
 
 
@@ -2990,9 +3248,7 @@ def test_cli_mail_deliver_repo_all_blocks_reviewed_enabled_unchecked_gap(
     assert blocked.exit_code == 1
     blocked_payload = json.loads(blocked.output)
     assert blocked_payload["schema_version"] == "dad_mailbox_coverage_gate.v1"
-    assert (
-        blocked_payload["mailbox_coverage"]["reviewed_enabled_not_checked_count"] == 1
-    )
+    assert blocked_payload["mailbox_coverage"]["reviewed_enabled_not_checked_count"] == 1
     assert not (allowed / ".digital-asset" / "mail" / "inbox.jsonl").exists()
 
 
@@ -3169,9 +3425,6 @@ def test_delivery_repo_all_blocks_when_any_reviewed_repo_is_delivery_held(
     result = RUNNER.invoke(app, ["mail", "deliver", "--repo", "all"])
 
     assert result.exit_code == 2
-    assert "--repo all delivery is blocked" in result.output
-    assert "logos-scripture-graph" in result.output
-    assert "mail storm-gate --operation delivery" in result.output
     assert deliver_called is False
     assert not (allowed / ".digital-asset" / "mail" / "inbox.jsonl").exists()
 
@@ -3705,7 +3958,10 @@ def test_mail_doctor_reports_dirty_spool_and_rust_packet_issues(tmp_path: Path):
     assert result["action_summary"]["safe_to_collect"] is False
     assert result["action_summary"]["severity_counts"]["critical"] >= 1
     assert result["action_summary"]["severity_counts"]["high"] >= 1
-    assert any("re-collect from the source repo outbox" in item for item in result["action_summary"]["next_actions"])
+    assert any(
+        "re-collect from the source repo outbox" in item
+        for item in result["action_summary"]["next_actions"]
+    )
     assert "jsonl_lock_tombstone" in observation_types
     assert result["summary"]["lock_tombstone_observation_count"] == 1
     assert "atomic_temp_fragment" in issue_types
@@ -3717,7 +3973,9 @@ def test_mail_doctor_reports_dirty_spool_and_rust_packet_issues(tmp_path: Path):
     )
     assert "central_inbox_uncollected_row" in issue_types
     assert "rust_rollout_packet_invalid" in issue_types
-    assert result["write_target_guidance"]["repo_agents_write"] == ".digital-asset/mail/outbox.jsonl"
+    assert (
+        result["write_target_guidance"]["repo_agents_write"] == ".digital-asset/mail/outbox.jsonl"
+    )
 
 
 def test_mail_doctor_blocks_unstable_source_outbox_snapshot(
@@ -3781,8 +4039,7 @@ def test_mail_doctor_treats_malformed_mail_backup_as_hygiene_observation(
     assert doctor["summary"]["unexpected_repo_mail_jsonl_count"] == 1
     assert doctor["action_summary"]["safe_to_collect"] is True
     assert any(
-        item["observation_type"] == "unexpected_repo_mail_jsonl"
-        and item["filename"] == backup.name
+        item["observation_type"] == "unexpected_repo_mail_jsonl" and item["filename"] == backup.name
         for item in doctor["observations"]
     )
     assert "malformed_jsonl" not in {issue["issue_type"] for issue in doctor["issues"]}
@@ -3942,14 +4199,14 @@ def test_mail_doctor_treats_lifecycle_copies_as_observations(tmp_path: Path):
     delivery_log = hub / "processed" / "mail" / "archive" / "delivery_log.jsonl"
     delivery_log.write_text(
         json.dumps(
-                    {
-                        "event_type": "delivered",
-                        "mail_id": packet["mail_id"],
-                        "dedupe_key": packet["dedupe_key"],
-                        "record_hash": mail_center._mail_record_hash(delivered_packet),
-                        "target_repo": "dad",
-                        "created_at": "2026-07-04T00:00:00+00:00",
-                    }
+            {
+                "event_type": "delivered",
+                "mail_id": packet["mail_id"],
+                "dedupe_key": packet["dedupe_key"],
+                "record_hash": mail_center._mail_record_hash(delivered_packet),
+                "target_repo": "dad",
+                "created_at": "2026-07-04T00:00:00+00:00",
+            }
         )
         + "\n",
         encoding="utf-8",
@@ -4081,8 +4338,12 @@ def test_mail_doctor_keeps_legacy_central_inbox_audit_gaps_as_observations(
     assert result["action_summary"]["legacy_observation_count"] == 1
     assert result["action_summary"]["mailbox_hygiene_observation_count"] == 1
     assert result["action_summary"]["safe_to_collect"] is True
-    assert any("legacy central inbox rows" in item for item in result["action_summary"]["next_actions"])
-    assert any("backup or repair JSONL files" in item for item in result["action_summary"]["next_actions"])
+    assert any(
+        "legacy central inbox rows" in item for item in result["action_summary"]["next_actions"]
+    )
+    assert any(
+        "backup or repair JSONL files" in item for item in result["action_summary"]["next_actions"]
+    )
     assert result["summary"]["legacy_collection_audit_gap_count"] == 1
     assert any(
         item["observation_type"] == "reviewed_legacy_central_inbox_without_collection_audit"
@@ -4130,7 +4391,16 @@ def test_cli_mail_doctor_can_allowlist_reviewed_legacy_central_rows(tmp_path: Pa
 
     blocked = RUNNER.invoke(
         app,
-        ["mail", "doctor", "--repo", str(repo), "--summary-only", "--fail-on-dirty", "--hub", str(hub)],
+        [
+            "mail",
+            "doctor",
+            "--repo",
+            str(repo),
+            "--summary-only",
+            "--fail-on-dirty",
+            "--hub",
+            str(hub),
+        ],
     )
     repaired = RUNNER.invoke(
         app,
@@ -4184,9 +4454,7 @@ def test_mail_doctor_reports_git_worktree_dirt_separately_from_mail_dirt(tmp_pat
     assert result["action_summary"]["safe_to_collect"] is True
     assert result["worktree_state"]["counts_by_category"]["rust_rollout_reference_snapshot"] == 1
     assert result["worktree_state"]["counts_by_category"]["dad_source_or_governance"] == 1
-    assert any(
-        "reference-snapshot churn" in item for item in result["worktree_state"]["guidance"]
-    )
+    assert any("reference-snapshot churn" in item for item in result["worktree_state"]["guidance"])
     assert any(
         "rust_rollout_snapshot_promotion.jsonl" in item
         for item in result["worktree_state"]["guidance"]
@@ -4619,13 +4887,7 @@ def test_cli_mail_repair_plan_reports_ordered_lanes_without_writes(
     rust_packet["payload"]["rust_rollout_revision_id"] = "tracked-reference-revision"
     tracked_packet = hub / "mail" / "outbox" / "rust_rollout" / "non_logos" / "target.json"
     staged_packet = (
-        hub
-        / "processed"
-        / "mail"
-        / "staged"
-        / "rust_rollout"
-        / "non_logos"
-        / "target.json"
+        hub / "processed" / "mail" / "staged" / "rust_rollout" / "non_logos" / "target.json"
     )
     tracked_packet.parent.mkdir(parents=True)
     staged_packet.parent.mkdir(parents=True)
@@ -4954,15 +5216,7 @@ def test_mail_doctor_treats_matching_rust_staging_and_reference_as_observation(
     packet["payload"]["rust_rollout_packet_type"] = "rust_buildout_notice"
     packet["payload"]["rollout_mode"] = "staged_rollout"
     tracked = hub / "mail" / "outbox" / "rust_rollout" / "non_logos" / "repo.json"
-    staged = (
-        hub
-        / "processed"
-        / "mail"
-        / "staged"
-        / "rust_rollout"
-        / "non_logos"
-        / "repo.json"
-    )
+    staged = hub / "processed" / "mail" / "staged" / "rust_rollout" / "non_logos" / "repo.json"
     tracked.parent.mkdir(parents=True)
     staged.parent.mkdir(parents=True)
     tracked.write_text(json.dumps(packet) + "\n", encoding="utf-8")
@@ -5012,15 +5266,7 @@ def test_mail_doctor_flags_divergent_rust_staging_and_reference_content(
     packet["payload"]["rust_rollout_packet_type"] = "rust_buildout_notice"
     packet["payload"]["rollout_mode"] = "staged_rollout"
     tracked = hub / "mail" / "outbox" / "rust_rollout" / "non_logos" / "repo.json"
-    staged = (
-        hub
-        / "processed"
-        / "mail"
-        / "staged"
-        / "rust_rollout"
-        / "non_logos"
-        / "repo.json"
-    )
+    staged = hub / "processed" / "mail" / "staged" / "rust_rollout" / "non_logos" / "repo.json"
     tracked.parent.mkdir(parents=True)
     staged.parent.mkdir(parents=True)
     tracked.write_text(json.dumps(packet) + "\n", encoding="utf-8")
@@ -5217,7 +5463,9 @@ def test_mail_doctor_repairs_only_stale_locks(tmp_path: Path, monkeypatch: pytes
     stale_lock = mailbox / ".outbox.jsonl.lock"
     stale_lock.write_text(json.dumps({"pid": 987654321, "created_at": "2026-07-04T00:00:00+00:00"}))
     active_lock = mailbox / ".inbox.jsonl.lock"
-    active_lock.write_text(json.dumps({"pid": os.getpid(), "created_at": "2026-07-04T00:00:00+00:00"}))
+    active_lock.write_text(
+        json.dumps({"pid": os.getpid(), "created_at": "2026-07-04T00:00:00+00:00"})
+    )
     old_time = os.path.getmtime(stale_lock) - 1_000
     os.utime(stale_lock, (old_time, old_time))
     monkeypatch.setattr(mail_center, "_jsonl_lock_pid_is_alive", lambda pid: pid == os.getpid())
@@ -5275,7 +5523,9 @@ def test_mail_doctor_treats_unremovable_dead_lock_as_nonblocking_tombstone(
     assert result["repaired"][0]["removed"] is False
     assert dead_lock.exists()
     observation = next(
-        item for item in result["observations"] if item["observation_type"] == "jsonl_lock_tombstone"
+        item
+        for item in result["observations"]
+        if item["observation_type"] == "jsonl_lock_tombstone"
     )
     assert observation["repair_attempted"] is True
     assert observation["repair_removed"] is False

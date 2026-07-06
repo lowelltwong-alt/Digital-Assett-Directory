@@ -233,7 +233,6 @@ phases:
         - roadmap/evidence/phase-8-dad-local-deployment.commands.json
         - AGENTS.md
         - AI_FRONT_DOOR.md
-        - .digital-asset/dad-integration.json
       commands:
         - python -m pytest tests/test_dad_local_deployment.py -q
         - python -m digital_asset_directory.cli doctor --hub . --scope deployment

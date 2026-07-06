@@ -20,7 +20,7 @@ from .exception_capture import (
     load_capture_pattern_registry,
     observed_capture_audit_gap_count,
 )
-from .utils import sha256_bytes, sha256_file
+from .utils import sha256_bytes, sha256_file, sha256_text_file_lf
 
 MAIL_MESSAGE_TYPES = {
     "lesson_suggestion",
@@ -60,6 +60,7 @@ LOCAL_PATH_FRAGMENTS = (
     "onedrive/",
 )
 GENERATED_LESSON_INDEX_DIRS = {"by-repo", "by-capability"}
+TEXT_LF_NORMALIZED_HASH_POLICY = "text-lf-normalized-v1"
 
 
 def _load_schema(repo_root: Path, registry: dict[str, Any], name: str) -> dict[str, Any]:
@@ -78,11 +79,17 @@ def _validate_payload(
     validator_cls(schema).validate(payload)
 
 
-def _hash_path(path: Path) -> str:
+def _file_hash_for_policy(path: Path, hash_policy: str | None = None) -> str:
+    if hash_policy == TEXT_LF_NORMALIZED_HASH_POLICY:
+        return sha256_text_file_lf(path)
+    return sha256_file(path)
+
+
+def _hash_path(path: Path, hash_policy: str | None = None) -> str:
     if not path.exists():
         return "missing"
     if path.is_file():
-        return f"sha256:{sha256_file(path)}"
+        return f"sha256:{_file_hash_for_policy(path, hash_policy)}"
     parts: list[str] = []
     for child in sorted(item for item in path.rglob("*") if item.is_file()):
         try:
@@ -91,7 +98,7 @@ def _hash_path(path: Path) -> str:
             rel = child.name
         if path.name == "lessons" and rel.split("/", 1)[0] in GENERATED_LESSON_INDEX_DIRS:
             continue
-        parts.append(f"{rel}\0{sha256_file(child)}")
+        parts.append(f"{rel}\0{_file_hash_for_policy(child, hash_policy)}")
     digest_input = "\n".join(parts).encode("utf-8")
     return f"sha256:{sha256_bytes(digest_input)}"
 
@@ -178,8 +185,11 @@ def _stale_report_input_hash_errors(
         report_label = report_path.relative_to(repo_root).as_posix()
     except ValueError:
         report_label = report_path.as_posix()
+    hash_policy = payload.get("hash_policy")
+    if not isinstance(hash_policy, str):
+        hash_policy = None
     for input_ref, input_hash in payload.get("input_hashes", {}).items():
-        actual = _hash_path(repo_root / str(input_ref))
+        actual = _hash_path(repo_root / str(input_ref), hash_policy=hash_policy)
         if actual != input_hash:
             errors.append(
                 f"Stale report input hash {report_label} "
@@ -2330,7 +2340,10 @@ def validate_repo(repo_root: Path) -> dict[str, Any]:
             elif ref and expected:
                 methodology_path = repo_root / str(ref)
                 if methodology_path.exists():
-                    actual = f"sha256:{sha256_file(methodology_path)}"
+                    hash_policy = payload.get("hash_policy")
+                    if not isinstance(hash_policy, str):
+                        hash_policy = None
+                    actual = f"sha256:{_file_hash_for_policy(methodology_path, hash_policy)}"
                     if actual != expected:
                         errors.append(
                             f"Stale methodology report {report_path.relative_to(repo_root)}: "

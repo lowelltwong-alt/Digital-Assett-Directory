@@ -52,6 +52,16 @@ def sha256_file(path: Path, chunk_size: int = 1024 * 1024) -> str:
     return digest.hexdigest()
 
 
+def sha256_text_file_lf(path: Path) -> str:
+    data = path.read_bytes()
+    try:
+        text = data.decode("utf-8")
+    except UnicodeDecodeError:
+        return sha256_bytes(data)
+    normalized = text.replace("\r\n", "\n").replace("\r", "\n")
+    return sha256_bytes(normalized.encode("utf-8"))
+
+
 def json_dumps(value: Any, *, pretty: bool = False) -> str:
     return json.dumps(
         value,
@@ -195,8 +205,7 @@ def idf_weights(token_sets: Iterable[Iterable[str]]) -> dict[str, float]:
     document_count = len(sets)
     df: Counter[str] = Counter(token for values in sets for token in values)
     return {
-        token: math.log((document_count + 1) / (count + 1)) + 1.0
-        for token, count in df.items()
+        token: math.log((document_count + 1) / (count + 1)) + 1.0 for token, count in df.items()
     }
 
 

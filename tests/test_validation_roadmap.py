@@ -735,6 +735,37 @@ def test_repo_inventory_report_input_hashes_are_validated(tmp_path: Path):
     ]
 
 
+def test_repo_inventory_report_hash_policy_normalizes_text_line_endings(tmp_path: Path):
+    repo = tmp_path / "repo"
+    input_path = repo / "src" / "digital_asset_directory" / "dad_library.py"
+    report_path = repo / "processed" / "repo_inventory" / "reconciled_inventory.json"
+    input_path.parent.mkdir(parents=True)
+    report_path.parent.mkdir(parents=True)
+    input_path.write_bytes(b"print('portable')\r\n")
+    portable_hash = _validation_hash_path(input_path, hash_policy="text-lf-normalized-v1")
+    assert portable_hash != _validation_hash_path(input_path)
+    report_path.write_text(
+        json.dumps(
+            {
+                "schema_version": "0.1.0",
+                "hash_policy": "text-lf-normalized-v1",
+                "input_hashes": {
+                    "src/digital_asset_directory/dad_library.py": portable_hash
+                },
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    errors = _stale_report_input_hash_errors(
+        repo,
+        report_path,
+        json.loads(report_path.read_text(encoding="utf-8")),
+    )
+
+    assert errors == []
+
+
 def _load_current_hash(path: Path) -> str:
     from digital_asset_directory.validation import _hash_path
 

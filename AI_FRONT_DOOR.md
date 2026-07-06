@@ -1,5 +1,31 @@
 # AI Front Door - Digital Asset Directory
 
+## Concurrent Work Default
+
+DAD often has multiple agents, branches, mail runs, Rust rollout tasks, and
+human edits active at the same time. Assume concurrent work is happening unless
+current evidence proves otherwise.
+
+Before material edits, do not work directly in the live checkout unless a human
+explicitly asks for that. Create or switch to an isolated branch/worktree from
+the current remote tip, then rerun the required preflight and read order inside
+that isolated checkout:
+
+```text
+git fetch origin
+git worktree add -b <codex/task-branch> <isolated-worktree-path> origin/main
+asset-dir agent preflight --repo <isolated-worktree-path> --agent <agent> --task "<task>" --hub <isolated-worktree-path>
+```
+
+If an existing isolated worktree is reused, first verify its branch, base, and
+dirty state. Never overwrite, reset, merge, rebase, or clean another agent's
+working tree without an explicit human instruction.
+
+For DAD-hub changes, pass `--hub <isolated-worktree-path>` on DAD CLI commands
+run inside the branch/worktree. Do not let the user-level DAD locator or shim
+silently redirect preflight, postflight, generated reports, or mail diagnostics
+back to another checkout.
+
 ## Repository identity
 
 - **Repository:** `Digital-Assett-Directory`
