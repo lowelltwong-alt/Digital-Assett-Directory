@@ -327,6 +327,8 @@ daemon_app = typer.Typer(no_args_is_help=True)
 app.add_typer(daemon_app, name="daemon")
 journal_app = typer.Typer(no_args_is_help=True)
 app.add_typer(journal_app, name="journal")
+mcp_app = typer.Typer(no_args_is_help=True)
+app.add_typer(mcp_app, name="mcp")
 console = Console()
 
 
@@ -624,6 +626,15 @@ def journal_ingest_remote_outbox(
 ) -> None:
     cfg = _cfg(hub=hub)
     console.print_json(data=ingest_remote_outbox(cfg.repo_root, journal_repo))
+
+
+@mcp_app.command("graph-stdio")
+def mcp_graph_stdio(hub: Optional[Path] = typer.Option(None)) -> None:
+    """Run the local read-only graph-surface MCP server over stdio."""
+    cfg = _cfg(hub=hub)
+    from .mcp_graph_server import run_stdio_server
+
+    run_stdio_server(cfg.repo_root)
 
 
 def _rust_rollout_snapshot_promotion_log(repo_root: Path) -> Path:
