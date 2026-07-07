@@ -1053,6 +1053,16 @@ def preflight(
             "error": str(exc),
         }
     try:
+        from .daemon import daemon_status
+
+        heartbeat_status = daemon_status(hub_root)
+    except Exception as exc:
+        heartbeat_status = {
+            "status": "unavailable",
+            "stale": True,
+            "error": str(exc),
+        }
+    try:
         from .mail_center import resurface_deferred_mail
 
         deferred_mail = resurface_deferred_mail(
@@ -1082,6 +1092,7 @@ def preflight(
         ),
         "learning_rule_acknowledgements": [],
         "mail_digest_status": digest_status,
+        "daemon_status": heartbeat_status,
         "recommended_review_lanes": recommended_review_lanes(
             task,
             baseline_changed_files,
@@ -1095,6 +1106,17 @@ def preflight(
         mail_digest_status=digest_status,
         deferred_mail=deferred_mail,
     )
+    payload["context_pack"]["daemon_status"] = {
+        "status": heartbeat_status.get("status", ""),
+        "stale": bool(heartbeat_status.get("stale")),
+        "heartbeat_path": heartbeat_status.get("heartbeat_path", ""),
+        "cycle_completed_at": heartbeat_status.get("cycle_completed_at", ""),
+        "stale_after_hours": heartbeat_status.get("stale_after_hours", ""),
+    }
+    if heartbeat_status.get("stale"):
+        payload["context_pack"].setdefault("warnings", []).append(
+            "daemon heartbeat is stale or unavailable"
+        )
     hard_lookup = _maybe_hard_issue_lookup(
         hub_root,
         target_repo,

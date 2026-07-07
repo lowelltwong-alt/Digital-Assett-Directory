@@ -3,6 +3,7 @@ import shutil
 from pathlib import Path
 
 from digital_asset_directory.database import CatalogDB
+from digital_asset_directory.daemon import run_daemon_cycle
 from digital_asset_directory.learning import (
     load_learning_rules,
     match_learning_rules,
@@ -247,6 +248,38 @@ def test_preflight_keeps_trivial_tasks_quiet(tmp_path: Path):
 
     assert "hard_issue_lookup" not in session
     assert "hard_issue_lookup" not in session["context_pack"]
+
+
+def test_preflight_warns_on_stale_daemon_heartbeat(tmp_path: Path):
+    hub = tmp_path / "hub"
+    hub.mkdir()
+    repo = tmp_path / "repo"
+    repo.mkdir()
+
+    missing = preflight(
+        hub,
+        repo,
+        hub / "state" / "catalog.sqlite3",
+        "codex",
+        "transport daemon check",
+    )
+
+    assert missing["daemon_status"]["status"] == "missing"
+    assert missing["daemon_status"]["stale"] is True
+    assert "daemon heartbeat is stale or unavailable" in missing["context_pack"]["warnings"]
+
+    run_daemon_cycle(hub, mail_repos=[], exception_repos=[], transport_repos=[])
+    fresh = preflight(
+        hub,
+        repo,
+        hub / "state" / "catalog.sqlite3",
+        "codex",
+        "transport daemon check",
+    )
+
+    assert fresh["daemon_status"]["status"] == "fresh"
+    assert fresh["daemon_status"]["stale"] is False
+    assert "daemon heartbeat is stale or unavailable" not in fresh["context_pack"]["warnings"]
 
 
 def test_midflight_blocks_until_learning_rule_acknowledged(tmp_path: Path):

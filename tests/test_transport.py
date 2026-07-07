@@ -6,7 +6,14 @@ from pathlib import Path
 import pytest
 from typer.testing import CliRunner
 
+import digital_asset_directory.daemon as daemon_mod
 from digital_asset_directory.cli import app
+from digital_asset_directory.daemon import (
+    daemon_status,
+    run_daemon_cycle,
+    task_scheduler_plan,
+    task_scheduler_status,
+)
 from digital_asset_directory.transport import (
     DATA_ROOT_MARKER,
     TRANSPORT_SURFACE_VERSION,
@@ -168,3 +175,175 @@ def test_plan_data_migration_emits_review_commands_without_deleting(tmp_path: Pa
     assert plan["total_files"] == 1
     assert all(command.startswith("git rm -r --cached") for command in plan["untrack_commands_after_verified_copy"])
     assert "This plan never deletes source files" in plan["rule"]
+
+
+def test_daemon_cycle_writes_heartbeat_and_daily_queue(tmp_path: Path):
+    hub = tmp_path / "hub"
+    hub.mkdir()
+
+    first = run_daemon_cycle(hub, mail_repos=[], exception_repos=[], transport_repos=[])
+    second = run_daemon_cycle(hub, mail_repos=[], exception_repos=[], transport_repos=[])
+
+    assert Path(first["heartbeat_path"]).exists()
+    assert Path(second["heartbeat_path"]).exists()
+    assert first["cycle_order"] == [
+        "mail_collect",
+        "mail_route",
+        "mail_deliver",
+        "mail_follow_through_audit",
+        "events_collect",
+        "exceptions_collect",
+        "lesson_graph_rebuild",
+        "graph_inference",
+        "transport_audit",
+        "daily_review_queue",
+        "heartbeat",
+    ]
+    assert Path(first["daily_review_queue"]["markdown_path"]).exists()
+    status = daemon_status(hub)
+    assert status["status"] == "fresh"
+    assert status["transport_audit_ran"] is True
+    assert "journal_checkpoint_due" not in status
+
+
+def test_daemon_cycle_with_initialized_data_root_writes_only_data_root(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+):
+    hub = tmp_path / "hub"
+    hub.mkdir()
+    data_root = tmp_path / "data-root"
+    apply_data_migration(hub, data_root)
+    monkeypatch.setenv("DAD_DATA_ROOT", str(data_root))
+
+    result = run_daemon_cycle(
+        hub,
+        mail_repos=[],
+        exception_repos=[],
+        transport_repos=[],
+    )
+
+    assert Path(result["heartbeat_path"]).is_relative_to(data_root)
+    assert (data_root / "processed" / "reports" / "daemon-heartbeat.json").exists()
+    assert not (hub / "processed" / "reports" / "daemon-heartbeat.json").exists()
+
+
+def test_transport_readiness_cli_reports_local_ready_with_human_gates_pending(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+):
+    hub = _hub_for_cli(tmp_path / "hub")
+    data_root = tmp_path / "data-root"
+    apply_data_migration(hub, data_root)
+    monkeypatch.setenv("DAD_DATA_ROOT", str(data_root))
+    run_daemon_cycle(
+        hub,
+        mail_repos=[],
+        exception_repos=[],
+        transport_repos=[],
+    )
+
+    result = RUNNER.invoke(app, ["transport", "readiness", "--hub", str(hub)])
+
+    assert result.exit_code == 0, result.output
+    payload = json.loads(result.stdout)
+    assert payload["schema_version"] == "dad.transport.readiness.v1"
+    assert payload["local_ready"] is True
+    assert payload["overall_status"] == "local_ready_human_gates_pending"
+    assert payload["daemon"]["status"] == "fresh"
+    assert payload["journal"]["status"] == "deferred_to_journal_stack_pr"
+    assert "daemon_schedule" in payload["human_gate_summary"]["pending"]
+
+
+def test_transport_readiness_can_include_scheduler_machine_evidence(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+):
+    hub = _hub_for_cli(tmp_path / "hub")
+    run_daemon_cycle(
+        hub,
+        mail_repos=[],
+        exception_repos=[],
+        transport_repos=[],
+    )
+
+    class Result:
+        returncode = 0
+        stdout = (
+            "TaskName: DAD Daemon Run Cycle\n"
+            "Status: Ready\n"
+            f"Task To Run: powershell -File asset-dir.ps1 daemon run-cycle --hub '{hub.resolve()}'\n"
+            "Next Run Time: 7/7/2026 9:00:00 AM\n"
+        )
+        stderr = ""
+
+    def fake_run(*_args, **_kwargs):
+        return Result()
+
+    monkeypatch.setattr(daemon_mod.subprocess, "run", fake_run)
+
+    result = RUNNER.invoke(
+        app,
+        [
+            "transport",
+            "readiness",
+            "--hub",
+            str(hub),
+            "--inspect-scheduler",
+            "--shim",
+            "asset-dir.ps1",
+        ],
+    )
+
+    assert result.exit_code == 0, result.output
+    payload = json.loads(result.stdout)
+    scheduler = payload["daemon"]["scheduler_status"]
+    assert scheduler["installed"] is True
+    assert scheduler["command_mentions_run_cycle"] is True
+    gate = payload["human_gates"]["daemon_schedule"]
+    assert gate["status"] == "scheduler_installed_machine_condition_met_pending_human_gate_record"
+
+
+def test_daemon_install_plan_uses_stable_shim_and_run_cycle(tmp_path: Path):
+    hub = tmp_path / "hub"
+    hub.mkdir()
+    shim = tmp_path / "asset-dir.ps1"
+
+    plan = task_scheduler_plan(
+        hub,
+        task_name="DAD Test Cycle",
+        schedule_time="10:30",
+        shim=shim,
+    )
+
+    assert plan["schema_version"] == "dad.daemon.task_scheduler_plan.v1"
+    assert str(shim) in plan["command"]
+    assert "daemon run-cycle" in plan["command"]
+    assert str(hub.resolve()) in plan["command"]
+
+
+def test_daemon_task_status_parses_read_only_scheduler_query(tmp_path: Path):
+    hub = tmp_path / "hub"
+    hub.mkdir()
+    shim = tmp_path / "asset-dir.ps1"
+
+    class Result:
+        returncode = 0
+        stdout = (
+            "TaskName: DAD Daemon Run Cycle\n"
+            "Status: Ready\n"
+            f"Task To Run: powershell -File '{shim}' daemon run-cycle --hub '{hub.resolve()}'\n"
+            "Next Run Time: 7/7/2026 9:00:00 AM\n"
+        )
+        stderr = ""
+
+    status = task_scheduler_status(
+        hub,
+        task_name="DAD Daemon Run Cycle",
+        shim=shim,
+        runner=lambda *_args, **_kwargs: Result(),
+    )
+
+    assert status["schema_version"] == "dad.daemon.task_scheduler_status.v1"
+    assert status["installed"] is True
+    assert status["command_mentions_run_cycle"] is True
+    assert status["expected_hub_found"] is True
+    assert status["expected_shim_found"] is True
