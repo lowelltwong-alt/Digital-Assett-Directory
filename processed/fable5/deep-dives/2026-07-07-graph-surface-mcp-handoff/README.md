@@ -40,6 +40,15 @@ boundary, not a new authority.
 - The lesson graph has a generated-manifest pattern in design/docs, but DAD
   does not yet have one registry that enumerates all graph surfaces.
 
+## Fable Output Reconciliation
+
+Fable output `fable-output/graph-surface-mcp-kernels.md` was authored from the
+`fable/aios-architecture` branch. Its finding F1 says this packet and
+`docs/MCP_FIRST_INTEGRATION_POLICY.md` were absent. Treat that as branch
+visibility drift, not a policy finding against the stacked Codex work: those
+files exist on the PR #17/#18 stack and are the intended base for follow-up
+implementation.
+
 ## Parallel Transport Merge Context
 
 Fable must consider the parallel transport work before finalizing graph surface
