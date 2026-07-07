@@ -1,0 +1,141 @@
+{
+  "schema_version": "0.1.0",
+  "packet_id": "fable5:graph-surface-mcp-handoff:2026-07-07",
+  "status": "candidate_review_packet",
+  "created_at": "2026-07-07T02:00:00Z",
+  "baseline_commit": "babcbc8",
+  "purpose": "Current-state Fable handoff for graph surface registry, generated graph manifests, MCP-first resources, AI-agnostic lifecycle, and no-lock-in governance.",
+  "authority_boundary": "This packet is review input only. It does not approve human gates, authorize repo writes, make MCP a governance authority, or promote generated graph evidence to source truth.",
+  "primary_paths": [
+    "processed/fable5/deep-dives/2026-07-07-graph-surface-mcp-handoff/README.md",
+    "processed/fable5/deep-dives/2026-07-07-graph-surface-mcp-handoff/fable5-master-prompt.md",
+    "processed/fable5/deep-dives/2026-07-07-graph-surface-mcp-handoff/kernel-briefs.md",
+    "processed/fable5/deep-dives/2026-07-07-graph-surface-mcp-handoff/expected-output.schema.json",
+    "docs/MCP_FIRST_INTEGRATION_POLICY.md",
+    "docs/GRAPH_BUILDOUT_HANDOFF.md",
+    "docs/KNOWLEDGE_GRAPH_MODEL.md",
+    "docs/DAD_OS_BUILD_ROADMAP.md",
+    "docs/DAD_TRANSPORT_AND_COMMS_REDESIGN.md",
+    "roadmap/evidence/phase-13-transport-local-acceptance.md",
+    "AI_FRONT_DOOR.md",
+    "AI_TABLE_OF_CONTENTS.md",
+    "MACHINE_NAVIGATION_MANIFEST.json",
+    "registry/ai-navigation-registry.json",
+    "processed/research/intake-graph.json",
+    "processed/research/intake-graph-edges.jsonl"
+  ],
+  "parallel_transport_worktree": {
+    "path": "C:/Users/lowel/OneDrive/Desktop/Git Projects/_codex_worktrees/dad-transport-followup",
+    "branch": "codex/transport-kernel-followup",
+    "status_summary": "Local-ready software with human gates pending. Active completion audit is still expanding data-root writer coverage and merge-level transport surfaces.",
+    "reported_readiness": "local_ready_human_gates_pending",
+    "reported_postflights": [
+      "dad:handoff:8a62a0c7-5b60-5137-bc35-21f5c5d3a4de",
+      "dad:handoff:f4adda80-8398-5475-abef-9fcb1a257a4a"
+    ],
+    "reported_lessons": [
+      "dad:lesson:699f7b03-4337-5775-9e33-b467f76e675b",
+      "dad:lesson:85531b28-a2ae-56d9-ac59-b14cc661c3d6"
+    ],
+    "primary_files": [
+      "src/digital_asset_directory/transport.py",
+      "src/digital_asset_directory/cli.py",
+      "src/digital_asset_directory/daemon.py",
+      "src/digital_asset_directory/journal.py",
+      "src/digital_asset_directory/mail_center.py",
+      "src/digital_asset_directory/dad_library.py",
+      "src/digital_asset_directory/exception_capture.py",
+      "src/digital_asset_directory/readiness.py",
+      "src/digital_asset_directory/research.py",
+      "src/digital_asset_directory/template_library.py",
+      "src/digital_asset_directory/proposals.py",
+      "src/digital_asset_directory/workflow_parts.py",
+      "tests/test_data_root_generated_writers.py",
+      "tests/test_transport.py",
+      "tests/test_exception_capture.py",
+      "tests/test_research.py",
+      "tests/test_proposals.py",
+      "tests/test_workflow_parts.py",
+      "roadmap/evidence/phase-13-transport-local-acceptance.md",
+      "docs/DAD_TRANSPORT_AND_COMMS_REDESIGN.md",
+      "docs/DAD_OS_BUILD_ROADMAP.md"
+    ],
+    "must_consider": [
+      "transport is local-ready, not operationally complete",
+      "real migration, journal repo push, Task Scheduler install, downstream update wave, protected repo repair, and Cloudflare deferral approval are still human gates",
+      "graph generated manifests should use the final transport data-plane path registry after merge",
+      "repo-level surface versions are needed for efficient future upgrades",
+      "synthetic data tests are required before downstream rollout"
+    ]
+  },
+  "related_stack": [
+    {
+      "pr": 13,
+      "branch": "codex/ai-agnostic-agent-lifecycle-20260706",
+      "summary": "AI-agnostic lifecycle adapter; Claude wrapper only."
+    },
+    {
+      "pr": 14,
+      "branch": "codex/transport-data-root-core-20260707",
+      "summary": "DAD_DATA_ROOT core and transport audit."
+    },
+    {
+      "pr": 15,
+      "branch": "codex/transport-daemon-readiness-20260707",
+      "summary": "Daemon heartbeat and readiness."
+    },
+    {
+      "pr": 16,
+      "branch": "codex/transport-journal-20260707",
+      "summary": "dad-journal checkpointing and remote-outbox quarantine."
+    },
+    {
+      "pr": 17,
+      "branch": "codex/transport-rollout-docs-mcp-20260707",
+      "summary": "Transport rollout docs, queue update planning, and MCP-first integration policy."
+    }
+  ],
+  "known_absent_or_partial_surfaces": [
+    {
+      "path": "processed/graph/graph.json",
+      "status": "not_present_in_current_worktree",
+      "note": "TOC references this generated graph surface, but the current branch does not carry a generated graph artifact."
+    },
+    {
+      "path": "processed/learning/lesson-graph-manifest.json",
+      "status": "not_present_in_current_worktree",
+      "note": "Existing docs describe the lesson graph manifest pattern; Local+Journal may route generated outputs through DAD_DATA_ROOT."
+    }
+  ],
+  "validation_evidence": [
+    {
+      "command": "python -m pytest",
+      "last_known_result": "PR #17: 967 passed."
+    },
+    {
+      "command": "DAD_DATA_ROOT=<initialized temp root> python -m pytest",
+      "last_known_result": "PR #17: 967 passed."
+    },
+    {
+      "command": "python -m digital_asset_directory.cli validate --hub .",
+      "last_known_result": "PR #17: valid true; 209 checked."
+    },
+    {
+      "command": "python -m digital_asset_directory.cli roadmap check --no-update --hub .",
+      "last_known_result": "PR #17: exit 0; existing human-gate warnings only."
+    }
+  ],
+  "suggested_fable_focus": [
+    "Define what counts as a graph surface and what does not.",
+    "Decide one ontology versus bounded ontologies with shared manifest guardrails.",
+    "Draw the boundary between navigation routes and knowledge claims.",
+    "Assign warn/fail stale-manifest behavior by graph surface risk.",
+    "Design graph manifest placement across source repo, DAD_DATA_ROOT, and dad-journal.",
+    "Define stable MCP resource URIs and decide whether query tools are v1 or v2.",
+    "Forbid graph edges and rankings that imply authority, truth, value, or human approval.",
+    "Review Codex's build plan against parallel transport follow-up work and adjust the merge/build order.",
+    "Design surface version tracking so repo upgrades can be targeted efficiently.",
+    "Specify synthetic mini-hub tests before downstream rollout.",
+    "Emit compact Codex kernels with exact files and tests."
+  ]
+}

@@ -1,8 +1,8 @@
 {
   "schema_version": "0.1.0",
   "registry_id": "ai-navigation-registry",
-  "navigation_version": "2026.07.07.1",
-  "updated_at": "2026-07-07T00:00:00Z",
+  "navigation_version": "2026.07.07.2",
+  "updated_at": "2026-07-07T02:15:00Z",
   "singular_entrypoint": {
     "path": "AI_FRONT_DOOR.md",
     "rule": "All agents start at AI_FRONT_DOOR.md, then follow the required read order and task-specific branches.",
@@ -60,8 +60,8 @@
       "role": "Singular human- and AI-readable start point for DAD work.",
       "tags": ["front_door", "authority", "navigation_freshness"],
       "use_when": "Always start here before material work.",
-      "current_version": "2026.07.07.1",
-      "last_material_change_at": "2026-07-07T00:00:00Z",
+      "current_version": "2026.07.07.2",
+      "last_material_change_at": "2026-07-07T02:15:00Z",
       "change_class": "navigation_contract",
       "route_after": ["registry/ai-navigation-registry.json", "MACHINE_NAVIGATION_MANIFEST.json", "AI_TABLE_OF_CONTENTS.md"],
       "freshness_hint": "Read the navigation freshness section before relying on remembered DAD paths."
@@ -72,8 +72,8 @@
       "role": "Machine-readable navigation version, branch freshness, and recent material changes.",
       "tags": ["front_door", "registry", "navigation_freshness", "validation"],
       "use_when": "You need to know what changed since the last DAD visit without bloating the TOC.",
-      "current_version": "2026.07.07.1",
-      "last_material_change_at": "2026-07-07T00:00:00Z",
+      "current_version": "2026.07.07.2",
+      "last_material_change_at": "2026-07-07T02:15:00Z",
       "change_class": "navigation_contract",
       "route_after": ["AI_FRONT_DOOR.md"],
       "freshness_hint": "Compare navigation_version and updated_at to any cached or repo-local last-seen value."
@@ -84,8 +84,8 @@
       "role": "Semantic branching map with path, role, tags, and use-when triggers.",
       "tags": ["front_door", "workflow", "navigation_freshness"],
       "use_when": "You know the task class and need the smallest matching branch.",
-      "current_version": "2026.07.07.1",
-      "last_material_change_at": "2026-07-07T00:00:00Z",
+      "current_version": "2026.07.07.2",
+      "last_material_change_at": "2026-07-07T02:15:00Z",
       "change_class": "navigation_contract",
       "route_after": ["AI_FRONT_DOOR.md", "registry/ai-navigation-registry.json"],
       "freshness_hint": "Use the TOC for routing meaning; use this registry for freshness."
@@ -96,8 +96,8 @@
       "role": "Machine-readable start files, registries, generated surfaces, and validation commands.",
       "tags": ["front_door", "registry", "validation", "navigation_freshness"],
       "use_when": "A tool or agent needs deterministic paths rather than prose routing.",
-      "current_version": "2026.07.07.1",
-      "last_material_change_at": "2026-07-07T00:00:00Z",
+      "current_version": "2026.07.07.2",
+      "last_material_change_at": "2026-07-07T02:15:00Z",
       "change_class": "navigation_contract",
       "route_after": ["AI_FRONT_DOOR.md", "registry/ai-navigation-registry.json"],
       "freshness_hint": "Manifest freshness mirrors the navigation registry version for DAD entrypoint changes."
@@ -298,6 +298,24 @@
       "freshness_hint": "Use metadata-only PR/branch state and escalation clocks; DAD records do not merge, approve, close, delete, rebase, or supersede source branches by themselves."
     },
     {
+      "branch_id": "fable_graph_surface_mcp_handoff",
+      "path": "processed/fable5/deep-dives/2026-07-07-graph-surface-mcp-handoff/fable5-master-prompt.md",
+      "role": "Fable handoff for graph surface manifests, MCP-first resources, no-lock-in runtime policy, parallel transport merge context, version tracking, synthetic tests, red-team, and premortem kernels.",
+      "tags": ["knowledge_graph", "mcp_integration", "transport_data_plane", "root_cause_review", "validation", "governance"],
+      "use_when": "You need Fable to review the graph/MCP build plan, adjust it for parallel transport work, and emit compact implementation/testing kernels before Codex builds the graph surface registry.",
+      "current_version": "0.1.0",
+      "last_material_change_at": "2026-07-07T02:15:00Z",
+      "change_class": "generated_report",
+      "route_after": [
+        "processed/fable5/deep-dives/2026-07-07-graph-surface-mcp-handoff/kernel-briefs.md",
+        "processed/fable5/deep-dives/2026-07-07-graph-surface-mcp-handoff/evidence-index.json",
+        "docs/MCP_FIRST_INTEGRATION_POLICY.md",
+        "docs/GRAPH_BUILDOUT_HANDOFF.md",
+        "docs/DAD_TRANSPORT_AND_COMMS_REDESIGN.md"
+      ],
+      "freshness_hint": "Treat this as review input only; it does not approve graph surface defaults, MCP tooling, transport merge completion, downstream rollout, or human gates."
+    },
+    {
       "branch_id": "repo_enrollment_mail_governance_safety_harness",
       "path": "assets/coding-harnesses/repo-enrollment-mail-governance-safety/",
       "role": "Reusable harness and eval cases for enrollment/mail write boundaries, dirty-spool gates, source-outbox retry storms, cross-source provenance conflicts, Rust rollout snapshot churn, and worktree-dirt separation.",
@@ -335,6 +353,22 @@
     }
   ],
   "recent_changes": [
+    {
+      "change_id": "nav-change:2026-07-07:fable-graph-surface-mcp-handoff",
+      "changed_at": "2026-07-07T02:15:00Z",
+      "change_type": "added_fable_graph_surface_mcp_handoff_packet",
+      "paths": [
+        "processed/fable5/deep-dives/2026-07-07-graph-surface-mcp-handoff/fable5-master-prompt.md",
+        "processed/fable5/deep-dives/2026-07-07-graph-surface-mcp-handoff/kernel-briefs.md",
+        "processed/fable5/deep-dives/2026-07-07-graph-surface-mcp-handoff/evidence-index.json",
+        "AI_FRONT_DOOR.md",
+        "AI_TABLE_OF_CONTENTS.md",
+        "MACHINE_NAVIGATION_MANIFEST.json"
+      ],
+      "summary": "Added a Fable review packet for graph surface manifests, MCP-first resources, no-lock-in runtime policy, parallel transport merge context, version tracking, synthetic tests, red-team, and premortem kernels.",
+      "agent_action": "Use this packet before implementing graph surface registry, graph manifests, MCP graph resources, or repo surface-version tracking; require Fable to adjust the Codex build plan for parallel transport merge work.",
+      "route_tags": ["knowledge_graph", "mcp_integration", "transport_data_plane", "validation", "governance"]
+    },
     {
       "change_id": "nav-change:2026-07-07:mcp-first-local-journal-transport",
       "changed_at": "2026-07-07T00:00:00Z",

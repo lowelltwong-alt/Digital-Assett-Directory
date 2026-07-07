@@ -12,8 +12,8 @@
     "AI_TABLE_OF_CONTENTS.md"
   ],
   "navigation_standards": {
-    "navigation_version": "2026.07.07.1",
-    "updated_at": "2026-07-07T00:00:00Z",
+    "navigation_version": "2026.07.07.2",
+    "updated_at": "2026-07-07T02:15:00Z",
     "single_ai_entrypoint": "AI_FRONT_DOOR.md",
     "ai_table_of_contents": "AI_TABLE_OF_CONTENTS.md",
     "navigation_registry": "registry/ai-navigation-registry.json",
@@ -94,6 +94,8 @@
     "docs/FABLE_HARD_ISSUE_LOOKUP_AND_SOLUTION_LINEAGE_PROMPT.md",
     "processed/fable5/deep-dives/2026-07-06-dad-deployment-rust-handoff/fable5-master-prompt.md",
     "processed/fable5/deep-dives/2026-07-06-dad-deployment-rust-handoff/evidence-index.json",
+    "processed/fable5/deep-dives/2026-07-07-graph-surface-mcp-handoff/fable5-master-prompt.md",
+    "processed/fable5/deep-dives/2026-07-07-graph-surface-mcp-handoff/evidence-index.json",
     "templates/downstream/EXCEPTIONS_README.md",
     "registry/exception-event-type-registry.json",
     "registry/exception-capture-pattern-registry.json",
