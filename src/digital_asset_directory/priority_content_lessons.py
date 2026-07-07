@@ -12,6 +12,7 @@ from .models import (
     LearningRuleRecord,
     PriorityContentLessonReviewRecord,
 )
+from .transport import data_relative_path
 from .utils import atomic_write_text, json_dumps, utc_now, write_jsonl
 
 METHODOLOGY_VERSION = "priority-content-lesson-synthesis-v0.1"
@@ -365,10 +366,12 @@ def write_priority_content_lesson_outputs(
     generated_at: str | None = None,
 ) -> dict[str, Any]:
     observations_path = observations_file or (
-        repo_root / "processed" / "learning" / "priority_content_observations.jsonl"
+        data_relative_path(
+            repo_root, Path("processed") / "learning" / "priority_content_observations.jsonl"
+        )
     )
     if not observations_path.is_absolute():
-        observations_path = repo_root / observations_path
+        observations_path = data_relative_path(repo_root, observations_path)
     records = build_priority_content_lesson_candidates(
         load_priority_content_observations(observations_path),
         scan_id=scan_id,
@@ -378,8 +381,8 @@ def write_priority_content_lesson_outputs(
     )
     if not records:
         raise ValueError("No lesson candidates were generated from the provided observations.")
-    learning_dir = repo_root / "processed" / "learning"
-    reports_dir = repo_root / "processed" / "reports"
+    learning_dir = data_relative_path(repo_root, Path("processed") / "learning")
+    reports_dir = data_relative_path(repo_root, Path("processed") / "reports")
     paths = {
         "lesson_candidates": learning_dir / "priority_content_lesson_candidates.jsonl",
         "report_markdown": reports_dir / "priority_content_lesson_candidates.md",
@@ -538,8 +541,8 @@ def write_priority_content_lesson_review_template_outputs(
     sample_size: int = 100,
 ) -> dict[str, Any]:
     reviews = build_priority_content_lesson_review_template(candidates, sample_size=sample_size)
-    learning_dir = repo_root / "processed" / "learning"
-    reports_dir = repo_root / "processed" / "reports"
+    learning_dir = data_relative_path(repo_root, Path("processed") / "learning")
+    reports_dir = data_relative_path(repo_root, Path("processed") / "reports")
     paths = {
         "review_template": learning_dir / "priority_content_lesson_review_template.jsonl",
         "review_report": reports_dir / "priority_content_lesson_review_template.md",
@@ -891,8 +894,8 @@ def write_learning_rule_promotion_candidate_outputs(
     )
     if not records:
         raise ValueError("No learning-rule promotion candidates were generated.")
-    learning_dir = repo_root / "processed" / "learning"
-    reports_dir = repo_root / "processed" / "reports"
+    learning_dir = data_relative_path(repo_root, Path("processed") / "learning")
+    reports_dir = data_relative_path(repo_root, Path("processed") / "reports")
     paths = {
         "promotion_candidates": learning_dir / "learning_rule_promotion_candidates.jsonl",
         "report_markdown": reports_dir / "learning_rule_promotion_candidates.md",

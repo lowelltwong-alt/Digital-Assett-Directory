@@ -11,11 +11,13 @@ from .ids import stable_id, session_id as new_session_id
 from .models import HandoffRecord, LearningRuleRecord, LessonRecord, ReviewLaneRecord
 from .dad_library import (
     CENTRAL_USAGE_LEDGER,
+    central_usage_path,
     compile_context_pack,
     load_asset_patterns,
     load_offerings,
     record_trace_outcomes,
 )
+from .transport import data_path
 from .utils import append_jsonl, sha256_bytes, sha256_file, split_multi, utc_now, write_json
 from .exceptions_lake import hard_issue_lookup, looks_like_hard_issue_lookup_context
 
@@ -32,6 +34,34 @@ REVIEW_FEEDBACK_TYPES = {
 REVIEW_FEEDBACK_SEVERITIES = {"critical", "high", "medium", "low", "info", "mixed"}
 ACK_REQUIRED_LEVELS = {"require_ack", "human_gate"}
 GENERATED_LESSON_INDEX_DIRS = {"by-repo", "by-capability"}
+
+
+def raw_lessons_dir(hub_root: Path) -> Path:
+    return data_path(hub_root, "raw_lessons")
+
+
+def raw_handoffs_dir(hub_root: Path) -> Path:
+    return data_path(hub_root, "raw_handoffs")
+
+
+def audit_events_dir(hub_root: Path) -> Path:
+    return data_path(hub_root, "audit_events")
+
+
+def agent_sessions_dir(hub_root: Path) -> Path:
+    return data_path(hub_root, "agent_sessions")
+
+
+def learning_dir(hub_root: Path) -> Path:
+    return data_path(hub_root, "learning")
+
+
+def lesson_graph_path(hub_root: Path) -> Path:
+    return learning_dir(hub_root) / LESSON_GRAPH_PATH.relative_to(Path("processed") / "learning")
+
+
+def lesson_graph_manifest_path(hub_root: Path) -> Path:
+    return learning_dir(hub_root) / LESSON_GRAPH_MANIFEST_PATH.relative_to(Path("processed") / "learning")
 
 
 def _repo_public_facing(repo: Path) -> bool:
@@ -220,7 +250,7 @@ def route_lesson(repo_root: Path, record: LessonRecord) -> list[Path]:
     instead of only by the date it was captured.
     """
     pointer = _lesson_pointer(record)
-    base = repo_root / "raw" / "lessons"
+    base = raw_lessons_dir(repo_root)
     written: list[Path] = []
 
     repo_name = Path(record.repository).name if record.repository else "unknown"
@@ -240,7 +270,7 @@ def rebuild_lesson_routes(repo_root: Path) -> dict[str, Any]:
 
     Indexes are append-only at capture time, so re-running this dedupes by lesson_id.
     """
-    base = repo_root / "raw" / "lessons"
+    base = raw_lessons_dir(repo_root)
     for sub in ("by-repo", "by-capability"):
         target = base / sub
         if target.exists():
@@ -379,7 +409,7 @@ def _hash_path(path: Path) -> str:
 
 
 def _load_canonical_lessons(repo_root: Path) -> list[LessonRecord]:
-    base = repo_root / "raw" / "lessons"
+    base = raw_lessons_dir(repo_root)
     seen: set[str] = set()
     lessons: list[LessonRecord] = []
     for path in sorted(base.glob("*/*.json")):
@@ -534,7 +564,7 @@ def build_lesson_graph(repo_root: Path) -> dict[str, Any]:
             elif asset_id:
                 unmatched_asset_refs[asset_id] = unmatched_asset_refs.get(asset_id, 0) + 1
 
-    for row in _read_jsonl_records(repo_root / CENTRAL_USAGE_LEDGER):
+    for row in _read_jsonl_records(central_usage_path(repo_root, CENTRAL_USAGE_LEDGER)):
         status = str(row.get("status", ""))
         if status not in {"using", "watching"}:
             continue
@@ -589,17 +619,19 @@ def build_lesson_graph(repo_root: Path) -> dict[str, Any]:
             "pattern-library growth; they do not prove value or source truth."
         ),
     }
-    out_path = repo_root / LESSON_GRAPH_PATH
+    out_path = lesson_graph_path(repo_root)
     write_json(out_path, payload, allow_direct_fallback=True)
     input_hashes = {
-        "raw/lessons": _hash_path(repo_root / "raw" / "lessons"),
+        "raw/lessons": _hash_path(raw_lessons_dir(repo_root)),
         "registry/asset-pattern-registry.json": _hash_path(
             repo_root / "registry" / "asset-pattern-registry.json"
         ),
         "registry/dad-offerings-registry.json": _hash_path(
             repo_root / "registry" / "dad-offerings-registry.json"
         ),
-        str(CENTRAL_USAGE_LEDGER): _hash_path(repo_root / CENTRAL_USAGE_LEDGER),
+        str(CENTRAL_USAGE_LEDGER): _hash_path(
+            central_usage_path(repo_root, CENTRAL_USAGE_LEDGER)
+        ),
         "registry/graph-edge-registry.json": _hash_path(
             repo_root / "registry" / "graph-edge-registry.json"
         ),
@@ -642,7 +674,7 @@ def build_lesson_graph(repo_root: Path) -> dict[str, Any]:
         },
         "authority_boundary": payload["authority_boundary"],
     }
-    manifest_path = repo_root / LESSON_GRAPH_MANIFEST_PATH
+    manifest_path = lesson_graph_manifest_path(repo_root)
     write_json(manifest_path, manifest, allow_direct_fallback=True)
     return {"graph": payload, "path": str(out_path), "manifest_path": str(manifest_path)}
 
@@ -674,12 +706,12 @@ def add_lesson(repo_root: Path, database_path: Path, **kwargs: Any) -> LessonRec
     )
     dated = created[:10]
     write_json(
-        repo_root / "raw" / "lessons" / dated / f"{record.lesson_id.split(':')[-1]}.json",
+        raw_lessons_dir(repo_root) / dated / f"{record.lesson_id.split(':')[-1]}.json",
         record.model_dump(mode="json"),
     )
     route_lesson(repo_root, record)
     append_jsonl(
-        repo_root / "audit" / "events" / f"{dated}.jsonl",
+        audit_events_dir(repo_root) / f"{dated}.jsonl",
         {
             "event_type": "lesson_added",
             "created_at": created,
@@ -1093,9 +1125,9 @@ def preflight(
             payload["context_pack"].setdefault("warnings", []).append(
                 "hard issue lookup found prior exception/fix evidence; review before improvising"
             )
-    write_json(hub_root / "state" / "agent_sessions" / f"{sid.split(':')[-1]}.json", payload)
+    write_json(agent_sessions_dir(hub_root) / f"{sid.split(':')[-1]}.json", payload)
     append_jsonl(
-        hub_root / "audit" / "events" / f"{payload['created_at'][:10]}.jsonl",
+        audit_events_dir(hub_root) / f"{payload['created_at'][:10]}.jsonl",
         {"event_type": "agent_preflight", **payload},
     )
     return payload
@@ -1153,14 +1185,14 @@ def midflight(
     session.setdefault("midflight_checks", []).append(result)
     write_json(session_path, session)
     append_jsonl(
-        hub_root / "audit" / "events" / f"{created[:10]}.jsonl",
+        audit_events_dir(hub_root) / f"{created[:10]}.jsonl",
         {"event_type": "agent_midflight", **result},
     )
     return result
 
 
 def load_session(hub_root: Path, sid: str) -> tuple[Path, dict[str, Any]]:
-    path = hub_root / "state" / "agent_sessions" / f"{sid.split(':')[-1]}.json"
+    path = agent_sessions_dir(hub_root) / f"{sid.split(':')[-1]}.json"
     if not path.exists():
         raise FileNotFoundError(f"Agent session not found: {sid}")
     return path, json.loads(path.read_text(encoding="utf-8"))
@@ -1209,7 +1241,7 @@ def postflight(
     )
     dated = created[:10]
     write_json(
-        hub_root / "raw" / "handoffs" / dated / f"{handoff.handoff_id.split(':')[-1]}.json",
+        raw_handoffs_dir(hub_root) / dated / f"{handoff.handoff_id.split(':')[-1]}.json",
         handoff.model_dump(mode="json"),
     )
     with CatalogDB(database_path) as db:
@@ -1245,7 +1277,7 @@ def postflight(
     )
     write_json(session_path, session)
     append_jsonl(
-        hub_root / "audit" / "events" / f"{dated}.jsonl",
+        audit_events_dir(hub_root) / f"{dated}.jsonl",
         {
             "event_type": "agent_postflight",
             "created_at": created,
@@ -1259,7 +1291,7 @@ def postflight(
 
 def open_sessions(hub_root: Path, repository: Path | None = None) -> list[dict[str, Any]]:
     sessions = []
-    for path in (hub_root / "state" / "agent_sessions").glob("*.json"):
+    for path in agent_sessions_dir(hub_root).glob("*.json"):
         payload = json.loads(path.read_text(encoding="utf-8"))
         if payload.get("status") != "open":
             continue

@@ -17,8 +17,9 @@ import json
 from pathlib import Path
 from typing import Any
 
-from .dad_library import PATTERN_MATCH_STOPWORDS, _tokenize, load_offerings
+from .dad_library import PATTERN_MATCH_STOPWORDS, _tokenize, central_usage_path, load_offerings
 from .ids import stable_id
+from .transport import data_path
 from .utils import utc_now, write_json
 
 INFERENCE_METHODOLOGY = Path("registry") / "graph-inference-methodology.json"
@@ -31,6 +32,12 @@ AUTHORITY_BOUNDARY = (
     "They are deterministic structural signals, not proof of value. Nothing here "
     "promotes itself; the combination review queue and a human decide adoption."
 )
+
+
+def learning_data_path(hub_root: Path, relative_path: Path) -> Path:
+    if relative_path.parts[:2] != ("processed", "learning"):
+        raise ValueError(f"Unsupported learning data-plane path: {relative_path}")
+    return data_path(hub_root, "learning").joinpath(*relative_path.parts[2:])
 
 
 def load_inference_methodology(hub_root: Path) -> dict[str, Any]:
@@ -155,7 +162,7 @@ def _co_used(
     method_version = "usage-cooccurrence-v1"
     # asset_id -> set of repo node ids
     repos_by_asset: dict[str, set[str]] = {}
-    for row in _read_jsonl(hub_root / CENTRAL_USAGE_LEDGER):
+    for row in _read_jsonl(central_usage_path(hub_root, CENTRAL_USAGE_LEDGER)):
         if str(row.get("status", "")) not in {"using", "watching"}:
             continue
         asset_id = str(row.get("asset_id", ""))
@@ -358,11 +365,11 @@ def write_inference_outputs(hub_root: Path) -> dict[str, Any]:
         "inference_edges": result["inference_edges"],
         "authority_boundary": AUTHORITY_BOUNDARY,
     }
-    report_path = hub_root / INFERENCE_REPORT_PATH
+    report_path = learning_data_path(hub_root, INFERENCE_REPORT_PATH)
     write_json(report_path, report, allow_direct_fallback=True)
 
     # Append only combination candidates not already in the queue (by combination_id).
-    queue_path = hub_root / COMBINATION_QUEUE_PATH
+    queue_path = learning_data_path(hub_root, COMBINATION_QUEUE_PATH)
     existing = {str(row.get("combination_id", "")) for row in _read_jsonl(queue_path)}
     appended = 0
     new_rows = []

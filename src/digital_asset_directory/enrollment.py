@@ -12,6 +12,7 @@ import yaml
 
 from .config import AppConfig, EnrollmentRepoPolicy
 from .mail_center import mail_digest_status, mail_gitignore_text, mail_readme_text
+from .transport import TRANSPORT_SURFACE_VERSION
 from .utils import append_jsonl, atomic_write_text, json_dumps, utc_now
 
 ENROLLMENT_VERSION = "0.1.0"
@@ -570,6 +571,11 @@ def _contract_payload(
             "last_operation": "update" if update else "enroll",
             "normal_write_boundary": ".digital-asset/mail/**",
             "one_time_full_governance_install": True,
+        },
+        "transport": {
+            "surface_version": TRANSPORT_SURFACE_VERSION,
+            "mode": "local_pull",
+            "journal_fallback": True,
         },
         "cadence": {
             "mail": {
@@ -1273,6 +1279,23 @@ def enrollment_status(
     contract_version = (
         str(contract.get("enrollment", {}).get("version", "")) if contract else ""
     )
+    transport_block = contract.get("transport", {}) if contract else {}
+    transport_version = str(transport_block.get("surface_version", ""))
+    transport_status = "missing"
+    if contract and not isinstance(transport_block, dict):
+        transport_status = "invalid"
+        errors.append("Enrollment contract transport block is invalid")
+    elif contract and not transport_version:
+        transport_status = "contract_missing"
+        errors.append("Enrollment contract missing transport.surface_version")
+    elif contract and transport_version != TRANSPORT_SURFACE_VERSION:
+        transport_status = "stale"
+        errors.append(
+            "Enrollment contract transport.surface_version "
+            f"{transport_version} != {TRANSPORT_SURFACE_VERSION}"
+        )
+    elif contract:
+        transport_status = "current"
     enabled_planes = contract.get("enabled_control_planes", []) if contract else []
     return {
         "repo_id": policy.id,
@@ -1284,6 +1307,11 @@ def enrollment_status(
         "policy_wave": policy.wave,
         "mail_digest": mail_status,
         "weekly_check_stale": True,
+        "transport": {
+            "status": transport_status,
+            "surface_version": transport_version,
+            "expected_surface_version": TRANSPORT_SURFACE_VERSION,
+        },
         "enabled_control_planes": enabled_planes,
         "repo_local_only_paths": REPO_LOCAL_ONLY_PATHS,
         "repo_local_only_boundary": REPO_LOCAL_ONLY_BOUNDARY,

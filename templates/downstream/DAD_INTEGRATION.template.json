@@ -20,6 +20,11 @@
     "normal_write_boundary": ".digital-asset/mail/**",
     "one_time_full_governance_install": true
   },
+  "transport": {
+    "surface_version": "1.0.0",
+    "mode": "local_pull",
+    "journal_fallback": true
+  },
   "cadence": {
     "mail": {
       "frequency": "daily",

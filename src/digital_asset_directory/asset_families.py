@@ -8,6 +8,7 @@ from typing import Any, Iterable, Literal
 
 from .ids import edge_id, stable_id
 from .models import AssetRecord, EdgeRecord, LearningLoopRecord
+from .transport import data_relative_path
 from .utils import atomic_write_text, utc_now, write_jsonl
 
 AUTHORITY_BOUNDARY = (
@@ -1771,7 +1772,7 @@ def write_asset_family_reports(
         source_id=source_id,
         review_sample=review_sample,
     )
-    reports_dir = repo_root / "processed" / "reports"
+    reports_dir = data_relative_path(repo_root, Path("processed") / "reports")
     asset_family_path = reports_dir / "asset_family_recognition.md"
     logos_path = reports_dir / "logos_asset_family_candidates.md"
     atomic_write_text(
@@ -1812,8 +1813,8 @@ def write_learning_loop_outputs(
         generated_at=generated,
     )
     edges = build_learning_loop_edges(records, scan_id=scan_id, created_at=generated)
-    learning_dir = repo_root / "processed" / "learning"
-    reports_dir = repo_root / "processed" / "reports"
+    learning_dir = data_relative_path(repo_root, Path("processed") / "learning")
+    reports_dir = data_relative_path(repo_root, Path("processed") / "reports")
     jsonl_path = learning_dir / "learning_loop_candidates.jsonl"
     edges_path = learning_dir / "asset_family_candidate_edges.jsonl"
     report_path = reports_dir / "learning_loop_candidates.md"

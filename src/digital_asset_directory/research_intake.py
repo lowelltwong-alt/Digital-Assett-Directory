@@ -17,6 +17,7 @@ from typing import Any
 from urllib.parse import urlparse
 
 from .ids import stable_id
+from .transport import data_path
 from .utils import append_jsonl, atomic_write_text, json_dumps, utc_now, write_jsonl
 
 TRUSTED_SOURCE_REGISTRY = Path("registry") / "trusted-source-registry.json"
@@ -243,6 +244,20 @@ INTAKE_GRAPH_NEED_RULES: tuple[tuple[str, tuple[str, ...]], ...] = (
 )
 
 
+def research_data_path(hub_root: Path, relative_path: Path) -> Path:
+    if relative_path.parts[:2] != ("processed", "research"):
+        raise ValueError(f"Unsupported research data-plane path: {relative_path}")
+    return data_path(hub_root, "research").joinpath(*relative_path.parts[2:])
+
+
+def research_intake_dir(hub_root: Path) -> Path:
+    return research_data_path(hub_root, INTAKE_DIR)
+
+
+def audit_events_dir(hub_root: Path) -> Path:
+    return data_path(hub_root, "audit_events")
+
+
 def _load_json(path: Path) -> dict[str, Any]:
     if not path.exists():
         raise FileNotFoundError(path)
@@ -260,7 +275,7 @@ def _slug(value: str) -> str:
 
 def _audit(hub_root: Path, event: dict[str, Any]) -> None:
     created = str(event.get("created_at") or utc_now())
-    append_jsonl(hub_root / "audit" / "events" / f"{created[:10]}.jsonl", event)
+    append_jsonl(audit_events_dir(hub_root) / f"{created[:10]}.jsonl", event)
 
 
 def _record_text(record: dict[str, Any]) -> str:
@@ -325,7 +340,7 @@ def _screening_summary(record: dict[str, Any]) -> dict[str, str]:
 
 
 def _intake_records(hub_root: Path) -> list[tuple[Path, dict[str, Any]]]:
-    intake_root = hub_root / INTAKE_DIR
+    intake_root = research_intake_dir(hub_root)
     if not intake_root.exists():
         return []
     records: list[tuple[Path, dict[str, Any]]] = []
@@ -639,8 +654,8 @@ def build_research_intake_graph(hub_root: Path) -> dict[str, Any]:
         },
         "authority_boundary": INTAKE_GRAPH_AUTHORITY_BOUNDARY,
     }
-    _write_json(hub_root / INTAKE_GRAPH_PATH, payload)
-    write_jsonl(hub_root / INTAKE_GRAPH_EDGES_PATH, edge_list)
+    _write_json(research_data_path(hub_root, INTAKE_GRAPH_PATH), payload)
+    write_jsonl(research_data_path(hub_root, INTAKE_GRAPH_EDGES_PATH), edge_list)
     _audit(
         hub_root,
         {
@@ -948,11 +963,11 @@ def _resolve_language_playbook_path(hub_root: Path, playbook: dict[str, Any]) ->
 
 
 def _intake_path(hub_root: Path, intake_id: str, name: str) -> Path:
-    return hub_root / INTAKE_DIR / f"{_slug(name)}-{intake_id.rsplit(':', 1)[-1][:8]}.json"
+    return research_intake_dir(hub_root) / f"{_slug(name)}-{intake_id.rsplit(':', 1)[-1][:8]}.json"
 
 
 def _find_intake(hub_root: Path, intake_id: str) -> tuple[Path, dict[str, Any]]:
-    for path in sorted((hub_root / INTAKE_DIR).glob("*.json")):
+    for path in sorted(research_intake_dir(hub_root).glob("*.json")):
         payload = json.loads(path.read_text(encoding="utf-8"))
         if payload.get("intake_id") == intake_id:
             return path, payload
@@ -1234,7 +1249,7 @@ def promote_intake(
 
 def list_intake(hub_root: Path, *, status: str = "") -> dict[str, Any]:
     records = []
-    intake_dir = hub_root / INTAKE_DIR
+    intake_dir = research_intake_dir(hub_root)
     if intake_dir.exists():
         for path in sorted(intake_dir.glob("*.json")):
             payload = json.loads(path.read_text(encoding="utf-8"))

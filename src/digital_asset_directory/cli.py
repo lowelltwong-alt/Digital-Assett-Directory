@@ -152,7 +152,6 @@ from .lesson_action_queue import (
 )
 from .manual_tasks import write_manual_task_queue
 from .mail_center import (
-    CENTRAL_MAIL_DIR,
     MAIL_MIRROR_DIR,
     MAX_MAIL_RECORD_BYTES,
     check_outbox_novelty,
@@ -248,6 +247,16 @@ from .rust_rollout import (
 from .semantic_evolution import write_semantic_evolution_outputs
 from .template_library import validate_template_registry, write_template_library_report
 from .test_parity import run_test_parity
+from .transport import (
+    DATA_PLANE_PATHS,
+    apply_data_migration,
+    audit_all_repo_transport,
+    data_path,
+    data_relative_path,
+    init_data_root,
+    plan_data_migration,
+    resolve_data_root,
+)
 from .validation import validate_repo
 from .workflow_parts import (
     build_workflow_part_review_queue,
@@ -297,6 +306,10 @@ rust_app = typer.Typer(no_args_is_help=True)
 app.add_typer(rust_app, name="rust")
 rust_rollout_app = typer.Typer(no_args_is_help=True)
 app.add_typer(rust_rollout_app, name="rust-rollout")
+data_app = typer.Typer(no_args_is_help=True)
+app.add_typer(data_app, name="data")
+transport_app = typer.Typer(no_args_is_help=True)
+app.add_typer(transport_app, name="transport")
 console = Console()
 
 
@@ -328,8 +341,95 @@ def _repo_path(repo_root: Path, path: Path | None) -> Path | None:
     return path if path.is_absolute() else repo_root / path
 
 
+def _transport_repo_rows(cfg) -> list[dict[str, Any]]:
+    rows_by_path: dict[str, dict[str, Any]] = {}
+
+    def add_policy(policy: object, enabled_attr: str) -> None:
+        if not bool(getattr(policy, enabled_attr, True)):
+            return
+        path = Path(getattr(policy, "path"))
+        key = str(path.resolve())
+        row = rows_by_path.setdefault(
+            key,
+            {
+                "id": str(getattr(policy, "id", path.name)),
+                "path": str(path),
+                "write_protected": False,
+            },
+        )
+        if bool(getattr(policy, "write_protected", False)):
+            row["write_protected"] = True
+
+    for policy in getattr(cfg, "mail_repos", []) or []:
+        add_policy(policy, "mail_enabled")
+    for policy in getattr(cfg, "exception_repos", []) or []:
+        add_policy(policy, "exceptions_enabled")
+    for policy in getattr(cfg, "enrollment_repos", []) or []:
+        add_policy(policy, "enrollment_enabled")
+    return sorted(rows_by_path.values(), key=lambda row: str(row["id"]))
+
+
+@data_app.command("status")
+def data_status(hub: Optional[Path] = typer.Option(None)) -> None:
+    cfg = _cfg(hub=hub)
+    root, mode = resolve_data_root(cfg.repo_root)
+    console.print_json(
+        data={
+            "schema_version": "dad.data.status.v1",
+            "hub_root": str(cfg.repo_root),
+            "data_root": str(root),
+            "mode": mode,
+            "surfaces": {
+                logical: str(data_path(cfg.repo_root, logical))
+                for logical in sorted(DATA_PLANE_PATHS)
+            },
+        }
+    )
+
+
+@data_app.command("init")
+def data_init(
+    target: Path = typer.Option(Path.home() / ".dad" / "data"),
+    hub: Optional[Path] = typer.Option(None),
+    force_onedrive: bool = typer.Option(False, "--force-onedrive"),
+) -> None:
+    cfg = _cfg(hub=hub)
+    console.print_json(
+        data=init_data_root(
+            target,
+            hub_root=cfg.repo_root,
+            force_onedrive=force_onedrive,
+        )
+    )
+
+
+@data_app.command("migrate")
+def data_migrate(
+    target: Path = typer.Option(Path.home() / ".dad" / "data"),
+    hub: Optional[Path] = typer.Option(None),
+    apply: bool = typer.Option(False, "--apply/--plan-only"),
+    force_onedrive: bool = typer.Option(False, "--force-onedrive"),
+) -> None:
+    cfg = _cfg(hub=hub)
+    result = (
+        apply_data_migration(cfg.repo_root, target, force_onedrive=force_onedrive)
+        if apply
+        else plan_data_migration(cfg.repo_root, target)
+    )
+    console.print_json(data=result)
+
+
+@transport_app.command("audit")
+def transport_audit(hub: Optional[Path] = typer.Option(None)) -> None:
+    cfg = _cfg(hub=hub)
+    console.print_json(data=audit_all_repo_transport(cfg.repo_root, _transport_repo_rows(cfg)))
+
+
 def _rust_rollout_snapshot_promotion_log(repo_root: Path) -> Path:
-    return repo_root / "processed" / "mail" / "archive" / "rust_rollout_snapshot_promotion.jsonl"
+    return data_relative_path(
+        repo_root,
+        Path("processed") / "mail" / "archive" / "rust_rollout_snapshot_promotion.jsonl",
+    )
 
 
 def _rust_rollout_snapshot_promotion_record(
@@ -1254,7 +1354,7 @@ def _mail_repair_plan_markdown(plan: dict[str, Any]) -> str:
 
 
 def _write_mail_repair_plan_packet(repo_root: Path, plan: dict[str, Any]) -> dict[str, Any]:
-    output_dir = repo_root / "processed" / "reports" / "mail_storm_repair"
+    output_dir = data_relative_path(repo_root, Path("processed") / "reports" / "mail_storm_repair")
     output_dir.mkdir(parents=True, exist_ok=True)
     slug = _mail_repair_report_slug(plan)
     json_path = output_dir / f"{slug}.json"
@@ -2795,7 +2895,7 @@ def rust_rollout_plan(
     cfg = _cfg(hub=hub)
     result = write_rust_rollout_plan(
         _repo_path(cfg.repo_root, config_path) or config_path,
-        _repo_path(cfg.repo_root, out_dir) or out_dir,
+        data_relative_path(cfg.repo_root, out_dir),
     )
     console.print_json(data=result)
 
@@ -2832,14 +2932,16 @@ def rust_rollout_build_mail(
 ) -> None:
     """Build deterministic local Rust rollout instruction packets."""
     cfg = _cfg(hub=hub)
-    resolved_out_dir = _repo_path(cfg.repo_root, out_dir) or out_dir
+    resolved_out_dir = data_relative_path(cfg.repo_root, out_dir)
+    active_data_root, _data_root_mode = resolve_data_root(cfg.repo_root)
+    central_mail_root = data_path(cfg.repo_root, "central_mail")
     live_mail_roots = [
         cfg.repo_root / MAIL_MIRROR_DIR,
-        cfg.repo_root / CENTRAL_MAIL_DIR / "inbox",
-        cfg.repo_root / CENTRAL_MAIL_DIR / "outbox",
-        cfg.repo_root / CENTRAL_MAIL_DIR / "archive",
-        cfg.repo_root / CENTRAL_MAIL_DIR / "quarantine",
-        cfg.repo_root / CENTRAL_MAIL_DIR / "releases",
+        central_mail_root / "inbox",
+        central_mail_root / "outbox",
+        central_mail_root / "archive",
+        central_mail_root / "quarantine",
+        central_mail_root / "releases",
     ]
     live_mail_root = next(
         (root for root in live_mail_roots if _is_under_or_equal(resolved_out_dir, root)),
@@ -2866,9 +2968,7 @@ def rust_rollout_build_mail(
     tracked_snapshot_dir = (cfg.repo_root / "mail" / "outbox" / "rust_rollout").resolve(
         strict=False
     )
-    default_staging_dir = (
-        cfg.repo_root / "processed" / "mail" / "staged" / "rust_rollout"
-    ).resolve(strict=False)
+    default_staging_dir = (central_mail_root / "staged" / "rust_rollout").resolve(strict=False)
     temp_root = _system_temp_root()
     if (
         _is_under_or_equal(resolved_out_dir, tracked_snapshot_dir)
@@ -2911,9 +3011,10 @@ def rust_rollout_build_mail(
             }
         )
         raise typer.Exit(2)
-    if not _is_under_or_equal(resolved_out_dir, cfg.repo_root) and not _is_under_or_equal(
-        resolved_out_dir,
-        temp_root,
+    if (
+        not _is_under_or_equal(resolved_out_dir, cfg.repo_root)
+        and not _is_under_or_equal(resolved_out_dir, active_data_root)
+        and not _is_under_or_equal(resolved_out_dir, temp_root)
     ):
         console.print_json(
             data={
@@ -3054,7 +3155,7 @@ def rust_rollout_lessons_summarize(
     cfg = _cfg(hub=hub)
     result = summarize_rust_rollout_lessons(
         _repo_path(cfg.repo_root, ledger) or ledger,
-        _repo_path(cfg.repo_root, out_dir) or out_dir,
+        data_relative_path(cfg.repo_root, out_dir),
     )
     console.print_json(data=result)
 
@@ -6240,7 +6341,7 @@ def agent_postflight(
     hub: Optional[Path] = typer.Option(None),
     file: list[str] = typer.Option([], "--file"),
     command: list[str] = typer.Option([], "--command"),
-    test: list[str] = typer.Option([], "--test"),
+    test: list[str] = typer.Option([], "--test", "--tests"),
     test_not_run: list[str] = typer.Option([], "--test-not-run"),
     confirmed: list[str] = typer.Option([], "--confirmed"),
     inferred: list[str] = typer.Option([], "--inferred"),

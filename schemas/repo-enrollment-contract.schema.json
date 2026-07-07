@@ -12,6 +12,7 @@
     "public_facing",
     "dad_hub",
     "enrollment",
+    "transport",
     "cadence",
     "enabled_control_planes",
     "local_validation_commands",
@@ -58,6 +59,16 @@
         "last_operation": {"enum": ["enroll", "update"]},
         "normal_write_boundary": {"const": ".digital-asset/mail/**"},
         "one_time_full_governance_install": {"type": "boolean"}
+      },
+      "additionalProperties": false
+    },
+    "transport": {
+      "type": "object",
+      "required": ["surface_version", "mode", "journal_fallback"],
+      "properties": {
+        "surface_version": {"const": "1.0.0"},
+        "mode": {"const": "local_pull"},
+        "journal_fallback": {"type": "boolean"}
       },
       "additionalProperties": false
     },

@@ -309,6 +309,26 @@ def test_enrollment_status_reports_schema_stale_contract(tmp_path: Path):
     assert any("schema validation failed" in error for error in status["errors"])
 
 
+def test_enrollment_status_reports_missing_transport_contract(tmp_path: Path):
+    hub = tmp_path / "hub"
+    repo = tmp_path / "repo-a"
+    hub.mkdir()
+    repo.mkdir()
+    policy = _policy(repo)
+    apply_enrollment(hub, policy, approval_id="APPROVED-1")
+
+    contract_path = repo / ".digital-asset" / "dad-integration.json"
+    contract = json.loads(contract_path.read_text(encoding="utf-8"))
+    del contract["transport"]
+    contract_path.write_text(json.dumps(contract), encoding="utf-8")
+
+    status = enrollment_status(policy)
+
+    assert status["update_available"] is True
+    assert status["transport"]["status"] == "contract_missing"
+    assert "Enrollment contract missing transport.surface_version" in status["errors"]
+
+
 def test_enrollment_status_reports_missing_exception_surface(tmp_path: Path):
     hub = tmp_path / "hub"
     repo = tmp_path / "repo-a"

@@ -10,6 +10,7 @@ from typing import Any
 from .config import LocalSource
 from .ids import stable_id
 from .models import AssetRecord, SemanticEvolutionRecord
+from .transport import data_relative_path
 from .utils import atomic_write_text, sha256_bytes, sha256_file, utc_now, write_jsonl
 
 METHODOLOGY_VERSION = "semantic-evolution-grading-v1"
@@ -543,8 +544,8 @@ def write_semantic_evolution_outputs(
         max_read_bytes=max_read_bytes,
         generated_at=generated,
     )
-    learning_dir = repo_root / "processed" / "learning"
-    reports_dir = repo_root / "processed" / "reports"
+    learning_dir = data_relative_path(repo_root, Path("processed") / "learning")
+    reports_dir = data_relative_path(repo_root, Path("processed") / "reports")
     candidates_path = learning_dir / "semantic_evolution_candidates.jsonl"
     report_path = reports_dir / "semantic_evolution_candidates.md"
     write_jsonl(candidates_path, [record.model_dump(mode="json") for record in records])

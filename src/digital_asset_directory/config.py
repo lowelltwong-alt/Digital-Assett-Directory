@@ -7,6 +7,7 @@ import os
 import json
 import yaml
 
+from .transport import resolve_data_root
 from .utils import atomic_write_text, find_repo_root
 
 
@@ -356,7 +357,8 @@ def load_config(path: Path | None = None, repo_root: Path | None = None) -> AppC
     raw = yaml.safe_load(cfg_path.read_text(encoding="utf-8")) or {}
     project = raw.get("project", {})
     db = Path(project.get("database", "state/catalog.sqlite3"))
-    db_path = db if db.is_absolute() else root / db
+    data_root, _data_root_mode = resolve_data_root(root)
+    db_path = db if db.is_absolute() else data_root / db
 
     local_sources: list[LocalSource] = []
     for item in raw.get("sources", {}).get("local", []) or []:
