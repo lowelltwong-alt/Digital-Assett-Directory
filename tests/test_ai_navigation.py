@@ -58,7 +58,7 @@ def test_manifest_exposes_navigation_and_graph_entrypoints() -> None:
     assert manifest["navigation_standards"]["navigation_registry"] == (
         "registry/ai-navigation-registry.json"
     )
-    assert manifest["navigation_standards"]["navigation_version"] == "2026.07.06.5"
+    assert manifest["navigation_standards"]["navigation_version"] == "2026.07.07.1"
     assert manifest["navigation_standards"]["routing_standard"] == (
         "docs/AI_ENTRYPOINT_AND_TOC_ROUTING_STANDARD.md"
     )
@@ -76,6 +76,8 @@ def test_manifest_exposes_navigation_and_graph_entrypoints() -> None:
     )
     assert "docs/PR_BRANCH_LIFECYCLE_GOVERNANCE.md" in manifest["knowledge_graph_entrypoints"]
     assert "docs/DAD_EVENT_PIPELINE.md" in manifest["knowledge_graph_entrypoints"]
+    assert "docs/MCP_FIRST_INTEGRATION_POLICY.md" in manifest["knowledge_graph_entrypoints"]
+    assert "docs/DAD_TRANSPORT_AND_COMMS_REDESIGN.md" in manifest["knowledge_graph_entrypoints"]
     assert "tools/dad_scan_core/src/event_log.rs" in manifest["knowledge_graph_entrypoints"]
     assert "processed/events/" in manifest["knowledge_graph_entrypoints"]
     assert (
@@ -118,7 +120,7 @@ def test_navigation_registry_keeps_front_door_singular_and_fresh() -> None:
     registry = json.loads((ROOT / "registry" / "ai-navigation-registry.json").read_text())
 
     assert registry["singular_entrypoint"]["path"] == "AI_FRONT_DOOR.md"
-    assert registry["navigation_version"] == "2026.07.06.5"
+    assert registry["navigation_version"] == "2026.07.07.1"
     assert registry["updated_at"]
     assert "memory" in registry["entrypoint_policy"]["memory_rule"].lower()
     assert registry["freshness_policy"]["recent_changes_limit"] <= 20
@@ -179,6 +181,8 @@ def test_navigation_registry_keeps_front_door_singular_and_fresh() -> None:
     assert "schemas/dad-pipeline-event.schema.json" in change_paths
     assert "docs/LESSON_LIFECYCLE_GOVERNANCE.md" in change_paths
     assert "docs/DAD_MAIL_STORM_AND_DIRTY_STATE_RUNBOOK.md" in change_paths
+    assert "docs/MCP_FIRST_INTEGRATION_POLICY.md" in change_paths
+    assert "docs/DAD_TRANSPORT_AND_COMMS_REDESIGN.md" in change_paths
     assert "docs/PR_BRANCH_LIFECYCLE_GOVERNANCE.md" in change_paths
     assert "docs/rust/RUST_ROLLOUT_LESSON_CAPTURE_PROTOCOL.md" in change_paths
     assert "schemas/rust-rollout-lesson.schema.json" in change_paths

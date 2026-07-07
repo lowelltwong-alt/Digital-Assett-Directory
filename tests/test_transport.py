@@ -66,6 +66,39 @@ def _hub_for_cli(path: Path) -> Path:
     return path
 
 
+def _write_transport_upgrade_config(hub: Path, repo_a: Path, repo_b: Path) -> None:
+    (hub / "config" / "sources.example.yaml").write_text(
+        "\n".join(
+            [
+                "project:",
+                "  database: state/catalog.sqlite3",
+                "mail:",
+                "  repos:",
+                "    - id: repo-a",
+                f"      path: {repo_a}",
+                "      mail_enabled: true",
+                "    - id: repo-b",
+                f"      path: {repo_b}",
+                "      mail_enabled: true",
+                "enrollment:",
+                "  repos:",
+                "    - id: repo-a",
+                f"      path: {repo_a}",
+                "      wave: wave-a",
+                "      update_allowed: true",
+                "      approved_approval_ids: [APPROVED-1]",
+                "    - id: repo-b",
+                f"      path: {repo_b}",
+                "      wave: wave-b",
+                "      update_allowed: true",
+                "      approved_approval_ids: [APPROVED-1]",
+                "",
+            ]
+        ),
+        encoding="utf-8",
+    )
+
+
 def test_uninitialized_data_root_falls_back_to_legacy(tmp_path: Path):
     hub = tmp_path / "hub"
     hub.mkdir()
@@ -169,6 +202,166 @@ def test_data_and_transport_cli_commands(tmp_path: Path):
     assert audit.exit_code == 0, audit.output
     payload = json.loads(audit.stdout)
     assert payload["hub_classification"] == "upgrade_required"
+
+
+def test_transport_upgrade_status_reports_reviewed_queue_and_plan_artifacts(tmp_path: Path):
+    hub = _hub_for_cli(tmp_path / "hub")
+    repo_a = tmp_path / "repo-a"
+    repo_b = tmp_path / "repo-b"
+    repo_a.mkdir()
+    repo_b.mkdir()
+    _write_transport_upgrade_config(hub, repo_a, repo_b)
+    report_path = data_path(hub, "central_reports") / "transport_audit.json"
+    report_path.parent.mkdir(parents=True, exist_ok=True)
+    report_path.write_text(
+        json.dumps(
+            {
+                "transport_surface_version": TRANSPORT_SURFACE_VERSION,
+                "repo_count": 2,
+                "classification_counts": {"upgrade_recommended": 2},
+                "hub": {"classification": "upgrade_required"},
+            }
+        ),
+        encoding="utf-8",
+    )
+    queue_path = transport_upgrade_queue_path(hub)
+    queue_path.parent.mkdir(parents=True, exist_ok=True)
+    rows = [
+        {"repo_id": "repo-a", "review_status": "candidate"},
+        {"repo_id": "repo-b", "review_status": "candidate"},
+        {"repo_id": "repo-protected", "review_status": "candidate", "write_protected": True},
+        {"repo_id": "repo-missing", "review_status": "candidate"},
+    ]
+    queue_path.write_text(
+        "".join(
+            json.dumps(
+                {
+                    "queue_key": f"queue:{row['repo_id']}",
+                    "classification": "upgrade_recommended",
+                    "expected_surface_version": TRANSPORT_SURFACE_VERSION,
+                    **row,
+                }
+            )
+            + "\n"
+            for row in rows
+        ),
+        encoding="utf-8",
+    )
+
+    plan_result = RUNNER.invoke(
+        app,
+        [
+            "enroll",
+            "update-plan",
+            "--hub",
+            str(hub),
+            "--wave",
+            "wave-a",
+            "--from-transport-queue",
+        ],
+    )
+    assert plan_result.exit_code == 0, plan_result.output
+
+    result = RUNNER.invoke(
+        app,
+        ["transport", "upgrade-status", "--hub", str(hub), "--wave", "wave-a"],
+    )
+
+    assert result.exit_code == 0, result.output
+    payload = json.loads(result.stdout)
+    assert payload["schema_version"] == "dad.transport.upgrade_status.v1"
+    assert payload["status"] == "ready_for_update_plan"
+    assert payload["plan_artifacts"]["repo_ids"] == ["repo-a"]
+    assert payload["selection"]["selected_repo_ids"] == ["repo-a"]
+    assert payload["selection"]["skipped_by_reason"] == {
+        "wrong_wave": 1,
+        "write_protected_central_only": 1,
+        "no_reviewed_enrollment_policy": 1,
+    }
+    assert payload["operator_next_steps"] == [
+        "asset-dir enroll update-plan --wave wave-a --from-transport-queue"
+    ]
+
+
+def test_transport_readiness_includes_upgrade_wave_status(tmp_path: Path):
+    hub = _hub_for_cli(tmp_path / "hub")
+    repo_a = tmp_path / "repo-a"
+    repo_b = tmp_path / "repo-b"
+    repo_a.mkdir()
+    repo_b.mkdir()
+    _write_transport_upgrade_config(hub, repo_a, repo_b)
+    report_path = data_path(hub, "central_reports") / "transport_audit.json"
+    report_path.parent.mkdir(parents=True, exist_ok=True)
+    report_path.write_text(
+        json.dumps(
+            {
+                "transport_surface_version": TRANSPORT_SURFACE_VERSION,
+                "repo_count": 2,
+                "classification_counts": {"upgrade_recommended": 2},
+                "hub": {"classification": "upgrade_required"},
+            }
+        ),
+        encoding="utf-8",
+    )
+    queue_path = transport_upgrade_queue_path(hub)
+    queue_path.parent.mkdir(parents=True, exist_ok=True)
+    queue_path.write_text(
+        json.dumps(
+            {
+                "queue_key": "queue:repo-a",
+                "repo_id": "repo-a",
+                "classification": "upgrade_recommended",
+                "expected_surface_version": TRANSPORT_SURFACE_VERSION,
+                "review_status": "candidate",
+            }
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+
+    result = RUNNER.invoke(
+        app,
+        ["transport", "readiness", "--hub", str(hub), "--wave", "wave-a"],
+    )
+
+    assert result.exit_code == 0, result.output
+    payload = json.loads(result.stdout)
+    assert payload["upgrade_wave"]["status"] == "ready_for_update_plan"
+    assert payload["human_gates"]["repo_upgrade_wave"]["evidence"]["selected_count"] == 1
+
+
+def test_transport_upgrade_status_reads_report_from_active_data_root(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+):
+    hub = _hub_for_cli(tmp_path / "hub")
+    data_root = tmp_path / "data-root"
+    apply_data_migration(hub, data_root)
+    monkeypatch.setenv("DAD_DATA_ROOT", str(data_root))
+    report_path = data_path(hub, "central_reports") / "transport_audit.json"
+    queue_path = transport_upgrade_queue_path(hub)
+    assert report_path.is_relative_to(data_root)
+    assert queue_path.is_relative_to(data_root)
+    report_path.parent.mkdir(parents=True, exist_ok=True)
+    report_path.write_text(
+        json.dumps(
+            {
+                "transport_surface_version": TRANSPORT_SURFACE_VERSION,
+                "repo_count": 0,
+                "classification_counts": {},
+                "hub": {"classification": "current"},
+            }
+        ),
+        encoding="utf-8",
+    )
+    queue_path.parent.mkdir(parents=True, exist_ok=True)
+    queue_path.write_text("", encoding="utf-8")
+
+    result = RUNNER.invoke(app, ["transport", "upgrade-status", "--hub", str(hub)])
+
+    assert result.exit_code == 0, result.output
+    payload = json.loads(result.stdout)
+    assert payload["audit"]["report_status"] == "readable"
+    assert payload["queue"]["queue_path"] == str(queue_path)
 
 
 def test_plan_data_migration_emits_review_commands_without_deleting(tmp_path: Path):

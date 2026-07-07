@@ -53,6 +53,10 @@ AGENT_RUNTIME_POLICY = {
     "adapter_authority": "optional_wrapper_only",
     "agent_id_policy": "arbitrary_non_empty_string",
     "vendor_lock_in_prohibited": True,
+    "internal_integration_default": "mcp_over_direct_api",
+    "mcp_authority": "neutral_tool_resource_prompt_boundary",
+    "direct_api_policy": "external_adapter_fallback_only",
+    "mcp_audit_policy": "dad_lifecycle_and_audit_required_for_side_effects",
 }
 
 WEEKLY_CHECKS = [
@@ -903,7 +907,8 @@ def _claude_body() -> str:
 Claude Code should follow the DAD enrollment contract in `AGENTS.md` and
 `.digital-asset/dad-integration.json`. `CLAUDE.md` is an optional runtime
 adapter, not the DAD source of truth. Agent review is triage only; human
-approval gates remain separate.
+approval gates remain separate. Internal DAD integrations default to MCP over
+direct APIs; Claude-specific APIs or hooks are fallback adapters only.
 """
 
 

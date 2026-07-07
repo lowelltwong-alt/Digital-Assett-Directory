@@ -145,7 +145,11 @@
         "core_contract": {"const": "AGENTS.md"},
         "adapter_authority": {"const": "optional_wrapper_only"},
         "agent_id_policy": {"const": "arbitrary_non_empty_string"},
-        "vendor_lock_in_prohibited": {"const": true}
+        "vendor_lock_in_prohibited": {"const": true},
+        "internal_integration_default": {"const": "mcp_over_direct_api"},
+        "mcp_authority": {"const": "neutral_tool_resource_prompt_boundary"},
+        "direct_api_policy": {"const": "external_adapter_fallback_only"},
+        "mcp_audit_policy": {"const": "dad_lifecycle_and_audit_required_for_side_effects"}
       },
       "additionalProperties": false
     },

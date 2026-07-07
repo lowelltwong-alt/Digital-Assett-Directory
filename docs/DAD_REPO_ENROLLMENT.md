@@ -17,6 +17,33 @@ hub reference, enrollment version, approved wave, cadence, enabled control
 planes, local validation commands, return address, and the exact DAD-managed
 paths approved for enrollment.
 
+Current contracts also carry the transport block:
+
+```json
+"transport": {
+  "surface_version": "1.0.0",
+  "mode": "local_pull",
+  "journal_fallback": true
+}
+```
+
+Repos missing this block, or repos with mailboxes but no contract, are
+transport-upgrade candidates. `asset-dir transport audit` writes the central
+audit report and deduped upgrade queue; reviewed enrollment update waves apply
+the contract and README refresh. Protected repos remain central-only until a
+repo-specific local-write approval exists.
+
+The optional `agent_runtime_policy` block makes no-lock-in explicit. New
+contracts default internal integrations to MCP over direct APIs:
+
+```json
+"internal_integration_default": "mcp_over_direct_api",
+"direct_api_policy": "external_adapter_fallback_only"
+```
+
+MCP resources, tools, and prompts are adapters over DAD governance, not a new
+authority layer.
+
 Current DAD control planes include the library/card catalog, mail center,
 reusable assets, coding harnesses, agent skills, templates, architecture
 references, repo enrollment, coding/test parity guidance, governance maps, data

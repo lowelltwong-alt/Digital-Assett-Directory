@@ -7,7 +7,9 @@ from pathlib import Path
 from jsonschema.validators import validator_for
 import pytest
 import yaml
+from typer.testing import CliRunner
 
+from digital_asset_directory.cli import app
 from digital_asset_directory.config import AppConfig, EnrollmentRepoPolicy, Settings
 from digital_asset_directory.enrollment import (
     APPROVED_RELATIVE_PATHS,
@@ -18,8 +20,11 @@ from digital_asset_directory.enrollment import (
     select_enrollment_policies,
 )
 from digital_asset_directory.mail_center import compose_mail
+from digital_asset_directory.transport import TRANSPORT_SURFACE_VERSION, transport_upgrade_queue_path
+from digital_asset_directory.utils import append_jsonl
 
 ROOT = Path(__file__).resolve().parents[1]
+RUNNER = CliRunner()
 
 
 def _policy(
@@ -112,6 +117,30 @@ def _all_files(repo: Path) -> set[str]:
         for path in repo.rglob("*")
         if path.is_file()
     }
+
+
+def _hub_for_cli(path: Path) -> Path:
+    path.mkdir(parents=True)
+    (path / "registry").mkdir()
+    (path / "registry" / "source-of-truth.json").write_text("{}", encoding="utf-8")
+    (path / "AI_FRONT_DOOR.md").write_text("# AI Front Door\n", encoding="utf-8")
+    (path / "MACHINE_NAVIGATION_MANIFEST.json").write_text("{}", encoding="utf-8")
+    (path / "src" / "digital_asset_directory").mkdir(parents=True)
+    (path / "src" / "digital_asset_directory" / "cli.py").write_text("", encoding="utf-8")
+    (path / "pyproject.toml").write_text(
+        "\n".join(
+            [
+                "[project]",
+                'name = "digital-asset-directory"',
+                "[project.scripts]",
+                'asset-dir = "digital_asset_directory.cli:app"',
+                "",
+            ]
+        ),
+        encoding="utf-8",
+    )
+    (path / "config").mkdir()
+    return path
 
 
 def test_enrollment_schema_registry_and_control_plane_registry_conform():
@@ -213,6 +242,14 @@ def test_apply_requires_approval_and_writes_only_approved_paths(tmp_path: Path):
     legacy_contract = dict(contract)
     legacy_contract.pop("agent_runtime_policy")
     _validate("repo_enrollment_contract", legacy_contract)
+    old_agent_policy_contract = dict(contract)
+    old_agent_policy_contract["agent_runtime_policy"] = {
+        "core_contract": "AGENTS.md",
+        "adapter_authority": "optional_wrapper_only",
+        "agent_id_policy": "arbitrary_non_empty_string",
+        "vendor_lock_in_prohibited": True,
+    }
+    _validate("repo_enrollment_contract", old_agent_policy_contract)
     _validate("repo_context_map", context_map)
     _validate("governance_map_adoption", governance_map)
     _validate("data_map_adoption", data_map)
@@ -222,6 +259,10 @@ def test_apply_requires_approval_and_writes_only_approved_paths(tmp_path: Path):
         "adapter_authority": "optional_wrapper_only",
         "agent_id_policy": "arbitrary_non_empty_string",
         "vendor_lock_in_prohibited": True,
+        "internal_integration_default": "mcp_over_direct_api",
+        "mcp_authority": "neutral_tool_resource_prompt_boundary",
+        "direct_api_policy": "external_adapter_fallback_only",
+        "mcp_audit_policy": "dad_lifecycle_and_audit_required_for_side_effects",
     }
     assert governance_map["agent_runtime_policy"] == contract["agent_runtime_policy"]
     capture_registry = json.loads(
@@ -288,6 +329,81 @@ def test_update_apply_is_idempotent(tmp_path: Path):
     assert update["changed_paths"] == [
         ".digital-asset/dad-integration.json",
     ]
+
+
+def test_update_plan_can_select_from_transport_upgrade_queue(tmp_path: Path):
+    hub = _hub_for_cli(tmp_path / "hub")
+    repo_a = tmp_path / "repo-a"
+    repo_b = tmp_path / "repo-b"
+    repo_a.mkdir()
+    repo_b.mkdir()
+    (hub / "config" / "sources.example.yaml").write_text(
+        "\n".join(
+            [
+                "project:",
+                "  database: state/catalog.sqlite3",
+                "enrollment:",
+                "  repos:",
+                "    - id: repo-a",
+                f"      path: {repo_a}",
+                "      wave: wave-a",
+                "      update_allowed: true",
+                "      approved_approval_ids: [APPROVED-1]",
+                "    - id: repo-b",
+                f"      path: {repo_b}",
+                "      wave: wave-b",
+                "      update_allowed: true",
+                "      approved_approval_ids: [APPROVED-1]",
+                "",
+            ]
+        ),
+        encoding="utf-8",
+    )
+    queue_path = transport_upgrade_queue_path(hub)
+    for row in [
+        {"repo_id": "repo-a", "review_status": "candidate"},
+        {"repo_id": "repo-b", "review_status": "candidate"},
+        {"repo_id": "repo-protected", "review_status": "candidate", "write_protected": True},
+        {"repo_id": "repo-missing", "review_status": "candidate"},
+    ]:
+        append_jsonl(
+            queue_path,
+            {
+                "queue_key": f"queue:{row['repo_id']}",
+                "classification": "upgrade_recommended",
+                "expected_surface_version": TRANSPORT_SURFACE_VERSION,
+                **row,
+            },
+        )
+
+    result = RUNNER.invoke(
+        app,
+        [
+            "enroll",
+            "update-plan",
+            "--hub",
+            str(hub),
+            "--wave",
+            "wave-a",
+            "--from-transport-queue",
+        ],
+    )
+
+    assert result.exit_code == 0, result.output
+    payload = json.loads(result.stdout)
+    assert payload["operation"] == "update"
+    assert payload["item_count"] == 1
+    assert payload["items"][0]["repo_id"] == "repo-a"
+    selection = payload["transport_upgrade_queue_selection"]
+    assert selection["queue_row_count"] == 4
+    assert selection["selected_count"] == 1
+    skipped = {item["repo_id"]: item["reason"] for item in selection["skipped"]}
+    assert skipped == {
+        "repo-b": "wrong_wave",
+        "repo-protected": "write_protected_central_only",
+        "repo-missing": "no_reviewed_enrollment_policy",
+    }
+    assert (hub / payload["plan_path"]).exists()
 
 
 def test_enrollment_status_reports_schema_stale_contract(tmp_path: Path):

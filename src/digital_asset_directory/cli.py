@@ -266,6 +266,10 @@ from .transport import (
     resolve_data_root,
 )
 from .transport_readiness import build_transport_readiness
+from .transport_upgrade import (
+    build_transport_upgrade_status,
+    select_transport_upgrade_policies_from_queue,
+)
 from .validation import validate_repo
 from .workflow_parts import (
     build_workflow_part_review_queue,
@@ -446,6 +450,7 @@ def transport_readiness(
     task_name: str = typer.Option("DAD Daemon Run Cycle"),
     shim: Optional[Path] = typer.Option(None),
     journal_repo: Optional[Path] = typer.Option(None),
+    wave: str = typer.Option("transport-surface-v1"),
 ) -> None:
     cfg = _cfg(hub=hub)
     scheduler = (
@@ -462,9 +467,29 @@ def transport_readiness(
         data=build_transport_readiness(
             cfg.repo_root,
             transport_repos=_transport_repo_rows(cfg),
+            enrollment_policies=cfg.enrollment_repos,
+            wave=wave,
             stale_hours=stale_hours,
             scheduler_status=scheduler,
             journal_repo_status=journal_repo_evidence,
+        )
+    )
+
+
+@transport_app.command("upgrade-status")
+def transport_upgrade_status(
+    repo: list[str] = typer.Option([], "--repo"),
+    wave: str = typer.Option("transport-surface-v1"),
+    hub: Optional[Path] = typer.Option(None),
+) -> None:
+    cfg = _cfg(hub=hub)
+    console.print_json(
+        data=build_transport_upgrade_status(
+            cfg.repo_root,
+            transport_repos=_transport_repo_rows(cfg),
+            enrollment_policies=cfg.enrollment_repos,
+            wave=wave,
+            requested_repos=repo,
         )
     )
 
@@ -2418,6 +2443,20 @@ def _select_enrollment(repo: list[str], cfg, *, wave: str | None = None):
     except ValueError as exc:
         console.print(str(exc))
         raise typer.Exit(2) from exc
+
+
+def _transport_upgrade_policies_from_queue(
+    cfg,
+    *,
+    wave: str,
+    requested_repos: list[str],
+) -> tuple[list[Any], dict[str, Any]]:
+    return select_transport_upgrade_policies_from_queue(
+        cfg.repo_root,
+        cfg.enrollment_repos,
+        wave=wave,
+        requested_repos=requested_repos,
+    )
 
 
 @app.command()
@@ -4747,13 +4786,31 @@ def enroll_apply(
 def enroll_update_plan(
     repo: list[str] = typer.Option([], "--repo"),
     wave: str = typer.Option(..., "--wave"),
+    from_transport_queue: bool = typer.Option(
+        False,
+        "--from-transport-queue",
+        help=(
+            "Select reviewed enrollment policies from the central "
+            "transport-upgrade queue instead of raw --repo arguments."
+        ),
+    ),
     config: Optional[Path] = typer.Option(None),
     hub: Optional[Path] = typer.Option(None),
 ) -> None:
     """Write a reviewed-wave enrollment update plan under processed/enrollment."""
     cfg = _cfg(config, hub)
-    policies = _select_enrollment(repo, cfg, wave=wave)
+    queue_selection: dict[str, Any] | None = None
+    if from_transport_queue:
+        policies, queue_selection = _transport_upgrade_policies_from_queue(
+            cfg,
+            wave=wave,
+            requested_repos=repo,
+        )
+    else:
+        policies = _select_enrollment(repo, cfg, wave=wave)
     result = build_enrollment_plan(cfg.repo_root, policies, wave=wave, update=True)
+    if queue_selection is not None:
+        result["transport_upgrade_queue_selection"] = queue_selection
     console.print_json(data=result)
 
 

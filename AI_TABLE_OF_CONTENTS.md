@@ -33,6 +33,8 @@ them.
 | `public_safe` | Metadata-only patterns safe for a future public DAD repo. |
 | `cross_repo` | Multi-repo patterns, workflows, and authority boundaries. |
 | `mail_center` | Cross-repo candidate suggestion inbox/outbox transport. |
+| `transport_data_plane` | Three-plane transport, active data root, daemon, journal, and transport-upgrade audit. |
+| `mcp_integration` | MCP-first internal adapter policy, resources/tools/prompts, and API fallback limits. |
 | `event_pipeline` | Append-only repo event flow, response-state tracking, and mailbox edge adapters. |
 | `validation` | Tests, CLI validators, and verification reports. |
 | `background_connection` | Low-compute connection scouting, escalation packets, and bounded expansion maps. |
@@ -67,6 +69,8 @@ them.
 | `registry/source-of-truth.json` | Repository precedence and authority-layer definitions. | `authority`, `registry` | You need to know what can override what. |
 | `registry/design-authority.json` | Non-negotiable design rules and boundary constraints. | `authority`, `registry` | You are changing design behavior or evaluating a proposed change. |
 | `registry/identity-layer-registry.json` | Asset identity and similarity ladder registry. | `authority`, `registry`, `knowledge_graph` | You compare assets, versions, duplicates, or semantic similarity. |
+| `docs/MCP_FIRST_INTEGRATION_POLICY.md` | Internal MCP-first adapter policy for DAD resources, tools, prompts, side effects, and direct API fallback. | `front_door`, `authority`, `mcp_integration`, `governance` | You create or review an MCP server, plugin, connector, cloud agent, API bridge, or runtime adapter. |
+| `docs/DAD_TRANSPORT_AND_COMMS_REDESIGN.md` | Three-plane transport design, `DAD_DATA_ROOT`, daemon, private journal fallback, and Cloudflare deferral boundary. | `workflow`, `transport_data_plane`, `mail_center`, `event_pipeline`, `repo_enrollment`, `roadmap` | You change runtime data paths, mail/exception/lesson/report writers, daemon cadence, journal checkpointing, or repo transport-upgrade waves. |
 | `assets/asset-registry.json` | Local index of installed reusable assets, provenance, rollout helpers, and safety notes. | `front_door`, `registry`, `reusable_asset`, `workflow` | You need to find a reusable asset before coding, refactoring, or template work. |
 | `registry/coding-asset-registry.json` | DAD coding asset registry with applicability limits, authority boundaries, validation commands, evidence, and review cadence. | `front_door`, `registry`, `reusable_asset`, `coding_asset`, `workflow` | You need to select a DAD coding asset or profile before AI-assisted implementation. |
 | `registry/language-coding-advantage-registry.json` | Language-specific AI coding advantage registry for Python, Rust, and future languages, with trusted sources, overlooked patterns, harness routes, and adoption gates. | `front_door`, `registry`, `coding_asset`, `learning_loop`, `validation` | You need to refresh language guidance, add a language-frontier signal, or decide what Python/Rust asset to consult before coding. |

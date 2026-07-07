@@ -1,4 +1,4 @@
-"""Read-only readiness summary for the local transport rollout."""
+"""Read-only readiness summary for the transport data-plane rollout."""
 
 from __future__ import annotations
 
@@ -16,6 +16,7 @@ from .transport import (
     read_transport_upgrade_queue,
     resolve_data_root,
 )
+from .transport_upgrade import build_transport_upgrade_status
 from .utils import utc_now
 
 
@@ -43,11 +44,13 @@ def build_transport_readiness(
     hub_root: Path,
     *,
     transport_repos: Sequence[Mapping[str, Any]] | None = None,
+    enrollment_policies: Sequence[Any] | None = None,
+    wave: str = "transport-surface-v1",
     stale_hours: int = 26,
     scheduler_status: Mapping[str, Any] | None = None,
     journal_repo_status: Mapping[str, Any] | None = None,
 ) -> dict[str, Any]:
-    """Summarize local transport readiness without mutating repos or data files."""
+    """Summarize transport readiness without mutating repos or data files."""
     data_root, data_mode = resolve_data_root(hub_root)
     report_path = data_path(hub_root, "central_reports") / "transport_audit.json"
     report_status, report_payload = _read_json_object(report_path)
@@ -55,10 +58,17 @@ def build_transport_readiness(
     daemon = daemon_status(hub_root, stale_hours=stale_hours)
     journal = journal_status(hub_root)
     repos = list(transport_repos or [])
+    upgrade_status = build_transport_upgrade_status(
+        hub_root,
+        transport_repos=repos,
+        enrollment_policies=enrollment_policies or [],
+        wave=wave,
+    )
     scheduler = dict(scheduler_status or {})
     journal_repo = dict(journal_repo_status or {})
 
     data_root_active = data_mode == "data_root"
+    last_checkpoint_at = str(journal.get("last_checkpoint_at") or "")
     daemon_fresh = daemon.get("status") == "fresh" and not bool(daemon.get("stale"))
     if scheduler.get("installed") and daemon_fresh:
         daemon_schedule_status = (
@@ -94,6 +104,16 @@ def build_transport_readiness(
                 ),
             },
         ),
+        "journal_repo_checkpoint": _gate(
+            complete=False,
+            status=journal_gate_status,
+            evidence={
+                "last_checkpoint_at": last_checkpoint_at,
+                "checkpoint_due": journal.get("checkpoint_due"),
+                "new_record_count": journal.get("new_record_count"),
+                "journal_repo_status": journal_repo or None,
+            },
+        ),
         "daemon_schedule": _gate(
             complete=False,
             status=daemon_schedule_status,
@@ -108,16 +128,6 @@ def build_transport_readiness(
                 ),
             },
         ),
-        "journal_repo_checkpoint": _gate(
-            complete=False,
-            status=journal_gate_status,
-            evidence={
-                "last_checkpoint_at": journal.get("last_checkpoint_at"),
-                "checkpoint_due": journal.get("checkpoint_due"),
-                "new_record_count": journal.get("new_record_count"),
-                "journal_repo_status": journal_repo or None,
-            },
-        ),
         "repo_upgrade_wave": _gate(
             complete=False,
             status="pending_reviewed_enrollment_wave",
@@ -126,6 +136,11 @@ def build_transport_readiness(
                 "transport_queue_row_count": queue.get("row_count"),
                 "transport_report_repo_count": report_payload.get("repo_count"),
                 "classification_counts": report_payload.get("classification_counts", {}),
+                "upgrade_status": upgrade_status.get("status"),
+                "selected_count": upgrade_status.get("selection", {}).get("selected_count"),
+                "skipped_by_reason": upgrade_status.get("selection", {}).get(
+                    "skipped_by_reason", {}
+                ),
             },
         ),
         "cloudflare_relay": _gate(
@@ -195,6 +210,7 @@ def build_transport_readiness(
             "row_count": queue.get("row_count"),
             "invalid_row_count": queue.get("invalid_row_count"),
         },
+        "upgrade_wave": upgrade_status,
         "daemon": {
             "status": daemon.get("status"),
             "stale": daemon.get("stale"),
@@ -220,11 +236,12 @@ def build_transport_readiness(
         "operator_next_steps": [
             "asset-dir data migrate --plan-only",
             "asset-dir data migrate --apply",
-            "asset-dir transport audit",
+            "asset-dir transport upgrade-status",
             "asset-dir daemon install --plan-only",
             "asset-dir daemon install --apply",
             "asset-dir journal repo-status",
             "asset-dir journal checkpoint --plan-only",
+            "asset-dir enroll update-plan --from-transport-queue",
         ],
         "transport_surface_version": TRANSPORT_SURFACE_VERSION,
         "authority_boundary": AUTHORITY_BOUNDARY,

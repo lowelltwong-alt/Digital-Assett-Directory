@@ -65,6 +65,27 @@ branches from this front door, not competing entrypoints. Dates and version
 signals live in the navigation registry so the AI table of contents can stay
 shallow and descriptive instead of becoming a bulky change log.
 
+## MCP-First Integrations
+
+DAD internal agent integrations default to MCP over direct vendor APIs. MCP
+resources expose read-only DAD context, MCP tools wrap bounded DAD CLI actions,
+and MCP prompts package repeatable workflows. Direct APIs and vendor SDKs are
+fallback adapters only when MCP cannot express the integration and a reviewed
+human gate approves the exception.
+
+Read `docs/MCP_FIRST_INTEGRATION_POLICY.md` before creating or reviewing an MCP
+server, plugin, connector, cloud agent, API bridge, or runtime adapter.
+
+## Transport And Data Root
+
+DAD's transport redesign is routed through
+`docs/DAD_TRANSPORT_AND_COMMS_REDESIGN.md`. Runtime candidate data belongs under
+the active `DAD_DATA_ROOT` local bus or the private `dad-journal` fallback, not
+as message PRs. Use `asset-dir data status`, `asset-dir transport audit`,
+`asset-dir daemon status`, and `asset-dir journal status` to inspect the current
+transport state before changing mail, exception, lesson, report, or ledger
+writers.
+
 ## Required read order
 
 1. `AGENTS.md`
