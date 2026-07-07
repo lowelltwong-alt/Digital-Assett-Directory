@@ -1,0 +1,75 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://local.digital-asset-directory/schemas/graph-surface-manifest.schema.json",
+  "title": "DAD Graph Surface Manifest",
+  "description": "Shared manifest contract for generated graph surfaces. The manifest records freshness evidence; it does not promote graph content to authority.",
+  "type": "object",
+  "additionalProperties": true,
+  "required": [
+    "schema_version",
+    "surface_id",
+    "ontology_id",
+    "generated_at",
+    "builder_version",
+    "graph_path",
+    "manifest_path",
+    "input_hashes",
+    "methodology_hashes",
+    "edge_registry_hash",
+    "graph_content_hash",
+    "freshness",
+    "counts",
+    "authority_boundary"
+  ],
+  "properties": {
+    "schema_version": {"const": "0.1.0"},
+    "surface_id": {"type": "string", "pattern": "^[a-z][a-z0-9-]*$"},
+    "ontology_id": {
+      "enum": ["knowledge", "research-intake", "exceptions", "operations"]
+    },
+    "generated_at": {"type": "string", "minLength": 1},
+    "builder_version": {"type": "string", "minLength": 1},
+    "graph_path": {"type": "string", "minLength": 1},
+    "manifest_path": {"type": "string", "minLength": 1},
+    "input_hashes": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "string",
+        "pattern": "^(sha256:[0-9a-f]{64}|missing)$"
+      }
+    },
+    "methodology_hashes": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "string",
+        "pattern": "^(sha256:[0-9a-f]{64}|missing)$"
+      }
+    },
+    "edge_registry_hash": {
+      "type": "string",
+      "pattern": "^(sha256:[0-9a-f]{64}|missing)$"
+    },
+    "graph_content_hash": {
+      "type": "string",
+      "pattern": "^(sha256:[0-9a-f]{64}|missing)$"
+    },
+    "freshness": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["state", "computed_at", "reasons"],
+      "properties": {
+        "state": {"enum": ["fresh", "stale", "inconsistent"]},
+        "computed_at": {"type": "string", "minLength": 1},
+        "reasons": {
+          "type": "array",
+          "items": {"type": "string", "minLength": 1}
+        }
+      }
+    },
+    "counts": {
+      "type": "object",
+      "additionalProperties": {"type": "integer", "minimum": 0}
+    },
+    "authority_boundary": {"type": "string", "minLength": 1}
+  }
+}

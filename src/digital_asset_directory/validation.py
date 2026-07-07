@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import importlib
 import json
 import re
 from pathlib import Path
@@ -9,6 +10,7 @@ import yaml
 from jsonschema.validators import validator_for
 
 from .config import load_config
+from .transport import DATA_PLANE_PATHS
 from .exception_capture import (
     BACKFILL_ROUTE_REQUIRED_FIELDS,
     audit_observed_capture_repo,
@@ -101,6 +103,83 @@ def _hash_path(path: Path, hash_policy: str | None = None) -> str:
         parts.append(f"{rel}\0{_file_hash_for_policy(child, hash_policy)}")
     digest_input = "\n".join(parts).encode("utf-8")
     return f"sha256:{sha256_bytes(digest_input)}"
+
+
+def _module_ref_exists(module_ref: str) -> bool:
+    module_name, separator, attr_name = module_ref.rpartition(".")
+    if not separator or not module_name or not attr_name:
+        return False
+    try:
+        module = importlib.import_module(module_name)
+    except Exception:
+        return False
+    return hasattr(module, attr_name)
+
+
+def _validate_graph_surface_registry_contract(
+    repo_root: Path,
+    registry: dict[str, Any],
+    errors: list[str],
+    checked: list[str],
+) -> None:
+    surface_registry_path = repo_root / "registry" / "graph-surface-registry.json"
+    if not surface_registry_path.exists():
+        errors.append("Missing graph surface registry: registry/graph-surface-registry.json")
+        return
+    payload = json.loads(surface_registry_path.read_text(encoding="utf-8"))
+    _validate_payload(repo_root, registry, "graph_surface_registry", payload)
+    checked.append("registry/graph-surface-registry.json")
+    surfaces = payload.get("surfaces", [])
+    surface_ids = [str(surface.get("surface_id", "")) for surface in surfaces]
+    if len(surface_ids) != len(set(surface_ids)):
+        errors.append("Graph surface registry has duplicate surface_id values")
+
+    for surface in surfaces:
+        surface_id = str(surface.get("surface_id", ""))
+        builder = surface.get("builder", {})
+        availability = str(builder.get("availability", ""))
+        command = str(builder.get("command", ""))
+        module_ref = str(builder.get("module", ""))
+        if availability == "wired":
+            if command.startswith("planned:"):
+                errors.append(f"Graph surface {surface_id} has planned command but is wired")
+            if not _module_ref_exists(module_ref):
+                errors.append(
+                    f"Graph surface {surface_id} builder module is not importable: {module_ref}"
+                )
+        for schema_ref in surface.get("schema_refs", []):
+            schema_path = repo_root / str(schema_ref)
+            if not schema_path.exists():
+                errors.append(
+                    f"Graph surface {surface_id} schema ref missing: {schema_ref}"
+                )
+        for source_input in surface.get("source_inputs", []):
+            kind = str(source_input.get("kind", ""))
+            ref = str(source_input.get("ref", ""))
+            required = bool(source_input.get("required", False))
+            if kind == "data_surface":
+                if ref not in DATA_PLANE_PATHS:
+                    errors.append(
+                        f"Graph surface {surface_id} uses unknown data surface: {ref}"
+                    )
+                continue
+            if kind == "registry_path" and not ref.startswith("registry/"):
+                errors.append(
+                    f"Graph surface {surface_id} registry input is outside registry/: {ref}"
+                )
+            if kind == "schema_path" and not ref.startswith("schemas/"):
+                errors.append(
+                    f"Graph surface {surface_id} schema input is outside schemas/: {ref}"
+                )
+            if required and not (repo_root / ref).exists():
+                errors.append(f"Graph surface {surface_id} required input missing: {ref}")
+        outputs = surface.get("outputs", {})
+        for key in ("manifest_logical_path", "body_logical_path"):
+            value = str(outputs.get(key, ""))
+            if value.startswith(("processed/", "raw/", "state/", "audit/")):
+                errors.append(
+                    f"Graph surface {surface_id} {key} must be data-plane logical, not {value}"
+                )
 
 
 def _repo_policy_identity_errors(label: str, policies: list[Any]) -> list[str]:
@@ -1347,19 +1426,37 @@ def _validate_lesson_graph_contract(
     registry: dict[str, Any],
     errors: list[str],
     checked: list[str],
+    warnings: list[str] | None = None,
 ) -> None:
+    warnings = warnings if warnings is not None else []
     edge_registry_path = repo_root / "registry" / "graph-edge-registry.json"
     edge_registry = json.loads(edge_registry_path.read_text(encoding="utf-8"))
     _validate_payload(repo_root, registry, "graph_edge_registry", edge_registry)
     checked.append("registry/graph-edge-registry.json")
     edge_defs = {row["edge_type"]: row for row in edge_registry.get("edge_types", [])}
+    forbidden_edge_claims = {
+        str(row.get("claim", "")): row
+        for row in edge_registry.get("forbidden_edge_claims", [])
+    }
     if len(edge_defs) != len(edge_registry.get("edge_types", [])):
         errors.append("Graph edge registry has duplicate edge_type values")
 
     graph_path = repo_root / "processed" / "learning" / "lesson-graph.json"
     if graph_path.exists():
         graph = json.loads(graph_path.read_text(encoding="utf-8"))
-        _validate_payload(repo_root, registry, "lesson_graph", graph)
+        for edge in graph.get("edges", []):
+            edge_type = str(edge.get("edge_type", ""))
+            if edge_type in forbidden_edge_claims and (
+                edge_type != "depends_on" or edge.get("edge_basis") != "declared.depends_on"
+            ):
+                errors.append(
+                    "Lesson graph uses forbidden generated edge claim: "
+                    f"{edge_type} ({forbidden_edge_claims[edge_type].get('reason', '')})"
+                )
+        try:
+            _validate_payload(repo_root, registry, "lesson_graph", graph)
+        except Exception as exc:
+            errors.append(f"Invalid lesson graph schema: {exc}")
         checked.append("processed/learning/lesson-graph.json")
         for edge in graph.get("edges", []):
             edge_type = edge.get("edge_type")
@@ -1398,10 +1495,49 @@ def _validate_lesson_graph_contract(
     if manifest_path.exists():
         manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
         checked.append("processed/learning/lesson-graph-manifest.json")
+        if "graph_surface_manifest" in registry.get("schemas", {}) and manifest.get(
+            "surface_id"
+        ):
+            try:
+                _validate_payload(repo_root, registry, "graph_surface_manifest", manifest)
+            except Exception as exc:
+                errors.append(f"Invalid lesson graph surface manifest: {exc}")
+        actual_edge_registry_hash = _hash_path(edge_registry_path)
+        expected_edge_registry_hash = manifest.get("edge_registry_hash")
+        if (
+            expected_edge_registry_hash
+            and expected_edge_registry_hash != actual_edge_registry_hash
+        ):
+            errors.append(
+                "Inconsistent lesson graph manifest edge registry hash: "
+                f"{expected_edge_registry_hash} != {actual_edge_registry_hash}"
+            )
+        methodology_hashes = manifest.get("methodology_hashes", {})
+        if isinstance(methodology_hashes, dict) and methodology_hashes.get(
+            "builder_source"
+        ):
+            actual_builder_hash = _hash_path(Path(__file__))
+            if methodology_hashes["builder_source"] != actual_builder_hash:
+                errors.append(
+                    "Inconsistent lesson graph manifest methodology hash "
+                    f"builder_source: {methodology_hashes['builder_source']} "
+                    f"!= {actual_builder_hash}"
+                )
+        graph_content_hash = manifest.get("graph_content_hash")
+        manifest_graph_path = repo_root / str(
+            manifest.get("graph_path") or "processed/learning/lesson-graph.json"
+        )
+        if graph_content_hash and manifest_graph_path.exists():
+            actual_graph_hash = _hash_path(manifest_graph_path)
+            if graph_content_hash != actual_graph_hash:
+                errors.append(
+                    "Inconsistent lesson graph manifest graph content hash: "
+                    f"{graph_content_hash} != {actual_graph_hash}"
+                )
         for rel, expected in manifest.get("input_hashes", {}).items():
             actual = _hash_path(repo_root / rel)
             if actual != expected:
-                errors.append(
+                warnings.append(
                     "Stale lesson graph manifest input hash "
                     f"{rel}: {expected} != {actual}"
                 )
@@ -1513,6 +1649,7 @@ def _phase_command_evidence_errors(repo_root: Path) -> list[str]:
 
 def validate_repo(repo_root: Path) -> dict[str, Any]:
     errors: list[str] = []
+    warnings: list[str] = []
     checked: list[str] = []
     required = [
         "README.md",
@@ -1600,6 +1737,7 @@ def validate_repo(repo_root: Path) -> dict[str, Any]:
             ),
             ("non_negotiables", "registry/non-negotiables.json"),
             ("graph_edge_registry", "registry/graph-edge-registry.json"),
+            ("graph_surface_registry", "registry/graph-surface-registry.json"),
             ("exception_event_type_registry", "registry/exception-event-type-registry.json"),
             ("exception_learning_methodology", "registry/exception-learning-methodology.json"),
             (
@@ -2463,7 +2601,8 @@ def validate_repo(repo_root: Path) -> dict[str, Any]:
                 errors.extend(
                     _capture_emission_simulation_errors(report_path, repo_root, payload)
                 )
-        _validate_lesson_graph_contract(repo_root, registry, errors, checked)
+        _validate_graph_surface_registry_contract(repo_root, registry, errors, checked)
+        _validate_lesson_graph_contract(repo_root, registry, errors, checked, warnings)
     except Exception as exc:
         errors.append(f"Invalid DAD library or harness registry: {exc}")
     try:
@@ -2581,4 +2720,10 @@ def validate_repo(repo_root: Path) -> dict[str, Any]:
         errors.extend(result["errors"])
     except Exception as exc:
         errors.append(f"Invalid template registry: {exc}")
-    return {"valid": not errors, "checked_count": len(set(checked)), "errors": errors}
+    return {
+        "valid": not errors,
+        "checked_count": len(set(checked)),
+        "warning_count": len(warnings),
+        "errors": errors,
+        "warnings": warnings,
+    }

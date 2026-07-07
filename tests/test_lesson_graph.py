@@ -30,6 +30,16 @@ def _validate_graph_edge_registry(payload: dict) -> None:
     validator_cls(schema).validate(payload)
 
 
+def _validate_graph_surface_manifest(payload: dict) -> None:
+    registry = json.loads((ROOT / "registry" / "schema-registry.json").read_text())
+    schema = json.loads(
+        (ROOT / registry["schemas"]["graph_surface_manifest"]).read_text()
+    )
+    validator_cls = validator_for(schema)
+    validator_cls.check_schema(schema)
+    validator_cls(schema).validate(payload)
+
+
 def _write_lesson(hub: Path, record: LessonRecord) -> None:
     dated = record.created_at[:10]
     path = hub / "raw" / "lessons" / dated / f"{record.lesson_id.split(':')[-1]}.json"
@@ -150,6 +160,14 @@ def test_build_lesson_graph_compiles_candidate_nodes_and_edges(tmp_path: Path):
         {"asset_id": "dad:offering:missing", "lesson_mentions": 1}
     ]
     manifest = json.loads(Path(result["manifest_path"]).read_text(encoding="utf-8"))
+    _validate_graph_surface_manifest(manifest)
+    assert manifest["surface_id"] == "lesson-graph"
+    assert manifest["ontology_id"] == "knowledge"
+    assert manifest["graph_content_hash"].startswith("sha256:")
+    assert manifest["edge_registry_hash"] == "missing" or manifest[
+        "edge_registry_hash"
+    ].startswith("sha256:")
+    assert manifest["freshness"]["state"] == "fresh"
     assert manifest["input_hashes"]["raw/lessons"].startswith("sha256:")
     assert "learned_in" in manifest["edge_definitions_present"]
     assert "about_asset" in manifest["edge_definitions_present"]
@@ -185,6 +203,22 @@ def test_graph_edge_registry_matches_schema_enum():
     )
     registry_edge_types = {row["edge_type"] for row in registry_payload["edge_types"]}
     assert schema_edge_types == registry_edge_types
+    forbidden_claims = {
+        row["claim"] for row in registry_payload["forbidden_edge_claims"]
+    }
+    assert {
+        "approved_by",
+        "verified",
+        "trusted",
+        "production_ready",
+        "better_than",
+        "recommended",
+        "canonical",
+        "authorized_by",
+        "depends_on",
+        "replaces",
+        "causes",
+    } <= forbidden_claims
 
 
 def test_lesson_graph_schema_rejects_inference_without_method_version():
