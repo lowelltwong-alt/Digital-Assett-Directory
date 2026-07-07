@@ -47,6 +47,13 @@ CONTROL_PLANE_IDS = [
     "learning_postflight_loops",
 ]
 
+AGENT_RUNTIME_POLICY = {
+    "core_contract": "AGENTS.md",
+    "adapter_authority": "optional_wrapper_only",
+    "agent_id_policy": "arbitrary_non_empty_string",
+    "vendor_lock_in_prohibited": True,
+}
+
 WEEKLY_CHECKS = [
     "asset_update_available",
     "skill_update_retirement_or_replacement",
@@ -577,6 +584,7 @@ def _contract_payload(
             },
         },
         "capture": _capture_surface_payload(hub_root),
+        "agent_runtime_policy": AGENT_RUNTIME_POLICY,
         "enabled_control_planes": _enabled_control_planes(policy),
         "local_validation_commands": policy.validation_commands,
         "approved_dad_managed_paths": APPROVED_RELATIVE_PATHS,
@@ -655,6 +663,7 @@ def _governance_map_payload(policy: EnrollmentRepoPolicy, hub_root: Path) -> dic
         "dad_hub_ref": _hub_ref(hub_root, policy),
         "authority_boundary": AUTHORITY_BOUNDARY,
         "source_authority": "target_repo_retains_local_canon",
+        "agent_runtime_policy": AGENT_RUNTIME_POLICY,
         "dad_managed_surfaces": APPROVED_RELATIVE_PATHS,
         "normal_operation_write_boundary": ".digital-asset/mail/**",
         "control_planes": _enabled_control_planes(policy),
@@ -810,8 +819,13 @@ Contract: `.digital-asset/dad-integration.json`
 Before material AI-assisted work, read this repo's front door and run:
 
 ```text
-asset-dir agent preflight --repo . --agent <codex|claude-code|cursor|other> --task "<task>"
+asset-dir agent preflight --repo . --agent <agent-id> --task "<task>"
 ```
+
+Use the actual runtime name as `<agent-id>` when useful, such as `codex`,
+`claude-code`, `cursor`, `copilot`, `human`, `ci`, or `other`. DAD's core
+contract is `AGENTS.md`; runtime-specific files and hooks are optional wrappers
+and must not become the only place where governance rules live.
 
 Read the returned `context_pack` before editing. If DAD is unavailable, local
 coding may continue with a logged warning, but cross-repo writes, public
@@ -881,7 +895,8 @@ def _claude_body() -> str:
     return """@AGENTS.md
 
 Claude Code should follow the DAD enrollment contract in `AGENTS.md` and
-`.digital-asset/dad-integration.json`. Agent review is triage only; human
+`.digital-asset/dad-integration.json`. `CLAUDE.md` is an optional runtime
+adapter, not the DAD source of truth. Agent review is triage only; human
 approval gates remain separate.
 """
 

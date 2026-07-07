@@ -210,10 +210,20 @@ def test_apply_requires_approval_and_writes_only_approved_paths(tmp_path: Path):
     governance_map = yaml.safe_load((repo / ".digital-asset" / "governance-map.yaml").read_text())
     data_map = yaml.safe_load((repo / ".digital-asset" / "data-map.yaml").read_text())
     _validate("repo_enrollment_contract", contract)
+    legacy_contract = dict(contract)
+    legacy_contract.pop("agent_runtime_policy")
+    _validate("repo_enrollment_contract", legacy_contract)
     _validate("repo_context_map", context_map)
     _validate("governance_map_adoption", governance_map)
     _validate("data_map_adoption", data_map)
     assert contract["enrollment"]["normal_write_boundary"] == ".digital-asset/mail/**"
+    assert contract["agent_runtime_policy"] == {
+        "core_contract": "AGENTS.md",
+        "adapter_authority": "optional_wrapper_only",
+        "agent_id_policy": "arbitrary_non_empty_string",
+        "vendor_lock_in_prohibited": True,
+    }
+    assert governance_map["agent_runtime_policy"] == contract["agent_runtime_policy"]
     capture_registry = json.loads(
         (ROOT / "registry" / "exception-capture-pattern-registry.json").read_text(
             encoding="utf-8"

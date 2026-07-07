@@ -2,10 +2,15 @@
 
 ## Front-door strategy
 
-- Codex reads `AGENTS.md` before work.
-- Claude Code reads `CLAUDE.md`, which imports `AGENTS.md`.
-- Claude project hooks record sessions and tool events and check for a postflight when the working tree changed.
-- Git pre-push enforcement is tool-neutral and can require a current handoff for changed work.
+- `AGENTS.md` is the durable AI-agent contract for DAD-governed repos.
+- DAD CLI lifecycle commands, schemas, audit records, deterministic hooks, and human gates are the enforcement backbone.
+- Runtime-specific files such as `CLAUDE.md`, Codex config, Cursor rules, or Copilot instructions are optional adapters over the same contract.
+- Runtime hook bridges should call the neutral DAD agent lifecycle adapter instead of owning governance semantics themselves.
+- Git pre-push enforcement is runtime-neutral and can require a current handoff for changed work.
+
+No AI runtime is required for DAD governance. Agent identifiers are arbitrary
+non-empty strings such as `codex`, `claude-code`, `cursor`, `copilot`, `human`,
+`ci`, or `other`.
 
 ## Behavioral guidance versus enforcement
 

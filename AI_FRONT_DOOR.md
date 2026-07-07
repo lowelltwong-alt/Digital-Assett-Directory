@@ -269,7 +269,7 @@ Context pack used:
 Run:
 
 ```text
-asset-dir agent preflight --repo <repo> --agent <agent> --task "<task>"
+asset-dir agent preflight --repo <repo> --agent <agent-id> --task "<task>"
 ```
 
 If `asset-dir` is not on `PATH`, first try the stable DAD user shim at
@@ -306,7 +306,7 @@ Next recommended action:
 Run:
 
 ```text
-asset-dir agent postflight --session <id> --repo <repo> --summary "..." --tests "..."
+asset-dir agent postflight --session <id> --repo <repo> --summary "..." --test "..." --test-not-run "..."
 ```
 
 ## Stop-and-report triggers

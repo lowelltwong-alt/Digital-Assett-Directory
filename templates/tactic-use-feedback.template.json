@@ -3,7 +3,7 @@
   "feedback_id": "dad:tactic-feedback:<stable-id>",
   "repo": "<repo path or reviewed repo id>",
   "task": "<short task summary>",
-  "agent": "<codex|claude-code|cursor|copilot|other>",
+  "agent": "<agent-id>",
   "tactic_id": "<tactic id from registry/coding-tactics-radar.json>",
   "used_at": "<ISO-8601 timestamp>",
   "helped_because": "<observable benefit or empty string>",

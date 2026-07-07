@@ -122,6 +122,22 @@
       },
       "additionalProperties": false
     },
+    "agent_runtime_policy": {
+      "type": "object",
+      "required": [
+        "core_contract",
+        "adapter_authority",
+        "agent_id_policy",
+        "vendor_lock_in_prohibited"
+      ],
+      "properties": {
+        "core_contract": {"const": "AGENTS.md"},
+        "adapter_authority": {"const": "optional_wrapper_only"},
+        "agent_id_policy": {"const": "arbitrary_non_empty_string"},
+        "vendor_lock_in_prohibited": {"const": true}
+      },
+      "additionalProperties": false
+    },
     "enabled_control_planes": {"type": "array", "items": {"type": "string", "minLength": 1}},
     "local_validation_commands": {"type": "array", "items": {"type": "string", "minLength": 1}},
     "approved_dad_managed_paths": {"type": "array", "items": {"type": "string", "minLength": 1}},
