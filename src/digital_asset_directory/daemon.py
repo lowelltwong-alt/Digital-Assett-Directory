@@ -20,6 +20,7 @@ from .exceptions_lake import (
     write_exception_report,
 )
 from .graph_inference import write_inference_outputs
+from .journal import checkpoint_journal, ingest_remote_outbox, journal_status
 from .learning import build_lesson_graph
 from .mail_center import collect_mail, deliver_mail, diagnose_mail_dirty_state, route_mail
 from .transport import AUTHORITY_BOUNDARY, audit_all_repo_transport, data_path
@@ -94,6 +95,9 @@ def daemon_status(hub_root: Path, *, stale_hours: int = 26) -> dict[str, Any]:
         "follow_through_status": payload.get("follow_through_status"),
         "follow_through_issue_count": payload.get("follow_through_issue_count"),
         "transport_audit_ran": payload.get("transport_audit_ran"),
+        "journal_checkpoint_due": payload.get("journal_checkpoint_due"),
+        "journal_checkpoint_applied": payload.get("journal_checkpoint_applied"),
+        "journal_checkpoint_status": payload.get("journal_checkpoint_status", {}),
         "last_cycle": payload,
         "authority_boundary": AUTHORITY_BOUNDARY,
     }
@@ -103,22 +107,26 @@ def _write_daily_review_queue(
     hub_root: Path,
     *,
     generated_at: str,
+    remote_outbox_result: dict[str, Any],
     mail_result: dict[str, Any],
     follow_through_result: dict[str, Any],
     event_result: dict[str, Any],
     exception_result: dict[str, Any],
     graph_result: dict[str, Any],
     transport_result: dict[str, Any] | None,
+    journal_result: dict[str, Any],
 ) -> dict[str, Any]:
     report = {
         "schema_version": "dad.daily_review_queue.v1",
         "generated_at": generated_at,
+        "remote_outbox_ingest": remote_outbox_result,
         "mail": mail_result,
         "follow_through": follow_through_result,
         "events": event_result,
         "exceptions": exception_result,
         "graphs": graph_result,
         "transport": transport_result or {"status": "not_run"},
+        "journal": journal_result,
         "authority_boundary": (
             "Daily review queue is an attention surface over candidate data. It "
             "does not approve repo writes, public release, source truth, or "
@@ -131,6 +139,9 @@ def _write_daily_review_queue(
         "# DAD Daily Review Queue",
         "",
         f"- Generated: {generated_at}",
+        f"- Remote outbox ingest: {remote_outbox_result.get('status', 'unknown')}",
+        f"- Remote outbox accepted: {remote_outbox_result.get('accepted_count', 'not run')}",
+        f"- Remote outbox quarantined: {remote_outbox_result.get('quarantined_count', 'not run')}",
         f"- Mail collect: {mail_result.get('collect', {}).get('status', 'unknown')}",
         f"- Mail route: {mail_result.get('route', {}).get('status', 'unknown')}",
         f"- Mail delivery: {mail_result.get('deliver', {}).get('status', 'unknown')}",
@@ -142,6 +153,9 @@ def _write_daily_review_queue(
         f"- Graph inference: {graph_result.get('inference', {}).get('status', 'unknown')}",
         f"- Transport audit: {transport_result.get('report_path', 'not run') if transport_result else 'not run'}",
         f"- Transport upgrade count: {transport_result.get('upgrade_required_count', 'not run') if transport_result else 'not run'}",
+        f"- Journal checkpoint due: {journal_result.get('checkpoint_due')}",
+        f"- Journal new records: {journal_result.get('new_record_count')}",
+        f"- Journal status: {journal_result.get('checkpoint_skipped_reason', 'ready_or_applied')}",
         "",
         "Boundary: this is an attention queue over candidate data. It does not "
         "authorize downstream repo writes, public release, source truth, or "
@@ -289,6 +303,26 @@ def _run_follow_through_audit(
     }
 
 
+def _run_remote_outbox_ingest(
+    hub_root: Path,
+    *,
+    journal_repo: Path | None,
+) -> dict[str, Any]:
+    if journal_repo is None:
+        return {
+            "status": "skipped",
+            "step": "journal_remote_outbox_ingest",
+            "reason": "journal_repo_not_configured",
+            "authority_boundary": AUTHORITY_BOUNDARY,
+        }
+    return _step_result(
+        "journal_remote_outbox_ingest",
+        ingest_remote_outbox,
+        hub_root,
+        journal_repo,
+    )
+
+
 def _run_graph_cycle(hub_root: Path) -> dict[str, Any]:
     return {
         "status": "ok",
@@ -390,9 +424,12 @@ def run_daemon_cycle(
     deliver_local_caches: bool = False,
     rebuild_graphs: bool = True,
     transport_repos: list[dict[str, Any]] | None = None,
+    journal_repo: Path | None = None,
+    checkpoint_apply: bool = False,
 ) -> dict[str, Any]:
     generated_at = utc_now()
     cycle_order = [
+        "journal_remote_outbox_ingest",
         "mail_collect",
         "mail_route",
         "mail_deliver",
@@ -404,7 +441,12 @@ def run_daemon_cycle(
         "transport_audit",
         "daily_review_queue",
         "heartbeat",
+        "journal_checkpoint",
     ]
+    remote_outbox_result = _run_remote_outbox_ingest(
+        hub_root,
+        journal_repo=journal_repo,
+    )
     mail_result = _run_mail_cycle(
         hub_root,
         mail_repos=mail_repos,
@@ -430,21 +472,25 @@ def run_daemon_cycle(
         if transport_repos is not None
         else None
     )
+    journal_status_result = journal_status(hub_root)
     review_queue = _write_daily_review_queue(
         hub_root,
         generated_at=generated_at,
+        remote_outbox_result=remote_outbox_result,
         mail_result=mail_result,
         follow_through_result=follow_through_result,
         event_result=event_result,
         exception_result=exception_result,
         graph_result=graph_result,
         transport_result=transport_result,
+        journal_result=journal_status_result,
     )
     heartbeat = {
         "schema_version": "dad.daemon.heartbeat.v1",
         "cycle_started_at": generated_at,
         "cycle_completed_at": utc_now(),
         "cycle_order": cycle_order,
+        "remote_outbox_ingest_status": remote_outbox_result.get("status"),
         "mail_collect_status": mail_result.get("collect", {}).get("status", mail_result.get("status")),
         "mail_route_status": mail_result.get("route", {}).get("status", mail_result.get("status")),
         "mail_deliver_status": mail_result.get("deliver", {}).get("status", mail_result.get("status")),
@@ -455,22 +501,33 @@ def run_daemon_cycle(
         "lesson_graph_status": graph_result.get("lesson_graph", {}).get("status", graph_result.get("status")),
         "graph_inference_status": graph_result.get("inference", {}).get("status", graph_result.get("status")),
         "transport_audit_ran": transport_result is not None,
+        "journal_checkpoint_due": journal_status_result.get("checkpoint_due"),
+        "journal_checkpoint_applied": False,
+        "journal_checkpoint_status": journal_status_result,
         "daily_review_queue": review_queue["markdown_path"],
         "authority_boundary": AUTHORITY_BOUNDARY,
     }
     atomic_write_text(daemon_heartbeat_path(hub_root), json_dumps(heartbeat, pretty=True) + "\n")
+    journal_result = checkpoint_journal(
+        hub_root,
+        journal_repo,
+        apply=checkpoint_apply,
+    )
     return {
         "schema_version": "dad.daemon.cycle.v1",
         "generated_at": generated_at,
         "cycle_order": cycle_order,
         "heartbeat_path": str(daemon_heartbeat_path(hub_root)),
         "daily_review_queue": review_queue,
+        "remote_outbox_ingest": remote_outbox_result,
         "mail": mail_result,
         "follow_through": follow_through_result,
         "events": event_result,
         "exceptions": exception_result,
         "graphs": graph_result,
         "transport": transport_result,
+        "journal_status": journal_status_result,
+        "journal": journal_result,
         "authority_boundary": AUTHORITY_BOUNDARY,
     }
 

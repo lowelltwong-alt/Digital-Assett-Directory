@@ -7,6 +7,7 @@ from pathlib import Path
 from typing import Any, Mapping, Sequence
 
 from .daemon import daemon_status
+from .journal import journal_status
 from .transport import (
     AUTHORITY_BOUNDARY,
     DATA_PLANE_PATHS,
@@ -44,6 +45,7 @@ def build_transport_readiness(
     transport_repos: Sequence[Mapping[str, Any]] | None = None,
     stale_hours: int = 26,
     scheduler_status: Mapping[str, Any] | None = None,
+    journal_repo_status: Mapping[str, Any] | None = None,
 ) -> dict[str, Any]:
     """Summarize local transport readiness without mutating repos or data files."""
     data_root, data_mode = resolve_data_root(hub_root)
@@ -51,8 +53,10 @@ def build_transport_readiness(
     report_status, report_payload = _read_json_object(report_path)
     queue = read_transport_upgrade_queue(hub_root)
     daemon = daemon_status(hub_root, stale_hours=stale_hours)
+    journal = journal_status(hub_root)
     repos = list(transport_repos or [])
     scheduler = dict(scheduler_status or {})
+    journal_repo = dict(journal_repo_status or {})
 
     data_root_active = data_mode == "data_root"
     daemon_fresh = daemon.get("status") == "fresh" and not bool(daemon.get("stale"))
@@ -66,6 +70,16 @@ def build_transport_readiness(
         daemon_schedule_status = "fresh_heartbeat_but_task_scheduler_unverified"
     else:
         daemon_schedule_status = "pending_task_scheduler_apply"
+    if journal_repo.get("machine_ready") and not bool(journal.get("checkpoint_due")):
+        journal_gate_status = (
+            "journal_repo_machine_condition_met_pending_human_gate_record"
+        )
+    elif journal_repo:
+        journal_gate_status = str(
+            journal_repo.get("status") or "journal_repo_not_ready"
+        )
+    else:
+        journal_gate_status = "pending_private_journal_repo_or_checkpoint_apply"
 
     human_gates = {
         "data_root_migration": _gate(
@@ -96,10 +110,12 @@ def build_transport_readiness(
         ),
         "journal_repo_checkpoint": _gate(
             complete=False,
-            status="deferred_to_journal_stack_pr",
+            status=journal_gate_status,
             evidence={
-                "implemented": False,
-                "note": "dad-journal checkpointing is intentionally added in the next stack layer.",
+                "last_checkpoint_at": journal.get("last_checkpoint_at"),
+                "checkpoint_due": journal.get("checkpoint_due"),
+                "new_record_count": journal.get("new_record_count"),
+                "journal_repo_status": journal_repo or None,
             },
         ),
         "repo_upgrade_wave": _gate(
@@ -127,6 +143,7 @@ def build_transport_readiness(
         "transport_audit_report_readable": report_status == "readable",
         "transport_upgrade_queue_readable": queue.get("invalid_row_count") == 0,
         "daemon_status_readable": daemon.get("schema_version") == "dad.daemon.status.v1",
+        "journal_status_readable": journal.get("schema_version") == "dad.journal.status.v1",
         "configured_policy_repo_count": len(repos),
         "data_plane_surface_count": len(DATA_PLANE_PATHS),
     }
@@ -137,6 +154,7 @@ def build_transport_readiness(
             "transport_audit_report_readable",
             "transport_upgrade_queue_readable",
             "daemon_status_readable",
+            "journal_status_readable",
         )
     )
     completed_gates = [
@@ -186,8 +204,11 @@ def build_transport_readiness(
             "scheduler_status": scheduler or None,
         },
         "journal": {
-            "status": "deferred_to_journal_stack_pr",
-            "repo_status": None,
+            "checkpoint_due": journal.get("checkpoint_due"),
+            "new_record_count": journal.get("new_record_count"),
+            "last_checkpoint_at": journal.get("last_checkpoint_at"),
+            "data_root_mode": journal.get("data_root_mode"),
+            "repo_status": journal_repo or None,
         },
         "human_gate_summary": {
             "complete_count": len(completed_gates),
@@ -202,6 +223,8 @@ def build_transport_readiness(
             "asset-dir transport audit",
             "asset-dir daemon install --plan-only",
             "asset-dir daemon install --apply",
+            "asset-dir journal repo-status",
+            "asset-dir journal checkpoint --plan-only",
         ],
         "transport_surface_version": TRANSPORT_SURFACE_VERSION,
         "authority_boundary": AUTHORITY_BOUNDARY,

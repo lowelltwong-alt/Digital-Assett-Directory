@@ -143,6 +143,7 @@ from .learning import (
     preflight,
     rebuild_lesson_routes,
 )
+from .journal import checkpoint_journal, ingest_remote_outbox, journal_repo_status, journal_status
 from .lesson_automation_coverage import write_lesson_automation_coverage_outputs
 from .lesson_action_queue import (
     DECISION_TEMPLATE_PATH,
@@ -320,6 +321,8 @@ transport_app = typer.Typer(no_args_is_help=True)
 app.add_typer(transport_app, name="transport")
 daemon_app = typer.Typer(no_args_is_help=True)
 app.add_typer(daemon_app, name="daemon")
+journal_app = typer.Typer(no_args_is_help=True)
+app.add_typer(journal_app, name="journal")
 console = Console()
 
 
@@ -442,11 +445,17 @@ def transport_readiness(
     inspect_scheduler: bool = typer.Option(False, "--inspect-scheduler"),
     task_name: str = typer.Option("DAD Daemon Run Cycle"),
     shim: Optional[Path] = typer.Option(None),
+    journal_repo: Optional[Path] = typer.Option(None),
 ) -> None:
     cfg = _cfg(hub=hub)
     scheduler = (
         task_scheduler_status(cfg.repo_root, task_name=task_name, shim=shim)
         if inspect_scheduler
+        else None
+    )
+    journal_repo_evidence = (
+        journal_repo_status(cfg.repo_root, journal_repo)
+        if journal_repo is not None
         else None
     )
     console.print_json(
@@ -455,6 +464,7 @@ def transport_readiness(
             transport_repos=_transport_repo_rows(cfg),
             stale_hours=stale_hours,
             scheduler_status=scheduler,
+            journal_repo_status=journal_repo_evidence,
         )
     )
 
@@ -462,6 +472,8 @@ def transport_readiness(
 @daemon_app.command("run-cycle")
 def daemon_run_cycle(
     hub: Optional[Path] = typer.Option(None),
+    journal_repo: Optional[Path] = typer.Option(None),
+    checkpoint_apply: bool = typer.Option(False, "--checkpoint-apply"),
     skip_transport_audit: bool = typer.Option(False, "--skip-transport-audit"),
     skip_graphs: bool = typer.Option(False, "--skip-graphs"),
     deliver_local_caches: bool = typer.Option(
@@ -479,6 +491,8 @@ def daemon_run_cycle(
             deliver_local_caches=deliver_local_caches,
             rebuild_graphs=not skip_graphs,
             transport_repos=None if skip_transport_audit else _transport_repo_rows(cfg),
+            journal_repo=journal_repo,
+            checkpoint_apply=checkpoint_apply,
         )
     )
 
@@ -526,6 +540,65 @@ def daemon_task_status(
             shim=shim,
         )
     )
+
+
+@journal_app.command("status")
+def journal_status_command(
+    hub: Optional[Path] = typer.Option(None),
+    min_records: int = typer.Option(200),
+    min_hours: int = typer.Option(24),
+) -> None:
+    cfg = _cfg(hub=hub)
+    console.print_json(
+        data=journal_status(cfg.repo_root, min_records=min_records, min_hours=min_hours)
+    )
+
+
+@journal_app.command("checkpoint")
+def journal_checkpoint(
+    journal_repo: Optional[Path] = typer.Option(None),
+    hub: Optional[Path] = typer.Option(None),
+    min_records: int = typer.Option(200),
+    min_hours: int = typer.Option(24),
+    apply: bool = typer.Option(False, "--apply/--plan-only"),
+) -> None:
+    cfg = _cfg(hub=hub)
+    console.print_json(
+        data=checkpoint_journal(
+            cfg.repo_root,
+            journal_repo,
+            apply=apply,
+            min_records=min_records,
+            min_hours=min_hours,
+        )
+    )
+
+
+@journal_app.command("repo-status")
+def journal_repo_status_command(
+    journal_repo: Path = typer.Option(...),
+    hub: Optional[Path] = typer.Option(None),
+    min_records: int = typer.Option(200),
+    min_hours: int = typer.Option(24),
+) -> None:
+    cfg = _cfg(hub=hub)
+    console.print_json(
+        data=journal_repo_status(
+            cfg.repo_root,
+            journal_repo,
+            min_records=min_records,
+            min_hours=min_hours,
+        )
+    )
+
+
+@journal_app.command("ingest-remote-outbox")
+def journal_ingest_remote_outbox(
+    journal_repo: Path = typer.Option(...),
+    hub: Optional[Path] = typer.Option(None),
+) -> None:
+    cfg = _cfg(hub=hub)
+    console.print_json(data=ingest_remote_outbox(cfg.repo_root, journal_repo))
 
 
 def _rust_rollout_snapshot_promotion_log(repo_root: Path) -> Path:

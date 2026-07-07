@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import subprocess
 from pathlib import Path
 
 import pytest
@@ -13,6 +14,12 @@ from digital_asset_directory.daemon import (
     run_daemon_cycle,
     task_scheduler_plan,
     task_scheduler_status,
+)
+from digital_asset_directory.journal import (
+    checkpoint_journal,
+    ingest_remote_outbox,
+    journal_repo_status,
+    journal_status,
 )
 from digital_asset_directory.transport import (
     DATA_ROOT_MARKER,
@@ -187,6 +194,7 @@ def test_daemon_cycle_writes_heartbeat_and_daily_queue(tmp_path: Path):
     assert Path(first["heartbeat_path"]).exists()
     assert Path(second["heartbeat_path"]).exists()
     assert first["cycle_order"] == [
+        "journal_remote_outbox_ingest",
         "mail_collect",
         "mail_route",
         "mail_deliver",
@@ -198,12 +206,19 @@ def test_daemon_cycle_writes_heartbeat_and_daily_queue(tmp_path: Path):
         "transport_audit",
         "daily_review_queue",
         "heartbeat",
+        "journal_checkpoint",
     ]
     assert Path(first["daily_review_queue"]["markdown_path"]).exists()
+    assert first["journal_status"]["schema_version"] == "dad.journal.status.v1"
+    assert first["journal"]["checkpoint_skipped_reason"] in {
+        "journal_repo_not_configured",
+        "threshold_not_met",
+    }
     status = daemon_status(hub)
     assert status["status"] == "fresh"
     assert status["transport_audit_ran"] is True
-    assert "journal_checkpoint_due" not in status
+    assert status["journal_checkpoint_due"] in {True, False}
+    assert status["journal_checkpoint_status"]["schema_version"] == "dad.journal.status.v1"
 
 
 def test_daemon_cycle_with_initialized_data_root_writes_only_data_root(
@@ -249,7 +264,7 @@ def test_transport_readiness_cli_reports_local_ready_with_human_gates_pending(
     assert payload["local_ready"] is True
     assert payload["overall_status"] == "local_ready_human_gates_pending"
     assert payload["daemon"]["status"] == "fresh"
-    assert payload["journal"]["status"] == "deferred_to_journal_stack_pr"
+    assert payload["journal"]["checkpoint_due"] in {True, False}
     assert "daemon_schedule" in payload["human_gate_summary"]["pending"]
 
 
@@ -347,3 +362,146 @@ def test_daemon_task_status_parses_read_only_scheduler_query(tmp_path: Path):
     assert status["command_mentions_run_cycle"] is True
     assert status["expected_hub_found"] is True
     assert status["expected_shim_found"] is True
+
+
+def test_journal_threshold_and_remote_outbox_quarantine(tmp_path: Path):
+    hub = tmp_path / "hub"
+    inbox = hub / "processed" / "mail" / "inbox" / "rows.jsonl"
+    inbox.parent.mkdir(parents=True)
+    inbox.write_text("\n".join(json.dumps({"i": i}) for i in range(199)) + "\n", encoding="utf-8")
+
+    assert journal_status(hub, min_records=200, min_hours=999)["checkpoint_due"] is False
+    journal_repo = tmp_path / "dad-journal"
+    plan_199 = checkpoint_journal(hub, journal_repo, min_records=200, min_hours=999)
+    assert plan_199["checkpoint_skipped_reason"] == "threshold_not_met"
+
+    with inbox.open("a", encoding="utf-8") as handle:
+        handle.write(json.dumps({"i": 199}) + "\n")
+
+    assert journal_status(hub, min_records=200, min_hours=999)["checkpoint_due"] is True
+    plan_200 = checkpoint_journal(hub, journal_repo, min_records=200, min_hours=999)
+    assert plan_200["checkpoint_skipped_reason"] == "plan_only"
+    assert plan_200["commands"]
+
+    remote = journal_repo / "remote-outbox"
+    remote.mkdir(parents=True)
+    (remote / "hostile.jsonl").write_text('{"bad": "packet"}\n{broken\n', encoding="utf-8")
+    ingest = ingest_remote_outbox(hub, journal_repo)
+
+    assert ingest["accepted_count"] == 0
+    assert ingest["quarantined_count"] >= 2
+    assert Path(ingest["quarantine_path"]).exists()
+
+
+def test_daemon_cycle_ingests_journal_remote_outbox(tmp_path: Path):
+    hub = tmp_path / "hub"
+    hub.mkdir()
+    journal_repo = tmp_path / "dad-journal"
+    remote = journal_repo / "remote-outbox"
+    remote.mkdir(parents=True)
+    (remote / "bad.jsonl").write_text("{broken\n", encoding="utf-8")
+
+    result = run_daemon_cycle(
+        hub,
+        mail_repos=[],
+        exception_repos=[],
+        transport_repos=[],
+        journal_repo=journal_repo,
+    )
+
+    assert result["cycle_order"].index("journal_remote_outbox_ingest") < result[
+        "cycle_order"
+    ].index("mail_collect")
+    assert result["remote_outbox_ingest"]["quarantined_count"] == 1
+    assert result["cycle_order"][-2:] == ["heartbeat", "journal_checkpoint"]
+
+
+def test_journal_apply_threshold_commits_and_pushes_to_data_repo(tmp_path: Path):
+    hub = tmp_path / "hub"
+    inbox = hub / "processed" / "mail" / "inbox" / "rows.jsonl"
+    inbox.parent.mkdir(parents=True)
+    inbox.write_text("\n".join(json.dumps({"i": i}) for i in range(200)) + "\n", encoding="utf-8")
+    source_fixture = hub / "src" / "not-data-plane.jsonl"
+    source_fixture.parent.mkdir(parents=True)
+    source_fixture.write_text('{"source": "must-not-journal"}\n', encoding="utf-8")
+    remote = tmp_path / "dad-journal-remote.git"
+    journal_repo = tmp_path / "dad-journal"
+    subprocess.run(["git", "init", "--bare", str(remote)], check=True)
+    subprocess.run(["git", "init", "-b", "main", str(journal_repo)], check=True)
+    subprocess.run(["git", "-C", str(journal_repo), "config", "user.email", "dad@example.test"], check=True)
+    subprocess.run(["git", "-C", str(journal_repo), "config", "user.name", "DAD Test"], check=True)
+    subprocess.run(["git", "-C", str(journal_repo), "remote", "add", "origin", str(remote)], check=True)
+
+    result = checkpoint_journal(hub, journal_repo, apply=True, min_records=200, min_hours=999)
+
+    assert result["checkpoint_applied"] is True
+    assert journal_status(hub, min_records=200, min_hours=999)["checkpoint_due"] is False
+    assert (journal_repo / "data" / "processed" / "mail" / "inbox" / "rows.jsonl").exists()
+    assert not (journal_repo / "data" / "src" / "not-data-plane.jsonl").exists()
+    manifest = json.loads((journal_repo / "journal_checkpoint_manifest.json").read_text())
+    assert manifest["checkpoint_scope"] == "DATA_PLANE_PATHS"
+    head = subprocess.run(
+        ["git", "-C", str(journal_repo), "rev-parse", "HEAD"],
+        capture_output=True,
+        text=True,
+        check=True,
+    ).stdout.strip()
+    remote_head = subprocess.run(
+        ["git", "-C", str(remote), "rev-parse", "main"],
+        capture_output=True,
+        text=True,
+        check=True,
+    ).stdout.strip()
+    assert head == remote_head
+
+
+def test_journal_repo_status_reports_missing_repo(tmp_path: Path):
+    hub = tmp_path / "hub"
+    missing = tmp_path / "dad-journal"
+
+    status = journal_repo_status(hub, missing)
+
+    assert status["schema_version"] == "dad.journal.repo_status.v1"
+    assert status["status"] == "missing"
+    assert status["exists"] is False
+
+
+def test_transport_readiness_can_include_journal_repo_machine_evidence(tmp_path: Path):
+    hub = _hub_for_cli(tmp_path / "hub")
+    inbox = hub / "processed" / "mail" / "inbox" / "rows.jsonl"
+    inbox.parent.mkdir(parents=True)
+    inbox.write_text("\n".join(json.dumps({"i": i}) for i in range(200)) + "\n", encoding="utf-8")
+    remote = tmp_path / "dad-journal-remote.git"
+    journal_repo = tmp_path / "dad-journal"
+    subprocess.run(["git", "init", "--bare", str(remote)], check=True)
+    subprocess.run(["git", "init", "-b", "main", str(journal_repo)], check=True)
+    subprocess.run(["git", "-C", str(journal_repo), "config", "user.email", "dad@example.test"], check=True)
+    subprocess.run(["git", "-C", str(journal_repo), "config", "user.name", "DAD Test"], check=True)
+    subprocess.run(["git", "-C", str(journal_repo), "remote", "add", "origin", str(remote)], check=True)
+    checkpoint_journal(hub, journal_repo, apply=True, min_records=200, min_hours=999)
+    run_daemon_cycle(
+        hub,
+        mail_repos=[],
+        exception_repos=[],
+        transport_repos=[],
+        journal_repo=None,
+    )
+
+    result = RUNNER.invoke(
+        app,
+        [
+            "transport",
+            "readiness",
+            "--hub",
+            str(hub),
+            "--journal-repo",
+            str(journal_repo),
+        ],
+    )
+
+    assert result.exit_code == 0, result.output
+    payload = json.loads(result.stdout)
+    repo_status = payload["journal"]["repo_status"]
+    assert repo_status["machine_ready"] is True
+    gate = payload["human_gates"]["journal_repo_checkpoint"]
+    assert gate["status"] == "journal_repo_machine_condition_met_pending_human_gate_record"
