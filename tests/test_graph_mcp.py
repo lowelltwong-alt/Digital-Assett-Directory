@@ -135,12 +135,19 @@ def test_graph_mcp_initialize_lists_tools_and_resources(tmp_path: Path):
     uris = {resource["uri"] for resource in resources}
     assert "dad://registry/graph-surface-registry" in uris
     assert "dad://surface/lesson-graph/manifest" in uris
+    assert "dad://report/surface-version-status" in uris
     manifest = _request(
         server,
         "resources/read",
         {"uri": "dad://surface/lesson-graph/manifest"},
     )
     assert manifest["result"]["contents"][0]["mimeType"] == "application/json"
+    surface_status = _request(
+        server,
+        "resources/read",
+        {"uri": "dad://report/surface-version-status"},
+    )
+    assert surface_status["result"]["contents"][0]["mimeType"] == "application/json"
 
 
 def test_graph_mcp_rejects_unknown_and_hostile_resource_uris(tmp_path: Path):

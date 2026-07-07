@@ -22,6 +22,7 @@ from .graph_surfaces import (
     resolve_graph_surface_path,
 )
 from .journal import journal_status
+from .surface_versions import surface_version_status_report_path
 from .transport import data_relative_path
 from .utils import json_dumps, sha256_file, utc_now
 from .validation import _hash_path
@@ -39,7 +40,12 @@ _REGISTRY_RESOURCES = {
     "graph-edge-registry": Path("registry") / "graph-edge-registry.json",
     "schema-registry": Path("registry") / "schema-registry.json",
 }
-_REPORT_RESOURCES = {"journal-status", "daemon-status", "graph-surface-status"}
+_REPORT_RESOURCES = {
+    "journal-status",
+    "daemon-status",
+    "graph-surface-status",
+    "surface-version-status",
+}
 _KERNEL_RESOURCES = {
     "aios-governance": Path("processed")
     / "fable5"
@@ -360,6 +366,23 @@ def _read_resource_payload(hub_root: Path, uri: str) -> tuple[str, str]:
             return "application/json", json_dumps(journal_status(hub_root), pretty=True)
         if report_id == "daemon-status":
             return "application/json", json_dumps(daemon_status(hub_root), pretty=True)
+        if report_id == "surface-version-status":
+            path = surface_version_status_report_path(hub_root)
+            if path.exists():
+                return "application/json", path.read_text(encoding="utf-8")
+            return "application/json", json_dumps(
+                {
+                    "schema_version": "dad.surface_versions.status.v1",
+                    "status": "missing",
+                    "report_path": str(path),
+                    "authority_boundary": (
+                        "Surface-version status is a central read-only report. "
+                        "Generate it with `asset-dir enroll surface-status`; "
+                        "missing status does not authorize repo writes."
+                    ),
+                },
+                pretty=True,
+            )
         return "application/json", json_dumps(graph_surface_status(hub_root), pretty=True)
 
     if kind == "kernel" and len(parts) == 1:
