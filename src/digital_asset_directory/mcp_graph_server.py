@@ -18,14 +18,14 @@ from urllib.parse import urlparse
 from .daemon import daemon_status
 from .graph_surfaces import (
     GRAPH_SURFACE_AUTHORITY_BOUNDARY,
+    graph_surface_freshness,
+    graph_surface_status,
     load_graph_surface_registry,
     resolve_graph_surface_path,
 )
 from .journal import journal_status
 from .surface_versions import surface_version_status_report_path
-from .transport import data_relative_path
-from .utils import json_dumps, sha256_file, utc_now
-from .validation import _hash_path
+from .utils import json_dumps
 
 MCP_PROTOCOL_VERSION = "2025-06-18"
 SERVER_NAME = "dad-local-graph-surfaces"
@@ -122,77 +122,6 @@ def _surface_paths(hub_root: Path, surface: dict[str, Any]) -> tuple[Path, Path]
     return manifest, body
 
 
-def _surface_freshness(hub_root: Path, surface: dict[str, Any]) -> dict[str, Any]:
-    manifest_path, body_path = _surface_paths(hub_root, surface)
-    reasons: list[str] = []
-    if not manifest_path.exists() or not body_path.exists():
-        return {
-            "state": "missing",
-            "reasons": ["manifest_or_body_missing"],
-            "manifest_exists": manifest_path.exists(),
-            "body_exists": body_path.exists(),
-        }
-    try:
-        manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
-    except (OSError, json.JSONDecodeError) as exc:
-        return {"state": "inconsistent", "reasons": [f"manifest_invalid:{exc}"]}
-
-    expected_body_hash = str(manifest.get("graph_content_hash") or "")
-    if expected_body_hash:
-        actual_body_hash = f"sha256:{sha256_file(body_path)}"
-        if expected_body_hash != actual_body_hash:
-            reasons.append("graph_content_hash_mismatch")
-
-    for rel, expected in manifest.get("input_hashes", {}).items():
-        actual = _hash_path(data_relative_path(hub_root, rel))
-        if actual != expected:
-            reasons.append(f"input_hash_changed:{rel}")
-
-    if "graph_content_hash_mismatch" in reasons:
-        state = "inconsistent"
-    elif reasons:
-        state = "stale"
-    else:
-        state = str(manifest.get("freshness", {}).get("state") or "fresh")
-    return {
-        "state": state,
-        "reasons": reasons,
-        "manifest_exists": True,
-        "body_exists": True,
-        "manifest_hash": f"sha256:{sha256_file(manifest_path)}",
-        "body_hash": f"sha256:{sha256_file(body_path)}",
-    }
-
-
-def graph_surface_status(hub_root: Path) -> dict[str, Any]:
-    registry = load_graph_surface_registry(hub_root)
-    surfaces: list[dict[str, Any]] = []
-    for surface in registry.get("surfaces", []):
-        surface_id = str(surface.get("surface_id", ""))
-        surfaces.append(
-            {
-                "surface_id": surface_id,
-                "surface_status": surface.get("status", ""),
-                "review_status": surface.get("review_status", ""),
-                "freshness": _surface_freshness(hub_root, surface),
-                "manifest_resource_uri": f"dad://surface/{surface_id}/manifest",
-                "body_available": _surface_freshness(hub_root, surface).get("body_exists", False),
-                "authority_boundary": surface.get(
-                    "authority_boundary", GRAPH_SURFACE_AUTHORITY_BOUNDARY
-                ),
-            }
-        )
-    return _strip_forbidden_fields(
-        {
-            "schema_version": "dad.mcp.graph_surface_status.v1",
-            "generated_at": utc_now(),
-            "registry_version": registry.get("registry_version", ""),
-            "surfaces": surfaces,
-            "authority_boundary": GRAPH_SURFACE_AUTHORITY_BOUNDARY,
-        }
-    )
-
-
 def _load_surface_graph(hub_root: Path, surface_id: str) -> tuple[dict[str, Any], dict[str, Any]]:
     surface = _surface_by_id(hub_root, surface_id)
     _manifest_path, body_path = _surface_paths(hub_root, surface)
@@ -256,7 +185,7 @@ def dad_graph_get_node(hub_root: Path, *, surface_id: str, node_id: str) -> dict
                 {
                     "schema_version": "dad.mcp.graph_get_node.v1",
                     "surface_id": surface_id,
-                    "surface_freshness": _surface_freshness(hub_root, surface),
+                    "surface_freshness": graph_surface_freshness(hub_root, surface),
                     "node": _sanitize_node(node),
                     "review_status": node.get("review_status", "candidate"),
                     "authority_boundary": surface.get(
@@ -286,7 +215,7 @@ def dad_graph_neighbors(
         {
             "schema_version": "dad.mcp.graph_neighbors.v1",
             "surface_id": surface_id,
-            "surface_freshness": _surface_freshness(hub_root, surface),
+            "surface_freshness": graph_surface_freshness(hub_root, surface),
             "node_id": node_id,
             "limit_applied": bounded,
             "edge_count": len(matches),
@@ -322,7 +251,7 @@ def dad_graph_search_nodes(
         {
             "schema_version": "dad.mcp.graph_search_nodes.v1",
             "surface_id": surface_id,
-            "surface_freshness": _surface_freshness(hub_root, surface),
+            "surface_freshness": graph_surface_freshness(hub_root, surface),
             "query": query,
             "limit_applied": bounded,
             "result_count": len(results),
