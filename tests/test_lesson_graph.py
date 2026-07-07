@@ -8,6 +8,7 @@ import pytest
 
 from digital_asset_directory.learning import build_lesson_graph
 from digital_asset_directory.models import LessonRecord
+from digital_asset_directory.transport import apply_data_migration
 
 pytestmark = pytest.mark.integration
 
@@ -187,6 +188,24 @@ def test_build_lesson_graph_is_idempotent_and_survives_missing_inputs(tmp_path: 
     assert empty["lesson_count"] == 0
     assert empty["node_count"] == 0
     assert empty["edge_count"] == 0
+
+
+def test_build_lesson_graph_writes_to_initialized_data_root(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+):
+    hub = _graph_hub(tmp_path)
+    data_root = tmp_path / "data-root"
+    apply_data_migration(hub, data_root)
+    monkeypatch.setenv("DAD_DATA_ROOT", str(data_root))
+
+    result = build_lesson_graph(hub)
+
+    assert Path(result["path"]).is_relative_to(data_root)
+    assert Path(result["manifest_path"]).is_relative_to(data_root)
+    assert (data_root / "processed" / "learning" / "lesson-graph.json").exists()
+    assert (data_root / "processed" / "learning" / "lesson-graph-manifest.json").exists()
+    assert not (hub / "processed" / "learning" / "lesson-graph.json").exists()
+    assert not (hub / "processed" / "learning" / "lesson-graph-manifest.json").exists()
 
 
 def test_graph_edge_registry_matches_schema_enum():
