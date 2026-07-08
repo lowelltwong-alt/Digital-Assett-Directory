@@ -247,7 +247,7 @@ def test_mcp_graph_tools_include_boundaries_limits_and_no_ranking_fields(
         assert "method_version" in edge
         assert edge["review_status"] == "candidate"
 
-        search = call_mccp_tool(
+        search = call_mcp_tool(
             hub,
             "dad_graph_search_nodes",
             {"surface_id": "lesson-graph", "query": "loop", "limit": 0},
