@@ -17,13 +17,14 @@ from .radars import activation_triggers, detect_synergies, generate_alerts
 from .recommendations import recommend_skills_and_agents
 from .scoring import load_scoring, score_asset
 from .models import AssetRecord
+from .transport import data_relative_path
 from .utils import append_jsonl, atomic_write_text, safe_relative, utc_now, write_json, write_jsonl
 
 
 def _append_scan_audit(repo_root: Path, event_type: str, payload: dict[str, Any]) -> None:
     created_at = payload.get("created_at") or utc_now()
     append_jsonl(
-        repo_root / "audit" / "events" / f"{created_at[:10]}.jsonl",
+        data_relative_path(repo_root, Path("audit") / "events" / f"{created_at[:10]}.jsonl"),
         {"event_type": event_type, "created_at": created_at, **payload},
     )
 
@@ -334,6 +335,7 @@ def export_outputs(
     recommendations,
     summary,
 ) -> None:
+    reports_dir = data_relative_path(repo_root, Path("processed") / "reports")
     write_jsonl(
         repo_root / "processed" / "catalog" / "assets.jsonl",
         [a.model_dump(mode="json") for a in assets],
@@ -364,14 +366,14 @@ def export_outputs(
         [t.model_dump(mode="json") for t in triggers],
     )
     write_jsonl(
-        repo_root / "processed" / "reports" / "capability_recommendations.jsonl",
+        reports_dir / "capability_recommendations.jsonl",
         [record.model_dump(mode="json") for record in recommendations],
     )
     write_jsonl(
         repo_root / "processed" / "alerts" / "alerts.jsonl",
         [a.model_dump(mode="json") for a in alerts],
     )
-    write_json(repo_root / "processed" / "reports" / "scan_summary.json", summary)
+    write_json(reports_dir / "scan_summary.json", summary)
     write_json(
         repo_root / "processed" / "quarantine" / "quarantine_summary.json",
         summary.get("quarantine", {}),
@@ -399,9 +401,7 @@ def export_outputs(
     lines.extend(
         [f"- `{e['source']}`: {e['error']}" for e in summary.get("errors", [])] or ["- None"]
     )
-    atomic_write_text(
-        repo_root / "processed" / "reports" / "scan_summary.md", "\n".join(lines) + "\n"
-    )
+    atomic_write_text(reports_dir / "scan_summary.md", "\n".join(lines) + "\n")
     quarantine = summary.get("quarantine", {})
     quarantine_lines = [
         "# Quarantine Summary",
@@ -424,10 +424,7 @@ def export_outputs(
     quarantine_lines.extend(
         [f"- `{item['path']}`: {item['reason']}" for item in samples[:50]] or ["- None"]
     )
-    atomic_write_text(
-        repo_root / "processed" / "reports" / "quarantine_summary.md",
-        "\n".join(quarantine_lines) + "\n",
-    )
+    atomic_write_text(reports_dir / "quarantine_summary.md", "\n".join(quarantine_lines) + "\n")
     identity_lines = [
         "# Identity Layers",
         "",
@@ -451,10 +448,7 @@ def export_outputs(
         "Source repositories remain authoritative. Generated duplicate, near-duplicate, and delta records do not select a canonical asset or delete any duplicate.",
         "",
     ]
-    atomic_write_text(
-        repo_root / "processed" / "reports" / "identity_layers.md",
-        "\n".join(identity_lines),
-    )
+    atomic_write_text(reports_dir / "identity_layers.md", "\n".join(identity_lines))
     alert_lines = ["# Alert Inbox", "", "Generated candidate alerts. Review before acting.", ""]
     for alert in alerts:
         alert_lines.extend(
@@ -490,7 +484,7 @@ def export_outputs(
             ]
         )
     atomic_write_text(
-        repo_root / "processed" / "reports" / "capability_recommendations.md",
+        reports_dir / "capability_recommendations.md",
         "\n".join(recommendation_lines) + "\n",
     )
 

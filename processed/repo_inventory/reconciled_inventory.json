@@ -6,8 +6,8 @@
     "needs-human-classification": 14,
     "protected-central-only": 3
   },
-  "content_fingerprint": "sha256:2c78924515c865ef72f7497e1398363d9ab6eac401c3065706c0d49233ce1dbb",
-  "generated_at": "2026-07-06T04:45:09.500772+00:00",
+  "content_fingerprint": "sha256:bce40ad5b6b0431cd016b72805d85756d28a35d3bb347f9e59bdfc2fedb6c526",
+  "generated_at": "2026-07-07T01:22:55.784900+00:00",
   "github_coverage_complete": false,
   "github_coverage_status": "configured_disabled",
   "github_sources": [
@@ -26,10 +26,10 @@
   ],
   "hash_policy": "text-lf-normalized-v1",
   "input_hashes": {
-    "src/digital_asset_directory/config.py": "sha256:27e3d080861c87c451d1f68af3c28ba3779020117dd0c115667522e0942b4e29",
-    "src/digital_asset_directory/dad_library.py": "sha256:f054d75414737be11f9e1bd768959204aad6608ac4d5af9dd9a48848e9e44f30"
+    "src/digital_asset_directory/config.py": "sha256:6bab93137471f468b5fed488f30a42d55098b07339ea547bb95b7a849bc1a71e",
+    "src/digital_asset_directory/dad_library.py": "sha256:cca7173ccfe726153f6deb47d5b0ef321a65a4761c5eeaef7f3ab113fefcb361"
   },
-  "methodology_hash": "sha256:f054d75414737be11f9e1bd768959204aad6608ac4d5af9dd9a48848e9e44f30",
+  "methodology_hash": "sha256:cca7173ccfe726153f6deb47d5b0ef321a65a4761c5eeaef7f3ab113fefcb361",
   "methodology_ref": "src/digital_asset_directory/dad_library.py",
   "records": [
     {
@@ -47,11 +47,11 @@
       "duplicate_lineage": false,
       "enrollment_policy_present": true,
       "git_state": {
-        "branch": "codex/dadm1-compose-input-safety",
+        "branch": "codex/transport-rollout-docs-mcp-20260707",
         "branch_status": "non_main",
-        "dirty_count": 68,
+        "dirty_count": 31,
         "git_detected": true,
-        "head": "111a1b2",
+        "head": "77b9023",
         "is_dirty": true,
         "remote_origin": "https://github.com/lowelltwong-alt/Digital-Assett-Directory.git"
       },
@@ -59,13 +59,13 @@
       "mail_policy_present": true,
       "nested_repo": false,
       "next_action": "Keep central-only until the active/dirty/non-main hold is reviewed.",
-      "path_public_safe": "C:/Users/lowel/AppData/Local/Temp/dad-pr12-resolve-20260706-01",
-      "path_ref": "C:/Users/lowel/AppData/Local/Temp/dad-pr12-resolve-20260706-01",
+      "path_public_safe": "C:/Users/lowel/OneDrive/Desktop/Git Projects/_codex_worktrees/dad-transport-rollout-docs",
+      "path_ref": "C:/Users/lowel/OneDrive/Desktop/Git Projects/_codex_worktrees/dad-transport-rollout-docs",
       "public_facing": false,
       "repo_id": "dad",
       "repo_id_source": "policy",
-      "repo_name": "dad-pr12-resolve-20260706-01",
-      "repo_record_id": "dad:dad-repo-record:6d29588c-cfbc-5bca-8069-ad639a790a4d",
+      "repo_name": "dad-transport-rollout-docs",
+      "repo_record_id": "dad:dad-repo-record:4729ecac-9ab2-5014-bbd0-2c4af0e6eaac",
       "same_basename_count": 1,
       "source_signals": [
         "enrollment_policy",
@@ -170,7 +170,7 @@
       "git_state": {
         "branch": "citation-audit-frontdoor",
         "branch_status": "non_main",
-        "dirty_count": 13,
+        "dirty_count": 12,
         "git_detected": true,
         "head": "",
         "is_dirty": true,
@@ -409,12 +409,12 @@
       "duplicate_lineage": false,
       "enrollment_policy_present": false,
       "git_state": {
-        "branch": "codex/bk4-bk7-rate-projection-guardrails",
+        "branch": "codex/rust-readiness-audit",
         "branch_status": "non_main",
-        "dirty_count": 0,
+        "dirty_count": 23,
         "git_detected": true,
-        "head": "9a8fa5f",
-        "is_dirty": false,
+        "head": "c468e10",
+        "is_dirty": true,
         "remote_origin": "https://github.com/lowelltwong-alt/LawFirm-os-intake.git"
       },
       "local_paths_allowed": false,
@@ -1173,8 +1173,8 @@
       "duplicate_lineage": false,
       "enrollment_policy_present": false,
       "git_state": {
-        "branch": "claude/priceless-euclid-8eb779",
-        "branch_status": "non_main",
+        "branch": "",
+        "branch_status": "detached_or_unknown",
         "dirty_count": 0,
         "git_detected": true,
         "head": "7bf7fd7",
@@ -1413,11 +1413,11 @@
       "duplicate_lineage": false,
       "enrollment_policy_present": false,
       "git_state": {
-        "branch": "main",
-        "branch_status": "mainline",
+        "branch": "fable/aios-architecture",
+        "branch_status": "non_main",
         "dirty_count": 0,
         "git_detected": true,
-        "head": "5d5d49a",
+        "head": "20f6c5f",
         "is_dirty": false,
         "remote_origin": "https://github.com/lowelltwong-alt/Digital-Assett-Directory.git"
       },
@@ -1472,46 +1472,6 @@
       "repo_id_source": "",
       "repo_name": "airca-fractal-decision-architecture",
       "repo_record_id": "dad:dad-repo-record:ee569709-e407-541f-99f0-f771e9b3f793",
-      "same_basename_count": 1,
-      "source_signals": [
-        "local_source:git-projects"
-      ],
-      "visibility": "unknown",
-      "write_boundary": "reviewed_policy_required"
-    },
-    {
-      "addressing_status": "bare_name_unambiguous",
-      "alias": "",
-      "authority_boundary": "This DAD report is central candidate metadata only. It does not authorize enrollment, delivery, hooks, source edits, or writes to downstream repos.",
-      "classification": "needs-human-classification",
-      "classification_reasons": [
-        "No reviewed policy or special classification marker."
-      ],
-      "contract_error": "",
-      "contract_present": false,
-      "duplicate_basename": false,
-      "duplicate_lineage": false,
-      "enrollment_policy_present": false,
-      "git_state": {
-        "branch": "codex/pr12-merge-review",
-        "branch_status": "non_main",
-        "dirty_count": 10,
-        "git_detected": true,
-        "head": "797927c",
-        "is_dirty": true,
-        "remote_origin": "https://github.com/lowelltwong-alt/Digital-Assett-Directory.git"
-      },
-      "local_paths_allowed": false,
-      "mail_policy_present": false,
-      "nested_repo": false,
-      "next_action": "Add to reviewed policy or explicitly ignore before DAD delivery/enrollment.",
-      "path_public_safe": "C:/Users/lowel/OneDrive/Desktop/Git Projects/_codex_pr_worktrees/dad-pr12-merge-review",
-      "path_ref": "C:/Users/lowel/OneDrive/Desktop/Git Projects/_codex_pr_worktrees/dad-pr12-merge-review",
-      "public_facing": false,
-      "repo_id": "",
-      "repo_id_source": "",
-      "repo_name": "dad-pr12-merge-review",
-      "repo_record_id": "dad:dad-repo-record:7b7b8387-cbdf-5f7a-a1be-8b98c0343392",
       "same_basename_count": 1,
       "source_signals": [
         "local_source:git-projects"
@@ -1693,6 +1653,46 @@
       "duplicate_lineage": false,
       "enrollment_policy_present": false,
       "git_state": {
+        "branch": "codex/initial-scaffold",
+        "branch_status": "non_main",
+        "dirty_count": 0,
+        "git_detected": true,
+        "head": "7d52081",
+        "is_dirty": false,
+        "remote_origin": "https://github.com/lowelltwong-alt/logos-doctrine-genealogy.git"
+      },
+      "local_paths_allowed": false,
+      "mail_policy_present": false,
+      "nested_repo": false,
+      "next_action": "Add to reviewed policy or explicitly ignore before DAD delivery/enrollment.",
+      "path_public_safe": "C:/Users/lowel/OneDrive/Desktop/Git Projects/03_World_View/logos-doctrine-genealogy",
+      "path_ref": "C:/Users/lowel/OneDrive/Desktop/Git Projects/03_World_View/logos-doctrine-genealogy",
+      "public_facing": false,
+      "repo_id": "",
+      "repo_id_source": "",
+      "repo_name": "logos-doctrine-genealogy",
+      "repo_record_id": "dad:dad-repo-record:e34c4bc6-afa2-598a-99a1-0a6d7ebe2b9d",
+      "same_basename_count": 1,
+      "source_signals": [
+        "local_source:git-projects"
+      ],
+      "visibility": "unknown",
+      "write_boundary": "reviewed_policy_required"
+    },
+    {
+      "addressing_status": "bare_name_unambiguous",
+      "alias": "",
+      "authority_boundary": "This DAD report is central candidate metadata only. It does not authorize enrollment, delivery, hooks, source edits, or writes to downstream repos.",
+      "classification": "needs-human-classification",
+      "classification_reasons": [
+        "No reviewed policy or special classification marker."
+      ],
+      "contract_error": "",
+      "contract_present": false,
+      "duplicate_basename": false,
+      "duplicate_lineage": false,
+      "enrollment_policy_present": false,
+      "git_state": {
         "branch": "feature/shannon-information-theory-note",
         "branch_status": "non_main",
         "dirty_count": 0,
@@ -1773,12 +1773,12 @@
       "duplicate_lineage": false,
       "enrollment_policy_present": false,
       "git_state": {
-        "branch": "main",
-        "branch_status": "mainline",
-        "dirty_count": 0,
+        "branch": "codex/new-case-e2e-frontend-workbench",
+        "branch_status": "non_main",
+        "dirty_count": 45,
         "git_detected": true,
         "head": "ea46d439",
-        "is_dirty": false,
+        "is_dirty": true,
         "remote_origin": "https://github.com/lowelltwong-alt/Albert-Trial-Simulation-System.git"
       },
       "local_paths_allowed": false,
@@ -1973,12 +1973,12 @@
       "duplicate_lineage": false,
       "enrollment_policy_present": false,
       "git_state": {
-        "branch": "codex/governance-child-mirror-gate",
+        "branch": "codex/register-doctrine-genealogy-active",
         "branch_status": "non_main",
-        "dirty_count": 0,
+        "dirty_count": 9,
         "git_detected": true,
-        "head": "88b9df9",
-        "is_dirty": false,
+        "head": "b6fc57b",
+        "is_dirty": true,
         "remote_origin": "https://github.com/lowelltwong-alt/logos-governance-architecture.git"
       },
       "local_paths_allowed": false,
@@ -2015,7 +2015,7 @@
       "git_state": {
         "branch": "scratch/t423-M4-codex-gpt55",
         "branch_status": "non_main",
-        "dirty_count": 53,
+        "dirty_count": 69,
         "git_detected": true,
         "head": "a29119b",
         "is_dirty": true,
@@ -2041,7 +2041,7 @@
     }
   ],
   "repo_count": 50,
-  "report_id": "dad:dad-repo-inventory:eb70ac00-3e75-5137-94f9-1d36fddef753",
+  "report_id": "dad:dad-repo-inventory:16f87a9c-a520-5850-b49f-937bb4bcc977",
   "schema_version": "0.1.0",
   "source_warnings": []
 }

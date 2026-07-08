@@ -14,6 +14,7 @@ from pydantic import ValidationError
 
 from .ids import stable_id
 from .models import MailAdoptionRecord, MailDecisionRecord, MailMessageRecord
+from .transport import data_path
 from .utils import (
     append_jsonl,
     atomic_write_text,
@@ -100,6 +101,14 @@ AUTHORITY_BOUNDARY = (
     "override target repo authority or mutate source files outside .digital-asset/mail/."
 )
 _ACTIVE_JSONL_LOCKS: set[Path] = set()
+
+
+def central_mail_dir(hub_root: Path) -> Path:
+    return data_path(hub_root, "central_mail")
+
+
+def central_reports_dir(hub_root: Path) -> Path:
+    return data_path(hub_root, "central_reports")
 
 
 class MailOutboxUnstableError(ValueError):
@@ -365,6 +374,15 @@ Agent review is triage only. Human review is required for any local adoption,
 and private/internal/restricted/unknown-origin mail cannot be released to a
 public-facing target unless DAD records an explicit human release.
 
+## Transport Boundary
+
+Mailbox JSONL files are gitignored local caches, not PR transport. Do not commit
+mail spool rows to carry DAD messages. DAD's default transport is local pull:
+the hub writes validated candidate mail into local inbox caches, and repos read
+their own cache during preflight or digest. Remote agents use the private
+`dad-journal` remote outbox fallback; the local daemon ingests those packets
+through the same collect, screen, route, and quarantine gates.
+
 Run a digest at most once per day unless a human asks for an immediate check:
 
 ```text
@@ -586,7 +604,7 @@ def _read_stable_jsonl_snapshot(
 def _quarantine_jsonl_errors(hub_root: Path, errors: list[dict[str, Any]]) -> None:
     if not errors:
         return
-    quarantine = hub_root / CENTRAL_MAIL_DIR / "quarantine" / "malformed_jsonl.jsonl"
+    quarantine = central_mail_dir(hub_root) / "quarantine" / "malformed_jsonl.jsonl"
     for error in errors:
         safe_error = dict(error)
         if safe_error.get("path"):
@@ -631,7 +649,7 @@ def _quarantine_invalid_mail_packet(
 
 
 def invalid_mail_quarantine_path(hub_root: Path) -> Path:
-    return hub_root / CENTRAL_MAIL_DIR / "quarantine" / "invalid_mail_packet.jsonl"
+    return central_mail_dir(hub_root) / "quarantine" / "invalid_mail_packet.jsonl"
 
 
 def _invalid_mail_record_hash(record: Any) -> str:
@@ -1361,7 +1379,7 @@ ASSET_SUGGESTION_DELIVERY_MODEL = (
 
 
 def _asset_graph_context(hub_root: Path, asset_id: str) -> dict[str, Any]:
-    graph_path = hub_root / "processed" / "learning" / "lesson-graph.json"
+    graph_path = data_path(hub_root, "learning") / "lesson-graph.json"
     if not graph_path.exists():
         return {"available": False, "reason": "lesson graph not built"}
     try:
@@ -1479,27 +1497,27 @@ def central_inbox_path(
     repo_policies: Sequence[Any] | None = None,
 ) -> Path:
     slug = _central_repo_file_slug(repo, repo_policies)
-    return hub_root / CENTRAL_MAIL_DIR / "inbox" / f"{slug}.jsonl"
+    return central_mail_dir(hub_root) / "inbox" / f"{slug}.jsonl"
 
 
 def _collection_log_path(hub_root: Path) -> Path:
-    return hub_root / CENTRAL_MAIL_DIR / "archive" / "collection_log.jsonl"
+    return central_mail_dir(hub_root) / "archive" / "collection_log.jsonl"
 
 
 def _route_log_path(hub_root: Path) -> Path:
-    return hub_root / CENTRAL_MAIL_DIR / "archive" / "route_log.jsonl"
+    return central_mail_dir(hub_root) / "archive" / "route_log.jsonl"
 
 
 def _collection_logical_lock_path(hub_root: Path) -> Path:
-    return hub_root / CENTRAL_MAIL_DIR / "archive" / "collection_logical_identity.lock"
+    return central_mail_dir(hub_root) / "archive" / "collection_logical_identity.lock"
 
 
 def _legacy_collection_allowlist_path(hub_root: Path) -> Path:
-    return hub_root / CENTRAL_MAIL_DIR / "archive" / "legacy_collection_allowlist.jsonl"
+    return central_mail_dir(hub_root) / "archive" / "legacy_collection_allowlist.jsonl"
 
 
 def legacy_delivery_allowlist_path(hub_root: Path) -> Path:
-    return hub_root / CENTRAL_MAIL_DIR / "archive" / "legacy_delivery_allowlist.jsonl"
+    return central_mail_dir(hub_root) / "archive" / "legacy_delivery_allowlist.jsonl"
 
 
 def _mail_record_hash(record: MailMessageRecord | dict[str, Any]) -> str:
@@ -1518,9 +1536,11 @@ def _append_collection_audit(
     *,
     central_path: Path,
     event_type: str,
+    source_outbox: Path | None = None,
     repo_policies: Sequence[Any] | None = None,
 ) -> None:
     record_hash = _mail_record_hash(record)
+    source_outbox_path = source_outbox or _mail_file(repo, "outbox.jsonl")
     payload = {
         "schema_version": "dad_mail_collection_audit.v1",
         "collection_audit_id": _collection_audit_id(record, record_hash, event_type),
@@ -1531,7 +1551,7 @@ def _append_collection_audit(
         "record_hash": record_hash,
         "source_repo": record.source_repo,
         "target_repo": record.target_repo,
-        "source_outbox": _safe_repo_ref(str(_mail_file(repo, "outbox.jsonl")), repo_policies),
+        "source_outbox": _safe_repo_ref(str(source_outbox_path), repo_policies),
         "central_inbox": _relative_path_ref(hub_root, central_path),
         "source_provenance": record.source_provenance,
         "public_release": record.public_release,
@@ -1623,7 +1643,7 @@ def _central_inbox_record_hashes(
     quarantine_errors: bool = True,
 ) -> set[str]:
     hashes: set[str] = set()
-    inbox_dir = hub_root / CENTRAL_MAIL_DIR / "inbox"
+    inbox_dir = central_mail_dir(hub_root) / "inbox"
     if not inbox_dir.exists():
         return hashes
     for path in sorted(inbox_dir.glob("*.jsonl")):
@@ -1735,7 +1755,7 @@ def _stored_central_mail_by_logical_identity(
     record: MailMessageRecord,
 ) -> tuple[Path, MailMessageRecord] | None:
     identity = _collection_logical_identity(record)
-    directory = hub_root / CENTRAL_MAIL_DIR / "inbox"
+    directory = central_mail_dir(hub_root) / "inbox"
     if not directory.exists():
         return None
     for path in sorted(directory.glob("*.jsonl")):
@@ -1810,6 +1830,180 @@ def _raise_if_source_outbox_has_active_lock(outbox: Path) -> None:
     )
 
 
+def collect_mail_payloads(
+    hub_root: Path,
+    repo: Path,
+    source_path: Path,
+    payloads: list[Any],
+    *,
+    repo_policies: Sequence[Any] | None = None,
+) -> dict[str, Any]:
+    """Collect already-read mail payloads through canonical mail gates.
+
+    This is the shared path for normal repo outboxes and journal remote-outbox
+    rows. It canonicalizes, redacts, dedupes, writes collection audit lineage,
+    and quarantines invalid packet objects by hash without copying raw payload
+    bodies into quarantine records.
+    """
+    collected = 0
+    duplicates = 0
+    quarantined_invalid = 0
+    errors: list[dict[str, str]] = []
+    invalid_quarantine_keys = _invalid_mail_quarantine_index(hub_root)
+    source_path_ref = _relative_path_ref(hub_root, source_path)
+    for payload in payloads:
+        try:
+            if not isinstance(payload, dict):
+                raise ValueError("JSONL row is not a mail packet object")
+            record = _canonical_collected_record(repo, payload, repo_policies)
+        except (ValidationError, ValueError) as exc:
+            record_hash = _invalid_mail_record_hash(payload)
+            if (source_path_ref, record_hash) in invalid_quarantine_keys:
+                quarantined_invalid += 1
+                continue
+            safe_error = "Mail packet schema validation failed; row quarantined by hash."
+            if "confidential or restricted" in str(exc):
+                safe_error = str(exc)
+            quarantine = _quarantine_invalid_mail_packet(
+                hub_root,
+                source_path=source_path,
+                record=payload,
+                repo=repo,
+                repo_policies=repo_policies,
+                reason=safe_error,
+            )
+            errors.append(
+                {
+                    "repo": _safe_repo_ref(str(repo), repo_policies),
+                    "error_type": "invalid_mail_packet",
+                    "mail_id": str(payload.get("mail_id", ""))
+                    if isinstance(payload, dict)
+                    else "",
+                    "dedupe_key": str(payload.get("dedupe_key", ""))
+                    if isinstance(payload, dict)
+                    else "",
+                    "record_hash": quarantine["record_hash"],
+                    "error": safe_error,
+                    "quarantine": _relative_path_ref(
+                        hub_root,
+                        invalid_mail_quarantine_path(hub_root),
+                    ),
+                }
+            )
+            invalid_quarantine_keys.add((source_path_ref, quarantine["record_hash"]))
+            quarantined_invalid += 1
+            continue
+        try:
+            with _jsonl_lock(_collection_logical_lock_path(hub_root)):
+                central_path = central_inbox_path(hub_root, repo, repo_policies)
+                stored_logical = _stored_central_mail_by_logical_identity(hub_root, record)
+                if stored_logical is not None:
+                    stored_path, stored_record = stored_logical
+                    stored_source_key = _collection_source_policy_key(stored_record)
+                    incoming_source_key = _collection_source_policy_key(record)
+                    if (
+                        stored_source_key
+                        and incoming_source_key
+                        and stored_source_key != incoming_source_key
+                    ):
+                        errors.append(
+                            {
+                                "repo": _safe_repo_ref(str(repo), repo_policies),
+                                "mail_id": record.mail_id,
+                                "error_type": "cross_source_original_identity_conflict",
+                                "error": (
+                                    "A central inbox row already exists for this original mail "
+                                    "identity from a different reviewed source repo."
+                                ),
+                                "existing_central_inbox": _relative_path_ref(
+                                    hub_root, stored_path
+                                ),
+                                "existing_source": stored_source_key,
+                                "incoming_source": incoming_source_key,
+                                "logical_identity": _collection_logical_identity(record),
+                                "recommendation": (
+                                    "Treat as a provenance conflict during mail storms; review "
+                                    "which repo owns the outbox row before collecting a duplicate."
+                                ),
+                            }
+                        )
+                        continue
+                    if _collection_logical_content_hash(
+                        stored_record
+                    ) != _collection_logical_content_hash(record):
+                        errors.append(
+                            {
+                                "repo": _safe_repo_ref(str(repo), repo_policies),
+                                "mail_id": record.mail_id,
+                                "error_type": "logical_duplicate_conflict",
+                                "error": (
+                                    "A central inbox row already exists for this logical original "
+                                    "mail identity but has different canonical content."
+                                ),
+                                "existing_central_inbox": _relative_path_ref(
+                                    hub_root, stored_path
+                                ),
+                                "logical_identity": _collection_logical_identity(record),
+                                "recommendation": (
+                                    "Review as a possible conflicting branch/worktree variant before "
+                                    "promoting a second central candidate."
+                                ),
+                            }
+                        )
+                        continue
+                    duplicates += 1
+                    _append_collection_audit(
+                        hub_root,
+                        repo,
+                        stored_record,
+                        central_path=stored_path,
+                        event_type="duplicate_seen",
+                        source_outbox=source_path,
+                        repo_policies=repo_policies,
+                    )
+                elif _append_unique(central_path, record):
+                    collected += 1
+                    _append_collection_audit(
+                        hub_root,
+                        repo,
+                        record,
+                        central_path=central_path,
+                        event_type="collected",
+                        source_outbox=source_path,
+                        repo_policies=repo_policies,
+                    )
+                else:
+                    duplicates += 1
+                    stored_record = (
+                        _stored_mail_record_by_identity(central_path, record) or record
+                    )
+                    _append_collection_audit(
+                        hub_root,
+                        repo,
+                        stored_record,
+                        central_path=central_path,
+                        event_type="duplicate_seen",
+                        source_outbox=source_path,
+                        repo_policies=repo_policies,
+                    )
+        except TimeoutError as exc:
+            errors.append(
+                {
+                    "repo": _safe_repo_ref(str(repo), repo_policies),
+                    "mail_id": record.mail_id,
+                    "error": str(exc),
+                }
+            )
+    return {
+        "collected_count": collected,
+        "duplicate_count": duplicates,
+        "quarantined_invalid_count": quarantined_invalid,
+        "error_count": len(errors),
+        "errors": errors,
+        "authority_boundary": AUTHORITY_BOUNDARY,
+    }
+
+
 def collect_mail(
     hub_root: Path, repos: list[Path], repo_policies: Sequence[Any] | None = None
 ) -> dict[str, Any]:
@@ -1817,7 +2011,6 @@ def collect_mail(
     duplicates = 0
     quarantined_invalid = 0
     errors: list[dict[str, str]] = []
-    invalid_quarantine_keys = _invalid_mail_quarantine_index(hub_root)
     for repo in repos:
         try:
             outbox = _mail_file(repo, "outbox.jsonl")
@@ -1877,149 +2070,17 @@ def collect_mail(
                 }
             )
             continue
-        for payload in payloads:
-            try:
-                if not isinstance(payload, dict):
-                    raise ValueError("JSONL row is not a mail packet object")
-                record = _canonical_collected_record(repo, payload, repo_policies)
-            except (ValidationError, ValueError) as exc:
-                record_hash = _invalid_mail_record_hash(payload)
-                source_path_ref = _relative_path_ref(hub_root, outbox)
-                if (source_path_ref, record_hash) in invalid_quarantine_keys:
-                    quarantined_invalid += 1
-                    continue
-                safe_error = "Mail packet schema validation failed; row quarantined by hash."
-                if "confidential or restricted" in str(exc):
-                    safe_error = str(exc)
-                quarantine = _quarantine_invalid_mail_packet(
-                    hub_root,
-                    source_path=outbox,
-                    record=payload,
-                    repo=repo,
-                    repo_policies=repo_policies,
-                    reason=safe_error,
-                )
-                errors.append(
-                    {
-                        "repo": _safe_repo_ref(str(repo), repo_policies),
-                        "error_type": "invalid_mail_packet",
-                        "mail_id": str(payload.get("mail_id", ""))
-                        if isinstance(payload, dict)
-                        else "",
-                        "dedupe_key": str(payload.get("dedupe_key", ""))
-                        if isinstance(payload, dict)
-                        else "",
-                        "record_hash": quarantine["record_hash"],
-                        "error": safe_error,
-                        "quarantine": _relative_path_ref(
-                            hub_root,
-                            hub_root
-                            / CENTRAL_MAIL_DIR
-                            / "quarantine"
-                            / "invalid_mail_packet.jsonl",
-                        ),
-                    }
-                )
-                invalid_quarantine_keys.add((source_path_ref, quarantine["record_hash"]))
-                continue
-            try:
-                with _jsonl_lock(_collection_logical_lock_path(hub_root)):
-                    central_path = central_inbox_path(hub_root, repo, repo_policies)
-                    stored_logical = _stored_central_mail_by_logical_identity(hub_root, record)
-                    if stored_logical is not None:
-                        stored_path, stored_record = stored_logical
-                        stored_source_key = _collection_source_policy_key(stored_record)
-                        incoming_source_key = _collection_source_policy_key(record)
-                        if (
-                            stored_source_key
-                            and incoming_source_key
-                            and stored_source_key != incoming_source_key
-                        ):
-                            errors.append(
-                                {
-                                    "repo": _safe_repo_ref(str(repo), repo_policies),
-                                    "mail_id": record.mail_id,
-                                    "error_type": "cross_source_original_identity_conflict",
-                                    "error": (
-                                        "A central inbox row already exists for this original mail "
-                                        "identity from a different reviewed source repo."
-                                    ),
-                                    "existing_central_inbox": _relative_path_ref(
-                                        hub_root, stored_path
-                                    ),
-                                    "existing_source": stored_source_key,
-                                    "incoming_source": incoming_source_key,
-                                    "logical_identity": _collection_logical_identity(record),
-                                    "recommendation": (
-                                        "Treat as a provenance conflict during mail storms; review "
-                                        "which repo owns the outbox row before collecting a duplicate."
-                                    ),
-                                }
-                            )
-                            continue
-                        if _collection_logical_content_hash(
-                            stored_record
-                        ) != _collection_logical_content_hash(record):
-                            errors.append(
-                                {
-                                    "repo": _safe_repo_ref(str(repo), repo_policies),
-                                    "mail_id": record.mail_id,
-                                    "error_type": "logical_duplicate_conflict",
-                                    "error": (
-                                        "A central inbox row already exists for this logical original "
-                                        "mail identity but has different canonical content."
-                                    ),
-                                    "existing_central_inbox": _relative_path_ref(
-                                        hub_root, stored_path
-                                    ),
-                                    "logical_identity": _collection_logical_identity(record),
-                                    "recommendation": (
-                                        "Review as a possible conflicting branch/worktree variant before "
-                                        "promoting a second central candidate."
-                                    ),
-                                }
-                            )
-                            continue
-                        duplicates += 1
-                        _append_collection_audit(
-                            hub_root,
-                            repo,
-                            stored_record,
-                            central_path=stored_path,
-                            event_type="duplicate_seen",
-                            repo_policies=repo_policies,
-                        )
-                    elif _append_unique(central_path, record):
-                        collected += 1
-                        _append_collection_audit(
-                            hub_root,
-                            repo,
-                            record,
-                            central_path=central_path,
-                            event_type="collected",
-                            repo_policies=repo_policies,
-                        )
-                    else:
-                        duplicates += 1
-                        stored_record = (
-                            _stored_mail_record_by_identity(central_path, record) or record
-                        )
-                        _append_collection_audit(
-                            hub_root,
-                            repo,
-                            stored_record,
-                            central_path=central_path,
-                            event_type="duplicate_seen",
-                            repo_policies=repo_policies,
-                        )
-            except TimeoutError as exc:
-                errors.append(
-                    {
-                        "repo": _safe_repo_ref(str(repo), repo_policies),
-                        "mail_id": record.mail_id,
-                        "error": str(exc),
-                    }
-                )
+        result = collect_mail_payloads(
+            hub_root,
+            repo,
+            outbox,
+            payloads,
+            repo_policies=repo_policies,
+        )
+        collected += int(result["collected_count"])
+        duplicates += int(result["duplicate_count"])
+        quarantined_invalid += int(result["quarantined_invalid_count"])
+        errors.extend(result["errors"])
     report = write_mail_center_report(hub_root)
     return {
         "collected_count": collected,
@@ -2042,7 +2103,7 @@ def _all_central_messages_with_errors(
 def _all_central_messages_with_paths_and_errors(
     hub_root: Path, bucket: str
 ) -> tuple[list[tuple[Path, MailMessageRecord]], list[dict[str, str]]]:
-    directory = hub_root / CENTRAL_MAIL_DIR / bucket
+    directory = central_mail_dir(hub_root) / bucket
     records: list[tuple[Path, MailMessageRecord]] = []
     errors: list[dict[str, str]] = []
     if not directory.exists():
@@ -2066,7 +2127,7 @@ def _all_central_messages(hub_root: Path, bucket: str) -> list[MailMessageRecord
 
 
 def _release_decisions(hub_root: Path) -> dict[str, dict[str, Any]]:
-    releases = hub_root / CENTRAL_MAIL_DIR / "releases" / "mail_releases.jsonl"
+    releases = central_mail_dir(hub_root) / "releases" / "mail_releases.jsonl"
     rows, errors = _read_jsonl_with_errors(releases)
     _quarantine_jsonl_errors(hub_root, errors)
     latest: dict[str, dict[str, Any]] = {}
@@ -2078,7 +2139,7 @@ def _release_decisions(hub_root: Path) -> dict[str, dict[str, Any]]:
 
 
 def _release_record_path(hub_root: Path) -> Path:
-    return hub_root / CENTRAL_MAIL_DIR / "releases" / "mail_releases.jsonl"
+    return central_mail_dir(hub_root) / "releases" / "mail_releases.jsonl"
 
 
 def _quarantine_public_hold(
@@ -2090,7 +2151,7 @@ def _quarantine_public_hold(
     repo_policies: Sequence[Any] | None = None,
 ) -> None:
     _append_central_audit_record(
-        hub_root / CENTRAL_MAIL_DIR / "quarantine" / "public_release_holds.jsonl",
+        central_mail_dir(hub_root) / "quarantine" / "public_release_holds.jsonl",
         {
             "event_type": "public_release_hold",
             "created_at": utc_now(),
@@ -2157,7 +2218,7 @@ def route_mail(
 ) -> dict[str, Any]:
     routed = 0
     duplicates = 0
-    outbox = hub_root / CENTRAL_MAIL_DIR / "outbox" / "routed.jsonl"
+    outbox = central_mail_dir(hub_root) / "outbox" / "routed.jsonl"
     records, errors = _all_central_messages_with_paths_and_errors(hub_root, "inbox")
     collection_audit_keys = _collection_audit_index(hub_root)
     legacy_collection_allowlist_keys = _legacy_collection_allowlist_index(hub_root)
@@ -2249,7 +2310,7 @@ def repair_route_audit_gaps(
     central_inbox_hashes = _central_inbox_record_hashes(hub_root, quarantine_errors=False)
     repaired = 0
     skipped: list[dict[str, str]] = []
-    routed_outbox = hub_root / CENTRAL_MAIL_DIR / "outbox" / "routed.jsonl"
+    routed_outbox = central_mail_dir(hub_root) / "outbox" / "routed.jsonl"
     derived_records: list[tuple[Path, MailMessageRecord, MailMessageRecord]] = []
     for source_path, source_record in source_records:
         derived = _routed_record_from_source(
@@ -2332,7 +2393,7 @@ def _delivery_logged(
     record: MailMessageRecord,
     repo_policies: Sequence[Any] | None = None,
 ) -> bool:
-    log_path = hub_root / CENTRAL_MAIL_DIR / "archive" / "delivery_log.jsonl"
+    log_path = central_mail_dir(hub_root) / "archive" / "delivery_log.jsonl"
     rows, errors = _read_jsonl_with_errors(log_path)
     _quarantine_jsonl_errors(hub_root, errors)
     target_refs = {_normalized_repo(repo), _safe_repo_ref(repo, repo_policies)}
@@ -2449,7 +2510,7 @@ def deliver_mail(
     rejected_release = 0
     route_block_count = 0
     skipped: list[dict[str, str]] = []
-    delivery_log = hub_root / CENTRAL_MAIL_DIR / "archive" / "delivery_log.jsonl"
+    delivery_log = central_mail_dir(hub_root) / "archive" / "delivery_log.jsonl"
     records, errors = _all_central_messages_with_errors(hub_root, "outbox")
     route_rows = _route_log_rows(hub_root, quarantine_errors=False)
     central_inbox_hashes = _central_inbox_record_hashes(hub_root, quarantine_errors=False)
@@ -2760,7 +2821,7 @@ def review_mail(
 
 
 def _central_review_log_path(hub_root: Path) -> Path:
-    return hub_root / CENTRAL_MAIL_DIR / "archive" / "central_review_decisions.jsonl"
+    return central_mail_dir(hub_root) / "archive" / "central_review_decisions.jsonl"
 
 
 def _central_message_matches_id(record: MailMessageRecord, mail_id: str) -> bool:
@@ -3128,7 +3189,7 @@ def _deferred_message_index(repo: Path) -> dict[str, dict[str, Any]]:
 
 
 def _watched_assets_for_repo(hub_root: Path, repo: Path) -> set[str]:
-    ledger = hub_root / "processed" / "usage" / "repo-asset-usage.jsonl"
+    ledger = data_path(hub_root, "usage") / "repo-asset-usage.jsonl"
     normalized = str(repo.resolve()).replace("\\", "/")
     watched: set[str] = set()
     for row in _read_jsonl(ledger):
@@ -3800,9 +3861,9 @@ def _mail_dirty_action_summary(
 def _mail_diagnostic_roots(hub_root: Path, repos: Sequence[Path] | None) -> list[Path]:
     roots = [
         hub_root / MAIL_MIRROR_DIR,
-        hub_root / CENTRAL_MAIL_DIR,
+        central_mail_dir(hub_root),
         hub_root / "mail" / "outbox" / "rust_rollout",
-        hub_root / CENTRAL_MAIL_DIR / "staged" / "rust_rollout",
+        central_mail_dir(hub_root) / "staged" / "rust_rollout",
     ]
     for repo in repos or []:
         roots.append(repo / MAIL_MIRROR_DIR)
@@ -4160,7 +4221,7 @@ def diagnose_mail_dirty_state(
     collection_audit_enforced_at = _parse_iso_datetime(COLLECTION_AUDIT_ENFORCED_AT)
     route_rows = _route_log_rows(hub_root, quarantine_errors=False)
     central_inbox_hashes = _central_inbox_record_hashes(hub_root, quarantine_errors=False)
-    delivery_log_path = hub_root / CENTRAL_MAIL_DIR / "archive" / "delivery_log.jsonl"
+    delivery_log_path = central_mail_dir(hub_root) / "archive" / "delivery_log.jsonl"
     delivery_log_rows, _ = _read_jsonl_with_errors(delivery_log_path)
     unexpected_repo_mail_jsonl_count = 0
     central_outbox_missing_route_audit_count = 0
@@ -4543,7 +4604,7 @@ def diagnose_mail_dirty_state(
                         ),
                     }
                 )
-            in_central_inbox = _path_is_relative_to(path, hub_root / CENTRAL_MAIL_DIR / "inbox")
+            in_central_inbox = _path_is_relative_to(path, central_mail_dir(hub_root) / "inbox")
             if in_central_inbox and str(record.get("review_status", "")) != "collected_candidate":
                 direct_central_count += 1
                 issues.append(
@@ -5099,8 +5160,8 @@ def diagnose_mail_dirty_state(
 def write_mail_center_report(hub_root: Path) -> dict[str, str]:
     inbox = _all_central_messages(hub_root, "inbox")
     outbox = _all_central_messages(hub_root, "outbox")
-    archive_dir = hub_root / CENTRAL_MAIL_DIR / "archive"
-    quarantine_dir = hub_root / CENTRAL_MAIL_DIR / "quarantine"
+    archive_dir = central_mail_dir(hub_root) / "archive"
+    quarantine_dir = central_mail_dir(hub_root) / "quarantine"
     release_rows, _ = _read_jsonl_with_errors(_release_record_path(hub_root))
     archive_count = (
         sum(len(_read_jsonl(path)) for path in archive_dir.glob("*.jsonl"))
@@ -5138,8 +5199,8 @@ def write_mail_center_report(hub_root: Path) -> dict[str, str]:
     for record in all_messages:
         counts[record.message_type] = counts.get(record.message_type, 0) + 1
     summary["message_type_counts"] = dict(sorted(counts.items()))
-    report_json = hub_root / REPORTS_DIR / "mail_center.json"
-    report_md = hub_root / REPORTS_DIR / "mail_center.md"
+    report_json = central_reports_dir(hub_root) / "mail_center.json"
+    report_md = central_reports_dir(hub_root) / "mail_center.md"
     atomic_write_text(report_json, json_dumps(summary, pretty=True) + "\n")
     lines = [
         "# DAD Mail Center",

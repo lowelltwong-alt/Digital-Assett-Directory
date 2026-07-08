@@ -74,6 +74,13 @@ from .dad_library import (
     write_repo_inventory_rust_probe_parity,
 )
 from .database import CatalogDB
+from .daemon import (
+    daemon_status,
+    install_task_scheduler,
+    run_daemon_cycle,
+    task_scheduler_plan,
+    task_scheduler_status,
+)
 from .enrollment import (
     apply_enrollment,
     build_enrollment_plan,
@@ -136,6 +143,7 @@ from .learning import (
     preflight,
     rebuild_lesson_routes,
 )
+from .journal import checkpoint_journal, ingest_remote_outbox, journal_repo_status, journal_status
 from .lesson_automation_coverage import write_lesson_automation_coverage_outputs
 from .lesson_action_queue import (
     DECISION_TEMPLATE_PATH,
@@ -152,7 +160,6 @@ from .lesson_action_queue import (
 )
 from .manual_tasks import write_manual_task_queue
 from .mail_center import (
-    CENTRAL_MAIL_DIR,
     MAIL_MIRROR_DIR,
     MAX_MAIL_RECORD_BYTES,
     check_outbox_novelty,
@@ -246,8 +253,24 @@ from .rust_rollout import (
     write_rust_rollout_plan,
 )
 from .semantic_evolution import write_semantic_evolution_outputs
+from .surface_versions import build_surface_version_status
 from .template_library import validate_template_registry, write_template_library_report
 from .test_parity import run_test_parity
+from .transport import (
+    DATA_PLANE_PATHS,
+    apply_data_migration,
+    audit_all_repo_transport,
+    data_path,
+    data_relative_path,
+    init_data_root,
+    plan_data_migration,
+    resolve_data_root,
+)
+from .transport_readiness import build_transport_readiness
+from .transport_upgrade import (
+    build_transport_upgrade_status,
+    select_transport_upgrade_policies_from_queue,
+)
 from .validation import validate_repo
 from .workflow_parts import (
     build_workflow_part_review_queue,
@@ -297,6 +320,16 @@ rust_app = typer.Typer(no_args_is_help=True)
 app.add_typer(rust_app, name="rust")
 rust_rollout_app = typer.Typer(no_args_is_help=True)
 app.add_typer(rust_rollout_app, name="rust-rollout")
+data_app = typer.Typer(no_args_is_help=True)
+app.add_typer(data_app, name="data")
+transport_app = typer.Typer(no_args_is_help=True)
+app.add_typer(transport_app, name="transport")
+daemon_app = typer.Typer(no_args_is_help=True)
+app.add_typer(daemon_app, name="daemon")
+journal_app = typer.Typer(no_args_is_help=True)
+app.add_typer(journal_app, name="journal")
+mcp_app = typer.Typer(no_args_is_help=True)
+app.add_typer(mcp_app, name="mcp")
 console = Console()
 
 
@@ -328,8 +361,288 @@ def _repo_path(repo_root: Path, path: Path | None) -> Path | None:
     return path if path.is_absolute() else repo_root / path
 
 
+def _transport_repo_rows(cfg) -> list[dict[str, Any]]:
+    rows_by_path: dict[str, dict[str, Any]] = {}
+
+    def add_policy(policy: object, enabled_attr: str) -> None:
+        if not bool(getattr(policy, enabled_attr, True)):
+            return
+        path = Path(getattr(policy, "path"))
+        key = str(path.resolve())
+        row = rows_by_path.setdefault(
+            key,
+            {
+                "id": str(getattr(policy, "id", path.name)),
+                "path": str(path),
+                "write_protected": False,
+            },
+        )
+        if bool(getattr(policy, "write_protected", False)):
+            row["write_protected"] = True
+
+    for policy in getattr(cfg, "mail_repos", []) or []:
+        add_policy(policy, "mail_enabled")
+    for policy in getattr(cfg, "exception_repos", []) or []:
+        add_policy(policy, "exceptions_enabled")
+    for policy in getattr(cfg, "enrollment_repos", []) or []:
+        add_policy(policy, "enrollment_enabled")
+    return sorted(rows_by_path.values(), key=lambda row: str(row["id"]))
+
+
+@data_app.command("status")
+def data_status(hub: Optional[Path] = typer.Option(None)) -> None:
+    cfg = _cfg(hub=hub)
+    root, mode = resolve_data_root(cfg.repo_root)
+    console.print_json(
+        data={
+            "schema_version": "dad.data.status.v1",
+            "hub_root": str(cfg.repo_root),
+            "data_root": str(root),
+            "mode": mode,
+            "surfaces": {
+                logical: str(data_path(cfg.repo_root, logical))
+                for logical in sorted(DATA_PLANE_PATHS)
+            },
+        }
+    )
+
+
+@data_app.command("init")
+def data_init(
+    target: Path = typer.Option(Path.home() / ".dad" / "data"),
+    hub: Optional[Path] = typer.Option(None),
+    force_onedrive: bool = typer.Option(False, "--force-onedrive"),
+) -> None:
+    cfg = _cfg(hub=hub)
+    console.print_json(
+        data=init_data_root(
+            target,
+            hub_root=cfg.repo_root,
+            force_onedrive=force_onedrive,
+        )
+    )
+
+
+@data_app.command("migrate")
+def data_migrate(
+    target: Path = typer.Option(Path.home() / ".dad" / "data"),
+    hub: Optional[Path] = typer.Option(None),
+    apply: bool = typer.Option(False, "--apply/--plan-only"),
+    force_onedrive: bool = typer.Option(False, "--force-onedrive"),
+) -> None:
+    cfg = _cfg(hub=hub)
+    result = (
+        apply_data_migration(cfg.repo_root, target, force_onedrive=force_onedrive)
+        if apply
+        else plan_data_migration(cfg.repo_root, target)
+    )
+    console.print_json(data=result)
+
+
+@transport_app.command("audit")
+def transport_audit(hub: Optional[Path] = typer.Option(None)) -> None:
+    cfg = _cfg(hub=hub)
+    console.print_json(data=audit_all_repo_transport(cfg.repo_root, _transport_repo_rows(cfg)))
+
+
+@transport_app.command("readiness")
+def transport_readiness(
+    hub: Optional[Path] = typer.Option(None),
+    stale_hours: int = typer.Option(26),
+    inspect_scheduler: bool = typer.Option(False, "--inspect-scheduler"),
+    task_name: str = typer.Option("DAD Daemon Run Cycle"),
+    shim: Optional[Path] = typer.Option(None),
+    journal_repo: Optional[Path] = typer.Option(None),
+    wave: str = typer.Option("transport-surface-v1"),
+) -> None:
+    cfg = _cfg(hub=hub)
+    scheduler = (
+        task_scheduler_status(cfg.repo_root, task_name=task_name, shim=shim)
+        if inspect_scheduler
+        else None
+    )
+    journal_repo_evidence = (
+        journal_repo_status(cfg.repo_root, journal_repo)
+        if journal_repo is not None
+        else None
+    )
+    console.print_json(
+        data=build_transport_readiness(
+            cfg.repo_root,
+            transport_repos=_transport_repo_rows(cfg),
+            enrollment_policies=cfg.enrollment_repos,
+            wave=wave,
+            stale_hours=stale_hours,
+            scheduler_status=scheduler,
+            journal_repo_status=journal_repo_evidence,
+        )
+    )
+
+
+@transport_app.command("upgrade-status")
+def transport_upgrade_status(
+    repo: list[str] = typer.Option([], "--repo"),
+    wave: str = typer.Option("transport-surface-v1"),
+    hub: Optional[Path] = typer.Option(None),
+) -> None:
+    cfg = _cfg(hub=hub)
+    console.print_json(
+        data=build_transport_upgrade_status(
+            cfg.repo_root,
+            transport_repos=_transport_repo_rows(cfg),
+            enrollment_policies=cfg.enrollment_repos,
+            wave=wave,
+            requested_repos=repo,
+        )
+    )
+
+
+@daemon_app.command("run-cycle")
+def daemon_run_cycle(
+    hub: Optional[Path] = typer.Option(None),
+    journal_repo: Optional[Path] = typer.Option(None),
+    checkpoint_apply: bool = typer.Option(False, "--checkpoint-apply"),
+    skip_transport_audit: bool = typer.Option(False, "--skip-transport-audit"),
+    skip_graphs: bool = typer.Option(False, "--skip-graphs"),
+    deliver_local_caches: bool = typer.Option(
+        False,
+        "--deliver-local-caches",
+        help="Also write routed mail to reviewed repo-local inbox caches.",
+    ),
+) -> None:
+    cfg = _cfg(hub=hub)
+    console.print_json(
+        data=run_daemon_cycle(
+            cfg.repo_root,
+            mail_repos=cfg.mail_repos,
+            exception_repos=cfg.exception_repos,
+            deliver_local_caches=deliver_local_caches,
+            rebuild_graphs=not skip_graphs,
+            transport_repos=None if skip_transport_audit else _transport_repo_rows(cfg),
+            journal_repo=journal_repo,
+            checkpoint_apply=checkpoint_apply,
+        )
+    )
+
+
+@daemon_app.command("status")
+def daemon_status_command(
+    hub: Optional[Path] = typer.Option(None),
+    stale_hours: int = typer.Option(26),
+) -> None:
+    cfg = _cfg(hub=hub)
+    console.print_json(data=daemon_status(cfg.repo_root, stale_hours=stale_hours))
+
+
+@daemon_app.command("install")
+def daemon_install(
+    hub: Optional[Path] = typer.Option(None),
+    task_name: str = typer.Option("DAD Daemon Run Cycle"),
+    schedule_time: str = typer.Option("09:00"),
+    twice_daily: bool = typer.Option(False, "--twice-daily"),
+    shim: Optional[Path] = typer.Option(None),
+    apply: bool = typer.Option(False, "--apply/--plan-only"),
+) -> None:
+    cfg = _cfg(hub=hub)
+    plan = task_scheduler_plan(
+        cfg.repo_root,
+        task_name=task_name,
+        schedule_time=schedule_time,
+        twice_daily=twice_daily,
+        shim=shim,
+    )
+    console.print_json(data=install_task_scheduler(plan) if apply else plan)
+
+
+@daemon_app.command("task-status")
+def daemon_task_status(
+    hub: Optional[Path] = typer.Option(None),
+    task_name: str = typer.Option("DAD Daemon Run Cycle"),
+    shim: Optional[Path] = typer.Option(None),
+) -> None:
+    cfg = _cfg(hub=hub)
+    console.print_json(
+        data=task_scheduler_status(
+            cfg.repo_root,
+            task_name=task_name,
+            shim=shim,
+        )
+    )
+
+
+@journal_app.command("status")
+def journal_status_command(
+    hub: Optional[Path] = typer.Option(None),
+    min_records: int = typer.Option(200),
+    min_hours: int = typer.Option(24),
+) -> None:
+    cfg = _cfg(hub=hub)
+    console.print_json(
+        data=journal_status(cfg.repo_root, min_records=min_records, min_hours=min_hours)
+    )
+
+
+@journal_app.command("checkpoint")
+def journal_checkpoint(
+    journal_repo: Optional[Path] = typer.Option(None),
+    hub: Optional[Path] = typer.Option(None),
+    min_records: int = typer.Option(200),
+    min_hours: int = typer.Option(24),
+    apply: bool = typer.Option(False, "--apply/--plan-only"),
+) -> None:
+    cfg = _cfg(hub=hub)
+    console.print_json(
+        data=checkpoint_journal(
+            cfg.repo_root,
+            journal_repo,
+            apply=apply,
+            min_records=min_records,
+            min_hours=min_hours,
+        )
+    )
+
+
+@journal_app.command("repo-status")
+def journal_repo_status_command(
+    journal_repo: Path = typer.Option(...),
+    hub: Optional[Path] = typer.Option(None),
+    min_records: int = typer.Option(200),
+    min_hours: int = typer.Option(24),
+) -> None:
+    cfg = _cfg(hub=hub)
+    console.print_json(
+        data=journal_repo_status(
+            cfg.repo_root,
+            journal_repo,
+            min_records=min_records,
+            min_hours=min_hours,
+        )
+    )
+
+
+@journal_app.command("ingest-remote-outbox")
+def journal_ingest_remote_outbox(
+    journal_repo: Path = typer.Option(...),
+    hub: Optional[Path] = typer.Option(None),
+) -> None:
+    cfg = _cfg(hub=hub)
+    console.print_json(data=ingest_remote_outbox(cfg.repo_root, journal_repo))
+
+
+@mcp_app.command("graph-stdio")
+def mcp_graph_stdio(hub: Optional[Path] = typer.Option(None)) -> None:
+    """Run the local read-only graph-surface MCP server over stdio."""
+    cfg = _cfg(hub=hub)
+    from .mcp_graph_server import run_stdio_server
+
+    run_stdio_server(cfg.repo_root)
+
+
 def _rust_rollout_snapshot_promotion_log(repo_root: Path) -> Path:
-    return repo_root / "processed" / "mail" / "archive" / "rust_rollout_snapshot_promotion.jsonl"
+    return data_relative_path(
+        repo_root,
+        Path("processed") / "mail" / "archive" / "rust_rollout_snapshot_promotion.jsonl",
+    )
 
 
 def _rust_rollout_snapshot_promotion_record(
@@ -1254,7 +1567,7 @@ def _mail_repair_plan_markdown(plan: dict[str, Any]) -> str:
 
 
 def _write_mail_repair_plan_packet(repo_root: Path, plan: dict[str, Any]) -> dict[str, Any]:
-    output_dir = repo_root / "processed" / "reports" / "mail_storm_repair"
+    output_dir = data_relative_path(repo_root, Path("processed") / "reports" / "mail_storm_repair")
     output_dir.mkdir(parents=True, exist_ok=True)
     slug = _mail_repair_report_slug(plan)
     json_path = output_dir / f"{slug}.json"
@@ -2144,6 +2457,20 @@ def _select_enrollment(repo: list[str], cfg, *, wave: str | None = None):
         raise typer.Exit(2) from exc
 
 
+def _transport_upgrade_policies_from_queue(
+    cfg,
+    *,
+    wave: str,
+    requested_repos: list[str],
+) -> tuple[list[Any], dict[str, Any]]:
+    return select_transport_upgrade_policies_from_queue(
+        cfg.repo_root,
+        cfg.enrollment_repos,
+        wave=wave,
+        requested_repos=requested_repos,
+    )
+
+
 @app.command()
 def scan(
     config: Optional[Path] = typer.Option(None),
@@ -2795,7 +3122,7 @@ def rust_rollout_plan(
     cfg = _cfg(hub=hub)
     result = write_rust_rollout_plan(
         _repo_path(cfg.repo_root, config_path) or config_path,
-        _repo_path(cfg.repo_root, out_dir) or out_dir,
+        data_relative_path(cfg.repo_root, out_dir),
     )
     console.print_json(data=result)
 
@@ -2832,14 +3159,16 @@ def rust_rollout_build_mail(
 ) -> None:
     """Build deterministic local Rust rollout instruction packets."""
     cfg = _cfg(hub=hub)
-    resolved_out_dir = _repo_path(cfg.repo_root, out_dir) or out_dir
+    resolved_out_dir = data_relative_path(cfg.repo_root, out_dir)
+    active_data_root, _data_root_mode = resolve_data_root(cfg.repo_root)
+    central_mail_root = data_path(cfg.repo_root, "central_mail")
     live_mail_roots = [
         cfg.repo_root / MAIL_MIRROR_DIR,
-        cfg.repo_root / CENTRAL_MAIL_DIR / "inbox",
-        cfg.repo_root / CENTRAL_MAIL_DIR / "outbox",
-        cfg.repo_root / CENTRAL_MAIL_DIR / "archive",
-        cfg.repo_root / CENTRAL_MAIL_DIR / "quarantine",
-        cfg.repo_root / CENTRAL_MAIL_DIR / "releases",
+        central_mail_root / "inbox",
+        central_mail_root / "outbox",
+        central_mail_root / "archive",
+        central_mail_root / "quarantine",
+        central_mail_root / "releases",
     ]
     live_mail_root = next(
         (root for root in live_mail_roots if _is_under_or_equal(resolved_out_dir, root)),
@@ -2866,9 +3195,7 @@ def rust_rollout_build_mail(
     tracked_snapshot_dir = (cfg.repo_root / "mail" / "outbox" / "rust_rollout").resolve(
         strict=False
     )
-    default_staging_dir = (
-        cfg.repo_root / "processed" / "mail" / "staged" / "rust_rollout"
-    ).resolve(strict=False)
+    default_staging_dir = (central_mail_root / "staged" / "rust_rollout").resolve(strict=False)
     temp_root = _system_temp_root()
     if (
         _is_under_or_equal(resolved_out_dir, tracked_snapshot_dir)
@@ -2911,9 +3238,10 @@ def rust_rollout_build_mail(
             }
         )
         raise typer.Exit(2)
-    if not _is_under_or_equal(resolved_out_dir, cfg.repo_root) and not _is_under_or_equal(
-        resolved_out_dir,
-        temp_root,
+    if (
+        not _is_under_or_equal(resolved_out_dir, cfg.repo_root)
+        and not _is_under_or_equal(resolved_out_dir, active_data_root)
+        and not _is_under_or_equal(resolved_out_dir, temp_root)
     ):
         console.print_json(
             data={
@@ -3054,7 +3382,7 @@ def rust_rollout_lessons_summarize(
     cfg = _cfg(hub=hub)
     result = summarize_rust_rollout_lessons(
         _repo_path(cfg.repo_root, ledger) or ledger,
-        _repo_path(cfg.repo_root, out_dir) or out_dir,
+        data_relative_path(cfg.repo_root, out_dir),
     )
     console.print_json(data=result)
 
@@ -4470,13 +4798,31 @@ def enroll_apply(
 def enroll_update_plan(
     repo: list[str] = typer.Option([], "--repo"),
     wave: str = typer.Option(..., "--wave"),
+    from_transport_queue: bool = typer.Option(
+        False,
+        "--from-transport-queue",
+        help=(
+            "Select reviewed enrollment policies from the central "
+            "transport-upgrade queue instead of raw --repo arguments."
+        ),
+    ),
     config: Optional[Path] = typer.Option(None),
     hub: Optional[Path] = typer.Option(None),
 ) -> None:
     """Write a reviewed-wave enrollment update plan under processed/enrollment."""
     cfg = _cfg(config, hub)
-    policies = _select_enrollment(repo, cfg, wave=wave)
+    queue_selection: dict[str, Any] | None = None
+    if from_transport_queue:
+        policies, queue_selection = _transport_upgrade_policies_from_queue(
+            cfg,
+            wave=wave,
+            requested_repos=repo,
+        )
+    else:
+        policies = _select_enrollment(repo, cfg, wave=wave)
     result = build_enrollment_plan(cfg.repo_root, policies, wave=wave, update=True)
+    if queue_selection is not None:
+        result["transport_upgrade_queue_selection"] = queue_selection
     console.print_json(data=result)
 
 
@@ -4513,6 +4859,24 @@ def enroll_status(
     cfg = _cfg(config, hub)
     policies = cfg.enrollment_repos if repo == ["all"] else _select_enrollment(repo, cfg)
     console.print_json(data=enrollment_status_all(policies))
+
+
+@enroll_app.command("surface-status")
+def enroll_surface_status(
+    wave: str = typer.Option(""),
+    config: Optional[Path] = typer.Option(None),
+    hub: Optional[Path] = typer.Option(None),
+) -> None:
+    """Write a central read-only enrollment surface-version report."""
+    cfg = _cfg(config, hub)
+    console.print_json(
+        data=build_surface_version_status(
+            cfg.repo_root,
+            enrollment_policies=cfg.enrollment_repos,
+            transport_repos=_transport_repo_rows(cfg),
+            wave=wave,
+        )
+    )
 
 
 @dad_app.command("needs")
@@ -6240,7 +6604,7 @@ def agent_postflight(
     hub: Optional[Path] = typer.Option(None),
     file: list[str] = typer.Option([], "--file"),
     command: list[str] = typer.Option([], "--command"),
-    test: list[str] = typer.Option([], "--test"),
+    test: list[str] = typer.Option([], "--test", "--tests"),
     test_not_run: list[str] = typer.Option([], "--test-not-run"),
     confirmed: list[str] = typer.Option([], "--confirmed"),
     inferred: list[str] = typer.Option([], "--inferred"),

@@ -19,4 +19,4 @@ if (-not (Test-Path (Join-Path $RepoPath '.git'))) {
 git -C $RepoPath config core.hooksPath .githooks
 
 Write-Host "New repo wired to Digital Asset Directory hub at $Hub"
-Write-Host "Next: cd '$RepoPath'; asset-dir agent preflight --repo . --hub '$Hub' --agent claude-code --task '<task>'"
+Write-Host "Next: cd '$RepoPath'; asset-dir agent preflight --repo . --hub '$Hub' --agent <agent-id> --task '<task>'"

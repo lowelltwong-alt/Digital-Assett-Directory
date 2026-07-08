@@ -23,6 +23,26 @@
     "dad_hub_ref": {"type": "string", "minLength": 1},
     "authority_boundary": {"type": "string", "minLength": 1},
     "source_authority": {"type": "string", "minLength": 1},
+    "agent_runtime_policy": {
+      "type": "object",
+      "required": [
+        "core_contract",
+        "adapter_authority",
+        "agent_id_policy",
+        "vendor_lock_in_prohibited"
+      ],
+      "properties": {
+        "core_contract": {"const": "AGENTS.md"},
+        "adapter_authority": {"const": "optional_wrapper_only"},
+        "agent_id_policy": {"const": "arbitrary_non_empty_string"},
+        "vendor_lock_in_prohibited": {"const": true},
+        "internal_integration_default": {"const": "mcp_over_direct_api"},
+        "mcp_authority": {"const": "neutral_tool_resource_prompt_boundary"},
+        "direct_api_policy": {"const": "external_adapter_fallback_only"},
+        "mcp_audit_policy": {"const": "dad_lifecycle_and_audit_required_for_side_effects"}
+      },
+      "additionalProperties": false
+    },
     "dad_managed_surfaces": {"type": "array", "items": {"type": "string", "minLength": 1}},
     "normal_operation_write_boundary": {"const": ".digital-asset/mail/**"},
     "control_planes": {"type": "array", "items": {"type": "string", "minLength": 1}},

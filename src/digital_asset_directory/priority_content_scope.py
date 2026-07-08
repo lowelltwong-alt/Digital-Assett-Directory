@@ -8,6 +8,7 @@ from typing import Any
 from .config import LocalSource
 from .ids import stable_id
 from .models import AssetRecord
+from .transport import data_relative_path
 from .utils import atomic_write_text, json_dumps, redact_sensitive_text, tokens, utc_now, write_jsonl
 
 METHODOLOGY_VERSION = "priority-content-extract-scope-v0.1"
@@ -542,7 +543,7 @@ def write_priority_content_extract_scope_outputs(
         per_repo_limit=per_repo_limit,
         generated_at=generated_at,
     )
-    reports_dir = repo_root / "processed" / "reports"
+    reports_dir = data_relative_path(repo_root, Path("processed") / "reports")
     paths = {
         "scope_markdown": reports_dir / "priority_content_extract_scope.md",
         "scope_json": reports_dir / "priority_content_extract_scope.json",
@@ -852,9 +853,11 @@ def write_priority_content_extract_outputs(
     limit: int = 50,
     generated_at: str | None = None,
 ) -> dict[str, Any]:
-    scope_path = scope_file or repo_root / "processed" / "reports" / "priority_content_extract_scope.json"
+    scope_path = scope_file or data_relative_path(
+        repo_root, Path("processed") / "reports" / "priority_content_extract_scope.json"
+    )
     if not scope_path.is_absolute():
-        scope_path = repo_root / scope_path
+        scope_path = data_relative_path(repo_root, scope_path)
     result = run_priority_content_extract(
         _load_scope(scope_path),
         local_sources,
@@ -869,8 +872,8 @@ def write_priority_content_extract_outputs(
         limit=limit,
         generated_at=generated_at,
     )
-    learning_dir = repo_root / "processed" / "learning"
-    reports_dir = repo_root / "processed" / "reports"
+    learning_dir = data_relative_path(repo_root, Path("processed") / "learning")
+    reports_dir = data_relative_path(repo_root, Path("processed") / "reports")
     paths = {
         "observations": learning_dir / "priority_content_observations.jsonl",
         "report_markdown": reports_dir / "priority_content_extract_report.md",

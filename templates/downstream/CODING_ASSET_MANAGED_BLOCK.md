@@ -26,7 +26,7 @@ Suggested local pointer file:
 Suggested DAD commands:
 
 ```text
-asset-dir agent preflight --repo . --agent <codex|claude-code|cursor|copilot|other> --task "<task>"
+asset-dir agent preflight --repo . --agent <agent-id> --task "<task>"
 python <DAD_ROOT>/scripts/suggest_coding_tactics.py --task "<task>" --language <python|rust|mixed|agent-instruction>
 asset-dir agent postflight --session <SESSION_ID> --repo . --summary "<summary>" --test "<command that passed>"
 ```

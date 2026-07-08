@@ -7,6 +7,7 @@ from typing import Any
 
 from .ids import stable_id
 from .models import ArchitectureConsultRecord
+from .transport import data_relative_path
 from .utils import atomic_write_text, json_dumps, redact_sensitive_text, sha256_bytes, tokens
 from .utils import utc_now
 
@@ -649,11 +650,13 @@ def _consult_slug(intent_file: Path, intent: dict[str, Any]) -> str:
 
 
 def _default_reference_records(repo_root: Path, warnings: list[str]) -> list[dict[str, Any]]:
-    jsonl = repo_root / "processed" / "learning" / "reference_architecture_candidates.jsonl"
+    learning_dir = data_relative_path(repo_root, Path("processed") / "learning")
+    reports_dir = data_relative_path(repo_root, Path("processed") / "reports")
+    jsonl = learning_dir / "reference_architecture_candidates.jsonl"
     records = _load_jsonl(jsonl, warnings, limit=500)
     if records:
         return records
-    payload = _load_json(repo_root / "processed" / "reports" / "reference_architectures.json", warnings)
+    payload = _load_json(reports_dir / "reference_architectures.json", warnings)
     return list(payload.get("records", []))
 
 
@@ -677,13 +680,13 @@ def build_architecture_consult(
         repo_root / "processed" / "workflow_parts" / "workflow_part_usage_guidance.json",
         warnings,
     )
+    learning_dir = data_relative_path(repo_root, Path("processed") / "learning")
+    reports_dir = data_relative_path(repo_root, Path("processed") / "reports")
     background_rows = _load_jsonl(
-        repo_root / "processed" / "learning" / "background_connection_candidates.jsonl",
-        warnings,
-        limit=1000,
+        learning_dir / "background_connection_candidates.jsonl", warnings, limit=1000
     )
     governance_scope = _load_json(
-        repo_root / "processed" / "reports" / "governance_map_adoption_scope.json",
+        reports_dir / "governance_map_adoption_scope.json",
         warnings,
     )
     learning_registry = _load_json(repo_root / "registry" / "learning-rule-registry.json", warnings)
@@ -982,7 +985,7 @@ def write_architecture_consult_outputs(
         generated_at=generated_at,
     )
     slug = _consult_slug(intent_file, record.model_dump(mode="json"))
-    output_dir = repo_root / "processed" / "reports" / "architecture_consults"
+    output_dir = data_relative_path(repo_root, Path("processed") / "reports" / "architecture_consults")
     markdown_path = output_dir / f"{slug}.md"
     json_path = output_dir / f"{slug}.json"
     seed_prompt_path = output_dir / f"{slug}_seed_prompt.md"

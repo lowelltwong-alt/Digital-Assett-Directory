@@ -53,7 +53,27 @@ PowerShell, set `$env:PYTHONPATH='src'` before running the command.
 Run a preflight:
 
 ```text
-asset-dir agent preflight --repo . --agent <codex|claude-code|other> --task "<task>"
+asset-dir agent preflight --repo . --agent <agent-id> --task "<task>"
+```
+
+Use an arbitrary non-empty `<agent-id>` such as `codex`, `claude-code`,
+`cursor`, `copilot`, `human`, `ci`, or `other`. DAD's durable contract is
+agent-agnostic; runtime-specific files and hooks are optional adapters.
+Internal agent integrations default to MCP-style tools, resources, and prompts
+over direct vendor APIs. Direct APIs are external fallback adapters only; MCP
+tools with side effects still require the DAD lifecycle, audit records, and
+human gates. See `docs/MCP_FIRST_INTEGRATION_POLICY.md`.
+
+Transport/data-plane checks are part of normal orientation. Runtime data should
+resolve through `DAD_DATA_ROOT` only after an initialized marker exists; a
+configured-but-uninitialized root must still fall back to legacy paths. Inspect
+with:
+
+```text
+asset-dir data status
+asset-dir transport audit
+asset-dir daemon status
+asset-dir journal status
 ```
 
 State the route, scope, validation plan, and stop conditions before editing.
@@ -113,7 +133,7 @@ Agents must not:
 ## Required postflight
 
 ```text
-asset-dir agent postflight --session <SESSION_ID> --repo . --summary "<summary>" --tests "<commands or not run>"
+asset-dir agent postflight --session <SESSION_ID> --repo . --summary "<summary>" --test "<command that passed>" --test-not-run "<command not run>"
 ```
 
 The final report must include:
@@ -159,7 +179,7 @@ Contract: `.digital-asset/dad-integration.json`
 Before material AI-assisted work, read this repo's front door and run:
 
 ```text
-asset-dir agent preflight --repo . --agent <codex|claude-code|cursor|other> --task "<task>"
+asset-dir agent preflight --repo . --agent <agent-id> --task "<task>"
 ```
 
 Read the returned `context_pack` before editing. If DAD is unavailable, local

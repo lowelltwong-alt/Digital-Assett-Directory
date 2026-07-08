@@ -15,6 +15,20 @@ state layer for deterministic response tracking, learning-loop signals, and
 future mailbox-backed dataflow. Mail absence must never be interpreted as repo
 adoption; actionable notices need explicit response events.
 
+## Transport Tiers
+
+DAD mail no longer rides the code PR pipe. T0 local pull is the default: mailbox
+JSONL is a gitignored repo-local cache, DAD central spools live under the active
+`DAD_DATA_ROOT`, and repos read their own inbox during preflight or digest. T1
+`dad-journal` is the private data-only fallback for backup and remote agents;
+remote outbox rows are ingested by the local daemon through the same screening
+and quarantine gates. T2 Cloudflare relay is design-only until its human gate.
+
+PRs remain for source-code changes and adopted lesson execution, not candidate
+mail packets. Internal remote-agent access should prefer an MCP adapter over a
+direct API, with mail resources read-only and mail mutation tools routed through
+DAD audit/quarantine gates.
+
 ## Authority Boundary
 
 Mail packets are append-only candidate evidence. They are not source truth,

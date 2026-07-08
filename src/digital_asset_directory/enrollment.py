@@ -12,6 +12,8 @@ import yaml
 
 from .config import AppConfig, EnrollmentRepoPolicy
 from .mail_center import mail_digest_status, mail_gitignore_text, mail_readme_text
+from .surface_versions import contract_surface_statuses, expected_contract_surface_blocks
+from .transport import TRANSPORT_SURFACE_VERSION
 from .utils import append_jsonl, atomic_write_text, json_dumps, utc_now
 
 ENROLLMENT_VERSION = "0.1.0"
@@ -46,6 +48,17 @@ CONTROL_PLANE_IDS = [
     "data_maps",
     "learning_postflight_loops",
 ]
+
+AGENT_RUNTIME_POLICY = {
+    "core_contract": "AGENTS.md",
+    "adapter_authority": "optional_wrapper_only",
+    "agent_id_policy": "arbitrary_non_empty_string",
+    "vendor_lock_in_prohibited": True,
+    "internal_integration_default": "mcp_over_direct_api",
+    "mcp_authority": "neutral_tool_resource_prompt_boundary",
+    "direct_api_policy": "external_adapter_fallback_only",
+    "mcp_audit_policy": "dad_lifecycle_and_audit_required_for_side_effects",
+}
 
 WEEKLY_CHECKS = [
     "asset_update_available",
@@ -564,6 +577,12 @@ def _contract_payload(
             "normal_write_boundary": ".digital-asset/mail/**",
             "one_time_full_governance_install": True,
         },
+        "transport": {
+            "surface_version": TRANSPORT_SURFACE_VERSION,
+            "mode": "local_pull",
+            "journal_fallback": True,
+        },
+        **expected_contract_surface_blocks(),
         "cadence": {
             "mail": {
                 "frequency": "daily",
@@ -577,6 +596,7 @@ def _contract_payload(
             },
         },
         "capture": _capture_surface_payload(hub_root),
+        "agent_runtime_policy": AGENT_RUNTIME_POLICY,
         "enabled_control_planes": _enabled_control_planes(policy),
         "local_validation_commands": policy.validation_commands,
         "approved_dad_managed_paths": APPROVED_RELATIVE_PATHS,
@@ -655,6 +675,7 @@ def _governance_map_payload(policy: EnrollmentRepoPolicy, hub_root: Path) -> dic
         "dad_hub_ref": _hub_ref(hub_root, policy),
         "authority_boundary": AUTHORITY_BOUNDARY,
         "source_authority": "target_repo_retains_local_canon",
+        "agent_runtime_policy": AGENT_RUNTIME_POLICY,
         "dad_managed_surfaces": APPROVED_RELATIVE_PATHS,
         "normal_operation_write_boundary": ".digital-asset/mail/**",
         "control_planes": _enabled_control_planes(policy),
@@ -810,8 +831,13 @@ Contract: `.digital-asset/dad-integration.json`
 Before material AI-assisted work, read this repo's front door and run:
 
 ```text
-asset-dir agent preflight --repo . --agent <codex|claude-code|cursor|other> --task "<task>"
+asset-dir agent preflight --repo . --agent <agent-id> --task "<task>"
 ```
+
+Use the actual runtime name as `<agent-id>` when useful, such as `codex`,
+`claude-code`, `cursor`, `copilot`, `human`, `ci`, or `other`. DAD's core
+contract is `AGENTS.md`; runtime-specific files and hooks are optional wrappers
+and must not become the only place where governance rules live.
 
 Read the returned `context_pack` before editing. If DAD is unavailable, local
 coding may continue with a logged warning, but cross-repo writes, public
@@ -881,8 +907,10 @@ def _claude_body() -> str:
     return """@AGENTS.md
 
 Claude Code should follow the DAD enrollment contract in `AGENTS.md` and
-`.digital-asset/dad-integration.json`. Agent review is triage only; human
-approval gates remain separate.
+`.digital-asset/dad-integration.json`. `CLAUDE.md` is an optional runtime
+adapter, not the DAD source of truth. Agent review is triage only; human
+approval gates remain separate. Internal DAD integrations default to MCP over
+direct APIs; Claude-specific APIs or hooks are fallback adapters only.
 """
 
 
@@ -1258,6 +1286,32 @@ def enrollment_status(
     contract_version = (
         str(contract.get("enrollment", {}).get("version", "")) if contract else ""
     )
+    transport_block = contract.get("transport", {}) if contract else {}
+    transport_version = str(transport_block.get("surface_version", ""))
+    transport_status = "missing"
+    if contract and not isinstance(transport_block, dict):
+        transport_status = "invalid"
+        errors.append("Enrollment contract transport block is invalid")
+    elif contract and not transport_version:
+        transport_status = "contract_missing"
+        errors.append("Enrollment contract missing transport.surface_version")
+    elif contract and transport_version != TRANSPORT_SURFACE_VERSION:
+        transport_status = "stale"
+        errors.append(
+            "Enrollment contract transport.surface_version "
+            f"{transport_version} != {TRANSPORT_SURFACE_VERSION}"
+        )
+    elif contract:
+        transport_status = "current"
+    surface_rows = contract_surface_statuses(contract) if contract else []
+    for row in surface_rows:
+        if row["surface"] == "transport" or not row["update_needed"]:
+            continue
+        errors.append(
+            "Enrollment contract "
+            f"{row['surface']}.surface_version is {row['status']}; "
+            f"expected {row['expected_surface_version']}"
+        )
     enabled_planes = contract.get("enabled_control_planes", []) if contract else []
     return {
         "repo_id": policy.id,
@@ -1269,6 +1323,12 @@ def enrollment_status(
         "policy_wave": policy.wave,
         "mail_digest": mail_status,
         "weekly_check_stale": True,
+        "transport": {
+            "status": transport_status,
+            "surface_version": transport_version,
+            "expected_surface_version": TRANSPORT_SURFACE_VERSION,
+        },
+        "surface_versions": {row["surface"]: row for row in surface_rows},
         "enabled_control_planes": enabled_planes,
         "repo_local_only_paths": REPO_LOCAL_ONLY_PATHS,
         "repo_local_only_boundary": REPO_LOCAL_ONLY_BOUNDARY,

@@ -696,7 +696,13 @@ def _safe_validation(repo_root: Path) -> dict[str, Any]:
     try:
         return validate_repo(repo_root)
     except Exception as exc:
-        return {"valid": False, "checked_count": 0, "errors": [str(exc)]}
+        return {
+            "valid": False,
+            "checked_count": 0,
+            "warning_count": 0,
+            "errors": [str(exc)],
+            "warnings": [],
+        }
 
 
 def _safe_roadmap(repo_root: Path) -> dict[str, Any]:

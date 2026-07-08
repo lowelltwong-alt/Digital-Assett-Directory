@@ -9,6 +9,7 @@ from typing import Any
 from .config import LocalSource
 from .ids import stable_id
 from .models import AlertRecord, AssetRecord, EdgeRecord, RepoBuildoutRecommendationRecord
+from .transport import data_relative_path
 from .utils import atomic_write_text, json_dumps, utc_now
 
 METHODOLOGY_VERSION = "repo-buildout-advisor-v0.1"
@@ -225,23 +226,35 @@ def load_optional_jsonl(path: Path | None) -> list[dict[str, Any]]:
 
 
 def load_default_repo_buildout_artifacts(repo_root: Path) -> dict[str, Any]:
-    processed = repo_root / "processed"
     return {
         "workflow_guidance": load_optional_json(
-            processed / "workflow_parts" / "workflow_part_usage_guidance.json"
+            data_relative_path(
+                repo_root, Path("processed") / "workflow_parts" / "workflow_part_usage_guidance.json"
+            )
         ),
-        "manual_tasks": load_optional_json(processed / "reports" / "manual_task_queue.json"),
+        "manual_tasks": load_optional_json(
+            data_relative_path(repo_root, Path("processed") / "reports" / "manual_task_queue.json")
+        ),
         "semantic_evolution": load_optional_jsonl(
-            processed / "learning" / "semantic_evolution_candidates.jsonl"
+            data_relative_path(
+                repo_root, Path("processed") / "learning" / "semantic_evolution_candidates.jsonl"
+            )
         ),
         "background_connections": load_optional_jsonl(
-            processed / "learning" / "background_connection_candidates.jsonl"
+            data_relative_path(
+                repo_root,
+                Path("processed") / "learning" / "background_connection_candidates.jsonl",
+            )
         ),
         "bottom_up_proposals": load_optional_jsonl(
-            processed / "proposals" / "bottom_up_proposals.jsonl"
+            data_relative_path(
+                repo_root, Path("processed") / "proposals" / "bottom_up_proposals.jsonl"
+            )
         ),
         "top_down_proposals": load_optional_jsonl(
-            processed / "proposals" / "top_down_proposals.jsonl"
+            data_relative_path(
+                repo_root, Path("processed") / "proposals" / "top_down_proposals.jsonl"
+            )
         ),
     }
 
@@ -1485,7 +1498,7 @@ def write_repo_buildout_outputs(
         generated_at=generated_at,
     )
     slug = _safe_slug(result["target_repo"]["key"])
-    output_dir = repo_root / "processed" / "reports" / "repo_buildout"
+    output_dir = data_relative_path(repo_root, Path("processed") / "reports" / "repo_buildout")
     markdown_path = output_dir / f"{slug}.md"
     json_path = output_dir / f"{slug}.json"
     prompt_path = output_dir / f"{slug}_fresh_eyes_prompt.md"

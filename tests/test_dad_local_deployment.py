@@ -1596,6 +1596,16 @@ def test_integration_contracts_try_stable_user_shims_before_raw_checkout_fallbac
     if local_contract_path.exists():
         contracts.append(json.loads(local_contract_path.read_text(encoding="utf-8")))
 
+    assert template_contract["agent_runtime_policy"] == {
+        "core_contract": "AGENTS.md",
+        "adapter_authority": "optional_wrapper_only",
+        "agent_id_policy": "arbitrary_non_empty_string",
+        "vendor_lock_in_prohibited": True,
+        "internal_integration_default": "mcp_over_direct_api",
+        "mcp_authority": "neutral_tool_resource_prompt_boundary",
+        "direct_api_policy": "external_adapter_fallback_only",
+        "mcp_audit_policy": "dad_lifecycle_and_audit_required_for_side_effects",
+    }
     for contract in contracts:
         fallback = contract["capture"]["cli_fallback"]
         assert "~/.dad/bin/asset-dir" in fallback
@@ -1605,3 +1615,9 @@ def test_integration_contracts_try_stable_user_shims_before_raw_checkout_fallbac
             "PYTHONPATH=src python -m digital_asset_directory.cli"
         )
         assert "dad_cli_unavailable" in fallback
+
+
+def test_new_repo_script_uses_agent_id_placeholder() -> None:
+    script = (ROOT / "scripts" / "new_repo.ps1").read_text(encoding="utf-8")
+    assert "--agent <agent-id>" in script
+    assert "--agent claude-code" not in script

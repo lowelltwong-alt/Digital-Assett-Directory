@@ -2,6 +2,74 @@
   "registry_version": "0.1.0",
   "status": "seed",
   "authority_boundary": "Graph edge types are a reviewed, closed, versioned vocabulary. Generated graph edges are candidate evidence unless a local review process promotes a downstream decision.",
+  "forbidden_edge_claims": [
+    {
+      "claim": "approved_by",
+      "blocked_when": "generated graph edge or MCP graph response",
+      "reason": "Approval is a human or reviewed-policy gate, never generated graph evidence.",
+      "replacement": "Use review_status plus an explicit approval record pointer outside generated graph content."
+    },
+    {
+      "claim": "verified",
+      "blocked_when": "generated graph edge or MCP graph response",
+      "reason": "Verification requires a reviewed validation artifact and cannot be inferred from graph structure.",
+      "replacement": "Use validated_by only for declared validation artifacts and keep review_status candidate until reviewed."
+    },
+    {
+      "claim": "trusted",
+      "blocked_when": "generated graph edge or MCP graph response",
+      "reason": "Trust tiers are reviewed source-policy facts, not generated graph outcomes.",
+      "replacement": "Point to a reviewed trusted-source registry row when one exists."
+    },
+    {
+      "claim": "production_ready",
+      "blocked_when": "generated graph edge or MCP graph response",
+      "reason": "Production readiness is a release and validation decision, not a graph relationship.",
+      "replacement": "Use validation pointers and human release gates outside generated graph content."
+    },
+    {
+      "claim": "better_than",
+      "blocked_when": "generated graph edge or MCP graph response",
+      "reason": "Comparative value claims require explicit evaluation methodology and review.",
+      "replacement": "Use candidate comparison evidence without ranking or recommendation language."
+    },
+    {
+      "claim": "recommended",
+      "blocked_when": "generated graph edge or MCP graph response",
+      "reason": "Recommendation is a decision surface and can create false authority.",
+      "replacement": "Use candidate route or candidate connection wording with authority_boundary."
+    },
+    {
+      "claim": "canonical",
+      "blocked_when": "generated graph edge or MCP graph response",
+      "reason": "Canon belongs to reviewed source-of-truth registries, not generated graphs.",
+      "replacement": "Use reviewed registry rows or source-of-truth pointers."
+    },
+    {
+      "claim": "authorized_by",
+      "blocked_when": "generated graph edge or MCP graph response",
+      "reason": "Authorization requires explicit policy and human gate evidence.",
+      "replacement": "Use approval IDs in audit or enrollment records outside generated graph content."
+    },
+    {
+      "claim": "depends_on",
+      "blocked_when": "generated inference without a declared dependency field",
+      "reason": "Dependency order can affect rollout and must come from a declared registry field.",
+      "replacement": "Use declared.depends_on only; generated proximity can be similar_to, complements, co_used_with, or another candidate edge."
+    },
+    {
+      "claim": "replaces",
+      "blocked_when": "unreviewed generated graph edge",
+      "reason": "Replacement can retire or redirect assets and requires reviewed lineage.",
+      "replacement": "Use supersedes only for declared lineage evidence with review_status candidate until reviewed."
+    },
+    {
+      "claim": "causes",
+      "blocked_when": "bare generated graph edge without explicit causal methodology and review",
+      "reason": "Causal language overstates candidate graph evidence.",
+      "replacement": "Use evidence_for, gap_evidence_for, or another candidate non-causal relationship."
+    }
+  ],
   "edge_types": [
     {
       "edge_type": "learned_in",

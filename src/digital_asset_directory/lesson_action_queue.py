@@ -6,6 +6,7 @@ from typing import Any
 
 from .ids import stable_id
 from .models import LessonAutomationDecisionRecord
+from .transport import data_relative_path
 from .utils import atomic_write_text, json_dumps, utc_now, write_jsonl
 
 METHODOLOGY_VERSION = "lesson-automation-next-action-queue-v0.1"
@@ -226,7 +227,7 @@ def _scope_path(repo_root: Path, signal_family_id: str) -> Path | None:
     filename = SCOPE_FILES.get(signal_family_id)
     if not filename:
         return None
-    return repo_root / "processed" / "reports" / filename
+    return data_relative_path(repo_root, Path("processed") / "reports" / filename)
 
 
 def _top_examples(signal_family_id: str, scope: dict[str, Any] | None) -> list[dict[str, Any]]:
@@ -313,7 +314,9 @@ def build_lesson_automation_next_action_queue(
     limit: int = 25,
 ) -> dict[str, Any]:
     generated = generated_at or utc_now()
-    cycle_path = repo_root / "processed" / "reports" / "scan_coverage_cycle.json"
+    cycle_path = data_relative_path(
+        repo_root, Path("processed") / "reports" / "scan_coverage_cycle.json"
+    )
     cycle = _load_json(cycle_path) or {}
     entries = list(cycle.get("cycle_entries") or cycle.get("recommended_cycle") or [])
     max_order = max((int(entry.get("cycle_order") or entry.get("order") or 0) for entry in entries), default=0)
@@ -565,7 +568,7 @@ def write_lesson_automation_next_action_outputs(
         generated_at=generated_at,
         limit=limit,
     )
-    reports_dir = repo_root / "processed" / "reports"
+    reports_dir = data_relative_path(repo_root, Path("processed") / "reports")
     paths = {
         "queue_markdown": reports_dir / "lesson_automation_next_actions.md",
         "queue_json": reports_dir / "lesson_automation_next_actions.json",
@@ -1259,9 +1262,7 @@ def write_lesson_automation_approval_packet_outputs(
     max_bytes_per_file: int = 20000,
     max_files: int = 50,
 ) -> dict[str, Any]:
-    path = decisions_file or repo_root / DECISION_TEMPLATE_PATH
-    if not path.is_absolute():
-        path = repo_root / path
+    path = data_relative_path(repo_root, decisions_file or DECISION_TEMPLATE_PATH)
     records = load_lesson_automation_decisions(path)
     result = build_lesson_automation_approval_packet(
         repo_root,
@@ -1271,7 +1272,7 @@ def write_lesson_automation_approval_packet_outputs(
         max_bytes_per_file=max_bytes_per_file,
         max_files=max_files,
     )
-    reports_dir = repo_root / "processed" / "reports"
+    reports_dir = data_relative_path(repo_root, Path("processed") / "reports")
     paths = {
         "packet_markdown": reports_dir / "lesson_automation_approval_packet.md",
         "packet_json": reports_dir / "lesson_automation_approval_packet.json",
@@ -1727,9 +1728,7 @@ def write_lesson_automation_approval_impact_outputs(
     max_bytes_per_file: int = 20000,
     max_files: int = 50,
 ) -> dict[str, Any]:
-    path = decisions_file or repo_root / DECISION_TEMPLATE_PATH
-    if not path.is_absolute():
-        path = repo_root / path
+    path = data_relative_path(repo_root, decisions_file or DECISION_TEMPLATE_PATH)
     records = load_lesson_automation_decisions(path)
     result = build_lesson_automation_approval_impact(
         repo_root,
@@ -1740,7 +1739,7 @@ def write_lesson_automation_approval_impact_outputs(
         max_bytes_per_file=max_bytes_per_file,
         max_files=max_files,
     )
-    reports_dir = repo_root / "processed" / "reports"
+    reports_dir = data_relative_path(repo_root, Path("processed") / "reports")
     paths = {
         "impact_markdown": reports_dir / "lesson_automation_approval_impact.md",
         "impact_json": reports_dir / "lesson_automation_approval_impact.json",
@@ -2015,16 +2014,14 @@ def write_lesson_automation_execution_plan_outputs(
     decisions_file: Path | None = None,
     generated_at: str | None = None,
 ) -> dict[str, Any]:
-    path = decisions_file or repo_root / DECISION_TEMPLATE_PATH
-    if not path.is_absolute():
-        path = repo_root / path
+    path = data_relative_path(repo_root, decisions_file or DECISION_TEMPLATE_PATH)
     records = load_lesson_automation_decisions(path)
     result = build_lesson_automation_execution_plan(
         repo_root,
         records,
         generated_at=generated_at,
     )
-    reports_dir = repo_root / "processed" / "reports"
+    reports_dir = data_relative_path(repo_root, Path("processed") / "reports")
     paths = {
         "plan_markdown": reports_dir / "lesson_automation_execution_plan.md",
         "plan_json": reports_dir / "lesson_automation_execution_plan.json",
@@ -2051,9 +2048,13 @@ def write_lesson_automation_decision_template_outputs(
         limit=limit,
     )
     records = build_lesson_automation_decision_template(queue["actions"], limit=limit)
-    decision_path = repo_root / DECISION_TEMPLATE_PATH
-    report_path = repo_root / "processed" / "reports" / "lesson_automation_decision_template.md"
-    report_json_path = repo_root / "processed" / "reports" / "lesson_automation_decision_template.json"
+    decision_path = data_relative_path(repo_root, DECISION_TEMPLATE_PATH)
+    report_path = data_relative_path(
+        repo_root, Path("processed") / "reports" / "lesson_automation_decision_template.md"
+    )
+    report_json_path = data_relative_path(
+        repo_root, Path("processed") / "reports" / "lesson_automation_decision_template.json"
+    )
     write_lesson_automation_decisions(decision_path, records)
     payload = {
         "methodology_version": METHODOLOGY_VERSION,

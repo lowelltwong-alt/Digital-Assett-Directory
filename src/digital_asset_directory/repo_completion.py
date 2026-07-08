@@ -7,6 +7,7 @@ from typing import Any
 
 from .models import AssetRecord
 from .repo_buildout import build_repo_groups
+from .transport import data_relative_path
 from .utils import atomic_write_text, json_dumps, utc_now
 
 METHODOLOGY_VERSION = "repo-completion-dashboard-v0.1"
@@ -205,14 +206,15 @@ def build_repo_completion_dashboard(
     limit: int = 100,
 ) -> dict[str, Any]:
     generated = generated_at or utc_now()
-    reports_dir = repo_root / "processed" / "reports"
+    reports_dir = data_relative_path(repo_root, Path("processed") / "reports")
+    learning_dir = data_relative_path(repo_root, Path("processed") / "learning")
     priority_scope = _load_json(reports_dir / "priority_content_extract_scope.json")
     learning_scope = _load_json(reports_dir / "repo_learning_loop_install_scope.json")
     governance_scope = _load_json(reports_dir / "governance_map_adoption_scope.json")
     ci_scope = _load_json(reports_dir / "ci_release_artifact_scope.json")
     approval_packet = _load_json(reports_dir / "lesson_automation_approval_packet.json")
     execution_plan = _load_json(reports_dir / "lesson_automation_execution_plan.json")
-    decisions = _load_jsonl(repo_root / "processed" / "learning" / "lesson_automation_action_decisions.jsonl")
+    decisions = _load_jsonl(learning_dir / "lesson_automation_action_decisions.jsonl")
     decision_summary = _decision_summary(decisions)
 
     priority_by_repo = _scope_by_repo(priority_scope, "repo_scopes")
@@ -418,7 +420,7 @@ def write_repo_completion_dashboard_outputs(
         generated_at=generated_at,
         limit=limit,
     )
-    reports_dir = repo_root / "processed" / "reports"
+    reports_dir = data_relative_path(repo_root, Path("processed") / "reports")
     paths = {
         "dashboard_markdown": reports_dir / "repo_completion_dashboard.md",
         "dashboard_json": reports_dir / "repo_completion_dashboard.json",
@@ -757,7 +759,7 @@ def write_repo_completion_wave_plan_outputs(
         dashboard_limit=dashboard_limit,
         per_wave_repo_limit=per_wave_repo_limit,
     )
-    reports_dir = repo_root / "processed" / "reports"
+    reports_dir = data_relative_path(repo_root, Path("processed") / "reports")
     paths = {
         "wave_markdown": reports_dir / "repo_completion_wave_plan.md",
         "wave_json": reports_dir / "repo_completion_wave_plan.json",
@@ -874,8 +876,8 @@ def build_repo_completion_proof_check(
         dashboard_limit=dashboard_limit,
         per_wave_repo_limit=per_wave_repo_limit,
     )
-    learning_dir = repo_root / "processed" / "learning"
-    reports_dir = repo_root / "processed" / "reports"
+    learning_dir = data_relative_path(repo_root, Path("processed") / "learning")
+    reports_dir = data_relative_path(repo_root, Path("processed") / "reports")
     decisions = _load_jsonl(learning_dir / "lesson_automation_action_decisions.jsonl")
     execution_plan = _load_json(reports_dir / "lesson_automation_execution_plan.json") or {}
     observations = _load_jsonl(learning_dir / "priority_content_observations.jsonl")
@@ -1274,7 +1276,7 @@ def write_repo_completion_proof_check_outputs(
         dashboard_limit=dashboard_limit,
         per_wave_repo_limit=per_wave_repo_limit,
     )
-    reports_dir = repo_root / "processed" / "reports"
+    reports_dir = data_relative_path(repo_root, Path("processed") / "reports")
     paths = {
         "proof_markdown": reports_dir / "repo_completion_proof_check.md",
         "proof_json": reports_dir / "repo_completion_proof_check.json",

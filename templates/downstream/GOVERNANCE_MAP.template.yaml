@@ -4,6 +4,15 @@ repo_ref: dad://repo/<repo-id>
 dad_hub_ref: dad://hub/Digital-Assett-Directory
 authority_boundary: DAD governance maps describe dependencies and approved surfaces; they do not transfer local source authority.
 source_authority: target_repo_retains_local_canon
+agent_runtime_policy:
+  core_contract: AGENTS.md
+  adapter_authority: optional_wrapper_only
+  agent_id_policy: arbitrary_non_empty_string
+  vendor_lock_in_prohibited: true
+  internal_integration_default: mcp_over_direct_api
+  mcp_authority: neutral_tool_resource_prompt_boundary
+  direct_api_policy: external_adapter_fallback_only
+  mcp_audit_policy: dad_lifecycle_and_audit_required_for_side_effects
 dad_managed_surfaces:
   - .digital-asset/mail/**
   - .digital-asset/skills/checkout.json

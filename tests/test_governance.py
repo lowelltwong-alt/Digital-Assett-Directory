@@ -27,6 +27,8 @@ def test_downstream_install_is_idempotent_and_enforces_open_session(tmp_path: Pa
     assert "fresh-eyes review" in agents_text
     assert "branch/PR status" in agents_text
     assert "escalation date" in agents_text
+    assert "optional adapters" in agents_text
+    assert "must not become the sole authority" in agents_text
     session = preflight(hub, target, hub / "state" / "catalog.sqlite3", "codex", "change")
     ok, _ = enforce_postflight(hub, target)
     assert not ok

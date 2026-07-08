@@ -28,6 +28,11 @@ Before material AI-assisted work:
    decisions require human attention, implementer red-team, premortem, rollback criteria,
    and fresh-eyes review.
 
+Agent runtime policy: `AGENTS.md`, DAD CLI lifecycle commands, schemas, audit
+records, deterministic hooks, and human gates are the durable contract. Runtime
+files for Claude, Codex, Cursor, Copilot, or future agents are optional adapters
+only and must not become the sole authority for DAD governance.
+
 Before reporting completion or pushing material changes:
 1. Run appropriate tests and report exact outcomes.
 2. Run `asset-dir agent postflight --session <SESSION_ID> --repo . --summary \"<summary>\" --hub \"{hub}\"`.

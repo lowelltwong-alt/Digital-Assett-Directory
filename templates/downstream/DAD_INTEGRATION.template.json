@@ -20,6 +20,31 @@
     "normal_write_boundary": ".digital-asset/mail/**",
     "one_time_full_governance_install": true
   },
+  "transport": {
+    "surface_version": "1.0.0",
+    "mode": "local_pull",
+    "journal_fallback": true
+  },
+  "graph": {
+    "surface_version": "0.1.0",
+    "mode": "generated_candidate_surfaces"
+  },
+  "mcp": {
+    "surface_version": "0.1.0",
+    "mode": "local_stdio_read_only",
+    "remote_enabled": false,
+    "vendor_sdk_required": false
+  },
+  "journal": {
+    "surface_version": "0.1.0",
+    "mode": "plan_only_until_human_gate",
+    "checkpoint_scope": "DATA_PLANE_PATHS"
+  },
+  "events": {
+    "surface_version": "0.1.0",
+    "mode": "repo_outbox_to_central_log",
+    "append_only": true
+  },
   "cadence": {
     "mail": {
       "frequency": "daily",
@@ -57,6 +82,16 @@
       "processed/exceptions/fix-outcomes/outcomes.jsonl"
     ],
     "cli_fallback": "If asset-dir is unavailable, first try the stable DAD user shim at ~/.dad/bin/asset-dir or ~/.dad/bin/asset-dir.ps1; if the shim is unavailable too, try PYTHONPATH=src python -m digital_asset_directory.cli from the DAD checkout; otherwise append metadata-only JSONL with dad_cli_unavailable and safe refs."
+  },
+  "agent_runtime_policy": {
+    "core_contract": "AGENTS.md",
+    "adapter_authority": "optional_wrapper_only",
+    "agent_id_policy": "arbitrary_non_empty_string",
+    "vendor_lock_in_prohibited": true,
+    "internal_integration_default": "mcp_over_direct_api",
+    "mcp_authority": "neutral_tool_resource_prompt_boundary",
+    "direct_api_policy": "external_adapter_fallback_only",
+    "mcp_audit_policy": "dad_lifecycle_and_audit_required_for_side_effects"
   },
   "enabled_control_planes": [
     "dad_library",
