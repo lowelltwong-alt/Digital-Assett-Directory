@@ -400,7 +400,7 @@ def test_cli_mail_compose_payload_json_path_round_trips_and_rejects_raw_json_pay
     assert outbox_check.exit_code == 0, outbox_check.output
     assert json.loads(outbox_check.output)["sent_count"] == 1
 
-    with pytest.raises(typer.BadParameter, match="key=value convenience mode"):
+    with pytest.raises(ValueError, match="key=value convenience mode"):
         cli_module._key_value_payload(['{"lesson_pack_json":{"lessons":["split risk"]}}'])
 
     json_value_payload = RUNNER.invoke(

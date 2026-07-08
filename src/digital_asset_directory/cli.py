@@ -1381,10 +1381,7 @@ def _key_value_payload(values: list[str]) -> dict[str, Any]:
         stripped = value.lstrip()
         bracketed_key = bool(re.match(r"^\[[^\]]+\]\s*=", stripped))
         if stripped.startswith("{") or (stripped.startswith("[") and not bracketed_key):
-            raise typer.BadParameter(
-                "--payload is key=value convenience mode only; use --payload-json "
-                "or --payload-file for structured JSON payloads."
-            )
+            raise ValueError(RAW_JSON_PAYLOAD_MESSAGE)
         if "=" not in value:
             raise typer.BadParameter(
                 "Mail payload values must use key=value form, or use --payload-json/"
@@ -1393,7 +1390,7 @@ def _key_value_payload(values: list[str]) -> dict[str, Any]:
         key, item = value.split("=", 1)
         key = key.strip()
         if _payload_key_looks_like_raw_json(key):
-            raise typer.BadParameter(RAW_JSON_PAYLOAD_MESSAGE)
+            raise ValueError(RAW_JSON_PAYLOAD_MESSAGE)
         if not key:
             raise typer.BadParameter("Mail payload keys cannot be empty.")
         payload[key] = item.strip()
