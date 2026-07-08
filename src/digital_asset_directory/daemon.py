@@ -30,6 +30,7 @@ from .utils import atomic_write_text, json_dumps, utc_now
 DAEMON_HEARTBEAT_NAME = "daemon-heartbeat.json"
 DAILY_REVIEW_QUEUE_MD = "daily_review_queue.md"
 DAILY_REVIEW_QUEUE_JSON = "daily_review_queue.json"
+DAEMON_TASK_WRAPPER_NAME = "dad-daemon-run-cycle.ps1"
 
 
 def _reports_dir(hub_root: Path) -> Path:
@@ -561,17 +562,29 @@ def task_scheduler_plan(
     checkpoint_apply: bool = False,
 ) -> dict[str, Any]:
     shim_path = shim or Path.home() / ".dad" / "bin" / "asset-dir.ps1"
+    wrapper_path = shim_path.parent / DAEMON_TASK_WRAPPER_NAME
     tr = "HOURLY" if twice_daily else "DAILY"
     mo = "12" if twice_daily else "1"
-    run_cycle_args = [f"--hub '{hub_root.resolve()}'"]
+    run_cycle_args = ["--hub", str(hub_root.resolve())]
     if journal_repo is not None:
-        run_cycle_args.append(f"--journal-repo '{journal_repo.resolve()}'")
+        run_cycle_args.extend(["--journal-repo", str(journal_repo.resolve())])
     if checkpoint_apply:
         run_cycle_args.append("--checkpoint-apply")
+    wrapper_args = " ".join(_ps_single_quote(arg) for arg in run_cycle_args)
+    wrapper_script = "\n".join(
+        [
+            "$ErrorActionPreference = 'Stop'",
+            f"& {_ps_single_quote(str(shim_path))} daemon run-cycle {wrapper_args}",
+            "exit $LASTEXITCODE",
+            "",
+        ]
+    )
+    task_to_run = (
+        f'powershell -NoProfile -ExecutionPolicy Bypass -File "{wrapper_path}"'
+    )
     command = (
         f'schtasks /Create /TN "{task_name}" /SC {tr} /MO {mo} /ST {schedule_time} '
-        f'/TR "powershell -NoProfile -ExecutionPolicy Bypass -File '
-        f"'{shim_path}' daemon run-cycle {' '.join(run_cycle_args)}\" /F"
+        f'/TR "{task_to_run}" /F'
     )
     return {
         "schema_version": "dad.daemon.task_scheduler_plan.v1",
@@ -579,6 +592,10 @@ def task_scheduler_plan(
         "schedule_time": schedule_time,
         "twice_daily": twice_daily,
         "shim": str(shim_path),
+        "wrapper_path": str(wrapper_path),
+        "wrapper_script": wrapper_script,
+        "task_to_run": task_to_run,
+        "run_cycle_args": run_cycle_args,
         "journal_repo": str(journal_repo.resolve()) if journal_repo is not None else None,
         "checkpoint_apply": checkpoint_apply,
         "command": command,
@@ -586,7 +603,14 @@ def task_scheduler_plan(
     }
 
 
+def _ps_single_quote(value: str) -> str:
+    return "'" + value.replace("'", "''") + "'"
+
+
 def install_task_scheduler(plan: dict[str, Any]) -> dict[str, Any]:
+    wrapper_path = Path(str(plan["wrapper_path"]))
+    wrapper_path.parent.mkdir(parents=True, exist_ok=True)
+    atomic_write_text(wrapper_path, str(plan["wrapper_script"]))
     command = str(plan["command"])
     result = subprocess.run(command, shell=True, capture_output=True, text=True, check=False)
     return {
@@ -642,6 +666,15 @@ def task_scheduler_status(
     task_to_run = parsed.get("task_to_run", "")
     hub_text = str(hub_root.resolve())
     shim_text = str((shim or Path.home() / ".dad" / "bin" / "asset-dir.ps1"))
+    wrapper_path = Path(shim_text).parent / DAEMON_TASK_WRAPPER_NAME
+    wrapper_text = ""
+    wrapper_read_error = ""
+    if str(wrapper_path) in task_to_run and wrapper_path.exists():
+        try:
+            wrapper_text = wrapper_path.read_text(encoding="utf-8")
+        except OSError as exc:
+            wrapper_read_error = str(exc)
+    command_material = task_to_run + "\n" + wrapper_text
     installed = returncode == 0
     return {
         "schema_version": "dad.daemon.task_scheduler_status.v1",
@@ -657,8 +690,12 @@ def task_scheduler_status(
         "task_status": parsed.get("status", ""),
         "next_run_time": parsed.get("next_run_time", ""),
         "task_to_run": task_to_run,
-        "command_mentions_run_cycle": "daemon run-cycle" in task_to_run,
-        "expected_hub_found": hub_text in task_to_run,
-        "expected_shim_found": shim_text in task_to_run,
+        "wrapper_path": str(wrapper_path),
+        "wrapper_found": bool(wrapper_text),
+        "wrapper_read_error": wrapper_read_error,
+        "wrapper_text": wrapper_text,
+        "command_mentions_run_cycle": "daemon run-cycle" in command_material,
+        "expected_hub_found": hub_text in command_material,
+        "expected_shim_found": shim_text in command_material,
         "authority_boundary": AUTHORITY_BOUNDARY,
     }

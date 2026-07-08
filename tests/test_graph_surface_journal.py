@@ -8,10 +8,12 @@ import pytest
 
 from digital_asset_directory.graph_surfaces import (
     graph_surface_checkpoint_plan,
+    graph_surface_status,
     write_graph_surface_checkpoint_artifacts,
 )
 from digital_asset_directory.journal import checkpoint_journal
 from digital_asset_directory.transport import apply_data_migration, data_path
+from digital_asset_directory.utils import sha256_bytes, sha256_file
 
 pytestmark = pytest.mark.integration
 
@@ -69,6 +71,60 @@ def _write_threshold_rows(hub: Path, count: int = 200) -> None:
         "\n".join(json.dumps({"i": i}) for i in range(count)) + "\n",
         encoding="utf-8",
     )
+
+
+def test_graph_surface_status_ignores_generated_lesson_indexes(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    hub = tmp_path / "hub"
+    hub.mkdir()
+    data_root = tmp_path / "data-root"
+    apply_data_migration(hub, data_root)
+    monkeypatch.setenv("DAD_DATA_ROOT", str(data_root))
+    (hub / "registry").mkdir(parents=True, exist_ok=True)
+    (hub / "registry" / "graph-surface-registry.json").write_text(
+        (ROOT / "registry" / "graph-surface-registry.json").read_text(encoding="utf-8"),
+        encoding="utf-8",
+    )
+    learning_dir = data_path(hub, "learning")
+    learning_dir.mkdir(parents=True)
+    body_path = learning_dir / "lesson-graph.json"
+    body_path.write_text('{"nodes":[],"edges":[]}\n', encoding="utf-8")
+    raw_lessons = data_path(hub, "raw_lessons")
+    canonical = raw_lessons / "2026-01-01" / "lesson.json"
+    generated = raw_lessons / "by-repo" / "index.json"
+    canonical.parent.mkdir(parents=True)
+    generated.parent.mkdir(parents=True)
+    canonical.write_text('{"lesson_id":"lesson:1"}\n', encoding="utf-8")
+    generated.write_text('{"generated":true}\n', encoding="utf-8")
+    digest_input = f"2026-01-01/lesson.json\0{sha256_file(canonical)}".encode("utf-8")
+    manifest = {
+        "schema_version": "0.1.0",
+        "surface_id": "lesson-graph",
+        "ontology_id": "knowledge",
+        "generated_at": "2026-07-08T00:00:00+00:00",
+        "builder_version": "test-builder",
+        "graph_path": "processed/learning/lesson-graph.json",
+        "manifest_path": "processed/learning/lesson-graph-manifest.json",
+        "input_hashes": {"raw/lessons": f"sha256:{sha256_bytes(digest_input)}"},
+        "methodology_hashes": {},
+        "edge_registry_hash": "missing",
+        "graph_content_hash": f"sha256:{sha256_file(body_path)}",
+        "freshness": {
+            "state": "fresh",
+            "computed_at": "2026-07-08T00:00:00+00:00",
+            "reasons": [],
+        },
+        "counts": {"node_count": 0, "edge_count": 0},
+        "authority_boundary": "candidate only",
+    }
+    (learning_dir / "lesson-graph-manifest.json").write_text(
+        json.dumps(manifest), encoding="utf-8"
+    )
+
+    status = graph_surface_status(hub)
+    lesson = next(row for row in status["surfaces"] if row["surface_id"] == "lesson-graph")
+    assert lesson["freshness"]["state"] == "fresh"
 
 
 def test_journal_checkpoint_plan_includes_graph_surface_snapshot_evidence(

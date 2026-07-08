@@ -189,6 +189,13 @@ def test_write_outputs_appends_queue_without_duplicates(tmp_path: Path):
     first = write_inference_outputs(hub)
     assert first["combinations_appended"] == first["combinations_total"]
     assert Path(first["report_path"]).exists()
+    manifest = json.loads(Path(first["manifest_path"]).read_text(encoding="utf-8"))
+    _validate("graph_surface_manifest", manifest)
+    assert manifest["surface_id"] == "graph-inference-overlay"
+    assert all(isinstance(value, int) for value in manifest["counts"].values())
+    assert manifest["counts"]["edge_count"] == len(
+        json.loads(Path(first["report_path"]).read_text(encoding="utf-8"))["inference_edges"]
+    )
     # second run appends nothing new (dedupe by combination_id)
     second = write_inference_outputs(hub)
     assert second["combinations_appended"] == 0

@@ -10,12 +10,17 @@ import pytest
 from typer.testing import CliRunner
 
 import digital_asset_directory.daemon as daemon_mod
+import digital_asset_directory.exception_capture as exception_capture_mod
 from digital_asset_directory.cli import app
 from digital_asset_directory.daemon import (
     daemon_status,
     run_daemon_cycle,
     task_scheduler_plan,
     task_scheduler_status,
+)
+from digital_asset_directory.exception_capture import (
+    PHASE6_MACHINE_EVIDENCE_SUMMARY_JSON,
+    write_phase6_machine_evidence_summary,
 )
 from digital_asset_directory.journal import (
     checkpoint_journal,
@@ -40,6 +45,8 @@ from digital_asset_directory.transport import (
     transport_contract_payload,
     transport_upgrade_queue_path,
 )
+from digital_asset_directory.utils import sha256_file
+from digital_asset_directory.validation import _stale_report_input_hash_errors
 
 RUNNER = CliRunner()
 
@@ -70,6 +77,120 @@ def _hub_for_cli(path: Path) -> Path:
         encoding="utf-8",
     )
     return path
+
+
+def test_exception_capture_report_defaults_use_initialized_data_root(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    hub = tmp_path / "hub"
+    hub.mkdir()
+    data_root = tmp_path / "data-root"
+    apply_data_migration(hub, data_root)
+    monkeypatch.setenv("DAD_DATA_ROOT", str(data_root))
+
+    result = write_phase6_machine_evidence_summary(hub)
+
+    output_path = data_root / PHASE6_MACHINE_EVIDENCE_SUMMARY_JSON
+    assert output_path.exists()
+    assert result["report_id"] == "dad:phase6-exception-capture-machine-evidence-summary"
+    assert not (hub / PHASE6_MACHINE_EVIDENCE_SUMMARY_JSON).exists()
+
+
+def test_validation_report_hashes_use_active_data_root(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    hub = tmp_path / "hub"
+    hub.mkdir()
+    legacy_events = hub / "processed" / "exceptions" / "lake" / "events.jsonl"
+    legacy_events.parent.mkdir(parents=True)
+    legacy_events.write_text('{"event":"legacy"}\n', encoding="utf-8")
+
+    data_root = tmp_path / "data-root"
+    apply_data_migration(hub, data_root)
+    monkeypatch.setenv("DAD_DATA_ROOT", str(data_root))
+    active_events = data_root / "processed" / "exceptions" / "lake" / "events.jsonl"
+    active_events.write_text('{"event":"active"}\n', encoding="utf-8")
+    legacy_events.write_text('{"event":"stale-legacy"}\n', encoding="utf-8")
+
+    report_path = data_root / "processed" / "reports" / "example.json"
+    report_path.parent.mkdir(parents=True)
+    payload = {
+        "input_hashes": {
+            "processed/exceptions/lake/events.jsonl": f"sha256:{sha256_file(active_events)}"
+        }
+    }
+
+    assert _stale_report_input_hash_errors(hub, report_path, payload) == []
+
+
+def test_exception_capture_plan_defaults_refresh_companion_reports(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    hub = tmp_path / "hub"
+    hub.mkdir()
+    readiness_outputs: list[Path | None] = []
+    observed_outputs: list[Path | None] = []
+
+    def fake_readiness(*args, output=None, **kwargs):
+        readiness_outputs.append(output)
+        return {"repos": []}
+
+    def fake_observed(*args, output=None, **kwargs):
+        observed_outputs.append(output)
+        return {"repos": []}
+
+    monkeypatch.setattr(
+        exception_capture_mod, "write_exception_backfill_readiness", fake_readiness
+    )
+    monkeypatch.setattr(
+        exception_capture_mod, "write_observed_capture_audit", fake_observed
+    )
+    monkeypatch.setattr(
+        exception_capture_mod,
+        "build_exception_capture_remediation_plan",
+        lambda readiness, per_lane_repo_limit=25: {"report_id": "remediation"},
+    )
+    monkeypatch.setattr(
+        exception_capture_mod,
+        "build_exception_capture_gap_review_queue",
+        lambda observed, per_group_example_limit=5: {"report_id": "gap"},
+    )
+    monkeypatch.setattr(
+        exception_capture_mod,
+        "build_exception_backfill_wave_plan",
+        lambda readiness, per_wave_repo_limit=25: {"report_id": "wave"},
+    )
+    monkeypatch.setattr(
+        exception_capture_mod, "_capture_remediation_plan_markdown", lambda report: ""
+    )
+    monkeypatch.setattr(
+        exception_capture_mod, "_capture_gap_review_queue_markdown", lambda report: ""
+    )
+    monkeypatch.setattr(
+        exception_capture_mod, "_backfill_wave_plan_markdown", lambda report: ""
+    )
+
+    exception_capture_mod.write_exception_capture_remediation_plan(hub, [])
+    exception_capture_mod.write_exception_capture_gap_review_queue(hub, [])
+    exception_capture_mod.write_exception_backfill_wave_plan(hub, [])
+
+    assert (
+        exception_capture_mod.CAPTURE_REMEDIATION_PLAN_JSON.with_name(
+            "exception_capture_remediation_plan_readiness.json"
+        )
+        in readiness_outputs
+    )
+    assert (
+        exception_capture_mod.BACKFILL_WAVE_PLAN_JSON.with_name(
+            "exception_backfill_wave_plan_readiness.json"
+        )
+        in readiness_outputs
+    )
+    assert observed_outputs == [
+        exception_capture_mod.CAPTURE_GAP_REVIEW_QUEUE_JSON.with_name(
+            "exception_capture_gap_review_queue_observed_audit.json"
+        )
+    ]
 
 
 def _write_transport_upgrade_config(hub: Path, repo_a: Path, repo_b: Path) -> None:
@@ -607,9 +728,13 @@ def test_daemon_install_plan_uses_stable_shim_and_run_cycle(tmp_path: Path):
     )
 
     assert plan["schema_version"] == "dad.daemon.task_scheduler_plan.v1"
-    assert str(shim) in plan["command"]
-    assert "daemon run-cycle" in plan["command"]
-    assert str(hub.resolve()) in plan["command"]
+    assert plan["wrapper_path"] in plan["command"]
+    assert "daemon run-cycle" not in plan["command"]
+    assert plan["wrapper_path"] == str(shim.with_name("dad-daemon-run-cycle.ps1"))
+    assert str(shim) in plan["wrapper_script"]
+    assert "daemon run-cycle" in plan["wrapper_script"]
+    assert str(hub.resolve()) in plan["wrapper_script"]
+    assert "--hub" in plan["run_cycle_args"]
 
 
 def test_daemon_task_status_parses_read_only_scheduler_query(tmp_path: Path):
@@ -636,6 +761,39 @@ def test_daemon_task_status_parses_read_only_scheduler_query(tmp_path: Path):
 
     assert status["schema_version"] == "dad.daemon.task_scheduler_status.v1"
     assert status["installed"] is True
+    assert status["command_mentions_run_cycle"] is True
+    assert status["expected_hub_found"] is True
+    assert status["expected_shim_found"] is True
+
+
+def test_daemon_task_status_reads_wrapper_for_long_scheduler_commands(tmp_path: Path):
+    hub = tmp_path / "hub"
+    hub.mkdir()
+    shim = tmp_path / "asset-dir.ps1"
+    wrapper = tmp_path / "dad-daemon-run-cycle.ps1"
+    wrapper.write_text(
+        f"& '{shim}' daemon run-cycle --hub '{hub.resolve()}' --checkpoint-apply\n",
+        encoding="utf-8",
+    )
+
+    class Result:
+        returncode = 0
+        stdout = (
+            "TaskName: DAD Daemon Run Cycle\n"
+            "Status: Ready\n"
+            f'Task To Run: powershell -File "{wrapper}"\n'
+            "Next Run Time: 7/7/2026 9:00:00 AM\n"
+        )
+        stderr = ""
+
+    status = task_scheduler_status(
+        hub,
+        task_name="DAD Daemon Run Cycle",
+        shim=shim,
+        runner=lambda *_args, **_kwargs: Result(),
+    )
+
+    assert status["wrapper_found"] is True
     assert status["command_mentions_run_cycle"] is True
     assert status["expected_hub_found"] is True
     assert status["expected_shim_found"] is True
@@ -697,6 +855,39 @@ def test_journal_checkpoint_time_threshold_ages_first_pending_checkpoint(tmp_pat
     assert due["pending_since"] == old_pending
 
 
+def test_journal_below_threshold_status_preserves_last_checkpoint(tmp_path: Path):
+    hub = tmp_path / "hub"
+    inbox = hub / "processed" / "mail" / "inbox" / "rows.jsonl"
+    inbox.parent.mkdir(parents=True)
+    inbox.write_text("\n".join(json.dumps({"i": i}) for i in range(200)) + "\n", encoding="utf-8")
+    status_path = data_path(hub, "central_reports") / "journal_checkpoint_status.json"
+    status_path.parent.mkdir(parents=True, exist_ok=True)
+    checkpointed_at = (datetime.now(timezone.utc) - timedelta(hours=1)).isoformat()
+    status_path.write_text(
+        json.dumps(
+            {
+                "checkpoint_record_count": 199,
+                "last_checkpoint_at": checkpointed_at,
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    status = checkpoint_journal(
+        hub,
+        tmp_path / "dad-journal",
+        apply=False,
+        min_records=200,
+        min_hours=24,
+    )
+
+    assert status["checkpoint_skipped_reason"] == "threshold_not_met"
+    assert status["checkpointed_at"] == checkpointed_at
+    saved = json.loads(status_path.read_text(encoding="utf-8"))
+    assert saved["checkpointed_at"] == checkpointed_at
+    assert journal_status(hub, min_records=200, min_hours=24)["last_checkpoint_at"] == checkpointed_at
+
+
 def test_daemon_checkpoint_failure_leaves_unfinalized_heartbeat(tmp_path: Path):
     hub = tmp_path / "hub"
     inbox = hub / "processed" / "mail" / "inbox" / "rows.jsonl"
@@ -753,6 +944,19 @@ def test_journal_apply_threshold_commits_and_pushes_to_data_repo(tmp_path: Path)
     source_fixture = hub / "src" / "not-data-plane.jsonl"
     source_fixture.parent.mkdir(parents=True)
     source_fixture.write_text('{"source": "must-not-journal"}\n', encoding="utf-8")
+    nested_git_object = (
+        hub
+        / "processed"
+        / "mail"
+        / "_synthetic"
+        / "temp-repo"
+        / ".git"
+        / "objects"
+        / "aa"
+        / "object-file"
+    )
+    nested_git_object.parent.mkdir(parents=True)
+    nested_git_object.write_text("must-not-journal-vcs-internals", encoding="utf-8")
     remote = tmp_path / "dad-journal-remote.git"
     journal_repo = tmp_path / "dad-journal"
     subprocess.run(["git", "init", "--bare", str(remote)], check=True)
@@ -764,9 +968,23 @@ def test_journal_apply_threshold_commits_and_pushes_to_data_repo(tmp_path: Path)
     result = checkpoint_journal(hub, journal_repo, apply=True, min_records=200, min_hours=999)
 
     assert result["checkpoint_applied"] is True
+    assert result["commands"][0].endswith("config core.longpaths true")
+    assert result["git_apply_results"][0]["returncode"] == 0
     assert journal_status(hub, min_records=200, min_hours=999)["checkpoint_due"] is False
     assert (journal_repo / "data" / "processed" / "mail" / "inbox" / "rows.jsonl").exists()
     assert not (journal_repo / "data" / "src" / "not-data-plane.jsonl").exists()
+    assert not (
+        journal_repo
+        / "data"
+        / "processed"
+        / "mail"
+        / "_synthetic"
+        / "temp-repo"
+        / ".git"
+        / "objects"
+        / "aa"
+        / "object-file"
+    ).exists()
     manifest = json.loads((journal_repo / "journal_checkpoint_manifest.json").read_text())
     assert manifest["checkpoint_scope"] == "DATA_PLANE_PATHS"
     head = subprocess.run(

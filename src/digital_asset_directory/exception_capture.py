@@ -25,6 +25,7 @@ from .exceptions_lake import (
 from .mail_center import MAIL_MIRROR_DIR, compose_mail
 from .mail_center import _build_mail_record, _jsonl_lock
 from .models import MailMessageRecord
+from .transport import data_relative_path
 from .utils import (
     append_jsonl,
     safe_relative,
@@ -200,6 +201,20 @@ PROMPT_INJECTION_PATTERNS = [
     re.compile(r"(?i)\b(system|developer) prompt\b"),
     re.compile(r"(?i)\bexecute (this )?(tool|command)\b"),
 ]
+
+
+def exception_capture_data_path(hub_root: Path, relative_path: Path | str) -> Path:
+    return data_relative_path(hub_root, relative_path)
+
+
+def _capture_output_path(
+    hub_root: Path,
+    output: Path | None,
+    default_relative_path: Path,
+) -> Path:
+    if output is not None:
+        return output if output.is_absolute() else exception_capture_data_path(hub_root, output)
+    return exception_capture_data_path(hub_root, default_relative_path)
 CAPTURE_AUDIT_EXCLUDE_DIRS = set(BACKFILL_EXCLUDE_DIRS) | {
     ".digital-asset",
     ".idea",
@@ -1648,9 +1663,13 @@ def write_exception_capture_emission_simulation(
             "approve human roadmap gates, mutate target repos, or certify source truth."
         ),
     }
-    output_path = hub_root / (output or CAPTURE_EMISSION_SIMULATION_JSON)
+    output_path = _capture_output_path(hub_root, output, CAPTURE_EMISSION_SIMULATION_JSON)
     write_json(output_path, report)
-    md_path = output_path.with_suffix(".md") if output else hub_root / CAPTURE_EMISSION_SIMULATION_MD
+    md_path = (
+        output_path.with_suffix(".md")
+        if output
+        else _capture_output_path(hub_root, None, CAPTURE_EMISSION_SIMULATION_MD)
+    )
     lines = [
         "# Exception Capture Emission Simulation",
         "",
@@ -1690,7 +1709,7 @@ def _phase6_source_report(
     key: str,
     rel_path: Path,
 ) -> tuple[dict[str, Any], dict[str, Any] | None]:
-    path = hub_root / rel_path
+    path = exception_capture_data_path(hub_root, rel_path)
     row: dict[str, Any] = {
         "report_key": key,
         "path": rel_path.as_posix(),
@@ -1892,9 +1911,15 @@ def write_phase6_machine_evidence_summary(
     output: Path | None = None,
 ) -> dict[str, Any]:
     report = build_phase6_machine_evidence_summary(hub_root)
-    output_path = hub_root / (output or PHASE6_MACHINE_EVIDENCE_SUMMARY_JSON)
+    output_path = _capture_output_path(
+        hub_root, output, PHASE6_MACHINE_EVIDENCE_SUMMARY_JSON
+    )
     write_json(output_path, report)
-    md_path = output_path.with_suffix(".md") if output else hub_root / PHASE6_MACHINE_EVIDENCE_SUMMARY_MD
+    md_path = (
+        output_path.with_suffix(".md")
+        if output
+        else _capture_output_path(hub_root, None, PHASE6_MACHINE_EVIDENCE_SUMMARY_MD)
+    )
     md_path.parent.mkdir(parents=True, exist_ok=True)
     md_path.write_text(_phase6_machine_evidence_summary_markdown(report), encoding="utf-8")
     return report
@@ -3127,9 +3152,13 @@ def write_observed_capture_audit(
             "capture-pattern updates."
         ),
     }
-    output_path = hub_root / (output or OBSERVED_AUDIT_JSON)
+    output_path = _capture_output_path(hub_root, output, OBSERVED_AUDIT_JSON)
     write_json(output_path, report)
-    md_path = output_path.with_suffix(".md") if output else hub_root / OBSERVED_AUDIT_MD
+    md_path = (
+        output_path.with_suffix(".md")
+        if output
+        else _capture_output_path(hub_root, None, OBSERVED_AUDIT_MD)
+    )
     lines = [
         "# Exception Capture Observed Audit",
         "",
@@ -3895,9 +3924,8 @@ def write_exception_capture_remediation_plan(
     max_scanned_files: int | None = 50_000,
     per_lane_repo_limit: int = 25,
 ) -> dict[str, Any]:
-    readiness_output = None
-    if output is not None:
-        readiness_output = output.with_name(output.stem + "_readiness.json")
+    plan_output = output or CAPTURE_REMEDIATION_PLAN_JSON
+    readiness_output = plan_output.with_name(plan_output.stem + "_readiness.json")
     readiness_report = write_exception_backfill_readiness(
         hub_root,
         repos,
@@ -3910,12 +3938,12 @@ def write_exception_capture_remediation_plan(
         readiness_report,
         per_lane_repo_limit=per_lane_repo_limit,
     )
-    output_path = hub_root / (output or CAPTURE_REMEDIATION_PLAN_JSON)
+    output_path = _capture_output_path(hub_root, output, CAPTURE_REMEDIATION_PLAN_JSON)
     write_json(output_path, plan)
     md_path = (
         output_path.with_suffix(".md")
         if output
-        else hub_root / CAPTURE_REMEDIATION_PLAN_MD
+        else _capture_output_path(hub_root, None, CAPTURE_REMEDIATION_PLAN_MD)
     )
     md_path.parent.mkdir(parents=True, exist_ok=True)
     md_path.write_text(_capture_remediation_plan_markdown(plan), encoding="utf-8")
@@ -3974,7 +4002,9 @@ def _append_unique_capture_surface_refresh_notice(
     payload = MailMessageRecord(**record).model_dump(mode="json")
     identity = _staged_mail_identity(payload)
     dedupe_key = identity[1]
-    stage_path = hub_root / CAPTURE_SURFACE_REFRESH_NOTICES_STAGED
+    stage_path = exception_capture_data_path(
+        hub_root, CAPTURE_SURFACE_REFRESH_NOTICES_STAGED
+    )
     with _jsonl_lock(stage_path):
         rows: list[dict[str, Any]] = []
         replaced = False
@@ -3990,7 +4020,9 @@ def _append_unique_capture_surface_refresh_notice(
                     existing = json.loads(line)
                 except json.JSONDecodeError as exc:
                     append_jsonl(
-                        hub_root / CAPTURE_SURFACE_REFRESH_NOTICE_QUARANTINE,
+                        exception_capture_data_path(
+                            hub_root, CAPTURE_SURFACE_REFRESH_NOTICE_QUARANTINE
+                        ),
                         {
                             "event_type": "capture_surface_refresh_notice_malformed_jsonl",
                             "created_at": utc_now(),
@@ -4029,7 +4061,9 @@ def _prune_inactive_capture_surface_refresh_notices(
     hub_root: Path,
     active_identities: set[tuple[str, str]],
 ) -> int:
-    stage_path = hub_root / CAPTURE_SURFACE_REFRESH_NOTICES_STAGED
+    stage_path = exception_capture_data_path(
+        hub_root, CAPTURE_SURFACE_REFRESH_NOTICES_STAGED
+    )
     if not stage_path.exists():
         return 0
     with _jsonl_lock(stage_path):
@@ -4046,7 +4080,9 @@ def _prune_inactive_capture_surface_refresh_notices(
                 existing = json.loads(line)
             except json.JSONDecodeError as exc:
                 append_jsonl(
-                    hub_root / CAPTURE_SURFACE_REFRESH_NOTICE_QUARANTINE,
+                    exception_capture_data_path(
+                        hub_root, CAPTURE_SURFACE_REFRESH_NOTICE_QUARANTINE
+                    ),
                     {
                         "event_type": "capture_surface_refresh_notice_malformed_jsonl",
                         "created_at": utc_now(),
@@ -4379,12 +4415,14 @@ def write_exception_capture_surface_refresh_notices(
             "signals are real exceptions."
         ),
     }
-    output_path = hub_root / (output or CAPTURE_SURFACE_REFRESH_NOTICES_JSON)
+    output_path = _capture_output_path(
+        hub_root, output, CAPTURE_SURFACE_REFRESH_NOTICES_JSON
+    )
     write_json(output_path, report)
     md_path = (
         output_path.with_suffix(".md")
         if output
-        else hub_root / CAPTURE_SURFACE_REFRESH_NOTICES_MD
+        else _capture_output_path(hub_root, None, CAPTURE_SURFACE_REFRESH_NOTICES_MD)
     )
     md_path.parent.mkdir(parents=True, exist_ok=True)
     md_path.write_text(_capture_surface_refresh_notices_markdown(report), encoding="utf-8")
@@ -4655,9 +4693,8 @@ def write_exception_capture_gap_review_queue(
     max_scanned_files: int | None = 50_000,
     per_group_example_limit: int = 5,
 ) -> dict[str, Any]:
-    observed_output = None
-    if output is not None:
-        observed_output = output.with_name(output.stem + "_observed_audit.json")
+    queue_output = output or CAPTURE_GAP_REVIEW_QUEUE_JSON
+    observed_output = queue_output.with_name(queue_output.stem + "_observed_audit.json")
     observed_report = write_observed_capture_audit(
         hub_root,
         repos,
@@ -4670,9 +4707,13 @@ def write_exception_capture_gap_review_queue(
         observed_report,
         per_group_example_limit=per_group_example_limit,
     )
-    output_path = hub_root / (output or CAPTURE_GAP_REVIEW_QUEUE_JSON)
+    output_path = _capture_output_path(hub_root, output, CAPTURE_GAP_REVIEW_QUEUE_JSON)
     write_json(output_path, report)
-    md_path = output_path.with_suffix(".md") if output else hub_root / CAPTURE_GAP_REVIEW_QUEUE_MD
+    md_path = (
+        output_path.with_suffix(".md")
+        if output
+        else _capture_output_path(hub_root, None, CAPTURE_GAP_REVIEW_QUEUE_MD)
+    )
     md_path.parent.mkdir(parents=True, exist_ok=True)
     md_path.write_text(_capture_gap_review_queue_markdown(report), encoding="utf-8")
     return report
@@ -4874,9 +4915,8 @@ def write_exception_backfill_wave_plan(
     max_scanned_files: int | None = 50_000,
     per_wave_repo_limit: int = 25,
 ) -> dict[str, Any]:
-    readiness_output = None
-    if output is not None:
-        readiness_output = output.with_name(output.stem + "_readiness.json")
+    plan_output = output or BACKFILL_WAVE_PLAN_JSON
+    readiness_output = plan_output.with_name(plan_output.stem + "_readiness.json")
     readiness_report = write_exception_backfill_readiness(
         hub_root,
         repos,
@@ -4889,9 +4929,13 @@ def write_exception_backfill_wave_plan(
         readiness_report,
         per_wave_repo_limit=per_wave_repo_limit,
     )
-    output_path = hub_root / (output or BACKFILL_WAVE_PLAN_JSON)
+    output_path = _capture_output_path(hub_root, output, BACKFILL_WAVE_PLAN_JSON)
     write_json(output_path, plan)
-    md_path = output_path.with_suffix(".md") if output else hub_root / BACKFILL_WAVE_PLAN_MD
+    md_path = (
+        output_path.with_suffix(".md")
+        if output
+        else _capture_output_path(hub_root, None, BACKFILL_WAVE_PLAN_MD)
+    )
     md_path.parent.mkdir(parents=True, exist_ok=True)
     md_path.write_text(_backfill_wave_plan_markdown(plan), encoding="utf-8")
     return plan
@@ -4987,9 +5031,13 @@ def write_exception_backfill_readiness(
             "or prove path-signal truth."
         ),
     }
-    output_path = hub_root / (output or BACKFILL_READINESS_JSON)
+    output_path = _capture_output_path(hub_root, output, BACKFILL_READINESS_JSON)
     write_json(output_path, report)
-    md_path = output_path.with_suffix(".md") if output else hub_root / BACKFILL_READINESS_MD
+    md_path = (
+        output_path.with_suffix(".md")
+        if output
+        else _capture_output_path(hub_root, None, BACKFILL_READINESS_MD)
+    )
     lines = [
         "# Exception Backfill Readiness",
         "",
@@ -5693,9 +5741,13 @@ def evaluate_exception_taxonomy_coverage(
             "candidate-only and do not prove source truth."
         ),
     }
-    output_path = hub_root / (output or TAXONOMY_COVERAGE_REPORT_JSON)
+    output_path = _capture_output_path(hub_root, output, TAXONOMY_COVERAGE_REPORT_JSON)
     write_json(output_path, report)
-    md_path = output_path.with_suffix(".md") if output else hub_root / TAXONOMY_COVERAGE_REPORT_MD
+    md_path = (
+        output_path.with_suffix(".md")
+        if output
+        else _capture_output_path(hub_root, None, TAXONOMY_COVERAGE_REPORT_MD)
+    )
     lines = [
         "# Exception Taxonomy Coverage",
         "",
@@ -5856,9 +5908,13 @@ def evaluate_capture_scenarios(
             "actual JSONL outboxes, but still do not prove all real repos are complete."
         ),
     }
-    output_path = hub_root / (output or CAPTURE_REPORT_JSON)
+    output_path = _capture_output_path(hub_root, output, CAPTURE_REPORT_JSON)
     write_json(output_path, report)
-    md_path = output_path.with_suffix(".md") if output else hub_root / CAPTURE_REPORT_MD
+    md_path = (
+        output_path.with_suffix(".md")
+        if output
+        else _capture_output_path(hub_root, None, CAPTURE_REPORT_MD)
+    )
     lines = [
         "# Exception Capture Completeness Report",
         "",
