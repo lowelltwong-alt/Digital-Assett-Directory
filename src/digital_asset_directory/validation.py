@@ -1834,6 +1834,14 @@ def validate_repo(repo_root: Path) -> dict[str, Any]:
             payload = json.loads((repo_root / rel).read_text(encoding="utf-8"))
             _validate_payload(repo_root, registry, schema_name, payload)
             checked.append(rel)
+        lesson_payload_fixture = "examples/mail/lesson-payload.golden.json"
+        _validate_payload(
+            repo_root,
+            registry,
+            "lesson_payload",
+            json.loads((repo_root / lesson_payload_fixture).read_text(encoding="utf-8")),
+        )
+        checked.append(lesson_payload_fixture)
         _validate_jsonl_with_registered_schema(
             repo_root,
             registry,

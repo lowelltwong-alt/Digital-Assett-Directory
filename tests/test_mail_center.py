@@ -37,6 +37,7 @@ import digital_asset_directory.mail_center as mail_center
 
 pytestmark = pytest.mark.integration
 RUNNER = CliRunner()
+ROOT = Path(__file__).resolve().parents[1]
 
 
 def _make_hub(path: Path) -> Path:
@@ -300,6 +301,7 @@ def test_cli_mail_compose_rejects_raw_json_in_key_value_payload_mode(tmp_path: P
     )
 
     assert result.exit_code == 2
+    assert "--payload-json" in result.output
     assert not (repo / ".digital-asset" / "mail" / "outbox.jsonl").exists()
 
 
@@ -349,6 +351,34 @@ def test_cli_mail_compose_payload_json_path_round_trips_and_rejects_raw_json_pay
     assert record["payload"]["lesson_pack"]["lessons"] == ["use payload-json for structured mail"]
     assert record["payload"]["lesson_pack"]["flags"]["candidate_only"] is True
 
+    stdin_repo = tmp_path / "repo-stdin"
+    stdin_repo.mkdir()
+    stdin_payload = {"stdin_payload": {"ok": True, "note": "read from stdin"}}
+    stdin_composed = RUNNER.invoke(
+        app,
+        [
+            "mail",
+            "compose",
+            "--repo",
+            str(stdin_repo),
+            "--type",
+            "lesson_suggestion",
+            "--target-repo",
+            "central_only",
+            "--summary",
+            "Share stdin structured payload guidance.",
+            "--payload-json",
+            "-",
+            "--hub",
+            str(hub),
+        ],
+        input=json.dumps(stdin_payload),
+    )
+
+    assert stdin_composed.exit_code == 0, stdin_composed.output
+    stdin_record = json.loads(stdin_composed.output)["record"]
+    assert stdin_record["payload"]["stdin_payload"]["ok"] is True
+
     outbox_check = RUNNER.invoke(
         app,
         [
@@ -370,7 +400,7 @@ def test_cli_mail_compose_payload_json_path_round_trips_and_rejects_raw_json_pay
     assert outbox_check.exit_code == 0, outbox_check.output
     assert json.loads(outbox_check.output)["sent_count"] == 1
 
-    with pytest.raises(typer.BadParameter, match="key=value convenience mode"):
+    with pytest.raises(ValueError, match="key=value convenience mode"):
         cli_module._key_value_payload(['{"lesson_pack_json":{"lessons":["split risk"]}}'])
 
     json_value_payload = RUNNER.invoke(
@@ -482,6 +512,139 @@ def test_cli_mail_outbox_check_accepts_payload_file_for_structured_novelty(
     assert result.exit_code == 0, result.output
     payload = json.loads(result.output)
     assert payload["verdict"] == "new"
+
+
+def test_cli_mail_compose_lesson_payload_schema_is_warning_only(tmp_path: Path):
+    hub = ROOT
+    repo = tmp_path / "repo-a"
+    repo.mkdir()
+
+    legacy_sender = RUNNER.invoke(
+        app,
+        [
+            "mail",
+            "compose",
+            "--hub",
+            str(hub),
+            "--repo",
+            str(repo),
+            "--type",
+            "lesson_suggestion",
+            "--summary",
+            "Legacy key-value lesson sender should not break.",
+            "--payload",
+            "note=legacy sender still works",
+        ],
+    )
+
+    assert legacy_sender.exit_code == 0, legacy_sender.output
+    legacy_payload = json.loads(legacy_sender.output)
+    assert legacy_payload["payload_validation"]["enforcement"] == "warning_only"
+    assert legacy_payload["payload_validation"]["status"] == "warning_only_failed"
+    assert legacy_payload["payload_validation"]["warning_count"] > 0
+    assert any("asset_type" in item for item in legacy_payload["payload_validation"]["warnings"])
+    assert _jsonl(repo / ".digital-asset" / "mail" / "outbox.jsonl")
+
+    golden = ROOT / "examples" / "mail" / "lesson-payload.golden.json"
+    valid_sender = RUNNER.invoke(
+        app,
+        [
+            "mail",
+            "compose",
+            "--hub",
+            str(hub),
+            "--repo",
+            str(repo),
+            "--type",
+            "lesson_suggestion",
+            "--summary",
+            "Golden lesson payload should validate without enforcement.",
+            "--payload-json",
+            str(golden),
+        ],
+    )
+
+    assert valid_sender.exit_code == 0, valid_sender.output
+    valid_payload = json.loads(valid_sender.output)
+    assert valid_payload["payload_validation"]["status"] == "passed"
+    assert valid_payload["payload_validation"]["warning_count"] == 0
+
+    skipped = RUNNER.invoke(
+        app,
+        [
+            "mail",
+            "compose",
+            "--hub",
+            str(hub),
+            "--repo",
+            str(repo),
+            "--type",
+            "lesson_suggestion",
+            "--summary",
+            "Operators can skip the warning-only payload check.",
+            "--no-payload-validation",
+        ],
+    )
+
+    assert skipped.exit_code == 0, skipped.output
+    skipped_payload = json.loads(skipped.output)
+    assert skipped_payload["payload_validation"]["status"] == "skipped"
+
+
+def test_supersedes_is_envelope_field_and_renders_route_and_digest_chains(tmp_path: Path):
+    hub = tmp_path / "dad"
+    repo_a = tmp_path / "repo-a"
+    repo_b = tmp_path / "repo-b"
+    hub.mkdir()
+    repo_a.mkdir()
+    repo_b.mkdir()
+    policies = [
+        _policy(repo_a, "repo-a", visibility="internal"),
+        _policy(repo_b, "repo-b", visibility="internal"),
+    ]
+    original = compose_mail(
+        repo_a,
+        message_type="lesson_suggestion",
+        target_repo=str(repo_b),
+        summary="Original bounded lesson candidate.",
+        payload={"note": "first candidate"},
+        repo_policies=policies,
+    )
+    upgrade = compose_mail(
+        repo_a,
+        message_type="lesson_suggestion",
+        target_repo=str(repo_b),
+        summary="Upgraded bounded lesson candidate.",
+        payload={"note": "second candidate"},
+        supersedes=original["record"]["mail_id"],
+        repo_policies=policies,
+    )
+
+    assert upgrade["record"]["supersedes"] == original["record"]["mail_id"]
+    assert upgrade["record"]["payload"]["supersedes"] == original["record"]["mail_id"]
+    assert upgrade["record"]["thread_id"] == original["record"]["thread_id"]
+
+    outbox_rows = _jsonl(repo_a / ".digital-asset" / "mail" / "outbox.jsonl")
+    assert outbox_rows[1]["supersedes"] == original["record"]["mail_id"]
+
+    collect_mail(hub, [repo_a], repo_policies=policies)
+    routed = route_mail(hub, repo_policies=policies)
+    deliver_mail(hub, [repo_b], repo_policies=policies)
+    digest = digest_mail(repo_b, checked_at="2026-07-08T12:00:00+00:00")
+
+    expected_chain = [original["record"]["mail_id"], upgrade["record"]["mail_id"]]
+    assert routed["supersession_chains"] == [
+        {
+            "mail_id": upgrade["record"]["mail_id"],
+            "thread_id": original["record"]["thread_id"],
+            "supersedes": original["record"]["mail_id"],
+            "chain": expected_chain,
+            "chain_complete": True,
+        }
+    ]
+    assert digest["supersession_chains"][0]["chain"] == expected_chain
+    assert digest["supersession_chains"][0]["chain_complete"] is True
+
 
 def test_bom_prefixed_jsonl_reads_and_reports_nonblocking_observation(tmp_path: Path):
     hub = _make_hub(tmp_path / "hub")

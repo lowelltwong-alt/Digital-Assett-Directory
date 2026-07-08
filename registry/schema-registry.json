@@ -35,6 +35,7 @@
     "repo_learning_event": "schemas/repo-learning-event.schema.json",
     "dad_pipeline_event": "schemas/dad-pipeline-event.schema.json",
     "mail_message": "schemas/mail-message.schema.json",
+    "lesson_payload": "schemas/lesson-payload.schema.json",
     "mail_decision": "schemas/mail-decision.schema.json",
     "attention_seed": "schemas/attention-seed.schema.json",
     "connection_candidate": "schemas/connection-candidate.schema.json",

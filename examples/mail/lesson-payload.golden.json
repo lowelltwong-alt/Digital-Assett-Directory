@@ -1,0 +1,18 @@
+{
+  "asset_type": "lesson_suggestion",
+  "applies_when": [
+    "A repo wants to share a candidate implementation lesson through DAD mail."
+  ],
+  "does_not_apply_when": [
+    "The message contains real client data, privileged material, credentials, or production exports."
+  ],
+  "danger_if_misapplied": "A context-bound lesson could be treated as universal authority or promoted without DAD review.",
+  "candidate_only": true,
+  "raw_private_payload_included": false,
+  "hidden_chain_of_thought_included": false,
+  "lake_write_performed": false,
+  "sqlite_write_performed": false,
+  "external_writes_performed": false,
+  "silent_learning_performed": false,
+  "dad_review_required_before_promotion": true
+}

@@ -867,6 +867,7 @@ class MailMessageRecord(BaseModel):
     payload: dict[str, Any] = Field(default_factory=dict)
     evidence: list[str] = Field(default_factory=list)
     suggested_actions: list[str] = Field(default_factory=list)
+    supersedes: str = ""
     source_provenance: dict[str, Any] = Field(default_factory=default_mail_source_provenance)
     public_release: dict[str, Any] = Field(default_factory=default_mail_public_release)
 

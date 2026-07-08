@@ -55,6 +55,7 @@
     "payload": {"type": "object"},
     "evidence": {"type": "array", "items": {"type": "string"}},
     "suggested_actions": {"type": "array", "items": {"type": "string"}},
+    "supersedes": {"type": "string"},
     "source_provenance": {
       "type": "object",
       "required": [

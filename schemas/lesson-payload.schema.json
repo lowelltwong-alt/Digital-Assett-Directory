@@ -1,0 +1,44 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://local.digital-asset-directory/schemas/lesson-payload.schema.json",
+  "title": "Lesson Suggestion Payload",
+  "$comment": "Warning-only first release. Keep additionalProperties true so PR-LL3 can add QRD fields such as LessonIR atoms, anonymity_set, adversary_model, and privilege_screen without breaking existing senders.",
+  "type": "object",
+  "required": [
+    "asset_type",
+    "applies_when",
+    "does_not_apply_when",
+    "danger_if_misapplied",
+    "candidate_only",
+    "raw_private_payload_included",
+    "hidden_chain_of_thought_included",
+    "lake_write_performed",
+    "sqlite_write_performed",
+    "external_writes_performed",
+    "silent_learning_performed",
+    "dad_review_required_before_promotion"
+  ],
+  "properties": {
+    "asset_type": {"type": "string", "minLength": 1},
+    "applies_when": {
+      "type": "array",
+      "items": {"type": "string", "minLength": 1},
+      "minItems": 1
+    },
+    "does_not_apply_when": {
+      "type": "array",
+      "items": {"type": "string", "minLength": 1},
+      "minItems": 1
+    },
+    "danger_if_misapplied": {"type": "string", "minLength": 1},
+    "candidate_only": {"type": "boolean"},
+    "raw_private_payload_included": {"type": "boolean"},
+    "hidden_chain_of_thought_included": {"type": "boolean"},
+    "lake_write_performed": {"type": "boolean"},
+    "sqlite_write_performed": {"type": "boolean"},
+    "external_writes_performed": {"type": "boolean"},
+    "silent_learning_performed": {"type": "boolean"},
+    "dad_review_required_before_promotion": {"type": "boolean"}
+  },
+  "additionalProperties": true
+}

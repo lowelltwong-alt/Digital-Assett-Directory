@@ -527,6 +527,12 @@ def test_mail_model_dumps_match_registered_schemas():
     validate_registered_schema("mail_decision", decision.model_dump(mode="json"))
 
 
+def test_lesson_payload_golden_fixture_matches_registered_schema():
+    payload = json.loads((ROOT / "examples" / "mail" / "lesson-payload.golden.json").read_text())
+
+    validate_registered_schema("lesson_payload", payload)
+
+
 def test_background_connection_model_dumps_match_registered_schemas():
     timestamp = "2026-01-01T00:00:00+00:00"
     seed = AttentionSeedRecord(
