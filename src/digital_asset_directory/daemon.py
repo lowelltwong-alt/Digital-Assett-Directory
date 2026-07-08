@@ -20,6 +20,7 @@ from .exceptions_lake import (
     write_exception_report,
 )
 from .graph_inference import write_inference_outputs
+from .graph_surfaces import graph_surface_status
 from .journal import checkpoint_journal, ingest_remote_outbox, journal_status
 from .learning import build_lesson_graph
 from .mail_center import collect_mail, deliver_mail, diagnose_mail_dirty_state, route_mail
@@ -113,6 +114,7 @@ def _write_daily_review_queue(
     event_result: dict[str, Any],
     exception_result: dict[str, Any],
     graph_result: dict[str, Any],
+    graph_surface_status_result: dict[str, Any],
     transport_result: dict[str, Any] | None,
     journal_result: dict[str, Any],
 ) -> dict[str, Any]:
@@ -125,6 +127,7 @@ def _write_daily_review_queue(
         "events": event_result,
         "exceptions": exception_result,
         "graphs": graph_result,
+        "graph_surfaces": graph_surface_status_result,
         "transport": transport_result or {"status": "not_run"},
         "journal": journal_result,
         "authority_boundary": (
@@ -151,6 +154,7 @@ def _write_daily_review_queue(
         f"- Exceptions collect: {exception_result.get('status', 'unknown')}",
         f"- Lesson graph: {graph_result.get('lesson_graph', {}).get('status', 'unknown')}",
         f"- Graph inference: {graph_result.get('inference', {}).get('status', 'unknown')}",
+        f"- Graph surface freshness: {graph_surface_status_result.get('freshness_counts', {})}",
         f"- Transport audit: {transport_result.get('report_path', 'not run') if transport_result else 'not run'}",
         f"- Transport upgrade count: {transport_result.get('upgrade_required_count', 'not run') if transport_result else 'not run'}",
         f"- Journal checkpoint due: {journal_result.get('checkpoint_due')}",
@@ -473,6 +477,7 @@ def run_daemon_cycle(
         else None
     )
     journal_status_result = journal_status(hub_root)
+    graph_surface_status_result = graph_surface_status(hub_root)
     review_queue = _write_daily_review_queue(
         hub_root,
         generated_at=generated_at,
@@ -482,6 +487,7 @@ def run_daemon_cycle(
         event_result=event_result,
         exception_result=exception_result,
         graph_result=graph_result,
+        graph_surface_status_result=graph_surface_status_result,
         transport_result=transport_result,
         journal_result=journal_status_result,
     )
@@ -500,6 +506,7 @@ def run_daemon_cycle(
         "exceptions_collect_status": exception_result.get("status"),
         "lesson_graph_status": graph_result.get("lesson_graph", {}).get("status", graph_result.get("status")),
         "graph_inference_status": graph_result.get("inference", {}).get("status", graph_result.get("status")),
+        "graph_surface_freshness_counts": graph_surface_status_result.get("freshness_counts", {}),
         "transport_audit_ran": transport_result is not None,
         "journal_checkpoint_due": journal_status_result.get("checkpoint_due"),
         "journal_checkpoint_applied": False,
@@ -525,6 +532,7 @@ def run_daemon_cycle(
         "events": event_result,
         "exceptions": exception_result,
         "graphs": graph_result,
+        "graph_surface_status": graph_surface_status_result,
         "transport": transport_result,
         "journal_status": journal_status_result,
         "journal": journal_result,
