@@ -1601,6 +1601,10 @@ def test_integration_contracts_try_stable_user_shims_before_raw_checkout_fallbac
         "adapter_authority": "optional_wrapper_only",
         "agent_id_policy": "arbitrary_non_empty_string",
         "vendor_lock_in_prohibited": True,
+        "internal_integration_default": "mcp_over_direct_api",
+        "mcp_authority": "neutral_tool_resource_prompt_boundary",
+        "direct_api_policy": "external_adapter_fallback_only",
+        "mcp_audit_policy": "dad_lifecycle_and_audit_required_for_side_effects",
     }
     for contract in contracts:
         fallback = contract["capture"]["cli_fallback"]

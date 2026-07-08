@@ -63,6 +63,10 @@ Git stays useful as a replicated log — the ceremony goes, not the tool.
   through the normal collect→screen→route pipeline (untrusted-input rules
   unchanged). This removes ALL message PRs immediately with zero new infra.
 
+Internal remote-agent access should prefer a DAD MCP adapter over direct APIs:
+resources for journal/status reads, tools for bounded outbox/checkpoint
+actions, prompts for review workflows. Direct APIs are fallback adapters only.
+
 ### T2: Cloudflare relay (later; design-gated by phase-10a-cloud-boundary-reviewed)
 Free tier: Workers (100k req/day) + D1 (SQLite at the edge, 5GB) + R2 (10GB).
 Note: Cloudflare **Queues is NOT on the free plan** — so the design is a Worker

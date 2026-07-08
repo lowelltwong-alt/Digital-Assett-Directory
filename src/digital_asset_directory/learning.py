@@ -621,6 +621,7 @@ def build_lesson_graph(repo_root: Path) -> dict[str, Any]:
     }
     out_path = lesson_graph_path(repo_root)
     write_json(out_path, payload, allow_direct_fallback=True)
+    edge_registry_hash = _hash_path(repo_root / "registry" / "graph-edge-registry.json")
     input_hashes = {
         "raw/lessons": _hash_path(raw_lessons_dir(repo_root)),
         "registry/asset-pattern-registry.json": _hash_path(
@@ -632,17 +633,35 @@ def build_lesson_graph(repo_root: Path) -> dict[str, Any]:
         str(CENTRAL_USAGE_LEDGER): _hash_path(
             central_usage_path(repo_root, CENTRAL_USAGE_LEDGER)
         ),
-        "registry/graph-edge-registry.json": _hash_path(
-            repo_root / "registry" / "graph-edge-registry.json"
-        ),
+        "registry/graph-edge-registry.json": edge_registry_hash,
     }
     edge_types_present = sorted(edges_by_type)
     manifest = {
         "schema_version": "0.1.0",
+        "surface_id": "lesson-graph",
+        "ontology_id": "knowledge",
         "generated_at": payload["generated_at"],
+        "builder_version": "lesson-graph-builder.v0.1.0",
         "graph_path": LESSON_GRAPH_PATH.as_posix(),
+        "manifest_path": LESSON_GRAPH_MANIFEST_PATH.as_posix(),
         "edge_registry_version": payload["edge_registry_version"],
+        "edge_registry_hash": edge_registry_hash,
         "input_hashes": input_hashes,
+        "methodology_hashes": {
+            "builder_source": _hash_path(Path(__file__)),
+        },
+        "graph_content_hash": _hash_path(out_path),
+        "freshness": {
+            "state": "fresh",
+            "computed_at": payload["generated_at"],
+            "reasons": [],
+        },
+        "counts": {
+            "node_count": len(nodes),
+            "edge_count": len(edges),
+            "node_type_count": len(nodes_by_type),
+            "edge_type_count": len(edges_by_type),
+        },
         "nodes_by_type": nodes_by_type,
         "edges_by_type": edges_by_type,
         "edge_definitions_present": {
@@ -1053,6 +1072,16 @@ def preflight(
             "error": str(exc),
         }
     try:
+        from .daemon import daemon_status
+
+        heartbeat_status = daemon_status(hub_root)
+    except Exception as exc:
+        heartbeat_status = {
+            "status": "unavailable",
+            "stale": True,
+            "error": str(exc),
+        }
+    try:
         from .mail_center import resurface_deferred_mail
 
         deferred_mail = resurface_deferred_mail(
@@ -1082,6 +1111,7 @@ def preflight(
         ),
         "learning_rule_acknowledgements": [],
         "mail_digest_status": digest_status,
+        "daemon_status": heartbeat_status,
         "recommended_review_lanes": recommended_review_lanes(
             task,
             baseline_changed_files,
@@ -1095,6 +1125,17 @@ def preflight(
         mail_digest_status=digest_status,
         deferred_mail=deferred_mail,
     )
+    payload["context_pack"]["daemon_status"] = {
+        "status": heartbeat_status.get("status", ""),
+        "stale": bool(heartbeat_status.get("stale")),
+        "heartbeat_path": heartbeat_status.get("heartbeat_path", ""),
+        "cycle_completed_at": heartbeat_status.get("cycle_completed_at", ""),
+        "stale_after_hours": heartbeat_status.get("stale_after_hours", ""),
+    }
+    if heartbeat_status.get("stale"):
+        payload["context_pack"].setdefault("warnings", []).append(
+            "daemon heartbeat is stale or unavailable"
+        )
     hard_lookup = _maybe_hard_issue_lookup(
         hub_root,
         target_repo,

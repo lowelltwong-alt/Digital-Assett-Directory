@@ -65,6 +65,27 @@ branches from this front door, not competing entrypoints. Dates and version
 signals live in the navigation registry so the AI table of contents can stay
 shallow and descriptive instead of becoming a bulky change log.
 
+## MCP-First Integrations
+
+DAD internal agent integrations default to MCP over direct vendor APIs. MCP
+resources expose read-only DAD context, MCP tools wrap bounded DAD CLI actions,
+and MCP prompts package repeatable workflows. Direct APIs and vendor SDKs are
+fallback adapters only when MCP cannot express the integration and a reviewed
+human gate approves the exception.
+
+Read `docs/MCP_FIRST_INTEGRATION_POLICY.md` before creating or reviewing an MCP
+server, plugin, connector, cloud agent, API bridge, or runtime adapter.
+
+## Transport And Data Root
+
+DAD's transport redesign is routed through
+`docs/DAD_TRANSPORT_AND_COMMS_REDESIGN.md`. Runtime candidate data belongs under
+the active `DAD_DATA_ROOT` local bus or the private `dad-journal` fallback, not
+as message PRs. Use `asset-dir data status`, `asset-dir transport audit`,
+`asset-dir daemon status`, and `asset-dir journal status` to inspect the current
+transport state before changing mail, exception, lesson, report, or ledger
+writers.
+
 ## Required read order
 
 1. `AGENTS.md`
@@ -105,6 +126,7 @@ not prove source truth, value, authority, or promotion.
 | `registry/dad-address-model-registry.json` | Machine-readable DAD address model with layer definitions, tuple segments, source inspirations, and frontier review policy. | You need the exact layer model for repo-local asset cards, learning loops, workflow/orchestration pointers, or validation. |
 | `docs/FABLE_DAD_ADDRESS_MODEL_PROMPT.md` | Prompt for Fable/frontier AI to red-team and improve the DAD address model. | You want a high-leverage critique of layer 9, compact workflow encoding, tests, and evolution policy. |
 | `processed/fable5/deep-dives/2026-07-06-dad-deployment-rust-handoff/fable5-master-prompt.md` | Current Fable review packet for the DAD deployment roadmap, Phase 8 local deployment proof, Phase 10A event pipeline, and Rust event-log checker boundary. | You are handing DAD to Fable to audit roadmap order, false-confidence risks, Rust/Python boundaries, or next high-leverage Rust leaf work. |
+| `processed/fable5/deep-dives/2026-07-07-graph-surface-mcp-handoff/fable5-master-prompt.md` | Fable review packet for graph surface manifests, MCP-first resources, no-lock-in runtime policy, parallel transport merge context, version tracking, synthetic tests, red-team, and premortem kernels. | You are handing DAD to Fable before building the graph surface registry, MCP graph resources, or repo surface-version tracking. |
 | `registry/edge-type-registry.json` | Controlled edge vocabulary. | You create, interpret, or validate graph relationships. |
 | `registry/asset-pattern-registry.json` | Controlled high-leverage pattern vocabulary. | You classify workflows, composite assets, or reusable systems. |
 | `registry/template-registry.json` | Controlled template library with forward and reverse dependencies. | You create, update, validate, or reuse templates. |
