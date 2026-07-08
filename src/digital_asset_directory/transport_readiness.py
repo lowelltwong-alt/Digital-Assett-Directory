@@ -7,6 +7,7 @@ from pathlib import Path
 from typing import Any, Mapping, Sequence
 
 from .daemon import daemon_status
+from .graph_surfaces import graph_surface_status
 from .journal import journal_status
 from .transport import (
     AUTHORITY_BOUNDARY,
@@ -57,6 +58,7 @@ def build_transport_readiness(
     queue = read_transport_upgrade_queue(hub_root)
     daemon = daemon_status(hub_root, stale_hours=stale_hours)
     journal = journal_status(hub_root)
+    graph_surfaces = graph_surface_status(hub_root)
     repos = list(transport_repos or [])
     upgrade_status = build_transport_upgrade_status(
         hub_root,
@@ -159,6 +161,8 @@ def build_transport_readiness(
         "transport_upgrade_queue_readable": queue.get("invalid_row_count") == 0,
         "daemon_status_readable": daemon.get("schema_version") == "dad.daemon.status.v1",
         "journal_status_readable": journal.get("schema_version") == "dad.journal.status.v1",
+        "graph_surface_status_readable": graph_surfaces.get("schema_version")
+        == "dad.graph_surface.status.v1",
         "configured_policy_repo_count": len(repos),
         "data_plane_surface_count": len(DATA_PLANE_PATHS),
     }
@@ -170,6 +174,7 @@ def build_transport_readiness(
             "transport_upgrade_queue_readable",
             "daemon_status_readable",
             "journal_status_readable",
+            "graph_surface_status_readable",
         )
     )
     completed_gates = [
@@ -226,6 +231,7 @@ def build_transport_readiness(
             "data_root_mode": journal.get("data_root_mode"),
             "repo_status": journal_repo or None,
         },
+        "graph_surfaces": graph_surfaces,
         "human_gate_summary": {
             "complete_count": len(completed_gates),
             "pending_count": len(pending_gates),

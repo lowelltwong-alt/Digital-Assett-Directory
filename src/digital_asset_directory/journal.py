@@ -15,6 +15,10 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
+from .graph_surfaces import (
+    graph_surface_checkpoint_plan,
+    write_graph_surface_checkpoint_artifacts,
+)
 from .mail_center import collect_mail_payloads
 from .transport import AUTHORITY_BOUNDARY, DATA_PLANE_PATHS, data_path, resolve_data_root
 from .utils import append_jsonl, atomic_write_text, json_dumps, sha256_bytes, utc_now
@@ -305,12 +309,14 @@ def checkpoint_journal(
         status["checkpoint_applied"] = False
         status["checkpoint_skipped_reason"] = "journal_repo_not_configured"
         status["commands"] = []
+        status["graph_surfaces"] = graph_surface_checkpoint_plan(hub_root, None)
         atomic_write_text(_journal_status_path(hub_root), json_dumps(status, pretty=True) + "\n")
         return status
 
     journal_repo = journal_repo.resolve()
     status["journal_repo"] = str(journal_repo)
     status["commands"] = _checkpoint_commands(journal_repo)
+    status["graph_surfaces"] = graph_surface_checkpoint_plan(hub_root, journal_repo)
     status["checkpoint_applied"] = False
 
     if not apply:
@@ -328,6 +334,8 @@ def checkpoint_journal(
             destination.parent.mkdir(parents=True, exist_ok=True)
             shutil.copy2(source, destination)
             copied_files += 1
+        graph_surfaces = write_graph_surface_checkpoint_artifacts(hub_root, journal_repo)
+        status["graph_surfaces"] = graph_surfaces
         manifest = {
             "schema_version": "dad.journal.checkpoint.v1",
             "checkpointed_at": utc_now(),
@@ -335,6 +343,7 @@ def checkpoint_journal(
             "checkpoint_scope": "DATA_PLANE_PATHS",
             "record_count": status["current_record_count"],
             "copied_file_count": copied_files,
+            "graph_surfaces": graph_surfaces,
             "authority_boundary": AUTHORITY_BOUNDARY,
         }
         atomic_write_text(

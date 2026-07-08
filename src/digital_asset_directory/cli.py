@@ -253,6 +253,7 @@ from .rust_rollout import (
     write_rust_rollout_plan,
 )
 from .semantic_evolution import write_semantic_evolution_outputs
+from .surface_versions import build_surface_version_status
 from .template_library import validate_template_registry, write_template_library_report
 from .test_parity import run_test_parity
 from .transport import (
@@ -327,6 +328,8 @@ daemon_app = typer.Typer(no_args_is_help=True)
 app.add_typer(daemon_app, name="daemon")
 journal_app = typer.Typer(no_args_is_help=True)
 app.add_typer(journal_app, name="journal")
+mcp_app = typer.Typer(no_args_is_help=True)
+app.add_typer(mcp_app, name="mcp")
 console = Console()
 
 
@@ -624,6 +627,15 @@ def journal_ingest_remote_outbox(
 ) -> None:
     cfg = _cfg(hub=hub)
     console.print_json(data=ingest_remote_outbox(cfg.repo_root, journal_repo))
+
+
+@mcp_app.command("graph-stdio")
+def mcp_graph_stdio(hub: Optional[Path] = typer.Option(None)) -> None:
+    """Run the local read-only graph-surface MCP server over stdio."""
+    cfg = _cfg(hub=hub)
+    from .mcp_graph_server import run_stdio_server
+
+    run_stdio_server(cfg.repo_root)
 
 
 def _rust_rollout_snapshot_promotion_log(repo_root: Path) -> Path:
@@ -4847,6 +4859,24 @@ def enroll_status(
     cfg = _cfg(config, hub)
     policies = cfg.enrollment_repos if repo == ["all"] else _select_enrollment(repo, cfg)
     console.print_json(data=enrollment_status_all(policies))
+
+
+@enroll_app.command("surface-status")
+def enroll_surface_status(
+    wave: str = typer.Option(""),
+    config: Optional[Path] = typer.Option(None),
+    hub: Optional[Path] = typer.Option(None),
+) -> None:
+    """Write a central read-only enrollment surface-version report."""
+    cfg = _cfg(config, hub)
+    console.print_json(
+        data=build_surface_version_status(
+            cfg.repo_root,
+            enrollment_policies=cfg.enrollment_repos,
+            transport_repos=_transport_repo_rows(cfg),
+            wave=wave,
+        )
+    )
 
 
 @dad_app.command("needs")

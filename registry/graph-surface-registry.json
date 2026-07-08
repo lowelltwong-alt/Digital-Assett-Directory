@@ -1,0 +1,162 @@
+{
+  "registry_version": "0.1.0",
+  "status": "candidate",
+  "authority_boundary": "Graph surfaces are named, registered, generated projections. This registry defines their allowed shape and freshness policy; generated graph content remains candidate evidence and cannot override reviewed registries, schemas, AGENTS.md, DAD lifecycle commands, audit records, Git/CI gates, or human approval gates.",
+  "surfaces": [
+    {
+      "surface_id": "lesson-graph",
+      "surface_kind": "generated_graph_surface",
+      "ontology_id": "knowledge",
+      "status": "active",
+      "purpose": "Compile lessons, repos, patterns, offerings, and usage rows into a candidate review graph.",
+      "builder": {
+        "availability": "wired",
+        "command": "asset-dir lesson graph",
+        "module": "digital_asset_directory.learning.build_lesson_graph"
+      },
+      "source_inputs": [
+        {"kind": "data_surface", "ref": "raw_lessons", "required": false},
+        {"kind": "data_surface", "ref": "usage", "required": false},
+        {"kind": "registry_path", "ref": "registry/asset-pattern-registry.json", "required": true},
+        {"kind": "registry_path", "ref": "registry/dad-offerings-registry.json", "required": true},
+        {"kind": "registry_path", "ref": "registry/graph-edge-registry.json", "required": true}
+      ],
+      "outputs": {
+        "manifest_logical_path": "learning/lesson-graph-manifest.json",
+        "body_logical_path": "learning/lesson-graph.json"
+      },
+      "schema_refs": [
+        "schemas/lesson-graph.schema.json",
+        "schemas/graph-surface-manifest.schema.json"
+      ],
+      "freshness_policy": {
+        "fresh": "hashes_match",
+        "stale": "warn",
+        "inconsistent": "block"
+      },
+      "consumers": ["DAD validation", "future local MCP read-only surface"],
+      "review_status": "candidate",
+      "authority_boundary": "Lesson graph rows are candidate review evidence. They do not prove source truth, repo authority, asset value, approval, trust, or recommendation."
+    },
+    {
+      "surface_id": "graph-inference-overlay",
+      "surface_kind": "generated_graph_surface",
+      "ontology_id": "knowledge",
+      "status": "partial",
+      "purpose": "Compute deterministic complement, co-use, and combination candidate edges over registered offerings and usage rows.",
+      "builder": {
+        "availability": "partial",
+        "command": "asset-dir catalog rebuild",
+        "module": "digital_asset_directory.graph_inference.write_inference_outputs"
+      },
+      "source_inputs": [
+        {"kind": "data_surface", "ref": "usage", "required": false},
+        {"kind": "registry_path", "ref": "registry/dad-offerings-registry.json", "required": true},
+        {"kind": "registry_path", "ref": "registry/graph-inference-methodology.json", "required": true},
+        {"kind": "registry_path", "ref": "registry/graph-edge-registry.json", "required": true}
+      ],
+      "outputs": {
+        "manifest_logical_path": "learning/graph-inference-manifest.json",
+        "body_logical_path": "learning/graph-inference.json"
+      },
+      "schema_refs": ["schemas/graph-surface-manifest.schema.json"],
+      "freshness_policy": {
+        "fresh": "hashes_match",
+        "stale": "warn",
+        "inconsistent": "block"
+      },
+      "consumers": ["combination candidate review", "future local MCP read-only surface"],
+      "review_status": "candidate",
+      "authority_boundary": "Inference overlay rows are candidate structural signals only. They cannot rank, recommend, approve, or authorize assets."
+    },
+    {
+      "surface_id": "research-intake-graph",
+      "surface_kind": "generated_graph_surface",
+      "ontology_id": "research-intake",
+      "status": "active",
+      "purpose": "Compile external research intake pointers into a candidate routing graph without importing external source authority.",
+      "builder": {
+        "availability": "wired",
+        "command": "asset-dir research intake-graph",
+        "module": "digital_asset_directory.research_intake.build_research_intake_graph"
+      },
+      "source_inputs": [
+        {"kind": "data_surface", "ref": "research", "required": false},
+        {"kind": "registry_path", "ref": "registry/dad-needs-registry.json", "required": true},
+        {"kind": "registry_path", "ref": "registry/trusted-source-registry.json", "required": true},
+        {"kind": "registry_path", "ref": "registry/graph-edge-registry.json", "required": true}
+      ],
+      "outputs": {
+        "manifest_logical_path": "research/intake-graph-manifest.json",
+        "body_logical_path": "research/intake-graph.json"
+      },
+      "schema_refs": ["schemas/graph-surface-manifest.schema.json"],
+      "freshness_policy": {
+        "fresh": "hashes_match",
+        "stale": "warn",
+        "inconsistent": "block"
+      },
+      "consumers": ["research review", "future local MCP read-only surface"],
+      "review_status": "candidate",
+      "authority_boundary": "Research intake graph rows are external-source pointers and routing candidates. They do not trust, vendor, approve, or adopt external content."
+    },
+    {
+      "surface_id": "exception-clusters",
+      "surface_kind": "generated_graph_surface",
+      "ontology_id": "exceptions",
+      "status": "planned",
+      "purpose": "Future candidate clustering over exception events and fix outcomes after transport data-path stability.",
+      "builder": {
+        "availability": "planned",
+        "command": "planned:asset-dir exceptions cluster-graph",
+        "module": "planned:digital_asset_directory.exceptions_lake"
+      },
+      "source_inputs": [
+        {"kind": "data_surface", "ref": "exceptions", "required": false},
+        {"kind": "registry_path", "ref": "registry/exception-event-type-registry.json", "required": true}
+      ],
+      "outputs": {
+        "manifest_logical_path": "exceptions/exception-clusters-manifest.json",
+        "body_logical_path": "exceptions/exception-clusters.json"
+      },
+      "schema_refs": ["schemas/graph-surface-manifest.schema.json"],
+      "freshness_policy": {
+        "fresh": "hashes_match",
+        "stale": "warn",
+        "inconsistent": "block"
+      },
+      "consumers": ["future local MCP read-only surface"],
+      "review_status": "candidate",
+      "authority_boundary": "Exception clusters will be generated candidate learning evidence only and cannot classify root cause or approval without review."
+    },
+    {
+      "surface_id": "repo-status",
+      "surface_kind": "generated_graph_surface",
+      "ontology_id": "operations",
+      "status": "planned",
+      "purpose": "Future read-only operational view over repo enrollment, transport, journal, graph, and MCP surface versions.",
+      "builder": {
+        "availability": "planned",
+        "command": "planned:asset-dir graph surface-status",
+        "module": "planned:digital_asset_directory.graph_surfaces"
+      },
+      "source_inputs": [
+        {"kind": "data_surface", "ref": "central_reports", "required": false},
+        {"kind": "registry_path", "ref": "registry/graph-surface-registry.json", "required": true}
+      ],
+      "outputs": {
+        "manifest_logical_path": "reports/repo-status-surface-manifest.json",
+        "body_logical_path": "reports/repo-status-surface.json"
+      },
+      "schema_refs": ["schemas/graph-surface-manifest.schema.json"],
+      "freshness_policy": {
+        "fresh": "hashes_match",
+        "stale": "warn",
+        "inconsistent": "block"
+      },
+      "consumers": ["future local MCP read-only surface", "downstream update planning"],
+      "review_status": "candidate",
+      "authority_boundary": "Repo-status graph rows summarize operational evidence only. They do not authorize downstream writes, protected-repo changes, or enrollment upgrades."
+    }
+  ]
+}
