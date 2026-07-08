@@ -276,6 +276,12 @@ kernel"). Rebase/cherry-pick it forward rather than rebuilding.
 Design: `docs/DAD_TRANSPORT_AND_COMMS_REDESIGN.md` (+ Implementation Manifest).
 Roadmap gate: `roadmap/roadmap.yaml` phase-13-transport-data-plane.
 
+Implementation status: H3-H6 are implemented in the stacked transport PRs
+(`data_path` rerouting, data CLI/audit, daemon heartbeat/readiness, and
+dad-journal checkpoint/remote-outbox ingest). H7 support for docs/templates and
+reviewed queue-based update planning is implemented, but downstream wave
+approval/apply remains a human rollout step.
+
 - [x] **H1. Transport kernel** — `src/digital_asset_directory/transport.py`:
       fail-safe DAD_DATA_ROOT resolver, copy-verify-activate migration (never
       deletes/never runs git), OneDrive guard, read-only legacy-transport

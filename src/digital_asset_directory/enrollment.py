@@ -12,6 +12,7 @@ import yaml
 
 from .config import AppConfig, EnrollmentRepoPolicy
 from .mail_center import mail_digest_status, mail_gitignore_text, mail_readme_text
+from .surface_versions import contract_surface_statuses, expected_contract_surface_blocks
 from .transport import TRANSPORT_SURFACE_VERSION
 from .utils import append_jsonl, atomic_write_text, json_dumps, utc_now
 
@@ -53,6 +54,10 @@ AGENT_RUNTIME_POLICY = {
     "adapter_authority": "optional_wrapper_only",
     "agent_id_policy": "arbitrary_non_empty_string",
     "vendor_lock_in_prohibited": True,
+    "internal_integration_default": "mcp_over_direct_api",
+    "mcp_authority": "neutral_tool_resource_prompt_boundary",
+    "direct_api_policy": "external_adapter_fallback_only",
+    "mcp_audit_policy": "dad_lifecycle_and_audit_required_for_side_effects",
 }
 
 WEEKLY_CHECKS = [
@@ -577,6 +582,7 @@ def _contract_payload(
             "mode": "local_pull",
             "journal_fallback": True,
         },
+        **expected_contract_surface_blocks(),
         "cadence": {
             "mail": {
                 "frequency": "daily",
@@ -903,7 +909,8 @@ def _claude_body() -> str:
 Claude Code should follow the DAD enrollment contract in `AGENTS.md` and
 `.digital-asset/dad-integration.json`. `CLAUDE.md` is an optional runtime
 adapter, not the DAD source of truth. Agent review is triage only; human
-approval gates remain separate.
+approval gates remain separate. Internal DAD integrations default to MCP over
+direct APIs; Claude-specific APIs or hooks are fallback adapters only.
 """
 
 
@@ -1296,6 +1303,15 @@ def enrollment_status(
         )
     elif contract:
         transport_status = "current"
+    surface_rows = contract_surface_statuses(contract) if contract else []
+    for row in surface_rows:
+        if row["surface"] == "transport" or not row["update_needed"]:
+            continue
+        errors.append(
+            "Enrollment contract "
+            f"{row['surface']}.surface_version is {row['status']}; "
+            f"expected {row['expected_surface_version']}"
+        )
     enabled_planes = contract.get("enabled_control_planes", []) if contract else []
     return {
         "repo_id": policy.id,
@@ -1312,6 +1328,7 @@ def enrollment_status(
             "surface_version": transport_version,
             "expected_surface_version": TRANSPORT_SURFACE_VERSION,
         },
+        "surface_versions": {row["surface"]: row for row in surface_rows},
         "enabled_control_planes": enabled_planes,
         "repo_local_only_paths": REPO_LOCAL_ONLY_PATHS,
         "repo_local_only_boundary": REPO_LOCAL_ONLY_BOUNDARY,
