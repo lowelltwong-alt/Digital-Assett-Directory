@@ -104,6 +104,12 @@ re-run, logs to the audit journal.
 prerequisite: PyInstaller single-exe + tray icon. The scheduled task IS the
 "OS with executables" — apps come after the pipe is quiet.
 
+`asset-dir daemon scheduled-tasks`: emits the UI-ready local scheduled-task
+registry and writes `processed/reports/scheduled_tasks.json` under the active
+data root. `--inspect-scheduler` adds live Windows Task Scheduler evidence; the
+registry is read-only status evidence and never creates, edits, disables, or
+deletes tasks.
+
 ## Invariants (unchanged law)
 
 - Mail/events/lessons remain candidate-only; screens and release gates run

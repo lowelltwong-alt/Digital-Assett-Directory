@@ -319,6 +319,59 @@
       "reviewer": "Lowell",
       "status": "boundary_deferred",
       "summary": "Human approved keeping Phase 5 boundary_deferred with active rate limit of zero scheduled external calls; future external research must record source terms, license/provenance/freshness/security review, and explicit human approval before reuse."
+    },
+    "phase-13-data-root-migration-approved": {
+      "evidence": [
+        "asset-dir data status --hub . => mode=data_root, data_root=C:/Users/lowel/.dad/data",
+        "asset-dir transport readiness --hub . --inspect-scheduler => local_ready=true, data_root.active=true",
+        "docs/DAD_TRANSPORT_AND_COMMS_REDESIGN.md",
+        "src/digital_asset_directory/transport.py",
+        "tests/test_transport.py"
+      ],
+      "phase_id": "phase-13-transport-data-plane",
+      "reviewed_at": "2026-07-08T20:48:00Z",
+      "reviewer": "Lowell",
+      "status": "verified",
+      "summary": "Lowell approved the active DAD_DATA_ROOT migration gate after reviewing that the active root is C:/Users/lowel/.dad/data, mode=data_root, outside OneDrive, with fail-safe legacy fallback preserved and data-plane surfaces routed through the active root."
+    },
+    "phase-13-journal-repo-approved": {
+      "evidence": [
+        "asset-dir journal repo-status --hub . --journal-repo C:/Users/lowel/.dad/dad-journal => machine_ready=true, clean main at 7dd0c15e58c3d93ed79b788fc038c388fa0f12cf",
+        "C:/Users/lowel/.dad/dad-journal/journal_checkpoint_manifest.json",
+        "C:/Users/lowel/.dad/dad-journal/data",
+        "src/digital_asset_directory/journal.py"
+      ],
+      "phase_id": "phase-13-transport-data-plane",
+      "reviewed_at": "2026-07-08T20:48:00Z",
+      "reviewer": "Lowell",
+      "status": "verified",
+      "summary": "Lowell approved the dad-journal gate after reviewing the private data-only journal repo status: exists=true, git_repository=true, origin_configured=true, working_tree_clean=true, checkpoint_present=true, checkpoint_current_for_threshold=true."
+    },
+    "phase-13-daemon-schedule-approved": {
+      "evidence": [
+        "asset-dir daemon task-status --hub . => installed=true, task_status=Ready, next_run_time=7/9/2026 9:00:00 AM",
+        "C:/Users/lowel/.dad/bin/dad-daemon-run-cycle.ps1",
+        "C:/Users/lowel/.dad/data/processed/reports/daemon-heartbeat.json",
+        "C:/Users/lowel/.dad/data/processed/reports/daily_review_queue.md",
+        "src/digital_asset_directory/daemon.py"
+      ],
+      "phase_id": "phase-13-transport-data-plane",
+      "reviewed_at": "2026-07-08T20:48:00Z",
+      "reviewer": "Lowell",
+      "status": "verified",
+      "summary": "Lowell approved the Task Scheduler daemon gate after reviewing that task DAD Daemon Run Cycle is installed, enabled, Ready, next run 2026-07-09 09:00 local time, and calls the stable wrapper C:/Users/lowel/.dad/bin/dad-daemon-run-cycle.ps1."
+    },
+    "phase-13-cloudflare-relay-deferred": {
+      "evidence": [
+        "docs/DAD_TRANSPORT_AND_COMMS_REDESIGN.md",
+        "roadmap/roadmap.yaml",
+        "asset-dir transport readiness --hub . --inspect-scheduler => cloudflare_relay.status=deferred_until_phase_10a_cloud_boundary_reviewed"
+      ],
+      "phase_id": "phase-13-transport-data-plane",
+      "reviewed_at": "2026-07-08T20:48:00Z",
+      "reviewer": "Lowell",
+      "status": "verified",
+      "summary": "Lowell approved keeping the Cloudflare Worker+D1 relay design-only and deferred. No Cloudflare relay is implemented or authorized until the phase-10a cloud-boundary gate and local transport tiers are proven."
     }
   },
   "schema_version": "0.1.0"
