@@ -25,6 +25,8 @@ import json
 import os
 import shutil
 import subprocess
+import tempfile
+import time
 from pathlib import Path
 from typing import Any
 
@@ -32,9 +34,32 @@ from .ids import stable_id
 from .utils import atomic_write_text, json_dumps, utc_now
 
 TRANSPORT_SURFACE_VERSION = "1.0.0"
+TRANSPORT_IMPLEMENTATION_VERSION = "1.0.0-m0m1m2"
+TRANSPORT_TARGET_IMPLEMENTATION_VERSION = "1.0.0-m0m1m2"
 DATA_ROOT_ENV = "DAD_DATA_ROOT"
 DATA_ROOT_MARKER = ".dad-data-root.json"
 USER_HUB_CONFIG = Path.home() / ".dad" / "hub.json"
+TRANSPORT_QUEUE_LOCK_TIMEOUT_SECONDS = 10.0
+TRANSPORT_QUEUE_LOCK_STALE_SECONDS = 30.0
+TRANSPORT_QUEUE_LOCK_CLEANUP_ATTEMPTS = 10
+
+TRANSPORT_IMPLEMENTATION_CAPABILITIES = [
+    "fail_safe_data_root_resolver",
+    "copy_verify_marker_last_migration",
+    "reviewed_data_plane_path_registry",
+    "legacy_transport_detector",
+    "contract_missing_detector",
+    "deduped_upgrade_queue",
+    "implementation_version_tracking",
+    "synthetic_rollout_harness",
+    "runtime_writer_data_root_reroute",
+    "daemon_run_cycle",
+    "task_scheduler_status_surface",
+    "journal_checkpoint_threshold",
+    "remote_outbox_screening",
+]
+
+TRANSPORT_TARGET_CAPABILITIES = list(TRANSPORT_IMPLEMENTATION_CAPABILITIES)
 
 # Logical name -> hub-relative path. This is THE registry of data-plane
 # surfaces; Codex reroutes writer modules through data_path() using these names.
@@ -201,6 +226,7 @@ def init_data_root(
         "created_at": utc_now(),
         "hub_ref": str(hub_root.resolve()),
         "transport_surface_version": TRANSPORT_SURFACE_VERSION,
+        "transport_implementation_version": TRANSPORT_IMPLEMENTATION_VERSION,
         "authority_boundary": AUTHORITY_BOUNDARY,
     }
     atomic_write_text(target / DATA_ROOT_MARKER, json_dumps(marker, pretty=True) + "\n")
@@ -380,15 +406,24 @@ def _mail_gitignore_covers_jsonl(repo: Path) -> bool:
     return "*.jsonl" in body
 
 
-def _contract_transport_version(repo: Path) -> str:
+def _contract_transport_fields(repo: Path) -> dict[str, Any]:
     contract = repo / ".digital-asset" / "dad-integration.json"
     if not contract.exists():
-        return ""
+        return {}
     try:
         payload = json.loads(contract.read_text(encoding="utf-8"))
     except (OSError, json.JSONDecodeError):
-        return ""
-    return str((payload.get("transport") or {}).get("surface_version", ""))
+        return {}
+    transport = payload.get("transport")
+    return transport if isinstance(transport, dict) else {}
+
+
+def _contract_transport_version(repo: Path) -> str:
+    return str(_contract_transport_fields(repo).get("surface_version", ""))
+
+
+def _contract_transport_implementation_version(repo: Path) -> str:
+    return str(_contract_transport_fields(repo).get("implementation_version", ""))
 
 
 def audit_repo_transport(
@@ -402,6 +437,7 @@ def audit_repo_transport(
             "classification": "unreachable",
             "signals": [],
             "transport_surface_version_seen": "",
+            "transport_implementation_version_seen": "",
             "write_protected": write_protected,
         }
     signals: list[dict[str, Any]] = []
@@ -433,6 +469,7 @@ def audit_repo_transport(
             }
         )
     seen_version = _contract_transport_version(repo)
+    seen_implementation_version = _contract_transport_implementation_version(repo)
     has_contract = (repo / ".digital-asset" / "dad-integration.json").exists()
     if has_contract and seen_version != TRANSPORT_SURFACE_VERSION:
         signals.append(
@@ -442,6 +479,20 @@ def audit_repo_transport(
                 "seen": seen_version or "absent",
                 "expected": TRANSPORT_SURFACE_VERSION,
                 "meaning": "Enrollment contract predates the transport redesign; repo needs the upgrade wave.",
+            }
+        )
+    if has_contract and seen_implementation_version != TRANSPORT_IMPLEMENTATION_VERSION:
+        signals.append(
+            {
+                "signal": "transport_implementation_version_stale",
+                "severity": "medium",
+                "seen": seen_implementation_version or "absent",
+                "expected": TRANSPORT_IMPLEMENTATION_VERSION,
+                "meaning": (
+                    "Enrollment contract does not pin the current transport "
+                    "implementation bundle; future upgrade waves cannot be "
+                    "tracked efficiently."
+                ),
             }
         )
     if has_mailbox and not has_contract:
@@ -470,8 +521,62 @@ def audit_repo_transport(
         "classification": classification,
         "signals": signals,
         "transport_surface_version_seen": seen_version,
+        "transport_implementation_version_seen": seen_implementation_version,
         "write_protected": write_protected,
     }
+
+
+def transport_upgrade_queue_path(hub_root: Path) -> Path:
+    return data_path(hub_root, "central_mail") / "staged" / "transport-upgrade-queue.jsonl"
+
+
+def _transport_queue_lock_path(queue_path: Path) -> Path:
+    digest = hashlib.sha256(str(queue_path.resolve()).encode("utf-8")).hexdigest()[:24]
+    lock_dir = Path(tempfile.gettempdir()) / "dad-transport-locks"
+    lock_dir.mkdir(parents=True, exist_ok=True)
+    return lock_dir / f"transport-upgrade-queue-{digest}.lock"
+
+
+def _unlink_transport_queue_lock(lock_path: Path, *, ignore_failure: bool) -> None:
+    for attempt in range(TRANSPORT_QUEUE_LOCK_CLEANUP_ATTEMPTS):
+        try:
+            lock_path.unlink()
+            return
+        except FileNotFoundError:
+            return
+        except PermissionError:
+            if attempt == TRANSPORT_QUEUE_LOCK_CLEANUP_ATTEMPTS - 1:
+                if ignore_failure:
+                    return
+                raise
+            time.sleep(0.05 * (attempt + 1))
+
+
+def _acquire_transport_queue_lock(queue_path: Path) -> tuple[int, Path]:
+    lock_path = _transport_queue_lock_path(queue_path)
+    deadline = time.monotonic() + TRANSPORT_QUEUE_LOCK_TIMEOUT_SECONDS
+    while True:
+        try:
+            fd = os.open(str(lock_path), os.O_CREAT | os.O_EXCL | os.O_WRONLY)
+            os.write(fd, f"{os.getpid()}\n".encode("utf-8"))
+            return fd, lock_path
+        except FileExistsError:
+            try:
+                lock_age = time.time() - lock_path.stat().st_mtime
+            except OSError:
+                lock_age = 0.0
+            if lock_age > TRANSPORT_QUEUE_LOCK_STALE_SECONDS:
+                _unlink_transport_queue_lock(lock_path, ignore_failure=True)
+            if time.monotonic() >= deadline:
+                raise TimeoutError(f"Timed out waiting for transport queue lock: {lock_path}")
+            time.sleep(0.05)
+
+
+def _release_transport_queue_lock(fd: int, lock_path: Path) -> None:
+    try:
+        os.close(fd)
+    finally:
+        _unlink_transport_queue_lock(lock_path, ignore_failure=True)
 
 
 def _hub_self_audit(hub_root: Path) -> dict[str, Any]:
@@ -508,8 +613,9 @@ def audit_all_repo_transport(
 
     ``repos``: [{"id", "path", "write_protected"}] from reviewed policy only -
     callers pass config-derived rows; this function never discovers repos.
-    Queue rows dedupe on (repo_id, expected surface version) so re-runs do not
-    spam; a repo upgrading resets naturally when its classification changes.
+    Queue rows dedupe on (repo_id, expected surface version, expected
+    implementation version) so re-runs do not spam; a repo upgrading resets
+    naturally when its expected version changes.
     """
     records = [
         audit_repo_transport(
@@ -530,6 +636,7 @@ def audit_all_repo_transport(
         "schema_version": "0.1.0",
         "generated_at": utc_now(),
         "transport_surface_version": TRANSPORT_SURFACE_VERSION,
+        "transport_implementation_version": TRANSPORT_IMPLEMENTATION_VERSION,
         "hub": hub_record,
         "repo_count": len(records),
         "classification_counts": _count(records, "classification"),
@@ -543,44 +650,53 @@ def audit_all_repo_transport(
 
     queue_path = transport_upgrade_queue_path(hub_root)
     queue_path.parent.mkdir(parents=True, exist_ok=True)
-    existing = set()
-    if queue_path.exists():
-        for line in queue_path.read_text(encoding="utf-8").splitlines():
-            if line.strip():
-                try:
-                    row = json.loads(line)
-                    existing.add(str(row.get("queue_key", "")))
-                except json.JSONDecodeError:
-                    continue
     appended = 0
-    with queue_path.open("a", encoding="utf-8") as handle:
-        for record in needs_upgrade:
-            queue_key = stable_id(
-                "transport-upgrade", record["repo_id"], TRANSPORT_SURFACE_VERSION
-            )
-            if queue_key in existing:
-                continue
-            handle.write(
-                json.dumps(
-                    {
-                        "queue_key": queue_key,
-                        "repo_id": record["repo_id"],
-                        "classification": record["classification"],
-                        "signals": [s["signal"] for s in record["signals"]],
-                        "expected_surface_version": TRANSPORT_SURFACE_VERSION,
-                        "staged_at": report["generated_at"],
-                        "delivery_rule": (
-                            "central_only for write-protected repos; otherwise "
-                            "candidate mail via reviewed delivery gates"
-                        ),
-                        "write_protected": record["write_protected"],
-                        "review_status": "candidate",
-                    },
-                    sort_keys=True,
+    lock_fd, lock_path = _acquire_transport_queue_lock(queue_path)
+    try:
+        existing = set()
+        if queue_path.exists():
+            for line in queue_path.read_text(encoding="utf-8").splitlines():
+                if line.strip():
+                    try:
+                        row = json.loads(line)
+                        existing.add(str(row.get("queue_key", "")))
+                    except json.JSONDecodeError:
+                        continue
+        with queue_path.open("a", encoding="utf-8") as handle:
+            for record in needs_upgrade:
+                queue_key = stable_id(
+                    "transport-upgrade",
+                    record["repo_id"],
+                    TRANSPORT_SURFACE_VERSION,
+                    TRANSPORT_IMPLEMENTATION_VERSION,
                 )
-                + "\n"
-            )
-            appended += 1
+                if queue_key in existing:
+                    continue
+                handle.write(
+                    json.dumps(
+                        {
+                            "queue_key": queue_key,
+                            "repo_id": record["repo_id"],
+                            "classification": record["classification"],
+                            "signals": [s["signal"] for s in record["signals"]],
+                            "expected_surface_version": TRANSPORT_SURFACE_VERSION,
+                            "expected_implementation_version": TRANSPORT_IMPLEMENTATION_VERSION,
+                            "staged_at": report["generated_at"],
+                            "delivery_rule": (
+                                "central_only for write-protected repos; otherwise "
+                                "candidate mail via reviewed delivery gates"
+                            ),
+                            "write_protected": record["write_protected"],
+                            "review_status": "candidate",
+                        },
+                        sort_keys=True,
+                    )
+                    + "\n"
+                )
+                existing.add(queue_key)
+                appended += 1
+    finally:
+        _release_transport_queue_lock(lock_fd, lock_path)
     return {
         "report_path": str(report_path),
         "queue_path": str(queue_path),
@@ -589,11 +705,6 @@ def audit_all_repo_transport(
         "hub_classification": hub_record["classification"],
         "authority_boundary": AUTHORITY_BOUNDARY,
     }
-
-
-def transport_upgrade_queue_path(hub_root: Path) -> Path:
-    return data_path(hub_root, "central_mail") / "staged" / "transport-upgrade-queue.jsonl"
-
 
 def read_transport_upgrade_queue(hub_root: Path) -> dict[str, Any]:
     path = transport_upgrade_queue_path(hub_root)
@@ -631,6 +742,269 @@ def read_transport_upgrade_queue(hub_root: Path) -> dict[str, Any]:
         "invalid_rows": invalid_rows,
         "authority_boundary": AUTHORITY_BOUNDARY,
     }
+
+
+def build_transport_version_status(
+    hub_root: Path,
+    repos: list[dict[str, Any]],
+    *,
+    write: bool = True,
+) -> dict[str, Any]:
+    """Summarize repo transport versions from reviewed repo rows only."""
+    records = [
+        audit_repo_transport(
+            Path(str(row.get("path", ""))),
+            repo_id=str(row.get("id", "")),
+            write_protected=bool(row.get("write_protected", False)),
+        )
+        for row in repos
+    ]
+    records.sort(key=lambda row: row["repo_id"])
+    repo_versions = [
+        {
+            "repo_id": record["repo_id"],
+            "classification": record["classification"],
+            "transport_surface_version_seen": record.get("transport_surface_version_seen", "")
+            or "missing",
+            "transport_implementation_version_seen": record.get(
+                "transport_implementation_version_seen", ""
+            )
+            or "missing",
+            "expected_surface_version": TRANSPORT_SURFACE_VERSION,
+            "expected_implementation_version": TRANSPORT_IMPLEMENTATION_VERSION,
+            "write_protected": bool(record.get("write_protected", False)),
+            "signals": [signal["signal"] for signal in record.get("signals", [])],
+        }
+        for record in records
+    ]
+    status = {
+        "schema_version": "dad.transport.version_status.v1",
+        "generated_at": utc_now(),
+        "status": "current"
+        if all(row["classification"] == "current" for row in repo_versions)
+        else "upgrade_needed",
+        "repo_count": len(repo_versions),
+        "classification_counts": _count(repo_versions, "classification"),
+        "transport_surface_version": TRANSPORT_SURFACE_VERSION,
+        "transport_implementation_version": TRANSPORT_IMPLEMENTATION_VERSION,
+        "target_implementation_version": TRANSPORT_TARGET_IMPLEMENTATION_VERSION,
+        "implementation_registry": {
+            "version": TRANSPORT_IMPLEMENTATION_VERSION,
+            "surface_version": TRANSPORT_SURFACE_VERSION,
+            "capabilities": TRANSPORT_IMPLEMENTATION_CAPABILITIES,
+            "target_m0_m2_capabilities": TRANSPORT_TARGET_CAPABILITIES,
+            "version_semantics": (
+                "surface_version pins the downstream contract shape; "
+                "implementation_version pins the DAD transport bundle/capability set."
+            ),
+        },
+        "repo_versions": repo_versions,
+        "operator_next_steps": [
+            "Run `asset-dir transport audit` to refresh upgrade queue rows.",
+            "Use reviewed enrollment update waves for real repos; do not write target repos from this report.",
+        ],
+        "authority_boundary": AUTHORITY_BOUNDARY,
+    }
+    if write:
+        report_dir = data_path(hub_root, "central_reports")
+        report_dir.mkdir(parents=True, exist_ok=True)
+        report_path = report_dir / "transport_version_status.json"
+        atomic_write_text(report_path, json_dumps(status, pretty=True) + "\n")
+        status["report_path"] = str(report_path)
+    return status
+
+
+def run_synthetic_transport_rollout(hub_root: Path) -> dict[str, Any]:
+    """Exercise transport detection/versioning with synthetic temp repos only."""
+    report_dir = data_path(hub_root, "central_reports")
+    with tempfile.TemporaryDirectory(prefix="dad-transport-synthetic-") as tmp_name:
+        tmp = Path(tmp_name)
+        synthetic_hub = tmp / "hub"
+        (synthetic_hub / "processed" / "usage").mkdir(parents=True)
+        (synthetic_hub / "processed" / "usage" / "usage.jsonl").write_text(
+            '{"usage_id":"synthetic"}\n', encoding="utf-8"
+        )
+        data_root = tmp / "data-root"
+        apply_data_migration(synthetic_hub, data_root, force_onedrive=True)
+        root, mode = resolve_data_root(
+            synthetic_hub, env={DATA_ROOT_ENV: str(data_root)}
+        )
+        data_root_ok = mode == "data_root" and root == data_root
+        data_root_writer_paths_ok = (
+            data_path(synthetic_hub, "usage", env={DATA_ROOT_ENV: str(data_root)})
+            == data_root / "processed" / "usage"
+        )
+
+        case_specs = [
+            {
+                "case_id": "current",
+                "gitignore": True,
+                "contract": transport_contract_payload(),
+                "expected_classification": "current",
+                "expected_signals": [],
+            },
+            {
+                "case_id": "stale-surface",
+                "gitignore": True,
+                "contract": {
+                    "surface_version": "0.0.1",
+                    "implementation_version": TRANSPORT_IMPLEMENTATION_VERSION,
+                    "mode": "local_pull",
+                    "journal_fallback": True,
+                },
+                "expected_classification": "upgrade_recommended",
+                "expected_signals": ["transport_surface_version_stale"],
+            },
+            {
+                "case_id": "missing-implementation",
+                "gitignore": True,
+                "contract": {
+                    "surface_version": TRANSPORT_SURFACE_VERSION,
+                    "mode": "local_pull",
+                    "journal_fallback": True,
+                },
+                "expected_classification": "upgrade_recommended",
+                "expected_signals": ["transport_implementation_version_stale"],
+            },
+            {
+                "case_id": "tracked-spool-protected",
+                "track_mail": True,
+                "gitignore": False,
+                "contract": transport_contract_payload(),
+                "write_protected": True,
+                "expected_classification": "upgrade_required",
+                "expected_signals": ["spool_jsonl_tracked_in_git"],
+            },
+            {
+                "case_id": "mailbox-contract-missing",
+                "gitignore": True,
+                "contract": None,
+                "expected_classification": "upgrade_recommended",
+                "expected_signals": ["contract_missing"],
+            },
+            {
+                "case_id": "no-dad-surface",
+                "no_mailbox": True,
+                "contract": None,
+                "expected_classification": "no_dad_surface",
+                "expected_signals": [],
+            },
+        ]
+        repos: list[dict[str, Any]] = []
+        expectations: dict[str, dict[str, Any]] = {}
+        for spec in case_specs:
+            repo = tmp / str(spec["case_id"])
+            _write_synthetic_transport_repo(repo, spec)
+            repos.append(
+                {
+                    "id": spec["case_id"],
+                    "path": str(repo),
+                    "write_protected": bool(spec.get("write_protected", False)),
+                }
+            )
+            expectations[str(spec["case_id"])] = spec
+        repos.append({"id": "unreachable", "path": str(tmp / "missing"), "write_protected": False})
+        expectations["unreachable"] = {
+            "expected_classification": "unreachable",
+            "expected_signals": [],
+        }
+
+        previous_data_root = os.environ.get(DATA_ROOT_ENV)
+        os.environ[DATA_ROOT_ENV] = str(data_root)
+        try:
+            first = audit_all_repo_transport(synthetic_hub, repos)
+            second = audit_all_repo_transport(synthetic_hub, repos)
+            status = build_transport_version_status(synthetic_hub, repos, write=False)
+        finally:
+            if previous_data_root is None:
+                os.environ.pop(DATA_ROOT_ENV, None)
+            else:
+                os.environ[DATA_ROOT_ENV] = previous_data_root
+        report = json.loads(Path(first["report_path"]).read_text(encoding="utf-8"))
+        case_results = []
+        for record in report["records"]:
+            expected = expectations[record["repo_id"]]
+            signals = {signal["signal"] for signal in record.get("signals", [])}
+            expected_signals = set(expected.get("expected_signals", []))
+            case_results.append(
+                {
+                    "case_id": record["repo_id"],
+                    "expected_classification": expected["expected_classification"],
+                    "actual_classification": record["classification"],
+                    "expected_signals": sorted(expected_signals),
+                    "actual_signals": sorted(signals),
+                    "passed": record["classification"] == expected["expected_classification"]
+                    and expected_signals <= signals,
+                }
+            )
+
+    payload = {
+        "schema_version": "dad.transport.synthetic_rollout.v1",
+        "generated_at": utc_now(),
+        "status": "passed"
+        if data_root_ok
+        and data_root_writer_paths_ok
+        and all(row["passed"] for row in case_results)
+        and second["queue_appended"] == 0
+        else "failed",
+        "synthetic_only": True,
+        "case_count": len(case_results),
+        "passed_count": sum(1 for row in case_results if row["passed"]),
+        "data_root_activation_passed": data_root_ok,
+        "data_root_writer_paths_passed": data_root_writer_paths_ok,
+        "queue_dedupe_second_run_appended": second["queue_appended"],
+        "version_status_schema": status["schema_version"],
+        "transport_surface_version": TRANSPORT_SURFACE_VERSION,
+        "transport_implementation_version": TRANSPORT_IMPLEMENTATION_VERSION,
+        "case_results": sorted(case_results, key=lambda row: row["case_id"]),
+        "authority_boundary": (
+            "Synthetic rollout creates temporary repos only. It proves detector, "
+            "version, and queue behavior; it does not approve or mutate real repos."
+        ),
+    }
+    report_dir.mkdir(parents=True, exist_ok=True)
+    report_path = report_dir / "transport_synthetic_rollout.json"
+    atomic_write_text(report_path, json_dumps(payload, pretty=True) + "\n")
+    payload["report_path"] = str(report_path)
+    return payload
+
+
+def transport_contract_payload(
+    *,
+    mode: str = "local_pull",
+    journal_fallback: bool = True,
+) -> dict[str, Any]:
+    """Return the reviewed downstream contract block for this implementation."""
+    return {
+        "surface_version": TRANSPORT_SURFACE_VERSION,
+        "implementation_version": TRANSPORT_IMPLEMENTATION_VERSION,
+        "mode": mode,
+        "journal_fallback": journal_fallback,
+    }
+
+
+def _write_synthetic_transport_repo(repo: Path, spec: dict[str, Any]) -> None:
+    repo.mkdir(parents=True)
+    if not spec.get("no_mailbox"):
+        mail = repo / ".digital-asset" / "mail"
+        mail.mkdir(parents=True)
+        (mail / "outbox.jsonl").write_text('{"mail_id":"synthetic"}\n', encoding="utf-8")
+        if spec.get("gitignore"):
+            (mail / ".gitignore").write_text("*.jsonl\nlast_checked.json\n", encoding="utf-8")
+    contract = spec.get("contract")
+    if contract is not None:
+        dad = repo / ".digital-asset"
+        dad.mkdir(parents=True, exist_ok=True)
+        (dad / "dad-integration.json").write_text(
+            json.dumps({"repo_id": repo.name, "transport": contract}, sort_keys=True),
+            encoding="utf-8",
+        )
+    subprocess.run(["git", "-C", str(repo), "init", "-q", "--template="], check=True)
+    if spec.get("track_mail"):
+        subprocess.run(
+            ["git", "-C", str(repo), "add", "-f", ".digital-asset/mail/outbox.jsonl"],
+            check=True,
+        )
 
 
 def _count(rows: list[dict[str, Any]], key: str) -> dict[str, int]:

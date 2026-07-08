@@ -24,6 +24,7 @@ the repo update-needed until a reviewed enrollment wave refreshes the contract.
 ```json
 "transport": {
   "surface_version": "1.0.0",
+  "implementation_version": "1.0.0-m0m1m2",
   "mode": "local_pull",
   "journal_fallback": true
 },
@@ -49,11 +50,14 @@ the repo update-needed until a reviewed enrollment wave refreshes the contract.
 }
 ```
 
-Repos missing these blocks, or repos with mailboxes but no contract, are
-transport-upgrade candidates. `asset-dir transport audit` writes the central
-audit report and deduped upgrade queue; reviewed enrollment update waves apply
-the contract and README refresh. Protected repos remain central-only until a
-repo-specific local-write approval exists.
+`surface_version` pins the downstream contract shape. `implementation_version`
+pins the DAD transport implementation bundle so future upgrade waves can target
+exact versions. Repos missing these blocks, repos with stale versions, or repos
+with mailboxes but no contract are transport-upgrade candidates. `asset-dir
+transport audit` writes the central audit report and deduped upgrade queue;
+reviewed enrollment update waves apply the contract and README refresh.
+Protected repos remain central-only until a repo-specific local-write approval
+exists.
 
 `asset-dir enroll surface-status` writes a central read-only compatibility
 report and deduped queue rows keyed by `repo + surface + expected_version`.

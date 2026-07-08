@@ -13,7 +13,7 @@ import yaml
 from .config import AppConfig, EnrollmentRepoPolicy
 from .mail_center import mail_digest_status, mail_gitignore_text, mail_readme_text
 from .surface_versions import contract_surface_statuses, expected_contract_surface_blocks
-from .transport import TRANSPORT_SURFACE_VERSION
+from .transport import TRANSPORT_IMPLEMENTATION_VERSION, TRANSPORT_SURFACE_VERSION
 from .utils import append_jsonl, atomic_write_text, json_dumps, utc_now
 
 ENROLLMENT_VERSION = "0.1.0"
@@ -579,6 +579,7 @@ def _contract_payload(
         },
         "transport": {
             "surface_version": TRANSPORT_SURFACE_VERSION,
+            "implementation_version": TRANSPORT_IMPLEMENTATION_VERSION,
             "mode": "local_pull",
             "journal_fallback": True,
         },
@@ -1288,6 +1289,7 @@ def enrollment_status(
     )
     transport_block = contract.get("transport", {}) if contract else {}
     transport_version = str(transport_block.get("surface_version", ""))
+    transport_implementation_version = str(transport_block.get("implementation_version", ""))
     transport_status = "missing"
     if contract and not isinstance(transport_block, dict):
         transport_status = "invalid"
@@ -1295,11 +1297,20 @@ def enrollment_status(
     elif contract and not transport_version:
         transport_status = "contract_missing"
         errors.append("Enrollment contract missing transport.surface_version")
+    elif contract and not transport_implementation_version:
+        transport_status = "implementation_missing"
+        errors.append("Enrollment contract missing transport.implementation_version")
     elif contract and transport_version != TRANSPORT_SURFACE_VERSION:
         transport_status = "stale"
         errors.append(
             "Enrollment contract transport.surface_version "
             f"{transport_version} != {TRANSPORT_SURFACE_VERSION}"
+        )
+    elif contract and transport_implementation_version != TRANSPORT_IMPLEMENTATION_VERSION:
+        transport_status = "stale"
+        errors.append(
+            "Enrollment contract transport.implementation_version "
+            f"{transport_implementation_version} != {TRANSPORT_IMPLEMENTATION_VERSION}"
         )
     elif contract:
         transport_status = "current"
@@ -1326,7 +1337,9 @@ def enrollment_status(
         "transport": {
             "status": transport_status,
             "surface_version": transport_version,
+            "implementation_version": transport_implementation_version,
             "expected_surface_version": TRANSPORT_SURFACE_VERSION,
+            "expected_implementation_version": TRANSPORT_IMPLEMENTATION_VERSION,
         },
         "surface_versions": {row["surface"]: row for row in surface_rows},
         "enabled_control_planes": enabled_planes,

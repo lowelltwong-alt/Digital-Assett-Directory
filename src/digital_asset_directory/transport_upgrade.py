@@ -8,6 +8,7 @@ from typing import Any, Mapping, Sequence
 
 from .transport import (
     AUTHORITY_BOUNDARY,
+    TRANSPORT_IMPLEMENTATION_VERSION,
     TRANSPORT_SURFACE_VERSION,
     data_path,
     read_transport_upgrade_queue,
@@ -60,6 +61,12 @@ def select_transport_upgrade_policies_from_queue(
         repo_id = str(row.get("repo_id", "")).strip()
         if not repo_id:
             skipped.append({"repo_id": "", "reason": "missing_repo_id"})
+            continue
+        if row.get("expected_surface_version") != TRANSPORT_SURFACE_VERSION:
+            skipped.append({"repo_id": repo_id, "reason": "stale_surface_version"})
+            continue
+        if row.get("expected_implementation_version") != TRANSPORT_IMPLEMENTATION_VERSION:
+            skipped.append({"repo_id": repo_id, "reason": "stale_implementation_version"})
             continue
         row_keys = {repo_id.casefold()}
         policy = policies_by_key.get(repo_id.casefold())

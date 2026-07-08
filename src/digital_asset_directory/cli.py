@@ -260,11 +260,13 @@ from .transport import (
     DATA_PLANE_PATHS,
     apply_data_migration,
     audit_all_repo_transport,
+    build_transport_version_status,
     data_path,
     data_relative_path,
     init_data_root,
     plan_data_migration,
     resolve_data_root,
+    run_synthetic_transport_rollout,
 )
 from .transport_readiness import build_transport_readiness
 from .transport_upgrade import (
@@ -445,11 +447,26 @@ def transport_audit(hub: Optional[Path] = typer.Option(None)) -> None:
     console.print_json(data=audit_all_repo_transport(cfg.repo_root, _transport_repo_rows(cfg)))
 
 
+@transport_app.command("version-status")
+def transport_version_status(hub: Optional[Path] = typer.Option(None)) -> None:
+    cfg = _cfg(hub=hub)
+    console.print_json(
+        data=build_transport_version_status(cfg.repo_root, _transport_repo_rows(cfg))
+    )
+
+
+@transport_app.command("synthetic-rollout")
+def transport_synthetic_rollout(hub: Optional[Path] = typer.Option(None)) -> None:
+    cfg = _cfg(hub=hub)
+    console.print_json(data=run_synthetic_transport_rollout(cfg.repo_root))
+
+
 @transport_app.command("readiness")
 def transport_readiness(
     hub: Optional[Path] = typer.Option(None),
     stale_hours: int = typer.Option(26),
     inspect_scheduler: bool = typer.Option(False, "--inspect-scheduler"),
+    skip_task_query: bool = typer.Option(False, "--skip-task-query"),
     task_name: str = typer.Option("DAD Daemon Run Cycle"),
     shim: Optional[Path] = typer.Option(None),
     journal_repo: Optional[Path] = typer.Option(None),
@@ -458,7 +475,7 @@ def transport_readiness(
     cfg = _cfg(hub=hub)
     scheduler = (
         task_scheduler_status(cfg.repo_root, task_name=task_name, shim=shim)
-        if inspect_scheduler
+        if inspect_scheduler and not skip_task_query
         else None
     )
     journal_repo_evidence = (
@@ -495,6 +512,23 @@ def transport_upgrade_status(
             requested_repos=repo,
         )
     )
+
+
+@transport_app.command("upgrade-plan")
+def transport_upgrade_plan(
+    repo: list[str] = typer.Option([], "--repo"),
+    wave: str = typer.Option("transport-surface-v1"),
+    hub: Optional[Path] = typer.Option(None),
+) -> None:
+    cfg = _cfg(hub=hub)
+    policies, queue_selection = _transport_upgrade_policies_from_queue(
+        cfg,
+        wave=wave,
+        requested_repos=repo,
+    )
+    result = build_enrollment_plan(cfg.repo_root, policies, wave=wave, update=True)
+    result["transport_upgrade_queue_selection"] = queue_selection
+    console.print_json(data=result)
 
 
 @daemon_app.command("run-cycle")
@@ -541,6 +575,8 @@ def daemon_install(
     schedule_time: str = typer.Option("09:00"),
     twice_daily: bool = typer.Option(False, "--twice-daily"),
     shim: Optional[Path] = typer.Option(None),
+    journal_repo: Optional[Path] = typer.Option(None),
+    checkpoint_apply: bool = typer.Option(False, "--checkpoint-apply"),
     apply: bool = typer.Option(False, "--apply/--plan-only"),
 ) -> None:
     cfg = _cfg(hub=hub)
@@ -550,6 +586,8 @@ def daemon_install(
         schedule_time=schedule_time,
         twice_daily=twice_daily,
         shim=shim,
+        journal_repo=journal_repo,
+        checkpoint_apply=checkpoint_apply,
     )
     console.print_json(data=install_task_scheduler(plan) if apply else plan)
 
