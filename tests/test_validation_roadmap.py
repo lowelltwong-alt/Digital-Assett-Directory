@@ -46,6 +46,7 @@ from digital_asset_directory.validation import (
     _resolve_observed_audit_repo,
     _source_provenance_consistency_errors,
     _stale_report_input_hash_errors,
+    _validate_graph_surface_manifest_contracts,
     _validate_lesson_graph_contract,
     validate_repo,
 )
@@ -662,7 +663,7 @@ def test_lesson_graph_hash_ignores_generated_lesson_indexes(tmp_path: Path):
     assert (_lesson_graph_hash_path(lessons), _validation_hash_path(lessons)) == before
 
 
-def test_lesson_graph_manifest_validation_fails_closed_on_stale_input_hash(
+def test_lesson_graph_manifest_validation_warns_on_stale_input_hash(
     tmp_path: Path,
 ):
     repo = tmp_path / "repo"
@@ -693,14 +694,234 @@ def test_lesson_graph_manifest_validation_fails_closed_on_stale_input_hash(
     )
     errors: list[str] = []
     checked: list[str] = []
+    warnings: list[str] = []
+
+    _validate_lesson_graph_contract(repo, registry, errors, checked, warnings)
+
+    assert "processed/learning/lesson-graph-manifest.json" in checked
+    assert errors == []
+    assert warnings == [
+        "Graph surface manifest lesson-graph stale input hash raw/lessons: "
+        f"sha256:stale != {_validation_hash_path(repo / 'raw' / 'lessons')}"
+    ]
+
+
+def test_lesson_graph_validation_blocks_inconsistent_manifest_hashes(tmp_path: Path):
+    repo = tmp_path / "repo"
+    (repo / "registry").mkdir(parents=True)
+    (repo / "schemas").mkdir()
+    for rel in [
+        "registry/graph-edge-registry.json",
+        "schemas/graph-edge-registry.schema.json",
+        "schemas/graph-surface-manifest.schema.json",
+        "schemas/lesson-graph.schema.json",
+    ]:
+        target = repo / rel
+        target.parent.mkdir(parents=True, exist_ok=True)
+        target.write_text((ROOT / rel).read_text(encoding="utf-8"), encoding="utf-8")
+    registry = {
+        "schemas": {
+            "graph_edge_registry": "schemas/graph-edge-registry.schema.json",
+            "graph_surface_manifest": "schemas/graph-surface-manifest.schema.json",
+            "lesson_graph": "schemas/lesson-graph.schema.json",
+        }
+    }
+    manifest_path = repo / "processed" / "learning" / "lesson-graph-manifest.json"
+    manifest_path.parent.mkdir(parents=True)
+    manifest_path.write_text(
+        json.dumps(
+            {
+                "schema_version": "0.1.0",
+                "surface_id": "lesson-graph",
+                "ontology_id": "knowledge",
+                "generated_at": "2026-07-07T00:00:00+00:00",
+                "builder_version": "lesson-graph-builder.v0.1.0",
+                "graph_path": "processed/learning/lesson-graph.json",
+                "manifest_path": "processed/learning/lesson-graph-manifest.json",
+                "input_hashes": {},
+                "methodology_hashes": {"builder_source": "sha256:" + "0" * 64},
+                "edge_registry_hash": "sha256:" + "1" * 64,
+                "graph_content_hash": "missing",
+                "freshness": {
+                    "state": "fresh",
+                    "computed_at": "2026-07-07T00:00:00+00:00",
+                    "reasons": [],
+                },
+                "counts": {},
+                "authority_boundary": "candidate only",
+            }
+        ),
+        encoding="utf-8",
+    )
+    errors: list[str] = []
+    checked: list[str] = []
+    warnings: list[str] = []
+
+    _validate_lesson_graph_contract(repo, registry, errors, checked, warnings)
+
+    assert warnings == []
+    assert any("edge registry hash" in error for error in errors)
+    assert any("methodology hash builder_source" in error for error in errors)
+
+
+def test_graph_surface_manifest_fresh_claim_over_stale_input_blocks(tmp_path: Path):
+    repo = tmp_path / "repo"
+    for rel in [
+        "schemas/graph-surface-manifest.schema.json",
+        "registry/graph-edge-registry.json",
+    ]:
+        target = repo / rel
+        target.parent.mkdir(parents=True, exist_ok=True)
+        target.write_text((ROOT / rel).read_text(encoding="utf-8"), encoding="utf-8")
+    registry_payload = {
+        "registry_version": "0.1.0",
+        "status": "candidate",
+        "authority_boundary": "candidate only",
+        "surfaces": [
+            {
+                "surface_id": "research-intake-graph",
+                "surface_kind": "generated_graph_surface",
+                "ontology_id": "research-intake",
+                "status": "active",
+                "purpose": "test",
+                "builder": {
+                    "availability": "wired",
+                    "command": "asset-dir research intake-graph",
+                    "module": "digital_asset_directory.research_intake.build_research_intake_graph",
+                },
+                "source_inputs": [],
+                "outputs": {
+                    "manifest_logical_path": "research/intake-graph-manifest.json",
+                    "body_logical_path": "research/intake-graph.json",
+                },
+                "schema_refs": ["schemas/graph-surface-manifest.schema.json"],
+                "freshness_policy": {
+                    "fresh": "hashes_match",
+                    "stale": "warn",
+                    "inconsistent": "block",
+                },
+                "consumers": ["test"],
+                "review_status": "candidate",
+                "authority_boundary": "candidate only",
+            }
+        ],
+    }
+    registry_path = repo / "registry" / "graph-surface-registry.json"
+    registry_path.write_text(json.dumps(registry_payload), encoding="utf-8")
+    source = repo / "processed" / "research" / "source.json"
+    source.parent.mkdir(parents=True)
+    source.write_text('{"changed": true}\n', encoding="utf-8")
+    manifest_path = repo / "processed" / "research" / "intake-graph-manifest.json"
+    manifest_path.write_text(
+        json.dumps(
+            {
+                "schema_version": "0.1.0",
+                "surface_id": "research-intake-graph",
+                "ontology_id": "research-intake",
+                "generated_at": "2026-07-07T00:00:00+00:00",
+                "builder_version": "test-builder",
+                "graph_path": "processed/research/intake-graph.json",
+                "manifest_path": "processed/research/intake-graph-manifest.json",
+                "input_hashes": {"processed/research/source.json": "sha256:stale"},
+                "methodology_hashes": {},
+                "edge_registry_hash": _validation_hash_path(
+                    repo / "registry" / "graph-edge-registry.json"
+                ),
+                "graph_content_hash": "missing",
+                "freshness": {
+                    "state": "fresh",
+                    "computed_at": "2026-07-07T00:00:00+00:00",
+                    "reasons": [],
+                },
+                "counts": {},
+                "authority_boundary": "candidate only",
+            }
+        ),
+        encoding="utf-8",
+    )
+    registry = {
+        "schemas": {
+            "graph_surface_manifest": "schemas/graph-surface-manifest.schema.json",
+        }
+    }
+    errors: list[str] = []
+    checked: list[str] = []
+    warnings: list[str] = []
+
+    _validate_graph_surface_manifest_contracts(repo, registry, errors, checked, warnings)
+
+    assert "processed/research/intake-graph-manifest.json" in checked
+    assert warnings == []
+    assert any("fresh claim over stale input" in error for error in errors)
+
+
+def test_lesson_graph_validation_blocks_forbidden_generated_edge_claim(tmp_path: Path):
+    repo = tmp_path / "repo"
+    (repo / "registry").mkdir(parents=True)
+    (repo / "schemas").mkdir()
+    for rel in [
+        "registry/graph-edge-registry.json",
+        "schemas/graph-edge-registry.schema.json",
+        "schemas/lesson-graph.schema.json",
+    ]:
+        target = repo / rel
+        target.parent.mkdir(parents=True, exist_ok=True)
+        target.write_text((ROOT / rel).read_text(encoding="utf-8"), encoding="utf-8")
+    registry = {
+        "schemas": {
+            "graph_edge_registry": "schemas/graph-edge-registry.schema.json",
+            "lesson_graph": "schemas/lesson-graph.schema.json",
+        }
+    }
+    graph_path = repo / "processed" / "learning" / "lesson-graph.json"
+    graph_path.parent.mkdir(parents=True)
+    graph_path.write_text(
+        json.dumps(
+            {
+                "schema_version": "0.1.0",
+                "generated_at": "2026-07-07T00:00:00+00:00",
+                "edge_registry_version": "0.1.0",
+                "manifest_path": "processed/learning/lesson-graph-manifest.json",
+                "pattern_library_version": "0.1.0",
+                "lesson_count": 0,
+                "node_count": 2,
+                "edge_count": 1,
+                "nodes_by_type": {"repo": 1, "lesson": 1},
+                "edges_by_type": {"approved_by": 1},
+                "nodes": [
+                    {"node_id": "lesson:a", "node_type": "lesson", "label": "A"},
+                    {"node_id": "repo:b", "node_type": "repo", "label": "B"},
+                ],
+                "edges": [
+                    {
+                        "edge_id": "edge:bad",
+                        "source": "lesson:a",
+                        "target": "repo:b",
+                        "edge_type": "approved_by",
+                        "edge_class": "join",
+                        "edge_basis": "generated",
+                        "method_version": "",
+                        "created_at": "",
+                        "evidence_refs": ["trace:test"],
+                        "review_status": "candidate",
+                    }
+                ],
+                "pattern_gap_candidates": [],
+                "unmatched_asset_refs": [],
+                "edge_rule": "candidate only",
+                "authority_boundary": "candidate only",
+            }
+        ),
+        encoding="utf-8",
+    )
+    errors: list[str] = []
+    checked: list[str] = []
 
     _validate_lesson_graph_contract(repo, registry, errors, checked)
 
-    assert "processed/learning/lesson-graph-manifest.json" in checked
-    assert errors == [
-        "Stale lesson graph manifest input hash raw/lessons: "
-        f"sha256:stale != {_validation_hash_path(repo / 'raw' / 'lessons')}"
-    ]
+    assert any(
+        "forbidden generated edge claim: approved_by" in error for error in errors
+    )
 
 
 def test_repo_inventory_report_input_hashes_are_validated(tmp_path: Path):
