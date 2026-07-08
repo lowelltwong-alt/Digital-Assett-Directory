@@ -20,12 +20,13 @@ from typing import Any
 from .dad_library import PATTERN_MATCH_STOPWORDS, _tokenize, central_usage_path, load_offerings
 from .ids import stable_id
 from .transport import data_path
-from .utils import utc_now, write_json
+from .utils import sha256_bytes, sha256_file, utc_now, write_json
 
 INFERENCE_METHODOLOGY = Path("registry") / "graph-inference-methodology.json"
 CENTRAL_USAGE_LEDGER = Path("processed") / "usage" / "repo-asset-usage.jsonl"
 COMBINATION_QUEUE_PATH = Path("processed") / "learning" / "combination-candidates.jsonl"
 INFERENCE_REPORT_PATH = Path("processed") / "learning" / "graph-inference.json"
+INFERENCE_MANIFEST_PATH = Path("processed") / "learning" / "graph-inference-manifest.json"
 
 AUTHORITY_BOUNDARY = (
     "Inference edges and combination candidates are generated candidate evidence. "
@@ -55,6 +56,22 @@ def _read_jsonl(path: Path) -> list[dict[str, Any]]:
             except json.JSONDecodeError:
                 continue
     return rows
+
+
+def _hash_path(path: Path) -> str:
+    if not path.exists():
+        return "missing"
+    if path.is_file():
+        return f"sha256:{sha256_file(path)}"
+    parts: list[str] = []
+    for child in sorted(item for item in path.rglob("*") if item.is_file()):
+        try:
+            rel = child.relative_to(path).as_posix()
+        except ValueError:
+            rel = child.name
+        parts.append(f"{rel}\0{sha256_file(child)}")
+    digest_input = "\n".join(parts).encode("utf-8")
+    return f"sha256:{sha256_bytes(digest_input)}"
 
 
 def _offering_node(offering_id: str) -> str:
@@ -367,6 +384,55 @@ def write_inference_outputs(hub_root: Path) -> dict[str, Any]:
     }
     report_path = learning_data_path(hub_root, INFERENCE_REPORT_PATH)
     write_json(report_path, report, allow_direct_fallback=True)
+    edge_registry_path = hub_root / "registry" / "graph-edge-registry.json"
+    edge_registry_hash = _hash_path(edge_registry_path)
+    manifest_path = learning_data_path(hub_root, INFERENCE_MANIFEST_PATH)
+    manifest = {
+        "schema_version": "0.1.0",
+        "surface_id": "graph-inference-overlay",
+        "ontology_id": "knowledge",
+        "generated_at": report["generated_at"],
+        "builder_version": "graph-inference-builder.v0.1.0",
+        "graph_path": INFERENCE_REPORT_PATH.as_posix(),
+        "manifest_path": INFERENCE_MANIFEST_PATH.as_posix(),
+        "edge_registry_hash": edge_registry_hash,
+        "input_hashes": {
+            str(CENTRAL_USAGE_LEDGER): _hash_path(
+                central_usage_path(hub_root, CENTRAL_USAGE_LEDGER)
+            ),
+            "registry/dad-offerings-registry.json": _hash_path(
+                hub_root / "registry" / "dad-offerings-registry.json"
+            ),
+            INFERENCE_METHODOLOGY.as_posix(): _hash_path(hub_root / INFERENCE_METHODOLOGY),
+            "registry/graph-edge-registry.json": edge_registry_hash,
+        },
+        "methodology_hashes": {
+            "builder_source": _hash_path(Path(__file__)),
+        },
+        "graph_content_hash": _hash_path(report_path),
+        "freshness": {
+            "state": "fresh",
+            "computed_at": report["generated_at"],
+            "reasons": [],
+        },
+        "counts": {
+            "node_count": len(result["inference_nodes"]),
+            "edge_count": len(result["inference_edges"]),
+            "edge_type_count": len(result["edges_by_type"]),
+            "combination_count": result["combination_count"],
+            "asset_card_count": result["asset_card_count"],
+        },
+        "edges_by_type": result["edges_by_type"],
+        "method_versions_used": sorted(
+            {
+                str(edge.get("method_version", ""))
+                for edge in result["inference_edges"]
+                if str(edge.get("method_version", ""))
+            }
+        ),
+        "authority_boundary": AUTHORITY_BOUNDARY,
+    }
+    write_json(manifest_path, manifest, allow_direct_fallback=True)
 
     # Append only combination candidates not already in the queue (by combination_id).
     queue_path = learning_data_path(hub_root, COMBINATION_QUEUE_PATH)
@@ -396,6 +462,7 @@ def write_inference_outputs(hub_root: Path) -> dict[str, Any]:
                 handle.write(json.dumps(row, sort_keys=True) + "\n")
     return {
         "report_path": str(report_path),
+        "manifest_path": str(manifest_path),
         "queue_path": str(queue_path),
         "combinations_total": result["combination_count"],
         "combinations_appended": appended,

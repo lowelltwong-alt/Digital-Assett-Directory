@@ -17,6 +17,7 @@ from .utils import json_dumps, sha256_bytes, sha256_file, utc_now
 
 GRAPH_SURFACE_REGISTRY = Path("registry") / "graph-surface-registry.json"
 GRAPH_SNAPSHOT_ROOT = Path("graph-surfaces")
+GENERATED_LESSON_INDEX_DIRS = {"by-repo", "by-capability"}
 GRAPH_SURFACE_AUTHORITY_BOUNDARY = (
     "Graph surface checkpoint rows are data-plane replication evidence for "
     "generated candidate graph surfaces. They do not approve, rank, recommend, "
@@ -84,6 +85,8 @@ def _hash_surface_input(path: Path) -> str:
             rel = child.relative_to(path).as_posix()
         except ValueError:
             rel = child.name
+        if path.name == "lessons" and rel.split("/", 1)[0] in GENERATED_LESSON_INDEX_DIRS:
+            continue
         parts.append(f"{rel}\0{sha256_file(child)}")
     digest_input = "\n".join(parts).encode("utf-8")
     return f"sha256:{sha256_bytes(digest_input)}"

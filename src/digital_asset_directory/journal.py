@@ -25,6 +25,7 @@ from .utils import append_jsonl, atomic_write_text, json_dumps, sha256_bytes, ut
 
 JOURNAL_STATUS_NAME = "journal_checkpoint_status.json"
 REMOTE_OUTBOX_QUARANTINE_NAME = "remote-outbox-quarantine.jsonl"
+VCS_CONTROL_DIR_NAMES = {".git", ".hg", ".svn"}
 
 
 def _reports_dir(hub_root: Path) -> Path:
@@ -52,7 +53,10 @@ def _iter_data_plane_files(hub_root: Path) -> list[tuple[Path, Path]]:
         if not surface_root.exists():
             continue
         for source in sorted(path for path in surface_root.rglob("*") if path.is_file()):
-            files.append((source, Path(relative_root) / source.relative_to(surface_root)))
+            relative = source.relative_to(surface_root)
+            if any(part.lower() in VCS_CONTROL_DIR_NAMES for part in relative.parts):
+                continue
+            files.append((source, Path(relative_root) / relative))
     return files
 
 
@@ -85,7 +89,9 @@ def journal_status(hub_root: Path, *, min_records: int = 200, min_hours: int = 2
     previous = _last_checkpoint_status(hub_root)
     last_count = int(previous.get("checkpoint_record_count") or 0)
     new_records = max(0, current_record_count - last_count)
-    checkpointed_at = str(previous.get("checkpointed_at") or "")
+    checkpointed_at = str(
+        previous.get("checkpointed_at") or previous.get("last_checkpoint_at") or ""
+    )
     pending_since = str(previous.get("pending_since") or previous.get("generated_at") or "")
     last_at = _parse_time(checkpointed_at) or _parse_time(pending_since)
     now = datetime.now(timezone.utc)
@@ -102,7 +108,8 @@ def journal_status(hub_root: Path, *, min_records: int = 200, min_hours: int = 2
         "current_record_count": current_record_count,
         "checkpoint_record_count": last_count,
         "new_record_count": new_records,
-        "last_checkpoint_at": previous.get("checkpointed_at", ""),
+        "checkpointed_at": checkpointed_at,
+        "last_checkpoint_at": checkpointed_at,
         "pending_since": pending_since if not checkpointed_at and current_record_count > 0 else "",
         "hours_since_checkpoint": hours_since,
         "thresholds": {"min_records": min_records, "min_hours": min_hours},
@@ -121,6 +128,7 @@ def _current_journal_branch(journal_repo: Path) -> str | None:
 
 def _checkpoint_commands(journal_repo: Path, branch: str) -> list[str]:
     return [
+        f'git -C "{journal_repo}" config core.longpaths true',
         f'git -C "{journal_repo}" add data journal_checkpoint_manifest.json',
         f'git -C "{journal_repo}" commit -m "Checkpoint DAD data root"',
         f'git -C "{journal_repo}" push origin {branch}',
@@ -129,10 +137,33 @@ def _checkpoint_commands(journal_repo: Path, branch: str) -> list[str]:
 
 def _checkpoint_command_args(journal_repo: Path, branch: str) -> list[list[str]]:
     return [
+        ["git", "-C", str(journal_repo), "config", "core.longpaths", "true"],
         ["git", "-C", str(journal_repo), "add", "data", "journal_checkpoint_manifest.json"],
         ["git", "-C", str(journal_repo), "commit", "-m", "Checkpoint DAD data root"],
         ["git", "-C", str(journal_repo), "push", "origin", branch],
     ]
+
+
+def _run_git_write(command: list[str]) -> dict[str, Any]:
+    result = subprocess.run(
+        command,
+        check=False,
+        capture_output=True,
+        text=True,
+    )
+    record = {
+        "command": command,
+        "returncode": result.returncode,
+        "stdout": result.stdout.strip(),
+        "stderr": result.stderr.strip(),
+    }
+    if result.returncode != 0:
+        raise RuntimeError(
+            "Journal git command failed: "
+            + " ".join(command)
+            + f"\nstdout: {record['stdout']}\nstderr: {record['stderr']}"
+        )
+    return record
 
 
 def _run_git_readonly(journal_repo: Path, args: list[str]) -> dict[str, Any]:
@@ -370,8 +401,9 @@ def checkpoint_journal(
             journal_repo / "journal_checkpoint_manifest.json",
             json_dumps(manifest, pretty=True) + "\n",
         )
+        status["git_apply_results"] = []
         for command in _checkpoint_command_args(journal_repo, current_branch):
-            subprocess.run(command, check=True)
+            status["git_apply_results"].append(_run_git_write(command))
         status["checkpoint_applied"] = True
 
     checkpointed_at = utc_now()

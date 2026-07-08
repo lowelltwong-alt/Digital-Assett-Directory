@@ -261,15 +261,14 @@ def _stale_report_input_hash_errors(
     payload: dict[str, Any],
 ) -> list[str]:
     errors: list[str] = []
-    try:
-        report_label = report_path.relative_to(repo_root).as_posix()
-    except ValueError:
-        report_label = report_path.as_posix()
+    report_label = _report_path_label(report_path, repo_root)
     hash_policy = payload.get("hash_policy")
     if not isinstance(hash_policy, str):
         hash_policy = None
     for input_ref, input_hash in payload.get("input_hashes", {}).items():
-        actual = _hash_path(repo_root / str(input_ref), hash_policy=hash_policy)
+        actual = _hash_path(
+            data_relative_path(repo_root, str(input_ref)), hash_policy=hash_policy
+        )
         if actual != input_hash:
             errors.append(
                 f"Stale report input hash {report_label} "
@@ -848,7 +847,7 @@ def _observed_audit_label(
 ) -> str:
     repo_info = row.get("repo", {}) if isinstance(row.get("repo"), dict) else {}
     repo_id = str(repo_info.get("repo_id") or repo_info.get("path_hint") or "unknown")
-    return f"{report_path.relative_to(repo_root)} {repo_id}:{outbox.get('path', '')}"
+    return f"{_report_path_label(report_path, repo_root)} {repo_id}:{outbox.get('path', '')}"
 
 
 def _observed_audit_int(value: Any, default: int = -1) -> int:
@@ -863,7 +862,7 @@ def _observed_audit_machine_evidence_errors(
     repo_root: Path,
     payload: dict[str, Any],
 ) -> list[str]:
-    label = str(report_path.relative_to(repo_root))
+    label = _report_path_label(report_path, repo_root)
     errors: list[str] = []
     recomputed_gap = observed_capture_audit_gap_count(payload, strict=False)
     recomputed_strict_gap = observed_capture_audit_gap_count(payload, strict=True)
@@ -2325,8 +2324,8 @@ def validate_repo(repo_root: Path) -> dict[str, Any]:
         mail_message_validator_cls = validator_for(mail_message_schema)
         mail_message_validator_cls.check_schema(mail_message_schema)
         mail_message_validator = mail_message_validator_cls(mail_message_schema)
-        source_packet_requests_path = (
-            repo_root / "processed" / "mail" / "staged" / "source_packet_requests.jsonl"
+        source_packet_requests_path = data_relative_path(
+            repo_root, "processed/mail/staged/source_packet_requests.jsonl"
         )
         if source_packet_requests_path.exists():
             checked.append("processed/mail/staged/source_packet_requests.jsonl")
@@ -2337,8 +2336,8 @@ def validate_repo(repo_root: Path) -> dict[str, Any]:
                     f"JSONL on line {error['line']}: {error['error']}"
                 )
             active_report_mail_ids: set[str] = set()
-            source_packet_report_path = (
-                repo_root / "processed" / "reports" / "exception_source_packet_requests.json"
+            source_packet_report_path = data_relative_path(
+                repo_root, "processed/reports/exception_source_packet_requests.json"
             )
             if source_packet_report_path.exists():
                 try:
@@ -2397,12 +2396,8 @@ def validate_repo(repo_root: Path) -> dict[str, Any]:
                             "in the current request report and has no cancellation: "
                             f"{mail_id}"
                         )
-        capture_refresh_notices_path = (
-            repo_root
-            / "processed"
-            / "mail"
-            / "staged"
-            / "capture_surface_refresh_notices.jsonl"
+        capture_refresh_notices_path = data_relative_path(
+            repo_root, "processed/mail/staged/capture_surface_refresh_notices.jsonl"
         )
         if capture_refresh_notices_path.exists():
             checked.append("processed/mail/staged/capture_surface_refresh_notices.jsonl")
@@ -2415,11 +2410,8 @@ def validate_repo(repo_root: Path) -> dict[str, Any]:
                     f"JSONL on line {error['line']}: {error['error']}"
                 )
             active_notice_mail_ids: set[str] = set()
-            capture_refresh_report_path = (
-                repo_root
-                / "processed"
-                / "reports"
-                / "exception_capture_surface_refresh_notices.json"
+            capture_refresh_report_path = data_relative_path(
+                repo_root, "processed/reports/exception_capture_surface_refresh_notices.json"
             )
             if capture_refresh_report_path.exists():
                 try:
@@ -2537,7 +2529,7 @@ def validate_repo(repo_root: Path) -> dict[str, Any]:
         usage_validator_cls = validator_for(usage_schema)
         usage_validator_cls.check_schema(usage_schema)
         usage_validator = usage_validator_cls(usage_schema)
-        usage_path = repo_root / "processed" / "usage" / "repo-asset-usage.jsonl"
+        usage_path = data_relative_path(repo_root, "processed/usage/repo-asset-usage.jsonl")
         if usage_path.exists():
             for line_number, line in enumerate(
                 usage_path.read_text(encoding="utf-8").splitlines(), start=1
@@ -2549,11 +2541,12 @@ def validate_repo(repo_root: Path) -> dict[str, Any]:
         context_pack_validator_cls = validator_for(context_pack_schema)
         context_pack_validator_cls.check_schema(context_pack_schema)
         context_pack_validator = context_pack_validator_cls(context_pack_schema)
-        for session_path in sorted((repo_root / "state" / "agent_sessions").glob("*.json")):
+        agent_sessions_dir = data_relative_path(repo_root, "state/agent_sessions")
+        for session_path in sorted(agent_sessions_dir.glob("*.json")):
             session = json.loads(session_path.read_text(encoding="utf-8"))
             if "context_pack" in session:
                 context_pack_validator.validate(session["context_pack"])
-                checked.append(str(session_path.relative_to(repo_root)))
+                checked.append(_report_path_label(session_path, repo_root))
         try:
             exception_cfg = load_config(repo_root=repo_root)
             exception_repo_policies = exception_cfg.exception_repos
@@ -2561,22 +2554,23 @@ def validate_repo(repo_root: Path) -> dict[str, Any]:
             exception_repo_policies = []
         capture_registry = load_capture_pattern_registry(repo_root)
         for report_path in [
-            *sorted((repo_root / "processed" / "reports").glob("*.json")),
-            *sorted((repo_root / "processed" / "events" / "reports").glob("*.json")),
-            *sorted((repo_root / "processed" / "harnesses").glob("*.json")),
-            *sorted((repo_root / "processed" / "repo_inventory").glob("*.json")),
+            *sorted(data_relative_path(repo_root, "processed/reports").glob("*.json")),
+            *sorted(data_relative_path(repo_root, "processed/events/reports").glob("*.json")),
+            *sorted(data_relative_path(repo_root, "processed/harnesses").glob("*.json")),
+            *sorted(data_relative_path(repo_root, "processed/repo_inventory").glob("*.json")),
         ]:
+            report_label = _report_path_label(report_path, repo_root)
             payload = json.loads(report_path.read_text(encoding="utf-8"))
             if not isinstance(payload, dict):
-                checked.append(str(report_path.relative_to(repo_root)))
+                checked.append(report_label)
                 continue
             ref = payload.get("methodology_ref")
             expected = payload.get("methodology_hash")
             if ref and not expected:
                 errors.append(
-                    f"Methodology report missing hash: {report_path.relative_to(repo_root)}"
+                    f"Methodology report missing hash: {report_label}"
                 )
-                checked.append(str(report_path.relative_to(repo_root)))
+                checked.append(report_label)
             elif ref and expected:
                 methodology_path = repo_root / str(ref)
                 if methodology_path.exists():
@@ -2586,19 +2580,21 @@ def validate_repo(repo_root: Path) -> dict[str, Any]:
                     actual = f"sha256:{_file_hash_for_policy(methodology_path, hash_policy)}"
                     if actual != expected:
                         errors.append(
-                            f"Stale methodology report {report_path.relative_to(repo_root)}: "
+                            f"Stale methodology report {report_label}: "
                             f"{expected} != {actual}"
                         )
-                checked.append(str(report_path.relative_to(repo_root)))
+                checked.append(report_label)
             if payload.get("input_hashes"):
                 errors.extend(_stale_report_input_hash_errors(repo_root, report_path, payload))
-                checked.append(str(report_path.relative_to(repo_root)))
-            elif report_path.is_relative_to(repo_root / "processed" / "events" / "reports"):
+                checked.append(report_label)
+            elif report_path.is_relative_to(
+                data_relative_path(repo_root, "processed/events/reports")
+            ):
                 errors.append(
                     f"Event pipeline report missing input_hashes: "
-                    f"{report_path.relative_to(repo_root)}"
+                    f"{report_label}"
                 )
-                checked.append(str(report_path.relative_to(repo_root)))
+                checked.append(report_label)
             if payload.get("audit_id") == "dad:exception-capture-observed-audit":
                 errors.extend(
                     _observed_audit_machine_evidence_errors(report_path, repo_root, payload)
@@ -2615,7 +2611,7 @@ def validate_repo(repo_root: Path) -> dict[str, Any]:
                     )
                     if audited_repo is None:
                         errors.append(
-                            f"Observed audit stale for {report_path.relative_to(repo_root)}: "
+                            f"Observed audit stale for {report_label}: "
                             f"{resolve_error} {repo_info.get('repo_id') or repo_info.get('path_hint')}"
                         )
                         continue
@@ -2651,7 +2647,7 @@ def validate_repo(repo_root: Path) -> dict[str, Any]:
                 errors.extend(
                     _phase6_machine_evidence_summary_errors(report_path, repo_root, payload)
                 )
-                checked.append(str(report_path.relative_to(repo_root)))
+                checked.append(report_label)
             elif payload.get("report_id") == "dad:exception-backfill-readiness":
                 policy_paths = _observed_audit_policy_paths(repo_root)
                 for row in payload.get("repos", []):
