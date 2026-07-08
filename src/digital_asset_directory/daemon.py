@@ -493,8 +493,9 @@ def run_daemon_cycle(
     )
     heartbeat = {
         "schema_version": "dad.daemon.heartbeat.v1",
+        "status": "in_progress",
         "cycle_started_at": generated_at,
-        "cycle_completed_at": utc_now(),
+        "cycle_completed_at": "",
         "cycle_order": cycle_order,
         "remote_outbox_ingest_status": remote_outbox_result.get("status"),
         "mail_collect_status": mail_result.get("collect", {}).get("status", mail_result.get("status")),
@@ -512,6 +513,7 @@ def run_daemon_cycle(
         "journal_checkpoint_applied": False,
         "journal_checkpoint_status": journal_status_result,
         "daily_review_queue": review_queue["markdown_path"],
+        "heartbeat_finalized": False,
         "authority_boundary": AUTHORITY_BOUNDARY,
     }
     atomic_write_text(daemon_heartbeat_path(hub_root), json_dumps(heartbeat, pretty=True) + "\n")
@@ -520,6 +522,14 @@ def run_daemon_cycle(
         journal_repo,
         apply=checkpoint_apply,
     )
+    heartbeat["journal_checkpoint_due"] = journal_result.get("checkpoint_due")
+    heartbeat["journal_checkpoint_applied"] = journal_result.get("checkpoint_applied")
+    heartbeat["journal_checkpoint_status"] = journal_result
+    heartbeat["status"] = "complete"
+    heartbeat["cycle_completed_at"] = utc_now()
+    heartbeat["heartbeat_finalized"] = True
+    heartbeat["heartbeat_finalized_at"] = utc_now()
+    atomic_write_text(daemon_heartbeat_path(hub_root), json_dumps(heartbeat, pretty=True) + "\n")
     return {
         "schema_version": "dad.daemon.cycle.v1",
         "generated_at": generated_at,
@@ -547,14 +557,21 @@ def task_scheduler_plan(
     schedule_time: str = "09:00",
     twice_daily: bool = False,
     shim: Path | None = None,
+    journal_repo: Path | None = None,
+    checkpoint_apply: bool = False,
 ) -> dict[str, Any]:
     shim_path = shim or Path.home() / ".dad" / "bin" / "asset-dir.ps1"
     tr = "HOURLY" if twice_daily else "DAILY"
     mo = "12" if twice_daily else "1"
+    run_cycle_args = [f"--hub '{hub_root.resolve()}'"]
+    if journal_repo is not None:
+        run_cycle_args.append(f"--journal-repo '{journal_repo.resolve()}'")
+    if checkpoint_apply:
+        run_cycle_args.append("--checkpoint-apply")
     command = (
         f'schtasks /Create /TN "{task_name}" /SC {tr} /MO {mo} /ST {schedule_time} '
         f'/TR "powershell -NoProfile -ExecutionPolicy Bypass -File '
-        f"'{shim_path}' daemon run-cycle --hub '{hub_root.resolve()}'\" /F"
+        f"'{shim_path}' daemon run-cycle {' '.join(run_cycle_args)}\" /F"
     )
     return {
         "schema_version": "dad.daemon.task_scheduler_plan.v1",
@@ -562,6 +579,8 @@ def task_scheduler_plan(
         "schedule_time": schedule_time,
         "twice_daily": twice_daily,
         "shim": str(shim_path),
+        "journal_repo": str(journal_repo.resolve()) if journal_repo is not None else None,
+        "checkpoint_apply": checkpoint_apply,
         "command": command,
         "authority_boundary": AUTHORITY_BOUNDARY,
     }

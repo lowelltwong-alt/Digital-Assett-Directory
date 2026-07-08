@@ -2,6 +2,8 @@ from __future__ import annotations
 
 import json
 import subprocess
+from concurrent.futures import ThreadPoolExecutor
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
 import pytest
@@ -23,15 +25,19 @@ from digital_asset_directory.journal import (
 )
 from digital_asset_directory.transport import (
     DATA_ROOT_MARKER,
+    TRANSPORT_IMPLEMENTATION_VERSION,
     TRANSPORT_SURFACE_VERSION,
     apply_data_migration,
     audit_all_repo_transport,
     audit_repo_transport,
+    build_transport_version_status,
     data_path,
     data_relative_path,
     init_data_root,
     plan_data_migration,
     resolve_data_root,
+    run_synthetic_transport_rollout,
+    transport_contract_payload,
     transport_upgrade_queue_path,
 )
 
@@ -177,6 +183,73 @@ def test_transport_audit_flags_mailbox_without_contract_and_writes_queue(tmp_pat
     rows = [json.loads(line) for line in queue_path.read_text(encoding="utf-8").splitlines()]
     assert rows[0]["repo_id"] == "repo-a"
     assert rows[0]["expected_surface_version"] == TRANSPORT_SURFACE_VERSION
+    assert rows[0]["expected_implementation_version"] == TRANSPORT_IMPLEMENTATION_VERSION
+
+
+def test_transport_audit_queue_dedupe_survives_concurrent_runs(tmp_path: Path):
+    hub = tmp_path / "hub"
+    hub.mkdir()
+    repo = tmp_path / "repo-a"
+    (repo / ".digital-asset" / "mail").mkdir(parents=True)
+    (repo / ".digital-asset" / "mail" / ".gitignore").write_text("*.jsonl\n", encoding="utf-8")
+    repos = [{"id": "repo-a", "path": str(repo), "write_protected": False}]
+
+    with ThreadPoolExecutor(max_workers=4) as pool:
+        results = list(pool.map(lambda _index: audit_all_repo_transport(hub, repos), range(4)))
+
+    rows = [
+        json.loads(line)
+        for line in transport_upgrade_queue_path(hub).read_text(encoding="utf-8").splitlines()
+        if line.strip()
+    ]
+    assert sum(result["queue_appended"] for result in results) == 1
+    assert [row["repo_id"] for row in rows] == ["repo-a"]
+
+
+def test_transport_version_status_and_synthetic_rollout(tmp_path: Path):
+    hub = _hub_for_cli(tmp_path / "hub")
+    current = tmp_path / "current"
+    (current / ".digital-asset" / "mail").mkdir(parents=True)
+    (current / ".digital-asset" / "mail" / ".gitignore").write_text("*.jsonl\n", encoding="utf-8")
+    (current / ".digital-asset" / "dad-integration.json").write_text(
+        json.dumps({"repo_id": "current", "transport": transport_contract_payload()}),
+        encoding="utf-8",
+    )
+    missing_impl = tmp_path / "missing-implementation"
+    (missing_impl / ".digital-asset" / "mail").mkdir(parents=True)
+    (missing_impl / ".digital-asset" / "mail" / ".gitignore").write_text("*.jsonl\n", encoding="utf-8")
+    (missing_impl / ".digital-asset" / "dad-integration.json").write_text(
+        json.dumps(
+            {
+                "repo_id": "missing-implementation",
+                "transport": {
+                    "surface_version": TRANSPORT_SURFACE_VERSION,
+                    "mode": "local_pull",
+                    "journal_fallback": True,
+                },
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    status = build_transport_version_status(
+        hub,
+        [
+            {"id": "current", "path": str(current), "write_protected": False},
+            {"id": "missing-implementation", "path": str(missing_impl), "write_protected": False},
+        ],
+    )
+    missing_row = next(
+        row for row in status["repo_versions"] if row["repo_id"] == "missing-implementation"
+    )
+    assert status["transport_implementation_version"] == TRANSPORT_IMPLEMENTATION_VERSION
+    assert status["status"] == "upgrade_needed"
+    assert missing_row["transport_implementation_version_seen"] == "missing"
+
+    synthetic = run_synthetic_transport_rollout(hub)
+    assert synthetic["status"] == "passed"
+    assert synthetic["case_count"] == synthetic["passed_count"]
+    assert synthetic["queue_dedupe_second_run_appended"] == 0
 
 
 def test_data_and_transport_cli_commands(tmp_path: Path):
@@ -239,6 +312,7 @@ def test_transport_upgrade_status_reports_reviewed_queue_and_plan_artifacts(tmp_
                     "queue_key": f"queue:{row['repo_id']}",
                     "classification": "upgrade_recommended",
                     "expected_surface_version": TRANSPORT_SURFACE_VERSION,
+                    "expected_implementation_version": TRANSPORT_IMPLEMENTATION_VERSION,
                     **row,
                 }
             )
@@ -312,6 +386,7 @@ def test_transport_readiness_includes_upgrade_wave_status(tmp_path: Path):
                 "repo_id": "repo-a",
                 "classification": "upgrade_recommended",
                 "expected_surface_version": TRANSPORT_SURFACE_VERSION,
+                "expected_implementation_version": TRANSPORT_IMPLEMENTATION_VERSION,
                 "review_status": "candidate",
             }
         )
@@ -595,6 +670,58 @@ def test_journal_threshold_and_remote_outbox_quarantine(tmp_path: Path):
     assert Path(ingest["quarantine_path"]).exists()
 
 
+def test_journal_checkpoint_time_threshold_ages_first_pending_checkpoint(tmp_path: Path):
+    hub = tmp_path / "hub"
+    inbox = hub / "processed" / "mail" / "inbox" / "rows.jsonl"
+    inbox.parent.mkdir(parents=True)
+    inbox.write_text("\n".join(json.dumps({"i": i}) for i in range(199)) + "\n", encoding="utf-8")
+    status_path = data_path(hub, "central_reports") / "journal_checkpoint_status.json"
+    status_path.parent.mkdir(parents=True, exist_ok=True)
+    old_pending = (datetime.now(timezone.utc) - timedelta(hours=25)).isoformat()
+    status_path.write_text(
+        json.dumps({"checkpoint_record_count": 0, "generated_at": old_pending}),
+        encoding="utf-8",
+    )
+
+    due = checkpoint_journal(
+        hub,
+        tmp_path / "dad-journal",
+        apply=False,
+        min_records=200,
+        min_hours=24,
+    )
+
+    assert due["checkpoint_due"] is True
+    assert due["checkpoint_skipped_reason"] == "plan_only"
+    assert due["new_record_count"] == 199
+    assert due["pending_since"] == old_pending
+
+
+def test_daemon_checkpoint_failure_leaves_unfinalized_heartbeat(tmp_path: Path):
+    hub = tmp_path / "hub"
+    inbox = hub / "processed" / "mail" / "inbox" / "rows.jsonl"
+    inbox.parent.mkdir(parents=True)
+    inbox.write_text("\n".join(json.dumps({"i": i}) for i in range(200)) + "\n", encoding="utf-8")
+    journal_repo = tmp_path / "not-a-git-journal"
+    journal_repo.mkdir()
+
+    with pytest.raises(ValueError, match="no current branch"):
+        run_daemon_cycle(
+            hub,
+            mail_repos=[],
+            exception_repos=[],
+            transport_repos=[],
+            journal_repo=journal_repo,
+            checkpoint_apply=True,
+        )
+
+    heartbeat = json.loads((hub / "processed" / "reports" / "daemon-heartbeat.json").read_text(encoding="utf-8"))
+    assert heartbeat["status"] == "in_progress"
+    assert heartbeat["cycle_completed_at"] == ""
+    assert heartbeat["heartbeat_finalized"] is False
+    assert heartbeat["journal_checkpoint_applied"] is False
+
+
 def test_daemon_cycle_ingests_journal_remote_outbox(tmp_path: Path):
     hub = tmp_path / "hub"
     hub.mkdir()
@@ -629,7 +756,7 @@ def test_journal_apply_threshold_commits_and_pushes_to_data_repo(tmp_path: Path)
     remote = tmp_path / "dad-journal-remote.git"
     journal_repo = tmp_path / "dad-journal"
     subprocess.run(["git", "init", "--bare", str(remote)], check=True)
-    subprocess.run(["git", "init", "-b", "main", str(journal_repo)], check=True)
+    subprocess.run(["git", "init", "-b", "journal-data", str(journal_repo)], check=True)
     subprocess.run(["git", "-C", str(journal_repo), "config", "user.email", "dad@example.test"], check=True)
     subprocess.run(["git", "-C", str(journal_repo), "config", "user.name", "DAD Test"], check=True)
     subprocess.run(["git", "-C", str(journal_repo), "remote", "add", "origin", str(remote)], check=True)
@@ -649,7 +776,7 @@ def test_journal_apply_threshold_commits_and_pushes_to_data_repo(tmp_path: Path)
         check=True,
     ).stdout.strip()
     remote_head = subprocess.run(
-        ["git", "-C", str(remote), "rev-parse", "main"],
+        ["git", "-C", str(remote), "rev-parse", "journal-data"],
         capture_output=True,
         text=True,
         check=True,

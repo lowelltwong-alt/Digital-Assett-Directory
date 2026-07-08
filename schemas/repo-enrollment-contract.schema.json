@@ -68,9 +68,10 @@
     },
     "transport": {
       "type": "object",
-      "required": ["surface_version", "mode", "journal_fallback"],
+      "required": ["surface_version", "implementation_version", "mode", "journal_fallback"],
       "properties": {
         "surface_version": {"const": "1.0.0"},
+        "implementation_version": {"const": "1.0.0-m0m1m2"},
         "mode": {"const": "local_pull"},
         "journal_fallback": {"type": "boolean"}
       },

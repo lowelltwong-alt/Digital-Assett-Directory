@@ -22,6 +22,7 @@
   },
   "transport": {
     "surface_version": "1.0.0",
+    "implementation_version": "1.0.0-m0m1m2",
     "mode": "local_pull",
     "journal_fallback": true
   },

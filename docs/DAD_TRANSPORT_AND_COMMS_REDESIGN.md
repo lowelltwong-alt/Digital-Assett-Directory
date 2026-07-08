@@ -196,7 +196,7 @@ handling). Report: `processed/reports/transport_audit.json`; queue:
 - Migration ordering: copy -> hash-verify -> marker LAST; never deletes, never
   runs git; emits exact untrack commands for the human.
 - Detector signal set + classifications + deduped upgrade queue
-  (queue_key = stable_id(repo, surface_version)).
+  (queue_key = stable_id(repo, surface_version, implementation_version)).
 - OneDrive guard on init/migrate.
 
 ## Codex delegation M0a — reroute writers through data_path (critical)
@@ -241,7 +241,8 @@ Unchanged; the daemon cycle ends with `transport audit` + journal checkpoint.
 
 Downstream/templates (repos receive these via enrollment update wave):
 1. `templates/downstream/DAD_INTEGRATION.template.json` — add
-   `"transport": {"surface_version": "1.0.0", "mode": "local_pull",
+   `"transport": {"surface_version": "1.0.0",
+   "implementation_version": "1.0.0-m0m1m2", "mode": "local_pull",
    "journal_fallback": true}`; and `schemas/repo-enrollment-contract.schema.json`
    to allow it.
 2. `templates/downstream/MAIL_README.md` + `mail_center.mail_readme_text()`
@@ -253,8 +254,9 @@ Hub docs:
 4. `docs/MAIL_CENTER.md` — transport tiers section; delivery = local cache
    write + repo pull; PRs never carry mail.
 5. `docs/DAD_EVENT_PIPELINE.md` — T0/T1/T2 alignment note.
-6. `docs/DAD_REPO_ENROLLMENT.md` — transport surface_version in contracts;
-   upgrade wave uses the transport-upgrade queue.
+6. `docs/DAD_REPO_ENROLLMENT.md` — transport surface_version and
+   implementation_version in contracts; upgrade wave uses the transport-upgrade
+   queue.
 7. `docs/DOWNSTREAM_REPO_GOVERNANCE.md` — three-plane rule (PRs = code +
    lesson-execution only).
 8. `AGENTS.md` (managed block) + `AI_FRONT_DOOR.md` + `AI_TABLE_OF_CONTENTS.md`

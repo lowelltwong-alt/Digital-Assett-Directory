@@ -24,7 +24,11 @@ from digital_asset_directory.surface_versions import (
     build_surface_version_status,
     surface_version_upgrade_queue_path,
 )
-from digital_asset_directory.transport import TRANSPORT_SURFACE_VERSION, transport_upgrade_queue_path
+from digital_asset_directory.transport import (
+    TRANSPORT_IMPLEMENTATION_VERSION,
+    TRANSPORT_SURFACE_VERSION,
+    transport_upgrade_queue_path,
+)
 from digital_asset_directory.utils import append_jsonl
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -397,6 +401,7 @@ def test_update_plan_can_select_from_transport_upgrade_queue(tmp_path: Path):
                 "queue_key": f"queue:{row['repo_id']}",
                 "classification": "upgrade_recommended",
                 "expected_surface_version": TRANSPORT_SURFACE_VERSION,
+                "expected_implementation_version": TRANSPORT_IMPLEMENTATION_VERSION,
                 **row,
             },
         )

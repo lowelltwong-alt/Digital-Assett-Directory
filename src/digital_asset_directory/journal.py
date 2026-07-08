@@ -85,9 +85,13 @@ def journal_status(hub_root: Path, *, min_records: int = 200, min_hours: int = 2
     previous = _last_checkpoint_status(hub_root)
     last_count = int(previous.get("checkpoint_record_count") or 0)
     new_records = max(0, current_record_count - last_count)
-    last_at = _parse_time(str(previous.get("checkpointed_at") or ""))
+    checkpointed_at = str(previous.get("checkpointed_at") or "")
+    pending_since = str(previous.get("pending_since") or previous.get("generated_at") or "")
+    last_at = _parse_time(checkpointed_at) or _parse_time(pending_since)
     now = datetime.now(timezone.utc)
     hours_since = 0.0 if last_at is None else max(0.0, (now - last_at).total_seconds() / 3600.0)
+    if not checkpointed_at and current_record_count > 0 and not pending_since:
+        pending_since = now.isoformat()
     due = new_records >= min_records or hours_since >= min_hours
     return {
         "schema_version": "dad.journal.status.v1",
@@ -99,6 +103,7 @@ def journal_status(hub_root: Path, *, min_records: int = 200, min_hours: int = 2
         "checkpoint_record_count": last_count,
         "new_record_count": new_records,
         "last_checkpoint_at": previous.get("checkpointed_at", ""),
+        "pending_since": pending_since if not checkpointed_at and current_record_count > 0 else "",
         "hours_since_checkpoint": hours_since,
         "thresholds": {"min_records": min_records, "min_hours": min_hours},
         "checkpoint_due": due,
@@ -106,19 +111,27 @@ def journal_status(hub_root: Path, *, min_records: int = 200, min_hours: int = 2
     }
 
 
-def _checkpoint_commands(journal_repo: Path) -> list[str]:
+def _current_journal_branch(journal_repo: Path) -> str | None:
+    branch = _run_git_readonly(journal_repo, ["branch", "--show-current"])
+    if branch["returncode"] != 0:
+        return None
+    current = branch["stdout"].strip()
+    return current or None
+
+
+def _checkpoint_commands(journal_repo: Path, branch: str) -> list[str]:
     return [
         f'git -C "{journal_repo}" add data journal_checkpoint_manifest.json',
         f'git -C "{journal_repo}" commit -m "Checkpoint DAD data root"',
-        f'git -C "{journal_repo}" push origin main',
+        f'git -C "{journal_repo}" push origin {branch}',
     ]
 
 
-def _checkpoint_command_args(journal_repo: Path) -> list[list[str]]:
+def _checkpoint_command_args(journal_repo: Path, branch: str) -> list[list[str]]:
     return [
         ["git", "-C", str(journal_repo), "add", "data", "journal_checkpoint_manifest.json"],
         ["git", "-C", str(journal_repo), "commit", "-m", "Checkpoint DAD data root"],
-        ["git", "-C", str(journal_repo), "push", "origin", "main"],
+        ["git", "-C", str(journal_repo), "push", "origin", branch],
     ]
 
 
@@ -315,8 +328,10 @@ def checkpoint_journal(
 
     journal_repo = journal_repo.resolve()
     status["journal_repo"] = str(journal_repo)
-    status["commands"] = _checkpoint_commands(journal_repo)
     status["graph_surfaces"] = graph_surface_checkpoint_plan(hub_root, journal_repo)
+    planned_branch = _current_journal_branch(journal_repo) or "<current-branch>"
+    status["journal_branch"] = planned_branch
+    status["commands"] = _checkpoint_commands(journal_repo, planned_branch)
     status["checkpoint_applied"] = False
 
     if not apply:
@@ -325,6 +340,11 @@ def checkpoint_journal(
         return status
 
     if apply:
+        current_branch = _current_journal_branch(journal_repo)
+        if current_branch is None:
+            raise ValueError("Refusing journal checkpoint apply: journal repo has no current branch.")
+        status["journal_branch"] = current_branch
+        status["commands"] = _checkpoint_commands(journal_repo, current_branch)
         data_root = Path(str(status["data_root"]))
         target = journal_repo / "data"
         target.mkdir(parents=True, exist_ok=True)
@@ -350,7 +370,7 @@ def checkpoint_journal(
             journal_repo / "journal_checkpoint_manifest.json",
             json_dumps(manifest, pretty=True) + "\n",
         )
-        for command in _checkpoint_command_args(journal_repo):
+        for command in _checkpoint_command_args(journal_repo, current_branch):
             subprocess.run(command, check=True)
         status["checkpoint_applied"] = True
 
