@@ -642,6 +642,55 @@ def _dedupe_identity(record: dict[str, Any]) -> str:
     return f"{record.get('mail_id', '')}|{record.get('dedupe_key', '')}"
 
 
+def _record_supersedes(record: dict[str, Any]) -> str:
+    value = str(record.get("supersedes") or "").strip()
+    if value:
+        return value
+    payload = record.get("payload")
+    if isinstance(payload, dict):
+        return str(payload.get("supersedes") or "").strip()
+    return ""
+
+
+def _supersession_chains(records: Sequence[MailMessageRecord | dict[str, Any]]) -> list[dict[str, Any]]:
+    rows = [
+        record.model_dump(mode="json") if isinstance(record, MailMessageRecord) else record
+        for record in records
+    ]
+    by_id = {str(row.get("mail_id") or ""): row for row in rows if str(row.get("mail_id") or "")}
+    chains: list[dict[str, Any]] = []
+    for row in rows:
+        mail_id = str(row.get("mail_id") or "").strip()
+        supersedes = _record_supersedes(row)
+        if not mail_id or not supersedes:
+            continue
+        chain = [mail_id]
+        seen = {mail_id}
+        cursor = supersedes
+        complete = True
+        while cursor:
+            if cursor in seen:
+                complete = False
+                break
+            chain.insert(0, cursor)
+            seen.add(cursor)
+            parent = by_id.get(cursor)
+            if parent is None:
+                complete = False
+                break
+            cursor = _record_supersedes(parent)
+        chains.append(
+            {
+                "mail_id": mail_id,
+                "thread_id": str(row.get("thread_id") or ""),
+                "supersedes": supersedes,
+                "chain": chain,
+                "chain_complete": complete,
+            }
+        )
+    return chains
+
+
 def _jsonl_lock_owner_pid(lock_path: Path) -> int | None:
     try:
         payload = json.loads(lock_path.read_text(encoding="utf-8"))
@@ -974,6 +1023,7 @@ def _build_mail_record(
     created_at: str | None = None,
     source_provenance: dict[str, Any] | None = None,
     public_release: dict[str, Any] | None = None,
+    supersedes: str = "",
 ) -> MailMessageRecord:
     if sensitivity in DISALLOWED_SENSITIVITIES:
         raise ValueError(
@@ -1012,6 +1062,7 @@ def _build_mail_record(
         payload=redacted_payload,
         evidence=[str(item) for item in redacted_evidence],
         suggested_actions=[str(item) for item in redacted_actions],
+        supersedes=str(supersedes or ""),
         source_provenance=source_provenance
         or _source_provenance(source, received_at=created_at or utc_now()),
         public_release=public_release
@@ -1126,6 +1177,7 @@ def _legacy_outbox_record(
         created_at=created_at,
         dedupe_key=f"legacy:{original_mail_id}",
         source_provenance=source_provenance,
+        supersedes=str(payload.get("supersedes") or payload.get("parent_message_id") or ""),
     )
 
 
@@ -1326,6 +1378,7 @@ def compose_mail(
             source_visibility=_policy_visibility(policy),
             target_policy=_policy_for_repo(target_repo, repo_policies),
         ),
+        supersedes=supersedes,
     )
     appended = _append_unique(_mail_file(repo, "outbox.jsonl"), record)
     source_policy_status = "reviewed_mail_repo" if policy is not None else "unreviewed_source_repo"
@@ -1790,10 +1843,12 @@ def _canonical_collected_record(
         evidence=incoming.evidence,
         suggested_actions=incoming.suggested_actions,
         sensitivity=incoming.sensitivity,
+        thread_id=incoming.thread_id,
         review_status="collected_candidate",
         created_at=incoming.created_at,
         source_provenance=source_provenance,
         public_release=release,
+        supersedes=incoming.supersedes or _record_supersedes(incoming.model_dump(mode="json")),
     )
     return _sanitize_mail_record_for_storage(collected_record, repo_policies)
 
@@ -2138,10 +2193,12 @@ def _routed_record_from_source(
             evidence=record.evidence,
             suggested_actions=record.suggested_actions,
             sensitivity=record.sensitivity,
+            thread_id=record.thread_id,
             review_status="routed_candidate",
             created_at=record.created_at,
             source_provenance=record.source_provenance,
             public_release=record.public_release,
+            supersedes=record.supersedes,
         )
     else:
         routed_record = record.model_copy(update={"review_status": "routed_candidate"})
@@ -2159,6 +2216,7 @@ def route_mail(
     duplicates = 0
     outbox = hub_root / CENTRAL_MAIL_DIR / "outbox" / "routed.jsonl"
     records, errors = _all_central_messages_with_paths_and_errors(hub_root, "inbox")
+    source_records = [record for _source_inbox_path, record in records]
     collection_audit_keys = _collection_audit_index(hub_root)
     legacy_collection_allowlist_keys = _legacy_collection_allowlist_index(hub_root)
     for source_inbox_path, record in records:
@@ -2226,6 +2284,7 @@ def route_mail(
         "errors": errors,
         "blocked": bool(errors),
         "outbox": str(outbox),
+        "supersession_chains": _supersession_chains(source_records),
         "report": report,
         "authority_boundary": AUTHORITY_BOUNDARY,
     }
@@ -3047,6 +3106,7 @@ def digest_mail(
         "parse_warning_count": len(inbox_errors) + len(archive_errors),
         "parse_warnings": [*inbox_errors, *archive_errors],
         "unread": unread,
+        "supersession_chains": _supersession_chains(inbox),
         "last_checked": str(last_checked),
         "authority_boundary": AUTHORITY_BOUNDARY,
     }
@@ -5132,6 +5192,7 @@ def write_mail_center_report(hub_root: Path) -> dict[str, str]:
         "private_origin_count": private_origin_count,
         "public_release_required_count": release_required_count,
         "release_decision_count": len(release_rows),
+        "supersession_chain_count": len(_supersession_chains(all_messages)),
         "message_type_counts": {},
     }
     counts: dict[str, int] = {}
@@ -5154,6 +5215,7 @@ def write_mail_center_report(hub_root: Path) -> dict[str, str]:
         f"- Non-public-origin messages: **{summary['private_origin_count']}**",
         f"- Public-release-required messages: **{summary['public_release_required_count']}**",
         f"- Release decisions: **{summary['release_decision_count']}**",
+        f"- Supersession chains: **{summary['supersession_chain_count']}**",
         "",
         "## Message Types",
         "",

@@ -9,6 +9,7 @@ from pathlib import Path
 from typing import Any, Optional, cast
 
 import typer
+from jsonschema.validators import validator_for
 from rich.console import Console
 
 from .archaeology import (
@@ -1415,6 +1416,60 @@ def _mail_payload_options(
     if payload_json is not None:
         return _parse_payload_json(_payload_json_text(payload_json), option_name="--payload-json")
     return _key_value_payload(payload)
+
+
+def _lesson_payload_warning_result(
+    repo_root: Path,
+    payload: dict[str, Any],
+    *,
+    disabled: bool = False,
+) -> dict[str, Any]:
+    schema_name = "lesson_payload"
+    schema_ref = "schemas/lesson-payload.schema.json"
+    base = {
+        "schema_name": schema_name,
+        "schema_ref": schema_ref,
+        "enforcement": "warning_only",
+        "authority_boundary": (
+            "Lesson payload validation is warning-only in this release. It does not "
+            "promote, reject, or authorize a lesson by itself."
+        ),
+    }
+    if disabled:
+        return {
+            **base,
+            "status": "skipped",
+            "warning_count": 0,
+            "warnings": [],
+        }
+    try:
+        registry = json.loads(
+            (repo_root / "registry" / "schema-registry.json").read_text(encoding="utf-8")
+        )
+        schema_ref = str(registry.get("schemas", {}).get(schema_name) or schema_ref)
+        schema = json.loads((repo_root / schema_ref).read_text(encoding="utf-8"))
+        validator_cls = validator_for(schema)
+        validator_cls.check_schema(schema)
+        errors = sorted(validator_cls(schema).iter_errors(payload), key=lambda item: list(item.path))
+    except Exception as exc:
+        return {
+            **base,
+            "schema_ref": schema_ref,
+            "status": "warning_only_unavailable",
+            "warning_count": 1,
+            "warnings": [f"lesson payload schema could not be checked: {exc}"],
+        }
+    warnings = []
+    for error in errors:
+        path = ".".join(str(item) for item in error.path) or "<root>"
+        warnings.append(f"{path}: {error.message}")
+    return {
+        **base,
+        "schema_ref": schema_ref,
+        "status": "passed" if not warnings else "warning_only_failed",
+        "warning_count": len(warnings),
+        "warnings": warnings,
+    }
 
 
 def _event_payload_options(
@@ -3199,12 +3254,12 @@ def mail_compose(
     payload: list[str] = typer.Option(
         [],
         "--payload",
-        help="Simple payload field in key=value form. Use --payload-file for structured JSON.",
+        help="Simple payload field in key=value form. Use --payload-json for structured JSON.",
     ),
     payload_json: Optional[str] = typer.Option(
         None,
         "--payload-json",
-        help="Structured payload JSON object. Prefer --payload-file for large lesson packs.",
+        help="Structured payload JSON object, path, or '-' for stdin.",
     ),
     payload_file: Optional[Path] = typer.Option(
         None,
@@ -3225,21 +3280,27 @@ def mail_compose(
     allow_similar: bool = typer.Option(
         False, "--allow-similar", help="Send even when a near-duplicate was already sent."
     ),
+    no_payload_validation: bool = typer.Option(
+        False,
+        "--no-payload-validation",
+        help="Skip warning-only lesson_suggestion payload schema validation.",
+    ),
     hub: Optional[Path] = typer.Option(None),
 ) -> None:
     """Append a candidate mail packet to a repo-local outbox."""
     cfg = _cfg(hub=hub)
     try:
+        parsed_payload = _mail_payload_options(
+            payload,
+            payload_json=payload_json,
+            payload_file=payload_file,
+        )
         result = compose_mail(
             repo.resolve(),
             message_type=message_type,
             target_repo=target_repo,
             summary=summary,
-            payload=_mail_payload_options(
-                payload,
-                payload_json=payload_json,
-                payload_file=payload_file,
-            ),
+            payload=parsed_payload,
             evidence=evidence,
             suggested_actions=suggested_action,
             sensitivity=sensitivity,
@@ -3250,6 +3311,12 @@ def mail_compose(
             supersedes=supersedes,
             allow_similar=allow_similar,
         )
+        if message_type == "lesson_suggestion":
+            result["payload_validation"] = _lesson_payload_warning_result(
+                cfg.repo_root,
+                parsed_payload,
+                disabled=no_payload_validation,
+            )
     except (ValueError, TypeError) as exc:
         console.print(str(exc))
         raise typer.Exit(2) from exc
@@ -3648,12 +3715,12 @@ def mail_outbox_check(
     payload: list[str] = typer.Option(
         [],
         "--payload",
-        help="Simple payload field in key=value form. Use --payload-file for structured JSON.",
+        help="Simple payload field in key=value form. Use --payload-json for structured JSON.",
     ),
     payload_json: Optional[str] = typer.Option(
         None,
         "--payload-json",
-        help="Structured payload JSON object. Prefer --payload-file for large lesson packs.",
+        help="Structured payload JSON object, path, or '-' for stdin.",
     ),
     payload_file: Optional[Path] = typer.Option(
         None,

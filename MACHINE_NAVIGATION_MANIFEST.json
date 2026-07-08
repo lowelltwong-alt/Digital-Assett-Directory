@@ -202,6 +202,7 @@
     "learning_rule_promotion_candidate_schema": "schemas/learning-rule-promotion-candidate.schema.json",
     "scan_cycle_event_schema": "schemas/scan-cycle-event.schema.json",
     "mail_message_schema": "schemas/mail-message.schema.json",
+    "lesson_payload_schema": "schemas/lesson-payload.schema.json",
     "mail_decision_schema": "schemas/mail-decision.schema.json",
     "dad_pipeline_event_schema": "schemas/dad-pipeline-event.schema.json",
     "exception_event_schema": "schemas/exception-event.schema.json",

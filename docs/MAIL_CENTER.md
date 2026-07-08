@@ -52,8 +52,8 @@ The mail message schema supports:
 
 Core fields are `mail_id`, `thread_id`, `message_type`, `source_repo`,
 `target_repo`, `created_at`, `dedupe_key`, `sensitivity`, `review_status`,
-`payload`, `evidence`, `suggested_actions`, `source_provenance`, and
-`public_release`.
+`payload`, `evidence`, `suggested_actions`, `supersedes`,
+`source_provenance`, and `public_release`.
 
 `source_provenance` records the canonical source repo, reviewed visibility,
 original source chain, return address, and compose/collect timestamps.
@@ -81,8 +81,14 @@ Schemas:
 
 ```text
 schemas/mail-message.schema.json
+schemas/lesson-payload.schema.json
 schemas/mail-decision.schema.json
 ```
+
+`schemas/lesson-payload.schema.json` is warning-only for the first release.
+`mail compose --type lesson_suggestion` reports payload validation warnings but
+still appends valid mail. Use `--no-payload-validation` only when you need an
+explicit temporary escape hatch.
 
 ## Storage
 
@@ -138,10 +144,10 @@ python -m digital_asset_directory.cli mail compose `
 ```
 
 For a structured lesson pack or other nested payload, write the JSON object to a
-small payload file and pass `--payload-file path\to\payload.json`. The file may
-be UTF-8 or UTF-8 with BOM. Use `--payload key=value` only for small flat
-metadata fields; raw JSON passed to `--payload` is rejected so it cannot be
-silently split at the first `=`.
+small payload file and pass `--payload-json path\to\payload.json` or
+`--payload-json -` for stdin. UTF-8 files with a BOM are tolerated. Use
+`--payload key=value` only for small flat metadata fields; raw JSON passed to
+`--payload` is rejected so it cannot be silently split at the first `=`.
 
 Read the compose result. If it reports `source_policy_status:
 unreviewed_source_repo`, the local outbox row is valid candidate mail but DAD
@@ -156,7 +162,7 @@ python -m digital_asset_directory.cli mail outbox-check `
   --repo C:\path\to\repo `
   --type lesson_suggestion `
   --summary "Structured lesson pack delivery." `
-  --payload-file path\to\payload.json
+  --payload-json path\to\payload.json
 ```
 
 Collect repo outboxes into DAD:
