@@ -253,6 +253,7 @@ from .rust_rollout import (
     write_rust_rollout_plan,
 )
 from .semantic_evolution import write_semantic_evolution_outputs
+from .surface_versions import build_surface_version_status
 from .template_library import validate_template_registry, write_template_library_report
 from .test_parity import run_test_parity
 from .transport import (
@@ -4858,6 +4859,24 @@ def enroll_status(
     cfg = _cfg(config, hub)
     policies = cfg.enrollment_repos if repo == ["all"] else _select_enrollment(repo, cfg)
     console.print_json(data=enrollment_status_all(policies))
+
+
+@enroll_app.command("surface-status")
+def enroll_surface_status(
+    wave: str = typer.Option(""),
+    config: Optional[Path] = typer.Option(None),
+    hub: Optional[Path] = typer.Option(None),
+) -> None:
+    """Write a central read-only enrollment surface-version report."""
+    cfg = _cfg(config, hub)
+    console.print_json(
+        data=build_surface_version_status(
+            cfg.repo_root,
+            enrollment_policies=cfg.enrollment_repos,
+            transport_repos=_transport_repo_rows(cfg),
+            wave=wave,
+        )
+    )
 
 
 @dad_app.command("needs")

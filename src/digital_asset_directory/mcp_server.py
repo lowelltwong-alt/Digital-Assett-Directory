@@ -1,9 +1,9 @@
-"""Local read-only MCP adapter for DAD graph surfaces.
+"""Local read-only MCP server for DAD graph surfaces.
 
-This module intentionally has no vendor SDK dependency. It exposes DAD
-registries and generated graph surfaces through a small MCP-compatible JSON-RPC
-stdio server while keeping DAD schemas, registries, audit records, and human
-gates as the authority.
+This is intentionally dependency-free and stdio-only. It implements the MCP
+JSON-RPC methods DAD needs for local graph resources and query tools while
+keeping all authority in DAD registries, schemas, lifecycle commands, audit
+records, Git/CI gates, and human gates.
 """
 
 from __future__ import annotations
@@ -12,603 +12,504 @@ import json
 import re
 import sys
 from pathlib import Path
-from typing import Any, BinaryIO, TextIO
-from urllib.parse import unquote, urlparse
+from typing import Any
+from urllib.parse import urlparse
 
-from .transport import DATA_PLANE_PATHS, data_path, data_relative_path
+from .daemon import daemon_status
+from .graph_surfaces import (
+    GRAPH_SURFACE_AUTHORITY_BOUNDARY,
+    graph_surface_freshness,
+    graph_surface_status,
+    load_graph_surface_registry,
+    resolve_graph_surface_path,
+)
+from .journal import journal_status
+from .surface_versions import surface_version_status_report_path
 from .utils import json_dumps
 
 MCP_PROTOCOL_VERSION = "2025-06-18"
-SERVER_NAME = "dad-local-readonly"
+SERVER_NAME = "dad-local-graph-surfaces"
 SERVER_VERSION = "0.1.0"
-MCP_AUTHORITY_BOUNDARY = (
-    "DAD MCP responses are read-only candidate context from registered DAD "
-    "surfaces. They do not authorize writes, approvals, ranking claims, remote "
-    "MCP, vendor lock-in, downstream mutation, or promotion of generated graph "
-    "content to source authority."
-)
-SAFE_ID_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9_.:-]{0,160}$")
-MAX_NEIGHBORS_LIMIT = 50
-MAX_SEARCH_LIMIT = 25
-QUERYABLE_SURFACE_STATUSES = {"active", "partial"}
+MAX_QUERY_LIMIT = 100
+DEFAULT_QUERY_LIMIT = 25
+FORBIDDEN_RESPONSE_KEYS = {"score", "rank", "centrality", "best", "top"}
+ID_PATTERN = re.compile(r"^[A-Za-z0-9][A-Za-z0-9_.:-]*$")
+
+_REGISTRY_RESOURCES = {
+    "graph-surface-registry": Path("registry") / "graph-surface-registry.json",
+    "graph-edge-registry": Path("registry") / "graph-edge-registry.json",
+    "schema-registry": Path("registry") / "schema-registry.json",
+}
+_REPORT_RESOURCES = {
+    "journal-status",
+    "daemon-status",
+    "graph-surface-status",
+    "surface-version-status",
+}
+_KERNEL_RESOURCES = {
+    "aios-governance": Path("processed")
+    / "fable5"
+    / "deep-dives"
+    / "2026-07-07-graph-surface-mcp-handoff"
+    / "fable-output"
+    / "graph-surface-mcp-kernels.md",
+}
+_PACKET_RESOURCES = {
+    "graph-surface-mcp-handoff": Path("processed")
+    / "fable5"
+    / "deep-dives"
+    / "2026-07-07-graph-surface-mcp-handoff"
+    / "README.md",
+    "2026-07-07-graph-surface-mcp-handoff": Path("processed")
+    / "fable5"
+    / "deep-dives"
+    / "2026-07-07-graph-surface-mcp-handoff"
+    / "README.md",
+}
 
 
-class MCPError(ValueError):
-    def __init__(self, message: str, *, code: int = -32602) -> None:
+class MCPError(Exception):
+    def __init__(self, code: int, message: str) -> None:
         super().__init__(message)
         self.code = code
+        self.message = message
 
 
-def _safe_id(value: Any, label: str) -> str:
-    text = str(value or "").strip()
-    if not text or not SAFE_ID_RE.fullmatch(text):
-        raise MCPError(f"Invalid {label}: {text!r}")
-    if ".." in text or "/" in text or "\\" in text:
-        raise MCPError(f"Invalid {label}: path traversal is not allowed")
-    return text
+def _validate_id(value: str, label: str) -> str:
+    if not value or "/" in value or "\\" in value or ".." in value or not ID_PATTERN.match(value):
+        raise MCPError(-32602, f"Invalid {label}: {value}")
+    return value
 
 
-def _load_json(path: Path) -> dict[str, Any]:
+def _bounded_limit(raw: Any) -> int:
     try:
-        payload = json.loads(path.read_text(encoding="utf-8"))
-    except FileNotFoundError as exc:
-        raise MCPError(f"Resource not found: {path}", code=-32002) from exc
-    except json.JSONDecodeError as exc:
-        raise MCPError(f"Invalid JSON resource: {path}: {exc.msg}", code=-32000) from exc
-    if not isinstance(payload, dict):
-        raise MCPError(f"JSON resource is not an object: {path}", code=-32000)
-    return payload
+        limit = int(raw if raw is not None else DEFAULT_QUERY_LIMIT)
+    except (TypeError, ValueError) as exc:
+        raise MCPError(-32602, "limit must be an integer") from exc
+    if limit < 1 or limit > MAX_QUERY_LIMIT:
+        raise MCPError(-32602, f"limit must be between 1 and {MAX_QUERY_LIMIT}")
+    return limit
 
 
-def _graph_surface_registry(hub_root: Path) -> dict[str, Any]:
-    return _load_json(hub_root / "registry" / "graph-surface-registry.json")
+def _strip_forbidden_fields(value: Any) -> Any:
+    if isinstance(value, dict):
+        return {
+            key: _strip_forbidden_fields(child)
+            for key, child in value.items()
+            if key.lower() not in FORBIDDEN_RESPONSE_KEYS
+        }
+    if isinstance(value, list):
+        return [_strip_forbidden_fields(child) for child in value]
+    return value
 
 
-def _surface_rows(hub_root: Path) -> list[dict[str, Any]]:
-    registry = _graph_surface_registry(hub_root)
-    rows = registry.get("surfaces", [])
-    return [row for row in rows if isinstance(row, dict)]
-
-
-def _surface_by_id(
-    hub_root: Path, surface_id: str, *, require_queryable: bool = False
-) -> dict[str, Any]:
-    wanted = _safe_id(surface_id, "surface_id")
-    for surface in _surface_rows(hub_root):
-        if str(surface.get("surface_id", "")) == wanted:
-            if require_queryable and str(surface.get("status", "")) not in QUERYABLE_SURFACE_STATUSES:
-                raise MCPError(
-                    f"Graph surface is not available for MCP queries: {wanted}",
-                    code=-32002,
-                )
+def _surface_by_id(hub_root: Path, surface_id: str) -> dict[str, Any]:
+    _validate_id(surface_id, "surface_id")
+    registry = load_graph_surface_registry(hub_root)
+    for surface in registry.get("surfaces", []):
+        if surface.get("surface_id") == surface_id:
             return surface
-    raise MCPError(f"Unknown graph surface: {wanted}", code=-32002)
+    raise MCPError(-32602, f"Unknown graph surface: {surface_id}")
 
 
-def _logical_output_path(hub_root: Path, logical_path: str) -> Path:
-    path = Path(logical_path)
-    if path.is_absolute():
-        return path
-    if not path.parts:
-        return hub_root
-    first = path.parts[0]
-    aliases = {"reports": "central_reports", "mail": "central_mail"}
-    logical = first if first in DATA_PLANE_PATHS else aliases.get(first, "")
-    if logical:
-        suffix = Path(*path.parts[1:]) if len(path.parts) > 1 else Path()
-        return data_path(hub_root, logical) / suffix
-    return data_relative_path(hub_root, path)
-
-
-def _surface_output_path(hub_root: Path, surface: dict[str, Any], key: str) -> Path:
+def _surface_paths(hub_root: Path, surface: dict[str, Any]) -> tuple[Path, Path]:
     outputs = surface.get("outputs", {})
-    if not isinstance(outputs, dict):
-        raise MCPError(f"Surface has no outputs map: {surface.get('surface_id', '')}")
-    logical = str(outputs.get(key, "")).strip()
-    if not logical:
-        raise MCPError(
-            f"Surface output missing {key}: {surface.get('surface_id', '')}"
-        )
-    return _logical_output_path(hub_root, logical)
-
-
-def _surface_manifest(hub_root: Path, surface_id: str) -> dict[str, Any]:
-    surface = _surface_by_id(hub_root, surface_id, require_queryable=True)
-    manifest_path = _surface_output_path(hub_root, surface, "manifest_logical_path")
-    return _load_json(manifest_path)
-
-
-def _surface_graph(hub_root: Path, surface_id: str) -> tuple[dict[str, Any], dict[str, Any]]:
-    surface = _surface_by_id(hub_root, surface_id, require_queryable=True)
-    graph_path = _surface_output_path(hub_root, surface, "body_logical_path")
-    return surface, _load_json(graph_path)
-
-
-def _surface_freshness(hub_root: Path, surface_id: str) -> dict[str, Any]:
     try:
-        manifest = _surface_manifest(hub_root, surface_id)
-    except MCPError:
-        return {"state": "unknown", "reasons": ["manifest_missing_or_unreadable"]}
-    freshness = manifest.get("freshness", {})
-    if isinstance(freshness, dict):
-        return freshness
-    return {"state": "unknown", "reasons": ["manifest_freshness_missing"]}
+        manifest = resolve_graph_surface_path(hub_root, str(outputs["manifest_logical_path"]))
+        body = resolve_graph_surface_path(hub_root, str(outputs["body_logical_path"]))
+    except (KeyError, ValueError) as exc:
+        raise MCPError(-32603, f"Invalid graph surface registry output: {exc}") from exc
+    return manifest, body
 
 
-def _response_base(
-    hub_root: Path, surface_id: str | None = None, surface: dict[str, Any] | None = None
-) -> dict[str, Any]:
-    payload: dict[str, Any] = {
-        "authority_boundary": MCP_AUTHORITY_BOUNDARY,
-        "adapter_authority": "optional_wrapper_only",
-        "write_capability": "none",
-    }
-    if surface_id is not None:
-        payload["surface_id"] = surface_id
-        payload["surface_freshness"] = _surface_freshness(hub_root, surface_id)
-    if surface is not None:
-        payload["review_status"] = surface.get("review_status", "candidate")
-        payload["surface_authority_boundary"] = surface.get(
-            "authority_boundary", MCP_AUTHORITY_BOUNDARY
-        )
-    return payload
-
-
-def _limit(value: Any, *, default: int = 25, maximum: int) -> int:
+def _load_surface_graph(hub_root: Path, surface_id: str) -> tuple[dict[str, Any], dict[str, Any]]:
+    surface = _surface_by_id(hub_root, surface_id)
+    _manifest_path, body_path = _surface_paths(hub_root, surface)
+    if not body_path.exists():
+        raise MCPError(-32602, f"Graph surface body is missing: {surface_id}")
     try:
-        parsed = int(value)
-    except (TypeError, ValueError):
-        parsed = default
-    if parsed < 1:
-        return 1
-    return min(parsed, maximum)
+        graph = json.loads(body_path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError) as exc:
+        raise MCPError(-32603, f"Graph surface body is unreadable: {exc}") from exc
+    return surface, graph
 
 
-def _node_matches(node: dict[str, Any], node_id: str) -> bool:
-    return str(node.get("node_id", "")) == node_id
+def _graph_nodes(graph: dict[str, Any]) -> list[dict[str, Any]]:
+    rows = graph.get("nodes")
+    if isinstance(rows, list):
+        return [row for row in rows if isinstance(row, dict)]
+    rows = graph.get("inference_nodes")
+    if isinstance(rows, list):
+        return [row for row in rows if isinstance(row, dict)]
+    return []
 
 
-def _public_node(node: dict[str, Any]) -> dict[str, Any]:
-    public = dict(node)
-    public.setdefault("review_status", "candidate")
-    return public
+def _graph_edges(graph: dict[str, Any]) -> list[dict[str, Any]]:
+    rows = graph.get("edges")
+    if isinstance(rows, list):
+        return [row for row in rows if isinstance(row, dict)]
+    rows = graph.get("inference_edges")
+    if isinstance(rows, list):
+        return [row for row in rows if isinstance(row, dict)]
+    return []
 
 
-def _public_edge(edge: dict[str, Any]) -> dict[str, Any]:
-    public = dict(edge)
-    public.setdefault("review_status", "candidate")
-    public.setdefault("edge_class", "")
-    public.setdefault("method_version", "")
-    return public
+def _sanitize_node(node: dict[str, Any]) -> dict[str, Any]:
+    sanitized = _strip_forbidden_fields(node)
+    sanitized.setdefault("review_status", node.get("review_status", "candidate"))
+    return sanitized
 
 
-def dad_graph_surface_status(
-    hub_root: Path, surface_id: str | None = None
-) -> dict[str, Any]:
-    rows = []
-    for surface in _surface_rows(hub_root):
-        sid = str(surface.get("surface_id", ""))
-        if surface_id is not None and sid != surface_id:
-            continue
-        manifest_status = "unread"
-        counts: dict[str, Any] = {}
-        try:
-            manifest = _surface_manifest(hub_root, sid)
-            manifest_status = "readable"
-            counts = manifest.get("counts", {}) if isinstance(manifest.get("counts"), dict) else {}
-        except MCPError:
-            manifest = {}
-        rows.append(
-            {
-                "surface_id": sid,
-                "surface_status": surface.get("status", ""),
-                "ontology_id": surface.get("ontology_id", ""),
-                "manifest_status": manifest_status,
-                "freshness": manifest.get(
-                    "freshness",
-                    {"state": "unknown", "reasons": ["manifest_missing_or_unreadable"]},
-                ),
-                "counts": counts,
-                "review_status": surface.get("review_status", "candidate"),
-                "authority_boundary": surface.get(
-                    "authority_boundary", MCP_AUTHORITY_BOUNDARY
-                ),
-            }
-        )
-    if surface_id is not None and not rows:
-        raise MCPError(f"Unknown graph surface: {surface_id}", code=-32002)
-    return {**_response_base(hub_root), "surfaces": rows}
+def _sanitize_edge(edge: dict[str, Any]) -> dict[str, Any]:
+    return _strip_forbidden_fields(
+        {
+            "edge_id": edge.get("edge_id", ""),
+            "source": edge.get("source", ""),
+            "target": edge.get("target", ""),
+            "edge_type": edge.get("edge_type", ""),
+            "edge_class": edge.get("edge_class", "context"),
+            "method_version": edge.get("method_version", ""),
+            "edge_basis": edge.get("edge_basis", ""),
+            "relationship": edge.get("relationship", ""),
+            "review_status": edge.get("review_status", "candidate"),
+        }
+    )
 
 
-def dad_graph_get_node(hub_root: Path, surface_id: str, node_id: str) -> dict[str, Any]:
-    surface, graph = _surface_graph(hub_root, surface_id)
-    wanted = str(node_id or "").strip()
-    if not wanted:
-        raise MCPError("node_id is required")
-    for node in graph.get("nodes", []):
-        if isinstance(node, dict) and _node_matches(node, wanted):
-            return {
-                **_response_base(hub_root, surface_id, surface),
-                "node": _public_node(node),
-            }
-    raise MCPError(f"Node not found: {wanted}", code=-32002)
+def dad_graph_get_node(hub_root: Path, *, surface_id: str, node_id: str) -> dict[str, Any]:
+    _validate_id(node_id.replace(":", "_"), "node_id")
+    surface, graph = _load_surface_graph(hub_root, surface_id)
+    for node in _graph_nodes(graph):
+        if node.get("node_id") == node_id:
+            return _strip_forbidden_fields(
+                {
+                    "schema_version": "dad.mcp.graph_get_node.v1",
+                    "surface_id": surface_id,
+                    "surface_freshness": graph_surface_freshness(hub_root, surface),
+                    "node": _sanitize_node(node),
+                    "review_status": node.get("review_status", "candidate"),
+                    "authority_boundary": surface.get(
+                        "authority_boundary", GRAPH_SURFACE_AUTHORITY_BOUNDARY
+                    ),
+                }
+            )
+    raise MCPError(-32602, f"Unknown node on surface {surface_id}: {node_id}")
 
 
 def dad_graph_neighbors(
     hub_root: Path,
+    *,
     surface_id: str,
     node_id: str,
-    direction: str = "both",
-    limit: int = 25,
+    limit: int | None = None,
 ) -> dict[str, Any]:
-    surface, graph = _surface_graph(hub_root, surface_id)
-    wanted = str(node_id or "").strip()
-    if not wanted:
-        raise MCPError("node_id is required")
-    direction = str(direction or "both")
-    if direction not in {"both", "incoming", "outgoing"}:
-        raise MCPError("direction must be one of: both, incoming, outgoing")
-    max_rows = _limit(limit, default=25, maximum=MAX_NEIGHBORS_LIMIT)
-    nodes = {
-        str(node.get("node_id", "")): node
-        for node in graph.get("nodes", [])
-        if isinstance(node, dict)
-    }
-    if wanted not in nodes:
-        raise MCPError(f"Node not found: {wanted}", code=-32002)
-    rows: list[dict[str, Any]] = []
-    for edge in graph.get("edges", []):
-        if not isinstance(edge, dict):
-            continue
-        source = str(edge.get("source", ""))
-        target = str(edge.get("target", ""))
-        include = (
-            (direction in {"both", "outgoing"} and source == wanted)
-            or (direction in {"both", "incoming"} and target == wanted)
-        )
-        if not include:
-            continue
-        neighbor_id = target if source == wanted else source
-        rows.append(
-            {
-                "neighbor": _public_node(nodes.get(neighbor_id, {"node_id": neighbor_id})),
-                "edge": _public_edge(edge),
-            }
-        )
-        if len(rows) >= max_rows:
-            break
-    return {
-        **_response_base(hub_root, surface_id, surface),
-        "node_id": wanted,
-        "direction": direction,
-        "limit": max_rows,
-        "neighbors": rows,
-    }
-
-
-def dad_graph_search_nodes(
-    hub_root: Path, surface_id: str, query: str, limit: int = 25
-) -> dict[str, Any]:
-    surface, graph = _surface_graph(hub_root, surface_id)
-    needle = str(query or "").strip().casefold()
-    if not needle:
-        raise MCPError("query is required")
-    max_rows = _limit(limit, default=25, maximum=MAX_SEARCH_LIMIT)
-    matches: list[dict[str, Any]] = []
-    for node in graph.get("nodes", []):
-        if not isinstance(node, dict):
-            continue
-        haystack = " ".join(
-            str(node.get(key, "")) for key in ("node_id", "node_type", "label")
-        ).casefold()
-        if needle not in haystack:
-            continue
-        match_fields = [
-            key
-            for key in ("node_id", "node_type", "label")
-            if needle in str(node.get(key, "")).casefold()
-        ]
-        matches.append({"node": _public_node(node), "match_fields": match_fields})
-        if len(matches) >= max_rows:
-            break
-    return {
-        **_response_base(hub_root, surface_id, surface),
-        "query": query,
-        "limit": max_rows,
-        "nodes": matches,
-    }
-
-
-TOOL_HANDLERS = {
-    "dad_graph_surface_status": dad_graph_surface_status,
-    "dad_graph_get_node": dad_graph_get_node,
-    "dad_graph_neighbors": dad_graph_neighbors,
-    "dad_graph_search_nodes": dad_graph_search_nodes,
-}
-
-
-def mcp_tool_definitions() -> list[dict[str, Any]]:
-    return [
+    _validate_id(node_id.replace(":", "_"), "node_id")
+    bounded = _bounded_limit(limit)
+    surface, graph = _load_surface_graph(hub_root, surface_id)
+    matches = [
+        edge
+        for edge in _graph_edges(graph)
+        if edge.get("source") == node_id or edge.get("target") == node_id
+    ][:bounded]
+    return _strip_forbidden_fields(
         {
-            "name": "dad_graph_surface_status",
-            "description": "Read registered DAD graph surface status and freshness.",
-            "inputSchema": {
-                "type": "object",
-                "properties": {"surface_id": {"type": "string"}},
-                "additionalProperties": False,
-            },
-        },
-        {
-            "name": "dad_graph_get_node",
-            "description": "Read one node from a registered graph surface.",
-            "inputSchema": {
-                "type": "object",
-                "required": ["surface_id", "node_id"],
-                "properties": {
-                    "surface_id": {"type": "string"},
-                    "node_id": {"type": "string"},
-                },
-                "additionalProperties": False,
-            },
-        },
-        {
-            "name": "dad_graph_neighbors",
-            "description": "Read bounded incoming/outgoing graph neighbors.",
-            "inputSchema": {
-                "type": "object",
-                "required": ["surface_id", "node_id"],
-                "properties": {
-                    "surface_id": {"type": "string"},
-                    "node_id": {"type": "string"},
-                    "direction": {"enum": ["both", "incoming", "outgoing"]},
-                    "limit": {"type": "integer", "minimum": 1, "maximum": MAX_NEIGHBORS_LIMIT},
-                },
-                "additionalProperties": False,
-            },
-        },
-        {
-            "name": "dad_graph_search_nodes",
-            "description": "Search node id/type/label text without ranking fields.",
-            "inputSchema": {
-                "type": "object",
-                "required": ["surface_id", "query"],
-                "properties": {
-                    "surface_id": {"type": "string"},
-                    "query": {"type": "string"},
-                    "limit": {"type": "integer", "minimum": 1, "maximum": MAX_SEARCH_LIMIT},
-                },
-                "additionalProperties": False,
-            },
-        },
-    ]
-
-
-def _registry_resource(hub_root: Path, registry_id: str) -> tuple[str, str]:
-    rid = _safe_id(registry_id, "registry_id")
-    path = hub_root / "registry" / f"{rid}.json"
-    return "application/json", json_dumps(_load_json(path), pretty=True)
-
-
-def _surface_manifest_resource(hub_root: Path, surface_id: str) -> tuple[str, str]:
-    sid = _safe_id(surface_id, "surface_id")
-    return "application/json", json_dumps(_surface_manifest(hub_root, sid), pretty=True)
-
-
-def _report_resource(hub_root: Path, report_id: str) -> tuple[str, str]:
-    wanted = _safe_id(report_id, "report_id")
-    report_root = data_path(hub_root, "central_reports")
-    for path in sorted(report_root.rglob("*.json")) if report_root.exists() else []:
-        payload = _load_json(path)
-        if str(payload.get("report_id", path.stem)) == wanted or path.stem == wanted:
-            return "application/json", json_dumps(payload, pretty=True)
-    raise MCPError(f"Report not found: {wanted}", code=-32002)
-
-
-def _kernel_resource(hub_root: Path, kernel_id: str) -> tuple[str, str]:
-    kid = _safe_id(kernel_id, "kernel_id")
-    if kid != "aios-governance":
-        raise MCPError(f"Unknown kernel: {kid}", code=-32002)
-    return (
-        "application/json",
-        json_dumps(_load_json(hub_root / "registry" / "aios-governance-kernel.json"), pretty=True),
+            "schema_version": "dad.mcp.graph_neighbors.v1",
+            "surface_id": surface_id,
+            "surface_freshness": graph_surface_freshness(hub_root, surface),
+            "node_id": node_id,
+            "limit_applied": bounded,
+            "edge_count": len(matches),
+            "edges": [_sanitize_edge(edge) for edge in matches],
+            "review_status": "candidate",
+            "authority_boundary": surface.get(
+                "authority_boundary", GRAPH_SURFACE_AUTHORITY_BOUNDARY
+            ),
+        }
     )
 
 
-def _packet_resource(hub_root: Path, packet_id: str) -> tuple[str, str]:
-    pid = _safe_id(packet_id, "packet_id")
-    packet_root = data_path(hub_root, "fable_packets")
-    candidates = []
-    if packet_root.exists():
-        candidates.extend(path for path in packet_root.rglob("*") if path.is_file())
-    candidates.extend(path for path in hub_root.glob(f"{pid}.*") if path.is_file())
-    for path in sorted(candidates):
-        if path.stem != pid:
-            continue
-        mime = "application/json" if path.suffix == ".json" else "text/markdown"
-        return mime, path.read_text(encoding="utf-8")
-    raise MCPError(f"Packet not found: {pid}", code=-32002)
+def dad_graph_search_nodes(
+    hub_root: Path,
+    *,
+    surface_id: str,
+    query: str,
+    limit: int | None = None,
+) -> dict[str, Any]:
+    if not query or not str(query).strip():
+        raise MCPError(-32602, "query is required")
+    bounded = _bounded_limit(limit)
+    needle = str(query).casefold()
+    surface, graph = _load_surface_graph(hub_root, surface_id)
+    results: list[dict[str, Any]] = []
+    for node in _graph_nodes(graph):
+        haystack = json_dumps(node).casefold()
+        if needle in haystack:
+            results.append(_sanitize_node(node))
+        if len(results) >= bounded:
+            break
+    return _strip_forbidden_fields(
+        {
+            "schema_version": "dad.mcp.graph_search_nodes.v1",
+            "surface_id": surface_id,
+            "surface_freshness": graph_surface_freshness(hub_root, surface),
+            "query": query,
+            "limit_applied": bounded,
+            "result_count": len(results),
+            "results": results,
+            "review_status": "candidate",
+            "authority_boundary": surface.get(
+                "authority_boundary", GRAPH_SURFACE_AUTHORITY_BOUNDARY
+            ),
+        }
+    )
 
 
-def read_mcp_resource(hub_root: Path, uri: str) -> dict[str, Any]:
+def _read_resource_payload(hub_root: Path, uri: str) -> tuple[str, str]:
     parsed = urlparse(uri)
-    if parsed.scheme != "dad":
-        raise MCPError("Only dad:// resources are supported")
-    host = parsed.netloc
-    parts = [unquote(part) for part in parsed.path.split("/") if part]
-    if host == "registry" and len(parts) == 1:
-        mime, text = _registry_resource(hub_root, parts[0])
-    elif host == "surface" and len(parts) == 2 and parts[1] == "manifest":
-        mime, text = _surface_manifest_resource(hub_root, parts[0])
-    elif host == "report" and len(parts) == 1:
-        mime, text = _report_resource(hub_root, parts[0])
-    elif host == "kernel" and len(parts) == 1:
-        mime, text = _kernel_resource(hub_root, parts[0])
-    elif host == "packet" and len(parts) == 1:
-        mime, text = _packet_resource(hub_root, parts[0])
-    else:
-        raise MCPError(f"Unknown DAD MCP resource URI: {uri}", code=-32002)
-    return {
-        "uri": uri,
-        "mimeType": mime,
-        "text": f"authority_boundary: {MCP_AUTHORITY_BOUNDARY}\n{text}",
-    }
+    if parsed.scheme != "dad" or parsed.params or parsed.query or parsed.fragment:
+        raise MCPError(-32602, f"Unsupported resource URI: {uri}")
+    kind = parsed.netloc
+    parts = [part for part in parsed.path.split("/") if part]
+    if any(part in {".", ".."} or "\\" in part for part in parts):
+        raise MCPError(-32602, f"Invalid resource URI: {uri}")
 
+    if kind == "registry" and len(parts) == 1:
+        registry_id = _validate_id(parts[0], "registry_id")
+        path = _REGISTRY_RESOURCES.get(registry_id)
+        if path is None:
+            raise MCPError(-32602, f"Unknown registry resource: {registry_id}")
+        return "application/json", (hub_root / path).read_text(encoding="utf-8")
 
-def list_mcp_resources(hub_root: Path) -> list[dict[str, Any]]:
-    resources = [
-        {
-            "uri": "dad://registry/graph-surface-registry",
-            "name": "Graph Surface Registry",
-            "mimeType": "application/json",
-        },
-        {
-            "uri": "dad://registry/graph-edge-registry",
-            "name": "Graph Edge Registry",
-            "mimeType": "application/json",
-        },
-        {
-            "uri": "dad://kernel/aios-governance",
-            "name": "AIOS Governance Kernel",
-            "mimeType": "application/json",
-        },
-    ]
-    for surface in _surface_rows(hub_root):
-        if str(surface.get("status", "")) not in QUERYABLE_SURFACE_STATUSES:
-            continue
-        sid = str(surface.get("surface_id", ""))
-        try:
-            manifest_path = _surface_output_path(
-                hub_root, surface, "manifest_logical_path"
-            )
-        except MCPError:
-            continue
-        if sid and manifest_path.exists():
-            resources.append(
+    if kind == "surface" and len(parts) == 2 and parts[1] == "manifest":
+        surface = _surface_by_id(hub_root, parts[0])
+        manifest_path, _body_path = _surface_paths(hub_root, surface)
+        if not manifest_path.exists():
+            raise MCPError(-32602, f"Surface manifest is missing: {parts[0]}")
+        return "application/json", manifest_path.read_text(encoding="utf-8")
+
+    if kind == "report" and len(parts) == 1:
+        report_id = _validate_id(parts[0], "report_id")
+        if report_id not in _REPORT_RESOURCES:
+            raise MCPError(-32602, f"Unknown report resource: {report_id}")
+        if report_id == "journal-status":
+            return "application/json", json_dumps(journal_status(hub_root), pretty=True)
+        if report_id == "daemon-status":
+            return "application/json", json_dumps(daemon_status(hub_root), pretty=True)
+        if report_id == "surface-version-status":
+            path = surface_version_status_report_path(hub_root)
+            if path.exists():
+                return "application/json", path.read_text(encoding="utf-8")
+            return "application/json", json_dumps(
                 {
-                    "uri": f"dad://surface/{sid}/manifest",
-                    "name": f"{sid} Manifest",
-                    "mimeType": "application/json",
+                    "schema_version": "dad.surface_versions.status.v1",
+                    "status": "missing",
+                    "report_path": str(path),
+                    "authority_boundary": (
+                        "Surface-version status is a central read-only report. "
+                        "Generate it with `asset-dir enroll surface-status`; "
+                        "missing status does not authorize repo writes."
+                    ),
+                },
+                pretty=True,
+            )
+        return "application/json", json_dumps(graph_surface_status(hub_root), pretty=True)
+
+    if kind == "kernel" and len(parts) == 1:
+        kernel_id = _validate_id(parts[0], "kernel_id")
+        path = _KERNEL_RESOURCES.get(kernel_id)
+        if path is None:
+            raise MCPError(-32602, f"Unknown kernel resource: {kernel_id}")
+        return "text/markdown", (hub_root / path).read_text(encoding="utf-8")
+
+    if kind == "packet" and len(parts) == 1:
+        packet_id = _validate_id(parts[0], "packet_id")
+        path = _PACKET_RESOURCES.get(packet_id)
+        if path is None:
+            raise MCPError(-32602, f"Unknown packet resource: {packet_id}")
+        return "text/markdown", (hub_root / path).read_text(encoding="utf-8")
+
+    raise MCPError(-32602, f"Unsupported resource URI: {uri}")
+
+
+class DADGraphMCPServer:
+    def __init__(self, hub_root: Path) -> None:
+        self.hub_root = hub_root.resolve()
+
+    def list_resources(self) -> list[dict[str, Any]]:
+        registry = load_graph_surface_registry(self.hub_root)
+        resources = [
+            {
+                "uri": f"dad://registry/{registry_id}",
+                "name": registry_id,
+                "mimeType": "application/json",
+            }
+            for registry_id in sorted(_REGISTRY_RESOURCES)
+        ]
+        resources.extend(
+            {
+                "uri": f"dad://surface/{surface['surface_id']}/manifest",
+                "name": f"{surface['surface_id']} manifest",
+                "mimeType": "application/json",
+            }
+            for surface in registry.get("surfaces", [])
+        )
+        resources.extend(
+            {
+                "uri": f"dad://report/{report_id}",
+                "name": report_id,
+                "mimeType": "application/json",
+            }
+            for report_id in sorted(_REPORT_RESOURCES)
+        )
+        resources.append(
+            {
+                "uri": "dad://kernel/aios-governance",
+                "name": "AIOS governance kernels",
+                "mimeType": "text/markdown",
+            }
+        )
+        resources.append(
+            {
+                "uri": "dad://packet/graph-surface-mcp-handoff",
+                "name": "Graph surface MCP handoff packet",
+                "mimeType": "text/markdown",
+            }
+        )
+        return resources
+
+    def read_resource(self, uri: str) -> dict[str, Any]:
+        mime_type, text = _read_resource_payload(self.hub_root, uri)
+        return {"contents": [{"uri": uri, "mimeType": mime_type, "text": text}]}
+
+    def list_tools(self) -> list[dict[str, Any]]:
+        surface_schema = {"type": "string", "minLength": 1}
+        limit_schema = {"type": "integer", "minimum": 1, "maximum": MAX_QUERY_LIMIT}
+        return [
+            {
+                "name": "dad_graph_surface_status",
+                "description": "Read registered DAD graph surface availability and freshness.",
+                "inputSchema": {"type": "object", "additionalProperties": False, "properties": {}},
+            },
+            {
+                "name": "dad_graph_get_node",
+                "description": "Read one node from a registered DAD graph surface.",
+                "inputSchema": {
+                    "type": "object",
+                    "additionalProperties": False,
+                    "required": ["surface_id", "node_id"],
+                    "properties": {"surface_id": surface_schema, "node_id": surface_schema},
+                },
+            },
+            {
+                "name": "dad_graph_neighbors",
+                "description": "Read bounded incident edges for one node.",
+                "inputSchema": {
+                    "type": "object",
+                    "additionalProperties": False,
+                    "required": ["surface_id", "node_id"],
+                    "properties": {
+                        "surface_id": surface_schema,
+                        "node_id": surface_schema,
+                        "limit": limit_schema,
+                    },
+                },
+            },
+            {
+                "name": "dad_graph_search_nodes",
+                "description": "Search nodes on a registered DAD graph surface with a bounded limit.",
+                "inputSchema": {
+                    "type": "object",
+                    "additionalProperties": False,
+                    "required": ["surface_id", "query"],
+                    "properties": {
+                        "surface_id": surface_schema,
+                        "query": {"type": "string", "minLength": 1},
+                        "limit": limit_schema,
+                    },
+                },
+            },
+        ]
+
+    def call_tool(self, name: str, arguments: dict[str, Any] | None = None) -> dict[str, Any]:
+        arguments = arguments or {}
+        if name == "dad_graph_surface_status":
+            payload = graph_surface_status(self.hub_root)
+        elif name == "dad_graph_get_node":
+            payload = dad_graph_get_node(self.hub_root, **arguments)
+        elif name == "dad_graph_neighbors":
+            payload = dad_graph_neighbors(self.hub_root, **arguments)
+        elif name == "dad_graph_search_nodes":
+            payload = dad_graph_search_nodes(self.hub_root, **arguments)
+        else:
+            raise MCPError(-32601, f"Unknown tool: {name}")
+        return {
+            "content": [
+                {
+                    "type": "text",
+                    "text": json_dumps(_strip_forbidden_fields(payload), pretty=True),
                 }
-            )
-    return resources
+            ],
+            "structuredContent": _strip_forbidden_fields(payload),
+        }
 
-
-def call_mcp_tool(hub_root: Path, name: str, arguments: dict[str, Any] | None) -> dict[str, Any]:
-    if name not in TOOL_HANDLERS:
-        raise MCPError(f"Unknown tool: {name}", code=-32601)
-    args = arguments or {}
-    if not isinstance(args, dict):
-        raise MCPError("Tool arguments must be an object")
-    return TOOL_HANDLERS[name](hub_root, **args)
-
-
-def _jsonrpc_result(request_id: Any, result: Any) -> dict[str, Any]:
-    return {"jsonrpc": "2.0", "id": request_id, "result": result}
-
-
-def _jsonrpc_error(request_id: Any, code: int, message: str) -> dict[str, Any]:
-    return {"jsonrpc": "2.0", "id": request_id, "error": {"code": code, "message": message}}
-
-
-def handle_mcp_request(hub_root: Path, request: dict[str, Any]) -> dict[str, Any] | None:
-    method = str(request.get("method", ""))
-    request_id = request.get("id")
-    params = request.get("params", {})
-    try:
-        if method == "initialize":
-            return _jsonrpc_result(
-                request_id,
-                {
+    def handle_request(self, request: dict[str, Any]) -> dict[str, Any] | None:
+        request_id = request.get("id")
+        method = str(request.get("method", ""))
+        params = request.get("params") or {}
+        try:
+            if method == "notifications/initialized":
+                return None
+            if method == "initialize":
+                result = {
                     "protocolVersion": MCP_PROTOCOL_VERSION,
                     "capabilities": {"resources": {}, "tools": {}},
                     "serverInfo": {"name": SERVER_NAME, "version": SERVER_VERSION},
-                },
-            )
-        if method == "notifications/initialized":
-            return None
-        if method == "resources/list":
-            return _jsonrpc_result(request_id, {"resources": list_mcp_resources(hub_root)})
-        if method == "resources/read":
-            uri = str(params.get("uri", "")) if isinstance(params, dict) else ""
-            return _jsonrpc_result(
-                request_id, {"contents": [read_mcp_resource(hub_root, uri)]}
-            )
-        if method == "tools/list":
-            return _jsonrpc_result(request_id, {"tools": mcp_tool_definitions()})
-        if method == "tools/call":
-            if not isinstance(params, dict):
-                raise MCPError("tools/call params must be an object")
-            result = call_mcp_tool(
-                hub_root,
-                str(params.get("name", "")),
-                params.get("arguments", {}),
-            )
-            return _jsonrpc_result(
-                request_id,
-                {
-                    "content": [
-                        {
-                            "type": "text",
-                            "text": json_dumps(result, pretty=True),
-                        }
-                    ],
-                    "isError": False,
-                },
-            )
-        raise MCPError(f"Unsupported MCP method: {method}", code=-32601)
-    except MCPError as exc:
-        return _jsonrpc_error(request_id, exc.code, str(exc))
-    except TypeError as exc:
-        return _jsonrpc_error(request_id, -32602, str(exc))
+                }
+            elif method == "ping":
+                result = {}
+            elif method == "resources/list":
+                result = {"resources": self.list_resources()}
+            elif method == "resources/read":
+                result = self.read_resource(str(params.get("uri", "")))
+            elif method == "tools/list":
+                result = {"tools": self.list_tools()}
+            elif method == "tools/call":
+                result = self.call_tool(
+                    str(params.get("name", "")),
+                    params.get("arguments") if isinstance(params.get("arguments"), dict) else {},
+                )
+            else:
+                raise MCPError(-32601, f"Method not found: {method}")
+            return {"jsonrpc": "2.0", "id": request_id, "result": result}
+        except MCPError as exc:
+            return {
+                "jsonrpc": "2.0",
+                "id": request_id,
+                "error": {"code": exc.code, "message": exc.message},
+            }
+        except Exception as exc:
+            return {
+                "jsonrpc": "2.0",
+                "id": request_id,
+                "error": {"code": -32603, "message": str(exc)},
+            }
 
 
-def _read_content_length_message(stream: TextIO | BinaryIO) -> dict[str, Any] | None:
-    headers: dict[str, str] = {}
-    while True:
-        line = stream.readline()
-        if line in ("", b""):
-            return None
-        if isinstance(line, bytes):
-            stripped = line.decode("ascii", errors="replace").strip()
+def run_stdio_server(hub_root: Path) -> None:
+    server = DADGraphMCPServer(hub_root)
+    for line in sys.stdin:
+        if not line.strip():
+            continue
+        try:
+            request = json.loads(line)
+        except json.JSONDecodeError as exc:
+            response = {
+                "jsonrpc": "2.0",
+                "id": None,
+                "error": {"code": -32700, "message": str(exc)},
+            }
         else:
-            stripped = line.strip()
-        if not stripped:
-            break
-        name, separator, value = stripped.partition(":")
-        if separator:
-            headers[name.casefold()] = value.strip()
-    length = int(headers.get("content-length", "0"))
-    if length <= 0:
-        return None
-    body = stream.read(length)
-    if isinstance(body, bytes):
-        body = body.decode("utf-8")
-    return json.loads(body)
-
-
-def _write_content_length_message(stream: TextIO | BinaryIO, payload: dict[str, Any]) -> None:
-    body = json_dumps(payload, pretty=False)
-    body_bytes = body.encode("utf-8")
-    header = f"Content-Length: {len(body_bytes)}\r\n\r\n".encode("ascii")
-    try:
-        stream.write(header + body_bytes)
-    except TypeError:
-        stream.write((header + body_bytes).decode("utf-8"))
-    stream.flush()
-
-
-def serve_stdio(
-    hub_root: Path,
-    *,
-    input_stream: TextIO | BinaryIO | None = None,
-    output_stream: TextIO | BinaryIO | None = None,
-) -> None:
-    reader = input_stream or sys.stdin.buffer
-    writer = output_stream or sys.stdout.buffer
-    while True:
-        request = _read_content_length_message(reader)
-        if request is None:
-            return
-        response = handle_mcp_request(hub_root, request)
+            response = server.handle_request(request)
         if response is not None:
-            _write_content_length_message(writer, response)
+            sys.stdout.write(json_dumps(response) + "\n")
+            sys.stdout.flush()

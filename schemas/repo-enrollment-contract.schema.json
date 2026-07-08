@@ -13,6 +13,10 @@
     "dad_hub",
     "enrollment",
     "transport",
+    "graph",
+    "mcp",
+    "journal",
+    "events",
     "cadence",
     "enabled_control_planes",
     "local_validation_commands",
@@ -69,6 +73,46 @@
         "surface_version": {"const": "1.0.0"},
         "mode": {"const": "local_pull"},
         "journal_fallback": {"type": "boolean"}
+      },
+      "additionalProperties": false
+    },
+    "graph": {
+      "type": "object",
+      "required": ["surface_version", "mode"],
+      "properties": {
+        "surface_version": {"const": "0.1.0"},
+        "mode": {"const": "generated_candidate_surfaces"}
+      },
+      "additionalProperties": false
+    },
+    "mcp": {
+      "type": "object",
+      "required": ["surface_version", "mode", "remote_enabled", "vendor_sdk_required"],
+      "properties": {
+        "surface_version": {"const": "0.1.0"},
+        "mode": {"const": "local_stdio_read_only"},
+        "remote_enabled": {"const": false},
+        "vendor_sdk_required": {"const": false}
+      },
+      "additionalProperties": false
+    },
+    "journal": {
+      "type": "object",
+      "required": ["surface_version", "mode", "checkpoint_scope"],
+      "properties": {
+        "surface_version": {"const": "0.1.0"},
+        "mode": {"const": "plan_only_until_human_gate"},
+        "checkpoint_scope": {"const": "DATA_PLANE_PATHS"}
+      },
+      "additionalProperties": false
+    },
+    "events": {
+      "type": "object",
+      "required": ["surface_version", "mode", "append_only"],
+      "properties": {
+        "surface_version": {"const": "0.1.0"},
+        "mode": {"const": "repo_outbox_to_central_log"},
+        "append_only": {"const": true}
       },
       "additionalProperties": false
     },

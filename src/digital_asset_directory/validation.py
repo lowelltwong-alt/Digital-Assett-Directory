@@ -10,7 +10,8 @@ import yaml
 from jsonschema.validators import validator_for
 
 from .config import load_config
-from .transport import DATA_PLANE_PATHS
+from .graph_surfaces import resolve_graph_surface_path
+from .transport import DATA_PLANE_PATHS, data_relative_path
 from .exception_capture import (
     BACKFILL_ROUTE_REQUIRED_FIELDS,
     audit_observed_capture_repo,
@@ -1088,7 +1089,7 @@ def _capture_emission_simulation_errors(
 
 def _report_path_label(report_path: Path, repo_root: Path) -> str:
     try:
-        return str(report_path.relative_to(repo_root))
+        return report_path.relative_to(repo_root).as_posix()
     except ValueError:
         return report_path.name
 
@@ -1491,56 +1492,140 @@ def _validate_lesson_graph_contract(
             f"registry_only={sorted(registry_edge_types - schema_edge_enum)}"
         )
 
+    _validate_graph_surface_manifest_contracts(repo_root, registry, errors, checked, warnings)
+
+
+def _builder_source_hash(module_ref: str) -> str:
+    module_name, separator, _attr_name = module_ref.rpartition(".")
+    if not separator or not module_name:
+        return "missing"
+    try:
+        module = importlib.import_module(module_name)
+    except Exception:
+        return "missing"
+    module_file = getattr(module, "__file__", "")
+    return _hash_path(Path(module_file)) if module_file else "missing"
+
+
+def _graph_surface_manifest_specs(repo_root: Path) -> list[tuple[dict[str, Any], Path]]:
+    registry_path = repo_root / "registry" / "graph-surface-registry.json"
+    if registry_path.exists():
+        try:
+            registry = json.loads(registry_path.read_text(encoding="utf-8"))
+        except (OSError, json.JSONDecodeError):
+            return []
+        specs: list[tuple[dict[str, Any], Path]] = []
+        for surface in registry.get("surfaces", []):
+            if not isinstance(surface, dict):
+                continue
+            outputs = surface.get("outputs", {})
+            try:
+                manifest_path = resolve_graph_surface_path(
+                    repo_root, str(outputs["manifest_logical_path"])
+                )
+            except (KeyError, ValueError):
+                continue
+            if manifest_path.exists():
+                specs.append((surface, manifest_path))
+        return specs
+
     manifest_path = repo_root / "processed" / "learning" / "lesson-graph-manifest.json"
     if manifest_path.exists():
+        return [
+            (
+                {
+                    "surface_id": "lesson-graph",
+                    "builder": {
+                        "module": "digital_asset_directory.learning.build_lesson_graph"
+                    },
+                    "outputs": {
+                        "manifest_logical_path": "learning/lesson-graph-manifest.json",
+                        "body_logical_path": "learning/lesson-graph.json",
+                    },
+                },
+                manifest_path,
+            )
+        ]
+    return []
+
+
+def _validate_graph_surface_manifest_contracts(
+    repo_root: Path,
+    registry: dict[str, Any],
+    errors: list[str],
+    checked: list[str],
+    warnings: list[str],
+) -> None:
+    edge_registry_path = repo_root / "registry" / "graph-edge-registry.json"
+    actual_edge_registry_hash = _hash_path(edge_registry_path)
+    for surface, manifest_path in _graph_surface_manifest_specs(repo_root):
+        surface_id = str(surface.get("surface_id", "unknown"))
         manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
-        checked.append("processed/learning/lesson-graph-manifest.json")
+        checked.append(_report_path_label(manifest_path, repo_root))
         if "graph_surface_manifest" in registry.get("schemas", {}) and manifest.get(
             "surface_id"
         ):
             try:
                 _validate_payload(repo_root, registry, "graph_surface_manifest", manifest)
             except Exception as exc:
-                errors.append(f"Invalid lesson graph surface manifest: {exc}")
-        actual_edge_registry_hash = _hash_path(edge_registry_path)
+                errors.append(f"Invalid graph surface manifest {surface_id}: {exc}")
         expected_edge_registry_hash = manifest.get("edge_registry_hash")
         if (
             expected_edge_registry_hash
             and expected_edge_registry_hash != actual_edge_registry_hash
         ):
             errors.append(
-                "Inconsistent lesson graph manifest edge registry hash: "
+                f"Inconsistent graph surface manifest {surface_id} edge registry hash: "
                 f"{expected_edge_registry_hash} != {actual_edge_registry_hash}"
             )
         methodology_hashes = manifest.get("methodology_hashes", {})
         if isinstance(methodology_hashes, dict) and methodology_hashes.get(
             "builder_source"
         ):
-            actual_builder_hash = _hash_path(Path(__file__))
+            actual_builder_hash = _builder_source_hash(
+                str(surface.get("builder", {}).get("module", ""))
+            )
             if methodology_hashes["builder_source"] != actual_builder_hash:
                 errors.append(
-                    "Inconsistent lesson graph manifest methodology hash "
+                    f"Inconsistent graph surface manifest {surface_id} methodology hash "
                     f"builder_source: {methodology_hashes['builder_source']} "
                     f"!= {actual_builder_hash}"
                 )
         graph_content_hash = manifest.get("graph_content_hash")
-        manifest_graph_path = repo_root / str(
-            manifest.get("graph_path") or "processed/learning/lesson-graph.json"
-        )
+        graph_path_value = str(manifest.get("graph_path") or "")
+        if graph_path_value:
+            manifest_graph_path = data_relative_path(repo_root, graph_path_value)
+        else:
+            try:
+                manifest_graph_path = resolve_graph_surface_path(
+                    repo_root,
+                    str(surface.get("outputs", {}).get("body_logical_path", "")),
+                )
+            except ValueError:
+                manifest_graph_path = repo_root / "__missing_graph_surface_body__"
         if graph_content_hash and manifest_graph_path.exists():
             actual_graph_hash = _hash_path(manifest_graph_path)
             if graph_content_hash != actual_graph_hash:
                 errors.append(
-                    "Inconsistent lesson graph manifest graph content hash: "
+                    f"Inconsistent graph surface manifest {surface_id} graph content hash: "
                     f"{graph_content_hash} != {actual_graph_hash}"
                 )
         for rel, expected in manifest.get("input_hashes", {}).items():
-            actual = _hash_path(repo_root / rel)
+            actual = _hash_path(data_relative_path(repo_root, rel))
             if actual != expected:
-                warnings.append(
-                    "Stale lesson graph manifest input hash "
+                message = (
+                    f"Graph surface manifest {surface_id} stale input hash "
                     f"{rel}: {expected} != {actual}"
                 )
+                freshness = manifest.get("freshness", {})
+                if isinstance(freshness, dict) and freshness.get("state") == "fresh":
+                    errors.append(
+                        "Inconsistent graph surface manifest "
+                        f"{surface_id} fresh claim over stale input {rel}: "
+                        f"{expected} != {actual}"
+                    )
+                else:
+                    warnings.append(message)
 
 
 def _validate_jsonl_with_registered_schema(
