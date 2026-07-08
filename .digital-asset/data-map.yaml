@@ -1,0 +1,31 @@
+schema_version: 0.1.0
+repo_id: dad
+repo_ref: dad://repo/dad
+dad_hub_ref: dad://hub/Digital-Assett-Directory
+visibility: internal
+public_facing: false
+data_inputs:
+- name: repo-local outbox mail
+  path: .digital-asset/mail/outbox.jsonl
+  sensitivity_allowed:
+  - public
+  - internal
+  raw_private_content_allowed: false
+generated_outputs:
+- .digital-asset/mail/inbox.jsonl
+- .digital-asset/mail/archive.jsonl
+- .digital-asset/mail/last_checked.json
+- .digital-asset/dad-integration.json
+- .digital-asset/context-map.json
+- .digital-asset/key-values/registry.json
+- .digital-asset/key-values/change-log.jsonl
+sensitive_boundaries:
+- Do not store secrets, credentials, raw private rows, or large copied source blobs
+  in mail.
+- Public-facing repos receive public-safe pointers by default.
+- Private/internal/restricted/unknown origins require human release before public
+  delivery.
+allowed_movement:
+  normal_operation: .digital-asset/mail/** only
+  full_enrollment_or_update: approved DAD-managed paths only with approval ID
+authority_boundary: Data map is candidate governance metadata until reviewed locally.

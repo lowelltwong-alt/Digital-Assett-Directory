@@ -12,7 +12,6 @@
 @AGENTS.md
 
 Claude Code should follow the DAD enrollment contract in `AGENTS.md` and
-`.digital-asset/dad-integration.json`. `CLAUDE.md` is an optional runtime
-adapter, not the source of DAD governance truth. Agent review is triage only;
-human approval gates remain separate.
+`.digital-asset/dad-integration.json`. Agent review is triage only; human
+approval gates remain separate.
 <!-- END DIGITAL_ASSET_DIRECTORY_CLAUDE_IMPORT -->
