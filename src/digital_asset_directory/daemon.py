@@ -31,6 +31,7 @@ DAEMON_HEARTBEAT_NAME = "daemon-heartbeat.json"
 DAILY_REVIEW_QUEUE_MD = "daily_review_queue.md"
 DAILY_REVIEW_QUEUE_JSON = "daily_review_queue.json"
 DAEMON_TASK_WRAPPER_NAME = "dad-daemon-run-cycle.ps1"
+SCHEDULED_TASKS_REPORT_NAME = "scheduled_tasks.json"
 
 
 def _reports_dir(hub_root: Path) -> Path:
@@ -43,6 +44,10 @@ def daemon_heartbeat_path(hub_root: Path) -> Path:
 
 def daily_review_queue_path(hub_root: Path) -> Path:
     return _reports_dir(hub_root) / DAILY_REVIEW_QUEUE_MD
+
+
+def scheduled_tasks_report_path(hub_root: Path) -> Path:
+    return _reports_dir(hub_root) / SCHEDULED_TASKS_REPORT_NAME
 
 
 def _parse_time(value: str) -> datetime | None:
@@ -100,6 +105,11 @@ def daemon_status(hub_root: Path, *, stale_hours: int = 26) -> dict[str, Any]:
         "journal_checkpoint_due": payload.get("journal_checkpoint_due"),
         "journal_checkpoint_applied": payload.get("journal_checkpoint_applied"),
         "journal_checkpoint_status": payload.get("journal_checkpoint_status", {}),
+        "scheduled_tasks_report_path": payload.get(
+            "scheduled_tasks_report_path",
+            str(scheduled_tasks_report_path(hub_root)),
+        ),
+        "scheduled_task_count": payload.get("scheduled_task_count"),
         "last_cycle": payload,
         "authority_boundary": AUTHORITY_BOUNDARY,
     }
@@ -117,6 +127,7 @@ def _write_daily_review_queue(
     graph_result: dict[str, Any],
     graph_surface_status_result: dict[str, Any],
     transport_result: dict[str, Any] | None,
+    scheduled_tasks_result: dict[str, Any],
     journal_result: dict[str, Any],
 ) -> dict[str, Any]:
     report = {
@@ -130,6 +141,7 @@ def _write_daily_review_queue(
         "graphs": graph_result,
         "graph_surfaces": graph_surface_status_result,
         "transport": transport_result or {"status": "not_run"},
+        "scheduled_tasks": scheduled_tasks_result,
         "journal": journal_result,
         "authority_boundary": (
             "Daily review queue is an attention surface over candidate data. It "
@@ -158,6 +170,8 @@ def _write_daily_review_queue(
         f"- Graph surface freshness: {graph_surface_status_result.get('freshness_counts', {})}",
         f"- Transport audit: {transport_result.get('report_path', 'not run') if transport_result else 'not run'}",
         f"- Transport upgrade count: {transport_result.get('upgrade_required_count', 'not run') if transport_result else 'not run'}",
+        f"- Scheduled tasks: {scheduled_tasks_result.get('task_count', 'unknown')}",
+        f"- Scheduled task report: {scheduled_tasks_result.get('report_path', 'unknown')}",
         f"- Journal checkpoint due: {journal_result.get('checkpoint_due')}",
         f"- Journal new records: {journal_result.get('new_record_count')}",
         f"- Journal status: {journal_result.get('checkpoint_skipped_reason', 'ready_or_applied')}",
@@ -444,6 +458,7 @@ def run_daemon_cycle(
         "lesson_graph_rebuild",
         "graph_inference",
         "transport_audit",
+        "scheduled_task_registry",
         "daily_review_queue",
         "heartbeat",
         "journal_checkpoint",
@@ -477,6 +492,10 @@ def run_daemon_cycle(
         if transport_repos is not None
         else None
     )
+    scheduled_tasks_result = scheduled_tasks_status(
+        hub_root,
+        inspect_scheduler=False,
+    )
     journal_status_result = journal_status(hub_root)
     graph_surface_status_result = graph_surface_status(hub_root)
     review_queue = _write_daily_review_queue(
@@ -490,6 +509,7 @@ def run_daemon_cycle(
         graph_result=graph_result,
         graph_surface_status_result=graph_surface_status_result,
         transport_result=transport_result,
+        scheduled_tasks_result=scheduled_tasks_result,
         journal_result=journal_status_result,
     )
     heartbeat = {
@@ -514,6 +534,8 @@ def run_daemon_cycle(
         "journal_checkpoint_applied": False,
         "journal_checkpoint_status": journal_status_result,
         "daily_review_queue": review_queue["markdown_path"],
+        "scheduled_tasks_report_path": scheduled_tasks_result["report_path"],
+        "scheduled_task_count": scheduled_tasks_result["task_count"],
         "heartbeat_finalized": False,
         "authority_boundary": AUTHORITY_BOUNDARY,
     }
@@ -531,6 +553,10 @@ def run_daemon_cycle(
     heartbeat["heartbeat_finalized"] = True
     heartbeat["heartbeat_finalized_at"] = utc_now()
     atomic_write_text(daemon_heartbeat_path(hub_root), json_dumps(heartbeat, pretty=True) + "\n")
+    scheduled_tasks_result = write_scheduled_tasks_report(
+        hub_root,
+        inspect_scheduler=False,
+    )
     return {
         "schema_version": "dad.daemon.cycle.v1",
         "generated_at": generated_at,
@@ -545,6 +571,7 @@ def run_daemon_cycle(
         "graphs": graph_result,
         "graph_surface_status": graph_surface_status_result,
         "transport": transport_result,
+        "scheduled_tasks": scheduled_tasks_result,
         "journal_status": journal_status_result,
         "journal": journal_result,
         "authority_boundary": AUTHORITY_BOUNDARY,
@@ -620,6 +647,168 @@ def install_task_scheduler(plan: dict[str, Any]) -> dict[str, Any]:
         "stdout": result.stdout,
         "stderr": result.stderr,
     }
+
+
+def _scheduler_status_summary(status: dict[str, Any]) -> dict[str, Any]:
+    return {
+        "schema_version": status.get("schema_version", "dad.daemon.task_scheduler_status.v1"),
+        "installed": bool(status.get("installed", False)),
+        "status": status.get("status", "unknown"),
+        "task_status": status.get("task_status", ""),
+        "next_run_time": status.get("next_run_time", ""),
+        "task_to_run": status.get("task_to_run", ""),
+        "wrapper_path": status.get("wrapper_path", ""),
+        "wrapper_found": bool(status.get("wrapper_found", False)),
+        "wrapper_read_error": status.get("wrapper_read_error", ""),
+        "command_mentions_run_cycle": bool(status.get("command_mentions_run_cycle", False)),
+        "expected_hub_found": bool(status.get("expected_hub_found", False)),
+        "expected_shim_found": bool(status.get("expected_shim_found", False)),
+        "returncode": status.get("returncode"),
+    }
+
+
+def _scheduled_task_health(
+    *,
+    scheduler: dict[str, Any],
+    heartbeat: dict[str, Any],
+    inspect_scheduler: bool,
+) -> str:
+    if inspect_scheduler:
+        if not scheduler.get("installed"):
+            return "scheduler_missing_or_unavailable"
+        if not scheduler.get("command_mentions_run_cycle"):
+            return "installed_command_mismatch"
+        if not scheduler.get("expected_hub_found"):
+            return "installed_hub_mismatch"
+        if not scheduler.get("expected_shim_found"):
+            return "installed_shim_mismatch"
+    if heartbeat.get("status") == "fresh" and not bool(heartbeat.get("stale", True)):
+        return "ready" if inspect_scheduler else "heartbeat_fresh_scheduler_not_inspected"
+    if heartbeat.get("status") in {"missing", "invalid", "stale"}:
+        return "heartbeat_stale_or_missing"
+    return "unknown"
+
+
+def scheduled_tasks_status(
+    hub_root: Path,
+    *,
+    task_name: str = "DAD Daemon Run Cycle",
+    shim: Path | None = None,
+    inspect_scheduler: bool = False,
+    runner: Any | None = None,
+    stale_hours: int = 26,
+) -> dict[str, Any]:
+    heartbeat = daemon_status(hub_root, stale_hours=stale_hours)
+    if inspect_scheduler:
+        scheduler = task_scheduler_status(
+            hub_root,
+            task_name=task_name,
+            shim=shim,
+            runner=runner,
+        )
+        scheduler_summary = _scheduler_status_summary(scheduler)
+    else:
+        scheduler_summary = {
+            "schema_version": "dad.daemon.task_scheduler_status.v1",
+            "installed": None,
+            "status": "not_inspected",
+            "task_status": "",
+            "next_run_time": "",
+            "task_to_run": "",
+            "wrapper_path": str((shim or Path.home() / ".dad" / "bin" / "asset-dir.ps1").parent / DAEMON_TASK_WRAPPER_NAME),
+            "wrapper_found": None,
+            "wrapper_read_error": "",
+            "command_mentions_run_cycle": None,
+            "expected_hub_found": None,
+            "expected_shim_found": None,
+            "returncode": None,
+        }
+    report_path = scheduled_tasks_report_path(hub_root)
+    health = _scheduled_task_health(
+        scheduler=scheduler_summary,
+        heartbeat=heartbeat,
+        inspect_scheduler=inspect_scheduler,
+    )
+    task = {
+        "task_id": "dad-daemon-run-cycle",
+        "display_name": "DAD daemon run cycle",
+        "task_name": task_name,
+        "owner": "dad",
+        "kind": "windows_task_scheduler",
+        "schedule_source": "windows_task_scheduler",
+        "primary_command": "asset-dir daemon run-cycle",
+        "status_command": "asset-dir daemon task-status --hub .",
+        "install_command": "asset-dir daemon install --apply",
+        "category": "transport_daemon",
+        "health": health,
+        "heartbeat": {
+            "status": heartbeat.get("status"),
+            "stale": heartbeat.get("stale"),
+            "cycle_completed_at": heartbeat.get("cycle_completed_at", ""),
+            "heartbeat_path": heartbeat.get("heartbeat_path", ""),
+            "daily_review_queue_path": heartbeat.get("daily_review_queue_path", ""),
+            "scheduled_tasks_report_path": str(report_path),
+        },
+        "scheduler": scheduler_summary,
+        "writes": [
+            "DAD_DATA_ROOT/processed/reports/daemon-heartbeat.json",
+            "DAD_DATA_ROOT/processed/reports/daily_review_queue.md",
+            "DAD_DATA_ROOT/processed/reports/scheduled_tasks.json",
+        ],
+        "mutation_policy": (
+            "This registry is read-only status evidence. It does not create, "
+            "delete, enable, disable, or edit scheduled tasks."
+        ),
+        "human_gate_ids": ["phase-13-daemon-schedule-approved"],
+        "ui_ready": True,
+    }
+    tasks = [task]
+    healthy_count = sum(1 for item in tasks if item["health"] in {"ready", "heartbeat_fresh_scheduler_not_inspected"})
+    installed_count = sum(
+        1
+        for item in tasks
+        if item.get("scheduler", {}).get("installed") is True
+    )
+    return {
+        "schema_version": "dad.daemon.scheduled_tasks.v1",
+        "generated_at": utc_now(),
+        "report_path": str(report_path),
+        "inspect_scheduler": inspect_scheduler,
+        "task_count": len(tasks),
+        "healthy_count": healthy_count,
+        "installed_count": installed_count,
+        "tasks": tasks,
+        "ui_ready": True,
+        "authority_boundary": (
+            "Scheduled-task registry rows are local operational status evidence. "
+            "They do not authorize scheduler mutation, downstream repo writes, "
+            "protected repo changes, Cloudflare deployment, or roadmap gate approval."
+        ),
+    }
+
+
+def write_scheduled_tasks_report(
+    hub_root: Path,
+    *,
+    task_name: str = "DAD Daemon Run Cycle",
+    shim: Path | None = None,
+    inspect_scheduler: bool = False,
+    runner: Any | None = None,
+    stale_hours: int = 26,
+) -> dict[str, Any]:
+    report = scheduled_tasks_status(
+        hub_root,
+        task_name=task_name,
+        shim=shim,
+        inspect_scheduler=inspect_scheduler,
+        runner=runner,
+        stale_hours=stale_hours,
+    )
+    atomic_write_text(
+        scheduled_tasks_report_path(hub_root),
+        json_dumps(report, pretty=True) + "\n",
+    )
+    return report
 
 
 def _parse_schtasks_list_output(stdout: str) -> dict[str, str]:

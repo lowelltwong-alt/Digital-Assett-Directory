@@ -18,14 +18,19 @@ runtime boundary; it is not a new governance authority.
 ## MCP Surface Shape
 
 - Resources expose read-only context: `AGENTS.md`, front-door docs, schemas,
-  governance maps, data maps, transport status, journal status, audit summaries,
-  and enrollment status.
+  governance maps, data maps, transport status, journal status, scheduled-task
+  status, audit summaries, and enrollment status.
 - Tools wrap bounded actions: `agent preflight`, `agent midflight`,
   `agent postflight`, `data status`, `transport readiness`, `journal status`,
   reviewed plan generation, and approved apply commands.
 - Prompts provide reusable workflows only: preflight briefing, review-lane
   checklist, postflight drafting, transport rollout review, and MCP adapter
   design review.
+
+The local scheduled-task surface is `dad://report/scheduled-tasks`, backed by
+`asset-dir daemon scheduled-tasks` and the active-data-root report
+`processed/reports/scheduled_tasks.json`. It is read-only status evidence for
+UI/adapters, not scheduler mutation authority.
 
 ## Safety Rules
 

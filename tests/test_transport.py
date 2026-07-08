@@ -15,6 +15,8 @@ from digital_asset_directory.cli import app
 from digital_asset_directory.daemon import (
     daemon_status,
     run_daemon_cycle,
+    scheduled_tasks_report_path,
+    scheduled_tasks_status,
     task_scheduler_plan,
     task_scheduler_status,
 )
@@ -593,6 +595,7 @@ def test_daemon_cycle_writes_heartbeat_and_daily_queue(tmp_path: Path):
         "lesson_graph_rebuild",
         "graph_inference",
         "transport_audit",
+        "scheduled_task_registry",
         "daily_review_queue",
         "heartbeat",
         "journal_checkpoint",
@@ -605,6 +608,14 @@ def test_daemon_cycle_writes_heartbeat_and_daily_queue(tmp_path: Path):
         in Path(first["daily_review_queue"]["markdown_path"]).read_text(encoding="utf-8")
     )
     assert first["journal_status"]["schema_version"] == "dad.journal.status.v1"
+    assert first["scheduled_tasks"]["schema_version"] == "dad.daemon.scheduled_tasks.v1"
+    assert first["scheduled_tasks"]["task_count"] == 1
+    assert first["scheduled_tasks"]["tasks"][0]["health"] == "heartbeat_fresh_scheduler_not_inspected"
+    assert Path(first["scheduled_tasks"]["report_path"]).exists()
+    assert (
+        Path(first["scheduled_tasks"]["report_path"])
+        == hub / "processed" / "reports" / "scheduled_tasks.json"
+    )
     assert first["journal"]["checkpoint_skipped_reason"] in {
         "journal_repo_not_configured",
         "threshold_not_met",
@@ -613,6 +624,8 @@ def test_daemon_cycle_writes_heartbeat_and_daily_queue(tmp_path: Path):
     assert status["status"] == "fresh"
     assert status["transport_audit_ran"] is True
     assert "graph_surface_freshness_counts" in status["last_cycle"]
+    assert status["scheduled_tasks_report_path"].endswith("scheduled_tasks.json")
+    assert status["scheduled_task_count"] == 1
     assert status["journal_checkpoint_due"] in {True, False}
     assert status["journal_checkpoint_status"]["schema_version"] == "dad.journal.status.v1"
 
@@ -635,7 +648,9 @@ def test_daemon_cycle_with_initialized_data_root_writes_only_data_root(
 
     assert Path(result["heartbeat_path"]).is_relative_to(data_root)
     assert (data_root / "processed" / "reports" / "daemon-heartbeat.json").exists()
+    assert (data_root / "processed" / "reports" / "scheduled_tasks.json").exists()
     assert not (hub / "processed" / "reports" / "daemon-heartbeat.json").exists()
+    assert not (hub / "processed" / "reports" / "scheduled_tasks.json").exists()
 
 
 def test_transport_readiness_cli_reports_local_ready_with_human_gates_pending(
@@ -797,6 +812,94 @@ def test_daemon_task_status_reads_wrapper_for_long_scheduler_commands(tmp_path: 
     assert status["command_mentions_run_cycle"] is True
     assert status["expected_hub_found"] is True
     assert status["expected_shim_found"] is True
+
+
+def test_scheduled_tasks_status_lists_daemon_for_ui(tmp_path: Path):
+    hub = tmp_path / "hub"
+    hub.mkdir()
+    shim = tmp_path / "asset-dir.ps1"
+    wrapper = tmp_path / "dad-daemon-run-cycle.ps1"
+    wrapper.write_text(
+        f"& '{shim}' daemon run-cycle --hub '{hub.resolve()}'\n",
+        encoding="utf-8",
+    )
+    run_daemon_cycle(hub, mail_repos=[], exception_repos=[], transport_repos=[])
+
+    class Result:
+        returncode = 0
+        stdout = (
+            "TaskName: DAD Daemon Run Cycle\n"
+            "Status: Ready\n"
+            f'Task To Run: powershell -File "{wrapper}"\n'
+            "Next Run Time: 7/9/2026 9:00:00 AM\n"
+        )
+        stderr = ""
+
+    status = scheduled_tasks_status(
+        hub,
+        shim=shim,
+        inspect_scheduler=True,
+        runner=lambda *_args, **_kwargs: Result(),
+    )
+
+    assert status["schema_version"] == "dad.daemon.scheduled_tasks.v1"
+    assert status["report_path"] == str(scheduled_tasks_report_path(hub))
+    assert status["task_count"] == 1
+    assert status["healthy_count"] == 1
+    task = status["tasks"][0]
+    assert task["task_id"] == "dad-daemon-run-cycle"
+    assert task["health"] == "ready"
+    assert task["ui_ready"] is True
+    assert task["scheduler"]["installed"] is True
+    assert task["scheduler"]["command_mentions_run_cycle"] is True
+    assert "stdout" not in task["scheduler"]
+    assert "wrapper_text" not in task["scheduler"]
+    assert "phase-13-daemon-schedule-approved" in task["human_gate_ids"]
+
+
+def test_daemon_scheduled_tasks_cli_can_write_report(tmp_path: Path, monkeypatch: pytest.MonkeyPatch):
+    hub = _hub_for_cli(tmp_path / "hub")
+    shim = tmp_path / "asset-dir.ps1"
+    wrapper = tmp_path / "dad-daemon-run-cycle.ps1"
+    wrapper.write_text(
+        f"& '{shim}' daemon run-cycle --hub '{hub.resolve()}'\n",
+        encoding="utf-8",
+    )
+    run_daemon_cycle(hub, mail_repos=[], exception_repos=[], transport_repos=[])
+
+    class Result:
+        returncode = 0
+        stdout = (
+            "TaskName: DAD Daemon Run Cycle\n"
+            "Status: Ready\n"
+            f'Task To Run: powershell -File "{wrapper}"\n'
+            "Next Run Time: 7/9/2026 9:00:00 AM\n"
+        )
+        stderr = ""
+
+    monkeypatch.setattr(daemon_mod.subprocess, "run", lambda *_args, **_kwargs: Result())
+
+    result = RUNNER.invoke(
+        app,
+        [
+            "daemon",
+            "scheduled-tasks",
+            "--hub",
+            str(hub),
+            "--inspect-scheduler",
+            "--shim",
+            str(shim),
+        ],
+    )
+
+    assert result.exit_code == 0, result.output
+    payload = json.loads(result.stdout)
+    assert payload["schema_version"] == "dad.daemon.scheduled_tasks.v1"
+    assert payload["tasks"][0]["health"] == "ready"
+    report_path = scheduled_tasks_report_path(hub)
+    assert report_path.exists()
+    report = json.loads(report_path.read_text(encoding="utf-8"))
+    assert report["tasks"][0]["scheduler"]["next_run_time"] == "7/9/2026 9:00:00 AM"
 
 
 def test_journal_threshold_and_remote_outbox_quarantine(tmp_path: Path):

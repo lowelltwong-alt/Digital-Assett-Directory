@@ -79,8 +79,10 @@ from .daemon import (
     daemon_status,
     install_task_scheduler,
     run_daemon_cycle,
+    scheduled_tasks_status,
     task_scheduler_plan,
     task_scheduler_status,
+    write_scheduled_tasks_report,
 )
 from .enrollment import (
     apply_enrollment,
@@ -605,6 +607,28 @@ def daemon_task_status(
             cfg.repo_root,
             task_name=task_name,
             shim=shim,
+        )
+    )
+
+
+@daemon_app.command("scheduled-tasks")
+def daemon_scheduled_tasks(
+    hub: Optional[Path] = typer.Option(None),
+    task_name: str = typer.Option("DAD Daemon Run Cycle"),
+    shim: Optional[Path] = typer.Option(None),
+    inspect_scheduler: bool = typer.Option(False, "--inspect-scheduler"),
+    write_report: bool = typer.Option(True, "--write-report/--no-write-report"),
+    stale_hours: int = typer.Option(26),
+) -> None:
+    cfg = _cfg(hub=hub)
+    builder = write_scheduled_tasks_report if write_report else scheduled_tasks_status
+    console.print_json(
+        data=builder(
+            cfg.repo_root,
+            task_name=task_name,
+            shim=shim,
+            inspect_scheduler=inspect_scheduler,
+            stale_hours=stale_hours,
         )
     )
 

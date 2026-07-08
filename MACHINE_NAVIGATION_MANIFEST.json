@@ -138,6 +138,7 @@
     "processed/harnesses/",
     "assets/coding-harnesses/",
     "processed/reports/mail_center.md",
+    "processed/reports/scheduled_tasks.json",
     "processed/events/reports/event_pipeline.md",
     "processed/reports/operational_readiness.md",
     "processed/reports/scan_coverage_cycle.md",

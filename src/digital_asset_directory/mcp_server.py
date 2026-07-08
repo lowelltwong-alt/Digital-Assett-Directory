@@ -15,7 +15,7 @@ from pathlib import Path
 from typing import Any
 from urllib.parse import urlparse
 
-from .daemon import daemon_status
+from .daemon import daemon_status, scheduled_tasks_report_path, scheduled_tasks_status
 from .graph_surfaces import (
     GRAPH_SURFACE_AUTHORITY_BOUNDARY,
     graph_surface_freshness,
@@ -44,6 +44,7 @@ _REPORT_RESOURCES = {
     "journal-status",
     "daemon-status",
     "graph-surface-status",
+    "scheduled-tasks",
     "surface-version-status",
 }
 _KERNEL_RESOURCES = {
@@ -295,6 +296,11 @@ def _read_resource_payload(hub_root: Path, uri: str) -> tuple[str, str]:
             return "application/json", json_dumps(journal_status(hub_root), pretty=True)
         if report_id == "daemon-status":
             return "application/json", json_dumps(daemon_status(hub_root), pretty=True)
+        if report_id == "scheduled-tasks":
+            path = scheduled_tasks_report_path(hub_root)
+            if path.exists():
+                return "application/json", path.read_text(encoding="utf-8")
+            return "application/json", json_dumps(scheduled_tasks_status(hub_root), pretty=True)
         if report_id == "surface-version-status":
             path = surface_version_status_report_path(hub_root)
             if path.exists():

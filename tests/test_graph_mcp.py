@@ -135,6 +135,7 @@ def test_graph_mcp_initialize_lists_tools_and_resources(tmp_path: Path):
     uris = {resource["uri"] for resource in resources}
     assert "dad://registry/graph-surface-registry" in uris
     assert "dad://surface/lesson-graph/manifest" in uris
+    assert "dad://report/scheduled-tasks" in uris
     assert "dad://report/surface-version-status" in uris
     manifest = _request(
         server,
@@ -148,6 +149,14 @@ def test_graph_mcp_initialize_lists_tools_and_resources(tmp_path: Path):
         {"uri": "dad://report/surface-version-status"},
     )
     assert surface_status["result"]["contents"][0]["mimeType"] == "application/json"
+    scheduled_tasks = _request(
+        server,
+        "resources/read",
+        {"uri": "dad://report/scheduled-tasks"},
+    )
+    assert scheduled_tasks["result"]["contents"][0]["mimeType"] == "application/json"
+    scheduled_payload = json.loads(scheduled_tasks["result"]["contents"][0]["text"])
+    assert scheduled_payload["schema_version"] == "dad.daemon.scheduled_tasks.v1"
 
 
 def test_graph_mcp_rejects_unknown_and_hostile_resource_uris(tmp_path: Path):
