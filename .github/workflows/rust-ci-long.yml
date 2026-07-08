@@ -51,7 +51,7 @@ jobs:
         run: cargo nextest run --manifest-path tools/dad_scan_core/Cargo.toml
       - name: dependency license/advisory policy
         if: matrix.os == 'ubuntu-latest'
-        run: cargo deny --manifest-path tools/dad_scan_core/Cargo.toml --config deny.toml check
+        run: cargo deny --manifest-path tools/dad_scan_core/Cargo.toml check --config deny.toml
       - name: audit advisories
         if: matrix.os == 'ubuntu-latest'
         run: cargo audit --file tools/dad_scan_core/Cargo.lock
