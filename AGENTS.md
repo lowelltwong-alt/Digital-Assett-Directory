@@ -59,6 +59,22 @@ asset-dir agent preflight --repo . --agent <agent-id> --task "<task>"
 Use an arbitrary non-empty `<agent-id>` such as `codex`, `claude-code`,
 `cursor`, `copilot`, `human`, `ci`, or `other`. DAD's durable contract is
 agent-agnostic; runtime-specific files and hooks are optional adapters.
+Internal agent integrations default to MCP-style tools, resources, and prompts
+over direct vendor APIs. Direct APIs are external fallback adapters only; MCP
+tools with side effects still require the DAD lifecycle, audit records, and
+human gates. See `docs/MCP_FIRST_INTEGRATION_POLICY.md`.
+
+Transport/data-plane checks are part of normal orientation. Runtime data should
+resolve through `DAD_DATA_ROOT` only after an initialized marker exists; a
+configured-but-uninitialized root must still fall back to legacy paths. Inspect
+with:
+
+```text
+asset-dir data status
+asset-dir transport audit
+asset-dir daemon status
+asset-dir journal status
+```
 
 State the route, scope, validation plan, and stop conditions before editing.
 

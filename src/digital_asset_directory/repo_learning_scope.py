@@ -6,6 +6,7 @@ from typing import Any
 
 from .config import LocalSource
 from .models import AssetRecord
+from .transport import data_relative_path
 from .utils import atomic_write_text, json_dumps, utc_now
 
 METHODOLOGY_VERSION = "repo-learning-loop-install-scope-v0.1"
@@ -458,7 +459,7 @@ def write_repo_learning_loop_install_scope_outputs(
         limit=limit,
         generated_at=generated_at,
     )
-    reports_dir = repo_root / "processed" / "reports"
+    reports_dir = data_relative_path(repo_root, Path("processed") / "reports")
     paths = {
         "scope_markdown": reports_dir / "repo_learning_loop_install_scope.md",
         "scope_json": reports_dir / "repo_learning_loop_install_scope.json",

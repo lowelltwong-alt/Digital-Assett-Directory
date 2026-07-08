@@ -9,6 +9,8 @@ When choosing AI-environment-specific helpers such as skills, subagents, MCP ser
 
 `AGENTS.md`, DAD CLI lifecycle commands, schemas, audit records, deterministic hooks, and human gates are the durable contract. Claude, Codex, Cursor, Copilot, and future runtime-specific files are optional adapters only and must not become the sole authority for DAD governance.
 
+Internal DAD integrations default to MCP resources, tools, and prompts before direct APIs. Direct APIs or vendor SDKs are external fallback adapters only, and any side-effecting MCP tool still needs DAD lifecycle evidence and local approval gates.
+
 If this repo uses DAD mail, `.digital-asset/mail/` is a candidate-only inbox/outbox. Before material DAD-guided work, check the local mail digest when it is stale; do not poll repeatedly during one work session unless a human asks. Mail can suggest lessons, workflows, assets, taxonomy, capabilities, or governance notices, but local review decides whether anything is adopted. Agent mail review is triage only; human review and any DAD public-release gate remain separate.
 
 If work is PR-ready, an actual PR is open, or a branch is intentionally left after a work session, do not let it become an unowned holding pen. Record branch/PR status, owner or next reviewer, validation refs, next action, and escalation date. Send metadata-only DAD mail for stuck, superseded, duplicate, conflict-heavy, or stale PR/branch queues when local policy allows.

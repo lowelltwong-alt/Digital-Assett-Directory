@@ -16,6 +16,7 @@ from jsonschema.validators import validator_for
 
 from .ids import stable_id
 from .models import MailMessageRecord
+from .transport import data_path
 from .utils import (
     append_jsonl,
     json_dumps,
@@ -72,6 +73,49 @@ EXCEPTION_FIX_SCHEMA = Path("schemas") / "exception-fix-outcome.schema.json"
 BACKFILL_RUNS_DIR = Path("processed") / "exceptions" / "backfill-runs"
 EXCEPTION_EVENT_TYPE_REGISTRY = Path("registry") / "exception-event-type-registry.json"
 EXCEPTION_LEARNING_METHODOLOGY = Path("registry") / "exception-learning-methodology.json"
+
+
+def exception_data_path(hub_root: Path, relative_path: Path) -> Path:
+    parts = relative_path.parts
+    if parts[:2] == ("raw", "exceptions"):
+        return data_path(hub_root, "raw_exceptions").joinpath(*parts[2:])
+    if parts[:2] == ("processed", "exceptions"):
+        return data_path(hub_root, "exceptions").joinpath(*parts[2:])
+    if parts[:2] == ("processed", "reports"):
+        return data_path(hub_root, "central_reports").joinpath(*parts[2:])
+    if parts[:2] == ("processed", "mail"):
+        return data_path(hub_root, "central_mail").joinpath(*parts[2:])
+    raise ValueError(f"Unsupported exception data-plane path: {relative_path}")
+
+
+def _default_or_requested_path(
+    hub_root: Path,
+    output: Path | None,
+    default_relative_path: Path,
+) -> Path:
+    if output is not None:
+        if output.is_absolute():
+            return output
+        if output.parts[:2] in {
+            ("raw", "exceptions"),
+            ("processed", "exceptions"),
+            ("processed", "reports"),
+            ("processed", "mail"),
+        }:
+            return exception_data_path(hub_root, output)
+        return hub_root / output
+    return exception_data_path(hub_root, default_relative_path)
+
+
+def _exception_input_ref_path(hub_root: Path, ref: Path) -> Path:
+    if ref.parts[:2] in {
+        ("raw", "exceptions"),
+        ("processed", "exceptions"),
+        ("processed", "reports"),
+        ("processed", "mail"),
+    }:
+        return exception_data_path(hub_root, ref)
+    return hub_root / ref
 
 SCHEMA_VERSION = "0.1.0"
 HARD_ISSUE_LOOKUP_BASIS = (
@@ -1806,13 +1850,13 @@ def _collision_fields(record: dict[str, Any]) -> dict[str, Any]:
 
 
 def _append_lake_event(hub_root: Path, record: dict[str, Any]) -> str:
-    lake = hub_root / LAKE_PATH
+    lake = exception_data_path(hub_root, LAKE_PATH)
     existing = _existing_events_by_id(lake).get(str(record["event_id"]))
     if existing is not None:
         if _collision_fields(existing) == _collision_fields(record):
             return "duplicate"
         append_jsonl(
-            hub_root / QUARANTINE_DIR / "duplicate_collision_suspect.jsonl",
+            exception_data_path(hub_root, QUARANTINE_DIR) / "duplicate_collision_suspect.jsonl",
             {
                 "event_type": "duplicate_collision_suspect",
                 "created_at": utc_now(),
@@ -1836,8 +1880,7 @@ def _append_lake_event(hub_root: Path, record: dict[str, Any]) -> str:
         return "collision"
     append_jsonl(lake, record)
     raw_path = (
-        hub_root
-        / RAW_EXCEPTION_DIR
+        exception_data_path(hub_root, RAW_EXCEPTION_DIR)
         / str(record["event_time"])[:10]
         / f"{_slug(str(record['source_repo']))}.jsonl"
     )
@@ -1884,13 +1927,14 @@ def _fix_collision_fields(record: dict[str, Any]) -> dict[str, Any]:
 
 
 def _append_fix_outcome_record(hub_root: Path, record: dict[str, Any]) -> str:
-    path = hub_root / FIX_OUTCOME_PATH
+    path = exception_data_path(hub_root, FIX_OUTCOME_PATH)
     existing = _existing_fix_outcomes_by_id(path).get(str(record["fix_id"]))
     if existing is not None:
         if _fix_collision_fields(existing) == _fix_collision_fields(record):
             return "duplicate"
         append_jsonl(
-            hub_root / QUARANTINE_DIR / "fix_outcome_duplicate_collision_suspect.jsonl",
+            exception_data_path(hub_root, QUARANTINE_DIR)
+            / "fix_outcome_duplicate_collision_suspect.jsonl",
             {
                 "event_type": "fix_outcome_duplicate_collision_suspect",
                 "created_at": utc_now(),
@@ -1915,8 +1959,7 @@ def _append_fix_outcome_record(hub_root: Path, record: dict[str, Any]) -> str:
         return "collision"
     append_jsonl(path, record)
     raw_path = (
-        hub_root
-        / RAW_EXCEPTION_DIR
+        exception_data_path(hub_root, RAW_EXCEPTION_DIR)
         / str(record["recorded_at"])[:10]
         / f"{_slug(str(record['source_repo']))}-fix-outcomes.jsonl"
     )
@@ -1933,7 +1976,9 @@ def collect_exception_fix_outcomes(
     outbox = repo / FIX_OUTCOME_PATH
     records, malformed = _read_jsonl_with_errors(outbox)
     repo_id, _, _ = _repo_identity(repo, repo_policies)
-    malformed_path = hub_root / QUARANTINE_DIR / "fix_outcome_malformed_jsonl.jsonl"
+    malformed_path = (
+        exception_data_path(hub_root, QUARANTINE_DIR) / "fix_outcome_malformed_jsonl.jsonl"
+    )
     for error in malformed:
         append_jsonl(
             malformed_path,
@@ -1950,7 +1995,9 @@ def collect_exception_fix_outcomes(
     duplicates = 0
     duplicate_collisions = 0
     quarantined = 0
-    quarantine_path = hub_root / QUARANTINE_DIR / f"{_slug(repo_id)}-fix-outcomes.jsonl"
+    quarantine_path = (
+        exception_data_path(hub_root, QUARANTINE_DIR) / f"{_slug(repo_id)}-fix-outcomes.jsonl"
+    )
     for packet in records:
         try:
             normalized = _canonicalize_fix_outcome_packet(
@@ -2041,7 +2088,7 @@ def collect_exception_events(
     outbox = repo / EXCEPTION_OUTBOX
     records, malformed = _read_jsonl_with_errors(outbox)
     repo_id, _, _ = _repo_identity(repo, repo_policies)
-    malformed_path = hub_root / QUARANTINE_DIR / "malformed_jsonl.jsonl"
+    malformed_path = exception_data_path(hub_root, QUARANTINE_DIR) / "malformed_jsonl.jsonl"
     for error in malformed:
         append_jsonl(
             malformed_path,
@@ -2058,7 +2105,7 @@ def collect_exception_events(
     duplicates = 0
     duplicate_collisions = 0
     quarantined = 0
-    quarantine_path = hub_root / QUARANTINE_DIR / f"{_slug(repo_id)}.jsonl"
+    quarantine_path = exception_data_path(hub_root, QUARANTINE_DIR) / f"{_slug(repo_id)}.jsonl"
     for packet in records:
         try:
             normalized = normalize_exception_packet(
@@ -2302,7 +2349,10 @@ def backfill_exception_candidates(
             if issues:
                 screened["review_status"] = "quarantined"
                 screened["screening"]["issues"] = issues
-                append_jsonl(hub_root / QUARANTINE_DIR / "backfill.jsonl", screened)
+                append_jsonl(
+                    exception_data_path(hub_root, QUARANTINE_DIR) / "backfill.jsonl",
+                    screened,
+                )
                 continue
             try:
                 validate_exception_event_record(hub_root, screened)
@@ -2310,7 +2360,7 @@ def backfill_exception_candidates(
                 screened["review_status"] = "quarantined"
                 screened["screening"]["issues"] = ["schema_validation_failed"]
                 append_jsonl(
-                    hub_root / QUARANTINE_DIR / "backfill.jsonl",
+                    exception_data_path(hub_root, QUARANTINE_DIR) / "backfill.jsonl",
                     {
                         **screened,
                         "quarantine_reason": str(exc),
@@ -2362,10 +2412,10 @@ def backfill_exception_candidates(
         "lake_path": LAKE_PATH.as_posix(),
         "coverage_warning": "partial_backfill_wave" if stopped != "walk_exhausted" else "",
     }
-    latest_run = hub_root / BACKFILL_RUNS_DIR / "latest.json"
+    latest_run = exception_data_path(hub_root, BACKFILL_RUNS_DIR) / "latest.json"
     latest_run.parent.mkdir(parents=True, exist_ok=True)
     latest_run.write_text(json_dumps(run_record, pretty=True) + "\n", encoding="utf-8")
-    append_jsonl(hub_root / BACKFILL_RUNS_DIR / "runs.jsonl", run_record)
+    append_jsonl(exception_data_path(hub_root, BACKFILL_RUNS_DIR) / "runs.jsonl", run_record)
     report = write_exception_report(hub_root)
     return {
         **run_record,
@@ -2374,7 +2424,7 @@ def backfill_exception_candidates(
 
 
 def load_lake_events(hub_root: Path) -> list[dict[str, Any]]:
-    path = hub_root / LAKE_PATH
+    path = exception_data_path(hub_root, LAKE_PATH)
     if not path.exists():
         return []
     events: list[dict[str, Any]] = []
@@ -2386,11 +2436,12 @@ def load_lake_events(hub_root: Path) -> list[dict[str, Any]]:
 
 
 def load_fix_outcomes(hub_root: Path) -> list[dict[str, Any]]:
-    path = hub_root / FIX_OUTCOME_PATH
+    path = exception_data_path(hub_root, FIX_OUTCOME_PATH)
     records, errors = _read_jsonl_with_errors(path)
     for error in errors:
         append_jsonl(
-            hub_root / QUARANTINE_DIR / "fix_outcome_report_malformed_jsonl.jsonl",
+            exception_data_path(hub_root, QUARANTINE_DIR)
+            / "fix_outcome_report_malformed_jsonl.jsonl",
             {
                 "event_type": "fix_outcome_report_malformed_jsonl",
                 "created_at": utc_now(),
@@ -2404,7 +2455,8 @@ def load_fix_outcomes(hub_root: Path) -> list[dict[str, Any]]:
             validate_exception_fix_outcome_record(hub_root, record)
         except ValueError as exc:
             append_jsonl(
-                hub_root / QUARANTINE_DIR / "fix_outcome_report_invalid_records.jsonl",
+                exception_data_path(hub_root, QUARANTINE_DIR)
+                / "fix_outcome_report_invalid_records.jsonl",
                 {
                     "event_type": "fix_outcome_report_invalid_record",
                     "created_at": utc_now(),
@@ -2566,7 +2618,7 @@ def _lookup_query_summary(value: Any, issues: list[str]) -> tuple[str, int]:
 
 
 def _load_lake_events_for_lookup(hub_root: Path) -> tuple[list[dict[str, Any]], list[str]]:
-    records, errors = _read_jsonl_with_errors(hub_root / LAKE_PATH)
+    records, errors = _read_jsonl_with_errors(exception_data_path(hub_root, LAKE_PATH))
     warnings: list[str] = []
     if errors:
         warnings.append("malformed exception lake rows were skipped during lookup")
@@ -2582,7 +2634,7 @@ def _load_lake_events_for_lookup(hub_root: Path) -> tuple[list[dict[str, Any]], 
 
 
 def _load_fix_outcomes_for_lookup(hub_root: Path) -> tuple[list[dict[str, Any]], list[str]]:
-    records, errors = _read_jsonl_with_errors(hub_root / FIX_OUTCOME_PATH)
+    records, errors = _read_jsonl_with_errors(exception_data_path(hub_root, FIX_OUTCOME_PATH))
     warnings: list[str] = []
     if errors:
         warnings.append("malformed fix-outcome rows were skipped during lookup")
@@ -3018,7 +3070,7 @@ def write_exception_report(hub_root: Path) -> dict[str, Any]:
         ),
     }
     latest_backfill_wave: dict[str, Any] = {}
-    latest_path = hub_root / BACKFILL_RUNS_DIR / "latest.json"
+    latest_path = exception_data_path(hub_root, BACKFILL_RUNS_DIR) / "latest.json"
     if latest_path.exists():
         try:
             latest_backfill_wave = json.loads(latest_path.read_text(encoding="utf-8"))
@@ -3074,7 +3126,7 @@ def write_exception_report(hub_root: Path) -> dict[str, Any]:
             "not raw logs, secrets, private rows, tool transcripts, or source authority."
         ),
     }
-    report_path = hub_root / REPORT_JSON
+    report_path = exception_data_path(hub_root, REPORT_JSON)
     report_path.parent.mkdir(parents=True, exist_ok=True)
     report_path.write_text(json_dumps(report, pretty=True) + "\n", encoding="utf-8")
     lines = [
@@ -3155,7 +3207,10 @@ def write_exception_report(hub_root: Path) -> dict[str, Any]:
         ]
     )
     lines.extend(f"- {action}" for action in next_actions)
-    (hub_root / REPORT_MD).write_text("\n".join(lines) + "\n", encoding="utf-8")
+    exception_data_path(hub_root, REPORT_MD).write_text(
+        "\n".join(lines) + "\n",
+        encoding="utf-8",
+    )
     return report
 
 
@@ -3168,7 +3223,9 @@ def _exception_report_input_hashes(hub_root: Path) -> dict[str, str]:
     ]
     return {
         ref.as_posix(): (
-            f"sha256:{sha256_file(hub_root / ref)}" if (hub_root / ref).exists() else "missing"
+            f"sha256:{sha256_file(_exception_input_ref_path(hub_root, ref))}"
+            if _exception_input_ref_path(hub_root, ref).exists()
+            else "missing"
         )
         for ref in refs
     }
@@ -3185,7 +3242,7 @@ def _exception_learning_queue_input_hashes(hub_root: Path) -> dict[str, str]:
     hashes: dict[str, str] = {}
     repo_root = Path(__file__).resolve().parents[2]
     for ref in refs:
-        path = hub_root / ref
+        path = _exception_input_ref_path(hub_root, ref)
         if not path.exists() and ref.parts[:1] == ("src",):
             path = repo_root / ref
         hashes[ref.as_posix()] = f"sha256:{sha256_file(path)}" if path.exists() else "missing"
@@ -3202,7 +3259,7 @@ def _exception_backfill_review_queue_input_hashes(hub_root: Path) -> dict[str, s
     hashes: dict[str, str] = {}
     repo_root = Path(__file__).resolve().parents[2]
     for ref in refs:
-        path = hub_root / ref
+        path = _exception_input_ref_path(hub_root, ref)
         if not path.exists() and ref.parts[:1] == ("src",):
             path = repo_root / ref
         hashes[ref.as_posix()] = f"sha256:{sha256_file(path)}" if path.exists() else "missing"
@@ -3211,7 +3268,7 @@ def _exception_backfill_review_queue_input_hashes(hub_root: Path) -> dict[str, s
 
 def _exception_source_packet_opportunity_input_hashes(hub_root: Path) -> dict[str, str]:
     hashes = _exception_backfill_review_queue_input_hashes(hub_root)
-    decisions_path = hub_root / BACKFILL_REVIEW_DECISIONS
+    decisions_path = exception_data_path(hub_root, BACKFILL_REVIEW_DECISIONS)
     hashes[BACKFILL_REVIEW_DECISIONS.as_posix()] = (
         f"sha256:{sha256_file(decisions_path)}" if decisions_path.exists() else "missing"
     )
@@ -3219,7 +3276,7 @@ def _exception_source_packet_opportunity_input_hashes(hub_root: Path) -> dict[st
 
 
 def _latest_backfill_run_summary(hub_root: Path) -> dict[str, Any]:
-    path = hub_root / BACKFILL_RUNS_DIR / "latest.json"
+    path = exception_data_path(hub_root, BACKFILL_RUNS_DIR) / "latest.json"
     if not path.exists():
         return {
             "available": False,
@@ -3632,10 +3689,14 @@ def write_exception_backfill_review_queue(
     }
     if not write_outputs:
         return report
-    output_path = hub_root / (output or BACKFILL_REVIEW_QUEUE_JSON)
+    output_path = _default_or_requested_path(hub_root, output, BACKFILL_REVIEW_QUEUE_JSON)
     output_path.parent.mkdir(parents=True, exist_ok=True)
     output_path.write_text(json_dumps(report, pretty=True) + "\n", encoding="utf-8")
-    md_path = output_path.with_suffix(".md") if output else hub_root / BACKFILL_REVIEW_QUEUE_MD
+    md_path = (
+        output_path.with_suffix(".md")
+        if output
+        else exception_data_path(hub_root, BACKFILL_REVIEW_QUEUE_MD)
+    )
     lines = [
         "# Exception Backfill Review Queue",
         "",
@@ -3935,10 +3996,14 @@ def write_exception_backfill_refresh_plan(
             "decisions instead of editing historical lake rows."
         ),
     }
-    output_path = hub_root / (output or BACKFILL_REFRESH_PLAN_JSON)
+    output_path = _default_or_requested_path(hub_root, output, BACKFILL_REFRESH_PLAN_JSON)
     output_path.parent.mkdir(parents=True, exist_ok=True)
     output_path.write_text(json_dumps(report, pretty=True) + "\n", encoding="utf-8")
-    md_path = output_path.with_suffix(".md") if output else hub_root / BACKFILL_REFRESH_PLAN_MD
+    md_path = (
+        output_path.with_suffix(".md")
+        if output
+        else exception_data_path(hub_root, BACKFILL_REFRESH_PLAN_MD)
+    )
     lines = [
         "# Exception Backfill Classifier Refresh Plan",
         "",
@@ -4055,7 +4120,7 @@ def _backfill_review_queue_fingerprint(
 
 
 def _append_unique_backfill_review_decision(hub_root: Path, record: dict[str, Any]) -> bool:
-    path = hub_root / BACKFILL_REVIEW_DECISIONS
+    path = exception_data_path(hub_root, BACKFILL_REVIEW_DECISIONS)
     existing_ids: set[str] = set()
     if path.exists():
         for row in _read_jsonl_with_errors(path)[0]:
@@ -4068,13 +4133,14 @@ def _append_unique_backfill_review_decision(hub_root: Path, record: dict[str, An
 
 
 def load_exception_backfill_review_decisions(hub_root: Path) -> list[dict[str, Any]]:
-    path = hub_root / BACKFILL_REVIEW_DECISIONS
+    path = exception_data_path(hub_root, BACKFILL_REVIEW_DECISIONS)
     if not path.exists():
         return []
     records, errors = _read_jsonl_with_errors(path)
     for error in errors:
         append_jsonl(
-            hub_root / QUARANTINE_DIR / "backfill_review_decisions_malformed_jsonl.jsonl",
+            exception_data_path(hub_root, QUARANTINE_DIR)
+            / "backfill_review_decisions_malformed_jsonl.jsonl",
             {
                 "event_type": "backfill_review_decision_malformed_jsonl",
                 "created_at": utc_now(),
@@ -4348,7 +4414,8 @@ def _quarantine_source_packet_request_decision(
     current_group: dict[str, Any] | None = None,
 ) -> None:
     append_jsonl(
-        hub_root / QUARANTINE_DIR / "source_packet_request_decision_mismatches.jsonl",
+        exception_data_path(hub_root, QUARANTINE_DIR)
+        / "source_packet_request_decision_mismatches.jsonl",
         {
             "event_type": event_type,
             "created_at": utc_now(),
@@ -4387,7 +4454,8 @@ def _validate_backfill_review_decision_for_request(
         validator_cls(schema).validate(row)
     except (OSError, json.JSONDecodeError, ValidationError) as exc:
         append_jsonl(
-            hub_root / QUARANTINE_DIR / "source_packet_request_invalid_decisions.jsonl",
+            exception_data_path(hub_root, QUARANTINE_DIR)
+            / "source_packet_request_invalid_decisions.jsonl",
             {
                 "event_type": "source_packet_request_invalid_decision",
                 "created_at": utc_now(),
@@ -4402,7 +4470,7 @@ def _validate_backfill_review_decision_for_request(
 
 
 def _load_valid_backfill_review_decisions_for_requests(hub_root: Path) -> list[dict[str, Any]]:
-    path = hub_root / BACKFILL_REVIEW_DECISIONS
+    path = exception_data_path(hub_root, BACKFILL_REVIEW_DECISIONS)
     if not path.exists():
         return []
     valid_rows: list[dict[str, Any]] = []
@@ -4415,7 +4483,8 @@ def _load_valid_backfill_review_decisions_for_requests(hub_root: Path) -> list[d
                 row = json.loads(stripped_bytes.decode("utf-8"))
             except (UnicodeDecodeError, json.JSONDecodeError) as exc:
                 append_jsonl(
-                    hub_root / QUARANTINE_DIR / "source_packet_request_malformed_decisions.jsonl",
+                    exception_data_path(hub_root, QUARANTINE_DIR)
+                    / "source_packet_request_malformed_decisions.jsonl",
                     {
                         "event_type": "source_packet_request_malformed_decision_jsonl",
                         "created_at": utc_now(),
@@ -4428,7 +4497,8 @@ def _load_valid_backfill_review_decisions_for_requests(hub_root: Path) -> list[d
                 continue
             if not isinstance(row, dict):
                 append_jsonl(
-                    hub_root / QUARANTINE_DIR / "source_packet_request_invalid_decisions.jsonl",
+                    exception_data_path(hub_root, QUARANTINE_DIR)
+                    / "source_packet_request_invalid_decisions.jsonl",
                     {
                         "event_type": "source_packet_request_invalid_decision",
                         "created_at": utc_now(),
@@ -4450,13 +4520,14 @@ def _load_valid_backfill_review_decisions_for_requests(hub_root: Path) -> list[d
 
 
 def _append_unique_source_packet_mail(hub_root: Path, record: dict[str, Any]) -> str:
-    path = hub_root / SOURCE_PACKET_REQUESTS_STAGED
+    path = exception_data_path(hub_root, SOURCE_PACKET_REQUESTS_STAGED)
     mail_record = MailMessageRecord(**record)
     payload = mail_record.model_dump(mode="json")
     issues = _source_packet_mail_semantic_issues(payload)
     if issues:
         append_jsonl(
-            hub_root / QUARANTINE_DIR / "source_packet_request_mail_rejected.jsonl",
+            exception_data_path(hub_root, QUARANTINE_DIR)
+            / "source_packet_request_mail_rejected.jsonl",
             {
                 "event_type": "source_packet_request_mail_rejected",
                 "created_at": utc_now(),
@@ -4472,7 +4543,8 @@ def _append_unique_source_packet_mail(hub_root: Path, record: dict[str, Any]) ->
         rows, errors = _read_jsonl_with_errors(path)
         for error in errors:
             append_jsonl(
-                hub_root / QUARANTINE_DIR / "source_packet_requests_malformed_jsonl.jsonl",
+                exception_data_path(hub_root, QUARANTINE_DIR)
+                / "source_packet_requests_malformed_jsonl.jsonl",
                 {
                     "event_type": "source_packet_request_malformed_jsonl",
                     "created_at": utc_now(),
@@ -4882,10 +4954,14 @@ def write_exception_source_packet_opportunities(
             "approve public release, promote learning, or mutate source repos."
         ),
     }
-    output_path = hub_root / (output or SOURCE_PACKET_OPPORTUNITIES_JSON)
+    output_path = _default_or_requested_path(hub_root, output, SOURCE_PACKET_OPPORTUNITIES_JSON)
     output_path.parent.mkdir(parents=True, exist_ok=True)
     output_path.write_text(json_dumps(report, pretty=True) + "\n", encoding="utf-8")
-    md_path = output_path.with_suffix(".md") if output else hub_root / SOURCE_PACKET_OPPORTUNITIES_MD
+    md_path = (
+        output_path.with_suffix(".md")
+        if output
+        else exception_data_path(hub_root, SOURCE_PACKET_OPPORTUNITIES_MD)
+    )
     lines = [
         "# Exception Source Packet Opportunities",
         "",
@@ -4929,13 +5005,14 @@ def _append_source_packet_request_cancellations(
     latest_decisions: dict[str, dict[str, Any]],
     active_mail_ids: set[str],
 ) -> int:
-    path = hub_root / SOURCE_PACKET_REQUESTS_STAGED
+    path = exception_data_path(hub_root, SOURCE_PACKET_REQUESTS_STAGED)
     if not path.exists():
         return 0
     rows, errors = _read_jsonl_with_errors(path)
     for error in errors:
         append_jsonl(
-            hub_root / QUARANTINE_DIR / "source_packet_requests_malformed_jsonl.jsonl",
+            exception_data_path(hub_root, QUARANTINE_DIR)
+            / "source_packet_requests_malformed_jsonl.jsonl",
             {
                 "event_type": "source_packet_request_malformed_jsonl",
                 "created_at": utc_now(),
@@ -5094,10 +5171,14 @@ def write_exception_source_packet_requests(
             "exceptions, or promote lessons."
         ),
     }
-    output_path = hub_root / (output or SOURCE_PACKET_REQUESTS_JSON)
+    output_path = _default_or_requested_path(hub_root, output, SOURCE_PACKET_REQUESTS_JSON)
     output_path.parent.mkdir(parents=True, exist_ok=True)
     output_path.write_text(json_dumps(report, pretty=True) + "\n", encoding="utf-8")
-    md_path = output_path.with_suffix(".md") if output else hub_root / SOURCE_PACKET_REQUESTS_MD
+    md_path = (
+        output_path.with_suffix(".md")
+        if output
+        else exception_data_path(hub_root, SOURCE_PACKET_REQUESTS_MD)
+    )
     lines = [
         "# Exception Source Packet Requests",
         "",
@@ -5362,10 +5443,14 @@ def write_exception_learning_queue(
             "learning."
         ),
     }
-    output_path = hub_root / (output or LEARNING_QUEUE_JSON)
+    output_path = _default_or_requested_path(hub_root, output, LEARNING_QUEUE_JSON)
     output_path.parent.mkdir(parents=True, exist_ok=True)
     output_path.write_text(json_dumps(report, pretty=True) + "\n", encoding="utf-8")
-    md_path = output_path.with_suffix(".md") if output else hub_root / LEARNING_QUEUE_MD
+    md_path = (
+        output_path.with_suffix(".md")
+        if output
+        else exception_data_path(hub_root, LEARNING_QUEUE_MD)
+    )
     lines = [
         "# Exception Learning Queue",
         "",
@@ -5413,7 +5498,7 @@ def _exception_fix_outcome_request_input_hashes(hub_root: Path) -> dict[str, str
     hashes: dict[str, str] = {}
     repo_root = Path(__file__).resolve().parents[2]
     for ref in refs:
-        path = hub_root / ref
+        path = _exception_input_ref_path(hub_root, ref)
         if not path.exists() and ref.parts[:1] in {("src",), ("schemas",)}:
             path = repo_root / ref
         if path.exists() and path.is_file():
@@ -5466,13 +5551,14 @@ def _fix_outcome_request_is_cancellation(record: dict[str, Any]) -> bool:
 
 
 def _append_unique_fix_outcome_request_mail(hub_root: Path, record: dict[str, Any]) -> str:
-    path = hub_root / FIX_OUTCOME_REQUESTS_STAGED
+    path = exception_data_path(hub_root, FIX_OUTCOME_REQUESTS_STAGED)
     mail_record = MailMessageRecord(**record)
     payload = mail_record.model_dump(mode="json")
     issues = _source_packet_mail_semantic_issues(payload)
     if issues:
         append_jsonl(
-            hub_root / QUARANTINE_DIR / "fix_outcome_request_mail_rejected.jsonl",
+            exception_data_path(hub_root, QUARANTINE_DIR)
+            / "fix_outcome_request_mail_rejected.jsonl",
             {
                 "event_type": "fix_outcome_request_mail_rejected",
                 "created_at": utc_now(),
@@ -5488,7 +5574,8 @@ def _append_unique_fix_outcome_request_mail(hub_root: Path, record: dict[str, An
         rows, errors = _read_jsonl_with_errors(path)
         for error in errors:
             append_jsonl(
-                hub_root / QUARANTINE_DIR / "fix_outcome_requests_malformed_jsonl.jsonl",
+                exception_data_path(hub_root, QUARANTINE_DIR)
+                / "fix_outcome_requests_malformed_jsonl.jsonl",
                 {
                     "event_type": "fix_outcome_request_malformed_jsonl",
                     "created_at": utc_now(),
@@ -5665,13 +5752,14 @@ def _append_fix_outcome_request_cancellations(
     *,
     active_mail_ids: set[str],
 ) -> int:
-    path = hub_root / FIX_OUTCOME_REQUESTS_STAGED
+    path = exception_data_path(hub_root, FIX_OUTCOME_REQUESTS_STAGED)
     if not path.exists():
         return 0
     rows, errors = _read_jsonl_with_errors(path)
     for error in errors:
         append_jsonl(
-            hub_root / QUARANTINE_DIR / "fix_outcome_requests_malformed_jsonl.jsonl",
+            exception_data_path(hub_root, QUARANTINE_DIR)
+            / "fix_outcome_requests_malformed_jsonl.jsonl",
             {
                 "event_type": "fix_outcome_request_malformed_jsonl",
                 "created_at": utc_now(),
@@ -5796,10 +5884,14 @@ def write_exception_fix_outcome_requests(
             "any source repo."
         ),
     }
-    output_path = hub_root / (output or FIX_OUTCOME_REQUESTS_JSON)
+    output_path = _default_or_requested_path(hub_root, output, FIX_OUTCOME_REQUESTS_JSON)
     output_path.parent.mkdir(parents=True, exist_ok=True)
     output_path.write_text(json_dumps(report, pretty=True) + "\n", encoding="utf-8")
-    md_path = output_path.with_suffix(".md") if output else hub_root / FIX_OUTCOME_REQUESTS_MD
+    md_path = (
+        output_path.with_suffix(".md")
+        if output
+        else exception_data_path(hub_root, FIX_OUTCOME_REQUESTS_MD)
+    )
     lines = [
         "# Exception Fix Outcome Requests",
         "",
@@ -5940,7 +6032,7 @@ def _record_learning_check_fix(
         record = build_exception_fix_outcome(hub_root, repo, **fix_kwargs)
         mutations = spec.get("mutations") if isinstance(spec.get("mutations"), dict) else {}
         record.update(mutations)
-        append_jsonl(hub_root / FIX_OUTCOME_PATH, record)
+        append_jsonl(exception_data_path(hub_root, FIX_OUTCOME_PATH), record)
         return
     record_exception_fix_outcome(hub_root, repo, **fix_kwargs)
 
@@ -6208,7 +6300,7 @@ def _learning_readiness_input_hashes(hub_root: Path, scenarios_path: Path) -> di
     hashes: dict[str, str] = {}
     repo_root = Path(__file__).resolve().parents[2]
     for ref in refs:
-        path = hub_root / ref
+        path = _exception_input_ref_path(hub_root, ref)
         if not path.exists() and ref.parts[:1] in {
             ("src",),
             ("schemas",),
@@ -6270,10 +6362,14 @@ def evaluate_exception_learning_readiness_scenarios(
             "lesson, prove real repo completeness, or override source authority."
         ),
     }
-    output_path = hub_root / (output or LEARNING_READINESS_JSON)
+    output_path = _default_or_requested_path(hub_root, output, LEARNING_READINESS_JSON)
     output_path.parent.mkdir(parents=True, exist_ok=True)
     output_path.write_text(json_dumps(report, pretty=True) + "\n", encoding="utf-8")
-    md_path = output_path.with_suffix(".md") if output else hub_root / LEARNING_READINESS_MD
+    md_path = (
+        output_path.with_suffix(".md")
+        if output
+        else exception_data_path(hub_root, LEARNING_READINESS_MD)
+    )
     lines = [
         "# Exception Learning Readiness Check",
         "",

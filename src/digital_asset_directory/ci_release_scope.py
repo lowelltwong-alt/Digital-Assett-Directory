@@ -6,6 +6,7 @@ from typing import Any
 
 from .config import LocalSource
 from .models import AssetRecord
+from .transport import data_relative_path
 from .utils import atomic_write_text, json_dumps, utc_now
 
 METHODOLOGY_VERSION = "ci-release-artifact-scope-v0.1"
@@ -520,7 +521,7 @@ def write_ci_release_artifact_scope_outputs(
         per_repo_limit=per_repo_limit,
         generated_at=generated_at,
     )
-    reports_dir = repo_root / "processed" / "reports"
+    reports_dir = data_relative_path(repo_root, Path("processed") / "reports")
     paths = {
         "scope_markdown": reports_dir / "ci_release_artifact_scope.md",
         "scope_json": reports_dir / "ci_release_artifact_scope.json",

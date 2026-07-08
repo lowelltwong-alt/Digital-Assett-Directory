@@ -16,6 +16,7 @@ from .models import (
     EscalationPacketRecord,
     ExpansionMapRecord,
 )
+from .transport import data_relative_path
 from .utils import atomic_write_text, redact_sensitive_text, tokens, utc_now, write_jsonl
 
 METHODOLOGY_VERSION = "background-connection-connectivity-v1"
@@ -841,8 +842,8 @@ def write_background_connection_outputs(
         reserve_cold=reserve_cold,
         generated_at=generated_at,
     )
-    learning_dir = repo_root / "processed" / "learning"
-    reports_dir = repo_root / "processed" / "reports"
+    learning_dir = data_relative_path(repo_root, Path("processed") / "learning")
+    reports_dir = data_relative_path(repo_root, Path("processed") / "reports")
     attention_path = learning_dir / "background_attention_seeds.jsonl"
     candidates_path = learning_dir / "background_connection_candidates.jsonl"
     packets_path = learning_dir / "background_escalation_packets.jsonl"

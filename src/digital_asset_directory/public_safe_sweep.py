@@ -4,6 +4,7 @@ from collections import Counter
 from pathlib import Path, PurePosixPath
 from typing import Any
 
+from .transport import data_relative_path
 from .utils import atomic_write_text, utc_now, write_json
 
 PUBLIC_SAFE_SOURCE_SWEEP_METHOD = "public-safe-source-sweep-v1"
@@ -334,7 +335,7 @@ def write_public_safe_source_sweep(
         max_files=max_files,
         generated_at=generated_at,
     )
-    output_dir = repo_root / "processed" / "reports" / "external_sweeps"
+    output_dir = data_relative_path(repo_root, Path("processed") / "reports" / "external_sweeps")
     report_path = output_dir / f"{source_id}_public_safe_sweep.md"
     json_path = output_dir / f"{source_id}_public_safe_sweep.json"
     atomic_write_text(report_path, public_safe_source_sweep_markdown(record) + "\n")

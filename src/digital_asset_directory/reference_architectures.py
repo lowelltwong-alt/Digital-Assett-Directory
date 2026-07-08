@@ -7,6 +7,7 @@ from typing import Any
 from .ids import stable_id
 from .models import AssetRecord, EdgeRecord, ReferenceArchitectureRecord, ScanCycleEventRecord
 from .repo_buildout import build_repo_groups
+from .transport import data_relative_path
 from .utils import append_jsonl, atomic_write_text, json_dumps, utc_now, write_jsonl
 
 METHODOLOGY_VERSION = "reference-architecture-recognition-v0.1"
@@ -824,8 +825,8 @@ def write_reference_architecture_outputs(
         component_limit=component_limit,
         generated_at=generated,
     )
-    report_dir = repo_root / "processed" / "reports"
-    learning_dir = repo_root / "processed" / "learning"
+    report_dir = data_relative_path(repo_root, Path("processed") / "reports")
+    learning_dir = data_relative_path(repo_root, Path("processed") / "learning")
     report_path = report_dir / "reference_architectures.md"
     payload_path = report_dir / "reference_architectures.json"
     candidates_path = learning_dir / "reference_architecture_candidates.jsonl"

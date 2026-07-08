@@ -14,6 +14,7 @@ from typing import Any
 
 from .ids import stable_id
 from .rust_bridge.dad_scan_core import validate_repo_inventory_probe_summary
+from .transport import data_path
 from .utils import append_jsonl, atomic_write_text, json_dumps, sha256_bytes, sha256_file, sha256_text_file_lf, utc_now
 
 NEEDS_REGISTRY = Path("registry") / "dad-needs-registry.json"
@@ -51,6 +52,31 @@ REPO_INVENTORY_RUST_PARITY_INPUT_REFS = (
     Path("tools") / "dad_scan_core" / "src" / "models.rs",
 )
 REPO_INVENTORY_HASH_POLICY = "text-lf-normalized-v1"
+
+
+def central_usage_dir(hub_root: Path) -> Path:
+    return data_path(hub_root, "usage")
+
+
+def central_usage_path(hub_root: Path, relative_path: Path) -> Path:
+    return central_usage_dir(hub_root) / relative_path.relative_to(Path("processed") / "usage")
+
+
+def harness_report_dir(hub_root: Path) -> Path:
+    return data_path(hub_root, "harness_reports")
+
+
+def repo_inventory_dir(hub_root: Path) -> Path:
+    return data_path(hub_root, "repo_inventory")
+
+
+def cadence_report_dir(hub_root: Path) -> Path:
+    return data_path(hub_root, "cadence")
+
+
+def central_reports_dir(hub_root: Path) -> Path:
+    return data_path(hub_root, "central_reports")
+
 
 USAGE_STATUSES = {"using", "watching", "rejected", "retired"}
 TRIAGE_DECISIONS = {"use_now", "save_for_future", "defer", "reject", "needs_human_review"}
@@ -849,7 +875,7 @@ def compile_context_pack(
         "registry_hashes": registry_hashes,
         "outcomes": [],
     }
-    append_jsonl(hub_root / DECISION_TRACE_LEDGER, trace)
+    append_jsonl(central_usage_path(hub_root, DECISION_TRACE_LEDGER), trace)
     return pack
 
 
@@ -864,7 +890,7 @@ def record_trace_outcomes(
     if not trace_id:
         return {"trace_id": "", "recorded_count": 0}
     created = utc_now()
-    rows = _read_jsonl(hub_root / DECISION_TRACE_LEDGER)
+    rows = _read_jsonl(central_usage_path(hub_root, DECISION_TRACE_LEDGER))
     trace_seen = any(row.get("trace_id") == trace_id for row in rows)
     records: list[dict[str, Any]] = []
     for outcome, asset_ids in outcomes.items():
@@ -881,14 +907,17 @@ def record_trace_outcomes(
                 }
             )
     for record in records:
-        append_jsonl(hub_root / DECISION_TRACE_LEDGER, {"event_type": "trace_outcome", **record})
+        append_jsonl(
+            central_usage_path(hub_root, DECISION_TRACE_LEDGER),
+            {"event_type": "trace_outcome", **record},
+        )
     return {"trace_id": trace_id, "recorded_count": len(records), "trace_seen": trace_seen}
 
 
 def calibration_report(hub_root: Path, *, minimum_n: int = 10) -> dict[str, Any]:
     recommendations: dict[str, dict[str, Any]] = {}
     outcomes: list[dict[str, Any]] = []
-    for row in _read_jsonl(hub_root / DECISION_TRACE_LEDGER):
+    for row in _read_jsonl(central_usage_path(hub_root, DECISION_TRACE_LEDGER)):
         if row.get("event_type") == "trace_outcome":
             outcomes.append(row)
             continue
@@ -922,7 +951,13 @@ def calibration_report(hub_root: Path, *, minimum_n: int = 10) -> dict[str, Any]
         "generated_at": utc_now(),
         "minimum_n_for_percentages": minimum_n,
         "decision_rows": rows,
-        "trace_count": len([row for row in _read_jsonl(hub_root / DECISION_TRACE_LEDGER) if row.get("trace_id")]),
+        "trace_count": len(
+            [
+                row
+                for row in _read_jsonl(central_usage_path(hub_root, DECISION_TRACE_LEDGER))
+                if row.get("trace_id")
+            ]
+        ),
         "outcome_count": len(outcomes),
         "authority_boundary": AUTHORITY_BOUNDARY,
     }
@@ -1241,7 +1276,7 @@ def reconcile_repo_inventory(
         "source_warnings": source_warnings,
         "authority_boundary": CENTRAL_ONLY_BOUNDARY,
     }
-    out_dir = hub_root / REPO_INVENTORY_DIR
+    out_dir = repo_inventory_dir(hub_root)
     out_dir.mkdir(parents=True, exist_ok=True)
     json_path = out_dir / "reconciled_inventory.json"
     md_path = out_dir / "reconciled_inventory.md"
@@ -1510,7 +1545,7 @@ def write_repo_inventory_rust_probe_parity(
             "Phase 8/9 human gates, authorize enrollment, or write to target repos."
         ),
     }
-    out_dir = hub_root / REPO_INVENTORY_DIR
+    out_dir = repo_inventory_dir(hub_root)
     out_dir.mkdir(parents=True, exist_ok=True)
     json_path = out_dir / "rust_probe_shadow_parity.json"
     md_path = out_dir / "rust_probe_shadow_parity.md"
@@ -1670,12 +1705,22 @@ def build_dad_cadence_plan(
                 "coding harness update and research-opportunity check",
                 "template/reference architecture update check",
                 "governance-map and data-map drift check",
+                "transport audit and transport-upgrade queue review",
                 "enrollment contract update-plan generation",
             ],
             "preflight_behavior": (
                 "Surface stale weekly checks as warnings; do not run heavy scans on every preflight."
             ),
             "write_boundary": "central reports plus candidate mail; enrollment apply still needs approval",
+            "transport_upgrade": {
+                "audit_command": "asset-dir transport audit",
+                "queue_path": "processed/mail/staged/transport-upgrade-queue.jsonl",
+                "target_repo_write_boundary": (
+                    "No downstream repo writes occur during weekly checks. Upgrade "
+                    "delivery still requires reviewed enrollment update waves and "
+                    "approved apply commands."
+                ),
+            },
         },
         "blocked_operations": [
             "no normal recurring source edits",
@@ -1685,7 +1730,7 @@ def build_dad_cadence_plan(
         ],
         "authority_boundary": CENTRAL_ONLY_BOUNDARY,
     }
-    out_dir = hub_root / CADENCE_REPORT_DIR
+    out_dir = cadence_report_dir(hub_root)
     out_dir.mkdir(parents=True, exist_ok=True)
     json_path = out_dir / "dad_cadence_plan.json"
     md_path = out_dir / "dad_cadence_plan.md"
@@ -2034,7 +2079,9 @@ def collect_repo_local_assets(
         ],
         "authority_boundary": REPO_ASSET_SURFACE_BOUNDARY,
     }
-    out_dir = hub_root / REPO_ASSET_REPORT_DIR
+    out_dir = central_reports_dir(hub_root) / REPO_ASSET_REPORT_DIR.relative_to(
+        Path("processed") / "reports"
+    )
     out_dir.mkdir(parents=True, exist_ok=True)
     path = out_dir / f"{_repo_report_slug(repo)}.json"
     _write_json(path, payload)
@@ -2099,7 +2146,7 @@ def scout_asset_candidates(
         "candidates": candidates[:limit],
         "authority_boundary": CENTRAL_ONLY_BOUNDARY,
     }
-    path = hub_root / "processed" / "reports" / f"asset-recognition-{_repo_report_slug(repo)}.json"
+    path = central_reports_dir(hub_root) / f"asset-recognition-{_repo_report_slug(repo)}.json"
     _write_json(path, payload)
     return {"asset_candidates": payload, "path": str(path)}
 
@@ -2182,7 +2229,7 @@ def discover_harness_opportunities(
         "opportunities": candidates[:limit],
         "authority_boundary": CENTRAL_ONLY_BOUNDARY,
     }
-    path = hub_root / HARNESS_REPORT_DIR / f"discovery-{_repo_report_slug(repo)}.json"
+    path = harness_report_dir(hub_root) / f"discovery-{_repo_report_slug(repo)}.json"
     _write_json(path, payload)
     return {"discovery": payload, "path": str(path)}
 
@@ -2231,7 +2278,11 @@ def record_usage(
         "central_only_reason": protection_reason if protected else "",
         "authority_boundary": AUTHORITY_BOUNDARY,
     }
-    central_appended = _append_unique(hub_root / CENTRAL_USAGE_LEDGER, record, "usage_id")
+    central_appended = _append_unique(
+        central_usage_path(hub_root, CENTRAL_USAGE_LEDGER),
+        record,
+        "usage_id",
+    )
     local_appended = False
     local_path = repo / LOCAL_USAGE_LEDGER
     if not protected:
@@ -2240,7 +2291,7 @@ def record_usage(
         "usage": record,
         "central_appended": central_appended,
         "local_appended": local_appended,
-        "central_ledger": str(hub_root / CENTRAL_USAGE_LEDGER),
+        "central_ledger": str(central_usage_path(hub_root, CENTRAL_USAGE_LEDGER)),
         "local_ledger": "" if protected else str(local_path),
         "central_only": protected,
         "authority_boundary": AUTHORITY_BOUNDARY,
@@ -2263,7 +2314,7 @@ def usage_upgrades(
     rows = [
         item
         for item in [
-            *_read_jsonl(hub_root / CENTRAL_USAGE_LEDGER),
+            *_read_jsonl(central_usage_path(hub_root, CENTRAL_USAGE_LEDGER)),
             *_read_jsonl(repo / LOCAL_USAGE_LEDGER),
         ]
         if (str(item.get("repo_id") or "") in accepted_repo_keys or str(item.get("repo")) in accepted_repo_keys)
@@ -2365,7 +2416,7 @@ def harness_research(hub_root: Path, harness_id: str) -> dict[str, Any]:
         "next_review_gate": "Human review before promoting research output into reviewed guidance.",
         "authority_boundary": AUTHORITY_BOUNDARY,
     }
-    path = hub_root / HARNESS_REPORT_DIR / f"research-{_slug(harness_id)}.json"
+    path = harness_report_dir(hub_root) / f"research-{_slug(harness_id)}.json"
     _write_json(path, payload)
     return {"research": payload, "path": str(path)}
 
@@ -2421,7 +2472,7 @@ def harness_evaluate(hub_root: Path, harness_id: str, repo: Path) -> dict[str, A
         "command_results": command_results,
         "authority_boundary": AUTHORITY_BOUNDARY,
     }
-    append_jsonl(hub_root / HARNESS_OUTCOME_LEDGER, outcome)
+    append_jsonl(central_usage_path(hub_root, HARNESS_OUTCOME_LEDGER), outcome)
     payload = {
         "schema_version": "0.1.0",
         "generated_at": utc_now(),
@@ -2431,10 +2482,10 @@ def harness_evaluate(hub_root: Path, harness_id: str, repo: Path) -> dict[str, A
         "match": match,
         "validation_commands": harness.get("validation_commands", []),
         "command_results": command_results,
-        "outcome_ledger": str(hub_root / HARNESS_OUTCOME_LEDGER),
+        "outcome_ledger": str(central_usage_path(hub_root, HARNESS_OUTCOME_LEDGER)),
         "authority_boundary": AUTHORITY_BOUNDARY,
     }
-    path = hub_root / HARNESS_REPORT_DIR / (
+    path = harness_report_dir(hub_root) / (
         f"evaluate-{_slug(harness_id)}-{_repo_report_slug(repo)}.json"
     )
     _write_json(path, payload)
@@ -2446,7 +2497,7 @@ def harness_package(hub_root: Path, harness_id: str) -> dict[str, Any]:
     root = hub_root / harness["path"]
     if not root.exists():
         raise FileNotFoundError(root)
-    package_path = hub_root / HARNESS_REPORT_DIR / f"{_slug(harness_id)}.zip"
+    package_path = harness_report_dir(hub_root) / f"{_slug(harness_id)}.zip"
     package_path.parent.mkdir(parents=True, exist_ok=True)
     with zipfile.ZipFile(package_path, "w", compression=zipfile.ZIP_DEFLATED) as archive:
         for path in sorted(root.rglob("*")):
@@ -2460,7 +2511,7 @@ def harness_package(hub_root: Path, harness_id: str) -> dict[str, Any]:
         "source_path": harness["path"],
         "authority_boundary": AUTHORITY_BOUNDARY,
     }
-    _write_json(hub_root / HARNESS_REPORT_DIR / f"{_slug(harness_id)}.package.json", manifest)
+    _write_json(harness_report_dir(hub_root) / f"{_slug(harness_id)}.package.json", manifest)
     return manifest
 
 
@@ -3039,11 +3090,15 @@ def _cadence_markdown(payload: dict[str, Any]) -> str:
     )
     for operation in payload["weekly"]["operations"]:
         lines.append(f"- {operation}")
+    transport_upgrade = payload["weekly"].get("transport_upgrade", {})
     lines.extend(
         [
             "",
             f"Preflight behavior: {payload['weekly']['preflight_behavior']}",
             f"Write boundary: {payload['weekly']['write_boundary']}",
+            f"Transport audit command: `{transport_upgrade.get('audit_command', '')}`",
+            f"Transport queue: `{transport_upgrade.get('queue_path', '')}`",
+            transport_upgrade.get("target_repo_write_boundary", ""),
             "",
             "## Blocked Operations",
             "",

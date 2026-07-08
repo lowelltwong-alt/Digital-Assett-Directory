@@ -6,17 +6,17 @@
   "duplicate_logical_path_count": 0,
   "duplicate_logical_paths": [],
   "follow_symlinks": false,
-  "generated_at": "2026-07-06T14:35:36.673620+00:00",
+  "generated_at": "2026-07-07T01:22:59.613702+00:00",
   "hash_policy": "text-lf-normalized-v1",
   "input_hashes": {
-    "src/digital_asset_directory/dad_library.py": "sha256:f054d75414737be11f9e1bd768959204aad6608ac4d5af9dd9a48848e9e44f30",
+    "src/digital_asset_directory/dad_library.py": "sha256:cca7173ccfe726153f6deb47d5b0ef321a65a4761c5eeaef7f3ab113fefcb361",
     "src/digital_asset_directory/rust_bridge/dad_scan_core.py": "sha256:4a4a6b8b8424297e149908405246e2950e33ac6e58f4cf1302444af3b12081d2",
     "tools/dad_scan_core/src/models.rs": "sha256:89bad92f5fcb890379ac04f9b06ccb62802ecb561a2ca223fe13271dadfb7532",
     "tools/dad_scan_core/src/repo_probe.rs": "sha256:f62cc2518cd1580d0d25ab1237d920f8edfa4811e7f07f5f885db38bf7994d9c"
   },
-  "matched_repo_count": 48,
+  "matched_repo_count": 49,
   "max_depth": 5,
-  "methodology_hash": "sha256:f054d75414737be11f9e1bd768959204aad6608ac4d5af9dd9a48848e9e44f30",
+  "methodology_hash": "sha256:cca7173ccfe726153f6deb47d5b0ef321a65a4761c5eeaef7f3ab113fefcb361",
   "methodology_ref": "src/digital_asset_directory/dad_library.py",
   "only_python_logical_paths": [],
   "only_python_skipped_dirs": [],
@@ -260,6 +260,12 @@
     },
     {
       "contract_present": false,
+      "logical_path": "dad-local-source/git-projects/03_world_view/logos-doctrine-genealogy",
+      "root_alias": "dad-local-source/git-projects",
+      "source": "python_inventory_discovery"
+    },
+    {
+      "contract_present": false,
       "logical_path": "dad-local-source/git-projects/03_world_view/logos-governance-architecture",
       "root_alias": "dad-local-source/git-projects",
       "source": "python_inventory_discovery"
@@ -313,8 +319,8 @@
       "source": "python_inventory_discovery"
     }
   ],
-  "python_repo_count": 48,
-  "python_skipped_dir_count": 258,
+  "python_repo_count": 49,
+  "python_skipped_dir_count": 261,
   "python_skipped_dirs": [
     {
       "logical_path": "dad-local-source/git-projects/.git",
@@ -1349,18 +1355,6 @@
       "source": "python_inventory_discovery"
     },
     {
-      "logical_path": "dad-local-source/git-projects/02_other_git_projects/mock-trial4.26/scripts/__pycache__",
-      "reason": "repo discovery skip directory",
-      "root_alias": "dad-local-source/git-projects",
-      "source": "python_inventory_discovery"
-    },
-    {
-      "logical_path": "dad-local-source/git-projects/02_other_git_projects/mock-trial4.26/simulation/__pycache__",
-      "reason": "repo discovery skip directory",
-      "root_alias": "dad-local-source/git-projects",
-      "source": "python_inventory_discovery"
-    },
-    {
       "logical_path": "dad-local-source/git-projects/02_other_git_projects/orphan_radar/orphan-radar/.git",
       "reason": "repo discovery skip directory",
       "root_alias": "dad-local-source/git-projects",
@@ -1421,6 +1415,30 @@
       "source": "python_inventory_discovery"
     },
     {
+      "logical_path": "dad-local-source/git-projects/03_world_view/logos-doctrine-genealogy/.git",
+      "reason": "repo discovery skip directory",
+      "root_alias": "dad-local-source/git-projects",
+      "source": "python_inventory_discovery"
+    },
+    {
+      "logical_path": "dad-local-source/git-projects/03_world_view/logos-doctrine-genealogy/.pytest_cache",
+      "reason": "repo discovery skip directory",
+      "root_alias": "dad-local-source/git-projects",
+      "source": "python_inventory_discovery"
+    },
+    {
+      "logical_path": "dad-local-source/git-projects/03_world_view/logos-doctrine-genealogy/scripts/__pycache__",
+      "reason": "repo discovery skip directory",
+      "root_alias": "dad-local-source/git-projects",
+      "source": "python_inventory_discovery"
+    },
+    {
+      "logical_path": "dad-local-source/git-projects/03_world_view/logos-doctrine-genealogy/tests/__pycache__",
+      "reason": "repo discovery skip directory",
+      "root_alias": "dad-local-source/git-projects",
+      "source": "python_inventory_discovery"
+    },
+    {
       "logical_path": "dad-local-source/git-projects/03_world_view/logos-governance-architecture/.git",
       "reason": "repo discovery skip directory",
       "root_alias": "dad-local-source/git-projects",
@@ -1440,6 +1458,12 @@
     },
     {
       "logical_path": "dad-local-source/git-projects/03_world_view/logos-governance-architecture/tests/__pycache__",
+      "reason": "repo discovery skip directory",
+      "root_alias": "dad-local-source/git-projects",
+      "source": "python_inventory_discovery"
+    },
+    {
+      "logical_path": "dad-local-source/git-projects/03_world_view/logos-governance-architecture/tools/logos_governance_fast_validators/target",
       "reason": "repo discovery skip directory",
       "root_alias": "dad-local-source/git-projects",
       "source": "python_inventory_discovery"
@@ -1865,12 +1889,12 @@
       "source": "python_inventory_discovery"
     }
   ],
-  "rust_contract_issue_code_count": 82,
+  "rust_contract_issue_code_count": 83,
   "rust_contract_parse_status_counts": {
-    "missing": 40,
+    "missing": 41,
     "present_parseable": 8
   },
-  "rust_contract_structural_fail_count": 47,
+  "rust_contract_structural_fail_count": 48,
   "rust_contract_structural_pass_count": 1,
   "rust_records": [
     {
@@ -2419,6 +2443,19 @@
       "contract_present_field_status": "ok",
       "contract_structural_field_status": "ok",
       "contract_structural_pass": false,
+      "logical_path": "dad-local-source/git-projects/03_world_view/logos-doctrine-genealogy",
+      "root_alias": "dad-local-source/git-projects",
+      "source": "rust_repo_inventory_probe"
+    },
+    {
+      "contract_issue_codes": [
+        "contract_missing"
+      ],
+      "contract_parse_status": "missing",
+      "contract_present": false,
+      "contract_present_field_status": "ok",
+      "contract_structural_field_status": "ok",
+      "contract_structural_pass": false,
       "logical_path": "dad-local-source/git-projects/03_world_view/logos-governance-architecture",
       "root_alias": "dad-local-source/git-projects",
       "source": "rust_repo_inventory_probe"
@@ -2531,8 +2568,8 @@
       "source": "rust_repo_inventory_probe"
     }
   ],
-  "rust_repo_count": 48,
-  "rust_skipped_dir_count": 258,
+  "rust_repo_count": 49,
+  "rust_skipped_dir_count": 261,
   "rust_skipped_dirs": [
     {
       "logical_path": "dad-local-source/git-projects/.git",
@@ -3567,18 +3604,6 @@
       "source": "rust_repo_inventory_probe"
     },
     {
-      "logical_path": "dad-local-source/git-projects/02_other_git_projects/mock-trial4.26/scripts/__pycache__",
-      "reason": "repo discovery skip directory",
-      "root_alias": "dad-local-source/git-projects",
-      "source": "rust_repo_inventory_probe"
-    },
-    {
-      "logical_path": "dad-local-source/git-projects/02_other_git_projects/mock-trial4.26/simulation/__pycache__",
-      "reason": "repo discovery skip directory",
-      "root_alias": "dad-local-source/git-projects",
-      "source": "rust_repo_inventory_probe"
-    },
-    {
       "logical_path": "dad-local-source/git-projects/02_other_git_projects/orphan_radar/orphan-radar/.git",
       "reason": "repo discovery skip directory",
       "root_alias": "dad-local-source/git-projects",
@@ -3639,6 +3664,30 @@
       "source": "rust_repo_inventory_probe"
     },
     {
+      "logical_path": "dad-local-source/git-projects/03_world_view/logos-doctrine-genealogy/.git",
+      "reason": "repo discovery skip directory",
+      "root_alias": "dad-local-source/git-projects",
+      "source": "rust_repo_inventory_probe"
+    },
+    {
+      "logical_path": "dad-local-source/git-projects/03_world_view/logos-doctrine-genealogy/.pytest_cache",
+      "reason": "repo discovery skip directory",
+      "root_alias": "dad-local-source/git-projects",
+      "source": "rust_repo_inventory_probe"
+    },
+    {
+      "logical_path": "dad-local-source/git-projects/03_world_view/logos-doctrine-genealogy/scripts/__pycache__",
+      "reason": "repo discovery skip directory",
+      "root_alias": "dad-local-source/git-projects",
+      "source": "rust_repo_inventory_probe"
+    },
+    {
+      "logical_path": "dad-local-source/git-projects/03_world_view/logos-doctrine-genealogy/tests/__pycache__",
+      "reason": "repo discovery skip directory",
+      "root_alias": "dad-local-source/git-projects",
+      "source": "rust_repo_inventory_probe"
+    },
+    {
       "logical_path": "dad-local-source/git-projects/03_world_view/logos-governance-architecture/.git",
       "reason": "repo discovery skip directory",
       "root_alias": "dad-local-source/git-projects",
@@ -3658,6 +3707,12 @@
     },
     {
       "logical_path": "dad-local-source/git-projects/03_world_view/logos-governance-architecture/tests/__pycache__",
+      "reason": "repo discovery skip directory",
+      "root_alias": "dad-local-source/git-projects",
+      "source": "rust_repo_inventory_probe"
+    },
+    {
+      "logical_path": "dad-local-source/git-projects/03_world_view/logos-governance-architecture/tools/logos_governance_fast_validators/target",
       "reason": "repo discovery skip directory",
       "root_alias": "dad-local-source/git-projects",
       "source": "rust_repo_inventory_probe"

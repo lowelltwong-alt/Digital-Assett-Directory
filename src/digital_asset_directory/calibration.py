@@ -17,6 +17,7 @@ from .instance_class import (
 from .ids import stable_id
 from .models import AlertRecord, AssetCalibrationReviewRecord, AssetRecord, SynergyRecord
 from .roadmap import record_human_gate_evidence
+from .transport import data_relative_path
 from .utils import atomic_write_text, utc_now, write_jsonl
 
 CALIBRATION_SCORE_RATINGS = {"unreviewed", "too_high", "about_right", "too_low", "unsure"}
@@ -2009,7 +2010,7 @@ def write_phase2_calibration_reports(
     *,
     sample_size: int = 25,
 ) -> dict[str, Any]:
-    reports_dir = repo_root / "processed" / "reports"
+    reports_dir = data_relative_path(repo_root, Path("processed") / "reports")
     calibration_dir = repo_root / "processed" / "calibration"
     scoring_path = reports_dir / "scoring_calibration.md"
     orphan_path = reports_dir / "orphan_review_sample.md"

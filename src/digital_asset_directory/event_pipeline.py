@@ -14,6 +14,7 @@ from .mail_center import (
     _policy_visibility,
     append_jsonl_locked,
 )
+from .transport import data_path
 from .utils import (
     append_jsonl,
     atomic_write_text,
@@ -103,6 +104,12 @@ AUTHORITY_BOUNDARY = (
     "source repo authority, satisfy human gates, approve public release, or authorize "
     "writes outside repo-local event/mail adapters."
 )
+
+
+def event_data_path(hub_root: Path, relative_path: Path) -> Path:
+    if relative_path.parts[:2] != ("processed", "events"):
+        raise ValueError(f"Unsupported event data-plane path: {relative_path}")
+    return data_path(hub_root, "events").joinpath(*relative_path.parts[2:])
 
 
 EventType = Literal[
@@ -379,7 +386,10 @@ def collect_events(
                 else:
                     duplicate_count += 1
                 continue
-            append_jsonl_locked(hub_root / EVENT_LOG_PATH, collected_record.model_dump(mode="json"))
+            append_jsonl_locked(
+                event_data_path(hub_root, EVENT_LOG_PATH),
+                collected_record.model_dump(mode="json"),
+            )
             existing_by_event_id[collected_record.event_id] = record_hash
             existing_by_dedupe[collected_record.dedupe_key] = record_hash
             if _is_notice_event(collected_record.model_dump(mode="json")):
@@ -404,7 +414,7 @@ def collect_events(
 
 def write_event_pipeline_report(hub_root: Path) -> dict[str, Any]:
     events = load_event_log(hub_root)
-    response_rows = _load_jsonl(hub_root / RESPONSE_STATE_PATH)
+    response_rows = _load_jsonl(event_data_path(hub_root, RESPONSE_STATE_PATH))
     by_type = Counter(str(row.get("event_type", "unknown")) for row in events)
     by_response = Counter(str(row.get("response_state", "unknown")) for row in response_rows)
     actionable_notice_ids = {
@@ -441,7 +451,7 @@ def write_event_pipeline_report(hub_root: Path) -> dict[str, Any]:
         ),
         "authority_boundary": AUTHORITY_BOUNDARY,
     }
-    write_json_path = hub_root / REPORT_JSON_PATH
+    write_json_path = event_data_path(hub_root, REPORT_JSON_PATH)
     write_json_path.parent.mkdir(parents=True, exist_ok=True)
     atomic_write_text(write_json_path, json_dumps(report, pretty=True) + "\n")
     md = [
@@ -461,7 +471,7 @@ def write_event_pipeline_report(hub_root: Path) -> dict[str, Any]:
         AUTHORITY_BOUNDARY,
         "",
     ]
-    atomic_write_text(hub_root / REPORT_MD_PATH, "\n".join(md))
+    atomic_write_text(event_data_path(hub_root, REPORT_MD_PATH), "\n".join(md))
     return {
         "schema_version": "dad.event_pipeline.report_result.v1",
         "json_path": REPORT_JSON_PATH.as_posix(),
@@ -471,7 +481,7 @@ def write_event_pipeline_report(hub_root: Path) -> dict[str, Any]:
 
 
 def load_event_log(hub_root: Path) -> list[dict[str, Any]]:
-    return _load_jsonl(hub_root / EVENT_LOG_PATH)
+    return _load_jsonl(event_data_path(hub_root, EVENT_LOG_PATH))
 
 
 def _collected_event(
@@ -626,19 +636,19 @@ def _write_response_state(hub_root: Path, record: DadPipelineEventRecord) -> boo
     }
     existing = {
         str(item.get("state_id"))
-        for item in _load_jsonl(hub_root / RESPONSE_STATE_PATH)
+        for item in _load_jsonl(event_data_path(hub_root, RESPONSE_STATE_PATH))
         if isinstance(item, dict)
     }
     if row["state_id"] in existing:
         return False
-    append_jsonl_locked(hub_root / RESPONSE_STATE_PATH, row)
+    append_jsonl_locked(event_data_path(hub_root, RESPONSE_STATE_PATH), row)
     return True
 
 
 def _event_log_indexes(hub_root: Path) -> tuple[dict[str, str], dict[str, str]]:
     by_event_id: dict[str, str] = {}
     by_dedupe: dict[str, str] = {}
-    for row in _load_jsonl(hub_root / EVENT_LOG_PATH):
+    for row in _load_jsonl(event_data_path(hub_root, EVENT_LOG_PATH)):
         provenance = row.get("collection_provenance", {})
         record_hash = str(provenance.get("record_hash") or "")
         if row.get("event_id") and record_hash:
@@ -655,7 +665,14 @@ def _event_report_input_hashes(hub_root: Path) -> dict[str, str]:
         Path("schemas") / "dad-pipeline-event.schema.json",
         Path("src") / "digital_asset_directory" / "event_pipeline.py",
     ]
-    return {path.as_posix(): _hash_path(hub_root / path) for path in inputs}
+    return {
+        path.as_posix(): _hash_path(
+            event_data_path(hub_root, path)
+            if path.parts[:2] == ("processed", "events")
+            else hub_root / path
+        )
+        for path in inputs
+    }
 
 
 def _hash_path(path: Path) -> str:
@@ -754,7 +771,7 @@ def _quarantine_event_issue(
             "Quarantine rows store metadata and hashes only; they do not copy raw event content."
         ),
     }
-    path = hub_root / QUARANTINE_DIR / filename
+    path = event_data_path(hub_root, QUARANTINE_DIR) / filename
     append_jsonl(path, record)
     return {
         "issue_type": record["issue_type"],

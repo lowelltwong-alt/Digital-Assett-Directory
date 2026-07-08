@@ -9,6 +9,7 @@ from typing import Any, Iterable, Literal
 from .asset_families import detect_asset_family_matches
 from .ids import edge_id, stable_id
 from .models import AssetRecord, EdgeRecord, WorkflowPartRecord, WorkflowPartReviewRecord
+from .transport import data_relative_path
 from .utils import atomic_write_text, utc_now, write_jsonl
 
 METHODOLOGY_VERSION = "workflow-part-recognition-v1"
@@ -1537,7 +1538,7 @@ def write_workflow_part_review_template_outputs(
     generated = generated_at or utc_now()
     reviews = build_workflow_part_review_template(records, sample_size=sample_size)
     workflow_dir = repo_root / "processed" / "workflow_parts"
-    reports_dir = repo_root / "processed" / "reports"
+    reports_dir = data_relative_path(repo_root, Path("processed") / "reports")
     review_path = workflow_dir / "workflow_part_review_template.jsonl"
     sample_path = reports_dir / "workflow_part_calibration_review_sample.md"
     summary_path = reports_dir / "workflow_part_review_results_summary.md"
@@ -1662,8 +1663,8 @@ def write_workflow_part_outputs(
         generated_at=generated,
     )
     candidate_edges = build_workflow_part_edges(records, scan_id=scan_id, created_at=generated)
-    learning_dir = repo_root / "processed" / "learning"
-    reports_dir = repo_root / "processed" / "reports"
+    learning_dir = data_relative_path(repo_root, Path("processed") / "learning")
+    reports_dir = data_relative_path(repo_root, Path("processed") / "reports")
     records_path = learning_dir / "workflow_parts.jsonl"
     edges_path = learning_dir / "workflow_part_candidate_edges.jsonl"
     report_path = reports_dir / "workflow_part_recognition.md"

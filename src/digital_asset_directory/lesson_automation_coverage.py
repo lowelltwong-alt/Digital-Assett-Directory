@@ -8,6 +8,7 @@ from .config import GitHubSource, LocalSource
 from .ids import stable_id
 from .models import AssetRecord, ScanCycleEventRecord
 from .repo_buildout import build_repo_groups
+from .transport import data_relative_path
 from .utils import append_jsonl, atomic_write_text, json_dumps, utc_now
 
 METHODOLOGY_VERSION = "lesson-automation-coverage-v0.1"
@@ -311,79 +312,42 @@ def _source_summaries(local_sources: list[LocalSource], github_sources: list[Git
 
 
 def _existing_output_status(repo_root: Path) -> dict[str, bool]:
+    reports_dir = data_relative_path(repo_root, Path("processed") / "reports")
+    learning_dir = data_relative_path(repo_root, Path("processed") / "learning")
     paths = {
-        "workflow_sweeps": repo_root / "processed" / "reports" / "workflow_sweeps",
-        "workflow_parts": repo_root / "processed" / "learning" / "workflow_parts.jsonl",
-        "manual_task_queue": repo_root / "processed" / "reports" / "manual_task_queue.json",
-        "template_library": repo_root / "processed" / "reports" / "template_library.json",
-        "priority_content_scope": repo_root
-        / "processed"
-        / "reports"
-        / "priority_content_extract_scope.json",
-        "priority_content_observations": repo_root
-        / "processed"
-        / "learning"
-        / "priority_content_observations.jsonl",
-        "priority_content_lesson_candidates": repo_root
-        / "processed"
-        / "learning"
+        "workflow_sweeps": reports_dir / "workflow_sweeps",
+        "workflow_parts": learning_dir / "workflow_parts.jsonl",
+        "manual_task_queue": reports_dir / "manual_task_queue.json",
+        "template_library": reports_dir / "template_library.json",
+        "priority_content_scope": reports_dir / "priority_content_extract_scope.json",
+        "priority_content_observations": learning_dir / "priority_content_observations.jsonl",
+        "priority_content_lesson_candidates": learning_dir
         / "priority_content_lesson_candidates.jsonl",
-        "learning_rule_promotion_candidates": repo_root
-        / "processed"
-        / "learning"
+        "learning_rule_promotion_candidates": learning_dir
         / "learning_rule_promotion_candidates.jsonl",
-        "lesson_automation_next_actions": repo_root
-        / "processed"
-        / "reports"
-        / "lesson_automation_next_actions.json",
-        "lesson_automation_decision_template": repo_root
-        / "processed"
-        / "learning"
+        "lesson_automation_next_actions": reports_dir / "lesson_automation_next_actions.json",
+        "lesson_automation_decision_template": learning_dir
         / "lesson_automation_action_decisions.jsonl",
-        "lesson_automation_approval_packet": repo_root
-        / "processed"
-        / "reports"
+        "lesson_automation_approval_packet": reports_dir
         / "lesson_automation_approval_packet.json",
-        "lesson_automation_approval_impact": repo_root
-        / "processed"
-        / "reports"
+        "lesson_automation_approval_impact": reports_dir
         / "lesson_automation_approval_impact.json",
-        "lesson_automation_execution_plan": repo_root
-        / "processed"
-        / "reports"
+        "lesson_automation_execution_plan": reports_dir
         / "lesson_automation_execution_plan.json",
-        "archaeology": repo_root / "processed" / "reports" / "worktree_archaeology.md",
-        "root_cause_lessons": repo_root / "processed" / "learning" / "counterfactual_lessons.jsonl",
-        "semantic_evolution": repo_root / "processed" / "learning" / "semantic_evolution_candidates.jsonl",
-        "ci_release_artifact_scope": repo_root
-        / "processed"
-        / "reports"
-        / "ci_release_artifact_scope.json",
-        "repo_learning_loop_install_scope": repo_root
-        / "processed"
-        / "reports"
+        "archaeology": reports_dir / "worktree_archaeology.md",
+        "root_cause_lessons": learning_dir / "counterfactual_lessons.jsonl",
+        "semantic_evolution": learning_dir / "semantic_evolution_candidates.jsonl",
+        "ci_release_artifact_scope": reports_dir / "ci_release_artifact_scope.json",
+        "repo_learning_loop_install_scope": reports_dir
         / "repo_learning_loop_install_scope.json",
-        "governance_map_adoption_scope": repo_root
-        / "processed"
-        / "reports"
+        "governance_map_adoption_scope": reports_dir
         / "governance_map_adoption_scope.json",
-        "background_connections": (
-            repo_root / "processed" / "learning" / "background_connection_candidates.jsonl"
-        ),
-        "repo_buildout_index": repo_root / "processed" / "reports" / "repo_buildout" / "index.md",
-        "repo_completion_dashboard": repo_root
-        / "processed"
-        / "reports"
-        / "repo_completion_dashboard.json",
-        "repo_completion_wave_plan": repo_root
-        / "processed"
-        / "reports"
-        / "repo_completion_wave_plan.json",
-        "repo_completion_proof_check": repo_root
-        / "processed"
-        / "reports"
-        / "repo_completion_proof_check.json",
-        "public_safe_sweeps": repo_root / "processed" / "reports" / "external_sweeps",
+        "background_connections": learning_dir / "background_connection_candidates.jsonl",
+        "repo_buildout_index": reports_dir / "repo_buildout" / "index.md",
+        "repo_completion_dashboard": reports_dir / "repo_completion_dashboard.json",
+        "repo_completion_wave_plan": reports_dir / "repo_completion_wave_plan.json",
+        "repo_completion_proof_check": reports_dir / "repo_completion_proof_check.json",
+        "public_safe_sweeps": reports_dir / "external_sweeps",
     }
     return {name: path.exists() for name, path in paths.items()}
 
@@ -857,13 +821,15 @@ def write_lesson_automation_coverage_outputs(
         limit=limit,
         generated_at=generated_at,
     )
-    reports_dir = repo_root / "processed" / "reports"
+    reports_dir = data_relative_path(repo_root, Path("processed") / "reports")
     paths = {
         "coverage_markdown": reports_dir / "lesson_automation_coverage.md",
         "coverage_json": reports_dir / "lesson_automation_coverage.json",
         "scan_cycle_markdown": reports_dir / "scan_coverage_cycle.md",
         "scan_cycle_json": reports_dir / "scan_coverage_cycle.json",
-        "scan_cycle_events": repo_root / "processed" / "learning" / "scan_cycle_events.jsonl",
+        "scan_cycle_events": data_relative_path(
+            repo_root, Path("processed") / "learning" / "scan_cycle_events.jsonl"
+        ),
     }
     atomic_write_text(paths["coverage_markdown"], coverage_markdown(result))
     atomic_write_text(paths["coverage_json"], json_dumps(result, pretty=True) + "\n")

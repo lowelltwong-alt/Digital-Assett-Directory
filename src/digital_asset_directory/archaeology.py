@@ -21,6 +21,7 @@ from .models import (
     RootCauseHypothesisRecord,
     WorktreeAttemptRecord,
 )
+from .transport import data_relative_path
 from .utils import append_jsonl, atomic_write_text, utc_now, write_jsonl
 
 AUTHORITY_BOUNDARY = (
@@ -838,8 +839,8 @@ def write_archaeology_outputs(
         max_commits=max_commits,
         generated_at=generated,
     )
-    learning_dir = repo_root / "processed" / "learning"
-    reports_dir = repo_root / "processed" / "reports"
+    learning_dir = data_relative_path(repo_root, Path("processed") / "learning")
+    reports_dir = data_relative_path(repo_root, Path("processed") / "reports")
     paths = {
         "attempts": learning_dir / "worktree_attempts.jsonl",
         "timeline_events": learning_dir / "repo_timeline_events.jsonl",
@@ -909,8 +910,8 @@ def write_root_cause_lesson_outputs(
         scan_id=scan_id,
         generated_at=generated,
     )
-    learning_dir = repo_root / "processed" / "learning"
-    reports_dir = repo_root / "processed" / "reports"
+    learning_dir = data_relative_path(repo_root, Path("processed") / "learning")
+    reports_dir = data_relative_path(repo_root, Path("processed") / "reports")
     paths = {
         "root_causes": learning_dir / "root_cause_hypotheses.jsonl",
         "counterfactual_lessons": learning_dir / "counterfactual_lessons.jsonl",

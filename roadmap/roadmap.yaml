@@ -372,3 +372,26 @@ phases:
         - id: phase-12-rename-copy-split-reviewed
           description: renamed/copied repos preserve stable repo ID where valid, while split repos require new enrollment records
     evidence_note: "This phase is intentionally last: broad enrollment starts only after deployment, inventory, mail, event pipeline, catalog routes, exception capture, and Rust boundaries have evidence."
+
+  - id: phase-13-transport-data-plane
+    title: Three-plane transport; data leaves the PR pipe
+    status: planned
+    acceptance:
+      required_files:
+        - docs/DAD_TRANSPORT_AND_COMMS_REDESIGN.md
+        - src/digital_asset_directory/transport.py
+        - tests/test_transport.py
+      required_outputs:
+        - processed/reports/transport_audit.json
+      human_gates:
+        - id: phase-13-data-root-migration-approved
+          description: DAD_DATA_ROOT location approved (outside OneDrive) and apply_data_migration run with verified copy before any untrack commit
+        - id: phase-13-journal-repo-approved
+          description: dad-journal data-only repo (direct push, no PRs, no branch protection) created and first threshold-batched checkpoint verified
+        - id: phase-13-daemon-schedule-approved
+          description: daemon run-cycle installed via Task Scheduler with heartbeat surfaced in preflight staleness warnings
+        - id: phase-13-repo-transport-upgrade-wave-approved
+          description: transport-upgrade queue reviewed; enrolled repos upgraded via enrollment update waves; protected repos handled central-only; tracked spool JSONL in logos-scripture-graph resolved with explicit local-write approval
+        - id: phase-13-cloudflare-relay-deferred
+          description: Cloudflare Worker+D1 relay stays design-only until phase-10a-cloud-boundary-reviewed and this phase's local tiers are proven
+    evidence_note: Kernel (resolver, migration, legacy-transport auditor) is implemented and golden-tested; Codex implements M0-M2 rerouting, daemon, and journal per docs/DAD_TRANSPORT_AND_COMMS_REDESIGN.md. Transport changes move candidate data off the PR pipe; code review governance is untouched.

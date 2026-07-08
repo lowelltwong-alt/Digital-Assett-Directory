@@ -18,6 +18,7 @@ on:
       - "scripts/run_dad_scan_core.py"
       - "docs/rust/**"
       - "templates/**"
+      - "deny.toml"
       - ".github/workflows/rust-ci-long.yml"
 
 jobs:
@@ -50,13 +51,15 @@ jobs:
         run: cargo nextest run --manifest-path tools/dad_scan_core/Cargo.toml
       - name: dependency license/advisory policy
         if: matrix.os == 'ubuntu-latest'
-        run: cargo deny check --manifest-path tools/dad_scan_core/Cargo.toml
+        run: cargo deny --manifest-path tools/dad_scan_core/Cargo.toml check --config deny.toml
       - name: audit advisories
         if: matrix.os == 'ubuntu-latest'
         run: cargo audit --file tools/dad_scan_core/Cargo.lock
       - name: coverage
         if: matrix.os == 'ubuntu-latest'
-        run: cargo llvm-cov --manifest-path tools/dad_scan_core/Cargo.toml --lcov --output-path tools/dad_scan_core/coverage/lcov.info
+        run: |
+          mkdir -p tools/dad_scan_core/coverage
+          cargo llvm-cov --manifest-path tools/dad_scan_core/Cargo.toml --lcov --output-path tools/dad_scan_core/coverage/lcov.info
       - uses: actions/setup-python@v5
         with:
           python-version: "3.11"

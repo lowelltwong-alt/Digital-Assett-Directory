@@ -27,6 +27,24 @@ enrollment, normal DAD operation is mailbox-only under `.digital-asset/mail/**`.
 See `docs/DAD_REPO_ENROLLMENT.md` for the contract, cadence, public-safe
 pointer policy, and update flow.
 
+## Three-Plane Rule
+
+Keep DAD source changes, candidate data, and lesson execution separate:
+
+- Code plane: reviewed PRs for DAD code, schemas, registries, docs, templates,
+  and approved downstream source changes.
+- Data plane: validated append-only mail, events, exceptions, reports, lessons,
+  and ledgers under `DAD_DATA_ROOT` or the private `dad-journal`; no message PRs.
+- Execution plane: adopted lessons may become batched, policy-scoped repo PRs
+  only when they require real source changes.
+
+## MCP-First Adapters
+
+Internal DAD adapters should expose repo governance through MCP resources,
+tools, and prompts before any direct API. A downstream repo may adopt an MCP
+wrapper, but its local contract, Git hooks, review policy, and human approvals
+remain authoritative.
+
 ## Flow
 
 ```text
