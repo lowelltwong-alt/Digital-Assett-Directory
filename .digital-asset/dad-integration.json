@@ -1,0 +1,163 @@
+{
+  "agent_runtime_policy": {
+    "adapter_authority": "optional_wrapper_only",
+    "agent_id_policy": "arbitrary_non_empty_string",
+    "core_contract": "AGENTS.md",
+    "vendor_lock_in_prohibited": true
+  },
+  "approved_dad_managed_paths": [
+    ".digital-asset/dad-integration.json",
+    ".digital-asset/mail/README.md",
+    ".digital-asset/mail/.gitignore",
+    ".digital-asset/mail/inbox.jsonl",
+    ".digital-asset/mail/outbox.jsonl",
+    ".digital-asset/mail/archive.jsonl",
+    ".digital-asset/mail/adoption.jsonl",
+    ".digital-asset/assets/README.md",
+    ".digital-asset/assets/index.jsonl",
+    ".digital-asset/assets/adoption.jsonl",
+    ".digital-asset/learning/events.jsonl",
+    ".digital-asset/skills/checkout.json",
+    ".digital-asset/context-map.json",
+    ".digital-asset/governance-map.yaml",
+    ".digital-asset/data-map.yaml",
+    ".digital-asset/key-values/registry.json",
+    ".digital-asset/key-values/change-log.jsonl",
+    ".ai-assets.json",
+    "AGENTS.md",
+    "CLAUDE.md",
+    "AI_FRONT_DOOR.md",
+    "AI_TABLE_OF_CONTENTS.md",
+    ".githooks/pre-push",
+    ".githooks/pre-push.ps1"
+  ],
+  "authority_boundary": "DAD enrollment installs or updates only reviewed, marker-bounded governance surfaces after a human approval ID. Normal recurring DAD operation remains mailbox-only under .digital-asset/mail/**.",
+  "cadence": {
+    "mail": {
+      "frequency": "daily",
+      "preflight_behavior": "warn_only_when_stale",
+      "stale_after_hours": 24
+    },
+    "weekly_checks": {
+      "checks": [
+        "asset_update_available",
+        "skill_update_retirement_or_replacement",
+        "template_update_available",
+        "architecture_reference_update",
+        "governance_map_drift",
+        "data_map_drift",
+        "new_best_practice_or_library_recommendation"
+      ],
+      "frequency": "weekly",
+      "preflight_behavior": "warn_only_when_stale"
+    }
+  },
+  "capture": {
+    "cli_fallback": "If asset-dir is unavailable, first try the stable DAD user shim at ~/.dad/bin/asset-dir or ~/.dad/bin/asset-dir.ps1; if the shim is unavailable too, try PYTHONPATH=src python -m digital_asset_directory.cli from the DAD checkout; otherwise append metadata-only JSONL with dad_cli_unavailable and safe refs.",
+    "exceptions_outbox": ".digital-asset/exceptions/outbox.jsonl",
+    "fix_outcomes": "processed/exceptions/fix-outcomes/outcomes.jsonl",
+    "mail_outbox": ".digital-asset/mail/outbox.jsonl",
+    "pattern_registry_ref": "dad://hub/Digital-Assett-Directory/registry/exception-capture-pattern-registry.json",
+    "repo_local_only_paths": [
+      ".digital-asset/exceptions/README.md",
+      ".digital-asset/exceptions/.gitignore",
+      ".digital-asset/exceptions/outbox.jsonl",
+      ".digital-asset/exceptions/inbox.jsonl",
+      ".digital-asset/exceptions/archive.jsonl",
+      "processed/exceptions/fix-outcomes/outcomes.jsonl"
+    ],
+    "surface_version": "0.4.0"
+  },
+  "dad_hub": {
+    "hub_id": "dad",
+    "hub_ref": "dad://hub/Digital-Assett-Directory",
+    "local_paths_included": true
+  },
+  "enabled_control_planes": [
+    "dad_library",
+    "mail_center",
+    "reusable_assets",
+    "coding_harnesses",
+    "agent_skills",
+    "templates",
+    "architecture_references",
+    "repo_enrollment",
+    "coding_test_parity",
+    "governance_maps",
+    "data_maps",
+    "learning_postflight_loops"
+  ],
+  "enrollment": {
+    "approval_id": "USER-2026-07-01-ENROLLMENT-WAVES",
+    "installed_at": "2026-07-08T18:14:48.315474+00:00",
+    "last_operation": "update",
+    "normal_write_boundary": ".digital-asset/mail/**",
+    "one_time_full_governance_install": true,
+    "status": "enrolled",
+    "version": "0.1.0",
+    "wave": "wave-2026-07-01-dad-hub"
+  },
+  "events": {
+    "authority_boundary": "Event records are operational evidence only; they do not approve, verify, recommend, or authorize source repo changes.",
+    "central_log": "processed/events/event_log.jsonl",
+    "local_outbox": ".digital-asset/events/outbox.jsonl",
+    "mode": "append_only_candidate_metadata",
+    "surface_version": "1.0.0",
+    "write_boundary": "Events are explicit candidate metadata emissions. Normal recurring DAD operation remains limited to .digital-asset/mail/**."
+  },
+  "graph": {
+    "authority_boundary": "Graph surfaces are generated candidate projections. They cannot override AGENTS.md, reviewed registries, schemas, audit records, Git/CI gates, or human approval gates.",
+    "freshness_policy": {
+      "fresh": "hashes_match",
+      "inconsistent": "block",
+      "stale": "warn_only"
+    },
+    "mode": "central_read_only_generated_surfaces",
+    "registry_ref": "dad://hub/Digital-Assett-Directory/registry/graph-surface-registry.json",
+    "surface_version": "1.0.0"
+  },
+  "journal": {
+    "authority_boundary": "Journal checkpoint rows are data-plane evidence only. They do not authorize a push or make generated graph content authoritative.",
+    "checkpoint_scope": "DAD_DATA_ROOT data plane only",
+    "checkpoint_threshold": ">=200 new records or >=24h",
+    "mode": "plan_only_until_human_gate",
+    "source_repo_writes": false,
+    "surface_version": "1.0.0"
+  },
+  "key_value_governance": {
+    "authority_boundary": "Key-value records make load-bearing values, dependencies, and changes reviewable. They do not prove a value is correct or authorize real data, source-system writes, public release, or cross-repo mutation.",
+    "change_log": ".digital-asset/key-values/change-log.jsonl",
+    "enforcement": "pre_push_postflight_gate",
+    "load_bearing_path_policy": "Changes to config, registry, schema, template, roadmap, governance, hook, AI-entrypoint, and named default/threshold/weight/formula paths require key-value change-log coverage.",
+    "mode": "repo_local_registry_and_change_log",
+    "registry": ".digital-asset/key-values/registry.json",
+    "surface_version": "1.0.0"
+  },
+  "local_validation_commands": [
+    "python -m pytest",
+    "python -m digital_asset_directory.cli validate"
+  ],
+  "mcp": {
+    "adapter_authority": "optional_wrapper_only",
+    "authority_boundary": "MCP is a read-only adapter over DAD registries and generated surfaces. It is not source authority and cannot perform writes.",
+    "mode": "local_stdio_read_only",
+    "remote_mcp_enabled": false,
+    "surface_version": "1.0.0",
+    "vendor_sdk_required": false,
+    "write_tools_enabled": false
+  },
+  "public_facing": false,
+  "repo_alias": "dad",
+  "repo_id": "dad",
+  "repo_path": "C:/Users/lowel/OneDrive/Desktop/Git Projects/04_Digital_Assett_Directory",
+  "repo_ref": "dad://repo/dad",
+  "return_address": "dad://repo/dad/.digital-asset/mail/outbox.jsonl",
+  "schema_version": "0.1.0",
+  "transport": {
+    "implementation_version": "1.0.0-m0m1m2",
+    "journal_fallback": true,
+    "mode": "local_pull",
+    "surface_version": "1.0.0"
+  },
+  "visibility": "internal"
+}

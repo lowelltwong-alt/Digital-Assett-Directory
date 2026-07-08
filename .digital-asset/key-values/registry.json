@@ -1,0 +1,31 @@
+{
+  "authority_boundary": "Key-value records make load-bearing values, dependencies, and changes reviewable. They do not prove a value is correct or authorize real data, source-system writes, public release, or cross-repo mutation.",
+  "change_log_ref": ".digital-asset/key-values/change-log.jsonl",
+  "key_values": [
+    {
+      "affected_refs": [
+        "config/**",
+        "registry/**",
+        "schemas/**",
+        "templates/**",
+        "roadmap/**"
+      ],
+      "current_value_hash": "",
+      "dependency_refs": [
+        "AGENTS.md",
+        ".githooks/pre-push"
+      ],
+      "key_id": "key-value-governance-required",
+      "label": "Key-value governance is required for load-bearing values",
+      "notes": "Scaffolded by DAD. Add one row for every load-bearing value before changing it.",
+      "owner": "repo-owner",
+      "review_status": "reviewed",
+      "risk_tier": "high",
+      "value_ref": ".digital-asset/key-values/registry.json",
+      "value_type": "boolean"
+    }
+  ],
+  "registry_id": "dad:key-values",
+  "repo_id": "dad",
+  "schema_version": "0.1.0"
+}

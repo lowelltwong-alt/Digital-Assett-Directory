@@ -365,8 +365,12 @@ python -m digital_asset_directory.cli roadmap check --no-update
 - Data map: `.digital-asset/data-map.yaml`
 - Skill checkout: `.digital-asset/skills/checkout.json`
 - Coding asset pointer: `.ai-assets.json`
+- Asset memory: `.digital-asset/assets/index.jsonl`
 
 Use these surfaces when work involves AI-assisted coding, repo governance,
 lessons, reusable assets, templates, agent skills, or cross-repo suggestions.
 DAD mail is candidate-only and local review controls adoption for `dad`.
+Use `.digital-asset/assets/` for compact metadata-only asset cards. DAD's
+address model uses 9 compact layers with layer 9 as learning/adaptation; put
+long workflow details in workflow cards or source docs and reference them.
 <!-- END DIGITAL_ASSET_DIRECTORY_ENROLLMENT -->

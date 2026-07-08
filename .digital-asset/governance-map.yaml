@@ -1,0 +1,55 @@
+schema_version: 0.1.0
+repo_id: dad
+repo_ref: dad://repo/dad
+dad_hub_ref: dad://hub/Digital-Assett-Directory
+authority_boundary: DAD enrollment installs or updates only reviewed, marker-bounded
+  governance surfaces after a human approval ID. Normal recurring DAD operation remains
+  mailbox-only under .digital-asset/mail/**.
+source_authority: target_repo_retains_local_canon
+dad_managed_surfaces:
+- .digital-asset/dad-integration.json
+- .digital-asset/mail/README.md
+- .digital-asset/mail/.gitignore
+- .digital-asset/mail/inbox.jsonl
+- .digital-asset/mail/outbox.jsonl
+- .digital-asset/mail/archive.jsonl
+- .digital-asset/mail/adoption.jsonl
+- .digital-asset/assets/README.md
+- .digital-asset/assets/index.jsonl
+- .digital-asset/assets/adoption.jsonl
+- .digital-asset/learning/events.jsonl
+- .digital-asset/skills/checkout.json
+- .digital-asset/context-map.json
+- .digital-asset/governance-map.yaml
+- .digital-asset/data-map.yaml
+- .digital-asset/key-values/registry.json
+- .digital-asset/key-values/change-log.jsonl
+- .ai-assets.json
+- AGENTS.md
+- CLAUDE.md
+- AI_FRONT_DOOR.md
+- AI_TABLE_OF_CONTENTS.md
+- .githooks/pre-push
+- .githooks/pre-push.ps1
+normal_operation_write_boundary: .digital-asset/mail/**
+control_planes:
+- dad_library
+- mail_center
+- reusable_assets
+- coding_harnesses
+- agent_skills
+- templates
+- architecture_references
+- repo_enrollment
+- coding_test_parity
+- governance_maps
+- data_maps
+- learning_postflight_loops
+validation_commands:
+- python -m pytest
+- python -m digital_asset_directory.cli validate
+human_gates:
+- enroll apply requires reviewed approval ID
+- enroll update-apply requires reviewed approval ID
+- private/internal/restricted/unknown-origin mail to public-facing repos requires
+  human release
