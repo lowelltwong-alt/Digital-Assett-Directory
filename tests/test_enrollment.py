@@ -20,6 +20,10 @@ from digital_asset_directory.enrollment import (
     select_enrollment_policies,
 )
 from digital_asset_directory.mail_center import compose_mail
+from digital_asset_directory.surface_versions import (
+    build_surface_version_status,
+    surface_version_upgrade_queue_path,
+)
 from digital_asset_directory.transport import TRANSPORT_SURFACE_VERSION, transport_upgrade_queue_path
 from digital_asset_directory.utils import append_jsonl
 
@@ -264,6 +268,27 @@ def test_apply_requires_approval_and_writes_only_approved_paths(tmp_path: Path):
         "direct_api_policy": "external_adapter_fallback_only",
         "mcp_audit_policy": "dad_lifecycle_and_audit_required_for_side_effects",
     }
+    assert contract["transport"]["surface_version"] == TRANSPORT_SURFACE_VERSION
+    assert contract["graph"] == {
+        "surface_version": "0.1.0",
+        "mode": "generated_candidate_surfaces",
+    }
+    assert contract["mcp"] == {
+        "surface_version": "0.1.0",
+        "mode": "local_stdio_read_only",
+        "remote_enabled": False,
+        "vendor_sdk_required": False,
+    }
+    assert contract["journal"] == {
+        "surface_version": "0.1.0",
+        "mode": "plan_only_until_human_gate",
+        "checkpoint_scope": "DATA_PLANE_PATHS",
+    }
+    assert contract["events"] == {
+        "surface_version": "0.1.0",
+        "mode": "repo_outbox_to_central_log",
+        "append_only": True,
+    }
     assert governance_map["agent_runtime_policy"] == contract["agent_runtime_policy"]
     capture_registry = json.loads(
         (ROOT / "registry" / "exception-capture-pattern-registry.json").read_text(
@@ -443,6 +468,99 @@ def test_enrollment_status_reports_missing_transport_contract(tmp_path: Path):
     assert status["update_available"] is True
     assert status["transport"]["status"] == "contract_missing"
     assert "Enrollment contract missing transport.surface_version" in status["errors"]
+
+
+def test_enrollment_status_reports_missing_surface_versions_as_legacy(tmp_path: Path):
+    hub = tmp_path / "hub"
+    repo = tmp_path / "repo-a"
+    hub.mkdir()
+    repo.mkdir()
+    policy = _policy(repo)
+    apply_enrollment(hub, policy, approval_id="APPROVED-1")
+
+    contract_path = repo / ".digital-asset" / "dad-integration.json"
+    contract = json.loads(contract_path.read_text(encoding="utf-8"))
+    for surface in ("graph", "mcp", "journal", "events"):
+        del contract[surface]
+    contract_path.write_text(json.dumps(contract), encoding="utf-8")
+
+    status = enrollment_status(policy)
+
+    assert status["update_available"] is True
+    for surface in ("graph", "mcp", "journal", "events"):
+        assert status["surface_versions"][surface]["status"] == "legacy"
+        assert status["surface_versions"][surface]["update_needed"] is True
+    assert any("graph.surface_version is legacy" in error for error in status["errors"])
+
+
+def test_surface_version_status_writes_queue_by_repo_surface_and_expected_version(
+    tmp_path: Path,
+):
+    hub = tmp_path / "hub"
+    repo_a = tmp_path / "repo-a"
+    repo_b = tmp_path / "repo-b"
+    hub.mkdir()
+    repo_a.mkdir()
+    repo_b.mkdir()
+    policy_a = _policy(repo_a, "repo-a")
+    policy_b = _policy(repo_b, "repo-b")
+    apply_enrollment(hub, policy_a, approval_id="APPROVED-1")
+    apply_enrollment(hub, policy_b, approval_id="APPROVED-1")
+
+    contract_a = json.loads((repo_a / ".digital-asset" / "dad-integration.json").read_text())
+    del contract_a["graph"]
+    del contract_a["mcp"]
+    (repo_a / ".digital-asset" / "dad-integration.json").write_text(
+        json.dumps(contract_a),
+        encoding="utf-8",
+    )
+    contract_b = json.loads((repo_b / ".digital-asset" / "dad-integration.json").read_text())
+    del contract_b["journal"]
+    (repo_b / ".digital-asset" / "dad-integration.json").write_text(
+        json.dumps(contract_b),
+        encoding="utf-8",
+    )
+
+    result = build_surface_version_status(
+        hub,
+        enrollment_policies=[policy_a, policy_b],
+        transport_repos=[
+            {"id": "repo-a", "path": str(repo_a), "write_protected": False},
+            {"id": "repo-b", "path": str(repo_b), "write_protected": True},
+        ],
+        wave="wave-a",
+    )
+
+    assert Path(result["report_path"]).exists()
+    assert result["surface_update_counts"]["graph"] == 1
+    assert result["surface_update_counts"]["mcp"] == 1
+    assert result["surface_update_counts"]["journal"] == 1
+    assert result["queue_appended"] == 3
+    queue_rows = [
+        json.loads(line)
+        for line in surface_version_upgrade_queue_path(hub).read_text(encoding="utf-8").splitlines()
+        if line.strip()
+    ]
+    assert {
+        (row["repo_id"], row["surface"], row["expected_surface_version"])
+        for row in queue_rows
+    } == {
+        ("repo-a", "graph", "0.1.0"),
+        ("repo-a", "mcp", "0.1.0"),
+        ("repo-b", "journal", "0.1.0"),
+    }
+    protected = [row for row in queue_rows if row["repo_id"] == "repo-b"][0]
+    assert protected["write_protected"] is True
+    assert protected["delivery_rule"].startswith("central_only")
+
+    deduped = build_surface_version_status(
+        hub,
+        enrollment_policies=[policy_a, policy_b],
+        transport_repos=[],
+        wave="wave-a",
+    )
+
+    assert deduped["queue_appended"] == 0
 
 
 def test_enrollment_status_reports_missing_exception_surface(tmp_path: Path):

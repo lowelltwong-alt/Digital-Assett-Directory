@@ -402,6 +402,12 @@ def test_daemon_cycle_writes_heartbeat_and_daily_queue(tmp_path: Path):
         "journal_checkpoint",
     ]
     assert Path(first["daily_review_queue"]["markdown_path"]).exists()
+    assert first["graph_surface_status"]["schema_version"] == "dad.graph_surface.status.v1"
+    assert "graph_surfaces" in first["daily_review_queue"]["report"]
+    assert (
+        "Graph surface freshness"
+        in Path(first["daily_review_queue"]["markdown_path"]).read_text(encoding="utf-8")
+    )
     assert first["journal_status"]["schema_version"] == "dad.journal.status.v1"
     assert first["journal"]["checkpoint_skipped_reason"] in {
         "journal_repo_not_configured",
@@ -410,6 +416,7 @@ def test_daemon_cycle_writes_heartbeat_and_daily_queue(tmp_path: Path):
     status = daemon_status(hub)
     assert status["status"] == "fresh"
     assert status["transport_audit_ran"] is True
+    assert "graph_surface_freshness_counts" in status["last_cycle"]
     assert status["journal_checkpoint_due"] in {True, False}
     assert status["journal_checkpoint_status"]["schema_version"] == "dad.journal.status.v1"
 
@@ -457,6 +464,8 @@ def test_transport_readiness_cli_reports_local_ready_with_human_gates_pending(
     assert payload["local_ready"] is True
     assert payload["overall_status"] == "local_ready_human_gates_pending"
     assert payload["daemon"]["status"] == "fresh"
+    assert payload["graph_surfaces"]["schema_version"] == "dad.graph_surface.status.v1"
+    assert payload["local_checks"]["graph_surface_status_readable"] is True
     assert payload["journal"]["checkpoint_due"] in {True, False}
     assert "daemon_schedule" in payload["human_gate_summary"]["pending"]
 

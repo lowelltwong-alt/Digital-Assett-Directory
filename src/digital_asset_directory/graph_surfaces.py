@@ -12,7 +12,7 @@ import json
 from pathlib import Path
 from typing import Any
 
-from .transport import data_path
+from .transport import data_path, data_relative_path
 from .utils import json_dumps, sha256_bytes, sha256_file, utc_now
 
 GRAPH_SURFACE_REGISTRY = Path("registry") / "graph-surface-registry.json"
@@ -70,6 +70,104 @@ def _snapshot_paths(surface_id: str, body_sha256: str) -> dict[str, str]:
         "manifest_json_path": (surface_dir / "manifest.json").as_posix(),
         "body_gzip_path": (surface_dir / f"body-{digest}.json.gz").as_posix(),
         "index_jsonl_path": (Path("data") / GRAPH_SNAPSHOT_ROOT / "index.jsonl").as_posix(),
+    }
+
+
+def _hash_surface_input(path: Path) -> str:
+    if not path.exists():
+        return "missing"
+    if path.is_file():
+        return f"sha256:{sha256_file(path)}"
+    parts: list[str] = []
+    for child in sorted(item for item in path.rglob("*") if item.is_file()):
+        try:
+            rel = child.relative_to(path).as_posix()
+        except ValueError:
+            rel = child.name
+        parts.append(f"{rel}\0{sha256_file(child)}")
+    digest_input = "\n".join(parts).encode("utf-8")
+    return f"sha256:{sha256_bytes(digest_input)}"
+
+
+def graph_surface_freshness(hub_root: Path, surface: dict[str, Any]) -> dict[str, Any]:
+    outputs = surface.get("outputs", {})
+    try:
+        manifest_path = resolve_graph_surface_path(
+            hub_root, str(outputs["manifest_logical_path"])
+        )
+        body_path = resolve_graph_surface_path(hub_root, str(outputs["body_logical_path"]))
+    except (KeyError, ValueError) as exc:
+        return {"state": "inconsistent", "reasons": [f"invalid_registry_output:{exc}"]}
+    reasons: list[str] = []
+    if not manifest_path.exists() or not body_path.exists():
+        return {
+            "state": "missing",
+            "reasons": ["manifest_or_body_missing"],
+            "manifest_exists": manifest_path.exists(),
+            "body_exists": body_path.exists(),
+        }
+    try:
+        manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError) as exc:
+        return {"state": "inconsistent", "reasons": [f"manifest_invalid:{exc}"]}
+
+    expected_body_hash = str(manifest.get("graph_content_hash") or "")
+    if expected_body_hash:
+        actual_body_hash = f"sha256:{sha256_file(body_path)}"
+        if expected_body_hash != actual_body_hash:
+            reasons.append("graph_content_hash_mismatch")
+
+    for rel, expected in manifest.get("input_hashes", {}).items():
+        actual = _hash_surface_input(data_relative_path(hub_root, rel))
+        if actual != expected:
+            reasons.append(f"input_hash_changed:{rel}")
+
+    if "graph_content_hash_mismatch" in reasons:
+        state = "inconsistent"
+    elif reasons:
+        state = "stale"
+    else:
+        state = str(manifest.get("freshness", {}).get("state") or "fresh")
+    return {
+        "state": state,
+        "reasons": reasons,
+        "manifest_exists": True,
+        "body_exists": True,
+        "manifest_hash": f"sha256:{sha256_file(manifest_path)}",
+        "body_hash": f"sha256:{sha256_file(body_path)}",
+    }
+
+
+def graph_surface_status(hub_root: Path) -> dict[str, Any]:
+    registry = load_graph_surface_registry(hub_root)
+    surfaces: list[dict[str, Any]] = []
+    counts: dict[str, int] = {}
+    for surface in registry.get("surfaces", []):
+        surface_id = str(surface.get("surface_id", ""))
+        freshness = graph_surface_freshness(hub_root, surface)
+        state = str(freshness.get("state") or "unknown")
+        counts[state] = counts.get(state, 0) + 1
+        surfaces.append(
+            {
+                "surface_id": surface_id,
+                "surface_status": surface.get("status", ""),
+                "review_status": surface.get("review_status", ""),
+                "freshness": freshness,
+                "manifest_resource_uri": f"dad://surface/{surface_id}/manifest",
+                "body_available": freshness.get("body_exists", False),
+                "authority_boundary": surface.get(
+                    "authority_boundary", GRAPH_SURFACE_AUTHORITY_BOUNDARY
+                ),
+            }
+        )
+    return {
+        "schema_version": "dad.graph_surface.status.v1",
+        "generated_at": utc_now(),
+        "registry_version": registry.get("registry_version", ""),
+        "surface_count": len(surfaces),
+        "freshness_counts": counts,
+        "surfaces": surfaces,
+        "authority_boundary": GRAPH_SURFACE_AUTHORITY_BOUNDARY,
     }
 
 
