@@ -616,6 +616,26 @@ def test_inventory_reconciliation_is_central_only_and_classifies_special_repos(
         assert not (repo / ".digital-asset").exists()
 
 
+def test_inventory_duplicate_markers_ignore_ancestor_temp_container(tmp_path: Path):
+    hub = tmp_path / "hub"
+    workspace = tmp_path / "temp-harness-root" / "workspace"
+    repo = _git_repo(workspace / "ordinary-repo")
+    duplicate = _git_repo(workspace / "repos" / "copy")
+    hub.mkdir()
+    source = SimpleNamespace(
+        id="workspace",
+        path=workspace,
+        enabled=True,
+        follow_symlinks=False,
+    )
+
+    result = reconcile_repo_inventory(hub, local_sources=[source], max_depth=3)
+    records = {record["repo_name"]: record for record in result["inventory"]["records"]}
+
+    assert records[repo.name]["classification"] == "needs-human-classification"
+    assert records[duplicate.name]["classification"] == "duplicate-ignore"
+
+
 def test_inventory_report_id_changes_for_same_count_content_change(tmp_path: Path):
     hub = tmp_path / "hub"
     workspace_a = tmp_path / "workspace-a"

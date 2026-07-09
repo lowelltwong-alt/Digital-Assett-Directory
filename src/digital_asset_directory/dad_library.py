@@ -2634,6 +2634,12 @@ def _path_marker_match(
     )
 
 
+def _direct_path_marker_match(repo: Path, markers: set[str]) -> bool:
+    """Match path-role markers only on the repo name or immediate parent."""
+    normalized = [_normalize_name(part) for part in repo.parts[-2:]]
+    return any(marker in normalized for marker in markers)
+
+
 def _name_marker_match(value: str, markers: set[str], *, contains: bool = False) -> bool:
     normalized = _normalize_name(value)
     return any(marker == normalized or (contains and marker in normalized) for marker in markers)
@@ -2963,7 +2969,7 @@ def _classify_inventory_repo(
         return "duplicate-ignore", reasons, "Review nested repo lineage before enrollment or delivery."
     if (
         duplicate_basename
-        or _path_marker_match(repo, DUPLICATE_MARKERS)
+        or _direct_path_marker_match(repo, DUPLICATE_MARKERS)
     ) and not enrollment_policy_present:
         reasons.append("Duplicate/reference/temp path marker or duplicate basename without policy.")
         return "duplicate-ignore", reasons, "Keep central record only; avoid mailbox delivery."

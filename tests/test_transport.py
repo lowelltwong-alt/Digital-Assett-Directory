@@ -480,6 +480,88 @@ def test_transport_upgrade_status_reports_reviewed_queue_and_plan_artifacts(tmp_
     ]
 
 
+def test_transport_upgrade_status_supersedes_stale_queue_rows_with_current_audit(
+    tmp_path: Path,
+):
+    hub = _hub_for_cli(tmp_path / "hub")
+    repo_a = tmp_path / "repo-a"
+    repo_b = tmp_path / "repo-b"
+    repo_a.mkdir()
+    repo_b.mkdir()
+    _write_transport_upgrade_config(hub, repo_a, repo_b)
+    report_path = data_path(hub, "central_reports") / "transport_audit.json"
+    report_path.parent.mkdir(parents=True, exist_ok=True)
+    report_path.write_text(
+        json.dumps(
+            {
+                "transport_surface_version": TRANSPORT_SURFACE_VERSION,
+                "transport_implementation_version": TRANSPORT_IMPLEMENTATION_VERSION,
+                "repo_count": 2,
+                "classification_counts": {"current": 1, "upgrade_required": 1},
+                "hub": {"classification": "upgrade_required"},
+                "records": [
+                    {"repo_id": "repo-a", "classification": "current"},
+                    {"repo_id": "repo-b", "classification": "upgrade_required"},
+                ],
+            }
+        ),
+        encoding="utf-8",
+    )
+    queue_path = transport_upgrade_queue_path(hub)
+    queue_path.parent.mkdir(parents=True, exist_ok=True)
+    queue_rows = [
+        {
+            "queue_key": "queue:repo-a:old",
+            "repo_id": "repo-a",
+            "classification": "upgrade_recommended",
+            "expected_surface_version": TRANSPORT_SURFACE_VERSION,
+            "expected_implementation_version": "old-implementation",
+            "review_status": "candidate",
+        },
+        {
+            "queue_key": "queue:repo-a:new",
+            "repo_id": "repo-a",
+            "classification": "upgrade_recommended",
+            "expected_surface_version": TRANSPORT_SURFACE_VERSION,
+            "expected_implementation_version": TRANSPORT_IMPLEMENTATION_VERSION,
+            "review_status": "candidate",
+        },
+        {
+            "queue_key": "queue:repo-b:new",
+            "repo_id": "repo-b",
+            "classification": "upgrade_required",
+            "expected_surface_version": TRANSPORT_SURFACE_VERSION,
+            "expected_implementation_version": TRANSPORT_IMPLEMENTATION_VERSION,
+            "review_status": "candidate",
+            "write_protected": True,
+        },
+    ]
+    queue_path.write_text(
+        "".join(json.dumps(row, sort_keys=True) + "\n" for row in queue_rows),
+        encoding="utf-8",
+    )
+
+    result = RUNNER.invoke(
+        app,
+        ["transport", "upgrade-status", "--hub", str(hub), "--wave", "wave-a"],
+    )
+
+    assert result.exit_code == 0, result.output
+    payload = json.loads(result.stdout)
+    assert payload["status"] == "protected_repos_central_only"
+    assert payload["queue"]["row_count"] == 3
+    assert payload["queue"]["effective_row_count"] == 2
+    assert payload["selection"]["selected_count"] == 0
+    assert payload["selection"]["skipped_by_reason"] == {
+        "superseded_by_current_audit": 1,
+        "write_protected_central_only": 1,
+    }
+    assert payload["selection"]["audit_filter"]["filter_applied"] is True
+    assert payload["operator_next_steps"] == [
+        "review protected repo rows centrally; do not write target repos"
+    ]
+
+
 def test_transport_readiness_includes_upgrade_wave_status(tmp_path: Path):
     hub = _hub_for_cli(tmp_path / "hub")
     repo_a = tmp_path / "repo-a"

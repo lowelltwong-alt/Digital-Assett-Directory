@@ -5154,6 +5154,59 @@ def test_cli_mail_repair_plan_blocks_coverage_gap_without_local_paths(
     assert "path" not in sample
 
 
+def test_cli_mail_repair_plan_ignores_nested_fixture_mailboxes(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+):
+    hub = _make_hub(tmp_path / "dad")
+    reviewed = tmp_path / "reviewed"
+    real_unreviewed = tmp_path / "real-unreviewed"
+    real_smoke_repo = tmp_path / "smoke-real-repo"
+    reviewed.mkdir()
+    for fixture_root in (
+        reviewed / ".pytest-tmp-local" / "pytest-fixtures" / "case-a",
+        reviewed / ".manual-key-value-check-6" / "repo-a",
+        tmp_path / "_codex_pytest_tmp" / "t470" / "test_validator_rejects_missing0",
+        reviewed / ".lawfirm-os-intake" / "smoke-07436c4376824153abbffd451410c99d",
+    ):
+        mail_dir = fixture_root / ".digital-asset" / "mail"
+        mail_dir.mkdir(parents=True)
+        (mail_dir / "outbox.jsonl").write_text("", encoding="utf-8")
+    (real_unreviewed / ".digital-asset" / "mail").mkdir(parents=True)
+    (real_unreviewed / ".digital-asset" / "mail" / "outbox.jsonl").write_text(
+        "", encoding="utf-8"
+    )
+    (real_smoke_repo / ".digital-asset" / "mail").mkdir(parents=True)
+    (real_smoke_repo / ".digital-asset" / "mail" / "outbox.jsonl").write_text(
+        "", encoding="utf-8"
+    )
+    cfg = SimpleNamespace(
+        repo_root=hub,
+        local_sources=[SimpleNamespace(enabled=True, path=tmp_path)],
+        mail_repos=[_policy(reviewed, "reviewed")],
+    )
+    monkeypatch.setattr(cli_module, "_cfg", lambda *args, **kwargs: cfg)
+
+    clean_fixture_result = RUNNER.invoke(
+        app,
+        ["mail", "repair-plan", "--repo", "reviewed"],
+    )
+    all_result = RUNNER.invoke(app, ["mail", "repair-plan"])
+
+    assert clean_fixture_result.exit_code == 0
+    clean_payload = json.loads(clean_fixture_result.output)
+    assert clean_payload["mailbox_coverage"] == {}
+    assert clean_payload["safe_for_selected_scope"] is True
+    assert clean_payload["issue_counts_by_type"] == {}
+
+    assert all_result.exit_code == 0
+    all_payload = json.loads(all_result.output)
+    assert all_payload["mailbox_coverage"]["unreviewed_mailbox_candidate_count"] == 2
+    sample = all_payload["repair_lanes"][0]["samples"]["unreviewed_mailbox_candidate_samples"][0]
+    assert sample["path_ref"].startswith("repo-path-sha256:")
+    assert "path" not in sample
+
+
 def test_cli_mail_repair_plan_write_report_persists_operator_packet_only(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,

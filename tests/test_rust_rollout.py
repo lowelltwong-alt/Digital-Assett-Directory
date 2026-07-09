@@ -12,7 +12,11 @@ from typer.testing import CliRunner
 
 import digital_asset_directory.cli as cli_module
 from digital_asset_directory.cli import app
-from digital_asset_directory.mail_center import compose_mail, diagnose_mail_dirty_state
+from digital_asset_directory.mail_center import (
+    central_mail_dir,
+    compose_mail,
+    diagnose_mail_dirty_state,
+)
 from digital_asset_directory.rust_rollout.apply import apply_rust_rollout_scaffold
 from digital_asset_directory.rust_rollout import mail_packets as rust_mail_packets
 from digital_asset_directory.rust_rollout.lesson_capture import (
@@ -249,7 +253,7 @@ def test_mail_doctor_allows_same_rust_packet_in_staging_and_reference(
     hub = tmp_path / "dad"
     config = _config(tmp_path)
     tracked = hub / "mail" / "outbox" / "rust_rollout"
-    staged = hub / "processed" / "mail" / "staged" / "rust_rollout"
+    staged = central_mail_dir(hub) / "staged" / "rust_rollout"
     build_rust_rollout_mail_packets(config, tracked)
     build_rust_rollout_mail_packets(config, staged)
 
@@ -269,7 +273,7 @@ def test_mail_doctor_blocks_stale_rust_packet_semantic_identity_conflict(
     hub = tmp_path / "dad"
     config = _config(tmp_path)
     tracked = hub / "mail" / "outbox" / "rust_rollout"
-    staged = hub / "processed" / "mail" / "staged" / "rust_rollout"
+    staged = central_mail_dir(hub) / "staged" / "rust_rollout"
     build_rust_rollout_mail_packets(config, tracked)
     text = config.read_text(encoding="utf-8")
     config.write_text(
@@ -321,7 +325,7 @@ def test_cli_rust_rollout_build_mail_blocks_live_mail_dirt_even_with_ack(
 ) -> None:
     hub = _make_hub(tmp_path / "dad")
     source = tmp_path / "source"
-    out_dir = tmp_path / "staged-mail"
+    out_dir = central_mail_dir(hub) / "staged" / "rust_rollout"
     source.mkdir()
     config = _config(tmp_path)
     compose_mail(
@@ -335,7 +339,7 @@ def test_cli_rust_rollout_build_mail_blocks_live_mail_dirt_even_with_ack(
         .read_text(encoding="utf-8")
         .splitlines()[0]
     )
-    central = hub / "processed" / "mail" / "inbox" / "direct.jsonl"
+    central = central_mail_dir(hub) / "inbox" / "direct.jsonl"
     central.parent.mkdir(parents=True)
     central.write_text(json.dumps(packet) + "\n", encoding="utf-8")
 
@@ -387,7 +391,7 @@ def test_cli_rust_rollout_build_mail_ack_requires_matching_dirty_fingerprint(
 ) -> None:
     hub = _make_hub(tmp_path / "dad")
     source = tmp_path / "source"
-    out_dir = tmp_path / "staged-mail"
+    out_dir = central_mail_dir(hub) / "staged" / "rust_rollout"
     source.mkdir()
     config = _config(tmp_path)
     packet = compose_mail(
@@ -475,7 +479,7 @@ def test_cli_rust_rollout_build_mail_ack_requires_matching_dirty_fingerprint(
     assert "dirty Rust packet" in allowed_payload["mail_dirty_check"]["dirty_state_ack"]
     assert allowed_payload["mail_dirty_check"]["dirty_state_fingerprint"] == dirty_fingerprint
     assert (out_dir / "README.md").exists()
-    bypass_log = hub / "processed" / "mail" / "archive" / "dirty_gate_bypass.jsonl"
+    bypass_log = central_mail_dir(hub) / "archive" / "dirty_gate_bypass.jsonl"
     bypass_rows = [
         json.loads(line)
         for line in bypass_log.read_text(encoding="utf-8").splitlines()
@@ -497,7 +501,7 @@ def test_cli_rust_rollout_build_mail_write_claim_cannot_be_bypassed(
 ) -> None:
     hub = _make_hub(tmp_path / "dad")
     source = tmp_path / "source"
-    out_dir = tmp_path / "staged-mail"
+    out_dir = central_mail_dir(hub) / "staged" / "rust_rollout"
     source.mkdir()
     config = _config(tmp_path)
     packet = compose_mail(
@@ -557,10 +561,10 @@ def test_cli_rust_rollout_build_mail_defaults_to_ignored_staging(tmp_path: Path)
     assert payload["out_dir"].replace("\\", "/").endswith(
         "processed/mail/staged/rust_rollout"
     )
-    assert (hub / "processed" / "mail" / "staged" / "rust_rollout" / "README.md").exists()
+    assert (central_mail_dir(hub) / "staged" / "rust_rollout" / "README.md").exists()
     assert not (hub / "mail" / "outbox" / "rust_rollout" / "README.md").exists()
     assert not (
-        hub / "processed" / "mail" / "archive" / "rust_rollout_snapshot_promotion.jsonl"
+        central_mail_dir(hub) / "archive" / "rust_rollout_snapshot_promotion.jsonl"
     ).exists()
 
 
@@ -590,9 +594,9 @@ def test_cli_rust_rollout_build_mail_rejects_promotion_ack_for_staging(
     assert payload["blocked"] is True
     assert "mail/outbox/rust_rollout" in payload["authority_boundary"]
     assert not (
-        hub / "processed" / "mail" / "archive" / "rust_rollout_snapshot_promotion.jsonl"
+        central_mail_dir(hub) / "archive" / "rust_rollout_snapshot_promotion.jsonl"
     ).exists()
-    assert not (hub / "processed" / "mail" / "staged" / "rust_rollout").exists()
+    assert not (central_mail_dir(hub) / "staged" / "rust_rollout").exists()
 
 
 def test_cli_rust_rollout_build_mail_blocks_custom_in_repo_output_root(
@@ -759,7 +763,7 @@ def test_cli_rust_rollout_build_mail_requires_ack_for_tracked_snapshot(
     audit_rows = [
         json.loads(line)
         for line in (
-            hub / "processed" / "mail" / "archive" / "rust_rollout_snapshot_promotion.jsonl"
+            central_mail_dir(hub) / "archive" / "rust_rollout_snapshot_promotion.jsonl"
         )
         .read_text(encoding="utf-8")
         .splitlines()
