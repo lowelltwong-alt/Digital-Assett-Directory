@@ -2104,7 +2104,7 @@ def _ensure_mail_clean_for_operation(
         payload["bypassed"] = True
         payload["allowed_dirty_ack_issue_types"] = sorted(allowed_issue_types)
         append_jsonl_locked(
-            cfg.repo_root / "processed" / "mail" / "archive" / "dirty_gate_bypass.jsonl",
+            data_path(cfg.repo_root, "central_mail") / "archive" / "dirty_gate_bypass.jsonl",
             {"event_type": "mail_dirty_gate_bypass", "created_at": utc_now(), **payload},
         )
         return payload
@@ -2388,8 +2388,10 @@ MAIL_CANDIDATE_PRUNE_DIRS = {
     ".tmp_pytest",
     ".cache",
     "_codex_worktrees",
+    "_codex_pytest_tmp",
     ".worktrees",
     ".pytest-tmp-root",
+    ".pytest-tmp-local",
     "processed",
     "raw",
     "state",
@@ -2435,6 +2437,8 @@ def _iter_mailbox_candidate_roots(base: Path, *, max_depth: int = MAIL_CANDIDATE
                 or lowered.startswith("pytest-tmp")
                 or lowered.startswith("tmp_pytest")
                 or lowered.startswith("tmp-pytest")
+                or lowered.startswith(".manual-key-value-check-")
+                or (lowered.startswith("smoke-") and current.name.startswith("."))
                 or lowered.startswith("dad-capture-emission-")
                 or lowered.startswith("dad-exception-learning-check-")
             ):

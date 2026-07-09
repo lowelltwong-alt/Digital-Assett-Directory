@@ -43,7 +43,17 @@ def select_transport_upgrade_policies_from_queue(
     requested_repos: Sequence[str] | None = None,
 ) -> tuple[list[Any], dict[str, Any]]:
     """Select reviewed enrollment policies from the central transport queue."""
+    hub_root = hub_root.resolve()
     queue = read_transport_upgrade_queue(hub_root)
+    effective_rows = _latest_queue_rows_by_repo(queue["rows"])
+    audit_status, audit_payload = _read_json_object(
+        data_path(hub_root, "central_reports") / "transport_audit.json"
+    )
+    audit_classifications = (
+        _audit_classifications_by_repo(audit_payload)
+        if audit_status == "readable"
+        else {}
+    )
     requested = {
         item.strip().casefold()
         for item in (requested_repos or [])
@@ -57,10 +67,23 @@ def select_transport_upgrade_policies_from_queue(
     selected: list[Any] = []
     seen_policy_ids: set[str] = set()
     skipped: list[dict[str, Any]] = []
-    for row in queue["rows"]:
+    for row in effective_rows:
         repo_id = str(row.get("repo_id", "")).strip()
         if not repo_id:
             skipped.append({"repo_id": "", "reason": "missing_repo_id"})
+            continue
+        audit_classification = audit_classifications.get(repo_id.casefold())
+        if audit_classification in {"current", "no_dad_surface"}:
+            skipped.append(
+                {
+                    "repo_id": repo_id,
+                    "reason": "superseded_by_current_audit",
+                    "audit_classification": audit_classification,
+                }
+            )
+            continue
+        if audit_classifications and audit_classification is None:
+            skipped.append({"repo_id": repo_id, "reason": "not_in_current_audit"})
             continue
         if row.get("expected_surface_version") != TRANSPORT_SURFACE_VERSION:
             skipped.append({"repo_id": repo_id, "reason": "stale_surface_version"})
@@ -110,12 +133,18 @@ def select_transport_upgrade_policies_from_queue(
         "schema_version": "dad.transport.upgrade_queue_selection.v1",
         "queue_path": queue["queue_path"],
         "queue_row_count": queue["row_count"],
+        "effective_row_count": len(effective_rows),
         "invalid_row_count": queue["invalid_row_count"],
         "selected_count": len(selected),
         "selected_repo_ids": [str(getattr(policy, "id", "")) for policy in selected],
         "skipped_count": len(skipped),
         "skipped": skipped,
         "skipped_by_reason": _count_reason(skipped),
+        "audit_filter": {
+            "report_status": audit_status,
+            "filter_applied": bool(audit_classifications),
+            "current_or_absent_rows_supersede_queue_history": True,
+        },
         "authority_boundary": (
             "Transport queue selection is read-only. It can only select reviewed "
             "enrollment.repos policy rows for an update plan; it never applies "
@@ -149,9 +178,10 @@ def build_transport_upgrade_status(
     plan_status, plan_payload = _read_json_object(plan_json_path)
     transport_rows = list(transport_repos or [])
     policies = list(enrollment_policies or [])
+    effective_rows = _latest_queue_rows_by_repo(queue["rows"])
     protected_repo_ids = [
         str(row.get("repo_id", "")).strip()
-        for row in queue["rows"]
+        for row in effective_rows
         if bool(row.get("write_protected", False)) and str(row.get("repo_id", "")).strip()
     ]
     unmatched_repo_ids = [
@@ -204,10 +234,11 @@ def build_transport_upgrade_status(
         "queue": {
             "queue_path": queue["queue_path"],
             "row_count": queue["row_count"],
+            "effective_row_count": len(effective_rows),
             "invalid_row_count": queue["invalid_row_count"],
             "candidate_row_count": sum(
                 1
-                for row in queue["rows"]
+                for row in effective_rows
                 if str(row.get("review_status", "")) in {"candidate", "queued", ""}
             ),
             "write_protected_row_count": len(protected_repo_ids),
@@ -247,6 +278,48 @@ def _count_reason(rows: Sequence[Mapping[str, Any]]) -> dict[str, int]:
     return counts
 
 
+def _latest_queue_rows_by_repo(rows: Sequence[Mapping[str, Any]]) -> list[Mapping[str, Any]]:
+    """Collapse append-only queue history to the latest row for each repo."""
+    missing_repo_rows: list[Mapping[str, Any]] = []
+    latest_by_repo: dict[str, Mapping[str, Any]] = {}
+    for row in rows:
+        repo_id = str(row.get("repo_id", "")).strip().casefold()
+        if not repo_id:
+            missing_repo_rows.append(row)
+            continue
+        if repo_id in latest_by_repo:
+            del latest_by_repo[repo_id]
+        latest_by_repo[repo_id] = row
+    return [*missing_repo_rows, *latest_by_repo.values()]
+
+
+def _audit_classifications_by_repo(payload: Mapping[str, Any]) -> dict[str, str]:
+    rows = payload.get("records", [])
+    if not isinstance(rows, list):
+        return {}
+    classifications: dict[str, str] = {}
+    for row in rows:
+        if not isinstance(row, Mapping):
+            continue
+        repo_id = str(row.get("repo_id", "")).strip().casefold()
+        classification = str(row.get("classification", "")).strip()
+        if repo_id and classification:
+            classifications[repo_id] = classification
+    return classifications
+
+
+def _live_skipped_by_reason(skipped_by_reason: Mapping[str, int]) -> dict[str, int]:
+    benign_history_reasons = {
+        "superseded_by_current_audit",
+        "not_in_current_audit",
+    }
+    return {
+        reason: count
+        for reason, count in skipped_by_reason.items()
+        if reason not in benign_history_reasons
+    }
+
+
 def _upgrade_status(
     *,
     report_status: str,
@@ -263,8 +336,11 @@ def _upgrade_status(
         return "no_queue_rows_for_reviewed_policy"
     if selected_count:
         return "ready_for_update_plan"
-    if skipped_by_reason and set(skipped_by_reason) <= {"write_protected_central_only"}:
+    live_skipped_by_reason = _live_skipped_by_reason(skipped_by_reason)
+    if live_skipped_by_reason and set(live_skipped_by_reason) <= {"write_protected_central_only"}:
         return "protected_repos_central_only"
+    if skipped_by_reason and not live_skipped_by_reason:
+        return "no_current_upgrade_rows"
     return "review_required"
 
 
@@ -277,6 +353,8 @@ def _operator_next_steps(status: str, *, wave: str) -> list[str]:
         return ["asset-dir transport audit"]
     if status == "protected_repos_central_only":
         return ["review protected repo rows centrally; do not write target repos"]
+    if status == "no_current_upgrade_rows":
+        return ["asset-dir transport audit", "no non-protected current upgrade rows selected"]
     if status == "no_queue_rows_for_reviewed_policy":
         return ["asset-dir transport audit", "review config/sources*.yaml transport policy rows"]
     return ["review skipped reasons before planning or applying any upgrade wave"]
