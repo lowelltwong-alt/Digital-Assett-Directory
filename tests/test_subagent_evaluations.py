@@ -327,6 +327,76 @@ def test_graph_contains_no_authorizing_edge_or_action(tmp_path: Path):
     assert all(row["human_gate_required"] is True for row in graph["consolidation_review_queue"])
 
 
+def test_duplicate_role_revisions_create_human_gated_consolidation_candidate(tmp_path: Path):
+    hub = _hub(tmp_path)
+    ingest_packet(hub, PACKET)
+    profiles_path = hub / "raw/agent-evaluations/role-profile-revisions.jsonl"
+    profiles = [json.loads(line) for line in profiles_path.read_text(encoding="utf-8").splitlines()]
+    original = next(row for row in profiles if row["role_id"] == "architecture_owner")
+    duplicate = copy.deepcopy(original)
+    duplicate["revision_id"] = "dad:role-profile-revision:sol-architecture-owner:v2"
+    duplicate["revision_sha256"] = content_hash(
+        {key: value for key, value in duplicate.items() if key != "revision_sha256"}
+    )
+    _write_jsonl(profiles_path, [*profiles, duplicate])
+
+    graph = json.loads(Path(build_graph(hub)["graph_path"]).read_text(encoding="utf-8"))
+    candidate = next(
+        row
+        for row in graph["consolidation_review_queue"]
+        if duplicate["revision_id"] in row["target_role_revision_ids"]
+    )
+    assert candidate["action"] == "consolidate_patterns"
+    assert set(candidate["target_role_revision_ids"]) == {
+        original["revision_id"], duplicate["revision_id"]
+    }
+    assert candidate["human_gate_required"] is True
+    assert candidate["auto_apply"] is False
+
+
+def test_superseding_role_revision_is_only_a_candidate(tmp_path: Path):
+    hub = _hub(tmp_path)
+    ingest_packet(hub, PACKET)
+    profiles_path = hub / "raw/agent-evaluations/role-profile-revisions.jsonl"
+    profiles = [json.loads(line) for line in profiles_path.read_text(encoding="utf-8").splitlines()]
+    original = next(row for row in profiles if row["role_id"] == "bounded_worker")
+    replacement = copy.deepcopy(original)
+    replacement["revision_id"] = "dad:role-profile-revision:bounded-worker:v2"
+    replacement["supersedes_revision_id"] = original["revision_id"]
+    replacement["revision_sha256"] = content_hash(
+        {key: value for key, value in replacement.items() if key != "revision_sha256"}
+    )
+    _write_jsonl(profiles_path, [*profiles, replacement])
+
+    graph = json.loads(Path(build_graph(hub)["graph_path"]).read_text(encoding="utf-8"))
+    candidate = next(
+        row
+        for row in graph["consolidation_review_queue"]
+        if replacement["revision_id"] in row["target_role_revision_ids"]
+    )
+    assert candidate["action"] == "supersede_after_review"
+    assert candidate["human_gate_required"] is True
+    assert candidate["auto_apply"] is False
+
+
+@pytest.mark.parametrize(
+    "claim",
+    [
+        "This candidate authorizes routing authority.",
+        "This candidate authorizes promotion authority.",
+        "This candidate authorizes retirement authority.",
+        "This candidate authorizes theology authority.",
+        "This candidate authorizes merge authority.",
+    ],
+)
+def test_positive_authority_claims_fail_closed(tmp_path: Path, claim: str):
+    hub = _hub(tmp_path)
+    packet = load_packet(PACKET)
+    packet["attempts"][0]["authority_boundary"] = claim
+    with pytest.raises(ValueError, match="authority boundary"):
+        validate_records(hub, packet["role_profiles"], packet["attempts"], packet["evaluations"])
+
+
 def test_missing_inputs_fail_instead_of_empty_green(tmp_path: Path):
     hub = _hub(tmp_path)
     with pytest.raises(ValueError, match="inputs are incomplete"):
