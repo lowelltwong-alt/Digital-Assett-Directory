@@ -265,6 +265,71 @@
       "examples": ["offering:dad:offering:x -> combination:dad:combo:y"],
       "danger_if_wrong": "Workflow recommendations can bundle unrelated assets.",
       "review_status": "candidate"
+    },
+    {
+      "edge_type": "attempt_instantiates_role_revision",
+      "edge_class": "join",
+      "direction": "execution attempt -> role profile revision",
+      "cardinality": "many-to-one",
+      "semantics": "An immutable execution attempt names the exact role-profile revision used for that invocation.",
+      "allowed_bases": ["attempt.role_revision_id"],
+      "evidence_required": ["validated execution-attempt record"],
+      "version": "0.1.0",
+      "examples": ["attempt:dad:subagent-attempt:x -> role-revision:dad:role-profile-revision:y:v1"],
+      "danger_if_wrong": "Attempt results can be attributed to the wrong reusable role contract.",
+      "review_status": "candidate"
+    },
+    {
+      "edge_type": "attempt_in_repository",
+      "edge_class": "join",
+      "direction": "execution attempt -> repository",
+      "cardinality": "many-to-one",
+      "semantics": "An execution-attempt record names the source repository in which the bounded task ran.",
+      "allowed_bases": ["attempt.source_repository"],
+      "evidence_required": ["validated execution-attempt record"],
+      "version": "0.1.0",
+      "examples": ["attempt:dad:subagent-attempt:x -> repo:logos-scripture-graph"],
+      "danger_if_wrong": "Cross-repository evidence diversity and applicability can be overstated.",
+      "review_status": "candidate"
+    },
+    {
+      "edge_type": "attempt_used_model_claim",
+      "edge_class": "join",
+      "direction": "execution attempt -> attributed model claim",
+      "cardinality": "many-to-one",
+      "semantics": "An execution-attempt record attributes a provider/model family claim with an explicit verification status.",
+      "allowed_bases": ["attempt.runtime_claims"],
+      "evidence_required": ["runtime claim and verification status"],
+      "version": "0.1.0",
+      "examples": ["attempt:dad:subagent-attempt:x -> model-claim:openai:gpt-5.6-sol"],
+      "danger_if_wrong": "Attempt performance can be falsely attributed to a model or provider.",
+      "review_status": "candidate"
+    },
+    {
+      "edge_type": "evaluation_of_attempt",
+      "edge_class": "join",
+      "direction": "evaluation -> execution attempt",
+      "cardinality": "many-to-one",
+      "semantics": "A rubric-pinned evaluation identifies the immutable execution attempt it reviews.",
+      "allowed_bases": ["evaluation.attempt_id"],
+      "evidence_required": ["validated evaluation record", "attempt snapshot hash"],
+      "version": "0.1.0",
+      "examples": ["evaluation:dad:subagent-evaluation:x -> attempt:dad:subagent-attempt:y"],
+      "danger_if_wrong": "Ratings and improvement notes can be attached to the wrong run.",
+      "review_status": "candidate"
+    },
+    {
+      "edge_type": "evaluation_assesses_capability",
+      "edge_class": "join",
+      "direction": "evaluation -> capability",
+      "cardinality": "many-to-many",
+      "semantics": "A criterion result names a candidate capability assessed for one execution attempt.",
+      "allowed_bases": ["evaluation.capability_results"],
+      "evidence_required": ["criterion evidence refs", "confidence", "counterevidence refs"],
+      "version": "0.1.0",
+      "examples": ["evaluation:dad:subagent-evaluation:x -> capability:root_cause_analysis"],
+      "danger_if_wrong": "A role or model can appear capable based on unrelated or absent evidence.",
+      "review_status": "candidate"
     }
   ]
 }

@@ -1,0 +1,19 @@
+{
+  "attempt_slug": "dad-graph-dalton",
+  "authority_boundary": "This reconstructed candidate record describes one bounded execution attempt. It does not identify a person, rank a model family, or authorize agent routing, promotion, consolidation, specialization, or supersession.",
+  "capture_type": "parent_reconstructed_terminal_summary",
+  "improvement_recommendations": [
+    "Emit a deterministic inventory digest so future scans can detect changes without rescanning all rows."
+  ],
+  "limitations": [
+    "This is a parent-captured bounded summary, not hidden reasoning or a full source transcript.",
+    "Exact start/end time and invocation prompt hash were unavailable."
+  ],
+  "observed_failures": [],
+  "observed_strengths": [
+    "Counted 378 valid archaeological attempts and correctly refused to treat any as reviewed subagent evaluations."
+  ],
+  "runtime_attempt_id": "019f4d2c-0c80-7c43-b868-6250909eb6f0",
+  "schema_version": "dad.subagent.parent-captured-evidence.v1",
+  "task_id": "DAD-SUBAGENT-GRAPH-V1"
+}

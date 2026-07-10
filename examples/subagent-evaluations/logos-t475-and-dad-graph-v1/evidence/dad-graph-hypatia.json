@@ -1,0 +1,19 @@
+{
+  "attempt_slug": "dad-graph-hypatia",
+  "authority_boundary": "This reconstructed candidate record describes one bounded execution attempt. It does not identify a person, rank a model family, or authorize agent routing, promotion, consolidation, specialization, or supersession.",
+  "capture_type": "parent_reconstructed_terminal_summary",
+  "improvement_recommendations": [
+    "Distinguish mandatory V1 controls from later maturity controls to make implementation sequencing even clearer."
+  ],
+  "limitations": [
+    "This is a parent-captured bounded summary, not hidden reasoning or a full source transcript.",
+    "Exact start/end time and invocation prompt hash were unavailable."
+  ],
+  "observed_failures": [],
+  "observed_strengths": [
+    "Separated role revisions, attempts, evaluations, model claims, and human decisions; identified leaderboard and identity-collapse hazards."
+  ],
+  "runtime_attempt_id": "019f4d2b-95bb-7b20-928c-1391af77d8a6",
+  "schema_version": "dad.subagent.parent-captured-evidence.v1",
+  "task_id": "DAD-SUBAGENT-GRAPH-V1"
+}

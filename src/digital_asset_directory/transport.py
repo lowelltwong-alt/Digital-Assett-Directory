@@ -75,9 +75,11 @@ DATA_PLANE_PATHS: dict[str, str] = {
     "repo_inventory": "processed/repo_inventory",
     "cadence": "processed/cadence",
     "fable_packets": "processed/fable5",
+    "agents": "processed/agents",
     "raw_lessons": "raw/lessons",
     "raw_handoffs": "raw/handoffs",
     "raw_exceptions": "raw/exceptions",
+    "raw_agent_evaluations": "raw/agent-evaluations",
     "audit_events": "audit/events",
     "agent_sessions": "state/agent_sessions",
 }

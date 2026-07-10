@@ -1,0 +1,19 @@
+{
+  "attempt_slug": "logos-t475-beauvoir",
+  "authority_boundary": "This reconstructed candidate record describes one bounded execution attempt. It does not identify a person, rank a model family, or authorize agent routing, promotion, consolidation, specialization, or supersession.",
+  "capture_type": "parent_reconstructed_terminal_summary",
+  "improvement_recommendations": [
+    "Pair each future task boundary with the exact source artifact hash it consumes."
+  ],
+  "limitations": [
+    "This is a parent-captured bounded summary, not hidden reasoning or a full source transcript.",
+    "Exact start/end time and invocation prompt hash were unavailable."
+  ],
+  "observed_failures": [],
+  "observed_strengths": [
+    "Mapped T476-T480 dependencies and preserved the independent-audit and owner gates."
+  ],
+  "runtime_attempt_id": "019f4d0e-59a1-7a23-b358-f185f2761594",
+  "schema_version": "dad.subagent.parent-captured-evidence.v1",
+  "task_id": "T475-T480"
+}
