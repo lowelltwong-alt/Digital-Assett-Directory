@@ -102,6 +102,30 @@ useful findings in postflight, and for downstream repos route candidate learning
 through the repo outbox only when local policy allows. Do not copy private rows,
 secrets, or long source blobs into DAD learning records.
 
+When a command reaches 60 seconds of measured wall time, or is expected to run
+for at least 120 seconds, apply
+`skill:long-run-optimization-review-pack` once per normalized command signature
+per session. Start a high-effort optimization director that delegates independent
+algorithm/architecture, primary-source library/web research, and language/runtime
+reviews; add a benchmark/parity reviewer and a separate high-effort builder only
+when a concrete candidate earns an approved bounded brief. The language review
+must consider Rust and existing DAD Rust modules, but profiling and shadow parity
+remain mandatory. If subagents are
+unavailable, run the same lanes as explicit local checklists and record that
+fallback in postflight. Retrigger only after a material implementation change
+or a measured duration increase of at least 25 percent.
+
+Before postflight for every material build, refactor, investigation, or
+cross-repo task, apply `skill:material-work-learning-discovery`. Check the DAD
+agent and asset libraries first, then run learning-loop, digital-asset/pattern,
+conversation-delta, prompt-curation, and reuse/application lanes. Start the
+learning sentinel and prompt screener at low effort and escalate only on
+uncertainty or high leverage. Capture explicit reusable decisions and failure
+lessons that are absent from final artifacts, but never store raw transcripts,
+hidden chain-of-thought, secrets, private payloads, or inferred private
+reasoning. Dedupe all outputs, route only privacy-safe candidates through
+allowed DAD channels, and rate every reused or created subagent after use.
+
 ## Operating rules
 
 Agents must:

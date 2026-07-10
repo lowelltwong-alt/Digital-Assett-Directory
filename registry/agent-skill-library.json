@@ -1,6 +1,6 @@
 {
   "schema_version": "0.1.0",
-  "library_version": "0.1.0",
+  "library_version": "0.3.0",
   "status": "candidate_seed",
   "authority_boundary": "DAD owns lifecycle metadata for DAD-managed skill records. Target repos decide whether to check out, update, retire, replace, or locally adapt a skill.",
   "checkout_policy": {
@@ -268,6 +268,114 @@
       "review_status": "candidate",
       "last_reviewed_at": "2026-07-04",
       "next_review_due_at": "2026-10-04"
+    },
+    {
+      "skill_id": "skill:long-run-optimization-review-pack",
+      "name": "Long-Run Optimization Review Pack",
+      "version": "0.1.0",
+      "status": "active",
+      "skill_format": "generic_agent_skill",
+      "path": "assets/agent-skills/long-run-optimization-review-pack",
+      "entrypoint": "assets/agent-skills/long-run-optimization-review-pack/README.md",
+      "description": "Deterministically triggers algorithm, library, language-runtime, and benchmark reviews after measured or predicted long-running commands.",
+      "trigger_examples": [
+        "A test, validation, build, scan, or daemon cycle runs for at least 60 seconds.",
+        "A command is expected to run for at least 120 seconds.",
+        "A repeated workflow needs evidence for algorithm, library, or Rust acceleration."
+      ],
+      "does_not_apply_when": [
+        "The command is an intentional wait on an external human-controlled service with no local hot path.",
+        "The same normalized command signature was reviewed in the session and has not become at least 25 percent slower."
+      ],
+      "capabilities": [
+        "long_run_trigger",
+        "optimization_director_routing",
+        "algorithm_architecture_review",
+        "library_web_research_scouting",
+        "language_runtime_boundary_review",
+        "benchmark_parity_planning",
+        "bounded_improvement_build"
+      ],
+      "checkout_modes": ["pointer", "wrapper"],
+      "update_policy": "dad_mail_notice",
+      "lifecycle": {
+        "supersedes": [],
+        "superseded_by": [],
+        "retirement_reason": "",
+        "replacement_skill_id": "",
+        "change_notice_templates": [
+          "templates/mail/skill-update-available.mail.template.json",
+          "templates/mail/skill-retirement-notice.mail.template.json"
+        ]
+      },
+      "dependencies": [
+        "assets/rust-buildout-guide/rust-buildout.json",
+        "assets/agent-skills/rust-qa-subagent-pack/subagents.yaml",
+        "registry/language-coding-advantage-registry.json",
+        "registry/coding-tactics-radar.json"
+      ],
+      "source_evidence": [
+        "assets/agent-skills/long-run-optimization-review-pack/README.md",
+        "assets/agent-skills/long-run-optimization-review-pack/subagents.yaml"
+      ],
+      "authority_boundary": "Optimization reviews are candidate evidence; dependency adoption and language migration still require local profiling, parity, validation, and authority.",
+      "review_status": "reviewed",
+      "last_reviewed_at": "2026-07-10",
+      "next_review_due_at": "2026-10-10"
+    },
+    {
+      "skill_id": "skill:material-work-learning-discovery",
+      "name": "Material Work Learning Discovery",
+      "version": "0.1.0",
+      "status": "active",
+      "skill_format": "codex_skill",
+      "path": "assets/agent-skills/material-work-learning-discovery",
+      "entrypoint": "assets/agent-skills/material-work-learning-discovery/SKILL.md",
+      "description": "Mandatory post-build learning lanes for incomplete loops, digital assets, discovery patterns, conversation-only value, exceptional prompts, and asset application.",
+      "trigger_examples": [
+        "Finish a material build, refactor, investigation, or cross-repo deployment.",
+        "Analyze what valuable explicit conversation context did not reach code or documentation.",
+        "Find new digital assets, asset-discovery patterns, prompts, or reusable lessons before postflight."
+      ],
+      "does_not_apply_when": [
+        "The task is a trivial status query or one-command read with no material decision or learning.",
+        "Privacy-safe evidence cannot be separated from secrets, private payloads, or raw case facts."
+      ],
+      "capabilities": [
+        "learning_loop_completion",
+        "digital_asset_discovery",
+        "asset_discovery_pattern_mining",
+        "conversation_material_delta_analysis",
+        "prompt_library_curation",
+        "asset_reuse_and_application_routing",
+        "agent_effectiveness_rating"
+      ],
+      "checkout_modes": ["pointer", "wrapper"],
+      "update_policy": "dad_mail_notice",
+      "lifecycle": {
+        "supersedes": [],
+        "superseded_by": [],
+        "retirement_reason": "",
+        "replacement_skill_id": "",
+        "change_notice_templates": [
+          "templates/mail/skill-update-available.mail.template.json",
+          "templates/mail/skill-retirement-notice.mail.template.json"
+        ]
+      },
+      "dependencies": [
+        "registry/agent-skill-library.json",
+        "registry/coding-asset-registry.json",
+        "registry/asset-pattern-registry.json",
+        "docs/AGENT_SKILL_LIBRARY.md"
+      ],
+      "source_evidence": [
+        "assets/agent-skills/material-work-learning-discovery/SKILL.md",
+        "assets/agent-skills/material-work-learning-discovery/subagents.yaml"
+      ],
+      "authority_boundary": "Learning outputs are privacy-safe candidates; no raw transcript, hidden reasoning, source-truth promotion, or downstream mutation is authorized.",
+      "review_status": "reviewed",
+      "last_reviewed_at": "2026-07-10",
+      "next_review_due_at": "2026-10-10"
     }
   ]
 }

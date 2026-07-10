@@ -1,0 +1,4 @@
+interface:
+  display_name: "Material Work Learning Discovery"
+  short_description: "Extract build lessons and reusable asset patterns"
+  default_prompt: "Review this material build for incomplete learning loops, reusable digital assets, new discovery patterns, exceptional prompts, and valuable explicit conversation context absent from the final artifacts. Dedupe against DAD and return privacy-safe candidate records."

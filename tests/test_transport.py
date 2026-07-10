@@ -973,12 +973,17 @@ def test_daemon_install_plan_uses_stable_shim_and_run_cycle(tmp_path: Path):
     assert plan["wrapper_path"] == str(shim.with_name("dad-daemon-run-cycle.ps1"))
     assert str(shim) in plan["wrapper_script"]
     assert "daemon run-cycle" in plan["wrapper_script"]
+    assert "& powershell" in plan["wrapper_script"]
+    assert plan["task_log_path"] in plan["wrapper_script"]
+    assert plan["task_status_path"] in plan["wrapper_script"]
+    assert "dad.daemon.task_run.v1" in plan["wrapper_script"]
     assert str(hub.resolve()) in plan["wrapper_script"]
     assert "--hub" in plan["run_cycle_args"]
     assert "--quiet" in plan["run_cycle_args"]
     settings_script = plan["settings_command"][-1]
     assert "AllowStartIfOnBatteries" in settings_script
     assert "DontStopIfGoingOnBatteries" in settings_script
+    assert "DontStopOnIdleEnd" in settings_script
     assert "StartWhenAvailable" in settings_script
 
 
@@ -1000,6 +1005,52 @@ def test_daemon_run_cycle_quiet_writes_reports_without_rendering_payload(tmp_pat
     assert result.exit_code == 0, result.output
     assert result.stdout == ""
     assert daemon_heartbeat_path(hub).exists()
+
+
+def test_daemon_writes_in_progress_heartbeat_before_expensive_steps(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+):
+    hub = tmp_path / "hub"
+    hub.mkdir()
+
+    def fail_after_observing_heartbeat(*_args, **_kwargs):
+        payload = json.loads(daemon_heartbeat_path(hub).read_text(encoding="utf-8"))
+        assert payload["status"] == "in_progress"
+        assert payload["heartbeat_finalized"] is False
+        assert payload["cycle_completed_at"] == ""
+        raise RuntimeError("stop after heartbeat observation")
+
+    monkeypatch.setattr(
+        daemon_mod, "_run_remote_outbox_ingest", fail_after_observing_heartbeat
+    )
+
+    with pytest.raises(RuntimeError, match="heartbeat observation"):
+        run_daemon_cycle(hub)
+
+
+@pytest.mark.parametrize(
+    ("task_status", "last_result", "expected"),
+    [
+        ("Ready", "0", "success"),
+        ("Running", "0", "running"),
+        ("Running", "267009", "running"),
+        ("Ready", "267009", "inconsistent"),
+        ("Ready", "0x41301", "inconsistent"),
+        ("Ready", "3221225786", "interrupted"),
+        ("Ready", "0xC000013A", "interrupted"),
+        ("Ready", "1", "failed"),
+        ("Ready", "", "unknown"),
+    ],
+)
+def test_scheduler_result_status_classifies_windows_results(
+    task_status: str, last_result: str, expected: str
+):
+    assert (
+        daemon_mod._scheduler_result_status(
+            task_status=task_status, last_result=last_result
+        )
+        == expected
+    )
 
 
 def test_daemon_task_status_parses_read_only_scheduler_query(tmp_path: Path):
