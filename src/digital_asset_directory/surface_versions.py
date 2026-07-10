@@ -15,10 +15,10 @@ from .ids import stable_id
 from .transport import TRANSPORT_SURFACE_VERSION, data_path
 from .utils import atomic_write_text, json_dumps, utc_now
 
-GRAPH_SURFACE_VERSION = "0.1.0"
-MCP_SURFACE_VERSION = "0.1.0"
-JOURNAL_SURFACE_VERSION = "0.1.0"
-EVENTS_SURFACE_VERSION = "0.1.0"
+GRAPH_SURFACE_VERSION = "1.0.0"
+MCP_SURFACE_VERSION = "1.0.0"
+JOURNAL_SURFACE_VERSION = "1.0.0"
+EVENTS_SURFACE_VERSION = "1.0.0"
 
 SURFACE_VERSION_ORDER = ("transport", "graph", "mcp", "journal", "events")
 EXPECTED_SURFACE_VERSIONS = {
@@ -39,7 +39,18 @@ SURFACE_VERSION_AUTHORITY_BOUNDARY = (
 def graph_surface_contract_block() -> dict[str, Any]:
     return {
         "surface_version": GRAPH_SURFACE_VERSION,
-        "mode": "generated_candidate_surfaces",
+        "mode": "central_read_only_generated_surfaces",
+        "registry_ref": "dad://hub/Digital-Assett-Directory/registry/graph-surface-registry.json",
+        "freshness_policy": {
+            "fresh": "hashes_match",
+            "stale": "warn_only",
+            "inconsistent": "block",
+        },
+        "authority_boundary": (
+            "Graph surfaces are generated candidate projections. They cannot override "
+            "AGENTS.md, reviewed registries, schemas, audit records, Git/CI gates, or "
+            "human approval gates."
+        ),
     }
 
 
@@ -47,8 +58,14 @@ def mcp_surface_contract_block() -> dict[str, Any]:
     return {
         "surface_version": MCP_SURFACE_VERSION,
         "mode": "local_stdio_read_only",
-        "remote_enabled": False,
+        "remote_mcp_enabled": False,
         "vendor_sdk_required": False,
+        "write_tools_enabled": False,
+        "adapter_authority": "optional_wrapper_only",
+        "authority_boundary": (
+            "MCP is a read-only adapter over DAD registries and generated surfaces. "
+            "It is not source authority and cannot perform writes."
+        ),
     }
 
 
@@ -56,15 +73,30 @@ def journal_surface_contract_block() -> dict[str, Any]:
     return {
         "surface_version": JOURNAL_SURFACE_VERSION,
         "mode": "plan_only_until_human_gate",
-        "checkpoint_scope": "DATA_PLANE_PATHS",
+        "checkpoint_scope": "DAD_DATA_ROOT data plane only",
+        "checkpoint_threshold": ">=200 new records or >=24h",
+        "source_repo_writes": False,
+        "authority_boundary": (
+            "Journal checkpoint rows are data-plane evidence only. They do not authorize "
+            "a push or make generated graph content authoritative."
+        ),
     }
 
 
 def events_surface_contract_block() -> dict[str, Any]:
     return {
         "surface_version": EVENTS_SURFACE_VERSION,
-        "mode": "repo_outbox_to_central_log",
-        "append_only": True,
+        "mode": "append_only_candidate_metadata",
+        "local_outbox": ".digital-asset/events/outbox.jsonl",
+        "central_log": "processed/events/event_log.jsonl",
+        "write_boundary": (
+            "Events are explicit candidate metadata emissions. Normal recurring DAD "
+            "operation remains limited to .digital-asset/mail/**."
+        ),
+        "authority_boundary": (
+            "Event records are operational evidence only; they do not approve, verify, "
+            "recommend, or authorize source repo changes."
+        ),
     }
 
 

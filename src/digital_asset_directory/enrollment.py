@@ -522,6 +522,76 @@ def _existing_installed_at(repo_root: Path) -> str:
     return str(payload.get("enrollment", {}).get("installed_at") or utc_now())
 
 
+def _numeric_version(value: Any) -> tuple[int, ...] | None:
+    text = str(value or "").strip()
+    if not text or not re.fullmatch(r"\d+(?:\.\d+)*", text):
+        return None
+    return tuple(int(part) for part in text.split("."))
+
+
+def _update_contract_downgrade_conflicts(
+    repo_root: Path,
+    generated_contract: dict[str, Any],
+) -> list[str]:
+    contract_path = repo_root / ".digital-asset" / "dad-integration.json"
+    if not contract_path.exists():
+        return []
+    try:
+        existing = json.loads(contract_path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return ["existing_contract_unreadable"]
+    if not isinstance(existing, dict):
+        return ["existing_contract_not_object"]
+
+    conflicts: list[str] = []
+    for surface, generated_block in generated_contract.items():
+        if not isinstance(generated_block, dict) or "surface_version" not in generated_block:
+            continue
+        existing_block = existing.get(surface)
+        if not isinstance(existing_block, dict) or "surface_version" not in existing_block:
+            continue
+        existing_text = str(existing_block.get("surface_version") or "")
+        generated_text = str(generated_block.get("surface_version") or "")
+        if existing_text == generated_text:
+            continue
+        existing_version = _numeric_version(existing_text)
+        generated_version = _numeric_version(generated_text)
+        if (
+            existing_version is None
+            or generated_version is None
+            or existing_version > generated_version
+        ):
+            conflicts.append(
+                f"{surface}.surface_version:{existing_text}>{generated_text}"
+            )
+
+    for field in ("approved_dad_managed_paths", "enabled_control_planes"):
+        existing_values = existing.get(field)
+        generated_values = generated_contract.get(field)
+        if not isinstance(existing_values, list) or not isinstance(generated_values, list):
+            continue
+        removed = sorted(
+            {str(value) for value in existing_values}
+            - {str(value) for value in generated_values}
+        )
+        if removed:
+            conflicts.append(f"{field}_would_remove:" + ",".join(removed))
+    return conflicts
+
+
+def _guard_update_contract_compatibility(
+    repo_root: Path,
+    generated_contract: dict[str, Any],
+) -> None:
+    conflicts = _update_contract_downgrade_conflicts(repo_root, generated_contract)
+    if conflicts:
+        raise ValueError(
+            "Refusing enrollment update because the generated contract would "
+            "downgrade or remove newer repo-local DAD surfaces: "
+            + "; ".join(conflicts)
+        )
+
+
 def _capture_surface_payload(hub_root: Path) -> dict[str, Any]:
     surface_version = "unknown"
     registry_path = hub_root / CAPTURE_PATTERN_REGISTRY
@@ -1071,6 +1141,11 @@ def _apply_payloads(
         ".ai-assets.json": _ai_assets_payload(policy, hub_root),
         ".digital-asset/skills/checkout.json": _skill_checkout_payload(policy, hub_root),
     }
+    if update:
+        _guard_update_contract_compatibility(
+            repo_root,
+            payloads[".digital-asset/dad-integration.json"],
+        )
     for rel, payload in payloads.items():
         if _write_json_if_changed(_target_path(repo_root, rel), payload):
             changed.append(rel)

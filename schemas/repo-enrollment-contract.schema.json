@@ -79,41 +79,62 @@
     },
     "graph": {
       "type": "object",
-      "required": ["surface_version", "mode"],
+      "required": ["surface_version", "mode", "registry_ref", "freshness_policy", "authority_boundary"],
       "properties": {
-        "surface_version": {"const": "0.1.0"},
-        "mode": {"const": "generated_candidate_surfaces"}
+        "surface_version": {"const": "1.0.0"},
+        "mode": {"const": "central_read_only_generated_surfaces"},
+        "registry_ref": {"const": "dad://hub/Digital-Assett-Directory/registry/graph-surface-registry.json"},
+        "freshness_policy": {
+          "type": "object",
+          "required": ["fresh", "stale", "inconsistent"],
+          "properties": {
+            "fresh": {"const": "hashes_match"},
+            "stale": {"const": "warn_only"},
+            "inconsistent": {"const": "block"}
+          },
+          "additionalProperties": false
+        },
+        "authority_boundary": {"type": "string", "minLength": 1}
       },
       "additionalProperties": false
     },
     "mcp": {
       "type": "object",
-      "required": ["surface_version", "mode", "remote_enabled", "vendor_sdk_required"],
+      "required": ["surface_version", "mode", "remote_mcp_enabled", "vendor_sdk_required", "write_tools_enabled", "adapter_authority", "authority_boundary"],
       "properties": {
-        "surface_version": {"const": "0.1.0"},
+        "surface_version": {"const": "1.0.0"},
         "mode": {"const": "local_stdio_read_only"},
-        "remote_enabled": {"const": false},
-        "vendor_sdk_required": {"const": false}
+        "remote_mcp_enabled": {"const": false},
+        "vendor_sdk_required": {"const": false},
+        "write_tools_enabled": {"const": false},
+        "adapter_authority": {"const": "optional_wrapper_only"},
+        "authority_boundary": {"type": "string", "minLength": 1}
       },
       "additionalProperties": false
     },
     "journal": {
       "type": "object",
-      "required": ["surface_version", "mode", "checkpoint_scope"],
+      "required": ["surface_version", "mode", "checkpoint_scope", "checkpoint_threshold", "source_repo_writes", "authority_boundary"],
       "properties": {
-        "surface_version": {"const": "0.1.0"},
+        "surface_version": {"const": "1.0.0"},
         "mode": {"const": "plan_only_until_human_gate"},
-        "checkpoint_scope": {"const": "DATA_PLANE_PATHS"}
+        "checkpoint_scope": {"const": "DAD_DATA_ROOT data plane only"},
+        "checkpoint_threshold": {"const": ">=200 new records or >=24h"},
+        "source_repo_writes": {"const": false},
+        "authority_boundary": {"type": "string", "minLength": 1}
       },
       "additionalProperties": false
     },
     "events": {
       "type": "object",
-      "required": ["surface_version", "mode", "append_only"],
+      "required": ["surface_version", "mode", "local_outbox", "central_log", "write_boundary", "authority_boundary"],
       "properties": {
-        "surface_version": {"const": "0.1.0"},
-        "mode": {"const": "repo_outbox_to_central_log"},
-        "append_only": {"const": true}
+        "surface_version": {"const": "1.0.0"},
+        "mode": {"const": "append_only_candidate_metadata"},
+        "local_outbox": {"const": ".digital-asset/events/outbox.jsonl"},
+        "central_log": {"const": "processed/events/event_log.jsonl"},
+        "write_boundary": {"type": "string", "minLength": 1},
+        "authority_boundary": {"type": "string", "minLength": 1}
       },
       "additionalProperties": false
     },
@@ -195,6 +216,20 @@
         "mcp_authority": {"const": "neutral_tool_resource_prompt_boundary"},
         "direct_api_policy": {"const": "external_adapter_fallback_only"},
         "mcp_audit_policy": {"const": "dad_lifecycle_and_audit_required_for_side_effects"}
+      },
+      "additionalProperties": false
+    },
+    "key_value_governance": {
+      "type": "object",
+      "required": ["surface_version", "mode", "registry", "change_log", "enforcement", "load_bearing_path_policy", "authority_boundary"],
+      "properties": {
+        "surface_version": {"const": "1.0.0"},
+        "mode": {"const": "repo_local_registry_and_change_log"},
+        "registry": {"const": ".digital-asset/key-values/registry.json"},
+        "change_log": {"const": ".digital-asset/key-values/change-log.jsonl"},
+        "enforcement": {"const": "pre_push_postflight_gate"},
+        "load_bearing_path_policy": {"type": "string", "minLength": 1},
+        "authority_boundary": {"type": "string", "minLength": 1}
       },
       "additionalProperties": false
     },

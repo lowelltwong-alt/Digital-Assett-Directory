@@ -22,6 +22,7 @@ from digital_asset_directory.enrollment import (
 from digital_asset_directory.mail_center import compose_mail
 from digital_asset_directory.surface_versions import (
     build_surface_version_status,
+    expected_contract_surface_blocks,
     surface_version_upgrade_queue_path,
 )
 from digital_asset_directory.transport import (
@@ -273,26 +274,8 @@ def test_apply_requires_approval_and_writes_only_approved_paths(tmp_path: Path):
         "mcp_audit_policy": "dad_lifecycle_and_audit_required_for_side_effects",
     }
     assert contract["transport"]["surface_version"] == TRANSPORT_SURFACE_VERSION
-    assert contract["graph"] == {
-        "surface_version": "0.1.0",
-        "mode": "generated_candidate_surfaces",
-    }
-    assert contract["mcp"] == {
-        "surface_version": "0.1.0",
-        "mode": "local_stdio_read_only",
-        "remote_enabled": False,
-        "vendor_sdk_required": False,
-    }
-    assert contract["journal"] == {
-        "surface_version": "0.1.0",
-        "mode": "plan_only_until_human_gate",
-        "checkpoint_scope": "DATA_PLANE_PATHS",
-    }
-    assert contract["events"] == {
-        "surface_version": "0.1.0",
-        "mode": "repo_outbox_to_central_log",
-        "append_only": True,
-    }
+    for surface, expected in expected_contract_surface_blocks().items():
+        assert contract[surface] == expected
     assert governance_map["agent_runtime_policy"] == contract["agent_runtime_policy"]
     capture_registry = json.loads(
         (ROOT / "registry" / "exception-capture-pattern-registry.json").read_text(
@@ -498,6 +481,38 @@ def test_enrollment_status_reports_missing_surface_versions_as_legacy(tmp_path: 
     assert any("graph.surface_version is legacy" in error for error in status["errors"])
 
 
+def test_enrollment_update_refuses_to_downgrade_newer_repo_contract(tmp_path: Path):
+    hub = tmp_path / "hub"
+    repo = tmp_path / "repo-a"
+    hub.mkdir()
+    repo.mkdir()
+    policy = _policy(repo)
+    apply_enrollment(hub, policy, approval_id="APPROVED-1")
+    contract_path = repo / ".digital-asset" / "dad-integration.json"
+    contract = json.loads(contract_path.read_text(encoding="utf-8"))
+    contract["graph"]["surface_version"] = "9.0.0"
+    contract["approved_dad_managed_paths"].append(
+        ".digital-asset/future-surface.json"
+    )
+    contract["enabled_control_planes"].append("future_control_plane")
+    contract_path.write_text(json.dumps(contract, sort_keys=True), encoding="utf-8")
+    before = contract_path.read_bytes()
+
+    with pytest.raises(ValueError, match="would downgrade or remove") as exc:
+        apply_enrollment(
+            hub,
+            policy,
+            approval_id="APPROVED-1",
+            update=True,
+        )
+
+    message = str(exc.value)
+    assert "graph.surface_version:9.0.0>1.0.0" in message
+    assert ".digital-asset/future-surface.json" in message
+    assert "future_control_plane" in message
+    assert contract_path.read_bytes() == before
+
+
 def test_surface_version_status_writes_queue_by_repo_surface_and_expected_version(
     tmp_path: Path,
 ):
@@ -550,9 +565,9 @@ def test_surface_version_status_writes_queue_by_repo_surface_and_expected_versio
         (row["repo_id"], row["surface"], row["expected_surface_version"])
         for row in queue_rows
     } == {
-        ("repo-a", "graph", "0.1.0"),
-        ("repo-a", "mcp", "0.1.0"),
-        ("repo-b", "journal", "0.1.0"),
+        ("repo-a", "graph", "1.0.0"),
+        ("repo-a", "mcp", "1.0.0"),
+        ("repo-b", "journal", "1.0.0"),
     }
     protected = [row for row in queue_rows if row["repo_id"] == "repo-b"][0]
     assert protected["write_protected"] is True
