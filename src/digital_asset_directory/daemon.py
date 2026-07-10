@@ -8,6 +8,7 @@ configuration.
 from __future__ import annotations
 
 import json
+import hashlib
 import subprocess
 from datetime import datetime, timezone
 from pathlib import Path
@@ -23,6 +24,10 @@ from .graph_inference import write_inference_outputs
 from .graph_surfaces import graph_surface_status
 from .journal import checkpoint_journal, ingest_remote_outbox, journal_status
 from .learning import build_lesson_graph
+from .lesson_automation_coverage import (
+    weekly_asset_coverage_due,
+    write_weekly_asset_coverage_outputs,
+)
 from .mail_center import collect_mail, deliver_mail, diagnose_mail_dirty_state, route_mail
 from .transport import AUTHORITY_BOUNDARY, audit_all_repo_transport, data_path
 from .utils import atomic_write_text, json_dumps, utc_now
@@ -36,6 +41,125 @@ SCHEDULED_TASKS_REPORT_NAME = "scheduled_tasks.json"
 
 def _reports_dir(hub_root: Path) -> Path:
     return data_path(hub_root, "central_reports")
+
+
+_CYCLE_INPUT_RELATIVE_PATHS = (
+    ".digital-asset/mail/outbox.jsonl",
+    ".digital-asset/exceptions/outbox.jsonl",
+    ".digital-asset/events/outbox.jsonl",
+    "processed/exceptions/fix-outcomes/outcomes.jsonl",
+)
+
+
+def _cycle_input_fingerprint(
+    hub_root: Path,
+    *,
+    mail_repos: Sequence[Any] | None,
+    exception_repos: Sequence[Any] | None,
+    journal_repo: Path | None,
+) -> tuple[str, int]:
+    rows: list[tuple[str, str, int, int]] = []
+    seen: set[tuple[str, str]] = set()
+    enabled_policies = [
+        policy for policy in (mail_repos or []) if bool(getattr(policy, "mail_enabled", True))
+    ] + [
+        policy
+        for policy in (exception_repos or [])
+        if bool(getattr(policy, "exceptions_enabled", True))
+    ]
+    for policy in enabled_policies:
+        repo_id = str(getattr(policy, "id", "") or getattr(policy, "alias", "") or "repo")
+        repo_root = Path(getattr(policy, "path"))
+        for relative in _CYCLE_INPUT_RELATIVE_PATHS:
+            key = (repo_id, relative)
+            if key in seen:
+                continue
+            seen.add(key)
+            path = repo_root / relative
+            try:
+                stat = path.stat()
+            except OSError:
+                continue
+            rows.append((repo_id, relative, stat.st_size, stat.st_mtime_ns))
+    if journal_repo is not None:
+        remote_root = journal_repo / "remote-outbox"
+        if remote_root.exists():
+            for path in sorted(remote_root.rglob("*.jsonl")):
+                try:
+                    stat = path.stat()
+                    relative = path.relative_to(remote_root).as_posix()
+                except OSError:
+                    continue
+                rows.append(("dad-journal", relative, stat.st_size, stat.st_mtime_ns))
+    for relative in (
+        "config/sources.local.yaml",
+        "config/sources.yaml",
+        "config/sources.example.yaml",
+        ".digital-asset/dad-integration.json",
+    ):
+        path = hub_root / relative
+        try:
+            stat = path.stat()
+        except OSError:
+            continue
+        rows.append(("dad", relative, stat.st_size, stat.st_mtime_ns))
+    material = json.dumps(sorted(rows), separators=(",", ":"), ensure_ascii=True)
+    return hashlib.sha256(material.encode("utf-8")).hexdigest(), len(rows)
+
+
+def _read_heartbeat_payload(hub_root: Path) -> dict[str, Any]:
+    path = daemon_heartbeat_path(hub_root)
+    if not path.exists():
+        return {}
+    try:
+        payload = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return {}
+    return payload if isinstance(payload, dict) else {}
+
+
+def _idle_cycle_result(
+    hub_root: Path,
+    *,
+    generated_at: str,
+    previous: dict[str, Any],
+    input_fingerprint: str,
+    input_snapshot_count: int,
+    journal_status_result: dict[str, Any],
+) -> dict[str, Any]:
+    completed_at = utc_now()
+    heartbeat = {
+        **previous,
+        "schema_version": "dad.daemon.heartbeat.v1",
+        "status": "complete",
+        "idle": True,
+        "idle_reason": "cycle_inputs_unchanged",
+        "cycle_started_at": generated_at,
+        "cycle_completed_at": completed_at,
+        "cycle_order": ["heartbeat"],
+        "input_fingerprint": input_fingerprint,
+        "input_snapshot_count": input_snapshot_count,
+        "journal_checkpoint_due": journal_status_result.get("checkpoint_due"),
+        "journal_checkpoint_applied": False,
+        "journal_checkpoint_status": journal_status_result,
+        "heartbeat_finalized": True,
+        "heartbeat_finalized_at": completed_at,
+        "authority_boundary": AUTHORITY_BOUNDARY,
+    }
+    atomic_write_text(
+        daemon_heartbeat_path(hub_root),
+        json_dumps(heartbeat, pretty=True) + "\n",
+    )
+    return {
+        "schema_version": "dad.daemon.cycle.v1",
+        "generated_at": generated_at,
+        "idle": True,
+        "idle_reason": "cycle_inputs_unchanged",
+        "cycle_order": ["heartbeat"],
+        "heartbeat_path": str(daemon_heartbeat_path(hub_root)),
+        "journal_status": journal_status_result,
+        "authority_boundary": AUTHORITY_BOUNDARY,
+    }
 
 
 def daemon_heartbeat_path(hub_root: Path) -> Path:
@@ -89,10 +213,17 @@ def daemon_status(hub_root: Path, *, stale_hours: int = 26) -> dict[str, Any]:
     if cycle_at is not None:
         age_hours = max(0.0, (datetime.now(timezone.utc) - cycle_at).total_seconds() / 3600.0)
         stale = age_hours > stale_hours
+    cycle_status = str(payload.get("status") or "")
+    heartbeat_status = "stale" if stale else "fresh"
+    if not stale and cycle_status == "complete_with_errors":
+        heartbeat_status = "degraded"
+    elif not stale and cycle_status not in {"complete", "complete_with_errors"}:
+        heartbeat_status = "invalid"
     return {
         "schema_version": "dad.daemon.status.v1",
         "generated_at": utc_now(),
-        "status": "stale" if stale else "fresh",
+        "status": heartbeat_status,
+        "cycle_status": cycle_status,
         "stale": stale,
         "heartbeat_path": str(heartbeat),
         "cycle_completed_at": payload.get("cycle_completed_at", ""),
@@ -102,6 +233,12 @@ def daemon_status(hub_root: Path, *, stale_hours: int = 26) -> dict[str, Any]:
         "follow_through_status": payload.get("follow_through_status"),
         "follow_through_issue_count": payload.get("follow_through_issue_count"),
         "transport_audit_ran": payload.get("transport_audit_ran"),
+        "weekly_asset_coverage_status": payload.get("weekly_asset_coverage_status"),
+        "weekly_asset_coverage_missing_high_signal_count": payload.get(
+            "weekly_asset_coverage_missing_high_signal_count"
+        ),
+        "weekly_asset_coverage_average_score": payload.get("weekly_asset_coverage_average_score"),
+        "weekly_asset_coverage_outputs": payload.get("weekly_asset_coverage_outputs", {}),
         "journal_checkpoint_due": payload.get("journal_checkpoint_due"),
         "journal_checkpoint_applied": payload.get("journal_checkpoint_applied"),
         "journal_checkpoint_status": payload.get("journal_checkpoint_status", {}),
@@ -127,6 +264,7 @@ def _write_daily_review_queue(
     graph_result: dict[str, Any],
     graph_surface_status_result: dict[str, Any],
     transport_result: dict[str, Any] | None,
+    weekly_asset_coverage_result: dict[str, Any],
     scheduled_tasks_result: dict[str, Any],
     journal_result: dict[str, Any],
 ) -> dict[str, Any]:
@@ -141,6 +279,7 @@ def _write_daily_review_queue(
         "graphs": graph_result,
         "graph_surfaces": graph_surface_status_result,
         "transport": transport_result or {"status": "not_run"},
+        "weekly_asset_coverage": weekly_asset_coverage_result,
         "scheduled_tasks": scheduled_tasks_result,
         "journal": journal_result,
         "authority_boundary": (
@@ -170,6 +309,8 @@ def _write_daily_review_queue(
         f"- Graph surface freshness: {graph_surface_status_result.get('freshness_counts', {})}",
         f"- Transport audit: {transport_result.get('report_path', 'not run') if transport_result else 'not run'}",
         f"- Transport upgrade count: {transport_result.get('upgrade_required_count', 'not run') if transport_result else 'not run'}",
+        f"- Weekly asset coverage: {weekly_asset_coverage_result.get('status', 'unknown')}",
+        f"- Weekly asset coverage missing high-signal: {weekly_asset_coverage_result.get('summary', {}).get('missing_high_signal_count', 'not run')}",
         f"- Scheduled tasks: {scheduled_tasks_result.get('task_count', 'unknown')}",
         f"- Scheduled task report: {scheduled_tasks_result.get('report_path', 'unknown')}",
         f"- Journal checkpoint due: {journal_result.get('checkpoint_due')}",
@@ -443,10 +584,34 @@ def run_daemon_cycle(
     deliver_local_caches: bool = False,
     rebuild_graphs: bool = True,
     transport_repos: list[dict[str, Any]] | None = None,
+    asset_coverage_repos: Sequence[Any] | None = None,
     journal_repo: Path | None = None,
     checkpoint_apply: bool = False,
 ) -> dict[str, Any]:
     generated_at = utc_now()
+    input_fingerprint, input_snapshot_count = _cycle_input_fingerprint(
+        hub_root,
+        mail_repos=mail_repos,
+        exception_repos=exception_repos,
+        journal_repo=journal_repo,
+    )
+    previous_heartbeat = _read_heartbeat_payload(hub_root)
+    journal_status_result = journal_status(hub_root)
+    weekly_due = weekly_asset_coverage_due(hub_root, generated_at=generated_at)
+    if (
+        previous_heartbeat.get("status") == "complete"
+        and previous_heartbeat.get("input_fingerprint") == input_fingerprint
+        and not bool(journal_status_result.get("checkpoint_due"))
+        and not bool(weekly_due.get("due"))
+    ):
+        return _idle_cycle_result(
+            hub_root,
+            generated_at=generated_at,
+            previous=previous_heartbeat,
+            input_fingerprint=input_fingerprint,
+            input_snapshot_count=input_snapshot_count,
+            journal_status_result=journal_status_result,
+        )
     cycle_order = [
         "journal_remote_outbox_ingest",
         "mail_collect",
@@ -458,6 +623,7 @@ def run_daemon_cycle(
         "lesson_graph_rebuild",
         "graph_inference",
         "transport_audit",
+        "weekly_asset_coverage",
         "scheduled_task_registry",
         "daily_review_queue",
         "heartbeat",
@@ -492,11 +658,16 @@ def run_daemon_cycle(
         if transport_repos is not None
         else None
     )
+    weekly_asset_coverage_result = _step_result(
+        "weekly_asset_coverage",
+        write_weekly_asset_coverage_outputs,
+        hub_root,
+        repo_policies=asset_coverage_repos if asset_coverage_repos is not None else mail_repos,
+    )
     scheduled_tasks_result = scheduled_tasks_status(
         hub_root,
         inspect_scheduler=False,
     )
-    journal_status_result = journal_status(hub_root)
     graph_surface_status_result = graph_surface_status(hub_root)
     review_queue = _write_daily_review_queue(
         hub_root,
@@ -509,6 +680,7 @@ def run_daemon_cycle(
         graph_result=graph_result,
         graph_surface_status_result=graph_surface_status_result,
         transport_result=transport_result,
+        weekly_asset_coverage_result=weekly_asset_coverage_result,
         scheduled_tasks_result=scheduled_tasks_result,
         journal_result=journal_status_result,
     )
@@ -518,6 +690,9 @@ def run_daemon_cycle(
         "cycle_started_at": generated_at,
         "cycle_completed_at": "",
         "cycle_order": cycle_order,
+        "idle": False,
+        "input_fingerprint": input_fingerprint,
+        "input_snapshot_count": input_snapshot_count,
         "remote_outbox_ingest_status": remote_outbox_result.get("status"),
         "mail_collect_status": mail_result.get("collect", {}).get("status", mail_result.get("status")),
         "mail_route_status": mail_result.get("route", {}).get("status", mail_result.get("status")),
@@ -530,6 +705,14 @@ def run_daemon_cycle(
         "graph_inference_status": graph_result.get("inference", {}).get("status", graph_result.get("status")),
         "graph_surface_freshness_counts": graph_surface_status_result.get("freshness_counts", {}),
         "transport_audit_ran": transport_result is not None,
+        "weekly_asset_coverage_status": weekly_asset_coverage_result.get("status"),
+        "weekly_asset_coverage_missing_high_signal_count": weekly_asset_coverage_result.get(
+            "summary", {}
+        ).get("missing_high_signal_count"),
+        "weekly_asset_coverage_average_score": weekly_asset_coverage_result.get("summary", {}).get(
+            "average_coverage_score"
+        ),
+        "weekly_asset_coverage_outputs": weekly_asset_coverage_result.get("outputs", {}),
         "journal_checkpoint_due": journal_status_result.get("checkpoint_due"),
         "journal_checkpoint_applied": False,
         "journal_checkpoint_status": journal_status_result,
@@ -540,15 +723,23 @@ def run_daemon_cycle(
         "authority_boundary": AUTHORITY_BOUNDARY,
     }
     atomic_write_text(daemon_heartbeat_path(hub_root), json_dumps(heartbeat, pretty=True) + "\n")
-    journal_result = checkpoint_journal(
+    journal_result = _step_result(
+        "journal_checkpoint",
+        checkpoint_journal,
         hub_root,
         journal_repo,
         apply=checkpoint_apply,
     )
     heartbeat["journal_checkpoint_due"] = journal_result.get("checkpoint_due")
-    heartbeat["journal_checkpoint_applied"] = journal_result.get("checkpoint_applied")
+    heartbeat["journal_checkpoint_applied"] = bool(
+        journal_result.get("checkpoint_applied", False)
+    )
     heartbeat["journal_checkpoint_status"] = journal_result
-    heartbeat["status"] = "complete"
+    heartbeat["status"] = (
+        "complete_with_errors"
+        if journal_result.get("status") in {"blocked", "error"}
+        else "complete"
+    )
     heartbeat["cycle_completed_at"] = utc_now()
     heartbeat["heartbeat_finalized"] = True
     heartbeat["heartbeat_finalized_at"] = utc_now()
@@ -560,6 +751,7 @@ def run_daemon_cycle(
     return {
         "schema_version": "dad.daemon.cycle.v1",
         "generated_at": generated_at,
+        "idle": False,
         "cycle_order": cycle_order,
         "heartbeat_path": str(daemon_heartbeat_path(hub_root)),
         "daily_review_queue": review_queue,
@@ -571,6 +763,7 @@ def run_daemon_cycle(
         "graphs": graph_result,
         "graph_surface_status": graph_surface_status_result,
         "transport": transport_result,
+        "weekly_asset_coverage": weekly_asset_coverage_result,
         "scheduled_tasks": scheduled_tasks_result,
         "journal_status": journal_status_result,
         "journal": journal_result,
@@ -592,7 +785,7 @@ def task_scheduler_plan(
     wrapper_path = shim_path.parent / DAEMON_TASK_WRAPPER_NAME
     tr = "HOURLY" if twice_daily else "DAILY"
     mo = "12" if twice_daily else "1"
-    run_cycle_args = ["--hub", str(hub_root.resolve())]
+    run_cycle_args = ["--hub", str(hub_root.resolve()), "--quiet"]
     if journal_repo is not None:
         run_cycle_args.extend(["--journal-repo", str(journal_repo.resolve())])
     if checkpoint_apply:
@@ -613,6 +806,12 @@ def task_scheduler_plan(
         f'schtasks /Create /TN "{task_name}" /SC {tr} /MO {mo} /ST {schedule_time} '
         f'/TR "{task_to_run}" /F'
     )
+    settings_script = (
+        "$settings = New-ScheduledTaskSettingsSet "
+        "-AllowStartIfOnBatteries -DontStopIfGoingOnBatteries -StartWhenAvailable; "
+        f"Set-ScheduledTask -TaskName {_ps_single_quote(task_name)} "
+        "-Settings $settings | Out-Null"
+    )
     return {
         "schema_version": "dad.daemon.task_scheduler_plan.v1",
         "task_name": task_name,
@@ -626,6 +825,12 @@ def task_scheduler_plan(
         "journal_repo": str(journal_repo.resolve()) if journal_repo is not None else None,
         "checkpoint_apply": checkpoint_apply,
         "command": command,
+        "settings_command": [
+            "powershell",
+            "-NoProfile",
+            "-Command",
+            settings_script,
+        ],
         "authority_boundary": AUTHORITY_BOUNDARY,
     }
 
@@ -640,12 +845,26 @@ def install_task_scheduler(plan: dict[str, Any]) -> dict[str, Any]:
     atomic_write_text(wrapper_path, str(plan["wrapper_script"]))
     command = str(plan["command"])
     result = subprocess.run(command, shell=True, capture_output=True, text=True, check=False)
+    settings_result = None
+    if result.returncode == 0:
+        settings_result = subprocess.run(
+            list(plan["settings_command"]),
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+    settings_returncode = (
+        int(settings_result.returncode) if settings_result is not None else None
+    )
     return {
         **plan,
-        "installed": result.returncode == 0,
+        "installed": result.returncode == 0 and settings_returncode == 0,
         "returncode": result.returncode,
         "stdout": result.stdout,
         "stderr": result.stderr,
+        "settings_returncode": settings_returncode,
+        "settings_stdout": settings_result.stdout if settings_result is not None else "",
+        "settings_stderr": settings_result.stderr if settings_result is not None else "",
     }
 
 
@@ -656,6 +875,8 @@ def _scheduler_status_summary(status: dict[str, Any]) -> dict[str, Any]:
         "status": status.get("status", "unknown"),
         "task_status": status.get("task_status", ""),
         "next_run_time": status.get("next_run_time", ""),
+        "last_run_time": status.get("last_run_time", ""),
+        "last_result": status.get("last_result", ""),
         "task_to_run": status.get("task_to_run", ""),
         "wrapper_path": status.get("wrapper_path", ""),
         "wrapper_found": bool(status.get("wrapper_found", False)),
@@ -682,10 +903,20 @@ def _scheduled_task_health(
             return "installed_hub_mismatch"
         if not scheduler.get("expected_shim_found"):
             return "installed_shim_mismatch"
+        last_result = str(scheduler.get("last_result") or "").strip()
+        if last_result:
+            try:
+                last_result_code = int(last_result, 0)
+            except ValueError:
+                last_result_code = None
+            if last_result_code not in {None, 0}:
+                return "scheduler_last_run_failed"
     if heartbeat.get("status") == "fresh" and not bool(heartbeat.get("stale", True)):
         return "ready" if inspect_scheduler else "heartbeat_fresh_scheduler_not_inspected"
     if heartbeat.get("status") in {"missing", "invalid", "stale"}:
         return "heartbeat_stale_or_missing"
+    if heartbeat.get("status") == "degraded":
+        return "degraded"
     return "unknown"
 
 
@@ -714,6 +945,8 @@ def scheduled_tasks_status(
             "status": "not_inspected",
             "task_status": "",
             "next_run_time": "",
+            "last_run_time": "",
+            "last_result": "",
             "task_to_run": "",
             "wrapper_path": str((shim or Path.home() / ".dad" / "bin" / "asset-dir.ps1").parent / DAEMON_TASK_WRAPPER_NAME),
             "wrapper_found": None,
@@ -878,6 +1111,8 @@ def task_scheduler_status(
         "stderr": stderr,
         "task_status": parsed.get("status", ""),
         "next_run_time": parsed.get("next_run_time", ""),
+        "last_run_time": parsed.get("last_run_time", ""),
+        "last_result": parsed.get("last_result", ""),
         "task_to_run": task_to_run,
         "wrapper_path": str(wrapper_path),
         "wrapper_found": bool(wrapper_text),

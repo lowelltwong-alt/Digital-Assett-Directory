@@ -9,8 +9,12 @@ repo.
 from __future__ import annotations
 
 import json
+import os
 import shutil
+import sqlite3
 import subprocess
+import tempfile
+import time
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
@@ -26,6 +30,9 @@ from .utils import append_jsonl, atomic_write_text, json_dumps, sha256_bytes, ut
 JOURNAL_STATUS_NAME = "journal_checkpoint_status.json"
 REMOTE_OUTBOX_QUARANTINE_NAME = "remote-outbox-quarantine.jsonl"
 VCS_CONTROL_DIR_NAMES = {".git", ".hg", ".svn"}
+CHECKPOINT_COPY_ATTEMPTS = 10
+CHECKPOINT_COPY_CHUNK_SIZE = 1024 * 1024
+SQLITE_CHECKPOINT_SUFFIXES = {".sqlite", ".sqlite3"}
 
 
 def _reports_dir(hub_root: Path) -> Path:
@@ -58,6 +65,58 @@ def _iter_data_plane_files(hub_root: Path) -> list[tuple[Path, Path]]:
                 continue
             files.append((source, Path(relative_root) / relative))
     return files
+
+
+def _copy_checkpoint_file_once(source: Path, destination: Path) -> None:
+    """Copy one live data-plane file through an atomic destination temp file."""
+    destination.parent.mkdir(parents=True, exist_ok=True)
+    fd, temp_name = tempfile.mkstemp(
+        prefix=f".{destination.name}.checkpoint.",
+        dir=str(destination.parent),
+    )
+    os.close(fd)
+    temp_path = Path(temp_name)
+    try:
+        if source.suffix.lower() in SQLITE_CHECKPOINT_SUFFIXES:
+            source_uri = source.resolve().as_uri() + "?mode=ro"
+            with sqlite3.connect(source_uri, uri=True, timeout=5.0) as source_db:
+                with sqlite3.connect(temp_path, timeout=5.0) as target_db:
+                    source_db.backup(target_db)
+        else:
+            with source.open("rb") as source_handle, temp_path.open("wb") as target_handle:
+                shutil.copyfileobj(
+                    source_handle,
+                    target_handle,
+                    length=CHECKPOINT_COPY_CHUNK_SIZE,
+                )
+                target_handle.flush()
+                os.fsync(target_handle.fileno())
+            try:
+                shutil.copystat(source, temp_path)
+            except OSError:
+                pass
+        os.replace(temp_path, destination)
+    finally:
+        try:
+            temp_path.unlink(missing_ok=True)
+        except OSError:
+            pass
+
+
+def _copy_checkpoint_file(source: Path, destination: Path) -> None:
+    last_error: OSError | None = None
+    for attempt in range(CHECKPOINT_COPY_ATTEMPTS):
+        try:
+            _copy_checkpoint_file_once(source, destination)
+            return
+        except OSError as exc:
+            last_error = exc
+            if attempt == CHECKPOINT_COPY_ATTEMPTS - 1:
+                break
+            time.sleep(0.05 * (attempt + 1))
+    if last_error is not None:
+        raise last_error
+    raise OSError(f"Checkpoint copy failed without an error: {source.name}")
 
 
 def _jsonl_record_count(hub_root: Path) -> int:
@@ -380,11 +439,38 @@ def checkpoint_journal(
         target = journal_repo / "data"
         target.mkdir(parents=True, exist_ok=True)
         copied_files = 0
+        copy_errors: list[dict[str, Any]] = []
         for source, relative in _iter_data_plane_files(hub_root):
             destination = target / relative
-            destination.parent.mkdir(parents=True, exist_ok=True)
-            shutil.copy2(source, destination)
-            copied_files += 1
+            try:
+                _copy_checkpoint_file(source, destination)
+            except OSError as exc:
+                copy_errors.append(
+                    {
+                        "relative_path": relative.as_posix(),
+                        "error_type": type(exc).__name__,
+                        "winerror": getattr(exc, "winerror", None),
+                        "errno": getattr(exc, "errno", None),
+                    }
+                )
+            else:
+                copied_files += 1
+        if copy_errors:
+            status.update(
+                {
+                    "status": "blocked",
+                    "checkpoint_applied": False,
+                    "checkpoint_skipped_reason": "copy_incomplete",
+                    "copied_file_count": copied_files,
+                    "copy_error_count": len(copy_errors),
+                    "copy_errors": copy_errors,
+                }
+            )
+            atomic_write_text(
+                _journal_status_path(hub_root),
+                json_dumps(status, pretty=True) + "\n",
+            )
+            return status
         graph_surfaces = write_graph_surface_checkpoint_artifacts(hub_root, journal_repo)
         status["graph_surfaces"] = graph_surfaces
         manifest = {

@@ -147,7 +147,10 @@ from .learning import (
     rebuild_lesson_routes,
 )
 from .journal import checkpoint_journal, ingest_remote_outbox, journal_repo_status, journal_status
-from .lesson_automation_coverage import write_lesson_automation_coverage_outputs
+from .lesson_automation_coverage import (
+    write_lesson_automation_coverage_outputs,
+    write_weekly_asset_coverage_outputs,
+)
 from .lesson_action_queue import (
     DECISION_TEMPLATE_PATH,
     load_lesson_automation_path_filter_file,
@@ -539,6 +542,11 @@ def daemon_run_cycle(
     hub: Optional[Path] = typer.Option(None),
     journal_repo: Optional[Path] = typer.Option(None),
     checkpoint_apply: bool = typer.Option(False, "--checkpoint-apply"),
+    quiet: bool = typer.Option(
+        False,
+        "--quiet",
+        help="Write operational reports without rendering the full cycle payload.",
+    ),
     skip_transport_audit: bool = typer.Option(False, "--skip-transport-audit"),
     skip_graphs: bool = typer.Option(False, "--skip-graphs"),
     deliver_local_caches: bool = typer.Option(
@@ -548,18 +556,19 @@ def daemon_run_cycle(
     ),
 ) -> None:
     cfg = _cfg(hub=hub)
-    console.print_json(
-        data=run_daemon_cycle(
-            cfg.repo_root,
-            mail_repos=cfg.mail_repos,
-            exception_repos=cfg.exception_repos,
-            deliver_local_caches=deliver_local_caches,
-            rebuild_graphs=not skip_graphs,
-            transport_repos=None if skip_transport_audit else _transport_repo_rows(cfg),
-            journal_repo=journal_repo,
-            checkpoint_apply=checkpoint_apply,
-        )
+    result = run_daemon_cycle(
+        cfg.repo_root,
+        mail_repos=cfg.mail_repos,
+        exception_repos=cfg.exception_repos,
+        deliver_local_caches=deliver_local_caches,
+        rebuild_graphs=not skip_graphs,
+        transport_repos=None if skip_transport_audit else _transport_repo_rows(cfg),
+        asset_coverage_repos=cfg.enrollment_repos,
+        journal_repo=journal_repo,
+        checkpoint_apply=checkpoint_apply,
     )
+    if not quiet:
+        console.print_json(data=result)
 
 
 @daemon_app.command("status")
@@ -7557,6 +7566,25 @@ def recommend_lesson_automation_coverage(
             scan_summary=scan_summary,
             limit=limit,
         )
+    console.print_json(data=result)
+
+
+@recommend_app.command("weekly-asset-coverage")
+def recommend_weekly_asset_coverage(
+    hub: Optional[Path] = typer.Option(None),
+    lookback_days: int = typer.Option(21, "--lookback-days", min=1, max=90),
+    due_days: int = typer.Option(7, "--due-days", min=1, max=31),
+    force: bool = typer.Option(False, "--force"),
+) -> None:
+    """Write the weekly read-only repo asset/test coverage report."""
+    cfg = _cfg(hub=hub)
+    result = write_weekly_asset_coverage_outputs(
+        cfg.repo_root,
+        repo_policies=cfg.enrollment_repos,
+        lookback_days=lookback_days,
+        due_days=due_days,
+        force=force,
+    )
     console.print_json(data=result)
 
 

@@ -11,8 +11,10 @@ from typer.testing import CliRunner
 
 import digital_asset_directory.daemon as daemon_mod
 import digital_asset_directory.exception_capture as exception_capture_mod
+import digital_asset_directory.journal as journal_mod
 from digital_asset_directory.cli import app
 from digital_asset_directory.daemon import (
+    daemon_heartbeat_path,
     daemon_status,
     run_daemon_cycle,
     scheduled_tasks_report_path,
@@ -309,6 +311,34 @@ def test_transport_audit_flags_mailbox_without_contract_and_writes_queue(tmp_pat
     assert rows[0]["expected_implementation_version"] == TRANSPORT_IMPLEMENTATION_VERSION
 
 
+def test_transport_audit_flags_stale_contract_repo_path_without_exposing_paths(tmp_path: Path):
+    repo = tmp_path / "canonical-repo"
+    mail = repo / ".digital-asset" / "mail"
+    mail.mkdir(parents=True)
+    (mail / ".gitignore").write_text("*.jsonl\n", encoding="utf-8")
+    contract = repo / ".digital-asset" / "dad-integration.json"
+    contract.write_text(
+        json.dumps(
+            {
+                "repo_path": str(tmp_path / "obsolete-checkout"),
+                "transport": {
+                    "surface_version": TRANSPORT_SURFACE_VERSION,
+                    "implementation_version": TRANSPORT_IMPLEMENTATION_VERSION,
+                },
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    record = audit_repo_transport(repo, repo_id="repo-a")
+
+    assert record["classification"] == "upgrade_recommended"
+    assert [signal["signal"] for signal in record["signals"]] == ["repo_path_stale"]
+    signal = record["signals"][0]
+    assert signal["recorded_path_exists"] is False
+    assert "obsolete-checkout" not in json.dumps(record)
+
+
 def test_transport_audit_queue_dedupe_survives_concurrent_runs(tmp_path: Path):
     hub = tmp_path / "hub"
     hub.mkdir()
@@ -479,6 +509,95 @@ def test_transport_upgrade_status_reports_reviewed_queue_and_plan_artifacts(tmp_
         "asset-dir enroll update-plan --wave wave-a --from-transport-queue"
     ]
 
+
+def test_transport_upgrade_status_obeys_policy_holds_even_when_queue_is_stale(
+    tmp_path: Path,
+):
+    hub = _hub_for_cli(tmp_path / "hub")
+    repo_hold = tmp_path / "repo-hold"
+    repo_no_update = tmp_path / "repo-no-update"
+    repo_hold.mkdir()
+    repo_no_update.mkdir()
+    (hub / "config" / "sources.example.yaml").write_text(
+        "\n".join(
+            [
+                "project:",
+                "  database: state/catalog.sqlite3",
+                "enrollment:",
+                "  repos:",
+                "    - id: repo-hold",
+                f"      path: {repo_hold}",
+                "      wave: wave-a",
+                "      update_allowed: true",
+                "      active_hold: true",
+                "      active_hold_reason: active work paused writes",
+                "      approved_approval_ids: [APPROVED-1]",
+                "    - id: repo-no-update",
+                f"      path: {repo_no_update}",
+                "      wave: wave-a",
+                "      update_allowed: false",
+                "      approved_approval_ids: [APPROVED-1]",
+                "",
+            ]
+        ),
+        encoding="utf-8",
+    )
+    report_path = data_path(hub, "central_reports") / "transport_audit.json"
+    report_path.parent.mkdir(parents=True, exist_ok=True)
+    report_path.write_text(
+        json.dumps(
+            {
+                "transport_surface_version": TRANSPORT_SURFACE_VERSION,
+                "transport_implementation_version": TRANSPORT_IMPLEMENTATION_VERSION,
+                "repo_count": 2,
+                "classification_counts": {"upgrade_required": 2},
+                "hub": {"classification": "upgrade_required"},
+                "records": [
+                    {"repo_id": "repo-hold", "classification": "upgrade_required"},
+                    {"repo_id": "repo-no-update", "classification": "upgrade_required"},
+                ],
+            }
+        ),
+        encoding="utf-8",
+    )
+    queue_path = transport_upgrade_queue_path(hub)
+    queue_path.parent.mkdir(parents=True, exist_ok=True)
+    queue_rows = [
+        {
+            "queue_key": "queue:repo-hold",
+            "repo_id": "repo-hold",
+            "classification": "upgrade_required",
+            "expected_surface_version": TRANSPORT_SURFACE_VERSION,
+            "expected_implementation_version": TRANSPORT_IMPLEMENTATION_VERSION,
+            "review_status": "candidate",
+        },
+        {
+            "queue_key": "queue:repo-no-update",
+            "repo_id": "repo-no-update",
+            "classification": "upgrade_required",
+            "expected_surface_version": TRANSPORT_SURFACE_VERSION,
+            "expected_implementation_version": TRANSPORT_IMPLEMENTATION_VERSION,
+            "review_status": "candidate",
+        },
+    ]
+    queue_path.write_text(
+        "".join(json.dumps(row, sort_keys=True) + "\n" for row in queue_rows),
+        encoding="utf-8",
+    )
+
+    result = RUNNER.invoke(
+        app,
+        ["transport", "upgrade-status", "--hub", str(hub), "--wave", "wave-a"],
+    )
+
+    assert result.exit_code == 0, result.output
+    payload = json.loads(result.stdout)
+    assert payload["status"] == "review_required"
+    assert payload["selection"]["selected_count"] == 0
+    assert payload["selection"]["skipped_by_reason"] == {
+        "active_hold_central_only": 1,
+        "update_not_allowed": 1,
+    }
 
 def test_transport_upgrade_status_supersedes_stale_queue_rows_with_current_audit(
     tmp_path: Path,
@@ -653,7 +772,9 @@ def test_plan_data_migration_emits_review_commands_without_deleting(tmp_path: Pa
     plan = plan_data_migration(hub, target)
 
     assert plan["total_files"] == 1
-    assert all(command.startswith("git rm -r --cached") for command in plan["untrack_commands_after_verified_copy"])
+    assert plan["untrack_scope"] == "tracked_and_gitignored_data_plane_files_only"
+    assert "git ls-files -ci --exclude-standard" in plan["untrack_commands_after_verified_copy"][0]
+    assert "git rm --cached -- $trackedRuntime" in plan["untrack_commands_after_verified_copy"][1]
     assert "This plan never deletes source files" in plan["rule"]
 
 
@@ -662,10 +783,24 @@ def test_daemon_cycle_writes_heartbeat_and_daily_queue(tmp_path: Path):
     hub.mkdir()
 
     first = run_daemon_cycle(hub, mail_repos=[], exception_repos=[], transport_repos=[])
+    heartbeat_path = Path(first["heartbeat_path"])
+    non_heartbeat_before = {
+        path.relative_to(hub).as_posix(): path.read_bytes()
+        for path in hub.rglob("*")
+        if path.is_file() and path != heartbeat_path
+    }
     second = run_daemon_cycle(hub, mail_repos=[], exception_repos=[], transport_repos=[])
+    non_heartbeat_after = {
+        path.relative_to(hub).as_posix(): path.read_bytes()
+        for path in hub.rglob("*")
+        if path.is_file() and path != heartbeat_path
+    }
 
     assert Path(first["heartbeat_path"]).exists()
     assert Path(second["heartbeat_path"]).exists()
+    assert second["idle"] is True
+    assert second["cycle_order"] == ["heartbeat"]
+    assert non_heartbeat_after == non_heartbeat_before
     assert first["cycle_order"] == [
         "journal_remote_outbox_ingest",
         "mail_collect",
@@ -677,6 +812,7 @@ def test_daemon_cycle_writes_heartbeat_and_daily_queue(tmp_path: Path):
         "lesson_graph_rebuild",
         "graph_inference",
         "transport_audit",
+        "weekly_asset_coverage",
         "scheduled_task_registry",
         "daily_review_queue",
         "heartbeat",
@@ -685,9 +821,13 @@ def test_daemon_cycle_writes_heartbeat_and_daily_queue(tmp_path: Path):
     assert Path(first["daily_review_queue"]["markdown_path"]).exists()
     assert first["graph_surface_status"]["schema_version"] == "dad.graph_surface.status.v1"
     assert "graph_surfaces" in first["daily_review_queue"]["report"]
+    assert "weekly_asset_coverage" in first["daily_review_queue"]["report"]
     assert (
         "Graph surface freshness"
         in Path(first["daily_review_queue"]["markdown_path"]).read_text(encoding="utf-8")
+    )
+    assert "Weekly asset coverage" in Path(first["daily_review_queue"]["markdown_path"]).read_text(
+        encoding="utf-8"
     )
     assert first["journal_status"]["schema_version"] == "dad.journal.status.v1"
     assert first["scheduled_tasks"]["schema_version"] == "dad.daemon.scheduled_tasks.v1"
@@ -705,6 +845,7 @@ def test_daemon_cycle_writes_heartbeat_and_daily_queue(tmp_path: Path):
     status = daemon_status(hub)
     assert status["status"] == "fresh"
     assert status["transport_audit_ran"] is True
+    assert status["weekly_asset_coverage_status"] in {"ok", "skipped"}
     assert "graph_surface_freshness_counts" in status["last_cycle"]
     assert status["scheduled_tasks_report_path"].endswith("scheduled_tasks.json")
     assert status["scheduled_task_count"] == 1
@@ -731,8 +872,10 @@ def test_daemon_cycle_with_initialized_data_root_writes_only_data_root(
     assert Path(result["heartbeat_path"]).is_relative_to(data_root)
     assert (data_root / "processed" / "reports" / "daemon-heartbeat.json").exists()
     assert (data_root / "processed" / "reports" / "scheduled_tasks.json").exists()
+    assert (data_root / "processed" / "reports" / "weekly_asset_coverage.json").exists()
     assert not (hub / "processed" / "reports" / "daemon-heartbeat.json").exists()
     assert not (hub / "processed" / "reports" / "scheduled_tasks.json").exists()
+    assert not (hub / "processed" / "reports" / "weekly_asset_coverage.json").exists()
 
 
 def test_transport_readiness_cli_reports_local_ready_with_human_gates_pending(
@@ -832,6 +975,31 @@ def test_daemon_install_plan_uses_stable_shim_and_run_cycle(tmp_path: Path):
     assert "daemon run-cycle" in plan["wrapper_script"]
     assert str(hub.resolve()) in plan["wrapper_script"]
     assert "--hub" in plan["run_cycle_args"]
+    assert "--quiet" in plan["run_cycle_args"]
+    settings_script = plan["settings_command"][-1]
+    assert "AllowStartIfOnBatteries" in settings_script
+    assert "DontStopIfGoingOnBatteries" in settings_script
+    assert "StartWhenAvailable" in settings_script
+
+
+def test_daemon_run_cycle_quiet_writes_reports_without_rendering_payload(tmp_path: Path):
+    hub = _hub_for_cli(tmp_path / "hub")
+
+    result = RUNNER.invoke(
+        app,
+        [
+            "daemon",
+            "run-cycle",
+            "--hub",
+            str(hub),
+            "--quiet",
+            "--skip-graphs",
+        ],
+    )
+
+    assert result.exit_code == 0, result.output
+    assert result.stdout == ""
+    assert daemon_heartbeat_path(hub).exists()
 
 
 def test_daemon_task_status_parses_read_only_scheduler_query(tmp_path: Path):
@@ -1073,7 +1241,7 @@ def test_journal_below_threshold_status_preserves_last_checkpoint(tmp_path: Path
     assert journal_status(hub, min_records=200, min_hours=24)["last_checkpoint_at"] == checkpointed_at
 
 
-def test_daemon_checkpoint_failure_leaves_unfinalized_heartbeat(tmp_path: Path):
+def test_daemon_checkpoint_failure_finalizes_degraded_heartbeat(tmp_path: Path):
     hub = tmp_path / "hub"
     inbox = hub / "processed" / "mail" / "inbox" / "rows.jsonl"
     inbox.parent.mkdir(parents=True)
@@ -1081,21 +1249,62 @@ def test_daemon_checkpoint_failure_leaves_unfinalized_heartbeat(tmp_path: Path):
     journal_repo = tmp_path / "not-a-git-journal"
     journal_repo.mkdir()
 
-    with pytest.raises(ValueError, match="no current branch"):
-        run_daemon_cycle(
-            hub,
-            mail_repos=[],
-            exception_repos=[],
-            transport_repos=[],
-            journal_repo=journal_repo,
-            checkpoint_apply=True,
-        )
+    result = run_daemon_cycle(
+        hub,
+        mail_repos=[],
+        exception_repos=[],
+        transport_repos=[],
+        journal_repo=journal_repo,
+        checkpoint_apply=True,
+    )
 
     heartbeat = json.loads((hub / "processed" / "reports" / "daemon-heartbeat.json").read_text(encoding="utf-8"))
-    assert heartbeat["status"] == "in_progress"
-    assert heartbeat["cycle_completed_at"] == ""
-    assert heartbeat["heartbeat_finalized"] is False
+    assert result["journal"]["status"] == "error"
+    assert heartbeat["status"] == "complete_with_errors"
+    assert heartbeat["cycle_completed_at"]
+    assert heartbeat["heartbeat_finalized"] is True
     assert heartbeat["journal_checkpoint_applied"] is False
+    assert daemon_status(hub)["status"] == "degraded"
+
+
+def test_journal_locked_copy_does_not_advance_checkpoint(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+):
+    hub = tmp_path / "hub"
+    inbox = hub / "processed" / "mail" / "inbox" / "rows.jsonl"
+    inbox.parent.mkdir(parents=True)
+    inbox.write_text(
+        "\n".join(json.dumps({"i": i}) for i in range(200)) + "\n",
+        encoding="utf-8",
+    )
+    journal_repo = tmp_path / "dad-journal"
+    subprocess.run(["git", "init", "-b", "journal-data", str(journal_repo)], check=True)
+
+    def locked_copy(_source: Path, _destination: Path) -> None:
+        error = PermissionError("synthetic live-file lock")
+        error.winerror = 32
+        raise error
+
+    monkeypatch.setattr(journal_mod, "_copy_checkpoint_file", locked_copy)
+
+    result = checkpoint_journal(
+        hub,
+        journal_repo,
+        apply=True,
+        min_records=200,
+        min_hours=999,
+    )
+
+    assert result["status"] == "blocked"
+    assert result["checkpoint_applied"] is False
+    assert result["checkpoint_skipped_reason"] == "copy_incomplete"
+    assert result["copy_error_count"] == 1
+    assert result["copy_errors"][0]["winerror"] == 32
+    assert result["checkpoint_due"] is True
+    assert result["checkpoint_record_count"] == 0
+    assert "git_apply_results" not in result
+    assert not (journal_repo / "journal_checkpoint_manifest.json").exists()
 
 
 def test_daemon_cycle_ingests_journal_remote_outbox(tmp_path: Path):

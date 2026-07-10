@@ -37,6 +37,47 @@ processed/learning/scan_cycle_events.jsonl
 - model or embedding calls;
 - downstream repo writes.
 
+## Weekly Asset Coverage
+
+Current methodology: `weekly-asset-coverage-v0.2`.
+
+Run this when DAD needs to check whether enrolled repos changed tests, engines,
+simulators, schemas, external-resource pointers, or other high-signal assets
+without sending a matching DAD envelope:
+
+```powershell
+$env:PYTHONPATH='src'; python -m digital_asset_directory.cli recommend weekly-asset-coverage --lookback-days 21 --force
+```
+
+The daemon also runs the same pass on a weekly due gate. It writes generated
+candidate outputs only:
+
+```text
+processed/reports/weekly_asset_coverage.md
+processed/reports/weekly_asset_coverage.json
+processed/cadence/weekly_asset_coverage_snapshot.jsonl
+processed/cadence/weekly_asset_coverage_history.jsonl
+processed/learning/scan_cycle_events.jsonl
+```
+
+The pass reads enabled reviewed enrollment paths, recent Git changed-path
+metadata, and an allowlist of IDs plus repo-relative refs from mail outbox,
+exception outbox, asset index, and `.digital-asset/learning/events.jsonl`.
+Envelope evidence is limited to the lookback window; undated rows can provide
+weak evidence only. It does not recursively tokenize payloads, summaries, source
+file contents, raw case facts, witness packets, private outputs, PR bodies, CI
+logs, or remote APIs. Missing reviewed repo paths are graded `BLOCKED` and become
+scan-unavailable review candidates rather than misleading `N/A` successes.
+
+Grading is weighted by asset signal. Strong repo-local DAD evidence gets full
+credit; weak term/category evidence gets half credit; missing high-signal paths
+become `review_finding` candidates labeled `asset_coverage_reporting_gap`.
+Those candidates are review prompts, not exception-lake truth, downstream write
+approval, or proof that a repo failed.
+
+When the weekly pass is not due, daemon status carries the prior report summary
+forward so outstanding gaps remain visible without rewriting the reports.
+
 ## Scan-Cycle Log
 
 `processed/reports/scan_coverage_cycle.md` is the handoff surface for the next
