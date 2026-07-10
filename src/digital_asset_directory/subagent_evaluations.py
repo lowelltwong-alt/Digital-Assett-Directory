@@ -12,7 +12,14 @@ from typing import Any, Iterable
 from jsonschema.validators import validator_for
 
 from .transport import data_relative_path
-from .utils import SECRET_PATTERNS, append_jsonl, utc_now, write_json, write_jsonl
+from .utils import (
+    SECRET_PATTERNS,
+    append_jsonl,
+    sha256_text_file_lf,
+    utc_now,
+    write_json,
+    write_jsonl,
+)
 
 
 AUTHORITY_BOUNDARY = (
@@ -147,11 +154,24 @@ def _verify_source_artifacts(hub_root: Path, attempts: Iterable[dict[str, Any]])
         for artifact in attempt.get("artifact_refs", []):
             ref = str(artifact.get("ref", ""))
             expected = str(artifact.get("sha256", ""))
+            hash_policy = str(artifact.get("hash_policy", ""))
             if ref.startswith("source://"):
                 relative = Path(ref.removeprefix("source://"))
                 if relative.is_absolute() or ".." in relative.parts:
                     raise ValueError(f"Unsafe source evidence ref: {ref}")
-                actual = _hash_path(hub_root / relative)
+                evidence_path = hub_root / relative
+                if hash_policy == "text_lf_normalized_v1":
+                    actual = (
+                        f"sha256:{sha256_text_file_lf(evidence_path)}"
+                        if evidence_path.exists()
+                        else "missing"
+                    )
+                elif hash_policy == "bytes_v1":
+                    actual = _hash_path(evidence_path)
+                else:
+                    raise ValueError(
+                        f"Attempt {attempt['attempt_id']} uses unsupported evidence hash policy"
+                    )
                 if actual != expected:
                     raise ValueError(
                         f"Attempt {attempt['attempt_id']} evidence hash mismatch for {ref}: "

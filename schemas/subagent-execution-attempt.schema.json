@@ -43,10 +43,11 @@
       "items": {
         "type": "object",
         "additionalProperties": false,
-        "required": ["ref", "sha256"],
+        "required": ["ref", "sha256", "hash_policy"],
         "properties": {
           "ref": {"type": "string", "minLength": 1},
-          "sha256": {"type": "string", "pattern": "^(sha256:[0-9a-f]{64}|unavailable)$"}
+          "sha256": {"type": "string", "pattern": "^(sha256:[0-9a-f]{64}|unavailable)$"},
+          "hash_policy": {"enum": ["bytes_v1", "text_lf_normalized_v1", "unavailable"]}
         }
       }
     },

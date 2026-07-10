@@ -7,6 +7,7 @@ from pathlib import Path
 from typing import Any
 
 from digital_asset_directory.subagent_evaluations import content_hash
+from digital_asset_directory.utils import sha256_text_file_lf
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -333,7 +334,8 @@ def make_attempt(definition: dict[str, Any], sequence: int) -> dict[str, Any]:
         "artifact_refs": [
             {
                 "ref": f"source://{evidence_rel.as_posix()}",
-                "sha256": f"sha256:{hashlib.sha256(evidence_path.read_bytes()).hexdigest()}",
+                "sha256": f"sha256:{sha256_text_file_lf(evidence_path)}",
+                "hash_policy": "text_lf_normalized_v1",
             }
         ],
         "started_at": None,

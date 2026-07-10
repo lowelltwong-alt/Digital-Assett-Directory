@@ -87,6 +87,19 @@ def test_seed_packet_validates_and_scores_are_replayed(tmp_path: Path):
     assert terra["failures"]
 
 
+def test_evidence_hashes_survive_crlf_to_lf_checkout(tmp_path: Path):
+    hub = _hub(tmp_path)
+    evidence_dir = hub / "examples/subagent-evaluations/logos-t475-and-dad-graph-v1/evidence"
+    for path in evidence_dir.glob("*.json"):
+        path.write_bytes(path.read_bytes().replace(b"\r\n", b"\n"))
+    packet = load_packet(PACKET)
+
+    result = validate_records(
+        hub, packet["role_profiles"], packet["attempts"], packet["evaluations"]
+    )
+    assert len(result["evaluations"]) == 16
+
+
 def test_ingest_is_idempotent_and_conflicting_id_fails(tmp_path: Path):
     hub = _hub(tmp_path)
     packet = _copy_packet(tmp_path)
