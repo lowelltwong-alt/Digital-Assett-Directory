@@ -143,12 +143,8 @@ def test_exception_capture_plan_defaults_refresh_companion_reports(
         observed_outputs.append(output)
         return {"repos": []}
 
-    monkeypatch.setattr(
-        exception_capture_mod, "write_exception_backfill_readiness", fake_readiness
-    )
-    monkeypatch.setattr(
-        exception_capture_mod, "write_observed_capture_audit", fake_observed
-    )
+    monkeypatch.setattr(exception_capture_mod, "write_exception_backfill_readiness", fake_readiness)
+    monkeypatch.setattr(exception_capture_mod, "write_observed_capture_audit", fake_observed)
     monkeypatch.setattr(
         exception_capture_mod,
         "build_exception_capture_remediation_plan",
@@ -170,9 +166,7 @@ def test_exception_capture_plan_defaults_refresh_companion_reports(
     monkeypatch.setattr(
         exception_capture_mod, "_capture_gap_review_queue_markdown", lambda report: ""
     )
-    monkeypatch.setattr(
-        exception_capture_mod, "_backfill_wave_plan_markdown", lambda report: ""
-    )
+    monkeypatch.setattr(exception_capture_mod, "_backfill_wave_plan_markdown", lambda report: "")
 
     exception_capture_mod.write_exception_capture_remediation_plan(hub, [])
     exception_capture_mod.write_exception_capture_gap_review_queue(hub, [])
@@ -370,7 +364,9 @@ def test_transport_version_status_and_synthetic_rollout(tmp_path: Path):
     )
     missing_impl = tmp_path / "missing-implementation"
     (missing_impl / ".digital-asset" / "mail").mkdir(parents=True)
-    (missing_impl / ".digital-asset" / "mail" / ".gitignore").write_text("*.jsonl\n", encoding="utf-8")
+    (missing_impl / ".digital-asset" / "mail" / ".gitignore").write_text(
+        "*.jsonl\n", encoding="utf-8"
+    )
     (missing_impl / ".digital-asset" / "dad-integration.json").write_text(
         json.dumps(
             {
@@ -599,6 +595,7 @@ def test_transport_upgrade_status_obeys_policy_holds_even_when_queue_is_stale(
         "update_not_allowed": 1,
     }
 
+
 def test_transport_upgrade_status_supersedes_stale_queue_rows_with_current_audit(
     tmp_path: Path,
 ):
@@ -798,6 +795,14 @@ def test_daemon_cycle_writes_heartbeat_and_daily_queue(tmp_path: Path):
 
     assert Path(first["heartbeat_path"]).exists()
     assert Path(second["heartbeat_path"]).exists()
+    heartbeat = json.loads(Path(first["heartbeat_path"]).read_text(encoding="utf-8"))
+    assert heartbeat["reporting_privacy"]["data_classification"] == "synthetic_development_only"
+    assert heartbeat["reporting_privacy"]["real_client_data_approved"] is False
+    assert heartbeat["reporting_privacy"]["real_client_data_gate"]["status"] == "blocked"
+    assert first["reporting_privacy"] == heartbeat["reporting_privacy"]
+    assert (
+        first["daily_review_queue"]["report"]["reporting_privacy"] == heartbeat["reporting_privacy"]
+    )
     assert second["idle"] is True
     assert second["cycle_order"] == ["heartbeat"]
     assert non_heartbeat_after == non_heartbeat_before
@@ -822,17 +827,18 @@ def test_daemon_cycle_writes_heartbeat_and_daily_queue(tmp_path: Path):
     assert first["graph_surface_status"]["schema_version"] == "dad.graph_surface.status.v1"
     assert "graph_surfaces" in first["daily_review_queue"]["report"]
     assert "weekly_asset_coverage" in first["daily_review_queue"]["report"]
-    assert (
-        "Graph surface freshness"
-        in Path(first["daily_review_queue"]["markdown_path"]).read_text(encoding="utf-8")
-    )
+    assert "Graph surface freshness" in Path(
+        first["daily_review_queue"]["markdown_path"]
+    ).read_text(encoding="utf-8")
     assert "Weekly asset coverage" in Path(first["daily_review_queue"]["markdown_path"]).read_text(
         encoding="utf-8"
     )
     assert first["journal_status"]["schema_version"] == "dad.journal.status.v1"
     assert first["scheduled_tasks"]["schema_version"] == "dad.daemon.scheduled_tasks.v1"
     assert first["scheduled_tasks"]["task_count"] == 1
-    assert first["scheduled_tasks"]["tasks"][0]["health"] == "heartbeat_fresh_scheduler_not_inspected"
+    assert (
+        first["scheduled_tasks"]["tasks"][0]["health"] == "heartbeat_fresh_scheduler_not_inspected"
+    )
     assert Path(first["scheduled_tasks"]["report_path"]).exists()
     assert (
         Path(first["scheduled_tasks"]["report_path"])
@@ -977,6 +983,13 @@ def test_daemon_install_plan_uses_stable_shim_and_run_cycle(tmp_path: Path):
     assert plan["task_log_path"] in plan["wrapper_script"]
     assert plan["task_status_path"] in plan["wrapper_script"]
     assert "dad.daemon.task_run.v1" in plan["wrapper_script"]
+    assert plan["reporting_privacy"]["data_classification"] == "synthetic_development_only"
+    assert plan["reporting_privacy"]["real_client_data_approved"] is False
+    assert "data_classification = 'synthetic_development_only'" in plan["wrapper_script"]
+    assert "real_client_data_approved = $false" in plan["wrapper_script"]
+    assert "System.Text.UTF8Encoding($false)" in plan["wrapper_script"]
+    assert "System.IO.File]::WriteAllText" in plan["wrapper_script"]
+    assert "Set-Content -LiteralPath $statusPath -Encoding UTF8" not in plan["wrapper_script"]
     assert str(hub.resolve()) in plan["wrapper_script"]
     assert "--hub" in plan["run_cycle_args"]
     assert "--quiet" in plan["run_cycle_args"]
@@ -1020,9 +1033,7 @@ def test_daemon_writes_in_progress_heartbeat_before_expensive_steps(
         assert payload["cycle_completed_at"] == ""
         raise RuntimeError("stop after heartbeat observation")
 
-    monkeypatch.setattr(
-        daemon_mod, "_run_remote_outbox_ingest", fail_after_observing_heartbeat
-    )
+    monkeypatch.setattr(daemon_mod, "_run_remote_outbox_ingest", fail_after_observing_heartbeat)
 
     with pytest.raises(RuntimeError, match="heartbeat observation"):
         run_daemon_cycle(hub)
@@ -1046,9 +1057,7 @@ def test_scheduler_result_status_classifies_windows_results(
     task_status: str, last_result: str, expected: str
 ):
     assert (
-        daemon_mod._scheduler_result_status(
-            task_status=task_status, last_result=last_result
-        )
+        daemon_mod._scheduler_result_status(task_status=task_status, last_result=last_result)
         == expected
     )
 
@@ -1156,9 +1165,21 @@ def test_scheduled_tasks_status_lists_daemon_for_ui(tmp_path: Path):
     assert "stdout" not in task["scheduler"]
     assert "wrapper_text" not in task["scheduler"]
     assert "phase-13-daemon-schedule-approved" in task["human_gate_ids"]
+    privacy = status["reporting_privacy"]
+    assert privacy["schema_version"] == "dad.daemon.reporting_privacy.v1"
+    assert privacy["data_classification"] == "synthetic_development_only"
+    assert privacy["real_client_data_approved"] is False
+    assert privacy["real_client_data_gate"] == {
+        "id": "daemon-real-client-data-approved",
+        "status": "blocked",
+    }
+    assert "tenant_and_matter_isolation" in privacy["required_before_real_firm_use"]
+    assert task["reporting_privacy"] == privacy
 
 
-def test_daemon_scheduled_tasks_cli_can_write_report(tmp_path: Path, monkeypatch: pytest.MonkeyPatch):
+def test_daemon_scheduled_tasks_cli_can_write_report(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+):
     hub = _hub_for_cli(tmp_path / "hub")
     shim = tmp_path / "asset-dir.ps1"
     wrapper = tmp_path / "dad-daemon-run-cycle.ps1"
@@ -1289,7 +1310,9 @@ def test_journal_below_threshold_status_preserves_last_checkpoint(tmp_path: Path
     assert status["checkpointed_at"] == checkpointed_at
     saved = json.loads(status_path.read_text(encoding="utf-8"))
     assert saved["checkpointed_at"] == checkpointed_at
-    assert journal_status(hub, min_records=200, min_hours=24)["last_checkpoint_at"] == checkpointed_at
+    assert (
+        journal_status(hub, min_records=200, min_hours=24)["last_checkpoint_at"] == checkpointed_at
+    )
 
 
 def test_daemon_checkpoint_failure_finalizes_degraded_heartbeat(tmp_path: Path):
@@ -1309,7 +1332,9 @@ def test_daemon_checkpoint_failure_finalizes_degraded_heartbeat(tmp_path: Path):
         checkpoint_apply=True,
     )
 
-    heartbeat = json.loads((hub / "processed" / "reports" / "daemon-heartbeat.json").read_text(encoding="utf-8"))
+    heartbeat = json.loads(
+        (hub / "processed" / "reports" / "daemon-heartbeat.json").read_text(encoding="utf-8")
+    )
     assert result["journal"]["status"] == "error"
     assert heartbeat["status"] == "complete_with_errors"
     assert heartbeat["cycle_completed_at"]
@@ -1406,9 +1431,13 @@ def test_journal_apply_threshold_commits_and_pushes_to_data_repo(tmp_path: Path)
     journal_repo = tmp_path / "dad-journal"
     subprocess.run(["git", "init", "--bare", str(remote)], check=True)
     subprocess.run(["git", "init", "-b", "journal-data", str(journal_repo)], check=True)
-    subprocess.run(["git", "-C", str(journal_repo), "config", "user.email", "dad@example.test"], check=True)
+    subprocess.run(
+        ["git", "-C", str(journal_repo), "config", "user.email", "dad@example.test"], check=True
+    )
     subprocess.run(["git", "-C", str(journal_repo), "config", "user.name", "DAD Test"], check=True)
-    subprocess.run(["git", "-C", str(journal_repo), "remote", "add", "origin", str(remote)], check=True)
+    subprocess.run(
+        ["git", "-C", str(journal_repo), "remote", "add", "origin", str(remote)], check=True
+    )
 
     result = checkpoint_journal(hub, journal_repo, apply=True, min_records=200, min_hours=999)
 
@@ -1467,9 +1496,13 @@ def test_transport_readiness_can_include_journal_repo_machine_evidence(tmp_path:
     journal_repo = tmp_path / "dad-journal"
     subprocess.run(["git", "init", "--bare", str(remote)], check=True)
     subprocess.run(["git", "init", "-b", "main", str(journal_repo)], check=True)
-    subprocess.run(["git", "-C", str(journal_repo), "config", "user.email", "dad@example.test"], check=True)
+    subprocess.run(
+        ["git", "-C", str(journal_repo), "config", "user.email", "dad@example.test"], check=True
+    )
     subprocess.run(["git", "-C", str(journal_repo), "config", "user.name", "DAD Test"], check=True)
-    subprocess.run(["git", "-C", str(journal_repo), "remote", "add", "origin", str(remote)], check=True)
+    subprocess.run(
+        ["git", "-C", str(journal_repo), "remote", "add", "origin", str(remote)], check=True
+    )
     checkpoint_journal(hub, journal_repo, apply=True, min_records=200, min_hours=999)
     run_daemon_cycle(
         hub,

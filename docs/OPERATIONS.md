@@ -33,6 +33,23 @@ audit/events/audit.jsonl
 
 ## Operational readiness
 
+### Daemon reporting privacy boundary
+
+The daemon reporting system is approved only for development with mock or
+synthetic data. Its heartbeat, daily review queue, scheduler status, and
+last-run logs may expose repository paths, payload metadata, review context, or
+client data if the system is later deployed inside a real firm. Daemon status
+surfaces therefore report `data_classification: synthetic_development_only`
+and `real_client_data_approved: false`, with the
+`daemon-real-client-data-approved` gate explicitly `blocked`. These labels are
+a deployment stop signal; they do not claim that report content is redacted.
+
+Do not process real client or matter data until separate acceptance evidence
+exists for redaction and minimization, role-based access control, retention and
+secure deletion, tenant and matter isolation, privacy leak and adversarial
+tests, and an approved logging and incident-response policy. Scheduler approval
+does not satisfy or override this privacy boundary.
+
 For first-time local setup or cross-repo invocation, start with
 `docs/DAD_LOCAL_DEPLOYMENT.md`. Bootstrap writes `~/.dad/hub.json` and creates
 stable shims under `~/.dad/bin` so DAD can be called from non-DAD repos without
