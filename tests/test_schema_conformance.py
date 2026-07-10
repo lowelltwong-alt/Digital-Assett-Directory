@@ -1,6 +1,8 @@
 import json
+from copy import deepcopy
 from pathlib import Path
 
+from jsonschema.exceptions import ValidationError as JSONSchemaValidationError
 from jsonschema.validators import validator_for
 from pydantic import ValidationError
 
@@ -531,6 +533,55 @@ def test_lesson_payload_golden_fixture_matches_registered_schema():
     payload = json.loads((ROOT / "examples" / "mail" / "lesson-payload.golden.json").read_text())
 
     validate_registered_schema("lesson_payload", payload)
+
+
+def test_lesson_payload_optional_receiver_fields_preserve_legacy_and_extensions():
+    payload = json.loads((ROOT / "examples" / "mail" / "lesson-payload.golden.json").read_text())
+    optional_fields = {
+        "data_class",
+        "runtime_scope",
+        "contains_real_data",
+        "contains_private_data",
+        "contains_client_data",
+        "contains_matter_data",
+        "contains_real_carrier_data",
+        "contains_privileged_content",
+        "contains_work_product",
+        "lesson_ir",
+        "anonymity_set",
+        "adversary_model",
+        "privilege_screen",
+        "lesson_disclosure_proof",
+        "crossing_proof",
+    }
+    legacy_payload = {key: value for key, value in payload.items() if key not in optional_fields}
+    legacy_payload["reviewed_future_extension"] = {"candidate_field": True}
+
+    validate_registered_schema("lesson_payload", legacy_payload)
+
+
+@pytest.mark.parametrize(
+    ("path", "unsafe_value"),
+    [
+        (("raw_private_payload_included",), True),
+        (("contains_real_data",), True),
+        (("contains_privileged_content",), True),
+        (("lesson_ir", "support_ids_included"), True),
+        (("lesson_disclosure_proof", "formal_privacy_guarantee_claimed"), True),
+        (("crossing_proof", "formal_noninterference_guarantee_claimed"), True),
+        (("crossing_proof", "send_performed"), True),
+    ],
+)
+def test_lesson_payload_receiver_warns_on_unsafe_authority_claims(path, unsafe_value):
+    payload = json.loads((ROOT / "examples" / "mail" / "lesson-payload.golden.json").read_text())
+    mutated = deepcopy(payload)
+    target = mutated
+    for key in path[:-1]:
+        target = target[key]
+    target[path[-1]] = unsafe_value
+
+    with pytest.raises(JSONSchemaValidationError):
+        validate_registered_schema("lesson_payload", mutated)
 
 
 def test_background_connection_model_dumps_match_registered_schemas():
