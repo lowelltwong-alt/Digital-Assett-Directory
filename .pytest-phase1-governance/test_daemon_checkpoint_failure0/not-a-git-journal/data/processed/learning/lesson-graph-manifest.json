@@ -1,0 +1,51 @@
+{
+  "authority_boundary": "Lesson-graph nodes and edges are generated candidate evidence compiled from raw lessons, registries, and usage ledgers. They guide review and pattern-library growth; they do not prove value or source truth.",
+  "builder_version": "lesson-graph-builder.v0.1.0",
+  "counts": {
+    "edge_count": 0,
+    "edge_type_count": 0,
+    "node_count": 0,
+    "node_type_count": 0
+  },
+  "coverage_report": {
+    "lesson_records_without_pattern_edges": 0,
+    "offering_count": 0,
+    "pattern_gap_candidate_count": 0,
+    "registered_edge_types_with_zero_edges": [
+      "about_asset",
+      "learned_in",
+      "matches_pattern",
+      "uses_asset",
+      "watches_asset"
+    ],
+    "unmatched_asset_ref_count": 0
+  },
+  "edge_definitions_present": {},
+  "edge_registry_hash": "missing",
+  "edge_registry_version": "0.1.0",
+  "edges_by_type": {},
+  "freshness": {
+    "computed_at": "2026-07-10T17:12:02.175461+00:00",
+    "reasons": [],
+    "state": "fresh"
+  },
+  "generated_at": "2026-07-10T17:12:02.175461+00:00",
+  "graph_content_hash": "sha256:cd8388469255bd0abf1754740a448c33d4cb9a6e2cf0522d8fadfa5f932c4e1a",
+  "graph_path": "processed/learning/lesson-graph.json",
+  "input_hashes": {
+    "processed\\usage\\repo-asset-usage.jsonl": "missing",
+    "raw/lessons": "missing",
+    "registry/asset-pattern-registry.json": "missing",
+    "registry/dad-offerings-registry.json": "missing",
+    "registry/graph-edge-registry.json": "missing"
+  },
+  "manifest_path": "processed/learning/lesson-graph-manifest.json",
+  "method_versions_used": [],
+  "methodology_hashes": {
+    "builder_source": "sha256:8168d3436dd5492489f235ae739b7830d75807609f8d94deab149d2b19fa6763"
+  },
+  "nodes_by_type": {},
+  "ontology_id": "knowledge",
+  "schema_version": "0.1.0",
+  "surface_id": "lesson-graph"
+}

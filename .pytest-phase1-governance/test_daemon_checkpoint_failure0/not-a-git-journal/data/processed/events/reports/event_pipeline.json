@@ -1,0 +1,23 @@
+{
+  "actionable_notice_count": 0,
+  "authority_boundary": "DAD pipeline events are append-only candidate metadata. They do not override source repo authority, satisfy human gates, approve public release, or authorize writes outside repo-local event/mail adapters.",
+  "cloud_boundary": "Cloud mirrors are deferred and may carry only public-safe metadata after human review.",
+  "event_count": 0,
+  "event_log_path": "processed/events/event_log.jsonl",
+  "event_type_counts": {},
+  "generated_at": "2026-07-10T17:12:02.163109+00:00",
+  "input_hashes": {
+    "processed/events/event_log.jsonl": "missing",
+    "processed/events/response_state.jsonl": "missing",
+    "schemas/dad-pipeline-event.schema.json": "missing",
+    "src/digital_asset_directory/event_pipeline.py": "missing"
+  },
+  "mailbox_edge_boundary": "Mail remains the repo-facing presentation adapter; the event log is central candidate state and does not imply target adoption.",
+  "notice_without_response_state_count": 0,
+  "notice_without_response_state_ids": [],
+  "quarantine_dir": "processed/events/quarantine",
+  "response_state_count": 0,
+  "response_state_counts": {},
+  "response_state_path": "processed/events/response_state.jsonl",
+  "schema_version": "dad.event_pipeline.report.v1"
+}

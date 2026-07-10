@@ -1,0 +1,25 @@
+{
+  "authority_boundary": "Transport audit records and upgrade queue rows are central candidate metadata. They never authorize writes to target repos; upgrade delivery goes through reviewed mail/enrollment gates like any other notice.",
+  "checkpoint_scope": "DATA_PLANE_PATHS",
+  "checkpointed_at": "2026-07-10T17:12:02.657770+00:00",
+  "copied_file_count": 12,
+  "graph_surfaces": {
+    "authority_boundary": "Graph surface checkpoint rows are data-plane replication evidence for generated candidate graph surfaces. They do not approve, rank, recommend, trust, or authorize any node, edge, asset, repo, or downstream write.",
+    "checkpoint_index_rows": [],
+    "generated_at": "2026-07-10T17:12:02.657770+00:00",
+    "missing_count": 0,
+    "ready_count": 0,
+    "registry_path": "registry/graph-surface-registry.json",
+    "registry_version": "",
+    "schema_version": "dad.graph_surface_checkpoint_plan.v1",
+    "skipped_body_count": 0,
+    "skipped_unchanged_body_count": 0,
+    "snapshots": [],
+    "surface_count": 0,
+    "written_body_count": 0,
+    "written_manifest_count": 0
+  },
+  "record_count": 200,
+  "schema_version": "dad.journal.checkpoint.v1",
+  "source_data_root": "C:\\Users\\lowel\\.codex\\worktrees\\dad-rust-phase1-measurement\\.pytest-phase1-governance\\test_daemon_checkpoint_failure0\\hub"
+}

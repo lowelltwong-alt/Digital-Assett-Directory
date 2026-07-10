@@ -1,0 +1,18 @@
+{
+  "authority_boundary": "Lesson-graph nodes and edges are generated candidate evidence compiled from raw lessons, registries, and usage ledgers. They guide review and pattern-library growth; they do not prove value or source truth.",
+  "edge_count": 0,
+  "edge_registry_version": "0.1.0",
+  "edge_rule": "Edges are deterministic joins named in edge_basis. They are generated candidate evidence for review and pattern-gap discovery, not proof of relationship value.",
+  "edges": [],
+  "edges_by_type": {},
+  "generated_at": "2026-07-10T17:12:02.175461+00:00",
+  "lesson_count": 0,
+  "manifest_path": "processed/learning/lesson-graph-manifest.json",
+  "node_count": 0,
+  "nodes": [],
+  "nodes_by_type": {},
+  "pattern_gap_candidates": [],
+  "pattern_library_version": "",
+  "schema_version": "0.1.0",
+  "unmatched_asset_refs": []
+}

@@ -1,0 +1,23 @@
+{
+  "authority_boundary": "Transport audit records and upgrade queue rows are central candidate metadata. They never authorize writes to target repos; upgrade delivery goes through reviewed mail/enrollment gates like any other notice.",
+  "classification_counts": {},
+  "generated_at": "2026-07-10T17:12:02.462324+00:00",
+  "hub": {
+    "classification": "upgrade_required",
+    "data_root_mode": "legacy",
+    "meaning": "The hub itself uses PR transport while data-plane files remain git-tracked or the data root is not activated.",
+    "repo_id": "dad-hub",
+    "tracked_by_top_dir": {
+      "audit": 0,
+      "processed": 0,
+      "raw": 0,
+      "state": 0
+    },
+    "tracked_data_plane_files": 0
+  },
+  "records": [],
+  "repo_count": 0,
+  "schema_version": "0.1.0",
+  "transport_implementation_version": "1.0.0-m0m1m2",
+  "transport_surface_version": "1.0.0"
+}
