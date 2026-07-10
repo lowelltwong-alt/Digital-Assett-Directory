@@ -1,0 +1,69 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://local.digital-asset-directory/schemas/subagent-execution-attempt.schema.json",
+  "title": "Subagent Execution Attempt",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version", "attempt_id", "task_id", "invocation_sequence",
+    "source_repository", "repo_revision", "role_profile_id", "role_revision_id",
+    "display_label", "runtime_claims", "artifact_refs", "terminal_status",
+    "capture_provenance", "capture_completeness", "sensitivity", "authority_boundary"
+  ],
+  "properties": {
+    "schema_version": {"const": "0.1.0"},
+    "attempt_id": {"type": "string", "pattern": "^dad:subagent-attempt:[a-z0-9-]+$"},
+    "runtime_attempt_id": {"type": ["string", "null"]},
+    "parent_session_id": {"type": ["string", "null"]},
+    "parent_attempt_id": {"type": ["string", "null"]},
+    "task_id": {"type": "string", "minLength": 1},
+    "task_summary": {"type": "string", "minLength": 1},
+    "invocation_sequence": {"type": "integer", "minimum": 1},
+    "source_repository": {"type": "string", "minLength": 1},
+    "repo_revision": {"type": "string", "minLength": 1},
+    "worktree_attempt_id": {"type": ["string", "null"]},
+    "role_profile_id": {"type": "string", "minLength": 1},
+    "role_revision_id": {"type": "string", "minLength": 1},
+    "display_label": {"type": ["string", "null"]},
+    "runtime_claims": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["provider", "model_id", "model_family", "reasoning_effort", "verification_status"],
+      "properties": {
+        "provider": {"type": "string", "minLength": 1},
+        "model_id": {"type": "string", "minLength": 1},
+        "model_family": {"type": "string", "minLength": 1},
+        "reasoning_effort": {"type": "string", "minLength": 1},
+        "verification_status": {"enum": ["reported", "runtime_verified", "provider_verified"]}
+      }
+    },
+    "input_hashes": {"type": "object", "additionalProperties": {"type": "string", "pattern": "^(sha256:[0-9a-f]{64}|unavailable)$"}},
+    "artifact_refs": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["ref", "sha256"],
+        "properties": {
+          "ref": {"type": "string", "minLength": 1},
+          "sha256": {"type": "string", "pattern": "^(sha256:[0-9a-f]{64}|unavailable)$"}
+        }
+      }
+    },
+    "started_at": {"type": ["string", "null"]},
+    "ended_at": {"type": ["string", "null"]},
+    "terminal_status": {"enum": ["completed", "failed", "cancelled", "interrupted", "unknown"]},
+    "capture_provenance": {"type": "string", "minLength": 1},
+    "capture_completeness": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["status", "missing_fields"],
+      "properties": {
+        "status": {"enum": ["complete", "partial_reconstructed", "insufficient"]},
+        "missing_fields": {"type": "array", "items": {"type": "string", "minLength": 1}}
+      }
+    },
+    "sensitivity": {"enum": ["public", "internal", "restricted", "unknown"]},
+    "authority_boundary": {"type": "string", "minLength": 1}
+  }
+}

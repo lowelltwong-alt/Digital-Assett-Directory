@@ -50,6 +50,7 @@ raw/lessons/**
 raw/handoffs/**
 raw/exceptions/**
 raw/events/**
+raw/agent-evaluations/**
 !raw/**/.gitkeep
 !raw/**/README.md
 processed/catalog/**
@@ -72,6 +73,7 @@ processed/reports/**
 processed/skills/**
 processed/usage/**
 processed/workflow_parts/**
+processed/agents/**
 !processed/**/.gitkeep
 !processed/**/README.md
 audit/events/*.jsonl

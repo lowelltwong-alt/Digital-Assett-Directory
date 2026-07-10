@@ -1,0 +1,79 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://local.digital-asset-directory/schemas/subagent-capability-graph.schema.json",
+  "title": "Subagent Capability Evidence Graph",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version", "generated_at", "methodology_id", "methodology_version",
+    "node_count", "edge_count", "nodes_by_type", "edges_by_type", "nodes", "edges",
+    "profile_summaries", "consolidation_review_queue", "unrated_inventory", "authority_boundary"
+  ],
+  "properties": {
+    "schema_version": {"const": "0.1.0"},
+    "generated_at": {"type": "string", "minLength": 1},
+    "methodology_id": {"type": "string", "minLength": 1},
+    "methodology_version": {"type": "string", "minLength": 1},
+    "node_count": {"type": "integer", "minimum": 0},
+    "edge_count": {"type": "integer", "minimum": 0},
+    "nodes_by_type": {"type": "object", "additionalProperties": {"type": "integer", "minimum": 0}},
+    "edges_by_type": {"type": "object", "additionalProperties": {"type": "integer", "minimum": 0}},
+    "nodes": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["node_id", "node_type", "label"],
+        "properties": {
+          "node_id": {"type": "string", "minLength": 1},
+          "node_type": {"enum": ["role_profile_revision", "execution_attempt", "evaluation", "capability", "model_claim", "repository"]},
+          "label": {"type": "string", "minLength": 1}
+        },
+        "additionalProperties": true
+      }
+    },
+    "edges": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["edge_id", "source", "target", "edge_type", "edge_class", "edge_basis", "method_version", "evidence_refs", "review_status"],
+        "properties": {
+          "edge_id": {"type": "string", "minLength": 1},
+          "source": {"type": "string", "minLength": 1},
+          "target": {"type": "string", "minLength": 1},
+          "edge_type": {"enum": ["attempt_instantiates_role_revision", "attempt_in_repository", "attempt_used_model_claim", "evaluation_of_attempt", "evaluation_assesses_capability"]},
+          "edge_class": {"const": "join"},
+          "edge_basis": {"type": "string", "minLength": 1},
+          "method_version": {"type": "string", "minLength": 1},
+          "evidence_refs": {"type": "array", "minItems": 1, "items": {"type": "string", "minLength": 1}},
+          "review_status": {"const": "candidate"}
+        }
+      }
+    },
+    "profile_summaries": {"type": "array", "items": {"type": "object"}},
+    "consolidation_review_queue": {"type": "array", "items": {"type": "object"}},
+    "unrated_inventory": {
+      "type": "array",
+      "items": {"$ref": "#/$defs/unrated_inventory"}
+    },
+    "authority_boundary": {"type": "string", "minLength": 1}
+  },
+  "$defs": {
+    "unrated_inventory": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["inventory_id", "source", "record_count", "agent_execution_identity_usable", "rating_status", "reason", "observed_at", "sensitivity", "authority_boundary"],
+      "properties": {
+        "inventory_id": {"type": "string", "pattern": "^dad:subagent-unrated-inventory:[a-z0-9-]+$"},
+        "source": {"type": "string", "pattern": "^(processed|raw|state)/[A-Za-z0-9._/-]+$", "maxLength": 300},
+        "record_count": {"type": "integer", "minimum": 0},
+        "agent_execution_identity_usable": {"const": false},
+        "rating_status": {"const": "insufficient_evidence"},
+        "reason": {"type": "string", "minLength": 1, "maxLength": 1000},
+        "observed_at": {"type": "string", "minLength": 1},
+        "sensitivity": {"enum": ["public", "internal", "restricted", "unknown"]},
+        "authority_boundary": {"type": "string", "minLength": 1, "maxLength": 1000}
+      }
+    }
+  }
+}

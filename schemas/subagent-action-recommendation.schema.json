@@ -1,0 +1,29 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://local.digital-asset-directory/schemas/subagent-action-recommendation.schema.json",
+  "title": "Subagent Action Recommendation Candidate",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "recommendation_id", "action", "target_role_revision_ids", "comparison_cohort", "evaluation_ids", "rubric_refs", "capability_ids", "sample_counts", "independence_counts", "rationale", "counterevidence", "blockers", "risk", "input_fingerprint", "human_gate_required", "auto_apply", "review_status", "authority_boundary"],
+  "properties": {
+    "schema_version": {"const": "0.1.0"},
+    "recommendation_id": {"type": "string", "pattern": "^dad:subagent-recommendation:[a-z0-9]+$"},
+    "action": {"enum": ["keep_both", "consolidate_patterns", "promote_one_as_default", "retain_as_specialist", "supersede_after_review", "insufficient_evidence"]},
+    "target_role_revision_ids": {"type": "array", "minItems": 1, "uniqueItems": true, "items": {"type": "string", "minLength": 1}},
+    "comparison_cohort": {"type": "object", "additionalProperties": false, "required": ["repositories", "task_ids"], "properties": {"repositories": {"type": "array", "items": {"type": "string", "minLength": 1}}, "task_ids": {"type": "array", "items": {"type": "string", "minLength": 1}}}},
+    "evaluation_ids": {"type": "array", "items": {"type": "string", "minLength": 1}},
+    "rubric_refs": {"type": "array", "minItems": 1, "items": {"type": "string", "minLength": 1}},
+    "capability_ids": {"type": "array", "items": {"type": "string", "minLength": 1}},
+    "sample_counts": {"type": "object", "additionalProperties": {"type": "integer", "minimum": 0}},
+    "independence_counts": {"type": "object", "additionalProperties": {"type": "integer", "minimum": 0}},
+    "rationale": {"type": "string", "minLength": 1},
+    "counterevidence": {"type": "array", "items": {"type": "string", "minLength": 1}},
+    "blockers": {"type": "array", "items": {"type": "string", "minLength": 1}},
+    "risk": {"enum": ["low", "medium", "high", "critical"]},
+    "input_fingerprint": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"},
+    "human_gate_required": {"const": true},
+    "auto_apply": {"const": false},
+    "review_status": {"const": "generated_candidate"},
+    "authority_boundary": {"type": "string", "minLength": 1}
+  }
+}

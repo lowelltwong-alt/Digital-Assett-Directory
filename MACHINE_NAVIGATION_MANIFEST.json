@@ -12,8 +12,8 @@
     "AI_TABLE_OF_CONTENTS.md"
   ],
   "navigation_standards": {
-    "navigation_version": "2026.07.07.2",
-    "updated_at": "2026-07-07T02:15:00Z",
+    "navigation_version": "2026.07.10.1",
+    "updated_at": "2026-07-10T19:15:00Z",
     "single_ai_entrypoint": "AI_FRONT_DOOR.md",
     "ai_table_of_contents": "AI_TABLE_OF_CONTENTS.md",
     "navigation_registry": "registry/ai-navigation-registry.json",
@@ -162,7 +162,13 @@
     "roadmap/evidence/phase-8-dad-local-deployment.human-review-packet.json",
     "roadmap/evidence/phase-9-all-repo-read-only-inventory.md",
     "roadmap/evidence/phase-10-mail-end-to-end-trial.md",
-    "roadmap/evidence/phase-10a-mailbox-event-pipeline.md"
+    "roadmap/evidence/phase-10a-mailbox-event-pipeline.md",
+    "docs/SUBAGENT_EVALUATION_AND_CAPABILITY_GRAPH.md",
+    "registry/subagent-evaluation-methodology.json",
+    "registry/subagent-evaluation-methodologies/",
+    "registry/subagent-capability-registry.json",
+    "examples/subagent-evaluations/",
+    "processed/agents/subagent-capability-graph.json"
   ],
   "registries": {
     "source_of_truth": "registry/source-of-truth.json",
@@ -197,6 +203,9 @@
     "exception_learning_methodology": "registry/exception-learning-methodology.json",
     "coding_tactics": "registry/coding-tactics-radar.json",
     "preflight_profile_router": "registry/preflight-profile-router.json",
+    "subagent_evaluation_methodology": "registry/subagent-evaluation-methodology.json",
+    "subagent_evaluation_methodology_snapshots": "registry/subagent-evaluation-methodologies/",
+    "subagent_capabilities": "registry/subagent-capability-registry.json",
     "schemas": "registry/schema-registry.json",
     "coding_asset_registry_schema": "schemas/coding-asset-registry.schema.json",
     "language_coding_advantage_registry_schema": "schemas/language-coding-advantage-registry.schema.json",
@@ -242,6 +251,12 @@
     "data_map_adoption_schema": "schemas/data-map-adoption.schema.json",
     "reference_architecture_schema": "schemas/reference-architecture.schema.json",
     "architecture_consult_schema": "schemas/architecture-consult.schema.json",
+    "subagent_role_profile_revision_schema": "schemas/subagent-role-profile-revision.schema.json",
+    "subagent_execution_attempt_schema": "schemas/subagent-execution-attempt.schema.json",
+    "subagent_attempt_evaluation_schema": "schemas/subagent-attempt-evaluation.schema.json",
+    "subagent_capability_graph_schema": "schemas/subagent-capability-graph.schema.json",
+    "subagent_action_recommendation_schema": "schemas/subagent-action-recommendation.schema.json",
+    "subagent_human_decision_schema": "schemas/subagent-human-decision.schema.json",
     "capabilities": "registry/capability-registry.json",
     "needs": "registry/need-registry.json",
     "data_dictionary": "docs/DATA_DICTIONARY.md",
@@ -257,6 +272,8 @@
     "processed/cadence/",
     "processed/harnesses/",
     "processed/learning/",
+    "raw/agent-evaluations/",
+    "processed/agents/",
     "state/catalog.sqlite3",
     "audit/events/"
   ],

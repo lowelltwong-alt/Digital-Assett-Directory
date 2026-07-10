@@ -1,0 +1,19 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://local.digital-asset-directory/schemas/subagent-unrated-inventory.schema.json",
+  "title": "Subagent Unrated Inventory Pointer",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["inventory_id", "source", "record_count", "agent_execution_identity_usable", "rating_status", "reason", "observed_at", "sensitivity", "authority_boundary"],
+  "properties": {
+    "inventory_id": {"type": "string", "pattern": "^dad:subagent-unrated-inventory:[a-z0-9-]+$"},
+    "source": {"type": "string", "pattern": "^(processed|raw|state)/[A-Za-z0-9._/-]+$", "maxLength": 300},
+    "record_count": {"type": "integer", "minimum": 0},
+    "agent_execution_identity_usable": {"const": false},
+    "rating_status": {"const": "insufficient_evidence"},
+    "reason": {"type": "string", "minLength": 1, "maxLength": 1000},
+    "observed_at": {"type": "string", "minLength": 1},
+    "sensitivity": {"enum": ["public", "internal", "restricted", "unknown"]},
+    "authority_boundary": {"type": "string", "minLength": 1, "maxLength": 1000}
+  }
+}

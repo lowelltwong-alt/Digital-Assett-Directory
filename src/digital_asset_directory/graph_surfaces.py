@@ -8,6 +8,7 @@ journal snapshot plans. It does not make graph content authoritative.
 from __future__ import annotations
 
 import gzip
+import importlib
 import json
 from pathlib import Path
 from typing import Any
@@ -29,6 +30,7 @@ _LOGICAL_PREFIXES = {
     "research": "research",
     "reports": "central_reports",
     "exceptions": "exceptions",
+    "agents": "agents",
 }
 
 
@@ -124,6 +126,31 @@ def graph_surface_freshness(hub_root: Path, surface: dict[str, Any]) -> dict[str
         actual = _hash_surface_input(data_relative_path(hub_root, rel))
         if actual != expected:
             reasons.append(f"input_hash_changed:{rel}")
+
+    expected_edge_registry_hash = str(manifest.get("edge_registry_hash") or "")
+    if expected_edge_registry_hash:
+        actual_edge_registry_hash = _hash_surface_input(
+            hub_root / "registry/graph-edge-registry.json"
+        )
+        if actual_edge_registry_hash != expected_edge_registry_hash:
+            reasons.append("edge_registry_hash_changed")
+
+    for rel, expected in manifest.get("methodology_hashes", {}).items():
+        if rel == "builder_source":
+            module_ref = str(surface.get("builder", {}).get("module", ""))
+            module_name, separator, _attribute = module_ref.rpartition(".")
+            actual = "missing"
+            if separator and module_name:
+                try:
+                    module = importlib.import_module(module_name)
+                    source_path = Path(str(module.__file__)).resolve()
+                    actual = _hash_surface_input(source_path)
+                except (ImportError, OSError, TypeError, ValueError):
+                    actual = "missing"
+        else:
+            actual = _hash_surface_input(hub_root / rel)
+        if actual != expected:
+            reasons.append(f"methodology_hash_changed:{rel}")
 
     if "graph_content_hash_mismatch" in reasons:
         state = "inconsistent"

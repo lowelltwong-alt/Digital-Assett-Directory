@@ -1,8 +1,8 @@
 {
   "schema_version": "0.1.0",
   "registry_id": "ai-navigation-registry",
-  "navigation_version": "2026.07.07.2",
-  "updated_at": "2026-07-07T02:15:00Z",
+  "navigation_version": "2026.07.10.1",
+  "updated_at": "2026-07-10T19:15:00Z",
   "singular_entrypoint": {
     "path": "AI_FRONT_DOOR.md",
     "rule": "All agents start at AI_FRONT_DOOR.md, then follow the required read order and task-specific branches.",
@@ -350,9 +350,37 @@
       "change_class": "learning_loop",
       "route_after": ["AI_FRONT_DOOR.md", "AI_TABLE_OF_CONTENTS.md"],
       "freshness_hint": "Exception capture patterns change quickly; inspect recent changes before judging whether a repo should have emitted mail."
+    },
+    {
+      "branch_id": "subagent_evaluation_capability_graph",
+      "path": "docs/SUBAGENT_EVALUATION_AND_CAPABILITY_GRAPH.md",
+      "role": "Attempt-first subagent identity, rating, evidence, capability graph, and human consolidation review system.",
+      "tags": ["agent_skill", "knowledge_graph", "calibration", "human_gate", "validation"],
+      "use_when": "You record, rate, compare, specialize, combine, promote, or supersede subagent role revisions across repositories.",
+      "current_version": "0.1.0",
+      "last_material_change_at": "2026-07-10T19:15:00Z",
+      "change_class": "learning_loop",
+      "route_after": ["AI_FRONT_DOOR.md", "registry/subagent-evaluation-methodology.json"],
+      "freshness_hint": "Attempt scores and graph relationships remain candidate evidence; inspect pinned rubric hashes, independence counts, and human-gate blockers."
     }
   ],
   "recent_changes": [
+    {
+      "change_id": "nav-change:2026-07-10:subagent-evaluation-capability-graph",
+      "changed_at": "2026-07-10T19:15:00Z",
+      "change_type": "added_subagent_evaluation_capability_graph",
+      "paths": [
+        "docs/SUBAGENT_EVALUATION_AND_CAPABILITY_GRAPH.md",
+        "registry/subagent-evaluation-methodology.json",
+        "registry/subagent-capability-registry.json",
+        "schemas/subagent-attempt-evaluation.schema.json",
+        "src/digital_asset_directory/subagent_evaluations.py",
+        "processed/agents/subagent-capability-graph.json"
+      ],
+      "summary": "Added immutable attempt intake, pinned evidence ratings, candidate capability graph, and human-gated role consolidation review.",
+      "agent_action": "Use this branch for subagent evaluation; never infer agent identity from nicknames or use graph scores to change routing automatically.",
+      "route_tags": ["agent_skill", "knowledge_graph", "calibration", "human_gate"]
+    },
     {
       "change_id": "nav-change:2026-07-07:fable-graph-surface-mcp-handoff",
       "changed_at": "2026-07-07T02:15:00Z",

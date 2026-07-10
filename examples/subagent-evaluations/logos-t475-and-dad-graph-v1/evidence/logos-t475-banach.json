@@ -1,0 +1,19 @@
+{
+  "attempt_slug": "logos-t475-banach",
+  "authority_boundary": "This reconstructed candidate record describes one bounded execution attempt. It does not identify a person, rank a model family, or authorize agent routing, promotion, consolidation, specialization, or supersession.",
+  "capture_type": "parent_reconstructed_terminal_summary",
+  "improvement_recommendations": [
+    "Include exact repair acceptance arithmetic in the first report to shorten integration."
+  ],
+  "limitations": [
+    "This is a parent-captured bounded summary, not hidden reasoning or a full source transcript.",
+    "Exact start/end time and invocation prompt hash were unavailable."
+  ],
+  "observed_failures": [],
+  "observed_strengths": [
+    "Identified the typed editorial-footnote loss as a P1 and the missing fixture as a P2."
+  ],
+  "runtime_attempt_id": "019f4c7d-67f1-7050-b058-363d5f409ac6",
+  "schema_version": "dad.subagent.parent-captured-evidence.v1",
+  "task_id": "T475"
+}

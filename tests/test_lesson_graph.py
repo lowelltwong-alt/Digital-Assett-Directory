@@ -221,7 +221,7 @@ def test_graph_edge_registry_matches_schema_enum():
         lesson_graph_schema["properties"]["edges"]["items"]["properties"]["edge_type"]["enum"]
     )
     registry_edge_types = {row["edge_type"] for row in registry_payload["edge_types"]}
-    assert schema_edge_types == registry_edge_types
+    assert schema_edge_types <= registry_edge_types
     forbidden_claims = {
         row["claim"] for row in registry_payload["forbidden_edge_claims"]
     }

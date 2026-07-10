@@ -101,6 +101,41 @@
       "authority_boundary": "Research intake graph rows are external-source pointers and routing candidates. They do not trust, vendor, approve, or adopt external content."
     },
     {
+      "surface_id": "subagent-capability-graph",
+      "surface_kind": "generated_graph_surface",
+      "ontology_id": "knowledge",
+      "status": "active",
+      "purpose": "Compile immutable subagent attempts and rubric-pinned evaluations into a candidate capability evidence graph and human review queue.",
+      "builder": {
+        "availability": "wired",
+        "command": "asset-dir subagents graph",
+        "module": "digital_asset_directory.subagent_evaluations.build_graph"
+      },
+      "source_inputs": [
+        {"kind": "data_surface", "ref": "raw_agent_evaluations", "required": true},
+        {"kind": "registry_path", "ref": "registry/subagent-evaluation-methodology.json", "required": true},
+        {"kind": "registry_path", "ref": "registry/subagent-evaluation-methodologies", "required": true},
+        {"kind": "registry_path", "ref": "registry/subagent-capability-registry.json", "required": true},
+        {"kind": "registry_path", "ref": "registry/graph-edge-registry.json", "required": true}
+      ],
+      "outputs": {
+        "manifest_logical_path": "agents/subagent-capability-graph-manifest.json",
+        "body_logical_path": "agents/subagent-capability-graph.json"
+      },
+      "schema_refs": [
+        "schemas/subagent-capability-graph.schema.json",
+        "schemas/graph-surface-manifest.schema.json"
+      ],
+      "freshness_policy": {
+        "fresh": "hashes_match",
+        "stale": "warn",
+        "inconsistent": "block"
+      },
+      "consumers": ["agent capability review", "human consolidation decisions"],
+      "review_status": "candidate",
+      "authority_boundary": "Attempt scores and graph rows are candidate evidence. They cannot rank model families, change routing, merge identities, retire roles, or authorize recommendations."
+    },
+    {
       "surface_id": "exception-clusters",
       "surface_kind": "generated_graph_surface",
       "ontology_id": "exceptions",

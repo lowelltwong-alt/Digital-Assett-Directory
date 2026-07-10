@@ -258,6 +258,11 @@ from .rust_rollout import (
     summarize_rust_rollout_lessons,
     write_rust_rollout_plan,
 )
+from .subagent_evaluations import (
+    build_graph as build_subagent_capability_graph,
+    ingest_packet as ingest_subagent_evaluation_packet,
+    status as subagent_evaluation_status,
+)
 from .semantic_evolution import write_semantic_evolution_outputs
 from .surface_versions import build_surface_version_status
 from .template_library import validate_template_registry, write_template_library_report
@@ -298,6 +303,8 @@ lesson_app = typer.Typer(no_args_is_help=True)
 app.add_typer(lesson_app, name="lesson")
 agent_app = typer.Typer(no_args_is_help=True)
 app.add_typer(agent_app, name="agent")
+subagents_app = typer.Typer(no_args_is_help=True)
+app.add_typer(subagents_app, name="subagents")
 roadmap_app = typer.Typer(no_args_is_help=True)
 app.add_typer(roadmap_app, name="roadmap")
 research_app = typer.Typer(no_args_is_help=True)
@@ -6600,6 +6607,40 @@ def lesson_graph(hub: Optional[Path] = typer.Option(None)) -> None:
         "authority_boundary": graph["authority_boundary"],
     }
     console.print_json(data=summary)
+
+
+@subagents_app.command("ingest")
+def subagents_ingest(
+    packet: Path = typer.Option(..., "--packet", exists=True, file_okay=False),
+    hub: Optional[Path] = typer.Option(None),
+) -> None:
+    """Validate and append an immutable subagent evaluation packet."""
+    cfg = _cfg(hub=hub)
+    try:
+        result = ingest_subagent_evaluation_packet(cfg.repo_root, packet.resolve())
+    except (OSError, ValueError) as exc:
+        console.print(str(exc))
+        raise typer.Exit(2) from exc
+    console.print_json(data=result)
+
+
+@subagents_app.command("graph")
+def subagents_graph(hub: Optional[Path] = typer.Option(None)) -> None:
+    """Build the candidate subagent capability graph and review queue."""
+    cfg = _cfg(hub=hub)
+    try:
+        result = build_subagent_capability_graph(cfg.repo_root)
+    except (OSError, ValueError) as exc:
+        console.print(str(exc))
+        raise typer.Exit(2) from exc
+    console.print_json(data=result)
+
+
+@subagents_app.command("status")
+def subagents_status(hub: Optional[Path] = typer.Option(None)) -> None:
+    """Show attempt/evaluation counts without turning them into rankings."""
+    cfg = _cfg(hub=hub)
+    console.print_json(data=subagent_evaluation_status(cfg.repo_root))
 
 
 @lesson_app.command("asset-use")
