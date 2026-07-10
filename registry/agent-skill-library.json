@@ -1,6 +1,6 @@
 {
   "schema_version": "0.1.0",
-  "library_version": "0.3.0",
+  "library_version": "0.4.0",
   "status": "candidate_seed",
   "authority_boundary": "DAD owns lifecycle metadata for DAD-managed skill records. Target repos decide whether to check out, update, retire, replace, or locally adapt a skill.",
   "checkout_policy": {
@@ -373,6 +373,62 @@
         "assets/agent-skills/material-work-learning-discovery/subagents.yaml"
       ],
       "authority_boundary": "Learning outputs are privacy-safe candidates; no raw transcript, hidden reasoning, source-truth promotion, or downstream mutation is authorized.",
+      "review_status": "reviewed",
+      "last_reviewed_at": "2026-07-10",
+      "next_review_due_at": "2026-10-10"
+    },
+    {
+      "skill_id": "skill:subagent-continuous-improvement",
+      "name": "Subagent Continuous Improvement",
+      "version": "0.1.0",
+      "status": "active",
+      "skill_format": "codex_skill",
+      "path": "assets/agent-skills/subagent-continuous-improvement",
+      "entrypoint": "assets/agent-skills/subagent-continuous-improvement/SKILL.md",
+      "description": "Bidirectional peer checking, model and effort routing audits, independent grading, trend review, and human-gated subagent instruction improvement.",
+      "trigger_examples": [
+        "Delegate material work to one or more subagents.",
+        "Audit whether Luna, Terra, Sol, or a reasoning effort was proportionate to the task and material.",
+        "Review repeated subagent feedback or a high-risk disagreement before changing role instructions."
+      ],
+      "does_not_apply_when": [
+        "No material subagent attempt occurred.",
+        "The only available evidence would expose raw transcripts, hidden reasoning, client data, secrets, or source blobs."
+      ],
+      "capabilities": [
+        "subagent_self_review",
+        "independent_peer_review",
+        "model_effort_routing_audit",
+        "bidirectional_checker_dispute_review",
+        "subagent_trend_analysis",
+        "exception_candidate_routing",
+        "human_gated_instruction_improvement",
+        "fable_architecture_escalation_packet"
+      ],
+      "checkout_modes": ["pointer", "wrapper"],
+      "update_policy": "dad_mail_notice",
+      "lifecycle": {
+        "supersedes": [],
+        "superseded_by": [],
+        "retirement_reason": "",
+        "replacement_skill_id": "",
+        "change_notice_templates": [
+          "templates/mail/skill-update-available.mail.template.json",
+          "templates/mail/skill-retirement-notice.mail.template.json"
+        ]
+      },
+      "dependencies": [
+        "registry/subagent-evaluation-methodology.json",
+        "registry/subagent-improvement-policy.json",
+        "schemas/subagent-execution-attempt.schema.json",
+        "templates/prompts/FABLE_SUBAGENT_SYSTEM_ESCALATION.md"
+      ],
+      "source_evidence": [
+        "assets/agent-skills/subagent-continuous-improvement/SKILL.md",
+        "assets/agent-skills/subagent-continuous-improvement/subagents.yaml",
+        "registry/subagent-improvement-policy.json"
+      ],
+      "authority_boundary": "Subagent reviews and routing audits are candidate evidence. They cannot rank model families, silently reroute work, change instructions, send external prompts, or override human authority.",
       "review_status": "reviewed",
       "last_reviewed_at": "2026-07-10",
       "next_review_due_at": "2026-10-10"

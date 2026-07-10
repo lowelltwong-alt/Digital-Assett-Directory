@@ -1,0 +1,42 @@
+schema_version: dad_subagent_pack.v0_1
+pack_id: dad:subagent-pack:subagent-continuous-improvement
+version: 0.1.0
+status: active
+ai_agnostic: true
+trigger: after_each_subagent_attempt_for_reusable_role_or_instruction_set
+fallback: explicit_local_checklists_with_independent_review_unavailable_status
+methodology_ref: registry/subagent-evaluation-methodology.json#0.1.0
+authority_boundary: >
+  Roles create candidate evidence only; they cannot change instructions,
+  promote revisions, rank models, expose hidden reasoning, or write private data.
+review_model: >
+  Bidirectional peer-check mesh. Any different model may independently review
+  another; effort controls cost and risk, not standing authority.
+roles:
+  - role_id: luna-routine-observer
+    effort: low
+    cadence: every_attempt
+    mission: Check receipt completeness, obvious gates, evidence gaps, and normalized recurrence; may challenge any peer on bounded evidence.
+  - role_id: routing-auditor
+    effort: medium
+    default_judge: terra
+    mission: Assess task and material/dataset complexity, size, ambiguity, sensitivity, consequence, and routing proportionality.
+    required_output: [factor_rationale, cheaper_or_stronger_route, no_inflight_switch]
+    rule: Recommend only; never silently switch an in-flight agent.
+  - role_id: terra-calibration-judge
+    effort: medium
+    escalation_effort: high
+    starts_when: [luna_threshold_hit, gate_failure, score_below_70, reviewer_delta_at_least_10, privacy_or_authority_risk]
+    mission: Independently judge evidence, comparable context, counterevidence, exception candidacy, and Sol proportionality; may review any peer.
+  - role_id: sol-instruction-improver
+    effort: high_or_xhigh
+    starts_when: [concrete_gate_failure, same_failure_class_2_of_last_5, same_failure_class_3_of_last_10_high_noise]
+    mission: Propose the smallest testable instruction change with success and rollback criteria.
+    human_gate_required: true
+  - role_id: fable-external-architecture-escalation
+    effort: manual_high_or_xhigh
+    cadence: rare_thresholded_only
+    starts_when: explicit_human_copy_paste_for_unresolved_super_high_risk_architecture_disagreement
+    mission: Fairly review all sides, explain pros and cons, red-team and premortem options, decide or recommend, and propose a non-binary synthesis when better.
+    human_gate_required: true
+required_output: [existing_attempt_evaluation_record_ref, self_review_summary, independent_review_summary_or_unavailable, routing_audit_with_factor_rationale, gate_status_and_evidence_refs, threshold_decision, privacy_safe_exception_or_no_exception_summary, human_instruction_change_decision_when_applicable]

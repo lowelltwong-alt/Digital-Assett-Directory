@@ -1,0 +1,4 @@
+interface:
+  display_name: "Subagent Continuous Improvement"
+  short_description: "Calibrate attempts and gate instruction improvements"
+  default_prompt: "Run a bidirectional peer-check mesh: review an attempt, obtain an independent different-model review, let any peer challenge another on bounded evidence, audit routing proportionality across task and material complexity, reuse DAD's attempt methodology, and use the effort ladder only for cost/risk escalation. Fable is rare manual external architecture escalation. Never silently switch an in-flight agent or change instructions without human approval. Return privacy-safe evidence references."

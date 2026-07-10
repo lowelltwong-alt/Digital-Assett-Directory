@@ -29,7 +29,8 @@ from .lesson_automation_coverage import (
     write_weekly_asset_coverage_outputs,
 )
 from .mail_center import collect_mail, deliver_mail, diagnose_mail_dirty_state, route_mail
-from .transport import AUTHORITY_BOUNDARY, audit_all_repo_transport, data_path
+from .subagent_evaluations import build_improvement_review
+from .transport import AUTHORITY_BOUNDARY, audit_all_repo_transport, data_path, data_relative_path
 from .utils import atomic_write_text, json_dumps, utc_now
 
 DAEMON_HEARTBEAT_NAME = "daemon-heartbeat.json"
@@ -78,6 +79,12 @@ _CYCLE_INPUT_RELATIVE_PATHS = (
     ".digital-asset/exceptions/outbox.jsonl",
     ".digital-asset/events/outbox.jsonl",
     "processed/exceptions/fix-outcomes/outcomes.jsonl",
+)
+_SUBAGENT_CYCLE_INPUT_PATHS = (
+    "raw/agent-evaluations/role-profile-revisions.jsonl",
+    "raw/agent-evaluations/execution-attempts.jsonl",
+    "raw/agent-evaluations/attempt-evaluations.jsonl",
+    "raw/agent-evaluations/unrated-inventory.jsonl",
 )
 
 
@@ -133,6 +140,13 @@ def _cycle_input_fingerprint(
         except OSError:
             continue
         rows.append(("dad", relative, stat.st_size, stat.st_mtime_ns))
+    for relative in _SUBAGENT_CYCLE_INPUT_PATHS:
+        path = data_relative_path(hub_root, Path(relative))
+        try:
+            stat = path.stat()
+        except OSError:
+            continue
+        rows.append(("dad-data", relative, stat.st_size, stat.st_mtime_ns))
     material = json.dumps(sorted(rows), separators=(",", ":"), ensure_ascii=True)
     return hashlib.sha256(material.encode("utf-8")).hexdigest(), len(rows)
 
@@ -297,6 +311,7 @@ def _write_daily_review_queue(
     event_result: dict[str, Any],
     exception_result: dict[str, Any],
     graph_result: dict[str, Any],
+    subagent_improvement_result: dict[str, Any],
     graph_surface_status_result: dict[str, Any],
     transport_result: dict[str, Any] | None,
     weekly_asset_coverage_result: dict[str, Any],
@@ -312,6 +327,7 @@ def _write_daily_review_queue(
         "events": event_result,
         "exceptions": exception_result,
         "graphs": graph_result,
+        "subagent_improvement": subagent_improvement_result,
         "graph_surfaces": graph_surface_status_result,
         "transport": transport_result or {"status": "not_run"},
         "weekly_asset_coverage": weekly_asset_coverage_result,
@@ -342,6 +358,8 @@ def _write_daily_review_queue(
         f"- Exceptions collect: {exception_result.get('status', 'unknown')}",
         f"- Lesson graph: {graph_result.get('lesson_graph', {}).get('status', 'unknown')}",
         f"- Graph inference: {graph_result.get('inference', {}).get('status', 'unknown')}",
+        f"- Subagent improvement review: {subagent_improvement_result.get('status', 'unknown')}",
+        f"- Subagent exception candidates: {len(subagent_improvement_result.get('report', {}).get('exception_candidates', []))}",
         f"- Graph surface freshness: {graph_surface_status_result.get('freshness_counts', {})}",
         f"- Transport audit: {transport_result.get('report_path', 'not run') if transport_result else 'not run'}",
         f"- Transport upgrade count: {transport_result.get('upgrade_required_count', 'not run') if transport_result else 'not run'}",
@@ -530,6 +548,16 @@ def _run_graph_cycle(hub_root: Path) -> dict[str, Any]:
     }
 
 
+def _run_subagent_improvement_review(hub_root: Path) -> dict[str, Any]:
+    if not (hub_root / "registry" / "subagent-improvement-policy.json").exists():
+        return {
+            "status": "skipped",
+            "reason": "subagent_improvement_policy_missing",
+            "authority_boundary": AUTHORITY_BOUNDARY,
+        }
+    return build_improvement_review(hub_root)
+
+
 def _run_event_cycle(hub_root: Path, *, mail_repos: Sequence[Any] | None) -> dict[str, Any]:
     if mail_repos is None:
         return {
@@ -657,6 +685,7 @@ def run_daemon_cycle(
         "events_collect",
         "exceptions_collect",
         "lesson_graph_rebuild",
+        "subagent_improvement_review",
         "graph_inference",
         "transport_audit",
         "weekly_asset_coverage",
@@ -706,6 +735,11 @@ def run_daemon_cycle(
             "authority_boundary": AUTHORITY_BOUNDARY,
         }
     )
+    subagent_improvement_result = _step_result(
+        "subagent_improvement_review",
+        _run_subagent_improvement_review,
+        hub_root,
+    )
     transport_result = (
         audit_all_repo_transport(hub_root, transport_repos) if transport_repos is not None else None
     )
@@ -729,6 +763,7 @@ def run_daemon_cycle(
         event_result=event_result,
         exception_result=exception_result,
         graph_result=graph_result,
+        subagent_improvement_result=subagent_improvement_result,
         graph_surface_status_result=graph_surface_status_result,
         transport_result=transport_result,
         weekly_asset_coverage_result=weekly_asset_coverage_result,
@@ -760,6 +795,10 @@ def run_daemon_cycle(
             ),
             "graph_inference_status": graph_result.get("inference", {}).get(
                 "status", graph_result.get("status")
+            ),
+            "subagent_improvement_status": subagent_improvement_result.get("status"),
+            "subagent_exception_candidate_count": len(
+                subagent_improvement_result.get("report", {}).get("exception_candidates", [])
             ),
             "graph_surface_freshness_counts": graph_surface_status_result.get(
                 "freshness_counts", {}
@@ -815,6 +854,7 @@ def run_daemon_cycle(
         "events": event_result,
         "exceptions": exception_result,
         "graphs": graph_result,
+        "subagent_improvement": subagent_improvement_result,
         "graph_surface_status": graph_surface_status_result,
         "transport": transport_result,
         "weekly_asset_coverage": weekly_asset_coverage_result,

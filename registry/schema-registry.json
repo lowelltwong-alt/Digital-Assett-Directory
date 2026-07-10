@@ -86,6 +86,7 @@
     "subagent_action_recommendation": "schemas/subagent-action-recommendation.schema.json",
     "subagent_human_decision": "schemas/subagent-human-decision.schema.json",
     "subagent_unrated_inventory": "schemas/subagent-unrated-inventory.schema.json",
+    "subagent_improvement_policy": "schemas/subagent-improvement-policy.schema.json",
     "trusted_source_registry": "schemas/trusted-source-registry.schema.json",
     "rust_rollout_lesson": "schemas/rust-rollout-lesson.schema.json",
     "exception_event": "schemas/exception-event.schema.json",

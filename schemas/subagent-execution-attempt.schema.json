@@ -37,6 +37,27 @@
         "verification_status": {"enum": ["reported", "runtime_verified", "provider_verified"]}
       }
     },
+    "routing_decision": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "task_complexity", "material_complexity", "material_scale", "material_ambiguity",
+        "material_sensitivity", "consequence", "selected_model_family",
+        "selected_reasoning_effort", "selection_reason", "alternatives_considered"
+      ],
+      "properties": {
+        "task_complexity": {"enum": ["low", "medium", "high", "extreme", "unknown"]},
+        "material_complexity": {"enum": ["low", "medium", "high", "extreme", "unknown"]},
+        "material_scale": {"enum": ["small", "medium", "large", "very_large", "unknown"]},
+        "material_ambiguity": {"enum": ["low", "medium", "high", "unknown"]},
+        "material_sensitivity": {"enum": ["public", "internal", "restricted", "unknown"]},
+        "consequence": {"enum": ["low", "medium", "high", "critical", "unknown"]},
+        "selected_model_family": {"type": "string", "minLength": 1},
+        "selected_reasoning_effort": {"type": "string", "minLength": 1},
+        "selection_reason": {"type": "string", "minLength": 1},
+        "alternatives_considered": {"type": "array", "items": {"type": "string", "minLength": 1}}
+      }
+    },
     "input_hashes": {"type": "object", "additionalProperties": {"type": "string", "pattern": "^(sha256:[0-9a-f]{64}|unavailable)$"}},
     "artifact_refs": {
       "type": "array",

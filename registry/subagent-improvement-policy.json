@@ -1,0 +1,81 @@
+{
+  "schema_version": "0.1.0",
+  "policy_version": "0.1.0",
+  "status": "candidate",
+  "observation_cadence": "every_completed_subagent_attempt",
+  "trend_review_cadence": "weekly_or_after_five_new_attempts",
+  "review_topology": {
+    "mode": "bidirectional_peer_mesh",
+    "rule": "No model family is a permanent superior. Any agent may review another when task fit and independence requirements are met.",
+    "escalation_semantics": "The route ladder controls cost and unresolved risk, not status or authority."
+  },
+  "model_routes": {
+    "observer": {
+      "preferred_model_family": "luna",
+      "reasoning_effort": "low",
+      "reason": "Routine evidence extraction and completeness checks are bounded and high-volume."
+    },
+    "independent_judge": {
+      "preferred_model_family": "terra",
+      "reasoning_effort": "medium",
+      "reason": "Independent scoring needs stronger synthesis without defaulting to frontier cost."
+    },
+    "routing_auditor": {
+      "preferred_model_family": "terra",
+      "reasoning_effort": "medium",
+      "reason": "Routing review must jointly assess task and material complexity, ambiguity, sensitivity, and consequence."
+    },
+    "codex_adjudicator": {
+      "preferred_model_family": "sol",
+      "reasoning_effort": "high",
+      "reason": "Use only after material disagreement between independent Codex reviews or a high-consequence unresolved gate."
+    },
+    "instruction_improver": {
+      "preferred_model_family": "sol",
+      "reasoning_effort": "high",
+      "reason": "Instruction redesign is reserved for persistent, high-leverage, evidence-backed failures."
+    }
+  },
+  "external_escalation": {
+    "target": "fable_5_master_architect",
+    "manual_copy_only": true,
+    "auto_send": false,
+    "requires_prior_codex_adjudication": true,
+    "triggers": [
+      "super_high_risk_boss_or_architect_disagreement",
+      "unresolved_cross_model_disagreement",
+      "novel_systemic_architecture_problem",
+      "high_consequence_authority_conflict",
+      "repeated_instruction_failure_without_bounded_fix"
+    ],
+    "prompt_template": "templates/prompts/FABLE_SUBAGENT_SYSTEM_ESCALATION.md",
+    "privacy_boundary": "Use safe summaries, hashes, bounded evidence refs, and explicit unknowns only; never include client data, raw transcripts, hidden reasoning, secrets, or source blobs.",
+    "human_authority": "Fable provides the external architecture decision or recommendation; a named human reviews and decides whether to apply it."
+  },
+  "thresholds": {
+    "self_independent_delta_points": 15,
+    "calibration_mismatch_count": 2,
+    "deficit_score_below": 70,
+    "repeated_deficit_count": 3,
+    "trend_window_attempts": 5,
+    "gate_failure_escalates_immediately": true
+  },
+  "exception_policy": {
+    "not_an_exception": "A score below 100 or an isolated improvement suggestion is normal feedback.",
+    "eligible_signals": [
+      "independent_gate_failure",
+      "repeated_independent_deficit",
+      "repeated_self_independent_calibration_mismatch"
+    ],
+    "event_type": "agent_behavior_exception",
+    "review_status": "candidate"
+  },
+  "instruction_change_policy": {
+    "auto_apply": false,
+    "human_gate_required": true,
+    "minimum_change": "Change the smallest instruction or testable role contract that addresses the repeated pattern.",
+    "anti_bloat": "Consolidate or replace obsolete guidance; do not append one instruction per observation.",
+    "rollback_required": true
+  },
+  "authority_boundary": "This policy produces candidate performance and exception evidence. It cannot rank model families, rewrite agent instructions, change routing, or promote a role without review."
+}
