@@ -10,7 +10,9 @@ import pytest
 from jsonschema.validators import validator_for
 
 from digital_asset_directory.subagent_evaluations import (
+    _routing_audit,
     build_graph,
+    build_improvement_review,
     content_hash,
     ingest_packet,
     load_packet,
@@ -33,6 +35,7 @@ def _hub(tmp_path: Path) -> Path:
         "registry/subagent-evaluation-methodology.json",
         "registry/subagent-evaluation-methodologies/0.1.0.json",
         "registry/subagent-capability-registry.json",
+        "registry/subagent-improvement-policy.json",
         "registry/graph-edge-registry.json",
         "registry/edge-type-registry.json",
         "schemas/subagent-role-profile-revision.schema.json",
@@ -42,6 +45,7 @@ def _hub(tmp_path: Path) -> Path:
         "schemas/subagent-action-recommendation.schema.json",
         "schemas/subagent-evaluation-methodology.schema.json",
         "schemas/subagent-unrated-inventory.schema.json",
+        "schemas/subagent-improvement-policy.schema.json",
     ):
         target = hub / rel
         target.parent.mkdir(parents=True, exist_ok=True)
@@ -85,6 +89,146 @@ def test_seed_packet_validates_and_scores_are_replayed(tmp_path: Path):
     }
     assert terra["outcome"] == "mixed"
     assert terra["failures"]
+
+
+def test_improvement_review_flags_missing_reviews_and_routing_without_exceptions(
+    tmp_path: Path,
+):
+    hub = _hub(tmp_path)
+    ingest_packet(hub, PACKET)
+
+    result = build_improvement_review(hub)
+    report = result["report"]
+
+    assert report["attempt_count"] == 16
+    assert report["evaluation_count"] == 16
+    assert report["exception_candidates"] == []
+    assert report["adjudication_candidates"] == []
+    assert report["model_routes"]["observer"]["preferred_model_family"] == "luna"
+    assert report["model_routes"]["routing_auditor"]["preferred_model_family"] == "terra"
+    assert report["model_routes"]["codex_adjudicator"]["preferred_model_family"] == "sol"
+    assert report["review_topology"]["mode"] == "bidirectional_peer_mesh"
+    assert report["external_escalation"]["target"] == "fable_5_master_architect"
+    assert report["external_escalation"]["auto_send"] is False
+    assert all("self_review_missing" in row["signals"] for row in report["attempt_reviews"])
+    assert all("independent_review_missing" in row["signals"] for row in report["attempt_reviews"])
+    assert all("routing_decision_missing" in row["signals"] for row in report["attempt_reviews"])
+    assert Path(result["report_path"]).exists()
+
+
+def test_improvement_review_escalates_repeated_independent_deficits(tmp_path: Path):
+    hub = _hub(tmp_path)
+    ingest_packet(hub, PACKET)
+    attempts = load_packet(PACKET)["attempts"]
+    terra_attempt_ids = {
+        row["attempt_id"]
+        for row in attempts
+        if row["role_profile_id"] == "dad:role-profile:terra-integration-specialist"
+    }
+    evaluations_path = hub / "raw/agent-evaluations/attempt-evaluations.jsonl"
+    evaluations = [json.loads(line) for line in evaluations_path.read_text().splitlines()]
+    reviewer_attempt_id = "dad:subagent-attempt:dad-graph-hypatia"
+    reviewer_evidence = (
+        "source://examples/subagent-evaluations/logos-t475-and-dad-graph-v1/"
+        "evidence/dad-graph-hypatia.json"
+    )
+    independent = []
+    for seed in [row for row in evaluations if row["attempt_id"] in terra_attempt_ids]:
+        row = copy.deepcopy(seed)
+        row["evaluation_id"] += "-independent-deficit"
+        row["evaluator"] = "terra-independent-deficit-reviewer"
+        row["evaluator_attempt_id"] = reviewer_attempt_id
+        row["evaluator_independence"] = "independent"
+        row["evaluator_identity"] = {
+            "actor_id": reviewer_attempt_id,
+            "actor_type": "subagent",
+            "verification_status": "runtime_verified",
+            "relationship_to_attempt": "independent",
+            "evidence_ref": reviewer_evidence,
+        }
+        row["evidence_grade"] = "independent_hashed_review"
+        for dimension in row["dimension_results"].values():
+            dimension["score"] = 60
+        row["aggregate_result"] = {
+            "status": "rated_attempt",
+            "score": 60,
+            "gate_failed": False,
+            "confidence": 0.9,
+        }
+        row["evidence_bundle_sha256"] = content_hash(
+            {
+                key: row[key]
+                for key in (
+                    "dimension_results",
+                    "capability_results",
+                    "strengths",
+                    "failures",
+                    "improvement_recommendations",
+                    "limitations",
+                    "evidence_grade",
+                    "evaluator_identity",
+                )
+            }
+        )
+        independent.append(row)
+    _write_jsonl(evaluations_path, [*evaluations, *independent])
+
+    report = build_improvement_review(hub)["report"]
+
+    candidate = next(
+        row
+        for row in report["exception_candidates"]
+        if row["role_revision_id"] == "dad:role-profile-revision:terra-integration-specialist:v1"
+    )
+    assert candidate["signals"] == ["repeated_independent_deficit"]
+    assert len(candidate["attempt_ids"]) == 3
+    improvement = next(
+        row
+        for row in report["instruction_improvement_candidates"]
+        if row["role_revision_id"] == candidate["role_revision_id"]
+    )
+    assert improvement["human_gate_required"] is True
+    assert improvement["auto_apply"] is False
+
+    attempts_path = hub / "raw/agent-evaluations/execution-attempts.jsonl"
+    shuffled_attempts = [
+        json.loads(line) for line in attempts_path.read_text(encoding="utf-8").splitlines()
+    ]
+    _write_jsonl(attempts_path, list(reversed(shuffled_attempts)))
+    shuffled_report = build_improvement_review(hub)["report"]
+    shuffled_candidate = next(
+        row
+        for row in shuffled_report["exception_candidates"]
+        if row["role_revision_id"] == candidate["role_revision_id"]
+    )
+    assert shuffled_candidate == candidate
+
+
+def test_routing_audit_detects_overpowered_bounded_work():
+    attempt = {
+        "runtime_claims": {
+            "model_id": "gpt-5.6-sol",
+            "model_family": "sol",
+            "reasoning_effort": "high",
+        },
+        "routing_decision": {
+            "task_complexity": "low",
+            "material_complexity": "low",
+            "material_scale": "small",
+            "material_ambiguity": "low",
+            "material_sensitivity": "public",
+            "consequence": "low",
+            "selected_model_family": "sol",
+            "selected_reasoning_effort": "high",
+            "selection_reason": "Synthetic boundary test.",
+            "alternatives_considered": ["luna/low"],
+        },
+    }
+
+    result = _routing_audit(attempt)
+
+    assert result["status"] == "review_recommended"
+    assert "possible_overpowered_route" in result["signals"]
 
 
 def test_evidence_hashes_survive_crlf_to_lf_checkout(tmp_path: Path):
@@ -181,8 +325,13 @@ def test_missing_evidence_is_not_replayed_as_zero(tmp_path: Path):
         {
             key: evaluation[key]
             for key in (
-                "dimension_results", "capability_results", "strengths", "failures",
-                "improvement_recommendations", "limitations", "evidence_grade",
+                "dimension_results",
+                "capability_results",
+                "strengths",
+                "failures",
+                "improvement_recommendations",
+                "limitations",
+                "evidence_grade",
                 "evaluator_identity",
             )
         }
@@ -224,13 +373,16 @@ def test_graph_preserves_attempt_identity_and_blocks_profile_ranking(tmp_path: P
     assert terra["observational_attempt_count"] == 3
     assert terra["gate_failed_attempt_count"] == 1
     assert all(
-        row["action"] == "insufficient_evidence"
-        for row in graph["consolidation_review_queue"]
+        row["action"] == "insufficient_evidence" for row in graph["consolidation_review_queue"]
     )
     assert graph["unrated_inventory"][0]["record_count"] == 378
     assert graph["unrated_inventory"][0]["agent_execution_identity_usable"] is False
     claude_evaluation = "evaluation:dad:subagent-evaluation:dad-graph-claude-opus-timeout"
-    assert not any(edge["source"] == claude_evaluation for edge in graph["edges"] if edge["edge_type"] == "evaluation_assesses_capability")
+    assert not any(
+        edge["source"] == claude_evaluation
+        for edge in graph["edges"]
+        if edge["edge_type"] == "evaluation_assesses_capability"
+    )
 
 
 def test_repeated_reviews_of_one_attempt_do_not_inflate_profile_eligibility(tmp_path: Path):
@@ -263,8 +415,13 @@ def test_repeated_reviews_of_one_attempt_do_not_inflate_profile_eligibility(tmp_
             {
                 key: row[key]
                 for key in (
-                    "dimension_results", "capability_results", "strengths", "failures",
-                    "improvement_recommendations", "limitations", "evidence_grade",
+                    "dimension_results",
+                    "capability_results",
+                    "strengths",
+                    "failures",
+                    "improvement_recommendations",
+                    "limitations",
+                    "evidence_grade",
                     "evaluator_identity",
                 )
             }
@@ -320,7 +477,12 @@ def test_graph_contains_no_authorizing_edge_or_action(tmp_path: Path):
     graph = json.loads(Path(build_graph(hub)["graph_path"]).read_text(encoding="utf-8"))
 
     forbidden_edges = {
-        "better_than", "recommended", "approved_by", "trusted", "authorized_by", "supersedes"
+        "better_than",
+        "recommended",
+        "approved_by",
+        "trusted",
+        "authorized_by",
+        "supersedes",
     }
     assert not (set(graph["edges_by_type"]) & forbidden_edges)
     assert all(row["auto_apply"] is False for row in graph["consolidation_review_queue"])
@@ -348,7 +510,8 @@ def test_duplicate_role_revisions_create_human_gated_consolidation_candidate(tmp
     )
     assert candidate["action"] == "consolidate_patterns"
     assert set(candidate["target_role_revision_ids"]) == {
-        original["revision_id"], duplicate["revision_id"]
+        original["revision_id"],
+        duplicate["revision_id"],
     }
     assert candidate["human_gate_required"] is True
     assert candidate["auto_apply"] is False
@@ -417,9 +580,10 @@ def test_historical_evaluation_replays_against_versioned_snapshot(tmp_path: Path
     result = validate_records(
         hub, packet["role_profiles"], packet["attempts"], packet["evaluations"]
     )
-    assert result["evaluations"]["dad:subagent-evaluation:logos-t475-banach"][
-        "rubric_version"
-    ] == "0.1.0"
+    assert (
+        result["evaluations"]["dad:subagent-evaluation:logos-t475-banach"]["rubric_version"]
+        == "0.1.0"
+    )
 
 
 def test_unrated_inventory_rejects_private_or_unstructured_payload(tmp_path: Path):

@@ -50,6 +50,8 @@ GRAPH_PATH = PROCESSED_BASE / "subagent-capability-graph.json"
 MANIFEST_PATH = PROCESSED_BASE / "subagent-capability-graph-manifest.json"
 NORMALIZED_EVALUATIONS_PATH = PROCESSED_BASE / "attempt-evaluations.jsonl"
 CONSOLIDATION_QUEUE_PATH = PROCESSED_BASE / "consolidation-review-queue.jsonl"
+IMPROVEMENT_POLICY_PATH = Path("registry/subagent-improvement-policy.json")
+IMPROVEMENT_REPORT_PATH = PROCESSED_BASE / "subagent-improvement-review.json"
 BUILDER_VERSION = "subagent-capability-graph-builder.v0.1.0"
 SCHEMA_NAMES = {
     "role_profiles": "subagent_role_profile_revision",
@@ -130,6 +132,10 @@ def _hash_path(path: Path) -> str:
     return f"sha256:{hashlib.sha256(chr(10).join(parts).encode('utf-8')).hexdigest()}"
 
 
+def _text_lf_hash(path: Path) -> str:
+    return f"sha256:{sha256_text_file_lf(path)}" if path.exists() else "missing"
+
+
 def _load_json(path: Path) -> dict[str, Any]:
     return json.loads(path.read_text(encoding="utf-8"))
 
@@ -158,9 +164,11 @@ def _validate_no_private_payload(value: Any, *, location: str) -> None:
         if isinstance(current, dict):
             for key, child in current.items():
                 normalized = str(key).strip().lower()
-                if (
-                    any(term in normalized for term in FORBIDDEN_RECORD_KEYS)
-                    and child not in (None, "", [], {})
+                if any(term in normalized for term in FORBIDDEN_RECORD_KEYS) and child not in (
+                    None,
+                    "",
+                    [],
+                    {},
                 ):
                     raise ValueError(f"Forbidden sensitive field {current_path}.{key}")
                 stack.append((f"{current_path}.{key}", child))
@@ -300,8 +308,7 @@ def _is_verified_independent(
         str((evaluator_attempt or {}).get("runtime_attempt_id") or ""),
     }
     evaluator_artifact_refs = {
-        str(row.get("ref") or "")
-        for row in (evaluator_attempt or {}).get("artifact_refs", [])
+        str(row.get("ref") or "") for row in (evaluator_attempt or {}).get("artifact_refs", [])
     }
     return bool(
         evaluation.get("evaluator_independence") == "independent"
@@ -344,11 +351,11 @@ def validate_records(
 
     methodology_path = hub_root / METHODOLOGY_PATH
     methodology = _load_json(methodology_path)
-    methodology_hash = _hash_path(methodology_path)
+    methodology_hash = _text_lf_hash(methodology_path)
     current_snapshot_path = (
         hub_root / METHODOLOGY_SNAPSHOT_DIR / f"{methodology['methodology_version']}.json"
     )
-    if _hash_path(current_snapshot_path) != methodology_hash:
+    if _text_lf_hash(current_snapshot_path) != methodology_hash:
         raise ValueError(
             "Current subagent evaluation methodology must match its immutable version snapshot"
         )
@@ -378,9 +385,7 @@ def validate_records(
     }
     general_edge_types = {
         str(row["id"])
-        for row in _load_json(hub_root / "registry/edge-type-registry.json").get(
-            "edge_types", []
-        )
+        for row in _load_json(hub_root / "registry/edge-type-registry.json").get("edge_types", [])
     }
     if not EDGE_TYPES <= graph_edge_types or not EDGE_TYPES <= general_edge_types:
         raise ValueError("Subagent graph edge vocabulary is not registered in both edge registries")
@@ -441,9 +446,10 @@ def validate_records(
             "self_review": "self",
             "unknown": "unknown",
         }.get(str(evaluation["evaluator_independence"]))
-        if expected_relationship and evaluation["evaluator_identity"][
-            "relationship_to_attempt"
-        ] != expected_relationship:
+        if (
+            expected_relationship
+            and evaluation["evaluator_identity"]["relationship_to_attempt"] != expected_relationship
+        ):
             raise ValueError(
                 f"Evaluation {evaluation['evaluation_id']} reviewer relationship mismatch"
             )
@@ -460,7 +466,7 @@ def validate_records(
             )
         snapshot = _load_json(snapshot_path)
         _schema_validator(hub_root, "subagent_evaluation_methodology").validate(snapshot)
-        snapshot_hash = _hash_path(snapshot_path)
+        snapshot_hash = _text_lf_hash(snapshot_path)
         if evaluation["rubric_id"] != snapshot["methodology_id"]:
             raise ValueError(f"Evaluation {evaluation['evaluation_id']} rubric id mismatch")
         if evaluation["rubric_version"] != snapshot["methodology_version"]:
@@ -496,10 +502,14 @@ def validate_records(
                 raise ValueError(
                     f"Evaluation {evaluation['evaluation_id']} must remain insufficient_evidence"
                 )
-        elif aggregate["status"] not in {
-            "rated_attempt",
-            "parent_observational_rating",
-        } or float(aggregate["score"]) != calculated:
+        elif (
+            aggregate["status"]
+            not in {
+                "rated_attempt",
+                "parent_observational_rating",
+            }
+            or float(aggregate["score"]) != calculated
+        ):
             raise ValueError(
                 f"Evaluation {evaluation['evaluation_id']} score mismatch: "
                 f"{aggregate['score']} != {calculated}"
@@ -729,7 +739,11 @@ def build_graph(hub_root: Path) -> dict[str, Any]:
         }
         nodes.setdefault(
             repo_node,
-            {"node_id": repo_node, "node_type": "repository", "label": str(attempt["source_repository"])},
+            {
+                "node_id": repo_node,
+                "node_type": "repository",
+                "label": str(attempt["source_repository"]),
+            },
         )
         nodes.setdefault(
             model_node,
@@ -741,9 +755,30 @@ def build_graph(hub_root: Path) -> dict[str, Any]:
             },
         )
         for row in (
-            _edge(attempt_node, role_node, "attempt_instantiates_role_revision", "attempt.role_revision_id", str(attempt["attempt_id"]), method_version),
-            _edge(attempt_node, repo_node, "attempt_in_repository", "attempt.source_repository", str(attempt["attempt_id"]), method_version),
-            _edge(attempt_node, model_node, "attempt_used_model_claim", "attempt.runtime_claims", str(attempt["attempt_id"]), method_version),
+            _edge(
+                attempt_node,
+                role_node,
+                "attempt_instantiates_role_revision",
+                "attempt.role_revision_id",
+                str(attempt["attempt_id"]),
+                method_version,
+            ),
+            _edge(
+                attempt_node,
+                repo_node,
+                "attempt_in_repository",
+                "attempt.source_repository",
+                str(attempt["attempt_id"]),
+                method_version,
+            ),
+            _edge(
+                attempt_node,
+                model_node,
+                "attempt_used_model_claim",
+                "attempt.runtime_claims",
+                str(attempt["attempt_id"]),
+                method_version,
+            ),
         ):
             edges[row["edge_id"]] = row
 
@@ -761,14 +796,28 @@ def build_graph(hub_root: Path) -> dict[str, Any]:
             "outcome": evaluation["outcome"],
             "independence": evaluation["evaluator_independence"],
         }
-        row = _edge(evaluation_node, attempt_node, "evaluation_of_attempt", "evaluation.attempt_id", str(evaluation["evaluation_id"]), method_version)
+        row = _edge(
+            evaluation_node,
+            attempt_node,
+            "evaluation_of_attempt",
+            "evaluation.attempt_id",
+            str(evaluation["evaluation_id"]),
+            method_version,
+        )
         edges[row["edge_id"]] = row
         evaluations_by_attempt.setdefault(str(evaluation["attempt_id"]), []).append(evaluation)
         for capability in evaluation["capability_results"]:
             if capability["status"] != "scored":
                 continue
             capability_node = _node_id("capability", str(capability["capability_id"]))
-            row = _edge(evaluation_node, capability_node, "evaluation_assesses_capability", "evaluation.capability_results", str(evaluation["evaluation_id"]), method_version)
+            row = _edge(
+                evaluation_node,
+                capability_node,
+                "evaluation_assesses_capability",
+                "evaluation.capability_results",
+                str(evaluation["evaluation_id"]),
+                method_version,
+            )
             edges[row["edge_id"]] = row
 
     attempts_by_revision: dict[str, list[dict[str, Any]]] = {}
@@ -786,12 +835,12 @@ def build_graph(hub_root: Path) -> dict[str, Any]:
         observational_attempt_ids = {
             str(evaluation["attempt_id"])
             for evaluation in all_role_evaluations
-            if evaluation["aggregate_result"]["status"]
-            == "parent_observational_rating"
+            if evaluation["aggregate_result"]["status"] == "parent_observational_rating"
         }
         for evaluation in all_role_evaluations:
             if (
                 evaluation["aggregate_result"]["status"] == "rated_attempt"
+                and _is_verified_independent(evaluation, validated["attempts"])
                 and not evaluation["aggregate_result"]["gate_failed"]
                 and evaluation["rubric_version"] == methodology["methodology_version"]
             ):
@@ -815,8 +864,7 @@ def build_graph(hub_root: Path) -> dict[str, Any]:
             and not evaluation["aggregate_result"]["gate_failed"]
         ]
         independent_reviewers = {
-            str(row["evaluator_identity"]["actor_id"])
-            for row in independent_evaluations
+            str(row["evaluator_identity"]["actor_id"]) for row in independent_evaluations
         }
         failed_gate_attempt_ids = {
             str(evaluation["attempt_id"])
@@ -875,7 +923,9 @@ def build_graph(hub_root: Path) -> dict[str, Any]:
                 "gate_failed_attempt_count": len(failed_gate_attempt_ids),
                 "repository_count": len(repos),
                 "task_count": len(tasks),
-                "profile_score_status": "provisional" if eligible_provisional else "attempt_evidence_only",
+                "profile_score_status": "provisional"
+                if eligible_provisional
+                else "attempt_evidence_only",
                 "profile_score": (
                     round(
                         sum(attempt_scores.values()) / len(attempt_scores),
@@ -921,7 +971,9 @@ def build_graph(hub_root: Path) -> dict[str, Any]:
             "target_role_revision_ids": [row["revision_id"]],
             "action": "insufficient_evidence",
             "comparison_cohort": {
-                "repositories": sorted({str(attempt["source_repository"]) for attempt in role_attempts}),
+                "repositories": sorted(
+                    {str(attempt["source_repository"]) for attempt in role_attempts}
+                ),
                 "task_ids": sorted({str(attempt["task_id"]) for attempt in role_attempts}),
             },
             "evaluation_ids": evaluation_ids,
@@ -950,11 +1002,7 @@ def build_graph(hub_root: Path) -> dict[str, Any]:
             },
             "rationale": "Preserve the role revision and collect comparable cross-context evidence before keep/combine/promote/supersede review.",
             "counterevidence": sorted(
-                {
-                    failure
-                    for evaluation in role_evaluations
-                    for failure in evaluation["failures"]
-                }
+                {failure for evaluation in role_evaluations for failure in evaluation["failures"]}
             ),
             "blockers": list(row["blockers"]),
             "risk": "high",
@@ -985,9 +1033,7 @@ def build_graph(hub_root: Path) -> dict[str, Any]:
         if not group_recommendations:
             continue
         base = dict(group_recommendations[0])
-        supersedes = any(
-            profile.get("supersedes_revision_id") in revision_ids for profile in group
-        )
+        supersedes = any(profile.get("supersedes_revision_id") in revision_ids for profile in group)
         base["recommendation_id"] = (
             "dad:subagent-recommendation:"
             + hashlib.sha256((group_id + "\0" + "\0".join(revision_ids)).encode()).hexdigest()[:20]
@@ -1002,7 +1048,11 @@ def build_graph(hub_root: Path) -> dict[str, Any]:
             }
         )
         base["capability_ids"] = sorted(
-            {capability_id for row in group_recommendations for capability_id in row["capability_ids"]}
+            {
+                capability_id
+                for row in group_recommendations
+                for capability_id in row["capability_ids"]
+            }
         )
         base["comparison_cohort"] = {
             "repositories": sorted(
@@ -1067,7 +1117,11 @@ def build_graph(hub_root: Path) -> dict[str, Any]:
     queue_path = data_relative_path(hub_root, CONSOLIDATION_QUEUE_PATH)
     manifest_path = data_relative_path(hub_root, MANIFEST_PATH)
     write_json(graph_path, graph, allow_direct_fallback=True)
-    write_jsonl(normalized_path, sorted(evaluations, key=lambda row: str(row["evaluation_id"])), allow_direct_fallback=True)
+    write_jsonl(
+        normalized_path,
+        sorted(evaluations, key=lambda row: str(row["evaluation_id"])),
+        allow_direct_fallback=True,
+    )
     write_jsonl(queue_path, consolidation_queue, allow_direct_fallback=True)
     edge_registry_hash = _hash_path(hub_root / EDGE_REGISTRY_PATH)
     input_hashes = {
@@ -1084,10 +1138,8 @@ def build_graph(hub_root: Path) -> dict[str, Any]:
         "edge_registry_hash": edge_registry_hash,
         "input_hashes": input_hashes,
         "methodology_hashes": {
-            METHODOLOGY_PATH.as_posix(): validated["methodology_hash"],
-            METHODOLOGY_SNAPSHOT_DIR.as_posix(): validated[
-                "methodology_snapshot_dir_hash"
-            ],
+            METHODOLOGY_PATH.as_posix(): _hash_path(hub_root / METHODOLOGY_PATH),
+            METHODOLOGY_SNAPSHOT_DIR.as_posix(): validated["methodology_snapshot_dir_hash"],
             CAPABILITY_REGISTRY_PATH.as_posix(): _hash_path(hub_root / CAPABILITY_REGISTRY_PATH),
             "builder_source": _hash_path(Path(__file__)),
         },
@@ -1118,6 +1170,8 @@ def build_graph(hub_root: Path) -> dict[str, Any]:
 
 
 def validate_hub_records(hub_root: Path) -> dict[str, Any]:
+    policy = _load_json(hub_root / IMPROVEMENT_POLICY_PATH)
+    _schema_validator(hub_root, "subagent_improvement_policy").validate(policy)
     role_profiles = _read_jsonl(data_relative_path(hub_root, RAW_FILES["role_profiles"]))
     attempts = _read_jsonl(data_relative_path(hub_root, RAW_FILES["attempts"]))
     evaluations = _read_jsonl(data_relative_path(hub_root, RAW_FILES["evaluations"]))
@@ -1134,6 +1188,7 @@ def validate_hub_records(hub_root: Path) -> dict[str, Any]:
         "role_profile_count": len(role_profiles),
         "attempt_count": len(attempts),
         "evaluation_count": len(evaluations),
+        "improvement_policy_version": policy["policy_version"],
         "graph_present": graph_path.exists(),
     }
 
@@ -1151,3 +1206,295 @@ def status(hub_root: Path) -> dict[str, Any]:
         "manifest_path": str(data_relative_path(hub_root, MANIFEST_PATH)),
         "authority_boundary": AUTHORITY_BOUNDARY,
     }
+
+
+def _numeric_scores(rows: Iterable[dict[str, Any]]) -> list[float]:
+    return [
+        float(score)
+        for row in rows
+        if (score := row.get("aggregate_result", {}).get("score")) is not None
+    ]
+
+
+def _mean_score(rows: Iterable[dict[str, Any]]) -> float | None:
+    scores = _numeric_scores(rows)
+    return round(sum(scores) / len(scores), 2) if scores else None
+
+
+def _model_family_key(value: Any) -> str:
+    normalized = str(value).casefold()
+    for family in ("luna", "terra", "sol"):
+        if family in normalized:
+            return family
+    return normalized
+
+
+def _routing_audit(
+    attempt: dict[str, Any],
+) -> dict[str, Any]:
+    decision = attempt.get("routing_decision")
+    if not isinstance(decision, dict):
+        return {
+            "status": "missing_routing_decision",
+            "signals": ["routing_decision_missing"],
+        }
+    runtime = attempt["runtime_claims"]
+    signals: list[str] = []
+    selected_family = _model_family_key(decision["selected_model_family"])
+    runtime_families = {
+        _model_family_key(runtime["model_family"]),
+        _model_family_key(runtime["model_id"]),
+    }
+    if selected_family not in runtime_families:
+        signals.append("selected_model_does_not_match_runtime_claim")
+    if (
+        decision["selected_reasoning_effort"].casefold()
+        != str(runtime["reasoning_effort"]).casefold()
+    ):
+        signals.append("selected_effort_does_not_match_runtime_claim")
+    family = str(runtime["model_family"]).casefold()
+    effort = str(runtime["reasoning_effort"]).casefold()
+    high_stakes = decision["consequence"] in {"high", "critical"} or decision[
+        "material_sensitivity"
+    ] in {"restricted", "unknown"}
+    bounded_low = (
+        decision["task_complexity"] == "low"
+        and decision["material_complexity"] == "low"
+        and decision["material_scale"] == "small"
+        and decision["material_ambiguity"] == "low"
+        and decision["consequence"] == "low"
+    )
+    if "luna" in family and high_stakes:
+        signals.append("possible_underpowered_route")
+    if "sol" in family and effort in {"high", "xhigh", "max", "ultra"} and bounded_low:
+        signals.append("possible_overpowered_route")
+    return {
+        "status": "review_recommended" if signals else "proportionate_candidate",
+        "signals": signals,
+    }
+
+
+def build_improvement_review(hub_root: Path, *, record_exceptions: bool = False) -> dict[str, Any]:
+    """Build a deterministic review queue over immutable subagent evidence."""
+    policy = _load_json(hub_root / IMPROVEMENT_POLICY_PATH)
+    _schema_validator(hub_root, "subagent_improvement_policy").validate(policy)
+    role_profiles = _read_jsonl(data_relative_path(hub_root, RAW_FILES["role_profiles"]))
+    attempts = _read_jsonl(data_relative_path(hub_root, RAW_FILES["attempts"]))
+    evaluations = _read_jsonl(data_relative_path(hub_root, RAW_FILES["evaluations"]))
+    unrated = _read_jsonl(data_relative_path(hub_root, RAW_FILES["unrated_inventory"]))
+    present = [bool(role_profiles), bool(attempts), bool(evaluations)]
+    if any(present) and not all(present):
+        raise ValueError("Subagent improvement inputs are partial, not a reviewable evidence set")
+    if all(present):
+        validate_records(hub_root, role_profiles, attempts, evaluations, unrated)
+    attempts_by_id = {str(row["attempt_id"]): row for row in attempts}
+    evaluations_by_attempt: dict[str, list[dict[str, Any]]] = {}
+    for evaluation in evaluations:
+        evaluations_by_attempt.setdefault(str(evaluation["attempt_id"]), []).append(evaluation)
+
+    thresholds = policy["thresholds"]
+    attempt_reviews: list[dict[str, Any]] = []
+    for attempt in attempts:
+        attempt_id = str(attempt["attempt_id"])
+        rows = evaluations_by_attempt.get(attempt_id, [])
+        self_rows = [row for row in rows if row["evaluator_independence"] == "self_review"]
+        independent_rows = [row for row in rows if _is_verified_independent(row, attempts_by_id)]
+        self_score = _mean_score(self_rows)
+        independent_score = _mean_score(independent_rows)
+        independent_scores = _numeric_scores(independent_rows)
+        independent_score_spread = (
+            round(max(independent_scores) - min(independent_scores), 2)
+            if len(independent_scores) >= 2
+            else None
+        )
+        delta = (
+            round(abs(self_score - independent_score), 2)
+            if self_score is not None and independent_score is not None
+            else None
+        )
+        subject_family = _model_family_key(attempt["runtime_claims"]["model_family"])
+        different_model_reviews = 0
+        for evaluation in independent_rows:
+            evaluator_attempt = attempts_by_id[str(evaluation["evaluator_attempt_id"])]
+            if (
+                _model_family_key(evaluator_attempt["runtime_claims"]["model_family"])
+                != subject_family
+            ):
+                different_model_reviews += 1
+        signals: list[str] = []
+        if not self_rows:
+            signals.append("self_review_missing")
+        if not independent_rows:
+            signals.append("independent_review_missing")
+        elif different_model_reviews == 0:
+            signals.append("different_model_review_missing")
+        if delta is not None and delta >= float(thresholds["self_independent_delta_points"]):
+            signals.append("self_independent_calibration_mismatch")
+        if independent_score_spread is not None and independent_score_spread >= float(
+            thresholds["self_independent_delta_points"]
+        ):
+            signals.append("independent_review_disagreement")
+        if any(row["aggregate_result"]["gate_failed"] for row in independent_rows):
+            signals.append("independent_gate_failure")
+        routing = _routing_audit(attempt)
+        signals.extend(routing["signals"])
+        attempt_reviews.append(
+            {
+                "attempt_id": attempt_id,
+                "role_revision_id": attempt["role_revision_id"],
+                "self_review_count": len(self_rows),
+                "independent_review_count": len(independent_rows),
+                "different_model_review_count": different_model_reviews,
+                "self_score": self_score,
+                "independent_score": independent_score,
+                "independent_score_spread": independent_score_spread,
+                "self_independent_delta": delta,
+                "routing_audit": routing,
+                "signals": sorted(set(signals)),
+            }
+        )
+
+    exception_candidates: list[dict[str, Any]] = []
+    instruction_candidates: list[dict[str, Any]] = []
+    adjudication_candidates = [
+        {
+            "attempt_id": row["attempt_id"],
+            "role_revision_id": row["role_revision_id"],
+            "signal": "independent_review_disagreement",
+            "score_spread": row["independent_score_spread"],
+            "recommended_route": policy["model_routes"]["codex_adjudicator"],
+            "next_if_unresolved": policy["external_escalation"],
+            "auto_dispatch": False,
+        }
+        for row in attempt_reviews
+        if "independent_review_disagreement" in row["signals"]
+    ]
+    by_revision: dict[str, list[dict[str, Any]]] = {}
+    for row in attempt_reviews:
+        by_revision.setdefault(str(row["role_revision_id"]), []).append(row)
+    window_size = int(thresholds["trend_window_attempts"])
+    for revision_id, role_rows in sorted(by_revision.items()):
+        ordered_rows = sorted(
+            role_rows,
+            key=lambda row: (
+                str(
+                    attempts_by_id[str(row["attempt_id"])].get("ended_at")
+                    or attempts_by_id[str(row["attempt_id"])].get("started_at")
+                    or ""
+                ),
+                str(attempts_by_id[str(row["attempt_id"])]["source_repository"]),
+                str(attempts_by_id[str(row["attempt_id"])]["task_id"]),
+                int(attempts_by_id[str(row["attempt_id"])]["invocation_sequence"]),
+                str(row["attempt_id"]),
+            ),
+        )
+        window = ordered_rows[-window_size:]
+        gate_rows = [row for row in window if "independent_gate_failure" in row["signals"]]
+        deficit_rows = [
+            row
+            for row in window
+            if row["independent_score"] is not None
+            and float(row["independent_score"]) < float(thresholds["deficit_score_below"])
+        ]
+        mismatch_rows = [
+            row for row in window if "self_independent_calibration_mismatch" in row["signals"]
+        ]
+        signals: list[str] = []
+        evidence_rows: list[dict[str, Any]] = []
+        if gate_rows and thresholds["gate_failure_escalates_immediately"]:
+            signals.append("independent_gate_failure")
+            evidence_rows.extend(gate_rows)
+        if len(deficit_rows) >= int(thresholds["repeated_deficit_count"]):
+            signals.append("repeated_independent_deficit")
+            evidence_rows.extend(deficit_rows)
+        if len(mismatch_rows) >= int(thresholds["calibration_mismatch_count"]):
+            signals.append("repeated_self_independent_calibration_mismatch")
+            evidence_rows.extend(mismatch_rows)
+        if not signals:
+            continue
+        attempt_ids = sorted({str(row["attempt_id"]) for row in evidence_rows})
+        identity = content_hash(
+            {"role_revision_id": revision_id, "signals": signals, "attempt_ids": attempt_ids}
+        )
+        exception_candidates.append(
+            {
+                "candidate_id": f"dad:subagent-exception-candidate:{identity[-20:]}",
+                "event_type": policy["exception_policy"]["event_type"],
+                "role_revision_id": revision_id,
+                "signals": signals,
+                "attempt_ids": attempt_ids,
+                "severity": "high" if "independent_gate_failure" in signals else "medium",
+                "summary": (
+                    "Repeated or gate-failed independent subagent evidence requires review "
+                    f"for role revision {revision_id}: {', '.join(signals)}."
+                ),
+                "review_status": "candidate",
+            }
+        )
+        instruction_candidates.append(
+            {
+                "role_revision_id": revision_id,
+                "action": "review_smallest_instruction_or_harness_change",
+                "signals": signals,
+                "attempt_ids": attempt_ids,
+                "recommended_route": policy["model_routes"]["instruction_improver"],
+                "human_gate_required": True,
+                "auto_apply": False,
+            }
+        )
+
+    recorded_exception_ids: list[str] = []
+    if record_exceptions and exception_candidates:
+        from .exceptions_lake import EXCEPTION_OUTBOX, load_lake_events, record_exception_event
+
+        existing_summaries = {
+            str(row.get("safe_summary") or row.get("summary") or "")
+            for row in [
+                *_read_jsonl(hub_root / EXCEPTION_OUTBOX),
+                *load_lake_events(hub_root),
+            ]
+        }
+        for candidate in exception_candidates:
+            summary = str(candidate["summary"])
+            if summary in existing_summaries:
+                continue
+            result = record_exception_event(
+                hub_root,
+                hub_root,
+                event_type="agent_behavior_exception",
+                summary=summary,
+                stage="review",
+                severity=str(candidate["severity"]),
+                capture_contract="review_finding",
+                agent="subagent-improvement-review",
+                context_refs=[
+                    str(candidate["candidate_id"]),
+                    str(candidate["role_revision_id"]),
+                    *[str(value) for value in candidate["attempt_ids"]],
+                ],
+                validation_refs=["asset-dir subagents improvement-review"],
+                asset_refs=["skill:subagent-continuous-improvement"],
+            )
+            recorded_exception_ids.append(str(result["event"]["event_id"]))
+            existing_summaries.add(summary)
+
+    report = {
+        "schema_version": "dad.subagent.improvement_review.v1",
+        "generated_at": utc_now(),
+        "policy_version": policy["policy_version"],
+        "attempt_count": len(attempts),
+        "evaluation_count": len(evaluations),
+        "attempt_reviews": attempt_reviews,
+        "exception_candidates": exception_candidates,
+        "recorded_exception_event_ids": recorded_exception_ids,
+        "instruction_improvement_candidates": instruction_candidates,
+        "adjudication_candidates": adjudication_candidates,
+        "model_routes": policy["model_routes"],
+        "review_topology": policy["review_topology"],
+        "external_escalation": policy["external_escalation"],
+        "exception_boundary": policy["exception_policy"]["not_an_exception"],
+        "authority_boundary": AUTHORITY_BOUNDARY,
+    }
+    path = data_relative_path(hub_root, IMPROVEMENT_REPORT_PATH)
+    write_json(path, report, allow_direct_fallback=True)
+    return {"report_path": str(path), "report": report}

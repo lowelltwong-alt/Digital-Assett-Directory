@@ -260,6 +260,7 @@ from .rust_rollout import (
 )
 from .subagent_evaluations import (
     build_graph as build_subagent_capability_graph,
+    build_improvement_review as build_subagent_improvement_review,
     ingest_packet as ingest_subagent_evaluation_packet,
     status as subagent_evaluation_status,
 )
@@ -492,9 +493,7 @@ def transport_readiness(
         else None
     )
     journal_repo_evidence = (
-        journal_repo_status(cfg.repo_root, journal_repo)
-        if journal_repo is not None
-        else None
+        journal_repo_status(cfg.repo_root, journal_repo) if journal_repo is not None else None
     )
     console.print_json(
         data=build_transport_readiness(
@@ -1752,7 +1751,9 @@ def _payload_file_text(path: Path) -> str:
 def _payload_json_text(value: str) -> str:
     source = value.strip()
     if not source:
-        raise typer.BadParameter("--payload-json requires a JSON object, file path, or '-' for stdin.")
+        raise typer.BadParameter(
+            "--payload-json requires a JSON object, file path, or '-' for stdin."
+        )
     if source == "-":
         return sys.stdin.read()
     if source.startswith(("{", "[")):
@@ -1838,7 +1839,9 @@ def _lesson_payload_warning_result(
         schema = json.loads((repo_root / schema_ref).read_text(encoding="utf-8"))
         validator_cls = validator_for(schema)
         validator_cls.check_schema(schema)
-        errors = sorted(validator_cls(schema).iter_errors(payload), key=lambda item: list(item.path))
+        errors = sorted(
+            validator_cls(schema).iter_errors(payload), key=lambda item: list(item.path)
+        )
     except Exception as exc:
         return {
             **base,
@@ -6641,6 +6644,24 @@ def subagents_status(hub: Optional[Path] = typer.Option(None)) -> None:
     """Show attempt/evaluation counts without turning them into rankings."""
     cfg = _cfg(hub=hub)
     console.print_json(data=subagent_evaluation_status(cfg.repo_root))
+
+
+@subagents_app.command("improvement-review")
+def subagents_improvement_review(
+    hub: Optional[Path] = typer.Option(None),
+    record_exceptions: bool = typer.Option(False, "--record-exceptions"),
+) -> None:
+    """Audit review completeness, model routing, trends, and escalation candidates."""
+    cfg = _cfg(hub=hub)
+    try:
+        result = build_subagent_improvement_review(
+            cfg.repo_root,
+            record_exceptions=record_exceptions,
+        )
+    except (OSError, ValueError) as exc:
+        console.print(str(exc))
+        raise typer.Exit(2) from exc
+    console.print_json(data=result)
 
 
 @lesson_app.command("asset-use")

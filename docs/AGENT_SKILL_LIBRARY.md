@@ -138,6 +138,26 @@ reasoning.
 
 ## Public And Private Boundary
 
+## Subagent Continuous Improvement
+
+`skill:subagent-continuous-improvement` applies after material subagent use. It
+reuses DAD's immutable attempt/evaluation records, requires detailed self-review
+and independent checking when available, and audits whether model family and
+reasoning effort fit both the task and the material or dataset. Review is a
+bidirectional peer mesh: workers may challenge incorrect checks, cheaper models
+may catch bounded mistakes by frontier models, and no architect is exempt from
+verification.
+
+Routine feedback remains normal candidate evidence. Only concrete gate failures
+or repeated calibrated patterns become exception candidates. Persistent issues
+may produce a human-gated instruction-improvement proposal; no prompt edits or
+reroutes apply automatically. The daemon is report-only; writing eligible
+candidates to DAD's exception outbox requires the explicit
+`asset-dir subagents improvement-review --record-exceptions` action. Super-high-risk unresolved architecture disputes
+produce a privacy-safe manual copy/paste packet for Fable that presents all
+sides, red-teams and premortems the options, and allows a non-binary solution.
+The named human retains final authority.
+
 Skill pointers can still leak sensitive context if they carry private source
 paths, copied examples, or private repo descriptions. Cross-repo skill mail
 therefore inherits `docs/MAIL_CENTER.md`:

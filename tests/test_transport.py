@@ -815,6 +815,7 @@ def test_daemon_cycle_writes_heartbeat_and_daily_queue(tmp_path: Path):
         "events_collect",
         "exceptions_collect",
         "lesson_graph_rebuild",
+        "subagent_improvement_review",
         "graph_inference",
         "transport_audit",
         "weekly_asset_coverage",
@@ -835,6 +836,7 @@ def test_daemon_cycle_writes_heartbeat_and_daily_queue(tmp_path: Path):
     )
     assert first["journal_status"]["schema_version"] == "dad.journal.status.v1"
     assert first["scheduled_tasks"]["schema_version"] == "dad.daemon.scheduled_tasks.v1"
+    assert first["subagent_improvement"]["status"] == "skipped"
     assert first["scheduled_tasks"]["task_count"] == 1
     assert (
         first["scheduled_tasks"]["tasks"][0]["health"] == "heartbeat_fresh_scheduler_not_inspected"
@@ -857,6 +859,30 @@ def test_daemon_cycle_writes_heartbeat_and_daily_queue(tmp_path: Path):
     assert status["scheduled_task_count"] == 1
     assert status["journal_checkpoint_due"] in {True, False}
     assert status["journal_checkpoint_status"]["schema_version"] == "dad.journal.status.v1"
+
+
+def test_daemon_fingerprint_tracks_subagent_evaluation_inputs(tmp_path: Path):
+    hub = tmp_path / "hub"
+    hub.mkdir()
+
+    before, before_count = daemon_mod._cycle_input_fingerprint(
+        hub,
+        mail_repos=[],
+        exception_repos=[],
+        journal_repo=None,
+    )
+    attempts = hub / "raw" / "agent-evaluations" / "execution-attempts.jsonl"
+    attempts.parent.mkdir(parents=True)
+    attempts.write_text('{"attempt_id":"synthetic"}\n', encoding="utf-8")
+    after, after_count = daemon_mod._cycle_input_fingerprint(
+        hub,
+        mail_repos=[],
+        exception_repos=[],
+        journal_repo=None,
+    )
+
+    assert after != before
+    assert after_count == before_count + 1
 
 
 def test_daemon_cycle_with_initialized_data_root_writes_only_data_root(
