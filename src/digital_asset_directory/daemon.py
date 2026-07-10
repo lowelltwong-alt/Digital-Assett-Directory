@@ -36,6 +36,8 @@ DAEMON_HEARTBEAT_NAME = "daemon-heartbeat.json"
 DAILY_REVIEW_QUEUE_MD = "daily_review_queue.md"
 DAILY_REVIEW_QUEUE_JSON = "daily_review_queue.json"
 DAEMON_TASK_WRAPPER_NAME = "dad-daemon-run-cycle.ps1"
+DAEMON_TASK_LAST_RUN_LOG = "daemon-task-last-run.log"
+DAEMON_TASK_LAST_RUN_STATUS = "daemon-task-last-run.json"
 SCHEDULED_TASKS_REPORT_NAME = "scheduled_tasks.json"
 
 
@@ -629,6 +631,24 @@ def run_daemon_cycle(
         "heartbeat",
         "journal_checkpoint",
     ]
+    heartbeat = {
+        "schema_version": "dad.daemon.heartbeat.v1",
+        "status": "in_progress",
+        "cycle_started_at": generated_at,
+        "cycle_completed_at": "",
+        "cycle_order": cycle_order,
+        "idle": False,
+        "input_fingerprint": input_fingerprint,
+        "input_snapshot_count": input_snapshot_count,
+        "journal_checkpoint_due": journal_status_result.get("checkpoint_due"),
+        "journal_checkpoint_applied": False,
+        "journal_checkpoint_status": journal_status_result,
+        "heartbeat_finalized": False,
+        "authority_boundary": AUTHORITY_BOUNDARY,
+    }
+    atomic_write_text(
+        daemon_heartbeat_path(hub_root), json_dumps(heartbeat, pretty=True) + "\n"
+    )
     remote_outbox_result = _run_remote_outbox_ingest(
         hub_root,
         journal_repo=journal_repo,
@@ -684,44 +704,51 @@ def run_daemon_cycle(
         scheduled_tasks_result=scheduled_tasks_result,
         journal_result=journal_status_result,
     )
-    heartbeat = {
-        "schema_version": "dad.daemon.heartbeat.v1",
-        "status": "in_progress",
-        "cycle_started_at": generated_at,
-        "cycle_completed_at": "",
-        "cycle_order": cycle_order,
-        "idle": False,
-        "input_fingerprint": input_fingerprint,
-        "input_snapshot_count": input_snapshot_count,
-        "remote_outbox_ingest_status": remote_outbox_result.get("status"),
-        "mail_collect_status": mail_result.get("collect", {}).get("status", mail_result.get("status")),
-        "mail_route_status": mail_result.get("route", {}).get("status", mail_result.get("status")),
-        "mail_deliver_status": mail_result.get("deliver", {}).get("status", mail_result.get("status")),
-        "follow_through_status": follow_through_result.get("audit_status", follow_through_result.get("status")),
-        "follow_through_issue_count": follow_through_result.get("issue_count"),
-        "events_collect_status": event_result.get("collect", {}).get("status", event_result.get("status")),
-        "exceptions_collect_status": exception_result.get("status"),
-        "lesson_graph_status": graph_result.get("lesson_graph", {}).get("status", graph_result.get("status")),
-        "graph_inference_status": graph_result.get("inference", {}).get("status", graph_result.get("status")),
-        "graph_surface_freshness_counts": graph_surface_status_result.get("freshness_counts", {}),
-        "transport_audit_ran": transport_result is not None,
-        "weekly_asset_coverage_status": weekly_asset_coverage_result.get("status"),
-        "weekly_asset_coverage_missing_high_signal_count": weekly_asset_coverage_result.get(
-            "summary", {}
-        ).get("missing_high_signal_count"),
-        "weekly_asset_coverage_average_score": weekly_asset_coverage_result.get("summary", {}).get(
-            "average_coverage_score"
-        ),
-        "weekly_asset_coverage_outputs": weekly_asset_coverage_result.get("outputs", {}),
-        "journal_checkpoint_due": journal_status_result.get("checkpoint_due"),
-        "journal_checkpoint_applied": False,
-        "journal_checkpoint_status": journal_status_result,
-        "daily_review_queue": review_queue["markdown_path"],
-        "scheduled_tasks_report_path": scheduled_tasks_result["report_path"],
-        "scheduled_task_count": scheduled_tasks_result["task_count"],
-        "heartbeat_finalized": False,
-        "authority_boundary": AUTHORITY_BOUNDARY,
-    }
+    heartbeat.update(
+        {
+            "remote_outbox_ingest_status": remote_outbox_result.get("status"),
+            "mail_collect_status": mail_result.get("collect", {}).get(
+                "status", mail_result.get("status")
+            ),
+            "mail_route_status": mail_result.get("route", {}).get(
+                "status", mail_result.get("status")
+            ),
+            "mail_deliver_status": mail_result.get("deliver", {}).get(
+                "status", mail_result.get("status")
+            ),
+            "follow_through_status": follow_through_result.get(
+                "audit_status", follow_through_result.get("status")
+            ),
+            "follow_through_issue_count": follow_through_result.get("issue_count"),
+            "events_collect_status": event_result.get("collect", {}).get(
+                "status", event_result.get("status")
+            ),
+            "exceptions_collect_status": exception_result.get("status"),
+            "lesson_graph_status": graph_result.get("lesson_graph", {}).get(
+                "status", graph_result.get("status")
+            ),
+            "graph_inference_status": graph_result.get("inference", {}).get(
+                "status", graph_result.get("status")
+            ),
+            "graph_surface_freshness_counts": graph_surface_status_result.get(
+                "freshness_counts", {}
+            ),
+            "transport_audit_ran": transport_result is not None,
+            "weekly_asset_coverage_status": weekly_asset_coverage_result.get("status"),
+            "weekly_asset_coverage_missing_high_signal_count": weekly_asset_coverage_result.get(
+                "summary", {}
+            ).get("missing_high_signal_count"),
+            "weekly_asset_coverage_average_score": weekly_asset_coverage_result.get(
+                "summary", {}
+            ).get("average_coverage_score"),
+            "weekly_asset_coverage_outputs": weekly_asset_coverage_result.get(
+                "outputs", {}
+            ),
+            "daily_review_queue": review_queue["markdown_path"],
+            "scheduled_tasks_report_path": scheduled_tasks_result["report_path"],
+            "scheduled_task_count": scheduled_tasks_result["task_count"],
+        }
+    )
     atomic_write_text(daemon_heartbeat_path(hub_root), json_dumps(heartbeat, pretty=True) + "\n")
     journal_result = _step_result(
         "journal_checkpoint",
@@ -783,6 +810,9 @@ def task_scheduler_plan(
 ) -> dict[str, Any]:
     shim_path = shim or Path.home() / ".dad" / "bin" / "asset-dir.ps1"
     wrapper_path = shim_path.parent / DAEMON_TASK_WRAPPER_NAME
+    task_report_dir = data_path(hub_root, "central_reports")
+    task_log_path = task_report_dir / DAEMON_TASK_LAST_RUN_LOG
+    task_status_path = task_report_dir / DAEMON_TASK_LAST_RUN_STATUS
     tr = "HOURLY" if twice_daily else "DAILY"
     mo = "12" if twice_daily else "1"
     run_cycle_args = ["--hub", str(hub_root.resolve()), "--quiet"]
@@ -794,8 +824,25 @@ def task_scheduler_plan(
     wrapper_script = "\n".join(
         [
             "$ErrorActionPreference = 'Stop'",
-            f"& {_ps_single_quote(str(shim_path))} daemon run-cycle {wrapper_args}",
-            "exit $LASTEXITCODE",
+            f"$logPath = {_ps_single_quote(str(task_log_path))}",
+            f"$statusPath = {_ps_single_quote(str(task_status_path))}",
+            "New-Item -ItemType Directory -Force -Path (Split-Path -Parent $logPath) | Out-Null",
+            "$startedAt = [DateTimeOffset]::UtcNow.ToString('o')",
+            (
+                "& powershell -NoProfile -ExecutionPolicy Bypass -File "
+                f"{_ps_single_quote(str(shim_path))} daemon run-cycle {wrapper_args} "
+                "*> $logPath"
+            ),
+            "$exitCode = $LASTEXITCODE",
+            "$status = [ordered]@{",
+            "  schema_version = 'dad.daemon.task_run.v1'",
+            "  started_at = $startedAt",
+            "  completed_at = [DateTimeOffset]::UtcNow.ToString('o')",
+            "  exit_code = $exitCode",
+            "  log_path = $logPath",
+            "}",
+            "$status | ConvertTo-Json | Set-Content -LiteralPath $statusPath -Encoding UTF8",
+            "exit $exitCode",
             "",
         ]
     )
@@ -808,7 +855,8 @@ def task_scheduler_plan(
     )
     settings_script = (
         "$settings = New-ScheduledTaskSettingsSet "
-        "-AllowStartIfOnBatteries -DontStopIfGoingOnBatteries -StartWhenAvailable; "
+        "-AllowStartIfOnBatteries -DontStopIfGoingOnBatteries "
+        "-DontStopOnIdleEnd -StartWhenAvailable; "
         f"Set-ScheduledTask -TaskName {_ps_single_quote(task_name)} "
         "-Settings $settings | Out-Null"
     )
@@ -819,6 +867,8 @@ def task_scheduler_plan(
         "twice_daily": twice_daily,
         "shim": str(shim_path),
         "wrapper_path": str(wrapper_path),
+        "task_log_path": str(task_log_path),
+        "task_status_path": str(task_status_path),
         "wrapper_script": wrapper_script,
         "task_to_run": task_to_run,
         "run_cycle_args": run_cycle_args,
@@ -877,6 +927,7 @@ def _scheduler_status_summary(status: dict[str, Any]) -> dict[str, Any]:
         "next_run_time": status.get("next_run_time", ""),
         "last_run_time": status.get("last_run_time", ""),
         "last_result": status.get("last_result", ""),
+        "last_result_status": status.get("last_result_status", "unknown"),
         "task_to_run": status.get("task_to_run", ""),
         "wrapper_path": status.get("wrapper_path", ""),
         "wrapper_found": bool(status.get("wrapper_found", False)),
@@ -886,6 +937,26 @@ def _scheduler_status_summary(status: dict[str, Any]) -> dict[str, Any]:
         "expected_shim_found": bool(status.get("expected_shim_found", False)),
         "returncode": status.get("returncode"),
     }
+
+
+def _scheduler_result_status(*, task_status: str, last_result: str) -> str:
+    normalized_task_status = task_status.strip().casefold()
+    if normalized_task_status == "running":
+        return "running"
+    value = last_result.strip()
+    if not value:
+        return "unknown"
+    try:
+        code = int(value, 0)
+    except ValueError:
+        return "unknown"
+    if code == 267009:  # 0x41301: task is currently running.
+        return "inconsistent" if normalized_task_status else "running"
+    if code == 0:
+        return "success"
+    if code == 3221225786:  # 0xC000013A: interrupted by a control event.
+        return "interrupted"
+    return "failed"
 
 
 def _scheduled_task_health(
@@ -903,14 +974,15 @@ def _scheduled_task_health(
             return "installed_hub_mismatch"
         if not scheduler.get("expected_shim_found"):
             return "installed_shim_mismatch"
-        last_result = str(scheduler.get("last_result") or "").strip()
-        if last_result:
-            try:
-                last_result_code = int(last_result, 0)
-            except ValueError:
-                last_result_code = None
-            if last_result_code not in {None, 0}:
-                return "scheduler_last_run_failed"
+        result_status = str(scheduler.get("last_result_status") or "unknown")
+        if result_status == "running":
+            return "scheduler_running"
+        if result_status == "inconsistent":
+            return "scheduler_state_inconsistent"
+        if result_status == "interrupted":
+            return "scheduler_last_run_interrupted"
+        if result_status == "failed":
+            return "scheduler_last_run_failed"
     if heartbeat.get("status") == "fresh" and not bool(heartbeat.get("stale", True)):
         return "ready" if inspect_scheduler else "heartbeat_fresh_scheduler_not_inspected"
     if heartbeat.get("status") in {"missing", "invalid", "stale"}:
@@ -947,6 +1019,7 @@ def scheduled_tasks_status(
             "next_run_time": "",
             "last_run_time": "",
             "last_result": "",
+            "last_result_status": "unknown",
             "task_to_run": "",
             "wrapper_path": str((shim or Path.home() / ".dad" / "bin" / "asset-dir.ps1").parent / DAEMON_TASK_WRAPPER_NAME),
             "wrapper_found": None,
@@ -1085,6 +1158,8 @@ def task_scheduler_status(
     stderr = str(getattr(result, "stderr", "") or "")
     returncode = int(getattr(result, "returncode", 1))
     parsed = _parse_schtasks_list_output(stdout)
+    task_status = parsed.get("status", "")
+    last_result = parsed.get("last_result", "")
     task_to_run = parsed.get("task_to_run", "")
     hub_text = str(hub_root.resolve())
     shim_text = str((shim or Path.home() / ".dad" / "bin" / "asset-dir.ps1"))
@@ -1109,10 +1184,14 @@ def task_scheduler_status(
         "returncode": returncode,
         "stdout": stdout,
         "stderr": stderr,
-        "task_status": parsed.get("status", ""),
+        "task_status": task_status,
         "next_run_time": parsed.get("next_run_time", ""),
         "last_run_time": parsed.get("last_run_time", ""),
-        "last_result": parsed.get("last_result", ""),
+        "last_result": last_result,
+        "last_result_status": _scheduler_result_status(
+            task_status=task_status,
+            last_result=last_result,
+        ),
         "task_to_run": task_to_run,
         "wrapper_path": str(wrapper_path),
         "wrapper_found": bool(wrapper_text),

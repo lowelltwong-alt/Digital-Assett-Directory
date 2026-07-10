@@ -108,6 +108,34 @@ flowchart TD
     F --> G["Postflight feedback to DAD"]
 ```
 
+## Long-Running Commands
+
+`skill:long-run-optimization-review-pack` provides the reviewed default for
+commands that take at least 60 measured seconds or are expected to take at
+least 120 seconds. A high-effort optimization director routes independent
+algorithm, primary-source library/web research, and language/runtime reviews,
+followed by a benchmark/parity plan and separate high-effort builder for an
+approved bounded brief. The trigger is deduplicated by normalized command
+signature per session so normal work does not create a subagent storm.
+
+The runtime lane explicitly checks DAD's Rust library before proposing new
+native code. Rust adoption still follows the profiled shadow-parity stages in
+`assets/rust-buildout-guide/rust-buildout.json`.
+
+## Material-Work Learning
+
+`skill:material-work-learning-discovery` runs before postflight for every
+material build or investigation. It checks the library first, then closes
+learning loops and extracts privacy-safe candidate assets, asset-discovery
+patterns, explicit conversation-only decisions, exceptional prompts, and
+concrete reuse targets. Low-effort sentinels escalate only when the evidence is
+uncertain or high leverage.
+
+The conversation lane records only explicit participant rationale and the
+delta absent from committed artifacts. It must not store raw transcripts,
+hidden chain-of-thought, secrets, private payloads, or inferred private
+reasoning.
+
 ## Public And Private Boundary
 
 Skill pointers can still leak sensitive context if they carry private source

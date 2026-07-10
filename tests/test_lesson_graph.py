@@ -86,6 +86,23 @@ def _graph_hub(tmp_path: Path) -> Path:
     (hub / "registry" / "dad-offerings-registry.json").write_text(
         json.dumps(offerings), encoding="utf-8"
     )
+    (hub / "registry" / "agent-skill-library.json").write_text(
+        json.dumps(
+            {
+                "skills": [
+                    {
+                        "skill_id": "skill:test-learning-review",
+                        "name": "Test Learning Review",
+                        "version": "0.1.0",
+                        "status": "active",
+                        "review_status": "reviewed",
+                        "capabilities": ["learning_loop_completion"],
+                    }
+                ]
+            }
+        ),
+        encoding="utf-8",
+    )
     repo_path = tmp_path / "repo-one"
     repo_path.mkdir()
     _write_lesson(
@@ -139,7 +156,15 @@ def test_build_lesson_graph_compiles_candidate_nodes_and_edges(tmp_path: Path):
     assert "lesson:dad:lesson:graph-test-1" in node_ids
     assert "pattern:governed_learning_loop_system" in node_ids
     assert "offering:dad:offering:test-asset" in node_ids
+    assert "skill:skill:test-learning-review" in node_ids
     assert "repo:repo_one" in node_ids
+    skill_node = next(
+        node
+        for node in graph["nodes"]
+        if node["node_id"] == "skill:skill:test-learning-review"
+    )
+    assert skill_node["node_type"] == "agent_skill"
+    assert skill_node["capabilities"] == ["learning_loop_completion"]
 
     assert graph["edges_by_type"] == {
         "learned_in": 1,
@@ -170,6 +195,10 @@ def test_build_lesson_graph_compiles_candidate_nodes_and_edges(tmp_path: Path):
     ].startswith("sha256:")
     assert manifest["freshness"]["state"] == "fresh"
     assert manifest["input_hashes"]["raw/lessons"].startswith("sha256:")
+    assert manifest["input_hashes"]["registry/agent-skill-library.json"].startswith(
+        "sha256:"
+    )
+    assert manifest["coverage_report"]["agent_skill_count"] == 1
     assert "learned_in" in manifest["edge_definitions_present"]
     assert "about_asset" in manifest["edge_definitions_present"]
 

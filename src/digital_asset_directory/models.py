@@ -233,6 +233,9 @@ class ReviewLaneRecord(BaseModel):
     lane_id: Literal[
         "review-lane:red-team-and-premortem",
         "review-lane:lesson-asset-harness-scout",
+        "review-lane:learning-loop-completion",
+        "review-lane:digital-asset-pattern-discovery",
+        "review-lane:conversation-prompt-value",
     ]
     status: Literal["subagent", "checklist", "not_applicable", "not_run"]
     reviewer: str = ""

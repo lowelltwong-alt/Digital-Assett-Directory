@@ -427,7 +427,7 @@ def _load_canonical_lessons(repo_root: Path) -> list[LessonRecord]:
 
 
 def build_lesson_graph(repo_root: Path) -> dict[str, Any]:
-    """Compile lessons, patterns, offerings, repos, and usage into candidate nodes and edges.
+    """Compile lessons, patterns, offerings, agent skills, repos, and usage.
 
     The graph is a rebuildable compilation of existing raw records: dated lesson files
     stay the source of truth, every edge carries the deterministic edge_basis that
@@ -442,6 +442,13 @@ def build_lesson_graph(repo_root: Path) -> dict[str, Any]:
         offerings = load_offerings(repo_root).get("offerings", [])
     except FileNotFoundError:
         offerings = []
+    agent_skill_registry_path = repo_root / "registry" / "agent-skill-library.json"
+    if agent_skill_registry_path.exists():
+        agent_skills = json.loads(
+            agent_skill_registry_path.read_text(encoding="utf-8")
+        ).get("skills", [])
+    else:
+        agent_skills = []
     edge_registry = _load_graph_edge_registry(repo_root)
     edge_defs = {
         str(row["edge_type"]): row for row in edge_registry.get("edge_types", [])
@@ -479,6 +486,22 @@ def build_lesson_graph(repo_root: Path) -> dict[str, Any]:
             "node_type": "offering",
             "label": str(offering.get("name", offering_id)),
             "offering_type": str(offering.get("offering_type", "")),
+        }
+
+    for skill in agent_skills:
+        skill_id = str(skill.get("skill_id", ""))
+        if not skill_id:
+            continue
+        nodes[f"skill:{skill_id}"] = {
+            "node_id": f"skill:{skill_id}",
+            "node_type": "agent_skill",
+            "label": str(skill.get("name", skill_id)),
+            "version": str(skill.get("version", "")),
+            "status": str(skill.get("status", "")),
+            "review_status": str(skill.get("review_status", "")),
+            "capabilities": sorted(
+                str(value) for value in skill.get("capabilities", []) if str(value)
+            ),
         }
 
     def repo_node_id(repository: str) -> str:
@@ -630,6 +653,7 @@ def build_lesson_graph(repo_root: Path) -> dict[str, Any]:
         "registry/dad-offerings-registry.json": _hash_path(
             repo_root / "registry" / "dad-offerings-registry.json"
         ),
+        "registry/agent-skill-library.json": _hash_path(agent_skill_registry_path),
         str(CENTRAL_USAGE_LEDGER): _hash_path(
             central_usage_path(repo_root, CENTRAL_USAGE_LEDGER)
         ),
@@ -641,7 +665,7 @@ def build_lesson_graph(repo_root: Path) -> dict[str, Any]:
         "surface_id": "lesson-graph",
         "ontology_id": "knowledge",
         "generated_at": payload["generated_at"],
-        "builder_version": "lesson-graph-builder.v0.1.0",
+        "builder_version": "lesson-graph-builder.v0.2.0",
         "graph_path": LESSON_GRAPH_PATH.as_posix(),
         "manifest_path": LESSON_GRAPH_MANIFEST_PATH.as_posix(),
         "edge_registry_version": payload["edge_registry_version"],
@@ -690,6 +714,7 @@ def build_lesson_graph(repo_root: Path) -> dict[str, Any]:
                 if not any(edge["source"] == f"lesson:{lesson.lesson_id}" and edge["edge_type"] == "matches_pattern" for edge in edges.values())
             ),
             "offering_count": len(offering_ids),
+            "agent_skill_count": len(agent_skills),
         },
         "authority_boundary": payload["authority_boundary"],
     }
@@ -957,13 +982,24 @@ def add_review_feedback(
     )
 
 
-def recommended_review_lanes(task: str, paths: list[str] | None = None) -> list[dict[str, Any]]:
-    """Return lightweight review lanes future agents can run as subagents or checklists."""
+MATERIAL_LEARNING_LANE_IDS = (
+    "review-lane:learning-loop-completion",
+    "review-lane:digital-asset-pattern-discovery",
+    "review-lane:conversation-prompt-value",
+)
+
+
+def _is_material_work(task: str, paths: list[str] | None = None) -> bool:
     task_text = task.lower()
     path_text = " ".join(paths or []).lower()
     substantial_signals = {
         "coding",
+        "build",
+        "implementation",
         "refactor",
+        "investigation",
+        "deploy",
+        "cross-repo",
         "test",
         "governance",
         "mail",
@@ -976,7 +1012,12 @@ def recommended_review_lanes(task: str, paths: list[str] | None = None) -> list[
         "public",
         "private",
     }
-    material = any(signal in task_text or signal in path_text for signal in substantial_signals)
+    return any(signal in task_text or signal in path_text for signal in substantial_signals)
+
+
+def recommended_review_lanes(task: str, paths: list[str] | None = None) -> list[dict[str, Any]]:
+    """Return lightweight review lanes future agents can run as subagents or checklists."""
+    material = _is_material_work(task, paths)
     mode = "subagent_when_available_else_checklist" if material else "checklist_if_useful"
     return [
         {
@@ -992,6 +1033,27 @@ def recommended_review_lanes(task: str, paths: list[str] | None = None) -> list[
             "purpose": "Look for reusable lessons, novel/important digital assets, coding-harness ideas, skill updates, and DAD needs discovered during the work.",
             "capture": "Record candidate lessons/assets/harness ideas in postflight and, for downstream repos, in the repo outbox when local policy allows.",
             "required_for": "material work where a reusable lesson, asset, harness, or workflow may have been learned",
+        },
+        {
+            "lane_id": "review-lane:learning-loop-completion",
+            "mode": mode,
+            "purpose": "Find and close incomplete learning loops, escalating effort only for uncertainty, conflict, or high leverage.",
+            "capture": "Record completed loops, incomplete loops, agent ratings, and the smallest next action.",
+            "required_for": "every material build, refactor, investigation, or cross-repo task",
+        },
+        {
+            "lane_id": "review-lane:digital-asset-pattern-discovery",
+            "mode": mode,
+            "purpose": "Find reusable assets, missed-asset signals, and novel patterns for discovering, grading, or applying assets.",
+            "capture": "Dedupe against DAD and record privacy-safe candidates with targets and falsifiable validators.",
+            "required_for": "every material build, refactor, investigation, or cross-repo task",
+        },
+        {
+            "lane_id": "review-lane:conversation-prompt-value",
+            "mode": mode,
+            "purpose": "Capture explicit reusable conversation decisions and exceptional prompts absent from final artifacts.",
+            "capture": "Store only privacy-safe summaries; exclude raw transcripts, hidden reasoning, secrets, and private payloads.",
+            "required_for": "every material build, refactor, investigation, or cross-repo task",
         },
     ]
 
@@ -1012,7 +1074,7 @@ def parse_review_lane_records(values: Any) -> list[ReviewLaneRecord]:
     for value in _review_lane_values(values):
         parsed = _parse_review_lane_value(value)
         lanes[parsed.lane_id] = parsed
-    return [lanes["review-lane:red-team-and-premortem"], lanes["review-lane:lesson-asset-harness-scout"]]
+    return list(lanes.values())
 
 
 def _review_lane_values(values: Any) -> list[str]:
@@ -1115,6 +1177,11 @@ def preflight(
         "recommended_review_lanes": recommended_review_lanes(
             task,
             baseline_changed_files,
+        ),
+        "required_review_lane_ids": (
+            list(MATERIAL_LEARNING_LANE_IDS)
+            if _is_material_work(task, baseline_changed_files)
+            else []
         ),
     }
     payload["context_pack"] = compile_context_pack(
@@ -1246,6 +1313,19 @@ def postflight(
     repository = Path(session["repository"])
     changed = split_multi(kwargs.get("files_changed")) or git_changed_files(repository)
     created = utc_now()
+    review_lanes = parse_review_lane_records(kwargs.get("review_lanes"))
+    required_lane_ids = set(session.get("required_review_lane_ids") or [])
+    incomplete_required_lanes = sorted(
+        lane.lane_id
+        for lane in review_lanes
+        if lane.lane_id in required_lane_ids
+        and lane.status not in {"subagent", "checklist"}
+    )
+    if incomplete_required_lanes:
+        raise ValueError(
+            "material postflight requires completed learning review lanes: "
+            + ", ".join(incomplete_required_lanes)
+        )
     handoff = HandoffRecord(
         handoff_id=stable_id("handoff", sid, created),
         session_id=sid,
@@ -1265,7 +1345,7 @@ def postflight(
         lessons=split_multi(kwargs.get("lessons")),
         risks=split_multi(kwargs.get("risks")),
         next_actions=split_multi(kwargs.get("next_actions")),
-        review_lanes=parse_review_lane_records(kwargs.get("review_lanes")),
+        review_lanes=review_lanes,
         review_status=kwargs.get("review_status", "candidate"),
     )
     trace_outcomes = record_trace_outcomes(

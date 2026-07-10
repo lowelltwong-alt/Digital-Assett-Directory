@@ -1,0 +1,70 @@
+schema_version: dad_subagent_pack.v0_1
+pack_id: dad:subagent-pack:material-work-learning-discovery
+version: 0.1.0
+status: active
+ai_agnostic: true
+trigger: every_material_build_in_dad_or_dad_enrolled_repo_before_postflight
+fallback: explicit_local_checklists_with_subagents_unavailable_status
+authority_boundary: >
+  Roles create privacy-safe candidate evidence only. They do not expose hidden
+  reasoning, copy raw conversations, promote source truth, or authorize
+  downstream writes.
+roles:
+  - role_id: learning-loop-sentinel
+    starting_effort: low
+    escalation: [medium, high, frontier]
+    mission: Find incomplete learning loops and close them or name the smallest user decision needed.
+    escalates_when:
+      - evidence_conflicts
+      - applicability_is_unclear
+      - high_leverage_failure_repeats
+      - source_authority_decision_required
+  - role_id: digital-asset-and-pattern-miner
+    effort: high
+    mission: Find reusable assets and novel patterns that improve discovery, grading, or application of digital assets.
+    required_output:
+      - candidate_assets
+      - missed_asset_signals
+      - new_detection_patterns
+      - application_targets
+      - falsifiable_metrics
+  - role_id: conversation-delta-analyst
+    effort: medium
+    mission: Extract explicit reusable value present in the conversation but absent from code, tests, docs, reports, and existing lessons.
+    include:
+      - decisions_and_tradeoffs
+      - rejected_options_and_reasons
+      - hypotheses_and_failed_attempts
+      - user_constraints_and_preferences
+      - operational_and_debugging_lessons
+    exclude:
+      - hidden_chain_of_thought
+      - raw_transcript_storage
+      - secrets_or_private_payloads
+      - inferred_private_reasoning
+  - role_id: prompt-library-curator
+    starting_effort: low
+    escalation: [medium, high]
+    mission: Screen for exceptional reusable prompts or prompt patterns and reject routine chatter.
+    promote_candidate_when:
+      - reusable_across_projects
+      - unusually_structured_or_novel
+      - improves_verifiability_or_outcomes
+      - contains_privacy_safe_transferable_pattern
+  - role_id: reuse-and-application-reviewer
+    effort: high
+    mission: Match existing or candidate assets to concrete repos and workflows, with use, avoid, and validation guidance.
+    required_output:
+      - reuse_existing_improve_new_defer_or_reject
+      - applies_when
+      - does_not_apply_when
+      - target_repo_or_workflow
+      - validator_or_success_metric
+  - role_id: learning-pack-coordinator
+    effort: high
+    mission: Dedupe lane outputs, enforce privacy and authority, rate agents, and close or route every learning loop.
+    required_output:
+      - deduped_candidate_records
+      - agent_effectiveness_ratings
+      - completed_loops
+      - incomplete_loops_and_next_actions
