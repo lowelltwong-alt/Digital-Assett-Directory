@@ -82,6 +82,30 @@ ABSOLUTE_PATH_RE = re.compile(
     r"(?:(?<![A-Za-z0-9])[A-Za-z]:[/\\]|\\\\|(?<![A-Za-z0-9+.:_/-])/(?!/))",
     re.IGNORECASE,
 )
+FORBIDDEN_AUTHORITY_CLAIMS = (
+    "authorizes routing",
+    "authorizes promotion",
+    "authorizes retirement",
+    "authorizes theology",
+    "authorizes merge",
+    "routing authority",
+    "promotion authority",
+    "retirement authority",
+    "theology authority",
+    "merge authority",
+)
+
+
+def _validate_candidate_authority_boundary(value: Any, label: str) -> None:
+    boundary = str(value)
+    lowered = boundary.casefold()
+    if "candidate" not in lowered or not any(
+        marker in lowered for marker in ("do not", "does not", "cannot", "not")
+    ):
+        raise ValueError(f"{label} must declare a candidate-only non-authority boundary")
+    for claim in FORBIDDEN_AUTHORITY_CLAIMS:
+        if claim in lowered:
+            raise ValueError(f"{label} contains forbidden authority claim: {claim}")
 
 
 def _canonical_bytes(value: Any) -> bytes:
@@ -312,6 +336,10 @@ def validate_records(
     ):
         for index, row in enumerate(rows, start=1):
             _validate_no_private_payload(row, location=f"{kind}[{index}]")
+            _validate_candidate_authority_boundary(
+                row.get("authority_boundary"),
+                f"{kind}[{index}] authority boundary",
+            )
     _verify_source_artifacts(hub_root, attempts)
 
     methodology_path = hub_root / METHODOLOGY_PATH
@@ -371,11 +399,19 @@ def validate_records(
     evaluations_by_id = unique(evaluations, "evaluation_id", "evaluation")
 
     for profile in role_profiles:
+        _validate_candidate_authority_boundary(
+            profile.get("authority_boundary"),
+            f"Role revision {profile['revision_id']} authority boundary",
+        )
         unhashed = {key: value for key, value in profile.items() if key != "revision_sha256"}
         if profile["revision_sha256"] != content_hash(unhashed):
             raise ValueError(f"Role revision {profile['revision_id']} content hash mismatch")
 
     for attempt in attempts:
+        _validate_candidate_authority_boundary(
+            attempt.get("authority_boundary"),
+            f"Attempt {attempt['attempt_id']} authority boundary",
+        )
         revision_id = str(attempt["role_revision_id"])
         profile = profiles_by_revision.get(revision_id)
         if profile is None:
@@ -384,6 +420,10 @@ def validate_records(
             raise ValueError(f"Attempt {attempt['attempt_id']} role profile/revision mismatch")
 
     for evaluation in evaluations:
+        _validate_candidate_authority_boundary(
+            evaluation.get("authority_boundary"),
+            f"Evaluation {evaluation['evaluation_id']} authority boundary",
+        )
         attempt = attempts_by_id.get(str(evaluation["attempt_id"]))
         if attempt is None:
             raise ValueError(
@@ -926,6 +966,79 @@ def build_graph(hub_root: Path) -> dict[str, Any]:
         }
         recommendation_validator.validate(recommendation)
         consolidation_queue.append(recommendation)
+
+    # Revisions of the same role profile are duplicate/similar candidates. Keep
+    # them immutable, but collapse their review rows into one human-gated action
+    # candidate so DAD can compare or consolidate them without applying a change.
+    profile_groups: dict[str, list[dict[str, Any]]] = {}
+    for profile in role_profiles:
+        profile_groups.setdefault(str(profile["role_profile_id"]), []).append(profile)
+    for group_id, group in sorted(profile_groups.items()):
+        if len(group) < 2:
+            continue
+        revision_ids = sorted(str(profile["revision_id"]) for profile in group)
+        group_recommendations = [
+            row
+            for row in consolidation_queue
+            if set(row["target_role_revision_ids"]) & set(revision_ids)
+        ]
+        if not group_recommendations:
+            continue
+        base = dict(group_recommendations[0])
+        supersedes = any(
+            profile.get("supersedes_revision_id") in revision_ids for profile in group
+        )
+        base["recommendation_id"] = (
+            "dad:subagent-recommendation:"
+            + hashlib.sha256((group_id + "\0" + "\0".join(revision_ids)).encode()).hexdigest()[:20]
+        )
+        base["target_role_revision_ids"] = revision_ids
+        base["action"] = "supersede_after_review" if supersedes else "consolidate_patterns"
+        base["evaluation_ids"] = sorted(
+            {
+                evaluation_id
+                for row in group_recommendations
+                for evaluation_id in row["evaluation_ids"]
+            }
+        )
+        base["capability_ids"] = sorted(
+            {capability_id for row in group_recommendations for capability_id in row["capability_ids"]}
+        )
+        base["comparison_cohort"] = {
+            "repositories": sorted(
+                {
+                    repository
+                    for row in group_recommendations
+                    for repository in row["comparison_cohort"]["repositories"]
+                }
+            ),
+            "task_ids": sorted(
+                {
+                    task_id
+                    for row in group_recommendations
+                    for task_id in row["comparison_cohort"]["task_ids"]
+                }
+            ),
+        }
+        base["rationale"] = (
+            "Repeated role-profile revisions are similar candidates. Compare their "
+            "bounded evidence and preserve differences before any human-gated consolidation "
+            + ("or supersession review." if supersedes else "review.")
+        )
+        base["input_fingerprint"] = content_hash(
+            {
+                "role_profile_ids": revision_ids,
+                "evaluation_ids": base["evaluation_ids"],
+                "methodology_hash": validated["methodology_hash"],
+            }
+        )
+        consolidation_queue = [
+            row
+            for row in consolidation_queue
+            if not (set(row["target_role_revision_ids"]) & set(revision_ids))
+        ]
+        recommendation_validator.validate(base)
+        consolidation_queue.append(base)
 
     generated_at = utc_now()
     node_rows = sorted(nodes.values(), key=lambda row: str(row["node_id"]))
