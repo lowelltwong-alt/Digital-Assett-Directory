@@ -34,7 +34,7 @@ from .lesson_automation_coverage import (
 from .mail_center import collect_mail, deliver_mail, diagnose_mail_dirty_state, route_mail
 from .subagent_evaluations import build_improvement_review
 from .transport import AUTHORITY_BOUNDARY, audit_all_repo_transport, data_path, data_relative_path
-from .utils import atomic_write_text, json_dumps, utc_now
+from .utils import atomic_write_text, json_dumps, sha256_file, utc_now
 
 DAEMON_HEARTBEAT_NAME = "daemon-heartbeat.json"
 DAILY_REVIEW_QUEUE_MD = "daily_review_queue.md"
@@ -100,6 +100,25 @@ _SUBAGENT_CYCLE_INPUT_PATHS = (
 )
 
 
+def _git_index_path(repo_root: Path) -> Path | None:
+    dot_git = repo_root / ".git"
+    if dot_git.is_dir():
+        return dot_git / "index"
+    if not dot_git.is_file():
+        return None
+    try:
+        marker = dot_git.read_text(encoding="utf-8").strip()
+    except OSError:
+        return None
+    prefix = "gitdir:"
+    if not marker.lower().startswith(prefix):
+        return None
+    git_dir = Path(marker[len(prefix):].strip())
+    if not git_dir.is_absolute():
+        git_dir = (repo_root / git_dir).resolve()
+    return git_dir / "index"
+
+
 def _cycle_input_fingerprint(
     hub_root: Path,
     *,
@@ -107,7 +126,7 @@ def _cycle_input_fingerprint(
     exception_repos: Sequence[Any] | None,
     journal_repo: Path | None,
 ) -> tuple[str, int]:
-    rows: list[tuple[str, str, int, int]] = []
+    rows: list[tuple[Any, ...]] = []
     seen: set[tuple[str, str]] = set()
     enabled_policies = [
         policy for policy in (mail_repos or []) if bool(getattr(policy, "mail_enabled", True))
@@ -135,16 +154,57 @@ def _cycle_input_fingerprint(
         relatives = LOGOS_LLOS_SURFACES.get(repo_id)
         raw_control_root = getattr(policy, "llos_control_path", None)
         configured_control_root = str(raw_control_root).strip() if raw_control_root is not None else ""
-        if not relatives or not configured_control_root:
-            continue
-        control_root = Path(configured_control_root)
-        for relative in (*relatives, POLICY_PATH):
-            path = control_root / relative
-            try:
-                stat = path.stat()
-            except OSError:
-                continue
-            rows.append((f"{repo_id}:llos-control", relative, stat.st_size, stat.st_mtime_ns))
+        if relatives and configured_control_root:
+            control_root = Path(configured_control_root)
+            for relative in (*relatives, POLICY_PATH):
+                path = control_root / relative
+                try:
+                    stat = path.stat()
+                except OSError:
+                    continue
+                rows.append(
+                    (f"{repo_id}:llos-control", relative, stat.st_size, stat.st_mtime_ns)
+                )
+        raw_transport_root = getattr(policy, "transport_audit_path", None)
+        configured_transport_root = (
+            str(raw_transport_root).strip() if raw_transport_root is not None else ""
+        )
+        if configured_transport_root:
+            transport_root = Path(configured_transport_root)
+            for relative in (
+                ".digital-asset/dad-integration.json",
+                ".digital-asset/mail/.gitignore",
+            ):
+                path = transport_root / relative
+                try:
+                    stat = path.stat()
+                except OSError:
+                    continue
+                rows.append(
+                    (
+                        f"{repo_id}:transport-audit",
+                        relative,
+                        stat.st_size,
+                        stat.st_mtime_ns,
+                        sha256_file(path),
+                    )
+                )
+            index_path = _git_index_path(transport_root)
+            if index_path is not None:
+                try:
+                    stat = index_path.stat()
+                except OSError:
+                    pass
+                else:
+                    rows.append(
+                        (
+                            f"{repo_id}:transport-audit",
+                            ".git/index",
+                            stat.st_size,
+                            stat.st_mtime_ns,
+                            sha256_file(index_path),
+                        )
+                    )
     if journal_repo is not None:
         remote_root = journal_repo / "remote-outbox"
         if remote_root.exists():

@@ -149,6 +149,8 @@ mail:
     #   path: 'C:\Users\lowel\OneDrive\Desktop\Git Projects\example-public-repo'
     #   # Optional read-only control mirror. Mail still uses `path` above.
     #   llos_control_path: 'C:\Users\lowel\.dad\control-mirrors\example-public-repo'
+    #   # Optional read-only transport audit root. Collection still uses `path`.
+    #   transport_audit_path: 'C:\Users\lowel\.dad\control-mirrors\example-public-repo'
     #   alias: example-public
     #   visibility: public
     #   public_facing: true

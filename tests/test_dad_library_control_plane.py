@@ -1082,6 +1082,12 @@ def test_load_config_resolves_separate_llos_control_path(tmp_path: Path) -> None
                 "    - id: logos-scripture-graph",
                 "      path: live/scripture",
                 "      llos_control_path: control-mirrors/scripture",
+                "      transport_audit_path: transport-mirrors/scripture",
+                "    - id: blank-audit-root",
+                "      path: live/blank",
+                "      transport_audit_path: ''",
+                "    - id: omitted-audit-root",
+                "      path: live/omitted",
                 "",
             ]
         ),
@@ -1093,6 +1099,9 @@ def test_load_config_resolves_separate_llos_control_path(tmp_path: Path) -> None
     policy = cfg.mail_repos[0]
     assert policy.path == hub / "live/scripture"
     assert policy.llos_control_path == hub / "control-mirrors/scripture"
+    assert policy.transport_audit_path == hub / "transport-mirrors/scripture"
+    assert cfg.mail_repos[1].transport_audit_path is None
+    assert cfg.mail_repos[2].transport_audit_path is None
 
 
 def test_load_config_preserves_absolute_llos_control_path(tmp_path: Path) -> None:
@@ -1115,6 +1124,7 @@ def test_load_config_preserves_absolute_llos_control_path(tmp_path: Path) -> Non
                 "    - id: logos-scripture-graph",
                 "      path: live/scripture",
                 f"      llos_control_path: '{mirror}'",
+                f"      transport_audit_path: '{mirror}'",
                 "",
             ]
         ),
@@ -1124,6 +1134,7 @@ def test_load_config_preserves_absolute_llos_control_path(tmp_path: Path) -> Non
     cfg = load_config(repo_root=hub)
 
     assert cfg.mail_repos[0].llos_control_path == mirror
+    assert cfg.mail_repos[0].transport_audit_path == mirror
 
 
 def test_dad_inventory_cli_can_use_reviewed_github_repository_file(
