@@ -78,6 +78,9 @@ def test_preflight_postflight_closes_session_and_persists(tmp_path: Path):
     lanes = {lane["lane_id"]: lane for lane in session["recommended_review_lanes"]}
     assert "review-lane:red-team-and-premortem" in lanes
     assert "review-lane:lesson-asset-harness-scout" in lanes
+    assert "review-lane:learning-loop-completion" in lanes
+    assert "review-lane:digital-asset-pattern-discovery" in lanes
+    assert "review-lane:conversation-prompt-value" in lanes
     assert lanes["review-lane:red-team-and-premortem"]["mode"] in {
         "subagent_when_available_else_checklist",
         "checklist_if_useful",
@@ -92,6 +95,9 @@ def test_preflight_postflight_closes_session_and_persists(tmp_path: Path):
         review_lanes=[
             "review-lane:red-team-and-premortem:checklist:checked failure modes",
             "review-lane:lesson-asset-harness-scout:checklist:captured reusable lesson",
+            "review-lane:learning-loop-completion:checklist:closed learning loops",
+            "review-lane:digital-asset-pattern-discovery:checklist:deduped asset patterns",
+            "review-lane:conversation-prompt-value:checklist:reviewed conversation delta",
         ],
     )
     assert handoff.session_id == session["session_id"]
@@ -101,6 +107,9 @@ def test_preflight_postflight_closes_session_and_persists(tmp_path: Path):
     } == {
         "review-lane:red-team-and-premortem",
         "review-lane:lesson-asset-harness-scout",
+        "review-lane:learning-loop-completion",
+        "review-lane:digital-asset-pattern-discovery",
+        "review-lane:conversation-prompt-value",
     }
     assert lesson.lessons == ["capture state transitions"]
     with CatalogDB(db_path) as db:
@@ -115,7 +124,7 @@ def test_postflight_defaults_unrecorded_review_lanes_to_not_run(tmp_path: Path):
     repo = tmp_path / "repo"
     repo.mkdir()
     db_path = hub / "state" / "catalog.sqlite3"
-    session = preflight(hub, repo, db_path, "codex", "schema registry work")
+    session = preflight(hub, repo, db_path, "codex", "status query")
 
     handoff, _lesson = postflight(hub, db_path, session["session_id"], "completed")
 
@@ -130,7 +139,7 @@ def test_postflight_accepts_json_review_lane_records(tmp_path: Path):
     repo = tmp_path / "repo"
     repo.mkdir()
     db_path = hub / "state" / "catalog.sqlite3"
-    session = preflight(hub, repo, db_path, "codex", "harness asset scout work")
+    session = preflight(hub, repo, db_path, "codex", "status query")
     lane = {
         "lane_id": "review-lane:lesson-asset-harness-scout",
         "status": "subagent",
@@ -156,6 +165,64 @@ def test_postflight_accepts_json_review_lane_records(tmp_path: Path):
     )
     assert scout.status == "subagent"
     assert scout.candidate_outputs == ["dad:need:subagent-review-and-asset-scout-findings"]
+
+
+def test_material_postflight_requires_learning_discovery_lanes(tmp_path: Path):
+    hub = tmp_path / "hub"
+    hub.mkdir()
+    (hub / "state" / "agent_sessions").mkdir(parents=True)
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    db_path = hub / "state" / "catalog.sqlite3"
+    session = preflight(hub, repo, db_path, "codex", "build transport code")
+
+    assert set(session["required_review_lane_ids"]) == {
+        "review-lane:learning-loop-completion",
+        "review-lane:digital-asset-pattern-discovery",
+        "review-lane:conversation-prompt-value",
+    }
+    with pytest.raises(ValueError, match="material postflight requires"):
+        postflight(hub, db_path, session["session_id"], "completed")
+
+    handoff, _lesson = postflight(
+        hub,
+        db_path,
+        session["session_id"],
+        "completed",
+        review_lanes=[
+            "review-lane:learning-loop-completion:checklist:loops reviewed",
+            "review-lane:digital-asset-pattern-discovery:subagent:assets deduped",
+            "review-lane:conversation-prompt-value:checklist:conversation delta reviewed",
+        ],
+    )
+    completed = {
+        lane.lane_id: lane.status
+        for lane in handoff.review_lanes
+        if lane.lane_id in session["required_review_lane_ids"]
+    }
+    assert completed == {
+        "review-lane:learning-loop-completion": "checklist",
+        "review-lane:digital-asset-pattern-discovery": "subagent",
+        "review-lane:conversation-prompt-value": "checklist",
+    }
+
+
+def test_trivial_preflight_does_not_require_learning_discovery_lanes(tmp_path: Path):
+    hub = tmp_path / "hub"
+    hub.mkdir()
+    (hub / "state" / "agent_sessions").mkdir(parents=True)
+    repo = tmp_path / "repo"
+    repo.mkdir()
+
+    session = preflight(
+        hub,
+        repo,
+        hub / "state" / "catalog.sqlite3",
+        "codex",
+        "status query",
+    )
+
+    assert session["required_review_lane_ids"] == []
 
 
 def _write_learning_rule_registry(hub: Path) -> None:
@@ -312,10 +379,13 @@ def test_midflight_blocks_until_learning_rule_acknowledged(tmp_path: Path):
     assert blocked["status"] == "blocked_missing_learning_rule_ack"
     assert {
         lane["lane_id"] for lane in blocked["recommended_review_lanes"]
-    } == {
-        "review-lane:red-team-and-premortem",
-        "review-lane:lesson-asset-harness-scout",
-    }
+        } == {
+            "review-lane:red-team-and-premortem",
+            "review-lane:lesson-asset-harness-scout",
+            "review-lane:learning-loop-completion",
+            "review-lane:digital-asset-pattern-discovery",
+            "review-lane:conversation-prompt-value",
+        }
     assert blocked["missing_learning_rule_acknowledgements"] == [
         "learning-rule:test-temp-fixture"
     ]

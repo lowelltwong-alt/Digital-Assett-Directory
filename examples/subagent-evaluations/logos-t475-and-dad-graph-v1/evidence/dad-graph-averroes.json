@@ -1,0 +1,19 @@
+{
+  "attempt_slug": "dad-graph-averroes",
+  "authority_boundary": "This reconstructed candidate record describes one bounded execution attempt. It does not identify a person, rank a model family, or authorize agent routing, promotion, consolidation, specialization, or supersession.",
+  "capture_type": "parent_reconstructed_terminal_summary",
+  "improvement_recommendations": [
+    "Include the transport data-plane registry seam in the first path summary."
+  ],
+  "limitations": [
+    "This is a parent-captured bounded summary, not hidden reasoning or a full source transcript.",
+    "Exact start/end time and invocation prompt hash were unavailable."
+  ],
+  "observed_failures": [],
+  "observed_strengths": [
+    "Located the exact graph surface, schema, CLI, transport, and test seams without proposing lesson-graph widening."
+  ],
+  "runtime_attempt_id": "019f4d2b-be71-7b81-84e7-139dce0c6ea2",
+  "schema_version": "dad.subagent.parent-captured-evidence.v1",
+  "task_id": "DAD-SUBAGENT-GRAPH-V1"
+}

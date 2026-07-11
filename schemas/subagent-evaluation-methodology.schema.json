@@ -1,0 +1,54 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://local.digital-asset-directory/schemas/subagent-evaluation-methodology.schema.json",
+  "title": "Subagent Evaluation Methodology",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["methodology_id", "methodology_version", "status", "scale", "dimensions", "calculation", "gates", "profile_evidence_thresholds", "disposition_vocabulary", "consolidation_decision_rules", "rules", "authority_boundary"],
+  "properties": {
+    "methodology_id": {"type": "string", "minLength": 1},
+    "methodology_version": {"type": "string", "minLength": 1},
+    "status": {"enum": ["candidate", "reviewed", "deprecated"]},
+    "scale": {
+      "type": "object", "additionalProperties": false, "required": ["minimum", "maximum"],
+      "properties": {"minimum": {"const": 0}, "maximum": {"const": 100}}
+    },
+    "dimensions": {
+      "type": "array", "minItems": 5, "maxItems": 5,
+      "items": {
+        "type": "object", "additionalProperties": false, "required": ["id", "weight"],
+        "properties": {"id": {"type": "string", "minLength": 1}, "weight": {"type": "number", "exclusiveMinimum": 0, "maximum": 1}}
+      }
+    },
+    "calculation": {"type": "string", "minLength": 1},
+    "gates": {"type": "array", "minItems": 1, "items": {"type": "string", "minLength": 1}},
+    "profile_evidence_thresholds": {
+      "type": "object", "additionalProperties": false,
+      "required": ["attempt_only", "provisional_profile_min_comparable_attempts", "default_comparison_min_attempts", "default_comparison_min_repositories_or_task_families"],
+      "properties": {
+        "attempt_only": {"type": "integer", "minimum": 1},
+        "provisional_profile_min_comparable_attempts": {"type": "integer", "minimum": 2},
+        "default_comparison_min_attempts": {"type": "integer", "minimum": 3},
+        "default_comparison_min_repositories_or_task_families": {"type": "integer", "minimum": 2}
+      }
+    },
+    "disposition_vocabulary": {"type": "array", "minItems": 6, "uniqueItems": true, "items": {"type": "string", "minLength": 1}},
+    "consolidation_decision_rules": {
+      "type": "array",
+      "minItems": 6,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["action", "applies_when", "required_checks", "human_gate_required"],
+        "properties": {
+          "action": {"enum": ["keep_both", "consolidate_patterns", "promote_one_as_default", "retain_as_specialist", "supersede_after_review", "insufficient_evidence"]},
+          "applies_when": {"type": "string", "minLength": 1},
+          "required_checks": {"type": "array", "minItems": 1, "items": {"type": "string", "minLength": 1}},
+          "human_gate_required": {"const": true}
+        }
+      }
+    },
+    "rules": {"type": "array", "minItems": 1, "items": {"type": "string", "minLength": 1}},
+    "authority_boundary": {"type": "string", "minLength": 1}
+  }
+}

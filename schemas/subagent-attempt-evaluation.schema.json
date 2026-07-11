@@ -1,0 +1,167 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://local.digital-asset-directory/schemas/subagent-attempt-evaluation.schema.json",
+  "title": "Subagent Attempt Evaluation",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version", "evaluation_id", "attempt_id", "evaluator", "evaluator_identity",
+    "evaluator_independence", "rubric_id", "rubric_version", "rubric_sha256",
+    "dimension_results", "capability_results", "aggregate_result", "outcome",
+    "strengths", "failures", "improvement_recommendations", "limitations",
+    "evidence_bundle_sha256", "evidence_grade", "evaluated_at", "review_status", "authority_boundary"
+  ],
+  "properties": {
+    "schema_version": {"const": "0.1.0"},
+    "evaluation_id": {"type": "string", "pattern": "^dad:subagent-evaluation:[a-z0-9-]+$"},
+    "attempt_id": {"type": "string", "minLength": 1},
+    "attempt_snapshot_sha256": {"type": "string", "pattern": "^(sha256:[0-9a-f]{64}|unavailable)$"},
+    "evaluator": {"type": "string", "minLength": 1},
+    "evaluator_attempt_id": {"type": ["string", "null"]},
+    "evaluator_identity": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["actor_id", "actor_type", "verification_status", "relationship_to_attempt", "evidence_ref"],
+      "properties": {
+        "actor_id": {"type": "string", "minLength": 1},
+        "actor_type": {"enum": ["subagent", "human", "external_agent", "ci", "unknown"]},
+        "verification_status": {"enum": ["runtime_verified", "human_verified", "unverified"]},
+        "relationship_to_attempt": {"enum": ["independent", "parent", "self", "unknown"]},
+        "evidence_ref": {"type": ["string", "null"]}
+      }
+    },
+    "evaluator_independence": {"enum": ["independent", "parent_review", "self_review", "unknown"]},
+    "rubric_id": {"type": "string", "minLength": 1},
+    "rubric_version": {"type": "string", "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+$"},
+    "rubric_sha256": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"},
+    "dimension_results": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["correctness", "scope_discipline", "evidence_traceability", "efficiency_compute_fit", "escalation_calibration"],
+      "properties": {
+        "correctness": {"$ref": "#/$defs/dimension"},
+        "scope_discipline": {"$ref": "#/$defs/dimension"},
+        "evidence_traceability": {"$ref": "#/$defs/dimension"},
+        "efficiency_compute_fit": {"$ref": "#/$defs/dimension"},
+        "escalation_calibration": {"$ref": "#/$defs/dimension"}
+      }
+    },
+    "capability_results": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["capability_id", "status", "rating", "confidence", "evidence_refs", "counterevidence_refs", "rationale"],
+        "properties": {
+          "capability_id": {"type": "string", "pattern": "^[a-z][a-z0-9_]*$"},
+          "status": {"enum": ["scored", "insufficient_evidence", "not_applicable"]},
+          "rating": {"type": ["number", "null"], "minimum": 0, "maximum": 100},
+          "confidence": {"type": "number", "minimum": 0, "maximum": 1},
+          "evidence_refs": {"type": "array", "items": {"type": "string", "minLength": 1}},
+          "counterevidence_refs": {"type": "array", "items": {"type": "string", "minLength": 1}},
+          "rationale": {"type": "string", "minLength": 1}
+        },
+        "allOf": [
+          {
+            "if": {"properties": {"status": {"const": "scored"}}},
+            "then": {
+              "properties": {
+                "rating": {"type": "number", "minimum": 0, "maximum": 100},
+                "evidence_refs": {"type": "array", "minItems": 1, "items": {"type": "string", "minLength": 1}}
+              }
+            }
+          },
+          {
+            "if": {"properties": {"status": {"enum": ["insufficient_evidence", "not_applicable"]}}},
+            "then": {
+              "properties": {
+                "rating": {"type": "null"},
+                "evidence_refs": {"type": "array", "maxItems": 0}
+              }
+            }
+          }
+        ]
+      }
+    },
+    "aggregate_result": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["status", "score", "gate_failed", "confidence"],
+      "properties": {
+        "status": {"enum": ["rated_attempt", "parent_observational_rating", "insufficient_evidence"]},
+        "score": {"type": ["number", "null"], "minimum": 0, "maximum": 100},
+        "gate_failed": {"type": "boolean"},
+        "confidence": {"type": "number", "minimum": 0, "maximum": 1}
+      }
+    },
+    "outcome": {"enum": ["successful", "mixed", "failed", "unknown"]},
+    "strengths": {"type": "array", "items": {"type": "string", "minLength": 1}},
+    "failures": {"type": "array", "items": {"type": "string", "minLength": 1}},
+    "improvement_recommendations": {"type": "array", "minItems": 1, "items": {"type": "string", "minLength": 1}},
+    "limitations": {"type": "array", "items": {"type": "string", "minLength": 1}},
+    "evidence_bundle_sha256": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"},
+    "evidence_grade": {"enum": ["direct_hashed_artifact", "parent_reconstructed_summary", "independent_hashed_review", "execution_failure_log"]},
+    "evaluated_at": {"type": "string", "minLength": 1},
+    "review_status": {"const": "generated_candidate"},
+    "authority_boundary": {"type": "string", "minLength": 1}
+  },
+  "allOf": [
+    {
+      "if": {"properties": {"evaluator_independence": {"const": "independent"}}},
+      "then": {
+        "properties": {
+          "evaluator_attempt_id": {"type": "string", "minLength": 1},
+          "evaluator_identity": {
+            "properties": {
+              "verification_status": {"enum": ["runtime_verified", "human_verified"]},
+              "relationship_to_attempt": {"const": "independent"},
+              "evidence_ref": {"type": "string", "minLength": 1}
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": {"properties": {"aggregate_result": {"properties": {"status": {"const": "insufficient_evidence"}}}}},
+      "then": {"properties": {"aggregate_result": {"properties": {"score": {"type": "null"}}}}}
+    },
+    {
+      "if": {"properties": {"aggregate_result": {"properties": {"status": {"enum": ["rated_attempt", "parent_observational_rating"]}}}}},
+      "then": {"properties": {"aggregate_result": {"properties": {"score": {"type": "number", "minimum": 0, "maximum": 100}}}}}
+    }
+  ],
+  "$defs": {
+    "dimension": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["status", "score", "evidence_refs", "rationale"],
+      "properties": {
+        "status": {"enum": ["scored", "insufficient_evidence", "not_applicable"]},
+        "score": {"type": ["number", "null"], "minimum": 0, "maximum": 100},
+        "evidence_refs": {"type": "array", "items": {"type": "string", "minLength": 1}},
+        "rationale": {"type": "string", "minLength": 1}
+      },
+      "allOf": [
+        {
+          "if": {"properties": {"status": {"const": "scored"}}},
+          "then": {
+            "properties": {
+              "score": {"type": "number", "minimum": 0, "maximum": 100},
+              "evidence_refs": {"type": "array", "minItems": 1, "items": {"type": "string", "minLength": 1}}
+            }
+          }
+        },
+        {
+          "if": {"properties": {"status": {"enum": ["insufficient_evidence", "not_applicable"]}}},
+          "then": {
+            "properties": {
+              "score": {"type": "null"},
+              "evidence_refs": {"type": "array", "maxItems": 0}
+            }
+          }
+        }
+      ]
+    }
+  }
+}

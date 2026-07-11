@@ -1,0 +1,50 @@
+{
+  "methodology_id": "dad:methodology:subagent-attempt-evaluation",
+  "methodology_version": "0.1.0",
+  "status": "candidate",
+  "scale": {"minimum": 0, "maximum": 100},
+  "dimensions": [
+    {"id": "correctness", "weight": 0.30},
+    {"id": "scope_discipline", "weight": 0.20},
+    {"id": "evidence_traceability", "weight": 0.20},
+    {"id": "efficiency_compute_fit", "weight": 0.15},
+    {"id": "escalation_calibration", "weight": 0.15}
+  ],
+  "calculation": "Weighted arithmetic mean over all five scored dimensions. Missing evidence produces insufficient_evidence, never zero. No hidden penalties are allowed.",
+  "gates": [
+    "A failed authority or scope safety gate blocks promotion regardless of aggregate score.",
+    "Self-review and parent review do not count as independent evidence.",
+    "Profile-level comparisons require a context cohort and preserve counterevidence."
+  ],
+  "profile_evidence_thresholds": {
+    "attempt_only": 1,
+    "provisional_profile_min_comparable_attempts": 3,
+    "default_comparison_min_attempts": 5,
+    "default_comparison_min_repositories_or_task_families": 2
+  },
+  "disposition_vocabulary": [
+    "keep_both",
+    "consolidate_patterns",
+    "promote_one_as_default",
+    "retain_as_specialist",
+    "supersede_after_review",
+    "insufficient_evidence"
+  ],
+  "consolidation_decision_rules": [
+    {"action": "insufficient_evidence", "applies_when": "Either role revision lacks five distinct non-gate-failed rated attempts, two distinct independent reviewers, or two repositories/task contexts.", "required_checks": ["distinct attempts", "distinct reviewers", "context diversity", "gate failures"], "human_gate_required": true},
+    {"action": "keep_both", "applies_when": "Eligible role revisions have materially different missions, complementary capabilities, or different failure exposure that consolidation would lose.", "required_checks": ["capability overlap", "mission overlap", "failure correlation", "context cohorts"], "human_gate_required": true},
+    {"action": "consolidate_patterns", "applies_when": "Eligible same-role revisions overlap on at least 80 percent of observed capabilities, differ by less than five score points, and have useful non-conflicting improvements.", "required_checks": ["capability Jaccard", "attempt-level score delta", "counterevidence", "composite role proposal"], "human_gate_required": true},
+    {"action": "promote_one_as_default", "applies_when": "Eligible same-role revisions differ by at least ten score points across comparable cohorts, the leading revision has no unresolved gate failure, and independent evidence supports the difference.", "required_checks": ["cohort comparability", "score delta", "independent evidence", "gate failures"], "human_gate_required": true},
+    {"action": "retain_as_specialist", "applies_when": "An eligible revision has a distinct high-value capability or context advantage that should not become the general default.", "required_checks": ["unique capabilities", "task contexts", "failure boundaries", "default role fit"], "human_gate_required": true},
+    {"action": "supersede_after_review", "applies_when": "A newer revision has explicit same-profile lineage, meets the evidence gates, and a human approves replacement conditions and rollback.", "required_checks": ["same role_profile_id", "declared supersedes lineage", "regression evidence", "human decision"], "human_gate_required": true}
+  ],
+  "rules": [
+    "Attempt ratings describe one execution attempt, not a person, nickname, model family, or reusable role profile.",
+    "Parent-reconstructed evidence may produce an observational score, but it never counts toward profile eligibility or model-family comparison.",
+    "Current observed score is separate from estimated upside or capability ceiling.",
+    "Combine creates a new composite role-profile candidate and never erases source attempts or revisions.",
+    "Keep, promote, specialize, combine, and supersede are human-reviewed recommendations only.",
+    "Graph similarity, centrality, agreement, or model output is not proof that an agent is better."
+  ],
+  "authority_boundary": "This candidate methodology may calculate attempt-level evidence summaries. It cannot rank model families, authorize role promotion, merge identities, retire agents, or change downstream agent routing."
+}

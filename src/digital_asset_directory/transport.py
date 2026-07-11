@@ -56,6 +56,9 @@ TRANSPORT_IMPLEMENTATION_CAPABILITIES = [
     "daemon_run_cycle",
     "task_scheduler_status_surface",
     "journal_checkpoint_threshold",
+    "journal_incremental_verified_file_index",
+    "journal_detached_worktree_transaction",
+    "catalog_database_journal_snapshot",
     "remote_outbox_screening",
 ]
 
@@ -75,12 +78,16 @@ DATA_PLANE_PATHS: dict[str, str] = {
     "repo_inventory": "processed/repo_inventory",
     "cadence": "processed/cadence",
     "fable_packets": "processed/fable5",
+    "agents": "processed/agents",
     "raw_lessons": "raw/lessons",
     "raw_handoffs": "raw/handoffs",
     "raw_exceptions": "raw/exceptions",
+    "raw_agent_evaluations": "raw/agent-evaluations",
     "audit_events": "audit/events",
     "agent_sessions": "state/agent_sessions",
+    "catalog_database": "state/catalog.sqlite3",
 }
+DATA_PLANE_FILE_SURFACES = frozenset({"catalog_database"})
 
 AUTHORITY_BOUNDARY = (
     "Transport audit records and upgrade queue rows are central candidate "
@@ -241,6 +248,8 @@ def init_data_root(
 def _iter_files(base: Path) -> list[Path]:
     if not base.exists():
         return []
+    if base.is_file():
+        return [base]
     return sorted(p for p in base.rglob("*") if p.is_file())
 
 
@@ -281,9 +290,11 @@ def plan_data_migration(
                 "file_count": len(files),
             }
         )
+    top_dirs = sorted({s["source"].split("/")[0] for s in surfaces})
+    quoted_dirs = " ".join(f'"{rel}"' for rel in top_dirs)
     untrack_commands = [
-        f'git rm -r --cached --quiet -- "{rel}"'
-        for rel in sorted({s["source"].split("/")[0] for s in surfaces})
+        f"$trackedRuntime = @(git ls-files -ci --exclude-standard -- {quoted_dirs})",
+        "if ($trackedRuntime.Count -gt 0) { git rm --cached -- $trackedRuntime }",
     ]
     return {
         "schema_version": "0.1.0",
@@ -294,6 +305,7 @@ def plan_data_migration(
         "total_files": total,
         "surfaces": surfaces,
         "untrack_commands_after_verified_copy": untrack_commands,
+        "untrack_scope": "tracked_and_gitignored_data_plane_files_only",
         "gitignore_lines_to_add": sorted(
             {f"/{s['source'].split('/')[0]}/" for s in surfaces}
         ),
@@ -406,7 +418,7 @@ def _mail_gitignore_covers_jsonl(repo: Path) -> bool:
     return "*.jsonl" in body
 
 
-def _contract_transport_fields(repo: Path) -> dict[str, Any]:
+def _contract_payload(repo: Path) -> dict[str, Any]:
     contract = repo / ".digital-asset" / "dad-integration.json"
     if not contract.exists():
         return {}
@@ -414,7 +426,11 @@ def _contract_transport_fields(repo: Path) -> dict[str, Any]:
         payload = json.loads(contract.read_text(encoding="utf-8"))
     except (OSError, json.JSONDecodeError):
         return {}
-    transport = payload.get("transport")
+    return payload if isinstance(payload, dict) else {}
+
+
+def _contract_transport_fields(repo: Path) -> dict[str, Any]:
+    transport = _contract_payload(repo).get("transport")
     return transport if isinstance(transport, dict) else {}
 
 
@@ -471,6 +487,23 @@ def audit_repo_transport(
     seen_version = _contract_transport_version(repo)
     seen_implementation_version = _contract_transport_implementation_version(repo)
     has_contract = (repo / ".digital-asset" / "dad-integration.json").exists()
+    contract_repo_path = str(_contract_payload(repo).get("repo_path") or "").strip()
+    if has_contract and contract_repo_path:
+        configured = os.path.normcase(os.path.normpath(str(repo.resolve())))
+        recorded = os.path.normcase(os.path.normpath(str(Path(contract_repo_path).resolve())))
+        if configured != recorded:
+            signals.append(
+                {
+                    "signal": "repo_path_stale",
+                    "severity": "medium",
+                    "recorded_path_exists": Path(contract_repo_path).exists(),
+                    "meaning": (
+                        "Enrollment contract repo_path does not match the reviewed "
+                        "canonical checkout; refresh the contract without changing "
+                        "transport or repo authority."
+                    ),
+                }
+            )
     if has_contract and seen_version != TRANSPORT_SURFACE_VERSION:
         signals.append(
             {
@@ -581,18 +614,33 @@ def _release_transport_queue_lock(fd: int, lock_path: Path) -> None:
 
 def _hub_self_audit(hub_root: Path) -> dict[str, Any]:
     tracked = 0
+    intentionally_tracked = 0
     top_dirs = sorted({rel.split("/")[0] for rel in DATA_PLANE_PATHS.values()})
     per_dir: dict[str, int] = {}
     for top in top_dirs:
-        count = len(_git_tracked(hub_root, top))
+        all_tracked = set(_git_tracked(hub_root, top))
+        ignored_result = subprocess.run(
+            ["git", "-C", str(hub_root), "ls-files", "-ci", "--exclude-standard", "--", top],
+            check=False,
+            capture_output=True,
+            text=True,
+        )
+        ignored_tracked = {
+            line.strip().replace("\\", "/")
+            for line in ignored_result.stdout.splitlines()
+            if line.strip()
+        }
+        count = len(ignored_tracked)
         per_dir[top] = count
         tracked += count
+        intentionally_tracked += len(all_tracked - ignored_tracked)
     _root, mode = resolve_data_root(hub_root)
     return {
         "repo_id": "dad-hub",
         "data_root_mode": mode,
         "tracked_data_plane_files": tracked,
         "tracked_by_top_dir": per_dir,
+        "intentionally_tracked_evidence_files": intentionally_tracked,
         "classification": (
             "current"
             if mode == "data_root" and tracked == 0

@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://local.digital-asset-directory/schemas/lesson-graph.schema.json",
   "title": "DAD Lesson Graph",
-  "description": "Rebuildable candidate node/edge compilation of lessons, patterns, offerings, repos, and usage. Raw lesson files stay the source of truth.",
+  "description": "Rebuildable candidate node/edge compilation of lessons, patterns, offerings, agent skills, repos, and usage. Raw lesson files and reviewed registries stay the source inputs.",
   "type": "object",
   "additionalProperties": true,
   "required": [
@@ -42,7 +42,7 @@
         "required": ["node_id", "node_type", "label"],
         "properties": {
           "node_id": {"type": "string", "minLength": 1},
-          "node_type": {"enum": ["lesson", "repo", "pattern", "offering"]},
+          "node_type": {"enum": ["lesson", "repo", "pattern", "offering", "agent_skill"]},
           "label": {"type": "string"}
         }
       }

@@ -1,0 +1,40 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://local.digital-asset-directory/schemas/subagent-role-profile-revision.schema.json",
+  "title": "Subagent Role Profile Revision",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "role_profile_id",
+    "revision_id",
+    "revision_sha256",
+    "role_id",
+    "mission",
+    "expected_inputs",
+    "expected_outputs",
+    "stop_conditions",
+    "prompt_hash",
+    "tool_policy_hash",
+    "status",
+    "review_status",
+    "authority_boundary"
+  ],
+  "properties": {
+    "schema_version": {"const": "0.1.0"},
+    "role_profile_id": {"type": "string", "pattern": "^dad:role-profile:[a-z0-9-]+$"},
+    "revision_id": {"type": "string", "pattern": "^dad:role-profile-revision:[a-z0-9-]+:v[0-9]+$"},
+    "revision_sha256": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"},
+    "role_id": {"type": "string", "pattern": "^[a-z][a-z0-9_]*$"},
+    "mission": {"type": "string", "minLength": 1},
+    "expected_inputs": {"type": "array", "items": {"type": "string", "minLength": 1}},
+    "expected_outputs": {"type": "array", "minItems": 1, "items": {"type": "string", "minLength": 1}},
+    "stop_conditions": {"type": "array", "minItems": 1, "items": {"type": "string", "minLength": 1}},
+    "prompt_hash": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"},
+    "tool_policy_hash": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"},
+    "supersedes_revision_id": {"type": ["string", "null"]},
+    "status": {"enum": ["candidate", "active", "retired"]},
+    "review_status": {"enum": ["generated_candidate", "human_reviewed", "rejected"]},
+    "authority_boundary": {"type": "string", "minLength": 1}
+  }
+}

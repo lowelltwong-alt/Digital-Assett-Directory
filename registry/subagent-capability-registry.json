@@ -1,0 +1,15 @@
+{
+  "registry_version": "0.1.0",
+  "status": "candidate",
+  "capabilities": [
+    {"id": "architecture_reasoning", "description": "Design and red-team system boundaries, invariants, and rollout gates."},
+    {"id": "bounded_evidence_inventory", "description": "Collect exact bounded evidence without interpretation or scope expansion."},
+    {"id": "contract_and_roadmap_mapping", "description": "Map task dependencies, contracts, and next-stage acceptance gates."},
+    {"id": "root_cause_analysis", "description": "Distinguish symptoms from the causal implementation or harness defect."},
+    {"id": "governance_authority_safety", "description": "Preserve authority, promotion, and human-gate boundaries."},
+    {"id": "validation_design", "description": "Define deterministic checks that fail closed at the intended boundary."},
+    {"id": "implementation_review", "description": "Review code or artifacts for correctness, regressions, and missing tests."},
+    {"id": "escalation_judgment", "description": "Recognize uncertainty, hard cases, and the appropriate higher review lane."}
+  ],
+  "rule": "Capability observations are attempt-scoped candidate evidence. Promotion to a reusable role-profile claim requires the versioned subagent evaluation methodology and human review."
+}

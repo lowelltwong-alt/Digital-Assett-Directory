@@ -86,6 +86,23 @@ def _graph_hub(tmp_path: Path) -> Path:
     (hub / "registry" / "dad-offerings-registry.json").write_text(
         json.dumps(offerings), encoding="utf-8"
     )
+    (hub / "registry" / "agent-skill-library.json").write_text(
+        json.dumps(
+            {
+                "skills": [
+                    {
+                        "skill_id": "skill:test-learning-review",
+                        "name": "Test Learning Review",
+                        "version": "0.1.0",
+                        "status": "active",
+                        "review_status": "reviewed",
+                        "capabilities": ["learning_loop_completion"],
+                    }
+                ]
+            }
+        ),
+        encoding="utf-8",
+    )
     repo_path = tmp_path / "repo-one"
     repo_path.mkdir()
     _write_lesson(
@@ -139,7 +156,15 @@ def test_build_lesson_graph_compiles_candidate_nodes_and_edges(tmp_path: Path):
     assert "lesson:dad:lesson:graph-test-1" in node_ids
     assert "pattern:governed_learning_loop_system" in node_ids
     assert "offering:dad:offering:test-asset" in node_ids
+    assert "skill:skill:test-learning-review" in node_ids
     assert "repo:repo_one" in node_ids
+    skill_node = next(
+        node
+        for node in graph["nodes"]
+        if node["node_id"] == "skill:skill:test-learning-review"
+    )
+    assert skill_node["node_type"] == "agent_skill"
+    assert skill_node["capabilities"] == ["learning_loop_completion"]
 
     assert graph["edges_by_type"] == {
         "learned_in": 1,
@@ -170,8 +195,46 @@ def test_build_lesson_graph_compiles_candidate_nodes_and_edges(tmp_path: Path):
     ].startswith("sha256:")
     assert manifest["freshness"]["state"] == "fresh"
     assert manifest["input_hashes"]["raw/lessons"].startswith("sha256:")
+    assert manifest["input_hashes"]["registry/agent-skill-library.json"].startswith(
+        "sha256:"
+    )
+    assert manifest["coverage_report"]["agent_skill_count"] == 1
     assert "learned_in" in manifest["edge_definitions_present"]
     assert "about_asset" in manifest["edge_definitions_present"]
+
+
+def test_registered_personal_skill_sources_are_ingested_from_library(tmp_path: Path):
+    hub = _graph_hub(tmp_path)
+    central_library = json.loads(
+        (ROOT / "registry" / "agent-skill-library.json").read_text(encoding="utf-8")
+    )
+    expected = {
+        "skill:dad-work-router",
+        "skill:dad-learning-loop",
+        "skill:dad-digital-asset-radar",
+        "skill:dad-iteration-optimizer",
+        "skill:dad-agent-skill-forge",
+        "skill:codex-capability-radar",
+    }
+    registered = {
+        row["skill_id"]: row
+        for row in central_library["skills"]
+        if row["skill_id"] in expected
+    }
+    assert set(registered) == expected
+    assert {row["skill_format"] for row in registered.values()} == {"generic_agent_skill"}
+    assert {row["review_status"] for row in registered.values()} == {"reviewed"}
+
+    (hub / "registry" / "agent-skill-library.json").write_text(
+        json.dumps({"skills": list(registered.values())}), encoding="utf-8"
+    )
+    graph = build_lesson_graph(hub)["graph"]
+    graph_skill_nodes = {
+        node["node_id"]
+        for node in graph["nodes"]
+        if node["node_type"] == "agent_skill"
+    }
+    assert graph_skill_nodes == {f"skill:{skill_id}" for skill_id in expected}
 
 
 def test_build_lesson_graph_is_idempotent_and_survives_missing_inputs(tmp_path: Path):
@@ -221,7 +284,7 @@ def test_graph_edge_registry_matches_schema_enum():
         lesson_graph_schema["properties"]["edges"]["items"]["properties"]["edge_type"]["enum"]
     )
     registry_edge_types = {row["edge_type"] for row in registry_payload["edge_types"]}
-    assert schema_edge_types == registry_edge_types
+    assert schema_edge_types <= registry_edge_types
     forbidden_claims = {
         row["claim"] for row in registry_payload["forbidden_edge_claims"]
     }

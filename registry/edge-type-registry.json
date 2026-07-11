@@ -291,6 +291,31 @@
       "id": "lineage_evidence_for",
       "direction": "copy_or_variant_to_family",
       "meaning": "A copied, temp, archive, changelog, or variant asset is evidence for a higher-level family lineage."
+    },
+    {
+      "id": "attempt_instantiates_role_revision",
+      "direction": "execution_attempt_to_role_profile_revision",
+      "meaning": "An execution attempt names the exact role-profile revision used for the invocation."
+    },
+    {
+      "id": "attempt_in_repository",
+      "direction": "execution_attempt_to_repository",
+      "meaning": "An execution attempt names the repository context in which it ran."
+    },
+    {
+      "id": "attempt_used_model_claim",
+      "direction": "execution_attempt_to_attributed_model_claim",
+      "meaning": "An execution attempt carries an attributed model claim with a verification status."
+    },
+    {
+      "id": "evaluation_of_attempt",
+      "direction": "evaluation_to_execution_attempt",
+      "meaning": "A rubric-pinned evaluation identifies the immutable attempt it reviews."
+    },
+    {
+      "id": "evaluation_assesses_capability",
+      "direction": "evaluation_to_capability",
+      "meaning": "An evaluation criterion records attempt-scoped evidence about a capability."
     }
   ],
   "rule": "Every generated edge must retain method, evidence, confidence, and scan provenance."

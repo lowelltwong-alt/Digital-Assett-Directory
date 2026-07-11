@@ -73,6 +73,19 @@ When DAD updates, retires, or replaces a skill, it creates candidate mail. Mail
 does not update the target repo. The target repo reviews the notice and decides
 whether to change its local pointer or wrapper.
 
+Each record is versioned by `version` and carries explicit lifecycle metadata:
+supersession links, retirement reason, replacement ID, and notice templates.
+The lesson graph ingests every registered record as a candidate `agent_skill`
+node from `registry/agent-skill-library.json`; graph presence is not approval,
+adoption, usefulness, or source truth.
+
+The active central personal-source registrations are runtime-neutral
+`generic_agent_skill` records: DAD Work Router, DAD Learning Loop, DAD Digital
+Asset Radar, DAD Iteration Optimizer, DAD Agent Skill Forge, and Codex
+Capability Radar. Their source directories are DAD-owned adaptations of
+validated personal skill sources. The central contracts retain only portable
+procedures and DAD gates; they do not install, modify, or configure a runtime.
+
 DAD tracks known downstream checkouts in append-only generated state:
 
 ```text
@@ -108,7 +121,55 @@ flowchart TD
     F --> G["Postflight feedback to DAD"]
 ```
 
+## Long-Running Commands
+
+`skill:long-run-optimization-review-pack` provides the reviewed default for
+commands that take at least 60 measured seconds or are expected to take at
+least 120 seconds. A high-effort optimization director routes independent
+algorithm, primary-source library/web research, and language/runtime reviews,
+followed by a benchmark/parity plan and separate high-effort builder for an
+approved bounded brief. The trigger is deduplicated by normalized command
+signature per session so normal work does not create a subagent storm.
+
+The runtime lane explicitly checks DAD's Rust library before proposing new
+native code. Rust adoption still follows the profiled shadow-parity stages in
+`assets/rust-buildout-guide/rust-buildout.json`.
+
+## Material-Work Learning
+
+`skill:material-work-learning-discovery` runs before postflight for every
+material build or investigation. It checks the library first, then closes
+learning loops and extracts privacy-safe candidate assets, asset-discovery
+patterns, explicit conversation-only decisions, exceptional prompts, and
+concrete reuse targets. Low-effort sentinels escalate only when the evidence is
+uncertain or high leverage.
+
+The conversation lane records only explicit participant rationale and the
+delta absent from committed artifacts. It must not store raw transcripts,
+hidden chain-of-thought, secrets, private payloads, or inferred private
+reasoning.
+
 ## Public And Private Boundary
+
+## Subagent Continuous Improvement
+
+`skill:subagent-continuous-improvement` applies after material subagent use. It
+reuses DAD's immutable attempt/evaluation records, requires detailed self-review
+and independent checking when available, and audits whether model family and
+reasoning effort fit both the task and the material or dataset. Review is a
+bidirectional peer mesh: workers may challenge incorrect checks, cheaper models
+may catch bounded mistakes by frontier models, and no architect is exempt from
+verification.
+
+Routine feedback remains normal candidate evidence. Only concrete gate failures
+or repeated calibrated patterns become exception candidates. Persistent issues
+may produce a human-gated instruction-improvement proposal; no prompt edits or
+reroutes apply automatically. The daemon is report-only; writing eligible
+candidates to DAD's exception outbox requires the explicit
+`asset-dir subagents improvement-review --record-exceptions` action. Super-high-risk unresolved architecture disputes
+produce a privacy-safe manual copy/paste packet for Fable that presents all
+sides, red-teams and premortems the options, and allows a non-binary solution.
+The named human retains final authority.
 
 Skill pointers can still leak sensitive context if they carry private source
 paths, copied examples, or private repo descriptions. Cross-repo skill mail

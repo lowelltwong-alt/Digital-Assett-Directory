@@ -77,6 +77,7 @@ def test_wired_graph_surface_builders_resolve_to_real_code() -> None:
     assert {surface["surface_id"] for surface in wired} == {
         "lesson-graph",
         "research-intake-graph",
+        "subagent-capability-graph",
     }
     for surface in wired:
         module_ref = surface["builder"]["module"]

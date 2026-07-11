@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 import json
+import os
+import sqlite3
 import subprocess
 from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, timedelta, timezone
@@ -11,8 +13,11 @@ from typer.testing import CliRunner
 
 import digital_asset_directory.daemon as daemon_mod
 import digital_asset_directory.exception_capture as exception_capture_mod
+import digital_asset_directory.journal as journal_mod
+import digital_asset_directory.transport_readiness as transport_readiness_mod
 from digital_asset_directory.cli import app
 from digital_asset_directory.daemon import (
+    daemon_heartbeat_path,
     daemon_status,
     run_daemon_cycle,
     scheduled_tasks_report_path,
@@ -141,12 +146,8 @@ def test_exception_capture_plan_defaults_refresh_companion_reports(
         observed_outputs.append(output)
         return {"repos": []}
 
-    monkeypatch.setattr(
-        exception_capture_mod, "write_exception_backfill_readiness", fake_readiness
-    )
-    monkeypatch.setattr(
-        exception_capture_mod, "write_observed_capture_audit", fake_observed
-    )
+    monkeypatch.setattr(exception_capture_mod, "write_exception_backfill_readiness", fake_readiness)
+    monkeypatch.setattr(exception_capture_mod, "write_observed_capture_audit", fake_observed)
     monkeypatch.setattr(
         exception_capture_mod,
         "build_exception_capture_remediation_plan",
@@ -168,9 +169,7 @@ def test_exception_capture_plan_defaults_refresh_companion_reports(
     monkeypatch.setattr(
         exception_capture_mod, "_capture_gap_review_queue_markdown", lambda report: ""
     )
-    monkeypatch.setattr(
-        exception_capture_mod, "_backfill_wave_plan_markdown", lambda report: ""
-    )
+    monkeypatch.setattr(exception_capture_mod, "_backfill_wave_plan_markdown", lambda report: "")
 
     exception_capture_mod.write_exception_capture_remediation_plan(hub, [])
     exception_capture_mod.write_exception_capture_gap_review_queue(hub, [])
@@ -309,6 +308,34 @@ def test_transport_audit_flags_mailbox_without_contract_and_writes_queue(tmp_pat
     assert rows[0]["expected_implementation_version"] == TRANSPORT_IMPLEMENTATION_VERSION
 
 
+def test_transport_audit_flags_stale_contract_repo_path_without_exposing_paths(tmp_path: Path):
+    repo = tmp_path / "canonical-repo"
+    mail = repo / ".digital-asset" / "mail"
+    mail.mkdir(parents=True)
+    (mail / ".gitignore").write_text("*.jsonl\n", encoding="utf-8")
+    contract = repo / ".digital-asset" / "dad-integration.json"
+    contract.write_text(
+        json.dumps(
+            {
+                "repo_path": str(tmp_path / "obsolete-checkout"),
+                "transport": {
+                    "surface_version": TRANSPORT_SURFACE_VERSION,
+                    "implementation_version": TRANSPORT_IMPLEMENTATION_VERSION,
+                },
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    record = audit_repo_transport(repo, repo_id="repo-a")
+
+    assert record["classification"] == "upgrade_recommended"
+    assert [signal["signal"] for signal in record["signals"]] == ["repo_path_stale"]
+    signal = record["signals"][0]
+    assert signal["recorded_path_exists"] is False
+    assert "obsolete-checkout" not in json.dumps(record)
+
+
 def test_transport_audit_queue_dedupe_survives_concurrent_runs(tmp_path: Path):
     hub = tmp_path / "hub"
     hub.mkdir()
@@ -340,7 +367,9 @@ def test_transport_version_status_and_synthetic_rollout(tmp_path: Path):
     )
     missing_impl = tmp_path / "missing-implementation"
     (missing_impl / ".digital-asset" / "mail").mkdir(parents=True)
-    (missing_impl / ".digital-asset" / "mail" / ".gitignore").write_text("*.jsonl\n", encoding="utf-8")
+    (missing_impl / ".digital-asset" / "mail" / ".gitignore").write_text(
+        "*.jsonl\n", encoding="utf-8"
+    )
     (missing_impl / ".digital-asset" / "dad-integration.json").write_text(
         json.dumps(
             {
@@ -478,6 +507,96 @@ def test_transport_upgrade_status_reports_reviewed_queue_and_plan_artifacts(tmp_
     assert payload["operator_next_steps"] == [
         "asset-dir enroll update-plan --wave wave-a --from-transport-queue"
     ]
+
+
+def test_transport_upgrade_status_obeys_policy_holds_even_when_queue_is_stale(
+    tmp_path: Path,
+):
+    hub = _hub_for_cli(tmp_path / "hub")
+    repo_hold = tmp_path / "repo-hold"
+    repo_no_update = tmp_path / "repo-no-update"
+    repo_hold.mkdir()
+    repo_no_update.mkdir()
+    (hub / "config" / "sources.example.yaml").write_text(
+        "\n".join(
+            [
+                "project:",
+                "  database: state/catalog.sqlite3",
+                "enrollment:",
+                "  repos:",
+                "    - id: repo-hold",
+                f"      path: {repo_hold}",
+                "      wave: wave-a",
+                "      update_allowed: true",
+                "      active_hold: true",
+                "      active_hold_reason: active work paused writes",
+                "      approved_approval_ids: [APPROVED-1]",
+                "    - id: repo-no-update",
+                f"      path: {repo_no_update}",
+                "      wave: wave-a",
+                "      update_allowed: false",
+                "      approved_approval_ids: [APPROVED-1]",
+                "",
+            ]
+        ),
+        encoding="utf-8",
+    )
+    report_path = data_path(hub, "central_reports") / "transport_audit.json"
+    report_path.parent.mkdir(parents=True, exist_ok=True)
+    report_path.write_text(
+        json.dumps(
+            {
+                "transport_surface_version": TRANSPORT_SURFACE_VERSION,
+                "transport_implementation_version": TRANSPORT_IMPLEMENTATION_VERSION,
+                "repo_count": 2,
+                "classification_counts": {"upgrade_required": 2},
+                "hub": {"classification": "upgrade_required"},
+                "records": [
+                    {"repo_id": "repo-hold", "classification": "upgrade_required"},
+                    {"repo_id": "repo-no-update", "classification": "upgrade_required"},
+                ],
+            }
+        ),
+        encoding="utf-8",
+    )
+    queue_path = transport_upgrade_queue_path(hub)
+    queue_path.parent.mkdir(parents=True, exist_ok=True)
+    queue_rows = [
+        {
+            "queue_key": "queue:repo-hold",
+            "repo_id": "repo-hold",
+            "classification": "upgrade_required",
+            "expected_surface_version": TRANSPORT_SURFACE_VERSION,
+            "expected_implementation_version": TRANSPORT_IMPLEMENTATION_VERSION,
+            "review_status": "candidate",
+        },
+        {
+            "queue_key": "queue:repo-no-update",
+            "repo_id": "repo-no-update",
+            "classification": "upgrade_required",
+            "expected_surface_version": TRANSPORT_SURFACE_VERSION,
+            "expected_implementation_version": TRANSPORT_IMPLEMENTATION_VERSION,
+            "review_status": "candidate",
+        },
+    ]
+    queue_path.write_text(
+        "".join(json.dumps(row, sort_keys=True) + "\n" for row in queue_rows),
+        encoding="utf-8",
+    )
+
+    result = RUNNER.invoke(
+        app,
+        ["transport", "upgrade-status", "--hub", str(hub), "--wave", "wave-a"],
+    )
+
+    assert result.exit_code == 0, result.output
+    payload = json.loads(result.stdout)
+    assert payload["status"] == "review_required"
+    assert payload["selection"]["selected_count"] == 0
+    assert payload["selection"]["skipped_by_reason"] == {
+        "active_hold_central_only": 1,
+        "update_not_allowed": 1,
+    }
 
 
 def test_transport_upgrade_status_supersedes_stale_queue_rows_with_current_audit(
@@ -653,7 +772,9 @@ def test_plan_data_migration_emits_review_commands_without_deleting(tmp_path: Pa
     plan = plan_data_migration(hub, target)
 
     assert plan["total_files"] == 1
-    assert all(command.startswith("git rm -r --cached") for command in plan["untrack_commands_after_verified_copy"])
+    assert plan["untrack_scope"] == "tracked_and_gitignored_data_plane_files_only"
+    assert "git ls-files -ci --exclude-standard" in plan["untrack_commands_after_verified_copy"][0]
+    assert "git rm --cached -- $trackedRuntime" in plan["untrack_commands_after_verified_copy"][1]
     assert "This plan never deletes source files" in plan["rule"]
 
 
@@ -662,10 +783,32 @@ def test_daemon_cycle_writes_heartbeat_and_daily_queue(tmp_path: Path):
     hub.mkdir()
 
     first = run_daemon_cycle(hub, mail_repos=[], exception_repos=[], transport_repos=[])
+    heartbeat_path = Path(first["heartbeat_path"])
+    non_heartbeat_before = {
+        path.relative_to(hub).as_posix(): path.read_bytes()
+        for path in hub.rglob("*")
+        if path.is_file() and path != heartbeat_path
+    }
     second = run_daemon_cycle(hub, mail_repos=[], exception_repos=[], transport_repos=[])
+    non_heartbeat_after = {
+        path.relative_to(hub).as_posix(): path.read_bytes()
+        for path in hub.rglob("*")
+        if path.is_file() and path != heartbeat_path
+    }
 
     assert Path(first["heartbeat_path"]).exists()
     assert Path(second["heartbeat_path"]).exists()
+    heartbeat = json.loads(Path(first["heartbeat_path"]).read_text(encoding="utf-8"))
+    assert heartbeat["reporting_privacy"]["data_classification"] == "synthetic_development_only"
+    assert heartbeat["reporting_privacy"]["real_client_data_approved"] is False
+    assert heartbeat["reporting_privacy"]["real_client_data_gate"]["status"] == "blocked"
+    assert first["reporting_privacy"] == heartbeat["reporting_privacy"]
+    assert (
+        first["daily_review_queue"]["report"]["reporting_privacy"] == heartbeat["reporting_privacy"]
+    )
+    assert second["idle"] is True
+    assert second["cycle_order"] == ["heartbeat"]
+    assert non_heartbeat_after == non_heartbeat_before
     assert first["cycle_order"] == [
         "journal_remote_outbox_ingest",
         "mail_collect",
@@ -675,8 +818,10 @@ def test_daemon_cycle_writes_heartbeat_and_daily_queue(tmp_path: Path):
         "events_collect",
         "exceptions_collect",
         "lesson_graph_rebuild",
+        "subagent_improvement_review",
         "graph_inference",
         "transport_audit",
+        "weekly_asset_coverage",
         "scheduled_task_registry",
         "daily_review_queue",
         "heartbeat",
@@ -685,14 +830,20 @@ def test_daemon_cycle_writes_heartbeat_and_daily_queue(tmp_path: Path):
     assert Path(first["daily_review_queue"]["markdown_path"]).exists()
     assert first["graph_surface_status"]["schema_version"] == "dad.graph_surface.status.v1"
     assert "graph_surfaces" in first["daily_review_queue"]["report"]
-    assert (
-        "Graph surface freshness"
-        in Path(first["daily_review_queue"]["markdown_path"]).read_text(encoding="utf-8")
+    assert "weekly_asset_coverage" in first["daily_review_queue"]["report"]
+    assert "Graph surface freshness" in Path(
+        first["daily_review_queue"]["markdown_path"]
+    ).read_text(encoding="utf-8")
+    assert "Weekly asset coverage" in Path(first["daily_review_queue"]["markdown_path"]).read_text(
+        encoding="utf-8"
     )
     assert first["journal_status"]["schema_version"] == "dad.journal.status.v1"
     assert first["scheduled_tasks"]["schema_version"] == "dad.daemon.scheduled_tasks.v1"
+    assert first["subagent_improvement"]["status"] == "skipped"
     assert first["scheduled_tasks"]["task_count"] == 1
-    assert first["scheduled_tasks"]["tasks"][0]["health"] == "heartbeat_fresh_scheduler_not_inspected"
+    assert (
+        first["scheduled_tasks"]["tasks"][0]["health"] == "heartbeat_fresh_scheduler_not_inspected"
+    )
     assert Path(first["scheduled_tasks"]["report_path"]).exists()
     assert (
         Path(first["scheduled_tasks"]["report_path"])
@@ -705,11 +856,36 @@ def test_daemon_cycle_writes_heartbeat_and_daily_queue(tmp_path: Path):
     status = daemon_status(hub)
     assert status["status"] == "fresh"
     assert status["transport_audit_ran"] is True
+    assert status["weekly_asset_coverage_status"] in {"ok", "skipped"}
     assert "graph_surface_freshness_counts" in status["last_cycle"]
     assert status["scheduled_tasks_report_path"].endswith("scheduled_tasks.json")
     assert status["scheduled_task_count"] == 1
     assert status["journal_checkpoint_due"] in {True, False}
     assert status["journal_checkpoint_status"]["schema_version"] == "dad.journal.status.v1"
+
+
+def test_daemon_fingerprint_tracks_subagent_evaluation_inputs(tmp_path: Path):
+    hub = tmp_path / "hub"
+    hub.mkdir()
+
+    before, before_count = daemon_mod._cycle_input_fingerprint(
+        hub,
+        mail_repos=[],
+        exception_repos=[],
+        journal_repo=None,
+    )
+    attempts = hub / "raw" / "agent-evaluations" / "execution-attempts.jsonl"
+    attempts.parent.mkdir(parents=True)
+    attempts.write_text('{"attempt_id":"synthetic"}\n', encoding="utf-8")
+    after, after_count = daemon_mod._cycle_input_fingerprint(
+        hub,
+        mail_repos=[],
+        exception_repos=[],
+        journal_repo=None,
+    )
+
+    assert after != before
+    assert after_count == before_count + 1
 
 
 def test_daemon_cycle_with_initialized_data_root_writes_only_data_root(
@@ -731,8 +907,10 @@ def test_daemon_cycle_with_initialized_data_root_writes_only_data_root(
     assert Path(result["heartbeat_path"]).is_relative_to(data_root)
     assert (data_root / "processed" / "reports" / "daemon-heartbeat.json").exists()
     assert (data_root / "processed" / "reports" / "scheduled_tasks.json").exists()
+    assert (data_root / "processed" / "reports" / "weekly_asset_coverage.json").exists()
     assert not (hub / "processed" / "reports" / "daemon-heartbeat.json").exists()
     assert not (hub / "processed" / "reports" / "scheduled_tasks.json").exists()
+    assert not (hub / "processed" / "reports" / "weekly_asset_coverage.json").exists()
 
 
 def test_transport_readiness_cli_reports_local_ready_with_human_gates_pending(
@@ -809,7 +987,8 @@ def test_transport_readiness_can_include_scheduler_machine_evidence(
     assert scheduler["installed"] is True
     assert scheduler["command_mentions_run_cycle"] is True
     gate = payload["human_gates"]["daemon_schedule"]
-    assert gate["status"] == "scheduler_installed_machine_condition_met_pending_human_gate_record"
+    assert gate["status"] == "scheduler_installed_pending_human_gate_record"
+    assert gate["complete"] is False
 
 
 def test_daemon_install_plan_uses_stable_shim_and_run_cycle(tmp_path: Path):
@@ -830,8 +1009,87 @@ def test_daemon_install_plan_uses_stable_shim_and_run_cycle(tmp_path: Path):
     assert plan["wrapper_path"] == str(shim.with_name("dad-daemon-run-cycle.ps1"))
     assert str(shim) in plan["wrapper_script"]
     assert "daemon run-cycle" in plan["wrapper_script"]
+    assert "& powershell" in plan["wrapper_script"]
+    assert plan["task_log_path"] in plan["wrapper_script"]
+    assert plan["task_status_path"] in plan["wrapper_script"]
+    assert "dad.daemon.task_run.v1" in plan["wrapper_script"]
+    assert plan["reporting_privacy"]["data_classification"] == "synthetic_development_only"
+    assert plan["reporting_privacy"]["real_client_data_approved"] is False
+    assert "data_classification = 'synthetic_development_only'" in plan["wrapper_script"]
+    assert "real_client_data_approved = $false" in plan["wrapper_script"]
+    assert "System.Text.UTF8Encoding($false)" in plan["wrapper_script"]
+    assert "System.IO.File]::WriteAllText" in plan["wrapper_script"]
+    assert "Set-Content -LiteralPath $statusPath -Encoding UTF8" not in plan["wrapper_script"]
     assert str(hub.resolve()) in plan["wrapper_script"]
     assert "--hub" in plan["run_cycle_args"]
+    assert "--quiet" in plan["run_cycle_args"]
+    settings_script = plan["settings_command"][-1]
+    assert "AllowStartIfOnBatteries" in settings_script
+    assert "DontStopIfGoingOnBatteries" in settings_script
+    assert "DontStopOnIdleEnd" in settings_script
+    assert "StartWhenAvailable" in settings_script
+
+
+def test_daemon_run_cycle_quiet_writes_reports_without_rendering_payload(tmp_path: Path):
+    hub = _hub_for_cli(tmp_path / "hub")
+
+    result = RUNNER.invoke(
+        app,
+        [
+            "daemon",
+            "run-cycle",
+            "--hub",
+            str(hub),
+            "--quiet",
+            "--skip-graphs",
+        ],
+    )
+
+    assert result.exit_code == 0, result.output
+    assert result.stdout == ""
+    assert daemon_heartbeat_path(hub).exists()
+
+
+def test_daemon_writes_in_progress_heartbeat_before_expensive_steps(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+):
+    hub = tmp_path / "hub"
+    hub.mkdir()
+
+    def fail_after_observing_heartbeat(*_args, **_kwargs):
+        payload = json.loads(daemon_heartbeat_path(hub).read_text(encoding="utf-8"))
+        assert payload["status"] == "in_progress"
+        assert payload["heartbeat_finalized"] is False
+        assert payload["cycle_completed_at"] == ""
+        raise RuntimeError("stop after heartbeat observation")
+
+    monkeypatch.setattr(daemon_mod, "_run_remote_outbox_ingest", fail_after_observing_heartbeat)
+
+    with pytest.raises(RuntimeError, match="heartbeat observation"):
+        run_daemon_cycle(hub)
+
+
+@pytest.mark.parametrize(
+    ("task_status", "last_result", "expected"),
+    [
+        ("Ready", "0", "success"),
+        ("Running", "0", "running"),
+        ("Running", "267009", "running"),
+        ("Ready", "267009", "inconsistent"),
+        ("Ready", "0x41301", "inconsistent"),
+        ("Ready", "3221225786", "interrupted"),
+        ("Ready", "0xC000013A", "interrupted"),
+        ("Ready", "1", "failed"),
+        ("Ready", "", "unknown"),
+    ],
+)
+def test_scheduler_result_status_classifies_windows_results(
+    task_status: str, last_result: str, expected: str
+):
+    assert (
+        daemon_mod._scheduler_result_status(task_status=task_status, last_result=last_result)
+        == expected
+    )
 
 
 def test_daemon_task_status_parses_read_only_scheduler_query(tmp_path: Path):
@@ -867,9 +1125,13 @@ def test_daemon_task_status_reads_wrapper_for_long_scheduler_commands(tmp_path: 
     hub = tmp_path / "hub"
     hub.mkdir()
     shim = tmp_path / "asset-dir.ps1"
+    journal_repo = tmp_path / "dad-journal"
     wrapper = tmp_path / "dad-daemon-run-cycle.ps1"
     wrapper.write_text(
-        f"& '{shim}' daemon run-cycle --hub '{hub.resolve()}' --checkpoint-apply\n",
+        (
+            f"& '{shim}' daemon run-cycle '--hub' '{hub.resolve()}' "
+            f"'--journal-repo' '{journal_repo}' '--checkpoint-apply'\n"
+        ),
         encoding="utf-8",
     )
 
@@ -894,6 +1156,8 @@ def test_daemon_task_status_reads_wrapper_for_long_scheduler_commands(tmp_path: 
     assert status["command_mentions_run_cycle"] is True
     assert status["expected_hub_found"] is True
     assert status["expected_shim_found"] is True
+    assert status["journal_repo"] == str(journal_repo)
+    assert status["checkpoint_apply"] is True
 
 
 def test_scheduled_tasks_status_lists_daemon_for_ui(tmp_path: Path):
@@ -937,9 +1201,21 @@ def test_scheduled_tasks_status_lists_daemon_for_ui(tmp_path: Path):
     assert "stdout" not in task["scheduler"]
     assert "wrapper_text" not in task["scheduler"]
     assert "phase-13-daemon-schedule-approved" in task["human_gate_ids"]
+    privacy = status["reporting_privacy"]
+    assert privacy["schema_version"] == "dad.daemon.reporting_privacy.v1"
+    assert privacy["data_classification"] == "synthetic_development_only"
+    assert privacy["real_client_data_approved"] is False
+    assert privacy["real_client_data_gate"] == {
+        "id": "daemon-real-client-data-approved",
+        "status": "blocked",
+    }
+    assert "tenant_and_matter_isolation" in privacy["required_before_real_firm_use"]
+    assert task["reporting_privacy"] == privacy
 
 
-def test_daemon_scheduled_tasks_cli_can_write_report(tmp_path: Path, monkeypatch: pytest.MonkeyPatch):
+def test_daemon_scheduled_tasks_cli_can_write_report(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+):
     hub = _hub_for_cli(tmp_path / "hub")
     shim = tmp_path / "asset-dir.ps1"
     wrapper = tmp_path / "dad-daemon-run-cycle.ps1"
@@ -1070,10 +1346,12 @@ def test_journal_below_threshold_status_preserves_last_checkpoint(tmp_path: Path
     assert status["checkpointed_at"] == checkpointed_at
     saved = json.loads(status_path.read_text(encoding="utf-8"))
     assert saved["checkpointed_at"] == checkpointed_at
-    assert journal_status(hub, min_records=200, min_hours=24)["last_checkpoint_at"] == checkpointed_at
+    assert (
+        journal_status(hub, min_records=200, min_hours=24)["last_checkpoint_at"] == checkpointed_at
+    )
 
 
-def test_daemon_checkpoint_failure_leaves_unfinalized_heartbeat(tmp_path: Path):
+def test_daemon_checkpoint_failure_finalizes_degraded_heartbeat(tmp_path: Path):
     hub = tmp_path / "hub"
     inbox = hub / "processed" / "mail" / "inbox" / "rows.jsonl"
     inbox.parent.mkdir(parents=True)
@@ -1081,21 +1359,74 @@ def test_daemon_checkpoint_failure_leaves_unfinalized_heartbeat(tmp_path: Path):
     journal_repo = tmp_path / "not-a-git-journal"
     journal_repo.mkdir()
 
-    with pytest.raises(ValueError, match="no current branch"):
-        run_daemon_cycle(
-            hub,
-            mail_repos=[],
-            exception_repos=[],
-            transport_repos=[],
-            journal_repo=journal_repo,
-            checkpoint_apply=True,
-        )
+    result = run_daemon_cycle(
+        hub,
+        mail_repos=[],
+        exception_repos=[],
+        transport_repos=[],
+        journal_repo=journal_repo,
+        checkpoint_apply=True,
+    )
 
-    heartbeat = json.loads((hub / "processed" / "reports" / "daemon-heartbeat.json").read_text(encoding="utf-8"))
-    assert heartbeat["status"] == "in_progress"
-    assert heartbeat["cycle_completed_at"] == ""
-    assert heartbeat["heartbeat_finalized"] is False
+    heartbeat = json.loads(
+        (hub / "processed" / "reports" / "daemon-heartbeat.json").read_text(encoding="utf-8")
+    )
+    assert result["journal"]["status"] == "error"
+    assert heartbeat["status"] == "complete_with_errors"
+    assert heartbeat["cycle_completed_at"]
+    assert heartbeat["heartbeat_finalized"] is True
     assert heartbeat["journal_checkpoint_applied"] is False
+    assert daemon_status(hub)["status"] == "degraded"
+
+
+def test_journal_locked_copy_does_not_advance_checkpoint(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+):
+    hub = tmp_path / "hub"
+    inbox = hub / "processed" / "mail" / "inbox" / "rows.jsonl"
+    inbox.parent.mkdir(parents=True)
+    inbox.write_text(
+        "\n".join(json.dumps({"i": i}) for i in range(200)) + "\n",
+        encoding="utf-8",
+    )
+    journal_repo = tmp_path / "dad-journal"
+    subprocess.run(["git", "init", "-b", "journal-data", str(journal_repo)], check=True)
+    subprocess.run(
+        ["git", "-C", str(journal_repo), "config", "user.email", "dad@example.test"],
+        check=True,
+    )
+    subprocess.run(
+        ["git", "-C", str(journal_repo), "config", "user.name", "DAD Test"],
+        check=True,
+    )
+
+    def locked_copy(_source: Path, _destination: Path) -> None:
+        error = PermissionError("synthetic live-file lock")
+        error.winerror = 32
+        raise error
+
+    monkeypatch.setattr(journal_mod, "_copy_checkpoint_file", locked_copy)
+
+    result = checkpoint_journal(
+        hub,
+        journal_repo,
+        apply=True,
+        min_records=200,
+        min_hours=999,
+    )
+
+    assert result["status"] == "blocked"
+    assert result["checkpoint_applied"] is False
+    assert result["checkpoint_skipped_reason"] == "copy_incomplete"
+    assert result["copy_error_count"] == 1
+    assert result["copy_errors"][0]["winerror"] == 32
+    assert result["checkpoint_due"] is True
+    assert result["checkpoint_record_count"] == 0
+    applied_commands = [row["command"] for row in result["git_apply_results"]]
+    assert not any("push" in command for command in applied_commands)
+    assert not any("merge" in command for command in applied_commands)
+    assert not (journal_repo / "journal_checkpoint_manifest.json").exists()
 
 
 def test_daemon_cycle_ingests_journal_remote_outbox(tmp_path: Path):
@@ -1126,6 +1457,13 @@ def test_journal_apply_threshold_commits_and_pushes_to_data_repo(tmp_path: Path)
     inbox = hub / "processed" / "mail" / "inbox" / "rows.jsonl"
     inbox.parent.mkdir(parents=True)
     inbox.write_text("\n".join(json.dumps({"i": i}) for i in range(200)) + "\n", encoding="utf-8")
+    crlf_bytes = b"first\r\nsecond\r\n"
+    crlf_path = hub / "processed" / "learning" / "crlf.txt"
+    crlf_path.parent.mkdir(parents=True)
+    crlf_path.write_bytes(crlf_bytes)
+    binary_bytes = b"\x00\x01\r\n\xff\x10"
+    binary_path = hub / "processed" / "learning" / "binary.bin"
+    binary_path.write_bytes(binary_bytes)
     source_fixture = hub / "src" / "not-data-plane.jsonl"
     source_fixture.parent.mkdir(parents=True)
     source_fixture.write_text('{"source": "must-not-journal"}\n', encoding="utf-8")
@@ -1146,9 +1484,13 @@ def test_journal_apply_threshold_commits_and_pushes_to_data_repo(tmp_path: Path)
     journal_repo = tmp_path / "dad-journal"
     subprocess.run(["git", "init", "--bare", str(remote)], check=True)
     subprocess.run(["git", "init", "-b", "journal-data", str(journal_repo)], check=True)
-    subprocess.run(["git", "-C", str(journal_repo), "config", "user.email", "dad@example.test"], check=True)
+    subprocess.run(
+        ["git", "-C", str(journal_repo), "config", "user.email", "dad@example.test"], check=True
+    )
     subprocess.run(["git", "-C", str(journal_repo), "config", "user.name", "DAD Test"], check=True)
-    subprocess.run(["git", "-C", str(journal_repo), "remote", "add", "origin", str(remote)], check=True)
+    subprocess.run(
+        ["git", "-C", str(journal_repo), "remote", "add", "origin", str(remote)], check=True
+    )
 
     result = checkpoint_journal(hub, journal_repo, apply=True, min_records=200, min_hours=999)
 
@@ -1185,6 +1527,610 @@ def test_journal_apply_threshold_commits_and_pushes_to_data_repo(tmp_path: Path)
         check=True,
     ).stdout.strip()
     assert head == remote_head
+    assert subprocess.run(
+        [
+            "git",
+            "-C",
+            str(remote),
+            "show",
+            "journal-data:data/processed/learning/crlf.txt",
+        ],
+        capture_output=True,
+        check=True,
+    ).stdout == crlf_bytes
+    assert subprocess.run(
+        [
+            "git",
+            "-C",
+            str(remote),
+            "show",
+            "journal-data:data/processed/learning/binary.bin",
+        ],
+        capture_output=True,
+        check=True,
+    ).stdout == binary_bytes
+
+
+def test_journal_incremental_checkpoint_reuses_verified_files_and_reconciles_deletions(
+    tmp_path: Path,
+):
+    hub = tmp_path / "hub"
+    inbox = hub / "processed" / "mail" / "inbox" / "rows.jsonl"
+    inbox.parent.mkdir(parents=True)
+    inbox.write_text(
+        "\n".join(json.dumps({"i": i}) for i in range(200)) + "\n",
+        encoding="utf-8",
+    )
+    stable = hub / "processed" / "learning" / "stable.json"
+    stale = hub / "processed" / "learning" / "stale.json"
+    stable.parent.mkdir(parents=True)
+    stable.write_text('{"stable": true}\n', encoding="utf-8")
+    stale.write_text('{"remove": true}\n', encoding="utf-8")
+    literal_path = stable.parent / "stable[1] with spaces.json"
+    literal_path.write_text('{"version": 1}\n', encoding="utf-8")
+    for index in range(99):
+        (stable.parent / f"stable-{index:03d}.json").write_text(
+            json.dumps({"stable": index}) + "\n",
+            encoding="utf-8",
+        )
+    remote = tmp_path / "dad-journal-remote.git"
+    journal_repo = tmp_path / "dad-journal"
+    subprocess.run(["git", "init", "--bare", str(remote)], check=True)
+    subprocess.run(["git", "init", "-b", "main", str(journal_repo)], check=True)
+    subprocess.run(
+        ["git", "-C", str(journal_repo), "config", "user.email", "dad@example.test"],
+        check=True,
+    )
+    subprocess.run(
+        ["git", "-C", str(journal_repo), "config", "user.name", "DAD Test"],
+        check=True,
+    )
+    subprocess.run(
+        ["git", "-C", str(journal_repo), "remote", "add", "origin", str(remote)],
+        check=True,
+    )
+
+    first = checkpoint_journal(
+        hub, journal_repo, apply=True, min_records=200, min_hours=999
+    )
+    assert first["copied_file_count"] >= 3
+    first_manifest = json.loads(
+        (journal_repo / "journal_checkpoint_manifest.json").read_text(encoding="utf-8")
+    )
+    assert first_manifest["file_index_version"] == "1.0.0"
+    assert first_manifest["journal_engine_version"] == "1.1.0"
+    assert len(first_manifest["file_index"]) == first_manifest["verified_file_count"]
+
+    with inbox.open("a", encoding="utf-8") as handle:
+        for i in range(200, 400):
+            handle.write(json.dumps({"i": i}) + "\n")
+    stale.unlink()
+    literal_path.write_text('{"version": 2}\n', encoding="utf-8")
+    spoofed = stable.parent / "stable-000.json"
+    spoofed_stat = spoofed.stat()
+    spoofed.write_text(json.dumps({"stable": 9}) + "\n", encoding="utf-8")
+    os.utime(spoofed, ns=(spoofed_stat.st_atime_ns, spoofed_stat.st_mtime_ns))
+
+    second = checkpoint_journal(
+        hub, journal_repo, apply=True, min_records=200, min_hours=999
+    )
+
+    assert second["checkpoint_applied"] is True
+    assert second["unchanged_file_count"] >= 99
+    assert second["copied_file_count"] <= 6
+    assert second["copied_file_count"] < second["verified_file_count"]
+    assert second["removed_file_count"] == 1
+    commands = [row["command"] for row in second["git_apply_results"]]
+    assert any("--no-checkout" in command for command in commands)
+    assert any(command[-2:] == ["read-tree", "HEAD"] for command in commands)
+    stage_result = next(
+        row
+        for row in second["git_apply_results"]
+        if any(token.startswith("--pathspec-from-file=") for token in row["command"])
+    )
+    assert stage_result["staged_path_count"] <= (
+        second["copied_file_count"] + second["removed_file_count"] + 8
+    )
+    assert "core.autocrlf=false" in stage_result["command"]
+    assert "--literal-pathspecs" in stage_result["command"]
+    assert any(
+        token.startswith("core.attributesFile=") for token in stage_result["command"]
+    )
+    assert (journal_repo / "data" / "processed" / "learning" / "stable.json").exists()
+    assert not (journal_repo / "data" / "processed" / "learning" / "stale.json").exists()
+    second_manifest = json.loads(
+        (journal_repo / "journal_checkpoint_manifest.json").read_text(encoding="utf-8")
+    )
+    assert "processed/learning/stale.json" not in second_manifest["file_index"]
+    assert second_manifest["file_index"]["processed/learning/stable.json"] == (
+        first_manifest["file_index"]["processed/learning/stable.json"]
+    )
+    assert json.loads(
+        (
+            journal_repo / "data" / "processed" / "learning" / "stable-000.json"
+        ).read_text(encoding="utf-8")
+    ) == {"stable": 9}
+    assert json.loads(
+        (
+            journal_repo
+            / "data"
+            / "processed"
+            / "learning"
+            / "stable[1] with spaces.json"
+        ).read_text(encoding="utf-8")
+    ) == {"version": 2}
+
+    stable.unlink()
+    second_manifest["file_index_version"] = "unsupported-test-version"
+    (journal_repo / "journal_checkpoint_manifest.json").write_text(
+        json.dumps(second_manifest, indent=2) + "\n", encoding="utf-8"
+    )
+    subprocess.run(
+        ["git", "-C", str(journal_repo), "add", "journal_checkpoint_manifest.json"],
+        check=True,
+    )
+    subprocess.run(
+        ["git", "-C", str(journal_repo), "commit", "-m", "Synthetic legacy index"],
+        check=True,
+    )
+    subprocess.run(
+        ["git", "-C", str(journal_repo), "push", "origin", "main"], check=True
+    )
+    with inbox.open("a", encoding="utf-8") as handle:
+        for i in range(400, 600):
+            handle.write(json.dumps({"i": i}) + "\n")
+
+    third = checkpoint_journal(
+        hub, journal_repo, apply=True, min_records=200, min_hours=999
+    )
+
+    assert third["checkpoint_applied"] is True
+    assert third["previous_file_index_valid"] is False
+    assert third["removed_file_count"] >= 1
+    assert not (journal_repo / "data" / "processed" / "learning" / "stable.json").exists()
+
+    malicious_manifest = json.loads(
+        (journal_repo / "journal_checkpoint_manifest.json").read_text(encoding="utf-8")
+    )
+    malicious_manifest["file_index"] = {
+        "../escape": {
+            "source_size": 1,
+            "source_mtime_ns": 1,
+            "checkpoint_size": 1,
+            "checkpoint_sha256": "sha256:" + "0" * 64,
+        }
+    }
+    (journal_repo / "journal_checkpoint_manifest.json").write_text(
+        json.dumps(malicious_manifest, indent=2) + "\n", encoding="utf-8"
+    )
+    subprocess.run(
+        ["git", "-C", str(journal_repo), "add", "journal_checkpoint_manifest.json"],
+        check=True,
+    )
+    subprocess.run(
+        ["git", "-C", str(journal_repo), "commit", "-m", "Synthetic invalid index"],
+        check=True,
+    )
+    invalid_status = journal_repo_status(
+        hub, journal_repo, min_records=200, min_hours=999
+    )
+    assert invalid_status["machine_ready"] is False
+    assert invalid_status["file_index_integrity"]["valid"] is False
+
+
+def test_journal_checkpoint_blocks_git_attributes_that_can_transform_bytes(
+    tmp_path: Path,
+):
+    hub = tmp_path / "hub"
+    inbox = hub / "processed" / "mail" / "inbox" / "rows.jsonl"
+    inbox.parent.mkdir(parents=True)
+    inbox.write_text(
+        "\n".join(json.dumps({"i": i}) for i in range(200)) + "\n",
+        encoding="utf-8",
+    )
+    remote = tmp_path / "dad-journal-remote.git"
+    journal_repo = tmp_path / "dad-journal"
+    subprocess.run(["git", "init", "--bare", str(remote)], check=True)
+    subprocess.run(["git", "init", "-b", "main", str(journal_repo)], check=True)
+    subprocess.run(
+        ["git", "-C", str(journal_repo), "config", "user.email", "dad@example.test"],
+        check=True,
+    )
+    subprocess.run(
+        ["git", "-C", str(journal_repo), "config", "user.name", "DAD Test"],
+        check=True,
+    )
+    subprocess.run(
+        ["git", "-C", str(journal_repo), "remote", "add", "origin", str(remote)],
+        check=True,
+    )
+    subprocess.run(
+        ["git", "-C", str(journal_repo), "commit", "--allow-empty", "-m", "init"],
+        check=True,
+    )
+    subprocess.run(["git", "-C", str(journal_repo), "push", "origin", "main"], check=True)
+    info_attributes = journal_repo / ".git" / "info" / "attributes"
+    info_attributes.parent.mkdir(parents=True, exist_ok=True)
+    info_attributes.write_text("*.json filter=unsafe-test\n", encoding="utf-8")
+
+    result = checkpoint_journal(
+        hub, journal_repo, apply=True, min_records=200, min_hours=999
+    )
+
+    assert result["checkpoint_applied"] is False
+    assert result["checkpoint_skipped_reason"] == "journal_attributes_unsupported"
+    assert not (journal_repo / "journal_checkpoint_manifest.json").exists()
+
+
+def test_journal_checkpoint_blocks_ignored_repository_attributes(tmp_path: Path):
+    hub = tmp_path / "hub"
+    inbox = hub / "processed" / "mail" / "inbox" / "rows.jsonl"
+    inbox.parent.mkdir(parents=True)
+    inbox.write_text(
+        "\n".join(json.dumps({"i": i}) for i in range(200)) + "\n",
+        encoding="utf-8",
+    )
+    remote = tmp_path / "dad-journal-remote.git"
+    journal_repo = tmp_path / "dad-journal"
+    subprocess.run(["git", "init", "--bare", str(remote)], check=True)
+    subprocess.run(["git", "init", "-b", "main", str(journal_repo)], check=True)
+    subprocess.run(
+        ["git", "-C", str(journal_repo), "config", "user.email", "dad@example.test"],
+        check=True,
+    )
+    subprocess.run(
+        ["git", "-C", str(journal_repo), "config", "user.name", "DAD Test"],
+        check=True,
+    )
+    subprocess.run(
+        ["git", "-C", str(journal_repo), "remote", "add", "origin", str(remote)],
+        check=True,
+    )
+    subprocess.run(
+        ["git", "-C", str(journal_repo), "commit", "--allow-empty", "-m", "init"],
+        check=True,
+    )
+    subprocess.run(["git", "-C", str(journal_repo), "push", "origin", "main"], check=True)
+    (journal_repo / ".git" / "info" / "exclude").write_text(
+        ".gitattributes\n", encoding="utf-8"
+    )
+    (journal_repo / ".gitattributes").write_text(
+        "*.json filter=unsafe-test\n", encoding="utf-8"
+    )
+    assert subprocess.run(
+        ["git", "-C", str(journal_repo), "status", "--porcelain"],
+        check=True,
+        capture_output=True,
+        text=True,
+    ).stdout == ""
+
+    result = checkpoint_journal(
+        hub, journal_repo, apply=True, min_records=200, min_hours=999
+    )
+
+    assert result["checkpoint_applied"] is False
+    assert result["checkpoint_skipped_reason"] == "journal_attributes_unsupported"
+    assert not (journal_repo / "journal_checkpoint_manifest.json").exists()
+
+
+def test_journal_checkpoints_catalog_database_as_integrity_checked_sqlite_snapshot(
+    tmp_path: Path,
+):
+    hub = tmp_path / "hub"
+    inbox = hub / "processed" / "mail" / "inbox" / "rows.jsonl"
+    inbox.parent.mkdir(parents=True)
+    inbox.write_text(
+        "\n".join(json.dumps({"i": i}) for i in range(200)) + "\n",
+        encoding="utf-8",
+    )
+    database = hub / "state" / "catalog.sqlite3"
+    database.parent.mkdir(parents=True)
+    with sqlite3.connect(database) as connection:
+        connection.execute("PRAGMA journal_mode=WAL")
+        connection.execute("CREATE TABLE assets (id INTEGER PRIMARY KEY, value TEXT)")
+        connection.execute("INSERT INTO assets(value) VALUES ('checkpointed')")
+        connection.commit()
+    remote = tmp_path / "dad-journal-remote.git"
+    journal_repo = tmp_path / "dad-journal"
+    subprocess.run(["git", "init", "--bare", str(remote)], check=True)
+    subprocess.run(["git", "init", "-b", "main", str(journal_repo)], check=True)
+    subprocess.run(
+        ["git", "-C", str(journal_repo), "config", "user.email", "dad@example.test"],
+        check=True,
+    )
+    subprocess.run(
+        ["git", "-C", str(journal_repo), "config", "user.name", "DAD Test"],
+        check=True,
+    )
+    subprocess.run(
+        ["git", "-C", str(journal_repo), "remote", "add", "origin", str(remote)],
+        check=True,
+    )
+
+    result = checkpoint_journal(
+        hub, journal_repo, apply=True, min_records=200, min_hours=999
+    )
+
+    assert result["checkpoint_applied"] is True
+    checkpoint_database = journal_repo / "data" / "state" / "catalog.sqlite3"
+    assert not (journal_repo / "data" / "state" / "catalog.sqlite3-wal").exists()
+    assert not (journal_repo / "data" / "state" / "catalog.sqlite3-shm").exists()
+    with sqlite3.connect(checkpoint_database) as connection:
+        assert connection.execute("PRAGMA integrity_check").fetchone() == ("ok",)
+        assert connection.execute("SELECT value FROM assets").fetchone() == (
+            "checkpointed",
+        )
+
+
+def test_journal_unsafe_remote_descendant_leaves_primary_checkpoint_unchanged(
+    tmp_path: Path,
+):
+    hub = tmp_path / "hub"
+    inbox = hub / "processed" / "mail" / "inbox" / "rows.jsonl"
+    inbox.parent.mkdir(parents=True)
+    inbox.write_text(
+        "\n".join(json.dumps({"i": i}) for i in range(200)) + "\n",
+        encoding="utf-8",
+    )
+    remote = tmp_path / "dad-journal-remote.git"
+    journal_repo = tmp_path / "dad-journal"
+    subprocess.run(["git", "init", "--bare", str(remote)], check=True)
+    subprocess.run(["git", "init", "-b", "main", str(journal_repo)], check=True)
+    for repo in (journal_repo,):
+        subprocess.run(
+            ["git", "-C", str(repo), "config", "user.email", "dad@example.test"],
+            check=True,
+        )
+        subprocess.run(
+            ["git", "-C", str(repo), "config", "user.name", "DAD Test"],
+            check=True,
+        )
+    subprocess.run(
+        ["git", "-C", str(journal_repo), "remote", "add", "origin", str(remote)],
+        check=True,
+    )
+    first = checkpoint_journal(
+        hub, journal_repo, apply=True, min_records=200, min_hours=999
+    )
+    assert first["checkpoint_applied"] is True
+    primary_head = subprocess.run(
+        ["git", "-C", str(journal_repo), "rev-parse", "HEAD"],
+        check=True,
+        capture_output=True,
+        text=True,
+    ).stdout.strip()
+    primary_manifest = (journal_repo / "journal_checkpoint_manifest.json").read_bytes()
+
+    competing = tmp_path / "competing-journal"
+    subprocess.run(
+        ["git", "clone", "--branch", "main", str(remote), str(competing)], check=True
+    )
+    subprocess.run(
+        ["git", "-C", str(competing), "config", "user.email", "other@example.test"],
+        check=True,
+    )
+    subprocess.run(
+        ["git", "-C", str(competing), "config", "user.name", "Other Writer"],
+        check=True,
+    )
+    (competing / "unsafe.txt").write_text("competing update\n", encoding="utf-8")
+    subprocess.run(["git", "-C", str(competing), "add", "unsafe.txt"], check=True)
+    subprocess.run(["git", "-C", str(competing), "commit", "-m", "Competing update"], check=True)
+    subprocess.run(["git", "-C", str(competing), "push", "origin", "main"], check=True)
+    with inbox.open("a", encoding="utf-8") as handle:
+        for i in range(200, 400):
+            handle.write(json.dumps({"i": i}) + "\n")
+
+    result = checkpoint_journal(
+        hub, journal_repo, apply=True, min_records=200, min_hours=999
+    )
+
+    assert result["checkpoint_applied"] is False
+    assert result["checkpoint_skipped_reason"] == "remote_descendant_recovery_failed"
+    assert subprocess.run(
+        ["git", "-C", str(journal_repo), "rev-parse", "HEAD"],
+        check=True,
+        capture_output=True,
+        text=True,
+    ).stdout.strip() == primary_head
+    assert (journal_repo / "journal_checkpoint_manifest.json").read_bytes() == primary_manifest
+    assert subprocess.run(
+        ["git", "-C", str(journal_repo), "status", "--porcelain"],
+        check=True,
+        capture_output=True,
+        text=True,
+    ).stdout == ""
+
+
+def test_journal_recovers_safe_remote_descendant_without_pending_status(tmp_path: Path):
+    hub = tmp_path / "hub"
+    inbox = hub / "processed" / "mail" / "inbox" / "rows.jsonl"
+    inbox.parent.mkdir(parents=True)
+    inbox.write_text(
+        "\n".join(json.dumps({"i": i}) for i in range(200)) + "\n",
+        encoding="utf-8",
+    )
+    remote = tmp_path / "dad-journal-remote.git"
+    journal_repo = tmp_path / "dad-journal"
+    subprocess.run(["git", "init", "--bare", str(remote)], check=True)
+    subprocess.run(["git", "init", "-b", "main", str(journal_repo)], check=True)
+    subprocess.run(
+        ["git", "-C", str(journal_repo), "config", "user.email", "dad@example.test"],
+        check=True,
+    )
+    subprocess.run(
+        ["git", "-C", str(journal_repo), "config", "user.name", "DAD Test"],
+        check=True,
+    )
+    subprocess.run(
+        ["git", "-C", str(journal_repo), "remote", "add", "origin", str(remote)],
+        check=True,
+    )
+    first = checkpoint_journal(
+        hub, journal_repo, apply=True, min_records=200, min_hours=999
+    )
+    assert first["checkpoint_applied"] is True
+
+    competing = tmp_path / "post-push-process-crash"
+    subprocess.run(
+        ["git", "clone", "--branch", "main", str(remote), str(competing)], check=True
+    )
+    subprocess.run(
+        ["git", "-C", str(competing), "config", "user.email", "other@example.test"],
+        check=True,
+    )
+    subprocess.run(
+        ["git", "-C", str(competing), "config", "user.name", "Other Writer"],
+        check=True,
+    )
+    remote_candidate = competing / "remote-outbox" / "after-push.jsonl"
+    remote_candidate.parent.mkdir(parents=True)
+    remote_candidate.write_text('{"candidate": true}\n', encoding="utf-8")
+    subprocess.run(
+        ["git", "-C", str(competing), "add", "remote-outbox/after-push.jsonl"],
+        check=True,
+    )
+    subprocess.run(
+        ["git", "-C", str(competing), "commit", "-m", "Remote checkpoint tail"],
+        check=True,
+    )
+    subprocess.run(["git", "-C", str(competing), "push", "origin", "main"], check=True)
+    with inbox.open("a", encoding="utf-8") as handle:
+        for i in range(200, 400):
+            handle.write(json.dumps({"i": i}) + "\n")
+
+    local_head_before_recovery = subprocess.run(
+        ["git", "-C", str(journal_repo), "rev-parse", "HEAD"],
+        check=True,
+        capture_output=True,
+        text=True,
+    ).stdout.strip()
+    dirty_note = journal_repo / "local-note.txt"
+    dirty_note.write_text("do not overwrite\n", encoding="utf-8")
+    blocked = checkpoint_journal(
+        hub, journal_repo, apply=True, min_records=200, min_hours=999
+    )
+    assert blocked["checkpoint_skipped_reason"] == "journal_worktree_not_clean"
+    assert subprocess.run(
+        ["git", "-C", str(journal_repo), "rev-parse", "HEAD"],
+        check=True,
+        capture_output=True,
+        text=True,
+    ).stdout.strip() == local_head_before_recovery
+    dirty_note.unlink()
+
+    result = checkpoint_journal(
+        hub, journal_repo, apply=True, min_records=200, min_hours=999
+    )
+
+    assert result["checkpoint_applied"] is True
+    assert result["synchronized_start_head"]
+    assert (journal_repo / "remote-outbox" / "after-push.jsonl").exists()
+    assert subprocess.run(
+        ["git", "-C", str(journal_repo), "rev-parse", "HEAD"],
+        check=True,
+        capture_output=True,
+        text=True,
+    ).stdout.strip() == subprocess.run(
+        ["git", "-C", str(remote), "rev-parse", "main"],
+        check=True,
+        capture_output=True,
+        text=True,
+    ).stdout.strip()
+
+
+def test_journal_recovers_one_time_local_sync_failure_after_remote_push(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+):
+    hub = tmp_path / "hub"
+    inbox = hub / "processed" / "mail" / "inbox" / "rows.jsonl"
+    inbox.parent.mkdir(parents=True)
+    inbox.write_text(
+        "\n".join(json.dumps({"i": i}) for i in range(200)) + "\n",
+        encoding="utf-8",
+    )
+    remote = tmp_path / "dad-journal-remote.git"
+    journal_repo = tmp_path / "dad-journal"
+    subprocess.run(["git", "init", "--bare", str(remote)], check=True)
+    subprocess.run(["git", "init", "-b", "main", str(journal_repo)], check=True)
+    subprocess.run(
+        ["git", "-C", str(journal_repo), "config", "user.email", "dad@example.test"],
+        check=True,
+    )
+    subprocess.run(
+        ["git", "-C", str(journal_repo), "config", "user.name", "DAD Test"],
+        check=True,
+    )
+    subprocess.run(
+        ["git", "-C", str(journal_repo), "remote", "add", "origin", str(remote)],
+        check=True,
+    )
+    original_run_git_write = journal_mod._run_git_write
+    failed_once = False
+    advanced_remote = False
+
+    def fail_first_merge(command: list[str]):
+        nonlocal advanced_remote, failed_once
+        if "push" in command and not advanced_remote:
+            result = original_run_git_write(command)
+            competing = tmp_path / "post-push-writer"
+            subprocess.run(
+                ["git", "clone", "--branch", "main", str(remote), str(competing)],
+                check=True,
+            )
+            subprocess.run(
+                ["git", "-C", str(competing), "config", "user.email", "other@example.test"],
+                check=True,
+            )
+            subprocess.run(
+                ["git", "-C", str(competing), "config", "user.name", "Other Writer"],
+                check=True,
+            )
+            concurrent = competing / "remote-outbox" / "concurrent.jsonl"
+            concurrent.parent.mkdir(parents=True)
+            concurrent.write_text('{"candidate": true}\n', encoding="utf-8")
+            subprocess.run(
+                ["git", "-C", str(competing), "add", "remote-outbox/concurrent.jsonl"],
+                check=True,
+            )
+            subprocess.run(
+                ["git", "-C", str(competing), "commit", "-m", "Concurrent outbox"],
+                check=True,
+            )
+            subprocess.run(
+                ["git", "-C", str(competing), "push", "origin", "main"], check=True
+            )
+            advanced_remote = True
+            return result
+        if "merge" in command and "--ff-only" in command and not failed_once:
+            failed_once = True
+            raise RuntimeError("synthetic one-time local fast-forward failure")
+        return original_run_git_write(command)
+
+    monkeypatch.setattr(journal_mod, "_run_git_write", fail_first_merge)
+
+    result = checkpoint_journal(
+        hub, journal_repo, apply=True, min_records=200, min_hours=999
+    )
+
+    assert failed_once is True
+    assert advanced_remote is True
+    assert result["checkpoint_applied"] is True
+    local_head = subprocess.run(
+        ["git", "-C", str(journal_repo), "rev-parse", "HEAD"],
+        check=True,
+        capture_output=True,
+        text=True,
+    ).stdout.strip()
+    remote_head = subprocess.run(
+        ["git", "-C", str(remote), "rev-parse", "main"],
+        check=True,
+        capture_output=True,
+        text=True,
+    ).stdout.strip()
+    assert local_head == remote_head
+    assert (journal_repo / "remote-outbox" / "concurrent.jsonl").exists()
 
 
 def test_journal_repo_status_reports_missing_repo(tmp_path: Path):
@@ -1207,9 +2153,13 @@ def test_transport_readiness_can_include_journal_repo_machine_evidence(tmp_path:
     journal_repo = tmp_path / "dad-journal"
     subprocess.run(["git", "init", "--bare", str(remote)], check=True)
     subprocess.run(["git", "init", "-b", "main", str(journal_repo)], check=True)
-    subprocess.run(["git", "-C", str(journal_repo), "config", "user.email", "dad@example.test"], check=True)
+    subprocess.run(
+        ["git", "-C", str(journal_repo), "config", "user.email", "dad@example.test"], check=True
+    )
     subprocess.run(["git", "-C", str(journal_repo), "config", "user.name", "DAD Test"], check=True)
-    subprocess.run(["git", "-C", str(journal_repo), "remote", "add", "origin", str(remote)], check=True)
+    subprocess.run(
+        ["git", "-C", str(journal_repo), "remote", "add", "origin", str(remote)], check=True
+    )
     checkpoint_journal(hub, journal_repo, apply=True, min_records=200, min_hours=999)
     run_daemon_cycle(
         hub,
@@ -1236,4 +2186,81 @@ def test_transport_readiness_can_include_journal_repo_machine_evidence(tmp_path:
     repo_status = payload["journal"]["repo_status"]
     assert repo_status["machine_ready"] is True
     gate = payload["human_gates"]["journal_repo_checkpoint"]
-    assert gate["status"] == "journal_repo_machine_condition_met_pending_human_gate_record"
+    assert gate["status"] == "journal_repo_ready_pending_human_gate_record"
+    assert gate["complete"] is False
+
+
+def test_transport_readiness_requires_reviewed_gate_and_current_machine_evidence(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+):
+    hub = _hub_for_cli(tmp_path / "hub")
+    run_daemon_cycle(hub, mail_repos=[], exception_repos=[], transport_repos=[])
+    monkeypatch.setattr(
+        transport_readiness_mod,
+        "_phase13_verified_gate_ids",
+        lambda _hub: {"phase-13-daemon-schedule-approved"},
+    )
+    scheduler = {
+        "installed": True,
+        "command_mentions_run_cycle": True,
+        "expected_hub_found": True,
+    }
+
+    readiness = transport_readiness_mod.build_transport_readiness(
+        hub,
+        transport_repos=[],
+        enrollment_policies=[],
+        scheduler_status=scheduler,
+    )
+
+    gate = readiness["human_gates"]["daemon_schedule"]
+    assert gate["complete"] is True
+    assert gate["status"] == "verified_and_operational"
+    assert readiness["human_gates"]["journal_repo_checkpoint"]["complete"] is False
+
+
+def test_transport_readiness_does_not_treat_empty_audit_as_completed_upgrade_wave(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+):
+    hub = _hub_for_cli(tmp_path / "hub")
+    report = data_path(hub, "central_reports") / "transport_audit.json"
+    report.parent.mkdir(parents=True, exist_ok=True)
+    report.write_text("{}\n", encoding="utf-8")
+    monkeypatch.setattr(
+        transport_readiness_mod,
+        "_phase13_verified_gate_ids",
+        lambda _hub: {"phase-13-repo-transport-upgrade-wave-approved"},
+    )
+
+    readiness = transport_readiness_mod.build_transport_readiness(
+        hub,
+        transport_repos=[{"id": "synthetic-repo"}],
+        enrollment_policies=[],
+    )
+
+    gate = readiness["human_gates"]["repo_upgrade_wave"]
+    assert gate["complete"] is False
+    assert gate["status"] == "pending_reviewed_enrollment_wave"
+
+    report.write_text(
+        json.dumps(
+            {
+                "schema_version": "0.1.0",
+                "transport_surface_version": TRANSPORT_SURFACE_VERSION,
+                "repo_count": True,
+                "classification_counts": {
+                    "current": True,
+                    "upgrade_required": False,
+                },
+            }
+        ),
+        encoding="utf-8",
+    )
+    malformed = transport_readiness_mod.build_transport_readiness(
+        hub,
+        transport_repos=[{"id": "synthetic-repo"}],
+        enrollment_policies=[],
+    )
+    assert malformed["human_gates"]["repo_upgrade_wave"]["complete"] is False

@@ -8,6 +8,7 @@ journal snapshot plans. It does not make graph content authoritative.
 from __future__ import annotations
 
 import gzip
+import importlib
 import json
 from pathlib import Path
 from typing import Any
@@ -29,6 +30,7 @@ _LOGICAL_PREFIXES = {
     "research": "research",
     "reports": "central_reports",
     "exceptions": "exceptions",
+    "agents": "agents",
 }
 
 
@@ -64,12 +66,17 @@ def _journal_surface_dir(surface_id: str) -> Path:
     return Path("data") / GRAPH_SNAPSHOT_ROOT / surface_id
 
 
-def _snapshot_paths(surface_id: str, body_sha256: str) -> dict[str, str]:
-    digest = body_sha256.removeprefix("sha256:")
+def _snapshot_paths(
+    surface_id: str,
+    body_sha256: str,
+    manifest_sha256: str,
+) -> dict[str, str]:
+    body_digest = body_sha256.removeprefix("sha256:")
+    manifest_digest = manifest_sha256.removeprefix("sha256:")
     surface_dir = _journal_surface_dir(surface_id)
     return {
-        "manifest_json_path": (surface_dir / "manifest.json").as_posix(),
-        "body_gzip_path": (surface_dir / f"body-{digest}.json.gz").as_posix(),
+        "manifest_json_path": (surface_dir / f"manifest-{manifest_digest}.json").as_posix(),
+        "body_gzip_path": (surface_dir / f"body-{body_digest}.json.gz").as_posix(),
         "index_jsonl_path": (Path("data") / GRAPH_SNAPSHOT_ROOT / "index.jsonl").as_posix(),
     }
 
@@ -124,6 +131,31 @@ def graph_surface_freshness(hub_root: Path, surface: dict[str, Any]) -> dict[str
         actual = _hash_surface_input(data_relative_path(hub_root, rel))
         if actual != expected:
             reasons.append(f"input_hash_changed:{rel}")
+
+    expected_edge_registry_hash = str(manifest.get("edge_registry_hash") or "")
+    if expected_edge_registry_hash:
+        actual_edge_registry_hash = _hash_surface_input(
+            hub_root / "registry/graph-edge-registry.json"
+        )
+        if actual_edge_registry_hash != expected_edge_registry_hash:
+            reasons.append("edge_registry_hash_changed")
+
+    for rel, expected in manifest.get("methodology_hashes", {}).items():
+        if rel == "builder_source":
+            module_ref = str(surface.get("builder", {}).get("module", ""))
+            module_name, separator, _attribute = module_ref.rpartition(".")
+            actual = "missing"
+            if separator and module_name:
+                try:
+                    module = importlib.import_module(module_name)
+                    source_path = Path(str(module.__file__)).resolve()
+                    actual = _hash_surface_input(source_path)
+                except (ImportError, OSError, TypeError, ValueError):
+                    actual = "missing"
+        else:
+            actual = _hash_surface_input(hub_root / rel)
+        if actual != expected:
+            reasons.append(f"methodology_hash_changed:{rel}")
 
     if "graph_content_hash_mismatch" in reasons:
         state = "inconsistent"
@@ -241,8 +273,10 @@ def graph_surface_checkpoint_plan(
 
         body_bytes = body_path.read_bytes()
         body_sha256 = f"sha256:{sha256_file(body_path)}"
+        manifest_bytes = (json_dumps(manifest_json, pretty=True) + "\n").encode("utf-8")
+        manifest_sha256 = f"sha256:{sha256_bytes(manifest_bytes)}"
         body_gzip_sha256 = f"sha256:{sha256_bytes(_stable_gzip(body_bytes))}"
-        paths = _snapshot_paths(surface_id, body_sha256)
+        paths = _snapshot_paths(surface_id, body_sha256, manifest_sha256)
         body_snapshot_exists = (
             bool(journal_repo)
             and (Path(journal_repo) / paths["body_gzip_path"]).exists()
@@ -256,6 +290,7 @@ def graph_surface_checkpoint_plan(
             "surface_id": surface_id,
             "checkpointed_at": generated_at,
             "manifest_json_path": paths["manifest_json_path"],
+            "manifest_json_sha256": manifest_sha256,
             "body_gzip_path": paths["body_gzip_path"],
             "body_sha256": body_sha256,
             "body_gzip_sha256": body_gzip_sha256,
@@ -269,6 +304,7 @@ def graph_surface_checkpoint_plan(
             {
                 "status": "ready",
                 "manifest_json": manifest_json,
+                "manifest_json_sha256": manifest_sha256,
                 "body_sha256": body_sha256,
                 "body_gzip_sha256": body_gzip_sha256,
                 "body_gzip_snapshot_path": paths["body_gzip_path"],
@@ -299,8 +335,11 @@ def graph_surface_checkpoint_plan(
 def write_graph_surface_checkpoint_artifacts(
     hub_root: Path,
     journal_repo: Path,
+    *,
+    baseline_journal_repo: Path | None = None,
 ) -> dict[str, Any]:
-    plan = graph_surface_checkpoint_plan(hub_root, journal_repo)
+    baseline = baseline_journal_repo or journal_repo
+    plan = graph_surface_checkpoint_plan(hub_root, baseline)
     index_rows: list[dict[str, Any]] = []
     written_manifest_count = 0
     written_body_count = 0
@@ -316,7 +355,8 @@ def write_graph_surface_checkpoint_artifacts(
         )
         written_manifest_count += 1
         body_snapshot_path = journal_repo / str(snapshot["body_gzip_snapshot_path"])
-        if snapshot["body_upload_action"] == "skip_unchanged" and body_snapshot_path.exists():
+        baseline_body_path = baseline / str(snapshot["body_gzip_snapshot_path"])
+        if snapshot["body_upload_action"] == "skip_unchanged" and baseline_body_path.exists():
             skipped_body_count += 1
         else:
             body_bytes = Path(str(snapshot["body_path"])).read_bytes()
@@ -328,10 +368,14 @@ def write_graph_surface_checkpoint_artifacts(
     if index_rows:
         index_path = journal_repo / "data" / GRAPH_SNAPSHOT_ROOT / "index.jsonl"
         index_path.parent.mkdir(parents=True, exist_ok=True)
-        existing = set()
-        if index_path.exists():
-            existing = set(index_path.read_text(encoding="utf-8").splitlines())
-        with index_path.open("a", encoding="utf-8") as handle:
+        baseline_index_path = baseline / "data" / GRAPH_SNAPSHOT_ROOT / "index.jsonl"
+        existing_lines: list[str] = []
+        if baseline_index_path.exists():
+            existing_lines = baseline_index_path.read_text(encoding="utf-8").splitlines()
+        existing = set(existing_lines)
+        with index_path.open("w", encoding="utf-8") as handle:
+            for line in existing_lines:
+                handle.write(line + "\n")
             for row in index_rows:
                 line = json_dumps(row)
                 if line in existing:

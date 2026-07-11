@@ -1,0 +1,19 @@
+{
+  "attempt_slug": "logos-t475-planck",
+  "authority_boundary": "This reconstructed candidate record describes one bounded execution attempt. It does not identify a person, rank a model family, or authorize agent routing, promotion, consolidation, specialization, or supersession.",
+  "capture_type": "parent_reconstructed_terminal_summary",
+  "improvement_recommendations": [
+    "Add a concise migration-state table when the repair changes generated candidate counts."
+  ],
+  "limitations": [
+    "This is a parent-captured bounded summary, not hidden reasoning or a full source transcript.",
+    "Exact start/end time and invocation prompt hash were unavailable."
+  ],
+  "observed_failures": [],
+  "observed_strengths": [
+    "Specified the minimal editorial-only sidecar route and protected verse text, counters, and word-token invariants."
+  ],
+  "runtime_attempt_id": "019f4d0e-343f-7cd3-a95d-560f3d6a56fb",
+  "schema_version": "dad.subagent.parent-captured-evidence.v1",
+  "task_id": "T475"
+}

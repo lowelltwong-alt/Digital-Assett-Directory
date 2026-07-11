@@ -9,6 +9,7 @@ from typing import Any, Mapping, Sequence
 from .daemon import daemon_status
 from .graph_surfaces import graph_surface_status
 from .journal import journal_status
+from .roadmap import check_roadmap
 from .transport import (
     AUTHORITY_BOUNDARY,
     DATA_PLANE_PATHS,
@@ -41,6 +42,24 @@ def _gate(*, complete: bool, status: str, evidence: dict[str, Any]) -> dict[str,
     }
 
 
+def _phase13_verified_gate_ids(hub_root: Path) -> set[str]:
+    try:
+        phase = check_roadmap(hub_root, update=False).get("phases", {}).get(
+            "phase-13-transport-data-plane", {}
+        )
+    except (OSError, ValueError, KeyError, TypeError):
+        return set()
+    return {
+        str(gate_id)
+        for gate_id in phase.get("human_gate_ids_verified", [])
+        if str(gate_id)
+    }
+
+
+def _is_nonnegative_plain_int(value: Any) -> bool:
+    return type(value) is int and value >= 0
+
+
 def build_transport_readiness(
     hub_root: Path,
     *,
@@ -68,24 +87,39 @@ def build_transport_readiness(
     )
     scheduler = dict(scheduler_status or {})
     journal_repo = dict(journal_repo_status or {})
+    verified_gate_ids = _phase13_verified_gate_ids(hub_root)
 
     data_root_active = data_mode == "data_root"
     last_checkpoint_at = str(journal.get("last_checkpoint_at") or "")
     daemon_fresh = daemon.get("status") == "fresh" and not bool(daemon.get("stale"))
-    if scheduler.get("installed") and daemon_fresh:
-        daemon_schedule_status = (
-            "scheduler_installed_machine_condition_met_pending_human_gate_record"
-        )
+    daemon_machine_ready = bool(
+        scheduler.get("installed")
+        and scheduler.get("command_mentions_run_cycle")
+        and scheduler.get("expected_hub_found")
+        and daemon_fresh
+    )
+    daemon_gate_verified = "phase-13-daemon-schedule-approved" in verified_gate_ids
+    if daemon_machine_ready and daemon_gate_verified:
+        daemon_schedule_status = "verified_and_operational"
+    elif daemon_machine_ready:
+        daemon_schedule_status = "scheduler_installed_pending_human_gate_record"
     elif scheduler:
         daemon_schedule_status = "scheduler_query_missing_or_not_installed"
     elif daemon_fresh:
         daemon_schedule_status = "fresh_heartbeat_but_task_scheduler_unverified"
     else:
         daemon_schedule_status = "pending_task_scheduler_apply"
-    if journal_repo.get("machine_ready") and not bool(journal.get("checkpoint_due")):
-        journal_gate_status = (
-            "journal_repo_machine_condition_met_pending_human_gate_record"
-        )
+    journal_machine_ready = bool(
+        journal_repo.get("machine_ready")
+        and journal_repo.get("working_tree_clean")
+        and journal_repo.get("checkpoint_current_for_threshold")
+        and not bool(journal.get("checkpoint_due"))
+    )
+    journal_gate_verified = "phase-13-journal-repo-approved" in verified_gate_ids
+    if journal_machine_ready and journal_gate_verified:
+        journal_gate_status = "verified_and_operational"
+    elif journal_machine_ready:
+        journal_gate_status = "journal_repo_ready_pending_human_gate_record"
     elif journal_repo:
         journal_gate_status = str(
             journal_repo.get("status") or "journal_repo_not_ready"
@@ -93,13 +127,61 @@ def build_transport_readiness(
     else:
         journal_gate_status = "pending_private_journal_repo_or_checkpoint_apply"
 
+    data_root_gate_verified = "phase-13-data-root-migration-approved" in verified_gate_ids
+    data_root_complete = data_root_active and data_root_gate_verified
+    repo_gate_verified = (
+        "phase-13-repo-transport-upgrade-wave-approved" in verified_gate_ids
+    )
+    raw_classification_counts = report_payload.get("classification_counts")
+    classification_counts = (
+        raw_classification_counts if isinstance(raw_classification_counts, dict) else {}
+    )
+    reported_repo_count = report_payload.get("repo_count")
+    classification_keys = (
+        "current",
+        "no_dad_surface",
+        "upgrade_recommended",
+        "upgrade_required",
+    )
+    classification_counts_are_strict = all(
+        _is_nonnegative_plain_int(classification_counts.get(key, 0))
+        for key in classification_keys
+    )
+    explicit_classification_total = (
+        sum(classification_counts.get(key, 0) for key in classification_keys)
+        if classification_counts_are_strict
+        else -1
+    )
+    repo_machine_ready = bool(
+        report_status == "readable"
+        and report_payload.get("schema_version") == "0.1.0"
+        and report_payload.get("transport_surface_version") == TRANSPORT_SURFACE_VERSION
+        and _is_nonnegative_plain_int(reported_repo_count)
+        and reported_repo_count > 0
+        and reported_repo_count == len(repos)
+        and explicit_classification_total == reported_repo_count
+        and "upgrade_required" in classification_counts
+        and classification_counts.get("upgrade_required") == 0
+    )
+    repo_gate_complete = repo_gate_verified and repo_machine_ready
+    cloudflare_gate_verified = (
+        "phase-13-cloudflare-relay-deferred" in verified_gate_ids
+    )
+
     human_gates = {
         "data_root_migration": _gate(
-            complete=data_root_active,
-            status="active" if data_root_active else "pending_human_apply",
+            complete=data_root_complete,
+            status=(
+                "verified_and_operational"
+                if data_root_complete
+                else "active_pending_human_gate_record"
+                if data_root_active
+                else "pending_human_apply"
+            ),
             evidence={
                 "data_root": str(data_root),
                 "mode": data_mode,
+                "human_gate_verified": data_root_gate_verified,
                 "note": (
                     "legacy mode is the fail-safe fallback until an initialized "
                     "DAD_DATA_ROOT marker is present"
@@ -107,23 +189,25 @@ def build_transport_readiness(
             },
         ),
         "journal_repo_checkpoint": _gate(
-            complete=False,
+            complete=journal_machine_ready and journal_gate_verified,
             status=journal_gate_status,
             evidence={
                 "last_checkpoint_at": last_checkpoint_at,
                 "checkpoint_due": journal.get("checkpoint_due"),
                 "new_record_count": journal.get("new_record_count"),
                 "journal_repo_status": journal_repo or None,
+                "human_gate_verified": journal_gate_verified,
             },
         ),
         "daemon_schedule": _gate(
-            complete=False,
+            complete=daemon_machine_ready and daemon_gate_verified,
             status=daemon_schedule_status,
             evidence={
                 "daemon_status": daemon.get("status"),
                 "stale": daemon.get("stale"),
                 "heartbeat_path": daemon.get("heartbeat_path"),
                 "scheduler_status": scheduler or None,
+                "human_gate_verified": daemon_gate_verified,
                 "note": (
                     "Task Scheduler evidence is read-only and machine-level; "
                     "the phase gate still needs a human approval/evidence record."
@@ -131,8 +215,14 @@ def build_transport_readiness(
             },
         ),
         "repo_upgrade_wave": _gate(
-            complete=False,
-            status="pending_reviewed_enrollment_wave",
+            complete=repo_gate_complete,
+            status=(
+                "verified_and_operational"
+                if repo_gate_complete
+                else "machine_ready_pending_human_gate_record"
+                if repo_machine_ready
+                else "pending_reviewed_enrollment_wave"
+            ),
             evidence={
                 "configured_policy_repo_count": len(repos),
                 "transport_queue_row_count": queue.get("row_count"),
@@ -143,13 +233,19 @@ def build_transport_readiness(
                 "skipped_by_reason": upgrade_status.get("selection", {}).get(
                     "skipped_by_reason", {}
                 ),
+                "human_gate_verified": repo_gate_verified,
             },
         ),
         "cloudflare_relay": _gate(
-            complete=False,
-            status="deferred_until_phase_10a_cloud_boundary_reviewed",
+            complete=cloudflare_gate_verified,
+            status=(
+                "verified_deferred"
+                if cloudflare_gate_verified
+                else "deferred_until_phase_10a_cloud_boundary_reviewed"
+            ),
             evidence={
                 "implemented": False,
+                "human_gate_verified": cloudflare_gate_verified,
                 "note": "M3 relay remains design-only until its human gate.",
             },
         ),

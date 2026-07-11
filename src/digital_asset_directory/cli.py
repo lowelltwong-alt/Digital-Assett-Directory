@@ -147,7 +147,10 @@ from .learning import (
     rebuild_lesson_routes,
 )
 from .journal import checkpoint_journal, ingest_remote_outbox, journal_repo_status, journal_status
-from .lesson_automation_coverage import write_lesson_automation_coverage_outputs
+from .lesson_automation_coverage import (
+    write_lesson_automation_coverage_outputs,
+    write_weekly_asset_coverage_outputs,
+)
 from .lesson_action_queue import (
     DECISION_TEMPLATE_PATH,
     load_lesson_automation_path_filter_file,
@@ -255,6 +258,12 @@ from .rust_rollout import (
     summarize_rust_rollout_lessons,
     write_rust_rollout_plan,
 )
+from .subagent_evaluations import (
+    build_graph as build_subagent_capability_graph,
+    build_improvement_review as build_subagent_improvement_review,
+    ingest_packet as ingest_subagent_evaluation_packet,
+    status as subagent_evaluation_status,
+)
 from .semantic_evolution import write_semantic_evolution_outputs
 from .surface_versions import build_surface_version_status
 from .template_library import validate_template_registry, write_template_library_report
@@ -295,6 +304,8 @@ lesson_app = typer.Typer(no_args_is_help=True)
 app.add_typer(lesson_app, name="lesson")
 agent_app = typer.Typer(no_args_is_help=True)
 app.add_typer(agent_app, name="agent")
+subagents_app = typer.Typer(no_args_is_help=True)
+app.add_typer(subagents_app, name="subagents")
 roadmap_app = typer.Typer(no_args_is_help=True)
 app.add_typer(roadmap_app, name="roadmap")
 research_app = typer.Typer(no_args_is_help=True)
@@ -468,7 +479,9 @@ def transport_synthetic_rollout(hub: Optional[Path] = typer.Option(None)) -> Non
 def transport_readiness(
     hub: Optional[Path] = typer.Option(None),
     stale_hours: int = typer.Option(26),
-    inspect_scheduler: bool = typer.Option(False, "--inspect-scheduler"),
+    inspect_scheduler: bool = typer.Option(
+        True, "--inspect-scheduler/--no-inspect-scheduler"
+    ),
     skip_task_query: bool = typer.Option(False, "--skip-task-query"),
     task_name: str = typer.Option("DAD Daemon Run Cycle"),
     shim: Optional[Path] = typer.Option(None),
@@ -481,9 +494,14 @@ def transport_readiness(
         if inspect_scheduler and not skip_task_query
         else None
     )
+    discovered_journal_repo = journal_repo
+    if discovered_journal_repo is None and scheduler is not None:
+        scheduled_journal_repo = scheduler.get("journal_repo")
+        if isinstance(scheduled_journal_repo, str) and scheduled_journal_repo.strip():
+            discovered_journal_repo = Path(scheduled_journal_repo)
     journal_repo_evidence = (
-        journal_repo_status(cfg.repo_root, journal_repo)
-        if journal_repo is not None
+        journal_repo_status(cfg.repo_root, discovered_journal_repo)
+        if discovered_journal_repo is not None
         else None
     )
     console.print_json(
@@ -539,6 +557,11 @@ def daemon_run_cycle(
     hub: Optional[Path] = typer.Option(None),
     journal_repo: Optional[Path] = typer.Option(None),
     checkpoint_apply: bool = typer.Option(False, "--checkpoint-apply"),
+    quiet: bool = typer.Option(
+        False,
+        "--quiet",
+        help="Write operational reports without rendering the full cycle payload.",
+    ),
     skip_transport_audit: bool = typer.Option(False, "--skip-transport-audit"),
     skip_graphs: bool = typer.Option(False, "--skip-graphs"),
     deliver_local_caches: bool = typer.Option(
@@ -548,18 +571,19 @@ def daemon_run_cycle(
     ),
 ) -> None:
     cfg = _cfg(hub=hub)
-    console.print_json(
-        data=run_daemon_cycle(
-            cfg.repo_root,
-            mail_repos=cfg.mail_repos,
-            exception_repos=cfg.exception_repos,
-            deliver_local_caches=deliver_local_caches,
-            rebuild_graphs=not skip_graphs,
-            transport_repos=None if skip_transport_audit else _transport_repo_rows(cfg),
-            journal_repo=journal_repo,
-            checkpoint_apply=checkpoint_apply,
-        )
+    result = run_daemon_cycle(
+        cfg.repo_root,
+        mail_repos=cfg.mail_repos,
+        exception_repos=cfg.exception_repos,
+        deliver_local_caches=deliver_local_caches,
+        rebuild_graphs=not skip_graphs,
+        transport_repos=None if skip_transport_audit else _transport_repo_rows(cfg),
+        asset_coverage_repos=cfg.enrollment_repos,
+        journal_repo=journal_repo,
+        checkpoint_apply=checkpoint_apply,
     )
+    if not quiet:
+        console.print_json(data=result)
 
 
 @daemon_app.command("status")
@@ -1736,7 +1760,9 @@ def _payload_file_text(path: Path) -> str:
 def _payload_json_text(value: str) -> str:
     source = value.strip()
     if not source:
-        raise typer.BadParameter("--payload-json requires a JSON object, file path, or '-' for stdin.")
+        raise typer.BadParameter(
+            "--payload-json requires a JSON object, file path, or '-' for stdin."
+        )
     if source == "-":
         return sys.stdin.read()
     if source.startswith(("{", "[")):
@@ -1822,7 +1848,9 @@ def _lesson_payload_warning_result(
         schema = json.loads((repo_root / schema_ref).read_text(encoding="utf-8"))
         validator_cls = validator_for(schema)
         validator_cls.check_schema(schema)
-        errors = sorted(validator_cls(schema).iter_errors(payload), key=lambda item: list(item.path))
+        errors = sorted(
+            validator_cls(schema).iter_errors(payload), key=lambda item: list(item.path)
+        )
     except Exception as exc:
         return {
             **base,
@@ -6593,6 +6621,58 @@ def lesson_graph(hub: Optional[Path] = typer.Option(None)) -> None:
     console.print_json(data=summary)
 
 
+@subagents_app.command("ingest")
+def subagents_ingest(
+    packet: Path = typer.Option(..., "--packet", exists=True, file_okay=False),
+    hub: Optional[Path] = typer.Option(None),
+) -> None:
+    """Validate and append an immutable subagent evaluation packet."""
+    cfg = _cfg(hub=hub)
+    try:
+        result = ingest_subagent_evaluation_packet(cfg.repo_root, packet.resolve())
+    except (OSError, ValueError) as exc:
+        console.print(str(exc))
+        raise typer.Exit(2) from exc
+    console.print_json(data=result)
+
+
+@subagents_app.command("graph")
+def subagents_graph(hub: Optional[Path] = typer.Option(None)) -> None:
+    """Build the candidate subagent capability graph and review queue."""
+    cfg = _cfg(hub=hub)
+    try:
+        result = build_subagent_capability_graph(cfg.repo_root)
+    except (OSError, ValueError) as exc:
+        console.print(str(exc))
+        raise typer.Exit(2) from exc
+    console.print_json(data=result)
+
+
+@subagents_app.command("status")
+def subagents_status(hub: Optional[Path] = typer.Option(None)) -> None:
+    """Show attempt/evaluation counts without turning them into rankings."""
+    cfg = _cfg(hub=hub)
+    console.print_json(data=subagent_evaluation_status(cfg.repo_root))
+
+
+@subagents_app.command("improvement-review")
+def subagents_improvement_review(
+    hub: Optional[Path] = typer.Option(None),
+    record_exceptions: bool = typer.Option(False, "--record-exceptions"),
+) -> None:
+    """Audit review completeness, model routing, trends, and escalation candidates."""
+    cfg = _cfg(hub=hub)
+    try:
+        result = build_subagent_improvement_review(
+            cfg.repo_root,
+            record_exceptions=record_exceptions,
+        )
+    except (OSError, ValueError) as exc:
+        console.print(str(exc))
+        raise typer.Exit(2) from exc
+    console.print_json(data=result)
+
+
 @lesson_app.command("asset-use")
 def lesson_asset_use(
     asset_id: str = typer.Option(..., "--asset-id"),
@@ -7557,6 +7637,25 @@ def recommend_lesson_automation_coverage(
             scan_summary=scan_summary,
             limit=limit,
         )
+    console.print_json(data=result)
+
+
+@recommend_app.command("weekly-asset-coverage")
+def recommend_weekly_asset_coverage(
+    hub: Optional[Path] = typer.Option(None),
+    lookback_days: int = typer.Option(21, "--lookback-days", min=1, max=90),
+    due_days: int = typer.Option(7, "--due-days", min=1, max=31),
+    force: bool = typer.Option(False, "--force"),
+) -> None:
+    """Write the weekly read-only repo asset/test coverage report."""
+    cfg = _cfg(hub=hub)
+    result = write_weekly_asset_coverage_outputs(
+        cfg.repo_root,
+        repo_policies=cfg.enrollment_repos,
+        lookback_days=lookback_days,
+        due_days=due_days,
+        force=force,
+    )
     console.print_json(data=result)
 
 

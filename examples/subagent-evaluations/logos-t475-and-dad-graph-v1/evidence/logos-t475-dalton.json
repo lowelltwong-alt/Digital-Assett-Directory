@@ -1,0 +1,19 @@
+{
+  "attempt_slug": "logos-t475-dalton",
+  "authority_boundary": "This reconstructed candidate record describes one bounded execution attempt. It does not identify a person, rank a model family, or authorize agent routing, promotion, consolidation, specialization, or supersession.",
+  "capture_type": "parent_reconstructed_terminal_summary",
+  "improvement_recommendations": [
+    "Flag unexplained typed-row removals for escalation even when arithmetic is internally consistent."
+  ],
+  "limitations": [
+    "This is a parent-captured bounded summary, not hidden reasoning or a full source transcript.",
+    "Exact start/end time and invocation prompt hash were unavailable."
+  ],
+  "observed_failures": [],
+  "observed_strengths": [
+    "Verified arithmetic, repeatability, and no-text constraints at low cost."
+  ],
+  "runtime_attempt_id": "019f4c7d-eea2-7061-a9e9-9f9a630a8b6d",
+  "schema_version": "dad.subagent.parent-captured-evidence.v1",
+  "task_id": "T475"
+}

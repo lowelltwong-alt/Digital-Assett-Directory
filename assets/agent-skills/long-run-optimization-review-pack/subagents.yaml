@@ -1,0 +1,89 @@
+schema_version: dad_subagent_pack.v0_1
+pack_id: dad:subagent-pack:long-run-optimization-review
+version: 0.1.0
+status: active
+ai_agnostic: true
+trigger:
+  measured_wall_time_seconds: 60
+  predicted_wall_time_seconds: 120
+  dedupe_scope: normalized_command_signature_per_session
+  retrigger_growth_percent: 25
+fallback: explicit_local_checklists_with_subagents_unavailable_status
+authority_boundary: >
+  Reviews produce candidate optimization evidence only. They do not cancel
+  commands, authorize dependencies, move governance semantics, or approve a
+  Python-to-Rust migration without profiling, parity, and local validation.
+roles:
+  - role_id: optimization-director
+    effort: high
+    mission: Classify the measured bottleneck, delegate only useful reviews, and approve or reject a bounded build brief.
+    delegates:
+      - algorithm-architecture-reviewer
+      - existing-library-web-research-scout
+      - language-runtime-boundary-reviewer
+      - benchmark-parity-planner
+      - improvement-builder
+    required_output:
+      - bottleneck_classification
+      - delegated_roles_and_effort
+      - evidence_summary
+      - adopt_experiment_defer_or_reject
+      - bounded_build_brief_or_no_build_reason
+  - role_id: algorithm-architecture-reviewer
+    effort: high
+    mission: Find repeated work, avoidable complexity, batching, caching, and concurrency opportunities.
+    required_output:
+      - measured_hotspots
+      - algorithmic_options
+      - expected_gain_range
+      - risks_and_stop_conditions
+  - role_id: existing-library-web-research-scout
+    effort: low_or_medium
+    mission: Search current primary sources for algorithms, maintained libraries, native tools, and reference implementations.
+    required_checks:
+      - primary_source_links
+      - compatibility
+      - license_and_provenance
+      - security_posture
+      - maintenance_health
+      - benchmark_fit
+    forbidden_actions:
+      - edit_code
+      - adopt_dependency
+      - claim_speedup_without_local_benchmark
+  - role_id: language-runtime-boundary-reviewer
+    effort: high
+    mission: Decide whether Rust or another runtime belongs behind a stable deterministic boundary.
+    required_inputs:
+      - profile_evidence
+      - current_language_boundary
+      - existing_dad_rust_capabilities
+    reject_when:
+      - bottleneck_is_unmeasured
+      - work_is_primarily_io_wait
+      - governance_or_human_gate_semantics_would_move
+      - no_shadow_parity_plan
+  - role_id: benchmark-parity-planner
+    effort: medium
+    mission: Specify same-input correctness parity, realistic timing, rollback, and regression gates.
+    required_output:
+      - baseline_command
+      - fixture_or_corpus_scope
+      - parity_oracle
+      - timing_method
+      - acceptance_threshold
+      - rollback_trigger
+  - role_id: improvement-builder
+    effort: high
+    mission: Implement an approved bounded optimization while preserving behavior and simplifying the workflow.
+    starts_only_when:
+      - director_approved_build_brief
+      - stable_boundary_identified
+      - parity_oracle_defined
+      - benchmark_acceptance_threshold_defined
+    required_output:
+      - files_changed
+      - behavior_parity_results
+      - before_after_timings
+      - workflow_simplification
+      - residual_risks

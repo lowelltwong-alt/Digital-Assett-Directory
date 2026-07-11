@@ -1,0 +1,19 @@
+{
+  "attempt_slug": "dad-graph-claude-opus-timeout",
+  "authority_boundary": "This reconstructed candidate record describes one bounded execution attempt. It does not identify a person, rank a model family, or authorize agent routing, promotion, consolidation, specialization, or supersession.",
+  "capture_type": "tool_execution_failure",
+  "improvement_recommendations": [
+    "Use a bounded diff packet and run an availability preflight before assigning the full audit."
+  ],
+  "limitations": [
+    "This is a parent-captured bounded summary, not hidden reasoning or a full source transcript.",
+    "Exact start/end time and invocation prompt hash were unavailable."
+  ],
+  "observed_failures": [
+    "Produced no verdict before the 15-minute execution ceiling."
+  ],
+  "observed_strengths": [],
+  "runtime_attempt_id": "claude-cli-20260710-opus-audit",
+  "schema_version": "dad.subagent.parent-captured-evidence.v1",
+  "task_id": "DAD-SUBAGENT-GRAPH-V1-INDEPENDENT-AUDIT"
+}

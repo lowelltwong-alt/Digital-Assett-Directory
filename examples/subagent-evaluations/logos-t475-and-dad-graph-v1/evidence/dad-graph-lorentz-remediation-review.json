@@ -1,0 +1,19 @@
+{
+  "attempt_slug": "dad-graph-lorentz-remediation-review",
+  "authority_boundary": "This reconstructed candidate record describes one bounded execution attempt. It does not identify a person, rank a model family, or authorize agent routing, promotion, consolidation, specialization, or supersession.",
+  "capture_type": "parent_reconstructed_terminal_summary",
+  "improvement_recommendations": [
+    "Run the exact ledger reconciliation probe before reporting code-level rubric replay as closed."
+  ],
+  "limitations": [
+    "This is a parent-captured bounded summary, not hidden reasoning or a full source transcript.",
+    "Exact start/end time and invocation prompt hash were unavailable."
+  ],
+  "observed_failures": [],
+  "observed_strengths": [
+    "Verified five prior findings closed and found three remaining P1 integrity gaps plus two P2 transparency gaps."
+  ],
+  "runtime_attempt_id": "019f4d58-e282-7070-9a5b-cfa4ac2fb354",
+  "schema_version": "dad.subagent.parent-captured-evidence.v1",
+  "task_id": "DAD-SUBAGENT-GRAPH-V1-REVIEW-2"
+}

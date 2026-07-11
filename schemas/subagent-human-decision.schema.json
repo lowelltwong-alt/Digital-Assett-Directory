@@ -1,0 +1,26 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://local.digital-asset-directory/schemas/subagent-human-decision.schema.json",
+  "title": "Subagent Human Decision Overlay",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "decision_id", "recommendation_id", "decision", "decided_by", "actor_type", "human_verified", "authority_ref", "decided_at", "input_fingerprint", "conditions", "resulting_change_refs", "review_status", "authority_boundary"],
+  "properties": {
+    "schema_version": {"const": "0.1.0"},
+    "decision_id": {"type": "string", "pattern": "^dad:subagent-decision:[a-z0-9-]+$"},
+    "recommendation_id": {"type": "string", "minLength": 1},
+    "decision": {"enum": ["approved", "rejected", "deferred", "needs_more_evidence"]},
+    "decided_by": {"type": "string", "minLength": 1},
+    "actor_type": {"const": "human"},
+    "human_verified": {"const": true},
+    "authority_ref": {"type": "string", "minLength": 1},
+    "decided_at": {"type": "string", "minLength": 1},
+    "input_fingerprint": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"},
+    "conditions": {"type": "array", "items": {"type": "string", "minLength": 1}},
+    "expires_at": {"type": ["string", "null"]},
+    "resulting_change_refs": {"type": "array", "items": {"type": "string", "minLength": 1}},
+    "supersedes_decision_id": {"type": ["string", "null"]},
+    "review_status": {"const": "human_reviewed"},
+    "authority_boundary": {"type": "string", "minLength": 1}
+  }
+}

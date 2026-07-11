@@ -1,0 +1,21 @@
+{
+  "attempt_slug": "logos-t475-chandrasekhar",
+  "authority_boundary": "This reconstructed candidate record describes one bounded execution attempt. It does not identify a person, rank a model family, or authorize agent routing, promotion, consolidation, specialization, or supersession.",
+  "capture_type": "parent_reconstructed_terminal_summary",
+  "improvement_recommendations": [
+    "Classify deltas by typed information loss before accepting count reductions as expected parity."
+  ],
+  "limitations": [
+    "This is a parent-captured bounded summary, not hidden reasoning or a full source transcript.",
+    "Exact start/end time and invocation prompt hash were unavailable."
+  ],
+  "observed_failures": [
+    "Initially classified the loss of three typed editorial footnotes as expected and was overruled by the architecture review."
+  ],
+  "observed_strengths": [
+    "Produced useful parity structure and remained within the review scope."
+  ],
+  "runtime_attempt_id": "019f4c7d-9c0c-7052-9682-1be2e322707d",
+  "schema_version": "dad.subagent.parent-captured-evidence.v1",
+  "task_id": "T475"
+}

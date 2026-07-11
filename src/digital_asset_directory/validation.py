@@ -12,6 +12,7 @@ from jsonschema.validators import validator_for
 from .config import load_config
 from .graph_surfaces import resolve_graph_surface_path
 from .transport import DATA_PLANE_PATHS, data_relative_path
+from .subagent_evaluations import validate_hub_records as validate_subagent_hub_records
 from .exception_capture import (
     BACKFILL_ROUTE_REQUIRED_FIELDS,
     audit_observed_capture_repo,
@@ -1479,17 +1480,25 @@ def _validate_lesson_graph_contract(
                 errors.append(
                     f"Lesson graph inference edge lacks method_version: {edge.get('edge_id')}"
                 )
-    lesson_schema = _load_schema(repo_root, registry, "lesson_graph")
-    schema_edge_enum = set(
-        lesson_schema["properties"]["edges"]["items"]["properties"]["edge_type"]["enum"]
-    )
     registry_edge_types = set(edge_defs)
-    if schema_edge_enum != registry_edge_types:
-        errors.append(
-            "Lesson graph schema edge enum differs from graph-edge registry: "
-            f"schema_only={sorted(schema_edge_enum - registry_edge_types)} "
-            f"registry_only={sorted(registry_edge_types - schema_edge_enum)}"
+    for schema_name, label in (
+        ("lesson_graph", "Lesson graph"),
+        ("subagent_capability_graph", "Subagent capability graph"),
+    ):
+        if schema_name not in registry.get("schemas", {}):
+            continue
+        graph_schema = _load_schema(repo_root, registry, schema_name)
+        schema_edge_enum = set(
+            graph_schema["properties"]["edges"]["items"]["properties"]["edge_type"][
+                "enum"
+            ]
         )
+        unknown = schema_edge_enum - registry_edge_types
+        if unknown:
+            errors.append(
+                f"{label} schema uses edge types absent from graph-edge registry: "
+                f"{sorted(unknown)}"
+            )
 
     _validate_graph_surface_manifest_contracts(repo_root, registry, errors, checked, warnings)
 
@@ -1578,18 +1587,20 @@ def _validate_graph_surface_manifest_contracts(
                 f"{expected_edge_registry_hash} != {actual_edge_registry_hash}"
             )
         methodology_hashes = manifest.get("methodology_hashes", {})
-        if isinstance(methodology_hashes, dict) and methodology_hashes.get(
-            "builder_source"
-        ):
-            actual_builder_hash = _builder_source_hash(
-                str(surface.get("builder", {}).get("module", ""))
-            )
-            if methodology_hashes["builder_source"] != actual_builder_hash:
-                errors.append(
-                    f"Inconsistent graph surface manifest {surface_id} methodology hash "
-                    f"builder_source: {methodology_hashes['builder_source']} "
-                    f"!= {actual_builder_hash}"
-                )
+        if isinstance(methodology_hashes, dict):
+            for rel, expected_methodology_hash in methodology_hashes.items():
+                if rel == "builder_source":
+                    actual_methodology_hash = _builder_source_hash(
+                        str(surface.get("builder", {}).get("module", ""))
+                    )
+                else:
+                    actual_methodology_hash = _hash_path(repo_root / rel)
+                if expected_methodology_hash != actual_methodology_hash:
+                    errors.append(
+                        f"Inconsistent graph surface manifest {surface_id} methodology "
+                        f"hash {rel}: {expected_methodology_hash} "
+                        f"!= {actual_methodology_hash}"
+                    )
         graph_content_hash = manifest.get("graph_content_hash")
         graph_path_value = str(manifest.get("graph_path") or "")
         if graph_path_value:
@@ -1822,6 +1833,11 @@ def validate_repo(repo_root: Path) -> dict[str, Any]:
             ("non_negotiables", "registry/non-negotiables.json"),
             ("graph_edge_registry", "registry/graph-edge-registry.json"),
             ("graph_surface_registry", "registry/graph-surface-registry.json"),
+            (
+                "subagent_evaluation_methodology",
+                "registry/subagent-evaluation-methodology.json",
+            ),
+            ("subagent_capability_registry", "registry/subagent-capability-registry.json"),
             ("exception_event_type_registry", "registry/exception-event-type-registry.json"),
             ("exception_learning_methodology", "registry/exception-learning-methodology.json"),
             (
@@ -1833,6 +1849,12 @@ def validate_repo(repo_root: Path) -> dict[str, Any]:
             payload = json.loads((repo_root / rel).read_text(encoding="utf-8"))
             _validate_payload(repo_root, registry, schema_name, payload)
             checked.append(rel)
+        subagent_result = validate_subagent_hub_records(repo_root)
+        checked.append(
+            "subagent-evaluations:"
+            f"{subagent_result['attempt_count']} attempts/"
+            f"{subagent_result['evaluation_count']} evaluations"
+        )
         lesson_payload_fixture = "examples/mail/lesson-payload.golden.json"
         _validate_payload(
             repo_root,

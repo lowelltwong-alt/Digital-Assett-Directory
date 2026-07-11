@@ -113,6 +113,19 @@ def select_transport_upgrade_policies_from_queue(
         if policy is None:
             skipped.append({"repo_id": repo_id, "reason": "no_reviewed_enrollment_policy"})
             continue
+        if bool(getattr(policy, "active_hold", False)):
+            reason = str(getattr(policy, "active_hold_reason", "") or "").strip()
+            skipped.append(
+                {
+                    "repo_id": repo_id,
+                    "reason": "active_hold_central_only",
+                    "active_hold_reason": reason,
+                }
+            )
+            continue
+        if not bool(getattr(policy, "update_allowed", False)):
+            skipped.append({"repo_id": repo_id, "reason": "update_not_allowed"})
+            continue
         if wave and getattr(policy, "wave", "") != wave:
             skipped.append(
                 {

@@ -1,0 +1,19 @@
+{
+  "attempt_slug": "dad-graph-claude-sonnet-limit",
+  "authority_boundary": "This reconstructed candidate record describes one bounded execution attempt. It does not identify a person, rank a model family, or authorize agent routing, promotion, consolidation, specialization, or supersession.",
+  "capture_type": "tool_execution_failure",
+  "improvement_recommendations": [
+    "Check provider session capacity before routing an independent gate to the CLI."
+  ],
+  "limitations": [
+    "This is a parent-captured bounded summary, not hidden reasoning or a full source transcript.",
+    "Exact start/end time and invocation prompt hash were unavailable."
+  ],
+  "observed_failures": [
+    "Could not start because the Claude session limit had been reached."
+  ],
+  "observed_strengths": [],
+  "runtime_attempt_id": "claude-cli-20260710-sonnet-audit",
+  "schema_version": "dad.subagent.parent-captured-evidence.v1",
+  "task_id": "DAD-SUBAGENT-GRAPH-V1-INDEPENDENT-AUDIT"
+}

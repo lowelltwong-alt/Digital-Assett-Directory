@@ -8,6 +8,8 @@ configuration.
 from __future__ import annotations
 
 import json
+import hashlib
+import re
 import subprocess
 from datetime import datetime, timezone
 from pathlib import Path
@@ -23,19 +25,188 @@ from .graph_inference import write_inference_outputs
 from .graph_surfaces import graph_surface_status
 from .journal import checkpoint_journal, ingest_remote_outbox, journal_status
 from .learning import build_lesson_graph
+from .lesson_automation_coverage import (
+    weekly_asset_coverage_due,
+    write_weekly_asset_coverage_outputs,
+)
 from .mail_center import collect_mail, deliver_mail, diagnose_mail_dirty_state, route_mail
-from .transport import AUTHORITY_BOUNDARY, audit_all_repo_transport, data_path
+from .subagent_evaluations import build_improvement_review
+from .transport import AUTHORITY_BOUNDARY, audit_all_repo_transport, data_path, data_relative_path
 from .utils import atomic_write_text, json_dumps, utc_now
 
 DAEMON_HEARTBEAT_NAME = "daemon-heartbeat.json"
 DAILY_REVIEW_QUEUE_MD = "daily_review_queue.md"
 DAILY_REVIEW_QUEUE_JSON = "daily_review_queue.json"
 DAEMON_TASK_WRAPPER_NAME = "dad-daemon-run-cycle.ps1"
+DAEMON_TASK_LAST_RUN_LOG = "daemon-task-last-run.log"
+DAEMON_TASK_LAST_RUN_STATUS = "daemon-task-last-run.json"
 SCHEDULED_TASKS_REPORT_NAME = "scheduled_tasks.json"
+
+_DAEMON_REAL_FIRM_PRIVACY_GATES = (
+    "approved_redaction_and_minimization",
+    "role_based_access_control",
+    "retention_and_secure_deletion",
+    "tenant_and_matter_isolation",
+    "privacy_leak_and_adversarial_tests",
+    "approved_logging_and_incident_response",
+)
+
+
+def daemon_reporting_privacy() -> dict[str, Any]:
+    """Return the deployment boundary carried by every daemon status surface."""
+    return {
+        "schema_version": "dad.daemon.reporting_privacy.v1",
+        "approved_scope": "synthetic_or_mock_only",
+        "data_classification": "synthetic_development_only",
+        "real_client_data_approved": False,
+        "real_client_data_gate": {
+            "id": "daemon-real-client-data-approved",
+            "status": "blocked",
+        },
+        "risk": (
+            "Daemon reports and logs may expose repository paths, payload metadata, "
+            "review context, or client data if deployed inside a real firm."
+        ),
+        "required_before_real_firm_use": list(_DAEMON_REAL_FIRM_PRIVACY_GATES),
+    }
 
 
 def _reports_dir(hub_root: Path) -> Path:
     return data_path(hub_root, "central_reports")
+
+
+_CYCLE_INPUT_RELATIVE_PATHS = (
+    ".digital-asset/mail/outbox.jsonl",
+    ".digital-asset/exceptions/outbox.jsonl",
+    ".digital-asset/events/outbox.jsonl",
+    "processed/exceptions/fix-outcomes/outcomes.jsonl",
+)
+_SUBAGENT_CYCLE_INPUT_PATHS = (
+    "raw/agent-evaluations/role-profile-revisions.jsonl",
+    "raw/agent-evaluations/execution-attempts.jsonl",
+    "raw/agent-evaluations/attempt-evaluations.jsonl",
+    "raw/agent-evaluations/unrated-inventory.jsonl",
+)
+
+
+def _cycle_input_fingerprint(
+    hub_root: Path,
+    *,
+    mail_repos: Sequence[Any] | None,
+    exception_repos: Sequence[Any] | None,
+    journal_repo: Path | None,
+) -> tuple[str, int]:
+    rows: list[tuple[str, str, int, int]] = []
+    seen: set[tuple[str, str]] = set()
+    enabled_policies = [
+        policy for policy in (mail_repos or []) if bool(getattr(policy, "mail_enabled", True))
+    ] + [
+        policy
+        for policy in (exception_repos or [])
+        if bool(getattr(policy, "exceptions_enabled", True))
+    ]
+    for policy in enabled_policies:
+        repo_id = str(getattr(policy, "id", "") or getattr(policy, "alias", "") or "repo")
+        repo_root = Path(getattr(policy, "path"))
+        for relative in _CYCLE_INPUT_RELATIVE_PATHS:
+            key = (repo_id, relative)
+            if key in seen:
+                continue
+            seen.add(key)
+            path = repo_root / relative
+            try:
+                stat = path.stat()
+            except OSError:
+                continue
+            rows.append((repo_id, relative, stat.st_size, stat.st_mtime_ns))
+    if journal_repo is not None:
+        remote_root = journal_repo / "remote-outbox"
+        if remote_root.exists():
+            for path in sorted(remote_root.rglob("*.jsonl")):
+                try:
+                    stat = path.stat()
+                    relative = path.relative_to(remote_root).as_posix()
+                except OSError:
+                    continue
+                rows.append(("dad-journal", relative, stat.st_size, stat.st_mtime_ns))
+    for relative in (
+        "config/sources.local.yaml",
+        "config/sources.yaml",
+        "config/sources.example.yaml",
+        ".digital-asset/dad-integration.json",
+    ):
+        path = hub_root / relative
+        try:
+            stat = path.stat()
+        except OSError:
+            continue
+        rows.append(("dad", relative, stat.st_size, stat.st_mtime_ns))
+    for relative in _SUBAGENT_CYCLE_INPUT_PATHS:
+        path = data_relative_path(hub_root, Path(relative))
+        try:
+            stat = path.stat()
+        except OSError:
+            continue
+        rows.append(("dad-data", relative, stat.st_size, stat.st_mtime_ns))
+    material = json.dumps(sorted(rows), separators=(",", ":"), ensure_ascii=True)
+    return hashlib.sha256(material.encode("utf-8")).hexdigest(), len(rows)
+
+
+def _read_heartbeat_payload(hub_root: Path) -> dict[str, Any]:
+    path = daemon_heartbeat_path(hub_root)
+    if not path.exists():
+        return {}
+    try:
+        payload = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return {}
+    return payload if isinstance(payload, dict) else {}
+
+
+def _idle_cycle_result(
+    hub_root: Path,
+    *,
+    generated_at: str,
+    previous: dict[str, Any],
+    input_fingerprint: str,
+    input_snapshot_count: int,
+    journal_status_result: dict[str, Any],
+) -> dict[str, Any]:
+    completed_at = utc_now()
+    heartbeat = {
+        **previous,
+        "schema_version": "dad.daemon.heartbeat.v1",
+        "status": "complete",
+        "idle": True,
+        "idle_reason": "cycle_inputs_unchanged",
+        "cycle_started_at": generated_at,
+        "cycle_completed_at": completed_at,
+        "cycle_order": ["heartbeat"],
+        "input_fingerprint": input_fingerprint,
+        "input_snapshot_count": input_snapshot_count,
+        "journal_checkpoint_due": journal_status_result.get("checkpoint_due"),
+        "journal_checkpoint_applied": False,
+        "journal_checkpoint_status": journal_status_result,
+        "heartbeat_finalized": True,
+        "heartbeat_finalized_at": completed_at,
+        "reporting_privacy": daemon_reporting_privacy(),
+        "authority_boundary": AUTHORITY_BOUNDARY,
+    }
+    atomic_write_text(
+        daemon_heartbeat_path(hub_root),
+        json_dumps(heartbeat, pretty=True) + "\n",
+    )
+    return {
+        "schema_version": "dad.daemon.cycle.v1",
+        "generated_at": generated_at,
+        "idle": True,
+        "idle_reason": "cycle_inputs_unchanged",
+        "cycle_order": ["heartbeat"],
+        "heartbeat_path": str(daemon_heartbeat_path(hub_root)),
+        "journal_status": journal_status_result,
+        "reporting_privacy": daemon_reporting_privacy(),
+        "authority_boundary": AUTHORITY_BOUNDARY,
+    }
 
 
 def daemon_heartbeat_path(hub_root: Path) -> Path:
@@ -69,6 +240,7 @@ def daemon_status(hub_root: Path, *, stale_hours: int = 26) -> dict[str, Any]:
             "status": "missing",
             "stale": True,
             "heartbeat_path": str(heartbeat),
+            "reporting_privacy": daemon_reporting_privacy(),
             "authority_boundary": AUTHORITY_BOUNDARY,
         }
     try:
@@ -81,6 +253,7 @@ def daemon_status(hub_root: Path, *, stale_hours: int = 26) -> dict[str, Any]:
             "stale": True,
             "heartbeat_path": str(heartbeat),
             "error": str(exc),
+            "reporting_privacy": daemon_reporting_privacy(),
             "authority_boundary": AUTHORITY_BOUNDARY,
         }
     cycle_at = _parse_time(str(payload.get("cycle_completed_at") or ""))
@@ -89,10 +262,17 @@ def daemon_status(hub_root: Path, *, stale_hours: int = 26) -> dict[str, Any]:
     if cycle_at is not None:
         age_hours = max(0.0, (datetime.now(timezone.utc) - cycle_at).total_seconds() / 3600.0)
         stale = age_hours > stale_hours
+    cycle_status = str(payload.get("status") or "")
+    heartbeat_status = "stale" if stale else "fresh"
+    if not stale and cycle_status == "complete_with_errors":
+        heartbeat_status = "degraded"
+    elif not stale and cycle_status not in {"complete", "complete_with_errors"}:
+        heartbeat_status = "invalid"
     return {
         "schema_version": "dad.daemon.status.v1",
         "generated_at": utc_now(),
-        "status": "stale" if stale else "fresh",
+        "status": heartbeat_status,
+        "cycle_status": cycle_status,
         "stale": stale,
         "heartbeat_path": str(heartbeat),
         "cycle_completed_at": payload.get("cycle_completed_at", ""),
@@ -102,6 +282,12 @@ def daemon_status(hub_root: Path, *, stale_hours: int = 26) -> dict[str, Any]:
         "follow_through_status": payload.get("follow_through_status"),
         "follow_through_issue_count": payload.get("follow_through_issue_count"),
         "transport_audit_ran": payload.get("transport_audit_ran"),
+        "weekly_asset_coverage_status": payload.get("weekly_asset_coverage_status"),
+        "weekly_asset_coverage_missing_high_signal_count": payload.get(
+            "weekly_asset_coverage_missing_high_signal_count"
+        ),
+        "weekly_asset_coverage_average_score": payload.get("weekly_asset_coverage_average_score"),
+        "weekly_asset_coverage_outputs": payload.get("weekly_asset_coverage_outputs", {}),
         "journal_checkpoint_due": payload.get("journal_checkpoint_due"),
         "journal_checkpoint_applied": payload.get("journal_checkpoint_applied"),
         "journal_checkpoint_status": payload.get("journal_checkpoint_status", {}),
@@ -109,6 +295,7 @@ def daemon_status(hub_root: Path, *, stale_hours: int = 26) -> dict[str, Any]:
             "scheduled_tasks_report_path",
             str(scheduled_tasks_report_path(hub_root)),
         ),
+        "reporting_privacy": daemon_reporting_privacy(),
         "scheduled_task_count": payload.get("scheduled_task_count"),
         "last_cycle": payload,
         "authority_boundary": AUTHORITY_BOUNDARY,
@@ -125,8 +312,10 @@ def _write_daily_review_queue(
     event_result: dict[str, Any],
     exception_result: dict[str, Any],
     graph_result: dict[str, Any],
+    subagent_improvement_result: dict[str, Any],
     graph_surface_status_result: dict[str, Any],
     transport_result: dict[str, Any] | None,
+    weekly_asset_coverage_result: dict[str, Any],
     scheduled_tasks_result: dict[str, Any],
     journal_result: dict[str, Any],
 ) -> dict[str, Any]:
@@ -139,10 +328,13 @@ def _write_daily_review_queue(
         "events": event_result,
         "exceptions": exception_result,
         "graphs": graph_result,
+        "subagent_improvement": subagent_improvement_result,
         "graph_surfaces": graph_surface_status_result,
         "transport": transport_result or {"status": "not_run"},
+        "weekly_asset_coverage": weekly_asset_coverage_result,
         "scheduled_tasks": scheduled_tasks_result,
         "journal": journal_result,
+        "reporting_privacy": daemon_reporting_privacy(),
         "authority_boundary": (
             "Daily review queue is an attention surface over candidate data. It "
             "does not approve repo writes, public release, source truth, or "
@@ -167,14 +359,20 @@ def _write_daily_review_queue(
         f"- Exceptions collect: {exception_result.get('status', 'unknown')}",
         f"- Lesson graph: {graph_result.get('lesson_graph', {}).get('status', 'unknown')}",
         f"- Graph inference: {graph_result.get('inference', {}).get('status', 'unknown')}",
+        f"- Subagent improvement review: {subagent_improvement_result.get('status', 'unknown')}",
+        f"- Subagent exception candidates: {len(subagent_improvement_result.get('report', {}).get('exception_candidates', []))}",
         f"- Graph surface freshness: {graph_surface_status_result.get('freshness_counts', {})}",
         f"- Transport audit: {transport_result.get('report_path', 'not run') if transport_result else 'not run'}",
         f"- Transport upgrade count: {transport_result.get('upgrade_required_count', 'not run') if transport_result else 'not run'}",
+        f"- Weekly asset coverage: {weekly_asset_coverage_result.get('status', 'unknown')}",
+        f"- Weekly asset coverage missing high-signal: {weekly_asset_coverage_result.get('summary', {}).get('missing_high_signal_count', 'not run')}",
         f"- Scheduled tasks: {scheduled_tasks_result.get('task_count', 'unknown')}",
         f"- Scheduled task report: {scheduled_tasks_result.get('report_path', 'unknown')}",
         f"- Journal checkpoint due: {journal_result.get('checkpoint_due')}",
         f"- Journal new records: {journal_result.get('new_record_count')}",
         f"- Journal status: {journal_result.get('checkpoint_skipped_reason', 'ready_or_applied')}",
+        "- Data classification: synthetic development only",
+        "- Real client data gate: blocked",
         "",
         "Boundary: this is an attention queue over candidate data. It does not "
         "authorize downstream repo writes, public release, source truth, or "
@@ -351,9 +549,17 @@ def _run_graph_cycle(hub_root: Path) -> dict[str, Any]:
     }
 
 
-def _run_event_cycle(
-    hub_root: Path, *, mail_repos: Sequence[Any] | None
-) -> dict[str, Any]:
+def _run_subagent_improvement_review(hub_root: Path) -> dict[str, Any]:
+    if not (hub_root / "registry" / "subagent-improvement-policy.json").exists():
+        return {
+            "status": "skipped",
+            "reason": "subagent_improvement_policy_missing",
+            "authority_boundary": AUTHORITY_BOUNDARY,
+        }
+    return build_improvement_review(hub_root)
+
+
+def _run_event_cycle(hub_root: Path, *, mail_repos: Sequence[Any] | None) -> dict[str, Any]:
     if mail_repos is None:
         return {
             "status": "skipped",
@@ -443,10 +649,34 @@ def run_daemon_cycle(
     deliver_local_caches: bool = False,
     rebuild_graphs: bool = True,
     transport_repos: list[dict[str, Any]] | None = None,
+    asset_coverage_repos: Sequence[Any] | None = None,
     journal_repo: Path | None = None,
     checkpoint_apply: bool = False,
 ) -> dict[str, Any]:
     generated_at = utc_now()
+    input_fingerprint, input_snapshot_count = _cycle_input_fingerprint(
+        hub_root,
+        mail_repos=mail_repos,
+        exception_repos=exception_repos,
+        journal_repo=journal_repo,
+    )
+    previous_heartbeat = _read_heartbeat_payload(hub_root)
+    journal_status_result = journal_status(hub_root)
+    weekly_due = weekly_asset_coverage_due(hub_root, generated_at=generated_at)
+    if (
+        previous_heartbeat.get("status") == "complete"
+        and previous_heartbeat.get("input_fingerprint") == input_fingerprint
+        and not bool(journal_status_result.get("checkpoint_due"))
+        and not bool(weekly_due.get("due"))
+    ):
+        return _idle_cycle_result(
+            hub_root,
+            generated_at=generated_at,
+            previous=previous_heartbeat,
+            input_fingerprint=input_fingerprint,
+            input_snapshot_count=input_snapshot_count,
+            journal_status_result=journal_status_result,
+        )
     cycle_order = [
         "journal_remote_outbox_ingest",
         "mail_collect",
@@ -456,13 +686,32 @@ def run_daemon_cycle(
         "events_collect",
         "exceptions_collect",
         "lesson_graph_rebuild",
+        "subagent_improvement_review",
         "graph_inference",
         "transport_audit",
+        "weekly_asset_coverage",
         "scheduled_task_registry",
         "daily_review_queue",
         "heartbeat",
         "journal_checkpoint",
     ]
+    heartbeat = {
+        "schema_version": "dad.daemon.heartbeat.v1",
+        "status": "in_progress",
+        "cycle_started_at": generated_at,
+        "cycle_completed_at": "",
+        "cycle_order": cycle_order,
+        "idle": False,
+        "input_fingerprint": input_fingerprint,
+        "input_snapshot_count": input_snapshot_count,
+        "journal_checkpoint_due": journal_status_result.get("checkpoint_due"),
+        "journal_checkpoint_applied": False,
+        "journal_checkpoint_status": journal_status_result,
+        "heartbeat_finalized": False,
+        "reporting_privacy": daemon_reporting_privacy(),
+        "authority_boundary": AUTHORITY_BOUNDARY,
+    }
+    atomic_write_text(daemon_heartbeat_path(hub_root), json_dumps(heartbeat, pretty=True) + "\n")
     remote_outbox_result = _run_remote_outbox_ingest(
         hub_root,
         journal_repo=journal_repo,
@@ -487,16 +736,24 @@ def run_daemon_cycle(
             "authority_boundary": AUTHORITY_BOUNDARY,
         }
     )
+    subagent_improvement_result = _step_result(
+        "subagent_improvement_review",
+        _run_subagent_improvement_review,
+        hub_root,
+    )
     transport_result = (
-        audit_all_repo_transport(hub_root, transport_repos)
-        if transport_repos is not None
-        else None
+        audit_all_repo_transport(hub_root, transport_repos) if transport_repos is not None else None
+    )
+    weekly_asset_coverage_result = _step_result(
+        "weekly_asset_coverage",
+        write_weekly_asset_coverage_outputs,
+        hub_root,
+        repo_policies=asset_coverage_repos if asset_coverage_repos is not None else mail_repos,
     )
     scheduled_tasks_result = scheduled_tasks_status(
         hub_root,
         inspect_scheduler=False,
     )
-    journal_status_result = journal_status(hub_root)
     graph_surface_status_result = graph_surface_status(hub_root)
     review_queue = _write_daily_review_queue(
         hub_root,
@@ -507,48 +764,76 @@ def run_daemon_cycle(
         event_result=event_result,
         exception_result=exception_result,
         graph_result=graph_result,
+        subagent_improvement_result=subagent_improvement_result,
         graph_surface_status_result=graph_surface_status_result,
         transport_result=transport_result,
+        weekly_asset_coverage_result=weekly_asset_coverage_result,
         scheduled_tasks_result=scheduled_tasks_result,
         journal_result=journal_status_result,
     )
-    heartbeat = {
-        "schema_version": "dad.daemon.heartbeat.v1",
-        "status": "in_progress",
-        "cycle_started_at": generated_at,
-        "cycle_completed_at": "",
-        "cycle_order": cycle_order,
-        "remote_outbox_ingest_status": remote_outbox_result.get("status"),
-        "mail_collect_status": mail_result.get("collect", {}).get("status", mail_result.get("status")),
-        "mail_route_status": mail_result.get("route", {}).get("status", mail_result.get("status")),
-        "mail_deliver_status": mail_result.get("deliver", {}).get("status", mail_result.get("status")),
-        "follow_through_status": follow_through_result.get("audit_status", follow_through_result.get("status")),
-        "follow_through_issue_count": follow_through_result.get("issue_count"),
-        "events_collect_status": event_result.get("collect", {}).get("status", event_result.get("status")),
-        "exceptions_collect_status": exception_result.get("status"),
-        "lesson_graph_status": graph_result.get("lesson_graph", {}).get("status", graph_result.get("status")),
-        "graph_inference_status": graph_result.get("inference", {}).get("status", graph_result.get("status")),
-        "graph_surface_freshness_counts": graph_surface_status_result.get("freshness_counts", {}),
-        "transport_audit_ran": transport_result is not None,
-        "journal_checkpoint_due": journal_status_result.get("checkpoint_due"),
-        "journal_checkpoint_applied": False,
-        "journal_checkpoint_status": journal_status_result,
-        "daily_review_queue": review_queue["markdown_path"],
-        "scheduled_tasks_report_path": scheduled_tasks_result["report_path"],
-        "scheduled_task_count": scheduled_tasks_result["task_count"],
-        "heartbeat_finalized": False,
-        "authority_boundary": AUTHORITY_BOUNDARY,
-    }
+    heartbeat.update(
+        {
+            "remote_outbox_ingest_status": remote_outbox_result.get("status"),
+            "mail_collect_status": mail_result.get("collect", {}).get(
+                "status", mail_result.get("status")
+            ),
+            "mail_route_status": mail_result.get("route", {}).get(
+                "status", mail_result.get("status")
+            ),
+            "mail_deliver_status": mail_result.get("deliver", {}).get(
+                "status", mail_result.get("status")
+            ),
+            "follow_through_status": follow_through_result.get(
+                "audit_status", follow_through_result.get("status")
+            ),
+            "follow_through_issue_count": follow_through_result.get("issue_count"),
+            "events_collect_status": event_result.get("collect", {}).get(
+                "status", event_result.get("status")
+            ),
+            "exceptions_collect_status": exception_result.get("status"),
+            "lesson_graph_status": graph_result.get("lesson_graph", {}).get(
+                "status", graph_result.get("status")
+            ),
+            "graph_inference_status": graph_result.get("inference", {}).get(
+                "status", graph_result.get("status")
+            ),
+            "subagent_improvement_status": subagent_improvement_result.get("status"),
+            "subagent_exception_candidate_count": len(
+                subagent_improvement_result.get("report", {}).get("exception_candidates", [])
+            ),
+            "graph_surface_freshness_counts": graph_surface_status_result.get(
+                "freshness_counts", {}
+            ),
+            "transport_audit_ran": transport_result is not None,
+            "weekly_asset_coverage_status": weekly_asset_coverage_result.get("status"),
+            "weekly_asset_coverage_missing_high_signal_count": weekly_asset_coverage_result.get(
+                "summary", {}
+            ).get("missing_high_signal_count"),
+            "weekly_asset_coverage_average_score": weekly_asset_coverage_result.get(
+                "summary", {}
+            ).get("average_coverage_score"),
+            "weekly_asset_coverage_outputs": weekly_asset_coverage_result.get("outputs", {}),
+            "daily_review_queue": review_queue["markdown_path"],
+            "scheduled_tasks_report_path": scheduled_tasks_result["report_path"],
+            "scheduled_task_count": scheduled_tasks_result["task_count"],
+        }
+    )
     atomic_write_text(daemon_heartbeat_path(hub_root), json_dumps(heartbeat, pretty=True) + "\n")
-    journal_result = checkpoint_journal(
+    journal_result = _step_result(
+        "journal_checkpoint",
+        checkpoint_journal,
         hub_root,
         journal_repo,
         apply=checkpoint_apply,
     )
     heartbeat["journal_checkpoint_due"] = journal_result.get("checkpoint_due")
-    heartbeat["journal_checkpoint_applied"] = journal_result.get("checkpoint_applied")
+    heartbeat["journal_checkpoint_applied"] = bool(journal_result.get("checkpoint_applied", False))
     heartbeat["journal_checkpoint_status"] = journal_result
-    heartbeat["status"] = "complete"
+    heartbeat["status"] = (
+        "complete_with_errors"
+        if journal_result.get("status") in {"blocked", "error"}
+        else "complete"
+    )
     heartbeat["cycle_completed_at"] = utc_now()
     heartbeat["heartbeat_finalized"] = True
     heartbeat["heartbeat_finalized_at"] = utc_now()
@@ -560,6 +845,7 @@ def run_daemon_cycle(
     return {
         "schema_version": "dad.daemon.cycle.v1",
         "generated_at": generated_at,
+        "idle": False,
         "cycle_order": cycle_order,
         "heartbeat_path": str(daemon_heartbeat_path(hub_root)),
         "daily_review_queue": review_queue,
@@ -569,11 +855,14 @@ def run_daemon_cycle(
         "events": event_result,
         "exceptions": exception_result,
         "graphs": graph_result,
+        "subagent_improvement": subagent_improvement_result,
         "graph_surface_status": graph_surface_status_result,
         "transport": transport_result,
+        "weekly_asset_coverage": weekly_asset_coverage_result,
         "scheduled_tasks": scheduled_tasks_result,
         "journal_status": journal_status_result,
         "journal": journal_result,
+        "reporting_privacy": daemon_reporting_privacy(),
         "authority_boundary": AUTHORITY_BOUNDARY,
     }
 
@@ -590,9 +879,12 @@ def task_scheduler_plan(
 ) -> dict[str, Any]:
     shim_path = shim or Path.home() / ".dad" / "bin" / "asset-dir.ps1"
     wrapper_path = shim_path.parent / DAEMON_TASK_WRAPPER_NAME
+    task_report_dir = data_path(hub_root, "central_reports")
+    task_log_path = task_report_dir / DAEMON_TASK_LAST_RUN_LOG
+    task_status_path = task_report_dir / DAEMON_TASK_LAST_RUN_STATUS
     tr = "HOURLY" if twice_daily else "DAILY"
     mo = "12" if twice_daily else "1"
-    run_cycle_args = ["--hub", str(hub_root.resolve())]
+    run_cycle_args = ["--hub", str(hub_root.resolve()), "--quiet"]
     if journal_repo is not None:
         run_cycle_args.extend(["--journal-repo", str(journal_repo.resolve())])
     if checkpoint_apply:
@@ -601,17 +893,46 @@ def task_scheduler_plan(
     wrapper_script = "\n".join(
         [
             "$ErrorActionPreference = 'Stop'",
-            f"& {_ps_single_quote(str(shim_path))} daemon run-cycle {wrapper_args}",
-            "exit $LASTEXITCODE",
+            f"$logPath = {_ps_single_quote(str(task_log_path))}",
+            f"$statusPath = {_ps_single_quote(str(task_status_path))}",
+            "New-Item -ItemType Directory -Force -Path (Split-Path -Parent $logPath) | Out-Null",
+            "$startedAt = [DateTimeOffset]::UtcNow.ToString('o')",
+            (
+                "& powershell -NoProfile -ExecutionPolicy Bypass -File "
+                f"{_ps_single_quote(str(shim_path))} daemon run-cycle {wrapper_args} "
+                "*> $logPath"
+            ),
+            "$exitCode = $LASTEXITCODE",
+            "$status = [ordered]@{",
+            "  schema_version = 'dad.daemon.task_run.v1'",
+            "  started_at = $startedAt",
+            "  completed_at = [DateTimeOffset]::UtcNow.ToString('o')",
+            "  exit_code = $exitCode",
+            "  log_path = $logPath",
+            "  data_classification = 'synthetic_development_only'",
+            "  real_client_data_approved = $false",
+            "}",
+            "$statusJson = $status | ConvertTo-Json",
+            "$utf8NoBom = New-Object System.Text.UTF8Encoding($false)",
+            (
+                "[System.IO.File]::WriteAllText($statusPath, "
+                "$statusJson + [Environment]::NewLine, $utf8NoBom)"
+            ),
+            "exit $exitCode",
             "",
         ]
     )
-    task_to_run = (
-        f'powershell -NoProfile -ExecutionPolicy Bypass -File "{wrapper_path}"'
-    )
+    task_to_run = f'powershell -NoProfile -ExecutionPolicy Bypass -File "{wrapper_path}"'
     command = (
         f'schtasks /Create /TN "{task_name}" /SC {tr} /MO {mo} /ST {schedule_time} '
         f'/TR "{task_to_run}" /F'
+    )
+    settings_script = (
+        "$settings = New-ScheduledTaskSettingsSet "
+        "-AllowStartIfOnBatteries -DontStopIfGoingOnBatteries "
+        "-DontStopOnIdleEnd -StartWhenAvailable; "
+        f"Set-ScheduledTask -TaskName {_ps_single_quote(task_name)} "
+        "-Settings $settings | Out-Null"
     )
     return {
         "schema_version": "dad.daemon.task_scheduler_plan.v1",
@@ -620,12 +941,21 @@ def task_scheduler_plan(
         "twice_daily": twice_daily,
         "shim": str(shim_path),
         "wrapper_path": str(wrapper_path),
+        "task_log_path": str(task_log_path),
+        "task_status_path": str(task_status_path),
         "wrapper_script": wrapper_script,
         "task_to_run": task_to_run,
         "run_cycle_args": run_cycle_args,
         "journal_repo": str(journal_repo.resolve()) if journal_repo is not None else None,
         "checkpoint_apply": checkpoint_apply,
         "command": command,
+        "settings_command": [
+            "powershell",
+            "-NoProfile",
+            "-Command",
+            settings_script,
+        ],
+        "reporting_privacy": daemon_reporting_privacy(),
         "authority_boundary": AUTHORITY_BOUNDARY,
     }
 
@@ -640,12 +970,24 @@ def install_task_scheduler(plan: dict[str, Any]) -> dict[str, Any]:
     atomic_write_text(wrapper_path, str(plan["wrapper_script"]))
     command = str(plan["command"])
     result = subprocess.run(command, shell=True, capture_output=True, text=True, check=False)
+    settings_result = None
+    if result.returncode == 0:
+        settings_result = subprocess.run(
+            list(plan["settings_command"]),
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+    settings_returncode = int(settings_result.returncode) if settings_result is not None else None
     return {
         **plan,
-        "installed": result.returncode == 0,
+        "installed": result.returncode == 0 and settings_returncode == 0,
         "returncode": result.returncode,
         "stdout": result.stdout,
         "stderr": result.stderr,
+        "settings_returncode": settings_returncode,
+        "settings_stdout": settings_result.stdout if settings_result is not None else "",
+        "settings_stderr": settings_result.stderr if settings_result is not None else "",
     }
 
 
@@ -656,6 +998,9 @@ def _scheduler_status_summary(status: dict[str, Any]) -> dict[str, Any]:
         "status": status.get("status", "unknown"),
         "task_status": status.get("task_status", ""),
         "next_run_time": status.get("next_run_time", ""),
+        "last_run_time": status.get("last_run_time", ""),
+        "last_result": status.get("last_result", ""),
+        "last_result_status": status.get("last_result_status", "unknown"),
         "task_to_run": status.get("task_to_run", ""),
         "wrapper_path": status.get("wrapper_path", ""),
         "wrapper_found": bool(status.get("wrapper_found", False)),
@@ -665,6 +1010,26 @@ def _scheduler_status_summary(status: dict[str, Any]) -> dict[str, Any]:
         "expected_shim_found": bool(status.get("expected_shim_found", False)),
         "returncode": status.get("returncode"),
     }
+
+
+def _scheduler_result_status(*, task_status: str, last_result: str) -> str:
+    normalized_task_status = task_status.strip().casefold()
+    if normalized_task_status == "running":
+        return "running"
+    value = last_result.strip()
+    if not value:
+        return "unknown"
+    try:
+        code = int(value, 0)
+    except ValueError:
+        return "unknown"
+    if code == 267009:  # 0x41301: task is currently running.
+        return "inconsistent" if normalized_task_status else "running"
+    if code == 0:
+        return "success"
+    if code == 3221225786:  # 0xC000013A: interrupted by a control event.
+        return "interrupted"
+    return "failed"
 
 
 def _scheduled_task_health(
@@ -682,10 +1047,21 @@ def _scheduled_task_health(
             return "installed_hub_mismatch"
         if not scheduler.get("expected_shim_found"):
             return "installed_shim_mismatch"
+        result_status = str(scheduler.get("last_result_status") or "unknown")
+        if result_status == "running":
+            return "scheduler_running"
+        if result_status == "inconsistent":
+            return "scheduler_state_inconsistent"
+        if result_status == "interrupted":
+            return "scheduler_last_run_interrupted"
+        if result_status == "failed":
+            return "scheduler_last_run_failed"
     if heartbeat.get("status") == "fresh" and not bool(heartbeat.get("stale", True)):
         return "ready" if inspect_scheduler else "heartbeat_fresh_scheduler_not_inspected"
     if heartbeat.get("status") in {"missing", "invalid", "stale"}:
         return "heartbeat_stale_or_missing"
+    if heartbeat.get("status") == "degraded":
+        return "degraded"
     return "unknown"
 
 
@@ -714,8 +1090,14 @@ def scheduled_tasks_status(
             "status": "not_inspected",
             "task_status": "",
             "next_run_time": "",
+            "last_run_time": "",
+            "last_result": "",
+            "last_result_status": "unknown",
             "task_to_run": "",
-            "wrapper_path": str((shim or Path.home() / ".dad" / "bin" / "asset-dir.ps1").parent / DAEMON_TASK_WRAPPER_NAME),
+            "wrapper_path": str(
+                (shim or Path.home() / ".dad" / "bin" / "asset-dir.ps1").parent
+                / DAEMON_TASK_WRAPPER_NAME
+            ),
             "wrapper_found": None,
             "wrapper_read_error": "",
             "command_mentions_run_cycle": None,
@@ -760,15 +1142,16 @@ def scheduled_tasks_status(
             "delete, enable, disable, or edit scheduled tasks."
         ),
         "human_gate_ids": ["phase-13-daemon-schedule-approved"],
+        "reporting_privacy": daemon_reporting_privacy(),
         "ui_ready": True,
     }
     tasks = [task]
-    healthy_count = sum(1 for item in tasks if item["health"] in {"ready", "heartbeat_fresh_scheduler_not_inspected"})
-    installed_count = sum(
+    healthy_count = sum(
         1
         for item in tasks
-        if item.get("scheduler", {}).get("installed") is True
+        if item["health"] in {"ready", "heartbeat_fresh_scheduler_not_inspected"}
     )
+    installed_count = sum(1 for item in tasks if item.get("scheduler", {}).get("installed") is True)
     return {
         "schema_version": "dad.daemon.scheduled_tasks.v1",
         "generated_at": utc_now(),
@@ -778,6 +1161,7 @@ def scheduled_tasks_status(
         "healthy_count": healthy_count,
         "installed_count": installed_count,
         "tasks": tasks,
+        "reporting_privacy": daemon_reporting_privacy(),
         "ui_ready": True,
         "authority_boundary": (
             "Scheduled-task registry rows are local operational status evidence. "
@@ -823,6 +1207,23 @@ def _parse_schtasks_list_output(stdout: str) -> dict[str, str]:
     return parsed
 
 
+def _generated_wrapper_options(wrapper_text: str) -> dict[str, Any]:
+    quoted_tokens = [
+        token.replace("''", "'")
+        for token in re.findall(r"'((?:''|[^'])*)'", wrapper_text)
+    ]
+    options: dict[str, Any] = {
+        "journal_repo": None,
+        "checkpoint_apply": False,
+    }
+    for index, token in enumerate(quoted_tokens):
+        if token == "--journal-repo" and index + 1 < len(quoted_tokens):
+            options["journal_repo"] = quoted_tokens[index + 1]
+        elif token == "--checkpoint-apply":
+            options["checkpoint_apply"] = True
+    return options
+
+
 def task_scheduler_status(
     hub_root: Path,
     *,
@@ -839,12 +1240,11 @@ def task_scheduler_status(
         return {
             "schema_version": "dad.daemon.task_scheduler_status.v1",
             "task_name": task_name,
-            "query_command": 'schtasks /Query /TN "{name}" /FO LIST /V'.format(
-                name=task_name
-            ),
+            "query_command": 'schtasks /Query /TN "{name}" /FO LIST /V'.format(name=task_name),
             "installed": False,
             "status": "unavailable",
             "error": str(exc),
+            "reporting_privacy": daemon_reporting_privacy(),
             "authority_boundary": AUTHORITY_BOUNDARY,
         }
 
@@ -852,6 +1252,8 @@ def task_scheduler_status(
     stderr = str(getattr(result, "stderr", "") or "")
     returncode = int(getattr(result, "returncode", 1))
     parsed = _parse_schtasks_list_output(stdout)
+    task_status = parsed.get("status", "")
+    last_result = parsed.get("last_result", "")
     task_to_run = parsed.get("task_to_run", "")
     hub_text = str(hub_root.resolve())
     shim_text = str((shim or Path.home() / ".dad" / "bin" / "asset-dir.ps1"))
@@ -864,27 +1266,35 @@ def task_scheduler_status(
         except OSError as exc:
             wrapper_read_error = str(exc)
     command_material = task_to_run + "\n" + wrapper_text
+    wrapper_options = _generated_wrapper_options(wrapper_text)
     installed = returncode == 0
     return {
         "schema_version": "dad.daemon.task_scheduler_status.v1",
         "task_name": task_name,
-        "query_command": 'schtasks /Query /TN "{name}" /FO LIST /V'.format(
-            name=task_name
-        ),
+        "query_command": 'schtasks /Query /TN "{name}" /FO LIST /V'.format(name=task_name),
         "installed": installed,
         "status": "installed" if installed else "missing",
         "returncode": returncode,
         "stdout": stdout,
         "stderr": stderr,
-        "task_status": parsed.get("status", ""),
+        "task_status": task_status,
         "next_run_time": parsed.get("next_run_time", ""),
+        "last_run_time": parsed.get("last_run_time", ""),
+        "last_result": last_result,
+        "last_result_status": _scheduler_result_status(
+            task_status=task_status,
+            last_result=last_result,
+        ),
         "task_to_run": task_to_run,
         "wrapper_path": str(wrapper_path),
         "wrapper_found": bool(wrapper_text),
         "wrapper_read_error": wrapper_read_error,
         "wrapper_text": wrapper_text,
+        "journal_repo": wrapper_options["journal_repo"],
+        "checkpoint_apply": wrapper_options["checkpoint_apply"],
         "command_mentions_run_cycle": "daemon run-cycle" in command_material,
         "expected_hub_found": hub_text in command_material,
         "expected_shim_found": shim_text in command_material,
+        "reporting_privacy": daemon_reporting_privacy(),
         "authority_boundary": AUTHORITY_BOUNDARY,
     }
