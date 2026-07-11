@@ -22,3 +22,9 @@ The central read-only audit writes
 `processed/reports/logos_llos_audit.json` under the active data root. Its hashes,
 versions, and status are candidate operational metadata, never Logos authority.
 
+For a repository whose active worktree is intentionally pinned to a dirty or
+in-progress branch, mail policy may set `llos_control_path` to a clean,
+centrally managed read-only mirror. Mail collection continues to read the live
+repository `path`; only the LLOS version and deny-write audit reads the mirror.
+The daemon never fetches, updates, or writes either root as part of this audit.
+

@@ -54,6 +54,7 @@ class MailRepoPolicy:
     delivery_allowed: bool = True
     write_protected: bool = False
     write_protection_reason: str = ""
+    llos_control_path: Path | None = None
 
 
 @dataclass
@@ -409,12 +410,23 @@ def load_config(path: Path | None = None, repo_root: Path | None = None) -> AppC
         raw_path = os.path.expandvars(os.path.expanduser(str(item.get("path", ""))))
         path = Path(raw_path)
         resolved_path = path if path.is_absolute() else root / path
+        raw_llos_control_path = str(item.get("llos_control_path", "")).strip()
+        llos_control_path = None
+        if raw_llos_control_path:
+            expanded_control_path = os.path.expandvars(os.path.expanduser(raw_llos_control_path))
+            candidate_control_path = Path(expanded_control_path)
+            llos_control_path = (
+                candidate_control_path
+                if candidate_control_path.is_absolute()
+                else root / candidate_control_path
+            )
         repo_id = str(item["id"])
         mail_repos.append(
             MailRepoPolicy(
                 id=repo_id,
                 path=resolved_path,
                 alias=str(item.get("alias") or repo_id),
+                llos_control_path=llos_control_path,
                 visibility=str(item.get("visibility", "unknown")),
                 public_facing=bool(item.get("public_facing", False)),
                 mail_enabled=bool(item.get("mail_enabled", True)),

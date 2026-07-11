@@ -1063,6 +1063,69 @@ def test_load_config_preserves_reviewed_github_repo_rows_from_file_for_inventory
     assert not (tmp_path / "remote-only").exists()
 
 
+def test_load_config_resolves_separate_llos_control_path(tmp_path: Path) -> None:
+    hub = tmp_path / "hub"
+    hub.mkdir()
+    _write_minimal_hub_markers(hub)
+    config_dir = hub / "config"
+    config_dir.mkdir()
+    (config_dir / "sources.example.yaml").write_text(
+        "\n".join(
+            [
+                "project:",
+                "  database: state/catalog.sqlite3",
+                "sources:",
+                "  local: []",
+                "  github: []",
+                "mail:",
+                "  repos:",
+                "    - id: logos-scripture-graph",
+                "      path: live/scripture",
+                "      llos_control_path: control-mirrors/scripture",
+                "",
+            ]
+        ),
+        encoding="utf-8",
+    )
+
+    cfg = load_config(repo_root=hub)
+
+    policy = cfg.mail_repos[0]
+    assert policy.path == hub / "live/scripture"
+    assert policy.llos_control_path == hub / "control-mirrors/scripture"
+
+
+def test_load_config_preserves_absolute_llos_control_path(tmp_path: Path) -> None:
+    hub = tmp_path / "hub"
+    hub.mkdir()
+    _write_minimal_hub_markers(hub)
+    mirror = (tmp_path / "absolute-control-mirror").resolve()
+    config_dir = hub / "config"
+    config_dir.mkdir()
+    (config_dir / "sources.example.yaml").write_text(
+        "\n".join(
+            [
+                "project:",
+                "  database: state/catalog.sqlite3",
+                "sources:",
+                "  local: []",
+                "  github: []",
+                "mail:",
+                "  repos:",
+                "    - id: logos-scripture-graph",
+                "      path: live/scripture",
+                f"      llos_control_path: '{mirror}'",
+                "",
+            ]
+        ),
+        encoding="utf-8",
+    )
+
+    cfg = load_config(repo_root=hub)
+
+    assert cfg.mail_repos[0].llos_control_path == mirror
+
+
 def test_dad_inventory_cli_can_use_reviewed_github_repository_file(
     tmp_path: Path,
 ):
