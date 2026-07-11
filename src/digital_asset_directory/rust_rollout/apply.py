@@ -4,6 +4,7 @@ import re
 import subprocess
 from pathlib import Path
 
+from ..logos_write_guard import LogosWriteBlocked, assert_dad_write_allowed
 from .models import RustApplyResult, RustRepoRecord, resolve_local_path
 from .policy import can_apply_forced_rollout
 
@@ -68,6 +69,18 @@ def apply_rust_rollout_scaffold(
             files_written=[],
             files_skipped=[],
             message=block_reason,
+        )
+    try:
+        assert_dad_write_allowed(target, approval_id=approval_id)
+    except LogosWriteBlocked as exc:
+        return RustApplyResult(
+            repo=record.repo,
+            status="blocked",
+            decision=decision,
+            approval_id=approval_id,
+            files_written=[],
+            files_skipped=[],
+            message=str(exc),
         )
 
     files = _scaffold_files(record)

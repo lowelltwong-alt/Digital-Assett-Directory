@@ -12,6 +12,8 @@ from collections import Counter
 from pathlib import Path
 from typing import Any, Iterable
 
+from .logos_write_guard import assert_dad_write_allowed
+
 WORD_RE = re.compile(r"[A-Za-z][A-Za-z0-9_+.#/-]{1,63}")
 SECRET_PATTERNS = [
     re.compile(
@@ -80,6 +82,7 @@ def _direct_overwrite_text(path: Path, text: str) -> None:
 
 
 def atomic_write_text(path: Path, text: str, *, allow_direct_fallback: bool = False) -> None:
+    assert_dad_write_allowed(path)
     path.parent.mkdir(parents=True, exist_ok=True)
     fd, tmp_name = tempfile.mkstemp(prefix=f".{path.name}.", dir=str(path.parent))
     try:
@@ -118,6 +121,7 @@ def atomic_write_text(path: Path, text: str, *, allow_direct_fallback: bool = Fa
 
 
 def append_jsonl(path: Path, value: Any) -> None:
+    assert_dad_write_allowed(path)
     path.parent.mkdir(parents=True, exist_ok=True)
     with path.open("a", encoding="utf-8", newline="\n") as handle:
         handle.write(json_dumps(value) + "\n")

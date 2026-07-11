@@ -22,9 +22,11 @@ from .exceptions_lake import (
     write_exception_report,
 )
 from .graph_inference import write_inference_outputs
+from .logos_write_guard import assert_dad_write_allowed
 from .graph_surfaces import graph_surface_status
 from .journal import checkpoint_journal, ingest_remote_outbox, journal_status
 from .learning import build_lesson_graph
+from .logos_llos import audit_logos_llos
 from .lesson_automation_coverage import (
     weekly_asset_coverage_due,
     write_weekly_asset_coverage_outputs,
@@ -80,6 +82,15 @@ _CYCLE_INPUT_RELATIVE_PATHS = (
     ".digital-asset/exceptions/outbox.jsonl",
     ".digital-asset/events/outbox.jsonl",
     "processed/exceptions/fix-outcomes/outcomes.jsonl",
+    "governance/LOGOS_LEARNING_LOOP_OPERATING_STANDARD.yaml",
+    "governance/registry/LLOS_ROUTE_REGISTRY.yaml",
+    ".ai/control/llos_v1_adapter.yaml",
+    ".ai/control/llos_v1_lesson_index.yaml",
+    "governance/LLOS_STANDARD_MIRROR.yaml",
+    "governance/LLOS_LESSON_INDEX.yaml",
+    "governance/llos_v1_adapter.yaml",
+    "governance/llos_v1_lesson_index.yaml",
+    ".digital-asset/dad-write-policy.json",
 )
 _SUBAGENT_CYCLE_INPUT_PATHS = (
     "raw/agent-evaluations/role-profile-revisions.jsonl",
@@ -312,6 +323,7 @@ def _write_daily_review_queue(
     event_result: dict[str, Any],
     exception_result: dict[str, Any],
     graph_result: dict[str, Any],
+    logos_llos_result: dict[str, Any],
     subagent_improvement_result: dict[str, Any],
     graph_surface_status_result: dict[str, Any],
     transport_result: dict[str, Any] | None,
@@ -328,6 +340,7 @@ def _write_daily_review_queue(
         "events": event_result,
         "exceptions": exception_result,
         "graphs": graph_result,
+        "logos_llos": logos_llos_result,
         "subagent_improvement": subagent_improvement_result,
         "graph_surfaces": graph_surface_status_result,
         "transport": transport_result or {"status": "not_run"},
@@ -359,6 +372,8 @@ def _write_daily_review_queue(
         f"- Exceptions collect: {exception_result.get('status', 'unknown')}",
         f"- Lesson graph: {graph_result.get('lesson_graph', {}).get('status', 'unknown')}",
         f"- Graph inference: {graph_result.get('inference', {}).get('status', 'unknown')}",
+        f"- Logos LLOS audit: {logos_llos_result.get('status', 'unknown')}",
+        f"- Logos LLOS current repos: {logos_llos_result.get('current_count', 'unknown')}",
         f"- Subagent improvement review: {subagent_improvement_result.get('status', 'unknown')}",
         f"- Subagent exception candidates: {len(subagent_improvement_result.get('report', {}).get('exception_candidates', []))}",
         f"- Graph surface freshness: {graph_surface_status_result.get('freshness_counts', {})}",
@@ -686,6 +701,7 @@ def run_daemon_cycle(
         "events_collect",
         "exceptions_collect",
         "lesson_graph_rebuild",
+        "logos_llos_read_only_audit",
         "subagent_improvement_review",
         "graph_inference",
         "transport_audit",
@@ -736,6 +752,12 @@ def run_daemon_cycle(
             "authority_boundary": AUTHORITY_BOUNDARY,
         }
     )
+    logos_llos_result = _step_result(
+        "logos_llos_read_only_audit",
+        audit_logos_llos,
+        hub_root,
+        mail_repos or [],
+    )
     subagent_improvement_result = _step_result(
         "subagent_improvement_review",
         _run_subagent_improvement_review,
@@ -764,6 +786,7 @@ def run_daemon_cycle(
         event_result=event_result,
         exception_result=exception_result,
         graph_result=graph_result,
+        logos_llos_result=logos_llos_result,
         subagent_improvement_result=subagent_improvement_result,
         graph_surface_status_result=graph_surface_status_result,
         transport_result=transport_result,
@@ -794,6 +817,8 @@ def run_daemon_cycle(
             "lesson_graph_status": graph_result.get("lesson_graph", {}).get(
                 "status", graph_result.get("status")
             ),
+            "logos_llos_status": logos_llos_result.get("status"),
+            "logos_llos_current_count": logos_llos_result.get("current_count"),
             "graph_inference_status": graph_result.get("inference", {}).get(
                 "status", graph_result.get("status")
             ),
@@ -855,6 +880,7 @@ def run_daemon_cycle(
         "events": event_result,
         "exceptions": exception_result,
         "graphs": graph_result,
+        "logos_llos": logos_llos_result,
         "subagent_improvement": subagent_improvement_result,
         "graph_surface_status": graph_surface_status_result,
         "transport": transport_result,
@@ -966,6 +992,7 @@ def _ps_single_quote(value: str) -> str:
 
 def install_task_scheduler(plan: dict[str, Any]) -> dict[str, Any]:
     wrapper_path = Path(str(plan["wrapper_path"]))
+    assert_dad_write_allowed(wrapper_path)
     wrapper_path.parent.mkdir(parents=True, exist_ok=True)
     atomic_write_text(wrapper_path, str(plan["wrapper_script"]))
     command = str(plan["command"])

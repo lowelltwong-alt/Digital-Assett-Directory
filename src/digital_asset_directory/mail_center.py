@@ -23,6 +23,7 @@ from .utils import (
     sha256_bytes,
     utc_now,
 )
+from .logos_write_guard import assert_dad_write_allowed
 
 MAIL_MIRROR_DIR = Path(".digital-asset") / "mail"
 MAIL_README_NAME = "README.md"
@@ -340,6 +341,7 @@ def _mail_file(repo: Path, name: str) -> Path:
 
 def ensure_repo_mailbox(repo: Path) -> Path:
     mail_dir = repo_mail_dir(repo)
+    assert_dad_write_allowed(mail_dir)
     mail_dir.mkdir(parents=True, exist_ok=True)
     readme = _mail_file(repo, MAIL_README_NAME)
     if not readme.exists():
@@ -763,6 +765,7 @@ def _jsonl_lock_pid_is_alive(pid: int) -> bool:
 
 
 def _unlink_jsonl_lock(lock_path: Path) -> bool:
+    assert_dad_write_allowed(lock_path)
     for attempt in range(5):
         try:
             lock_path.unlink()
@@ -794,6 +797,7 @@ def _lock_diagnostic_allows_tombstone_takeover(diagnostic: dict[str, Any]) -> bo
 
 @contextmanager
 def _jsonl_lock(path: Path) -> Iterator[None]:
+    assert_dad_write_allowed(path)
     path.parent.mkdir(parents=True, exist_ok=True)
     lock_path = path.with_name(f".{path.name}.lock")
     lock_key = lock_path.resolve()
@@ -4222,6 +4226,7 @@ def diagnose_mail_dirty_state(
             ):
                 removed = False
                 try:
+                    assert_dad_write_allowed(temp_path)
                     temp_path.unlink()
                     removed = True
                 except OSError:
