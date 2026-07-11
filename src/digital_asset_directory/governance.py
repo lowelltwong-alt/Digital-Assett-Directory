@@ -5,6 +5,7 @@ from pathlib import Path
 import yaml
 
 from .learning import open_sessions
+from .logos_write_guard import assert_dad_write_allowed
 from .mail_center import mail_gitignore_text, mail_readme_text
 from .utils import atomic_write_text
 
@@ -52,6 +53,7 @@ The central directory catalogs evidence and candidates. It does not override thi
 def install_governance(target_repo: Path, hub_root: Path, force: bool = False) -> list[Path]:
     target_repo = target_repo.resolve()
     hub_root = hub_root.resolve()
+    assert_dad_write_allowed(target_repo)
     target_repo.mkdir(parents=True, exist_ok=True)
     changed: list[Path] = []
     agents = target_repo / "AGENTS.md"
@@ -171,6 +173,7 @@ def scaffold_new_repo(target_repo: Path, hub_root: Path, name: str | None = None
     """
     target_repo = target_repo.resolve()
     hub_root = hub_root.resolve()
+    assert_dad_write_allowed(target_repo)
     target_repo.mkdir(parents=True, exist_ok=True)
     project_name = name or target_repo.name
     changed: list[Path] = []

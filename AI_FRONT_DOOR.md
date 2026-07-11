@@ -86,6 +86,13 @@ as message PRs. Use `asset-dir data status`, `asset-dir transport audit`,
 transport state before changing mail, exception, lesson, report, or ledger
 writers.
 
+The Logos family has a stricter asymmetric boundary documented in
+`docs/LOGOS_READ_ONLY_BRIDGE.md` and registered in
+`registry/logos-repo-authority.json`: Logos-local tooling may write its own
+outbox and pull central candidates, while DAD may read approved metadata but
+cannot write any Logos filesystem entry. There is no standing or scheduled
+approval bypass.
+
 ## Required read order
 
 1. `AGENTS.md`
@@ -150,6 +157,7 @@ not prove source truth, value, authority, or promotion.
 | `docs/DAD_REPO_ENROLLMENT.md` | Reviewed-wave repo enrollment and control-plane contract for persistent repos. | You plan, apply, update, audit, or explain DAD full governance enrollment. |
 | `docs/REPO_LOCAL_DIGITAL_ASSET_DIRECTORY.md` | Repo-local `.digital-asset/assets/` memory standard, compatibility inputs, and fractal placement guidance. | You need a repo to log its own digital assets, compare an existing asset directory to DAD convention, or collect metadata-only asset sightings without mutating the source repo. |
 | `registry/control-plane-registry.json` | Reviewed DAD control-plane registry with cadence, surfaces, and normal write boundaries. | You need to know what DAD can advise, update by approval, or touch during recurring operation. |
+| `registry/logos-repo-authority.json` | Stable Logos repo identities and unconditional DAD runtime write denial. | You scan, collect from, audit, enroll, deliver to, or otherwise target a Logos-family repo. |
 | `registry/dad-needs-registry.json` | DAD request list for lessons, assets, harness feedback, usage feedback, skill updates, and governance drift repos should send back through mail. | A repo needs to know what DAD is looking for. |
 | `registry/dad-offerings-registry.json` | Rich DAD card catalog of assets, skills, templates, harnesses, architecture refs, maps, workflows, and known upgrades. | A repo needs to match context to DAD offerings or decide whether to use now, save for future, defer, reject, or ask for human review. |
 | `registry/dad-usefulness-methodology.json` | Deterministic scoring method for DAD offering recommendations. | You need to explain why DAD suggested an offering without claiming the score proves truth or value. |
@@ -169,6 +177,7 @@ not prove source truth, value, authority, or promotion.
 | `registry/preflight-profile-router.json` | Task/context router from repo/language/risk signals to DAD profiles, tactics, validation, and stop conditions. | You need to choose the right preflight profile or run a midflight tactic recommendation. |
 | `docs/CROSS_REPO_GOVERNANCE_DEPENDENCY_MAP_PATTERN.md` | Reusable cross-repo governance map and child-mirror template pattern. | You design a repo family where upstream governance and child repo mirrors must stay aligned. |
 | `docs/MAIL_CENTER.md` | Governed DAD mail hub, repo-local inbox/outbox mirror, dirty-spool doctor protocol, and warning-only QRD/IFC lesson receiver boundary. | You need candidate lessons, workflows, assets, taxonomy, capabilities, or governance notices to move across repos, need the synthetic lesson receiver contract, or Rust rollout/concurrent repo mail looks dirty. |
+| `docs/LOGOS_READ_ONLY_BRIDGE.md` | Asymmetric Logos communication and fail-closed DAD write guard. | You need Logos-to-DAD communication without granting DAD a reverse write channel. |
 | `docs/DAD_EVENT_PIPELINE.md` | Local-first event/data pipeline contract beneath mail, with repo event outboxes, central candidate event logs, response-state rows, quarantine, and Rust leaf-check boundaries. | You need repo learning-loop responses, asset-use events, exception/fix outcomes, or DAD notice adoption to be explicit instead of inferred from mail presence. |
 | `docs/DAD_MAIL_STORM_AND_DIRTY_STATE_RUNBOOK.md` | Operator runbook for distinguishing true mailbox/staged-packet dirt from ordinary dirty worktree or Rust reference-snapshot churn. | Multiple repos or branches are sending DAD mail, Rust rollout lessons, or learning-loop packets and the tree looks very dirty. |
 | `docs/PR_BRANCH_LIFECYCLE_GOVERNANCE.md` | DAD lesson and repo-facing governance pattern for preventing PR-ready branches and open PRs from becoming stale conflict debt. | Work is PR-ready, an actual PR is open, branches are accumulating, or a handoff needs owner, next action, and escalation-clock evidence. |

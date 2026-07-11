@@ -1,0 +1,51 @@
+{
+  "schema_version": "dad.logos.repo-authority.v1",
+  "surface_version": "1.0.0",
+  "owner": "Lowell Wong",
+  "default_dad_write_mode": "deny",
+  "dad_scheduled_write_grants_allowed": false,
+  "repos": [
+    {
+      "repo_id": "logos-governance-architecture",
+      "remote_slug": "lowelltwong-alt/logos-governance-architecture",
+      "aliases": ["logos-governance-architecture"],
+      "dad_write_mode": "deny",
+      "dad_read_mode": "approved_control_metadata_and_outbox"
+    },
+    {
+      "repo_id": "logos-scripture-graph",
+      "remote_slug": "lowelltwong-alt/logos-scripture-graph",
+      "aliases": ["logos-scripture-graph", "logos-scripture-graph-repo"],
+      "dad_write_mode": "deny",
+      "dad_read_mode": "approved_control_metadata_and_outbox"
+    },
+    {
+      "repo_id": "logos-boundary-literature",
+      "remote_slug": "lowelltwong-alt/logos-boundary-literature",
+      "aliases": ["logos-boundary-literature"],
+      "dad_write_mode": "deny",
+      "dad_read_mode": "approved_control_metadata_and_outbox"
+    },
+    {
+      "repo_id": "logos-doctrine-genealogy",
+      "remote_slug": "lowelltwong-alt/logos-doctrine-genealogy",
+      "aliases": ["logos-doctrine-genealogy"],
+      "dad_write_mode": "deny",
+      "dad_read_mode": "approved_control_metadata_and_outbox"
+    }
+  ],
+  "communication": {
+    "logos_local_may_write_own_outbox": true,
+    "dad_may_read_approved_outbox": true,
+    "dad_may_write_central_data_root": true,
+    "logos_local_may_read_or_pull_central_candidates": true,
+    "dad_may_push_or_write_logos": false
+  },
+  "approval_state": {
+    "standing_approval_ids": [],
+    "environment_override_allowed": false,
+    "future_write_requires_foreground_scoped_single_use_grant": true,
+    "single_use_grant_implemented": false
+  }
+}
+

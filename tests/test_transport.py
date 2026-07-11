@@ -819,6 +819,7 @@ def test_daemon_cycle_writes_heartbeat_and_daily_queue(tmp_path: Path):
         "events_collect",
         "exceptions_collect",
         "lesson_graph_rebuild",
+        "logos_llos_read_only_audit",
         "subagent_improvement_review",
         "graph_inference",
         "transport_audit",

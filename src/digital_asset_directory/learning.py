@@ -18,6 +18,7 @@ from .dad_library import (
     record_trace_outcomes,
 )
 from .transport import data_path
+from .logos_write_guard import assert_dad_write_allowed
 from .utils import append_jsonl, sha256_bytes, sha256_file, split_multi, utc_now, write_json
 from .exceptions_lake import hard_issue_lookup, looks_like_hard_issue_lookup_context
 
@@ -271,6 +272,7 @@ def rebuild_lesson_routes(repo_root: Path) -> dict[str, Any]:
     Indexes are append-only at capture time, so re-running this dedupes by lesson_id.
     """
     base = raw_lessons_dir(repo_root)
+    assert_dad_write_allowed(base)
     for sub in ("by-repo", "by-capability"):
         target = base / sub
         if target.exists():

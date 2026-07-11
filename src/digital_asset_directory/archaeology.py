@@ -22,6 +22,7 @@ from .models import (
     WorktreeAttemptRecord,
 )
 from .transport import data_relative_path
+from .logos_write_guard import assert_dad_write_allowed
 from .utils import append_jsonl, atomic_write_text, utc_now, write_jsonl
 
 AUTHORITY_BOUNDARY = (
@@ -1026,6 +1027,7 @@ def append_repo_learning_event(
         created_at=created,
     )
     target = repo / ".digital-asset-directory" / "learning" / "events.jsonl"
+    assert_dad_write_allowed(target)
     target.parent.mkdir(parents=True, exist_ok=True)
     append_jsonl(target, record.model_dump(mode="json"))
     return record

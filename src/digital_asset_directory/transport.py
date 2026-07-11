@@ -32,6 +32,7 @@ from typing import Any
 
 from .ids import stable_id
 from .utils import atomic_write_text, json_dumps, utc_now
+from .logos_write_guard import assert_dad_write_allowed
 
 TRANSPORT_SURFACE_VERSION = "1.0.0"
 TRANSPORT_IMPLEMENTATION_VERSION = "1.0.0-m0m1m2"
@@ -212,6 +213,7 @@ def init_data_root(
     ``data init`` from silently splitting state; ``data migrate --apply`` is the
     ordinary copy-verify-activate path.
     """
+    assert_dad_write_allowed(target)
     if _looks_like_onedrive(target) and not force_onedrive:
         raise ValueError(
             "Data root is inside a OneDrive-synced path; sync locks race "
@@ -338,6 +340,7 @@ def apply_data_migration(
     are skipped. Sources are never deleted; git is never invoked. Activation
     (the marker) happens only after every copied file verifies.
     """
+    assert_dad_write_allowed(target)
     if _looks_like_onedrive(target) and not force_onedrive:
         raise ValueError(
             "Refusing to migrate into a OneDrive-synced data root without "
