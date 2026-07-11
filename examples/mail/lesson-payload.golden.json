@@ -14,5 +14,74 @@
   "sqlite_write_performed": false,
   "external_writes_performed": false,
   "silent_learning_performed": false,
-  "dad_review_required_before_promotion": true
+  "dad_review_required_before_promotion": true,
+  "data_class": "synthetic_fixture",
+  "runtime_scope": "synthetic_candidate",
+  "contains_real_data": false,
+  "contains_private_data": false,
+  "contains_client_data": false,
+  "contains_matter_data": false,
+  "contains_real_carrier_data": false,
+  "contains_privileged_content": false,
+  "contains_work_product": false,
+  "lesson_ir": {
+    "lesson_id": "synthetic-lesson-generalize",
+    "data_class": "synthetic_fixture",
+    "runtime_scope": "synthetic_candidate",
+    "candidate_only": true,
+    "atoms": [
+      {
+        "dimension": "carrier",
+        "value": "carrier_tier_regional",
+        "atom_class": "operational"
+      }
+    ],
+    "claim": {
+      "before_code": "candidate_review_default",
+      "after_code": "candidate_review_escalated"
+    },
+    "applies_when": ["applies_matching_operational_context"],
+    "does_not_apply_when": ["not_for_strategy_or_unknown_context"],
+    "danger_if_misapplied": "danger_overgeneralized_candidate_rule",
+    "support_ids_included": false,
+    "free_text_included": false
+  },
+  "anonymity_set": 3,
+  "adversary_model": "synthetic_auxiliary_knowledge_adversary_placeholder",
+  "privilege_screen": {
+    "strategy_atoms_present": false,
+    "blocked": false,
+    "blocking_atom_count": 0,
+    "blocking_atom_keys_included": false
+  },
+  "lesson_disclosure_proof": {
+    "proof_id": "lessondisclosureproof_aaaaaaaaaaaaaaaaaaaa",
+    "safe_output_digest": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+    "status": "candidate",
+    "guarantee": "bounded_reident_under_declared_adversary",
+    "formal_privacy_guarantee_claimed": false,
+    "support_matter_ids_included": false,
+    "candidate_only": true,
+    "human_review_required": true,
+    "authenticated_human_disclosure_review_verified": false,
+    "actual_qrd_crossing_authorized": false
+  },
+  "crossing_proof": {
+    "proof_id": "crossingproof_bbbbbbbbbbbbbbbbbbbb",
+    "safe_output_digest": "sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+    "guarantee": "deterministic_declared_pattern_residue_check",
+    "formal_noninterference_guarantee_claimed": false,
+    "source_labels": ["public", "candidate"],
+    "effective_label": "candidate",
+    "scanner_clean": true,
+    "residue_reason_codes": [],
+    "overall_status": "blocked",
+    "actual_crossing_asserted": false,
+    "dad_receiver_schema_authority_verified": false,
+    "authenticated_human_crossing_review_verified": false,
+    "owning_repo_review_verified": false,
+    "send_performed": false,
+    "support_ids_included": false,
+    "free_text_included": false
+  }
 }

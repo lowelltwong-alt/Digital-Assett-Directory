@@ -2,8 +2,189 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://local.digital-asset-directory/schemas/lesson-payload.schema.json",
   "title": "Lesson Suggestion Payload",
-  "$comment": "Warning-only first release. Keep additionalProperties true so PR-LL3 can add QRD fields such as LessonIR atoms, anonymity_set, adversary_model, and privilege_screen without breaking existing senders.",
+  "$comment": "Warning-only receiver contract. Optional QRD and IFC fields are sanitized candidate projections, not proof of disclosure, crossing, promotion, legal authority, or compliance authority. Keep additionalProperties true so reviewed extensions do not break existing senders.",
   "type": "object",
+  "$defs": {
+    "closedCode": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 80,
+      "pattern": "^[a-z0-9_:-]+$"
+    },
+    "digest": {
+      "type": "string",
+      "pattern": "^sha256:[0-9a-f]{64}$"
+    },
+    "lessonAtom": {
+      "type": "object",
+      "required": ["dimension", "value", "atom_class"],
+      "properties": {
+        "dimension": {
+          "enum": ["carrier", "jurisdiction", "matter_type", "role", "issue_family", "threshold_band"]
+        },
+        "value": {"$ref": "#/$defs/closedCode"},
+        "atom_class": {"enum": ["operational", "strategy"]}
+      },
+      "additionalProperties": true
+    },
+    "lessonIRProjection": {
+      "type": "object",
+      "required": [
+        "lesson_id",
+        "data_class",
+        "runtime_scope",
+        "candidate_only",
+        "atoms",
+        "claim",
+        "applies_when",
+        "does_not_apply_when",
+        "danger_if_misapplied",
+        "support_ids_included",
+        "free_text_included"
+      ],
+      "properties": {
+        "lesson_id": {"type": "string", "pattern": "^synthetic-[a-z0-9-]+$"},
+        "data_class": {"const": "synthetic_fixture"},
+        "runtime_scope": {"const": "synthetic_candidate"},
+        "candidate_only": {"const": true},
+        "atoms": {
+          "type": "array",
+          "minItems": 1,
+          "items": {"$ref": "#/$defs/lessonAtom"}
+        },
+        "claim": {
+          "type": "object",
+          "required": ["before_code", "after_code"],
+          "properties": {
+            "before_code": {"enum": ["candidate_review_default", "candidate_review_escalated"]},
+            "after_code": {"enum": ["candidate_review_default", "candidate_review_escalated"]}
+          },
+          "additionalProperties": true
+        },
+        "applies_when": {
+          "type": "array",
+          "minItems": 1,
+          "items": {"$ref": "#/$defs/closedCode"}
+        },
+        "does_not_apply_when": {
+          "type": "array",
+          "minItems": 1,
+          "items": {"$ref": "#/$defs/closedCode"}
+        },
+        "danger_if_misapplied": {"$ref": "#/$defs/closedCode"},
+        "support_ids_included": {"const": false},
+        "free_text_included": {"const": false}
+      },
+      "not": {
+        "anyOf": [
+          {"required": ["support_matter_ids"]},
+          {"required": ["free_text"]}
+        ]
+      },
+      "additionalProperties": true
+    },
+    "privilegeScreenProjection": {
+      "type": "object",
+      "required": [
+        "strategy_atoms_present",
+        "blocked",
+        "blocking_atom_count",
+        "blocking_atom_keys_included"
+      ],
+      "properties": {
+        "strategy_atoms_present": {"type": "boolean"},
+        "blocked": {"type": "boolean"},
+        "blocking_atom_count": {"type": "integer", "minimum": 0},
+        "blocking_atom_keys_included": {"const": false}
+      },
+      "additionalProperties": true
+    },
+    "lessonDisclosureProofProjection": {
+      "type": "object",
+      "required": [
+        "proof_id",
+        "safe_output_digest",
+        "status",
+        "guarantee",
+        "formal_privacy_guarantee_claimed",
+        "support_matter_ids_included",
+        "candidate_only",
+        "human_review_required",
+        "authenticated_human_disclosure_review_verified",
+        "actual_qrd_crossing_authorized"
+      ],
+      "properties": {
+        "proof_id": {"type": "string", "pattern": "^lessondisclosureproof_[0-9a-f]{20}$"},
+        "safe_output_digest": {"$ref": "#/$defs/digest"},
+        "status": {"enum": ["candidate", "suppressed", "blocked"]},
+        "guarantee": {"const": "bounded_reident_under_declared_adversary"},
+        "formal_privacy_guarantee_claimed": {"const": false},
+        "support_matter_ids_included": {"const": false},
+        "candidate_only": {"const": true},
+        "human_review_required": {"const": true},
+        "authenticated_human_disclosure_review_verified": {"const": false},
+        "actual_qrd_crossing_authorized": {"const": false}
+      },
+      "additionalProperties": true
+    },
+    "crossingProofProjection": {
+      "type": "object",
+      "required": [
+        "proof_id",
+        "safe_output_digest",
+        "guarantee",
+        "formal_noninterference_guarantee_claimed",
+        "source_labels",
+        "effective_label",
+        "scanner_clean",
+        "residue_reason_codes",
+        "overall_status",
+        "actual_crossing_asserted",
+        "dad_receiver_schema_authority_verified",
+        "authenticated_human_crossing_review_verified",
+        "owning_repo_review_verified",
+        "send_performed",
+        "support_ids_included",
+        "free_text_included"
+      ],
+      "properties": {
+        "proof_id": {"type": "string", "pattern": "^crossingproof_[0-9a-f]{20}$"},
+        "safe_output_digest": {"$ref": "#/$defs/digest"},
+        "guarantee": {"const": "deterministic_declared_pattern_residue_check"},
+        "formal_noninterference_guarantee_claimed": {"const": false},
+        "source_labels": {
+          "type": "array",
+          "minItems": 1,
+          "items": {"enum": ["public", "candidate", "internal", "privileged"]}
+        },
+        "effective_label": {"enum": ["public", "candidate", "internal", "privileged"]},
+        "scanner_clean": {"type": "boolean"},
+        "residue_reason_codes": {
+          "type": "array",
+          "items": {
+            "enum": [
+              "currency_or_rate_detected",
+              "specific_carrier_identifier_detected",
+              "pii_detected",
+              "privilege_or_work_product_detected",
+              "raw_source_blob_detected",
+              "free_text_signal_present",
+              "non_ascii_signal_detected"
+            ]
+          }
+        },
+        "overall_status": {"const": "blocked"},
+        "actual_crossing_asserted": {"const": false},
+        "dad_receiver_schema_authority_verified": {"const": false},
+        "authenticated_human_crossing_review_verified": {"const": false},
+        "owning_repo_review_verified": {"const": false},
+        "send_performed": {"const": false},
+        "support_ids_included": {"const": false},
+        "free_text_included": {"const": false}
+      },
+      "additionalProperties": true
+    }
+  },
   "required": [
     "asset_type",
     "applies_when",
@@ -18,8 +199,35 @@
     "silent_learning_performed",
     "dad_review_required_before_promotion"
   ],
+  "allOf": [
+    {
+      "if": {
+        "anyOf": [
+          {"required": ["lesson_ir"]},
+          {"required": ["anonymity_set"]},
+          {"required": ["adversary_model"]},
+          {"required": ["privilege_screen"]},
+          {"required": ["lesson_disclosure_proof"]},
+          {"required": ["crossing_proof"]}
+        ]
+      },
+      "then": {
+        "required": [
+          "data_class",
+          "runtime_scope",
+          "contains_real_data",
+          "contains_private_data",
+          "contains_client_data",
+          "contains_matter_data",
+          "contains_real_carrier_data",
+          "contains_privileged_content",
+          "contains_work_product"
+        ]
+      }
+    }
+  ],
   "properties": {
-    "asset_type": {"type": "string", "minLength": 1},
+    "asset_type": {"const": "lesson_suggestion"},
     "applies_when": {
       "type": "array",
       "items": {"type": "string", "minLength": 1},
@@ -31,14 +239,29 @@
       "minItems": 1
     },
     "danger_if_misapplied": {"type": "string", "minLength": 1},
-    "candidate_only": {"type": "boolean"},
-    "raw_private_payload_included": {"type": "boolean"},
-    "hidden_chain_of_thought_included": {"type": "boolean"},
-    "lake_write_performed": {"type": "boolean"},
-    "sqlite_write_performed": {"type": "boolean"},
-    "external_writes_performed": {"type": "boolean"},
-    "silent_learning_performed": {"type": "boolean"},
-    "dad_review_required_before_promotion": {"type": "boolean"}
+    "candidate_only": {"const": true},
+    "raw_private_payload_included": {"const": false},
+    "hidden_chain_of_thought_included": {"const": false},
+    "lake_write_performed": {"const": false},
+    "sqlite_write_performed": {"const": false},
+    "external_writes_performed": {"const": false},
+    "silent_learning_performed": {"const": false},
+    "dad_review_required_before_promotion": {"const": true},
+    "data_class": {"const": "synthetic_fixture"},
+    "runtime_scope": {"const": "synthetic_candidate"},
+    "contains_real_data": {"const": false},
+    "contains_private_data": {"const": false},
+    "contains_client_data": {"const": false},
+    "contains_matter_data": {"const": false},
+    "contains_real_carrier_data": {"const": false},
+    "contains_privileged_content": {"const": false},
+    "contains_work_product": {"const": false},
+    "lesson_ir": {"$ref": "#/$defs/lessonIRProjection"},
+    "anonymity_set": {"type": "integer", "minimum": 0},
+    "adversary_model": {"$ref": "#/$defs/closedCode"},
+    "privilege_screen": {"$ref": "#/$defs/privilegeScreenProjection"},
+    "lesson_disclosure_proof": {"$ref": "#/$defs/lessonDisclosureProofProjection"},
+    "crossing_proof": {"$ref": "#/$defs/crossingProofProjection"}
   },
   "additionalProperties": true
 }
