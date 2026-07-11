@@ -15,6 +15,7 @@ import sqlite3
 import subprocess
 import tempfile
 import time
+from concurrent.futures import ThreadPoolExecutor
 from contextlib import closing
 from datetime import datetime, timezone
 from pathlib import Path
@@ -50,7 +51,7 @@ CHECKPOINT_COPY_CHUNK_SIZE = 1024 * 1024
 SQLITE_CHECKPOINT_SUFFIXES = {".sqlite", ".sqlite3"}
 SQLITE_SIDECAR_SUFFIXES = {".sqlite-wal", ".sqlite-shm", ".sqlite3-wal", ".sqlite3-shm"}
 CHECKPOINT_FILE_INDEX_VERSION = "1.0.0"
-JOURNAL_ENGINE_VERSION = "1.1.0"
+JOURNAL_ENGINE_VERSION = "1.2.0"
 JOURNAL_ENGINE_CAPABILITIES = [
     "verified_incremental_file_index",
     "no_checkout_git_index_transaction",
@@ -58,7 +59,10 @@ JOURNAL_ENGINE_CAPABILITIES = [
     "byte_preserving_git_staging",
     "safe_remote_descendant_recovery",
     "content_addressed_graph_manifests",
+    "bounded_parallel_integrity_verification",
+    "compact_transport_readiness_summary",
 ]
+JOURNAL_INTEGRITY_MAX_WORKERS = 4
 
 
 def _reports_dir(hub_root: Path) -> Path:
@@ -261,6 +265,19 @@ def _validated_checkpoint_file_index(manifest: Any) -> dict[str, dict[str, Any]]
     return validated
 
 
+def _checkpoint_manifest_structure_valid(manifest: Any) -> bool:
+    if not isinstance(manifest, dict):
+        return False
+    if manifest.get("schema_version") != "dad.journal.checkpoint.v1":
+        return False
+    if manifest.get("checkpoint_scope") != "DATA_PLANE_PATHS":
+        return False
+    raw_index = manifest.get("file_index")
+    if not isinstance(raw_index, dict):
+        return False
+    return not raw_index or bool(_validated_checkpoint_file_index(manifest))
+
+
 def _managed_checkpoint_relative_paths(checkpoint_repo: Path) -> set[str]:
     data_root = checkpoint_repo / "data"
     managed: set[str] = set()
@@ -279,7 +296,10 @@ def _managed_checkpoint_relative_paths(checkpoint_repo: Path) -> set[str]:
 
 
 def _checkpoint_file_index_integrity(
-    checkpoint_repo: Path, manifest: Any
+    checkpoint_repo: Path,
+    manifest: Any,
+    *,
+    max_workers: int | None = None,
 ) -> dict[str, Any]:
     file_index = _validated_checkpoint_file_index(manifest)
     actual_paths = _managed_checkpoint_relative_paths(checkpoint_repo)
@@ -292,18 +312,52 @@ def _checkpoint_file_index_integrity(
             "errors": [],
         }
     indexed_paths = set(file_index)
-    errors: list[dict[str, str]] = []
-    for relative_text in sorted(indexed_paths):
+    sorted_entries = [(relative_text, file_index[relative_text]) for relative_text in sorted(indexed_paths)]
+    worker_count = max_workers
+    if worker_count is None:
+        worker_count = min(JOURNAL_INTEGRITY_MAX_WORKERS, max(1, os.cpu_count() or 1))
+    worker_count = max(1, worker_count)
+
+    def verify_entry(item: tuple[str, dict[str, Any]]) -> dict[str, str] | None:
+        relative_text, entry = item
         path = checkpoint_repo / "data" / relative_text
-        entry = file_index[relative_text]
         try:
             actual_hash = f"sha256:{sha256_file(path)}"
             actual_size = path.stat().st_size
         except OSError as exc:
-            errors.append({"relative_path": relative_text, "error": type(exc).__name__})
-            continue
+            return {"relative_path": relative_text, "error": type(exc).__name__}
         if actual_hash != entry["checkpoint_sha256"] or actual_size != entry["checkpoint_size"]:
-            errors.append({"relative_path": relative_text, "error": "hash_or_size_mismatch"})
+            return {"relative_path": relative_text, "error": "hash_or_size_mismatch"}
+        return None
+
+    def verify_serially() -> list[dict[str, str] | None]:
+        return [verify_entry(item) for item in sorted_entries]
+
+    if worker_count == 1:
+        verification_rows = verify_serially()
+        backend = "python_serial"
+    else:
+        try:
+            executor = ThreadPoolExecutor(max_workers=worker_count)
+        except (OSError, RuntimeError):
+            verification_rows = verify_serially()
+            worker_count = 1
+            backend = "python_serial_executor_fallback"
+        else:
+            try:
+                futures = [executor.submit(verify_entry, item) for item in sorted_entries]
+            except (OSError, RuntimeError):
+                executor.shutdown(wait=True, cancel_futures=True)
+                verification_rows = verify_serially()
+                worker_count = 1
+                backend = "python_serial_executor_fallback"
+            else:
+                try:
+                    verification_rows = [future.result() for future in futures]
+                finally:
+                    executor.shutdown(wait=True)
+                backend = "python_thread_pool"
+    errors = [row for row in verification_rows if row is not None]
     missing_from_index = sorted(actual_paths - indexed_paths)
     missing_from_data = sorted(indexed_paths - actual_paths)
     return {
@@ -314,6 +368,8 @@ def _checkpoint_file_index_integrity(
         "missing_from_index": missing_from_index,
         "missing_from_data": missing_from_data,
         "errors": errors,
+        "verification_backend": backend,
+        "verification_worker_count": worker_count,
     }
 
 
@@ -805,15 +861,16 @@ def journal_repo_status(
         if data_dir.exists()
         else 0
     )
-    manifest_schema_ok = (
-        manifest_result["status"] == "readable"
-        and manifest.get("schema_version") == "dad.journal.checkpoint.v1"
-        and manifest.get("checkpoint_scope") == "DATA_PLANE_PATHS"
+    manifest_schema_ok = manifest_result["status"] == "readable" and (
+        _checkpoint_manifest_structure_valid(manifest)
     )
+    manifest_engine_version = str(manifest.get("journal_engine_version") or "")
+    engine_version_current = manifest_engine_version == JOURNAL_ENGINE_VERSION
     file_index_integrity = _checkpoint_file_index_integrity(journal_repo, manifest)
     manifest_record_count = _int_or_zero(manifest.get("record_count"))
     checkpoint_current_for_threshold = (
         manifest_schema_ok
+        and engine_version_current
         and file_index_integrity["valid"]
         and manifest_record_count >= _int_or_zero(status.get("checkpoint_record_count"))
         and not bool(status.get("checkpoint_due"))
@@ -827,11 +884,14 @@ def journal_repo_status(
         and checkpoint_present
         and remote["returncode"] == 0
         and working_tree_clean
+        and engine_version_current
     )
     if not is_git_repo:
         repo_status = "not_git_repository"
     elif not checkpoint_present:
         repo_status = "checkpoint_missing_or_invalid"
+    elif not engine_version_current:
+        repo_status = "checkpoint_engine_version_stale"
     elif status.get("checkpoint_due"):
         repo_status = "checkpoint_present_but_due"
     elif unexpected_top_level:
@@ -857,6 +917,9 @@ def journal_repo_status(
         "file_index_integrity": file_index_integrity,
         "checkpoint_present": checkpoint_present,
         "checkpoint_current_for_threshold": checkpoint_current_for_threshold,
+        "journal_engine_version_seen": manifest_engine_version,
+        "journal_engine_version_expected": JOURNAL_ENGINE_VERSION,
+        "journal_engine_version_current": engine_version_current,
         "data_dir": str(data_dir),
         "data_dir_exists": data_dir.exists(),
         "data_file_count": data_file_count,
@@ -884,6 +947,28 @@ def checkpoint_journal(
     min_hours: int = 24,
 ) -> dict[str, Any]:
     status = journal_status(hub_root, min_records=min_records, min_hours=min_hours)
+    if journal_repo is not None:
+        manifest_result = _read_checkpoint_manifest(journal_repo.resolve())
+        manifest = manifest_result.get("manifest", {})
+        manifest_structure_valid = _checkpoint_manifest_structure_valid(manifest)
+        manifest_recovery_due = manifest_result.get("status") == "invalid" or (
+            manifest_result.get("status") == "readable" and not manifest_structure_valid
+        )
+        engine_upgrade_due = (
+            isinstance(manifest, dict)
+            and bool(manifest)
+            and manifest.get("journal_engine_version") != JOURNAL_ENGINE_VERSION
+        )
+        status["journal_manifest_status"] = manifest_result.get("status")
+        status["journal_manifest_structure_valid"] = manifest_structure_valid
+        status["journal_manifest_recovery_due"] = manifest_recovery_due
+        status["journal_engine_upgrade_due"] = engine_upgrade_due
+        if manifest_recovery_due:
+            status["checkpoint_due"] = True
+            status["checkpoint_due_reason"] = "journal_manifest_recovery"
+        elif engine_upgrade_due:
+            status["checkpoint_due"] = True
+            status["checkpoint_due_reason"] = "journal_engine_upgrade"
     if not status["checkpoint_due"]:
         status["checkpoint_applied"] = False
         status["checkpoint_skipped_reason"] = "threshold_not_met"
