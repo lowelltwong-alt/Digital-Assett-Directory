@@ -21,6 +21,7 @@ from pathlib import Path
 from typing import Any
 
 from .graph_surfaces import (
+    GRAPH_SNAPSHOT_ROOT,
     graph_surface_checkpoint_plan,
     write_graph_surface_checkpoint_artifacts,
 )
@@ -49,6 +50,15 @@ CHECKPOINT_COPY_CHUNK_SIZE = 1024 * 1024
 SQLITE_CHECKPOINT_SUFFIXES = {".sqlite", ".sqlite3"}
 SQLITE_SIDECAR_SUFFIXES = {".sqlite-wal", ".sqlite-shm", ".sqlite3-wal", ".sqlite3-shm"}
 CHECKPOINT_FILE_INDEX_VERSION = "1.0.0"
+JOURNAL_ENGINE_VERSION = "1.1.0"
+JOURNAL_ENGINE_CAPABILITIES = [
+    "verified_incremental_file_index",
+    "no_checkout_git_index_transaction",
+    "exact_staged_path_reconciliation",
+    "byte_preserving_git_staging",
+    "safe_remote_descendant_recovery",
+    "content_addressed_graph_manifests",
+]
 
 
 def _reports_dir(hub_root: Path) -> Path:
@@ -311,17 +321,21 @@ def _build_checkpoint_snapshot(
     hub_root: Path,
     checkpoint_repo: Path,
     status: dict[str, Any],
+    *,
+    baseline_checkpoint_repo: Path | None = None,
 ) -> dict[str, Any]:
+    baseline = baseline_checkpoint_repo or checkpoint_repo
     target = checkpoint_repo / "data"
     target.mkdir(parents=True, exist_ok=True)
-    previous_manifest = _read_checkpoint_manifest(checkpoint_repo).get("manifest", {})
+    previous_manifest = _read_checkpoint_manifest(baseline).get("manifest", {})
     previous_file_index = _validated_checkpoint_file_index(previous_manifest)
     source_files = _iter_data_plane_files(hub_root)
     current_relative_paths = {relative.as_posix() for _source, relative in source_files}
     stale_relative_paths = sorted(
-        _managed_checkpoint_relative_paths(checkpoint_repo) - current_relative_paths
+        _managed_checkpoint_relative_paths(baseline) - current_relative_paths
     )
-    removed_destinations: list[Path] = []
+    removed_relative_paths: list[str] = []
+    copied_relative_paths: list[str] = []
     copied_files = 0
     unchanged_files = 0
     verified_files = 0
@@ -329,11 +343,12 @@ def _build_checkpoint_snapshot(
     copy_errors: list[dict[str, Any]] = []
     for source, relative in source_files:
         destination = target / relative
+        baseline_destination = baseline / "data" / relative
         relative_text = relative.as_posix()
         previous_entry = previous_file_index.get(relative_text)
         if _can_reuse_checkpoint_file(
             source,
-            destination,
+            baseline_destination,
             previous_entry,
             journal_worktree_clean=True,
         ):
@@ -355,33 +370,151 @@ def _build_checkpoint_snapshot(
         else:
             copied_files += 1
             verified_files += 1
+            copied_relative_paths.append(relative_text)
     if not copy_errors:
         for relative_text in stale_relative_paths:
-            destination = target / Path(relative_text)
-            try:
-                if destination.is_file():
-                    destination.unlink()
-                    removed_destinations.append(destination)
-            except OSError as exc:
-                copy_errors.append(
-                    {
-                        "relative_path": relative_text,
-                        "error_type": type(exc).__name__,
-                        "winerror": getattr(exc, "winerror", None),
-                        "errno": getattr(exc, "errno", None),
-                    }
-                )
-        _remove_empty_checkpoint_dirs(target, removed_destinations)
+            removed_relative_paths.append(relative_text)
     return {
         "copied_file_count": copied_files,
         "unchanged_file_count": unchanged_files,
         "verified_file_count": verified_files,
-        "removed_file_count": len(removed_destinations),
+        "removed_file_count": len(removed_relative_paths),
         "copy_error_count": len(copy_errors),
         "copy_errors": copy_errors,
         "file_index": file_index,
+        "copied_relative_paths": copied_relative_paths,
+        "removed_relative_paths": removed_relative_paths,
         "previous_file_index_valid": bool(previous_file_index) or not previous_manifest,
     }
+
+
+def _graph_checkpoint_stage_paths(plan: dict[str, Any]) -> set[str]:
+    paths: set[str] = set()
+    wrote_index = False
+    for snapshot in plan.get("snapshots", []):
+        if snapshot.get("status") != "ready":
+            continue
+        paths.add(str(snapshot["manifest_json_snapshot_path"]))
+        if snapshot.get("body_upload_action") != "skip_unchanged":
+            paths.add(str(snapshot["body_gzip_snapshot_path"]))
+        wrote_index = True
+    if wrote_index:
+        paths.add(f"data/{GRAPH_SNAPSHOT_ROOT.as_posix()}/index.jsonl")
+    return paths
+
+
+def _stage_checkpoint_paths(
+    checkpoint_worktree: Path,
+    baseline_checkpoint_repo: Path,
+    paths: set[str],
+    pathspec_file: Path,
+) -> dict[str, Any]:
+    normalized = sorted(path.replace("\\", "/") for path in paths)
+    attribute_directories = {Path(".")}
+    for relative_text in normalized:
+        parent = Path(relative_text).parent
+        attribute_directories.update([parent, *parent.parents])
+    for directory in attribute_directories:
+        if (checkpoint_worktree / directory / ".gitattributes").exists() or (
+            baseline_checkpoint_repo / directory / ".gitattributes"
+        ).exists():
+            raise RuntimeError(
+                "Journal staging blocked because a path-relevant .gitattributes file exists."
+            )
+    expected_staged: set[str] = set()
+    for relative_text in normalized:
+        candidate = checkpoint_worktree / Path(relative_text)
+        baseline = baseline_checkpoint_repo / Path(relative_text)
+        if candidate.is_file() != baseline.is_file():
+            expected_staged.add(relative_text)
+            continue
+        if candidate.is_file():
+            if candidate.stat().st_size != baseline.stat().st_size:
+                expected_staged.add(relative_text)
+            elif sha256_file(candidate) != sha256_file(baseline):
+                expected_staged.add(relative_text)
+    pathspec_file.write_bytes(b"\0".join(path.encode("utf-8") for path in normalized) + b"\0")
+    result = _run_git_write(
+        [
+            "git",
+            "--literal-pathspecs",
+            "-c",
+            "core.autocrlf=false",
+            "-c",
+            f"core.attributesFile={os.devnull}",
+            "-C",
+            str(checkpoint_worktree),
+            "add",
+            "--all",
+            f"--pathspec-from-file={pathspec_file}",
+            "--pathspec-file-nul",
+        ]
+    )
+    staged = _run_git_readonly(checkpoint_worktree, ["diff", "--cached", "--name-only", "-z"])
+    if staged["returncode"] != 0:
+        raise RuntimeError(f"Unable to inspect staged journal paths: {staged['stderr']}")
+    staged_paths = {item for item in staged["stdout"].split("\0") if item}
+    if staged_paths != expected_staged:
+        raise RuntimeError(
+            "Journal staged-path reconciliation failed: "
+            f"expected={len(expected_staged)} actual={len(staged_paths)}"
+        )
+    result["staged_path_count"] = len(staged_paths)
+    return result
+
+
+def _journal_attributes_are_disabled(journal_repo: Path) -> bool:
+    if (journal_repo / ".gitattributes").exists():
+        return False
+    attributes = _run_git_readonly(
+        journal_repo,
+        [
+            "ls-files",
+            "--cached",
+            "-z",
+            "--",
+            ".gitattributes",
+            ":(glob)**/.gitattributes",
+        ],
+    )
+    if attributes["returncode"] != 0 or attributes["stdout"]:
+        return False
+    info_attributes = _run_git_readonly(
+        journal_repo, ["rev-parse", "--git-path", "info/attributes"]
+    )
+    if info_attributes["returncode"] != 0:
+        return False
+    path = Path(info_attributes["stdout"])
+    if not path.is_absolute():
+        path = journal_repo / path
+    try:
+        return not path.exists() or path.stat().st_size == 0
+    except OSError:
+        return False
+
+
+def _recover_safe_remote_descendant(
+    journal_repo: Path,
+    branch: str,
+    results: list[dict[str, Any]],
+) -> str:
+    local = _run_git_readonly(journal_repo, ["rev-parse", "HEAD"])
+    if local["returncode"] != 0:
+        return ""
+    remote = _run_git_readonly(
+        journal_repo,
+        ["ls-remote", "--exit-code", "origin", f"refs/heads/{branch}"],
+    )
+    if remote["returncode"] == 2:
+        return local["stdout"]
+    if remote["returncode"] != 0:
+        raise RuntimeError("Unable to inspect the remote journal branch for recovery.")
+    return _sync_known_remote_checkpoint(
+        journal_repo,
+        branch,
+        local["stdout"],
+        results,
+    )
 
 
 def _jsonl_record_count(hub_root: Path) -> int:
@@ -425,6 +558,8 @@ def journal_status(hub_root: Path, *, min_records: int = 200, min_hours: int = 2
     due = new_records >= min_records or hours_since >= min_hours
     return {
         "schema_version": "dad.journal.status.v1",
+        "journal_engine_version": JOURNAL_ENGINE_VERSION,
+        "journal_engine_capabilities": JOURNAL_ENGINE_CAPABILITIES,
         "generated_at": utc_now(),
         "data_root": str(data_root),
         "data_root_mode": mode,
@@ -782,6 +917,36 @@ def checkpoint_journal(
         status["journal_branch"] = current_branch
         status["commands"] = _checkpoint_commands(journal_repo, current_branch)
         status["git_apply_results"] = []
+        worktree_status = _run_git_readonly(journal_repo, ["status", "--short"])
+        if worktree_status["returncode"] != 0 or worktree_status["stdout"]:
+            status.update(
+                {
+                    "status": "blocked",
+                    "checkpoint_skipped_reason": "journal_worktree_not_clean",
+                    "journal_worktree_status": worktree_status,
+                }
+            )
+            atomic_write_text(
+                _journal_status_path(hub_root), json_dumps(status, pretty=True) + "\n"
+            )
+            return status
+
+        if not _journal_attributes_are_disabled(journal_repo):
+            status.update(
+                {
+                    "status": "blocked",
+                    "checkpoint_skipped_reason": "journal_attributes_unsupported",
+                    "git_byte_preservation": "blocked_by_repository_or_info_attributes",
+                }
+            )
+            atomic_write_text(
+                _journal_status_path(hub_root), json_dumps(status, pretty=True) + "\n"
+            )
+            return status
+        status["git_byte_preservation"] = (
+            "repository_attributes_absent; global_attributes_disabled; autocrlf_disabled"
+        )
+
         pending_remote_head = str(
             _last_checkpoint_status(hub_root).get("remote_checkpoint_head") or ""
         )
@@ -807,20 +972,25 @@ def checkpoint_journal(
                     _journal_status_path(hub_root), json_dumps(status, pretty=True) + "\n"
                 )
                 return status
-        worktree_status = _run_git_readonly(journal_repo, ["status", "--short"])
-        if worktree_status["returncode"] != 0 or worktree_status["stdout"]:
+        try:
+            recovered_head = _recover_safe_remote_descendant(
+                journal_repo,
+                current_branch,
+                status["git_apply_results"],
+            )
+            status["synchronized_start_head"] = recovered_head
+        except RuntimeError as exc:
             status.update(
                 {
                     "status": "blocked",
-                    "checkpoint_skipped_reason": "journal_worktree_not_clean",
-                    "journal_worktree_status": worktree_status,
+                    "checkpoint_skipped_reason": "remote_descendant_recovery_failed",
+                    "git_transaction_error": str(exc),
                 }
             )
             atomic_write_text(
                 _journal_status_path(hub_root), json_dumps(status, pretty=True) + "\n"
             )
             return status
-
         try:
             status["git_apply_results"].append(
                 _run_git_write(
@@ -854,14 +1024,23 @@ def checkpoint_journal(
                             "worktree",
                             "add",
                             "--detach",
+                            "--no-checkout",
                             str(checkpoint_worktree),
                             "HEAD",
                         ]
                     )
                 )
                 try:
+                    status["git_apply_results"].append(
+                        _run_git_write(
+                            ["git", "-C", str(checkpoint_worktree), "read-tree", "HEAD"]
+                        )
+                    )
                     snapshot = _build_checkpoint_snapshot(
-                        hub_root, checkpoint_worktree, status
+                        hub_root,
+                        checkpoint_worktree,
+                        status,
+                        baseline_checkpoint_repo=journal_repo,
                     )
                     status.update(
                         {
@@ -884,11 +1063,15 @@ def checkpoint_journal(
                         return status
 
                     graph_surfaces = write_graph_surface_checkpoint_artifacts(
-                        hub_root, checkpoint_worktree
+                        hub_root,
+                        checkpoint_worktree,
+                        baseline_journal_repo=journal_repo,
                     )
                     status["graph_surfaces"] = graph_surfaces
                     manifest = {
                         "schema_version": "dad.journal.checkpoint.v1",
+                        "journal_engine_version": JOURNAL_ENGINE_VERSION,
+                        "journal_engine_capabilities": JOURNAL_ENGINE_CAPABILITIES,
                         "checkpointed_at": utc_now(),
                         "source_data_root": str(Path(str(status["data_root"]))),
                         "checkpoint_scope": "DATA_PLANE_PATHS",
@@ -906,15 +1089,21 @@ def checkpoint_journal(
                         checkpoint_worktree / "journal_checkpoint_manifest.json",
                         json_dumps(manifest, pretty=True) + "\n",
                     )
+                    stage_paths = {
+                        "journal_checkpoint_manifest.json",
+                        *(f"data/{path}" for path in snapshot["copied_relative_paths"]),
+                        *(f"data/{path}" for path in snapshot["removed_relative_paths"]),
+                        *_graph_checkpoint_stage_paths(graph_surfaces),
+                    }
+                    status["git_apply_results"].append(
+                        _stage_checkpoint_paths(
+                            checkpoint_worktree,
+                            journal_repo,
+                            stage_paths,
+                            Path(temp_dir) / "checkpoint-pathspec.bin",
+                        )
+                    )
                     transaction_commands = [
-                        [
-                            "git",
-                            "-C",
-                            str(checkpoint_worktree),
-                            "add",
-                            "data",
-                            "journal_checkpoint_manifest.json",
-                        ],
                         [
                             "git",
                             "-C",

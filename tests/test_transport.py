@@ -1457,6 +1457,13 @@ def test_journal_apply_threshold_commits_and_pushes_to_data_repo(tmp_path: Path)
     inbox = hub / "processed" / "mail" / "inbox" / "rows.jsonl"
     inbox.parent.mkdir(parents=True)
     inbox.write_text("\n".join(json.dumps({"i": i}) for i in range(200)) + "\n", encoding="utf-8")
+    crlf_bytes = b"first\r\nsecond\r\n"
+    crlf_path = hub / "processed" / "learning" / "crlf.txt"
+    crlf_path.parent.mkdir(parents=True)
+    crlf_path.write_bytes(crlf_bytes)
+    binary_bytes = b"\x00\x01\r\n\xff\x10"
+    binary_path = hub / "processed" / "learning" / "binary.bin"
+    binary_path.write_bytes(binary_bytes)
     source_fixture = hub / "src" / "not-data-plane.jsonl"
     source_fixture.parent.mkdir(parents=True)
     source_fixture.write_text('{"source": "must-not-journal"}\n', encoding="utf-8")
@@ -1520,6 +1527,28 @@ def test_journal_apply_threshold_commits_and_pushes_to_data_repo(tmp_path: Path)
         check=True,
     ).stdout.strip()
     assert head == remote_head
+    assert subprocess.run(
+        [
+            "git",
+            "-C",
+            str(remote),
+            "show",
+            "journal-data:data/processed/learning/crlf.txt",
+        ],
+        capture_output=True,
+        check=True,
+    ).stdout == crlf_bytes
+    assert subprocess.run(
+        [
+            "git",
+            "-C",
+            str(remote),
+            "show",
+            "journal-data:data/processed/learning/binary.bin",
+        ],
+        capture_output=True,
+        check=True,
+    ).stdout == binary_bytes
 
 
 def test_journal_incremental_checkpoint_reuses_verified_files_and_reconciles_deletions(
@@ -1537,6 +1566,8 @@ def test_journal_incremental_checkpoint_reuses_verified_files_and_reconciles_del
     stable.parent.mkdir(parents=True)
     stable.write_text('{"stable": true}\n', encoding="utf-8")
     stale.write_text('{"remove": true}\n', encoding="utf-8")
+    literal_path = stable.parent / "stable[1] with spaces.json"
+    literal_path.write_text('{"version": 1}\n', encoding="utf-8")
     for index in range(99):
         (stable.parent / f"stable-{index:03d}.json").write_text(
             json.dumps({"stable": index}) + "\n",
@@ -1567,12 +1598,14 @@ def test_journal_incremental_checkpoint_reuses_verified_files_and_reconciles_del
         (journal_repo / "journal_checkpoint_manifest.json").read_text(encoding="utf-8")
     )
     assert first_manifest["file_index_version"] == "1.0.0"
+    assert first_manifest["journal_engine_version"] == "1.1.0"
     assert len(first_manifest["file_index"]) == first_manifest["verified_file_count"]
 
     with inbox.open("a", encoding="utf-8") as handle:
         for i in range(200, 400):
             handle.write(json.dumps({"i": i}) + "\n")
     stale.unlink()
+    literal_path.write_text('{"version": 2}\n', encoding="utf-8")
     spoofed = stable.parent / "stable-000.json"
     spoofed_stat = spoofed.stat()
     spoofed.write_text(json.dumps({"stable": 9}) + "\n", encoding="utf-8")
@@ -1584,9 +1617,25 @@ def test_journal_incremental_checkpoint_reuses_verified_files_and_reconciles_del
 
     assert second["checkpoint_applied"] is True
     assert second["unchanged_file_count"] >= 99
-    assert second["copied_file_count"] <= 5
+    assert second["copied_file_count"] <= 6
     assert second["copied_file_count"] < second["verified_file_count"]
     assert second["removed_file_count"] == 1
+    commands = [row["command"] for row in second["git_apply_results"]]
+    assert any("--no-checkout" in command for command in commands)
+    assert any(command[-2:] == ["read-tree", "HEAD"] for command in commands)
+    stage_result = next(
+        row
+        for row in second["git_apply_results"]
+        if any(token.startswith("--pathspec-from-file=") for token in row["command"])
+    )
+    assert stage_result["staged_path_count"] <= (
+        second["copied_file_count"] + second["removed_file_count"] + 8
+    )
+    assert "core.autocrlf=false" in stage_result["command"]
+    assert "--literal-pathspecs" in stage_result["command"]
+    assert any(
+        token.startswith("core.attributesFile=") for token in stage_result["command"]
+    )
     assert (journal_repo / "data" / "processed" / "learning" / "stable.json").exists()
     assert not (journal_repo / "data" / "processed" / "learning" / "stale.json").exists()
     second_manifest = json.loads(
@@ -1601,6 +1650,15 @@ def test_journal_incremental_checkpoint_reuses_verified_files_and_reconciles_del
             journal_repo / "data" / "processed" / "learning" / "stable-000.json"
         ).read_text(encoding="utf-8")
     ) == {"stable": 9}
+    assert json.loads(
+        (
+            journal_repo
+            / "data"
+            / "processed"
+            / "learning"
+            / "stable[1] with spaces.json"
+        ).read_text(encoding="utf-8")
+    ) == {"version": 2}
 
     stable.unlink()
     second_manifest["file_index_version"] = "unsupported-test-version"
@@ -1660,6 +1718,101 @@ def test_journal_incremental_checkpoint_reuses_verified_files_and_reconciles_del
     assert invalid_status["file_index_integrity"]["valid"] is False
 
 
+def test_journal_checkpoint_blocks_git_attributes_that_can_transform_bytes(
+    tmp_path: Path,
+):
+    hub = tmp_path / "hub"
+    inbox = hub / "processed" / "mail" / "inbox" / "rows.jsonl"
+    inbox.parent.mkdir(parents=True)
+    inbox.write_text(
+        "\n".join(json.dumps({"i": i}) for i in range(200)) + "\n",
+        encoding="utf-8",
+    )
+    remote = tmp_path / "dad-journal-remote.git"
+    journal_repo = tmp_path / "dad-journal"
+    subprocess.run(["git", "init", "--bare", str(remote)], check=True)
+    subprocess.run(["git", "init", "-b", "main", str(journal_repo)], check=True)
+    subprocess.run(
+        ["git", "-C", str(journal_repo), "config", "user.email", "dad@example.test"],
+        check=True,
+    )
+    subprocess.run(
+        ["git", "-C", str(journal_repo), "config", "user.name", "DAD Test"],
+        check=True,
+    )
+    subprocess.run(
+        ["git", "-C", str(journal_repo), "remote", "add", "origin", str(remote)],
+        check=True,
+    )
+    subprocess.run(
+        ["git", "-C", str(journal_repo), "commit", "--allow-empty", "-m", "init"],
+        check=True,
+    )
+    subprocess.run(["git", "-C", str(journal_repo), "push", "origin", "main"], check=True)
+    info_attributes = journal_repo / ".git" / "info" / "attributes"
+    info_attributes.parent.mkdir(parents=True, exist_ok=True)
+    info_attributes.write_text("*.json filter=unsafe-test\n", encoding="utf-8")
+
+    result = checkpoint_journal(
+        hub, journal_repo, apply=True, min_records=200, min_hours=999
+    )
+
+    assert result["checkpoint_applied"] is False
+    assert result["checkpoint_skipped_reason"] == "journal_attributes_unsupported"
+    assert not (journal_repo / "journal_checkpoint_manifest.json").exists()
+
+
+def test_journal_checkpoint_blocks_ignored_repository_attributes(tmp_path: Path):
+    hub = tmp_path / "hub"
+    inbox = hub / "processed" / "mail" / "inbox" / "rows.jsonl"
+    inbox.parent.mkdir(parents=True)
+    inbox.write_text(
+        "\n".join(json.dumps({"i": i}) for i in range(200)) + "\n",
+        encoding="utf-8",
+    )
+    remote = tmp_path / "dad-journal-remote.git"
+    journal_repo = tmp_path / "dad-journal"
+    subprocess.run(["git", "init", "--bare", str(remote)], check=True)
+    subprocess.run(["git", "init", "-b", "main", str(journal_repo)], check=True)
+    subprocess.run(
+        ["git", "-C", str(journal_repo), "config", "user.email", "dad@example.test"],
+        check=True,
+    )
+    subprocess.run(
+        ["git", "-C", str(journal_repo), "config", "user.name", "DAD Test"],
+        check=True,
+    )
+    subprocess.run(
+        ["git", "-C", str(journal_repo), "remote", "add", "origin", str(remote)],
+        check=True,
+    )
+    subprocess.run(
+        ["git", "-C", str(journal_repo), "commit", "--allow-empty", "-m", "init"],
+        check=True,
+    )
+    subprocess.run(["git", "-C", str(journal_repo), "push", "origin", "main"], check=True)
+    (journal_repo / ".git" / "info" / "exclude").write_text(
+        ".gitattributes\n", encoding="utf-8"
+    )
+    (journal_repo / ".gitattributes").write_text(
+        "*.json filter=unsafe-test\n", encoding="utf-8"
+    )
+    assert subprocess.run(
+        ["git", "-C", str(journal_repo), "status", "--porcelain"],
+        check=True,
+        capture_output=True,
+        text=True,
+    ).stdout == ""
+
+    result = checkpoint_journal(
+        hub, journal_repo, apply=True, min_records=200, min_hours=999
+    )
+
+    assert result["checkpoint_applied"] is False
+    assert result["checkpoint_skipped_reason"] == "journal_attributes_unsupported"
+    assert not (journal_repo / "journal_checkpoint_manifest.json").exists()
+
+
 def test_journal_checkpoints_catalog_database_as_integrity_checked_sqlite_snapshot(
     tmp_path: Path,
 ):
@@ -1709,7 +1862,9 @@ def test_journal_checkpoints_catalog_database_as_integrity_checked_sqlite_snapsh
         )
 
 
-def test_journal_remote_race_leaves_primary_checkpoint_unchanged(tmp_path: Path):
+def test_journal_unsafe_remote_descendant_leaves_primary_checkpoint_unchanged(
+    tmp_path: Path,
+):
     hub = tmp_path / "hub"
     inbox = hub / "processed" / "mail" / "inbox" / "rows.jsonl"
     inbox.parent.mkdir(parents=True)
@@ -1758,8 +1913,8 @@ def test_journal_remote_race_leaves_primary_checkpoint_unchanged(tmp_path: Path)
         ["git", "-C", str(competing), "config", "user.name", "Other Writer"],
         check=True,
     )
-    (competing / "README.md").write_text("competing update\n", encoding="utf-8")
-    subprocess.run(["git", "-C", str(competing), "add", "README.md"], check=True)
+    (competing / "unsafe.txt").write_text("competing update\n", encoding="utf-8")
+    subprocess.run(["git", "-C", str(competing), "add", "unsafe.txt"], check=True)
     subprocess.run(["git", "-C", str(competing), "commit", "-m", "Competing update"], check=True)
     subprocess.run(["git", "-C", str(competing), "push", "origin", "main"], check=True)
     with inbox.open("a", encoding="utf-8") as handle:
@@ -1771,7 +1926,7 @@ def test_journal_remote_race_leaves_primary_checkpoint_unchanged(tmp_path: Path)
     )
 
     assert result["checkpoint_applied"] is False
-    assert result["checkpoint_skipped_reason"] == "git_transaction_failed"
+    assert result["checkpoint_skipped_reason"] == "remote_descendant_recovery_failed"
     assert subprocess.run(
         ["git", "-C", str(journal_repo), "rev-parse", "HEAD"],
         check=True,
@@ -1785,6 +1940,103 @@ def test_journal_remote_race_leaves_primary_checkpoint_unchanged(tmp_path: Path)
         capture_output=True,
         text=True,
     ).stdout == ""
+
+
+def test_journal_recovers_safe_remote_descendant_without_pending_status(tmp_path: Path):
+    hub = tmp_path / "hub"
+    inbox = hub / "processed" / "mail" / "inbox" / "rows.jsonl"
+    inbox.parent.mkdir(parents=True)
+    inbox.write_text(
+        "\n".join(json.dumps({"i": i}) for i in range(200)) + "\n",
+        encoding="utf-8",
+    )
+    remote = tmp_path / "dad-journal-remote.git"
+    journal_repo = tmp_path / "dad-journal"
+    subprocess.run(["git", "init", "--bare", str(remote)], check=True)
+    subprocess.run(["git", "init", "-b", "main", str(journal_repo)], check=True)
+    subprocess.run(
+        ["git", "-C", str(journal_repo), "config", "user.email", "dad@example.test"],
+        check=True,
+    )
+    subprocess.run(
+        ["git", "-C", str(journal_repo), "config", "user.name", "DAD Test"],
+        check=True,
+    )
+    subprocess.run(
+        ["git", "-C", str(journal_repo), "remote", "add", "origin", str(remote)],
+        check=True,
+    )
+    first = checkpoint_journal(
+        hub, journal_repo, apply=True, min_records=200, min_hours=999
+    )
+    assert first["checkpoint_applied"] is True
+
+    competing = tmp_path / "post-push-process-crash"
+    subprocess.run(
+        ["git", "clone", "--branch", "main", str(remote), str(competing)], check=True
+    )
+    subprocess.run(
+        ["git", "-C", str(competing), "config", "user.email", "other@example.test"],
+        check=True,
+    )
+    subprocess.run(
+        ["git", "-C", str(competing), "config", "user.name", "Other Writer"],
+        check=True,
+    )
+    remote_candidate = competing / "remote-outbox" / "after-push.jsonl"
+    remote_candidate.parent.mkdir(parents=True)
+    remote_candidate.write_text('{"candidate": true}\n', encoding="utf-8")
+    subprocess.run(
+        ["git", "-C", str(competing), "add", "remote-outbox/after-push.jsonl"],
+        check=True,
+    )
+    subprocess.run(
+        ["git", "-C", str(competing), "commit", "-m", "Remote checkpoint tail"],
+        check=True,
+    )
+    subprocess.run(["git", "-C", str(competing), "push", "origin", "main"], check=True)
+    with inbox.open("a", encoding="utf-8") as handle:
+        for i in range(200, 400):
+            handle.write(json.dumps({"i": i}) + "\n")
+
+    local_head_before_recovery = subprocess.run(
+        ["git", "-C", str(journal_repo), "rev-parse", "HEAD"],
+        check=True,
+        capture_output=True,
+        text=True,
+    ).stdout.strip()
+    dirty_note = journal_repo / "local-note.txt"
+    dirty_note.write_text("do not overwrite\n", encoding="utf-8")
+    blocked = checkpoint_journal(
+        hub, journal_repo, apply=True, min_records=200, min_hours=999
+    )
+    assert blocked["checkpoint_skipped_reason"] == "journal_worktree_not_clean"
+    assert subprocess.run(
+        ["git", "-C", str(journal_repo), "rev-parse", "HEAD"],
+        check=True,
+        capture_output=True,
+        text=True,
+    ).stdout.strip() == local_head_before_recovery
+    dirty_note.unlink()
+
+    result = checkpoint_journal(
+        hub, journal_repo, apply=True, min_records=200, min_hours=999
+    )
+
+    assert result["checkpoint_applied"] is True
+    assert result["synchronized_start_head"]
+    assert (journal_repo / "remote-outbox" / "after-push.jsonl").exists()
+    assert subprocess.run(
+        ["git", "-C", str(journal_repo), "rev-parse", "HEAD"],
+        check=True,
+        capture_output=True,
+        text=True,
+    ).stdout.strip() == subprocess.run(
+        ["git", "-C", str(remote), "rev-parse", "main"],
+        check=True,
+        capture_output=True,
+        text=True,
+    ).stdout.strip()
 
 
 def test_journal_recovers_one_time_local_sync_failure_after_remote_push(

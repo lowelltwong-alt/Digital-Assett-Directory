@@ -203,6 +203,40 @@ def test_build_lesson_graph_compiles_candidate_nodes_and_edges(tmp_path: Path):
     assert "about_asset" in manifest["edge_definitions_present"]
 
 
+def test_registered_personal_skill_sources_are_ingested_from_library(tmp_path: Path):
+    hub = _graph_hub(tmp_path)
+    central_library = json.loads(
+        (ROOT / "registry" / "agent-skill-library.json").read_text(encoding="utf-8")
+    )
+    expected = {
+        "skill:dad-work-router",
+        "skill:dad-learning-loop",
+        "skill:dad-digital-asset-radar",
+        "skill:dad-iteration-optimizer",
+        "skill:dad-agent-skill-forge",
+        "skill:codex-capability-radar",
+    }
+    registered = {
+        row["skill_id"]: row
+        for row in central_library["skills"]
+        if row["skill_id"] in expected
+    }
+    assert set(registered) == expected
+    assert {row["skill_format"] for row in registered.values()} == {"generic_agent_skill"}
+    assert {row["review_status"] for row in registered.values()} == {"reviewed"}
+
+    (hub / "registry" / "agent-skill-library.json").write_text(
+        json.dumps({"skills": list(registered.values())}), encoding="utf-8"
+    )
+    graph = build_lesson_graph(hub)["graph"]
+    graph_skill_nodes = {
+        node["node_id"]
+        for node in graph["nodes"]
+        if node["node_type"] == "agent_skill"
+    }
+    assert graph_skill_nodes == {f"skill:{skill_id}" for skill_id in expected}
+
+
 def test_build_lesson_graph_is_idempotent_and_survives_missing_inputs(tmp_path: Path):
     hub = _graph_hub(tmp_path)
     first = build_lesson_graph(hub)["graph"]
