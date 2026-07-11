@@ -1392,6 +1392,14 @@ def test_journal_locked_copy_does_not_advance_checkpoint(
     )
     journal_repo = tmp_path / "dad-journal"
     subprocess.run(["git", "init", "-b", "journal-data", str(journal_repo)], check=True)
+    subprocess.run(
+        ["git", "-C", str(journal_repo), "config", "user.email", "dad@example.test"],
+        check=True,
+    )
+    subprocess.run(
+        ["git", "-C", str(journal_repo), "config", "user.name", "DAD Test"],
+        check=True,
+    )
 
     def locked_copy(_source: Path, _destination: Path) -> None:
         error = PermissionError("synthetic live-file lock")
