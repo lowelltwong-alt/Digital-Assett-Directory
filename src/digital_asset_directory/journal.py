@@ -265,6 +265,19 @@ def _validated_checkpoint_file_index(manifest: Any) -> dict[str, dict[str, Any]]
     return validated
 
 
+def _checkpoint_manifest_structure_valid(manifest: Any) -> bool:
+    if not isinstance(manifest, dict):
+        return False
+    if manifest.get("schema_version") != "dad.journal.checkpoint.v1":
+        return False
+    if manifest.get("checkpoint_scope") != "DATA_PLANE_PATHS":
+        return False
+    raw_index = manifest.get("file_index")
+    if not isinstance(raw_index, dict):
+        return False
+    return not raw_index or bool(_validated_checkpoint_file_index(manifest))
+
+
 def _managed_checkpoint_relative_paths(checkpoint_repo: Path) -> set[str]:
     data_root = checkpoint_repo / "data"
     managed: set[str] = set()
@@ -848,10 +861,8 @@ def journal_repo_status(
         if data_dir.exists()
         else 0
     )
-    manifest_schema_ok = (
-        manifest_result["status"] == "readable"
-        and manifest.get("schema_version") == "dad.journal.checkpoint.v1"
-        and manifest.get("checkpoint_scope") == "DATA_PLANE_PATHS"
+    manifest_schema_ok = manifest_result["status"] == "readable" and (
+        _checkpoint_manifest_structure_valid(manifest)
     )
     manifest_engine_version = str(manifest.get("journal_engine_version") or "")
     engine_version_current = manifest_engine_version == JOURNAL_ENGINE_VERSION
@@ -939,13 +950,17 @@ def checkpoint_journal(
     if journal_repo is not None:
         manifest_result = _read_checkpoint_manifest(journal_repo.resolve())
         manifest = manifest_result.get("manifest", {})
-        manifest_recovery_due = manifest_result.get("status") == "invalid"
+        manifest_structure_valid = _checkpoint_manifest_structure_valid(manifest)
+        manifest_recovery_due = manifest_result.get("status") == "invalid" or (
+            manifest_result.get("status") == "readable" and not manifest_structure_valid
+        )
         engine_upgrade_due = (
             isinstance(manifest, dict)
             and bool(manifest)
             and manifest.get("journal_engine_version") != JOURNAL_ENGINE_VERSION
         )
         status["journal_manifest_status"] = manifest_result.get("status")
+        status["journal_manifest_structure_valid"] = manifest_structure_valid
         status["journal_manifest_recovery_due"] = manifest_recovery_due
         status["journal_engine_upgrade_due"] = engine_upgrade_due
         if manifest_recovery_due:

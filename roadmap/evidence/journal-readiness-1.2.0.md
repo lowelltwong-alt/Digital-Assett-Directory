@@ -44,7 +44,7 @@ promotion. Python remains the executable serial oracle and fallback.
 
 Independent failure-path review found and closed three readiness gaps before
 promotion: executor worker-start/submission failures now use the serial oracle,
-an existing unreadable or malformed checkpoint manifest forces immediate
+an existing unreadable, malformed, or structurally invalid checkpoint manifest forces immediate
 recovery even below normal thresholds, and compact readiness output preserves
 the journal status plus expected/seen engine versions. Focused reproductions
 and the complete transport module pass with these cases enabled.

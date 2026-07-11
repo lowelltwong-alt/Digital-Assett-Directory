@@ -1655,6 +1655,30 @@ def test_journal_apply_threshold_commits_and_pushes_to_data_repo(tmp_path: Path)
     )
     assert recovered_manifest["journal_engine_version"] == "1.2.0"
 
+    (journal_repo / "journal_checkpoint_manifest.json").write_text(
+        "{}\n", encoding="utf-8"
+    )
+    subprocess.run(
+        ["git", "-C", str(journal_repo), "add", "journal_checkpoint_manifest.json"],
+        check=True,
+    )
+    subprocess.run(
+        ["git", "-C", str(journal_repo), "commit", "-m", "Invalid manifest shape"],
+        check=True,
+    )
+    subprocess.run(
+        ["git", "-C", str(journal_repo), "push", "origin", "journal-data"],
+        check=True,
+    )
+    shape_recovered = checkpoint_journal(
+        hub, journal_repo, apply=True, min_records=99999, min_hours=999
+    )
+    assert shape_recovered["checkpoint_applied"] is True
+    assert shape_recovered["journal_manifest_status"] == "readable"
+    assert shape_recovered["journal_manifest_structure_valid"] is False
+    assert shape_recovered["journal_manifest_recovery_due"] is True
+    assert shape_recovered["checkpoint_due_reason"] == "journal_manifest_recovery"
+
 
 def test_journal_incremental_checkpoint_reuses_verified_files_and_reconciles_deletions(
     tmp_path: Path,
