@@ -569,6 +569,35 @@ def test_cli_mail_compose_lesson_payload_schema_is_warning_only(tmp_path: Path):
     assert valid_payload["payload_validation"]["status"] == "passed"
     assert valid_payload["payload_validation"]["warning_count"] == 0
 
+    unsafe_payload = json.loads(golden.read_text(encoding="utf-8"))
+    unsafe_payload["crossing_proof"]["send_performed"] = True
+    unsafe_payload_file = tmp_path / "unsafe-lesson-payload.json"
+    unsafe_payload_file.write_text(json.dumps(unsafe_payload), encoding="utf-8")
+    unsafe_sender = RUNNER.invoke(
+        app,
+        [
+            "mail",
+            "compose",
+            "--hub",
+            str(hub),
+            "--repo",
+            str(repo),
+            "--type",
+            "lesson_suggestion",
+            "--summary",
+            "Unsafe authority claims remain warnings during receiver migration.",
+            "--payload-json",
+            str(unsafe_payload_file),
+            "--allow-similar",
+        ],
+    )
+
+    assert unsafe_sender.exit_code == 0, unsafe_sender.output
+    unsafe_result = json.loads(unsafe_sender.output)
+    assert unsafe_result["payload_validation"]["enforcement"] == "warning_only"
+    assert unsafe_result["payload_validation"]["status"] == "warning_only_failed"
+    assert any("send_performed" in warning for warning in unsafe_result["payload_validation"]["warnings"])
+
     skipped = RUNNER.invoke(
         app,
         [

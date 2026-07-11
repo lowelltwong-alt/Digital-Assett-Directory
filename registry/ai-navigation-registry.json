@@ -60,8 +60,8 @@
       "role": "Singular human- and AI-readable start point for DAD work.",
       "tags": ["front_door", "authority", "navigation_freshness"],
       "use_when": "Always start here before material work.",
-      "current_version": "2026.07.07.2",
-      "last_material_change_at": "2026-07-07T02:15:00Z",
+      "current_version": "2026.07.10.1",
+      "last_material_change_at": "2026-07-10T00:00:00Z",
       "change_class": "navigation_contract",
       "route_after": ["registry/ai-navigation-registry.json", "MACHINE_NAVIGATION_MANIFEST.json", "AI_TABLE_OF_CONTENTS.md"],
       "freshness_hint": "Read the navigation freshness section before relying on remembered DAD paths."
@@ -72,8 +72,8 @@
       "role": "Machine-readable navigation version, branch freshness, and recent material changes.",
       "tags": ["front_door", "registry", "navigation_freshness", "validation"],
       "use_when": "You need to know what changed since the last DAD visit without bloating the TOC.",
-      "current_version": "2026.07.07.2",
-      "last_material_change_at": "2026-07-07T02:15:00Z",
+      "current_version": "2026.07.10.1",
+      "last_material_change_at": "2026-07-10T00:00:00Z",
       "change_class": "navigation_contract",
       "route_after": ["AI_FRONT_DOOR.md"],
       "freshness_hint": "Compare navigation_version and updated_at to any cached or repo-local last-seen value."
@@ -84,8 +84,8 @@
       "role": "Semantic branching map with path, role, tags, and use-when triggers.",
       "tags": ["front_door", "workflow", "navigation_freshness"],
       "use_when": "You know the task class and need the smallest matching branch.",
-      "current_version": "2026.07.07.2",
-      "last_material_change_at": "2026-07-07T02:15:00Z",
+      "current_version": "2026.07.10.1",
+      "last_material_change_at": "2026-07-10T00:00:00Z",
       "change_class": "navigation_contract",
       "route_after": ["AI_FRONT_DOOR.md", "registry/ai-navigation-registry.json"],
       "freshness_hint": "Use the TOC for routing meaning; use this registry for freshness."
@@ -96,8 +96,8 @@
       "role": "Machine-readable start files, registries, generated surfaces, and validation commands.",
       "tags": ["front_door", "registry", "validation", "navigation_freshness"],
       "use_when": "A tool or agent needs deterministic paths rather than prose routing.",
-      "current_version": "2026.07.07.2",
-      "last_material_change_at": "2026-07-07T02:15:00Z",
+      "current_version": "2026.07.10.1",
+      "last_material_change_at": "2026-07-10T00:00:00Z",
       "change_class": "navigation_contract",
       "route_after": ["AI_FRONT_DOOR.md", "registry/ai-navigation-registry.json"],
       "freshness_hint": "Manifest freshness mirrors the navigation registry version for DAD entrypoint changes."
@@ -243,14 +243,14 @@
     {
       "branch_id": "mail_center",
       "path": "docs/MAIL_CENTER.md",
-      "role": "Governed DAD mail hub and repo-local inbox/outbox mirror design.",
+      "role": "Governed DAD mail hub, repo-local inbox/outbox mirror, and warning-only synthetic QRD/IFC lesson receiver boundary.",
       "tags": ["mail_center", "cross_repo", "learning_loop", "security_privacy"],
       "use_when": "You compose, collect, route, deliver, digest, review, or explain DAD mail.",
-      "current_version": "0.1.0",
-      "last_material_change_at": "2026-07-06T04:57:17Z",
+      "current_version": "0.2.0",
+      "last_material_change_at": "2026-07-10T00:00:00Z",
       "change_class": "mail_surface",
       "route_after": ["docs/DAD_EVENT_PIPELINE.md", "AI_FRONT_DOOR.md", "registry/ai-navigation-registry.json"],
-      "freshness_hint": "Mail remains candidate-only and repo-facing; event pipeline rows provide explicit response-state candidate metadata."
+      "freshness_hint": "Mail and optional QRD/IFC projections remain candidate-only. Receiver schema validity is not disclosure, crossing, send, promotion, legal, privacy, or compliance authority."
     },
     {
       "branch_id": "event_pipeline",
@@ -380,6 +380,23 @@
       "summary": "Added immutable attempt intake, pinned evidence ratings, candidate capability graph, and human-gated role consolidation review.",
       "agent_action": "Use this branch for subagent evaluation; never infer agent identity from nicknames or use graph scores to change routing automatically.",
       "route_tags": ["agent_skill", "knowledge_graph", "calibration", "human_gate"]
+    },
+    {
+      "change_id": "nav-change:2026-07-10:qrd-ifc-warning-only-receiver",
+      "changed_at": "2026-07-10T00:00:00Z",
+      "change_type": "expanded_warning_only_lesson_receiver",
+      "paths": [
+        "schemas/lesson-payload.schema.json",
+        "examples/mail/lesson-payload.golden.json",
+        "docs/MAIL_CENTER.md",
+        "AI_FRONT_DOOR.md",
+        "AI_TABLE_OF_CONTENTS.md",
+        "MACHINE_NAVIGATION_MANIFEST.json",
+        "roadmap/evidence/qrd-ifc-warning-only-receiver.md"
+      ],
+      "summary": "Added optional sanitized QRD and IFC projections to the warning-only lesson payload receiver without breaking legacy senders or granting transport or promotion authority.",
+      "agent_action": "Treat schema conformance as receiver-shape evidence only; keep synthetic candidate data, human review, owning-repo review, and DAD promotion gates explicit.",
+      "route_tags": ["mail_center", "learning_loop", "security_privacy", "governance", "validation"]
     },
     {
       "change_id": "nav-change:2026-07-07:fable-graph-surface-mcp-handoff",

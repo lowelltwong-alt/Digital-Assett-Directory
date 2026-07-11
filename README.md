@@ -43,6 +43,9 @@ Turn scattered files, repositories, lessons, schemas, workflows, prompts, tests,
 - A reusable cross-repo governance dependency-map pattern and template seed for
   future repo families that need upstream governance maps, child mirrors, AI
   discovery surfaces, PR disclosure, validators, and tests aligned from day one.
+- A warning-only, extensible lesson receiver schema for synthetic candidate
+  QRD/IFC projections; validation never grants send, promotion, legal, privacy,
+  or compliance authority.
 
 ## Safety posture
 

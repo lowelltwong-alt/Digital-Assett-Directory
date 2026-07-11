@@ -102,7 +102,20 @@ schemas/mail-decision.schema.json
 `schemas/lesson-payload.schema.json` is warning-only for the first release.
 `mail compose --type lesson_suggestion` reports payload validation warnings but
 still appends valid mail. Use `--no-payload-validation` only when you need an
-explicit temporary escape hatch.
+explicit temporary escape hatch. The optional `lesson_ir`, `anonymity_set`,
+`adversary_model`, `privilege_screen`, `lesson_disclosure_proof`, and
+`crossing_proof` fields are sanitized receiver projections for synthetic
+candidate packets. Using any projection requires explicit synthetic scope and
+literal-false real/private/client/matter/carrier/privilege/work-product flags.
+The projections exclude support identifiers and free text and keep all
+human-review, receiver-authority, send, privacy-guarantee, and noninterference-
+guarantee claims false.
+
+Schema-valid means only that a payload matches DAD's warning-only receiver
+shape. It does not authorize disclosure, crossing, delivery, promotion, legal
+judgment, or compliance judgment. Intake remains the owner of QRD/IFC proof
+generation; DAD receives reviewed candidate projections and cannot promote them
+without its normal review gate.
 
 ## Storage
 
