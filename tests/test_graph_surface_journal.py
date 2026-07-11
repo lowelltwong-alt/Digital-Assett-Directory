@@ -151,6 +151,10 @@ def test_journal_checkpoint_plan_includes_graph_surface_snapshot_evidence(
     assert snapshot["body_sha256"].startswith("sha256:")
     assert snapshot["body_gzip_sha256"].startswith("sha256:")
     assert snapshot["body_gzip_snapshot_path"].endswith(".json.gz")
+    assert snapshot["manifest_json_snapshot_path"].endswith(".json")
+    assert snapshot["manifest_json_sha256"].removeprefix("sha256:") in snapshot[
+        "manifest_json_snapshot_path"
+    ]
     assert snapshot["body_upload_action"] == "write_gzip"
     assert snapshot["index_row"]["body_sha256"] == snapshot["body_sha256"]
     assert not (hub / "processed" / "reports" / "journal_checkpoint_status.json").exists()
@@ -182,9 +186,26 @@ def test_graph_surface_checkpoint_artifacts_write_gzip_and_skip_unchanged(
     assert json.loads(manifest_path.read_text(encoding="utf-8")) == manifest
     assert gzip.decompress(body_path.read_bytes()) == body_bytes
 
+    manifest_source = Path(snapshot["manifest_path"])
+    revised_manifest = {**manifest, "revision_marker": "second"}
+    manifest_source.write_text(
+        json.dumps(revised_manifest, indent=2, sort_keys=True) + "\n",
+        encoding="utf-8",
+    )
+
     second = graph_surface_checkpoint_plan(hub, journal_repo)
     second_snapshot = next(
         row for row in second["snapshots"] if row["surface_id"] == "lesson-graph"
     )
     assert second_snapshot["body_upload_action"] == "skip_unchanged"
     assert second["skipped_unchanged_body_count"] == 1
+    assert second_snapshot["manifest_json_snapshot_path"] != snapshot[
+        "manifest_json_snapshot_path"
+    ]
+    written_second = write_graph_surface_checkpoint_artifacts(hub, journal_repo)
+    written_snapshot = next(
+        row for row in written_second["snapshots"] if row["surface_id"] == "lesson-graph"
+    )
+    second_manifest_path = journal_repo / written_snapshot["manifest_json_snapshot_path"]
+    assert json.loads(manifest_path.read_text(encoding="utf-8")) == manifest
+    assert json.loads(second_manifest_path.read_text(encoding="utf-8")) == revised_manifest
