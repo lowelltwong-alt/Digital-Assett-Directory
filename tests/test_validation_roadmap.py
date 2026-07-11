@@ -1465,6 +1465,73 @@ def test_seed_roadmap_file_gate_is_complete():
     assert result["phases"]["phase-0-seed"]["computed_status"] == "complete"
 
 
+def test_roadmap_required_outputs_follow_initialized_data_root(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+):
+    hub = tmp_path / "hub"
+    data_root = tmp_path / "data-root"
+    (hub / "roadmap").mkdir(parents=True)
+    (data_root / "processed" / "reports").mkdir(parents=True)
+    (hub / "roadmap" / "roadmap.yaml").write_text(
+        """
+roadmap_version: test
+phases:
+  - id: phase-output
+    status: planned
+    acceptance:
+      required_outputs:
+        - processed/reports/runtime.json
+""",
+        encoding="utf-8",
+    )
+    (data_root / "processed" / "reports" / "runtime.json").write_text("{}\n", encoding="utf-8")
+    (data_root / ".dad-data-root.json").write_text(
+        json.dumps({"hub_ref": str(hub.resolve())}) + "\n",
+        encoding="utf-8",
+    )
+    monkeypatch.setenv("DAD_DATA_ROOT", str(data_root))
+
+    result = check_roadmap(hub, update=False)
+
+    assert result["phases"]["phase-output"]["computed_status"] == "complete"
+    assert result["phases"]["phase-output"]["evidence"] == ["processed/reports/runtime.json"]
+
+
+def test_roadmap_required_outputs_fail_safe_to_legacy_root(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+):
+    hub = tmp_path / "hub"
+    candidate = tmp_path / "uninitialized-data-root"
+    (hub / "roadmap").mkdir(parents=True)
+    (candidate / "processed" / "reports").mkdir(parents=True)
+    (hub / "roadmap" / "roadmap.yaml").write_text(
+        """
+roadmap_version: test
+phases:
+  - id: phase-output
+    status: planned
+    acceptance:
+      required_outputs:
+        - processed/reports/runtime.json
+""",
+        encoding="utf-8",
+    )
+    (candidate / "processed" / "reports" / "runtime.json").write_text("{}\n", encoding="utf-8")
+    (candidate / ".dad-data-root.json").write_text(
+        json.dumps({"hub_ref": str((tmp_path / "another-hub").resolve())}) + "\n",
+        encoding="utf-8",
+    )
+    monkeypatch.setenv("DAD_DATA_ROOT", str(candidate))
+
+    missing = check_roadmap(hub, update=False)
+    assert missing["phases"]["phase-output"]["computed_status"] == "planned"
+
+    (hub / "processed" / "reports").mkdir(parents=True)
+    (hub / "processed" / "reports" / "runtime.json").write_text("{}\n", encoding="utf-8")
+    present = check_roadmap(hub, update=False)
+    assert present["phases"]["phase-output"]["computed_status"] == "complete"
+
+
 def test_roadmap_human_gate_requires_tracked_evidence(tmp_path: Path):
     (tmp_path / "roadmap").mkdir()
     (tmp_path / "required.txt").write_text("ok", encoding="utf-8")

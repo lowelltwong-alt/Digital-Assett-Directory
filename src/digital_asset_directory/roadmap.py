@@ -5,6 +5,7 @@ from pathlib import Path
 from typing import Any
 import yaml
 
+from .transport import data_relative_path
 from .utils import utc_now, write_json
 
 AGENT_REVIEWERS = {
@@ -40,6 +41,15 @@ def _load_gate_evidence(repo_root: Path) -> dict[str, Any]:
 def _load_roadmap(repo_root: Path) -> dict[str, Any]:
     roadmap_path = repo_root / "roadmap" / "roadmap.yaml"
     return yaml.safe_load(roadmap_path.read_text(encoding="utf-8"))
+
+
+def _acceptance_paths(repo_root: Path, acceptance: dict[str, Any]) -> list[tuple[str, Path]]:
+    files = [(str(path), repo_root / str(path)) for path in acceptance.get("required_files", [])]
+    outputs = [
+        (str(path), data_relative_path(repo_root, str(path)))
+        for path in acceptance.get("required_outputs", [])
+    ]
+    return files + outputs
 
 
 def _find_phase(repo_root: Path, phase_id: str) -> dict[str, Any]:
@@ -81,9 +91,8 @@ def build_human_gate_review_packet(repo_root: Path, phase_id: str) -> dict[str, 
     gate_evidence = _load_gate_evidence(repo_root)
     roadmap_state = check_roadmap(repo_root, update=False)["phases"][phase_id]
     acceptance = phase.get("acceptance", {})
-    required_files = list(acceptance.get("required_files", [])) + list(
-        acceptance.get("required_outputs", [])
-    )
+    required_paths = _acceptance_paths(repo_root, acceptance)
+    required_files = [path for path, _resolved in required_paths]
     command_evidence = gate_evidence.get("commands", {}).get(phase_id, {})
     gates = [_normalize_human_gate(phase_id, gate) for gate in acceptance.get("human_gates", [])]
     unverified_by_id = {
@@ -127,9 +136,7 @@ def build_human_gate_review_packet(repo_root: Path, phase_id: str) -> dict[str, 
                     "reviewer": "<Lowell|user|human>",
                     "reviewed_at": "<ISO-8601 timestamp>",
                     "summary": "<human decision summary>",
-                    "evidence": [
-                        path for path in required_files if (repo_root / path).exists()
-                    ],
+                    "evidence": [path for path, resolved in required_paths if resolved.exists()],
                 },
             }
         )
@@ -146,7 +153,7 @@ def build_human_gate_review_packet(repo_root: Path, phase_id: str) -> dict[str, 
         "human_gate_satisfied": False,
         "agent_review_satisfies_gate": False,
         "required_files": [
-            {"path": path, "exists": (repo_root / path).exists()} for path in required_files
+            {"path": path, "exists": resolved.exists()} for path, resolved in required_paths
         ],
         "commands": [
             {
@@ -160,7 +167,7 @@ def build_human_gate_review_packet(repo_root: Path, phase_id: str) -> dict[str, 
         "command_evidence_files": [
             path
             for path in required_files
-            if path.endswith(".commands.json") and (repo_root / path).exists()
+            if path.endswith(".commands.json") and dict(required_paths)[path].exists()
         ],
         "human_gates": gate_rows,
         "next_actions": [
@@ -301,9 +308,9 @@ def check_roadmap(repo_root: Path, update: bool = True) -> dict[str, Any]:
             for phase_id in dependencies
             if computed_by_phase.get(str(phase_id)) != "complete"
         ]
-        required = acceptance.get("required_files", []) + acceptance.get("required_outputs", [])
-        present = [path for path in required if (repo_root / path).exists()]
-        missing = [path for path in required if not (repo_root / path).exists()]
+        required = _acceptance_paths(repo_root, acceptance)
+        present = [path for path, resolved in required if resolved.exists()]
+        missing = [path for path, resolved in required if not resolved.exists()]
         human_gates = [
             _normalize_human_gate(phase["id"], gate) for gate in acceptance.get("human_gates", [])
         ]
