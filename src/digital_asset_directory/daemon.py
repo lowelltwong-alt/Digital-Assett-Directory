@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import json
 import hashlib
+import re
 import subprocess
 from datetime import datetime, timezone
 from pathlib import Path
@@ -1206,6 +1207,23 @@ def _parse_schtasks_list_output(stdout: str) -> dict[str, str]:
     return parsed
 
 
+def _generated_wrapper_options(wrapper_text: str) -> dict[str, Any]:
+    quoted_tokens = [
+        token.replace("''", "'")
+        for token in re.findall(r"'((?:''|[^'])*)'", wrapper_text)
+    ]
+    options: dict[str, Any] = {
+        "journal_repo": None,
+        "checkpoint_apply": False,
+    }
+    for index, token in enumerate(quoted_tokens):
+        if token == "--journal-repo" and index + 1 < len(quoted_tokens):
+            options["journal_repo"] = quoted_tokens[index + 1]
+        elif token == "--checkpoint-apply":
+            options["checkpoint_apply"] = True
+    return options
+
+
 def task_scheduler_status(
     hub_root: Path,
     *,
@@ -1248,6 +1266,7 @@ def task_scheduler_status(
         except OSError as exc:
             wrapper_read_error = str(exc)
     command_material = task_to_run + "\n" + wrapper_text
+    wrapper_options = _generated_wrapper_options(wrapper_text)
     installed = returncode == 0
     return {
         "schema_version": "dad.daemon.task_scheduler_status.v1",
@@ -1271,6 +1290,8 @@ def task_scheduler_status(
         "wrapper_found": bool(wrapper_text),
         "wrapper_read_error": wrapper_read_error,
         "wrapper_text": wrapper_text,
+        "journal_repo": wrapper_options["journal_repo"],
+        "checkpoint_apply": wrapper_options["checkpoint_apply"],
         "command_mentions_run_cycle": "daemon run-cycle" in command_material,
         "expected_hub_found": hub_text in command_material,
         "expected_shim_found": shim_text in command_material,
