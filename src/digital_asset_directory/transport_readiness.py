@@ -76,7 +76,14 @@ def build_transport_readiness(
     report_status, report_payload = _read_json_object(report_path)
     queue = read_transport_upgrade_queue(hub_root)
     daemon = daemon_status(hub_root, stale_hours=stale_hours)
-    journal = journal_status(hub_root)
+    scheduler = dict(scheduler_status or {})
+    journal_repo = dict(journal_repo_status or {})
+    embedded_journal = journal_repo.get("journal_status")
+    journal = (
+        dict(embedded_journal)
+        if isinstance(embedded_journal, Mapping)
+        else journal_status(hub_root)
+    )
     graph_surfaces = graph_surface_status(hub_root)
     repos = list(transport_repos or [])
     upgrade_status = build_transport_upgrade_status(
@@ -85,8 +92,6 @@ def build_transport_readiness(
         enrollment_policies=enrollment_policies or [],
         wave=wave,
     )
-    scheduler = dict(scheduler_status or {})
-    journal_repo = dict(journal_repo_status or {})
     verified_gate_ids = _phase13_verified_gate_ids(hub_root)
 
     data_root_active = data_mode == "data_root"
@@ -347,4 +352,67 @@ def build_transport_readiness(
         ],
         "transport_surface_version": TRANSPORT_SURFACE_VERSION,
         "authority_boundary": AUTHORITY_BOUNDARY,
+    }
+
+
+def compact_transport_readiness(payload: Mapping[str, Any]) -> dict[str, Any]:
+    """Return the stable operator/UI summary without embedding large evidence bodies."""
+    gates = payload.get("human_gates")
+    compact_gates: dict[str, dict[str, Any]] = {}
+    if isinstance(gates, Mapping):
+        for name, raw_gate in gates.items():
+            gate = raw_gate if isinstance(raw_gate, Mapping) else {}
+            compact_gates[str(name)] = {
+                "complete": bool(gate.get("complete")),
+                "status": str(gate.get("status") or "unknown"),
+            }
+    journal = payload.get("journal")
+    journal = journal if isinstance(journal, Mapping) else {}
+    repo_status = journal.get("repo_status")
+    repo_status = repo_status if isinstance(repo_status, Mapping) else {}
+    daemon = payload.get("daemon")
+    daemon = daemon if isinstance(daemon, Mapping) else {}
+    audit = payload.get("audit")
+    audit = audit if isinstance(audit, Mapping) else {}
+    return {
+        "schema_version": "dad.transport.readiness.summary.v1",
+        "generated_at": payload.get("generated_at"),
+        "overall_status": payload.get("overall_status"),
+        "local_ready": bool(payload.get("local_ready")),
+        "human_gate_summary": payload.get("human_gate_summary", {}),
+        "human_gates": compact_gates,
+        "classification_counts": audit.get("classification_counts", {}),
+        "daemon": {
+            "status": daemon.get("status"),
+            "stale": daemon.get("stale"),
+        },
+        "journal": {
+            "checkpoint_due": journal.get("checkpoint_due"),
+            "new_record_count": journal.get("new_record_count"),
+            "last_checkpoint_at": journal.get("last_checkpoint_at"),
+            "status": repo_status.get("status"),
+            "machine_ready": bool(repo_status.get("machine_ready")),
+            "journal_engine_version_seen": repo_status.get(
+                "journal_engine_version_seen"
+            ),
+            "journal_engine_version_expected": repo_status.get(
+                "journal_engine_version_expected"
+            ),
+            "journal_engine_version_current": repo_status.get(
+                "journal_engine_version_current"
+            ),
+            "integrity_valid": bool(
+                (repo_status.get("file_index_integrity") or {}).get("valid")
+                if isinstance(repo_status.get("file_index_integrity"), Mapping)
+                else False
+            ),
+            "verification_backend": (
+                repo_status.get("file_index_integrity") or {}
+            ).get("verification_backend")
+            if isinstance(repo_status.get("file_index_integrity"), Mapping)
+            else None,
+        },
+        "operator_next_steps": payload.get("operator_next_steps", []),
+        "transport_surface_version": payload.get("transport_surface_version"),
+        "authority_boundary": payload.get("authority_boundary"),
     }

@@ -244,7 +244,7 @@ once with no DAD_DATA_ROOT (legacy mode) and once with a tmp initialized root.
 Unchanged; the daemon cycle ends with `transport audit` + journal checkpoint.
 
 The implemented journal checkpoint is transactional and incremental. Journal
-engine `1.1.0` builds and hash-verifies a due snapshot through a detached
+engine `1.2.0` builds and hash-verifies a due snapshot through a detached
 no-checkout Git worktree whose index is seeded from `HEAD`; only verified
 changes, removals, graph artifacts, and the manifest are materialized and
 staged through an exact NUL-delimited path set. It snapshots
@@ -258,6 +258,14 @@ index is validated before reuse; malformed or legacy indexes force a full
 verified baseline. Readiness requires both
 reviewed human-gate evidence and current scheduler, journal, manifest, and audit
 machine evidence.
+
+Journal engine `1.2.0` also verifies the full checkpoint index with a bounded,
+deterministically ordered four-worker Python pool and falls back to the serial
+oracle only when executor construction or worker submission is unavailable. Profiling and live parity
+showed that Windows file-open latency, not SHA-256 CPU work, dominated; the Rust
+batch verifier remains deferred by the staged Rust promotion gate. Operators and
+UI clients can use `transport readiness --summary-only` to avoid embedding and
+rendering the multi-megabyte manifest evidence body.
 
 ## Documents that must change (exact list)
 

@@ -7,6 +7,7 @@ import subprocess
 from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
+from typing import Any
 
 import pytest
 from typer.testing import CliRunner
@@ -941,6 +942,54 @@ def test_transport_readiness_cli_reports_local_ready_with_human_gates_pending(
     assert "daemon_schedule" in payload["human_gate_summary"]["pending"]
 
 
+def test_transport_readiness_summary_omits_large_evidence_bodies(tmp_path: Path):
+    hub = _hub_for_cli(tmp_path / "hub")
+    result = RUNNER.invoke(
+        app,
+        ["transport", "readiness", "--hub", str(hub), "--summary-only"],
+    )
+
+    assert result.exit_code == 0, result.output
+    payload = json.loads(result.stdout)
+    assert payload["schema_version"] == "dad.transport.readiness.summary.v1"
+    assert "human_gate_summary" in payload
+    assert "repo_status" not in payload["journal"]
+    assert all("evidence" not in gate for gate in payload["human_gates"].values())
+
+
+def test_transport_readiness_summary_preserves_journal_failure_diagnosis():
+    payload = transport_readiness_mod.compact_transport_readiness(
+        {
+            "journal": {
+                "repo_status": {
+                    "status": "checkpoint_engine_version_stale",
+                    "machine_ready": False,
+                    "journal_engine_version_seen": "1.1.0",
+                    "journal_engine_version_expected": "1.2.0",
+                    "journal_engine_version_current": False,
+                    "file_index_integrity": {
+                        "valid": True,
+                        "verification_backend": "python_thread_pool",
+                    },
+                }
+            }
+        }
+    )
+
+    assert payload["journal"] == {
+        "checkpoint_due": None,
+        "new_record_count": None,
+        "last_checkpoint_at": None,
+        "status": "checkpoint_engine_version_stale",
+        "machine_ready": False,
+        "journal_engine_version_seen": "1.1.0",
+        "journal_engine_version_expected": "1.2.0",
+        "journal_engine_version_current": False,
+        "integrity_valid": True,
+        "verification_backend": "python_thread_pool",
+    }
+
+
 def test_transport_readiness_can_include_scheduler_machine_evidence(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
@@ -1550,6 +1599,62 @@ def test_journal_apply_threshold_commits_and_pushes_to_data_repo(tmp_path: Path)
         check=True,
     ).stdout == binary_bytes
 
+    manifest["journal_engine_version"] = "1.1.0"
+    (journal_repo / "journal_checkpoint_manifest.json").write_text(
+        json.dumps(manifest, indent=2) + "\n", encoding="utf-8"
+    )
+    subprocess.run(
+        ["git", "-C", str(journal_repo), "add", "journal_checkpoint_manifest.json"],
+        check=True,
+    )
+    subprocess.run(
+        ["git", "-C", str(journal_repo), "commit", "-m", "Stale journal engine"],
+        check=True,
+    )
+    subprocess.run(
+        ["git", "-C", str(journal_repo), "push", "origin", "journal-data"],
+        check=True,
+    )
+    stale = journal_repo_status(hub, journal_repo, min_records=99999, min_hours=999)
+    assert stale["status"] == "checkpoint_engine_version_stale"
+    assert stale["journal_engine_version_current"] is False
+
+    upgraded = checkpoint_journal(
+        hub, journal_repo, apply=True, min_records=99999, min_hours=999
+    )
+    assert upgraded["checkpoint_applied"] is True
+    assert upgraded["journal_engine_upgrade_due"] is True
+    upgraded_manifest = json.loads(
+        (journal_repo / "journal_checkpoint_manifest.json").read_text(encoding="utf-8")
+    )
+    assert upgraded_manifest["journal_engine_version"] == "1.2.0"
+
+    (journal_repo / "journal_checkpoint_manifest.json").write_text(
+        "{not-json\n", encoding="utf-8"
+    )
+    subprocess.run(
+        ["git", "-C", str(journal_repo), "add", "journal_checkpoint_manifest.json"],
+        check=True,
+    )
+    subprocess.run(
+        ["git", "-C", str(journal_repo), "commit", "-m", "Corrupt manifest fixture"],
+        check=True,
+    )
+    subprocess.run(
+        ["git", "-C", str(journal_repo), "push", "origin", "journal-data"],
+        check=True,
+    )
+    recovered = checkpoint_journal(
+        hub, journal_repo, apply=True, min_records=99999, min_hours=999
+    )
+    assert recovered["checkpoint_applied"] is True
+    assert recovered["journal_manifest_recovery_due"] is True
+    assert recovered["checkpoint_due_reason"] == "journal_manifest_recovery"
+    recovered_manifest = json.loads(
+        (journal_repo / "journal_checkpoint_manifest.json").read_text(encoding="utf-8")
+    )
+    assert recovered_manifest["journal_engine_version"] == "1.2.0"
+
 
 def test_journal_incremental_checkpoint_reuses_verified_files_and_reconciles_deletions(
     tmp_path: Path,
@@ -1598,7 +1703,7 @@ def test_journal_incremental_checkpoint_reuses_verified_files_and_reconciles_del
         (journal_repo / "journal_checkpoint_manifest.json").read_text(encoding="utf-8")
     )
     assert first_manifest["file_index_version"] == "1.0.0"
-    assert first_manifest["journal_engine_version"] == "1.1.0"
+    assert first_manifest["journal_engine_version"] == "1.2.0"
     assert len(first_manifest["file_index"]) == first_manifest["verified_file_count"]
 
     with inbox.open("a", encoding="utf-8") as handle:
@@ -1811,6 +1916,105 @@ def test_journal_checkpoint_blocks_ignored_repository_attributes(tmp_path: Path)
     assert result["checkpoint_applied"] is False
     assert result["checkpoint_skipped_reason"] == "journal_attributes_unsupported"
     assert not (journal_repo / "journal_checkpoint_manifest.json").exists()
+
+
+def test_journal_integrity_thread_pool_matches_serial_with_multiple_defects(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+):
+    journal_repo = tmp_path / "dad-journal"
+    data = journal_repo / "data" / "processed" / "learning"
+    data.mkdir(parents=True)
+    correct = data / "a.json"
+    mismatch = data / "b.json"
+    extra = data / "extra.json"
+    correct.write_text('{"ok": true}\n', encoding="utf-8")
+    mismatch.write_text('{"v": 1}\n', encoding="utf-8")
+    extra.write_text('{"extra": true}\n', encoding="utf-8")
+
+    def entry(path: Path) -> dict[str, Any]:
+        stat = path.stat()
+        return {
+            "source_size": stat.st_size,
+            "source_mtime_ns": stat.st_mtime_ns,
+            "checkpoint_size": stat.st_size,
+            "checkpoint_sha256": f"sha256:{sha256_file(path)}",
+        }
+
+    manifest = {
+        "file_index_version": "1.0.0",
+        "file_index": {
+            "processed/learning/a.json": entry(correct),
+            "processed/learning/b.json": entry(mismatch),
+            "processed/learning/missing.json": {
+                "source_size": 1,
+                "source_mtime_ns": 1,
+                "checkpoint_size": 1,
+                "checkpoint_sha256": "sha256:" + "0" * 64,
+            },
+        },
+    }
+    mismatch.write_text('{"v": 2}\n', encoding="utf-8")
+
+    serial = journal_mod._checkpoint_file_index_integrity(
+        journal_repo, manifest, max_workers=1
+    )
+    parallel = journal_mod._checkpoint_file_index_integrity(
+        journal_repo, manifest, max_workers=4
+    )
+    serial_core = {
+        key: value
+        for key, value in serial.items()
+        if key not in {"verification_backend", "verification_worker_count"}
+    }
+    parallel_core = {
+        key: value
+        for key, value in parallel.items()
+        if key not in {"verification_backend", "verification_worker_count"}
+    }
+
+    assert parallel_core == serial_core
+    assert parallel["verification_backend"] == "python_thread_pool"
+    assert parallel["verification_worker_count"] == 4
+    assert parallel["errors"] == [
+        {"relative_path": "processed/learning/b.json", "error": "hash_or_size_mismatch"},
+        {"relative_path": "processed/learning/missing.json", "error": "FileNotFoundError"},
+    ]
+    assert parallel["missing_from_index"] == ["processed/learning/extra.json"]
+    assert parallel["missing_from_data"] == ["processed/learning/missing.json"]
+
+    real_executor = journal_mod.ThreadPoolExecutor
+
+    def unavailable_executor(*_args: Any, **_kwargs: Any) -> Any:
+        raise OSError("synthetic executor unavailable")
+
+    monkeypatch.setattr(journal_mod, "ThreadPoolExecutor", unavailable_executor)
+    fallback = journal_mod._checkpoint_file_index_integrity(
+        journal_repo, manifest, max_workers=4
+    )
+    assert fallback["verification_backend"] == "python_serial_executor_fallback"
+    assert fallback["verification_worker_count"] == 1
+    assert fallback["errors"] == serial["errors"]
+
+    class SubmitFailingExecutor:
+        def __init__(self, *_args: Any, **_kwargs: Any) -> None:
+            self.shutdown_called = False
+
+        def submit(self, *_args: Any, **_kwargs: Any) -> Any:
+            raise OSError("synthetic worker start failure")
+
+        def shutdown(self, *, wait: bool, cancel_futures: bool = False) -> None:
+            self.shutdown_called = wait and cancel_futures
+
+    monkeypatch.setattr(journal_mod, "ThreadPoolExecutor", SubmitFailingExecutor)
+    submit_fallback = journal_mod._checkpoint_file_index_integrity(
+        journal_repo, manifest, max_workers=4
+    )
+    assert submit_fallback["verification_backend"] == "python_serial_executor_fallback"
+    assert submit_fallback["verification_worker_count"] == 1
+    assert submit_fallback["errors"] == serial["errors"]
+
+    monkeypatch.setattr(journal_mod, "ThreadPoolExecutor", real_executor)
 
 
 def test_journal_checkpoints_catalog_database_as_integrity_checked_sqlite_snapshot(

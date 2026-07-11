@@ -280,7 +280,7 @@ from .transport import (
     resolve_data_root,
     run_synthetic_transport_rollout,
 )
-from .transport_readiness import build_transport_readiness
+from .transport_readiness import build_transport_readiness, compact_transport_readiness
 from .transport_upgrade import (
     build_transport_upgrade_status,
     select_transport_upgrade_policies_from_queue,
@@ -487,6 +487,7 @@ def transport_readiness(
     shim: Optional[Path] = typer.Option(None),
     journal_repo: Optional[Path] = typer.Option(None),
     wave: str = typer.Option("transport-surface-v1"),
+    summary_only: bool = typer.Option(False, "--summary-only"),
 ) -> None:
     cfg = _cfg(hub=hub)
     scheduler = (
@@ -504,8 +505,7 @@ def transport_readiness(
         if discovered_journal_repo is not None
         else None
     )
-    console.print_json(
-        data=build_transport_readiness(
+    payload = build_transport_readiness(
             cfg.repo_root,
             transport_repos=_transport_repo_rows(cfg),
             enrollment_policies=cfg.enrollment_repos,
@@ -514,7 +514,9 @@ def transport_readiness(
             scheduler_status=scheduler,
             journal_repo_status=journal_repo_evidence,
         )
-    )
+    if summary_only:
+        payload = compact_transport_readiness(payload)
+    console.print_json(data=payload)
 
 
 @transport_app.command("upgrade-status")
