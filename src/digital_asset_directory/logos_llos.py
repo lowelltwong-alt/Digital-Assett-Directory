@@ -124,6 +124,10 @@ def _semantic_errors(repo_id: str, relative: str, payload: dict[str, Any]) -> li
     return errors
 
 
+def _roots_overlap(left: Path, right: Path) -> bool:
+    return left == right or left.is_relative_to(right) or right.is_relative_to(left)
+
+
 def audit_logos_llos(hub_root: Path, repo_policies: Sequence[Any]) -> dict[str, Any]:
     """Read reviewed LLOS control files and write only a central metadata report."""
 
@@ -134,7 +138,46 @@ def audit_logos_llos(hub_root: Path, repo_policies: Sequence[Any]) -> dict[str, 
         if policy is None:
             rows.append({"repo_id": repo_id, "status": "not_configured", "files": []})
             continue
-        repo_root = Path(getattr(policy, "path")).resolve()
+        communication_root = Path(getattr(policy, "path")).resolve()
+        raw_control_root = getattr(policy, "llos_control_path", None)
+        configured_control_root = str(raw_control_root).strip() if raw_control_root is not None else ""
+        if not configured_control_root:
+            rows.append(
+                {
+                    "repo_id": repo_id,
+                    "control_root_source": "unconfigured",
+                    "status": "upgrade_required",
+                    "surface_versions": [],
+                    "missing_paths": list(relatives),
+                    "semantic_errors": ["llos_control_path is required for Logos audits"],
+                    "dad_write_policy": "missing_or_unsafe",
+                    "files": [
+                        {"path": relative, "status": "control_root_unconfigured"}
+                        for relative in relatives
+                    ],
+                }
+            )
+            continue
+        repo_root = Path(configured_control_root).resolve()
+        if _roots_overlap(communication_root, repo_root):
+            rows.append(
+                {
+                    "repo_id": repo_id,
+                    "control_root_source": "invalid_llos_control_path",
+                    "status": "upgrade_required",
+                    "surface_versions": [],
+                    "missing_paths": list(relatives),
+                    "semantic_errors": [
+                        "llos_control_path must be distinct from and outside the live communication root"
+                    ],
+                    "dad_write_policy": "missing_or_unsafe",
+                    "files": [
+                        {"path": relative, "status": "control_root_unsafe"}
+                        for relative in relatives
+                    ],
+                }
+            )
+            continue
         files: list[dict[str, Any]] = []
         versions: set[str] = set()
         semantic_errors: list[str] = []
@@ -143,7 +186,19 @@ def audit_logos_llos(hub_root: Path, repo_policies: Sequence[Any]) -> dict[str, 
             if not path.is_file():
                 files.append({"path": relative, "status": "missing"})
                 continue
-            payload = _governed_yaml(path)
+            try:
+                payload = _governed_yaml(path)
+            except (OSError, UnicodeError, yaml.YAMLError):
+                error = "unreadable or invalid YAML"
+                semantic_errors.append(f"{relative}: {error}")
+                files.append(
+                    {
+                        "path": relative,
+                        "status": "invalid",
+                        "semantic_errors": [error],
+                    }
+                )
+                continue
             version = _surface_version(payload)
             if version:
                 versions.add(version)
@@ -183,6 +238,7 @@ def audit_logos_llos(hub_root: Path, repo_policies: Sequence[Any]) -> dict[str, 
         rows.append(
             {
                 "repo_id": repo_id,
+                "control_root_source": "llos_control_path",
                 "status": "current" if not missing and not semantic_errors and versions == {"1.0.0"} and marker_ok else "upgrade_required",
                 "surface_versions": sorted(versions),
                 "missing_paths": missing,

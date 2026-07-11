@@ -7,6 +7,7 @@ import subprocess
 from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
+from types import SimpleNamespace
 from typing import Any
 
 import pytest
@@ -888,6 +889,40 @@ def test_daemon_fingerprint_tracks_subagent_evaluation_inputs(tmp_path: Path):
 
     assert after != before
     assert after_count == before_count + 1
+
+
+def test_daemon_fingerprint_tracks_logos_control_mirror_inputs(tmp_path: Path):
+    hub = tmp_path / "hub"
+    hub.mkdir()
+    live = tmp_path / "live-scripture"
+    mirror = tmp_path / "control-scripture"
+    adapter = mirror / ".ai/control/llos_v1_adapter.yaml"
+    adapter.parent.mkdir(parents=True)
+    adapter.write_text("surface_version: 1.0.0\n", encoding="utf-8")
+    policy = SimpleNamespace(
+        id="logos-scripture-graph",
+        alias="scripture",
+        path=live,
+        llos_control_path=mirror,
+        mail_enabled=True,
+    )
+
+    before, before_count = daemon_mod._cycle_input_fingerprint(
+        hub,
+        mail_repos=[policy],
+        exception_repos=[],
+        journal_repo=None,
+    )
+    adapter.write_text("surface_version: 1.0.1\n", encoding="utf-8")
+    after, after_count = daemon_mod._cycle_input_fingerprint(
+        hub,
+        mail_repos=[policy],
+        exception_repos=[],
+        journal_repo=None,
+    )
+
+    assert after != before
+    assert after_count == before_count
 
 
 def test_daemon_cycle_with_initialized_data_root_writes_only_data_root(

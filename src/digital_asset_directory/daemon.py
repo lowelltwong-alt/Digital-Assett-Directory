@@ -26,7 +26,7 @@ from .logos_write_guard import assert_dad_write_allowed
 from .graph_surfaces import graph_surface_status
 from .journal import checkpoint_journal, ingest_remote_outbox, journal_status
 from .learning import build_lesson_graph
-from .logos_llos import audit_logos_llos
+from .logos_llos import LOGOS_LLOS_SURFACES, POLICY_PATH, audit_logos_llos
 from .lesson_automation_coverage import (
     weekly_asset_coverage_due,
     write_weekly_asset_coverage_outputs,
@@ -130,6 +130,21 @@ def _cycle_input_fingerprint(
             except OSError:
                 continue
             rows.append((repo_id, relative, stat.st_size, stat.st_mtime_ns))
+    for policy in mail_repos or []:
+        repo_id = str(getattr(policy, "id", "") or getattr(policy, "alias", "") or "repo")
+        relatives = LOGOS_LLOS_SURFACES.get(repo_id)
+        raw_control_root = getattr(policy, "llos_control_path", None)
+        configured_control_root = str(raw_control_root).strip() if raw_control_root is not None else ""
+        if not relatives or not configured_control_root:
+            continue
+        control_root = Path(configured_control_root)
+        for relative in (*relatives, POLICY_PATH):
+            path = control_root / relative
+            try:
+                stat = path.stat()
+            except OSError:
+                continue
+            rows.append((f"{repo_id}:llos-control", relative, stat.st_size, stat.st_mtime_ns))
     if journal_repo is not None:
         remote_root = journal_repo / "remote-outbox"
         if remote_root.exists():

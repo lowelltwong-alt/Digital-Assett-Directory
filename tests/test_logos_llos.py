@@ -19,7 +19,9 @@ def _tree_hash(root: Path) -> str:
 
 
 def _repo(tmp_path: Path, repo_id: str) -> SimpleNamespace:
-    root = tmp_path / repo_id
+    root = tmp_path / "control" / repo_id
+    live_root = tmp_path / "live" / repo_id
+    live_root.mkdir(parents=True)
     payloads = {
         "logos-governance-architecture": [
             {
@@ -98,28 +100,103 @@ def _repo(tmp_path: Path, repo_id: str) -> SimpleNamespace:
         ),
         encoding="utf-8",
     )
-    return SimpleNamespace(id=repo_id, path=root, mail_enabled=True)
+    return SimpleNamespace(
+        id=repo_id,
+        path=live_root,
+        llos_control_path=root,
+        mail_enabled=True,
+    )
 
 
 def test_synthetic_family_audit_is_current_and_never_writes_sources(tmp_path: Path) -> None:
     hub = tmp_path / "hub"
     policies = [_repo(tmp_path, repo_id) for repo_id in LOGOS_LLOS_SURFACES]
-    before = {row.id: _tree_hash(row.path) for row in policies}
+    before_live = {row.id: _tree_hash(row.path) for row in policies}
+    before_control = {row.id: _tree_hash(row.llos_control_path) for row in policies}
 
     result = audit_logos_llos(hub, policies)
 
     assert result["current_count"] == 4
     assert result["upgrade_required_count"] == 0
     assert result["source_write_count"] == 0
-    assert {row.id: _tree_hash(row.path) for row in policies} == before
+    assert {row.id: _tree_hash(row.path) for row in policies} == before_live
+    assert {row.id: _tree_hash(row.llos_control_path) for row in policies} == before_control
     assert Path(result["report_path"]).is_file()
+
+
+def test_control_mirror_is_independent_from_live_communication_root(tmp_path: Path) -> None:
+    hub = tmp_path / "hub"
+    mirror_policy = _repo(tmp_path / "mirrors", "logos-scripture-graph")
+    live_root = tmp_path / "live" / "logos-scripture-graph"
+    outbox = live_root / ".digital-asset/mail/outbox.jsonl"
+    outbox.parent.mkdir(parents=True)
+    outbox.write_text('{"candidate":"local"}\n', encoding="utf-8")
+    policy = SimpleNamespace(
+        id="logos-scripture-graph",
+        path=live_root,
+        llos_control_path=mirror_policy.llos_control_path,
+        mail_enabled=True,
+    )
+    before_live = _tree_hash(live_root)
+    before_mirror = _tree_hash(mirror_policy.llos_control_path)
+
+    result = audit_logos_llos(hub, [policy])
+
+    scripture = next(row for row in result["repos"] if row["repo_id"] == policy.id)
+    assert scripture["status"] == "current"
+    assert scripture["control_root_source"] == "llos_control_path"
+    assert _tree_hash(live_root) == before_live
+    assert _tree_hash(mirror_policy.llos_control_path) == before_mirror
+
+
+def test_missing_blank_or_overlapping_control_root_fails_closed(tmp_path: Path) -> None:
+    hub = tmp_path / "hub"
+    controls = (None, "", tmp_path / "live", tmp_path / "live/nested")
+
+    for index, control_root in enumerate(controls):
+        live_root = tmp_path / "live" if index >= 2 else tmp_path / f"live-{index}"
+        policy = SimpleNamespace(
+            id="logos-scripture-graph",
+            path=live_root,
+            mail_enabled=True,
+        )
+        if control_root is not None:
+            policy.llos_control_path = control_root
+        result = audit_logos_llos(hub, [policy])
+        scripture = next(
+            row for row in result["repos"] if row["repo_id"] == "logos-scripture-graph"
+        )
+        assert scripture["status"] == "upgrade_required"
+        assert scripture["dad_write_policy"] == "missing_or_unsafe"
+        assert scripture["control_root_source"] in {
+            "unconfigured",
+            "invalid_llos_control_path",
+        }
+
+
+def test_malformed_yaml_replaces_stale_current_report(tmp_path: Path) -> None:
+    hub = tmp_path / "hub"
+    policy = _repo(tmp_path, "logos-scripture-graph")
+    first = audit_logos_llos(hub, [policy])
+    assert first["current_count"] == 1
+    adapter = policy.llos_control_path / ".ai/control/llos_v1_adapter.yaml"
+    adapter.write_text("invalid: [unterminated\n", encoding="utf-8")
+
+    second = audit_logos_llos(hub, [policy])
+
+    scripture = next(row for row in second["repos"] if row["repo_id"] == policy.id)
+    persisted = json.loads(Path(second["report_path"]).read_text(encoding="utf-8"))
+    assert scripture["status"] == "upgrade_required"
+    assert scripture["files"][0]["status"] == "invalid"
+    assert persisted["current_count"] == 0
+    assert persisted["upgrade_required_count"] == 4
 
 
 def test_missing_marker_or_surface_fails_closed_as_upgrade_required(tmp_path: Path) -> None:
     hub = tmp_path / "hub"
     policy = _repo(tmp_path, "logos-scripture-graph")
-    (policy.path / ".digital-asset/dad-write-policy.json").unlink()
-    (policy.path / ".ai/control/llos_v1_adapter.yaml").unlink()
+    (policy.llos_control_path / ".digital-asset/dad-write-policy.json").unlink()
+    (policy.llos_control_path / ".ai/control/llos_v1_adapter.yaml").unlink()
 
     result = audit_logos_llos(hub, [policy])
     scripture = next(row for row in result["repos"] if row["repo_id"] == "logos-scripture-graph")
@@ -130,11 +207,11 @@ def test_missing_marker_or_surface_fails_closed_as_upgrade_required(tmp_path: Pa
 def test_mismatched_marker_identity_and_unsafe_adapter_fail_closed(tmp_path: Path) -> None:
     hub = tmp_path / "hub"
     policy = _repo(tmp_path, "logos-boundary-literature")
-    marker = policy.path / ".digital-asset/dad-write-policy.json"
+    marker = policy.llos_control_path / ".digital-asset/dad-write-policy.json"
     value = json.loads(marker.read_text(encoding="utf-8"))
     value["repo_id"] = "logos-scripture-graph"
     marker.write_text(json.dumps(value), encoding="utf-8")
-    adapter = policy.path / "governance/LLOS_STANDARD_MIRROR.yaml"
+    adapter = policy.llos_control_path / "governance/LLOS_STANDARD_MIRROR.yaml"
     payload = yaml.safe_load(adapter.read_text(encoding="utf-8"))
     payload["upstream_standard"]["path"] = "wrong/path.yaml"
     payload["dad_bridge"]["dad_may_write_inside_logos_repo"] = True
@@ -150,7 +227,7 @@ def test_mismatched_marker_identity_and_unsafe_adapter_fail_closed(tmp_path: Pat
 def test_route_registry_must_be_a_mapping_not_just_matching_names(tmp_path: Path) -> None:
     hub = tmp_path / "hub"
     policy = _repo(tmp_path, "logos-governance-architecture")
-    routes = policy.path / "governance/registry/LLOS_ROUTE_REGISTRY.yaml"
+    routes = policy.llos_control_path / "governance/registry/LLOS_ROUTE_REGISTRY.yaml"
     routes.write_text(
         yaml.safe_dump(
             {
