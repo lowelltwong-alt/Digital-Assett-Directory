@@ -73,6 +73,19 @@ When DAD updates, retires, or replaces a skill, it creates candidate mail. Mail
 does not update the target repo. The target repo reviews the notice and decides
 whether to change its local pointer or wrapper.
 
+Each record is versioned by `version` and carries explicit lifecycle metadata:
+supersession links, retirement reason, replacement ID, and notice templates.
+The lesson graph ingests every registered record as a candidate `agent_skill`
+node from `registry/agent-skill-library.json`; graph presence is not approval,
+adoption, usefulness, or source truth.
+
+The active central personal-source registrations are runtime-neutral
+`generic_agent_skill` records: DAD Work Router, DAD Learning Loop, DAD Digital
+Asset Radar, DAD Iteration Optimizer, DAD Agent Skill Forge, and Codex
+Capability Radar. Their source directories are DAD-owned adaptations of
+validated personal skill sources. The central contracts retain only portable
+procedures and DAD gates; they do not install, modify, or configure a runtime.
+
 DAD tracks known downstream checkouts in append-only generated state:
 
 ```text
