@@ -378,21 +378,52 @@ def _repo_path(repo_root: Path, path: Path | None) -> Path | None:
 
 
 def _transport_repo_rows(cfg) -> list[dict[str, Any]]:
-    rows_by_path: dict[str, dict[str, Any]] = {}
+    rows_by_id: dict[str, dict[str, Any]] = {}
+    override_ids: set[str] = set()
+    live_paths_by_id: dict[str, str] = {}
+    override_paths_by_id: dict[str, str] = {}
 
     def add_policy(policy: object, enabled_attr: str) -> None:
         if not bool(getattr(policy, enabled_attr, True)):
             return
-        path = Path(getattr(policy, "path"))
-        key = str(path.resolve())
-        row = rows_by_path.setdefault(
-            key,
-            {
-                "id": str(getattr(policy, "id", path.name)),
+        repo_id = str(getattr(policy, "id", "") or getattr(policy, "alias", "") or "repo")
+        normalized_id = repo_id.strip().casefold()
+        live_path = Path(getattr(policy, "path"))
+        resolved_live_path = os.path.normcase(str(live_path.resolve()))
+        prior_live_path = live_paths_by_id.get(normalized_id)
+        if prior_live_path is not None and prior_live_path != resolved_live_path:
+            raise ValueError(
+                f"Transport audit stable repo ID collision for {repo_id}: "
+                f"{prior_live_path} != {resolved_live_path}"
+            )
+        live_paths_by_id[normalized_id] = resolved_live_path
+        configured_audit_path = getattr(policy, "transport_audit_path", None)
+        has_audit_override = bool(str(configured_audit_path).strip()) if configured_audit_path is not None else False
+        path = Path(configured_audit_path) if has_audit_override else live_path
+        if has_audit_override:
+            resolved_override_path = os.path.normcase(str(path.resolve()))
+            prior_override_path = override_paths_by_id.get(normalized_id)
+            if prior_override_path is not None and prior_override_path != resolved_override_path:
+                raise ValueError(
+                    f"Conflicting transport_audit_path values for {repo_id}: "
+                    f"{prior_override_path} != {resolved_override_path}"
+                )
+            override_paths_by_id[normalized_id] = resolved_override_path
+        row = rows_by_id.get(normalized_id)
+        if row is None:
+            row = {
+                "id": repo_id,
                 "path": str(path),
                 "write_protected": False,
-            },
-        )
+                "audit_root_source": "transport_audit_path" if has_audit_override else "policy_path",
+            }
+            rows_by_id[normalized_id] = row
+            if has_audit_override:
+                override_ids.add(normalized_id)
+        elif has_audit_override and normalized_id not in override_ids:
+            row["path"] = str(path)
+            row["audit_root_source"] = "transport_audit_path"
+            override_ids.add(normalized_id)
         if bool(getattr(policy, "write_protected", False)):
             row["write_protected"] = True
 
@@ -402,7 +433,7 @@ def _transport_repo_rows(cfg) -> list[dict[str, Any]]:
         add_policy(policy, "exceptions_enabled")
     for policy in getattr(cfg, "enrollment_repos", []) or []:
         add_policy(policy, "enrollment_enabled")
-    return sorted(rows_by_path.values(), key=lambda row: str(row["id"]))
+    return sorted(rows_by_id.values(), key=lambda row: str(row["id"]))
 
 
 @data_app.command("status")

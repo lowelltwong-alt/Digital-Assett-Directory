@@ -14,6 +14,7 @@ import pytest
 from typer.testing import CliRunner
 
 import digital_asset_directory.daemon as daemon_mod
+import digital_asset_directory.cli as cli_mod
 import digital_asset_directory.exception_capture as exception_capture_mod
 import digital_asset_directory.journal as journal_mod
 import digital_asset_directory.transport_readiness as transport_readiness_mod
@@ -923,6 +924,158 @@ def test_daemon_fingerprint_tracks_logos_control_mirror_inputs(tmp_path: Path):
 
     assert after != before
     assert after_count == before_count
+
+
+def test_daemon_fingerprint_tracks_transport_audit_root_inputs(tmp_path: Path):
+    hub = tmp_path / "hub"
+    hub.mkdir()
+    live = tmp_path / "live-repo"
+    mirror = tmp_path / "transport-mirror"
+    contract = mirror / ".digital-asset/dad-integration.json"
+    contract.parent.mkdir(parents=True)
+    contract.write_text('{"transport":{"surface_version":"1.0.0"}}\n', encoding="utf-8")
+    policy = SimpleNamespace(
+        id="repo",
+        alias="repo",
+        path=live,
+        transport_audit_path=mirror,
+        mail_enabled=True,
+    )
+
+    before, before_count = daemon_mod._cycle_input_fingerprint(
+        hub,
+        mail_repos=[policy],
+        exception_repos=[],
+        journal_repo=None,
+    )
+    original_stat = contract.stat()
+    contract.write_text('{"transport":{"surface_version":"1.0.1"}}\n', encoding="utf-8")
+    os.utime(contract, ns=(original_stat.st_atime_ns, original_stat.st_mtime_ns))
+    after, after_count = daemon_mod._cycle_input_fingerprint(
+        hub,
+        mail_repos=[policy],
+        exception_repos=[],
+        journal_repo=None,
+    )
+
+    assert after != before
+    assert after_count == before_count
+
+    contract.unlink()
+    removed, removed_count = daemon_mod._cycle_input_fingerprint(
+        hub,
+        mail_repos=[policy],
+        exception_repos=[],
+        journal_repo=None,
+    )
+    assert removed != after
+    assert removed_count == after_count - 1
+
+
+def test_transport_rows_prefer_audit_root_without_redirecting_mail(tmp_path: Path):
+    live = tmp_path / "live"
+    mirror = tmp_path / "mirror"
+    mail_policy = SimpleNamespace(
+        id="logos-scripture-graph",
+        alias="scripture",
+        path=live,
+        transport_audit_path=mirror,
+        mail_enabled=True,
+        write_protected=True,
+    )
+    exception_policy = SimpleNamespace(
+        id="logos-scripture-graph",
+        alias="scripture",
+        path=live,
+        exceptions_enabled=True,
+        write_protected=True,
+    )
+    cfg = SimpleNamespace(
+        mail_repos=[mail_policy],
+        exception_repos=[exception_policy],
+        enrollment_repos=[],
+    )
+
+    rows = cli_mod._transport_repo_rows(cfg)
+
+    assert rows == [
+        {
+            "id": "logos-scripture-graph",
+            "path": str(mirror),
+            "write_protected": True,
+            "audit_root_source": "transport_audit_path",
+        }
+    ]
+    assert mail_policy.path == live
+
+
+def test_transport_rows_reject_stable_id_and_override_collisions(tmp_path: Path):
+    first = SimpleNamespace(
+        id="Repo",
+        path=tmp_path / "live-a",
+        transport_audit_path=tmp_path / "mirror-a",
+        mail_enabled=True,
+    )
+    conflicting_live = SimpleNamespace(
+        id="repo",
+        path=tmp_path / "live-b",
+        exceptions_enabled=True,
+    )
+    cfg = SimpleNamespace(
+        mail_repos=[first],
+        exception_repos=[conflicting_live],
+        enrollment_repos=[],
+    )
+    with pytest.raises(ValueError, match="stable repo ID collision"):
+        cli_mod._transport_repo_rows(cfg)
+
+    conflicting_override = SimpleNamespace(
+        id="REPO",
+        path=tmp_path / "live-a",
+        transport_audit_path=tmp_path / "mirror-b",
+        exceptions_enabled=True,
+    )
+    cfg.exception_repos = [conflicting_override]
+    with pytest.raises(ValueError, match="Conflicting transport_audit_path"):
+        cli_mod._transport_repo_rows(cfg)
+
+
+def test_transport_fingerprint_resolves_linked_worktree_git_index(tmp_path: Path):
+    hub = tmp_path / "hub"
+    hub.mkdir()
+    live = tmp_path / "live"
+    mirror = tmp_path / "linked-mirror"
+    git_dir = tmp_path / "common.git/worktrees/linked-mirror"
+    mirror.mkdir()
+    git_dir.mkdir(parents=True)
+    (mirror / ".git").write_text(f"gitdir: {git_dir}\n", encoding="utf-8")
+    index = git_dir / "index"
+    index.write_bytes(b"index-v1")
+    policy = SimpleNamespace(
+        id="repo",
+        path=live,
+        transport_audit_path=mirror,
+        mail_enabled=True,
+    )
+
+    before, before_count = daemon_mod._cycle_input_fingerprint(
+        hub,
+        mail_repos=[policy],
+        exception_repos=[],
+        journal_repo=None,
+    )
+    original_stat = index.stat()
+    index.write_bytes(b"index-v2")
+    os.utime(index, ns=(original_stat.st_atime_ns, original_stat.st_mtime_ns))
+    after, after_count = daemon_mod._cycle_input_fingerprint(
+        hub,
+        mail_repos=[policy],
+        exception_repos=[],
+        journal_repo=None,
+    )
+
+    assert after != before
+    assert after_count == before_count == 1
 
 
 def test_daemon_cycle_with_initialized_data_root_writes_only_data_root(

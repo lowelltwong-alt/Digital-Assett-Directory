@@ -28,3 +28,9 @@ centrally managed read-only mirror. Mail collection continues to read the live
 repository `path`; only the LLOS version and deny-write audit reads the mirror.
 The daemon never fetches, updates, or writes either root as part of this audit.
 
+`transport_audit_path` similarly lets transport version, Git-ignore, and legacy
+spool checks read a clean main mirror while collection continues to use the
+live repository `path`. When multiple mail, exception, or enrollment policy
+rows share a stable repo ID, the explicit transport audit root wins only for
+the read-only audit. It never redirects collection, delivery, or enrollment.
+
