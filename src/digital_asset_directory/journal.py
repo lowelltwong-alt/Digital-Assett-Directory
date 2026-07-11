@@ -15,6 +15,7 @@ import sqlite3
 import subprocess
 import tempfile
 import time
+from contextlib import closing
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
@@ -24,8 +25,21 @@ from .graph_surfaces import (
     write_graph_surface_checkpoint_artifacts,
 )
 from .mail_center import collect_mail_payloads
-from .transport import AUTHORITY_BOUNDARY, DATA_PLANE_PATHS, data_path, resolve_data_root
-from .utils import append_jsonl, atomic_write_text, json_dumps, sha256_bytes, utc_now
+from .transport import (
+    AUTHORITY_BOUNDARY,
+    DATA_PLANE_FILE_SURFACES,
+    DATA_PLANE_PATHS,
+    data_path,
+    resolve_data_root,
+)
+from .utils import (
+    append_jsonl,
+    atomic_write_text,
+    json_dumps,
+    sha256_bytes,
+    sha256_file,
+    utc_now,
+)
 
 JOURNAL_STATUS_NAME = "journal_checkpoint_status.json"
 REMOTE_OUTBOX_QUARANTINE_NAME = "remote-outbox-quarantine.jsonl"
@@ -33,6 +47,8 @@ VCS_CONTROL_DIR_NAMES = {".git", ".hg", ".svn"}
 CHECKPOINT_COPY_ATTEMPTS = 10
 CHECKPOINT_COPY_CHUNK_SIZE = 1024 * 1024
 SQLITE_CHECKPOINT_SUFFIXES = {".sqlite", ".sqlite3"}
+SQLITE_SIDECAR_SUFFIXES = {".sqlite-wal", ".sqlite-shm", ".sqlite3-wal", ".sqlite3-shm"}
+CHECKPOINT_FILE_INDEX_VERSION = "1.0.0"
 
 
 def _reports_dir(hub_root: Path) -> Path:
@@ -59,9 +75,17 @@ def _iter_data_plane_files(hub_root: Path) -> list[tuple[Path, Path]]:
         surface_root = data_path(hub_root, logical)
         if not surface_root.exists():
             continue
+        if surface_root.is_file():
+            if not surface_root.is_symlink():
+                files.append((surface_root, Path(relative_root)))
+            continue
         for source in sorted(path for path in surface_root.rglob("*") if path.is_file()):
             relative = source.relative_to(surface_root)
-            if any(part.lower() in VCS_CONTROL_DIR_NAMES for part in relative.parts):
+            if (
+                source.is_symlink()
+                or any(part.lower() in VCS_CONTROL_DIR_NAMES for part in relative.parts)
+                or any(source.name.lower().endswith(suffix) for suffix in SQLITE_SIDECAR_SUFFIXES)
+            ):
                 continue
             files.append((source, Path(relative_root) / relative))
     return files
@@ -79,9 +103,14 @@ def _copy_checkpoint_file_once(source: Path, destination: Path) -> None:
     try:
         if source.suffix.lower() in SQLITE_CHECKPOINT_SUFFIXES:
             source_uri = source.resolve().as_uri() + "?mode=ro"
-            with sqlite3.connect(source_uri, uri=True, timeout=5.0) as source_db:
-                with sqlite3.connect(temp_path, timeout=5.0) as target_db:
+            with closing(
+                sqlite3.connect(source_uri, uri=True, timeout=5.0)
+            ) as source_db:
+                with closing(sqlite3.connect(temp_path, timeout=5.0)) as target_db:
                     source_db.backup(target_db)
+                    integrity = target_db.execute("PRAGMA integrity_check").fetchone()
+                    if not integrity or str(integrity[0]).lower() != "ok":
+                        raise OSError("SQLite checkpoint failed integrity_check")
         else:
             with source.open("rb") as source_handle, temp_path.open("wb") as target_handle:
                 shutil.copyfileobj(
@@ -117,6 +146,242 @@ def _copy_checkpoint_file(source: Path, destination: Path) -> None:
     if last_error is not None:
         raise last_error
     raise OSError(f"Checkpoint copy failed without an error: {source.name}")
+
+
+def _checkpoint_source_fingerprint(source: Path) -> dict[str, int]:
+    stat = source.stat()
+    return {
+        "source_size": stat.st_size,
+        "source_mtime_ns": stat.st_mtime_ns,
+    }
+
+
+def _checkpoint_file_entry(source: Path, destination: Path) -> dict[str, Any]:
+    fingerprint = _checkpoint_source_fingerprint(source)
+    destination_stat = destination.stat()
+    return {
+        **fingerprint,
+        "checkpoint_size": destination_stat.st_size,
+        "checkpoint_sha256": f"sha256:{sha256_file(destination)}",
+    }
+
+
+def _copy_and_index_checkpoint_file(source: Path, destination: Path) -> dict[str, Any]:
+    for _attempt in range(CHECKPOINT_COPY_ATTEMPTS):
+        before = _checkpoint_source_fingerprint(source)
+        _copy_checkpoint_file(source, destination)
+        after = _checkpoint_source_fingerprint(source)
+        if source.suffix.lower() in SQLITE_CHECKPOINT_SUFFIXES or before == after:
+            return _checkpoint_file_entry(source, destination)
+    raise OSError(f"Checkpoint source changed during every copy attempt: {source.name}")
+
+
+def _can_reuse_checkpoint_file(
+    source: Path,
+    destination: Path,
+    previous: Any,
+    *,
+    journal_worktree_clean: bool,
+) -> bool:
+    if not journal_worktree_clean or source.suffix.lower() in SQLITE_CHECKPOINT_SUFFIXES:
+        return False
+    if not isinstance(previous, dict) or not destination.is_file():
+        return False
+    try:
+        fingerprint = _checkpoint_source_fingerprint(source)
+        destination_size = destination.stat().st_size
+        expected_hash = str(previous.get("checkpoint_sha256") or "")
+        source_hash_before = f"sha256:{sha256_file(source)}"
+        destination_hash = f"sha256:{sha256_file(destination)}"
+        source_hash_after = f"sha256:{sha256_file(source)}"
+        final_fingerprint = _checkpoint_source_fingerprint(source)
+    except OSError:
+        return False
+    return (
+        previous.get("source_size") == fingerprint["source_size"]
+        and previous.get("source_mtime_ns") == fingerprint["source_mtime_ns"]
+        and final_fingerprint == fingerprint
+        and previous.get("checkpoint_size") == destination_size
+        and expected_hash.startswith("sha256:")
+        and source_hash_before == expected_hash
+        and source_hash_after == expected_hash
+        and destination_hash == expected_hash
+    )
+
+
+def _remove_empty_checkpoint_dirs(data_root: Path, paths: list[Path]) -> None:
+    parents = {
+        parent
+        for path in paths
+        for parent in path.parents
+        if parent != data_root and data_root in parent.parents
+    }
+    for parent in sorted(parents, key=lambda item: len(item.parts), reverse=True):
+        try:
+            parent.rmdir()
+        except OSError:
+            pass
+
+
+def _validated_checkpoint_file_index(manifest: Any) -> dict[str, dict[str, Any]]:
+    if not isinstance(manifest, dict):
+        return {}
+    if manifest.get("file_index_version") != CHECKPOINT_FILE_INDEX_VERSION:
+        return {}
+    raw_index = manifest.get("file_index")
+    if not isinstance(raw_index, dict):
+        return {}
+    validated: dict[str, dict[str, Any]] = {}
+    for relative_text, entry in raw_index.items():
+        if not isinstance(relative_text, str) or not isinstance(entry, dict):
+            return {}
+        relative = Path(relative_text)
+        if relative.is_absolute() or ".." in relative.parts or relative.as_posix() != relative_text:
+            return {}
+        if not isinstance(entry.get("source_size"), int):
+            return {}
+        if not isinstance(entry.get("source_mtime_ns"), int):
+            return {}
+        if not isinstance(entry.get("checkpoint_size"), int):
+            return {}
+        checkpoint_hash = entry.get("checkpoint_sha256")
+        if not isinstance(checkpoint_hash, str) or not checkpoint_hash.startswith("sha256:"):
+            return {}
+        validated[relative_text] = dict(entry)
+    return validated
+
+
+def _managed_checkpoint_relative_paths(checkpoint_repo: Path) -> set[str]:
+    data_root = checkpoint_repo / "data"
+    managed: set[str] = set()
+    for logical, relative_root in DATA_PLANE_PATHS.items():
+        candidate = data_root / relative_root
+        if logical in DATA_PLANE_FILE_SURFACES:
+            if candidate.is_file():
+                managed.add(Path(relative_root).as_posix())
+            continue
+        if not candidate.is_dir():
+            continue
+        for path in candidate.rglob("*"):
+            if path.is_file() and not path.is_symlink():
+                managed.add(path.relative_to(data_root).as_posix())
+    return managed
+
+
+def _checkpoint_file_index_integrity(
+    checkpoint_repo: Path, manifest: Any
+) -> dict[str, Any]:
+    file_index = _validated_checkpoint_file_index(manifest)
+    actual_paths = _managed_checkpoint_relative_paths(checkpoint_repo)
+    if not file_index:
+        return {
+            "valid": False,
+            "reason": "missing_or_invalid_file_index",
+            "indexed_file_count": 0,
+            "actual_managed_file_count": len(actual_paths),
+            "errors": [],
+        }
+    indexed_paths = set(file_index)
+    errors: list[dict[str, str]] = []
+    for relative_text in sorted(indexed_paths):
+        path = checkpoint_repo / "data" / relative_text
+        entry = file_index[relative_text]
+        try:
+            actual_hash = f"sha256:{sha256_file(path)}"
+            actual_size = path.stat().st_size
+        except OSError as exc:
+            errors.append({"relative_path": relative_text, "error": type(exc).__name__})
+            continue
+        if actual_hash != entry["checkpoint_sha256"] or actual_size != entry["checkpoint_size"]:
+            errors.append({"relative_path": relative_text, "error": "hash_or_size_mismatch"})
+    missing_from_index = sorted(actual_paths - indexed_paths)
+    missing_from_data = sorted(indexed_paths - actual_paths)
+    return {
+        "valid": not errors and not missing_from_index and not missing_from_data,
+        "reason": "ok" if not errors and not missing_from_index and not missing_from_data else "mismatch",
+        "indexed_file_count": len(indexed_paths),
+        "actual_managed_file_count": len(actual_paths),
+        "missing_from_index": missing_from_index,
+        "missing_from_data": missing_from_data,
+        "errors": errors,
+    }
+
+
+def _build_checkpoint_snapshot(
+    hub_root: Path,
+    checkpoint_repo: Path,
+    status: dict[str, Any],
+) -> dict[str, Any]:
+    target = checkpoint_repo / "data"
+    target.mkdir(parents=True, exist_ok=True)
+    previous_manifest = _read_checkpoint_manifest(checkpoint_repo).get("manifest", {})
+    previous_file_index = _validated_checkpoint_file_index(previous_manifest)
+    source_files = _iter_data_plane_files(hub_root)
+    current_relative_paths = {relative.as_posix() for _source, relative in source_files}
+    stale_relative_paths = sorted(
+        _managed_checkpoint_relative_paths(checkpoint_repo) - current_relative_paths
+    )
+    removed_destinations: list[Path] = []
+    copied_files = 0
+    unchanged_files = 0
+    verified_files = 0
+    file_index: dict[str, dict[str, Any]] = {}
+    copy_errors: list[dict[str, Any]] = []
+    for source, relative in source_files:
+        destination = target / relative
+        relative_text = relative.as_posix()
+        previous_entry = previous_file_index.get(relative_text)
+        if _can_reuse_checkpoint_file(
+            source,
+            destination,
+            previous_entry,
+            journal_worktree_clean=True,
+        ):
+            file_index[relative_text] = dict(previous_entry)
+            unchanged_files += 1
+            verified_files += 1
+            continue
+        try:
+            file_index[relative_text] = _copy_and_index_checkpoint_file(source, destination)
+        except OSError as exc:
+            copy_errors.append(
+                {
+                    "relative_path": relative_text,
+                    "error_type": type(exc).__name__,
+                    "winerror": getattr(exc, "winerror", None),
+                    "errno": getattr(exc, "errno", None),
+                }
+            )
+        else:
+            copied_files += 1
+            verified_files += 1
+    if not copy_errors:
+        for relative_text in stale_relative_paths:
+            destination = target / Path(relative_text)
+            try:
+                if destination.is_file():
+                    destination.unlink()
+                    removed_destinations.append(destination)
+            except OSError as exc:
+                copy_errors.append(
+                    {
+                        "relative_path": relative_text,
+                        "error_type": type(exc).__name__,
+                        "winerror": getattr(exc, "winerror", None),
+                        "errno": getattr(exc, "errno", None),
+                    }
+                )
+        _remove_empty_checkpoint_dirs(target, removed_destinations)
+    return {
+        "copied_file_count": copied_files,
+        "unchanged_file_count": unchanged_files,
+        "verified_file_count": verified_files,
+        "removed_file_count": len(removed_destinations),
+        "copy_error_count": len(copy_errors),
+        "copy_errors": copy_errors,
+        "file_index": file_index,
+        "previous_file_index_valid": bool(previous_file_index) or not previous_manifest,
+    }
 
 
 def _jsonl_record_count(hub_root: Path) -> int:
@@ -249,6 +514,76 @@ def _run_git_readonly(journal_repo: Path, args: list[str]) -> dict[str, Any]:
     }
 
 
+def _checkpoint_remote_diff_is_safe(
+    journal_repo: Path, checkpoint_head: str, remote_head: str
+) -> bool:
+    ancestor = _run_git_readonly(
+        journal_repo, ["merge-base", "--is-ancestor", checkpoint_head, remote_head]
+    )
+    if ancestor["returncode"] != 0:
+        return False
+    changed = _run_git_readonly(
+        journal_repo, ["diff", "--name-only", checkpoint_head, remote_head]
+    )
+    if changed["returncode"] != 0:
+        return False
+    allowed_files = {"journal_checkpoint_manifest.json", "README.md"}
+    return all(
+        path in allowed_files
+        or path.startswith("data/")
+        or path.startswith("remote-outbox/")
+        for path in changed["stdout"].splitlines()
+        if path
+    )
+
+
+def _sync_known_remote_checkpoint(
+    journal_repo: Path,
+    branch: str,
+    checkpoint_head: str,
+    results: list[dict[str, Any]],
+    *,
+    max_attempts: int = 3,
+) -> str:
+    last_error = "remote branch kept moving"
+    for _attempt in range(max_attempts):
+        results.append(
+            _run_git_write(
+                ["git", "-C", str(journal_repo), "fetch", "origin", branch]
+            )
+        )
+        remote = _run_git_readonly(journal_repo, ["rev-parse", f"origin/{branch}"])
+        local = _run_git_readonly(journal_repo, ["rev-parse", "HEAD"])
+        if remote["returncode"] != 0 or local["returncode"] != 0:
+            raise RuntimeError("Unable to resolve local and remote checkpoint heads.")
+        remote_head = remote["stdout"]
+        if local["stdout"] == remote_head:
+            return remote_head
+        if not _checkpoint_remote_diff_is_safe(
+            journal_repo, checkpoint_head, remote_head
+        ):
+            raise RuntimeError(
+                "Remote journal head is not a safe descendant of the known checkpoint."
+            )
+        try:
+            results.append(
+                _run_git_write(
+                    [
+                        "git",
+                        "-C",
+                        str(journal_repo),
+                        "merge",
+                        "--ff-only",
+                        remote_head,
+                    ]
+                )
+            )
+        except RuntimeError as exc:
+            last_error = str(exc)
+            continue
+    raise RuntimeError(f"Could not synchronize known remote checkpoint: {last_error}")
+
+
 def _read_checkpoint_manifest(journal_repo: Path) -> dict[str, Any]:
     path = journal_repo / "journal_checkpoint_manifest.json"
     if not path.exists():
@@ -340,14 +675,24 @@ def journal_repo_status(
         and manifest.get("schema_version") == "dad.journal.checkpoint.v1"
         and manifest.get("checkpoint_scope") == "DATA_PLANE_PATHS"
     )
+    file_index_integrity = _checkpoint_file_index_integrity(journal_repo, manifest)
     manifest_record_count = _int_or_zero(manifest.get("record_count"))
     checkpoint_current_for_threshold = (
         manifest_schema_ok
+        and file_index_integrity["valid"]
         and manifest_record_count >= _int_or_zero(status.get("checkpoint_record_count"))
         and not bool(status.get("checkpoint_due"))
     )
-    checkpoint_present = manifest_schema_ok and data_file_count > 0
-    machine_ready = is_git_repo and checkpoint_present and remote["returncode"] == 0
+    checkpoint_present = (
+        manifest_schema_ok and file_index_integrity["valid"] and data_file_count > 0
+    )
+    working_tree_clean = worktree["returncode"] == 0 and not worktree["stdout"]
+    machine_ready = (
+        is_git_repo
+        and checkpoint_present
+        and remote["returncode"] == 0
+        and working_tree_clean
+    )
     if not is_git_repo:
         repo_status = "not_git_repository"
     elif not checkpoint_present:
@@ -371,9 +716,10 @@ def journal_repo_status(
         "head": head["stdout"] if head["returncode"] == 0 else "",
         "origin_url": remote["stdout"] if remote["returncode"] == 0 else "",
         "origin_configured": remote["returncode"] == 0,
-        "working_tree_clean": worktree["returncode"] == 0 and not worktree["stdout"],
+        "working_tree_clean": working_tree_clean,
         "working_tree_status": worktree["stdout"],
         "checkpoint_manifest": manifest_result,
+        "file_index_integrity": file_index_integrity,
         "checkpoint_present": checkpoint_present,
         "checkpoint_current_for_threshold": checkpoint_current_for_threshold,
         "data_dir": str(data_dir),
@@ -435,61 +781,199 @@ def checkpoint_journal(
             raise ValueError("Refusing journal checkpoint apply: journal repo has no current branch.")
         status["journal_branch"] = current_branch
         status["commands"] = _checkpoint_commands(journal_repo, current_branch)
-        data_root = Path(str(status["data_root"]))
-        target = journal_repo / "data"
-        target.mkdir(parents=True, exist_ok=True)
-        copied_files = 0
-        copy_errors: list[dict[str, Any]] = []
-        for source, relative in _iter_data_plane_files(hub_root):
-            destination = target / relative
+        status["git_apply_results"] = []
+        pending_remote_head = str(
+            _last_checkpoint_status(hub_root).get("remote_checkpoint_head") or ""
+        )
+        if pending_remote_head:
             try:
-                _copy_checkpoint_file(source, destination)
-            except OSError as exc:
-                copy_errors.append(
+                recovered_head = _sync_known_remote_checkpoint(
+                    journal_repo,
+                    current_branch,
+                    pending_remote_head,
+                    status["git_apply_results"],
+                )
+                status["recovered_remote_checkpoint_head"] = recovered_head
+            except RuntimeError as exc:
+                status.update(
                     {
-                        "relative_path": relative.as_posix(),
-                        "error_type": type(exc).__name__,
-                        "winerror": getattr(exc, "winerror", None),
-                        "errno": getattr(exc, "errno", None),
+                        "status": "blocked",
+                        "checkpoint_skipped_reason": "remote_checkpoint_recovery_failed",
+                        "git_transaction_error": str(exc),
+                        "remote_checkpoint_head": pending_remote_head,
                     }
                 )
-            else:
-                copied_files += 1
-        if copy_errors:
+                atomic_write_text(
+                    _journal_status_path(hub_root), json_dumps(status, pretty=True) + "\n"
+                )
+                return status
+        worktree_status = _run_git_readonly(journal_repo, ["status", "--short"])
+        if worktree_status["returncode"] != 0 or worktree_status["stdout"]:
+            status.update(
+                {
+                    "status": "blocked",
+                    "checkpoint_skipped_reason": "journal_worktree_not_clean",
+                    "journal_worktree_status": worktree_status,
+                }
+            )
+            atomic_write_text(
+                _journal_status_path(hub_root), json_dumps(status, pretty=True) + "\n"
+            )
+            return status
+
+        try:
+            status["git_apply_results"].append(
+                _run_git_write(
+                    ["git", "-C", str(journal_repo), "config", "core.longpaths", "true"]
+                )
+            )
+            head = _run_git_readonly(journal_repo, ["rev-parse", "HEAD"])
+            if head["returncode"] != 0:
+                status["git_apply_results"].append(
+                    _run_git_write(
+                        [
+                            "git",
+                            "-C",
+                            str(journal_repo),
+                            "commit",
+                            "--allow-empty",
+                            "-m",
+                            "Initialize DAD journal",
+                        ]
+                    )
+                )
+
+            with tempfile.TemporaryDirectory(prefix="dad-journal-checkpoint-") as temp_dir:
+                checkpoint_worktree = Path(temp_dir) / "worktree"
+                status["git_apply_results"].append(
+                    _run_git_write(
+                        [
+                            "git",
+                            "-C",
+                            str(journal_repo),
+                            "worktree",
+                            "add",
+                            "--detach",
+                            str(checkpoint_worktree),
+                            "HEAD",
+                        ]
+                    )
+                )
+                try:
+                    snapshot = _build_checkpoint_snapshot(
+                        hub_root, checkpoint_worktree, status
+                    )
+                    status.update(
+                        {
+                            key: value
+                            for key, value in snapshot.items()
+                            if key != "file_index"
+                        }
+                    )
+                    if snapshot["copy_errors"]:
+                        status.update(
+                            {
+                                "status": "blocked",
+                                "checkpoint_skipped_reason": "copy_incomplete",
+                            }
+                        )
+                        atomic_write_text(
+                            _journal_status_path(hub_root),
+                            json_dumps(status, pretty=True) + "\n",
+                        )
+                        return status
+
+                    graph_surfaces = write_graph_surface_checkpoint_artifacts(
+                        hub_root, checkpoint_worktree
+                    )
+                    status["graph_surfaces"] = graph_surfaces
+                    manifest = {
+                        "schema_version": "dad.journal.checkpoint.v1",
+                        "checkpointed_at": utc_now(),
+                        "source_data_root": str(Path(str(status["data_root"]))),
+                        "checkpoint_scope": "DATA_PLANE_PATHS",
+                        "record_count": status["current_record_count"],
+                        "copied_file_count": snapshot["copied_file_count"],
+                        "unchanged_file_count": snapshot["unchanged_file_count"],
+                        "verified_file_count": snapshot["verified_file_count"],
+                        "removed_file_count": snapshot["removed_file_count"],
+                        "file_index_version": CHECKPOINT_FILE_INDEX_VERSION,
+                        "file_index": snapshot["file_index"],
+                        "graph_surfaces": graph_surfaces,
+                        "authority_boundary": AUTHORITY_BOUNDARY,
+                    }
+                    atomic_write_text(
+                        checkpoint_worktree / "journal_checkpoint_manifest.json",
+                        json_dumps(manifest, pretty=True) + "\n",
+                    )
+                    transaction_commands = [
+                        [
+                            "git",
+                            "-C",
+                            str(checkpoint_worktree),
+                            "add",
+                            "data",
+                            "journal_checkpoint_manifest.json",
+                        ],
+                        [
+                            "git",
+                            "-C",
+                            str(checkpoint_worktree),
+                            "commit",
+                            "-m",
+                            "Checkpoint DAD data root",
+                        ],
+                    ]
+                    for command in transaction_commands:
+                        status["git_apply_results"].append(_run_git_write(command))
+                    checkpoint_head = _run_git_readonly(
+                        checkpoint_worktree, ["rev-parse", "HEAD"]
+                    )["stdout"]
+                    status["git_apply_results"].append(
+                        _run_git_write(
+                            [
+                                "git",
+                                "-C",
+                                str(checkpoint_worktree),
+                                "push",
+                                "origin",
+                                f"HEAD:refs/heads/{current_branch}",
+                            ]
+                        )
+                    )
+                    status["remote_checkpoint_head"] = checkpoint_head
+                    status["transaction_phase"] = "remote_push_complete_local_sync_pending"
+                    atomic_write_text(
+                        _journal_status_path(hub_root), json_dumps(status, pretty=True) + "\n"
+                    )
+                    synchronized_head = _sync_known_remote_checkpoint(
+                        journal_repo,
+                        current_branch,
+                        checkpoint_head,
+                        status["git_apply_results"],
+                    )
+                    status["synchronized_remote_head"] = synchronized_head
+                    status.pop("remote_checkpoint_head", None)
+                    status.pop("transaction_phase", None)
+                finally:
+                    cleanup = _run_git_readonly(
+                        journal_repo,
+                        ["worktree", "remove", "--force", str(checkpoint_worktree)],
+                    )
+                    status["worktree_cleanup"] = cleanup
+        except (OSError, RuntimeError) as exc:
             status.update(
                 {
                     "status": "blocked",
                     "checkpoint_applied": False,
-                    "checkpoint_skipped_reason": "copy_incomplete",
-                    "copied_file_count": copied_files,
-                    "copy_error_count": len(copy_errors),
-                    "copy_errors": copy_errors,
+                    "checkpoint_skipped_reason": "git_transaction_failed",
+                    "git_transaction_error": str(exc),
                 }
             )
             atomic_write_text(
-                _journal_status_path(hub_root),
-                json_dumps(status, pretty=True) + "\n",
+                _journal_status_path(hub_root), json_dumps(status, pretty=True) + "\n"
             )
             return status
-        graph_surfaces = write_graph_surface_checkpoint_artifacts(hub_root, journal_repo)
-        status["graph_surfaces"] = graph_surfaces
-        manifest = {
-            "schema_version": "dad.journal.checkpoint.v1",
-            "checkpointed_at": utc_now(),
-            "source_data_root": str(data_root),
-            "checkpoint_scope": "DATA_PLANE_PATHS",
-            "record_count": status["current_record_count"],
-            "copied_file_count": copied_files,
-            "graph_surfaces": graph_surfaces,
-            "authority_boundary": AUTHORITY_BOUNDARY,
-        }
-        atomic_write_text(
-            journal_repo / "journal_checkpoint_manifest.json",
-            json_dumps(manifest, pretty=True) + "\n",
-        )
-        status["git_apply_results"] = []
-        for command in _checkpoint_command_args(journal_repo, current_branch):
-            status["git_apply_results"].append(_run_git_write(command))
         status["checkpoint_applied"] = True
 
     checkpointed_at = utc_now()

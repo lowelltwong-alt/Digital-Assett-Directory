@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 import json
+import os
+import sqlite3
 import subprocess
 from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, timedelta, timezone
@@ -12,6 +14,7 @@ from typer.testing import CliRunner
 import digital_asset_directory.daemon as daemon_mod
 import digital_asset_directory.exception_capture as exception_capture_mod
 import digital_asset_directory.journal as journal_mod
+import digital_asset_directory.transport_readiness as transport_readiness_mod
 from digital_asset_directory.cli import app
 from digital_asset_directory.daemon import (
     daemon_heartbeat_path,
@@ -984,7 +987,8 @@ def test_transport_readiness_can_include_scheduler_machine_evidence(
     assert scheduler["installed"] is True
     assert scheduler["command_mentions_run_cycle"] is True
     gate = payload["human_gates"]["daemon_schedule"]
-    assert gate["status"] == "scheduler_installed_machine_condition_met_pending_human_gate_record"
+    assert gate["status"] == "scheduler_installed_pending_human_gate_record"
+    assert gate["complete"] is False
 
 
 def test_daemon_install_plan_uses_stable_shim_and_run_cycle(tmp_path: Path):
@@ -1121,9 +1125,13 @@ def test_daemon_task_status_reads_wrapper_for_long_scheduler_commands(tmp_path: 
     hub = tmp_path / "hub"
     hub.mkdir()
     shim = tmp_path / "asset-dir.ps1"
+    journal_repo = tmp_path / "dad-journal"
     wrapper = tmp_path / "dad-daemon-run-cycle.ps1"
     wrapper.write_text(
-        f"& '{shim}' daemon run-cycle --hub '{hub.resolve()}' --checkpoint-apply\n",
+        (
+            f"& '{shim}' daemon run-cycle '--hub' '{hub.resolve()}' "
+            f"'--journal-repo' '{journal_repo}' '--checkpoint-apply'\n"
+        ),
         encoding="utf-8",
     )
 
@@ -1148,6 +1156,8 @@ def test_daemon_task_status_reads_wrapper_for_long_scheduler_commands(tmp_path: 
     assert status["command_mentions_run_cycle"] is True
     assert status["expected_hub_found"] is True
     assert status["expected_shim_found"] is True
+    assert status["journal_repo"] == str(journal_repo)
+    assert status["checkpoint_apply"] is True
 
 
 def test_scheduled_tasks_status_lists_daemon_for_ui(tmp_path: Path):
@@ -1405,7 +1415,9 @@ def test_journal_locked_copy_does_not_advance_checkpoint(
     assert result["copy_errors"][0]["winerror"] == 32
     assert result["checkpoint_due"] is True
     assert result["checkpoint_record_count"] == 0
-    assert "git_apply_results" not in result
+    applied_commands = [row["command"] for row in result["git_apply_results"]]
+    assert not any("push" in command for command in applied_commands)
+    assert not any("merge" in command for command in applied_commands)
     assert not (journal_repo / "journal_checkpoint_manifest.json").exists()
 
 
@@ -1502,6 +1514,365 @@ def test_journal_apply_threshold_commits_and_pushes_to_data_repo(tmp_path: Path)
     assert head == remote_head
 
 
+def test_journal_incremental_checkpoint_reuses_verified_files_and_reconciles_deletions(
+    tmp_path: Path,
+):
+    hub = tmp_path / "hub"
+    inbox = hub / "processed" / "mail" / "inbox" / "rows.jsonl"
+    inbox.parent.mkdir(parents=True)
+    inbox.write_text(
+        "\n".join(json.dumps({"i": i}) for i in range(200)) + "\n",
+        encoding="utf-8",
+    )
+    stable = hub / "processed" / "learning" / "stable.json"
+    stale = hub / "processed" / "learning" / "stale.json"
+    stable.parent.mkdir(parents=True)
+    stable.write_text('{"stable": true}\n', encoding="utf-8")
+    stale.write_text('{"remove": true}\n', encoding="utf-8")
+    for index in range(99):
+        (stable.parent / f"stable-{index:03d}.json").write_text(
+            json.dumps({"stable": index}) + "\n",
+            encoding="utf-8",
+        )
+    remote = tmp_path / "dad-journal-remote.git"
+    journal_repo = tmp_path / "dad-journal"
+    subprocess.run(["git", "init", "--bare", str(remote)], check=True)
+    subprocess.run(["git", "init", "-b", "main", str(journal_repo)], check=True)
+    subprocess.run(
+        ["git", "-C", str(journal_repo), "config", "user.email", "dad@example.test"],
+        check=True,
+    )
+    subprocess.run(
+        ["git", "-C", str(journal_repo), "config", "user.name", "DAD Test"],
+        check=True,
+    )
+    subprocess.run(
+        ["git", "-C", str(journal_repo), "remote", "add", "origin", str(remote)],
+        check=True,
+    )
+
+    first = checkpoint_journal(
+        hub, journal_repo, apply=True, min_records=200, min_hours=999
+    )
+    assert first["copied_file_count"] >= 3
+    first_manifest = json.loads(
+        (journal_repo / "journal_checkpoint_manifest.json").read_text(encoding="utf-8")
+    )
+    assert first_manifest["file_index_version"] == "1.0.0"
+    assert len(first_manifest["file_index"]) == first_manifest["verified_file_count"]
+
+    with inbox.open("a", encoding="utf-8") as handle:
+        for i in range(200, 400):
+            handle.write(json.dumps({"i": i}) + "\n")
+    stale.unlink()
+    spoofed = stable.parent / "stable-000.json"
+    spoofed_stat = spoofed.stat()
+    spoofed.write_text(json.dumps({"stable": 9}) + "\n", encoding="utf-8")
+    os.utime(spoofed, ns=(spoofed_stat.st_atime_ns, spoofed_stat.st_mtime_ns))
+
+    second = checkpoint_journal(
+        hub, journal_repo, apply=True, min_records=200, min_hours=999
+    )
+
+    assert second["checkpoint_applied"] is True
+    assert second["unchanged_file_count"] >= 99
+    assert second["copied_file_count"] <= 5
+    assert second["copied_file_count"] < second["verified_file_count"]
+    assert second["removed_file_count"] == 1
+    assert (journal_repo / "data" / "processed" / "learning" / "stable.json").exists()
+    assert not (journal_repo / "data" / "processed" / "learning" / "stale.json").exists()
+    second_manifest = json.loads(
+        (journal_repo / "journal_checkpoint_manifest.json").read_text(encoding="utf-8")
+    )
+    assert "processed/learning/stale.json" not in second_manifest["file_index"]
+    assert second_manifest["file_index"]["processed/learning/stable.json"] == (
+        first_manifest["file_index"]["processed/learning/stable.json"]
+    )
+    assert json.loads(
+        (
+            journal_repo / "data" / "processed" / "learning" / "stable-000.json"
+        ).read_text(encoding="utf-8")
+    ) == {"stable": 9}
+
+    stable.unlink()
+    second_manifest["file_index_version"] = "unsupported-test-version"
+    (journal_repo / "journal_checkpoint_manifest.json").write_text(
+        json.dumps(second_manifest, indent=2) + "\n", encoding="utf-8"
+    )
+    subprocess.run(
+        ["git", "-C", str(journal_repo), "add", "journal_checkpoint_manifest.json"],
+        check=True,
+    )
+    subprocess.run(
+        ["git", "-C", str(journal_repo), "commit", "-m", "Synthetic legacy index"],
+        check=True,
+    )
+    subprocess.run(
+        ["git", "-C", str(journal_repo), "push", "origin", "main"], check=True
+    )
+    with inbox.open("a", encoding="utf-8") as handle:
+        for i in range(400, 600):
+            handle.write(json.dumps({"i": i}) + "\n")
+
+    third = checkpoint_journal(
+        hub, journal_repo, apply=True, min_records=200, min_hours=999
+    )
+
+    assert third["checkpoint_applied"] is True
+    assert third["previous_file_index_valid"] is False
+    assert third["removed_file_count"] >= 1
+    assert not (journal_repo / "data" / "processed" / "learning" / "stable.json").exists()
+
+    malicious_manifest = json.loads(
+        (journal_repo / "journal_checkpoint_manifest.json").read_text(encoding="utf-8")
+    )
+    malicious_manifest["file_index"] = {
+        "../escape": {
+            "source_size": 1,
+            "source_mtime_ns": 1,
+            "checkpoint_size": 1,
+            "checkpoint_sha256": "sha256:" + "0" * 64,
+        }
+    }
+    (journal_repo / "journal_checkpoint_manifest.json").write_text(
+        json.dumps(malicious_manifest, indent=2) + "\n", encoding="utf-8"
+    )
+    subprocess.run(
+        ["git", "-C", str(journal_repo), "add", "journal_checkpoint_manifest.json"],
+        check=True,
+    )
+    subprocess.run(
+        ["git", "-C", str(journal_repo), "commit", "-m", "Synthetic invalid index"],
+        check=True,
+    )
+    invalid_status = journal_repo_status(
+        hub, journal_repo, min_records=200, min_hours=999
+    )
+    assert invalid_status["machine_ready"] is False
+    assert invalid_status["file_index_integrity"]["valid"] is False
+
+
+def test_journal_checkpoints_catalog_database_as_integrity_checked_sqlite_snapshot(
+    tmp_path: Path,
+):
+    hub = tmp_path / "hub"
+    inbox = hub / "processed" / "mail" / "inbox" / "rows.jsonl"
+    inbox.parent.mkdir(parents=True)
+    inbox.write_text(
+        "\n".join(json.dumps({"i": i}) for i in range(200)) + "\n",
+        encoding="utf-8",
+    )
+    database = hub / "state" / "catalog.sqlite3"
+    database.parent.mkdir(parents=True)
+    with sqlite3.connect(database) as connection:
+        connection.execute("PRAGMA journal_mode=WAL")
+        connection.execute("CREATE TABLE assets (id INTEGER PRIMARY KEY, value TEXT)")
+        connection.execute("INSERT INTO assets(value) VALUES ('checkpointed')")
+        connection.commit()
+    remote = tmp_path / "dad-journal-remote.git"
+    journal_repo = tmp_path / "dad-journal"
+    subprocess.run(["git", "init", "--bare", str(remote)], check=True)
+    subprocess.run(["git", "init", "-b", "main", str(journal_repo)], check=True)
+    subprocess.run(
+        ["git", "-C", str(journal_repo), "config", "user.email", "dad@example.test"],
+        check=True,
+    )
+    subprocess.run(
+        ["git", "-C", str(journal_repo), "config", "user.name", "DAD Test"],
+        check=True,
+    )
+    subprocess.run(
+        ["git", "-C", str(journal_repo), "remote", "add", "origin", str(remote)],
+        check=True,
+    )
+
+    result = checkpoint_journal(
+        hub, journal_repo, apply=True, min_records=200, min_hours=999
+    )
+
+    assert result["checkpoint_applied"] is True
+    checkpoint_database = journal_repo / "data" / "state" / "catalog.sqlite3"
+    assert not (journal_repo / "data" / "state" / "catalog.sqlite3-wal").exists()
+    assert not (journal_repo / "data" / "state" / "catalog.sqlite3-shm").exists()
+    with sqlite3.connect(checkpoint_database) as connection:
+        assert connection.execute("PRAGMA integrity_check").fetchone() == ("ok",)
+        assert connection.execute("SELECT value FROM assets").fetchone() == (
+            "checkpointed",
+        )
+
+
+def test_journal_remote_race_leaves_primary_checkpoint_unchanged(tmp_path: Path):
+    hub = tmp_path / "hub"
+    inbox = hub / "processed" / "mail" / "inbox" / "rows.jsonl"
+    inbox.parent.mkdir(parents=True)
+    inbox.write_text(
+        "\n".join(json.dumps({"i": i}) for i in range(200)) + "\n",
+        encoding="utf-8",
+    )
+    remote = tmp_path / "dad-journal-remote.git"
+    journal_repo = tmp_path / "dad-journal"
+    subprocess.run(["git", "init", "--bare", str(remote)], check=True)
+    subprocess.run(["git", "init", "-b", "main", str(journal_repo)], check=True)
+    for repo in (journal_repo,):
+        subprocess.run(
+            ["git", "-C", str(repo), "config", "user.email", "dad@example.test"],
+            check=True,
+        )
+        subprocess.run(
+            ["git", "-C", str(repo), "config", "user.name", "DAD Test"],
+            check=True,
+        )
+    subprocess.run(
+        ["git", "-C", str(journal_repo), "remote", "add", "origin", str(remote)],
+        check=True,
+    )
+    first = checkpoint_journal(
+        hub, journal_repo, apply=True, min_records=200, min_hours=999
+    )
+    assert first["checkpoint_applied"] is True
+    primary_head = subprocess.run(
+        ["git", "-C", str(journal_repo), "rev-parse", "HEAD"],
+        check=True,
+        capture_output=True,
+        text=True,
+    ).stdout.strip()
+    primary_manifest = (journal_repo / "journal_checkpoint_manifest.json").read_bytes()
+
+    competing = tmp_path / "competing-journal"
+    subprocess.run(
+        ["git", "clone", "--branch", "main", str(remote), str(competing)], check=True
+    )
+    subprocess.run(
+        ["git", "-C", str(competing), "config", "user.email", "other@example.test"],
+        check=True,
+    )
+    subprocess.run(
+        ["git", "-C", str(competing), "config", "user.name", "Other Writer"],
+        check=True,
+    )
+    (competing / "README.md").write_text("competing update\n", encoding="utf-8")
+    subprocess.run(["git", "-C", str(competing), "add", "README.md"], check=True)
+    subprocess.run(["git", "-C", str(competing), "commit", "-m", "Competing update"], check=True)
+    subprocess.run(["git", "-C", str(competing), "push", "origin", "main"], check=True)
+    with inbox.open("a", encoding="utf-8") as handle:
+        for i in range(200, 400):
+            handle.write(json.dumps({"i": i}) + "\n")
+
+    result = checkpoint_journal(
+        hub, journal_repo, apply=True, min_records=200, min_hours=999
+    )
+
+    assert result["checkpoint_applied"] is False
+    assert result["checkpoint_skipped_reason"] == "git_transaction_failed"
+    assert subprocess.run(
+        ["git", "-C", str(journal_repo), "rev-parse", "HEAD"],
+        check=True,
+        capture_output=True,
+        text=True,
+    ).stdout.strip() == primary_head
+    assert (journal_repo / "journal_checkpoint_manifest.json").read_bytes() == primary_manifest
+    assert subprocess.run(
+        ["git", "-C", str(journal_repo), "status", "--porcelain"],
+        check=True,
+        capture_output=True,
+        text=True,
+    ).stdout == ""
+
+
+def test_journal_recovers_one_time_local_sync_failure_after_remote_push(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+):
+    hub = tmp_path / "hub"
+    inbox = hub / "processed" / "mail" / "inbox" / "rows.jsonl"
+    inbox.parent.mkdir(parents=True)
+    inbox.write_text(
+        "\n".join(json.dumps({"i": i}) for i in range(200)) + "\n",
+        encoding="utf-8",
+    )
+    remote = tmp_path / "dad-journal-remote.git"
+    journal_repo = tmp_path / "dad-journal"
+    subprocess.run(["git", "init", "--bare", str(remote)], check=True)
+    subprocess.run(["git", "init", "-b", "main", str(journal_repo)], check=True)
+    subprocess.run(
+        ["git", "-C", str(journal_repo), "config", "user.email", "dad@example.test"],
+        check=True,
+    )
+    subprocess.run(
+        ["git", "-C", str(journal_repo), "config", "user.name", "DAD Test"],
+        check=True,
+    )
+    subprocess.run(
+        ["git", "-C", str(journal_repo), "remote", "add", "origin", str(remote)],
+        check=True,
+    )
+    original_run_git_write = journal_mod._run_git_write
+    failed_once = False
+    advanced_remote = False
+
+    def fail_first_merge(command: list[str]):
+        nonlocal advanced_remote, failed_once
+        if "push" in command and not advanced_remote:
+            result = original_run_git_write(command)
+            competing = tmp_path / "post-push-writer"
+            subprocess.run(
+                ["git", "clone", "--branch", "main", str(remote), str(competing)],
+                check=True,
+            )
+            subprocess.run(
+                ["git", "-C", str(competing), "config", "user.email", "other@example.test"],
+                check=True,
+            )
+            subprocess.run(
+                ["git", "-C", str(competing), "config", "user.name", "Other Writer"],
+                check=True,
+            )
+            concurrent = competing / "remote-outbox" / "concurrent.jsonl"
+            concurrent.parent.mkdir(parents=True)
+            concurrent.write_text('{"candidate": true}\n', encoding="utf-8")
+            subprocess.run(
+                ["git", "-C", str(competing), "add", "remote-outbox/concurrent.jsonl"],
+                check=True,
+            )
+            subprocess.run(
+                ["git", "-C", str(competing), "commit", "-m", "Concurrent outbox"],
+                check=True,
+            )
+            subprocess.run(
+                ["git", "-C", str(competing), "push", "origin", "main"], check=True
+            )
+            advanced_remote = True
+            return result
+        if "merge" in command and "--ff-only" in command and not failed_once:
+            failed_once = True
+            raise RuntimeError("synthetic one-time local fast-forward failure")
+        return original_run_git_write(command)
+
+    monkeypatch.setattr(journal_mod, "_run_git_write", fail_first_merge)
+
+    result = checkpoint_journal(
+        hub, journal_repo, apply=True, min_records=200, min_hours=999
+    )
+
+    assert failed_once is True
+    assert advanced_remote is True
+    assert result["checkpoint_applied"] is True
+    local_head = subprocess.run(
+        ["git", "-C", str(journal_repo), "rev-parse", "HEAD"],
+        check=True,
+        capture_output=True,
+        text=True,
+    ).stdout.strip()
+    remote_head = subprocess.run(
+        ["git", "-C", str(remote), "rev-parse", "main"],
+        check=True,
+        capture_output=True,
+        text=True,
+    ).stdout.strip()
+    assert local_head == remote_head
+    assert (journal_repo / "remote-outbox" / "concurrent.jsonl").exists()
+
+
 def test_journal_repo_status_reports_missing_repo(tmp_path: Path):
     hub = tmp_path / "hub"
     missing = tmp_path / "dad-journal"
@@ -1555,4 +1926,81 @@ def test_transport_readiness_can_include_journal_repo_machine_evidence(tmp_path:
     repo_status = payload["journal"]["repo_status"]
     assert repo_status["machine_ready"] is True
     gate = payload["human_gates"]["journal_repo_checkpoint"]
-    assert gate["status"] == "journal_repo_machine_condition_met_pending_human_gate_record"
+    assert gate["status"] == "journal_repo_ready_pending_human_gate_record"
+    assert gate["complete"] is False
+
+
+def test_transport_readiness_requires_reviewed_gate_and_current_machine_evidence(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+):
+    hub = _hub_for_cli(tmp_path / "hub")
+    run_daemon_cycle(hub, mail_repos=[], exception_repos=[], transport_repos=[])
+    monkeypatch.setattr(
+        transport_readiness_mod,
+        "_phase13_verified_gate_ids",
+        lambda _hub: {"phase-13-daemon-schedule-approved"},
+    )
+    scheduler = {
+        "installed": True,
+        "command_mentions_run_cycle": True,
+        "expected_hub_found": True,
+    }
+
+    readiness = transport_readiness_mod.build_transport_readiness(
+        hub,
+        transport_repos=[],
+        enrollment_policies=[],
+        scheduler_status=scheduler,
+    )
+
+    gate = readiness["human_gates"]["daemon_schedule"]
+    assert gate["complete"] is True
+    assert gate["status"] == "verified_and_operational"
+    assert readiness["human_gates"]["journal_repo_checkpoint"]["complete"] is False
+
+
+def test_transport_readiness_does_not_treat_empty_audit_as_completed_upgrade_wave(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+):
+    hub = _hub_for_cli(tmp_path / "hub")
+    report = data_path(hub, "central_reports") / "transport_audit.json"
+    report.parent.mkdir(parents=True, exist_ok=True)
+    report.write_text("{}\n", encoding="utf-8")
+    monkeypatch.setattr(
+        transport_readiness_mod,
+        "_phase13_verified_gate_ids",
+        lambda _hub: {"phase-13-repo-transport-upgrade-wave-approved"},
+    )
+
+    readiness = transport_readiness_mod.build_transport_readiness(
+        hub,
+        transport_repos=[{"id": "synthetic-repo"}],
+        enrollment_policies=[],
+    )
+
+    gate = readiness["human_gates"]["repo_upgrade_wave"]
+    assert gate["complete"] is False
+    assert gate["status"] == "pending_reviewed_enrollment_wave"
+
+    report.write_text(
+        json.dumps(
+            {
+                "schema_version": "0.1.0",
+                "transport_surface_version": TRANSPORT_SURFACE_VERSION,
+                "repo_count": True,
+                "classification_counts": {
+                    "current": True,
+                    "upgrade_required": False,
+                },
+            }
+        ),
+        encoding="utf-8",
+    )
+    malformed = transport_readiness_mod.build_transport_readiness(
+        hub,
+        transport_repos=[{"id": "synthetic-repo"}],
+        enrollment_policies=[],
+    )
+    assert malformed["human_gates"]["repo_upgrade_wave"]["complete"] is False

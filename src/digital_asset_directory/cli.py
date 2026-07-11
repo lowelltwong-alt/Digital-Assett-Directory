@@ -479,7 +479,9 @@ def transport_synthetic_rollout(hub: Optional[Path] = typer.Option(None)) -> Non
 def transport_readiness(
     hub: Optional[Path] = typer.Option(None),
     stale_hours: int = typer.Option(26),
-    inspect_scheduler: bool = typer.Option(False, "--inspect-scheduler"),
+    inspect_scheduler: bool = typer.Option(
+        True, "--inspect-scheduler/--no-inspect-scheduler"
+    ),
     skip_task_query: bool = typer.Option(False, "--skip-task-query"),
     task_name: str = typer.Option("DAD Daemon Run Cycle"),
     shim: Optional[Path] = typer.Option(None),
@@ -492,8 +494,15 @@ def transport_readiness(
         if inspect_scheduler and not skip_task_query
         else None
     )
+    discovered_journal_repo = journal_repo
+    if discovered_journal_repo is None and scheduler is not None:
+        scheduled_journal_repo = scheduler.get("journal_repo")
+        if isinstance(scheduled_journal_repo, str) and scheduled_journal_repo.strip():
+            discovered_journal_repo = Path(scheduled_journal_repo)
     journal_repo_evidence = (
-        journal_repo_status(cfg.repo_root, journal_repo) if journal_repo is not None else None
+        journal_repo_status(cfg.repo_root, discovered_journal_repo)
+        if discovered_journal_repo is not None
+        else None
     )
     console.print_json(
         data=build_transport_readiness(

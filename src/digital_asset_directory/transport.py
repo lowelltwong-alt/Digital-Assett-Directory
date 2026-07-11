@@ -56,6 +56,9 @@ TRANSPORT_IMPLEMENTATION_CAPABILITIES = [
     "daemon_run_cycle",
     "task_scheduler_status_surface",
     "journal_checkpoint_threshold",
+    "journal_incremental_verified_file_index",
+    "journal_detached_worktree_transaction",
+    "catalog_database_journal_snapshot",
     "remote_outbox_screening",
 ]
 
@@ -82,7 +85,9 @@ DATA_PLANE_PATHS: dict[str, str] = {
     "raw_agent_evaluations": "raw/agent-evaluations",
     "audit_events": "audit/events",
     "agent_sessions": "state/agent_sessions",
+    "catalog_database": "state/catalog.sqlite3",
 }
+DATA_PLANE_FILE_SURFACES = frozenset({"catalog_database"})
 
 AUTHORITY_BOUNDARY = (
     "Transport audit records and upgrade queue rows are central candidate "
@@ -243,6 +248,8 @@ def init_data_root(
 def _iter_files(base: Path) -> list[Path]:
     if not base.exists():
         return []
+    if base.is_file():
+        return [base]
     return sorted(p for p in base.rglob("*") if p.is_file())
 
 

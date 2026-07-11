@@ -243,6 +243,16 @@ once with no DAD_DATA_ROOT (legacy mode) and once with a tmp initialized root.
 
 Unchanged; the daemon cycle ends with `transport audit` + journal checkpoint.
 
+The implemented journal checkpoint is transactional and incremental. A due
+checkpoint builds and hash-verifies its snapshot in a detached temporary Git
+worktree, snapshots `state/catalog.sqlite3` through SQLite backup plus
+`PRAGMA integrity_check`, excludes WAL/SHM sidecars, reconciles only reviewed
+data-plane paths, and pushes without force before synchronizing the primary
+journal checkout. Its versioned file index is validated before reuse; malformed
+or legacy indexes force a full verified baseline. Readiness requires both
+reviewed human-gate evidence and current scheduler, journal, manifest, and audit
+machine evidence.
+
 ## Documents that must change (exact list)
 
 Downstream/templates (repos receive these via enrollment update wave):
