@@ -17,7 +17,7 @@ from .dad_library import (
     load_offerings,
     record_trace_outcomes,
 )
-from .transport import data_path
+from .transport import data_path, existing_data_file, legacy_data_path
 from .logos_write_guard import assert_dad_write_allowed
 from .utils import append_jsonl, sha256_bytes, sha256_file, split_multi, utc_now, write_json
 from .exceptions_lake import hard_issue_lookup, looks_like_hard_issue_lookup_context
@@ -1302,7 +1302,10 @@ def midflight(
 
 
 def load_session(hub_root: Path, sid: str) -> tuple[Path, dict[str, Any]]:
-    path = agent_sessions_dir(hub_root) / f"{sid.split(':')[-1]}.json"
+    # Fall back to the legacy hub-relative path so sessions created before the
+    # data-root reroute (e.g. by lifecycle hooks) stay reachable and get closed
+    # in place instead of leaving a stale open copy behind.
+    path = existing_data_file(hub_root, "agent_sessions", f"{sid.split(':')[-1]}.json")
     if not path.exists():
         raise FileNotFoundError(f"Agent session not found: {sid}")
     return path, json.loads(path.read_text(encoding="utf-8"))
@@ -1414,7 +1417,13 @@ def postflight(
 
 def open_sessions(hub_root: Path, repository: Path | None = None) -> list[dict[str, Any]]:
     sessions = []
-    for path in agent_sessions_dir(hub_root).glob("*.json"):
+    primary_dir = agent_sessions_dir(hub_root)
+    legacy_dir = legacy_data_path(hub_root, "agent_sessions")
+    paths = {path.name: path for path in legacy_dir.glob("*.json")} if legacy_dir != primary_dir else {}
+    # Data-root copies win on name collisions; legacy copies stay visible so
+    # sessions stranded at the pre-data-root path still gate enforce_postflight.
+    paths.update({path.name: path for path in primary_dir.glob("*.json")})
+    for path in sorted(paths.values()):
         payload = json.loads(path.read_text(encoding="utf-8"))
         if payload.get("status") != "open":
             continue

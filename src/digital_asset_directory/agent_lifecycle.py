@@ -7,6 +7,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
+from .transport import data_path, existing_data_file
 from .utils import append_jsonl, utc_now, write_json
 
 AGENT_LIFECYCLE_NAMESPACE = uuid.UUID("d7d89920-42cf-4c2d-9b7b-cfa3b7b33a24")
@@ -73,9 +74,15 @@ def handle_lifecycle_event(
         external_session_id=external_session_id,
         session_key_agent=session_key_agent,
     )
-    session_path = hub_root / "state" / "agent_sessions" / f"{internal_uuid}.json"
+    # Resolve through the transport data plane so hook-created sessions land
+    # where the CLI (preflight/postflight/enforce) reads them; existing_data_file
+    # keeps sessions written before the data-root reroute reachable at the
+    # legacy hub-relative path.
+    session_path = existing_data_file(
+        hub_root, "agent_sessions", f"{internal_uuid}.json"
+    )
     created = utc_now()
-    audit_path = hub_root / "audit" / "events" / f"{created[:10]}.jsonl"
+    audit_path = data_path(hub_root, "audit_events") / f"{created[:10]}.jsonl"
 
     if event == "session-start":
         if not session_path.exists():
@@ -156,7 +163,7 @@ def handle_lifecycle_event(
                 "review_status": "auto_captured_unreviewed",
             }
             write_json(
-                hub_root / "raw" / "handoffs" / created[:10] / f"auto-{internal_uuid}.json",
+                data_path(hub_root, "raw_handoffs") / created[:10] / f"auto-{internal_uuid}.json",
                 draft,
             )
             payload = {
