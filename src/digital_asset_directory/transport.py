@@ -168,6 +168,42 @@ def data_path(
     return root / DATA_PLANE_PATHS[logical_name]
 
 
+def legacy_data_path(hub_root: Path, logical_name: str) -> Path:
+    """Return the pre-data-root hub-relative location of a data-plane surface."""
+    if logical_name not in DATA_PLANE_PATHS:
+        raise KeyError(
+            f"Unknown data-plane surface '{logical_name}'. Add it to "
+            "DATA_PLANE_PATHS with review; do not invent paths inline."
+        )
+    return hub_root / DATA_PLANE_PATHS[logical_name]
+
+
+def existing_data_file(
+    hub_root: Path,
+    logical_name: str,
+    relative: Path | str,
+    *,
+    env: dict[str, str] | None = None,
+) -> Path:
+    """Resolve a data-plane file, preferring the data root but falling back to
+    the legacy hub-relative location when the file exists only there.
+
+    New records are always written through ``data_path``. Reads and updates of
+    an EXISTING record must still find files created by writers that predate
+    the data-root reroute (e.g. hook-created agent sessions under the repo's
+    ``state/agent_sessions``); otherwise state silently splits across roots.
+    When the file exists in neither location, the data-root path is returned so
+    callers create new files on the canonical surface.
+    """
+    primary = data_path(hub_root, logical_name, env=env) / relative
+    if primary.exists():
+        return primary
+    legacy = legacy_data_path(hub_root, logical_name) / relative
+    if legacy != primary and legacy.exists():
+        return legacy
+    return primary
+
+
 def data_relative_path(
     hub_root: Path, relative_path: Path | str, *, env: dict[str, str] | None = None
 ) -> Path:
