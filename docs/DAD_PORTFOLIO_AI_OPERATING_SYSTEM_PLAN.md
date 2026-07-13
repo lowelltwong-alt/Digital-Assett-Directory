@@ -2,12 +2,13 @@
 
 Status: active architecture and buildout plan. P0, the non-mutating Model C
 P1/P3/P4 kernel, the unified Portfolio Cockpit, proposal-only identity reconciliation,
-candidate-only workstream shaping, and the read-only Portfolio Review Packet
-slices are implemented. Evidence and decisions live in
+candidate-only workstream shaping, the durable recovery-decision control plane,
+and the read-only Portfolio Review Packet slices are implemented. Evidence and decisions live in
 `docs/frontier/collaboration/04_CODEX_RETURN_IMPLEMENTATION.md`,
 `docs/frontier/collaboration/11_PORTFOLIO_COCKPIT_PROJECTION.md`,
-`docs/frontier/collaboration/13_PORTFOLIO_WORKSTREAM_SHAPING.md`, and
-`docs/frontier/collaboration/14_PORTFOLIO_REVIEW_PACKET.md`. This plan
+`docs/frontier/collaboration/13_PORTFOLIO_WORKSTREAM_SHAPING.md`,
+`docs/frontier/collaboration/14_PORTFOLIO_REVIEW_PACKET.md`, and
+`docs/frontier/collaboration/15_PORTFOLIO_RECOVERY_DECISION_CONTROL.md`. This plan
 is not a human gate approval and never permits DAD to mutate sibling repos.
 
 ## Recovery And 2026-07-11 Update
@@ -196,6 +197,34 @@ publication failure. The response template is copy-only and records no decision.
 `os refresh` publishes this independent derived cursor only after the cockpit,
 reconciliation, and shaping set succeeds. No timer, notification, MCP mutation
 tool, durable calibration event, or executor is enabled.
+
+### Implemented Recovery-Decision Control Plane
+
+Portfolio shaping decisions and manual recovery results now use a third strict
+envelope family in the existing single ledger:
+
+    dad.portfolio_shaping_decision_event.v1
+
+`asset-dir os decide` binds a named human decision to one exact case revision,
+source-snapshot digest, precondition digest, and canonical choice. `asset-dir os
+decision-retract` records an inverse event. `asset-dir os recovery-packet`
+returns a transient, path-free, command-free receipt with
+`execution_authorized=false`; it never performs Git work. After a separately
+approved supervised action, `asset-dir os recovery-result` can append only a
+privacy-safe result verified by a different checker identity.
+
+Shaping and review writers emit v2. Active, retracted, stale, pending, failed,
+aborted, and verified state is projected without changing cockpit or
+reconciliation v1 semantics. Pending manual work appears as waiting, failed
+verification as failed, future deferral as intentionally quiet, verified work
+as completed, and stale decision evidence as blocked. V1 generated cursors are
+migration input only; `os refresh` rebuilds v2 from source evidence.
+
+This control plane still authorizes nothing in Git. Every preservation commit,
+worktree removal, raw-artifact disposition, semantic survivor, push, merge,
+branch deletion, and automation activation requires its own exact approval. The
+full authority contract and kill criteria are in
+`docs/frontier/collaboration/15_PORTFOLIO_RECOVERY_DECISION_CONTROL.md`.
 
 ### Implemented Project-Management Agent Directory
 
@@ -808,20 +837,22 @@ Critical risks and required controls:
 
 ## Immediate Next Actions
 
-1. Run the supervised Portfolio Review trial in
-   `roadmap/evidence/portfolio-review-operator-trial.md`; classify only its three
-   displayed rows and verify a repeated run keeps `today_changed=false`.
-2. Review shaping precision for useful/noisy recovery cases and missed
-   splits/rescopes/duplicates before adding a durable decision command.
+1. Complete the privacy-safe read-only inventory and obtain a separate exact
+   approval for each proposed preservation commit; do not touch original dirty
+   worktrees during this gate.
+2. Run five supervised Portfolio Review trials across at least seven days,
+   classify only the displayed rows, and prove source zero-write, single-instance
+   locking, publication rollback, material-only notifications, and fail-closed
+   OneDrive recovery before requesting automation activation.
 3. Build the candidate-only self-grade integrity reviewer and workflow-improvement
    router with domain overlays, `preserve_simple`, evaluator checks, and human-gated
    changes; never use a self-score as promotion evidence.
 4. Expose the reviewed packet through local read-only MCP resources; keep mutation
    tools absent until the executor gate is approved.
-5. Decide explicitly whether to enable activation rung 2 only after repeated review
-   trials prove stale-source, nonzero-exit, unchanged-fingerprint, and prompt-budget
-   behavior. Keep D17 in `human_manual` until queue audit, operator evidence,
-   independent checker, anchored trust, and rollback controls are accepted.
+5. Decide explicitly whether to enable activation rung 2 only after the full
+   seven-day supervised trial passes and a final activation approval is recorded.
+   Keep D17 in `human_manual` until queue audit, operator evidence, independent
+   checker, anchored trust, and rollback controls are accepted.
 
 ## Reusable Lesson
 

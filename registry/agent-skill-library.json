@@ -1,6 +1,6 @@
 {
   "schema_version": "0.1.0",
-  "library_version": "0.6.0",
+  "library_version": "0.8.0",
   "status": "candidate_seed",
   "authority_boundary": "DAD owns lifecycle metadata for DAD-managed skill records. Target repos decide whether to check out, update, retire, replace, or locally adapt a skill.",
   "checkout_policy": {
@@ -124,12 +124,13 @@
     {
       "skill_id": "skill:dad-digital-asset-radar",
       "name": "DAD Digital Asset Radar",
-      "version": "0.1.0",
+      "version": "0.2.0",
       "status": "active",
       "skill_format": "generic_agent_skill",
       "path": "assets/agent-skills/dad-digital-asset-radar",
       "entrypoint": "assets/agent-skills/dad-digital-asset-radar/SKILL.md",
-      "description": "Finds, grades, deduplicates, and routes concrete reusable assets and detection patterns with provenance, privacy, and adoption constraints.",
+      "subagent_pack": "assets/agent-skills/dad-digital-asset-radar/subagents.yaml",
+      "description": "Discovers, identifies, classifies, deduplicates, grades, and routes reusable assets through extensible multi-label facets with provenance, privacy, lifecycle, freshness, and adoption constraints.",
       "trigger_examples": [
         "A concrete reusable asset candidate or missed-asset incident exists.",
         "Run an explicit repository delta or asset-discovery review."
@@ -142,7 +143,10 @@
         "digital_asset_discovery",
         "asset_deduplication",
         "asset_provenance_review",
-        "asset_adoption_routing"
+        "asset_adoption_routing",
+        "asset_identity_revision_stewardship",
+        "asset_taxonomy_classification",
+        "asset_taxonomy_drift_audit"
       ],
       "checkout_modes": [
         "pointer",
@@ -161,18 +165,96 @@
       },
       "dependencies": [
         "assets/asset-registry.json",
+        "assets/agent-skills/dad-digital-asset-radar/subagents.yaml",
+        "assets/agent-skills/dad-digital-asset-radar/references/DIGITAL_ASSET_TAXONOMY.md",
         "registry/asset-pattern-registry.json",
         "registry/agent-skill-library.json",
+        "registry/subagent-capability-registry.json",
+        "schemas/subagent-pack.schema.json",
         "docs/ASSET_RECOGNITION_METHODOLOGY.md"
       ],
       "source_evidence": [
         "assets/agent-skills/dad-digital-asset-radar/SKILL.md",
+        "assets/agent-skills/dad-digital-asset-radar/subagents.yaml",
+        "assets/agent-skills/dad-digital-asset-radar/references/DIGITAL_ASSET_TAXONOMY.md",
         "personal-skill-source:dad-digital-asset-radar"
       ],
       "authority_boundary": "Asset records are candidate evidence; target repositories retain adoption authority and external assets need provenance, license, security, and compatibility review.",
       "review_status": "reviewed",
-      "last_reviewed_at": "2026-07-10",
-      "next_review_due_at": "2026-10-10"
+      "last_reviewed_at": "2026-07-13",
+      "next_review_due_at": "2026-08-13"
+    },
+    {
+      "skill_id": "skill:dad-manifest-graph-engineering",
+      "name": "DAD Manifest Graph Engineering",
+      "version": "0.1.0",
+      "status": "candidate",
+      "skill_format": "generic_agent_skill",
+      "path": "assets/agent-skills/dad-manifest-graph-engineering",
+      "entrypoint": "assets/agent-skills/dad-manifest-graph-engineering/SKILL.md",
+      "subagent_pack": "assets/agent-skills/dad-manifest-graph-engineering/subagents.yaml",
+      "description": "Designs, builds, evolves, and independently validates governed manifests, typed graphs, fingerprints, reverse blast-radius maps, and read-only query projections with plan-to-execution mesh continuity.",
+      "trigger_examples": [
+        "Design or repair a manifest, registry, ontology, typed graph, or deterministic projection.",
+        "Trace schema, naming, authority, freshness, or data-flow changes through reverse consumers.",
+        "Carry a planned structured-artifact agent decomposition into execution without losing role or handoff intent."
+      ],
+      "does_not_apply_when": [
+        "The task is a simple data edit with no reusable contract, dependency, projection, or schema effect.",
+        "Source authority, privacy classification, or consumer coverage cannot be established."
+      ],
+      "capabilities": [
+        "manifest_authority_modeling",
+        "identity_address_ontology_design",
+        "dependency_dataflow_extraction",
+        "typed_graph_provenance_modeling",
+        "schema_contract_engineering",
+        "deterministic_projection_building",
+        "semantic_fingerprint_freshness",
+        "reverse_blast_radius_analysis",
+        "query_mcp_projection_design",
+        "structured_artifact_independent_audit"
+      ],
+      "checkout_modes": [
+        "pointer",
+        "wrapper"
+      ],
+      "update_policy": "manual_review",
+      "lifecycle": {
+        "supersedes": [],
+        "superseded_by": [],
+        "retirement_reason": "",
+        "replacement_skill_id": "",
+        "change_notice_templates": [
+          "templates/mail/skill-update-available.mail.template.json",
+          "templates/mail/skill-retirement-notice.mail.template.json"
+        ]
+      },
+      "dependencies": [
+        "assets/agent-skills/dad-manifest-graph-engineering/subagents.yaml",
+        "assets/agent-skills/dad-manifest-graph-engineering/references/AGENT_MESH_MANIFEST_CONTRACT.md",
+        "assets/agent-skills/dad-manifest-graph-engineering/references/agent-mesh-manifest.schema.json",
+        "assets/agent-skills/dad-manifest-graph-engineering/scripts/validate_agent_mesh_manifest.py",
+        "assets/agent-skills/dad-manifest-graph-engineering/assets/agent-mesh-manifest.template.json",
+        "registry/agent-skill-library.json",
+        "registry/subagent-capability-registry.json",
+        "registry/schema-registry.json",
+        "registry/graph-edge-registry.json",
+        "schemas/subagent-pack.schema.json",
+        "docs/MCP_FIRST_INTEGRATION_POLICY.md"
+      ],
+      "source_evidence": [
+        "assets/agent-skills/dad-manifest-graph-engineering/SKILL.md",
+        "assets/agent-skills/dad-manifest-graph-engineering/subagents.yaml",
+        "assets/agent-skills/dad-manifest-graph-engineering/references/AGENT_MESH_MANIFEST_CONTRACT.md",
+        "assets/agent-skills/dad-manifest-graph-engineering/references/agent-mesh-manifest.schema.json",
+        "assets/agent-skills/dad-manifest-graph-engineering/scripts/validate_agent_mesh_manifest.py",
+        "assets/agent-skills/dad-manifest-graph-engineering/assets/agent-mesh-manifest.template.json"
+      ],
+      "authority_boundary": "Manifest, graph, dependency, query, and mesh outputs are candidate evidence. Source repositories and named humans retain schema, authority, adoption, execution, release, and promotion decisions.",
+      "review_status": "candidate",
+      "last_reviewed_at": "2026-07-13",
+      "next_review_due_at": "2026-08-13"
     },
     {
       "skill_id": "skill:dad-iteration-optimizer",
@@ -873,6 +955,62 @@
       "review_status": "candidate",
       "last_reviewed_at": "2026-07-12",
       "next_review_due_at": "2026-08-12"
+    },
+    {
+      "skill_id": "skill:personal-hierarchical-agent-mesh",
+      "name": "Personal Hierarchical Agent Mesh",
+      "version": "0.1.0",
+      "status": "candidate",
+      "skill_format": "generic_agent_skill",
+      "path": "assets/agent-skills/personal-hierarchical-agent-mesh",
+      "entrypoint": "assets/agent-skills/personal-hierarchical-agent-mesh/SKILL.md",
+      "description": "Emits a plan and token-efficient worker-checker-foreman-boss routing mesh whenever planning mode, plan execution, or material multi-step work requires decomposition or independent verification.",
+      "trigger_examples": [
+        "Enter planning mode and include a compact mesh revision with the plan.",
+        "Execute or resume an existing plan and reconcile every planned role and proof obligation.",
+        "Start a material multi-step build, investigation, architecture, research, migration, governance, or cross-repository task even without a formal plan."
+      ],
+      "does_not_apply_when": [
+        "Outside planning or plan execution, the task is a trivial, reversible, one-step, or purely deterministic action.",
+        "Delegation would cost more than local execution; in planning or plan execution this suppresses fan-out but not the routing decision."
+      ],
+      "capabilities": [
+        "plan_mode_mesh_routing",
+        "execution_plan_reconciliation",
+        "token_efficient_delegation",
+        "hierarchical_agent_orchestration",
+        "independent_peer_review"
+      ],
+      "checkout_modes": [
+        "pointer",
+        "wrapper"
+      ],
+      "update_policy": "dad_mail_notice",
+      "lifecycle": {
+        "supersedes": [],
+        "superseded_by": [],
+        "retirement_reason": "",
+        "replacement_skill_id": "",
+        "change_notice_templates": [
+          "templates/mail/skill-update-available.mail.template.json",
+          "templates/mail/skill-retirement-notice.mail.template.json"
+        ]
+      },
+      "dependencies": [
+        "assets/agent-skills/dad-manifest-graph-engineering",
+        "assets/agent-skills/subagent-continuous-improvement",
+        "registry/subagent-evaluation-methodology.json",
+        "docs/GLOBAL_PERSONAL_SKILLS_GPT.md",
+        "personal-skill-source:subagent-peer-review-routing"
+      ],
+      "source_evidence": [
+        "assets/agent-skills/personal-hierarchical-agent-mesh/SKILL.md",
+        "personal-skill-source:personal-hierarchical-agent-mesh"
+      ],
+      "authority_boundary": "The active global personal skill remains source authority. This DAD adaptation and every agent route are candidate guidance; they cannot install runtime instructions, prove correctness, authorize side effects, expose private context, or override repository and human authority.",
+      "review_status": "candidate",
+      "last_reviewed_at": "2026-07-13",
+      "next_review_due_at": "2026-08-13"
     },
     {
       "skill_id": "skill:dad-trigger-pattern-radar",

@@ -11,6 +11,7 @@ import runpy
 import pytest
 
 from digital_asset_directory import portfolio_review as review
+from digital_asset_directory import portfolio_shaping as shaping_projection
 from digital_asset_directory.portfolio_cockpit import schema_validation_problems
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -24,6 +25,30 @@ def _sources():
     state, cockpit, reconciliation = SUPPORT["_triple"]([project], [pair])
     shaping = SUPPORT["_shape"]((state, cockpit, reconciliation))
     return cockpit, reconciliation, shaping
+
+
+def _decision_sources(
+    *,
+    choice_kind: str | None = None,
+    result_status: str = "",
+    stale: bool = False,
+    review_after: str = "",
+):
+    project = SUPPORT["_project"]("decision-review")
+    pair = SUPPORT["_workstream"]("workstream:decision-review", "private ignored label")
+    triple = SUPPORT["_triple"]([project], [pair])
+    base = SUPPORT["_shape"](triple)
+    decisions = SUPPORT["_decisions_for"](
+        base,
+        choice_kind=choice_kind,
+        result_status=result_status,
+        review_after=review_after,
+        revision_id="dad:revision:stale" if stale else None,
+    )
+    shaped = shaping_projection.build_portfolio_shaping(
+        *triple, decisions=decisions, now=NOW, schema_root=ROOT
+    )
+    return triple[1], triple[2], shaped
 
 
 def _health(**overrides):
@@ -103,6 +128,119 @@ def test_packet_is_strict_private_minimized_and_reuses_today() -> None:
     assert packet["methodology"]["numeric_score_used"] is False
     assert packet["methodology"]["creates_second_today_queue"] is False
     assert packet["execution_authorized"] is False
+
+
+@pytest.mark.parametrize(
+    ("sources_kwargs", "lane", "reason"),
+    [
+        ({}, "waiting", "manual_recovery_pending"),
+        ({"stale": True}, "blocked", "stale_decision"),
+        ({"result_status": "failed"}, "failed", "manual_recovery_failed"),
+        ({"result_status": "verified"}, "completed", "manual_recovery_verified"),
+        (
+            {"choice_kind": "defer", "review_after": (NOW + timedelta(days=5)).isoformat()},
+            "intentionally_quiet",
+            "defer_review_scheduled",
+        ),
+    ],
+)
+def test_decisions_route_to_existing_lanes_without_creating_second_today(
+    sources_kwargs: dict[str, object], lane: str, reason: str
+) -> None:
+    cockpit, reconciliation, shaping = _decision_sources(**sources_kwargs)
+    packet = review.build_portfolio_review(
+        cockpit, reconciliation, shaping, _health(), now=NOW, schema_root=ROOT
+    )
+    _validate(packet)
+    decision_cards = [
+        row for row in packet["dashboard"][lane] if row["kind"] == "shaping_decision"
+    ]
+    assert len(decision_cards) == 1
+    assert decision_cards[0]["reason_codes"] == [reason]
+    assert len(packet["dashboard"]["now"]) == len(cockpit["today"]) <= 3
+    assert packet["methodology"]["creates_second_today_queue"] is False
+    assert all(
+        row["subject_ref"] != shaping["cases"][0]["case_id"]
+        for row in packet["dashboard"]["next"]
+    )
+
+
+def test_decision_fingerprint_is_unchanged_when_only_generation_time_changes() -> None:
+    cockpit, reconciliation, shaping = _decision_sources(
+        choice_kind="defer", review_after=(NOW + timedelta(days=5)).isoformat()
+    )
+    first = review.build_portfolio_review(
+        cockpit, reconciliation, shaping, _health(), now=NOW, schema_root=ROOT
+    )
+    second = review.build_portfolio_review(
+        cockpit,
+        reconciliation,
+        shaping,
+        _health(),
+        now=NOW + timedelta(minutes=1),
+        schema_root=ROOT,
+    )
+    _validate(first)
+    _validate(second)
+    assert first["material_fingerprints"] == second["material_fingerprints"]
+
+
+def test_semantic_validator_rejects_forged_decision_lane_contract() -> None:
+    cockpit, reconciliation, shaping = _decision_sources()
+    packet = review.build_portfolio_review(
+        cockpit, reconciliation, shaping, _health(), now=NOW, schema_root=ROOT
+    )
+    forged = deepcopy(packet)
+    card = forged["dashboard"]["waiting"].pop(0)
+    card["lane"] = "completed"
+    card["item_id"] = review.stable_id(
+        review.METHOD_ID,
+        "dashboard",
+        "completed",
+        card["kind"],
+        card["subject_ref"],
+    )
+    forged["dashboard"]["completed"].append(card)
+    forged["summary"]["waiting_count"] -= 1
+    forged["summary"]["completed_count"] += 1
+    forged["material_fingerprints"] = review._fingerprints(
+        forged["dashboard"], forged["health"], forged["attachments"]
+    )
+    assert "decision_card_contract_mismatch" in review.portfolio_review_semantic_problems(
+        forged
+    )
+
+
+def test_v1_shaping_is_migration_only_and_reports_upgrade_required() -> None:
+    cockpit, reconciliation, shaping = _sources()
+    legacy = deepcopy(shaping)
+    legacy["schema_version"] = "dad.portfolio_workstream_shaping.v1"
+    legacy["methodology"]["method_id"] = "dad.portfolio-workstream-shaping.v1"
+    legacy.pop("source_snapshot_digest")
+    legacy.pop("decision_projection")
+    for case in legacy["cases"]:
+        case.pop("decision")
+    packet = review.build_portfolio_review(
+        cockpit, reconciliation, legacy, _health(), now=NOW, schema_root=ROOT
+    )
+    _validate(packet)
+    assert packet["schema_version"] == "dad.portfolio_review_packet.v2"
+    assert packet["status"] == "upgrade_required"
+    assert "upgrade_required" in packet["sources"]["shaping"]["problems"]
+    assert all(row["kind"] != "shaping" for row in packet["attachments"])
+
+
+def test_decision_review_html_and_json_do_not_inherit_private_fields() -> None:
+    cockpit, reconciliation, shaping = _decision_sources()
+    packet = review.build_portfolio_review(
+        cockpit, reconciliation, shaping, _health(), now=NOW, schema_root=ROOT
+    )
+    _validate(packet)
+    payload = json.dumps(packet)
+    html = review.portfolio_review_html(packet)
+    assert "private ignored label" not in payload + html
+    assert "C:/private" not in payload + html
+    assert all(token not in html.casefold() for token in ("<script", "<form", "<button"))
 
 
 def test_missing_stale_and_applicable_checker_evidence_never_clear() -> None:

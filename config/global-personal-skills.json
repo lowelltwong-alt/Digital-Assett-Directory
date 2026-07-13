@@ -17,6 +17,7 @@
     {"skill_id": "personal-skill:dad-digital-asset-radar", "name": "DAD Digital Asset Radar", "source_path": "dad-digital-asset-radar", "origin": "personal", "status": "active"},
     {"skill_id": "personal-skill:dad-iteration-optimizer", "name": "DAD Iteration Optimizer", "source_path": "dad-iteration-optimizer", "origin": "personal", "status": "active"},
     {"skill_id": "personal-skill:dad-learning-loop", "name": "DAD Learning Loop", "source_path": "dad-learning-loop", "origin": "personal", "status": "active"},
+    {"skill_id": "personal-skill:dad-manifest-graph-engineering", "name": "DAD Manifest Graph Engineering", "source_path": "dad-manifest-graph-engineering", "origin": "personal", "status": "active"},
     {"skill_id": "personal-skill:dad-trigger-pattern-radar", "name": "DAD Trigger Pattern Radar", "source_path": "dad-trigger-pattern-radar", "origin": "personal", "status": "active"},
     {"skill_id": "personal-skill:dad-work-router", "name": "DAD Work Router", "source_path": "dad-work-router", "origin": "personal", "status": "active"},
     {"skill_id": "personal-skill:personal-daily-decision-ops", "name": "Personal Daily Decision Ops", "source_path": "personal-daily-decision-ops", "origin": "personal", "status": "active"},

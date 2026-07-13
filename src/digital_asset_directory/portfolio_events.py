@@ -1,7 +1,7 @@
 """Durable, privacy-safe event substrate for the portfolio OS.
 
 ``append_events`` is the single persistence transaction.  Under one owned
-lock it repairs a torn tail, validates and verifies the existing ledger,
+lock it optionally repairs a torn tail, validates and verifies the existing ledger,
 normalizes incoming events, rebases them onto the current per-stream heads,
 deduplicates explicit command retries, and writes the complete buffer.
 
@@ -32,6 +32,7 @@ from .utils import json_dumps, redact_sensitive_text
 
 EVENT_SCHEMA_VERSION = "dad.portfolio_workstream_event.v1"
 EXECUTION_EVENT_SCHEMA_VERSION = "dad.portfolio_execution_control_event.v1"
+RECOVERY_EVENT_SCHEMA_VERSION = "dad.portfolio_shaping_decision_event.v1"
 
 EVENT_KINDS = (
     "idea_captured",
@@ -49,6 +50,9 @@ EVENT_KINDS = (
     "dispatch_intent_approved",
     "dispatch_intent_revoked",
     "dispatch_reconciliation_recorded",
+    "shaping_decision_recorded",
+    "shaping_decision_retracted",
+    "manual_recovery_result_recorded",
 )
 
 EXECUTION_EVENT_KINDS = frozenset(
@@ -60,6 +64,14 @@ EXECUTION_EVENT_KINDS = frozenset(
         "dispatch_intent_approved",
         "dispatch_intent_revoked",
         "dispatch_reconciliation_recorded",
+    }
+)
+
+RECOVERY_EVENT_KINDS = frozenset(
+    {
+        "shaping_decision_recorded",
+        "shaping_decision_retracted",
+        "manual_recovery_result_recorded",
     }
 )
 
@@ -169,6 +181,12 @@ def _canonical_command_id(command_id: str) -> str:
     return stable_id("portfolio-command", minimized)
 
 
+def canonical_command_id(command_id: str) -> str:
+    """Return the persisted opaque identity for one explicit command key."""
+
+    return _canonical_command_id(command_id)
+
+
 def _new_command_id(event_kind: str, stream_id: str, payload: dict[str, Any]) -> str:
     if event_kind in _DETERMINISTIC_COMMAND_KINDS:
         return stable_id(
@@ -199,13 +217,13 @@ def chain_event_id(
     return stable_id("portfolio-event", *parts)
 
 
-@lru_cache(maxsize=2)
+@lru_cache(maxsize=3)
 def _event_validator(schema_version: str) -> Any:
-    schema_name = (
-        "portfolio-execution-control-event.schema.json"
-        if schema_version == EXECUTION_EVENT_SCHEMA_VERSION
-        else "portfolio-workstream-event.schema.json"
-    )
+    schema_name = {
+        EVENT_SCHEMA_VERSION: "portfolio-workstream-event.schema.json",
+        EXECUTION_EVENT_SCHEMA_VERSION: "portfolio-execution-control-event.schema.json",
+        RECOVERY_EVENT_SCHEMA_VERSION: "portfolio-shaping-decision-event.schema.json",
+    }[schema_version]
     schema_path = Path(__file__).resolve().parents[2] / "schemas" / schema_name
     schema = json.loads(schema_path.read_text(encoding="utf-8"))
     validator_class = validator_for(schema)
@@ -220,7 +238,11 @@ def envelope_problems(event: Any) -> list[str]:
         return ["$: not_an_object"]
     problems: list[str] = []
     schema_version = str(event.get("schema_version", ""))
-    if schema_version not in {EVENT_SCHEMA_VERSION, EXECUTION_EVENT_SCHEMA_VERSION}:
+    if schema_version not in {
+        EVENT_SCHEMA_VERSION,
+        EXECUTION_EVENT_SCHEMA_VERSION,
+        RECOVERY_EVENT_SCHEMA_VERSION,
+    }:
         return [f"$['schema_version']: unsupported event schema version {schema_version!r}"]
     for error in sorted(
         _event_validator(schema_version).iter_errors(event), key=lambda item: list(item.path)
@@ -245,6 +267,9 @@ def envelope_problems(event: Any) -> list[str]:
             "dispatch_intent_approved": "workstream_id",
             "dispatch_intent_revoked": "workstream_id",
             "dispatch_reconciliation_recorded": "workstream_id",
+            "shaping_decision_recorded": "case_id",
+            "shaping_decision_retracted": "case_id",
+            "manual_recovery_result_recorded": "case_id",
         }
         identity_field = identity_fields.get(str(event.get("event_kind", "")))
         if identity_field and str(event.get("stream_id", "")) != str(
@@ -296,6 +321,8 @@ def build_event(
         "schema_version": (
             EXECUTION_EVENT_SCHEMA_VERSION
             if event_kind in EXECUTION_EVENT_KINDS
+            else RECOVERY_EVENT_SCHEMA_VERSION
+            if event_kind in RECOVERY_EVENT_KINDS
             else EVENT_SCHEMA_VERSION
         ),
         "stream_id": minimized_stream,
@@ -669,23 +696,34 @@ def append_events(
     *,
     recorded_at: str,
     validate_existing: Callable[[list[dict[str, Any]], dict[str, Any]], None] | None = None,
+    repair_torn_tail: bool = True,
 ) -> dict[str, Any]:
     """Validate, rebase, deduplicate, and durably append one command batch.
 
     ``validate_existing`` runs after the existing ledger has passed integrity
     checks and while the ledger lock is still owned.  Raising from the callback
     aborts the append and releases the lock.  Callbacks must treat the supplied
-    events and diagnostics as read-only.
+    events and diagnostics as read-only.  Strict callers can disable tail
+    repair; a torn tail then blocks the transaction without changing either the
+    ledger or quarantine file.
     """
 
     ledger.parent.mkdir(parents=True, exist_ok=True)
     with LedgerLock(ledger):
-        quarantined = repair_tail(ledger, recorded_at=recorded_at)
+        quarantined = repair_tail(ledger, recorded_at=recorded_at) if repair_torn_tail else 0
         existing, diagnostics = read_events(ledger)
-        if diagnostics["corrupt_line_count"] or diagnostics["invalid_envelope_count"]:
+        if (
+            diagnostics["torn_tail_pending"]
+            or diagnostics["corrupt_line_count"]
+            or diagnostics["invalid_envelope_count"]
+        ):
+            integrity_problems = list(diagnostics["problems"])
+            if diagnostics["torn_tail_pending"]:
+                integrity_problems.insert(0, "torn_tail_pending")
             raise LedgerIntegrityError(
-                "Ledger contains interior corruption or invalid event chains; refusing append: "
-                + "|".join(diagnostics["problems"])
+                "Ledger contains an unrepaired tail, interior corruption, or invalid event "
+                "chains; refusing append: "
+                + "|".join(integrity_problems)
             )
         if validate_existing is not None:
             validate_existing(existing, diagnostics)
@@ -760,12 +798,15 @@ __all__ = [
     "EVENT_SCHEMA_VERSION",
     "EXECUTION_EVENT_KINDS",
     "EXECUTION_EVENT_SCHEMA_VERSION",
+    "RECOVERY_EVENT_KINDS",
+    "RECOVERY_EVENT_SCHEMA_VERSION",
     "EventConflictError",
     "LedgerIntegrityError",
     "LedgerLock",
     "LedgerValidationError",
     "append_events",
     "build_event",
+    "canonical_command_id",
     "chain_event_id",
     "envelope_problems",
     "head_event",

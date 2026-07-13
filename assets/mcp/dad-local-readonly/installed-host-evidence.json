@@ -1,0 +1,73 @@
+{
+  "schema_version": "dad.mcp.installed_host_evidence.v1",
+  "captured_at": "2026-07-13T20:00:00Z",
+  "observation_max_age_days": 7,
+  "future_skew_seconds": 0,
+  "logical_server_name": "dad-local-graph-surfaces",
+  "observation_policy": {
+    "named_server_only": true,
+    "unrelated_config_read": false,
+    "config_payload_retained": false,
+    "absolute_paths_retained": false,
+    "credentials_retained": false,
+    "activation_inferred": false
+  },
+  "hosts": [
+    {
+      "adapter_id": "codex_project",
+      "configuration_state": "not_configured",
+      "entrypoint_check": "not_run",
+      "activation_state": "not_active",
+      "command_fingerprint": null,
+      "evidence_kind": "named_server_metadata_only"
+    },
+    {
+      "adapter_id": "codex_global",
+      "configuration_state": "configured_named_server",
+      "entrypoint_check": "initialize_passed",
+      "activation_state": "unconfirmed",
+      "command_fingerprint": "sha256:21ef1f142309b24247f7acfc6c16f7b400baafe9f8bd18c18cd99cd30ab46659",
+      "evidence_kind": "named_server_metadata_only"
+    },
+    {
+      "adapter_id": "claude_code_project",
+      "configuration_state": "configured_named_server",
+      "entrypoint_check": "host_reported_connected",
+      "activation_state": "host_reported_connected",
+      "command_fingerprint": "sha256:21ef1f142309b24247f7acfc6c16f7b400baafe9f8bd18c18cd99cd30ab46659",
+      "evidence_kind": "named_server_metadata_only"
+    },
+    {
+      "adapter_id": "claude_desktop",
+      "configuration_state": "configured_named_server",
+      "entrypoint_check": "initialize_passed",
+      "activation_state": "unconfirmed",
+      "command_fingerprint": "sha256:21ef1f142309b24247f7acfc6c16f7b400baafe9f8bd18c18cd99cd30ab46659",
+      "evidence_kind": "named_server_metadata_only"
+    },
+    {
+      "adapter_id": "cursor",
+      "configuration_state": "configured_named_server",
+      "entrypoint_check": "initialize_passed",
+      "activation_state": "unconfirmed",
+      "command_fingerprint": "sha256:21ef1f142309b24247f7acfc6c16f7b400baafe9f8bd18c18cd99cd30ab46659",
+      "evidence_kind": "named_server_metadata_only"
+    },
+    {
+      "adapter_id": "vscode_github_copilot",
+      "configuration_state": "unavailable_host",
+      "entrypoint_check": "initialize_passed",
+      "activation_state": "host_unavailable",
+      "command_fingerprint": "sha256:21ef1f142309b24247f7acfc6c16f7b400baafe9f8bd18c18cd99cd30ab46659",
+      "evidence_kind": "named_server_metadata_only"
+    },
+    {
+      "adapter_id": "github_copilot_cli",
+      "configuration_state": "unavailable_host",
+      "entrypoint_check": "initialize_passed",
+      "activation_state": "host_unavailable",
+      "command_fingerprint": "sha256:21ef1f142309b24247f7acfc6c16f7b400baafe9f8bd18c18cd99cd30ab46659",
+      "evidence_kind": "named_server_metadata_only"
+    }
+  ]
+}

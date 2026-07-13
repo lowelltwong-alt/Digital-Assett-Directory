@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "dad.portfolio_workstream_shaping.v1",
+  "$id": "dad.portfolio_workstream_shaping.v2",
   "title": "DAD Portfolio Workstream Shaping Projection",
   "type": "object",
   "additionalProperties": false,
@@ -19,6 +19,8 @@
     "methodology",
     "sources",
     "source_coupling",
+    "source_snapshot_digest",
+    "decision_projection",
     "summary",
     "review_queue",
     "workstream_cards",
@@ -30,7 +32,7 @@
   ],
   "properties": {
     "schema_version": {
-      "const": "dad.portfolio_workstream_shaping.v1"
+      "const": "dad.portfolio_workstream_shaping.v2"
     },
     "generated_at": {
       "type": "string",
@@ -86,7 +88,7 @@
       ],
       "properties": {
         "method_id": {
-          "const": "dad.portfolio-workstream-shaping.v1"
+          "const": "dad.portfolio-workstream-shaping.v2"
         },
         "methodology_ref": {
           "const": "docs/frontier/collaboration/13_PORTFOLIO_WORKSTREAM_SHAPING.md"
@@ -378,6 +380,100 @@
         }
       }
     },
+    "source_snapshot_digest": {
+      "type": "string",
+      "pattern": "^sha256:[0-9a-f]{64}$"
+    },
+    "decision_projection": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "source_status",
+        "source_schema_version",
+        "source_hash",
+        "source_snapshot_digest",
+        "decision_count",
+        "historical_decision_count",
+        "active_count",
+        "retracted_count",
+        "stale_count",
+        "pending_manual_action_count",
+        "verified_result_count",
+        "failed_result_count",
+        "aborted_result_count",
+        "unmatched_decision_count",
+        "problems"
+      ],
+      "properties": {
+        "source_status": {
+          "enum": [
+            "observed",
+            "invalid",
+            "unavailable"
+          ]
+        },
+        "source_schema_version": {
+          "type": "string",
+          "maxLength": 100
+        },
+        "source_hash": {
+          "type": "string",
+          "pattern": "^(?:|sha256:[0-9a-f]{64})$"
+        },
+        "source_snapshot_digest": {
+          "type": "string",
+          "pattern": "^sha256:[0-9a-f]{64}$"
+        },
+        "decision_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "historical_decision_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "active_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "retracted_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "stale_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "pending_manual_action_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "verified_result_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "failed_result_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "aborted_result_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "unmatched_decision_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "problems": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {
+            "type": "string",
+            "pattern": "^[a-z][a-z0-9_.:-]*$"
+          }
+        }
+      }
+    },
     "summary": {
       "type": "object",
       "additionalProperties": false,
@@ -596,7 +692,8 @@
           "signals",
           "counterevidence",
           "evidence_summary",
-          "choices"
+          "choices",
+          "decision"
         ],
         "properties": {
           "case_id": {
@@ -817,6 +914,64 @@
             },
             "minItems": 2,
             "maxItems": 5
+          },
+          "decision": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "state",
+              "decision_id",
+              "choice_id",
+              "choice_kind",
+              "disposition",
+              "review_after",
+              "manual_action_state",
+              "result_ref"
+            ],
+            "properties": {
+              "state": {
+                "enum": [
+                  "none",
+                  "active",
+                  "retracted",
+                  "stale"
+                ]
+              },
+              "decision_id": {
+                "type": "string",
+                "maxLength": 1000
+              },
+              "choice_id": {
+                "type": "string",
+                "maxLength": 1000
+              },
+              "choice_kind": {
+                "type": "string",
+                "maxLength": 100
+              },
+              "disposition": {
+                "type": "string",
+                "maxLength": 100
+              },
+              "review_after": {
+                "type": "string",
+                "maxLength": 100
+              },
+              "manual_action_state": {
+                "enum": [
+                  "none",
+                  "pending",
+                  "verified",
+                  "failed",
+                  "aborted",
+                  "not_required"
+                ]
+              },
+              "result_ref": {
+                "type": "string",
+                "maxLength": 1000
+              }
+            }
           }
         }
       },

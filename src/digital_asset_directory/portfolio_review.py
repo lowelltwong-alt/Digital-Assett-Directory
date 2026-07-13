@@ -26,8 +26,9 @@ from .portfolio_shaping import portfolio_shaping_semantic_problems
 from .transport import data_path
 from .utils import atomic_write_text, json_dumps
 
-SCHEMA_VERSION = "dad.portfolio_review_packet.v1"
-METHOD_ID = "dad.portfolio-review-packet.v1"
+SCHEMA_VERSION = "dad.portfolio_review_packet.v2"
+METHOD_ID = "dad.portfolio-review-packet.v2"
+LEGACY_SHAPING_SCHEMA_VERSION = "dad.portfolio_workstream_shaping.v1"
 METHODOLOGY_REF = "docs/frontier/collaboration/14_PORTFOLIO_REVIEW_PACKET.md"
 HEALTH_SOURCE_IDS = (
     "daemon",
@@ -148,6 +149,7 @@ def _source_descriptor(
     schema_name: str = "",
     schema_root: Path | None = None,
     semantic_validator: Callable[[dict[str, Any]], list[str]] | None = None,
+    legacy_schema: str = "",
 ) -> dict[str, Any]:
     if not isinstance(value, dict):
         return {
@@ -161,7 +163,9 @@ def _source_descriptor(
         }
     problems: list[str] = []
     schema_version = str(value.get("schema_version", ""))
-    if expected_schema and schema_version != expected_schema:
+    if legacy_schema and schema_version == legacy_schema:
+        problems.append("upgrade_required")
+    elif expected_schema and schema_version != expected_schema:
         problems.append("unexpected_schema")
     if schema_name and schema_root is not None:
         structural = schema_validation_problems(value, schema_root, schema_name)
@@ -192,7 +196,14 @@ def _source_descriptor(
             freshness = "current"
     unavailable = "source_unavailable" in problems
     invalid = any(
-        item in {"source_invalid", "schema_invalid", "semantic_invalid", "unexpected_schema"}
+        item
+        in {
+            "source_invalid",
+            "schema_invalid",
+            "semantic_invalid",
+            "unexpected_schema",
+            "upgrade_required",
+        }
         for item in problems
     )
     return {
@@ -488,7 +499,9 @@ def _dashboard(
     attachments: list[dict[str, Any]],
     health: list[dict[str, Any]],
     roadmap: Any,
+    shaping: Any,
     *,
+    now: datetime,
     settings: ReviewSettings,
 ) -> dict[str, list[dict[str, Any]]]:
     lanes: dict[str, list[dict[str, Any]]] = {name: [] for name in DASHBOARD_LANES}
@@ -514,7 +527,18 @@ def _dashboard(
                     sources=["cockpit"],
                 )
             )
-        for attachment in attachments[: settings.today_limit]:
+        decided_cases = {
+            str(row.get("case_id", ""))
+            for row in (shaping.get("cases", []) if isinstance(shaping, dict) else [])
+            if isinstance(row, dict)
+            and isinstance(row.get("decision"), dict)
+            and row["decision"].get("state") in {"active", "stale"}
+        }
+        for attachment in [
+            row
+            for row in attachments
+            if not (row.get("kind") == "shaping" and row.get("subject_ref") in decided_cases)
+        ][: settings.today_limit]:
             lanes["next"].append(
                 _card(
                     "next",
@@ -631,6 +655,85 @@ def _dashboard(
                     sources=[row["source_id"]],
                 )
             )
+    decision_lanes: dict[str, list[dict[str, Any]]] = {
+        lane: [] for lane in DASHBOARD_LANES
+    }
+    if isinstance(shaping, dict):
+        for case in shaping.get("cases", []):
+            if not isinstance(case, dict) or not isinstance(case.get("decision"), dict):
+                continue
+            decision = case["decision"]
+            state = str(decision.get("state", "none"))
+            if state in {"none", "retracted"}:
+                continue
+            subject = str(decision.get("decision_id") or case.get("case_id", ""))
+            manual_state = str(decision.get("manual_action_state", "none"))
+            review_after = _parse_time(decision.get("review_after"))
+            if state == "stale":
+                lane, label, status, reason = (
+                    "blocked",
+                    "Shaping decision needs review",
+                    "blocked",
+                    "stale_decision",
+                )
+            elif manual_state == "failed":
+                lane, label, status, reason = (
+                    "failed",
+                    "Manual recovery verification failed",
+                    "failed",
+                    "manual_recovery_failed",
+                )
+            elif manual_state == "verified":
+                lane, label, status, reason = (
+                    "completed",
+                    "Manual recovery verified",
+                    "verified",
+                    "manual_recovery_verified",
+                )
+            elif manual_state == "aborted":
+                lane, label, status, reason = (
+                    "blocked",
+                    "Manual recovery needs review",
+                    "aborted",
+                    "manual_recovery_aborted",
+                )
+            elif decision.get("choice_kind") == "defer" and review_after is not None:
+                if review_after > now:
+                    lane, label, status, reason = (
+                        "intentionally_quiet",
+                        "Deferred shaping decision",
+                        "deferred",
+                        "defer_review_scheduled",
+                    )
+                else:
+                    lane, label, status, reason = (
+                        "blocked",
+                        "Deferred shaping decision needs review",
+                        "review_due",
+                        "defer_review_due",
+                    )
+            else:
+                lane, label, status, reason = (
+                    "waiting",
+                    "Manual recovery pending",
+                    "waiting",
+                    "manual_recovery_pending",
+                )
+            decision_lanes[lane].append(
+                _card(
+                    lane,
+                    "shaping_decision",
+                    subject,
+                    label,
+                    status,
+                    reasons=[reason],
+                    sources=["shaping"],
+                )
+            )
+    for lane in DASHBOARD_LANES:
+        if lane in {"now", "next"}:
+            continue
+        lanes[lane] = (decision_lanes[lane] + lanes[lane])[: settings.lane_limit]
     return lanes
 
 
@@ -799,6 +902,7 @@ def build_portfolio_review(
             schema_name="portfolio_workstream_shaping",
             schema_root=root,
             semantic_validator=portfolio_shaping_semantic_problems,
+            legacy_schema=LEGACY_SHAPING_SCHEMA_VERSION,
         ),
     }
     for source_id in HEALTH_SOURCE_IDS:
@@ -812,16 +916,27 @@ def build_portfolio_review(
         for row in (cockpit.get("today", []) if isinstance(cockpit, dict) else [])
         if isinstance(row, dict)
     }
-    attachments = _attachments(reconciliation, shaping, today_ids)
+    current_shaping = (
+        shaping
+        if isinstance(shaping, dict) and shaping.get("schema_version") == SHAPING_SCHEMA_VERSION
+        else None
+    )
+    attachments = _attachments(reconciliation, current_shaping, today_ids)
     dashboard = _dashboard(
-        cockpit, attachments, health, operational.get("roadmap"), settings=policy
+        cockpit,
+        attachments,
+        health,
+        operational.get("roadmap"),
+        current_shaping,
+        now=observed,
+        settings=policy,
     )
     blockers, unknowns = _issues(sources, health)
     cockpit_summary = cockpit.get("summary", {}) if isinstance(cockpit, dict) else {}
     cockpit_queue = cockpit.get("attention_queue", []) if isinstance(cockpit, dict) else []
     recon_summary = reconciliation.get("summary", {}) if isinstance(reconciliation, dict) else {}
-    shaping_summary = shaping.get("summary", {}) if isinstance(shaping, dict) else {}
-    shaping_coverage = shaping.get("coverage", {}) if isinstance(shaping, dict) else {}
+    shaping_summary = current_shaping.get("summary", {}) if current_shaping else {}
+    shaping_coverage = current_shaping.get("coverage", {}) if current_shaping else {}
     coverage = {
         "attention_item_count": len(cockpit_queue),
         "today_item_count": len(dashboard["now"]),
@@ -870,8 +985,14 @@ def build_portfolio_review(
         "unknown_count": len(unknowns),
         "all_clear": all_clear,
     }
+    upgrade_required = bool(
+        isinstance(shaping, dict)
+        and shaping.get("schema_version") == LEGACY_SHAPING_SCHEMA_VERSION
+    )
     status = (
-        "blocked_candidate"
+        "upgrade_required"
+        if upgrade_required
+        else "blocked_candidate"
         if not core_ready
         else "partial_candidate"
         if blockers or unknowns
@@ -941,6 +1062,43 @@ def portfolio_review_semantic_problems(packet: dict[str, Any]) -> list[str]:
     if len(dashboard.get("now", [])) > 3:
         problems.add("today_limit_exceeded")
     item_ids: set[str] = set()
+    decision_contracts = {
+        "manual_recovery_pending": (
+            "waiting",
+            "waiting",
+            "Manual recovery pending",
+        ),
+        "stale_decision": (
+            "blocked",
+            "blocked",
+            "Shaping decision needs review",
+        ),
+        "manual_recovery_failed": (
+            "failed",
+            "failed",
+            "Manual recovery verification failed",
+        ),
+        "manual_recovery_verified": (
+            "completed",
+            "verified",
+            "Manual recovery verified",
+        ),
+        "manual_recovery_aborted": (
+            "blocked",
+            "aborted",
+            "Manual recovery needs review",
+        ),
+        "defer_review_scheduled": (
+            "intentionally_quiet",
+            "deferred",
+            "Deferred shaping decision",
+        ),
+        "defer_review_due": (
+            "blocked",
+            "review_due",
+            "Deferred shaping decision needs review",
+        ),
+    }
     for lane in DASHBOARD_LANES:
         for row in dashboard.get(lane, []):
             item_id = str(row.get("item_id", ""))
@@ -961,6 +1119,13 @@ def portfolio_review_semantic_problems(packet: dict[str, Any]) -> list[str]:
             for key in ("reason_codes", "attachment_refs", "source_refs"):
                 if row.get(key, []) != sorted(set(row.get(key, []))):
                     problems.add(f"dashboard_collection_not_canonical:{key}")
+            if row.get("kind") == "shaping_decision":
+                reasons = row.get("reason_codes", [])
+                contract = decision_contracts.get(reasons[0]) if len(reasons) == 1 else None
+                if contract != (lane, row.get("status"), row.get("label")):
+                    problems.add("decision_card_contract_mismatch")
+                if row.get("source_refs") != ["shaping"] or row.get("attachment_refs"):
+                    problems.add("decision_card_provenance_mismatch")
     attachments = packet.get("attachments", [])
     attachment_ids = {row.get("attachment_id") for row in attachments}
     if len(attachment_ids) != len(attachments):
@@ -1036,6 +1201,18 @@ def portfolio_review_semantic_problems(packet: dict[str, Any]) -> list[str]:
     )
     if summary.get("all_clear") is not expected_clear:
         problems.add("all_clear_mismatch")
+    upgrade_required = "upgrade_required" in sources.get("shaping", {}).get("problems", [])
+    expected_status = (
+        "upgrade_required"
+        if upgrade_required
+        else "blocked_candidate"
+        if not core_ready
+        else "partial_candidate"
+        if packet.get("blockers") or packet.get("unknowns")
+        else "generated_candidate"
+    )
+    if packet.get("status") != expected_status:
+        problems.add("review_status_mismatch")
     if packet.get("material_fingerprints") != _fingerprints(dashboard, health, attachments):
         problems.add("material_fingerprint_mismatch")
     if (
@@ -1122,11 +1299,11 @@ def portfolio_review_html(packet: dict[str, Any]) -> str:
 <body><a class="skip" href="#main">Skip to main content</a><main id="main" class="shell">
 <div class="eyebrow">DAD &middot; Portfolio review packet</div>
 <h1>One review. No hidden green.</h1>
-<p class="muted">{escape(clearance)}. One snapshot-bound view of current attention and control-plane health. This page cannot execute or record an action.</p>
+<p class="muted">{escape(clearance)}. Status: {escape(packet["status"])}. One snapshot-bound, read-only view of current attention and control-plane health.</p>
 <section class="stats" aria-label="Review totals">{stats}</section>
 <h2>Operational health</h2><section class="health" aria-label="Operational health">{health}</section>
 {"".join(sections)}
-<footer>Generated {escape(packet["generated_at"])}. {escape(packet["authority_boundary"])}</footer>
+<footer>Generated {escape(packet["generated_at"])}. Derived local report with no active controls.</footer>
 </main></body></html>"""
 
 

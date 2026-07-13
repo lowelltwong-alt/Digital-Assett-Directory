@@ -130,6 +130,9 @@ def test_graph_mcp_initialize_lists_tools_and_resources(tmp_path: Path):
         "dad_graph_get_node",
         "dad_graph_neighbors",
         "dad_graph_search_nodes",
+        "dad_mcp_dependency_status",
+        "dad_mcp_dependency_impact",
+        "dad_mcp_dependency_refresh_candidate",
     }
     resources = _request(server, "resources/list")["result"]["resources"]
     uris = {resource["uri"] for resource in resources}

@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://example.invalid/dad/portfolio-review-packet.schema.json",
+  "$id": "dad.portfolio_review_packet.v2",
   "title": "DAD Portfolio Review Packet",
   "type": "object",
   "additionalProperties": false,
@@ -31,7 +31,7 @@
   ],
   "properties": {
     "schema_version": {
-      "const": "dad.portfolio_review_packet.v1"
+      "const": "dad.portfolio_review_packet.v2"
     },
     "generated_at": {
       "type": "string",
@@ -41,7 +41,8 @@
       "enum": [
         "generated_candidate",
         "partial_candidate",
-        "blocked_candidate"
+        "blocked_candidate",
+        "upgrade_required"
       ]
     },
     "data_classification": {
@@ -571,7 +572,7 @@
       ],
       "properties": {
         "method_id": {
-          "const": "dad.portfolio-review-packet.v1"
+          "const": "dad.portfolio-review-packet.v2"
         },
         "methodology_ref": {
           "const": "docs/frontier/collaboration/14_PORTFOLIO_REVIEW_PACKET.md"

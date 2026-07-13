@@ -1,0 +1,85 @@
+{
+  "schema_version": "dad.task_local_agent_mesh_manifest.v1",
+  "mesh_id": "dad:agent-mesh:mcp-dependency-repair",
+  "task_id": "mcp-dependency-repair-20260713",
+  "revision_id": "dad:agent-mesh-revision:mcp-dependency-repair:v2",
+  "supersedes_revision_id": "dad:agent-mesh-revision:mcp-dependency-repair:v1",
+  "phase": "execution",
+  "status": "complete",
+  "source_snapshot_digest": "sha256:4a3a9f38bf5494152c7dff1c56155446dc7630da2f6cb225aee173421b371762",
+  "authority": {
+    "source_authority": "The DAD repository and explicit human gates retain source and execution authority.",
+    "execution_authority": false,
+    "human_gate_required": true
+  },
+  "max_delegation_depth": 1,
+  "writer_role_id": "bounded-mcp-writer",
+  "checker_role_id": "independent-mcp-checker",
+  "non_overlap_statement": "Only bounded-mcp-writer repairs the five MCP findings; independent-mcp-checker remains read-only and performs the return review.",
+  "roles": [
+    {
+      "role_id": "bounded-mcp-writer",
+      "why_needed": "One writer must repair the independently confirmed enforcement gaps without overlapping the checker.",
+      "mission": "Repair validation behavior binding, full MCP CLI route inventory, exact timestamp boundaries, JSON-RPC error privacy, and all navigation consumers, then refresh fingerprints.",
+      "inputs": ["five confirmed independent findings", "planning revision", "current MCP source and host adapter bundle"],
+      "dependencies": [],
+      "authority": "May edit only MCP-related source, schemas, registries, assets, navigation, validation, tests, and documentation; no live host configuration.",
+      "model_effort_class": "high",
+      "writer_checker_relation": "writer",
+      "acceptance_conditions": ["All five negative probes fail closed.", "Focused MCP suites, repository validation, Ruff, and diff checks pass."],
+      "stop_conditions": ["Authority expansion is required.", "A live host configuration write is required."],
+      "handoff": {
+        "recipient_role_ids": ["independent-mcp-checker"],
+        "deliverables": ["repaired MCP-scoped diff", "negative probes", "freshness and parity evidence"],
+        "readiness_conditions": ["Writer checks pass.", "Exact fingerprints are refreshed only after code and tests stabilize."]
+      }
+    },
+    {
+      "role_id": "independent-mcp-checker",
+      "why_needed": "The original checker found five false-current and privacy gaps and must verify their repair independently.",
+      "mission": "Re-run adversarial probes for validation stubbing, hidden MCP routes, time boundaries, error leakage, and missing navigation consumers, then issue a separate release gate.",
+      "inputs": ["repaired MCP-scoped diff", "raw negative-probe output", "planning and execution mesh revisions"],
+      "dependencies": ["bounded-mcp-writer"],
+      "authority": "Read-only return review; cannot edit writer outputs, accept its own changes, or grant execution authority.",
+      "model_effort_class": "high",
+      "writer_checker_relation": "checker",
+      "acceptance_conditions": ["Each prior finding has independent closure evidence or remains open.", "Writer/checker separation and no-authority boundary remain intact."],
+      "stop_conditions": ["Checker becomes a writer.", "A finding lacks raw reproducible evidence."],
+      "handoff": {
+        "recipient_role_ids": [],
+        "deliverables": ["independent closure findings", "release gate", "decomposition grade"],
+        "readiness_conditions": ["All writer evidence and both mesh revisions are available."]
+      }
+    }
+  ],
+  "proof_obligations": [
+    {
+      "obligation_id": "mcp-contract-current",
+      "description": "Prove the map cannot claim current when enforcement, routes, navigation, time, privacy, or authority drift.",
+      "evidence_required": ["13 independent mutation probes", "47 focused MCP tests", "repository validation with 265 checks", "full repository pytest"],
+      "owner_role_id": "bounded-mcp-writer",
+      "checker_role_id": "independent-mcp-checker",
+      "status": "satisfied"
+    }
+  ],
+  "unresolved_decisions": [],
+  "reconciliations": [
+    {
+      "prior_role_id": "bounded-mcp-writer",
+      "disposition": "reused",
+      "current_role_ids": ["bounded-mcp-writer"],
+      "reason": "The writer boundary remains valid, but five independent findings materially narrow and strengthen its mission and acceptance evidence.",
+      "evidence_refs": ["independent checker five-finding return", "mcp dependency map revision 2026-07-13.2"],
+      "material_drift": true
+    },
+    {
+      "prior_role_id": "independent-mcp-checker",
+      "disposition": "reused",
+      "current_role_ids": ["independent-mcp-checker"],
+      "reason": "The checker stays separate, while its mission changes from broad audit to explicit closure of the five confirmed findings.",
+      "evidence_refs": ["confirmed validation, route, time, error-privacy, and navigation findings"],
+      "material_drift": true
+    }
+  ],
+  "manifest_digest": "sha256:1c58abafa79eff37fabe815745a76b5fb13aa92e15a4f01ee42d987273e96e1e"
+}

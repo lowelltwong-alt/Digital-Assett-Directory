@@ -1,0 +1,66 @@
+{
+  "schema_version": "dad.task_local_agent_mesh_manifest.v1",
+  "mesh_id": "dad:agent-mesh:mcp-dependency-repair",
+  "task_id": "mcp-dependency-repair-20260713",
+  "revision_id": "dad:agent-mesh-revision:mcp-dependency-repair:v1",
+  "phase": "planning",
+  "status": "complete",
+  "source_snapshot_digest": "sha256:4a3a9f38bf5494152c7dff1c56155446dc7630da2f6cb225aee173421b371762",
+  "authority": {
+    "source_authority": "The DAD repository and explicit human gates retain source and execution authority.",
+    "execution_authority": false,
+    "human_gate_required": true
+  },
+  "max_delegation_depth": 1,
+  "writer_role_id": "bounded-mcp-writer",
+  "checker_role_id": "independent-mcp-checker",
+  "non_overlap_statement": "Only bounded-mcp-writer edits MCP-scoped artifacts; independent-mcp-checker reads the resulting diff and evidence without editing writer scope.",
+  "roles": [
+    {
+      "role_id": "bounded-mcp-writer",
+      "why_needed": "One writer prevents overlapping edits to the strict dependency map, server, and fingerprints.",
+      "mission": "Implement the accepted vendor-neutral MCP dependency, freshness, privacy, and blast-radius contract.",
+      "inputs": ["accepted MCP dependency contract", "current MCP source and host adapter bundle"],
+      "dependencies": [],
+      "authority": "May edit only MCP-related source, schemas, registries, assets, navigation, validation, tests, and documentation; no live host configuration.",
+      "model_effort_class": "high",
+      "writer_checker_relation": "writer",
+      "acceptance_conditions": ["Focused MCP tests and repository validation pass.", "No mutation or remote authority is introduced."],
+      "stop_conditions": ["Authority expansion is required.", "A live host configuration write is required."],
+      "handoff": {
+        "recipient_role_ids": ["independent-mcp-checker"],
+        "deliverables": ["MCP-scoped diff", "deterministic validation evidence"],
+        "readiness_conditions": ["Writer checks pass.", "Exact fingerprints are current."]
+      }
+    },
+    {
+      "role_id": "independent-mcp-checker",
+      "why_needed": "The strict map can otherwise certify its own omissions or weak gates.",
+      "mission": "Independently verify dependency coverage, stale refusal, privacy, authority, and host claims.",
+      "inputs": ["MCP-scoped diff", "raw focused test evidence"],
+      "dependencies": ["bounded-mcp-writer"],
+      "authority": "Read-only review; cannot edit writer outputs, self-grade the writer, or authorize execution.",
+      "model_effort_class": "high",
+      "writer_checker_relation": "checker",
+      "acceptance_conditions": ["Findings identify false-current paths and missing consumers.", "Release gate and disagreement are explicit."],
+      "stop_conditions": ["Checker becomes a writer.", "Evidence is limited to the writer self-grade."],
+      "handoff": {
+        "recipient_role_ids": [],
+        "deliverables": ["independent findings", "release gate"],
+        "readiness_conditions": ["MCP-scoped diff and negative probes are available."]
+      }
+    }
+  ],
+  "proof_obligations": [
+    {
+      "obligation_id": "mcp-contract-current",
+      "description": "Prove the map cannot claim current when enforcement, routes, navigation, time, privacy, or authority drift.",
+      "evidence_required": ["mutation tests", "MCP parity tests", "repository validation"],
+      "owner_role_id": "bounded-mcp-writer",
+      "checker_role_id": "independent-mcp-checker",
+      "status": "pending"
+    }
+  ],
+  "unresolved_decisions": [],
+  "manifest_digest": "sha256:e76aa442ff383a96c99697cf9b711bd93ac043c28014f2566cea887fc91b3d17"
+}

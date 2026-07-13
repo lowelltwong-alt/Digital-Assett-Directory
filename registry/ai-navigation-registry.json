@@ -1,8 +1,8 @@
 {
   "schema_version": "0.1.0",
   "registry_id": "ai-navigation-registry",
-  "navigation_version": "2026.07.13.8",
-  "updated_at": "2026-07-13T23:59:00Z",
+  "navigation_version": "2026.07.13.9",
+  "updated_at": "2026-07-13T23:59:30Z",
   "singular_entrypoint": {
     "path": "AI_FRONT_DOOR.md",
     "rule": "All agents start at AI_FRONT_DOOR.md, then follow the required read order and task-specific branches.",
@@ -420,7 +420,7 @@
     {
       "branch_id": "portfolio_ai_operating_system",
       "path": "docs/DAD_PORTFOLIO_AI_OPERATING_SYSTEM_PLAN.md",
-      "role": "DAD portfolio OS plan plus read-only Git attention, verified mixed event ledger, unified Portfolio Cockpit, proposal-only identity reconciliation, candidate-only workstream shaping, strict daily Portfolio Review Packet, workstream board, exact-event approval shadow verifier, source-zero-write attempt journal, dependency assertions, child-project sovereignty, and governed PM/trigger role directory.",
+      "role": "DAD portfolio OS plan plus read-only Git attention, verified mixed event ledger, unified Portfolio Cockpit, proposal-only identity reconciliation, candidate-only workstream shaping, strict durable recovery decisions and manual-result evidence, strict daily Portfolio Review Packet, workstream board, exact-event approval shadow verifier, source-zero-write attempt journal, dependency assertions, child-project sovereignty, and governed PM/trigger role directory.",
       "tags": [
         "control_plane",
         "branch_lifecycle",
@@ -436,8 +436,8 @@
         "human_gate"
       ],
       "use_when": "Creative ideas, chats, branches, worktrees, or projects are sprawling; forgotten work needs recovery; or DAD's portfolio OS buildout is continuing.",
-      "current_version": "0.9.0",
-      "last_material_change_at": "2026-07-13T18:30:00Z",
+      "current_version": "1.0.0",
+      "last_material_change_at": "2026-07-13T23:59:30Z",
       "change_class": "navigation_contract",
       "route_after": [
         "docs/research/PORTFOLIO_AI_OS_PRACTICE_RESEARCH_2026-07-11.md",
@@ -452,6 +452,7 @@
         "src/digital_asset_directory/portfolio_cockpit.py",
         "src/digital_asset_directory/portfolio_reconciliation.py",
         "src/digital_asset_directory/portfolio_shaping.py",
+        "src/digital_asset_directory/portfolio_recovery.py",
         "schemas/portfolio-attention-report.schema.json",
         "schemas/portfolio-workstream-event.schema.json",
         "schemas/portfolio-execution-control-event.schema.json",
@@ -463,12 +464,18 @@
         "schemas/portfolio-cockpit.schema.json",
         "schemas/portfolio-reconciliation.schema.json",
         "schemas/portfolio-workstream-shaping.schema.json",
+        "schemas/portfolio-shaping-decision-event.schema.json",
         "src/digital_asset_directory/portfolio_review.py",
         "schemas/portfolio-review-packet.schema.json",
         "docs/frontier/collaboration/14_PORTFOLIO_REVIEW_PACKET.md",
+        "docs/frontier/collaboration/15_PORTFOLIO_RECOVERY_DECISION_CONTROL.md",
         "roadmap/evidence/portfolio-review-operator-trial.md",
         "assets/agent-skills/personal-project-management-ops/",
         "assets/agent-skills/dad-trigger-pattern-radar/",
+        "assets/mcp/dad-local-readonly/",
+        "registry/mcp-dependency-map.json",
+        "schemas/mcp-dependency-map.schema.json",
+        "src/digital_asset_directory/mcp_dependency_map.py",
         "processed/agents/subagent-role-directory.json",
         "docs/frontier/collaboration/02_SHARED_ARCHITECTURE_SYNTHESIS.md",
         "docs/frontier/collaboration/05_EXECUTION_LEASE_AND_DISPATCH_CONTROL.md",
@@ -483,7 +490,7 @@
         "roadmap/evidence/portfolio-shaping-operator-trial.md",
         "docs/FABLE_PORTFOLIO_AI_OPERATING_SYSTEM_PROMPT.md"
       ],
-      "freshness_hint": "Portfolio reports, cockpit ordering, reconciliation proposals, shaping cases, assertions, signatures, dry-run claims, and declared roles are candidate metadata. Only complete exact accepted most-specific scope joins attention; repo bindings are context only. Similarity and age never authorize identity or action, unknown or stale input prevents false green, and no shaping choice records a decision, launches agents, or mutates Git. The Review Packet reuses cockpit Today, exposes categorical health, and remains non-executing; its all-clear claim fails closed on stale, missing, invalid, dirty, unresolved, or unscoped evidence."
+      "freshness_hint": "Portfolio reports, cockpit ordering, reconciliation proposals, shaping cases, assertions, signatures, dry-run claims, and declared roles are candidate metadata. Durable recovery decisions bind only exact current case revisions and canonical choices; their transient receipts explicitly deny execution authority. Similarity and age never authorize identity or action, unknown or stale input prevents false green, and no decision or result mutates Git. The Review Packet reuses cockpit Today, exposes categorical health, and remains non-executing; its all-clear claim fails closed on stale, missing, invalid, dirty, unresolved, or unscoped evidence."
     },
     {
       "branch_id": "fable_graph_surface_mcp_handoff",
@@ -665,15 +672,24 @@
     {
       "change_id": "nav-change:2026-07-13:portfolio-workstream-shaping",
       "changed_at": "2026-07-13T13:05:00Z",
-      "change_type": "added_candidate_only_portfolio_workstream_shaping",
+      "change_type": "added_candidate_only_portfolio_workstream_shaping_and_recovery_decisions",
       "paths": [
         "docs/DAD_PORTFOLIO_AI_OPERATING_SYSTEM_PLAN.md",
         "docs/frontier/collaboration/13_PORTFOLIO_WORKSTREAM_SHAPING.md",
+        "docs/frontier/collaboration/15_PORTFOLIO_RECOVERY_DECISION_CONTROL.md",
+        "docs/MCP_FIRST_INTEGRATION_POLICY.md",
+        "assets/mcp/dad-local-readonly/",
+        "assets/asset-registry.json",
+        "registry/coding-asset-registry.json",
+        "src/digital_asset_directory/portfolio_events.py",
+        "src/digital_asset_directory/portfolio_recovery.py",
         "src/digital_asset_directory/portfolio_shaping.py",
         "src/digital_asset_directory/portfolio_cockpit.py",
         "src/digital_asset_directory/portfolio_reconciliation.py",
         "src/digital_asset_directory/cli.py",
         "schemas/portfolio-workstream-shaping.schema.json",
+        "schemas/portfolio-shaping-decision-event.schema.json",
+        "schemas/portfolio-review-packet.schema.json",
         "registry/schema-registry.json",
         "AI_TABLE_OF_CONTENTS.md",
         "MACHINE_NAVIGATION_MANIFEST.json",
@@ -682,8 +698,8 @@
         "roadmap/evidence/portfolio-shaping-operator-trial.md",
         "registry/ai-navigation-registry.json"
       ],
-      "summary": "Added strict snapshot-bound split, rescope, possible-duplicate, and recovery cases with exact source coupling, ordinal evidence, inspect-only similarity, age-independent recovery, inert choices, path sanitization, bounded Today review, semantic validation, and six-cursor rollback.",
-      "agent_action": "Use os shape for creative-sprawl review; never treat a case, similarity, age, inert choice, or no-cases result as accepted identity, a durable decision, all-clear status, or execution authority.",
+      "summary": "Added strict snapshot-bound shaping plus exact decision, inverse-retraction, non-authorizing recovery-receipt, independently checked result, and v2 review projections without adding Git execution authority.",
+      "agent_action": "Use os shape for creative-sprawl review and decide/recovery-result only against exact current evidence. Approve every manual Git action separately outside DAD; never treat a case, choice, packet, or result as execution authority.",
       "route_tags": [
         "attention",
         "branch_lifecycle",
@@ -1095,7 +1111,7 @@
       ]
     },
     {
-      "change_id": "nav-change:2026-07-04:claude-architectural-root-cause-packets",
+      "change_id": "nav-change:2026-07-04:claude-architectural-root-cause-review",
       "changed_at": "2026-07-04T17:22:39Z",
       "change_type": "added_claude_architectural_root_cause_packet_guidance",
       "paths": [
@@ -1105,8 +1121,8 @@
         "registry/dad-offerings-registry.json",
         "registry/dad-needs-registry.json"
       ],
-      "summary": "Added Claude-readable root-cause packet guidance for integration and implementation patterns that may be architectural.",
-      "agent_action": "Use this route when repeated failures suggest boundary, sequencing, ownership, contract, generated-evidence, or harness/enforcement root causes.",
+      "summary": "Added Claude-readable packet guidance for tracing repeated implementation failures to architectural root causes without treating model output as authority.",
+      "agent_action": "Use the packet when repeated integration failures may indicate an architectural issue; keep source evidence and human gates authoritative.",
       "route_tags": [
         "root_cause_review",
         "learning_loop",

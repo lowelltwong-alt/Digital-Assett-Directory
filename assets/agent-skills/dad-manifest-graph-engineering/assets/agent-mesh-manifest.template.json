@@ -1,0 +1,66 @@
+{
+  "schema_version": "dad.task_local_agent_mesh_manifest.v1",
+  "mesh_id": "dad:agent-mesh:example-task",
+  "task_id": "example-task",
+  "revision_id": "dad:agent-mesh-revision:example-task:v1",
+  "phase": "planning",
+  "status": "planned",
+  "source_snapshot_digest": "sha256:0000000000000000000000000000000000000000000000000000000000000000",
+  "authority": {
+    "source_authority": "The task repository retains source authority.",
+    "execution_authority": false,
+    "human_gate_required": true
+  },
+  "max_delegation_depth": 1,
+  "writer_role_id": "bounded-writer",
+  "checker_role_id": "independent-checker",
+  "non_overlap_statement": "Only bounded-writer may write; independent-checker reads evidence and cannot edit the writer scope.",
+  "roles": [
+    {
+      "role_id": "bounded-writer",
+      "why_needed": "One bounded writer implements the accepted contract.",
+      "mission": "Produce the bounded artifact and deterministic validation evidence.",
+      "inputs": ["accepted task contract"],
+      "dependencies": [],
+      "authority": "May write only the approved task-local artifact scope.",
+      "model_effort_class": "medium",
+      "writer_checker_relation": "writer",
+      "acceptance_conditions": ["Artifact passes its deterministic validator."],
+      "stop_conditions": ["Scope or authority changes."],
+      "handoff": {
+        "recipient_role_ids": ["independent-checker"],
+        "deliverables": ["artifact", "validation evidence"],
+        "readiness_conditions": ["Writer checks pass."]
+      }
+    },
+    {
+      "role_id": "independent-checker",
+      "why_needed": "Material output requires independent verification.",
+      "mission": "Verify acceptance, privacy, authority, and regression evidence independently.",
+      "inputs": ["artifact", "validation evidence"],
+      "dependencies": ["bounded-writer"],
+      "authority": "Read-only review; cannot approve its own work or mutate writer outputs.",
+      "model_effort_class": "medium",
+      "writer_checker_relation": "checker",
+      "acceptance_conditions": ["Independent findings and release gate are explicit."],
+      "stop_conditions": ["Checker is also the writer."],
+      "handoff": {
+        "recipient_role_ids": [],
+        "deliverables": ["independent findings", "release gate"],
+        "readiness_conditions": ["Raw permitted evidence is available."]
+      }
+    }
+  ],
+  "proof_obligations": [
+    {
+      "obligation_id": "bounded-change",
+      "description": "Prove the writer stayed inside the approved scope.",
+      "evidence_required": ["final diff", "validation results"],
+      "owner_role_id": "bounded-writer",
+      "checker_role_id": "independent-checker",
+      "status": "pending"
+    }
+  ],
+  "unresolved_decisions": [],
+  "manifest_digest": "sha256:e3d0cbf9e101b1e8cb3e0f67e77f251615d6701487cb70e379ec45bca120fdf2"
+}

@@ -32,6 +32,45 @@ The local scheduled-task surface is `dad://report/scheduled-tasks`, backed by
 `processed/reports/scheduled_tasks.json`. It is read-only status evidence for
 UI/adapters, not scheduler mutation authority.
 
+## Runtime-Neutral Host Adapters
+
+The reviewed local graph server has one logical identity,
+`dad-local-graph-surfaces`, and one direct stdio invocation through
+`asset-dir mcp graph-stdio`. Host-specific configuration is a thin adapter only;
+it does not fork the server contract or grant a vendor extra authority.
+
+`assets/mcp/dad-local-readonly/` contains validated templates for Codex, Claude
+Code, Claude Desktop, Cursor, VS Code/GitHub Copilot, and Copilot CLI. Every
+template resolves to the same Python module, argument vector, read-only tool
+allowlist, local-only transport, and deny-all execution boundary. Machine paths
+are rendered at installation time and are not stored in the reusable templates.
+
+Installation, host trust, and restart remain explicit human gates. An adapter
+validation pass proves configuration parity, not that a particular host loaded
+the server; each installed host still needs an initialize handshake and local
+status check.
+
+## Dependency Freshness And Blast Radius
+
+`registry/mcp-dependency-map.json` is the reviewed machine contract for DAD's
+single local stdio server. It covers identity, protocol, CLI and packaging
+entrypoints, implementation and backends, runtime data, schemas, registries,
+governance, adapters, navigation, validation, and security authority. Typed
+edges point from a changed dependency to its downstream consumer, while named
+flows preserve source-to-transform-to-sink direction.
+
+Dedicated MCP files use exact hashes. Shared registries, CLI/packaging files,
+and navigation surfaces use semantic selectors so unrelated changes do not
+create false staleness. Repository validation fails closed when selected
+semantics, local imports, runtime tools/resources, adapter allowlists, first-
+party host-source freshness, authority direction, or data-flow direction drift.
+
+The server exposes categorical dependency status, stale-refusing impact, and a
+review-only candidate fingerprint report. Candidate refresh never writes the
+map, authorizes itself, edits host configuration, or grants Git/DAD execution
+authority. Installed-host evidence is metadata-only and distinguishes reusable
+template parity from configuration, availability, and confirmed activation.
+
 ## Safety Rules
 
 - Resource URIs must be validated and scoped to approved DAD surfaces.

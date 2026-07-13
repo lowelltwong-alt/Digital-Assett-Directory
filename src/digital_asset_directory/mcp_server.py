@@ -24,6 +24,14 @@ from .graph_surfaces import (
     resolve_graph_surface_path,
 )
 from .journal import journal_status
+from .mcp_dependency_map import (
+    HOST_EVIDENCE_PATH,
+    MAP_PATH,
+    MCPDependencyMapError,
+    build_mcp_dependency_refresh_candidate,
+    mcp_dependency_impact,
+    validate_mcp_dependency_map,
+)
 from .surface_versions import surface_version_status_report_path
 from .utils import json_dumps
 
@@ -33,6 +41,15 @@ SERVER_VERSION = "0.1.0"
 MAX_QUERY_LIMIT = 100
 DEFAULT_QUERY_LIMIT = 25
 FORBIDDEN_RESPONSE_KEYS = {"score", "rank", "centrality", "best", "top"}
+SENSITIVE_RESPONSE_KEY = re.compile(
+    r"(?:authorization|api[_-]?key|password|secret|private[_-]?key|token)",
+    re.IGNORECASE,
+)
+LOCAL_PATH_TEXT = re.compile(r"(?i)(?:[A-Z]:[\\/]|\\\\)[^\s<>\"']+")
+SENSITIVE_ERROR_TEXT = re.compile(
+    r"(?i)(?:authorization|api[_-]?key|password|secret|private[_-]?key|token)"
+    r"\s*[:=]\s*[^\s,;]+"
+)
 ID_PATTERN = re.compile(r"^[A-Za-z0-9][A-Za-z0-9_.:-]*$")
 
 _REGISTRY_RESOURCES = {
@@ -70,15 +87,21 @@ _PACKET_RESOURCES = {
 
 
 class MCPError(Exception):
-    def __init__(self, code: int, message: str) -> None:
+    def __init__(self, code: int, message: str, *, error_code: str | None = None) -> None:
         super().__init__(message)
         self.code = code
         self.message = message
+        self.error_code = error_code or {
+            -32601: "method_or_tool_not_found",
+            -32602: "invalid_request",
+            -32603: "resource_or_server_error",
+            -32010: "dependency_map_stale",
+        }.get(code, "mcp_error")
 
 
 def _validate_id(value: str, label: str) -> str:
     if not value or "/" in value or "\\" in value or ".." in value or not ID_PATTERN.match(value):
-        raise MCPError(-32602, f"Invalid {label}: {value}")
+        raise MCPError(-32602, f"Invalid {label}")
     return value
 
 
@@ -98,10 +121,32 @@ def _strip_forbidden_fields(value: Any) -> Any:
             key: _strip_forbidden_fields(child)
             for key, child in value.items()
             if key.lower() not in FORBIDDEN_RESPONSE_KEYS
+            and not SENSITIVE_RESPONSE_KEY.search(key)
         }
     if isinstance(value, list):
         return [_strip_forbidden_fields(child) for child in value]
+    if isinstance(value, str):
+        sanitized = LOCAL_PATH_TEXT.sub("<local-path-redacted>", value)
+        if sanitized.startswith(("/", "file://")):
+            return "<local-path-redacted>"
+        return sanitized
     return value
+
+
+def _sanitize_resource_text(mime_type: str, text: str) -> str:
+    if mime_type == "application/json":
+        try:
+            payload = json.loads(text)
+        except json.JSONDecodeError as exc:
+            raise MCPError(-32603, "JSON resource is invalid") from exc
+        return json_dumps(_strip_forbidden_fields(payload), pretty=True)
+    return LOCAL_PATH_TEXT.sub("<local-path-redacted>", text)
+
+
+def _sanitize_error_message(message: str) -> str:
+    sanitized = str(_strip_forbidden_fields(message))
+    sanitized = SENSITIVE_ERROR_TEXT.sub("<credential-redacted>", sanitized)
+    return sanitized[:200] if sanitized else "MCP request failed"
 
 
 def _surface_by_id(hub_root: Path, surface_id: str) -> dict[str, Any]:
@@ -110,7 +155,7 @@ def _surface_by_id(hub_root: Path, surface_id: str) -> dict[str, Any]:
     for surface in registry.get("surfaces", []):
         if surface.get("surface_id") == surface_id:
             return surface
-    raise MCPError(-32602, f"Unknown graph surface: {surface_id}")
+    raise MCPError(-32602, "Unknown graph surface")
 
 
 def _surface_paths(hub_root: Path, surface: dict[str, Any]) -> tuple[Path, Path]:
@@ -119,7 +164,7 @@ def _surface_paths(hub_root: Path, surface: dict[str, Any]) -> tuple[Path, Path]
         manifest = resolve_graph_surface_path(hub_root, str(outputs["manifest_logical_path"]))
         body = resolve_graph_surface_path(hub_root, str(outputs["body_logical_path"]))
     except (KeyError, ValueError) as exc:
-        raise MCPError(-32603, f"Invalid graph surface registry output: {exc}") from exc
+        raise MCPError(-32603, "Invalid graph surface registry output") from exc
     return manifest, body
 
 
@@ -127,11 +172,11 @@ def _load_surface_graph(hub_root: Path, surface_id: str) -> tuple[dict[str, Any]
     surface = _surface_by_id(hub_root, surface_id)
     _manifest_path, body_path = _surface_paths(hub_root, surface)
     if not body_path.exists():
-        raise MCPError(-32602, f"Graph surface body is missing: {surface_id}")
+        raise MCPError(-32602, "Graph surface body is missing")
     try:
         graph = json.loads(body_path.read_text(encoding="utf-8"))
     except (OSError, json.JSONDecodeError) as exc:
-        raise MCPError(-32603, f"Graph surface body is unreadable: {exc}") from exc
+        raise MCPError(-32603, "Graph surface body is unreadable") from exc
     return surface, graph
 
 
@@ -194,7 +239,7 @@ def dad_graph_get_node(hub_root: Path, *, surface_id: str, node_id: str) -> dict
                     ),
                 }
             )
-    raise MCPError(-32602, f"Unknown node on surface {surface_id}: {node_id}")
+    raise MCPError(-32602, "Unknown node on graph surface")
 
 
 def dad_graph_neighbors(
@@ -268,30 +313,30 @@ def dad_graph_search_nodes(
 def _read_resource_payload(hub_root: Path, uri: str) -> tuple[str, str]:
     parsed = urlparse(uri)
     if parsed.scheme != "dad" or parsed.params or parsed.query or parsed.fragment:
-        raise MCPError(-32602, f"Unsupported resource URI: {uri}")
+        raise MCPError(-32602, "Unsupported resource URI")
     kind = parsed.netloc
     parts = [part for part in parsed.path.split("/") if part]
     if any(part in {".", ".."} or "\\" in part for part in parts):
-        raise MCPError(-32602, f"Invalid resource URI: {uri}")
+        raise MCPError(-32602, "Invalid resource URI")
 
     if kind == "registry" and len(parts) == 1:
         registry_id = _validate_id(parts[0], "registry_id")
         path = _REGISTRY_RESOURCES.get(registry_id)
         if path is None:
-            raise MCPError(-32602, f"Unknown registry resource: {registry_id}")
+            raise MCPError(-32602, "Unknown registry resource")
         return "application/json", (hub_root / path).read_text(encoding="utf-8")
 
     if kind == "surface" and len(parts) == 2 and parts[1] == "manifest":
         surface = _surface_by_id(hub_root, parts[0])
         manifest_path, _body_path = _surface_paths(hub_root, surface)
         if not manifest_path.exists():
-            raise MCPError(-32602, f"Surface manifest is missing: {parts[0]}")
+            raise MCPError(-32602, "Surface manifest is missing")
         return "application/json", manifest_path.read_text(encoding="utf-8")
 
     if kind == "report" and len(parts) == 1:
         report_id = _validate_id(parts[0], "report_id")
         if report_id not in _REPORT_RESOURCES:
-            raise MCPError(-32602, f"Unknown report resource: {report_id}")
+            raise MCPError(-32602, "Unknown report resource")
         if report_id == "journal-status":
             return "application/json", json_dumps(journal_status(hub_root), pretty=True)
         if report_id == "daemon-status":
@@ -324,17 +369,25 @@ def _read_resource_payload(hub_root: Path, uri: str) -> tuple[str, str]:
         kernel_id = _validate_id(parts[0], "kernel_id")
         path = _KERNEL_RESOURCES.get(kernel_id)
         if path is None:
-            raise MCPError(-32602, f"Unknown kernel resource: {kernel_id}")
+            raise MCPError(-32602, "Unknown kernel resource")
         return "text/markdown", (hub_root / path).read_text(encoding="utf-8")
 
     if kind == "packet" and len(parts) == 1:
         packet_id = _validate_id(parts[0], "packet_id")
         path = _PACKET_RESOURCES.get(packet_id)
         if path is None:
-            raise MCPError(-32602, f"Unknown packet resource: {packet_id}")
+            raise MCPError(-32602, "Unknown packet resource")
         return "text/markdown", (hub_root / path).read_text(encoding="utf-8")
 
-    raise MCPError(-32602, f"Unsupported resource URI: {uri}")
+    if kind == "mcp" and len(parts) == 1:
+        if parts[0] == "dependency-map":
+            return "application/json", (hub_root / MAP_PATH).read_text(encoding="utf-8")
+        if parts[0] == "installed-host-status":
+            return "application/json", (hub_root / HOST_EVIDENCE_PATH).read_text(
+                encoding="utf-8"
+            )
+
+    raise MCPError(-32602, "Unsupported resource URI")
 
 
 class DADGraphMCPServer:
@@ -381,11 +434,57 @@ class DADGraphMCPServer:
                 "mimeType": "text/markdown",
             }
         )
+        resources.extend(
+            [
+                {
+                    "uri": "dad://mcp/dependency-map",
+                    "name": "MCP dependency and blast-radius map",
+                    "mimeType": "application/json",
+                },
+                {
+                    "uri": "dad://mcp/dependency-status",
+                    "name": "MCP dependency freshness status",
+                    "mimeType": "application/json",
+                },
+                {
+                    "uri": "dad://mcp/dependency-refresh-candidate",
+                    "name": "MCP review-only fingerprint refresh candidate",
+                    "mimeType": "application/json",
+                },
+                {
+                    "uri": "dad://mcp/installed-host-status",
+                    "name": "MCP privacy-safe installed-host evidence",
+                    "mimeType": "application/json",
+                },
+            ]
+        )
         return resources
 
     def read_resource(self, uri: str) -> dict[str, Any]:
-        mime_type, text = _read_resource_payload(self.hub_root, uri)
-        return {"contents": [{"uri": uri, "mimeType": mime_type, "text": text}]}
+        if uri == "dad://mcp/dependency-status":
+            mime_type = "application/json"
+            text = json_dumps(self._dependency_status(), pretty=True)
+        elif uri == "dad://mcp/dependency-refresh-candidate":
+            mime_type = "application/json"
+            text = json_dumps(build_mcp_dependency_refresh_candidate(self.hub_root), pretty=True)
+        else:
+            mime_type, text = _read_resource_payload(self.hub_root, uri)
+        return {
+            "contents": [
+                {
+                    "uri": uri,
+                    "mimeType": mime_type,
+                    "text": _sanitize_resource_text(mime_type, text),
+                }
+            ]
+        }
+
+    def _dependency_status(self) -> dict[str, Any]:
+        return validate_mcp_dependency_map(
+            self.hub_root,
+            runtime_tools=[row["name"] for row in self.list_tools()],
+            runtime_resources=[row["uri"] for row in self.list_resources()],
+        )
 
     def list_tools(self) -> list[dict[str, Any]]:
         surface_schema = {"type": "string", "minLength": 1}
@@ -434,10 +533,42 @@ class DADGraphMCPServer:
                     },
                 },
             },
+            {
+                "name": "dad_mcp_dependency_status",
+                "description": "Read categorical MCP dependency-map freshness and coverage status.",
+                "inputSchema": {"type": "object", "additionalProperties": False, "properties": {}},
+            },
+            {
+                "name": "dad_mcp_dependency_impact",
+                "description": "Read deterministic downstream change effects; refuses claims while the map is stale.",
+                "inputSchema": {
+                    "type": "object",
+                    "additionalProperties": False,
+                    "required": ["node_id"],
+                    "properties": {
+                        "node_id": {"type": "string", "pattern": "^mcp\\.[a-z][a-z0-9_.-]*$"},
+                        "max_depth": {"type": "integer", "minimum": 1, "maximum": 16},
+                    },
+                },
+            },
+            {
+                "name": "dad_mcp_dependency_refresh_candidate",
+                "description": "Calculate review-only dependency fingerprint candidates without writing or authorizing changes.",
+                "inputSchema": {"type": "object", "additionalProperties": False, "properties": {}},
+            },
         ]
 
     def call_tool(self, name: str, arguments: dict[str, Any] | None = None) -> dict[str, Any]:
         arguments = arguments or {}
+        if name in {
+            "dad_mcp_dependency_status",
+            "dad_mcp_dependency_refresh_candidate",
+        } and arguments:
+            raise MCPError(-32602, "This tool accepts no arguments")
+        if name == "dad_mcp_dependency_impact" and not set(arguments).issubset(
+            {"node_id", "max_depth"}
+        ):
+            raise MCPError(-32602, "Unexpected dependency impact argument")
         if name == "dad_graph_surface_status":
             payload = graph_surface_status(self.hub_root)
         elif name == "dad_graph_get_node":
@@ -446,8 +577,20 @@ class DADGraphMCPServer:
             payload = dad_graph_neighbors(self.hub_root, **arguments)
         elif name == "dad_graph_search_nodes":
             payload = dad_graph_search_nodes(self.hub_root, **arguments)
+        elif name == "dad_mcp_dependency_status":
+            payload = self._dependency_status()
+        elif name == "dad_mcp_dependency_impact":
+            status = self._dependency_status()
+            if not status["current_claims_allowed"]:
+                raise MCPError(-32010, "MCP dependency map is stale; current impact claims refused")
+            try:
+                payload = mcp_dependency_impact(self.hub_root, **arguments)
+            except MCPDependencyMapError as exc:
+                raise MCPError(-32602, "Invalid dependency impact request") from exc
+        elif name == "dad_mcp_dependency_refresh_candidate":
+            payload = build_mcp_dependency_refresh_candidate(self.hub_root)
         else:
-            raise MCPError(-32601, f"Unknown tool: {name}")
+            raise MCPError(-32601, "Unknown tool")
         return {
             "content": [
                 {
@@ -485,19 +628,27 @@ class DADGraphMCPServer:
                     params.get("arguments") if isinstance(params.get("arguments"), dict) else {},
                 )
             else:
-                raise MCPError(-32601, f"Method not found: {method}")
+                raise MCPError(-32601, "Method not found")
             return {"jsonrpc": "2.0", "id": request_id, "result": result}
         except MCPError as exc:
             return {
                 "jsonrpc": "2.0",
                 "id": request_id,
-                "error": {"code": exc.code, "message": exc.message},
+                "error": {
+                    "code": exc.code,
+                    "message": _sanitize_error_message(exc.message),
+                    "data": {"error_code": exc.error_code},
+                },
             }
-        except Exception as exc:
+        except Exception:
             return {
                 "jsonrpc": "2.0",
                 "id": request_id,
-                "error": {"code": -32603, "message": str(exc)},
+                "error": {
+                    "code": -32603,
+                    "message": "Internal MCP error",
+                    "data": {"error_code": "internal_error"},
+                },
             }
 
 
@@ -508,11 +659,15 @@ def run_stdio_server(hub_root: Path) -> None:
             continue
         try:
             request = json.loads(line)
-        except json.JSONDecodeError as exc:
+        except json.JSONDecodeError:
             response = {
                 "jsonrpc": "2.0",
                 "id": None,
-                "error": {"code": -32700, "message": str(exc)},
+                "error": {
+                    "code": -32700,
+                    "message": "Invalid JSON request",
+                    "data": {"error_code": "parse_error"},
+                },
             }
         else:
             response = server.handle_request(request)

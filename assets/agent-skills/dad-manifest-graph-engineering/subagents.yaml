@@ -1,0 +1,122 @@
+schema_version: dad_subagent_pack.v0_1
+pack_id: dad:subagent-pack:dad-manifest-graph-engineering
+version: 0.1.0
+status: candidate
+ai_agnostic: true
+methodology_ref: registry/subagent-evaluation-methodology.json#0.1.0
+authority_boundary: >
+  Roles produce candidate structured-artifact evidence only. They cannot change
+  source authority, ingest private payloads, approve their own work, dispatch
+  agents, expose mutation tools, or write outside the designated writer scope.
+routing_policy:
+  max_delegation_depth: 1
+  deterministic_first: true
+  writer_role_id: deterministic-manifest-graph-builder
+  checker_role_id: independent-manifest-graph-auditor
+  task_local_mesh_contract: references/AGENT_MESH_MANIFEST_CONTRACT.md
+  task_local_mesh_schema: references/agent-mesh-manifest.schema.json
+  task_local_mesh_template: assets/agent-mesh-manifest.template.json
+  task_local_mesh_validator: scripts/validate_agent_mesh_manifest.py
+  material_drift_requires_new_mesh_revision: true
+  self_grade_authority: none
+roles:
+  - role_id: manifest-mission-authority-steward
+    profile_role_id: manifest_mission_authority_steward
+    evaluated_role_revision_ids: []
+    capability_ids: [manifest_authority_modeling, governance_authority_safety]
+    search_terms: [manifest mission, source authority, scope boundary, structured artifact]
+    effort: low_then_medium_on_ambiguity
+    mission: Define mission, source authority, scope, sensitivity, non-goals, consumers, and human gates before structure or code is proposed.
+    required_input: [task_request, source_authority, coverage]
+    required_output: [mission_contract, authority_map, scope, non_goals, sensitivity, human_gates]
+    stop_conditions: [source_authority_unknown, private_payload_required, scope_unbounded]
+  - role_id: identity-address-ontology-steward
+    profile_role_id: identity_address_ontology_steward
+    evaluated_role_revision_ids: []
+    capability_ids: [identity_address_ontology_design]
+    search_terms: [stable identity, revision identity, address grammar, ontology]
+    effort: medium
+    mission: Separate stable and revision identity, define address grammar and ontology terms, and surface collisions or aliases without merging them.
+    required_input: [mission_contract, existing_identifiers, consumer_requirements]
+    required_output: [identity_model, address_grammar, ontology, aliases, collision_cases, unknowns]
+    stop_conditions: [identity_merge_requires_human_review, label_used_as_identity, namespace_owner_unknown]
+  - role_id: dependency-dataflow-extractor
+    profile_role_id: dependency_dataflow_extractor
+    evaluated_role_revision_ids: []
+    capability_ids: [dependency_dataflow_extraction, bounded_evidence_inventory]
+    search_terms: [dependency extraction, data flow, source consumer, import graph]
+    effort: deterministic_then_low_for_ambiguity
+    mission: Extract observed dependencies and data flows with deterministic tools, preserving coverage and separating observed from inferred edges.
+    required_input: [coverage_roots, identity_model, source_snapshots]
+    required_output: [coverage, observed_edges, inferred_edge_candidates, counterevidence, unresolved_sources]
+    stop_conditions: [coverage_unstated, inference_presented_as_observation, source_mutation_requested]
+  - role_id: typed-graph-provenance-modeler
+    profile_role_id: typed_graph_provenance_modeler
+    evaluated_role_revision_ids: []
+    capability_ids: [typed_graph_provenance_modeling]
+    search_terms: [typed node, typed edge, provenance, confidence, graph ontology]
+    effort: medium
+    mission: Model typed nodes and edges with provenance, confidence, review state, and evidence direction while preventing centrality or similarity from becoming authority.
+    required_input: [ontology, observed_edges, inferred_edge_candidates, authority_map]
+    required_output: [node_types, edge_types, provenance_contract, review_states, forbidden_inferences]
+    stop_conditions: [provenance_missing, inferred_edge_unlabeled, graph_metric_used_as_truth]
+  - role_id: schema-contract-engineer
+    profile_role_id: schema_contract_engineer
+    evaluated_role_revision_ids: []
+    capability_ids: [schema_contract_engineering, validation_design]
+    search_terms: [json schema, manifest contract, compatibility, migration]
+    effort: medium
+    mission: Define strict schemas, invariants, compatibility, migrations, and negative cases for source and generated structured artifacts.
+    required_input: [identity_model, node_types, edge_types, consumer_requirements]
+    required_output: [schema_contracts, invariants, compatibility_policy, migration_cases, negative_tests]
+    stop_conditions: [unknown_fields_grant_authority, migration_ambiguous, consumer_version_unknown]
+  - role_id: deterministic-manifest-graph-builder
+    profile_role_id: deterministic_manifest_graph_builder
+    evaluated_role_revision_ids: []
+    capability_ids: [deterministic_projection_building, implementation_review]
+    search_terms: [manifest builder, graph builder, deterministic projection, reproducible output]
+    effort: medium_or_high_by_blast_radius
+    mission: Act as the single writer for deterministic builders and bounded tests after contracts are accepted; preserve sources and make outputs reproducible.
+    required_input: [accepted_schema_contracts, source_snapshots, output_scope, validation_plan]
+    required_output: [bounded_change, deterministic_build_evidence, source_immutability_evidence, migration_result, handoff]
+    stop_conditions: [contract_unaccepted, second_writer_present, output_scope_overlap, private_data_would_be_copied]
+  - role_id: fingerprint-freshness-version-steward
+    profile_role_id: fingerprint_freshness_version_steward
+    evaluated_role_revision_ids: []
+    capability_ids: [semantic_fingerprint_freshness]
+    search_terms: [semantic fingerprint, freshness state, source digest, version drift]
+    effort: medium
+    mission: Define semantic fingerprints, source coverage, version identities, freshness transitions, and fail-closed behavior for missing or unsupported evidence.
+    required_input: [source_contracts, generated_contracts, builder_inputs, consumer_versions]
+    required_output: [fingerprint_contract, freshness_state_machine, version_policy, drift_cases, rebuild_triggers]
+    stop_conditions: [timestamp_only_freshness, partial_coverage_hidden, unsupported_version_treated_current]
+  - role_id: reverse-blast-radius-analyst
+    profile_role_id: reverse_blast_radius_analyst
+    evaluated_role_revision_ids: []
+    capability_ids: [reverse_blast_radius_analysis, dependency_frontier_analysis]
+    search_terms: [reverse dependencies, blast radius, consumer impact, schema change]
+    effort: medium_or_high_by_scope
+    mission: Walk reverse dependencies from each changed name, schema, authority, builder, and output to all known consumers and expose unverified reachability.
+    required_input: [changed_artifacts, dependency_graph, consumer_registry, coverage]
+    required_output: [reverse_reachability, affected_consumers, validation_matrix, unknown_consumers, rollout_order]
+    stop_conditions: [consumer_coverage_unknown, generated_edge_used_as_proof, breaking_change_without_rollout]
+  - role_id: query-mcp-projection-engineer
+    profile_role_id: query_mcp_projection_engineer
+    evaluated_role_revision_ids: []
+    capability_ids: [query_mcp_projection_design, governance_authority_safety]
+    search_terms: [read only query, MCP projection, bounded search, privacy filter]
+    effort: medium
+    mission: Design bounded read-only queries or MCP projections over validated artifacts with privacy filters and no execution authority.
+    required_input: [validated_artifacts, sensitivity_contract, query_requirements, authority_boundary]
+    required_output: [query_contract, resource_and_tool_surface, bounded_outputs, privacy_controls, denial_cases]
+    stop_conditions: [mutation_surface_requested, sensitivity_unknown, unbounded_result, host_trust_assumed]
+  - role_id: independent-manifest-graph-auditor
+    profile_role_id: independent_manifest_graph_auditor
+    evaluated_role_revision_ids: []
+    capability_ids: [structured_artifact_independent_audit, evaluator_integrity_audit]
+    search_terms: [independent graph audit, manifest red team, schema drift, false authority]
+    effort: high_for_material_changes
+    mission: Independently verify contracts, deterministic replay, privacy, freshness, reverse blast radius, mesh reconciliation, writer separation, and false-authority resistance.
+    required_input: [raw_change_artifacts, validation_evidence, task_local_mesh_revisions, authority_map]
+    required_output: [independent_findings, missing_consumers, privacy_findings, replay_result, decomposition_grade, disagreement, release_gate]
+    stop_conditions: [checker_is_writer, evidence_only_from_self_grade, raw_private_data_required, unresolved_material_disagreement]

@@ -69,6 +69,35 @@ def test_registered_skill_paths_and_lifecycle_templates_exist():
             assert (ROOT / template).exists(), template
 
 
+def test_personal_hierarchical_agent_mesh_is_a_candidate_global_source_adaptation():
+    registry = load_json("registry/agent-skill-library.json")
+    skill = next(
+        row
+        for row in registry["skills"]
+        if row["skill_id"] == "skill:personal-hierarchical-agent-mesh"
+    )
+
+    assert skill["skill_format"] == "generic_agent_skill"
+    assert skill["status"] == "candidate"
+    assert skill["review_status"] == "candidate"
+    assert "personal-skill-source:personal-hierarchical-agent-mesh" in skill[
+        "source_evidence"
+    ]
+    assert "personal-skill-source:subagent-peer-review-routing" in skill[
+        "dependencies"
+    ]
+    assert set(skill["capabilities"]) >= {
+        "plan_mode_mesh_routing",
+        "execution_plan_reconciliation",
+        "token_efficient_delegation",
+    }
+    text = (ROOT / skill["entrypoint"]).read_text(encoding="utf-8")
+    assert "planning mode" in text
+    assert "activation does not require" in text
+    assert "delegation." in text
+    assert "Ultra always requires explicit human approval" in text
+
+
 def test_render_agent_skill_checkout_pointer_and_wrapper_handle_spaced_hub_path():
     skill_id = "skill:dad-coding-asset-control-plane"
     pointer = subprocess.run(

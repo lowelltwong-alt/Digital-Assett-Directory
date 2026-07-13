@@ -1,0 +1,17 @@
+{
+  "mcpServers": {
+    "dad-local-graph-surfaces": {
+      "type": "stdio",
+      "command": "${DAD_PYTHON}",
+      "args": [
+        "-m",
+        "digital_asset_directory.cli",
+        "mcp",
+        "graph-stdio",
+        "--hub",
+        "${DAD_HUB}"
+      ],
+      "env": {}
+    }
+  }
+}

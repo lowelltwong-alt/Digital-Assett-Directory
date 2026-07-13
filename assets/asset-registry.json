@@ -529,6 +529,45 @@
       ]
     },
     {
+      "asset_id": "dad-local-mcp-host-adapters",
+      "name": "DAD Local Read-Only MCP Host Adapters",
+      "version": "0.1.0",
+      "path": "assets/mcp/dad-local-readonly",
+      "asset_type": "runtime_adapter_asset",
+      "managed_block_id": "DAD_LOCAL_READONLY_MCP_HOST_ADAPTERS",
+      "profiles": [
+        "mcp",
+        "codex",
+        "claude",
+        "cursor",
+        "github-copilot",
+        "local-first"
+      ],
+      "use_when": [
+        "A supported AI host needs the existing local read-only DAD graph MCP server.",
+        "Another repository needs a reviewed pointer to the canonical DAD MCP invocation without a vendor-specific fork.",
+        "An operator needs to verify cross-host command, tool, transport, and authority parity before installation."
+      ],
+      "does_not_apply_when": [
+        "The requested integration needs remote transport, source mutation, Git execution, or vendor API credentials.",
+        "The host or target repository has not approved MCP installation and trust.",
+        "The configured Python executable or DAD hub has not passed an initialize handshake."
+      ],
+      "install_path": "assets/mcp/dad-local-readonly",
+      "source_package": {
+        "filename": "repo-local",
+        "sha256": ""
+      },
+      "installed_at": "2026-07-13",
+      "review_status": "installed_for_local_reuse",
+      "safety_notes": [
+        "All templates resolve to one local stdio server and deny remote and execution authority.",
+        "Machine-specific paths are rendered only at installation time and are absent from the reusable asset.",
+        "Host installation, trust, restart, and downstream adoption remain separate human gates.",
+        "The asset was authored locally from first-party host configuration contracts and contains no third-party implementation code or credentials."
+      ]
+    },
+    {
       "asset_id": "dad-nine-layer-address-model",
       "name": "DAD 9-Layer Learning Address Model",
       "version": "0.1.0",

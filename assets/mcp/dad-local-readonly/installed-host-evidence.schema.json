@@ -1,0 +1,50 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://dad.local/schemas/mcp-installed-host-evidence-v1.json",
+  "title": "Privacy-safe installed MCP host evidence",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "captured_at", "observation_max_age_days", "future_skew_seconds", "logical_server_name", "observation_policy", "hosts"],
+  "properties": {
+    "schema_version": {"const": "dad.mcp.installed_host_evidence.v1"},
+    "captured_at": {"type": "string", "format": "date-time"},
+    "observation_max_age_days": {"type": "integer", "minimum": 1, "maximum": 30},
+    "future_skew_seconds": {"const": 0},
+    "logical_server_name": {"const": "dad-local-graph-surfaces"},
+    "observation_policy": {
+      "const": {
+        "named_server_only": true,
+        "unrelated_config_read": false,
+        "config_payload_retained": false,
+        "absolute_paths_retained": false,
+        "credentials_retained": false,
+        "activation_inferred": false
+      }
+    },
+    "hosts": {
+      "type": "array",
+      "minItems": 7,
+      "maxItems": 7,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "adapter_id",
+          "configuration_state",
+          "entrypoint_check",
+          "activation_state",
+          "command_fingerprint",
+          "evidence_kind"
+        ],
+        "properties": {
+          "adapter_id": {"type": "string", "pattern": "^[a-z][a-z0-9_]+$"},
+          "configuration_state": {"enum": ["not_configured", "configured_named_server", "unavailable_host"]},
+          "entrypoint_check": {"enum": ["not_run", "initialize_passed", "host_reported_connected"]},
+          "activation_state": {"enum": ["not_active", "unconfirmed", "host_reported_connected", "host_unavailable"]},
+          "command_fingerprint": {"type": ["string", "null"], "pattern": "^sha256:[a-f0-9]{64}$"},
+          "evidence_kind": {"const": "named_server_metadata_only"}
+        }
+      }
+    }
+  }
+}

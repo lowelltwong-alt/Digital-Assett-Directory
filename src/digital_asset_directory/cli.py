@@ -278,11 +278,19 @@ from .portfolio_reconciliation import (
     build_portfolio_reconciliation,
     write_portfolio_reconciliation_outputs,
 )
+from .portfolio_recovery import (
+    build_recovery_packet,
+    load_recovery_projection,
+    record_recovery_result,
+    record_shaping_decision,
+    retract_shaping_decision,
+)
 from .portfolio_review import (
     build_portfolio_review,
     write_portfolio_review_outputs,
 )
 from .portfolio_shaping import (
+    ShapingSettings,
     build_portfolio_shaping,
     write_portfolio_shaping_outputs,
 )
@@ -1291,6 +1299,148 @@ def portfolio_os_attempt_simulate(
         raise typer.Exit(2) from exc
 
 
+@os_app.command("decide")
+def portfolio_os_decide(
+    case_id: str = typer.Argument(...),
+    revision_id: str = typer.Option(..., "--revision-id"),
+    choice_id: str = typer.Option(..., "--choice-id"),
+    source_snapshot_digest: str = typer.Option(..., "--source-snapshot-digest"),
+    preconditions_digest: str = typer.Option(..., "--preconditions-digest"),
+    approver: str = typer.Option(..., "--approver"),
+    approval_ref: str = typer.Option(..., "--approval-ref"),
+    disposition: Optional[str] = typer.Option(None, "--disposition"),
+    review_after: str = typer.Option("", "--review-after"),
+    supersedes_decision_id: str = typer.Option("", "--supersedes-decision-id"),
+    request_id: str = typer.Option(..., "--request-id"),
+    config: Optional[Path] = typer.Option(None),
+    hub: Optional[Path] = typer.Option(None),
+) -> None:
+    """Record one exact human shaping decision; never execute its choice."""
+
+    cfg = _cfg(config, hub)
+    try:
+        _state, _cockpit, _reconciliation, shaping, _decisions = (
+            _rebuild_current_recovery_shaping(cfg)
+        )
+        result = record_shaping_decision(
+            cfg.repo_root,
+            shaping,
+            case_id=case_id,
+            case_revision_id=revision_id,
+            choice_id=choice_id,
+            approver=approver,
+            approval_ref=approval_ref,
+            command_id=request_id,
+            disposition=disposition,
+            review_after=review_after or None,
+            supersedes_decision_id=supersedes_decision_id,
+            expected_source_snapshot_digest=source_snapshot_digest,
+            expected_preconditions_digest=preconditions_digest,
+        )
+    except (OSError, ValueError, RuntimeError) as exc:
+        console.print(str(exc))
+        raise typer.Exit(2) from exc
+    console.print_json(data=result)
+
+
+@os_app.command("decision-retract")
+def portfolio_os_decision_retract(
+    decision_id: str = typer.Argument(...),
+    retracted_by: str = typer.Option(..., "--retracted-by"),
+    approval_ref: str = typer.Option(..., "--approval-ref"),
+    reason_code: str = typer.Option(..., "--reason-code"),
+    request_id: str = typer.Option(..., "--request-id"),
+    config: Optional[Path] = typer.Option(None),
+    hub: Optional[Path] = typer.Option(None),
+) -> None:
+    """Record an inverse recovery-decision event without rewriting history."""
+
+    cfg = _cfg(config, hub)
+    try:
+        result = retract_shaping_decision(
+            cfg.repo_root,
+            decision_id,
+            retracted_by=retracted_by,
+            approval_ref=approval_ref,
+            reason_code=reason_code,
+            command_id=request_id,
+        )
+    except (OSError, ValueError, RuntimeError) as exc:
+        console.print(str(exc))
+        raise typer.Exit(2) from exc
+    console.print_json(data=result)
+
+
+@os_app.command("recovery-packet")
+def portfolio_os_recovery_packet(
+    decision_id: str = typer.Argument(...),
+    expires_hours: int = typer.Option(24, "--expires-hours", min=1, max=168),
+    config: Optional[Path] = typer.Option(None),
+    hub: Optional[Path] = typer.Option(None),
+) -> None:
+    """Emit one transient, path-free receipt with execution explicitly denied."""
+
+    cfg = _cfg(config, hub)
+    try:
+        _state, _cockpit, _reconciliation, shaping, _decisions = (
+            _rebuild_current_recovery_shaping(cfg)
+        )
+        now = datetime.now(timezone.utc)
+        packet = build_recovery_packet(
+            cfg.repo_root,
+            shaping,
+            decision_id,
+            now=now,
+            expires_at=now + timedelta(hours=expires_hours),
+        )
+    except (OSError, ValueError, RuntimeError) as exc:
+        console.print(str(exc))
+        raise typer.Exit(2) from exc
+    console.print_json(data=packet)
+
+
+@os_app.command("recovery-result")
+def portfolio_os_recovery_result(
+    packet_id: str = typer.Argument(...),
+    packet_file: Path = typer.Option(..., "--packet-file", exists=True, dir_okay=False),
+    result_status: str = typer.Option(..., "--status"),
+    before_snapshot_digest: str = typer.Option(..., "--before-snapshot-digest"),
+    after_snapshot_digest: str = typer.Option(..., "--after-snapshot-digest"),
+    worker_id: str = typer.Option(..., "--worker-id"),
+    checker_id: str = typer.Option(..., "--checker-id"),
+    evidence_ref: list[str] = typer.Option(..., "--evidence-ref"),
+    request_id: str = typer.Option(..., "--request-id"),
+    config: Optional[Path] = typer.Option(None),
+    hub: Optional[Path] = typer.Option(None),
+) -> None:
+    """Record a privacy-safe checked result for one exact transient packet."""
+
+    cfg = _cfg(config, hub)
+    try:
+        packet = json.loads(packet_file.read_text(encoding="utf-8"))
+        if not isinstance(packet, dict) or str(packet.get("packet_id", "")) != packet_id:
+            raise ValueError("packet file does not match the requested packet ID")
+        _state, _cockpit, _reconciliation, shaping, _decisions = (
+            _rebuild_current_recovery_shaping(cfg)
+        )
+        result = record_recovery_result(
+            cfg.repo_root,
+            shaping,
+            packet,
+            result_status=result_status,
+            before_snapshot_digest=before_snapshot_digest,
+            after_snapshot_digest=after_snapshot_digest,
+            worker_id=worker_id,
+            checker_id=checker_id,
+            evidence_refs=evidence_ref,
+            command_id=request_id,
+        )
+    except (OSError, ValueError, RuntimeError, json.JSONDecodeError) as exc:
+        console.print(str(exc))
+        raise typer.Exit(2) from exc
+    console.print_json(data=result)
+
+
 @os_app.command("workstreams")
 def portfolio_os_workstreams(
     full: bool = typer.Option(
@@ -1353,10 +1503,25 @@ def portfolio_os_refresh(
     try:
         cockpit = build_portfolio_cockpit(report, state, schema_root=cfg.repo_root)
         reconciliation = build_portfolio_reconciliation(cockpit, schema_root=cfg.repo_root)
-        shaping = build_portfolio_shaping(state, cockpit, reconciliation, schema_root=cfg.repo_root)
+        base_shaping = build_portfolio_shaping(
+            state, cockpit, reconciliation, schema_root=cfg.repo_root
+        )
+        decisions = load_recovery_projection(cfg.repo_root, base_shaping)
+        shaping = build_portfolio_shaping(
+            state,
+            cockpit,
+            reconciliation,
+            decisions=decisions,
+            schema_root=cfg.repo_root,
+        )
         cockpit_outputs, reconciliation_outputs, shaping_outputs = (
             _publish_portfolio_projection_set(
-                cfg.repo_root, state, cockpit, reconciliation, shaping
+                cfg.repo_root,
+                state,
+                cockpit,
+                reconciliation,
+                shaping,
+                decisions=decisions,
             )
         )
     except Exception as exc:
@@ -10101,6 +10266,8 @@ def _publish_portfolio_projection_set(
     cockpit: dict[str, Any],
     reconciliation: dict[str, Any],
     shaping: dict[str, Any],
+    *,
+    decisions: dict[str, Any] | None = None,
 ) -> tuple[dict[str, Any], dict[str, Any], dict[str, Any]]:
     """Publish dependent cursors with bounded rollback on synchronous failure."""
 
@@ -10123,6 +10290,7 @@ def _publish_portfolio_projection_set(
             workstream_state=workstream_state,
             cockpit=cockpit,
             reconciliation=reconciliation,
+            decisions=decisions,
         )
         reconciliation_outputs = write_portfolio_reconciliation_outputs(repo_root, reconciliation)
         cockpit_outputs = write_portfolio_cockpit_outputs(repo_root, cockpit)
@@ -10277,6 +10445,78 @@ def _current_portfolio_review_sources(cfg) -> tuple[Any, Any, Any]:
     )
 
 
+def _rebuild_current_recovery_shaping(
+    cfg,
+    *,
+    now: datetime | None = None,
+) -> tuple[dict[str, Any], dict[str, Any], dict[str, Any], dict[str, Any], dict[str, Any]]:
+    """Rebuild exact current shaping evidence without scanning or writing Git sources."""
+
+    base = data_path(cfg.repo_root, "central_reports") / "portfolio_os"
+    prior_shaping = _read_review_json(base / "shaping.json")
+    if not isinstance(prior_shaping, dict) or not str(
+        prior_shaping.get("schema_version", "")
+    ).startswith("dad.portfolio_workstream_shaping.v"):
+        raise ValueError("Current shaping evidence is unavailable; run asset-dir os refresh first.")
+    generated_text = str(prior_shaping.get("generated_at", ""))
+    try:
+        generated_at = datetime.fromisoformat(generated_text.replace("Z", "+00:00"))
+    except ValueError as exc:
+        raise ValueError("Current shaping evidence has an invalid generated_at value.") from exc
+    if generated_at.tzinfo is None or generated_at.utcoffset() is None:
+        raise ValueError("Current shaping evidence generated_at must include a timezone.")
+    source_snapshot_at = generated_at.astimezone(timezone.utc)
+    observed_at = now or datetime.now(timezone.utc)
+    if observed_at.tzinfo is None or observed_at.utcoffset() is None:
+        raise ValueError("Recovery observation time must include a timezone.")
+    observed_at = observed_at.astimezone(timezone.utc)
+    methodology = prior_shaping.get("methodology", {})
+    if not isinstance(methodology, dict):
+        raise ValueError("Current shaping methodology is unavailable.")
+    settings = ShapingSettings(
+        case_limit=int(methodology.get("case_limit", 250)),
+        review_limit=int(methodology.get("review_limit", 3)),
+        fresh_after_hours=int(methodology.get("fresh_after_hours", 26)),
+        future_tolerance_hours=int(methodology.get("future_tolerance_hours", 1)),
+    )
+    report = _v1_attention_report(cfg.repo_root)
+    state = load_workstream_state(
+        cfg.repo_root,
+        now=source_snapshot_at,
+        portfolio_snapshot=report,
+    )
+    cockpit = build_portfolio_cockpit(
+        report,
+        state,
+        now=source_snapshot_at,
+        schema_root=cfg.repo_root,
+    )
+    reconciliation = build_portfolio_reconciliation(
+        cockpit,
+        now=source_snapshot_at,
+        schema_root=cfg.repo_root,
+    )
+    base_shaping = build_portfolio_shaping(
+        state,
+        cockpit,
+        reconciliation,
+        now=observed_at,
+        settings=settings,
+        schema_root=cfg.repo_root,
+    )
+    decisions = load_recovery_projection(cfg.repo_root, base_shaping, now=observed_at)
+    shaping = build_portfolio_shaping(
+        state,
+        cockpit,
+        reconciliation,
+        decisions=decisions,
+        now=observed_at,
+        settings=settings,
+        schema_root=cfg.repo_root,
+    )
+    return state, cockpit, reconciliation, shaping, decisions
+
+
 @os_app.command("review")
 def portfolio_os_review(
     full: bool = typer.Option(False, "--full", help="Print the full strict review packet."),
@@ -10410,9 +10650,24 @@ def portfolio_os_reconcile(
             publish_sources=False,
         )
         projection = build_portfolio_reconciliation(cockpit, schema_root=cfg.repo_root)
-        shaping = build_portfolio_shaping(state, cockpit, projection, schema_root=cfg.repo_root)
+        base_shaping = build_portfolio_shaping(
+            state, cockpit, projection, schema_root=cfg.repo_root
+        )
+        decisions = load_recovery_projection(cfg.repo_root, base_shaping)
+        shaping = build_portfolio_shaping(
+            state,
+            cockpit,
+            projection,
+            decisions=decisions,
+            schema_root=cfg.repo_root,
+        )
         cockpit_outputs, outputs, shaping_outputs = _publish_portfolio_projection_set(
-            cfg.repo_root, state, cockpit, projection, shaping
+            cfg.repo_root,
+            state,
+            cockpit,
+            projection,
+            shaping,
+            decisions=decisions,
         )
     except Exception as exc:
         console.print(f"Cannot publish portfolio reconciliation: {exc}")
@@ -10464,11 +10719,24 @@ def portfolio_os_shape(
             publish_sources=False,
         )
         reconciliation = build_portfolio_reconciliation(cockpit, schema_root=cfg.repo_root)
-        projection = build_portfolio_shaping(
+        base_shaping = build_portfolio_shaping(
             state, cockpit, reconciliation, schema_root=cfg.repo_root
         )
+        decisions = load_recovery_projection(cfg.repo_root, base_shaping)
+        projection = build_portfolio_shaping(
+            state,
+            cockpit,
+            reconciliation,
+            decisions=decisions,
+            schema_root=cfg.repo_root,
+        )
         cockpit_outputs, reconciliation_outputs, outputs = _publish_portfolio_projection_set(
-            cfg.repo_root, state, cockpit, reconciliation, projection
+            cfg.repo_root,
+            state,
+            cockpit,
+            reconciliation,
+            projection,
+            decisions=decisions,
         )
     except Exception as exc:
         console.print(f"Cannot publish portfolio shaping: {exc}")

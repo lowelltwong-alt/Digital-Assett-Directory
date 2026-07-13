@@ -326,6 +326,50 @@
       ]
     },
     {
+      "asset_id": "asset:dad-local-mcp-host-adapters",
+      "name": "DAD Local Read-Only MCP Host Adapters",
+      "version": "0.1.0",
+      "asset_type": "repo_template",
+      "path": "assets/mcp/dad-local-readonly",
+      "profiles": ["mcp", "codex", "claude", "cursor", "github-copilot", "local-first"],
+      "languages": ["python", "agent-instruction", "mixed"],
+      "applies_when": [
+        "A supported AI host needs the existing local read-only DAD graph MCP server.",
+        "A repository needs one runtime-neutral MCP pointer instead of vendor-specific server forks.",
+        "An operator needs deterministic validation of host adapter command and authority parity."
+      ],
+      "does_not_apply_when": [
+        "The integration requires remote transport, credentials, source mutation, or Git execution.",
+        "MCP installation or host trust has not been explicitly approved.",
+        "The rendered Python executable and initialized DAD hub have not passed a local handshake."
+      ],
+      "danger_if_misapplied": "Hardcoded machine paths, duplicate host registrations, or added mutation tools could create configuration drift or falsely imply DAD execution authority.",
+      "recommended_for_repo_types": ["persistent_software_repo", "governed_repo_family", "local_ai_workspace"],
+      "recommended_for_task_types": ["mcp_installation", "agent_environment_setup", "cross_runtime_integration", "repo_template_creation"],
+      "authority_boundary": "The bundle configures one local read-only adapter. Hosts and target repositories retain installation, trust, tool-selection, and adoption authority.",
+      "validation_commands": [
+        "python assets/mcp/dad-local-readonly/validate.py",
+        "python -m pytest tests/test_dad_mcp_host_adapters.py tests/test_mcp_server.py tests/test_graph_mcp.py"
+      ],
+      "upgrade_policy": "first_party_host_contract_review_plus_parity_tests",
+      "review_status": "installed_for_local_reuse",
+      "last_reviewed_at": "2026-07-13",
+      "next_review_due_at": "2026-10-13",
+      "source_evidence": [
+        "assets/mcp/dad-local-readonly/contract.json",
+        "docs/MCP_FIRST_INTEGRATION_POLICY.md",
+        "https://learn.chatgpt.com/docs/extend/mcp.md",
+        "https://docs.anthropic.com/en/docs/claude-code/mcp",
+        "https://docs.cursor.com/context/model-context-protocol",
+        "https://code.visualstudio.com/docs/agents/reference/mcp-configuration",
+        "https://docs.github.com/en/copilot/how-tos/copilot-cli/customize-copilot/add-mcp-servers"
+      ],
+      "related_assets": [
+        "dad-local-mcp-host-adapters",
+        "asset:agent-skill-library"
+      ]
+    },
+    {
       "asset_id": "asset:language-coding-playbooks",
       "name": "Language Coding Playbooks",
       "version": "0.1.0",

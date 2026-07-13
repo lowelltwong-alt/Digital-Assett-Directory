@@ -1,0 +1,4 @@
+interface:
+  display_name: "DAD Manifest Graph Engineering"
+  short_description: "Engineer governed manifests and typed graphs"
+  default_prompt: "Use $dad-manifest-graph-engineering to design or repair this governed manifest and graph pipeline."

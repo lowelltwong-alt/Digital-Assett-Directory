@@ -1,0 +1,362 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://dad.local/schemas/mcp-dependency-map-v1.json",
+  "title": "DAD MCP dependency and blast-radius map",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "map_revision",
+    "logical_server_name",
+    "authority_policy",
+    "required_categories",
+    "nodes",
+    "edges",
+    "data_flows",
+    "coverage",
+    "interfaces",
+    "refresh_policy"
+  ],
+  "properties": {
+    "schema_version": {"const": "dad.mcp.dependency_map.v1"},
+    "map_revision": {"type": "string", "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}\\.[0-9]+$"},
+    "logical_server_name": {"const": "dad-local-graph-surfaces"},
+    "authority_policy": {
+      "const": {
+        "local_only": true,
+        "read_only": true,
+        "remote_enabled": false,
+        "execution_authority": false,
+        "self_authorizing_refresh": false,
+        "host_configuration_write": false
+      }
+    },
+    "required_categories": {
+      "type": "array",
+      "uniqueItems": true,
+      "minItems": 14,
+      "items": {"$ref": "#/$defs/category"}
+    },
+    "nodes": {
+      "type": "array",
+      "minItems": 14,
+      "items": {"$ref": "#/$defs/node"}
+    },
+    "edges": {
+      "type": "array",
+      "minItems": 13,
+      "items": {"$ref": "#/$defs/edge"}
+    },
+    "data_flows": {
+      "type": "array",
+      "minItems": 3,
+      "items": {"$ref": "#/$defs/flow"}
+    },
+    "coverage": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "python_local_imports",
+        "cli_entrypoint",
+        "mcp_cli_routes",
+        "repository_validation_gate",
+        "consumer_node_ids"
+      ],
+      "properties": {
+        "python_local_imports": {
+          "type": "array",
+          "minItems": 3,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["path", "modules"],
+            "properties": {
+              "path": {"$ref": "#/$defs/relativePath"},
+              "modules": {
+                "type": "array",
+                "uniqueItems": true,
+                "items": {"type": "string", "pattern": "^[a-z][a-z0-9_.]*$"}
+              }
+            }
+          }
+        },
+        "cli_entrypoint": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["path", "function", "command", "module", "call"],
+          "properties": {
+            "path": {"const": "src/digital_asset_directory/cli.py"},
+            "function": {"const": "mcp_graph_stdio"},
+            "command": {"const": "graph-stdio"},
+            "module": {"const": "digital_asset_directory.mcp_graph_server"},
+            "call": {"const": "run_stdio_server"}
+          }
+        },
+        "mcp_cli_routes": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["command", "function", "module", "call", "authority"],
+            "properties": {
+              "command": {"type": "string", "pattern": "^[a-z][a-z0-9-]*$"},
+              "function": {"type": "string", "pattern": "^[A-Za-z_][A-Za-z0-9_]*$"},
+              "module": {"type": "string", "pattern": "^digital_asset_directory\\.[a-z0-9_]+$"},
+              "call": {"type": "string", "pattern": "^[A-Za-z_][A-Za-z0-9_]*$"},
+              "authority": {"const": "local_read_only_stdio"}
+            }
+          }
+        },
+        "repository_validation_gate": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["path", "function", "status_field"],
+          "properties": {
+            "path": {"const": "src/digital_asset_directory/validation.py"},
+            "function": {"const": "validate_repo"},
+            "status_field": {"const": "current_claims_allowed"}
+          }
+        },
+        "consumer_node_ids": {
+          "type": "array",
+          "minItems": 7,
+          "uniqueItems": true,
+          "items": {"$ref": "#/$defs/id"}
+        }
+      }
+    },
+    "interfaces": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["tools", "resource_coverage"],
+      "properties": {
+        "tools": {
+          "type": "array",
+          "minItems": 7,
+          "uniqueItems": true,
+          "items": {"type": "string", "pattern": "^dad_[a-z0-9_]+$"}
+        },
+        "resource_coverage": {
+          "type": "array",
+          "minItems": 10,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["match", "value", "node_id", "allow_empty"],
+            "properties": {
+              "match": {"enum": ["exact", "prefix"]},
+              "value": {"type": "string", "pattern": "^dad://[a-z0-9-]+/(?:[^\\s]+)?$"},
+              "node_id": {"$ref": "#/$defs/id"},
+              "allow_empty": {"type": "boolean"}
+            }
+          }
+        }
+      }
+    },
+    "refresh_policy": {
+      "const": {
+        "mode": "review_only_candidate",
+        "auto_write": false,
+        "auto_authorize": false,
+        "stale_impact_behavior": "refuse_current_claim"
+      }
+    }
+  },
+  "$defs": {
+    "id": {"type": "string", "pattern": "^mcp\\.[a-z][a-z0-9_.-]*$"},
+    "relativePath": {
+      "type": "string",
+      "minLength": 1,
+      "pattern": "^(?!/)(?!.*\\\\)(?!.*(?:^|/)\\.\\.(?:/|$))[A-Za-z0-9_.@/-]+$"
+    },
+    "category": {
+      "enum": [
+        "identity",
+        "protocol",
+        "entrypoint",
+        "implementation",
+        "backend",
+        "runtime_data",
+        "schema",
+        "registry",
+        "governance",
+        "host_adapter",
+        "packaging",
+        "navigation",
+        "validation",
+        "security_authority"
+      ]
+    },
+    "fingerprint": {
+      "oneOf": [
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["kind", "path", "sha256"],
+          "properties": {
+            "kind": {"enum": ["exact_sha256", "tree_sha256"]},
+            "path": {"$ref": "#/$defs/relativePath"},
+            "sha256": {"type": "string", "pattern": "^sha256:[a-f0-9]{64}$"}
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["kind", "path", "symbols", "sha256"],
+          "properties": {
+            "kind": {"const": "python_symbols_sha256"},
+            "path": {"$ref": "#/$defs/relativePath"},
+            "symbols": {
+              "type": "array",
+              "minItems": 1,
+              "uniqueItems": true,
+              "items": {"type": "string", "pattern": "^[A-Za-z_][A-Za-z0-9_]*$"}
+            },
+            "sha256": {"type": "string", "pattern": "^sha256:[a-f0-9]{64}$"}
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["kind", "path", "pointer", "sha256"],
+          "properties": {
+            "kind": {"enum": ["json_pointer_sha256", "toml_pointer_sha256"]},
+            "path": {"$ref": "#/$defs/relativePath"},
+            "pointer": {"type": "string", "pattern": "^/"},
+            "sha256": {"type": "string", "pattern": "^sha256:[a-f0-9]{64}$"}
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["kind", "path", "symbol", "sha256"],
+          "properties": {
+            "kind": {"const": "python_symbol_sha256"},
+            "path": {"$ref": "#/$defs/relativePath"},
+            "symbol": {"type": "string", "pattern": "^[A-Za-z_][A-Za-z0-9_]*$"},
+            "sha256": {"type": "string", "pattern": "^sha256:[a-f0-9]{64}$"}
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["kind", "path", "contains", "sha256"],
+          "properties": {
+            "kind": {"const": "text_line_sha256"},
+            "path": {"$ref": "#/$defs/relativePath"},
+            "contains": {"type": "string", "minLength": 3},
+            "sha256": {"type": "string", "pattern": "^sha256:[a-f0-9]{64}$"}
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["kind", "path", "contains", "sha256"],
+          "properties": {
+            "kind": {"const": "text_lines_sha256"},
+            "path": {"$ref": "#/$defs/relativePath"},
+            "contains": {
+              "type": "array",
+              "minItems": 2,
+              "uniqueItems": true,
+              "items": {"type": "string", "minLength": 3}
+            },
+            "sha256": {"type": "string", "pattern": "^sha256:[a-f0-9]{64}$"}
+          }
+        }
+      ]
+    },
+    "node": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["node_id", "category", "label", "artifact_kind", "change_contract"],
+      "properties": {
+        "node_id": {"$ref": "#/$defs/id"},
+        "category": {"$ref": "#/$defs/category"},
+        "label": {"type": "string", "minLength": 1},
+        "artifact_kind": {"enum": ["file", "directory", "virtual", "runtime_data"]},
+        "change_contract": {"type": "string", "minLength": 1},
+        "fingerprint": {"$ref": "#/$defs/fingerprint"}
+      }
+    },
+    "edge": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["edge_id", "source", "target", "edge_type", "change_effect"],
+      "properties": {
+        "edge_id": {"$ref": "#/$defs/id"},
+        "source": {"$ref": "#/$defs/id"},
+        "target": {"$ref": "#/$defs/id"},
+        "edge_type": {
+          "enum": [
+            "defines",
+            "constrains",
+            "validates",
+            "loads",
+            "reads",
+            "invokes",
+            "exposes",
+            "routes_to",
+            "packages",
+            "documents",
+            "produces"
+          ]
+        },
+        "change_effect": {
+          "enum": [
+            "identity_review",
+            "protocol_parity_review",
+            "entrypoint_parity_review",
+            "implementation_revalidation",
+            "backend_contract_review",
+            "runtime_data_flow_review",
+            "schema_revalidation",
+            "registry_semantic_review",
+            "authority_review",
+            "adapter_parity_review",
+            "packaging_revalidation",
+            "navigation_refresh",
+            "validator_revalidation",
+            "privacy_security_review",
+            "host_activation_recheck"
+          ]
+        }
+      }
+    },
+    "flow": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["flow_id", "label", "steps", "authority"],
+      "properties": {
+        "flow_id": {"$ref": "#/$defs/id"},
+        "label": {"type": "string", "minLength": 1},
+        "steps": {
+          "type": "array",
+          "minItems": 3,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["phase", "node_id", "data_class"],
+            "properties": {
+              "phase": {"enum": ["source", "transform", "sink"]},
+              "node_id": {"$ref": "#/$defs/id"},
+              "data_class": {
+                "enum": [
+                  "repository_metadata",
+                  "generated_candidate_graph",
+                  "categorical_status",
+                  "review_only_fingerprint",
+                  "bounded_query",
+                  "host_configuration_metadata"
+                ]
+              }
+            }
+          }
+        },
+        "authority": {"const": "read_only_candidate_evidence"}
+      }
+    }
+  }
+}

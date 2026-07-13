@@ -1,0 +1,265 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://dad.local/schemas/mcp-host-adapter-bundle-v1.json",
+  "title": "DAD local read-only MCP host adapter bundle",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "logical_server_name",
+    "server_contract",
+    "authority",
+    "binding_policy",
+    "installation",
+    "first_party_sources",
+    "adapters"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": "dad.mcp.host_adapter_bundle.v1"
+    },
+    "logical_server_name": {
+      "const": "dad-local-graph-surfaces"
+    },
+    "server_contract": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "implementation",
+        "command_variable",
+        "args_template",
+        "hub_variable",
+        "allowed_tools"
+      ],
+      "properties": {
+        "implementation": {
+          "const": "digital_asset_directory.mcp_server:DADGraphMCPServer"
+        },
+        "command_variable": {
+          "const": "DAD_PYTHON"
+        },
+        "args_template": {
+          "const": [
+            "-m",
+            "digital_asset_directory.cli",
+            "mcp",
+            "graph-stdio",
+            "--hub",
+            "{{DAD_HUB}}"
+          ]
+        },
+        "hub_variable": {
+          "const": "DAD_HUB"
+        },
+        "allowed_tools": {
+          "const": [
+            "dad_graph_surface_status",
+            "dad_graph_get_node",
+            "dad_graph_neighbors",
+            "dad_graph_search_nodes",
+            "dad_mcp_dependency_status",
+            "dad_mcp_dependency_impact",
+            "dad_mcp_dependency_refresh_candidate"
+          ]
+        }
+      }
+    },
+    "authority": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "transport",
+        "local_only",
+        "read_only",
+        "remote_enabled",
+        "vendor_sdk_required",
+        "execution_authority",
+        "installation_policy"
+      ],
+      "properties": {
+        "transport": {
+          "const": "stdio"
+        },
+        "local_only": {
+          "const": true
+        },
+        "read_only": {
+          "const": true
+        },
+        "remote_enabled": {
+          "const": false
+        },
+        "vendor_sdk_required": {
+          "const": false
+        },
+        "execution_authority": {
+          "const": false
+        },
+        "installation_policy": {
+          "const": "explicit_human_approval"
+        }
+      }
+    },
+    "binding_policy": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "DAD_PYTHON",
+        "DAD_HUB"
+      ],
+      "properties": {
+        "DAD_PYTHON": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "kind",
+            "windows_basename",
+            "absolute_at_install",
+            "shell_wrapper_allowed"
+          ],
+          "properties": {
+            "kind": {
+              "const": "direct_python_executable"
+            },
+            "windows_basename": {
+              "const": "python.exe"
+            },
+            "absolute_at_install": {
+              "const": true
+            },
+            "shell_wrapper_allowed": {
+              "const": false
+            }
+          }
+        },
+        "DAD_HUB": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "kind",
+            "absolute_at_install"
+          ],
+          "properties": {
+            "kind": {
+              "const": "initialized_local_directory"
+            },
+            "absolute_at_install": {
+              "const": true
+            }
+          }
+        }
+      }
+    },
+    "installation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "authorized_by_bundle",
+        "merge_strategy",
+        "overwrite_existing_config",
+        "activation_requires_host_trust"
+      ],
+      "properties": {
+        "authorized_by_bundle": {
+          "const": false
+        },
+        "merge_strategy": {
+          "const": "merge_named_server_only"
+        },
+        "overwrite_existing_config": {
+          "const": false
+        },
+        "activation_requires_host_trust": {
+          "const": true
+        }
+      }
+    },
+    "adapters": {
+      "type": "array",
+      "minItems": 7,
+      "uniqueItems": true,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "adapter_id",
+          "host",
+          "scope",
+          "template",
+          "format",
+          "root_key",
+          "placeholder_mode",
+          "target_hint"
+        ],
+        "properties": {
+          "adapter_id": {
+            "type": "string",
+            "pattern": "^[a-z][a-z0-9_]+$"
+          },
+          "host": {
+            "type": "string",
+            "minLength": 1
+          },
+          "scope": {
+            "type": "string",
+            "minLength": 1
+          },
+          "template": {
+            "type": "string",
+            "pattern": "^templates/[a-z0-9.-]+$"
+          },
+          "format": {
+            "enum": [
+              "json",
+              "toml"
+            ]
+          },
+          "root_key": {
+            "enum": [
+              "mcp_servers",
+              "mcpServers",
+              "servers"
+            ]
+          },
+          "placeholder_mode": {
+            "enum": [
+              "render",
+              "claude_env",
+              "cursor_env",
+              "vscode_env"
+            ]
+          },
+          "target_hint": {
+            "type": "string",
+            "minLength": 1
+          }
+        }
+      }
+    },
+    "first_party_sources": {
+      "type": "array",
+      "minItems": 6,
+      "uniqueItems": true,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["host", "url", "checked_at", "max_age_days"],
+        "properties": {
+          "host": {
+            "enum": [
+              "codex",
+              "claude_code",
+              "claude_desktop",
+              "cursor",
+              "vscode_github_copilot",
+              "github_copilot_cli"
+            ]
+          },
+          "url": {"type": "string", "format": "uri", "pattern": "^https://"},
+          "checked_at": {"type": "string", "format": "date"},
+          "max_age_days": {"type": "integer", "minimum": 1, "maximum": 180}
+        }
+      }
+    }
+  }
+}
