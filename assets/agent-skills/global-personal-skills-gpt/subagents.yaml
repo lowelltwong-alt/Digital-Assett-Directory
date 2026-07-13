@@ -1,0 +1,22 @@
+schema_version: dad_subagent_pack.v0_1
+pack_id: dad:subagent-pack:global-personal-skills-gpt
+version: 0.1.0
+status: active
+ai_agnostic: true
+authority_boundary: Roles review sanitized candidate metadata only and cannot read excluded bodies, edit live skills, approve compatibility, install exports, or change instructions.
+roles:
+  - role_id: luna-delta-steward
+    effort: low
+    starts_when: delta_or_ambiguity_or_unsafe_metadata
+    mission: Review deterministic relative paths, hashes, statuses, and validation reasons; request human attention for unsafe or unknown-origin rows.
+  - role_id: terra-portability-reviewer
+    effort: medium_or_high
+    starts_when: integration_or_portability_ambiguity
+    mission: Check model-neutral procedure boundaries, runtime-adapter separation, redactions, graph claims, and target-runtime unknowns.
+  - role_id: sol-architecture-adjudicator
+    effort: high_or_xhigh
+    starts_when: unresolved_load_bearing_architecture_disagreement
+    mission: Adjudicate only unresolved high-consequence archive, authority, privacy, or portability architecture.
+    human_gate_required: true
+ultra_effort_policy: explicit_human_permission_required_per_model_attempt
+required_output: [sanitized_delta_summary, validation_evidence, escalation_or_no_escalation, candidate_only_caveat]

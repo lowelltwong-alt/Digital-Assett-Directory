@@ -190,6 +190,21 @@
       "normal_write_boundary": ".digital-asset/mail/**",
       "authority_boundary": "Lessons, review-lane findings, and asset/harness scout outputs are bounded candidate learning unless reviewed and context-matched.",
       "review_status": "reviewed"
+    },
+    {
+      "control_plane_id": "global_personal_skills_gpt",
+      "name": "Global Personal Skills GPT",
+      "status": "active",
+      "cadence": "daily-delta",
+      "primary_surfaces": [
+        "config/global-personal-skills.json",
+        "src/digital_asset_directory/global_personal_skills.py",
+        "assets/agent-skills/global-personal-skills-gpt/**",
+        "DAD_DATA_ROOT/private/personal-skills/**"
+      ],
+      "normal_write_boundary": "Initialized DAD_DATA_ROOT/private/personal-skills/**; local-only and excluded from journal replication",
+      "authority_boundary": "The live global Codex skill root remains source authority. Archives are inert; unknown origins are metadata-only; portable exports require named review and do not install or edit skills.",
+      "review_status": "candidate"
     }
   ]
 }

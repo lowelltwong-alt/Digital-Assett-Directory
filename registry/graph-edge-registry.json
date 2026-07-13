@@ -330,6 +330,48 @@
       "examples": ["evaluation:dad:subagent-evaluation:x -> capability:root_cause_analysis"],
       "danger_if_wrong": "A role or model can appear capable based on unrelated or absent evidence.",
       "review_status": "candidate"
+    },
+    {
+      "edge_type": "derived_from", "edge_class": "join", "direction": "portable export -> archived revision", "cardinality": "many-to-one",
+      "semantics": "A portable export was deterministically assembled from one validated archived revision under an explicit review record.",
+      "allowed_bases": ["declared-personal-skill-archive-v1"], "evidence_required": ["validated portable export manifest", "validated archived revision", "approval id"], "version": "0.1.0",
+      "examples": ["portable-export:x -> archived-revision:y"], "danger_if_wrong": "An export can be attributed to bytes or authority it did not derive from.", "review_status": "candidate"
+    },
+    {
+      "edge_type": "snapshot_of", "edge_class": "join", "direction": "archived revision -> personal source observation", "cardinality": "many-to-one",
+      "semantics": "An inert archived revision records bytes captured in an immutable observation of an explicitly allowlisted personal source.",
+      "allowed_bases": ["declared-personal-skill-archive-v1"], "evidence_required": ["validated revision manifest", "source allowlist row"], "version": "0.1.0",
+      "examples": ["archived-revision:x -> source-observation:y"], "danger_if_wrong": "An archive can be attributed to the wrong observation or treated as a currently active source.", "review_status": "candidate"
+    },
+    {
+      "edge_type": "revision_of", "edge_class": "join", "direction": "archived revision -> stable personal skill", "cardinality": "many-to-one",
+      "semantics": "A content-specific archive revision belongs to one stable personal skill identity.",
+      "allowed_bases": ["declared-personal-skill-archive-v1"], "evidence_required": ["validated revision manifest", "stable skill id"], "version": "0.1.0",
+      "examples": ["archived-revision:x -> personal-skill:y"], "danger_if_wrong": "Revision history and disappearance/reappearance lineage can attach to the wrong skill.", "review_status": "candidate"
+    },
+    {
+      "edge_type": "adapted_as", "edge_class": "join", "direction": "personal skill -> DAD adaptation", "cardinality": "one-to-many",
+      "semantics": "A DAD-managed runtime-neutral adaptation explicitly cites a personal-skill source marker.",
+      "allowed_bases": ["personal-skill-source marker"], "evidence_required": ["agent skill registry source_evidence marker"], "version": "0.1.0",
+      "examples": ["personal-skill:x -> dad-adaptation:y"], "danger_if_wrong": "A DAD adaptation can be mistaken for an exact copy or original source.", "review_status": "candidate"
+    },
+    {
+      "edge_type": "portable_to", "edge_class": "join", "direction": "portable export -> target runtime", "cardinality": "many-to-one",
+      "semantics": "A reviewed export names its intended target runtime without claiming proven compatibility or installation.",
+      "allowed_bases": ["declared-personal-skill-archive-v1"], "evidence_required": ["portable export manifest", "reviewer", "approval id"], "version": "0.1.0",
+      "examples": ["portable-export:x -> runtime:y"], "danger_if_wrong": "Future agents can over-trust an intended target as proven compatibility.", "review_status": "candidate"
+    },
+    {
+      "edge_type": "loaded_by", "edge_class": "join", "direction": "active source -> runtime", "cardinality": "many-to-many",
+      "semantics": "A declared runtime owns discovery of an active personal source; this does not authorize another runtime or archive copy to load it.",
+      "allowed_bases": ["declared-personal-skill-archive-v1"], "evidence_required": ["source manifest runtime field"], "version": "0.1.0",
+      "examples": ["active-source:x -> runtime:codex"], "danger_if_wrong": "Archive or checkout presence can be mistaken for active installation.", "review_status": "candidate"
+    },
+    {
+      "edge_type": "duplicate_content_of", "edge_class": "join", "direction": "archived revision -> archived revision (symmetric pair stored once)", "cardinality": "many-to-many",
+      "semantics": "Two per-skill revisions have the same canonical tree content hash; authority, identity, and preferred source remain separate.",
+      "allowed_bases": ["declared-personal-skill-archive-v1"], "evidence_required": ["matching non-empty tree SHA-256", "validated revision manifests"], "version": "0.1.0",
+      "examples": ["archived-revision:x -> archived-revision:y"], "danger_if_wrong": "Hash equality can be misused to collapse identities or transfer authority.", "review_status": "candidate"
     }
   ]
 }

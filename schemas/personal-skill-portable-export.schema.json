@@ -1,0 +1,9 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema", "$id": "https://local.digital-asset-directory/schemas/personal-skill-portable-export.schema.json", "title": "Personal Skill Portable Export", "type": "object", "additionalProperties": false,
+  "required": ["schema_version", "export_id", "artifact_role", "skill_id", "source_revision_id", "target_runtime", "reviewed_by", "approval_id", "files", "omitted_runtime_adapters", "redactions", "local_paths_included", "compatibility_status", "authority_boundary"],
+  "properties": {
+    "schema_version": {"const": "dad.personal-skills.v1"}, "export_id": {"type": "string", "pattern": "^dad:personal-skill-export:"}, "artifact_role": {"const": "portable_export"}, "skill_id": {"type": "string", "pattern": "^personal-skill:[a-z0-9][a-z0-9-]*$"}, "source_revision_id": {"type": "string", "pattern": "^dad:personal-skill-revision:[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"}, "target_runtime": {"type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]*$"}, "reviewed_by": {"type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9 ._@-]{0,127}$"}, "approval_id": {"type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9._:@-]{0,127}$"}, "local_paths_included": {"const": false}, "compatibility_status": {"const": "candidate_reviewed_bundle"}, "authority_boundary": {"type": "string", "minLength": 1},
+    "files": {"type": "array", "items": {"type": "object", "additionalProperties": false, "required": ["path", "source_role", "sha256", "size"], "properties": {"path": {"type": "string"}, "source_role": {"enum": ["portable_procedure", "runtime_adapter"]}, "sha256": {"type": "string", "pattern": "^[a-f0-9]{64}$"}, "size": {"type": "integer", "minimum": 0}}}},
+    "omitted_runtime_adapters": {"type": "array", "items": {"type": "string"}}, "redactions": {"type": "array", "items": {"type": "object"}}
+  }
+}
