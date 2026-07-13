@@ -35,6 +35,7 @@ def _hub(tmp_path: Path) -> Path:
         "registry/subagent-evaluation-methodology.json",
         "registry/subagent-evaluation-methodologies/0.1.0.json",
         "registry/subagent-capability-registry.json",
+        "registry/subagent-evaluation-profile-registry.json",
         "registry/subagent-improvement-policy.json",
         "registry/graph-edge-registry.json",
         "registry/edge-type-registry.json",
@@ -44,6 +45,9 @@ def _hub(tmp_path: Path) -> Path:
         "schemas/subagent-capability-graph.schema.json",
         "schemas/subagent-action-recommendation.schema.json",
         "schemas/subagent-evaluation-methodology.schema.json",
+        "schemas/subagent-evaluation-profile-registry.schema.json",
+        "schemas/subagent-self-assessment.schema.json",
+        "schemas/subagent-evaluation-integrity-report.schema.json",
         "schemas/subagent-unrated-inventory.schema.json",
         "schemas/subagent-improvement-policy.schema.json",
     ):
@@ -119,15 +123,28 @@ def test_improvement_review_flags_missing_reviews_and_routing_without_exceptions
 def test_improvement_review_escalates_repeated_independent_deficits(tmp_path: Path):
     hub = _hub(tmp_path)
     ingest_packet(hub, PACKET)
+    attempts_path = hub / "raw/agent-evaluations/execution-attempts.jsonl"
+    raw_attempts = [json.loads(line) for line in attempts_path.read_text().splitlines()]
+    reviewer_attempt_id = "dad:subagent-attempt:dad-graph-hypatia"
+    reviewer_attempt = next(row for row in raw_attempts if row["attempt_id"] == reviewer_attempt_id)
+    reviewer_attempt["runtime_claims"]["verification_status"] = "runtime_verified"
+    _write_jsonl(attempts_path, raw_attempts)
+
+    evaluations_path = hub / "raw/agent-evaluations/attempt-evaluations.jsonl"
+    evaluations = [json.loads(line) for line in evaluations_path.read_text().splitlines()]
+    attempts_by_id = {row["attempt_id"]: row for row in raw_attempts}
+    for evaluation in evaluations:
+        evaluation["attempt_snapshot_sha256"] = content_hash(
+            attempts_by_id[evaluation["attempt_id"]]
+        )
+    _write_jsonl(evaluations_path, evaluations)
+
     attempts = load_packet(PACKET)["attempts"]
     terra_attempt_ids = {
         row["attempt_id"]
         for row in attempts
         if row["role_profile_id"] == "dad:role-profile:terra-integration-specialist"
     }
-    evaluations_path = hub / "raw/agent-evaluations/attempt-evaluations.jsonl"
-    evaluations = [json.loads(line) for line in evaluations_path.read_text().splitlines()]
-    reviewer_attempt_id = "dad:subagent-attempt:dad-graph-hypatia"
     reviewer_evidence = (
         "source://examples/subagent-evaluations/logos-t475-and-dad-graph-v1/"
         "evidence/dad-graph-hypatia.json"

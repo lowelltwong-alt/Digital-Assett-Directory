@@ -1,9 +1,10 @@
 {
   "schema_version": "0.1.0",
   "methodology_id": "dad-usefulness-methodology-v0.1",
-  "methodology_version": "0.2.0",
+  "methodology_version": "0.3.0",
   "authority_boundary": "Usefulness scores are deterministic routing aids, not proof of truth, value, safety, or local adoption readiness.",
-  "scoring_formula": "Directional coverage. Context dimensions score |offering_tokens intersect repo_tokens| / |repo_tokens|. Task and capability dimensions score |task_tokens intersect offering_tokens| / |offering_tokens|. Weighted component scores are summed on a 0-100 scale. Missing thresholds are invalid.",
+  "scoring_formula": "Directional coverage. Context dimensions score |offering_tokens intersect repo_tokens| / |repo_tokens|. Task and capability dimensions score |task_tokens intersect offering_tokens| / |offering_tokens|. Weighted component scores are summed on a 0-100 scale. Candidate order uses the declared intent priority, then intent-match count, exact task-token specificity, usefulness score, and offering id. Missing thresholds are invalid.",
+  "intent_priority": ["enrollment", "mail", "rust", "governance", "coding"],
   "weights": {
     "language_match": 0.2,
     "repo_type_match": 0.15,

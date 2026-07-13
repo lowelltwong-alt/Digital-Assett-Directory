@@ -1,0 +1,144 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://local.digital-asset-directory/schemas/subagent-role-directory.schema.json",
+  "title": "Subagent Role Directory Projection",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "generated_at",
+    "builder_version",
+    "methodology_id",
+    "methodology_version",
+    "role_count",
+    "source_hashes",
+    "search_contract",
+    "roles",
+    "authority_boundary"
+  ],
+  "properties": {
+    "schema_version": {"const": "dad.subagent.role_directory.v1"},
+    "generated_at": {"type": "string", "minLength": 1},
+    "builder_version": {"type": "string", "minLength": 1},
+    "methodology_id": {"type": "string", "minLength": 1},
+    "methodology_version": {"type": "string", "minLength": 1},
+    "role_count": {"type": "integer", "minimum": 0},
+    "source_hashes": {
+      "type": "object",
+      "minProperties": 3,
+      "additionalProperties": {"type": "string", "pattern": "^(sha256:[0-9a-f]{64}|missing)$"}
+    },
+    "search_contract": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["method_version", "match_classes", "tie_break", "quality_boundary"],
+      "properties": {
+        "method_version": {"const": "registered-subagent-pack-directory.v0.1.0"},
+        "match_classes": {
+          "type": "array",
+          "items": {"enum": ["exact_identity", "exact_declared_match", "all_query_tokens", "unfiltered"]},
+          "minItems": 4,
+          "maxItems": 4,
+          "uniqueItems": true
+        },
+        "tie_break": {"type": "string", "minLength": 1},
+        "quality_boundary": {"type": "string", "minLength": 1}
+      }
+    },
+    "roles": {
+      "type": "array",
+      "items": {"$ref": "#/$defs/role"}
+    },
+    "authority_boundary": {"type": "string", "minLength": 1}
+  },
+  "$defs": {
+    "revision_summary": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "revision_id",
+        "attempt_count",
+        "rated_attempt_count",
+        "independent_evaluation_count",
+        "profile_score_status",
+        "profile_score",
+        "default_comparison_eligible",
+        "blockers"
+      ],
+      "properties": {
+        "revision_id": {"type": "string", "minLength": 1},
+        "attempt_count": {"type": "integer", "minimum": 0},
+        "rated_attempt_count": {"type": "integer", "minimum": 0},
+        "independent_evaluation_count": {"type": "integer", "minimum": 0},
+        "profile_score_status": {"enum": ["provisional", "attempt_evidence_only"]},
+        "profile_score": {"type": ["number", "null"], "minimum": 0, "maximum": 100},
+        "default_comparison_eligible": {"type": "boolean"},
+        "blockers": {"type": "array", "items": {"type": "string", "minLength": 1}}
+      }
+    },
+    "role": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "role_ref",
+        "skill_id",
+        "skill_name",
+        "skill_status",
+        "skill_review_status",
+        "pack_id",
+        "pack_version",
+        "pack_status",
+        "role_id",
+        "role_profile_id",
+        "mission",
+        "effort",
+        "search_terms",
+        "capability_ids",
+        "expected_inputs",
+        "expected_outputs",
+        "stop_conditions",
+        "evaluated_role_revision_ids",
+        "methodology_ref",
+        "source_ref",
+        "source_sha256",
+        "catalog_sha256",
+        "evaluation_status",
+        "evaluated_revisions",
+        "review_status",
+        "authority_boundary"
+      ],
+      "properties": {
+        "role_ref": {"type": "string", "pattern": "^dad:subagent-pack:[a-z0-9-]+#[a-z][a-z0-9-]*$"},
+        "skill_id": {"type": "string", "pattern": "^skill:[a-z0-9][a-z0-9:-]*$"},
+        "skill_name": {"type": "string", "minLength": 1},
+        "skill_status": {"enum": ["active", "candidate", "deprecated", "retired", "replaced"]},
+        "skill_review_status": {"enum": ["candidate", "reviewed", "rejected"]},
+        "pack_id": {"type": "string", "minLength": 1},
+        "pack_version": {"type": "string", "minLength": 1},
+        "pack_status": {"enum": ["candidate", "active", "deprecated", "retired"]},
+        "role_id": {"type": "string", "minLength": 1},
+        "role_profile_id": {"type": "string", "pattern": "^dad:role-profile:[a-z0-9-]+$"},
+        "mission": {"type": "string", "minLength": 1},
+        "effort": {"type": "string", "minLength": 1},
+        "search_terms": {"type": "array", "items": {"type": "string", "minLength": 1}},
+        "capability_ids": {"type": "array", "items": {"type": "string", "minLength": 1}},
+        "expected_inputs": {"type": "array", "items": {"type": "string", "minLength": 1}},
+        "expected_outputs": {"type": "array", "items": {"type": "string", "minLength": 1}},
+        "stop_conditions": {"type": "array", "items": {"type": "string", "minLength": 1}},
+        "evaluated_role_revision_ids": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {"type": "string", "pattern": "^dad:role-profile-revision:[a-z0-9-]+:v[0-9]+$"}
+        },
+        "methodology_ref": {"type": "string", "minLength": 1},
+        "source_ref": {"type": "string", "pattern": "^assets/agent-skills/[A-Za-z0-9._/-]+$"},
+        "source_sha256": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"},
+        "catalog_sha256": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"},
+        "evaluation_status": {"enum": ["insufficient_evidence", "attempt_evidence_only", "provisional_revision_evidence"]},
+        "evaluated_revisions": {"type": "array", "items": {"$ref": "#/$defs/revision_summary"}},
+        "review_status": {"const": "candidate"},
+        "authority_boundary": {"type": "string", "minLength": 1}
+      }
+    }
+  }
+}

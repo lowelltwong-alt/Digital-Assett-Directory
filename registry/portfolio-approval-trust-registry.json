@@ -1,0 +1,10 @@
+{
+  "schema_version": "dad.portfolio_approval_trust_registry.v1",
+  "registry_id": "dad:registry:portfolio-approval-trust",
+  "registry_sequence": 0,
+  "previous_registry_digest": "",
+  "root_anchor_status": "unanchored_shadow",
+  "status": "candidate_deny_all",
+  "authority_boundary": "Public verification material only. This empty unanchored shadow registry denies all approval authority, stores no private keys, and cannot authorize a real executor.",
+  "keys": []
+}

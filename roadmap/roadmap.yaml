@@ -189,7 +189,7 @@ phases:
 
   - id: phase-7-language-frontier-and-rust-core
     title: Language frontier radar and DAD-first Rust scan core
-    status: planned
+    status: awaiting_human_gate
     acceptance:
       required_files:
         - roadmap/evidence/dad-deployment-and-all-repo-verification-roadmap.md
@@ -225,7 +225,7 @@ phases:
 
   - id: phase-8-dad-local-deployment
     title: Local DAD deployment and hub resolution
-    status: awaiting_human_gate
+    status: complete
     acceptance:
       required_files:
         - roadmap/evidence/dad-deployment-and-all-repo-verification-roadmap.md
@@ -325,12 +325,13 @@ phases:
 
   - id: phase-11-dad-library-card-catalog-upgrade
     title: DAD library card catalog and context-pack route upgrade
-    status: planned
+    status: awaiting_human_gate
     acceptance:
       depends_on:
         - phase-8-dad-local-deployment
       required_files:
         - roadmap/evidence/dad-deployment-and-all-repo-verification-roadmap.md
+        - roadmap/evidence/phase-11-dad-library-card-catalog-upgrade.md
         - AI_FRONT_DOOR.md
         - AI_TABLE_OF_CONTENTS.md
         - MACHINE_NAVIGATION_MANIFEST.json

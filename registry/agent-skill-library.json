@@ -24,14 +24,45 @@
       "path": "assets/agent-skills/dad-work-router",
       "entrypoint": "assets/agent-skills/dad-work-router/SKILL.md",
       "description": "Routes material work through DAD preflight, reusable assets, review lanes, privacy controls, and postflight without overriding local authority.",
-      "trigger_examples": ["Begin material coding, governance, registry, mail, schema, or cross-repository work.", "Determine which DAD assets, skills, reviews, and postflight controls apply to a task."],
-      "does_not_apply_when": ["The work is a trivial read-only query with no material decision.", "A local authority conflict requires a human decision before routing can continue."],
-      "capabilities": ["material_work_routing", "preflight_orchestration", "review_lane_selection", "postflight_evidence_capture"],
-      "checkout_modes": ["pointer", "wrapper"],
+      "trigger_examples": [
+        "Begin material coding, governance, registry, mail, schema, or cross-repository work.",
+        "Determine which DAD assets, skills, reviews, and postflight controls apply to a task."
+      ],
+      "does_not_apply_when": [
+        "The work is a trivial read-only query with no material decision.",
+        "A local authority conflict requires a human decision before routing can continue."
+      ],
+      "capabilities": [
+        "material_work_routing",
+        "preflight_orchestration",
+        "review_lane_selection",
+        "postflight_evidence_capture"
+      ],
+      "checkout_modes": [
+        "pointer",
+        "wrapper"
+      ],
       "update_policy": "dad_mail_notice",
-      "lifecycle": {"supersedes": [], "superseded_by": [], "retirement_reason": "", "replacement_skill_id": "", "change_notice_templates": ["templates/mail/skill-update-available.mail.template.json", "templates/mail/skill-retirement-notice.mail.template.json"]},
-      "dependencies": ["registry/agent-skill-library.json", "assets/asset-registry.json", "registry/coding-asset-registry.json", "docs/AGENT_SKILL_LIBRARY.md"],
-      "source_evidence": ["assets/agent-skills/dad-work-router/SKILL.md", "personal-skill-source:dad-work-router"],
+      "lifecycle": {
+        "supersedes": [],
+        "superseded_by": [],
+        "retirement_reason": "",
+        "replacement_skill_id": "",
+        "change_notice_templates": [
+          "templates/mail/skill-update-available.mail.template.json",
+          "templates/mail/skill-retirement-notice.mail.template.json"
+        ]
+      },
+      "dependencies": [
+        "registry/agent-skill-library.json",
+        "assets/asset-registry.json",
+        "registry/coding-asset-registry.json",
+        "docs/AGENT_SKILL_LIBRARY.md"
+      ],
+      "source_evidence": [
+        "assets/agent-skills/dad-work-router/SKILL.md",
+        "personal-skill-source:dad-work-router"
+      ],
       "authority_boundary": "This routing guidance does not override local repository authority, human gates, privacy policy, or validation requirements.",
       "review_status": "reviewed",
       "last_reviewed_at": "2026-07-10",
@@ -46,14 +77,45 @@
       "path": "assets/agent-skills/dad-learning-loop",
       "entrypoint": "assets/agent-skills/dad-learning-loop/SKILL.md",
       "description": "Completes evidence-backed learning loops with applicability limits, validation, deduplication, privacy-safe candidate routing, and human-gated promotion.",
-      "trigger_examples": ["A concrete surprise, failure, repeated issue, or applicable reviewed lesson affects the task.", "Close a validated learning loop before DAD postflight."],
-      "does_not_apply_when": ["Routine work produced no material surprise, failure, or reusable observation.", "Evidence cannot be separated from private data, secrets, or raw transcripts."],
-      "capabilities": ["lesson_retrieval", "learning_loop_completion", "lesson_deduplication", "privacy_safe_lesson_capture"],
-      "checkout_modes": ["pointer", "wrapper"],
+      "trigger_examples": [
+        "A concrete surprise, failure, repeated issue, or applicable reviewed lesson affects the task.",
+        "Close a validated learning loop before DAD postflight."
+      ],
+      "does_not_apply_when": [
+        "Routine work produced no material surprise, failure, or reusable observation.",
+        "Evidence cannot be separated from private data, secrets, or raw transcripts."
+      ],
+      "capabilities": [
+        "lesson_retrieval",
+        "learning_loop_completion",
+        "lesson_deduplication",
+        "privacy_safe_lesson_capture"
+      ],
+      "checkout_modes": [
+        "pointer",
+        "wrapper"
+      ],
       "update_policy": "dad_mail_notice",
-      "lifecycle": {"supersedes": [], "superseded_by": [], "retirement_reason": "", "replacement_skill_id": "", "change_notice_templates": ["templates/mail/skill-update-available.mail.template.json", "templates/mail/skill-retirement-notice.mail.template.json"]},
-      "dependencies": ["docs/LESSON_LIFECYCLE_GOVERNANCE.md", "registry/context-tag-registry.json", "schemas/counterfactual-lesson.schema.json", "registry/agent-skill-library.json"],
-      "source_evidence": ["assets/agent-skills/dad-learning-loop/SKILL.md", "personal-skill-source:dad-learning-loop"],
+      "lifecycle": {
+        "supersedes": [],
+        "superseded_by": [],
+        "retirement_reason": "",
+        "replacement_skill_id": "",
+        "change_notice_templates": [
+          "templates/mail/skill-update-available.mail.template.json",
+          "templates/mail/skill-retirement-notice.mail.template.json"
+        ]
+      },
+      "dependencies": [
+        "docs/LESSON_LIFECYCLE_GOVERNANCE.md",
+        "registry/context-tag-registry.json",
+        "schemas/counterfactual-lesson.schema.json",
+        "registry/agent-skill-library.json"
+      ],
+      "source_evidence": [
+        "assets/agent-skills/dad-learning-loop/SKILL.md",
+        "personal-skill-source:dad-learning-loop"
+      ],
       "authority_boundary": "Lessons remain privacy-safe candidate evidence and require reviewed promotion; they do not change source truth, instructions, or downstream repositories automatically.",
       "review_status": "reviewed",
       "last_reviewed_at": "2026-07-10",
@@ -68,14 +130,45 @@
       "path": "assets/agent-skills/dad-digital-asset-radar",
       "entrypoint": "assets/agent-skills/dad-digital-asset-radar/SKILL.md",
       "description": "Finds, grades, deduplicates, and routes concrete reusable assets and detection patterns with provenance, privacy, and adoption constraints.",
-      "trigger_examples": ["A concrete reusable asset candidate or missed-asset incident exists.", "Run an explicit repository delta or asset-discovery review."],
-      "does_not_apply_when": ["Routine work has no concrete candidate or missed-asset comparison.", "External provenance, license, security, or compatibility cannot be reviewed."],
-      "capabilities": ["digital_asset_discovery", "asset_deduplication", "asset_provenance_review", "asset_adoption_routing"],
-      "checkout_modes": ["pointer", "wrapper"],
+      "trigger_examples": [
+        "A concrete reusable asset candidate or missed-asset incident exists.",
+        "Run an explicit repository delta or asset-discovery review."
+      ],
+      "does_not_apply_when": [
+        "Routine work has no concrete candidate or missed-asset comparison.",
+        "External provenance, license, security, or compatibility cannot be reviewed."
+      ],
+      "capabilities": [
+        "digital_asset_discovery",
+        "asset_deduplication",
+        "asset_provenance_review",
+        "asset_adoption_routing"
+      ],
+      "checkout_modes": [
+        "pointer",
+        "wrapper"
+      ],
       "update_policy": "dad_mail_notice",
-      "lifecycle": {"supersedes": [], "superseded_by": [], "retirement_reason": "", "replacement_skill_id": "", "change_notice_templates": ["templates/mail/skill-update-available.mail.template.json", "templates/mail/skill-retirement-notice.mail.template.json"]},
-      "dependencies": ["assets/asset-registry.json", "registry/asset-pattern-registry.json", "registry/agent-skill-library.json", "docs/ASSET_RECOGNITION_METHODOLOGY.md"],
-      "source_evidence": ["assets/agent-skills/dad-digital-asset-radar/SKILL.md", "personal-skill-source:dad-digital-asset-radar"],
+      "lifecycle": {
+        "supersedes": [],
+        "superseded_by": [],
+        "retirement_reason": "",
+        "replacement_skill_id": "",
+        "change_notice_templates": [
+          "templates/mail/skill-update-available.mail.template.json",
+          "templates/mail/skill-retirement-notice.mail.template.json"
+        ]
+      },
+      "dependencies": [
+        "assets/asset-registry.json",
+        "registry/asset-pattern-registry.json",
+        "registry/agent-skill-library.json",
+        "docs/ASSET_RECOGNITION_METHODOLOGY.md"
+      ],
+      "source_evidence": [
+        "assets/agent-skills/dad-digital-asset-radar/SKILL.md",
+        "personal-skill-source:dad-digital-asset-radar"
+      ],
       "authority_boundary": "Asset records are candidate evidence; target repositories retain adoption authority and external assets need provenance, license, security, and compatibility review.",
       "review_status": "reviewed",
       "last_reviewed_at": "2026-07-10",
@@ -90,14 +183,45 @@
       "path": "assets/agent-skills/dad-iteration-optimizer",
       "entrypoint": "assets/agent-skills/dad-iteration-optimizer/SKILL.md",
       "description": "Uses measured bottlenecks, conservative improvements, parity checks, and captured limits to reduce slow commands and repeated workflows.",
-      "trigger_examples": ["A command runs at least 60 measured seconds or is expected to run at least 120 seconds.", "Repeated workflow cost is blocking iteration and has a measurable local scope."],
-      "does_not_apply_when": ["No measured or predicted duration trigger and no repeated iteration bottleneck exists.", "A proposed acceleration lacks a comparable workload or correctness validation path."],
-      "capabilities": ["performance_baselining", "bottleneck_diagnosis", "optimization_strategy_selection", "benchmark_parity_validation"],
-      "checkout_modes": ["pointer", "wrapper"],
+      "trigger_examples": [
+        "A command runs at least 60 measured seconds or is expected to run at least 120 seconds.",
+        "Repeated workflow cost is blocking iteration and has a measurable local scope."
+      ],
+      "does_not_apply_when": [
+        "No measured or predicted duration trigger and no repeated iteration bottleneck exists.",
+        "A proposed acceleration lacks a comparable workload or correctness validation path."
+      ],
+      "capabilities": [
+        "performance_baselining",
+        "bottleneck_diagnosis",
+        "optimization_strategy_selection",
+        "benchmark_parity_validation"
+      ],
+      "checkout_modes": [
+        "pointer",
+        "wrapper"
+      ],
       "update_policy": "dad_mail_notice",
-      "lifecycle": {"supersedes": [], "superseded_by": [], "retirement_reason": "", "replacement_skill_id": "", "change_notice_templates": ["templates/mail/skill-update-available.mail.template.json", "templates/mail/skill-retirement-notice.mail.template.json"]},
-      "dependencies": ["assets/rust-buildout-guide/rust-buildout.json", "registry/language-coding-advantage-registry.json", "registry/coding-tactics-radar.json", "assets/agent-skills/long-run-optimization-review-pack/README.md"],
-      "source_evidence": ["assets/agent-skills/dad-iteration-optimizer/SKILL.md", "personal-skill-source:dad-iteration-optimizer"],
+      "lifecycle": {
+        "supersedes": [],
+        "superseded_by": [],
+        "retirement_reason": "",
+        "replacement_skill_id": "",
+        "change_notice_templates": [
+          "templates/mail/skill-update-available.mail.template.json",
+          "templates/mail/skill-retirement-notice.mail.template.json"
+        ]
+      },
+      "dependencies": [
+        "assets/rust-buildout-guide/rust-buildout.json",
+        "registry/language-coding-advantage-registry.json",
+        "registry/coding-tactics-radar.json",
+        "assets/agent-skills/long-run-optimization-review-pack/README.md"
+      ],
+      "source_evidence": [
+        "assets/agent-skills/dad-iteration-optimizer/SKILL.md",
+        "personal-skill-source:dad-iteration-optimizer"
+      ],
       "authority_boundary": "Optimization evidence does not authorize language migration or dependency adoption; profiling, parity, local validation, privacy, and human gates remain controlling.",
       "review_status": "reviewed",
       "last_reviewed_at": "2026-07-10",
@@ -112,14 +236,45 @@
       "path": "assets/agent-skills/dad-agent-skill-forge",
       "entrypoint": "assets/agent-skills/dad-agent-skill-forge/SKILL.md",
       "description": "Selects, validates, registers, grades, and improves reusable agent skills with independent checking and human-gated instruction changes.",
-      "trigger_examples": ["Create, revise, retire, or assess a reusable skill, subagent profile, prompt harness, hook, or automation.", "Repeated independently confirmed feedback may justify a bounded instruction-improvement proposal."],
-      "does_not_apply_when": ["The capability is a one-off task rather than reusable procedural guidance.", "Evidence is limited to isolated complaints or cannot be independently checked."],
-      "capabilities": ["skill_capability_selection", "agent_skill_registration", "independent_execution_grading", "human_gated_instruction_improvement"],
-      "checkout_modes": ["pointer", "wrapper"],
+      "trigger_examples": [
+        "Create, revise, retire, or assess a reusable skill, subagent profile, prompt harness, hook, or automation.",
+        "Repeated independently confirmed feedback may justify a bounded instruction-improvement proposal."
+      ],
+      "does_not_apply_when": [
+        "The capability is a one-off task rather than reusable procedural guidance.",
+        "Evidence is limited to isolated complaints or cannot be independently checked."
+      ],
+      "capabilities": [
+        "skill_capability_selection",
+        "agent_skill_registration",
+        "independent_execution_grading",
+        "human_gated_instruction_improvement"
+      ],
+      "checkout_modes": [
+        "pointer",
+        "wrapper"
+      ],
       "update_policy": "dad_mail_notice",
-      "lifecycle": {"supersedes": [], "superseded_by": [], "retirement_reason": "", "replacement_skill_id": "", "change_notice_templates": ["templates/mail/skill-update-available.mail.template.json", "templates/mail/skill-retirement-notice.mail.template.json"]},
-      "dependencies": ["registry/agent-skill-library.json", "docs/AGENT_SKILL_LIBRARY.md", "registry/subagent-evaluation-methodology.json", "registry/subagent-improvement-policy.json"],
-      "source_evidence": ["assets/agent-skills/dad-agent-skill-forge/SKILL.md", "personal-skill-source:dad-agent-skill-forge"],
+      "lifecycle": {
+        "supersedes": [],
+        "superseded_by": [],
+        "retirement_reason": "",
+        "replacement_skill_id": "",
+        "change_notice_templates": [
+          "templates/mail/skill-update-available.mail.template.json",
+          "templates/mail/skill-retirement-notice.mail.template.json"
+        ]
+      },
+      "dependencies": [
+        "registry/agent-skill-library.json",
+        "docs/AGENT_SKILL_LIBRARY.md",
+        "registry/subagent-evaluation-methodology.json",
+        "registry/subagent-improvement-policy.json"
+      ],
+      "source_evidence": [
+        "assets/agent-skills/dad-agent-skill-forge/SKILL.md",
+        "personal-skill-source:dad-agent-skill-forge"
+      ],
       "authority_boundary": "Skill metadata feeds a candidate graph only; human approval remains required for instruction changes and no registration overrides local repository authority.",
       "review_status": "reviewed",
       "last_reviewed_at": "2026-07-10",
@@ -134,14 +289,44 @@
       "path": "assets/agent-skills/codex-capability-radar",
       "entrypoint": "assets/agent-skills/codex-capability-radar/SKILL.md",
       "description": "Matches currently available Codex capabilities to a task through local inspection, official-first verification, privacy boundaries, and explicit approval gates.",
-      "trigger_examples": ["Assess which current Codex skills, plugins, tools, worktrees, automations, or runtime surfaces may help a task.", "Verify a changing Codex capability before recommending it."],
-      "does_not_apply_when": ["The task does not involve Codex capabilities or a current-platform recommendation.", "Official documentation or local availability cannot support a time-sensitive capability claim."],
-      "capabilities": ["runtime_capability_inventory", "official_source_verification", "capability_surface_selection", "approval_gated_configuration_guidance"],
-      "checkout_modes": ["pointer", "wrapper"],
+      "trigger_examples": [
+        "Assess which current Codex skills, plugins, tools, worktrees, automations, or runtime surfaces may help a task.",
+        "Verify a changing Codex capability before recommending it."
+      ],
+      "does_not_apply_when": [
+        "The task does not involve Codex capabilities or a current-platform recommendation.",
+        "Official documentation or local availability cannot support a time-sensitive capability claim."
+      ],
+      "capabilities": [
+        "runtime_capability_inventory",
+        "official_source_verification",
+        "capability_surface_selection",
+        "approval_gated_configuration_guidance"
+      ],
+      "checkout_modes": [
+        "pointer",
+        "wrapper"
+      ],
       "update_policy": "dad_mail_notice",
-      "lifecycle": {"supersedes": [], "superseded_by": [], "retirement_reason": "", "replacement_skill_id": "", "change_notice_templates": ["templates/mail/skill-update-available.mail.template.json", "templates/mail/skill-retirement-notice.mail.template.json"]},
-      "dependencies": ["registry/agent-skill-library.json", "docs/AGENT_SKILL_LIBRARY.md", "docs/MCP_FIRST_INTEGRATION_POLICY.md"],
-      "source_evidence": ["assets/agent-skills/codex-capability-radar/SKILL.md", "personal-skill-source:codex-capability-radar"],
+      "lifecycle": {
+        "supersedes": [],
+        "superseded_by": [],
+        "retirement_reason": "",
+        "replacement_skill_id": "",
+        "change_notice_templates": [
+          "templates/mail/skill-update-available.mail.template.json",
+          "templates/mail/skill-retirement-notice.mail.template.json"
+        ]
+      },
+      "dependencies": [
+        "registry/agent-skill-library.json",
+        "docs/AGENT_SKILL_LIBRARY.md",
+        "docs/MCP_FIRST_INTEGRATION_POLICY.md"
+      ],
+      "source_evidence": [
+        "assets/agent-skills/codex-capability-radar/SKILL.md",
+        "personal-skill-source:codex-capability-radar"
+      ],
       "authority_boundary": "Capability recommendations do not authorize plugin installation, automation, persistent capture, global configuration changes, or any action reserved for explicit user approval.",
       "review_status": "reviewed",
       "last_reviewed_at": "2026-07-10",
@@ -171,7 +356,10 @@
         "downstream_pointer_guidance",
         "postflight_pay_forward"
       ],
-      "checkout_modes": ["pointer", "wrapper"],
+      "checkout_modes": [
+        "pointer",
+        "wrapper"
+      ],
       "update_policy": "dad_mail_notice",
       "lifecycle": {
         "supersedes": [],
@@ -224,7 +412,10 @@
         "long_script_refactor",
         "agent_instruction_design"
       ],
-      "checkout_modes": ["pointer", "local_copy_requires_human_approval"],
+      "checkout_modes": [
+        "pointer",
+        "local_copy_requires_human_approval"
+      ],
       "update_policy": "dad_mail_notice",
       "lifecycle": {
         "supersedes": [],
@@ -272,7 +463,10 @@
         "rust_api_boundary",
         "test_validation_strategy"
       ],
-      "checkout_modes": ["pointer", "local_copy_requires_human_approval"],
+      "checkout_modes": [
+        "pointer",
+        "local_copy_requires_human_approval"
+      ],
       "update_policy": "dad_mail_notice",
       "lifecycle": {
         "supersedes": [],
@@ -320,7 +514,9 @@
         "python_api_design",
         "postflight_tactic_feedback"
       ],
-      "checkout_modes": ["pointer"],
+      "checkout_modes": [
+        "pointer"
+      ],
       "update_policy": "dad_mail_notice",
       "lifecycle": {
         "supersedes": [],
@@ -373,7 +569,10 @@
         "rust_learning_capture",
         "rust_red_team_premortem"
       ],
-      "checkout_modes": ["pointer", "wrapper"],
+      "checkout_modes": [
+        "pointer",
+        "wrapper"
+      ],
       "update_policy": "dad_mail_notice",
       "lifecycle": {
         "supersedes": [],
@@ -428,7 +627,10 @@
         "benchmark_parity_planning",
         "bounded_improvement_build"
       ],
-      "checkout_modes": ["pointer", "wrapper"],
+      "checkout_modes": [
+        "pointer",
+        "wrapper"
+      ],
       "update_policy": "dad_mail_notice",
       "lifecycle": {
         "supersedes": [],
@@ -482,7 +684,10 @@
         "asset_reuse_and_application_routing",
         "agent_effectiveness_rating"
       ],
-      "checkout_modes": ["pointer", "wrapper"],
+      "checkout_modes": [
+        "pointer",
+        "wrapper"
+      ],
       "update_policy": "dad_mail_notice",
       "lifecycle": {
         "supersedes": [],
@@ -512,32 +717,39 @@
     {
       "skill_id": "skill:subagent-continuous-improvement",
       "name": "Subagent Continuous Improvement",
-      "version": "0.1.0",
-      "status": "active",
+      "version": "0.2.0",
+      "status": "candidate",
       "skill_format": "codex_skill",
       "path": "assets/agent-skills/subagent-continuous-improvement",
       "entrypoint": "assets/agent-skills/subagent-continuous-improvement/SKILL.md",
-      "description": "Bidirectional peer checking, model and effort routing audits, independent grading, trend review, and human-gated subagent instruction improvement.",
+      "description": "Pre-outcome self-prediction, independent evaluator-integrity audit, domain-profile review, system-layer attribution, preserve-simple routing, and held-out human-gated improvement.",
       "trigger_examples": [
-        "Delegate material work to one or more subagents.",
-        "Audit whether Luna, Terra, Sol, or a reasoning effort was proportionate to the task and material.",
-        "Review repeated subagent feedback or a high-risk disagreement before changing role instructions."
+        "Delegate material work to one or more reusable subagents and capture prediction calibration.",
+        "Determine whether a self-grade or independent grade is gameable, non-blind, lineage-conflicted, or unsupported by replayable evidence.",
+        "Decide whether an observed deficit belongs to the agent, model route, tool, input, data, workflow, handoff, evaluator, domain overlay, or downstream specialist.",
+        "Protect a simple deterministic subagent from unnecessary prompt growth or regression."
       ],
       "does_not_apply_when": [
-        "No material subagent attempt occurred.",
-        "The only available evidence would expose raw transcripts, hidden reasoning, client data, secrets, or source blobs."
+        "No material reusable subagent or workflow attempt occurred.",
+        "The only available evidence would expose raw transcripts, hidden reasoning, client data, secrets, or source blobs.",
+        "A trivial one-off deterministic command has no reusable role, workflow, or evaluation consequence."
       ],
       "capabilities": [
-        "subagent_self_review",
+        "pre_outcome_self_prediction",
         "independent_peer_review",
+        "evaluator_integrity_audit",
         "model_effort_routing_audit",
-        "bidirectional_checker_dispute_review",
-        "subagent_trend_analysis",
-        "exception_candidate_routing",
-        "human_gated_instruction_improvement",
+        "improvement_layer_attribution",
+        "domain_evaluation_profile_stewardship",
+        "preserve_simple_workflow_design",
+        "heldout_shadow_trial_design",
+        "human_gated_agent_or_workflow_improvement",
         "fable_architecture_escalation_packet"
       ],
-      "checkout_modes": ["pointer", "wrapper"],
+      "checkout_modes": [
+        "pointer",
+        "wrapper"
+      ],
       "update_policy": "dad_mail_notice",
       "lifecycle": {
         "supersedes": [],
@@ -553,17 +765,197 @@
         "registry/subagent-evaluation-methodology.json",
         "registry/subagent-improvement-policy.json",
         "schemas/subagent-execution-attempt.schema.json",
-        "templates/prompts/FABLE_SUBAGENT_SYSTEM_ESCALATION.md"
+        "templates/prompts/FABLE_SUBAGENT_SYSTEM_ESCALATION.md",
+        "registry/subagent-evaluation-profile-registry.json",
+        "schemas/subagent-self-assessment.schema.json",
+        "schemas/subagent-evaluation-integrity-report.schema.json"
       ],
       "source_evidence": [
         "assets/agent-skills/subagent-continuous-improvement/SKILL.md",
         "assets/agent-skills/subagent-continuous-improvement/subagents.yaml",
-        "registry/subagent-improvement-policy.json"
+        "registry/subagent-improvement-policy.json",
+        "src/digital_asset_directory/subagent_integrity.py",
+        "docs/research/SUBAGENT_SELF_GRADING_AND_IMPROVEMENT_RESEARCH_2026-07-13.md"
       ],
-      "authority_boundary": "Subagent reviews and routing audits are candidate evidence. They cannot rank model families, silently reroute work, change instructions, send external prompts, or override human authority.",
-      "review_status": "reviewed",
-      "last_reviewed_at": "2026-07-10",
-      "next_review_due_at": "2026-10-10"
+      "authority_boundary": "Self predictions, integrity reports, domain profiles, and intervention routes are candidate evidence. They cannot prove correctness, compare domains, rank model families, silently reroute work, change an agent or workflow, send external prompts, or override human authority.",
+      "review_status": "candidate",
+      "last_reviewed_at": "2026-07-13",
+      "next_review_due_at": "2026-08-13",
+      "subagent_pack": "assets/agent-skills/subagent-continuous-improvement/subagents.yaml"
+    },
+    {
+      "skill_id": "skill:personal-project-management-ops",
+      "name": "Personal Project Management Ops",
+      "version": "0.1.0",
+      "status": "candidate",
+      "skill_format": "generic_agent_skill",
+      "path": "assets/agent-skills/personal-project-management-ops",
+      "entrypoint": "assets/agent-skills/personal-project-management-ops/SKILL.md",
+      "subagent_pack": "assets/agent-skills/personal-project-management-ops/subagents.yaml",
+      "kernel_compatibility": {
+        "contract_ref": "src/digital_asset_directory/portfolio_attention.py#LIFECYCLE_STATES",
+        "durable_lifecycle_states": [
+          "proposed",
+          "active",
+          "paused",
+          "snoozed",
+          "incubating",
+          "merged",
+          "superseded",
+          "archived"
+        ],
+        "overlay_terms": [
+          "focus-window",
+          "ready",
+          "blocked",
+          "validate",
+          "delivered",
+          "research-state",
+          "execution-lease"
+        ],
+        "unsupported_claims": [
+          "bare approval identifiers never authorize; typed event-digest attestations require an external trusted verifier",
+          "the kernel does not dispatch agents or mutate Git",
+          "overlay terms cannot be written as durable lifecycle states"
+        ]
+      },
+      "description": "Coordinates creative project sprawl from idea capture through related-work discovery, workstream planning, recovery, research, validation, delivery, and portfolio review without silently creating work.",
+      "trigger_examples": [
+        "Organize several related ideas from chats into projects and bounded workstreams.",
+        "Recover a neglected branch or worktree and produce a quiet resume option.",
+        "Plan dependencies, acceptance evidence, and execution leases for a project portfolio."
+      ],
+      "does_not_apply_when": [
+        "The task is a single isolated action with no project, workstream, or portfolio coordination need.",
+        "The requested mutation lacks the required human approval."
+      ],
+      "capabilities": [
+        "project_identity_and_related_work",
+        "workstream_planning",
+        "dependency_frontier_analysis",
+        "neglected_work_recovery",
+        "research_project_management",
+        "delivery_validation_and_handoff"
+      ],
+      "checkout_modes": [
+        "pointer",
+        "wrapper"
+      ],
+      "update_policy": "dad_mail_notice",
+      "lifecycle": {
+        "supersedes": [],
+        "superseded_by": [],
+        "retirement_reason": "",
+        "replacement_skill_id": "",
+        "change_notice_templates": [
+          "templates/mail/skill-update-available.mail.template.json",
+          "templates/mail/skill-retirement-notice.mail.template.json"
+        ]
+      },
+      "dependencies": [
+        "assets/agent-skills/dad-trigger-pattern-radar",
+        "assets/agent-skills/dad-work-router",
+        "registry/subagent-evaluation-methodology.json",
+        "src/digital_asset_directory/portfolio_workstreams.py",
+        "src/digital_asset_directory/portfolio_execution.py",
+        "schemas/portfolio-execution-control-event.schema.json",
+        "docs/frontier/collaboration/05_EXECUTION_LEASE_AND_DISPATCH_CONTROL.md"
+      ],
+      "source_evidence": [
+        "assets/agent-skills/personal-project-management-ops/SKILL.md",
+        "assets/agent-skills/personal-project-management-ops/subagents.yaml",
+        "assets/agent-skills/personal-project-management-ops/references/PROJECT_MANAGEMENT_CONTRACT.md",
+        "src/digital_asset_directory/portfolio_execution.py",
+        "schemas/portfolio-execution-control-event.schema.json",
+        "docs/frontier/collaboration/05_EXECUTION_LEASE_AND_DISPATCH_CONTROL.md"
+      ],
+      "authority_boundary": "Project-management roles produce candidate control packets and recommendations. They cannot promote identities, mutate repositories or task systems, notify people, deliver work, or transfer sovereignty without explicit human approval.",
+      "review_status": "candidate",
+      "last_reviewed_at": "2026-07-12",
+      "next_review_due_at": "2026-08-12"
+    },
+    {
+      "skill_id": "skill:dad-trigger-pattern-radar",
+      "name": "DAD Trigger Pattern Radar",
+      "version": "0.1.0",
+      "status": "candidate",
+      "skill_format": "generic_agent_skill",
+      "path": "assets/agent-skills/dad-trigger-pattern-radar",
+      "entrypoint": "assets/agent-skills/dad-trigger-pattern-radar/SKILL.md",
+      "subagent_pack": "assets/agent-skills/dad-trigger-pattern-radar/subagents.yaml",
+      "kernel_compatibility": {
+        "contract_ref": "src/digital_asset_directory/portfolio_attention.py#LIFECYCLE_STATES",
+        "durable_lifecycle_states": [
+          "proposed",
+          "active",
+          "paused",
+          "snoozed",
+          "incubating",
+          "merged",
+          "superseded",
+          "archived"
+        ],
+        "overlay_terms": [
+          "focus-window",
+          "ready",
+          "blocked",
+          "validate",
+          "delivered",
+          "research-state"
+        ],
+        "unsupported_claims": [
+          "candidate routines are not scheduled",
+          "declared capabilities are not evaluated capability evidence"
+        ]
+      },
+      "description": "Discovers, deduplicates, shadow-tests, grades, and improves humane workflow trigger signatures while keeping every side effect and promotion human-gated.",
+      "trigger_examples": [
+        "Review a missed or noisy workflow trigger and propose the smallest versioned correction.",
+        "Find repeated neglected-work, dependency, validation, or handoff patterns after material work.",
+        "Design a shadow trial for a candidate reminder or portfolio routine."
+      ],
+      "does_not_apply_when": [
+        "There is no material observation, repeat, missed trigger, false positive, or reusable workflow candidate.",
+        "The requested action would bypass a notification, mutation, scheduling, privacy, or sovereignty gate."
+      ],
+      "capabilities": [
+        "trigger_pattern_discovery",
+        "trigger_trial_evaluation",
+        "portfolio_attention_curatorship",
+        "dependency_frontier_analysis",
+        "neglected_work_recovery",
+        "research_project_management"
+      ],
+      "checkout_modes": [
+        "pointer",
+        "wrapper"
+      ],
+      "update_policy": "dad_mail_notice",
+      "lifecycle": {
+        "supersedes": [],
+        "superseded_by": [],
+        "retirement_reason": "",
+        "replacement_skill_id": "",
+        "change_notice_templates": [
+          "templates/mail/skill-update-available.mail.template.json",
+          "templates/mail/skill-retirement-notice.mail.template.json"
+        ]
+      },
+      "dependencies": [
+        "registry/subagent-evaluation-methodology.json",
+        "registry/subagent-improvement-policy.json",
+        "src/digital_asset_directory/portfolio_attention.py",
+        "src/digital_asset_directory/portfolio_workstreams.py"
+      ],
+      "source_evidence": [
+        "assets/agent-skills/dad-trigger-pattern-radar/SKILL.md",
+        "assets/agent-skills/dad-trigger-pattern-radar/subagents.yaml",
+        "assets/agent-skills/dad-trigger-pattern-radar/routines.yaml"
+      ],
+      "authority_boundary": "Trigger roles and routines produce candidate evidence, projections, and shadow-trial designs. They cannot self-promote, schedule themselves, notify people, mutate external systems, or change agent instructions.",
+      "review_status": "candidate",
+      "last_reviewed_at": "2026-07-12",
+      "next_review_due_at": "2026-08-12"
     },
     {
       "skill_id": "skill:global-personal-skills-gpt",
@@ -583,18 +975,39 @@
         "The source is a bundled system, plugin cache, installed third-party root, or unknown origin.",
         "The requested action would silently edit, install, or execute a live global skill."
       ],
-      "capabilities": ["personal_skill_inventory", "content_addressed_skill_archive", "personal_skill_delta_review", "personal_skill_candidate_graph", "reviewed_portable_skill_export"],
-      "checkout_modes": ["pointer", "wrapper"],
+      "capabilities": [
+        "personal_skill_inventory",
+        "content_addressed_skill_archive",
+        "personal_skill_delta_review",
+        "personal_skill_candidate_graph",
+        "reviewed_portable_skill_export"
+      ],
+      "checkout_modes": [
+        "pointer",
+        "wrapper"
+      ],
       "update_policy": "dad_mail_notice",
       "lifecycle": {
         "supersedes": [],
         "superseded_by": [],
         "retirement_reason": "",
         "replacement_skill_id": "",
-        "change_notice_templates": ["templates/mail/skill-update-available.mail.template.json", "templates/mail/skill-retirement-notice.mail.template.json"]
+        "change_notice_templates": [
+          "templates/mail/skill-update-available.mail.template.json",
+          "templates/mail/skill-retirement-notice.mail.template.json"
+        ]
       },
-      "dependencies": ["config/global-personal-skills.json", "docs/GLOBAL_PERSONAL_SKILLS_GPT.md", "registry/agent-skill-library.json", "registry/graph-edge-registry.json"],
-      "source_evidence": ["assets/agent-skills/global-personal-skills-gpt/SKILL.md", "assets/agent-skills/global-personal-skills-gpt/subagents.yaml", "roadmap/evidence/global-personal-skills-gpt-v1.md"],
+      "dependencies": [
+        "config/global-personal-skills.json",
+        "docs/GLOBAL_PERSONAL_SKILLS_GPT.md",
+        "registry/agent-skill-library.json",
+        "registry/graph-edge-registry.json"
+      ],
+      "source_evidence": [
+        "assets/agent-skills/global-personal-skills-gpt/SKILL.md",
+        "assets/agent-skills/global-personal-skills-gpt/subagents.yaml",
+        "roadmap/evidence/global-personal-skills-gpt-v1.md"
+      ],
       "authority_boundary": "The live global personal skill root remains source authority. Archive bodies are inert and local-only; exports and graph claims remain reviewed candidates and never install or edit skills.",
       "review_status": "candidate",
       "last_reviewed_at": "2026-07-13",

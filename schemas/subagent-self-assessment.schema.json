@@ -1,0 +1,162 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://local.digital-asset-directory/schemas/subagent-self-assessment.schema.json",
+  "title": "Subagent Actor-Claimed Prediction Receipt",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "assessment_id",
+    "attempt_id",
+    "actor_id",
+    "phase",
+    "outcome_visibility",
+    "profile_id",
+    "profile_version",
+    "profile_sha256",
+    "criterion_predictions",
+    "anticipated_failure_modes",
+    "falsifiers",
+    "limitations",
+    "recorded_at",
+    "received_at",
+    "receipt_source",
+    "assessment_sha256",
+    "review_status",
+    "authority_boundary"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": "dad.subagent.self_assessment.v1"
+    },
+    "assessment_id": {
+      "type": "string",
+      "pattern": "^dad:subagent-self-assessment:[a-z0-9-]+$"
+    },
+    "attempt_id": {
+      "type": "string",
+      "pattern": "^dad:subagent-attempt:[a-z0-9-]+$"
+    },
+    "actor_id": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 200
+    },
+    "phase": {
+      "const": "pre_outcome_prediction"
+    },
+    "outcome_visibility": {
+      "const": "not_available"
+    },
+    "profile_id": {
+      "type": "string",
+      "pattern": "^dad:evaluation-profile:[a-z0-9-]+$"
+    },
+    "profile_version": {
+      "type": "string",
+      "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+$"
+    },
+    "profile_sha256": {
+      "type": "string",
+      "pattern": "^sha256:[0-9a-f]{64}$"
+    },
+    "criterion_predictions": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "criterion_id",
+          "predicted_status",
+          "probability_pass",
+          "confidence",
+          "evidence_refs"
+        ],
+        "properties": {
+          "criterion_id": {
+            "type": "string",
+            "pattern": "^[a-z][a-z0-9_]*$"
+          },
+          "predicted_status": {
+            "enum": [
+              "pass",
+              "fail",
+              "unknown"
+            ]
+          },
+          "probability_pass": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 1
+          },
+          "confidence": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 1
+          },
+          "evidence_refs": {
+            "type": "array",
+            "maxItems": 20,
+            "items": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 300
+            }
+          }
+        }
+      }
+    },
+    "anticipated_failure_modes": {
+      "type": "array",
+      "maxItems": 20,
+      "items": {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 500
+      }
+    },
+    "falsifiers": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 20,
+      "items": {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 500
+      }
+    },
+    "limitations": {
+      "type": "array",
+      "maxItems": 20,
+      "items": {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 500
+      }
+    },
+    "recorded_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "received_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "receipt_source": {
+      "const": "dad_cli_runtime"
+    },
+    "assessment_sha256": {
+      "type": "string",
+      "pattern": "^sha256:[0-9a-f]{64}$"
+    },
+    "review_status": {
+      "const": "generated_candidate"
+    },
+    "authority_boundary": {
+      "type": "string",
+      "minLength": 40,
+      "maxLength": 1000
+    }
+  }
+}

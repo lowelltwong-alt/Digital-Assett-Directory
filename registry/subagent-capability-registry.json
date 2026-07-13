@@ -2,14 +2,98 @@
   "registry_version": "0.1.0",
   "status": "candidate",
   "capabilities": [
-    {"id": "architecture_reasoning", "description": "Design and red-team system boundaries, invariants, and rollout gates."},
-    {"id": "bounded_evidence_inventory", "description": "Collect exact bounded evidence without interpretation or scope expansion."},
-    {"id": "contract_and_roadmap_mapping", "description": "Map task dependencies, contracts, and next-stage acceptance gates."},
-    {"id": "root_cause_analysis", "description": "Distinguish symptoms from the causal implementation or harness defect."},
-    {"id": "governance_authority_safety", "description": "Preserve authority, promotion, and human-gate boundaries."},
-    {"id": "validation_design", "description": "Define deterministic checks that fail closed at the intended boundary."},
-    {"id": "implementation_review", "description": "Review code or artifacts for correctness, regressions, and missing tests."},
-    {"id": "escalation_judgment", "description": "Recognize uncertainty, hard cases, and the appropriate higher review lane."}
+    {
+      "id": "architecture_reasoning",
+      "description": "Design and red-team system boundaries, invariants, and rollout gates."
+    },
+    {
+      "id": "bounded_evidence_inventory",
+      "description": "Collect exact bounded evidence without interpretation or scope expansion."
+    },
+    {
+      "id": "contract_and_roadmap_mapping",
+      "description": "Map task dependencies, contracts, and next-stage acceptance gates."
+    },
+    {
+      "id": "root_cause_analysis",
+      "description": "Distinguish symptoms from the causal implementation or harness defect."
+    },
+    {
+      "id": "governance_authority_safety",
+      "description": "Preserve authority, promotion, and human-gate boundaries."
+    },
+    {
+      "id": "validation_design",
+      "description": "Define deterministic checks that fail closed at the intended boundary."
+    },
+    {
+      "id": "implementation_review",
+      "description": "Review code or artifacts for correctness, regressions, and missing tests."
+    },
+    {
+      "id": "escalation_judgment",
+      "description": "Recognize uncertainty, hard cases, and the appropriate higher review lane."
+    },
+    {
+      "id": "project_identity_and_related_work",
+      "description": "Preserve project and workstream identities while finding candidate continuations, siblings, experiments, contradictions, and possible duplicates within explicit coverage."
+    },
+    {
+      "id": "workstream_planning",
+      "description": "Shape promoted outcomes into bounded workstreams, non-goals, next actions, acceptance evidence, and execution-boundary proposals."
+    },
+    {
+      "id": "dependency_frontier_analysis",
+      "description": "Separate proposed from reviewed dependency edges, detect cycles and blocked chains, and identify a candidate unlock frontier without treating centrality as truth."
+    },
+    {
+      "id": "portfolio_attention_curatorship",
+      "description": "Build humane candidate Today, WIP, Kanban, and optional Scrum-focus projections while preserving quiet states and overflow."
+    },
+    {
+      "id": "research_project_management",
+      "description": "Manage research questions through source coverage, evidence and counterevidence, falsification, uncertainty, synthesis, and decision readiness."
+    },
+    {
+      "id": "neglected_work_recovery",
+      "description": "Reconstruct intent and evidence for dirty, stale, blocked, waiting, superseded, or unknown branches and worktrees without age-only abandonment claims."
+    },
+    {
+      "id": "trigger_pattern_discovery",
+      "description": "Discover and deduplicate versioned trigger signatures with suppressors, cooldowns, authority gates, negative cases, rollback, and kill criteria."
+    },
+    {
+      "id": "trigger_trial_evaluation",
+      "description": "Independently evaluate trigger trials for useful-action precision, misses, dismissals, harm, compute fit, authority compliance, and drift."
+    },
+    {
+      "id": "child_project_sovereignty",
+      "description": "Review child-project authority transitions, delivery boundaries, retained upstream responsibility, and rollback under explicit human approval."
+    },
+    {
+      "id": "delivery_validation_and_handoff",
+      "description": "Reconcile acceptance evidence, independent validation, residual risks, ownership, rollback, delivery readiness, and resume capsules."
+    },
+    {
+      "id": "pre_outcome_self_prediction",
+      "description": "Capture criterion-level actor-claimed predictions, confidence, falsifiers, and limitations; only an orchestrator-controlled seal may establish outcome blindness, and no self-grade has authority."
+    },
+    {
+      "id": "evaluator_integrity_audit",
+      "description": "Audit available reviewer identity, lineage, cycle, and anti-gaming evidence while explicitly failing closed when blindness, replay, qualification, or outcome truth is not attested."
+    },
+    {
+      "id": "improvement_layer_attribution",
+      "description": "Frame competing agent, model, tool, input, data, workflow, handoff, evaluator, domain, and downstream-layer hypotheses; localize a cause only with deterministic evidence or a seeded ablation."
+    },
+    {
+      "id": "domain_evaluation_profile_stewardship",
+      "description": "Select and maintain context-bounded domain evaluation overlays with applicability, non-applicability, expert, and cross-domain-comparison limits."
+    },
+    {
+      "id": "preserve_simple_workflow_design",
+      "description": "Protect a narrow deterministic role from prompt bloat; a freeze requires executable criterion outcomes, negative cases, latency/cost evidence, held-out confirmation, and human approval."
+    }
   ],
   "rule": "Capability observations are attempt-scoped candidate evidence. Promotion to a reusable role-profile claim requires the versioned subagent evaluation methodology and human review."
 }

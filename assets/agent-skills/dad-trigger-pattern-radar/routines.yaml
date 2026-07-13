@@ -1,0 +1,37 @@
+schema_version: dad_trigger_routines.v0_1
+status: candidate_specs_not_scheduled
+authority_boundary: >
+  These are specifications, not enabled automations. Scheduling or any external
+  side effect requires explicit human approval.
+routines:
+  - routine_id: postflight-trigger-scan
+    cadence: after_material_postflight
+    executor: deterministic_signature_matcher
+    escalation_role: luna-trigger-observer
+    budget: none_then_low_on_ambiguous_or_unmatched_signal
+  - routine_id: daily-portfolio-pulse
+    cadence: daily_when_enabled
+    executor: deterministic_fingerprinted_projection_refresh
+    escalation_roles: [luna-trigger-observer, portfolio-scrum-board-curator]
+    budget: none_then_low_or_medium_on_signal
+    skip_when: input_fingerprint_unchanged
+  - routine_id: weekly-trigger-discovery
+    cadence: weekly_when_enabled
+    default_role: terra-trigger-pattern-judge
+    budget: medium
+  - routine_id: dependency-frontier-review
+    cadence: on_dependency_or_board_change_before_focus_window_or_weekly
+    default_role: dependency-critical-frontier-analyst
+    budget: medium_then_high_if_graph_is_ambiguous
+  - routine_id: monthly-trigger-calibration
+    cadence: monthly_when_enabled
+    default_role: terra-trigger-evaluation-grader
+    budget: medium
+  - routine_id: trigger-feedback-capture
+    cadence: on_accept_reject_dismiss_snooze_harm_miss_or_usefulness_event
+    executor: asset_dir_os_trigger_feedback_write
+    budget: none_or_low_validation_only
+  - routine_id: high-leverage-workflow-design
+    cadence: threshold_only
+    default_role: sol-automation-workflow-architect
+    budget: high_or_xhigh_by_consequence

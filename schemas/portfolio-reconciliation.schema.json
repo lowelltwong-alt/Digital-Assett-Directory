@@ -1,0 +1,517 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "dad.portfolio_reconciliation.v1",
+  "title": "DAD Portfolio Reconciliation Projection",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "generated_at",
+    "status",
+    "data_classification",
+    "public_safe",
+    "execution_authorized",
+    "mutations_performed",
+    "authority_boundary",
+    "methodology",
+    "source",
+    "summary",
+    "review_queue",
+    "workstream_cards",
+    "binding_candidates",
+    "unassigned_bundles",
+    "quiet_workstream_ids",
+    "dependency_context",
+    "blockers",
+    "unknowns",
+    "source_refs"
+  ],
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "summary": {
+            "properties": {"fully_reconciled": {"const": true}},
+            "required": ["fully_reconciled"]
+          }
+        },
+        "required": ["summary"]
+      },
+      "then": {
+        "properties": {
+          "status": {"const": "generated_candidate"},
+          "source": {
+            "properties": {
+              "status": {"const": "observed"},
+              "freshness": {"const": "current"},
+              "problems": {"maxItems": 0}
+            }
+          },
+          "summary": {
+            "properties": {
+              "eligible_workstream_count": {"minimum": 1},
+              "blocker_count": {"const": 0},
+              "unknown_count": {"const": 0},
+              "blocking_evidence_count": {"const": 0},
+              "proposal_ready_count": {"const": 0},
+              "hidden_exact_proposal_count": {"const": 0},
+              "intake_needed": {"const": false}
+            }
+          },
+          "unassigned_bundles": {"maxItems": 0},
+          "blockers": {"maxItems": 0},
+          "unknowns": {"maxItems": 0}
+        }
+      }
+    }
+  ],
+  "properties": {
+    "schema_version": {"const": "dad.portfolio_reconciliation.v1"},
+    "generated_at": {"type": "string", "format": "date-time"},
+    "status": {"enum": ["generated_candidate", "blocked_candidate"]},
+    "data_classification": {"const": "local_private_metadata"},
+    "public_safe": {"const": false},
+    "execution_authorized": {"const": false},
+    "mutations_performed": {"const": false},
+    "authority_boundary": {"type": "string", "minLength": 1},
+    "methodology": {"$ref": "#/$defs/methodology"},
+    "source": {"$ref": "#/$defs/source"},
+    "summary": {"$ref": "#/$defs/summary"},
+    "review_queue": {
+      "type": "array",
+      "maxItems": 3,
+      "items": {"$ref": "#/$defs/review"}
+    },
+    "workstream_cards": {
+      "type": "array",
+      "items": {"$ref": "#/$defs/workstreamCard"}
+    },
+    "binding_candidates": {
+      "type": "array",
+      "items": {"$ref": "#/$defs/candidate"}
+    },
+    "unassigned_bundles": {
+      "type": "array",
+      "items": {"$ref": "#/$defs/unassignedBundle"}
+    },
+    "quiet_workstream_ids": {"$ref": "#/$defs/stringArray"},
+    "dependency_context": {"$ref": "#/$defs/dependencyContext"},
+    "blockers": {
+      "type": "array",
+      "items": {"$ref": "#/$defs/blocker"}
+    },
+    "unknowns": {
+      "type": "array",
+      "items": {"$ref": "#/$defs/coverage"}
+    },
+    "source_refs": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["cockpit"],
+      "properties": {
+        "cockpit": {"$ref": "#/$defs/hash"}
+      }
+    }
+  },
+  "$defs": {
+    "hash": {
+      "type": "string",
+      "pattern": "^sha256:[0-9a-f]{64}$"
+    },
+    "stringArray": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": {"type": "string"}
+    },
+    "methodology": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "method_id",
+        "methodology_ref",
+        "candidate_limit",
+        "review_limit",
+        "fresh_after_hours",
+        "future_tolerance_hours",
+        "evidence_precedence",
+        "critical_path_claimed"
+      ],
+      "properties": {
+        "method_id": {"const": "dad.portfolio-reconciliation-selection.v1"},
+        "methodology_ref": {"type": "string", "minLength": 1},
+        "candidate_limit": {"type": "integer", "minimum": 1, "maximum": 10},
+        "review_limit": {"type": "integer", "minimum": 1, "maximum": 3},
+        "fresh_after_hours": {"type": "integer", "minimum": 1},
+        "future_tolerance_hours": {"type": "integer", "minimum": 0},
+        "evidence_precedence": {
+          "type": "array",
+          "prefixItems": [
+            {"const": "E0_existing_exact"},
+            {"const": "E1_unique_structural"},
+            {"const": "I0_inspect_only"}
+          ],
+          "items": false,
+          "minItems": 3,
+          "maxItems": 3
+        },
+        "critical_path_claimed": {"const": false}
+      }
+    },
+    "source": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "status",
+        "freshness",
+        "schema_version",
+        "generated_at",
+        "source_hash",
+        "problems"
+      ],
+      "properties": {
+        "status": {"enum": ["observed", "invalid"]},
+        "freshness": {"enum": ["current", "stale", "future", "unknown"]},
+        "schema_version": {"type": "string"},
+        "generated_at": {"type": "string"},
+        "source_hash": {"$ref": "#/$defs/hash"},
+        "problems": {"$ref": "#/$defs/stringArray"}
+      }
+    },
+    "summary": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "workstream_count",
+        "eligible_workstream_count",
+        "candidate_count",
+        "hidden_candidate_count",
+        "proposal_ready_count",
+        "hidden_exact_proposal_count",
+        "inspect_only_count",
+        "unassigned_attention_bundle_count",
+        "blocker_count",
+        "unknown_count",
+        "blocking_evidence_count",
+        "fully_reconciled",
+        "intake_needed",
+        "no_candidates_generated"
+      ],
+      "properties": {
+        "workstream_count": {"type": "integer", "minimum": 0},
+        "eligible_workstream_count": {"type": "integer", "minimum": 0},
+        "candidate_count": {"type": "integer", "minimum": 0},
+        "hidden_candidate_count": {"type": "integer", "minimum": 0},
+        "proposal_ready_count": {"type": "integer", "minimum": 0},
+        "hidden_exact_proposal_count": {"type": "integer", "minimum": 0},
+        "inspect_only_count": {"type": "integer", "minimum": 0},
+        "unassigned_attention_bundle_count": {"type": "integer", "minimum": 0},
+        "blocker_count": {"type": "integer", "minimum": 0},
+        "unknown_count": {"type": "integer", "minimum": 0},
+        "blocking_evidence_count": {"type": "integer", "minimum": 0},
+        "fully_reconciled": {"type": "boolean"},
+        "intake_needed": {"type": "boolean"},
+        "no_candidates_generated": {"type": "boolean"}
+      }
+    },
+    "review": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "review_id",
+        "kind",
+        "attention_ids",
+        "proposal_id",
+        "label",
+        "next_action"
+      ],
+      "properties": {
+        "review_id": {"type": "string", "minLength": 1},
+        "kind": {"const": "binding_candidate"},
+        "attention_ids": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {"type": "string", "minLength": 1}
+        },
+        "proposal_id": {"type": "string", "minLength": 1},
+        "label": {"type": "string"},
+        "next_action": {"type": "string", "minLength": 1}
+      }
+    },
+    "workstreamCard": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "card_id",
+        "card_revision_id",
+        "workstream_id",
+        "label",
+        "lifecycle_state",
+        "accepted_resource_ids",
+        "candidate_proposal_ids",
+        "truncated_candidate_count",
+        "hidden_exact_proposal_count"
+      ],
+      "properties": {
+        "card_id": {"type": "string", "minLength": 1},
+        "card_revision_id": {"type": "string", "minLength": 1},
+        "workstream_id": {"type": "string", "minLength": 1},
+        "label": {"type": "string"},
+        "lifecycle_state": {"type": "string"},
+        "accepted_resource_ids": {"$ref": "#/$defs/stringArray"},
+        "candidate_proposal_ids": {"$ref": "#/$defs/stringArray"},
+        "truncated_candidate_count": {"type": "integer", "minimum": 0},
+        "hidden_exact_proposal_count": {"type": "integer", "minimum": 0}
+      }
+    },
+    "relation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["relationship_type", "score", "shared_tokens", "reason"],
+      "properties": {
+        "relationship_type": {"type": "string"},
+        "score": {
+          "anyOf": [
+            {"type": "number", "minimum": 0, "maximum": 1},
+            {"type": "null"}
+          ]
+        },
+        "shared_tokens": {"$ref": "#/$defs/stringArray"},
+        "reason": {"type": "string"}
+      }
+    },
+    "safeCommandArg": {
+      "type": "string",
+      "not": {
+        "enum": [
+          "--accept",
+          "--approved-by",
+          "--approval-ref",
+          "--apply",
+          "--create",
+          "--dispatch"
+        ]
+      }
+    },
+    "evidenceDetails": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "binding_id",
+        "binding_ids",
+        "binding_resolution",
+        "structural_anchor_resource_id",
+        "structural_anchor_resource_ids",
+        "shared_tokens",
+        "target_label_hash"
+      ],
+      "properties": {
+        "binding_id": {"type": "string"},
+        "binding_ids": {"$ref": "#/$defs/stringArray"},
+        "binding_resolution": {"type": "string"},
+        "structural_anchor_resource_id": {"type": "string"},
+        "structural_anchor_resource_ids": {"$ref": "#/$defs/stringArray"},
+        "shared_tokens": {"$ref": "#/$defs/stringArray"},
+        "target_label_hash": {"$ref": "#/$defs/hash"}
+      }
+    },
+    "command": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["command", "args"],
+      "properties": {
+        "command": {"const": "asset-dir"},
+        "args": {
+          "type": "array",
+          "prefixItems": [
+            {"const": "os"},
+            {"const": "bind"},
+            {"$ref": "#/$defs/safeCommandArg"},
+            {"enum": ["repo", "branch", "worktree"]},
+            {"$ref": "#/$defs/safeCommandArg"},
+            {"const": "--label"},
+            {"$ref": "#/$defs/safeCommandArg"},
+            {"const": "--request-id"},
+            {"$ref": "#/$defs/safeCommandArg"}
+          ],
+          "items": false,
+          "minItems": 9,
+          "maxItems": 9
+        }
+      }
+    },
+    "candidate": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "proposal_id",
+        "revision_id",
+        "workstream_id",
+        "workstream_label",
+        "resource_id",
+        "resource_kind",
+        "resource_label",
+        "project_id",
+        "project_name",
+        "evidence_tier",
+        "disposition",
+        "signals",
+        "counterevidence",
+        "evidence_details",
+        "relation",
+        "proposal_command"
+      ],
+      "allOf": [
+        {
+          "if": {
+            "properties": {"proposal_command": {"type": "object"}},
+            "required": ["proposal_command"]
+          },
+          "then": {
+            "properties": {
+              "evidence_tier": {"const": "E1_unique_structural"},
+              "disposition": {"const": "proposal_ready"}
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {"disposition": {"const": "proposal_ready"}},
+            "required": ["disposition"]
+          },
+          "then": {
+            "properties": {
+              "evidence_tier": {"const": "E1_unique_structural"},
+              "proposal_command": {"$ref": "#/$defs/command"}
+            }
+          }
+        }
+      ],
+      "properties": {
+        "proposal_id": {"type": "string", "minLength": 1},
+        "revision_id": {"type": "string", "minLength": 1},
+        "workstream_id": {"type": "string", "minLength": 1},
+        "workstream_label": {"type": "string"},
+        "resource_id": {"type": "string", "minLength": 1},
+        "resource_kind": {"enum": ["repo", "branch", "worktree"]},
+        "resource_label": {"type": "string"},
+        "project_id": {"type": "string", "minLength": 1},
+        "project_name": {"type": "string"},
+        "evidence_tier": {
+          "enum": ["E0_existing_exact", "E1_unique_structural", "I0_inspect_only"]
+        },
+        "disposition": {
+          "enum": [
+            "review_existing",
+            "proposal_ready",
+            "proposal_available",
+            "ambiguous",
+            "inspect_only",
+            "conflict"
+          ]
+        },
+        "signals": {"$ref": "#/$defs/stringArray"},
+        "counterevidence": {"$ref": "#/$defs/stringArray"},
+        "evidence_details": {"$ref": "#/$defs/evidenceDetails"},
+        "relation": {"$ref": "#/$defs/relation"},
+        "proposal_command": {
+          "anyOf": [
+            {"$ref": "#/$defs/command"},
+            {"type": "null"}
+          ]
+        }
+      }
+    },
+    "unassignedBundle": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "bundle_id",
+        "attention_ids",
+        "context_workstream_id",
+        "project_id",
+        "project_name",
+        "label",
+        "resource_ids",
+        "resource_kinds",
+        "resource_labels",
+        "candidate_proposal_ids",
+        "next_action"
+      ],
+      "properties": {
+        "bundle_id": {"type": "string", "minLength": 1},
+        "attention_ids": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {"type": "string", "minLength": 1}
+        },
+        "context_workstream_id": {"type": "string"},
+        "project_id": {"type": "string", "minLength": 1},
+        "project_name": {"type": "string"},
+        "label": {"type": "string"},
+        "resource_ids": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {"type": "string", "minLength": 1}
+        },
+        "resource_kinds": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {"enum": ["repo", "branch", "worktree"]}
+        },
+        "resource_labels": {"$ref": "#/$defs/stringArray"},
+        "candidate_proposal_ids": {"$ref": "#/$defs/stringArray"},
+        "next_action": {"type": "string", "minLength": 1}
+      }
+    },
+    "unlock": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["workstream_id", "label", "blocking_count", "blocks_directly"],
+      "properties": {
+        "workstream_id": {"type": "string"},
+        "label": {"type": "string"},
+        "blocking_count": {"type": "integer", "minimum": 1},
+        "blocks_directly": {"$ref": "#/$defs/stringArray"}
+      }
+    },
+    "dependencyContext": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["accepted_only", "critical_path_claimed", "unlock_frontier"],
+      "properties": {
+        "accepted_only": {"const": true},
+        "critical_path_claimed": {"const": false},
+        "unlock_frontier": {
+          "type": "array",
+          "items": {"$ref": "#/$defs/unlock"}
+        }
+      }
+    },
+    "blocker": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["kind", "ref", "note"],
+      "properties": {
+        "kind": {"type": "string", "minLength": 1},
+        "ref": {"type": "string"},
+        "note": {"type": "string", "minLength": 1}
+      }
+    },
+    "coverage": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["source", "kind", "ref", "note", "severity"],
+      "properties": {
+        "source": {"type": "string"},
+        "kind": {"type": "string"},
+        "ref": {"type": "string"},
+        "note": {"type": "string"},
+        "severity": {"enum": ["info", "warning", "danger"]}
+      }
+    }
+  }
+}

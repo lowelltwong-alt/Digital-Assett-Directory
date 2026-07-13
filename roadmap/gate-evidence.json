@@ -22,7 +22,7 @@
           "roadmap/evidence/phase-8-dad-local-deployment.md",
           "roadmap/evidence/phase-8-dad-local-deployment.commands.json"
         ],
-        "recorded_at": "2026-07-05",
+        "recorded_at": "2026-07-11",
         "status": "passed"
       },
       "python -m pytest tests/test_dad_local_deployment.py -q": {
@@ -30,7 +30,7 @@
           "roadmap/evidence/phase-8-dad-local-deployment.md",
           "roadmap/evidence/phase-8-dad-local-deployment.commands.json"
         ],
-        "recorded_at": "2026-07-05",
+        "recorded_at": "2026-07-11",
         "status": "passed"
       },
       "user-shim asset-dir agent preflight --repo . --agent codex --task \"Goal 1 deployment smoke from outside DAD\"": {
@@ -38,7 +38,7 @@
           "roadmap/evidence/phase-8-dad-local-deployment.md",
           "roadmap/evidence/phase-8-dad-local-deployment.commands.json"
         ],
-        "recorded_at": "2026-07-05",
+        "recorded_at": "2026-07-11",
         "status": "passed"
       },
       "python -m digital_asset_directory.cli rust phase8-evidence-check": {
@@ -46,7 +46,7 @@
           "roadmap/evidence/phase-8-dad-local-deployment.md",
           "roadmap/evidence/phase-8-dad-local-deployment.commands.json"
         ],
-        "recorded_at": "2026-07-06",
+        "recorded_at": "2026-07-11",
         "status": "passed"
       },
       "user-shim asset-dir doctor --scope deployment from two non-DAD repos": {
@@ -54,7 +54,7 @@
           "roadmap/evidence/phase-8-dad-local-deployment.md",
           "roadmap/evidence/phase-8-dad-local-deployment.commands.json"
         ],
-        "recorded_at": "2026-07-05",
+        "recorded_at": "2026-07-11",
         "status": "passed"
       },
       "user-shim asset-dir doctor --scope deployment from Mock Trial4.26 and LawFirm-os-intake without target worktree changes": {
@@ -68,6 +68,66 @@
     }
   },
   "human_gates": {
+    "phase-8-local-install-reviewed": {
+      "evidence": [
+        "roadmap/evidence/dad-deployment-and-all-repo-verification-roadmap.md",
+        "roadmap/evidence/phase-8-dad-local-deployment.md",
+        "roadmap/evidence/phase-8-dad-local-deployment.commands.json",
+        "roadmap/evidence/phase-8-dad-local-deployment.human-review-packet.json",
+        "AGENTS.md",
+        "AI_FRONT_DOOR.md"
+      ],
+      "phase_id": "phase-8-dad-local-deployment",
+      "reviewed_at": "2026-07-12T00:28:59Z",
+      "reviewer": "Lowell",
+      "status": "verified",
+      "summary": "Lowell reviewed the fresh Phase 8 evidence and verified that DAD is callable through the stable local installation or wrapper outside the DAD checkout without manual PYTHONPATH knowledge. This does not authorize enrollment, mail delivery, public release, protected-repository writes, Phase 9, or broader Rust promotion."
+    },
+    "phase-8-hub-locator-reviewed": {
+      "evidence": [
+        "roadmap/evidence/dad-deployment-and-all-repo-verification-roadmap.md",
+        "roadmap/evidence/phase-8-dad-local-deployment.md",
+        "roadmap/evidence/phase-8-dad-local-deployment.commands.json",
+        "roadmap/evidence/phase-8-dad-local-deployment.human-review-packet.json",
+        "AGENTS.md",
+        "AI_FRONT_DOOR.md"
+      ],
+      "phase_id": "phase-8-dad-local-deployment",
+      "reviewed_at": "2026-07-12T00:28:59Z",
+      "reviewer": "Lowell",
+      "status": "verified",
+      "summary": "Lowell reviewed the fresh Phase 8 evidence and verified that --hub, DAD_HUB, and the user-level hub configuration resolve the same canonical DAD hub from non-DAD repositories. This does not authorize enrollment, mail delivery, public release, protected-repository writes, Phase 9, or broader Rust promotion."
+    },
+    "phase-8-doctor-smoke-reviewed": {
+      "evidence": [
+        "roadmap/evidence/dad-deployment-and-all-repo-verification-roadmap.md",
+        "roadmap/evidence/phase-8-dad-local-deployment.md",
+        "roadmap/evidence/phase-8-dad-local-deployment.commands.json",
+        "roadmap/evidence/phase-8-dad-local-deployment.human-review-packet.json",
+        "AGENTS.md",
+        "AI_FRONT_DOOR.md"
+      ],
+      "phase_id": "phase-8-dad-local-deployment",
+      "reviewed_at": "2026-07-12T00:28:59Z",
+      "reviewer": "Lowell",
+      "status": "verified",
+      "summary": "Lowell reviewed the fresh Phase 8 evidence and verified that asset-dir doctor passes from DAD and at least two isolated non-DAD callers without mutating the caller directories. This does not authorize enrollment, mail delivery, public release, protected-repository writes, Phase 9, or broader Rust promotion."
+    },
+    "phase-8-unavailable-policy-reviewed": {
+      "evidence": [
+        "roadmap/evidence/dad-deployment-and-all-repo-verification-roadmap.md",
+        "roadmap/evidence/phase-8-dad-local-deployment.md",
+        "roadmap/evidence/phase-8-dad-local-deployment.commands.json",
+        "roadmap/evidence/phase-8-dad-local-deployment.human-review-packet.json",
+        "AGENTS.md",
+        "AI_FRONT_DOOR.md"
+      ],
+      "phase_id": "phase-8-dad-local-deployment",
+      "reviewed_at": "2026-07-12T00:28:59Z",
+      "reviewer": "Lowell",
+      "status": "verified",
+      "summary": "Lowell reviewed the fresh Phase 8 evidence and verified that unavailable DAD warns for ordinary local coding and fails closed for cross-repository writes, protected-repository work, public release, and sensitive mail. This does not authorize enrollment, mail delivery, public release, protected-repository writes, Phase 9, or broader Rust promotion."
+    },
     "phase-1-github-token-scope-reviewed-deferred": {
       "evidence": [
         "roadmap/evidence/phase-1-first-inventory.md"

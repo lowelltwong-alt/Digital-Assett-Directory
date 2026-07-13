@@ -1,0 +1,461 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "dad://schemas/portfolio-workstream-state.v1",
+  "title": "DAD Portfolio Workstream State",
+  "description": "Folded projection of the portfolio workstream event ledger: ideas, workstreams, lifecycle states, board columns, dependency rollup, sprawl clusters, and the explainable focus queue capped at three Today items. Local private metadata; candidate evidence only.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "generated_at",
+    "status",
+    "data_classification",
+    "public_safe",
+    "authority_boundary",
+    "summary",
+    "conversations",
+    "projects",
+    "ideas",
+    "workstreams",
+    "today",
+    "focus_queue",
+    "board",
+    "dependencies",
+    "sprawl_clusters",
+    "relationship_class_stats",
+    "coverage",
+    "ledger_diagnostics",
+    "portfolio_snapshot"
+  ],
+  "properties": {
+    "schema_version": {"const": "dad.portfolio_workstreams.v1"},
+    "generated_at": {"type": "string", "format": "date-time"},
+    "status": {"const": "generated_candidate"},
+    "data_classification": {"const": "local_private_metadata"},
+    "public_safe": {"const": false},
+    "authority_boundary": {"type": "string", "minLength": 1},
+    "summary": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "project_count",
+        "idea_count",
+        "conversation_count",
+        "workstream_count",
+        "open_workstream_count",
+        "relation_count",
+        "focus_item_count",
+        "today_item_count",
+        "suppressed_workstream_count",
+        "bottleneck_count",
+        "sprawl_cluster_count"
+      ],
+      "properties": {
+        "project_count": {"type": "integer", "minimum": 0},
+        "idea_count": {"type": "integer", "minimum": 0},
+        "conversation_count": {"type": "integer", "minimum": 0},
+        "workstream_count": {"type": "integer", "minimum": 0},
+        "open_workstream_count": {"type": "integer", "minimum": 0},
+        "relation_count": {"type": "integer", "minimum": 0},
+        "focus_item_count": {"type": "integer", "minimum": 0},
+        "today_item_count": {"type": "integer", "minimum": 0, "maximum": 3},
+        "suppressed_workstream_count": {"type": "integer", "minimum": 0},
+        "bottleneck_count": {"type": "integer", "minimum": 0},
+        "sprawl_cluster_count": {"type": "integer", "minimum": 0}
+      }
+    },
+    "conversations": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["conversation_id", "title", "idea_ids"],
+        "properties": {
+          "conversation_id": {"type": "string", "minLength": 1},
+          "title": {"type": "string"},
+          "idea_ids": {"type": "array", "items": {"type": "string"}}
+        }
+      }
+    },
+    "projects": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "project_id",
+          "name",
+          "parent_project_id",
+          "note",
+          "sovereignty_state",
+          "state_since",
+          "registered_at",
+          "sovereignty_history"
+        ],
+        "properties": {
+          "project_id": {"type": "string", "minLength": 1},
+          "name": {"type": "string", "minLength": 1},
+          "parent_project_id": {"type": "string"},
+          "note": {"type": "string"},
+          "sovereignty_state": {
+            "enum": [
+              "incubating",
+              "dad_governed_child",
+              "release_candidate",
+              "delivery_approved",
+              "client_sovereign",
+              "maintained_upstream",
+              "fully_detached"
+            ]
+          },
+          "state_since": {"type": "string", "format": "date-time"},
+          "registered_at": {"type": "string", "format": "date-time"},
+          "sovereignty_history": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "from_state",
+                "to_state",
+                "decided_by",
+                "approval_ref",
+                "note",
+                "recorded_at"
+              ],
+              "properties": {
+                "from_state": {"type": "string"},
+                "to_state": {"type": "string"},
+                "decided_by": {"type": "string", "minLength": 1},
+                "approval_ref": {"type": "string", "minLength": 1},
+                "note": {"type": "string"},
+                "recorded_at": {"type": "string", "format": "date-time"}
+              }
+            }
+          }
+        }
+      }
+    },
+    "ideas": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["idea_id", "text", "conversation_id", "conversation_title", "captured_at", "provenance"],
+        "properties": {
+          "idea_id": {"type": "string"},
+          "text": {"type": "string"},
+          "conversation_id": {"type": "string"},
+          "conversation_title": {"type": "string"},
+          "captured_at": {"type": "string"},
+          "provenance": {"type": "object"}
+        }
+      }
+    },
+    "workstreams": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "workstream_id",
+          "idea_id",
+          "idea_text",
+          "proposal_kind",
+          "recommended_action",
+          "needs_human_decision",
+          "divergence",
+          "relations",
+          "proposed_at",
+          "lifecycle_state",
+          "state_since",
+          "snooze_until",
+          "review_at",
+          "capsule",
+          "dismissal_epoch",
+          "decision_rejected_at",
+          "conflict_resolved",
+          "bindings",
+          "dismiss_count",
+          "last_activity_at",
+          "inactive_days"
+        ],
+        "properties": {
+          "workstream_id": {"type": "string"},
+          "idea_id": {"type": "string"},
+          "idea_text": {"type": "string"},
+          "proposal_kind": {
+            "enum": [
+              "new_independent_workstream",
+              "new_sibling_workstream",
+              "new_experiment_workstream",
+              "new_workstream_flagged_conflict",
+              "resume_existing",
+              "merge_or_dedupe"
+            ]
+          },
+          "recommended_action": {"type": "string"},
+          "needs_human_decision": {"type": "boolean"},
+          "divergence": {"type": "boolean"},
+          "relations": {"type": "array", "items": {"type": "object"}},
+          "proposed_at": {"type": "string"},
+          "lifecycle_state": {
+            "enum": ["proposed", "active", "paused", "snoozed", "incubating", "merged", "superseded", "archived"]
+          },
+          "state_since": {"type": "string"},
+          "snooze_until": {"type": "string"},
+          "review_at": {"type": "string"},
+          "capsule": {
+            "oneOf": [
+              {"type": "null"},
+              {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "capsule_id",
+                  "pause_reason",
+                  "blocker",
+                  "last_check",
+                  "next_action",
+                  "snooze_until",
+                  "incubating",
+                  "review_at",
+                  "recorded_at"
+                ],
+                "properties": {
+                  "capsule_id": {"type": "string"},
+                  "pause_reason": {"type": "string"},
+                  "blocker": {"type": "string"},
+                  "last_check": {"type": "string"},
+                  "next_action": {"type": "string"},
+                  "snooze_until": {"type": "string"},
+                  "incubating": {"type": "boolean"},
+                  "review_at": {"type": "string"},
+                  "recorded_at": {"type": "string"}
+                }
+              }
+            ]
+          },
+          "conflict_resolved": {"type": "boolean"},
+          "dismissal_epoch": {"type": "integer", "minimum": 0},
+          "decision_rejected_at": {"type": "string"},
+          "bindings": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "binding_id",
+                "binding_kind",
+                "ref",
+                "label",
+                "assertion_status",
+                "asserted_by",
+                "approval_ref",
+                "recorded_at"
+              ],
+              "properties": {
+                "binding_id": {"type": "string"},
+                "binding_kind": {
+                  "enum": [
+                    "repo",
+                    "branch",
+                    "worktree",
+                    "codex_task",
+                    "agent_run",
+                    "specification",
+                    "conversation",
+                    "depends_on",
+                    "blocks"
+                  ]
+                },
+                "ref": {"type": "string"},
+                "label": {"type": "string"},
+                "assertion_status": {"enum": ["proposed", "accepted"]},
+                "asserted_by": {"type": "string"},
+                "approval_ref": {"type": "string"},
+                "recorded_at": {"type": "string"}
+              }
+            }
+          },
+          "dismiss_count": {"type": "integer", "minimum": 0},
+          "last_activity_at": {"type": "string"},
+          "inactive_days": {"type": ["integer", "null"]}
+        }
+      }
+    },
+    "today": {"type": "array", "maxItems": 3, "items": {"$ref": "#/$defs/focus_item"}},
+    "focus_queue": {"type": "array", "items": {"$ref": "#/$defs/focus_item"}},
+    "board": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["proposed", "active", "paused", "snoozed", "incubating", "merged", "superseded", "archived"],
+      "properties": {
+        "proposed": {"$ref": "#/$defs/board_column"},
+        "active": {"$ref": "#/$defs/board_column"},
+        "paused": {"$ref": "#/$defs/board_column"},
+        "snoozed": {"$ref": "#/$defs/board_column"},
+        "incubating": {"$ref": "#/$defs/board_column"},
+        "merged": {"$ref": "#/$defs/board_column"},
+        "superseded": {"$ref": "#/$defs/board_column"},
+        "archived": {"$ref": "#/$defs/board_column"}
+      }
+    },
+    "dependencies": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["per_workstream", "bottlenecks", "invalid_assertions", "cycle_nodes"],
+      "properties": {
+        "per_workstream": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["blocking_count", "blocks_directly", "blocked_by"],
+            "properties": {
+              "blocking_count": {"type": "integer", "minimum": 0},
+              "blocks_directly": {"type": "array", "items": {"type": "string"}},
+              "blocked_by": {"type": "array", "items": {"type": "string"}}
+            }
+          }
+        },
+        "bottlenecks": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["workstream_id", "blocking_count", "blocks_directly"],
+            "properties": {
+              "workstream_id": {"type": "string"},
+              "blocking_count": {"type": "integer", "minimum": 1},
+              "blocks_directly": {"type": "array", "items": {"type": "string"}}
+            }
+          }
+        },
+        "invalid_assertions": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["kind", "source", "target"],
+            "properties": {
+              "kind": {"enum": ["self_dependency", "dependency_cycle"]},
+              "source": {"type": "string"},
+              "target": {"type": "string"}
+            }
+          }
+        },
+        "cycle_nodes": {"type": "array", "items": {"type": "string"}}
+      }
+    },
+    "sprawl_clusters": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["workstream_ids", "reason"],
+        "properties": {
+          "workstream_ids": {"type": "array", "minItems": 2, "items": {"type": "string"}},
+          "reason": {"type": "string", "minLength": 1}
+        }
+      }
+    },
+    "relationship_class_stats": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["accepts", "dismisses", "samples", "accept_rate", "low_precision"],
+        "properties": {
+          "accepts": {"type": "integer", "minimum": 0},
+          "dismisses": {"type": "integer", "minimum": 0},
+          "samples": {"type": "integer", "minimum": 0},
+          "accept_rate": {"type": ["number", "null"], "minimum": 0, "maximum": 1},
+          "low_precision": {"type": "boolean"}
+        }
+      }
+    },
+    "coverage": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["workstream_id", "note"],
+        "properties": {
+          "workstream_id": {"type": "string"},
+          "note": {"type": "string", "minLength": 1}
+        }
+      }
+    },
+    "ledger_diagnostics": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["corrupt_line_count", "invalid_envelope_count", "torn_tail_pending", "problems", "fold_problems"],
+      "properties": {
+        "corrupt_line_count": {"type": "integer", "minimum": 0},
+        "invalid_envelope_count": {"type": "integer", "minimum": 0},
+        "torn_tail_pending": {"type": "boolean"},
+        "problems": {"type": "array", "items": {"type": "string"}},
+        "fold_problems": {"type": "array", "items": {"type": "string"}}
+      }
+    },
+    "portfolio_snapshot": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["status", "as_of", "source_hash"],
+      "properties": {
+        "status": {"enum": ["provided", "unavailable"]},
+        "as_of": {"type": "string"},
+        "source_hash": {"type": "string"}
+      }
+    }
+  },
+  "$defs": {
+    "board_column": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["workstream_id", "idea_text"],
+        "properties": {
+          "workstream_id": {"type": "string"},
+          "idea_text": {"type": "string"}
+        }
+      }
+    },
+    "focus_item": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "workstream_id",
+        "idea_text",
+        "proposal_kind",
+        "lifecycle_state",
+        "priority",
+        "tier",
+        "trigger_signature",
+        "trigger_kind",
+        "reasons",
+        "suppressed_reasons",
+        "next_action",
+        "inactive_days",
+        "last_activity_at"
+      ],
+      "properties": {
+        "workstream_id": {"type": "string"},
+        "idea_text": {"type": "string"},
+        "proposal_kind": {"type": "string"},
+        "lifecycle_state": {"type": "string"},
+        "priority": {"type": "integer", "minimum": 0},
+        "tier": {"enum": ["silent", "interrupt", "nudge", "weekly"]},
+        "trigger_signature": {"type": "string"},
+        "trigger_kind": {"type": "string"},
+        "reasons": {"type": "array", "items": {"type": "string"}},
+        "suppressed_reasons": {"type": "array", "items": {"type": "string"}},
+        "next_action": {"type": "string"},
+        "inactive_days": {"type": ["integer", "null"]},
+        "last_activity_at": {"type": "string"}
+      }
+    }
+  }
+}

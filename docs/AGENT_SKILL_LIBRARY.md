@@ -40,6 +40,35 @@ replaces a checked-out skill.
 | `scripts/check_agent_skill_checkouts.py` | Dry-run checker for stale, retired, replaced, or unknown skill checkouts recorded in `processed/skills/checkouts.jsonl`. |
 | `scripts/validate_agent_skill_library.py` | Registry, path, template, and mail-template validator. |
 
+## Registered Subagent Role Packs
+
+A skill may declare one repository-relative `subagent_pack` in the registry.
+DAD reads only that allowlisted path, requires it to remain inside the skill
+directory, validates it with `schemas/subagent-pack.schema.json`, and rejects
+unknown capability IDs, duplicate pack/profile identities, stale methodology
+references, absolute paths, traversal, secrets, and private payloads.
+
+Build the generated candidate directory explicitly:
+
+```text
+asset-dir subagents catalog
+```
+
+Search without writing or dispatching work:
+
+```text
+asset-dir subagents directory --query "neglected dirty worktree"
+asset-dir os agents --capability dependency_frontier_analysis
+```
+
+`processed/agents/subagent-role-directory.json` is a catalog sidecar to the
+attempt-first capability graph. Declared roles and capabilities are retrieval
+metadata, not evidence of competence. An untried role is always
+`insufficient_evidence`; evaluated revision summaries appear only when the pack
+declares exact `evaluated_role_revision_ids` that match the immutable evaluation
+graph. Search uses categorical matches and lexical tie-breaking, never scores,
+centrality, model family, popularity, or automatic recommendations.
+
 ## Checkout Modes
 
 | Mode | Use when | Boundary |

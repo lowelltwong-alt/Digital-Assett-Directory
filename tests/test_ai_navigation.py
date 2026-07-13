@@ -58,7 +58,7 @@ def test_manifest_exposes_navigation_and_graph_entrypoints() -> None:
     assert manifest["navigation_standards"]["navigation_registry"] == (
         "registry/ai-navigation-registry.json"
     )
-    assert manifest["navigation_standards"]["navigation_version"] == "2026.07.10.1"
+    assert manifest["navigation_standards"]["navigation_version"] == "2026.07.13.6"
     assert manifest["navigation_standards"]["routing_standard"] == (
         "docs/AI_ENTRYPOINT_AND_TOC_ROUTING_STANDARD.md"
     )
@@ -76,14 +76,52 @@ def test_manifest_exposes_navigation_and_graph_entrypoints() -> None:
     )
     assert "docs/PR_BRANCH_LIFECYCLE_GOVERNANCE.md" in manifest["knowledge_graph_entrypoints"]
     assert "docs/DAD_EVENT_PIPELINE.md" in manifest["knowledge_graph_entrypoints"]
+    assert (
+        "src/digital_asset_directory/portfolio_workstreams.py"
+        in manifest["knowledge_graph_entrypoints"]
+    )
+    assert (
+        "src/digital_asset_directory/portfolio_cockpit.py"
+        in manifest["knowledge_graph_entrypoints"]
+    )
+    assert "schemas/portfolio-cockpit.schema.json" in manifest["knowledge_graph_entrypoints"]
+    assert (
+        "src/digital_asset_directory/portfolio_reconciliation.py"
+        in manifest["knowledge_graph_entrypoints"]
+    )
+    assert "schemas/portfolio-reconciliation.schema.json" in manifest["knowledge_graph_entrypoints"]
+    assert (
+        "docs/frontier/collaboration/12_PORTFOLIO_BINDING_ASSISTANCE.md"
+        in manifest["knowledge_graph_entrypoints"]
+    )
+    assert (
+        "roadmap/evidence/portfolio-reconciliation-operator-trial.md"
+        in manifest["knowledge_graph_entrypoints"]
+    )
+    assert (
+        "src/digital_asset_directory/portfolio_shaping.py"
+        in manifest["knowledge_graph_entrypoints"]
+    )
+    assert (
+        "schemas/portfolio-workstream-shaping.schema.json"
+        in manifest["knowledge_graph_entrypoints"]
+    )
+    assert (
+        "docs/frontier/collaboration/13_PORTFOLIO_WORKSTREAM_SHAPING.md"
+        in manifest["knowledge_graph_entrypoints"]
+    )
+    assert (
+        "roadmap/evidence/portfolio-shaping-operator-trial.md"
+        in manifest["knowledge_graph_entrypoints"]
+    )
+    assert (
+        "schemas/portfolio-workstream-event.schema.json" in manifest["knowledge_graph_entrypoints"]
+    )
     assert "docs/MCP_FIRST_INTEGRATION_POLICY.md" in manifest["knowledge_graph_entrypoints"]
     assert "docs/DAD_TRANSPORT_AND_COMMS_REDESIGN.md" in manifest["knowledge_graph_entrypoints"]
     assert "tools/dad_scan_core/src/event_log.rs" in manifest["knowledge_graph_entrypoints"]
     assert "processed/events/" in manifest["knowledge_graph_entrypoints"]
-    assert (
-        "processed/events/reports/event_pipeline.md"
-        in manifest["knowledge_graph_entrypoints"]
-    )
+    assert "processed/events/reports/event_pipeline.md" in manifest["knowledge_graph_entrypoints"]
     assert (
         "docs/rust/RUST_ROLLOUT_LESSON_CAPTURE_PROTOCOL.md"
         in manifest["knowledge_graph_entrypoints"]
@@ -124,7 +162,7 @@ def test_navigation_registry_keeps_front_door_singular_and_fresh() -> None:
     registry = json.loads((ROOT / "registry" / "ai-navigation-registry.json").read_text())
 
     assert registry["singular_entrypoint"]["path"] == "AI_FRONT_DOOR.md"
-    assert registry["navigation_version"] == "2026.07.13.1"
+    assert registry["navigation_version"] == "2026.07.13.8"
     assert registry["updated_at"]
     assert "memory" in registry["entrypoint_policy"]["memory_rule"].lower()
     assert registry["freshness_policy"]["recent_changes_limit"] <= 20
@@ -143,12 +181,25 @@ def test_navigation_registry_keeps_front_door_singular_and_fresh() -> None:
     assert "docs/DAD_EVENT_PIPELINE.md" in branches
     assert "docs/DAD_MAIL_STORM_AND_DIRTY_STATE_RUNBOOK.md" in branches
     assert "docs/PR_BRANCH_LIFECYCLE_GOVERNANCE.md" in branches
+    portfolio_branch = branches["docs/DAD_PORTFOLIO_AI_OPERATING_SYSTEM_PLAN.md"]
+    assert (
+        "src/digital_asset_directory/portfolio_reconciliation.py" in portfolio_branch["route_after"]
+    )
+    assert "schemas/portfolio-reconciliation.schema.json" in portfolio_branch["route_after"]
+    assert "src/digital_asset_directory/portfolio_shaping.py" in portfolio_branch["route_after"]
+    assert "schemas/portfolio-workstream-shaping.schema.json" in portfolio_branch["route_after"]
+    assert (
+        "docs/frontier/collaboration/13_PORTFOLIO_WORKSTREAM_SHAPING.md"
+        in portfolio_branch["route_after"]
+    )
+    assert (
+        "roadmap/evidence/portfolio-reconciliation-operator-trial.md"
+        in portfolio_branch["route_after"]
+    )
+    assert "roadmap/evidence/portfolio-shaping-operator-trial.md" in portfolio_branch["route_after"]
     assert "docs/rust/RUST_ROLLOUT_LESSON_CAPTURE_PROTOCOL.md" in branches
     assert "assets/coding-harnesses/repo-enrollment-mail-governance-safety/" in branches
-    assert (
-        "roadmap/evidence/dad-deployment-and-all-repo-verification-roadmap.md"
-        in branches
-    )
+    assert "roadmap/evidence/dad-deployment-and-all-repo-verification-roadmap.md" in branches
     deployment_branch = branches[
         "roadmap/evidence/dad-deployment-and-all-repo-verification-roadmap.md"
     ]
@@ -157,8 +208,7 @@ def test_navigation_registry_keeps_front_door_singular_and_fresh() -> None:
         in deployment_branch["route_after"]
     )
     assert (
-        "roadmap/evidence/phase-10a-mailbox-event-pipeline.md"
-        in deployment_branch["route_after"]
+        "roadmap/evidence/phase-10a-mailbox-event-pipeline.md" in deployment_branch["route_after"]
     )
     assert (
         "processed/fable5/deep-dives/2026-07-06-dad-deployment-rust-handoff/fable5-master-prompt.md"
@@ -174,13 +224,10 @@ def test_navigation_registry_keeps_front_door_singular_and_fresh() -> None:
 
     change_paths = {path for change in registry["recent_changes"] for path in change["paths"]}
     assert "registry/ai-navigation-registry.json" in change_paths
-    assert "docs/DAD_ADDRESS_MODEL.md" in change_paths
+    assert "docs/DAD_ADDRESS_MODEL.md" in branches
     assert "docs/HARNESS_VS_DETERMINISTIC_ENFORCEMENT.md" in change_paths
     assert "docs/CLAUDE_ARCHITECTURAL_ROOT_CAUSE_REVIEW.md" in change_paths
-    assert (
-        "roadmap/evidence/phase-8-dad-local-deployment.human-review-packet.json"
-        in change_paths
-    )
+    assert "roadmap/evidence/phase-8-dad-local-deployment.human-review-packet.json" in change_paths
     assert "docs/DAD_EVENT_PIPELINE.md" in change_paths
     assert (
         "processed/fable5/deep-dives/2026-07-06-dad-deployment-rust-handoff/fable5-master-prompt.md"
@@ -250,9 +297,7 @@ def test_pr_branch_lifecycle_governance_route_is_discoverable() -> None:
     manifest = json.loads((ROOT / "MACHINE_NAVIGATION_MANIFEST.json").read_text())
     registry = json.loads((ROOT / "registry" / "ai-navigation-registry.json").read_text())
     needs = json.loads((ROOT / "registry" / "dad-needs-registry.json").read_text())
-    runbook = (ROOT / "docs" / "PR_BRANCH_LIFECYCLE_GOVERNANCE.md").read_text(
-        encoding="utf-8"
-    )
+    runbook = (ROOT / "docs" / "PR_BRANCH_LIFECYCLE_GOVERNANCE.md").read_text(encoding="utf-8")
 
     route = "docs/PR_BRANCH_LIFECYCLE_GOVERNANCE.md"
 

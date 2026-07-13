@@ -65,6 +65,14 @@
           "upgrade_channel": {"enum": ["dad_mail", "manual_review", "none"]},
           "known_upgrades": {"type": "array", "items": {"type": "object"}},
           "source_refs": {"type": "array", "items": {"type": "string", "minLength": 1}, "minItems": 1},
+          "validation_refs": {"type": "array", "items": {"type": "string", "minLength": 1}, "minItems": 1},
+          "owner_authority": {"type": "string", "minLength": 1},
+          "adoption_semantics": {"type": "string", "minLength": 1},
+          "routing_intents": {
+            "type": "array",
+            "items": {"enum": ["coding", "governance", "mail", "rust", "enrollment"]},
+            "uniqueItems": true
+          },
           "harness_registry_ref": {"type": "string", "minLength": 1},
           "workflow_stages": {
             "type": "array",

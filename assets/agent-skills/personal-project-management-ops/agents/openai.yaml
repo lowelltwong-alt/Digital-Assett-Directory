@@ -1,0 +1,4 @@
+interface:
+  display_name: "Personal Project Management Ops"
+  short_description: "Orchestrate projects from idea through delivery"
+  default_prompt: "Use $personal-project-management-ops to organize this project, identify related work, plan dependencies, and choose the next bounded action."

@@ -1,0 +1,959 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://dad.local/schemas/portfolio-cockpit.schema.json",
+  "title": "DAD Portfolio Cockpit Projection",
+  "description": "Strict local-only composite projection of Git/worktree observations and folded workstream state.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "generated_at",
+    "status",
+    "data_classification",
+    "public_safe",
+    "execution_authorized",
+    "authority_boundary",
+    "selection_policy",
+    "sources",
+    "summary",
+    "today",
+    "attention_queue",
+    "lanes",
+    "board",
+    "projects",
+    "workstreams",
+    "resources",
+    "bindings",
+    "coverage",
+    "unknowns",
+    "source_refs"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": "dad.portfolio_cockpit.v1"
+    },
+    "generated_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "status": {
+      "enum": [
+        "generated_candidate",
+        "partial_candidate"
+      ]
+    },
+    "data_classification": {
+      "const": "local_private_metadata"
+    },
+    "public_safe": {
+      "const": false
+    },
+    "execution_authorized": {
+      "const": false
+    },
+    "authority_boundary": {
+      "type": "string",
+      "minLength": 20
+    },
+    "selection_policy": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "policy_id",
+        "methodology_ref",
+        "today_limit",
+        "fresh_after_hours",
+        "bands",
+        "tie_breakers"
+      ],
+      "properties": {
+        "policy_id": {
+          "const": "dad.portfolio-cockpit-selection.v1"
+        },
+        "methodology_ref": {
+          "const": "docs/frontier/collaboration/11_PORTFOLIO_COCKPIT_PROJECTION.md"
+        },
+        "today_limit": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 3
+        },
+        "fresh_after_hours": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "bands": {
+          "type": "array",
+          "prefixItems": [
+            {
+              "const": "human_decision"
+            },
+            {
+              "const": "integrity_unknown"
+            },
+            {
+              "const": "dirty_recovery"
+            },
+            {
+              "const": "dependency_unlock"
+            },
+            {
+              "const": "related_active_neglect"
+            },
+            {
+              "const": "weekly_maintenance"
+            }
+          ],
+          "items": false,
+          "minItems": 6,
+          "maxItems": 6
+        },
+        "tie_breakers": {
+          "type": "array",
+          "prefixItems": [
+            {
+              "const": "source_local_priority_desc"
+            },
+            {
+              "const": "accepted_blocking_count_desc"
+            },
+            {
+              "const": "inactive_days_desc"
+            },
+            {
+              "const": "attention_id_asc"
+            }
+          ],
+          "items": false,
+          "minItems": 4,
+          "maxItems": 4
+        }
+      }
+    },
+    "sources": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "git",
+        "workstreams"
+      ],
+      "properties": {
+        "git": {
+          "allOf": [
+            {"$ref": "#/$defs/source"},
+            {
+              "properties": {
+                "name": {"const": "git"}
+              }
+            }
+          ]
+        },
+        "workstreams": {
+          "allOf": [
+            {"$ref": "#/$defs/source"},
+            {
+              "properties": {
+                "name": {"const": "workstreams"}
+              }
+            }
+          ]
+        }
+      }
+    },
+    "summary": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "project_count",
+        "branch_count",
+        "worktree_count",
+        "workstream_count",
+        "attention_item_count",
+        "today_item_count",
+        "unknown_count",
+        "unassigned_attention_count",
+        "all_clear"
+      ],
+      "properties": {
+        "project_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "branch_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "worktree_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "workstream_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "attention_item_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "today_item_count": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 3
+        },
+        "unknown_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "unassigned_attention_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "all_clear": {
+          "type": "boolean"
+        }
+      }
+    },
+    "today": {
+      "type": "array",
+      "maxItems": 3,
+      "items": {
+        "$ref": "#/$defs/attention"
+      }
+    },
+    "attention_queue": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/attention"
+      }
+    },
+    "lanes": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "human_gates",
+        "dirty_worktrees",
+        "neglected_work",
+        "unlock_frontier",
+        "related_work",
+        "quiet_work"
+      ],
+      "properties": {
+        "human_gates": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/attention"
+          }
+        },
+        "dirty_worktrees": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/attention"
+          }
+        },
+        "neglected_work": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/attention"
+          }
+        },
+        "unlock_frontier": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/unlock"
+          }
+        },
+        "related_work": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/related"
+          }
+        },
+        "quiet_work": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/quiet"
+          }
+        }
+      }
+    },
+    "board": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "proposed",
+        "active",
+        "paused",
+        "snoozed",
+        "incubating",
+        "merged",
+        "superseded",
+        "archived"
+      ],
+      "properties": {
+        "proposed": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/boardCard"
+          }
+        },
+        "active": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/boardCard"
+          }
+        },
+        "paused": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/boardCard"
+          }
+        },
+        "snoozed": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/boardCard"
+          }
+        },
+        "incubating": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/boardCard"
+          }
+        },
+        "merged": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/boardCard"
+          }
+        },
+        "superseded": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/boardCard"
+          }
+        },
+        "archived": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/boardCard"
+          }
+        }
+      }
+    },
+    "projects": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/project"
+      }
+    },
+    "workstreams": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/workstream"
+      }
+    },
+    "resources": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/resource"
+      }
+    },
+    "bindings": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/binding"
+      }
+    },
+    "coverage": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/coverage"
+      }
+    },
+    "unknowns": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/coverage"
+      }
+    },
+    "source_refs": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "git",
+        "workstreams"
+      ],
+      "properties": {
+        "git": {
+          "type": "string"
+        },
+        "workstreams": {
+          "type": "string"
+        }
+      }
+    }
+  },
+  "$defs": {
+    "stringArray": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "nullableInt": {
+      "type": [
+        "integer",
+        "null"
+      ],
+      "minimum": 0
+    },
+    "coverage": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "source",
+        "kind",
+        "ref",
+        "note",
+        "severity"
+      ],
+      "properties": {
+        "source": {
+          "type": "string"
+        },
+        "kind": {
+          "type": "string"
+        },
+        "ref": {
+          "type": "string"
+        },
+        "note": {
+          "type": "string"
+        },
+        "severity": {
+          "enum": [
+            "info",
+            "warning",
+            "danger"
+          ]
+        }
+      }
+    },
+    "evidence": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "git",
+        "workstream",
+        "coverage_ref"
+      ],
+      "properties": {
+        "git": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "dirty",
+            "changed_path_count",
+            "ahead",
+            "behind"
+          ],
+          "properties": {
+            "dirty": {
+              "type": [
+                "boolean",
+                "null"
+              ]
+            },
+            "changed_path_count": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "ahead": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "behind": {
+              "type": "integer",
+              "minimum": 0
+            }
+          }
+        },
+        "workstream": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "trigger_kind",
+            "trigger_signature",
+            "tier",
+            "needs_human_decision"
+          ],
+          "properties": {
+            "trigger_kind": {
+              "type": "string"
+            },
+            "trigger_signature": {
+              "type": "string"
+            },
+            "tier": {
+              "type": "string"
+            },
+            "needs_human_decision": {
+              "type": "boolean"
+            }
+          }
+        },
+        "coverage_ref": {
+          "type": "string"
+        }
+      }
+    },
+    "attention": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "attention_id",
+        "source",
+        "band",
+        "source_local_priorities",
+        "blocking_count",
+        "inactive_days",
+        "project_id",
+        "project_name",
+        "workstream_id",
+        "label",
+        "lifecycle_state",
+        "reasons",
+        "next_action",
+        "resource_ids",
+        "evidence",
+        "selected_today",
+        "fingerprint"
+      ],
+      "properties": {
+        "attention_id": {
+          "type": "string"
+        },
+        "source": {
+          "enum": [
+            "git",
+            "workstreams",
+            "joined",
+            "system"
+          ]
+        },
+        "band": {
+          "enum": [
+            "human_decision",
+            "integrity_unknown",
+            "dirty_recovery",
+            "dependency_unlock",
+            "related_active_neglect",
+            "weekly_maintenance"
+          ]
+        },
+        "source_local_priorities": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "git",
+            "workstreams"
+          ],
+          "properties": {
+            "git": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "workstreams": {
+              "type": "integer",
+              "minimum": 0
+            }
+          }
+        },
+        "blocking_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "inactive_days": {
+          "$ref": "#/$defs/nullableInt"
+        },
+        "project_id": {
+          "type": "string"
+        },
+        "project_name": {
+          "type": "string"
+        },
+        "workstream_id": {
+          "type": "string"
+        },
+        "label": {
+          "type": "string"
+        },
+        "lifecycle_state": {
+          "type": "string"
+        },
+        "reasons": {
+          "$ref": "#/$defs/stringArray"
+        },
+        "next_action": {
+          "type": "string"
+        },
+        "resource_ids": {
+          "$ref": "#/$defs/stringArray"
+        },
+        "evidence": {
+          "$ref": "#/$defs/evidence"
+        },
+        "selected_today": {
+          "type": "boolean"
+        },
+        "fingerprint": {
+          "type": "string",
+          "pattern": "^sha256:[0-9a-f]{64}$"
+        }
+      }
+    },
+    "source": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "name",
+        "status",
+        "freshness",
+        "schema_version",
+        "generated_at",
+        "source_hash",
+        "problems"
+      ],
+      "properties": {
+        "name": {
+          "enum": [
+            "git",
+            "workstreams"
+          ]
+        },
+        "status": {
+          "enum": [
+            "observed",
+            "unavailable",
+            "invalid"
+          ]
+        },
+        "freshness": {
+          "enum": [
+            "current",
+            "stale",
+            "unknown"
+          ]
+        },
+        "schema_version": {
+          "type": "string"
+        },
+        "generated_at": {
+          "type": "string"
+        },
+        "source_hash": {
+          "type": "string"
+        },
+        "problems": {
+          "$ref": "#/$defs/stringArray"
+        }
+      }
+    },
+    "relatedProject": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "project_id",
+        "project_name",
+        "score",
+        "shared_metadata_tokens",
+        "status"
+      ],
+      "properties": {
+        "project_id": {
+          "type": "string"
+        },
+        "project_name": {
+          "type": "string"
+        },
+        "score": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1
+        },
+        "shared_metadata_tokens": {
+          "$ref": "#/$defs/stringArray"
+        },
+        "status": {
+          "type": "string"
+        }
+      }
+    },
+    "project": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "project_id",
+        "name",
+        "default_branch",
+        "active_within_threshold",
+        "branch_resource_ids",
+        "worktree_resource_ids",
+        "accepted_workstream_ids",
+        "related_projects"
+      ],
+      "properties": {
+        "project_id": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "default_branch": {
+          "type": "string"
+        },
+        "active_within_threshold": {
+          "type": "boolean"
+        },
+        "branch_resource_ids": {
+          "$ref": "#/$defs/stringArray"
+        },
+        "worktree_resource_ids": {
+          "$ref": "#/$defs/stringArray"
+        },
+        "accepted_workstream_ids": {
+          "$ref": "#/$defs/stringArray"
+        },
+        "related_projects": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/relatedProject"
+          }
+        }
+      }
+    },
+    "workstream": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "workstream_id",
+        "label",
+        "lifecycle_state",
+        "needs_human_decision",
+        "inactive_days",
+        "accepted_resource_ids",
+        "proposed_resource_refs"
+      ],
+      "properties": {
+        "workstream_id": {
+          "type": "string"
+        },
+        "label": {
+          "type": "string"
+        },
+        "lifecycle_state": {
+          "type": "string"
+        },
+        "needs_human_decision": {
+          "type": "boolean"
+        },
+        "inactive_days": {
+          "$ref": "#/$defs/nullableInt"
+        },
+        "accepted_resource_ids": {
+          "$ref": "#/$defs/stringArray"
+        },
+        "proposed_resource_refs": {
+          "$ref": "#/$defs/stringArray"
+        }
+      }
+    },
+    "resource": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "resource_id",
+        "resource_kind",
+        "project_id",
+        "project_name",
+        "label",
+        "path",
+        "accepted_workstream_ids",
+        "linked_resource_ids"
+      ],
+      "properties": {
+        "resource_id": {
+          "type": "string"
+        },
+        "resource_kind": {
+          "enum": [
+            "repo",
+            "branch",
+            "worktree"
+          ]
+        },
+        "project_id": {
+          "type": "string"
+        },
+        "project_name": {
+          "type": "string"
+        },
+        "label": {
+          "type": "string"
+        },
+        "path": {
+          "type": "string"
+        },
+        "accepted_workstream_ids": {
+          "$ref": "#/$defs/stringArray"
+        },
+        "linked_resource_ids": {
+          "$ref": "#/$defs/stringArray"
+        }
+      }
+    },
+    "binding": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "binding_id",
+        "workstream_id",
+        "binding_kind",
+        "ref",
+        "assertion_status",
+        "resolution",
+        "resource_id"
+      ],
+      "properties": {
+        "binding_id": {
+          "type": "string"
+        },
+        "workstream_id": {
+          "type": "string"
+        },
+        "binding_kind": {
+          "enum": [
+            "repo",
+            "branch",
+            "worktree"
+          ]
+        },
+        "ref": {
+          "type": "string"
+        },
+        "assertion_status": {
+          "enum": [
+            "proposed",
+            "accepted"
+          ]
+        },
+        "resolution": {
+          "enum": [
+            "accepted_exact",
+            "accepted_unresolved",
+            "proposed_exact",
+            "proposed_unresolved"
+          ]
+        },
+        "resource_id": {
+          "type": "string"
+        }
+      }
+    },
+    "unlock": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "workstream_id",
+        "label",
+        "blocking_count",
+        "blocks_directly"
+      ],
+      "properties": {
+        "workstream_id": {
+          "type": "string"
+        },
+        "label": {
+          "type": "string"
+        },
+        "blocking_count": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "blocks_directly": {
+          "$ref": "#/$defs/stringArray"
+        }
+      }
+    },
+    "related": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "source_project_id",
+        "target_project_id",
+        "target_project_name",
+        "score",
+        "status"
+      ],
+      "properties": {
+        "source_project_id": {
+          "type": "string"
+        },
+        "target_project_id": {
+          "type": "string"
+        },
+        "target_project_name": {
+          "type": "string"
+        },
+        "score": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1
+        },
+        "status": {
+          "type": "string"
+        }
+      }
+    },
+    "quiet": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "workstream_id",
+        "label",
+        "lifecycle_state",
+        "reason"
+      ],
+      "properties": {
+        "workstream_id": {
+          "type": "string"
+        },
+        "label": {
+          "type": "string"
+        },
+        "lifecycle_state": {
+          "type": "string"
+        },
+        "reason": {
+          "type": "string"
+        }
+      }
+    },
+    "boardCard": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "workstream_id",
+        "idea_text"
+      ],
+      "properties": {
+        "workstream_id": {
+          "type": "string"
+        },
+        "idea_text": {
+          "type": "string"
+        }
+      }
+    }
+  }
+}

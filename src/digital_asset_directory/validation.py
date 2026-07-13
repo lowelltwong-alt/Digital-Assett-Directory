@@ -152,27 +152,21 @@ def _validate_graph_surface_registry_contract(
         for schema_ref in surface.get("schema_refs", []):
             schema_path = repo_root / str(schema_ref)
             if not schema_path.exists():
-                errors.append(
-                    f"Graph surface {surface_id} schema ref missing: {schema_ref}"
-                )
+                errors.append(f"Graph surface {surface_id} schema ref missing: {schema_ref}")
         for source_input in surface.get("source_inputs", []):
             kind = str(source_input.get("kind", ""))
             ref = str(source_input.get("ref", ""))
             required = bool(source_input.get("required", False))
             if kind == "data_surface":
                 if ref not in DATA_PLANE_PATHS:
-                    errors.append(
-                        f"Graph surface {surface_id} uses unknown data surface: {ref}"
-                    )
+                    errors.append(f"Graph surface {surface_id} uses unknown data surface: {ref}")
                 continue
             if kind == "registry_path" and not ref.startswith("registry/"):
                 errors.append(
                     f"Graph surface {surface_id} registry input is outside registry/: {ref}"
                 )
             if kind == "schema_path" and not ref.startswith("schemas/"):
-                errors.append(
-                    f"Graph surface {surface_id} schema input is outside schemas/: {ref}"
-                )
+                errors.append(f"Graph surface {surface_id} schema input is outside schemas/: {ref}")
             if required and not (repo_root / ref).exists():
                 errors.append(f"Graph surface {surface_id} required input missing: {ref}")
         outputs = surface.get("outputs", {})
@@ -214,8 +208,7 @@ def _repo_policy_identity_errors(label: str, policies: list[Any]) -> list[str]:
         unique_ids = sorted(set(values))
         if len(values) > 1 and len(unique_ids) > 1:
             errors.append(
-                f"{label} maps one resolved path to multiple repo ids: "
-                f"{path_key} {unique_ids}"
+                f"{label} maps one resolved path to multiple repo ids: {path_key} {unique_ids}"
             )
     return errors
 
@@ -267,13 +260,10 @@ def _stale_report_input_hash_errors(
     if not isinstance(hash_policy, str):
         hash_policy = None
     for input_ref, input_hash in payload.get("input_hashes", {}).items():
-        actual = _hash_path(
-            data_relative_path(repo_root, str(input_ref)), hash_policy=hash_policy
-        )
+        actual = _hash_path(data_relative_path(repo_root, str(input_ref)), hash_policy=hash_policy)
         if actual != input_hash:
             errors.append(
-                f"Stale report input hash {report_label} "
-                f"{input_ref}: {input_hash} != {actual}"
+                f"Stale report input hash {report_label} {input_ref}: {input_hash} != {actual}"
             )
     return errors
 
@@ -308,7 +298,9 @@ def _contains_local_path_ref(value: Any) -> bool:
     text = value.strip()
     if _repo_prefixed_value_contains_local_path(text):
         return True
-    if text.startswith(("repo-path-sha256:", "path-ref-sha256:", "path-sha256:", "dad://", "repo:")):
+    if text.startswith(
+        ("repo-path-sha256:", "path-ref-sha256:", "path-sha256:", "dad://", "repo:")
+    ):
         return False
     return _looks_like_local_path_text(text)
 
@@ -363,12 +355,10 @@ def _language_registry_semantic_errors(
         str(item.get("source_id", "")) for item in trusted_source_registry.get("sources", [])
     }
     trusted_sources_by_id = {
-        str(item.get("source_id", "")): item
-        for item in trusted_source_registry.get("sources", [])
+        str(item.get("source_id", "")): item for item in trusted_source_registry.get("sources", [])
     }
     language_ids = [
-        str(item.get("language_id", ""))
-        for item in language_registry.get("languages", [])
+        str(item.get("language_id", "")) for item in language_registry.get("languages", [])
     ]
     if len(language_ids) != len(set(language_ids)):
         errors.append("Language coding advantage registry has duplicate language_id values")
@@ -387,8 +377,7 @@ def _language_registry_semantic_errors(
         language_status = str(language.get("status", ""))
         if language_status == "template" and language.get("recommendable") is not False:
             errors.append(
-                "Language coding advantage template row must be recommendable=false: "
-                f"{language_id}"
+                f"Language coding advantage template row must be recommendable=false: {language_id}"
             )
         if language_status != "template" and language.get("recommendable") is not True:
             errors.append(
@@ -407,10 +396,7 @@ def _language_registry_semantic_errors(
                     "Language coding advantage registry references unknown "
                     f"primary asset {asset_id}: {language_id}"
                 )
-        proof_refs = [
-            str(item)
-            for item in language.get("proof_surface_refs", [])
-        ]
+        proof_refs = [str(item) for item in language.get("proof_surface_refs", [])]
         if len(proof_refs) != len(set(proof_refs)):
             errors.append(
                 "Language coding advantage registry has duplicate "
@@ -432,8 +418,7 @@ def _language_registry_semantic_errors(
                 f"agent_coding_guidelines guideline_id values: {language_id}"
             )
         target_ids = [
-            str(item.get("target_id", ""))
-            for item in language.get("codebase_watch_targets", [])
+            str(item.get("target_id", "")) for item in language.get("codebase_watch_targets", [])
         ]
         if len(target_ids) != len(set(target_ids)):
             errors.append(
@@ -454,8 +439,7 @@ def _language_registry_semantic_errors(
                 ref = str(ref_record.get("ref", ""))
                 review_status = str(ref_record.get("review_status", ""))
                 label = (
-                    "Language coding advantage watch target "
-                    f"{language_id}/{target_id} example_ref"
+                    f"Language coding advantage watch target {language_id}/{target_id} example_ref"
                 )
                 if ref_source_id not in target_source_ids:
                     errors.append(f"{label} source {ref_source_id} is not declared on target")
@@ -475,12 +459,9 @@ def _language_registry_semantic_errors(
                 patterns = [str(item) for item in source.get("url_patterns", [])]
                 if not _source_ref_matches_patterns(ref, patterns):
                     errors.append(
-                        f"{label} does not match trusted source {ref_source_id} "
-                        f"url_patterns: {ref}"
+                        f"{label} does not match trusted source {ref_source_id} url_patterns: {ref}"
                     )
-        for channel in language.get("frontier_promotion_policy", {}).get(
-            "output_channels", []
-        ):
+        for channel in language.get("frontier_promotion_policy", {}).get("output_channels", []):
             _validate_language_frontier_channel(
                 str(channel),
                 f"Language coding advantage {language_id} output_channel",
@@ -548,13 +529,11 @@ def _fix_outcome_semantic_errors(fix: dict[str, Any], line_number: int) -> list[
             )
         if canonical_lookup != "found_in_lake":
             errors.append(
-                "Exception fix outcome duplicate canonical event is missing "
-                f"on line {line_number}"
+                f"Exception fix outcome duplicate canonical event is missing on line {line_number}"
             )
     if decision in {"accepted_risk", "deferred"} and not str(fix.get("expiry") or "").strip():
         errors.append(
-            "Exception fix outcome accepted-risk/deferred row lacks expiry "
-            f"on line {line_number}"
+            f"Exception fix outcome accepted-risk/deferred row lacks expiry on line {line_number}"
         )
     return errors
 
@@ -604,8 +583,7 @@ def _exception_event_taxonomy_by_type(
         defaults = category_defaults.get(category, {})
         if isinstance(defaults, dict):
             event_taxonomy[event_type] = {
-                axis: str(defaults.get(axis, "unknown"))
-                for axis in EXCEPTION_TAXONOMY_AXIS_KEYS
+                axis: str(defaults.get(axis, "unknown")) for axis in EXCEPTION_TAXONOMY_AXIS_KEYS
             }
     return event_taxonomy
 
@@ -665,11 +643,7 @@ def _exception_route_bundle_errors(
         capture_pattern_registry,
         exception_type_registry,
     )
-    rules = [
-        rule
-        for rule in route_registry.get("rules", [])
-        if isinstance(rule, dict)
-    ]
+    rules = [rule for rule in route_registry.get("rules", []) if isinstance(rule, dict)]
     rules_by_id = {str(rule.get("rule_id") or ""): rule for rule in rules}
     reviewed_cases = [
         case
@@ -682,8 +656,7 @@ def _exception_route_bundle_errors(
         for rule_id in _string_set(case.get("covered_rule_ids")):
             if rule_id not in rules_by_id:
                 errors.append(
-                    "Exception route bundle scenario covers unknown rule_id: "
-                    f"{case_id} {rule_id}"
+                    f"Exception route bundle scenario covers unknown rule_id: {case_id} {rule_id}"
                 )
                 continue
             cases_by_rule.setdefault(rule_id, []).append(case)
@@ -873,9 +846,7 @@ def _observed_audit_machine_evidence_errors(
     ):
         errors.append(f"Observed audit gap_flag_count mismatch: {label}")
     if (
-        _observed_audit_int(
-            payload.get("strict_gap_flag_count", payload.get("strict_gap_count"))
-        )
+        _observed_audit_int(payload.get("strict_gap_flag_count", payload.get("strict_gap_count")))
         != recomputed_strict_gap
     ):
         errors.append(f"Observed audit strict_gap_flag_count mismatch: {label}")
@@ -890,7 +861,9 @@ def _observed_audit_machine_evidence_errors(
         and isinstance(row.get("repo"), dict)
         and row["repo"].get("reviewed_policy")
     )
-    payload_scope = payload.get("audit_scope") if isinstance(payload.get("audit_scope"), dict) else {}
+    payload_scope = (
+        payload.get("audit_scope") if isinstance(payload.get("audit_scope"), dict) else {}
+    )
     expected_repo_count = _observed_audit_int(payload_scope.get("expected_repo_count"))
     audited_repo_count = _observed_audit_int(payload_scope.get("audited_repo_count"))
     reviewed_policy_repo_count = _observed_audit_int(
@@ -1044,18 +1017,13 @@ def _capture_emission_simulation_errors(
             continue
         case_id = case.get("scenario_id", "<unknown>")
         suggestion_comparisons = case.get("suggestion_comparisons")
-        if not isinstance(suggestion_comparisons, dict) or not all(
-            suggestion_comparisons.values()
-        ):
+        if not isinstance(suggestion_comparisons, dict) or not all(suggestion_comparisons.values()):
             errors.append(
-                "Capture emission simulation suggestion comparison failed: "
-                f"{label} {case_id}"
+                f"Capture emission simulation suggestion comparison failed: {label} {case_id}"
             )
         observed = case.get("observed")
         if not isinstance(observed, dict) or observed.get("passed") is not True:
-            errors.append(
-                f"Capture emission simulation observed check failed: {label} {case_id}"
-            )
+            errors.append(f"Capture emission simulation observed check failed: {label} {case_id}")
         emitted_packets = case.get("emitted_packets", [])
         if not isinstance(emitted_packets, list):
             errors.append(
@@ -1063,9 +1031,7 @@ def _capture_emission_simulation_errors(
             )
             emitted_packets = []
         emitted_screening_issues = [
-            packet.get("screening_issues")
-            for packet in emitted_packets
-            if isinstance(packet, dict)
+            packet.get("screening_issues") for packet in emitted_packets if isinstance(packet, dict)
         ]
         if any(emitted_screening_issues):
             errors.append(
@@ -1153,9 +1119,7 @@ def _candidate_path_scan_staleness_errors(
             parsed_max_scanned_files = int(raw_max_scanned_files)
         except (TypeError, ValueError):
             return [f"Candidate path scan stale for {label}: invalid max scanned files"]
-        max_scanned_files = (
-            parsed_max_scanned_files if parsed_max_scanned_files > 0 else None
-        )
+        max_scanned_files = parsed_max_scanned_files if parsed_max_scanned_files > 0 else None
     current = audit_observed_capture_repo(
         repo_root,
         audited_repo,
@@ -1187,9 +1151,7 @@ def _candidate_path_scan_staleness_errors(
         expected = expected_scan.get(key)
         actual = current_scan.get(key)
         if expected != actual:
-            errors.append(
-                f"Candidate path scan stale for {label} {key}: {expected} != {actual}"
-            )
+            errors.append(f"Candidate path scan stale for {label} {key}: {expected} != {actual}")
     expected_count = row.get("candidate_path_signal_count")
     actual_count = current.get("candidate_path_signal_count")
     if expected_count != actual_count:
@@ -1244,14 +1206,8 @@ def _phase6_machine_evidence_summary_errors(
             errors.append(f"Phase 6 machine evidence summary stale for {label}: {key} mismatch")
     if payload.get("human_gate_satisfied") is not False:
         errors.append(f"Phase 6 machine evidence summary may satisfy human gate: {label}")
-    if (
-        payload.get("overall_machine_status") == "passed"
-        and payload.get("blocked_gate_ids")
-    ):
-        errors.append(
-            "Phase 6 machine evidence summary passed with blocked gates: "
-            f"{label}"
-        )
+    if payload.get("overall_machine_status") == "passed" and payload.get("blocked_gate_ids"):
+        errors.append(f"Phase 6 machine evidence summary passed with blocked gates: {label}")
     return errors
 
 
@@ -1271,8 +1227,7 @@ def _exception_backfill_wave_plan_staleness_errors(
         readiness_payload = json.loads(readiness_path.read_text(encoding="utf-8"))
     except json.JSONDecodeError as exc:
         return [
-            f"Exception backfill wave plan stale for {label}: malformed readiness report "
-            f"{exc.msg}"
+            f"Exception backfill wave plan stale for {label}: malformed readiness report {exc.msg}"
         ]
     try:
         per_wave_repo_limit = int(payload.get("per_wave_repo_limit") or 25)
@@ -1357,9 +1312,7 @@ def _exception_capture_remediation_plan_staleness_errors(
         "pass_condition",
     ]:
         if _json_stable(payload.get(key)) != _json_stable(expected.get(key)):
-            errors.append(
-                f"Exception capture remediation plan stale for {label}: {key} mismatch"
-            )
+            errors.append(f"Exception capture remediation plan stale for {label}: {key} mismatch")
     return errors
 
 
@@ -1416,9 +1369,7 @@ def _exception_capture_gap_review_queue_staleness_errors(
         "authority_boundary",
     ]:
         if _json_stable(payload.get(key)) != _json_stable(expected.get(key)):
-            errors.append(
-                f"Exception capture gap review queue stale for {label}: {key} mismatch"
-            )
+            errors.append(f"Exception capture gap review queue stale for {label}: {key} mismatch")
     return errors
 
 
@@ -1436,8 +1387,7 @@ def _validate_lesson_graph_contract(
     checked.append("registry/graph-edge-registry.json")
     edge_defs = {row["edge_type"]: row for row in edge_registry.get("edge_types", [])}
     forbidden_edge_claims = {
-        str(row.get("claim", "")): row
-        for row in edge_registry.get("forbidden_edge_claims", [])
+        str(row.get("claim", "")): row for row in edge_registry.get("forbidden_edge_claims", [])
     }
     if len(edge_defs) != len(edge_registry.get("edge_types", [])):
         errors.append("Graph edge registry has duplicate edge_type values")
@@ -1489,15 +1439,12 @@ def _validate_lesson_graph_contract(
             continue
         graph_schema = _load_schema(repo_root, registry, schema_name)
         schema_edge_enum = set(
-            graph_schema["properties"]["edges"]["items"]["properties"]["edge_type"][
-                "enum"
-            ]
+            graph_schema["properties"]["edges"]["items"]["properties"]["edge_type"]["enum"]
         )
         unknown = schema_edge_enum - registry_edge_types
         if unknown:
             errors.append(
-                f"{label} schema uses edge types absent from graph-edge registry: "
-                f"{sorted(unknown)}"
+                f"{label} schema uses edge types absent from graph-edge registry: {sorted(unknown)}"
             )
 
     _validate_graph_surface_manifest_contracts(repo_root, registry, errors, checked, warnings)
@@ -1543,9 +1490,7 @@ def _graph_surface_manifest_specs(repo_root: Path) -> list[tuple[dict[str, Any],
             (
                 {
                     "surface_id": "lesson-graph",
-                    "builder": {
-                        "module": "digital_asset_directory.learning.build_lesson_graph"
-                    },
+                    "builder": {"module": "digital_asset_directory.learning.build_lesson_graph"},
                     "outputs": {
                         "manifest_logical_path": "learning/lesson-graph-manifest.json",
                         "body_logical_path": "learning/lesson-graph.json",
@@ -1570,18 +1515,13 @@ def _validate_graph_surface_manifest_contracts(
         surface_id = str(surface.get("surface_id", "unknown"))
         manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
         checked.append(_report_path_label(manifest_path, repo_root))
-        if "graph_surface_manifest" in registry.get("schemas", {}) and manifest.get(
-            "surface_id"
-        ):
+        if "graph_surface_manifest" in registry.get("schemas", {}) and manifest.get("surface_id"):
             try:
                 _validate_payload(repo_root, registry, "graph_surface_manifest", manifest)
             except Exception as exc:
                 errors.append(f"Invalid graph surface manifest {surface_id}: {exc}")
         expected_edge_registry_hash = manifest.get("edge_registry_hash")
-        if (
-            expected_edge_registry_hash
-            and expected_edge_registry_hash != actual_edge_registry_hash
-        ):
+        if expected_edge_registry_hash and expected_edge_registry_hash != actual_edge_registry_hash:
             errors.append(
                 f"Inconsistent graph surface manifest {surface_id} edge registry hash: "
                 f"{expected_edge_registry_hash} != {actual_edge_registry_hash}"
@@ -1696,7 +1636,9 @@ def _phase_command_evidence_errors(repo_root: Path) -> list[str]:
     phase8 = phases.get("phase-8-dad-local-deployment")
     if not phase8:
         return errors
-    evidence_path = repo_root / "roadmap" / "evidence" / "phase-8-dad-local-deployment.commands.json"
+    evidence_path = (
+        repo_root / "roadmap" / "evidence" / "phase-8-dad-local-deployment.commands.json"
+    )
     if not evidence_path.exists():
         errors.append("Phase 8 command evidence JSON is missing")
         return errors
@@ -1713,8 +1655,7 @@ def _phase_command_evidence_errors(repo_root: Path) -> list[str]:
     for required_phrase in ["does not enroll", "satisfy human gates"]:
         if required_phrase not in authority:
             errors.append(
-                "Phase 8 command evidence authority boundary must state it "
-                f"{required_phrase}"
+                f"Phase 8 command evidence authority boundary must state it {required_phrase}"
             )
     expected_commands = list(phase8.get("acceptance", {}).get("commands", []) or [])
     rows = evidence.get("commands")
@@ -1837,6 +1778,10 @@ def validate_repo(repo_root: Path) -> dict[str, Any]:
                 "subagent_evaluation_methodology",
                 "registry/subagent-evaluation-methodology.json",
             ),
+            (
+                "subagent_evaluation_profile_registry",
+                "registry/subagent-evaluation-profile-registry.json",
+            ),
             ("subagent_capability_registry", "registry/subagent-capability-registry.json"),
             ("exception_event_type_registry", "registry/exception-event-type-registry.json"),
             ("exception_learning_methodology", "registry/exception-learning-methodology.json"),
@@ -1880,13 +1825,10 @@ def validate_repo(repo_root: Path) -> dict[str, Any]:
             checked,
         )
         trusted_source_registry = json.loads(
-            (repo_root / "registry" / "trusted-source-registry.json").read_text(
-                encoding="utf-8"
-            )
+            (repo_root / "registry" / "trusted-source-registry.json").read_text(encoding="utf-8")
         )
         trusted_source_ids = [
-            str(item.get("source_id", ""))
-            for item in trusted_source_registry.get("sources", [])
+            str(item.get("source_id", "")) for item in trusted_source_registry.get("sources", [])
         ]
         if len(trusted_source_ids) != len(set(trusted_source_ids)):
             errors.append("Trusted source registry has duplicate source_id values")
@@ -1899,13 +1841,10 @@ def validate_repo(repo_root: Path) -> dict[str, Any]:
                             f"{field}: {source.get('source_id')}"
                         )
         coding_asset_registry = json.loads(
-            (repo_root / "registry" / "coding-asset-registry.json").read_text(
-                encoding="utf-8"
-            )
+            (repo_root / "registry" / "coding-asset-registry.json").read_text(encoding="utf-8")
         )
         coding_asset_ids = [
-            str(item.get("asset_id", ""))
-            for item in coding_asset_registry.get("assets", [])
+            str(item.get("asset_id", "")) for item in coding_asset_registry.get("assets", [])
         ]
         if len(coding_asset_ids) != len(set(coding_asset_ids)):
             errors.append("Coding asset registry has duplicate asset_id values")
@@ -1921,9 +1860,7 @@ def validate_repo(repo_root: Path) -> dict[str, Any]:
         tactic_validator_cls.check_schema(tactic_schema)
         tactic_validator = tactic_validator_cls(tactic_schema)
         tactic_registry = json.loads(
-            (repo_root / "registry" / "coding-tactics-radar.json").read_text(
-                encoding="utf-8"
-            )
+            (repo_root / "registry" / "coding-tactics-radar.json").read_text(encoding="utf-8")
         )
         tactic_ids: list[str] = []
         for tactic in tactic_registry.get("tactics", []):
@@ -1945,13 +1882,10 @@ def validate_repo(repo_root: Path) -> dict[str, Any]:
             str(item.get("asset_id", "")) for item in reusable_asset_registry.get("assets", [])
         }
         offering_registry = json.loads(
-            (repo_root / "registry" / "dad-offerings-registry.json").read_text(
-                encoding="utf-8"
-            )
+            (repo_root / "registry" / "dad-offerings-registry.json").read_text(encoding="utf-8")
         )
         offering_ids = {
-            str(item.get("offering_id", ""))
-            for item in offering_registry.get("offerings", [])
+            str(item.get("offering_id", "")) for item in offering_registry.get("offerings", [])
         }
         language_registry = json.loads(
             (repo_root / "registry" / "language-coding-advantage-registry.json").read_text(
@@ -1982,7 +1916,9 @@ def validate_repo(repo_root: Path) -> dict[str, Any]:
             if isinstance(item, dict) and item.get("category")
         }
         taxonomy_dimensions = exception_type_registry.get("taxonomy_dimensions", {})
-        taxonomy_axes = taxonomy_dimensions.get("axes", {}) if isinstance(taxonomy_dimensions, dict) else {}
+        taxonomy_axes = (
+            taxonomy_dimensions.get("axes", {}) if isinstance(taxonomy_dimensions, dict) else {}
+        )
         required_taxonomy_axes = {
             "origin_surface",
             "detection_mode",
@@ -2013,27 +1949,21 @@ def validate_repo(repo_root: Path) -> dict[str, Any]:
         for category, defaults in category_defaults.items():
             if category not in event_categories:
                 errors.append(
-                    "Exception taxonomy dimensions define unused category default: "
-                    f"{category}"
+                    f"Exception taxonomy dimensions define unused category default: {category}"
                 )
             if not isinstance(defaults, dict):
                 continue
             for axis in required_taxonomy_axes:
                 value = str(defaults.get(axis, ""))
                 if not value:
-                    errors.append(
-                        "Exception taxonomy category default lacks "
-                        f"{axis}: {category}"
-                    )
+                    errors.append(f"Exception taxonomy category default lacks {axis}: {category}")
                     continue
                 if axis_values.get(axis) and value not in axis_values[axis]:
                     errors.append(
                         "Exception taxonomy category default uses unknown "
                         f"{axis} value {value}: {category}"
                     )
-        event_taxonomy_by_type = _exception_event_taxonomy_by_type(
-            exception_type_registry
-        )
+        event_taxonomy_by_type = _exception_event_taxonomy_by_type(exception_type_registry)
         classifier = exception_type_registry.get("backfill_classifier", {})
         backfill_rules = classifier.get("rules", []) if isinstance(classifier, dict) else []
         backfill_rule_ids: list[str] = []
@@ -2084,9 +2014,7 @@ def validate_repo(repo_root: Path) -> dict[str, Any]:
                 encoding="utf-8"
             )
         )
-        capture_rule_ids = [
-            item["rule_id"] for item in capture_pattern_registry.get("rules", [])
-        ]
+        capture_rule_ids = [item["rule_id"] for item in capture_pattern_registry.get("rules", [])]
         if len(capture_rule_ids) != len(set(capture_rule_ids)):
             errors.append("Exception capture pattern registry has duplicate rule_id values")
         emitting_rule_ids: set[str] = set()
@@ -2109,10 +2037,7 @@ def validate_repo(repo_root: Path) -> dict[str, Any]:
             if item.get("emit", {}).get("exception_event_type")
         }
         for event_type in sorted(capture_rule_event_types - set(exception_types)):
-            errors.append(
-                "Exception capture pattern emits unregistered event_type: "
-                f"{event_type}"
-            )
+            errors.append(f"Exception capture pattern emits unregistered event_type: {event_type}")
         capture_rule_mail_types = {
             str(item.get("emit", {}).get("mail_message_type"))
             for item in capture_pattern_registry.get("rules", [])
@@ -2120,8 +2045,7 @@ def validate_repo(repo_root: Path) -> dict[str, Any]:
         }
         for message_type in sorted(capture_rule_mail_types - MAIL_MESSAGE_TYPES):
             errors.append(
-                "Exception capture pattern emits unregistered mail message_type: "
-                f"{message_type}"
+                f"Exception capture pattern emits unregistered mail message_type: {message_type}"
             )
         capture_rule_contracts = {
             str(item.get("emit", {}).get("capture_contract"))
@@ -2129,13 +2053,8 @@ def validate_repo(repo_root: Path) -> dict[str, Any]:
             if item.get("emit", {}).get("capture_contract")
         }
         for contract in sorted(capture_rule_contracts - EXCEPTION_CAPTURE_CONTRACTS):
-            errors.append(
-                "Exception capture pattern emits unknown capture_contract: "
-                f"{contract}"
-            )
-        capture_scenario_schema = _load_schema(
-            repo_root, registry, "exception_capture_scenarios"
-        )
+            errors.append(f"Exception capture pattern emits unknown capture_contract: {contract}")
+        capture_scenario_schema = _load_schema(repo_root, registry, "exception_capture_scenarios")
         capture_scenario_validator_cls = validator_for(capture_scenario_schema)
         capture_scenario_validator_cls.check_schema(capture_scenario_schema)
         capture_scenario_validator = capture_scenario_validator_cls(capture_scenario_schema)
@@ -2148,9 +2067,7 @@ def validate_repo(repo_root: Path) -> dict[str, Any]:
             / "synthetic-capture-scenarios.json"
         )
         if capture_scenario_path.exists():
-            capture_scenarios = json.loads(
-                capture_scenario_path.read_text(encoding="utf-8")
-            )
+            capture_scenarios = json.loads(capture_scenario_path.read_text(encoding="utf-8"))
             capture_scenario_validator.validate(capture_scenarios)
             if capture_scenarios.get("target_registry") != (
                 "registry/exception-capture-pattern-registry.json"
@@ -2170,8 +2087,7 @@ def validate_repo(repo_root: Path) -> dict[str, Any]:
                     f"{missing_scenario_families}"
                 )
             registry_families = {
-                item.get("pattern_family")
-                for item in capture_pattern_registry.get("rules", [])
+                item.get("pattern_family") for item in capture_pattern_registry.get("rules", [])
             }
             unknown_scenario_families = sorted(scenario_families - registry_families)
             if unknown_scenario_families:
@@ -2201,20 +2117,19 @@ def validate_repo(repo_root: Path) -> dict[str, Any]:
                 expected_contracts.update(expected.get("capture_contracts", []))
             for event_type in sorted(expected_event_types - set(exception_types)):
                 errors.append(
-                    "Exception capture scenario expects unregistered event_type: "
-                    f"{event_type}"
+                    f"Exception capture scenario expects unregistered event_type: {event_type}"
                 )
             for message_type in sorted(expected_mail_types - MAIL_MESSAGE_TYPES):
                 errors.append(
-                    "Exception capture scenario expects unknown mail message_type: "
-                    f"{message_type}"
+                    f"Exception capture scenario expects unknown mail message_type: {message_type}"
                 )
             for contract in sorted(expected_contracts - EXCEPTION_CAPTURE_CONTRACTS):
                 errors.append(
-                    "Exception capture scenario expects unknown capture_contract: "
-                    f"{contract}"
+                    f"Exception capture scenario expects unknown capture_contract: {contract}"
                 )
-            downstream_exceptions_readme = repo_root / "templates" / "downstream" / "EXCEPTIONS_README.md"
+            downstream_exceptions_readme = (
+                repo_root / "templates" / "downstream" / "EXCEPTIONS_README.md"
+            )
             downstream_exceptions_readme_text = (
                 downstream_exceptions_readme.read_text(encoding="utf-8")
                 if downstream_exceptions_readme.exists()
@@ -2310,9 +2225,7 @@ def validate_repo(repo_root: Path) -> dict[str, Any]:
         )
         backfill_decision_validator_cls = validator_for(backfill_decision_schema)
         backfill_decision_validator_cls.check_schema(backfill_decision_schema)
-        backfill_decision_validator = backfill_decision_validator_cls(
-            backfill_decision_schema
-        )
+        backfill_decision_validator = backfill_decision_validator_cls(backfill_decision_schema)
         backfill_decisions_path = (
             repo_root
             / "processed"
@@ -2321,9 +2234,7 @@ def validate_repo(repo_root: Path) -> dict[str, Any]:
             / "backfill_review_decisions.jsonl"
         )
         if backfill_decisions_path.exists():
-            checked.append(
-                "processed/exceptions/review-queue/backfill_review_decisions.jsonl"
-            )
+            checked.append("processed/exceptions/review-queue/backfill_review_decisions.jsonl")
             for line_number, line in enumerate(
                 backfill_decisions_path.read_text(encoding="utf-8").splitlines(),
                 start=1,
@@ -2405,12 +2316,9 @@ def validate_repo(repo_root: Path) -> dict[str, Any]:
                         f"repo-relative path metadata on line {line_number}"
                     )
                 payload = packet.get("payload") if isinstance(packet.get("payload"), dict) else {}
-                if (
-                    str(packet.get("message_type") or "") == "governance_notice"
-                    and str(payload.get("source_ref") or "").startswith(
-                        "dad://exceptions/backfill-review-groups/"
-                    )
-                ):
+                if str(packet.get("message_type") or "") == "governance_notice" and str(
+                    payload.get("source_ref") or ""
+                ).startswith("dad://exceptions/backfill-review-groups/"):
                     mail_id = str(packet.get("mail_id") or "")
                     if mail_id not in canceled_mail_ids and mail_id not in active_report_mail_ids:
                         errors.append(
@@ -2423,9 +2331,7 @@ def validate_repo(repo_root: Path) -> dict[str, Any]:
         )
         if capture_refresh_notices_path.exists():
             checked.append("processed/mail/staged/capture_surface_refresh_notices.jsonl")
-            notices, notice_errors = _read_jsonl_records_with_errors(
-                capture_refresh_notices_path
-            )
+            notices, notice_errors = _read_jsonl_records_with_errors(capture_refresh_notices_path)
             for error in notice_errors:
                 errors.append(
                     "Exception capture-surface refresh staged mail has malformed "
@@ -2491,9 +2397,7 @@ def validate_repo(repo_root: Path) -> dict[str, Any]:
         harness_eval_validator_cls.check_schema(harness_eval_schema)
         harness_eval_validator = harness_eval_validator_cls(harness_eval_schema)
         harness_registry = json.loads(
-            (repo_root / "registry" / "coding-harness-registry.json").read_text(
-                encoding="utf-8"
-            )
+            (repo_root / "registry" / "coding-harness-registry.json").read_text(encoding="utf-8")
         )
         harness_ids: list[str] = []
         for harness in harness_registry.get("harnesses", []):
@@ -2536,9 +2440,7 @@ def validate_repo(repo_root: Path) -> dict[str, Any]:
         if len(harness_ids) != len(set(harness_ids)):
             errors.append("Coding harness registry has duplicate harness_id values")
         offering_registry = json.loads(
-            (repo_root / "registry" / "dad-offerings-registry.json").read_text(
-                encoding="utf-8"
-            )
+            (repo_root / "registry" / "dad-offerings-registry.json").read_text(encoding="utf-8")
         )
         offering_ids = [item["offering_id"] for item in offering_registry.get("offerings", [])]
         if len(offering_ids) != len(set(offering_ids)):
@@ -2589,9 +2491,7 @@ def validate_repo(repo_root: Path) -> dict[str, Any]:
             ref = payload.get("methodology_ref")
             expected = payload.get("methodology_hash")
             if ref and not expected:
-                errors.append(
-                    f"Methodology report missing hash: {report_label}"
-                )
+                errors.append(f"Methodology report missing hash: {report_label}")
                 checked.append(report_label)
             elif ref and expected:
                 methodology_path = repo_root / str(ref)
@@ -2602,8 +2502,7 @@ def validate_repo(repo_root: Path) -> dict[str, Any]:
                     actual = f"sha256:{_file_hash_for_policy(methodology_path, hash_policy)}"
                     if actual != expected:
                         errors.append(
-                            f"Stale methodology report {report_label}: "
-                            f"{expected} != {actual}"
+                            f"Stale methodology report {report_label}: {expected} != {actual}"
                         )
                 checked.append(report_label)
             if payload.get("input_hashes"):
@@ -2612,10 +2511,7 @@ def validate_repo(repo_root: Path) -> dict[str, Any]:
             elif report_path.is_relative_to(
                 data_relative_path(repo_root, "processed/events/reports")
             ):
-                errors.append(
-                    f"Event pipeline report missing input_hashes: "
-                    f"{report_label}"
-                )
+                errors.append(f"Event pipeline report missing input_hashes: {report_label}")
                 checked.append(report_label)
             if payload.get("audit_id") == "dad:exception-capture-observed-audit":
                 errors.extend(
@@ -2665,7 +2561,9 @@ def validate_repo(repo_root: Path) -> dict[str, Any]:
                             policy_paths=policy_paths,
                         )
                     )
-            elif payload.get("report_id") == "dad:phase6-exception-capture-machine-evidence-summary":
+            elif (
+                payload.get("report_id") == "dad:phase6-exception-capture-machine-evidence-summary"
+            ):
                 errors.extend(
                     _phase6_machine_evidence_summary_errors(report_path, repo_root, payload)
                 )
@@ -2709,9 +2607,7 @@ def validate_repo(repo_root: Path) -> dict[str, Any]:
                     )
                 )
             elif payload.get("report_id") == "dad:exception-capture-emission-simulation":
-                errors.extend(
-                    _capture_emission_simulation_errors(report_path, repo_root, payload)
-                )
+                errors.extend(_capture_emission_simulation_errors(report_path, repo_root, payload))
         _validate_graph_surface_registry_contract(repo_root, registry, errors, checked)
         _validate_lesson_graph_contract(repo_root, registry, errors, checked, warnings)
     except Exception as exc:
@@ -2723,9 +2619,7 @@ def validate_repo(repo_root: Path) -> dict[str, Any]:
         schema_path = repo_root / registry["schemas"]["control_plane_registry"]
         schema = json.loads(schema_path.read_text(encoding="utf-8"))
         payload = json.loads(
-            (repo_root / "registry" / "control-plane-registry.json").read_text(
-                encoding="utf-8"
-            )
+            (repo_root / "registry" / "control-plane-registry.json").read_text(encoding="utf-8")
         )
         validator_cls = validator_for(schema)
         validator_cls.check_schema(schema)
@@ -2743,9 +2637,7 @@ def validate_repo(repo_root: Path) -> dict[str, Any]:
         schema_path = repo_root / registry["schemas"]["learning_rule"]
         schema = json.loads(schema_path.read_text(encoding="utf-8"))
         payload = json.loads(
-            (repo_root / "registry" / "learning-rule-registry.json").read_text(
-                encoding="utf-8"
-            )
+            (repo_root / "registry" / "learning-rule-registry.json").read_text(encoding="utf-8")
         )
         validator_cls = validator_for(schema)
         validator_cls.check_schema(schema)
@@ -2766,9 +2658,7 @@ def validate_repo(repo_root: Path) -> dict[str, Any]:
         schema_path = repo_root / registry["schemas"]["asset_identity_layer"]
         schema = json.loads(schema_path.read_text(encoding="utf-8"))
         payload = json.loads(
-            (repo_root / "registry" / "identity-layer-registry.json").read_text(
-                encoding="utf-8"
-            )
+            (repo_root / "registry" / "identity-layer-registry.json").read_text(encoding="utf-8")
         )
         validator_cls = validator_for(schema)
         validator_cls.check_schema(schema)
@@ -2822,9 +2712,7 @@ def validate_repo(repo_root: Path) -> dict[str, Any]:
         checked.extend(
             str((repo_root / row["path"]).relative_to(repo_root))
             for row in json.loads(
-                (repo_root / "registry" / "template-registry.json").read_text(
-                    encoding="utf-8"
-                )
+                (repo_root / "registry" / "template-registry.json").read_text(encoding="utf-8")
             ).get("templates", [])
             if (repo_root / row["path"]).exists()
         )

@@ -87,6 +87,30 @@
           },
           "path": {"type": "string", "minLength": 1},
           "entrypoint": {"type": "string", "minLength": 1},
+          "subagent_pack": {"type": "string", "pattern": "^assets/agent-skills/[A-Za-z0-9._/-]+/subagents\\.yaml$"},
+          "kernel_compatibility": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["contract_ref", "durable_lifecycle_states", "overlay_terms", "unsupported_claims"],
+            "properties": {
+              "contract_ref": {"type": "string", "minLength": 1},
+              "durable_lifecycle_states": {
+                "type": "array",
+                "uniqueItems": true,
+                "items": {"type": "string", "minLength": 1}
+              },
+              "overlay_terms": {
+                "type": "array",
+                "uniqueItems": true,
+                "items": {"type": "string", "minLength": 1}
+              },
+              "unsupported_claims": {
+                "type": "array",
+                "uniqueItems": true,
+                "items": {"type": "string", "minLength": 1}
+              }
+            }
+          },
           "description": {"type": "string", "minLength": 1},
           "trigger_examples": {
             "type": "array",

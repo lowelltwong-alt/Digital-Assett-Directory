@@ -35,6 +35,34 @@ pytest --picked                     # tests for files changed per git (needs pyt
 > Note: a command-line `-m` overrides the default `-m "not network"`. To keep both,
 > write `-m "unit and not network"`.
 
+## Restricted Windows temporary roots
+
+Pytest's normal `tmp_path` remains the default. Under a restricted Windows
+token, pytest's numbered-directory ACL or cleanup behavior can occasionally
+make its own managed temporary root unreadable. Only for that failure class,
+point DAD's opt-in fixture fallback at the already ignored ordinary workspace
+root:
+
+```powershell
+$env:DAD_PYTEST_TMP_ROOT = Join-Path (Get-Location) '.pytest-tmp-root'
+python -m pytest -q -p no:cacheprovider <targeted tests>
+```
+
+Fallback child names use bounded hashes rather than full pytest node names so
+nested Git fixtures remain below Windows path-length limits even when the
+workspace root is long.
+
+This fallback creates a unique child directory per test and deliberately does
+not delete it while the run is active. Remove `.pytest-tmp-root/` only after all
+pytest and descendant processes have stopped. Do not use an arbitrary shared
+path, do not treat product-level permission errors as fixture failures, and do
+not use this fallback with parallel workers until isolation has been tested.
+
+If a subprocess timeout leaves a CPU-active descendant, the run is invalid;
+terminate the complete process tree and isolate that test with `-vv -s` plus
+`-o faulthandler_timeout=45`. Stop after the bounded timeout and confirm every
+descendant has exited before treating a retry as evidence.
+
 ## Orchestration with nox
 
 `noxfile.py` standardizes dev/CI tasks so there is one entrypoint:

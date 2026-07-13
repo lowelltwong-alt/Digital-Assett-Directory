@@ -1,0 +1,222 @@
+{
+  "registry_version": "0.1.0",
+  "status": "candidate",
+  "universal_loop": [
+    "lock_task_and_evaluation_contract",
+    "capture_prediction_only_when_calibration_is_decision_relevant",
+    "preserve_immutable_attempt_and_artifacts",
+    "run_deterministic_and_domain_validation",
+    "obtain_independent_review",
+    "audit_evaluator_integrity",
+    "attribute_failure_to_system_layer",
+    "choose_no_change_or_bounded_intervention",
+    "run_held_out_shadow_trial",
+    "require_human_promotion_and_rollback_decision",
+    "monitor_drift_and_regression"
+  ],
+  "improvement_target_layers": [
+    "agent_instruction",
+    "model_route",
+    "tool",
+    "input_contract",
+    "context_or_data",
+    "workflow",
+    "handoff",
+    "evaluation_harness",
+    "reviewer",
+    "domain_overlay",
+    "downstream_specialist",
+    "preserve_simple",
+    "observe_more"
+  ],
+  "dispositions": [
+    "no_change_freeze_candidate",
+    "collect_more_evidence",
+    "repair_task_or_rubric",
+    "repair_evaluator",
+    "revise_agent_instruction",
+    "change_model_or_effort_route",
+    "change_context_or_data",
+    "change_tool_or_environment",
+    "redesign_workflow_or_handoff",
+    "compose_downstream_specialist",
+    "require_domain_expert",
+    "retire_or_supersede",
+    "human_attribution_required"
+  ],
+  "profiles": [
+    {
+      "profile_id": "dad:evaluation-profile:general-agentic-work",
+      "profile_version": "0.1.0",
+      "status": "candidate",
+      "applies_when": [
+        "The task is open-ended agentic work and no reviewed domain overlay fits better.",
+        "Correctness, scope, evidence, efficiency, and escalation can be assessed from bounded artifacts."
+      ],
+      "does_not_apply_when": [
+        "A safety-critical or professionally regulated domain requires a specialist contract.",
+        "The work is a simple deterministic transform better covered by the simple profile."
+      ],
+      "danger_if_misapplied": "A generic rubric can hide domain-specific invalidity and produce false confidence.",
+      "required_criteria": [
+        {
+          "criterion_id": "correctness",
+          "validator_kind": "mixed",
+          "description": "The output satisfies the locked task contract."
+        },
+        {
+          "criterion_id": "scope_discipline",
+          "validator_kind": "independent_review",
+          "description": "The attempt stayed inside authority and scope."
+        },
+        {
+          "criterion_id": "evidence_traceability",
+          "validator_kind": "deterministic",
+          "description": "Material claims have replayable evidence references."
+        },
+        {
+          "criterion_id": "efficiency_compute_fit",
+          "validator_kind": "mixed",
+          "description": "The route and resource cost were proportionate."
+        },
+        {
+          "criterion_id": "escalation_calibration",
+          "validator_kind": "independent_review",
+          "description": "Uncertainty and escalation were handled proportionately."
+        }
+      ],
+      "domain_expert_required": false,
+      "minimum_comparable_attempts_for_no_change": 5,
+      "cross_domain_comparison_forbidden": true,
+      "authority_boundary": "This candidate profile guides bounded review only; it cannot authorize promotion, routing, instruction changes, or cross-domain ranking."
+    },
+    {
+      "profile_id": "dad:evaluation-profile:simple-deterministic",
+      "profile_version": "0.1.0",
+      "status": "candidate",
+      "applies_when": [
+        "The role performs a narrow deterministic transformation or validation with stable inputs and outputs.",
+        "Correctness can be checked by exact, property, negative, or fuzz tests without interpretive judgment."
+      ],
+      "does_not_apply_when": [
+        "The task requires material synthesis, contested interpretation, or open-ended judgment.",
+        "Failures can cause high-consequence harm that requires a domain expert."
+      ],
+      "danger_if_misapplied": "Freezing a superficially simple role can preserve hidden semantic errors; adding reflective prose to a truly simple role can instead slow and destabilize it.",
+      "required_criteria": [
+        {
+          "criterion_id": "deterministic_parity",
+          "validator_kind": "deterministic",
+          "description": "Exact and property checks agree with the locked contract."
+        },
+        {
+          "criterion_id": "negative_case_resistance",
+          "validator_kind": "deterministic",
+          "description": "Known-invalid and boundary inputs fail safely."
+        },
+        {
+          "criterion_id": "latency_cost_budget",
+          "validator_kind": "deterministic",
+          "description": "Runtime and cost remain inside the declared budget."
+        },
+        {
+          "criterion_id": "scope_discipline",
+          "validator_kind": "deterministic",
+          "description": "The role changes only the allowed output surface."
+        }
+      ],
+      "domain_expert_required": false,
+      "minimum_comparable_attempts_for_no_change": 3,
+      "cross_domain_comparison_forbidden": true,
+      "authority_boundary": "This candidate profile may nominate a preserve-simple decision; it cannot freeze or alter a role without held-out evidence and human approval."
+    },
+    {
+      "profile_id": "dad:evaluation-profile:financial-algorithm-research",
+      "profile_version": "0.1.0",
+      "status": "candidate",
+      "applies_when": [
+        "The role proposes, evaluates, or implements a financial trading, forecasting, allocation, or risk algorithm."
+      ],
+      "does_not_apply_when": [
+        "The task is bookkeeping, formatting, or a deterministic financial data transform with no strategy or risk claim."
+      ],
+      "danger_if_misapplied": "A generic high score can conceal leakage, overfitting, unrealistic costs, regime fragility, or tail risk.",
+      "required_criteria": [
+        {
+          "criterion_id": "data_vintage_and_leakage",
+          "validator_kind": "domain_expert",
+          "description": "Data vintages and feature timing rule out look-ahead and survivorship leakage."
+        },
+        {
+          "criterion_id": "out_of_sample_regime_coverage",
+          "validator_kind": "mixed",
+          "description": "Held-out and regime-aware evaluation supports the claimed behavior."
+        },
+        {
+          "criterion_id": "cost_slippage_and_capacity",
+          "validator_kind": "domain_expert",
+          "description": "Costs, slippage, liquidity, and capacity assumptions are realistic."
+        },
+        {
+          "criterion_id": "drawdown_tail_and_stress_risk",
+          "validator_kind": "domain_expert",
+          "description": "Drawdown, tail loss, and stress behavior are explicit."
+        },
+        {
+          "criterion_id": "independent_model_risk_validation",
+          "validator_kind": "domain_expert",
+          "description": "Independent model-risk review challenges construction and use."
+        }
+      ],
+      "domain_expert_required": true,
+      "minimum_comparable_attempts_for_no_change": 5,
+      "cross_domain_comparison_forbidden": true,
+      "authority_boundary": "This candidate profile is research governance only; it cannot authorize investment, trading, deployment, or model approval."
+    },
+    {
+      "profile_id": "dad:evaluation-profile:evidence-heavy-historical-claims",
+      "profile_version": "0.1.0",
+      "status": "candidate",
+      "applies_when": [
+        "The role checks archaeological, historical, textual, chronological, or provenance-sensitive claims, including biblical archaeology."
+      ],
+      "does_not_apply_when": [
+        "The task is a deterministic citation-format transform with no claim evaluation.",
+        "The role is being asked to decide theology rather than assess evidence and scholarly claims."
+      ],
+      "danger_if_misapplied": "A generic correctness score can collapse artifact provenance, excavation context, dating uncertainty, contested interpretation, ethics, and theological claims into false certainty.",
+      "required_criteria": [
+        {
+          "criterion_id": "artifact_and_citation_provenance",
+          "validator_kind": "domain_expert",
+          "description": "Artifacts, publications, and citations have traceable provenance."
+        },
+        {
+          "criterion_id": "context_and_chronology",
+          "validator_kind": "domain_expert",
+          "description": "Excavation context, stratigraphy, chronology, and dating uncertainty are preserved."
+        },
+        {
+          "criterion_id": "observation_inference_interpretation_separation",
+          "validator_kind": "independent_review",
+          "description": "Observation, inference, and contested interpretation remain distinct."
+        },
+        {
+          "criterion_id": "counterevidence_and_scholarly_dispute",
+          "validator_kind": "domain_expert",
+          "description": "Material counterevidence and live scholarly disputes are represented."
+        },
+        {
+          "criterion_id": "ethical_and_legal_provenance",
+          "validator_kind": "domain_expert",
+          "description": "Collection, excavation, ownership, and publication ethics are addressed."
+        }
+      ],
+      "domain_expert_required": true,
+      "minimum_comparable_attempts_for_no_change": 5,
+      "cross_domain_comparison_forbidden": true,
+      "authority_boundary": "This candidate profile assesses evidence handling only; it cannot authenticate artifacts, settle contested history or theology, or replace qualified domain review."
+    }
+  ],
+  "authority_boundary": "The registry defines candidate evaluation contracts and intervention vocabulary only. It cannot compare scores across domains, promote agents, rewrite instructions, or authorize workflow changes."
+}

@@ -1,8 +1,10 @@
 from __future__ import annotations
 
+from datetime import datetime, timedelta, timezone
 import json
 import os
 import re
+import subprocess
 import sys
 import tempfile
 from pathlib import Path
@@ -177,6 +179,7 @@ from .mail_center import (
     deliver_mail,
     diagnose_mail_dirty_state,
     digest_mail,
+    mail_digest_status,
     invalid_mail_quarantine_path,
     legacy_delivery_allowlist_path,
     repair_route_audit_gaps,
@@ -244,6 +247,66 @@ from .repo_completion import (
     write_repo_completion_wave_plan_outputs,
 )
 from .repo_learning_scope import write_repo_learning_loop_install_scope_outputs
+from .portfolio_attempts import (
+    claim_dry_run_attempt,
+    load_attempt_projection,
+    record_dry_run_result,
+    simulate_claim_race,
+    write_attempt_outputs,
+)
+from .portfolio_authority import (
+    load_attestations,
+    load_trust_registry,
+    trust_registry_digest,
+)
+from .portfolio_execution import (
+    approve_dispatch_intent,
+    dispatch_packet as build_dispatch_packet,
+    grant_execution_lease,
+    load_execution_control,
+    propose_dispatch_intent,
+    request_execution_lease,
+    revoke_dispatch_intent,
+    revoke_execution_lease,
+    write_execution_control_outputs,
+)
+from .portfolio_cockpit import (
+    build_portfolio_cockpit,
+    write_portfolio_cockpit_outputs,
+)
+from .portfolio_reconciliation import (
+    build_portfolio_reconciliation,
+    write_portfolio_reconciliation_outputs,
+)
+from .portfolio_review import (
+    build_portfolio_review,
+    write_portfolio_review_outputs,
+)
+from .portfolio_shaping import (
+    build_portfolio_shaping,
+    write_portfolio_shaping_outputs,
+)
+
+from .portfolio_os import (
+    PortfolioScanSettings,
+    build_portfolio_attention_report,
+    write_portfolio_attention_outputs,
+)
+from .portfolio_workstreams import (
+    CaptureSettings as WorkstreamCaptureSettings,
+    build_trigger_feedback_projection as build_portfolio_trigger_feedback,
+    capture_ideas as capture_workstream_ideas,
+    load_state as load_workstream_state,
+    record_binding as record_workstream_binding,
+    record_binding_retraction as retract_workstream_binding,
+    record_capsule as record_workstream_capsule,
+    record_feedback as record_workstream_feedback,
+    record_sovereignty as record_project_sovereignty,
+    register_project as register_portfolio_project,
+    refresh as refresh_workstreams,
+    write_state_outputs as write_workstream_state_outputs,
+    write_trigger_feedback_projection as write_portfolio_trigger_feedback,
+)
 from .roadmap import check_roadmap, write_human_gate_review_packet
 from .global_personal_skills import (
     build_graph as build_personal_skill_graph,
@@ -269,11 +332,18 @@ from .rust_rollout import (
     summarize_rust_rollout_lessons,
     write_rust_rollout_plan,
 )
+from .subagent_integrity import (
+    build_integrity_review as build_subagent_integrity_review,
+    list_evaluation_profiles as list_subagent_evaluation_profiles,
+    record_self_assessment as record_subagent_self_assessment,
+)
 from .subagent_evaluations import (
     build_graph as build_subagent_capability_graph,
     build_improvement_review as build_subagent_improvement_review,
     ingest_packet as ingest_subagent_evaluation_packet,
+    search_role_directory as search_subagent_role_directory,
     status as subagent_evaluation_status,
+    write_role_directory_projection as write_subagent_role_directory,
 )
 from .semantic_evolution import write_semantic_evolution_outputs
 from .surface_versions import build_surface_version_status
@@ -310,7 +380,15 @@ from .workflow_parts import (
     write_workflow_part_review_template_outputs,
     write_workflow_part_usage_guidance,
 )
-from .utils import append_jsonl, find_repo_root, json_dumps, safe_relative, sha256_bytes, utc_now
+from .utils import (
+    append_jsonl,
+    atomic_write_text,
+    find_repo_root,
+    json_dumps,
+    safe_relative,
+    sha256_bytes,
+    utc_now,
+)
 
 app = typer.Typer(no_args_is_help=True, help="Digital Asset Directory portfolio intelligence CLI.")
 lesson_app = typer.Typer(no_args_is_help=True)
@@ -361,6 +439,8 @@ app.add_typer(personal_skills_app, name="personal-skills")
 app.add_typer(journal_app, name="journal")
 mcp_app = typer.Typer(no_args_is_help=True)
 app.add_typer(mcp_app, name="mcp")
+os_app = typer.Typer(no_args_is_help=True)
+app.add_typer(os_app, name="os")
 console = Console()
 
 
@@ -486,6 +566,866 @@ def _repo_path(repo_root: Path, path: Path | None) -> Path | None:
     if path is None:
         return None
     return path if path.is_absolute() else repo_root / path
+
+
+@os_app.command("status")
+def portfolio_os_status(
+    root: list[Path] = typer.Option(
+        [],
+        "--root",
+        help=(
+            "Local portfolio root to inspect. Repeat for multiple roots; defaults to enabled "
+            "local sources in DAD config."
+        ),
+    ),
+    stale_days: int = typer.Option(3, "--stale-days", min=1, max=365),
+    max_depth: int = typer.Option(5, "--max-depth", min=1, max=12),
+    related_limit: int = typer.Option(3, "--related-limit", min=0, max=10),
+    full: bool = typer.Option(
+        False,
+        "--full",
+        help="Print the full report instead of the compact Today summary and output paths.",
+    ),
+    config: Optional[Path] = typer.Option(None),
+    hub: Optional[Path] = typer.Option(None),
+) -> None:
+    """Write a read-only branch/worktree attention report and local HTML dashboard."""
+
+    cfg = _cfg(config, hub)
+    roots = [path.expanduser().resolve() for path in root]
+    if not roots:
+        roots = [
+            source.path.expanduser().resolve() for source in cfg.local_sources if source.enabled
+        ]
+    try:
+        settings = PortfolioScanSettings(
+            roots=tuple(roots),
+            stale_days=stale_days,
+            max_depth=max_depth,
+            related_limit=related_limit,
+        )
+        report = build_portfolio_attention_report(settings)
+        outputs = write_portfolio_attention_outputs(cfg.repo_root, report)
+    except (OSError, ValueError, subprocess.SubprocessError) as exc:
+        console.print(str(exc))
+        raise typer.Exit(2) from exc
+    if full:
+        console.print_json(data=report)
+        return
+    console.print_json(
+        data={
+            **outputs,
+            "today": report["today"],
+            "scan_error_count": len(report["scan"]["errors"]),
+        }
+    )
+
+
+def _v1_attention_report(repo_root: Path) -> dict[str, Any] | None:
+    report_path = data_path(repo_root, "central_reports") / "portfolio_attention.json"
+    if not report_path.exists():
+        return None
+    try:
+        return json.loads(report_path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return None
+
+
+_OS_REJECTED_STATUSES = {
+    "accepted_repo_binding_required",
+    "action_outside_lease",
+    "active_workstream_required",
+    "approval_expiry_outside_lease",
+    "independent_checker_required",
+    "unknown_workstream",
+    "lease_expired",
+    "lease_grant_required",
+    "path_outside_lease",
+    "repo_binding_scope_mismatch",
+    "terminal_workstream",
+    "unknown_dispatch",
+    "unknown_lease",
+    "unknown_dependency_target",
+    "self_dependency_rejected",
+    "unknown_binding",
+    "unknown_project",
+    "illegal_transition",
+}
+
+
+def _print_os_write_result(result: dict[str, Any]) -> None:
+    """Print a structured write result and fail automation on rejected writes."""
+
+    console.print_json(data=result)
+    if str(result.get("status", "")) in _OS_REJECTED_STATUSES:
+        raise typer.Exit(2)
+
+
+@os_app.command("capture")
+def portfolio_os_capture(
+    idea: list[str] = typer.Argument(
+        ..., help="One or more idea texts from a single conversation."
+    ),
+    conversation_id: str = typer.Option(
+        "",
+        "--conversation-id",
+        help="Stable conversation reference; derived from content when omitted.",
+    ),
+    title: str = typer.Option(
+        "", "--title", help="Optional conversation title (minimized before storage)."
+    ),
+    join_report: bool = typer.Option(
+        True,
+        "--join-report/--no-join-report",
+        help="Relate ideas to the latest Portfolio Attention V1 report when present.",
+    ),
+    request_id: str = typer.Option(
+        "",
+        "--request-id",
+        help="Caller idempotency key; reuse only when retrying this exact command.",
+    ),
+    config: Optional[Path] = typer.Option(None),
+    hub: Optional[Path] = typer.Option(None),
+) -> None:
+    """Capture ideas: minimize, relate to prior work, propose workstreams."""
+
+    cfg = _cfg(config, hub)
+    report = _v1_attention_report(cfg.repo_root) if join_report else None
+    result = capture_workstream_ideas(
+        cfg.repo_root,
+        list(idea),
+        conversation_id=conversation_id,
+        conversation_title=title,
+        portfolio_report=report,
+        settings=WorkstreamCaptureSettings(),
+        command_id=request_id or None,
+    )
+    _print_os_write_result(result)
+
+
+@os_app.command("capsule")
+def portfolio_os_capsule(
+    workstream_id: str = typer.Argument(...),
+    pause_reason: str = typer.Option("", "--pause-reason"),
+    blocker: str = typer.Option("", "--blocker"),
+    last_check: str = typer.Option("", "--last-check"),
+    next_action: str = typer.Option("", "--next-action"),
+    snooze_days: int = typer.Option(0, "--snooze-days", min=0, max=365),
+    incubating: bool = typer.Option(False, "--incubating"),
+    review_days: int = typer.Option(0, "--review-days", min=0, max=365),
+    request_id: str = typer.Option(
+        "",
+        "--request-id",
+        help="Caller idempotency key; reuse only when retrying this exact command.",
+    ),
+    config: Optional[Path] = typer.Option(None),
+    hub: Optional[Path] = typer.Option(None),
+) -> None:
+    """Record a resume capsule (why paused, blocker, last check, next action)."""
+
+    cfg = _cfg(config, hub)
+    result = record_workstream_capsule(
+        cfg.repo_root,
+        workstream_id,
+        pause_reason=pause_reason,
+        blocker=blocker,
+        last_check=last_check,
+        next_action=next_action,
+        snooze_days=snooze_days,
+        incubating=incubating,
+        review_days=review_days,
+        command_id=request_id or None,
+    )
+    _print_os_write_result(result)
+
+
+@os_app.command("feedback")
+def portfolio_os_feedback(
+    workstream_id: str = typer.Argument(...),
+    action: str = typer.Argument(
+        ...,
+        help=("resume|keep|snooze|incubate|pause|dismiss|reject_decision|merge|supersede|archive"),
+    ),
+    note: str = typer.Option("", "--note"),
+    snooze_days: int = typer.Option(0, "--snooze-days", min=0, max=365),
+    review_days: int = typer.Option(0, "--review-days", min=0, max=365),
+    trigger_signature: str = typer.Option(
+        "",
+        "--trigger-signature",
+        help="Signature of the focus item being answered (from the queue output).",
+    ),
+    request_id: str = typer.Option(
+        "",
+        "--request-id",
+        help="Caller idempotency key; reuse only when retrying this exact command.",
+    ),
+    config: Optional[Path] = typer.Option(None),
+    hub: Optional[Path] = typer.Option(None),
+) -> None:
+    """Record focus feedback; dismissals converge to an explicit decision."""
+
+    cfg = _cfg(config, hub)
+    try:
+        result = record_workstream_feedback(
+            cfg.repo_root,
+            workstream_id,
+            action,
+            note=note,
+            snooze_days=snooze_days,
+            review_days=review_days,
+            trigger_signature=trigger_signature,
+            command_id=request_id or None,
+        )
+    except ValueError as exc:
+        console.print(str(exc))
+        raise typer.Exit(2) from exc
+    _print_os_write_result(result)
+
+
+@os_app.command("trigger-feedback")
+def portfolio_os_trigger_feedback(
+    write: bool = typer.Option(
+        False,
+        "--write",
+        help="Persist the privacy-minimized projection under processed reports.",
+    ),
+    config: Optional[Path] = typer.Option(None),
+    hub: Optional[Path] = typer.Option(None),
+) -> None:
+    """Project categorical trigger feedback without scoring or promoting signatures."""
+
+    cfg = _cfg(config, hub)
+    try:
+        projection = build_portfolio_trigger_feedback(cfg.repo_root)
+        if write:
+            projection = {
+                **projection,
+                "output_path": str(write_portfolio_trigger_feedback(cfg.repo_root, projection)),
+            }
+    except (OSError, ValueError) as exc:
+        console.print(str(exc))
+        raise typer.Exit(2) from exc
+    console.print_json(data=projection)
+
+
+@os_app.command("bind")
+def portfolio_os_bind(
+    workstream_id: str = typer.Argument(...),
+    binding_kind: str = typer.Argument(
+        ...,
+        help="repo|branch|worktree|codex_task|agent_run|specification|conversation|depends_on|blocks",
+    ),
+    ref: str = typer.Argument(
+        ..., help="Reference (minimized before storage; dependency kinds need a workstream id)."
+    ),
+    label: str = typer.Option("", "--label"),
+    accept: bool = typer.Option(
+        False,
+        "--accept",
+        help="Record a human-accepted assertion; otherwise store a proposal that cannot affect rollups.",
+    ),
+    approved_by: str = typer.Option("", "--approved-by"),
+    approval_ref: str = typer.Option("", "--approval-ref"),
+    request_id: str = typer.Option("", "--request-id"),
+    config: Optional[Path] = typer.Option(None),
+    hub: Optional[Path] = typer.Option(None),
+) -> None:
+    """Assert a declarative binding; nothing is created or verified in Git."""
+
+    cfg = _cfg(config, hub)
+    try:
+        result = record_workstream_binding(
+            cfg.repo_root,
+            workstream_id,
+            binding_kind,
+            ref,
+            label=label,
+            assertion_status="accepted" if accept else "proposed",
+            asserted_by=approved_by,
+            approval_ref=approval_ref,
+            command_id=request_id or None,
+        )
+    except ValueError as exc:
+        console.print(str(exc))
+        raise typer.Exit(2) from exc
+    _print_os_write_result(result)
+
+
+@os_app.command("unbind")
+def portfolio_os_unbind(
+    workstream_id: str = typer.Argument(...),
+    binding_kind: str = typer.Argument(...),
+    ref: str = typer.Argument(...),
+    reason: str = typer.Option(..., "--reason"),
+    retracted_by: str = typer.Option(..., "--retracted-by"),
+    request_id: str = typer.Option("", "--request-id"),
+    config: Optional[Path] = typer.Option(None),
+    hub: Optional[Path] = typer.Option(None),
+) -> None:
+    """Retract a mistaken binding without rewriting ledger history."""
+
+    cfg = _cfg(config, hub)
+    try:
+        result = retract_workstream_binding(
+            cfg.repo_root,
+            workstream_id,
+            binding_kind,
+            ref,
+            reason=reason,
+            retracted_by=retracted_by,
+            command_id=request_id or None,
+        )
+    except ValueError as exc:
+        console.print(str(exc))
+        raise typer.Exit(2) from exc
+    _print_os_write_result(result)
+
+
+@os_app.command("project")
+def portfolio_os_project(
+    name: str = typer.Argument(...),
+    project_id: str = typer.Option("", "--project-id"),
+    parent_project_id: str = typer.Option("", "--parent-project-id"),
+    note: str = typer.Option("", "--note"),
+    request_id: str = typer.Option("", "--request-id"),
+    config: Optional[Path] = typer.Option(None),
+    hub: Optional[Path] = typer.Option(None),
+) -> None:
+    """Register a DAD-governed child project; initial state is incubating."""
+
+    cfg = _cfg(config, hub)
+    try:
+        result = register_portfolio_project(
+            cfg.repo_root,
+            name,
+            project_id=project_id,
+            parent_project_id=parent_project_id,
+            note=note,
+            command_id=request_id or None,
+        )
+    except ValueError as exc:
+        console.print(str(exc))
+        raise typer.Exit(2) from exc
+    _print_os_write_result(result)
+
+
+@os_app.command("sovereignty")
+def portfolio_os_sovereignty(
+    project_id: str = typer.Argument(...),
+    state: str = typer.Argument(...),
+    decided_by: str = typer.Option(..., "--decided-by"),
+    approval_ref: str = typer.Option(..., "--approval-ref"),
+    note: str = typer.Option("", "--note"),
+    request_id: str = typer.Option("", "--request-id"),
+    config: Optional[Path] = typer.Option(None),
+    hub: Optional[Path] = typer.Option(None),
+) -> None:
+    """Record one legal, human-approved child-project sovereignty transition."""
+
+    cfg = _cfg(config, hub)
+    try:
+        result = record_project_sovereignty(
+            cfg.repo_root,
+            project_id,
+            state,
+            decided_by=decided_by,
+            approval_ref=approval_ref,
+            note=note,
+            command_id=request_id or None,
+        )
+    except ValueError as exc:
+        console.print(str(exc))
+        raise typer.Exit(2) from exc
+    _print_os_write_result(result)
+
+
+@os_app.command("lease-request")
+def portfolio_os_lease_request(
+    workstream_id: str = typer.Argument(...),
+    owner_id: str = typer.Option(..., "--owner-id"),
+    owner_kind: str = typer.Option("agent", "--owner-kind"),
+    repo_binding_id: str = typer.Option(..., "--repo-binding-id"),
+    action: list[str] = typer.Option(..., "--action"),
+    path: list[str] = typer.Option(..., "--path"),
+    duration_hours: int = typer.Option(24, "--duration-hours", min=1, max=744),
+    return_state: str = typer.Option("paused", "--return-state"),
+    rationale_code: str = typer.Option(..., "--rationale-code"),
+    supersedes_lease_id: str = typer.Option("", "--supersedes-lease-id"),
+    request_id: str = typer.Option("", "--request-id"),
+    config: Optional[Path] = typer.Option(None),
+    hub: Optional[Path] = typer.Option(None),
+) -> None:
+    """Request bounded execution authority; this records no approval and runs nothing."""
+
+    cfg = _cfg(config, hub)
+    observed = datetime.now(timezone.utc)
+    try:
+        result = request_execution_lease(
+            cfg.repo_root,
+            workstream_id,
+            owner_id=owner_id,
+            owner_kind=owner_kind,
+            repo_binding_id=repo_binding_id,
+            action_classes=action,
+            requested_paths=path,
+            not_before=observed,
+            expires_at=observed + timedelta(hours=duration_hours),
+            return_state=return_state,
+            rationale_code=rationale_code,
+            supersedes_lease_id=supersedes_lease_id,
+            command_id=request_id or None,
+            now=observed,
+        )
+    except ValueError as exc:
+        console.print(str(exc))
+        raise typer.Exit(2) from exc
+    _print_os_write_result(result)
+
+
+@os_app.command("lease-grant")
+def portfolio_os_lease_grant(
+    workstream_id: str = typer.Argument(...),
+    lease_id: str = typer.Argument(...),
+    granted_by: str = typer.Option(..., "--granted-by"),
+    approval_id: str = typer.Option(..., "--approval-id"),
+    request_id: str = typer.Option("", "--request-id"),
+    config: Optional[Path] = typer.Option(None),
+    hub: Optional[Path] = typer.Option(None),
+) -> None:
+    """Record a human approval attestation; external verification remains required."""
+
+    cfg = _cfg(config, hub)
+    result = grant_execution_lease(
+        cfg.repo_root,
+        workstream_id,
+        lease_id,
+        granted_by=granted_by,
+        approval_id=approval_id,
+        command_id=request_id or None,
+    )
+    _print_os_write_result(result)
+
+
+@os_app.command("lease-revoke")
+def portfolio_os_lease_revoke(
+    workstream_id: str = typer.Argument(...),
+    lease_id: str = typer.Argument(...),
+    revoked_by: str = typer.Option(..., "--revoked-by"),
+    approval_id: str = typer.Option(..., "--approval-id"),
+    reason_code: str = typer.Option(..., "--reason-code"),
+    request_id: str = typer.Option("", "--request-id"),
+    config: Optional[Path] = typer.Option(None),
+    hub: Optional[Path] = typer.Option(None),
+) -> None:
+    """Append a fail-closed lease revocation without rewriting history."""
+
+    cfg = _cfg(config, hub)
+    result = revoke_execution_lease(
+        cfg.repo_root,
+        workstream_id,
+        lease_id,
+        revoked_by=revoked_by,
+        approval_id=approval_id,
+        reason_code=reason_code,
+        command_id=request_id or None,
+    )
+    _print_os_write_result(result)
+
+
+@os_app.command("dispatch-propose")
+def portfolio_os_dispatch_propose(
+    workstream_id: str = typer.Argument(...),
+    lease_id: str = typer.Option(..., "--lease-id"),
+    repo_binding_id: str = typer.Option(..., "--repo-binding-id"),
+    action: str = typer.Option(..., "--action"),
+    worker_revision_id: str = typer.Option(..., "--worker-revision-id"),
+    checker_revision_id: str = typer.Option(..., "--checker-revision-id"),
+    task_summary: str = typer.Option(..., "--task-summary"),
+    path: list[str] = typer.Option(..., "--path"),
+    acceptance_ref: list[str] = typer.Option(..., "--acceptance-ref"),
+    validation: list[str] = typer.Option(..., "--validation"),
+    authority_ref: list[str] = typer.Option(..., "--authority-ref"),
+    expected_repo_snapshot: str = typer.Option(..., "--expected-repo-snapshot"),
+    forbidden_action: list[str] = typer.Option([], "--forbidden-action"),
+    request_id: str = typer.Option("", "--request-id"),
+    config: Optional[Path] = typer.Option(None),
+    hub: Optional[Path] = typer.Option(None),
+) -> None:
+    """Record a metadata-only dispatch revision; no worker is launched."""
+
+    cfg = _cfg(config, hub)
+    try:
+        result = propose_dispatch_intent(
+            cfg.repo_root,
+            workstream_id,
+            lease_id=lease_id,
+            repo_binding_id=repo_binding_id,
+            action=action,
+            worker_revision_id=worker_revision_id,
+            checker_revision_id=checker_revision_id,
+            task_summary=task_summary,
+            requested_paths=path,
+            acceptance_refs=acceptance_ref,
+            validation_commands=validation,
+            authority_refs=authority_ref,
+            expected_repo_snapshot=expected_repo_snapshot,
+            forbidden_actions=forbidden_action,
+            command_id=request_id or None,
+        )
+    except ValueError as exc:
+        console.print(str(exc))
+        raise typer.Exit(2) from exc
+    _print_os_write_result(result)
+
+
+@os_app.command("dispatch-approve")
+def portfolio_os_dispatch_approve(
+    workstream_id: str = typer.Argument(...),
+    dispatch_revision_id: str = typer.Argument(...),
+    approved_by: str = typer.Option(..., "--approved-by"),
+    approval_id: str = typer.Option(..., "--approval-id"),
+    duration_hours: int = typer.Option(8, "--duration-hours", min=1, max=744),
+    request_id: str = typer.Option("", "--request-id"),
+    config: Optional[Path] = typer.Option(None),
+    hub: Optional[Path] = typer.Option(None),
+) -> None:
+    """Approve one exact dispatch revision; approval remains externally unverified."""
+
+    cfg = _cfg(config, hub)
+    observed = datetime.now(timezone.utc)
+    result = approve_dispatch_intent(
+        cfg.repo_root,
+        workstream_id,
+        dispatch_revision_id,
+        approved_by=approved_by,
+        approval_id=approval_id,
+        expires_at=observed + timedelta(hours=duration_hours),
+        command_id=request_id or None,
+        now=observed,
+    )
+    _print_os_write_result(result)
+
+
+@os_app.command("dispatch-revoke")
+def portfolio_os_dispatch_revoke(
+    workstream_id: str = typer.Argument(...),
+    dispatch_revision_id: str = typer.Argument(...),
+    revoked_by: str = typer.Option(..., "--revoked-by"),
+    approval_id: str = typer.Option(..., "--approval-id"),
+    reason_code: str = typer.Option(..., "--reason-code"),
+    request_id: str = typer.Option("", "--request-id"),
+    config: Optional[Path] = typer.Option(None),
+    hub: Optional[Path] = typer.Option(None),
+) -> None:
+    """Append a fail-closed dispatch revocation."""
+
+    cfg = _cfg(config, hub)
+    result = revoke_dispatch_intent(
+        cfg.repo_root,
+        workstream_id,
+        dispatch_revision_id,
+        revoked_by=revoked_by,
+        approval_id=approval_id,
+        reason_code=reason_code,
+        command_id=request_id or None,
+    )
+    _print_os_write_result(result)
+
+
+@os_app.command("execution")
+def portfolio_os_execution(
+    write: bool = typer.Option(False, "--write", help="Write the local JSON and HTML projection."),
+    attestations: Optional[Path] = typer.Option(
+        None,
+        "--attestations",
+        help="Read raw signed approval attestations; invalid or unavailable trust denies all.",
+    ),
+    config: Optional[Path] = typer.Option(None),
+    hub: Optional[Path] = typer.Option(None),
+) -> None:
+    """Show shadow execution authority; no executor or source mutation exists."""
+
+    cfg = _cfg(config, hub)
+    try:
+        rows = load_attestations(attestations) if attestations else []
+        projection = load_execution_control(cfg.repo_root, attestations=rows)
+    except (OSError, ValueError, json.JSONDecodeError) as exc:
+        console.print(str(exc))
+        raise typer.Exit(2) from exc
+    if write:
+        projection = {
+            **projection,
+            "outputs": write_execution_control_outputs(cfg.repo_root, projection),
+        }
+    console.print_json(data=projection)
+
+
+@os_app.command("approval-trust")
+def portfolio_os_approval_trust(
+    config: Optional[Path] = typer.Option(None),
+    hub: Optional[Path] = typer.Option(None),
+) -> None:
+    """Inspect the public, unanchored shadow trust registry without exposing secrets."""
+
+    cfg = _cfg(config, hub)
+    registry = load_trust_registry(cfg.repo_root)
+    console.print_json(
+        data={
+            "schema_version": "dad.portfolio_approval_trust_status.v1",
+            "status": registry.get("status", "invalid"),
+            "root_anchor_status": registry.get("root_anchor_status", "invalid"),
+            "registry_sequence": registry.get("registry_sequence"),
+            "registry_digest": trust_registry_digest(registry),
+            "key_count": len(registry.get("keys", [])),
+            "private_key_count": 0,
+            "real_execution_authority": False,
+            "authority_boundary": registry.get("authority_boundary", ""),
+        }
+    )
+
+
+@os_app.command("dispatch-packet")
+def portfolio_os_dispatch_packet(
+    dispatch_revision_id: str = typer.Argument(...),
+    attestations: Optional[Path] = typer.Option(None, "--attestations"),
+    config: Optional[Path] = typer.Option(None),
+    hub: Optional[Path] = typer.Option(None),
+) -> None:
+    """Read one shadow dispatch packet; verification never enables execution."""
+
+    cfg = _cfg(config, hub)
+    try:
+        rows = load_attestations(attestations) if attestations else []
+        projection = load_execution_control(cfg.repo_root, attestations=rows)
+    except (OSError, ValueError, json.JSONDecodeError) as exc:
+        console.print(str(exc))
+        raise typer.Exit(2) from exc
+    packet = build_dispatch_packet(projection, dispatch_revision_id)
+    console.print_json(data=packet)
+    if packet["status"] == "unknown_dispatch":
+        raise typer.Exit(2)
+
+
+@os_app.command("attempts")
+def portfolio_os_attempts(
+    write: bool = typer.Option(False, "--write", help="Write local JSON and HTML projections."),
+    config: Optional[Path] = typer.Option(None),
+    hub: Optional[Path] = typer.Option(None),
+) -> None:
+    """Read the non-authoritative source-zero-write attempt journal."""
+
+    cfg = _cfg(config, hub)
+    projection = load_attempt_projection(cfg.repo_root)
+    if write:
+        projection = {**projection, "outputs": write_attempt_outputs(cfg.repo_root, projection)}
+    console.print_json(data=projection)
+
+
+@os_app.command("attempt-claim")
+def portfolio_os_attempt_claim(
+    dispatch_revision_id: str = typer.Argument(...),
+    worker_revision_id: str = typer.Option(..., "--worker"),
+    attempt_id: str = typer.Option("", "--attempt-id"),
+    request_id: str = typer.Option("", "--request-id"),
+    config: Optional[Path] = typer.Option(None),
+    hub: Optional[Path] = typer.Option(None),
+) -> None:
+    """Record one local dry-run claim; selection grants no execution authority."""
+
+    cfg = _cfg(config, hub)
+    try:
+        result = claim_dry_run_attempt(
+            cfg.repo_root,
+            load_execution_control(cfg.repo_root),
+            dispatch_revision_id,
+            worker_revision_id=worker_revision_id,
+            attempt_id=attempt_id,
+            command_id=request_id,
+        )
+    except (OSError, ValueError, RuntimeError) as exc:
+        console.print(str(exc))
+        raise typer.Exit(2) from exc
+    console.print_json(data=result)
+
+
+@os_app.command("attempt-result")
+def portfolio_os_attempt_result(
+    attempt_id: str = typer.Argument(...),
+    disposition: str = typer.Option(..., "--disposition"),
+    evidence_ref: list[str] = typer.Option([], "--evidence-ref"),
+    request_id: str = typer.Option("", "--request-id"),
+    config: Optional[Path] = typer.Option(None),
+    hub: Optional[Path] = typer.Option(None),
+) -> None:
+    """Record a simulated result; source writes and execution remain zero."""
+
+    cfg = _cfg(config, hub)
+    try:
+        result = record_dry_run_result(
+            cfg.repo_root,
+            attempt_id,
+            result_disposition=disposition,
+            evidence_refs=evidence_ref,
+            command_id=request_id,
+        )
+    except (OSError, ValueError, RuntimeError) as exc:
+        console.print(str(exc))
+        raise typer.Exit(2) from exc
+    console.print_json(data=result)
+
+
+@os_app.command("attempt-simulate")
+def portfolio_os_attempt_simulate(
+    candidates_file: Path = typer.Argument(..., exists=True, dir_okay=False),
+) -> None:
+    """Purely simulate deterministic single-winner claim ordering from JSON."""
+
+    try:
+        value = json.loads(candidates_file.read_text(encoding="utf-8"))
+        candidates = value.get("candidates", []) if isinstance(value, dict) else value
+        if not isinstance(candidates, list):
+            raise ValueError("candidate file must contain a list or a candidates packet")
+        console.print_json(data=simulate_claim_race(candidates))
+    except (OSError, ValueError, json.JSONDecodeError) as exc:
+        console.print(str(exc))
+        raise typer.Exit(2) from exc
+
+
+@os_app.command("workstreams")
+def portfolio_os_workstreams(
+    full: bool = typer.Option(
+        False, "--full", help="Print the full folded state instead of the summary."
+    ),
+    config: Optional[Path] = typer.Option(None),
+    hub: Optional[Path] = typer.Option(None),
+) -> None:
+    """Fold the workstream ledger and write the JSON/HTML board outputs."""
+
+    cfg = _cfg(config, hub)
+    state = load_workstream_state(cfg.repo_root)
+    outputs = write_workstream_state_outputs(cfg.repo_root, state)
+    if full:
+        console.print_json(data=state)
+        return
+    console.print_json(data=outputs)
+
+
+@os_app.command("refresh")
+def portfolio_os_refresh(
+    scan_portfolio: bool = typer.Option(
+        True,
+        "--scan-portfolio/--no-scan-portfolio",
+        help="Refresh the read-only V1 Git snapshot before folding workstreams.",
+    ),
+    config: Optional[Path] = typer.Option(None),
+    hub: Optional[Path] = typer.Option(None),
+) -> None:
+    """Universal trigger target: fold, render, and report whether Today changed."""
+
+    cfg = _cfg(config, hub)
+    report = _v1_attention_report(cfg.repo_root)
+    scan_summary: dict[str, Any] = {"status": "not_requested", "scan_error_count": 0}
+    if scan_portfolio:
+        roots = [
+            source.path.expanduser().resolve() for source in cfg.local_sources if source.enabled
+        ]
+        if roots:
+            try:
+                report = build_portfolio_attention_report(PortfolioScanSettings(roots=tuple(roots)))
+                write_portfolio_attention_outputs(cfg.repo_root, report)
+                scan_summary = {
+                    "status": "refreshed",
+                    "scan_error_count": len(report["scan"]["errors"]),
+                    "project_count": report["summary"]["project_count"],
+                }
+            except (OSError, ValueError, subprocess.SubprocessError) as exc:
+                console.print(str(exc))
+                raise typer.Exit(2) from exc
+        else:
+            report = None
+            scan_summary = {"status": "no_enabled_roots", "scan_error_count": 0}
+    refresh_result = refresh_workstreams(cfg.repo_root)
+    try:
+        state = json.loads(Path(refresh_result["json_path"]).read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError, KeyError) as exc:
+        console.print(f"Cannot load refreshed workstream state: {exc}")
+        raise typer.Exit(2) from exc
+    try:
+        cockpit = build_portfolio_cockpit(report, state, schema_root=cfg.repo_root)
+        reconciliation = build_portfolio_reconciliation(cockpit, schema_root=cfg.repo_root)
+        shaping = build_portfolio_shaping(state, cockpit, reconciliation, schema_root=cfg.repo_root)
+        cockpit_outputs, reconciliation_outputs, shaping_outputs = (
+            _publish_portfolio_projection_set(
+                cfg.repo_root, state, cockpit, reconciliation, shaping
+            )
+        )
+    except Exception as exc:
+        console.print(f"Cannot publish portfolio cockpit, reconciliation, and shaping: {exc}")
+        raise typer.Exit(2) from exc
+    try:
+        health_inputs = _portfolio_review_health_inputs(cfg)
+        review_packet = build_portfolio_review(
+            cockpit, reconciliation, shaping, health_inputs, schema_root=cfg.repo_root
+        )
+        review_outputs = write_portfolio_review_outputs(
+            cfg.repo_root,
+            review_packet,
+            cockpit=cockpit,
+            reconciliation=reconciliation,
+            shaping=shaping,
+            health_inputs=health_inputs,
+        )
+        review_receipt = {
+            "status": review_outputs["status"],
+            "summary": review_outputs["summary"],
+            "today_changed": review_outputs["today_changed"],
+            "review_response_template": review_outputs["review_response_template"],
+            "authority_boundary": review_outputs["authority_boundary"],
+            "generated_at": review_outputs["generated_at"],
+        }
+    except Exception as exc:
+        console.print(f"Cannot publish portfolio review: {exc}")
+        raise typer.Exit(2) from exc
+    console.print_json(
+        data={
+            **refresh_result,
+            "workstream_today_changed": refresh_result["today_changed"],
+            "today_changed": cockpit_outputs["today_changed"],
+            "portfolio_scan": scan_summary,
+            "cockpit": cockpit_outputs,
+            "reconciliation": reconciliation_outputs,
+            "shaping": shaping_outputs,
+            "review": review_receipt,
+        }
+    )
+
+
+@os_app.command("agents")
+def portfolio_os_agents(
+    query: str = typer.Option("", "--query", "-q"),
+    capability: str = typer.Option("", "--capability"),
+    skill_id: str = typer.Option("", "--skill-id"),
+    include_inactive: bool = typer.Option(False, "--include-inactive"),
+    limit: int = typer.Option(20, "--limit", min=1, max=100),
+    config: Optional[Path] = typer.Option(None),
+    hub: Optional[Path] = typer.Option(None),
+) -> None:
+    """Search declared PM/workflow roles without dispatching or quality-ranking them."""
+
+    cfg = _cfg(config, hub)
+    try:
+        result = search_subagent_role_directory(
+            cfg.repo_root,
+            query=query,
+            capability=capability,
+            skill_id=skill_id,
+            include_inactive=include_inactive,
+            limit=limit,
+        )
+    except (OSError, ValueError) as exc:
+        console.print(str(exc))
+        raise typer.Exit(2) from exc
+    console.print_json(data=result)
 
 
 def _transport_repo_rows(cfg) -> list[dict[str, Any]]:
@@ -5475,9 +6415,19 @@ def usage_record(
     reason: str = typer.Option("", "--reason"),
     mail_id: str = typer.Option("", "--mail-id"),
     adoption_id: str = typer.Option("", "--adoption-id"),
+    dependency_basis: str = typer.Option(
+        "",
+        "--dependency-basis",
+        help=(
+            "Required for dependency statuses: explicit_repo_record or human_reviewed for "
+            "depends_on; imported_candidate for dependency_candidate. explicit_repo_record "
+            "also requires --source-ref. human_reviewed requires a named --recorded-by and "
+            "either --adoption-id or --source-ref."
+        ),
+    ),
     hub: Optional[Path] = typer.Option(None),
 ) -> None:
-    """Record that a repo uses, watches, rejects, or retired a DAD asset."""
+    """Record explicit asset usage, watching, dependency, rejection, or retirement state."""
     cfg = _cfg(hub=hub)
     try:
         result = record_usage(
@@ -5490,6 +6440,7 @@ def usage_record(
             reason=reason,
             mail_id=mail_id,
             adoption_id=adoption_id,
+            dependency_basis=dependency_basis,
             mail_policies=cfg.mail_repos,
             enrollment_policies=cfg.enrollment_repos,
         )
@@ -6796,11 +7747,105 @@ def subagents_graph(hub: Optional[Path] = typer.Option(None)) -> None:
     console.print_json(data=result)
 
 
+@subagents_app.command("catalog")
+def subagents_catalog(
+    include_inactive: bool = typer.Option(False, "--include-inactive"),
+    hub: Optional[Path] = typer.Option(None),
+) -> None:
+    """Build the candidate role directory from explicitly registered skill packs."""
+
+    cfg = _cfg(hub=hub)
+    try:
+        result = write_subagent_role_directory(
+            cfg.repo_root,
+            include_inactive=include_inactive,
+        )
+    except (OSError, ValueError) as exc:
+        console.print(str(exc))
+        raise typer.Exit(2) from exc
+    console.print_json(data=result)
+
+
+@subagents_app.command("directory")
+def subagents_directory(
+    query: str = typer.Option("", "--query", "-q"),
+    capability: str = typer.Option("", "--capability"),
+    skill_id: str = typer.Option("", "--skill-id"),
+    include_inactive: bool = typer.Option(False, "--include-inactive"),
+    limit: int = typer.Option(20, "--limit", min=1, max=100),
+    hub: Optional[Path] = typer.Option(None),
+) -> None:
+    """Search registered role contracts without writing or dispatching work."""
+
+    cfg = _cfg(hub=hub)
+    try:
+        result = search_subagent_role_directory(
+            cfg.repo_root,
+            query=query,
+            capability=capability,
+            skill_id=skill_id,
+            include_inactive=include_inactive,
+            limit=limit,
+        )
+    except (OSError, ValueError) as exc:
+        console.print(str(exc))
+        raise typer.Exit(2) from exc
+    console.print_json(data=result)
+
+
 @subagents_app.command("status")
 def subagents_status(hub: Optional[Path] = typer.Option(None)) -> None:
     """Show attempt/evaluation counts without turning them into rankings."""
     cfg = _cfg(hub=hub)
     console.print_json(data=subagent_evaluation_status(cfg.repo_root))
+
+
+@subagents_app.command("profiles")
+def subagents_profiles(hub: Optional[Path] = typer.Option(None)) -> None:
+    """List candidate domain evaluation contracts without selecting or ranking them."""
+    cfg = _cfg(hub=hub)
+    try:
+        result = list_subagent_evaluation_profiles(cfg.repo_root)
+    except (OSError, ValueError) as exc:
+        console.print(str(exc))
+        raise typer.Exit(2) from exc
+    console.print_json(data=result)
+
+
+@subagents_app.command("self-assess")
+def subagents_self_assess(
+    packet: Path = typer.Option(..., "--packet", exists=True, dir_okay=False),
+    hub: Optional[Path] = typer.Option(None),
+) -> None:
+    """Append an actor-claimed prediction with DAD receipt chronology; never a grade."""
+    cfg = _cfg(hub=hub)
+    try:
+        payload = json.loads(packet.read_text(encoding="utf-8"))
+        if not isinstance(payload, dict):
+            raise ValueError("Self-assessment packet must contain one JSON object")
+        result = record_subagent_self_assessment(cfg.repo_root, payload)
+    except (OSError, ValueError, json.JSONDecodeError) as exc:
+        console.print(str(exc))
+        raise typer.Exit(2) from exc
+    console.print_json(data=result)
+
+
+@subagents_app.command("integrity-review")
+def subagents_integrity_review(
+    profile: Optional[str] = typer.Option(None, "--profile"),
+    hub: Optional[Path] = typer.Option(None),
+) -> None:
+    """Audit self-grades, evaluator independence, and the correct improvement layer."""
+    cfg = _cfg(hub=hub)
+    try:
+        result = build_subagent_integrity_review(
+            cfg.repo_root,
+            profile_id=profile,
+        )
+    except (OSError, ValueError) as exc:
+        console.print(str(exc))
+        raise typer.Exit(2) from exc
+    console.print_json(data=result)
 
 
 @subagents_app.command("improvement-review")
@@ -9048,6 +10093,397 @@ def orphan_run(
 ) -> None:
     cfg = _cfg(hub=hub)
     console.print_json(data=run_orphan_radar(cfg.repo_root, source, executable))
+
+
+def _publish_portfolio_projection_set(
+    repo_root: Path,
+    workstream_state: dict[str, Any],
+    cockpit: dict[str, Any],
+    reconciliation: dict[str, Any],
+    shaping: dict[str, Any],
+) -> tuple[dict[str, Any], dict[str, Any], dict[str, Any]]:
+    """Publish dependent cursors with bounded rollback on synchronous failure."""
+
+    base = data_path(repo_root, "central_reports") / "portfolio_os"
+    paths = [
+        base / "cockpit.html",
+        base / "cockpit.json",
+        base / "reconciliation.html",
+        base / "reconciliation.json",
+        base / "shaping.html",
+        base / "shaping.json",
+    ]
+    previous: dict[Path, str | None] = {}
+    for path in paths:
+        previous[path] = path.read_text(encoding="utf-8") if path.exists() else None
+    try:
+        shaping_outputs = write_portfolio_shaping_outputs(
+            repo_root,
+            shaping,
+            workstream_state=workstream_state,
+            cockpit=cockpit,
+            reconciliation=reconciliation,
+        )
+        reconciliation_outputs = write_portfolio_reconciliation_outputs(repo_root, reconciliation)
+        cockpit_outputs = write_portfolio_cockpit_outputs(repo_root, cockpit)
+    except Exception as exc:
+        rollback_errors: list[str] = []
+        for path in paths:
+            try:
+                prior = previous[path]
+                if prior is None:
+                    path.unlink(missing_ok=True)
+                else:
+                    atomic_write_text(path, prior)
+            except OSError as rollback_exc:
+                rollback_errors.append(f"{path.name}:{type(rollback_exc).__name__}")
+        if rollback_errors:
+            raise OSError(
+                "Portfolio cursor publication failed and rollback was incomplete: "
+                + ", ".join(rollback_errors)
+            ) from exc
+        raise
+    return cockpit_outputs, reconciliation_outputs, shaping_outputs
+
+
+def _build_current_portfolio_cockpit(
+    cfg,
+    *,
+    roots: list[Path],
+    scan_portfolio: bool,
+    stale_days: int,
+    max_depth: int,
+    related_limit: int,
+    publish: bool = True,
+    publish_sources: bool = True,
+) -> tuple[dict[str, Any], dict[str, Any], dict[str, Any], dict[str, Any]]:
+    """Build and optionally publish one cockpit snapshot and its folded state."""
+
+    report = _v1_attention_report(cfg.repo_root)
+    scan_summary: dict[str, Any] = {
+        "status": "not_requested",
+        "scan_error_count": 0,
+    }
+    if scan_portfolio:
+        resolved_roots = [path.expanduser().resolve() for path in roots]
+        if not resolved_roots:
+            resolved_roots = [
+                source.path.expanduser().resolve() for source in cfg.local_sources if source.enabled
+            ]
+        if resolved_roots:
+            report = build_portfolio_attention_report(
+                PortfolioScanSettings(
+                    roots=tuple(resolved_roots),
+                    stale_days=stale_days,
+                    max_depth=max_depth,
+                    related_limit=related_limit,
+                )
+            )
+            if publish_sources:
+                write_portfolio_attention_outputs(cfg.repo_root, report)
+            scan_summary = {
+                "status": "refreshed",
+                "scan_error_count": len(report["scan"]["errors"]),
+                "project_count": report["summary"]["project_count"],
+            }
+        else:
+            report = None
+            scan_summary = {"status": "no_enabled_roots", "scan_error_count": 0}
+
+    state = load_workstream_state(cfg.repo_root, portfolio_snapshot=report)
+    if publish_sources:
+        write_workstream_state_outputs(cfg.repo_root, state)
+    cockpit = build_portfolio_cockpit(report, state, schema_root=cfg.repo_root)
+    outputs = write_portfolio_cockpit_outputs(cfg.repo_root, cockpit) if publish else {}
+    return state, cockpit, outputs, scan_summary
+
+
+def _read_review_json(path: Path) -> Any:
+    if not path.exists():
+        return None
+    try:
+        return json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return {"schema_version": "", "generated_at": "", "status": "invalid"}
+
+
+def _review_report_health(path: Path, *, fallback_schema: str) -> dict[str, Any]:
+    payload = _read_review_json(path)
+    if payload is None:
+        return {
+            "schema_version": fallback_schema,
+            "generated_at": "",
+            "status": "missing",
+        }
+    if not isinstance(payload, dict) or payload.get("status") == "invalid":
+        return {
+            "schema_version": fallback_schema,
+            "generated_at": "",
+            "status": "invalid",
+        }
+    return {
+        "schema_version": str(payload.get("schema_version") or fallback_schema),
+        "generated_at": str(payload.get("generated_at") or payload.get("audited_at") or ""),
+        "status": str(payload.get("status") or "observed"),
+    }
+
+
+def _portfolio_review_health_inputs(cfg) -> dict[str, Any]:
+    reports = data_path(cfg.repo_root, "central_reports")
+
+    def observed(name: str, function) -> dict[str, Any]:
+        try:
+            result = function()
+        except Exception:
+            return {
+                "schema_version": f"dad.portfolio_review.{name}.adapter.v1",
+                "generated_at": utc_now(),
+                "status": "invalid",
+            }
+        return (
+            result
+            if isinstance(result, dict)
+            else {
+                "schema_version": f"dad.portfolio_review.{name}.adapter.v1",
+                "generated_at": utc_now(),
+                "status": "invalid",
+            }
+        )
+
+    mail = observed("mail", lambda: mail_digest_status(cfg.repo_root))
+    mail = {"schema_version": "dad.mail.digest.status.v1", **mail}
+    return {
+        "daemon": observed("daemon", lambda: daemon_status(cfg.repo_root)),
+        "daily_review": _review_report_health(
+            reports / "daily_review_queue.json",
+            fallback_schema="dad.daily_review_queue.v1",
+        ),
+        "mail": mail,
+        "journal": observed("journal", lambda: journal_status(cfg.repo_root)),
+        "transport": _review_report_health(
+            reports / "transport_audit.json",
+            fallback_schema="dad.transport.audit.v1",
+        ),
+        "execution": observed("execution", lambda: load_execution_control(cfg.repo_root)),
+        "roadmap": observed("roadmap", lambda: check_roadmap(cfg.repo_root, update=False)),
+    }
+
+
+def _current_portfolio_review_sources(cfg) -> tuple[Any, Any, Any]:
+    base = data_path(cfg.repo_root, "central_reports") / "portfolio_os"
+    return tuple(
+        _read_review_json(base / f"{name}.json")
+        for name in ("cockpit", "reconciliation", "shaping")
+    )
+
+
+@os_app.command("review")
+def portfolio_os_review(
+    full: bool = typer.Option(False, "--full", help="Print the full strict review packet."),
+    config: Optional[Path] = typer.Option(None),
+    hub: Optional[Path] = typer.Option(None),
+) -> None:
+    """Publish one read-only daily review without scanning or rewriting sources."""
+
+    cfg = _cfg(config, hub)
+    cockpit, reconciliation, shaping = _current_portfolio_review_sources(cfg)
+    health_inputs = _portfolio_review_health_inputs(cfg)
+    try:
+        packet = build_portfolio_review(
+            cockpit,
+            reconciliation,
+            shaping,
+            health_inputs,
+            schema_root=cfg.repo_root,
+        )
+        outputs = write_portfolio_review_outputs(
+            cfg.repo_root,
+            packet,
+            cockpit=cockpit,
+            reconciliation=reconciliation,
+            shaping=shaping,
+            health_inputs=health_inputs,
+        )
+    except Exception as exc:
+        console.print(f"Cannot publish portfolio review: {exc}")
+        raise typer.Exit(2) from exc
+    if full:
+        console.print_json(data=packet)
+        return
+    console.print_json(
+        data={
+            "status": outputs["status"],
+            "summary": outputs["summary"],
+            "today_changed": outputs["today_changed"],
+            "review_response_template": outputs["review_response_template"],
+            "authority_boundary": outputs["authority_boundary"],
+            "generated_at": outputs["generated_at"],
+        }
+    )
+
+
+@os_app.command("cockpit")
+def portfolio_os_cockpit(
+    root: list[Path] = typer.Option(
+        [],
+        "--root",
+        help=(
+            "Local portfolio root to inspect. Repeat for multiple roots; defaults to enabled "
+            "local sources in DAD config."
+        ),
+    ),
+    scan_portfolio: bool = typer.Option(
+        True,
+        "--scan-portfolio/--no-scan-portfolio",
+        help="Refresh the read-only Git snapshot before building the cockpit.",
+    ),
+    stale_days: int = typer.Option(3, "--stale-days", min=1, max=365),
+    max_depth: int = typer.Option(5, "--max-depth", min=1, max=12),
+    related_limit: int = typer.Option(3, "--related-limit", min=0, max=10),
+    full: bool = typer.Option(
+        False,
+        "--full",
+        help="Print the full strict cockpit projection instead of its compact output packet.",
+    ),
+    config: Optional[Path] = typer.Option(None),
+    hub: Optional[Path] = typer.Option(None),
+) -> None:
+    """Build one local read-only view of Git attention and workstream state."""
+
+    cfg = _cfg(config, hub)
+    try:
+        _state, cockpit, outputs, scan_summary = _build_current_portfolio_cockpit(
+            cfg,
+            roots=root,
+            scan_portfolio=scan_portfolio,
+            stale_days=stale_days,
+            max_depth=max_depth,
+            related_limit=related_limit,
+        )
+    except (OSError, ValueError, TypeError, subprocess.SubprocessError) as exc:
+        console.print(f"Cannot publish portfolio cockpit: {exc}")
+        raise typer.Exit(2) from exc
+    if full:
+        console.print_json(data=cockpit)
+        return
+    console.print_json(data={**outputs, "portfolio_scan": scan_summary})
+
+
+@os_app.command("reconcile")
+def portfolio_os_reconcile(
+    root: list[Path] = typer.Option(
+        [],
+        "--root",
+        help=(
+            "Local portfolio root to inspect. Repeat for multiple roots; defaults to enabled "
+            "local sources in DAD config."
+        ),
+    ),
+    scan_portfolio: bool = typer.Option(
+        True,
+        "--scan-portfolio/--no-scan-portfolio",
+        help="Refresh the read-only Git snapshot before reconciliation.",
+    ),
+    stale_days: int = typer.Option(3, "--stale-days", min=1, max=365),
+    max_depth: int = typer.Option(5, "--max-depth", min=1, max=12),
+    related_limit: int = typer.Option(3, "--related-limit", min=0, max=10),
+    full: bool = typer.Option(
+        False,
+        "--full",
+        help="Print the full strict reconciliation projection.",
+    ),
+    config: Optional[Path] = typer.Option(None),
+    hub: Optional[Path] = typer.Option(None),
+) -> None:
+    """Propose exact resource associations without accepting or creating work."""
+
+    cfg = _cfg(config, hub)
+    try:
+        state, cockpit, cockpit_outputs, scan_summary = _build_current_portfolio_cockpit(
+            cfg,
+            roots=root,
+            scan_portfolio=scan_portfolio,
+            stale_days=stale_days,
+            max_depth=max_depth,
+            related_limit=related_limit,
+            publish=False,
+            publish_sources=False,
+        )
+        projection = build_portfolio_reconciliation(cockpit, schema_root=cfg.repo_root)
+        shaping = build_portfolio_shaping(state, cockpit, projection, schema_root=cfg.repo_root)
+        cockpit_outputs, outputs, shaping_outputs = _publish_portfolio_projection_set(
+            cfg.repo_root, state, cockpit, projection, shaping
+        )
+    except Exception as exc:
+        console.print(f"Cannot publish portfolio reconciliation: {exc}")
+        raise typer.Exit(2) from exc
+    if full:
+        console.print_json(data=projection)
+        return
+    console.print_json(
+        data={
+            **outputs,
+            "portfolio_scan": scan_summary,
+            "cockpit": cockpit_outputs,
+            "shaping": shaping_outputs,
+        }
+    )
+
+
+@os_app.command("shape")
+def portfolio_os_shape(
+    root: list[Path] = typer.Option(
+        [],
+        "--root",
+        help="Local portfolio root to inspect; defaults to enabled local sources.",
+    ),
+    scan_portfolio: bool = typer.Option(
+        True,
+        "--scan-portfolio/--no-scan-portfolio",
+        help="Refresh the read-only Git snapshot before shaping workstreams.",
+    ),
+    stale_days: int = typer.Option(3, "--stale-days", min=1, max=365),
+    max_depth: int = typer.Option(5, "--max-depth", min=1, max=12),
+    related_limit: int = typer.Option(3, "--related-limit", min=0, max=10),
+    full: bool = typer.Option(False, "--full", help="Print the full strict shaping projection."),
+    config: Optional[Path] = typer.Option(None),
+    hub: Optional[Path] = typer.Option(None),
+) -> None:
+    """Propose inert split, rescope, duplicate, and recovery choices."""
+
+    cfg = _cfg(config, hub)
+    try:
+        state, cockpit, _cockpit_outputs, scan_summary = _build_current_portfolio_cockpit(
+            cfg,
+            roots=root,
+            scan_portfolio=scan_portfolio,
+            stale_days=stale_days,
+            max_depth=max_depth,
+            related_limit=related_limit,
+            publish=False,
+            publish_sources=False,
+        )
+        reconciliation = build_portfolio_reconciliation(cockpit, schema_root=cfg.repo_root)
+        projection = build_portfolio_shaping(
+            state, cockpit, reconciliation, schema_root=cfg.repo_root
+        )
+        cockpit_outputs, reconciliation_outputs, outputs = _publish_portfolio_projection_set(
+            cfg.repo_root, state, cockpit, reconciliation, projection
+        )
+    except Exception as exc:
+        console.print(f"Cannot publish portfolio shaping: {exc}")
+        raise typer.Exit(2) from exc
+    if full:
+        console.print_json(data=projection)
+        return
+    console.print_json(
+        data={
+            **outputs,
+            "portfolio_scan": scan_summary,
+            "cockpit": cockpit_outputs,
+            "reconciliation": reconciliation_outputs,
+        }
+    )
 
 
 if __name__ == "__main__":

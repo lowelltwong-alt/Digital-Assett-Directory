@@ -1,0 +1,134 @@
+{
+  "schema_version": "dad.portfolio-shaping-subagent-evidence.v1",
+  "generated_at": "2026-07-13T14:10:06Z",
+  "task_family": "portfolio_workstream_shaping_candidate_projection",
+  "evidence_class": "parent_reconstructed_privacy_safe_summary",
+  "attempts": [
+    {
+      "attempt_id": "dad:subagent-attempt:portfolio-shaping-architecture",
+      "role_profile_id": "dad:role-profile:workstream-intake-identity-steward",
+      "reported_self_rating_5": 4.8,
+      "parent_observational_score_100": 96,
+      "outcome": "successful",
+      "confirmed_evidence": [
+        "selected a pure candidate projection with a separately gated future human decision event",
+        "defined kind-specific evidence tiers, stable case and revision identity, and false-positive controls",
+        "preserved Git, ledger, task, schedule, and notification authority boundaries"
+      ],
+      "counterevidence": [
+        "the live portfolio had only one real workstream, so split, rescope, and duplicate precision remained synthetic"
+      ],
+      "improvement": "Re-evaluate tier usefulness after multiple human-labeled workstreams exist."
+    },
+    {
+      "attempt_id": "dad:subagent-attempt:portfolio-shaping-acceptance-review",
+      "role_profile_id": "dad:role-profile:delivery-closeout-resumption-steward",
+      "reported_self_rating_5": 4.9,
+      "parent_observational_score_100": 98,
+      "outcome": "successful",
+      "confirmed_evidence": [
+        "reproduced acceptance defects before issuing a gate decision",
+        "verified source reconstruction, semantic coupling, privacy minimization, and rollback after fixes",
+        "returned ACCEPT only after no severity-0, severity-1, or severity-2 issue remained in scope"
+      ],
+      "counterevidence": [
+        "the first pass necessarily evaluated an implementation that changed during hardening"
+      ],
+      "improvement": "Pin each acceptance report to an exact implementation revision and durable evidence timestamp."
+    },
+    {
+      "attempt_id": "dad:subagent-attempt:portfolio-shaping-redteam",
+      "role_profile_id": "dad:role-profile:delivery-closeout-resumption-steward",
+      "reported_self_rating_5": 4.7,
+      "parent_observational_score_100": 95,
+      "outcome": "successful",
+      "confirmed_evidence": [
+        "found inherited-prose privacy laundering, portable-path gaps, false stale-only recovery, and late-writer rollback weaknesses",
+        "replayed adversarial fixtures after hardening and found no remaining severity-0 or severity-1 issue",
+        "separated derived cursor publication from source-authority mutation"
+      ],
+      "counterevidence": [
+        "process-crash, OneDrive contention, concurrent-reader switching, and terminal receipt paths remain unproved or deferred"
+      ],
+      "improvement": "Include terminal receipts and generation-level crash consistency in the first privacy and atomicity checklist."
+    },
+    {
+      "attempt_id": "dad:subagent-attempt:portfolio-shaping-optimization-review",
+      "role_profile_id": "dad:role-profile:optimization-director",
+      "reported_self_rating_5": 4.7,
+      "parent_observational_score_100": 94,
+      "outcome": "successful",
+      "confirmed_evidence": [
+        "measured the slow authority loop and recommended focused inner rungs plus serial release validation",
+        "identified O(n-squared) eligible-label comparison as a deferred scaling boundary",
+        "rejected premature Rust, parallelism, and new-library adoption without profile and parity evidence"
+      ],
+      "counterevidence": [
+        "the review did not implement a benchmarked similarity index because the current one-workstream cohort could not justify it"
+      ],
+      "improvement": "Profile comparison count and wall time again when the eligible-workstream cohort materially grows."
+    },
+    {
+      "attempt_id": "dad:subagent-attempt:portfolio-shaping-learning-sentinel",
+      "role_profile_id": "dad:role-profile:learning-loop-sentinel",
+      "reported_self_rating_5": 4.7,
+      "parent_observational_score_100": 94,
+      "outcome": "successful",
+      "confirmed_evidence": [
+        "identified scan-visible synthetic Git fixtures as a repeatable observation hazard",
+        "identified provenance-based taint of inherited free-text as the reusable privacy lesson",
+        "deduplicated the already documented failed zero-write proof rather than creating a second lesson"
+      ],
+      "counterevidence": [
+        "the broader cross-projection taint harness remains candidate work rather than a completed reusable control"
+      ],
+      "improvement": "Add a configuration-time warning for any synthetic Git fixture outside explicitly excluded roots."
+    },
+    {
+      "attempt_id": "dad:subagent-attempt:portfolio-shaping-asset-pattern-miner",
+      "role_profile_id": "dad:role-profile:digital-asset-and-pattern-miner",
+      "reported_self_rating_5": 4.8,
+      "parent_observational_score_100": 96,
+      "outcome": "successful",
+      "confirmed_evidence": [
+        "searched the asset, skill, harness, pattern, and learning registries before proposing reuse",
+        "deduplicated static projection safety as an improve-existing candidate after two supervised projection families",
+        "routed resumable zero-write proof into the existing read-only inventory family with falsifiable gates"
+      ],
+      "counterevidence": [
+        "the lane was read-only and did not build or independently execute either candidate harness"
+      ],
+      "improvement": "Promote neither candidate until adoption trials satisfy the stated tamper, canary, rollback, and zero-write gates."
+    }
+  ],
+  "candidate_learning_outcomes": [
+    {
+      "candidate_id": "static-projection-safety",
+      "disposition": "improve_existing",
+      "reason": "Cockpit, reconciliation, and shaping now form a repeated safety constellation, but crash atomicity and broader adoption remain unproved."
+    },
+    {
+      "candidate_id": "resumable-zero-write-operator-proof",
+      "disposition": "improve_existing",
+      "parent_candidate": "goal2-readonly-inventory-classification",
+      "reason": "Checkpoint identity and intentional-mutation detection belong in the existing read-only proof family."
+    },
+    {
+      "candidate_id": "projection-safety-constellation",
+      "disposition": "improve_existing",
+      "target": "registry/harness-discovery-methodology.json",
+      "reason": "Detection should use a capability constellation rather than filenames and deduplicate related projections into one family."
+    }
+  ],
+  "validation_refs": [
+    "source://roadmap/evidence/portfolio-shaping-operator-trial.md",
+    "source://processed/reports/portfolio_os/shaping.json",
+    "source://docs/frontier/collaboration/13_PORTFOLIO_WORKSTREAM_SHAPING.md"
+  ],
+  "limitations": [
+    "Ratings are parent-observational and attempt-scoped.",
+    "They do not count toward role-profile eligibility, rank model families, or change routing.",
+    "Raw transcripts, hidden reasoning, private paths, secrets, and payloads are excluded."
+  ],
+  "authority_boundary": "These candidate evaluations and learning outcomes cannot promote, merge, retire, or reroute a role, model, asset, or harness. Any instruction or registry revision requires separate human approval."
+}

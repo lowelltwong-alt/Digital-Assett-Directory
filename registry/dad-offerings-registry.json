@@ -22,6 +22,10 @@
       "known_upgrades": [],
       "source_refs": ["assets/asset-registry.json", "registry/coding-asset-registry.json"],
       "review_status": "installed_for_local_reuse",
+      "validation_refs": ["tests/test_dad_library_control_plane.py"],
+      "owner_authority": "DAD catalog maintainers own this card; the target repository owner controls adoption.",
+      "adoption_semantics": "Candidate pointer only; adoption requires explicit local review and a recorded local decision.",
+      "routing_intents": ["coding"],
       "authority_boundary": "Candidate reusable engineering guidance; local tests and repo authority decide adoption."
     },
     {
@@ -43,6 +47,9 @@
       "known_upgrades": [],
       "source_refs": ["docs/AGENT_SKILL_LIBRARY.md", "registry/agent-skill-library.json"],
       "review_status": "reviewed",
+      "validation_refs": ["tests/test_agent_skill_library.py"],
+      "owner_authority": "DAD catalog maintainers own this card; the target repository owner controls skill checkout.",
+      "adoption_semantics": "Pointer only; checkout requires an explicit target-repository decision and does not copy a skill automatically.",
       "authority_boundary": "Skill records are pointers and lifecycle metadata; target repos decide checkout."
     },
     {
@@ -70,6 +77,9 @@
       "known_upgrades": [],
       "source_refs": ["assets/python-underused-idioms/idioms.json", "assets/python-underused-idioms/README.md"],
       "review_status": "installed_for_local_reuse",
+      "validation_refs": ["tests/test_coding_asset_control_plane.py"],
+      "owner_authority": "DAD catalog maintainers own this card; the target repository owner controls style and adoption.",
+      "adoption_semantics": "Candidate guidance only; each idiom requires local applicability review and task-relevant tests.",
       "authority_boundary": "Idioms are candidate guidance gated by avoid_when conditions; local repo style authority wins on conflict."
     },
     {
@@ -97,6 +107,10 @@
       "known_upgrades": [],
       "source_refs": ["assets/rust-buildout-guide/rust-buildout.json", "assets/coding-harnesses/rust-shadow-parity-harness"],
       "review_status": "installed_for_local_reuse",
+      "validation_refs": ["tests/test_coding_asset_control_plane.py", "tests/test_rust_bridge_dad_scan_core.py"],
+      "owner_authority": "DAD catalog maintainers own this card; the target repository owner and human Rust gate control adoption.",
+      "adoption_semantics": "Candidate planning guidance only; profiling, shadow parity, and a separate human gate are required before Rust expansion.",
+      "routing_intents": ["rust"],
       "authority_boundary": "Stage gates (profile evidence, parity reports, human review for full ports) are the enforceable part; language preference is not."
     },
     {
@@ -156,6 +170,9 @@
         "lessons/rust_rollout/lesson_ledger.jsonl"
       ],
       "review_status": "installed_for_local_reuse",
+      "validation_refs": ["tests/test_rust_bridge_dad_scan_core.py", "tests/test_rust_rollout.py"],
+      "owner_authority": "DAD owns the experimental leaf contract; Python policy and the target repository owner retain final authority.",
+      "adoption_semantics": "Internal experimental leaf only; no downstream rollout, replacement, or promotion follows from catalog matching.",
       "authority_boundary": "Rust emits candidate observations only. Python/DAD retains orchestration and review authority; downstream apply is policy gated and Logos repos are instruction-mail-only. Rust rollout feedback originates in source repo outboxes; DAD central inbox/outbox rows require collection and route audit."
     },
     {
@@ -184,6 +201,9 @@
       ],
       "source_refs": ["registry/coding-harness-registry.json#dad:harness:rust-shadow-parity", "src/digital_asset_directory/test_parity.py", "docs/TESTING_AND_ORCHESTRATION.md"],
       "review_status": "candidate",
+      "validation_refs": ["tests/test_test_parity.py"],
+      "owner_authority": "DAD catalog maintainers own this harness card; the target repository owner controls any experiment.",
+      "adoption_semantics": "Candidate harness only; a match may propose a shadow test but cannot authorize Rust promotion.",
       "authority_boundary": "Rust timing claims are gated behind verified structured parity."
     },
     {
@@ -206,6 +226,9 @@
       "known_upgrades": [],
       "source_refs": ["registry/coding-harness-registry.json#dad:harness:python-test-performance-orchestration", "docs/TESTING_AND_ORCHESTRATION.md", "assets/python-ai-advantage-preflight"],
       "review_status": "candidate",
+      "validation_refs": ["tests/test_dad_library_control_plane.py"],
+      "owner_authority": "DAD catalog maintainers own this harness card; the target repository owner controls test strategy.",
+      "adoption_semantics": "Candidate test plan only; selected tests never replace required local validation.",
       "authority_boundary": "Test selection is a proposal; full validation remains required for risky changes."
     },
     {
@@ -228,6 +251,10 @@
       "known_upgrades": [],
       "source_refs": ["registry/coding-harness-registry.json#dad:harness:repo-enrollment-mail-governance-safety", "docs/DAD_REPO_ENROLLMENT.md", "docs/MAIL_CENTER.md", "docs/DAD_MAIL_STORM_AND_DIRTY_STATE_RUNBOOK.md", "assets/coding-harnesses/repo-enrollment-mail-governance-safety/tests-or-evals/minimum-eval.json"],
       "review_status": "candidate",
+      "validation_refs": ["tests/test_coding_asset_control_plane.py", "tests/test_enrollment.py", "tests/test_mail_center.py"],
+      "owner_authority": "DAD governance owns this safety contract; each target repository owner controls enrollment and mail adoption.",
+      "adoption_semantics": "Candidate safety route only; enrollment, delivery, public release, and rollout each retain their separate gates.",
+      "routing_intents": ["mail", "enrollment"],
       "authority_boundary": "Normal recurring DAD operation writes only mailbox files; broader changes require approval."
     },
     {
@@ -267,6 +294,9 @@
         "registry/exception-capture-pattern-registry.json"
       ],
       "review_status": "candidate",
+      "validation_refs": ["tests/test_exception_capture.py"],
+      "owner_authority": "DAD governance owns this harness card; source repositories retain authority over their observations.",
+      "adoption_semantics": "Candidate evaluation only; passing scenarios do not promote rules or establish source truth.",
       "authority_boundary": "Capture-completeness results are candidate evidence; they prove scenario coverage and observed outbox comparisons, not source truth or public safety."
     },
     {
@@ -305,6 +335,9 @@
         "src/digital_asset_directory/exceptions_lake.py"
       ],
       "review_status": "candidate",
+      "validation_refs": ["tests/test_exception_capture.py", "tests/test_exceptions_lake.py"],
+      "owner_authority": "DAD governance owns this harness card; humans retain lesson-promotion authority.",
+      "adoption_semantics": "Candidate evaluation only; synthetic readiness cannot promote a lesson or learning rule.",
       "authority_boundary": "Learning-readiness results are synthetic candidate evidence; they do not promote lessons, prove real repo completeness, or override source authority."
     },
     {
@@ -339,6 +372,10 @@
       "known_upgrades": [],
       "source_refs": ["docs/HARNESS_VS_DETERMINISTIC_ENFORCEMENT.md", "docs/CODING_HARNESS_LIBRARY.md", "docs/HARNESS_DISCOVERY_RADAR.md"],
       "review_status": "reviewed",
+      "validation_refs": ["tests/test_dad_library_control_plane.py"],
+      "owner_authority": "DAD governance owns this decision guide; the target repository owner selects enforcement.",
+      "adoption_semantics": "Advisory decision support only; no harness or deterministic control is installed automatically.",
+      "routing_intents": ["governance"],
       "authority_boundary": "Advisory routing only. It does not override local repo authority, required validation, human gates, public/private release gates, or source-of-truth rules."
     },
     {
@@ -372,6 +409,9 @@
       "known_upgrades": [],
       "source_refs": ["docs/CLAUDE_ARCHITECTURAL_ROOT_CAUSE_REVIEW.md", "docs/DAD_EXCEPTIONS_LAKE_BUILDOUT.md", "templates/downstream/EXCEPTIONS_README.md"],
       "review_status": "reviewed",
+      "validation_refs": ["tests/test_dad_library_control_plane.py"],
+      "owner_authority": "DAD architecture owns the packet format; the DAD boss architect and human retain decisions.",
+      "adoption_semantics": "Exceptional-review route only; a returned review remains candidate evidence and cannot approve implementation.",
       "authority_boundary": "Claude review packets are candidate analysis requests. They do not approve fixes, override local source authority, or bypass human gates."
     },
     {
@@ -410,6 +450,9 @@
         "registry/trusted-source-registry.json"
       ],
       "review_status": "candidate",
+      "validation_refs": ["tests/test_coding_asset_control_plane.py"],
+      "owner_authority": "DAD catalog maintainers own this card; the target repository owner controls language choices.",
+      "adoption_semantics": "Candidate guidance only; matching never selects a language or authorizes code changes.",
       "authority_boundary": "Candidate language guidance only; local repo authority, validation, security policy, and human gates decide adoption."
     },
     {
@@ -450,6 +493,9 @@
         "registry/language-coding-advantage-registry.json"
       ],
       "review_status": "candidate",
+      "validation_refs": ["tests/test_coding_asset_control_plane.py"],
+      "owner_authority": "DAD catalog maintainers own these pointers; the target repository owner controls playbook use.",
+      "adoption_semantics": "Candidate playbook only; local validation and security review precede any application.",
       "authority_boundary": "Candidate language playbooks only; repo-local authority, validation, security policy, and human gates decide adoption."
     },
     {
@@ -488,6 +534,9 @@
         "registry/trusted-source-registry.json"
       ],
       "review_status": "candidate",
+      "validation_refs": ["tests/test_coding_asset_control_plane.py", "tests/test_dad_library_control_plane.py"],
+      "owner_authority": "DAD research governance owns this harness card; target repositories retain adoption authority.",
+      "adoption_semantics": "Pointer-only candidate research; no external code, dependency, or recommendation is adopted automatically.",
       "authority_boundary": "The harness routes language-frontier ideas as candidate evidence only; target repos retain local authority and must validate before adoption."
     },
     {
@@ -529,6 +578,9 @@
         "docs/REPO_LOCAL_DIGITAL_ASSET_DIRECTORY.md"
       ],
       "review_status": "candidate",
+      "validation_refs": ["tests/test_dad_library_control_plane.py"],
+      "owner_authority": "DAD architecture owns the address vocabulary; source systems retain record authority.",
+      "adoption_semantics": "Candidate coordinate model only; use requires explicit local mapping and does not create graph truth.",
       "authority_boundary": "DAD address-model guidance is a compact coordinate system for candidate records. It does not replace graph edges, prove truth or value, import LawFirm OS canon, or authorize source mutation."
     }
   ]

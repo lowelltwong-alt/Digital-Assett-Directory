@@ -1,0 +1,341 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "dad://schemas/portfolio-workstream-event.v1",
+  "title": "DAD Portfolio Workstream Event Envelope",
+  "description": "Strict envelope for every row of the portfolio workstream ledger. Identity is per-stream hash-chained and includes an optional explicit command id for retry idempotency. All payload strings are minimized before persistence.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "event_id",
+    "event_kind",
+    "schema_version",
+    "stream_id",
+    "prev_event_id",
+    "recorded_at",
+    "redaction_count",
+    "payload"
+  ],
+  "properties": {
+    "event_id": {"type": "string", "pattern": "^dad:portfolio-event:[0-9a-f-]{36}$"},
+    "event_kind": {
+      "enum": [
+        "idea_captured",
+        "workstream_proposed",
+        "capsule_recorded",
+        "focus_feedback",
+        "binding_asserted",
+        "binding_retracted",
+        "project_registered",
+        "sovereignty_recorded"
+      ]
+    },
+    "schema_version": {"const": "dad.portfolio_workstream_event.v1"},
+    "stream_id": {"type": "string", "minLength": 1},
+    "prev_event_id": {
+      "type": "string",
+      "pattern": "^$|^dad:portfolio-event:[0-9a-f-]{36}$"
+    },
+    "command_id": {
+      "type": "string",
+      "pattern": "^dad:portfolio-command:[0-9a-f-]{36}$"
+    },
+    "recorded_at": {"type": "string", "format": "date-time"},
+    "redaction_count": {"type": "integer", "minimum": 0},
+    "payload": {"type": "object"}
+  },
+  "allOf": [
+    {
+      "if": {"properties": {"event_kind": {"const": "idea_captured"}}},
+      "then": {
+        "properties": {
+          "payload": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["idea_id", "text", "conversation_id", "conversation_title", "provenance"],
+            "properties": {
+              "idea_id": {"type": "string", "pattern": "^dad:portfolio-idea:[0-9a-f-]{36}$"},
+              "text": {"type": "string", "minLength": 1},
+              "conversation_id": {"type": "string", "minLength": 1},
+              "conversation_title": {"type": "string"},
+              "provenance": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": ["captured_by", "source_kind"],
+                "properties": {
+                  "captured_by": {"type": "string"},
+                  "source_kind": {"type": "string"}
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": {"properties": {"event_kind": {"const": "workstream_proposed"}}},
+      "then": {
+        "properties": {
+          "payload": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "workstream_id",
+              "idea_id",
+              "proposal_kind",
+              "recommended_action",
+              "needs_human_decision",
+              "divergence",
+              "primary_relation_id",
+              "relations",
+              "coverage_notes"
+            ],
+            "properties": {
+              "workstream_id": {"type": "string", "pattern": "^dad:portfolio-workstream:[0-9a-f-]{36}$"},
+              "idea_id": {"type": "string", "pattern": "^dad:portfolio-idea:[0-9a-f-]{36}$"},
+              "proposal_kind": {
+                "enum": [
+                  "new_independent_workstream",
+                  "new_sibling_workstream",
+                  "new_experiment_workstream",
+                  "new_workstream_flagged_conflict",
+                  "resume_existing",
+                  "merge_or_dedupe"
+                ]
+              },
+              "recommended_action": {"type": "string", "minLength": 1},
+              "needs_human_decision": {"type": "boolean"},
+              "divergence": {"type": "boolean"},
+              "primary_relation_id": {"type": "string"},
+              "relations": {"type": "array", "items": {"$ref": "#/$defs/relation"}},
+              "coverage_notes": {"type": "array", "items": {"type": "string"}}
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": {"properties": {"event_kind": {"const": "capsule_recorded"}}},
+      "then": {
+        "properties": {
+          "payload": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "workstream_id",
+              "capsule_id",
+              "pause_reason",
+              "blocker",
+              "last_check",
+              "next_action",
+              "snooze_until",
+              "incubating",
+              "review_at"
+            ],
+            "properties": {
+              "workstream_id": {"type": "string"},
+              "capsule_id": {"type": "string", "pattern": "^dad:portfolio-capsule:[0-9a-f-]{36}$"},
+              "pause_reason": {"type": "string"},
+              "blocker": {"type": "string"},
+              "last_check": {"type": "string"},
+              "next_action": {"type": "string"},
+              "snooze_until": {"type": "string"},
+              "incubating": {"type": "boolean"},
+              "review_at": {"type": "string"}
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": {"properties": {"event_kind": {"const": "focus_feedback"}}},
+      "then": {
+        "properties": {
+          "payload": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["workstream_id", "action", "note", "snooze_until", "review_at", "trigger_signature"],
+            "properties": {
+              "workstream_id": {"type": "string"},
+              "action": {
+                "enum": [
+                  "resume",
+                  "keep",
+                  "snooze",
+                  "incubate",
+                  "pause",
+                  "dismiss",
+                  "reject_decision",
+                  "merge",
+                  "supersede",
+                  "archive"
+                ]
+              },
+              "note": {"type": "string"},
+              "snooze_until": {"type": "string"},
+              "review_at": {"type": "string"},
+              "trigger_signature": {"type": "string"}
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": {"properties": {"event_kind": {"const": "binding_asserted"}}},
+      "then": {
+        "properties": {
+          "payload": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "workstream_id",
+              "binding_id",
+              "binding_kind",
+              "ref",
+              "label",
+              "assertion_status",
+              "asserted_by",
+              "approval_ref"
+            ],
+            "properties": {
+              "workstream_id": {"type": "string"},
+              "binding_id": {"type": "string", "pattern": "^dad:portfolio-binding:[0-9a-f-]{36}$"},
+              "binding_kind": {
+                "enum": [
+                  "repo",
+                  "branch",
+                  "worktree",
+                  "codex_task",
+                  "agent_run",
+                  "specification",
+                  "conversation",
+                  "depends_on",
+                  "blocks"
+                ]
+              },
+              "ref": {"type": "string", "minLength": 1},
+              "label": {"type": "string"},
+              "assertion_status": {"enum": ["proposed", "accepted"]},
+              "asserted_by": {"type": "string"},
+              "approval_ref": {"type": "string"}
+            },
+            "allOf": [
+              {
+                "if": {
+                  "properties": {"assertion_status": {"const": "accepted"}},
+                  "required": ["assertion_status"]
+                },
+                "then": {
+                  "properties": {
+                    "asserted_by": {"type": "string", "minLength": 1},
+                    "approval_ref": {"type": "string", "minLength": 1}
+                  }
+                }
+              }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "if": {"properties": {"event_kind": {"const": "binding_retracted"}}},
+      "then": {
+        "properties": {
+          "payload": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["workstream_id", "binding_id", "reason", "retracted_by"],
+            "properties": {
+              "workstream_id": {"type": "string", "minLength": 1},
+              "binding_id": {"type": "string", "pattern": "^dad:portfolio-binding:[0-9a-f-]{36}$"},
+              "reason": {"type": "string"},
+              "retracted_by": {"type": "string", "minLength": 1}
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": {"properties": {"event_kind": {"const": "project_registered"}}},
+      "then": {
+        "properties": {
+          "payload": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["project_id", "name", "parent_project_id", "note"],
+            "properties": {
+              "project_id": {"type": "string", "minLength": 1},
+              "name": {"type": "string", "minLength": 1},
+              "parent_project_id": {"type": "string"},
+              "note": {"type": "string"}
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": {"properties": {"event_kind": {"const": "sovereignty_recorded"}}},
+      "then": {
+        "properties": {
+          "payload": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["project_id", "sovereignty_state", "decided_by", "approval_ref", "note"],
+            "properties": {
+              "project_id": {"type": "string", "minLength": 1},
+              "sovereignty_state": {
+                "enum": [
+                  "incubating",
+                  "dad_governed_child",
+                  "release_candidate",
+                  "delivery_approved",
+                  "client_sovereign",
+                  "maintained_upstream",
+                  "fully_detached"
+                ]
+              },
+              "decided_by": {"type": "string", "minLength": 1},
+              "approval_ref": {"type": "string", "minLength": 1},
+              "note": {"type": "string"}
+            }
+          }
+        }
+      }
+    }
+  ],
+  "$defs": {
+    "relation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "relation_id",
+        "source_id",
+        "target_kind",
+        "target_id",
+        "target_label",
+        "relationship_type",
+        "score",
+        "shared_tokens",
+        "family_token",
+        "reason",
+        "confidence"
+      ],
+      "properties": {
+        "relation_id": {"type": "string", "pattern": "^dad:portfolio-relation:[0-9a-f-]{36}$"},
+        "source_id": {"type": "string", "minLength": 1},
+        "target_kind": {
+          "enum": ["workstream", "co_captured_idea", "portfolio_project", "portfolio_branch"]
+        },
+        "target_id": {"type": "string", "minLength": 1},
+        "target_label": {"type": "string"},
+        "relationship_type": {
+          "enum": ["continuation", "sibling", "duplicate", "experiment", "contradiction"]
+        },
+        "score": {"type": "number", "minimum": 0, "maximum": 1},
+        "shared_tokens": {"type": "array", "items": {"type": "string"}},
+        "family_token": {"type": "string"},
+        "reason": {"type": "string", "minLength": 1},
+        "confidence": {"enum": ["high", "medium", "low"]}
+      }
+    }
+  }
+}
