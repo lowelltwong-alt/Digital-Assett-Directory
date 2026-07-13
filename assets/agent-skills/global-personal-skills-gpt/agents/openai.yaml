@@ -1,0 +1,4 @@
+interface:
+  display_name: "Global Personal Skills GPT"
+  short_description: "Archive and port personal skills without activating copies"
+  default_prompt: "Run deterministic personal-skills status first. Review sanitized deltas only, preserve the live global skill root as authority, keep archive bodies local-only and inert, require reviewed path-free portable exports, and never edit or install live skills from the archive."

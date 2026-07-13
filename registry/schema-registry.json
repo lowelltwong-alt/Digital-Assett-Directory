@@ -99,6 +99,10 @@
     "exception_capture_scenarios": "schemas/exception-capture-scenarios.schema.json",
     "exception_learning_readiness_scenarios": "schemas/exception-learning-readiness-scenarios.schema.json",
     "proposal": "schemas/proposal.schema.json",
-    "proposal_review": "schemas/proposal-review.schema.json"
+    "proposal_review": "schemas/proposal-review.schema.json",
+    "personal_skill_source_manifest": "schemas/personal-skill-source-manifest.schema.json",
+    "personal_skill_revision": "schemas/personal-skill-revision.schema.json",
+    "personal_skill_run": "schemas/personal-skill-run.schema.json",
+    "personal_skill_portable_export": "schemas/personal-skill-portable-export.schema.json"
   }
 }

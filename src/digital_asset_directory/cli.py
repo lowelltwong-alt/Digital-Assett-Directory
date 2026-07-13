@@ -9,6 +9,7 @@ from pathlib import Path
 from typing import Any, Optional, cast
 
 import typer
+from jsonschema.exceptions import ValidationError
 from jsonschema.validators import validator_for
 from rich.console import Console
 
@@ -244,6 +245,16 @@ from .repo_completion import (
 )
 from .repo_learning_scope import write_repo_learning_loop_install_scope_outputs
 from .roadmap import check_roadmap, write_human_gate_review_packet
+from .global_personal_skills import (
+    build_graph as build_personal_skill_graph,
+    daily as run_personal_skill_daily,
+    export_portable as export_personal_skill_portable,
+    inventory as inventory_personal_skills,
+    list_archive as list_personal_skill_archive,
+    query_archive as query_personal_skill_archive,
+    snapshot as snapshot_personal_skills,
+    status as personal_skill_status,
+)
 from .rust_bridge import (
     run_dad_event_log_check,
     run_dad_mail_spool_check,
@@ -270,6 +281,8 @@ from .template_library import validate_template_registry, write_template_library
 from .test_parity import run_test_parity
 from .transport import (
     DATA_PLANE_PATHS,
+    ALL_RUNTIME_DATA_PATHS,
+    LOCAL_ONLY_DATA_PATHS,
     apply_data_migration,
     audit_all_repo_transport,
     build_transport_version_status,
@@ -343,6 +356,8 @@ app.add_typer(transport_app, name="transport")
 daemon_app = typer.Typer(no_args_is_help=True)
 app.add_typer(daemon_app, name="daemon")
 journal_app = typer.Typer(no_args_is_help=True)
+personal_skills_app = typer.Typer(no_args_is_help=True)
+app.add_typer(personal_skills_app, name="personal-skills")
 app.add_typer(journal_app, name="journal")
 mcp_app = typer.Typer(no_args_is_help=True)
 app.add_typer(mcp_app, name="mcp")
@@ -369,6 +384,102 @@ def _cfg(config: Optional[Path] = None, hub: Optional[Path] = None):
             }
         )
         raise typer.Exit(2) from None
+
+
+def _personal_skill_output(action, hub: Optional[Path], **kwargs: Any) -> None:
+    cfg = _cfg(hub=hub)
+    try:
+        console.print_json(data=action(cfg.repo_root, **kwargs))
+    except (OSError, RuntimeError, ValueError, KeyError, ValidationError) as exc:
+        console.print_json(
+            data={
+                "schema": "dad.personal-skills.error.v1",
+                "status": "blocked",
+                "error": str(exc),
+                "authority_boundary": "Blocked commands do not authorize excluded-root reads, recurring legacy writes, unreviewed exports, or live-skill edits.",
+            }
+        )
+        raise typer.Exit(2) from None
+
+
+@personal_skills_app.command("inventory")
+def personal_skills_inventory(hub: Optional[Path] = typer.Option(None)) -> None:
+    _personal_skill_output(inventory_personal_skills, hub)
+
+
+@personal_skills_app.command("status")
+def personal_skills_status(hub: Optional[Path] = typer.Option(None)) -> None:
+    _personal_skill_output(personal_skill_status, hub)
+
+
+@personal_skills_app.command("diff")
+def personal_skills_diff(hub: Optional[Path] = typer.Option(None)) -> None:
+    _personal_skill_output(personal_skill_status, hub)
+
+
+@personal_skills_app.command("snapshot")
+def personal_skills_snapshot(
+    allow_legacy_write: bool = typer.Option(False, "--allow-legacy-write"),
+    hub: Optional[Path] = typer.Option(None),
+) -> None:
+    _personal_skill_output(
+        snapshot_personal_skills,
+        hub,
+        allow_legacy_write=allow_legacy_write,
+    )
+
+
+@personal_skills_app.command("list")
+def personal_skills_list(hub: Optional[Path] = typer.Option(None)) -> None:
+    _personal_skill_output(list_personal_skill_archive, hub)
+
+
+@personal_skills_app.command("query")
+def personal_skills_query(
+    health: str = typer.Option(""),
+    artifact_role: str = typer.Option(""),
+    skill_id: str = typer.Option(""),
+    hub: Optional[Path] = typer.Option(None),
+) -> None:
+    _personal_skill_output(
+        query_personal_skill_archive,
+        hub,
+        health=health,
+        artifact_role=artifact_role,
+        skill_id=skill_id,
+    )
+
+
+@personal_skills_app.command("export")
+def personal_skills_export(
+    skill_id: str = typer.Option(...),
+    target_runtime: str = typer.Option(...),
+    reviewed_by: str = typer.Option(...),
+    approval_id: str = typer.Option(...),
+    revision_id: str = typer.Option(""),
+    include_source_runtime_adapter: bool = typer.Option(False, "--include-source-runtime-adapter"),
+    hub: Optional[Path] = typer.Option(None),
+) -> None:
+    _personal_skill_output(
+        export_personal_skill_portable,
+        hub,
+        skill_id=skill_id,
+        target_runtime=target_runtime,
+        reviewed_by=reviewed_by,
+        approval_id=approval_id,
+        revision_id=revision_id,
+        include_source_runtime_adapter=include_source_runtime_adapter,
+    )
+
+
+@personal_skills_app.command("graph")
+def personal_skills_graph(hub: Optional[Path] = typer.Option(None)) -> None:
+    _personal_skill_output(build_personal_skill_graph, hub)
+
+
+@personal_skills_app.command("daily")
+def personal_skills_daily(hub: Optional[Path] = typer.Option(None)) -> None:
+    _personal_skill_output(run_personal_skill_daily, hub)
 
 
 def _repo_path(repo_root: Path, path: Path | None) -> Path | None:
@@ -398,7 +509,9 @@ def _transport_repo_rows(cfg) -> list[dict[str, Any]]:
             )
         live_paths_by_id[normalized_id] = resolved_live_path
         configured_audit_path = getattr(policy, "transport_audit_path", None)
-        has_audit_override = bool(str(configured_audit_path).strip()) if configured_audit_path is not None else False
+        has_audit_override = (
+            bool(str(configured_audit_path).strip()) if configured_audit_path is not None else False
+        )
         path = Path(configured_audit_path) if has_audit_override else live_path
         if has_audit_override:
             resolved_override_path = os.path.normcase(str(path.resolve()))
@@ -415,7 +528,9 @@ def _transport_repo_rows(cfg) -> list[dict[str, Any]]:
                 "id": repo_id,
                 "path": str(path),
                 "write_protected": False,
-                "audit_root_source": "transport_audit_path" if has_audit_override else "policy_path",
+                "audit_root_source": "transport_audit_path"
+                if has_audit_override
+                else "policy_path",
             }
             rows_by_id[normalized_id] = row
             if has_audit_override:
@@ -448,8 +563,10 @@ def data_status(hub: Optional[Path] = typer.Option(None)) -> None:
             "mode": mode,
             "surfaces": {
                 logical: str(data_path(cfg.repo_root, logical))
-                for logical in sorted(DATA_PLANE_PATHS)
+                for logical in sorted(ALL_RUNTIME_DATA_PATHS)
             },
+            "local_only_surfaces": sorted(LOCAL_ONLY_DATA_PATHS),
+            "journaled_surfaces": sorted(DATA_PLANE_PATHS),
         }
     )
 
@@ -510,9 +627,7 @@ def transport_synthetic_rollout(hub: Optional[Path] = typer.Option(None)) -> Non
 def transport_readiness(
     hub: Optional[Path] = typer.Option(None),
     stale_hours: int = typer.Option(26),
-    inspect_scheduler: bool = typer.Option(
-        True, "--inspect-scheduler/--no-inspect-scheduler"
-    ),
+    inspect_scheduler: bool = typer.Option(True, "--inspect-scheduler/--no-inspect-scheduler"),
     skip_task_query: bool = typer.Option(False, "--skip-task-query"),
     task_name: str = typer.Option("DAD Daemon Run Cycle"),
     shim: Optional[Path] = typer.Option(None),
@@ -537,14 +652,14 @@ def transport_readiness(
         else None
     )
     payload = build_transport_readiness(
-            cfg.repo_root,
-            transport_repos=_transport_repo_rows(cfg),
-            enrollment_policies=cfg.enrollment_repos,
-            wave=wave,
-            stale_hours=stale_hours,
-            scheduler_status=scheduler,
-            journal_repo_status=journal_repo_evidence,
-        )
+        cfg.repo_root,
+        transport_repos=_transport_repo_rows(cfg),
+        enrollment_policies=cfg.enrollment_repos,
+        wave=wave,
+        stale_hours=stale_hours,
+        scheduler_status=scheduler,
+        journal_repo_status=journal_repo_evidence,
+    )
     if summary_only:
         payload = compact_transport_readiness(payload)
     console.print_json(data=payload)

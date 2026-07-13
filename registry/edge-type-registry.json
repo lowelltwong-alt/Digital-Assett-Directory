@@ -316,6 +316,36 @@
       "id": "evaluation_assesses_capability",
       "direction": "evaluation_to_capability",
       "meaning": "An evaluation criterion records attempt-scoped evidence about a capability."
+    },
+    {
+      "id": "snapshot_of",
+      "direction": "archived_revision_to_active_source",
+      "meaning": "An inert archive revision records an allowlisted active source observation."
+    },
+    {
+      "id": "revision_of",
+      "direction": "revision_to_stable_skill_identity",
+      "meaning": "A content-specific archive revision belongs to one stable personal skill identity."
+    },
+    {
+      "id": "adapted_as",
+      "direction": "source_skill_to_dad_adaptation",
+      "meaning": "A DAD-managed adaptation explicitly cites a personal source without claiming exact identity."
+    },
+    {
+      "id": "portable_to",
+      "direction": "portable_export_to_target_runtime",
+      "meaning": "A reviewed bundle names an intended runtime without proving compatibility or installation."
+    },
+    {
+      "id": "loaded_by",
+      "direction": "active_source_to_runtime",
+      "meaning": "A declared runtime discovers an active source; archive copies remain inert."
+    },
+    {
+      "id": "duplicate_content_of",
+      "direction": "symmetric",
+      "meaning": "Two revisions have the same canonical tree hash; authority and stable identity remain separate."
     }
   ],
   "rule": "Every generated edge must retain method, evidence, confidence, and scan provenance."

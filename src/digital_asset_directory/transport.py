@@ -26,6 +26,7 @@ import os
 import shutil
 import subprocess
 import tempfile
+import stat
 import time
 from pathlib import Path
 from typing import Any
@@ -87,6 +88,18 @@ DATA_PLANE_PATHS: dict[str, str] = {
     "audit_events": "audit/events",
     "agent_sessions": "state/agent_sessions",
     "catalog_database": "state/catalog.sqlite3",
+}
+# Local-only runtime state uses the same initialized-root/legacy resolver and
+# migration discipline as the data plane, but is deliberately excluded from
+# journal replication. Personal skill archive bodies can contain private
+# instructions and must never enter the private Git journal merely because a
+# recurring snapshot ran.
+LOCAL_ONLY_DATA_PATHS: dict[str, str] = {
+    "personal_skill_archives": "private/personal-skills",
+}
+ALL_RUNTIME_DATA_PATHS: dict[str, str] = {
+    **DATA_PLANE_PATHS,
+    **LOCAL_ONLY_DATA_PATHS,
 }
 DATA_PLANE_FILE_SURFACES = frozenset({"catalog_database"})
 
@@ -159,13 +172,14 @@ def _data_root_marker_matches_hub(candidate: Path, hub_root: Path) -> bool:
 def data_path(
     hub_root: Path, logical_name: str, *, env: dict[str, str] | None = None
 ) -> Path:
-    if logical_name not in DATA_PLANE_PATHS:
+    if logical_name not in ALL_RUNTIME_DATA_PATHS:
         raise KeyError(
             f"Unknown data-plane surface '{logical_name}'. Add it to "
-            "DATA_PLANE_PATHS with review; do not invent paths inline."
+            "DATA_PLANE_PATHS or LOCAL_ONLY_DATA_PATHS with review; do not "
+            "invent paths inline."
         )
     root, _mode = resolve_data_root(hub_root, env=env)
-    return root / DATA_PLANE_PATHS[logical_name]
+    return root / ALL_RUNTIME_DATA_PATHS[logical_name]
 
 
 def legacy_data_path(hub_root: Path, logical_name: str) -> Path:
@@ -219,7 +233,7 @@ def data_relative_path(
         return path
     normalized = Path(*path.parts)
     for logical_name, reviewed_root in sorted(
-        DATA_PLANE_PATHS.items(),
+        ALL_RUNTIME_DATA_PATHS.items(),
         key=lambda item: len(Path(item[1]).parts),
         reverse=True,
     ):
@@ -256,6 +270,7 @@ def init_data_root(
             "SQLite/JSONL writes. Choose a path outside OneDrive or pass "
             "force_onedrive=True after accepting the risk."
         )
+    _assert_migration_path(target, target)
     unverified = _unverified_target_copies(hub_root, target)
     if unverified:
         sample = ", ".join(unverified[:5])
@@ -265,7 +280,7 @@ def init_data_root(
             f"sample: {sample}). Run `data migrate --apply` for copy -> verify "
             "-> marker-last activation."
         )
-    target.mkdir(parents=True, exist_ok=True)
+    marker_path = _prepare_migration_destination(target, target / DATA_ROOT_MARKER)
     marker = {
         "schema_version": "0.1.0",
         "created_at": utc_now(),
@@ -274,8 +289,8 @@ def init_data_root(
         "transport_implementation_version": TRANSPORT_IMPLEMENTATION_VERSION,
         "authority_boundary": AUTHORITY_BOUNDARY,
     }
-    atomic_write_text(target / DATA_ROOT_MARKER, json_dumps(marker, pretty=True) + "\n")
-    return {"data_root": str(target), "marker": str(target / DATA_ROOT_MARKER)}
+    atomic_write_text(marker_path, json_dumps(marker, pretty=True) + "\n")
+    return {"data_root": str(target), "marker": str(marker_path)}
 
 
 # ---------------------------------------------------------------------------
@@ -283,19 +298,86 @@ def init_data_root(
 # ---------------------------------------------------------------------------
 
 
-def _iter_files(base: Path) -> list[Path]:
+def _transport_reparse_like(path: Path) -> bool:
+    try:
+        junction = getattr(path, "is_junction", None)
+        if path.is_symlink() or bool(junction and junction()):
+            return True
+        attributes = int(getattr(path.lstat(), "st_file_attributes", 0))
+    except OSError:
+        return True
+    return bool(attributes & int(getattr(stat, "FILE_ATTRIBUTE_REPARSE_POINT", 0x400)))
+
+
+def _assert_migration_path(boundary: Path, path: Path) -> Path:
+    boundary_absolute = Path(os.path.abspath(boundary))
+    path_absolute = Path(os.path.abspath(path))
+    if not path_absolute.is_relative_to(boundary_absolute):
+        raise RuntimeError("Data migration path escaped its reviewed boundary")
+
+    current = path_absolute
+    while True:
+        if os.path.lexists(current) and _transport_reparse_like(current):
+            raise RuntimeError(
+                f"Data migration path contains a link or reparse point: {current.name}"
+            )
+        if current == boundary_absolute:
+            break
+        current = current.parent
+
+    resolved_boundary = boundary_absolute.resolve(strict=False)
+    resolved_path = path_absolute.resolve(strict=False)
+    if not resolved_path.is_relative_to(resolved_boundary):
+        raise RuntimeError("Data migration path resolved outside its reviewed boundary")
+    return path_absolute
+
+
+def _prepare_migration_destination(target: Path, destination: Path) -> Path:
+    safe = _assert_migration_path(target, destination)
+    safe.parent.mkdir(parents=True, exist_ok=True)
+    _assert_migration_path(target, safe.parent)
+    safe = _assert_migration_path(target, safe)
+    if os.path.lexists(safe):
+        mode = safe.lstat().st_mode
+        if not stat.S_ISREG(mode):
+            raise RuntimeError(
+                f"Data migration destination is not a regular file: {safe.name}"
+            )
+    return safe
+
+
+def _iter_files(base: Path, *, boundary: Path | None = None) -> list[Path]:
+    reviewed_boundary = boundary or base
     if not base.exists():
+        if os.path.lexists(base):
+            _assert_migration_path(reviewed_boundary, base)
         return []
-    if base.is_file():
+    _assert_migration_path(reviewed_boundary, base)
+    mode = base.lstat().st_mode
+    if stat.S_ISREG(mode):
         return [base]
-    return sorted(p for p in base.rglob("*") if p.is_file())
+    if not stat.S_ISDIR(mode):
+        raise RuntimeError(
+            f"Data migration source is not a regular file or directory: {base}"
+        )
+    files: list[Path] = []
+    for path in sorted(base.rglob("*")):
+        _assert_migration_path(reviewed_boundary, path)
+        path_mode = path.lstat().st_mode
+        if stat.S_ISREG(path_mode):
+            files.append(path)
+        elif not stat.S_ISDIR(path_mode):
+            raise RuntimeError(
+                f"Data migration source contains a special file: {path.name}"
+            )
+    return files
 
 
 def _legacy_data_files(hub_root: Path) -> list[tuple[str, Path, Path]]:
     files: list[tuple[str, Path, Path]] = []
-    for _logical, rel in sorted(DATA_PLANE_PATHS.items()):
+    for _logical, rel in sorted(ALL_RUNTIME_DATA_PATHS.items()):
         src_base = hub_root / rel
-        for src in _iter_files(src_base):
+        for src in _iter_files(src_base, boundary=hub_root):
             files.append((rel, src, src.relative_to(src_base)))
     return files
 
@@ -303,7 +385,7 @@ def _legacy_data_files(hub_root: Path) -> list[tuple[str, Path, Path]]:
 def _unverified_target_copies(hub_root: Path, target: Path) -> list[str]:
     unverified: list[str] = []
     for rel, src, rel_file in _legacy_data_files(hub_root):
-        dst = target / rel / rel_file
+        dst = _assert_migration_path(target, target / rel / rel_file)
         if not dst.exists():
             unverified.append(str(src.relative_to(hub_root)))
             continue
@@ -317,8 +399,8 @@ def plan_data_migration(
 ) -> dict[str, Any]:
     surfaces = []
     total = 0
-    for logical, rel in sorted(DATA_PLANE_PATHS.items()):
-        files = _iter_files(hub_root / rel)
+    for logical, rel in sorted(ALL_RUNTIME_DATA_PATHS.items()):
+        files = _iter_files(hub_root / rel, boundary=hub_root)
         total += len(files)
         surfaces.append(
             {
@@ -385,17 +467,18 @@ def apply_data_migration(
     copied = 0
     skipped = 0
     verified_failures: list[str] = []
-    for logical, rel in sorted(DATA_PLANE_PATHS.items()):
+    for logical, rel in sorted(ALL_RUNTIME_DATA_PATHS.items()):
         src_base = hub_root / rel
         dst_base = target / rel
-        for src in _iter_files(src_base):
+        for src in _iter_files(src_base, boundary=hub_root):
             rel_file = src.relative_to(src_base)
-            dst = dst_base / rel_file
+            dst = _assert_migration_path(target, dst_base / rel_file)
             if dst.exists() and _file_digest(dst) == _file_digest(src):
                 skipped += 1
                 continue
-            dst.parent.mkdir(parents=True, exist_ok=True)
+            dst = _prepare_migration_destination(target, dst)
             shutil.copy2(src, dst)
+            dst = _assert_migration_path(target, dst)
             if _file_digest(dst) != _file_digest(src):
                 verified_failures.append(str(src))
                 continue
@@ -406,6 +489,7 @@ def apply_data_migration(
             f"{len(verified_failures)} file(s); marker NOT written: "
             + ", ".join(verified_failures[:5])
         )
+    _assert_migration_path(target, target / DATA_ROOT_MARKER)
     init_data_root(target, hub_root=hub_root, force_onedrive=force_onedrive)
     plan = plan_data_migration(hub_root, target)
     return {

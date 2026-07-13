@@ -1,8 +1,8 @@
 {
   "schema_version": "0.1.0",
   "registry_id": "ai-navigation-registry",
-  "navigation_version": "2026.07.10.1",
-  "updated_at": "2026-07-10T19:15:00Z",
+  "navigation_version": "2026.07.13.1",
+  "updated_at": "2026-07-13T03:30:00Z",
   "singular_entrypoint": {
     "path": "AI_FRONT_DOOR.md",
     "rule": "All agents start at AI_FRONT_DOOR.md, then follow the required read order and task-specific branches.",
@@ -362,9 +362,39 @@
       "change_class": "learning_loop",
       "route_after": ["AI_FRONT_DOOR.md", "registry/subagent-evaluation-methodology.json"],
       "freshness_hint": "Attempt scores and graph relationships remain candidate evidence; inspect pinned rubric hashes, independence counts, and human-gate blockers."
+    },
+    {
+      "branch_id": "global_personal_skills_gpt",
+      "path": "docs/GLOBAL_PERSONAL_SKILLS_GPT.md",
+      "role": "Governed allowlisted inventory, inert local-only archival, candidate graph, and reviewed portable export for global personal skills.",
+      "tags": ["agent_skill", "knowledge_graph", "control_plane", "security_privacy", "transport_data_plane"],
+      "use_when": "You inventory, archive, compare, query, or port Lowell's global personal skills without changing the live source.",
+      "current_version": "0.1.0",
+      "last_material_change_at": "2026-07-13T03:30:00Z",
+      "change_class": "library_catalog",
+      "route_after": ["AI_FRONT_DOOR.md", "config/global-personal-skills.json", "registry/agent-skill-library.json"],
+      "freshness_hint": "Allowlist, runtime-adapter, export, and local-only transport changes require renewed privacy and authority review."
     }
   ],
   "recent_changes": [
+    {
+      "change_id": "nav-change:2026-07-13:global-personal-skills-gpt",
+      "changed_at": "2026-07-13T03:30:00Z",
+      "change_type": "added_global_personal_skills_control_plane",
+      "paths": [
+        "docs/GLOBAL_PERSONAL_SKILLS_GPT.md",
+        "config/global-personal-skills.json",
+        "src/digital_asset_directory/global_personal_skills.py",
+        "assets/agent-skills/global-personal-skills-gpt/",
+        "schemas/personal-skill-source-manifest.schema.json",
+        "schemas/personal-skill-revision.schema.json",
+        "schemas/personal-skill-run.schema.json",
+        "schemas/personal-skill-portable-export.schema.json"
+      ],
+      "summary": "Added explicit personal origin allowlisting, local-only content-addressed archives, deterministic delta/status, candidate graph lineage, and reviewed path-free portable exports.",
+      "agent_action": "Preserve the live global skill root as authority; run deterministic status first and never treat archive or graph presence as installation or approval.",
+      "route_tags": ["agent_skill", "knowledge_graph", "control_plane", "security_privacy"]
+    },
     {
       "change_id": "nav-change:2026-07-10:subagent-evaluation-capability-graph",
       "changed_at": "2026-07-10T19:15:00Z",

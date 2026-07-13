@@ -1,0 +1,22 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://local.digital-asset-directory/schemas/personal-skill-source-manifest.schema.json",
+  "title": "Global Personal Skill Source Manifest",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "manifest_id", "source_runtime", "source_root_kind", "source_root_relative", "deny_skill_names", "deny_path_parts", "text_extensions", "max_file_bytes", "max_skill_bytes", "authority_boundary", "skills"],
+  "properties": {
+    "schema_version": {"const": "dad.personal-skills.v1"},
+    "manifest_id": {"const": "global-personal-skills-gpt"},
+    "source_runtime": {"type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]*$"},
+    "source_root_kind": {"const": "codex_home_skills"},
+    "source_root_relative": {"const": "skills"},
+    "deny_skill_names": {"type": "array", "uniqueItems": true, "items": {"type": "string", "minLength": 1}},
+    "deny_path_parts": {"type": "array", "uniqueItems": true, "items": {"type": "string", "minLength": 1}},
+    "text_extensions": {"type": "array", "minItems": 1, "uniqueItems": true, "items": {"type": "string", "pattern": "^\\.[a-z0-9]+$"}},
+    "max_file_bytes": {"type": "integer", "minimum": 1},
+    "max_skill_bytes": {"type": "integer", "minimum": 1},
+    "authority_boundary": {"type": "string", "minLength": 1},
+    "skills": {"type": "array", "minItems": 1, "items": {"type": "object", "additionalProperties": false, "required": ["skill_id", "name", "source_path", "origin", "status"], "properties": {"skill_id": {"type": "string", "pattern": "^personal-skill:[a-z0-9][a-z0-9-]*$"}, "name": {"type": "string", "minLength": 1}, "source_path": {"type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]*$"}, "origin": {"const": "personal"}, "status": {"enum": ["active", "paused"]}, "source_runtime": {"type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]*$"}}}}
+  }
+}

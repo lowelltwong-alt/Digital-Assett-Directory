@@ -1,6 +1,6 @@
 {
   "schema_version": "0.1.0",
-  "library_version": "0.5.0",
+  "library_version": "0.6.0",
   "status": "candidate_seed",
   "authority_boundary": "DAD owns lifecycle metadata for DAD-managed skill records. Target repos decide whether to check out, update, retire, replace, or locally adapt a skill.",
   "checkout_policy": {
@@ -564,6 +564,41 @@
       "review_status": "reviewed",
       "last_reviewed_at": "2026-07-10",
       "next_review_due_at": "2026-10-10"
+    },
+    {
+      "skill_id": "skill:global-personal-skills-gpt",
+      "name": "Global Personal Skills GPT",
+      "version": "0.1.0",
+      "status": "candidate",
+      "skill_format": "codex_skill",
+      "path": "assets/agent-skills/global-personal-skills-gpt",
+      "entrypoint": "assets/agent-skills/global-personal-skills-gpt/SKILL.md",
+      "description": "Governs deterministic allowlisted inventory, inert local-only revision archives, candidate graph queries, and reviewed portable exports without creating a second active skill source.",
+      "trigger_examples": [
+        "Inventory or archive Lowell's global personal skills without changing the live runtime source.",
+        "Show personal-skill deltas, lineage, unsafe revisions, DAD adaptations, or exact duplicates.",
+        "Create a reviewed path-free portable skill bundle for another frontier runtime."
+      ],
+      "does_not_apply_when": [
+        "The source is a bundled system, plugin cache, installed third-party root, or unknown origin.",
+        "The requested action would silently edit, install, or execute a live global skill."
+      ],
+      "capabilities": ["personal_skill_inventory", "content_addressed_skill_archive", "personal_skill_delta_review", "personal_skill_candidate_graph", "reviewed_portable_skill_export"],
+      "checkout_modes": ["pointer", "wrapper"],
+      "update_policy": "dad_mail_notice",
+      "lifecycle": {
+        "supersedes": [],
+        "superseded_by": [],
+        "retirement_reason": "",
+        "replacement_skill_id": "",
+        "change_notice_templates": ["templates/mail/skill-update-available.mail.template.json", "templates/mail/skill-retirement-notice.mail.template.json"]
+      },
+      "dependencies": ["config/global-personal-skills.json", "docs/GLOBAL_PERSONAL_SKILLS_GPT.md", "registry/agent-skill-library.json", "registry/graph-edge-registry.json"],
+      "source_evidence": ["assets/agent-skills/global-personal-skills-gpt/SKILL.md", "assets/agent-skills/global-personal-skills-gpt/subagents.yaml", "roadmap/evidence/global-personal-skills-gpt-v1.md"],
+      "authority_boundary": "The live global personal skill root remains source authority. Archive bodies are inert and local-only; exports and graph claims remain reviewed candidates and never install or edit skills.",
+      "review_status": "candidate",
+      "last_reviewed_at": "2026-07-13",
+      "next_review_due_at": "2026-10-13"
     }
   ]
 }

@@ -44,6 +44,7 @@ state/*.sqlite3
 state/*.sqlite3-*
 state/agent_sessions/*.json
 raw/local/**
+private/personal-skills/**
 raw/github/**
 raw/research/**
 raw/lessons/**

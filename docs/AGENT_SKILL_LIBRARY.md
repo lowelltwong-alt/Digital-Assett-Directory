@@ -149,6 +149,24 @@ delta absent from committed artifacts. It must not store raw transcripts,
 hidden chain-of-thought, secrets, private payloads, or inferred private
 reasoning.
 
+## Global Personal Skills GPT
+
+`skill:global-personal-skills-gpt` governs archival of explicitly allowlisted
+personal global skills. It does not make the archive part of this library's
+checkout source and does not change the live runtime source. The library stores
+only the reviewed steward/adaptation metadata and pointer policy.
+
+Archive bodies resolve to the local-only `personal_skill_archives` data surface
+and are excluded from Git journal replication. Stable personal skill IDs,
+content-specific revisions, shared blob hashes, DAD adaptations, portable
+exports, checkout pointers, and runtimes remain distinct graph objects. The
+`personal-skill-source:*` markers on existing runtime-neutral adaptations are
+declared provenance for candidate `adapted_as` edges, not exact-copy claims.
+
+Portable exports require named review and approval, omit runtime adapters by
+default, contain no local absolute paths, and never install themselves. See
+`docs/GLOBAL_PERSONAL_SKILLS_GPT.md`.
+
 ## Public And Private Boundary
 
 ## Subagent Continuous Improvement
