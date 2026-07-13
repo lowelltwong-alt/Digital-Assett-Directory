@@ -34,7 +34,9 @@
     "surface_version": "0.1.0",
     "mode": "local_stdio_read_only",
     "remote_enabled": false,
-    "vendor_sdk_required": false
+    "vendor_sdk_required": false,
+    "adoption_request_template": "templates/downstream/MCP_ADOPTION_REQUEST.template.json",
+    "registration_requires_explicit_human_approval": true
   },
   "journal": {
     "surface_version": "0.1.0",

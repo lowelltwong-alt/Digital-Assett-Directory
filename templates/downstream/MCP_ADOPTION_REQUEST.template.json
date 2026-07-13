@@ -1,0 +1,83 @@
+{
+  "schema_version": "0.1.0",
+  "request_id": "<repo-id>:dad-mcp-adoption:<date-or-ticket>",
+  "status": "draft_requires_human_approval",
+  "repo": {
+    "repo_id": "<repo-id>",
+    "repo_alias": "<repo-alias>",
+    "local_path": "<absolute-local-repo-path>",
+    "front_door": "AI_FRONT_DOOR.md",
+    "dad_integration": ".digital-asset/dad-integration.json"
+  },
+  "dad_hub": {
+    "hub_ref": "dad://hub/Digital-Assett-Directory",
+    "local_path": "<absolute-local-dad-hub-path>",
+    "must_not_fallback_to_unrelated_global_install": true
+  },
+  "host_registration": {
+    "host": "<codex|cursor|claude_code|other>",
+    "scope": "<workspace|user|project>",
+    "human_approval_id": "<required-before-apply>",
+    "apply_status": "not_applied",
+    "rollback_steps": [
+      "<remove host-specific MCP server entry>",
+      "<rerun read-only host MCP list smoke to confirm removal>"
+    ]
+  },
+  "server": {
+    "name": "dad-local-graph-surfaces",
+    "transport": "stdio",
+    "command": "asset-dir",
+    "args": [
+      "mcp",
+      "graph-stdio",
+      "--hub",
+      "<absolute-local-dad-hub-path>"
+    ],
+    "fallback_command": "python",
+    "fallback_args": [
+      "-m",
+      "digital_asset_directory.cli",
+      "mcp",
+      "graph-stdio",
+      "--hub",
+      "<absolute-local-dad-hub-path>"
+    ],
+    "fallback_requires_reviewed_dad_checkout": true
+  },
+  "allowed_surface": {
+    "mode": "local_stdio_read_only",
+    "resources": [
+      "dad://registry/graph-surface-registry",
+      "dad://surface/{surface}/manifest",
+      "dad://report/scheduled-tasks"
+    ],
+    "tools": [
+      "dad_graph_surface_status",
+      "dad_graph_get_node",
+      "dad_graph_neighbors",
+      "dad_graph_search_nodes"
+    ],
+    "side_effects_allowed": false
+  },
+  "privacy_boundary": {
+    "no_client_payloads": true,
+    "no_secrets": true,
+    "no_raw_source_rows": true,
+    "no_raw_conversations": true,
+    "metadata_only": true
+  },
+  "validation": {
+    "before_apply": [
+      "python -m pytest tests/test_mcp_server.py tests/test_graph_mcp.py",
+      "confirm downstream repo front door treats DAD as candidate evidence only",
+      "confirm human approval id is present"
+    ],
+    "after_apply": [
+      "host MCP list-resources smoke",
+      "host MCP list-tools smoke",
+      "host MCP read-only graph status smoke"
+    ]
+  },
+  "authority_boundary": "This request does not install, enable, or authorize DAD MCP by itself. Registration requires explicit human approval for the named host and scope."
+}
