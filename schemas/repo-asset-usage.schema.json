@@ -21,7 +21,10 @@
     "repo": {"type": "string", "minLength": 1},
     "repo_id": {"type": "string"},
     "asset_id": {"type": "string", "minLength": 1},
-    "status": {"enum": ["using", "watching", "rejected", "retired"]},
+    "status": {"enum": ["using", "watching", "depends_on", "dependency_candidate", "rejected", "retired"]},
+    "dependency_basis": {
+      "enum": ["explicit_repo_record", "human_reviewed", "imported_candidate"]
+    },
     "recorded_at": {"type": "string", "minLength": 1},
     "recorded_by": {"type": "string", "minLength": 1},
     "source_ref": {"type": "string"},
@@ -33,5 +36,21 @@
     "central_only_reason": {"type": "string"},
     "authority_boundary": {"type": "string", "minLength": 1}
   },
+  "allOf": [
+    {
+      "if": {"properties": {"status": {"const": "depends_on"}}, "required": ["status"]},
+      "then": {
+        "required": ["dependency_basis"],
+        "properties": {"dependency_basis": {"enum": ["explicit_repo_record", "human_reviewed"]}}
+      }
+    },
+    {
+      "if": {"properties": {"status": {"const": "dependency_candidate"}}, "required": ["status"]},
+      "then": {
+        "required": ["dependency_basis"],
+        "properties": {"dependency_basis": {"const": "imported_candidate"}}
+      }
+    }
+  ],
   "additionalProperties": false
 }

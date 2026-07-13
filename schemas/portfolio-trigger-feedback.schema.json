@@ -1,0 +1,72 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://local.digital-asset-directory/schemas/portfolio-trigger-feedback.schema.json",
+  "title": "Portfolio Trigger Feedback Projection",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "generated_at",
+    "methodology",
+    "coverage",
+    "signature_count",
+    "signatures",
+    "authority_boundary"
+  ],
+  "properties": {
+    "schema_version": {"const": "dad.portfolio.trigger_feedback.v1"},
+    "generated_at": {"type": "string", "format": "date-time"},
+    "methodology": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["method_version", "accepted_actions", "suppressed_actions", "rejected_actions", "score_policy", "privacy_policy"],
+      "properties": {
+        "method_version": {"const": "portfolio-trigger-feedback-projection.v0.1.0"},
+        "accepted_actions": {"type": "array", "items": {"enum": ["resume", "keep", "merge"]}, "uniqueItems": true},
+        "suppressed_actions": {"type": "array", "items": {"enum": ["snooze", "incubate", "pause", "dismiss"]}, "uniqueItems": true},
+        "rejected_actions": {"type": "array", "items": {"enum": ["reject_decision", "supersede", "archive"]}, "uniqueItems": true},
+        "score_policy": {"type": "string", "minLength": 1},
+        "privacy_policy": {"type": "string", "minLength": 1}
+      }
+    },
+    "coverage": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["feedback_event_count", "valid_signature_event_count", "unsigned_event_count", "invalid_signature_event_count", "ledger_diagnostic_count"],
+      "properties": {
+        "feedback_event_count": {"type": "integer", "minimum": 0},
+        "valid_signature_event_count": {"type": "integer", "minimum": 0},
+        "unsigned_event_count": {"type": "integer", "minimum": 0},
+        "invalid_signature_event_count": {"type": "integer", "minimum": 0},
+        "ledger_diagnostic_count": {"type": "integer", "minimum": 0}
+      }
+    },
+    "signature_count": {"type": "integer", "minimum": 0},
+    "signatures": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["trigger_signature", "workstream_ids", "action_counts", "feedback_class_counts", "first_recorded_at", "last_recorded_at"],
+        "properties": {
+          "trigger_signature": {"type": "string", "pattern": "^dad:portfolio-trigger:[0-9a-f-]{36}$"},
+          "workstream_ids": {"type": "array", "uniqueItems": true, "items": {"type": "string", "minLength": 1}},
+          "action_counts": {"type": "object", "additionalProperties": {"type": "integer", "minimum": 1}},
+          "feedback_class_counts": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["accepted", "suppressed", "rejected"],
+            "properties": {
+              "accepted": {"type": "integer", "minimum": 0},
+              "suppressed": {"type": "integer", "minimum": 0},
+              "rejected": {"type": "integer", "minimum": 0}
+            }
+          },
+          "first_recorded_at": {"type": "string", "format": "date-time"},
+          "last_recorded_at": {"type": "string", "format": "date-time"}
+        }
+      }
+    },
+    "authority_boundary": {"type": "string", "minLength": 1}
+  }
+}

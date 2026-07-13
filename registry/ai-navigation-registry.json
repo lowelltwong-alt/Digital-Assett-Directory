@@ -1,8 +1,8 @@
 {
   "schema_version": "0.1.0",
   "registry_id": "ai-navigation-registry",
-  "navigation_version": "2026.07.13.1",
-  "updated_at": "2026-07-13T03:30:00Z",
+  "navigation_version": "2026.07.13.8",
+  "updated_at": "2026-07-13T23:59:00Z",
   "singular_entrypoint": {
     "path": "AI_FRONT_DOOR.md",
     "rule": "All agents start at AI_FRONT_DOOR.md, then follow the required read order and task-specific branches.",
@@ -58,55 +58,92 @@
       "branch_id": "front_door",
       "path": "AI_FRONT_DOOR.md",
       "role": "Singular human- and AI-readable start point for DAD work.",
-      "tags": ["front_door", "authority", "navigation_freshness"],
+      "tags": [
+        "front_door",
+        "authority",
+        "navigation_freshness"
+      ],
       "use_when": "Always start here before material work.",
       "current_version": "2026.07.10.1",
       "last_material_change_at": "2026-07-10T00:00:00Z",
       "change_class": "navigation_contract",
-      "route_after": ["registry/ai-navigation-registry.json", "MACHINE_NAVIGATION_MANIFEST.json", "AI_TABLE_OF_CONTENTS.md"],
+      "route_after": [
+        "registry/ai-navigation-registry.json",
+        "MACHINE_NAVIGATION_MANIFEST.json",
+        "AI_TABLE_OF_CONTENTS.md"
+      ],
       "freshness_hint": "Read the navigation freshness section before relying on remembered DAD paths."
     },
     {
       "branch_id": "navigation_registry",
       "path": "registry/ai-navigation-registry.json",
       "role": "Machine-readable navigation version, branch freshness, and recent material changes.",
-      "tags": ["front_door", "registry", "navigation_freshness", "validation"],
+      "tags": [
+        "front_door",
+        "registry",
+        "navigation_freshness",
+        "validation"
+      ],
       "use_when": "You need to know what changed since the last DAD visit without bloating the TOC.",
       "current_version": "2026.07.10.1",
       "last_material_change_at": "2026-07-10T00:00:00Z",
       "change_class": "navigation_contract",
-      "route_after": ["AI_FRONT_DOOR.md"],
+      "route_after": [
+        "AI_FRONT_DOOR.md"
+      ],
       "freshness_hint": "Compare navigation_version and updated_at to any cached or repo-local last-seen value."
     },
     {
       "branch_id": "ai_toc",
       "path": "AI_TABLE_OF_CONTENTS.md",
       "role": "Semantic branching map with path, role, tags, and use-when triggers.",
-      "tags": ["front_door", "workflow", "navigation_freshness"],
+      "tags": [
+        "front_door",
+        "workflow",
+        "navigation_freshness"
+      ],
       "use_when": "You know the task class and need the smallest matching branch.",
       "current_version": "2026.07.10.1",
       "last_material_change_at": "2026-07-10T00:00:00Z",
       "change_class": "navigation_contract",
-      "route_after": ["AI_FRONT_DOOR.md", "registry/ai-navigation-registry.json"],
+      "route_after": [
+        "AI_FRONT_DOOR.md",
+        "registry/ai-navigation-registry.json"
+      ],
       "freshness_hint": "Use the TOC for routing meaning; use this registry for freshness."
     },
     {
       "branch_id": "machine_manifest",
       "path": "MACHINE_NAVIGATION_MANIFEST.json",
       "role": "Machine-readable start files, registries, generated surfaces, and validation commands.",
-      "tags": ["front_door", "registry", "validation", "navigation_freshness"],
+      "tags": [
+        "front_door",
+        "registry",
+        "validation",
+        "navigation_freshness"
+      ],
       "use_when": "A tool or agent needs deterministic paths rather than prose routing.",
       "current_version": "2026.07.10.1",
       "last_material_change_at": "2026-07-10T00:00:00Z",
       "change_class": "navigation_contract",
-      "route_after": ["AI_FRONT_DOOR.md", "registry/ai-navigation-registry.json"],
+      "route_after": [
+        "AI_FRONT_DOOR.md",
+        "registry/ai-navigation-registry.json"
+      ],
       "freshness_hint": "Manifest freshness mirrors the navigation registry version for DAD entrypoint changes."
     },
     {
       "branch_id": "deployment_verification_roadmap",
       "path": "roadmap/evidence/dad-deployment-and-all-repo-verification-roadmap.md",
       "role": "Ordered proof ladder for DAD local deployment, all-repo inventory, mail trials, exception capture, Rust production slice, catalog routes, and reviewed enrollment waves.",
-      "tags": ["roadmap", "deployment", "cross_repo", "mail_center", "rust", "validation"],
+      "tags": [
+        "roadmap",
+        "deployment",
+        "cross_repo",
+        "mail_center",
+        "rust",
+        "validation"
+      ],
       "use_when": "You are continuing DAD deployment/all-repo verification or deciding which phase must happen next.",
       "current_version": "0.1.3",
       "last_material_change_at": "2026-07-06T13:50:00Z",
@@ -126,43 +163,71 @@
       "branch_id": "local_deployment",
       "path": "docs/DAD_LOCAL_DEPLOYMENT.md",
       "role": "Local bootstrap, hub locator, stable invocation, doctor scopes, and unavailable-hub policy.",
-      "tags": ["deployment", "workflow", "validation", "front_door"],
+      "tags": [
+        "deployment",
+        "workflow",
+        "validation",
+        "front_door"
+      ],
       "use_when": "DAD needs to be callable from a non-DAD repo without manual PYTHONPATH knowledge.",
       "current_version": "0.1.0",
       "last_material_change_at": "2026-07-04T18:20:00Z",
       "change_class": "navigation_contract",
-      "route_after": ["docs/OPERATIONS.md", "asset-dir doctor"],
+      "route_after": [
+        "docs/OPERATIONS.md",
+        "asset-dir doctor"
+      ],
       "freshness_hint": "Use deployment-scope doctor for hub/install proof; operational-scope doctor remains the stricter generated-surface readiness check."
     },
     {
       "branch_id": "library_catalog",
       "path": "registry/dad-offerings-registry.json",
       "role": "Rich card catalog of DAD assets, skills, harnesses, architecture refs, maps, workflows, and known upgrades.",
-      "tags": ["registry", "control_plane", "learning_loop", "coding_asset"],
+      "tags": [
+        "registry",
+        "control_plane",
+        "learning_loop",
+        "coding_asset"
+      ],
       "use_when": "A repo or agent needs to match context to DAD offerings, use now, save for future, or watch an upgrade channel.",
       "current_version": "0.1.0",
       "last_material_change_at": "2026-07-04T17:05:24Z",
       "change_class": "library_catalog",
-      "route_after": ["AI_FRONT_DOOR.md", "AI_TABLE_OF_CONTENTS.md"],
+      "route_after": [
+        "AI_FRONT_DOOR.md",
+        "AI_TABLE_OF_CONTENTS.md"
+      ],
       "freshness_hint": "Use with dad-usefulness methodology; catalog changes may require a new context pack."
     },
     {
       "branch_id": "dad_needs",
       "path": "registry/dad-needs-registry.json",
       "role": "DAD request list for what repos should send back through candidate mail.",
-      "tags": ["registry", "mail_center", "learning_loop"],
+      "tags": [
+        "registry",
+        "mail_center",
+        "learning_loop"
+      ],
       "use_when": "A repo needs to decide whether a lesson, asset, harness result, exception, or governance drift should be sent to DAD.",
       "current_version": "0.1.0",
       "last_material_change_at": "2026-07-04T17:05:24Z",
       "change_class": "library_catalog",
-      "route_after": ["AI_FRONT_DOOR.md", "docs/MAIL_CENTER.md"],
+      "route_after": [
+        "AI_FRONT_DOOR.md",
+        "docs/MAIL_CENTER.md"
+      ],
       "freshness_hint": "A needs change can alter outbox emission expectations; check recent_changes before assuming old packet rules."
     },
     {
       "branch_id": "dad_rust_system",
       "path": "assets/dad-rust-upgrade-starter-pack/README.md",
       "role": "First-stop route for understanding DAD's Rust system before reading adoption plans or implementation code.",
-      "tags": ["rust", "coding_asset", "reusable_asset", "navigation_freshness"],
+      "tags": [
+        "rust",
+        "coding_asset",
+        "reusable_asset",
+        "navigation_freshness"
+      ],
       "use_when": "Another repo or AI asks where to look to understand DAD's Rust system.",
       "current_version": "0.1.0",
       "last_material_change_at": "2026-07-06T05:58:00Z",
@@ -180,7 +245,13 @@
       "branch_id": "rust_rollout_lesson_capture",
       "path": "docs/rust/RUST_ROLLOUT_LESSON_CAPTURE_PROTOCOL.md",
       "role": "Rust rollout lesson-capture protocol for append-only ledger rows, schema expectations, summary regeneration, and repo feedback packets.",
-      "tags": ["rust", "learning_loop", "schema", "mail_center", "validation"],
+      "tags": [
+        "rust",
+        "learning_loop",
+        "schema",
+        "mail_center",
+        "validation"
+      ],
       "use_when": "A repo needs to send, process, validate, or summarize Rust rollout lessons during Rust deployment or mail storms.",
       "current_version": "0.1.0",
       "last_material_change_at": "2026-07-05T07:45:00Z",
@@ -196,7 +267,12 @@
       "branch_id": "harness_vs_enforcement",
       "path": "docs/HARNESS_VS_DETERMINISTIC_ENFORCEMENT.md",
       "role": "Decision model for choosing harnesses, advisory reporting, warnings, or deterministic enforcement.",
-      "tags": ["harness_decision", "coding_asset", "governance", "learning_loop"],
+      "tags": [
+        "harness_decision",
+        "coding_asset",
+        "governance",
+        "learning_loop"
+      ],
       "use_when": "A repo or agent discovers an issue and must decide whether it belongs in a harness, subharness, report, warning, validator, CI gate, or hard stop.",
       "current_version": "0.1.0",
       "last_material_change_at": "2026-07-04T17:16:04Z",
@@ -212,7 +288,12 @@
       "branch_id": "claude_architectural_root_cause_review",
       "path": "docs/CLAUDE_ARCHITECTURAL_ROOT_CAUSE_REVIEW.md",
       "role": "Claude-readable packet guidance for integration and implementation issue patterns that may have architectural root causes.",
-      "tags": ["root_cause_review", "learning_loop", "governance", "coding_asset"],
+      "tags": [
+        "root_cause_review",
+        "learning_loop",
+        "governance",
+        "coding_asset"
+      ],
       "use_when": "Repeated integration failures, implementation drift, boundary mismatch, ownership ambiguity, or review findings suggest architecture rather than a single local bug.",
       "current_version": "0.1.0",
       "last_material_change_at": "2026-07-04T17:22:39Z",
@@ -228,7 +309,11 @@
       "branch_id": "lesson_lifecycle_governance",
       "path": "docs/LESSON_LIFECYCLE_GOVERNANCE.md",
       "role": "Candidate design for lesson lifecycle review overlays, review clocks, upgrades, downgrades, supersession, and archive status.",
-      "tags": ["learning_loop", "calibration", "governance"],
+      "tags": [
+        "learning_loop",
+        "calibration",
+        "governance"
+      ],
       "use_when": "A repo or agent needs to decide whether an old lesson is still useful, stale, harmful, superseded, or ready for promotion review.",
       "current_version": "0.1.0",
       "last_material_change_at": "2026-07-04T17:42:00Z",
@@ -244,19 +329,35 @@
       "branch_id": "mail_center",
       "path": "docs/MAIL_CENTER.md",
       "role": "Governed DAD mail hub, repo-local inbox/outbox mirror, and warning-only synthetic QRD/IFC lesson receiver boundary.",
-      "tags": ["mail_center", "cross_repo", "learning_loop", "security_privacy"],
+      "tags": [
+        "mail_center",
+        "cross_repo",
+        "learning_loop",
+        "security_privacy"
+      ],
       "use_when": "You compose, collect, route, deliver, digest, review, or explain DAD mail.",
       "current_version": "0.2.0",
       "last_material_change_at": "2026-07-10T00:00:00Z",
       "change_class": "mail_surface",
-      "route_after": ["docs/DAD_EVENT_PIPELINE.md", "AI_FRONT_DOOR.md", "registry/ai-navigation-registry.json"],
+      "route_after": [
+        "docs/DAD_EVENT_PIPELINE.md",
+        "AI_FRONT_DOOR.md",
+        "registry/ai-navigation-registry.json"
+      ],
       "freshness_hint": "Mail and optional QRD/IFC projections remain candidate-only. Receiver schema validity is not disclosure, crossing, send, promotion, legal, privacy, or compliance authority."
     },
     {
       "branch_id": "event_pipeline",
       "path": "docs/DAD_EVENT_PIPELINE.md",
       "role": "Local-first event/data pipeline contract beneath mail, including repo event outboxes, central event logs, response-state rows, quarantine, and Rust leaf-check boundaries.",
-      "tags": ["event_pipeline", "mail_center", "learning_loop", "cross_repo", "validation", "rust"],
+      "tags": [
+        "event_pipeline",
+        "mail_center",
+        "learning_loop",
+        "cross_repo",
+        "validation",
+        "rust"
+      ],
       "use_when": "You need repo responses, asset-use feedback, exception/fix outcomes, or DAD notice adoption to be explicit instead of inferred from mail presence.",
       "current_version": "0.1.0",
       "last_material_change_at": "2026-07-06T05:58:00Z",
@@ -277,31 +378,125 @@
       "branch_id": "mail_dirty_state_runbook",
       "path": "docs/DAD_MAIL_STORM_AND_DIRTY_STATE_RUNBOOK.md",
       "role": "Operator runbook for concurrent repo mail storms, wrong-box inbox writes, source-outbox duplicate retries, Rust rollout staging, and dirty-worktree separation.",
-      "tags": ["mail_center", "cross_repo", "rust", "validation", "workflow"],
+      "tags": [
+        "mail_center",
+        "cross_repo",
+        "rust",
+        "validation",
+        "workflow"
+      ],
       "use_when": "Many repos or branches are writing DAD mail, Rust rollout lessons, or learning-loop packets and the DAD tree looks very dirty.",
       "current_version": "0.1.0",
       "last_material_change_at": "2026-07-05T04:20:00Z",
       "change_class": "mail_surface",
-      "route_after": ["docs/MAIL_CENTER.md", "asset-dir mail doctor"],
+      "route_after": [
+        "docs/MAIL_CENTER.md",
+        "asset-dir mail doctor"
+      ],
       "freshness_hint": "Use mail doctor safe_to_collect/safe_to_route/safe_to_deliver instead of treating git worktree dirt as mailbox corruption."
     },
     {
       "branch_id": "pr_branch_lifecycle_governance",
       "path": "docs/PR_BRANCH_LIFECYCLE_GOVERNANCE.md",
       "role": "DAD lesson and repo-facing governance pattern for preventing PR-ready branches and open PRs from becoming stale conflict debt.",
-      "tags": ["branch_lifecycle", "governance", "learning_loop", "cross_repo", "workflow"],
+      "tags": [
+        "branch_lifecycle",
+        "governance",
+        "learning_loop",
+        "cross_repo",
+        "workflow"
+      ],
       "use_when": "A branch is PR-ready, a PR is open, branch queues are accumulating, or handoff needs owner, next action, validation refs, and escalation-clock evidence.",
       "current_version": "0.1.0",
       "last_material_change_at": "2026-07-06T14:30:00Z",
       "change_class": "learning_loop",
-      "route_after": ["registry/dad-needs-registry.json", "docs/DAD_MAIL_STORM_AND_DIRTY_STATE_RUNBOOK.md", "AI_FRONT_DOOR.md"],
+      "route_after": [
+        "registry/dad-needs-registry.json",
+        "docs/DAD_MAIL_STORM_AND_DIRTY_STATE_RUNBOOK.md",
+        "AI_FRONT_DOOR.md"
+      ],
       "freshness_hint": "Use metadata-only PR/branch state and escalation clocks; DAD records do not merge, approve, close, delete, rebase, or supersede source branches by themselves."
+    },
+    {
+      "branch_id": "portfolio_ai_operating_system",
+      "path": "docs/DAD_PORTFOLIO_AI_OPERATING_SYSTEM_PLAN.md",
+      "role": "DAD portfolio OS plan plus read-only Git attention, verified mixed event ledger, unified Portfolio Cockpit, proposal-only identity reconciliation, candidate-only workstream shaping, strict daily Portfolio Review Packet, workstream board, exact-event approval shadow verifier, source-zero-write attempt journal, dependency assertions, child-project sovereignty, and governed PM/trigger role directory.",
+      "tags": [
+        "control_plane",
+        "branch_lifecycle",
+        "attention",
+        "event_pipeline",
+        "governance",
+        "cross_repo",
+        "workflow",
+        "local_first",
+        "project_management",
+        "trigger_pattern",
+        "agent_skill",
+        "human_gate"
+      ],
+      "use_when": "Creative ideas, chats, branches, worktrees, or projects are sprawling; forgotten work needs recovery; or DAD's portfolio OS buildout is continuing.",
+      "current_version": "0.9.0",
+      "last_material_change_at": "2026-07-13T18:30:00Z",
+      "change_class": "navigation_contract",
+      "route_after": [
+        "docs/research/PORTFOLIO_AI_OS_PRACTICE_RESEARCH_2026-07-11.md",
+        "src/digital_asset_directory/portfolio_os.py",
+        "src/digital_asset_directory/portfolio_events.py",
+        "src/digital_asset_directory/portfolio_execution.py",
+        "src/digital_asset_directory/portfolio_authority.py",
+        "src/digital_asset_directory/portfolio_attempts.py",
+        "src/digital_asset_directory/portfolio_relations.py",
+        "src/digital_asset_directory/portfolio_attention.py",
+        "src/digital_asset_directory/portfolio_workstreams.py",
+        "src/digital_asset_directory/portfolio_cockpit.py",
+        "src/digital_asset_directory/portfolio_reconciliation.py",
+        "src/digital_asset_directory/portfolio_shaping.py",
+        "schemas/portfolio-attention-report.schema.json",
+        "schemas/portfolio-workstream-event.schema.json",
+        "schemas/portfolio-execution-control-event.schema.json",
+        "schemas/portfolio-approval-attestation.schema.json",
+        "schemas/portfolio-approval-trust-registry.schema.json",
+        "schemas/portfolio-attempt-event.schema.json",
+        "registry/portfolio-approval-trust-registry.json",
+        "schemas/portfolio-workstream-state.schema.json",
+        "schemas/portfolio-cockpit.schema.json",
+        "schemas/portfolio-reconciliation.schema.json",
+        "schemas/portfolio-workstream-shaping.schema.json",
+        "src/digital_asset_directory/portfolio_review.py",
+        "schemas/portfolio-review-packet.schema.json",
+        "docs/frontier/collaboration/14_PORTFOLIO_REVIEW_PACKET.md",
+        "roadmap/evidence/portfolio-review-operator-trial.md",
+        "assets/agent-skills/personal-project-management-ops/",
+        "assets/agent-skills/dad-trigger-pattern-radar/",
+        "processed/agents/subagent-role-directory.json",
+        "docs/frontier/collaboration/02_SHARED_ARCHITECTURE_SYNTHESIS.md",
+        "docs/frontier/collaboration/05_EXECUTION_LEASE_AND_DISPATCH_CONTROL.md",
+        "docs/frontier/collaboration/06_CODEX_EXECUTION_CONTROL_RECOVERY_HANDOFF.md",
+        "docs/frontier/collaboration/09_TRUSTED_APPROVAL_AND_DRY_RUN_ATTEMPT_CONTROL.md",
+        "docs/frontier/collaboration/10_TRUSTED_APPROVAL_ATTEMPT_KERNEL_HANDOFF.md",
+        "docs/frontier/collaboration/11_PORTFOLIO_COCKPIT_PROJECTION.md",
+        "docs/frontier/collaboration/12_PORTFOLIO_BINDING_ASSISTANCE.md",
+        "docs/frontier/collaboration/13_PORTFOLIO_WORKSTREAM_SHAPING.md",
+        "roadmap/evidence/portfolio-attention-v1.md",
+        "roadmap/evidence/portfolio-reconciliation-operator-trial.md",
+        "roadmap/evidence/portfolio-shaping-operator-trial.md",
+        "docs/FABLE_PORTFOLIO_AI_OPERATING_SYSTEM_PROMPT.md"
+      ],
+      "freshness_hint": "Portfolio reports, cockpit ordering, reconciliation proposals, shaping cases, assertions, signatures, dry-run claims, and declared roles are candidate metadata. Only complete exact accepted most-specific scope joins attention; repo bindings are context only. Similarity and age never authorize identity or action, unknown or stale input prevents false green, and no shaping choice records a decision, launches agents, or mutates Git. The Review Packet reuses cockpit Today, exposes categorical health, and remains non-executing; its all-clear claim fails closed on stale, missing, invalid, dirty, unresolved, or unscoped evidence."
     },
     {
       "branch_id": "fable_graph_surface_mcp_handoff",
       "path": "processed/fable5/deep-dives/2026-07-07-graph-surface-mcp-handoff/fable5-master-prompt.md",
       "role": "Fable handoff for graph surface manifests, MCP-first resources, no-lock-in runtime policy, parallel transport merge context, version tracking, synthetic tests, red-team, and premortem kernels.",
-      "tags": ["knowledge_graph", "mcp_integration", "transport_data_plane", "root_cause_review", "validation", "governance"],
+      "tags": [
+        "knowledge_graph",
+        "mcp_integration",
+        "transport_data_plane",
+        "root_cause_review",
+        "validation",
+        "governance"
+      ],
       "use_when": "You need Fable to review the graph/MCP build plan, adjust it for parallel transport work, and emit compact implementation/testing kernels before Codex builds the graph surface registry.",
       "current_version": "0.1.0",
       "last_material_change_at": "2026-07-07T02:15:00Z",
@@ -319,64 +514,282 @@
       "branch_id": "repo_enrollment_mail_governance_safety_harness",
       "path": "assets/coding-harnesses/repo-enrollment-mail-governance-safety/",
       "role": "Reusable harness and eval cases for enrollment/mail write boundaries, dirty-spool gates, source-outbox retry storms, cross-source provenance conflicts, Rust rollout snapshot churn, and worktree-dirt separation.",
-      "tags": ["mail_center", "dirty_state", "rust", "repo_enrollment", "validation"],
+      "tags": [
+        "mail_center",
+        "dirty_state",
+        "rust",
+        "repo_enrollment",
+        "validation"
+      ],
       "use_when": "You need to test or red-team DAD mail/enrollment behavior during concurrent repo mail, Rust rollout, or very dirty worktree states.",
       "current_version": "0.1.0",
       "last_material_change_at": "2026-07-05T04:55:00Z",
       "change_class": "coding_harness",
-      "route_after": ["docs/DAD_MAIL_STORM_AND_DIRTY_STATE_RUNBOOK.md", "tests/test_mail_center.py"],
+      "route_after": [
+        "docs/DAD_MAIL_STORM_AND_DIRTY_STATE_RUNBOOK.md",
+        "tests/test_mail_center.py"
+      ],
       "freshness_hint": "Run or inspect this harness when mail doctor behavior changes; retry duplicates are observations, but reviewed cross-source identity conflicts block."
     },
     {
       "branch_id": "address_model",
       "path": "docs/DAD_ADDRESS_MODEL.md",
       "role": "DAD 9-layer address model for compact asset, workflow, exception, and learning coordinates.",
-      "tags": ["address_model", "knowledge_graph", "learning_loop"],
+      "tags": [
+        "address_model",
+        "knowledge_graph",
+        "learning_loop"
+      ],
       "use_when": "You need compact context or graph-compatible coordinates without storing bulky workflow text inline.",
       "current_version": "0.1.0",
       "last_material_change_at": "2026-07-04T17:05:24Z",
       "change_class": "library_catalog",
-      "route_after": ["AI_FRONT_DOOR.md", "AI_TABLE_OF_CONTENTS.md"],
+      "route_after": [
+        "AI_FRONT_DOOR.md",
+        "AI_TABLE_OF_CONTENTS.md"
+      ],
       "freshness_hint": "Layer-model changes are semantic; compare registry version before using old address assumptions."
     },
     {
       "branch_id": "exceptions_lake",
       "path": "docs/DAD_EXCEPTIONS_LAKE_BUILDOUT.md",
       "role": "Cross-repo exceptions lake, fix-outcome ledger, and exception-to-learning compiler plan.",
-      "tags": ["learning_loop", "cross_repo", "security_privacy", "validation"],
+      "tags": [
+        "learning_loop",
+        "cross_repo",
+        "security_privacy",
+        "validation"
+      ],
       "use_when": "You capture or learn from failures, bypasses, review findings, fix outcomes, or missed DAD mail patterns.",
       "current_version": "0.1.0",
       "last_material_change_at": "2026-07-04T17:05:24Z",
       "change_class": "learning_loop",
-      "route_after": ["AI_FRONT_DOOR.md", "AI_TABLE_OF_CONTENTS.md"],
+      "route_after": [
+        "AI_FRONT_DOOR.md",
+        "AI_TABLE_OF_CONTENTS.md"
+      ],
       "freshness_hint": "Exception capture patterns change quickly; inspect recent changes before judging whether a repo should have emitted mail."
     },
     {
       "branch_id": "subagent_evaluation_capability_graph",
       "path": "docs/SUBAGENT_EVALUATION_AND_CAPABILITY_GRAPH.md",
-      "role": "Attempt-first subagent identity, rating, evidence, capability graph, and human consolidation review system.",
-      "tags": ["agent_skill", "knowledge_graph", "calibration", "human_gate", "validation"],
-      "use_when": "You record, rate, compare, specialize, combine, promote, or supersede subagent role revisions across repositories.",
-      "current_version": "0.1.0",
-      "last_material_change_at": "2026-07-10T19:15:00Z",
+      "role": "Attempt-first subagent evidence graph plus runtime-stamped pre-outcome self prediction, evaluator-integrity meta-review, explicit domain overlays, system-layer attribution, preserve-simple routing, and a separately evidenced searchable role directory.",
+      "tags": [
+        "agent_skill",
+        "knowledge_graph",
+        "calibration",
+        "human_gate",
+        "validation",
+        "project_management",
+        "trigger_pattern",
+        "evaluator_integrity",
+        "domain_profiles",
+        "workflow"
+      ],
+      "use_when": "You record or review subagent attempts, test whether self-grading or independent grading is trustworthy, choose a domain evaluation contract, attribute failure to an agent or workflow layer, or decide whether a simple role should remain unchanged.",
+      "current_version": "0.3.0",
+      "last_material_change_at": "2026-07-13T19:00:00Z",
       "change_class": "learning_loop",
-      "route_after": ["AI_FRONT_DOOR.md", "registry/subagent-evaluation-methodology.json"],
-      "freshness_hint": "Attempt scores and graph relationships remain candidate evidence; inspect pinned rubric hashes, independence counts, and human-gate blockers."
+      "route_after": [
+        "AI_FRONT_DOOR.md",
+        "registry/subagent-evaluation-methodology.json",
+        "registry/agent-skill-library.json",
+        "processed/agents/subagent-role-directory.json",
+        "registry/subagent-evaluation-profile-registry.json",
+        "docs/research/SUBAGENT_SELF_GRADING_AND_IMPROVEMENT_RESEARCH_2026-07-13.md",
+        "src/digital_asset_directory/subagent_integrity.py",
+        "roadmap/evidence/subagent-self-grade-integrity-kernel.md"
+      ],
+      "freshness_hint": "Self predictions are telemetry, hashes prove integrity not truth, identity separation does not prove blind or lineage independence, selected profiles are explicit unverified candidates, and cross-domain scores are forbidden. Any intervention or no-change freeze remains held-out, rollback-ready, and human-gated."
     },
     {
       "branch_id": "global_personal_skills_gpt",
       "path": "docs/GLOBAL_PERSONAL_SKILLS_GPT.md",
       "role": "Governed allowlisted inventory, inert local-only archival, candidate graph, and reviewed portable export for global personal skills.",
-      "tags": ["agent_skill", "knowledge_graph", "control_plane", "security_privacy", "transport_data_plane"],
+      "tags": [
+        "agent_skill",
+        "knowledge_graph",
+        "control_plane",
+        "security_privacy",
+        "transport_data_plane"
+      ],
       "use_when": "You inventory, archive, compare, query, or port Lowell's global personal skills without changing the live source.",
       "current_version": "0.1.0",
       "last_material_change_at": "2026-07-13T03:30:00Z",
       "change_class": "library_catalog",
-      "route_after": ["AI_FRONT_DOOR.md", "config/global-personal-skills.json", "registry/agent-skill-library.json"],
+      "route_after": [
+        "AI_FRONT_DOOR.md",
+        "config/global-personal-skills.json",
+        "registry/agent-skill-library.json"
+      ],
       "freshness_hint": "Allowlist, runtime-adapter, export, and local-only transport changes require renewed privacy and authority review."
     }
   ],
   "recent_changes": [
+    {
+      "change_id": "nav-change:2026-07-13:subagent-self-grade-integrity",
+      "changed_at": "2026-07-13T19:00:00Z",
+      "change_type": "added_subagent_self_grade_and_evaluator_integrity_kernel",
+      "paths": [
+        "docs/SUBAGENT_EVALUATION_AND_CAPABILITY_GRAPH.md",
+        "docs/research/SUBAGENT_SELF_GRADING_AND_IMPROVEMENT_RESEARCH_2026-07-13.md",
+        "docs/HARNESS_VS_DETERMINISTIC_ENFORCEMENT.md",
+        "registry/subagent-evaluation-profile-registry.json",
+        "schemas/subagent-self-assessment.schema.json",
+        "schemas/subagent-evaluation-integrity-report.schema.json",
+        "src/digital_asset_directory/subagent_integrity.py",
+        "src/digital_asset_directory/cli.py",
+        "assets/agent-skills/subagent-continuous-improvement/SKILL.md",
+        "assets/agent-skills/subagent-continuous-improvement/subagents.yaml",
+        "registry/subagent-capability-registry.json",
+        "registry/agent-skill-library.json",
+        "tests/test_subagent_integrity.py",
+        "roadmap/evidence/subagent-self-grade-integrity-kernel.md",
+        "AI_FRONT_DOOR.md",
+        "AI_TABLE_OF_CONTENTS.md",
+        "MACHINE_NAVIGATION_MANIFEST.json",
+        "registry/ai-navigation-registry.json"
+      ],
+      "summary": "Added pre-outcome prediction telemetry, strict domain evaluation profiles, read-only evaluator-integrity and anti-gaming review, system-layer fault attribution, preserve-simple routing, and candidate-only human-gated intervention contracts without a cross-domain score or automatic change.",
+      "agent_action": "Use subagents profiles to inspect contracts, self-assess before outcome visibility, and integrity-review after independent evidence. Never treat a self-grade, hash, agreement, selected profile, or disposition as proof, ranking, or authority to change an agent or workflow.",
+      "route_tags": [
+        "agent_skill",
+        "calibration",
+        "evaluator_integrity",
+        "domain_profiles",
+        "workflow",
+        "validation",
+        "human_gate"
+      ]
+    },
+    {
+      "change_id": "nav-change:2026-07-13:portfolio-workstream-shaping",
+      "changed_at": "2026-07-13T13:05:00Z",
+      "change_type": "added_candidate_only_portfolio_workstream_shaping",
+      "paths": [
+        "docs/DAD_PORTFOLIO_AI_OPERATING_SYSTEM_PLAN.md",
+        "docs/frontier/collaboration/13_PORTFOLIO_WORKSTREAM_SHAPING.md",
+        "src/digital_asset_directory/portfolio_shaping.py",
+        "src/digital_asset_directory/portfolio_cockpit.py",
+        "src/digital_asset_directory/portfolio_reconciliation.py",
+        "src/digital_asset_directory/cli.py",
+        "schemas/portfolio-workstream-shaping.schema.json",
+        "registry/schema-registry.json",
+        "AI_TABLE_OF_CONTENTS.md",
+        "MACHINE_NAVIGATION_MANIFEST.json",
+        "tests/test_portfolio_shaping.py",
+        "tests/test_portfolio_cockpit.py",
+        "roadmap/evidence/portfolio-shaping-operator-trial.md",
+        "registry/ai-navigation-registry.json"
+      ],
+      "summary": "Added strict snapshot-bound split, rescope, possible-duplicate, and recovery cases with exact source coupling, ordinal evidence, inspect-only similarity, age-independent recovery, inert choices, path sanitization, bounded Today review, semantic validation, and six-cursor rollback.",
+      "agent_action": "Use os shape for creative-sprawl review; never treat a case, similarity, age, inert choice, or no-cases result as accepted identity, a durable decision, all-clear status, or execution authority.",
+      "route_tags": [
+        "attention",
+        "branch_lifecycle",
+        "project_management",
+        "workflow",
+        "local_first",
+        "validation",
+        "human_gate"
+      ]
+    },
+    {
+      "change_id": "nav-change:2026-07-13:portfolio-cockpit-reconciliation",
+      "changed_at": "2026-07-13T23:55:00Z",
+      "change_type": "added_strict_portfolio_cockpit_and_proposal_only_reconciliation",
+      "paths": [
+        "docs/DAD_PORTFOLIO_AI_OPERATING_SYSTEM_PLAN.md",
+        "docs/frontier/collaboration/11_PORTFOLIO_COCKPIT_PROJECTION.md",
+        "src/digital_asset_directory/portfolio_cockpit.py",
+        "src/digital_asset_directory/portfolio_reconciliation.py",
+        "src/digital_asset_directory/cli.py",
+        "schemas/portfolio-cockpit.schema.json",
+        "schemas/portfolio-reconciliation.schema.json",
+        "registry/schema-registry.json",
+        "AI_TABLE_OF_CONTENTS.md",
+        "MACHINE_NAVIGATION_MANIFEST.json",
+        "tests/test_portfolio_cockpit.py",
+        "tests/test_portfolio_reconciliation.py",
+        "docs/frontier/collaboration/12_PORTFOLIO_BINDING_ASSISTANCE.md",
+        "roadmap/evidence/portfolio-reconciliation-operator-trial.md",
+        "registry/ai-navigation-registry.json"
+      ],
+      "summary": "Added a strict read-only cockpit plus snapshot-bound reconciliation with most-specific branch/worktree scope, repo-context isolation, semantic binding validation, rollback-coupled cursors, inspect-only similarity, and fail-closed ambiguity/unknown handling.",
+      "agent_action": "Use os cockpit for attention and os reconcile for candidate identity review; never treat similarity, no candidates, or a proposal command as an accepted binding, all-clear result, or execution authority.",
+      "route_tags": [
+        "attention",
+        "branch_lifecycle",
+        "project_management",
+        "workflow",
+        "local_first",
+        "validation",
+        "human_gate"
+      ]
+    },
+    {
+      "change_id": "nav-change:2026-07-13:portfolio-trusted-approval-attempt-kernel",
+      "changed_at": "2026-07-13T20:00:00Z",
+      "change_type": "expanded_execution_shadow_with_exact_event_verifier_and_dry_run_attempts",
+      "paths": [
+        "docs/frontier/collaboration/05_EXECUTION_LEASE_AND_DISPATCH_CONTROL.md",
+        "src/digital_asset_directory/portfolio_execution.py",
+        "src/digital_asset_directory/portfolio_authority.py",
+        "src/digital_asset_directory/portfolio_attempts.py",
+        "docs/frontier/collaboration/06_CODEX_EXECUTION_CONTROL_RECOVERY_HANDOFF.md",
+        "schemas/portfolio-execution-control-event.schema.json",
+        "schemas/portfolio-approval-attestation.schema.json",
+        "schemas/portfolio-approval-trust-registry.schema.json",
+        "schemas/portfolio-attempt-event.schema.json",
+        "registry/portfolio-approval-trust-registry.json",
+        "src/digital_asset_directory/portfolio_events.py",
+        "src/digital_asset_directory/cli.py",
+        "tests/test_portfolio_execution_control.py",
+        "tests/test_portfolio_execution_authority_invariants.py",
+        "tests/test_portfolio_approval_verifier.py",
+        "tests/test_portfolio_attempt_journal.py",
+        "docs/frontier/collaboration/09_TRUSTED_APPROVAL_AND_DRY_RUN_ATTEMPT_CONTROL.md",
+        "docs/frontier/collaboration/10_TRUSTED_APPROVAL_ATTEMPT_KERNEL_HANDOFF.md",
+        "docs/TESTING_AND_ORCHESTRATION.md"
+      ],
+      "summary": "Removed raw caller-labeled authority from the public fold, added exact-event Ed25519 shadow verification against an empty unanchored registry, and added a source-zero-write dry-run attempt journal.",
+      "agent_action": "Use os approval-trust, os execution, os dispatch-packet, os attempts, and os attempt-simulate for shadow evidence only; missing crypto or anchored trust denies authority, and no command executes work or mutates a source repository.",
+      "route_tags": [
+        "control_plane",
+        "event_pipeline",
+        "human_gate",
+        "governance",
+        "security_privacy",
+        "validation"
+      ]
+    },
+    {
+      "change_id": "nav-change:2026-07-12:portfolio-pm-trigger-role-directory",
+      "changed_at": "2026-07-12T18:30:00Z",
+      "change_type": "added_registered_pm_trigger_role_directory",
+      "paths": [
+        "assets/agent-skills/personal-project-management-ops/",
+        "assets/agent-skills/dad-trigger-pattern-radar/",
+        "registry/agent-skill-library.json",
+        "registry/subagent-capability-registry.json",
+        "schemas/subagent-pack.schema.json",
+        "schemas/subagent-role-directory.schema.json",
+        "schemas/portfolio-trigger-feedback.schema.json",
+        "src/digital_asset_directory/subagent_evaluations.py",
+        "src/digital_asset_directory/portfolio_workstreams.py",
+        "processed/agents/subagent-role-directory.json"
+      ],
+      "summary": "Registered 11 runtime-neutral PM and trigger roles behind explicit pack allowlists, added a read-only categorical directory, and kept declarations separate from attempt-first grading.",
+      "agent_action": "Use subagents directory or os agents for retrieval; never treat declared capabilities as competence, infer evaluation links, dispatch work, or enable candidate routines from the directory.",
+      "route_tags": [
+        "agent_skill",
+        "project_management",
+        "trigger_pattern",
+        "knowledge_graph",
+        "human_gate",
+        "privacy"
+      ]
+    },
     {
       "change_id": "nav-change:2026-07-13:global-personal-skills-gpt",
       "changed_at": "2026-07-13T03:30:00Z",
@@ -393,7 +806,62 @@
       ],
       "summary": "Added explicit personal origin allowlisting, local-only content-addressed archives, deterministic delta/status, candidate graph lineage, and reviewed path-free portable exports.",
       "agent_action": "Preserve the live global skill root as authority; run deterministic status first and never treat archive or graph presence as installation or approval.",
-      "route_tags": ["agent_skill", "knowledge_graph", "control_plane", "security_privacy"]
+      "route_tags": [
+        "agent_skill",
+        "knowledge_graph",
+        "control_plane",
+        "security_privacy"
+      ]
+    },
+    {
+      "change_id": "nav-change:2026-07-12:portfolio-os-model-c-kernel",
+      "changed_at": "2026-07-12T16:30:00Z",
+      "change_type": "added_verified_workstream_and_sovereignty_kernel",
+      "paths": [
+        "docs/frontier/collaboration/02_SHARED_ARCHITECTURE_SYNTHESIS.md",
+        "src/digital_asset_directory/portfolio_events.py",
+        "src/digital_asset_directory/portfolio_relations.py",
+        "src/digital_asset_directory/portfolio_attention.py",
+        "src/digital_asset_directory/portfolio_workstreams.py",
+        "schemas/portfolio-workstream-event.schema.json",
+        "schemas/portfolio-workstream-state.schema.json",
+        "tests/test_portfolio_event_invariants.py",
+        "tests/test_portfolio_attention_invariants.py",
+        "tests/test_portfolio_os_integration_invariants.py"
+      ],
+      "summary": "Added the Claude-Codex Model C kernel with strict verified event chains, explicit request idempotency, humane attention projections, human-approved reversible dependencies, material Today change detection, and child-project sovereignty transitions.",
+      "agent_action": "Use os capture/capsule/feedback/bind/unbind/workstreams/refresh for workstreams and os project/sovereignty for DAD child governance; keep Git mutation and recurring activation separately human-gated.",
+      "route_tags": [
+        "control_plane",
+        "attention",
+        "event_pipeline",
+        "governance",
+        "human_gate",
+        "local_first"
+      ]
+    },
+    {
+      "change_id": "nav-change:2026-07-11:portfolio-ai-operating-system-v1",
+      "changed_at": "2026-07-11T16:30:00Z",
+      "change_type": "recovered_portfolio_os_plan_and_added_attention_v1",
+      "paths": [
+        "docs/DAD_PORTFOLIO_AI_OPERATING_SYSTEM_PLAN.md",
+        "docs/FABLE_PORTFOLIO_AI_OPERATING_SYSTEM_PROMPT.md",
+        "docs/research/PORTFOLIO_AI_OS_PRACTICE_RESEARCH_2026-07-11.md",
+        "src/digital_asset_directory/portfolio_os.py",
+        "schemas/portfolio-attention-report.schema.json",
+        "roadmap/evidence/portfolio-attention-v1.md",
+        "tests/test_portfolio_os.py"
+      ],
+      "summary": "Recovered the untracked portfolio OS plan from an obsolete worktree, added source-backed research and a corrected build order, and implemented read-only branch/worktree attention JSON plus local HTML.",
+      "agent_action": "Run asset-dir os status for local attention evidence; treat related-work and cleanup guidance as candidates, and use the plan before adding project/workstream mutation flows.",
+      "route_tags": [
+        "control_plane",
+        "branch_lifecycle",
+        "attention",
+        "cross_repo",
+        "local_first"
+      ]
     },
     {
       "change_id": "nav-change:2026-07-10:subagent-evaluation-capability-graph",
@@ -409,24 +877,12 @@
       ],
       "summary": "Added immutable attempt intake, pinned evidence ratings, candidate capability graph, and human-gated role consolidation review.",
       "agent_action": "Use this branch for subagent evaluation; never infer agent identity from nicknames or use graph scores to change routing automatically.",
-      "route_tags": ["agent_skill", "knowledge_graph", "calibration", "human_gate"]
-    },
-    {
-      "change_id": "nav-change:2026-07-10:qrd-ifc-warning-only-receiver",
-      "changed_at": "2026-07-10T00:00:00Z",
-      "change_type": "expanded_warning_only_lesson_receiver",
-      "paths": [
-        "schemas/lesson-payload.schema.json",
-        "examples/mail/lesson-payload.golden.json",
-        "docs/MAIL_CENTER.md",
-        "AI_FRONT_DOOR.md",
-        "AI_TABLE_OF_CONTENTS.md",
-        "MACHINE_NAVIGATION_MANIFEST.json",
-        "roadmap/evidence/qrd-ifc-warning-only-receiver.md"
-      ],
-      "summary": "Added optional sanitized QRD and IFC projections to the warning-only lesson payload receiver without breaking legacy senders or granting transport or promotion authority.",
-      "agent_action": "Treat schema conformance as receiver-shape evidence only; keep synthetic candidate data, human review, owning-repo review, and DAD promotion gates explicit.",
-      "route_tags": ["mail_center", "learning_loop", "security_privacy", "governance", "validation"]
+      "route_tags": [
+        "agent_skill",
+        "knowledge_graph",
+        "calibration",
+        "human_gate"
+      ]
     },
     {
       "change_id": "nav-change:2026-07-07:fable-graph-surface-mcp-handoff",
@@ -442,7 +898,13 @@
       ],
       "summary": "Added a Fable review packet for graph surface manifests, MCP-first resources, no-lock-in runtime policy, parallel transport merge context, version tracking, synthetic tests, red-team, and premortem kernels.",
       "agent_action": "Use this packet before implementing graph surface registry, graph manifests, MCP graph resources, or repo surface-version tracking; require Fable to adjust the Codex build plan for parallel transport merge work.",
-      "route_tags": ["knowledge_graph", "mcp_integration", "transport_data_plane", "validation", "governance"]
+      "route_tags": [
+        "knowledge_graph",
+        "mcp_integration",
+        "transport_data_plane",
+        "validation",
+        "governance"
+      ]
     },
     {
       "change_id": "nav-change:2026-07-07:mcp-first-local-journal-transport",
@@ -457,7 +919,12 @@
       ],
       "summary": "Added MCP-first internal adapter policy plus Local+Journal transport routing for DAD_DATA_ROOT, daemon readiness, dad-journal checkpointing, and reviewed transport-upgrade waves.",
       "agent_action": "Prefer MCP resources/tools/prompts over direct APIs for internal DAD integrations, and inspect the transport data-plane docs before changing runtime writers, daemon, journal, or enrollment upgrade behavior.",
-      "route_tags": ["mcp_integration", "transport_data_plane", "governance", "repo_enrollment"]
+      "route_tags": [
+        "mcp_integration",
+        "transport_data_plane",
+        "governance",
+        "repo_enrollment"
+      ]
     },
     {
       "change_id": "nav-change:2026-07-06:pr-branch-lifecycle-governance",
@@ -472,7 +939,12 @@
       ],
       "summary": "Added a DAD-wide lesson and repo-facing governance route so PR-ready branches and open PRs carry owner, next-action, validation, and escalation-clock evidence instead of becoming stale conflict debt.",
       "agent_action": "When work is PR-ready, a PR is open, or branch queues are accumulating, record lifecycle status and send metadata-only DAD mail if the work could get stuck or needs human attention.",
-      "route_tags": ["branch_lifecycle", "governance", "learning_loop", "cross_repo"]
+      "route_tags": [
+        "branch_lifecycle",
+        "governance",
+        "learning_loop",
+        "cross_repo"
+      ]
     },
     {
       "change_id": "nav-change:2026-07-06:fable-deployment-rust-handoff",
@@ -488,7 +960,13 @@
       ],
       "summary": "Added a current Fable handoff packet for the DAD deployment roadmap, Phase 8 local-deployment proof, Phase 10A event pipeline, and Rust event-log checker boundary.",
       "agent_action": "Use this packet when handing current DAD deployment/Rust state to Fable; treat it as review input only, not human-gate approval or Rust governance promotion.",
-      "route_tags": ["roadmap", "rust", "validation", "human_gate", "root_cause_review"]
+      "route_tags": [
+        "roadmap",
+        "rust",
+        "validation",
+        "human_gate",
+        "root_cause_review"
+      ]
     },
     {
       "change_id": "nav-change:2026-07-06:event-log-rust-leaf-checker",
@@ -504,7 +982,12 @@
       ],
       "summary": "Added a Rust event-log-check leaf probe for Phase 10A structural JSONL evidence: malformed/UTF-8/oversized rows, invalid field values, duplicate event/dedupe ids, unsafe strings, and alias-only issue samples.",
       "agent_action": "Use asset-dir rust event-log-check as structural evidence only; Python events collect/report and validate remain authoritative for policy, release, response-state, and gates.",
-      "route_tags": ["event_pipeline", "rust", "validation", "mail_center"]
+      "route_tags": [
+        "event_pipeline",
+        "rust",
+        "validation",
+        "mail_center"
+      ]
     },
     {
       "change_id": "nav-change:2026-07-06:event-pipeline-initial-slice",
@@ -522,7 +1005,13 @@
       ],
       "summary": "Added the first local-first event pipeline slice beneath mail: repo event outboxes, central event log, response-state rows, malformed/unsafe quarantine, report output, and explicit Rust leaf-check boundaries.",
       "agent_action": "Use events for explicit repo response and learning-loop state; do not infer adoption from mail absence, and do not let Rust structural checks satisfy DAD policy gates.",
-      "route_tags": ["event_pipeline", "mail_center", "learning_loop", "validation", "rust"]
+      "route_tags": [
+        "event_pipeline",
+        "mail_center",
+        "learning_loop",
+        "validation",
+        "rust"
+      ]
     },
     {
       "change_id": "nav-change:2026-07-06:phase-8-human-gate-review-packet",
@@ -537,7 +1026,12 @@
       ],
       "summary": "Added a generated review-only packet and navigation route for the four open Phase 8 human gates; Phase 8 now declares awaiting_human_gate while command evidence remains pending human review.",
       "agent_action": "Use the packet to review Phase 8 gates, but do not treat it as approval or write roadmap/gate-evidence.json without explicit human review.",
-      "route_tags": ["roadmap", "deployment", "human_gate", "validation"]
+      "route_tags": [
+        "roadmap",
+        "deployment",
+        "human_gate",
+        "validation"
+      ]
     },
     {
       "change_id": "nav-change:2026-07-05:rust-rollout-lesson-capture-route",
@@ -554,7 +1048,12 @@
       ],
       "summary": "Added first-class navigation and schema coverage for Rust rollout lesson capture so repo feedback during Rust mail storms is structured, append-only, and validation-backed.",
       "agent_action": "Use the Rust lesson-capture protocol and schema before sending or accepting Rust rollout feedback; run lessons-summarize after ledger appends.",
-      "route_tags": ["rust", "learning_loop", "schema", "mail_center"]
+      "route_tags": [
+        "rust",
+        "learning_loop",
+        "schema",
+        "mail_center"
+      ]
     },
     {
       "change_id": "nav-change:2026-07-05:mail-storm-dirty-state-runbook",
@@ -571,22 +1070,12 @@
       ],
       "summary": "Added a dedicated runbook and navigation route for separating true dirty mail spools from ordinary dirty worktrees and Rust rollout reference-snapshot churn during concurrent repo mail storms.",
       "agent_action": "Run mail doctor with --repo all during multi-repo storms; use safe_to_collect/safe_to_route/safe_to_deliver for mail and --fail-on-worktree-dirty only when a clean git tree is required.",
-      "route_tags": ["mail_center", "cross_repo", "rust", "validation"]
-    },
-    {
-      "change_id": "nav-change:2026-07-04:local-deployment-route",
-      "changed_at": "2026-07-04T18:20:00Z",
-      "change_type": "added_local_deployment_route",
-      "paths": [
-        "docs/DAD_LOCAL_DEPLOYMENT.md",
-        "docs/OPERATIONS.md",
-        "AI_TABLE_OF_CONTENTS.md",
-        "scripts/bootstrap.ps1",
-        "scripts/bootstrap.sh"
-      ],
-      "summary": "Added a local deployment route for bootstrap, user hub locator, stable asset-dir shims, deployment-scope doctor, and unavailable-hub policy.",
-      "agent_action": "Use this route before assuming DAD is callable from non-DAD repos; deployment readiness is separate from full operational readiness.",
-      "route_tags": ["deployment", "workflow", "validation"]
+      "route_tags": [
+        "mail_center",
+        "cross_repo",
+        "rust",
+        "validation"
+      ]
     },
     {
       "change_id": "nav-change:2026-07-04:lesson-lifecycle-governance",
@@ -599,7 +1088,11 @@
       ],
       "summary": "Added non-enforced lesson lifecycle design so DAD can later review lessons for upgrade, downgrade, improvement, supersession, archive, and next-review cadence.",
       "agent_action": "Use this branch when an old lesson might be stale, noisy, harmful, superseded, or ready for promotion review; keep raw lessons immutable.",
-      "route_tags": ["learning_loop", "calibration", "governance"]
+      "route_tags": [
+        "learning_loop",
+        "calibration",
+        "governance"
+      ]
     },
     {
       "change_id": "nav-change:2026-07-04:claude-architectural-root-cause-packets",
@@ -614,63 +1107,11 @@
       ],
       "summary": "Added Claude-readable root-cause packet guidance for integration and implementation patterns that may be architectural.",
       "agent_action": "Use this route when repeated failures suggest boundary, sequencing, ownership, contract, generated-evidence, or harness/enforcement root causes.",
-      "route_tags": ["root_cause_review", "learning_loop", "governance"]
-    },
-    {
-      "change_id": "nav-change:2026-07-04:harness-vs-enforcement-model",
-      "changed_at": "2026-07-04T17:16:04Z",
-      "change_type": "added_harness_vs_enforcement_decision_model",
-      "paths": [
-        "docs/HARNESS_VS_DETERMINISTIC_ENFORCEMENT.md",
-        "docs/CODING_HARNESS_LIBRARY.md",
-        "docs/HARNESS_DISCOVERY_RADAR.md",
-        "registry/dad-offerings-registry.json",
-        "registry/dad-needs-registry.json"
-      ],
-      "summary": "Added DAD's harness-first decision model so agents avoid turning every useful pattern into bulky deterministic enforcement.",
-      "agent_action": "Consult this model before promoting a finding to a hard check; use harnesses and subharnesses for learning-heavy or noisy issues.",
-      "route_tags": ["harness_decision", "coding_asset", "learning_loop"]
-    },
-    {
-      "change_id": "nav-change:2026-07-04:ai-navigation-freshness-registry",
-      "changed_at": "2026-07-04T17:05:24Z",
-      "change_type": "added_navigation_freshness_registry",
-      "paths": [
-        "registry/ai-navigation-registry.json",
-        "schemas/ai-navigation-registry.schema.json",
-        "AI_FRONT_DOOR.md",
-        "AI_TABLE_OF_CONTENTS.md",
-        "MACHINE_NAVIGATION_MANIFEST.json"
-      ],
-      "summary": "Added compact version/date navigation freshness so agents can detect rapid DAD changes without making the TOC deep or bulky.",
-      "agent_action": "Start at AI_FRONT_DOOR.md, compare navigation_version and updated_at, then inspect affected branch_map rows instead of relying on memory.",
-      "route_tags": ["front_door", "navigation_freshness", "registry"]
-    },
-    {
-      "change_id": "nav-change:2026-07-04:dad-address-model",
-      "changed_at": "2026-07-04T16:20:00Z",
-      "change_type": "added_address_model_branch",
-      "paths": [
-        "docs/DAD_ADDRESS_MODEL.md",
-        "registry/dad-address-model-registry.json",
-        "schemas/dad-address-model-registry.schema.json"
-      ],
-      "summary": "Added DAD's 9-layer address model and source-inspired layer 9 handling for compact learning and workflow coordinates.",
-      "agent_action": "Read the address model branch when designing repo-local assets, exception records, workflow cards, or learning-loop coordinates.",
-      "route_tags": ["address_model", "learning_loop", "knowledge_graph"]
-    },
-    {
-      "change_id": "nav-change:2026-07-04:repo-local-asset-memory",
-      "changed_at": "2026-07-04T16:25:00Z",
-      "change_type": "added_repo_local_asset_memory_branch",
-      "paths": [
-        "docs/REPO_LOCAL_DIGITAL_ASSET_DIRECTORY.md",
-        "schemas/repo-local-digital-asset-record.schema.json",
-        "templates/downstream/DAD_ASSETS_README.md"
-      ],
-      "summary": "Added a repo-local digital asset memory standard so repos can log their own assets and DAD can collect metadata-only sightings.",
-      "agent_action": "Use this branch before enrolling or comparing repo-local `.digital-asset/assets/` directories.",
-      "route_tags": ["repo_local_asset_memory", "reusable_asset", "cross_repo"]
+      "route_tags": [
+        "root_cause_review",
+        "learning_loop",
+        "governance"
+      ]
     }
   ],
   "authority_boundary": "This registry only governs DAD navigation freshness and routing. It does not make generated reports source truth, authorize downstream repo writes, or override source-repository authority."

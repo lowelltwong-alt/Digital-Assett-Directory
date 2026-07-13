@@ -1,0 +1,81 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "dad://schemas/portfolio-approval-trust-registry.v1",
+  "title": "DAD Portfolio Approval Trust Registry",
+  "description": "Public verification material for shadow verification only. The empty candidate registry denies all; its root is deliberately unanchored and cannot authorize a real executor.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "registry_id",
+    "registry_sequence",
+    "previous_registry_digest",
+    "root_anchor_status",
+    "status",
+    "authority_boundary",
+    "keys"
+  ],
+  "properties": {
+    "schema_version": {"const": "dad.portfolio_approval_trust_registry.v1"},
+    "registry_id": {"const": "dad:registry:portfolio-approval-trust"},
+    "registry_sequence": {"type": "integer", "minimum": 0},
+    "previous_registry_digest": {"type": "string", "pattern": "^$|^[0-9a-f]{64}$"},
+    "root_anchor_status": {"const": "unanchored_shadow"},
+    "status": {"enum": ["candidate_deny_all", "reviewed_shadow_active", "reviewed_suspended"]},
+    "authority_boundary": {"type": "string", "minLength": 1},
+    "keys": {
+      "type": "array",
+      "items": {"$ref": "#/$defs/key"},
+      "uniqueItems": true
+    }
+  },
+  "$defs": {
+    "key": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "key_id",
+        "algorithm",
+        "public_key_base64",
+        "authority_domain",
+        "approver_ids",
+        "allowed_event_kinds",
+        "valid_from",
+        "valid_until",
+        "revoked_at",
+        "key_status",
+        "review_status",
+        "authority_refs"
+      ],
+      "properties": {
+        "key_id": {"type": "string", "pattern": "^dad:portfolio-approval-key:[0-9a-f]{64}$"},
+        "algorithm": {"const": "ed25519"},
+        "public_key_base64": {"type": "string", "pattern": "^[A-Za-z0-9_-]{43}$"},
+        "authority_domain": {"type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$"},
+        "approver_ids": {
+          "type": "array",
+          "minItems": 1,
+          "items": {"type": "string", "minLength": 1, "maxLength": 200, "pattern": "^[\\x21-\\x7e]+$"},
+          "uniqueItems": true
+        },
+        "allowed_event_kinds": {
+          "type": "array",
+          "minItems": 1,
+          "items": {"enum": ["execution_lease_granted", "dispatch_intent_approved", "dispatch_reconciliation_recorded"]},
+          "uniqueItems": true
+        },
+        "valid_from": {"type": "string", "format": "date-time"},
+        "valid_until": {"type": "string", "format": "date-time"},
+        "revoked_at": {"type": ["string", "null"], "format": "date-time"},
+        "key_status": {"enum": ["active", "retired", "revoked", "compromised"]},
+        "review_status": {"const": "reviewed"},
+        "authority_refs": {
+          "type": "array",
+          "minItems": 1,
+          "items": {"type": "string", "minLength": 1},
+          "uniqueItems": true
+        }
+      }
+    }
+  }
+}

@@ -52,6 +52,7 @@ REPO_INVENTORY_RUST_PARITY_INPUT_REFS = (
     Path("tools") / "dad_scan_core" / "src" / "models.rs",
 )
 REPO_INVENTORY_HASH_POLICY = "text-lf-normalized-v1"
+REPO_INVENTORY_UNBORN_HEAD = "UNBORN"
 
 
 def central_usage_dir(hub_root: Path) -> Path:
@@ -78,7 +79,7 @@ def central_reports_dir(hub_root: Path) -> Path:
     return data_path(hub_root, "central_reports")
 
 
-USAGE_STATUSES = {"using", "watching", "rejected", "retired"}
+USAGE_STATUSES = {"using", "watching", "depends_on", "dependency_candidate", "rejected", "retired"}
 TRIAGE_DECISIONS = {"use_now", "save_for_future", "defer", "reject", "needs_human_review"}
 AUTHORITY_BOUNDARY = (
     "DAD library, usage, and harness records are candidate control-plane metadata. "
@@ -594,6 +595,23 @@ def _human_review_needed(repo_context: dict[str, Any], offering: dict[str, Any])
     return False
 
 
+def _task_routing_intents(task: str) -> set[str]:
+    """Return small, declared task families used only to order candidate cards."""
+    tokens = _tokenize(task)
+    intents: set[str] = set()
+    if tokens & {"enroll", "enrollment", "onboard", "onboarding"}:
+        intents.add("enrollment")
+    if tokens & {"mail", "mailbox", "spool", "delivery", "deliver"}:
+        intents.add("mail")
+    if tokens & {"governance", "authority", "policy", "enforcement", "control", "controls"}:
+        intents.add("governance")
+    if "rust" in tokens:
+        intents.add("rust")
+    if tokens & {"code", "coding", "feature", "implement", "implementation", "refactor", "test", "tests", "python", "write"}:
+        intents.add("coding")
+    return intents
+
+
 def score_offering(
     repo_context: dict[str, Any],
     offering: dict[str, Any],
@@ -622,6 +640,27 @@ def score_offering(
     )
     needs_human_review = _human_review_needed(repo_context, offering)
     decision = _decision_for_score(weighted, needs_human_review, methodology)
+    task_tokens = _tokenize(task)
+    route_tokens = _tokenize(
+        [
+            *offering.get("task_types", []),
+            *offering.get("capabilities", []),
+            *offering.get("domains", []),
+            *offering.get("languages", []),
+        ]
+    )
+    route_match_terms = sorted(task_tokens & route_tokens)
+    task_intents = _task_routing_intents(task)
+    route_intent_matches = sorted(task_intents & set(offering.get("routing_intents", [])))
+    declared_priority = list(methodology.get("intent_priority", []))
+    intent_priority = {
+        intent: len(declared_priority) - index
+        for index, intent in enumerate(declared_priority)
+    }
+    route_intent_priority = max(
+        (intent_priority[intent] for intent in route_intent_matches),
+        default=1 if route_intent_matches else 0,
+    )
     return {
         "offering_id": offering["offering_id"],
         "name": offering["name"],
@@ -630,6 +669,10 @@ def score_offering(
         "decision": decision,
         "usefulness_score": round(weighted, 2),
         "component_scores": component_scores,
+        "route_specificity": len(route_match_terms),
+        "route_match_terms": route_match_terms,
+        "route_intent_matches": route_intent_matches,
+        "route_intent_priority": route_intent_priority,
         "methodology_id": methodology["methodology_id"],
         "methodology_version": methodology.get("methodology_version", ""),
         "needs_human_review": needs_human_review,
@@ -662,7 +705,15 @@ def match_repo_offerings(
         score_offering(context, offering, methodology, task=task)
         for offering in offerings
     ]
-    matches.sort(key=lambda item: item["usefulness_score"], reverse=True)
+    matches.sort(
+        key=lambda item: (
+            -int(item["route_intent_priority"]),
+            -len(item["route_intent_matches"]),
+            -int(item["route_specificity"]),
+            -float(item["usefulness_score"]),
+            str(item["offering_id"]),
+        )
+    )
     return {
         "repo": _normalized_path(repo),
         "task": task,
@@ -671,6 +722,12 @@ def match_repo_offerings(
         "returned_match_count": len(matches[:limit]),
         "limit": limit,
         "matches": matches[:limit],
+        "routing_basis": (
+            "Declared task-family priority "
+            f"{methodology.get('intent_priority', [])}, then intent-match count, exact "
+            "task-token specificity, candidate usefulness score, and offering id; routing "
+            "order is not proof of quality or adoption authority."
+        ),
         "authority_boundary": AUTHORITY_BOUNDARY,
     }
 
@@ -2245,6 +2302,7 @@ def record_usage(
     reason: str = "",
     mail_id: str = "",
     adoption_id: str = "",
+    dependency_basis: str = "",
     mail_policies: Sequence[Any] | None = None,
     enrollment_policies: Sequence[Any] | None = None,
 ) -> dict[str, Any]:
@@ -2252,14 +2310,68 @@ def record_usage(
         raise ValueError(f"Usage target repo does not exist: {repo}")
     normalized_status = status.lower().replace("-", "_")
     if normalized_status not in USAGE_STATUSES:
-        raise ValueError("status must be using, watching, rejected, or retired")
+        raise ValueError(
+            "status must be using, watching, depends_on, dependency_candidate, rejected, or retired"
+        )
+    confirmed_dependency_bases = {"explicit_repo_record", "human_reviewed"}
+    if normalized_status == "depends_on" and dependency_basis not in confirmed_dependency_bases:
+        raise ValueError(
+            "depends_on status requires dependency_basis: explicit_repo_record, "
+            "or human_reviewed"
+        )
+    if normalized_status == "depends_on" and dependency_basis == "explicit_repo_record":
+        if not source_ref.strip():
+            raise ValueError("explicit_repo_record dependency requires a nonempty source_ref")
+    if normalized_status == "depends_on" and dependency_basis == "human_reviewed":
+        generic_reviewers = {
+            "",
+            "unknown",
+            "agent",
+            "ai",
+            "automation",
+            "ci",
+            "codex",
+            "claude",
+            "copilot",
+            "cursor",
+            "fable",
+            "human",
+            "human reviewer",
+            "luna",
+            "other",
+            "reviewer",
+            "sol",
+            "terra",
+            "user",
+            "boss_architect",
+        }
+        if recorded_by.strip().lower() in generic_reviewers:
+            raise ValueError("human_reviewed dependency requires a named non-generic reviewer")
+        if not (adoption_id.strip() or source_ref.strip()):
+            raise ValueError(
+                "human_reviewed dependency requires an adoption_id or source_ref review pointer"
+            )
+    if normalized_status == "dependency_candidate" and dependency_basis != "imported_candidate":
+        raise ValueError("dependency_candidate requires dependency_basis: imported_candidate")
+    if normalized_status not in {"depends_on", "dependency_candidate"} and dependency_basis:
+        raise ValueError(
+            "dependency_basis is only valid for depends_on or dependency_candidate status"
+        )
     policy = _repo_policy(repo, mail_policies=mail_policies, enrollment_policies=enrollment_policies)
     protected, protection_reason = _repo_write_protection(policy)
     repo_ref = _repo_ref(repo, policy)
     repo_id = str(getattr(policy, "id", "") if policy else "")
     usage_repo_key = repo_id or repo_ref
     timestamp = utc_now()
-    usage_id = stable_id("dad-usage", usage_repo_key, asset_id, normalized_status, source_ref)
+    usage_id = stable_id(
+        "dad-usage",
+        usage_repo_key,
+        asset_id,
+        normalized_status,
+        dependency_basis,
+        source_ref,
+        adoption_id,
+    )
     record = {
         "schema_version": "0.1.0",
         "usage_id": usage_id,
@@ -2267,6 +2379,7 @@ def record_usage(
         "repo_id": repo_id,
         "asset_id": asset_id,
         "status": normalized_status,
+        **({"dependency_basis": dependency_basis} if dependency_basis else {}),
         "recorded_at": timestamp,
         "recorded_by": recorded_by,
         "source_ref": source_ref,
@@ -2318,7 +2431,7 @@ def usage_upgrades(
             *_read_jsonl(repo / LOCAL_USAGE_LEDGER),
         ]
         if (str(item.get("repo_id") or "") in accepted_repo_keys or str(item.get("repo")) in accepted_repo_keys)
-        and str(item.get("status")) in {"using", "watching"}
+        and str(item.get("status")) in {"using", "watching", "depends_on"}
     ]
     by_asset = {item["offering_id"]: item for item in load_offerings(hub_root).get("offerings", [])}
     upgrades: list[dict[str, Any]] = []
@@ -2680,9 +2793,14 @@ def _inventory_git_state(repo: Path) -> dict[str, Any]:
     inside = _inventory_git_stdout(repo, ["rev-parse", "--is-inside-work-tree"])
     if inside != "true":
         return state
-    status = _inventory_git_stdout(repo, ["status", "--porcelain=v1"]) or ""
+    status_result = _inventory_git_stdout(repo, ["status", "--porcelain=v1"])
+    status = status_result or ""
     dirty_lines = [line for line in status.splitlines() if line.strip()]
     branch = _inventory_git_stdout(repo, ["branch", "--show-current"]) or ""
+    head = _inventory_git_stdout(repo, ["rev-parse", "--short", "HEAD"])
+    symbolic_head = _inventory_git_stdout(repo, ["symbolic-ref", "--quiet", "--short", "HEAD"])
+    if head is None and status_result is not None and symbolic_head is not None:
+        head = REPO_INVENTORY_UNBORN_HEAD
     state.update(
         {
             "git_detected": True,
@@ -2694,7 +2812,7 @@ def _inventory_git_state(repo: Path) -> dict[str, Any]:
                 if branch
                 else "detached_or_unknown"
             ),
-            "head": _inventory_git_stdout(repo, ["rev-parse", "--short", "HEAD"]) or "",
+            "head": head or "",
             "remote_origin": _inventory_git_stdout(repo, ["remote", "get-url", "origin"]) or "",
             "dirty_count": len(dirty_lines),
             "is_dirty": bool(dirty_lines),

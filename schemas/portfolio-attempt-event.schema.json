@@ -1,0 +1,109 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "dad://schemas/portfolio-attempt-event.v1",
+  "title": "DAD Portfolio Source-Zero-Write Attempt Event",
+  "description": "Strict non-authoritative dry-run claim and result journal. These rows never prove approval, execution, source mutation, or a real outcome.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "event_id",
+    "event_kind",
+    "prev_event_id",
+    "command_id",
+    "recorded_at",
+    "redaction_count",
+    "authority_boundary",
+    "payload"
+  ],
+  "properties": {
+    "schema_version": {"const": "dad.portfolio_attempt_event.v1"},
+    "event_id": {"type": "string", "pattern": "^dad:portfolio-attempt-event:[0-9a-f]{64}$"},
+    "event_kind": {"enum": ["dry_run_claim_recorded", "dry_run_result_recorded"]},
+    "prev_event_id": {"type": "string", "pattern": "^$|^dad:portfolio-attempt-event:[0-9a-f]{64}$"},
+    "command_id": {"type": "string", "pattern": "^dad:portfolio-attempt-command:[0-9a-f-]{36}$"},
+    "recorded_at": {"type": "string", "format": "date-time"},
+    "redaction_count": {"type": "integer", "minimum": 0},
+    "authority_boundary": {"const": "source_zero_write_candidate_only"},
+    "payload": {"type": "object"}
+  },
+  "allOf": [
+    {
+      "if": {"properties": {"event_kind": {"const": "dry_run_claim_recorded"}}},
+      "then": {"properties": {"payload": {"$ref": "#/$defs/claim"}}}
+    },
+    {
+      "if": {"properties": {"event_kind": {"const": "dry_run_result_recorded"}}},
+      "then": {"properties": {"payload": {"$ref": "#/$defs/result"}}}
+    }
+  ],
+  "$defs": {
+    "attempt_id": {"type": "string", "pattern": "^dad:portfolio-attempt:[0-9a-f-]{36}$"},
+    "dispatch_id": {"type": "string", "pattern": "^dad:portfolio-dispatch:[0-9a-f-]{36}$"},
+    "scope_digest": {"type": "string", "pattern": "^dad:portfolio-dispatch-scope:[0-9a-f]{64}$"},
+    "claim": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "attempt_id",
+        "dispatch_revision_id",
+        "dispatch_scope_digest",
+        "worker_revision_id",
+        "execution_mode",
+        "source_write_policy",
+        "execution_performed",
+        "source_write_count",
+        "non_authoritative",
+        "claim_selected",
+        "selected_attempt_id"
+      ],
+      "properties": {
+        "attempt_id": {"$ref": "#/$defs/attempt_id"},
+        "dispatch_revision_id": {"$ref": "#/$defs/dispatch_id"},
+        "dispatch_scope_digest": {"$ref": "#/$defs/scope_digest"},
+        "worker_revision_id": {"type": "string", "minLength": 1, "maxLength": 200},
+        "execution_mode": {"const": "dry_run"},
+        "source_write_policy": {"const": "source_zero_write"},
+        "execution_performed": {"const": false},
+        "source_write_count": {"const": 0},
+        "non_authoritative": {"const": true},
+        "claim_selected": {"type": "boolean"},
+        "selected_attempt_id": {"$ref": "#/$defs/attempt_id"}
+      }
+    },
+    "result": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "attempt_id",
+        "dispatch_revision_id",
+        "dispatch_scope_digest",
+        "worker_revision_id",
+        "execution_mode",
+        "source_write_policy",
+        "execution_performed",
+        "source_write_count",
+        "non_authoritative",
+        "result_disposition",
+        "evidence_refs"
+      ],
+      "properties": {
+        "attempt_id": {"$ref": "#/$defs/attempt_id"},
+        "dispatch_revision_id": {"$ref": "#/$defs/dispatch_id"},
+        "dispatch_scope_digest": {"$ref": "#/$defs/scope_digest"},
+        "worker_revision_id": {"type": "string", "minLength": 1, "maxLength": 200},
+        "execution_mode": {"const": "dry_run"},
+        "source_write_policy": {"const": "source_zero_write"},
+        "execution_performed": {"const": false},
+        "source_write_count": {"const": 0},
+        "non_authoritative": {"const": true},
+        "result_disposition": {"enum": ["simulated_succeeded", "simulated_failed", "aborted", "outcome_unknown"]},
+        "evidence_refs": {
+          "type": "array",
+          "items": {"type": "string", "minLength": 1, "maxLength": 300},
+          "uniqueItems": true
+        }
+      }
+    }
+  }
+}

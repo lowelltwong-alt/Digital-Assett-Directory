@@ -1,0 +1,183 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "dad://schemas/portfolio-attention-report.v1",
+  "title": "DAD Portfolio Attention Report",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "generated_at",
+    "status",
+    "data_classification",
+    "public_safe",
+    "scan",
+    "summary",
+    "today",
+    "attention_queue",
+    "projects",
+    "authority_boundary"
+  ],
+  "properties": {
+    "schema_version": {"const": "dad.portfolio_attention.v1"},
+    "generated_at": {"type": "string", "format": "date-time"},
+    "status": {"const": "generated_candidate"},
+    "data_classification": {"const": "local_private_metadata"},
+    "public_safe": {"const": false},
+    "scan": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["roots", "stale_days", "max_depth", "related_limit", "discovered_checkout_count", "errors"],
+      "properties": {
+        "roots": {"type": "array", "items": {"type": "string"}},
+        "stale_days": {"type": "integer", "minimum": 1},
+        "max_depth": {"type": "integer", "minimum": 1, "maximum": 12},
+        "related_limit": {"type": "integer", "minimum": 0, "maximum": 10},
+        "discovered_checkout_count": {"type": "integer", "minimum": 0},
+        "errors": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["path", "error"],
+            "properties": {"path": {"type": "string"}, "error": {"type": "string"}}
+          }
+        }
+      }
+    },
+    "summary": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["project_count", "branch_count", "worktree_count", "dirty_worktree_count", "attention_item_count", "today_item_count"],
+      "properties": {
+        "project_count": {"type": "integer", "minimum": 0},
+        "branch_count": {"type": "integer", "minimum": 0},
+        "worktree_count": {"type": "integer", "minimum": 0},
+        "dirty_worktree_count": {"type": "integer", "minimum": 0},
+        "attention_item_count": {"type": "integer", "minimum": 0},
+        "today_item_count": {"type": "integer", "minimum": 0, "maximum": 3}
+      }
+    },
+    "today": {"type": "array", "maxItems": 3, "items": {"$ref": "#/$defs/attention_item"}},
+    "attention_queue": {"type": "array", "items": {"$ref": "#/$defs/attention_item"}},
+    "projects": {"type": "array", "items": {"$ref": "#/$defs/project"}},
+    "authority_boundary": {"type": "string", "minLength": 1}
+  },
+  "$defs": {
+    "attention_item": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["priority", "project_id", "project_name", "branch", "worktree_path", "last_activity_at", "inactive_days", "reasons", "next_action", "evidence"],
+      "properties": {
+        "priority": {"type": "integer", "minimum": 0, "maximum": 100},
+        "project_id": {"type": "string", "pattern": "^dad:portfolio-project:"},
+        "project_name": {"type": "string", "minLength": 1},
+        "branch": {"type": "string", "minLength": 1},
+        "worktree_path": {"type": "string"},
+        "last_activity_at": {"type": "string"},
+        "inactive_days": {"type": ["integer", "null"], "minimum": 0},
+        "reasons": {"type": "array", "minItems": 1, "uniqueItems": true, "items": {"type": "string"}},
+        "next_action": {"type": "string", "minLength": 1},
+        "evidence": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["dirty", "changed_path_count", "ahead", "behind", "merged_by_ancestry", "upstream", "worktree_locked"],
+          "properties": {
+            "dirty": {"type": ["boolean", "null"]},
+            "changed_path_count": {"type": "integer", "minimum": 0},
+            "ahead": {"type": "integer", "minimum": 0},
+            "behind": {"type": "integer", "minimum": 0},
+            "merged_by_ancestry": {"type": "boolean"},
+            "upstream": {"type": "string"},
+            "worktree_locked": {"type": ["boolean", "string"]}
+          }
+        }
+      }
+    },
+    "worktree": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["path", "branch", "head", "detached", "locked", "prunable", "status_known", "dirty", "change_counts", "changed_path_count", "latest_dirty_activity_at", "status_error"],
+      "properties": {
+        "path": {"type": "string", "minLength": 1},
+        "branch": {"type": "string"},
+        "head": {"type": "string"},
+        "detached": {"type": "boolean"},
+        "locked": {"type": ["boolean", "string"]},
+        "prunable": {"type": ["boolean", "string"]},
+        "status_known": {"type": "boolean"},
+        "dirty": {"type": ["boolean", "null"]},
+        "change_counts": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["staged", "unstaged", "untracked", "conflicted"],
+          "properties": {
+            "staged": {"type": "integer", "minimum": 0},
+            "unstaged": {"type": "integer", "minimum": 0},
+            "untracked": {"type": "integer", "minimum": 0},
+            "conflicted": {"type": "integer", "minimum": 0}
+          }
+        },
+        "changed_path_count": {"type": "integer", "minimum": 0},
+        "latest_dirty_activity_at": {"type": "string"},
+        "status_error": {"type": "string"}
+      }
+    },
+    "branch": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name", "head", "committed_at", "subject", "upstream", "upstream_gone", "ahead", "behind", "project_id", "project_name", "worktree_path", "dirty", "status_unknown", "status_error", "worktree_locked", "conflicted", "changed_path_count", "last_activity_at", "inactive_days", "merged", "prunable_worktree"],
+      "properties": {
+        "name": {"type": "string", "minLength": 1},
+        "head": {"type": "string"},
+        "committed_at": {"type": "string"},
+        "subject": {"type": "string"},
+        "upstream": {"type": "string"},
+        "upstream_gone": {"type": "boolean"},
+        "ahead": {"type": "integer", "minimum": 0},
+        "behind": {"type": "integer", "minimum": 0},
+        "project_id": {"type": "string"},
+        "project_name": {"type": "string"},
+        "worktree_path": {"type": "string"},
+        "dirty": {"type": ["boolean", "null"]},
+        "status_unknown": {"type": "boolean"},
+        "status_error": {"type": "string"},
+        "worktree_locked": {"type": ["boolean", "string"]},
+        "conflicted": {"type": "boolean"},
+        "changed_path_count": {"type": "integer", "minimum": 0},
+        "last_activity_at": {"type": "string"},
+        "inactive_days": {"type": ["integer", "null"], "minimum": 0},
+        "merged": {"type": "boolean"},
+        "prunable_worktree": {"type": "boolean"}
+      }
+    },
+    "project": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["project_id", "name", "common_git_dir", "remote_url", "default_branch", "active_within_threshold", "worktrees", "branches", "related_projects"],
+      "properties": {
+        "project_id": {"type": "string", "pattern": "^dad:portfolio-project:"},
+        "name": {"type": "string", "minLength": 1},
+        "common_git_dir": {"type": "string", "minLength": 1},
+        "remote_url": {"type": "string"},
+        "default_branch": {"type": "string"},
+        "active_within_threshold": {"type": "boolean"},
+        "worktrees": {"type": "array", "items": {"$ref": "#/$defs/worktree"}},
+        "branches": {"type": "array", "items": {"$ref": "#/$defs/branch"}},
+        "related_projects": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["project_id", "project_name", "score", "shared_metadata_tokens", "status"],
+            "properties": {
+              "project_id": {"type": "string"},
+              "project_name": {"type": "string"},
+              "score": {"type": "number", "minimum": 0, "maximum": 1},
+              "shared_metadata_tokens": {"type": "array", "items": {"type": "string"}},
+              "status": {"const": "generated_candidate"}
+            }
+          }
+        }
+      }
+    }
+  }
+}

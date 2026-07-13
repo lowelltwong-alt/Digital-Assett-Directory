@@ -1,0 +1,4 @@
+interface:
+  display_name: "DAD Trigger Pattern Radar"
+  short_description: "Find and grade workflow automation triggers"
+  default_prompt: "Use $dad-trigger-pattern-radar to find high-value workflow, learning-loop, and portfolio-management trigger patterns."

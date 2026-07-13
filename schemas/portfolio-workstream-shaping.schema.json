@@ -1,0 +1,1047 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "dad.portfolio_workstream_shaping.v1",
+  "title": "DAD Portfolio Workstream Shaping Projection",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "generated_at",
+    "status",
+    "data_classification",
+    "public_safe",
+    "execution_authorized",
+    "mutations_performed",
+    "decision_recorded",
+    "source_authority_mutated",
+    "publication_scope",
+    "authority_boundary",
+    "methodology",
+    "sources",
+    "source_coupling",
+    "summary",
+    "review_queue",
+    "workstream_cards",
+    "cases",
+    "coverage",
+    "blockers",
+    "unknowns",
+    "source_refs"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": "dad.portfolio_workstream_shaping.v1"
+    },
+    "generated_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "generated_candidate",
+        "partial_candidate",
+        "blocked_candidate"
+      ]
+    },
+    "data_classification": {
+      "const": "local_private_metadata"
+    },
+    "public_safe": {
+      "const": false
+    },
+    "execution_authorized": {
+      "const": false
+    },
+    "mutations_performed": {
+      "const": false
+    },
+    "decision_recorded": {
+      "const": false
+    },
+    "source_authority_mutated": {
+      "const": false
+    },
+    "publication_scope": {
+      "const": "derived_reports_only"
+    },
+    "authority_boundary": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 1000
+    },
+    "methodology": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "method_id",
+        "methodology_ref",
+        "case_limit",
+        "review_limit",
+        "fresh_after_hours",
+        "future_tolerance_hours",
+        "evidence_precedence",
+        "age_creates_case",
+        "critical_path_claimed"
+      ],
+      "properties": {
+        "method_id": {
+          "const": "dad.portfolio-workstream-shaping.v1"
+        },
+        "methodology_ref": {
+          "const": "docs/frontier/collaboration/13_PORTFOLIO_WORKSTREAM_SHAPING.md"
+        },
+        "case_limit": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 500
+        },
+        "review_limit": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 3
+        },
+        "fresh_after_hours": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "future_tolerance_hours": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "evidence_precedence": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 1000
+          },
+          "uniqueItems": true
+        },
+        "age_creates_case": {
+          "const": false
+        },
+        "critical_path_claimed": {
+          "const": false
+        }
+      }
+    },
+    "sources": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "workstreams",
+        "cockpit",
+        "reconciliation"
+      ],
+      "properties": {
+        "workstreams": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "name",
+            "status",
+            "freshness",
+            "schema_version",
+            "generated_at",
+            "source_hash",
+            "problems"
+          ],
+          "properties": {
+            "name": {
+              "type": "string",
+              "enum": [
+                "workstreams",
+                "cockpit",
+                "reconciliation"
+              ]
+            },
+            "status": {
+              "type": "string",
+              "enum": [
+                "observed",
+                "invalid",
+                "unavailable"
+              ]
+            },
+            "freshness": {
+              "type": "string",
+              "enum": [
+                "current",
+                "stale",
+                "future",
+                "unknown"
+              ]
+            },
+            "schema_version": {
+              "type": "string",
+              "maxLength": 100
+            },
+            "generated_at": {
+              "type": "string",
+              "maxLength": 100
+            },
+            "source_hash": {
+              "type": "string",
+              "maxLength": 200
+            },
+            "problems": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 1000
+              },
+              "uniqueItems": true
+            }
+          }
+        },
+        "cockpit": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "name",
+            "status",
+            "freshness",
+            "schema_version",
+            "generated_at",
+            "source_hash",
+            "problems"
+          ],
+          "properties": {
+            "name": {
+              "type": "string",
+              "enum": [
+                "workstreams",
+                "cockpit",
+                "reconciliation"
+              ]
+            },
+            "status": {
+              "type": "string",
+              "enum": [
+                "observed",
+                "invalid",
+                "unavailable"
+              ]
+            },
+            "freshness": {
+              "type": "string",
+              "enum": [
+                "current",
+                "stale",
+                "future",
+                "unknown"
+              ]
+            },
+            "schema_version": {
+              "type": "string",
+              "maxLength": 100
+            },
+            "generated_at": {
+              "type": "string",
+              "maxLength": 100
+            },
+            "source_hash": {
+              "type": "string",
+              "maxLength": 200
+            },
+            "problems": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 1000
+              },
+              "uniqueItems": true
+            }
+          }
+        },
+        "reconciliation": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "name",
+            "status",
+            "freshness",
+            "schema_version",
+            "generated_at",
+            "source_hash",
+            "problems"
+          ],
+          "properties": {
+            "name": {
+              "type": "string",
+              "enum": [
+                "workstreams",
+                "cockpit",
+                "reconciliation"
+              ]
+            },
+            "status": {
+              "type": "string",
+              "enum": [
+                "observed",
+                "invalid",
+                "unavailable"
+              ]
+            },
+            "freshness": {
+              "type": "string",
+              "enum": [
+                "current",
+                "stale",
+                "future",
+                "unknown"
+              ]
+            },
+            "schema_version": {
+              "type": "string",
+              "maxLength": 100
+            },
+            "generated_at": {
+              "type": "string",
+              "maxLength": 100
+            },
+            "source_hash": {
+              "type": "string",
+              "maxLength": 200
+            },
+            "problems": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 1000
+              },
+              "uniqueItems": true
+            }
+          }
+        }
+      }
+    },
+    "source_coupling": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "workstreams_to_cockpit",
+        "cockpit_to_reconciliation",
+        "reconciliation_fully_reconciled"
+      ],
+      "properties": {
+        "workstreams_to_cockpit": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "actual_source_hash",
+            "claimed_source_hash",
+            "matches"
+          ],
+          "properties": {
+            "actual_source_hash": {
+              "type": "string",
+              "maxLength": 200
+            },
+            "claimed_source_hash": {
+              "type": "string",
+              "maxLength": 200
+            },
+            "matches": {
+              "type": "boolean"
+            }
+          }
+        },
+        "cockpit_to_reconciliation": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "actual_source_hash",
+            "claimed_source_hash",
+            "matches"
+          ],
+          "properties": {
+            "actual_source_hash": {
+              "type": "string",
+              "maxLength": 200
+            },
+            "claimed_source_hash": {
+              "type": "string",
+              "maxLength": 200
+            },
+            "matches": {
+              "type": "boolean"
+            }
+          }
+        },
+        "reconciliation_fully_reconciled": {
+          "type": "boolean"
+        }
+      }
+    },
+    "summary": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "workstream_count",
+        "eligible_workstream_count",
+        "case_count",
+        "hidden_case_count",
+        "split_case_count",
+        "rescope_case_count",
+        "possible_duplicate_case_count",
+        "recovery_case_count",
+        "review_count",
+        "blocker_count",
+        "unknown_count",
+        "shaping_complete",
+        "intake_needed",
+        "no_cases_generated"
+      ],
+      "properties": {
+        "workstream_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "eligible_workstream_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "case_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "hidden_case_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "split_case_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "rescope_case_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "possible_duplicate_case_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "recovery_case_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "review_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "blocker_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "unknown_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "shaping_complete": {
+          "type": "boolean"
+        },
+        "intake_needed": {
+          "type": "boolean"
+        },
+        "no_cases_generated": {
+          "type": "boolean"
+        }
+      }
+    },
+    "review_queue": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "review_id",
+          "case_id",
+          "case_kind",
+          "evidence_tier",
+          "attention_ids",
+          "label",
+          "next_action"
+        ],
+        "properties": {
+          "review_id": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 1000
+          },
+          "case_id": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 1000
+          },
+          "case_kind": {
+            "type": "string",
+            "enum": [
+              "split",
+              "rescope",
+              "possible_duplicate",
+              "recovery"
+            ]
+          },
+          "evidence_tier": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 1000
+          },
+          "attention_ids": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 1000
+            },
+            "minItems": 1,
+            "uniqueItems": true
+          },
+          "label": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 1000
+          },
+          "next_action": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 1000
+          }
+        }
+      },
+      "maxItems": 3
+    },
+    "workstream_cards": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "card_id",
+          "workstream_id",
+          "label",
+          "lifecycle_state",
+          "accepted_specific_resource_ids",
+          "case_ids",
+          "missing_exact_scope"
+        ],
+        "properties": {
+          "card_id": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 1000
+          },
+          "workstream_id": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 1000
+          },
+          "label": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 1000
+          },
+          "lifecycle_state": {
+            "type": "string",
+            "enum": [
+              "proposed",
+              "active"
+            ]
+          },
+          "accepted_specific_resource_ids": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 1000
+            },
+            "uniqueItems": true
+          },
+          "case_ids": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 1000
+            },
+            "uniqueItems": true
+          },
+          "missing_exact_scope": {
+            "type": "boolean"
+          }
+        }
+      }
+    },
+    "cases": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "case_id",
+          "revision_id",
+          "case_kind",
+          "evidence_tier",
+          "disposition",
+          "label",
+          "subject_workstream_ids",
+          "subject_resource_ids",
+          "source_attention_ids",
+          "source_bundle_ids",
+          "signals",
+          "counterevidence",
+          "evidence_summary",
+          "choices"
+        ],
+        "properties": {
+          "case_id": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 1000
+          },
+          "revision_id": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 1000
+          },
+          "case_kind": {
+            "type": "string",
+            "enum": [
+              "split",
+              "rescope",
+              "possible_duplicate",
+              "recovery"
+            ]
+          },
+          "evidence_tier": {
+            "type": "string",
+            "enum": [
+              "PD0_shared_exact_specific_resource",
+              "PD1_reciprocal_exact_pair_split_between_workstreams",
+              "PD2_similarity_only",
+              "SP0_disconnected_exact_owned_components",
+              "RS0_exact_contextual_unassigned_bundle",
+              "RS1_repo_context_only",
+              "RC0_integrity_unknown_attention",
+              "RC1_dirty_exact_attention",
+              "RC2_existing_workstream_trigger",
+              "RC3_unassigned_observed_bundle"
+            ]
+          },
+          "disposition": {
+            "type": "string",
+            "enum": [
+              "review",
+              "inspect_only",
+              "blocked"
+            ]
+          },
+          "label": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 1000
+          },
+          "subject_workstream_ids": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 1000
+            },
+            "uniqueItems": true
+          },
+          "subject_resource_ids": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 1000
+            },
+            "uniqueItems": true
+          },
+          "source_attention_ids": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 1000
+            },
+            "uniqueItems": true
+          },
+          "source_bundle_ids": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 1000
+            },
+            "uniqueItems": true
+          },
+          "signals": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 1000
+            },
+            "uniqueItems": true
+          },
+          "counterevidence": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 1000
+            },
+            "uniqueItems": true
+          },
+          "evidence_summary": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "exact_component_count",
+              "project_count",
+              "shared_specific_resource_count",
+              "shared_token_count",
+              "shared_token_hashes",
+              "attention_bands",
+              "trigger_kinds",
+              "context_basis"
+            ],
+            "properties": {
+              "exact_component_count": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "project_count": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "shared_specific_resource_count": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "shared_token_count": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "shared_token_hashes": {
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "pattern": "^sha256:[0-9a-f]{64}$"
+                },
+                "uniqueItems": true
+              },
+              "attention_bands": {
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 1000
+                },
+                "uniqueItems": true
+              },
+              "trigger_kinds": {
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 1000
+                },
+                "uniqueItems": true
+              },
+              "context_basis": {
+                "type": "string",
+                "enum": [
+                  "none",
+                  "accepted_exact_collision",
+                  "reciprocal_exact_pair",
+                  "similarity_only",
+                  "accepted_exact_components",
+                  "exact_attention_assignment",
+                  "repo_context_only",
+                  "unassigned_exact_bundle",
+                  "accepted_attention_join",
+                  "observed_attention"
+                ]
+              }
+            }
+          },
+          "choices": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "choice_id",
+                "choice_kind",
+                "label",
+                "effect_preview",
+                "execution_available",
+                "requires_human_decision"
+              ],
+              "properties": {
+                "choice_id": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 1000
+                },
+                "choice_kind": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 1000
+                },
+                "label": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 1000
+                },
+                "effect_preview": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 1000
+                },
+                "execution_available": {
+                  "const": false
+                },
+                "requires_human_decision": {
+                  "const": true
+                }
+              }
+            },
+            "minItems": 2,
+            "maxItems": 5
+          }
+        }
+      },
+      "maxItems": 500
+    },
+    "coverage": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "eligible_workstream_ids",
+        "source_resource_ids",
+        "source_attention_ids",
+        "source_bundle_ids",
+        "today_attention_ids",
+        "quiet_workstream_ids",
+        "terminal_workstream_ids",
+        "workstreams_without_exact_bindings",
+        "label_pair_count",
+        "unevaluated_label_pair_count",
+        "exact_context_bundle_count",
+        "repo_context_bundle_count",
+        "unassigned_bundle_count",
+        "source_case_count",
+        "cases_truncated_count",
+        "typed_relation_evidence_available"
+      ],
+      "properties": {
+        "eligible_workstream_ids": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 1000
+          },
+          "uniqueItems": true
+        },
+        "source_resource_ids": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 1000
+          },
+          "uniqueItems": true
+        },
+        "source_attention_ids": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 1000
+          },
+          "uniqueItems": true
+        },
+        "source_bundle_ids": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 1000
+          },
+          "uniqueItems": true
+        },
+        "today_attention_ids": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 1000
+          },
+          "uniqueItems": true
+        },
+        "quiet_workstream_ids": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 1000
+          },
+          "uniqueItems": true
+        },
+        "terminal_workstream_ids": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 1000
+          },
+          "uniqueItems": true
+        },
+        "workstreams_without_exact_bindings": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 1000
+          },
+          "uniqueItems": true
+        },
+        "label_pair_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "unevaluated_label_pair_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "exact_context_bundle_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "repo_context_bundle_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "unassigned_bundle_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "source_case_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "cases_truncated_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "typed_relation_evidence_available": {
+          "const": false
+        }
+      }
+    },
+    "blockers": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "kind",
+          "ref",
+          "note"
+        ],
+        "properties": {
+          "kind": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 1000
+          },
+          "ref": {
+            "type": "string",
+            "maxLength": 1000
+          },
+          "note": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 1000
+          }
+        }
+      }
+    },
+    "unknowns": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "source",
+          "kind",
+          "ref",
+          "note",
+          "severity"
+        ],
+        "properties": {
+          "source": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 1000
+          },
+          "kind": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 1000
+          },
+          "ref": {
+            "type": "string",
+            "maxLength": 1000
+          },
+          "note": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 1000
+          },
+          "severity": {
+            "type": "string",
+            "enum": [
+              "info",
+              "warning",
+              "danger"
+            ]
+          }
+        }
+      }
+    },
+    "source_refs": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "workstreams",
+        "cockpit",
+        "reconciliation"
+      ],
+      "properties": {
+        "workstreams": {
+          "type": "string",
+          "maxLength": 200
+        },
+        "cockpit": {
+          "type": "string",
+          "maxLength": 200
+        },
+        "reconciliation": {
+          "type": "string",
+          "maxLength": 200
+        }
+      }
+    }
+  }
+}

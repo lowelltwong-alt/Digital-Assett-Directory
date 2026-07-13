@@ -9,6 +9,7 @@ from contextlib import contextmanager
 from pathlib import Path
 from typing import Any, Iterable
 
+import yaml
 from jsonschema.validators import validator_for
 
 from .transport import data_relative_path
@@ -30,6 +31,7 @@ AUTHORITY_BOUNDARY = (
 METHODOLOGY_PATH = Path("registry/subagent-evaluation-methodology.json")
 METHODOLOGY_SNAPSHOT_DIR = Path("registry/subagent-evaluation-methodologies")
 CAPABILITY_REGISTRY_PATH = Path("registry/subagent-capability-registry.json")
+AGENT_SKILL_LIBRARY_PATH = Path("registry/agent-skill-library.json")
 EDGE_REGISTRY_PATH = Path("registry/graph-edge-registry.json")
 RAW_BASE = Path("raw/agent-evaluations")
 RAW_PACKET_DIR = RAW_BASE / "packets"
@@ -48,11 +50,13 @@ PACKET_FILES = {
 PROCESSED_BASE = Path("processed/agents")
 GRAPH_PATH = PROCESSED_BASE / "subagent-capability-graph.json"
 MANIFEST_PATH = PROCESSED_BASE / "subagent-capability-graph-manifest.json"
+ROLE_DIRECTORY_PATH = PROCESSED_BASE / "subagent-role-directory.json"
 NORMALIZED_EVALUATIONS_PATH = PROCESSED_BASE / "attempt-evaluations.jsonl"
 CONSOLIDATION_QUEUE_PATH = PROCESSED_BASE / "consolidation-review-queue.jsonl"
 IMPROVEMENT_POLICY_PATH = Path("registry/subagent-improvement-policy.json")
 IMPROVEMENT_REPORT_PATH = PROCESSED_BASE / "subagent-improvement-review.json"
 BUILDER_VERSION = "subagent-capability-graph-builder.v0.1.0"
+ROLE_DIRECTORY_METHOD_VERSION = "registered-subagent-pack-directory.v0.1.0"
 SCHEMA_NAMES = {
     "role_profiles": "subagent_role_profile_revision",
     "attempts": "subagent_execution_attempt",
@@ -138,6 +142,199 @@ def _text_lf_hash(path: Path) -> str:
 
 def _load_json(path: Path) -> dict[str, Any]:
     return json.loads(path.read_text(encoding="utf-8"))
+
+
+def _normalized_role_slug(value: Any) -> str:
+    slug = re.sub(r"[^a-z0-9]+", "-", str(value).casefold()).strip("-")
+    if not slug:
+        raise ValueError("Subagent catalog role identity is empty after normalization")
+    return slug
+
+
+def _string_list(value: Any) -> list[str]:
+    if value is None:
+        return []
+    if isinstance(value, str):
+        return [value] if value.strip() else []
+    if isinstance(value, dict):
+        return [str(key) for key in value]
+    if isinstance(value, list):
+        return [str(item) for item in value if str(item).strip()]
+    return [str(value)]
+
+
+def _first_role_list(role: dict[str, Any], *keys: str) -> list[str]:
+    for key in keys:
+        if key in role:
+            return _string_list(role[key])
+    return []
+
+
+def load_registered_role_catalog(
+    hub_root: Path,
+    *,
+    include_inactive: bool = False,
+) -> list[dict[str, Any]]:
+    """Load declared role entries from registered DAD skill packs.
+
+    Catalog entries are discoverability evidence, not execution attempts or
+    evaluated role revisions. They therefore receive a distinct graph node type
+    and remain ``insufficient_evidence`` until immutable attempt records exist.
+    """
+
+    library_path = hub_root / AGENT_SKILL_LIBRARY_PATH
+    if not library_path.exists():
+        return []
+    library = _load_json(library_path)
+    try:
+        _schema_validator(hub_root, "agent_skill_library").validate(library)
+    except Exception as exc:
+        raise ValueError(f"Invalid agent skill library: {exc}") from exc
+    known_capabilities = {
+        str(row["id"])
+        for row in _load_json(hub_root / CAPABILITY_REGISTRY_PATH).get("capabilities", [])
+    }
+    root = hub_root.resolve()
+    catalog: list[dict[str, Any]] = []
+    seen_refs: set[str] = set()
+    seen_profiles: dict[str, str] = {}
+    seen_pack_ids: dict[str, str] = {}
+    methodology, _methodology_hash = _load_current_methodology(hub_root)
+    expected_methodology_ref = (
+        f"registry/subagent-evaluation-methodology.json#{methodology['methodology_version']}"
+    )
+    for skill in library.get("skills", []):
+        if not include_inactive and (
+            skill.get("status") in {"retired", "replaced"}
+            or skill.get("review_status") == "rejected"
+        ):
+            continue
+        declared_pack = str(skill.get("subagent_pack") or "")
+        if not declared_pack:
+            continue
+        relative_skill_path = Path(str(skill["path"]))
+        if relative_skill_path.is_absolute() or ".." in relative_skill_path.parts:
+            raise ValueError(f"Unsafe registered skill path: {relative_skill_path}")
+        resolved_skill_path = (root / relative_skill_path).resolve()
+        if resolved_skill_path != root and root not in resolved_skill_path.parents:
+            raise ValueError(f"Registered skill escapes hub root: {relative_skill_path}")
+        relative_pack_path = Path(declared_pack)
+        if relative_pack_path.is_absolute() or ".." in relative_pack_path.parts:
+            raise ValueError(f"Unsafe registered subagent pack path: {declared_pack}")
+        pack_path = (root / relative_pack_path).resolve()
+        if resolved_skill_path not in pack_path.parents:
+            raise ValueError(
+                f"Registered subagent pack must remain inside its skill directory: {declared_pack}"
+            )
+        if not pack_path.is_file():
+            raise ValueError(f"Registered subagent pack is missing: {declared_pack}")
+        pack = yaml.safe_load(pack_path.read_text(encoding="utf-8")) or {}
+        if not isinstance(pack, dict):
+            raise ValueError(f"Invalid subagent pack contract: {relative_skill_path}")
+        try:
+            _schema_validator(hub_root, "subagent_pack").validate(pack)
+        except Exception as exc:
+            raise ValueError(f"Invalid subagent pack {declared_pack}: {exc}") from exc
+        _validate_no_private_payload(pack, location=relative_pack_path.as_posix())
+        pack_id = str(pack.get("pack_id") or "")
+        previous_skill = seen_pack_ids.get(pack_id)
+        if previous_skill and previous_skill != str(skill["skill_id"]):
+            raise ValueError(
+                f"Subagent pack {pack_id} is declared by both {previous_skill} "
+                f"and {skill['skill_id']}"
+            )
+        seen_pack_ids[pack_id] = str(skill["skill_id"])
+        if not include_inactive and pack.get("status") == "retired":
+            continue
+        if str(pack["methodology_ref"]) != expected_methodology_ref:
+            raise ValueError(
+                f"Subagent pack {pack_id} methodology ref is stale or unknown: "
+                f"{pack['methodology_ref']}"
+            )
+        authority_boundary = str(pack.get("authority_boundary") or "")
+        _validate_candidate_authority_boundary(
+            authority_boundary,
+            f"Subagent pack {pack_id} authority boundary",
+        )
+        roles = pack.get("roles")
+        if not isinstance(roles, list) or not roles:
+            raise ValueError(f"Subagent pack {pack_id} has no roles")
+        pack_role_ids: set[str] = set()
+        for raw_role in roles:
+            if not isinstance(raw_role, dict):
+                raise ValueError(f"Subagent pack {pack_id} has a non-object role")
+            role_id = str(raw_role.get("role_id") or "")
+            if not role_id or role_id in pack_role_ids:
+                raise ValueError(f"Subagent pack {pack_id} has an empty or duplicate role id")
+            pack_role_ids.add(role_id)
+            mission = str(raw_role.get("mission") or "").strip()
+            if not mission:
+                raise ValueError(f"Subagent role {pack_id}#{role_id} has no mission")
+            role_ref = f"{pack_id}#{role_id}"
+            if role_ref in seen_refs:
+                raise ValueError(f"Duplicate subagent catalog role {role_ref}")
+            seen_refs.add(role_ref)
+            profile_slug = _normalized_role_slug(raw_role.get("profile_role_id") or role_id)
+            role_profile_id = f"dad:role-profile:{profile_slug}"
+            previous_ref = seen_profiles.get(role_profile_id)
+            if previous_ref and previous_ref != role_ref:
+                raise ValueError(
+                    f"Subagent catalog profile {role_profile_id} is declared by both "
+                    f"{previous_ref} and {role_ref}"
+                )
+            seen_profiles[role_profile_id] = role_ref
+            capability_ids = sorted(set(_string_list(raw_role.get("capability_ids"))))
+            unknown = sorted(set(capability_ids) - known_capabilities)
+            if unknown:
+                raise ValueError(
+                    f"Subagent role {role_ref} declares unknown capabilities: " + ", ".join(unknown)
+                )
+            expected_inputs = _first_role_list(
+                raw_role, "required_input", "required_inputs", "inputs"
+            )
+            expected_outputs = _first_role_list(
+                raw_role, "required_output", "required_outputs", "output"
+            )
+            stop_conditions = sorted(
+                set(
+                    _first_role_list(raw_role, "stop_conditions")
+                    + _first_role_list(raw_role, "reject_when")
+                    + _first_role_list(raw_role, "forbidden_actions")
+                )
+            )
+            source_ref = relative_pack_path.as_posix()
+            declared = {
+                "role_ref": role_ref,
+                "skill_id": str(skill["skill_id"]),
+                "skill_name": str(skill["name"]),
+                "skill_status": str(skill["status"]),
+                "skill_review_status": str(skill["review_status"]),
+                "pack_id": pack_id,
+                "pack_version": str(pack.get("version") or "unknown"),
+                "pack_status": str(pack.get("status") or "candidate"),
+                "role_id": role_id,
+                "role_profile_id": role_profile_id,
+                "mission": mission,
+                "effort": str(
+                    raw_role.get("effort") or raw_role.get("starting_effort") or "unspecified"
+                ),
+                "search_terms": _string_list(raw_role.get("search_terms")),
+                "capability_ids": capability_ids,
+                "expected_inputs": expected_inputs,
+                "expected_outputs": expected_outputs,
+                "stop_conditions": stop_conditions,
+                "evaluated_role_revision_ids": sorted(
+                    set(_string_list(raw_role.get("evaluated_role_revision_ids")))
+                ),
+                "methodology_ref": str(pack["methodology_ref"]),
+                "source_ref": source_ref,
+                "source_sha256": _text_lf_hash(pack_path),
+                "authority_boundary": authority_boundary,
+                "review_status": "candidate",
+            }
+            declared["catalog_sha256"] = content_hash(declared)
+            catalog.append(declared)
+    return sorted(catalog, key=lambda row: str(row["role_ref"]))
 
 
 def _read_jsonl(path: Path) -> list[dict[str, Any]]:
@@ -262,6 +459,21 @@ def _schema_validator(hub_root: Path, schema_name: str):
     return validator_cls(schema)
 
 
+def _load_current_methodology(hub_root: Path) -> tuple[dict[str, Any], str]:
+    methodology_path = hub_root / METHODOLOGY_PATH
+    methodology = _load_json(methodology_path)
+    _schema_validator(hub_root, "subagent_evaluation_methodology").validate(methodology)
+    methodology_hash = _text_lf_hash(methodology_path)
+    snapshot_path = (
+        hub_root / METHODOLOGY_SNAPSHOT_DIR / f"{methodology['methodology_version']}.json"
+    )
+    if _text_lf_hash(snapshot_path) != methodology_hash:
+        raise ValueError(
+            "Current subagent evaluation methodology must match its immutable version snapshot"
+        )
+    return methodology, methodology_hash
+
+
 def _validate_rows(hub_root: Path, kind: str, rows: Iterable[dict[str, Any]]) -> None:
     validator = _schema_validator(hub_root, SCHEMA_NAMES[kind])
     for index, row in enumerate(rows, start=1):
@@ -316,6 +528,8 @@ def _is_verified_independent(
         and evaluator_attempt_id != evaluation.get("attempt_id")
         and evaluator_attempt is not None
         and evaluator_attempt.get("terminal_status") == "completed"
+        and (evaluator_attempt.get("runtime_claims") or {}).get("verification_status")
+        in {"runtime_verified", "provider_verified"}
         and identity.get("relationship_to_attempt") == "independent"
         and identity.get("verification_status") in {"runtime_verified", "human_verified"}
         and str(identity.get("actor_id") or "") in allowed_actor_ids
@@ -1169,7 +1383,264 @@ def build_graph(hub_root: Path) -> dict[str, Any]:
     }
 
 
+def build_role_directory_projection(
+    hub_root: Path,
+    *,
+    include_inactive: bool = False,
+) -> dict[str, Any]:
+    """Build an in-memory directory over explicitly registered role packs.
+
+    Declared capabilities are retrieval metadata only. Evaluation evidence is
+    joined solely through exact ``evaluated_role_revision_ids`` declared by the
+    pack and then identity-checked against the attempt graph.
+    """
+
+    catalog = load_registered_role_catalog(
+        hub_root,
+        include_inactive=include_inactive,
+    )
+    methodology, methodology_hash = _load_current_methodology(hub_root)
+    graph_path = data_relative_path(hub_root, GRAPH_PATH)
+    summaries_by_revision: dict[str, dict[str, Any]] = {}
+    if graph_path.exists():
+        graph = _load_json(graph_path)
+        _schema_validator(hub_root, "subagent_capability_graph").validate(graph)
+        summaries_by_revision = {
+            str(row["revision_id"]): row for row in graph.get("profile_summaries", [])
+        }
+
+    roles: list[dict[str, Any]] = []
+    for catalog_role in catalog:
+        evaluated_revisions: list[dict[str, Any]] = []
+        for revision_id in catalog_role["evaluated_role_revision_ids"]:
+            summary = summaries_by_revision.get(str(revision_id))
+            if summary is None:
+                raise ValueError(
+                    f"Catalog role {catalog_role['role_ref']} declares missing evaluated "
+                    f"revision {revision_id}"
+                )
+            if summary["role_profile_id"] != catalog_role["role_profile_id"]:
+                raise ValueError(
+                    f"Catalog role {catalog_role['role_ref']} evaluation link crosses role "
+                    f"identity: {revision_id}"
+                )
+            evaluated_revisions.append(
+                {
+                    "revision_id": str(summary["revision_id"]),
+                    "attempt_count": int(summary["attempt_count"]),
+                    "rated_attempt_count": int(summary["rated_attempt_count"]),
+                    "independent_evaluation_count": int(summary["independent_evaluation_count"]),
+                    "profile_score_status": str(summary["profile_score_status"]),
+                    "profile_score": summary["profile_score"],
+                    "default_comparison_eligible": bool(summary["default_comparison_eligible"]),
+                    "blockers": [str(value) for value in summary["blockers"]],
+                }
+            )
+        if not evaluated_revisions:
+            evaluation_status = "insufficient_evidence"
+        elif any(row["profile_score_status"] == "provisional" for row in evaluated_revisions):
+            evaluation_status = "provisional_revision_evidence"
+        else:
+            evaluation_status = "attempt_evidence_only"
+        role = {
+            **catalog_role,
+            "evaluation_status": evaluation_status,
+            "evaluated_revisions": evaluated_revisions,
+        }
+        _validate_no_private_payload(role, location=str(role["role_ref"]))
+        roles.append(role)
+
+    source_hashes = {
+        AGENT_SKILL_LIBRARY_PATH.as_posix(): _hash_path(hub_root / AGENT_SKILL_LIBRARY_PATH),
+        CAPABILITY_REGISTRY_PATH.as_posix(): _hash_path(hub_root / CAPABILITY_REGISTRY_PATH),
+        METHODOLOGY_PATH.as_posix(): methodology_hash,
+        "builder_source": _hash_path(Path(__file__)),
+    }
+    for role in roles:
+        source_hashes[str(role["source_ref"])] = str(role["source_sha256"])
+    if graph_path.exists():
+        source_hashes[GRAPH_PATH.as_posix()] = _hash_path(graph_path)
+
+    projection = {
+        "schema_version": "dad.subagent.role_directory.v1",
+        "generated_at": utc_now(),
+        "builder_version": ROLE_DIRECTORY_METHOD_VERSION,
+        "methodology_id": methodology["methodology_id"],
+        "methodology_version": methodology["methodology_version"],
+        "role_count": len(roles),
+        "source_hashes": dict(sorted(source_hashes.items())),
+        "search_contract": {
+            "method_version": ROLE_DIRECTORY_METHOD_VERSION,
+            "match_classes": [
+                "exact_identity",
+                "exact_declared_match",
+                "all_query_tokens",
+                "unfiltered",
+            ],
+            "tie_break": "skill_id, pack_version, and role_id lexical order within each categorical match class",
+            "quality_boundary": "Search retrieves declared role contracts. It does not recommend, rank quality, infer competence, or treat declared capabilities as evaluated evidence.",
+        },
+        "roles": roles,
+        "authority_boundary": AUTHORITY_BOUNDARY,
+    }
+    try:
+        _schema_validator(hub_root, "subagent_role_directory").validate(projection)
+    except Exception as exc:
+        raise ValueError(f"Invalid subagent role directory projection: {exc}") from exc
+    return projection
+
+
+def write_role_directory_projection(
+    hub_root: Path,
+    *,
+    include_inactive: bool = False,
+) -> dict[str, Any]:
+    projection = build_role_directory_projection(
+        hub_root,
+        include_inactive=include_inactive,
+    )
+    path = data_relative_path(hub_root, ROLE_DIRECTORY_PATH)
+    write_json(path, projection, allow_direct_fallback=True)
+    return {
+        "directory_path": str(path),
+        "role_count": projection["role_count"],
+        "source_hashes": projection["source_hashes"],
+        "authority_boundary": AUTHORITY_BOUNDARY,
+    }
+
+
+def role_directory_freshness(hub_root: Path) -> dict[str, Any]:
+    path = data_relative_path(hub_root, ROLE_DIRECTORY_PATH)
+    if not path.exists():
+        return {"state": "missing", "reasons": ["directory_not_built"]}
+    try:
+        persisted = _load_json(path)
+        _schema_validator(hub_root, "subagent_role_directory").validate(persisted)
+        current = build_role_directory_projection(hub_root)
+    except (OSError, ValueError, KeyError) as exc:
+        return {"state": "invalid", "reasons": [str(exc)]}
+    reasons = []
+    if persisted["builder_version"] != current["builder_version"]:
+        reasons.append("builder_version_changed")
+    if persisted["source_hashes"] != current["source_hashes"]:
+        reasons.append("source_hashes_changed")
+    return {"state": "stale" if reasons else "fresh", "reasons": reasons}
+
+
+def _directory_tokens(value: Any) -> set[str]:
+    return set(re.findall(r"[a-z0-9]+", str(value).casefold()))
+
+
+def search_role_directory(
+    hub_root: Path,
+    *,
+    query: str = "",
+    capability: str = "",
+    skill_id: str = "",
+    include_inactive: bool = False,
+    limit: int = 20,
+) -> dict[str, Any]:
+    """Search declared role contracts without writing or quality-ranking them."""
+
+    if limit < 1 or limit > 100:
+        raise ValueError("Subagent directory limit must be between 1 and 100")
+    projection = build_role_directory_projection(
+        hub_root,
+        include_inactive=include_inactive,
+    )
+    normalized_query = " ".join(str(query).casefold().split())
+    query_tokens = _directory_tokens(normalized_query)
+    class_order = {
+        "exact_identity": 0,
+        "exact_declared_match": 1,
+        "all_query_tokens": 2,
+        "unfiltered": 3,
+    }
+    matches: list[dict[str, Any]] = []
+    for role in projection["roles"]:
+        if capability and capability not in role["capability_ids"]:
+            continue
+        if skill_id and skill_id != role["skill_id"]:
+            continue
+        identities = {
+            str(role["role_ref"]).casefold(),
+            str(role["role_id"]).casefold(),
+            str(role["role_profile_id"]).casefold(),
+        }
+        declared_phrases = {
+            str(value).casefold() for value in [*role["capability_ids"], *role["search_terms"]]
+        }
+        field_values = {
+            "identity": " ".join(sorted(identities)),
+            "capabilities": " ".join(role["capability_ids"]),
+            "search_terms": " ".join(role["search_terms"]),
+            "mission": str(role["mission"]),
+            "expected_inputs": " ".join(role["expected_inputs"]),
+            "expected_outputs": " ".join(role["expected_outputs"]),
+        }
+        document_tokens = set().union(
+            *(_directory_tokens(value) for value in field_values.values())
+        )
+        if not normalized_query:
+            match_basis = "exact_declared_match" if capability else "unfiltered"
+        elif normalized_query in identities:
+            match_basis = "exact_identity"
+        elif normalized_query in declared_phrases:
+            match_basis = "exact_declared_match"
+        elif query_tokens and query_tokens <= document_tokens:
+            match_basis = "all_query_tokens"
+        else:
+            continue
+        if not query_tokens and capability:
+            matched_fields = ["capabilities"]
+        else:
+            matched_fields = sorted(
+                field
+                for field, value in field_values.items()
+                if not query_tokens or query_tokens & _directory_tokens(value)
+            )
+        matches.append(
+            {
+                **role,
+                "match_basis": match_basis,
+                "matched_fields": matched_fields,
+            }
+        )
+    matches.sort(
+        key=lambda row: (
+            class_order[str(row["match_basis"])],
+            str(row["skill_id"]),
+            str(row["pack_version"]),
+            str(row["role_id"]),
+        )
+    )
+    return {
+        "schema_version": "dad.subagent.role_directory.search.v1",
+        "query": query,
+        "filters": {
+            "capability": capability,
+            "skill_id": skill_id,
+            "include_inactive": include_inactive,
+        },
+        "coverage": {
+            "directory_role_count": projection["role_count"],
+            "matched_role_count": len(matches),
+            "returned_role_count": min(len(matches), limit),
+        },
+        "projection_freshness": role_directory_freshness(hub_root),
+        "matches": matches[:limit],
+        "search_contract": projection["search_contract"],
+        "authority_boundary": AUTHORITY_BOUNDARY,
+    }
+
+
 def validate_hub_records(hub_root: Path) -> dict[str, Any]:
+    from .subagent_integrity import (
+        SELF_ASSESSMENTS_PATH,
+        _profile_index,
+        _validate_assessment,
+    )
+
     policy = _load_json(hub_root / IMPROVEMENT_POLICY_PATH)
     _schema_validator(hub_root, "subagent_improvement_policy").validate(policy)
     role_profiles = _read_jsonl(data_relative_path(hub_root, RAW_FILES["role_profiles"]))
@@ -1181,6 +1652,10 @@ def validate_hub_records(hub_root: Path) -> dict[str, Any]:
         raise ValueError("Subagent evaluation raw inputs are partial, not an empty valid state")
     if all(present):
         validate_records(hub_root, role_profiles, attempts, evaluations, unrated)
+    _, evaluation_profiles, _ = _profile_index(hub_root)
+    self_assessments = _read_jsonl(data_relative_path(hub_root, SELF_ASSESSMENTS_PATH))
+    for assessment in self_assessments:
+        _validate_assessment(hub_root, assessment, evaluation_profiles)
     graph_path = data_relative_path(hub_root, GRAPH_PATH)
     if graph_path.exists():
         _schema_validator(hub_root, "subagent_capability_graph").validate(_load_json(graph_path))
@@ -1188,6 +1663,7 @@ def validate_hub_records(hub_root: Path) -> dict[str, Any]:
         "role_profile_count": len(role_profiles),
         "attempt_count": len(attempts),
         "evaluation_count": len(evaluations),
+        "self_assessment_count": len(self_assessments),
         "improvement_policy_version": policy["policy_version"],
         "graph_present": graph_path.exists(),
     }
@@ -1198,6 +1674,11 @@ def status(hub_root: Path) -> dict[str, Any]:
         kind: len(_read_jsonl(data_relative_path(hub_root, path)))
         for kind, path in RAW_FILES.items()
     }
+    from .subagent_integrity import SELF_ASSESSMENTS_PATH
+
+    counts["self_assessments"] = len(
+        _read_jsonl(data_relative_path(hub_root, SELF_ASSESSMENTS_PATH))
+    )
     graph_path = data_relative_path(hub_root, GRAPH_PATH)
     return {
         "raw_counts": counts,

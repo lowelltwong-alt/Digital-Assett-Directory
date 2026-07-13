@@ -1,7 +1,7 @@
 # Phase 9: All-Repo Read-Only Inventory Evidence
 
-Generated: 2026-07-05
-Status: machine evidence captured; human gates still pending
+Generated: 2026-07-12
+Status: stable local machine evidence captured; GitHub coverage incomplete; human gates still pending
 
 ## Scope
 
@@ -42,6 +42,37 @@ governance apply/update was run.
   `report_id` from stable report content, not just hub path plus repo count, so
   same-count inventory changes cannot reuse the same report identity.
 
+## Current Authoritative Quiet-Window Inventory
+
+On 2026-07-12, a fresh authoritative run captured a Git-state fingerprint for
+every discovered repository, reconciled the inventory, rediscovered the same
+scope, and captured the same fingerprints again. The snapshot included the
+current commit or `UNBORN` sentinel, porcelain status, and bounded content
+signatures for changed and untracked paths. Git subprocesses were parallelized
+only for the read-only before/after snapshots; inventory reconciliation remained
+single-authority and target repositories were never run concurrently against a
+competing implementation.
+
+Quiet-window result:
+
+- before repository count: 82
+- after repository count: 82
+- repositories with changed Git state: 0
+- before fingerprint:
+  `sha256:e009b6d9e5fb81afb7f1d29040250b69f1b4f7812a824144863ed891f47fcec6`
+- after fingerprint:
+  `sha256:e009b6d9e5fb81afb7f1d29040250b69f1b4f7812a824144863ed891f47fcec6`
+- unavailable Git-state fingerprints: 0
+- elapsed time: 118.452 seconds
+  - before snapshot: 64.278 seconds
+  - inventory reconciliation: 40.640 seconds
+  - after snapshot: 13.534 seconds
+
+An earlier attempt timed out after 304.1 seconds before it could emit a
+stability verdict. It is rejected evidence. It did not update this packet. The
+accepted rerun removed redundant sequential Git subprocesses while preserving
+the same fail-closed before/inventory/after comparison.
+
 ## Current Durable Inventory Smoke
 
 Command:
@@ -58,22 +89,38 @@ Result:
 - GitHub coverage status: `configured_disabled`
 - GitHub coverage complete: `false`
 - report content fingerprint:
-  `sha256:21568979eb214a695c36cd62453e76f33525ba50ec3bf80ca4da2497a2d144c9`
-- repo_count: 48
+  `sha256:d46d43f14250094d25412b4bc087d38793dabc44cd303a9cde6f11b6a15ebdac`
+- repo_count: 82
 - classification_counts:
-  - active-no-write: 8
-  - duplicate-ignore: 26
-  - needs-human-classification: 11
-  - protected-central-only: 3
-- public-facing local-path leak check: clean in durable report
+  - active-no-write: 9
+  - duplicate-ignore: 55
+  - enroll: 1
+  - needs-human-classification: 10
+  - protected-central-only: 7
+- public-facing records checked: 18
+- public-facing local-path leak check: clean; no user-home or OneDrive fragments
+- unresolved candidate dispositions are represented only by these opaque central
+  record aliases; no local paths are included:
+  - `dad:dad-repo-record:dd582769-31d4-5331-a241-e39c0d757a72`
+  - `dad:dad-repo-record:ee569709-e407-541f-99f0-f771e9b3f793`
+  - `dad:dad-repo-record:87531b10-0c07-5b5d-939a-57c0f3429bca`
+  - `dad:dad-repo-record:0786d403-79b5-5fdd-b845-3a7b918fbe6c`
+  - `dad:dad-repo-record:663fccb5-4028-5797-a2d0-cb48e474df18`
+  - `dad:dad-repo-record:5841ab90-798a-5649-8d19-f56e506db514`
+  - `dad:dad-repo-record:bc6aa7c6-ab22-52bc-89d2-6646d3344deb`
+  - `dad:dad-repo-record:e7efe4e0-a014-5527-a831-a5cbe128cd2c`
+  - `dad:dad-repo-record:bc8ab4bb-7ef1-51fe-868d-e37f1e632f67`
+  - `dad:dad-repo-record:558ef48a-b8f8-5a91-884d-705bbfe77dc3`
 - pytest temp, Rust `target`, symlink, and junction traversal checks: clean
 - Rust repo-inventory probe: read-only, alias-only structural evidence for
   configured local roots; Python remains the authority for classification,
   GitHub reconciliation, public-safe redaction, policy holds, and human gates.
-- Rust/Python shadow parity: `matched`
-  - Python repo roots: 48
-  - Rust repo roots: 48
-  - matched repo roots: 48
+- Rust/Python shadow parity below is retained prior structural evidence from the
+  2026-07-05 48-repository corpus. It was not rerun against the current
+  82-repository corpus and therefore does not establish current-corpus parity.
+  - prior Python repo roots: 48
+  - prior Rust repo roots: 48
+  - prior matched repo roots: 48
   - Python skipped dirs: 255
   - Rust skipped dirs: 255
   - skip-policy mismatches: 0
@@ -86,7 +133,7 @@ not the durable current inventory source. The current checked-in evidence must
 not imply all-GitHub coverage until reviewed GitHub rows are imported through a
 durable source.
 
-Special repo checks:
+Current special-repo checks:
 
 - DAD is `active-no-write` because the current worktree is dirty.
 - Mock Trial/Albert is `active-no-write`, not Logos-protected.
@@ -114,6 +161,23 @@ Lesson/asset/harness scout recommended:
   repo adoption.
 
 ## Validation
+
+Current authoritative validation:
+
+```text
+optimized read-only Git fingerprint snapshot
+PYTHONPATH=src reconcile_repo_inventory(..., max_depth=5)
+optimized read-only Git fingerprint snapshot
+```
+
+Result: 82/82 repositories were present before and after; the aggregate
+fingerprints matched; zero repository states changed; zero fingerprints were
+unavailable; public-safe scanning found zero private-path fragments. GitHub
+coverage remains deliberately `configured_disabled` and incomplete. No GitHub
+credentials or connector rows were used.
+
+The following commands are retained as prior structural validation from the
+earlier packet and are not claimed as fresh 82-repository results:
 
 Commands run:
 

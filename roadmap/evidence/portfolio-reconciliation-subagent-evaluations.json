@@ -1,0 +1,127 @@
+{
+  "schema_version": "dad.portfolio-reconciliation-subagent-evidence.v1",
+  "generated_at": "2026-07-13T11:38:00Z",
+  "task_family": "portfolio_reconciliation_supervised_activation",
+  "evidence_class": "parent_reconstructed_privacy_safe_summary",
+  "attempts": [
+    {
+      "attempt_id": "dad:subagent-attempt:portfolio-reconciliation-identity-architect",
+      "role_profile_id": "dad:role-profile:workstream-intake-identity-steward",
+      "reported_self_rating_5": 4.8,
+      "parent_observational_score_100": 96,
+      "outcome": "successful",
+      "confirmed_evidence": [
+        "pure snapshot projection selected",
+        "proposal and evidence revision identities separated",
+        "zero-workstream and human-authority boundaries specified"
+      ],
+      "counterevidence": [
+        "initial proposal did not yet contain the later most-specific ownership and bounded-command hardening"
+      ],
+      "improvement": "State at architecture time that repo identity is project context and cannot establish branch or worktree ownership."
+    },
+    {
+      "attempt_id": "dad:subagent-attempt:portfolio-reconciliation-initial-conformance",
+      "role_profile_id": "dad:role-profile:delivery-closeout-resumption-steward",
+      "reported_self_rating_5": 4.9,
+      "parent_observational_score_100": 98,
+      "outcome": "successful",
+      "confirmed_evidence": [
+        "correctly blocked the pre-hardening contract",
+        "identified schema, semantic, source-hash, and false-green defects",
+        "kept findings read-only and reproducible"
+      ],
+      "counterevidence": [
+        "the gate necessarily became stale while the implementation contract changed"
+      ],
+      "improvement": "Label every gate with the exact source revision and rerun only after the contract freezes."
+    },
+    {
+      "attempt_id": "dad:subagent-attempt:portfolio-reconciliation-final-redteam",
+      "role_profile_id": "dad:role-profile:delivery-closeout-resumption-steward",
+      "reported_self_rating_5": 4.8,
+      "parent_observational_score_100": 96,
+      "outcome": "successful",
+      "confirmed_evidence": [
+        "found optional Git lock risk",
+        "proved commands bounded to Today",
+        "verified strict artifacts, privacy, CSP, source coupling, and zero-write proof",
+        "issued final ACCEPT with residual S2 risks"
+      ],
+      "counterevidence": [
+        "hidden-count HTML explainability and optional-lock safety surfaced late rather than in the first pass"
+      ],
+      "improvement": "Include read-only subprocess side effects and operator explainability in the first adversarial checklist."
+    },
+    {
+      "attempt_id": "dad:subagent-attempt:portfolio-reconciliation-acceptance-gate",
+      "role_profile_id": "dad:role-profile:delivery-closeout-resumption-steward",
+      "reported_self_rating_5": 4.9,
+      "parent_observational_score_100": 98,
+      "outcome": "successful",
+      "confirmed_evidence": [
+        "separated code acceptance from stale evidence blocking",
+        "replayed 136-test evidence",
+        "validated schema, semantic coupling, privacy, and v3 proof",
+        "issued final ACCEPT only after durable evidence matched"
+      ],
+      "counterevidence": [
+        "the first gate report inherited stale test counts and artifact timestamps from the implementation handoff"
+      ],
+      "improvement": "Open with separate code, generated-artifact, and durable-evidence gate statuses."
+    },
+    {
+      "attempt_id": "dad:subagent-attempt:portfolio-reconciliation-lesson-asset-scout",
+      "role_profile_id": "dad:role-profile:lesson-asset-harness-scout",
+      "reported_self_rating_5": 4.6,
+      "parent_observational_score_100": 92,
+      "outcome": "successful",
+      "confirmed_evidence": [
+        "classified 325-to-188 as local evidence only",
+        "recommended updating existing skills instead of creating duplicates",
+        "kept the static projection safety harness at WATCH"
+      ],
+      "counterevidence": [
+        "one workstream provides no precision or recall cohort"
+      ],
+      "improvement": "Re-evaluate only after labeled repeated trials provide false-positive, miss, and usefulness evidence."
+    },
+    {
+      "attempt_id": "dad:subagent-attempt:portfolio-reconciliation-optimization-director",
+      "role_profile_id": "dad:role-profile:optimization-director",
+      "reported_self_rating_5": 4.8,
+      "parent_observational_score_100": 96,
+      "outcome": "successful",
+      "confirmed_evidence": [
+        "measured the full suite at an expected 11.3-to-12.5 minutes",
+        "identified Windows process-startup and filesystem cost",
+        "rejected Rust and xdist without profile and parity evidence",
+        "recommended focused inner loops and serial release validation"
+      ],
+      "counterevidence": [
+        "the initial ten-minute wrapper orphaned a Windows descendant and produced no valid full-suite result"
+      ],
+      "improvement": "Require tree-aware child containment and a cap longer than the measured p95 before launching another Windows timeout wrapper."
+    }
+  ],
+  "unresolved_child_rating_note": {
+    "reported_scores_5_in_director_order": [
+      5.0,
+      4.0,
+      4.7
+    ],
+    "disposition": "not_ingested_as_separate_attempts",
+    "reason": "Exact child runtime identities and the role-to-score mapping were unavailable after context compaction; DAD must not fabricate the join."
+  },
+  "validation_refs": [
+    "source://roadmap/evidence/portfolio-reconciliation-operator-trial.md",
+    "source://processed/reports/portfolio_os/reconciliation.json",
+    "source://.tmp/reconciliation-zero-write-proof-current.json"
+  ],
+  "limitations": [
+    "Ratings are parent-observational and attempt-scoped.",
+    "They do not count toward role-profile eligibility, rank model families, or change routing.",
+    "Raw transcripts, hidden reasoning, source paths, and private payloads are excluded."
+  ],
+  "authority_boundary": "These candidate evaluations cannot promote, merge, retire, or reroute a role or model. Any instruction revision requires separate human approval."
+}

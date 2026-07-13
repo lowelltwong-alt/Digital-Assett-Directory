@@ -1,67 +1,111 @@
 ---
 name: subagent-continuous-improvement
-description: Run self-review, independent review, routing audit, and thresholded human-gated instruction improvement for reusable subagent roles.
+description: Capture actor-claimed prediction receipts, run independent evidence and evaluator-integrity review, keep causal attribution explicit, and route only evidence-backed no-change or bounded human-gated improvements across domain-specific workflows.
 ---
 
 # Subagent Continuous Improvement
 
-Review every attempt, then reuse `registry/subagent-evaluation-methodology.json`
-(`0.1.0`) and its existing attempt/evaluation record contract. Do not invent a
-parallel score or record. The weighted mean is 30/20/20/15/15 over correctness,
-scope discipline, evidence traceability, efficiency/compute fit, and escalation
-calibration; range 0-100; missing evidence is `insufficient_evidence`, never
-zero. Preserve counterevidence and context.
+Self-grading is diagnostic telemetry, never proof. Do not ask an agent to award
+itself an authoritative aggregate grade. Before outcome evidence is visible,
+lock the task contract and an explicit profile from
+`registry/subagent-evaluation-profile-registry.json`, then record criterion-level
+pass probabilities, confidence, falsifiers, anticipated failure modes, and
+limitations with `asset-dir subagents self-assess`. The DAD runtime receipt time, not a claimed timestamp, establishes receipt chronology only.
+It does not prove the actor identity or outcome blindness. Call a prediction pre-outcome
+only when an orchestrator seals it before execution or validation and controls outcome access.
 
-The acting agent writes a concise self-review. A different agent/model reviews
-the same bounded evidence independently; any model may review any other, and
-self-review and parent review do not count as independent evidence. Store only
-privacy-safe summaries and evidence references, never raw transcripts, hidden
-reasoning, secrets, private rows, or long blobs.
+After the attempt, preserve immutable artifacts and use the existing attempt
+evaluation methodology for bounded attempt evidence. A different reviewer makes
+its verdict from the locked evidence before seeing the self prediction whenever
+the workflow can support blindness. Then run `asset-dir subagents
+integrity-review`. A hash proves record integrity only; it does not prove that an
+artifact, claim, environment, grader, or reviewer is correct.
 
-## Peer-Check Mesh and Routing
+## Universal Loop and Domain Overlays
 
-Luna, Terra, Sol, and the routing auditor are peers in a bidirectional review
-mesh, not a permanent hierarchy. Luna may catch Terra or Sol on bounded
-evidence; Terra may audit Sol's proportionality; and any different model may
-independently review another. The low/medium/high/xhigh ladder controls review
-cost and risk escalation only. It does not confer authority, correctness, or
-standing superiority.
+Use one universal control loop across domains:
 
-The distinct `routing-auditor` assesses task complexity plus material/dataset
-complexity, size, ambiguity, sensitivity, and consequence. It judges whether
-Luna/Terra/Sol and low/medium/high/xhigh effort were proportionate, states the
-factor-based rationale, and recommends a cheaper or stronger route when useful.
-Nuanced audits default to Terra at medium effort. It recommends only and never
-silently switches an in-flight agent; any reroute happens only at an explicit
-boundary with owner/orchestrator approval.
+1. lock the task and evaluation contract;
+2. optionally seal a prediction when calibration is decision-relevant and outcome access is controlled;
+3. preserve attempt and artifact evidence;
+4. run deterministic and domain validation;
+5. obtain independent review;
+6. audit the evaluator for blindness, lineage, reciprocal review, identity bias,
+   evidence replay, domain qualification, and holdout exposure;
+7. test competing causal hypotheses before attributing a failure to a system layer;
+8. choose no change or a bounded intervention;
+9. compare on held-out shadow cases;
+10. require a named human promotion and rollback decision; and
+11. monitor drift, cost, latency, and regressions.
 
-- **Luna, low:** routine bounded checks; it may challenge any peer when it has
-  concrete evidence of a gate, scope, privacy, or calibration issue.
-- **Terra, medium by default, high when warranted:** nuanced audit and
-  proportionality judgment; it may review any peer, including Sol. Check when
-  evidence is incomplete, score below 70, self/independent delta >=15, or
-  privacy/authority risk is present. Check comparable context and
-  counterevidence.
-- **Sol, high/xhigh only:** review or propose changes for a concrete gate
-  failure, or the same
-  normalized failure class in >=2 of the last 5 comparable attempts (>=3 of 10
-  when noise is high). Propose the smallest testable instruction change with
-  success, non-goals, and rollback. An imperfect score alone is not an
-  exception.
+Do not use a universal cross-domain leaderboard. The universal loop governs
+provenance, independence, calibration, experimentation, and authority. Domain profiles are candidate routing
+contracts until their artifacts, validators, thresholds, qualifications, budgets, and hard
+gates are executable; profile selection alone never proves domain validity. Financial algorithms require
+leakage, out-of-sample regime, realistic cost/slippage/capacity, drawdown/tail,
+and independent model-risk checks. Archaeological and historical claims require
+artifact/citation provenance, context and chronology, observation-versus-
+inference separation, counterevidence, contested interpretation, and ethical or
+legal provenance. A qualified domain expert remains required where the profile
+says so.
 
-A gate failure is an exception candidate, not proof of an instruction defect;
-the peer mesh separates operator error, task mismatch, missing context, and
-instruction defect. Fable is a rare, manual external architecture escalation
-for unresolved super-high-risk boss/architect disagreements; it is not a
-standing superior or routine review tier. A named human copy/pastes a
-privacy-safe packet containing all positions, evidence, counterarguments, and
-unknowns. Fable explains pros and cons, red-teams and premortems each option,
-recommends a decision, and may propose a non-binary synthesis. Only a named human may
-approve, apply, or reject Sol's change. Approval must cite role/version,
-evidence, independent review, bounded diff, test cohort, success threshold,
-and rollback. Keep prior attempts and instructions immutable.
+Profile selection is explicit candidate input. Do not infer a domain from private
+prose, and do not apply a profile outside its `applies_when`,
+`does_not_apply_when`, and `danger_if_misapplied` boundaries.
 
-Prefer one precise rule/example/checklist item over broad prompt prose. Remove
-duplicated or low-yield wording and reject caveats without a falsifiable
-validator. If subagents are unavailable, run explicit checklists and mark
-independence unavailable; never fabricate it.
+## Attribute Before Changing
+
+An observed failure does not establish an instruction defect. Route a candidate
+to one or more of these layers: agent instruction, model or effort route, tool,
+input contract, context or data, workflow, handoff, evaluation harness, reviewer,
+domain overlay, downstream specialist, preserve-simple, or observe-more.
+
+Use the disposition vocabulary in the profile registry as future-safe candidate
+vocabulary. The current kernel can expose missing evidence and broad hypotheses but cannot
+localize most causal layers; use `human_attribution_required` until seeded ablations or
+deterministic layer evidence identify a cause. Never auto-apply a change. In particular:
+
+- `repair_evaluator` when the grader is gameable, uncalibrated, non-blind, or
+  unable to replay evidence;
+- `redesign_workflow_or_handoff` when the agent is locally correct but inputs,
+  ordering, ownership, or handoffs create the failure;
+- `compose_downstream_specialist` when a simple upstream role should remain
+  stable and another role should interpret or extend its output;
+- `no_change_freeze_candidate` when a simple deterministic role has a comparable
+  passing cohort, negative/boundary evidence, proportionate latency and cost,
+  no unresolved gate, and held-out shadow confirmation; and
+- `collect_more_evidence` or `human_attribution_required` when causality is not
+  localized.
+
+For simple deterministic roles, first ask whether an agent is needed at all. Prefer exact,
+property, metamorphic, or fuzz checks when they decide correctness. Keep any core agent
+minimal and put optional prediction, validation, and review in the workflow wrapper. The
+current kernel must not nominate a no-change freeze until runtime actor binding, criterion
+outcomes, negative evidence, latency/cost evidence, and held-out confirmation are recorded.
+
+## Independent Integrity Review
+
+Identity separation alone is not independence. Check shared parent sessions,
+model family, prompt or training lineage when available, reciprocal review
+cycles, ordering, blindness to self scores, contamination, and domain
+qualification. Use canaries, known-good/known-bad mutations, paraphrase and
+position perturbations, prompt-injection tests, task/grader bug audits, and human
+adjudication on held-out cases. A reviewer that fails these checks is itself an
+improvement target.
+
+Luna, Terra, Sol, and external reviewers are peers, not a permanent hierarchy.
+Effort controls cost and unresolved risk. Use bounded deterministic checks or
+Luna for routine completeness, Terra for nuanced integrity and attribution, and
+Sol only for persistent high-leverage ambiguity or a bounded redesign. Fable is
+a rare manual architecture escalation after unresolved high-consequence Codex
+adjudication; never auto-send private evidence.
+
+Store only privacy-safe summaries, categorical signals, hashes, and bounded
+evidence references. Never store raw transcripts, hidden reasoning, secrets,
+private source rows, or long source blobs. If independent review is unavailable,
+say so; do not fabricate it.
+
+Promotion requires a versioned candidate, held-out or shadow comparison against
+the prior version, explicit success and non-regression criteria, cost and latency
+measurement, rollback, and named human approval. Preserve prior attempts,
+profiles, evaluators, and instructions immutably.

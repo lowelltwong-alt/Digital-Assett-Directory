@@ -3,17 +3,17 @@
   "commands": [
     {
       "command": "python -m pytest tests/test_dad_local_deployment.py -q",
-      "evidence_summary": "Focused deployment suite passed with wrapper subprocess, hub locator, fail-closed, raw-fallback, machine-readable recovery guidance contract, operational recovery redaction, controlled unavailable-hub errors, user-local unavailable-ack audit fallback, and false-green probe regressions.",
+      "evidence_summary": "Fresh 2026-07-11 run passed 45 tests with wrapper subprocess, hub locator, fail-closed, raw-fallback, recovery-guidance, operational-redaction, unavailable-hub, audit-fallback, and false-green probe coverage.",
       "status": "passed"
     },
     {
       "command": "python -m digital_asset_directory.cli doctor --hub . --scope deployment",
-      "evidence_summary": "DAD repo deployment doctor returned deployment_ready=true with external invocation verified, probe locator writeback verified, recovery guidance available, and locator pointing to this hub.",
+      "evidence_summary": "Fresh 2026-07-11 DAD deployment doctor returned deployment_ready=true with install integrity, explicit hub resolution, locator agreement, stable shims, external invocation, operational attestation, Rust toolchains, and fail-closed unavailable policy verified.",
       "status": "passed"
     },
     {
       "command": "user-shim asset-dir doctor --scope deployment from two non-DAD repos",
-      "evidence_summary": "Stable user shim resolved the DAD hub through the user locator from two temporary non-DAD repos, with inside_hub=false and no target processed writes.",
+      "evidence_summary": "Fresh 2026-07-11 stable user-shim doctors resolved the DAD hub through the user locator from two isolated non-DAD directories, with inside_hub=false, external invocation verified, and both caller directories unchanged.",
       "status": "passed"
     },
     {
@@ -23,16 +23,16 @@
     },
     {
       "command": "user-shim asset-dir agent preflight --repo . --agent codex --task \"Goal 1 deployment smoke from outside DAD\"",
-      "evidence_summary": "Stable user shim ran agent preflight from a temporary non-DAD repo, returned a context pack, and did not create target processed or state directories.",
+      "evidence_summary": "Fresh 2026-07-11 stable user shim ran agent preflight from an isolated non-DAD directory, returned a context pack with no required learning acknowledgements, and left the caller directory unchanged.",
       "status": "passed"
     },
     {
       "command": "python -m digital_asset_directory.cli rust phase8-evidence-check",
-      "evidence_summary": "Rust read-only Phase 8 command-evidence checker returned phase8_evidence_structural_clean=true, issue_count=0, required_command_count=5, observed_command_count=6, human_review_status=pending, and phase8_human_gate_satisfied=false. This is structural evidence only; it does not rerun live deployment smoke tests or approve human gates.",
+      "evidence_summary": "Fresh 2026-07-11 Rust read-only checker returned phase8_evidence_structural_clean=true, issue_count=0, unsafe_string_count=0, required_command_count=5, observed_command_count=6, human_review_status=pending, and phase8_human_gate_satisfied=false. This remains structural evidence only and does not approve human gates.",
       "status": "passed"
     }
   ],
-  "created_at": "2026-07-05",
+  "created_at": "2026-07-11",
   "human_review_status": "pending",
   "schema_version": "dad.phase8.command-evidence.v1"
 }

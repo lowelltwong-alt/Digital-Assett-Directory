@@ -145,6 +145,21 @@ def test_dad_library_registries_validate_against_schemas():
         )
 
 
+def test_every_offering_declares_validation_owner_and_adoption_contract():
+    offerings = load_offerings(ROOT)["offerings"]
+
+    assert len(offerings) == 16
+    for offering in offerings:
+        assert offering["validation_refs"]
+        assert all((ROOT / ref).exists() for ref in offering["validation_refs"])
+        assert offering["owner_authority"].strip()
+        assert offering["adoption_semantics"].strip()
+        assert any(
+            term in offering["adoption_semantics"].lower()
+            for term in ("candidate", "pointer", "requires", "cannot", "no ")
+        )
+
+
 def test_harness_vs_enforcement_decision_model_is_cataloged():
     offerings = load_offerings(ROOT)["offerings"]
     needs = load_needs(ROOT)["needs"]
@@ -261,6 +276,329 @@ def test_dad_match_recommends_rust_parity_for_slow_python_test_task(tmp_path: Pa
     assert match["decision"] in {"save_for_future", "needs_human_review", "use_now"}
     assert match["methodology_id"] == "dad-usefulness-methodology-v0.1"
     assert "component_scores" in match
+
+
+@pytest.mark.parametrize(
+    ("task", "expected_first"),
+    [
+        (
+            "coding preflight profile test plan",
+            "dad:offering:ai-engineering-preflight",
+        ),
+        (
+            "governance review deterministic enforcement risk authority",
+            "dad:offering:harness-vs-deterministic-enforcement",
+        ),
+        (
+            "mail delivery protected repository dirty spool safety",
+            "dad:offering:repo-enrollment-mail-governance-safety-harness",
+        ),
+        (
+            "Rust performance migration profiling parity",
+            "dad:offering:rust-buildout-guide",
+        ),
+        (
+            "repository enrollment protected repo mail governance",
+            "dad:offering:repo-enrollment-mail-governance-safety-harness",
+        ),
+    ],
+)
+def test_golden_task_routes_specific_guidance_before_generic_rust(
+    tmp_path: Path, task: str, expected_first: str
+):
+    repo = _context_repo(tmp_path)
+
+    result = match_repo_offerings(ROOT, repo, task=task, limit=5)
+
+    assert result["matches"][0]["offering_id"] == expected_first
+    assert result["matches"][0]["route_specificity"] > 0
+    assert "not proof" in result["routing_basis"]
+
+
+def test_usage_can_explicitly_record_dependency_without_inferring_it(tmp_path: Path):
+    hub = tmp_path / "hub"
+    hub.mkdir()
+    repo = _context_repo(tmp_path)
+    policy = MailRepoPolicy(id="repo", path=repo, alias="repo")
+
+    result = record_usage(
+        hub,
+        repo,
+        asset_id="dad:offering:ai-engineering-preflight",
+        status="depends_on",
+        dependency_basis="explicit_repo_record",
+        recorded_by="unit-test",
+        source_ref="repo://repo/.digital-asset/dad-usage.jsonl",
+        mail_policies=[policy],
+    )
+
+    _validate("repo_asset_usage", result["usage"])
+    assert result["usage"]["status"] == "depends_on"
+    assert result["usage"]["dependency_basis"] == "explicit_repo_record"
+
+    candidate = record_usage(
+        hub,
+        repo,
+        asset_id="dad:offering:ai-engineering-preflight",
+        status="dependency_candidate",
+        dependency_basis="imported_candidate",
+        recorded_by="unit-test",
+        mail_policies=[policy],
+    )
+    _validate("repo_asset_usage", candidate["usage"])
+    assert candidate["usage"]["status"] == "dependency_candidate"
+    assert candidate["usage"]["usage_id"] != result["usage"]["usage_id"]
+
+
+def test_usage_dependency_requires_explicit_basis(tmp_path: Path):
+    hub = tmp_path / "hub"
+    hub.mkdir()
+    repo = _context_repo(tmp_path)
+
+    with pytest.raises(ValueError, match="requires dependency_basis"):
+        record_usage(
+            hub,
+            repo,
+            asset_id="dad:offering:ai-engineering-preflight",
+            status="depends_on",
+            recorded_by="unit-test",
+        )
+
+
+def test_usage_record_cli_forwards_confirmed_dependency_basis(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+):
+    hub = tmp_path / "hub"
+    repo = tmp_path / "repo"
+    hub.mkdir()
+    repo.mkdir()
+    monkeypatch.setattr(
+        "digital_asset_directory.cli._cfg",
+        lambda hub=None: SimpleNamespace(repo_root=hub, mail_repos=[], enrollment_repos=[]),
+    )
+
+    result = RUNNER.invoke(
+        app,
+        [
+            "usage",
+            "record",
+            "--hub",
+            str(hub),
+            "--repo",
+            str(repo),
+            "--asset",
+            "dad:offering:ai-engineering-preflight",
+            "--status",
+            "depends_on",
+            "--dependency-basis",
+            "human_reviewed",
+            "--recorded-by",
+            "Lowell",
+            "--adoption-id",
+            "review:phase-11-test",
+        ],
+    )
+
+    assert result.exit_code == 0
+    payload = json.loads(result.output)
+    assert payload["usage"]["status"] == "depends_on"
+    assert payload["usage"]["dependency_basis"] == "human_reviewed"
+
+
+def test_usage_record_cli_fails_closed_without_dependency_basis(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+):
+    hub = tmp_path / "hub"
+    repo = tmp_path / "repo"
+    hub.mkdir()
+    repo.mkdir()
+    monkeypatch.setattr(
+        "digital_asset_directory.cli._cfg",
+        lambda hub=None: SimpleNamespace(repo_root=hub, mail_repos=[], enrollment_repos=[]),
+    )
+
+    result = RUNNER.invoke(
+        app,
+        [
+            "usage",
+            "record",
+            "--hub",
+            str(hub),
+            "--repo",
+            str(repo),
+            "--asset",
+            "dad:offering:ai-engineering-preflight",
+            "--status",
+            "depends_on",
+        ],
+    )
+
+    assert result.exit_code == 2
+    assert "requires dependency_basis" in result.output
+
+
+def test_confirmed_dependency_bases_require_authority_evidence(tmp_path: Path):
+    hub = tmp_path / "hub"
+    repo = tmp_path / "repo"
+    hub.mkdir()
+    repo.mkdir()
+
+    with pytest.raises(ValueError, match="nonempty source_ref"):
+        record_usage(
+            hub,
+            repo,
+            asset_id="dad:offering:ai-engineering-preflight",
+            status="depends_on",
+            dependency_basis="explicit_repo_record",
+            recorded_by="unit-test",
+        )
+    with pytest.raises(ValueError, match="named non-generic reviewer"):
+        record_usage(
+            hub,
+            repo,
+            asset_id="dad:offering:ai-engineering-preflight",
+            status="depends_on",
+            dependency_basis="human_reviewed",
+            recorded_by="unknown",
+            adoption_id="review:test",
+        )
+    with pytest.raises(ValueError, match="named non-generic reviewer"):
+        record_usage(
+            hub,
+            repo,
+            asset_id="dad:offering:ai-engineering-preflight",
+            status="depends_on",
+            dependency_basis="human_reviewed",
+            recorded_by="human",
+            adoption_id="review:test",
+        )
+    with pytest.raises(ValueError, match="adoption_id or source_ref"):
+        record_usage(
+            hub,
+            repo,
+            asset_id="dad:offering:ai-engineering-preflight",
+            status="depends_on",
+            dependency_basis="human_reviewed",
+            recorded_by="Lowell",
+        )
+
+
+def test_distinct_human_dependency_review_pointers_have_distinct_usage_ids(tmp_path: Path):
+    hub = tmp_path / "hub"
+    repo = tmp_path / "repo"
+    hub.mkdir()
+    repo.mkdir()
+
+    first = record_usage(
+        hub,
+        repo,
+        asset_id="dad:offering:ai-engineering-preflight",
+        status="depends_on",
+        dependency_basis="human_reviewed",
+        recorded_by="Lowell",
+        adoption_id="review:first",
+    )
+    second = record_usage(
+        hub,
+        repo,
+        asset_id="dad:offering:ai-engineering-preflight",
+        status="depends_on",
+        dependency_basis="human_reviewed",
+        recorded_by="Lowell",
+        adoption_id="review:second",
+    )
+
+    assert first["usage"]["usage_id"] != second["usage"]["usage_id"]
+
+
+def test_usage_record_cli_rejects_unbound_human_review_claim(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+):
+    hub = tmp_path / "hub"
+    repo = tmp_path / "repo"
+    hub.mkdir()
+    repo.mkdir()
+    monkeypatch.setattr(
+        "digital_asset_directory.cli._cfg",
+        lambda hub=None: SimpleNamespace(repo_root=hub, mail_repos=[], enrollment_repos=[]),
+    )
+
+    result = RUNNER.invoke(
+        app,
+        [
+            "usage",
+            "record",
+            "--hub",
+            str(hub),
+            "--repo",
+            str(repo),
+            "--asset",
+            "dad:offering:ai-engineering-preflight",
+            "--status",
+            "depends_on",
+            "--dependency-basis",
+            "human_reviewed",
+        ],
+    )
+
+    assert result.exit_code == 2
+    assert "named non-generic reviewer" in result.output
+
+
+@pytest.mark.parametrize(
+    ("task", "expected_first"),
+    [
+        (
+            "review our enrollment rules before adding this repository",
+            "dad:offering:repo-enrollment-mail-governance-safety-harness",
+        ),
+        (
+            "design authority and governance controls",
+            "dad:offering:harness-vs-deterministic-enforcement",
+        ),
+        (
+            "profile slow Python parser before considering Rust",
+            "dad:offering:rust-buildout-guide",
+        ),
+        (
+            "write Python feature and tests",
+            "dad:offering:ai-engineering-preflight",
+        ),
+    ],
+)
+def test_task_family_routing_handles_paraphrases_and_negative_case(
+    tmp_path: Path, task: str, expected_first: str
+):
+    repo = _context_repo(tmp_path)
+
+    result = match_repo_offerings(ROOT, repo, task=task, limit=5)
+
+    assert result["matches"][0]["offering_id"] == expected_first
+    assert result["matches"][0]["route_intent_matches"]
+
+
+def test_declared_multi_intent_precedence_prefers_enrollment_safety(tmp_path: Path):
+    repo = _context_repo(tmp_path)
+
+    result = match_repo_offerings(
+        ROOT,
+        repo,
+        task="code governance mail controls for repository enrollment",
+        limit=5,
+    )
+
+    assert load_usefulness_methodology(ROOT)["intent_priority"] == [
+        "enrollment",
+        "mail",
+        "rust",
+        "governance",
+        "coding",
+    ]
+    assert (
+        result["matches"][0]["offering_id"]
+        == "dad:offering:repo-enrollment-mail-governance-safety-harness"
+    )
+    assert "['enrollment', 'mail', 'rust', 'governance', 'coding']" in result["routing_basis"]
 
 
 def test_best_case_usefulness_score_can_reach_use_now(tmp_path: Path):
@@ -1509,6 +1847,91 @@ def test_inventory_public_facing_git_state_redacts_branch_and_head(tmp_path: Pat
     assert record["git_state"]["branch"] == "redacted-public-facing"
     assert "feature/private-branch" not in serialized
     assert str(public_repo) not in serialized
+
+
+def test_inventory_unborn_repo_has_deterministic_explicit_head_identity(tmp_path: Path):
+    hub = tmp_path / "hub"
+    workspace = tmp_path / "workspace"
+    hub.mkdir()
+    unborn = _real_git_repo(workspace / "unborn")
+    source = SimpleNamespace(
+        id="workspace",
+        path=workspace,
+        enabled=True,
+        follow_symlinks=False,
+    )
+
+    first = reconcile_repo_inventory(hub, local_sources=[source], max_depth=1)["inventory"]
+    second = reconcile_repo_inventory(hub, local_sources=[source], max_depth=1)["inventory"]
+    first_record = first["records"][0]
+    second_record = second["records"][0]
+
+    assert first_record["git_state"]["git_detected"] is True
+    assert first_record["git_state"]["head"] == "UNBORN"
+    assert second_record["git_state"]["head"] == "UNBORN"
+    assert first["content_fingerprint"] == second["content_fingerprint"]
+    assert unborn.exists()
+
+
+def test_inventory_born_head_identity_is_unchanged_and_public_unborn_is_redacted(
+    tmp_path: Path,
+):
+    hub = tmp_path / "hub"
+    hub.mkdir()
+    born = _real_git_repo(tmp_path / "born")
+    (born / "README.md").write_text("born\n", encoding="utf-8")
+    subprocess.run(["git", "add", "README.md"], cwd=born, check=True, capture_output=True)
+    subprocess.run(
+        [
+            "git",
+            "-c",
+            "user.name=DAD Test",
+            "-c",
+            "user.email=dad-test@example.invalid",
+            "commit",
+            "-m",
+            "initial",
+        ],
+        cwd=born,
+        check=True,
+        capture_output=True,
+    )
+    expected_head = subprocess.run(
+        ["git", "rev-parse", "--short", "HEAD"],
+        cwd=born,
+        check=True,
+        capture_output=True,
+        text=True,
+    ).stdout.strip()
+    born_policy = EnrollmentRepoPolicy(
+        id="born",
+        path=born,
+        alias="born",
+        visibility="internal",
+        public_facing=False,
+        enrollment_enabled=True,
+    )
+
+    born_record = reconcile_repo_inventory(
+        hub, enrollment_policies=[born_policy], max_depth=1
+    )["inventory"]["records"][0]
+    assert born_record["git_state"]["head"] == expected_head
+
+    public_unborn = _real_git_repo(tmp_path / "public-unborn")
+    public_policy = EnrollmentRepoPolicy(
+        id="public-unborn",
+        path=public_unborn,
+        alias="public-unborn",
+        visibility="public",
+        public_facing=True,
+        enrollment_enabled=True,
+        local_paths_allowed=False,
+    )
+    public_record = reconcile_repo_inventory(
+        hub, enrollment_policies=[public_policy], max_depth=1
+    )["inventory"]["records"][0]
+    assert public_record["git_state"]["head"] == "redacted-public-facing"
+    assert "UNBORN" not in json.dumps(public_record)
 
 
 def test_inventory_nested_git_root_is_reported_duplicate_ignore(tmp_path: Path):

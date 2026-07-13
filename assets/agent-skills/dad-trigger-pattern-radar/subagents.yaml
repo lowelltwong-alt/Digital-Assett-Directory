@@ -1,0 +1,83 @@
+schema_version: dad_subagent_pack.v0_1
+pack_id: dad:subagent-pack:trigger-pattern-radar
+version: 0.1.0
+status: candidate
+ai_agnostic: true
+methodology_ref: registry/subagent-evaluation-methodology.json#0.1.0
+authority_boundary: >
+  Roles produce candidate trigger, board, dependency, and workflow evidence.
+  They cannot change instructions, schedule routines, notify people, mutate Git
+  or task systems, rank models, or promote patterns.
+roles:
+  - role_id: luna-trigger-observer
+    profile_role_id: luna_trigger_observer
+    evaluated_role_revision_ids: []
+    capability_ids: [bounded_evidence_inventory, trigger_pattern_discovery]
+    search_terms: [ambiguous trigger signal, unmatched event cluster, trigger coverage gap]
+    effort: low
+    mission: Inspect ambiguous or unmatched deterministic candidates, summarize coverage gaps, and emit bounded watch items without changing signatures.
+    required_output: [coverage, candidate_signals, suppressors, unknowns, escalation_decision]
+    stop_conditions: [private_payload_required, source_authority_unclear]
+  - role_id: neglected-worktree-triage-manager
+    profile_role_id: neglected_worktree_triage_manager
+    evaluated_role_revision_ids: []
+    capability_ids: [neglected_work_recovery, portfolio_attention_curatorship]
+    search_terms: [neglected worktree, stale dirty branch, forgotten work, missing next action]
+    effort: medium
+    mission: Distinguish abandoned, blocked, active, incubating, merged, superseded, and unknown worktrees using Git evidence plus project context.
+    required_output: [coverage, state_candidate, evidence, owner_and_next_action_gap, quiet_option, review_date]
+    stop_conditions: [age_is_only_evidence, mutation_requested_without_approval]
+  - role_id: portfolio-scrum-board-curator
+    profile_role_id: portfolio_scrum_board_curator
+    evaluated_role_revision_ids: []
+    capability_ids: [portfolio_attention_curatorship, workstream_planning]
+    search_terms: [scrum board, kanban portfolio, focus window, WIP limit, project manager]
+    effort: medium
+    mission: Populate a rebuildable candidate Scrum/Kanban board from observed evidence, optional focus windows, WIP limits, and explicit unknowns.
+    required_output: [candidate_board_delta, evidence_refs, dependency_candidates, wip_exceptions, human_confirmations]
+    stop_conditions: [projection_would_override_source_state, wip_would_be_hidden]
+  - role_id: research-project-workflow-steward
+    profile_role_id: research_project_workflow_steward
+    evaluated_role_revision_ids: []
+    capability_ids: [research_project_management, validation_design]
+    search_terms: [research project, evidence backlog, falsification, source coverage, decision readiness]
+    effort: medium
+    mission: Manage candidate research flow from question through source map, evidence collection, synthesis, falsification, decision readiness, and handoff.
+    required_output: [research_state_delta, source_coverage, evidence_gaps, falsification_status, decision_readiness, next_research_action]
+    stop_conditions: [source_count_used_as_readiness, counterevidence_missing]
+  - role_id: dependency-critical-frontier-analyst
+    profile_role_id: dependency_critical_frontier_analyst
+    evaluated_role_revision_ids: []
+    capability_ids: [dependency_frontier_analysis, validation_design]
+    search_terms: [dependency graph, unlock frontier, blocked chain, cycle, bottleneck]
+    effort: medium_or_high
+    mission: Propose typed dependency edges, find blocked chains, and identify the smallest bottleneck-relieving action.
+    required_output: [dependency_graph_delta, counterevidence, unlock_frontier, bottlenecks, validation_plan]
+    stop_conditions: [proposed_edge_used_as_blocker, centrality_used_as_truth]
+  - role_id: terra-trigger-pattern-judge
+    profile_role_id: terra_trigger_pattern_judge
+    evaluated_role_revision_ids: []
+    capability_ids: [trigger_pattern_discovery, escalation_judgment]
+    search_terms: [trigger dedupe, false positive, missed trigger, shadow trial, trigger revision]
+    effort: medium
+    mission: Consume feedback and candidate clusters, dedupe signatures, judge counterexamples, select a shadow test, and emit the smallest versioned revision diff.
+    required_output: [reuse_improve_new_reject, evidence_grade, feedback_summary, negative_cases, shadow_test, revision_diff, routing_rationale]
+    stop_conditions: [promotion_requested_without_trial, negative_cases_missing]
+  - role_id: sol-automation-workflow-architect
+    profile_role_id: sol_automation_workflow_architect
+    evaluated_role_revision_ids: []
+    capability_ids: [architecture_reasoning, trigger_pattern_discovery, governance_authority_safety]
+    search_terms: [automation architecture, cross-repo routine, reversible automation, kill criteria]
+    effort: high_or_xhigh_thresholded
+    mission: Design the smallest reversible automation workflow after cheaper lanes establish a real high-leverage pattern.
+    required_output: [workflow_contract, authority_gates, cost_model, rollback, kill_criteria, bounded_trial]
+    stop_conditions: [novel_pattern_not_evidenced, side_effect_gate_missing]
+  - role_id: terra-trigger-evaluation-grader
+    profile_role_id: terra_trigger_evaluation_grader
+    evaluated_role_revision_ids: []
+    capability_ids: [trigger_trial_evaluation, implementation_review]
+    search_terms: [trigger grader, useful action precision, misses, dismissals, harm, compute fit]
+    effort: medium
+    mission: Independently grade a trigger trial for useful-action precision, misses, harm, compute fit, authority compliance, and generalizability.
+    required_output: [evaluation_methodology_version, comparison_cohort, evidence_and_counterevidence, useful_action_precision, misses, dismissals_and_harm, compute_fit, authority_gate_status, feedback_disposition]
+    stop_conditions: [unlabeled_silence_counted_as_negative, self_review_used_as_independent]

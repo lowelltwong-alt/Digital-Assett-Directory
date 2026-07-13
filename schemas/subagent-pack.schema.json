@@ -1,0 +1,89 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://local.digital-asset-directory/schemas/subagent-pack.schema.json",
+  "title": "Registered Subagent Role Pack",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "pack_id",
+    "version",
+    "status",
+    "ai_agnostic",
+    "methodology_ref",
+    "authority_boundary",
+    "roles"
+  ],
+  "properties": {
+    "schema_version": {"const": "dad_subagent_pack.v0_1"},
+    "pack_id": {"type": "string", "pattern": "^dad:subagent-pack:[a-z0-9][a-z0-9-]*$"},
+    "version": {"type": "string", "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+$"},
+    "status": {"enum": ["candidate", "active", "deprecated", "retired"]},
+    "ai_agnostic": {"const": true},
+    "methodology_ref": {"type": "string", "pattern": "^registry/subagent-evaluation-methodology\\.json#[0-9]+\\.[0-9]+\\.[0-9]+$"},
+    "authority_boundary": {"type": "string", "minLength": 1, "maxLength": 2000},
+    "routing_policy": {"type": "object", "additionalProperties": true},
+    "roles": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "role_id",
+          "profile_role_id",
+          "capability_ids",
+          "search_terms",
+          "effort",
+          "mission",
+          "required_output",
+          "stop_conditions"
+        ],
+        "properties": {
+          "role_id": {"type": "string", "pattern": "^[a-z][a-z0-9-]*$"},
+          "profile_role_id": {"type": "string", "pattern": "^[a-z][a-z0-9_]*$"},
+          "capability_ids": {
+            "type": "array",
+            "minItems": 1,
+            "uniqueItems": true,
+            "items": {"type": "string", "pattern": "^[a-z][a-z0-9_]*$"}
+          },
+          "search_terms": {
+            "type": "array",
+            "minItems": 1,
+            "uniqueItems": true,
+            "items": {"type": "string", "minLength": 1}
+          },
+          "effort": {"type": "string", "minLength": 1},
+          "mission": {"type": "string", "minLength": 1},
+          "required_input": {
+            "type": "array",
+            "uniqueItems": true,
+            "items": {"type": "string", "minLength": 1}
+          },
+          "required_output": {
+            "type": "array",
+            "minItems": 1,
+            "uniqueItems": true,
+            "items": {"type": "string", "minLength": 1}
+          },
+          "stop_conditions": {
+            "type": "array",
+            "minItems": 1,
+            "uniqueItems": true,
+            "items": {"type": "string", "minLength": 1}
+          },
+          "evaluated_role_revision_ids": {
+            "type": "array",
+            "uniqueItems": true,
+            "default": [],
+            "items": {
+              "type": "string",
+              "pattern": "^dad:role-profile-revision:[a-z0-9-]+:v[0-9]+$"
+            }
+          }
+        }
+      }
+    }
+  }
+}

@@ -222,8 +222,8 @@ def test_phase8_human_gate_review_packet_is_review_only():
     assert packet["schema_version"] == "dad.roadmap.human-gate-review-packet.v1"
     assert packet["phase_id"] == "phase-8-dad-local-deployment"
     assert packet["packet_status"] == "review_input_only"
-    assert packet["recommended_declared_status"] == "awaiting_human_gate"
-    assert packet["computed_status"] == "awaiting_human_gate"
+    assert packet["recommended_declared_status"] == "complete"
+    assert packet["computed_status"] == "complete"
     assert packet["human_gate_satisfied"] is False
     assert packet["agent_review_satisfies_gate"] is False
     assert any("cannot approve a human gate" in risk for risk in packet["false_confidence_risks"])
@@ -231,7 +231,7 @@ def test_phase8_human_gate_review_packet_is_review_only():
     assert "approve public release" in packet["authority_boundary"]
     assert "authorize enrollment" in packet["authority_boundary"]
     assert "cross-repo writes" in packet["authority_boundary"]
-    assert all(gate["current_status"] == "unverified" for gate in packet["human_gates"])
+    assert all(gate["current_status"] == "verified" for gate in packet["human_gates"])
     assert all(gate["human_review_required"] is True for gate in packet["human_gates"])
     assert all(gate["agent_review_satisfies_gate"] is False for gate in packet["human_gates"])
     assert all(
@@ -248,6 +248,7 @@ def test_phase8_human_gate_review_packet_is_review_only():
 
 def test_roadmap_human_gate_review_packet_cli_writes_review_only_packet(tmp_path: Path):
     output = tmp_path / "phase8.packet.json"
+    gate_evidence_before = _load_json("roadmap/gate-evidence.json")
 
     result = RUNNER.invoke(
         app,
@@ -268,8 +269,7 @@ def test_roadmap_human_gate_review_packet_cli_writes_review_only_packet(tmp_path
     assert packet["packet_status"] == "review_input_only"
     assert packet["human_gate_satisfied"] is False
     assert packet["agent_review_satisfies_gate"] is False
-    gate_evidence = _load_json("roadmap/gate-evidence.json")
-    assert "phase-8-local-install-reviewed" not in gate_evidence["human_gates"]
+    assert _load_json("roadmap/gate-evidence.json") == gate_evidence_before
 
 
 def test_phase8_command_evidence_validation_rejects_stale_or_promoted_packet(tmp_path: Path):

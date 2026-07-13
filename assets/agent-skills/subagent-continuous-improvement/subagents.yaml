@@ -1,42 +1,145 @@
 schema_version: dad_subagent_pack.v0_1
 pack_id: dad:subagent-pack:subagent-continuous-improvement
-version: 0.1.0
-status: active
+version: 0.2.0
+status: candidate
 ai_agnostic: true
-trigger: after_each_subagent_attempt_for_reusable_role_or_instruction_set
-fallback: explicit_local_checklists_with_independent_review_unavailable_status
 methodology_ref: registry/subagent-evaluation-methodology.json#0.1.0
 authority_boundary: >
-  Roles create candidate evidence only; they cannot change instructions,
-  promote revisions, rank models, expose hidden reasoning, or write private data.
-review_model: >
-  Bidirectional peer-check mesh. Any different model may independently review
-  another; effort controls cost and risk, not standing authority.
+  Roles create privacy-safe candidate evidence only. They cannot turn self
+  predictions into proof, rank domains or model families, change instructions
+  or workflows, promote revisions, dispatch external review, or bypass a human
+  decision and rollback gate.
+routing_policy:
+  universal_loop_ref: registry/subagent-evaluation-profile-registry.json#universal_loop
+  domain_profiles_ref: registry/subagent-evaluation-profile-registry.json#profiles
+  integrity_command: asset-dir subagents integrity-review
+  prediction_receipt_command: asset-dir subagents self-assess
+  auto_apply: false
+  human_gate_required: true
 roles:
-  - role_id: luna-routine-observer
-    effort: low
-    cadence: every_attempt
-    mission: Check receipt completeness, obvious gates, evidence gaps, and normalized recurrence; may challenge any peer on bounded evidence.
-  - role_id: routing-auditor
-    effort: medium
-    default_judge: terra
-    mission: Assess task and material/dataset complexity, size, ambiguity, sensitivity, consequence, and routing proportionality.
-    required_output: [factor_rationale, cheaper_or_stronger_route, no_inflight_switch]
-    rule: Recommend only; never silently switch an in-flight agent.
-  - role_id: terra-calibration-judge
-    effort: medium
-    escalation_effort: high
-    starts_when: [luna_threshold_hit, gate_failure, score_below_70, reviewer_delta_at_least_10, privacy_or_authority_risk]
-    mission: Independently judge evidence, comparable context, counterevidence, exception candidacy, and Sol proportionality; may review any peer.
-  - role_id: sol-instruction-improver
-    effort: high_or_xhigh
-    starts_when: [concrete_gate_failure, same_failure_class_2_of_last_5, same_failure_class_3_of_last_10_high_noise]
-    mission: Propose the smallest testable instruction change with success and rollback criteria.
-    human_gate_required: true
-  - role_id: fable-external-architecture-escalation
-    effort: manual_high_or_xhigh
-    cadence: rare_thresholded_only
-    starts_when: explicit_human_copy_paste_for_unresolved_super_high_risk_architecture_disagreement
-    mission: Fairly review all sides, explain pros and cons, red-team and premortem options, decide or recommend, and propose a non-binary synthesis when better.
-    human_gate_required: true
-required_output: [existing_attempt_evaluation_record_ref, self_review_summary, independent_review_summary_or_unavailable, routing_audit_with_factor_rationale, gate_status_and_evidence_refs, threshold_decision, privacy_safe_exception_or_no_exception_summary, human_instruction_change_decision_when_applicable]
+  - role_id: pre-outcome-self-prediction-observer
+    profile_role_id: pre_outcome_self_prediction_observer
+    capability_ids:
+      - pre_outcome_self_prediction
+      - validation_design
+      - governance_authority_safety
+    search_terms:
+      - self grading
+      - pre outcome prediction
+      - calibration
+      - falsifier
+    effort: low_or_workflow_wrapper
+    mission: >
+      When calibration is decision-relevant, ask the orchestrator to seal criterion
+      predictions before outcome access. Treat an ordinary DAD receipt as chronology,
+      not proof of actor identity or blindness; keep the wrapper outside simple agents.
+    required_input:
+      - locked_task_contract
+      - explicit_evaluation_profile
+      - pre_outcome_input_evidence_refs
+    required_output:
+      - actor_claimed_prediction_receipt_or_orchestrator_seal
+      - criterion_probabilities_and_confidence
+      - falsifiers_and_limitations
+    stop_conditions:
+      - outcome_evidence_is_already_visible
+      - evaluation_profile_is_missing_or_context_mismatched
+      - private_payload_would_be_required
+  - role_id: evaluation-integrity-auditor
+    profile_role_id: evaluation_integrity_auditor
+    capability_ids:
+      - evaluator_integrity_audit
+      - implementation_review
+      - governance_authority_safety
+      - validation_design
+    search_terms:
+      - self grade cheating
+      - evaluator integrity
+      - blind review
+      - reciprocal review
+      - grade gaming
+    effort: medium_high
+    mission: >
+      Independently audit whether evaluation evidence, reviewer identity,
+      blindness, lineage, ordering, domain qualification, environment replay,
+      and anti-gaming checks support only the claims actually made.
+    required_input:
+      - immutable_attempt_and_evaluation_records
+      - self_assessment_receipt_or_missing_status
+      - selected_profile_or_universal_only_status
+    required_output:
+      - strict_integrity_report
+      - forged_or_unverifiable_grade_signals
+      - evaluator_improvement_candidates
+      - explicit_unknowns
+    stop_conditions:
+      - evaluator_was_coached_with_self_score_before_blind_verdict
+      - evidence_cannot_be_replayed_or_bounded
+      - report_would_promote_or_auto_change_anything
+  - role_id: improvement-layer-router
+    profile_role_id: improvement_layer_router
+    capability_ids:
+      - improvement_layer_attribution
+      - root_cause_analysis
+      - escalation_judgment
+      - governance_authority_safety
+    search_terms:
+      - agent improvement
+      - workflow improvement
+      - fault attribution
+      - evaluator repair
+      - downstream specialist
+    effort: medium_high
+    mission: >
+      Test competing causal hypotheses and route only deterministically localized
+      evidence to a system layer. Otherwise choose observe-more or human attribution;
+      vocabulary breadth is not evidence that causal routing has been implemented.
+    required_input:
+      - integrity_report
+      - comparable_attempt_cohort
+      - counterevidence
+      - cost_latency_and_risk_context
+    required_output:
+      - candidate_target_layers
+      - candidate_disposition
+      - competing_hypotheses_and_falsifiers
+      - heldout_shadow_trial_brief
+      - rollback_and_human_gate
+    stop_conditions:
+      - causal_layer_is_not_localized
+      - comparison_crosses_domain_profiles
+      - only_one_unverified_grade_supports_change
+      - proposed_change_has_no_non_regression_test
+  - role_id: domain-and-simplicity-steward
+    profile_role_id: domain_and_simplicity_steward
+    capability_ids:
+      - domain_evaluation_profile_stewardship
+      - preserve_simple_workflow_design
+      - validation_design
+      - escalation_judgment
+    search_terms:
+      - domain evaluation
+      - financial algorithm review
+      - archaeology checker
+      - preserve simple agent
+      - workflow composition
+    effort: medium_with_domain_expert_escalation
+    mission: >
+      Check profile applicability and expert requirements, forbid cross-domain
+      leaderboards, and protect stable deterministic roles from reflective
+      prompt bloat by moving orthogonal intelligence into a workflow wrapper or
+      downstream specialist.
+    required_input:
+      - task_and_domain_contract
+      - profile_applicability_boundaries
+      - deterministic_negative_and_latency_evidence
+      - comparable_attempt_cohort
+    required_output:
+      - profile_fit_or_human_gate
+      - domain_expert_requirement
+      - preserve_simple_or_compose_specialist_candidate_only_after_executable_evidence
+      - danger_if_misapplied
+    stop_conditions:
+      - domain_profile_fit_is_uncertain
+      - qualified_domain_review_is_required_but_missing
+      - simple_role_has_unresolved_semantic_or_safety_failure

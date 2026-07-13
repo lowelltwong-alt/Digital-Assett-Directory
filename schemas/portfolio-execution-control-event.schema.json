@@ -1,0 +1,72 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "dad://schemas/portfolio-execution-control-event.v1",
+  "title": "DAD Portfolio Execution Control Event",
+  "description": "Strict authority-plane events stored in the existing Portfolio OS ledger. These events never execute work; approval references require an external trusted verifier.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["event_id", "event_kind", "schema_version", "stream_id", "prev_event_id", "recorded_at", "redaction_count", "payload"],
+  "properties": {
+    "event_id": {"type": "string", "pattern": "^dad:portfolio-event:[0-9a-f-]{36}$"},
+    "event_kind": {"enum": ["execution_lease_requested", "execution_lease_granted", "execution_lease_revoked", "dispatch_intent_proposed", "dispatch_intent_approved", "dispatch_intent_revoked", "dispatch_reconciliation_recorded"]},
+    "schema_version": {"const": "dad.portfolio_execution_control_event.v1"},
+    "stream_id": {"type": "string", "minLength": 1},
+    "prev_event_id": {"type": "string", "pattern": "^$|^dad:portfolio-event:[0-9a-f-]{36}$"},
+    "command_id": {"type": "string", "pattern": "^dad:portfolio-command:[0-9a-f-]{36}$"},
+    "recorded_at": {"type": "string", "format": "date-time"},
+    "redaction_count": {"type": "integer", "minimum": 0},
+    "payload": {"type": "object"}
+  },
+  "allOf": [
+    {"if": {"properties": {"event_kind": {"const": "execution_lease_requested"}}}, "then": {"properties": {"payload": {"$ref": "#/$defs/lease_request"}}}},
+    {"if": {"properties": {"event_kind": {"const": "execution_lease_granted"}}}, "then": {"properties": {"payload": {"$ref": "#/$defs/lease_grant"}}}},
+    {"if": {"properties": {"event_kind": {"const": "execution_lease_revoked"}}}, "then": {"properties": {"payload": {"$ref": "#/$defs/lease_revoke"}}}},
+    {"if": {"properties": {"event_kind": {"const": "dispatch_intent_proposed"}}}, "then": {"properties": {"payload": {"$ref": "#/$defs/dispatch_proposal"}}}},
+    {"if": {"properties": {"event_kind": {"const": "dispatch_intent_approved"}}}, "then": {"properties": {"payload": {"$ref": "#/$defs/dispatch_approval"}}}},
+    {"if": {"properties": {"event_kind": {"const": "dispatch_intent_revoked"}}}, "then": {"properties": {"payload": {"$ref": "#/$defs/dispatch_revoke"}}}},
+    {"if": {"properties": {"event_kind": {"const": "dispatch_reconciliation_recorded"}}}, "then": {"properties": {"payload": {"$ref": "#/$defs/reconciliation"}}}}
+  ],
+  "$defs": {
+    "lease_id": {"type": "string", "pattern": "^dad:portfolio-lease:[0-9a-f-]{36}$"},
+    "dispatch_id": {"type": "string", "pattern": "^dad:portfolio-dispatch:[0-9a-f-]{36}$"},
+    "scope_digest": {"type": "string", "pattern": "^dad:portfolio-(?:lease|dispatch)-scope:[0-9a-f]{64}$"},
+    "string_list": {"type": "array", "minItems": 1, "items": {"type": "string", "minLength": 1}, "uniqueItems": true},
+    "lease_request": {
+      "type": "object", "additionalProperties": false,
+      "required": ["workstream_id", "lease_id", "owner_id", "owner_kind", "repo_binding_id", "action_classes", "requested_paths", "not_before", "expires_at", "return_state", "rationale_code", "supersedes_lease_id", "scope_digest"],
+      "properties": {
+        "workstream_id": {"type": "string", "minLength": 1}, "lease_id": {"$ref": "#/$defs/lease_id"}, "owner_id": {"type": "string", "minLength": 1}, "owner_kind": {"enum": ["human", "agent", "team"]}, "repo_binding_id": {"type": "string", "minLength": 1},
+        "action_classes": {"type": "array", "minItems": 1, "items": {"enum": ["inspect", "plan", "implement", "validate"]}, "uniqueItems": true}, "requested_paths": {"$ref": "#/$defs/string_list"}, "not_before": {"type": "string", "format": "date-time"}, "expires_at": {"type": "string", "format": "date-time"},
+        "return_state": {"enum": ["proposed", "active", "paused", "snoozed", "incubating", "merged", "superseded", "archived"]}, "rationale_code": {"type": "string", "minLength": 1}, "supersedes_lease_id": {"type": "string"}, "scope_digest": {"$ref": "#/$defs/scope_digest"}
+      }
+    },
+    "lease_grant": {
+      "type": "object", "additionalProperties": false, "required": ["workstream_id", "lease_id", "scope_digest", "granted_by", "approval_id"],
+      "properties": {"workstream_id": {"type": "string", "minLength": 1}, "lease_id": {"$ref": "#/$defs/lease_id"}, "scope_digest": {"$ref": "#/$defs/scope_digest"}, "granted_by": {"type": "string", "minLength": 1}, "approval_id": {"type": "string", "minLength": 1}}
+    },
+    "lease_revoke": {
+      "type": "object", "additionalProperties": false, "required": ["workstream_id", "lease_id", "revoked_by", "approval_id", "reason_code"],
+      "properties": {"workstream_id": {"type": "string", "minLength": 1}, "lease_id": {"$ref": "#/$defs/lease_id"}, "revoked_by": {"type": "string", "minLength": 1}, "approval_id": {"type": "string", "minLength": 1}, "reason_code": {"type": "string", "minLength": 1}}
+    },
+    "dispatch_proposal": {
+      "type": "object", "additionalProperties": false,
+      "required": ["workstream_id", "dispatch_revision_id", "lease_id", "repo_binding_id", "action", "worker_revision_id", "checker_revision_id", "task_summary", "requested_paths", "acceptance_refs", "validation_commands", "authority_refs", "expected_repo_snapshot", "forbidden_actions", "scope_digest"],
+      "properties": {
+        "workstream_id": {"type": "string", "minLength": 1}, "dispatch_revision_id": {"$ref": "#/$defs/dispatch_id"}, "lease_id": {"$ref": "#/$defs/lease_id"}, "repo_binding_id": {"type": "string", "minLength": 1}, "action": {"enum": ["inspect", "plan", "implement", "validate"]}, "worker_revision_id": {"type": "string", "minLength": 1}, "checker_revision_id": {"type": "string", "minLength": 1}, "task_summary": {"type": "string", "minLength": 1, "maxLength": 500},
+        "requested_paths": {"$ref": "#/$defs/string_list"}, "acceptance_refs": {"$ref": "#/$defs/string_list"}, "validation_commands": {"$ref": "#/$defs/string_list"}, "authority_refs": {"$ref": "#/$defs/string_list"}, "expected_repo_snapshot": {"type": "string", "minLength": 1}, "forbidden_actions": {"$ref": "#/$defs/string_list"}, "scope_digest": {"$ref": "#/$defs/scope_digest"}
+      }
+    },
+    "dispatch_approval": {
+      "type": "object", "additionalProperties": false, "required": ["workstream_id", "dispatch_revision_id", "lease_id", "proposal_scope_digest", "lease_scope_digest", "approved_by", "approval_id", "expires_at"],
+      "properties": {"workstream_id": {"type": "string", "minLength": 1}, "dispatch_revision_id": {"$ref": "#/$defs/dispatch_id"}, "lease_id": {"$ref": "#/$defs/lease_id"}, "proposal_scope_digest": {"$ref": "#/$defs/scope_digest"}, "lease_scope_digest": {"$ref": "#/$defs/scope_digest"}, "approved_by": {"type": "string", "minLength": 1}, "approval_id": {"type": "string", "minLength": 1}, "expires_at": {"type": "string", "format": "date-time"}}
+    },
+    "dispatch_revoke": {
+      "type": "object", "additionalProperties": false, "required": ["workstream_id", "dispatch_revision_id", "revoked_by", "approval_id", "reason_code"],
+      "properties": {"workstream_id": {"type": "string", "minLength": 1}, "dispatch_revision_id": {"$ref": "#/$defs/dispatch_id"}, "revoked_by": {"type": "string", "minLength": 1}, "approval_id": {"type": "string", "minLength": 1}, "reason_code": {"type": "string", "minLength": 1}}
+    },
+    "reconciliation": {
+      "type": "object", "additionalProperties": false, "required": ["workstream_id", "dispatch_revision_id", "attempt_id", "dispatch_scope_digest", "observed_disposition", "evidence_refs", "decided_by", "approval_id"],
+      "properties": {"workstream_id": {"type": "string", "minLength": 1}, "dispatch_revision_id": {"$ref": "#/$defs/dispatch_id"}, "attempt_id": {"type": "string", "minLength": 1}, "dispatch_scope_digest": {"$ref": "#/$defs/scope_digest"}, "observed_disposition": {"enum": ["succeeded", "failed", "aborted", "outcome_unknown"]}, "evidence_refs": {"$ref": "#/$defs/string_list"}, "decided_by": {"type": "string", "minLength": 1}, "approval_id": {"type": "string", "minLength": 1}}
+    }
+  }
+}

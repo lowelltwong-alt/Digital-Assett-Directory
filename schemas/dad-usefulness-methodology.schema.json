@@ -10,6 +10,11 @@
     "methodology_version": {"type": "string", "minLength": 1},
     "authority_boundary": {"type": "string", "minLength": 1},
     "scoring_formula": {"type": "string", "minLength": 1},
+    "intent_priority": {
+      "type": "array",
+      "items": {"enum": ["enrollment", "mail", "rust", "governance", "coding"]},
+      "uniqueItems": true
+    },
     "weights": {
       "type": "object",
       "required": [

@@ -1,0 +1,557 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://local.digital-asset-directory/schemas/subagent-evaluation-integrity-report.schema.json",
+  "title": "Subagent Evaluation Integrity Report",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "generated_at",
+    "methodology",
+    "profile_selection",
+    "source_snapshot",
+    "report_status",
+    "score_authority",
+    "attempt_reviews",
+    "summary",
+    "anti_gaming_checks",
+    "methodology_limitations",
+    "material_fingerprint",
+    "authority_boundary"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": "dad.subagent.evaluation_integrity_report.v1"
+    },
+    "generated_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "methodology": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "methodology_id",
+        "methodology_version",
+        "source_sha256",
+        "formula",
+        "uncertainty_handling"
+      ],
+      "properties": {
+        "methodology_id": {
+          "const": "dad:methodology:subagent-evaluation-integrity"
+        },
+        "methodology_version": {
+          "const": "0.1.0"
+        },
+        "source_sha256": {
+          "type": "string",
+          "pattern": "^sha256:[0-9a-f]{64}$"
+        },
+        "formula": {
+          "const": "categorical_rule_projection_no_composite_score"
+        },
+        "uncertainty_handling": {
+          "const": "missing_or_unverifiable_evidence_blocks_clearance_and_routes_to_collect_more_evidence"
+        }
+      }
+    },
+    "profile_selection": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "profile_id",
+        "status",
+        "profile_version",
+        "profile_sha256",
+        "cross_domain_comparison_forbidden"
+      ],
+      "properties": {
+        "profile_id": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "pattern": "^dad:evaluation-profile:[a-z0-9-]+$"
+        },
+        "status": {
+          "enum": [
+            "universal_only",
+            "explicit_candidate_unverified"
+          ]
+        },
+        "profile_version": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+$"
+        },
+        "profile_sha256": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "pattern": "^sha256:[0-9a-f]{64}$"
+        },
+        "cross_domain_comparison_forbidden": {
+          "const": true
+        }
+      }
+    },
+    "source_snapshot": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "attempt_count",
+        "evaluation_count",
+        "self_assessment_count",
+        "source_sha256"
+      ],
+      "properties": {
+        "attempt_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "evaluation_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "self_assessment_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "source_sha256": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "attempts",
+            "evaluations",
+            "self_assessments",
+            "profiles"
+          ],
+          "properties": {
+            "attempts": {
+              "type": "string",
+              "pattern": "^sha256:[0-9a-f]{64}$"
+            },
+            "evaluations": {
+              "type": "string",
+              "pattern": "^sha256:[0-9a-f]{64}$"
+            },
+            "self_assessments": {
+              "type": "string",
+              "pattern": "^sha256:[0-9a-f]{64}$"
+            },
+            "profiles": {
+              "type": "string",
+              "pattern": "^sha256:[0-9a-f]{64}$"
+            }
+          }
+        }
+      }
+    },
+    "report_status": {
+      "enum": [
+        "no_evidence",
+        "insufficient_integrity",
+        "reviewable_candidate"
+      ]
+    },
+    "score_authority": {
+      "const": "self_assessment_is_prediction_telemetry_not_proof_or_promotion_authority"
+    },
+    "attempt_reviews": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/attempt_review"
+      }
+    },
+    "summary": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "disposition_counts",
+        "target_layer_counts",
+        "portfolio_signals"
+      ],
+      "properties": {
+        "disposition_counts": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/count"
+          }
+        },
+        "target_layer_counts": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/count"
+          }
+        },
+        "portfolio_signals": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {
+            "type": "string",
+            "pattern": "^[a-z][a-z0-9_]*$"
+          }
+        }
+      }
+    },
+    "anti_gaming_checks": {
+      "type": "array",
+      "minItems": 5,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "check_id",
+          "status",
+          "signals"
+        ],
+        "properties": {
+          "check_id": {
+            "type": "string",
+            "pattern": "^[a-z][a-z0-9_]*$"
+          },
+          "status": {
+            "enum": [
+              "run",
+              "partial",
+              "not_supported_by_current_records"
+            ]
+          },
+          "signals": {
+            "type": "array",
+            "uniqueItems": true,
+            "items": {
+              "type": "string",
+              "pattern": "^[a-z][a-z0-9_]*$"
+            }
+          }
+        }
+      }
+    },
+    "methodology_limitations": {
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": {
+        "type": "string",
+        "minLength": 10
+      }
+    },
+    "material_fingerprint": {
+      "type": "string",
+      "pattern": "^sha256:[0-9a-f]{64}$"
+    },
+    "authority_boundary": {
+      "type": "string",
+      "minLength": 50
+    }
+  },
+  "$defs": {
+    "count": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "count"
+      ],
+      "properties": {
+        "id": {
+          "type": "string",
+          "pattern": "^[a-z][a-z0-9_]*$"
+        },
+        "count": {
+          "type": "integer",
+          "minimum": 0
+        }
+      }
+    },
+    "attempt_review": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "review_id",
+        "attempt_id",
+        "role_revision_id",
+        "terminal_status",
+        "self_assessment",
+        "independent_review",
+        "evaluator_integrity",
+        "attribution",
+        "recommended_disposition",
+        "human_gate_required",
+        "auto_apply",
+        "signals"
+      ],
+      "properties": {
+        "review_id": {
+          "type": "string",
+          "pattern": "^dad:subagent-integrity-review:[a-f0-9]{20}$"
+        },
+        "attempt_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "role_revision_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "terminal_status": {
+          "enum": [
+            "completed",
+            "failed",
+            "cancelled",
+            "interrupted",
+            "unknown"
+          ]
+        },
+        "self_assessment": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "status",
+            "count",
+            "received_before_recorded_attempt_end",
+            "actor_binding",
+            "calibration_status",
+            "profile_match",
+            "criterion_coverage",
+            "signals"
+          ],
+          "properties": {
+            "status": {
+              "enum": [
+                "missing",
+                "receipt_before_recorded_attempt_end",
+                "receipt_after_recorded_attempt_end",
+                "attempt_end_missing",
+                "conflicting_records"
+              ]
+            },
+            "count": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "received_before_recorded_attempt_end": {
+              "type": [
+                "boolean",
+                "null"
+              ]
+            },
+            "actor_binding": {
+              "enum": [
+                "missing",
+                "mismatch",
+                "claimed_match_unverified",
+                "runtime_verified"
+              ]
+            },
+            "calibration_status": {
+              "enum": [
+                "missing",
+                "not_available_missing_criterion_outcomes",
+                "calibrated_candidate",
+                "miscalibrated_candidate"
+              ]
+            },
+            "profile_match": {
+              "enum": [
+                "match",
+                "mismatch",
+                "not_selected",
+                "missing"
+              ]
+            },
+            "criterion_coverage": {
+              "enum": [
+                "complete",
+                "partial",
+                "not_selected",
+                "missing"
+              ]
+            },
+            "signals": {
+              "type": "array",
+              "uniqueItems": true,
+              "items": {
+                "type": "string",
+                "pattern": "^[a-z][a-z0-9_]*$"
+              }
+            }
+          }
+        },
+        "independent_review": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "status",
+            "claimed_count",
+            "identity_verified_count",
+            "different_model_family_count",
+            "domain_expert_review_count",
+            "blind_review_status",
+            "lineage_status",
+            "reciprocal_cycle_detected",
+            "signals"
+          ],
+          "properties": {
+            "status": {
+              "enum": [
+                "missing",
+                "claim_unverified",
+                "identity_verified_integrity_incomplete",
+                "reviewable_candidate"
+              ]
+            },
+            "claimed_count": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "identity_verified_count": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "different_model_family_count": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "domain_expert_review_count": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "blind_review_status": {
+              "enum": [
+                "not_recorded",
+                "attested_candidate"
+              ]
+            },
+            "lineage_status": {
+              "enum": [
+                "not_available",
+                "common_lineage_detected",
+                "distinct_parent_candidate"
+              ]
+            },
+            "reciprocal_cycle_detected": {
+              "type": "boolean"
+            },
+            "signals": {
+              "type": "array",
+              "uniqueItems": true,
+              "items": {
+                "type": "string",
+                "pattern": "^[a-z][a-z0-9_]*$"
+              }
+            }
+          }
+        },
+        "evaluator_integrity": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "status",
+            "signals"
+          ],
+          "properties": {
+            "status": {
+              "enum": [
+                "not_reviewable",
+                "integrity_incomplete",
+                "reviewable_candidate"
+              ]
+            },
+            "signals": {
+              "type": "array",
+              "uniqueItems": true,
+              "items": {
+                "type": "string",
+                "pattern": "^[a-z][a-z0-9_]*$"
+              }
+            }
+          }
+        },
+        "attribution": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "status",
+            "target_layers",
+            "signals"
+          ],
+          "properties": {
+            "status": {
+              "enum": [
+                "unresolved",
+                "candidate"
+              ]
+            },
+            "target_layers": {
+              "type": "array",
+              "minItems": 1,
+              "uniqueItems": true,
+              "items": {
+                "enum": [
+                  "agent_instruction",
+                  "model_route",
+                  "tool",
+                  "input_contract",
+                  "context_or_data",
+                  "workflow",
+                  "handoff",
+                  "evaluation_harness",
+                  "reviewer",
+                  "domain_overlay",
+                  "downstream_specialist",
+                  "preserve_simple",
+                  "observe_more"
+                ]
+              }
+            },
+            "signals": {
+              "type": "array",
+              "uniqueItems": true,
+              "items": {
+                "type": "string",
+                "pattern": "^[a-z][a-z0-9_]*$"
+              }
+            }
+          }
+        },
+        "recommended_disposition": {
+          "enum": [
+            "no_change_freeze_candidate",
+            "collect_more_evidence",
+            "repair_task_or_rubric",
+            "repair_evaluator",
+            "revise_agent_instruction",
+            "change_model_or_effort_route",
+            "change_context_or_data",
+            "change_tool_or_environment",
+            "redesign_workflow_or_handoff",
+            "compose_downstream_specialist",
+            "require_domain_expert",
+            "retire_or_supersede",
+            "human_attribution_required"
+          ]
+        },
+        "human_gate_required": {
+          "const": true
+        },
+        "auto_apply": {
+          "const": false
+        },
+        "signals": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {
+            "type": "string",
+            "pattern": "^[a-z][a-z0-9_]*$"
+          }
+        }
+      }
+    }
+  }
+}

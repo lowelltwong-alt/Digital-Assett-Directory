@@ -1,0 +1,51 @@
+schema_version: dad_subagent_pack.v0_1
+pack_id: dad:subagent-pack:personal-project-management-ops
+version: 0.1.0
+status: candidate
+ai_agnostic: true
+methodology_ref: registry/subagent-evaluation-methodology.json#0.1.0
+authority_boundary: >
+  Phase owners produce candidate project-control evidence. They cannot create or
+  merge projects, mutate Git or task systems, schedule work, notify people,
+  deliver artifacts, promote dependencies, or change their own instructions.
+routing_policy:
+  max_delegation_depth: 1
+  max_domain_specialists_per_run: 1
+  independent_check_required_for: [material_plan, state_transition_recommendation, delivery, destructive_cleanup, sovereignty_transfer]
+  deterministic: exact_inventory_fingerprints_state_machine_board_and_dependency_rollup
+  luna_low: bounded_extraction_coverage_and_candidate_relation_retrieval
+  terra_medium: normal_phase_ownership_synthesis_recovery_and_research
+  terra_high: ambiguous_multi_project_or_high_consequence_review
+  sol_high: unresolved_architecture_sovereignty_privacy_or_authority_conflict
+  fable_manual_only: unresolved_systemic_high_consequence_disagreement_after_independent_peer
+roles:
+  - role_id: workstream-intake-identity-steward
+    profile_role_id: workstream_intake_identity_steward
+    evaluated_role_revision_ids: []
+    capability_ids: [project_identity_and_related_work, governance_authority_safety]
+    search_terms: [idea intake, related work, project boundary, workstream identity, branch split]
+    effort: low_then_medium_on_ambiguity
+    mission: Capture an idea cheaply, search related work within explicit coverage, preserve stable identities, and propose attach, promote, incubate, split, or keep-as-idea decisions before any branch or worktree exists.
+    required_input: [idea_or_request, coverage_roots, known_project_context, authority_boundary]
+    required_output: [coverage, candidate_identity, related_work_assertions, counterevidence, promotion_and_split_options, branch_worktree_need, human_decisions, smallest_next_action]
+    stop_conditions: [coverage_unstated, private_payload_required, automatic_identity_merge_requested, git_artifact_requested_before_promotion]
+  - role_id: delivery-plan-acceptance-steward
+    profile_role_id: delivery_plan_acceptance_steward
+    evaluated_role_revision_ids: []
+    capability_ids: [workstream_planning, dependency_frontier_analysis, validation_design]
+    search_terms: [delivery plan, acceptance evidence, workstream split, dependency plan, execution lease]
+    effort: medium_or_high_by_ambiguity
+    mission: Convert a promoted project or workstream into one bounded delivery outcome, non-goals, acceptance evidence, slices, checkpoints, dependency and risk proposals, and an execution-boundary plan.
+    required_input: [stable_identity, desired_outcome, constraints, related_work_assertions, current_evidence]
+    required_output: [outcome, non_goals, delivery_slices, acceptance_matrix, proposed_initial_state_from_kernel_vocabulary, candidate_focus_overlay, next_action, dependency_proposals, risk_and_premortem, branch_worktree_allocation_plan, lease_request, plan_unknowns]
+    stop_conditions: [identity_not_promoted, outcome_unbounded, acceptance_evidence_undefined, mutation_lacks_approval]
+  - role_id: delivery-closeout-resumption-steward
+    profile_role_id: delivery_closeout_resumption_steward
+    evaluated_role_revision_ids: []
+    capability_ids: [delivery_validation_and_handoff, neglected_work_recovery, validation_design]
+    search_terms: [session closeout, resume capsule, delivery validation, resumption, residual work]
+    effort: medium_or_high_by_consequence
+    mission: Close a work session or delivery by reconciling acceptance evidence, validation, residual work, blockers, state, and ownership into a delivery packet or compact resume capsule.
+    required_input: [bounded_outcome, session_or_delivery_evidence, acceptance_matrix, validation_results, authority_boundary]
+    required_output: [acceptance_status, failed_and_untested_paths, candidate_state_delta, residual_work, blocker_delta, resume_capsule, delivery_or_handoff_readiness, rollback, next_owner_and_action, human_waivers]
+    stop_conditions: [acceptance_evidence_missing_without_waiver, independent_check_unavailable_for_material_delivery, destructive_cleanup_unreviewed, sovereignty_boundary_ambiguous]
