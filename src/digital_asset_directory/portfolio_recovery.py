@@ -283,6 +283,16 @@ def _ledger_diagnostic_problems(diagnostics: Mapping[str, Any] | None) -> list[s
     return sorted(set(problems))
 
 
+def _is_approved_manual_action(decision: Mapping[str, Any]) -> bool:
+    """Return whether a decision can produce one supervised manual result."""
+
+    return (
+        decision.get("status") == "active"
+        and decision.get("disposition") == "approved"
+        and decision.get("choice_kind") != "defer"
+    )
+
+
 def fold_recovery_events(
     events: Iterable[dict[str, Any]],
     shaping: Mapping[str, Any] | None = None,
@@ -295,6 +305,7 @@ def fold_recovery_events(
     decisions: dict[str, dict[str, Any]] = {}
     results: dict[str, dict[str, Any]] = {}
     packet_ids: set[str] = set()
+    result_decision_ids: set[str] = set()
     problems = _ledger_diagnostic_problems(ledger_diagnostics)
 
     for event in events:
@@ -371,8 +382,14 @@ def fold_recovery_events(
         if decision["status"] != "active":
             problems.append(f"result_for_inactive_decision:{decision_id}")
             continue
+        if not _is_approved_manual_action(decision):
+            problems.append(f"result_for_unapproved_manual_action:{decision_id}")
+            continue
         if str(payload.get("worker_id", "")) == str(payload.get("checker_id", "")):
             problems.append(f"worker_checker_not_distinct:{result_id}")
+            continue
+        if decision_id in result_decision_ids:
+            problems.append(f"duplicate_recovery_result_for_decision:{decision_id}")
             continue
         if result_id in results or packet_id in packet_ids:
             problems.append(f"duplicate_recovery_result:{result_id or packet_id}")
@@ -394,6 +411,7 @@ def fold_recovery_events(
             "event_id": str(event.get("event_id", "")),
         }
         packet_ids.add(packet_id)
+        result_decision_ids.add(decision_id)
 
     if shaping is not None:
         for decision in decisions.values():
@@ -584,8 +602,10 @@ def _append_recovery_event(
             return
         if decision["status"] != "active":
             raise RecoveryStateError("manual result requires a current active decision")
-        if any(row["packet_id"] == payload["packet_id"] for row in projection["results"]):
-            raise RecoveryStateError("recovery packet already has a recorded result")
+        if not _is_approved_manual_action(decision):
+            raise RecoveryStateError("manual result requires an approved non-defer decision")
+        if any(row["decision_id"] == decision_id for row in projection["results"]):
+            raise RecoveryStateError("decision already has a recorded recovery result")
 
     return append_events(
         ledger_path(hub_root),
@@ -964,6 +984,10 @@ def build_recovery_packet(
     )
     if decision is None or decision["status"] != "active":
         raise RecoveryStateError("recovery packet requires a current active decision")
+    if not _is_approved_manual_action(decision):
+        raise RecoveryStateError("recovery packet requires an approved non-defer decision")
+    if any(row["decision_id"] == decision_id for row in projection["results"]):
+        raise RecoveryStateError("decision already has a recorded recovery result")
     validate_shaping_selection(
         shaping,
         case_id=decision["case_id"],
@@ -1097,6 +1121,8 @@ def record_recovery_result(
     )
     if decision is None or decision["status"] != "active":
         raise RecoveryStateError("manual result requires a current active decision")
+    if not _is_approved_manual_action(decision):
+        raise RecoveryStateError("manual result requires an approved non-defer decision")
     for field in (
         "case_id",
         "case_revision_id",
@@ -1109,6 +1135,8 @@ def record_recovery_result(
     ):
         if packet_value[field] != decision[field]:
             raise RecoveryStateError(f"recovery packet no longer matches decision: {field}")
+    if any(row["decision_id"] == decision["decision_id"] for row in projection["results"]):
+        raise RecoveryStateError("decision already has a recorded recovery result")
     validate_shaping_selection(
         shaping,
         case_id=decision["case_id"],

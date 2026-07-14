@@ -125,6 +125,7 @@ def _record(
     choice: dict[str, object],
     *,
     command_id: str,
+    disposition: str | None = None,
     supersedes: str = "",
     now: datetime = T0,
 ) -> dict[str, object]:
@@ -137,6 +138,7 @@ def _record(
         approver="human:lowell",
         approval_ref="approval:recovery:1",
         command_id=command_id,
+        disposition=disposition,
         supersedes_decision_id=supersedes,
         now=now,
     )
@@ -456,6 +458,35 @@ def test_packet_is_transient_private_minimized_and_never_authorizes(tmp_path: Pa
     assert "packet_path_or_prose_exposed" in recovery_packet_problems(tainted)
 
 
+@pytest.mark.parametrize(
+    ("choice_index", "disposition"),
+    ((1, None), (0, "rejected"), (1, "approved")),
+)
+def test_packet_requires_an_approved_non_defer_decision(
+    tmp_path: Path,
+    choice_index: int,
+    disposition: str | None,
+) -> None:
+    shaping, case_id, revision_id, choices = _shaping()
+    recorded = _record(
+        tmp_path,
+        shaping,
+        case_id,
+        revision_id,
+        choices[choice_index],
+        command_id=f"decision-no-manual-action-{choice_index}-{disposition}",
+        disposition=disposition,
+    )
+
+    with pytest.raises(RecoveryStateError, match="approved non-defer decision"):
+        build_recovery_packet(
+            tmp_path,
+            shaping,
+            str(recorded["decision_id"]),
+            now=T0 + timedelta(minutes=1),
+        )
+
+
 def test_packet_id_binds_every_exact_approval_field(tmp_path: Path) -> None:
     shaping, case_id, revision_id, choices = _shaping()
     recorded = _record(
@@ -569,6 +600,63 @@ def test_manual_result_requires_distinct_checker_and_folds_compatibly(tmp_path: 
     ]
     assert projection["results"][0]["decision_id"] == recorded["decision_id"]
     assert projection["results"][0]["packet_id"] == packet["packet_id"]
+
+
+def test_decision_accepts_only_one_result_across_distinct_packets(tmp_path: Path) -> None:
+    shaping, case_id, revision_id, choices = _shaping()
+    recorded = _record(
+        tmp_path,
+        shaping,
+        case_id,
+        revision_id,
+        choices[0],
+        command_id="decision-two-packets",
+    )
+    decision_id = str(recorded["decision_id"])
+    first_packet = build_recovery_packet(
+        tmp_path,
+        shaping,
+        decision_id,
+        now=T0 + timedelta(minutes=1),
+    )
+    second_packet = build_recovery_packet(
+        tmp_path,
+        shaping,
+        decision_id,
+        now=T0 + timedelta(minutes=2),
+    )
+    assert first_packet["packet_id"] != second_packet["packet_id"]
+    result_kwargs = {
+        "result_status": "verified",
+        "before_snapshot_digest": "sha256:" + "4" * 64,
+        "after_snapshot_digest": "sha256:" + "5" * 64,
+        "worker_id": "role:worker:v1",
+        "checker_id": "role:checker:v2",
+        "evidence_refs": ["test:one-result-per-decision:1"],
+    }
+
+    first = record_recovery_result(
+        tmp_path,
+        shaping,
+        first_packet,
+        command_id="result-first-packet",
+        now=T0 + timedelta(minutes=3),
+        **result_kwargs,
+    )
+    with pytest.raises(RecoveryStateError, match="decision already has"):
+        record_recovery_result(
+            tmp_path,
+            shaping,
+            second_packet,
+            command_id="result-second-packet",
+            now=T0 + timedelta(minutes=4),
+            **result_kwargs,
+        )
+
+    projection = load_recovery_projection(tmp_path, shaping, now=T0 + timedelta(minutes=4))
+    assert first["events_appended"] == 1
+    assert len(projection["results"]) == 1
+    assert projection["diagnostics"] == []
 
 
 def test_result_retry_precedes_expiry_but_conflict_still_fails(tmp_path: Path) -> None:
