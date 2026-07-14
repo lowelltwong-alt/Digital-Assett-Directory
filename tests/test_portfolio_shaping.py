@@ -284,6 +284,62 @@ def _shape(triple, *, now: datetime = NOW, limit: int = 250):
     )
 
 
+def _decisions_for(
+    shaping: dict[str, object],
+    *,
+    choice_kind: str | None = None,
+    status: str = "active",
+    review_after: str = "",
+    result_status: str = "",
+    revision_id: str | None = None,
+    snapshot_digest: str | None = None,
+) -> dict[str, object]:
+    case = shaping["cases"][0]
+    choice = next(
+        (
+            row
+            for row in case["choices"]
+            if choice_kind is None or row["choice_kind"] == choice_kind
+        ),
+        case["choices"][0],
+    )
+    decision_id = "dad:decision:test"
+    projection: dict[str, object] = {
+        "schema_version": "dad.portfolio_recovery_projection.v1",
+        "status": "ready",
+        "execution_authorized": False,
+        "mutations_performed": False,
+        "source_authority_mutated": False,
+        "decisions": [
+            {
+                "decision_id": decision_id,
+                "case_id": case["case_id"],
+                "case_revision_id": revision_id or case["revision_id"],
+                "source_snapshot_digest": snapshot_digest
+                or shaping["source_snapshot_digest"],
+                "expected_preconditions_digest": ps._case_preconditions_digest(case),
+                "choice_id": choice["choice_id"],
+                "choice_kind": choice["choice_kind"],
+                "status": status,
+                "disposition": "defer" if choice["choice_kind"] == "defer" else "review",
+                "review_after": review_after,
+            }
+        ],
+        "results": [],
+    }
+    if result_status:
+        projection["results"] = [
+            {
+                "result_id": "dad:recovery-result:test",
+                "decision_id": decision_id,
+                "packet_id": "dad:recovery-packet:test",
+                "status": result_status,
+                "result_status": result_status,
+            }
+        ]
+    return projection
+
+
 def _validate(value: dict[str, object]) -> None:
     schema = json.loads(
         (ROOT / "schemas" / "portfolio-workstream-shaping.schema.json").read_text(encoding="utf-8")
@@ -324,6 +380,105 @@ def test_empty_portfolio_never_claims_organization() -> None:
     assert result["summary"]["no_cases_generated"] is True
     assert result["summary"]["intake_needed"] is True
     assert result["summary"]["shaping_complete"] is False
+
+
+def test_v2_decision_projection_is_snapshot_bound_pending_and_retractable() -> None:
+    triple = _triple([_project("decision-pending")], [])
+    base = _shape(triple)
+    decisions = _decisions_for(base)
+    pending = ps.build_portfolio_shaping(
+        *triple, decisions=decisions, now=NOW, schema_root=ROOT
+    )
+    _validate(pending)
+    annotation = pending["cases"][0]["decision"]
+    assert pending["schema_version"] == "dad.portfolio_workstream_shaping.v2"
+    assert annotation["state"] == "active"
+    assert annotation["manual_action_state"] == "pending"
+    assert pending["decision_projection"]["pending_manual_action_count"] == 1
+    assert pending["review_queue"] == []
+    assert pending["execution_authorized"] is False
+
+    retracted_input = deepcopy(decisions)
+    retracted_input["decisions"][0]["status"] = "retracted"
+    retracted = ps.build_portfolio_shaping(
+        *triple, decisions=retracted_input, now=NOW, schema_root=ROOT
+    )
+    _validate(retracted)
+    assert retracted["cases"][0]["decision"]["state"] == "retracted"
+    assert retracted["cases"][0]["decision"]["manual_action_state"] == "none"
+    assert len(retracted["review_queue"]) == 1
+
+
+@pytest.mark.parametrize(
+    ("override", "expected"),
+    [
+        ({"revision_id": "dad:revision:stale"}, "stale"),
+        ({"snapshot_digest": "sha256:" + "0" * 64}, "stale"),
+    ],
+)
+def test_decision_binding_mismatch_is_stale(override: dict[str, str], expected: str) -> None:
+    triple = _triple([_project("decision-stale")], [])
+    base = _shape(triple)
+    decisions = _decisions_for(base, **override)
+    result = ps.build_portfolio_shaping(
+        *triple, decisions=decisions, now=NOW, schema_root=ROOT
+    )
+    _validate(result)
+    assert result["cases"][0]["decision"]["state"] == expected
+    assert result["decision_projection"]["stale_count"] == 1
+    assert result["review_queue"] == []
+
+
+def test_decision_projection_minimizes_private_extra_fields() -> None:
+    triple = _triple([_project("decision-private")], [])
+    base = _shape(triple)
+    decisions = _decisions_for(base)
+    decisions["decisions"][0]["private_note"] = "PRIVATE CLIENT ALPHA C:/private/matter"
+    decisions["results"] = []
+    result = ps.build_portfolio_shaping(
+        *triple, decisions=decisions, now=NOW, schema_root=ROOT
+    )
+    _validate(result)
+    serialized = json.dumps(result)
+    html = ps.portfolio_shaping_html(result)
+    assert "PRIVATE CLIENT ALPHA" not in serialized + html
+    assert "C:/private/matter" not in serialized + html
+    assert "private_note" not in serialized
+
+
+def test_blocked_recovery_projection_is_not_applied() -> None:
+    triple = _triple([_project("decision-blocked")], [])
+    base = _shape(triple)
+    decisions = _decisions_for(base)
+    decisions["status"] = "blocked"
+    decisions["diagnostics"] = ["PRIVATE CLIENT C:/private/evidence"]
+    result = ps.build_portfolio_shaping(
+        *triple, decisions=decisions, now=NOW, schema_root=ROOT
+    )
+    _validate(result)
+    assert result["decision_projection"]["source_status"] == "invalid"
+    assert result["cases"][0]["decision"] == ps._empty_decision_annotation()
+    assert any(row["kind"] == "decision_projection_invalid" for row in result["blockers"])
+    assert "PRIVATE CLIENT" not in json.dumps(result)
+
+
+def test_retracted_history_does_not_hide_current_case_decision() -> None:
+    triple = _triple([_project("decision-history")], [])
+    base = _shape(triple)
+    decisions = _decisions_for(base)
+    current = deepcopy(decisions["decisions"][0])
+    current["decision_id"] = "dad:decision:current"
+    historical = deepcopy(decisions["decisions"][0])
+    historical["decision_id"] = "dad:decision:historical"
+    historical["status"] = "retracted"
+    decisions["decisions"] = [historical, current]
+    result = ps.build_portfolio_shaping(
+        *triple, decisions=decisions, now=NOW, schema_root=ROOT
+    )
+    _validate(result)
+    assert result["cases"][0]["decision"]["decision_id"] == "dad:decision:current"
+    assert result["decision_projection"]["active_count"] == 1
+    assert result["decision_projection"]["historical_decision_count"] == 1
 
 
 def test_shared_exact_resource_is_one_symmetric_pd0_without_winner() -> None:
@@ -792,6 +947,22 @@ def test_writer_rejects_semantic_tampering_and_publishes_strict_outputs(tmp_path
         reconciliation=reconciliation,
     )
     assert Path(packet["json_path"]).exists() and Path(packet["html_path"]).exists()
+    decisions = _decisions_for(result)
+    decided = ps.build_portfolio_shaping(
+        *triple,
+        decisions=decisions,
+        now=NOW,
+        schema_root=ROOT,
+    )
+    decided_packet = ps.write_portfolio_shaping_outputs(
+        tmp_path,
+        decided,
+        workstream_state=state,
+        cockpit=cockpit,
+        reconciliation=reconciliation,
+        decisions=decisions,
+    )
+    assert decided_packet["summary"]["case_count"] == decided["summary"]["case_count"]
     tampered = deepcopy(result)
     tampered["cases"][0]["choices"][0]["execution_available"] = True
     with pytest.raises(ValueError, match="Invalid portfolio shaping"):

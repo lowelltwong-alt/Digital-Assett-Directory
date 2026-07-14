@@ -1,0 +1,175 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "dad://schemas/portfolio-shaping-decision-event.v1",
+  "title": "DAD Portfolio Shaping Decision Event",
+  "description": "Strict, non-executing decision and independently checked manual-result events stored in the existing Portfolio OS ledger.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "event_id",
+    "event_kind",
+    "schema_version",
+    "stream_id",
+    "prev_event_id",
+    "command_id",
+    "recorded_at",
+    "redaction_count",
+    "payload"
+  ],
+  "properties": {
+    "event_id": {"type": "string", "pattern": "^dad:portfolio-event:[0-9a-f-]{36}$"},
+    "event_kind": {
+      "enum": [
+        "shaping_decision_recorded",
+        "shaping_decision_retracted",
+        "manual_recovery_result_recorded"
+      ]
+    },
+    "schema_version": {"const": "dad.portfolio_shaping_decision_event.v1"},
+    "stream_id": {"$ref": "#/$defs/case_id"},
+    "prev_event_id": {
+      "type": "string",
+      "pattern": "^$|^dad:portfolio-event:[0-9a-f-]{36}$"
+    },
+    "command_id": {
+      "type": "string",
+      "pattern": "^dad:portfolio-command:[0-9a-f-]{36}$"
+    },
+    "recorded_at": {"type": "string", "format": "date-time"},
+    "redaction_count": {"type": "integer", "minimum": 0},
+    "payload": {"type": "object"}
+  },
+  "allOf": [
+    {
+      "if": {"properties": {"event_kind": {"const": "shaping_decision_recorded"}}},
+      "then": {"properties": {"payload": {"$ref": "#/$defs/decision_recorded"}}}
+    },
+    {
+      "if": {"properties": {"event_kind": {"const": "shaping_decision_retracted"}}},
+      "then": {"properties": {"payload": {"$ref": "#/$defs/decision_retracted"}}}
+    },
+    {
+      "if": {"properties": {"event_kind": {"const": "manual_recovery_result_recorded"}}},
+      "then": {"properties": {"payload": {"$ref": "#/$defs/recovery_result"}}}
+    }
+  ],
+  "$defs": {
+    "case_id": {
+      "type": "string",
+      "pattern": "^dad:[A-Za-z0-9_.-]+:[0-9a-f-]{36}$"
+    },
+    "decision_id": {
+      "type": "string",
+      "pattern": "^dad:portfolio-decision:[0-9a-f-]{36}$"
+    },
+    "packet_id": {
+      "type": "string",
+      "pattern": "^dad:portfolio-recovery-packet:[0-9a-f-]{36}$"
+    },
+    "result_id": {
+      "type": "string",
+      "pattern": "^dad:portfolio-recovery-result:[0-9a-f-]{36}$"
+    },
+    "digest": {
+      "type": "string",
+      "pattern": "^sha256:[0-9a-f]{64}$"
+    },
+    "opaque_token": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9:._-]{0,199}$"
+    },
+    "optional_datetime": {
+      "anyOf": [
+        {"const": ""},
+        {"type": "string", "format": "date-time"}
+      ]
+    },
+    "decision_recorded": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "decision_id",
+        "case_id",
+        "case_revision_id",
+        "source_snapshot_digest",
+        "expected_preconditions_digest",
+        "choice_id",
+        "choice_kind",
+        "disposition",
+        "review_after",
+        "approver",
+        "approval_ref",
+        "supersedes_decision_id"
+      ],
+      "properties": {
+        "decision_id": {"$ref": "#/$defs/decision_id"},
+        "case_id": {"$ref": "#/$defs/case_id"},
+        "case_revision_id": {"type": "string", "minLength": 1, "maxLength": 200},
+        "source_snapshot_digest": {"$ref": "#/$defs/digest"},
+        "expected_preconditions_digest": {"$ref": "#/$defs/digest"},
+        "choice_id": {"type": "string", "minLength": 1, "maxLength": 200},
+        "choice_kind": {"$ref": "#/$defs/opaque_token"},
+        "disposition": {"enum": ["approved", "deferred", "rejected"]},
+        "review_after": {"$ref": "#/$defs/optional_datetime"},
+        "approver": {"$ref": "#/$defs/opaque_token"},
+        "approval_ref": {"$ref": "#/$defs/opaque_token"},
+        "supersedes_decision_id": {
+          "type": "string",
+          "pattern": "^$|^dad:portfolio-decision:[0-9a-f-]{36}$"
+        }
+      }
+    },
+    "decision_retracted": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "decision_id",
+        "case_id",
+        "retracted_by",
+        "approval_ref",
+        "reason_code"
+      ],
+      "properties": {
+        "decision_id": {"$ref": "#/$defs/decision_id"},
+        "case_id": {"$ref": "#/$defs/case_id"},
+        "retracted_by": {"$ref": "#/$defs/opaque_token"},
+        "approval_ref": {"$ref": "#/$defs/opaque_token"},
+        "reason_code": {"$ref": "#/$defs/opaque_token"}
+      }
+    },
+    "recovery_result": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "result_id",
+        "decision_id",
+        "case_id",
+        "packet_id",
+        "before_snapshot_digest",
+        "after_snapshot_digest",
+        "result_status",
+        "worker_id",
+        "checker_id",
+        "evidence_refs"
+      ],
+      "properties": {
+        "result_id": {"$ref": "#/$defs/result_id"},
+        "decision_id": {"$ref": "#/$defs/decision_id"},
+        "case_id": {"$ref": "#/$defs/case_id"},
+        "packet_id": {"$ref": "#/$defs/packet_id"},
+        "before_snapshot_digest": {"$ref": "#/$defs/digest"},
+        "after_snapshot_digest": {"$ref": "#/$defs/digest"},
+        "result_status": {"enum": ["verified", "failed", "aborted"]},
+        "worker_id": {"$ref": "#/$defs/opaque_token"},
+        "checker_id": {"$ref": "#/$defs/opaque_token"},
+        "evidence_refs": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 50,
+          "uniqueItems": true,
+          "items": {"$ref": "#/$defs/opaque_token"}
+        }
+      }
+    }
+  }
+}

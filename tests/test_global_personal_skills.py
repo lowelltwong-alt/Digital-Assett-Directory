@@ -124,7 +124,10 @@ def test_source_manifest_is_registered_and_conforms() -> None:
     cls = validator_for(schema)
     cls.check_schema(schema)
     cls(schema).validate(payload)
-    assert len(payload["skills"]) == 20
+    assert len(payload["skills"]) == 21
+    assert "personal-skill:dad-manifest-graph-engineering" in {
+        row["skill_id"] for row in payload["skills"]
+    }
     assert {".system", "codex-primary-runtime"} <= set(payload["deny_skill_names"])
     assert LOCAL_ONLY_DATA_PATHS["personal_skill_archives"] == "private/personal-skills"
 

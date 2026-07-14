@@ -1,0 +1,163 @@
+{
+  "schema_version": "dad.mcp.host_adapter_bundle.v1",
+  "logical_server_name": "dad-local-graph-surfaces",
+  "server_contract": {
+    "implementation": "digital_asset_directory.mcp_server:DADGraphMCPServer",
+    "command_variable": "DAD_PYTHON",
+    "args_template": [
+      "-m",
+      "digital_asset_directory.cli",
+      "mcp",
+      "graph-stdio",
+      "--hub",
+      "{{DAD_HUB}}"
+    ],
+    "hub_variable": "DAD_HUB",
+    "allowed_tools": [
+      "dad_graph_surface_status",
+      "dad_graph_get_node",
+      "dad_graph_neighbors",
+      "dad_graph_search_nodes",
+      "dad_mcp_dependency_status",
+      "dad_mcp_dependency_impact",
+      "dad_mcp_dependency_refresh_candidate"
+    ]
+  },
+  "authority": {
+    "transport": "stdio",
+    "local_only": true,
+    "read_only": true,
+    "remote_enabled": false,
+    "vendor_sdk_required": false,
+    "execution_authority": false,
+    "installation_policy": "explicit_human_approval"
+  },
+  "binding_policy": {
+    "DAD_PYTHON": {
+      "kind": "direct_python_executable",
+      "windows_basename": "python.exe",
+      "absolute_at_install": true,
+      "shell_wrapper_allowed": false
+    },
+    "DAD_HUB": {
+      "kind": "initialized_local_directory",
+      "absolute_at_install": true
+    }
+  },
+  "installation": {
+    "authorized_by_bundle": false,
+    "merge_strategy": "merge_named_server_only",
+    "overwrite_existing_config": false,
+    "activation_requires_host_trust": true
+  },
+  "first_party_sources": [
+    {
+      "host": "codex",
+      "url": "https://learn.chatgpt.com/docs/extend/mcp.md",
+      "checked_at": "2026-07-13",
+      "max_age_days": 90
+    },
+    {
+      "host": "claude_code",
+      "url": "https://code.claude.com/docs/en/mcp",
+      "checked_at": "2026-07-13",
+      "max_age_days": 90
+    },
+    {
+      "host": "claude_desktop",
+      "url": "https://modelcontextprotocol.io/quickstart/user",
+      "checked_at": "2026-07-13",
+      "max_age_days": 90
+    },
+    {
+      "host": "cursor",
+      "url": "https://cursor.com/docs/mcp.md",
+      "checked_at": "2026-07-13",
+      "max_age_days": 90
+    },
+    {
+      "host": "vscode_github_copilot",
+      "url": "https://code.visualstudio.com/docs/agents/reference/mcp-configuration",
+      "checked_at": "2026-07-13",
+      "max_age_days": 90
+    },
+    {
+      "host": "github_copilot_cli",
+      "url": "https://docs.github.com/en/copilot/how-tos/copilot-cli/customize-copilot/add-mcp-servers",
+      "checked_at": "2026-07-13",
+      "max_age_days": 90
+    }
+  ],
+  "adapters": [
+    {
+      "adapter_id": "codex_project",
+      "host": "codex",
+      "scope": "project",
+      "template": "templates/codex.project.config.toml",
+      "format": "toml",
+      "root_key": "mcp_servers",
+      "placeholder_mode": "render",
+      "target_hint": ".codex/config.toml"
+    },
+    {
+      "adapter_id": "codex_global",
+      "host": "codex",
+      "scope": "global",
+      "template": "templates/codex.global.config.toml",
+      "format": "toml",
+      "root_key": "mcp_servers",
+      "placeholder_mode": "render",
+      "target_hint": "user Codex config.toml"
+    },
+    {
+      "adapter_id": "claude_code_project",
+      "host": "claude_code",
+      "scope": "project",
+      "template": "templates/claude-code.project.mcp.json",
+      "format": "json",
+      "root_key": "mcpServers",
+      "placeholder_mode": "claude_env",
+      "target_hint": ".mcp.json"
+    },
+    {
+      "adapter_id": "claude_desktop",
+      "host": "claude_desktop",
+      "scope": "user",
+      "template": "templates/claude-desktop.mcp.json",
+      "format": "json",
+      "root_key": "mcpServers",
+      "placeholder_mode": "render",
+      "target_hint": "claude_desktop_config.json"
+    },
+    {
+      "adapter_id": "cursor",
+      "host": "cursor",
+      "scope": "project_or_user",
+      "template": "templates/cursor.mcp.json",
+      "format": "json",
+      "root_key": "mcpServers",
+      "placeholder_mode": "cursor_env",
+      "target_hint": ".cursor/mcp.json or user Cursor mcp.json"
+    },
+    {
+      "adapter_id": "vscode_github_copilot",
+      "host": "vscode_github_copilot",
+      "scope": "workspace_or_profile",
+      "template": "templates/vscode-github-copilot.mcp.json",
+      "format": "json",
+      "root_key": "servers",
+      "placeholder_mode": "vscode_env",
+      "target_hint": ".vscode/mcp.json or user profile mcp.json"
+    },
+    {
+      "adapter_id": "github_copilot_cli",
+      "host": "github_copilot_cli",
+      "scope": "user",
+      "template": "templates/github-copilot-cli.mcp-config.json",
+      "format": "json",
+      "root_key": "mcpServers",
+      "placeholder_mode": "render",
+      "target_hint": ".copilot/mcp-config.json"
+    }
+  ]
+}

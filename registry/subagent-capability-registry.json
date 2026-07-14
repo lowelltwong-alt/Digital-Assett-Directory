@@ -1,5 +1,5 @@
 {
-  "registry_version": "0.1.0",
+  "registry_version": "0.2.0",
   "status": "candidate",
   "capabilities": [
     {
@@ -93,6 +93,82 @@
     {
       "id": "preserve_simple_workflow_design",
       "description": "Protect a narrow deterministic role from prompt bloat; a freeze requires executable criterion outcomes, negative cases, latency/cost evidence, held-out confirmation, and human approval."
+    },
+    {
+      "id": "manifest_authority_modeling",
+      "description": "Define a structured artifact's mission, authoritative sources, scope, consumers, sensitivity, non-goals, and human gates before schema or implementation work."
+    },
+    {
+      "id": "identity_address_ontology_design",
+      "description": "Separate stable, revision, alias, and display identities while defining address grammars, ontology terms, collision handling, and namespace authority."
+    },
+    {
+      "id": "dependency_dataflow_extraction",
+      "description": "Extract deterministic dependency and data-flow observations with explicit coverage while separating observations from inferred candidate edges."
+    },
+    {
+      "id": "typed_graph_provenance_modeling",
+      "description": "Define typed nodes and edges with provenance, confidence, review state, evidence direction, and forbidden authority inferences."
+    },
+    {
+      "id": "schema_contract_engineering",
+      "description": "Design strict structured-artifact schemas, invariants, compatibility, migrations, and fail-closed negative cases."
+    },
+    {
+      "id": "deterministic_projection_building",
+      "description": "Build reproducible manifests and graph projections from immutable source observations under one bounded writer scope."
+    },
+    {
+      "id": "semantic_fingerprint_freshness",
+      "description": "Bind source coverage, semantic digests, versions, freshness states, rebuild triggers, and unsupported-input behavior."
+    },
+    {
+      "id": "reverse_blast_radius_analysis",
+      "description": "Trace changed names, schemas, authority, builders, and outputs through reverse dependencies to affected and unknown consumers."
+    },
+    {
+      "id": "query_mcp_projection_design",
+      "description": "Design bounded read-only query or MCP projections with strict output schemas, privacy filters, and no execution authority."
+    },
+    {
+      "id": "structured_artifact_independent_audit",
+      "description": "Independently test structured artifacts for deterministic replay, schema and authority drift, privacy, freshness, missing consumers, and writer-checker separation."
+    },
+    {
+      "id": "digital_asset_discovery",
+      "description": "Inventory concrete reusable asset candidates and coverage without changing sources or treating mere existence as value."
+    },
+    {
+      "id": "asset_identity_revision_stewardship",
+      "description": "Separate stable asset, revision, variant, package, deployment, and observation identities while surfacing ambiguous merges."
+    },
+    {
+      "id": "asset_taxonomy_classification",
+      "description": "Apply evidence-backed multi-label asset facets while preserving unknown, unclassified, conflicting, and proposed taxonomy values."
+    },
+    {
+      "id": "asset_provenance_license_privacy",
+      "description": "Review asset origin, derivation, ownership, license, sensitivity, release, security, and compatibility without exposing protected content."
+    },
+    {
+      "id": "asset_deduplication_variant_synergy",
+      "description": "Distinguish exact duplicates, containment, revisions, variants, complements, conflicts, and combinations without using similarity as identity."
+    },
+    {
+      "id": "asset_evidence_value_adoption",
+      "description": "Assess validation, usefulness, applicability, maintenance cost, adoption, counterevidence, and do-not-apply limits without universal scores."
+    },
+    {
+      "id": "asset_lifecycle_routing",
+      "description": "Route candidate asset evidence to review, trial, reuse, revision, hold, rejection, supersession, or retirement without downstream application authority."
+    },
+    {
+      "id": "asset_taxonomy_drift_audit",
+      "description": "Detect recurring unknowns, contradictory facets, obsolete values, and classification regressions and propose compatible taxonomy revisions."
+    },
+    {
+      "id": "digital_asset_independent_audit",
+      "description": "Independently audit asset discovery, identity, taxonomy, provenance, privacy, deduplication, evidence, adoption, and lifecycle routing."
     }
   ],
   "rule": "Capability observations are attempt-scoped candidate evidence. Promotion to a reusable role-profile claim requires the versioned subagent evaluation methodology and human review."

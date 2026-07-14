@@ -16,7 +16,7 @@ import itertools
 import json
 from pathlib import Path
 import re
-from typing import Any, Callable
+from typing import Any, Callable, Mapping
 
 from .ids import stable_id
 from .portfolio_cockpit import (
@@ -33,9 +33,9 @@ from .portfolio_relations import RelationTarget, classify_relations
 from .transport import data_path
 from .utils import atomic_write_text, json_dumps
 
-SCHEMA_VERSION = "dad.portfolio_workstream_shaping.v1"
+SCHEMA_VERSION = "dad.portfolio_workstream_shaping.v2"
 WORKSTREAM_SCHEMA_VERSION = "dad.portfolio_workstreams.v1"
-METHOD_ID = "dad.portfolio-workstream-shaping.v1"
+METHOD_ID = "dad.portfolio-workstream-shaping.v2"
 METHODOLOGY_REF = "docs/frontier/collaboration/13_PORTFOLIO_WORKSTREAM_SHAPING.md"
 TERMINAL_STATES = frozenset({"merged", "superseded", "archived"})
 QUIET_STATES = frozenset({"paused", "snoozed", "incubating"})
@@ -52,7 +52,14 @@ _ABSOLUTE_PATH_RE = re.compile(
     re.IGNORECASE,
 )
 _SAFE_TOKEN_RE = re.compile(r"^[a-z][a-z0-9_.:-]{0,99}$")
+_SAFE_REF_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9_.:-]{0,999}$")
 _AGE_ONLY_REASONS = frozenset({"stale_branch", "stale_branch_in_active_project"})
+_DECISION_STATES = frozenset({"active", "retracted", "stale"})
+_RESULT_STATES = frozenset({"verified", "failed", "aborted"})
+_RECOVERY_PROJECTION_SCHEMA_VERSION = "dad.portfolio_recovery_projection.v1"
+_MANUAL_ACTION_STATES = frozenset(
+    {"none", "pending", "verified", "failed", "aborted", "not_required"}
+)
 _TIER_CONTRACTS: dict[str, tuple[str, str, str]] = {
     "PD0_shared_exact_specific_resource": (
         "possible_duplicate",
@@ -465,11 +472,316 @@ def _unknown_row(row: dict[str, Any]) -> dict[str, str]:
     }
 
 
+def _empty_decision_annotation() -> dict[str, str]:
+    return {
+        "state": "none",
+        "decision_id": "",
+        "choice_id": "",
+        "choice_kind": "",
+        "disposition": "",
+        "review_after": "",
+        "manual_action_state": "none",
+        "result_ref": "",
+    }
+
+
+def _safe_ref(value: Any, namespace: str) -> str:
+    text = str(value or "").strip()
+    if not text:
+        return ""
+    return text if _SAFE_REF_RE.fullmatch(text) else _opaque_ref(text, namespace)
+
+
+def _shaping_source_snapshot_digest(
+    sources: Mapping[str, Any], source_coupling: Mapping[str, Any]
+) -> str:
+    required = ("workstreams", "cockpit", "reconciliation")
+    source_refs = {
+        name: str(sources.get(name, {}).get("source_hash", "")) for name in required
+    }
+    descriptors = {
+        name: {
+            key: sources.get(name, {}).get(key, "")
+            for key in (
+                "status",
+                "freshness",
+                "schema_version",
+                "generated_at",
+                "source_hash",
+            )
+        }
+        for name in required
+    }
+    return _canonical_hash(
+        {
+            "schema_version": SCHEMA_VERSION,
+            "source_refs": source_refs,
+            "sources": descriptors,
+            "source_coupling": source_coupling,
+        }
+    )
+
+
+def _case_preconditions_digest(case: Mapping[str, Any]) -> str:
+    keys = (
+        "case_id",
+        "revision_id",
+        "case_kind",
+        "evidence_tier",
+        "disposition",
+        "subject_workstream_ids",
+        "subject_resource_ids",
+        "source_attention_ids",
+        "source_bundle_ids",
+        "signals",
+        "counterevidence",
+        "evidence_summary",
+        "choices",
+    )
+    return _canonical_hash({key: case.get(key) for key in keys})
+
+
+def _decision_annotations(
+    decisions: Mapping[str, Any] | None,
+    cases: list[dict[str, Any]],
+    *,
+    source_snapshot_digest: str,
+) -> tuple[dict[str, Any], dict[str, dict[str, str]], list[dict[str, str]]]:
+    """Minimize a recovery fold into case-bound, non-authorizing annotations."""
+
+    annotations = {str(row["case_id"]): _empty_decision_annotation() for row in cases}
+    if decisions is None:
+        return (
+            {
+                "source_status": "unavailable",
+                "source_schema_version": "",
+                "source_hash": "",
+                "source_snapshot_digest": source_snapshot_digest,
+                "decision_count": 0,
+                "historical_decision_count": 0,
+                "active_count": 0,
+                "retracted_count": 0,
+                "stale_count": 0,
+                "pending_manual_action_count": 0,
+                "verified_result_count": 0,
+                "failed_result_count": 0,
+                "aborted_result_count": 0,
+                "unmatched_decision_count": 0,
+                "problems": [],
+            },
+            annotations,
+            [],
+        )
+    source_hash = _canonical_hash(decisions)
+    if not isinstance(decisions, Mapping):
+        descriptor = {
+            "source_status": "invalid",
+            "source_schema_version": "",
+            "source_hash": source_hash,
+            "source_snapshot_digest": source_snapshot_digest,
+            "decision_count": 0,
+            "historical_decision_count": 0,
+            "active_count": 0,
+            "retracted_count": 0,
+            "stale_count": 0,
+            "pending_manual_action_count": 0,
+            "verified_result_count": 0,
+            "failed_result_count": 0,
+            "aborted_result_count": 0,
+            "unmatched_decision_count": 0,
+            "problems": ["decision_projection_not_object"],
+        }
+        return descriptor, annotations, [
+            {
+                "kind": "decision_projection_invalid",
+                "ref": source_hash,
+                "note": "Decision evidence is structurally invalid and was not applied.",
+            }
+        ]
+
+    schema_version = _safe_token(decisions.get("schema_version"), "")
+    raw_decisions = decisions.get("decisions", [])
+    raw_results = decisions.get("results", [])
+    problems: set[str] = set()
+    if schema_version != _RECOVERY_PROJECTION_SCHEMA_VERSION:
+        problems.add("decision_schema_invalid")
+    if _safe_token(decisions.get("status"), "") != "ready":
+        problems.add("decision_projection_not_ready")
+    for field in ("execution_authorized", "mutations_performed", "source_authority_mutated"):
+        if decisions.get(field) is not False:
+            problems.add(f"decision_projection_{field}_invalid")
+    if not isinstance(raw_decisions, list):
+        problems.add("decisions_not_array")
+        raw_decisions = []
+    if not isinstance(raw_results, list):
+        problems.add("results_not_array")
+        raw_results = []
+
+    result_by_decision: dict[str, dict[str, Any]] = {}
+    for raw in raw_results:
+        if not isinstance(raw, dict):
+            problems.add("result_not_object")
+            continue
+        decision_id = _safe_ref(raw.get("decision_id"), "decision-result")
+        if not decision_id:
+            problems.add("result_decision_id_missing")
+            continue
+        if decision_id in result_by_decision:
+            problems.add("duplicate_result_for_decision")
+            continue
+        result_by_decision[decision_id] = raw
+
+    case_by_id = {str(row["case_id"]): row for row in cases}
+    seen_decisions: set[str] = set()
+    unmatched_count = 0
+    for raw in raw_decisions:
+        if not isinstance(raw, dict):
+            problems.add("decision_not_object")
+            continue
+        decision_id = _safe_ref(raw.get("decision_id"), "decision")
+        case_id = _safe_ref(raw.get("case_id"), "decision-case")
+        if not decision_id or not case_id:
+            problems.add("decision_identity_missing")
+            continue
+        if decision_id in seen_decisions:
+            problems.add("duplicate_decision_id")
+            continue
+        seen_decisions.add(decision_id)
+        case = case_by_id.get(case_id)
+        if case is None:
+            unmatched_count += 1
+            continue
+
+        raw_state = _safe_token(raw.get("status", raw.get("state", "active")), "stale")
+        choice_id = _safe_ref(raw.get("choice_id"), "decision-choice")
+        choice_kind = _safe_token(raw.get("choice_kind"), "unknown_choice")
+        disposition = _safe_token(raw.get("disposition"), "review")
+        review_after_value = _parse_datetime(raw.get("review_after"))
+        review_after = review_after_value.isoformat() if review_after_value else ""
+        canonical_choices = {
+            str(choice.get("choice_id", "")): str(choice.get("choice_kind", ""))
+            for choice in case.get("choices", [])
+            if isinstance(choice, dict)
+        }
+        bound_snapshot = str(
+            raw.get("source_snapshot_digest", raw.get("shaping_source_snapshot_digest", ""))
+        )
+        binding_valid = bool(
+            str(raw.get("case_revision_id", "")) == str(case.get("revision_id", ""))
+            and bound_snapshot == source_snapshot_digest
+            and str(raw.get("expected_preconditions_digest", ""))
+            == _case_preconditions_digest(case)
+            and choice_id in canonical_choices
+            and canonical_choices.get(choice_id) == choice_kind
+        )
+        state = (
+            "retracted"
+            if raw_state == "retracted"
+            else "active"
+            if raw_state == "active" and binding_valid
+            else "stale"
+        )
+
+        result = result_by_decision.get(decision_id, {})
+        if result.get("case_id") and str(result.get("case_id")) != case_id:
+            problems.add("result_case_mismatch")
+        result_state = _safe_token(
+            result.get("result_status", result.get("status", "")), ""
+        )
+        result_ref = _safe_ref(
+            result.get("result_id", result.get("packet_id", "")), "decision-result"
+        )
+        if result and result_state not in _RESULT_STATES:
+            problems.add("result_status_invalid")
+            result_state = ""
+        if result and not result_ref:
+            problems.add("result_ref_missing")
+        if state == "retracted":
+            manual_action_state = "none"
+        elif result_state:
+            manual_action_state = result_state
+        elif choice_kind == "defer":
+            manual_action_state = "not_required"
+        else:
+            manual_action_state = "pending"
+        candidate = {
+            "state": state,
+            "decision_id": decision_id,
+            "choice_id": choice_id,
+            "choice_kind": choice_kind,
+            "disposition": disposition,
+            "review_after": review_after,
+            "manual_action_state": manual_action_state,
+            "result_ref": result_ref,
+        }
+        existing = annotations[case_id]
+        if existing["state"] in {"active", "stale"} and state in {"active", "stale"}:
+            problems.add("multiple_current_decisions_for_case")
+        elif state in {"active", "stale"} or existing["state"] in {"none", "retracted"}:
+            annotations[case_id] = candidate
+
+    if set(result_by_decision) - seen_decisions:
+        problems.add("result_decision_unmatched")
+    selected_decision_count = sum(
+        row["state"] != "none" for row in annotations.values()
+    )
+    historical_decision_count = max(
+        0,
+        len(seen_decisions) - unmatched_count - selected_decision_count,
+    )
+    if problems:
+        annotations = {case_id: _empty_decision_annotation() for case_id in annotations}
+    values = list(annotations.values())
+    source_status = "invalid" if problems else "observed"
+    descriptor = {
+        "source_status": source_status,
+        "source_schema_version": schema_version,
+        "source_hash": source_hash,
+        "source_snapshot_digest": source_snapshot_digest,
+        "decision_count": len(seen_decisions),
+        "historical_decision_count": historical_decision_count,
+        "active_count": sum(row["state"] == "active" for row in values),
+        "retracted_count": sum(row["state"] == "retracted" for row in values),
+        "stale_count": sum(row["state"] == "stale" for row in values),
+        "pending_manual_action_count": sum(
+            row["manual_action_state"] == "pending" for row in values
+        ),
+        "verified_result_count": sum(
+            row["manual_action_state"] == "verified" for row in values
+        ),
+        "failed_result_count": sum(row["manual_action_state"] == "failed" for row in values),
+        "aborted_result_count": sum(
+            row["manual_action_state"] == "aborted" for row in values
+        ),
+        "unmatched_decision_count": unmatched_count,
+        "problems": sorted(problems),
+    }
+    blockers: list[dict[str, str]] = []
+    if problems:
+        blockers.append(
+            {
+                "kind": "decision_projection_invalid",
+                "ref": source_hash,
+                "note": "Decision evidence is structurally invalid and was not trusted.",
+            }
+        )
+    if unmatched_count:
+        blockers.append(
+            {
+                "kind": "decision_case_unmatched",
+                "ref": stable_id(METHOD_ID, "unmatched-decisions", str(unmatched_count)),
+                "note": "One or more decisions do not match a visible source case.",
+            }
+        )
+    return descriptor, annotations, blockers
+
+
 def build_portfolio_shaping(
     workstream_state: dict[str, Any] | None,
     cockpit: dict[str, Any] | None,
     reconciliation: dict[str, Any] | None,
     *,
+    decisions: Mapping[str, Any] | None = None,
     now: datetime | None = None,
     settings: ShapingSettings | None = None,
     schema_root: Path | None = None,
@@ -554,6 +866,7 @@ def build_portfolio_shaping(
         },
         "reconciliation_fully_reconciled": (reconciliation_summary.get("fully_reconciled") is True),
     }
+    source_snapshot_digest = _shaping_source_snapshot_digest(sources, source_coupling)
     coupling_checks = (
         ("workstream_cockpit_hash_mismatch", source_coupling["workstreams_to_cockpit"]),
         (
@@ -997,10 +1310,20 @@ def build_portfolio_shaping(
     for row in cases:
         deduplicated.setdefault(row["case_id"], row)
     all_cases = sorted(deduplicated.values(), key=lambda row: _case_sort_key(row, today_order))
+    decision_projection, decision_annotations, decision_blockers = _decision_annotations(
+        decisions,
+        all_cases,
+        source_snapshot_digest=source_snapshot_digest,
+    )
+    blockers.extend(decision_blockers)
+    for row in all_cases:
+        row["decision"] = decision_annotations[row["case_id"]]
     visible_cases = all_cases[: policy.case_limit]
     hidden_case_count = len(all_cases) - len(visible_cases)
     review_queue: list[dict[str, Any]] = []
     for row in visible_cases:
+        if row["decision"]["state"] in {"active", "stale"}:
+            continue
         matched_today = [value for value in row["source_attention_ids"] if value in today_order]
         if not matched_today:
             continue
@@ -1012,7 +1335,7 @@ def build_portfolio_shaping(
                 "evidence_tier": row["evidence_tier"],
                 "attention_ids": matched_today,
                 "label": row["label"],
-                "next_action": "Review the inert choices; use a separate human-gated command only after deciding.",
+                "next_action": "Review the inert choices; any later work requires a separate human gate.",
             }
         )
         if len(review_queue) >= policy.review_limit:
@@ -1109,6 +1432,8 @@ def build_portfolio_shaping(
         },
         "sources": sources,
         "source_coupling": source_coupling,
+        "source_snapshot_digest": source_snapshot_digest,
+        "decision_projection": decision_projection,
         "summary": summary,
         "review_queue": review_queue,
         "workstream_cards": workstream_cards,
@@ -1183,10 +1508,12 @@ def portfolio_shaping_html(projection: dict[str, Any]) -> str:
             f"<td>{escape(row['case_kind'])}</td><td>{escape(row['evidence_tier'])}</td>"
             f"<td>{escape(row['label'])}</td><td>{escape(row['disposition'])}</td>"
             f"<td>{escape(', '.join(choice['label'] for choice in row['choices']))}</td>"
+            f"<td>{escape(row['decision']['state'])}</td>"
+            f"<td>{escape(row['decision']['manual_action_state'])}</td>"
             f"<td><code>{escape(row['case_id'])}</code></td></tr>"
             for row in projection["cases"]
         )
-        or '<tr><td colspan="6">No shaping case was generated. This is not automatically an all-clear.</td></tr>'
+        or '<tr><td colspan="8">No shaping case was generated. This is not automatically an all-clear.</td></tr>'
     )
     card_rows = (
         "".join(
@@ -1223,21 +1550,23 @@ def portfolio_shaping_html(projection: dict[str, Any]) -> str:
     complete = "yes" if summary["shaping_complete"] else "no"
     status = escape(projection["status"])
     classification = escape(projection["data_classification"])
+    decision_projection = projection["decision_projection"]
     return f"""<!doctype html>
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <meta http-equiv="Content-Security-Policy" content="{escape(_csp(), quote=True)}"><title>DAD Workstream Shaping</title><style>{_STYLE}</style></head>
 <body><a class="skip" href="#main">Skip to main content</a><main id="main" class="shell"><div class="eyebrow">DAD ? Creative sprawl shaping</div>
 <h1>Shape the sprawl. Keep the decision yours.</h1><p class="muted">Candidate split, rescope, duplicate-comparison, and recovery choices over one frozen Portfolio OS snapshot. Every menu is descriptive; this page has no active controls.</p>
 <div class="banner"><strong>Status: {status}. Shaping complete: {complete}.</strong> Classification: {classification}. There are {summary["unknown_count"]} source unknowns and {summary["blocker_count"]} blockers. Until status is generated_candidate, every card is inventory-only and must not be treated as a decision or all-clear.</div>
+<p class="muted">Decision source: {escape(decision_projection["source_status"])}. Pending manual actions: {decision_projection["pending_manual_action_count"]}. Stale decisions: {decision_projection["stale_count"]}.</p>
 <p class="muted">No-cases is reported separately and never means the portfolio is organized.</p>
 <section class="stats"><div class="stat"><strong>{summary["case_count"]}</strong><span>visible cases</span></div><div class="stat"><strong>{summary["hidden_case_count"]}</strong><span>hidden cases</span></div><div class="stat"><strong>{summary["split_case_count"]}</strong><span>split</span></div><div class="stat"><strong>{summary["rescope_case_count"]}</strong><span>rescope</span></div><div class="stat"><strong>{summary["possible_duplicate_case_count"]}</strong><span>possible duplicate</span></div><div class="stat"><strong>{summary["recovery_case_count"]}</strong><span>recovery</span></div></section>
 <h2>Source readiness</h2><div class="table-wrap"><table><caption>Frozen source status and freshness.</caption><thead><tr><th scope="col">Source</th><th scope="col">Status</th><th scope="col">Freshness</th><th scope="col">Schema</th><th scope="col">Problems</th></tr></thead><tbody>{source_rows}</tbody></table></div>
 <h2>Today review</h2><section class="cards">{review_cards}</section>
 <h2>Workstream scope</h2><div class="table-wrap"><table><caption>Exact accepted scope and shaping coverage.</caption><thead><tr><th scope="col">Workstream</th><th scope="col">State</th><th scope="col">Exact resources</th><th scope="col">Cases</th><th scope="col">Missing exact scope</th></tr></thead><tbody>{card_rows}</tbody></table></div>
-<h2>Full shaping inventory</h2><details><summary>{summary["case_count"]} visible cases; {summary["hidden_case_count"]} hidden by the configured bound</summary><div class="table-wrap"><table><caption>Evidence-tiered cases. Similarity remains inspect-only.</caption><thead><tr><th scope="col">Kind</th><th scope="col">Tier</th><th scope="col">Subject</th><th scope="col">Disposition</th><th scope="col">Inert choices</th><th scope="col">Case ID</th></tr></thead><tbody>{case_rows}</tbody></table></div></details>
+<h2>Full shaping inventory</h2><details><summary>{summary["case_count"]} visible cases; {summary["hidden_case_count"]} hidden by the configured bound</summary><div class="table-wrap"><table><caption>Evidence-tiered cases. Similarity remains inspect-only.</caption><thead><tr><th scope="col">Kind</th><th scope="col">Tier</th><th scope="col">Subject</th><th scope="col">Disposition</th><th scope="col">Inert choices</th><th scope="col">Decision state</th><th scope="col">Manual state</th><th scope="col">Case ID</th></tr></thead><tbody>{case_rows}</tbody></table></div></details>
 <h2>Blockers</h2><div class="table-wrap"><table><caption>Source, identity, and reconciliation blockers that prevent false confidence.</caption><thead><tr><th scope="col">Kind</th><th scope="col">Ref</th><th scope="col">Explanation</th></tr></thead><tbody>{blocker_rows}</tbody></table></div>
 <h2>Unknowns</h2><div class="table-wrap"><table><caption>Incomplete source evidence retained as an explicit limit.</caption><thead><tr><th scope="col">Severity</th><th scope="col">Kind</th><th scope="col">Opaque ref</th><th scope="col">Explanation</th></tr></thead><tbody>{unknown_rows}</tbody></table></div>
-<footer>Generated {escape(projection["generated_at"])}. {escape(projection["authority_boundary"])}</footer></main></body></html>"""
+<footer>Generated {escape(projection["generated_at"])}. Derived local report with no active controls.</footer></main></body></html>"""
 
 
 _PATH_RE = _ABSOLUTE_PATH_RE
@@ -1267,6 +1596,21 @@ def portfolio_shaping_semantic_problems(projection: dict[str, Any]) -> list[str]
             problems.add(f"source_hash_reference_mismatch:{name}")
 
     coupling = projection.get("source_coupling", {})
+    expected_snapshot_digest = _shaping_source_snapshot_digest(sources, coupling)
+    if projection.get("source_snapshot_digest") != expected_snapshot_digest:
+        problems.add("source_snapshot_digest_mismatch")
+    decision_projection = projection.get("decision_projection", {})
+    if not isinstance(decision_projection, dict):
+        problems.add("decision_projection_not_object")
+        decision_projection = {}
+    if decision_projection.get("source_snapshot_digest") != expected_snapshot_digest:
+        problems.add("decision_snapshot_digest_mismatch")
+    if decision_projection.get("source_status") not in {"observed", "invalid", "unavailable"}:
+        problems.add("decision_source_status_invalid")
+    if decision_projection.get("problems") != sorted(
+        set(decision_projection.get("problems", []))
+    ):
+        problems.add("decision_problems_not_canonical")
     expected_links = {
         "workstreams_to_cockpit": (
             sources.get("workstreams", {}).get("source_hash", "")
@@ -1387,6 +1731,40 @@ def portfolio_shaping_semantic_problems(projection: dict[str, Any]) -> list[str]
         if row.get("revision_id") != stable_id(case_id, _canonical_hash(material)):
             problems.add("case_revision_identity_mismatch")
 
+        decision = row.get("decision", {})
+        if not isinstance(decision, dict):
+            problems.add("case_decision_not_object")
+            decision = {}
+        state = str(decision.get("state", ""))
+        manual_state = str(decision.get("manual_action_state", ""))
+        if state not in {*_DECISION_STATES, "none"}:
+            problems.add("case_decision_state_invalid")
+        if manual_state not in _MANUAL_ACTION_STATES:
+            problems.add("case_manual_action_state_invalid")
+        if state == "none" and decision != _empty_decision_annotation():
+            problems.add("empty_case_decision_mismatch")
+        if state == "retracted" and manual_state != "none":
+            problems.add("retracted_decision_action_mismatch")
+        if state in {"active", "stale"}:
+            choice_map = {
+                str(choice.get("choice_id", "")): str(choice.get("choice_kind", ""))
+                for choice in choices
+                if isinstance(choice, dict)
+            }
+            if (
+                not decision.get("decision_id")
+                or decision.get("choice_id") not in choice_map
+                or choice_map.get(decision.get("choice_id")) != decision.get("choice_kind")
+            ):
+                problems.add("case_decision_choice_mismatch")
+        if manual_state in _RESULT_STATES and not decision.get("result_ref"):
+            problems.add("case_decision_result_ref_missing")
+        if decision.get("choice_kind") == "defer" and state == "active" and manual_state not in {
+            "not_required",
+            *_RESULT_STATES,
+        }:
+            problems.add("defer_manual_action_mismatch")
+
         evidence = row.get("evidence_summary", {})
         workstream_count = len(row.get("subject_workstream_ids", []))
         resource_count = len(row.get("subject_resource_ids", []))
@@ -1494,6 +1872,8 @@ def portfolio_shaping_semantic_problems(projection: dict[str, Any]) -> list[str]
         if case_id not in case_by_id:
             problems.add("review_case_missing")
             continue
+        if case_by_id[case_id].get("decision", {}).get("state") in {"active", "stale"}:
+            problems.add("decided_case_in_review_queue")
         if not attention_ids or not set(attention_ids) <= set(today_ids):
             problems.add("review_not_subset_of_today")
         if not set(attention_ids) <= set(case_by_id[case_id].get("source_attention_ids", [])):
@@ -1506,9 +1886,50 @@ def portfolio_shaping_semantic_problems(projection: dict[str, Any]) -> list[str]
             or review.get("evidence_tier") != case.get("evidence_tier")
             or review.get("label") != case.get("label")
             or review.get("next_action")
-            != "Review the inert choices; use a separate human-gated command only after deciding."
+            != "Review the inert choices; any later work requires a separate human gate."
         ):
             problems.add("review_case_metadata_mismatch")
+
+    visible_decisions = [
+        row.get("decision", {})
+        for row in cases
+        if isinstance(row.get("decision"), dict) and row["decision"].get("state") != "none"
+    ]
+    for key, expected in {
+        "active_count": sum(row.get("state") == "active" for row in visible_decisions),
+        "retracted_count": sum(row.get("state") == "retracted" for row in visible_decisions),
+        "stale_count": sum(row.get("state") == "stale" for row in visible_decisions),
+        "pending_manual_action_count": sum(
+            row.get("manual_action_state") == "pending" for row in visible_decisions
+        ),
+        "verified_result_count": sum(
+            row.get("manual_action_state") == "verified" for row in visible_decisions
+        ),
+        "failed_result_count": sum(
+            row.get("manual_action_state") == "failed" for row in visible_decisions
+        ),
+        "aborted_result_count": sum(
+            row.get("manual_action_state") == "aborted" for row in visible_decisions
+        ),
+    }.items():
+        if int(decision_projection.get(key, 0) or 0) < expected:
+            problems.add(f"decision_projection_count_too_small:{key}")
+    if decision_projection.get("source_status") == "invalid" and not any(
+        row.get("kind") == "decision_projection_invalid"
+        for row in projection.get("blockers", [])
+        if isinstance(row, dict)
+    ):
+        problems.add("decision_projection_blocker_missing")
+    if decision_projection.get("source_status") == "observed":
+        counted_decisions = sum(
+            int(decision_projection.get(key, 0) or 0)
+            for key in ("active_count", "retracted_count", "stale_count")
+        ) + sum(
+            int(decision_projection.get(key, 0) or 0)
+            for key in ("historical_decision_count", "unmatched_decision_count")
+        )
+        if decision_projection.get("decision_count") != counted_decisions:
+            problems.add("decision_projection_count_mismatch")
 
     summary = projection.get("summary", {})
     counts = Counter(row.get("case_kind") for row in cases)
@@ -1590,6 +2011,7 @@ def write_portfolio_shaping_outputs(
     workstream_state: dict[str, Any],
     cockpit: dict[str, Any],
     reconciliation: dict[str, Any],
+    decisions: Mapping[str, Any] | None = None,
 ) -> dict[str, Any]:
     """Validate against frozen sources and publish HTML, then the JSON cursor."""
 
@@ -1607,6 +2029,7 @@ def write_portfolio_shaping_outputs(
         workstream_state,
         cockpit,
         reconciliation,
+        decisions=decisions,
         now=generated_at,
         settings=ShapingSettings(
             case_limit=int(methodology["case_limit"]),

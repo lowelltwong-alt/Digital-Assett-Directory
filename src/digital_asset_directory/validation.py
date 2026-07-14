@@ -1714,6 +1714,25 @@ def validate_repo(repo_root: Path) -> dict[str, Any]:
             checked.append(str(path.relative_to(repo_root)))
         except Exception as exc:
             errors.append(f"Invalid JSON Schema {path.name}: {exc}")
+    try:
+        from .mcp_dependency_map import validate_mcp_dependency_map
+        from .mcp_server import DADGraphMCPServer
+
+        mcp_server = DADGraphMCPServer(repo_root)
+        mcp_status = validate_mcp_dependency_map(
+            repo_root,
+            runtime_tools=[row["name"] for row in mcp_server.list_tools()],
+            runtime_resources=[row["uri"] for row in mcp_server.list_resources()],
+        )
+        if not mcp_status["current_claims_allowed"]:
+            errors.append(
+                "MCP dependency map is not current: "
+                + ", ".join(mcp_status["issue_codes"])
+            )
+        else:
+            checked.append("registry/mcp-dependency-map.json:freshness")
+    except Exception as exc:
+        errors.append(f"MCP dependency map validation failed: {type(exc).__name__}")
     for path in sorted((repo_root / "registry").glob("*.json")) + [
         repo_root / "MACHINE_NAVIGATION_MANIFEST.json"
     ]:

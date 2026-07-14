@@ -1,0 +1,109 @@
+schema_version: dad_subagent_pack.v0_1
+pack_id: dad:subagent-pack:dad-digital-asset-radar
+version: 0.1.0
+status: candidate
+ai_agnostic: true
+methodology_ref: registry/subagent-evaluation-methodology.json#0.1.0
+authority_boundary: >
+  Roles produce privacy-safe candidate asset evidence only. They cannot ingest
+  raw private data, approve or install assets, change taxonomies, rank models,
+  mutate source repositories, or treat self-grades as proof.
+routing_policy:
+  max_delegation_depth: 1
+  deterministic_first: true
+  writer_role_id: asset-lifecycle-routing-steward
+  checker_role_id: independent-digital-asset-auditor
+  taxonomy_ref: references/DIGITAL_ASSET_TAXONOMY.md
+  multi_label_facets: true
+  unknowns_must_remain_visible: true
+roles:
+  - role_id: digital-asset-discovery-observer
+    profile_role_id: digital_asset_discovery_observer
+    evaluated_role_revision_ids: []
+    capability_ids: [digital_asset_discovery, bounded_evidence_inventory]
+    search_terms: [asset discovery, repository delta, reusable candidate, missed asset]
+    effort: deterministic_then_low
+    mission: Inventory concrete candidates and coverage without changing source files or treating existence as value.
+    required_input: [coverage, source_snapshot, task_context]
+    required_output: [coverage, candidates, evidence_refs, exclusions, unknowns]
+    stop_conditions: [coverage_unstated, raw_private_data_required, source_mutation_requested]
+  - role_id: asset-identity-revision-steward
+    profile_role_id: asset_identity_revision_steward
+    evaluated_role_revision_ids: []
+    capability_ids: [asset_identity_revision_stewardship]
+    search_terms: [asset identity, revision, variant, stable id, package]
+    effort: medium
+    mission: Separate stable asset, revision, variant, package, deployment, and observation identities and surface ambiguous merges.
+    required_input: [candidates, existing_registry_matches, provenance]
+    required_output: [identity_candidates, revision_links, variant_links, collisions, human_decisions]
+    stop_conditions: [label_used_as_identity, merge_requires_human_review, provenance_missing]
+  - role_id: asset-facet-classification-steward
+    profile_role_id: asset_facet_classification_steward
+    evaluated_role_revision_ids: []
+    capability_ids: [asset_taxonomy_classification]
+    search_terms: [asset taxonomy, multi label, classification facet, unclassified]
+    effort: low_then_medium_on_unknowns
+    mission: Apply evidence-backed multi-label facets while preserving unknown, unclassified, conflicting, and proposed taxonomy values.
+    required_input: [identity_candidates, taxonomy_revision, evidence_refs]
+    required_output: [facet_assignments, unknown_facets, unclassified_facets, conflicts, taxonomy_candidates]
+    stop_conditions: [forced_single_label, unknown_collapsed_to_other, taxonomy_change_self_approved]
+  - role_id: asset-provenance-license-privacy-reviewer
+    profile_role_id: asset_provenance_license_privacy_reviewer
+    evaluated_role_revision_ids: []
+    capability_ids: [asset_provenance_license_privacy, governance_authority_safety]
+    search_terms: [provenance, license, privacy, release, third party asset]
+    effort: medium_or_high_by_sensitivity
+    mission: Review origin, derivation, license, ownership, sensitivity, release status, security, and compatibility without exposing protected content.
+    required_input: [candidate_identity, source_pointers, target_scope]
+    required_output: [provenance_status, license_status, sensitivity, release_gate, security_and_compatibility_gaps]
+    stop_conditions: [ownership_uncertain, restricted_content_required, license_unverifiable, client_payload_detected]
+  - role_id: asset-dedupe-variant-synergy-analyst
+    profile_role_id: asset_dedupe_variant_synergy_analyst
+    evaluated_role_revision_ids: []
+    capability_ids: [asset_deduplication_variant_synergy]
+    search_terms: [duplicate asset, variant, synergy, combine assets, overlap]
+    effort: medium
+    mission: Compare candidates for exact duplication, containment, variant, complement, conflict, or combination without turning similarity into identity.
+    required_input: [candidate_revisions, existing_assets, typed_relationships]
+    required_output: [comparison_coverage, relationship_candidates, counterevidence, reuse_improve_new_options]
+    stop_conditions: [similarity_used_as_identity, semantic_difference_unreviewed, combination_authority_missing]
+  - role_id: asset-evidence-value-adoption-analyst
+    profile_role_id: asset_evidence_value_adoption_analyst
+    evaluated_role_revision_ids: []
+    capability_ids: [asset_evidence_value_adoption]
+    search_terms: [asset value, adoption evidence, reuse outcome, validation quality]
+    effort: medium
+    mission: Assess validation, usefulness, applicability, maintenance cost, target adoption, counterevidence, and do-not-apply boundaries without universal scores.
+    required_input: [candidate, validation, usage_evidence, target_context]
+    required_output: [evidence_grade, value_hypothesis, adoption_status, counterevidence, applicability_limits, validation_need]
+    stop_conditions: [popularity_used_as_value, cross_domain_score_requested, adoption_target_missing]
+  - role_id: asset-lifecycle-routing-steward
+    profile_role_id: asset_lifecycle_routing_steward
+    evaluated_role_revision_ids: []
+    capability_ids: [asset_lifecycle_routing, governance_authority_safety]
+    search_terms: [asset lifecycle, route candidate, adoption gate, retirement]
+    effort: medium
+    mission: Act as the single candidate-record writer, routing accepted evidence to review, trial, reuse, revision, hold, rejection, supersession, or retirement without applying it downstream.
+    required_input: [independently_reviewable_candidate, facet_assignments, provenance_status, evidence_grade]
+    required_output: [candidate_record, lifecycle_state, routing_target, human_gates, rollback_or_retention]
+    stop_conditions: [independent_review_unavailable, downstream_mutation_requested, release_gate_failed, second_writer_present]
+  - role_id: asset-taxonomy-drift-analyst
+    profile_role_id: asset_taxonomy_drift_analyst
+    evaluated_role_revision_ids: []
+    capability_ids: [asset_taxonomy_drift_audit]
+    search_terms: [taxonomy drift, unknown cluster, facet revision, classification regression]
+    effort: medium
+    mission: Detect recurring unknowns, contradictory facets, obsolete values, and classification regressions, proposing the smallest compatible taxonomy revision.
+    required_input: [taxonomy_revision, classified_cohort, unknowns, feedback]
+    required_output: [drift_evidence, affected_assets, compatibility_effects, taxonomy_revision_candidate, negative_cases]
+    stop_conditions: [isolated_unknown_used_as_new_class, taxonomy_auto_changed, migration_impact_unknown]
+  - role_id: independent-digital-asset-auditor
+    profile_role_id: independent_digital_asset_auditor
+    evaluated_role_revision_ids: []
+    capability_ids: [digital_asset_independent_audit, evaluator_integrity_audit]
+    search_terms: [independent asset audit, asset red team, provenance check, taxonomy audit]
+    effort: medium_or_high_by_risk
+    mission: Independently test discovery coverage, identity, facets, provenance, privacy, dedupe, value, lifecycle routing, and writer separation against raw permitted evidence.
+    required_input: [candidate_record, permitted_source_evidence, taxonomy_revision, validation_results]
+    required_output: [independent_findings, misses, false_merges, privacy_and_license_findings, disagreement, release_gate]
+    stop_conditions: [checker_is_writer, evidence_only_from_self_grade, private_payload_required, unresolved_material_disagreement]

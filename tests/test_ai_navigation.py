@@ -58,7 +58,7 @@ def test_manifest_exposes_navigation_and_graph_entrypoints() -> None:
     assert manifest["navigation_standards"]["navigation_registry"] == (
         "registry/ai-navigation-registry.json"
     )
-    assert manifest["navigation_standards"]["navigation_version"] == "2026.07.13.6"
+    assert manifest["navigation_standards"]["navigation_version"] == "2026.07.13.7"
     assert manifest["navigation_standards"]["routing_standard"] == (
         "docs/AI_ENTRYPOINT_AND_TOC_ROUTING_STANDARD.md"
     )
@@ -107,7 +107,19 @@ def test_manifest_exposes_navigation_and_graph_entrypoints() -> None:
         in manifest["knowledge_graph_entrypoints"]
     )
     assert (
+        "schemas/portfolio-shaping-decision-event.schema.json"
+        in manifest["knowledge_graph_entrypoints"]
+    )
+    assert (
+        "src/digital_asset_directory/portfolio_recovery.py"
+        in manifest["knowledge_graph_entrypoints"]
+    )
+    assert (
         "docs/frontier/collaboration/13_PORTFOLIO_WORKSTREAM_SHAPING.md"
+        in manifest["knowledge_graph_entrypoints"]
+    )
+    assert (
+        "docs/frontier/collaboration/15_PORTFOLIO_RECOVERY_DECISION_CONTROL.md"
         in manifest["knowledge_graph_entrypoints"]
     )
     assert (
@@ -162,7 +174,7 @@ def test_navigation_registry_keeps_front_door_singular_and_fresh() -> None:
     registry = json.loads((ROOT / "registry" / "ai-navigation-registry.json").read_text())
 
     assert registry["singular_entrypoint"]["path"] == "AI_FRONT_DOOR.md"
-    assert registry["navigation_version"] == "2026.07.13.8"
+    assert registry["navigation_version"] == "2026.07.13.9"
     assert registry["updated_at"]
     assert "memory" in registry["entrypoint_policy"]["memory_rule"].lower()
     assert registry["freshness_policy"]["recent_changes_limit"] <= 20
