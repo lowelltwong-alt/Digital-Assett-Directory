@@ -75,6 +75,10 @@ human gate approves the exception.
 
 Read `docs/MCP_FIRST_INTEGRATION_POLICY.md` before creating or reviewing an MCP
 server, plugin, connector, cloud agent, API bridge, or runtime adapter.
+Read `docs/DAD_MCP_ADOPTION_AND_REGISTRATION_SCAFFOLD.md` before registering
+DAD's local MCP server in Codex, Cursor, Claude Code, or another downstream
+host. That scaffold is documentation and request-template guidance only; it
+does not install, enable, or authorize a global/user MCP configuration change.
 
 ## Transport And Data Root
 
