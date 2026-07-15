@@ -59,6 +59,7 @@ def _hub(tmp_path: Path, *, evaluation_support: bool = False) -> Path:
         "subagent-continuous-improvement",
         "dad-digital-asset-radar",
         "dad-manifest-graph-engineering",
+        "personal-portfolio-capacity-review",
     ):
         source = ROOT / "assets/agent-skills" / skill_name
         target = hub / "assets/agent-skills" / skill_name
@@ -85,13 +86,14 @@ def test_catalog_builds_without_attempts_and_keeps_grades_insufficient(tmp_path:
 
     projection = build_role_directory_projection(hub)
 
-    assert projection["role_count"] == 34
+    assert projection["role_count"] == 37
     assert {row["skill_id"] for row in projection["roles"]} == {
         "skill:personal-project-management-ops",
         "skill:dad-trigger-pattern-radar",
         "skill:subagent-continuous-improvement",
         "skill:dad-digital-asset-radar",
         "skill:dad-manifest-graph-engineering",
+        "skill:personal-portfolio-capacity-review",
     }
     assert all(row["evaluation_status"] == "insufficient_evidence" for row in projection["roles"])
     assert all(row["evaluated_revisions"] == [] for row in projection["roles"])

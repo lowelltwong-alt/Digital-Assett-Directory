@@ -68,6 +68,136 @@
     }
   },
   "human_gates": {
+    "phase-11-offering-routes-reviewed": {
+      "evidence": [
+        "roadmap/evidence/phase-11-dad-library-card-catalog-upgrade.md",
+        "roadmap/evidence/phase-11-dad-library-card-catalog-upgrade.human-review-packet.json",
+        "AI_FRONT_DOOR.md",
+        "AI_TABLE_OF_CONTENTS.md",
+        "MACHINE_NAVIGATION_MANIFEST.json"
+      ],
+      "phase_id": "phase-11-dad-library-card-catalog-upgrade",
+      "reviewed_at": "2026-07-15T19:45:36Z",
+      "reviewer": "Lowell",
+      "status": "verified",
+      "summary": "Lowell approved the reviewed DAD-local offering routes for assets, harnesses, skills, templates, Rust candidates, mail, exceptions, and enrollment guidance. This verifies navigation and routing only; it does not authorize enrollment, mail delivery, public release, target-repository writes, or offering adoption."
+    },
+    "phase-11-context-pack-golden-tasks-reviewed": {
+      "evidence": [
+        "roadmap/evidence/phase-11-dad-library-card-catalog-upgrade.md",
+        "roadmap/evidence/phase-11-dad-library-card-catalog-upgrade.human-review-packet.json",
+        "docs/CODING_HARNESS_LIBRARY.md",
+        "AI_FRONT_DOOR.md",
+        "AI_TABLE_OF_CONTENTS.md"
+      ],
+      "phase_id": "phase-11-dad-library-card-catalog-upgrade",
+      "reviewed_at": "2026-07-15T19:45:36Z",
+      "reviewer": "Lowell",
+      "status": "verified",
+      "summary": "Lowell approved the bounded deterministic context-pack routing evidence for golden coding, governance, mail, Rust, and enrollment tasks. Routes remain candidate recommendations under local source authority and are not general semantic or adoption authority."
+    },
+    "phase-11-offering-authority-reviewed": {
+      "evidence": [
+        "roadmap/evidence/phase-11-dad-library-card-catalog-upgrade.md",
+        "roadmap/evidence/phase-11-dad-library-card-catalog-upgrade.human-review-packet.json",
+        "docs/CODING_HARNESS_LIBRARY.md",
+        "AI_FRONT_DOOR.md"
+      ],
+      "phase_id": "phase-11-dad-library-card-catalog-upgrade",
+      "reviewed_at": "2026-07-15T19:45:36Z",
+      "reviewer": "Lowell",
+      "status": "verified",
+      "summary": "Lowell verified that current DAD offerings declare bounded use conditions, validation references, owner authority, update channels, and adoption semantics. Declared evidence pointers are not proof of universal fitness, and downstream adoption remains separately reviewed."
+    },
+    "phase-11-usage-ledger-reviewed": {
+      "evidence": [
+        "roadmap/evidence/phase-11-dad-library-card-catalog-upgrade.md",
+        "roadmap/evidence/phase-11-dad-library-card-catalog-upgrade.human-review-packet.json",
+        "docs/CODING_HARNESS_LIBRARY.md"
+      ],
+      "phase_id": "phase-11-dad-library-card-catalog-upgrade",
+      "reviewed_at": "2026-07-15T19:45:36Z",
+      "reviewer": "Lowell",
+      "status": "verified",
+      "summary": "Lowell verified the reviewed distinction between confirmed usage or dependency records and candidate observations. Match scores, graph edges, and candidate dependencies remain non-authorizing evidence and cannot establish value or adoption."
+    },
+    "phase-9-protected-active-rules-reviewed": {
+      "evidence": [
+        "roadmap/evidence/phase-9-all-repo-read-only-inventory.md",
+        "docs/DAD_REPO_ENROLLMENT.md"
+      ],
+      "phase_id": "phase-9-all-repo-read-only-inventory",
+      "reviewed_at": "2026-07-15T19:45:36Z",
+      "reviewer": "Lowell",
+      "status": "verified",
+      "summary": "Lowell verified the current protected and active repository rules: Logos Scripture Graph and Logos Governance Architecture remain protected-central-only, while Mock Trial/Albert remains active-no-write rather than extra-protected. No target-repository write or enrollment is authorized."
+    },
+    "phase-9-public-safe-report-reviewed": {
+      "evidence": [
+        "roadmap/evidence/phase-9-all-repo-read-only-inventory.md",
+        "docs/DAD_REPO_ENROLLMENT.md"
+      ],
+      "phase_id": "phase-9-all-repo-read-only-inventory",
+      "reviewed_at": "2026-07-15T19:45:36Z",
+      "reviewer": "Lowell",
+      "status": "verified",
+      "summary": "Lowell verified the current public-safe inventory report boundary after the 82-repository quiet-window evidence reported no private absolute-path fragments in public-facing rows. GitHub coverage and complete repository classification remain explicitly unverified."
+    },
+    "phase-7-rust-starter-pack-reviewed": {
+      "evidence": [
+        "assets/dad-rust-upgrade-starter-pack/manifest.json",
+        "assets/rust-buildout-guide/rust-buildout.json",
+        "docs/rust/DAD_FORCED_RUST_ROLLOUT_POLICY.md",
+        "docs/rust/DAD_RUST_SCAN_CORE.md"
+      ],
+      "phase_id": "phase-7-language-frontier-and-rust-core",
+      "reviewed_at": "2026-07-15T19:45:36Z",
+      "reviewer": "Lowell",
+      "status": "boundary_deferred",
+      "summary": "Lowell intentionally deferred starter-pack installation or promotion. The preserved pack may support future review, but no crate overlay, source installation, downstream rollout, or value claim is authorized without fresh license, provenance, security, profiling, parity, and human review."
+    },
+    "phase-7-dad-scan-core-overlay-approved": {
+      "evidence": [
+        "tools/dad_scan_core/Cargo.toml",
+        "tools/dad_scan_core/src/lib.rs",
+        "src/digital_asset_directory/rust_bridge/dad_scan_core.py",
+        "docs/rust/DAD_RUST_SCAN_CORE.md",
+        "config/rust_rollout_policy.yaml"
+      ],
+      "phase_id": "phase-7-language-frontier-and-rust-core",
+      "reviewed_at": "2026-07-15T19:45:36Z",
+      "reviewer": "Lowell",
+      "status": "boundary_deferred",
+      "summary": "Lowell approved only the existing DAD-local Rust scan core as a read-only shadow leaf tool while deferring canonical promotion and expansion. Python retains policy authority; profiling, cargo quality gates, parity, rollback, and public/private path checks remain mandatory before any broader use."
+    },
+    "phase-7-language-frontier-source-cadence-reviewed": {
+      "evidence": [
+        "docs/LANGUAGE_CODING_ADVANTAGE.md",
+        "docs/RESEARCH_INTAKE_PIPELINE.md",
+        "registry/trusted-source-registry.json",
+        "registry/language-coding-advantage-registry.json",
+        "assets/coding-harnesses/language-frontier-research/harness.json"
+      ],
+      "phase_id": "phase-7-language-frontier-and-rust-core",
+      "reviewed_at": "2026-07-15T19:45:36Z",
+      "reviewer": "Lowell",
+      "status": "boundary_deferred",
+      "summary": "Lowell accepted the safe deferred boundary for language-frontier research: trusted-source pointers and local candidate research may remain available, but no standing external research cadence, source-content import, or automatic recommendation promotion is authorized."
+    },
+    "phase-7-downstream-rust-rollout-boundary-reviewed": {
+      "evidence": [
+        "docs/rust/DAD_FORCED_RUST_ROLLOUT_POLICY.md",
+        "docs/rust/NON_LOGOS_REPO_FORCED_ROLLOUT_GUIDE.md",
+        "config/repo_rust_status.yaml",
+        "config/rust_rollout_policy.yaml",
+        "lessons/rust_rollout/lesson_ledger.jsonl"
+      ],
+      "phase_id": "phase-7-language-frontier-and-rust-core",
+      "reviewed_at": "2026-07-15T19:45:36Z",
+      "reviewer": "Lowell",
+      "status": "boundary_deferred",
+      "summary": "Lowell explicitly deferred all downstream Rust rollout. Non-Logos work remains candidate mail only, Logos writes require separate repo-specific approval, and no repository may receive Rust changes without measured profiling, same-workload parity, rollback, privacy, license, security, and local-authority review."
+    },
     "phase-8-local-install-reviewed": {
       "evidence": [
         "roadmap/evidence/dad-deployment-and-all-repo-verification-roadmap.md",
