@@ -174,6 +174,13 @@ from .ml_agent_family import (
     ml_family_status,
     ml_research_plan,
 )
+from .knowledge_engineering import (
+    knowledge_catalog,
+    knowledge_dependency_graph,
+    knowledge_research_plan,
+    knowledge_route,
+    knowledge_status,
+)
 from .portfolio_intents import (
     capture_plan,
     fold_plan_index,
@@ -512,6 +519,8 @@ personal_skills_app = typer.Typer(no_args_is_help=True)
 app.add_typer(personal_skills_app, name="personal-skills")
 ml_app = typer.Typer(no_args_is_help=True)
 app.add_typer(ml_app, name="ml")
+knowledge_engineering_app = typer.Typer(no_args_is_help=True)
+app.add_typer(knowledge_engineering_app, name="knowledge-engineering")
 agent_families_app = typer.Typer(no_args_is_help=True)
 app.add_typer(agent_families_app, name="agent-families")
 product_os_app = typer.Typer(no_args_is_help=True)
@@ -698,6 +707,66 @@ def ml_graph(
 def ml_research_plan_command(hub: Optional[Path] = typer.Option(None)) -> None:
     """Show the unscheduled, human-gated 14-day ML research contract."""
     _ml_output(ml_research_plan, hub)
+
+
+def _knowledge_output(action, hub: Optional[Path], **kwargs: Any) -> None:
+    cfg = _cfg(hub=hub)
+    try:
+        console.print_json(data=action(cfg.repo_root, **kwargs))
+    except (OSError, ValueError, KeyError, ValidationError) as exc:
+        console.print_json(
+            data={
+                "schema_version": "knowledge.engineering.error.v1",
+                "status": "blocked",
+                "error": str(exc),
+                "candidate_only": True,
+                "authority_boundary": "Blocked Knowledge Engineering commands do not authorize corpus access, browsing, indexing, provider egress, scheduling, deployment, or mutation.",
+            }
+        )
+        raise typer.Exit(2) from None
+
+
+@knowledge_engineering_app.command("status")
+def knowledge_engineering_status_command(
+    hub: Optional[Path] = typer.Option(None),
+) -> None:
+    """Show the portable specialist family, coverage, and inactive research state."""
+    _knowledge_output(knowledge_status, hub)
+
+
+@knowledge_engineering_app.command("catalog")
+def knowledge_engineering_catalog_command(
+    query: str = typer.Option("", "--query", "-q"),
+    hub: Optional[Path] = typer.Option(None),
+) -> None:
+    """Search roles, techniques, workflows, and primary-source pointers read-only."""
+    _knowledge_output(knowledge_catalog, hub, query=query)
+
+
+@knowledge_engineering_app.command("route")
+def knowledge_engineering_route_command(
+    query: str = typer.Option(..., "--query", "-q"),
+    hub: Optional[Path] = typer.Option(None),
+) -> None:
+    """Return a deterministic candidate route without dispatch or execution authority."""
+    _knowledge_output(knowledge_route, hub, query=query)
+
+
+@knowledge_engineering_app.command("graph")
+def knowledge_engineering_graph_command(
+    node: str = typer.Option("", help="Optional node ID for transitive dependencies."),
+    hub: Optional[Path] = typer.Option(None),
+) -> None:
+    """Inspect the specialist pack dependency graph read-only."""
+    _knowledge_output(knowledge_dependency_graph, hub, node=node or None)
+
+
+@knowledge_engineering_app.command("research-plan")
+def knowledge_engineering_research_plan_command(
+    hub: Optional[Path] = typer.Option(None),
+) -> None:
+    """Show the inactive, human-gated seven-day frontier research contract."""
+    _knowledge_output(knowledge_research_plan, hub)
 
 
 def _agent_family_output(action, hub: Optional[Path], **kwargs: Any) -> None:

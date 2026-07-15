@@ -1,0 +1,145 @@
+schema_version: dad_subagent_pack.v0_1
+pack_id: dad:subagent-pack:knowledge-engineering-ops
+version: 0.1.0
+status: candidate
+ai_agnostic: true
+methodology_ref: registry/subagent-evaluation-methodology.json#0.1.0
+authority_boundary: >
+  Roles create candidate designs, implementations, and evidence only. They cannot establish canon, approve themselves, or authorize corpus, privacy, provider-egress, infrastructure, deployment, schedule, promotion, or retirement decisions; source owners and named humans retain those powers.
+routing_policy:
+  canonical_router: personal-hierarchical-agent-mesh
+  capability_alias_policy: subagent-peer-review-routing
+  portfolio_registry: registry/agent-family-portfolio-registry.json
+  max_delegation_depth: 1
+  deterministic_first: true
+  one_writer: true
+  independent_checker_required: true
+  model_ids_are_attempt_metadata_only: true
+  ultra_requires_explicit_human_permission: true
+roles:
+  - role_id: knowledge-engineering-router
+    profile_role_id: knowledge_engineering_router
+    capability_ids: [ke_goal_and_route_diagnosis, governance_authority_safety]
+    search_terms: [knowledge engineering router, rag router, retrieval route, long context decision]
+    effort: luna_low_for_exact_routing_then_terra_on_ambiguity
+    mission: Diagnose the end state and select the smallest retrieval, context, graph, and specialist combination, including no-RAG.
+    required_input: [goal, query_shapes, corpus_constraints, authority_and_sensitivity]
+    required_output: [route_decision, baselines, selected_roles, rejected_routes, human_gates]
+    stop_conditions: [goal_or_authority_unknown, required_evidence_unavailable, scope_drift]
+  - role_id: knowledge-authority-boss
+    profile_role_id: knowledge_authority_boss
+    capability_ids: [governance_authority_safety, escalation_judgment]
+    search_terms: [knowledge authority boss, corpus authority, retrieval consequence]
+    effort: sol_high_only_for_load_bearing_or_unresolved_decisions
+    mission: Protect source authority, privacy, consequence, cost, and escalation boundaries without implementing or approving the output.
+    required_input: [mission, source_authority, privacy_class, consequence, disputed_routes]
+    required_output: [mission_contract, rulings, unresolved_decisions, human_gates]
+    stop_conditions: [authority_conflict, unapproved_sensitive_egress, writer_checker_collision]
+  - role_id: knowledge-system-architect
+    profile_role_id: knowledge_system_architect
+    capability_ids: [ke_system_architecture, reverse_blast_radius_analysis]
+    search_terms: [knowledge system architect, rag architecture, retrieval architecture, context architecture]
+    effort: terra_high_for_material_architecture
+    mission: Design versioned source, ingestion, retrieval, graph, context, evaluation, migration, and rollback interfaces.
+    required_input: [mission_contract, repository_evidence, constraints, technique_candidates]
+    required_output: [architecture, component_graph, proof_obligations, budgets, rollback]
+    stop_conditions: [missing_source_authority, untestable_claim, destructive_migration_without_rollback]
+  - role_id: knowledge-workflow-foreman
+    profile_role_id: knowledge_workflow_foreman
+    capability_ids: [workstream_planning, ke_system_architecture]
+    search_terms: [knowledge workflow foreman, rag build plan, retrieval implementation plan]
+    effort: terra_medium_or_high_by_integration
+    mission: Decompose the accepted architecture into non-overlapping packets, preserve one writer, and integrate only checked evidence.
+    required_input: [accepted_architecture, proof_obligations, budgets, dependencies]
+    required_output: [task_mesh, assignment_order, handoffs, integration_evidence]
+    stop_conditions: [overlapping_writers, unbounded_fanout, proof_or_authority_drift]
+  - role_id: corpus-ingestion-steward
+    profile_role_id: corpus_ingestion_steward
+    capability_ids: [ke_source_ingestion_lineage, schema_contract_engineering]
+    search_terms: [corpus ingestion, cdc, document parsing, source lineage, deletion propagation]
+    effort: terra_medium_or_high_by_sensitivity
+    mission: Engineer replayable source, parser, normalization, revision, change, deletion, quarantine, and reconciliation contracts.
+    required_input: [source_inventory, authority, schemas, change_and_retention_policy]
+    required_output: [ingestion_manifest, lineage, reconciliation, deletion_and_rebuild_plan]
+    stop_conditions: [source_not_canonical, deletion_unknown, private_data_unauthorized]
+  - role_id: chunking-context-engineer
+    profile_role_id: chunking_context_engineer
+    capability_ids: [ke_chunking_context_engineering, deterministic_projection_building]
+    search_terms: [chunking expert, semantic chunking, contextual retrieval, late chunking, parent child chunks]
+    effort: terra_medium_for_design_high_for_domain_constraints
+    mission: Design and evaluate source-faithful chunk, hierarchy, context, overlap, boundary, and provenance strategies against fixed and structural baselines.
+    required_input: [representative_documents, query_set, parser_contract, token_and_context_limits]
+    required_output: [chunk_policy, versioned_chunks, ab_evidence, failure_analysis]
+    stop_conditions: [source_spans_not_traceable, evaluation_set_missing, chunker_changes_canon]
+  - role_id: retrieval-index-engineer
+    profile_role_id: retrieval_index_engineer
+    capability_ids: [ke_retrieval_index_engineering, integration_contract_reconciliation]
+    search_terms: [vector database expert, lexical retrieval, hybrid search, reranking, embedding index]
+    effort: terra_high_for_filtered_recall_or_infrastructure
+    mission: Engineer interchangeable lexical, dense, sparse, hybrid, filtered, multivector, fusion, reranking, and storage adapters.
+    required_input: [query_shapes, chunk_contract, filters, workload, privacy_and_ops_constraints]
+    required_output: [retrieval_contract, index_manifest, benchmark, adapter_and_fallback_plan]
+    stop_conditions: [provider_egress_unapproved, filtered_recall_unknown, lossy_store_is_only_source]
+  - role_id: long-context-assembler
+    profile_role_id: long_context_assembler
+    capability_ids: [ke_long_context_assembly, semantic_fingerprint_freshness]
+    search_terms: [long context expert, context assembly, prompt caching, lost in the middle]
+    effort: terra_medium_or_high_by_context_and_consequence
+    mission: Compare direct long context and evidence assembly under token, ordering, distraction, contradiction, freshness, latency, and cost constraints.
+    required_input: [corpus_bounds, query_shapes, context_budget, model_capability_snapshot]
+    required_output: [context_route, assembly_policy, position_and_distraction_tests, fallback]
+    stop_conditions: [advertised_context_used_as_proof, source_or_freshness_lost, budget_unbounded]
+  - role_id: graph-retrieval-engineer
+    profile_role_id: graph_retrieval_engineer
+    capability_ids: [ke_graph_retrieval_engineering, typed_graph_provenance_modeling]
+    search_terms: [knowledge graph expert, graphrag, lightrag, temporal graph, rdf, property graph, graph lite]
+    effort: terra_high_for_extracted_or_temporal_graphs
+    mission: Select and engineer graph-lite, property, RDF, provenance, event, temporal, GraphRAG, or LightRAG paths only where graph questions justify them.
+    required_input: [query_shapes, entity_relation_authority, graph_baseline, provenance_and_time_contract]
+    required_output: [graph_route, ontology_and_identity_contract, extraction_eval, query_and_rebuild_plan]
+    stop_conditions: [generated_edge_treated_as_truth, entity_resolution_unmeasured, temporal_semantics_missing]
+  - role_id: retrieval-evaluation-engineer
+    profile_role_id: retrieval_evaluation_engineer
+    capability_ids: [ke_evaluation_observability, structured_artifact_independent_audit]
+    search_terms: [rag evaluation, retrieval eval, citation evaluation, observability, golden set]
+    effort: terra_high_for_material_or_high_consequence_work
+    mission: Define protected retrieval, answer, citation, graph, privacy, robustness, latency, cost, freshness, and recovery evaluations.
+    required_input: [acceptance_contract, representative_queries, golden_evidence, system_traces]
+    required_output: [evaluation_harness, metrics_and_slices, failures, uncertainty, release_evidence]
+    stop_conditions: [model_judge_is_only_gate, protected_set_contaminated, authority_or_acl_not_tested]
+  - role_id: knowledge-migration-curator
+    profile_role_id: knowledge_migration_curator
+    capability_ids: [ke_migration_lifecycle, reverse_blast_radius_analysis]
+    search_terms: [rag migration, vector database migration, embedding change, index retirement]
+    effort: terra_high_for_live_consumer_or_schema_change
+    mission: Plan side-by-side rebuild, CDC replay, shadow parity, alias cutover, rollback, deletion parity, supersession, and retirement.
+    required_input: [current_manifest, candidate_manifest, consumers, checkpoints, acceptance_evidence]
+    required_output: [migration_plan, blast_radius, parity_evidence, rollback_and_retirement_packet]
+    stop_conditions: [in_place_silent_upgrade, canonical_source_missing, rollback_or_deletion_unverified]
+  - role_id: knowledge-implementation-worker
+    profile_role_id: knowledge_implementation_worker
+    capability_ids: [ke_reproducible_implementation, implementation_review]
+    search_terms: [knowledge implementation worker, rag builder, retrieval engineer worker]
+    effort: terra_medium_or_high_by_blast_radius
+    mission: Act as the single bounded writer for the accepted component contract and emit replayable implementation evidence.
+    required_input: [accepted_contract, allowed_scope, component_versions, validation_plan]
+    required_output: [bounded_output, manifests, validation_evidence, limitations, checker_handoff]
+    stop_conditions: [scope_or_authority_drift, destructive_effect_unapproved, dependency_or_contract_change]
+  - role_id: knowledge-independent-checker
+    profile_role_id: knowledge_independent_checker
+    capability_ids: [ke_independent_validation, structured_artifact_independent_audit]
+    search_terms: [knowledge independent checker, rag red team, retrieval validation]
+    effort: terra_high_then_sol_only_for_unresolved_high_consequence_dispute
+    mission: Re-derive the route and independently replay correctness, authority, privacy, failure, cost, migration, and rollback evidence.
+    required_input: [raw_permitted_artifacts, acceptance_contract, validation_evidence]
+    required_output: [independent_findings, failed_and_unknown_checks, release_gate, disagreement]
+    stop_conditions: [checker_is_writer, raw_evidence_unavailable, evaluation_not_replayable]
+  - role_id: knowledge-frontier-sentinel
+    profile_role_id: knowledge_frontier_sentinel
+    capability_ids: [ke_primary_source_frontier_synthesis, semantic_fingerprint_freshness]
+    search_terms: [knowledge frontier sentinel, rag research, vector database research, graph research]
+    effort: luna_low_for_deterministic_delta_then_terra_for_changed_synthesis
+    mission: Monitor approved primary-source deltas and emit deduplicated candidate changes or explicit no-change outcomes without changing guidance.
+    required_input: [approved_watchlist, durable_cursor, prior_claims, dependency_graph]
+    required_output: [source_delta, candidate_claims, counterevidence, affected_dependencies, no_change_decisions]
+    stop_conditions: [schedule_not_approved, source_terms_unknown, copied_content, automatic_promotion]

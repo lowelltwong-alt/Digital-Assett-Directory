@@ -671,6 +671,30 @@
       "owner_authority": "DAD owns candidate catalog, routing, receipts, and projections; source repositories and the named human retain project truth, adoption, activation, code, policy, release, spend, legal, data, and external-system authority.",
       "adoption_semantics": "Candidate and read-only by default. Telemetry is explicit opt-in, routines require separate activation, and adapters require exact configuration and permission.",
       "authority_boundary": "The OS can observe, retrieve, recommend, draft, and independently validate inside declared bounds. It cannot grant execution, activate itself, approve its own outputs, or perform prohibited actions."
+    },
+    {
+      "offering_id": "dad:offering:knowledge-engineering-ops",
+      "name": "Knowledge Engineering Ops",
+      "version": "0.1.0",
+      "offering_type": "skill",
+      "path": "assets/agent-skills/knowledge-engineering-ops",
+      "languages": ["agent-instruction", "python", "mixed"],
+      "repo_types": ["application", "library", "control_plane", "research_repo", "governed_repo_family"],
+      "domains": ["knowledge_engineering", "information_retrieval", "rag", "long_context", "vector_search", "knowledge_graph", "research", "governance"],
+      "context_tags": ["knowledge_engineering", "rag", "chunking", "retrieval", "vector_database", "graphrag", "lightrag", "temporal_graph", "portable", "weekly_research"],
+      "task_types": ["knowledge_system_diagnosis", "rag_design", "chunking_design", "retrieval_implementation", "graph_design", "evaluation", "migration", "frontier_research"],
+      "capabilities": ["smallest_knowledge_route", "portable_retrieval_architecture", "chunking_context_engineering", "vector_graph_and_long_context_routing", "layered_independent_evaluation", "weekly_pointer_only_research"],
+      "applies_when": ["A repo needs a governed knowledge, retrieval, context, vector, or graph system.", "An existing RAG, chunker, embedding, index, graph, or vector database needs evaluation, migration, or lifecycle review."],
+      "does_not_apply_when": ["A direct deterministic source query fully meets the bounded goal.", "The requested action would bypass source, privacy, provider, infrastructure, deployment, schedule, or human authority."],
+      "public_safe": true,
+      "upgrade_channel": "dad_mail",
+      "known_upgrades": [],
+      "source_refs": ["registry/agent-skill-library.json#skill:knowledge-engineering-ops", "registry/knowledge-engineering-family-registry.json", "registry/knowledge-engineering-technique-registry.json", "registry/knowledge-engineering-source-registry.json"],
+      "review_status": "candidate",
+      "validation_refs": ["tests/test_knowledge_engineering_family.py", "scripts/validate_agent_skill_library.py"],
+      "owner_authority": "DAD owns candidate skill, registry, and graph metadata; source repositories and named humans own corpus, domain, privacy, provider, infrastructure, adoption, release, schedule, cutover, and retirement decisions.",
+      "adoption_semantics": "Pointer or wrapper by default; the explicitly requested personal global copy remains separately runtime-authoritative and does not activate weekly research or downstream adoption.",
+      "authority_boundary": "This offering can diagnose, design, implement in approved scope, and independently validate; it cannot access new corpora, activate recurring research, install infrastructure, deploy, or self-approve."
     }
   ]
 }

@@ -342,6 +342,34 @@
         "review_status": "candidate"
       },
       {
+        "source": "pack:knowledge-engineering-ops",
+        "edge_type": "member_of",
+        "target": "family:data-schema-knowledge-graph",
+        "evidence_ref": "assets/agent-skills/knowledge-engineering-ops/SKILL.md",
+        "review_status": "candidate"
+      },
+      {
+        "source": "pack:knowledge-engineering-ops",
+        "edge_type": "depends_on",
+        "target": "family:knowledge-research-provenance",
+        "evidence_ref": "registry/knowledge-engineering-family-registry.json",
+        "review_status": "candidate"
+      },
+      {
+        "source": "pack:knowledge-engineering-ops",
+        "edge_type": "validated_by",
+        "target": "family:quality-verification-release",
+        "evidence_ref": "tests/test_knowledge_engineering_family.py",
+        "review_status": "candidate"
+      },
+      {
+        "source": "pack:knowledge-engineering-ops",
+        "edge_type": "depends_on",
+        "target": "family:security-privacy-supply-chain",
+        "evidence_ref": "registry/knowledge-engineering-technique-registry.json#ke-technique:retrieval-security-and-poisoning-controls",
+        "review_status": "candidate"
+      },
+      {
         "source": "skill:integration-mcp-automation-agent-family",
         "edge_type": "implements",
         "target": "family:integration-mcp-automation",
@@ -974,6 +1002,16 @@
         "knowledge graph",
         "lineage",
         "vector",
+        "rag",
+        "retrieval augmented generation",
+        "long context",
+        "chunking",
+        "embedding",
+        "vector database",
+        "graphrag",
+        "lightrag",
+        "temporal graph",
+        "rdf",
         "search",
         "migration",
         "retention"
@@ -983,9 +1021,14 @@
         "schema_engineering",
         "identity_lineage",
         "etl_quality",
-        "graph_engineering"
+        "graph_engineering",
+        "knowledge_retrieval_engineering",
+        "chunking_context_engineering",
+        "retrieval_evaluation"
       ],
-      "specialist_packs": [],
+      "specialist_packs": [
+        "pack:knowledge-engineering-ops"
+      ],
       "human_gates": [],
       "owner_authority": "source repository and named domain owner",
       "requires_independent_assurance": true,

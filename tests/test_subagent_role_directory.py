@@ -87,7 +87,7 @@ def test_catalog_builds_without_attempts_and_keeps_grades_insufficient(tmp_path:
 
     projection = build_role_directory_projection(hub)
 
-    assert projection["role_count"] == 168
+    assert projection["role_count"] == 182
     library = json.loads((ROOT / "registry/agent-skill-library.json").read_text(encoding="utf-8"))
     expected_skills = {
         row["skill_id"]

@@ -1,6 +1,6 @@
 {
   "schema_version": "dad.mcp.dependency_map.v1",
-  "map_revision": "2026-07-15.1",
+  "map_revision": "2026-07-15.2",
   "logical_server_name": "dad-local-graph-surfaces",
   "authority_policy": {
     "local_only": true,
@@ -41,7 +41,7 @@
       "label": "MCP JSON-RPC stdio protocol implementation",
       "artifact_kind": "file",
       "change_contract": "Protocol or method changes require initialize, tools, resources, privacy, and adapter parity checks.",
-      "fingerprint": {"kind": "exact_sha256", "path": "src/digital_asset_directory/mcp_server.py", "sha256": "sha256:3158c8b358b6ecc29ca3f9df933e89f7cfdd25da28ed930a439176328a3e1e66"}
+      "fingerprint": {"kind": "exact_sha256", "path": "src/digital_asset_directory/mcp_server.py", "sha256": "sha256:4b379a0775bb5d01c3da0d57077c1c3946fa9f09f4c7ac50504d018a6228197f"}
     },
     {
       "node_id": "mcp.node.entrypoint.graph-stdio",
@@ -57,7 +57,7 @@
       "label": "Read-only MCP server",
       "artifact_kind": "file",
       "change_contract": "Any edit invalidates the exact implementation fingerprint and requires interface/privacy revalidation.",
-      "fingerprint": {"kind": "exact_sha256", "path": "src/digital_asset_directory/mcp_server.py", "sha256": "sha256:3158c8b358b6ecc29ca3f9df933e89f7cfdd25da28ed930a439176328a3e1e66"}
+      "fingerprint": {"kind": "exact_sha256", "path": "src/digital_asset_directory/mcp_server.py", "sha256": "sha256:4b379a0775bb5d01c3da0d57077c1c3946fa9f09f4c7ac50504d018a6228197f"}
     },
     {
       "node_id": "mcp.node.implementation.dependency-engine",

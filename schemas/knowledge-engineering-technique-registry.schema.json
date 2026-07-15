@@ -1,0 +1,56 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://local.digital-asset-directory/schemas/knowledge-engineering-technique-registry.schema.json",
+  "title": "Knowledge Engineering Technique Registry",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "registry_id", "registry_version", "status", "authority_boundary", "coverage_statement", "techniques"],
+  "properties": {
+    "schema_version": {"const": "0.1.0"},
+    "registry_id": {"const": "knowledge-engineering-technique-registry"},
+    "registry_version": {"type": "string", "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+$"},
+    "status": {"enum": ["candidate", "reviewed", "retired"]},
+    "authority_boundary": {"type": "string", "minLength": 1},
+    "coverage_statement": {"type": "string", "minLength": 1},
+    "techniques": {"type": "array", "minItems": 1, "items": {"$ref": "#/$defs/technique"}}
+  },
+  "$defs": {
+    "nonEmptyStrings": {"type": "array", "minItems": 1, "uniqueItems": true, "items": {"type": "string", "minLength": 1}},
+    "technique": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["technique_id", "revision_id", "label", "category", "evidence_maturity", "query_shapes", "applies_when", "does_not_apply_when", "danger_if_misapplied", "prerequisites", "baseline_refs", "evaluation_requirements", "operational_requirements", "privacy_security_requirements", "implementation_options", "source_refs", "lifecycle", "authority_boundary"],
+      "properties": {
+        "technique_id": {"type": "string", "pattern": "^ke-technique:[a-z0-9][a-z0-9-]*$"},
+        "revision_id": {"type": "string", "pattern": "^ke-technique-revision:[a-z0-9][a-z0-9-]*:v[1-9][0-9]*$"},
+        "label": {"type": "string", "minLength": 1},
+        "category": {"enum": ["baseline", "ingestion", "chunking", "retrieval", "context", "vector_index", "graph", "agentic", "evaluation", "security", "lifecycle"]},
+        "evidence_maturity": {"enum": ["established", "mixed", "emerging", "candidate"]},
+        "query_shapes": {"$ref": "#/$defs/nonEmptyStrings"},
+        "applies_when": {"$ref": "#/$defs/nonEmptyStrings"},
+        "does_not_apply_when": {"$ref": "#/$defs/nonEmptyStrings"},
+        "danger_if_misapplied": {"type": "string", "minLength": 1},
+        "prerequisites": {"$ref": "#/$defs/nonEmptyStrings"},
+        "baseline_refs": {"$ref": "#/$defs/nonEmptyStrings"},
+        "evaluation_requirements": {"$ref": "#/$defs/nonEmptyStrings"},
+        "operational_requirements": {"$ref": "#/$defs/nonEmptyStrings"},
+        "privacy_security_requirements": {"$ref": "#/$defs/nonEmptyStrings"},
+        "implementation_options": {"$ref": "#/$defs/nonEmptyStrings"},
+        "source_refs": {"$ref": "#/$defs/nonEmptyStrings"},
+        "lifecycle": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["state", "reviewed_at", "next_review_due_at", "supersedes", "superseded_by"],
+          "properties": {
+            "state": {"enum": ["candidate", "reviewed", "active", "watch", "stale", "deprecated", "retired"]},
+            "reviewed_at": {"type": "string", "format": "date"},
+            "next_review_due_at": {"type": "string", "format": "date"},
+            "supersedes": {"type": "array", "uniqueItems": true, "items": {"type": "string"}},
+            "superseded_by": {"type": "array", "uniqueItems": true, "items": {"type": "string"}}
+          }
+        },
+        "authority_boundary": {"type": "string", "minLength": 1}
+      }
+    }
+  }
+}

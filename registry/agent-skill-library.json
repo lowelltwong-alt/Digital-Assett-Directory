@@ -1607,6 +1607,58 @@
       "review_status": "candidate",
       "last_reviewed_at": "2026-07-15",
       "next_review_due_at": "2026-08-15"
+    },
+    {
+      "skill_id": "skill:knowledge-engineering-ops",
+      "name": "Knowledge Engineering Ops",
+      "version": "0.1.0",
+      "status": "candidate",
+      "skill_format": "generic_agent_skill",
+      "path": "assets/agent-skills/knowledge-engineering-ops",
+      "entrypoint": "assets/agent-skills/knowledge-engineering-ops/SKILL.md",
+      "subagent_pack": "assets/agent-skills/knowledge-engineering-ops/subagents.yaml",
+      "description": "Portable specialist family for direct long context, RAG, chunking, lexical/vector/hybrid retrieval, reranking, vector databases, GraphRAG/LightRAG, RDF/property/temporal graphs, evaluation, migration, and weekly frontier research.",
+      "trigger_examples": [
+        "Diagnose whether a product or project needs RAG, long context, vector search, a knowledge graph, or a simpler source/search route.",
+        "Design, build, evaluate, migrate, or retire a governed knowledge, retrieval, chunking, vector, graph, or context system.",
+        "Run the inactive weekly knowledge-engineering research plan after its exact schedule is approved."
+      ],
+      "does_not_apply_when": [
+        "A known deterministic source query fully satisfies the bounded goal.",
+        "Source authority, corpus privacy, provider egress, deletion semantics, or evaluation evidence cannot be established."
+      ],
+      "capabilities": [
+        "knowledge_system_diagnosis",
+        "rag_and_long_context_architecture",
+        "chunking_and_context_engineering",
+        "vector_and_hybrid_retrieval",
+        "knowledge_graph_and_graphrag",
+        "retrieval_evaluation_and_observability",
+        "knowledge_system_migration_and_lifecycle",
+        "weekly_primary_source_frontier_research"
+      ],
+      "checkout_modes": ["pointer", "wrapper", "local_copy_requires_human_approval"],
+      "update_policy": "dad_mail_notice",
+      "lifecycle": {"supersedes": [], "superseded_by": [], "retirement_reason": "", "replacement_skill_id": "", "change_notice_templates": ["templates/mail/skill-update-available.mail.template.json", "templates/mail/skill-retirement-notice.mail.template.json"]},
+      "dependencies": [
+        "registry/knowledge-engineering-family-registry.json",
+        "registry/knowledge-engineering-technique-registry.json",
+        "registry/knowledge-engineering-source-registry.json",
+        "assets/agent-skills/data-schema-knowledge-graph-agent-family",
+        "assets/agent-skills/knowledge-research-provenance-agent-family",
+        "assets/agent-skills/dad-manifest-graph-engineering",
+        "assets/agent-skills/quality-verification-release-agent-family"
+      ],
+      "source_evidence": [
+        "assets/agent-skills/knowledge-engineering-ops/SKILL.md",
+        "assets/agent-skills/knowledge-engineering-ops/subagents.yaml",
+        "assets/agent-skills/knowledge-engineering-ops/references/KNOWLEDGE_ENGINEERING_WORKFLOW_CONTRACT.md",
+        "personal-skill-source:knowledge-engineering-ops"
+      ],
+      "authority_boundary": "The skill and role pack produce candidate routes and evidence; source repositories and named humans retain canon, corpus access, provider egress, infrastructure, deployment, schedule, promotion, cutover, and retirement authority.",
+      "review_status": "candidate",
+      "last_reviewed_at": "2026-07-15",
+      "next_review_due_at": "2026-08-15"
     }
   ]
 }

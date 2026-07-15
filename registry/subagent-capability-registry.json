@@ -321,6 +321,54 @@
     {
       "id": "ml_deployment_monitoring_and_rollback",
       "description": "Design and audit human-gated ML deployment readiness, observability, fallback, drift and outcome monitoring, incident ownership, and independent rollback."
+    },
+    {
+      "id": "ke_goal_and_route_diagnosis",
+      "description": "Frame a knowledge-system end state, corpus, query shapes, source authority, sensitivity, budgets, baselines, and the smallest direct-context, retrieval, vector, graph, or no-RAG route."
+    },
+    {
+      "id": "ke_system_architecture",
+      "description": "Design provider-neutral source, ingestion, chunking, retrieval, graph, context, evaluation, operations, migration, rollback, and proof interfaces."
+    },
+    {
+      "id": "ke_source_ingestion_lineage",
+      "description": "Engineer canonical source, parser, normalization, stable identity, revision, CDC, deletion, quarantine, reconciliation, rebuild, and provenance contracts."
+    },
+    {
+      "id": "ke_chunking_context_engineering",
+      "description": "Design and evaluate fixed, structural, parent-child, contextual, late, semantic, hierarchical, and domain-aware chunk/context policies with exact source-span provenance."
+    },
+    {
+      "id": "ke_retrieval_index_engineering",
+      "description": "Engineer and benchmark lexical, dense, sparse, hybrid, filtered, multivector, fusion, reranking, embedding, ANN, and replaceable vector-store adapters."
+    },
+    {
+      "id": "ke_long_context_assembly",
+      "description": "Design direct long-context and evidence-assembly routes with effective-context, ordering, position, distraction, contradiction, token, latency, cost, freshness, and fallback tests."
+    },
+    {
+      "id": "ke_graph_retrieval_engineering",
+      "description": "Select and engineer graph-lite, property, RDF, provenance, event, temporal, GraphRAG, LightRAG, and graph-memory systems with entity, relation, time, query, and rebuild evidence."
+    },
+    {
+      "id": "ke_evaluation_observability",
+      "description": "Build layered ingestion, retrieval, answer, citation, graph, ACL/privacy, robustness, latency, cost, freshness, deletion, outage, migration, and recovery evaluations and traces."
+    },
+    {
+      "id": "ke_migration_lifecycle",
+      "description": "Plan and verify side-by-side rebuild, CDC replay, shadow parity, alias cutover, rollback, deletion parity, supersession, retirement, and consumer blast radius."
+    },
+    {
+      "id": "ke_primary_source_frontier_synthesis",
+      "description": "Run pointer-only primary-source delta research over approved standards, labs, papers, engines, evaluation, ingestion, and security sources and propose local evaluation or no-change."
+    },
+    {
+      "id": "ke_reproducible_implementation",
+      "description": "Implement one accepted knowledge-system component under a single writer with versioned manifests, boundaries, tests, replay evidence, limitations, and rollback."
+    },
+    {
+      "id": "ke_independent_validation",
+      "description": "Independently re-derive the knowledge route and replay source, retrieval, answer, citation, graph, privacy, security, operations, migration, and rollback acceptance checks."
     }
   ],
   "rule": "Capability observations are attempt-scoped candidate evidence. Promotion to a reusable role-profile claim requires the versioned subagent evaluation methodology and human review."

@@ -1,0 +1,49 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://local.digital-asset-directory/schemas/knowledge-engineering-source-registry.schema.json",
+  "title": "Knowledge Engineering Primary Source Watch Registry",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "registry_id", "registry_version", "status", "candidate_only", "authority_boundary", "watch_policy", "sources"],
+  "properties": {
+    "schema_version": {"const": "0.1.0"},
+    "registry_id": {"const": "knowledge-engineering-source-registry"},
+    "registry_version": {"type": "string", "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+$"},
+    "status": {"enum": ["candidate", "reviewed", "retired"]},
+    "candidate_only": {"const": true},
+    "authority_boundary": {"type": "string", "minLength": 1},
+    "watch_policy": {
+      "type": "object", "additionalProperties": false,
+      "required": ["cadence", "activation_status", "cursor_required", "delta_first", "content_retention", "promotion_policy"],
+      "properties": {
+        "cadence": {"const": "P7D"},
+        "activation_status": {"const": "human_activation_required"},
+        "cursor_required": {"const": true},
+        "delta_first": {"const": true},
+        "content_retention": {"const": "pointers_and_bounded_claims_only"},
+        "promotion_policy": {"type": "string", "minLength": 1}
+      }
+    },
+    "sources": {
+      "type": "array", "minItems": 1,
+      "items": {
+        "type": "object", "additionalProperties": false,
+        "required": ["source_id", "name", "source_type", "url", "trust_basis", "lanes", "watch_for", "cadence", "baseline_checked_at", "terms_status", "status"],
+        "properties": {
+          "source_id": {"type": "string", "pattern": "^ke-source:[a-z0-9][a-z0-9-]*$"},
+          "name": {"type": "string", "minLength": 1},
+          "source_type": {"enum": ["official_standard", "official_documentation", "official_repository", "original_paper", "official_security_guidance"]},
+          "url": {"type": "string", "format": "uri"},
+          "trust_basis": {"type": "string", "minLength": 1},
+          "lanes": {"$ref": "#/$defs/nonEmptyStrings"},
+          "watch_for": {"$ref": "#/$defs/nonEmptyStrings"},
+          "cadence": {"enum": ["P7D", "P30D", "event-triggered"]},
+          "baseline_checked_at": {"type": "string", "format": "date"},
+          "terms_status": {"enum": ["pointer_only_reviewed", "pointer_only_needs_review"]},
+          "status": {"enum": ["candidate", "reviewed", "watch", "retired"]}
+        }
+      }
+    }
+  },
+  "$defs": {"nonEmptyStrings": {"type": "array", "minItems": 1, "uniqueItems": true, "items": {"type": "string", "minLength": 1}}}
+}
