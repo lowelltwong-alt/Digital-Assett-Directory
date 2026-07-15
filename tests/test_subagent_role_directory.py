@@ -99,7 +99,7 @@ def test_catalog_builds_without_attempts_and_keeps_grades_insufficient(tmp_path:
 
     projection = build_role_directory_projection(hub)
 
-    assert projection["role_count"] == 125
+    assert projection["role_count"] == 126
     assert {row["skill_id"] for row in projection["roles"]} == {
         "skill:personal-project-management-ops",
         "skill:dad-trigger-pattern-radar",
@@ -254,3 +254,19 @@ def test_registered_pm_kernel_vocabulary_matches_implemented_contract():
         "require an external trusted verifier"
     ) in unsupported_claims
     assert "the kernel does not dispatch agents or mutate Git" in unsupported_claims
+
+
+def test_artifact_product_catalyst_is_discoverable_without_new_capability_ids(tmp_path: Path):
+    hub = _hub(tmp_path)
+
+    result = search_role_directory(hub, query="first runnable artifact product diagnosis")
+
+    assert result["coverage"]["returned_role_count"] == 1
+    match = result["matches"][0]
+    assert match["role_id"] == "artifact-proximate-product-catalyst"
+    assert set(match["capability_ids"]) == {
+        "project_identity_and_related_work",
+        "workstream_planning",
+        "validation_design",
+        "governance_authority_safety",
+    }

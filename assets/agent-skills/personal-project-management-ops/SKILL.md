@@ -1,6 +1,6 @@
 ---
 name: personal-project-management-ops
-description: Orchestrate projects from idea intake through related-work search, shaping, workstream decomposition, dependency planning, focus execution, recovery, research, validation, delivery, and portfolio review. Use when starting, organizing, resuming, splitting, prioritizing, researching, rescuing, reviewing, or delivering one or many projects, especially when creative ideas sprawl across chats, repositories, branches, and worktrees.
+description: Orchestrate projects from idea intake through related-work search, shaping, workstream decomposition, dependency planning, first-runnable-artifact product diagnosis, focus execution, recovery, research, validation, delivery, and portfolio review. Use when starting, organizing, resuming, splitting, prioritizing, diagnosing an observable artifact against its intended user and outcome, researching, rescuing, reviewing, or delivering one or many projects, especially when creative ideas sprawl across chats, repositories, branches, and worktrees.
 ---
 
 # Personal Project Management Ops
@@ -13,7 +13,7 @@ source authority.
 
 1. Read `references/PROJECT_MANAGEMENT_CONTRACT.md`.
 2. Identify the mode: `capture`, `shape`, `plan`, `execute`, `recover`,
-   `research`, `validate-deliver`, or `portfolio-review`.
+   `research`, `diagnose-artifact`, `validate-deliver`, or `portfolio-review`.
 3. Inventory existing evidence before creating a project. Search related ideas,
    projects, workstreams, repositories, branches, worktrees, tasks, and prior
    decisions within an explicit coverage envelope.
@@ -21,9 +21,13 @@ source authority.
    only for a distinct dependency, research, risk, or validation surface.
 5. Build or refresh one project control packet. Keep inferred relationships,
    dependencies, state, priority, and next actions explicitly candidate.
-6. Return the smallest bounded action, quiet option, human decisions, and next
+6. In `diagnose-artifact` mode, activate the
+   `artifact-proximate-product-catalyst` only when a first runnable artifact or
+   equivalent observable experience exists. Inspect the artifact evidence and
+   applicable experience surfaces; do not infer usability from plans alone.
+7. Return the smallest bounded action, quiet option, human decisions, and next
    review condition. Do not create external work unless explicitly approved.
-7. At material completion, route reusable lessons, trigger feedback, and attempt
+8. At material completion, route reusable lessons, trigger feedback, and attempt
    evidence through DAD while preserving the exact role revision used.
 
 ## Reuse before creating roles
@@ -37,6 +41,9 @@ Compose existing capabilities instead of cloning them:
 - `$dad-work-router` for approved implementation handoff;
 - `$dad-learning-loop` for evidenced learning events;
 - `$subagent-peer-review-routing` for model, effort, and checker selection.
+
+Use `references/AI_NATIVE_PROCESS_PILOT.md` only for the bounded manual pilot.
+It is not an enabled automation or a default requirement for every workstream.
 
 ## Operating boundaries
 
@@ -55,6 +62,10 @@ Compose existing capabilities instead of cloning them:
   notifications, delivery, destructive cleanup, or persistent automation.
 - Use Fable only for unresolved high-consequence architecture disagreement after
   independent Codex review. Never auto-send private context.
+- The product catalyst diagnoses product evidence and proposes the smallest
+  evidence-producing experiment. It never allocates engineering work, edits or
+  releases artifacts, approves its own output, mutates systems, or becomes a
+  second project manager.
 
 ## Output
 

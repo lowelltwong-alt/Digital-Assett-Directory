@@ -14,6 +14,9 @@ dependencies, mutate source files, change scores, or mark roadmap work complete.
 - Asset ID, if known:
 - Asset path or name:
 - Repository where the asset was used:
+- Asset class: file | schema | prompt | skill | agent | workflow | routine | other
+- Workflow or routine ID, if applicable:
+- Workflow or routine revision, if applicable:
 
 ## Interaction
 
@@ -42,6 +45,26 @@ dependencies, mutate source files, change scores, or mark roadmap work complete.
 - Use outcome: helped | blocked | no_effect | unknown
 - Observed usefulness: low | medium | high | unknown
 - Observed futurefulness: low | medium | high | unknown
+
+## Workflow and Routine Telemetry, when applicable
+
+Use direct observations only. Every measure has a separate `status` of
+`observed | unknown | not_measured | not_applicable`; never encode missingness
+only in the value or estimate a missing value.
+
+- Evidence-to-candidate time, status/value/unit/evidence:
+- Candidate-to-first-test time, status/value/unit/evidence:
+- Test-to-decision time, status/value/unit/evidence:
+- Repeated explanations, status/count/evidence:
+- Human attention, status/duration/evidence:
+- Unused output, status/observation/evidence:
+- Rework or defects, status/observation/evidence:
+- Validated benefit, status/observation/evidence:
+- Use after 30 days, status/yes | no | unknown/value/evidence:
+- Routine quiet or expiry condition reached:
+
+Telemetry is candidate evidence. It does not prove benefit, causation,
+productivity, product-market fit, correctness, or promotion readiness.
 
 ## Pay-Forward Guidance
 

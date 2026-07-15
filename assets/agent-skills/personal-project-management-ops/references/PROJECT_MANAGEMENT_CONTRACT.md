@@ -32,6 +32,10 @@ wip_overflow[]
 blockers[]
 risks[]
 human_decisions[]
+routine_purpose_and_expiry_assessment
+build_refusal_assessment
+experience_surface_assessment[]
+learning_velocity_measures
 task_refs[]: task_id, workstream_id, source_system, source_authority, state, evidence_ref
 quiet_option
 next_review_condition
@@ -42,6 +46,116 @@ authority_boundary
 ```
 
 Unknown is valid. Never manufacture completeness.
+
+## Routine purpose and expiry assessment
+
+Assess a recurring process, review, trigger, or report before recommending it
+and again at its review condition. Every field may be `unknown` when evidence
+is missing; unknowns route to a human decision rather than an invented answer.
+
+```text
+consumer
+decision_or_behavior_changed
+why_now
+risk_caught
+retained_human_judgment
+evidence_of_value
+cost_ceiling
+quiet_condition
+review_expiry_or_retirement_condition
+```
+
+A routine without a named consumer or plausible changed decision/behavior is a
+retirement or non-creation candidate. A routine becomes quiet when its recorded
+quiet condition is true. Age, invocation count, or model confidence alone does
+not prove value or justify retirement.
+
+## Build-refusal assessment
+
+Run this before expanding implementation and during artifact diagnosis:
+
+```text
+can_build: yes | no | unknown
+should_exist: yes | no | unknown
+target_user_and_outcome
+what_it_replaces
+maintenance_and_attention_cost
+smallest_evidence_version
+stop_condition
+evidence_and_unknowns
+human_decision_needed
+```
+
+`can_build=yes` never implies `should_exist=yes`. Prefer the smallest version
+that can change a named decision or produce falsifiable evidence. A product
+catalyst may recommend refusal, deferral, or a bounded experiment; it may not
+allocate work or cancel an approved workstream.
+
+## Applicable experience surfaces
+
+Assess only surfaces that could affect the intended user or operating agent.
+Each surface must have `state: applicable | not_applicable | unknown` plus an
+`evidence` reference or a reason evidence is unavailable:
+
+- UI;
+- cockpit;
+- CLI;
+- MCP;
+- API/SDK;
+- error recovery;
+- permissions;
+- rollback;
+- human handoff;
+- agent handoff;
+- next-action guidance.
+
+Do not turn this list into a requirement to build every surface. `unknown`
+means inspect or ask; `not_applicable` requires a short contextual reason.
+
+## Learning-velocity measures
+
+During the manual pilot, capture direct observations when available:
+
+```text
+evidence_to_candidate
+candidate_to_first_test
+test_to_decision
+repeated_explanations
+human_attention
+unused_output
+rework_and_defects
+validated_benefit
+use_after_30_days
+```
+
+Every measure records `value`, `unit`, `evidence_ref`, and `status`, where
+`status` is `observed`, `unknown`, `not_measured`, or `not_applicable`.
+Do not infer missing durations, counts, benefit, or continued use. These
+measurements support comparison and diagnosis. Telemetry is not proof of product
+value or a universal score.
+
+## Artifact-proximate product catalyst
+
+Activate `artifact-proximate-product-catalyst` only when all are true:
+
+- a first runnable artifact or equivalent observable experience exists;
+- an intended user and outcome are known or a human is available to clarify;
+- inspection can stay inside the stated authority and privacy boundary; and
+- a product/value diagnosis could change a near-term decision.
+
+The catalyst inspects evidence, identifies current project position, evaluates
+only applicable experience surfaces, performs the routine-purpose and
+build-refusal assessments, and proposes the smallest evidence-producing
+experiment with success, failure, and stop signals. Stop when artifact evidence
+is absent, the intended user/outcome cannot be established, authority is
+ambiguous, or the request requires work allocation, edits, release, self-
+approval, or system mutation. It is a specialist under the phase owner, not a
+second project manager.
+
+For one-human operation, return one digest with no more than three immediate
+action asks. Everything else stays in drill-down evidence or a quiet/watch
+state. The catalyst may not create recurring work merely to complete its own
+checklist.
 
 Durable workstream `state` is closed to the implemented attention-kernel
 vocabulary: `proposed`, `active`, `paused`, `snoozed`, `incubating`, `merged`,
