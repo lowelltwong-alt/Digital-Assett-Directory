@@ -130,6 +130,11 @@
     "agent_family_routing_decision": "schemas/agent-family-routing-decision.schema.json",
     "agent_family_health": "schemas/agent-family-health.schema.json",
     "agent_family_pilot": "schemas/agent-family-pilot.schema.json",
-    "portfolio_cockpit_v2": "schemas/portfolio-cockpit-v2.schema.json"
+    "portfolio_cockpit_v2": "schemas/portfolio-cockpit-v2.schema.json",
+    "technical_product_company_os_registry": "schemas/technical-product-company-os-registry.schema.json",
+    "capability_routing_receipt": "schemas/capability-routing-receipt.schema.json",
+    "workflow_run_event": "schemas/workflow-run-event.schema.json",
+    "capability_portfolio_snapshot": "schemas/capability-portfolio-snapshot.schema.json",
+    "capability_operational_graph": "schemas/capability-operational-graph.schema.json"
   }
 }

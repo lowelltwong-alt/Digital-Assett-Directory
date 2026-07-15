@@ -892,6 +892,26 @@ def test_daemon_fingerprint_tracks_subagent_evaluation_inputs(tmp_path: Path):
     assert after_count == before_count + 1
 
 
+def test_daemon_fingerprint_hashes_small_load_bearing_controls(tmp_path: Path):
+    hub = tmp_path / "hub"
+    control = hub / "config" / "sources.yaml"
+    control.parent.mkdir(parents=True)
+    control.write_text("sources: [a]\n", encoding="utf-8")
+    original = control.stat()
+    before, count = daemon_mod._cycle_input_fingerprint(
+        hub, mail_repos=[], exception_repos=[], journal_repo=None
+    )
+
+    control.write_text("sources: [b]\n", encoding="utf-8")
+    os.utime(control, ns=(original.st_atime_ns, original.st_mtime_ns))
+    after, after_count = daemon_mod._cycle_input_fingerprint(
+        hub, mail_repos=[], exception_repos=[], journal_repo=None
+    )
+
+    assert after != before
+    assert after_count == count
+
+
 def test_daemon_fingerprint_tracks_logos_control_mirror_inputs(tmp_path: Path):
     hub = tmp_path / "hub"
     hub.mkdir()
@@ -1614,6 +1634,33 @@ def test_daemon_checkpoint_failure_finalizes_degraded_heartbeat(tmp_path: Path):
     assert heartbeat["cycle_completed_at"]
     assert heartbeat["heartbeat_finalized"] is True
     assert heartbeat["journal_checkpoint_applied"] is False
+    assert daemon_status(hub)["status"] == "degraded"
+
+
+def test_daemon_nested_step_failure_finalizes_degraded_heartbeat(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+):
+    hub = tmp_path / "hub"
+    hub.mkdir()
+    monkeypatch.setattr(
+        daemon_mod,
+        "_run_mail_cycle",
+        lambda *args, **kwargs: {
+            "status": "ok",
+            "collect": {"status": "error", "error": "synthetic nested failure"},
+            "route": {"status": "skipped"},
+            "deliver": {"status": "skipped"},
+        },
+    )
+
+    run_daemon_cycle(hub, mail_repos=[], exception_repos=[], transport_repos=[])
+
+    heartbeat = json.loads(
+        (hub / "processed" / "reports" / "daemon-heartbeat.json").read_text(encoding="utf-8")
+    )
+    assert heartbeat["status"] == "complete_with_errors"
+    assert heartbeat["material_error_count"] >= 1
+    assert any("mail.collect.status:error" in path for path in heartbeat["material_error_paths"])
     assert daemon_status(hub)["status"] == "degraded"
 
 

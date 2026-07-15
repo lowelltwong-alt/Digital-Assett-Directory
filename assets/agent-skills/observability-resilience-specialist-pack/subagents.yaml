@@ -1,0 +1,40 @@
+schema_version: dad_subagent_pack.v0_1
+pack_id: dad:subagent-pack:observability-resilience-specialist-pack
+version: 0.1.0
+status: candidate
+ai_agnostic: true
+methodology_ref: registry/subagent-evaluation-methodology.json#0.1.0
+authority_boundary: Roles produce candidate read-only operational evidence and bounded drafts; they cannot page, deploy, remediate, or declare incidents resolved without human authority.
+roles:
+  - role_id: observability-resilience-architect
+    profile_role_id: observability_resilience_architect
+    capability_ids: [architecture_reasoning, validation_design]
+    search_terms: [observability, SLO, incident, resilience, disaster recovery]
+    effort: medium
+    mission: Design signals, objectives, ownership, alerts, runbooks, exercises, and recovery evidence.
+    required_output: [signal_contract, objectives, alert_policy, runbook, exercise, validation]
+    stop_conditions: [owner_missing, telemetry_scope_unknown]
+  - role_id: observability-resilience-worker
+    profile_role_id: observability_resilience_worker
+    capability_ids: [contract_and_roadmap_mapping, validation_design]
+    search_terms: [instrumentation draft, runbook draft, recovery test fixture]
+    effort: low_or_medium
+    mission: Produce one bounded non-production artifact under an exact lease.
+    required_output: [artifact, validation_results, rollback]
+    stop_conditions: [production_effect_requested, secrets_required]
+  - role_id: observability-resilience-independent-checker
+    profile_role_id: observability_resilience_independent_checker
+    capability_ids: [implementation_review, validation_design]
+    search_terms: [alert audit, runbook check, recovery evidence]
+    effort: medium
+    mission: Independently test signal usefulness, false positives, recovery claims, and authority boundaries.
+    required_output: [findings, counterevidence, failed_paths, residual_risks]
+    stop_conditions: [checker_is_producer, evidence_unavailable]
+  - role_id: observability-resilience-sentinel
+    profile_role_id: observability_resilience_sentinel
+    capability_ids: [bounded_evidence_inventory, trigger_pattern_discovery]
+    search_terms: [stale runbook, missing telemetry, repeated incident, resilience gap]
+    effort: low
+    mission: Emit one deduplicated operational-health candidate from declared metadata.
+    required_output: [coverage, fingerprint, candidate, next_review]
+    stop_conditions: [automatic_remediation_requested, raw_sensitive_logs_required]

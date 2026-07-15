@@ -98,6 +98,49 @@ _SUBAGENT_CYCLE_INPUT_PATHS = (
     "raw/agent-evaluations/attempt-evaluations.jsonl",
     "raw/agent-evaluations/unrated-inventory.jsonl",
 )
+_CONTROL_HASH_MAX_BYTES = 1024 * 1024
+_MATERIAL_ERROR_STATUSES = {"blocked", "error", "failed", "invalid"}
+
+
+def _fingerprint_row(owner: str, relative: str, path: Path) -> tuple[Any, ...] | None:
+    """Hash small control files so same-size/same-mtime edits still wake the daemon."""
+    try:
+        stat = path.stat()
+    except OSError:
+        return None
+    row: tuple[Any, ...] = (owner, relative, stat.st_size, stat.st_mtime_ns)
+    if stat.st_size <= _CONTROL_HASH_MAX_BYTES and path.suffix.casefold() != ".jsonl":
+        try:
+            row = (*row, sha256_file(path))
+        except OSError:
+            return None
+    return row
+
+
+def _material_error_paths(value: Any, *, path: str = "cycle") -> list[str]:
+    """Find nested material step errors without treating absent/skipped work as failure."""
+    found: list[str] = []
+    if isinstance(value, dict):
+        if ".reporting_privacy" in path:
+            return []
+        status = value.get("status")
+        expected_optional_absence = (
+            value.get("error_type") == "FileNotFoundError"
+            and "graph-inference-methodology.json" in str(value.get("error", ""))
+        )
+        if (
+            isinstance(status, str)
+            and status.casefold() in _MATERIAL_ERROR_STATUSES
+            and not expected_optional_absence
+        ):
+            found.append(f"{path}.status:{status.casefold()}")
+        for key, child in value.items():
+            if key != "status":
+                found.extend(_material_error_paths(child, path=f"{path}.{key}"))
+    elif isinstance(value, list):
+        for index, child in enumerate(value):
+            found.extend(_material_error_paths(child, path=f"{path}[{index}]"))
+    return sorted(set(found))
 
 
 def _git_index_path(repo_root: Path) -> Path | None:
@@ -144,11 +187,9 @@ def _cycle_input_fingerprint(
                 continue
             seen.add(key)
             path = repo_root / relative
-            try:
-                stat = path.stat()
-            except OSError:
-                continue
-            rows.append((repo_id, relative, stat.st_size, stat.st_mtime_ns))
+            row = _fingerprint_row(repo_id, relative, path)
+            if row is not None:
+                rows.append(row)
     for policy in mail_repos or []:
         repo_id = str(getattr(policy, "id", "") or getattr(policy, "alias", "") or "repo")
         relatives = LOGOS_LLOS_SURFACES.get(repo_id)
@@ -158,13 +199,9 @@ def _cycle_input_fingerprint(
             control_root = Path(configured_control_root)
             for relative in (*relatives, POLICY_PATH):
                 path = control_root / relative
-                try:
-                    stat = path.stat()
-                except OSError:
-                    continue
-                rows.append(
-                    (f"{repo_id}:llos-control", relative, stat.st_size, stat.st_mtime_ns)
-                )
+                row = _fingerprint_row(f"{repo_id}:llos-control", relative, path)
+                if row is not None:
+                    rows.append(row)
         raw_transport_root = getattr(policy, "transport_audit_path", None)
         configured_transport_root = (
             str(raw_transport_root).strip() if raw_transport_root is not None else ""
@@ -222,18 +259,14 @@ def _cycle_input_fingerprint(
         ".digital-asset/dad-integration.json",
     ):
         path = hub_root / relative
-        try:
-            stat = path.stat()
-        except OSError:
-            continue
-        rows.append(("dad", relative, stat.st_size, stat.st_mtime_ns))
+        row = _fingerprint_row("dad", relative, path)
+        if row is not None:
+            rows.append(row)
     for relative in _SUBAGENT_CYCLE_INPUT_PATHS:
         path = data_relative_path(hub_root, Path(relative))
-        try:
-            stat = path.stat()
-        except OSError:
-            continue
-        rows.append(("dad-data", relative, stat.st_size, stat.st_mtime_ns))
+        row = _fingerprint_row("dad-data", relative, path)
+        if row is not None:
+            rows.append(row)
     material = json.dumps(sorted(rows), separators=(",", ":"), ensure_ascii=True)
     return hashlib.sha256(material.encode("utf-8")).hexdigest(), len(rows)
 
@@ -929,9 +962,28 @@ def run_daemon_cycle(
     heartbeat["journal_checkpoint_due"] = journal_result.get("checkpoint_due")
     heartbeat["journal_checkpoint_applied"] = bool(journal_result.get("checkpoint_applied", False))
     heartbeat["journal_checkpoint_status"] = journal_result
+    cycle_errors = _material_error_paths(
+        {
+            "remote_outbox_ingest": remote_outbox_result,
+            "mail": mail_result,
+            "follow_through": follow_through_result,
+            "events": event_result,
+            "exceptions": exception_result,
+            "graphs": graph_result,
+            "logos_llos": logos_llos_result,
+            "subagent_improvement": subagent_improvement_result,
+            "transport": transport_result,
+            "weekly_asset_coverage": weekly_asset_coverage_result,
+            "scheduled_tasks": scheduled_tasks_result,
+            "daily_review_queue": review_queue,
+            "journal": journal_result,
+        }
+    )
+    heartbeat["material_error_count"] = len(cycle_errors)
+    heartbeat["material_error_paths"] = cycle_errors
     heartbeat["status"] = (
         "complete_with_errors"
-        if journal_result.get("status") in {"blocked", "error"}
+        if cycle_errors
         else "complete"
     )
     heartbeat["cycle_completed_at"] = utc_now()

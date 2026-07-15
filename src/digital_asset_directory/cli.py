@@ -185,6 +185,20 @@ from .agent_families import (
     write_agent_family_health,
     write_portfolio_cockpit_v2,
 )
+from .technical_product_os import (
+    append_routing_receipt,
+    append_workflow_run_event,
+    build_capability_index,
+    build_capability_portfolio_snapshot,
+    build_operational_capability_graph,
+    build_routing_receipt,
+    build_workflow_run_event,
+    classify_offload,
+    evaluate_decision_right,
+    evaluate_routines,
+    route_capabilities,
+    write_capability_os_outputs,
+)
 from .mail_center import (
     MAIL_MIRROR_DIR,
     MAX_MAIL_RECORD_BYTES,
@@ -465,6 +479,8 @@ ml_app = typer.Typer(no_args_is_help=True)
 app.add_typer(ml_app, name="ml")
 agent_families_app = typer.Typer(no_args_is_help=True)
 app.add_typer(agent_families_app, name="agent-families")
+product_os_app = typer.Typer(no_args_is_help=True)
+app.add_typer(product_os_app, name="product-os")
 app.add_typer(journal_app, name="journal")
 mcp_app = typer.Typer(no_args_is_help=True)
 app.add_typer(mcp_app, name="mcp")
@@ -719,7 +735,8 @@ def agent_families_cockpit_command(
     try:
         health = agent_family_health(cfg.repo_root)
         portfolio_v1 = load_portfolio_cockpit_v1(cfg.repo_root) if include_portfolio_v1 else None
-        cockpit = build_portfolio_cockpit_v2(health, portfolio_v1)
+        capability_snapshot = build_capability_portfolio_snapshot(cfg.repo_root)
+        cockpit = build_portfolio_cockpit_v2(health, portfolio_v1, capability_snapshot)
         outputs: dict[str, Any] = {}
         if publish:
             outputs = {
@@ -752,6 +769,280 @@ def agent_families_cockpit_command(
             }
         )
         raise typer.Exit(2) from None
+
+
+def _product_os_output(action: Any, hub: Optional[Path], **kwargs: Any) -> None:
+    cfg = _cfg(hub=hub)
+    try:
+        console.print_json(data=action(cfg.repo_root, **kwargs))
+    except (OSError, RuntimeError, ValueError, KeyError, ValidationError) as exc:
+        console.print_json(
+            data={
+                "schema_version": "dad.technical_product_os.error.v1",
+                "status": "blocked",
+                "error": str(exc),
+                "authority_boundary": (
+                    "A blocked Product OS command grants no execution, mutation, activation, "
+                    "promotion, release, or external-system authority."
+                ),
+            }
+        )
+        raise typer.Exit(2) from None
+
+
+@product_os_app.command("catalog")
+def product_os_catalog_command(
+    hub: Optional[Path] = typer.Option(None),
+) -> None:
+    """Compile the source-fingerprinted capability and dependency index."""
+    _product_os_output(build_capability_index, hub)
+
+
+@product_os_app.command("route")
+def product_os_route_command(
+    query: str = typer.Argument(...),
+    requested_right: str = typer.Option("recommend", "--right"),
+    consequence_tier: str = typer.Option("C0", "--tier"),
+    privacy_class: str = typer.Option("internal_metadata", "--privacy"),
+    maximum_primary: int = typer.Option(3, "--maximum-primary", min=1, max=3),
+    permission_granted: bool = typer.Option(True, "--permission/--no-permission"),
+    suppress_capability: list[str] = typer.Option([], "--suppress-capability"),
+    hub: Optional[Path] = typer.Option(None),
+) -> None:
+    """Recommend at most three primary capabilities; never execute the route."""
+    _product_os_output(
+        route_capabilities,
+        hub,
+        query=query,
+        requested_right=requested_right,
+        consequence_tier=consequence_tier,
+        privacy_class=privacy_class,
+        maximum_primary=maximum_primary,
+        permission_granted=permission_granted,
+        suppressed_capability_ids=suppress_capability,
+    )
+
+
+@product_os_app.command("graph")
+def product_os_graph_command(
+    hub: Optional[Path] = typer.Option(None),
+) -> None:
+    """Project catalog, routes, runs, evidence, policies, gaps, and decisions."""
+    _product_os_output(build_operational_capability_graph, hub)
+
+
+@product_os_app.command("routines")
+def product_os_routines_command(
+    activate: list[str] = typer.Option([], "--activate"),
+    previous_fingerprint: list[str] = typer.Option([], "--previous", help="routine_id=sha256:..."),
+    quiet: bool = typer.Option(False, "--quiet"),
+    hub: Optional[Path] = typer.Option(None),
+) -> None:
+    """Evaluate dormant/delta routine contracts without scheduling or executing them."""
+    previous: dict[str, str] = {}
+    for value in previous_fingerprint:
+        if "=" not in value:
+            raise typer.BadParameter("--previous must use routine_id=sha256:...")
+        routine_id, fingerprint = value.split("=", 1)
+        previous[routine_id] = fingerprint
+    _product_os_output(
+        evaluate_routines,
+        hub,
+        activated_routine_ids=activate,
+        previous_fingerprints=previous,
+        quiet_mode=quiet,
+    )
+
+
+@product_os_app.command("authority")
+def product_os_authority_command(
+    requested_right: str = typer.Option(..., "--right"),
+    consequence_tier: str = typer.Option(..., "--tier"),
+    privacy_class: str = typer.Option("internal_metadata", "--privacy"),
+    actor_class: str = typer.Option(..., "--actor"),
+    verified_gate: list[str] = typer.Option([], "--gate"),
+    actor_id: str = typer.Option("", "--actor-id"),
+    producer_id: str = typer.Option("", "--producer-id"),
+    checker_id: str = typer.Option("", "--checker-id"),
+    action_digest: str = typer.Option("", "--action-digest"),
+    lease_ref: str = typer.Option("", "--lease-ref"),
+    lease_expires_at: str = typer.Option("", "--lease-expires-at"),
+    human_approval_ref: str = typer.Option("", "--human-approval-ref"),
+    checker_evaluation_ref: str = typer.Option("", "--checker-evaluation-ref"),
+    human_gate: bool = typer.Option(False, "--human-gate"),
+    checker_gate: bool = typer.Option(False, "--checker-gate"),
+    domain_gate: bool = typer.Option(False, "--domain-gate"),
+    lease: bool = typer.Option(False, "--lease"),
+    final_confirmation: bool = typer.Option(False, "--final-confirmation"),
+    rollback: bool = typer.Option(False, "--rollback"),
+    hub: Optional[Path] = typer.Option(None),
+) -> None:
+    """Evaluate declared AI decision rights and consequence gates."""
+    _product_os_output(
+        evaluate_decision_right,
+        hub,
+        requested_right=requested_right,
+        consequence_tier=consequence_tier,
+        privacy_class=privacy_class,
+        actor_class=actor_class,
+        verified_gates=verified_gate,
+        actor_id=actor_id,
+        producer_id=producer_id,
+        checker_id=checker_id,
+        action_digest=action_digest,
+        lease_ref=lease_ref,
+        lease_expires_at=lease_expires_at,
+        human_approval_ref=human_approval_ref,
+        checker_evaluation_ref=checker_evaluation_ref,
+        human_gate_verified=human_gate,
+        checker_gate_verified=checker_gate,
+        domain_gate_verified=domain_gate,
+        lease_verified=lease,
+        final_confirmation_verified=final_confirmation,
+        rollback_present=rollback,
+    )
+
+
+@product_os_app.command("snapshot")
+def product_os_snapshot_command(
+    quiet: bool = typer.Option(False, "--quiet"),
+    publish: bool = typer.Option(False, "--publish"),
+    full: bool = typer.Option(False, "--full/--summary"),
+    hub: Optional[Path] = typer.Option(None),
+) -> None:
+    """Build the usage, workflow, gap, efficiency, and three-decision digest."""
+    cfg = _cfg(hub=hub)
+    try:
+        snapshot = build_capability_portfolio_snapshot(cfg.repo_root, quiet_mode=quiet)
+        output = write_capability_os_outputs(cfg.repo_root, snapshot) if publish else {}
+        console.print_json(
+            data=snapshot
+            if full
+            else {
+                "schema_version": snapshot["schema_version"],
+                "generated_at": snapshot["generated_at"],
+                "status": snapshot["status"],
+                "summary": snapshot["summary"],
+                "efficiency": snapshot["efficiency"],
+                "operator": snapshot["operator"],
+                "output": output,
+                "authority_boundary": snapshot["authority_boundary"],
+            }
+        )
+    except (OSError, RuntimeError, ValueError, KeyError, ValidationError) as exc:
+        console.print_json(data={"status": "blocked", "error": str(exc)})
+        raise typer.Exit(2) from None
+
+
+@product_os_app.command("record-route")
+def product_os_record_route_command(
+    query: str = typer.Argument(...),
+    opaque_task_id: str = typer.Option(..., "--task-id"),
+    request_class: str = typer.Option(..., "--request-class"),
+    repository_id: str = typer.Option(..., "--repository-id"),
+    request_tag: list[str] = typer.Option([], "--tag"),
+    requested_right: str = typer.Option("recommend", "--right"),
+    consequence_tier: str = typer.Option("C0", "--tier"),
+    privacy_class: str = typer.Option("internal_metadata", "--privacy"),
+    synthetic: bool = typer.Option(False, "--synthetic"),
+    route_outcome: str = typer.Option("accepted_candidate", "--outcome"),
+    override_reason: list[str] = typer.Option([], "--override-reason"),
+    hub: Optional[Path] = typer.Option(None),
+) -> None:
+    """Explicitly opt in one privacy-safe routing receipt; retries are deduplicated."""
+    cfg = _cfg(hub=hub)
+    route = route_capabilities(
+        cfg.repo_root,
+        query,
+        requested_right=requested_right,
+        consequence_tier=consequence_tier,
+        privacy_class=privacy_class,
+    )
+    receipt = build_routing_receipt(
+        route,
+        opaque_task_id=opaque_task_id,
+        request_class=request_class,
+        request_tags=request_tag,
+        repository_id=repository_id,
+        synthetic_or_fixture=synthetic,
+        route_outcome=route_outcome,
+        override_reason_codes=override_reason,
+    )
+    console.print_json(data=append_routing_receipt(cfg.repo_root, receipt))
+
+
+@product_os_app.command("record-run")
+def product_os_record_run_command(
+    workflow_id: str = typer.Option(..., "--workflow-id"),
+    workflow_revision_id: str = typer.Option(..., "--workflow-revision"),
+    run_id: str = typer.Option(..., "--run-id"),
+    route_event_id: str = typer.Option(..., "--route-event-id"),
+    event_state: str = typer.Option(..., "--state"),
+    capability_id: list[str] = typer.Option([], "--capability"),
+    input_fingerprint: str = typer.Option(..., "--input-fingerprint"),
+    execution_mode: str = typer.Option("deterministic", "--execution-mode"),
+    producer_ref: str = typer.Option(..., "--producer-ref"),
+    synthetic: bool = typer.Option(False, "--synthetic"),
+    checker_ref: str = typer.Option("", "--checker-ref"),
+    evaluation_ref: str = typer.Option("", "--evaluation-ref"),
+    validation_outcome: str = typer.Option("", "--validation-outcome"),
+    adapter_id: str = typer.Option("", "--adapter-id"),
+    hub: Optional[Path] = typer.Option(None),
+) -> None:
+    """Append one explicit workflow lifecycle event; validation needs independent refs."""
+    cfg = _cfg(hub=hub)
+    event = build_workflow_run_event(
+        workflow_id=workflow_id,
+        workflow_revision_id=workflow_revision_id,
+        run_id=run_id,
+        route_event_id=route_event_id,
+        event_state=event_state,
+        capability_ids=capability_id,
+        input_fingerprint=input_fingerprint,
+        execution_mode=execution_mode,
+        producer_ref=producer_ref,
+        synthetic_or_fixture=synthetic,
+        independent_checker_ref=checker_ref,
+        independent_evaluation_ref=evaluation_ref,
+        validation_outcome=validation_outcome,
+        adapter_id=adapter_id,
+    )
+    console.print_json(data=append_workflow_run_event(cfg.repo_root, event))
+
+
+@product_os_app.command("offload-check")
+def product_os_offload_check_command(
+    task_class: str = typer.Argument(...),
+    mechanical: bool = typer.Option(False, "--mechanical"),
+    closed_paths: bool = typer.Option(False, "--closed-paths"),
+    stable_interfaces: bool = typer.Option(False, "--stable-interfaces"),
+    deterministic_validation: bool = typer.Option(False, "--deterministic-validation"),
+    isolated_worktree: bool = typer.Option(False, "--isolated-worktree"),
+    reversible: bool = typer.Option(False, "--reversible"),
+    explicit_lease: bool = typer.Option(False, "--explicit-lease"),
+    independent_checker: bool = typer.Option(False, "--independent-checker"),
+    sanitized_packet: bool = typer.Option(False, "--sanitized-packet"),
+    prohibited_class: list[str] = typer.Option([], "--prohibited-class"),
+    adapter_id: str = typer.Option("adapter:cursor-local", "--adapter"),
+    hub: Optional[Path] = typer.Option(None),
+) -> None:
+    """Classify a mechanical offload packet without dispatching it."""
+    _product_os_output(
+        classify_offload,
+        hub,
+        task_class=task_class,
+        mechanical_task=mechanical,
+        closed_allowed_paths=closed_paths,
+        stable_authority_and_interfaces=stable_interfaces,
+        deterministic_validation=deterministic_validation,
+        isolated_worktree=isolated_worktree,
+        reversible_diff=reversible,
+        explicit_lease=explicit_lease,
+        independent_checker=independent_checker,
+        sanitized_minimal_packet=sanitized_packet,
+        prohibited_classes=prohibited_class,
+        adapter_id=adapter_id,
+    )
 
 
 def _repo_path(repo_root: Path, path: Path | None) -> Path | None:

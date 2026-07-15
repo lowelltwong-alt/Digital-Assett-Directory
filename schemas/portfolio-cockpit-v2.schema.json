@@ -53,6 +53,9 @@
         },
         "agent_families": {
           "$ref": "#/$defs/source"
+        },
+        "capability_os": {
+          "$ref": "#/$defs/source"
         }
       }
     },
@@ -64,7 +67,8 @@
         "digest_count",
         "family_count",
         "family_issue_count",
-        "portfolio_item_count"
+        "portfolio_item_count",
+        "capability_item_count"
       ],
       "properties": {
         "now_count": {
@@ -84,6 +88,10 @@
           "minimum": 0
         },
         "portfolio_item_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "capability_item_count": {
           "type": "integer",
           "minimum": 0
         }
@@ -114,6 +122,10 @@
           "type": "string"
         },
         "agent_families": {
+          "type": "string",
+          "pattern": "^sha256:"
+        },
+        "capability_os": {
           "type": "string",
           "pattern": "^sha256:"
         }
@@ -175,7 +187,8 @@
         "source": {
           "enum": [
             "portfolio_v1",
-            "agent_families"
+            "agent_families",
+            "capability_os"
           ]
         },
         "band": {
@@ -223,4 +236,3 @@
     }
   }
 }
-

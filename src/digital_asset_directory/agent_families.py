@@ -504,6 +504,7 @@ def _family_band(issue: dict[str, Any]) -> str:
 def build_portfolio_cockpit_v2(
     health: dict[str, Any],
     portfolio_v1: dict[str, Any] | None = None,
+    capability_snapshot: dict[str, Any] | None = None,
     *,
     now: datetime | None = None,
 ) -> dict[str, Any]:
@@ -525,6 +526,7 @@ def build_portfolio_cockpit_v2(
         for issue in health["issues"]
     ]
     portfolio_items: list[dict[str, Any]] = []
+    capability_items: list[dict[str, Any]] = []
     portfolio_source = {
         "status": "unavailable",
         "schema_version": "",
@@ -565,8 +567,48 @@ def build_portfolio_cockpit_v2(
                 "fingerprint": _canonical_hash(portfolio_v1),
                 "problems": ["unsupported_portfolio_schema"],
             }
+    capability_source: dict[str, Any] | None = None
+    if isinstance(capability_snapshot, dict):
+        if capability_snapshot.get("schema_version") == "dad.capability_portfolio_snapshot.v1":
+            capability_source = {
+                "status": "observed",
+                "schema_version": "dad.capability_portfolio_snapshot.v1",
+                "fingerprint": str(capability_snapshot.get("catalog_fingerprint", "")),
+                "problems": [],
+            }
+            for item in capability_snapshot.get("operator", {}).get("digest", []):
+                capability_items.append(
+                    {
+                        "attention_id": str(item.get("decision_id", "")),
+                        "source": "capability_os",
+                        "band": "human_decision",
+                        "label": str(item.get("label", "")),
+                        "family_id": "",
+                        "reasons": sorted(
+                            {
+                                str(item.get("kind", "capability_os")),
+                                str(item.get("recommended_action", "review")),
+                            }
+                        ),
+                        "next_action": str(item.get("recommended_action", "review")),
+                        "human_decision_required": True,
+                        "selected_now": False,
+                        "fingerprint": str(item.get("fingerprint", _canonical_hash(item))),
+                        "evidence_refs": sorted(
+                            {str(ref) for ref in item.get("evidence_refs", [])}
+                        ),
+                    }
+                )
+        else:
+            capability_source = {
+                "status": "invalid",
+                "schema_version": str(capability_snapshot.get("schema_version", "")),
+                "fingerprint": _canonical_hash(capability_snapshot),
+                "problems": ["unsupported_capability_snapshot_schema"],
+            }
     deduped = {
-        item["fingerprint"]: item for item in [*portfolio_items, *family_items]
+        item["fingerprint"]: item
+        for item in [*portfolio_items, *family_items, *capability_items]
     }
     digest = sorted(
         deduped.values(),
@@ -580,44 +622,50 @@ def build_portfolio_cockpit_v2(
     selected = {item["fingerprint"] for item in now_items}
     for item in digest:
         item["selected_now"] = item["fingerprint"] in selected
+    sources = {
+        "portfolio_v1": portfolio_source,
+        "agent_families": {
+            "status": "observed",
+            "schema_version": health["schema_version"],
+            "fingerprint": health["source_fingerprint"],
+            "problems": (
+                []
+                if health["status"] == "generated_candidate"
+                else ["agent_family_health_partial"]
+            ),
+        },
+    }
+    source_refs = {
+        "portfolio_v1": portfolio_source["fingerprint"],
+        "agent_families": health["source_fingerprint"],
+    }
+    if capability_source is not None:
+        sources["capability_os"] = capability_source
+        source_refs["capability_os"] = capability_source["fingerprint"]
+    all_observed = all(source["status"] == "observed" for source in sources.values())
     result = {
         "schema_version": SCHEMA_VERSION,
         "generated_at": observed.isoformat(),
         "status": (
             "generated_candidate"
-            if portfolio_source["status"] == "observed"
-            and health["status"] == "generated_candidate"
+            if all_observed and health["status"] == "generated_candidate"
             else "partial_candidate"
         ),
         "candidate_only": True,
         "execution_authorized": False,
         "authority_boundary": AUTHORITY_BOUNDARY,
-        "sources": {
-            "portfolio_v1": portfolio_source,
-            "agent_families": {
-                "status": "observed",
-                "schema_version": health["schema_version"],
-                "fingerprint": health["source_fingerprint"],
-                "problems": (
-                    []
-                    if health["status"] == "generated_candidate"
-                    else ["agent_family_health_partial"]
-                ),
-            },
-        },
+        "sources": sources,
         "summary": {
             "now_count": len(now_items),
             "digest_count": len(digest),
             "family_count": health["summary"]["family_count"],
             "family_issue_count": health["summary"]["issue_count"],
             "portfolio_item_count": len(portfolio_items),
+            "capability_item_count": len(capability_items),
         },
         "now": now_items,
         "digest": digest,
-        "source_refs": {
-            "portfolio_v1": portfolio_source["fingerprint"],
-            "agent_families": health["source_fingerprint"],
-        },
+        "source_refs": source_refs,
     }
     return result
 

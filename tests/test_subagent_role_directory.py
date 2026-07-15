@@ -68,6 +68,11 @@ def _hub(tmp_path: Path, *, evaluation_support: bool = False) -> Path:
         "integration-mcp-automation-agent-family",
         "product-ux-accessibility-agent-family",
         "legal-evidence-governance-overlay",
+        "technical-product-company-os",
+        "platform-cloud-sre-agent-family",
+        "observability-resilience-specialist-pack",
+        "developer-platform-devex-specialist-pack",
+        "product-intelligence-experimentation-pack",
     ):
         source = ROOT / "assets/agent-skills" / skill_name
         target = hub / "assets/agent-skills" / skill_name
@@ -94,7 +99,7 @@ def test_catalog_builds_without_attempts_and_keeps_grades_insufficient(tmp_path:
 
     projection = build_role_directory_projection(hub)
 
-    assert projection["role_count"] == 99
+    assert projection["role_count"] == 125
     assert {row["skill_id"] for row in projection["roles"]} == {
         "skill:personal-project-management-ops",
         "skill:dad-trigger-pattern-radar",
@@ -110,6 +115,11 @@ def test_catalog_builds_without_attempts_and_keeps_grades_insufficient(tmp_path:
         "skill:integration-mcp-automation-agent-family",
         "skill:product-ux-accessibility-agent-family",
         "skill:legal-evidence-governance-overlay",
+        "skill:technical-product-company-os",
+        "skill:platform-cloud-sre-agent-family",
+        "skill:observability-resilience-specialist-pack",
+        "skill:developer-platform-devex-specialist-pack",
+        "skill:product-intelligence-experimentation-pack",
     }
     assert all(row["evaluation_status"] == "insufficient_evidence" for row in projection["roles"])
     assert all(row["evaluated_revisions"] == [] for row in projection["roles"])

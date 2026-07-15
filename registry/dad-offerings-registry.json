@@ -647,6 +647,30 @@
       "owner_authority": "DAD owns portfolio metadata and projections; each source repository and named human owns adoption, code, policy, release, legal, and external-system decisions.",
       "adoption_semantics": "Read-only routing and inspection by default; skill checkout remains pointer or wrapper based and no recurring routine is activated.",
       "authority_boundary": "The control plane proposes family combinations, graph evidence, health issues, pilots, and at most three cockpit decisions. It cannot dispatch, mutate, promote, release, or make legal conclusions."
+    },
+    {
+      "offering_id": "dad:offering:technical-product-company-os",
+      "name": "Technical Product Company Operating System",
+      "version": "0.1.0",
+      "offering_type": "control_plane",
+      "path": "registry/technical-product-company-os-registry.json",
+      "languages": ["agent-instruction", "python", "mixed"],
+      "repo_types": ["application", "library", "control_plane", "research_repo", "governed_repo_family"],
+      "domains": ["technical_product", "software_engineering", "platform", "quality", "security", "data", "integration", "product_intelligence", "governance"],
+      "context_tags": ["capability_os", "product_catalyst", "project_manager", "decision_rights", "workflow_graph", "usage_evidence", "gap_detection", "one_human_operations"],
+      "task_types": ["product_shaping", "project_coordination", "capability_routing", "workflow_composition", "decision_governance", "capability_gap_review", "portfolio_digest"],
+      "capabilities": ["smallest_sufficient_capability_routing", "ai_decision_rights_gateway", "append_only_operational_telemetry", "workflow_dependency_graph", "human_gated_improvement", "one_human_digest"],
+      "applies_when": ["A technical product request needs to be shaped, routed, governed, coordinated, measured, or improved without losing reusable capability knowledge."],
+      "does_not_apply_when": ["A single deterministic command or narrower existing skill completes the request without material routing, authority, or lifecycle judgment."],
+      "public_safe": true,
+      "upgrade_channel": "dad_mail",
+      "known_upgrades": [],
+      "source_refs": ["registry/technical-product-company-os-registry.json", "docs/TECHNICAL_PRODUCT_COMPANY_OS.md", "assets/agent-skills/technical-product-company-os/SKILL.md"],
+      "review_status": "candidate",
+      "validation_refs": ["tests/test_technical_product_company_os.py", "scripts/validate_agent_skill_library.py"],
+      "owner_authority": "DAD owns candidate catalog, routing, receipts, and projections; source repositories and the named human retain project truth, adoption, activation, code, policy, release, spend, legal, data, and external-system authority.",
+      "adoption_semantics": "Candidate and read-only by default. Telemetry is explicit opt-in, routines require separate activation, and adapters require exact configuration and permission.",
+      "authority_boundary": "The OS can observe, retrieve, recommend, draft, and independently validate inside declared bounds. It cannot grant execution, activate itself, approve its own outputs, or perform prohibited actions."
     }
   ]
 }

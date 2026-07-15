@@ -22,6 +22,7 @@ from digital_asset_directory.agent_families import (
 ROOT = Path(__file__).resolve().parents[1]
 FAMILY_SKILLS = [
     "full-stack-engineering-agent-family",
+    "platform-cloud-sre-agent-family",
     "quality-verification-release-agent-family",
     "security-privacy-supply-chain-agent-family",
     "knowledge-research-provenance-agent-family",
@@ -62,7 +63,7 @@ def test_registry_and_all_family_schemas_are_registered_and_valid() -> None:
 
 def test_portfolio_is_small_model_neutral_and_wip_bounded() -> None:
     registry = load_json("registry/agent-family-portfolio-registry.json")
-    assert len(registry["families"]) == 9
+    assert len(registry["families"]) == 10
     assert registry["ai_agnostic"] is True
     assert registry["runtime_routing"]["capability_aliases"] == ["luna", "terra", "sol"]
     assert set(registry["runtime_routing"]["attempt_only_fields"]) >= {
@@ -180,11 +181,11 @@ def test_health_is_semantically_deduplicated_and_timestamp_independent() -> None
     first = agent_family_health(ROOT, now=datetime(2026, 7, 14, tzinfo=timezone.utc))
     second = agent_family_health(ROOT, now=datetime(2026, 7, 28, tzinfo=timezone.utc))
     validate("schemas/agent-family-health.schema.json", first)
-    assert first["summary"]["family_count"] == 9
+    assert first["summary"]["family_count"] == 10
     assert first["summary"]["stale_count"] == 0
     assert first["summary"]["unknown_count"] == 0
-    assert first["summary"]["issue_count"] == 9
-    assert len({row["fingerprint"] for row in first["issues"]}) == 9
+    assert first["summary"]["issue_count"] == 10
+    assert len({row["fingerprint"] for row in first["issues"]}) == 10
     assert [row["fingerprint"] for row in first["issues"]] == [
         row["fingerprint"] for row in second["issues"]
     ]
@@ -200,7 +201,7 @@ def test_cockpit_v2_limits_now_to_three_preserves_digest_and_escapes_html() -> N
     cockpit["now"][0]["reasons"] = ["<script>alert(1)</script>"]
     validate("schemas/portfolio-cockpit-v2.schema.json", cockpit)
     assert len(cockpit["now"]) == 3
-    assert len(cockpit["digest"]) == 9
+    assert len(cockpit["digest"]) == 10
     assert sum(item["selected_now"] for item in cockpit["digest"]) == 3
     html = portfolio_cockpit_v2_html(cockpit)
     assert "<script>alert(1)</script>" not in html

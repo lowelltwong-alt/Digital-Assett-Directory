@@ -1,8 +1,8 @@
 {
   "schema_version": "0.1.0",
   "registry_id": "ai-navigation-registry",
-  "navigation_version": "2026.07.14.11",
-  "updated_at": "2026-07-14T23:30:00Z",
+  "navigation_version": "2026.07.14.12",
+  "updated_at": "2026-07-15T02:31:33Z",
   "singular_entrypoint": {
     "path": "AI_FRONT_DOOR.md",
     "rule": "All agents start at AI_FRONT_DOOR.md, then follow the required read order and task-specific branches.",
@@ -658,6 +658,18 @@
       "freshness_hint": "Runtime model observations expire, the technique library is incomplete, and research, deployment, instruction, automation, and supersession changes remain human-gated."
     },
     {
+      "branch_id": "technical_product_company_os",
+      "path": "docs/TECHNICAL_PRODUCT_COMPANY_OS.md",
+      "role": "One-human capability operating system for product catalysis, project coordination, top-ten technical coverage, AI decision rights, routing, workflow evidence, automation, offload, gap detection, and improvement.",
+      "tags": ["agent_skill", "workflow", "knowledge_graph", "control_plane", "project_management", "governance", "automation", "human_gate"],
+      "use_when": "You shape or coordinate a technical product, retrieve the smallest sufficient capability set, govern what AI can decide, inspect capability/workflow use, or review a gap or improvement candidate.",
+      "current_version": "0.1.0",
+      "last_material_change_at": "2026-07-15T02:31:33Z",
+      "change_class": "library_catalog",
+      "route_after": ["AI_FRONT_DOOR.md", "registry/technical-product-company-os-registry.json", "registry/agent-family-portfolio-registry.json", "registry/agent-skill-library.json"],
+      "freshness_hint": "The catalog is fingerprinted and rebuildable; telemetry is explicit opt-in, routines are dormant, Cursor is unauthorized, and all active change remains human-gated."
+    },
+    {
       "branch_id": "agent_family_portfolio",
       "path": "docs/AGENT_FAMILY_PORTFOLIO.md",
       "role": "Model-neutral family portfolio with shared role and interface contracts, typed dependency projection, independent assurance, read-only pilots, lifecycle sentinels, and a one-human cockpit.",
@@ -953,27 +965,6 @@
       ]
     },
     {
-      "change_id": "nav-change:2026-07-10:subagent-evaluation-capability-graph",
-      "changed_at": "2026-07-10T19:15:00Z",
-      "change_type": "added_subagent_evaluation_capability_graph",
-      "paths": [
-        "docs/SUBAGENT_EVALUATION_AND_CAPABILITY_GRAPH.md",
-        "registry/subagent-evaluation-methodology.json",
-        "registry/subagent-capability-registry.json",
-        "schemas/subagent-attempt-evaluation.schema.json",
-        "src/digital_asset_directory/subagent_evaluations.py",
-        "processed/agents/subagent-capability-graph.json"
-      ],
-      "summary": "Added immutable attempt intake, pinned evidence ratings, candidate capability graph, and human-gated role consolidation review.",
-      "agent_action": "Use this branch for subagent evaluation; never infer agent identity from nicknames or use graph scores to change routing automatically.",
-      "route_tags": [
-        "agent_skill",
-        "knowledge_graph",
-        "calibration",
-        "human_gate"
-      ]
-    },
-    {
       "change_id": "nav-change:2026-07-07:fable-graph-surface-mcp-handoff",
       "changed_at": "2026-07-07T02:15:00Z",
       "change_type": "added_fable_graph_surface_mcp_handoff_packet",
@@ -1167,21 +1158,22 @@
       ]
     },
     {
-      "change_id": "nav-change:2026-07-04:lesson-lifecycle-governance",
-      "changed_at": "2026-07-04T17:42:00Z",
-      "change_type": "added_lesson_lifecycle_governance_branch",
-      "paths": [
-        "docs/LESSON_LIFECYCLE_GOVERNANCE.md",
-        "docs/LESSONS_AND_HANDOFF_LOOP.md",
-        "registry/dad-needs-registry.json"
-      ],
-      "summary": "Added non-enforced lesson lifecycle design so DAD can later review lessons for upgrade, downgrade, improvement, supersession, archive, and next-review cadence.",
-      "agent_action": "Use this branch when an old lesson might be stale, noisy, harmful, superseded, or ready for promotion review; keep raw lessons immutable.",
-      "route_tags": [
-        "learning_loop",
-        "calibration",
-        "governance"
-      ]
+      "change_id": "nav-change:2026-07-14:technical-product-company-os",
+      "changed_at": "2026-07-15T02:31:33Z",
+      "change_type": "added_technical_product_company_os",
+      "paths": ["docs/TECHNICAL_PRODUCT_COMPANY_OS.md", "registry/technical-product-company-os-registry.json", "src/digital_asset_directory/technical_product_os.py", "assets/agent-skills/technical-product-company-os", "assets/agent-skills/platform-cloud-sre-agent-family"],
+      "summary": "Added the governed one-human capability OS with product catalyst and project-manager roles, top-ten technical coverage, AI decision rights, typed workflow/dependency evidence, append-only telemetry, dormant automations, and bounded offload classification.",
+      "agent_action": "Route technical-product work through the smallest eligible set, preserve source authority and evidence stages, keep routines dormant, and never infer execution permission from model strength or routing confidence.",
+      "route_tags": ["agent_skill", "workflow", "knowledge_graph", "project_management", "governance", "automation", "human_gate"]
+    },
+    {
+      "change_id": "nav-change:2026-07-10:subagent-evaluation-capability-graph",
+      "changed_at": "2026-07-10T19:15:00Z",
+      "change_type": "added_subagent_evaluation_capability_graph",
+      "paths": ["docs/SUBAGENT_EVALUATION_AND_CAPABILITY_GRAPH.md", "registry/subagent-evaluation-methodology.json", "registry/subagent-capability-registry.json", "schemas/subagent-attempt-evaluation.schema.json", "src/digital_asset_directory/subagent_evaluations.py", "processed/agents/subagent-capability-graph.json"],
+      "summary": "Added immutable attempt intake, pinned evidence ratings, candidate capability graph, and human-gated role consolidation review.",
+      "agent_action": "Use this branch for subagent evaluation; never infer agent identity from nicknames or use graph scores to change routing automatically.",
+      "route_tags": ["agent_skill", "knowledge_graph", "calibration", "human_gate"]
     }
   ],
   "authority_boundary": "This registry only governs DAD navigation freshness and routing. It does not make generated reports source truth, authorize downstream repo writes, or override source-repository authority."

@@ -148,7 +148,7 @@ def test_dad_library_registries_validate_against_schemas():
 def test_every_offering_declares_validation_owner_and_adoption_contract():
     offerings = load_offerings(ROOT)["offerings"]
 
-    assert len(offerings) == 18
+    assert len(offerings) == 19
     for offering in offerings:
         assert offering["validation_refs"]
         assert all((ROOT / ref).exists() for ref in offering["validation_refs"])

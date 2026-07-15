@@ -205,6 +205,23 @@
       "normal_write_boundary": "Initialized DAD_DATA_ROOT/private/personal-skills/**; local-only and excluded from journal replication",
       "authority_boundary": "The live global Codex skill root remains source authority. Archives are inert; unknown origins are metadata-only; portable exports require named review and do not install or edit skills.",
       "review_status": "candidate"
+    },
+    {
+      "control_plane_id": "technical_product_company_os",
+      "name": "Technical Product Company Operating System",
+      "status": "candidate",
+      "cadence": "dormant-delta-routines-require-human-activation",
+      "primary_surfaces": [
+        "registry/technical-product-company-os-registry.json",
+        "src/digital_asset_directory/technical_product_os.py",
+        "assets/agent-skills/technical-product-company-os/**",
+        "DAD_DATA_ROOT/processed/usage/capability-routing-receipts.jsonl",
+        "DAD_DATA_ROOT/processed/usage/workflow-run-events.jsonl",
+        "DAD_DATA_ROOT/processed/reports/portfolio_os/**"
+      ],
+      "normal_write_boundary": "Explicit opt-in append-only usage ledgers and governed DAD report outputs only",
+      "authority_boundary": "This control plane may route, summarize, and propose. It cannot self-activate, grant execution, approve its own work, change source truth, dispatch an external adapter, or make a C3/C4 decision.",
+      "review_status": "candidate"
     }
   ]
 }

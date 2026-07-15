@@ -1,0 +1,149 @@
+{
+  "schema_version": "dad.task_local_agent_mesh_manifest.v1",
+  "mesh_id": "dad:agent-mesh:capability-operating-system-complete",
+  "task_id": "capability-operating-system-complete",
+  "revision_id": "dad:agent-mesh-revision:capability-operating-system-complete:v1",
+  "phase": "planning",
+  "status": "planned",
+  "source_snapshot_digest": "sha256:660683b213a37e2be0d717eeb9dfd625a1dfce72566fd116fa964e4dd8c3bd19",
+  "authority": {
+    "source_authority": "DAD registries and repository contracts retain local source authority; Lowell retains product, automation, external-offload, budget, security, privacy, release, and final decision authority.",
+    "execution_authority": false,
+    "human_gate_required": true
+  },
+  "max_delegation_depth": 1,
+  "writer_role_id": "capability-os-integration-writer",
+  "checker_role_id": "capability-os-independent-checker",
+  "non_overlap_statement": "Only capability-os-integration-writer edits repository files. Scouts and specialists are read-only, and the independent checker replays evidence without editing writer outputs.",
+  "roles": [
+    {
+      "role_id": "capability-os-integration-writer",
+      "why_needed": "One integration owner must preserve compatibility across schemas, registries, graph projections, routing, telemetry, CLI, cockpit, skills, and tests.",
+      "mission": "Implement the complete phased Capability Operating System and produce deterministic validation evidence.",
+      "inputs": ["user-approved Capability OS specification", "existing ML and family portfolio implementation", "DAD authority and navigation contracts", "specialist findings"],
+      "dependencies": ["portfolio-reconciliation-scout", "one-human-operations-specialist", "ai-governance-specialist"],
+      "authority": "May edit only this isolated worktree for the accepted build; may not activate external automation, mutate other repositories, install integrations, or authorize release.",
+      "model_effort_class": "high",
+      "writer_checker_relation": "writer",
+      "acceptance_conditions": ["All planned phases are implemented", "Focused and full validation pass", "One-human cockpit exposes at most three immediate decisions", "No producer self-approval or silent mutation path exists"],
+      "stop_conditions": ["Source-authority conflict", "Unreviewed sensitive-data movement", "External mutation or Cursor activation would be required", "Acceptance criteria become untestable"],
+      "handoff": {
+        "recipient_role_ids": ["capability-os-independent-checker"],
+        "deliverables": ["complete diff", "schema and graph validation", "test and CLI evidence", "known-risk register"],
+        "readiness_conditions": ["Writer validation passes", "All specialist findings are dispositioned"]
+      }
+    },
+    {
+      "role_id": "portfolio-reconciliation-scout",
+      "why_needed": "The implementation spans an older live branch and a dirty isolated portfolio worktree that must be reconciled without losing work.",
+      "mission": "Inventory branch, worktree, registry, module, test, and compatibility evidence and recommend the safest integration sequence.",
+      "inputs": ["main repository", "dad-ml-agent-family worktree", "Git metadata", "existing family tests"],
+      "dependencies": [],
+      "authority": "Read-only inventory; cannot edit, clean, reset, merge, rebase, or commit.",
+      "model_effort_class": "low",
+      "writer_checker_relation": "specialist",
+      "acceptance_conditions": ["Exact implemented and missing surfaces are listed", "Conflicts and ownership risks are explicit"],
+      "stop_conditions": ["Dirty changes cannot be attributed", "A destructive Git action appears necessary"],
+      "handoff": {
+        "recipient_role_ids": ["capability-os-integration-writer"],
+        "deliverables": ["reconciliation inventory", "integration recommendation", "conflict list"],
+        "readiness_conditions": ["Both worktrees and relevant histories are inspected"]
+      }
+    },
+    {
+      "role_id": "one-human-operations-specialist",
+      "why_needed": "A single busy human needs extreme attention efficiency, quiet defaults, bounded decisions, and token-aware offload.",
+      "mission": "Define one-human cockpit, automation, trigger, token-budget, deterministic batch, and Cursor-style offload acceptance contracts.",
+      "inputs": ["existing cockpit and daemon assets", "trigger and project-management skills", "user attention constraint", "privacy and authority boundaries"],
+      "dependencies": [],
+      "authority": "Read-only design advice; cannot schedule routines, enable integrations, contact services, or mutate project state.",
+      "model_effort_class": "medium",
+      "writer_checker_relation": "specialist",
+      "acceptance_conditions": ["At most three immediate decisions", "Quiet batching and snooze semantics are testable", "Large simple work routes to deterministic or approved low-cost adapters", "Activation remains human-gated"],
+      "stop_conditions": ["External adapter is assumed authorized", "Token efficiency weakens validation or privacy"],
+      "handoff": {
+        "recipient_role_ids": ["capability-os-integration-writer"],
+        "deliverables": ["operator contract", "metrics", "negative tests", "reuse map"],
+        "readiness_conditions": ["Existing DAD operator surfaces are inspected"]
+      }
+    },
+    {
+      "role_id": "ai-governance-specialist",
+      "why_needed": "Every AI, workflow, trigger, and offload route needs explicit decision rights and consequence gates.",
+      "mission": "Define observe, retrieve, recommend, draft, validate, execute, and prohibited authority with fail-closed human gates and separation of duties.",
+      "inputs": ["source-of-truth registry", "design-authority registry", "family and subagent contracts", "automation and offload requirements"],
+      "dependencies": [],
+      "authority": "Read-only governance analysis; cannot grant authority, approve automation, or modify policy.",
+      "model_effort_class": "high",
+      "writer_checker_relation": "specialist",
+      "acceptance_conditions": ["Decision-right fields are machine-readable", "Consequence tiers and human gates are explicit", "Conflicts fail closed", "Adversarial cases cover privilege escalation and self-approval"],
+      "stop_conditions": ["Authority owner is missing", "Policy conflict cannot be resolved from source evidence"],
+      "handoff": {
+        "recipient_role_ids": ["capability-os-integration-writer", "capability-os-independent-checker"],
+        "deliverables": ["decision-rights contract", "schema fields", "adversarial tests", "unresolved risks"],
+        "readiness_conditions": ["Governing registries are inspected"]
+      }
+    },
+    {
+      "role_id": "capability-os-independent-checker",
+      "why_needed": "A material governance and routing control plane cannot be accepted by its producer.",
+      "mission": "Independently replay schemas, routing, telemetry, graph, cockpit, privacy, governance, offload, skill, CLI, and regression acceptance evidence.",
+      "inputs": ["frozen implementation diff", "source contracts", "raw validation output", "specialist findings"],
+      "dependencies": ["capability-os-integration-writer", "ai-governance-specialist"],
+      "authority": "Read-only independent review; cannot edit outputs, activate automations, or approve release on behalf of the human.",
+      "model_effort_class": "high",
+      "writer_checker_relation": "checker",
+      "acceptance_conditions": ["Every proof obligation has replayed evidence", "Failures and residual risks are explicit", "Checker independence is preserved"],
+      "stop_conditions": ["Checker authored the implementation", "Required raw evidence is unavailable", "Validation would require an external mutation"],
+      "handoff": {
+        "recipient_role_ids": [],
+        "deliverables": ["independent findings", "proof replay", "human release recommendation"],
+        "readiness_conditions": ["Writer handoff is frozen", "Raw evidence is available"]
+      }
+    }
+  ],
+  "proof_obligations": [
+    {
+      "obligation_id": "complete-scope",
+      "description": "Prove all four planes, top-ten portfolio, governance, token-efficient automation, and operator surfaces are implemented.",
+      "evidence_required": ["registry coverage tests", "CLI smoke tests", "final diff"],
+      "owner_role_id": "capability-os-integration-writer",
+      "checker_role_id": "capability-os-independent-checker",
+      "status": "pending"
+    },
+    {
+      "obligation_id": "authority-safety",
+      "description": "Prove AI decision rights fail closed and no producer, sentinel, trigger, or offload adapter can self-authorize mutations.",
+      "evidence_required": ["negative governance tests", "role separation checks", "authority matrix validation"],
+      "owner_role_id": "capability-os-integration-writer",
+      "checker_role_id": "capability-os-independent-checker",
+      "status": "pending"
+    },
+    {
+      "obligation_id": "telemetry-integrity",
+      "description": "Prove considered, selected, executed, completed, and independently validated evidence remain distinct, private, deduplicated, and revision-aware.",
+      "evidence_required": ["receipt schema tests", "aggregate replay tests", "privacy and retry tests"],
+      "owner_role_id": "capability-os-integration-writer",
+      "checker_role_id": "capability-os-independent-checker",
+      "status": "pending"
+    },
+    {
+      "obligation_id": "one-human-operability",
+      "description": "Prove the cockpit requires at most three immediate decisions and supports quiet batching, snooze, defer, drill-down, and compact resume.",
+      "evidence_required": ["cockpit schema tests", "operator scenario tests", "bounded output evidence"],
+      "owner_role_id": "capability-os-integration-writer",
+      "checker_role_id": "capability-os-independent-checker",
+      "status": "pending"
+    },
+    {
+      "obligation_id": "regression-safety",
+      "description": "Prove existing ML, family, DAD validation, navigation, and repository tests remain compatible.",
+      "evidence_required": ["focused tests", "full pytest", "DAD validate", "roadmap check"],
+      "owner_role_id": "capability-os-integration-writer",
+      "checker_role_id": "capability-os-independent-checker",
+      "status": "pending"
+    }
+  ],
+  "unresolved_decisions": [],
+  "manifest_digest": "sha256:41992e9f73ec71375a79876c99a718f41888bc90c74d5cbbb86462ed499a420b"
+}

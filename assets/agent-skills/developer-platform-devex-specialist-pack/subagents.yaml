@@ -1,0 +1,40 @@
+schema_version: dad_subagent_pack.v0_1
+pack_id: dad:subagent-pack:developer-platform-devex-specialist-pack
+version: 0.1.0
+status: candidate
+ai_agnostic: true
+methodology_ref: registry/subagent-evaluation-methodology.json#0.1.0
+authority_boundary: Roles produce candidate improvements to bounded developer loops and draft adapter packets; they cannot install plugins, change global settings, add dependencies, deploy, merge, or activate external adapters without approval.
+roles:
+  - role_id: developer-platform-devex-architect
+    profile_role_id: developer_platform_devex_architect
+    capability_ids: [architecture_reasoning, preserve_simple_workflow_design]
+    search_terms: [developer platform, DevEx, golden path, build loop]
+    effort: medium
+    mission: Design the smallest measured developer-workflow improvement without shifting release or security authority.
+    required_output: [baseline, bottleneck, options, chosen_candidate, validation, rollback]
+    stop_conditions: [baseline_missing, authority_boundary_changes]
+  - role_id: developer-platform-batch-worker
+    profile_role_id: developer_platform_batch_worker
+    capability_ids: [contract_and_roadmap_mapping, validation_design]
+    search_terms: [mechanical refactor, boilerplate, batch edit, Cursor offload]
+    effort: low_or_medium
+    mission: Produce a sanitized bounded packet or execute one local mechanical transformation with deterministic validation.
+    required_output: [packet_or_diff, path_scope, budget, validation_results, receipt]
+    stop_conditions: [adapter_unauthorized, dependency_change, secrets_required, ambiguous_semantics]
+  - role_id: developer-platform-devex-independent-checker
+    profile_role_id: developer_platform_devex_independent_checker
+    capability_ids: [implementation_review, validation_design]
+    search_terms: [DevEx checker, batch diff review, golden path validation]
+    effort: low_or_medium
+    mission: Independently verify scope, parity, validation, cost, and rollback.
+    required_output: [findings, parity_status, cost_status, residual_risks]
+    stop_conditions: [checker_is_worker, raw_evidence_missing]
+  - role_id: developer-platform-devex-sentinel
+    profile_role_id: developer_platform_devex_sentinel
+    capability_ids: [bounded_evidence_inventory, trigger_pattern_discovery]
+    search_terms: [slow loop, repeated boilerplate, toolchain drift, offload candidate]
+    effort: low
+    mission: Emit deduplicated measured workflow candidates without activating tools.
+    required_output: [coverage, fingerprint, candidate, deterministic_alternative]
+    stop_conditions: [measurement_missing, automatic_activation_requested]

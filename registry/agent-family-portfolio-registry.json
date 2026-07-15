@@ -128,6 +128,7 @@
     "edge_types": [
       "depends_on",
       "implements",
+      "member_of",
       "validated_by",
       "governed_by",
       "applies_to",
@@ -570,6 +571,48 @@
         "target": "repo:lawfirm-os",
         "evidence_ref": "registry/agent-family-portfolio-registry.json#pilot:lawfirm-os-security-overlay",
         "review_status": "candidate"
+      },
+      {
+        "source": "skill:platform-cloud-sre-agent-family",
+        "edge_type": "implements",
+        "target": "family:platform-cloud-sre",
+        "evidence_ref": "assets/agent-skills/platform-cloud-sre-agent-family/SKILL.md",
+        "review_status": "candidate"
+      },
+      {
+        "source": "family:platform-cloud-sre",
+        "edge_type": "observed_by",
+        "target": "role:platform-cloud-sre-sentinel",
+        "evidence_ref": "assets/agent-skills/platform-cloud-sre-agent-family/subagents.yaml",
+        "review_status": "candidate"
+      },
+      {
+        "source": "family:platform-cloud-sre",
+        "edge_type": "validated_by",
+        "target": "family:quality-verification-release",
+        "evidence_ref": "registry/technical-product-company-os-registry.json",
+        "review_status": "candidate"
+      },
+      {
+        "source": "pack:observability-resilience-specialist-pack",
+        "edge_type": "member_of",
+        "target": "family:platform-cloud-sre",
+        "evidence_ref": "assets/agent-skills/observability-resilience-specialist-pack/SKILL.md",
+        "review_status": "candidate"
+      },
+      {
+        "source": "pack:developer-platform-devex-specialist-pack",
+        "edge_type": "member_of",
+        "target": "family:full-stack-engineering",
+        "evidence_ref": "assets/agent-skills/developer-platform-devex-specialist-pack/SKILL.md",
+        "review_status": "candidate"
+      },
+      {
+        "source": "pack:product-intelligence-experimentation-pack",
+        "edge_type": "member_of",
+        "target": "family:product-ux-accessibility",
+        "evidence_ref": "assets/agent-skills/product-intelligence-experimentation-pack/SKILL.md",
+        "review_status": "candidate"
       }
     ],
     "forbidden_claims": [
@@ -668,8 +711,7 @@
         "release_handoff"
       ],
       "specialist_packs": [
-        "platform_sre",
-        "documentation_devex",
+        "pack:developer-platform-devex-specialist-pack",
         "migration_modernization",
         "performance",
         "cost_optimization"
@@ -730,7 +772,9 @@
         "rollback_review",
         "evaluator_integrity"
       ],
-      "specialist_packs": [],
+      "specialist_packs": [
+        "pack:product-intelligence-experimentation-pack"
+      ],
       "human_gates": [],
       "owner_authority": "source repository and named domain owner",
       "requires_independent_assurance": false,
@@ -1033,10 +1077,70 @@
       "danger_if_misapplied": "Activating this family without evidence can add cost, duplicate authority, or create false confidence."
     },
     {
+      "family_id": "family:platform-cloud-sre",
+      "name": "Platform Cloud SRE",
+      "kind": "core",
+      "build_order": 9,
+      "lifecycle_state": "candidate",
+      "status": "implemented_candidate",
+      "skill_ref": "skill:platform-cloud-sre-agent-family",
+      "pack_ref": "assets/agent-skills/platform-cloud-sre-agent-family/subagents.yaml",
+      "domains": [
+        "platform",
+        "cloud",
+        "site_reliability"
+      ],
+      "trigger_terms": [
+        "platform",
+        "cloud",
+        "sre",
+        "production runtime",
+        "infrastructure",
+        "capacity",
+        "service objective",
+        "disaster recovery"
+      ],
+      "capabilities": [
+        "platform_architecture",
+        "service_reliability",
+        "capacity_and_cost",
+        "rollout_and_rollback",
+        "recovery"
+      ],
+      "specialist_packs": [
+        "pack:observability-resilience-specialist-pack"
+      ],
+      "human_gates": [
+        "production_change",
+        "external_effect",
+        "final_confirmation"
+      ],
+      "owner_authority": "source repository, named platform owner, and Lowell",
+      "requires_independent_assurance": true,
+      "validation_ref": "tests/test_technical_product_company_os.py",
+      "freshness_sources": [
+        "skill_revision",
+        "dependency_graph",
+        "validation_evidence",
+        "attempt_evidence",
+        "governance_change",
+        "runtime_capability_change",
+        "service_objective_change"
+      ],
+      "review_cadence": "event-triggered-or-P30D",
+      "applies_when": [
+        "The task affects production runtime, infrastructure, capacity, reliability, rollout, or recovery."
+      ],
+      "does_not_apply_when": [
+        "The task is only application feature implementation with no production-runtime boundary."
+      ],
+      "danger_if_misapplied": "Treating Platform as application or security authority can hide ownership, cause unsafe production effects, and duplicate Full Stack or Security."
+    },
+    {
       "family_id": "family:legal-evidence-governance",
       "name": "Legal Evidence Governance",
       "kind": "domain_overlay",
-      "build_order": 9,
+      "build_order": 10,
       "lifecycle_state": "candidate",
       "status": "implemented_candidate",
       "skill_ref": "skill:legal-evidence-governance-overlay",

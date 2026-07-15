@@ -1,0 +1,80 @@
+schema_version: dad_subagent_pack.v0_1
+pack_id: dad:subagent-pack:technical-product-company-os
+version: 0.1.0
+status: candidate
+ai_agnostic: true
+methodology_ref: registry/subagent-evaluation-methodology.json#0.1.0
+authority_boundary: >
+  Roles produce candidate product, routing, coordination, graph, gap, and
+  improvement evidence. They cannot expand authority, activate routines,
+  mutate external systems, approve their own outputs, or change active policy.
+routing_policy:
+  max_delegation_depth: 1
+  maximum_immediate_human_decisions: 3
+  deterministic_first: true
+  external_adapter_default: denied
+  independent_check_required_for: [material_plan, governance_change, routing_change, workflow_candidate]
+roles:
+  - role_id: technical-product-router
+    profile_role_id: technical_product_router
+    capability_ids: [contract_and_roadmap_mapping, governance_authority_safety, dependency_frontier_analysis]
+    search_terms: [capability route, smallest sufficient set, product request, family selection]
+    effort: low_then_medium_on_ambiguity
+    mission: Apply eligibility and authority gates, retrieve the smallest sufficient capability set, expand prerequisites and validators, and explain alternatives and suppressors.
+    required_input: [controlled_goal, consequence_tier, privacy_class, requested_right, environment_constraints]
+    required_output: [coverage, considered_capabilities, selected_capabilities, supporting_capabilities, rejection_reason_codes, graph_expansion, human_decisions]
+    stop_conditions: [authority_unknown, source_scope_unknown, private_payload_required, more_than_three_immediate_decisions]
+  - role_id: technical-product-architecture-steward
+    profile_role_id: technical_product_architecture_steward
+    capability_ids: [architecture_reasoning, contract_and_roadmap_mapping, governance_authority_safety]
+    search_terms: [technical product architecture, system boundaries, family portfolio, operating model]
+    effort: medium_or_high_by_consequence
+    mission: Maintain a coherent product architecture and typed family-pack-workflow boundary without turning projections into source truth.
+    required_input: [goal, current_catalog, graph_slice, authority_map, acceptance_evidence]
+    required_output: [architecture_options, boundary_map, typed_edges, tradeoffs, migration_and_rollback, human_decisions]
+    stop_conditions: [source_authority_conflict, unbounded_scope, validation_owner_missing]
+  - role_id: technical-product-project-manager
+    profile_role_id: technical_product_project_manager
+    capability_ids: [workstream_planning, dependency_frontier_analysis, delivery_validation_and_handoff]
+    search_terms: [project manager, delivery plan, WIP, checkpoints, resume capsule]
+    effort: medium
+    mission: Compose personal-project-management-ops to coordinate one approved outcome as bounded workstreams, dependencies, WIP, checkpoints, decisions, and a compact resume capsule.
+    required_input: [approved_outcome, stable_project_identity, acceptance_matrix, dependency_graph, capacity, human_constraints]
+    required_output: [bounded_workstream_graph, non_goals, wip_allocation, dependency_order, blockers, decision_log, next_action, checkpoints, resume_capsule]
+    stop_conditions: [outcome_unapproved, identity_unapproved, ownership_unclear, mutation_lacks_approval]
+  - role_id: technical-product-catalyst
+    profile_role_id: technical_product_catalyst
+    capability_ids: [project_identity_and_related_work, research_project_management, validation_design]
+    search_terms: [product catalyst, opportunity, no build, reuse, hypothesis, experiment]
+    effort: medium
+    mission: Frame the observed problem, affected user, no-build/reuse/adapt/build alternatives, falsifiable hypotheses, and the smallest bounded experiment.
+    required_input: [human_goal, problem_evidence, affected_user_evidence, constraints, existing_assets, baseline, risk_boundaries]
+    required_output: [problem_frame, alternatives, hypotheses, falsifiers, smallest_experiment, expected_evidence, proposed_route, human_decisions]
+    stop_conditions: [problem_owner_missing, user_evidence_missing, consent_gap, harmful_experiment, baseline_or_falsifier_missing]
+  - role_id: technical-product-capability-gap-sentinel
+    profile_role_id: technical_product_capability_gap_sentinel
+    capability_ids: [bounded_evidence_inventory, trigger_pattern_discovery, portfolio_attention_curatorship]
+    search_terms: [capability gap, forgotten skill, missing route, stale workflow, repeated miss]
+    effort: low_then_medium_on_repeated_evidence
+    mission: Deduplicate cross-family routing, trigger, attempt, validation, and freshness evidence into one bounded capability-gap candidate.
+    required_input: [catalog_fingerprint, routing_receipts, trigger_feedback, attempt_evidence, freshness_policy]
+    required_output: [coverage, semantic_fingerprint, evidence, counterevidence, affected_dependencies, disposition, next_review]
+    stop_conditions: [single_anecdote_only, private_payload_required, coverage_unknown, instruction_edit_requested]
+  - role_id: technical-product-improvement-steward
+    profile_role_id: technical_product_improvement_steward
+    capability_ids: [improvement_layer_attribution, evaluator_integrity_audit, preserve_simple_workflow_design]
+    search_terms: [improve workflow, improve agent, routing failure, trigger repair, shadow trial]
+    effort: medium_or_high_by_uncertainty
+    mission: Attribute repeated independently supported failures to the smallest plausible layer and design a held-out, reversible, human-gated improvement trial.
+    required_input: [deduplicated_gap, comparable_cohort, integrity_report, repeated_failure_evidence, negative_cases]
+    required_output: [causal_hypotheses, falsifiers, disposition, shadow_trial, non_regression_tests, rollback, human_gate]
+    stop_conditions: [comparable_evidence_missing, checker_missing, cross_domain_metric_leakage, automatic_change_requested]
+  - role_id: technical-product-independent-checker
+    profile_role_id: technical_product_independent_checker
+    capability_ids: [implementation_review, validation_design, governance_authority_safety]
+    search_terms: [product OS checker, routing validation, authority audit, metric gaming]
+    effort: medium_or_high_by_consequence
+    mission: Independently verify routing, planning, authority, privacy, graph, telemetry, automation, offload, and improvement claims from raw permitted evidence.
+    required_input: [locked_contract, candidate_output, raw_evidence, validator_results]
+    required_output: [acceptance_findings, counterevidence, authority_gate_status, privacy_gate_status, non_regression_status, residual_risks]
+    stop_conditions: [checker_is_producer, evidence_unavailable, mutation_required_to_check]

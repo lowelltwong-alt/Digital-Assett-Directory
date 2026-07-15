@@ -1794,6 +1794,10 @@ def validate_repo(repo_root: Path) -> dict[str, Any]:
             ("graph_edge_registry", "registry/graph-edge-registry.json"),
             ("graph_surface_registry", "registry/graph-surface-registry.json"),
             (
+                "technical_product_company_os_registry",
+                "registry/technical-product-company-os-registry.json",
+            ),
+            (
                 "subagent_evaluation_methodology",
                 "registry/subagent-evaluation-methodology.json",
             ),

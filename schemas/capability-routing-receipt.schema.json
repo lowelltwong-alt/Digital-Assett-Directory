@@ -1,0 +1,56 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://dad.local/schemas/capability-routing-receipt-v1.json",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["specversion", "id", "source", "type", "subject", "time", "dataschema", "route_revision", "catalog_fingerprint", "capability_descriptor_revision", "opaque_task_id", "request_class", "request_tags", "requested_right", "consequence_tier", "privacy_class", "repository_id", "considered", "selected_capabilities", "supporting_capabilities", "required_validators", "selected_workflow_revisions", "rejection_reason_codes", "route_outcome", "override_reason_codes", "human_gate_status", "checker_gate_status", "domain_gate_status", "synthetic_or_fixture", "semantic_task_fingerprint", "authority_boundary"],
+  "properties": {
+    "specversion": {"const": "1.0"},
+    "id": {"type": "string", "pattern": "^route-event:[a-z0-9-]+$"},
+    "source": {"const": "dad://capability-os/router"},
+    "type": {"enum": ["dad.capability.route.decided.v1", "dad.capability.route.overridden.v1", "dad.capability.route.corrected.v1"]},
+    "subject": {"type": "string", "pattern": "^route:[a-z0-9-]+$"},
+    "time": {"type": "string", "format": "date-time"},
+    "dataschema": {"const": "schemas/capability-routing-receipt.schema.json"},
+    "route_revision": {"type": "string", "minLength": 1},
+    "catalog_fingerprint": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"},
+    "capability_descriptor_revision": {"type": "string", "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+$"},
+    "opaque_task_id": {"type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]*$"},
+    "request_class": {"type": "string", "pattern": "^[a-z][a-z0-9_-]*$"},
+    "request_tags": {"type": "array", "uniqueItems": true, "items": {"type": "string", "pattern": "^[a-z][a-z0-9_-]*$"}},
+    "requested_right": {"enum": ["observe", "retrieve", "recommend", "draft", "validate", "execute", "prohibited"]},
+    "consequence_tier": {"enum": ["C0", "C1", "C2", "C3", "C4"]},
+    "privacy_class": {"enum": ["public", "internal_metadata", "private_metadata", "restricted", "unknown"]},
+    "repository_id": {"type": "string", "pattern": "^repo:[a-z0-9][a-z0-9-]*$"},
+    "considered": {"type": "array", "items": {"$ref": "#/$defs/considered"}},
+    "selected_capabilities": {"type": "array", "maxItems": 3, "uniqueItems": true, "items": {"type": "string", "pattern": "^capability:"}},
+    "supporting_capabilities": {"type": "array", "uniqueItems": true, "items": {"type": "string", "pattern": "^capability:"}},
+    "required_validators": {"type": "array", "uniqueItems": true, "items": {"type": "string"}},
+    "selected_workflow_revisions": {"type": "array", "maxItems": 3, "uniqueItems": true, "items": {"type": "string", "pattern": "^workflow-revision:.*:v[1-9][0-9]*$"}},
+    "rejection_reason_codes": {"type": "array", "uniqueItems": true, "items": {"type": "string", "pattern": "^[a-z][a-z0-9_]*$"}},
+    "route_outcome": {"enum": ["accepted_candidate", "overridden", "suppressed", "rejected", "unknown"]},
+    "override_reason_codes": {"type": "array", "uniqueItems": true, "items": {"type": "string", "pattern": "^[a-z][a-z0-9_]*$"}},
+    "human_gate_status": {"enum": ["not_required", "required_missing", "candidate_only", "verified"]},
+    "checker_gate_status": {"enum": ["not_required", "required_missing", "candidate_only", "verified"]},
+    "domain_gate_status": {"enum": ["not_required", "required_missing", "candidate_only", "verified"]},
+    "execution_lease_ref": {"type": "string"},
+    "independent_evaluation_ref": {"type": "string"},
+    "synthetic_or_fixture": {"type": "boolean"},
+    "semantic_task_fingerprint": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"},
+    "corrects_event_id": {"type": "string", "pattern": "^route-event:"},
+    "authority_boundary": {"type": "string", "minLength": 20}
+  },
+  "$defs": {
+    "considered": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["capability_id", "eligible", "reason_codes", "retrieval_channels"],
+      "properties": {
+        "capability_id": {"type": "string", "pattern": "^capability:"},
+        "eligible": {"type": "boolean"},
+        "reason_codes": {"type": "array", "minItems": 1, "uniqueItems": true, "items": {"type": "string", "pattern": "^[a-z][a-z0-9_]*$"}},
+        "retrieval_channels": {"type": "array", "uniqueItems": true, "items": {"enum": ["exact", "lexical", "semantic", "validated_workflow", "dependency", "validator"]}}
+      }
+    }
+  }
+}

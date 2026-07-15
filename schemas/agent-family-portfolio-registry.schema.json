@@ -241,6 +241,7 @@
             "enum": [
               "depends_on",
               "implements",
+              "member_of",
               "validated_by",
               "governed_by",
               "applies_to",
