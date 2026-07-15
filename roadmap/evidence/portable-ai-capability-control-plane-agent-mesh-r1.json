@@ -1,0 +1,151 @@
+{
+  "schema_version": "dad.task_local_agent_mesh_manifest.v1",
+  "mesh_id": "dad:agent-mesh:portable-ai-capability-control-plane",
+  "task_id": "portable-ai-capability-control-plane-plan",
+  "revision_id": "dad:agent-mesh-revision:portable-ai-capability-control-plane:v1",
+  "phase": "postflight",
+  "status": "complete",
+  "source_snapshot_digest": "sha256:a5f84f4cd37bc3282f944ef66ee5ebacf55ed10431f944f0f995a10054e039f9",
+  "authority": {
+    "source_authority": "Live global skills and target repositories retain source authority; DAD owns only candidate lifecycle, graph, harness, evaluation, and policy metadata.",
+    "execution_authority": false,
+    "human_gate_required": true
+  },
+  "max_delegation_depth": 1,
+  "writer_role_id": "plan-writer",
+  "checker_role_id": "independent-plan-checker",
+  "non_overlap_statement": "The plan writer alone writes the plan worktree; all inventory, architecture, A/B, and checker lanes are read-only.",
+  "roles": [
+    {
+      "role_id": "portability-lineage-scout",
+      "why_needed": "Existing AI-agnostic lifecycle, global-skill, runtime, harness, evaluation, and knowledge work must be reused by ancestry rather than duplicated.",
+      "mission": "Inventory exact implemented assets, lineage, gaps, stale worktrees, and canonical relations.",
+      "inputs": ["DAD worktrees and Git ancestry", "skill, family, schema, and global-skill registries"],
+      "dependencies": [],
+      "authority": "Read-only; cannot merge identities, edit files, or promote a candidate.",
+      "model_effort_class": "high",
+      "writer_checker_relation": "specialist",
+      "acceptance_conditions": ["Confirmed and inferred findings are separated and exact reusable assets are cited."],
+      "stop_conditions": ["Source authority or branch ancestry cannot be established."],
+      "handoff": {"recipient_role_ids": ["plan-writer"], "deliverables": ["lineage and reuse audit"], "readiness_conditions": ["The integrated build base and duplicate risks are explicit."]}
+    },
+    {
+      "role_id": "lifecycle-harness-auditor",
+      "why_needed": "The plan must distinguish current declarations from enforceable preflight, midflight, postflight, harness, and release gates.",
+      "mission": "Audit deterministic lifecycle and harness enforcement and specify the objective delta.",
+      "inputs": ["learning lifecycle code", "runtime resolver", "harness engineering", "validators and tests"],
+      "dependencies": [],
+      "authority": "Read-only; cannot activate a gate, runtime, harness, or schedule.",
+      "model_effort_class": "high",
+      "writer_checker_relation": "specialist",
+      "acceptance_conditions": ["Every lifecycle gap has a proposed contract, test, rollout, and rollback."],
+      "stop_conditions": ["A proposed deterministic rule depends on semantic model judgment."],
+      "handoff": {"recipient_role_ids": ["plan-writer"], "deliverables": ["lifecycle and harness delta"], "readiness_conditions": ["Objective and behavioral enforcement are separated."]}
+    },
+    {
+      "role_id": "ab-governance-redteam",
+      "why_needed": "Cross-model testing can improve upgrade safety but can also waste tokens, leak data, or create a false leaderboard.",
+      "mission": "Design and red-team conditional multi-model A/B, receipts, blinding, methodology, no-winner, promotion, and exceptions.",
+      "inputs": ["runtime receipts", "subagent evaluation methodology", "harness lifecycle", "privacy and authority policy"],
+      "dependencies": [],
+      "authority": "Read-only; this turn cannot claim cross-model diversity because model/provider selection receipts are unavailable.",
+      "model_effort_class": "high",
+      "writer_checker_relation": "specialist",
+      "acceptance_conditions": ["Required, prohibited, and no-winner conditions plus human gates are explicit."],
+      "stop_conditions": ["The design would infer provider/model identity or permit self-promotion."],
+      "handoff": {"recipient_role_ids": ["plan-writer"], "deliverables": ["A/B governance and premortem"], "readiness_conditions": ["Metrics and identity evidence are revision-bound."]}
+    },
+    {
+      "role_id": "plan-writer",
+      "why_needed": "One owner must reconcile the evidence into a durable phased plan without overlapping edits.",
+      "mission": "Write the current-state delta, target architecture, phases, gates, tests, migration, rollback, and human decisions.",
+      "inputs": ["lineage audit", "lifecycle audit", "A/B red-team", "DAD preflight and reviewed rules"],
+      "dependencies": ["portability-lineage-scout", "lifecycle-harness-auditor", "ab-governance-redteam"],
+      "authority": "May write only the dedicated planning worktree and private plan-memory record; cannot implement or activate the plan.",
+      "model_effort_class": "high",
+      "writer_checker_relation": "writer",
+      "acceptance_conditions": ["The plan is durable, buildable, independently checked, and honest about unimplemented work."],
+      "stop_conditions": ["Implementation, activation, provider access, or scheduling would begin."],
+      "handoff": {"recipient_role_ids": ["independent-plan-checker"], "deliverables": ["plan artifact and mesh manifest"], "readiness_conditions": ["All specialist findings are reconciled."]}
+    },
+    {
+      "role_id": "independent-plan-checker",
+      "why_needed": "The writer cannot approve a high-risk shared lifecycle and routing architecture.",
+      "mission": "Re-derive plan completeness, current-state accuracy, enforceability, exceptions, cost discipline, and rollback.",
+      "inputs": ["plan artifact", "raw local evidence", "specialist reports"],
+      "dependencies": ["plan-writer"],
+      "authority": "Read-only; cannot edit, activate, or approve implementation.",
+      "model_effort_class": "high",
+      "writer_checker_relation": "checker",
+      "acceptance_conditions": ["PASS or BLOCK identifies exact remaining proof gaps."],
+      "stop_conditions": ["Checker independence or source evidence is unavailable."],
+      "handoff": {"recipient_role_ids": [], "deliverables": ["independent plan verdict"], "readiness_conditions": ["The plan is frozen for review."]}
+    }
+  ],
+  "proof_obligations": [
+    {
+      "obligation_id": "reuse-integrated-lineage",
+      "description": "The plan must reuse the integrated lifecycle, global skill, runtime, harness, evaluation, graph, and knowledge foundations without reviving stale worktrees.",
+      "evidence_required": ["Git ancestry audit", "current implementation paths", "independent review"],
+      "owner_role_id": "plan-writer",
+      "checker_role_id": "independent-plan-checker",
+      "status": "satisfied"
+    },
+    {
+      "obligation_id": "enforce-without-overreach",
+      "description": "Objective portability rules must be deterministic while semantic compatibility, legitimate exceptions, honest postflight, and local source authority remain protected.",
+      "evidence_required": ["lifecycle gates", "typed exception contract", "negative tests", "rollback"],
+      "owner_role_id": "plan-writer",
+      "checker_role_id": "independent-plan-checker",
+      "status": "satisfied"
+    },
+    {
+      "obligation_id": "cross-model-evidence-integrity",
+      "description": "Parallel comparison must require verified model/provider receipts, a neutral packet, blind independent evaluation, no-winner logic, budgets, and human promotion.",
+      "evidence_required": ["A/B protocol", "methodology version", "receipt and diversity rules", "premortem"],
+      "owner_role_id": "plan-writer",
+      "checker_role_id": "independent-plan-checker",
+      "status": "satisfied"
+    }
+  ],
+  "unresolved_decisions": [
+    {
+      "decision_id": "phase-one-implementation-approval",
+      "summary": "Implementation, hard-gate activation, runtime adapters, A/B budgets, and scheduling require later explicit human approvals.",
+      "owner_role_id": "plan-writer",
+      "blocking": false,
+      "status": "deferred"
+    },
+    {
+      "decision_id": "unallowlisted-global-skills-disposition",
+      "summary": "The two live but unallowlisted global skills require one exact human disposition during the Phase 0 baseline; presence alone grants no adoption or archival authority.",
+      "owner_role_id": "plan-writer",
+      "blocking": false,
+      "status": "deferred"
+    }
+  ],
+  "reconciliations": [
+    {
+      "disposition": "reused",
+      "current_role_ids": ["portability-lineage-scout", "plan-writer"],
+      "reason": "The integrated b34cf64 lineage already contains the AI-agnostic lifecycle, global-skill, runtime, harness, evaluation, graph, and knowledge foundations; stale worktrees are not revived.",
+      "evidence_refs": ["git-ancestry-audit:2026-07-15", "plan:existing-implementation-to-preserve"],
+      "material_drift": false
+    },
+    {
+      "disposition": "reused",
+      "current_role_ids": ["lifecycle-harness-auditor", "ab-governance-redteam", "plan-writer"],
+      "reason": "Objective deterministic gates, semantic harness checks, receipt integrity, conditional A/B, safe rollback, and human authority were reconciled into one control-layer plan.",
+      "evidence_refs": ["plan:lifecycle-enforcement", "plan:governed-cross-model-ab", "plan:rollback-and-kill-criteria"],
+      "material_drift": false
+    },
+    {
+      "disposition": "reused",
+      "current_role_ids": ["independent-plan-checker"],
+      "reason": "The checker initially blocked six gaps, then independently passed the corrected plan for Phase 0 and Phase 1 only.",
+      "evidence_refs": ["subagent:/root/portability-lineage-audit:pass:2026-07-15"],
+      "material_drift": false
+    }
+  ],
+  "manifest_digest": "sha256:af39e4a40c8dfde3d71cd37c3df3e8a829f8771c9df8a26d0a6d78879efbc89b"
+}
