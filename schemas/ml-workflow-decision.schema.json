@@ -1,0 +1,40 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://local.digital-asset-directory/schemas/ml-workflow-decision.schema.json",
+  "title": "Machine Learning Workflow Decision",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version", "decision_id", "created_at", "goal", "decision_owner",
+    "authority_and_sensitivity", "no_ml_baseline", "candidate_technique_ids",
+    "recommendation", "applies_when", "does_not_apply_when",
+    "danger_if_misapplied", "data_and_split_contract", "evaluation_contract",
+    "human_gates", "rollback_and_kill_criteria", "unknowns", "evidence_refs",
+    "review_status", "authority_boundary"
+  ],
+  "properties": {
+    "schema_version": {"const": "0.1.0"},
+    "decision_id": {"type": "string", "pattern": "^ml-workflow-decision:[a-z0-9][a-z0-9-]*$"},
+    "created_at": {"type": "string", "format": "date-time"},
+    "goal": {"type": "string", "minLength": 1},
+    "decision_owner": {"type": "string", "minLength": 1},
+    "authority_and_sensitivity": {"type": "string", "minLength": 1},
+    "no_ml_baseline": {"type": "string", "minLength": 1},
+    "candidate_technique_ids": {"type": "array", "uniqueItems": true, "items": {"type": "string", "pattern": "^ml-technique:[a-z0-9][a-z0-9-]*$"}},
+    "recommendation": {"enum": ["no_ml", "investigate", "bounded_experiment", "blocked", "human_decision_required"]},
+    "applies_when": {"$ref": "#/$defs/nonEmptyStrings"},
+    "does_not_apply_when": {"$ref": "#/$defs/nonEmptyStrings"},
+    "danger_if_misapplied": {"type": "string", "minLength": 1},
+    "data_and_split_contract": {"type": "string", "minLength": 1},
+    "evaluation_contract": {"type": "string", "minLength": 1},
+    "human_gates": {"$ref": "#/$defs/nonEmptyStrings"},
+    "rollback_and_kill_criteria": {"$ref": "#/$defs/nonEmptyStrings"},
+    "unknowns": {"type": "array", "items": {"type": "string", "minLength": 1}},
+    "evidence_refs": {"$ref": "#/$defs/nonEmptyStrings"},
+    "review_status": {"enum": ["candidate", "reviewed", "rejected", "superseded"]},
+    "authority_boundary": {"type": "string", "minLength": 1}
+  },
+  "$defs": {
+    "nonEmptyStrings": {"type": "array", "minItems": 1, "uniqueItems": true, "items": {"type": "string", "minLength": 1}}
+  }
+}

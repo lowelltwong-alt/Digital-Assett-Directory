@@ -1,0 +1,295 @@
+{
+  "schema_version": "dad.task_local_agent_mesh_manifest.v1",
+  "mesh_id": "dad:agent-mesh:ml-agent-family",
+  "task_id": "ml-agent-family-20260714",
+  "revision_id": "dad:agent-mesh-revision:ml-agent-family:v1",
+  "phase": "postflight",
+  "status": "complete",
+  "source_snapshot_digest": "sha256:23c2c6e1c91262bfa0c792dd8e7155e04f2ef6e19516a4bb0468a783b5003e2f",
+  "authority": {
+    "source_authority": "This DAD worktree retains source authority; model observations and research findings remain dated candidate evidence.",
+    "execution_authority": false,
+    "human_gate_required": true
+  },
+  "max_delegation_depth": 1,
+  "writer_role_id": "local-foreman-writer",
+  "checker_role_id": "independent-ml-family-checker",
+  "non_overlap_statement": "Only local-foreman-writer may edit the implementation; all delegated roles are read-only and the independent checker cannot modify writer outputs.",
+  "roles": [
+    {
+      "role_id": "local-foreman-writer",
+      "why_needed": "A single bounded writer must reconcile the skill, registries, schemas, graph surfaces, CLI, and tests.",
+      "mission": "Implement the model-independent ML agent family in this isolated DAD worktree.",
+      "inputs": [
+        "user contract",
+        "DAD preflight context pack",
+        "existing governed registries and skill contracts"
+      ],
+      "dependencies": [
+        "existing-ml-assets-scout",
+        "ml-architecture-boss"
+      ],
+      "authority": "May write only the bounded ML family, navigation, registry, CLI, test, and evidence surfaces in this worktree.",
+      "model_effort_class": "high",
+      "writer_checker_relation": "writer",
+      "acceptance_conditions": [
+        "The family is provider- and model-independent at stable identity boundaries.",
+        "Schemas, registries, CLI, tests, and skill validation pass.",
+        "Research and global activation remain human-gated."
+      ],
+      "stop_conditions": [
+        "A change would install global state, schedule automation, or cross repository authority boundaries.",
+        "A required learning-rule acknowledgement is missing."
+      ],
+      "handoff": {
+        "recipient_role_ids": [
+          "independent-ml-family-checker"
+        ],
+        "deliverables": [
+          "bounded diff",
+          "validation evidence",
+          "authority and lifecycle contract"
+        ],
+        "readiness_conditions": [
+          "Targeted tests and deterministic validators pass."
+        ]
+      }
+    },
+    {
+      "role_id": "existing-ml-assets-scout",
+      "why_needed": "The repository requires reuse discovery before new reusable assets are created.",
+      "mission": "Identify reusable contracts and complete privacy-safe post-build learning, asset, prompt, and reuse discovery.",
+      "inputs": [
+        "DAD asset registry",
+        "DAD agent-skill library",
+        "existing subagent and graph contracts"
+      ],
+      "dependencies": [],
+      "authority": "Read-only discovery; cannot edit or promote candidate assets.",
+      "model_effort_class": "medium",
+      "writer_checker_relation": "specialist",
+      "acceptance_conditions": [
+        "Reusable assets and material gaps are reported with paths."
+      ],
+      "stop_conditions": [
+        "Discovery would require private payloads or external mutation."
+      ],
+      "handoff": {
+        "recipient_role_ids": [
+          "local-foreman-writer",
+          "ml-architecture-boss"
+        ],
+        "deliverables": [
+          "reuse inventory",
+          "gap and risk findings"
+        ],
+        "readiness_conditions": [
+          "Relevant registries and skill contracts have been inspected."
+        ]
+      }
+    },
+    {
+      "role_id": "ml-architecture-boss",
+      "why_needed": "The cross-cutting authority, routing, lifecycle, and model-adapter design needs an independent architecture challenge.",
+      "mission": "Define and red-team the model-independent architecture and acceptance gates.",
+      "inputs": [
+        "user contract",
+        "reuse inventory",
+        "existing routing and improvement authorities"
+      ],
+      "dependencies": [
+        "existing-ml-assets-scout"
+      ],
+      "authority": "Read-only architecture advice; cannot edit or create a competing routing authority.",
+      "model_effort_class": "high",
+      "writer_checker_relation": "peer",
+      "acceptance_conditions": [
+        "Stable identities are separated from dated runtime adapter observations.",
+        "Existing mesh and peer-review skills remain sole routing authorities."
+      ],
+      "stop_conditions": [
+        "The proposal creates a second canonical model alias or routing authority."
+      ],
+      "handoff": {
+        "recipient_role_ids": [
+          "local-foreman-writer",
+          "independent-ml-family-checker"
+        ],
+        "deliverables": [
+          "architecture contract",
+          "risks and acceptance gates"
+        ],
+        "readiness_conditions": [
+          "Reuse inventory is available."
+        ]
+      }
+    },
+    {
+      "role_id": "validation-optimization-director",
+      "why_needed": "A validation attempt crossed the deterministic long-run review threshold and required measured attribution before any optimization proposal.",
+      "mission": "Profile validation and test latency, consider algorithm, library, runtime, and Rust boundaries, and reject unsupported rewrites.",
+      "inputs": [
+        "measured command durations",
+        "validation and test command signatures",
+        "existing DAD Rust boundary"
+      ],
+      "dependencies": [
+        "local-foreman-writer"
+      ],
+      "authority": "Read-only optimization review; cannot edit, add dependencies, move governance semantics, or authorize a builder.",
+      "model_effort_class": "high",
+      "writer_checker_relation": "specialist",
+      "acceptance_conditions": [
+        "Bottlenecks, parity requirements, and disposition are evidence-backed.",
+        "Rust is considered only behind a measured deterministic boundary."
+      ],
+      "stop_conditions": [
+        "No reproducible hotspot earns a bounded experiment.",
+        "A candidate would weaken correctness or governance."
+      ],
+      "handoff": {
+        "recipient_role_ids": [
+          "local-foreman-writer",
+          "independent-ml-family-checker"
+        ],
+        "deliverables": [
+          "timing and profile evidence",
+          "optimization disposition",
+          "benchmark and parity gates"
+        ],
+        "readiness_conditions": [
+          "A normalized command crosses the long-run trigger."
+        ]
+      }
+    },
+    {
+      "role_id": "independent-ml-family-checker",
+      "why_needed": "A separate checker must verify the writer did not create false authority, unsafe activation, or regression risk.",
+      "mission": "Independently review the final diff, graph semantics, lifecycle gates, privacy boundaries, and test evidence.",
+      "inputs": [
+        "bounded diff",
+        "validation evidence",
+        "architecture acceptance gates"
+      ],
+      "dependencies": [
+        "local-foreman-writer",
+        "ml-architecture-boss"
+      ],
+      "authority": "Read-only verification; cannot mutate the writer scope or approve external activation.",
+      "model_effort_class": "high",
+      "writer_checker_relation": "checker",
+      "acceptance_conditions": [
+        "All material findings have evidence and a release disposition.",
+        "No unresolved high-risk finding remains."
+      ],
+      "stop_conditions": [
+        "The checker would need to edit the implementation or becomes the writer."
+      ],
+      "handoff": {
+        "recipient_role_ids": [],
+        "deliverables": [
+          "independent findings",
+          "release gate",
+          "remaining risks"
+        ],
+        "readiness_conditions": [
+          "Final diff and validation evidence are available."
+        ]
+      }
+    }
+  ],
+  "proof_obligations": [
+    {
+      "obligation_id": "model-independent-identity",
+      "description": "Prove stable family and role identities do not depend on a provider or current model name.",
+      "evidence_required": [
+        "family registry",
+        "dated runtime adapter observation",
+        "adapter expiry tests"
+      ],
+      "owner_role_id": "local-foreman-writer",
+      "checker_role_id": "independent-ml-family-checker",
+      "status": "satisfied"
+    },
+    {
+      "obligation_id": "human-gated-activation",
+      "description": "Prove global installation, recurring research, promotion, and external mutation are not silently activated.",
+      "evidence_required": [
+        "research contract",
+        "skill authority boundaries",
+        "CLI output tests"
+      ],
+      "owner_role_id": "local-foreman-writer",
+      "checker_role_id": "independent-ml-family-checker",
+      "status": "satisfied"
+    },
+    {
+      "obligation_id": "governed-dependency-graph",
+      "description": "Prove dependencies and governance relationships are typed, directional, candidate-labelled, and queryable upstream and downstream.",
+      "evidence_required": [
+        "graph contract",
+        "transitive graph tests",
+        "unknown-node fail-closed test"
+      ],
+      "owner_role_id": "local-foreman-writer",
+      "checker_role_id": "independent-ml-family-checker",
+      "status": "satisfied"
+    }
+  ],
+  "unresolved_decisions": [
+    {
+      "decision_id": "live-global-installation",
+      "summary": "Installing the skill into the live global personal-skill surface remains a separate human-approved action after review or merge.",
+      "owner_role_id": "local-foreman-writer",
+      "blocking": false,
+      "status": "deferred"
+    },
+    {
+      "decision_id": "fortnightly-scheduler",
+      "summary": "Activating the P14D research scheduler remains unscheduled until a human selects sources, runtime, budget, and publication boundary.",
+      "owner_role_id": "local-foreman-writer",
+      "blocking": false,
+      "status": "deferred"
+    }
+  ],
+  "reconciliations": [
+    {
+      "prior_role_id": "existing-ml-assets-scout",
+      "disposition": "reused",
+      "current_role_ids": [
+        "existing-ml-assets-scout"
+      ],
+      "reason": "The same read-only scout completed the required post-build learning and asset-discovery lanes without expanding authority.",
+      "evidence_refs": [
+        "material-work-learning-discovery report"
+      ],
+      "material_drift": false
+    },
+    {
+      "disposition": "added",
+      "current_role_ids": [
+        "validation-optimization-director"
+      ],
+      "reason": "Measured validation and test durations crossed the long-run review trigger after the execution manifest was created.",
+      "evidence_refs": [
+        "validation profiling report",
+        "expanded integration-suite timing"
+      ],
+      "material_drift": true
+    },
+    {
+      "prior_role_id": "independent-ml-family-checker",
+      "disposition": "reused",
+      "current_role_ids": [
+        "independent-ml-family-checker"
+      ],
+      "reason": "The declared checker found and independently replayed midflight, graph coverage, and canonical-ID fixes before issuing a pass gate.",
+      "evidence_refs": [
+        "independent checker release gate",
+        "145-test integration suite"
+      ],
+      "material_drift": false
+    }
+  ],
+  "manifest_digest": "sha256:c233573081180e63580cf2ef596cc36d461fad0d75731c1c04c2aaa9e09f1212"
+}

@@ -168,6 +168,12 @@ from .lesson_action_queue import (
     write_lesson_automation_next_action_outputs,
 )
 from .manual_tasks import write_manual_task_queue
+from .ml_agent_family import (
+    ml_catalog,
+    ml_dependency_graph,
+    ml_family_status,
+    ml_research_plan,
+)
 from .mail_center import (
     MAIL_MIRROR_DIR,
     MAX_MAIL_RECORD_BYTES,
@@ -444,6 +450,8 @@ app.add_typer(daemon_app, name="daemon")
 journal_app = typer.Typer(no_args_is_help=True)
 personal_skills_app = typer.Typer(no_args_is_help=True)
 app.add_typer(personal_skills_app, name="personal-skills")
+ml_app = typer.Typer(no_args_is_help=True)
+app.add_typer(ml_app, name="ml")
 app.add_typer(journal_app, name="journal")
 mcp_app = typer.Typer(no_args_is_help=True)
 app.add_typer(mcp_app, name="mcp")
@@ -568,6 +576,52 @@ def personal_skills_graph(hub: Optional[Path] = typer.Option(None)) -> None:
 @personal_skills_app.command("daily")
 def personal_skills_daily(hub: Optional[Path] = typer.Option(None)) -> None:
     _personal_skill_output(run_personal_skill_daily, hub)
+
+
+def _ml_output(action, hub: Optional[Path], **kwargs: Any) -> None:
+    cfg = _cfg(hub=hub)
+    try:
+        console.print_json(data=action(cfg.repo_root, **kwargs))
+    except (OSError, ValueError, KeyError, ValidationError) as exc:
+        console.print_json(
+            data={
+                "schema_version": "ml.family.error.v1",
+                "status": "blocked",
+                "error": str(exc),
+                "authority_boundary": "Blocked ML catalog and graph commands do not authorize data access, training, deployment, research activation, or mutation.",
+            }
+        )
+        raise typer.Exit(2) from None
+
+
+@ml_app.command("status")
+def ml_status(hub: Optional[Path] = typer.Option(None)) -> None:
+    """Show the candidate ML family, routing authority, and adapter freshness."""
+    _ml_output(ml_family_status, hub)
+
+
+@ml_app.command("catalog")
+def ml_catalog_command(
+    query: str = typer.Option("", "--query", "-q"),
+    hub: Optional[Path] = typer.Option(None),
+) -> None:
+    """Search declared ML roles, workflows, and technique cards without dispatch."""
+    _ml_output(ml_catalog, hub, query=query)
+
+
+@ml_app.command("graph")
+def ml_graph(
+    node: str = typer.Option("", help="Optional node ID for transitive up/down dependencies."),
+    hub: Optional[Path] = typer.Option(None),
+) -> None:
+    """Project candidate upstream and downstream ML-family dependencies."""
+    _ml_output(ml_dependency_graph, hub, node=node or None)
+
+
+@ml_app.command("research-plan")
+def ml_research_plan_command(hub: Optional[Path] = typer.Option(None)) -> None:
+    """Show the unscheduled, human-gated 14-day ML research contract."""
+    _ml_output(ml_research_plan, hub)
 
 
 def _repo_path(repo_root: Path, path: Path | None) -> Path | None:

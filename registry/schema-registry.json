@@ -122,6 +122,9 @@
     "personal_skill_source_manifest": "schemas/personal-skill-source-manifest.schema.json",
     "personal_skill_revision": "schemas/personal-skill-revision.schema.json",
     "personal_skill_run": "schemas/personal-skill-run.schema.json",
-    "personal_skill_portable_export": "schemas/personal-skill-portable-export.schema.json"
+    "personal_skill_portable_export": "schemas/personal-skill-portable-export.schema.json",
+    "ml_agent_family_registry": "schemas/ml-agent-family-registry.schema.json",
+    "ml_technique_registry": "schemas/ml-technique-registry.schema.json",
+    "ml_workflow_decision": "schemas/ml-workflow-decision.schema.json"
   }
 }

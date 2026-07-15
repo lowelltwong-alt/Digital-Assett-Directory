@@ -582,6 +582,47 @@
       "owner_authority": "DAD architecture owns the address vocabulary; source systems retain record authority.",
       "adoption_semantics": "Candidate coordinate model only; use requires explicit local mapping and does not create graph truth.",
       "authority_boundary": "DAD address-model guidance is a compact coordinate system for candidate records. It does not replace graph edges, prove truth or value, import LawFirm OS canon, or authorize source mutation."
+    },
+    {
+      "offering_id": "dad:offering:ml-workflow-agent-family",
+      "name": "Machine Learning Workflow Agent Family",
+      "version": "0.1.0",
+      "offering_type": "skill",
+      "path": "assets/agent-skills/ml-workflow-agent-family",
+      "languages": ["agent-instruction", "python", "rust", "mixed"],
+      "repo_types": ["application", "library", "control_plane", "research_repo", "governed_repo_family"],
+      "domains": ["machine_learning", "ai_engineering", "data_science", "agent_workflow", "knowledge_graph", "governance"],
+      "context_tags": ["machine_learning", "subagent_family", "model_independent", "experiment", "research_refresh", "lifecycle", "graph_dependency"],
+      "task_types": ["ml_opportunity_review", "ml_design", "ml_implementation", "ml_validation", "ml_research", "ml_monitoring", "ml_lifecycle_review"],
+      "capabilities": [
+        "model_independent_ml_agent_mesh",
+        "ml_technique_routing",
+        "leakage_resistant_experiment_design",
+        "independent_ml_validation",
+        "fortnightly_primary_source_research",
+        "ml_lifecycle_and_supersession_review"
+      ],
+      "applies_when": [
+        "A repo needs to decide whether ML fits an end goal or to execute a governed ML workflow.",
+        "A reusable ML role, technique, runtime binding, harness, or dependency needs lifecycle review."
+      ],
+      "does_not_apply_when": [
+        "A deterministic or ordinary statistical solution fully meets the goal with lower risk and cost.",
+        "The requested action would bypass data, domain, privacy, safety, deployment, automation, or human authority."
+      ],
+      "public_safe": true,
+      "upgrade_channel": "dad_mail",
+      "known_upgrades": [],
+      "source_refs": [
+        "registry/agent-skill-library.json#skill:ml-workflow-agent-family",
+        "registry/ml-agent-family-registry.json",
+        "registry/ml-technique-registry.json"
+      ],
+      "review_status": "candidate",
+      "validation_refs": ["tests/test_ml_agent_family.py", "scripts/validate_agent_skill_library.py"],
+      "owner_authority": "DAD owns the candidate family and registry metadata; source repositories and named humans own ML data, domain, deployment, and adoption decisions.",
+      "adoption_semantics": "Pointer or lightweight wrapper only; checkout and live global installation require an explicit local decision and do not activate research automation.",
+      "authority_boundary": "This offering routes and governs candidate ML work; it cannot authorize data access, model training, deployment, recurring research, instruction changes, or supersession."
     }
   ]
 }

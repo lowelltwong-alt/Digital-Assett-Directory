@@ -1150,6 +1150,75 @@
       "review_status": "candidate",
       "last_reviewed_at": "2026-07-13",
       "next_review_due_at": "2026-10-13"
+    },
+    {
+      "skill_id": "skill:ml-workflow-agent-family",
+      "name": "Machine Learning Workflow Agent Family",
+      "version": "0.1.0",
+      "status": "candidate",
+      "skill_format": "codex_skill",
+      "path": "assets/agent-skills/ml-workflow-agent-family",
+      "entrypoint": "assets/agent-skills/ml-workflow-agent-family/SKILL.md",
+      "subagent_pack": "assets/agent-skills/ml-workflow-agent-family/subagents.yaml",
+      "description": "Model-independent ML opportunity, technique, experiment, implementation, validation, research, deployment-readiness, monitoring, and lifecycle routing that composes DAD's existing mesh and attempt-first improvement contracts.",
+      "trigger_examples": [
+        "Decide whether a goal should use machine learning and compare it with a no-ML baseline.",
+        "Choose and implement an ML technique with leakage-resistant evaluation and independent checking.",
+        "Review ML roles, models, harnesses, or techniques for drift, adaptation, rewrite, retirement, or supersession.",
+        "Run a human-approved fortnightly primary-source ML research refresh."
+      ],
+      "does_not_apply_when": [
+        "A fully specified deterministic transform or ordinary process change solves the task and no ML claim is needed.",
+        "Data authority, domain review, privacy, safety, or deployment gates cannot be established."
+      ],
+      "capabilities": [
+        "ml_opportunity_and_goal_framing",
+        "ml_system_and_experiment_architecture",
+        "ml_workflow_decomposition",
+        "ml_data_readiness_and_leakage_audit",
+        "ml_technique_selection",
+        "ml_reproducible_implementation",
+        "ml_independent_validation",
+        "ml_primary_source_research_synthesis",
+        "ml_lifecycle_drift_and_supersession",
+        "ml_deployment_monitoring_and_rollback"
+      ],
+      "checkout_modes": ["pointer", "wrapper"],
+      "update_policy": "dad_mail_notice",
+      "lifecycle": {
+        "supersedes": [],
+        "superseded_by": [],
+        "retirement_reason": "",
+        "replacement_skill_id": "",
+        "change_notice_templates": [
+          "templates/mail/skill-update-available.mail.template.json",
+          "templates/mail/skill-retirement-notice.mail.template.json"
+        ]
+      },
+      "dependencies": [
+        "assets/agent-skills/personal-hierarchical-agent-mesh",
+        "assets/agent-skills/subagent-continuous-improvement",
+        "assets/agent-skills/dad-manifest-graph-engineering",
+        "assets/agent-skills/ml-workflow-agent-family/subagents.yaml",
+        "assets/agent-skills/ml-workflow-agent-family/routines.yaml",
+        "assets/agent-skills/ml-workflow-agent-family/references/ML_WORKFLOW_CONTRACT.md",
+        "registry/ml-agent-family-registry.json",
+        "registry/ml-technique-registry.json",
+        "registry/subagent-evaluation-profile-registry.json",
+        "docs/RESEARCH_INTAKE_PIPELINE.md",
+        "personal-skill-source:subagent-peer-review-routing"
+      ],
+      "source_evidence": [
+        "assets/agent-skills/ml-workflow-agent-family/SKILL.md",
+        "assets/agent-skills/ml-workflow-agent-family/subagents.yaml",
+        "assets/agent-skills/ml-workflow-agent-family/routines.yaml",
+        "registry/ml-agent-family-registry.json",
+        "registry/ml-technique-registry.json"
+      ],
+      "authority_boundary": "The family produces candidate ML decisions and evidence only. Target repositories and named humans retain data, domain, privacy, security, training, deployment, release, automation, instruction-change, and supersession authority.",
+      "review_status": "candidate",
+      "last_reviewed_at": "2026-07-14",
+      "next_review_due_at": "2026-08-14"
     }
   ]
 }

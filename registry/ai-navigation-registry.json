@@ -1,8 +1,8 @@
 {
   "schema_version": "0.1.0",
   "registry_id": "ai-navigation-registry",
-  "navigation_version": "2026.07.13.9",
-  "updated_at": "2026-07-13T23:59:30Z",
+  "navigation_version": "2026.07.14.10",
+  "updated_at": "2026-07-14T22:00:00Z",
   "singular_entrypoint": {
     "path": "AI_FRONT_DOOR.md",
     "rule": "All agents start at AI_FRONT_DOOR.md, then follow the required read order and task-specific branches.",
@@ -630,9 +630,70 @@
         "registry/agent-skill-library.json"
       ],
       "freshness_hint": "Allowlist, runtime-adapter, export, and local-only transport changes require renewed privacy and authority review."
+    },
+    {
+      "branch_id": "ml_workflow_agent_family",
+      "path": "assets/agent-skills/ml-workflow-agent-family/SKILL.md",
+      "role": "Model-independent ML opportunity, technique, experiment, implementation, independent validation, research, deployment-readiness, monitoring, and lifecycle specialization.",
+      "tags": [
+        "agent_skill",
+        "machine_learning",
+        "knowledge_graph",
+        "research_intake",
+        "calibration",
+        "governance",
+        "human_gate"
+      ],
+      "use_when": "You need to decide whether ML fits, find or route an ML role or technique, execute a governed ML workflow, inspect dependencies, or review research and lifecycle state.",
+      "current_version": "0.1.0",
+      "last_material_change_at": "2026-07-14T22:00:00Z",
+      "change_class": "library_catalog",
+      "route_after": [
+        "AI_FRONT_DOOR.md",
+        "registry/ml-agent-family-registry.json",
+        "registry/ml-technique-registry.json",
+        "registry/subagent-evaluation-profile-registry.json",
+        "docs/RESEARCH_INTAKE_PIPELINE.md"
+      ],
+      "freshness_hint": "Runtime model observations expire, the technique library is incomplete, and research, deployment, instruction, automation, and supersession changes remain human-gated."
     }
   ],
   "recent_changes": [
+    {
+      "change_id": "nav-change:2026-07-14:ml-workflow-agent-family",
+      "changed_at": "2026-07-14T22:00:00Z",
+      "change_type": "added_model_independent_ml_workflow_agent_family",
+      "paths": [
+        "assets/agent-skills/ml-workflow-agent-family/",
+        "registry/ml-agent-family-registry.json",
+        "registry/ml-technique-registry.json",
+        "schemas/ml-agent-family-registry.schema.json",
+        "schemas/ml-technique-registry.schema.json",
+        "schemas/ml-workflow-decision.schema.json",
+        "registry/subagent-capability-registry.json",
+        "registry/subagent-evaluation-profile-registry.json",
+        "registry/agent-skill-library.json",
+        "registry/dad-offerings-registry.json",
+        "src/digital_asset_directory/ml_agent_family.py",
+        "src/digital_asset_directory/cli.py",
+        "tests/test_ml_agent_family.py",
+        "AI_FRONT_DOOR.md",
+        "AI_TABLE_OF_CONTENTS.md",
+        "MACHINE_NAVIGATION_MANIFEST.json",
+        "registry/ai-navigation-registry.json"
+      ],
+      "summary": "Added a composable ML-specific role family, incomplete-by-design technique catalog, no-ML and leakage gates, expiring GPT-5.6 adapter observations, read-only catalog and dependency queries, attempt-first evaluation overlay, and unscheduled human-gated 14-day research contract.",
+      "agent_action": "Use asset-dir ml status, catalog, graph, and research-plan for candidate discovery only. Resolve Luna/Terra/Sol through the canonical routing skills, keep model IDs attempt-scoped or expiring, and require named humans for data, deployment, automation, instruction, and supersession decisions.",
+      "route_tags": [
+        "agent_skill",
+        "machine_learning",
+        "knowledge_graph",
+        "research_intake",
+        "calibration",
+        "validation",
+        "human_gate"
+      ]
+    },
     {
       "change_id": "nav-change:2026-07-13:subagent-self-grade-integrity",
       "changed_at": "2026-07-13T19:00:00Z",
@@ -1107,25 +1168,6 @@
       "route_tags": [
         "learning_loop",
         "calibration",
-        "governance"
-      ]
-    },
-    {
-      "change_id": "nav-change:2026-07-04:claude-architectural-root-cause-review",
-      "changed_at": "2026-07-04T17:22:39Z",
-      "change_type": "added_claude_architectural_root_cause_packet_guidance",
-      "paths": [
-        "docs/CLAUDE_ARCHITECTURAL_ROOT_CAUSE_REVIEW.md",
-        "docs/DAD_EXCEPTIONS_LAKE_BUILDOUT.md",
-        "templates/downstream/EXCEPTIONS_README.md",
-        "registry/dad-offerings-registry.json",
-        "registry/dad-needs-registry.json"
-      ],
-      "summary": "Added Claude-readable packet guidance for tracing repeated implementation failures to architectural root causes without treating model output as authority.",
-      "agent_action": "Use the packet when repeated integration failures may indicate an architectural issue; keep source evidence and human gates authoritative.",
-      "route_tags": [
-        "root_cause_review",
-        "learning_loop",
         "governance"
       ]
     }

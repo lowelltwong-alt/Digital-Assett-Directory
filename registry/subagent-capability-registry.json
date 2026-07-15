@@ -169,6 +169,46 @@
     {
       "id": "digital_asset_independent_audit",
       "description": "Independently audit asset discovery, identity, taxonomy, provenance, privacy, deduplication, evidence, adoption, and lifecycle routing."
+    },
+    {
+      "id": "ml_opportunity_and_goal_framing",
+      "description": "Decide whether an end goal warrants ML by locking decision ownership, error costs, feedback, data feasibility, and a credible no-ML alternative."
+    },
+    {
+      "id": "ml_system_and_experiment_architecture",
+      "description": "Design bounded ML data, feature, experiment, model, serving, monitoring, rollback, and proof interfaces without granting deployment authority."
+    },
+    {
+      "id": "ml_workflow_decomposition",
+      "description": "Decompose accepted ML work into non-overlapping data, experiment, implementation, validation, and lifecycle packets with independent checks."
+    },
+    {
+      "id": "ml_data_readiness_and_leakage_audit",
+      "description": "Audit population, provenance, consent, labels, vintages, split units, sampling, missingness, leakage, and expected distribution shift before training."
+    },
+    {
+      "id": "ml_technique_selection",
+      "description": "Compare versioned ML technique cards against problem shape, prerequisites, contraindications, failure costs, baselines, evidence, and operational constraints."
+    },
+    {
+      "id": "ml_reproducible_implementation",
+      "description": "Implement a locked ML experiment or pipeline with versioned data, code, dependencies, configuration, schemas, tests, and replayable artifacts."
+    },
+    {
+      "id": "ml_independent_validation",
+      "description": "Independently replay ML baselines, leakage guards, metrics, calibration, uncertainty, robustness, slices, reproducibility, cost, latency, and rollback checks."
+    },
+    {
+      "id": "ml_primary_source_research_synthesis",
+      "description": "Collect pointer-only primary ML research, deduplicate claims, preserve counterevidence, and propose bounded replication or local evaluation before promotion."
+    },
+    {
+      "id": "ml_lifecycle_drift_and_supersession",
+      "description": "Review ML models, techniques, roles, harnesses, dependencies, and governance for evidence-backed freshness, adaptation, rewrite, retirement, or supersession decisions."
+    },
+    {
+      "id": "ml_deployment_monitoring_and_rollback",
+      "description": "Design and audit human-gated ML deployment readiness, observability, fallback, drift and outcome monitoring, incident ownership, and independent rollback."
     }
   ],
   "rule": "Capability observations are attempt-scoped candidate evidence. Promotion to a reusable role-profile claim requires the versioned subagent evaluation methodology and human review."
