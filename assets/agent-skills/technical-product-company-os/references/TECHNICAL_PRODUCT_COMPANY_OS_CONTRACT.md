@@ -8,6 +8,18 @@
 4. Route improvement through deduplicated evidence, independent checking,
    held-out trials, rollback, and named-human adoption.
 
+## Project position and completion depth
+
+Before routing an existing build, separate observed project position from the
+human-owned desired destination. Use the existing project-management state and
+the candidate evidence-stage projection in
+`PROJECT_POSITION_AND_COMPLETION_CONTRACT.md`; do not create another lifecycle.
+Require Lowell to confirm the durable end-state class, this engagement's
+completion depth, integration targets, non-goals, and sufficient-stop condition
+before producing an execution handoff. Diagnose-only, repair, bounded completion,
+integration, validation, maintenance, and retirement are legitimate outcomes.
+Full end-to-end delivery is not the default.
+
 ## Decision rights
 
 Use `observe`, `retrieve`, `recommend`, `draft`, `validate`, `execute`, and

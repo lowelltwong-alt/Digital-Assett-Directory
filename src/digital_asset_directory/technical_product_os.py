@@ -24,6 +24,10 @@ ROUTE_SCHEMA = Path("schemas/capability-routing-receipt.schema.json")
 RUN_SCHEMA = Path("schemas/workflow-run-event.schema.json")
 SNAPSHOT_SCHEMA = Path("schemas/capability-portfolio-snapshot.schema.json")
 GRAPH_SCHEMA = Path("schemas/capability-operational-graph.schema.json")
+SPECIALIST_PACK_PATHS = {
+    "pack:mcp-integration-specialist-pack": Path("assets/agent-skills/mcp-integration-specialist-pack/subagents.yaml"),
+    "pack:ui-ux-specialist-pack": Path("assets/agent-skills/ui-ux-specialist-pack/subagents.yaml"),
+}
 ROUTE_LEDGER_NAME = "capability-routing-receipts.jsonl"
 RUN_LEDGER_NAME = "workflow-run-events.jsonl"
 AUTHORITY_BOUNDARY = (
@@ -118,6 +122,116 @@ def _workflow_intent_suppressed(value: str, trigger: str) -> bool:
         _contains_phrase(clause, trigger) and any(signal in clause for signal in counter_signals)
         for clause in _clauses(value)
     )
+
+
+def _incidental_capability_context(query: str, capability_id: str) -> bool:
+    normalized = " ".join(_TOKEN_RE.findall(query.casefold()))
+    if capability_id == "capability:integration-api-mcp-automation":
+        integration_intent = any(
+            _contains_phrase(normalized, term)
+            for term in (
+                "integrate", "integration", "connect", "connector", "configure",
+                "expose", "design mcp", "build mcp", "create mcp", "migrate",
+                "oauth", "webhook", "queue", "mcp resource", "mcp prompt", "mcp tool",
+            )
+        )
+        incidental = any(
+            _contains_phrase(normalized, term)
+            for term in (
+                "uses mcp", "mcp dependency", "mcp dependencies",
+                "fix one test in an mcp server", "fix test in mcp server",
+                "mcp server test", "mcp files",
+            )
+        )
+        return incidental and not integration_intent
+    if capability_id == "capability:product-ux-accessibility":
+        ui_intent = any(
+            _contains_phrase(normalized, term)
+            for term in (
+                "design", "redesign", "user journey", "information architecture",
+                "accessibility", "usability", "keyboard focus", "screen reader",
+                "interaction", "dashboard", "cockpit",
+            )
+        )
+        incidental = any(
+            _contains_phrase(normalized, term)
+            for term in ("ui files", "frontend files", "uses a design system")
+        )
+        return incidental and not ui_intent
+    return False
+
+
+def select_specialist_roles(
+    repo_root: Path,
+    pack_id: str,
+    query: str,
+    *,
+    activation_evidence: Iterable[str] = (),
+    maximum_primary: int = 3,
+) -> dict[str, Any]:
+    """Select a bounded expert subset after family routing and evidence gating."""
+    relative_path = SPECIALIST_PACK_PATHS.get(pack_id)
+    if relative_path is None:
+        raise ValueError(f"Unknown specialist pack: {pack_id}")
+    pack = yaml.safe_load((repo_root / relative_path).read_text(encoding="utf-8"))
+    if not isinstance(pack, dict) or not isinstance(pack.get("roles"), list):
+        raise ValueError(f"Invalid specialist pack: {pack_id}")
+    policy_limit = int(pack.get("routing_policy", {}).get("maximum_primary_roles", 3))
+    limit = max(1, min(3, policy_limit, maximum_primary))
+    evidence = sorted({str(item) for item in activation_evidence if str(item).strip()})
+    considered: list[dict[str, Any]] = []
+    scored: list[tuple[int, str]] = []
+    for role in pack["roles"]:
+        matched: list[str] = []
+        negated: list[str] = []
+        score = 0
+        for term in role["search_terms"]:
+            if _negated_match(query, term):
+                negated.append(term)
+                continue
+            exact, lexical, overlap = _strong_term_match(query, term)
+            if exact or lexical:
+                matched.append(term)
+                score += (8 if exact else 0) + overlap
+        reasons: list[str] = []
+        if not evidence:
+            reasons.append("activation_evidence_required")
+        if negated:
+            reasons.append("negative_intent_suppressed")
+        if not matched:
+            reasons.append("no_role_method_match")
+        eligible = bool(evidence) and not negated and bool(matched)
+        if eligible:
+            scored.append((score, role["role_id"]))
+        considered.append(
+            {
+                "role_id": role["role_id"],
+                "eligible": eligible,
+                "matched_terms": sorted(set(matched)),
+                "reason_codes": reasons or ["method_match_with_activation_evidence"],
+            }
+        )
+    scored.sort(key=lambda item: (-item[0], item[1]))
+    selected = [role_id for _, role_id in scored[:limit]]
+    selected_set = set(selected)
+    for row in considered:
+        if row["eligible"] and row["role_id"] not in selected_set:
+            row["reason_codes"] = ["eligible_not_selected_due_to_smallest_set_limit"]
+    return {
+        "schema_version": "dad.specialist_role_route.v1",
+        "status": "generated_candidate" if evidence else "blocked_candidate",
+        "candidate_only": True,
+        "execution_authorized": False,
+        "pack_id": pack_id,
+        "pack_revision": str(pack["version"]),
+        "activation_evidence": evidence,
+        "maximum_primary_roles": limit,
+        "whole_pack_activation": False,
+        "selected_role_ids": selected,
+        "considered": considered,
+        "rejection_reason_codes": [] if selected else (["activation_evidence_required"] if not evidence else ["no_role_method_match"]),
+        "authority_boundary": str(pack["authority_boundary"]),
+    }
 
 
 def _strong_term_match(query: str, term: str) -> tuple[bool, bool, int]:
@@ -566,6 +680,7 @@ def route_capabilities(
             channels.append("semantic")
         score = exact * 8.0 + lexical * 2.0 + semantic
         lifecycle_state = lifecycle_states.get(row["capability_id"], registry["status"])
+        incidental_context = _incidental_capability_context(query, row["capability_id"])
         eligible = (
             not hard_block
             and row["capability_id"] not in suppressed
@@ -573,6 +688,7 @@ def route_capabilities(
             and lifecycle_state not in {"stale", "superseded", "retired", "blocked"}
             and (environment_eligible is None or row["capability_id"] in environment_eligible)
             and (tool_eligible is None or row["capability_id"] in tool_eligible)
+            and not incidental_context
         )
         reasons = []
         if hard_block:
@@ -581,6 +697,8 @@ def route_capabilities(
             reasons.append("permission_gate_blocked")
         if row["capability_id"] in suppressed:
             reasons.append("explicitly_suppressed")
+        if incidental_context:
+            reasons.append("incidental_context_suppressed")
         if negated_terms:
             reasons.append("negative_intent_suppressed")
         if lifecycle_state in {"stale", "superseded", "retired", "blocked"}:

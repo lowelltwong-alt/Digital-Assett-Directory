@@ -12,8 +12,8 @@
     "AI_TABLE_OF_CONTENTS.md"
   ],
   "navigation_standards": {
-    "navigation_version": "2026.07.14.13",
-    "updated_at": "2026-07-15T04:09:48Z",
+    "navigation_version": "2026.07.14.14",
+    "updated_at": "2026-07-15T16:00:00Z",
     "single_ai_entrypoint": "AI_FRONT_DOOR.md",
     "ai_table_of_contents": "AI_TABLE_OF_CONTENTS.md",
     "navigation_registry": "registry/ai-navigation-registry.json",
@@ -93,6 +93,9 @@
     "registry/technical-product-company-os-registry.json",
     "src/digital_asset_directory/technical_product_os.py",
     "assets/agent-skills/technical-product-company-os/",
+    "assets/agent-skills/technical-product-company-os/references/PROJECT_POSITION_AND_COMPLETION_CONTRACT.md",
+    "assets/agent-skills/mcp-integration-specialist-pack/",
+    "assets/agent-skills/ui-ux-specialist-pack/",
     "assets/agent-skills/platform-cloud-sre-agent-family/",
     "assets/mcp/dad-local-readonly/",
     "registry/mcp-dependency-map.json",
@@ -300,6 +303,7 @@
     "agent_family_pilot_schema": "schemas/agent-family-pilot.schema.json",
     "portfolio_cockpit_v2_schema": "schemas/portfolio-cockpit-v2.schema.json",
     "technical_product_company_os_registry_schema": "schemas/technical-product-company-os-registry.schema.json",
+    "project_position_diagnosis_schema": "schemas/project-position-diagnosis.schema.json",
     "capability_routing_receipt_schema": "schemas/capability-routing-receipt.schema.json",
     "workflow_run_event_schema": "schemas/workflow-run-event.schema.json",
     "capability_portfolio_snapshot_schema": "schemas/capability-portfolio-snapshot.schema.json",

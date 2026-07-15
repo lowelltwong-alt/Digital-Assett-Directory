@@ -136,6 +136,25 @@ def test_skill_library_and_offering_expose_pointer_only_adoption() -> None:
     assert offering["review_status"] == "candidate"
 
 
+def test_mcp_and_ui_specialist_packs_are_members_not_new_families() -> None:
+    registry = load_json("registry/agent-family-portfolio-registry.json")
+    families = {row["family_id"]: row for row in registry["families"]}
+    expected = {
+        "pack:mcp-integration-specialist-pack": "family:integration-mcp-automation",
+        "pack:ui-ux-specialist-pack": "family:product-ux-accessibility",
+    }
+    assert len(families) == 10
+    for pack_id, family_id in expected.items():
+        assert pack_id in families[family_id]["specialist_packs"]
+        assert pack_id not in families
+        assert any(
+            edge["source"] == pack_id
+            and edge["edge_type"] == "member_of"
+            and edge["target"] == family_id
+            for edge in registry["graph_contract"]["dependency_edges"]
+        )
+
+
 def test_routing_selects_the_smallest_combination_and_separate_assurance() -> None:
     ml = route_agent_families(ROOT, "train a machine learning classifier")
     assert ml["selected_family_ids"] == ["family:ml-workflow"]

@@ -1,7 +1,7 @@
 {
   "schema_version": "dad.technical_product_company_os_registry.v1",
   "registry_id": "technical-product-company-os-registry",
-  "registry_version": "0.1.0",
+  "registry_version": "0.2.0",
   "status": "candidate",
   "candidate_only": true,
   "ai_agnostic": true,
@@ -276,7 +276,7 @@
       "coverage_rank": 6,
       "name": "Integration, API, MCP and Automation",
       "implementation_kind": "existing_family",
-      "implementation_refs": ["family:integration-mcp-automation"],
+      "implementation_refs": ["family:integration-mcp-automation", "pack:mcp-integration-specialist-pack"],
       "depends_on": ["capability:security-privacy-supply-chain"],
       "validated_by": ["family:quality-verification-release"],
       "trigger_terms": ["API", "MCP", "integration", "webhook", "queue", "connector", "automation"]
@@ -286,7 +286,7 @@
       "coverage_rank": 7,
       "name": "Product, UX and Accessibility",
       "implementation_kind": "existing_family",
-      "implementation_refs": ["family:product-ux-accessibility"],
+      "implementation_refs": ["family:product-ux-accessibility", "pack:ui-ux-specialist-pack"],
       "depends_on": [],
       "validated_by": ["family:quality-verification-release"],
       "trigger_terms": ["product", "UX", "accessibility", "user journey", "cockpit", "usability"]
@@ -375,6 +375,15 @@
       "trigger_terms": ["capability gap", "missed route", "improve routine", "improve trigger"],
       "capability_sequence": ["capability:technical-product-architecture", "capability:quality-verification-release"],
       "required_human_gates": ["approve_shadow_trial", "approve_adoption"],
+      "validator_refs": ["role:technical-product-independent-checker"]
+    },
+    {
+      "workflow_id": "workflow:project-position-to-right-sized-completion",
+      "revision_id": "workflow-revision:project-position-to-right-sized-completion:v1",
+      "status": "candidate",
+      "trigger_terms": ["where is this project", "diagnose project", "resume build", "finish project", "what remains", "integrate project"],
+      "capability_sequence": ["capability:technical-product-architecture"],
+      "required_human_gates": ["confirm_desired_end_state", "confirm_completion_depth", "approve_execution_handoff"],
       "validator_refs": ["role:technical-product-independent-checker"]
     }
   ],

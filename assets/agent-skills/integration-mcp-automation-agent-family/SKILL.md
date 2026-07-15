@@ -17,9 +17,19 @@ Build runtime-neutral integrations that preserve explicit permissions, idempoten
 6. Emit assignment, evidence, challenge, health, candidate-change, and human-decision records through the shared portfolio contracts. Generated relationships and health findings remain candidate evidence.
 7. Run DAD midflight on material dependency, data-flow, authority, privacy, schema, runtime, acceptance, or risk drift; close with independent validation and postflight.
 
+## Focused expert routing
+
+Use `../mcp-integration-specialist-pack/` only after a named integration target
+or demonstrated interface gap exists. Start with the fit/boundary diagnostician
+and route at most three primary specialists for the missing resource, prompt,
+tool, identity, compatibility, contract, testing, operations, or migration
+expertise. Never activate the entire specialist pack, and do not infer a need
+from an MCP dependency alone.
+
 ## Domain Contract
 
 - Prefer MCP resources, tools, and prompts for internal agent integration; use direct APIs only under the reviewed fallback policy.
+- MCP-first is not MCP-always: an ordinary internal interface is preferable when no cross-runtime integration is needed.
 - Map producer, consumer, contract, auth, permissions, rate limits, retries, idempotency keys, ordering, reconciliation, audit, and rollback.
 - Keep read-only context separate from side-effecting tools and require explicit inputs and human gates for every mutation class.
 - Test duplicate delivery, partial failure, auth expiry, replay, rate limiting, malformed input, stale contracts, and recovery.
@@ -29,4 +39,3 @@ Stop before enabling a connector, scheduler, plugin, credential, external mutati
 ## Authority
 
 Each connected system retains authority. This family cannot infer mailbox, calendar, Git, deployment, plugin, or external write permission from a design or prior unrelated approval.
-

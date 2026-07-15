@@ -39,6 +39,7 @@ def test_registry_schemas_and_exact_top_ten_are_valid() -> None:
     schemas = load_json("registry/schema-registry.json")["schemas"]
     expected = {
         "technical_product_company_os_registry": "schemas/technical-product-company-os-registry.schema.json",
+        "project_position_diagnosis": "schemas/project-position-diagnosis.schema.json",
         "capability_routing_receipt": "schemas/capability-routing-receipt.schema.json",
         "workflow_run_event": "schemas/workflow-run-event.schema.json",
         "capability_portfolio_snapshot": "schemas/capability-portfolio-snapshot.schema.json",
@@ -67,6 +68,8 @@ def test_all_new_skill_packs_validate_and_stay_model_neutral() -> None:
         "observability-resilience-specialist-pack",
         "developer-platform-devex-specialist-pack",
         "product-intelligence-experimentation-pack",
+        "mcp-integration-specialist-pack",
+        "ui-ux-specialist-pack",
     ]
     skill_ids = {row["skill_id"] for row in load_json("registry/agent-skill-library.json")["skills"]}
     for name in names:
@@ -77,6 +80,155 @@ def test_all_new_skill_packs_validate_and_stay_model_neutral() -> None:
         assert f"skill:{name}" in skill_ids
         lowered = json.dumps(pack).lower()
         assert all(term not in lowered for term in ("gpt-", "claude-", "gemini-"))
+
+
+def test_project_position_diagnosis_is_candidate_only_and_right_sized() -> None:
+    diagnosis = {
+        "schema_version": "dad.project_position_diagnosis.v1",
+        "diagnosis_id": "diagnosis:fixture",
+        "as_of": "2026-07-15T12:00:00Z",
+        "candidate_only": True,
+        "coverage": {
+            "source_refs": ["repo:fixture"],
+            "input_fingerprint": f"sha256:{'a' * 64}",
+            "unavailable_sources": [],
+            "gaps": [],
+        },
+        "project_identity": {"project_id": "project:fixture", "authority_ref": "owner:human", "owner": "human-owner"},
+        "current_state": "active",
+        "observed_position": {
+            "evidence_stage": "implementation-underway",
+            "working_surfaces": ["bounded core"],
+            "broken_surfaces": [],
+            "incomplete_surfaces": ["named integration"],
+            "evidence_refs": ["test:fixture"],
+        },
+        "issue_codes": ["integration-contract-missing"],
+        "destination": {
+            "confirmation_status": "human_confirmed",
+            "human_decision_ref": "decision:fixture-destination-v1",
+            "confirmation_recorded_at": "2026-07-15T11:55:00Z",
+            "purpose": "Connect the bounded core to the named target.",
+            "end_state_class": "integration",
+            "completion_depth": "integrate-with-target",
+            "integration_targets": ["system:target"],
+            "acceptance_evidence": ["contract and failure tests"],
+            "non_goals": ["full product release"],
+            "sufficient_stop": "The named target passes contract and rollback checks.",
+        },
+        "routing": {
+            "selected_capabilities": ["capability:integration-api-mcp-automation"],
+            "prerequisites": [],
+            "validators": ["family:quality-verification-release"],
+            "suppressed_capabilities": ["capability:product-ux-accessibility"],
+            "mcp_first_assessment": {
+                "applicable": True,
+                "reason": "A cross-runtime integration is required.",
+                "preferred_interface": "resource",
+                "direct_api_fallback_status": "not-needed",
+            },
+        },
+        "human_decisions": [],
+        "smallest_reversible_next_action": "Draft the read-only resource contract.",
+        "producer_ref": "role:technical-product-project-position-diagnostician",
+        "independent_validation_ref": "evaluation:fixture-position-v1",
+        "execution_handoff_status": "candidate-ready-for-human-approval",
+        "execution_authorized": False,
+        "authority_boundary": "Diagnosis and route are candidates; existing execution gates still apply.",
+    }
+    validate("schemas/project-position-diagnosis.schema.json", diagnosis)
+    assert len(diagnosis["routing"]["selected_capabilities"]) <= 3
+    assert diagnosis["execution_authorized"] is False
+
+
+def test_project_position_workflow_does_not_expand_to_full_delivery() -> None:
+    route = product_os.route_capabilities(ROOT, "where is this project and what remains")
+    assert route["selected_capabilities"] == []
+    matches = {row["workflow_id"] for row in route["workflow_matches"]}
+    assert "workflow:project-position-to-right-sized-completion" in matches
+    assert "workflow:software-product-delivery" not in matches
+    registry = load_json("registry/technical-product-company-os-registry.json")
+    workflow = next(row for row in registry["workflows"] if row["workflow_id"] == "workflow:project-position-to-right-sized-completion")
+    assert workflow["capability_sequence"] == ["capability:technical-product-architecture"]
+    assert len(workflow["required_human_gates"]) == 3
+
+
+def test_project_position_role_and_specialist_packs_are_bounded() -> None:
+    product_pack = yaml.safe_load((ROOT / "assets/agent-skills/technical-product-company-os/subagents.yaml").read_text(encoding="utf-8"))
+    assert "technical-product-project-position-diagnostician" in {row["role_id"] for row in product_pack["roles"]}
+    for name, parent in (
+        ("mcp-integration-specialist-pack", "family:integration-mcp-automation"),
+        ("ui-ux-specialist-pack", "family:product-ux-accessibility"),
+    ):
+        pack = yaml.safe_load((ROOT / f"assets/agent-skills/{name}/subagents.yaml").read_text(encoding="utf-8"))
+        assert pack["routing_policy"]["parent_family"] == parent
+        assert pack["routing_policy"]["maximum_primary_roles"] == 3
+        assert pack["routing_policy"]["whole_pack_activation"] == "prohibited"
+
+
+def test_specialist_role_selector_requires_evidence_and_enforces_smallest_set() -> None:
+    blocked = product_os.select_specialist_roles(
+        ROOT,
+        "pack:mcp-integration-specialist-pack",
+        "repository uses MCP dependencies",
+    )
+    assert blocked["selected_role_ids"] == []
+    assert blocked["rejection_reason_codes"] == ["activation_evidence_required"]
+    selected = product_os.select_specialist_roles(
+        ROOT,
+        "pack:mcp-integration-specialist-pack",
+        "choose MCP or API and design a read only MCP resource for the named target",
+        activation_evidence=["target:approved-read-context", "gap:cross-runtime-context"],
+    )
+    assert 1 <= len(selected["selected_role_ids"]) <= 3
+    assert "mcp-fit-boundary-diagnostician" in selected["selected_role_ids"]
+    assert "mcp-resource-context-specialist" in selected["selected_role_ids"]
+    assert selected["whole_pack_activation"] is False
+    assert len(selected["selected_role_ids"]) < len(selected["considered"])
+
+
+def test_incidental_mcp_context_does_not_activate_integration_capability() -> None:
+    for query in ("repository uses MCP dependencies", "fix one test in an MCP server"):
+        route = product_os.route_capabilities(ROOT, query)
+        assert "capability:integration-api-mcp-automation" not in route["selected_capabilities"]
+        integration = next(
+            row for row in route["considered"]
+            if row["capability_id"] == "capability:integration-api-mcp-automation"
+        )
+        assert "incidental_context_suppressed" in integration["reason_codes"]
+
+
+def test_human_confirmed_handoff_requires_attestation_and_checker() -> None:
+    schema = load_json("schemas/project-position-diagnosis.schema.json")
+    cls = validator_for(schema)
+    invalid = {
+        "schema_version": "dad.project_position_diagnosis.v1",
+        "diagnosis_id": "diagnosis:invalid",
+        "as_of": "2026-07-15T12:00:00Z",
+        "candidate_only": True,
+        "coverage": {"source_refs": ["repo:x"], "input_fingerprint": f"sha256:{'b' * 64}", "unavailable_sources": [], "gaps": []},
+        "project_identity": {"project_id": "project:x", "authority_ref": "owner:x", "owner": "human"},
+        "current_state": "active",
+        "observed_position": {"evidence_stage": "implementation-underway", "working_surfaces": [], "broken_surfaces": [], "incomplete_surfaces": [], "evidence_refs": []},
+        "issue_codes": ["none-observed"],
+        "destination": {"confirmation_status": "human_confirmed", "human_decision_ref": "", "confirmation_recorded_at": "", "purpose": "ship", "end_state_class": "major-product", "completion_depth": "productionize-approved-scope", "integration_targets": [], "acceptance_evidence": [], "non_goals": [], "sufficient_stop": "done"},
+        "routing": {"selected_capabilities": [], "prerequisites": [], "validators": [], "suppressed_capabilities": [], "mcp_first_assessment": {"applicable": False, "reason": "none", "preferred_interface": "not-applicable", "direct_api_fallback_status": "not-needed"}},
+        "human_decisions": [],
+        "smallest_reversible_next_action": "wait",
+        "producer_ref": "role:producer",
+        "independent_validation_ref": "",
+        "execution_handoff_status": "candidate-ready-for-human-approval",
+        "execution_authorized": False,
+        "authority_boundary": "candidate only",
+    }
+    errors = list(cls(schema, format_checker=cls.FORMAT_CHECKER).iter_errors(invalid))
+    assert errors
+    assert {tuple(error.path) for error in errors} >= {
+        ("destination", "human_decision_ref"),
+        ("destination", "acceptance_evidence"),
+        ("destination", "non_goals"),
+        ("independent_validation_ref",),
+    }
 
 
 def test_catalog_is_fingerprinted_and_graph_refs_resolve() -> None:
@@ -374,7 +526,7 @@ def test_receipt_is_revision_aware_and_secret_looking_values_are_rejected(
 ) -> None:
     receipt = _receipt()
     assert receipt["catalog_fingerprint"].startswith("sha256:")
-    assert receipt["capability_descriptor_revision"] == "0.1.0"
+    assert receipt["capability_descriptor_revision"] == "0.2.0"
     assert receipt["selected_workflow_revisions"] == ["workflow-revision:production-readiness:v1"]
     receipt["request_tags"] = ["sk-proj-abcdef123456789"]
     with pytest.raises(ValueError, match="Secret-looking telemetry"):

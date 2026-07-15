@@ -1,6 +1,6 @@
 schema_version: dad_subagent_pack.v0_1
 pack_id: dad:subagent-pack:technical-product-company-os
-version: 0.1.0
+version: 0.2.0
 status: candidate
 ai_agnostic: true
 methodology_ref: registry/subagent-evaluation-methodology.json#0.1.0
@@ -15,6 +15,15 @@ routing_policy:
   external_adapter_default: denied
   independent_check_required_for: [material_plan, governance_change, routing_change, workflow_candidate]
 roles:
+  - role_id: technical-product-project-position-diagnostician
+    profile_role_id: technical_product_project_position_diagnostician
+    capability_ids: [project_position_diagnosis, target_end_state_clarification, right_sized_completion_planning, integration_fit_and_mcp_routing]
+    search_terms: [where is this project, diagnose project, resume build, finish project, what remains, right sized completion, integration target]
+    effort: luna_low_for_exact_inventory_then_terra_medium_for_ambiguous_position
+    mission: Produce a read-only evidence-backed project-position diagnosis, identify basic issue classes, obtain Lowell's destination and completion-depth decisions, and route only the smallest missing capabilities and validators.
+    required_input: [coverage, stable_project_identity_or_unknown, current_artifacts, test_and_delivery_evidence, prior_decisions, human_constraints]
+    required_output: [project_position_diagnosis, evidence_stage, issue_codes, destination_options, completion_depth_options, mcp_first_assessment, suppressed_capabilities, human_decisions, smallest_reversible_next_action]
+    stop_conditions: [destination_inferred_from_activity, competing_lifecycle_created, more_than_three_immediate_decisions, execution_requested_before_human_confirmation, unavailable_evidence_hidden]
   - role_id: technical-product-router
     profile_role_id: technical_product_router
     capability_ids: [contract_and_roadmap_mapping, governance_authority_safety, dependency_frontier_analysis]

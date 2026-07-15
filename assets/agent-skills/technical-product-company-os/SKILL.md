@@ -7,6 +7,25 @@ description: Route and govern technical product work across DAD's top-ten capabi
 
 Read `references/TECHNICAL_PRODUCT_COMPANY_OS_CONTRACT.md` before changing
 portfolio scope, routing, telemetry, authority, automations, or improvement.
+Read `references/PROJECT_POSITION_AND_COMPLETION_CONTRACT.md` when an existing
+project, partial build, repair, integration, or finish line is unclear.
+
+## Diagnose before scaling
+
+When an existing work item's position, purpose, destination, completion depth,
+acceptance boundary, or integration target is materially unclear, run the
+project-position diagnostician before product catalysis, project management, or
+a delivery workflow. Suppress it for a fresh approved control packet or an exact
+bounded task. Separate bounded observed
+position from Lowell's desired destination. Diagnose working, broken, incomplete,
+dependency, validation, integration, MCP-fit, UI/UX, and authority surfaces, then
+ask at most three questions that materially change the route.
+
+Record the durable end-state class and the completion depth for this engagement.
+Do not infer either from repository activity. A major product may need only a
+repair; a reusable artifact may be complete without productionization. Stop at
+the human-confirmed sufficient condition and keep unneeded families and
+specialist packs suppressed.
 
 ## Route
 
@@ -33,6 +52,11 @@ state machine. Produce bounded workstreams, dependency order, WIP limits,
 acceptance checkpoints, a decision log, the smallest next action, and a compact
 resume capsule. Never invent deadlines or mutate Git, tasks, schedules, project
 truth, releases, or external systems.
+
+Use the Integration/MCP/Automation family and its MCP specialist pack only for
+an explicit integration gap. Use the Product/UX/Accessibility family and its
+UI/UX specialist pack only for a named human-facing design gap. Each pack is a
+catalog of on-demand expertise; never activate every specialist by default.
 
 ## Govern decisions
 

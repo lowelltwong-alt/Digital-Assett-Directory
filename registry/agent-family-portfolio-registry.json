@@ -1,7 +1,7 @@
 {
   "schema_version": "dad.agent_family_portfolio_registry.v1",
   "registry_id": "agent-family-portfolio-registry",
-  "registry_version": "0.1.0",
+  "registry_version": "0.2.0",
   "status": "candidate",
   "candidate_only": true,
   "ai_agnostic": true,
@@ -613,6 +613,20 @@
         "target": "family:product-ux-accessibility",
         "evidence_ref": "assets/agent-skills/product-intelligence-experimentation-pack/SKILL.md",
         "review_status": "candidate"
+      },
+      {
+        "source": "pack:mcp-integration-specialist-pack",
+        "edge_type": "member_of",
+        "target": "family:integration-mcp-automation",
+        "evidence_ref": "assets/agent-skills/mcp-integration-specialist-pack/SKILL.md",
+        "review_status": "candidate"
+      },
+      {
+        "source": "pack:ui-ux-specialist-pack",
+        "edge_type": "member_of",
+        "target": "family:product-ux-accessibility",
+        "evidence_ref": "assets/agent-skills/ui-ux-specialist-pack/SKILL.md",
+        "review_status": "candidate"
       }
     ],
     "forbidden_claims": [
@@ -999,7 +1013,9 @@
         "idempotency_reconciliation",
         "automation_health"
       ],
-      "specialist_packs": [],
+      "specialist_packs": [
+        "pack:mcp-integration-specialist-pack"
+      ],
       "human_gates": [],
       "owner_authority": "source repository and named domain owner",
       "requires_independent_assurance": true,
@@ -1054,7 +1070,9 @@
         "accessibility",
         "usability_evidence"
       ],
-      "specialist_packs": [],
+      "specialist_packs": [
+        "pack:ui-ux-specialist-pack"
+      ],
       "human_gates": [],
       "owner_authority": "source repository and named domain owner",
       "requires_independent_assurance": true,

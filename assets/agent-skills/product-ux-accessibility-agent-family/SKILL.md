@@ -17,6 +17,15 @@ Turn project intent and system capability into a humane, accessible, low-burden 
 6. Emit assignment, evidence, challenge, health, candidate-change, and human-decision records through the shared portfolio contracts. Generated relationships and health findings remain candidate evidence.
 7. Run DAD midflight on material dependency, data-flow, authority, privacy, schema, runtime, acceptance, or risk drift; close with independent validation and postflight.
 
+## Focused expert routing
+
+Use `../ui-ux-specialist-pack/` only for a confirmed human-interface
+obligation. Route at most three primary specialists for the demonstrated user
+research, journey, information architecture, interaction, visual, design
+system, content, accessibility, usability, responsive, cockpit, handoff, or
+measurement gap. Never activate the entire specialist pack. UI files alone are
+not activation evidence.
+
 ## Domain Contract
 
 - Identify the user, outcome, decisions, frequency, failure cost, accessibility needs, cognitive load, and quiet option.
@@ -29,4 +38,3 @@ Stop when the accountable user or outcome is unknown, accessibility cannot be te
 ## Authority
 
 Named humans own product direction and acceptance. This family may recommend or implement an approved interface but cannot create tasks, notifications, decisions, or external actions by itself.
-

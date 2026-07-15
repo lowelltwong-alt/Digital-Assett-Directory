@@ -21,6 +21,54 @@ freshness, and failure modes are distinct. Observability/Resilience,
 Developer-Platform/DevEx, and Product-Intelligence/Experimentation begin as
 specialist packs and can be promoted only by repeated cross-repository evidence.
 
+## Project position and right-sized completion
+
+The OS does not assume that every request is a full product build. For an
+existing idea, repository, branch, or partial build, the project-position
+diagnostician first records what is actually evidenced: identity and authority,
+working and broken surfaces, validation, dependencies, integrations, and
+unknowns. That observation is not a new project lifecycle and cannot overwrite
+the existing project-management state.
+
+Observed position and desired destination are separate axes. When approved
+evidence does not already answer them, the diagnostician asks no more than
+three material questions: what must be true and for whom; how far this
+engagement should go; and what it must connect to, preferably through MCP,
+including data, permission, deployment, or deadline constraints.
+
+The completion depth may stop at diagnosis, repair, one bounded outcome, a
+named integration, validation of an existing build, approved productionization,
+maintenance, or retirement. A large repository, an old branch, passing tests,
+or the word "complete" never implies a release-ready product. Routing selects
+at most three primary capabilities and records excluded capabilities and the
+sufficient-stop boundary. Full end-to-end delivery requires an explicitly
+confirmed major-product, MVP, production-service, or operating-system outcome.
+
+The canonical contract is
+`assets/agent-skills/technical-product-company-os/references/PROJECT_POSITION_AND_COMPLETION_CONTRACT.md`;
+the candidate artifact validates against
+`schemas/project-position-diagnosis.schema.json`. Diagnosis remains read-only
+and never authorizes execution.
+
+## Focused MCP and UI/UX experts
+
+Integration/MCP and Product/UX remain top-ten families. Their new specialist
+packs are dormant expert catalogs, not additional families:
+
+- `mcp-integration-specialist-pack` covers interface fit, resources, prompts,
+  tools, identity, host/client compatibility, data-contract reconciliation,
+  conformance, operations, and reversible migration.
+- `ui-ux-specialist-pack` covers user evidence, journeys, information
+  architecture, interaction, visual UI, design systems, content,
+  accessibility, usability, responsive behavior, cockpit design, frontend
+  handoff, and measurement.
+
+The family router instantiates only the one-to-three roles required by a named
+gap. MCP dependencies alone do not activate MCP experts; UI files alone do not
+activate UX experts. Full Stack remains responsible for approved code changes,
+Quality remains the independent gate, and Security checks permission or privacy
+boundaries.
+
 ## AI governance
 
 AI rights are `observe`, `retrieve`, `recommend`, `draft`, `validate`,
@@ -51,6 +99,12 @@ The typed graph separates families, specialist packs, capabilities, workflow
 definitions, revisions, route decisions, executions, validations, governance,
 freshness, conflicts, and supersession. Generated edges remain candidate
 evidence; source registries remain authoritative.
+
+Project-position diagnoses remain validated candidate artifacts in this
+revision; they are not projected as new operational graph node or edge types.
+The operational graph records the existing workflow, route, family, pack,
+validation, and human-decision references. A future diagnosis projection must
+extend the graph builder and schema together before claiming graph support.
 
 ## Evidence and anti-gaming
 

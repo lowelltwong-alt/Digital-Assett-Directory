@@ -63,3 +63,17 @@ The research cadence is a dormant `P14D` contract. Activation requires human app
 A new top-level family needs evidence of recurrence across at least three repositories, or one high-consequence authority domain, plus its own authority boundary, validation harness, freshness sources, and failure modes. Otherwise the capability remains a specialist pack. Platform/SRE, documentation/DevEx, migration, performance, and cost optimization start inside full-stack engineering.
 
 Only one family build and one bounded pilot may be active at once. Extra work remains incubating. A family never approves its own material output, and no scan or cockpit issue authorizes a change.
+
+## On-demand specialist routing
+
+Generic family roles protect the shared hierarchy; specialist packs make deep
+methods discoverable without creating more top-level families. The Integration
+family owns `pack:mcp-integration-specialist-pack`, and Product/UX owns
+`pack:ui-ux-specialist-pack`. A project-position diagnosis identifies the
+demonstrated gap first, then routes at most three primary specialists. The
+entire pack is never activated by default.
+
+Negative intent, a sufficient deterministic tool, an exact bounded change, or
+missing target/user evidence suppresses specialist activation. Passing one
+completion depth does not activate the next. Pack membership and graph edges
+express discovery and governance only; they cannot grant execution authority.
