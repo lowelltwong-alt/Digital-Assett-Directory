@@ -1,8 +1,8 @@
 {
   "schema_version": "0.1.0",
   "registry_id": "ai-navigation-registry",
-  "navigation_version": "2026.07.14.12",
-  "updated_at": "2026-07-15T02:31:33Z",
+  "navigation_version": "2026.07.14.13",
+  "updated_at": "2026-07-15T04:09:48Z",
   "singular_entrypoint": {
     "path": "AI_FRONT_DOOR.md",
     "rule": "All agents start at AI_FRONT_DOOR.md, then follow the required read order and task-specific branches.",
@@ -670,6 +670,18 @@
       "freshness_hint": "The catalog is fingerprinted and rebuildable; telemetry is explicit opt-in, routines are dormant, Cursor is unauthorized, and all active change remains human-gated."
     },
     {
+      "branch_id": "self_learning_improvement_system",
+      "path": "docs/SELF_LEARNING_IMPROVEMENT_SYSTEM_PLAN.md",
+      "role": "Candidate cross-family Self-Learning and Improvement overlay with evidence-locked evaluation, routed expert packs, technique and workflow lifecycle, weekly research radar, and one-human decision control.",
+      "tags": ["agent_skill", "workflow", "learning_loop", "machine_learning", "knowledge_graph", "automation", "governance", "human_gate"],
+      "use_when": "You design, build, validate, pilot, activate, monitor, or audit any self-learning, self-improvement, memory, prompt optimization, workflow optimization, continual-learning, or capability-gap loop.",
+      "current_version": "0.1.0",
+      "last_material_change_at": "2026-07-15T04:09:48Z",
+      "change_class": "library_catalog",
+      "route_after": ["AI_FRONT_DOOR.md", "docs/research/AI_SELF_LEARNING_AND_IMPROVEMENT_RESEARCH_2026-07-14.md", "docs/TECHNICAL_PRODUCT_COMPANY_OS.md", "registry/technical-product-company-os-registry.json"],
+      "freshness_hint": "The design is candidate-only; the P7D radar, optimizers, training work, notifications, and mutations are dormant until independently checked and separately approved by Lowell."
+    },
+    {
       "branch_id": "agent_family_portfolio",
       "path": "docs/AGENT_FAMILY_PORTFOLIO.md",
       "role": "Model-neutral family portfolio with shared role and interface contracts, typed dependency projection, independent assurance, read-only pilots, lifecycle sentinels, and a one-human cockpit.",
@@ -683,6 +695,15 @@
     }
   ],
   "recent_changes": [
+    {
+      "change_id": "nav-change:2026-07-15:self-learning-improvement-system-plan",
+      "changed_at": "2026-07-15T04:09:48Z",
+      "change_type": "added_self_learning_improvement_research_and_candidate_plan",
+      "paths": ["docs/research/AI_SELF_LEARNING_AND_IMPROVEMENT_RESEARCH_2026-07-14.md", "docs/SELF_LEARNING_IMPROVEMENT_SYSTEM_PLAN.md", "docs/FABLE_SELF_LEARNING_IMPROVEMENT_SYSTEM_PROMPT.md", "roadmap/evidence/self-learning-improvement-task-mesh-r1.json", "roadmap/evidence/self-learning-improvement-independent-review-2026-07-15.md"],
+      "summary": "Added a primary-source learning-technique taxonomy, candidate cross-family improvement overlay, 45 governed workflows, evaluator-integrity boundary, low-cost dormant weekly research radar, typed graph design, phased test plan, and sanitized Fable review packet.",
+      "agent_action": "Use these artifacts for design and independent review only. Keep the weekly radar, optimizers, training, instruction edits, notifications, and external effects dormant; require frozen evaluation, an independent checker, rollback, and Lowell's decision before any adoption.",
+      "route_tags": ["research", "agent_skill", "learning_loop", "machine_learning", "workflow", "knowledge_graph", "governance", "human_gate"]
+    },
     {
       "change_id": "nav-change:2026-07-14:ml-workflow-agent-family",
       "changed_at": "2026-07-14T22:00:00Z",
@@ -1133,28 +1154,6 @@
         "learning_loop",
         "schema",
         "mail_center"
-      ]
-    },
-    {
-      "change_id": "nav-change:2026-07-05:mail-storm-dirty-state-runbook",
-      "changed_at": "2026-07-05T04:20:00Z",
-      "change_type": "added_mail_storm_dirty_state_route",
-      "paths": [
-        "docs/DAD_MAIL_STORM_AND_DIRTY_STATE_RUNBOOK.md",
-        "assets/coding-harnesses/repo-enrollment-mail-governance-safety/",
-        "docs/MAIL_CENTER.md",
-        "AI_FRONT_DOOR.md",
-        "AI_TABLE_OF_CONTENTS.md",
-        "MACHINE_NAVIGATION_MANIFEST.json",
-        "roadmap/evidence/phase-10-mail-end-to-end-trial.md"
-      ],
-      "summary": "Added a dedicated runbook and navigation route for separating true dirty mail spools from ordinary dirty worktrees and Rust rollout reference-snapshot churn during concurrent repo mail storms.",
-      "agent_action": "Run mail doctor with --repo all during multi-repo storms; use safe_to_collect/safe_to_route/safe_to_deliver for mail and --fail-on-worktree-dirty only when a clean git tree is required.",
-      "route_tags": [
-        "mail_center",
-        "cross_repo",
-        "rust",
-        "validation"
       ]
     },
     {
