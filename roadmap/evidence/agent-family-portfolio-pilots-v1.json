@@ -1,0 +1,66 @@
+{
+  "schema_version": "dad.agent_family_portfolio_pilot_evidence.v1",
+  "recorded_at": "2026-07-15T01:28:25Z",
+  "candidate_only": true,
+  "execution_authorized": false,
+  "privacy_contract": "Tracked path metadata and Git status fingerprints only; no raw file bodies, private source rows, secrets, credentials, or conversations were inspected or retained.",
+  "pilots": [
+    {
+      "pilot_id": "pilot:dad-agent-family-portfolio",
+      "repo_id": "repo:dad",
+      "tracked_file_count": 1133,
+      "stack_indicators": ["data_or_graph", "python", "rust"],
+      "source_git_fingerprint_before": "sha256:6ea737fa584d18c6b2a8f6151cd396dde669c4a99a3c865600c2e40601052fd7",
+      "source_git_fingerprint_after": "sha256:6ea737fa584d18c6b2a8f6151cd396dde669c4a99a3c865600c2e40601052fd7",
+      "mutation_observed": false,
+      "family_count": 7,
+      "overlay_count": 0,
+      "human_gate": "Lowell retains adoption and release authority."
+    },
+    {
+      "pilot_id": "pilot:mock-trial-agent-family-portfolio",
+      "repo_id": "repo:mock-trial",
+      "tracked_file_count": 2915,
+      "stack_indicators": ["frontend", "node_or_web"],
+      "source_git_fingerprint_before": "sha256:6e0ad49213c5ab2c4becef6362f0d42823398f78bfc3c7eb7ea91cf2fb7d351c",
+      "source_git_fingerprint_after": "sha256:6e0ad49213c5ab2c4becef6362f0d42823398f78bfc3c7eb7ea91cf2fb7d351c",
+      "mutation_observed": false,
+      "family_count": 7,
+      "overlay_count": 1,
+      "human_gate": "Qualified legal review and Lowell approval are required before adoption or legal conclusions."
+    }
+  ],
+  "acceptance_evidence": [
+    {
+      "capability": "routing",
+      "evidence_refs": ["tests/test_agent_family_portfolio.py::test_routing_selects_the_smallest_combination_and_separate_assurance", "registry/agent-family-portfolio-registry.json#families"],
+      "result": "The deterministic router selects only term-supported producer families, then adds one distinct quality checker for material work."
+    },
+    {
+      "capability": "dependency_mapping",
+      "evidence_refs": ["tests/test_agent_family_portfolio.py::test_catalog_and_dependency_graph_are_read_only_candidate_projections", "registry/agent-family-portfolio-registry.json#graph_contract"],
+      "result": "Typed family, skill, pack, role, project, assurance, governance, and observation dependencies are projected as candidate evidence."
+    },
+    {
+      "capability": "independent_validation",
+      "evidence_refs": ["assets/agent-skills/quality-verification-release-agent-family/subagents.yaml", "tests/test_agent_family_portfolio.py::test_each_new_skill_has_the_shared_roles_and_distinct_checker"],
+      "result": "Every family exposes exactly one worker and a distinct independent checker; material producers are validated by the quality family."
+    },
+    {
+      "capability": "supersession",
+      "evidence_refs": ["registry/agent-family-portfolio-registry.json#shared_contract", "registry/graph-edge-registry.json#supersedes", "src/digital_asset_directory/agent_families.py#agent_family_health"],
+      "result": "Superseded is a governed lifecycle state, supersedes is a registered candidate edge, and sentinels can surface lifecycle changes without rewriting an active family."
+    },
+    {
+      "capability": "recovery",
+      "evidence_refs": ["tests/test_agent_family_portfolio.py::test_metadata_only_pilot_preserves_source_git_state", "roadmap/evidence/agent-family-portfolio-pilots-v1.json#pilots"],
+      "result": "Both live pilots preserved identical before/after Git fingerprints; family contracts require rollback and stop on source drift."
+    }
+  ],
+  "limitations": [
+    "The pilot family recommendations are declared candidate scopes, not proof that every family should be activated for every task in either repository.",
+    "No code, policy, agent instruction, release, recurring schedule, plugin, or external system was changed.",
+    "LawFirm OS remains an incubating declaration and was not inspected."
+  ],
+  "authority_boundary": "Pilot evidence supports human review only. DAD and each source repository retain their existing authority, and no pilot result authorizes adoption, mutation, release, security remediation, or legal conclusions."
+}

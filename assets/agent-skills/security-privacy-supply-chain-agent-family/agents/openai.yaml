@@ -1,0 +1,4 @@
+interface:
+  display_name: "Security Privacy Supply Chain Agent Family"
+  short_description: "Assess security, privacy, identity, and supply chain"
+  default_prompt: "Use -privacy-supply-chain-agent-family to threat-model this change and identify human-gated security and privacy actions."

@@ -60,6 +60,14 @@ def _hub(tmp_path: Path, *, evaluation_support: bool = False) -> Path:
         "dad-digital-asset-radar",
         "dad-manifest-graph-engineering",
         "ml-workflow-agent-family",
+        "full-stack-engineering-agent-family",
+        "quality-verification-release-agent-family",
+        "security-privacy-supply-chain-agent-family",
+        "knowledge-research-provenance-agent-family",
+        "data-schema-knowledge-graph-agent-family",
+        "integration-mcp-automation-agent-family",
+        "product-ux-accessibility-agent-family",
+        "legal-evidence-governance-overlay",
     ):
         source = ROOT / "assets/agent-skills" / skill_name
         target = hub / "assets/agent-skills" / skill_name
@@ -86,7 +94,7 @@ def test_catalog_builds_without_attempts_and_keeps_grades_insufficient(tmp_path:
 
     projection = build_role_directory_projection(hub)
 
-    assert projection["role_count"] == 43
+    assert projection["role_count"] == 99
     assert {row["skill_id"] for row in projection["roles"]} == {
         "skill:personal-project-management-ops",
         "skill:dad-trigger-pattern-radar",
@@ -94,6 +102,14 @@ def test_catalog_builds_without_attempts_and_keeps_grades_insufficient(tmp_path:
         "skill:dad-digital-asset-radar",
         "skill:dad-manifest-graph-engineering",
         "skill:ml-workflow-agent-family",
+        "skill:full-stack-engineering-agent-family",
+        "skill:quality-verification-release-agent-family",
+        "skill:security-privacy-supply-chain-agent-family",
+        "skill:knowledge-research-provenance-agent-family",
+        "skill:data-schema-knowledge-graph-agent-family",
+        "skill:integration-mcp-automation-agent-family",
+        "skill:product-ux-accessibility-agent-family",
+        "skill:legal-evidence-governance-overlay",
     }
     assert all(row["evaluation_status"] == "insufficient_evidence" for row in projection["roles"])
     assert all(row["evaluated_revisions"] == [] for row in projection["roles"])

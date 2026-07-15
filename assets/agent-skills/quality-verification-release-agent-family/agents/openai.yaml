@@ -1,0 +1,4 @@
+interface:
+  display_name: "Quality Verification Release Agent Family"
+  short_description: "Design independent tests and release evidence"
+  default_prompt: "Use -verification-release-agent-family to independently verify this material output and produce a release gate."

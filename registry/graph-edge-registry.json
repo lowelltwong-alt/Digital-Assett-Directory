@@ -372,6 +372,42 @@
       "semantics": "Two per-skill revisions have the same canonical tree content hash; authority, identity, and preferred source remain separate.",
       "allowed_bases": ["declared-personal-skill-archive-v1"], "evidence_required": ["matching non-empty tree SHA-256", "validated revision manifests"], "version": "0.1.0",
       "examples": ["archived-revision:x -> archived-revision:y"], "danger_if_wrong": "Hash equality can be misused to collapse identities or transfer authority.", "review_status": "candidate"
+    },
+    {
+      "edge_type": "implements", "edge_class": "join", "direction": "skill or component -> declared capability family", "cardinality": "many-to-many",
+      "semantics": "A registered skill or component explicitly declares that it implements a bounded family or capability contract.",
+      "allowed_bases": ["declared-agent-family-portfolio-v1"], "evidence_required": ["validated family registry row", "registered skill or component"], "version": "0.1.0",
+      "examples": ["skill:full-stack-engineering-agent-family -> family:full-stack-engineering"], "danger_if_wrong": "A prompt or component can be mistaken for a complete or installed capability family.", "review_status": "candidate"
+    },
+    {
+      "edge_type": "governed_by", "edge_class": "join", "direction": "object -> governance contract", "cardinality": "many-to-many",
+      "semantics": "A declared object names the governance contract that constrains its behavior and authority.",
+      "allowed_bases": ["declared-agent-family-portfolio-v1", "declared-governance-reference"], "evidence_required": ["validated declaration", "governance evidence reference"], "version": "0.1.0",
+      "examples": ["family:integration-mcp-automation -> skill:dad-work-router"], "danger_if_wrong": "A family can appear governed by a contract that does not actually apply or can conceal a conflicting authority boundary.", "review_status": "candidate"
+    },
+    {
+      "edge_type": "applies_to", "edge_class": "join", "direction": "family, policy, or overlay -> bounded target", "cardinality": "many-to-many",
+      "semantics": "A reviewed or candidate scope declaration says an object may be relevant to a named repository, project, workflow, or domain target.",
+      "allowed_bases": ["declared-agent-family-pilot-v1", "reviewed-scope-declaration"], "evidence_required": ["scope declaration", "target identity", "review status"], "version": "0.1.0",
+      "examples": ["family:legal-evidence-governance -> repo:mock-trial"], "danger_if_wrong": "A relevance edge can be misread as adoption, installation, competence, data access, or mutation authority.", "review_status": "candidate"
+    },
+    {
+      "edge_type": "observed_by", "edge_class": "join", "direction": "object or dependency -> sentinel or monitor", "cardinality": "many-to-many",
+      "semantics": "A declaration assigns a read-only observer to report evidence-backed freshness, integrity, or lifecycle signals for an object.",
+      "allowed_bases": ["declared-agent-family-portfolio-v1", "reviewed-monitoring-contract"], "evidence_required": ["observer identity", "bounded observation contract", "no-mutation authority statement"], "version": "0.1.0",
+      "examples": ["family:data-schema-knowledge-graph -> role:data-schema-knowledge-graph-sentinel"], "danger_if_wrong": "Monitoring presence can be mistaken for complete coverage or an observer can silently acquire repair authority.", "review_status": "candidate"
+    },
+    {
+      "edge_type": "stale_due_to", "edge_class": "inference", "direction": "object -> changed or missing evidence", "cardinality": "many-to-many",
+      "semantics": "A fingerprinted health projection says a specific evidence, dependency, compatibility, authority, or validation change makes an object's current status stale or unknown.",
+      "allowed_bases": ["agent-family-health-v1", "semantic-fingerprint-freshness-v1"], "evidence_required": ["semantic issue fingerprint", "changed or missing evidence reference", "freshness reason", "review status"], "version": "0.1.0",
+      "examples": ["family:integration-mcp-automation -> dependency:mcp-contract-revision"], "danger_if_wrong": "Age or an unrelated change can incorrectly retire useful guidance or flood the human review queue.", "review_status": "candidate"
+    },
+    {
+      "edge_type": "conflicts_with", "edge_class": "inference", "direction": "object -> object (symmetric pair stored once)", "cardinality": "many-to-many",
+      "semantics": "Evidence shows two candidate contracts, authorities, dependencies, or recommendations cannot both be applied in the declared context without a human decision.",
+      "allowed_bases": ["agent-family-health-v1", "reviewed-conflict-declaration"], "evidence_required": ["both object identities", "bounded conflict context", "supporting and counterevidence", "human decision owner"], "version": "0.1.0",
+      "examples": ["family:security-privacy-supply-chain -> policy:public-release-with-private-rows"], "danger_if_wrong": "False conflicts can block compatible work, while missed context can turn a local disagreement into an incorrect universal prohibition.", "review_status": "candidate"
     }
   ]
 }

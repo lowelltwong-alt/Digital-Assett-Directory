@@ -1,0 +1,4 @@
+interface:
+  display_name: "Data Schema Knowledge Graph Agent Family"
+  short_description: "Engineer governed data, schema, lineage, and graphs"
+  default_prompt: "Use -schema-knowledge-graph-agent-family to design and validate this data or knowledge-graph change."

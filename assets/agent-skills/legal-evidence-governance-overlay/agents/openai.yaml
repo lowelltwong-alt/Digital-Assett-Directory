@@ -1,0 +1,4 @@
+interface:
+  display_name: "Legal Evidence Governance Overlay"
+  short_description: "Add legal evidence, privilege, and authority gates"
+  default_prompt: "Use -evidence-governance-overlay to identify legal-evidence controls and the required qualified-human decisions."

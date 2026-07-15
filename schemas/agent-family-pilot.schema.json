@@ -1,0 +1,126 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://dad.local/schemas/agent-family-pilot-v1.json",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "generated_at",
+    "pilot_id",
+    "repo_id",
+    "candidate_only",
+    "execution_authorized",
+    "mutation_observed",
+    "source_git_fingerprint_before",
+    "source_git_fingerprint_after",
+    "privacy_scope",
+    "observed_metadata",
+    "recommended_family_ids",
+    "overlay_ids",
+    "evidence_refs",
+    "human_gates",
+    "authority_boundary"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": "dad.agent_family_pilot.v1"
+    },
+    "generated_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "pilot_id": {
+      "type": "string",
+      "pattern": "^pilot:"
+    },
+    "repo_id": {
+      "type": "string",
+      "pattern": "^repo:"
+    },
+    "candidate_only": {
+      "const": true
+    },
+    "execution_authorized": {
+      "const": false
+    },
+    "mutation_observed": {
+      "const": false
+    },
+    "source_git_fingerprint_before": {
+      "type": "string",
+      "pattern": "^sha256:[0-9a-f]{64}$"
+    },
+    "source_git_fingerprint_after": {
+      "type": "string",
+      "pattern": "^sha256:[0-9a-f]{64}$"
+    },
+    "privacy_scope": {
+      "type": "string",
+      "minLength": 1
+    },
+    "observed_metadata": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "tracked_file_count",
+        "extension_counts",
+        "stack_indicators"
+      ],
+      "properties": {
+        "tracked_file_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "extension_counts": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "integer",
+            "minimum": 0
+          }
+        },
+        "stack_indicators": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "recommended_family_ids": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": {
+        "type": "string",
+        "pattern": "^family:"
+      }
+    },
+    "overlay_ids": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": {
+        "type": "string",
+        "pattern": "^family:"
+      }
+    },
+    "evidence_refs": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": {
+        "type": "string"
+      }
+    },
+    "human_gates": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": {
+        "type": "string"
+      }
+    },
+    "authority_boundary": {
+      "type": "string",
+      "minLength": 20
+    }
+  }
+}
+

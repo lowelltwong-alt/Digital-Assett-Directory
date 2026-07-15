@@ -1,0 +1,4 @@
+interface:
+  display_name: "Product UX Accessibility Agent Family"
+  short_description: "Shape humane product, UX, and accessibility workflows"
+  default_prompt: "Use -ux-accessibility-agent-family to shape and verify this one-human product workflow."

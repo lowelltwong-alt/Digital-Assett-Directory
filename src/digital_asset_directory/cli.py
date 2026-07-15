@@ -174,6 +174,17 @@ from .ml_agent_family import (
     ml_family_status,
     ml_research_plan,
 )
+from .agent_families import (
+    agent_family_catalog,
+    agent_family_dependency_graph,
+    agent_family_health,
+    build_portfolio_cockpit_v2,
+    inspect_agent_family_pilot,
+    load_portfolio_cockpit_v1,
+    route_agent_families,
+    write_agent_family_health,
+    write_portfolio_cockpit_v2,
+)
 from .mail_center import (
     MAIL_MIRROR_DIR,
     MAX_MAIL_RECORD_BYTES,
@@ -452,6 +463,8 @@ personal_skills_app = typer.Typer(no_args_is_help=True)
 app.add_typer(personal_skills_app, name="personal-skills")
 ml_app = typer.Typer(no_args_is_help=True)
 app.add_typer(ml_app, name="ml")
+agent_families_app = typer.Typer(no_args_is_help=True)
+app.add_typer(agent_families_app, name="agent-families")
 app.add_typer(journal_app, name="journal")
 mcp_app = typer.Typer(no_args_is_help=True)
 app.add_typer(mcp_app, name="mcp")
@@ -622,6 +635,123 @@ def ml_graph(
 def ml_research_plan_command(hub: Optional[Path] = typer.Option(None)) -> None:
     """Show the unscheduled, human-gated 14-day ML research contract."""
     _ml_output(ml_research_plan, hub)
+
+
+def _agent_family_output(action, hub: Optional[Path], **kwargs: Any) -> None:
+    cfg = _cfg(hub=hub)
+    try:
+        console.print_json(data=action(cfg.repo_root, **kwargs))
+    except (OSError, RuntimeError, ValueError, KeyError, ValidationError) as exc:
+        console.print_json(
+            data={
+                "schema_version": "dad.agent_family.error.v1",
+                "status": "blocked",
+                "error": str(exc),
+                "authority_boundary": (
+                    "Blocked family commands do not authorize code, policy, release, "
+                    "agent-instruction, source-repository, or external-system mutation."
+                ),
+            }
+        )
+        raise typer.Exit(2) from None
+
+
+@agent_families_app.command("catalog")
+def agent_families_catalog_command(
+    query: str = typer.Option("", "--query", "-q"),
+    hub: Optional[Path] = typer.Option(None),
+) -> None:
+    """Search governed family capabilities without dispatching work."""
+    _agent_family_output(agent_family_catalog, hub, query=query)
+
+
+@agent_families_app.command("route")
+def agent_families_route_command(
+    request: str = typer.Argument(..., help="Project request to route."),
+    material: bool = typer.Option(True, "--material/--non-material"),
+    risk_tag: list[str] = typer.Option([], "--risk-tag"),
+    hub: Optional[Path] = typer.Option(None),
+) -> None:
+    """Recommend the smallest model-neutral family set; never execute it."""
+    _agent_family_output(
+        route_agent_families,
+        hub,
+        request=request,
+        material=material,
+        risk_tags=risk_tag,
+    )
+
+
+@agent_families_app.command("graph")
+def agent_families_graph_command(
+    node: str = typer.Option("", help="Optional node ID for a focused projection."),
+    hub: Optional[Path] = typer.Option(None),
+) -> None:
+    """Project typed family, role, pack, pilot, and governance dependencies."""
+    _agent_family_output(agent_family_dependency_graph, hub, focus_node=node or None)
+
+
+@agent_families_app.command("health")
+def agent_families_health_command(hub: Optional[Path] = typer.Option(None)) -> None:
+    """Inspect family contracts and emit deduplicated candidate issues."""
+    _agent_family_output(agent_family_health, hub)
+
+
+@agent_families_app.command("pilot")
+def agent_families_pilot_command(
+    pilot_id: str = typer.Argument(...),
+    repo: Path = typer.Argument(..., exists=True, file_okay=False, resolve_path=True),
+    hub: Optional[Path] = typer.Option(None),
+) -> None:
+    """Run a bounded, metadata-only pilot and prove the source Git state is unchanged."""
+    _agent_family_output(inspect_agent_family_pilot, hub, pilot_repo=repo, pilot_id=pilot_id)
+
+
+@agent_families_app.command("cockpit")
+def agent_families_cockpit_command(
+    include_portfolio_v1: bool = typer.Option(True, "--portfolio-v1/--no-portfolio-v1"),
+    publish: bool = typer.Option(False, "--publish/--no-publish"),
+    full: bool = typer.Option(False, "--full/--summary"),
+    hub: Optional[Path] = typer.Option(None),
+) -> None:
+    """Build the side-by-side one-human cockpit v2, with at most three Now decisions."""
+    cfg = _cfg(hub=hub)
+    try:
+        health = agent_family_health(cfg.repo_root)
+        portfolio_v1 = load_portfolio_cockpit_v1(cfg.repo_root) if include_portfolio_v1 else None
+        cockpit = build_portfolio_cockpit_v2(health, portfolio_v1)
+        outputs: dict[str, Any] = {}
+        if publish:
+            outputs = {
+                "health": write_agent_family_health(cfg.repo_root, health),
+                "cockpit": write_portfolio_cockpit_v2(cfg.repo_root, cockpit),
+            }
+        console.print_json(
+            data=cockpit
+            if full
+            else {
+                "schema_version": cockpit["schema_version"],
+                "generated_at": cockpit["generated_at"],
+                "status": cockpit["status"],
+                "summary": cockpit["summary"],
+                "now": cockpit["now"],
+                "outputs": outputs,
+                "authority_boundary": cockpit["authority_boundary"],
+            }
+        )
+    except (OSError, RuntimeError, ValueError, KeyError, ValidationError) as exc:
+        console.print_json(
+            data={
+                "schema_version": "dad.agent_family.error.v1",
+                "status": "blocked",
+                "error": str(exc),
+                "authority_boundary": (
+                    "Cockpit generation is read-only unless --publish writes governed DAD reports; "
+                    "it never authorizes downstream mutation."
+                ),
+            }
+        )
+        raise typer.Exit(2) from None
 
 
 def _repo_path(repo_root: Path, path: Path | None) -> Path | None:

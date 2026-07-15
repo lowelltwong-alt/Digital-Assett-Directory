@@ -125,6 +125,11 @@
     "personal_skill_portable_export": "schemas/personal-skill-portable-export.schema.json",
     "ml_agent_family_registry": "schemas/ml-agent-family-registry.schema.json",
     "ml_technique_registry": "schemas/ml-technique-registry.schema.json",
-    "ml_workflow_decision": "schemas/ml-workflow-decision.schema.json"
+    "ml_workflow_decision": "schemas/ml-workflow-decision.schema.json",
+    "agent_family_portfolio_registry": "schemas/agent-family-portfolio-registry.schema.json",
+    "agent_family_routing_decision": "schemas/agent-family-routing-decision.schema.json",
+    "agent_family_health": "schemas/agent-family-health.schema.json",
+    "agent_family_pilot": "schemas/agent-family-pilot.schema.json",
+    "portfolio_cockpit_v2": "schemas/portfolio-cockpit-v2.schema.json"
   }
 }

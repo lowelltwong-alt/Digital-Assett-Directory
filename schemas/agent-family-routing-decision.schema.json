@@ -1,0 +1,87 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://dad.local/schemas/agent-family-routing-decision-v1.json",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "request",
+    "material",
+    "risk_tags",
+    "selected_family_ids",
+    "supporting_family_ids",
+    "rejected_family_ids",
+    "checker_family_id",
+    "human_gates",
+    "candidate_only",
+    "execution_authorized",
+    "authority_boundary"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": "dad.agent_family_routing_decision.v1"
+    },
+    "request": {
+      "type": "string"
+    },
+    "material": {
+      "type": "boolean"
+    },
+    "risk_tags": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": {
+        "type": "string"
+      }
+    },
+    "selected_family_ids": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": {
+        "type": "string",
+        "pattern": "^family:"
+      }
+    },
+    "supporting_family_ids": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": {
+        "type": "string",
+        "pattern": "^family:"
+      }
+    },
+    "rejected_family_ids": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": {
+        "type": "string",
+        "pattern": "^family:"
+      }
+    },
+    "checker_family_id": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "pattern": "^family:"
+    },
+    "human_gates": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": {
+        "type": "string"
+      }
+    },
+    "candidate_only": {
+      "const": true
+    },
+    "execution_authorized": {
+      "const": false
+    },
+    "authority_boundary": {
+      "type": "string",
+      "minLength": 20
+    }
+  }
+}
+

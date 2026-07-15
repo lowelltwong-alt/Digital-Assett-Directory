@@ -623,6 +623,30 @@
       "owner_authority": "DAD owns the candidate family and registry metadata; source repositories and named humans own ML data, domain, deployment, and adoption decisions.",
       "adoption_semantics": "Pointer or lightweight wrapper only; checkout and live global installation require an explicit local decision and do not activate research automation.",
       "authority_boundary": "This offering routes and governs candidate ML work; it cannot authorize data access, model training, deployment, recurring research, instruction changes, or supersession."
+    },
+    {
+      "offering_id": "dad:offering:agent-family-portfolio-control-plane",
+      "name": "Agent-Family Portfolio Control Plane",
+      "version": "0.1.0",
+      "offering_type": "control_plane",
+      "path": "registry/agent-family-portfolio-registry.json",
+      "languages": ["agent-instruction", "python", "mixed"],
+      "repo_types": ["application", "library", "control_plane", "research_repo", "governed_repo_family"],
+      "domains": ["software_engineering", "quality", "security", "research", "data", "integration", "product", "legal_governance"],
+      "context_tags": ["agent_family", "model_independent", "dependency_graph", "one_human_cockpit", "independent_assurance"],
+      "task_types": ["family_routing", "family_health_review", "dependency_projection", "bounded_pilot", "cockpit_review"],
+      "capabilities": ["smallest_family_routing", "runtime_capability_resolution", "typed_family_dependency_graph", "deduplicated_freshness_health", "one_human_cockpit_v2"],
+      "applies_when": ["A material request may need one or more governed reusable capability families, independent assurance, or lifecycle monitoring."],
+      "does_not_apply_when": ["A narrower deterministic tool or existing DAD skill completes the request without a family mesh."],
+      "public_safe": true,
+      "upgrade_channel": "dad_mail",
+      "known_upgrades": [],
+      "source_refs": ["registry/agent-family-portfolio-registry.json", "docs/AGENT_FAMILY_PORTFOLIO.md", "registry/agent-skill-library.json"],
+      "review_status": "candidate",
+      "validation_refs": ["tests/test_agent_family_portfolio.py", "scripts/validate_agent_skill_library.py"],
+      "owner_authority": "DAD owns portfolio metadata and projections; each source repository and named human owns adoption, code, policy, release, legal, and external-system decisions.",
+      "adoption_semantics": "Read-only routing and inspection by default; skill checkout remains pointer or wrapper based and no recurring routine is activated.",
+      "authority_boundary": "The control plane proposes family combinations, graph evidence, health issues, pilots, and at most three cockpit decisions. It cannot dispatch, mutate, promote, release, or make legal conclusions."
     }
   ]
 }

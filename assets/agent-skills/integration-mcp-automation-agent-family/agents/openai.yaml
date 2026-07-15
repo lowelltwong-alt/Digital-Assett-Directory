@@ -1,0 +1,4 @@
+interface:
+  display_name: "Integration MCP Automation Agent Family"
+  short_description: "Build governed integrations, MCP, and automation"
+  default_prompt: "Use -mcp-automation-agent-family to design this integration with bounded permissions and reconciliation."

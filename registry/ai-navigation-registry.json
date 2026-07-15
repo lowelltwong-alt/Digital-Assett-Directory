@@ -1,8 +1,8 @@
 {
   "schema_version": "0.1.0",
   "registry_id": "ai-navigation-registry",
-  "navigation_version": "2026.07.14.10",
-  "updated_at": "2026-07-14T22:00:00Z",
+  "navigation_version": "2026.07.14.11",
+  "updated_at": "2026-07-14T23:30:00Z",
   "singular_entrypoint": {
     "path": "AI_FRONT_DOOR.md",
     "rule": "All agents start at AI_FRONT_DOOR.md, then follow the required read order and task-specific branches.",
@@ -656,6 +656,18 @@
         "docs/RESEARCH_INTAKE_PIPELINE.md"
       ],
       "freshness_hint": "Runtime model observations expire, the technique library is incomplete, and research, deployment, instruction, automation, and supersession changes remain human-gated."
+    },
+    {
+      "branch_id": "agent_family_portfolio",
+      "path": "docs/AGENT_FAMILY_PORTFOLIO.md",
+      "role": "Model-neutral family portfolio with shared role and interface contracts, typed dependency projection, independent assurance, read-only pilots, lifecycle sentinels, and a one-human cockpit.",
+      "tags": ["agent_skill", "workflow", "knowledge_graph", "control_plane", "governance", "validation", "human_gate"],
+      "use_when": "You select, build, route, pilot, validate, monitor, adapt, supersede, or retire a reusable agent family.",
+      "current_version": "0.1.0",
+      "last_material_change_at": "2026-07-14T23:30:00Z",
+      "change_class": "library_catalog",
+      "route_after": ["AI_FRONT_DOOR.md", "registry/agent-family-portfolio-registry.json", "registry/agent-skill-library.json", "registry/graph-edge-registry.json"],
+      "freshness_hint": "Provider and model IDs are expiring attempt metadata; family health and graph links are candidate evidence, recurring research is dormant, and all mutation or promotion remains human-gated."
     }
   ],
   "recent_changes": [
