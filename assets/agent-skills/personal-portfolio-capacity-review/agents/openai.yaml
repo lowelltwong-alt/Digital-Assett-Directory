@@ -1,0 +1,4 @@
+interface:
+  display_name: "Personal Portfolio Capacity Review"
+  short_description: "Find weekly portfolio capacity bottlenecks"
+  default_prompt: "Use $personal-portfolio-capacity-review to run a read-only weekly portfolio capacity review and return at most three human asks."

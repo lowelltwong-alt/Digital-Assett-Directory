@@ -1,0 +1,45 @@
+{
+  "schema_version": "dad.repo-missions.v1",
+  "repo_ref": "dad://repo/dad",
+  "status": "candidate",
+  "data_classification": "C0_public",
+  "c3_payload_included": false,
+  "human_review_required": true,
+  "authority_boundary": "This file records a candidate DAD-owned mission only. It does not claim, infer, or modify the missions or canon of sibling or scanned repositories.",
+  "mission": "Maintain a local-first digital asset catalog, knowledge graph, portfolio intelligence surface, and governed learning hub that preserves source-repository authority.",
+  "source_evidence": [
+    "AI_FRONT_DOOR.md",
+    "MACHINE_NAVIGATION_MANIFEST.json",
+    "registry/source-of-truth.json",
+    "registry/design-authority.json"
+  ],
+  "tracks": [
+    {
+      "track_id": "catalog-and-graph",
+      "goal": "Maintain reproducible, provenance-aware asset, relationship, and source-coverage evidence without treating generated candidates as source truth.",
+      "review_status": "candidate",
+      "map_rules": {
+        "branch_patterns": ["catalog/*", "graph/*", "codex/*"],
+        "path_globs": ["registry/**", "schemas/**", "ontology/**", "processed/graph/**"]
+      }
+    },
+    {
+      "track_id": "portfolio-intelligence",
+      "goal": "Provide privacy-bounded, rebuildable portfolio attention, project, workstream, decision, and capacity evidence while humans retain execution authority.",
+      "review_status": "candidate",
+      "map_rules": {
+        "branch_patterns": ["portfolio/*", "codex/*"],
+        "path_globs": ["src/digital_asset_directory/portfolio_*.py", "schemas/portfolio-*.schema.json", "docs/frontier/collaboration/**"]
+      }
+    },
+    {
+      "track_id": "governed-learning-and-reuse",
+      "goal": "Capture privacy-safe lessons and reusable assets with validation, independent review, provenance, and explicit human promotion gates.",
+      "review_status": "candidate",
+      "map_rules": {
+        "branch_patterns": ["learning/*", "assets/*", "codex/*"],
+        "path_globs": ["assets/**", "lessons/**", "registry/agent-skill-library.json", "registry/subagent-*.json"]
+      }
+    }
+  ]
+}
