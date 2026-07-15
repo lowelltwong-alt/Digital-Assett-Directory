@@ -1,6 +1,6 @@
 schema_version: dad_subagent_pack.v0_1
 pack_id: dad:subagent-pack:personal-project-management-ops
-version: 0.2.0
+version: 0.3.0
 status: candidate
 ai_agnostic: true
 methodology_ref: registry/subagent-evaluation-methodology.json#0.1.0
@@ -19,6 +19,56 @@ routing_policy:
   sol_high: unresolved_architecture_sovereignty_privacy_or_authority_conflict
   fable_manual_only: unresolved_systemic_high_consequence_disagreement_after_independent_peer
 roles:
+  - role_id: intent-capture-router
+    profile_role_id: intent_capture_router
+    evaluated_role_revision_ids: []
+    capability_ids: [project_identity_and_related_work, neglected_work_recovery, governance_authority_safety]
+    search_terms: [intent checkpoint, durable plan, forgotten plan, unfinished build]
+    effort: deterministic
+    mission: Classify explicit material planning, persist an idempotent non-authorizing seed and final sanitized plan, and perform exact identity lookup without inferring priority or authority.
+    required_input: [structured_intent, privacy_partition, consequence_class, source_binding]
+    required_output: [plan_id, plan_revision_id, request_digest, capture_status, exact_matches, execution_authorized_false]
+    stop_conditions: [raw_conversation_required, initialized_private_data_root_unavailable, privacy_partition_unknown, plan_capture_would_create_workstream_or_authority]
+  - role_id: related-work-scout
+    profile_role_id: related_work_scout
+    evaluated_role_revision_ids: []
+    capability_ids: [project_identity_and_related_work, dependency_frontier_analysis]
+    search_terms: [search before create, possible duplicate, parent child peer variant, existing plan]
+    effort: low_then_medium_on_ambiguity
+    mission: Retrieve at most five evidence-backed candidate plans, entities, families, libraries, skills, projects, and worktrees while preserving distinct identities and privacy partitions.
+    required_input: [semantic_card, coverage_envelope, privacy_partition, authority_scope]
+    required_output: [top_candidates, evidence, counterevidence, coverage_gaps, candidate_relations, smallest_viable_family_set]
+    stop_conditions: [cross_privacy_search_requested, automatic_merge_requested, equal_best_candidates, stale_authority_evidence]
+  - role_id: partial-build-diagnostician
+    profile_role_id: partial_build_diagnostician
+    evaluated_role_revision_ids: []
+    capability_ids: [neglected_work_recovery, delivery_validation_and_handoff, dependency_frontier_analysis]
+    search_terms: [partial build, dirty worktree, ahead branch, resume packet, acceptance evidence]
+    effort: medium_or_high_by_consequence
+    mission: Reconstruct plan, worktree, validation, acceptance, dependency, and downstream-consumer state without mutating Git and produce an immutable recovery bundle.
+    required_input: [plan_revision, current_source_snapshot, worktree_observation, validation_evidence, acceptance_evidence]
+    required_output: [conservative_classification, source_snapshot_digest, completion_support, proposal_only_dispositions, forbidden_actions, resume_request]
+    stop_conditions: [source_snapshot_stale, status_unknown, mutation_requested, completion_claim_lacks_acceptance_or_independent_check]
+  - role_id: recovery-independent-checker
+    profile_role_id: recovery_independent_checker
+    evaluated_role_revision_ids: []
+    capability_ids: [neglected_work_recovery, validation_design, governance_authority_safety]
+    search_terms: [independent identity check, recovery validation, false merge, stale snapshot]
+    effort: high_for_material_identity_or_recovery
+    mission: Blind-check material identity, relationship, recovery, and verified-completion conclusions using a route independent from the producer.
+    required_input: [producer_packet, exact_evidence_refs, methodology_revision, independence_constraints]
+    required_output: [supported_findings, disagreements, missing_evidence, false_merge_risk, disposition]
+    stop_conditions: [producer_and_checker_not_independent, evidence_unavailable, private_payload_required, self_approval_requested]
+  - role_id: forgotten-plan-sentinel
+    profile_role_id: forgotten_plan_sentinel
+    evaluated_role_revision_ids: []
+    capability_ids: [neglected_work_recovery, project_identity_and_related_work]
+    search_terms: [weekly digest, forgotten plan, stale build, reminder deduplication]
+    effort: deterministic_then_luna_low_only_for_changed_ambiguity
+    mission: Incrementally rebuild unfinished-plan status, reuse the existing Today queue, suppress unchanged or quiet items, and prepare at most three metadata-safe decisions with zero model calls when deterministic evidence suffices.
+    required_input: [plan_index, today_queue, prior_fingerprints, suppressors, activation_record]
+    required_output: [inventory_count, changed_asks_max_three, zero_token_receipt, delivery_packet, delivery_reconciliation_state]
+    stop_conditions: [schedule_not_activated, sensitive_notification_content, blind_retry_requested, second_attention_queue_requested, mutation_requested]
   - role_id: workstream-intake-identity-steward
     profile_role_id: workstream_intake_identity_steward
     evaluated_role_revision_ids: []

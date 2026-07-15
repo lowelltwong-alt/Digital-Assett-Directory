@@ -1,0 +1,124 @@
+{
+  "schema_version": "dad.task_local_agent_mesh_manifest.v1",
+  "mesh_id": "dad:agent-mesh:capability-os-recovery",
+  "task_id": "capability-os-recovery-20260715",
+  "revision_id": "dad:agent-mesh-revision:capability-os-recovery:v1",
+  "phase": "execution",
+  "status": "active",
+  "source_snapshot_digest": "sha256:f32b6242d0dc35c159f1465f1a3a8c61a08bf9eecc022d12bc1d791e113ee281",
+  "authority": {
+    "source_authority": "DAD retains repository authority; Lowell retains product, privacy, budget, notification, release, and activation authority.",
+    "execution_authority": false,
+    "human_gate_required": true
+  },
+  "max_delegation_depth": 1,
+  "writer_role_id": "integration-foreman",
+  "checker_role_id": "independent-checker",
+  "non_overlap_statement": "The integration foreman owns shared registries, CLI wiring, branch integration, and final conflict resolution; persistence and recovery specialists may write only their assigned new modules, schemas, references, and focused tests; the independent checker is read-only.",
+  "roles": [
+    {
+      "role_id": "integration-foreman",
+      "why_needed": "The approved plan spans existing portfolio, graph, agent-family, CLI, daemon, and validation surfaces.",
+      "mission": "Preserve prior work, integrate disjoint outputs, maintain authority boundaries, wire shared interfaces, and produce complete validation evidence.",
+      "inputs": ["approved capability OS plan", "DAD preflight trace", "existing agent-family portfolio branch", "existing recovery and AI-native pilot work"],
+      "dependencies": [],
+      "authority": "May write the integration worktree and commit explicitly approved preservation work; may not push, merge, deploy, activate schedules, or mutate external systems.",
+      "model_effort_class": "high",
+      "writer_checker_relation": "writer",
+      "acceptance_conditions": ["All planned contracts are implemented or explicitly fail-closed and reported", "Focused and repository validations pass", "No private payload or authority widening is introduced"],
+      "stop_conditions": ["Dirty work would be lost", "A source-authority conflict appears", "A change would enable external mutation or persistent notification without a reviewed gate"],
+      "handoff": {
+        "recipient_role_ids": ["persistence-specialist", "recovery-specialist", "independent-checker"],
+        "deliverables": ["integrated branch", "shared interface contracts", "validation evidence"],
+        "readiness_conditions": ["Existing work is preserved", "Disjoint write scopes are assigned"]
+      }
+    },
+    {
+      "role_id": "persistence-specialist",
+      "why_needed": "Durable plan and semantic identity persistence is a separable, schema-heavy subsystem.",
+      "mission": "Implement append-only intent/plan persistence, durable semantic entities, deterministic related-work matching, and focused tests.",
+      "inputs": ["intent checkpoint contract", "entity identity contract", "existing portfolio event and relation patterns"],
+      "dependencies": ["integration-foreman"],
+      "authority": "May write only new plan/entity modules, their schemas, and focused tests in the integration worktree; no shared CLI or registry edits.",
+      "model_effort_class": "high",
+      "writer_checker_relation": "specialist",
+      "acceptance_conditions": ["Events are immutable and idempotent", "Similarity never merges identity", "Private plans are stored only under initialized DAD data root", "Focused tests pass"],
+      "stop_conditions": ["Raw conversations or secrets would be persisted", "Identity ambiguity is treated as authority", "Shared-file changes are required without foreman handoff"],
+      "handoff": {
+        "recipient_role_ids": ["integration-foreman", "independent-checker"],
+        "deliverables": ["persistence modules", "schemas", "focused tests", "integration notes"],
+        "readiness_conditions": ["Focused tests pass", "Changed paths stay in scope"]
+      }
+    },
+    {
+      "role_id": "recovery-specialist",
+      "why_needed": "Partial-build reconciliation and weekly digest behavior are separable from identity persistence.",
+      "mission": "Implement deterministic build-state recovery, changed-only weekly digest, specialist-pack contracts, and focused tests.",
+      "inputs": ["plan projection contract", "portfolio attention and worktree evidence", "weekly reminder suppressors"],
+      "dependencies": ["persistence-specialist"],
+      "authority": "May write only new recovery/digest modules, PM specialist-pack references, and focused tests; no shared CLI or registry edits.",
+      "model_effort_class": "medium",
+      "writer_checker_relation": "specialist",
+      "acceptance_conditions": ["Recovery is read-only", "Today remains capped at three", "Unchanged cycles use zero model calls", "Focused tests pass"],
+      "stop_conditions": ["Recovery would mutate Git", "A second attention queue is created", "Notification or schedule activation is implied"],
+      "handoff": {
+        "recipient_role_ids": ["integration-foreman", "independent-checker"],
+        "deliverables": ["recovery and digest modules", "specialist-pack contracts", "focused tests", "integration notes"],
+        "readiness_conditions": ["Persistence interfaces are available", "Focused tests pass"]
+      }
+    },
+    {
+      "role_id": "independent-checker",
+      "why_needed": "Identity, privacy, authority, automation, and recovery controls have broad downstream consequences.",
+      "mission": "Independently verify contracts, tests, privacy boundaries, authority invariants, negative cases, and release readiness.",
+      "inputs": ["approved plan", "final diff", "schemas", "test results", "generated projections"],
+      "dependencies": ["integration-foreman", "persistence-specialist", "recovery-specialist"],
+      "authority": "Read-only review; may not edit implementation, approve its own work, push, merge, deploy, or activate automation.",
+      "model_effort_class": "high",
+      "writer_checker_relation": "checker",
+      "acceptance_conditions": ["Independent findings cite exact evidence", "Security and authority negative cases are rerun", "Release gate and remaining risks are explicit"],
+      "stop_conditions": ["Checker identity overlaps a writer", "Required evidence is unavailable", "A critical invariant fails"],
+      "handoff": {
+        "recipient_role_ids": [],
+        "deliverables": ["independent findings", "release gate", "remaining-risk report"],
+        "readiness_conditions": ["Integrated diff and tests are available"]
+      }
+    }
+  ],
+  "proof_obligations": [
+    {
+      "obligation_id": "plan-memory-authority",
+      "description": "Prove plan capture creates no project, workstream, priority, lease, reminder, dependency, or execution authority.",
+      "evidence_required": ["schema invariants", "negative tests", "independent diff review"],
+      "owner_role_id": "persistence-specialist",
+      "checker_role_id": "independent-checker",
+      "status": "pending"
+    },
+    {
+      "obligation_id": "identity-safety",
+      "description": "Prove similarity remains candidate evidence and cannot silently merge identities or cross privacy partitions.",
+      "evidence_required": ["matching tests", "cycle and ambiguity tests", "privacy tests"],
+      "owner_role_id": "persistence-specialist",
+      "checker_role_id": "independent-checker",
+      "status": "pending"
+    },
+    {
+      "obligation_id": "recovery-zero-write",
+      "description": "Prove recovery and weekly digest projections do not mutate Git or create a second attention queue.",
+      "evidence_required": ["read-only recovery tests", "digest suppressor tests", "final diff"],
+      "owner_role_id": "recovery-specialist",
+      "checker_role_id": "independent-checker",
+      "status": "pending"
+    },
+    {
+      "obligation_id": "integration-regression",
+      "description": "Prove the integrated capability OS remains schema-valid and preserves existing portfolio behavior.",
+      "evidence_required": ["focused test shards", "DAD validate", "roadmap check", "full pytest result or exact timeout report"],
+      "owner_role_id": "integration-foreman",
+      "checker_role_id": "independent-checker",
+      "status": "pending"
+    }
+  ],
+  "unresolved_decisions": [],
+  "manifest_digest": "sha256:14016a4fd2e7bc0f93c58bce84033afb6206a6ee46ea8e9842eaa36647678118"
+}

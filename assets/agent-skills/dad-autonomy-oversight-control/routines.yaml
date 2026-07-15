@@ -1,0 +1,9 @@
+schema_version: dad_routines.v0_1
+family_id: family:autonomy-oversight-and-control
+routines:
+  - routine_id: authority-preflight
+    steps: [digest_exact_action, classify_a0_a4, check_allowlist, check_lease, check_privacy_cost_consequence, check_quarantine_kill]
+    real_execution_authority: false
+  - routine_id: selective-quarantine
+    steps: [identify_smallest_supported_scope, reject_new_leases, preserve_evidence, create_one_human_decision]
+    automatic_recovery: false

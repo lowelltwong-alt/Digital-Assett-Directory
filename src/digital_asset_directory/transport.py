@@ -85,8 +85,14 @@ DATA_PLANE_PATHS: dict[str, str] = {
     "raw_handoffs": "raw/handoffs",
     "raw_exceptions": "raw/exceptions",
     "raw_agent_evaluations": "raw/agent-evaluations",
+    "raw_portfolio_intents": "raw/portfolio",
+    "raw_identity": "raw/identity",
     "audit_events": "audit/events",
     "agent_sessions": "state/agent_sessions",
+    "portfolio_reports": "processed/portfolio_os",
+    "identity_reports": "processed/identity",
+    "runtime_reports": "processed/runtime",
+    "autonomy_reports": "processed/autonomy",
     "catalog_database": "state/catalog.sqlite3",
 }
 # Local-only runtime state uses the same initialized-root/legacy resolver and
@@ -96,6 +102,9 @@ DATA_PLANE_PATHS: dict[str, str] = {
 # recurring snapshot ran.
 LOCAL_ONLY_DATA_PATHS: dict[str, str] = {
     "personal_skill_archives": "private/personal-skills",
+    "private_portfolio_plans": "private/portfolio/plans",
+    "runtime_state": "state/runtime",
+    "autonomy_state": "state/autonomy",
 }
 ALL_RUNTIME_DATA_PATHS: dict[str, str] = {
     **DATA_PLANE_PATHS,

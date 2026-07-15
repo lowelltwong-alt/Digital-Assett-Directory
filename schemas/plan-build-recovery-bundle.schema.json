@@ -1,0 +1,12 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://dad.local/schemas/plan-build-recovery-bundle.schema.json",
+  "title": "DAD read-only plan/build recovery bundle",
+  "type": "object",
+  "required": ["schema_version", "bundle_id", "observed_at", "source_observed_at", "repository_id", "worktree_id", "head_id", "plan_id", "plan_revision_id", "source_snapshot_digest", "snapshot_current", "classification", "completion_supported", "proposed_disposition", "forbidden_git_actions", "candidate_only", "execution_authorized", "authority_boundary"],
+  "properties": {
+    "schema_version": {"const": "dad.plan_build_recovery_bundle.v1"}, "bundle_id": {"type": "string"}, "observed_at": {"type": "string", "format": "date-time"}, "source_observed_at": {"type": "string", "format": "date-time"}, "repository_id": {"type": "string", "minLength": 1}, "worktree_id": {"type": "string", "minLength": 1}, "head_id": {"type": "string", "minLength": 1}, "plan_id": {"type": "string"}, "plan_revision_id": {"type": "string"}, "source_snapshot_digest": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"}, "snapshot_current": {"type": "boolean"},
+    "classification": {"enum": ["contained_in_main", "patch_equivalent", "dirty_unique_value_possible", "ahead_unintegrated", "diverged", "blocked", "intentionally_held", "unknown"]}, "completion_supported": {"type": "boolean"}, "acceptance_evidence": {"type": "array"}, "validation_evidence": {"type": "array"}, "proposed_disposition": {"type": "string"}, "allowed_actions": {"type": "array"}, "forbidden_git_actions": {"type": "array"},
+    "candidate_only": {"const": true}, "execution_authorized": {"const": false}, "authority_boundary": {"type": "string"}
+  }
+}

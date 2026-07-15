@@ -1,0 +1,21 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://dad.local/schemas/autonomy-control-event-v1.json",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "event_id", "event_kind", "recorded_at", "scope_type", "scope_id", "authority_level", "consequence", "previous_event_id", "payload", "human_gate_required", "execution_authorized"],
+  "properties": {
+    "schema_version": {"const": "dad.autonomy_control_event.v1"},
+    "event_id": {"type": "string", "pattern": "^dad:autonomy-event:"},
+    "event_kind": {"enum": ["lease_requested", "lease_candidate", "lease_revoked", "quarantine_started", "global_kill_started", "recovery_requested", "recovery_approved", "incident_acknowledged"]},
+    "recorded_at": {"type": "string", "format": "date-time"},
+    "scope_type": {"enum": ["attempt", "workflow_revision", "role", "family", "adapter", "repository", "portfolio"]},
+    "scope_id": {"type": "string", "minLength": 1},
+    "authority_level": {"enum": ["A0", "A1", "A2", "A3", "A4"]},
+    "consequence": {"enum": ["small", "medium", "large", "critical", "outlier"]},
+    "previous_event_id": {"type": "string"},
+    "payload": {"type": "object"},
+    "human_gate_required": {"type": "boolean"},
+    "execution_authorized": {"const": false}
+  }
+}

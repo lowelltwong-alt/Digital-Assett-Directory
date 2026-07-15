@@ -1,6 +1,6 @@
 {
   "schema_version": "dad.mcp.dependency_map.v1",
-  "map_revision": "2026-07-13.3",
+  "map_revision": "2026-07-15.1",
   "logical_server_name": "dad-local-graph-surfaces",
   "authority_policy": {
     "local_only": true,
@@ -41,7 +41,7 @@
       "label": "MCP JSON-RPC stdio protocol implementation",
       "artifact_kind": "file",
       "change_contract": "Protocol or method changes require initialize, tools, resources, privacy, and adapter parity checks.",
-      "fingerprint": {"kind": "exact_sha256", "path": "src/digital_asset_directory/mcp_server.py", "sha256": "sha256:7cfe13c2e525f59ac96d5e361e58be4b81c7f3aa9597474cc3d1399133de88ca"}
+      "fingerprint": {"kind": "exact_sha256", "path": "src/digital_asset_directory/mcp_server.py", "sha256": "sha256:3158c8b358b6ecc29ca3f9df933e89f7cfdd25da28ed930a439176328a3e1e66"}
     },
     {
       "node_id": "mcp.node.entrypoint.graph-stdio",
@@ -57,7 +57,7 @@
       "label": "Read-only MCP server",
       "artifact_kind": "file",
       "change_contract": "Any edit invalidates the exact implementation fingerprint and requires interface/privacy revalidation.",
-      "fingerprint": {"kind": "exact_sha256", "path": "src/digital_asset_directory/mcp_server.py", "sha256": "sha256:7cfe13c2e525f59ac96d5e361e58be4b81c7f3aa9597474cc3d1399133de88ca"}
+      "fingerprint": {"kind": "exact_sha256", "path": "src/digital_asset_directory/mcp_server.py", "sha256": "sha256:3158c8b358b6ecc29ca3f9df933e89f7cfdd25da28ed930a439176328a3e1e66"}
     },
     {
       "node_id": "mcp.node.implementation.dependency-engine",
@@ -134,7 +134,7 @@
       "label": "Graph surface registry semantics",
       "artifact_kind": "file",
       "change_contract": "Canonical JSON semantics are fingerprinted so formatting-only changes do not create false staleness.",
-      "fingerprint": {"kind": "json_pointer_sha256", "path": "registry/graph-surface-registry.json", "pointer": "/surfaces", "sha256": "sha256:6c53a74ba1345c3c9348cf2cc315051c6333de36bc41155b67cbad998ef62d79"}
+      "fingerprint": {"kind": "json_pointer_sha256", "path": "registry/graph-surface-registry.json", "pointer": "/surfaces", "sha256": "sha256:7401ee9f3f95438e9d372c2e796d5008534121d1bc45aa09ff9c1e30fd7e60ca"}
     },
     {
       "node_id": "mcp.node.registry.schema-route",
@@ -302,7 +302,7 @@
   ],
   "coverage": {
     "python_local_imports": [
-      {"path": "src/digital_asset_directory/mcp_server.py", "modules": ["daemon", "graph_surfaces", "journal", "mcp_dependency_map", "surface_versions", "utils"]},
+      {"path": "src/digital_asset_directory/mcp_server.py", "modules": ["daemon", "entity_graph", "entity_identity", "graph_surfaces", "journal", "mcp_dependency_map", "portfolio_intents", "portfolio_weekly_digest", "surface_versions", "utils"]},
       {"path": "src/digital_asset_directory/mcp_graph_server.py", "modules": ["mcp_server"]},
       {"path": "src/digital_asset_directory/mcp_dependency_map.py", "modules": []}
     ],
@@ -351,6 +351,9 @@
       {"match": "prefix", "value": "dad://registry/", "node_id": "mcp.node.registry.graph-surfaces", "allow_empty": false},
       {"match": "prefix", "value": "dad://surface/", "node_id": "mcp.node.runtime-data.local-hub", "allow_empty": true},
       {"match": "prefix", "value": "dad://report/", "node_id": "mcp.node.backend.operational-status", "allow_empty": false},
+      {"match": "prefix", "value": "dad://plans/", "node_id": "mcp.node.runtime-data.local-hub", "allow_empty": false},
+      {"match": "prefix", "value": "dad://identity/", "node_id": "mcp.node.runtime-data.local-hub", "allow_empty": true},
+      {"match": "prefix", "value": "dad://recovery/", "node_id": "mcp.node.backend.operational-status", "allow_empty": false},
       {"match": "prefix", "value": "dad://kernel/", "node_id": "mcp.node.governance.mcp-first-policy", "allow_empty": false},
       {"match": "prefix", "value": "dad://packet/", "node_id": "mcp.node.governance.mcp-first-policy", "allow_empty": false},
       {"match": "exact", "value": "dad://mcp/dependency-map", "node_id": "mcp.node.registry.dependency-map", "allow_empty": false},

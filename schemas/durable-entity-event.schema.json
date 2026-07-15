@@ -1,0 +1,14 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://dad.local/schemas/durable-entity-event.schema.json",
+  "title": "DAD durable semantic entity event",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "event_kind", "stream_id", "request_id", "request_digest", "recorded_at", "payload", "authority_boundary"],
+  "properties": {
+    "schema_version": {"const": "dad.durable_entity_event.v1"}, "event_id": {"type": "string"}, "prev_event_id": {"type": "string"},
+    "event_kind": {"enum": ["entity_registered", "entity_revision_added", "relation_proposed", "source_binding_proposed", "identity_decision_recorded"]},
+    "stream_id": {"type": "string", "minLength": 1}, "request_id": {"type": "string", "minLength": 1}, "request_digest": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"}, "recorded_at": {"type": "string", "format": "date-time"},
+    "payload": {"type": "object", "additionalProperties": true}, "authority_boundary": {"type": "string", "minLength": 1}
+  }
+}

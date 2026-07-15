@@ -1024,6 +1024,24 @@ def build_workflow_run_event(
     context_cache_hit: bool = False,
     context_capsule_ref: str = "",
     corrects_event_id: str = "",
+    material_execution: bool = False,
+    plan_id: str = "",
+    plan_revision_id: str = "",
+    entity_id: str = "",
+    entity_revision_id: str = "",
+    workstream_id: str = "",
+    family_id: str = "",
+    role_id: str = "",
+    attempt_id: str = "",
+    runtime_route_decision_id: str = "",
+    harness_revision_id: str = "",
+    lease_id: str = "",
+    effect_class: str = "",
+    tool_time_ms: int | None = None,
+    retry_count: int = 0,
+    evidence_refs: Iterable[str] = (),
+    validation_refs: Iterable[str] = (),
+    dependency_refs: Iterable[str] = (),
     now: datetime | None = None,
 ) -> dict[str, Any]:
     event_id = uuid4().hex
@@ -1062,6 +1080,11 @@ def build_workflow_run_event(
         "model_call_count": model_call_count,
         "context_cache_hit": context_cache_hit,
         "result_reason_codes": sorted(set(result_reason_codes)),
+        "material_execution": material_execution,
+        "retry_count": retry_count,
+        "evidence_refs": sorted(set(evidence_refs)),
+        "validation_refs": sorted(set(validation_refs)),
+        "dependency_refs": sorted(set(dependency_refs)),
         "authority_boundary": AUTHORITY_BOUNDARY,
     }
     optional = {
@@ -1072,12 +1095,34 @@ def build_workflow_run_event(
         "adapter_id": adapter_id,
         "context_capsule_ref": context_capsule_ref,
         "corrects_event_id": corrects_event_id,
+        "plan_id": plan_id,
+        "plan_revision_id": plan_revision_id,
+        "entity_id": entity_id,
+        "entity_revision_id": entity_revision_id,
+        "workstream_id": workstream_id,
+        "family_id": family_id,
+        "role_id": role_id,
+        "attempt_id": attempt_id,
+        "runtime_route_decision_id": runtime_route_decision_id,
+        "harness_revision_id": harness_revision_id,
+        "lease_id": lease_id,
+        "effect_class": effect_class,
     }
     for key, value in optional.items():
         if value:
             event[key] = value
     if duration_ms is not None:
         event["duration_ms"] = duration_ms
+    if tool_time_ms is not None:
+        event["tool_time_ms"] = tool_time_ms
+    if material_execution:
+        required_bindings = (
+            "plan_revision_id", "entity_revision_id", "family_id", "role_id",
+            "attempt_id", "runtime_route_decision_id", "harness_revision_id", "lease_id", "effect_class",
+        )
+        missing = [field for field in required_bindings if not event.get(field)]
+        if missing:
+            raise ValueError(f"Material workflow run is missing control-plane bindings: {missing}")
     return event
 
 
@@ -1137,6 +1182,60 @@ def append_workflow_run_event(repo_root: Path, event: dict[str, Any]) -> dict[st
         return {"appended": False, "reason": "duplicate_event_identity", "path": str(path), "event": event}
     append_jsonl_locked(path, event)
     return {"appended": True, "reason": "new_event", "path": str(path), "event": event}
+
+
+def resolve_independent_validation_receipt(
+    repo_root: Path,
+    *,
+    receipt_id: str,
+    plan_revision_id: str,
+    producer_ref: str,
+    checker_ref: str,
+    acceptance_evidence: Iterable[str],
+) -> dict[str, Any]:
+    """Resolve only a canonical, lifecycle-valid workflow validation receipt."""
+
+    run_rows = _read_jsonl(_run_ledger(repo_root))
+    route_rows = _read_jsonl(_route_ledger(repo_root))
+    schema_root = Path(__file__).resolve().parents[2]
+    try:
+        for row in run_rows:
+            _validate(row, schema_root / RUN_SCHEMA)
+        for row in route_rows:
+            _validate(row, schema_root / ROUTE_SCHEMA)
+    except Exception as exc:
+        raise ValueError("Workflow proof ledger contains a non-canonical event") from exc
+    effective_runs = _effective_events(run_rows)
+    effective_routes = _effective_events(route_rows)
+    receipt = next((row for row in effective_runs if row.get("id") == receipt_id), None)
+    if receipt is None:
+        raise ValueError("Canonical independent validation receipt was not found")
+    lifecycle = {
+        str(row.get("event_state"))
+        for row in effective_runs
+        if row.get("run_id") == receipt.get("run_id")
+        and row.get("route_event_id") == receipt.get("route_event_id")
+    }
+    route = next(
+        (row for row in effective_routes if row.get("id") == receipt.get("route_event_id")),
+        None,
+    )
+    if route is None or not {"started", "completed", "independently_validated"} <= lifecycle:
+        raise ValueError("Independent validation receipt lacks canonical route or lifecycle evidence")
+    if not (
+        receipt.get("event_state") == "independently_validated"
+        and receipt.get("plan_revision_id") == plan_revision_id
+        and receipt.get("producer_ref") == producer_ref
+        and receipt.get("independent_checker_ref") == checker_ref
+        and producer_ref != checker_ref
+        and bool(receipt.get("independent_evaluation_ref"))
+        and receipt.get("validation_outcome") == "supported_success"
+        and set(acceptance_evidence).issubset(set(receipt.get("evidence_refs", [])))
+        and receipt.get("workflow_revision_id")
+        in set(route.get("selected_workflow_revisions", []))
+    ):
+        raise ValueError("Canonical independent validation receipt does not match the plan proof")
+    return receipt
 
 
 def _effective_events(rows: list[dict[str, Any]]) -> list[dict[str, Any]]:

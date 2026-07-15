@@ -1,0 +1,11 @@
+schema_version: dad_routines.v0_1
+family_id: family:harness-engineering-ops
+routines:
+  - routine_id: harness-route
+    steps: [load_registry, validate_snapshot, filter_capabilities, select_smallest_fit, require_independent_checker]
+    execution_authorized: false
+  - routine_id: harness-lifecycle-review
+    cadence: weekly_delta_only
+    steps: [fingerprint_sources, inspect_changed_only, evaluate_consumers, prepare_candidate_transition]
+    unchanged_model_tokens: 0
+    execution_authorized: false

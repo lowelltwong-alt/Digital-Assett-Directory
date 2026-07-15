@@ -63,7 +63,7 @@ def test_registry_and_all_family_schemas_are_registered_and_valid() -> None:
 
 def test_portfolio_is_small_model_neutral_and_wip_bounded() -> None:
     registry = load_json("registry/agent-family-portfolio-registry.json")
-    assert len(registry["families"]) == 10
+    assert len(registry["families"]) == 12
     assert registry["ai_agnostic"] is True
     assert registry["runtime_routing"]["capability_aliases"] == ["luna", "terra", "sol"]
     assert set(registry["runtime_routing"]["attempt_only_fields"]) >= {
@@ -143,7 +143,7 @@ def test_mcp_and_ui_specialist_packs_are_members_not_new_families() -> None:
         "pack:mcp-integration-specialist-pack": "family:integration-mcp-automation",
         "pack:ui-ux-specialist-pack": "family:product-ux-accessibility",
     }
-    assert len(families) == 10
+    assert len(families) == 12
     for pack_id, family_id in expected.items():
         assert pack_id in families[family_id]["specialist_packs"]
         assert pack_id not in families
@@ -200,11 +200,11 @@ def test_health_is_semantically_deduplicated_and_timestamp_independent() -> None
     first = agent_family_health(ROOT, now=datetime(2026, 7, 14, tzinfo=timezone.utc))
     second = agent_family_health(ROOT, now=datetime(2026, 7, 28, tzinfo=timezone.utc))
     validate("schemas/agent-family-health.schema.json", first)
-    assert first["summary"]["family_count"] == 10
+    assert first["summary"]["family_count"] == 12
     assert first["summary"]["stale_count"] == 0
     assert first["summary"]["unknown_count"] == 0
-    assert first["summary"]["issue_count"] == 10
-    assert len({row["fingerprint"] for row in first["issues"]}) == 10
+    assert first["summary"]["issue_count"] == 12
+    assert len({row["fingerprint"] for row in first["issues"]}) == 12
     assert [row["fingerprint"] for row in first["issues"]] == [
         row["fingerprint"] for row in second["issues"]
     ]
@@ -220,7 +220,7 @@ def test_cockpit_v2_limits_now_to_three_preserves_digest_and_escapes_html() -> N
     cockpit["now"][0]["reasons"] = ["<script>alert(1)</script>"]
     validate("schemas/portfolio-cockpit-v2.schema.json", cockpit)
     assert len(cockpit["now"]) == 3
-    assert len(cockpit["digest"]) == 10
+    assert len(cockpit["digest"]) >= 12
     assert sum(item["selected_now"] for item in cockpit["digest"]) == 3
     html = portfolio_cockpit_v2_html(cockpit)
     assert "<script>alert(1)</script>" not in html

@@ -627,6 +627,34 @@
         "target": "family:product-ux-accessibility",
         "evidence_ref": "assets/agent-skills/ui-ux-specialist-pack/SKILL.md",
         "review_status": "candidate"
+      },
+      {
+        "source": "skill:dad-harness-engineering-ops",
+        "edge_type": "implements",
+        "target": "family:harness-engineering-ops",
+        "evidence_ref": "assets/agent-skills/dad-harness-engineering-ops/SKILL.md",
+        "review_status": "candidate"
+      },
+      {
+        "source": "family:harness-engineering-ops",
+        "edge_type": "validated_by",
+        "target": "family:quality-verification-release",
+        "evidence_ref": "tests/test_runtime_harness_autonomy_control.py",
+        "review_status": "candidate"
+      },
+      {
+        "source": "skill:dad-autonomy-oversight-control",
+        "edge_type": "implements",
+        "target": "family:autonomy-oversight-and-control",
+        "evidence_ref": "assets/agent-skills/dad-autonomy-oversight-control/SKILL.md",
+        "review_status": "candidate"
+      },
+      {
+        "source": "family:autonomy-oversight-and-control",
+        "edge_type": "governed_by",
+        "target": "registry:autonomy-oversight-registry",
+        "evidence_ref": "registry/autonomy-oversight-registry.json",
+        "review_status": "candidate"
       }
     ],
     "forbidden_claims": [
@@ -1211,6 +1239,52 @@
         "A narrower existing DAD skill or deterministic tool fully satisfies the task."
       ],
       "danger_if_misapplied": "Activating this family without evidence can add cost, duplicate authority, or create false confidence."
+    },
+    {
+      "family_id": "family:harness-engineering-ops",
+      "name": "Harness Engineering Operations",
+      "kind": "core",
+      "build_order": 11,
+      "lifecycle_state": "candidate",
+      "status": "implemented_candidate",
+      "skill_ref": "skill:dad-harness-engineering-ops",
+      "pack_ref": "assets/agent-skills/dad-harness-engineering-ops/subagents.yaml",
+      "domains": ["agent_engineering", "runtime_portability", "quality_assurance"],
+      "trigger_terms": ["harness", "prompt harness", "agent harness", "harness maintenance", "harness retirement", "runtime fit"],
+      "capabilities": ["harness_architecture", "typed_safe_runner", "runtime_fit", "evaluation", "lifecycle_management"],
+      "specialist_packs": [],
+      "human_gates": ["harness_activation", "harness_supersession", "harness_retirement"],
+      "owner_authority": "Lowell and the source repository",
+      "requires_independent_assurance": true,
+      "validation_ref": "tests/test_runtime_harness_autonomy_control.py",
+      "freshness_sources": ["harness_revision", "runtime_capability_snapshot", "evaluation_evidence", "consumer_graph", "frontier_source_delta"],
+      "review_cadence": "weekly-delta-or-event-triggered",
+      "applies_when": ["A reusable agent or workflow needs a provider-neutral harness or an existing harness may be stale."],
+      "does_not_apply_when": ["A reviewed current harness exactly satisfies the task and no fit or lifecycle evidence changed."],
+      "danger_if_misapplied": "A weak or mismatched harness can create false confidence, unsafe execution, or lock roles to a retired runtime."
+    },
+    {
+      "family_id": "family:autonomy-oversight-and-control",
+      "name": "Autonomy Oversight and Control",
+      "kind": "core",
+      "build_order": 12,
+      "lifecycle_state": "candidate",
+      "status": "implemented_candidate",
+      "skill_ref": "skill:dad-autonomy-oversight-control",
+      "pack_ref": "assets/agent-skills/dad-autonomy-oversight-control/subagents.yaml",
+      "domains": ["ai_governance", "execution_control", "incident_control"],
+      "trigger_terms": ["autonomy", "execution lease", "allowlist", "quarantine", "global kill", "resume request"],
+      "capabilities": ["a0_a4_classification", "lease_validation", "selective_quarantine", "global_kill", "human_gated_recovery"],
+      "specialist_packs": [],
+      "human_gates": ["a2_activation", "a3_exact_confirmation", "control_plane_recovery"],
+      "owner_authority": "Lowell and the source repository",
+      "requires_independent_assurance": true,
+      "validation_ref": "tests/test_runtime_harness_autonomy_control.py",
+      "freshness_sources": ["authority_policy", "lease_schema", "runtime_route", "harness_revision", "incident_evidence"],
+      "review_cadence": "event-triggered-or-P30D",
+      "applies_when": ["An agent action may mutate, deliver, schedule, spend, message, change permissions, affect production, or recover from quarantine."],
+      "does_not_apply_when": ["The work is purely read-only and no authority or control decision exists."],
+      "danger_if_misapplied": "An incorrect authority classification can permit harmful actions or unnecessarily block safe work."
     }
   ],
   "pilots": [
@@ -1226,7 +1300,9 @@
         "family:knowledge-research-provenance",
         "family:data-schema-knowledge-graph",
         "family:integration-mcp-automation",
-        "family:product-ux-accessibility"
+        "family:product-ux-accessibility",
+        "family:harness-engineering-ops",
+        "family:autonomy-oversight-and-control"
       ],
       "overlay_ids": [],
       "metadata_allowlist": [
@@ -1258,7 +1334,9 @@
         "family:knowledge-research-provenance",
         "family:data-schema-knowledge-graph",
         "family:integration-mcp-automation",
-        "family:product-ux-accessibility"
+        "family:product-ux-accessibility",
+        "family:harness-engineering-ops",
+        "family:autonomy-oversight-and-control"
       ],
       "overlay_ids": [
         "family:legal-evidence-governance"

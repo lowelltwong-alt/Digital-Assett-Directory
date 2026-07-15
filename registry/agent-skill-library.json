@@ -868,7 +868,7 @@
     {
       "skill_id": "skill:personal-project-management-ops",
       "name": "Personal Project Management Ops",
-      "version": "0.2.0",
+      "version": "0.3.0",
       "status": "candidate",
       "skill_format": "generic_agent_skill",
       "path": "assets/agent-skills/personal-project-management-ops",
@@ -901,12 +901,13 @@
           "overlay terms cannot be written as durable lifecycle states"
         ]
       },
-      "description": "Coordinates creative project sprawl from idea capture through related-work discovery, workstream planning, artifact-proximate product diagnosis, recovery, research, validation, delivery, and portfolio review without silently creating work.",
+      "description": "Coordinates creative project sprawl with durable non-authorizing plan memory, search-before-create, partial-build recovery, workstream planning, product diagnosis, validation, delivery, and portfolio review.",
       "trigger_examples": [
         "Organize several related ideas from chats into projects and bounded workstreams.",
         "Diagnose a first runnable artifact against its intended user and outcome before recommending more buildout.",
         "Recover a neglected branch or worktree and produce a quiet resume option.",
         "Plan dependencies, acceptance evidence, and execution leases for a project portfolio."
+        ,"Recover an explicit material plan or partial build that was abandoned in another task, branch, worktree, or name."
       ],
       "does_not_apply_when": [
         "The task is a single isolated action with no project, workstream, or portfolio coordination need.",
@@ -919,6 +920,10 @@
         "neglected_work_recovery",
         "research_project_management",
         "delivery_validation_and_handoff"
+        ,"durable_plan_memory"
+        ,"semantic_entity_identity"
+        ,"unfinished_build_recovery"
+        ,"weekly_forgotten_plan_digest"
       ],
       "checkout_modes": [
         "pointer",
@@ -943,6 +948,9 @@
         "src/digital_asset_directory/portfolio_execution.py",
         "schemas/portfolio-execution-control-event.schema.json",
         "docs/frontier/collaboration/05_EXECUTION_LEASE_AND_DISPATCH_CONTROL.md"
+        ,"src/digital_asset_directory/portfolio_intents.py"
+        ,"src/digital_asset_directory/entity_identity.py"
+        ,"src/digital_asset_directory/portfolio_build_recovery.py"
       ],
       "source_evidence": [
         "assets/agent-skills/personal-project-management-ops/SKILL.md",
@@ -952,6 +960,8 @@
         "src/digital_asset_directory/portfolio_execution.py",
         "schemas/portfolio-execution-control-event.schema.json",
         "docs/frontier/collaboration/05_EXECUTION_LEASE_AND_DISPATCH_CONTROL.md"
+        ,"assets/agent-skills/personal-project-management-ops/routines.yaml"
+        ,"assets/agent-skills/personal-project-management-ops/references/UNFINISHED_INTENT_RECOVERY_CONTRACT.md"
       ],
       "authority_boundary": "Project-management roles produce candidate control packets and recommendations. They cannot promote identities, mutate repositories or task systems, notify people, deliver work, or transfer sovereignty without explicit human approval.",
       "review_status": "candidate",
@@ -1551,6 +1561,52 @@
       "review_status": "candidate",
       "last_reviewed_at": "2026-07-14",
       "next_review_due_at": "2026-10-14"
+    },
+    {
+      "skill_id": "skill:dad-harness-engineering-ops",
+      "name": "DAD Harness Engineering Ops",
+      "version": "0.1.0",
+      "status": "candidate",
+      "skill_format": "generic_agent_skill",
+      "path": "assets/agent-skills/dad-harness-engineering-ops",
+      "entrypoint": "assets/agent-skills/dad-harness-engineering-ops/SKILL.md",
+      "subagent_pack": "assets/agent-skills/dad-harness-engineering-ops/subagents.yaml",
+      "description": "Provider-neutral harness design, typed safe execution preparation, runtime-fit evaluation, independent checking, maintenance, supersession, and retirement.",
+      "trigger_examples": ["Build, select, evaluate, maintain, replace, or retire an agent or model harness."],
+      "does_not_apply_when": ["A reviewed existing harness exactly satisfies the bounded task and no lifecycle evidence changed."],
+      "capabilities": ["harness_architecture", "typed_safe_runner", "runtime_fit", "harness_evaluation", "harness_lifecycle"],
+      "checkout_modes": ["pointer", "wrapper"],
+      "update_policy": "dad_mail_notice",
+      "lifecycle": {"supersedes": [], "superseded_by": [], "retirement_reason": "", "replacement_skill_id": "", "change_notice_templates": ["templates/mail/skill-update-available.mail.template.json", "templates/mail/skill-retirement-notice.mail.template.json"]},
+      "dependencies": ["registry/harness-engineering-registry.json", "registry/runtime-adapter-registry.json", "assets/agent-skills/quality-verification-release-agent-family"],
+      "source_evidence": ["assets/agent-skills/dad-harness-engineering-ops/SKILL.md", "assets/agent-skills/dad-harness-engineering-ops/subagents.yaml", "src/digital_asset_directory/harness_engineering.py"],
+      "authority_boundary": "Harness routes and revisions are candidate evidence; this skill cannot execute, activate, supersede, retire, or self-approve a harness.",
+      "review_status": "candidate",
+      "last_reviewed_at": "2026-07-15",
+      "next_review_due_at": "2026-08-15"
+    },
+    {
+      "skill_id": "skill:dad-autonomy-oversight-control",
+      "name": "DAD Autonomy Oversight and Control",
+      "version": "0.1.0",
+      "status": "candidate",
+      "skill_format": "generic_agent_skill",
+      "path": "assets/agent-skills/dad-autonomy-oversight-control",
+      "entrypoint": "assets/agent-skills/dad-autonomy-oversight-control/SKILL.md",
+      "subagent_pack": "assets/agent-skills/dad-autonomy-oversight-control/subagents.yaml",
+      "description": "Deterministic A0-A4 authority classification, exact lease and allowlist gates, selective quarantine, global kill, and human-only recovery.",
+      "trigger_examples": ["Classify or control an autonomous, scheduled, external, paid, permission, production, or recovery action."],
+      "does_not_apply_when": ["The work is purely read-only and no authority, quarantine, kill, schedule, or recovery question exists."],
+      "capabilities": ["autonomy_classification", "lease_validation", "selective_quarantine", "global_kill", "human_gated_recovery"],
+      "checkout_modes": ["pointer", "wrapper"],
+      "update_policy": "dad_mail_notice",
+      "lifecycle": {"supersedes": [], "superseded_by": [], "retirement_reason": "", "replacement_skill_id": "", "change_notice_templates": ["templates/mail/skill-update-available.mail.template.json", "templates/mail/skill-retirement-notice.mail.template.json"]},
+      "dependencies": ["registry/autonomy-oversight-registry.json", "registry/runtime-adapter-registry.json", "registry/harness-engineering-registry.json"],
+      "source_evidence": ["assets/agent-skills/dad-autonomy-oversight-control/SKILL.md", "assets/agent-skills/dad-autonomy-oversight-control/subagents.yaml", "src/digital_asset_directory/autonomy_control.py"],
+      "authority_boundary": "The control family may deny and prepare restrictive candidates; it cannot execute, sign, widen authority, activate itself, or recover automatically.",
+      "review_status": "candidate",
+      "last_reviewed_at": "2026-07-15",
+      "next_review_due_at": "2026-08-15"
     }
   ]
 }

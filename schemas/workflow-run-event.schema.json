@@ -3,7 +3,7 @@
   "$id": "https://dad.local/schemas/workflow-run-event-v1.json",
   "type": "object",
   "additionalProperties": false,
-  "required": ["specversion", "id", "source", "type", "subject", "time", "dataschema", "workflow_id", "workflow_revision_id", "run_id", "route_event_id", "event_state", "capability_ids", "input_fingerprint", "execution_mode", "producer_ref", "synthetic_or_fixture", "privacy_class", "token_usage", "cost_usage", "authority_boundary"],
+  "required": ["specversion", "id", "source", "type", "subject", "time", "dataschema", "workflow_id", "workflow_revision_id", "run_id", "route_event_id", "event_state", "capability_ids", "input_fingerprint", "execution_mode", "producer_ref", "material_execution", "retry_count", "evidence_refs", "validation_refs", "dependency_refs", "synthetic_or_fixture", "privacy_class", "token_usage", "cost_usage", "authority_boundary"],
   "properties": {
     "specversion": {"const": "1.0"},
     "id": {"type": "string", "pattern": "^run-event:[a-z0-9-]+$"},
@@ -29,6 +29,15 @@
     "independent_evaluation_ref": {"type": "string"},
     "validation_outcome": {"enum": ["supported_success", "supported_partial", "supported_failure", "unknown", "not_applicable"]},
     "result_reason_codes": {"type": "array", "uniqueItems": true, "items": {"type": "string", "pattern": "^[a-z][a-z0-9_]*$"}},
+    "material_execution": {"type": "boolean"},
+    "plan_id": {"type": "string"}, "plan_revision_id": {"type": "string"},
+    "entity_id": {"type": "string"}, "entity_revision_id": {"type": "string"},
+    "workstream_id": {"type": "string"}, "family_id": {"type": "string"}, "role_id": {"type": "string"}, "attempt_id": {"type": "string"},
+    "runtime_route_decision_id": {"type": "string"}, "harness_revision_id": {"type": "string"}, "lease_id": {"type": "string"}, "effect_class": {"type": "string"},
+    "tool_time_ms": {"type": "integer", "minimum": 0}, "retry_count": {"type": "integer", "minimum": 0},
+    "evidence_refs": {"type": "array", "uniqueItems": true, "items": {"type": "string"}},
+    "validation_refs": {"type": "array", "uniqueItems": true, "items": {"type": "string"}},
+    "dependency_refs": {"type": "array", "uniqueItems": true, "items": {"type": "string"}},
     "synthetic_or_fixture": {"type": "boolean"},
     "privacy_class": {"enum": ["public", "internal_metadata", "private_metadata", "restricted"]},
     "token_usage": {"$ref": "#/$defs/tokenUsage"},
@@ -38,6 +47,12 @@
     "corrects_event_id": {"type": "string", "pattern": "^run-event:"},
     "authority_boundary": {"type": "string", "minLength": 20}
   },
+  "allOf": [
+    {
+      "if": {"properties": {"material_execution": {"const": true}}, "required": ["material_execution"]},
+      "then": {"required": ["plan_revision_id", "entity_revision_id", "family_id", "role_id", "attempt_id", "runtime_route_decision_id", "harness_revision_id", "lease_id", "effect_class"]}
+    }
+  ],
   "$defs": {
     "tokenUsage": {
       "type": "object", "additionalProperties": false,

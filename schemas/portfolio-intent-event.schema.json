@@ -1,0 +1,38 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://dad.local/schemas/portfolio-intent-event.schema.json",
+  "title": "DAD non-authorizing portfolio intent event",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "event_id", "prev_event_id", "event_kind", "plan_id", "revision_id", "request_id", "request_digest", "recorded_at", "execution_authorized", "authority_boundary", "payload"],
+  "properties": {
+    "schema_version": {"const": "dad.portfolio_intent_event.v1"},
+    "event_id": {"type": "string", "minLength": 1},
+    "prev_event_id": {"type": "string"},
+    "event_kind": {"enum": ["intent_checkpoint_recorded", "intent_checkpoint_revised", "intent_checkpoint_closed", "intent_checkpoint_superseded", "intent_checkpoint_hold_recorded"]},
+    "plan_id": {"type": "string", "minLength": 1},
+    "revision_id": {"type": "string", "minLength": 1},
+    "request_id": {"type": "string", "minLength": 1},
+    "request_digest": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"},
+    "recorded_at": {"type": "string", "format": "date-time"},
+    "execution_authorized": {"const": false},
+    "authority_boundary": {"type": "string", "minLength": 1},
+    "payload": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["plan_id", "revision_id", "predecessor_revision_id", "content_digest", "title", "aliases", "outcome", "lifecycle", "implementation_state", "privacy_class", "consequence_class", "smallest_next_action", "acceptance_evidence", "independent_check_ref", "producer_ref", "independent_checker_ref", "validated_plan_revision_id", "human_approval_ref", "artifact_ref", "redaction_count", "execution_authorized"],
+      "properties": {
+        "plan_id": {"type": "string", "minLength": 1}, "revision_id": {"type": "string", "minLength": 1}, "predecessor_revision_id": {"type": "string"},
+        "content_digest": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"}, "title": {"type": "string", "minLength": 1}, "aliases": {"type": "array", "items": {"type": "string"}}, "outcome": {"type": "string", "minLength": 1},
+        "lifecycle": {"enum": ["draft", "decision_complete", "superseded", "withdrawn"]},
+        "implementation_state": {"enum": ["unstarted", "partial", "blocked", "drifted", "validation_pending", "implemented_candidate", "verified_complete", "superseded", "unknown"]},
+        "privacy_class": {"enum": ["public", "internal", "private", "restricted"]}, "consequence_class": {"enum": ["C0", "C1", "C2", "C3", "C4"]}, "smallest_next_action": {"type": "string"},
+        "acceptance_evidence": {"type": "array", "uniqueItems": true, "items": {"type": "string"}}, "independent_check_ref": {"type": "string"}, "producer_ref": {"type": "string"}, "independent_checker_ref": {"type": "string"}, "validated_plan_revision_id": {"type": "string"}, "human_approval_ref": {"type": "string"},
+        "artifact_ref": {"type": "string", "minLength": 1}, "redaction_count": {"type": "integer", "minimum": 0}, "execution_authorized": {"const": false}
+      },
+      "allOf": [
+        {"if": {"properties": {"implementation_state": {"const": "verified_complete"}}}, "then": {"properties": {"acceptance_evidence": {"minItems": 1}, "independent_check_ref": {"minLength": 1}, "producer_ref": {"minLength": 1}, "independent_checker_ref": {"minLength": 1}, "validated_plan_revision_id": {"minLength": 1}, "predecessor_revision_id": {"minLength": 1}}}}
+      ]
+    }
+  }
+}

@@ -58,7 +58,7 @@ def test_platform_is_family_and_three_adjacent_domains_are_packs() -> None:
     assert "pack:observability-incident-resilience" not in family_ids
     assert "pack:developer-platform-devex" not in family_ids
     assert "pack:product-intelligence-experimentation" not in family_ids
-    assert len(portfolio["families"]) == 10
+    assert len(portfolio["families"]) == 12
 
 
 def test_all_new_skill_packs_validate_and_stay_model_neutral() -> None:
@@ -358,6 +358,45 @@ def test_validation_event_requires_independent_evidence(isolated_ledgers: tuple[
     event.pop("independent_evaluation_ref")
     with pytest.raises(ValueError, match="checker and evaluation"):
         product_os.append_workflow_run_event(ROOT, event)
+
+
+def test_material_workflow_run_requires_complete_control_plane_bindings() -> None:
+    common = {
+        "workflow_id": "workflow:production-readiness",
+        "workflow_revision_id": "workflow-revision:production-readiness:v1",
+        "run_id": "material-run",
+        "route_event_id": "route-event:material",
+        "event_state": "started",
+        "capability_ids": ["capability:platform-cloud-sre"],
+        "input_fingerprint": f"sha256:{'3' * 64}",
+        "execution_mode": "deterministic",
+        "producer_ref": "producer:workflow-worker",
+        "material_execution": True,
+    }
+    with pytest.raises(ValueError, match="control-plane bindings"):
+        product_os.build_workflow_run_event(**common)
+
+    event = product_os.build_workflow_run_event(
+        **common,
+        plan_id="plan:production-readiness",
+        plan_revision_id="plan-revision:production-readiness:v1",
+        entity_id="entity:production-readiness",
+        entity_revision_id="entity-revision:production-readiness:v1",
+        family_id="family:quality-verification-release",
+        role_id="role:independent-checker",
+        attempt_id="attempt:material-run:1",
+        runtime_route_decision_id="runtime-route:material-run:1",
+        harness_revision_id="harness-revision:release-gate:v1",
+        lease_id="lease:material-run:1",
+        effect_class="a2_bounded_reversible",
+        tool_time_ms=12,
+        evidence_refs=["evidence:material-run"],
+        validation_refs=["validation:pending"],
+        dependency_refs=["dependency:release-gate"],
+    )
+    assert event["plan_revision_id"] == "plan-revision:production-readiness:v1"
+    assert event["harness_revision_id"] == "harness-revision:release-gate:v1"
+    assert event["material_execution"] is True
 
 
 def test_synthetic_runs_are_excluded_and_unknown_cost_is_not_zero(

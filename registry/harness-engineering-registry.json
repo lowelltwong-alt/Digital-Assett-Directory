@@ -1,0 +1,14 @@
+{
+  "schema_version": "dad.harness_engineering_registry.v1",
+  "registry_id": "harness-engineering-registry",
+  "registry_version": "0.1.0",
+  "family_id": "family:harness-engineering-ops",
+  "status": "candidate_deny_execute",
+  "authority_boundary": "Harness records, routes, dry-run packets, lifecycle candidates, and research deltas are candidate evidence. No harness is activated, executed, promoted, superseded, or retired without its separate reviewed gate.",
+  "execution_authorized": false,
+  "roles": ["runtime_matcher", "portfolio_boss", "architect", "foreman", "builder", "independent_checker", "frontier_researcher", "lifecycle_sentinel"],
+  "lifecycle": ["discovered", "candidate", "shadow", "piloted", "reviewed_active", "watch", "stale", "superseded", "retired", "rejected"],
+  "activation_requirements": ["schema_valid", "package_valid", "positive_cases", "negative_cases", "failure_recovery_cases", "runtime_fit", "independent_review", "rollback", "bounded_pilot", "human_approval"],
+  "typed_command_policy": {"shell": false, "timeout_minimum_seconds": 1, "timeout_maximum_seconds": 120, "cwd_policies": ["target_repo", "harness_package"], "effect_classes": ["read_only", "local_build_artifact"], "external_mutation_allowed": false},
+  "research_policy": {"delta_only": true, "unchanged_model_tokens": 0, "weekly_pointer_limit": 20, "weekly_model_review_limit": 10, "maximum_cockpit_candidates": 3}
+}

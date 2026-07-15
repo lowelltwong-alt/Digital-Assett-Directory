@@ -1,0 +1,12 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://dad.local/schemas/entity-graph.schema.json",
+  "title": "DAD candidate semantic entity graph",
+  "type": "object",
+  "required": ["schema_version", "nodes", "edges", "candidate_only", "execution_authorized", "authority_boundary"],
+  "properties": {
+    "schema_version": {"const": "dad.entity_graph.v1"}, "graph_digest": {"type": "string"},
+    "nodes": {"type": "array", "items": {"type": "object"}}, "edges": {"type": "array", "items": {"type": "object"}},
+    "candidate_only": {"const": true}, "execution_authorized": {"const": false}, "authority_boundary": {"type": "string", "minLength": 1}
+  }
+}

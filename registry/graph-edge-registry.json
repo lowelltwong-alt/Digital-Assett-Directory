@@ -408,6 +408,42 @@
       "semantics": "Evidence shows two candidate contracts, authorities, dependencies, or recommendations cannot both be applied in the declared context without a human decision.",
       "allowed_bases": ["agent-family-health-v1", "reviewed-conflict-declaration"], "evidence_required": ["both object identities", "bounded conflict context", "supporting and counterevidence", "human decision owner"], "version": "0.1.0",
       "examples": ["family:security-privacy-supply-chain -> policy:public-release-with-private-rows"], "danger_if_wrong": "False conflicts can block compatible work, while missed context can turn a local disagreement into an incorrect universal prohibition.", "review_status": "candidate"
+    },
+    {
+      "edge_type": "contains", "edge_class": "join", "direction": "semantic parent -> child", "cardinality": "one-to-many", "semantics": "A reviewed semantic structure declares a bounded child without transferring governance authority.", "allowed_bases": ["durable-entity-relation-v1"], "evidence_required": ["both entity revisions", "reviewed structural evidence"], "version": "0.1.0", "examples": ["entity:software-engineering -> entity:frontend-pack"], "danger_if_wrong": "Semantic containment can be confused with sovereignty or source authority.", "review_status": "candidate"
+    },
+    {
+      "edge_type": "part_of", "edge_class": "join", "direction": "semantic child -> parent", "cardinality": "many-to-one", "semantics": "The inverse structural assertion of contains; it never changes project sovereignty.", "allowed_bases": ["durable-entity-relation-v1"], "evidence_required": ["both entity revisions", "reviewed structural evidence"], "version": "0.1.0", "examples": ["entity:frontend-pack -> entity:software-engineering"], "danger_if_wrong": "A child can be routed under the wrong plan or authority.", "review_status": "candidate"
+    },
+    {
+      "edge_type": "specializes", "edge_class": "inference", "direction": "specialized entity -> broader entity", "cardinality": "many-to-many", "semantics": "A candidate entity narrows the capabilities or scope of another entity.", "allowed_bases": ["deterministic-semantic-card-v1"], "evidence_required": ["semantic-card comparison", "counterevidence"], "version": "0.1.0", "examples": ["entity:full-stack-engineering -> entity:software-engineering"], "danger_if_wrong": "Distinct peers can be collapsed into an incorrect hierarchy.", "review_status": "candidate"
+    },
+    {
+      "edge_type": "peer_of", "edge_class": "inference", "direction": "entity -> entity (symmetric pair stored once)", "cardinality": "many-to-many", "semantics": "Two entities have related outcomes without supported identity or hierarchy equivalence.", "allowed_bases": ["deterministic-semantic-card-v1"], "evidence_required": ["semantic-card comparison", "counterevidence"], "version": "0.1.0", "examples": ["entity:mobile-engineering -> entity:web-engineering"], "danger_if_wrong": "Unrelated work can create noisy routing candidates.", "review_status": "candidate"
+    },
+    {
+      "edge_type": "plans_for", "edge_class": "join", "direction": "plan -> durable entity", "cardinality": "many-to-one", "semantics": "An immutable plan revision names the concept or capability it intends to advance.", "allowed_bases": ["durable-plan-revision-v1"], "evidence_required": ["plan revision", "accepted entity binding"], "version": "0.1.0", "examples": ["plan:capability-os -> entity:capability-os"], "danger_if_wrong": "Execution evidence can attach to the wrong durable concept.", "review_status": "candidate"
+    },
+    {
+      "edge_type": "advances", "edge_class": "join", "direction": "workstream -> plan", "cardinality": "many-to-many", "semantics": "A reviewed workstream binding advances a named immutable plan revision.", "allowed_bases": ["reviewed-workstream-plan-binding-v1"], "evidence_required": ["accepted binding", "plan revision"], "version": "0.1.0", "examples": ["workstream:recovery -> plan:capability-os"], "danger_if_wrong": "Portfolio attention can be assigned to unrelated work.", "review_status": "candidate"
+    },
+    {
+      "edge_type": "supports", "edge_class": "join", "direction": "knowledge or asset entity -> target entity", "cardinality": "many-to-many", "semantics": "A declared library or asset provides bounded evidence or implementation support.", "allowed_bases": ["durable-entity-relation-v1"], "evidence_required": ["source and target revision", "support boundary"], "version": "0.1.0", "examples": ["entity:ml-library -> entity:ml-agent-family"], "danger_if_wrong": "Presence of a library can be mistaken for complete capability coverage.", "review_status": "candidate"
+    },
+    {
+      "edge_type": "continues", "edge_class": "join", "direction": "newer plan or build -> predecessor", "cardinality": "many-to-one", "semantics": "A declared lineage record continues work without claiming identity equivalence or completion.", "allowed_bases": ["durable-plan-revision-v1", "reviewed-build-lineage-v1"], "evidence_required": ["predecessor identity", "lineage evidence"], "version": "0.1.0", "examples": ["build:v2 -> build:v1"], "danger_if_wrong": "Unrelated work can inherit stale scope or acceptance claims.", "review_status": "candidate"
+    },
+    {
+      "edge_type": "variant_of", "edge_class": "inference", "direction": "entity -> related entity", "cardinality": "many-to-many", "semantics": "A bounded scope, audience, or implementation difference creates a candidate variant relationship.", "allowed_bases": ["deterministic-semantic-card-v1"], "evidence_required": ["similarity evidence", "difference evidence"], "version": "0.1.0", "examples": ["entity:local-runtime-harness -> entity:hosted-runtime-harness"], "danger_if_wrong": "Variants can be silently treated as interchangeable.", "review_status": "candidate"
+    },
+    {
+      "edge_type": "possible_duplicate_of", "edge_class": "inference", "direction": "entity -> entity (symmetric pair stored once)", "cardinality": "many-to-many", "semantics": "Strong retrieval similarity requires a human identity disposition and preserves both identities.", "allowed_bases": ["deterministic-semantic-card-v1"], "evidence_required": ["top-five retrieval evidence", "counterevidence", "privacy partition match"], "version": "0.1.0", "examples": ["entity:fullstack-family -> entity:full-stack-family"], "danger_if_wrong": "Similarity can erase distinct plans or transfer authority.", "review_status": "candidate"
+    },
+    {
+      "edge_type": "merged_into", "edge_class": "join", "direction": "retired identity -> surviving identity", "cardinality": "many-to-one", "semantics": "An explicit human identity decision preserves the retired ID and redirects future exact lookup.", "allowed_bases": ["human-identity-decision-v1"], "evidence_required": ["human decision id", "both identity revisions", "redirect record"], "version": "0.1.0", "examples": ["entity:old-name -> entity:stable-name"], "danger_if_wrong": "False merges can hide unique work and corrupt lineage.", "review_status": "candidate"
+    },
+    {
+      "edge_type": "split_into", "edge_class": "join", "direction": "retired overloaded identity -> successor identities", "cardinality": "one-to-many", "semantics": "An explicit human decision preserves an overloaded historical identity while creating distinct successors.", "allowed_bases": ["human-identity-decision-v1"], "evidence_required": ["human decision id", "split rationale", "successor identities"], "version": "0.1.0", "examples": ["entity:engineering -> entity:product-engineering"], "danger_if_wrong": "Historical evidence can be attributed to the wrong successor.", "review_status": "candidate"
     }
   ]
 }

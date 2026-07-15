@@ -12,11 +12,16 @@ source authority.
 ## Route the request
 
 1. Read `references/PROJECT_MANAGEMENT_CONTRACT.md`.
+   For reusable families, libraries, products, architectures, or multi-session
+   builds, also read `references/UNFINISHED_INTENT_RECOVERY_CONTRACT.md`.
 2. Identify the mode: `capture`, `shape`, `plan`, `execute`, `recover`,
    `research`, `diagnose-artifact`, `validate-deliver`, or `portfolio-review`.
 3. Inventory existing evidence before creating a project. Search related ideas,
-   projects, workstreams, repositories, branches, worktrees, tasks, and prior
-   decisions within an explicit coverage envelope.
+   plans, durable entities, agent families, knowledge libraries, projects,
+   workstreams, repositories, branches, worktrees, tasks, and prior decisions
+   within an explicit coverage envelope. Capture a compact non-authorizing
+   intent seed before material planning and the sanitized immutable plan when
+   planning finishes.
 4. Select one phase owner from `subagents.yaml`. Add one independent specialist
    only for a distinct dependency, research, risk, or validation surface.
 5. Build or refresh one project control packet. Keep inferred relationships,
@@ -49,6 +54,9 @@ It is not an enabled automation or a default requirement for every workstream.
 
 - Ideas are cheap captures. Projects are intentional containers. Workstreams are
   bounded outcomes. Execution leases are scarce permissions. Tasks are actions.
+- Intent checkpoints and immutable plans are recovery evidence only. They never
+  create a project, workstream, priority, reminder, dependency, lease, or
+  authority; never store raw conversations, prompts, secrets, or source blobs.
 - Search related work before recommending a project, branch, or worktree.
   Similarity proposes a relationship; it never merges identities.
 - Use the attention kernel's durable states. Keep Today at three or fewer and
@@ -79,3 +87,5 @@ Return:
 6. risk, premortem, quiet option, human gates, and escalation date;
 7. delegated roles, checks, disagreements, and attempt-rating status;
 8. the smallest reversible next step.
+9. exact plan/entity revision, related-work disposition, recovery snapshot, and
+   unfinished-work remainder when the request is a material multi-session build.

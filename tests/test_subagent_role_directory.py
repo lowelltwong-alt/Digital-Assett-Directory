@@ -53,27 +53,15 @@ def _hub(tmp_path: Path, *, evaluation_support: bool = False) -> Path:
         target = hub / relative
         target.parent.mkdir(parents=True, exist_ok=True)
         shutil.copy2(ROOT / relative, target)
-    for skill_name in (
-        "personal-project-management-ops",
-        "dad-trigger-pattern-radar",
-        "subagent-continuous-improvement",
-        "dad-digital-asset-radar",
-        "dad-manifest-graph-engineering",
-        "ml-workflow-agent-family",
-        "full-stack-engineering-agent-family",
-        "quality-verification-release-agent-family",
-        "security-privacy-supply-chain-agent-family",
-        "knowledge-research-provenance-agent-family",
-        "data-schema-knowledge-graph-agent-family",
-        "integration-mcp-automation-agent-family",
-        "product-ux-accessibility-agent-family",
-        "legal-evidence-governance-overlay",
-        "technical-product-company-os",
-        "platform-cloud-sre-agent-family",
-        "observability-resilience-specialist-pack",
-        "developer-platform-devex-specialist-pack",
-        "product-intelligence-experimentation-pack",
-    ):
+    library = json.loads((ROOT / "registry/agent-skill-library.json").read_text(encoding="utf-8"))
+    skill_names = sorted(
+        Path(str(row["path"])).name
+        for row in library["skills"]
+        if row.get("subagent_pack")
+        and row.get("status") not in {"retired", "replaced"}
+        and row.get("review_status") != "rejected"
+    )
+    for skill_name in skill_names:
         source = ROOT / "assets/agent-skills" / skill_name
         target = hub / "assets/agent-skills" / skill_name
         target.parent.mkdir(parents=True, exist_ok=True)
@@ -99,28 +87,16 @@ def test_catalog_builds_without_attempts_and_keeps_grades_insufficient(tmp_path:
 
     projection = build_role_directory_projection(hub)
 
-    assert projection["role_count"] == 126
-    assert {row["skill_id"] for row in projection["roles"]} == {
-        "skill:personal-project-management-ops",
-        "skill:dad-trigger-pattern-radar",
-        "skill:subagent-continuous-improvement",
-        "skill:dad-digital-asset-radar",
-        "skill:dad-manifest-graph-engineering",
-        "skill:ml-workflow-agent-family",
-        "skill:full-stack-engineering-agent-family",
-        "skill:quality-verification-release-agent-family",
-        "skill:security-privacy-supply-chain-agent-family",
-        "skill:knowledge-research-provenance-agent-family",
-        "skill:data-schema-knowledge-graph-agent-family",
-        "skill:integration-mcp-automation-agent-family",
-        "skill:product-ux-accessibility-agent-family",
-        "skill:legal-evidence-governance-overlay",
-        "skill:technical-product-company-os",
-        "skill:platform-cloud-sre-agent-family",
-        "skill:observability-resilience-specialist-pack",
-        "skill:developer-platform-devex-specialist-pack",
-        "skill:product-intelligence-experimentation-pack",
+    assert projection["role_count"] == 168
+    library = json.loads((ROOT / "registry/agent-skill-library.json").read_text(encoding="utf-8"))
+    expected_skills = {
+        row["skill_id"]
+        for row in library["skills"]
+        if row.get("subagent_pack")
+        and row.get("status") not in {"retired", "replaced"}
+        and row.get("review_status") != "rejected"
     }
+    assert {row["skill_id"] for row in projection["roles"]} == expected_skills
     assert all(row["evaluation_status"] == "insufficient_evidence" for row in projection["roles"])
     assert all(row["evaluated_revisions"] == [] for row in projection["roles"])
     assert all("profile_score" not in row for row in projection["roles"])
@@ -134,10 +110,12 @@ def test_search_is_read_only_and_uses_categorical_match_contract(tmp_path: Path)
 
     after = sorted(path.relative_to(hub).as_posix() for path in hub.rglob("*"))
     assert before == after
-    assert result["coverage"]["returned_role_count"] == 1
-    match = result["matches"][0]
-    assert match["role_id"] == "neglected-worktree-triage-manager"
-    assert match["match_basis"] == "all_query_tokens"
+    assert result["coverage"]["returned_role_count"] == 2
+    assert {row["role_id"] for row in result["matches"]} == {
+        "neglected-worktree-triage-manager",
+        "partial-build-diagnostician",
+    }
+    assert {row["match_basis"] for row in result["matches"]} == {"all_query_tokens"}
     assert "quality_rank" not in json.dumps(result)
     assert "recommended" not in json.dumps(result).casefold()
 
@@ -211,7 +189,11 @@ def test_evaluation_link_requires_exact_declared_revision_and_identity(tmp_path:
     hub = _hub(tmp_path, evaluation_support=True)
     personal_path = hub / "assets/agent-skills/personal-project-management-ops/subagents.yaml"
     personal = _load_yaml(personal_path)
-    role = personal["roles"][0]
+    role = next(
+        row
+        for row in personal["roles"]
+        if row["role_id"] == "workstream-intake-identity-steward"
+    )
     role["profile_role_id"] = "terra_integration_specialist"
     role["evaluated_role_revision_ids"] = [
         "dad:role-profile-revision:terra-integration-specialist:v1"
