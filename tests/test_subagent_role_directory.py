@@ -87,14 +87,23 @@ def test_catalog_builds_without_attempts_and_keeps_grades_insufficient(tmp_path:
 
     projection = build_role_directory_projection(hub)
 
-    assert projection["role_count"] == 182
     library = json.loads((ROOT / "registry/agent-skill-library.json").read_text(encoding="utf-8"))
-    expected_skills = {
-        row["skill_id"]
+    registered_packs = [
+        row
         for row in library["skills"]
         if row.get("subagent_pack")
         and row.get("status") not in {"retired", "replaced"}
         and row.get("review_status") != "rejected"
+    ]
+    expected_role_count = sum(
+        len(_load_yaml(ROOT / row["subagent_pack"])["roles"])
+        for row in registered_packs
+    )
+    assert projection["role_count"] == expected_role_count
+    assert projection["role_count"] > 182
+    expected_skills = {
+        row["skill_id"]
+        for row in registered_packs
     }
     assert {row["skill_id"] for row in projection["roles"]} == expected_skills
     assert all(row["evaluation_status"] == "insufficient_evidence" for row in projection["roles"])

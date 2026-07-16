@@ -24,6 +24,8 @@ config/sources.local.yaml
 !.digital-asset/context-map.json
 !.digital-asset/governance-map.yaml
 !.digital-asset/data-map.yaml
+!.digital-asset/portfolio/
+!.digital-asset/portfolio/missions.json
 !.digital-asset/skills/
 !.digital-asset/skills/checkout.json
 !.digital-asset/mail/

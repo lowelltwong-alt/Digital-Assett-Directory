@@ -362,6 +362,11 @@ from .portfolio_review import (
     build_portfolio_review,
     write_portfolio_review_outputs,
 )
+from .portfolio_capacity_review import (
+    build_portfolio_capacity_review,
+    load_repo_mission_coverage,
+    write_portfolio_capacity_review_output,
+)
 from .portfolio_shaping import (
     ShapingSettings,
     build_portfolio_shaping,
@@ -11157,6 +11162,93 @@ def portfolio_os_review(
             "generated_at": outputs["generated_at"],
         }
     )
+
+
+@os_app.command("capacity-review")
+def portfolio_os_capacity_review(
+    root: list[Path] = typer.Option(
+        [],
+        "--root",
+        help=(
+            "Explicit repository root whose source-owned mission contract may be read. "
+            "Repeat for multiple roots; configured local roots plus DAD are used by default."
+        ),
+    ),
+    full: bool = typer.Option(False, "--full", help="Print the full JSON-only shadow packet."),
+    config: Optional[Path] = typer.Option(None),
+    hub: Optional[Path] = typer.Option(None),
+) -> None:
+    """Publish a local read-only weekly capacity shadow packet without agent dispatch."""
+
+    cfg = _cfg(config, hub)
+    configured_roots = (
+        [Path(value).expanduser().resolve() for value in root]
+        if root
+        else [
+            source.path.expanduser().resolve()
+            for source in cfg.local_sources
+            if source.enabled
+        ]
+    )
+    configured_roots.append(cfg.repo_root.resolve())
+    reports = data_path(cfg.repo_root, "central_reports")
+    portfolio_reports = reports / "portfolio_os"
+    prior_packet = _read_review_json(portfolio_reports / "capacity_review.json")
+    health_inputs = _portfolio_review_health_inputs(cfg)
+    roadmap_payload = health_inputs.get("roadmap")
+    if isinstance(roadmap_payload, dict):
+        roadmap_payload = {
+            **roadmap_payload,
+            "schema_version": "dad.roadmap.status.adapter.v1",
+            "status": roadmap_payload.get("status") or "observed",
+        }
+    source_payloads: dict[str, Any] = {
+        "portfolio_review": _read_review_json(portfolio_reports / "review.json"),
+        "portfolio_attention": _read_review_json(reports / "portfolio_attention.json"),
+        "subagent_role_directory": _read_review_json(
+            data_path(cfg.repo_root, "agents") / "subagent-role-directory.json"
+        ),
+        "agent_skill_registry": _read_review_json(
+            cfg.repo_root / "registry" / "agent-skill-library.json"
+        ),
+        "asset_registry": _read_review_json(
+            cfg.repo_root / "assets" / "asset-registry.json"
+        ),
+        "coding_asset_registry": _read_review_json(
+            cfg.repo_root / "registry" / "coding-asset-registry.json"
+        ),
+        "subagent_evaluation_profiles": _read_review_json(
+            cfg.repo_root / "registry" / "subagent-evaluation-profile-registry.json"
+        ),
+        "learning_loop_status": _read_review_json(reports / "learning_loop_status.json"),
+        "iteration_measurements": _read_review_json(reports / "iteration_measurements.json"),
+        "daemon": health_inputs.get("daemon"),
+        "scheduled_tasks": _read_review_json(reports / "scheduled_tasks.json"),
+        "research_freshness": _read_review_json(reports / "research_freshness.json"),
+        "roadmap": roadmap_payload,
+    }
+    try:
+        missions = load_repo_mission_coverage(
+            configured_roots,
+            schema_root=cfg.repo_root,
+        )
+        packet = build_portfolio_capacity_review(
+            source_payloads=source_payloads,
+            mission_coverage=missions,
+            prior_packet=prior_packet,
+        )
+        outputs = write_portfolio_capacity_review_output(
+            cfg.repo_root,
+            packet,
+            schema_root=cfg.repo_root,
+        )
+    except Exception as exc:
+        console.print(f"Cannot publish portfolio capacity review: {exc}")
+        raise typer.Exit(2) from exc
+    if full:
+        console.print_json(data=packet)
+        return
+    console.print_json(data=outputs)
 
 
 @os_app.command("cockpit")

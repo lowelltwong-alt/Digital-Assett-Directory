@@ -1,0 +1,24 @@
+schema_version: dad_portfolio_capacity_routines.v0_1
+status: candidate_specs_not_scheduled
+authority_boundary: >
+  This file specifies a manual shadow routine only. Activation, cadence,
+  execution environment, delivery surface, notifications, and every mutation
+  require explicit human approval.
+routines:
+  - routine_id: weekly-portfolio-capacity-review
+    cadence: weekly_when_explicitly_enabled
+    mode: manual_shadow
+    semantic_agent_fanout: 0
+    fanout_status: deterministic_v0_not_dispatched
+    agent_assisted_extension: manual_frozen_input_only
+    deterministic_first: true
+    skip_when: material_fingerprint_unchanged_and_no_wake_condition_fired
+    candidate_worker_roles: [neglected-worktree-triage-manager, dependency-critical-frontier-analyst, research-project-workflow-steward, delivery-closeout-resumption-steward, evaluation-integrity-auditor, improvement-layer-router]
+    candidate_audit_role: capability-maturity-and-cycle-auditor
+    candidate_foreman_role: portfolio-capacity-foreman
+    candidate_independent_checker_role: independent-capacity-review-checker
+    threshold_only_boss_role: sol-automation-workflow-architect
+    frontier_review: fable_manual_only
+    maximum_human_asks: 3
+    overflow_policy: complete_and_visible
+    side_effects: prohibited

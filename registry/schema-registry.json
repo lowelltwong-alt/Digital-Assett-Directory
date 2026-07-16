@@ -30,6 +30,8 @@
     "portfolio_workstream_shaping": "schemas/portfolio-workstream-shaping.schema.json",
     "portfolio_shaping_decision_event": "schemas/portfolio-shaping-decision-event.schema.json",
     "portfolio_review_packet": "schemas/portfolio-review-packet.schema.json",
+    "portfolio_capacity_review": "schemas/portfolio-capacity-review.schema.json",
+    "repo_missions": "schemas/repo-missions.schema.json",
     "portfolio_execution_control_event": "schemas/portfolio-execution-control-event.schema.json",
     "portfolio_approval_attestation": "schemas/portfolio-approval-attestation.schema.json",
     "portfolio_approval_trust_registry": "schemas/portfolio-approval-trust-registry.schema.json",

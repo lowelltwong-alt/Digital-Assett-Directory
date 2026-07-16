@@ -67,6 +67,7 @@ def test_current_portability_registry_is_valid_and_baselined() -> None:
     assert result["inventory"]["surfaces"]["dad_skill_registry"]["baseline_count"] == 38
     assert set(result["inventory"]["new_identity_ids"]) == {
         "personal-skill:portable-capability-governance",
+        "skill:personal-portfolio-capacity-review",
         "skill:portable-capability-governance",
     }
 

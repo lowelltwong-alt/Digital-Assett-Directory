@@ -1,0 +1,59 @@
+schema_version: dad_subagent_pack.v0_1
+pack_id: dad:subagent-pack:personal-portfolio-capacity-review
+version: 0.1.0
+status: candidate
+ai_agnostic: true
+methodology_ref: registry/subagent-evaluation-methodology.json#0.1.0
+authority_boundary: >
+  Roles produce read-only candidate capacity evidence and a shadow review
+  packet. They cannot mutate repositories or task systems, control daemons,
+  schedule routines, notify people, change instructions, promote themselves,
+  or approve their own material output.
+routing_policy:
+  mode: manual_shadow
+  max_delegation_depth: 1
+  max_new_capacity_roles: 3
+  max_human_asks: 3
+  numeric_or_composite_score: prohibited
+  c3_payload: prohibited
+  semantic_agent_fanout: 0
+  fanout_status: deterministic_v0_not_dispatched
+  agent_assisted_extension: manual_frozen_input_only
+  deterministic_first: [source_coverage, git_and_worktree_state, roadmap_and_acceptance_state, registry_and_role_revision_state, routine_and_daemon_status, measured_iteration_evidence]
+  composed_worker_roles: [neglected-worktree-triage-manager, dependency-critical-frontier-analyst, research-project-workflow-steward, delivery-closeout-resumption-steward, evaluation-integrity-auditor, improvement-layer-router, luna-trigger-observer, portfolio-scrum-board-curator]
+  foreman: portfolio-capacity-foreman
+  independent_checker: independent-capacity-review-checker
+  boss_threshold_only: sol-automation-workflow-architect
+  frontier_review: fable_manual_only_after_unresolved_checker_and_sol_disagreement
+  schedule_status: candidate_specs_not_scheduled
+roles:
+  - role_id: portfolio-capacity-foreman
+    profile_role_id: portfolio_capacity_foreman
+    evaluated_role_revision_ids: []
+    capability_ids: [portfolio_attention_curatorship, dependency_frontier_analysis, escalation_judgment, governance_authority_safety]
+    search_terms: [portfolio capacity, bottleneck synthesis, human decision queue, categorical precedence, weekly shadow review]
+    effort: medium_then_high_only_on_cross_domain_ambiguity
+    mission: Integrate bounded deterministic and worker evidence into one shadow packet, apply noncompensatory categorical precedence, escalate at most three human asks, and reveal the complete overflow without taking action.
+    required_input: [configured_coverage_ids, repo_missions, current_source_evidence, worker_packets, authority_boundary, capacity_review_schema]
+    required_output: [source_and_mission_coverage, bottlenecks, human_asks_max_three, complete_overflow, suppressions_and_wake_conditions, disagreements, routing_lineage, unknowns, material_fingerprint]
+    stop_conditions: [c3_payload_required, coverage_or_mission_authority_unstated, numeric_or_composite_score_requested, overflow_would_be_hidden, mutation_or_scheduling_requested]
+  - role_id: capability-maturity-and-cycle-auditor
+    profile_role_id: capability_maturity_and_cycle_auditor
+    evaluated_role_revision_ids: []
+    capability_ids: [contract_and_roadmap_mapping, evaluator_integrity_audit, improvement_layer_attribution, root_cause_analysis]
+    search_terms: [planned only, half built library, skill maturity, subagent maturity, learning loop gap, iteration cycle bottleneck]
+    effort: medium_then_high_on_measured_systemic_issue
+    mission: Distinguish declared, planned, implemented, validated, evaluated, and reviewed capability evidence, then diagnose true iteration-cycle constraints from measured or repeatable observations.
+    required_input: [mission_and_roadmap_evidence, implementation_and_validation_refs, role_revision_and_evaluation_refs, learning_receipts, measured_iteration_observations]
+    required_output: [categorical_capability_maturity, missing_next_proofs, iteration_evidence, competing_layer_hypotheses, falsifiers, bounded_improvement_options, escalation_decision]
+    stop_conditions: [plan_or_folder_used_as_completion_proof, unmeasured_optimization_claim, cross_domain_score_requested, private_payload_required, instruction_change_requested_without_human_review]
+  - role_id: independent-capacity-review-checker
+    profile_role_id: independent_capacity_review_checker
+    evaluated_role_revision_ids: []
+    capability_ids: [evaluator_integrity_audit, validation_design, implementation_review, governance_authority_safety]
+    search_terms: [capacity review checker, blind review, coverage audit, counterevidence, privacy and authority gate]
+    effort: medium_or_high_by_consequence
+    mission: Blindly check source and mission coverage, categorical precedence, counterevidence, privacy, overflow completeness, and escalation fit before accepting, revising, or blocking the shadow packet.
+    required_input: [source_evidence_without_foreman_conclusions, schemas, repo_missions, authority_boundary, role_and_attempt_lineage]
+    required_output: [blindness_attestation, lineage_audit, coverage_gaps, precedence_audit, counterevidence, privacy_and_authority_status, accept_revise_or_block, required_corrections]
+    stop_conditions: [foreman_conclusions_provided_before_verdict, author_checker_overlap, lineage_incomplete, c3_payload_present, independent_source_evidence_unavailable]

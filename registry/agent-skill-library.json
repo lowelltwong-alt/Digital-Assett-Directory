@@ -1661,6 +1661,66 @@
       "next_review_due_at": "2026-08-15"
     },
     {
+      "skill_id": "skill:personal-portfolio-capacity-review",
+      "name": "Personal Portfolio Capacity Review",
+      "version": "0.1.0",
+      "status": "candidate",
+      "skill_format": "generic_agent_skill",
+      "path": "assets/agent-skills/personal-portfolio-capacity-review",
+      "entrypoint": "assets/agent-skills/personal-portfolio-capacity-review/SKILL.md",
+      "subagent_pack": "assets/agent-skills/personal-portfolio-capacity-review/subagents.yaml",
+      "description": "Runs a manual, read-only portfolio capacity review over explicit metadata coverage, composes existing worker roles, limits human asks to three, reveals overflow, and preserves blind independent checking and human-gated escalation.",
+      "trigger_examples": [
+        "Run the weekly shadow review for human decision waits, neglected work, partial buildouts, capability maturity gaps, learning loops, iteration drag, routine health, and architecture drift.",
+        "Find the highest-leverage portfolio bottlenecks and return no more than three human decisions with safe defaults and complete overflow.",
+        "Audit whether libraries, skills, subagent families, routines, or daemons are declared, implemented, validated, evaluated, and reviewed."
+      ],
+      "does_not_apply_when": [
+        "Coverage or source authority cannot be established without C3 payloads or private source content.",
+        "The request is to mutate repositories, control daemons, schedule the routine, notify people, or change agent instructions without the separate human approval.",
+        "The task is a single bounded decision with no portfolio-capacity or cross-workstream review need."
+      ],
+      "capabilities": [
+        "portfolio_attention_curatorship",
+        "dependency_frontier_analysis",
+        "contract_and_roadmap_mapping",
+        "evaluator_integrity_audit",
+        "improvement_layer_attribution",
+        "escalation_judgment",
+        "governance_authority_safety"
+      ],
+      "checkout_modes": ["pointer", "wrapper"],
+      "update_policy": "manual_review",
+      "lifecycle": {"supersedes": [], "superseded_by": [], "retirement_reason": "", "replacement_skill_id": "", "change_notice_templates": ["templates/mail/skill-update-available.mail.template.json", "templates/mail/skill-retirement-notice.mail.template.json"]},
+      "dependencies": [
+        "assets/agent-skills/personal-portfolio-capacity-review/subagents.yaml",
+        "assets/agent-skills/personal-portfolio-capacity-review/routines.yaml",
+        "assets/agent-skills/personal-portfolio-capacity-review/references/PORTFOLIO_CAPACITY_REVIEW_CONTRACT.md",
+        "assets/agent-skills/dad-trigger-pattern-radar",
+        "assets/agent-skills/personal-project-management-ops",
+        "assets/agent-skills/subagent-continuous-improvement",
+        "assets/agent-skills/dad-iteration-optimizer",
+        "schemas/portfolio-capacity-review.schema.json",
+        "schemas/repo-missions.schema.json",
+        ".digital-asset/portfolio/missions.json",
+        "registry/subagent-evaluation-methodology.json",
+        "registry/subagent-capability-registry.json"
+      ],
+      "source_evidence": [
+        "assets/agent-skills/personal-portfolio-capacity-review/SKILL.md",
+        "assets/agent-skills/personal-portfolio-capacity-review/subagents.yaml",
+        "assets/agent-skills/personal-portfolio-capacity-review/routines.yaml",
+        "assets/agent-skills/personal-portfolio-capacity-review/references/PORTFOLIO_CAPACITY_REVIEW_CONTRACT.md",
+        "schemas/portfolio-capacity-review.schema.json",
+        "schemas/repo-missions.schema.json",
+        ".digital-asset/portfolio/missions.json"
+      ],
+      "authority_boundary": "The skill emits read-only candidate evidence and recommendations only. Source repositories retain mission and canon authority; humans retain scheduling, notification, execution, promotion, instruction-change, and frontier-escalation authority.",
+      "review_status": "candidate",
+      "last_reviewed_at": "2026-07-15",
+      "next_review_due_at": "2026-08-15"
+    },
+    {
       "skill_id": "skill:portable-capability-governance",
       "name": "Portable Capability Governance",
       "version": "0.1.0",
