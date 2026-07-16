@@ -104,8 +104,26 @@ def _python_symbol(path: Path, symbol: str) -> Any:
     for node in tree.body:
         if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef)):
             if node.name == symbol:
-                return ast.dump(node, annotate_fields=True, include_attributes=False)
+                return _stable_ast_payload(node)
     raise MCPDependencyMapError("python_symbol_not_found")
+
+
+def _stable_ast_payload(node: ast.AST) -> Any:
+    """Serialize an AST without interpreter-version-only optional fields."""
+
+    fields: list[tuple[str, Any]] = []
+    for name, value in ast.iter_fields(node):
+        if name == "type_params":
+            continue
+        if isinstance(value, ast.AST):
+            value = _stable_ast_payload(value)
+        elif isinstance(value, list):
+            value = [
+                _stable_ast_payload(item) if isinstance(item, ast.AST) else item
+                for item in value
+            ]
+        fields.append((name, value))
+    return (type(node).__name__, fields)
 
 
 def _python_symbols(path: Path, symbols: Iterable[str]) -> list[Any]:
@@ -114,7 +132,8 @@ def _python_symbols(path: Path, symbols: Iterable[str]) -> list[Any]:
 
 def _tree_payload(path: Path) -> list[tuple[str, str]]:
     rows: list[tuple[str, str]] = []
-    for child in sorted(path.rglob("*")):
+    files = [child for child in path.rglob("*") if child.is_file()]
+    for child in sorted(files, key=lambda item: item.relative_to(path).as_posix()):
         if not child.is_file() or "__pycache__" in child.parts or child.suffix == ".pyc":
             continue
         rows.append((child.relative_to(path).as_posix(), _sha256(_stable_file_bytes(child))))

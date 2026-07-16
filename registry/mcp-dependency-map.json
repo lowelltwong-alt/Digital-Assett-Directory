@@ -49,7 +49,7 @@
       "label": "graph-stdio CLI entrypoint",
       "artifact_kind": "file",
       "change_contract": "The hardcoded module and CLI command coupling must stay identical to all host adapters.",
-      "fingerprint": {"kind": "python_symbol_sha256", "path": "src/digital_asset_directory/cli.py", "symbol": "mcp_graph_stdio", "sha256": "sha256:0ec570b70954a43e2825a51babc539d46ec1ced4d77819a73ce7821fc02d8d0e"}
+      "fingerprint": {"kind": "python_symbol_sha256", "path": "src/digital_asset_directory/cli.py", "symbol": "mcp_graph_stdio", "sha256": "sha256:2eb0e2831a599b1fb8508973d8923bf64928ae1209d2d7fa587b6d0acd71b35b"}
     },
     {
       "node_id": "mcp.node.implementation.server",
@@ -65,7 +65,7 @@
       "label": "Dependency freshness and impact engine",
       "artifact_kind": "file",
       "change_contract": "Any edit requires mutation, refusal, privacy, and deterministic replay tests.",
-      "fingerprint": {"kind": "exact_sha256", "path": "src/digital_asset_directory/mcp_dependency_map.py", "sha256": "sha256:dcf7f27b0152ac9546024824c5f5238aacfde267a252ec8a26d87d713caa43ab"}
+      "fingerprint": {"kind": "exact_sha256", "path": "src/digital_asset_directory/mcp_dependency_map.py", "sha256": "sha256:1656e63f813f66686ca83ffd1273a14d13f4e57681d0ee757b6e64ddb6ec551e"}
     },
     {
       "node_id": "mcp.node.implementation.compatibility-facade",
@@ -81,7 +81,7 @@
       "label": "Graph surface read backend",
       "artifact_kind": "file",
       "change_contract": "Only the MCP-consumed graph-surface symbols are fingerprinted; unrelated module edits do not create false staleness.",
-      "fingerprint": {"kind": "python_symbols_sha256", "path": "src/digital_asset_directory/graph_surfaces.py", "symbols": ["graph_surface_freshness", "graph_surface_status", "load_graph_surface_registry", "resolve_graph_surface_path"], "sha256": "sha256:6143f1edf14f02f21b22cf837a9d41ceaa6aa6aa68befe08269c3f5eeb33a017"}
+      "fingerprint": {"kind": "python_symbols_sha256", "path": "src/digital_asset_directory/graph_surfaces.py", "symbols": ["graph_surface_freshness", "graph_surface_status", "load_graph_surface_registry", "resolve_graph_surface_path"], "sha256": "sha256:2d37a9b429544c00ed7173895bb97cada93aa6e2b0c5ec2748c2461de7b4c867"}
     },
     {
       "node_id": "mcp.node.backend.operational-status",
@@ -96,7 +96,7 @@
       "label": "Canonical JSON serialization",
       "artifact_kind": "file",
       "change_contract": "Only json_dumps semantics affect this server dependency.",
-      "fingerprint": {"kind": "python_symbol_sha256", "path": "src/digital_asset_directory/utils.py", "symbol": "json_dumps", "sha256": "sha256:2e219473bd2da484d5cd63504fde3a76c35090dda13567c9643f6cdf2c00ed60"}
+      "fingerprint": {"kind": "python_symbol_sha256", "path": "src/digital_asset_directory/utils.py", "symbol": "json_dumps", "sha256": "sha256:8cde579c6c209bf2938bc21b83d1c16a65b933c8ef7790763c4b82527ce90deb"}
     },
     {
       "node_id": "mcp.node.runtime-data.local-hub",
@@ -158,7 +158,7 @@
       "label": "Vendor-neutral reusable host adapter bundle",
       "artifact_kind": "directory",
       "change_contract": "Every template, contract, evidence schema, and validator must normalize to one server and tool contract.",
-      "fingerprint": {"kind": "tree_sha256", "path": "assets/mcp/dad-local-readonly", "sha256": "sha256:1f011ccac638c3cfcc72a6ec17cb15a12d4e00b37bf83907b3fcc674b1e7cfb2"}
+      "fingerprint": {"kind": "tree_sha256", "path": "assets/mcp/dad-local-readonly", "sha256": "sha256:553fe23fca9b29b49725b4b80854c20674f1eca1ba4fbe5b839f95f88ae84b35"}
     },
     {
       "node_id": "mcp.node.host-adapter.installed-evidence",
@@ -214,7 +214,7 @@
       "label": "Repository-wide MCP freshness gate",
       "artifact_kind": "file",
       "change_contract": "The shared validator is tracked by its one MCP freshness integration line.",
-      "fingerprint": {"kind": "python_symbol_sha256", "path": "src/digital_asset_directory/validation.py", "symbol": "validate_repo", "sha256": "sha256:5d2e7aff8d68a5018d57be023a0a3f69971d39d87c3e4491a3acf9d34fa8fe7d"}
+      "fingerprint": {"kind": "python_symbol_sha256", "path": "src/digital_asset_directory/validation.py", "symbol": "validate_repo", "sha256": "sha256:701eb2fad21bdd98054bacf2c817b51709b63940fe517077c9b671216e6acb59"}
     },
     {
       "node_id": "mcp.node.security-authority.readonly-boundary",
