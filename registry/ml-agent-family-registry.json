@@ -1,7 +1,7 @@
 {
-  "schema_version": "0.1.0",
+  "schema_version": "0.2.0",
   "registry_id": "ml-agent-family-registry",
-  "registry_version": "0.1.0",
+  "registry_version": "0.2.0",
   "status": "candidate",
   "ai_agnostic": true,
   "authority_boundary": "This registry describes candidate ML workflows, dependencies, lifecycle decisions, and dated runtime observations. It cannot authorize data access, model selection, training, deployment, instruction changes, research promotion, automation, or cross-repository mutation.",
@@ -13,6 +13,25 @@
     "legacy_field_semantics": "The existing subagent-improvement field preferred_model_family is a compatibility field: luna, terra, and sol are interpreted as capability aliases, never provider or model identities.",
     "stable_identity_rule": "Stable identity is role profile plus revision plus capability contract. Provider and model IDs are attempt-scoped claims or expiring adapter observations only.",
     "fail_closed_rule": "If no approved available runtime satisfies tools, context, privacy, output, evidence, and consequence requirements, stop for a routing decision. Availability never lowers the consequence tier."
+  },
+  "fit_routing_contract": {
+    "policy_revision_id": "ml-fit-routing-policy:0.2.0",
+    "first_hop_workflow_id": "workflow:ml-opportunity-review",
+    "mandatory_before_specialist": true,
+    "applies_to": ["ML opportunity assessment", "ML technique selection", "named ML tool request", "ML experiment planning", "ML implementation request"],
+    "non_bypass_rule": "A named tool, model, library, runtime, provider, or specialist cannot bypass the deterministic ML-fit assessment or its no-ML and knowledge-engineering handoffs.",
+    "request_schema_ref": "schemas/ml-fit-routing-request.schema.json",
+    "receipt_schema_ref": "schemas/ml-fit-routing-assessment.schema.json",
+    "specialist_receipt_rule": "A downstream ml-technique-router candidate must carry the exact assessment digest produced by the first hop; the receipt grants no dispatch or execution authority.",
+    "toolchain_policy": [
+      "Order the no-ML or simplest credible baseline before more complex candidates.",
+      "Every optional stage requires explicit entry and stop criteria.",
+      "Do not select distributed execution without measured local insufficiency or an approved hard constraint.",
+      "Use one deep-learning backend by default and add another only under a reviewed comparison need.",
+      "Treat tuning, export, serving, and named tools as optional implementation choices after fit and benchmark evidence.",
+      "Route retrieval, RAG, long-context, vector, and graph knowledge-system problems through the Knowledge Engineering family first."
+    ],
+    "forbidden_shortcuts": ["tool-name routing", "provider-name routing", "popularity as evidence", "uncalibrated data-size thresholds", "boolean approval as authority", "specialist self-approval"]
   },
   "runtime_adapter_observations": [
     {
@@ -49,9 +68,9 @@
       "cadence": "task-triggered",
       "activation_status": "task_triggered",
       "owner_authority": "source repository and named product/domain owner",
-      "inputs_ref": "schemas/ml-workflow-decision.schema.json",
-      "outputs_ref": "candidate ML or no-ML decision record",
-      "steps": ["lock end goal and error costs", "establish data and decision authority", "compare no-ML alternatives", "route to technique review or stop"],
+      "inputs_ref": "schemas/ml-fit-routing-request.schema.json",
+      "outputs_ref": "schemas/ml-fit-routing-assessment.schema.json",
+      "steps": ["run the deterministic mandatory-first fit assessment", "lock end goal and error costs", "establish data and decision authority", "compare no-ML alternatives", "produce a receipt-bound ordered toolchain or stop or hand off to Knowledge Engineering"],
       "gate_refs": ["gate:source-authority", "gate:data-privacy", "gate:domain-owner", "gate:no-ml-baseline"],
       "failure_modes": ["solutionism", "unmeasurable target", "missing feedback loop", "automation bias"],
       "validation_ref": "tests/test_ml_agent_family.py",
@@ -152,6 +171,7 @@
       {"source": "dad:subagent-pack:ml-workflow-agent-family", "edge_type": "has_member", "target": "role:ml-workflow-foreman", "evidence_ref": "assets/agent-skills/ml-workflow-agent-family/subagents.yaml", "review_status": "candidate"},
       {"source": "dad:subagent-pack:ml-workflow-agent-family", "edge_type": "has_member", "target": "role:ml-data-readiness-steward", "evidence_ref": "assets/agent-skills/ml-workflow-agent-family/subagents.yaml", "review_status": "candidate"},
       {"source": "dad:subagent-pack:ml-workflow-agent-family", "edge_type": "has_member", "target": "role:ml-technique-router", "evidence_ref": "assets/agent-skills/ml-workflow-agent-family/subagents.yaml", "review_status": "candidate"},
+      {"source": "workflow:ml-opportunity-review", "edge_type": "routes_to", "target": "role:ml-technique-router", "evidence_ref": "schemas/ml-fit-routing-assessment.schema.json", "review_status": "candidate"},
       {"source": "dad:subagent-pack:ml-workflow-agent-family", "edge_type": "has_member", "target": "role:ml-implementation-worker", "evidence_ref": "assets/agent-skills/ml-workflow-agent-family/subagents.yaml", "review_status": "candidate"},
       {"source": "dad:subagent-pack:ml-workflow-agent-family", "edge_type": "has_member", "target": "role:ml-independent-checker", "evidence_ref": "assets/agent-skills/ml-workflow-agent-family/subagents.yaml", "review_status": "candidate"},
       {"source": "dad:subagent-pack:ml-workflow-agent-family", "edge_type": "has_member", "target": "role:ml-frontier-researcher", "evidence_ref": "assets/agent-skills/ml-workflow-agent-family/subagents.yaml", "review_status": "candidate"},
