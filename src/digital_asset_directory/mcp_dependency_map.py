@@ -64,6 +64,16 @@ def _sha256(data: bytes) -> str:
     return f"sha256:{hashlib.sha256(data).hexdigest()}"
 
 
+def _stable_file_bytes(path: Path) -> bytes:
+    """Return cross-platform bytes for text fingerprints, preserving binaries."""
+
+    data = path.read_bytes()
+    try:
+        return data.decode("utf-8").replace("\r\n", "\n").replace("\r", "\n").encode("utf-8")
+    except UnicodeDecodeError:
+        return data
+
+
 def _canonical(value: Any) -> bytes:
     return json.dumps(value, sort_keys=True, separators=(",", ":"), ensure_ascii=True).encode()
 
@@ -107,7 +117,7 @@ def _tree_payload(path: Path) -> list[tuple[str, str]]:
     for child in sorted(path.rglob("*")):
         if not child.is_file() or "__pycache__" in child.parts or child.suffix == ".pyc":
             continue
-        rows.append((child.relative_to(path).as_posix(), _sha256(child.read_bytes())))
+        rows.append((child.relative_to(path).as_posix(), _sha256(_stable_file_bytes(child))))
     return rows
 
 
@@ -120,7 +130,7 @@ def compute_fingerprint(repo_root: Path, spec: Mapping[str, Any]) -> str:
     path = repo_root / relative
     kind = str(spec.get("kind", ""))
     if kind == "exact_sha256":
-        return _sha256(path.read_bytes())
+        return _sha256(_stable_file_bytes(path))
     if kind == "tree_sha256":
         return _sha256(_canonical(_tree_payload(path)))
     if kind == "json_pointer_sha256":

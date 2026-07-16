@@ -33,7 +33,7 @@
       "label": "Canonical logical server identity",
       "artifact_kind": "file",
       "change_contract": "A logical-name or implementation change requires parity review in every adapter and host evidence row.",
-      "fingerprint": {"kind": "exact_sha256", "path": "assets/mcp/dad-local-readonly/contract.json", "sha256": "sha256:7a1cdda4f07a703d84b894d229998cebe203d3bf6a25c0e7ff3f728cea7a0ea3"}
+      "fingerprint": {"kind": "exact_sha256", "path": "assets/mcp/dad-local-readonly/contract.json", "sha256": "sha256:5323e2a76822cd11abbd75eb6d792be245c1cab1df5bf95057776d1f38b42794"}
     },
     {
       "node_id": "mcp.node.protocol.jsonrpc-stdio",
@@ -41,7 +41,7 @@
       "label": "MCP JSON-RPC stdio protocol implementation",
       "artifact_kind": "file",
       "change_contract": "Protocol or method changes require initialize, tools, resources, privacy, and adapter parity checks.",
-      "fingerprint": {"kind": "exact_sha256", "path": "src/digital_asset_directory/mcp_server.py", "sha256": "sha256:4b379a0775bb5d01c3da0d57077c1c3946fa9f09f4c7ac50504d018a6228197f"}
+      "fingerprint": {"kind": "exact_sha256", "path": "src/digital_asset_directory/mcp_server.py", "sha256": "sha256:287ef7b57ec7a7ab23473d27b986fde27d4db702d6f5cba1dcacb6535af3be50"}
     },
     {
       "node_id": "mcp.node.entrypoint.graph-stdio",
@@ -57,7 +57,7 @@
       "label": "Read-only MCP server",
       "artifact_kind": "file",
       "change_contract": "Any edit invalidates the exact implementation fingerprint and requires interface/privacy revalidation.",
-      "fingerprint": {"kind": "exact_sha256", "path": "src/digital_asset_directory/mcp_server.py", "sha256": "sha256:4b379a0775bb5d01c3da0d57077c1c3946fa9f09f4c7ac50504d018a6228197f"}
+      "fingerprint": {"kind": "exact_sha256", "path": "src/digital_asset_directory/mcp_server.py", "sha256": "sha256:287ef7b57ec7a7ab23473d27b986fde27d4db702d6f5cba1dcacb6535af3be50"}
     },
     {
       "node_id": "mcp.node.implementation.dependency-engine",
@@ -65,7 +65,7 @@
       "label": "Dependency freshness and impact engine",
       "artifact_kind": "file",
       "change_contract": "Any edit requires mutation, refusal, privacy, and deterministic replay tests.",
-      "fingerprint": {"kind": "exact_sha256", "path": "src/digital_asset_directory/mcp_dependency_map.py", "sha256": "sha256:03b99d326cc94b298308545b6f3f4f741b623094b4be495ebb1099f5f889998d"}
+      "fingerprint": {"kind": "exact_sha256", "path": "src/digital_asset_directory/mcp_dependency_map.py", "sha256": "sha256:608a3ee5b122b2b9d7c7355b878dde723a9d626ebf0fd902ad77f9a371712682"}
     },
     {
       "node_id": "mcp.node.implementation.compatibility-facade",
@@ -73,7 +73,7 @@
       "label": "Single-server compatibility facade",
       "artifact_kind": "file",
       "change_contract": "The facade must continue to re-export one canonical implementation without new authority.",
-      "fingerprint": {"kind": "exact_sha256", "path": "src/digital_asset_directory/mcp_graph_server.py", "sha256": "sha256:f8735cf090424f4500e4668b41e747bb04b19c130b0f2402e81f4f2e1882db50"}
+      "fingerprint": {"kind": "exact_sha256", "path": "src/digital_asset_directory/mcp_graph_server.py", "sha256": "sha256:a50e533eb6d03834a21c3efc441b11c6abe9c4146cadfc5e1a4849b25b63b190"}
     },
     {
       "node_id": "mcp.node.backend.graph-surfaces",
@@ -111,7 +111,7 @@
       "label": "Strict MCP dependency map schema",
       "artifact_kind": "file",
       "change_contract": "Schema changes require map, validator, registry, and mutation-test updates.",
-      "fingerprint": {"kind": "exact_sha256", "path": "schemas/mcp-dependency-map.schema.json", "sha256": "sha256:ba148f9047e1967de9eb3304e4958046be7b96add882a553fcf3611ed40a75ff"}
+      "fingerprint": {"kind": "exact_sha256", "path": "schemas/mcp-dependency-map.schema.json", "sha256": "sha256:142e598bbfa6f95e9db535d7443933b15531aeb5dc8ff06652b7575b2c8617c3"}
     },
     {
       "node_id": "mcp.node.schema.graph-surfaces",
@@ -119,7 +119,7 @@
       "label": "Graph surface schemas",
       "artifact_kind": "file",
       "change_contract": "Graph-surface contract changes require resource and data-flow review.",
-      "fingerprint": {"kind": "exact_sha256", "path": "schemas/graph-surface-registry.schema.json", "sha256": "sha256:2d82deb0cef369141a1542dc8bf4cfb213a9d8bddfd3f6a30dfba637ca9f66b0"}
+      "fingerprint": {"kind": "exact_sha256", "path": "schemas/graph-surface-registry.schema.json", "sha256": "sha256:254d266d69facfe194de36206374b7a86198c8066bddd23aae1aa78d0a3ec3fd"}
     },
     {
       "node_id": "mcp.node.registry.dependency-map",
@@ -150,7 +150,7 @@
       "label": "MCP-first integration policy",
       "artifact_kind": "file",
       "change_contract": "Governance changes require explicit authority and data-direction review before implementation follows.",
-      "fingerprint": {"kind": "exact_sha256", "path": "docs/MCP_FIRST_INTEGRATION_POLICY.md", "sha256": "sha256:e4623dea57596b5630eaabd2f70fb944fda6d6337fabb94cf93503d7840d68ba"}
+      "fingerprint": {"kind": "exact_sha256", "path": "docs/MCP_FIRST_INTEGRATION_POLICY.md", "sha256": "sha256:550f20e3cf251243b41ca5b3a6ad0c157cbe6fd21a47d64497e4a70e6326f4d2"}
     },
     {
       "node_id": "mcp.node.host-adapter.templates",
@@ -158,7 +158,7 @@
       "label": "Vendor-neutral reusable host adapter bundle",
       "artifact_kind": "directory",
       "change_contract": "Every template, contract, evidence schema, and validator must normalize to one server and tool contract.",
-      "fingerprint": {"kind": "tree_sha256", "path": "assets/mcp/dad-local-readonly", "sha256": "sha256:9377c09d949f39ab552e3a165cb8208c2ca3540074f8d7a3d63b07eadee6d978"}
+      "fingerprint": {"kind": "tree_sha256", "path": "assets/mcp/dad-local-readonly", "sha256": "sha256:1f011ccac638c3cfcc72a6ec17cb15a12d4e00b37bf83907b3fcc674b1e7cfb2"}
     },
     {
       "node_id": "mcp.node.host-adapter.installed-evidence",
@@ -166,7 +166,7 @@
       "label": "Privacy-safe installed-host evidence",
       "artifact_kind": "file",
       "change_contract": "Installed/configured/available states are separate from reusable template parity and never imply activation.",
-      "fingerprint": {"kind": "exact_sha256", "path": "assets/mcp/dad-local-readonly/installed-host-evidence.json", "sha256": "sha256:c347159eb4c9898ecd3de8e037ae8a3d1a23f04a3d86e7494e4c71caf6d6c508"}
+      "fingerprint": {"kind": "exact_sha256", "path": "assets/mcp/dad-local-readonly/installed-host-evidence.json", "sha256": "sha256:d22dbf1b2ca65f6248f72e5248592cce4c8ebe9474c46591a0b43d9d54372027"}
     },
     {
       "node_id": "mcp.node.packaging.asset-dir",
@@ -206,7 +206,7 @@
       "label": "MCP dependency mutation and parity tests",
       "artifact_kind": "file",
       "change_contract": "Test edits require review so coverage cannot silently weaken.",
-      "fingerprint": {"kind": "exact_sha256", "path": "tests/test_mcp_dependency_map.py", "sha256": "sha256:729e0a726fd2fdff00baa68fd4832fbb758067c90cd49944f097dd7441c26c00"}
+      "fingerprint": {"kind": "exact_sha256", "path": "tests/test_mcp_dependency_map.py", "sha256": "sha256:d2b0e277a57aa3e05323f82ab23cfe9af4709e5743ef62470f858f6b4b1e6f53"}
     },
     {
       "node_id": "mcp.node.validation.repository-gate",

@@ -343,6 +343,20 @@ def test_fit_route_orders_baseline_before_optional_tabular_ensemble() -> None:
     assert stages[1]["entry_criteria"] and stages[1]["stop_criteria"]
 
 
+def test_fit_route_stops_predictive_route_without_applicable_labels() -> None:
+    result = ml_fit_route(
+        ROOT,
+        objective="Predict a reviewed synthetic outcome.",
+        problem_shape="tabular_prediction",
+        execution_scale="local",
+        label_status="not_applicable",
+        consequence="medium",
+    )
+    assert result["disposition"] == "data_work_first"
+    assert result["specialist_route"] is None
+    assert result["candidate_technique_ids"] == ["ml-technique:no-ml-baseline"]
+
+
 def test_fit_route_sends_semantic_retrieval_to_existing_knowledge_family() -> None:
     result = ml_fit_route(
         ROOT,

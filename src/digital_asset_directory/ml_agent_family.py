@@ -298,9 +298,9 @@ def ml_fit_route(
                 techniques=[baseline],
             )
         )
-    elif label_status in {"unavailable", "unknown"}:
+    elif label_status in {"unavailable", "unknown", "not_applicable"}:
         disposition = "data_work_first"
-        if label_status == "unknown":
+        if label_status in {"unknown", "not_applicable"}:
             unknowns.append("label availability and provenance")
         stages.append(
             _stage(
