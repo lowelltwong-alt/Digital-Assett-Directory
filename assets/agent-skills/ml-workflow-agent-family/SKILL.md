@@ -12,6 +12,14 @@ a provider as an agent identity.
 ## Start With The Decision
 
 1. Run DAD preflight and inspect `registry/ml-agent-family-registry.json`.
+   Then run the mandatory deterministic first hop with `asset-dir ml fit`.
+   Within DAD's governed ML route, this applies even when the request names a
+   model, library, provider, or specialist. Pass the complete receipt through
+   `asset-dir ml specialist-route`; it rejects missing, stale, or tampered
+   receipts before returning a downstream candidate. The receipt grants no
+   execution authority. External runtimes that do not use this entry point are
+   outside this harness's enforcement coverage and must not be reported as
+   checked.
 2. State the end goal, decision owner, target population, prediction or action,
    error costs, latency, privacy, and the no-ML baseline.
 3. Recommend ML only when data, feedback, evaluation, maintenance, and expected
@@ -21,6 +29,12 @@ a provider as an agent identity.
    Carry forward `applies_when`, `does_not_apply_when`, and
    `danger_if_misapplied` from every selected technique.
 5. Read `references/ML_WORKFLOW_CONTRACT.md` before implementation or deployment.
+
+Route retrieval, RAG, long-context, vector, and graph knowledge-system work to
+the Knowledge Engineering family first. Keep the simplest credible baseline
+first. Every optional toolchain stage needs explicit entry and stop criteria;
+distributed execution and a second deep-learning backend require separate
+measured justification.
 
 ## Route The Family
 

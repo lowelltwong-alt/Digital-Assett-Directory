@@ -7,11 +7,11 @@
   "required": [
     "schema_version", "registry_id", "registry_version", "status",
     "ai_agnostic", "authority_boundary", "routing_authority",
-    "runtime_adapter_observations", "workflow_cards", "lifecycle_policy",
+    "fit_routing_contract", "runtime_adapter_observations", "workflow_cards", "lifecycle_policy",
     "graph_contract", "research_contract"
   ],
   "properties": {
-    "schema_version": {"const": "0.1.0"},
+    "schema_version": {"const": "0.2.0"},
     "registry_id": {"const": "ml-agent-family-registry"},
     "registry_version": {"type": "string", "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+$"},
     "status": {"enum": ["candidate", "reviewed", "retired"]},
@@ -26,6 +26,23 @@
         "legacy_field_semantics": {"type": "string", "minLength": 1},
         "stable_identity_rule": {"type": "string", "minLength": 1},
         "fail_closed_rule": {"type": "string", "minLength": 1}
+      }
+    },
+    "fit_routing_contract": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["policy_revision_id", "first_hop_workflow_id", "mandatory_before_specialist", "applies_to", "non_bypass_rule", "request_schema_ref", "receipt_schema_ref", "specialist_receipt_rule", "toolchain_policy", "forbidden_shortcuts"],
+      "properties": {
+        "policy_revision_id": {"const": "ml-fit-routing-policy:0.2.0"},
+        "first_hop_workflow_id": {"const": "workflow:ml-opportunity-review"},
+        "mandatory_before_specialist": {"const": true},
+        "applies_to": {"$ref": "#/$defs/nonEmptyStrings"},
+        "non_bypass_rule": {"type": "string", "minLength": 1},
+        "request_schema_ref": {"const": "schemas/ml-fit-routing-request.schema.json"},
+        "receipt_schema_ref": {"const": "schemas/ml-fit-routing-assessment.schema.json"},
+        "specialist_receipt_rule": {"type": "string", "minLength": 1},
+        "toolchain_policy": {"$ref": "#/$defs/nonEmptyStrings"},
+        "forbidden_shortcuts": {"$ref": "#/$defs/nonEmptyStrings"}
       }
     },
     "runtime_adapter_observations": {

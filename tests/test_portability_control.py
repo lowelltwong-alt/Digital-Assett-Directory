@@ -263,6 +263,23 @@ def test_source_runtime_binding_and_suspected_secret_block_protected_transition(
     assert "suspected_secret" in gate["quarantine_codes"]
 
 
+def test_research_cursor_fields_are_not_mistaken_for_cursor_runtime_binding() -> None:
+    assert pc._line_has_normative_runtime_binding("cursor_required: true") is False
+    assert pc._line_has_normative_runtime_binding("Use pointer-only results after the cursor is stored.") is False
+    assert pc._line_has_normative_runtime_binding("always use Cursor for this workflow") is True
+    assert pc._line_has_normative_runtime_binding("always use cursor for this workflow") is True
+    assert pc._line_has_normative_runtime_binding("read-only GPT adapter observation") is False
+
+
+def test_portable_digest_is_stable_across_text_line_endings(tmp_path: Path) -> None:
+    card = {"portable_files": ["contract.txt"]}
+    path = tmp_path / "contract.txt"
+    path.write_bytes(b"first\nsecond\n")
+    lf_digest = pc._portable_files_digest(tmp_path, card)
+    path.write_bytes(b"first\r\nsecond\r\n")
+    assert pc._portable_files_digest(tmp_path, card) == lf_digest
+
+
 def test_live_personal_source_is_verified_locally_but_absence_is_ci_safe(
     monkeypatch: pytest.MonkeyPatch, tmp_path: Path
 ) -> None:

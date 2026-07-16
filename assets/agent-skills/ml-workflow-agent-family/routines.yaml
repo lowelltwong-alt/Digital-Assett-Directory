@@ -6,6 +6,17 @@ routines:
     activation: task_triggered
     default_role: ml-solution-architect
     checker_role: ml-mission-boss
+    deterministic_first_hop:
+      action: asset-dir ml fit
+      workflow_id: workflow:ml-opportunity-review
+      receipt_schema: schemas/ml-fit-routing-assessment.schema.json
+      mandatory_before_specialist: true
+      bypass_on_named_tool: false
+      dispatch_authorized: false
+    governed_specialist_route:
+      action: asset-dir ml specialist-route
+      validation: full_receipt_digest_plus_policy_revision
+      fail_closed_on: [missing_receipt, stale_policy_revision, payload_tampering, nested_digest_mismatch]
   - routine_id: ml-experiment-and-build
     workflow_id: workflow:ml-experiment-and-build
     activation: explicit_task_authority

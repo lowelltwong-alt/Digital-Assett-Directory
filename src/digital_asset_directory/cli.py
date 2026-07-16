@@ -172,7 +172,9 @@ from .ml_agent_family import (
     ml_catalog,
     ml_dependency_graph,
     ml_family_status,
+    ml_fit_route,
     ml_research_plan,
+    ml_specialist_route,
 )
 from .knowledge_engineering import (
     knowledge_catalog,
@@ -716,6 +718,50 @@ def ml_graph(
 def ml_research_plan_command(hub: Optional[Path] = typer.Option(None)) -> None:
     """Show the unscheduled, human-gated 14-day ML research contract."""
     _ml_output(ml_research_plan, hub)
+
+
+@ml_app.command("fit")
+def ml_fit_command(
+    objective: str = typer.Option(..., "--objective", help="Outcome or supported decision to assess."),
+    problem_shape: str = typer.Option("unknown", "--problem-shape"),
+    execution_scale: str = typer.Option("unknown", "--execution-scale"),
+    label_status: str = typer.Option("unknown", "--label-status"),
+    consequence: str = typer.Option("medium", "--consequence"),
+    named_tool: str = typer.Option("", "--named-tool", help="Preference evidence only; never bypasses fit."),
+    hub: Optional[Path] = typer.Option(None),
+) -> None:
+    """Run the mandatory deterministic ML-fit gate without dispatch or mutation."""
+    _ml_output(
+        ml_fit_route,
+        hub,
+        objective=objective,
+        problem_shape=problem_shape,
+        execution_scale=execution_scale,
+        label_status=label_status,
+        consequence=consequence,
+        named_tool_preference=named_tool or None,
+    )
+
+
+@ml_app.command("specialist-route")
+def ml_specialist_route_command(
+    receipt: Path = typer.Option(..., "--receipt", help="Path to a complete ML fit receipt JSON file."),
+    hub: Optional[Path] = typer.Option(None),
+) -> None:
+    """Validate a fit receipt before returning a non-dispatched specialist candidate."""
+    try:
+        payload = json.loads(receipt.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError) as exc:
+        console.print_json(
+            data={
+                "schema_version": "ml.family.error.v1",
+                "status": "blocked",
+                "error": str(exc),
+                "authority_boundary": "An unreadable receipt grants no ML specialist route or execution authority.",
+            }
+        )
+        raise typer.Exit(2) from None
+    _ml_output(ml_specialist_route, hub, receipt=payload)
 
 
 def _knowledge_output(action, hub: Optional[Path], **kwargs: Any) -> None:

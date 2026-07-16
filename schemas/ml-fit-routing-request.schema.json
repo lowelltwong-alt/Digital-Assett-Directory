@@ -1,0 +1,17 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://local.digital-asset-directory/schemas/ml-fit-routing-request.schema.json",
+  "title": "Machine Learning Fit Routing Request",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "objective", "problem_shape", "execution_scale", "label_status", "consequence", "named_tool_preference"],
+  "properties": {
+    "schema_version": {"const": "ml.fit.routing_request.v1"},
+    "objective": {"type": "string", "minLength": 1},
+    "problem_shape": {"enum": ["deterministic_transform", "tabular_prediction", "high_cardinality_tabular", "semantic_retrieval", "deep_representation", "unknown"]},
+    "execution_scale": {"enum": ["local", "large_local", "distributed_required", "unknown"]},
+    "label_status": {"enum": ["available", "partial", "unavailable", "not_applicable", "unknown"]},
+    "consequence": {"enum": ["low", "medium", "high"]},
+    "named_tool_preference": {"type": ["string", "null"]}
+  }
+}

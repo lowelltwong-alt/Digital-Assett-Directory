@@ -64,6 +64,16 @@ def _sha256(data: bytes) -> str:
     return f"sha256:{hashlib.sha256(data).hexdigest()}"
 
 
+def _stable_file_bytes(path: Path) -> bytes:
+    """Return cross-platform bytes for text fingerprints, preserving binaries."""
+
+    data = path.read_bytes()
+    try:
+        return data.decode("utf-8").replace("\r\n", "\n").replace("\r", "\n").encode("utf-8")
+    except UnicodeDecodeError:
+        return data
+
+
 def _canonical(value: Any) -> bytes:
     return json.dumps(value, sort_keys=True, separators=(",", ":"), ensure_ascii=True).encode()
 
@@ -94,8 +104,26 @@ def _python_symbol(path: Path, symbol: str) -> Any:
     for node in tree.body:
         if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef)):
             if node.name == symbol:
-                return ast.dump(node, annotate_fields=True, include_attributes=False)
+                return _stable_ast_payload(node)
     raise MCPDependencyMapError("python_symbol_not_found")
+
+
+def _stable_ast_payload(node: ast.AST) -> Any:
+    """Serialize an AST without interpreter-version-only optional fields."""
+
+    fields: list[tuple[str, Any]] = []
+    for name, value in ast.iter_fields(node):
+        if name == "type_params":
+            continue
+        if isinstance(value, ast.AST):
+            value = _stable_ast_payload(value)
+        elif isinstance(value, list):
+            value = [
+                _stable_ast_payload(item) if isinstance(item, ast.AST) else item
+                for item in value
+            ]
+        fields.append((name, value))
+    return (type(node).__name__, fields)
 
 
 def _python_symbols(path: Path, symbols: Iterable[str]) -> list[Any]:
@@ -104,10 +132,11 @@ def _python_symbols(path: Path, symbols: Iterable[str]) -> list[Any]:
 
 def _tree_payload(path: Path) -> list[tuple[str, str]]:
     rows: list[tuple[str, str]] = []
-    for child in sorted(path.rglob("*")):
+    files = [child for child in path.rglob("*") if child.is_file()]
+    for child in sorted(files, key=lambda item: item.relative_to(path).as_posix()):
         if not child.is_file() or "__pycache__" in child.parts or child.suffix == ".pyc":
             continue
-        rows.append((child.relative_to(path).as_posix(), _sha256(child.read_bytes())))
+        rows.append((child.relative_to(path).as_posix(), _sha256(_stable_file_bytes(child))))
     return rows
 
 
@@ -120,7 +149,7 @@ def compute_fingerprint(repo_root: Path, spec: Mapping[str, Any]) -> str:
     path = repo_root / relative
     kind = str(spec.get("kind", ""))
     if kind == "exact_sha256":
-        return _sha256(path.read_bytes())
+        return _sha256(_stable_file_bytes(path))
     if kind == "tree_sha256":
         return _sha256(_canonical(_tree_payload(path)))
     if kind == "json_pointer_sha256":
@@ -600,6 +629,7 @@ def validate_mcp_dependency_map(
         fingerprint = node.get("fingerprint") if isinstance(node, Mapping) else None
         if not fingerprint:
             continue
+        node_id = str(node.get("node_id", "unknown")) if isinstance(node, Mapping) else "unknown"
         try:
             observed = compute_fingerprint(repo_root, fingerprint)
         except Exception:
@@ -607,6 +637,7 @@ def validate_mcp_dependency_map(
             continue
         if observed != fingerprint.get("sha256"):
             errors.append("fingerprint_stale")
+            errors.append(f"fingerprint_stale:{node_id}")
     issue_codes = sorted(set(errors))
     current = not issue_codes
     return {

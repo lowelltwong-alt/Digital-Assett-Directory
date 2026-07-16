@@ -162,7 +162,7 @@
       {
         "source": "family:ml-workflow",
         "edge_type": "observed_by",
-        "target": "role:ml-workflow-sentinel",
+        "target": "role:ml-lifecycle-curator",
         "evidence_ref": "assets/agent-skills/ml-workflow-agent-family/subagents.yaml",
         "review_status": "candidate"
       },

@@ -60,10 +60,10 @@ roles:
     capability_ids: [ml_technique_selection, ml_opportunity_and_goal_framing]
     search_terms: [choose ml algorithm, recommend ml workflow, model selection, technique contraindication]
     effort: luna_for_exact_catalog_then_terra_for_contextual_selection
-    mission: Retrieve and compare technique cards against the locked problem, constraints, prerequisites, contraindications, and no-ML baseline.
-    required_input: [problem_shape, constraints, data_readiness_report, technique_registry]
-    required_output: [candidate_shortlist, applicability_matrix, rejected_options, evaluation_plan]
-    stop_conditions: [technique_missing_context_limits, popularity_used_as_proof, baseline_absent]
+    mission: After the deterministic ML-fit first hop, retrieve and compare technique cards against the locked problem, constraints, prerequisites, contraindications, no-ML baseline, and receipt-bound ordered toolchain.
+    required_input: [ml_fit_assessment_digest, problem_shape, constraints, data_readiness_report, technique_registry]
+    required_output: [receipt_binding, candidate_shortlist, ordered_toolchain, applicability_matrix, rejected_options, entry_and_stop_criteria, evaluation_plan]
+    stop_conditions: [ml_fit_assessment_absent_or_changed, technique_missing_context_limits, popularity_used_as_proof, baseline_absent, named_tool_used_as_route]
   - role_id: ml-implementation-worker
     profile_role_id: ml_implementation_worker
     capability_ids: [ml_reproducible_implementation, implementation_review]
