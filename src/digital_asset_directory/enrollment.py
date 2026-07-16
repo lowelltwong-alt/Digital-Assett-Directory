@@ -991,7 +991,7 @@ Claude Code should follow the DAD enrollment contract in `AGENTS.md` and
 `.digital-asset/dad-integration.json`. `CLAUDE.md` is an optional runtime
 adapter, not the DAD source of truth. Agent review is triage only; human
 approval gates remain separate. Internal DAD integrations default to MCP over
-direct APIs; Claude-specific APIs or hooks are fallback adapters only.
+direct APIs; runtime-specific APIs or hooks are fallback adapters only.
 """
 
 
