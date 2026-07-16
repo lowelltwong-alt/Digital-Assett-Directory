@@ -61,6 +61,12 @@ must not silently fall back to an unrelated global install:
 python -m digital_asset_directory.cli mcp graph-stdio --hub <DAD-root>
 ```
 
+The server also exposes provider-neutral MCP prompts for `dad_preflight_briefing`,
+`dad_review_lane_checklist`, and `dad_postflight_draft`. These prompts only
+prepare guidance or a draft; they do not run commands, record lifecycle events,
+register a host, or authorize a side effect. Hosts may render them through
+their native prompt UI, but DAD does not depend on a vendor-specific client.
+
 ## Downstream Repo Pattern
 
 For repos such as Albert, do not copy DAD's MCP server as source authority.

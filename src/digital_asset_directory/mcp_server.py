@@ -54,6 +54,11 @@ SENSITIVE_ERROR_TEXT = re.compile(
     r"(?i)(?:authorization|api[_-]?key|password|secret|private[_-]?key|token)"
     r"\s*[:=]\s*[^\s,;]+"
 )
+PROMPT_SENSITIVE_TEXT = re.compile(
+    r"(?i)(?:raw\s+(?:conversation|payload|source)|private(?:[_ -]?(?:source|data|payload|file))?|"
+    r"(?:authorization|api[_ -]?key|password|secret|private[_ -]?key|token)\s*(?:[:=]|\s+))"
+)
+POSIX_PATH_TEXT = re.compile(r"(?<![A-Za-z0-9])/(?:[^\s/]+/)+[^\s]*")
 ID_PATTERN = re.compile(r"^[A-Za-z0-9][A-Za-z0-9_.:-]*$")
 
 _REGISTRY_RESOURCES = {
@@ -151,6 +156,26 @@ def _sanitize_error_message(message: str) -> str:
     sanitized = str(_strip_forbidden_fields(message))
     sanitized = SENSITIVE_ERROR_TEXT.sub("<credential-redacted>", sanitized)
     return sanitized[:200] if sanitized else "MCP request failed"
+
+
+def _prompt_argument(value: Any, name: str, *, required: bool = True) -> str:
+    if value is None and not required:
+        return ""
+    if not isinstance(value, str):
+        raise MCPError(-32602, f"{name} must be a string")
+    text = value.strip()
+    if required and not text:
+        raise MCPError(-32602, f"{name} is required")
+    if len(text) > 240:
+        raise MCPError(-32602, f"{name} is too long")
+    if (
+        LOCAL_PATH_TEXT.search(text)
+        or POSIX_PATH_TEXT.search(text)
+        or text.casefold().startswith("file://")
+        or PROMPT_SENSITIVE_TEXT.search(text)
+    ):
+        raise MCPError(-32602, f"{name} contains disallowed private or credential-like content")
+    return text
 
 
 def _surface_by_id(hub_root: Path, surface_id: str) -> dict[str, Any]:
@@ -680,6 +705,84 @@ class DADGraphMCPServer:
             },
         ]
 
+    def list_prompts(self) -> list[dict[str, Any]]:
+        """Return provider-neutral, read-only workflow prompt templates."""
+        return [
+            {
+                "name": "dad_preflight_briefing",
+                "description": (
+                    "Prepare a bounded DAD preflight briefing; local repository authority "
+                    "and human gates remain in force."
+                ),
+                "arguments": [
+                    {"name": "task", "description": "Short task description.", "required": True},
+                    {"name": "agent", "description": "Non-empty runtime-neutral agent identifier.", "required": True},
+                ],
+            },
+            {
+                "name": "dad_review_lane_checklist",
+                "description": "Prepare an independent review checklist for a proposed DAD change.",
+                "arguments": [
+                    {"name": "change", "description": "Short change description.", "required": True},
+                ],
+            },
+            {
+                "name": "dad_postflight_draft",
+                "description": "Draft a privacy-safe DAD postflight record without recording it.",
+                "arguments": [
+                    {"name": "summary", "description": "Short outcome summary.", "required": True},
+                    {"name": "tests", "description": "Tests or checks that were run.", "required": False},
+                ],
+            },
+        ]
+
+    def get_prompt(self, name: str, arguments: dict[str, Any] | None = None) -> dict[str, Any]:
+        """Render a generic prompt; never executes a command or mutates DAD."""
+        arguments = arguments or {}
+        if name == "dad_preflight_briefing":
+            if set(arguments) != {"task", "agent"}:
+                raise MCPError(-32602, "Unexpected preflight prompt argument")
+            task = _prompt_argument(arguments.get("task"), "task")
+            agent = _prompt_argument(arguments.get("agent"), "agent")
+            return {
+                "description": "Read-only DAD preflight briefing",
+                "messages": [{"role": "user", "content": {"type": "text", "text": (
+                    f"Prepare a DAD preflight briefing for agent {agent!r} and task {task!r}. "
+                    "Inspect local source authority, relevant manifests and registries, "
+                    "privacy boundaries, validation commands, review lanes, and stop conditions. "
+                    "Do not mutate files, register MCP, execute tools, or treat recommendations as authority."
+                )}}],
+            }
+        if name == "dad_review_lane_checklist":
+            if set(arguments) != {"change"}:
+                raise MCPError(-32602, "Unexpected review prompt argument")
+            change = _prompt_argument(arguments.get("change"), "change")
+            return {
+                "description": "Independent DAD review-lane checklist",
+                "messages": [{"role": "user", "content": {"type": "text", "text": (
+                    f"Independently review the proposed change {change!r}. Check correctness, "
+                    "scope discipline, source authority, privacy leakage, portability, deterministic "
+                    "tests, dependency freshness, and rollback. Report evidence and unknowns; "
+                    "do not approve execution or merge."
+                )}}],
+            }
+        if name == "dad_postflight_draft":
+            if set(arguments) - {"summary", "tests"} or "summary" not in arguments:
+                raise MCPError(-32602, "Unexpected postflight prompt argument")
+            summary = _prompt_argument(arguments.get("summary"), "summary")
+            tests = _prompt_argument(arguments.get("tests"), "tests", required=False) or "not supplied"
+            return {
+                "description": "Privacy-safe DAD postflight draft",
+                "messages": [{"role": "user", "content": {"type": "text", "text": (
+                    f"Draft a DAD postflight for outcome {summary!r}. Tests/checks: {tests!r}. "
+                    "Include files changed, exact validation evidence, findings, assumptions, "
+                    "unknowns, reusable lessons, review-lane status, and remaining risks. "
+                    "Exclude secrets, raw conversations, private payloads, absolute paths, and commands. "
+                    "This is a draft only; do not record or publish it."
+                )}}],
+            }
+        raise MCPError(-32601, "Unknown prompt")
+
     def call_tool(self, name: str, arguments: dict[str, Any] | None = None) -> dict[str, Any]:
         arguments = arguments or {}
         if name in {
@@ -733,7 +836,7 @@ class DADGraphMCPServer:
             if method == "initialize":
                 result = {
                     "protocolVersion": MCP_PROTOCOL_VERSION,
-                    "capabilities": {"resources": {}, "tools": {}},
+                    "capabilities": {"resources": {}, "tools": {}, "prompts": {}},
                     "serverInfo": {"name": SERVER_NAME, "version": SERVER_VERSION},
                 }
             elif method == "ping":
@@ -744,6 +847,13 @@ class DADGraphMCPServer:
                 result = self.read_resource(str(params.get("uri", "")))
             elif method == "tools/list":
                 result = {"tools": self.list_tools()}
+            elif method == "prompts/list":
+                result = {"prompts": self.list_prompts()}
+            elif method == "prompts/get":
+                result = self.get_prompt(
+                    str(params.get("name", "")),
+                    params.get("arguments") if isinstance(params.get("arguments"), dict) else {},
+                )
             elif method == "tools/call":
                 result = self.call_tool(
                     str(params.get("name", "")),
