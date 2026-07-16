@@ -1,0 +1,77 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://local.digital-asset-directory/schemas/ml-fit-routing-assessment.schema.json",
+  "title": "Machine Learning Fit Routing Assessment",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version", "policy_revision_id", "assessment_id", "assessment_digest", "first_hop_workflow_id",
+    "first_hop_completed", "objective", "problem_shape", "execution_scale", "label_status",
+    "consequence", "named_tool_preference", "disposition", "candidate_only",
+    "dispatch_authorized", "candidate_technique_ids", "ordered_toolchain",
+    "rejected_alternatives", "required_gates", "unknowns", "specialist_route",
+    "human_decision_required", "authority_boundary"
+  ],
+  "properties": {
+    "schema_version": {"const": "ml.fit.routing_assessment.v1"},
+    "policy_revision_id": {"const": "ml-fit-routing-policy:0.2.0"},
+    "assessment_id": {"type": "string", "pattern": "^ml-fit-assessment:[a-f0-9]{16}$"},
+    "assessment_digest": {"type": "string", "pattern": "^sha256:[a-f0-9]{64}$"},
+    "first_hop_workflow_id": {"const": "workflow:ml-opportunity-review"},
+    "first_hop_completed": {"const": true},
+    "objective": {"type": "string", "minLength": 1},
+    "problem_shape": {"enum": ["deterministic_transform", "tabular_prediction", "high_cardinality_tabular", "semantic_retrieval", "deep_representation", "unknown"]},
+    "execution_scale": {"enum": ["local", "large_local", "distributed_required", "unknown"]},
+    "label_status": {"enum": ["available", "partial", "unavailable", "not_applicable", "unknown"]},
+    "consequence": {"enum": ["low", "medium", "high"]},
+    "named_tool_preference": {"type": ["string", "null"]},
+    "disposition": {"enum": ["no_ml", "data_work_first", "bounded_ml_candidate", "route_to_knowledge_engineering", "insufficient_evidence"]},
+    "candidate_only": {"const": true},
+    "dispatch_authorized": {"const": false},
+    "candidate_technique_ids": {"type": "array", "uniqueItems": true, "items": {"type": "string", "pattern": "^ml-technique:[a-z0-9][a-z0-9-]*$"}},
+    "ordered_toolchain": {"type": "array", "minItems": 1, "items": {"$ref": "#/$defs/stage"}},
+    "rejected_alternatives": {"type": "array", "items": {"$ref": "#/$defs/rejection"}},
+    "required_gates": {"$ref": "#/$defs/nonEmptyStrings"},
+    "unknowns": {"type": "array", "uniqueItems": true, "items": {"type": "string", "minLength": 1}},
+    "specialist_route": {
+      "oneOf": [
+        {"type": "null"},
+        {
+          "type": "object", "additionalProperties": false,
+          "required": ["role_id", "assessment_digest", "route_status"],
+          "properties": {
+            "role_id": {"const": "ml-technique-router"},
+            "assessment_digest": {"type": "string", "pattern": "^sha256:[a-f0-9]{64}$"},
+            "route_status": {"const": "candidate_not_dispatched"}
+          }
+        }
+      ]
+    },
+    "human_decision_required": {"type": "boolean"},
+    "authority_boundary": {"type": "string", "minLength": 1}
+  },
+  "$defs": {
+    "nonEmptyStrings": {"type": "array", "minItems": 1, "uniqueItems": true, "items": {"type": "string", "minLength": 1}},
+    "stage": {
+      "type": "object", "additionalProperties": false,
+      "required": ["order", "stage_id", "required", "entry_criteria", "stop_criteria", "candidate_technique_ids"],
+      "properties": {
+        "order": {"type": "integer", "minimum": 1},
+        "stage_id": {"type": "string", "pattern": "^ml-stage:[a-z0-9][a-z0-9-]*$"},
+        "required": {"type": "boolean"},
+        "entry_criteria": {"$ref": "#/$defs/nonEmptyStrings"},
+        "stop_criteria": {"$ref": "#/$defs/nonEmptyStrings"},
+        "candidate_technique_ids": {"type": "array", "uniqueItems": true, "items": {"type": "string", "pattern": "^ml-technique:[a-z0-9][a-z0-9-]*$"}}
+      }
+    },
+    "rejection": {
+      "type": "object", "additionalProperties": false,
+      "required": ["alternative", "reason", "reconsider_when"],
+      "properties": {
+        "alternative": {"type": "string", "minLength": 1},
+        "reason": {"type": "string", "minLength": 1},
+        "reconsider_when": {"type": "string", "minLength": 1}
+      }
+    }
+  }
+}

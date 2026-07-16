@@ -52,11 +52,20 @@ _NORMATIVE_REQUEST = re.compile(
     re.I,
 )
 _NORMATIVE_SOURCE = re.compile(
-    r"(?:always|only|permanent(?:ly)?|locked|fixed|must\s+use|requires?|default\s+to)"
-    r".{0,80}(?:gpt(?:[-_.]?[0-9])?|openai|anthropic|claude|gemini|cursor|bedrock|vertex|mistral|llama|groq)"
-    r"|(?:gpt(?:[-_.]?[0-9])?|openai|anthropic|claude|gemini|cursor|bedrock|vertex|mistral|llama|groq)"
-    r".{0,80}(?:only|permanent(?:ly)?|locked|fixed|required|default)",
+    r"(?:always|(?<!read-)(?<!candidate-)(?<!pointer-)only|permanent(?:ly)?|locked|fixed|must\s+use|requires?|default\s+to)"
+    r".{0,80}\b(?:gpt(?:[-_.]?[0-9])?|openai|anthropic|claude|gemini|bedrock|vertex|mistral|llama|groq)\b"
+    r"|\b(?:gpt(?:[-_.]?[0-9])?|openai|anthropic|claude|gemini|bedrock|vertex|mistral|llama|groq)\b"
+    r".{0,80}(?:(?<!read-)(?<!candidate-)(?<!pointer-)only|permanent(?:ly)?|locked|fixed|required|default)",
     re.I | re.S,
+)
+_NORMATIVE_CURSOR_SOURCE = re.compile(
+    r"(?:always|(?<!read-)(?<!candidate-)(?<!pointer-)only|permanent(?:ly)?|locked|fixed|must\s+use|requires?|default\s+to)"
+    r".{0,80}\bCursor\b|\bCursor\b.{0,80}(?:(?<!read-)(?<!candidate-)(?<!pointer-)only|permanent(?:ly)?|locked|fixed|required|default)",
+    re.I | re.S,
+)
+_CURSOR_DATA_FIELD = re.compile(
+    r"\b(?:prior_cursor|cursor_required|durable cursor|research cursor|source cursor|cursor receipt)\b",
+    re.I,
 )
 _GOVERNED_PREFIXES = (
     "assets/agent-skills/",
@@ -101,7 +110,8 @@ def _line_has_normative_runtime_binding(line: str) -> bool:
     lowered = line.lower()
     if "optional adapter" in lowered or "optional runtime adapter" in lowered:
         return False
-    return bool(_NORMATIVE_SOURCE.search(line))
+    cursor_binding = _NORMATIVE_CURSOR_SOURCE.search(line) and not _CURSOR_DATA_FIELD.search(line)
+    return bool(_NORMATIVE_SOURCE.search(line) or cursor_binding)
 
 
 def canonical_digest(value: Any) -> str:
@@ -400,10 +410,15 @@ def _portable_files_digest(repo_root: Path, card: dict[str, Any]) -> str | None:
         return None
     rows: list[dict[str, str]] = []
     for label, path in resolved:
+        data = path.read_bytes()
+        try:
+            normalized = data.decode("utf-8").replace("\r\n", "\n").encode("utf-8")
+        except UnicodeDecodeError:
+            normalized = data
         rows.append(
             {
                 "path": label,
-                "sha256": "sha256:" + hashlib.sha256(path.read_bytes()).hexdigest(),
+                "sha256": "sha256:" + hashlib.sha256(normalized).hexdigest(),
             }
         )
     return canonical_digest(rows)
@@ -653,7 +668,17 @@ def assess_lifecycle(
     eligibility = classify_eligibility(task, paths)
     validation = validate_portability(repo_root)
     applicable = eligibility["applicability"]
-    finding_codes = sorted({row["code"] for row in validation["findings"]}) if applicable != "not_applicable" or protected_transition else []
+    finding_codes = (
+        sorted(
+            {
+                row["code"]
+                for row in validation["findings"]
+                if row.get("severity", "error") != "warning"
+            }
+        )
+        if applicable != "not_applicable" or protected_transition
+        else []
+    )
     if eligibility.get("runtime_binding_requested"):
         finding_codes = sorted(set(finding_codes) | {"normative_runtime_binding_in_request"})
     exact_artifacts = sorted({str(value) for value in artifact_ids if str(value)})

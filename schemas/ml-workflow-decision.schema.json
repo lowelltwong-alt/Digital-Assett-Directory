@@ -6,19 +6,36 @@
   "additionalProperties": false,
   "required": [
     "schema_version", "decision_id", "created_at", "goal", "decision_owner",
-    "authority_and_sensitivity", "no_ml_baseline", "candidate_technique_ids",
+    "authority_and_sensitivity", "supported_action", "action_reversibility",
+    "abstention_behavior", "decision_costs", "prediction_time_availability",
+    "maintenance_owner", "no_ml_baseline", "candidate_technique_ids",
     "recommendation", "applies_when", "does_not_apply_when",
     "danger_if_misapplied", "data_and_split_contract", "evaluation_contract",
     "human_gates", "rollback_and_kill_criteria", "unknowns", "evidence_refs",
     "review_status", "authority_boundary"
   ],
   "properties": {
-    "schema_version": {"const": "0.1.0"},
+    "schema_version": {"const": "0.2.0"},
     "decision_id": {"type": "string", "pattern": "^ml-workflow-decision:[a-z0-9][a-z0-9-]*$"},
     "created_at": {"type": "string", "format": "date-time"},
     "goal": {"type": "string", "minLength": 1},
     "decision_owner": {"type": "string", "minLength": 1},
     "authority_and_sensitivity": {"type": "string", "minLength": 1},
+    "supported_action": {"type": "string", "minLength": 1},
+    "action_reversibility": {"enum": ["reversible", "partially_reversible", "irreversible", "unknown"]},
+    "abstention_behavior": {"type": "string", "minLength": 1},
+    "decision_costs": {
+      "type": "object", "additionalProperties": false,
+      "required": ["false_positive", "false_negative", "delay", "human_review"],
+      "properties": {
+        "false_positive": {"type": "string", "minLength": 1},
+        "false_negative": {"type": "string", "minLength": 1},
+        "delay": {"type": "string", "minLength": 1},
+        "human_review": {"type": "string", "minLength": 1}
+      }
+    },
+    "prediction_time_availability": {"type": "string", "minLength": 1},
+    "maintenance_owner": {"type": "string", "minLength": 1},
     "no_ml_baseline": {"type": "string", "minLength": 1},
     "candidate_technique_ids": {"type": "array", "uniqueItems": true, "items": {"type": "string", "pattern": "^ml-technique:[a-z0-9][a-z0-9-]*$"}},
     "recommendation": {"enum": ["no_ml", "investigate", "bounded_experiment", "blocked", "human_decision_required"]},

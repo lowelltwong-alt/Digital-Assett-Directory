@@ -304,6 +304,8 @@
     "ml_agent_family_registry_schema": "schemas/ml-agent-family-registry.schema.json",
     "ml_technique_registry_schema": "schemas/ml-technique-registry.schema.json",
     "ml_workflow_decision_schema": "schemas/ml-workflow-decision.schema.json",
+    "ml_fit_routing_assessment_schema": "schemas/ml-fit-routing-assessment.schema.json",
+    "ml_fit_routing_request_schema": "schemas/ml-fit-routing-request.schema.json",
     "agent_family_portfolio_registry_schema": "schemas/agent-family-portfolio-registry.schema.json",
     "agent_family_routing_decision_schema": "schemas/agent-family-routing-decision.schema.json",
     "agent_family_health_schema": "schemas/agent-family-health.schema.json",
