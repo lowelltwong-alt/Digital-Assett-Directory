@@ -41,7 +41,7 @@ def test_pm_skill_routes_artifact_diagnosis_to_one_bounded_specialist():
         "Diagnose a first runnable artifact" in example
         for example in registered["trigger_examples"]
     )
-    assert pack["version"] == "0.2.0"
+    assert pack["version"] == "0.3.0"
     assert set(role["required_output"]) >= {
         "current_project_position",
         "intended_user_and_outcome",
