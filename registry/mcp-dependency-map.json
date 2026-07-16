@@ -65,7 +65,7 @@
       "label": "Dependency freshness and impact engine",
       "artifact_kind": "file",
       "change_contract": "Any edit requires mutation, refusal, privacy, and deterministic replay tests.",
-      "fingerprint": {"kind": "exact_sha256", "path": "src/digital_asset_directory/mcp_dependency_map.py", "sha256": "sha256:608a3ee5b122b2b9d7c7355b878dde723a9d626ebf0fd902ad77f9a371712682"}
+      "fingerprint": {"kind": "exact_sha256", "path": "src/digital_asset_directory/mcp_dependency_map.py", "sha256": "sha256:dcf7f27b0152ac9546024824c5f5238aacfde267a252ec8a26d87d713caa43ab"}
     },
     {
       "node_id": "mcp.node.implementation.compatibility-facade",

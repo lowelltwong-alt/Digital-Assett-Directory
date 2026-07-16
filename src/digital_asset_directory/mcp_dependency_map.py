@@ -610,6 +610,7 @@ def validate_mcp_dependency_map(
         fingerprint = node.get("fingerprint") if isinstance(node, Mapping) else None
         if not fingerprint:
             continue
+        node_id = str(node.get("node_id", "unknown")) if isinstance(node, Mapping) else "unknown"
         try:
             observed = compute_fingerprint(repo_root, fingerprint)
         except Exception:
@@ -617,6 +618,7 @@ def validate_mcp_dependency_map(
             continue
         if observed != fingerprint.get("sha256"):
             errors.append("fingerprint_stale")
+            errors.append(f"fingerprint_stale:{node_id}")
     issue_codes = sorted(set(errors))
     current = not issue_codes
     return {

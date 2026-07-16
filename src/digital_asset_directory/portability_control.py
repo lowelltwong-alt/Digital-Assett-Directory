@@ -668,7 +668,17 @@ def assess_lifecycle(
     eligibility = classify_eligibility(task, paths)
     validation = validate_portability(repo_root)
     applicable = eligibility["applicability"]
-    finding_codes = sorted({row["code"] for row in validation["findings"]}) if applicable != "not_applicable" or protected_transition else []
+    finding_codes = (
+        sorted(
+            {
+                row["code"]
+                for row in validation["findings"]
+                if row.get("severity", "error") != "warning"
+            }
+        )
+        if applicable != "not_applicable" or protected_transition
+        else []
+    )
     if eligibility.get("runtime_binding_requested"):
         finding_codes = sorted(set(finding_codes) | {"normative_runtime_binding_in_request"})
     exact_artifacts = sorted({str(value) for value in artifact_ids if str(value)})
