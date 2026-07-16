@@ -17,7 +17,7 @@ on:
       - "tests/test_rust_*.py"
       - "scripts/run_dad_scan_core.py"
       - "docs/rust/**"
-      - "templates/**"
+      - "templates/rust/**"
       - "deny.toml"
       - ".github/workflows/rust-ci-long.yml"
 
