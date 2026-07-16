@@ -16,6 +16,7 @@ from .portfolio_weekly_digest import build_weekly_digest
 from .runtime_resolver import load_adapter_registry
 from .harness_engineering import load_harness_registry
 from .autonomy_control import load_autonomy_registry
+from .portability_control import health_snapshot as portability_health_snapshot
 from .transport import data_path
 from .utils import atomic_write_text, json_dumps
 
@@ -53,6 +54,7 @@ def build_capability_os_cockpit(
     runtime_registry = load_adapter_registry(repo_root)
     harness_registry = load_harness_registry(repo_root)
     autonomy_registry = load_autonomy_registry(repo_root)
+    portability_health = portability_health_snapshot(repo_root, now=now)
     usage = list(usage_rows or [])
     usage_summary = {
         "row_count": len(usage),
@@ -87,6 +89,14 @@ def build_capability_os_cockpit(
             "harness_family_id": harness_registry["family_id"],
             "harness_status": harness_registry["status"],
         },
+        "portable_capability_health": {
+            "policy_revision_id": portability_health["policy_revision_id"],
+            "baseline_id": portability_health["baseline_id"],
+            "coverage": portability_health["coverage"],
+            "finding_counts": portability_health["finding_counts"],
+            "backlog_count": portability_health["backlog_count"],
+            "model_calls": portability_health["model_calls"],
+        },
         "incidents_and_quarantine": {
             "global_kill_status": "not_observed",
             "quarantine_status": "not_observed",
@@ -102,7 +112,18 @@ def build_capability_os_cockpit(
         {"control": name, "behavior": "create_request_packet", "execution_authorized": False}
         for name in ("pause", "kill", "acknowledge", "snooze", "resume_request")
     ]
-    body = {"views": views, "decisions": digest["asks"][:3], "controls": controls}
+    merged_decisions: list[dict[str, Any]] = []
+    seen_decisions: set[str] = set()
+    for row in [*portability_health["decisions"], *digest["asks"]]:
+        fingerprint = _digest({
+            "title": row.get("title", ""),
+            "artifact_id": row.get("artifact_id", ""),
+            "recommended_action": row.get("recommended_action", "inspect"),
+        })
+        if fingerprint not in seen_decisions:
+            seen_decisions.add(fingerprint)
+            merged_decisions.append(row)
+    body = {"views": views, "decisions": merged_decisions[:3], "controls": controls}
     return {
         "schema_version": "dad.capability_os_cockpit.v1",
         "generated_at": observed,

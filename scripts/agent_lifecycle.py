@@ -12,7 +12,7 @@ def main() -> int:
     parser = argparse.ArgumentParser(
         description="Record DAD agent lifecycle hook events without binding to one AI runtime."
     )
-    parser.add_argument("event", choices=["session-start", "post-tool", "stop"])
+    parser.add_argument("event", choices=["session-start", "pre-tool", "post-tool", "stop"])
     parser.add_argument("--hub", type=Path, required=True)
     parser.add_argument("--repo", type=Path, required=True)
     parser.add_argument("--agent", required=True)
@@ -20,6 +20,10 @@ def main() -> int:
     parser.add_argument("--task", default="")
     parser.add_argument("--tool", default="")
     parser.add_argument("--tool-input-key", action="append", default=[])
+    parser.add_argument("--tool-input-digest", default="")
+    parser.add_argument("--duration-ms", type=int)
+    parser.add_argument("--tool-outcome", choices=["succeeded", "failed", "unknown"], default="unknown")
+    parser.add_argument("--repeat-suppressor", action="append", default=[])
     parser.add_argument("--stop-hook-active", action="store_true")
     args = parser.parse_args()
 
@@ -35,6 +39,10 @@ def main() -> int:
         task=args.task or None,
         tool=args.tool or None,
         tool_input_keys=args.tool_input_key,
+        tool_input_digest=args.tool_input_digest or None,
+        duration_ms=args.duration_ms,
+        tool_outcome=args.tool_outcome,
+        repeat_suppressors=args.repeat_suppressor,
         stop_hook_active=args.stop_hook_active,
     )
     if result.payload is not None:

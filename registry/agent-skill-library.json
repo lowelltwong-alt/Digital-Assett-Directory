@@ -1659,6 +1659,34 @@
       "review_status": "candidate",
       "last_reviewed_at": "2026-07-15",
       "next_review_due_at": "2026-08-15"
+    },
+    {
+      "skill_id": "skill:portable-capability-governance",
+      "name": "Portable Capability Governance",
+      "version": "0.1.0",
+      "status": "active",
+      "skill_format": "generic_agent_skill",
+      "path": "assets/agent-skills/portable-capability-governance",
+      "entrypoint": "assets/agent-skills/portable-capability-governance/SKILL.md",
+      "subagent_pack": "assets/agent-skills/portable-capability-governance/subagents.yaml",
+      "description": "Deterministically governs provider-neutral reusable capability cores, runtime adapters, exceptions, lifecycle gates, runtime upgrade evidence, and safe retirement.",
+      "trigger_examples": [
+        "Create or materially revise a reusable skill, agent, workflow, harness, library, knowledge interface, or template.",
+        "Switch, compare, qualify, supersede, or retire a model, provider, runtime, or adapter for a reusable capability."
+      ],
+      "does_not_apply_when": [
+        "The request is brainstorming, an ordinary answer, or one-off non-reusable work with no governed-path change."
+      ],
+      "capabilities": ["portable_core_and_adapter_design", "deterministic_portability_validation", "lifecycle_gate_integration", "runtime_receipt_and_qualification_review", "retirement_and_safe_rollback"],
+      "checkout_modes": ["pointer", "wrapper", "local_copy_requires_human_approval"],
+      "update_policy": "dad_mail_notice",
+      "lifecycle": {"supersedes": [], "superseded_by": [], "retirement_reason": "", "replacement_skill_id": "", "change_notice_templates": ["templates/mail/skill-update-available.mail.template.json", "templates/mail/skill-retirement-notice.mail.template.json"]},
+      "dependencies": ["registry/portable-capability-registry.json", "registry/portability-policy-registry.json", "registry/portable-runtime-qualification-registry.json", "registry/runtime-adapter-registry.json", "registry/harness-engineering-registry.json", "assets/agent-skills/subagent-continuous-improvement"],
+      "source_evidence": ["assets/agent-skills/portable-capability-governance/SKILL.md", "assets/agent-skills/portable-capability-governance/subagents.yaml", "assets/agent-skills/portable-capability-governance/references/PORTABLE_CAPABILITY_CONTRACT.md", "personal-skill-source:portable-capability-governance"],
+      "authority_boundary": "The skill creates deterministic evidence and candidates only. Source repositories and named humans retain provider, exception, activation, downstream adoption, release, schedule, external-effect, supersession, and retirement authority.",
+      "review_status": "reviewed",
+      "last_reviewed_at": "2026-07-15",
+      "next_review_due_at": "2026-10-15"
     }
   ]
 }

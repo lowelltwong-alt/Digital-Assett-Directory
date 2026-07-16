@@ -542,6 +542,10 @@ runtime_app = typer.Typer(no_args_is_help=True)
 app.add_typer(runtime_app, name="runtime")
 autonomy_app = typer.Typer(no_args_is_help=True)
 app.add_typer(autonomy_app, name="autonomy")
+portability_app = typer.Typer(no_args_is_help=True)
+app.add_typer(portability_app, name="portability")
+portability_experiment_app = typer.Typer(no_args_is_help=True)
+portability_app.add_typer(portability_experiment_app, name="experiment")
 console = Console()
 
 
@@ -1549,6 +1553,7 @@ def portfolio_os_lease_request(
     duration_hours: int = typer.Option(24, "--duration-hours", min=1, max=744),
     return_state: str = typer.Option("paused", "--return-state"),
     rationale_code: str = typer.Option(..., "--rationale-code"),
+    portability_artifact_id: list[str] = typer.Option([], "--portability-artifact-id"),
     supersedes_lease_id: str = typer.Option("", "--supersedes-lease-id"),
     request_id: str = typer.Option("", "--request-id"),
     config: Optional[Path] = typer.Option(None),
@@ -1571,6 +1576,7 @@ def portfolio_os_lease_request(
             expires_at=observed + timedelta(hours=duration_hours),
             return_state=return_state,
             rationale_code=rationale_code,
+            portability_artifact_ids=portability_artifact_id,
             supersedes_lease_id=supersedes_lease_id,
             command_id=request_id or None,
             now=observed,
@@ -11842,6 +11848,135 @@ def autonomy_allowlist(
     cfg = _cfg(config, hub)
     registry = load_autonomy_registry(cfg.repo_root)
     console.print_json(data={"status": "candidate_deny_execute", "authority_levels": registry["authority_levels"], "active_allowlists": [], "execution_authorized": False})
+
+
+@portability_app.command("status")
+def portability_status(
+    config: Optional[Path] = typer.Option(None),
+    hub: Optional[Path] = typer.Option(None),
+) -> None:
+    from .portability_control import health_snapshot
+
+    cfg = _cfg(config, hub)
+    console.print_json(data=health_snapshot(cfg.repo_root))
+
+
+@portability_app.command("classify")
+def portability_classify(
+    task: str = typer.Option("", "--task"),
+    path: list[str] = typer.Option([], "--path"),
+    config: Optional[Path] = typer.Option(None),
+    hub: Optional[Path] = typer.Option(None),
+) -> None:
+    from .portability_control import assess_lifecycle
+
+    cfg = _cfg(config, hub)
+    console.print_json(data=assess_lifecycle(cfg.repo_root, stage="preflight", task=task, paths=path))
+
+
+@portability_app.command("validate")
+def portability_validate(
+    protected_transition: bool = typer.Option(False, "--protected-transition"),
+    config: Optional[Path] = typer.Option(None),
+    hub: Optional[Path] = typer.Option(None),
+) -> None:
+    from .portability_control import assess_lifecycle, validate_portability
+
+    cfg = _cfg(config, hub)
+    result = (
+        assess_lifecycle(cfg.repo_root, stage="release", protected_transition=True)
+        if protected_transition
+        else validate_portability(cfg.repo_root)
+    )
+    console.print_json(data=result)
+    if result.get("valid") is False or result.get("gate_outcome") == "block":
+        raise typer.Exit(2)
+
+
+@portability_app.command("affected")
+def portability_affected(
+    artifact_id: str = typer.Argument(...),
+    config: Optional[Path] = typer.Option(None),
+    hub: Optional[Path] = typer.Option(None),
+) -> None:
+    from .portability_control import affected
+
+    cfg = _cfg(config, hub)
+    console.print_json(data=affected(cfg.repo_root, artifact_id))
+
+
+@portability_app.command("graph")
+def portability_graph(
+    config: Optional[Path] = typer.Option(None),
+    hub: Optional[Path] = typer.Option(None),
+) -> None:
+    from .portability_control import build_graph
+
+    cfg = _cfg(config, hub)
+    console.print_json(data=build_graph(cfg.repo_root))
+
+
+@portability_app.command("exception-candidate")
+def portability_exception_candidate(
+    artifact_id: str = typer.Option(..., "--artifact-id"),
+    reason: str = typer.Option(..., "--reason"),
+) -> None:
+    from .portability_control import exception_candidate
+
+    console.print_json(data=exception_candidate(artifact_id, reason))
+
+
+@portability_app.command("migration-plan")
+def portability_migration_plan(
+    config: Optional[Path] = typer.Option(None),
+    hub: Optional[Path] = typer.Option(None),
+) -> None:
+    from .portability_control import inventory, validate_portability
+
+    cfg = _cfg(config, hub)
+    inv = inventory(cfg.repo_root)
+    result = validate_portability(cfg.repo_root)
+    console.print_json(data={"baseline": inv, "new_or_worsened": result["findings"], "migration_order": ["new_and_changed", "allowlisted_personal_skills", "families_and_packs", "workflows_libraries_and_knowledge_interfaces", "enrolled_repositories_by_local_approval"], "execution_authorized": False})
+
+
+@portability_experiment_app.command("prepare")
+def portability_experiment_prepare(
+    core_revision_id: str = typer.Option(..., "--core-revision-id"),
+    harness_revision_id: str = typer.Option(..., "--harness-revision-id"),
+    corpus_revision_id: str = typer.Option(..., "--corpus-revision-id"),
+) -> None:
+    from .portability_control import canonical_digest
+
+    packet = {"core_revision_id": core_revision_id, "harness_revision_id": harness_revision_id, "corpus_revision_id": corpus_revision_id, "runtime_bindings_separate": True, "read_only_shadow": True, "human_promotion_required": True, "execution_authorized": False}
+    console.print_json(data={"experiment_packet_id": "portability-experiment-packet:" + canonical_digest(packet).split(":", 1)[1], **packet})
+
+
+@portability_experiment_app.command("validate")
+def portability_experiment_validate(
+    qualification_file: Path = typer.Option(..., "--qualification-file"),
+    receipt_file: list[Path] = typer.Option(..., "--receipt-file"),
+    config: Optional[Path] = typer.Option(None),
+    hub: Optional[Path] = typer.Option(None),
+) -> None:
+    from .portability_control import qualify_runtime
+
+    cfg = _cfg(config, hub)
+    qualification = json.loads(qualification_file.read_text(encoding="utf-8"))
+    receipts = [json.loads(path.read_text(encoding="utf-8")) for path in receipt_file]
+    console.print_json(data=qualify_runtime(cfg.repo_root, qualification, receipts))
+
+
+@portability_app.command("retirement-exposure")
+def portability_retirement_exposure(
+    runtime_id: str = typer.Option(..., "--runtime-id"),
+    signal_digest: str = typer.Option(..., "--signal-digest"),
+    config: Optional[Path] = typer.Option(None),
+    hub: Optional[Path] = typer.Option(None),
+) -> None:
+    from .portability_control import retirement_exposure
+
+    cfg = _cfg(config, hub)
+    console.print_json(data=retirement_exposure(cfg.repo_root, runtime_id, signal_digest))
 
 
 if __name__ == "__main__":

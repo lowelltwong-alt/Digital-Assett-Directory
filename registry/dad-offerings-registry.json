@@ -695,6 +695,30 @@
       "owner_authority": "DAD owns candidate skill, registry, and graph metadata; source repositories and named humans own corpus, domain, privacy, provider, infrastructure, adoption, release, schedule, cutover, and retirement decisions.",
       "adoption_semantics": "Pointer or wrapper by default; the explicitly requested personal global copy remains separately runtime-authoritative and does not activate weekly research or downstream adoption.",
       "authority_boundary": "This offering can diagnose, design, implement in approved scope, and independently validate; it cannot access new corpora, activate recurring research, install infrastructure, deploy, or self-approve."
+    },
+    {
+      "offering_id": "dad:offering:portable-capability-governance",
+      "name": "Portable Capability Governance",
+      "version": "0.1.0",
+      "offering_type": "control_plane",
+      "path": "assets/agent-skills/portable-capability-governance",
+      "languages": ["agent-instruction", "python", "mixed"],
+      "repo_types": ["application", "library", "control_plane", "research_repo", "governed_repo_family"],
+      "domains": ["agent_engineering", "runtime_portability", "governance", "quality_assurance"],
+      "context_tags": ["portable", "model_agnostic", "provider_neutral", "runtime_adapter", "model_retirement", "lifecycle_gate"],
+      "task_types": ["skill_creation", "agent_family_creation", "workflow_creation", "runtime_upgrade", "model_retirement", "protected_release"],
+      "capabilities": ["portable_core_contract", "deterministic_portability_gate", "runtime_qualification_evidence", "safe_rollback", "dependency_blast_radius"],
+      "applies_when": ["A reusable AI-mediated capability is created, revised, exported, activated, promoted, replaced, or retired."],
+      "does_not_apply_when": ["The work is ordinary brainstorming or one-off and does not create or change a governed reusable artifact."],
+      "public_safe": true,
+      "upgrade_channel": "dad_mail",
+      "known_upgrades": [],
+      "source_refs": ["registry/agent-skill-library.json#skill:portable-capability-governance", "registry/portable-capability-registry.json", "registry/portability-policy-registry.json"],
+      "review_status": "reviewed",
+      "validation_refs": ["tests/test_portability_control.py", "scripts/validate_agent_skill_library.py"],
+      "owner_authority": "DAD owns its local contract and evidence; live personal skills and source repositories retain their instructions, meaning, adoption, and release authority.",
+      "adoption_semantics": "Active for new-or-worsened objective DAD-local gates. Downstream enforcement requires reviewed enrollment and local policy.",
+      "authority_boundary": "This offering cannot grant provider access, approve an exception, activate a schedule, mutate another repository, promote a model, or execute an external effect."
     }
   ]
 }

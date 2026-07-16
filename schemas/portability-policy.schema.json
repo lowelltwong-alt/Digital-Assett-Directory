@@ -1,0 +1,17 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://dad.local/schemas/portability-policy-v1.json",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "registry_id", "active_policy_revision_id", "policy_revisions", "activation_decisions", "candidate_only", "execution_authorized", "authority_boundary"],
+  "properties": {
+    "schema_version": {"const": "dad.portability_policy_registry.v1"},
+    "registry_id": {"const": "portability-policy-registry"},
+    "active_policy_revision_id": {"type": "string", "pattern": "^portability-policy-revision:"},
+    "policy_revisions": {"type": "array", "minItems": 1, "items": {"type": "object", "additionalProperties": false, "required": ["revision_id", "predecessor_revision_id", "rollout_mode", "objective_gate_codes", "protected_transitions", "legacy_review_trigger", "maximum_cockpit_decisions", "unchanged_model_calls", "content_digest"], "properties": {"revision_id": {"type": "string", "pattern": "^portability-policy-revision:"}, "predecessor_revision_id": {"type": "string"}, "rollout_mode": {"enum": ["shadow", "warn", "enforce_new_or_worsened", "reviewed_active"]}, "objective_gate_codes": {"type": "array", "minItems": 1, "uniqueItems": true, "items": {"type": "string"}}, "protected_transitions": {"type": "array", "minItems": 1, "uniqueItems": true, "items": {"enum": ["implementation_lease", "activation", "registry_promotion", "reviewed_portable", "protected_release", "public_export", "cross_repo_delivery"]}}, "legacy_review_trigger": {"type": "string", "minLength": 3}, "maximum_cockpit_decisions": {"const": 3}, "unchanged_model_calls": {"const": 0}, "content_digest": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"}}}},
+    "activation_decisions": {"type": "array", "minItems": 1, "items": {"type": "object", "additionalProperties": false, "required": ["decision_id", "policy_revision_id", "human_approval_ref", "activated_at", "previous_policy_revision_id", "rollback_revalidation_required"], "properties": {"decision_id": {"type": "string", "pattern": "^portability-activation-decision:"}, "policy_revision_id": {"type": "string", "pattern": "^portability-policy-revision:"}, "human_approval_ref": {"type": "string", "minLength": 3}, "activated_at": {"type": "string", "format": "date-time"}, "previous_policy_revision_id": {"type": "string"}, "rollback_revalidation_required": {"const": true}}}},
+    "candidate_only": {"const": true},
+    "execution_authorized": {"const": false},
+    "authority_boundary": {"type": "string", "minLength": 20}
+  }
+}

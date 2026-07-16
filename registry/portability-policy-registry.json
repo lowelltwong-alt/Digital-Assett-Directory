@@ -1,0 +1,31 @@
+{
+  "schema_version": "dad.portability_policy_registry.v1",
+  "registry_id": "portability-policy-registry",
+  "active_policy_revision_id": "portability-policy-revision:0.1.0",
+  "policy_revisions": [
+    {
+      "revision_id": "portability-policy-revision:0.1.0",
+      "predecessor_revision_id": "",
+      "rollout_mode": "enforce_new_or_worsened",
+      "objective_gate_codes": ["missing_portability_disposition", "stale_portability_disposition", "undispositioned_governed_file", "missing_exact_portability_binding", "invalid_portability_card", "normative_runtime_binding_in_core", "normative_runtime_binding_in_source", "normative_runtime_binding_in_request", "confirmed_secret", "sensitive_absolute_path", "portable_source_unavailable", "oversized_portable_source_unscanned", "missing_core_parent", "expired_exception", "exception_decision_unverified", "stale_evidence", "missing_independent_check", "dependency_cycle", "false_model_diversity_claim", "unsafe_rollback", "baseline_integrity_failure", "content_digest_mismatch"],
+      "protected_transitions": ["implementation_lease", "activation", "registry_promotion", "reviewed_portable", "protected_release", "public_export", "cross_repo_delivery"],
+      "legacy_review_trigger": "Material governed-contract revision, new finding, increased scope, or expired evidence/exception.",
+      "maximum_cockpit_decisions": 3,
+      "unchanged_model_calls": 0,
+      "content_digest": "sha256:34a8ad71a618c98bda3e407d577e656d70886ae0572d9ce1a2773313dbf839ab"
+    }
+  ],
+  "activation_decisions": [
+    {
+      "decision_id": "portability-activation-decision:2026-07-15-local-dad-new-or-worsened",
+      "policy_revision_id": "portability-policy-revision:0.1.0",
+      "human_approval_ref": "user-request:2026-07-15:all-steps-necessary-for-continuous-use",
+      "activated_at": "2026-07-15T00:00:00-04:00",
+      "previous_policy_revision_id": "",
+      "rollback_revalidation_required": true
+    }
+  ],
+  "candidate_only": true,
+  "execution_authorized": false,
+  "authority_boundary": "The active pointer applies only to objective DAD-local new-or-worsened gates. Provider use, schedules, downstream adoption, exceptions, promotion, and external effects remain separately human-gated."
+}

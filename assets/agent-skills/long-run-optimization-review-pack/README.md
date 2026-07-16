@@ -12,9 +12,27 @@ when either condition is true:
 - an executed command reaches 60 seconds of measured wall time; or
 - a command is expected to exceed 120 seconds before it starts.
 
+Also run the deterministic redundant-work guard before execution when the same
+normalized command/work-unit signature is seen against the exact same source
+and repository-state fingerprint. Emit a candidate before the second repeat
+when the prior run took at least five seconds, or before the third repeat when
+duration is unavailable. This early trigger uses zero model calls. It suggests
+reuse, narrowing, or an immutable state-keyed cache; it never cancels work.
+
+Suppress intentional benchmarks, cold-cache/parity runs, explicit retries after
+failure, test-isolation cases, changed inputs/options/tool revisions, and any
+operation whose mutable state lacks an exact fingerprint. A persistent cache is
+out of scope until it has a versioned invalidation and rollback contract.
+
 Normalize the signature by removing temporary paths, timestamps, and fixture
 identifiers. Do not retrigger for the same signature unless its duration grows
 by at least 25 percent or its implementation changes materially.
+
+Route exact unchanged evidence deterministically. Use Luna/low only for a
+changed ambiguous cluster, Terra after measured repeated waste or three
+lineage-distinct occurrences, and Sol only for unresolved high-consequence
+cross-repository authority, privacy, or invalidation architecture. Any adopted
+cache or batching change requires a separate parity/failure-path checker.
 
 ## Review lanes
 

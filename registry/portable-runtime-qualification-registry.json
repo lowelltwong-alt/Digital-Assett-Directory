@@ -1,0 +1,25 @@
+{
+  "schema_version": "dad.portable_runtime_qualification_registry.v1",
+  "registry_id": "portable-runtime-qualification-registry",
+  "registry_version": "0.1.0",
+  "methodology": {
+    "methodology_id": "dad:methodology:portable-runtime-qualification:0.1.0",
+    "scope": "One role, core revision, adapter revision, harness revision, corpus revision, and operating envelope.",
+    "requires": ["paired_or_matched_attempts", "predeclared_margin", "protected_cohorts", "evaluator_integrity", "no_winner", "human_promotion"],
+    "forbids": ["global_model_ranking", "provider_leaderboard", "cross_domain_leaderboard", "self_promotion"]
+  },
+  "receipt_issuers": [
+    {
+      "issuer_id": "receipt-issuer:synthetic-fixture",
+      "verification_method": "synthetic_fixture",
+      "adapter_revision_ids": ["adapter-revision:synthetic-fixture:0.1.0"],
+      "live_claims_allowed": false,
+      "review_status": "reviewed_fixture_only"
+    }
+  ],
+  "qualifications": [],
+  "live_diversity_claims_allowed": false,
+  "candidate_only": true,
+  "execution_authorized": false,
+  "authority_boundary": "Only synthetic receipt verification is registered. No live provider/model diversity, qualification, promotion, or execution claim is authorized."
+}

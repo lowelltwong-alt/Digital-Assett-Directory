@@ -1,0 +1,31 @@
+{
+  "schema_version": "dad.harness_revision.v1",
+  "harness_id": "harness:portable-capability-contract",
+  "revision_id": "harness-revision:portable-capability-contract:0.1.0",
+  "version": "0.1.0",
+  "content_digest": "sha256:ab0cb1b6accaf4c5e52be91efec85578b876ea5bc7942a84791f6338704c9397",
+  "predecessor_revision_id": "",
+  "lifecycle_state": "candidate",
+  "applicability_tags": ["portable_capability", "provider_neutral", "protected_transition"],
+  "runtime_requirements": {"python": ">=3.11", "model_calls": 0, "network": false},
+  "dependencies": ["schemas/portable-capability-card.schema.json", "registry/portability-policy-registry.json"],
+  "fresh_until": "2026-10-15T00:00:00-04:00",
+  "commands": [
+    {
+      "command_id": "portability-validate",
+      "argv": ["python", "-m", "digital_asset_directory.cli", "portability", "validate", "--hub", "."],
+      "cwd_policy": "target_repo",
+      "timeout_seconds": 120,
+      "effect_class": "read_only",
+      "required_tool_capabilities": ["python"],
+      "allowed_environment_keys": ["PYTHONPATH"]
+    }
+  ],
+  "positive_cases": ["A new reusable skill has a complete provider-neutral card and passes the protected gate."],
+  "negative_cases": ["A new reusable identity has no disposition.", "A portable core encodes a permanent provider or model binding.", "A receipt is replayed or lacks verified model identity."],
+  "failure_recovery_cases": ["Policy or baseline digest mismatch fails closed.", "Unavailable runtime evidence returns no_winner without changing the active route.", "Unsafe rollback produces a resumable checkpoint."],
+  "provenance_refs": ["assets/agent-skills/portable-capability-governance/references/PORTABLE_CAPABILITY_CONTRACT.md", "tests/test_portability_control.py"],
+  "rollback": "Deactivate the reviewed policy pointer and revert the bounded revision; preserve immutable evidence and revalidate before restoration.",
+  "review_evidence": ["roadmap/evidence/portable-ai-capability-control-plane-agent-mesh-r2.json"],
+  "candidate_only": true
+}

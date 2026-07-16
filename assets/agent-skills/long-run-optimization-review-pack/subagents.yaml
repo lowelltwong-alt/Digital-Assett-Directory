@@ -6,6 +6,8 @@ ai_agnostic: true
 trigger:
   measured_wall_time_seconds: 60
   predicted_wall_time_seconds: 120
+  repeated_same_state_prior_duration_seconds: 5
+  repeated_same_state_unknown_duration_count: 3
   dedupe_scope: normalized_command_signature_per_session
   retrigger_growth_percent: 25
 fallback: explicit_local_checklists_with_subagents_unavailable_status
@@ -14,6 +16,22 @@ authority_boundary: >
   commands, authorize dependencies, move governance semantics, or approve a
   Python-to-Rust migration without profiling, parity, and local validation.
 roles:
+  - role_id: redundant-work-observer
+    effort: low
+    mission: Inspect only changed ambiguous same-signature/same-state candidates after deterministic matching and propose reuse, narrowing, batching, or an immutable cache without editing or executing.
+    starts_only_when:
+      - deterministic_candidate_changed_or_ambiguous
+    suppressors:
+      - intentional_benchmark_or_cold_cache_run
+      - explicit_retry_after_failure
+      - test_isolation_case
+      - source_state_or_options_changed
+      - mutable_state_fingerprint_unavailable
+    required_output:
+      - exact_signature_and_state_evidence
+      - suppressor_check
+      - estimated_avoidable_cost
+      - deterministic_or_terra_route
   - role_id: optimization-director
     effort: high
     mission: Classify the measured bottleneck, delegate only useful reviews, and approve or reject a bounded build brief.

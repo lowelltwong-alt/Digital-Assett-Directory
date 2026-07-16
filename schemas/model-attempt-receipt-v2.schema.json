@@ -1,0 +1,33 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://dad.local/schemas/model-attempt-receipt-v2.json",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "receipt_id", "issuer_id", "verification_method", "runtime_id", "adapter_revision_id", "assignment_id", "attempt_id", "provider_id", "model_family", "model_release", "evidence_digest", "nonce", "observed_at", "issued_at", "expires_at", "verification_state", "core_revision_id", "harness_revision_id", "corpus_revision_id", "role_id", "candidate_only", "execution_authorized"],
+  "properties": {
+    "schema_version": {"const": "dad.model_attempt_receipt.v2"},
+    "receipt_id": {"type": "string", "pattern": "^model-attempt-receipt:"},
+    "issuer_id": {"type": "string", "pattern": "^receipt-issuer:"},
+    "verification_method": {"enum": ["signed_attestation", "reviewed_local_trust", "synthetic_fixture"]},
+    "runtime_id": {"type": "string", "pattern": "^runtime:"},
+    "adapter_revision_id": {"type": "string", "minLength": 3},
+    "assignment_id": {"type": "string", "minLength": 3},
+    "attempt_id": {"type": "string", "minLength": 3},
+    "provider_id": {"type": "string"},
+    "model_family": {"type": "string"},
+    "model_release": {"type": "string"},
+    "evidence_digest": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"},
+    "attestation_ref": {"type": "string"},
+    "nonce": {"type": "string", "minLength": 8},
+    "observed_at": {"type": "string", "format": "date-time"},
+    "issued_at": {"type": "string", "format": "date-time"},
+    "expires_at": {"type": "string", "format": "date-time"},
+    "verification_state": {"enum": ["unknown", "observed", "verified", "expired", "revoked", "disputed"]},
+    "core_revision_id": {"type": "string", "minLength": 3},
+    "harness_revision_id": {"type": "string", "minLength": 3},
+    "corpus_revision_id": {"type": "string", "minLength": 3},
+    "role_id": {"type": "string", "minLength": 3},
+    "candidate_only": {"const": true},
+    "execution_authorized": {"const": false}
+  }
+}

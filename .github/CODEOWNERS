@@ -1,0 +1,9 @@
+# One-human protected control-plane ownership. GitHub branch protection and
+# required validation are the external activation trust anchor.
+/registry/portable-capability-registry.json @lowelltwong-alt
+/registry/portability-policy-registry.json @lowelltwong-alt
+/registry/portable-runtime-qualification-registry.json @lowelltwong-alt
+/schemas/portable-capability-*.schema.json @lowelltwong-alt
+/schemas/portability-*.schema.json @lowelltwong-alt
+/schemas/model-attempt-receipt-v2.schema.json @lowelltwong-alt
+/src/digital_asset_directory/portability_control.py @lowelltwong-alt

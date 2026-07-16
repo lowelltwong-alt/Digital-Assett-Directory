@@ -1,0 +1,22 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://dad.local/schemas/portability-health-snapshot-v1.json",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "snapshot_id", "generated_at", "policy_revision_id", "baseline_id", "coverage", "finding_counts", "decisions", "backlog_count", "model_calls", "candidate_only", "execution_authorized", "authority_boundary"],
+  "properties": {
+    "schema_version": {"const": "dad.portability_health_snapshot.v1"},
+    "snapshot_id": {"type": "string", "pattern": "^portability-health:"},
+    "generated_at": {"type": "string", "format": "date-time"},
+    "policy_revision_id": {"type": "string"},
+    "baseline_id": {"type": "string"},
+    "coverage": {"type": "object"},
+    "finding_counts": {"type": "object"},
+    "decisions": {"type": "array", "maxItems": 3, "items": {"type": "object"}},
+    "backlog_count": {"type": "integer", "minimum": 0},
+    "model_calls": {"const": 0},
+    "candidate_only": {"const": true},
+    "execution_authorized": {"const": false},
+    "authority_boundary": {"type": "string", "minLength": 20}
+  }
+}

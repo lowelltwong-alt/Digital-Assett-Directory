@@ -134,7 +134,7 @@ def _maybe_hard_issue_lookup(
 def git_changed_files(repo: Path) -> list[str]:
     try:
         result = subprocess.run(
-            ["git", "-C", str(repo), "status", "--porcelain"],
+            ["git", "-C", str(repo), "status", "--porcelain", "--untracked-files=all"],
             capture_output=True,
             text=True,
             check=False,
@@ -1255,6 +1255,43 @@ def preflight(
         payload["context_pack"].setdefault("warnings", []).append(
             "daemon heartbeat is stale or unavailable"
         )
+    try:
+        from .portability_control import assess_lifecycle
+
+        portability_root = (
+            target_repo
+            if (target_repo / "registry" / "portable-capability-registry.json").exists()
+            else hub_root
+        )
+        payload["portability_gate"] = assess_lifecycle(
+            portability_root,
+            stage="preflight",
+            task=task,
+            paths=baseline_changed_files,
+            protected_transition=False,
+        )
+        payload["context_pack"]["portability_gate"] = {
+            key: payload["portability_gate"][key]
+            for key in (
+                "assessment_id",
+                "applicability",
+                "policy_revision_id",
+                "baseline_id",
+                "finding_codes",
+                "gate_outcome",
+                "model_calls",
+            )
+        }
+    except Exception as exc:
+        payload["portability_gate"] = {
+            "applicability": "ambiguous_candidate",
+            "gate_outcome": "eligible_unverified",
+            "error_class": type(exc).__name__,
+            "execution_authorized": False,
+        }
+        payload["context_pack"].setdefault("warnings", []).append(
+            "portability assessment is unavailable; protected transitions must fail closed"
+        )
     plan_intent = _classify_material_plan_intent(task)
     if plan_intent is not None:
         from .portfolio_intents import IntentIntegrityError, capture_plan
@@ -1375,6 +1412,31 @@ def midflight(
             path_values,
         ),
     }
+    try:
+        from .portability_control import assess_lifecycle
+
+        repository = Path(session["repository"])
+        portability_root = (
+            repository
+            if (repository / "registry" / "portable-capability-registry.json").exists()
+            else hub_root
+        )
+        result["portability_gate"] = assess_lifecycle(
+            portability_root,
+            stage="midflight",
+            task=str(session.get("task", "")),
+            paths=path_values,
+            protected_transition=False,
+        )
+        if result["portability_gate"]["gate_outcome"] == "block":
+            result["status"] = "blocked_portability_gate"
+    except Exception as exc:
+        result["portability_gate"] = {
+            "applicability": "ambiguous_candidate",
+            "gate_outcome": "eligible_unverified",
+            "error_class": type(exc).__name__,
+            "execution_authorized": False,
+        }
     hard_lookup = _maybe_hard_issue_lookup(
         hub_root,
         Path(session["repository"]),
@@ -1428,6 +1490,28 @@ def postflight(
     repository = Path(session["repository"])
     changed = split_multi(kwargs.get("files_changed")) or git_changed_files(repository)
     created = utc_now()
+    try:
+        from .portability_control import assess_lifecycle
+
+        portability_root = (
+            repository
+            if (repository / "registry" / "portable-capability-registry.json").exists()
+            else hub_root
+        )
+        portability_gate = assess_lifecycle(
+            portability_root,
+            stage="postflight",
+            task=str(session.get("task", "")),
+            paths=changed,
+            protected_transition=False,
+        )
+    except Exception as exc:
+        portability_gate = {
+            "applicability": "ambiguous_candidate",
+            "gate_outcome": "eligible_unverified",
+            "error_class": type(exc).__name__,
+            "execution_authorized": False,
+        }
     review_lanes = parse_review_lane_records(kwargs.get("review_lanes"))
     required_lane_ids = set(session.get("required_review_lane_ids") or [])
     incomplete_required_lanes = sorted(
@@ -1509,6 +1593,7 @@ def postflight(
             "handoff_id": handoff.handoff_id,
             "lesson_id": lesson.lesson_id,
             "trace_outcomes": trace_outcomes,
+            "portability_postflight": portability_gate,
         }
     )
     write_json(session_path, session)
@@ -1523,6 +1608,8 @@ def postflight(
             "plan_id": session.get("intent_checkpoint", {}).get("plan_id", ""),
             "plan_revision_id": session.get("intent_checkpoint", {}).get("plan_revision_id", ""),
             "related_work_disposition": "preserved_candidate_relations",
+            "portability_assessment_id": portability_gate.get("assessment_id", ""),
+            "portability_gate_outcome": portability_gate.get("gate_outcome", "eligible_unverified"),
         },
     )
     return handoff, lesson

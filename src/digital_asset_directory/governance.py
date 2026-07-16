@@ -2,9 +2,10 @@ from __future__ import annotations
 
 import os
 from pathlib import Path
+import subprocess
 import yaml
 
-from .learning import open_sessions
+from .learning import git_changed_files, open_sessions
 from .logos_write_guard import assert_dad_write_allowed
 from .mail_center import mail_gitignore_text, mail_readme_text
 from .utils import atomic_write_text
@@ -164,6 +165,21 @@ dist/
 build/
 """
 
+_DOWNSTREAM_REUSABLE_PREFIXES = (
+    "src/",
+    "lib/",
+    "packages/",
+    "apps/",
+    "services/",
+    "agents/",
+    "skills/",
+    "workflows/",
+    "prompts/",
+    "harnesses/",
+    "schemas/",
+    "registry/",
+)
+
 
 def scaffold_new_repo(target_repo: Path, hub_root: Path, name: str | None = None) -> list[Path]:
     """Create a new repository pre-wired to the hub: starter files + governance install.
@@ -203,4 +219,60 @@ def enforce_postflight(hub_root: Path, target_repo: Path) -> tuple[bool, str]:
     if pending:
         ids = ", ".join(item["session_id"] for item in pending)
         return False, f"Open AI work session(s) require postflight handoff: {ids}"
+    hub_portability = hub_root / "registry" / "portable-capability-registry.json"
+    local_portability = target_repo / "registry" / "portable-capability-registry.json"
+    if hub_portability.exists() or local_portability.exists():
+        from .portability_control import assess_lifecycle, classify_eligibility
+
+        changed = git_changed_files(target_repo)
+        try:
+            upstream = subprocess.run(
+                ["git", "-C", str(target_repo), "rev-parse", "--abbrev-ref", "@{upstream}"],
+                capture_output=True,
+                text=True,
+                check=False,
+                timeout=10,
+            )
+            comparison = upstream.stdout.strip() if upstream.returncode == 0 else "origin/main"
+            committed = subprocess.run(
+                ["git", "-C", str(target_repo), "diff", "--name-only", f"{comparison}...HEAD"],
+                capture_output=True,
+                text=True,
+                check=False,
+                timeout=20,
+            )
+            if committed.returncode == 0:
+                changed.extend(committed.stdout.splitlines())
+        except (FileNotFoundError, subprocess.TimeoutExpired):
+            pass
+        changed = sorted({path.replace("\\", "/") for path in changed if path})
+        enrolled = (target_repo / ".digital-asset" / "dad-integration.json").exists()
+        downstream_reusable_changes = [
+            path for path in changed if path.startswith(_DOWNSTREAM_REUSABLE_PREFIXES)
+        ]
+        if enrolled and not local_portability.exists() and downstream_reusable_changes:
+            return False, (
+                "Portability protected-release gate blocked: enrolled downstream code or "
+                "reusable-asset changes require a reviewed local portability registry/path policy"
+            )
+        if (
+            not local_portability.exists()
+            and classify_eligibility("", changed)["applicability"] == "portable_required"
+        ):
+            return False, (
+                "Portability protected-release gate blocked: downstream governed changes "
+                "require a reviewed local portability disposition or adoption contract"
+            )
+
+        assessment = assess_lifecycle(
+            target_repo if local_portability.exists() else hub_root,
+            stage="release",
+            paths=changed,
+            protected_transition=True,
+        )
+        if assessment["gate_outcome"] == "block":
+            return False, (
+                "Portability protected-release gate blocked: "
+                + ", ".join(assessment["finding_codes"])
+            )
     return True, "No open Digital Asset Directory agent sessions for this repository."
