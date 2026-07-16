@@ -715,6 +715,9 @@
         "schemas/ml-agent-family-registry.schema.json",
         "schemas/ml-technique-registry.schema.json",
         "schemas/ml-workflow-decision.schema.json",
+        "schemas/ml-fit-routing-assessment.schema.json",
+        "schemas/ml-fit-routing-request.schema.json",
+        "docs/ML_EXPERT_MESH_DELTA_INTEGRATION.md",
         "registry/subagent-capability-registry.json",
         "registry/subagent-evaluation-profile-registry.json",
         "registry/agent-skill-library.json",
@@ -727,8 +730,8 @@
         "MACHINE_NAVIGATION_MANIFEST.json",
         "registry/ai-navigation-registry.json"
       ],
-      "summary": "Added a composable ML-specific role family, incomplete-by-design technique catalog, no-ML and leakage gates, expiring GPT-5.6 adapter observations, read-only catalog and dependency queries, attempt-first evaluation overlay, and unscheduled human-gated 14-day research contract.",
-      "agent_action": "Use asset-dir ml status, catalog, graph, and research-plan for candidate discovery only. Resolve Luna/Terra/Sol through the canonical routing skills, keep model IDs attempt-scoped or expiring, and require named humans for data, deployment, automation, instruction, and supersession decisions.",
+      "summary": "Added a composable ML-specific role family, incomplete-by-design technique catalog, mandatory deterministic ML-fit receipt, ordered entry/stop-bounded toolchain, no-ML and leakage gates, expiring GPT-5.6 adapter observations, read-only catalog and dependency queries, attempt-first evaluation overlay, and unscheduled human-gated 14-day research contract.",
+      "agent_action": "Run asset-dir ml fit before any ML technique or named-tool route; bind downstream candidate routing to its exact digest. Use status, catalog, graph, and research-plan for candidate discovery only. Resolve Luna/Terra/Sol through canonical routing skills, keep model IDs attempt-scoped or expiring, and require named humans for data, deployment, automation, instruction, and supersession decisions.",
       "route_tags": [
         "agent_skill",
         "machine_learning",

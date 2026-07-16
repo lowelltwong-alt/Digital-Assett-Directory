@@ -7,10 +7,22 @@ cards live in `registry/ml-agent-family-registry.json`; technique cards live in
 
 ## 1. Frame The Decision
 
+Run `asset-dir ml fit` before any ML technique or tool specialist in DAD's
+governed ML route. Pass the complete receipt to `asset-dir ml specialist-route`;
+that entry point recomputes the full-payload digest, checks its policy revision
+and nested binding, and fails closed on missing or changed evidence. A named
+tool cannot bypass this DAD entry point, and a no-ML or Knowledge Engineering
+disposition stops it from returning a specialist candidate. External runtimes
+that bypass DAD are outside the harness's enforcement coverage.
+
 Record the end goal, accountable decision owner, unit of analysis, target
 population, prediction horizon or action, acceptable latency, error costs,
 constraints, and success criteria. Separate prediction quality from whether the
 result improves the downstream decision.
+
+Also record the supported downstream action, whether it is reversible, the
+abstention behavior and cost, false-positive, false-negative, delay, and human
+review costs, prediction-time feature availability, and the maintenance owner.
 
 Create and test a no-ML alternative. ML is not indicated when rules, search,
 statistics, optimization, better instrumentation, or process repair meet the
@@ -48,6 +60,12 @@ when complexity could materially increase maintenance or failure modes.
 Do not select an algorithm from popularity, leaderboard position, novelty,
 graph centrality, or one aggregate score. Match inductive bias and operational
 constraints to the problem and data.
+
+Return an ordered toolchain rather than a bag of tools. Put the no-ML or
+simplest credible baseline first. Every optional stage records entry and stop
+criteria plus rejected alternatives. Do not introduce distributed execution
+without measured local insufficiency or an approved hard constraint. Use one
+deep-learning backend by default and justify any second backend independently.
 
 ## 5. Implement Reproducibly
 

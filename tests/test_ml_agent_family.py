@@ -1,6 +1,8 @@
 from __future__ import annotations
 
+from copy import deepcopy
 from datetime import datetime, timezone
+import hashlib
 import json
 import os
 import subprocess
@@ -16,7 +18,10 @@ from digital_asset_directory.ml_agent_family import (
     ml_catalog,
     ml_dependency_graph,
     ml_family_status,
+    ml_fit_route,
     ml_research_plan,
+    ml_specialist_route,
+    validate_ml_fit_receipt,
 )
 
 
@@ -39,6 +44,8 @@ def test_ml_schemas_are_registered_and_registries_conform() -> None:
     assert schema_registry["ml_agent_family_registry"] == "schemas/ml-agent-family-registry.schema.json"
     assert schema_registry["ml_technique_registry"] == "schemas/ml-technique-registry.schema.json"
     assert schema_registry["ml_workflow_decision"] == "schemas/ml-workflow-decision.schema.json"
+    assert schema_registry["ml_fit_routing_assessment"] == "schemas/ml-fit-routing-assessment.schema.json"
+    assert schema_registry["ml_fit_routing_request"] == "schemas/ml-fit-routing-request.schema.json"
     validate(
         "schemas/ml-agent-family-registry.schema.json",
         load_json("registry/ml-agent-family-registry.json"),
@@ -181,14 +188,227 @@ def test_research_plan_is_p14d_and_never_scheduled_by_catalog() -> None:
     assert result["workflow"]["workflow_id"] == "workflow:ml-frontier-research-refresh"
 
 
+def test_fit_route_is_mandatory_first_hop_and_schema_valid() -> None:
+    result = ml_fit_route(
+        ROOT,
+        objective="Prioritize bounded synthetic rows for review.",
+        problem_shape="tabular_prediction",
+        execution_scale="local",
+        label_status="available",
+        consequence="medium",
+        named_tool_preference="XGBoost",
+    )
+    validate("schemas/ml-fit-routing-assessment.schema.json", result)
+    assert result["first_hop_workflow_id"] == "workflow:ml-opportunity-review"
+    assert result["first_hop_completed"] is True
+    assert result["dispatch_authorized"] is False
+    assert result["specialist_route"]["assessment_digest"] == result["assessment_digest"]
+    assert result["specialist_route"]["role_id"] == "ml-technique-router"
+    assert any("XGBoost" in row["alternative"] for row in result["rejected_alternatives"])
+    assert validate_ml_fit_receipt(ROOT, result) == result
+    specialist = ml_specialist_route(ROOT, result)
+    assert specialist["assessment_digest"] == result["assessment_digest"]
+    assert specialist["dispatch_authorized"] is False
+
+
+@pytest.mark.parametrize("field", ["disposition", "ordered_toolchain", "required_gates"])
+def test_fit_receipt_rejects_material_tampering(field: str) -> None:
+    receipt = ml_fit_route(
+        ROOT,
+        objective="Predict a bounded synthetic outcome.",
+        problem_shape="tabular_prediction",
+        execution_scale="local",
+        label_status="available",
+    )
+    tampered = deepcopy(receipt)
+    if field == "disposition":
+        tampered[field] = "no_ml"
+    elif field == "ordered_toolchain":
+        tampered[field][0]["stop_criteria"] = ["Accept without evidence."]
+    else:
+        tampered[field].append("unreviewed automatic approval")
+    with pytest.raises(ValueError, match="deterministic policy replay"):
+        validate_ml_fit_receipt(ROOT, tampered)
+
+
+def test_fit_receipt_rejects_nested_digest_and_stale_policy() -> None:
+    receipt = ml_fit_route(
+        ROOT,
+        objective="Predict a bounded synthetic outcome.",
+        problem_shape="tabular_prediction",
+        execution_scale="local",
+        label_status="available",
+    )
+    nested = deepcopy(receipt)
+    nested["specialist_route"]["assessment_digest"] = "sha256:" + "0" * 64
+    with pytest.raises(ValueError, match="not bound"):
+        validate_ml_fit_receipt(ROOT, nested)
+    stale = deepcopy(receipt)
+    stale["policy_revision_id"] = "ml-fit-routing-policy:0.1.0"
+    with pytest.raises(ValueError, match="missing or stale"):
+        validate_ml_fit_receipt(ROOT, stale)
+    with pytest.raises(ValueError, match="missing or stale"):
+        ml_specialist_route(ROOT, {})
+    with pytest.raises(ValueError, match="must be a JSON object"):
+        ml_specialist_route(ROOT, [])
+
+
+def test_fit_receipt_rejects_forged_but_self_consistent_policy_output() -> None:
+    receipt = ml_fit_route(
+        ROOT,
+        objective="Predict a bounded synthetic outcome.",
+        problem_shape="tabular_prediction",
+        execution_scale="local",
+        label_status="available",
+    )
+    forged = deepcopy(receipt)
+    forged["ordered_toolchain"][0]["stop_criteria"] = ["Accept the named tool without comparison."]
+    material = {
+        key: value
+        for key, value in forged.items()
+        if key not in {"assessment_id", "assessment_digest"}
+    }
+    material["specialist_route"] = {
+        key: value
+        for key, value in material["specialist_route"].items()
+        if key != "assessment_digest"
+    }
+    digest_hex = hashlib.sha256(
+        json.dumps(material, sort_keys=True, separators=(",", ":")).encode("utf-8")
+    ).hexdigest()
+    forged["assessment_digest"] = f"sha256:{digest_hex}"
+    forged["assessment_id"] = f"ml-fit-assessment:{digest_hex[:16]}"
+    forged["specialist_route"]["assessment_digest"] = forged["assessment_digest"]
+    with pytest.raises(ValueError, match="deterministic policy replay"):
+        validate_ml_fit_receipt(ROOT, forged)
+
+
+def test_fit_workflow_interfaces_resolve_and_request_maps_to_cli_inputs() -> None:
+    family = load_json("registry/ml-agent-family-registry.json")
+    workflow = next(
+        row for row in family["workflow_cards"] if row["workflow_id"] == "workflow:ml-opportunity-review"
+    )
+    assert workflow["inputs_ref"] == "schemas/ml-fit-routing-request.schema.json"
+    assert workflow["outputs_ref"] == "schemas/ml-fit-routing-assessment.schema.json"
+    assert (ROOT / workflow["inputs_ref"]).is_file()
+    assert (ROOT / workflow["outputs_ref"]).is_file()
+    result = ml_fit_route(ROOT, objective="Clarify a fixture.")
+    request = {
+        "schema_version": "ml.fit.routing_request.v1",
+        **{
+            key: result[key]
+            for key in (
+                "objective",
+                "problem_shape",
+                "execution_scale",
+                "label_status",
+                "consequence",
+                "named_tool_preference",
+            )
+        },
+    }
+    validate("schemas/ml-fit-routing-request.schema.json", request)
+
+
+def test_fit_route_no_ml_stops_before_specialist() -> None:
+    result = ml_fit_route(
+        ROOT,
+        objective="Render a deterministic report.",
+        problem_shape="deterministic_transform",
+        execution_scale="local",
+        label_status="not_applicable",
+        consequence="low",
+    )
+    assert result["disposition"] == "no_ml"
+    assert result["specialist_route"] is None
+    assert result["candidate_technique_ids"] == ["ml-technique:no-ml-baseline"]
+    assert result["ordered_toolchain"][0]["stage_id"] == "ml-stage:deterministic-baseline"
+
+
+def test_fit_route_orders_baseline_before_optional_tabular_ensemble() -> None:
+    result = ml_fit_route(
+        ROOT,
+        objective="Predict a reviewed synthetic outcome.",
+        problem_shape="high_cardinality_tabular",
+        execution_scale="large_local",
+        label_status="available",
+        consequence="medium",
+    )
+    stages = result["ordered_toolchain"]
+    assert [row["order"] for row in stages] == [1, 2]
+    assert stages[0]["stage_id"] == "ml-stage:credible-baseline"
+    assert stages[0]["required"] is True
+    assert stages[1]["stage_id"] == "ml-stage:tabular-ensemble-candidate"
+    assert stages[1]["required"] is False
+    assert stages[1]["entry_criteria"] and stages[1]["stop_criteria"]
+
+
+def test_fit_route_sends_semantic_retrieval_to_existing_knowledge_family() -> None:
+    result = ml_fit_route(
+        ROOT,
+        objective="Retrieve cited passages from an approved corpus.",
+        problem_shape="semantic_retrieval",
+        execution_scale="local",
+        label_status="not_applicable",
+        consequence="medium",
+    )
+    assert result["disposition"] == "route_to_knowledge_engineering"
+    assert result["specialist_route"] is None
+    assert result["ordered_toolchain"][0]["stage_id"] == "ml-stage:knowledge-route-handoff"
+
+
+def test_fit_route_rejects_unjustified_distribution_and_limits_deep_backend() -> None:
+    result = ml_fit_route(
+        ROOT,
+        objective="Learn a synthetic image representation.",
+        problem_shape="deep_representation",
+        execution_scale="local",
+        label_status="partial",
+        consequence="high",
+    )
+    assert result["human_decision_required"] is True
+    assert any(row["alternative"] == "distributed compute stack" for row in result["rejected_alternatives"])
+    deep = next(row for row in result["ordered_toolchain"] if "deep-backend" in row["stage_id"])
+    assert "do not add a second backend by default" in deep["stop_criteria"][0]
+
+
+def test_fit_route_fails_closed_on_unknown_enum_value() -> None:
+    with pytest.raises(ValueError, match="problem_shape must be one of"):
+        ml_fit_route(ROOT, objective="Fixture", problem_shape="use-whatever-tool-was-named")
+
+
+def test_family_contract_declares_non_bypass_and_receipt_binding() -> None:
+    family = load_json("registry/ml-agent-family-registry.json")
+    contract = family["fit_routing_contract"]
+    assert contract["mandatory_before_specialist"] is True
+    assert "named tool" in contract["non_bypass_rule"].lower()
+    graph = family["graph_contract"]["dependency_edges"]
+    assert any(
+        edge["source"] == "workflow:ml-opportunity-review"
+        and edge["target"] == "role:ml-technique-router"
+        for edge in graph
+    )
+
+
 def test_workflow_decision_requires_no_ml_and_human_gates() -> None:
     payload = {
-        "schema_version": "0.1.0",
+        "schema_version": "0.2.0",
         "decision_id": "ml-workflow-decision:synthetic-tabular",
         "created_at": "2026-07-14T00:00:00Z",
         "goal": "Predict a synthetic outcome for a bounded experiment.",
         "decision_owner": "named synthetic owner",
         "authority_and_sensitivity": "synthetic public fixture only",
+        "supported_action": "Send a synthetic candidate to human review.",
+        "action_reversibility": "reversible",
+        "abstention_behavior": "Abstain to human review when evidence is insufficient.",
+        "decision_costs": {
+            "false_positive": "Unnecessary synthetic review.",
+            "false_negative": "Missed synthetic candidate.",
+            "delay": "One fixture cycle.",
+            "human_review": "One bounded fixture review.",
+        },
+        "prediction_time_availability": "Only synthetic features observed before the prediction timestamp.",
+        "maintenance_owner": "named synthetic owner",
         "no_ml_baseline": "Compare with a deterministic rule and regularized linear model.",
         "candidate_technique_ids": ["ml-technique:tree-ensembles"],
         "recommendation": "bounded_experiment",
@@ -248,3 +468,103 @@ def test_ml_cli_commands_are_read_only_and_succeed(command: list[str]) -> None:
     assert result.returncode == 0, result.stdout + result.stderr
     payload = json.loads(result.stdout)
     assert payload["candidate_only"] is True
+
+
+def test_ml_fit_cli_is_read_only_and_cannot_be_bypassed_by_named_tool() -> None:
+    env = os.environ.copy()
+    env["PYTHONPATH"] = os.pathsep.join(
+        part for part in (str(ROOT / "src"), env.get("PYTHONPATH", "")) if part
+    )
+    result = subprocess.run(
+        [
+            sys.executable,
+            "-m",
+            "digital_asset_directory.cli",
+            "ml",
+            "fit",
+            "--objective",
+            "Predict a synthetic review outcome.",
+            "--problem-shape",
+            "tabular_prediction",
+            "--execution-scale",
+            "local",
+            "--label-status",
+            "available",
+            "--named-tool",
+            "PyTorch",
+            "--hub",
+            str(ROOT),
+        ],
+        cwd=ROOT,
+        env=env,
+        text=True,
+        capture_output=True,
+        check=False,
+    )
+    assert result.returncode == 0, result.stdout + result.stderr
+    payload = json.loads(result.stdout)
+    assert payload["first_hop_completed"] is True
+    assert payload["dispatch_authorized"] is False
+    assert payload["specialist_route"]["assessment_digest"] == payload["assessment_digest"]
+
+
+def test_ml_specialist_cli_requires_and_replays_complete_receipt(tmp_path: Path) -> None:
+    receipt = ml_fit_route(
+        ROOT,
+        objective="Predict a bounded synthetic review outcome.",
+        problem_shape="tabular_prediction",
+        execution_scale="local",
+        label_status="available",
+    )
+    receipt_path = tmp_path / "fit-receipt.json"
+    receipt_path.write_text(json.dumps(receipt), encoding="utf-8")
+    env = os.environ.copy()
+    env["PYTHONPATH"] = os.pathsep.join(
+        part for part in (str(ROOT / "src"), env.get("PYTHONPATH", "")) if part
+    )
+    result = subprocess.run(
+        [
+            sys.executable,
+            "-m",
+            "digital_asset_directory.cli",
+            "ml",
+            "specialist-route",
+            "--receipt",
+            str(receipt_path),
+            "--hub",
+            str(ROOT),
+        ],
+        cwd=ROOT,
+        env=env,
+        text=True,
+        capture_output=True,
+        check=False,
+    )
+    assert result.returncode == 0, result.stdout + result.stderr
+    payload = json.loads(result.stdout)
+    assert payload["assessment_digest"] == receipt["assessment_digest"]
+    assert payload["dispatch_authorized"] is False
+
+    receipt_path.write_text("[]", encoding="utf-8")
+    blocked = subprocess.run(
+        [
+            sys.executable,
+            "-m",
+            "digital_asset_directory.cli",
+            "ml",
+            "specialist-route",
+            "--receipt",
+            str(receipt_path),
+            "--hub",
+            str(ROOT),
+        ],
+        cwd=ROOT,
+        env=env,
+        text=True,
+        capture_output=True,
+        check=False,
+    )
+    assert blocked.returncode == 2
+    blocked_payload = json.loads(blocked.stdout)
+    assert blocked_payload["status"] == "blocked"
+    assert "must be a JSON object" in blocked_payload["error"]
