@@ -108,7 +108,11 @@ def _has_governed_prefix(path: str) -> bool:
 
 def _line_has_normative_runtime_binding(line: str) -> bool:
     lowered = line.lower()
-    if "optional adapter" in lowered or "optional runtime adapter" in lowered:
+    if (
+        "optional adapter" in lowered
+        or "optional runtime adapter" in lowered
+        or "fallback adapter" in lowered
+    ):
         return False
     cursor_binding = _NORMATIVE_CURSOR_SOURCE.search(line) and not _CURSOR_DATA_FIELD.search(line)
     return bool(_NORMATIVE_SOURCE.search(line) or cursor_binding)

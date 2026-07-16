@@ -269,6 +269,7 @@ def test_research_cursor_fields_are_not_mistaken_for_cursor_runtime_binding() ->
     assert pc._line_has_normative_runtime_binding("always use Cursor for this workflow") is True
     assert pc._line_has_normative_runtime_binding("always use cursor for this workflow") is True
     assert pc._line_has_normative_runtime_binding("read-only GPT adapter observation") is False
+    assert pc._line_has_normative_runtime_binding("Claude-specific APIs are fallback adapters only") is False
 
 
 def test_portable_digest_is_stable_across_text_line_endings(tmp_path: Path) -> None:

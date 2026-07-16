@@ -909,8 +909,9 @@ asset-dir agent preflight --repo . --agent <agent-id> --task "<task>"
 If `asset-dir` is not available on `PATH`, use the stable user shim at
 `~/.dad/bin/asset-dir` (POSIX shells) or `~/.dad/bin/asset-dir.ps1`
 (PowerShell). If neither shim exists, run from the DAD checkout with
-`PYTHONPATH=src python -m digital_asset_directory.cli` (POSIX) or
-`$env:PYTHONPATH='src'; python -m digital_asset_directory.cli` (PowerShell).
+`PYTHONPATH=src python -m digital_asset_directory.cli agent preflight --repo . --agent <agent-id> --task "<task>"`
+(POSIX) or `$env:PYTHONPATH='src'; python -m digital_asset_directory.cli agent preflight --repo . --agent <agent-id> --task "<task>"`
+(PowerShell).
 Treat a missing CLI as an availability warning, not permission to bypass the
 fail-closed boundaries below.
 

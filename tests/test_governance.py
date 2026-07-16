@@ -33,6 +33,14 @@ def test_downstream_install_is_idempotent_and_enforces_open_session(tmp_path: Pa
     assert "~/.dad/bin/asset-dir.ps1" in agents_text
     assert "PYTHONPATH=src python -m digital_asset_directory.cli" in agents_text
     assert "$env:PYTHONPATH='src'; python -m digital_asset_directory.cli" in agents_text
+    assert (
+        'PYTHONPATH=src python -m digital_asset_directory.cli agent preflight --repo . '
+        '--agent <agent-id> --task "<task>"'
+    ) in agents_text
+    assert (
+        "$env:PYTHONPATH='src'; python -m digital_asset_directory.cli agent preflight "
+        '--repo . --agent <agent-id> --task "<task>"'
+    ) in agents_text
     assert agents_text.index("~/.dad/bin/asset-dir") < agents_text.index(
         "PYTHONPATH=src python -m digital_asset_directory.cli"
     )

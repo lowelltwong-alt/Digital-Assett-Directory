@@ -237,6 +237,14 @@ def test_apply_requires_approval_and_writes_only_approved_paths(tmp_path: Path):
     assert "~/.dad/bin/asset-dir.ps1" in agents_text
     assert "PYTHONPATH=src python -m digital_asset_directory.cli" in agents_text
     assert "$env:PYTHONPATH='src'; python -m digital_asset_directory.cli" in agents_text
+    assert (
+        'PYTHONPATH=src python -m digital_asset_directory.cli agent preflight --repo . '
+        '--agent <agent-id> --task "<task>"'
+    ) in agents_text
+    assert (
+        "$env:PYTHONPATH='src'; python -m digital_asset_directory.cli agent preflight "
+        '--repo . --agent <agent-id> --task "<task>"'
+    ) in agents_text
     assert agents_text.index("~/.dad/bin/asset-dir") < agents_text.index(
         "PYTHONPATH=src python -m digital_asset_directory.cli"
     )
