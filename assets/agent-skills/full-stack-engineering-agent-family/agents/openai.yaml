@@ -1,0 +1,4 @@
+interface:
+  display_name: "Full-Stack Engineering Agent Family"
+  short_description: "Build and review any software stack safely"
+  default_prompt: "Use -stack-engineering-agent-family to plan and execute this repository change with the smallest stack-specific specialist set."

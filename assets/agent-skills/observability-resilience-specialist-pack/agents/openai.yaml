@@ -1,0 +1,4 @@
+interface:
+  display_name: "Observability Resilience Pack"
+  short_description: "Instrument, respond, recover, and learn safely"
+  default_prompt: "Use $observability-resilience-specialist-pack to design telemetry, incident, resilience, or recovery work."

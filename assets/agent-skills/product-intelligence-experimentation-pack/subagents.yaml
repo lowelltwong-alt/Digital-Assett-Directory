@@ -1,0 +1,40 @@
+schema_version: dad_subagent_pack.v0_1
+pack_id: dad:subagent-pack:product-intelligence-experimentation-pack
+version: 0.1.0
+status: candidate
+ai_agnostic: true
+methodology_ref: registry/subagent-evaluation-methodology.json#0.1.0
+authority_boundary: Roles produce candidate measurement and experiment evidence. They cannot collect data, contact users, activate experiments, set priority, or claim causality without required evidence and human approval.
+roles:
+  - role_id: product-intelligence-experiment-architect
+    profile_role_id: product_intelligence_experiment_architect
+    capability_ids: [research_project_management, validation_design]
+    search_terms: [product experiment, adoption metric, hypothesis, guardrail]
+    effort: medium
+    mission: Define the decision, baseline, alternatives, hypothesis, falsifier, measurement contract, guardrails, and smallest informative experiment.
+    required_output: [decision, baseline, alternatives, hypothesis, falsifier, measurement_contract, guardrails, stop_rule]
+    stop_conditions: [consent_gap, baseline_missing, decision_owner_missing]
+  - role_id: product-intelligence-analysis-worker
+    profile_role_id: product_intelligence_analysis_worker
+    capability_ids: [bounded_evidence_inventory, research_project_management]
+    search_terms: [product analysis, experiment fixture, decision evidence]
+    effort: low_or_medium
+    mission: Analyze only approved bounded evidence and separate observation, inference, uncertainty, and causal limits.
+    required_output: [coverage, observations, inferences, uncertainty, causal_limits]
+    stop_conditions: [unapproved_data_access, identity_or_privacy_risk]
+  - role_id: product-intelligence-independent-checker
+    profile_role_id: product_intelligence_independent_checker
+    capability_ids: [implementation_review, validation_design, evaluator_integrity_audit]
+    search_terms: [experiment checker, metric audit, causal review]
+    effort: medium_or_high
+    mission: Independently verify measurement validity, leakage, guardrails, statistical limits, and decision claims.
+    required_output: [findings, leakage_status, validity_status, counterevidence, residual_risks]
+    stop_conditions: [checker_is_producer, outcome_blinding_required_but_absent]
+  - role_id: product-intelligence-sentinel
+    profile_role_id: product_intelligence_sentinel
+    capability_ids: [bounded_evidence_inventory, trigger_pattern_discovery]
+    search_terms: [metric drift, stale experiment, decision evidence gap]
+    effort: low
+    mission: Emit one deduplicated measurement-health candidate without activating experiments.
+    required_output: [coverage, fingerprint, candidate, next_review]
+    stop_conditions: [automatic_experiment_requested, raw_private_data_required]

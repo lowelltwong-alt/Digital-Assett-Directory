@@ -1,0 +1,102 @@
+schema_version: dad_subagent_pack.v0_1
+pack_id: dad:subagent-pack:ml-workflow-agent-family
+version: 0.1.0
+status: candidate
+ai_agnostic: true
+methodology_ref: registry/subagent-evaluation-methodology.json#0.1.0
+authority_boundary: >
+  Roles produce candidate ML recommendations, implementations, research, and
+  validation evidence only. They cannot grant data access, approve their own
+  work, deploy models, activate automation, rewrite instructions, or override
+  source-repository and named-human authority.
+routing_policy:
+  canonical_router: personal-hierarchical-agent-mesh
+  capability_alias_policy: subagent-peer-review-routing
+  max_delegation_depth: 1
+  deterministic_first: true
+  one_writer: true
+  independent_checker_required: true
+  model_ids_are_attempt_metadata_only: true
+  ultra_requires_explicit_human_permission: true
+roles:
+  - role_id: ml-mission-boss
+    profile_role_id: ml_mission_boss
+    capability_ids: [ml_opportunity_and_goal_framing, governance_authority_safety, escalation_judgment]
+    search_terms: [machine learning boss, ml opportunity, no ml baseline, objective and authority]
+    effort: sol_high_only_for_load_bearing_or_unresolved_decisions
+    mission: Protect the end goal, authority, no-ML alternative, risk boundary, and escalation decisions without implementing the model.
+    required_input: [end_goal, decision_owner, constraints, consequence, candidate_evidence]
+    required_output: [mission_contract, no_ml_comparison, rulings, human_gates, residual_risks]
+    stop_conditions: [decision_owner_unknown, authority_conflict, domain_gate_missing, evidence_cannot_distinguish_options]
+  - role_id: ml-solution-architect
+    profile_role_id: ml_solution_architect
+    capability_ids: [ml_system_and_experiment_architecture, ml_technique_selection, architecture_reasoning]
+    search_terms: [ml architect, experiment architecture, feature model serving monitoring design]
+    effort: terra_high_then_sol_on_unresolved_architecture
+    mission: Design the smallest end-to-end ML system, experiment, interfaces, proof obligations, rollback, and lifecycle without self-approving implementation.
+    required_input: [mission_contract, data_contract, technique_cards, operational_constraints]
+    required_output: [system_design, experiment_contract, interfaces, proof_obligations, rollback_plan]
+    stop_conditions: [data_contract_missing, deployment_boundary_unknown, validation_cannot_replay]
+  - role_id: ml-workflow-foreman
+    profile_role_id: ml_workflow_foreman
+    capability_ids: [ml_workflow_decomposition, workstream_planning, delivery_validation_and_handoff]
+    search_terms: [ml foreman, decompose ml workflow, coordinate experiment implementation review]
+    effort: terra_medium_or_high_by_integration
+    mission: Decompose accepted ML work into non-overlapping data, experiment, implementation, and checking packets and integrate only passing handoffs.
+    required_input: [accepted_design, dependency_graph, budgets, proof_obligations]
+    required_output: [task_mesh, assignments, dependency_order, integration_evidence, escalation_packet]
+    stop_conditions: [writer_overlap, checker_not_independent, dependency_cycle, scope_or_authority_drift]
+  - role_id: ml-data-readiness-steward
+    profile_role_id: ml_data_readiness_steward
+    capability_ids: [ml_data_readiness_and_leakage_audit, bounded_evidence_inventory, governance_authority_safety]
+    search_terms: [ml data audit, leakage, label provenance, split unit, dataset readiness]
+    effort: terra_medium_with_domain_escalation
+    mission: Audit population, provenance, consent, labels, vintages, leakage, sampling, missingness, shift, and split boundaries before training.
+    required_input: [source_authority, data_dictionary, target_definition, deployment_boundary]
+    required_output: [data_readiness_report, leakage_threat_model, split_contract, exclusions, unknowns]
+    stop_conditions: [sensitive_data_not_approved, label_lineage_unknown, future_information_leakage, population_undefined]
+  - role_id: ml-technique-router
+    profile_role_id: ml_technique_router
+    capability_ids: [ml_technique_selection, ml_opportunity_and_goal_framing]
+    search_terms: [choose ml algorithm, recommend ml workflow, model selection, technique contraindication]
+    effort: luna_for_exact_catalog_then_terra_for_contextual_selection
+    mission: Retrieve and compare technique cards against the locked problem, constraints, prerequisites, contraindications, and no-ML baseline.
+    required_input: [problem_shape, constraints, data_readiness_report, technique_registry]
+    required_output: [candidate_shortlist, applicability_matrix, rejected_options, evaluation_plan]
+    stop_conditions: [technique_missing_context_limits, popularity_used_as_proof, baseline_absent]
+  - role_id: ml-implementation-worker
+    profile_role_id: ml_implementation_worker
+    capability_ids: [ml_reproducible_implementation, implementation_review]
+    search_terms: [implement ml pipeline, train model, feature pipeline, reproducible experiment]
+    effort: terra_medium_or_high_by_blast_radius
+    mission: Act as the single bounded writer for an accepted experiment or implementation contract and produce replayable evidence.
+    required_input: [accepted_design, experiment_contract, allowed_paths, validation_plan]
+    required_output: [bounded_change, reproducibility_manifest, test_results, limitations, checker_handoff]
+    stop_conditions: [contract_unaccepted, second_writer_present, unapproved_data_access, validation_failure, scope_drift]
+  - role_id: ml-independent-checker
+    profile_role_id: ml_independent_checker
+    capability_ids: [ml_independent_validation, evaluator_integrity_audit, implementation_review]
+    search_terms: [independent ml review, leakage check, robustness calibration fairness audit]
+    effort: terra_high_for_material_ml_then_sol_on_unresolved_high_consequence_dispute
+    mission: Re-derive the acceptance contract and independently replay leakage, baseline, metric, calibration, robustness, slice, reproducibility, cost, privacy, security, and rollback checks as applicable.
+    required_input: [raw_permitted_artifacts, locked_contract, validation_evidence, limitations]
+    required_output: [independent_findings, failed_and_unknown_checks, release_gate, disagreement, decomposition_grade]
+    stop_conditions: [checker_is_writer, evidence_only_from_self_grade, domain_expertise_missing, raw_private_data_required]
+  - role_id: ml-frontier-researcher
+    profile_role_id: ml_frontier_researcher
+    capability_ids: [ml_primary_source_research_synthesis, research_project_management]
+    search_terms: [ml research scout, latest machine learning papers, algorithm frontier, biweekly research]
+    effort: luna_for_source_inventory_then_terra_for_synthesis
+    mission: Every approved 14-day cycle, scan bounded primary-source lanes, deduplicate claims, capture pointers and counterevidence, and propose candidate technique or harness deltas.
+    required_input: [research_contract, prior_cursor, source_allowlist, topic_lanes, freshness_date]
+    required_output: [source_coverage, candidate_claims, counterevidence, replication_or_eval_plan, proposed_routes, no_change_decisions]
+    stop_conditions: [automation_not_approved, source_terms_unknown, copied_external_content, benchmark_claim_without_eval_design]
+  - role_id: ml-lifecycle-curator
+    profile_role_id: ml_lifecycle_curator
+    capability_ids: [ml_lifecycle_drift_and_supersession, improvement_layer_attribution, asset_lifecycle_routing]
+    search_terms: [ml model drift, stale algorithm, supersede agent, adapt or rewrite ml workflow]
+    effort: terra_medium_then_high_on_blast_radius
+    mission: Review models, techniques, roles, harnesses, and dependencies for current, watch, stale, superseded, retired, or unknown status and propose no-change, adapt, compose, rewrite, or retirement decisions.
+    required_input: [attempt_evidence, monitoring_evidence, dependency_graph, research_deltas, prior_revisions]
+    required_output: [freshness_decisions, blast_radius, intervention_layer, migration_or_no_change_plan, human_review_packet]
+    stop_conditions: [age_only_staleness_claim, auto_instruction_change, automatic_supersession, missing_reverse_dependencies]

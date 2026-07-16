@@ -1,0 +1,147 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://local.digital-asset-directory/schemas/ml-agent-family-registry.schema.json",
+  "title": "Machine Learning Agent Family Registry",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version", "registry_id", "registry_version", "status",
+    "ai_agnostic", "authority_boundary", "routing_authority",
+    "runtime_adapter_observations", "workflow_cards", "lifecycle_policy",
+    "graph_contract", "research_contract"
+  ],
+  "properties": {
+    "schema_version": {"const": "0.1.0"},
+    "registry_id": {"const": "ml-agent-family-registry"},
+    "registry_version": {"type": "string", "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+$"},
+    "status": {"enum": ["candidate", "reviewed", "retired"]},
+    "ai_agnostic": {"const": true},
+    "authority_boundary": {"type": "string", "minLength": 1},
+    "routing_authority": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["canonical_skill_refs", "legacy_field_semantics", "stable_identity_rule", "fail_closed_rule"],
+      "properties": {
+        "canonical_skill_refs": {"$ref": "#/$defs/nonEmptyStrings"},
+        "legacy_field_semantics": {"type": "string", "minLength": 1},
+        "stable_identity_rule": {"type": "string", "minLength": 1},
+        "fail_closed_rule": {"type": "string", "minLength": 1}
+      }
+    },
+    "runtime_adapter_observations": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["observation_id", "provider", "observed_at", "expires_at", "source_ref", "status", "authoritative", "mappings"],
+        "properties": {
+          "observation_id": {"type": "string", "pattern": "^ml-runtime-observation:[a-z0-9._:-]+$"},
+          "provider": {"type": "string", "minLength": 1},
+          "observed_at": {"type": "string", "format": "date-time"},
+          "expires_at": {"type": "string", "format": "date-time"},
+          "source_ref": {"type": "string", "minLength": 1},
+          "status": {"const": "candidate_runtime_evidence"},
+          "authoritative": {"const": false},
+          "mappings": {
+            "type": "array", "minItems": 1,
+            "items": {
+              "type": "object", "additionalProperties": false,
+              "required": ["capability_alias", "model_id", "supported_efforts"],
+              "properties": {
+                "capability_alias": {"enum": ["luna", "terra", "sol"]},
+                "model_id": {"type": "string", "minLength": 1},
+                "supported_efforts": {"$ref": "#/$defs/nonEmptyStrings"}
+              }
+            }
+          }
+        }
+      }
+    },
+    "workflow_cards": {
+      "type": "array", "minItems": 1,
+      "items": {"$ref": "#/$defs/workflowCard"}
+    },
+    "lifecycle_policy": {
+      "type": "object", "additionalProperties": false,
+      "required": ["states", "review_triggers", "dispositions", "no_change_rule", "adapt_rule", "rewrite_rule", "human_gate"],
+      "properties": {
+        "states": {"$ref": "#/$defs/nonEmptyStrings"},
+        "review_triggers": {"$ref": "#/$defs/nonEmptyStrings"},
+        "dispositions": {"$ref": "#/$defs/nonEmptyStrings"},
+        "no_change_rule": {"type": "string", "minLength": 1},
+        "adapt_rule": {"type": "string", "minLength": 1},
+        "rewrite_rule": {"type": "string", "minLength": 1},
+        "human_gate": {"type": "string", "minLength": 1}
+      }
+    },
+    "graph_contract": {
+      "type": "object", "additionalProperties": false,
+      "required": ["node_types", "allowed_edge_types", "dependency_edges", "forbidden_claims"],
+      "properties": {
+        "node_types": {"$ref": "#/$defs/nonEmptyStrings"},
+        "allowed_edge_types": {"$ref": "#/$defs/nonEmptyStrings"},
+        "dependency_edges": {
+          "type": "array", "minItems": 1,
+          "items": {
+            "type": "object", "additionalProperties": false,
+            "required": ["source", "edge_type", "target", "evidence_ref", "review_status"],
+            "properties": {
+              "source": {"type": "string", "minLength": 1},
+              "edge_type": {"enum": ["depends_on", "composes_with", "specializes", "routes_to", "validated_by", "has_member", "requires_capability", "requires_human_gate", "produces_learning_signal", "attempt_used_model_claim", "evaluation_of_attempt", "evaluation_assesses_capability", "supersedes"]},
+              "target": {"type": "string", "minLength": 1},
+              "evidence_ref": {"type": "string", "minLength": 1},
+              "review_status": {"const": "candidate"}
+            }
+          }
+        },
+        "forbidden_claims": {"$ref": "#/$defs/nonEmptyStrings"}
+      }
+    },
+    "research_contract": {
+      "type": "object", "additionalProperties": false,
+      "required": ["cadence", "activation_status", "cursor_required", "source_policy", "lanes", "promotion_policy", "outputs", "stop_conditions"],
+      "properties": {
+        "cadence": {"const": "P14D"},
+        "activation_status": {"const": "human_activation_required"},
+        "cursor_required": {"const": true},
+        "source_policy": {"type": "string", "minLength": 1},
+        "lanes": {"$ref": "#/$defs/nonEmptyStrings"},
+        "promotion_policy": {"type": "string", "minLength": 1},
+        "outputs": {"$ref": "#/$defs/nonEmptyStrings"},
+        "stop_conditions": {"$ref": "#/$defs/nonEmptyStrings"}
+      }
+    }
+  },
+  "$defs": {
+    "nonEmptyStrings": {
+      "type": "array", "minItems": 1, "uniqueItems": true,
+      "items": {"type": "string", "minLength": 1}
+    },
+    "workflowCard": {
+      "type": "object", "additionalProperties": false,
+      "required": [
+        "workflow_id", "trigger", "cadence", "activation_status",
+        "owner_authority", "inputs_ref", "outputs_ref", "steps", "gate_refs",
+        "failure_modes", "validation_ref", "learning_ref", "applies_when",
+        "does_not_apply_when", "danger_if_misapplied"
+      ],
+      "properties": {
+        "workflow_id": {"type": "string", "pattern": "^workflow:ml-[a-z0-9-]+$"},
+        "trigger": {"type": "string", "minLength": 1},
+        "cadence": {"type": "string", "minLength": 1},
+        "activation_status": {"enum": ["task_triggered", "manual", "human_activation_required"]},
+        "owner_authority": {"type": "string", "minLength": 1},
+        "inputs_ref": {"type": "string", "minLength": 1},
+        "outputs_ref": {"type": "string", "minLength": 1},
+        "steps": {"$ref": "#/$defs/nonEmptyStrings"},
+        "gate_refs": {"$ref": "#/$defs/nonEmptyStrings"},
+        "failure_modes": {"$ref": "#/$defs/nonEmptyStrings"},
+        "validation_ref": {"type": "string", "minLength": 1},
+        "learning_ref": {"type": "string", "minLength": 1},
+        "applies_when": {"$ref": "#/$defs/nonEmptyStrings"},
+        "does_not_apply_when": {"$ref": "#/$defs/nonEmptyStrings"},
+        "danger_if_misapplied": {"type": "string", "minLength": 1}
+      }
+    }
+  }
+}

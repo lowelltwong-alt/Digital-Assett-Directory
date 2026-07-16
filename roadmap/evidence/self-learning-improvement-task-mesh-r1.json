@@ -1,0 +1,198 @@
+{
+  "schema_version": "dad.task_local_agent_mesh_manifest.v1",
+  "mesh_id": "dad:agent-mesh:self-learning-improvement-research",
+  "task_id": "self-learning-improvement-research-plan",
+  "revision_id": "dad:agent-mesh-revision:self-learning-improvement-research:v1",
+  "phase": "planning",
+  "status": "planned",
+  "source_snapshot_digest": "sha256:3c756d31952c81bf176090bf77d31ce7bc60055b92d64477bfaa409e8e53d784",
+  "authority": {
+    "source_authority": "DAD owns this candidate planning package; primary sources own research claims; the named human owns adoption, activation, and every instruction or system change.",
+    "execution_authority": false,
+    "human_gate_required": true
+  },
+  "max_delegation_depth": 1,
+  "writer_role_id": "synthesis-writer",
+  "checker_role_id": "independent-checker",
+  "non_overlap_statement": "Only synthesis-writer may edit repository artifacts. Research specialists and the independent checker are read-only; Fable receives a manual sanitized packet and cannot write or activate DAD.",
+  "roles": [
+    {
+      "role_id": "human-owner",
+      "why_needed": "Only the named human may decide whether to send the Fable packet, fund or activate a routine, adopt a candidate, or enter the next phase.",
+      "mission": "Review compact evidence and make explicit budget, privacy, activation, adoption, exception, and stop decisions without becoming the producer or checker.",
+      "inputs": ["sanitized decision packet", "independent findings", "cost and attention envelope"],
+      "dependencies": [],
+      "authority": "Lowell alone owns the decisions named in this manifest. This role is not an AI runtime, delegation target, or standing approval and grants no execution authority.",
+      "model_effort_class": "deterministic",
+      "writer_checker_relation": "peer",
+      "acceptance_conditions": ["Each decision records exact scope, budget, consequence, expiry, and disposition.", "Silence or prior approval never counts as a new approval."],
+      "stop_conditions": ["The decision packet exceeds the declared privacy boundary.", "Evidence, rollback, or independent challenge is missing for a material change."],
+      "handoff": {
+        "recipient_role_ids": ["synthesis-writer", "frontier-manual-reviewer"],
+        "deliverables": ["explicit human decision or deferral"],
+        "readiness_conditions": ["A bounded decision packet and independent findings are available."]
+      }
+    },
+    {
+      "role_id": "continual-learning-researcher",
+      "why_needed": "Parameter, data, memory, and online-learning techniques require a distinct primary-source research lane.",
+      "mission": "Map continual, online, active, meta, self-supervised, self-training, replay, anti-forgetting, curriculum, self-play, and test-time adaptation methods with applicability and failure boundaries.",
+      "inputs": ["public primary research sources", "existing ML family and technique registry"],
+      "dependencies": [],
+      "authority": "Read-only public research; may propose claims and source pointers but cannot change models, datasets, registries, or workflows.",
+      "model_effort_class": "high",
+      "writer_checker_relation": "specialist",
+      "acceptance_conditions": ["Technique taxonomy distinguishes parameter updates from non-parametric workflow learning.", "Load-bearing claims cite primary sources and record limitations."],
+      "stop_conditions": ["A source requires private data or inaccessible paywalled content.", "A technique would be presented as safe autonomous self-modification."],
+      "handoff": {
+        "recipient_role_ids": ["synthesis-writer"],
+        "deliverables": ["technique taxonomy", "source ledger", "applicability and contraindication notes"],
+        "readiness_conditions": ["Primary-source claims and unresolved conflicts are explicit."]
+      }
+    },
+    {
+      "role_id": "agentic-improvement-researcher",
+      "why_needed": "Agent reflection, evaluator, memory, prompt/program optimization, and tool-use improvement have different evidence and gaming risks from model training.",
+      "mission": "Map agentic self-improvement loops, evaluation-driven optimization, prompt and program search, memory and retrieval adaptation, tool-use learning, multi-agent critique, and process supervision.",
+      "inputs": ["public primary research sources", "DAD subagent evaluation and integrity contracts"],
+      "dependencies": [],
+      "authority": "Read-only public research; cannot rewrite prompts, roles, evaluators, memories, or policies.",
+      "model_effort_class": "high",
+      "writer_checker_relation": "specialist",
+      "acceptance_conditions": ["Separates proposal, shadow evaluation, independent validation, pilot, adoption, and rollback.", "Addresses evaluator overfitting, reward hacking, and self-approval."],
+      "stop_conditions": ["Evidence is marketing-only or benchmark claims lack a primary source.", "The proposed loop bypasses independent evaluation or human gates."],
+      "handoff": {
+        "recipient_role_ids": ["synthesis-writer"],
+        "deliverables": ["agentic workflow taxonomy", "evaluation and gaming controls", "source ledger"],
+        "readiness_conditions": ["Workflow stages and falsifiers are explicit."]
+      }
+    },
+    {
+      "role_id": "research-ops-governance-researcher",
+      "why_needed": "A weekly crawler must balance freshness, recall, privacy, licensing, attention, and token cost.",
+      "mission": "Design a cheap delta-first weekly research discovery pipeline, trusted-source policy, dedupe and citation checks, budgets, suppressors, escalation, and governance for candidate adoption.",
+      "inputs": ["public source metadata", "DAD research intake and dormant routine contracts", "one-human attention limits"],
+      "dependencies": [],
+      "authority": "Read-only design; no scheduler, crawler, connector, notification, or external mutation may be activated.",
+      "model_effort_class": "medium",
+      "writer_checker_relation": "specialist",
+      "acceptance_conditions": ["Unchanged cycles use deterministic zero-model processing.", "Changed cycles have bounded tokens, sources, notices, and human decisions."],
+      "stop_conditions": ["Robots, terms, privacy, licensing, or rate-limit boundaries are unknown.", "A routine would persist or notify without human approval."],
+      "handoff": {
+        "recipient_role_ids": ["synthesis-writer"],
+        "deliverables": ["weekly crawler architecture", "budget and trigger contract", "source and governance matrix"],
+        "readiness_conditions": ["Cost model, suppressors, idempotency, and kill criteria are explicit."]
+      }
+    },
+    {
+      "role_id": "synthesis-writer",
+      "why_needed": "One writer must reconcile non-overlapping research into a coherent model-neutral family and workflow graph.",
+      "mission": "Produce the research brief, family architecture, workflow suite, weekly research plan, dependency graph, phased roadmap, and sanitized neutral Fable prompt.",
+      "inputs": ["three specialist research handoffs", "DAD registries and governance", "docs/research/AI_SELF_LEARNING_AND_IMPROVEMENT_RESEARCH_2026-07-14.md source ledger"],
+      "dependencies": ["continual-learning-researcher", "agentic-improvement-researcher", "research-ops-governance-researcher"],
+      "authority": "May edit only task-local documentation, evidence, and planning manifests on the isolated branch; cannot activate automation or modify live authority.",
+      "model_effort_class": "high",
+      "writer_checker_relation": "writer",
+      "acceptance_conditions": ["Architecture is model-neutral, graph-addressed, cost-bounded, human-gated, and usable by one operator.", "Each workflow has triggers, evidence, checker, rollback, and stop conditions.", "Fable packet is neutral, sanitized, and manually transferable."],
+      "stop_conditions": ["Research sources materially conflict without an explicit unknown or experiment.", "Scope expands to implementing autonomous model or policy modification."],
+      "handoff": {
+        "recipient_role_ids": ["independent-checker", "frontier-manual-reviewer"],
+        "deliverables": ["research synthesis", "architecture and workflow plan", "Fable handoff prompt", "validation evidence"],
+        "readiness_conditions": ["Citations resolve and deterministic artifact checks pass."]
+      }
+    },
+    {
+      "role_id": "independent-checker",
+      "why_needed": "A self-improvement architecture cannot validate its own safety, coverage, or evidence quality.",
+      "mission": "Independently challenge taxonomy completeness, citations, evaluator integrity, governance, cost claims, dependency graph, and Fable-packet neutrality.",
+      "inputs": ["frozen planning package", "primary source ledger", "DAD authority contracts"],
+      "dependencies": ["synthesis-writer"],
+      "authority": "Read-only review; cannot edit or approve its own work and cannot create activation authority.",
+      "model_effort_class": "high",
+      "writer_checker_relation": "checker",
+      "acceptance_conditions": ["Findings distinguish blockers, bounded pilots, human decisions, and residual unknowns.", "Every proof obligation has replayable evidence."],
+      "stop_conditions": ["Checker becomes the writer.", "Primary evidence is unavailable for a load-bearing claim."],
+      "handoff": {
+        "recipient_role_ids": ["synthesis-writer", "human-owner"],
+        "deliverables": ["independent findings", "acceptance verdict", "residual risks"],
+        "readiness_conditions": ["Frozen artifacts and permitted source pointers are available."]
+      }
+    },
+    {
+      "role_id": "frontier-manual-reviewer",
+      "why_needed": "The master self-improvement architecture merits an independent frontier-model red-team before implementation.",
+      "mission": "When the human manually supplies the sanitized packet to Fable, produce an independent architecture, red-team, premortem, and convergence recommendations.",
+      "inputs": ["sanitized frozen Fable packet", "public source allowlist"],
+      "dependencies": ["synthesis-writer", "human-owner"],
+      "authority": "Manual external candidate review only; no repository write, dispatch, approval, or activation authority.",
+      "model_effort_class": "frontier_manual",
+      "writer_checker_relation": "peer",
+      "acceptance_conditions": ["Fable distinguishes facts, assumptions, policy choices, experiments, and risks.", "Fable proposes non-binary synthesis and falsifiable pilots."],
+      "stop_conditions": ["The named human has not approved and copy-pasted the packet.", "The packet would include private content, secrets, or unnecessary source blobs."],
+      "handoff": {
+        "recipient_role_ids": ["synthesis-writer", "independent-checker"],
+        "deliverables": ["independent design", "red-team and premortem", "ranked recommendations and disagreements"],
+        "readiness_conditions": ["Human manually authorizes the exact sanitized packet and budget."]
+      }
+    }
+  ],
+  "proof_obligations": [
+    {
+      "obligation_id": "primary-source-coverage",
+      "description": "Load-bearing technique and architecture claims use current primary sources with limitations.",
+      "evidence_required": ["source ledger", "claim-to-source map", "citation replay"],
+      "owner_role_id": "synthesis-writer",
+      "checker_role_id": "independent-checker",
+      "status": "satisfied"
+    },
+    {
+      "obligation_id": "fail-closed-improvement",
+      "description": "No workflow can self-approve, silently change active instructions, train a production model, or mutate an external system.",
+      "evidence_required": ["decision-right matrix", "negative workflow tests", "human-gate map"],
+      "owner_role_id": "synthesis-writer",
+      "checker_role_id": "independent-checker",
+      "status": "satisfied"
+    },
+    {
+      "obligation_id": "weekly-cost-bound",
+      "description": "The weekly research design is delta-first, deterministic when unchanged, and bounded when changed.",
+      "evidence_required": ["crawler stages", "token and source budgets", "suppressors", "kill criteria"],
+      "owner_role_id": "synthesis-writer",
+      "checker_role_id": "independent-checker",
+      "status": "satisfied"
+    },
+    {
+      "obligation_id": "workflow-reconstructability",
+      "description": "Decomposed specialist outputs can be reconstructed into versioned workflows without losing provenance, dissent, dependencies, or validation state.",
+      "evidence_required": ["typed workflow graph", "artifact interfaces", "revision and correction rules"],
+      "owner_role_id": "synthesis-writer",
+      "checker_role_id": "independent-checker",
+      "status": "satisfied"
+    },
+    {
+      "obligation_id": "fable-packet-neutrality",
+      "description": "The manual Fable packet is sanitized, target-independent, balanced, and contains symmetric proof obligations and stop conditions.",
+      "evidence_required": ["Fable prompt", "allowlist and prohibitions", "review rubric"],
+      "owner_role_id": "synthesis-writer",
+      "checker_role_id": "independent-checker",
+      "status": "satisfied"
+    }
+  ],
+  "unresolved_decisions": [
+    {
+      "decision_id": "fable-review-pending",
+      "summary": "The human must decide whether and when to copy the sanitized prompt to Fable and what token budget to authorize.",
+      "owner_role_id": "human-owner",
+      "blocking": true,
+      "status": "open"
+    },
+    {
+      "decision_id": "weekly-routine-activation",
+      "summary": "No scheduler or recurring external research routine may be activated until the human reviews the source, privacy, cost, notification, and rollback contract.",
+      "owner_role_id": "human-owner",
+      "blocking": false,
+      "status": "deferred"
+    }
+  ],
+  "manifest_digest": "sha256:ac46cd08be44f09aa8a5b7e721dda89b2d11fbdeb3c19a582adb487b50ac0d6c"
+}

@@ -1,0 +1,187 @@
+{
+  "schema_version": "0.1.0",
+  "registry_id": "ml-agent-family-registry",
+  "registry_version": "0.1.0",
+  "status": "candidate",
+  "ai_agnostic": true,
+  "authority_boundary": "This registry describes candidate ML workflows, dependencies, lifecycle decisions, and dated runtime observations. It cannot authorize data access, model selection, training, deployment, instruction changes, research promotion, automation, or cross-repository mutation.",
+  "routing_authority": {
+    "canonical_skill_refs": [
+      "skill:personal-hierarchical-agent-mesh",
+      "personal-skill-source:subagent-peer-review-routing"
+    ],
+    "legacy_field_semantics": "The existing subagent-improvement field preferred_model_family is a compatibility field: luna, terra, and sol are interpreted as capability aliases, never provider or model identities.",
+    "stable_identity_rule": "Stable identity is role profile plus revision plus capability contract. Provider and model IDs are attempt-scoped claims or expiring adapter observations only.",
+    "fail_closed_rule": "If no approved available runtime satisfies tools, context, privacy, output, evidence, and consequence requirements, stop for a routing decision. Availability never lowers the consequence tier."
+  },
+  "runtime_adapter_observations": [
+    {
+      "observation_id": "ml-runtime-observation:openai:gpt-5.6:2026-07-14",
+      "provider": "openai",
+      "observed_at": "2026-07-14T00:00:00Z",
+      "expires_at": "2026-07-28T00:00:00Z",
+      "source_ref": "https://developers.openai.com/api/docs/models",
+      "status": "candidate_runtime_evidence",
+      "authoritative": false,
+      "mappings": [
+        {
+          "capability_alias": "luna",
+          "model_id": "gpt-5.6-luna",
+          "supported_efforts": ["none", "low", "medium", "high", "xhigh", "max"]
+        },
+        {
+          "capability_alias": "terra",
+          "model_id": "gpt-5.6-terra",
+          "supported_efforts": ["none", "low", "medium", "high", "xhigh", "max"]
+        },
+        {
+          "capability_alias": "sol",
+          "model_id": "gpt-5.6-sol",
+          "supported_efforts": ["none", "low", "medium", "high", "xhigh", "max"]
+        }
+      ]
+    }
+  ],
+  "workflow_cards": [
+    {
+      "workflow_id": "workflow:ml-opportunity-review",
+      "trigger": "A goal may benefit from prediction, ranking, discovery, generation, control, or adaptive decisions.",
+      "cadence": "task-triggered",
+      "activation_status": "task_triggered",
+      "owner_authority": "source repository and named product/domain owner",
+      "inputs_ref": "schemas/ml-workflow-decision.schema.json",
+      "outputs_ref": "candidate ML or no-ML decision record",
+      "steps": ["lock end goal and error costs", "establish data and decision authority", "compare no-ML alternatives", "route to technique review or stop"],
+      "gate_refs": ["gate:source-authority", "gate:data-privacy", "gate:domain-owner", "gate:no-ml-baseline"],
+      "failure_modes": ["solutionism", "unmeasurable target", "missing feedback loop", "automation bias"],
+      "validation_ref": "tests/test_ml_agent_family.py",
+      "learning_ref": "registry/subagent-evaluation-profile-registry.json#dad:evaluation-profile:machine-learning-workflow",
+      "applies_when": ["The end goal and downstream decision are explicit.", "A bounded data and evaluation path can be investigated."],
+      "does_not_apply_when": ["A deterministic transform already fully specifies the answer.", "The target or accountable decision owner is unknown."],
+      "danger_if_misapplied": "Recommending ML before proving need and measurability can add cost, opacity, data risk, and false confidence without improving the outcome."
+    },
+    {
+      "workflow_id": "workflow:ml-experiment-and-build",
+      "trigger": "A reviewed opportunity decision authorizes a bounded experiment or implementation.",
+      "cadence": "task-triggered",
+      "activation_status": "task_triggered",
+      "owner_authority": "source repository; named humans retain data, domain, deployment, and release authority",
+      "inputs_ref": "assets/agent-skills/ml-workflow-agent-family/references/ML_WORKFLOW_CONTRACT.md",
+      "outputs_ref": "versioned experiment, implementation, evidence, and checker handoff",
+      "steps": ["run preflight", "lock data and experiment contract", "select techniques", "implement with one writer", "run DAD midflight and re-lock the contract on material data split metric technique runtime dependency authority privacy scope or proof-obligation change", "independently replay checks", "run postflight"],
+      "gate_refs": ["gate:experiment-contract", "gate:midflight-contract-relock", "gate:independent-checker", "gate:deployment-separate"],
+      "failure_modes": ["data leakage", "metric gaming", "irreproducibility", "worker self-approval", "silent scope drift"],
+      "validation_ref": "assets/agent-skills/ml-workflow-agent-family/references/ML_WORKFLOW_CONTRACT.md",
+      "learning_ref": "skill:subagent-continuous-improvement",
+      "applies_when": ["A reviewed ML decision and data contract exist.", "The experiment can be bounded and rolled back."],
+      "does_not_apply_when": ["Data access or training has not been authorized.", "The evaluation cannot distinguish the candidate from the baseline."],
+      "danger_if_misapplied": "Training before locking splits, metrics, baselines, and authority can make leakage or post-hoc success criteria look like evidence."
+    },
+    {
+      "workflow_id": "workflow:ml-deployment-readiness",
+      "trigger": "An independently checked ML artifact is proposed for a real decision or production path.",
+      "cadence": "manual",
+      "activation_status": "manual",
+      "owner_authority": "named product, domain, privacy, security, operations, and release humans",
+      "inputs_ref": "independently checked model, data, experiment, monitoring, rollback, and incident evidence",
+      "outputs_ref": "human deployment decision or blocked readiness packet",
+      "steps": ["verify offline and downstream evidence", "verify monitoring and fallback", "verify rollback and ownership", "obtain named-human decision"],
+      "gate_refs": ["gate:domain-safety", "gate:privacy-security", "gate:operations", "gate:human-deployment"],
+      "failure_modes": ["offline-only confidence", "missing rollback", "unowned alerts", "silent high-impact automation"],
+      "validation_ref": "assets/agent-skills/ml-workflow-agent-family/references/ML_WORKFLOW_CONTRACT.md#7-gate-deployment",
+      "learning_ref": "registry/subagent-improvement-policy.json",
+      "applies_when": ["A model will affect a real user, system, allocation, or decision."],
+      "does_not_apply_when": ["The artifact remains an isolated synthetic or educational experiment."],
+      "danger_if_misapplied": "Treating experiment completion as deployment approval can create unmonitored, irreversible, unsafe, or noncompliant decisions."
+    },
+    {
+      "workflow_id": "workflow:ml-frontier-research-refresh",
+      "trigger": "The approved 14-day research cursor is due or a named human requests a bounded frontier refresh.",
+      "cadence": "P14D",
+      "activation_status": "human_activation_required",
+      "owner_authority": "DAD research intake plus named human promotion reviewer",
+      "inputs_ref": "docs/RESEARCH_INTAKE_PIPELINE.md and the research_contract in this registry",
+      "outputs_ref": "pointer-only candidate research deltas, counterevidence, eval plans, and no-change decisions",
+      "steps": ["load durable cursor and prior claims", "scan bounded primary-source lanes", "deduplicate and screen pointers", "assess applicability and counterevidence", "propose candidate routes", "advance cursor only after receipt"],
+      "gate_refs": ["gate:automation-activation", "gate:source-terms", "gate:research-screening", "gate:human-promotion"],
+      "failure_modes": ["paper hype", "benchmark laundering", "duplicate alerts", "copied external content", "automatic prompt growth"],
+      "validation_ref": "docs/RESEARCH_INTAKE_PIPELINE.md",
+      "learning_ref": "processed/research/intake-graph.json",
+      "applies_when": ["The source scope, cursor, and research lanes are approved.", "The cycle can produce pointer-only evidence and explicit no-change outcomes."],
+      "does_not_apply_when": ["Recurring activation has not been approved.", "Source terms, provenance, or privacy boundaries are unclear."],
+      "danger_if_misapplied": "An unscreened research feed can turn novelty, benchmark artifacts, or prompt injection into durable but unsafe guidance."
+    },
+    {
+      "workflow_id": "workflow:ml-family-lifecycle-review",
+      "trigger": "Monitoring, attempts, research, dependencies, runtime capabilities, harnesses, or governance evidence materially changes.",
+      "cadence": "event-triggered-or-quarterly-review",
+      "activation_status": "manual",
+      "owner_authority": "DAD candidate review plus named human lifecycle decision",
+      "inputs_ref": "attempt evaluations, monitoring evidence, dependency graph, research deltas, and prior revisions",
+      "outputs_ref": "no-change, adapt, compose, rewrite, retire, or supersede-after-review packet",
+      "steps": ["identify changed evidence", "attribute the affected layer", "trace reverse dependencies", "compare intervention options", "run held-out check", "obtain human decision"],
+      "gate_refs": ["gate:attempt-first-evidence", "gate:reverse-blast-radius", "gate:held-out-trial", "gate:human-lifecycle"],
+      "failure_modes": ["age-only retirement", "prompt bloat", "model leaderboard", "automatic supersession", "lost rollback"],
+      "validation_ref": "skill:subagent-continuous-improvement",
+      "learning_ref": "docs/SUBAGENT_EVALUATION_AND_CAPABILITY_GRAPH.md",
+      "applies_when": ["A material, evidence-backed change may affect one or more ML family components."],
+      "does_not_apply_when": ["The only signal is age or one unverified complaint.", "No reverse dependencies or comparable evidence are available."],
+      "danger_if_misapplied": "Changing roles or techniques on weak evidence can destroy a simple reliable workflow, erase lineage, and misattribute a system-level problem to a prompt."
+    }
+  ],
+  "lifecycle_policy": {
+    "states": ["discovered", "candidate", "reviewed", "active", "watch", "stale", "deprecated", "retired", "archived", "unknown"],
+    "review_triggers": ["runtime adapter expiry", "dependency or harness change", "schema or authority change", "new counterevidence", "benchmark invalidation", "repeated independently verified failure", "distribution or outcome drift", "security privacy legal or regulatory change", "plausible replacement technique"],
+    "dispositions": ["no_change", "collect_more_evidence", "adapt", "compose_specialist", "new_revision", "rewrite_new_identity", "retire", "supersede_after_review"],
+    "no_change_rule": "Prefer no change when comparable evidence, negative cases, latency and cost, and held-out confirmation show the current bounded contract remains fit.",
+    "adapt_rule": "Adapt when mission and output semantics remain stable while a runtime binding, dependency, evidence pointer, or compatible interface changes.",
+    "rewrite_rule": "Create a new identity when mission, authority, output semantics, privacy boundary, or required proof changes incompatibly; preserve prior revisions and migration evidence.",
+    "human_gate": "Instruction changes, promotion, deployment, retirement, and supersession require an explicit named-human decision and rollback criteria."
+  },
+  "graph_contract": {
+    "node_types": ["agent_skill", "subagent_pack", "role", "capability", "ml_technique", "workflow", "evaluation_profile", "research_intake", "runtime_model_claim", "governance_gate"],
+    "allowed_edge_types": ["depends_on", "composes_with", "specializes", "routes_to", "validated_by", "has_member", "requires_capability", "requires_human_gate", "produces_learning_signal", "attempt_used_model_claim", "evaluation_of_attempt", "evaluation_assesses_capability", "supersedes"],
+    "dependency_edges": [
+      {"source": "skill:ml-workflow-agent-family", "edge_type": "specializes", "target": "skill:personal-hierarchical-agent-mesh", "evidence_ref": "assets/agent-skills/ml-workflow-agent-family/SKILL.md", "review_status": "candidate"},
+      {"source": "skill:ml-workflow-agent-family", "edge_type": "depends_on", "target": "skill:subagent-continuous-improvement", "evidence_ref": "registry/agent-skill-library.json", "review_status": "candidate"},
+      {"source": "skill:ml-workflow-agent-family", "edge_type": "depends_on", "target": "skill:dad-manifest-graph-engineering", "evidence_ref": "registry/agent-skill-library.json", "review_status": "candidate"},
+      {"source": "skill:ml-workflow-agent-family", "edge_type": "depends_on", "target": "registry:ml-technique-registry", "evidence_ref": "registry/ml-technique-registry.json", "review_status": "candidate"},
+      {"source": "skill:ml-workflow-agent-family", "edge_type": "has_member", "target": "dad:subagent-pack:ml-workflow-agent-family", "evidence_ref": "assets/agent-skills/ml-workflow-agent-family/subagents.yaml", "review_status": "candidate"},
+      {"source": "dad:subagent-pack:ml-workflow-agent-family", "edge_type": "has_member", "target": "role:ml-mission-boss", "evidence_ref": "assets/agent-skills/ml-workflow-agent-family/subagents.yaml", "review_status": "candidate"},
+      {"source": "dad:subagent-pack:ml-workflow-agent-family", "edge_type": "has_member", "target": "role:ml-solution-architect", "evidence_ref": "assets/agent-skills/ml-workflow-agent-family/subagents.yaml", "review_status": "candidate"},
+      {"source": "dad:subagent-pack:ml-workflow-agent-family", "edge_type": "has_member", "target": "role:ml-workflow-foreman", "evidence_ref": "assets/agent-skills/ml-workflow-agent-family/subagents.yaml", "review_status": "candidate"},
+      {"source": "dad:subagent-pack:ml-workflow-agent-family", "edge_type": "has_member", "target": "role:ml-data-readiness-steward", "evidence_ref": "assets/agent-skills/ml-workflow-agent-family/subagents.yaml", "review_status": "candidate"},
+      {"source": "dad:subagent-pack:ml-workflow-agent-family", "edge_type": "has_member", "target": "role:ml-technique-router", "evidence_ref": "assets/agent-skills/ml-workflow-agent-family/subagents.yaml", "review_status": "candidate"},
+      {"source": "dad:subagent-pack:ml-workflow-agent-family", "edge_type": "has_member", "target": "role:ml-implementation-worker", "evidence_ref": "assets/agent-skills/ml-workflow-agent-family/subagents.yaml", "review_status": "candidate"},
+      {"source": "dad:subagent-pack:ml-workflow-agent-family", "edge_type": "has_member", "target": "role:ml-independent-checker", "evidence_ref": "assets/agent-skills/ml-workflow-agent-family/subagents.yaml", "review_status": "candidate"},
+      {"source": "dad:subagent-pack:ml-workflow-agent-family", "edge_type": "has_member", "target": "role:ml-frontier-researcher", "evidence_ref": "assets/agent-skills/ml-workflow-agent-family/subagents.yaml", "review_status": "candidate"},
+      {"source": "dad:subagent-pack:ml-workflow-agent-family", "edge_type": "has_member", "target": "role:ml-lifecycle-curator", "evidence_ref": "assets/agent-skills/ml-workflow-agent-family/subagents.yaml", "review_status": "candidate"},
+      {"source": "role:ml-mission-boss", "edge_type": "requires_capability", "target": "capability:ml_opportunity_and_goal_framing", "evidence_ref": "registry/subagent-capability-registry.json", "review_status": "candidate"},
+      {"source": "role:ml-solution-architect", "edge_type": "requires_capability", "target": "capability:ml_system_and_experiment_architecture", "evidence_ref": "registry/subagent-capability-registry.json", "review_status": "candidate"},
+      {"source": "role:ml-workflow-foreman", "edge_type": "requires_capability", "target": "capability:ml_workflow_decomposition", "evidence_ref": "registry/subagent-capability-registry.json", "review_status": "candidate"},
+      {"source": "role:ml-data-readiness-steward", "edge_type": "requires_capability", "target": "capability:ml_data_readiness_and_leakage_audit", "evidence_ref": "registry/subagent-capability-registry.json", "review_status": "candidate"},
+      {"source": "role:ml-technique-router", "edge_type": "requires_capability", "target": "capability:ml_technique_selection", "evidence_ref": "registry/subagent-capability-registry.json", "review_status": "candidate"},
+      {"source": "role:ml-implementation-worker", "edge_type": "requires_capability", "target": "capability:ml_reproducible_implementation", "evidence_ref": "registry/subagent-capability-registry.json", "review_status": "candidate"},
+      {"source": "role:ml-independent-checker", "edge_type": "requires_capability", "target": "capability:ml_independent_validation", "evidence_ref": "registry/subagent-capability-registry.json", "review_status": "candidate"},
+      {"source": "role:ml-frontier-researcher", "edge_type": "requires_capability", "target": "capability:ml_primary_source_research_synthesis", "evidence_ref": "registry/subagent-capability-registry.json", "review_status": "candidate"},
+      {"source": "role:ml-lifecycle-curator", "edge_type": "requires_capability", "target": "capability:ml_lifecycle_drift_and_supersession", "evidence_ref": "registry/subagent-capability-registry.json", "review_status": "candidate"},
+      {"source": "skill:ml-workflow-agent-family", "edge_type": "validated_by", "target": "dad:evaluation-profile:machine-learning-workflow", "evidence_ref": "registry/subagent-evaluation-profile-registry.json", "review_status": "candidate"},
+      {"source": "workflow:ml-experiment-and-build", "edge_type": "validated_by", "target": "gate:midflight-contract-relock", "evidence_ref": "assets/agent-skills/ml-workflow-agent-family/references/ML_WORKFLOW_CONTRACT.md", "review_status": "candidate"},
+      {"source": "workflow:ml-deployment-readiness", "edge_type": "requires_human_gate", "target": "gate:human-deployment", "evidence_ref": "assets/agent-skills/ml-workflow-agent-family/references/ML_WORKFLOW_CONTRACT.md", "review_status": "candidate"},
+      {"source": "workflow:ml-frontier-research-refresh", "edge_type": "requires_human_gate", "target": "gate:automation-activation", "evidence_ref": "assets/agent-skills/ml-workflow-agent-family/routines.yaml", "review_status": "candidate"},
+      {"source": "workflow:ml-frontier-research-refresh", "edge_type": "routes_to", "target": "docs:research-intake-pipeline", "evidence_ref": "docs/RESEARCH_INTAKE_PIPELINE.md", "review_status": "candidate"},
+      {"source": "workflow:ml-family-lifecycle-review", "edge_type": "produces_learning_signal", "target": "registry:subagent-evaluation-profile-registry", "evidence_ref": "registry/subagent-evaluation-profile-registry.json", "review_status": "candidate"}
+    ],
+    "forbidden_claims": ["graph presence proves installation or competence", "similarity or centrality proves value", "a runtime observation is stable identity", "an inferred edge authorizes mutation", "supersession without reviewed lineage and human decision"]
+  },
+  "research_contract": {
+    "cadence": "P14D",
+    "activation_status": "human_activation_required",
+    "cursor_required": true,
+    "source_policy": "Use primary papers, official proceedings, official standards, official framework documentation, and official lab publications. Store pointers and bounded claims, never copied papers, code, or prompts.",
+    "lanes": ["generalization optimization and scaling", "data-centric learning evaluation and uncertainty", "tabular time-series and anomaly methods", "causal online reinforcement and decision learning", "graph geometric multimodal and generative learning", "privacy security fairness safety and governance", "framework harness benchmark and reproducibility changes"],
+    "promotion_policy": "Quarantine, screen prompt-injection/license/provenance/compatibility, deduplicate, record counterevidence and a local replication or eval design, then require named-human promotion.",
+    "outputs": ["source coverage", "candidate claims", "counterevidence", "applicability and non-applicability", "danger if misapplied", "replication or local eval plan", "technique harness or skill route", "no-change decisions", "durable cursor receipt"],
+    "stop_conditions": ["automation activation missing", "source scope or terms unknown", "private or sensitive content required", "copied external content", "benchmark claim lacks comparable evaluation design", "promotion would be automatic"]
+  }
+}

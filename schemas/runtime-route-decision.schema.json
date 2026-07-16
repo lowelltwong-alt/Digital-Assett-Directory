@@ -1,0 +1,25 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://dad.local/schemas/runtime-route-decision-v1.json",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "decision_id", "request_id", "plan_revision_id", "harness_revision_id", "snapshot_id", "status", "selected_runtime_id", "fallback_runtime_id", "eligible_runtime_ids", "rejections", "ranking_basis", "lease", "candidate_only", "execution_authorized", "authority_boundary"],
+  "properties": {
+    "schema_version": {"const": "dad.runtime_route_decision.v1"},
+    "decision_id": {"type": "string", "pattern": "^dad:runtime-route:"},
+    "request_id": {"type": "string", "minLength": 1},
+    "plan_revision_id": {"type": "string", "minLength": 1},
+    "harness_revision_id": {"type": "string", "minLength": 1},
+    "snapshot_id": {"type": "string", "pattern": "^dad:runtime-snapshot:"},
+    "status": {"enum": ["selected", "blocked"]},
+    "selected_runtime_id": {"type": "string"},
+    "fallback_runtime_id": {"type": "string"},
+    "eligible_runtime_ids": {"type": "array", "uniqueItems": true, "items": {"type": "string", "pattern": "^runtime:"}},
+    "rejections": {"type": "array", "items": {"type": "object", "additionalProperties": false, "required": ["runtime_id", "reason_codes"], "properties": {"runtime_id": {"type": "string"}, "reason_codes": {"type": "array", "uniqueItems": true, "items": {"type": "string"}}}}},
+    "ranking_basis": {"type": "array", "items": {"type": "string"}},
+    "lease": {"type": "object", "additionalProperties": false, "required": ["lease_id", "request_digest", "selected_runtime_id", "expires_at", "maximum_attempts", "fallback_permitted_before_side_effect"], "properties": {"lease_id": {"type": "string", "pattern": "^dad:runtime-lease:"}, "request_digest": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"}, "selected_runtime_id": {"type": "string"}, "expires_at": {"type": "string", "format": "date-time"}, "maximum_attempts": {"const": 2}, "fallback_permitted_before_side_effect": {"const": true}}},
+    "candidate_only": {"const": true},
+    "execution_authorized": {"const": false},
+    "authority_boundary": {"type": "string", "minLength": 20}
+  }
+}

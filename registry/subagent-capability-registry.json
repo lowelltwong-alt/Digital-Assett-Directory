@@ -39,6 +39,118 @@
       "description": "Preserve project and workstream identities while finding candidate continuations, siblings, experiments, contradictions, and possible duplicates within explicit coverage."
     },
     {
+      "id": "project_position_diagnosis",
+      "description": "Diagnose an existing project's evidence-backed position, working and broken surfaces, basic issue classes, and unavailable evidence without inferring purpose or changing lifecycle state."
+    },
+    {
+      "id": "target_end_state_clarification",
+      "description": "Separate observed project position from the human-confirmed durable end state, integration target, acceptance evidence, non-goals, and sufficient-stop condition."
+    },
+    {
+      "id": "right_sized_completion_planning",
+      "description": "Choose diagnose, repair, bounded completion, integration, validation, productionization, maintenance, or retirement depth without defaulting to full end-to-end delivery."
+    },
+    {
+      "id": "integration_fit_and_mcp_routing",
+      "description": "Determine whether integration is needed and whether an MCP resource, prompt, tool, combination, ordinary internal interface, or reviewed fallback best fits the authority boundary."
+    },
+    {
+      "id": "mcp_fit_and_boundary_analysis",
+      "description": "Select the smallest justified MCP or non-MCP interface from a named integration target, host/client constraints, authority, privacy, and consequence boundaries."
+    },
+    {
+      "id": "mcp_resource_context_design",
+      "description": "Design bounded read-only MCP resources with discoverability, provenance, freshness, pagination, privacy, and source-authority controls."
+    },
+    {
+      "id": "mcp_tool_permission_design",
+      "description": "Design MCP tool contracts with explicit mutation classes, least authority, confirmations, idempotency, audit, rollback, and denial paths."
+    },
+    {
+      "id": "mcp_prompt_workflow_design",
+      "description": "Design reusable human-invoked MCP prompts with explicit parameters, context boundaries, outcomes, and failure states."
+    },
+    {
+      "id": "mcp_identity_auth_tenancy",
+      "description": "Map MCP identities, authentication, delegated authorization, tenant isolation, token lifetime, revocation, and audit without exposing credentials."
+    },
+    {
+      "id": "mcp_host_client_compatibility",
+      "description": "Verify named MCP hosts, clients, transports, lifecycle behavior, and capability assumptions against current declared evidence."
+    },
+    {
+      "id": "integration_contract_reconciliation",
+      "description": "Engineer producer-consumer schemas, transformations, ordering, retries, duplicate handling, reconciliation, and partial-failure recovery."
+    },
+    {
+      "id": "mcp_conformance_security_testing",
+      "description": "Independently test MCP contracts, malformed inputs, replay, auth expiry, permission denial, partial failures, and unintended data exposure."
+    },
+    {
+      "id": "mcp_operations_versioning",
+      "description": "Define integration health, compatibility windows, version change detection, deprecation, recovery, and freshness monitoring."
+    },
+    {
+      "id": "integration_migration_fallback",
+      "description": "Plan reversible interface migrations with shadow parity, cutover gates, fallback, rollback, and preserved authority."
+    },
+    {
+      "id": "user_research_synthesis",
+      "description": "Synthesize authorized user evidence, needs, contexts, risks, counterevidence, and unknowns without inventing or collecting research."
+    },
+    {
+      "id": "service_blueprint_journey_design",
+      "description": "Map user journeys, backstage dependencies, handoffs, failure points, and sufficient experience outcomes."
+    },
+    {
+      "id": "information_architecture_navigation",
+      "description": "Design evidence-backed content models, labels, navigation, findability, search paths, and progressive disclosure."
+    },
+    {
+      "id": "interaction_workflow_design",
+      "description": "Design task flows, interface states, feedback, errors, recovery, undo, quiet behavior, and cognitive-load boundaries."
+    },
+    {
+      "id": "visual_interface_design",
+      "description": "Define visual hierarchy, layout, responsive states, and component usage consistent with approved product and design-system authority."
+    },
+    {
+      "id": "design_system_engineering",
+      "description": "Engineer reusable design tokens, components, variants, state contracts, documentation, governance, and bounded migrations."
+    },
+    {
+      "id": "content_design_microcopy",
+      "description": "Design concise labels, instructions, errors, empty states, confirmations, terminology, and help for a known audience."
+    },
+    {
+      "id": "accessibility_inclusive_design",
+      "description": "Specify and test semantic, keyboard, focus, contrast, motion, assistive-technology, and inclusive interaction obligations."
+    },
+    {
+      "id": "usability_research_testing",
+      "description": "Design and interpret authorized usability evaluations with explicit tasks, baselines, failures, counterevidence, and confidence."
+    },
+    {
+      "id": "responsive_multimodal_design",
+      "description": "Define coherent interface behavior across viewports, input modes, density, offline states, and justified modalities."
+    },
+    {
+      "id": "data_visualization_dashboard_design",
+      "description": "Design evidence-transparent dashboards and one-human cockpits with drill-down, quiet states, and bounded immediate decisions."
+    },
+    {
+      "id": "frontend_ux_handoff",
+      "description": "Translate approved UX into bounded implementation contracts, assets, state matrices, traceable questions, and testable acceptance."
+    },
+    {
+      "id": "ux_measurement_experimentation",
+      "description": "Define privacy-safe UX hypotheses, baselines, measures, guardrails, falsifiers, and activation gates without enabling collection."
+    },
+    {
+      "id": "ui_ux_independent_validation",
+      "description": "Independently verify user evidence, interaction states, accessibility, usability claims, implementation parity, and authority boundaries."
+    },
+    {
       "id": "workstream_planning",
       "description": "Shape promoted outcomes into bounded workstreams, non-goals, next actions, acceptance evidence, and execution-boundary proposals."
     },
@@ -169,6 +281,94 @@
     {
       "id": "digital_asset_independent_audit",
       "description": "Independently audit asset discovery, identity, taxonomy, provenance, privacy, deduplication, evidence, adoption, and lifecycle routing."
+    },
+    {
+      "id": "ml_opportunity_and_goal_framing",
+      "description": "Decide whether an end goal warrants ML by locking decision ownership, error costs, feedback, data feasibility, and a credible no-ML alternative."
+    },
+    {
+      "id": "ml_system_and_experiment_architecture",
+      "description": "Design bounded ML data, feature, experiment, model, serving, monitoring, rollback, and proof interfaces without granting deployment authority."
+    },
+    {
+      "id": "ml_workflow_decomposition",
+      "description": "Decompose accepted ML work into non-overlapping data, experiment, implementation, validation, and lifecycle packets with independent checks."
+    },
+    {
+      "id": "ml_data_readiness_and_leakage_audit",
+      "description": "Audit population, provenance, consent, labels, vintages, split units, sampling, missingness, leakage, and expected distribution shift before training."
+    },
+    {
+      "id": "ml_technique_selection",
+      "description": "Compare versioned ML technique cards against problem shape, prerequisites, contraindications, failure costs, baselines, evidence, and operational constraints."
+    },
+    {
+      "id": "ml_reproducible_implementation",
+      "description": "Implement a locked ML experiment or pipeline with versioned data, code, dependencies, configuration, schemas, tests, and replayable artifacts."
+    },
+    {
+      "id": "ml_independent_validation",
+      "description": "Independently replay ML baselines, leakage guards, metrics, calibration, uncertainty, robustness, slices, reproducibility, cost, latency, and rollback checks."
+    },
+    {
+      "id": "ml_primary_source_research_synthesis",
+      "description": "Collect pointer-only primary ML research, deduplicate claims, preserve counterevidence, and propose bounded replication or local evaluation before promotion."
+    },
+    {
+      "id": "ml_lifecycle_drift_and_supersession",
+      "description": "Review ML models, techniques, roles, harnesses, dependencies, and governance for evidence-backed freshness, adaptation, rewrite, retirement, or supersession decisions."
+    },
+    {
+      "id": "ml_deployment_monitoring_and_rollback",
+      "description": "Design and audit human-gated ML deployment readiness, observability, fallback, drift and outcome monitoring, incident ownership, and independent rollback."
+    },
+    {
+      "id": "ke_goal_and_route_diagnosis",
+      "description": "Frame a knowledge-system end state, corpus, query shapes, source authority, sensitivity, budgets, baselines, and the smallest direct-context, retrieval, vector, graph, or no-RAG route."
+    },
+    {
+      "id": "ke_system_architecture",
+      "description": "Design provider-neutral source, ingestion, chunking, retrieval, graph, context, evaluation, operations, migration, rollback, and proof interfaces."
+    },
+    {
+      "id": "ke_source_ingestion_lineage",
+      "description": "Engineer canonical source, parser, normalization, stable identity, revision, CDC, deletion, quarantine, reconciliation, rebuild, and provenance contracts."
+    },
+    {
+      "id": "ke_chunking_context_engineering",
+      "description": "Design and evaluate fixed, structural, parent-child, contextual, late, semantic, hierarchical, and domain-aware chunk/context policies with exact source-span provenance."
+    },
+    {
+      "id": "ke_retrieval_index_engineering",
+      "description": "Engineer and benchmark lexical, dense, sparse, hybrid, filtered, multivector, fusion, reranking, embedding, ANN, and replaceable vector-store adapters."
+    },
+    {
+      "id": "ke_long_context_assembly",
+      "description": "Design direct long-context and evidence-assembly routes with effective-context, ordering, position, distraction, contradiction, token, latency, cost, freshness, and fallback tests."
+    },
+    {
+      "id": "ke_graph_retrieval_engineering",
+      "description": "Select and engineer graph-lite, property, RDF, provenance, event, temporal, GraphRAG, LightRAG, and graph-memory systems with entity, relation, time, query, and rebuild evidence."
+    },
+    {
+      "id": "ke_evaluation_observability",
+      "description": "Build layered ingestion, retrieval, answer, citation, graph, ACL/privacy, robustness, latency, cost, freshness, deletion, outage, migration, and recovery evaluations and traces."
+    },
+    {
+      "id": "ke_migration_lifecycle",
+      "description": "Plan and verify side-by-side rebuild, CDC replay, shadow parity, alias cutover, rollback, deletion parity, supersession, retirement, and consumer blast radius."
+    },
+    {
+      "id": "ke_primary_source_frontier_synthesis",
+      "description": "Run pointer-only primary-source delta research over approved standards, labs, papers, engines, evaluation, ingestion, and security sources and propose local evaluation or no-change."
+    },
+    {
+      "id": "ke_reproducible_implementation",
+      "description": "Implement one accepted knowledge-system component under a single writer with versioned manifests, boundaries, tests, replay evidence, limitations, and rollback."
+    },
+    {
+      "id": "ke_independent_validation",
+      "description": "Independently re-derive the knowledge route and replay source, retrieval, answer, citation, graph, privacy, security, operations, migration, and rollback acceptance checks."
     }
   ],
   "rule": "Capability observations are attempt-scoped candidate evidence. Promotion to a reusable role-profile claim requires the versioned subagent evaluation methodology and human review."

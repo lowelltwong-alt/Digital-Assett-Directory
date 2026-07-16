@@ -1,0 +1,192 @@
+{
+  "schema_version": "dad.task_local_agent_mesh_manifest.v1",
+  "mesh_id": "dad:agent-mesh:portable-ai-capability-control-plane",
+  "task_id": "portable-ai-capability-control-plane-plan",
+  "revision_id": "dad:agent-mesh-revision:portable-ai-capability-control-plane:v2",
+  "supersedes_revision_id": "dad:agent-mesh-revision:portable-ai-capability-control-plane:v1",
+  "phase": "execution",
+  "status": "active",
+  "source_snapshot_digest": "sha256:a5f84f4cd37bc3282f944ef66ee5ebacf55ed10431f944f0f995a10054e039f9",
+  "authority": {
+    "source_authority": "The DAD repository owns DAD contracts and enforcement; the live personal skill owns its instructions; enrolled repositories retain local adoption and source authority.",
+    "execution_authority": false,
+    "human_gate_required": true
+  },
+  "max_delegation_depth": 1,
+  "writer_role_id": "control-plane-integrator",
+  "checker_role_id": "independent-implementation-checker",
+  "non_overlap_statement": "Only control-plane-integrator may write repository or live personal-skill files; every delegated specialist and checker is read-only.",
+  "roles": [
+    {
+      "role_id": "portability-lineage-scout",
+      "why_needed": "The implementation must reuse existing skill, family, plan-memory, runtime, harness, graph, and lifecycle surfaces rather than add parallel authority.",
+      "mission": "Map exact schemas, registries, validators, builders, and tests that the portability overlay must extend, and report collisions or missing consumers.",
+      "inputs": ["approved plan revision", "current DAD source tree and registries"],
+      "dependencies": [],
+      "authority": "Read-only inventory; cannot edit, activate, merge identities, or approve findings.",
+      "model_effort_class": "high",
+      "writer_checker_relation": "specialist",
+      "acceptance_conditions": ["Exact reusable surfaces and reverse consumers are cited with confirmed versus inferred findings separated."],
+      "stop_conditions": ["Source authority or current branch identity cannot be established."],
+      "handoff": {
+        "recipient_role_ids": ["control-plane-integrator"],
+        "deliverables": ["contract and lineage map"],
+        "readiness_conditions": ["Existing assets, conflicts, and required migrations are explicit."]
+      }
+    },
+    {
+      "role_id": "lifecycle-harness-auditor",
+      "why_needed": "Always-followed behavior depends on exact preflight, midflight, postflight, promotion, release, and DAD-unavailable semantics.",
+      "mission": "Derive the smallest enforceable lifecycle integration and tests while preserving honest postflight, local authority, and warning-to-hard-gate rollout.",
+      "inputs": ["approved plan revision", "agent lifecycle", "runtime resolver", "harness engine", "CLI and tests"],
+      "dependencies": [],
+      "authority": "Read-only audit; cannot activate gates, runtimes, schedules, or external effects.",
+      "model_effort_class": "high",
+      "writer_checker_relation": "specialist",
+      "acceptance_conditions": ["Every gate has an implementation point, failure behavior, and regression test."],
+      "stop_conditions": ["A proposed deterministic rule requires semantic model judgment or prevents honest postflight."],
+      "handoff": {
+        "recipient_role_ids": ["control-plane-integrator"],
+        "deliverables": ["lifecycle integration and test map"],
+        "readiness_conditions": ["Objective gates and harness-only claims are separated."]
+      }
+    },
+    {
+      "role_id": "adversarial-test-scout",
+      "why_needed": "The control plane can create false confidence unless bypass, forged receipt, exception, rollback, privacy, and legacy-ratchet failures are tested independently.",
+      "mission": "Design adversarial fixtures and release criteria covering every supported entry point and the conditional cross-model evaluation boundary.",
+      "inputs": ["approved plan revision", "current schemas and validators", "runtime and harness contracts"],
+      "dependencies": [],
+      "authority": "Read-only test design; cannot run provider calls, mutate live settings, or approve implementation.",
+      "model_effort_class": "high",
+      "writer_checker_relation": "specialist",
+      "acceptance_conditions": ["Bypass cases, falsifiers, no-winner conditions, and rollback eligibility checks are concrete."],
+      "stop_conditions": ["Testing would require private payloads, unverifiable model identity, provider access, or real side effects."],
+      "handoff": {
+        "recipient_role_ids": ["control-plane-integrator", "independent-implementation-checker"],
+        "deliverables": ["adversarial acceptance matrix"],
+        "readiness_conditions": ["Fixtures are synthetic/local and expected results are revision-bound."]
+      }
+    },
+    {
+      "role_id": "control-plane-integrator",
+      "why_needed": "A single writer must implement the global skill, DAD overlay, schemas, registry, lifecycle gates, graph, CLI, telemetry, and tests without overlapping edits.",
+      "mission": "Implement the approved phases in the isolated worktree, activate only evidence-safe local enforcement, install the explicitly requested global skill, and preserve all human and repository authority boundaries.",
+      "inputs": ["approved plan revision", "specialist handoffs", "DAD preflight", "existing validators and registries"],
+      "dependencies": ["portability-lineage-scout", "lifecycle-harness-auditor", "adversarial-test-scout"],
+      "authority": "May write this isolated DAD worktree and the explicitly requested live personal skill; cannot access providers, create schedules, mutate other repositories, deploy, push, or self-approve.",
+      "model_effort_class": "high",
+      "writer_checker_relation": "writer",
+      "acceptance_conditions": ["Targeted and full validation pass, live skill validates, lifecycle enforcement is measurable, and no prohibited authority is activated."],
+      "stop_conditions": ["Source authority changes, checker independence fails, private data would move, postflight becomes unclosable, or activation exceeds the user's request."],
+      "handoff": {
+        "recipient_role_ids": ["independent-implementation-checker"],
+        "deliverables": ["implementation diff", "test evidence", "activation and rollback evidence"],
+        "readiness_conditions": ["Writer checks pass and remaining unknowns are explicit."]
+      }
+    },
+    {
+      "role_id": "independent-implementation-checker",
+      "why_needed": "The writer cannot approve a repository-wide lifecycle and global-skill enforcement change.",
+      "mission": "Independently re-derive the contract, inspect the final diff, replay validation and bypass cases, and issue PASS or BLOCK.",
+      "inputs": ["approved plan revision", "raw implementation diff", "specialist acceptance matrix", "validation evidence"],
+      "dependencies": ["control-plane-integrator"],
+      "authority": "Read-only final review; cannot edit, activate, commit, push, or approve its own work.",
+      "model_effort_class": "high",
+      "writer_checker_relation": "checker",
+      "acceptance_conditions": ["All proof obligations have independent evidence and the release gate is explicit."],
+      "stop_conditions": ["Evidence is unavailable, checker becomes writer, or a material boundary remains ambiguous."],
+      "handoff": {
+        "recipient_role_ids": [],
+        "deliverables": ["independent implementation verdict", "decomposition grade"],
+        "readiness_conditions": ["Raw permitted evidence and runnable validators are available."]
+      }
+    }
+  ],
+  "proof_obligations": [
+    {
+      "obligation_id": "portable-contract-enforced",
+      "description": "Every eligible new or materially revised reusable DAD capability receives a deterministic portability disposition before active promotion or protected release.",
+      "evidence_required": ["schemas and registry", "preflight midflight postflight tests", "promotion and release denial tests"],
+      "owner_role_id": "control-plane-integrator",
+      "checker_role_id": "independent-implementation-checker",
+      "status": "pending"
+    },
+    {
+      "obligation_id": "global-skill-portable",
+      "description": "The live personal skill and DAD adaptation are concise, runtime-neutral, discoverable, independently forward-tested, and neither self-authorizes nor silently installs elsewhere.",
+      "evidence_required": ["skill validation", "registry validation", "forward-test evidence", "source authority mapping"],
+      "owner_role_id": "control-plane-integrator",
+      "checker_role_id": "independent-implementation-checker",
+      "status": "pending"
+    },
+    {
+      "obligation_id": "runtime-upgrade-safe",
+      "description": "Runtime/model changes require revision-bound verified receipts and qualification evidence; unverifiable diversity, unsafe rollback, and automatic promotion fail closed.",
+      "evidence_required": ["receipt and qualification schemas", "forgery and replay tests", "retirement and rollback tests"],
+      "owner_role_id": "control-plane-integrator",
+      "checker_role_id": "independent-implementation-checker",
+      "status": "pending"
+    },
+    {
+      "obligation_id": "one-human-operable",
+      "description": "Unchanged scans use zero model calls, decisions are deduplicated and capped at three, and telemetry proves coverage without creating alert or token burden.",
+      "evidence_required": ["deterministic inventory", "health snapshot", "cockpit decision tests", "usage and freshness fields"],
+      "owner_role_id": "control-plane-integrator",
+      "checker_role_id": "independent-implementation-checker",
+      "status": "pending"
+    }
+  ],
+  "unresolved_decisions": [
+    {
+      "decision_id": "external-runtime-and-schedule-activation",
+      "summary": "Provider registrations, live cross-model experiments, downstream adoption, persistent scheduling, and external effects remain inactive until separately verified and exactly approved.",
+      "owner_role_id": "control-plane-integrator",
+      "blocking": false,
+      "status": "deferred"
+    }
+  ],
+  "reconciliations": [
+    {
+      "prior_role_id": "portability-lineage-scout",
+      "disposition": "reused",
+      "current_role_ids": ["portability-lineage-scout"],
+      "reason": "The existing lineage mission remains required during implementation.",
+      "evidence_refs": ["plan:existing-implementation-to-preserve"],
+      "material_drift": true
+    },
+    {
+      "prior_role_id": "lifecycle-harness-auditor",
+      "disposition": "reused",
+      "current_role_ids": ["lifecycle-harness-auditor"],
+      "reason": "The lifecycle audit remains required and is now bound to exact integration points and tests.",
+      "evidence_refs": ["plan:lifecycle-enforcement"],
+      "material_drift": true
+    },
+    {
+      "prior_role_id": "ab-governance-redteam",
+      "disposition": "replaced",
+      "current_role_ids": ["adversarial-test-scout"],
+      "reason": "The frozen A/B design now needs a broader implementation-level bypass and acceptance test lane.",
+      "evidence_refs": ["plan:test-and-acceptance-plan"],
+      "material_drift": true
+    },
+    {
+      "prior_role_id": "plan-writer",
+      "disposition": "replaced",
+      "current_role_ids": ["control-plane-integrator"],
+      "reason": "Planning is complete; one bounded implementation writer now owns all edits.",
+      "evidence_refs": ["plan:delivery-phases", "user:implementation-authorization:2026-07-15"],
+      "material_drift": true
+    },
+    {
+      "prior_role_id": "independent-plan-checker",
+      "disposition": "replaced",
+      "current_role_ids": ["independent-implementation-checker"],
+      "reason": "The planning gate passed; a fresh checker must validate implementation rather than its own plan verdict.",
+      "evidence_refs": ["subagent:/root/portability-lineage-audit:pass:2026-07-15"],
+      "material_drift": true
+    }
+  ],
+  "manifest_digest": "sha256:b3672f6d1affd13597ac0f5cb4ca1bac9ab68606f33f2fe993784d30abb7e708"
+}

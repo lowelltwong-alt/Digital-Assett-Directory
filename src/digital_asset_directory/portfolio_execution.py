@@ -37,10 +37,48 @@ dispatch_scope_digest = _legacy.dispatch_scope_digest
 grant_execution_lease = _legacy.grant_execution_lease
 lease_scope_digest = _legacy.lease_scope_digest
 propose_dispatch_intent = _legacy.propose_dispatch_intent
-request_execution_lease = _legacy.request_execution_lease
 revoke_dispatch_intent = _legacy.revoke_dispatch_intent
 revoke_execution_lease = _legacy.revoke_execution_lease
 write_execution_control_outputs = _legacy.write_execution_control_outputs
+
+
+def request_execution_lease(
+    hub_root: Path,
+    *args: Any,
+    portability_artifact_ids: Iterable[str] = (),
+    **kwargs: Any,
+) -> dict[str, Any]:
+    """Request a lease only after any applicable portability disposition passes.
+
+    Repositories without the portability control plane retain the legacy
+    behavior. Once the registry exists, governed paths fail closed unless the
+    caller binds the request to exact, known artifact identities.
+    """
+
+    registry = hub_root / "registry" / "portable-capability-registry.json"
+    if registry.exists():
+        from .portability_control import assess_lifecycle
+
+        assessment = assess_lifecycle(
+            hub_root,
+            stage="implementation_lease",
+            task=str(kwargs.get("rationale_code", "")),
+            paths=kwargs.get("requested_paths", ()),
+            artifact_ids=portability_artifact_ids,
+            protected_transition=True,
+        )
+        if assessment["gate_outcome"] == "block":
+            return {
+                "status": "portability_disposition_required",
+                "events_appended": 0,
+                "assessment_id": assessment["assessment_id"],
+                "finding_codes": assessment["finding_codes"],
+                "execution_authorized": False,
+            }
+        kwargs["portability_assessment_id"] = assessment["assessment_id"]
+        kwargs["portability_artifact_ids"] = assessment["bound_artifact_ids"]
+        kwargs["portability_scope_digest"] = assessment["requested_scope_digest"]
+    return _legacy.request_execution_lease(hub_root, *args, **kwargs)
 
 
 def _now(value: datetime | None) -> datetime:

@@ -1,0 +1,49 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://local.digital-asset-directory/schemas/knowledge-engineering-family-registry.schema.json",
+  "title": "Knowledge Engineering Specialist Family Registry",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "registry_id", "registry_version", "status", "candidate_only", "ai_agnostic", "parent_family_id", "peer_family_ids", "authority_boundary", "routing_authority", "workflow_cards", "routing_profiles", "lifecycle_policy", "graph_contract", "research_contract"],
+  "properties": {
+    "schema_version": {"const": "0.1.0"},
+    "registry_id": {"const": "knowledge-engineering-family-registry"},
+    "registry_version": {"type": "string", "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+$"},
+    "status": {"enum": ["candidate", "reviewed", "retired"]},
+    "candidate_only": {"const": true},
+    "ai_agnostic": {"const": true},
+    "parent_family_id": {"const": "family:data-schema-knowledge-graph"},
+    "peer_family_ids": {"type": "array", "minItems": 1, "uniqueItems": true, "items": {"type": "string"}},
+    "authority_boundary": {"type": "string", "minLength": 1},
+    "routing_authority": {
+      "type": "object", "additionalProperties": false,
+      "required": ["canonical_skill_refs", "capability_aliases", "stable_identity_rule", "smallest_route_rule", "fail_closed_rule"],
+      "properties": {
+        "canonical_skill_refs": {"$ref": "#/$defs/nonEmptyStrings"},
+        "capability_aliases": {"type": "object", "additionalProperties": false, "required": ["luna", "terra", "sol"], "properties": {"luna": {"type": "string"}, "terra": {"type": "string"}, "sol": {"type": "string"}}},
+        "stable_identity_rule": {"type": "string", "minLength": 1},
+        "smallest_route_rule": {"type": "string", "minLength": 1},
+        "fail_closed_rule": {"type": "string", "minLength": 1}
+      }
+    },
+    "workflow_cards": {"type": "array", "minItems": 1, "items": {"$ref": "#/$defs/workflowCard"}},
+    "routing_profiles": {"type": "array", "minItems": 1, "items": {"$ref": "#/$defs/routingProfile"}},
+    "lifecycle_policy": {"type": "object", "additionalProperties": false, "required": ["states", "review_triggers", "dispositions", "human_gate"], "properties": {"states": {"$ref": "#/$defs/nonEmptyStrings"}, "review_triggers": {"$ref": "#/$defs/nonEmptyStrings"}, "dispositions": {"$ref": "#/$defs/nonEmptyStrings"}, "human_gate": {"type": "string", "minLength": 1}}},
+    "graph_contract": {
+      "type": "object", "additionalProperties": false,
+      "required": ["node_types", "allowed_edge_types", "dependency_edges", "forbidden_claims"],
+      "properties": {
+        "node_types": {"$ref": "#/$defs/nonEmptyStrings"},
+        "allowed_edge_types": {"$ref": "#/$defs/nonEmptyStrings"},
+        "dependency_edges": {"type": "array", "minItems": 1, "items": {"type": "object", "additionalProperties": false, "required": ["source", "edge_type", "target", "evidence_ref", "review_status"], "properties": {"source": {"type": "string", "minLength": 1}, "edge_type": {"enum": ["depends_on", "composes_with", "specializes", "member_of", "peer_of", "routes_to", "validated_by", "has_member", "requires_capability", "requires_human_gate", "produces_learning_signal", "applies_to", "supersedes"]}, "target": {"type": "string", "minLength": 1}, "evidence_ref": {"type": "string", "minLength": 1}, "review_status": {"const": "candidate"}}}},
+        "forbidden_claims": {"$ref": "#/$defs/nonEmptyStrings"}
+      }
+    },
+    "research_contract": {"type": "object", "additionalProperties": false, "required": ["cadence", "activation_status", "source_registry_ref", "cursor_required", "deterministic_first", "promotion_policy", "outputs", "stop_conditions"], "properties": {"cadence": {"const": "P7D"}, "activation_status": {"const": "human_activation_required"}, "source_registry_ref": {"const": "registry/knowledge-engineering-source-registry.json"}, "cursor_required": {"const": true}, "deterministic_first": {"const": true}, "promotion_policy": {"type": "string", "minLength": 1}, "outputs": {"$ref": "#/$defs/nonEmptyStrings"}, "stop_conditions": {"$ref": "#/$defs/nonEmptyStrings"}}}
+  },
+  "$defs": {
+    "nonEmptyStrings": {"type": "array", "minItems": 1, "uniqueItems": true, "items": {"type": "string", "minLength": 1}},
+    "workflowCard": {"type": "object", "additionalProperties": false, "required": ["workflow_id", "trigger", "cadence", "activation_status", "owner_authority", "steps", "gate_refs", "failure_modes", "validation_ref", "applies_when", "does_not_apply_when", "danger_if_misapplied"], "properties": {"workflow_id": {"type": "string", "pattern": "^workflow:ke-[a-z0-9-]+$"}, "trigger": {"type": "string", "minLength": 1}, "cadence": {"type": "string", "minLength": 1}, "activation_status": {"enum": ["task_triggered", "manual", "human_activation_required"]}, "owner_authority": {"type": "string", "minLength": 1}, "steps": {"$ref": "#/$defs/nonEmptyStrings"}, "gate_refs": {"$ref": "#/$defs/nonEmptyStrings"}, "failure_modes": {"$ref": "#/$defs/nonEmptyStrings"}, "validation_ref": {"type": "string", "minLength": 1}, "applies_when": {"$ref": "#/$defs/nonEmptyStrings"}, "does_not_apply_when": {"$ref": "#/$defs/nonEmptyStrings"}, "danger_if_misapplied": {"type": "string", "minLength": 1}}},
+    "routingProfile": {"type": "object", "additionalProperties": false, "required": ["profile_id", "query_terms", "route_kind", "technique_ids", "required_gates", "reason"], "properties": {"profile_id": {"type": "string", "pattern": "^ke-route:[a-z0-9-]+$"}, "query_terms": {"$ref": "#/$defs/nonEmptyStrings"}, "route_kind": {"enum": ["no_retrieval", "lexical", "vector", "hybrid", "long_context", "graph", "temporal_graph", "multimodal", "agentic", "investigate"]}, "technique_ids": {"$ref": "#/$defs/nonEmptyStrings"}, "required_gates": {"$ref": "#/$defs/nonEmptyStrings"}, "reason": {"type": "string", "minLength": 1}}}
+  }
+}

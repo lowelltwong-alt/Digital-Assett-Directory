@@ -1,0 +1,124 @@
+{
+  "schema_version": "dad.task_local_agent_mesh_manifest.v1",
+  "mesh_id": "dad:agent-mesh:project-right-sizing-expert-suites",
+  "task_id": "project-right-sizing-expert-suites",
+  "revision_id": "dad:agent-mesh-revision:project-right-sizing-expert-suites:v1",
+  "phase": "planning",
+  "status": "planned",
+  "source_snapshot_digest": "sha256:28e4cbb81628a4908e0286e28ad7b4e90bda8ecb12742b1fe96130b60ac52070",
+  "authority": {
+    "source_authority": "DAD owns its candidate capability, skill, role-pack, workflow, and navigation contracts. Each project repository retains project truth and Lowell retains intended destination, completion depth, integration, priority, budget, activation, and acceptance authority.",
+    "execution_authority": false,
+    "human_gate_required": true
+  },
+  "max_delegation_depth": 1,
+  "writer_role_id": "bounded-registry-writer",
+  "checker_role_id": "independent-scope-checker",
+  "non_overlap_statement": "Only bounded-registry-writer may edit the isolated worktree. Lifecycle and expert-suite specialists are read-only; the independent checker may inspect and test but cannot modify candidate artifacts.",
+  "roles": [
+    {
+      "role_id": "project-position-specialist",
+      "why_needed": "Project evidence, intended destination, completion depth, and sufficient stopping conditions require a distinct lifecycle and right-sizing design lane.",
+      "mission": "Design a read-only project-position diagnosis, basic-issue triage, user clarification, target-state contract, and smallest sufficient continuation route without creating a parallel project state machine.",
+      "inputs": ["existing project-management contract", "Technical Product Company OS", "current project evidence patterns"],
+      "dependencies": [],
+      "authority": "Read-only design. May recommend questions, diagnostic dimensions, and routes but cannot infer the user's destination, change project state, or start work.",
+      "model_effort_class": "high",
+      "writer_checker_relation": "specialist",
+      "acceptance_conditions": ["The design distinguishes project position from desired end state and completion depth.", "A minor repair or integration request does not activate a full product lifecycle.", "User questions are bounded to three immediate decisions."],
+      "stop_conditions": ["The design creates a competing lifecycle vocabulary.", "The destination would be inferred from repository activity alone."],
+      "handoff": {
+        "recipient_role_ids": ["bounded-registry-writer"],
+        "deliverables": ["diagnostic contract", "issue taxonomy", "right-sized routing and stop rules"],
+        "readiness_conditions": ["Existing PM and product-catalyst contracts are reconciled."]
+      }
+    },
+    {
+      "role_id": "mcp-ui-suite-specialist",
+      "why_needed": "The existing MCP and Product/UX core families need a gap audit before adding specialist expertise.",
+      "mission": "Inventory current MCP and UI/UX roles, identify genuinely distinct expert methods and authority boundaries, and propose routed specialist packs that are instantiated only when applicable.",
+      "inputs": ["existing family skills and packs", "agent-skill and capability registries", "MCP-first policy"],
+      "dependencies": [],
+      "authority": "Read-only inventory and design. Cannot install MCP, configure hosts, activate connectors, change interfaces, or create external effects.",
+      "model_effort_class": "medium",
+      "writer_checker_relation": "specialist",
+      "acceptance_conditions": ["Existing families are extended rather than duplicated.", "Each proposed expert has distinct inputs, outputs, failure modes, and activation triggers.", "The smallest subset is routed instead of activating the full suite."],
+      "stop_conditions": ["A proposed role is only a title without distinct method or validation.", "Current MCP details would require unverified volatile assumptions."],
+      "handoff": {
+        "recipient_role_ids": ["bounded-registry-writer"],
+        "deliverables": ["MCP gap map", "UI/UX gap map", "specialist-pack role contracts"],
+        "readiness_conditions": ["Every new role is deduplicated against the current library."]
+      }
+    },
+    {
+      "role_id": "bounded-registry-writer",
+      "why_needed": "One writer must integrate the accepted diagnostic and specialist-pack contracts into DAD without overlapping edits.",
+      "mission": "Implement the project-position diagnostician, right-sized workflow, MCP expert pack, UI/UX expert pack, registry/graph links, documentation, navigation, and deterministic tests.",
+      "inputs": ["two specialist handoffs", "preflight context", "authoritative DAD schemas and registries"],
+      "dependencies": ["project-position-specialist", "mcp-ui-suite-specialist"],
+      "authority": "May edit only task-scoped DAD skill, registry, documentation, navigation, roadmap-evidence, and test artifacts in the isolated worktree. Cannot activate agents, automation, connectors, or external systems.",
+      "model_effort_class": "high",
+      "writer_checker_relation": "writer",
+      "acceptance_conditions": ["Project position, purpose, desired end state, integration target, completion depth, and sufficient stop are explicit.", "Existing Integration/MCP and Product/UX families point to validated specialist packs.", "Routing and schemas pass deterministic tests and repository validation."],
+      "stop_conditions": ["A schema or authority change expands beyond candidate routing metadata.", "Implementation requires external configuration, credentials, or project-repository writes."],
+      "handoff": {
+        "recipient_role_ids": ["independent-scope-checker"],
+        "deliverables": ["candidate artifacts", "diff", "validation evidence", "limitations"],
+        "readiness_conditions": ["Writer checks pass and all changed paths are enumerated."]
+      }
+    },
+    {
+      "role_id": "independent-scope-checker",
+      "why_needed": "A right-sizing system must be independently checked for accidental overbuild, role duplication, and authority drift.",
+      "mission": "Verify the frozen change from source evidence, challenge full-lifecycle defaulting, check MCP-first and UI/UX coverage, replay schemas/tests, and report blockers or residual risks.",
+      "inputs": ["frozen candidate artifacts", "raw permitted registry evidence", "validation results"],
+      "dependencies": ["bounded-registry-writer"],
+      "authority": "Read-only independent review. Cannot edit, approve activation, or infer Lowell's project destination.",
+      "model_effort_class": "high",
+      "writer_checker_relation": "checker",
+      "acceptance_conditions": ["Minor tasks route without full-family execution.", "User intent gates destination and completion depth.", "MCP and UI/UX roles are discoverable, distinct, and bounded.", "All validation evidence is replayed."],
+      "stop_conditions": ["Checker becomes a writer.", "Source evidence or test replay is unavailable."],
+      "handoff": {
+        "recipient_role_ids": [],
+        "deliverables": ["independent findings", "pass or revise verdict", "residual risks"],
+        "readiness_conditions": ["Frozen artifacts and exact commands are available."]
+      }
+    }
+  ],
+  "proof_obligations": [
+    {
+      "obligation_id": "right-sized-routing",
+      "description": "Prove diagnosis and routing stop at the smallest sufficient outcome rather than defaulting to an end-to-end product build.",
+      "evidence_required": ["diagnostic contract", "negative routing fixtures", "human intent gate"],
+      "owner_role_id": "bounded-registry-writer",
+      "checker_role_id": "independent-scope-checker",
+      "status": "pending"
+    },
+    {
+      "obligation_id": "mcp-first-specialist-coverage",
+      "description": "Prove the existing Integration/MCP family gains distinct MCP specialists without a competing family or external authority.",
+      "evidence_required": ["specialist pack", "portfolio membership", "schema validation", "routing triggers"],
+      "owner_role_id": "bounded-registry-writer",
+      "checker_role_id": "independent-scope-checker",
+      "status": "pending"
+    },
+    {
+      "obligation_id": "ui-ux-specialist-coverage",
+      "description": "Prove the Product/UX family can route a broad expertise suite while activating only the smallest applicable subset.",
+      "evidence_required": ["specialist pack", "role-method distinctions", "portfolio membership", "negative full-suite activation test"],
+      "owner_role_id": "bounded-registry-writer",
+      "checker_role_id": "independent-scope-checker",
+      "status": "pending"
+    },
+    {
+      "obligation_id": "human-destination-authority",
+      "description": "Prove repository activity and model inference cannot establish the desired destination, integration target, or completion depth.",
+      "evidence_required": ["authority contract", "stop conditions", "user-decision fields", "tests"],
+      "owner_role_id": "bounded-registry-writer",
+      "checker_role_id": "independent-scope-checker",
+      "status": "pending"
+    }
+  ],
+  "unresolved_decisions": [],
+  "manifest_digest": "sha256:6f5da4a2ec13facb8cf4addd436bf67ee07614de0b31e13ba91e9cc7db43dde1"
+}

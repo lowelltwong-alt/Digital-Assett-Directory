@@ -1,0 +1,158 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://dad.local/schemas/project-position-diagnosis-v1.json",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "diagnosis_id", "as_of", "candidate_only", "coverage", "project_identity", "current_state", "observed_position", "issue_codes", "destination", "routing", "human_decisions", "smallest_reversible_next_action", "producer_ref", "independent_validation_ref", "execution_handoff_status", "execution_authorized", "authority_boundary"],
+  "properties": {
+    "schema_version": {"const": "dad.project_position_diagnosis.v1"},
+    "diagnosis_id": {"type": "string", "pattern": "^diagnosis:[a-z0-9][a-z0-9._:-]*$"},
+    "as_of": {"type": "string", "format": "date-time"},
+    "candidate_only": {"const": true},
+    "coverage": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["source_refs", "input_fingerprint", "unavailable_sources", "gaps"],
+      "properties": {
+        "source_refs": {"$ref": "#/$defs/strings"},
+        "input_fingerprint": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"},
+        "unavailable_sources": {"$ref": "#/$defs/stringsMaybeEmpty"},
+        "gaps": {"$ref": "#/$defs/stringsMaybeEmpty"}
+      }
+    },
+    "project_identity": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["project_id", "authority_ref", "owner"],
+      "properties": {
+        "project_id": {"type": "string", "minLength": 1},
+        "authority_ref": {"type": "string", "minLength": 1},
+        "owner": {"type": "string", "minLength": 1}
+      }
+    },
+    "current_state": {"enum": ["proposed", "active", "paused", "snoozed", "incubating", "merged", "superseded", "archived", "unknown"]},
+    "observed_position": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["evidence_stage", "working_surfaces", "broken_surfaces", "incomplete_surfaces", "evidence_refs"],
+      "properties": {
+        "evidence_stage": {"enum": ["unknown", "problem-framed", "solution-shaped", "implementation-underway", "integrated", "validated", "released", "operating", "recovery"]},
+        "working_surfaces": {"$ref": "#/$defs/stringsMaybeEmpty"},
+        "broken_surfaces": {"$ref": "#/$defs/stringsMaybeEmpty"},
+        "incomplete_surfaces": {"$ref": "#/$defs/stringsMaybeEmpty"},
+        "evidence_refs": {"$ref": "#/$defs/stringsMaybeEmpty"}
+      }
+    },
+    "issue_codes": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": {"enum": ["identity-unclear", "purpose-unclear", "destination-unconfirmed", "acceptance-missing", "scope-drift", "duplicate-or-related-work-unresolved", "broken-build-or-test", "missing-dependency", "dependency-cycle", "integration-target-unknown", "integration-contract-missing", "mcp-fit-unknown", "data-or-schema-gap", "security-or-privacy-gate", "ui-ux-gap", "accessibility-gap", "deployment-or-operations-gap", "stale-or-conflicting-authority", "validation-gap", "release-or-handoff-gap", "none-observed"]}
+    },
+    "destination": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["confirmation_status", "human_decision_ref", "confirmation_recorded_at", "purpose", "end_state_class", "completion_depth", "integration_targets", "acceptance_evidence", "non_goals", "sufficient_stop"],
+      "properties": {
+        "confirmation_status": {"enum": ["unknown", "proposed", "human_confirmed"]},
+        "human_decision_ref": {"type": "string"},
+        "confirmation_recorded_at": {"type": "string"},
+        "purpose": {"type": "string"},
+        "end_state_class": {"enum": ["answer-or-decision", "reusable-artifact", "bounded-change", "integration", "prototype", "pilot", "mvp", "major-product", "production-service", "operating-system", "maintenance-only", "retire-or-archive", "unknown"]},
+        "completion_depth": {"enum": ["diagnose-only", "repair-current-intent", "complete-bounded-outcome", "integrate-with-target", "validate-existing-build", "productionize-approved-scope", "maintain", "retire", "unknown"]},
+        "integration_targets": {"$ref": "#/$defs/stringsMaybeEmpty"},
+        "acceptance_evidence": {"$ref": "#/$defs/stringsMaybeEmpty"},
+        "non_goals": {"$ref": "#/$defs/stringsMaybeEmpty"},
+        "sufficient_stop": {"type": "string"}
+      }
+    },
+    "routing": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["selected_capabilities", "prerequisites", "validators", "suppressed_capabilities", "mcp_first_assessment"],
+      "properties": {
+        "selected_capabilities": {"type": "array", "maxItems": 3, "uniqueItems": true, "items": {"type": "string", "pattern": "^capability:"}},
+        "prerequisites": {"$ref": "#/$defs/stringsMaybeEmpty"},
+        "validators": {"$ref": "#/$defs/stringsMaybeEmpty"},
+        "suppressed_capabilities": {"$ref": "#/$defs/stringsMaybeEmpty"},
+        "mcp_first_assessment": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["applicable", "reason", "preferred_interface", "direct_api_fallback_status"],
+          "properties": {
+            "applicable": {"type": "boolean"},
+            "reason": {"type": "string"},
+            "preferred_interface": {"enum": ["resource", "prompt", "tool", "combination", "not-applicable", "unknown"]},
+            "direct_api_fallback_status": {"enum": ["not-needed", "candidate-requires-human-review", "prohibited", "unknown"]}
+          }
+        }
+      }
+    },
+    "human_decisions": {"type": "array", "maxItems": 3, "uniqueItems": true, "items": {"type": "string", "minLength": 1}},
+    "smallest_reversible_next_action": {"type": "string", "minLength": 1},
+    "producer_ref": {"type": "string", "minLength": 1},
+    "independent_validation_ref": {"type": "string"},
+    "execution_handoff_status": {"enum": ["blocked-destination-unconfirmed", "blocked-completion-depth-unconfirmed", "not-requested", "candidate-ready-for-human-approval"]},
+    "execution_authorized": {"const": false},
+    "authority_boundary": {"type": "string", "minLength": 1}
+  },
+  "$defs": {
+    "strings": {"type": "array", "minItems": 1, "uniqueItems": true, "items": {"type": "string", "minLength": 1}},
+    "stringsMaybeEmpty": {"type": "array", "uniqueItems": true, "items": {"type": "string", "minLength": 1}}
+  },
+  "allOf": [
+    {
+      "if": {"properties": {"destination": {"properties": {"confirmation_status": {"const": "human_confirmed"}}}}},
+      "then": {
+        "properties": {
+          "destination": {
+            "properties": {
+              "human_decision_ref": {"minLength": 1},
+              "confirmation_recorded_at": {"format": "date-time", "minLength": 1},
+              "purpose": {"minLength": 1},
+              "acceptance_evidence": {"minItems": 1},
+              "non_goals": {"minItems": 1},
+              "sufficient_stop": {"minLength": 1}
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": {"properties": {"destination": {"properties": {"confirmation_status": {"enum": ["unknown", "proposed"]}}}}},
+      "then": {"properties": {"execution_handoff_status": {"const": "blocked-destination-unconfirmed"}}}
+    },
+    {
+      "if": {
+        "properties": {
+          "destination": {
+            "properties": {
+              "confirmation_status": {"const": "human_confirmed"},
+              "completion_depth": {"const": "unknown"}
+            },
+            "required": ["confirmation_status", "completion_depth"]
+          }
+        }
+      },
+      "then": {"properties": {"execution_handoff_status": {"const": "blocked-completion-depth-unconfirmed"}}}
+    },
+    {
+      "if": {"properties": {"execution_handoff_status": {"const": "candidate-ready-for-human-approval"}}},
+      "then": {
+        "properties": {
+          "destination": {
+            "properties": {
+              "confirmation_status": {"const": "human_confirmed"},
+              "completion_depth": {"not": {"const": "unknown"}},
+              "human_decision_ref": {"minLength": 1},
+              "acceptance_evidence": {"minItems": 1},
+              "non_goals": {"minItems": 1},
+              "sufficient_stop": {"minLength": 1}
+            }
+          },
+          "routing": {"properties": {"validators": {"minItems": 1}}},
+          "independent_validation_ref": {"minLength": 1}
+        }
+      }
+    }
+  ]
+}

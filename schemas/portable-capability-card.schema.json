@@ -1,0 +1,86 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://dad.local/schemas/portable-capability-card-v1.json",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "card_id", "revision_id", "artifact_id", "artifact_kind", "binding_class", "source_authority", "owner", "status", "candidate_only", "execution_authorized", "authority_boundary"],
+  "properties": {
+    "schema_version": {"const": "dad.portable_capability_card.v1"},
+    "card_id": {"type": "string", "pattern": "^portability-card:"},
+    "revision_id": {"type": "string", "pattern": "^portability-card-revision:"},
+    "artifact_id": {"type": "string", "minLength": 3},
+    "artifact_kind": {"enum": ["skill", "personal_skill", "agent", "subagent_pack", "family", "workflow", "routine", "trigger", "harness", "prompt", "library", "knowledge_interface", "evaluation_pack", "algorithm_pack", "template", "runtime_adapter", "provider_probe"]},
+    "binding_class": {"enum": ["portable_core", "runtime_adapter", "provider_probe", "environment_bound_exception"]},
+    "source_authority": {"type": "string", "minLength": 3},
+    "owner": {"type": "string", "minLength": 1},
+    "status": {"enum": ["unknown_legacy", "declared", "schema_validated", "shadow_validated", "pilot_validated", "reviewed_portable", "watch", "stale", "superseded", "retired", "environment_bound"]},
+    "portable_files": {"$ref": "#/$defs/strings"},
+    "content_digest": {"$ref": "#/$defs/digest"},
+    "source_observation_digest": {"$ref": "#/$defs/digest"},
+    "instruction_binding": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["source_ref", "begin_marker", "end_marker", "content_digest"],
+      "properties": {
+        "source_ref": {"const": "personal-codex-source:AGENTS.md"},
+        "begin_marker": {"type": "string", "minLength": 3},
+        "end_marker": {"type": "string", "minLength": 3},
+        "content_digest": {"$ref": "#/$defs/digest"}
+      }
+    },
+    "live_source_binding": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["source_ref", "content_digest"],
+      "properties": {
+        "source_ref": {"type": "string", "pattern": "^personal-skill-source:"},
+        "content_digest": {"$ref": "#/$defs/digest"}
+      }
+    },
+    "contract_digests": {"$ref": "#/$defs/contracts"},
+    "capability_ids": {"$ref": "#/$defs/strings"},
+    "tool_ids": {"$ref": "#/$defs/strings"},
+    "context_contract": {"type": "string", "minLength": 1},
+    "privacy_classes": {"$ref": "#/$defs/strings"},
+    "consequence_classes": {"$ref": "#/$defs/strings"},
+    "effect_classes": {"$ref": "#/$defs/strings"},
+    "dependencies": {"type": "array", "uniqueItems": true, "items": {"type": "string"}},
+    "reverse_consumers": {"type": "array", "uniqueItems": true, "items": {"type": "string"}},
+    "adapter_revision_ids": {"type": "array", "uniqueItems": true, "items": {"type": "string", "pattern": "^portability-card-revision:"}},
+    "harness_revision_id": {"type": "string"},
+    "evidence_refs": {"$ref": "#/$defs/strings"},
+    "fresh_until": {"type": "string", "format": "date-time"},
+    "rollback_ref": {"type": "string", "minLength": 1},
+    "core_revision_id": {"type": "string", "pattern": "^portability-card-revision:"},
+    "target_capability_predicate": {"type": "object"},
+    "adapter_interface_digest": {"$ref": "#/$defs/digest"},
+    "preserved_contract_digests": {"$ref": "#/$defs/contracts"},
+    "compatibility_evidence": {"$ref": "#/$defs/strings"},
+    "target_runtime_classes": {"$ref": "#/$defs/strings"},
+    "provider_bindings": {"type": "array", "uniqueItems": true, "items": {"type": "string"}},
+    "adapter_revision_id": {"type": "string", "pattern": "^portability-card-revision:"},
+    "receipt_protocol_id": {"type": "string", "minLength": 1},
+    "probe_fields": {"$ref": "#/$defs/strings"},
+    "exception_decision_id": {"type": "string", "pattern": "^human-decision:"},
+    "exception_scope": {"type": "string", "minLength": 3},
+    "exception_owner": {"type": "string", "minLength": 1},
+    "exception_expires_at": {"type": "string", "format": "date-time"},
+    "exception_policy_revision_id": {"type": "string", "pattern": "^portability-policy-revision:"},
+    "containment_plan": {"type": "string", "minLength": 3},
+    "migration_plan": {"type": "string", "minLength": 3},
+    "candidate_only": {"const": true},
+    "execution_authorized": {"const": false},
+    "authority_boundary": {"type": "string", "minLength": 20}
+  },
+  "allOf": [
+    {"if": {"properties": {"binding_class": {"const": "portable_core"}}}, "then": {"required": ["portable_files", "content_digest", "contract_digests", "capability_ids", "tool_ids", "context_contract", "privacy_classes", "consequence_classes", "effect_classes", "dependencies", "reverse_consumers", "adapter_revision_ids", "harness_revision_id", "evidence_refs", "fresh_until", "rollback_ref"], "not": {"anyOf": [{"required": ["core_revision_id"]}, {"required": ["exception_decision_id"]}, {"required": ["receipt_protocol_id"]}]}}},
+    {"if": {"properties": {"binding_class": {"const": "runtime_adapter"}}}, "then": {"required": ["core_revision_id", "target_capability_predicate", "adapter_interface_digest", "preserved_contract_digests", "compatibility_evidence", "target_runtime_classes", "fresh_until", "rollback_ref"], "not": {"anyOf": [{"required": ["portable_files"]}, {"required": ["exception_decision_id"]}, {"required": ["receipt_protocol_id"]}]}}},
+    {"if": {"properties": {"binding_class": {"const": "provider_probe"}}}, "then": {"required": ["adapter_revision_id", "receipt_protocol_id", "probe_fields", "fresh_until"], "not": {"anyOf": [{"required": ["portable_files"]}, {"required": ["core_revision_id"]}, {"required": ["exception_decision_id"]}]}}},
+    {"if": {"properties": {"binding_class": {"const": "environment_bound_exception"}}}, "then": {"required": ["exception_decision_id", "exception_scope", "exception_owner", "exception_expires_at", "exception_policy_revision_id", "containment_plan", "migration_plan", "rollback_ref"], "properties": {"status": {"const": "environment_bound"}}, "not": {"anyOf": [{"required": ["portable_files"]}, {"required": ["core_revision_id"]}, {"required": ["receipt_protocol_id"]}]}}}
+  ],
+  "$defs": {
+    "strings": {"type": "array", "minItems": 1, "uniqueItems": true, "items": {"type": "string", "minLength": 1}},
+    "digest": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"},
+    "contracts": {"type": "object", "additionalProperties": false, "required": ["input", "output", "error", "privacy", "effect", "authority"], "properties": {"input": {"$ref": "#/$defs/digest"}, "output": {"$ref": "#/$defs/digest"}, "error": {"$ref": "#/$defs/digest"}, "privacy": {"$ref": "#/$defs/digest"}, "effect": {"$ref": "#/$defs/digest"}, "authority": {"$ref": "#/$defs/digest"}}}
+  }
+}

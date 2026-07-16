@@ -1,0 +1,4 @@
+interface:
+  display_name: "Knowledge Engineering Ops"
+  short_description: "Engineer retrieval, context, vector, and graph systems"
+  default_prompt: "Use $knowledge-engineering-ops to diagnose and design the smallest evidence-backed knowledge system for this goal."

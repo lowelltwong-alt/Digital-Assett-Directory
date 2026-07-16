@@ -1,0 +1,4 @@
+interface:
+  display_name: "Portable Capability Governance"
+  short_description: "Enforce portable, model-neutral capabilities"
+  default_prompt: "Use $portable-capability-governance to check this reusable capability for provider-neutral portability and governed upgrade readiness."

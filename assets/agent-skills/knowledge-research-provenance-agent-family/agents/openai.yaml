@@ -1,0 +1,4 @@
+interface:
+  display_name: "Knowledge Research Provenance Agent Family"
+  short_description: "Research claims with provenance and counterevidence"
+  default_prompt: "Use -research-provenance-agent-family to build an authoritative, citation-backed research packet for this decision."

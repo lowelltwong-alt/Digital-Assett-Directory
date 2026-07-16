@@ -1,0 +1,171 @@
+{
+  "schema_version": "dad.task_local_agent_mesh_manifest.v1",
+  "mesh_id": "dad:agent-mesh:ai-native-process-pilot",
+  "task_id": "ai-native-process-pilot",
+  "revision_id": "dad:agent-mesh-revision:ai-native-process-pilot:v1",
+  "phase": "planning",
+  "status": "planned",
+  "source_snapshot_digest": "sha256:23c2c6e1c91262bfa0c792dd8e7155e04f2ef6e19516a4bb0468a783b5003e2f",
+  "authority": {
+    "source_authority": "DAD retains authority for its contracts and registries; generated pilot evidence remains candidate-only and Lowell retains product, activation, release, and promotion authority.",
+    "execution_authority": false,
+    "human_gate_required": true
+  },
+  "max_delegation_depth": 1,
+  "writer_role_id": "implementation-worker",
+  "checker_role_id": "independent-checker",
+  "non_overlap_statement": "Only implementation-worker may edit implementation, schema, registry, documentation, and test files; scout and checker are read-only, while the root foreman writes only task-local mesh revisions and integrates accepted evidence.",
+  "roles": [
+    {
+      "role_id": "contract-scout",
+      "why_needed": "Existing project, workflow, trigger, graph, skill, and test contracts must be mapped before extending them.",
+      "mission": "Inventory the narrowest reusable contracts, consumers, validators, and collision risks for the AI-native process pilot.",
+      "inputs": [
+        "current DAD source snapshot",
+        "approved AI-native process pilot scope"
+      ],
+      "dependencies": [],
+      "authority": "Read-only inventory and recommendations; cannot edit files or approve implementation.",
+      "model_effort_class": "low",
+      "writer_checker_relation": "specialist",
+      "acceptance_conditions": [
+        "Returns exact reusable paths and consumers.",
+        "Identifies duplicate or conflicting schema, role, and trigger concepts.",
+        "Names the smallest coherent implementation slice."
+      ],
+      "stop_conditions": [
+        "Source authority is ambiguous.",
+        "Private or external payloads would be required."
+      ],
+      "handoff": {
+        "recipient_role_ids": [
+          "implementation-worker",
+          "independent-checker"
+        ],
+        "deliverables": [
+          "inventory map",
+          "consumer and collision report"
+        ],
+        "readiness_conditions": [
+          "Relevant local registries, schemas, skills, and tests were inspected."
+        ]
+      }
+    },
+    {
+      "role_id": "implementation-worker",
+      "why_needed": "One bounded writer must implement the coupled contract, role, metrics, harness, and registration changes coherently.",
+      "mission": "Implement the smallest DAD-native AI process pilot with schemas, deterministic validation, specialist registration, documentation, examples, and tests.",
+      "inputs": [
+        "approved AI-native process pilot scope",
+        "contract-scout inventory",
+        "DAD authority and lifecycle contracts"
+      ],
+      "dependencies": [
+        "contract-scout"
+      ],
+      "authority": "May edit only task-relevant DAD schemas, registries, project-management specialist-pack files, documentation, tests, and bounded pilot-harness files in this worktree; no external or cross-repo writes.",
+      "model_effort_class": "medium",
+      "writer_checker_relation": "writer",
+      "acceptance_conditions": [
+        "Routine-purpose, build-refusal, experience-surface, learning-velocity, and usage/findability fields are machine-validated.",
+        "Product catalyst is a bounded specialist inside the existing project-management family.",
+        "Candidate triggers include suppressors, expiry, human gates, validators, and negative cases.",
+        "Focused tests and DAD validation pass."
+      ],
+      "stop_conditions": [
+        "Implementation would require changing source authority or enabling automation.",
+        "A conflicting canonical contract cannot be reconciled without human choice.",
+        "Write scope overlaps another active writer."
+      ],
+      "handoff": {
+        "recipient_role_ids": [
+          "independent-checker"
+        ],
+        "deliverables": [
+          "implementation diff",
+          "focused validation evidence",
+          "known limitations"
+        ],
+        "readiness_conditions": [
+          "Worker tests pass and the diff is limited to the approved scope."
+        ]
+      }
+    },
+    {
+      "role_id": "independent-checker",
+      "why_needed": "The worker cannot approve a new governance contract, agent role, trigger pattern, or pilot harness.",
+      "mission": "Independently verify schema behavior, role boundaries, trigger suppressors, graph and registry consistency, privacy, one-human ergonomics, and regression evidence.",
+      "inputs": [
+        "approved AI-native process pilot scope",
+        "contract-scout inventory",
+        "implementation diff and tests"
+      ],
+      "dependencies": [
+        "implementation-worker"
+      ],
+      "authority": "Read-only independent review; cannot edit worker files, promote candidates, activate routines, or release changes.",
+      "model_effort_class": "medium",
+      "writer_checker_relation": "checker",
+      "acceptance_conditions": [
+        "Re-runs focused and baseline validation independently.",
+        "Tests negative cases and false-authority paths.",
+        "Reports release gate, defects, untested paths, and residual risks."
+      ],
+      "stop_conditions": [
+        "Checker authored a material implementation file.",
+        "Required source evidence or deterministic validators are unavailable."
+      ],
+      "handoff": {
+        "recipient_role_ids": [],
+        "deliverables": [
+          "independent findings",
+          "release gate",
+          "decomposition-quality observations"
+        ],
+        "readiness_conditions": [
+          "Final diff and raw validation outputs are available."
+        ]
+      }
+    }
+  ],
+  "proof_obligations": [
+    {
+      "obligation_id": "bounded-contract",
+      "description": "Prove the implementation extends existing DAD contracts without creating a duplicate authority surface.",
+      "evidence_required": [
+        "final diff",
+        "registry and schema validation",
+        "duplicate search evidence"
+      ],
+      "owner_role_id": "implementation-worker",
+      "checker_role_id": "independent-checker",
+      "status": "pending"
+    },
+    {
+      "obligation_id": "candidate-only-automation",
+      "description": "Prove no trigger, routine, product recommendation, or pilot result can mutate active systems or self-promote.",
+      "evidence_required": [
+        "negative tests",
+        "authority-boundary review",
+        "human-gate fields"
+      ],
+      "owner_role_id": "implementation-worker",
+      "checker_role_id": "independent-checker",
+      "status": "pending"
+    },
+    {
+      "obligation_id": "one-human-ergonomics",
+      "description": "Prove the pilot remains usable by one human with bounded decisions, quiet conditions, expiry, and cost visibility.",
+      "evidence_required": [
+        "pilot example",
+        "schema constraints",
+        "checker premortem"
+      ],
+      "owner_role_id": "implementation-worker",
+      "checker_role_id": "independent-checker",
+      "status": "pending"
+    }
+  ],
+  "unresolved_decisions": [],
+  "manifest_digest": "sha256:bcadbb57f08699062f3ed5cf4c4ac21a030b9e1a7f245b1d600b11da199c70cf"
+}

@@ -1,0 +1,24 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://dad.local/schemas/capability-operational-graph-v1.json",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "generated_at", "status", "candidate_only", "execution_authorized", "catalog_fingerprint", "source_fingerprint", "nodes", "edges", "summary", "authority_boundary"],
+  "properties": {
+    "schema_version": {"const": "dad.capability_operational_graph.v1"},
+    "generated_at": {"type": "string", "format": "date-time"},
+    "status": {"const": "generated_candidate"},
+    "candidate_only": {"const": true},
+    "execution_authorized": {"const": false},
+    "catalog_fingerprint": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"},
+    "source_fingerprint": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"},
+    "nodes": {"type": "array", "items": {"$ref": "#/$defs/node"}},
+    "edges": {"type": "array", "items": {"$ref": "#/$defs/edge"}},
+    "summary": {"type": "object", "additionalProperties": false, "required": ["node_count", "edge_count", "node_type_counts", "edge_type_counts"], "properties": {"node_count": {"type": "integer", "minimum": 0}, "edge_count": {"type": "integer", "minimum": 0}, "node_type_counts": {"type": "object", "additionalProperties": {"type": "integer", "minimum": 0}}, "edge_type_counts": {"type": "object", "additionalProperties": {"type": "integer", "minimum": 0}}}},
+    "authority_boundary": {"type": "string", "minLength": 20}
+  },
+  "$defs": {
+    "node": {"type": "object", "additionalProperties": false, "required": ["node_id", "node_type", "name", "status", "authority_ref", "evidence_refs"], "properties": {"node_id": {"type": "string", "minLength": 3}, "node_type": {"enum": ["capability", "implementation", "family", "specialist_pack", "skill", "workflow_definition", "workflow_revision", "workflow_run", "route_trace", "project", "repository", "evidence", "validator", "policy", "human_decision", "gap_candidate", "adapter"]}, "name": {"type": "string"}, "status": {"type": "string"}, "authority_ref": {"type": "string"}, "revision_ref": {"type": "string"}, "fingerprint": {"type": "string"}, "evidence_refs": {"type": "array", "uniqueItems": true, "items": {"type": "string"}}}},
+    "edge": {"type": "object", "additionalProperties": false, "required": ["source", "edge_type", "target", "status", "evidence_ref"], "properties": {"source": {"type": "string"}, "edge_type": {"enum": ["implements", "depends_on", "member_of", "validated_by", "governed_by", "applies_to", "observed_by", "conflicts_with", "supersedes", "gap_evidence_for", "derived_from"]}, "target": {"type": "string"}, "status": {"const": "candidate"}, "evidence_ref": {"type": "string"}}}
+  }
+}

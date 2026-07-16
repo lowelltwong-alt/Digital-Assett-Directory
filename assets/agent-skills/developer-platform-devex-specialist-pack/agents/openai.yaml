@@ -1,0 +1,4 @@
+interface:
+  display_name: "Developer Platform DevEx Pack"
+  short_description: "Improve developer workflows with measured evidence"
+  default_prompt: "Use $developer-platform-devex-specialist-pack to improve this developer workflow or internal platform."

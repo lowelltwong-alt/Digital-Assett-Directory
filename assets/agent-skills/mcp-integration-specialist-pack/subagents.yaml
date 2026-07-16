@@ -1,0 +1,96 @@
+schema_version: dad_subagent_pack.v0_1
+pack_id: dad:subagent-pack:mcp-integration-specialist-pack
+version: 0.1.0
+status: candidate
+ai_agnostic: true
+methodology_ref: registry/subagent-evaluation-methodology.json#0.1.0
+authority_boundary: Roles produce candidate MCP and integration evidence or bounded drafts. They cannot grant access, use credentials, install or enable connectors, mutate external systems, or approve their own outputs.
+routing_policy:
+  parent_family: family:integration-mcp-automation
+  activation: named_target_or_demonstrated_interface_gap_only
+  maximum_primary_roles: 3
+  whole_pack_activation: prohibited
+  deterministic_first: true
+  independent_checker_required_for_material_output: true
+roles:
+  - role_id: mcp-fit-boundary-diagnostician
+    profile_role_id: mcp_fit_boundary_diagnostician
+    capability_ids: [mcp_fit_and_boundary_analysis, integration_fit_and_mcp_routing]
+    search_terms: [mcp fit, integration boundary, mcp or api, interface choice]
+    effort: low_then_medium_on_ambiguity
+    mission: Decide whether integration is needed and whether resource, prompt, tool, combination, internal interface, or reviewed fallback is the smallest safe fit.
+    required_output: [fit_decision, authority_boundary, selected_interface, rejected_options, human_decisions]
+    stop_conditions: [integration_target_unknown, authority_unknown, mcp_selected_by_default]
+  - role_id: mcp-resource-context-specialist
+    profile_role_id: mcp_resource_context_specialist
+    capability_ids: [mcp_resource_context_design]
+    search_terms: [mcp resource, context exposure, resource uri, read only context]
+    effort: medium
+    mission: Design bounded discoverable read-only context with provenance, freshness, pagination, and privacy controls.
+    required_output: [resource_contract, coverage, provenance, freshness, privacy_controls, test_cases]
+    stop_conditions: [source_authority_unknown, secret_or_private_scope_unapproved]
+  - role_id: mcp-tool-permission-specialist
+    profile_role_id: mcp_tool_permission_specialist
+    capability_ids: [mcp_tool_permission_design, governance_authority_safety]
+    search_terms: [mcp tool, side effect, permission boundary, human confirmation]
+    effort: high_by_consequence
+    mission: Design explicit inputs, mutation classes, confirmations, idempotency, audit, rollback, and least-authority tool contracts.
+    required_output: [tool_contract, permission_matrix, consequence_tier, idempotency, rollback, negative_tests]
+    stop_conditions: [mutation_class_implicit, credential_use_unapproved, rollback_missing]
+  - role_id: mcp-prompt-workflow-specialist
+    profile_role_id: mcp_prompt_workflow_specialist
+    capability_ids: [mcp_prompt_workflow_design]
+    search_terms: [mcp prompt, reusable prompt, workflow prompt, elicitation]
+    effort: medium
+    mission: Design human-invoked prompts and workflow interfaces with explicit parameters, context boundaries, and stable outcomes.
+    required_output: [prompt_contract, parameters, context_dependencies, failure_states, acceptance]
+    stop_conditions: [hidden_side_effect, unbounded_context, outcome_unknown]
+  - role_id: mcp-identity-auth-tenancy-specialist
+    profile_role_id: mcp_identity_auth_tenancy_specialist
+    capability_ids: [mcp_identity_auth_tenancy, governance_authority_safety]
+    search_terms: [mcp oauth, authentication, authorization, tenancy, identity]
+    effort: high
+    mission: Map identities, delegated authority, tenant isolation, token lifetimes, revocation, and audit without handling raw credentials.
+    required_output: [identity_map, auth_flow, tenancy_boundaries, revocation, audit_requirements, risks]
+    stop_conditions: [credential_required, tenant_boundary_unknown, delegated_authority_ambiguous]
+  - role_id: mcp-host-client-compatibility-specialist
+    profile_role_id: mcp_host_client_compatibility_specialist
+    capability_ids: [mcp_host_client_compatibility]
+    search_terms: [mcp client, mcp host, compatibility, capability negotiation, transport]
+    effort: medium
+    mission: Verify the named hosts, clients, transports, lifecycle behavior, and capability assumptions against declared evidence.
+    required_output: [compatibility_matrix, assumptions, unsupported_paths, fixtures, fallback]
+    stop_conditions: [host_or_client_unnamed, volatile_claim_unverified]
+  - role_id: mcp-contract-reconciliation-specialist
+    profile_role_id: mcp_contract_reconciliation_specialist
+    capability_ids: [integration_contract_reconciliation]
+    search_terms: [schema mapping, reconciliation, retries, idempotency, partial failure]
+    effort: medium_or_high_by_data_risk
+    mission: Design producer-consumer contracts, transformations, ordering, retries, duplicate handling, reconciliation, and recovery.
+    required_output: [contract_map, transformation_rules, failure_matrix, reconciliation_plan, rollback]
+    stop_conditions: [source_of_truth_unknown, lossy_mapping_unapproved]
+  - role_id: mcp-conformance-security-checker
+    profile_role_id: mcp_conformance_security_checker
+    capability_ids: [mcp_conformance_security_testing, implementation_review]
+    search_terms: [mcp conformance, mcp security test, integration negative test, permission audit]
+    effort: medium_or_high_by_consequence
+    mission: Independently test contracts, malformed inputs, replay, duplicate delivery, auth expiry, permission denial, partial failure, and data leakage.
+    required_output: [findings, conformance_results, counterevidence, failed_paths, residual_risks]
+    stop_conditions: [checker_is_producer, evidence_unavailable, live_mutation_required]
+  - role_id: mcp-operations-versioning-specialist
+    profile_role_id: mcp_operations_versioning_specialist
+    capability_ids: [mcp_operations_versioning]
+    search_terms: [mcp operations, versioning, stale contract, monitoring, deprecation]
+    effort: medium
+    mission: Define health, compatibility windows, change detection, deprecation, recovery, and deduplicated freshness candidates.
+    required_output: [operations_contract, version_policy, health_signals, recovery, next_review]
+    stop_conditions: [automatic_upgrade_requested, alert_owner_missing]
+  - role_id: mcp-migration-fallback-specialist
+    profile_role_id: mcp_migration_fallback_specialist
+    capability_ids: [integration_migration_fallback]
+    search_terms: [mcp migration, api fallback, connector replacement, compatibility migration]
+    effort: medium_or_high_by_consequence
+    mission: Plan reversible migration between interfaces with shadow parity, cutover gates, rollback, and authority preservation.
+    required_output: [migration_stages, parity_evidence, cutover_gates, rollback, retained_authority]
+    stop_conditions: [big_bang_cutover, parity_unmeasured, fallback_policy_unapproved]
+

@@ -1,0 +1,4 @@
+interface:
+  display_name: "Platform Cloud SRE Family"
+  short_description: "Build and verify reliable production platforms"
+  default_prompt: "Use $platform-cloud-sre-agent-family to design or assess this production platform and reliability work."

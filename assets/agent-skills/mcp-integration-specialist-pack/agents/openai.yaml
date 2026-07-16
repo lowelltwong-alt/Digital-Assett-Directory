@@ -1,0 +1,5 @@
+interface:
+  display_name: "MCP Integration Specialist Pack"
+  short_description: "Route focused MCP design and verification expertise"
+  default_prompt: "Use $mcp-integration-specialist-pack to route only the MCP experts needed for this named integration gap."
+

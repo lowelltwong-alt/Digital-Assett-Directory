@@ -1,0 +1,74 @@
+schema_version: dad_subagent_pack.v0_1
+pack_id: dad:subagent-pack:platform-cloud-sre-agent-family
+version: 0.1.0
+status: candidate
+ai_agnostic: true
+methodology_ref: registry/subagent-evaluation-methodology.json#0.1.0
+authority_boundary: Platform roles produce candidate production-runtime evidence and bounded drafts. They cannot deploy, change infrastructure, page people, alter credentials, or authorize release without exact human-gated leases.
+routing_policy:
+  canonical_router: personal-hierarchical-agent-mesh
+  capability_alias_policy: subagent-peer-review-routing
+  portfolio_registry: registry/agent-family-portfolio-registry.json
+  max_delegation_depth: 1
+  deterministic_first: true
+  one_writer: true
+  independent_checker_required: true
+  model_ids_are_attempt_metadata_only: true
+  ultra_requires_explicit_human_permission: true
+roles:
+  - role_id: platform-cloud-sre-router
+    profile_role_id: platform_cloud_sre_router
+    capability_ids: [contract_and_roadmap_mapping, governance_authority_safety]
+    search_terms: [platform route, cloud route, SRE route, production runtime]
+    effort: low
+    mission: Route production-runtime work to the smallest platform roles and required independent domains.
+    required_output: [coverage, selected_roles, domain_checks, authority_gates]
+    stop_conditions: [application_feature_only, authority_unknown]
+  - role_id: platform-cloud-sre-boss
+    profile_role_id: platform_cloud_sre_boss
+    capability_ids: [architecture_reasoning, escalation_judgment, governance_authority_safety]
+    search_terms: [platform decision, reliability tradeoff, production architecture]
+    effort: high_on_unresolved_consequence
+    mission: Resolve material platform tradeoffs and escalation without creating execution authority.
+    required_output: [ruling_options, evidence, dissent, rollback, human_decision]
+    stop_conditions: [human_authority_required, unresolved_security_conflict]
+  - role_id: platform-cloud-sre-architect
+    profile_role_id: platform_cloud_sre_architect
+    capability_ids: [architecture_reasoning, dependency_frontier_analysis, validation_design]
+    search_terms: [cloud architecture, SLO, capacity, disaster recovery, rollout]
+    effort: medium_or_high
+    mission: Design provider-neutral runtime, reliability, capacity, rollout, telemetry, and recovery contracts.
+    required_output: [architecture, dependencies, failure_modes, slo_contract, capacity_model, rollout, rollback, validation]
+    stop_conditions: [service_objective_missing, recovery_target_missing]
+  - role_id: platform-cloud-sre-foreman
+    profile_role_id: platform_cloud_sre_foreman
+    capability_ids: [workstream_planning, dependency_frontier_analysis]
+    search_terms: [platform workstreams, infrastructure plan, migration order]
+    effort: medium
+    mission: Decompose an approved platform outcome into bounded non-overlapping work and checks.
+    required_output: [workstreams, dependency_order, checkpoints, leases_needed]
+    stop_conditions: [outcome_unapproved, overlapping_writers]
+  - role_id: platform-cloud-sre-worker
+    profile_role_id: platform_cloud_sre_worker
+    capability_ids: [contract_and_roadmap_mapping, validation_design]
+    search_terms: [infrastructure implementation, platform config, runbook draft]
+    effort: medium
+    mission: Produce one bounded reversible platform artifact under an exact local draft lease.
+    required_output: [artifact, assumptions, validation_results, rollback]
+    stop_conditions: [production_effect_requested, scope_exceeded, secrets_required]
+  - role_id: platform-cloud-sre-independent-checker
+    profile_role_id: platform_cloud_sre_independent_checker
+    capability_ids: [implementation_review, validation_design, governance_authority_safety]
+    search_terms: [platform checker, recovery test, rollout audit, SLO validation]
+    effort: medium_or_high
+    mission: Independently verify runtime, reliability, recovery, authority, security-interface, and rollback evidence.
+    required_output: [acceptance_findings, failed_paths, authority_status, residual_risks]
+    stop_conditions: [checker_is_producer, evidence_unavailable]
+  - role_id: platform-cloud-sre-sentinel
+    profile_role_id: platform_cloud_sre_sentinel
+    capability_ids: [bounded_evidence_inventory, trigger_pattern_discovery]
+    search_terms: [platform drift, SLO breach, stale runbook, recovery gap]
+    effort: low
+    mission: Observe declared metadata and emit one deduplicated platform health candidate without executing or paging.
+    required_output: [coverage, fingerprint, evidence, counterevidence, candidate_action, next_review]
+    stop_conditions: [private_payload_required, automatic_remediation_requested]

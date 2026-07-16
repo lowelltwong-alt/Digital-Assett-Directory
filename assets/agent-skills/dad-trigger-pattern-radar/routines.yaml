@@ -9,6 +9,168 @@ routines:
     executor: deterministic_signature_matcher
     escalation_role: luna-trigger-observer
     budget: none_then_low_on_ambiguous_or_unmatched_signal
+  - routine_id: routine-purpose-expiry-review
+    pattern_id: dad:trigger-pattern:routine-purpose-expiry-review
+    pattern_revision_id: dad:trigger-pattern-revision:routine-purpose-expiry-review:v1
+    revision: 1
+    status: candidate
+    epistemic_state: derived
+    problem_or_opportunity: prevent_recurring_processes_without_a_consumer_changed_decision_or_reviewable_value_from_persisting_silently
+    cadence: manual_on_routine_creation_material_change_or_review_condition
+    executor: deterministic_candidate_packet_builder
+    escalation_role: artifact-proximate-product-catalyst
+    input_fingerprint: sha256_of_routine_identity_revision_consumer_decision_or_behavior_changed_why_now_risk_caught_retained_human_judgment_evidence_of_value_cost_ceiling_quiet_condition_quiet_state_evidence_review_expiry_or_retirement_condition
+    applies_when: [routine_is_proposed_or_materially_revised, recorded_review_expiry_or_retirement_condition_is_due, consumer_or_changed_decision_evidence_is_missing]
+    does_not_apply_when: [one_off_nonrecurring_action, routine_is_quiet_with_current_evidence_and_review_not_due, no_authorized_evidence_scope]
+    required_signals: [stable_routine_identity, routine_revision, authority_boundary, purpose_or_expiry_assessment]
+    any_signals: [material_revision, review_condition_due, consumer_missing, changed_decision_missing, value_evidence_changed, cost_ceiling_changed]
+    forbidden_signals: [private_payload_required, authority_boundary_unknown, request_to_schedule_notify_mutate_or_retire_without_human_gate]
+    counter_signals: [current_named_consumer, current_changed_decision_evidence, quiet_condition_true, review_not_due]
+    emit_when: named_consumer_or_changed_decision_is_missing_or_review_expiry_condition_is_due
+    suppress_when: [input_fingerprint_unchanged, quiet_condition_true, human_dismissal_fingerprint_unchanged, no_authorized_evidence_scope]
+    quiet_when: routine_is_within_review_window_and_no_material_evidence_changed
+    transitions: [unseen_to_candidate_review, candidate_review_to_quiet, candidate_review_to_human_decision, human_dismissed_to_wake_on_material_fingerprint_change]
+    ordered_sequence: [validate_authority, compute_fingerprint, apply_suppressors, build_candidate_packet, request_human_decision_if_needed]
+    grouping_key: routine_id
+    temporal_window: current_revision_plus_recorded_review_condition
+    minimum_lineage_distinct_occurrences: 1_for_watch_only_no_promotion
+    source_diversity: routine_owner_evidence_plus_named_consumer_when_available
+    coverage: current_routine_revision_and_recorded_review_evidence_with_gaps_explicit
+    deterministic_fields: [identity, revision, input_fingerprint, due_condition, quiet_state_evidence, suppressors, idempotency_key]
+    model_proposed_fields: [purpose_gap, value_interpretation, keep_quiet_revise_or_retire_recommendation]
+    idempotency_key: "routine-purpose-expiry-review:{routine_id}:{input_fingerprint}"
+    candidate_action: suggest_review_keep_quiet_revise_or_retire
+    candidate_action_class: suggest
+    human_gate: required_before_routine_creation_revision_retirement_scheduling_or_notification
+    side_effect_authority: none_candidate_packet_only
+    prohibited_side_effects: [schedule, notify, mutate_source, edit_instruction, retire_routine, cross_repo_write]
+    cooldown: until_material_input_fingerprint_change_or_recorded_review_condition
+    expiry: pilot_end_or_90_days_without_human_review
+    wake_condition: material_input_fingerprint_change_or_recorded_review_condition_due
+    privacy_class: internal_metadata_only
+    redaction_rule: retain_ids_statuses_and_evidence_pointers_only_exclude_private_payloads_secrets_and_raw_conversations
+    expected_benefit: fewer_ownerless_or_low_value_recurring_processes_and_clearer_human_decisions
+    execution_cost: deterministic_then_low_only_on_unknown_context
+    interruption_cost: one_deduplicated_candidate_in_a_digest
+    false_positive_harm: premature_pressure_to_retire_a_useful_quiet_routine
+    validator: tests/test_ai_native_process_pilot_contract.py#test_ai_native_trigger_specs_satisfy_canonical_contract
+    positive_cases: [review_condition_due_with_current_evidence, routine_revision_changes_consumer_or_cost_ceiling, missing_consumer_or_changed_decision]
+    negative_cases: [unchanged_fingerprint, quiet_condition_true_with_current_evidence, one_off_action, unavailable_authorized_evidence]
+    rollback: discard_candidate_packet_and_restore_prior_watching_state_no_source_change_exists
+    kill_criteria: [candidate_creates_recurring_work, candidate_exceeds_three_human_asks, any_side_effect_occurs, private_payload_is_required]
+    feedback_events: [accept, reject, dismiss, snooze, usefulness, harm, miss]
+    historical_replay: not_run_candidate_only
+    lineage_grouped_holdout: not_run_candidate_only
+    drift_state: not_calibrated
+    budget: none_then_low_only_for_unknown_context
+  - routine_id: first-runnable-artifact-review
+    pattern_id: dad:trigger-pattern:first-runnable-artifact-review
+    pattern_revision_id: dad:trigger-pattern-revision:first-runnable-artifact-review:v1
+    revision: 1
+    status: candidate
+    epistemic_state: derived
+    problem_or_opportunity: inspect_real_product_or_agent_experience_before_more_buildout_and_find_the_smallest_evidence_producing_next_step
+    cadence: manual_on_first_runnable_artifact_evidence_or_material_artifact_revision
+    executor: deterministic_candidate_packet_builder
+    escalation_role: artifact-proximate-product-catalyst
+    input_fingerprint: sha256_of_workstream_artifact_revision_intended_user_outcome_and_surface_evidence
+    applies_when: [first_runnable_or_observable_artifact_exists, intended_user_and_outcome_are_known, product_decision_could_change]
+    does_not_apply_when: [planning_only_without_observable_artifact, trivial_internal_change_without_product_decision, quiet_or_snoozed_workstream_without_material_change]
+    required_signals: [stable_workstream_identity, artifact_revision, intended_user_and_outcome, artifact_evidence, authority_boundary]
+    any_signals: [first_runnable_artifact, material_artifact_revision, new_surface_evidence, changed_user_outcome]
+    forbidden_signals: [private_payload_required, authority_or_privacy_boundary_unclear, request_for_work_allocation_edit_release_or_mutation]
+    counter_signals: [no_observable_artifact, intended_user_unknown, intended_outcome_unknown, no_material_delta, human_dismissal_fingerprint_unchanged]
+    emit_when: first_runnable_artifact_exists_and_product_decision_could_change
+    suppress_when: [input_fingerprint_unchanged, no_runnable_artifact_evidence, intended_user_or_outcome_unresolved, quiet_or_snoozed_workstream, human_dismissal_fingerprint_unchanged, authority_or_privacy_boundary_unclear]
+    quiet_when: no_material_artifact_or_outcome_delta
+    transitions: [artifact_unseen_to_candidate_review, candidate_review_to_human_decision, candidate_review_to_quiet, human_dismissed_to_wake_on_material_fingerprint_change]
+    ordered_sequence: [validate_authority_and_artifact_evidence, compute_fingerprint, apply_suppressors, inspect_applicable_surfaces, build_candidate_packet]
+    grouping_key: workstream_id
+    temporal_window: current_artifact_revision_and_current_intended_outcome
+    minimum_lineage_distinct_occurrences: 1_for_watch_only_no_promotion
+    source_diversity: artifact_evidence_plus_user_or_outcome_source_when_available
+    coverage: current_artifact_revision_and_applicable_surfaces_with_unknowns_explicit
+    deterministic_fields: [identity, artifact_revision, input_fingerprint, evidence_presence, suppressors, idempotency_key]
+    model_proposed_fields: [experience_gap, build_refusal, smallest_experiment, success_failure_and_stop_signals]
+    idempotency_key: "first-runnable-artifact-review:{workstream_id}:{input_fingerprint}"
+    candidate_action: suggest_smallest_evidence_producing_experiment_or_build_refusal
+    candidate_action_class: suggest
+    human_gate: required_before_experiment_work_allocation_artifact_edit_release_or_system_mutation
+    side_effect_authority: none_candidate_packet_only
+    prohibited_side_effects: [allocate_work, edit_artifact, release, schedule, notify, mutate_system, cross_repo_write, self_approve]
+    cooldown: until_material_artifact_outcome_or_surface_fingerprint_change
+    expiry: pilot_end_or_90_days_without_human_review
+    wake_condition: material_artifact_outcome_or_surface_fingerprint_change
+    privacy_class: repo_local_metadata_and_approved_artifact_evidence
+    redaction_rule: retain_pointers_and_short_observations_only_exclude_private_payloads_secrets_and_raw_user_data
+    expected_benefit: earlier_product_learning_and_less_unjustified_buildout
+    execution_cost: deterministic_eligibility_then_medium_only_for_eligible_artifact_review
+    interruption_cost: one_deduplicated_candidate_in_a_digest
+    false_positive_harm: unnecessary_product_ceremony_or_delay_for_a_nonproduct_change
+    validator: tests/test_ai_native_process_pilot_contract.py#test_ai_native_trigger_specs_satisfy_canonical_contract
+    positive_cases: [first_runnable_artifact_with_named_user_and_outcome, material_artifact_revision_changes_applicable_surface, observed_failure_changes_product_decision]
+    negative_cases: [planning_only, no_named_user_or_outcome, unchanged_artifact_fingerprint, quiet_workstream_without_material_change]
+    rollback: discard_candidate_packet_and_restore_prior_workstream_view_no_artifact_change_exists
+    kill_criteria: [catalyst_becomes_second_project_manager, checklist_requires_nonapplicable_surfaces, more_than_three_human_asks, any_side_effect_occurs]
+    feedback_events: [accept, reject, dismiss, snooze, usefulness, harm, miss]
+    historical_replay: not_run_candidate_only
+    lineage_grouped_holdout: not_run_candidate_only
+    drift_state: not_calibrated
+    budget: none_then_medium_only_after_eligibility
+  - routine_id: learning-velocity-followup
+    pattern_id: dad:trigger-pattern:learning-velocity-followup
+    pattern_revision_id: dad:trigger-pattern-revision:learning-velocity-followup:v1
+    revision: 1
+    status: candidate
+    epistemic_state: derived
+    problem_or_opportunity: close_an_approved_manual_pilot_with_observed_decision_and_use_evidence_without_treating_telemetry_as_benefit
+    cadence: manual_after_first_test_human_decision_or_30_day_review_condition
+    executor: deterministic_candidate_packet_builder
+    escalation_role: delivery-closeout-resumption-steward
+    input_fingerprint: sha256_of_pilot_workstream_test_decision_and_measure_evidence
+    applies_when: [approved_manual_pilot_exists, first_test_or_human_decision_has_new_evidence, 30_day_review_condition_is_due]
+    does_not_apply_when: [no_approved_pilot, telemetry_only_without_decision_context, followup_not_due]
+    required_signals: [pilot_id, workstream_id, authority_boundary, measure_statuses, decision_or_review_condition]
+    any_signals: [new_test_evidence, new_human_decision, 30_day_use_evidence, measure_status_changed]
+    forbidden_signals: [private_payload_required, request_to_promote_schedule_or_apply_cross_repo, inferred_measure_without_evidence]
+    counter_signals: [no_new_evidence, input_fingerprint_unchanged, followup_not_due, quiet_condition_true]
+    emit_when: approved_pilot_has_new_test_decision_or_30_day_evidence
+    suppress_when: [input_fingerprint_unchanged, no_approved_pilot, no_new_evidence, quiet_condition_true, human_dismissal_fingerprint_unchanged]
+    quiet_when: followup_not_due_or_all_measure_statuses_are_recorded_for_current_evidence
+    transitions: [pilot_evidence_unseen_to_candidate_followup, candidate_followup_to_human_disposition, candidate_followup_to_quiet, human_dismissed_to_wake_on_new_evidence]
+    ordered_sequence: [validate_pilot_authority, compute_fingerprint, apply_suppressors, normalize_observed_measure_statuses, build_candidate_disposition_packet]
+    grouping_key: pilot_id_and_workstream_id
+    temporal_window: first_test_through_30_day_review_condition
+    minimum_lineage_distinct_occurrences: 1_for_workstream_followup_no_process_promotion
+    source_diversity: artifact_test_human_decision_and_use_evidence_when_available
+    coverage: approved_pilot_window_through_due_followup_with_unknowns_explicit
+    deterministic_fields: [identity, input_fingerprint, due_condition, measure_statuses, suppressors, idempotency_key]
+    model_proposed_fields: [adopt_revise_watch_reject_or_stop_recommendation, comparison_limits, next_review_condition]
+    idempotency_key: "learning-velocity-followup:{pilot_id}:{workstream_id}:{input_fingerprint}"
+    candidate_action: suggest_adopt_revise_watch_reject_or_stop
+    candidate_action_class: suggest
+    human_gate: required_before_process_adoption_trigger_promotion_scheduling_or_cross_repo_application
+    side_effect_authority: none_candidate_packet_only
+    prohibited_side_effects: [adopt_process, promote_trigger, schedule, notify, mutate_source, cross_repo_apply, infer_missing_measure]
+    cooldown: until_new_test_decision_use_or_measure_status_evidence
+    expiry: pilot_end_plus_30_day_review_or_90_days_without_human_review
+    wake_condition: new_test_decision_use_or_measure_status_evidence
+    privacy_class: internal_metadata_only
+    redaction_rule: retain_measure_statuses_units_and_evidence_pointers_only_exclude_private_payloads_raw_artifacts_and_personal_data
+    expected_benefit: completed_learning_loops_with_human_dispositions_and_less_unmeasured_process_adoption
+    execution_cost: deterministic_then_low_for_evidence_normalization
+    interruption_cost: one_deduplicated_candidate_in_a_digest
+    false_positive_harm: unnecessary_followup_or_false_causal_claim_from_telemetry
+    validator: tests/test_ai_native_process_pilot_contract.py#test_ai_native_trigger_specs_satisfy_canonical_contract
+    positive_cases: [new_first_test_and_human_decision_evidence, due_30_day_use_review, observed_measure_status_changes]
+    negative_cases: [no_approved_pilot, unchanged_fingerprint, no_new_evidence, telemetry_without_decision_context]
+    rollback: discard_candidate_packet_and_restore_prior_pilot_view_no_process_change_exists
+    kill_criteria: [telemetry_is_treated_as_proof, missing_values_are_inferred, more_than_three_human_asks, any_side_effect_occurs]
+    feedback_events: [accept, reject, dismiss, snooze, usefulness, harm, miss]
+    historical_replay: not_run_candidate_only
+    lineage_grouped_holdout: not_run_candidate_only
+    drift_state: not_calibrated
+    budget: none_then_low_for_evidence_normalization
   - routine_id: daily-portfolio-pulse
     cadence: daily_when_enabled
     executor: deterministic_fingerprinted_projection_refresh

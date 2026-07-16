@@ -1,0 +1,141 @@
+{
+  "schema_version": "dad.task_local_agent_mesh_manifest.v1",
+  "mesh_id": "dad:agent-mesh:ai-native-process-pilot",
+  "task_id": "ai-native-process-pilot",
+  "revision_id": "dad:agent-mesh-revision:ai-native-process-pilot:v3",
+  "supersedes_revision_id": "dad:agent-mesh-revision:ai-native-process-pilot:v2",
+  "phase": "postflight",
+  "status": "complete",
+  "source_snapshot_digest": "sha256:662ba81c1cf06b544317bf201080889ffb422a1247feb28c196b6f04019a1eae",
+  "authority": {
+    "source_authority": "DAD retains contract and registry authority; the completed output is a candidate manual pilot only, and Lowell retains activation, product, release, scheduling, promotion, and cross-repository authority.",
+    "execution_authority": false,
+    "human_gate_required": true
+  },
+  "max_delegation_depth": 1,
+  "writer_role_id": "implementation-worker",
+  "checker_role_id": "independent-checker",
+  "non_overlap_statement": "The implementation worker alone edited the governed pilot files; the scout, optimizer, and independent checker were read-only, and the root foreman edited only task-local mesh evidence.",
+  "roles": [
+    {
+      "role_id": "contract-scout",
+      "why_needed": "Existing authority surfaces had to be mapped before implementation.",
+      "mission": "Identify reusable contracts, consumers, and collision risks.",
+      "inputs": ["DAD source snapshot", "approved pilot scope"],
+      "dependencies": [],
+      "authority": "Read-only inventory; no edits or approval authority.",
+      "model_effort_class": "low",
+      "writer_checker_relation": "specialist",
+      "acceptance_conditions": ["Narrow implementation path and collision risks are documented."],
+      "stop_conditions": ["Source authority is ambiguous."],
+      "handoff": {
+        "recipient_role_ids": ["implementation-worker", "independent-checker"],
+        "deliverables": ["contract inventory and collision report"],
+        "readiness_conditions": ["Relevant local contracts and tests were inspected."]
+      }
+    },
+    {
+      "role_id": "implementation-worker",
+      "why_needed": "One writer was required for a coherent bounded contract change.",
+      "mission": "Implement and repair the candidate manual pilot without a new runtime authority surface.",
+      "inputs": ["approved scope", "scout inventory", "checker defects"],
+      "dependencies": ["contract-scout"],
+      "authority": "May edit only approved project-management, trigger, feedback, registry, documentation, and focused-test files in this worktree.",
+      "model_effort_class": "medium",
+      "writer_checker_relation": "writer",
+      "acceptance_conditions": ["Focused tests pass.", "All checker blockers are repaired.", "No automation or external mutation is enabled."],
+      "stop_conditions": ["A new authority surface or overlapping writer is required."],
+      "handoff": {
+        "recipient_role_ids": ["independent-checker"],
+        "deliverables": ["bounded implementation diff", "focused validation evidence"],
+        "readiness_conditions": ["Worker tests pass and diff scope is clean."]
+      }
+    },
+    {
+      "role_id": "independent-checker",
+      "why_needed": "The writer could not approve its own governance and trigger contracts.",
+      "mission": "Independently verify authority, privacy, ergonomics, completeness, and regression evidence.",
+      "inputs": ["final diff", "focused tests", "canonical trigger contract"],
+      "dependencies": ["implementation-worker"],
+      "authority": "Read-only release gate for the candidate manual pilot; no activation or promotion authority.",
+      "model_effort_class": "medium",
+      "writer_checker_relation": "checker",
+      "acceptance_conditions": ["Prior defects are rechecked.", "Negative authority paths are covered.", "A release gate and residual risks are reported."],
+      "stop_conditions": ["Checker becomes a material writer."],
+      "handoff": {
+        "recipient_role_ids": [],
+        "deliverables": ["independent release gate", "residual risk report"],
+        "readiness_conditions": ["Final repair diff and raw focused-test results are available."]
+      }
+    }
+  ],
+  "proof_obligations": [
+    {
+      "obligation_id": "bounded-contract",
+      "description": "The change extends existing DAD contracts without a duplicate runtime authority surface.",
+      "evidence_required": ["changed-path scan", "focused contract tests", "independent checker release gate"],
+      "owner_role_id": "implementation-worker",
+      "checker_role_id": "independent-checker",
+      "status": "satisfied"
+    },
+    {
+      "obligation_id": "candidate-only-automation",
+      "description": "No trigger, recommendation, or pilot result can mutate active systems or self-promote.",
+      "evidence_required": ["canonical trigger metadata", "negative authority assertions", "human gates"],
+      "owner_role_id": "implementation-worker",
+      "checker_role_id": "independent-checker",
+      "status": "satisfied"
+    },
+    {
+      "obligation_id": "one-human-ergonomics",
+      "description": "The pilot bounds human attention, decisions, workstreams, quiet states, and expiry.",
+      "evidence_required": ["pilot contract", "semantic contract tests", "checker premortem"],
+      "owner_role_id": "implementation-worker",
+      "checker_role_id": "independent-checker",
+      "status": "satisfied"
+    }
+  ],
+  "unresolved_decisions": [
+    {
+      "decision_id": "full-repository-suite-timeout",
+      "summary": "The full pytest run produced no result before the five-minute cap; changed-path suites passed and the timeout remains a nonblocking baseline unknown.",
+      "owner_role_id": "independent-checker",
+      "blocking": false,
+      "status": "deferred"
+    },
+    {
+      "decision_id": "preexisting-mcp-fingerprint-drift",
+      "summary": "Scoped DAD validation checks 258 items but remains invalid on nine pre-existing MCP dependency-map fingerprints whose source files were untouched by this task.",
+      "owner_role_id": "independent-checker",
+      "blocking": false,
+      "status": "deferred"
+    }
+  ],
+  "reconciliations": [
+    {
+      "prior_role_id": "contract-scout",
+      "disposition": "reused",
+      "current_role_ids": ["contract-scout"],
+      "reason": "The completed inventory constrained the build to existing contracts.",
+      "evidence_refs": ["contract-scout final inventory"],
+      "material_drift": true
+    },
+    {
+      "prior_role_id": "implementation-worker",
+      "disposition": "reused",
+      "current_role_ids": ["implementation-worker"],
+      "reason": "The original writer completed one checker-directed repair pass without expanding write authority.",
+      "evidence_refs": ["focused tests: 23 passed", "git diff --check passed"],
+      "material_drift": true
+    },
+    {
+      "prior_role_id": "independent-checker",
+      "disposition": "reused",
+      "current_role_ids": ["independent-checker"],
+      "reason": "The checker remained read-only and issued the final candidate/manual release gate.",
+      "evidence_refs": ["independent checker final release gate"],
+      "material_drift": true
+    }
+  ],
+  "manifest_digest": "sha256:5fd2feec61723cdd56b940c64bd1aa17c14c20ea01e48f2a2c613d62d0f1d660"
+}

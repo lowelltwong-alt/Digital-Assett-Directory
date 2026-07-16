@@ -115,6 +115,20 @@ unavailable, run the same lanes as explicit local checklists and record that
 fallback in postflight. Retrigger only after a material implementation change
 or a measured duration increase of at least 25 percent.
 
+For instrumented shell-level work, before repeating an expensive command against
+unchanged inputs, use the deterministic redundant-work guard.
+The second same-state repetition after a prior run of at least five seconds, or
+the third same-state repetition when duration is unknown, is a candidate for
+reuse, narrowing, batching, or an immutable state-keyed cache. Exact evidence
+uses zero model calls; ambiguous changed clusters may use one Luna/low observer,
+Terra is reserved for measured redesign, and Sol is reserved for unresolved
+high-consequence cross-repository architecture. Suppress intentional benchmarks,
+changed inputs, explicit failure retries, and isolation tests. Never cache mutable
+current state without an exact invalidation fingerprint, and never store raw
+commands or sensitive payloads in DAD. Repetition inside one process requires
+explicit work-unit instrumentation; otherwise report `coverage_unavailable`,
+never a clean result.
+
 Before postflight for every material build, refactor, investigation, or
 cross-repo task, apply `skill:material-work-learning-discovery`. Check the DAD
 agent and asset libraries first, then run learning-loop, digital-asset/pattern,

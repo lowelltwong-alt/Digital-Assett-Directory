@@ -34,6 +34,10 @@ from .mcp_dependency_map import (
 )
 from .surface_versions import surface_version_status_report_path
 from .utils import json_dumps
+from .portfolio_intents import fold_plan_index, load_plan_revision, read_events as read_intent_events
+from .portfolio_weekly_digest import build_weekly_digest
+from .entity_identity import fold_state as fold_entity_state, read_events as read_entity_events
+from .entity_graph import build_entity_graph, reverse_blast_radius
 
 MCP_PROTOCOL_VERSION = "2025-06-18"
 SERVER_NAME = "dad-local-graph-surfaces"
@@ -310,7 +314,9 @@ def dad_graph_search_nodes(
     )
 
 
-def _read_resource_payload(hub_root: Path, uri: str) -> tuple[str, str]:
+def _read_resource_payload(
+    hub_root: Path, uri: str, *, approved_private_partitions: frozenset[str]
+) -> tuple[str, str]:
     parsed = urlparse(uri)
     if parsed.scheme != "dad" or parsed.params or parsed.query or parsed.fragment:
         raise MCPError(-32602, "Unsupported resource URI")
@@ -325,6 +331,80 @@ def _read_resource_payload(hub_root: Path, uri: str) -> tuple[str, str]:
         if path is None:
             raise MCPError(-32602, "Unknown registry resource")
         return "application/json", (hub_root / path).read_text(encoding="utf-8")
+
+    if kind == "plans":
+        if not approved_private_partitions:
+            raise MCPError(-32600, "Private plan resource access is not approved for this MCP host")
+        events = read_intent_events(hub_root)
+        index = fold_plan_index(events)
+        if parts == ["search"]:
+            filtered = [
+                row for row in index["plans"]
+                if row.get("privacy_class") in approved_private_partitions
+            ]
+            return "application/json", json_dumps(
+                {**index, "plans": filtered, "plan_count": len(filtered)}, pretty=True
+            )
+        if len(parts) in {1, 2}:
+            plan_id = _validate_id(parts[0], "plan_id")
+            indexed = next((row for row in index["plans"] if row["plan_id"] == plan_id), None)
+            if indexed is None or indexed.get("privacy_class") not in approved_private_partitions:
+                raise MCPError(-32602, "Unknown plan resource")
+            if len(parts) == 2 and parts[1] == "lineage":
+                lineage = [row for row in events if row.get("plan_id") == plan_id]
+                if not lineage:
+                    raise MCPError(-32602, "Unknown plan resource")
+                return "application/json", json_dumps(
+                    {
+                        "schema_version": "dad.mcp.plan_lineage.v1",
+                        "plan_id": plan_id,
+                        "events": lineage,
+                        "execution_authorized": False,
+                    },
+                    pretty=True,
+                )
+            if len(parts) == 1:
+                try:
+                    plan = load_plan_revision(hub_root, plan_id)
+                except (KeyError, OSError, RuntimeError) as exc:
+                    raise MCPError(-32602, "Unknown plan resource") from exc
+                plan.pop("plan_markdown", None)
+                return "application/json", json_dumps(plan, pretty=True)
+
+    if kind == "identity" and len(parts) in {1, 2}:
+        if not approved_private_partitions:
+            raise MCPError(-32600, "Private identity resource access is not approved for this MCP host")
+        entity_id = _validate_id(parts[0], "entity_id")
+        state = fold_entity_state(read_entity_events(hub_root))
+        entity = next((row for row in state["entities"] if row["entity_id"] == entity_id), None)
+        if (
+            entity is None
+            or entity.get("semantic_card", {}).get("privacy_partition")
+            not in approved_private_partitions
+        ):
+            raise MCPError(-32602, "Unknown identity resource")
+        graph = build_entity_graph(state)
+        if len(parts) == 1:
+            return "application/json", json_dumps(entity, pretty=True)
+        if parts[1] == "neighbors":
+            edges = [row for row in graph["edges"] if entity_id in {row["source"], row["target"]}]
+            return "application/json", json_dumps({"entity_id": entity_id, "edges": edges, "execution_authorized": False}, pretty=True)
+        if parts[1] == "blast-radius":
+            return "application/json", json_dumps({"entity_id": entity_id, "reverse_dependencies": reverse_blast_radius(graph, entity_id), "execution_authorized": False}, pretty=True)
+
+    if kind == "recovery" and parts == ["candidates"]:
+        if not approved_private_partitions:
+            raise MCPError(-32600, "Private recovery access is not approved for this MCP host")
+        index = fold_plan_index(read_intent_events(hub_root))
+        filtered = [row for row in index["plans"] if row.get("privacy_class") in approved_private_partitions]
+        return "application/json", json_dumps(build_weekly_digest({**index, "plans": filtered, "plan_count": len(filtered)}), pretty=True)
+
+    if kind == "report" and parts == ["unfinished-intent"]:
+        if not approved_private_partitions:
+            raise MCPError(-32600, "Private recovery access is not approved for this MCP host")
+        index = fold_plan_index(read_intent_events(hub_root))
+        filtered = [row for row in index["plans"] if row.get("privacy_class") in approved_private_partitions]
+        return "application/json", json_dumps(build_weekly_digest({**index, "plans": filtered, "plan_count": len(filtered)}), pretty=True)
 
     if kind == "surface" and len(parts) == 2 and parts[1] == "manifest":
         surface = _surface_by_id(hub_root, parts[0])
@@ -391,8 +471,11 @@ def _read_resource_payload(hub_root: Path, uri: str) -> tuple[str, str]:
 
 
 class DADGraphMCPServer:
-    def __init__(self, hub_root: Path) -> None:
+    def __init__(
+        self, hub_root: Path, *, approved_private_partitions: tuple[str, ...] = ()
+    ) -> None:
         self.hub_root = hub_root.resolve()
+        self.approved_private_partitions = frozenset(approved_private_partitions)
 
     def list_resources(self) -> list[dict[str, Any]]:
         registry = load_graph_surface_registry(self.hub_root)
@@ -412,6 +495,41 @@ class DADGraphMCPServer:
             }
             for surface in registry.get("surfaces", [])
         )
+        resources.extend(
+            [
+                {"uri": "dad://plans/search", "name": "Private plan index", "mimeType": "application/json"},
+                {"uri": "dad://recovery/candidates", "name": "Unfinished plan recovery candidates", "mimeType": "application/json"},
+                {"uri": "dad://report/unfinished-intent", "name": "Unfinished intent digest", "mimeType": "application/json"},
+            ]
+        )
+        try:
+            plan_index = fold_plan_index(read_intent_events(self.hub_root))
+            for row in plan_index["plans"]:
+                if row.get("privacy_class") not in self.approved_private_partitions:
+                    continue
+                resources.extend(
+                    [
+                        {"uri": f"dad://plans/{row['plan_id']}", "name": f"Plan {row['plan_id']}", "mimeType": "application/json"},
+                        {"uri": f"dad://plans/{row['plan_id']}/lineage", "name": f"Plan lineage {row['plan_id']}", "mimeType": "application/json"},
+                    ]
+                )
+            entity_state = fold_entity_state(read_entity_events(self.hub_root))
+            for row in entity_state["entities"]:
+                entity_id = row["entity_id"]
+                if (
+                    row.get("semantic_card", {}).get("privacy_partition")
+                    not in self.approved_private_partitions
+                ):
+                    continue
+                resources.extend(
+                    [
+                        {"uri": f"dad://identity/{entity_id}", "name": f"Identity {entity_id}", "mimeType": "application/json"},
+                        {"uri": f"dad://identity/{entity_id}/neighbors", "name": f"Identity neighbors {entity_id}", "mimeType": "application/json"},
+                        {"uri": f"dad://identity/{entity_id}/blast-radius", "name": f"Identity blast radius {entity_id}", "mimeType": "application/json"},
+                    ]
+                )
+        except (OSError, RuntimeError, ValueError):
+            pass
         resources.extend(
             {
                 "uri": f"dad://report/{report_id}",
@@ -468,7 +586,11 @@ class DADGraphMCPServer:
             mime_type = "application/json"
             text = json_dumps(build_mcp_dependency_refresh_candidate(self.hub_root), pretty=True)
         else:
-            mime_type, text = _read_resource_payload(self.hub_root, uri)
+            mime_type, text = _read_resource_payload(
+                self.hub_root,
+                uri,
+                approved_private_partitions=self.approved_private_partitions,
+            )
         return {
             "contents": [
                 {

@@ -7,6 +7,7 @@ from pathlib import Path
 import pytest
 
 from digital_asset_directory.agent_lifecycle import (
+    command_signature_digest,
     handle_lifecycle_event,
     stable_lifecycle_session_id,
 )
@@ -102,6 +103,75 @@ def test_neutral_lifecycle_records_generic_agent_and_blocks_dirty_stop(tmp_path:
         external_session_id="generic-session",
     )
     assert closed_stop.payload is None
+
+
+def test_redundant_work_guard_warns_before_repeated_same_state_command(tmp_path: Path):
+    hub = tmp_path / "hub"
+    repo = tmp_path / "repo"
+    _init_repo(repo)
+    signature = command_signature_digest("python -m pytest tests/test_one.py")
+    common = dict(
+        hub_root=hub,
+        repo=repo,
+        agent="other",
+        external_session_id="repeat-session",
+        tool="shell",
+        tool_input_digest=signature,
+    )
+    handle_lifecycle_event("post-tool", **common, duration_ms=6_000)
+    warning = handle_lifecycle_event("pre-tool", **common)
+    assert "redundant-work guard" in warning.message
+    assert signature not in warning.message
+
+    (repo / "changed.txt").write_text("changed\n", encoding="utf-8")
+    changed_state = handle_lifecycle_event("pre-tool", **common)
+    assert changed_state.message == ""
+    handle_lifecycle_event("post-tool", **common, duration_ms=6_000)
+    (repo / "changed.txt").write_text("changed again\n", encoding="utf-8")
+    still_dirty_but_new_content = handle_lifecycle_event("pre-tool", **common)
+    assert still_dirty_but_new_content.message == ""
+
+
+def test_redundant_work_guard_hashes_untrusted_input_and_honors_suppressors(tmp_path: Path):
+    hub = tmp_path / "hub"
+    repo = tmp_path / "repo"
+    _init_repo(repo)
+    raw = "sensitive command text that must not be stored"
+    common = dict(
+        hub_root=hub,
+        repo=repo,
+        agent="other",
+        external_session_id="privacy-session",
+        tool="shell",
+        tool_input_digest=raw,
+    )
+    handle_lifecycle_event("post-tool", **common, duration_ms=6_000)
+    suppressed = handle_lifecycle_event(
+        "pre-tool", **common, repeat_suppressors=["intentional_benchmark"]
+    )
+    assert suppressed.message == ""
+    rows = _audit_rows(hub)
+    assert raw not in json.dumps(rows)
+    assert command_signature_digest(raw) in json.dumps(rows)
+    assert "intentional_benchmark" in json.dumps(rows)
+
+
+def test_redundant_work_guard_wakes_after_successful_failure_retry(tmp_path: Path):
+    hub = tmp_path / "hub"
+    repo = tmp_path / "repo"
+    _init_repo(repo)
+    common = dict(
+        hub_root=hub,
+        repo=repo,
+        agent="other",
+        external_session_id="retry-session",
+        tool="shell",
+        tool_input_digest=command_signature_digest("python -m pytest tests/test_retry.py"),
+    )
+    handle_lifecycle_event("post-tool", **common, duration_ms=6_000, tool_outcome="failed")
+    assert handle_lifecycle_event("pre-tool", **common).message == ""
+    handle_lifecycle_event("post-tool", **common, duration_ms=6_000, tool_outcome="succeeded")
+    assert "redundant-work guard" in handle_lifecycle_event("pre-tool", **common).message
 
 
 def test_lifecycle_accepts_custom_agent_id_and_default_external_session(tmp_path: Path):

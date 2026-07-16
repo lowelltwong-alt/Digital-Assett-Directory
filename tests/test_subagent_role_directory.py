@@ -53,14 +53,15 @@ def _hub(tmp_path: Path, *, evaluation_support: bool = False) -> Path:
         target = hub / relative
         target.parent.mkdir(parents=True, exist_ok=True)
         shutil.copy2(ROOT / relative, target)
-    for skill_name in (
-        "personal-project-management-ops",
-        "dad-trigger-pattern-radar",
-        "subagent-continuous-improvement",
-        "dad-digital-asset-radar",
-        "dad-manifest-graph-engineering",
-        "personal-portfolio-capacity-review",
-    ):
+    library = json.loads((ROOT / "registry/agent-skill-library.json").read_text(encoding="utf-8"))
+    skill_names = sorted(
+        Path(str(row["path"])).name
+        for row in library["skills"]
+        if row.get("subagent_pack")
+        and row.get("status") not in {"retired", "replaced"}
+        and row.get("review_status") != "rejected"
+    )
+    for skill_name in skill_names:
         source = ROOT / "assets/agent-skills" / skill_name
         target = hub / "assets/agent-skills" / skill_name
         target.parent.mkdir(parents=True, exist_ok=True)
@@ -86,15 +87,25 @@ def test_catalog_builds_without_attempts_and_keeps_grades_insufficient(tmp_path:
 
     projection = build_role_directory_projection(hub)
 
-    assert projection["role_count"] == 37
-    assert {row["skill_id"] for row in projection["roles"]} == {
-        "skill:personal-project-management-ops",
-        "skill:dad-trigger-pattern-radar",
-        "skill:subagent-continuous-improvement",
-        "skill:dad-digital-asset-radar",
-        "skill:dad-manifest-graph-engineering",
-        "skill:personal-portfolio-capacity-review",
+    library = json.loads((ROOT / "registry/agent-skill-library.json").read_text(encoding="utf-8"))
+    registered_packs = [
+        row
+        for row in library["skills"]
+        if row.get("subagent_pack")
+        and row.get("status") not in {"retired", "replaced"}
+        and row.get("review_status") != "rejected"
+    ]
+    expected_role_count = sum(
+        len(_load_yaml(ROOT / row["subagent_pack"])["roles"])
+        for row in registered_packs
+    )
+    assert projection["role_count"] == expected_role_count
+    assert projection["role_count"] > 182
+    expected_skills = {
+        row["skill_id"]
+        for row in registered_packs
     }
+    assert {row["skill_id"] for row in projection["roles"]} == expected_skills
     assert all(row["evaluation_status"] == "insufficient_evidence" for row in projection["roles"])
     assert all(row["evaluated_revisions"] == [] for row in projection["roles"])
     assert all("profile_score" not in row for row in projection["roles"])
@@ -108,10 +119,12 @@ def test_search_is_read_only_and_uses_categorical_match_contract(tmp_path: Path)
 
     after = sorted(path.relative_to(hub).as_posix() for path in hub.rglob("*"))
     assert before == after
-    assert result["coverage"]["returned_role_count"] == 1
-    match = result["matches"][0]
-    assert match["role_id"] == "neglected-worktree-triage-manager"
-    assert match["match_basis"] == "all_query_tokens"
+    assert result["coverage"]["returned_role_count"] == 2
+    assert {row["role_id"] for row in result["matches"]} == {
+        "neglected-worktree-triage-manager",
+        "partial-build-diagnostician",
+    }
+    assert {row["match_basis"] for row in result["matches"]} == {"all_query_tokens"}
     assert "quality_rank" not in json.dumps(result)
     assert "recommended" not in json.dumps(result).casefold()
 
@@ -185,7 +198,11 @@ def test_evaluation_link_requires_exact_declared_revision_and_identity(tmp_path:
     hub = _hub(tmp_path, evaluation_support=True)
     personal_path = hub / "assets/agent-skills/personal-project-management-ops/subagents.yaml"
     personal = _load_yaml(personal_path)
-    role = personal["roles"][0]
+    role = next(
+        row
+        for row in personal["roles"]
+        if row["role_id"] == "workstream-intake-identity-steward"
+    )
     role["profile_role_id"] = "terra_integration_specialist"
     role["evaluated_role_revision_ids"] = [
         "dad:role-profile-revision:terra-integration-specialist:v1"
@@ -228,3 +245,19 @@ def test_registered_pm_kernel_vocabulary_matches_implemented_contract():
         "require an external trusted verifier"
     ) in unsupported_claims
     assert "the kernel does not dispatch agents or mutate Git" in unsupported_claims
+
+
+def test_artifact_product_catalyst_is_discoverable_without_new_capability_ids(tmp_path: Path):
+    hub = _hub(tmp_path)
+
+    result = search_role_directory(hub, query="first runnable artifact product diagnosis")
+
+    assert result["coverage"]["returned_role_count"] == 1
+    match = result["matches"][0]
+    assert match["role_id"] == "artifact-proximate-product-catalyst"
+    assert set(match["capability_ids"]) == {
+        "project_identity_and_related_work",
+        "workstream_planning",
+        "validation_design",
+        "governance_authority_safety",
+    }

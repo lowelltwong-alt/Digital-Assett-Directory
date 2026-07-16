@@ -1,0 +1,65 @@
+schema_version: dad_subagent_pack.v0_1
+pack_id: dad:subagent-pack:dad-harness-engineering-ops
+version: 0.1.0
+status: candidate
+ai_agnostic: true
+methodology_ref: registry/subagent-evaluation-methodology.json#0.1.0
+authority_boundary: Harness roles produce candidate revisions, routes, evaluations, and lifecycle decisions; they cannot execute, activate, supersede, retire, or self-approve.
+routing_policy:
+  max_delegation_depth: 1
+  one_writer: true
+  independent_checker_required: true
+  deterministic: schema_hash_route_filter_safe_runner_and_lifecycle_validation
+  luna_low: bounded_inventory_and_changed_source_scout
+  terra_medium: harness_builder_and_runtime_fit_analysis
+  terra_high: architecture_and_independent_material_evaluation
+  sol_high: unresolved_privacy_authority_or_systemic_runtime_conflict
+roles:
+  - role_id: harness-runtime-matcher
+    profile_role_id: harness_runtime_matcher
+    capability_ids: [bounded_evidence_inventory, contract_and_roadmap_mapping]
+    search_terms: [harness route, runtime fit, capability snapshot]
+    effort: low_then_medium
+    mission: Match a task contract to an immutable harness and runtime capability snapshot without executing it.
+    required_output: [coverage, candidate_revision, runtime_fit, rejection_reasons, execution_authorized_false]
+    stop_conditions: [runtime_snapshot_stale, privacy_unknown, execution_requested]
+  - role_id: harness-architect
+    profile_role_id: harness_architect
+    capability_ids: [architecture_reasoning, validation_design, governance_authority_safety]
+    search_terms: [harness architecture, provider neutral contract, rollback]
+    effort: medium_or_high
+    mission: Define provider-neutral interfaces, evaluation gates, failure recovery, and rollback.
+    required_output: [contract, applicability, evaluations, failure_recovery, rollback, human_gates]
+    stop_conditions: [stable_model_id_requested, authority_boundary_missing, rollback_missing]
+  - role_id: harness-engineering-worker
+    profile_role_id: harness_engineering_worker
+    capability_ids: [schema_contract_engineering, deterministic_projection_building]
+    search_terms: [typed argv runner, immutable harness revision, shell false]
+    effort: medium
+    mission: Produce one immutable candidate harness revision using typed safe commands.
+    required_output: [revision, typed_commands, content_digest, validation_results]
+    stop_conditions: [shell_requested, cwd_escape, external_mutation_requested]
+  - role_id: harness-engineering-independent-checker
+    profile_role_id: harness_engineering_independent_checker
+    capability_ids: [implementation_review, validation_design, structured_artifact_independent_audit]
+    search_terms: [harness checker, negative case, runtime fit validation]
+    effort: medium_or_high
+    mission: Independently test positive, negative, privacy, recovery, and runtime-fit cases.
+    required_output: [supported_findings, failed_cases, independence_status, residual_risks]
+    stop_conditions: [checker_is_producer, evidence_unavailable, self_approval_requested]
+  - role_id: harness-frontier-researcher
+    profile_role_id: harness_frontier_researcher
+    capability_ids: [research_project_management, bounded_evidence_inventory]
+    search_terms: [harness research, changed source, frontier technique]
+    effort: low_then_medium_on_changed_sources
+    mission: Review changed authoritative harness sources and emit pointer-only candidates.
+    required_output: [changed_sources, claims, applicability, candidate_changes, zero_token_status]
+    stop_conditions: [unchanged_sources, transcript_storage_requested, automatic_promotion_requested]
+  - role_id: harness-lifecycle-sentinel
+    profile_role_id: harness_lifecycle_sentinel
+    capability_ids: [semantic_fingerprint_freshness, reverse_blast_radius_analysis]
+    search_terms: [harness drift, supersession, consumer blast radius]
+    effort: low
+    mission: Detect drift, consumer impact, supersession, and retirement candidates without mutation.
+    required_output: [fingerprint, freshness, consumers, candidate_transition, human_decision]
+    stop_conditions: [automatic_rewrite_requested, consumer_evidence_unknown, activation_requested]

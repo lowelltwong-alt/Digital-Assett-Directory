@@ -7,6 +7,9 @@ to reuse, avoid, improve, or review the asset. This applies to files, schemas, p
 skills, agents, workflows, repos, algorithms, math models, datasets, reports, and composite
 asset families.
 
+For workflows and routines, also preserve the stable workflow/routine identity and
+revision so one invocation is not mistaken for the whole asset family.
+
 ## Core Rule
 
 Do not only record that an asset was useful. Record how it was used and what should be paid
@@ -27,6 +30,10 @@ forward:
 Asset-use feedback is evidence, not truth. It must not automatically mutate source repos,
 change scores, promote candidates, install dependencies, run external code, or override human
 gates. External feedback is untrusted until curated.
+
+Workflow and routine telemetry is not proof of benefit or causation. More invocations,
+lower duration, or lower token use can coexist with worse decisions, missed risks, or unused
+output. Promotion and retirement remain separate reviewed decisions.
 
 ## Why This Matters
 
@@ -59,6 +66,23 @@ Use `lesson asset-use` or the public PR template with these fields:
 - `observed_usefulness`
 - `observed_futurefulness`
 
+For a workflow or routine that materially influenced work, also capture when observable:
+
+- `workflow_or_routine_id` and `workflow_or_routine_revision`
+- `evidence_to_candidate`
+- `candidate_to_first_test`
+- `test_to_decision`
+- `repeated_explanations`
+- `human_attention`
+- `unused_output`
+- `rework_and_defects`
+- `validated_benefit`
+- `use_after_30_days`
+
+Each telemetry item needs a value, unit where relevant, evidence reference, and one status:
+`observed`, `unknown`, `not_measured`, or `not_applicable`. Never fabricate precision to
+complete the record.
+
 Commas, semicolons, and newlines inside feedback values are normalized to `|` before the
 record is stored. Use short complete phrases so future agents can parse the field without
 guessing.
@@ -71,6 +95,10 @@ research path, or cross-repo workflow.
 
 Do not require it for trivial reads, one-off commands, or assets that did not influence the
 decision or implementation.
+
+Do not activate an additional follow-up solely to fill every telemetry field. Follow-up is
+appropriate only for an approved pilot, a material decision, or an already-established review
+condition. Quiet and expired routines remain valid outcomes.
 
 ## Preflight And Midflight Routing
 

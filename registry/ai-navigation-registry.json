@@ -1,8 +1,8 @@
 {
   "schema_version": "0.1.0",
   "registry_id": "ai-navigation-registry",
-  "navigation_version": "2026.07.13.9",
-  "updated_at": "2026-07-13T23:59:30Z",
+  "navigation_version": "2026.07.14.14",
+  "updated_at": "2026-07-15T16:00:00Z",
   "singular_entrypoint": {
     "path": "AI_FRONT_DOOR.md",
     "rule": "All agents start at AI_FRONT_DOOR.md, then follow the required read order and task-specific branches.",
@@ -630,9 +630,115 @@
         "registry/agent-skill-library.json"
       ],
       "freshness_hint": "Allowlist, runtime-adapter, export, and local-only transport changes require renewed privacy and authority review."
+    },
+    {
+      "branch_id": "ml_workflow_agent_family",
+      "path": "assets/agent-skills/ml-workflow-agent-family/SKILL.md",
+      "role": "Model-independent ML opportunity, technique, experiment, implementation, independent validation, research, deployment-readiness, monitoring, and lifecycle specialization.",
+      "tags": [
+        "agent_skill",
+        "machine_learning",
+        "knowledge_graph",
+        "research_intake",
+        "calibration",
+        "governance",
+        "human_gate"
+      ],
+      "use_when": "You need to decide whether ML fits, find or route an ML role or technique, execute a governed ML workflow, inspect dependencies, or review research and lifecycle state.",
+      "current_version": "0.1.0",
+      "last_material_change_at": "2026-07-14T22:00:00Z",
+      "change_class": "library_catalog",
+      "route_after": [
+        "AI_FRONT_DOOR.md",
+        "registry/ml-agent-family-registry.json",
+        "registry/ml-technique-registry.json",
+        "registry/subagent-evaluation-profile-registry.json",
+        "docs/RESEARCH_INTAKE_PIPELINE.md"
+      ],
+      "freshness_hint": "Runtime model observations expire, the technique library is incomplete, and research, deployment, instruction, automation, and supersession changes remain human-gated."
+    },
+    {
+      "branch_id": "technical_product_company_os",
+      "path": "docs/TECHNICAL_PRODUCT_COMPANY_OS.md",
+      "role": "One-human capability operating system for project-position diagnosis, right-sized completion, product catalysis, project coordination, top-ten technical coverage, AI decision rights, routing, workflow evidence, automation, offload, gap detection, and improvement.",
+      "tags": ["agent_skill", "workflow", "knowledge_graph", "control_plane", "project_management", "governance", "automation", "human_gate"],
+      "use_when": "You diagnose where a project is, confirm its destination and completion depth, shape or coordinate a technical product, or retrieve the smallest sufficient capability and specialist set.",
+      "current_version": "0.2.0",
+      "last_material_change_at": "2026-07-15T16:00:00Z",
+      "change_class": "library_catalog",
+      "route_after": ["AI_FRONT_DOOR.md", "registry/technical-product-company-os-registry.json", "registry/agent-family-portfolio-registry.json", "registry/agent-skill-library.json"],
+      "freshness_hint": "Project position remains separate from human-approved destination; MCP and UI/UX expert packs are on-demand only; telemetry is opt-in, routines are dormant, and all active change remains human-gated."
+    },
+    {
+      "branch_id": "self_learning_improvement_system",
+      "path": "docs/SELF_LEARNING_IMPROVEMENT_SYSTEM_PLAN.md",
+      "role": "Candidate cross-family Self-Learning and Improvement overlay with evidence-locked evaluation, routed expert packs, technique and workflow lifecycle, weekly research radar, and one-human decision control.",
+      "tags": ["agent_skill", "workflow", "learning_loop", "machine_learning", "knowledge_graph", "automation", "governance", "human_gate"],
+      "use_when": "You design, build, validate, pilot, activate, monitor, or audit any self-learning, self-improvement, memory, prompt optimization, workflow optimization, continual-learning, or capability-gap loop.",
+      "current_version": "0.1.0",
+      "last_material_change_at": "2026-07-15T04:09:48Z",
+      "change_class": "library_catalog",
+      "route_after": ["AI_FRONT_DOOR.md", "docs/research/AI_SELF_LEARNING_AND_IMPROVEMENT_RESEARCH_2026-07-14.md", "docs/TECHNICAL_PRODUCT_COMPANY_OS.md", "registry/technical-product-company-os-registry.json"],
+      "freshness_hint": "The design is candidate-only; the P7D radar, optimizers, training work, notifications, and mutations are dormant until independently checked and separately approved by Lowell."
+    },
+    {
+      "branch_id": "agent_family_portfolio",
+      "path": "docs/AGENT_FAMILY_PORTFOLIO.md",
+      "role": "Model-neutral family portfolio with shared role and interface contracts, typed dependency projection, independent assurance, read-only pilots, lifecycle sentinels, and a one-human cockpit.",
+      "tags": ["agent_skill", "workflow", "knowledge_graph", "control_plane", "governance", "validation", "human_gate"],
+      "use_when": "You select, build, route, pilot, validate, monitor, adapt, supersede, or retire a reusable agent family.",
+      "current_version": "0.1.0",
+      "last_material_change_at": "2026-07-14T23:30:00Z",
+      "change_class": "library_catalog",
+      "route_after": ["AI_FRONT_DOOR.md", "registry/agent-family-portfolio-registry.json", "registry/agent-skill-library.json", "registry/graph-edge-registry.json"],
+      "freshness_hint": "Provider and model IDs are expiring attempt metadata; family health and graph links are candidate evidence, recurring research is dormant, and all mutation or promotion remains human-gated."
     }
   ],
   "recent_changes": [
+    {
+      "change_id": "nav-change:2026-07-15:self-learning-improvement-system-plan",
+      "changed_at": "2026-07-15T04:09:48Z",
+      "change_type": "added_self_learning_improvement_research_and_candidate_plan",
+      "paths": ["docs/research/AI_SELF_LEARNING_AND_IMPROVEMENT_RESEARCH_2026-07-14.md", "docs/SELF_LEARNING_IMPROVEMENT_SYSTEM_PLAN.md", "docs/FABLE_SELF_LEARNING_IMPROVEMENT_SYSTEM_PROMPT.md", "roadmap/evidence/self-learning-improvement-task-mesh-r1.json", "roadmap/evidence/self-learning-improvement-independent-review-2026-07-15.md"],
+      "summary": "Added a primary-source learning-technique taxonomy, candidate cross-family improvement overlay, 45 governed workflows, evaluator-integrity boundary, low-cost dormant weekly research radar, typed graph design, phased test plan, and sanitized Fable review packet.",
+      "agent_action": "Use these artifacts for design and independent review only. Keep the weekly radar, optimizers, training, instruction edits, notifications, and external effects dormant; require frozen evaluation, an independent checker, rollback, and Lowell's decision before any adoption.",
+      "route_tags": ["research", "agent_skill", "learning_loop", "machine_learning", "workflow", "knowledge_graph", "governance", "human_gate"]
+    },
+    {
+      "change_id": "nav-change:2026-07-14:ml-workflow-agent-family",
+      "changed_at": "2026-07-14T22:00:00Z",
+      "change_type": "added_model_independent_ml_workflow_agent_family",
+      "paths": [
+        "assets/agent-skills/ml-workflow-agent-family/",
+        "registry/ml-agent-family-registry.json",
+        "registry/ml-technique-registry.json",
+        "schemas/ml-agent-family-registry.schema.json",
+        "schemas/ml-technique-registry.schema.json",
+        "schemas/ml-workflow-decision.schema.json",
+        "registry/subagent-capability-registry.json",
+        "registry/subagent-evaluation-profile-registry.json",
+        "registry/agent-skill-library.json",
+        "registry/dad-offerings-registry.json",
+        "src/digital_asset_directory/ml_agent_family.py",
+        "src/digital_asset_directory/cli.py",
+        "tests/test_ml_agent_family.py",
+        "AI_FRONT_DOOR.md",
+        "AI_TABLE_OF_CONTENTS.md",
+        "MACHINE_NAVIGATION_MANIFEST.json",
+        "registry/ai-navigation-registry.json"
+      ],
+      "summary": "Added a composable ML-specific role family, incomplete-by-design technique catalog, no-ML and leakage gates, expiring GPT-5.6 adapter observations, read-only catalog and dependency queries, attempt-first evaluation overlay, and unscheduled human-gated 14-day research contract.",
+      "agent_action": "Use asset-dir ml status, catalog, graph, and research-plan for candidate discovery only. Resolve Luna/Terra/Sol through the canonical routing skills, keep model IDs attempt-scoped or expiring, and require named humans for data, deployment, automation, instruction, and supersession decisions.",
+      "route_tags": [
+        "agent_skill",
+        "machine_learning",
+        "knowledge_graph",
+        "research_intake",
+        "calibration",
+        "validation",
+        "human_gate"
+      ]
+    },
     {
       "change_id": "nav-change:2026-07-13:subagent-self-grade-integrity",
       "changed_at": "2026-07-13T19:00:00Z",
@@ -880,27 +986,6 @@
       ]
     },
     {
-      "change_id": "nav-change:2026-07-10:subagent-evaluation-capability-graph",
-      "changed_at": "2026-07-10T19:15:00Z",
-      "change_type": "added_subagent_evaluation_capability_graph",
-      "paths": [
-        "docs/SUBAGENT_EVALUATION_AND_CAPABILITY_GRAPH.md",
-        "registry/subagent-evaluation-methodology.json",
-        "registry/subagent-capability-registry.json",
-        "schemas/subagent-attempt-evaluation.schema.json",
-        "src/digital_asset_directory/subagent_evaluations.py",
-        "processed/agents/subagent-capability-graph.json"
-      ],
-      "summary": "Added immutable attempt intake, pinned evidence ratings, candidate capability graph, and human-gated role consolidation review.",
-      "agent_action": "Use this branch for subagent evaluation; never infer agent identity from nicknames or use graph scores to change routing automatically.",
-      "route_tags": [
-        "agent_skill",
-        "knowledge_graph",
-        "calibration",
-        "human_gate"
-      ]
-    },
-    {
       "change_id": "nav-change:2026-07-07:fable-graph-surface-mcp-handoff",
       "changed_at": "2026-07-07T02:15:00Z",
       "change_type": "added_fable_graph_surface_mcp_handoff_packet",
@@ -1072,62 +1157,22 @@
       ]
     },
     {
-      "change_id": "nav-change:2026-07-05:mail-storm-dirty-state-runbook",
-      "changed_at": "2026-07-05T04:20:00Z",
-      "change_type": "added_mail_storm_dirty_state_route",
-      "paths": [
-        "docs/DAD_MAIL_STORM_AND_DIRTY_STATE_RUNBOOK.md",
-        "assets/coding-harnesses/repo-enrollment-mail-governance-safety/",
-        "docs/MAIL_CENTER.md",
-        "AI_FRONT_DOOR.md",
-        "AI_TABLE_OF_CONTENTS.md",
-        "MACHINE_NAVIGATION_MANIFEST.json",
-        "roadmap/evidence/phase-10-mail-end-to-end-trial.md"
-      ],
-      "summary": "Added a dedicated runbook and navigation route for separating true dirty mail spools from ordinary dirty worktrees and Rust rollout reference-snapshot churn during concurrent repo mail storms.",
-      "agent_action": "Run mail doctor with --repo all during multi-repo storms; use safe_to_collect/safe_to_route/safe_to_deliver for mail and --fail-on-worktree-dirty only when a clean git tree is required.",
-      "route_tags": [
-        "mail_center",
-        "cross_repo",
-        "rust",
-        "validation"
-      ]
+      "change_id": "nav-change:2026-07-14:technical-product-company-os",
+      "changed_at": "2026-07-15T02:31:33Z",
+      "change_type": "added_technical_product_company_os",
+      "paths": ["docs/TECHNICAL_PRODUCT_COMPANY_OS.md", "registry/technical-product-company-os-registry.json", "src/digital_asset_directory/technical_product_os.py", "assets/agent-skills/technical-product-company-os", "assets/agent-skills/platform-cloud-sre-agent-family"],
+      "summary": "Added the governed one-human capability OS with product catalyst and project-manager roles, top-ten technical coverage, AI decision rights, typed workflow/dependency evidence, append-only telemetry, dormant automations, and bounded offload classification.",
+      "agent_action": "Route technical-product work through the smallest eligible set, preserve source authority and evidence stages, keep routines dormant, and never infer execution permission from model strength or routing confidence.",
+      "route_tags": ["agent_skill", "workflow", "knowledge_graph", "project_management", "governance", "automation", "human_gate"]
     },
     {
-      "change_id": "nav-change:2026-07-04:lesson-lifecycle-governance",
-      "changed_at": "2026-07-04T17:42:00Z",
-      "change_type": "added_lesson_lifecycle_governance_branch",
-      "paths": [
-        "docs/LESSON_LIFECYCLE_GOVERNANCE.md",
-        "docs/LESSONS_AND_HANDOFF_LOOP.md",
-        "registry/dad-needs-registry.json"
-      ],
-      "summary": "Added non-enforced lesson lifecycle design so DAD can later review lessons for upgrade, downgrade, improvement, supersession, archive, and next-review cadence.",
-      "agent_action": "Use this branch when an old lesson might be stale, noisy, harmful, superseded, or ready for promotion review; keep raw lessons immutable.",
-      "route_tags": [
-        "learning_loop",
-        "calibration",
-        "governance"
-      ]
-    },
-    {
-      "change_id": "nav-change:2026-07-04:claude-architectural-root-cause-review",
-      "changed_at": "2026-07-04T17:22:39Z",
-      "change_type": "added_claude_architectural_root_cause_packet_guidance",
-      "paths": [
-        "docs/CLAUDE_ARCHITECTURAL_ROOT_CAUSE_REVIEW.md",
-        "docs/DAD_EXCEPTIONS_LAKE_BUILDOUT.md",
-        "templates/downstream/EXCEPTIONS_README.md",
-        "registry/dad-offerings-registry.json",
-        "registry/dad-needs-registry.json"
-      ],
-      "summary": "Added Claude-readable packet guidance for tracing repeated implementation failures to architectural root causes without treating model output as authority.",
-      "agent_action": "Use the packet when repeated integration failures may indicate an architectural issue; keep source evidence and human gates authoritative.",
-      "route_tags": [
-        "root_cause_review",
-        "learning_loop",
-        "governance"
-      ]
+      "change_id": "nav-change:2026-07-15:project-right-sizing-expert-packs",
+      "changed_at": "2026-07-15T16:00:00Z",
+      "change_type": "added_project_position_and_specialist_packs",
+      "paths": ["docs/TECHNICAL_PRODUCT_COMPANY_OS.md", "assets/agent-skills/technical-product-company-os/references/PROJECT_POSITION_AND_COMPLETION_CONTRACT.md", "schemas/project-position-diagnosis.schema.json", "assets/agent-skills/mcp-integration-specialist-pack", "assets/agent-skills/ui-ux-specialist-pack", "registry/subagent-capability-registry.json", "processed/agents/subagent-capability-graph.json"],
+      "summary": "Added read-only project-position diagnosis, human-confirmed destination and completion depth, sufficient-stop boundaries, and on-demand MCP and UI/UX expert packs under existing families.",
+      "agent_action": "Diagnose first when destination or depth is ambiguous, ask at most three material questions, then route no more than three primary capabilities or specialist roles and stop at the approved depth.",
+      "route_tags": ["agent_skill", "workflow", "project_management", "mcp", "ux", "knowledge_graph", "governance", "human_gate"]
     }
   ],
   "authority_boundary": "This registry only governs DAD navigation freshness and routing. It does not make generated reports source truth, authorize downstream repo writes, or override source-repository authority."

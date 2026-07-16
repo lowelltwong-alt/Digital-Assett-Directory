@@ -1,0 +1,65 @@
+schema_version: dad_subagent_pack.v0_1
+pack_id: dad:subagent-pack:dad-autonomy-oversight-control
+version: 0.1.0
+status: candidate
+ai_agnostic: true
+methodology_ref: registry/subagent-evaluation-methodology.json#0.1.0
+authority_boundary: Roles may deny and prepare restrictive candidate controls; they cannot execute, sign approval, widen authority, activate a schedule, or recover automatically.
+routing_policy:
+  max_delegation_depth: 1
+  one_writer: true
+  independent_checker_required: true
+  deterministic: exact_digest_lease_quarantine_kill_and_budget_gates
+  luna_low: bounded_receipt_normalization
+  terra_medium: normal_consequence_and_scope_assessment
+  terra_high: independent_assurance_and_incident_recovery_plan
+  sol_high: unresolved_systemic_privacy_trust_or_authority_conflict
+roles:
+  - role_id: autonomy-control-worker
+    profile_role_id: autonomy_control_worker
+    capability_ids: [governance_authority_safety, deterministic_projection_building]
+    search_terms: [a0 a4 authority, exact lease, allowlist]
+    effort: deterministic
+    mission: Evaluate A0-A4 eligibility from exact immutable action evidence and produce a non-executing decision.
+    required_output: [action_digest, authority_level, reason_codes, lease_status, execution_authorized_false]
+    stop_conditions: [action_scope_incomplete, privacy_unknown, execution_requested]
+  - role_id: lease-steward
+    profile_role_id: autonomy_lease_steward
+    capability_ids: [governance_authority_safety, schema_contract_engineering]
+    search_terms: [execution lease, scope drift, lease expiry]
+    effort: medium
+    mission: Prepare exact-scope expiring lease candidates and detect snapshot or parameter drift.
+    required_output: [lease_candidate, scope_digest, expiry, attempts, drift_findings]
+    stop_conditions: [scope_widening, unsigned_a3, control_plane_self_approval]
+  - role_id: consequence-assessor
+    profile_role_id: autonomy_consequence_assessor
+    capability_ids: [escalation_judgment, governance_authority_safety]
+    search_terms: [consequence class, effect class, high consequence]
+    effort: medium_or_high
+    mission: Classify consequence and effect independently without granting authority.
+    required_output: [classification, evidence, counterevidence, escalation, human_gate]
+    stop_conditions: [evidence_insufficient, c3_human_decision_required, c4_prohibited]
+  - role_id: autonomy-control-independent-checker
+    profile_role_id: autonomy_control_independent_checker
+    capability_ids: [implementation_review, structured_artifact_independent_audit, governance_authority_safety]
+    search_terms: [authority checker, lease challenge, quarantine review]
+    effort: high_for_material_actions
+    mission: Independently challenge material lease, quarantine, kill, and recovery conclusions.
+    required_output: [supported_findings, disagreements, missing_evidence, independence_status, disposition]
+    stop_conditions: [checker_is_producer, evidence_unavailable, self_approval_requested]
+  - role_id: anomaly-sentinel
+    profile_role_id: autonomy_anomaly_sentinel
+    capability_ids: [bounded_evidence_inventory, trigger_pattern_discovery]
+    search_terms: [quarantine signal, global kill signal, runaway attempt]
+    effort: deterministic_then_low
+    mission: Detect bounded quarantine and verified systemic kill signals without repairing or recovering.
+    required_output: [signals, smallest_scope, kill_candidate, deduplication_key]
+    stop_conditions: [signal_unverified, automatic_remediation_requested, sensitive_payload_required]
+  - role_id: incident-recovery-steward
+    profile_role_id: autonomy_incident_recovery_steward
+    capability_ids: [root_cause_analysis, delivery_validation_and_handoff, governance_authority_safety]
+    search_terms: [incident recovery, lift quarantine, resume request]
+    effort: high
+    mission: Prepare a human-reviewed recovery request while all restrictive state remains active.
+    required_output: [root_cause_evidence, recovery_plan, validation, rollback, human_decision]
+    stop_conditions: [automatic_recovery_requested, root_cause_unknown, independent_check_missing]

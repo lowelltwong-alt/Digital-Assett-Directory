@@ -1,0 +1,87 @@
+{
+  "schema_version": "dad.task_local_agent_mesh_manifest.v1",
+  "mesh_id": "dad:agent-mesh:project-right-sizing-expert-suites",
+  "task_id": "project-right-sizing-expert-suites",
+  "revision_id": "dad:agent-mesh-revision:project-right-sizing-expert-suites:v2",
+  "supersedes_revision_id": "dad:agent-mesh-revision:project-right-sizing-expert-suites:v1",
+  "phase": "postflight",
+  "status": "complete",
+  "source_snapshot_digest": "sha256:4a433294ef3e56ee43a97fce2c4ab1ebc40fb107e2cba7a4bb2f8633664a8531",
+  "authority": {
+    "source_authority": "DAD owns candidate role, skill, registry, workflow, schema, routing, and navigation contracts; project repositories retain local truth and Lowell retains destination, depth, integration, activation, acceptance, and release authority.",
+    "execution_authority": false,
+    "human_gate_required": true
+  },
+  "max_delegation_depth": 1,
+  "writer_role_id": "bounded-registry-writer",
+  "checker_role_id": "independent-scope-checker",
+  "non_overlap_statement": "Only bounded-registry-writer edited the isolated worktree. Both specialists and the independent checker remained read-only; the checker findings were reconciled by the writer and separately replayed.",
+  "roles": [
+    {
+      "role_id": "project-position-specialist",
+      "why_needed": "Right-sized diagnosis required independent lifecycle and stopping-boundary expertise.",
+      "mission": "Design and review the observed-position, human-destination, completion-depth, issue, and sufficient-stop contract.",
+      "inputs": ["canonical project-management contract", "candidate diagnosis contract", "independent counterexamples"],
+      "dependencies": [],
+      "authority": "Read-only specialist; cannot infer destination, mutate project state, or execute work.",
+      "model_effort_class": "high",
+      "writer_checker_relation": "specialist",
+      "acceptance_conditions": ["Canonical PM states are reused.", "Ambiguity defaults to diagnosis and no handoff.", "Exact bounded work suppresses the diagnostic."],
+      "stop_conditions": ["A second lifecycle appears.", "Repository activity becomes intent."],
+      "handoff": {"recipient_role_ids": ["bounded-registry-writer"], "deliverables": ["position and completion contract", "negative cases"], "readiness_conditions": ["PM vocabulary and human authority are reconciled."]}
+    },
+    {
+      "role_id": "mcp-ui-suite-specialist",
+      "why_needed": "Existing parent families needed distinct expert methods without portfolio expansion.",
+      "mission": "Audit and define bounded MCP and UI/UX specialist methods, activation evidence, suppressors, and validation boundaries.",
+      "inputs": ["existing family contracts", "MCP-first policy", "current capability library"],
+      "dependencies": [],
+      "authority": "Read-only specialist; cannot install, activate, contact users, collect data, or mutate systems.",
+      "model_effort_class": "medium",
+      "writer_checker_relation": "specialist",
+      "acceptance_conditions": ["Packs remain members of existing families.", "Methods are distinct.", "Executable routing selects no more than three roles."],
+      "stop_conditions": ["Whole-pack activation is possible.", "Incidental files or dependencies activate experts."],
+      "handoff": {"recipient_role_ids": ["bounded-registry-writer"], "deliverables": ["MCP role contracts", "UI UX role contracts", "negative routing cases"], "readiness_conditions": ["Roles are deduplicated against existing families."]}
+    },
+    {
+      "role_id": "bounded-registry-writer",
+      "why_needed": "One writer was required for coherent cross-registry implementation and revision after challenge.",
+      "mission": "Implement candidate skills, packs, schemas, selector, family membership, workflow, navigation, documentation, and tests.",
+      "inputs": ["specialist handoffs", "preflight context", "checker findings", "validation results"],
+      "dependencies": ["project-position-specialist", "mcp-ui-suite-specialist"],
+      "authority": "May edit task-scoped DAD artifacts in the isolated worktree only; cannot activate or externally mutate anything.",
+      "model_effort_class": "high",
+      "writer_checker_relation": "writer",
+      "acceptance_conditions": ["Schemas and registries validate.", "Targeted tests pass.", "All material checker blockers are corrected."],
+      "stop_conditions": ["External configuration or credentials are required.", "Candidate metadata grants authority."],
+      "handoff": {"recipient_role_ids": ["independent-scope-checker"], "deliverables": ["frozen diff", "test evidence", "known limitations"], "readiness_conditions": ["Changed paths and exact commands are available."]}
+    },
+    {
+      "role_id": "independent-scope-checker",
+      "why_needed": "The producer could not validate its own right-sizing and authority claims.",
+      "mission": "Challenge lifecycle, attestation, routing, graph, MCP, UI/UX, and overbuild claims and replay deterministic evidence.",
+      "inputs": ["frozen candidate", "canonical contracts", "raw registry evidence", "test results"],
+      "dependencies": ["bounded-registry-writer"],
+      "authority": "Read-only checker; cannot edit, activate, approve, or infer the destination.",
+      "model_effort_class": "high",
+      "writer_checker_relation": "checker",
+      "acceptance_conditions": ["No competing lifecycle remains.", "Human confirmation is attested.", "Specialist bounds are executable.", "Graph claims match implementation."],
+      "stop_conditions": ["Checker becomes writer.", "Evidence cannot be replayed."],
+      "handoff": {"recipient_role_ids": [], "deliverables": ["independent verdict", "residual risks"], "readiness_conditions": ["Revised artifacts and commands are frozen."]}
+    }
+  ],
+  "proof_obligations": [
+    {"obligation_id": "right-sized-routing", "description": "Diagnosis and routing stop at the smallest human-confirmed outcome.", "evidence_required": ["diagnosis schema", "conditional workflow", "negative routing tests"], "owner_role_id": "bounded-registry-writer", "checker_role_id": "independent-scope-checker", "status": "satisfied"},
+    {"obligation_id": "mcp-first-specialist-coverage", "description": "MCP experts extend the existing family and require named activation evidence.", "evidence_required": ["MCP pack", "member-of edge", "executable role selector"], "owner_role_id": "bounded-registry-writer", "checker_role_id": "independent-scope-checker", "status": "satisfied"},
+    {"obligation_id": "ui-ux-specialist-coverage", "description": "UI/UX methods are broad but each stage activates only a bounded subset.", "evidence_required": ["UI UX pack", "member-of edge", "whole-pack negative test"], "owner_role_id": "bounded-registry-writer", "checker_role_id": "independent-scope-checker", "status": "satisfied"},
+    {"obligation_id": "human-destination-authority", "description": "Human destination and depth require attestable decision and validation references.", "evidence_required": ["conditional schema", "invalid handoff fixture", "authority contract"], "owner_role_id": "bounded-registry-writer", "checker_role_id": "independent-scope-checker", "status": "satisfied"}
+  ],
+  "unresolved_decisions": [],
+  "reconciliations": [
+    {"prior_role_id": "project-position-specialist", "disposition": "reused", "current_role_ids": ["project-position-specialist"], "reason": "The role found the competing lifecycle and attestation gaps during independent review.", "evidence_refs": ["schemas/project-position-diagnosis.schema.json", "assets/agent-skills/technical-product-company-os/references/PROJECT_POSITION_AND_COMPLETION_CONTRACT.md"], "material_drift": true},
+    {"prior_role_id": "mcp-ui-suite-specialist", "disposition": "reused", "current_role_ids": ["mcp-ui-suite-specialist"], "reason": "The audit directly informed distinct role methods, suppressors, and parent-family membership.", "evidence_refs": ["assets/agent-skills/mcp-integration-specialist-pack/subagents.yaml", "assets/agent-skills/ui-ux-specialist-pack/subagents.yaml"], "material_drift": true},
+    {"prior_role_id": "bounded-registry-writer", "disposition": "reused", "current_role_ids": ["bounded-registry-writer"], "reason": "Single-writer ownership was preserved through implementation and checker-driven revision.", "evidence_refs": ["src/digital_asset_directory/technical_product_os.py", "tests/test_technical_product_company_os.py"], "material_drift": true},
+    {"prior_role_id": "independent-scope-checker", "disposition": "reused", "current_role_ids": ["independent-scope-checker"], "reason": "Independent challenge was material and remained read-only.", "evidence_refs": ["tests/test_technical_product_company_os.py", "tests/test_agent_family_portfolio.py"], "material_drift": true}
+  ],
+  "manifest_digest": "sha256:181e041882696f472215c9ab49af309e8da4091baaeeab54b15f5cac52091c22"
+}

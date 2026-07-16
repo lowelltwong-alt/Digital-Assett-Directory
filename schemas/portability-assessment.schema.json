@@ -1,0 +1,26 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://dad.local/schemas/portability-assessment-v1.json",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "assessment_id", "stage", "applicability", "policy_revision_id", "baseline_id", "affected_artifact_ids", "bound_artifact_ids", "requested_scope_digest", "finding_codes", "quarantine_codes", "gate_outcome", "model_calls", "assessment_digest", "candidate_only", "execution_authorized", "authority_boundary"],
+  "properties": {
+    "schema_version": {"const": "dad.portability_assessment.v1"},
+    "assessment_id": {"type": "string", "pattern": "^portability-assessment:"},
+    "stage": {"enum": ["preflight", "midflight", "postflight", "implementation_lease", "activation", "registry_promotion", "reviewed_portable", "release", "protected_release", "public_export", "cross_repo_delivery", "validation"]},
+    "applicability": {"enum": ["not_applicable", "portable_required", "environment_bound_exception_required", "ambiguous_candidate"]},
+    "policy_revision_id": {"type": "string"},
+    "baseline_id": {"type": "string"},
+    "affected_artifact_ids": {"type": "array", "uniqueItems": true, "items": {"type": "string"}},
+    "bound_artifact_ids": {"type": "array", "uniqueItems": true, "items": {"type": "string"}},
+    "requested_scope_digest": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"},
+    "finding_codes": {"type": "array", "uniqueItems": true, "items": {"type": "string"}},
+    "quarantine_codes": {"type": "array", "uniqueItems": true, "items": {"type": "string"}},
+    "gate_outcome": {"enum": ["not_applicable", "pass", "warn", "block", "eligible_unverified"]},
+    "model_calls": {"const": 0},
+    "assessment_digest": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"},
+    "candidate_only": {"const": true},
+    "execution_authorized": {"const": false},
+    "authority_boundary": {"type": "string", "minLength": 20}
+  }
+}

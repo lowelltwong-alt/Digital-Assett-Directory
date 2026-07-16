@@ -192,6 +192,25 @@
       "consumers": ["future local MCP read-only surface", "downstream update planning"],
       "review_status": "candidate",
       "authority_boundary": "Repo-status graph rows summarize operational evidence only. They do not authorize downstream writes, protected-repo changes, or enrollment upgrades."
+    },
+    {
+      "surface_id": "durable-entity-plan-graph",
+      "surface_kind": "generated_graph_surface",
+      "ontology_id": "knowledge",
+      "status": "partial",
+      "purpose": "Project durable entities, immutable plans, candidate semantic relations, and reverse dependency neighborhoods without merging identities.",
+      "builder": {"availability": "partial", "command": "asset-dir identity validate", "module": "digital_asset_directory.entity_graph.build_entity_graph"},
+      "source_inputs": [
+        {"kind": "data_surface", "ref": "raw_identity", "required": false},
+        {"kind": "data_surface", "ref": "raw_portfolio_intents", "required": false},
+        {"kind": "registry_path", "ref": "registry/graph-edge-registry.json", "required": true}
+      ],
+      "outputs": {"manifest_logical_path": "identity/entity-graph-manifest.json", "body_logical_path": "identity/entity-graph.json"},
+      "schema_refs": ["schemas/entity-graph.schema.json", "schemas/graph-surface-manifest.schema.json"],
+      "freshness_policy": {"fresh": "hashes_match", "stale": "warn", "inconsistent": "block"},
+      "consumers": ["search-before-create", "local cockpit", "future read-only MCP resources"],
+      "review_status": "candidate",
+      "authority_boundary": "Entity and plan graph rows are candidate retrieval evidence. They cannot merge identities, create dependencies, change lifecycle, or grant execution authority."
     }
   ]
 }

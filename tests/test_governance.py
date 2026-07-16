@@ -1,4 +1,5 @@
 from pathlib import Path
+import subprocess
 
 import pytest
 
@@ -11,6 +12,7 @@ from digital_asset_directory.governance import (
 from digital_asset_directory.learning import preflight, postflight
 
 pytestmark = pytest.mark.integration
+ROOT = Path(__file__).resolve().parents[1]
 
 
 def test_downstream_install_is_idempotent_and_enforces_open_session(tmp_path: Path):
@@ -54,3 +56,30 @@ def test_scaffold_new_repo_wires_starter_files_and_governance(tmp_path: Path):
     assert (target / ".digital-asset" / "mail" / "inbox.jsonl").exists()
     assert (target / ".githooks" / "pre-push").exists()
     assert any("README.md" in str(path) for path in changed)
+
+
+def test_downstream_governed_change_requires_local_portability_adoption(tmp_path: Path):
+    target = tmp_path / "downstream"
+    governed = target / "assets/agent-skills/new-skill/SKILL.md"
+    governed.parent.mkdir(parents=True)
+    governed.write_text("# Candidate", encoding="utf-8")
+    subprocess.run(["git", "init"], cwd=target, check=True, capture_output=True)
+    ok, message = enforce_postflight(ROOT, target)
+    assert ok is False
+    assert "reviewed local portability disposition" in message
+
+
+def test_enrolled_downstream_code_change_fails_closed_without_local_path_policy(
+    tmp_path: Path,
+):
+    target = tmp_path / "downstream"
+    marker = target / ".digital-asset/dad-integration.json"
+    source = target / "src/reusable/library.py"
+    marker.parent.mkdir(parents=True)
+    source.parent.mkdir(parents=True)
+    marker.write_text("{}", encoding="utf-8")
+    source.write_text("VALUE = 1\n", encoding="utf-8")
+    subprocess.run(["git", "init"], cwd=target, check=True, capture_output=True)
+    ok, message = enforce_postflight(ROOT, target)
+    assert ok is False
+    assert "reviewed local portability registry/path policy" in message

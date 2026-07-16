@@ -1,0 +1,12 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://dad.local/schemas/capability-os-cockpit.schema.json",
+  "title": "DAD Capability OS cockpit",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "generated_at", "cockpit_id", "views", "decisions", "controls", "maximum_immediate_decisions", "local_bind", "external_javascript", "candidate_only", "execution_authorized", "authority_boundary"],
+  "properties": {
+    "schema_version": {"const": "dad.capability_os_cockpit.v1"}, "generated_at": {"type": "string", "format": "date-time"}, "cockpit_id": {"type": "string"}, "views": {"type": "object"},
+    "decisions": {"type": "array", "maxItems": 3}, "controls": {"type": "array"}, "maximum_immediate_decisions": {"const": 3}, "local_bind": {"const": "127.0.0.1"}, "external_javascript": {"const": false}, "candidate_only": {"const": true}, "execution_authorized": {"const": false}, "authority_boundary": {"type": "string"}
+  }
+}

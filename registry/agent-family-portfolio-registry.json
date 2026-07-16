@@ -1,0 +1,1434 @@
+{
+  "schema_version": "dad.agent_family_portfolio_registry.v1",
+  "registry_id": "agent-family-portfolio-registry",
+  "registry_version": "0.2.0",
+  "status": "candidate",
+  "candidate_only": true,
+  "ai_agnostic": true,
+  "authority_boundary": "DAD owns this candidate family catalog, shared contracts, dependency projection, and read-only cockpit overlay. Source repositories and named humans retain architecture, data, security, privacy, legal, deployment, release, exception, and adoption authority.",
+  "shared_contract": {
+    "roles": [
+      "router",
+      "boss",
+      "architect",
+      "foreman",
+      "worker",
+      "independent_checker",
+      "sentinel"
+    ],
+    "interfaces": [
+      "family_manifest",
+      "capability_contract",
+      "assignment",
+      "evidence",
+      "challenge",
+      "health_snapshot",
+      "candidate_change",
+      "human_decision"
+    ],
+    "lifecycle_states": [
+      "candidate",
+      "piloted",
+      "reviewed",
+      "active",
+      "watch",
+      "stale",
+      "superseded",
+      "retired"
+    ],
+    "max_delegation_depth": 1,
+    "one_writer": true,
+    "independent_checker_required": true,
+    "sentinel_execution_authorized": false,
+    "generated_relations_are_candidate": true
+  },
+  "runtime_routing": {
+    "capability_aliases": [
+      "luna",
+      "terra",
+      "sol"
+    ],
+    "stable_identity_basis": [
+      "family_id",
+      "role_id",
+      "capability_contract",
+      "revision"
+    ],
+    "attempt_only_fields": [
+      "provider",
+      "model_id",
+      "reasoning_effort",
+      "runtime_tools",
+      "observed_at",
+      "expires_at"
+    ],
+    "resolution_inputs": [
+      "availability",
+      "tools",
+      "context",
+      "privacy",
+      "cost",
+      "consequence"
+    ],
+    "fail_closed_rule": "Stop when no approved available runtime can satisfy the same tools, context, privacy, output, evidence, and consequence contract."
+  },
+  "promotion_policy": {
+    "minimum_cross_repo_recurrence": 3,
+    "high_consequence_domain_exception": true,
+    "required_evidence": [
+      "distinct authority boundary",
+      "distinct validation harness",
+      "distinct freshness sources",
+      "distinct failure modes"
+    ],
+    "default_disposition": "specialist_pack",
+    "human_approval_required": true
+  },
+  "portfolio_wip_policy": {
+    "maximum_active_family_builds": 1,
+    "maximum_active_family_pilots": 1,
+    "overflow_state": "incubating",
+    "human_owner": "Lowell"
+  },
+  "research_policy": {
+    "cadence": "P14D",
+    "activation_status": "human_activation_required",
+    "default_run_time": "06:00",
+    "timezone": "America/New_York",
+    "delta_only": true,
+    "no_change_model_tokens": 0,
+    "changed_cycle_default_tier": "luna",
+    "maximum_synthesis_tier": "terra",
+    "recurring_sol_allowed": false,
+    "pointer_only": true,
+    "human_promotion_required": true
+  },
+  "cockpit_policy": {
+    "schema_version": "dad.portfolio_cockpit.v2",
+    "maximum_now_items": 3,
+    "full_digest": true,
+    "execution_authorized": false,
+    "semantic_issue_deduplication": true,
+    "write_scope": "DAD generated reports only"
+  },
+  "graph_contract": {
+    "node_types": [
+      "agent_family",
+      "agent_skill",
+      "subagent_pack",
+      "role",
+      "capability",
+      "project",
+      "repository",
+      "evidence",
+      "validation",
+      "governance_gate",
+      "runtime_claim"
+    ],
+    "edge_types": [
+      "depends_on",
+      "implements",
+      "member_of",
+      "validated_by",
+      "governed_by",
+      "applies_to",
+      "observed_by",
+      "stale_due_to",
+      "conflicts_with",
+      "supersedes"
+    ],
+    "dependency_edges": [
+      {
+        "source": "skill:ml-workflow-agent-family",
+        "edge_type": "implements",
+        "target": "family:ml-workflow",
+        "evidence_ref": "assets/agent-skills/ml-workflow-agent-family/SKILL.md",
+        "review_status": "candidate"
+      },
+      {
+        "source": "pack:assets/agent-skills/ml-workflow-agent-family/subagents.yaml",
+        "edge_type": "implements",
+        "target": "family:ml-workflow",
+        "evidence_ref": "assets/agent-skills/ml-workflow-agent-family/subagents.yaml",
+        "review_status": "candidate"
+      },
+      {
+        "source": "family:ml-workflow",
+        "edge_type": "governed_by",
+        "target": "skill:dad-work-router",
+        "evidence_ref": "AGENTS.md",
+        "review_status": "candidate"
+      },
+      {
+        "source": "family:ml-workflow",
+        "edge_type": "observed_by",
+        "target": "role:ml-workflow-sentinel",
+        "evidence_ref": "assets/agent-skills/ml-workflow-agent-family/subagents.yaml",
+        "review_status": "candidate"
+      },
+      {
+        "source": "family:ml-workflow",
+        "edge_type": "validated_by",
+        "target": "family:quality-verification-release",
+        "evidence_ref": "registry/agent-family-portfolio-registry.json",
+        "review_status": "candidate"
+      },
+      {
+        "source": "skill:full-stack-engineering-agent-family",
+        "edge_type": "implements",
+        "target": "family:full-stack-engineering",
+        "evidence_ref": "assets/agent-skills/full-stack-engineering-agent-family/SKILL.md",
+        "review_status": "candidate"
+      },
+      {
+        "source": "pack:assets/agent-skills/full-stack-engineering-agent-family/subagents.yaml",
+        "edge_type": "implements",
+        "target": "family:full-stack-engineering",
+        "evidence_ref": "assets/agent-skills/full-stack-engineering-agent-family/subagents.yaml",
+        "review_status": "candidate"
+      },
+      {
+        "source": "family:full-stack-engineering",
+        "edge_type": "governed_by",
+        "target": "skill:dad-work-router",
+        "evidence_ref": "AGENTS.md",
+        "review_status": "candidate"
+      },
+      {
+        "source": "family:full-stack-engineering",
+        "edge_type": "observed_by",
+        "target": "role:full-stack-engineering-sentinel",
+        "evidence_ref": "assets/agent-skills/full-stack-engineering-agent-family/subagents.yaml",
+        "review_status": "candidate"
+      },
+      {
+        "source": "family:full-stack-engineering",
+        "edge_type": "validated_by",
+        "target": "family:quality-verification-release",
+        "evidence_ref": "registry/agent-family-portfolio-registry.json",
+        "review_status": "candidate"
+      },
+      {
+        "source": "skill:quality-verification-release-agent-family",
+        "edge_type": "implements",
+        "target": "family:quality-verification-release",
+        "evidence_ref": "assets/agent-skills/quality-verification-release-agent-family/SKILL.md",
+        "review_status": "candidate"
+      },
+      {
+        "source": "pack:assets/agent-skills/quality-verification-release-agent-family/subagents.yaml",
+        "edge_type": "implements",
+        "target": "family:quality-verification-release",
+        "evidence_ref": "assets/agent-skills/quality-verification-release-agent-family/subagents.yaml",
+        "review_status": "candidate"
+      },
+      {
+        "source": "family:quality-verification-release",
+        "edge_type": "governed_by",
+        "target": "skill:dad-work-router",
+        "evidence_ref": "AGENTS.md",
+        "review_status": "candidate"
+      },
+      {
+        "source": "family:quality-verification-release",
+        "edge_type": "observed_by",
+        "target": "role:quality-verification-release-sentinel",
+        "evidence_ref": "assets/agent-skills/quality-verification-release-agent-family/subagents.yaml",
+        "review_status": "candidate"
+      },
+      {
+        "source": "skill:security-privacy-supply-chain-agent-family",
+        "edge_type": "implements",
+        "target": "family:security-privacy-supply-chain",
+        "evidence_ref": "assets/agent-skills/security-privacy-supply-chain-agent-family/SKILL.md",
+        "review_status": "candidate"
+      },
+      {
+        "source": "pack:assets/agent-skills/security-privacy-supply-chain-agent-family/subagents.yaml",
+        "edge_type": "implements",
+        "target": "family:security-privacy-supply-chain",
+        "evidence_ref": "assets/agent-skills/security-privacy-supply-chain-agent-family/subagents.yaml",
+        "review_status": "candidate"
+      },
+      {
+        "source": "family:security-privacy-supply-chain",
+        "edge_type": "governed_by",
+        "target": "skill:dad-work-router",
+        "evidence_ref": "AGENTS.md",
+        "review_status": "candidate"
+      },
+      {
+        "source": "family:security-privacy-supply-chain",
+        "edge_type": "observed_by",
+        "target": "role:security-privacy-supply-chain-sentinel",
+        "evidence_ref": "assets/agent-skills/security-privacy-supply-chain-agent-family/subagents.yaml",
+        "review_status": "candidate"
+      },
+      {
+        "source": "family:security-privacy-supply-chain",
+        "edge_type": "validated_by",
+        "target": "family:quality-verification-release",
+        "evidence_ref": "registry/agent-family-portfolio-registry.json",
+        "review_status": "candidate"
+      },
+      {
+        "source": "skill:knowledge-research-provenance-agent-family",
+        "edge_type": "implements",
+        "target": "family:knowledge-research-provenance",
+        "evidence_ref": "assets/agent-skills/knowledge-research-provenance-agent-family/SKILL.md",
+        "review_status": "candidate"
+      },
+      {
+        "source": "pack:assets/agent-skills/knowledge-research-provenance-agent-family/subagents.yaml",
+        "edge_type": "implements",
+        "target": "family:knowledge-research-provenance",
+        "evidence_ref": "assets/agent-skills/knowledge-research-provenance-agent-family/subagents.yaml",
+        "review_status": "candidate"
+      },
+      {
+        "source": "family:knowledge-research-provenance",
+        "edge_type": "governed_by",
+        "target": "skill:dad-work-router",
+        "evidence_ref": "AGENTS.md",
+        "review_status": "candidate"
+      },
+      {
+        "source": "family:knowledge-research-provenance",
+        "edge_type": "observed_by",
+        "target": "role:knowledge-research-provenance-sentinel",
+        "evidence_ref": "assets/agent-skills/knowledge-research-provenance-agent-family/subagents.yaml",
+        "review_status": "candidate"
+      },
+      {
+        "source": "family:knowledge-research-provenance",
+        "edge_type": "validated_by",
+        "target": "family:quality-verification-release",
+        "evidence_ref": "registry/agent-family-portfolio-registry.json",
+        "review_status": "candidate"
+      },
+      {
+        "source": "skill:data-schema-knowledge-graph-agent-family",
+        "edge_type": "implements",
+        "target": "family:data-schema-knowledge-graph",
+        "evidence_ref": "assets/agent-skills/data-schema-knowledge-graph-agent-family/SKILL.md",
+        "review_status": "candidate"
+      },
+      {
+        "source": "pack:assets/agent-skills/data-schema-knowledge-graph-agent-family/subagents.yaml",
+        "edge_type": "implements",
+        "target": "family:data-schema-knowledge-graph",
+        "evidence_ref": "assets/agent-skills/data-schema-knowledge-graph-agent-family/subagents.yaml",
+        "review_status": "candidate"
+      },
+      {
+        "source": "family:data-schema-knowledge-graph",
+        "edge_type": "governed_by",
+        "target": "skill:dad-work-router",
+        "evidence_ref": "AGENTS.md",
+        "review_status": "candidate"
+      },
+      {
+        "source": "family:data-schema-knowledge-graph",
+        "edge_type": "observed_by",
+        "target": "role:data-schema-knowledge-graph-sentinel",
+        "evidence_ref": "assets/agent-skills/data-schema-knowledge-graph-agent-family/subagents.yaml",
+        "review_status": "candidate"
+      },
+      {
+        "source": "family:data-schema-knowledge-graph",
+        "edge_type": "validated_by",
+        "target": "family:quality-verification-release",
+        "evidence_ref": "registry/agent-family-portfolio-registry.json",
+        "review_status": "candidate"
+      },
+      {
+        "source": "pack:knowledge-engineering-ops",
+        "edge_type": "member_of",
+        "target": "family:data-schema-knowledge-graph",
+        "evidence_ref": "assets/agent-skills/knowledge-engineering-ops/SKILL.md",
+        "review_status": "candidate"
+      },
+      {
+        "source": "pack:knowledge-engineering-ops",
+        "edge_type": "depends_on",
+        "target": "family:knowledge-research-provenance",
+        "evidence_ref": "registry/knowledge-engineering-family-registry.json",
+        "review_status": "candidate"
+      },
+      {
+        "source": "pack:knowledge-engineering-ops",
+        "edge_type": "validated_by",
+        "target": "family:quality-verification-release",
+        "evidence_ref": "tests/test_knowledge_engineering_family.py",
+        "review_status": "candidate"
+      },
+      {
+        "source": "pack:knowledge-engineering-ops",
+        "edge_type": "depends_on",
+        "target": "family:security-privacy-supply-chain",
+        "evidence_ref": "registry/knowledge-engineering-technique-registry.json#ke-technique:retrieval-security-and-poisoning-controls",
+        "review_status": "candidate"
+      },
+      {
+        "source": "skill:integration-mcp-automation-agent-family",
+        "edge_type": "implements",
+        "target": "family:integration-mcp-automation",
+        "evidence_ref": "assets/agent-skills/integration-mcp-automation-agent-family/SKILL.md",
+        "review_status": "candidate"
+      },
+      {
+        "source": "pack:assets/agent-skills/integration-mcp-automation-agent-family/subagents.yaml",
+        "edge_type": "implements",
+        "target": "family:integration-mcp-automation",
+        "evidence_ref": "assets/agent-skills/integration-mcp-automation-agent-family/subagents.yaml",
+        "review_status": "candidate"
+      },
+      {
+        "source": "family:integration-mcp-automation",
+        "edge_type": "governed_by",
+        "target": "skill:dad-work-router",
+        "evidence_ref": "AGENTS.md",
+        "review_status": "candidate"
+      },
+      {
+        "source": "family:integration-mcp-automation",
+        "edge_type": "observed_by",
+        "target": "role:integration-mcp-automation-sentinel",
+        "evidence_ref": "assets/agent-skills/integration-mcp-automation-agent-family/subagents.yaml",
+        "review_status": "candidate"
+      },
+      {
+        "source": "family:integration-mcp-automation",
+        "edge_type": "validated_by",
+        "target": "family:quality-verification-release",
+        "evidence_ref": "registry/agent-family-portfolio-registry.json",
+        "review_status": "candidate"
+      },
+      {
+        "source": "skill:product-ux-accessibility-agent-family",
+        "edge_type": "implements",
+        "target": "family:product-ux-accessibility",
+        "evidence_ref": "assets/agent-skills/product-ux-accessibility-agent-family/SKILL.md",
+        "review_status": "candidate"
+      },
+      {
+        "source": "pack:assets/agent-skills/product-ux-accessibility-agent-family/subagents.yaml",
+        "edge_type": "implements",
+        "target": "family:product-ux-accessibility",
+        "evidence_ref": "assets/agent-skills/product-ux-accessibility-agent-family/subagents.yaml",
+        "review_status": "candidate"
+      },
+      {
+        "source": "family:product-ux-accessibility",
+        "edge_type": "governed_by",
+        "target": "skill:dad-work-router",
+        "evidence_ref": "AGENTS.md",
+        "review_status": "candidate"
+      },
+      {
+        "source": "family:product-ux-accessibility",
+        "edge_type": "observed_by",
+        "target": "role:product-ux-accessibility-sentinel",
+        "evidence_ref": "assets/agent-skills/product-ux-accessibility-agent-family/subagents.yaml",
+        "review_status": "candidate"
+      },
+      {
+        "source": "family:product-ux-accessibility",
+        "edge_type": "validated_by",
+        "target": "family:quality-verification-release",
+        "evidence_ref": "registry/agent-family-portfolio-registry.json",
+        "review_status": "candidate"
+      },
+      {
+        "source": "skill:legal-evidence-governance-overlay",
+        "edge_type": "implements",
+        "target": "family:legal-evidence-governance",
+        "evidence_ref": "assets/agent-skills/legal-evidence-governance-overlay/SKILL.md",
+        "review_status": "candidate"
+      },
+      {
+        "source": "pack:assets/agent-skills/legal-evidence-governance-overlay/subagents.yaml",
+        "edge_type": "implements",
+        "target": "family:legal-evidence-governance",
+        "evidence_ref": "assets/agent-skills/legal-evidence-governance-overlay/subagents.yaml",
+        "review_status": "candidate"
+      },
+      {
+        "source": "family:legal-evidence-governance",
+        "edge_type": "governed_by",
+        "target": "skill:dad-work-router",
+        "evidence_ref": "AGENTS.md",
+        "review_status": "candidate"
+      },
+      {
+        "source": "family:legal-evidence-governance",
+        "edge_type": "observed_by",
+        "target": "role:legal-evidence-governance-sentinel",
+        "evidence_ref": "assets/agent-skills/legal-evidence-governance-overlay/subagents.yaml",
+        "review_status": "candidate"
+      },
+      {
+        "source": "family:legal-evidence-governance",
+        "edge_type": "validated_by",
+        "target": "family:quality-verification-release",
+        "evidence_ref": "registry/agent-family-portfolio-registry.json",
+        "review_status": "candidate"
+      },
+      {
+        "source": "family:full-stack-engineering",
+        "edge_type": "applies_to",
+        "target": "repo:dad",
+        "evidence_ref": "registry/agent-family-portfolio-registry.json#pilot:dad-agent-family-portfolio",
+        "review_status": "candidate"
+      },
+      {
+        "source": "family:quality-verification-release",
+        "edge_type": "applies_to",
+        "target": "repo:dad",
+        "evidence_ref": "registry/agent-family-portfolio-registry.json#pilot:dad-agent-family-portfolio",
+        "review_status": "candidate"
+      },
+      {
+        "source": "family:security-privacy-supply-chain",
+        "edge_type": "applies_to",
+        "target": "repo:dad",
+        "evidence_ref": "registry/agent-family-portfolio-registry.json#pilot:dad-agent-family-portfolio",
+        "review_status": "candidate"
+      },
+      {
+        "source": "family:knowledge-research-provenance",
+        "edge_type": "applies_to",
+        "target": "repo:dad",
+        "evidence_ref": "registry/agent-family-portfolio-registry.json#pilot:dad-agent-family-portfolio",
+        "review_status": "candidate"
+      },
+      {
+        "source": "family:data-schema-knowledge-graph",
+        "edge_type": "applies_to",
+        "target": "repo:dad",
+        "evidence_ref": "registry/agent-family-portfolio-registry.json#pilot:dad-agent-family-portfolio",
+        "review_status": "candidate"
+      },
+      {
+        "source": "family:integration-mcp-automation",
+        "edge_type": "applies_to",
+        "target": "repo:dad",
+        "evidence_ref": "registry/agent-family-portfolio-registry.json#pilot:dad-agent-family-portfolio",
+        "review_status": "candidate"
+      },
+      {
+        "source": "family:product-ux-accessibility",
+        "edge_type": "applies_to",
+        "target": "repo:dad",
+        "evidence_ref": "registry/agent-family-portfolio-registry.json#pilot:dad-agent-family-portfolio",
+        "review_status": "candidate"
+      },
+      {
+        "source": "family:full-stack-engineering",
+        "edge_type": "applies_to",
+        "target": "repo:mock-trial",
+        "evidence_ref": "registry/agent-family-portfolio-registry.json#pilot:mock-trial-agent-family-portfolio",
+        "review_status": "candidate"
+      },
+      {
+        "source": "family:quality-verification-release",
+        "edge_type": "applies_to",
+        "target": "repo:mock-trial",
+        "evidence_ref": "registry/agent-family-portfolio-registry.json#pilot:mock-trial-agent-family-portfolio",
+        "review_status": "candidate"
+      },
+      {
+        "source": "family:security-privacy-supply-chain",
+        "edge_type": "applies_to",
+        "target": "repo:mock-trial",
+        "evidence_ref": "registry/agent-family-portfolio-registry.json#pilot:mock-trial-agent-family-portfolio",
+        "review_status": "candidate"
+      },
+      {
+        "source": "family:knowledge-research-provenance",
+        "edge_type": "applies_to",
+        "target": "repo:mock-trial",
+        "evidence_ref": "registry/agent-family-portfolio-registry.json#pilot:mock-trial-agent-family-portfolio",
+        "review_status": "candidate"
+      },
+      {
+        "source": "family:data-schema-knowledge-graph",
+        "edge_type": "applies_to",
+        "target": "repo:mock-trial",
+        "evidence_ref": "registry/agent-family-portfolio-registry.json#pilot:mock-trial-agent-family-portfolio",
+        "review_status": "candidate"
+      },
+      {
+        "source": "family:integration-mcp-automation",
+        "edge_type": "applies_to",
+        "target": "repo:mock-trial",
+        "evidence_ref": "registry/agent-family-portfolio-registry.json#pilot:mock-trial-agent-family-portfolio",
+        "review_status": "candidate"
+      },
+      {
+        "source": "family:product-ux-accessibility",
+        "edge_type": "applies_to",
+        "target": "repo:mock-trial",
+        "evidence_ref": "registry/agent-family-portfolio-registry.json#pilot:mock-trial-agent-family-portfolio",
+        "review_status": "candidate"
+      },
+      {
+        "source": "family:legal-evidence-governance",
+        "edge_type": "applies_to",
+        "target": "repo:mock-trial",
+        "evidence_ref": "registry/agent-family-portfolio-registry.json#pilot:mock-trial-agent-family-portfolio",
+        "review_status": "candidate"
+      },
+      {
+        "source": "family:security-privacy-supply-chain",
+        "edge_type": "applies_to",
+        "target": "repo:lawfirm-os",
+        "evidence_ref": "registry/agent-family-portfolio-registry.json#pilot:lawfirm-os-security-overlay",
+        "review_status": "candidate"
+      },
+      {
+        "source": "family:quality-verification-release",
+        "edge_type": "applies_to",
+        "target": "repo:lawfirm-os",
+        "evidence_ref": "registry/agent-family-portfolio-registry.json#pilot:lawfirm-os-security-overlay",
+        "review_status": "candidate"
+      },
+      {
+        "source": "family:legal-evidence-governance",
+        "edge_type": "applies_to",
+        "target": "repo:lawfirm-os",
+        "evidence_ref": "registry/agent-family-portfolio-registry.json#pilot:lawfirm-os-security-overlay",
+        "review_status": "candidate"
+      },
+      {
+        "source": "skill:platform-cloud-sre-agent-family",
+        "edge_type": "implements",
+        "target": "family:platform-cloud-sre",
+        "evidence_ref": "assets/agent-skills/platform-cloud-sre-agent-family/SKILL.md",
+        "review_status": "candidate"
+      },
+      {
+        "source": "family:platform-cloud-sre",
+        "edge_type": "observed_by",
+        "target": "role:platform-cloud-sre-sentinel",
+        "evidence_ref": "assets/agent-skills/platform-cloud-sre-agent-family/subagents.yaml",
+        "review_status": "candidate"
+      },
+      {
+        "source": "family:platform-cloud-sre",
+        "edge_type": "validated_by",
+        "target": "family:quality-verification-release",
+        "evidence_ref": "registry/technical-product-company-os-registry.json",
+        "review_status": "candidate"
+      },
+      {
+        "source": "pack:observability-resilience-specialist-pack",
+        "edge_type": "member_of",
+        "target": "family:platform-cloud-sre",
+        "evidence_ref": "assets/agent-skills/observability-resilience-specialist-pack/SKILL.md",
+        "review_status": "candidate"
+      },
+      {
+        "source": "pack:developer-platform-devex-specialist-pack",
+        "edge_type": "member_of",
+        "target": "family:full-stack-engineering",
+        "evidence_ref": "assets/agent-skills/developer-platform-devex-specialist-pack/SKILL.md",
+        "review_status": "candidate"
+      },
+      {
+        "source": "pack:product-intelligence-experimentation-pack",
+        "edge_type": "member_of",
+        "target": "family:product-ux-accessibility",
+        "evidence_ref": "assets/agent-skills/product-intelligence-experimentation-pack/SKILL.md",
+        "review_status": "candidate"
+      },
+      {
+        "source": "pack:mcp-integration-specialist-pack",
+        "edge_type": "member_of",
+        "target": "family:integration-mcp-automation",
+        "evidence_ref": "assets/agent-skills/mcp-integration-specialist-pack/SKILL.md",
+        "review_status": "candidate"
+      },
+      {
+        "source": "pack:ui-ux-specialist-pack",
+        "edge_type": "member_of",
+        "target": "family:product-ux-accessibility",
+        "evidence_ref": "assets/agent-skills/ui-ux-specialist-pack/SKILL.md",
+        "review_status": "candidate"
+      },
+      {
+        "source": "skill:dad-harness-engineering-ops",
+        "edge_type": "implements",
+        "target": "family:harness-engineering-ops",
+        "evidence_ref": "assets/agent-skills/dad-harness-engineering-ops/SKILL.md",
+        "review_status": "candidate"
+      },
+      {
+        "source": "family:harness-engineering-ops",
+        "edge_type": "validated_by",
+        "target": "family:quality-verification-release",
+        "evidence_ref": "tests/test_runtime_harness_autonomy_control.py",
+        "review_status": "candidate"
+      },
+      {
+        "source": "skill:dad-autonomy-oversight-control",
+        "edge_type": "implements",
+        "target": "family:autonomy-oversight-and-control",
+        "evidence_ref": "assets/agent-skills/dad-autonomy-oversight-control/SKILL.md",
+        "review_status": "candidate"
+      },
+      {
+        "source": "family:autonomy-oversight-and-control",
+        "edge_type": "governed_by",
+        "target": "registry:autonomy-oversight-registry",
+        "evidence_ref": "registry/autonomy-oversight-registry.json",
+        "review_status": "candidate"
+      }
+    ],
+    "forbidden_claims": [
+      "graph presence proves installation or competence",
+      "centrality or similarity proves value",
+      "a runtime model claim is stable identity",
+      "a sentinel issue authorizes mutation",
+      "supersession is automatic"
+    ]
+  },
+  "families": [
+    {
+      "family_id": "family:ml-workflow",
+      "name": "Machine Learning Workflow",
+      "kind": "core",
+      "build_order": 1,
+      "lifecycle_state": "candidate",
+      "status": "implemented_candidate",
+      "skill_ref": "skill:ml-workflow-agent-family",
+      "pack_ref": "assets/agent-skills/ml-workflow-agent-family/subagents.yaml",
+      "domains": [
+        "machine_learning",
+        "ai_engineering"
+      ],
+      "trigger_terms": [
+        "machine learning",
+        "ml",
+        "model training",
+        "prediction",
+        "classification",
+        "regression",
+        "clustering",
+        "forecasting",
+        "reinforcement learning"
+      ],
+      "capabilities": [
+        "ml_opportunity",
+        "experiment_design",
+        "data_readiness",
+        "technique_selection",
+        "deployment_monitoring"
+      ],
+      "specialist_packs": [],
+      "human_gates": [],
+      "owner_authority": "source repository and named domain owner",
+      "requires_independent_assurance": true,
+      "validation_ref": "tests/test_agent_family_portfolio.py",
+      "freshness_sources": [
+        "skill_revision",
+        "dependency_graph",
+        "validation_evidence",
+        "attempt_evidence",
+        "governance_change",
+        "runtime_capability_change"
+      ],
+      "review_cadence": "event-triggered-or-P90D",
+      "applies_when": [
+        "The task explicitly needs machine learning workflow capabilities."
+      ],
+      "does_not_apply_when": [
+        "A narrower existing DAD skill or deterministic tool fully satisfies the task."
+      ],
+      "danger_if_misapplied": "Activating this family without evidence can add cost, duplicate authority, or create false confidence."
+    },
+    {
+      "family_id": "family:full-stack-engineering",
+      "name": "Full-Stack Engineering",
+      "kind": "core",
+      "build_order": 2,
+      "lifecycle_state": "candidate",
+      "status": "implemented_candidate",
+      "skill_ref": "skill:full-stack-engineering-agent-family",
+      "pack_ref": "assets/agent-skills/full-stack-engineering-agent-family/subagents.yaml",
+      "domains": [
+        "software_engineering"
+      ],
+      "trigger_terms": [
+        "full stack",
+        "frontend",
+        "backend",
+        "web app",
+        "mobile app",
+        "desktop app",
+        "api",
+        "database",
+        "deployment",
+        "refactor",
+        "debug",
+        "code"
+      ],
+      "capabilities": [
+        "stack_inventory",
+        "software_architecture",
+        "implementation",
+        "migration",
+        "release_handoff"
+      ],
+      "specialist_packs": [
+        "pack:developer-platform-devex-specialist-pack",
+        "migration_modernization",
+        "performance",
+        "cost_optimization"
+      ],
+      "human_gates": [],
+      "owner_authority": "source repository and named domain owner",
+      "requires_independent_assurance": true,
+      "validation_ref": "tests/test_agent_family_portfolio.py",
+      "freshness_sources": [
+        "skill_revision",
+        "dependency_graph",
+        "validation_evidence",
+        "attempt_evidence",
+        "governance_change",
+        "runtime_capability_change"
+      ],
+      "review_cadence": "event-triggered-or-P90D",
+      "applies_when": [
+        "The task explicitly needs full-stack engineering capabilities."
+      ],
+      "does_not_apply_when": [
+        "A narrower existing DAD skill or deterministic tool fully satisfies the task."
+      ],
+      "danger_if_misapplied": "Activating this family without evidence can add cost, duplicate authority, or create false confidence."
+    },
+    {
+      "family_id": "family:quality-verification-release",
+      "name": "Quality Verification Release",
+      "kind": "core",
+      "build_order": 3,
+      "lifecycle_state": "candidate",
+      "status": "implemented_candidate",
+      "skill_ref": "skill:quality-verification-release-agent-family",
+      "pack_ref": "assets/agent-skills/quality-verification-release-agent-family/subagents.yaml",
+      "domains": [
+        "assurance",
+        "software_engineering"
+      ],
+      "trigger_terms": [
+        "test",
+        "quality",
+        "verification",
+        "validation",
+        "qa",
+        "ci",
+        "release",
+        "rollback",
+        "accessibility audit",
+        "performance test",
+        "fuzz",
+        "property test",
+        "mutation test"
+      ],
+      "capabilities": [
+        "test_architecture",
+        "independent_verification",
+        "release_readiness",
+        "rollback_review",
+        "evaluator_integrity"
+      ],
+      "specialist_packs": [
+        "pack:product-intelligence-experimentation-pack"
+      ],
+      "human_gates": [],
+      "owner_authority": "source repository and named domain owner",
+      "requires_independent_assurance": false,
+      "validation_ref": "tests/test_agent_family_portfolio.py",
+      "freshness_sources": [
+        "skill_revision",
+        "dependency_graph",
+        "validation_evidence",
+        "attempt_evidence",
+        "governance_change",
+        "runtime_capability_change"
+      ],
+      "review_cadence": "event-triggered-or-P90D",
+      "applies_when": [
+        "The task explicitly needs quality verification release capabilities."
+      ],
+      "does_not_apply_when": [
+        "A narrower existing DAD skill or deterministic tool fully satisfies the task."
+      ],
+      "danger_if_misapplied": "Activating this family without evidence can add cost, duplicate authority, or create false confidence."
+    },
+    {
+      "family_id": "family:security-privacy-supply-chain",
+      "name": "Security Privacy Supply Chain",
+      "kind": "core",
+      "build_order": 4,
+      "lifecycle_state": "candidate",
+      "status": "implemented_candidate",
+      "skill_ref": "skill:security-privacy-supply-chain-agent-family",
+      "pack_ref": "assets/agent-skills/security-privacy-supply-chain-agent-family/subagents.yaml",
+      "domains": [
+        "security",
+        "privacy"
+      ],
+      "trigger_terms": [
+        "security",
+        "privacy",
+        "secret",
+        "credential",
+        "authentication",
+        "authorization",
+        "identity",
+        "threat model",
+        "supply chain",
+        "dependency risk",
+        "license",
+        "incident",
+        "cloud configuration",
+        "iac"
+      ],
+      "capabilities": [
+        "threat_modeling",
+        "privacy_boundary",
+        "identity_access",
+        "dependency_provenance",
+        "incident_readiness"
+      ],
+      "specialist_packs": [],
+      "human_gates": [],
+      "owner_authority": "source repository and named domain owner",
+      "requires_independent_assurance": true,
+      "validation_ref": "tests/test_agent_family_portfolio.py",
+      "freshness_sources": [
+        "skill_revision",
+        "dependency_graph",
+        "validation_evidence",
+        "attempt_evidence",
+        "governance_change",
+        "runtime_capability_change"
+      ],
+      "review_cadence": "event-triggered-or-P90D",
+      "applies_when": [
+        "The task explicitly needs security privacy supply chain capabilities."
+      ],
+      "does_not_apply_when": [
+        "A narrower existing DAD skill or deterministic tool fully satisfies the task."
+      ],
+      "danger_if_misapplied": "Activating this family without evidence can add cost, duplicate authority, or create false confidence."
+    },
+    {
+      "family_id": "family:knowledge-research-provenance",
+      "name": "Knowledge Research Provenance",
+      "kind": "core",
+      "build_order": 5,
+      "lifecycle_state": "candidate",
+      "status": "implemented_candidate",
+      "skill_ref": "skill:knowledge-research-provenance-agent-family",
+      "pack_ref": "assets/agent-skills/knowledge-research-provenance-agent-family/subagents.yaml",
+      "domains": [
+        "research",
+        "knowledge_management"
+      ],
+      "trigger_terms": [
+        "research",
+        "white paper",
+        "paper",
+        "source",
+        "citation",
+        "provenance",
+        "evidence",
+        "claim",
+        "counterevidence",
+        "literature",
+        "discovery"
+      ],
+      "capabilities": [
+        "source_discovery",
+        "claim_evidence_mapping",
+        "citation_verification",
+        "counterevidence",
+        "research_freshness"
+      ],
+      "specialist_packs": [],
+      "human_gates": [],
+      "owner_authority": "source repository and named domain owner",
+      "requires_independent_assurance": true,
+      "validation_ref": "tests/test_agent_family_portfolio.py",
+      "freshness_sources": [
+        "skill_revision",
+        "dependency_graph",
+        "validation_evidence",
+        "attempt_evidence",
+        "governance_change",
+        "runtime_capability_change"
+      ],
+      "review_cadence": "P14D",
+      "applies_when": [
+        "The task explicitly needs knowledge research provenance capabilities."
+      ],
+      "does_not_apply_when": [
+        "A narrower existing DAD skill or deterministic tool fully satisfies the task."
+      ],
+      "danger_if_misapplied": "Activating this family without evidence can add cost, duplicate authority, or create false confidence."
+    },
+    {
+      "family_id": "family:data-schema-knowledge-graph",
+      "name": "Data Schema Knowledge Graph",
+      "kind": "core",
+      "build_order": 6,
+      "lifecycle_state": "candidate",
+      "status": "implemented_candidate",
+      "skill_ref": "skill:data-schema-knowledge-graph-agent-family",
+      "pack_ref": "assets/agent-skills/data-schema-knowledge-graph-agent-family/subagents.yaml",
+      "domains": [
+        "data_engineering",
+        "knowledge_graph"
+      ],
+      "trigger_terms": [
+        "data",
+        "schema",
+        "database",
+        "etl",
+        "ontology",
+        "taxonomy",
+        "knowledge graph",
+        "lineage",
+        "vector",
+        "rag",
+        "retrieval augmented generation",
+        "long context",
+        "chunking",
+        "embedding",
+        "vector database",
+        "graphrag",
+        "lightrag",
+        "temporal graph",
+        "rdf",
+        "search",
+        "migration",
+        "retention"
+      ],
+      "capabilities": [
+        "data_contracts",
+        "schema_engineering",
+        "identity_lineage",
+        "etl_quality",
+        "graph_engineering",
+        "knowledge_retrieval_engineering",
+        "chunking_context_engineering",
+        "retrieval_evaluation"
+      ],
+      "specialist_packs": [
+        "pack:knowledge-engineering-ops"
+      ],
+      "human_gates": [],
+      "owner_authority": "source repository and named domain owner",
+      "requires_independent_assurance": true,
+      "validation_ref": "tests/test_agent_family_portfolio.py",
+      "freshness_sources": [
+        "skill_revision",
+        "dependency_graph",
+        "validation_evidence",
+        "attempt_evidence",
+        "governance_change",
+        "runtime_capability_change"
+      ],
+      "review_cadence": "event-triggered-or-P90D",
+      "applies_when": [
+        "The task explicitly needs data schema knowledge graph capabilities."
+      ],
+      "does_not_apply_when": [
+        "A narrower existing DAD skill or deterministic tool fully satisfies the task."
+      ],
+      "danger_if_misapplied": "Activating this family without evidence can add cost, duplicate authority, or create false confidence."
+    },
+    {
+      "family_id": "family:integration-mcp-automation",
+      "name": "Integration MCP Automation",
+      "kind": "core",
+      "build_order": 7,
+      "lifecycle_state": "candidate",
+      "status": "implemented_candidate",
+      "skill_ref": "skill:integration-mcp-automation-agent-family",
+      "pack_ref": "assets/agent-skills/integration-mcp-automation-agent-family/subagents.yaml",
+      "domains": [
+        "integration",
+        "automation"
+      ],
+      "trigger_terms": [
+        "integration",
+        "mcp",
+        "connector",
+        "webhook",
+        "queue",
+        "event",
+        "automation",
+        "scheduler",
+        "rate limit",
+        "reconciliation",
+        "idempotency",
+        "oauth"
+      ],
+      "capabilities": [
+        "api_contracts",
+        "mcp_design",
+        "connector_safety",
+        "idempotency_reconciliation",
+        "automation_health"
+      ],
+      "specialist_packs": [
+        "pack:mcp-integration-specialist-pack"
+      ],
+      "human_gates": [],
+      "owner_authority": "source repository and named domain owner",
+      "requires_independent_assurance": true,
+      "validation_ref": "tests/test_agent_family_portfolio.py",
+      "freshness_sources": [
+        "skill_revision",
+        "dependency_graph",
+        "validation_evidence",
+        "attempt_evidence",
+        "governance_change",
+        "runtime_capability_change"
+      ],
+      "review_cadence": "event-triggered-or-P90D",
+      "applies_when": [
+        "The task explicitly needs integration mcp automation capabilities."
+      ],
+      "does_not_apply_when": [
+        "A narrower existing DAD skill or deterministic tool fully satisfies the task."
+      ],
+      "danger_if_misapplied": "Activating this family without evidence can add cost, duplicate authority, or create false confidence."
+    },
+    {
+      "family_id": "family:product-ux-accessibility",
+      "name": "Product UX Accessibility",
+      "kind": "core",
+      "build_order": 8,
+      "lifecycle_state": "candidate",
+      "status": "implemented_candidate",
+      "skill_ref": "skill:product-ux-accessibility-agent-family",
+      "pack_ref": "assets/agent-skills/product-ux-accessibility-agent-family/subagents.yaml",
+      "domains": [
+        "product",
+        "user_experience"
+      ],
+      "trigger_terms": [
+        "product",
+        "ux",
+        "user experience",
+        "accessibility",
+        "a11y",
+        "design system",
+        "user journey",
+        "information architecture",
+        "cockpit",
+        "dashboard",
+        "usability"
+      ],
+      "capabilities": [
+        "product_shaping",
+        "user_journey",
+        "information_architecture",
+        "accessibility",
+        "usability_evidence"
+      ],
+      "specialist_packs": [
+        "pack:ui-ux-specialist-pack"
+      ],
+      "human_gates": [],
+      "owner_authority": "source repository and named domain owner",
+      "requires_independent_assurance": true,
+      "validation_ref": "tests/test_agent_family_portfolio.py",
+      "freshness_sources": [
+        "skill_revision",
+        "dependency_graph",
+        "validation_evidence",
+        "attempt_evidence",
+        "governance_change",
+        "runtime_capability_change"
+      ],
+      "review_cadence": "event-triggered-or-P90D",
+      "applies_when": [
+        "The task explicitly needs product ux accessibility capabilities."
+      ],
+      "does_not_apply_when": [
+        "A narrower existing DAD skill or deterministic tool fully satisfies the task."
+      ],
+      "danger_if_misapplied": "Activating this family without evidence can add cost, duplicate authority, or create false confidence."
+    },
+    {
+      "family_id": "family:platform-cloud-sre",
+      "name": "Platform Cloud SRE",
+      "kind": "core",
+      "build_order": 9,
+      "lifecycle_state": "candidate",
+      "status": "implemented_candidate",
+      "skill_ref": "skill:platform-cloud-sre-agent-family",
+      "pack_ref": "assets/agent-skills/platform-cloud-sre-agent-family/subagents.yaml",
+      "domains": [
+        "platform",
+        "cloud",
+        "site_reliability"
+      ],
+      "trigger_terms": [
+        "platform",
+        "cloud",
+        "sre",
+        "production runtime",
+        "infrastructure",
+        "capacity",
+        "service objective",
+        "disaster recovery"
+      ],
+      "capabilities": [
+        "platform_architecture",
+        "service_reliability",
+        "capacity_and_cost",
+        "rollout_and_rollback",
+        "recovery"
+      ],
+      "specialist_packs": [
+        "pack:observability-resilience-specialist-pack"
+      ],
+      "human_gates": [
+        "production_change",
+        "external_effect",
+        "final_confirmation"
+      ],
+      "owner_authority": "source repository, named platform owner, and Lowell",
+      "requires_independent_assurance": true,
+      "validation_ref": "tests/test_technical_product_company_os.py",
+      "freshness_sources": [
+        "skill_revision",
+        "dependency_graph",
+        "validation_evidence",
+        "attempt_evidence",
+        "governance_change",
+        "runtime_capability_change",
+        "service_objective_change"
+      ],
+      "review_cadence": "event-triggered-or-P30D",
+      "applies_when": [
+        "The task affects production runtime, infrastructure, capacity, reliability, rollout, or recovery."
+      ],
+      "does_not_apply_when": [
+        "The task is only application feature implementation with no production-runtime boundary."
+      ],
+      "danger_if_misapplied": "Treating Platform as application or security authority can hide ownership, cause unsafe production effects, and duplicate Full Stack or Security."
+    },
+    {
+      "family_id": "family:legal-evidence-governance",
+      "name": "Legal Evidence Governance",
+      "kind": "domain_overlay",
+      "build_order": 10,
+      "lifecycle_state": "candidate",
+      "status": "implemented_candidate",
+      "skill_ref": "skill:legal-evidence-governance-overlay",
+      "pack_ref": "assets/agent-skills/legal-evidence-governance-overlay/subagents.yaml",
+      "domains": [
+        "legal",
+        "governance"
+      ],
+      "trigger_terms": [
+        "legal",
+        "law",
+        "case",
+        "matter",
+        "jurisdiction",
+        "privilege",
+        "confidential",
+        "citation",
+        "evidence",
+        "filing",
+        "client",
+        "mock trial"
+      ],
+      "capabilities": [
+        "jurisdiction_authority",
+        "privilege_confidentiality",
+        "citation_lineage",
+        "retention",
+        "qualified_human_review"
+      ],
+      "specialist_packs": [],
+      "human_gates": [
+        "legal_human_review"
+      ],
+      "owner_authority": "named qualified human and source repository",
+      "requires_independent_assurance": true,
+      "validation_ref": "tests/test_agent_family_portfolio.py",
+      "freshness_sources": [
+        "skill_revision",
+        "dependency_graph",
+        "validation_evidence",
+        "attempt_evidence",
+        "governance_change",
+        "runtime_capability_change"
+      ],
+      "review_cadence": "event-triggered-or-P90D",
+      "applies_when": [
+        "The task explicitly needs legal evidence governance capabilities."
+      ],
+      "does_not_apply_when": [
+        "A narrower existing DAD skill or deterministic tool fully satisfies the task."
+      ],
+      "danger_if_misapplied": "Activating this family without evidence can add cost, duplicate authority, or create false confidence."
+    },
+    {
+      "family_id": "family:harness-engineering-ops",
+      "name": "Harness Engineering Operations",
+      "kind": "core",
+      "build_order": 11,
+      "lifecycle_state": "candidate",
+      "status": "implemented_candidate",
+      "skill_ref": "skill:dad-harness-engineering-ops",
+      "pack_ref": "assets/agent-skills/dad-harness-engineering-ops/subagents.yaml",
+      "domains": ["agent_engineering", "runtime_portability", "quality_assurance"],
+      "trigger_terms": ["harness", "prompt harness", "agent harness", "harness maintenance", "harness retirement", "runtime fit", "portable capability", "model agnostic", "model retirement"],
+      "capabilities": ["harness_architecture", "typed_safe_runner", "runtime_fit", "evaluation", "lifecycle_management", "portable_capability_governance"],
+      "specialist_packs": ["pack:portable-capability-governance"],
+      "human_gates": ["harness_activation", "harness_supersession", "harness_retirement"],
+      "owner_authority": "Lowell and the source repository",
+      "requires_independent_assurance": true,
+      "validation_ref": "tests/test_runtime_harness_autonomy_control.py",
+      "freshness_sources": ["harness_revision", "runtime_capability_snapshot", "evaluation_evidence", "consumer_graph", "frontier_source_delta"],
+      "review_cadence": "weekly-delta-or-event-triggered",
+      "applies_when": ["A reusable agent or workflow needs a provider-neutral harness or an existing harness may be stale."],
+      "does_not_apply_when": ["A reviewed current harness exactly satisfies the task and no fit or lifecycle evidence changed."],
+      "danger_if_misapplied": "A weak or mismatched harness can create false confidence, unsafe execution, or lock roles to a retired runtime."
+    },
+    {
+      "family_id": "family:autonomy-oversight-and-control",
+      "name": "Autonomy Oversight and Control",
+      "kind": "core",
+      "build_order": 12,
+      "lifecycle_state": "candidate",
+      "status": "implemented_candidate",
+      "skill_ref": "skill:dad-autonomy-oversight-control",
+      "pack_ref": "assets/agent-skills/dad-autonomy-oversight-control/subagents.yaml",
+      "domains": ["ai_governance", "execution_control", "incident_control"],
+      "trigger_terms": ["autonomy", "execution lease", "allowlist", "quarantine", "global kill", "resume request"],
+      "capabilities": ["a0_a4_classification", "lease_validation", "selective_quarantine", "global_kill", "human_gated_recovery"],
+      "specialist_packs": [],
+      "human_gates": ["a2_activation", "a3_exact_confirmation", "control_plane_recovery"],
+      "owner_authority": "Lowell and the source repository",
+      "requires_independent_assurance": true,
+      "validation_ref": "tests/test_runtime_harness_autonomy_control.py",
+      "freshness_sources": ["authority_policy", "lease_schema", "runtime_route", "harness_revision", "incident_evidence"],
+      "review_cadence": "event-triggered-or-P30D",
+      "applies_when": ["An agent action may mutate, deliver, schedule, spend, message, change permissions, affect production, or recover from quarantine."],
+      "does_not_apply_when": ["The work is purely read-only and no authority or control decision exists."],
+      "danger_if_misapplied": "An incorrect authority classification can permit harmful actions or unnecessarily block safe work."
+    }
+  ],
+  "pilots": [
+    {
+      "pilot_id": "pilot:dad-agent-family-portfolio",
+      "repo_id": "repo:dad",
+      "status": "piloted_candidate",
+      "privacy_scope": "repo_local_metadata_and_synthetic_tests_only",
+      "family_ids": [
+        "family:full-stack-engineering",
+        "family:quality-verification-release",
+        "family:security-privacy-supply-chain",
+        "family:knowledge-research-provenance",
+        "family:data-schema-knowledge-graph",
+        "family:integration-mcp-automation",
+        "family:product-ux-accessibility",
+        "family:harness-engineering-ops",
+        "family:autonomy-oversight-and-control"
+      ],
+      "overlay_ids": [],
+      "metadata_allowlist": [
+        "tracked path names",
+        "manifests",
+        "schemas",
+        "registries",
+        "test names",
+        "Git fingerprints"
+      ],
+      "forbidden_data": [
+        "secrets",
+        "credentials",
+        "private source rows",
+        "raw conversations"
+      ],
+      "mutation_authorized": false,
+      "human_gate": "Lowell retains adoption and release authority."
+    },
+    {
+      "pilot_id": "pilot:mock-trial-agent-family-portfolio",
+      "repo_id": "repo:mock-trial",
+      "status": "piloted_candidate",
+      "privacy_scope": "metadata_only_no_case_rows",
+      "family_ids": [
+        "family:full-stack-engineering",
+        "family:quality-verification-release",
+        "family:security-privacy-supply-chain",
+        "family:knowledge-research-provenance",
+        "family:data-schema-knowledge-graph",
+        "family:integration-mcp-automation",
+        "family:product-ux-accessibility",
+        "family:harness-engineering-ops",
+        "family:autonomy-oversight-and-control"
+      ],
+      "overlay_ids": [
+        "family:legal-evidence-governance"
+      ],
+      "metadata_allowlist": [
+        "tracked path names",
+        "language manifests",
+        "test names",
+        "public governance documents",
+        "Git fingerprints"
+      ],
+      "forbidden_data": [
+        "case rows",
+        "client data",
+        "privileged material",
+        "credentials",
+        "raw prompts",
+        "raw conversations"
+      ],
+      "mutation_authorized": false,
+      "human_gate": "Qualified legal review and Lowell approval are required before adoption or legal conclusions."
+    },
+    {
+      "pilot_id": "pilot:lawfirm-os-security-overlay",
+      "repo_id": "repo:lawfirm-os",
+      "status": "incubating",
+      "privacy_scope": "metadata_only_no_client_or_matter_rows",
+      "family_ids": [
+        "family:security-privacy-supply-chain",
+        "family:quality-verification-release"
+      ],
+      "overlay_ids": [
+        "family:legal-evidence-governance"
+      ],
+      "metadata_allowlist": [
+        "tracked path names",
+        "public-safe governance metadata",
+        "test names",
+        "Git fingerprints"
+      ],
+      "forbidden_data": [
+        "client data",
+        "matter rows",
+        "privileged material",
+        "credentials",
+        "raw conversations"
+      ],
+      "mutation_authorized": false,
+      "human_gate": "LawFirm OS source authority and qualified legal/security reviewers control adoption."
+    }
+  ]
+}

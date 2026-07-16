@@ -216,6 +216,88 @@
       "minimum_comparable_attempts_for_no_change": 5,
       "cross_domain_comparison_forbidden": true,
       "authority_boundary": "This candidate profile assesses evidence handling only; it cannot authenticate artifacts, settle contested history or theology, or replace qualified domain review."
+    },
+    {
+      "profile_id": "dad:evaluation-profile:machine-learning-workflow",
+      "profile_version": "0.1.0",
+      "status": "candidate",
+      "applies_when": [
+        "A role recommends, designs, implements, validates, deploys, monitors, researches, or changes a material machine-learning workflow.",
+        "The output can affect model, data, experiment, technique, deployment, monitoring, or lifecycle decisions."
+      ],
+      "does_not_apply_when": [
+        "The task is a deterministic data transform with no learned model, technique choice, or ML claim.",
+        "A safety-critical or professionally regulated overlay requires stricter domain-specific criteria in addition to this profile."
+      ],
+      "danger_if_misapplied": "A generic agent score can hide a wrong goal, unauthorized data, leakage, invalid splits, metric mismatch, shortcut learning, poor calibration, distribution shift, unfair or unsafe behavior, irreproducibility, or missing rollback.",
+      "required_criteria": [
+        {
+          "criterion_id": "goal_and_no_ml_baseline_fit",
+          "validator_kind": "mixed",
+          "description": "The ML proposal serves a locked downstream goal and is compared against a credible deterministic, statistical, search, optimization, or process baseline."
+        },
+        {
+          "criterion_id": "data_authority_lineage_and_domain_validity",
+          "validator_kind": "domain_expert",
+          "description": "Population, consent or license, sensitivity, labels, vintages, availability time, missingness, and domain semantics are authorized and traceable."
+        },
+        {
+          "criterion_id": "split_and_leakage_resistance",
+          "validator_kind": "mixed",
+          "description": "The split matches deployment units and time; preprocessing, selection, resampling, duplicate entities, and future information cannot leak across the evaluation boundary."
+        },
+        {
+          "criterion_id": "metric_calibration_and_uncertainty_fit",
+          "validator_kind": "mixed",
+          "description": "Metrics, thresholds, calibration, uncertainty, and slices reflect error costs and downstream decisions instead of a convenient aggregate score."
+        },
+        {
+          "criterion_id": "robustness_shift_and_counterevidence",
+          "validator_kind": "independent_review",
+          "description": "Plausible distribution changes, shortcut features, stress cases, negative results, and counterevidence are tested and retained."
+        },
+        {
+          "criterion_id": "reproducibility_compute_latency_and_dependency_fit",
+          "validator_kind": "deterministic",
+          "description": "Data, code, configuration, dependencies, artifacts, costs, latency, and replay commands are versioned and remain inside declared budgets."
+        },
+        {
+          "criterion_id": "fairness_privacy_security_safety_and_domain_gates",
+          "validator_kind": "domain_expert",
+          "description": "Applicable fairness, privacy, security, safety, legal, regulatory, and professional-domain risks have qualified independent review and explicit human gates."
+        },
+        {
+          "criterion_id": "deployment_monitoring_incident_and_rollback_readiness",
+          "validator_kind": "domain_expert",
+          "description": "Deployment is separately authorized and has ownership, observability, fallback, drift and outcome monitoring, incident response, kill criteria, and tested rollback."
+        }
+      ],
+      "domain_expert_required": true,
+      "minimum_comparable_attempts_for_no_change": 5,
+      "cross_domain_comparison_forbidden": true,
+      "authority_boundary": "This candidate ML profile guides bounded review only. It cannot authorize data access, compare models across unrelated domains, approve a model, deploy, retrain, rewrite an agent, or replace qualified domain and human decisions."
+    },
+    {
+      "profile_id": "dad:evaluation-profile:knowledge-engineering-workflow",
+      "profile_version": "0.1.0",
+      "status": "candidate",
+      "applies_when": ["A role diagnoses, designs, implements, validates, migrates, researches, or changes a material knowledge, RAG, retrieval, chunking, vector, context, or graph workflow.", "The output can affect source access, evidence retrieval, citations, graph relations, provider egress, index lifecycle, or downstream decisions."],
+      "does_not_apply_when": ["The task is a direct bounded source read with no material retrieval, transformation, or architecture claim.", "A legal, security, privacy, theological, or other high-consequence overlay requires stricter additional domain review."],
+      "danger_if_misapplied": "A generic answer-quality score can hide wrong source authority, missing evidence, access leakage, chunk distortion, embedding drift, graph fabrication, unsupported citations, stale deletes, latency/cost failure, or an unrecoverable migration.",
+      "required_criteria": [
+        {"criterion_id": "goal_query_shape_and_no_rag_baseline_fit", "validator_kind": "mixed", "description": "The route serves a locked end goal and query shapes and is compared with direct-source, no-retrieval, lexical, structural, and long-context baselines where applicable."},
+        {"criterion_id": "source_authority_ingestion_lineage_and_deletion", "validator_kind": "domain_expert", "description": "Canonical sources, identities, parser/normalizer versions, provenance, privacy, retention, changes, tombstones, reconciliation, and rebuild are authorized and traceable."},
+        {"criterion_id": "chunk_context_embedding_and_index_reproducibility", "validator_kind": "deterministic", "description": "Chunk spans/policy, context assembly, embeddings, metadata, index algorithms/parameters, filters, component versions, and rollback reproduce exactly or fail explicitly."},
+        {"criterion_id": "retrieval_recall_rank_and_access_correctness", "validator_kind": "mixed", "description": "Representative and adversarial retrieval measures recall/rank, exact/semantic/multihop/temporal slices, tenant/ACL correctness, filtered recall, and calibrated abstention."},
+        {"criterion_id": "answer_grounding_citation_and_contradiction", "validator_kind": "domain_expert", "description": "Answers are correct and supported; citations entail claims and are complete; contradictions, authority conflicts, missing evidence, and abstention are handled explicitly."},
+        {"criterion_id": "graph_identity_relation_time_and_query_validity", "validator_kind": "mixed", "description": "Graph identity, entity resolution, edge provenance, candidate status, temporal semantics, path correctness, orphan/stale edges, and query lift are tested against a simpler retrieval baseline."},
+        {"criterion_id": "privacy_security_poisoning_and_instruction_separation", "validator_kind": "independent_review", "description": "Embeddings and derived stores are classified; source allowlists, tenant isolation, prompt/retrieval injection, poisoning, secret/PII, egress, deletion, and tool-authority boundaries are tested."},
+        {"criterion_id": "latency_cost_freshness_recovery_and_migration", "validator_kind": "deterministic", "description": "Latency, throughput, cost, freshness lag, outage fallback, backup/restore, side-by-side shadow parity, CDC replay, deletion parity, rollback, and retirement stay inside declared budgets."}
+      ],
+      "domain_expert_required": true,
+      "minimum_comparable_attempts_for_no_change": 5,
+      "cross_domain_comparison_forbidden": true,
+      "authority_boundary": "This candidate profile guides bounded review only. It cannot authorize corpus access, provider egress, compare systems across unrelated domains, promote a technique, deploy, schedule research, mutate indexes, or replace qualified domain and human decisions."
     }
   ],
   "authority_boundary": "The registry defines candidate evaluation contracts and intervention vocabulary only. It cannot compare scores across domains, promote agents, rewrite instructions, or authorize workflow changes."

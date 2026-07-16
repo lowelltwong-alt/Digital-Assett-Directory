@@ -1,0 +1,20 @@
+{
+  "schema_version": "dad.autonomy_oversight_registry.v1",
+  "registry_id": "autonomy-oversight-registry",
+  "registry_version": "0.1.0",
+  "family_id": "family:autonomy-oversight-and-control",
+  "status": "candidate_deny_execute",
+  "authority_boundary": "This control plane can classify, deny, quarantine, kill, and prepare exact candidate leases. It cannot execute work, sign approvals, widen its own authority, activate itself, or recover automatically.",
+  "real_execution_authority": false,
+  "automatic_recovery_allowed": false,
+  "authority_levels": {
+    "A0": "observe",
+    "A1": "recommend_or_draft",
+    "A2": "allowlisted_bounded_reversible_delivery",
+    "A3": "exact_human_confirmed_external_or_high_consequence_action",
+    "A4": "prohibited"
+  },
+  "scope_hierarchy": ["attempt", "workflow_revision", "role", "family", "adapter", "repository", "portfolio"],
+  "global_kill_signals": ["protected_data_crossing", "authority_or_lease_bypass", "unbounded_or_cross_repo_mutation", "trust_compromise", "audit_corruption", "repeated_runaway_across_isolation", "affected_scope_indeterminate"],
+  "roles": ["deterministic_gateway", "lease_steward", "consequence_assessor", "independent_assurance", "anomaly_sentinel", "quarantine_coordinator", "budget_governor", "incident_recovery_steward", "human_decision_curator", "audit_steward"]
+}

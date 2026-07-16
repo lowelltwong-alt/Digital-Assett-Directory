@@ -1229,6 +1229,29 @@ def export_portable(
     include_source_runtime_adapter: bool = False,
     env: dict[str, str] | None = None,
 ) -> dict[str, Any]:
+    portability_registry = hub / "registry" / "portable-capability-registry.json"
+    if portability_registry.exists():
+        from .portability_control import assess_lifecycle, load_registry
+
+        exact_artifact_id = skill_id
+        cards = load_registry(hub)["cards"]
+        if not any(row.get("artifact_id") == exact_artifact_id for row in cards):
+            raise ValueError(
+                f"Portable export blocked: {exact_artifact_id} has no exact portability disposition"
+            )
+
+        gate = assess_lifecycle(
+            hub,
+            stage="public_export",
+            task=f"export portable reusable skill {skill_id}",
+            paths=["config/global-personal-skills.json"],
+            protected_transition=True,
+        )
+        if gate["gate_outcome"] != "pass":
+            raise ValueError(
+                "Portable export blocked by the reviewed portability policy: "
+                + ", ".join(gate.get("finding_codes", []))
+            )
     if not PERSONAL_SKILL_ID.fullmatch(skill_id):
         raise ValueError("Invalid personal skill ID")
     if not SAFE_SEGMENT.fullmatch(target_runtime):

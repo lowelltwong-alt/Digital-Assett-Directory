@@ -1,0 +1,18 @@
+schema_version: dad_routines.v0_1
+family_id: family:harness-engineering-ops
+routines:
+  - routine_id: portable-capability-preflight
+    steps: [classify_applicability, search_related_identity, validate_baseline, assess_portability, route_smallest_mesh]
+    unchanged_model_tokens: 0
+    execution_authorized: false
+  - routine_id: portable-capability-midflight
+    steps: [detect_scope_delta, revalidate_affected_slice, quarantine_uncertain_evidence, require_current_assessment]
+    unchanged_model_tokens: 0
+    execution_authorized: false
+  - routine_id: portable-capability-postflight
+    steps: [reconcile_artifacts, run_deterministic_gate, run_behavioral_harness, require_independent_check, emit_health_snapshot]
+    unchanged_model_tokens: 0
+    execution_authorized: false
+  - routine_id: runtime-retirement-review
+    steps: [verify_receipts, compare_matched_attempts, return_no_winner_on_ambiguity, map_retirement_exposure, validate_rollback]
+    execution_authorized: false

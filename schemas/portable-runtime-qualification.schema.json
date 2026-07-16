@@ -1,0 +1,28 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://dad.local/schemas/portable-runtime-qualification-v1.json",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "qualification_id", "methodology_id", "role_id", "core_revision_id", "adapter_revision_id", "harness_revision_id", "corpus_revision_id", "operating_envelope_digest", "receipt_ids", "matched_attempts", "predeclared_margin", "protected_cohorts", "evaluator_integrity", "hard_gate_failures", "result", "human_promotion_required", "candidate_only", "execution_authorized"],
+  "properties": {
+    "schema_version": {"const": "dad.portable_runtime_qualification.v1"},
+    "qualification_id": {"type": "string", "pattern": "^runtime-qualification:"},
+    "methodology_id": {"const": "dad:methodology:portable-runtime-qualification:0.1.0"},
+    "role_id": {"type": "string"},
+    "core_revision_id": {"type": "string"},
+    "adapter_revision_id": {"type": "string"},
+    "harness_revision_id": {"type": "string"},
+    "corpus_revision_id": {"type": "string"},
+    "operating_envelope_digest": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"},
+    "receipt_ids": {"type": "array", "minItems": 2, "uniqueItems": true, "items": {"type": "string"}},
+    "matched_attempts": {"type": "integer", "minimum": 2},
+    "predeclared_margin": {"type": "number", "minimum": 0},
+    "protected_cohorts": {"type": "array", "minItems": 1, "uniqueItems": true, "items": {"type": "string"}},
+    "evaluator_integrity": {"enum": ["verified", "failed", "insufficient_evidence"]},
+    "hard_gate_failures": {"type": "array", "uniqueItems": true, "items": {"type": "string"}},
+    "result": {"enum": ["pass", "fail", "no_winner", "human_policy_choice"]},
+    "human_promotion_required": {"const": true},
+    "candidate_only": {"const": true},
+    "execution_authorized": {"const": false}
+  }
+}

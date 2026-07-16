@@ -1,0 +1,4 @@
+interface:
+  display_name: "Product Intelligence Experimentation"
+  short_description: "Frame and validate product decisions safely"
+  default_prompt: "Use $product-intelligence-experimentation-pack to design a governed product measurement or experiment workflow."

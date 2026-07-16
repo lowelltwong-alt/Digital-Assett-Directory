@@ -93,24 +93,31 @@ def _scope_digest(kind: str, payload: dict[str, Any]) -> str:
 
 
 def lease_scope_digest(payload: dict[str, Any]) -> str:
+    fields = [
+        "workstream_id",
+        "owner_id",
+        "owner_kind",
+        "repo_binding_id",
+        "action_classes",
+        "requested_paths",
+        "not_before",
+        "expires_at",
+        "return_state",
+        "rationale_code",
+        "supersedes_lease_id",
+    ]
+    fields.extend(
+        key
+        for key in (
+            "portability_assessment_id",
+            "portability_artifact_ids",
+            "portability_scope_digest",
+        )
+        if key in payload
+    )
     return _scope_digest(
         "lease",
-        {
-            key: payload[key]
-            for key in (
-                "workstream_id",
-                "owner_id",
-                "owner_kind",
-                "repo_binding_id",
-                "action_classes",
-                "requested_paths",
-                "not_before",
-                "expires_at",
-                "return_state",
-                "rationale_code",
-                "supersedes_lease_id",
-            )
-        },
+        {key: payload[key] for key in fields},
     )
 
 
@@ -788,6 +795,9 @@ def request_execution_lease(
     expires_at: datetime,
     return_state: str,
     rationale_code: str,
+    portability_assessment_id: str = "",
+    portability_artifact_ids: Iterable[str] = (),
+    portability_scope_digest: str = "",
     supersedes_lease_id: str = "",
     lease_id: str = "",
     command_id: str | None = None,
@@ -825,6 +835,12 @@ def request_execution_lease(
         "rationale_code": rationale_code,
         "supersedes_lease_id": supersedes_lease_id,
     }
+    if portability_assessment_id:
+        payload["portability_assessment_id"] = portability_assessment_id
+        payload["portability_artifact_ids"] = _canonical_strings(
+            portability_artifact_ids, field="portability_artifact_ids"
+        )
+        payload["portability_scope_digest"] = portability_scope_digest
     payload["scope_digest"] = lease_scope_digest(payload)
 
     def prepare(

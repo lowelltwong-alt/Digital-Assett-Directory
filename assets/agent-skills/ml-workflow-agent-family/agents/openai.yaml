@@ -1,0 +1,4 @@
+interface:
+  display_name: "Machine Learning Agent Family"
+  short_description: "Route and govern machine-learning agent workflows"
+  default_prompt: "Use $ml-workflow-agent-family to decide whether ML fits this goal, select a governed technique, and execute it with independent validation."

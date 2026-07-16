@@ -31,6 +31,8 @@
     {"skill_id": "personal-skill:pr-publish-worker", "name": "PR Publish Worker", "source_path": "pr-publish-worker", "origin": "personal", "status": "active"},
     {"skill_id": "personal-skill:pr-review-merge-gate", "name": "PR Review Merge Gate", "source_path": "pr-review-merge-gate", "origin": "personal", "status": "active"},
     {"skill_id": "personal-skill:subagent-continuous-improvement", "name": "Subagent Continuous Improvement", "source_path": "subagent-continuous-improvement", "origin": "personal", "status": "active"},
-    {"skill_id": "personal-skill:subagent-peer-review-routing", "name": "Subagent Peer Review Routing", "source_path": "subagent-peer-review-routing", "origin": "personal", "status": "active"}
+    {"skill_id": "personal-skill:subagent-peer-review-routing", "name": "Subagent Peer Review Routing", "source_path": "subagent-peer-review-routing", "origin": "personal", "status": "active"},
+    {"skill_id": "personal-skill:knowledge-engineering-ops", "name": "Knowledge Engineering Ops", "source_path": "knowledge-engineering-ops", "origin": "personal", "status": "active"},
+    {"skill_id": "personal-skill:portable-capability-governance", "name": "Portable Capability Governance", "source_path": "portable-capability-governance", "origin": "personal", "status": "active"}
   ]
 }

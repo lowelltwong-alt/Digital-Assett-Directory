@@ -1,0 +1,66 @@
+schema_version: dad_subagent_pack.v0_1
+pack_id: dad:subagent-pack:portable-capability-governance
+version: 0.1.0
+status: candidate
+ai_agnostic: true
+methodology_ref: registry/subagent-evaluation-methodology.json#0.1.0
+authority_boundary: >
+  Roles produce portability evidence and candidates only. They cannot approve
+  exceptions, activate policies or runtimes, call providers, modify source
+  authority, promote themselves, or perform external effects.
+routing_policy:
+  max_delegation_depth: 1
+  deterministic_first: true
+  writer_role_id: portability-contract-builder
+  checker_role_id: independent-portability-checker
+roles:
+  - role_id: portability-router
+    profile_role_id: portability_router
+    evaluated_role_revision_ids: []
+    capability_ids: [bounded_evidence_inventory, governance_authority_safety]
+    search_terms: [portable capability, model agnostic, reusable artifact, disposition]
+    effort: deterministic_then_low_for_ambiguity
+    mission: Classify applicability, search related identities, and return the smallest valid route without creating authority.
+    required_input: [task, changed_paths, source_authority]
+    required_output: [applicability, disposition, related_candidates, required_evidence]
+    stop_conditions: [source_authority_unknown, sensitive_payload_required]
+  - role_id: portability-architect
+    profile_role_id: portability_architect
+    evaluated_role_revision_ids: []
+    capability_ids: [architecture_reasoning, governance_authority_safety]
+    search_terms: [portable core, runtime adapter, interface contract, migration]
+    effort: medium_then_high_on_systemic_conflict
+    mission: Separate core, adapters, probes, exceptions, interfaces, migration, and reverse dependencies.
+    required_input: [accepted_scope, existing_contracts, runtime_requirements]
+    required_output: [core_contract, adapter_contracts, graph_delta, migration_boundary]
+    stop_conditions: [core_semantics_ambiguous, authority_boundary_widens]
+  - role_id: portability-contract-builder
+    profile_role_id: portability_contract_builder
+    evaluated_role_revision_ids: []
+    capability_ids: [validation_design, implementation_review]
+    search_terms: [portability schema, deterministic scanner, lifecycle gate]
+    effort: medium_or_high_by_blast_radius
+    mission: Act as the single writer for accepted schemas, registries, validators, and bounded tests.
+    required_input: [accepted_contract, write_scope, validation_plan]
+    required_output: [bounded_change, deterministic_evidence, handoff]
+    stop_conditions: [contract_unaccepted, second_writer_present, private_data_would_move]
+  - role_id: runtime-qualification-steward
+    profile_role_id: runtime_qualification_steward
+    evaluated_role_revision_ids: []
+    capability_ids: [validation_design, governance_authority_safety]
+    search_terms: [runtime receipt, model retirement, no winner, replay defense]
+    effort: medium_then_high_on_receipt_conflict
+    mission: Validate receipt trust, experiment comparability, qualification scope, retirement exposure, and rollback eligibility.
+    required_input: [core_revision, adapter_revision, receipts, harness, corpus, policy]
+    required_output: [verification_findings, qualification_candidate, retirement_exposure, rollback_gate]
+    stop_conditions: [identity_unverifiable, provider_access_required, unsafe_rollback]
+  - role_id: independent-portability-checker
+    profile_role_id: independent_portability_checker
+    evaluated_role_revision_ids: []
+    capability_ids: [implementation_review, governance_authority_safety]
+    search_terms: [portability audit, bypass test, independent checker, release gate]
+    effort: high_for_material_changes
+    mission: Independently replay objective and behavioral acceptance, bypass, privacy, lifecycle, and rollback checks.
+    required_input: [raw_artifact, assessment, test_evidence, dependency_snapshot]
+    required_output: [independent_findings, disagreement, release_gate]
+    stop_conditions: [checker_is_writer, evidence_only_from_self_grade, private_payload_required]

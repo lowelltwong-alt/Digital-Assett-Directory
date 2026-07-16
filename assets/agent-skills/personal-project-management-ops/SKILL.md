@@ -1,6 +1,6 @@
 ---
 name: personal-project-management-ops
-description: Orchestrate projects from idea intake through related-work search, shaping, workstream decomposition, dependency planning, focus execution, recovery, research, validation, delivery, and portfolio review. Use when starting, organizing, resuming, splitting, prioritizing, researching, rescuing, reviewing, or delivering one or many projects, especially when creative ideas sprawl across chats, repositories, branches, and worktrees.
+description: Orchestrate projects from idea intake through related-work search, shaping, workstream decomposition, dependency planning, first-runnable-artifact product diagnosis, focus execution, recovery, research, validation, delivery, and portfolio review. Use when starting, organizing, resuming, splitting, prioritizing, diagnosing an observable artifact against its intended user and outcome, researching, rescuing, reviewing, or delivering one or many projects, especially when creative ideas sprawl across chats, repositories, branches, and worktrees.
 ---
 
 # Personal Project Management Ops
@@ -12,18 +12,27 @@ source authority.
 ## Route the request
 
 1. Read `references/PROJECT_MANAGEMENT_CONTRACT.md`.
+   For reusable families, libraries, products, architectures, or multi-session
+   builds, also read `references/UNFINISHED_INTENT_RECOVERY_CONTRACT.md`.
 2. Identify the mode: `capture`, `shape`, `plan`, `execute`, `recover`,
-   `research`, `validate-deliver`, or `portfolio-review`.
+   `research`, `diagnose-artifact`, `validate-deliver`, or `portfolio-review`.
 3. Inventory existing evidence before creating a project. Search related ideas,
-   projects, workstreams, repositories, branches, worktrees, tasks, and prior
-   decisions within an explicit coverage envelope.
+   plans, durable entities, agent families, knowledge libraries, projects,
+   workstreams, repositories, branches, worktrees, tasks, and prior decisions
+   within an explicit coverage envelope. Capture a compact non-authorizing
+   intent seed before material planning and the sanitized immutable plan when
+   planning finishes.
 4. Select one phase owner from `subagents.yaml`. Add one independent specialist
    only for a distinct dependency, research, risk, or validation surface.
 5. Build or refresh one project control packet. Keep inferred relationships,
    dependencies, state, priority, and next actions explicitly candidate.
-6. Return the smallest bounded action, quiet option, human decisions, and next
+6. In `diagnose-artifact` mode, activate the
+   `artifact-proximate-product-catalyst` only when a first runnable artifact or
+   equivalent observable experience exists. Inspect the artifact evidence and
+   applicable experience surfaces; do not infer usability from plans alone.
+7. Return the smallest bounded action, quiet option, human decisions, and next
    review condition. Do not create external work unless explicitly approved.
-7. At material completion, route reusable lessons, trigger feedback, and attempt
+8. At material completion, route reusable lessons, trigger feedback, and attempt
    evidence through DAD while preserving the exact role revision used.
 
 ## Reuse before creating roles
@@ -38,10 +47,16 @@ Compose existing capabilities instead of cloning them:
 - `$dad-learning-loop` for evidenced learning events;
 - `$subagent-peer-review-routing` for model, effort, and checker selection.
 
+Use `references/AI_NATIVE_PROCESS_PILOT.md` only for the bounded manual pilot.
+It is not an enabled automation or a default requirement for every workstream.
+
 ## Operating boundaries
 
 - Ideas are cheap captures. Projects are intentional containers. Workstreams are
   bounded outcomes. Execution leases are scarce permissions. Tasks are actions.
+- Intent checkpoints and immutable plans are recovery evidence only. They never
+  create a project, workstream, priority, reminder, dependency, lease, or
+  authority; never store raw conversations, prompts, secrets, or source blobs.
 - Search related work before recommending a project, branch, or worktree.
   Similarity proposes a relationship; it never merges identities.
 - Use the attention kernel's durable states. Keep Today at three or fewer and
@@ -55,6 +70,10 @@ Compose existing capabilities instead of cloning them:
   notifications, delivery, destructive cleanup, or persistent automation.
 - Use Fable only for unresolved high-consequence architecture disagreement after
   independent Codex review. Never auto-send private context.
+- The product catalyst diagnoses product evidence and proposes the smallest
+  evidence-producing experiment. It never allocates engineering work, edits or
+  releases artifacts, approves its own output, mutates systems, or becomes a
+  second project manager.
 
 ## Output
 
@@ -68,3 +87,5 @@ Return:
 6. risk, premortem, quiet option, human gates, and escalation date;
 7. delegated roles, checks, disagreements, and attempt-rating status;
 8. the smallest reversible next step.
+9. exact plan/entity revision, related-work disposition, recovery snapshot, and
+   unfinished-work remainder when the request is a material multi-session build.

@@ -168,6 +168,79 @@ from .lesson_action_queue import (
     write_lesson_automation_next_action_outputs,
 )
 from .manual_tasks import write_manual_task_queue
+from .ml_agent_family import (
+    ml_catalog,
+    ml_dependency_graph,
+    ml_family_status,
+    ml_research_plan,
+)
+from .knowledge_engineering import (
+    knowledge_catalog,
+    knowledge_dependency_graph,
+    knowledge_research_plan,
+    knowledge_route,
+    knowledge_status,
+)
+from .portfolio_intents import (
+    capture_plan,
+    fold_plan_index,
+    load_plan_revision,
+    read_events as read_intent_events,
+    revise_plan,
+    search_plans,
+)
+from .portfolio_related_work import search_related_work
+from .portfolio_build_recovery import build_recovery_bundle
+from .portfolio_weekly_digest import build_weekly_digest, metadata_safe_toast, write_weekly_digest
+from .entity_identity import (
+    fold_state as fold_entity_state,
+    read_events as read_entity_events,
+    semantic_card,
+    register_entity,
+    record_identity_decision,
+)
+from .entity_matching import find_candidates
+from .entity_graph import build_entity_graph, reverse_blast_radius
+from .runtime_resolver import build_capability_snapshot, resolve_runtime
+from .harness_engineering import (
+    lifecycle_candidate,
+    load_harness_registry,
+    route_harness,
+    run_typed_command,
+)
+from .autonomy_control import (
+    build_control_event,
+    evaluate_authority,
+    global_kill_candidate,
+    load_autonomy_registry,
+    quarantine_candidate,
+)
+from .capability_os_cockpit import build_capability_os_cockpit, write_capability_os_cockpit
+from .agent_families import (
+    agent_family_catalog,
+    agent_family_dependency_graph,
+    agent_family_health,
+    build_portfolio_cockpit_v2,
+    inspect_agent_family_pilot,
+    load_portfolio_cockpit_v1,
+    route_agent_families,
+    write_agent_family_health,
+    write_portfolio_cockpit_v2,
+)
+from .technical_product_os import (
+    append_routing_receipt,
+    append_workflow_run_event,
+    build_capability_index,
+    build_capability_portfolio_snapshot,
+    build_operational_capability_graph,
+    build_routing_receipt,
+    build_workflow_run_event,
+    classify_offload,
+    evaluate_decision_right,
+    evaluate_routines,
+    route_capabilities,
+    write_capability_os_outputs,
+)
 from .mail_center import (
     MAIL_MIRROR_DIR,
     MAX_MAIL_RECORD_BYTES,
@@ -449,11 +522,35 @@ app.add_typer(daemon_app, name="daemon")
 journal_app = typer.Typer(no_args_is_help=True)
 personal_skills_app = typer.Typer(no_args_is_help=True)
 app.add_typer(personal_skills_app, name="personal-skills")
+ml_app = typer.Typer(no_args_is_help=True)
+app.add_typer(ml_app, name="ml")
+knowledge_engineering_app = typer.Typer(no_args_is_help=True)
+app.add_typer(knowledge_engineering_app, name="knowledge-engineering")
+agent_families_app = typer.Typer(no_args_is_help=True)
+app.add_typer(agent_families_app, name="agent-families")
+product_os_app = typer.Typer(no_args_is_help=True)
+app.add_typer(product_os_app, name="product-os")
 app.add_typer(journal_app, name="journal")
 mcp_app = typer.Typer(no_args_is_help=True)
 app.add_typer(mcp_app, name="mcp")
 os_app = typer.Typer(no_args_is_help=True)
 app.add_typer(os_app, name="os")
+plan_app = typer.Typer(no_args_is_help=True)
+os_app.add_typer(plan_app, name="plan")
+intent_app = typer.Typer(no_args_is_help=True)
+os_app.add_typer(intent_app, name="intent")
+recovery_app = typer.Typer(no_args_is_help=True)
+os_app.add_typer(recovery_app, name="recovery")
+identity_app = typer.Typer(no_args_is_help=True)
+app.add_typer(identity_app, name="identity")
+runtime_app = typer.Typer(no_args_is_help=True)
+app.add_typer(runtime_app, name="runtime")
+autonomy_app = typer.Typer(no_args_is_help=True)
+app.add_typer(autonomy_app, name="autonomy")
+portability_app = typer.Typer(no_args_is_help=True)
+app.add_typer(portability_app, name="portability")
+portability_experiment_app = typer.Typer(no_args_is_help=True)
+portability_app.add_typer(portability_experiment_app, name="experiment")
 console = Console()
 
 
@@ -573,6 +670,504 @@ def personal_skills_graph(hub: Optional[Path] = typer.Option(None)) -> None:
 @personal_skills_app.command("daily")
 def personal_skills_daily(hub: Optional[Path] = typer.Option(None)) -> None:
     _personal_skill_output(run_personal_skill_daily, hub)
+
+
+def _ml_output(action, hub: Optional[Path], **kwargs: Any) -> None:
+    cfg = _cfg(hub=hub)
+    try:
+        console.print_json(data=action(cfg.repo_root, **kwargs))
+    except (OSError, ValueError, KeyError, ValidationError) as exc:
+        console.print_json(
+            data={
+                "schema_version": "ml.family.error.v1",
+                "status": "blocked",
+                "error": str(exc),
+                "authority_boundary": "Blocked ML catalog and graph commands do not authorize data access, training, deployment, research activation, or mutation.",
+            }
+        )
+        raise typer.Exit(2) from None
+
+
+@ml_app.command("status")
+def ml_status(hub: Optional[Path] = typer.Option(None)) -> None:
+    """Show the candidate ML family, routing authority, and adapter freshness."""
+    _ml_output(ml_family_status, hub)
+
+
+@ml_app.command("catalog")
+def ml_catalog_command(
+    query: str = typer.Option("", "--query", "-q"),
+    hub: Optional[Path] = typer.Option(None),
+) -> None:
+    """Search declared ML roles, workflows, and technique cards without dispatch."""
+    _ml_output(ml_catalog, hub, query=query)
+
+
+@ml_app.command("graph")
+def ml_graph(
+    node: str = typer.Option("", help="Optional node ID for transitive up/down dependencies."),
+    hub: Optional[Path] = typer.Option(None),
+) -> None:
+    """Project candidate upstream and downstream ML-family dependencies."""
+    _ml_output(ml_dependency_graph, hub, node=node or None)
+
+
+@ml_app.command("research-plan")
+def ml_research_plan_command(hub: Optional[Path] = typer.Option(None)) -> None:
+    """Show the unscheduled, human-gated 14-day ML research contract."""
+    _ml_output(ml_research_plan, hub)
+
+
+def _knowledge_output(action, hub: Optional[Path], **kwargs: Any) -> None:
+    cfg = _cfg(hub=hub)
+    try:
+        console.print_json(data=action(cfg.repo_root, **kwargs))
+    except (OSError, ValueError, KeyError, ValidationError) as exc:
+        console.print_json(
+            data={
+                "schema_version": "knowledge.engineering.error.v1",
+                "status": "blocked",
+                "error": str(exc),
+                "candidate_only": True,
+                "authority_boundary": "Blocked Knowledge Engineering commands do not authorize corpus access, browsing, indexing, provider egress, scheduling, deployment, or mutation.",
+            }
+        )
+        raise typer.Exit(2) from None
+
+
+@knowledge_engineering_app.command("status")
+def knowledge_engineering_status_command(
+    hub: Optional[Path] = typer.Option(None),
+) -> None:
+    """Show the portable specialist family, coverage, and inactive research state."""
+    _knowledge_output(knowledge_status, hub)
+
+
+@knowledge_engineering_app.command("catalog")
+def knowledge_engineering_catalog_command(
+    query: str = typer.Option("", "--query", "-q"),
+    hub: Optional[Path] = typer.Option(None),
+) -> None:
+    """Search roles, techniques, workflows, and primary-source pointers read-only."""
+    _knowledge_output(knowledge_catalog, hub, query=query)
+
+
+@knowledge_engineering_app.command("route")
+def knowledge_engineering_route_command(
+    query: str = typer.Option(..., "--query", "-q"),
+    hub: Optional[Path] = typer.Option(None),
+) -> None:
+    """Return a deterministic candidate route without dispatch or execution authority."""
+    _knowledge_output(knowledge_route, hub, query=query)
+
+
+@knowledge_engineering_app.command("graph")
+def knowledge_engineering_graph_command(
+    node: str = typer.Option("", help="Optional node ID for transitive dependencies."),
+    hub: Optional[Path] = typer.Option(None),
+) -> None:
+    """Inspect the specialist pack dependency graph read-only."""
+    _knowledge_output(knowledge_dependency_graph, hub, node=node or None)
+
+
+@knowledge_engineering_app.command("research-plan")
+def knowledge_engineering_research_plan_command(
+    hub: Optional[Path] = typer.Option(None),
+) -> None:
+    """Show the inactive, human-gated seven-day frontier research contract."""
+    _knowledge_output(knowledge_research_plan, hub)
+
+
+def _agent_family_output(action, hub: Optional[Path], **kwargs: Any) -> None:
+    cfg = _cfg(hub=hub)
+    try:
+        console.print_json(data=action(cfg.repo_root, **kwargs))
+    except (OSError, RuntimeError, ValueError, KeyError, ValidationError) as exc:
+        console.print_json(
+            data={
+                "schema_version": "dad.agent_family.error.v1",
+                "status": "blocked",
+                "error": str(exc),
+                "authority_boundary": (
+                    "Blocked family commands do not authorize code, policy, release, "
+                    "agent-instruction, source-repository, or external-system mutation."
+                ),
+            }
+        )
+        raise typer.Exit(2) from None
+
+
+@agent_families_app.command("catalog")
+def agent_families_catalog_command(
+    query: str = typer.Option("", "--query", "-q"),
+    hub: Optional[Path] = typer.Option(None),
+) -> None:
+    """Search governed family capabilities without dispatching work."""
+    _agent_family_output(agent_family_catalog, hub, query=query)
+
+
+@agent_families_app.command("route")
+def agent_families_route_command(
+    request: str = typer.Argument(..., help="Project request to route."),
+    material: bool = typer.Option(True, "--material/--non-material"),
+    risk_tag: list[str] = typer.Option([], "--risk-tag"),
+    hub: Optional[Path] = typer.Option(None),
+) -> None:
+    """Recommend the smallest model-neutral family set; never execute it."""
+    _agent_family_output(
+        route_agent_families,
+        hub,
+        request=request,
+        material=material,
+        risk_tags=risk_tag,
+    )
+
+
+@agent_families_app.command("graph")
+def agent_families_graph_command(
+    node: str = typer.Option("", help="Optional node ID for a focused projection."),
+    hub: Optional[Path] = typer.Option(None),
+) -> None:
+    """Project typed family, role, pack, pilot, and governance dependencies."""
+    _agent_family_output(agent_family_dependency_graph, hub, focus_node=node or None)
+
+
+@agent_families_app.command("health")
+def agent_families_health_command(hub: Optional[Path] = typer.Option(None)) -> None:
+    """Inspect family contracts and emit deduplicated candidate issues."""
+    _agent_family_output(agent_family_health, hub)
+
+
+@agent_families_app.command("pilot")
+def agent_families_pilot_command(
+    pilot_id: str = typer.Argument(...),
+    repo: Path = typer.Argument(..., exists=True, file_okay=False, resolve_path=True),
+    hub: Optional[Path] = typer.Option(None),
+) -> None:
+    """Run a bounded, metadata-only pilot and prove the source Git state is unchanged."""
+    _agent_family_output(inspect_agent_family_pilot, hub, pilot_repo=repo, pilot_id=pilot_id)
+
+
+@agent_families_app.command("cockpit")
+def agent_families_cockpit_command(
+    include_portfolio_v1: bool = typer.Option(True, "--portfolio-v1/--no-portfolio-v1"),
+    publish: bool = typer.Option(False, "--publish/--no-publish"),
+    full: bool = typer.Option(False, "--full/--summary"),
+    hub: Optional[Path] = typer.Option(None),
+) -> None:
+    """Build the side-by-side one-human cockpit v2, with at most three Now decisions."""
+    cfg = _cfg(hub=hub)
+    try:
+        health = agent_family_health(cfg.repo_root)
+        portfolio_v1 = load_portfolio_cockpit_v1(cfg.repo_root) if include_portfolio_v1 else None
+        capability_snapshot = build_capability_portfolio_snapshot(cfg.repo_root)
+        cockpit = build_portfolio_cockpit_v2(health, portfolio_v1, capability_snapshot)
+        outputs: dict[str, Any] = {}
+        if publish:
+            outputs = {
+                "health": write_agent_family_health(cfg.repo_root, health),
+                "cockpit": write_portfolio_cockpit_v2(cfg.repo_root, cockpit),
+            }
+        console.print_json(
+            data=cockpit
+            if full
+            else {
+                "schema_version": cockpit["schema_version"],
+                "generated_at": cockpit["generated_at"],
+                "status": cockpit["status"],
+                "summary": cockpit["summary"],
+                "now": cockpit["now"],
+                "outputs": outputs,
+                "authority_boundary": cockpit["authority_boundary"],
+            }
+        )
+    except (OSError, RuntimeError, ValueError, KeyError, ValidationError) as exc:
+        console.print_json(
+            data={
+                "schema_version": "dad.agent_family.error.v1",
+                "status": "blocked",
+                "error": str(exc),
+                "authority_boundary": (
+                    "Cockpit generation is read-only unless --publish writes governed DAD reports; "
+                    "it never authorizes downstream mutation."
+                ),
+            }
+        )
+        raise typer.Exit(2) from None
+
+
+def _product_os_output(action: Any, hub: Optional[Path], **kwargs: Any) -> None:
+    cfg = _cfg(hub=hub)
+    try:
+        console.print_json(data=action(cfg.repo_root, **kwargs))
+    except (OSError, RuntimeError, ValueError, KeyError, ValidationError) as exc:
+        console.print_json(
+            data={
+                "schema_version": "dad.technical_product_os.error.v1",
+                "status": "blocked",
+                "error": str(exc),
+                "authority_boundary": (
+                    "A blocked Product OS command grants no execution, mutation, activation, "
+                    "promotion, release, or external-system authority."
+                ),
+            }
+        )
+        raise typer.Exit(2) from None
+
+
+@product_os_app.command("catalog")
+def product_os_catalog_command(
+    hub: Optional[Path] = typer.Option(None),
+) -> None:
+    """Compile the source-fingerprinted capability and dependency index."""
+    _product_os_output(build_capability_index, hub)
+
+
+@product_os_app.command("route")
+def product_os_route_command(
+    query: str = typer.Argument(...),
+    requested_right: str = typer.Option("recommend", "--right"),
+    consequence_tier: str = typer.Option("C0", "--tier"),
+    privacy_class: str = typer.Option("internal_metadata", "--privacy"),
+    maximum_primary: int = typer.Option(3, "--maximum-primary", min=1, max=3),
+    permission_granted: bool = typer.Option(True, "--permission/--no-permission"),
+    suppress_capability: list[str] = typer.Option([], "--suppress-capability"),
+    hub: Optional[Path] = typer.Option(None),
+) -> None:
+    """Recommend at most three primary capabilities; never execute the route."""
+    _product_os_output(
+        route_capabilities,
+        hub,
+        query=query,
+        requested_right=requested_right,
+        consequence_tier=consequence_tier,
+        privacy_class=privacy_class,
+        maximum_primary=maximum_primary,
+        permission_granted=permission_granted,
+        suppressed_capability_ids=suppress_capability,
+    )
+
+
+@product_os_app.command("graph")
+def product_os_graph_command(
+    hub: Optional[Path] = typer.Option(None),
+) -> None:
+    """Project catalog, routes, runs, evidence, policies, gaps, and decisions."""
+    _product_os_output(build_operational_capability_graph, hub)
+
+
+@product_os_app.command("routines")
+def product_os_routines_command(
+    activate: list[str] = typer.Option([], "--activate"),
+    previous_fingerprint: list[str] = typer.Option([], "--previous", help="routine_id=sha256:..."),
+    quiet: bool = typer.Option(False, "--quiet"),
+    hub: Optional[Path] = typer.Option(None),
+) -> None:
+    """Evaluate dormant/delta routine contracts without scheduling or executing them."""
+    previous: dict[str, str] = {}
+    for value in previous_fingerprint:
+        if "=" not in value:
+            raise typer.BadParameter("--previous must use routine_id=sha256:...")
+        routine_id, fingerprint = value.split("=", 1)
+        previous[routine_id] = fingerprint
+    _product_os_output(
+        evaluate_routines,
+        hub,
+        activated_routine_ids=activate,
+        previous_fingerprints=previous,
+        quiet_mode=quiet,
+    )
+
+
+@product_os_app.command("authority")
+def product_os_authority_command(
+    requested_right: str = typer.Option(..., "--right"),
+    consequence_tier: str = typer.Option(..., "--tier"),
+    privacy_class: str = typer.Option("internal_metadata", "--privacy"),
+    actor_class: str = typer.Option(..., "--actor"),
+    verified_gate: list[str] = typer.Option([], "--gate"),
+    actor_id: str = typer.Option("", "--actor-id"),
+    producer_id: str = typer.Option("", "--producer-id"),
+    checker_id: str = typer.Option("", "--checker-id"),
+    action_digest: str = typer.Option("", "--action-digest"),
+    lease_ref: str = typer.Option("", "--lease-ref"),
+    lease_expires_at: str = typer.Option("", "--lease-expires-at"),
+    human_approval_ref: str = typer.Option("", "--human-approval-ref"),
+    checker_evaluation_ref: str = typer.Option("", "--checker-evaluation-ref"),
+    human_gate: bool = typer.Option(False, "--human-gate"),
+    checker_gate: bool = typer.Option(False, "--checker-gate"),
+    domain_gate: bool = typer.Option(False, "--domain-gate"),
+    lease: bool = typer.Option(False, "--lease"),
+    final_confirmation: bool = typer.Option(False, "--final-confirmation"),
+    rollback: bool = typer.Option(False, "--rollback"),
+    hub: Optional[Path] = typer.Option(None),
+) -> None:
+    """Evaluate declared AI decision rights and consequence gates."""
+    _product_os_output(
+        evaluate_decision_right,
+        hub,
+        requested_right=requested_right,
+        consequence_tier=consequence_tier,
+        privacy_class=privacy_class,
+        actor_class=actor_class,
+        verified_gates=verified_gate,
+        actor_id=actor_id,
+        producer_id=producer_id,
+        checker_id=checker_id,
+        action_digest=action_digest,
+        lease_ref=lease_ref,
+        lease_expires_at=lease_expires_at,
+        human_approval_ref=human_approval_ref,
+        checker_evaluation_ref=checker_evaluation_ref,
+        human_gate_verified=human_gate,
+        checker_gate_verified=checker_gate,
+        domain_gate_verified=domain_gate,
+        lease_verified=lease,
+        final_confirmation_verified=final_confirmation,
+        rollback_present=rollback,
+    )
+
+
+@product_os_app.command("snapshot")
+def product_os_snapshot_command(
+    quiet: bool = typer.Option(False, "--quiet"),
+    publish: bool = typer.Option(False, "--publish"),
+    full: bool = typer.Option(False, "--full/--summary"),
+    hub: Optional[Path] = typer.Option(None),
+) -> None:
+    """Build the usage, workflow, gap, efficiency, and three-decision digest."""
+    cfg = _cfg(hub=hub)
+    try:
+        snapshot = build_capability_portfolio_snapshot(cfg.repo_root, quiet_mode=quiet)
+        output = write_capability_os_outputs(cfg.repo_root, snapshot) if publish else {}
+        console.print_json(
+            data=snapshot
+            if full
+            else {
+                "schema_version": snapshot["schema_version"],
+                "generated_at": snapshot["generated_at"],
+                "status": snapshot["status"],
+                "summary": snapshot["summary"],
+                "efficiency": snapshot["efficiency"],
+                "operator": snapshot["operator"],
+                "output": output,
+                "authority_boundary": snapshot["authority_boundary"],
+            }
+        )
+    except (OSError, RuntimeError, ValueError, KeyError, ValidationError) as exc:
+        console.print_json(data={"status": "blocked", "error": str(exc)})
+        raise typer.Exit(2) from None
+
+
+@product_os_app.command("record-route")
+def product_os_record_route_command(
+    query: str = typer.Argument(...),
+    opaque_task_id: str = typer.Option(..., "--task-id"),
+    request_class: str = typer.Option(..., "--request-class"),
+    repository_id: str = typer.Option(..., "--repository-id"),
+    request_tag: list[str] = typer.Option([], "--tag"),
+    requested_right: str = typer.Option("recommend", "--right"),
+    consequence_tier: str = typer.Option("C0", "--tier"),
+    privacy_class: str = typer.Option("internal_metadata", "--privacy"),
+    synthetic: bool = typer.Option(False, "--synthetic"),
+    route_outcome: str = typer.Option("accepted_candidate", "--outcome"),
+    override_reason: list[str] = typer.Option([], "--override-reason"),
+    hub: Optional[Path] = typer.Option(None),
+) -> None:
+    """Explicitly opt in one privacy-safe routing receipt; retries are deduplicated."""
+    cfg = _cfg(hub=hub)
+    route = route_capabilities(
+        cfg.repo_root,
+        query,
+        requested_right=requested_right,
+        consequence_tier=consequence_tier,
+        privacy_class=privacy_class,
+    )
+    receipt = build_routing_receipt(
+        route,
+        opaque_task_id=opaque_task_id,
+        request_class=request_class,
+        request_tags=request_tag,
+        repository_id=repository_id,
+        synthetic_or_fixture=synthetic,
+        route_outcome=route_outcome,
+        override_reason_codes=override_reason,
+    )
+    console.print_json(data=append_routing_receipt(cfg.repo_root, receipt))
+
+
+@product_os_app.command("record-run")
+def product_os_record_run_command(
+    workflow_id: str = typer.Option(..., "--workflow-id"),
+    workflow_revision_id: str = typer.Option(..., "--workflow-revision"),
+    run_id: str = typer.Option(..., "--run-id"),
+    route_event_id: str = typer.Option(..., "--route-event-id"),
+    event_state: str = typer.Option(..., "--state"),
+    capability_id: list[str] = typer.Option([], "--capability"),
+    input_fingerprint: str = typer.Option(..., "--input-fingerprint"),
+    execution_mode: str = typer.Option("deterministic", "--execution-mode"),
+    producer_ref: str = typer.Option(..., "--producer-ref"),
+    synthetic: bool = typer.Option(False, "--synthetic"),
+    checker_ref: str = typer.Option("", "--checker-ref"),
+    evaluation_ref: str = typer.Option("", "--evaluation-ref"),
+    validation_outcome: str = typer.Option("", "--validation-outcome"),
+    adapter_id: str = typer.Option("", "--adapter-id"),
+    hub: Optional[Path] = typer.Option(None),
+) -> None:
+    """Append one explicit workflow lifecycle event; validation needs independent refs."""
+    cfg = _cfg(hub=hub)
+    event = build_workflow_run_event(
+        workflow_id=workflow_id,
+        workflow_revision_id=workflow_revision_id,
+        run_id=run_id,
+        route_event_id=route_event_id,
+        event_state=event_state,
+        capability_ids=capability_id,
+        input_fingerprint=input_fingerprint,
+        execution_mode=execution_mode,
+        producer_ref=producer_ref,
+        synthetic_or_fixture=synthetic,
+        independent_checker_ref=checker_ref,
+        independent_evaluation_ref=evaluation_ref,
+        validation_outcome=validation_outcome,
+        adapter_id=adapter_id,
+    )
+    console.print_json(data=append_workflow_run_event(cfg.repo_root, event))
+
+
+@product_os_app.command("offload-check")
+def product_os_offload_check_command(
+    task_class: str = typer.Argument(...),
+    mechanical: bool = typer.Option(False, "--mechanical"),
+    closed_paths: bool = typer.Option(False, "--closed-paths"),
+    stable_interfaces: bool = typer.Option(False, "--stable-interfaces"),
+    deterministic_validation: bool = typer.Option(False, "--deterministic-validation"),
+    isolated_worktree: bool = typer.Option(False, "--isolated-worktree"),
+    reversible: bool = typer.Option(False, "--reversible"),
+    explicit_lease: bool = typer.Option(False, "--explicit-lease"),
+    independent_checker: bool = typer.Option(False, "--independent-checker"),
+    sanitized_packet: bool = typer.Option(False, "--sanitized-packet"),
+    prohibited_class: list[str] = typer.Option([], "--prohibited-class"),
+    adapter_id: str = typer.Option("adapter:cursor-local", "--adapter"),
+    hub: Optional[Path] = typer.Option(None),
+) -> None:
+    """Classify a mechanical offload packet without dispatching it."""
+    _product_os_output(
+        classify_offload,
+        hub,
+        task_class=task_class,
+        mechanical_task=mechanical,
+        closed_allowed_paths=closed_paths,
+        stable_authority_and_interfaces=stable_interfaces,
+        deterministic_validation=deterministic_validation,
+        isolated_worktree=isolated_worktree,
+        reversible_diff=reversible,
+        explicit_lease=explicit_lease,
+        independent_checker=independent_checker,
+        sanitized_minimal_packet=sanitized_packet,
+        prohibited_classes=prohibited_class,
+        adapter_id=adapter_id,
+    )
 
 
 def _repo_path(repo_root: Path, path: Path | None) -> Path | None:
@@ -963,6 +1558,7 @@ def portfolio_os_lease_request(
     duration_hours: int = typer.Option(24, "--duration-hours", min=1, max=744),
     return_state: str = typer.Option("paused", "--return-state"),
     rationale_code: str = typer.Option(..., "--rationale-code"),
+    portability_artifact_id: list[str] = typer.Option([], "--portability-artifact-id"),
     supersedes_lease_id: str = typer.Option("", "--supersedes-lease-id"),
     request_id: str = typer.Option("", "--request-id"),
     config: Optional[Path] = typer.Option(None),
@@ -985,6 +1581,7 @@ def portfolio_os_lease_request(
             expires_at=observed + timedelta(hours=duration_hours),
             return_state=return_state,
             rationale_code=rationale_code,
+            portability_artifact_ids=portability_artifact_id,
             supersedes_lease_id=supersedes_lease_id,
             command_id=request_id or None,
             now=observed,
@@ -10844,6 +11441,634 @@ def portfolio_os_shape(
             "reconciliation": reconciliation_outputs,
         }
     )
+
+
+@intent_app.command("checkpoint")
+def portfolio_intent_checkpoint(
+    title: str = typer.Option(..., "--title"),
+    outcome: str = typer.Option(..., "--outcome"),
+    next_action: str = typer.Option("", "--next-action"),
+    consequence: str = typer.Option("C1", "--consequence"),
+    request_id: str = typer.Option("", "--request-id"),
+    config: Optional[Path] = typer.Option(None),
+    hub: Optional[Path] = typer.Option(None),
+) -> None:
+    """Persist a compact non-authorizing material-intent seed."""
+    cfg = _cfg(config, hub)
+    event = capture_plan(
+        cfg.repo_root,
+        title=title,
+        outcome=outcome,
+        smallest_next_action=next_action,
+        consequence_class=consequence,
+        request_id=request_id,
+    )
+    console.print_json(data=event)
+
+
+@plan_app.command("capture")
+def portfolio_plan_capture(
+    title: str = typer.Option(..., "--title"),
+    outcome: str = typer.Option(..., "--outcome"),
+    plan_file: Optional[Path] = typer.Option(None, "--plan-file"),
+    lifecycle: str = typer.Option("decision_complete", "--lifecycle"),
+    implementation_state: str = typer.Option("unstarted", "--implementation-state"),
+    next_action: str = typer.Option("", "--next-action"),
+    acceptance_evidence: list[str] = typer.Option([], "--acceptance-evidence"),
+    independent_check_ref: str = typer.Option("", "--independent-check-ref"),
+    producer_ref: str = typer.Option("", "--producer-ref"),
+    independent_checker_ref: str = typer.Option("", "--independent-checker-ref"),
+    validated_plan_revision_id: str = typer.Option("", "--validated-plan-revision-id"),
+    human_approval_ref: str = typer.Option("", "--human-approval-ref"),
+    request_id: str = typer.Option("", "--request-id"),
+    config: Optional[Path] = typer.Option(None),
+    hub: Optional[Path] = typer.Option(None),
+) -> None:
+    """Capture one sanitized immutable private plan revision."""
+    cfg = _cfg(config, hub)
+    markdown = plan_file.read_text(encoding="utf-8") if plan_file else ""
+    event = capture_plan(
+        cfg.repo_root,
+        title=title,
+        outcome=outcome,
+        plan_markdown=markdown,
+        lifecycle=lifecycle,
+        implementation_state=implementation_state,
+        smallest_next_action=next_action,
+        acceptance_evidence=acceptance_evidence,
+        independent_check_ref=independent_check_ref,
+        producer_ref=producer_ref,
+        independent_checker_ref=independent_checker_ref,
+        validated_plan_revision_id=validated_plan_revision_id,
+        human_approval_ref=human_approval_ref,
+        request_id=request_id,
+    )
+    console.print_json(data=event)
+
+
+@plan_app.command("revise")
+def portfolio_plan_revise(
+    plan_id: str = typer.Argument(...),
+    plan_file: Optional[Path] = typer.Option(None, "--plan-file"),
+    lifecycle: Optional[str] = typer.Option(None, "--lifecycle"),
+    implementation_state: Optional[str] = typer.Option(None, "--implementation-state"),
+    acceptance_evidence: list[str] = typer.Option([], "--acceptance-evidence"),
+    independent_check_ref: Optional[str] = typer.Option(None, "--independent-check-ref"),
+    producer_ref: Optional[str] = typer.Option(None, "--producer-ref"),
+    independent_checker_ref: Optional[str] = typer.Option(None, "--independent-checker-ref"),
+    validated_plan_revision_id: Optional[str] = typer.Option(None, "--validated-plan-revision-id"),
+    human_approval_ref: Optional[str] = typer.Option(None, "--human-approval-ref"),
+    request_id: str = typer.Option("", "--request-id"),
+    config: Optional[Path] = typer.Option(None),
+    hub: Optional[Path] = typer.Option(None),
+) -> None:
+    cfg = _cfg(config, hub)
+    markdown = plan_file.read_text(encoding="utf-8") if plan_file else None
+    console.print_json(data=revise_plan(
+        cfg.repo_root,
+        plan_id,
+        plan_markdown=markdown,
+        lifecycle=lifecycle,
+        implementation_state=implementation_state,
+        acceptance_evidence=acceptance_evidence or None,
+        independent_check_ref=independent_check_ref,
+        producer_ref=producer_ref,
+        independent_checker_ref=independent_checker_ref,
+        validated_plan_revision_id=validated_plan_revision_id,
+        human_approval_ref=human_approval_ref,
+        request_id=request_id,
+    ))
+
+
+@plan_app.command("search")
+def portfolio_plan_search(
+    query: str = typer.Argument(...),
+    related: bool = typer.Option(True, "--related/--plans-only"),
+    privacy_partition: str = typer.Option("private", "--privacy-partition"),
+    config: Optional[Path] = typer.Option(None),
+    hub: Optional[Path] = typer.Option(None),
+) -> None:
+    cfg = _cfg(config, hub)
+    result = (
+        search_related_work(
+            cfg.repo_root, cfg.repo_root, query, privacy_partition=privacy_partition
+        )
+        if related
+        else search_plans(
+            cfg.repo_root, query, privacy_partition=privacy_partition
+        )
+    )
+    console.print_json(data=result)
+
+
+@plan_app.command("show")
+def portfolio_plan_show(
+    plan_id: str = typer.Argument(...),
+    revision_id: str = typer.Option("", "--revision-id"),
+    config: Optional[Path] = typer.Option(None),
+    hub: Optional[Path] = typer.Option(None),
+) -> None:
+    cfg = _cfg(config, hub)
+    console.print_json(data=load_plan_revision(cfg.repo_root, plan_id, revision_id))
+
+
+@plan_app.command("status")
+def portfolio_plan_status(
+    config: Optional[Path] = typer.Option(None),
+    hub: Optional[Path] = typer.Option(None),
+) -> None:
+    cfg = _cfg(config, hub)
+    console.print_json(data=fold_plan_index(read_intent_events(cfg.repo_root)))
+
+
+@plan_app.command("recover")
+def portfolio_plan_recover(
+    plan_id: str = typer.Argument(...),
+    observation_file: Path = typer.Option(..., "--observation-file"),
+    config: Optional[Path] = typer.Option(None),
+    hub: Optional[Path] = typer.Option(None),
+) -> None:
+    cfg = _cfg(config, hub)
+    plan = next(
+        (row for row in fold_plan_index(read_intent_events(cfg.repo_root))["plans"] if row["plan_id"] == plan_id),
+        None,
+    )
+    if plan is None:
+        raise typer.BadParameter(f"unknown plan: {plan_id}")
+    observation = json.loads(observation_file.read_text(encoding="utf-8"))
+    console.print_json(data=build_recovery_bundle(plan=plan, worktree_observation=observation))
+
+
+@plan_app.command("close")
+def portfolio_plan_close(
+    plan_id: str = typer.Argument(...),
+    lifecycle: str = typer.Option("withdrawn", "--lifecycle"),
+    request_id: str = typer.Option("", "--request-id"),
+    config: Optional[Path] = typer.Option(None),
+    hub: Optional[Path] = typer.Option(None),
+) -> None:
+    """Record a non-executing lifecycle revision; verified completion is evidence-gated elsewhere."""
+    if lifecycle not in {"withdrawn", "superseded"}:
+        raise typer.BadParameter("close supports only withdrawn or superseded")
+    cfg = _cfg(config, hub)
+    console.print_json(data=revise_plan(cfg.repo_root, plan_id, lifecycle=lifecycle, request_id=request_id))
+
+
+@recovery_app.command("digest")
+def portfolio_recovery_digest(
+    today_file: Optional[Path] = typer.Option(None, "--today-file"),
+    previous_file: Optional[Path] = typer.Option(None, "--previous-file"),
+    config: Optional[Path] = typer.Option(None),
+    hub: Optional[Path] = typer.Option(None),
+) -> None:
+    cfg = _cfg(config, hub)
+    today = json.loads(today_file.read_text(encoding="utf-8")) if today_file else []
+    previous = json.loads(previous_file.read_text(encoding="utf-8")) if previous_file else []
+    digest = build_weekly_digest(
+        fold_plan_index(read_intent_events(cfg.repo_root)),
+        today_items=today,
+        previous_fingerprints=previous,
+    )
+    console.print_json(data={"digest": digest, "output": write_weekly_digest(cfg.repo_root, digest)})
+
+
+@recovery_app.command("deliver")
+def portfolio_recovery_deliver(
+    digest_file: Path = typer.Option(..., "--digest-file"),
+) -> None:
+    """Render the metadata-safe toast packet without scheduling or delivering it."""
+    digest = json.loads(digest_file.read_text(encoding="utf-8"))
+    console.print_json(data={"status": "activation_required", "toast": metadata_safe_toast(digest)})
+
+
+@os_app.command("capability-cockpit")
+def capability_os_cockpit_command(
+    today_file: Optional[Path] = typer.Option(None, "--today-file"),
+    usage_file: Optional[Path] = typer.Option(None, "--usage-file"),
+    full: bool = typer.Option(False, "--full"),
+    config: Optional[Path] = typer.Option(None),
+    hub: Optional[Path] = typer.Option(None),
+) -> None:
+    """Publish the local read-only Capability OS companion cockpit."""
+    cfg = _cfg(config, hub)
+    today = json.loads(today_file.read_text(encoding="utf-8")) if today_file else []
+    usage = json.loads(usage_file.read_text(encoding="utf-8")) if usage_file else []
+    cockpit = build_capability_os_cockpit(cfg.repo_root, cfg.repo_root, today_items=today, usage_rows=usage)
+    outputs = write_capability_os_cockpit(cfg.repo_root, cockpit)
+    console.print_json(data=cockpit if full else outputs)
+
+
+@identity_app.command("candidates")
+def identity_candidates(
+    label: str = typer.Option(..., "--label"),
+    entity_kind: str = typer.Option(..., "--kind"),
+    capability: list[str] = typer.Option([], "--capability"),
+    config: Optional[Path] = typer.Option(None),
+    hub: Optional[Path] = typer.Option(None),
+) -> None:
+    cfg = _cfg(config, hub)
+    state = fold_entity_state(read_entity_events(cfg.repo_root))
+    source = {"entity_id": "query:ephemeral", "semantic_card": semantic_card(label=label, entity_kind=entity_kind, capabilities=capability)}
+    console.print_json(data=find_candidates(source, state["entities"]))
+
+
+@identity_app.command("lineage")
+def identity_lineage(
+    entity_id: str = typer.Argument(...),
+    config: Optional[Path] = typer.Option(None),
+    hub: Optional[Path] = typer.Option(None),
+) -> None:
+    cfg = _cfg(config, hub)
+    graph = build_entity_graph(fold_entity_state(read_entity_events(cfg.repo_root)))
+    console.print_json(data={"entity_id": entity_id, "reverse_dependencies": reverse_blast_radius(graph, entity_id), "execution_authorized": False})
+
+
+@identity_app.command("neighbors")
+def identity_neighbors(
+    entity_id: str = typer.Argument(...),
+    config: Optional[Path] = typer.Option(None),
+    hub: Optional[Path] = typer.Option(None),
+) -> None:
+    cfg = _cfg(config, hub)
+    graph = build_entity_graph(fold_entity_state(read_entity_events(cfg.repo_root)))
+    edges = [row for row in graph["edges"] if entity_id in {row["source"], row["target"]}]
+    console.print_json(data={"entity_id": entity_id, "edges": edges, "candidate_only": True, "execution_authorized": False})
+
+
+@identity_app.command("validate")
+def identity_validate(
+    config: Optional[Path] = typer.Option(None),
+    hub: Optional[Path] = typer.Option(None),
+) -> None:
+    cfg = _cfg(config, hub)
+    graph = build_entity_graph(fold_entity_state(read_entity_events(cfg.repo_root)))
+    console.print_json(data={"valid": True, "graph_digest": graph["graph_digest"], "execution_authorized": False})
+
+
+@identity_app.command("decision-record")
+def identity_decision_record_command(
+    decision_id: str = typer.Option(..., "--decision-id"),
+    disposition: str = typer.Option(..., "--disposition"),
+    source: list[str] = typer.Option(..., "--source"),
+    target: list[str] = typer.Option([], "--target"),
+    human_approval_ref: str = typer.Option(..., "--human-approval-ref"),
+    rationale: str = typer.Option(..., "--rationale"),
+    config: Optional[Path] = typer.Option(None),
+    hub: Optional[Path] = typer.Option(None),
+) -> None:
+    cfg = _cfg(config, hub)
+    console.print_json(data=record_identity_decision(
+        cfg.repo_root,
+        decision_id=decision_id,
+        disposition=disposition,
+        source_entity_ids=source,
+        target_entity_ids=target,
+        human_approval_ref=human_approval_ref,
+        rationale=rationale,
+    ))
+
+
+@identity_app.command("merge")
+def identity_merge_command(
+    source: list[str] = typer.Option(..., "--source"),
+    target: str = typer.Option(..., "--target"),
+    decision_id: str = typer.Option(..., "--decision-id"),
+    human_approval_ref: str = typer.Option(..., "--human-approval-ref"),
+    rationale: str = typer.Option(..., "--rationale"),
+    config: Optional[Path] = typer.Option(None),
+    hub: Optional[Path] = typer.Option(None),
+) -> None:
+    """Record a reviewed merge decision; redirect application remains separate."""
+    cfg = _cfg(config, hub)
+    console.print_json(data=record_identity_decision(cfg.repo_root, decision_id=decision_id, disposition="merge", source_entity_ids=source, target_entity_ids=[target], human_approval_ref=human_approval_ref, rationale=rationale))
+
+
+@identity_app.command("split")
+def identity_split_command(
+    source: str = typer.Option(..., "--source"),
+    target: list[str] = typer.Option(..., "--target"),
+    decision_id: str = typer.Option(..., "--decision-id"),
+    human_approval_ref: str = typer.Option(..., "--human-approval-ref"),
+    rationale: str = typer.Option(..., "--rationale"),
+    config: Optional[Path] = typer.Option(None),
+    hub: Optional[Path] = typer.Option(None),
+) -> None:
+    """Record a reviewed split decision; successor application remains separate."""
+    cfg = _cfg(config, hub)
+    console.print_json(data=record_identity_decision(cfg.repo_root, decision_id=decision_id, disposition="split", source_entity_ids=[source], target_entity_ids=target, human_approval_ref=human_approval_ref, rationale=rationale))
+
+
+@runtime_app.command("status")
+def runtime_status(
+    config: Optional[Path] = typer.Option(None),
+    hub: Optional[Path] = typer.Option(None),
+) -> None:
+    cfg = _cfg(config, hub)
+    from .runtime_resolver import load_adapter_registry
+    console.print_json(data=load_adapter_registry(cfg.repo_root))
+
+
+@runtime_app.command("adapters")
+def runtime_adapters(
+    config: Optional[Path] = typer.Option(None),
+    hub: Optional[Path] = typer.Option(None),
+) -> None:
+    runtime_status(config=config, hub=hub)
+
+
+@runtime_app.command("resolve")
+def runtime_resolve(
+    registrations_file: Path = typer.Option(..., "--registrations-file"),
+    request_file: Path = typer.Option(..., "--request-file"),
+    config: Optional[Path] = typer.Option(None),
+    hub: Optional[Path] = typer.Option(None),
+) -> None:
+    cfg = _cfg(config, hub)
+    registrations = json.loads(registrations_file.read_text(encoding="utf-8"))
+    request = json.loads(request_file.read_text(encoding="utf-8"))
+    snapshot = build_capability_snapshot(cfg.repo_root, registrations)
+    console.print_json(data=resolve_runtime(cfg.repo_root, request, snapshot))
+
+
+@runtime_app.command("explain")
+def runtime_explain(decision_file: Path = typer.Option(..., "--decision-file")) -> None:
+    decision = json.loads(decision_file.read_text(encoding="utf-8"))
+    console.print_json(data={
+        "decision_id": decision.get("decision_id", ""),
+        "status": decision.get("status", "unknown"),
+        "selected_runtime_id": decision.get("selected_runtime_id", ""),
+        "fallback_runtime_id": decision.get("fallback_runtime_id", ""),
+        "ranking_basis": decision.get("ranking_basis", []),
+        "rejections": decision.get("rejections", []),
+        "execution_authorized": False,
+    })
+
+
+@harness_app.command("engineering-status")
+def harness_engineering_status(
+    config: Optional[Path] = typer.Option(None),
+    hub: Optional[Path] = typer.Option(None),
+) -> None:
+    cfg = _cfg(config, hub)
+    console.print_json(data=load_harness_registry(cfg.repo_root))
+
+
+@harness_app.command("route")
+def harness_route(
+    revisions_file: Path = typer.Option(..., "--revisions-file"),
+    tag: list[str] = typer.Option([], "--tag"),
+    runtime_capability: list[str] = typer.Option([], "--runtime-capability"),
+) -> None:
+    revisions = json.loads(revisions_file.read_text(encoding="utf-8"))
+    console.print_json(data=route_harness(revisions, task_tags=tag, runtime_capability_ids=runtime_capability))
+
+
+@harness_app.command("health")
+def harness_health_command(
+    config: Optional[Path] = typer.Option(None),
+    hub: Optional[Path] = typer.Option(None),
+) -> None:
+    harness_engineering_status(config=config, hub=hub)
+
+
+@harness_app.command("run")
+def harness_run_command(
+    spec_file: Path = typer.Option(..., "--spec-file"),
+    target_repo: Path = typer.Option(Path("."), "--target-repo"),
+    harness_package: Path = typer.Option(Path("."), "--harness-package"),
+    available_tool: list[str] = typer.Option([], "--available-tool"),
+) -> None:
+    """Prepare a typed command dry run; the candidate registry denies execution."""
+    spec = json.loads(spec_file.read_text(encoding="utf-8"))
+    console.print_json(data=run_typed_command(spec, target_repo=target_repo, harness_package=harness_package, available_tool_capabilities=available_tool, execute=False))
+
+
+@harness_app.command("shadow")
+def harness_shadow_command(
+    revision_file: Path = typer.Option(..., "--revision-file"),
+    evidence: list[str] = typer.Option(..., "--evidence"),
+) -> None:
+    revision = json.loads(revision_file.read_text(encoding="utf-8"))
+    console.print_json(data=lifecycle_candidate(revision, "shadow", evidence_refs=evidence))
+
+
+@harness_app.command("lifecycle")
+def harness_lifecycle_command(
+    revision_file: Path = typer.Option(..., "--revision-file"),
+    to_state: str = typer.Option(..., "--to-state"),
+    evidence: list[str] = typer.Option(..., "--evidence"),
+    human_approval_ref: str = typer.Option("", "--human-approval-ref"),
+) -> None:
+    revision = json.loads(revision_file.read_text(encoding="utf-8"))
+    console.print_json(data=lifecycle_candidate(revision, to_state, evidence_refs=evidence, human_approval_ref=human_approval_ref))
+
+
+@autonomy_app.command("status")
+def autonomy_status(
+    config: Optional[Path] = typer.Option(None),
+    hub: Optional[Path] = typer.Option(None),
+) -> None:
+    cfg = _cfg(config, hub)
+    console.print_json(data=load_autonomy_registry(cfg.repo_root))
+
+
+@autonomy_app.command("evaluate")
+def autonomy_evaluate(
+    action_file: Path = typer.Option(..., "--action-file"),
+    config: Optional[Path] = typer.Option(None),
+    hub: Optional[Path] = typer.Option(None),
+) -> None:
+    cfg = _cfg(config, hub)
+    action = json.loads(action_file.read_text(encoding="utf-8"))
+    console.print_json(data=evaluate_authority(cfg.repo_root, action))
+
+
+@autonomy_app.command("pause")
+def autonomy_pause(
+    scope_type: str = typer.Option(..., "--scope-type"),
+    scope_id: str = typer.Option(..., "--scope-id"),
+    reason: list[str] = typer.Option(..., "--reason"),
+    consequence: str = typer.Option("medium", "--consequence"),
+    config: Optional[Path] = typer.Option(None),
+    hub: Optional[Path] = typer.Option(None),
+) -> None:
+    cfg = _cfg(config, hub)
+    console.print_json(data=quarantine_candidate(cfg.repo_root, scope_type=scope_type, scope_id=scope_id, consequence=consequence, reason_codes=reason))
+
+
+@autonomy_app.command("kill")
+def autonomy_kill(
+    signal: list[str] = typer.Option(..., "--signal"),
+    incident_id: str = typer.Option(..., "--incident-id"),
+    config: Optional[Path] = typer.Option(None),
+    hub: Optional[Path] = typer.Option(None),
+) -> None:
+    cfg = _cfg(config, hub)
+    console.print_json(data=global_kill_candidate(cfg.repo_root, observed_signals=signal, incident_id=incident_id))
+
+
+@autonomy_app.command("resume-request")
+def autonomy_resume_request(
+    scope_type: str = typer.Option(..., "--scope-type"),
+    scope_id: str = typer.Option(..., "--scope-id"),
+    evidence: list[str] = typer.Option(..., "--evidence"),
+    config: Optional[Path] = typer.Option(None),
+    hub: Optional[Path] = typer.Option(None),
+) -> None:
+    cfg = _cfg(config, hub)
+    console.print_json(data=build_control_event(cfg.repo_root, event_kind="recovery_requested", scope_type=scope_type, scope_id=scope_id, authority_level="A1", consequence="medium", payload={"evidence_refs": evidence, "lifts_restriction": False}))
+
+
+@autonomy_app.command("recover")
+def autonomy_recover(
+    scope_type: str = typer.Option(..., "--scope-type"),
+    scope_id: str = typer.Option(..., "--scope-id"),
+    human_approval_ref: str = typer.Option(..., "--human-approval-ref"),
+    independent_check_ref: str = typer.Option(..., "--independent-check-ref"),
+    config: Optional[Path] = typer.Option(None),
+    hub: Optional[Path] = typer.Option(None),
+) -> None:
+    cfg = _cfg(config, hub)
+    console.print_json(data=build_control_event(cfg.repo_root, event_kind="recovery_approved", scope_type=scope_type, scope_id=scope_id, authority_level="A3", consequence="critical", payload={"human_approval_ref": human_approval_ref, "independent_check_ref": independent_check_ref, "applied": False, "requires_separate_activation": True}))
+
+
+@autonomy_app.command("allowlist")
+def autonomy_allowlist(
+    config: Optional[Path] = typer.Option(None),
+    hub: Optional[Path] = typer.Option(None),
+) -> None:
+    cfg = _cfg(config, hub)
+    registry = load_autonomy_registry(cfg.repo_root)
+    console.print_json(data={"status": "candidate_deny_execute", "authority_levels": registry["authority_levels"], "active_allowlists": [], "execution_authorized": False})
+
+
+@portability_app.command("status")
+def portability_status(
+    config: Optional[Path] = typer.Option(None),
+    hub: Optional[Path] = typer.Option(None),
+) -> None:
+    from .portability_control import health_snapshot
+
+    cfg = _cfg(config, hub)
+    console.print_json(data=health_snapshot(cfg.repo_root))
+
+
+@portability_app.command("classify")
+def portability_classify(
+    task: str = typer.Option("", "--task"),
+    path: list[str] = typer.Option([], "--path"),
+    config: Optional[Path] = typer.Option(None),
+    hub: Optional[Path] = typer.Option(None),
+) -> None:
+    from .portability_control import assess_lifecycle
+
+    cfg = _cfg(config, hub)
+    console.print_json(data=assess_lifecycle(cfg.repo_root, stage="preflight", task=task, paths=path))
+
+
+@portability_app.command("validate")
+def portability_validate(
+    protected_transition: bool = typer.Option(False, "--protected-transition"),
+    config: Optional[Path] = typer.Option(None),
+    hub: Optional[Path] = typer.Option(None),
+) -> None:
+    from .portability_control import assess_lifecycle, validate_portability
+
+    cfg = _cfg(config, hub)
+    result = (
+        assess_lifecycle(cfg.repo_root, stage="release", protected_transition=True)
+        if protected_transition
+        else validate_portability(cfg.repo_root)
+    )
+    console.print_json(data=result)
+    if result.get("valid") is False or result.get("gate_outcome") == "block":
+        raise typer.Exit(2)
+
+
+@portability_app.command("affected")
+def portability_affected(
+    artifact_id: str = typer.Argument(...),
+    config: Optional[Path] = typer.Option(None),
+    hub: Optional[Path] = typer.Option(None),
+) -> None:
+    from .portability_control import affected
+
+    cfg = _cfg(config, hub)
+    console.print_json(data=affected(cfg.repo_root, artifact_id))
+
+
+@portability_app.command("graph")
+def portability_graph(
+    config: Optional[Path] = typer.Option(None),
+    hub: Optional[Path] = typer.Option(None),
+) -> None:
+    from .portability_control import build_graph
+
+    cfg = _cfg(config, hub)
+    console.print_json(data=build_graph(cfg.repo_root))
+
+
+@portability_app.command("exception-candidate")
+def portability_exception_candidate(
+    artifact_id: str = typer.Option(..., "--artifact-id"),
+    reason: str = typer.Option(..., "--reason"),
+) -> None:
+    from .portability_control import exception_candidate
+
+    console.print_json(data=exception_candidate(artifact_id, reason))
+
+
+@portability_app.command("migration-plan")
+def portability_migration_plan(
+    config: Optional[Path] = typer.Option(None),
+    hub: Optional[Path] = typer.Option(None),
+) -> None:
+    from .portability_control import inventory, validate_portability
+
+    cfg = _cfg(config, hub)
+    inv = inventory(cfg.repo_root)
+    result = validate_portability(cfg.repo_root)
+    console.print_json(data={"baseline": inv, "new_or_worsened": result["findings"], "migration_order": ["new_and_changed", "allowlisted_personal_skills", "families_and_packs", "workflows_libraries_and_knowledge_interfaces", "enrolled_repositories_by_local_approval"], "execution_authorized": False})
+
+
+@portability_experiment_app.command("prepare")
+def portability_experiment_prepare(
+    core_revision_id: str = typer.Option(..., "--core-revision-id"),
+    harness_revision_id: str = typer.Option(..., "--harness-revision-id"),
+    corpus_revision_id: str = typer.Option(..., "--corpus-revision-id"),
+) -> None:
+    from .portability_control import canonical_digest
+
+    packet = {"core_revision_id": core_revision_id, "harness_revision_id": harness_revision_id, "corpus_revision_id": corpus_revision_id, "runtime_bindings_separate": True, "read_only_shadow": True, "human_promotion_required": True, "execution_authorized": False}
+    console.print_json(data={"experiment_packet_id": "portability-experiment-packet:" + canonical_digest(packet).split(":", 1)[1], **packet})
+
+
+@portability_experiment_app.command("validate")
+def portability_experiment_validate(
+    qualification_file: Path = typer.Option(..., "--qualification-file"),
+    receipt_file: list[Path] = typer.Option(..., "--receipt-file"),
+    config: Optional[Path] = typer.Option(None),
+    hub: Optional[Path] = typer.Option(None),
+) -> None:
+    from .portability_control import qualify_runtime
+
+    cfg = _cfg(config, hub)
+    qualification = json.loads(qualification_file.read_text(encoding="utf-8"))
+    receipts = [json.loads(path.read_text(encoding="utf-8")) for path in receipt_file]
+    console.print_json(data=qualify_runtime(cfg.repo_root, qualification, receipts))
+
+
+@portability_app.command("retirement-exposure")
+def portability_retirement_exposure(
+    runtime_id: str = typer.Option(..., "--runtime-id"),
+    signal_digest: str = typer.Option(..., "--signal-digest"),
+    config: Optional[Path] = typer.Option(None),
+    hub: Optional[Path] = typer.Option(None),
+) -> None:
+    from .portability_control import retirement_exposure
+
+    cfg = _cfg(config, hub)
+    console.print_json(data=retirement_exposure(cfg.repo_root, runtime_id, signal_digest))
 
 
 if __name__ == "__main__":

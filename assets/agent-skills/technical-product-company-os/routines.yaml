@@ -1,0 +1,72 @@
+schema_version: dad_skill_routines.v0_2
+skill_id: skill:technical-product-company-os
+activation_status: human_activation_required
+default_execution_authorized: false
+authority_boundary: >
+  Routine evaluation is deterministic and candidate-only. No routine may
+  self-activate, call a model, notify, mutate, or dispatch an adapter.
+routines:
+  - routine_id: capability-catalog-delta
+    revision: v1
+    activation_status: dormant
+    cadence: P1D
+    trigger: authoritative_registry_fingerprint_changed
+    suppressors: [unchanged_fingerprint, quiet_mode, permission_missing]
+    wake_conditions: [human_activation, source_fingerprint_delta]
+    input_fingerprint: catalog_fingerprint
+    permission_envelope: read_only_dad_registry_metadata
+    budget: {maximum_model_calls: 0, maximum_immediate_decisions: 1}
+    idempotency_key: routine_id_revision_input_fingerprint
+    outputs: [one_deduplicated_catalog_refresh_candidate]
+    validator: deterministic_catalog_fingerprint_replay
+    rollback: discard_candidate_and_restore_prior_projection
+    kill_criteria: [unexpected_model_call, external_mutation, source_authority_conflict]
+    no_change_model_tokens: 0
+  - routine_id: capability-gap-review
+    revision: v1
+    activation_status: dormant
+    cadence: P7D
+    trigger: repeated_eligible_unserved_failed_or_overridden_route
+    suppressors: [unchanged_route_run_fingerprint, insufficient_repetition, quiet_mode, permission_missing]
+    wake_conditions: [human_activation, independently_supported_evidence_delta]
+    input_fingerprint: route_and_run_ledger_fingerprint
+    permission_envelope: privacy_safe_usage_metadata_only
+    budget: {maximum_model_calls: 0, maximum_immediate_decisions: 1}
+    idempotency_key: routine_id_revision_input_fingerprint
+    outputs: [at_most_one_gap_candidate_per_semantic_fingerprint]
+    validator: gap_rule_replay_with_counterevidence
+    rollback: discard_candidate_without_rewriting_ledgers
+    kill_criteria: [private_payload_required, automatic_instruction_edit, self_promotion]
+    no_change_model_tokens: 0
+  - routine_id: workflow-pattern-review
+    revision: v1
+    activation_status: dormant
+    cadence: P14D
+    trigger: repeated_independently_validated_capability_sequence
+    suppressors: [unchanged_route_run_fingerprint, fewer_than_three_supported_runs, quiet_mode, permission_missing]
+    wake_conditions: [human_activation, third_supported_sequence_run]
+    input_fingerprint: route_and_run_ledger_fingerprint
+    permission_envelope: privacy_safe_usage_metadata_only
+    budget: {maximum_model_calls: 0, maximum_immediate_decisions: 1}
+    idempotency_key: routine_id_revision_input_fingerprint
+    outputs: [at_most_one_workflow_candidate]
+    validator: independent_run_linkage_and_sequence_replay
+    rollback: discard_shadow_candidate_without_activation
+    kill_criteria: [synthetic_evidence_in_operational_count, validator_missing, automatic_activation]
+    no_change_model_tokens: 0
+  - routine_id: operator-digest
+    revision: v1
+    activation_status: dormant
+    cadence: P7D
+    trigger: material_decision_or_risk_delta
+    suppressors: [unchanged_portfolio_fingerprint, empty_digest, quiet_mode, permission_missing]
+    wake_conditions: [human_activation, new_human_decision_fingerprint]
+    input_fingerprint: portfolio_candidate_fingerprint
+    permission_envelope: local_candidate_metadata_only
+    budget: {maximum_model_calls: 0, maximum_immediate_decisions: 3}
+    idempotency_key: routine_id_revision_input_fingerprint
+    outputs: [at_most_three_immediate_decisions]
+    validator: max_three_and_semantic_deduplication_replay
+    rollback: discard_digest_without_notification
+    kill_criteria: [more_than_three_immediate_decisions, notification_without_permission, external_mutation]
+    no_change_model_tokens: 0

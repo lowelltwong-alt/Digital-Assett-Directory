@@ -1,0 +1,409 @@
+{
+  "schema_version": "dad.technical_product_company_os_registry.v1",
+  "registry_id": "technical-product-company-os-registry",
+  "registry_version": "0.2.0",
+  "status": "candidate",
+  "candidate_only": true,
+  "ai_agnostic": true,
+  "authority_boundary": "DAD owns this candidate orchestration contract and its derived catalog, routing, telemetry, graph, and cockpit projections. Source repositories retain local meaning. Lowell retains product, priority, budget, privacy, security, automation activation, external offload, release, and exception authority.",
+  "implemented_scope": {
+    "coverage_ranks": [1, 10],
+    "later_ranks_status": "deferred_not_implemented",
+    "maximum_immediate_decisions": 3,
+    "single_human_operator": true,
+    "operator_has_external_full_time_job": true
+  },
+  "authority_precedence": [
+    "registry/source-of-truth.json",
+    "registry/design-authority.json",
+    "registered schemas and controlled vocabularies",
+    "validated implementation",
+    "roadmap state",
+    "narrative documentation",
+    "generated projections"
+  ],
+  "decision_rights": [
+    {
+      "right_id": "observe",
+      "description": "Read declared metadata inside an approved coverage and privacy boundary.",
+      "allowed_actor_classes": ["router", "manager", "catalyst", "architect", "worker", "checker", "sentinel", "deterministic_service"],
+      "allowed_consequence_tiers": ["C0"],
+      "required_gates": ["declared_scope", "known_privacy_class"],
+      "prohibited_side_effects": ["persistent_capture_without_approval", "scope_expansion"]
+    },
+    {
+      "right_id": "retrieve",
+      "description": "Retrieve content only from explicitly authorized sources and hydration depth.",
+      "allowed_actor_classes": ["router", "manager", "catalyst", "architect", "worker", "checker"],
+      "allowed_consequence_tiers": ["C0", "C1", "C2", "C3"],
+      "required_gates": ["source_authorization", "privacy_gate"],
+      "prohibited_side_effects": ["permission_bypass", "undeclared_cross_repo_retrieval"]
+    },
+    {
+      "right_id": "recommend",
+      "description": "Emit candidate evidence, alternatives, counterevidence, confidence, and unknowns.",
+      "allowed_actor_classes": ["router", "manager", "catalyst", "architect", "checker", "sentinel"],
+      "allowed_consequence_tiers": ["C0", "C1", "C2", "C3"],
+      "required_gates": ["evidence_and_counterevidence", "candidate_label"],
+      "prohibited_side_effects": ["automatic_promotion", "automatic_execution"]
+    },
+    {
+      "right_id": "draft",
+      "description": "Write a bounded reversible artifact in an explicitly authorized worktree or staging surface.",
+      "allowed_actor_classes": ["worker"],
+      "allowed_consequence_tiers": ["C1", "C2"],
+      "required_gates": ["exact_scope", "single_writer", "validation_plan", "rollback"],
+      "prohibited_side_effects": ["external_effect", "release", "scope_expansion"]
+    },
+    {
+      "right_id": "validate",
+      "description": "Independently check a producer output from permitted evidence without modifying it.",
+      "allowed_actor_classes": ["checker", "deterministic_service"],
+      "allowed_consequence_tiers": ["C1", "C2", "C3"],
+      "required_gates": ["producer_checker_separation", "raw_evidence"],
+      "prohibited_side_effects": ["checker_mutation", "business_decision"]
+    },
+    {
+      "right_id": "execute",
+      "description": "Perform the exact leased action only after all consequence-specific gates pass.",
+      "allowed_actor_classes": ["leased_executor"],
+      "allowed_consequence_tiers": ["C2", "C3"],
+      "required_gates": ["verified_unexpired_lease", "action_digest", "scope_match", "checker_gate", "human_gate", "rollback"],
+      "prohibited_side_effects": ["unleased_action", "approval_reuse", "silent_retry_after_unknown_external_outcome"]
+    },
+    {
+      "right_id": "prohibited",
+      "description": "Actions the Capability OS never delegates.",
+      "allowed_actor_classes": [],
+      "allowed_consequence_tiers": [],
+      "required_gates": [],
+      "prohibited_side_effects": ["final_legal_conclusion", "authority_bypass", "secret_exfiltration", "unbounded_self_modification", "hidden_surveillance", "irreversible_destructive_action", "score_as_truth"]
+    }
+  ],
+  "consequence_tiers": [
+    {
+      "tier": "C0",
+      "label": "bounded_observation",
+      "human_gate": false,
+      "checker_gate": false,
+      "lease_required": false,
+      "final_confirmation_required": false,
+      "rollback_required": false,
+      "examples": ["approved metadata inventory", "read-only generated projection"]
+    },
+    {
+      "tier": "C1",
+      "label": "bounded_local_draft",
+      "human_gate": true,
+      "checker_gate": true,
+      "lease_required": true,
+      "final_confirmation_required": false,
+      "rollback_required": true,
+      "examples": ["reversible worktree edit", "isolated mechanical batch"]
+    },
+    {
+      "tier": "C2",
+      "label": "material_governed_change",
+      "human_gate": true,
+      "checker_gate": true,
+      "lease_required": true,
+      "final_confirmation_required": false,
+      "rollback_required": true,
+      "examples": ["schema", "registry", "agent instruction", "routing", "governance", "CI or security control"]
+    },
+    {
+      "tier": "C3",
+      "label": "external_or_production_effect",
+      "human_gate": true,
+      "checker_gate": true,
+      "lease_required": true,
+      "final_confirmation_required": true,
+      "rollback_required": true,
+      "examples": ["deployment", "merge", "permission change", "message", "paid service", "persistent automation", "user experiment"]
+    },
+    {
+      "tier": "C4",
+      "label": "prohibited",
+      "human_gate": true,
+      "checker_gate": true,
+      "lease_required": false,
+      "final_confirmation_required": false,
+      "rollback_required": false,
+      "examples": ["authority bypass", "unbounded autonomous self-modification", "secret movement", "irreversible destructive action"]
+    }
+  ],
+  "separation_of_duties": {
+    "producer_cannot_check": true,
+    "checker_cannot_mutate": true,
+    "router_cannot_expand_authority": true,
+    "sentinel_cannot_execute": true,
+    "model_runtime_has_no_authority": true,
+    "approval_cannot_be_reused": true,
+    "graph_edge_cannot_grant_authority": true
+  },
+  "one_human_ops_profile": {
+    "profile_id": "one-human-ops-profile:v1",
+    "maximum_today": 3,
+    "maximum_digest_asks": 3,
+    "maximum_digests_per_workday": 1,
+    "default_interrupt_budget": 0,
+    "normal_weekday_review_minutes": 5,
+    "weekly_review_minutes": 20,
+    "quiet_mode_blocks_model_calls": true,
+    "quiet_mode_blocks_notifications": true,
+    "unchanged_cycle_model_tokens": 0,
+    "age_alone_can_escalate": false,
+    "overflow_policy": "inspectable_silent_digest",
+    "batch_by": "semantic_decision_key",
+    "human_decision_actions": ["approve_pilot", "observe_more", "route_existing", "defer", "snooze", "reject", "pause", "revoke"]
+  },
+  "retrieval_policy": {
+    "router_revision": "technical-product-router:v1",
+    "stages": ["authority_and_eligibility", "exact_alias", "lexical", "optional_semantic", "validated_workflow", "dependency_expansion", "bounded_rerank", "smallest_set"],
+    "semantic_default": "disabled_until_configured",
+    "maximum_primary_capabilities": 3,
+    "required_reason_codes": true,
+    "dependency_and_validator_expansion_required": true,
+    "held_out_metrics": ["eligible_recall_at_k", "dependency_omission", "validator_omission", "false_activation", "smallest_set_accuracy", "task_pass_rate", "human_override_rate", "latency", "cost"]
+  },
+  "telemetry_policy": {
+    "activation_status": "explicit_opt_in",
+    "route_ledger": "processed/usage/capability-routing-receipts.jsonl",
+    "run_ledger": "processed/usage/workflow-run-events.jsonl",
+    "event_identity": "source_plus_event_id",
+    "last_used_basis": "linked_execution_started_or_later",
+    "operational_counts_exclude_synthetic": true,
+    "raw_prompts_allowed": false,
+    "prompt_hashes_allowed": false,
+    "absolute_paths_allowed": false,
+    "client_payloads_allowed": false,
+    "provider_model_ids_in_stable_identity": false,
+    "unknown_token_usage_is_zero": false,
+    "corrections_are_append_only": true
+  },
+  "automation_policy": {
+    "default_status": "dormant",
+    "activation_ladder": ["dormant", "manual_read_only", "scheduled_deterministic_delta", "shadow_scout", "human_approved_candidate_generation", "separately_leased_external_worker"],
+    "no_change_behavior": "heartbeat_only_zero_model_tokens",
+    "required_fields": ["stable_id", "revision", "trigger", "suppressors", "wake_conditions", "input_fingerprint", "permission_envelope", "budget", "idempotency_key", "outputs", "validator", "rollback", "kill_criteria"],
+    "self_enable_allowed": false,
+    "instruction_edit_allowed": false,
+    "notification_default": "denied",
+    "external_mutation_default": "denied"
+  },
+  "adapter_policy": [
+    {
+      "adapter_id": "adapter:deterministic-local",
+      "adapter_class": "deterministic",
+      "status": "available",
+      "supported_rights": ["observe", "draft", "validate"],
+      "prohibited_rights": ["unleased_execute"],
+      "persistent_capture_allowed": false,
+      "install_or_global_change_allowed": false
+    },
+    {
+      "adapter_id": "adapter:cursor-local",
+      "adapter_class": "optional_external_worker",
+      "status": "unavailable_unauthorized",
+      "supported_rights": ["draft"],
+      "prohibited_rights": ["retrieve_secrets", "install_plugins", "change_global_settings", "deploy", "merge", "release", "external_mutation", "self_validate"],
+      "persistent_capture_allowed": false,
+      "install_or_global_change_allowed": false
+    }
+  ],
+  "offload_policy": {
+    "all_eligibility_required": ["mechanical_task", "closed_allowed_paths", "stable_authority_and_interfaces", "deterministic_validation", "isolated_worktree", "reversible_diff", "explicit_lease", "independent_checker", "sanitized_minimal_packet"],
+    "reject_classes": ["secrets", "permission_expansion", "network_expansion", "dependency_addition", "public_release", "governance_edit", "source_of_truth_edit", "migration", "security_critical_logic", "ambiguous_cross_repo_semantics", "missing_validator"],
+    "packet_fields": ["goal", "authority_refs", "allowed_paths", "forbidden_paths", "forbidden_actions", "snapshot_digest", "acceptance", "validation", "budget", "timeout", "checker"]
+  },
+  "foundation_capabilities": [
+    {"capability_id": "foundation:ml-workflow", "implementation_ref": "family:ml-workflow"},
+    {"capability_id": "foundation:full-stack-engineering", "implementation_ref": "family:full-stack-engineering"}
+  ],
+  "capabilities": [
+    {
+      "capability_id": "capability:technical-product-architecture",
+      "coverage_rank": 1,
+      "name": "Technical Product Architecture",
+      "implementation_kind": "orchestration_skill",
+      "implementation_refs": ["skill:technical-product-company-os"],
+      "depends_on": [],
+      "validated_by": ["family:quality-verification-release"],
+      "trigger_terms": ["product architecture", "technical strategy", "system design", "family route", "product company"]
+    },
+    {
+      "capability_id": "capability:quality-verification-release",
+      "coverage_rank": 2,
+      "name": "Quality, Verification and Release",
+      "implementation_kind": "existing_family",
+      "implementation_refs": ["family:quality-verification-release"],
+      "depends_on": [],
+      "validated_by": ["role:quality-verification-release-independent-checker"],
+      "trigger_terms": ["test", "quality", "verification", "release", "CI", "rollback"]
+    },
+    {
+      "capability_id": "capability:security-privacy-supply-chain",
+      "coverage_rank": 3,
+      "name": "Security, Privacy, Identity and Supply Chain",
+      "implementation_kind": "existing_family",
+      "implementation_refs": ["family:security-privacy-supply-chain"],
+      "depends_on": [],
+      "validated_by": ["family:quality-verification-release"],
+      "trigger_terms": ["security", "privacy", "identity", "secrets", "threat", "license", "supply chain"]
+    },
+    {
+      "capability_id": "capability:platform-cloud-sre",
+      "coverage_rank": 4,
+      "name": "Platform, Cloud and SRE",
+      "implementation_kind": "new_family",
+      "implementation_refs": ["family:platform-cloud-sre"],
+      "depends_on": ["capability:security-privacy-supply-chain"],
+      "validated_by": ["family:quality-verification-release", "role:platform-cloud-sre-independent-checker"],
+      "trigger_terms": ["platform", "cloud", "SRE", "production runtime", "infrastructure", "capacity", "disaster recovery"]
+    },
+    {
+      "capability_id": "capability:data-schema-knowledge-graph",
+      "coverage_rank": 5,
+      "name": "Data, Schema and Knowledge Graph",
+      "implementation_kind": "existing_family",
+      "implementation_refs": ["family:data-schema-knowledge-graph"],
+      "depends_on": ["capability:security-privacy-supply-chain"],
+      "validated_by": ["family:quality-verification-release"],
+      "trigger_terms": ["data", "database", "schema", "ontology", "knowledge graph", "lineage", "migration"]
+    },
+    {
+      "capability_id": "capability:integration-api-mcp-automation",
+      "coverage_rank": 6,
+      "name": "Integration, API, MCP and Automation",
+      "implementation_kind": "existing_family",
+      "implementation_refs": ["family:integration-mcp-automation", "pack:mcp-integration-specialist-pack"],
+      "depends_on": ["capability:security-privacy-supply-chain"],
+      "validated_by": ["family:quality-verification-release"],
+      "trigger_terms": ["API", "MCP", "integration", "webhook", "queue", "connector", "automation"]
+    },
+    {
+      "capability_id": "capability:product-ux-accessibility",
+      "coverage_rank": 7,
+      "name": "Product, UX and Accessibility",
+      "implementation_kind": "existing_family",
+      "implementation_refs": ["family:product-ux-accessibility", "pack:ui-ux-specialist-pack"],
+      "depends_on": [],
+      "validated_by": ["family:quality-verification-release"],
+      "trigger_terms": ["product", "UX", "accessibility", "user journey", "cockpit", "usability"]
+    },
+    {
+      "capability_id": "capability:observability-incident-resilience",
+      "coverage_rank": 8,
+      "name": "Observability, Incident Response and Resilience",
+      "implementation_kind": "specialist_pack",
+      "implementation_refs": ["pack:observability-resilience-specialist-pack"],
+      "depends_on": ["capability:platform-cloud-sre"],
+      "validated_by": ["family:quality-verification-release", "role:observability-resilience-independent-checker"],
+      "trigger_terms": ["observability", "telemetry", "SLO", "incident", "on call", "runbook", "resilience"]
+    },
+    {
+      "capability_id": "capability:developer-platform-devex",
+      "coverage_rank": 9,
+      "name": "Developer Platform and DevEx",
+      "implementation_kind": "specialist_pack",
+      "implementation_refs": ["pack:developer-platform-devex-specialist-pack", "family:full-stack-engineering"],
+      "depends_on": ["capability:quality-verification-release"],
+      "validated_by": ["role:developer-platform-devex-independent-checker"],
+      "trigger_terms": ["DevEx", "developer platform", "build loop", "toolchain", "golden path", "mechanical refactor", "Cursor"]
+    },
+    {
+      "capability_id": "capability:product-intelligence-experimentation",
+      "coverage_rank": 10,
+      "name": "Product Intelligence and Experimentation",
+      "implementation_kind": "specialist_pack",
+      "implementation_refs": ["pack:product-intelligence-experimentation-pack", "family:product-ux-accessibility"],
+      "depends_on": ["capability:data-schema-knowledge-graph", "capability:quality-verification-release"],
+      "validated_by": ["role:product-intelligence-independent-checker"],
+      "trigger_terms": ["product intelligence", "experiment", "adoption", "hypothesis", "metric", "feature evaluation"]
+    }
+  ],
+  "workflows": [
+    {
+      "workflow_id": "workflow:idea-to-bounded-plan",
+      "revision_id": "workflow-revision:idea-to-bounded-plan:v1",
+      "status": "candidate",
+      "trigger_terms": ["new idea", "shape product", "project plan"],
+      "capability_sequence": ["capability:technical-product-architecture", "capability:product-ux-accessibility", "capability:quality-verification-release"],
+      "required_human_gates": ["approve_outcome", "approve_project_identity"],
+      "validator_refs": ["role:technical-product-independent-checker"]
+    },
+    {
+      "workflow_id": "workflow:software-product-delivery",
+      "revision_id": "workflow-revision:software-product-delivery:v1",
+      "status": "candidate",
+      "trigger_terms": ["build product", "ship feature", "software delivery"],
+      "capability_sequence": ["capability:technical-product-architecture", "capability:product-ux-accessibility", "capability:data-schema-knowledge-graph", "capability:integration-api-mcp-automation", "capability:security-privacy-supply-chain", "capability:quality-verification-release"],
+      "required_human_gates": ["approve_scope", "approve_release"],
+      "validator_refs": ["family:quality-verification-release"]
+    },
+    {
+      "workflow_id": "workflow:production-readiness",
+      "revision_id": "workflow-revision:production-readiness:v1",
+      "status": "candidate",
+      "trigger_terms": ["production ready", "deploy safely", "operational readiness"],
+      "capability_sequence": ["capability:platform-cloud-sre", "capability:observability-incident-resilience", "capability:security-privacy-supply-chain", "capability:quality-verification-release"],
+      "required_human_gates": ["approve_production_change", "final_confirmation"],
+      "validator_refs": ["role:platform-cloud-sre-independent-checker", "family:quality-verification-release"]
+    },
+    {
+      "workflow_id": "workflow:product-experiment",
+      "revision_id": "workflow-revision:product-experiment:v1",
+      "status": "candidate",
+      "trigger_terms": ["run experiment", "measure adoption", "validate hypothesis"],
+      "capability_sequence": ["capability:product-ux-accessibility", "capability:product-intelligence-experimentation", "capability:data-schema-knowledge-graph", "capability:quality-verification-release"],
+      "required_human_gates": ["approve_data_scope", "approve_experiment_activation"],
+      "validator_refs": ["role:product-intelligence-independent-checker"]
+    },
+    {
+      "workflow_id": "workflow:large-simple-task-offload",
+      "revision_id": "workflow-revision:large-simple-task-offload:v1",
+      "status": "candidate",
+      "trigger_terms": ["large simple task", "mechanical batch", "offload to Cursor"],
+      "capability_sequence": ["capability:developer-platform-devex", "capability:quality-verification-release"],
+      "required_human_gates": ["approve_adapter", "approve_exact_dispatch"],
+      "validator_refs": ["role:developer-platform-devex-independent-checker"]
+    },
+    {
+      "workflow_id": "workflow:capability-gap-improvement",
+      "revision_id": "workflow-revision:capability-gap-improvement:v1",
+      "status": "candidate",
+      "trigger_terms": ["capability gap", "missed route", "improve routine", "improve trigger"],
+      "capability_sequence": ["capability:technical-product-architecture", "capability:quality-verification-release"],
+      "required_human_gates": ["approve_shadow_trial", "approve_adoption"],
+      "validator_refs": ["role:technical-product-independent-checker"]
+    },
+    {
+      "workflow_id": "workflow:project-position-to-right-sized-completion",
+      "revision_id": "workflow-revision:project-position-to-right-sized-completion:v1",
+      "status": "candidate",
+      "trigger_terms": ["where is this project", "diagnose project", "resume build", "finish project", "what remains", "integrate project"],
+      "capability_sequence": ["capability:technical-product-architecture"],
+      "required_human_gates": ["confirm_desired_end_state", "confirm_completion_depth", "approve_execution_handoff"],
+      "validator_refs": ["role:technical-product-independent-checker"]
+    }
+  ],
+  "graph_contract": {
+    "node_types": ["capability", "implementation", "family", "specialist_pack", "skill", "workflow_definition", "workflow_revision", "workflow_run", "route_trace", "project", "repository", "evidence", "validator", "policy", "human_decision", "gap_candidate", "adapter"],
+    "edge_types": ["implements", "depends_on", "member_of", "validated_by", "governed_by", "applies_to", "observed_by", "conflicts_with", "supersedes", "gap_evidence_for", "derived_from"],
+    "generated_edges_are_candidate": true,
+    "runtime_cooccurrence_cannot_create_dependency": true,
+    "graph_edges_cannot_grant_authority": true
+  },
+  "metric_guards": {
+    "universal_score_allowed": false,
+    "leaderboard_allowed": false,
+    "never_used_status": "unobserved",
+    "success_requires_independent_validation": true,
+    "retry_inflation_allowed": false,
+    "synthetic_in_operational_counts": false,
+    "usage_can_auto_promote": false,
+    "usage_can_auto_suppress": false,
+    "usage_can_auto_retire": false,
+    "age_alone_proves_stale": false
+  }
+}

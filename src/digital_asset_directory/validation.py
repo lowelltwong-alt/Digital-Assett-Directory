@@ -1741,6 +1741,23 @@ def validate_repo(repo_root: Path) -> dict[str, Any]:
             checked.append(str(path.relative_to(repo_root)))
         except Exception as exc:
             errors.append(f"Invalid JSON {path}: {exc}")
+    try:
+        from .portability_control import validate_portability
+
+        portability = validate_portability(repo_root)
+        checked.append(
+            "portability-control:"
+            f"{portability['card_count']} cards/"
+            f"{portability['hard_finding_count']} hard findings"
+        )
+        if not portability["valid"]:
+            for finding in portability["findings"]:
+                errors.append(
+                    "Portability gate failed: "
+                    f"{finding['code']} ({finding['artifact_id']})"
+                )
+    except Exception as exc:
+        errors.append(f"Portability control validation failed: {type(exc).__name__}: {exc}")
     for path in sorted((repo_root / "config").glob("*.yaml")) + sorted(
         (repo_root / "roadmap").glob("*.yaml")
     ):
@@ -1793,6 +1810,10 @@ def validate_repo(repo_root: Path) -> dict[str, Any]:
             ("non_negotiables", "registry/non-negotiables.json"),
             ("graph_edge_registry", "registry/graph-edge-registry.json"),
             ("graph_surface_registry", "registry/graph-surface-registry.json"),
+            (
+                "technical_product_company_os_registry",
+                "registry/technical-product-company-os-registry.json",
+            ),
             (
                 "subagent_evaluation_methodology",
                 "registry/subagent-evaluation-methodology.json",

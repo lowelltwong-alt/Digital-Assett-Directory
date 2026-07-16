@@ -1,0 +1,215 @@
+{
+  "schema_version": "dad.task_local_agent_mesh_manifest.v1",
+  "mesh_id": "dad:agent-mesh:agent-family-portfolio-roadmap",
+  "task_id": "agent-family-portfolio-roadmap",
+  "revision_id": "dad:agent-mesh-revision:agent-family-portfolio-roadmap:v1",
+  "phase": "execution",
+  "status": "active",
+  "source_snapshot_digest": "sha256:6e3089a7de6c20ce39bbd81ab205d89be4c6f1068b21eed8c44ab0485ebc3d16",
+  "authority": {
+    "source_authority": "DAD owns its family registry, schemas, generated candidate projections, and cockpit contract; every source repository retains its own meaning and adoption authority.",
+    "execution_authority": false,
+    "human_gate_required": true
+  },
+  "max_delegation_depth": 1,
+  "writer_role_id": "portfolio-family-builder",
+  "checker_role_id": "architecture-integrity-checker",
+  "non_overlap_statement": "Only portfolio-family-builder may edit the implementation worktree. All delegated specialists and the independent checker are read-only and return evidence to the writer.",
+  "roles": [
+    {
+      "role_id": "portfolio-family-builder",
+      "why_needed": "One integration owner must preserve schema, registry, graph, routing, CLI, cockpit, and test coherence.",
+      "mission": "Validate and commit the ML family, then implement the shared model-neutral family control plane, full-stack and six portfolio families, legal overlay, DAD and Mock Trial pilots, cockpit projection, and deterministic tests.",
+      "inputs": [
+        "human-approved agent-family portfolio roadmap",
+        "DAD preflight dad:session:35ad4424-1df2-4f13-bbb2-19819e636df3",
+        "existing ML family candidate",
+        "existing DAD registries, graph, cockpit, and governance contracts"
+      ],
+      "dependencies": [],
+      "authority": "May write only the isolated DAD worktree; may not mutate pilot repositories, install global skills, create automations, publish, or promote candidate guidance.",
+      "model_effort_class": "high",
+      "writer_checker_relation": "writer",
+      "acceptance_conditions": [
+        "All new structured artifacts validate and replay deterministically.",
+        "Routing activates the smallest sufficient family set and enforces checker independence.",
+        "Cockpit exposes no more than three immediate human decisions and has no execution authority.",
+        "DAD and Mock Trial pilots use metadata-only local evidence and do not mutate either source repository.",
+        "Repository validation, roadmap checks, and task-relevant tests pass."
+      ],
+      "stop_conditions": [
+        "A change requires writing outside the isolated DAD worktree.",
+        "A generated relationship would be treated as reviewed truth or execution authority.",
+        "A legal, privacy, security, release, or external mutation decision lacks Lowell's approval.",
+        "Existing user changes overlap incompatibly with the implementation scope."
+      ],
+      "handoff": {
+        "recipient_role_ids": [
+          "architecture-integrity-checker"
+        ],
+        "deliverables": [
+          "implementation diff",
+          "schema and registry validation evidence",
+          "pilot outputs",
+          "test and postflight evidence"
+        ],
+        "readiness_conditions": [
+          "Writer checks pass and source-authority boundaries are explicit."
+        ]
+      }
+    },
+    {
+      "role_id": "cockpit-integration-scout",
+      "why_needed": "The existing cockpit has a strict read-only attention contract that must not be bypassed by the new family projection.",
+      "mission": "Inspect the current cockpit and graph implementation and return bounded integration points, compatibility risks, and tests without editing files.",
+      "inputs": [
+        "existing portfolio cockpit implementation",
+        "existing graph and schema registries",
+        "approved one-human cockpit acceptance criteria"
+      ],
+      "dependencies": [],
+      "authority": "Read-only specialist; no file, Git, runtime, or external writes.",
+      "model_effort_class": "medium",
+      "writer_checker_relation": "specialist",
+      "acceptance_conditions": [
+        "Names exact integration surfaces and compatibility constraints.",
+        "Identifies tests for top-three decisions, deduplication, and candidate-only authority."
+      ],
+      "stop_conditions": [
+        "The brief would require modifying the worktree or inspecting private source rows."
+      ],
+      "handoff": {
+        "recipient_role_ids": [
+          "portfolio-family-builder"
+        ],
+        "deliverables": [
+          "cockpit integration findings",
+          "compatibility and regression checklist"
+        ],
+        "readiness_conditions": [
+          "Findings cite repository paths and observable contracts."
+        ]
+      }
+    },
+    {
+      "role_id": "lesson-asset-harness-scout",
+      "why_needed": "DAD requires reuse-first discovery and a separate check for duplicate assets, missing harnesses, and pay-forward lessons.",
+      "mission": "Inspect the proposed implementation against DAD's existing asset, skill, harness, and learning surfaces and report reuse, duplication, and validation opportunities without editing files.",
+      "inputs": [
+        "DAD asset and agent-skill registries",
+        "approved family architecture",
+        "existing ML family candidate"
+      ],
+      "dependencies": [],
+      "authority": "Read-only specialist; no file, Git, runtime, or external writes.",
+      "model_effort_class": "medium",
+      "writer_checker_relation": "specialist",
+      "acceptance_conditions": [
+        "Reports concrete reuse candidates and likely duplicate concepts.",
+        "Proposes falsifiable harness checks and bounded pay-forward lessons."
+      ],
+      "stop_conditions": [
+        "The review would require copying private payloads or promoting candidate guidance."
+      ],
+      "handoff": {
+        "recipient_role_ids": [
+          "portfolio-family-builder"
+        ],
+        "deliverables": [
+          "reuse and duplication findings",
+          "candidate harness and lesson findings"
+        ],
+        "readiness_conditions": [
+          "Findings are privacy-safe, deduplicated, and tied to repository evidence."
+        ]
+      }
+    },
+    {
+      "role_id": "architecture-integrity-checker",
+      "why_needed": "A high-risk shared contract and graph implementation requires fresh-eyes verification independent of the writer.",
+      "mission": "Re-derive the acceptance contract, inspect the final diff and evidence, and red-team authority, privacy, routing minimality, graph direction, stale deduplication, cockpit limits, compatibility, and missing tests.",
+      "inputs": [
+        "human-approved roadmap",
+        "final implementation diff",
+        "raw validation outputs",
+        "DAD authority and graph contracts"
+      ],
+      "dependencies": [
+        "portfolio-family-builder"
+      ],
+      "authority": "Read-only independent checker; cannot edit, promote, approve external adoption, or replace human release authority.",
+      "model_effort_class": "high",
+      "writer_checker_relation": "checker",
+      "acceptance_conditions": [
+        "Returns prioritized findings with exact evidence and an explicit release recommendation.",
+        "Independently checks material acceptance obligations rather than trusting the writer summary."
+      ],
+      "stop_conditions": [
+        "Checker independence is compromised or raw evidence is unavailable."
+      ],
+      "handoff": {
+        "recipient_role_ids": [],
+        "deliverables": [
+          "independent findings",
+          "premortem",
+          "release recommendation and residual risks"
+        ],
+        "readiness_conditions": [
+          "Final diff and machine-checkable evidence are available."
+        ]
+      }
+    }
+  ],
+  "proof_obligations": [
+    {
+      "obligation_id": "model-neutral-routing",
+      "description": "Prove role contracts use capability tiers and runtime constraints rather than permanent provider model identifiers.",
+      "evidence_required": [
+        "family registry",
+        "routing tests",
+        "provider substitution negative test"
+      ],
+      "owner_role_id": "portfolio-family-builder",
+      "checker_role_id": "architecture-integrity-checker",
+      "status": "pending"
+    },
+    {
+      "obligation_id": "candidate-only-sentinels",
+      "description": "Prove monitoring produces deduplicated candidate evidence and cannot rewrite active guidance or external systems.",
+      "evidence_required": [
+        "health projection tests",
+        "duplicate fingerprint test",
+        "authority fields and negative cases"
+      ],
+      "owner_role_id": "portfolio-family-builder",
+      "checker_role_id": "architecture-integrity-checker",
+      "status": "pending"
+    },
+    {
+      "obligation_id": "one-human-cockpit",
+      "description": "Prove the cockpit projects family coverage, health, evidence, freshness, risks, and at most three immediate human decisions without execution authority.",
+      "evidence_required": [
+        "cockpit JSON and HTML tests",
+        "Today cap regression test",
+        "read-only command boundary"
+      ],
+      "owner_role_id": "portfolio-family-builder",
+      "checker_role_id": "architecture-integrity-checker",
+      "status": "pending"
+    },
+    {
+      "obligation_id": "pilot-sovereignty",
+      "description": "Prove DAD and Mock Trial pilots consume metadata-only evidence and do not mutate source repositories or claim legal authority.",
+      "evidence_required": [
+        "pilot registry",
+        "pilot projection tests",
+        "source repository git-status comparison"
+      ],
+      "owner_role_id": "portfolio-family-builder",
+      "checker_role_id": "architecture-integrity-checker",
+      "status": "pending"
+    }
+  ],
+  "unresolved_decisions": [],
+  "manifest_digest": "sha256:50d6fa98624727427bb000dd67fe663e23a81b782651abf18b81271856bd59f4"
+}

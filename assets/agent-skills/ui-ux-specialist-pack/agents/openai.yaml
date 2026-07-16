@@ -1,0 +1,5 @@
+interface:
+  display_name: "UI/UX Specialist Pack"
+  short_description: "Route focused product-interface expertise"
+  default_prompt: "Use $ui-ux-specialist-pack to route only the UI/UX experts required by this confirmed user outcome."
+

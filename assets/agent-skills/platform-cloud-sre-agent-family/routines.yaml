@@ -1,0 +1,15 @@
+schema_version: dad_skill_routines.v0_1
+skill_id: skill:platform-cloud-sre-agent-family
+activation_status: human_activation_required
+default_execution_authorized: false
+routines:
+  - routine_id: platform-contract-freshness
+    cadence: P7D
+    trigger: declared_dependency_or_policy_delta
+    mode: read_only_delta
+    no_change_model_tokens: 0
+  - routine_id: resilience-evidence-review
+    cadence: P30D
+    trigger: recovery_evidence_due_or_material_change
+    mode: candidate_only
+    no_change_model_tokens: 0

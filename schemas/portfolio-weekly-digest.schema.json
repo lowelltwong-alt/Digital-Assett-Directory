@@ -1,0 +1,12 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://dad.local/schemas/portfolio-weekly-digest.schema.json",
+  "title": "DAD deterministic forgotten-plan digest",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "digest_id", "generated_at", "schedule_candidate", "inventory", "asks", "model_calls", "model_tokens", "delivery", "activation_status", "candidate_only", "execution_authorized", "authority_boundary"],
+  "properties": {
+    "schema_version": {"const": "dad.portfolio_weekly_digest.v1"}, "digest_id": {"type": "string"}, "generated_at": {"type": "string", "format": "date-time"}, "schedule_candidate": {"type": "object"}, "inventory": {"type": "object"},
+    "asks": {"type": "array", "maxItems": 3, "items": {"type": "object"}}, "model_calls": {"const": 0}, "model_tokens": {"const": 0}, "delivery": {"type": "object"}, "activation_status": {"const": "supervised_trial_required"}, "candidate_only": {"const": true}, "execution_authorized": {"const": false}, "authority_boundary": {"type": "string"}
+  }
+}

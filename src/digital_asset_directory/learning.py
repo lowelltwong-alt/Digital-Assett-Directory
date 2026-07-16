@@ -134,7 +134,7 @@ def _maybe_hard_issue_lookup(
 def git_changed_files(repo: Path) -> list[str]:
     try:
         result = subprocess.run(
-            ["git", "-C", str(repo), "status", "--porcelain"],
+            ["git", "-C", str(repo), "status", "--porcelain", "--untracked-files=all"],
             capture_output=True,
             text=True,
             check=False,
@@ -1110,6 +1110,56 @@ def _parse_review_lane_value(value: str) -> ReviewLaneRecord:
     )
 
 
+_PLAN_INTENT_KINDS = (
+    ("agent_family", re.compile(r"\b(?:agent family|family of (?:sub)?agents|subagent family)\b", re.I)),
+    ("knowledge_library", re.compile(r"\b(?:knowledge library|knowledge base|expertise library)\b", re.I)),
+    ("product", re.compile(r"\b(?:build|create|design|plan)\b.{0,60}\bproduct\b", re.I)),
+    ("architecture", re.compile(r"\b(?:architecture|operating system|capability os|control plane)\b", re.I)),
+    ("multi_session_build", re.compile(r"\b(?:multi[- ]session|roadmap|in phases|over time|full build)\b", re.I)),
+)
+_PLAN_DOMAIN_TERMS = (
+    "machine learning", "artificial intelligence", "full stack", "software engineering",
+    "project management", "product catalyst", "harness engineering", "autonomy governance",
+    "security", "privacy", "research", "knowledge graph", "mcp", "ui ux", "legal",
+)
+_PLAN_MUTATION_REQUEST = re.compile(
+    r"^\s*(?:(?:please|kindly)\s+)?(?:"
+    r"build|create|implement|execute|develop|stand[ -]?up|"
+    r"plan\s+(?:a|an|the|this|that|our|my)|start\s+(?:a|an|the|this)|"
+    r"(?:i|we)\s+(?:want|need|would like)\s+to\s+(?:build|create|implement|develop|plan)"
+    r")\b",
+    re.I,
+)
+
+
+def _classify_material_plan_intent(task: str) -> dict[str, Any] | None:
+    """Return a safe structured seed without retaining raw task or a task hash."""
+
+    # Persistent capture is a metadata mutation.  Mere mention, explanation,
+    # research, review, audit, or status inspection is never sufficient.
+    if not _PLAN_MUTATION_REQUEST.search(task):
+        return None
+    kinds = [kind for kind, pattern in _PLAN_INTENT_KINDS if pattern.search(task)]
+    if not kinds:
+        return None
+    lowered = task.casefold()
+    domains = [term for term in _PLAN_DOMAIN_TERMS if term in lowered]
+    if "product" in kinds:
+        product_match = re.search(r"\b([a-z][a-z0-9-]{1,32})\s+product\b", lowered)
+        if product_match and product_match.group(1) not in {"the", "this", "that", "our", "my", "a", "an"}:
+            domains.append(product_match.group(1))
+            domains = list(dict.fromkeys(domains))
+    primary_domain = domains[0] if domains else "cross-domain"
+    primary_kind = kinds[0].replace("_", " ")
+    return {
+        "title": f"{primary_domain.title()} {primary_kind.title()} intent",
+        "outcome": f"Prepare or continue the explicitly requested {primary_domain} {primary_kind} as a bounded, discoverable plan.",
+        "capabilities": sorted(set(kinds)),
+        "domain_facets": domains or ["cross-domain"],
+        "multi_session": "multi_session_build" in kinds or len(kinds) > 1,
+    }
+
+
 def preflight(
     hub_root: Path,
     target_repo: Path,
@@ -1205,6 +1255,88 @@ def preflight(
         payload["context_pack"].setdefault("warnings", []).append(
             "daemon heartbeat is stale or unavailable"
         )
+    try:
+        from .portability_control import assess_lifecycle
+
+        portability_root = (
+            target_repo
+            if (target_repo / "registry" / "portable-capability-registry.json").exists()
+            else hub_root
+        )
+        payload["portability_gate"] = assess_lifecycle(
+            portability_root,
+            stage="preflight",
+            task=task,
+            paths=baseline_changed_files,
+            protected_transition=False,
+        )
+        payload["context_pack"]["portability_gate"] = {
+            key: payload["portability_gate"][key]
+            for key in (
+                "assessment_id",
+                "applicability",
+                "policy_revision_id",
+                "baseline_id",
+                "finding_codes",
+                "gate_outcome",
+                "model_calls",
+            )
+        }
+    except Exception as exc:
+        payload["portability_gate"] = {
+            "applicability": "ambiguous_candidate",
+            "gate_outcome": "eligible_unverified",
+            "error_class": type(exc).__name__,
+            "execution_authorized": False,
+        }
+        payload["context_pack"].setdefault("warnings", []).append(
+            "portability assessment is unavailable; protected transitions must fail closed"
+        )
+    plan_intent = _classify_material_plan_intent(task)
+    if plan_intent is not None:
+        from .portfolio_intents import IntentIntegrityError, capture_plan
+        from .portfolio_related_work import search_related_work
+
+        try:
+            related = search_related_work(hub_root, hub_root, task)
+        except Exception as exc:
+            related = {
+                "schema_version": "dad.portfolio_related_work.v1",
+                "classification": "insufficient_evidence",
+                "candidates": [],
+                "coverage": {"error_class": type(exc).__name__},
+                "candidate_only": True,
+                "execution_authorized": False,
+            }
+        payload["related_work"] = related
+        try:
+            event = capture_plan(
+                hub_root,
+                title=plan_intent["title"],
+                outcome=plan_intent["outcome"],
+                capabilities=plan_intent["capabilities"],
+                domain_facets=plan_intent["domain_facets"],
+                smallest_next_action="Search related work and complete one bounded immutable plan.",
+                consequence_class="C2" if plan_intent["multi_session"] else "C1",
+                source_ref=f"agent-preflight:{agent}",
+                runtime_ref=agent,
+            )
+            payload["intent_checkpoint"] = {
+                "status": "captured",
+                "plan_id": event["plan_id"],
+                "plan_revision_id": event["revision_id"],
+                "event_id": event["event_id"],
+                "execution_authorized": False,
+            }
+        except (IntentIntegrityError, OSError, ValueError) as exc:
+            payload["intent_checkpoint"] = {
+                "status": "required_but_unavailable",
+                "error_class": type(exc).__name__,
+                "execution_authorized": False,
+            }
+            payload["context_pack"].setdefault("warnings", []).append(
+                "material plan intent was classified but private checkpoint storage is unavailable"
+            )
     hard_lookup = _maybe_hard_issue_lookup(
         hub_root,
         target_repo,
@@ -1280,6 +1412,31 @@ def midflight(
             path_values,
         ),
     }
+    try:
+        from .portability_control import assess_lifecycle
+
+        repository = Path(session["repository"])
+        portability_root = (
+            repository
+            if (repository / "registry" / "portable-capability-registry.json").exists()
+            else hub_root
+        )
+        result["portability_gate"] = assess_lifecycle(
+            portability_root,
+            stage="midflight",
+            task=str(session.get("task", "")),
+            paths=path_values,
+            protected_transition=False,
+        )
+        if result["portability_gate"]["gate_outcome"] == "block":
+            result["status"] = "blocked_portability_gate"
+    except Exception as exc:
+        result["portability_gate"] = {
+            "applicability": "ambiguous_candidate",
+            "gate_outcome": "eligible_unverified",
+            "error_class": type(exc).__name__,
+            "execution_authorized": False,
+        }
     hard_lookup = _maybe_hard_issue_lookup(
         hub_root,
         Path(session["repository"]),
@@ -1289,6 +1446,21 @@ def midflight(
     )
     if hard_lookup is not None:
         result["hard_issue_lookup"] = hard_lookup
+    if session.get("intent_checkpoint", {}).get("status") == "captured" and (context or paths):
+        try:
+            from .portfolio_related_work import search_related_work
+
+            result["related_work_refresh"] = search_related_work(
+                hub_root,
+                hub_root,
+                " ".join([str(session.get("task", "")), *(context or []), *(paths or [])]),
+            )
+        except Exception as exc:
+            result["related_work_refresh"] = {
+                "classification": "insufficient_evidence",
+                "error_class": type(exc).__name__,
+                "execution_authorized": False,
+            }
     session["learning_rule_matches"] = matches
     session["required_learning_rule_acknowledgements"] = required
     session["learning_rule_acknowledgements"] = acknowledged
@@ -1318,6 +1490,28 @@ def postflight(
     repository = Path(session["repository"])
     changed = split_multi(kwargs.get("files_changed")) or git_changed_files(repository)
     created = utc_now()
+    try:
+        from .portability_control import assess_lifecycle
+
+        portability_root = (
+            repository
+            if (repository / "registry" / "portable-capability-registry.json").exists()
+            else hub_root
+        )
+        portability_gate = assess_lifecycle(
+            portability_root,
+            stage="postflight",
+            task=str(session.get("task", "")),
+            paths=changed,
+            protected_transition=False,
+        )
+    except Exception as exc:
+        portability_gate = {
+            "applicability": "ambiguous_candidate",
+            "gate_outcome": "eligible_unverified",
+            "error_class": type(exc).__name__,
+            "execution_authorized": False,
+        }
     review_lanes = parse_review_lane_records(kwargs.get("review_lanes"))
     required_lane_ids = set(session.get("required_review_lane_ids") or [])
     incomplete_required_lanes = sorted(
@@ -1399,6 +1593,7 @@ def postflight(
             "handoff_id": handoff.handoff_id,
             "lesson_id": lesson.lesson_id,
             "trace_outcomes": trace_outcomes,
+            "portability_postflight": portability_gate,
         }
     )
     write_json(session_path, session)
@@ -1410,6 +1605,11 @@ def postflight(
             "session_id": sid,
             "handoff_id": handoff.handoff_id,
             "lesson_id": lesson.lesson_id,
+            "plan_id": session.get("intent_checkpoint", {}).get("plan_id", ""),
+            "plan_revision_id": session.get("intent_checkpoint", {}).get("plan_revision_id", ""),
+            "related_work_disposition": "preserved_candidate_relations",
+            "portability_assessment_id": portability_gate.get("assessment_id", ""),
+            "portability_gate_outcome": portability_gate.get("gate_outcome", "eligible_unverified"),
         },
     )
     return handoff, lesson

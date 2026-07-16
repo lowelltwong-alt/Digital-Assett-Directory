@@ -1,0 +1,38 @@
+schema_version: knowledge_engineering_routines.v0_1
+source_registry: registry/knowledge-engineering-family-registry.json
+routines:
+  - routine_id: knowledge-system-diagnosis
+    workflow_id: workflow:ke-system-diagnosis
+    activation: task_triggered
+    default_role: knowledge-engineering-router
+    checker_role: knowledge-authority-boss
+  - routine_id: knowledge-system-build
+    workflow_id: workflow:ke-build-and-evaluate
+    activation: explicit_task_authority
+    default_role: knowledge-workflow-foreman
+    writer_role: knowledge-implementation-worker
+    checker_role: knowledge-independent-checker
+    midflight_triggers:
+      - material_source_parser_chunk_or_embedding_change
+      - material_index_retrieval_graph_or_context_change
+      - material_evaluation_privacy_cost_latency_or_runtime_change
+      - material_dependency_authority_scope_or_proof_change
+    midflight_action: stop_recheck_affected_slice_revise_and_relock
+  - routine_id: knowledge-frontier-weekly-refresh
+    workflow_id: workflow:ke-frontier-weekly-refresh
+    cadence: P7D
+    activation: human_activation_required
+    idempotency: durable_cursor_plus_source_identity_plus_release_digest
+    deterministic_first: true
+    default_role: knowledge-frontier-sentinel
+    research_peer: family:knowledge-research-provenance
+    checker_role: knowledge-independent-checker
+    auto_promote: false
+    auto_schedule: false
+  - routine_id: knowledge-system-lifecycle-review
+    workflow_id: workflow:ke-lifecycle-and-migration-review
+    activation: material_change_or_manual_quarterly_review
+    default_role: knowledge-migration-curator
+    checker_role: knowledge-independent-checker
+    auto_change_instructions: false
+    auto_supersede: false

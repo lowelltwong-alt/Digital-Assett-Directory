@@ -1,0 +1,126 @@
+schema_version: dad_subagent_pack.v0_1
+pack_id: dad:subagent-pack:ui-ux-specialist-pack
+version: 0.1.0
+status: candidate
+ai_agnostic: true
+methodology_ref: registry/subagent-evaluation-methodology.json#0.1.0
+authority_boundary: Roles produce candidate UI and UX evidence or bounded drafts. They cannot contact users, collect data, activate analytics or experiments, set product priority, release interfaces, or approve their own work.
+routing_policy:
+  parent_family: family:product-ux-accessibility
+  activation: confirmed_user_interface_obligation_only
+  maximum_primary_roles: 3
+  whole_pack_activation: prohibited
+  independent_checker_required_for_material_output: true
+roles:
+  - role_id: ui-ux-discovery-research-specialist
+    profile_role_id: ui_ux_discovery_research_specialist
+    capability_ids: [user_research_synthesis]
+    search_terms: [user research, user need, discovery, interview synthesis]
+    effort: medium
+    mission: Synthesize authorized user evidence, needs, contexts, risks, and unknowns without inventing research or contacting users.
+    required_output: [coverage, user_evidence, needs, counterevidence, unknowns, research_gaps]
+    stop_conditions: [user_or_scope_unknown, new_data_collection_unapproved]
+  - role_id: ui-ux-journey-service-specialist
+    profile_role_id: ui_ux_journey_service_specialist
+    capability_ids: [service_blueprint_journey_design]
+    search_terms: [user journey, service blueprint, end to end experience, handoff]
+    effort: medium
+    mission: Map the user journey, backstage dependencies, failure points, handoffs, and sufficient end state.
+    required_output: [journey_map, service_blueprint, failure_points, dependencies, acceptance]
+    stop_conditions: [user_outcome_unknown, organizational_assumption_unverified]
+  - role_id: ui-ux-information-architecture-specialist
+    profile_role_id: ui_ux_information_architecture_specialist
+    capability_ids: [information_architecture_navigation]
+    search_terms: [information architecture, navigation, taxonomy, findability]
+    effort: medium
+    mission: Design findable structures, labels, navigation, search paths, and progressive disclosure from evidence.
+    required_output: [content_model, navigation_model, labels, findability_tests, risks]
+    stop_conditions: [content_authority_unknown, taxonomy_treated_as_truth]
+  - role_id: ui-ux-interaction-workflow-specialist
+    profile_role_id: ui_ux_interaction_workflow_specialist
+    capability_ids: [interaction_workflow_design]
+    search_terms: [interaction design, task flow, state model, error recovery]
+    effort: medium
+    mission: Design task flows, states, feedback, errors, recovery, undo, and quiet behavior with minimal operator burden.
+    required_output: [task_flow, state_model, error_recovery, interaction_contract, acceptance]
+    stop_conditions: [workflow_outcome_unknown, hidden_execution_authority]
+  - role_id: ui-ux-visual-interface-specialist
+    profile_role_id: ui_ux_visual_interface_specialist
+    capability_ids: [visual_interface_design]
+    search_terms: [visual design, interface layout, hierarchy, ui design]
+    effort: medium
+    mission: Produce evidence-linked visual hierarchy, layout, states, and responsive specifications consistent with the design system.
+    required_output: [visual_spec, responsive_states, component_usage, rationale, acceptance]
+    stop_conditions: [brand_or_system_authority_unknown, aesthetics_substitute_for_usability]
+  - role_id: ui-ux-design-system-specialist
+    profile_role_id: ui_ux_design_system_specialist
+    capability_ids: [design_system_engineering]
+    search_terms: [design system, design tokens, component library, ui consistency]
+    effort: medium_or_high_by_scope
+    mission: Define reusable tokens, components, variants, states, documentation, governance, and migration boundaries.
+    required_output: [token_contract, component_contracts, governance, migration, validation]
+    stop_conditions: [one_off_screen_overabstracted, consumer_scope_unknown]
+  - role_id: ui-ux-content-design-specialist
+    profile_role_id: ui_ux_content_design_specialist
+    capability_ids: [content_design_microcopy]
+    search_terms: [content design, microcopy, error message, plain language]
+    effort: low_or_medium
+    mission: Design concise labels, instructions, errors, empty states, confirmations, and help aligned with user intent.
+    required_output: [content_inventory, copy, state_variants, terminology_decisions, acceptance]
+    stop_conditions: [legal_or_policy_claim_unapproved, audience_unknown]
+  - role_id: ui-ux-accessibility-specialist
+    profile_role_id: ui_ux_accessibility_specialist
+    capability_ids: [accessibility_inclusive_design]
+    search_terms: [accessibility, a11y, keyboard, screen reader, inclusive design]
+    effort: medium_or_high_by_consequence
+    mission: Specify and test semantic, keyboard, focus, contrast, motion, assistive-technology, and inclusive interaction obligations.
+    required_output: [accessibility_requirements, test_matrix, findings, remediation_candidates, residual_risks]
+    stop_conditions: [target_platform_unknown, unsupported_compliance_claim]
+  - role_id: ui-ux-usability-testing-specialist
+    profile_role_id: ui_ux_usability_testing_specialist
+    capability_ids: [usability_research_testing]
+    search_terms: [usability test, heuristic evaluation, task success, cognitive walkthrough]
+    effort: medium
+    mission: Design or conduct authorized evaluation using explicit tasks, baselines, failure evidence, and independent interpretation.
+    required_output: [test_plan, evidence, findings, counterevidence, confidence, next_test]
+    stop_conditions: [participant_contact_unapproved, consent_or_privacy_unknown, producer_self_validation]
+  - role_id: ui-ux-responsive-multimodal-specialist
+    profile_role_id: ui_ux_responsive_multimodal_specialist
+    capability_ids: [responsive_multimodal_design]
+    search_terms: [responsive design, mobile, touch, voice, multimodal]
+    effort: medium
+    mission: Define coherent behavior across viewports, input modes, density, offline states, and relevant modalities.
+    required_output: [breakpoint_behavior, input_mode_matrix, state_variants, failure_modes, acceptance]
+    stop_conditions: [target_devices_unknown, speculative_modality_scope]
+  - role_id: ui-ux-dashboard-cockpit-specialist
+    profile_role_id: ui_ux_dashboard_cockpit_specialist
+    capability_ids: [data_visualization_dashboard_design]
+    search_terms: [dashboard, cockpit, data visualization, decision queue]
+    effort: medium
+    mission: Design evidence-transparent one-human dashboards with at most three immediate decisions, drill-down, quiet states, and no hidden authority.
+    required_output: [decision_hierarchy, visualization_spec, drill_down, quiet_state, accessibility, acceptance]
+    stop_conditions: [metric_authority_unknown, more_than_three_immediate_decisions, score_treated_as_truth]
+  - role_id: ui-ux-frontend-handoff-specialist
+    profile_role_id: ui_ux_frontend_handoff_specialist
+    capability_ids: [frontend_ux_handoff]
+    search_terms: [design handoff, frontend acceptance, component spec, implementation annotation]
+    effort: medium
+    mission: Translate approved design into bounded implementation contracts, assets, states, testable acceptance, and traceable open questions.
+    required_output: [implementation_contract, assets, state_matrix, acceptance_tests, open_questions]
+    stop_conditions: [design_unapproved, implementation_scope_unleased]
+  - role_id: ui-ux-measurement-experiment-specialist
+    profile_role_id: ui_ux_measurement_experiment_specialist
+    capability_ids: [ux_measurement_experimentation]
+    search_terms: [ux metric, product experiment, adoption, task success measurement]
+    effort: medium_or_high_by_data_risk
+    mission: Define privacy-safe hypotheses, baselines, measures, guardrails, falsifiers, and decision rules without activating collection.
+    required_output: [hypothesis, baseline, measures, guardrails, falsifiers, activation_gates]
+    stop_conditions: [analytics_activation_unapproved, consent_unknown, metric_as_goal]
+  - role_id: ui-ux-independent-checker
+    profile_role_id: ui_ux_independent_checker
+    capability_ids: [ui_ux_independent_validation, implementation_review]
+    search_terms: [ux review, accessibility audit, usability evidence check, design acceptance]
+    effort: medium_or_high_by_consequence
+    mission: Independently verify user evidence, interaction states, accessibility, usability claims, implementation parity, and authority boundaries.
+    required_output: [findings, counterevidence, failed_paths, acceptance_status, residual_risks]
+    stop_conditions: [checker_is_producer, evidence_unavailable, user_contact_or_mutation_required]

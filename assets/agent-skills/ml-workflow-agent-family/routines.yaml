@@ -1,0 +1,36 @@
+schema_version: ml_agent_family_routines.v0_1
+source_registry: registry/ml-agent-family-registry.json
+routines:
+  - routine_id: ml-opportunity-review
+    workflow_id: workflow:ml-opportunity-review
+    activation: task_triggered
+    default_role: ml-solution-architect
+    checker_role: ml-mission-boss
+  - routine_id: ml-experiment-and-build
+    workflow_id: workflow:ml-experiment-and-build
+    activation: explicit_task_authority
+    default_role: ml-workflow-foreman
+    writer_role: ml-implementation-worker
+    checker_role: ml-independent-checker
+    midflight_triggers:
+      - material_data_label_or_split_change
+      - material_metric_technique_or_runtime_change
+      - material_dependency_authority_privacy_or_scope_change
+      - proof_obligation_or_learning_rule_change
+    midflight_action: stop_run_dad_midflight_revise_and_relock_contract
+  - routine_id: ml-frontier-research-refresh
+    workflow_id: workflow:ml-frontier-research-refresh
+    cadence: P14D
+    activation: human_activation_required
+    idempotency: durable_cursor_plus_source_identity
+    default_role: ml-frontier-researcher
+    checker_role: ml-independent-checker
+    auto_promote: false
+    auto_schedule: false
+  - routine_id: ml-family-lifecycle-review
+    workflow_id: workflow:ml-family-lifecycle-review
+    activation: material_change_or_manual_quarterly_review
+    default_role: ml-lifecycle-curator
+    checker_role: ml-independent-checker
+    auto_change_instructions: false
+    auto_supersede: false

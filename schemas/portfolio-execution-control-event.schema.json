@@ -37,7 +37,8 @@
       "properties": {
         "workstream_id": {"type": "string", "minLength": 1}, "lease_id": {"$ref": "#/$defs/lease_id"}, "owner_id": {"type": "string", "minLength": 1}, "owner_kind": {"enum": ["human", "agent", "team"]}, "repo_binding_id": {"type": "string", "minLength": 1},
         "action_classes": {"type": "array", "minItems": 1, "items": {"enum": ["inspect", "plan", "implement", "validate"]}, "uniqueItems": true}, "requested_paths": {"$ref": "#/$defs/string_list"}, "not_before": {"type": "string", "format": "date-time"}, "expires_at": {"type": "string", "format": "date-time"},
-        "return_state": {"enum": ["proposed", "active", "paused", "snoozed", "incubating", "merged", "superseded", "archived"]}, "rationale_code": {"type": "string", "minLength": 1}, "supersedes_lease_id": {"type": "string"}, "scope_digest": {"$ref": "#/$defs/scope_digest"}
+        "return_state": {"enum": ["proposed", "active", "paused", "snoozed", "incubating", "merged", "superseded", "archived"]}, "rationale_code": {"type": "string", "minLength": 1}, "supersedes_lease_id": {"type": "string"}, "scope_digest": {"$ref": "#/$defs/scope_digest"},
+        "portability_assessment_id": {"type": "string", "pattern": "^portability-assessment:"}, "portability_artifact_ids": {"$ref": "#/$defs/string_list"}, "portability_scope_digest": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"}
       }
     },
     "lease_grant": {

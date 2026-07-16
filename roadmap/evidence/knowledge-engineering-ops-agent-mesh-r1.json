@@ -1,0 +1,124 @@
+{
+  "schema_version": "dad.task_local_agent_mesh_manifest.v1",
+  "mesh_id": "dad:agent-mesh:knowledge-engineering-ops",
+  "task_id": "knowledge-engineering-ops-build",
+  "revision_id": "dad:agent-mesh-revision:knowledge-engineering-ops:v1",
+  "phase": "planning",
+  "status": "planned",
+  "source_snapshot_digest": "sha256:1470f82cfe6b074401cbed19048bae92602b2e49c0354940fb72a83f4fb83623",
+  "authority": {
+    "source_authority": "DAD governs its registries and adaptation; the live global skill root, Logos, Mock Trial, and external sources retain their own authority.",
+    "execution_authority": false,
+    "human_gate_required": true
+  },
+  "max_delegation_depth": 1,
+  "writer_role_id": "bounded-writer",
+  "checker_role_id": "independent-checker",
+  "non_overlap_statement": "Only bounded-writer may edit the DAD worktree and approved live global skill; scouts and independent-checker remain read-only.",
+  "roles": [
+    {
+      "role_id": "local-inventory-scout",
+      "why_needed": "Existing DAD, Logos, Mock Trial, and global capabilities must be reused instead of duplicated.",
+      "mission": "Return bounded metadata and code pointers, stable identities, overlap, gaps, and source-authority cautions.",
+      "inputs": ["DAD registries and skills", "approved sibling repository metadata and code paths"],
+      "dependencies": [],
+      "authority": "Read-only; may not copy private content or edit any repository.",
+      "model_effort_class": "low",
+      "writer_checker_relation": "specialist",
+      "acceptance_conditions": ["Exact reusable identities and actionable gaps are reported."],
+      "stop_conditions": ["Private or client content would be required."],
+      "handoff": {
+        "recipient_role_ids": ["bounded-writer"],
+        "deliverables": ["deduplicated local inventory"],
+        "readiness_conditions": ["Paths and source-authority boundaries are explicit."]
+      }
+    },
+    {
+      "role_id": "frontier-research-scout",
+      "why_needed": "The field changes quickly and the initial library needs current primary-source evidence.",
+      "mission": "Synthesize primary standards, official documentation, original papers, counterevidence, uncertainties, and a watchlist.",
+      "inputs": ["bounded research brief", "primary public sources"],
+      "dependencies": [],
+      "authority": "Read-only research; pointers and bounded claims only; no promotion or scheduling authority.",
+      "model_effort_class": "medium",
+      "writer_checker_relation": "specialist",
+      "acceptance_conditions": ["Dated sources, technique taxonomy, evaluation gates, and uncertainties are reported."],
+      "stop_conditions": ["A claim lacks a primary source or source terms are unclear."],
+      "handoff": {
+        "recipient_role_ids": ["bounded-writer"],
+        "deliverables": ["primary-source frontier brief"],
+        "readiness_conditions": ["Claims are separable from vendor conclusions."]
+      }
+    },
+    {
+      "role_id": "bounded-writer",
+      "why_needed": "One writer must integrate the portable skill, schemas, registries, code, and tests without overlapping edits.",
+      "mission": "Implement the accepted phased plan and produce deterministic validation evidence.",
+      "inputs": ["approved plan", "deduplicated local inventory", "primary-source frontier brief"],
+      "dependencies": ["local-inventory-scout", "frontier-research-scout"],
+      "authority": "May edit only this DAD worktree and the explicitly requested knowledge-engineering-ops live global skill and allowlist row.",
+      "model_effort_class": "high",
+      "writer_checker_relation": "writer",
+      "acceptance_conditions": ["All local phases pass focused validation and no prohibited external effect occurs."],
+      "stop_conditions": ["Scope, privacy, source authority, recurring activation, or cross-repository write changes."],
+      "handoff": {
+        "recipient_role_ids": ["independent-checker"],
+        "deliverables": ["final diff", "test evidence", "research and authority map"],
+        "readiness_conditions": ["Focused checks pass and limitations are explicit."]
+      }
+    },
+    {
+      "role_id": "independent-checker",
+      "why_needed": "The writer cannot approve a load-bearing portable family and shared registry change.",
+      "mission": "Re-derive acceptance and red-team correctness, overlap, portability, privacy, authority, routing, graph, schedule, and regression evidence.",
+      "inputs": ["raw permitted diff", "plan", "validation evidence"],
+      "dependencies": ["bounded-writer"],
+      "authority": "Read-only independent review; cannot edit or approve its own work.",
+      "model_effort_class": "high",
+      "writer_checker_relation": "checker",
+      "acceptance_conditions": ["Release gate, failed and unknown checks, counterevidence, and disagreements are explicit."],
+      "stop_conditions": ["Checker independence or replayable evidence is unavailable."],
+      "handoff": {
+        "recipient_role_ids": [],
+        "deliverables": ["independent findings", "release gate"],
+        "readiness_conditions": ["Writer evidence and raw diff are available."]
+      }
+    }
+  ],
+  "proof_obligations": [
+    {
+      "obligation_id": "reuse-without-duplication",
+      "description": "Prove the capability is a child specialist pack and reuses existing research, graph, quality, privacy, and routing authority.",
+      "evidence_required": ["family registry relations", "skill and pack contracts", "independent review"],
+      "owner_role_id": "bounded-writer",
+      "checker_role_id": "independent-checker",
+      "status": "pending"
+    },
+    {
+      "obligation_id": "portable-provider-neutral-core",
+      "description": "Prove durable roles and technique contracts contain no permanent vendor model identity or local absolute path.",
+      "evidence_required": ["portable skill validation", "path and model-id negative tests"],
+      "owner_role_id": "bounded-writer",
+      "checker_role_id": "independent-checker",
+      "status": "pending"
+    },
+    {
+      "obligation_id": "read-only-research-and-routing",
+      "description": "Prove catalog, routing, graph, and weekly research surfaces are candidate-only and cannot schedule, promote, ingest, index, or mutate.",
+      "evidence_required": ["schemas", "CLI tests", "authority and activation assertions"],
+      "owner_role_id": "bounded-writer",
+      "checker_role_id": "independent-checker",
+      "status": "pending"
+    }
+  ],
+  "unresolved_decisions": [
+    {
+      "decision_id": "weekly-activation",
+      "summary": "Exact weekly activation time, delivery surface, source budget, and persistent schedule require a later A3 human decision.",
+      "owner_role_id": "bounded-writer",
+      "blocking": false,
+      "status": "deferred"
+    }
+  ],
+  "manifest_digest": "sha256:d8365e86f1b1cb1b49848f8f09393211f8942aa337a82c80d2ff65fc0e2d9eb5"
+}

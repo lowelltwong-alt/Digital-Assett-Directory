@@ -1,0 +1,232 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://dad.local/schemas/agent-family-health-v1.json",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "generated_at",
+    "status",
+    "candidate_only",
+    "execution_authorized",
+    "source_fingerprint",
+    "summary",
+    "families",
+    "issues",
+    "authority_boundary"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": "dad.agent_family_health.v1"
+    },
+    "generated_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "status": {
+      "enum": [
+        "generated_candidate",
+        "partial_candidate"
+      ]
+    },
+    "candidate_only": {
+      "const": true
+    },
+    "execution_authorized": {
+      "const": false
+    },
+    "source_fingerprint": {
+      "type": "string",
+      "pattern": "^sha256:[0-9a-f]{64}$"
+    },
+    "summary": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "family_count",
+        "current_count",
+        "watch_count",
+        "stale_count",
+        "unknown_count",
+        "issue_count",
+        "human_decision_count"
+      ],
+      "properties": {
+        "family_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "current_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "watch_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "stale_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "unknown_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "issue_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "human_decision_count": {
+          "type": "integer",
+          "minimum": 0
+        }
+      }
+    },
+    "families": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/familyHealth"
+      }
+    },
+    "issues": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/issue"
+      }
+    },
+    "authority_boundary": {
+      "type": "string",
+      "minLength": 20
+    }
+  },
+  "$defs": {
+    "strings": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": {
+        "type": "string"
+      }
+    },
+    "familyHealth": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "family_id",
+        "name",
+        "build_order",
+        "lifecycle_state",
+        "health_state",
+        "reasons",
+        "evidence_refs",
+        "dependency_issues",
+        "candidate_actions"
+      ],
+      "properties": {
+        "family_id": {
+          "type": "string",
+          "pattern": "^family:"
+        },
+        "name": {
+          "type": "string"
+        },
+        "build_order": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "lifecycle_state": {
+          "type": "string"
+        },
+        "health_state": {
+          "enum": [
+            "current",
+            "watch",
+            "stale",
+            "superseded",
+            "unknown"
+          ]
+        },
+        "reasons": {
+          "$ref": "#/$defs/strings"
+        },
+        "evidence_refs": {
+          "$ref": "#/$defs/strings"
+        },
+        "dependency_issues": {
+          "$ref": "#/$defs/strings"
+        },
+        "candidate_actions": {
+          "$ref": "#/$defs/strings"
+        }
+      }
+    },
+    "issue": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "issue_id",
+        "fingerprint",
+        "family_id",
+        "issue_kind",
+        "severity",
+        "reason",
+        "dependency_source",
+        "dependency_target",
+        "evidence_refs",
+        "human_decision_required",
+        "next_action"
+      ],
+      "properties": {
+        "issue_id": {
+          "type": "string",
+          "pattern": "^family-issue:"
+        },
+        "fingerprint": {
+          "type": "string",
+          "pattern": "^sha256:[0-9a-f]{64}$"
+        },
+        "family_id": {
+          "type": "string",
+          "pattern": "^family:"
+        },
+        "issue_kind": {
+          "enum": [
+            "human_decision",
+            "integrity_unknown",
+            "missing_dependency",
+            "stale_dependency",
+            "conflict",
+            "freshness_review"
+          ]
+        },
+        "severity": {
+          "enum": [
+            "info",
+            "warning",
+            "danger"
+          ]
+        },
+        "reason": {
+          "type": "string",
+          "minLength": 1
+        },
+        "dependency_source": {
+          "type": "string"
+        },
+        "dependency_target": {
+          "type": "string"
+        },
+        "evidence_refs": {
+          "$ref": "#/$defs/strings"
+        },
+        "human_decision_required": {
+          "type": "boolean"
+        },
+        "next_action": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    }
+  }
+}
+

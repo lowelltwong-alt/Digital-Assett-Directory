@@ -1,0 +1,4 @@
+interface:
+  display_name: "Technical Product Company OS"
+  short_description: "Route and govern the top-ten product capability system"
+  default_prompt: "Use $technical-product-company-os to shape, route, govern, and observe this product request."

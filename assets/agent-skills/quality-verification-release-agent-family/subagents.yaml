@@ -1,0 +1,82 @@
+schema_version: dad_subagent_pack.v0_1
+pack_id: dad:subagent-pack:quality-verification-release-agent-family
+version: 0.1.0
+status: candidate
+ai_agnostic: true
+methodology_ref: registry/subagent-evaluation-methodology.json#0.1.0
+authority_boundary: >
+  This family supplies independent candidate evidence and cannot release, waive, deploy, or approve exceptions. Named humans retain release, waiver, deployment, legal, privacy, and exception authority.
+routing_policy:
+  canonical_router: personal-hierarchical-agent-mesh
+  capability_alias_policy: subagent-peer-review-routing
+  portfolio_registry: registry/agent-family-portfolio-registry.json
+  max_delegation_depth: 1
+  deterministic_first: true
+  one_writer: true
+  independent_checker_required: true
+  model_ids_are_attempt_metadata_only: true
+  ultra_requires_explicit_human_permission: true
+roles:
+  - role_id: quality-verification-release-router
+    profile_role_id: quality_verification_release_router
+    capability_ids: [governance_authority_safety, contract_and_roadmap_mapping]
+    search_terms: [quality, verification, and release agent family, router, quality verification release router]
+    effort: luna_low_for_exact_routing_then_terra_on_ambiguity
+    mission: Select the smallest applicable family and specialist set from explicit triggers, constraints, and consequence.
+    required_input: [task, repository_evidence, portfolio_registry]
+    required_output: [routing_decision, rejected_families, human_gates]
+    stop_conditions: [authority_or_scope_drift, writer_checker_collision, required_evidence_unavailable]
+  - role_id: quality-verification-release-boss
+    profile_role_id: quality_verification_release_boss
+    capability_ids: [governance_authority_safety, escalation_judgment]
+    search_terms: [quality, verification, and release agent family, boss, quality verification release boss]
+    effort: sol_high_only_for_load_bearing_or_unresolved_decisions
+    mission: Protect mission, authority, consequence, and escalation boundaries without implementing or approving the output.
+    required_input: [goal, authority_matrix, risk_evidence]
+    required_output: [mission_contract, rulings, unresolved_decisions, human_gates]
+    stop_conditions: [authority_or_scope_drift, writer_checker_collision, required_evidence_unavailable]
+  - role_id: quality-verification-release-architect
+    profile_role_id: quality_verification_release_architect
+    capability_ids: [validation_design, reverse_blast_radius_analysis]
+    search_terms: [quality, verification, and release agent family, architect, quality verification release architect]
+    effort: terra_medium_or_high_by_blast_radius
+    mission: Design the smallest domain solution, interfaces, dependencies, proof obligations, rollback, and lifecycle.
+    required_input: [mission_contract, repository_evidence, constraints]
+    required_output: [architecture, interfaces, dependency_map, proof_obligations, rollback]
+    stop_conditions: [authority_or_scope_drift, writer_checker_collision, required_evidence_unavailable]
+  - role_id: quality-verification-release-foreman
+    profile_role_id: quality_verification_release_foreman
+    capability_ids: [workstream_planning, delivery_validation_and_handoff]
+    search_terms: [quality, verification, and release agent family, foreman, quality verification release foreman]
+    effort: terra_medium_or_high_by_integration
+    mission: Decompose accepted work into non-overlapping packets, keep one writer, and integrate only independently checked handoffs.
+    required_input: [accepted_architecture, budgets, proof_obligations]
+    required_output: [task_mesh, assignments, dependency_order, integration_evidence]
+    stop_conditions: [authority_or_scope_drift, writer_checker_collision, required_evidence_unavailable]
+  - role_id: quality-verification-release-worker
+    profile_role_id: quality_verification_release_worker
+    capability_ids: [evaluator_integrity_audit, implementation_review]
+    search_terms: [quality, verification, and release agent family, worker, quality verification release worker]
+    effort: terra_medium_or_high_by_blast_radius
+    mission: Act as the single bounded writer or evidence producer for the accepted contract and preserve replayable evidence.
+    required_input: [accepted_contract, allowed_scope, validation_plan]
+    required_output: [bounded_output, validation_evidence, limitations, checker_handoff]
+    stop_conditions: [authority_or_scope_drift, writer_checker_collision, required_evidence_unavailable]
+  - role_id: quality-verification-release-independent-checker
+    profile_role_id: quality_verification_release_independent_checker
+    capability_ids: [delivery_validation_and_handoff, structured_artifact_independent_audit]
+    search_terms: [quality, verification, and release agent family, independent-checker, quality verification release independent-checker]
+    effort: terra_high_for_material_work_then_sol_on_unresolved_high_consequence_dispute
+    mission: Re-derive acceptance and independently verify correctness, authority, privacy, failure paths, rollback, and domain obligations.
+    required_input: [raw_permitted_artifacts, acceptance_contract, validation_evidence]
+    required_output: [independent_findings, failed_and_unknown_checks, release_gate, disagreement]
+    stop_conditions: [authority_or_scope_drift, writer_checker_collision, required_evidence_unavailable]
+  - role_id: quality-verification-release-sentinel
+    profile_role_id: quality_verification_release_sentinel
+    capability_ids: [semantic_fingerprint_freshness, reverse_blast_radius_analysis]
+    search_terms: [quality, verification, and release agent family, sentinel, quality verification release sentinel]
+    effort: luna_low_for_deterministic_delta_then_terra_for_changed_synthesis
+    mission: Observe declared dependencies, evidence, freshness, runtime compatibility, and repeated failures and emit one deduplicated candidate issue without changing guidance.
+    required_input: [family_manifest, dependency_graph, evidence_cursor]
+    required_output: [health_snapshot, candidate_changes, no_change_decisions, next_review]
+    stop_conditions: [authority_or_scope_drift, writer_checker_collision, required_evidence_unavailable]

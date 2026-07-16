@@ -1,0 +1,33 @@
+schema_version: dad_routines.v0_1
+pack_id: dad:subagent-pack:personal-project-management-ops
+version: 0.3.0
+status: candidate
+authority_boundary: >
+  Routines capture and project private recovery evidence only. They create no
+  project, workstream, priority, dependency, reminder, lease, dispatch, Git
+  mutation, notification, or execution authority.
+routines:
+  - routine_id: material-plan-checkpoint
+    triggers: [explicit_reusable_family, explicit_knowledge_library, explicit_product, explicit_architecture, explicit_multi_session_build]
+    suppressors: [brainstorming, ordinary_read_only_answer, synthetic_fixture, privacy_disallowed]
+    steps: [deterministic_materiality, idempotent_seed_capture, search_before_create, bounded_relation_review, immutable_final_capture]
+    model_policy: deterministic_first
+    mutation_scope: private_plan_journal_only
+  - routine_id: affected-slice-midflight
+    triggers: [capability_changed, outcome_changed, scope_changed, repository_changed, privacy_changed, dependency_changed, authority_changed]
+    steps: [refresh_exact_plan_revision, search_affected_identity_slice, invalidate_stale_snapshot, request_new_lease_when_scope_widened]
+    model_policy: terra_only_on_ambiguity
+    mutation_scope: candidate_evidence_only
+  - routine_id: plan-build-postflight-reconciliation
+    triggers: [material_session_close, validation_completed, implementation_interrupted]
+    steps: [link_exact_plan_revision, bind_build_and_tests, compute_remaining_work, create_resume_packet, request_independent_check_for_completion]
+    model_policy: deterministic_then_independent_terra
+    mutation_scope: recovery_evidence_only
+  - routine_id: monday-forgotten-plan-digest
+    proposed_schedule: "Monday 07:00 America/New_York"
+    activation_status: supervised_trial_required
+    triggers: [reviewed_schedule_due]
+    steps: [incremental_inventory, lineage_grouping, suppressors, existing_today_queue, max_three_asks, fixed_template, delivery_reconciliation]
+    model_policy: zero_tokens_when_deterministic_luna_low_only_for_changed_ambiguity
+    delivery: [local_cockpit, metadata_safe_windows_toast_candidate]
+    mutation_scope: none_until_separate_activation

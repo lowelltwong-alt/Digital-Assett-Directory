@@ -1,0 +1,18 @@
+{
+  "schema_version": "dad.runtime_adapter_registry.v1",
+  "registry_id": "runtime-adapter-registry",
+  "registry_version": "0.1.0",
+  "status": "candidate_deny_execute",
+  "authority_boundary": "Adapters discover declared local runtime capabilities and normalize receipts only. They never execute work, discover credentials, scan networks, or infer a provider from a host name.",
+  "network_discovery_allowed": false,
+  "live_probe_default": false,
+  "execution_authorized": false,
+  "verification_levels": ["reported", "locally_observed", "runtime_verified", "provider_verified"],
+  "adapters": [
+    {"adapter_id": "adapter:codex-host", "label": "Codex host", "registration_mode": "local_host_receipt", "protocol_methods": ["discover", "health", "normalize_receipt"], "provider_identity_rule": "receipt_required", "scheduled_probe_allowed": false},
+    {"adapter_id": "adapter:cursor-host", "label": "Cursor host", "registration_mode": "local_host_receipt", "protocol_methods": ["discover", "health", "normalize_receipt"], "provider_identity_rule": "receipt_required_gemini_never_inferred", "scheduled_probe_allowed": false},
+    {"adapter_id": "adapter:claude-code-host", "label": "Claude Code host", "registration_mode": "local_host_receipt", "protocol_methods": ["discover", "health", "normalize_receipt"], "provider_identity_rule": "receipt_required", "scheduled_probe_allowed": false},
+    {"adapter_id": "adapter:openai-compatible", "label": "Explicit OpenAI-compatible endpoint", "registration_mode": "explicit_local_registration", "protocol_methods": ["discover", "health", "normalize_receipt"], "provider_identity_rule": "explicit_registration_required", "scheduled_probe_allowed": false},
+    {"adapter_id": "adapter:local-endpoint", "label": "Explicit local endpoint", "registration_mode": "explicit_local_registration", "protocol_methods": ["discover", "health", "normalize_receipt"], "provider_identity_rule": "explicit_registration_required", "scheduled_probe_allowed": false}
+  ]
+}

@@ -1,0 +1,13 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://dad.local/schemas/portfolio-related-work.schema.json",
+  "title": "DAD related work search result",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "retrieval_result_digest", "privacy_partition", "candidates", "classification", "primary_candidate_id", "smallest_viable_family_ids", "coverage", "candidate_only", "execution_authorized", "authority_boundary"],
+  "properties": {
+    "schema_version": {"const": "dad.portfolio_related_work.v1"}, "retrieval_result_digest": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"}, "privacy_partition": {"type": "string", "minLength": 1},
+    "candidates": {"type": "array", "maxItems": 5, "items": {"type": "object"}}, "classification": {"enum": ["ambiguous", "candidate_found", "insufficient_evidence"]}, "primary_candidate_id": {"const": ""}, "smallest_viable_family_ids": {"type": "array", "maxItems": 2, "items": {"type": "string"}}, "coverage": {"type": "object"},
+    "candidate_only": {"const": true}, "execution_authorized": {"const": false}, "authority_boundary": {"type": "string", "minLength": 1}
+  }
+}

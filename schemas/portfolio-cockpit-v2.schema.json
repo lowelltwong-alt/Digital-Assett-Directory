@@ -1,0 +1,238 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://dad.local/schemas/portfolio-cockpit-v2.json",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "generated_at",
+    "status",
+    "candidate_only",
+    "execution_authorized",
+    "authority_boundary",
+    "sources",
+    "summary",
+    "now",
+    "digest",
+    "source_refs"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": "dad.portfolio_cockpit.v2"
+    },
+    "generated_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "status": {
+      "enum": [
+        "generated_candidate",
+        "partial_candidate"
+      ]
+    },
+    "candidate_only": {
+      "const": true
+    },
+    "execution_authorized": {
+      "const": false
+    },
+    "authority_boundary": {
+      "type": "string",
+      "minLength": 20
+    },
+    "sources": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "portfolio_v1",
+        "agent_families"
+      ],
+      "properties": {
+        "portfolio_v1": {
+          "$ref": "#/$defs/source"
+        },
+        "agent_families": {
+          "$ref": "#/$defs/source"
+        },
+        "capability_os": {
+          "$ref": "#/$defs/source"
+        }
+      }
+    },
+    "summary": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "now_count",
+        "digest_count",
+        "family_count",
+        "family_issue_count",
+        "portfolio_item_count",
+        "capability_item_count"
+      ],
+      "properties": {
+        "now_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "digest_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "family_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "family_issue_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "portfolio_item_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "capability_item_count": {
+          "type": "integer",
+          "minimum": 0
+        }
+      }
+    },
+    "now": {
+      "type": "array",
+      "maxItems": 3,
+      "items": {
+        "$ref": "#/$defs/item"
+      }
+    },
+    "digest": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/item"
+      }
+    },
+    "source_refs": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "portfolio_v1",
+        "agent_families"
+      ],
+      "properties": {
+        "portfolio_v1": {
+          "type": "string"
+        },
+        "agent_families": {
+          "type": "string",
+          "pattern": "^sha256:"
+        },
+        "capability_os": {
+          "type": "string",
+          "pattern": "^sha256:"
+        }
+      }
+    }
+  },
+  "$defs": {
+    "source": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "status",
+        "schema_version",
+        "fingerprint",
+        "problems"
+      ],
+      "properties": {
+        "status": {
+          "enum": [
+            "observed",
+            "unavailable",
+            "invalid"
+          ]
+        },
+        "schema_version": {
+          "type": "string"
+        },
+        "fingerprint": {
+          "type": "string"
+        },
+        "problems": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "item": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "attention_id",
+        "source",
+        "band",
+        "label",
+        "family_id",
+        "reasons",
+        "next_action",
+        "human_decision_required",
+        "selected_now",
+        "fingerprint",
+        "evidence_refs"
+      ],
+      "properties": {
+        "attention_id": {
+          "type": "string"
+        },
+        "source": {
+          "enum": [
+            "portfolio_v1",
+            "agent_families",
+            "capability_os"
+          ]
+        },
+        "band": {
+          "enum": [
+            "human_decision",
+            "integrity_unknown",
+            "dependency_unlock",
+            "weekly_maintenance"
+          ]
+        },
+        "label": {
+          "type": "string"
+        },
+        "family_id": {
+          "type": "string"
+        },
+        "reasons": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {
+            "type": "string"
+          }
+        },
+        "next_action": {
+          "type": "string"
+        },
+        "human_decision_required": {
+          "type": "boolean"
+        },
+        "selected_now": {
+          "type": "boolean"
+        },
+        "fingerprint": {
+          "type": "string",
+          "pattern": "^sha256:[0-9a-f]{64}$"
+        },
+        "evidence_refs": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    }
+  }
+}

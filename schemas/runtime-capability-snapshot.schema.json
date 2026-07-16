@@ -1,0 +1,47 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://dad.local/schemas/runtime-capability-snapshot-v1.json",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "snapshot_id", "observed_at", "expires_at", "source", "runtimes", "candidate_only", "authority_boundary"],
+  "properties": {
+    "schema_version": {"const": "dad.runtime_capability_snapshot.v1"},
+    "snapshot_id": {"type": "string", "pattern": "^dad:runtime-snapshot:"},
+    "observed_at": {"type": "string", "format": "date-time"},
+    "expires_at": {"type": "string", "format": "date-time"},
+    "source": {"enum": ["explicit_local_registration", "local_host_receipt", "synthetic_fixture"]},
+    "candidate_only": {"const": true},
+    "authority_boundary": {"type": "string", "minLength": 20},
+    "runtimes": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["runtime_id", "registration_id", "adapter_id", "provider_id", "runtime_label", "health", "verification_status", "capability_ids", "tool_ids", "privacy_classes", "effort_classes", "max_context_tokens", "cost_status", "latency_class", "reliability_class", "qualified_role_ids", "observed_at", "expires_at"],
+        "properties": {
+          "runtime_id": {"type": "string", "pattern": "^runtime:"},
+          "registration_id": {"type": "string", "pattern": "^registration:"},
+          "adapter_id": {"type": "string", "pattern": "^adapter:"},
+          "provider_id": {"type": "string", "minLength": 1},
+          "runtime_label": {"type": "string", "minLength": 1},
+          "health": {"enum": ["available", "degraded", "unavailable", "unknown"]},
+          "verification_status": {"enum": ["reported", "locally_observed", "runtime_verified", "provider_verified"]},
+          "capability_ids": {"$ref": "#/$defs/strings"},
+          "tool_ids": {"$ref": "#/$defs/strings"},
+          "privacy_classes": {"type": "array", "uniqueItems": true, "items": {"enum": ["public", "internal", "confidential", "restricted"]}},
+          "effort_classes": {"type": "array", "uniqueItems": true, "items": {"enum": ["low", "medium", "high"]}},
+          "max_context_tokens": {"type": "integer", "minimum": 1},
+          "cost_status": {"enum": ["known", "unknown", "local_no_meter"]},
+          "estimated_cost_per_million_tokens": {"type": "number", "minimum": 0},
+          "latency_class": {"enum": ["low", "medium", "high", "unknown"]},
+          "reliability_class": {"enum": ["verified", "observed", "reported", "unknown"]},
+          "qualified_role_ids": {"$ref": "#/$defs/strings"},
+          "observed_at": {"type": "string", "format": "date-time"},
+          "expires_at": {"type": "string", "format": "date-time"}
+        }
+      }
+    }
+  },
+  "$defs": {"strings": {"type": "array", "uniqueItems": true, "items": {"type": "string", "minLength": 1}}}
+}
