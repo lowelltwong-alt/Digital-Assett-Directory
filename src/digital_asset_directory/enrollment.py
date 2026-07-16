@@ -614,8 +614,9 @@ def _capture_surface_payload(hub_root: Path) -> dict[str, Any]:
         "cli_fallback": (
             "If asset-dir is unavailable, first try the stable DAD user shim at "
             "~/.dad/bin/asset-dir or ~/.dad/bin/asset-dir.ps1; if the shim is "
-            "unavailable too, try PYTHONPATH=src python -m digital_asset_directory.cli "
-            "from the DAD checkout; otherwise append metadata-only JSONL with "
+            "unavailable too, run from the DAD checkout with PYTHONPATH=src python "
+            "-m digital_asset_directory.cli (POSIX) or $env:PYTHONPATH='src'; python "
+            "-m digital_asset_directory.cli (PowerShell); otherwise append metadata-only JSONL with "
             "dad_cli_unavailable and safe refs."
         ),
     }
@@ -904,6 +905,14 @@ Before material AI-assisted work, read this repo's front door and run:
 ```text
 asset-dir agent preflight --repo . --agent <agent-id> --task "<task>"
 ```
+
+If `asset-dir` is not available on `PATH`, use the stable user shim at
+`~/.dad/bin/asset-dir` (POSIX shells) or `~/.dad/bin/asset-dir.ps1`
+(PowerShell). If neither shim exists, run from the DAD checkout with
+`PYTHONPATH=src python -m digital_asset_directory.cli` (POSIX) or
+`$env:PYTHONPATH='src'; python -m digital_asset_directory.cli` (PowerShell).
+Treat a missing CLI as an availability warning, not permission to bypass the
+fail-closed boundaries below.
 
 Use the actual runtime name as `<agent-id>` when useful, such as `codex`,
 `claude-code`, `cursor`, `copilot`, `human`, `ci`, or `other`. DAD's core

@@ -29,6 +29,14 @@ def test_downstream_install_is_idempotent_and_enforces_open_session(tmp_path: Pa
     assert "fresh-eyes review" in agents_text
     assert "branch/PR status" in agents_text
     assert "escalation date" in agents_text
+    assert "~/.dad/bin/asset-dir" in agents_text
+    assert "~/.dad/bin/asset-dir.ps1" in agents_text
+    assert "PYTHONPATH=src python -m digital_asset_directory.cli" in agents_text
+    assert "$env:PYTHONPATH='src'; python -m digital_asset_directory.cli" in agents_text
+    assert agents_text.index("~/.dad/bin/asset-dir") < agents_text.index(
+        "PYTHONPATH=src python -m digital_asset_directory.cli"
+    )
+    assert "A missing CLI does not relax local fail-closed boundaries." in agents_text
     assert "optional adapters" in agents_text
     assert "must not become the sole authority" in agents_text
     session = preflight(hub, target, hub / "state" / "catalog.sqlite3", "codex", "change")

@@ -232,6 +232,16 @@ def test_apply_requires_approval_and_writes_only_approved_paths(tmp_path: Path):
     assert set(result["changed_paths"]) <= allowed_enrollment_bootstrap
     assert created <= allowed_enrollment_bootstrap
     assert "Keep this line." in (repo / "AGENTS.md").read_text(encoding="utf-8")
+    agents_text = (repo / "AGENTS.md").read_text(encoding="utf-8")
+    assert "~/.dad/bin/asset-dir" in agents_text
+    assert "~/.dad/bin/asset-dir.ps1" in agents_text
+    assert "PYTHONPATH=src python -m digital_asset_directory.cli" in agents_text
+    assert "$env:PYTHONPATH='src'; python -m digital_asset_directory.cli" in agents_text
+    assert agents_text.index("~/.dad/bin/asset-dir") < agents_text.index(
+        "PYTHONPATH=src python -m digital_asset_directory.cli"
+    )
+    assert "not permission to bypass the" in agents_text
+    assert "fail-closed boundaries below." in agents_text
     assert result["hook_install_disclosed"] is True
     assert result["repo_local_only_paths"] == REPO_LOCAL_ONLY_PATHS
     assert (repo / ".githooks" / "pre-push").exists()
@@ -289,6 +299,9 @@ def test_apply_requires_approval_and_writes_only_approved_paths(tmp_path: Path):
     assert contract["capture"]["mail_outbox"] == ".digital-asset/mail/outbox.jsonl"
     assert "~/.dad/bin/asset-dir" in contract["capture"]["cli_fallback"]
     assert "~/.dad/bin/asset-dir.ps1" in contract["capture"]["cli_fallback"]
+    assert "$env:PYTHONPATH='src'; python -m digital_asset_directory.cli" in contract[
+        "capture"
+    ]["cli_fallback"]
     assert contract["capture"]["repo_local_only_paths"] == REPO_LOCAL_ONLY_PATHS
     assert "processed/exceptions/fix-outcomes/outcomes.jsonl" in contract["capture"][
         "repo_local_only_paths"
