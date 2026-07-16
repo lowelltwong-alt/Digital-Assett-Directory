@@ -84,7 +84,7 @@
       ".digital-asset/exceptions/archive.jsonl",
       "processed/exceptions/fix-outcomes/outcomes.jsonl"
     ],
-    "cli_fallback": "If asset-dir is unavailable, first try the stable DAD user shim at ~/.dad/bin/asset-dir or ~/.dad/bin/asset-dir.ps1; if the shim is unavailable too, try PYTHONPATH=src python -m digital_asset_directory.cli from the DAD checkout; otherwise append metadata-only JSONL with dad_cli_unavailable and safe refs."
+    "cli_fallback": "If asset-dir is unavailable, first try the stable DAD user shim at ~/.dad/bin/asset-dir or ~/.dad/bin/asset-dir.ps1; if the shim is unavailable too, run from the DAD checkout with PYTHONPATH=src python -m digital_asset_directory.cli (POSIX) or $env:PYTHONPATH='src'; python -m digital_asset_directory.cli (PowerShell); otherwise append metadata-only JSONL with dad_cli_unavailable and safe refs."
   },
   "agent_runtime_policy": {
     "core_contract": "AGENTS.md",

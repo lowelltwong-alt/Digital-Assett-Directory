@@ -30,6 +30,14 @@ Before material AI-assisted work:
    decisions require human attention, implementer red-team, premortem, rollback criteria,
    and fresh-eyes review.
 
+If `asset-dir` is not available on `PATH`, use the stable user shim at
+`~/.dad/bin/asset-dir` (POSIX shells) or `~/.dad/bin/asset-dir.ps1`
+(PowerShell). If neither shim exists, run from the DAD checkout with
+`PYTHONPATH=src python -m digital_asset_directory.cli agent preflight --repo . --agent <agent-id> --task "<task>"`
+(POSIX) or `$env:PYTHONPATH='src'; python -m digital_asset_directory.cli agent preflight --repo . --agent <agent-id> --task "<task>"`
+(PowerShell).
+A missing CLI does not relax local fail-closed boundaries.
+
 Agent runtime policy: `AGENTS.md`, DAD CLI lifecycle commands, schemas, audit
 records, deterministic hooks, and human gates are the durable contract. Runtime
 files for Claude, Codex, Cursor, Copilot, or future agents are optional adapters

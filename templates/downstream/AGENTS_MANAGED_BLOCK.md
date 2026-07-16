@@ -3,6 +3,8 @@
 
 Before material AI work, run a central-hub preflight. Before reporting completion or pushing changes, run a postflight that captures exact files, commands, tests, lessons, discoveries, failures, reusable patterns, missing capabilities, uncertainty, and risks.
 
+If `asset-dir` is not available on `PATH`, use the stable user shim at `~/.dad/bin/asset-dir` (POSIX shells) or `~/.dad/bin/asset-dir.ps1` (PowerShell). If neither shim exists, run from the DAD checkout with `PYTHONPATH=src python -m digital_asset_directory.cli agent preflight --repo . --agent <agent-id> --task "<task>"` (POSIX) or `$env:PYTHONPATH='src'; python -m digital_asset_directory.cli agent preflight --repo . --agent <agent-id> --task "<task>"` (PowerShell). A missing CLI does not relax local fail-closed boundaries.
+
 Before changing shared contracts, schemas, CI/hooks, governance, scoring/ranking, roadmap gates, dependencies, migrations, source-boundary rules, or defaults that future agents may inherit, classify the decision as high, medium, or low risk. High-risk load-bearing decisions require human attention, implementer red-team, premortem, rollback criteria, and fresh-eyes review.
 
 When choosing AI-environment-specific helpers such as skills, subagents, MCP servers, hooks, plugins, connectors, or background/cloud agents, consult the local repo's reviewed guidance first; the central hub's AI environment capability matrix is advisory until adopted by this repo.

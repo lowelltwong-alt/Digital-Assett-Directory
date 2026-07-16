@@ -614,8 +614,9 @@ def _capture_surface_payload(hub_root: Path) -> dict[str, Any]:
         "cli_fallback": (
             "If asset-dir is unavailable, first try the stable DAD user shim at "
             "~/.dad/bin/asset-dir or ~/.dad/bin/asset-dir.ps1; if the shim is "
-            "unavailable too, try PYTHONPATH=src python -m digital_asset_directory.cli "
-            "from the DAD checkout; otherwise append metadata-only JSONL with "
+            "unavailable too, run from the DAD checkout with PYTHONPATH=src python "
+            "-m digital_asset_directory.cli (POSIX) or $env:PYTHONPATH='src'; python "
+            "-m digital_asset_directory.cli (PowerShell); otherwise append metadata-only JSONL with "
             "dad_cli_unavailable and safe refs."
         ),
     }
@@ -905,6 +906,15 @@ Before material AI-assisted work, read this repo's front door and run:
 asset-dir agent preflight --repo . --agent <agent-id> --task "<task>"
 ```
 
+If `asset-dir` is not available on `PATH`, use the stable user shim at
+`~/.dad/bin/asset-dir` (POSIX shells) or `~/.dad/bin/asset-dir.ps1`
+(PowerShell). If neither shim exists, run from the DAD checkout with
+`PYTHONPATH=src python -m digital_asset_directory.cli agent preflight --repo . --agent <agent-id> --task "<task>"`
+(POSIX) or `$env:PYTHONPATH='src'; python -m digital_asset_directory.cli agent preflight --repo . --agent <agent-id> --task "<task>"`
+(PowerShell).
+Treat a missing CLI as an availability warning, not permission to bypass the
+fail-closed boundaries below.
+
 Use the actual runtime name as `<agent-id>` when useful, such as `codex`,
 `claude-code`, `cursor`, `copilot`, `human`, `ci`, or `other`. DAD's core
 contract is `AGENTS.md`; runtime-specific files and hooks are optional wrappers
@@ -981,7 +991,7 @@ Claude Code should follow the DAD enrollment contract in `AGENTS.md` and
 `.digital-asset/dad-integration.json`. `CLAUDE.md` is an optional runtime
 adapter, not the DAD source of truth. Agent review is triage only; human
 approval gates remain separate. Internal DAD integrations default to MCP over
-direct APIs; Claude-specific APIs or hooks are fallback adapters only.
+direct APIs; runtime-specific APIs or hooks are fallback adapters only.
 """
 
 
