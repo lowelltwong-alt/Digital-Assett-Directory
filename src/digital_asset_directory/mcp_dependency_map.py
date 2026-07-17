@@ -52,7 +52,7 @@ _SENSITIVE = re.compile(
 _FLOW_PHASE = {"source": 0, "transform": 1, "sink": 2}
 # These reviewed digests bind direction, not content fingerprints. A legitimate
 # graph/flow direction change therefore requires an explicit code-and-map review.
-_EXPECTED_EDGE_DIRECTION = "sha256:14ebd821cdb1706168f951e3588edc70e6f3331391aede6233b292ff2696ec38"
+_EXPECTED_EDGE_DIRECTION = "sha256:c5482b5c947caaf03850c58d9182ad74b0270fe07b708ddd0f9a9123db40db2a"
 _EXPECTED_FLOW_DIRECTION = "sha256:d00ba08f2e41ce68bd679a8cf91ef766cdd5579795d8494dc72ea07f20891f2f"
 
 

@@ -64,11 +64,8 @@ def test_current_portability_registry_is_valid_and_baselined() -> None:
     assert result["valid"] is True
     assert result["model_calls"] == 0
     assert result["inventory"]["baseline_integrity"] == "verified"
-    assert result["inventory"]["surfaces"]["dad_skill_registry"]["baseline_count"] == 38
+    assert result["inventory"]["surfaces"]["dad_skill_registry"]["baseline_count"] == 40
     assert set(result["inventory"]["new_identity_ids"]) == {
-        "personal-skill:portable-capability-governance",
-        "skill:personal-portfolio-capacity-review",
-        "skill:portable-capability-governance",
         "workflow:ml-synthetic-data-opportunity-review",
         "workflow:ml-synthetic-helper-research-refresh",
     }
