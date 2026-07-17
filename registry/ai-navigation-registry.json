@@ -1,8 +1,8 @@
 {
   "schema_version": "0.1.0",
   "registry_id": "ai-navigation-registry",
-  "navigation_version": "2026.07.16.15",
-  "updated_at": "2026-07-16T22:30:00Z",
+  "navigation_version": "2026.07.16.17",
+  "updated_at": "2026-07-17T03:00:00Z",
   "singular_entrypoint": {
     "path": "AI_FRONT_DOOR.md",
     "rule": "All agents start at AI_FRONT_DOOR.md, then follow the required read order and task-specific branches.",
@@ -54,6 +54,18 @@
     }
   ],
   "branch_map": [
+    {
+      "branch_id": "ci_module_boundary_governance",
+      "path": "assets/agent-skills/dad-ci-module-boundary-governance/SKILL.md",
+      "role": "Provider-neutral module ownership, dependency-triggered suite selection, workflow-contract validation, required-check aggregation, and metadata-only migration routing.",
+      "tags": ["agent_skill", "ci", "dependency_graph", "monorepo", "validation", "governance"],
+      "use_when": "You design, change, audit, or migrate CI workflows, module suites, path filters, required checks, integration/release lanes, or scheduled full regression.",
+      "current_version": "0.1.0",
+      "last_material_change_at": "2026-07-16T22:30:00Z",
+      "change_class": "library_catalog",
+      "route_after": ["AI_FRONT_DOOR.md", ".ci/module-boundaries.yaml", "schemas/ci-module-boundary.schema.json", "assets/coding-harnesses/ci-module-boundary-governance/tests-or-evals/scenarios.yaml"],
+      "freshness_hint": "Provider adapters cannot broaden manifest scope; dependency completeness is unknown without observed-edge evidence; downstream adoption remains human-gated."
+    },
     {
       "branch_id": "front_door",
       "path": "AI_FRONT_DOOR.md",
@@ -704,6 +716,18 @@
       "change_class": "library_catalog",
       "route_after": ["AI_FRONT_DOOR.md", "registry/agent-family-portfolio-registry.json", "registry/agent-skill-library.json", "registry/graph-edge-registry.json"],
       "freshness_hint": "Provider and model IDs are expiring attempt metadata; family health and graph links are candidate evidence, recurring research is dormant, and all mutation or promotion remains human-gated."
+    },
+    {
+      "branch_id": "source_knowledge_ingestion",
+      "path": "assets/source-knowledge-ingestion/README.md",
+      "role": "Metadata-first cross-repository knowledge ingestion, privacy-safe inert snapshots, normalized candidate records, dedupe evidence, graph projection, and human-gated promotion.",
+      "tags": ["learning_loop", "digital_asset", "knowledge_graph", "cross_repo", "security_privacy", "validation", "human_gate"],
+      "use_when": "A source repository has reusable lessons, assets, roles, workflows, schemas, tests, or governance patterns that DAD should retain without copying case, client, raw, output, or private-workspace content.",
+      "current_version": "0.1.0",
+      "last_material_change_at": "2026-07-16T23:30:00Z",
+      "change_class": "library_catalog",
+      "route_after": ["AI_FRONT_DOOR.md", "registry/source-knowledge-ingestion-registry.json", "assets/source-knowledge-ingestion/policy.json", "roadmap/evidence/albert-source-knowledge-ingestion-report.md", "registry/graph-surface-registry.json"],
+      "freshness_hint": "Every snapshot is source-revision and dirty-state bound; extracted records remain internal candidates, excluded paths remain opaque, and promotion or downstream adoption requires separate human review."
     }
   ],
   "recent_changes": [

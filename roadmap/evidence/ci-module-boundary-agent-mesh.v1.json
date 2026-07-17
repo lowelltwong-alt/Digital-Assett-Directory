@@ -1,0 +1,125 @@
+{
+  "schema_version": "dad.task_local_agent_mesh_manifest.v1",
+  "mesh_id": "dad:agent-mesh:ci-module-boundary",
+  "task_id": "ci-module-boundary",
+  "revision_id": "dad:agent-mesh-revision:ci-module-boundary:v1",
+  "phase": "planning",
+  "status": "planned",
+  "source_snapshot_digest": "sha256:7dbe0b63afcf86dda27fa602185d0a3f7c01f3f89cc0559ed61b037557b667fe",
+  "authority": {
+    "source_authority": "DAD governs this package; enrolled repositories retain authority over local CI adoption.",
+    "execution_authority": false,
+    "human_gate_required": true
+  },
+  "max_delegation_depth": 1,
+  "writer_role_id": "primary-writer",
+  "checker_role_id": "fresh-eyes-checker",
+  "non_overlap_statement": "Only primary-writer edits tracked files; scouts and checker are read-only.",
+  "roles": [
+    {
+      "role_id": "overlap-scout",
+      "why_needed": "A cheap inventory prevents duplicate lessons, skills, validators, and templates.",
+      "mission": "Find reusable overlaps and exact gaps in DAD CI and dependency surfaces.",
+      "inputs": ["DAD registries, lessons, workflows, assets, graphs, tests, and instructions"],
+      "dependencies": [],
+      "authority": "Read-only DAD inventory; no downstream content or edits.",
+      "model_effort_class": "low",
+      "writer_checker_relation": "specialist",
+      "acceptance_conditions": ["Exact paths and IDs support a dedupe conclusion."],
+      "stop_conditions": ["Search would require downstream content or mutation."],
+      "handoff": {
+        "recipient_role_ids": ["primary-writer"],
+        "deliverables": ["overlap inventory", "reuse recommendation"],
+        "readiness_conditions": ["DAD-local search is complete."]
+      }
+    },
+    {
+      "role_id": "architecture-scout",
+      "why_needed": "Shared CI contracts require proportional medium-effort synthesis.",
+      "mission": "Propose provider-neutral semantics, evaluator behavior, integration surfaces, and portability evidence.",
+      "inputs": ["user rule", "DAD authority contracts", "existing harness and graph patterns"],
+      "dependencies": ["overlap-scout"],
+      "authority": "Read-only advice; cannot edit or approve its own proposal.",
+      "model_effort_class": "medium",
+      "writer_checker_relation": "specialist",
+      "acceptance_conditions": ["Design covers requested lanes, edges, fixtures, exceptions, and deadlocks."],
+      "stop_conditions": ["Reviewed authority sources cannot resolve a conflict."],
+      "handoff": {
+        "recipient_role_ids": ["primary-writer"],
+        "deliverables": ["contract design", "integration map", "risk notes"],
+        "readiness_conditions": ["Existing surfaces and alternatives are compared."]
+      }
+    },
+    {
+      "role_id": "adoption-scout",
+      "why_needed": "A metadata-only inventory bounds migration without downstream reads or writes.",
+      "mission": "Identify enrolled-repo metadata, audit limits, and human-reviewed adoption routes.",
+      "inputs": ["DAD enrollment audit metadata", "metadata-only CI release scope"],
+      "dependencies": [],
+      "authority": "Read-only DAD metadata; no downstream traversal or mutation.",
+      "model_effort_class": "low",
+      "writer_checker_relation": "specialist",
+      "acceptance_conditions": ["Findings state audit depth, evidence status, and non-mutation boundary."],
+      "stop_conditions": ["A conclusion would require downstream workflow contents."],
+      "handoff": {
+        "recipient_role_ids": ["primary-writer"],
+        "deliverables": ["repo inventory", "audit limits", "patch categories"],
+        "readiness_conditions": ["Authoritative enrollment evidence is identified."]
+      }
+    },
+    {
+      "role_id": "primary-writer",
+      "why_needed": "One writer keeps schema, evaluator, fixtures, registries, navigation, skill, and scaffolds coherent.",
+      "mission": "Implement the provider-neutral capability and deterministic evidence.",
+      "inputs": ["user requirements", "preflight context", "scout handoffs", "reviewed DAD authority"],
+      "dependencies": ["overlap-scout", "architecture-scout", "adoption-scout"],
+      "authority": "May edit only the isolated DAD worktree; no downstream or global changes.",
+      "model_effort_class": "medium",
+      "writer_checker_relation": "writer",
+      "acceptance_conditions": ["Focused and repository validation pass.", "Audit is metadata-only.", "Portability evidence is revision-bound."],
+      "stop_conditions": ["Silent dependent skips remain possible.", "Required-check deadlock remains.", "A downstream write becomes necessary."],
+      "handoff": {
+        "recipient_role_ids": ["fresh-eyes-checker"],
+        "deliverables": ["diff", "validator results", "fixture evidence", "migration audit"],
+        "readiness_conditions": ["Writer checks pass and diff is stable."]
+      }
+    },
+    {
+      "role_id": "fresh-eyes-checker",
+      "why_needed": "High-risk CI governance requires independent false-positive and false-negative review.",
+      "mission": "Red-team the completed capability against requested edge cases and authority boundaries.",
+      "inputs": ["final diff", "contract", "fixtures", "audit", "validation output"],
+      "dependencies": ["primary-writer"],
+      "authority": "Read-only review; cannot edit or approve authored work.",
+      "model_effort_class": "medium",
+      "writer_checker_relation": "checker",
+      "acceptance_conditions": ["Findings cover requested risk classes and state proceed, repair, or escalate."],
+      "stop_conditions": ["Evidence is incomplete or independence is compromised."],
+      "handoff": {
+        "recipient_role_ids": [],
+        "deliverables": ["independent findings", "release recommendation"],
+        "readiness_conditions": ["Raw permitted artifacts and results are available."]
+      }
+    }
+  ],
+  "proof_obligations": [
+    {
+      "obligation_id": "declared-edge-scope",
+      "description": "Prove suites follow ownership and dependency edges without unrelated blockers or silent broadening.",
+      "evidence_required": ["negative fixtures", "transitive tests", "broadening diagnostics"],
+      "owner_role_id": "primary-writer",
+      "checker_role_id": "fresh-eyes-checker",
+      "status": "pending"
+    },
+    {
+      "obligation_id": "portable-adoption",
+      "description": "Prove provider neutrality and metadata-only human-gated adoption.",
+      "evidence_required": ["schema", "adapter", "revision evidence", "migration audit"],
+      "owner_role_id": "primary-writer",
+      "checker_role_id": "fresh-eyes-checker",
+      "status": "pending"
+    }
+  ],
+  "unresolved_decisions": [],
+  "manifest_digest": "sha256:3c6035a55b60cc867c0e5fe591c4146adbdbf469be40f19f14141cf62b58ad73"
+}

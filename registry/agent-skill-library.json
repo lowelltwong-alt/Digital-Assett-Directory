@@ -1747,6 +1747,29 @@
       "review_status": "reviewed",
       "last_reviewed_at": "2026-07-15",
       "next_review_due_at": "2026-10-15"
+    },
+    {
+      "skill_id": "skill:dad-ci-module-boundary-governance",
+      "name": "DAD CI Module Boundary Governance",
+      "version": "0.1.0",
+      "status": "candidate",
+      "skill_format": "generic_agent_skill",
+      "path": "assets/agent-skills/dad-ci-module-boundary-governance",
+      "entrypoint": "assets/agent-skills/dad-ci-module-boundary-governance/SKILL.md",
+      "subagent_pack": "assets/agent-skills/dad-ci-module-boundary-governance/subagents.yaml",
+      "description": "Designs and audits provider-neutral module-owned CI, dependency-triggered suites, required aggregators, and separate scheduled regression.",
+      "trigger_examples": ["Design or change CI path filters, module suites, or required checks.", "Investigate an unrelated-module false blocker or duplicate push and PR run.", "Adopt module-boundary CI in a monorepo or Law Firm OS repo family."],
+      "does_not_apply_when": ["The work is a declared integration or release suite with explicit scope.", "A separate scheduled full-system regression is being run without changing its PR boundary."],
+      "capabilities": ["module_ownership_manifest", "dependency_trigger_synthesis", "workflow_contract_validation", "proportional_agent_routing"],
+      "checkout_modes": ["pointer", "wrapper"],
+      "update_policy": "dad_mail_notice",
+      "lifecycle": {"supersedes": [], "superseded_by": [], "retirement_reason": "", "replacement_skill_id": "", "change_notice_templates": ["templates/mail/skill-update-available.mail.template.json", "templates/mail/skill-retirement-notice.mail.template.json"]},
+      "dependencies": ["schemas/ci-module-boundary.schema.json", "assets/coding-harnesses/ci-module-boundary-governance", "templates/ci-module-boundary", "assets/agent-skills/subagent-continuous-improvement"],
+      "source_evidence": ["assets/agent-skills/dad-ci-module-boundary-governance/SKILL.md", "assets/agent-skills/dad-ci-module-boundary-governance/references/CI_MODULE_BOUNDARY_CONTRACT.md", "assets/coding-harnesses/ci-module-boundary-governance/tests-or-evals/scenarios.yaml"],
+      "authority_boundary": "The skill may create or review candidate manifests and patches in approved scope; source owners retain downstream CI adoption, required-check, release, and exception authority.",
+      "review_status": "candidate",
+      "last_reviewed_at": "2026-07-16",
+      "next_review_due_at": "2026-08-16"
     }
   ]
 }

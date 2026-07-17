@@ -1,0 +1,25 @@
+name: scheduled-full-regression
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "41 6 * * 1"
+
+permissions:
+  contents: read
+
+jobs:
+  full-system:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: pip
+      - run: python -m pip install -e '.[dev]'
+      - run: python -m pytest
+      - run: python -m digital_asset_directory.cli validate --hub .
+      - run: python -m digital_asset_directory.cli roadmap check --hub . --no-update

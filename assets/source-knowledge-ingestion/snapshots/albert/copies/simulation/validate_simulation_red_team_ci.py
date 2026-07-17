@@ -1,0 +1,192 @@
+#!/usr/bin/env python3
+"""Validate the simulator red-team GitHub Actions workflow."""
+
+from __future__ import annotations
+
+import json
+import subprocess
+import sys
+from pathlib import Path
+
+
+ROOT = Path(__file__).resolve().parents[1]
+WORKFLOW = ROOT / ".github" / "workflows" / "simulation-red-team.yml"
+OUTPUT = ROOT / "simulation" / "output" / "simulation_red_team_ci_checks.json"
+REPORT = ROOT / "reports" / "simulation_red_team_ci.md"
+
+REQUIRED_TEXT = [
+    "name: Albert Simulation Red-Team",
+    "push:",
+    "pull_request:",
+    "paths:",
+    '"simulation/**"',
+    "workflow_dispatch:",
+    "schedule:",
+    'cron: "17 10 * * 1"',
+    "permissions:",
+    "contents: read",
+    "concurrency:",
+    "cancel-in-progress: true",
+    "runs-on: ubuntu-latest",
+    "timeout-minutes: 30",
+    "actions/checkout@v6",
+    "actions/setup-python@v6",
+    'python-version: "3.13"',
+]
+
+REQUIRED_COMMANDS = [
+    "python simulation/validate_simulation_red_team_ci.py",
+    "python simulation/run_simulation_red_team_suite.py",
+    "python scripts/validate_case_output_isolation.py --check",
+    "python scripts/validate_system_maps.py --check",
+    "python simulation/validate_simulation_credibility_assessment.py",
+    "python simulation/validate_simulation_experiment_manifest.py",
+    "python simulation/validate_simulation_run_family_manifest.py",
+    "python simulation/redteam_simulation_safety.py --fail-on-medium",
+    "python simulation/build_simulation_red_team_run_snapshot.py",
+    "python simulation/validate_simulation_red_team_run_snapshot.py",
+    "python scripts/build_digital_asset_catalog.py --check",
+    "python scripts/build_digital_asset_graph.py --check",
+    "python ai_workland/scripts/validate_ai_docs.py --update",
+    "python ai_workland/scripts/validate_ai_docs.py",
+    "python tools/validate_package.py",
+    "git diff -- source/raw",
+    "git diff --check",
+]
+
+FORBIDDEN_TEXT = [
+    "pull_request_target",
+    "workflow_run:",
+    "pip install",
+    "curl ",
+    "Invoke-WebRequest",
+    "secrets.",
+    "record_monte_carlo_calibration_decision.py --apply",
+    "simulation/build_monte_carlo_calibration_decision_intake.py --apply",
+]
+
+
+def rel(path: Path) -> str:
+    return str(path.relative_to(ROOT)).replace("\\", "/")
+
+
+def write_json(path: Path, payload: dict) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(json.dumps(payload, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
+
+
+def source_raw_status() -> dict:
+    proc = subprocess.run(
+        ["git", "diff", "--", "source/raw"],
+        cwd=ROOT,
+        text=True,
+        capture_output=True,
+        check=False,
+    )
+    output = (proc.stdout or proc.stderr or "").strip()
+    return {
+        "status": "pass" if proc.returncode == 0 and not output else "fail",
+        "returncode": proc.returncode,
+        "output": output,
+    }
+
+
+def validate_workflow() -> dict:
+    errors: list[str] = []
+    text = ""
+    if not WORKFLOW.exists():
+        errors.append(f"Missing workflow: {rel(WORKFLOW)}")
+    else:
+        text = WORKFLOW.read_text(encoding="utf-8")
+
+    missing_text = [item for item in REQUIRED_TEXT if item not in text]
+    missing_commands = [item for item in REQUIRED_COMMANDS if item not in text]
+    forbidden_hits = [item for item in FORBIDDEN_TEXT if item in text]
+
+    if missing_text:
+        errors.append("workflow missing required text: " + ", ".join(missing_text))
+    if missing_commands:
+        errors.append("workflow missing required commands: " + ", ".join(missing_commands))
+    if forbidden_hits:
+        errors.append("workflow contains forbidden text: " + ", ".join(forbidden_hits))
+
+    raw = source_raw_status()
+    if raw["status"] != "pass":
+        errors.append("source/raw has a diff")
+
+    return {
+        "schema": "simulation_red_team_ci_checks.v1",
+        "status": "fail" if errors else "pass",
+        "workflow_path": rel(WORKFLOW),
+        "boundary": "This CI workflow validates the current simulator guardrails. It does not approve new simulator behavior, external data/API use, OSS dependency adoption, human calibration decisions, AI judge, jury personas, opponent modeling, transcript replay, live mode, embeddings, vector DB, graph DB, or GraphRAG.",
+        "trigger_policy": "Run the full simulator suite only for declared simulator code, contracts, inputs, or direct dependents; also allow manual dispatch and one weekly read-only scheduled run. Unrelated OCR and UI changes must not trigger it.",
+        "required_command_count": len(REQUIRED_COMMANDS),
+        "missing_required_text": missing_text,
+        "missing_required_commands": missing_commands,
+        "forbidden_hits": forbidden_hits,
+        "source_raw_status": raw,
+        "errors": errors,
+        "error_count": len(errors),
+    }
+
+
+def render_report(result: dict) -> str:
+    lines = [
+        "# Simulation Red-Team CI",
+        "",
+        "Generated by `simulation/validate_simulation_red_team_ci.py`. Deterministic; no timestamps.",
+        "",
+        "## Boundary",
+        "",
+        result["boundary"],
+        "",
+        "## Summary",
+        "",
+        f"- Status: `{result['status']}`",
+        f"- Workflow: `{result['workflow_path']}`",
+        f"- Trigger policy: {result['trigger_policy']}",
+        f"- Required commands: {result['required_command_count']}",
+        f"- Source/raw status: `{result['source_raw_status']['status']}`",
+        f"- Errors: {result['error_count']}",
+        "",
+        "## Required Commands",
+        "",
+    ]
+    for command in REQUIRED_COMMANDS:
+        lines.append(f"- `{command}`")
+    lines.extend(["", "## Forbidden Patterns", ""])
+    for item in FORBIDDEN_TEXT:
+        lines.append(f"- `{item}`")
+    if result["errors"]:
+        lines.extend(["", "## Errors", ""])
+        for error in result["errors"]:
+            lines.append(f"- {error}")
+    if result["status"] == "pass":
+        lines.extend(
+            [
+                "",
+                "PASS: simulator red-team CI workflow is present, read-only, dependency-free, weekly scheduled, and aligned with the current wait-for-human-decisions branch.",
+            ]
+        )
+    else:
+        lines.extend(["", "FAIL: repair the simulator red-team CI workflow before relying on CI guardrails."])
+    lines.append("")
+    return "\n".join(lines)
+
+
+def main() -> None:
+    result = validate_workflow()
+    write_json(OUTPUT, result)
+    REPORT.parent.mkdir(parents=True, exist_ok=True)
+    REPORT.write_text(render_report(result), encoding="utf-8")
+    print(f"Wrote {rel(OUTPUT)}")
+    print(f"Wrote {rel(REPORT)}")
+    if result["errors"]:
+        for error in result["errors"]:
+            print("ERROR:", error)
+        sys.exit(1)
+    print("PASS: simulation red-team CI workflow")
+
+
+if __name__ == "__main__":
+    main()

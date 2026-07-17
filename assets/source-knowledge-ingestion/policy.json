@@ -1,0 +1,74 @@
+{
+  "schema_version": "dad.source_knowledge_ingestion_policy.v1",
+  "policy_id": "policy:dad-source-knowledge-ingestion",
+  "revision_id": "policy-revision:dad-source-knowledge-ingestion:0.1.0",
+  "status": "candidate",
+  "provider_neutral": true,
+  "source_authority_rule": "The source repository remains authoritative; DAD stores only revision-bound candidate observations and reusable extracts.",
+  "classifications": [
+    "lesson",
+    "digital-asset",
+    "skill",
+    "agent-or-subagent-definition",
+    "workflow-or-harness",
+    "schema-or-registry",
+    "test-or-evaluation-pack",
+    "architecture-or-governance-pattern",
+    "repo-specific-not-reusable",
+    "private-reference-only",
+    "rejected-or-unsafe",
+    "unknown-pending-content-review"
+  ],
+  "required_metadata": [
+    "source_repository",
+    "source_path_or_opaque_hash",
+    "source_revision",
+    "content_hash_or_git_blob_id",
+    "authority",
+    "privacy_classification",
+    "bounded_description",
+    "applicability",
+    "non_applicability",
+    "dependencies",
+    "reverse_consumers",
+    "evidence_status",
+    "owner",
+    "freshness",
+    "supersession_state",
+    "review_status"
+  ],
+  "privacy_controls": {
+    "source_content_default": "do_not_read",
+    "content_read_requirement": "explicit_path_allowlist",
+    "exact_copy_requirement": "narrower_explicit_copy_allowlist_and_deterministic_scan",
+    "text_hash_normalization": "utf8_crlf_and_cr_to_lf",
+    "excluded_path_representation": "opaque_sha256_and_aggregate_family_only",
+    "private_workspace_representation": "approved_stable_manifest_identifier_only",
+    "forbidden_content": [
+      "case_documents",
+      "witness_material",
+      "ocr_text",
+      "legal_evidence",
+      "client_data",
+      "raw_conversations",
+      "credentials",
+      "secrets",
+      "private_workspace_contents"
+    ]
+  },
+  "promotion_controls": {
+    "candidate_by_default": true,
+    "human_review_required": true,
+    "automatic_global_registry_promotion": false,
+    "automatic_downstream_mutation": false,
+    "license_review_required": true,
+    "supersession_is_non_destructive": true
+  },
+  "routing": {
+    "mechanical_inventory": "deterministic_script_or_luna_low",
+    "dedupe_and_graph_synthesis": "terra_medium_or_high",
+    "architecture_privacy_conflict": "sol_high_only_if_unresolved",
+    "independent_checker_required": true
+  },
+  "review_status": "candidate"
+}

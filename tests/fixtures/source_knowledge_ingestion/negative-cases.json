@@ -1,0 +1,13 @@
+{
+  "schema_version": "dad.source_knowledge_ingestion_negative_fixtures.v1",
+  "cases": [
+    {"id": "raw-source-content", "path": "source/raw/client-record.txt", "expected": "opaque_metadata_only"},
+    {"id": "case-output", "path": "outputs/cases/matter/witness.json", "expected": "opaque_metadata_only"},
+    {"id": "private-reference", "path": "ai_workland/generated/file_manifest.json", "expected": "stable_reference_only"},
+    {"id": "credential-copy", "content_class": "synthetic credential assignment with a long value", "expected": "copy_rejected"},
+    {"id": "absolute-path-copy", "content": "C:/Users/example/private/source", "expected": "copy_rejected"},
+    {"id": "silent-promotion", "review_status": "reviewed", "expected": "validation_failed"},
+    {"id": "dangling-edge", "source": "missing", "target": "also-missing", "expected": "validation_failed"},
+    {"id": "hash-drift", "mutation": "append_byte_to_approved_copy", "expected": "validation_failed"}
+  ]
+}

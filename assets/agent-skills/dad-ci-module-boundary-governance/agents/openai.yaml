@@ -1,0 +1,4 @@
+interface:
+  display_name: "CI Module Boundary Governance"
+  short_description: "Scope CI through declared module dependencies"
+  default_prompt: "Use $dad-ci-module-boundary-governance to design or audit dependency-scoped CI."

@@ -1,0 +1,376 @@
+{
+  "schema": "new_case_workflow_phases.v1",
+  "required_phase_ids": [
+    "INTAKE_CONTROL_PLANE",
+    "SOURCE_CUSTODY",
+    "OCR_EXTRACTION",
+    "NORMALIZATION",
+    "CHUNKING_EVAL",
+    "GRAPH_KG",
+    "WITNESS_ADMIN_PREP",
+    "SIMULATION_OPTIONAL",
+    "READINESS_EXPORT"
+  ],
+  "phase_order": [
+    {
+      "phase_id": "INTAKE_CONTROL_PLANE",
+      "title": "Intake Control Plane",
+      "gate": "always_ready",
+      "purpose": "Create the human-review packet, validate the deterministic questions, and validate any completed intake record.",
+      "commands": [
+        {
+          "command": "python scripts/build_new_case_intake_packet.py",
+          "purpose": "Build the deterministic question packet."
+        },
+        {
+          "command": "python scripts/validate_new_case_intake.py",
+          "purpose": "Validate the question set, generated packet, template, and schema."
+        },
+        {
+          "command": "python scripts/validate_new_case_intake.py --intake case_config/new_case_intake.json",
+          "purpose": "Validate the completed case-specific intake record after human answers are recorded."
+        }
+      ],
+      "expected_outputs": [
+        "reports/new_case_intake_packet.md",
+        "case_config/new_case_intake.json"
+      ]
+    },
+    {
+      "phase_id": "SOURCE_CUSTODY",
+      "title": "Source Custody",
+      "gate": "human_confirmed_and_raw_immutable_acknowledged",
+      "purpose": "Stage PDFs, DOCX, images, and extracted custody metadata without editing source/raw.",
+      "commands": [
+        {
+          "command": "git diff -- source/raw",
+          "purpose": "Verify raw source custody has no unintended edits."
+        }
+      ],
+      "expected_outputs": [
+        "source/raw/",
+        "data/manifests/document_manifest.csv",
+        "data/manifests/raw_source_hashes.json"
+      ]
+    },
+    {
+      "phase_id": "OCR_EXTRACTION",
+      "title": "OCR And Extraction",
+      "gate": "processing_permission_allows_ai_or_local_work",
+      "purpose": "Inventory pages and keep OCR/extraction promotion behind confidence, disagreement, and human-review gates.",
+      "commands": [
+        {
+          "command": "python scripts/build_ocr_page_inventory.py",
+          "purpose": "Build page/source inventory without running OCR engines."
+        },
+        {
+          "command": "python scripts/build_visual_evidence_review_queue.py",
+          "purpose": "Build the visual evidence review queue from raw images, paired notes, source hashes, OCR page inventory, and analysis-layer evidence links."
+        },
+        {
+          "command": "python scripts/validate_visual_evidence_review_queue.py",
+          "purpose": "Validate visual evidence coverage, date/time/number/entity review targets, raw-image authority warnings, and human-review prompts."
+        },
+        {
+          "command": "python scripts/validate_ocr_harness.py",
+          "purpose": "Validate the fail-closed OCR harness and disabled engine registry."
+        },
+        {
+          "command": "python scripts/audit_ocr_normalization.py",
+          "purpose": "Audit current normalized/extracted text for OCR-style defects."
+        }
+      ],
+      "expected_outputs": [
+        "data/ocr/page_inventory.json",
+        "data/visual_evidence/review_queue.json",
+        "reports/ocr_page_inventory.md",
+        "reports/visual_evidence_review_queue.md",
+        "reports/ocr_harness_validation.md",
+        "reports/ocr_normalization_qa.md"
+      ]
+    },
+    {
+      "phase_id": "NORMALIZATION",
+      "title": "Normalization",
+      "gate": "source_custody_and_extraction_ready",
+      "purpose": "Create one canonical normalized text record per exhibit, deposition, pleading, or source artifact.",
+      "commands": [
+        {
+          "command": "python scripts/normalize_sources.py --check",
+          "purpose": "Check deterministic normalized outputs before rebuild."
+        },
+        {
+          "command": "python scripts/validate_normalized_sources.py",
+          "purpose": "Validate normalized source invariants."
+        },
+        {
+          "command": "python scripts/audit_source_fidelity.py --fail-on-medium",
+          "purpose": "Validate live source fidelity before chunks or graph promotion."
+        }
+      ],
+      "expected_outputs": [
+        "source/processed/normalized_md/",
+        "reports/source_fidelity_audit.md",
+        "reports/source_fidelity_audit.json"
+      ]
+    },
+    {
+      "phase_id": "CHUNKING_EVAL",
+      "title": "Chunking And Retrieval Eval Gate",
+      "gate": "normalized_sources_valid",
+      "purpose": "Generate source-faithful chunks, validate coverage, and pass the current retrieval gate before graph/vector promotion.",
+      "commands": [
+        {
+          "command": "python scripts/chunk_corpus.py --variant baseline --scope canonical --output source/processed/chunks/chunks_baseline_scoped.jsonl --sources-out source/processed/chunks/canonical_chunk_sources.json",
+          "purpose": "Build scoped baseline chunks."
+        },
+        {
+          "command": "python scripts/chunk_corpus.py --variant legal_v1 --scope canonical --output source/processed/chunks/chunks_legal_v1.jsonl --sources-out source/processed/chunks/canonical_chunk_sources.json",
+          "purpose": "Build legal_v1 chunks."
+        },
+        {
+          "command": "python scripts/validate_chunker_punctuation.py",
+          "purpose": "Validate punctuation-aware boundary detection."
+        },
+        {
+          "command": "python scripts/validate_chunks.py source/processed/chunks/chunks_legal_v1.jsonl",
+          "purpose": "Validate chunk schema, provenance, and source faithfulness."
+        },
+        {
+          "command": "python scripts/audit_chunk_coverage.py",
+          "purpose": "Audit canonical chunk coverage."
+        },
+        {
+          "command": "python scripts/evaluate_chunk_retrieval.py --runs baseline_scoped=source/processed/chunks/chunks_baseline_scoped.jsonl legal_v1=source/processed/chunks/chunks_legal_v1.jsonl --eval eval/chunking/chunk_retrieval_eval.jsonl --report reports/chunking_ab_report.md",
+          "purpose": "Run the current A/B retrieval gate."
+        }
+      ],
+      "expected_outputs": [
+        "source/processed/chunks/",
+        "reports/chunking_ab_report.md"
+      ]
+    },
+    {
+      "phase_id": "GRAPH_KG",
+      "title": "File-Backed Knowledge Graph",
+      "gate": "kg_depth_requires_graph_and_chunk_gate_passed",
+      "purpose": "Build the file-backed graph, retrieval packs, prep views, role matrix, exhibit familiarity, and source-backed graph audits.",
+      "commands": [
+        {
+          "command": "python scripts/build_vector_index_manifest.py",
+          "purpose": "Pin provisional chunk/vector contract without generating embeddings."
+        },
+        {
+          "command": "python scripts/build_file_graph.py",
+          "purpose": "Build the file-backed graph from chunks, claims, and edges."
+        },
+        {
+          "command": "python scripts/audit_graph_anchors.py",
+          "purpose": "Audit graph source anchors."
+        },
+        {
+          "command": "python scripts/build_graph_retrieval_packs.py",
+          "purpose": "Build graph-assisted retrieval packs."
+        },
+        {
+          "command": "python scripts/build_graph_prep_views.py",
+          "purpose": "Build witness/issue prep views."
+        },
+        {
+          "command": "python scripts/build_graph_case_prep_views.py",
+          "purpose": "Build case-level prep views."
+        },
+        {
+          "command": "python scripts/audit_graph_case_prep.py",
+          "purpose": "Audit case prep views."
+        },
+        {
+          "command": "python scripts/build_witness_role_matrix.py --fail-on-medium",
+          "purpose": "Build portrayal-roster role matrix from confirmed settings."
+        },
+        {
+          "command": "python scripts/build_witness_exhibit_familiarity.py --fail-on-medium",
+          "purpose": "Build witness-by-exhibit familiarity matrix."
+        },
+        {
+          "command": "python scripts/validate_file_graph.py",
+          "purpose": "Validate graph semantics, anchors, provenance, and role boundaries."
+        }
+      ],
+      "expected_outputs": [
+        "data/graph/",
+        "reports/file_graph_summary.md",
+        "reports/witness_role_matrix.md",
+        "reports/witness_exhibit_familiarity_matrix.md"
+      ]
+    },
+    {
+      "phase_id": "WITNESS_ADMIN_PREP",
+      "title": "Witness And Admin Prep Materials",
+      "gate": "human_roster_confirmed_and_packets_requested",
+      "purpose": "Build witness-facing and admin/judge materials only after the human-played roster and knowledge boundaries are confirmed.",
+      "commands": [
+        {
+          "command": "python scripts/build_graph_trial_prep_packs.py",
+          "purpose": "Build graph-backed trial prep packs."
+        },
+        {
+          "command": "python scripts/build_graph_role_prep_sheets.py",
+          "purpose": "Build human-role prep sheets."
+        },
+        {
+          "command": "python scripts/audit_graph_role_prep_sheets.py --fail-on-medium",
+          "purpose": "Audit role prep sheets."
+        },
+        {
+          "command": "python scripts/audit_graph_content_quality.py --fail-on-medium",
+          "purpose": "Audit graph content quality."
+        },
+        {
+          "command": "python scripts/audit_visual_evidence_importance.py --fail-on-medium",
+          "purpose": "Audit photo/visual evidence importance and limits."
+        },
+        {
+          "command": "python scripts/audit_graph_query_smoke.py",
+          "purpose": "Run graph query smoke tests."
+        },
+        {
+          "command": "python scripts/build_witness_technique_assignments.py",
+          "purpose": "Build witness technique assignments."
+        },
+        {
+          "command": "python scripts/validate_witness_prep_techniques.py",
+          "purpose": "Validate technique registry, control plan, and assignments."
+        },
+        {
+          "command": "python scripts/build_trial_witness_packets.py",
+          "purpose": "Build final human witness packets."
+        },
+        {
+          "command": "python scripts/build_podcast_transcripts.py",
+          "purpose": "Build source-bound podcast transcripts."
+        },
+        {
+          "command": "python scripts/build_flashcard_decks.py",
+          "purpose": "Build witness flashcards."
+        },
+        {
+          "command": "python scripts/validate_witness_packet_docx.py",
+          "purpose": "Validate witness packet outputs."
+        },
+        {
+          "command": "python scripts/validate_admin_judge_packet.py",
+          "purpose": "Validate admin/judge packet outputs."
+        }
+      ],
+      "expected_outputs": [
+        "reports/witness_packets_docx/",
+        "reports/admin_judge_packet/",
+        "reports/witness_technique_assignments.md"
+      ]
+    },
+    {
+      "phase_id": "SIMULATION_OPTIONAL",
+      "title": "Optional File-Backed Simulation",
+      "gate": "simulation_requested_and_human_roster_confirmed",
+      "purpose": "Build deterministic simulation layers only after graph facts, answer safety, and human roster boundaries are valid.",
+      "commands": [
+        {
+          "command": "python simulation/run_graph_simulation.py",
+          "purpose": "Build graph-backed practice strategy paths."
+        },
+        {
+          "command": "python simulation/compare_graph_simulation_strategies.py",
+          "purpose": "Compare heuristic strategy paths."
+        },
+        {
+          "command": "python simulation/validate_graph_simulation.py",
+          "purpose": "Validate simulation roster and score math."
+        },
+        {
+          "command": "python simulation/audit_graph_simulation_usefulness.py --fail-on-medium",
+          "purpose": "Audit simulation usefulness."
+        },
+        {
+          "command": "python simulation/build_simulation_facts.py",
+          "purpose": "Build source-anchored simulation facts."
+        },
+        {
+          "command": "python simulation/check_simulation_facts.py --tests config/simulation_fact_checker_tests.json --output simulation/output/simulation_fact_checks.json --report reports/simulation_fact_checker.md",
+          "purpose": "Run fact-checker fixtures."
+        },
+        {
+          "command": "python simulation/validate_simulation_facts.py",
+          "purpose": "Validate simulation facts."
+        },
+        {
+          "command": "python simulation/build_answer_permutations.py",
+          "purpose": "Build source-bound answer permutations."
+        },
+        {
+          "command": "python simulation/validate_answer_permutations.py",
+          "purpose": "Validate answer permutations."
+        }
+      ],
+      "expected_outputs": [
+        "simulation/output/",
+        "reports/simulation_fact_checker.md",
+        "reports/answer_permutations.md"
+      ]
+    },
+    {
+      "phase_id": "READINESS_EXPORT",
+      "title": "Readiness And Package Boundary",
+      "gate": "after_selected_phases",
+      "purpose": "Build readiness certificates, digital asset indexes, AI-doc manifests, package-boundary checks, and raw-source cleanliness proof.",
+      "commands": [
+        {
+          "command": "python scripts/audit_workflow_readiness.py",
+          "purpose": "Audit workflow readiness."
+        },
+        {
+          "command": "python scripts/build_kg_readiness_certificate.py",
+          "purpose": "Build KG readiness certificate."
+        },
+        {
+          "command": "python scripts/build_digital_asset_catalog.py",
+          "purpose": "Rebuild digital asset catalog."
+        },
+        {
+          "command": "python scripts/build_digital_asset_graph.py",
+          "purpose": "Rebuild digital asset graph."
+        },
+        {
+          "command": "python scripts/build_digital_asset_catalog.py --check",
+          "purpose": "Validate digital asset catalog."
+        },
+        {
+          "command": "python scripts/build_digital_asset_graph.py --check",
+          "purpose": "Validate digital asset graph."
+        },
+        {
+          "command": "python ai_workland/scripts/validate_ai_docs.py --update",
+          "purpose": "Update AI file manifest."
+        },
+        {
+          "command": "python ai_workland/scripts/validate_ai_docs.py",
+          "purpose": "Validate AI docs and source-status layer."
+        },
+        {
+          "command": "python tools/validate_package.py",
+          "purpose": "Validate candidate package boundary."
+        },
+        {
+          "command": "git diff -- source/raw",
+          "purpose": "Prove raw source has not been edited."
+        }
+      ],
+      "expected_outputs": [
+        "reports/workflow_readiness_audit.md",
+        "reports/kg_readiness_certificate.md",
+        "AI_DIGITAL_ASSET_CATALOG.md",
+        "reports/digital_asset_graph.md"
+      ]
+    }
+  ]
+}

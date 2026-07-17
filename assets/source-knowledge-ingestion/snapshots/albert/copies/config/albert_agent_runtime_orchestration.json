@@ -1,0 +1,198 @@
+{
+  "schema": "albert_agent_runtime_orchestration.v1",
+  "status": "architecture_contract_runtime_disabled",
+  "scope": "future_ai_steps_for_green_only_mock_case_workflows",
+  "runtime_enabled": false,
+  "provider_agnostic": true,
+  "source_truth_rule": "AI output is an advisory artifact and never source truth or human approval.",
+  "deployment_boundary": {
+    "allowed_data_classes_now": ["green"],
+    "blocked_data_classes_now": ["amber", "red", "unknown"],
+    "real_matter_lane_enabled": false,
+    "browser_direct_to_model": false,
+    "external_model_receives_raw_case_files": false,
+    "telemetry_may_contain_case_payloads": false
+  },
+  "executor_adapters": [
+    {
+      "adapter_id": "direct_approved_model_api",
+      "host_examples": ["provider_api", "approved_local_gateway"],
+      "critical_task_eligible": true,
+      "requirements": ["model_identity_attested", "capability_profile_passed", "data_policy_passed", "version_not_blocked"]
+    },
+    {
+      "adapter_id": "copilot_hosted_model",
+      "host_examples": ["copilot_model_picker", "copilot_agent_host"],
+      "critical_task_eligible": "conditional",
+      "requirements": ["underlying_model_identity_visible", "underlying_model_approved", "effort_control_attested", "no_host_rewrite_or_silent_fallback", "data_policy_passed"]
+    },
+    {
+      "adapter_id": "opaque_copilot_or_unknown_host",
+      "host_examples": ["copilot_unspecified", "unknown_enterprise_assistant"],
+      "critical_task_eligible": false,
+      "requirements": ["low_risk_machine_checkable_tasks_only"]
+    },
+    {
+      "adapter_id": "local_small_model",
+      "host_examples": ["offline_local_runtime"],
+      "critical_task_eligible": false,
+      "requirements": ["green_only", "deterministic_validator", "no_promotion_authority"]
+    },
+    {
+      "adapter_id": "human_executor",
+      "host_examples": ["named_reviewer"],
+      "critical_task_eligible": false,
+      "requirements": ["identity_recorded", "authority_recorded", "evidence_available"]
+    }
+  ],
+  "model_policy": {
+    "requested_future_preferences_unverified": [
+      {"family": "openai_gpt", "minimum_requested_label": "5.6", "note": "User-requested future floor; availability and capability must be verified at deployment time."},
+      {"family": "anthropic_opus", "minimum_requested_label": "5.8", "note": "User-requested future floor; availability and capability must be verified at deployment time."}
+    ],
+    "selection_rule": "Route by verified capability profile, task consequence, data policy, and independent evidence; never by a product label alone.",
+    "version_comparison_rule": "Provider-specific normalized version metadata is required; do not compare marketing labels as decimal numbers.",
+    "silent_substitution_forbidden": true,
+    "critical_tasks_require_independent_model_family_when_available": true,
+    "unavailable_or_unverified_fallback": "stop_and_request_human_or_use_noncritical_deterministic_path"
+  },
+  "capability_profiles": {
+    "small_structured_extractor": ["closed_schema_output", "exact_copy", "bounded_context"],
+    "medium_workflow_reasoner": ["multi_artifact_synthesis", "tool_contract_following", "citation_generation", "uncertainty_reporting"],
+    "large_governance_reasoner": ["high_consequence_reasoning", "cross_domain_conflict_analysis", "adversarial_review", "dissent_preservation", "long_context_evidence_traceability"]
+  },
+  "model_registry": {
+    "status": "empty_until_human_reviewed_deployment_configuration",
+    "entries": [],
+    "required_entry_fields": ["registry_id", "host", "adapter_id", "provider", "model_family", "exact_model_id", "immutable_version_or_snapshot", "capability_profiles", "supported_efforts", "allowed_data_classes", "enabled_task_classes", "evaluation_evidence", "data_handling_attestation", "reviewed_by", "reviewed_at", "expires_at", "enabled"]
+  },
+  "effort_levels": {
+    "low": {"use": "bounded reversible exact work with deterministic validation", "minimum_checks": 1},
+    "medium": {"use": "normal drafting or integration with bounded ambiguity", "minimum_checks": 1},
+    "high": {"use": "source fidelity, witness boundaries, simulation reasoning, privacy, security, or material promotion", "minimum_checks": 2},
+    "extra_high": {"use": "systemic unresolved architecture, high-consequence conflict, or novel governance issue", "minimum_checks": 2}
+  },
+  "mesh_roles": {
+    "worker": {
+      "authority": "produce one bounded advisory draft and self-review",
+      "may_approve_own_work": false,
+      "may_override_validator": false
+    },
+    "foreman": {
+      "authority": "decompose work, assign independent checks, integrate only supported outputs, and return disputes",
+      "may_approve_own_work": false,
+      "may_override_validator": false
+    },
+    "boss": {
+      "authority": "resolve documented cross-agent disputes and architecture or governance conflicts",
+      "routine_content_generation": false,
+      "may_override_validator": false,
+      "may_create_source_truth": false,
+      "human_escalation_required_for": ["unresolved_high_consequence_dispute", "policy_exception", "real_matter_enablement", "legal_or_security_release_claim"]
+    }
+  },
+  "peer_mesh_rules": [
+    "Workers may challenge foremen and checkers with evidence.",
+    "Foremen may return incomplete tasks and may not convert consensus into source truth.",
+    "Same-level peers independently check material outputs.",
+    "The boss resolves only a recorded dispute packet and must state evidence, uncertainty, and dissent.",
+    "A stronger or newer model never outranks deterministic evidence or a named human gate.",
+    "No agent evaluates a material output as its only checker."
+  ],
+  "task_classes": [
+    {
+      "task_class": "mechanical_inventory",
+      "critical": false,
+      "effort": "low",
+      "worker_count": 1,
+      "independent_checker_count": 1,
+      "boss_on_success": false,
+      "eligible_adapters": ["direct_approved_model_api", "copilot_hosted_model", "opaque_copilot_or_unknown_host", "local_small_model"]
+    },
+    {
+      "task_class": "normal_case_material_draft",
+      "critical": false,
+      "effort": "medium",
+      "worker_count": 1,
+      "independent_checker_count": 1,
+      "boss_on_success": false,
+      "eligible_adapters": ["direct_approved_model_api", "copilot_hosted_model"]
+    },
+    {
+      "task_class": "source_or_witness_boundary",
+      "critical": true,
+      "effort": "high",
+      "worker_count": 1,
+      "independent_checker_count": 2,
+      "boss_on_success": false,
+      "eligible_adapters": ["direct_approved_model_api", "copilot_hosted_model"]
+    },
+    {
+      "task_class": "simulation_strategy_or_scoring",
+      "critical": true,
+      "effort": "high",
+      "worker_count": 2,
+      "independent_checker_count": 2,
+      "boss_on_success": false,
+      "eligible_adapters": ["direct_approved_model_api", "copilot_hosted_model"]
+    },
+    {
+      "task_class": "architecture_governance_dispute",
+      "critical": true,
+      "effort": "extra_high",
+      "worker_count": 2,
+      "independent_checker_count": 2,
+      "boss_on_success": true,
+      "eligible_adapters": ["direct_approved_model_api", "copilot_hosted_model"]
+    }
+  ],
+  "run_envelope_required_fields": [
+    "run_id", "case_id", "data_classification", "task_class", "role_id", "mesh_role", "adapter_id",
+    "provider", "model_family", "provider_model_id", "provider_model_version", "model_identity_attestation",
+    "effort_requested", "effort_attested", "input_artifact_refs", "input_hashes", "output_artifact_refs",
+    "validator_results", "peer_review_ids", "confidence", "uncertainty", "dissent", "review_status",
+    "human_gate", "producer_version", "started_at", "completed_at"
+  ],
+  "assignment_contract": {
+    "schema": "albert_agent_assignment.v1",
+    "validator": "scripts/validate_albert_agent_runtime_orchestration.py::validate_assignment",
+    "required_execution_roles": ["worker", "checker"],
+    "execution_identity_fields": ["execution_id", "attempt_id", "session_id", "context_id", "mesh_role", "adapter_id", "provider", "model_family", "exact_model_id", "model_snapshot", "effort_attested", "identity_attested"],
+    "independence_states": ["full", "reduced_requires_human"],
+    "boss_invocation": "material_dispute_only",
+    "critical_ai_registry_required": true,
+    "human_executor_rule": "A human executor uses recorded identity authority and evidence requirements; model registry fields do not apply to the human execution itself."
+  },
+  "promotion_gates": [
+    "input hashes resolve to the same case",
+    "classification is green for the current release",
+    "executor is eligible for the task class",
+    "critical-task capability and model identity are attested",
+    "required independent checks passed",
+    "all citations and source anchors resolve",
+    "no unresolved material dissent remains",
+    "required human gate is recorded",
+    "output remains labeled not_source_truth"
+  ],
+  "runtime_safety_requirements": [
+    "classification gate runs before prompt construction or network access",
+    "legal documents OCR text chunks and tool output are untrusted data not instructions",
+    "tools resources write roots and network destinations are allowlisted per task",
+    "case and lane isolation are enforced before retrieval",
+    "worker checker and boss execution identities are distinct",
+    "high consequence checks prefer a different registered model family and disclose reduced independence",
+    "fanout recursion token cost time and retry budgets are bounded",
+    "kill switch and partial failure paths fail closed",
+    "logs retain metadata hashes and evidence pointers but no raw prompts case payloads or hidden reasoning",
+    "saved response fixtures precede any separately approved live adapter test"
+  ],
+  "failure_behavior": {
+    "unknown_model": "block_critical_task",
+    "silent_model_fallback": "invalidate_run",
+    "missing_effort_attestation": "block_critical_task",
+    "checker_disagreement": "return_to_foreman_then_boss_if_material",
+    "validator_failure": "block_promotion",
+    "cross_case_reference": "invalidate_run_and_security_review",
+    "amber_red_or_unknown_data": "stop_current_runtime"
+  }
+}

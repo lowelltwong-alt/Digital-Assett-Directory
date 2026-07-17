@@ -4,6 +4,61 @@
   "rules": [
     {
       "schema_version": "0.1.0",
+      "rule_id": "learning-rule:ci-tests-follow-declared-module-dependency-edges",
+      "title": "CI tests follow declared module dependency edges",
+      "summary": "Ordinary PR checks run only for a module's code, contracts, authoritative inputs, or declared dependency reachability; unrelated modules cannot block one another merely because they share a repository.",
+      "trigger_terms": [
+        "CI workflow",
+        "path filter",
+        "module suite",
+        "monorepo test",
+        "required check",
+        "changed paths",
+        "duplicate push pull request",
+        "scheduled regression",
+        "unrelated module failure"
+      ],
+      "trigger_path_patterns": [
+        ".github/workflows/**",
+        ".ci/module-boundaries.yaml",
+        "templates/ci-module-boundary/**",
+        "scripts/validate_ci_module_boundaries.py"
+      ],
+      "context_tags": [
+        "ci_module_boundary",
+        "dependency_contract",
+        "load_bearing_decision",
+        "source_authority"
+      ],
+      "applies_when": [
+        "An ordinary PR or push workflow selects module tests in a monorepo or governed multi-repo family.",
+        "A CI workflow, module root, contract, authoritative input, dependency edge, required check, or test ownership rule changes.",
+        "An unrelated module suite blocks work, duplicate push and PR runs occur, or a path-filtered required check can deadlock."
+      ],
+      "does_not_apply_when": [
+        "A true integration or release suite declares its module/dependency scope and event boundary.",
+        "A separately scheduled or manual full-system regression runs outside ordinary PR gating.",
+        "The repository has one inseparable module and records that reviewed scope explicitly."
+      ],
+      "required_actions": [
+        "Use the provider-neutral module ownership manifest and deterministic validator.",
+        "Declare code, contract, authoritative-input, and direct-dependent edges with owners and evidence.",
+        "Separate module, integration, release, and scheduled-full-regression lanes.",
+        "Use an always-starting selector/aggregator for required checks.",
+        "Require owner, reason, expiry, reviewer, review time, and evidence for exceptions.",
+        "Report dependency coverage unavailable unless observed-edge evidence was compared."
+      ],
+      "danger_if_ignored": "Repository-wide module workflows create unrelated false blockers; overly narrow declarations can silently skip real dependents; skipped required workflows can deadlock pull requests.",
+      "evidence": [
+        "roadmap/evidence/ci-module-boundary-decision.md",
+        "schemas/ci-module-boundary.schema.json",
+        "assets/coding-harnesses/ci-module-boundary-governance/tests-or-evals/scenarios.yaml"
+      ],
+      "enforcement_level": "require_ack",
+      "review_status": "reviewed"
+    },
+    {
+      "schema_version": "0.1.0",
       "rule_id": "learning-rule:current-score-before-upside",
       "title": "Review current score before upside",
       "summary": "During asset calibration, judge the generated current score from direct or cautiously derived evidence before considering ceiling, future lift, or development potential.",

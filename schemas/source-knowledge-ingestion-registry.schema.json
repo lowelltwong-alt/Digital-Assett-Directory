@@ -1,0 +1,38 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://dad.local/schemas/source-knowledge-ingestion-registry.schema.json",
+  "title": "DAD source knowledge ingestion registry",
+  "type": "object",
+  "required": ["registry_version", "status", "policy_ref", "sources", "authority_boundary"],
+  "properties": {
+    "registry_version": {"type": "string"},
+    "status": {"enum": ["candidate", "reviewed"]},
+    "policy_ref": {"type": "string"},
+    "sources": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["source_id", "source_authority", "owner", "snapshot_id", "snapshot_manifest", "source_revision", "freshness", "supersession_state", "promotion_status", "review_status"],
+        "properties": {
+          "source_id": {"type": "string", "pattern": "^dad://repo/"},
+          "source_authority": {"type": "string"},
+          "owner": {"type": "string"},
+          "snapshot_id": {"type": "string"},
+          "snapshot_manifest": {"type": "string"},
+          "source_revision": {"type": "string", "pattern": "^[0-9a-f]{40}$"},
+          "dirty_state_digest": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"},
+          "freshness": {"type": "string"},
+          "supersession_state": {"type": "string"},
+          "promotion_status": {"type": "string"},
+          "license_status": {"type": "string"},
+          "human_review_required": {"const": true},
+          "downstream_mutation_authorized": {"const": false},
+          "review_status": {"type": "string"}
+        },
+        "additionalProperties": false
+      }
+    },
+    "authority_boundary": {"type": "string", "minLength": 20}
+  },
+  "additionalProperties": false
+}

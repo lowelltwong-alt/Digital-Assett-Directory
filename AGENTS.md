@@ -42,6 +42,14 @@ Downstream repos should receive skill pointers or wrappers by local approval;
 do not copy full DAD skills, plugins, hooks, or automation into another repo
 from the library alone.
 
+For CI, test ownership, path filters, required checks, module boundaries,
+monorepo workflows, or cross-repo release lanes, use
+`assets/agent-skills/dad-ci-module-boundary-governance/`. Ordinary PR checks
+must follow `.ci/module-boundaries.yaml` ownership and declared dependency
+edges. Keep scheduled full-system regression separate, and fail closed on
+undeclared workflows, silent scope broadening, or path-filtered required checks.
+Do not infer a complete dependency graph when observed-edge coverage is absent.
+
 ## Before material work
 
 CLI examples use `asset-dir` when DAD is installed. If `asset-dir` is not on

@@ -1,0 +1,21 @@
+{
+  "harness_id": "dad:harness:ci-module-boundary-governance",
+  "name": "CI Module Boundary Governance",
+  "version": "0.1.0",
+  "path": "assets/coding-harnesses/ci-module-boundary-governance",
+  "family": "ci_governance",
+  "status": "candidate",
+  "languages": ["provider-neutral", "python", "yaml"],
+  "repo_types": ["monorepo", "multi_repo_family", "application", "library"],
+  "domains": ["software_engineering", "ci_governance", "dependency_management"],
+  "context_tags": ["module_ownership", "changed_paths", "dependency_edges", "required_checks"],
+  "task_types": ["ci_design", "ci_audit", "test_selection", "monorepo_governance"],
+  "capabilities": ["module_manifest_validation", "transitive_suite_selection", "workflow_contract_validation", "metadata_only_adoption_audit"],
+  "public_safe": true,
+  "entrypoints": ["README.md", "harness.json", "examples/module-boundaries.yaml", "tests-or-evals/scenarios.yaml"],
+  "research_questions": ["Are declared edges complete enough to avoid false-green dependent skips?", "Do provider adapters preserve the provider-neutral selection contract?"],
+  "validation_commands": ["python scripts/validate_ci_module_boundaries.py --repo . fixtures", "python -m pytest tests/test_ci_module_boundaries.py -q"],
+  "source_evidence": ["schemas/ci-module-boundary.schema.json", "roadmap/evidence/ci-module-boundary-decision.md"],
+  "review_status": "candidate",
+  "authority_boundary": "The harness validates declared scope and emits candidate adoption findings; each source repository retains CI and dependency authority."
+}

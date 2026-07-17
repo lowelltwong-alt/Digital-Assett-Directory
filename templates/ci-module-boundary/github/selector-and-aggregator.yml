@@ -1,0 +1,74 @@
+name: ci-module-selector
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  contract:
+    name: ci-contract
+    runs-on: ubuntu-latest
+    outputs:
+      selection: ${{ steps.select.outputs.selection }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: pip
+      - run: python -m pip install PyYAML jsonschema pathspec
+      - id: select
+        name: Validate contract and select suites
+        env:
+          PYTHONPATH: src
+        run: |
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            base_commit="origin/${{ github.base_ref }}"
+            git cat-file -e "${base_commit}^{commit}"
+            git diff --name-status "${base_commit}...HEAD" > changed-paths.txt
+          else
+            base_commit="${{ github.event.before }}"
+            if [ "$base_commit" = "0000000000000000000000000000000000000000" ]; then
+              git diff-tree --root --no-commit-id --name-status -r "${{ github.sha }}" > changed-paths.txt
+              : > base-module-boundaries.yaml
+              exit 0
+            fi
+            git cat-file -e "${base_commit}^{commit}"
+            git diff --name-status "${base_commit}...${{ github.sha }}" > changed-paths.txt
+          fi
+          if git cat-file -e "${base_commit}:.ci/module-boundaries.yaml" 2>/dev/null; then
+            git show "${base_commit}:.ci/module-boundaries.yaml" > base-module-boundaries.yaml
+          else
+            : > base-module-boundaries.yaml
+          fi
+          base_args=()
+          if [ -s base-module-boundaries.yaml ]; then
+            base_args=(--base-manifest base-module-boundaries.yaml)
+          fi
+          python scripts/validate_ci_module_boundaries.py --repo . validate --provider github-actions --manifest .ci/module-boundaries.yaml "${base_args[@]}"
+          python scripts/validate_ci_module_boundaries.py --repo . evaluate --manifest .ci/module-boundaries.yaml --changes-file changed-paths.txt > selection.json
+          echo "selection=$(python -c 'import json; print(json.dumps(json.load(open("selection.json"))["selected_suites"]))')" >> "$GITHUB_OUTPUT"
+
+  module-jobs:
+    needs: contract
+    if: ${{ contains(needs.contract.outputs.selection, '"example"') }}
+    uses: ./replace-with-local-reusable-workflow.yml
+    with:
+      selection: ${{ needs.contract.outputs.selection }}
+
+  required-aggregate:
+    name: ci-module-boundary
+    if: ${{ always() }}
+    needs: [contract, module-jobs]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Fail only selected or contract failures
+        run: |
+          test "${{ needs.contract.result }}" = "success"
+          test "${{ needs.module-jobs.result }}" = "success" -o "${{ needs.module-jobs.result }}" = "skipped"

@@ -1,0 +1,177 @@
+{
+  "schema_version": "dad.task_local_agent_mesh_manifest.v1",
+  "mesh_id": "dad:agent-mesh:ci-module-boundary",
+  "task_id": "ci-module-boundary",
+  "revision_id": "dad:agent-mesh-revision:ci-module-boundary:v2",
+  "supersedes_revision_id": "dad:agent-mesh-revision:ci-module-boundary:v1",
+  "phase": "postflight",
+  "status": "complete",
+  "source_snapshot_digest": "sha256:ee2e6cb5ea4a9fa7ec5b6fb32f4d09ac385a48c17e2b87559bba67de10bba0cc",
+  "authority": {
+    "source_authority": "DAD governs this candidate package; every enrolled repository retains authority over local CI adoption and exceptions.",
+    "execution_authority": false,
+    "human_gate_required": true
+  },
+  "max_delegation_depth": 1,
+  "writer_role_id": "primary-writer",
+  "checker_role_id": "fresh-eyes-checker",
+  "non_overlap_statement": "Only primary-writer edited tracked files; all scouts, the independent checker, and optimization reviewers remained read-only.",
+  "roles": [
+    {
+      "role_id": "overlap-scout",
+      "why_needed": "A low-cost inventory prevented duplicate lessons, skills, validators, and templates.",
+      "mission": "Find reusable overlaps and exact gaps in DAD CI and dependency surfaces.",
+      "inputs": ["DAD registries, lessons, workflows, assets, graphs, tests, and instructions"],
+      "dependencies": [],
+      "authority": "Read-only DAD inventory; no downstream content or edits.",
+      "model_effort_class": "low",
+      "writer_checker_relation": "specialist",
+      "acceptance_conditions": ["Exact paths and IDs support a dedupe conclusion."],
+      "stop_conditions": ["Search would require downstream content or mutation."],
+      "handoff": {
+        "recipient_role_ids": ["primary-writer"],
+        "deliverables": ["overlap inventory", "reuse recommendation"],
+        "readiness_conditions": ["DAD-local search is complete."]
+      }
+    },
+    {
+      "role_id": "architecture-scout",
+      "why_needed": "Provider-neutral CI contracts required medium-effort workflow and dependency synthesis.",
+      "mission": "Propose provider-neutral semantics, evaluator behavior, integration surfaces, and portability evidence.",
+      "inputs": ["governing rule", "DAD authority contracts", "existing harness and graph patterns"],
+      "dependencies": ["overlap-scout"],
+      "authority": "Read-only advice; cannot edit or approve its own proposal.",
+      "model_effort_class": "medium",
+      "writer_checker_relation": "specialist",
+      "acceptance_conditions": ["Design covers lanes, typed edges, fixtures, exceptions, and required-check deadlocks."],
+      "stop_conditions": ["Reviewed authority sources cannot resolve a conflict."],
+      "handoff": {
+        "recipient_role_ids": ["primary-writer"],
+        "deliverables": ["contract design", "integration map", "risk notes"],
+        "readiness_conditions": ["Existing surfaces and alternatives are compared."]
+      }
+    },
+    {
+      "role_id": "adoption-scout",
+      "why_needed": "A metadata-only inventory bounded migration without downstream reads or writes.",
+      "mission": "Identify enrolled-repository metadata, audit limits, and human-reviewed adoption routes.",
+      "inputs": ["DAD enrollment audit metadata", "metadata-only CI release scope"],
+      "dependencies": [],
+      "authority": "Read-only DAD metadata; no downstream traversal or mutation.",
+      "model_effort_class": "low",
+      "writer_checker_relation": "specialist",
+      "acceptance_conditions": ["Findings state audit depth, evidence status, and the non-mutation boundary."],
+      "stop_conditions": ["A conclusion would require downstream workflow contents."],
+      "handoff": {
+        "recipient_role_ids": ["primary-writer"],
+        "deliverables": ["repository inventory", "audit limits", "patch categories"],
+        "readiness_conditions": ["Authoritative enrollment metadata is identified."]
+      }
+    },
+    {
+      "role_id": "primary-writer",
+      "why_needed": "One writer kept schema, evaluator, fixtures, registries, navigation, skill, and scaffolds coherent.",
+      "mission": "Implement and repair the provider-neutral capability and deterministic evidence.",
+      "inputs": ["governing rule", "preflight context", "scout handoffs", "independent repair findings"],
+      "dependencies": ["overlap-scout", "architecture-scout", "adoption-scout"],
+      "authority": "May edit only the isolated DAD worktree; no downstream or global changes.",
+      "model_effort_class": "medium",
+      "writer_checker_relation": "writer",
+      "acceptance_conditions": ["Focused and repository validation pass.", "Audit is metadata-only.", "Exact provider contracts fail closed."],
+      "stop_conditions": ["Silent dependent skips remain possible.", "Required-check deadlock remains.", "A downstream write becomes necessary."],
+      "handoff": {
+        "recipient_role_ids": ["fresh-eyes-checker"],
+        "deliverables": ["stable diff", "validator results", "fixture evidence", "migration audit"],
+        "readiness_conditions": ["Writer checks pass and exact workflow digests are current."]
+      }
+    },
+    {
+      "role_id": "fresh-eyes-checker",
+      "why_needed": "High-impact CI governance required independent false-positive and false-negative review.",
+      "mission": "Red-team the completed capability and independently verify repaired workflow-condition, body, branch, exception, and scheduling controls.",
+      "inputs": ["final diff", "contract", "fixtures", "audit", "validation output"],
+      "dependencies": ["primary-writer"],
+      "authority": "Read-only review; cannot edit writer output or grant execution authority.",
+      "model_effort_class": "medium",
+      "writer_checker_relation": "checker",
+      "acceptance_conditions": ["Requested risk classes are covered and the final verdict is PROCEED or a concrete repair."],
+      "stop_conditions": ["Evidence is incomplete or independence is compromised."],
+      "handoff": {
+        "recipient_role_ids": [],
+        "deliverables": ["independent findings", "final PROCEED verdict"],
+        "readiness_conditions": ["Raw permitted artifacts and results are available."]
+      }
+    },
+    {
+      "role_id": "optimization-director",
+      "why_needed": "A full-suite timeout activated DAD's measured long-run review rule.",
+      "mission": "Measure the expensive pytest signature and decide whether algorithm, library, parallelism, or runtime changes are warranted.",
+      "inputs": ["timed-out command signature", "focused timing evidence", "portability validator profile"],
+      "dependencies": ["primary-writer"],
+      "authority": "Read-only optimization analysis; no code, dependency, runtime, or cache changes.",
+      "model_effort_class": "high",
+      "writer_checker_relation": "specialist",
+      "acceptance_conditions": ["Recommendation uses a stable baseline and names parity, rollback, and stop gates."],
+      "stop_conditions": ["Optimization would change scope or require a new dependency without evidence."],
+      "handoff": {
+        "recipient_role_ids": ["primary-writer"],
+        "deliverables": ["measured bottleneck classification", "deferred experiment brief"],
+        "readiness_conditions": ["No current-task optimization is justified."]
+      }
+    },
+    {
+      "role_id": "optimization-checker",
+      "why_needed": "The long-run review required an independent check against optimizing an unstable timeout outlier.",
+      "mission": "Challenge the bottleneck evidence, cache-safety boundary, Rust/library escalation, and parity gates.",
+      "inputs": ["optimization director evidence", "portability source and timings"],
+      "dependencies": ["optimization-director"],
+      "authority": "Read-only checker; no implementation or dependency changes.",
+      "model_effort_class": "medium",
+      "writer_checker_relation": "peer",
+      "acceptance_conditions": ["Reject unsafe current-state caching and unsupported runtime escalation."],
+      "stop_conditions": ["Independent evidence is unavailable."],
+      "handoff": {
+        "recipient_role_ids": ["primary-writer"],
+        "deliverables": ["independent optimization grade", "safety constraints"],
+        "readiness_conditions": ["Deferred Python-first experiment is bounded."]
+      }
+    }
+  ],
+  "proof_obligations": [
+    {
+      "obligation_id": "declared-edge-scope",
+      "description": "Prove suites follow ownership and dependency edges without unrelated blockers or silent broadening.",
+      "evidence_required": ["12 fixture cases", "19 focused boundary tests", "actual-delta evaluation", "independent PROCEED verdict"],
+      "owner_role_id": "primary-writer",
+      "checker_role_id": "fresh-eyes-checker",
+      "status": "satisfied"
+    },
+    {
+      "obligation_id": "portable-adoption",
+      "description": "Prove provider neutrality and metadata-only human-gated adoption.",
+      "evidence_required": ["portable core and GitHub adapter cards", "zero-finding portability validation", "eight-repository metadata audit", "zero downstream reads and writes"],
+      "owner_role_id": "primary-writer",
+      "checker_role_id": "fresh-eyes-checker",
+      "status": "satisfied"
+    }
+  ],
+  "unresolved_decisions": [
+    {
+      "decision_id": "full-suite-runtime",
+      "summary": "The full repository pytest command exceeded 604 seconds; a content-keyed Python validator-cache experiment is deferred to separate measured work.",
+      "owner_role_id": "primary-writer",
+      "blocking": false,
+      "status": "deferred"
+    }
+  ],
+  "reconciliations": [
+    {"prior_role_id": "overlap-scout", "disposition": "reused", "current_role_ids": ["overlap-scout"], "reason": "The inventory completed with no exact pre-existing capability and reusable adjacent assets.", "evidence_refs": ["DAD-local overlap report"], "material_drift": false},
+    {"prior_role_id": "architecture-scout", "disposition": "reused", "current_role_ids": ["architecture-scout"], "reason": "The architecture contract was implemented with a provider-neutral core and explicit adapter.", "evidence_refs": ["roadmap/evidence/ci-module-boundary-decision.md"], "material_drift": true},
+    {"prior_role_id": "adoption-scout", "disposition": "reused", "current_role_ids": ["adoption-scout"], "reason": "The audit remained metadata-only and produced patch categories without downstream traversal.", "evidence_refs": ["roadmap/evidence/ci-module-boundary-adoption-audit.json"], "material_drift": true},
+    {"prior_role_id": "primary-writer", "disposition": "reused", "current_role_ids": ["primary-writer"], "reason": "The writer completed one bounded repair cycle after independent findings and preserved exclusive write ownership.", "evidence_refs": ["19 focused boundary tests", "314-check DAD validation"], "material_drift": true},
+    {"prior_role_id": "fresh-eyes-checker", "disposition": "reused", "current_role_ids": ["fresh-eyes-checker"], "reason": "The checker first returned REPAIR, then independently returned PROCEED after exact digest and scheduling repairs.", "evidence_refs": ["independent REPAIR and PROCEED verdicts"], "material_drift": true},
+    {"disposition": "added", "current_role_ids": ["optimization-director"], "reason": "A command exceeded the long-run threshold and activated the required optimization review.", "evidence_refs": ["604-second full-suite timeout", "measured portability profile"], "material_drift": true},
+    {"disposition": "added", "current_role_ids": ["optimization-checker"], "reason": "An independent read-only check rejected an unstable baseline and unsafe cache or runtime escalation.", "evidence_refs": ["4/5 optimization review"], "material_drift": true}
+  ],
+  "manifest_digest": "sha256:48d126132575c3c053f4c88f3823562b7d0b89eddbfe1484535506e54df63b05"
+}

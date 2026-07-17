@@ -1,0 +1,24 @@
+{
+  "registry_version": "0.1.0",
+  "status": "candidate",
+  "policy_ref": "assets/source-knowledge-ingestion/policy.json",
+  "sources": [
+    {
+      "source_id": "dad://repo/mock-trial-4-26",
+      "source_authority": "Albert",
+      "owner": "Lowell",
+      "snapshot_id": "dad:source-knowledge-snapshot:albert:2026-07-16",
+      "snapshot_manifest": "assets/source-knowledge-ingestion/snapshots/albert/manifest.json",
+      "source_revision": "c1ede94ce903cabadcd15aa5682814a76f3bf891",
+      "dirty_state_digest": "sha256:12e8028ef795664efd4a107689e51f8b6fa5d1da615f2034dc02ade7d9f6785b",
+      "freshness": "revision_bound_historical_dirty_worktree_observation",
+      "supersession_state": "historical_candidate_source_has_advanced",
+      "promotion_status": "not_promoted_candidate_only",
+      "license_status": "internal_only_source_license_review_required_before_export_or_promotion",
+      "human_review_required": true,
+      "downstream_mutation_authorized": false,
+      "review_status": "generated_candidate"
+    }
+  ],
+  "authority_boundary": "Source repositories retain authority. Registry rows are inert candidate snapshot routing metadata and do not promote lessons, assets, agents, skills, taxonomies, or downstream changes."
+}

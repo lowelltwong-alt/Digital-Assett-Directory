@@ -30,6 +30,12 @@ Before material AI-assisted work:
    decisions require human attention, implementer red-team, premortem, rollback criteria,
    and fresh-eyes review.
 
+For CI, test selection, path filters, required checks, module ownership, or
+integration/release workflow changes, use the DAD CI module-boundary capability.
+Ordinary PR checks must follow declared module ownership and dependency edges;
+scheduled full-system regression stays separate. Never broaden one module's
+workflow across the repository without an explicit reviewed exception.
+
 If `asset-dir` is not available on `PATH`, use the stable user shim at
 `~/.dad/bin/asset-dir` (POSIX shells) or `~/.dad/bin/asset-dir.ps1`
 (PowerShell). If neither shim exists, run from the DAD checkout with
@@ -217,6 +223,32 @@ def scaffold_new_repo(target_repo: Path, hub_root: Path, name: str | None = None
     if not gitignore.exists():
         atomic_write_text(gitignore, STARTER_GITIGNORE)
         changed.append(gitignore)
+
+    ci_template = (
+        hub_root
+        / "templates"
+        / "ci-module-boundary"
+        / "monorepo"
+        / "module-boundaries.yaml"
+    )
+    ci_manifest = target_repo / ".ci" / "module-boundaries.candidate.yaml"
+    if ci_template.exists() and not ci_manifest.exists() and not (target_repo / ".ci" / "module-boundaries.yaml").exists():
+        payload = yaml.safe_load(ci_template.read_text(encoding="utf-8"))
+        payload["repository"]["repository_id"] = project_name.lower().replace(" ", "-")
+        ci_manifest.parent.mkdir(parents=True, exist_ok=True)
+        atomic_write_text(ci_manifest, yaml.safe_dump(payload, sort_keys=False))
+        changed.append(ci_manifest)
+        adoption_source = hub_root / "templates" / "ci-module-boundary" / "ADOPTION.md"
+        if adoption_source.exists():
+            adoption_target = target_repo / ".ci" / "ADOPTION.md"
+            atomic_write_text(adoption_target, adoption_source.read_text(encoding="utf-8"))
+            changed.append(adoption_target)
+        schema_source = hub_root / "schemas" / "ci-module-boundary.schema.json"
+        if schema_source.exists():
+            schema_target = target_repo / "schemas" / "ci-module-boundary.schema.json"
+            schema_target.parent.mkdir(parents=True, exist_ok=True)
+            atomic_write_text(schema_target, schema_source.read_text(encoding="utf-8"))
+            changed.append(schema_target)
 
     changed.extend(install_governance(target_repo, hub_root))
     return changed

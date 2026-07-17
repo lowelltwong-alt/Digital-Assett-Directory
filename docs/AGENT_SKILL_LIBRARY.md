@@ -40,6 +40,15 @@ replaces a checked-out skill.
 | `scripts/check_agent_skill_checkouts.py` | Dry-run checker for stale, retired, replaced, or unknown skill checkouts recorded in `processed/skills/checkouts.jsonl`. |
 | `scripts/validate_agent_skill_library.py` | Registry, path, template, and mail-template validator. |
 
+## CI Module Boundary Skill
+
+`skill:dad-ci-module-boundary-governance` routes CI workflow, module ownership,
+path-filter, required-check, monorepo, and multi-repo test-scope work through a
+provider-neutral manifest and deterministic validator. It uses low effort for
+bounded inventory, medium effort for dependency/workflow synthesis, and high
+effort only for unresolved high-consequence architecture conflicts. Downstream
+adoption remains source-owner or approval-gated.
+
 ## Registered Subagent Role Packs
 
 A skill may declare one repository-relative `subagent_pack` in the registry.

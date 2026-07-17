@@ -1,0 +1,117 @@
+{
+  "approved_copy_count": 10,
+  "approved_copy_hashes": {
+    ".digital-asset/context-map.json": "sha256:09117b378f80f6cc9576fe1b2e0d792f46738ba324eaf714180e12eff8cae9bc",
+    ".github/workflows/ci-contracts.yml": "sha256:0eda21df64b9f1fb3a53b6218c5b82bddbc5547894c2a36d925256cdeaf2fb9c",
+    ".github/workflows/ocr-quality.yml": "sha256:7c184eb93ab6600098d3ba20ae2622b0bf528e264c2c604c807e486ac51d5747",
+    ".github/workflows/simulation-red-team.yml": "sha256:70dadf5fa136ea70d3a028894594b74b11cbbf49d133b0059b540ea5344cd307",
+    ".github/workflows/ui-browser.yml": "sha256:497315ed93a0540a44896834e4ae8de0d3d27f95965a9d62af78180ce08cc3cd",
+    "config/albert_agent_runtime_orchestration.json": "sha256:486282672f42bcd8f0a31c468121929931c95666e48ba843e6a655e021aec297",
+    "config/albert_subagent_decision_flow.json": "sha256:5df9af7f973120f39842339b341163e52d9fd9ae359478e65103d9d4eeae80e4",
+    "config/new_case_workflow_phases.json": "sha256:75f162d0f6bc91d583cec3dba54c343bae8a94507663f82c7e614d7d51a118e1",
+    "simulation/validate_simulation_red_team_ci.py": "sha256:d18a67ba3e7e5f2cc4a3a3d87133006f7fe2d4a02561c0d9ba2d25352198aceb",
+    "tests/test_ci_module_path_scoping.py": "sha256:0271782481697ff54db80ccebfa985cd2110004d5d851f3d2f0ef19827cb98b0"
+  },
+  "approved_read_count": 21,
+  "approved_read_hashes": {
+    ".digital-asset/context-map.json": "sha256:09117b378f80f6cc9576fe1b2e0d792f46738ba324eaf714180e12eff8cae9bc",
+    ".digital-asset/dad-integration.json": "sha256:0309f0322b46e6302c60088e364f50df81fcc62a7e5eea4ed9b556c27dee78f2",
+    ".github/workflows/ci-contracts.yml": "sha256:0eda21df64b9f1fb3a53b6218c5b82bddbc5547894c2a36d925256cdeaf2fb9c",
+    ".github/workflows/ocr-quality.yml": "sha256:7c184eb93ab6600098d3ba20ae2622b0bf528e264c2c604c807e486ac51d5747",
+    ".github/workflows/simulation-red-team.yml": "sha256:70dadf5fa136ea70d3a028894594b74b11cbbf49d133b0059b540ea5344cd307",
+    ".github/workflows/ui-browser.yml": "sha256:497315ed93a0540a44896834e4ae8de0d3d27f95965a9d62af78180ce08cc3cd",
+    "AGENTS.md": "sha256:32f5a091eb3853bd6a16fc8374d8dceb1c53f58c8f1cfbf0848ff4a6285c6afd",
+    "AI_AGENT_RUNTIME_ORCHESTRATION.md": "sha256:01437c8be650ce0d57cfc5a3de7d24f79b6c210115d84dc3b33536d6452d44b5",
+    "AI_FRONT_DOOR.md": "sha256:860ea688127c3468dc54e2be467b69ddba6568cd627ff3a297aae97cf5a444f0",
+    "AI_LEARNING_LOOP_LESSONS.md": "sha256:830595ce5589bdd5912a4e348efc826d438b815ff69732c2b54e697b93c7b918",
+    "AI_MONTE_CARLO_SIMULATOR_BUILD_LESSONS.md": "sha256:4e991d38e74cf3a75b8b8c6cd89f03772d5e8895bc93bed820920f1bf6890f69",
+    "AI_SUBAGENT_DECISION_FLOW.md": "sha256:1d8b37a30edd459d70fb61d9c4cf84e3ac75de798c9d142818fa204944a7e5d9",
+    "AI_TOC.md": "sha256:7b5dc784d175cb69f79e251478b1adfd984e5f86ad0f9fd01e28595f7e285aae",
+    "config/albert_agent_runtime_orchestration.json": "sha256:486282672f42bcd8f0a31c468121929931c95666e48ba843e6a655e021aec297",
+    "config/albert_subagent_decision_flow.json": "sha256:5df9af7f973120f39842339b341163e52d9fd9ae359478e65103d9d4eeae80e4",
+    "config/digital_asset_catalog.json": "sha256:dfe63df1295b37f81fbddd9f00fc665269a4a68efa40867ba4f6fc0254e92b18",
+    "config/legal_case_edge_type_registry.json": "sha256:3ab8724cb9fa38886324d9b58e14c57a2e3ec70c96e60522725a0e1e3e3c6c40",
+    "config/new_case_workflow_phases.json": "sha256:75f162d0f6bc91d583cec3dba54c343bae8a94507663f82c7e614d7d51a118e1",
+    "registries/litigation_witness_prep_technique_registry.v1.json": "sha256:9968bbf4eadd65f3c1df9f472fb2f601bf001c37ee6f8f9c0aa81e471ee2be54",
+    "simulation/validate_simulation_red_team_ci.py": "sha256:d18a67ba3e7e5f2cc4a3a3d87133006f7fe2d4a02561c0d9ba2d25352198aceb",
+    "tests/test_ci_module_path_scoping.py": "sha256:0271782481697ff54db80ccebfa985cd2110004d5d851f3d2f0ef19827cb98b0"
+  },
+  "authority_boundary": "Albert remains authoritative for its repository meaning and product data. DAD owns only this internal, revision-bound candidate snapshot. No record is adopted policy, public-release material, or downstream write authority without separate human review.",
+  "candidate_count": 1424,
+  "classification_counts": {
+    "agent-or-subagent-definition": 27,
+    "architecture-or-governance-pattern": 22,
+    "digital-asset": 57,
+    "lesson": 23,
+    "private-reference-only": 4,
+    "rejected-or-unsafe": 3002,
+    "repo-specific-not-reusable": 112,
+    "schema-or-registry": 189,
+    "test-or-evaluation-pack": 555,
+    "unknown-pending-content-review": 411,
+    "workflow-or-harness": 27
+  },
+  "copy_rejections": {},
+  "generated_by": "src/digital_asset_directory/source_knowledge_ingestion.py",
+  "graph_edge_count": 1985,
+  "graph_node_count": 1987,
+  "human_review_required": true,
+  "inventory_record_count": 4429,
+  "knowledge_record_count": 552,
+  "knowledge_record_counts": {
+    "agent-or-subagent-definition": 20,
+    "architecture-or-governance-pattern": 114,
+    "digital-asset": 154,
+    "lesson": 81,
+    "schema-or-registry": 139,
+    "workflow-or-harness": 44
+  },
+  "license_status": "internal_only_source_license_review_required_before_export_or_promotion",
+  "output_hashes": {
+    "inventory": "sha256:49673f30b49503a0b87b44978b7fb15359fe59a879b86a68ca203a454056603a",
+    "knowledge_graph": "sha256:74cf574b030c66d3195e917d0a3e552bc1907f4029cf98f40c03b2d2d94a8285",
+    "knowledge_records": "sha256:c839dd8288c95103896b53f2044d8115faab1d838714484ab962becb2de4854f"
+  },
+  "outputs": {
+    "copies_root": "copies",
+    "inventory": "inventory.jsonl",
+    "knowledge_graph": "knowledge-graph.json",
+    "knowledge_records": "knowledge-records.jsonl"
+  },
+  "privacy_excluded_count": 3002,
+  "privacy_exclusion_family_counts": {
+    "analysis/**": 6,
+    "case_config/**": 2,
+    "data/non-asset/**": 35,
+    "exports/**": 2,
+    "outputs/cases/**": 1282,
+    "reports/**": 1407,
+    "reviews/**": 4,
+    "simulation/output/**": 120,
+    "source/**": 125,
+    "training/**": 19
+  },
+  "privacy_policy": {
+    "excluded_content_read_count": 0,
+    "excluded_inventory_source_paths_persisted": 0,
+    "excluded_records_use_opaque_path_hashes": true,
+    "private_workspace_content_copied": false,
+    "private_workspace_enumerated": false
+  },
+  "promotion_status": "not_promoted_candidate_only",
+  "review_status": "generated_candidate",
+  "sanitization_findings": {
+    ".digital-asset/dad-integration.json": [
+      "absolute_private_path"
+    ]
+  },
+  "schema_version": "dad.source_knowledge_ingestion.v1",
+  "snapshot_id": "dad:source-knowledge-snapshot:albert:2026-07-16",
+  "source_branch_observed": "codex/ocr-training-governance",
+  "source_display_name": "Albert / Mock Trial4.26",
+  "source_mutated": false,
+  "source_repository": "dad://repo/mock-trial-4-26",
+  "source_revision": "c1ede94ce903cabadcd15aa5682814a76f3bf891",
+  "source_worktree_status_sha256": "sha256:12e8028ef795664efd4a107689e51f8b6fa5d1da615f2034dc02ade7d9f6785b",
+  "tracked_path_count": 4426
+}

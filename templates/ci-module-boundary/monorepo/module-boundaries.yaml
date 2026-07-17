@@ -1,0 +1,67 @@
+schema_version: dad.ci_module_boundaries.v1
+capability_id: dad:capability:ci-module-boundary-governance
+capability_revision: 0.1.0
+repository:
+  repository_id: replace-me
+  owners: [replace-with-owner]
+  default_branch: main
+workflow_paths:
+  - .github/workflows/**
+  - .ci/**
+modules:
+  - module_id: example
+    owners: [replace-with-owner]
+    roots: [modules/example]
+    triggers:
+      - edge_type: code
+        paths: [modules/example/src/**]
+      - edge_type: contract
+        paths: [modules/example/contracts/**]
+      - edge_type: authoritative_input
+        paths: [modules/example/inputs/**]
+dependencies: []
+suites:
+  - suite_id: ci-contract
+    lane: ci_contract
+    scope: declared_modules
+    scope_modules: []
+    events: [pull_request, push_default_branch]
+    command: python scripts/validate_ci_module_boundaries.py --repo . validate
+  - suite_id: example
+    lane: module
+    scope: module
+    scope_modules: [example]
+    events: [pull_request, push_default_branch]
+    command: replace-with-example-suite
+  - suite_id: scheduled-full
+    lane: scheduled_full_regression
+    scope: repository
+    scope_modules: [example]
+    events: [schedule, workflow_dispatch]
+    command: replace-with-full-system-suite
+workflows:
+  - workflow_id: pr-selector
+    provider_path: .github/workflows/ci-module-selector.yml
+    lane: ci_contract
+    events: [pull_request, push_default_branch]
+    required_check: true
+    always_reports: true
+    scope: selector
+    selector_job: contract
+    suite_job_map: {example: module-jobs}
+    required_aggregator_job: required-aggregate
+    workflow_contract_digest: sha256:0000000000000000000000000000000000000000000000000000000000000000
+    job_contract_digests:
+      contract: sha256:0000000000000000000000000000000000000000000000000000000000000000
+      module-jobs: sha256:0000000000000000000000000000000000000000000000000000000000000000
+      required-aggregate: sha256:0000000000000000000000000000000000000000000000000000000000000000
+  - workflow_id: scheduled-full
+    provider_path: .github/workflows/scheduled-full-regression.yml
+    lane: scheduled_full_regression
+    events: [schedule, workflow_dispatch]
+    required_check: false
+    always_reports: true
+    scope: repository
+    workflow_contract_digest: sha256:0000000000000000000000000000000000000000000000000000000000000000
+generated_artifacts: []
+exceptions: []

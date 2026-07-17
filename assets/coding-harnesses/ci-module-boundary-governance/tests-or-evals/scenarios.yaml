@@ -1,0 +1,14 @@
+schema_version: dad.ci_module_boundary_scenarios.v1
+cases:
+  - {case_id: ocr-only-isolated, operation: evaluate, changes: ["M\tmodules/ocr/src/reader.py"], expect: {status: ok, selected_modules: [ocr], selected_suites: [ci-contract, ocr]}}
+  - {case_id: simulator-change, operation: evaluate, changes: ["M\tmodules/simulator/src/engine.py"], expect: {status: ok, selected_modules: [simulator], selected_suites: [ci-contract, simulator]}}
+  - {case_id: ui-facade-browser, operation: evaluate, changes: ["M\tmodules/ui/src/facade.ts"], expect: {status: ok, selected_modules: [ui], selected_suites: [browser, ci-contract]}}
+  - {case_id: declared-transitive-downstream-contract, operation: evaluate, changes: ["M\tmodules/ocr/contracts/result.json"], expect: {status: ok, selected_modules: [ocr, simulator, ui], selected_suites: [browser, ci-contract, ocr, simulator, ui-integration]}}
+  - {case_id: workflow-contract-only, operation: evaluate, changes: ["M\t.github/workflows/selector.yml"], expect: {status: ok, selected_modules: [], selected_suites: [ci-contract]}}
+  - {case_id: scheduled-full-available, operation: evaluate, event: schedule, changes: [], expect: {status: ok, selected_modules: [], selected_suites: [scheduled-full]}}
+  - {case_id: stale-generated-does-not-trigger, operation: evaluate, changes: ["M\tmodules/simulator/generated/stale.json"], expect: {status: ok, selected_modules: [], selected_suites: [ci-contract], generated_artifacts_ignored: [modules/simulator/generated/stale.json]}}
+  - {case_id: rename-inside-module, operation: evaluate, changes: ["R100\tmodules/ocr/src/old.py\tmodules/ocr/src/new.py"], expect: {status: ok, selected_modules: [ocr], selected_suites: [ci-contract, ocr]}}
+  - {case_id: overly-broad-glob-fails, operation: validate, manifest: ../examples/negative/broad-module.yaml, expect_status: invalid, expect_codes: [overly_broad_glob]}
+  - {case_id: duplicate-and-deadlock-fail, operation: validate, manifest: ../examples/negative/duplicate-events.yaml, expect_status: invalid, expect_codes: [duplicate_push_pull_request, required_check_deadlock]}
+  - {case_id: missing-observed-edge-fails, operation: validate, observed_dependencies: [[simulator, ocr]], expect_status: invalid, expect_codes: [missing_dependency_edge]}
+  - {case_id: scope-change-needs-review, operation: validate, base_manifest: ../examples/negative/base-narrow.yaml, expect_status: invalid, expect_codes: [scope_broadening]}

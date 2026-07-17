@@ -211,6 +211,36 @@
       "consumers": ["search-before-create", "local cockpit", "future read-only MCP resources"],
       "review_status": "candidate",
       "authority_boundary": "Entity and plan graph rows are candidate retrieval evidence. They cannot merge identities, create dependencies, change lifecycle, or grant execution authority."
+    },
+    {
+      "surface_id": "source-knowledge-ingestion-graph",
+      "surface_kind": "generated_graph_surface",
+      "ontology_id": "knowledge",
+      "status": "partial",
+      "purpose": "Project revision-bound source repository observations and normalized reusable-knowledge candidates without copying prohibited content or transferring source authority.",
+      "builder": {
+        "availability": "partial",
+        "command": "python scripts/ingest_source_knowledge.py build --source-root <approved-source> --destination <snapshot-dir>",
+        "module": "digital_asset_directory.source_knowledge_ingestion.build_snapshot"
+      },
+      "source_inputs": [
+        {"kind": "registry_path", "ref": "registry/source-knowledge-ingestion-registry.json", "required": true},
+        {"kind": "schema_path", "ref": "schemas/source-knowledge-ingestion.schema.json", "required": true},
+        {"kind": "source_path", "ref": "assets/source-knowledge-ingestion/snapshots/albert/manifest.json", "required": false}
+      ],
+      "outputs": {
+        "manifest_logical_path": "learning/source-knowledge-ingestion-graph-manifest.json",
+        "body_logical_path": "learning/source-knowledge-ingestion-graph.json"
+      },
+      "schema_refs": [
+        "schemas/source-knowledge-ingestion.schema.json",
+        "schemas/source-knowledge-graph.schema.json",
+        "schemas/graph-surface-manifest.schema.json"
+      ],
+      "freshness_policy": {"fresh": "hashes_match", "stale": "warn", "inconsistent": "block"},
+      "consumers": ["search-before-create", "dad-work-router", "knowledge-engineering-ops", "future read-only MCP resources"],
+      "review_status": "candidate",
+      "authority_boundary": "Rows are internal, candidate-only retrieval evidence. They do not promote source lessons, assets, roles, taxonomies, policies, or authorize downstream writes."
     }
   ]
 }

@@ -55,6 +55,8 @@ files under `tests-or-evals/` must conform to
 - AI engineering preflight.
 - Agent-instruction and code-review red-team.
 - Repo enrollment/mail/governance safety.
+- CI module-boundary governance for module ownership, typed path/dependency
+  triggers, provider workflow contracts, and scheduled full regression.
 - Public/private source provenance.
 - Exception learning readiness for mixed-evidence, fix-outcome, release, and
   backfill promotion boundaries.

@@ -1,0 +1,110 @@
+name: Albert Simulation Red-Team
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - "simulation/**"
+      - "config/*simulation*"
+      - "config/*trial*"
+      - "schemas/*simulation*"
+      - "schemas/*trial*"
+      - "scripts/*simulation*"
+      - "scripts/case_paths.py"
+      - "scripts/validate_case_output_isolation.py"
+      - "outputs/cases/*/simulation/**"
+      - "outputs/cases/*/config/witness_*.json"
+      - "outputs/cases/*/data/graph/simulation_*"
+      - "outputs/cases/*/data/graph/witness_role_matrix.json"
+      - "outputs/cases/*/data/graph/role_prep_sheets.json"
+  pull_request:
+    paths:
+      - "simulation/**"
+      - "config/*simulation*"
+      - "config/*trial*"
+      - "schemas/*simulation*"
+      - "schemas/*trial*"
+      - "scripts/*simulation*"
+      - "scripts/case_paths.py"
+      - "scripts/validate_case_output_isolation.py"
+      - "outputs/cases/*/simulation/**"
+      - "outputs/cases/*/config/witness_*.json"
+      - "outputs/cases/*/data/graph/simulation_*"
+      - "outputs/cases/*/data/graph/witness_role_matrix.json"
+      - "outputs/cases/*/data/graph/role_prep_sheets.json"
+  workflow_dispatch:
+  schedule:
+    - cron: "17 10 * * 1"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: albert-simulation-red-team-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  simulator-red-team:
+    name: Simulator red-team suite
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v6
+
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.13"
+
+      - name: Validate CI workflow contract
+        run: python simulation/validate_simulation_red_team_ci.py
+
+      - name: Run simulator red-team suite
+        run: python simulation/run_simulation_red_team_suite.py
+
+      - name: Validate case output isolation
+        run: python scripts/validate_case_output_isolation.py --check
+
+      - name: Validate system maps
+        run: python scripts/validate_system_maps.py --check
+
+      - name: Refresh completed-suite credibility assessment
+        run: python simulation/validate_simulation_credibility_assessment.py
+
+      - name: Validate simulator experiment manifest
+        run: python simulation/validate_simulation_experiment_manifest.py
+
+      - name: Validate simulator run-family manifest boundary
+        run: python simulation/validate_simulation_run_family_manifest.py
+
+      - name: Run standalone simulator safety red-team
+        run: python simulation/redteam_simulation_safety.py --fail-on-medium
+
+      - name: Rebuild simulator red-team run snapshot
+        run: python simulation/build_simulation_red_team_run_snapshot.py
+
+      - name: Validate simulator red-team run snapshot
+        run: python simulation/validate_simulation_red_team_run_snapshot.py
+
+      - name: Validate digital asset catalog
+        run: python scripts/build_digital_asset_catalog.py --check
+
+      - name: Validate digital asset graph
+        run: python scripts/build_digital_asset_graph.py --check
+
+      - name: Refresh AI docs manifest
+        run: python ai_workland/scripts/validate_ai_docs.py --update
+
+      - name: Validate AI docs
+        run: python ai_workland/scripts/validate_ai_docs.py
+
+      - name: Validate package boundary
+        run: python tools/validate_package.py
+
+      - name: Confirm raw sources remain untouched
+        run: git diff -- source/raw
+
+      - name: Check whitespace
+        run: git diff --check

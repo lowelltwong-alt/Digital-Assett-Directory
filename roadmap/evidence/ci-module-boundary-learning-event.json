@@ -1,0 +1,26 @@
+{
+  "schema_version": "0.1.0",
+  "event_id": "dad:learning-event:ci-unrelated-module-false-blocker:6631e5cb9401",
+  "repository": "dad",
+  "stage": "after_work",
+  "task": "Generalize a privacy-safe unrelated-module CI false-blocker into declared module and dependency ownership.",
+  "agent": "codex",
+  "context_tags": ["ci_module_boundary", "unrelated_module_false_blocker", "stale_generated_artifact", "dependency_contract"],
+  "assets_used": [
+    "dad:harness:python-test-performance-orchestration",
+    "template:cross-repo-governance-dependency-map",
+    "ci-release-artifact-scope-v0.1"
+  ],
+  "expected_value": "Ordinary PR checks run only for owned or declared dependent scope while scheduled full regression remains available.",
+  "actual_value": "Candidate capability, validator, fixtures, template, and DAD self-adoption created; exact prior lesson search returned no match.",
+  "failure_class": "unrelated_module_ci_false_blocker",
+  "dependency_order_notes": "Declare module ownership and dependency edges before encoding provider workflow triggers.",
+  "evidence": [
+    "incident-summary-sha256:6631e5cb9401a75014b942a0d20cd015654ec2b54d6b9af5871b9e377733ef0a",
+    "roadmap/evidence/ci-module-boundary-decision.md",
+    "assets/coding-harnesses/ci-module-boundary-governance/tests-or-evals/scenarios.yaml"
+  ],
+  "safety_confirmation": "Contains only the approved privacy-safe generalized incident class and hash reference; no case name, client material, raw conversation, credentials, or private payload.",
+  "created_at": "2026-07-16T18:30:00-04:00",
+  "review_status": "generated_candidate"
+}

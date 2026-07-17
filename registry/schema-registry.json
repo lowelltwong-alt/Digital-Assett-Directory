@@ -91,6 +91,9 @@
     "graph_edge_registry": "schemas/graph-edge-registry.schema.json",
     "graph_surface_registry": "schemas/graph-surface-registry.schema.json",
     "graph_surface_manifest": "schemas/graph-surface-manifest.schema.json",
+    "source_knowledge_ingestion": "schemas/source-knowledge-ingestion.schema.json",
+    "source_knowledge_graph": "schemas/source-knowledge-graph.schema.json",
+    "source_knowledge_ingestion_registry": "schemas/source-knowledge-ingestion-registry.schema.json",
     "mcp_dependency_map": "schemas/mcp-dependency-map.schema.json",
     "mcp_surface_contract": "schemas/mcp-surface-contract.schema.json",
     "mcp_action_packet": "schemas/mcp-action-packet.schema.json",
@@ -166,6 +169,7 @@
     "runtime_route_decision": "schemas/runtime-route-decision.schema.json",
     "harness_revision": "schemas/harness-revision.schema.json",
     "autonomy_control_event": "schemas/autonomy-control-event.schema.json",
-    "capability_os_cockpit": "schemas/capability-os-cockpit.schema.json"
+    "capability_os_cockpit": "schemas/capability-os-cockpit.schema.json",
+    "ci_module_boundary": "schemas/ci-module-boundary.schema.json"
   }
 }

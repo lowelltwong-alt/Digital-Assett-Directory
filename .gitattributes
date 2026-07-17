@@ -1,0 +1,2 @@
+# Revision-bound source snapshots preserve LF bytes and approved EOF whitespace on every platform.
+assets/source-knowledge-ingestion/snapshots/** text eol=lf -whitespace

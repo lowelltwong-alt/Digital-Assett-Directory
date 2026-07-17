@@ -1,6 +1,6 @@
 {
   "schema_version": "dad.mcp.dependency_map.v1",
-  "map_revision": "2026-07-16.2",
+  "map_revision": "2026-07-16.3",
   "logical_server_name": "dad-local-graph-surfaces",
   "authority_policy": {
     "local_only": true,
@@ -158,7 +158,7 @@
       "label": "Graph surface registry semantics",
       "artifact_kind": "file",
       "change_contract": "Canonical JSON semantics are fingerprinted so formatting-only changes do not create false staleness.",
-      "fingerprint": {"kind": "json_pointer_sha256", "path": "registry/graph-surface-registry.json", "pointer": "/surfaces", "sha256": "sha256:7401ee9f3f95438e9d372c2e796d5008534121d1bc45aa09ff9c1e30fd7e60ca"}
+      "fingerprint": {"kind": "json_pointer_sha256", "path": "registry/graph-surface-registry.json", "pointer": "/surfaces", "sha256": "sha256:39d416c481a30cb3bdaf9bf81f74ab4ee595e33633b321a8f8e96ae916c955cc"}
     },
     {
       "node_id": "mcp.node.registry.schema-route",

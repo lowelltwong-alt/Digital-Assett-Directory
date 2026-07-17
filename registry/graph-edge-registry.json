@@ -444,6 +444,18 @@
     },
     {
       "edge_type": "split_into", "edge_class": "join", "direction": "retired overloaded identity -> successor identities", "cardinality": "one-to-many", "semantics": "An explicit human decision preserves an overloaded historical identity while creating distinct successors.", "allowed_bases": ["human-identity-decision-v1"], "evidence_required": ["human decision id", "split rationale", "successor identities"], "version": "0.1.0", "examples": ["entity:engineering -> entity:product-engineering"], "danger_if_wrong": "Historical evidence can be attributed to the wrong successor.", "review_status": "candidate"
+    },
+    {
+      "edge_type": "source_snapshot_of", "edge_class": "join", "direction": "inert DAD snapshot -> observed source revision", "cardinality": "many-to-one",
+      "semantics": "A DAD-owned, immutable, candidate-only snapshot records an explicitly identified source revision without transferring source authority or execution rights.",
+      "allowed_bases": ["governed-source-knowledge-ingestion-v1"], "evidence_required": ["validated snapshot manifest", "source revision", "dirty-state digest when applicable"], "version": "0.1.0",
+      "examples": ["source-snapshot:albert:2026-07-16 -> source-revision:albert:c1ede94"], "danger_if_wrong": "A dirty or partial observation can be mistaken for committed source truth, current state, or an adopted DAD policy.", "review_status": "candidate"
+    },
+    {
+      "edge_type": "extracted_from", "edge_class": "join", "direction": "normalized candidate knowledge -> source file observation", "cardinality": "many-to-one",
+      "semantics": "A bounded candidate record was deterministically extracted from an approved source-file observation under explicit privacy and authority controls.",
+      "allowed_bases": ["governed-source-knowledge-ingestion-v1"], "evidence_required": ["source-relative path or opaque source reference", "revision-bound content hash", "validated ingestion manifest"], "version": "0.1.0",
+      "examples": ["lesson-candidate:albert:072 -> source-file-observation:ai-learning-loop-lessons"], "danger_if_wrong": "A candidate can inherit authority, provenance, or content that was not actually inspected or approved for ingestion.", "review_status": "candidate"
     }
   ]
 }

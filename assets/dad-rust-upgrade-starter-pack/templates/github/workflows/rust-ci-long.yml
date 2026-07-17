@@ -9,14 +9,6 @@ on:
         default: "false"
   schedule:
     - cron: "17 7 * * 1"
-  pull_request:
-    paths:
-      - "tools/dad_scan_core/**"
-      - "scripts/run_dad_scan_core.py"
-      - "docs/rust/**"
-      - "templates/**"
-      - ".github/workflows/rust-ci-long.yml"
-
 jobs:
   long-rust:
     name: long-rust-${{ matrix.os }}

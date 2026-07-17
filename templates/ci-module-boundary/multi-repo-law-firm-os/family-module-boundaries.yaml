@@ -1,0 +1,21 @@
+schema_version: dad.ci_module_boundary_family.v1
+family_id: law-firm-os
+authority_boundary: Each child repository retains local CI authority and must adopt its own manifest.
+family_owner: replace-with-family-owner
+repositories:
+  - repository_id: replace-with-authority-repo
+    role: family-authority
+    local_manifest: .ci/module-boundaries.yaml
+  - repository_id: replace-with-child-repo
+    role: child
+    local_manifest: .ci/module-boundaries.yaml
+declared_cross_repo_dependencies:
+  - edge_id: replace-with-edge
+    from_repository_id: replace-with-upstream
+    to_repository_id: replace-with-downstream
+    on: [contract, authoritative_input]
+    evidence: replace-with-reviewed-contract-reference
+adoption:
+  automatic_downstream_mutation: false
+  required_local_review: true
+  return_metadata_only: true
