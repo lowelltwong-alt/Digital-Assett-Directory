@@ -56,10 +56,10 @@ workflows:
     selector_job: selector
     suite_job_map: {python-control-plane: python, governance: governance, rust-scan: rust}
     required_aggregator_job: validate
-    workflow_contract_digest: sha256:327d72b24b7af3c95c3c6e464c3d8ddd8688ead672e2fec96be46f55e161b5dc
+    workflow_contract_digest: sha256:95e3a7ebad6c6c296b986d1c79256d54acef0c1e9ba6e90b0ec4c7f488fb2e3d
     job_contract_digests:
       selector: sha256:58255041c47bba2cb881f682e509fe16483593fa353315dba60905d4c65131f0
-      python: sha256:32b0ec10d67e14b3a72a72735586d62bb854143424f5e90eb21d5bb815110315
+      python: sha256:3e3b1f1a952197ebc0b53789b4d405dc412656e5d43442f5a0cceb9b8c51ac02
       governance: sha256:3383af32eddc0e53d2262a627b7c8563623edd9e482761b71269fc8b5d24ba64
       rust: sha256:9fcd0b0b653ebf381cad09a5c167b5c2b3b669889861bd444fdfa7e41044fb47
       validate: sha256:8a968878ee7dd02732ff51f504db2be70899c97eb471133fff83475c866b5657

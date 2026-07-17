@@ -278,6 +278,8 @@ def test_dad_rust_selection_is_enforced_by_fail_closed_selector_adapter():
     assert 'git cat-file -e "${base_commit}^{commit}"' in workflow
     assert "git show" in workflow
     assert "|| true" not in workflow
+    python_job = workflow.split("  python:", 1)[1].split("  governance:", 1)[0]
+    assert "fetch-depth: 0" in python_job
     assert "needs: [selector, python, governance, rust]" in workflow
 
 

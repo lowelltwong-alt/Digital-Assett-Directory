@@ -156,7 +156,7 @@
       "owner": "DAD and Lowell",
       "status": "schema_validated",
       "portable_files": [".claude/settings.json", ".github/CODEOWNERS", ".github/workflows/rust-ci-long.yml", ".github/workflows/rust-ci-pr.yml", ".github/workflows/scheduled-full-regression.yml", ".github/workflows/validate.yml", "AGENTS.md", "config/global-personal-skills.json", "registry/agent-family-portfolio-registry.json", "registry/agent-skill-library.json", "registry/dad-offerings-registry.json", "registry/mcp-dependency-map.json", "registry/portability-policy-registry.json", "registry/portable-runtime-qualification-registry.json", "registry/schema-registry.json", "schemas/model-attempt-receipt-v2.schema.json", "schemas/portability-assessment.schema.json", "schemas/portability-health-snapshot.schema.json", "schemas/portability-policy.schema.json", "schemas/portable-capability-card.schema.json", "schemas/portable-capability-registry.schema.json", "schemas/portable-runtime-qualification.schema.json", "schemas/portfolio-execution-control-event.schema.json", "scripts/agent_lifecycle.py", "scripts/claude_hook.py", "src/digital_asset_directory/_portfolio_execution_legacy.py", "src/digital_asset_directory/agent_lifecycle.py", "src/digital_asset_directory/capability_os_cockpit.py", "src/digital_asset_directory/ci_module_boundary_github.py", "src/digital_asset_directory/cli.py", "src/digital_asset_directory/enrollment.py", "src/digital_asset_directory/global_personal_skills.py", "src/digital_asset_directory/governance.py", "src/digital_asset_directory/learning.py", "src/digital_asset_directory/mcp_dependency_map.py", "src/digital_asset_directory/portability_control.py", "src/digital_asset_directory/portfolio_execution.py", "src/digital_asset_directory/validation.py", "templates/downstream/AGENTS_MANAGED_BLOCK.md"],
-      "content_digest": "sha256:5e8c419e7c933e5894763479c9fbd01a2fc3811c61f48fdd3d485a1c0e18f9a0",
+      "content_digest": "sha256:83f6894d41274e0be7195b63d482c1870b0202a69a2658c71f4369cbe18ff798",
       "contract_digests": {"input": "sha256:eee475da7d6fe76d90852dfa97de0e1f047cb72d7d0134552245b7cda9a9fb68", "output": "sha256:0ec04e3bcb58df087b53068eb3756924c878f35a40871814bd8749313aa69dea", "error": "sha256:0c31568c5353cbf327cd009c17af20a687f7e97685e609c9a8d96f03852fd118", "privacy": "sha256:6eccc25be5945d494635818e68177f6efe953e9f2e74fbf165b5139d08429551", "effect": "sha256:c9093452afcdef36603faec991dc45d87d2166fb706f2b70f263b6625f6a3491", "authority": "sha256:408c3ee0aef794f423d49ba8141f3492961aa68b354d03c37c455d072d7e32c3"},
       "capability_ids": ["deterministic_portability_assessment", "protected_transition_gating", "dependency_impact_analysis", "runtime_qualification"],
       "tool_ids": ["dad-cli", "json-schema", "git"],
@@ -504,7 +504,7 @@
         "templates/ci-module-boundary/multi-repo-law-firm-os/family-module-boundaries.yaml",
         "assets/coding-harnesses/ci-module-boundary-governance/tests-or-evals/scenarios.yaml"
       ],
-      "content_digest": "sha256:6472ec3c6db12216ad555d82e7f0852d7edf8b7c0c43bfba7893950b36329a14",
+      "content_digest": "sha256:649022d67f7f41d290e55b82c78f9a051fe91da0897cf5f23395782d4b67e86a",
       "source_observation_digest": "sha256:6fa79a984581c86ca50c8f4bf75a5db18fcd07f086e37e62e430b54e5dbc957d",
       "contract_digests": {
         "input": "sha256:01298fbb37ec7f2fc1f46541873ea2f100f0a88510cbb71c50da9df0f8d126c9",

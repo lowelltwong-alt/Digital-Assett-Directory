@@ -5,9 +5,10 @@ status: candidate
 ai_agnostic: true
 methodology_ref: registry/subagent-evaluation-methodology.json#0.1.0
 authority_boundary: >
-  Roles return read-only inventory, synthesis, and independent findings. The
-  single parent writer retains edits; source owners retain CI adoption,
-  dependency truth, required-check, release, exception, and activation authority.
+  Roles return candidate, read-only inventory, synthesis, and independent
+  findings. They do not grant authority or approve adoption. The single parent
+  writer retains edits; source owners retain CI adoption, dependency truth,
+  required-check, release, exception, and activation decisions.
 routing_policy:
   max_delegation_depth: 1
   deterministic_first: true
