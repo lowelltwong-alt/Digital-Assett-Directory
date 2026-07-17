@@ -15,7 +15,7 @@ from .transport import DATA_PLANE_PATHS, resolve_data_root
 
 
 CODEX_HOOK_ADAPTER_ID = "adapter:intent-continuity-shadow"
-CODEX_HOOK_ADAPTER_REVISION_ID = "adapter-revision:intent-continuity-codex-host:0.3.8"
+CODEX_HOOK_ADAPTER_REVISION_ID = "adapter-revision:intent-continuity-codex-host:0.3.9"
 MAX_HOOK_INPUT_BYTES = 64 * 1024
 HOOK_LOCK_TIMEOUT_SECONDS = 1.5
 AUTHORITY_BOUNDARY = (

@@ -13,7 +13,7 @@ Status: implementation in progress; recurring activation is not eligible.
 | Codex metadata adapter | Strict minimized receipt; no transcript/internal-file access; initialized private-data-root gate | implemented candidate |
 | Global/repository projections and queues | Deterministic replay, repo/global graph, live conservative duplicate/closeout inputs, repository-local cockpits, four required action queues plus three supporting queue views, at most three immediate next actions | implemented candidate |
 | Silent shadow hooks | Repo-local Codex hook definition, content-free handler, exact retry, privacy, missed-hook reconciliation, latency, rollback tests, and host-readiness assessment | committed candidate; project trust, exact hook trust, linked-worktree discovery, and real dispatch unverified |
-| Bounded PM roles | Existing role pack remains 0.4.0; portable PM capability is 0.4.7; evaluated revision IDs remain empty pending real evidence | implemented candidate; promotion prohibited |
+| Bounded PM roles | Existing role pack remains 0.4.0; portable PM capability is 0.4.8; evaluated revision IDs remain empty pending real evidence | implemented candidate; promotion prohibited |
 | Supervised trial | Five qualifying reviews across at least seven days, measured latency, and zero-failure gates | preflight review recorded one missed capture; qualifying trial not started |
 | Progressive activation | Dormant previews plus append-only, revision-bound, predecessor-ordered approve/revoke/kill evidence with expiry, rollback, and kill criteria; no automatic cleanup | implemented candidate; all non-manual stages blocked by current trial evidence |
 
@@ -176,20 +176,20 @@ gates.
   proof. Every qualifying real review therefore requires supervisor attestation,
   and no receipt can authorize hook trust or activation by itself.
 - Revision-bound performance receipt
-  `dad:hook-performance:c98b34009208ec1e3ea0a7fe64bfd35f8bc62f3f5ab37e24198eee3197360974`
-  recorded five exact cold-process Windows samples with p95 815.456 ms under the
+  `dad:hook-performance:9b27fda5f13281b6fd79304dca8171d045c30844b4e183015c427b2ef0e76530`
+  recorded five exact cold-process Windows samples with p95 708.626 ms under the
   1,500 ms budget; all five were silent, persisted, privacy-safe, and left the
   source worktree unchanged. Evidence:
   `roadmap/evidence/intent-continuity-hook-performance-2026-07-17.json`.
 - Revision-bound scale receipt
-  `dad:hook-scale:d3aeb008620ef64ed313101fc80b7ac25bdcbb3e9a8445a3d865f492f718c976`
-  measured warm 0/1K/10K hook latency at 691.58/598.586/687.863 ms and a cold
-  10K index rebuild at 1,942.565 ms. Every case was silent, persisted exactly one
+  `dad:hook-scale:295ef21620f2794c2325646cd0bb2c524f7cb9a020c77429676a470657c9d738`
+  measured warm 0/1K/10K hook latency at 1,496.017/712.445/752.372 ms and a cold
+  10K index rebuild at 2,185.279 ms. Every case was silent, persisted exactly one
   event, produced a valid size/hash-bound index, recorded zero failure markers,
   remained below its applicable boundary, and left source unchanged. Evidence:
   `roadmap/evidence/intent-continuity-hook-scale-2026-07-17.json`.
 - Host-readiness assessment
-  `sha256:2a0b47fadf60f02c073ec133e979d7a02525d933cdafcf67dc11b6aa9989deec`
+  `sha256:11ed022612ccb8dcbec2c362c8b259bd18979d66c0311b54076a94ca2ff1b6c2`
   proves the exact revision-bound adapter-interface digest matches, all four intended
   lifecycle events are configured, no current-revision failure marker exists,
   and the repository is a linked worktree. It correctly reports `not_ready`
@@ -214,7 +214,7 @@ gates.
   next honest human action. It binds the exact review set and current adapter
   digest, rejects path-like identifiers and failure tokens, and carries
   explicit false delivery, activation, cleanup, and execution authorities.
-- PM core 0.4.7, supervised Codex adapter 0.3.8, and portability harness 0.1.5
+- PM core 0.4.8, supervised Codex adapter 0.3.9, and portability harness 0.1.5
   close the remaining non-human completion gaps. Recovery now searches exact
   private plan source bindings and accepted workstream bindings without
   emitting their raw refs, and a two-repository fixture proves cross-repository
@@ -231,6 +231,9 @@ gates.
   source checkout when the private data root was unavailable. Adapter 0.3.8
   now refuses uninitialized or wrong-hub data roots, with regression coverage
   proving that neither the source checkout nor the mismatched root is mutated.
+  Core 0.4.8 normalizes timezone-aware activity timestamps to UTC before
+  ordering, earliest/latest comparison, or paired-session duration folding;
+  adapter 0.3.9 rebinds the unchanged supervised host interface to that core.
   Its live status contains zero approval records and authorizes no delivery,
   execution, archive, or cleanup effect.
 - The final bounded delta passed 123 continuity/recovery/host/hook/trial tests,
@@ -280,8 +283,8 @@ reviewed lifecycle vocabulary. The observable correction in this build is one
 durable repo-local lifecycle kernel with plan, readiness, delivery, validation,
 and closeout represented as separate overlays or gates.
 
-The candidate asset is the 0.4.7 revision of Personal Project Management Ops
-plus a separate 0.3.8 supervised Codex-host adapter. It is not a new
+The candidate asset is the 0.4.8 revision of Personal Project Management Ops
+plus a separate 0.3.9 supervised Codex-host adapter. It is not a new
 idea-library skill.
 The linked-worktree routing surprise was captured as a privacy-safe local
 exception candidate and resolved in the reviewed documentation and focused
