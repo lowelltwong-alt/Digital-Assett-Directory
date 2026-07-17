@@ -12,8 +12,8 @@
     "AI_TABLE_OF_CONTENTS.md"
   ],
   "navigation_standards": {
-    "navigation_version": "2026.07.14.14",
-    "updated_at": "2026-07-15T16:00:00Z",
+    "navigation_version": "2026.07.16.15",
+    "updated_at": "2026-07-16T22:30:00Z",
     "single_ai_entrypoint": "AI_FRONT_DOOR.md",
     "ai_table_of_contents": "AI_TABLE_OF_CONTENTS.md",
     "navigation_registry": "registry/ai-navigation-registry.json",

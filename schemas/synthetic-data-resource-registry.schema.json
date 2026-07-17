@@ -1,0 +1,147 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://local.digital-asset-directory/schemas/synthetic-data-resource-registry.schema.json",
+  "title": "Synthetic Data Resource Registry",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version", "registry_id", "registry_version", "status",
+    "ai_agnostic", "authority_boundary", "routing_contract", "resources",
+    "unresolved_names", "research_contract"
+  ],
+  "properties": {
+    "schema_version": {"const": "0.1.0"},
+    "registry_id": {"const": "synthetic-data-resource-registry"},
+    "registry_version": {"type": "string", "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+$"},
+    "status": {"enum": ["candidate", "reviewed", "retired"]},
+    "ai_agnostic": {"const": true},
+    "authority_boundary": {"type": "string", "minLength": 1},
+    "routing_contract": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["deterministic_first", "suggestion_only", "positive_signals", "blocking_signals", "real_holdout_rule", "minimum_evidence"],
+      "properties": {
+        "deterministic_first": {"const": true},
+        "suggestion_only": {"const": true},
+        "positive_signals": {"$ref": "#/$defs/nonEmptyStrings"},
+        "blocking_signals": {"$ref": "#/$defs/nonEmptyStrings"},
+        "real_holdout_rule": {"type": "string", "minLength": 1},
+        "minimum_evidence": {"type": "string", "minLength": 1}
+      }
+    },
+    "resources": {
+      "type": "array",
+      "minItems": 1,
+      "items": {"$ref": "#/$defs/resource"}
+    },
+    "unresolved_names": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["observed_name", "status", "reason", "searched_on"],
+        "properties": {
+          "observed_name": {"type": "string", "minLength": 1},
+          "status": {"const": "unresolved_not_routable"},
+          "reason": {"type": "string", "minLength": 1},
+          "searched_on": {"type": "string", "format": "date"}
+        }
+      }
+    },
+    "research_contract": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["cadence", "activation_status", "source_policy", "external_content_security", "auto_schedule", "auto_promote", "context_sources", "runtime_route", "automation_binding", "candidate_limits", "outputs"],
+      "properties": {
+        "cadence": {"const": "P7D"},
+        "activation_status": {"const": "human_activated"},
+        "source_policy": {"type": "string", "minLength": 1},
+        "external_content_security": {"$ref": "#/$defs/nonEmptyStrings"},
+        "auto_schedule": {"const": true},
+        "auto_promote": {"const": false},
+        "context_sources": {"$ref": "#/$defs/nonEmptyStrings"},
+        "runtime_route": {
+          "type": "object", "additionalProperties": false,
+          "required": ["capability_alias", "reasoning_effort", "adapter_revision_id", "retirement_rule", "escalation_rule"],
+          "properties": {
+            "capability_alias": {"const": "luna"},
+            "reasoning_effort": {"const": "low"},
+            "adapter_revision_id": {"const": "portability-card-revision:runtime-adapter-codex-gpt-5-6-luna-low-weekly-research:0.1.0"},
+            "retirement_rule": {"type": "string", "minLength": 1},
+            "escalation_rule": {"type": "string", "minLength": 1}
+          }
+        },
+        "automation_binding": {
+          "type": "object", "additionalProperties": false,
+          "required": ["automation_id", "timezone", "weekday", "local_time", "authorized_by", "authorized_at"],
+          "properties": {
+            "automation_id": {"const": "weekly-dad-external-asset-scout"},
+            "timezone": {"const": "America/New_York"},
+            "weekday": {"const": "Monday"},
+            "local_time": {"const": "09:00"},
+            "authorized_by": {"const": "Lowell"},
+            "authorized_at": {"type": "string", "format": "date-time"}
+          }
+        },
+        "candidate_limits": {
+          "type": "object", "additionalProperties": false,
+          "required": ["max_candidates", "max_immediate_decisions", "max_read_only_scouts"],
+          "properties": {
+            "max_candidates": {"const": 10},
+            "max_immediate_decisions": {"const": 3},
+            "max_read_only_scouts": {"const": 2}
+          }
+        },
+        "outputs": {"$ref": "#/$defs/nonEmptyStrings"}
+      }
+    }
+  },
+  "$defs": {
+    "nonEmptyStrings": {
+      "type": "array", "minItems": 1, "uniqueItems": true,
+      "items": {"type": "string", "minLength": 1}
+    },
+    "resource": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "resource_id", "name", "status", "artifact_classes", "domains", "modalities",
+        "tasks", "synthetic_scope", "generation_methods", "owner", "primary_sources",
+        "license", "access", "use_when", "avoid_when", "validation_requirements",
+        "keywords", "last_verified", "review_after", "confidence"
+      ],
+      "properties": {
+        "resource_id": {"type": "string", "pattern": "^synthetic-resource:[a-z0-9][a-z0-9-]*$"},
+        "name": {"type": "string", "minLength": 1},
+        "status": {"enum": ["candidate", "reviewed", "watch", "retired"]},
+        "artifact_classes": {"$ref": "#/$defs/nonEmptyStrings"},
+        "domains": {"$ref": "#/$defs/nonEmptyStrings"},
+        "modalities": {"$ref": "#/$defs/nonEmptyStrings"},
+        "tasks": {"$ref": "#/$defs/nonEmptyStrings"},
+        "synthetic_scope": {"enum": ["fully_synthetic", "simulation", "augmentation", "mixed", "evaluation_fixture", "real_validation_benchmark"]},
+        "generation_methods": {"$ref": "#/$defs/nonEmptyStrings"},
+        "owner": {"type": "string", "minLength": 1},
+        "primary_sources": {
+          "type": "array", "minItems": 1,
+          "items": {
+            "type": "object", "additionalProperties": false,
+            "required": ["url", "source_type"],
+            "properties": {
+              "url": {"type": "string", "format": "uri"},
+              "source_type": {"enum": ["official_docs", "official_repository", "primary_paper", "official_dataset_card", "standard"]}
+            }
+          }
+        },
+        "license": {"type": "string", "minLength": 1},
+        "access": {"enum": ["open", "registration", "restricted", "commercial", "mixed", "unknown"]},
+        "use_when": {"$ref": "#/$defs/nonEmptyStrings"},
+        "avoid_when": {"$ref": "#/$defs/nonEmptyStrings"},
+        "validation_requirements": {"$ref": "#/$defs/nonEmptyStrings"},
+        "keywords": {"$ref": "#/$defs/nonEmptyStrings"},
+        "last_verified": {"type": "string", "format": "date"},
+        "review_after": {"type": "string", "format": "date"},
+        "confidence": {"enum": ["high", "medium", "low"]}
+      }
+    }
+  }
+}

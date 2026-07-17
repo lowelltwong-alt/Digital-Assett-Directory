@@ -176,6 +176,7 @@ from .ml_agent_family import (
     ml_research_plan,
     ml_specialist_route,
 )
+from .synthetic_data_resources import synthetic_catalog, synthetic_route
 from .knowledge_engineering import (
     knowledge_catalog,
     knowledge_dependency_graph,
@@ -762,6 +763,41 @@ def ml_specialist_route_command(
         )
         raise typer.Exit(2) from None
     _ml_output(ml_specialist_route, hub, receipt=payload)
+
+
+@ml_app.command("synthetic-catalog")
+def ml_synthetic_catalog_command(
+    query: str = typer.Option("", "--query", "-q"),
+    domain: str = typer.Option("", "--domain"),
+    hub: Optional[Path] = typer.Option(None),
+) -> None:
+    """Search pointer-only synthetic-data resources without downloading or dispatching."""
+    _ml_output(synthetic_catalog, hub, query=query, domain=domain)
+
+
+@ml_app.command("synthetic-route")
+def ml_synthetic_route_command(
+    objective: str = typer.Option(..., "--objective"),
+    modality: str = typer.Option("unknown", "--modality"),
+    domain: str = typer.Option("", "--domain"),
+    signals: str = typer.Option("", "--signals", help="Comma-separated governed need/blocking signals."),
+    real_holdout_available: bool = typer.Option(False, "--real-holdout-available"),
+    consequence: str = typer.Option("medium", "--consequence"),
+    limit: int = typer.Option(5, "--limit"),
+    hub: Optional[Path] = typer.Option(None),
+) -> None:
+    """Return a deterministic, non-authorizing synthetic-data opportunity route."""
+    _ml_output(
+        synthetic_route,
+        hub,
+        objective=objective,
+        modality=modality,
+        domain=domain,
+        signals=signals,
+        real_holdout_available=real_holdout_available,
+        consequence=consequence,
+        limit=limit,
+    )
 
 
 def _knowledge_output(action, hub: Optional[Path], **kwargs: Any) -> None:

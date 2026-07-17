@@ -69,6 +69,8 @@ def test_current_portability_registry_is_valid_and_baselined() -> None:
         "personal-skill:portable-capability-governance",
         "skill:personal-portfolio-capacity-review",
         "skill:portable-capability-governance",
+        "workflow:ml-synthetic-data-opportunity-review",
+        "workflow:ml-synthetic-helper-research-refresh",
     }
 
 

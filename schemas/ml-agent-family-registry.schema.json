@@ -146,7 +146,7 @@
         "workflow_id": {"type": "string", "pattern": "^workflow:ml-[a-z0-9-]+$"},
         "trigger": {"type": "string", "minLength": 1},
         "cadence": {"type": "string", "minLength": 1},
-        "activation_status": {"enum": ["task_triggered", "manual", "human_activation_required"]},
+        "activation_status": {"enum": ["task_triggered", "manual", "human_activation_required", "human_activated"]},
         "owner_authority": {"type": "string", "minLength": 1},
         "inputs_ref": {"type": "string", "minLength": 1},
         "outputs_ref": {"type": "string", "minLength": 1},

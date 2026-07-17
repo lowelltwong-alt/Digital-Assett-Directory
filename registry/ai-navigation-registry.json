@@ -1,8 +1,8 @@
 {
   "schema_version": "0.1.0",
   "registry_id": "ai-navigation-registry",
-  "navigation_version": "2026.07.14.14",
-  "updated_at": "2026-07-15T16:00:00Z",
+  "navigation_version": "2026.07.16.15",
+  "updated_at": "2026-07-16T22:30:00Z",
   "singular_entrypoint": {
     "path": "AI_FRONT_DOOR.md",
     "rule": "All agents start at AI_FRONT_DOOR.md, then follow the required read order and task-specific branches.",
@@ -658,6 +658,18 @@
       "freshness_hint": "Runtime model observations expire, the technique library is incomplete, and research, deployment, instruction, automation, and supersession changes remain human-gated."
     },
     {
+      "branch_id": "synthetic_data_resource_library",
+      "path": "docs/SYNTHETIC_DATA_RESOURCE_LIBRARY.md",
+      "role": "Pointer-only synthetic dataset, generator, simulator, augmentation, fixture, and complementary real-holdout catalog with deterministic opportunity routing.",
+      "tags": ["registry", "machine_learning", "synthetic_data", "workflow", "research_intake", "validation", "human_gate"],
+      "use_when": "A task has scarce labels, rare cases, controllable ground truth, simulation, privacy-safe fixture, domain-randomization, or coverage-stress needs and synthetic data may help.",
+      "current_version": "0.1.0",
+      "last_material_change_at": "2026-07-16T22:30:00Z",
+      "change_class": "library_catalog",
+      "route_after": ["AI_FRONT_DOOR.md", "assets/agent-skills/ml-workflow-agent-family/SKILL.md", "registry/synthetic-data-resource-registry.json", "registry/ml-agent-family-registry.json"],
+      "freshness_hint": "Pointers and terms can change; the human-activated weekly research automation is active, candidate-only, and bound to an expiring runtime adapter; real-world claims always require a source-separated real holdout."
+    },
+    {
       "branch_id": "technical_product_company_os",
       "path": "docs/TECHNICAL_PRODUCT_COMPANY_OS.md",
       "role": "One-human capability operating system for project-position diagnosis, right-sized completion, product catalysis, project coordination, top-ten technical coverage, AI decision rights, routing, workflow evidence, automation, offload, gap detection, and improvement.",
@@ -695,6 +707,15 @@
     }
   ],
   "recent_changes": [
+    {
+      "change_id": "nav-change:2026-07-16:synthetic-data-resource-library",
+      "changed_at": "2026-07-16T22:30:00Z",
+      "change_type": "added_synthetic_data_resource_library",
+      "paths": ["docs/SYNTHETIC_DATA_RESOURCE_LIBRARY.md", "registry/synthetic-data-resource-registry.json", "schemas/synthetic-data-resource-registry.schema.json", "src/digital_asset_directory/synthetic_data_resources.py", "assets/agent-skills/ml-workflow-agent-family"],
+      "summary": "Added 48 primary-source synthetic-data and complementary real-holdout pointers, deterministic suggestion gates, and proportional scout/architect/checker routing inside the existing ML family.",
+      "agent_action": "Run the deterministic route before naming a generator, use synthetic data only for a concrete coverage need, verify source terms, and require real-distribution validation for real-world claims.",
+      "route_tags": ["machine_learning", "synthetic_data", "workflow", "research_intake", "validation", "human_gate"]
+    },
     {
       "change_id": "nav-change:2026-07-15:self-learning-improvement-system-plan",
       "changed_at": "2026-07-15T04:09:48Z",
@@ -1135,28 +1156,6 @@
         "deployment",
         "human_gate",
         "validation"
-      ]
-    },
-    {
-      "change_id": "nav-change:2026-07-05:rust-rollout-lesson-capture-route",
-      "changed_at": "2026-07-05T07:45:00Z",
-      "change_type": "added_rust_rollout_lesson_capture_route",
-      "paths": [
-        "docs/rust/RUST_ROLLOUT_LESSON_CAPTURE_PROTOCOL.md",
-        "schemas/rust-rollout-lesson.schema.json",
-        "lessons/rust_rollout/lesson_ledger.jsonl",
-        "registry/dad-needs-registry.json",
-        "AI_FRONT_DOOR.md",
-        "AI_TABLE_OF_CONTENTS.md",
-        "MACHINE_NAVIGATION_MANIFEST.json"
-      ],
-      "summary": "Added first-class navigation and schema coverage for Rust rollout lesson capture so repo feedback during Rust mail storms is structured, append-only, and validation-backed.",
-      "agent_action": "Use the Rust lesson-capture protocol and schema before sending or accepting Rust rollout feedback; run lessons-summarize after ledger appends.",
-      "route_tags": [
-        "rust",
-        "learning_loop",
-        "schema",
-        "mail_center"
       ]
     },
     {
