@@ -2,8 +2,9 @@
 """Runner for the DAD contract check usable from hooks and CI.
 
 Dependency-light: stdlib + PyYAML. Exit codes: 0 clean or warn-mode finding;
-2 enforce-mode violation; never nonzero for infrastructure problems in warn
-mode (a broken checker must not block work during probation).
+2 enforce-mode violation or infrastructure failure; never nonzero for
+infrastructure problems in effective warn mode (a broken checker must not
+block work during probation).
 """
 
 from __future__ import annotations
@@ -30,35 +31,33 @@ def main() -> int:
 
     hub = args.hub.resolve()
     sys.path.insert(0, str(hub / "src"))
+    # If policy loading itself fails, policy mode must fail closed because the
+    # reviewed effective mode cannot be established. Explicit warn remains the
+    # only non-blocking infrastructure posture.
+    selected_mode = "enforce" if args.mode == "policy" else args.mode
     try:
         from digital_asset_directory.contract_check import (
+            effective_mode,
+            load_policy,
             render_text,
+            resolve_base,
             run_contract_check,
         )
 
+        policy = load_policy(hub)
+        selected_mode = effective_mode(policy, args.mode)
         repo = args.repo.resolve()
-        base = args.base
-        if not base:
-            import subprocess
-
-            base = subprocess.run(
-                ["git", "-C", str(repo), "merge-base", "HEAD", "origin/main"],
-                capture_output=True,
-                text=True,
-                check=True,
-                timeout=60,
-            ).stdout.strip()
+        base = args.base or resolve_base(repo, args.head)
         extra_text = os.environ.get(args.extra_text_env, "") if args.extra_text_env else ""
-        mode = None if args.mode == "policy" else args.mode
         report = run_contract_check(
-            repo, hub, base, args.head, extra_text=extra_text, mode=mode
+            repo, hub, base, args.head, extra_text=extra_text, mode=selected_mode
         )
         print(render_text(report))
         if report["violation"] and report["mode"] == "enforce":
             return 2
         return 0
     except Exception as exc:  # noqa: BLE001
-        if args.mode == "enforce":
+        if selected_mode == "enforce":
             print(f"DAD contract check failed to run in enforce mode: {exc}")
             return 2
         print(f"DAD contract check could not run ({exc}); not blocking during probation.")

@@ -1,16 +1,25 @@
 from __future__ import annotations
 
+import importlib.util
 import json
 import subprocess
+import sys
 from pathlib import Path
+from types import SimpleNamespace
 
 import jsonschema
+import pytest
+from typer.testing import CliRunner
 
+from digital_asset_directory import cli
 from digital_asset_directory.contract_check import (
+    ContractCheckInfrastructureError,
     classify_paths,
+    effective_mode,
     load_policy,
     protected_path_specs,
     render_text,
+    resolve_base,
     run_contract_check,
 )
 
@@ -83,6 +92,43 @@ def _commit(repo: Path, relpath: str, message: str) -> None:
     path.write_text("content\n", encoding="utf-8")
     _git(repo, "add", "-A")
     _git(repo, "commit", "-q", "-m", message)
+
+
+def _set_policy_mode(repo: Path, mode: str) -> None:
+    path = repo / "registry" / "contract-check-policy.json"
+    policy = json.loads(path.read_text(encoding="utf-8"))
+    policy["mode"] = mode
+    path.write_text(json.dumps(policy), encoding="utf-8")
+
+
+def _run_standalone(
+    repo: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+    *,
+    mode: str = "policy",
+) -> tuple[int, str]:
+    spec = importlib.util.spec_from_file_location(
+        "dad_contract_check_runner_test", ROOT / "scripts" / "contract_check.py"
+    )
+    assert spec is not None and spec.loader is not None
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    monkeypatch.setattr(sys, "path", list(sys.path))
+    monkeypatch.setattr(
+        sys,
+        "argv",
+        [
+            "contract_check.py",
+            "--hub",
+            str(repo),
+            "--repo",
+            str(repo),
+            "--mode",
+            mode,
+        ],
+    )
+    return int(module.main()), capsys.readouterr().out
 
 
 def test_cold_agent_protected_change_without_trailer_is_violation(tmp_path: Path) -> None:
@@ -162,6 +208,195 @@ def test_enforce_mode_flag_overrides_policy(tmp_path: Path) -> None:
     report = run_contract_check(repo, repo, base, mode="enforce")
     assert report["mode"] == "enforce"
     assert report["violation"] is True
+
+
+def test_effective_mode_resolves_policy_and_explicit_override() -> None:
+    assert effective_mode({"mode": "enforce"}, "policy") == "enforce"
+    assert effective_mode({"mode": "warn"}, None) == "warn"
+    assert effective_mode({"mode": "enforce"}, "warn") == "warn"
+    with pytest.raises(ContractCheckInfrastructureError, match="Unsupported"):
+        effective_mode({"mode": "invalid"}, "policy")
+
+
+def test_resolve_base_uses_configured_non_origin_upstream(tmp_path: Path) -> None:
+    repo = _hub_repo(tmp_path)
+    base = _git(repo, "rev-parse", "HEAD").strip()
+    _commit(repo, "src/change.py", "change after upstream")
+    _git(repo, "remote", "add", "central", "https://example.invalid/repo.git")
+    _git(repo, "update-ref", "refs/remotes/central/trunk", base)
+    _git(repo, "config", "branch.main.remote", "central")
+    _git(repo, "config", "branch.main.merge", "refs/heads/trunk")
+
+    assert resolve_base(repo) == base
+
+
+def test_resolve_base_uses_single_recorded_remote_head(tmp_path: Path) -> None:
+    repo = _hub_repo(tmp_path)
+    base = _git(repo, "rev-parse", "HEAD").strip()
+    _commit(repo, "src/change.py", "change after remote default")
+    _git(repo, "remote", "add", "source", "https://example.invalid/repo.git")
+    _git(repo, "update-ref", "refs/remotes/source/trunk", base)
+    _git(
+        repo,
+        "symbolic-ref",
+        "refs/remotes/source/HEAD",
+        "refs/remotes/source/trunk",
+    )
+
+    assert resolve_base(repo) == base
+
+
+def test_resolve_base_never_guesses_origin_main(tmp_path: Path) -> None:
+    repo = _hub_repo(tmp_path)
+    base = _git(repo, "rev-parse", "HEAD").strip()
+    _git(repo, "update-ref", "refs/remotes/origin/main", base)
+
+    with pytest.raises(ContractCheckInfrastructureError, match="--base"):
+        resolve_base(repo)
+
+
+def test_policy_enforce_runner_fails_closed_on_base_resolution_error(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    repo = _hub_repo(tmp_path)
+    _set_policy_mode(repo, "enforce")
+
+    exit_code, output = _run_standalone(repo, monkeypatch, capsys)
+
+    assert exit_code == 2
+    assert "failed to run in enforce mode" in output
+    assert "--base" in output
+
+
+def test_policy_warn_runner_does_not_block_on_base_resolution_error(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    repo = _hub_repo(tmp_path)
+
+    exit_code, output = _run_standalone(repo, monkeypatch, capsys)
+
+    assert exit_code == 0
+    assert "not blocking during probation" in output
+    assert "--base" in output
+
+
+def test_policy_runner_fails_closed_when_policy_cannot_be_loaded(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    repo = _hub_repo(tmp_path)
+    (repo / "registry" / "contract-check-policy.json").unlink()
+
+    exit_code, output = _run_standalone(repo, monkeypatch, capsys)
+
+    assert exit_code == 2
+    assert "failed to run in enforce mode" in output
+
+
+def test_explicit_warn_runner_does_not_block_when_policy_cannot_be_loaded(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    repo = _hub_repo(tmp_path)
+    (repo / "registry" / "contract-check-policy.json").unlink()
+
+    exit_code, output = _run_standalone(
+        repo, monkeypatch, capsys, mode="warn"
+    )
+
+    assert exit_code == 0
+    assert "not blocking during probation" in output
+
+
+@pytest.mark.parametrize(("policy_mode", "expected_exit"), [("warn", 0), ("enforce", 2)])
+def test_cli_uses_effective_policy_mode_for_base_resolution_errors(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    policy_mode: str,
+    expected_exit: int,
+) -> None:
+    repo = _hub_repo(tmp_path)
+    _set_policy_mode(repo, policy_mode)
+    monkeypatch.setattr(cli, "_cfg", lambda **_kwargs: SimpleNamespace(repo_root=repo))
+
+    result = CliRunner().invoke(
+        cli.app,
+        ["agent", "contract-check", "--repo", str(repo)],
+    )
+
+    assert result.exit_code == expected_exit
+    assert "--base" in result.output
+    if policy_mode == "warn":
+        assert "not blocking in effective warn mode" in result.output
+    else:
+        assert "failed to run in enforce mode" in result.output
+
+
+@pytest.mark.parametrize(
+    ("requested_mode", "remove_policy", "expected_fragment"),
+    [
+        ("banana", False, "Unsupported contract-check mode"),
+        ("policy", True, "contract-check-policy.json"),
+    ],
+)
+def test_cli_fails_closed_before_effective_policy_mode_is_known(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    requested_mode: str,
+    remove_policy: bool,
+    expected_fragment: str,
+) -> None:
+    repo = _hub_repo(tmp_path)
+    if remove_policy:
+        (repo / "registry" / "contract-check-policy.json").unlink()
+    monkeypatch.setattr(cli, "_cfg", lambda **_kwargs: SimpleNamespace(repo_root=repo))
+
+    result = CliRunner().invoke(
+        cli.app,
+        [
+            "agent",
+            "contract-check",
+            "--repo",
+            str(repo),
+            "--mode",
+            requested_mode,
+        ],
+    )
+
+    assert result.exit_code == 2
+    normalized_output = " ".join(result.output.split())
+    assert "failed to run in enforce mode" in normalized_output
+    assert expected_fragment in normalized_output
+
+
+def test_cli_explicit_warn_does_not_block_when_policy_cannot_be_loaded(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    repo = _hub_repo(tmp_path)
+    (repo / "registry" / "contract-check-policy.json").unlink()
+    monkeypatch.setattr(cli, "_cfg", lambda **_kwargs: SimpleNamespace(repo_root=repo))
+
+    result = CliRunner().invoke(
+        cli.app,
+        [
+            "agent",
+            "contract-check",
+            "--repo",
+            str(repo),
+            "--mode",
+            "warn",
+        ],
+    )
+
+    assert result.exit_code == 0
+    assert "not blocking in effective warn mode" in result.output
 
 
 def test_shipped_policy_validates_against_schema() -> None:

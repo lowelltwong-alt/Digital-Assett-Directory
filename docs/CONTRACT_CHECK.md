@@ -27,6 +27,18 @@ agent behavior.
      open-session gate;
    - on demand: `asset-dir agent contract-check`.
 
+When `--base` is omitted, the checker uses the current branch's configured
+upstream. If there is no upstream, it accepts exactly one locally recorded
+`refs/remotes/<remote>/HEAD`. It never contacts a remote or guesses a name
+such as `origin/main`; missing or ambiguous Git evidence requires an explicit
+`--base <ref-or-commit>`. CI supplies its pull-request base explicitly.
+
+Infrastructure failures follow the effective policy mode. Warn mode reports
+the failure and exits successfully; enforce mode exits with status 2. When
+policy/default mode is requested, an unreadable policy or unsupported policy
+mode also exits with status 2 because the reviewed effective mode cannot be
+established. An exact explicit `--mode warn` remains non-blocking.
+
 ## What a trailer does and does not prove
 
 A trailer is a decision point, not cryptographic proof. It converts silent

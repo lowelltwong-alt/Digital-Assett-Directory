@@ -346,7 +346,7 @@
     {
       "schema_version": "dad.portable_capability_card.v1",
       "card_id": "portability-card:harness-portable-capability-control-plane",
-      "revision_id": "portability-card-revision:harness-portable-capability-control-plane:0.1.5",
+      "revision_id": "portability-card-revision:harness-portable-capability-control-plane:0.1.6",
       "artifact_id": "harness:portable-capability-control-plane",
       "artifact_kind": "harness",
       "binding_class": "portable_core",
@@ -405,7 +405,7 @@
         "src/digital_asset_directory/validation.py",
         "templates/downstream/AGENTS_MANAGED_BLOCK.md"
       ],
-      "content_digest": "sha256:44bd77859ffc8b2c8e97c6ea28b4f89972fa17654ec8f5c3df4c3aeb7585f7c6",
+      "content_digest": "sha256:2f2508929f13b83f3826e37e369333a599ab8a56eb3b725bd50fabf1effffb5a",
       "contract_digests": {
         "input": "sha256:eee475da7d6fe76d90852dfa97de0e1f047cb72d7d0134552245b7cda9a9fb68",
         "output": "sha256:0ec04e3bcb58df087b53068eb3756924c878f35a40871814bd8749313aa69dea",
@@ -458,7 +458,8 @@
       "harness_revision_id": "harness-revision:portable-capability-contract:0.1.0",
       "evidence_refs": [
         "tests/test_portability_control.py",
-        "tests/test_governance.py"
+        "tests/test_governance.py",
+        "tests/test_contract_check.py"
       ],
       "fresh_until": "2026-10-15T00:00:00-04:00",
       "rollback_ref": "Revert the control-plane revision and restore the prior externally protected required-check revision.",

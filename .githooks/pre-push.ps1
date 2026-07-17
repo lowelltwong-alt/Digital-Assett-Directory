@@ -13,7 +13,7 @@ if (-not $DadHub) {
 }
 python "$DadHub/scripts/enforce_postflight.py" --hub "$DadHub" --repo (Get-Location).Path
 if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-# DAD contract check in registry policy mode: exits 0 while the reviewed
-# policy is warn (probation); blocks only after promotion to enforce.
+# DAD contract check in registry policy mode: warn-mode check failures are
+# non-blocking; enforce mode or an unreadable policy exits nonzero.
 python "$DadHub/scripts/contract_check.py" --hub "$DadHub" --repo (Get-Location).Path
 exit $LASTEXITCODE
