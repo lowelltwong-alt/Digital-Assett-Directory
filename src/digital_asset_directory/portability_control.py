@@ -439,6 +439,45 @@ def _portable_source_text(repo_root: Path, card: dict[str, Any]) -> str:
     return "\n".join(chunks)
 
 
+def _adapter_interface_digest(repo_root: Path, card: dict[str, Any]) -> str | None:
+    """Bind a runtime-adapter revision to every exact repo-local interface file."""
+
+    rows: list[dict[str, str]] = []
+    for raw in card.get("adapter_interface_sources", []):
+        label = str(raw).replace("\\", "/")
+        relative = Path(label)
+        if relative.is_absolute() or ".." in relative.parts:
+            return None
+        path = repo_root / relative
+        if not path.is_file():
+            return None
+        data = path.read_bytes()
+        try:
+            data = data.decode("utf-8").replace("\r\n", "\n").encode("utf-8")
+        except UnicodeDecodeError:
+            pass
+        rows.append({"path": label, "sha256": "sha256:" + hashlib.sha256(data).hexdigest()})
+    return canonical_digest(rows) if rows else None
+
+
+def runtime_adapter_interface_digest(repo_root: Path, artifact_id: str) -> str:
+    """Return the observed source-bound digest for one registered runtime adapter."""
+
+    registry = _load(repo_root / REGISTRY_PATH)
+    matches = [
+        card
+        for card in registry.get("cards", [])
+        if card.get("artifact_id") == artifact_id
+        and card.get("artifact_kind") == "runtime_adapter"
+    ]
+    if len(matches) != 1:
+        raise ValueError(f"Expected one registered runtime adapter: {artifact_id}")
+    digest = _adapter_interface_digest(repo_root, matches[0])
+    if digest is None:
+        raise ValueError(f"Runtime adapter interface is incomplete: {artifact_id}")
+    return digest
+
+
 def changed_governed_files(repo_root: Path, baseline_commit: str) -> list[str]:
     """Return every governed path changed from the immutable baseline.
 
@@ -555,6 +594,24 @@ def validate_portability(repo_root: Path, *, now: datetime | None = None) -> dic
         elif observed_content != card.get("content_digest"):
             findings.append(_finding("content_digest_mismatch", artifact))
         source_text = _portable_source_text(repo_root, card)
+        if card["binding_class"] == "runtime_adapter" and card.get(
+            "adapter_interface_sources"
+        ):
+            observed_interface = _adapter_interface_digest(repo_root, card)
+            if observed_interface is None:
+                findings.append(_finding("adapter_interface_source_unavailable", artifact))
+            elif observed_interface != card.get("adapter_interface_digest"):
+                findings.append(_finding("adapter_interface_digest_mismatch", artifact))
+            else:
+                for raw in card["adapter_interface_sources"]:
+                    authority_path = repo_root / str(raw)
+                    if authority_path.stat().st_size <= _MAX_PORTABLE_SOURCE_BYTES:
+                        try:
+                            source_text += "\n" + authority_path.read_text(encoding="utf-8")
+                        except UnicodeDecodeError:
+                            findings.append(
+                                _finding("adapter_interface_source_unavailable", artifact)
+                            )
         resolved_sources = _resolved_portable_files(repo_root, card)
         if resolved_sources and any(
             path.stat().st_size > _MAX_PORTABLE_SOURCE_BYTES for _, path in resolved_sources
@@ -631,7 +688,10 @@ def validate_portability(repo_root: Path, *, now: datetime | None = None) -> dic
     covered_files = {
         str(path).replace("\\", "/")
         for card in artifact_cards.values()
-        for path in card.get("portable_files", [])
+        for path in [
+            *card.get("portable_files", []),
+            *card.get("adapter_interface_sources", []),
+        ]
         if not str(path).startswith("personal-skill-source:")
     }
     for relative in changed_governed_files(repo_root, registry["baseline"]["git_commit"]):
@@ -707,7 +767,10 @@ def assess_lifecycle(
             covered_scope = {
                 str(path).replace("\\", "/")
                 for artifact in exact_artifacts
-                for path in known_cards[artifact].get("portable_files", [])
+                for path in [
+                    *known_cards[artifact].get("portable_files", []),
+                    *known_cards[artifact].get("adapter_interface_sources", []),
+                ]
                 if not str(path).startswith("personal-skill-source:")
             }
             if any(path not in covered_scope for path in governed_scope):
@@ -939,11 +1002,16 @@ def retirement_exposure(repo_root: Path, runtime_id: str, signal_digest: str) ->
 
 def rollback_eligible(route: dict[str, Any]) -> dict[str, Any]:
     reasons = []
-    if route.get("health") != "available": reasons.append("runtime_unavailable")
-    if route.get("retirement_state") in {"retired", "revoked"}: reasons.append("runtime_ineligible")
-    if route.get("privacy_eligible") is not True: reasons.append("privacy_ineligible")
-    if route.get("authority_eligible") is not True: reasons.append("authority_ineligible")
-    if route.get("qualification_current") is not True: reasons.append("qualification_ineligible")
+    if route.get("health") != "available":
+        reasons.append("runtime_unavailable")
+    if route.get("retirement_state") in {"retired", "revoked"}:
+        reasons.append("runtime_ineligible")
+    if route.get("privacy_eligible") is not True:
+        reasons.append("privacy_ineligible")
+    if route.get("authority_eligible") is not True:
+        reasons.append("authority_ineligible")
+    if route.get("qualification_current") is not True:
+        reasons.append("qualification_ineligible")
     return {"eligible": not reasons, "reason_codes": reasons, "action": "move_active_policy_pointer" if not reasons else "resumable_checkpoint", "execution_authorized": False}
 
 

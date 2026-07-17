@@ -1,6 +1,6 @@
 schema_version: dad_subagent_pack.v0_1
 pack_id: dad:subagent-pack:personal-project-management-ops
-version: 0.3.0
+version: 0.4.0
 status: candidate
 ai_agnostic: true
 methodology_ref: registry/subagent-evaluation-methodology.json#0.1.0
@@ -33,21 +33,21 @@ roles:
     profile_role_id: related_work_scout
     evaluated_role_revision_ids: []
     capability_ids: [project_identity_and_related_work, dependency_frontier_analysis]
-    search_terms: [search before create, possible duplicate, parent child peer variant, existing plan]
+    search_terms: [search before create, possible duplicate, parent child peer variant, existing plan, ref-aware recovery, Codex task metadata, restarted idea]
     effort: low_then_medium_on_ambiguity
-    mission: Retrieve at most five evidence-backed candidate plans, entities, families, libraries, skills, projects, and worktrees while preserving distinct identities and privacy partitions.
-    required_input: [semantic_card, coverage_envelope, privacy_partition, authority_scope]
-    required_output: [top_candidates, evidence, counterevidence, coverage_gaps, candidate_relations, smallest_viable_family_set]
-    stop_conditions: [cross_privacy_search_requested, automatic_merge_requested, equal_best_candidates, stale_authority_evidence]
+    mission: Retrieve at most five evidence-backed candidate plans, entities, families, libraries, skills, local and remote-tracking refs, dirty overlays, projects, worktrees, and explicitly supplied Codex task metadata while preserving distinct identities and privacy partitions.
+    required_input: [semantic_card, ref_aware_coverage_envelope, privacy_partition, authority_scope, explicit_codex_metadata_receipts]
+    required_output: [top_candidates, exact_id_and_binding_matches, ref_and_overlay_matches, codex_metadata_matches, evidence, counterevidence, coverage_gaps, possible_duplicate_only_relations, smallest_viable_family_set]
+    stop_conditions: [cross_privacy_search_requested, automatic_merge_requested, equal_best_candidates, stale_authority_evidence, raw_conversation_or_codex_internal_files_required, network_fetch_required]
   - role_id: partial-build-diagnostician
     profile_role_id: partial_build_diagnostician
     evaluated_role_revision_ids: []
     capability_ids: [neglected_work_recovery, delivery_validation_and_handoff, dependency_frontier_analysis]
-    search_terms: [partial build, dirty worktree, ahead branch, resume packet, acceptance evidence]
+    search_terms: [partial build, dirty worktree, ahead branch, remote-only ref, detached head, resume packet, acceptance evidence, task archive candidate]
     effort: medium_or_high_by_consequence
-    mission: Reconstruct plan, worktree, validation, acceptance, dependency, and downstream-consumer state without mutating Git and produce an immutable recovery bundle.
-    required_input: [plan_revision, current_source_snapshot, worktree_observation, validation_evidence, acceptance_evidence]
-    required_output: [conservative_classification, source_snapshot_digest, completion_support, proposal_only_dispositions, forbidden_actions, resume_request]
+    mission: Reconstruct plan, all local and remote-tracking refs, linked worktrees, dirty overlays, Codex metadata receipts, validation, acceptance, dependency, and downstream-consumer state without fetching or mutating Git and produce an immutable recovery bundle.
+    required_input: [plan_revision, ref_aware_source_snapshot, worktree_observations, codex_metadata_receipts, validation_evidence, acceptance_evidence]
+    required_output: [conservative_classification, source_snapshot_digest, coverage_gaps, completion_support, proposal_only_dispositions, separate_task_and_worktree_gates, forbidden_actions, resume_request]
     stop_conditions: [source_snapshot_stale, status_unknown, mutation_requested, completion_claim_lacks_acceptance_or_independent_check]
   - role_id: recovery-independent-checker
     profile_role_id: recovery_independent_checker
@@ -57,17 +57,17 @@ roles:
     effort: high_for_material_identity_or_recovery
     mission: Blind-check material identity, relationship, recovery, and verified-completion conclusions using a route independent from the producer.
     required_input: [producer_packet, exact_evidence_refs, methodology_revision, independence_constraints]
-    required_output: [supported_findings, disagreements, missing_evidence, false_merge_risk, disposition]
+    required_output: [supported_findings, disagreements, missing_evidence, false_merge_risk, completion_false_positive_risk, task_archive_gate_result, worktree_close_gate_result, disposition]
     stop_conditions: [producer_and_checker_not_independent, evidence_unavailable, private_payload_required, self_approval_requested]
   - role_id: forgotten-plan-sentinel
     profile_role_id: forgotten_plan_sentinel
     evaluated_role_revision_ids: []
     capability_ids: [neglected_work_recovery, project_identity_and_related_work]
-    search_terms: [weekly digest, forgotten plan, stale build, reminder deduplication]
+    search_terms: [weekly digest, forgotten plan, interrupted work, stale build, reminder deduplication, changed-only continuity queue]
     effort: deterministic_then_luna_low_only_for_changed_ambiguity
-    mission: Incrementally rebuild unfinished-plan status, reuse the existing Today queue, suppress unchanged or quiet items, and prepare at most three metadata-safe decisions with zero model calls when deterministic evidence suffices.
-    required_input: [plan_index, today_queue, prior_fingerprints, suppressors, activation_record]
-    required_output: [inventory_count, changed_asks_max_three, zero_token_receipt, delivery_packet, delivery_reconciliation_state]
+    mission: Incrementally rebuild unfinished and interrupted-plan status from the continuity projection, reuse the existing Today queue, suppress unchanged or quiet items, and prepare at most three metadata-safe decisions with zero model calls when deterministic evidence suffices.
+    required_input: [continuity_projection, plan_index, today_queue, prior_fingerprints, suppressors, activation_record]
+    required_output: [inventory_count, interrupted_count, changed_asks_max_three, zero_token_receipt, delivery_packet, delivery_reconciliation_state]
     stop_conditions: [schedule_not_activated, sensitive_notification_content, blind_retry_requested, second_attention_queue_requested, mutation_requested]
   - role_id: workstream-intake-identity-steward
     profile_role_id: workstream_intake_identity_steward
@@ -77,7 +77,7 @@ roles:
     effort: low_then_medium_on_ambiguity
     mission: Capture an idea cheaply, search related work within explicit coverage, preserve stable identities, and propose attach, promote, incubate, split, or keep-as-idea decisions before any branch or worktree exists.
     required_input: [idea_or_request, coverage_roots, known_project_context, authority_boundary]
-    required_output: [coverage, candidate_identity, related_work_assertions, counterevidence, promotion_and_split_options, branch_worktree_need, human_decisions, smallest_next_action]
+    required_output: [coverage, candidate_identity, related_work_assertions, counterevidence, promotion_and_split_options, branch_worktree_need, worktree_open_proposal_only, human_decisions, smallest_next_action]
     stop_conditions: [coverage_unstated, private_payload_required, automatic_identity_merge_requested, git_artifact_requested_before_promotion]
   - role_id: delivery-plan-acceptance-steward
     profile_role_id: delivery_plan_acceptance_steward
@@ -93,12 +93,12 @@ roles:
     profile_role_id: delivery_closeout_resumption_steward
     evaluated_role_revision_ids: []
     capability_ids: [delivery_validation_and_handoff, neglected_work_recovery, validation_design]
-    search_terms: [session closeout, resume capsule, delivery validation, resumption, residual work]
+    search_terms: [session closeout, resume capsule, delivery validation, resumption, residual work, archive task, close worktree, branch disposition]
     effort: medium_or_high_by_consequence
     mission: Close a work session or delivery by reconciling acceptance evidence, validation, residual work, blockers, state, and ownership into a delivery packet or compact resume capsule.
     required_input: [bounded_outcome, session_or_delivery_evidence, acceptance_matrix, validation_results, authority_boundary]
-    required_output: [acceptance_status, failed_and_untested_paths, candidate_state_delta, residual_work, blocker_delta, resume_capsule, delivery_or_handoff_readiness, rollback, next_owner_and_action, human_waivers]
-    stop_conditions: [acceptance_evidence_missing_without_waiver, independent_check_unavailable_for_material_delivery, destructive_cleanup_unreviewed, sovereignty_boundary_ambiguous]
+    required_output: [acceptance_status, failed_and_untested_paths, candidate_state_delta, residual_work, blocker_delta, resume_capsule, delivery_or_handoff_readiness, task_archive_proposal, worktree_close_proposal, branch_delete_separate_gate, rollback, next_owner_and_action, human_waivers]
+    stop_conditions: [acceptance_evidence_missing_without_waiver, independent_check_unavailable_for_material_delivery, task_archive_and_worktree_close_collapsed, destructive_cleanup_unreviewed, sovereignty_boundary_ambiguous]
   - role_id: artifact-proximate-product-catalyst
     profile_role_id: artifact_proximate_product_catalyst
     evaluated_role_revision_ids: []

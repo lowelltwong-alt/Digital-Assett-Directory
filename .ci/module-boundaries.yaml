@@ -6,18 +6,18 @@ workflow_paths: [.github/workflows/**, .ci/**]
 modules:
   - module_id: python-control-plane
     owners: [dad-maintainer]
-    roots: [src, tests, scripts, pyproject.toml, uv.lock]
+    roots: [src, tests, scripts, .codex/hooks/intent_continuity_shadow.py, pyproject.toml, uv.lock]
     triggers:
-      - {edge_type: code, paths: [src/**, tests/**, scripts/**]}
+      - {edge_type: code, paths: [src/**, tests/**, scripts/**, .codex/hooks/intent_continuity_shadow.py]}
       - {edge_type: contract, paths: [pyproject.toml, uv.lock, src/digital_asset_directory/cli.py]}
       - {edge_type: authoritative_input, paths: [src/digital_asset_directory/config.py]}
   - module_id: governance
     owners: [dad-maintainer]
-    roots: [registry, schemas, assets, templates, docs, roadmap, .gitattributes, AGENTS.md, AI_FRONT_DOOR.md, AI_TABLE_OF_CONTENTS.md, MACHINE_NAVIGATION_MANIFEST.json]
+    roots: [registry, schemas, assets, templates, docs, roadmap, config/intent-continuity-shadow-hooks.json, .digital-asset/key-values/change-log.jsonl, .digital-asset/key-values/registry.json, .codex/hooks.json, .gitattributes, AGENTS.md, AI_FRONT_DOOR.md, AI_TABLE_OF_CONTENTS.md, MACHINE_NAVIGATION_MANIFEST.json]
     triggers:
       - {edge_type: code, paths: [assets/**, templates/**]}
-      - {edge_type: contract, paths: [registry/**, schemas/**, .gitattributes, AGENTS.md, AI_FRONT_DOOR.md, AI_TABLE_OF_CONTENTS.md, MACHINE_NAVIGATION_MANIFEST.json]}
-      - {edge_type: authoritative_input, paths: [registry/**, schemas/**, docs/**, roadmap/**]}
+      - {edge_type: contract, paths: [registry/**, schemas/**, .digital-asset/key-values/change-log.jsonl, .digital-asset/key-values/registry.json, .codex/hooks.json, .gitattributes, AGENTS.md, AI_FRONT_DOOR.md, AI_TABLE_OF_CONTENTS.md, MACHINE_NAVIGATION_MANIFEST.json]}
+      - {edge_type: authoritative_input, paths: [registry/**, schemas/**, docs/**, roadmap/**, config/intent-continuity-shadow-hooks.json]}
   - module_id: rust-scan
     owners: [dad-maintainer]
     roots: [tools/dad_scan_core, src/digital_asset_directory/rust_bridge, src/digital_asset_directory/rust_rollout, docs/rust, templates/rust, deny.toml]
@@ -68,4 +68,13 @@ workflows:
   - {workflow_id: scheduled-full, provider_path: .github/workflows/scheduled-full-regression.yml, lane: scheduled_full_regression, events: [schedule, workflow_dispatch], required_check: false, always_reports: true, scope: repository, workflow_contract_digest: "sha256:05970a4507d42dd4eb8ef803a2dd805db314a9c633befb465424f0233110aa95"}
 generated_artifacts:
   - {artifact_id: processed-candidates, module_id: governance, paths: [processed/**], authoritative_inputs: [registry/**, schemas/**]}
-exceptions: []
+exceptions:
+  - exception_id: intent-continuity-owned-paths-pr56
+    codes: [scope_broadening]
+    diagnostic_scopes: [manifest:scope]
+    owner: dad-maintainer
+    reason: PR 56 assigns the exact intent-continuity hook, config, and governed metadata paths to their existing Python and governance suites before baseline adoption.
+    expires_on: "2026-07-24"
+    reviewed_by: Lowell Wong
+    reviewed_at: "2026-07-17T07:02:25-04:00"
+    review_ref: codex-task:019f5d2c-4fd6-7fc2-a0a7-057981e09b1d:push-and-merge-pr56

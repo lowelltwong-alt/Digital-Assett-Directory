@@ -1,0 +1,38 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://dad.local/schemas/portfolio-continuity-stage-activation-state.schema.json",
+  "title": "DAD progressive attention stage activation state",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "evaluated_at", "trial_id", "eligibility_state_digest", "adapter_interface_digest", "stages", "fixture_approval_count", "automatic_cleanup_allowed", "execution_authorized", "authority_boundary", "state_digest"],
+  "properties": {
+    "schema_version": {"const": "dad.portfolio_continuity_stage_activation_state.v1"},
+    "evaluated_at": {"type": "string", "format": "date-time"},
+    "trial_id": {"type": "string", "pattern": "^trial:[a-z0-9][a-z0-9._:-]{0,127}$"},
+    "eligibility_state_digest": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"},
+    "adapter_interface_digest": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"},
+    "stages": {
+      "type": "array", "minItems": 5, "maxItems": 5,
+      "items": {
+        "type": "object", "additionalProperties": false,
+        "required": ["stage_id", "order", "status", "activation_authorized", "approval_event_id", "valid_until", "rollback_criteria", "kill_criteria", "gate_failures"],
+        "properties": {
+          "stage_id": {"enum": ["manual", "supervised_silent_shadow", "session_start_summary", "weekly_changed_only_digest", "breakpoint_prompts"]},
+          "order": {"type": "integer", "minimum": 1, "maximum": 5},
+          "status": {"enum": ["active", "inactive_shadow", "trial_incomplete", "eligible_for_human_activation", "separate_human_approval_required", "blocked_by_predecessor_stage", "invalid_future_record", "stale_binding", "predecessor_binding_mismatch", "revoked", "killed", "expired"]},
+          "activation_authorized": {"type": "boolean"},
+          "approval_event_id": {"type": "string", "pattern": "^(|dad:continuity-stage-approval:[0-9a-f]{64})$"},
+          "valid_until": {"type": "string"},
+          "rollback_criteria": {"type": "array", "uniqueItems": true, "items": {"type": "string", "pattern": "^[a-z0-9][a-z0-9._:-]{0,127}$"}},
+          "kill_criteria": {"type": "array", "uniqueItems": true, "items": {"type": "string", "pattern": "^[a-z0-9][a-z0-9._:-]{0,127}$"}},
+          "gate_failures": {"type": "array", "uniqueItems": true, "items": {"type": "string", "pattern": "^[a-z0-9_.:-]+$"}}
+        }
+      }
+    },
+    "fixture_approval_count": {"type": "integer", "minimum": 0},
+    "automatic_cleanup_allowed": {"const": false},
+    "execution_authorized": {"const": false},
+    "authority_boundary": {"type": "string", "minLength": 80},
+    "state_digest": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"}
+  }
+}

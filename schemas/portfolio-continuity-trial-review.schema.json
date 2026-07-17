@@ -1,0 +1,71 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://dad.local/schemas/portfolio-continuity-trial-review.schema.json",
+  "title": "DAD supervised continuity shadow-trial review",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version", "review_id", "trial_id", "reviewer_id", "recorded_at",
+    "snapshot_digest", "fixture_only", "recording_origin", "failure_metrics", "performance", "useful_capture_count",
+    "eligible_plan_count", "max_asks_in_digest", "notification_content_safe",
+    "candidate_only", "execution_authorized", "authority_boundary"
+  ],
+  "properties": {
+    "schema_version": {"const": "dad.portfolio_continuity_trial_review.v1"},
+    "review_id": {"type": "string", "pattern": "^dad:continuity-review:[0-9a-f]{64}$"},
+    "trial_id": {"type": "string", "pattern": "^trial:[a-z0-9][a-z0-9._:-]{0,127}$"},
+    "reviewer_id": {"type": "string", "minLength": 1, "maxLength": 160},
+    "recorded_at": {"type": "string", "format": "date-time"},
+    "snapshot_digest": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"},
+    "fixture_only": {"type": "boolean"},
+    "recording_origin": {"enum": ["fixture_builder", "production_clock"]},
+    "failure_metrics": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "missed_captures", "unnecessary_captures", "harmful_captures", "false_merges",
+        "accidental_mutations", "repeated_unchanged_asks", "privacy_escapes",
+        "blind_delivery_retries", "model_calls_on_unchanged_cycles"
+      ],
+      "properties": {
+        "missed_captures": {"type": "integer", "minimum": 0},
+        "missed_recoveries": {"type": "integer", "minimum": 0},
+        "unnecessary_captures": {"type": "integer", "minimum": 0},
+        "harmful_captures": {"type": "integer", "minimum": 0},
+        "false_duplicate_suggestions": {"type": "integer", "minimum": 0},
+        "false_merges": {"type": "integer", "minimum": 0},
+        "accidental_mutations": {"type": "integer", "minimum": 0},
+        "unauthorized_mutations": {"type": "integer", "minimum": 0},
+        "repeated_unchanged_asks": {"type": "integer", "minimum": 0},
+        "privacy_escapes": {"type": "integer", "minimum": 0},
+        "blind_delivery_retries": {"type": "integer", "minimum": 0},
+        "model_calls_on_unchanged_cycles": {"type": "integer", "minimum": 0}
+      }
+    },
+    "performance": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "hook_sample_count", "hook_latency_ms_p95", "hook_latency_budget_ms",
+        "hook_latency_within_budget"
+      ],
+      "properties": {
+        "hook_sample_count": {"type": "integer", "minimum": 0},
+        "hook_latency_ms_p95": {"type": "number", "minimum": 0},
+        "hook_latency_budget_ms": {"type": "number", "exclusiveMinimum": 0},
+        "hook_latency_within_budget": {"type": "boolean"},
+        "measurement_origin": {"enum": ["fixture", "unbound", "instrumented_harness"]},
+        "performance_evidence_digest": {"type": "string", "pattern": "^$|^sha256:[0-9a-f]{64}$"},
+        "adapter_interface_digest": {"type": "string", "pattern": "^$|^sha256:[0-9a-f]{64}$"},
+        "supervisor_attestation_id": {"type": "string", "maxLength": 240}
+      }
+    },
+    "useful_capture_count": {"type": "integer", "minimum": 0},
+    "eligible_plan_count": {"type": "integer", "minimum": 0},
+    "max_asks_in_digest": {"type": "integer", "minimum": 0},
+    "notification_content_safe": {"type": "boolean"},
+    "candidate_only": {"const": true},
+    "execution_authorized": {"const": false},
+    "authority_boundary": {"type": "string", "minLength": 40}
+  }
+}

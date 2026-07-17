@@ -54,6 +54,7 @@
     "core_revision_id": {"type": "string", "pattern": "^portability-card-revision:"},
     "target_capability_predicate": {"type": "object"},
     "adapter_interface_digest": {"$ref": "#/$defs/digest"},
+    "adapter_interface_sources": {"$ref": "#/$defs/strings"},
     "preserved_contract_digests": {"$ref": "#/$defs/contracts"},
     "compatibility_evidence": {"$ref": "#/$defs/strings"},
     "target_runtime_classes": {"$ref": "#/$defs/strings"},

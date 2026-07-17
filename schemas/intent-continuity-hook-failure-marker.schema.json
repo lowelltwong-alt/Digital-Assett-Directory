@@ -1,0 +1,25 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://dad.local/schemas/intent-continuity-hook-failure-marker.schema.json",
+  "title": "DAD content-free Codex shadow-hook failure marker",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version", "failure_id", "recorded_at", "adapter_revision_id",
+    "runtime_event", "repository_id", "source_digest", "reason_code",
+    "candidate_only", "execution_authorized", "authority_boundary"
+  ],
+  "properties": {
+    "schema_version": {"const": "dad.intent_continuity_hook_failure_marker.v1"},
+    "failure_id": {"type": "string", "pattern": "^dad:hook-failure:[0-9a-f]{64}$"},
+    "recorded_at": {"type": "string", "format": "date-time"},
+    "adapter_revision_id": {"type": "string", "minLength": 1, "maxLength": 180},
+    "runtime_event": {"enum": ["SessionStart", "PreCompact", "PostCompact", "Stop"]},
+    "repository_id": {"type": "string", "pattern": "^[A-Za-z0-9._:-]{0,120}$"},
+    "source_digest": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"},
+    "reason_code": {"const": "hook_ingest_failed"},
+    "candidate_only": {"const": true},
+    "execution_authorized": {"const": false},
+    "authority_boundary": {"type": "string", "minLength": 40}
+  }
+}

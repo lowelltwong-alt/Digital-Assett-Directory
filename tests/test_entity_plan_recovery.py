@@ -12,6 +12,8 @@ from digital_asset_directory.entity_identity import fold_state, propose_relation
 from digital_asset_directory.entity_matching import compare_cards, find_candidates
 from digital_asset_directory.portfolio_build_recovery import build_recovery_bundle, classify_worktree, snapshot_is_current
 from digital_asset_directory.portfolio_related_work import search_related_work
+from digital_asset_directory.portfolio_intents import capture_plan
+from digital_asset_directory import portfolio_workstreams as pw
 from digital_asset_directory.transport import init_data_root
 
 
@@ -90,6 +92,54 @@ def test_related_work_returns_at_most_five_candidate_only(
     assert result["primary_candidate_id"] == ""
     assert result["execution_authorized"] is False
     assert result["coverage"]["external_embedding_calls"] == 0
+
+
+def test_related_work_recovers_plan_and_accepted_workstream_binding_only_matches(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    repo, _data = _hub(tmp_path, monkeypatch)
+    plan = capture_plan(
+        repo,
+        title="Unrelated durable plan",
+        outcome="Preserve a bounded result",
+        source_bindings=["xenolith-zaffre-quasar-contract"],
+    )
+    captured = pw.capture_ideas(
+        repo,
+        ["A separate bounded observation"],
+        conversation_id="binding-only-fixture",
+        now=datetime(2026, 7, 17, tzinfo=timezone.utc),
+    )
+    workstream_id = captured["proposals"][0]["workstream_id"]
+    binding = pw.record_binding(
+        repo,
+        workstream_id,
+        "specification",
+        "xenolith-zaffre-quasar-contract",
+        label="Xenolith zaffre quasar contract",
+        assertion_status="accepted",
+        asserted_by="human:fixture",
+        approval_ref="approval:fixture",
+        now=datetime(2026, 7, 17, 1, tzinfo=timezone.utc),
+    )
+
+    result = search_related_work(repo, repo, "xenolith zaffre quasar")
+    candidates = {
+        (row["candidate_kind"], row["candidate_id"]): row
+        for row in result["candidates"]
+    }
+    assert ("plan", plan["plan_id"]) in candidates
+    assert ("workstream_binding", binding["binding_id"]) in candidates
+    plan_row = candidates[("plan", plan["plan_id"])]
+    binding_row = candidates[("workstream_binding", binding["binding_id"])]
+    assert plan_row["shared_tokens"] == []
+    assert binding_row["shared_tokens"] == []
+    assert binding_row["title"] == "Accepted specification binding"
+    assert "xenolith" not in json.dumps(plan_row)
+    assert "zaffre" not in json.dumps(binding_row)
+    assert "xenolith-zaffre-quasar-contract" not in json.dumps(binding_row)
+    assert result["coverage"]["accepted_workstream_bindings_examined"] == 1
+    assert result["execution_authorized"] is False
 
 
 @pytest.mark.parametrize(

@@ -1,0 +1,36 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://dad.local/schemas/portfolio-continuity-stage-approval.schema.json",
+  "title": "DAD progressive attention stage approval event",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version", "approval_event_id", "stage_id", "decision", "approved_by",
+    "approval_ref", "trial_id", "eligibility_state_digest", "adapter_interface_digest",
+    "predecessor_approval_event_id", "rollback_criteria", "kill_criteria", "recorded_at",
+    "valid_until", "fixture_only", "operator_attested", "stage_activation_authority_only",
+    "execution_authorized", "automatic_cleanup_allowed", "authority_boundary"
+  ],
+  "properties": {
+    "schema_version": {"const": "dad.portfolio_continuity_stage_approval.v1"},
+    "approval_event_id": {"type": "string", "pattern": "^dad:continuity-stage-approval:[0-9a-f]{64}$"},
+    "stage_id": {"enum": ["session_start_summary", "weekly_changed_only_digest", "breakpoint_prompts"]},
+    "decision": {"enum": ["approve", "revoke", "kill"]},
+    "approved_by": {"type": "string", "pattern": "^[a-z0-9][a-z0-9._:-]{0,127}$"},
+    "approval_ref": {"type": "string", "pattern": "^[a-z0-9][a-z0-9._:-]{0,127}$"},
+    "trial_id": {"type": "string", "pattern": "^trial:[a-z0-9][a-z0-9._:-]{0,127}$"},
+    "eligibility_state_digest": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"},
+    "adapter_interface_digest": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"},
+    "predecessor_approval_event_id": {"type": "string", "pattern": "^(|dad:continuity-stage-approval:[0-9a-f]{64})$"},
+    "rollback_criteria": {"type": "array", "minItems": 1, "maxItems": 12, "uniqueItems": true, "items": {"type": "string", "pattern": "^[a-z0-9][a-z0-9._:-]{0,127}$"}},
+    "kill_criteria": {"type": "array", "minItems": 1, "maxItems": 12, "uniqueItems": true, "items": {"type": "string", "pattern": "^[a-z0-9][a-z0-9._:-]{0,127}$"}},
+    "recorded_at": {"type": "string", "format": "date-time"},
+    "valid_until": {"type": "string", "format": "date-time"},
+    "fixture_only": {"type": "boolean"},
+    "operator_attested": {"const": true},
+    "stage_activation_authority_only": {"const": true},
+    "execution_authorized": {"const": false},
+    "automatic_cleanup_allowed": {"const": false},
+    "authority_boundary": {"type": "string", "minLength": 100}
+  }
+}

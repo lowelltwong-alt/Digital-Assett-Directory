@@ -1,0 +1,17 @@
+{
+  "schema_version": "dad.portfolio_continuity_adapter_receipt.v1",
+  "request_id": "opaque-idempotency-key",
+  "adapter_id": "adapter:intent-continuity-shadow",
+  "adapter_revision_id": "adapter-revision:0.1.0",
+  "source_kind": "runtime_hook",
+  "source_id": "opaque-runtime-task-id",
+  "source_revision": "opaque-source-revision",
+  "event_kind": "session_started",
+  "observed_at": "2026-01-01T00:00:00Z",
+  "privacy_partition": "private",
+  "payload": {
+    "session_id": "opaque-session-id",
+    "repository_id": "opaque-repository-id",
+    "last_material_activity_at": "2026-01-01T00:00:00Z"
+  }
+}
