@@ -8,6 +8,7 @@ import sys
 
 import pytest
 
+from digital_asset_directory import validation
 from digital_asset_directory.synthetic_data_resources import (
     load_synthetic_resources,
     synthetic_catalog,
@@ -158,6 +159,35 @@ def test_route_is_deterministic_and_rejects_unknown_signal() -> None:
     assert synthetic_route(ROOT, **kwargs) == synthetic_route(ROOT, **kwargs)
     with pytest.raises(ValueError, match="unknown synthetic-data signals"):
         synthetic_route(ROOT, objective="x", signals="magic")
+
+
+def test_route_requires_requested_modality_and_domain_compatibility() -> None:
+    result = synthetic_route(
+        ROOT,
+        objective="Generate rare hardware examples",
+        modality="quantum_state",
+        domain="quantum_hardware",
+        signals="rare_cases,controllable_ground_truth",
+        real_holdout_available=True,
+    )
+    assert result["disposition"] == "insufficient_evidence"
+    assert result["candidates"] == []
+
+
+def test_repo_validation_includes_synthetic_resource_registry(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    observed: list[str] = []
+    original = validation._validate_payload
+
+    def recording_validator(repo_root: Path, registry: dict, schema_name: str, payload: object) -> None:
+        observed.append(schema_name)
+        original(repo_root, registry, schema_name, payload)
+
+    monkeypatch.setattr(validation, "_validate_payload", recording_validator)
+    result = validation.validate_repo(ROOT)
+    assert result["valid"], result["errors"]
+    assert "synthetic_data_resource_registry" in observed
 
 
 def test_nonstandard_portal_and_conflicting_terms_are_review_required() -> None:

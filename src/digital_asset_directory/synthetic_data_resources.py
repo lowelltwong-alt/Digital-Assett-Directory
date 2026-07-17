@@ -122,14 +122,22 @@ def synthetic_route(
 
     registry = load_synthetic_resources(repo_root)
     task_tokens = _tokens(f"{objective} {modality} {domain}")
+    requested_modality = modality.strip().lower()
+    requested_domains = _tokens(domain)
     ranked: list[tuple[int, str, dict[str, Any]]] = []
     for row in registry["resources"]:
         if row["status"] == "retired":
             continue
+        row_modalities = {str(value).lower() for value in row["modalities"]}
+        row_domains = _tokens(" ".join(row["domains"]))
+        if requested_modality != "unknown" and requested_modality not in row_modalities:
+            continue
+        if requested_domains and not requested_domains & row_domains:
+            continue
         score = len(task_tokens & _resource_tokens(row))
-        if modality != "unknown" and modality.lower() in {m.lower() for m in row["modalities"]}:
+        if requested_modality != "unknown":
             score += 4
-        if domain and _tokens(domain) & _tokens(" ".join(row["domains"])):
+        if requested_domains:
             score += 3
         if score:
             ranked.append((score, row["resource_id"], row))
@@ -160,6 +168,8 @@ def synthetic_route(
             "validation_requirements": row["validation_requirements"],
             "primary_sources": row["primary_sources"],
         })
+    if disposition == "candidate_synthetic_path" and not candidates:
+        disposition = "insufficient_evidence"
     if disposition != "candidate_synthetic_path":
         candidates = []
 

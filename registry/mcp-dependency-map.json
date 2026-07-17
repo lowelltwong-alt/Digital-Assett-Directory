@@ -214,7 +214,7 @@
       "label": "Repository-wide MCP freshness gate",
       "artifact_kind": "file",
       "change_contract": "The shared validator is tracked by its one MCP freshness integration line.",
-      "fingerprint": {"kind": "python_symbol_sha256", "path": "src/digital_asset_directory/validation.py", "symbol": "validate_repo", "sha256": "sha256:701eb2fad21bdd98054bacf2c817b51709b63940fe517077c9b671216e6acb59"}
+      "fingerprint": {"kind": "python_symbol_sha256", "path": "src/digital_asset_directory/validation.py", "symbol": "validate_repo", "sha256": "sha256:64bdbf6ce9afdc6242421eb3164037d7d8e8cbc46b502d9198e269e3207aee4a"}
     },
     {
       "node_id": "mcp.node.security-authority.readonly-boundary",
