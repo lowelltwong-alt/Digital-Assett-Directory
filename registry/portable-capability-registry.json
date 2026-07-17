@@ -404,7 +404,7 @@
         "src/digital_asset_directory/validation.py",
         "templates/downstream/AGENTS_MANAGED_BLOCK.md"
       ],
-      "content_digest": "sha256:3fc89bb0e1877d71836afd5416d96b521dc48e46d0b731b61dfd78c1f44b2cf7",
+      "content_digest": "sha256:1e2da9c4c1ca61b36ef87af938973e9c7e41e1acc29492c0053ab0c2d7e45653",
       "contract_digests": {
         "input": "sha256:eee475da7d6fe76d90852dfa97de0e1f047cb72d7d0134552245b7cda9a9fb68",
         "output": "sha256:0ec04e3bcb58df087b53068eb3756924c878f35a40871814bd8749313aa69dea",
