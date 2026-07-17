@@ -1,0 +1,82 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "dad://schemas/intelligence-routing-registry.v1",
+  "title": "DAD Intelligence Routing Registry",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "registry_id",
+    "status",
+    "authority_boundary",
+    "principles",
+    "vendors",
+    "task_class_defaults",
+    "escalation_triggers",
+    "de_escalation_rule",
+    "approval_record_contract",
+    "methodology_note"
+  ],
+  "properties": {
+    "schema_version": {"type": "string"},
+    "registry_id": {"type": "string"},
+    "status": {"type": "string"},
+    "authority_boundary": {"type": "string"},
+    "principles": {"type": "array", "minItems": 1, "items": {"type": "string"}},
+    "vendors": {
+      "type": "object",
+      "minProperties": 1,
+      "additionalProperties": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["tiers"],
+        "properties": {
+          "tiers": {
+            "type": "array",
+            "minItems": 1,
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["tier_id", "rank", "label", "use_for"],
+              "properties": {
+                "tier_id": {"type": "string", "minLength": 1},
+                "rank": {"type": "integer", "minimum": 1},
+                "label": {"type": "string"},
+                "use_for": {"type": "string"},
+                "requires_human_approval": {"type": "boolean"}
+              }
+            }
+          },
+          "notes": {"type": "string"}
+        }
+      }
+    },
+    "task_class_defaults": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["task_class", "start_tier"],
+        "properties": {
+          "task_class": {"type": "string", "minLength": 1},
+          "start_tier": {"type": "array", "minItems": 1, "items": {"type": "string"}},
+          "rule": {"type": "string"},
+          "requires_human_approval": {"type": "boolean"}
+        }
+      }
+    },
+    "escalation_triggers": {"type": "array", "minItems": 1, "items": {"type": "string"}},
+    "de_escalation_rule": {"type": "string"},
+    "approval_record_contract": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["where", "fields", "rule"],
+      "properties": {
+        "where": {"type": "string"},
+        "fields": {"type": "array", "items": {"type": "string"}},
+        "rule": {"type": "string"}
+      }
+    },
+    "methodology_note": {"type": "string"}
+  }
+}

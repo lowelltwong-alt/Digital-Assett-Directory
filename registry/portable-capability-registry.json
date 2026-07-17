@@ -375,6 +375,7 @@
         "registry/routine-contract-registry.json",
         "registry/schema-registry.json",
         "schemas/contract-check-policy.schema.json",
+        "schemas/intelligence-routing-registry.schema.json",
         "schemas/model-attempt-receipt-v2.schema.json",
         "schemas/portability-assessment.schema.json",
         "schemas/portability-health-snapshot.schema.json",
@@ -404,7 +405,7 @@
         "src/digital_asset_directory/validation.py",
         "templates/downstream/AGENTS_MANAGED_BLOCK.md"
       ],
-      "content_digest": "sha256:1e2da9c4c1ca61b36ef87af938973e9c7e41e1acc29492c0053ab0c2d7e45653",
+      "content_digest": "sha256:44bd77859ffc8b2c8e97c6ea28b4f89972fa17654ec8f5c3df4c3aeb7585f7c6",
       "contract_digests": {
         "input": "sha256:eee475da7d6fe76d90852dfa97de0e1f047cb72d7d0134552245b7cda9a9fb68",
         "output": "sha256:0ec04e3bcb58df087b53068eb3756924c878f35a40871814bd8749313aa69dea",
@@ -1395,7 +1396,7 @@
         "src/digital_asset_directory/portfolio_roadmap.py",
         "templates/hooks/intent-continuity-shadow-receipt.template.json"
       ],
-      "content_digest": "sha256:8bdf6e0b909628e54a3cbfe8323deae112aad4167474b2918e48dc41bf9f59de",
+      "content_digest": "sha256:7baa42eafbb1a4a224ec9654347ac2e53c09b33d72cbc5c5f6bf4413eb011c22",
       "source_observation_digest": "sha256:1aeef157eb837554b2d8bf2b3de020f8daf701533a3ca6efe7d31e0888368a9a",
       "contract_digests": {
         "input": "sha256:eee475da7d6fe76d90852dfa97de0e1f047cb72d7d0134552245b7cda9a9fb68",

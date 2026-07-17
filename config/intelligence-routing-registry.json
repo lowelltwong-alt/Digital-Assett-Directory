@@ -1,0 +1,56 @@
+{
+  "schema_version": "0.1.0",
+  "registry_id": "dad-intelligence-routing",
+  "status": "candidate_reviewed_pending_user_confirmation",
+  "authority_boundary": "Routing rows are policy defaults, not calculated scores. They advise which intelligence tier a task should start at; humans and local repo authority can always override. A tier label never proves task difficulty or output quality. Approval-gated tiers fail closed: no named human approval recorded, no dispatch.",
+  "principles": [
+    "Deterministic code first: if a script can do it, no model runs at all (see the routine-contract foreman).",
+    "Then the cheapest tier that can succeed; escalate only on uncertainty, conflict, novelty, or high leverage.",
+    "Escalation is one step at a time with the reason recorded; skipping tiers requires the reason to name why.",
+    "Approval-gated tiers (codex-ultra, claude-fable) are reserved capacity, never defaults, never auto-dispatched.",
+    "Cross-vendor review beats same-vendor review: the reviewer tier comes from the vendor that did not author the work when available.",
+    "Every skill, subagent, and routine declares its default tier in its own metadata; this registry defines the ladder they point into."
+  ],
+  "vendors": {
+    "openai-codex": {
+      "tiers": [
+        {"tier_id": "codex-luna", "rank": 1, "label": "low", "use_for": "mechanical edits, formatting, file moves, single-file fixes with tests, structuring raw captures"},
+        {"tier_id": "codex-terra", "rank": 2, "label": "medium", "use_for": "standard feature builds, test suites, refactors inside one module, routine reviews"},
+        {"tier_id": "codex-sol", "rank": 3, "label": "high_to_extra_high", "use_for": "cross-module builds, architecture-adjacent implementation, red-team reviews, hard debugging"},
+        {"tier_id": "codex-ultra", "rank": 4, "label": "maximum", "use_for": "reserved; hardest OpenAI-side problems only", "requires_human_approval": true}
+      ],
+      "notes": "Luna -> Terra -> Sol ascending follows the proportional Luna/Terra/Sol escalation convention in docs/GLOBAL_PERSONAL_SKILLS_GPT.md. USER CONFIRMATION NEEDED: the 2026-07-17 instruction listed 'sol, terra, luna low to ex high', which read literally inverts this order; this registry keeps the established repo convention until Lowell confirms."
+    },
+    "anthropic-claude": {
+      "tiers": [
+        {"tier_id": "claude-haiku-4.5", "rank": 1, "label": "low", "use_for": "mechanical edits, capture structuring, summaries, cheap triage"},
+        {"tier_id": "claude-sonnet-low", "rank": 2, "label": "low_effort_sonnet", "use_for": "standard builds and reviews where haiku output quality is insufficient"},
+        {"tier_id": "claude-sonnet-medium", "rank": 3, "label": "medium", "use_for": "multi-file features, integration debugging, careful reviews"},
+        {"tier_id": "claude-sonnet-high", "rank": 4, "label": "high_to_extra_high", "use_for": "architecture-adjacent work, red-teams, premortems, hard debugging"},
+        {"tier_id": "claude-fable", "rank": 5, "label": "maximum", "use_for": "reserved exclusively for the hardest problems of the highest leverage and highest risk; disagreement arbitration at the top of the escalation ladder", "requires_human_approval": true}
+      ],
+      "notes": "Fable is never a default and never self-assigns; a human names the task Fable-worthy before dispatch."
+    }
+  },
+  "task_class_defaults": [
+    {"task_class": "mechanical_edit_or_capture_structuring", "start_tier": ["codex-luna", "claude-haiku-4.5"]},
+    {"task_class": "standard_build_with_tests", "start_tier": ["codex-terra", "claude-sonnet-medium"]},
+    {"task_class": "review_of_other_vendor_work", "start_tier": ["codex-terra", "claude-sonnet-medium"], "rule": "reviewer vendor != author vendor when both are available"},
+    {"task_class": "red_team_premortem_architecture_adjacent", "start_tier": ["codex-sol", "claude-sonnet-high"]},
+    {"task_class": "load_bearing_or_reflexive_or_irreversible", "start_tier": ["claude-fable", "codex-ultra"], "requires_human_approval": true, "rule": "human names the task and the tier before dispatch; risk-tier record per docs/LOAD_BEARING_DECISION_REVIEW.md required"}
+  ],
+  "escalation_triggers": [
+    "two attempts at the current tier failed or disagree with each other",
+    "the task turned out to touch a shared contract, schema, gate, or future-agent default",
+    "reviewer and author disagree after one reply round",
+    "the agent reports uncertainty it cannot resolve with available evidence",
+    "novel problem shape with no matching skill, lesson, or precedent"
+  ],
+  "de_escalation_rule": "When a tier finishes a task class three consecutive times with no reviewer findings, record a candidate suggestion to lower that task class's default tier; a human reviews before the default changes.",
+  "approval_record_contract": {
+    "where": ".digital-asset/learning/events.jsonl or the dispatching session's preflight record",
+    "fields": ["approved_tier", "task", "approved_by", "approved_at", "scope_limits"],
+    "rule": "One approval covers one named task; approvals do not generalize."
+  },
+  "methodology_note": "Tier ranks are ordinal policy labels, not measurements. No numeric scoring is defined here; any future cost/quality scoring must cite its own methodology per learning-rule:calculated-score-requires-methodology."
+}
