@@ -1,4 +1,5 @@
 from pathlib import Path
+import shutil
 import subprocess
 
 import pytest
@@ -58,6 +59,18 @@ def test_downstream_install_is_idempotent_and_enforces_open_session(tmp_path: Pa
 def test_scaffold_new_repo_wires_starter_files_and_governance(tmp_path: Path):
     hub = tmp_path / "hub"
     (hub / "scripts").mkdir(parents=True)
+    template = hub / "templates" / "ci-module-boundary" / "monorepo"
+    template.mkdir(parents=True)
+    shutil.copy(
+        ROOT / "templates" / "ci-module-boundary" / "monorepo" / "module-boundaries.yaml",
+        template / "module-boundaries.yaml",
+    )
+    shutil.copy(ROOT / "templates" / "ci-module-boundary" / "ADOPTION.md", template.parent / "ADOPTION.md")
+    (hub / "schemas").mkdir()
+    shutil.copy(
+        ROOT / "schemas" / "ci-module-boundary.schema.json",
+        hub / "schemas" / "ci-module-boundary.schema.json",
+    )
     target = tmp_path / "fresh"
     changed = scaffold_new_repo(target, hub, name="Fresh Project")
     assert (target / "README.md").exists()
@@ -71,6 +84,12 @@ def test_scaffold_new_repo_wires_starter_files_and_governance(tmp_path: Path):
     assert (target / ".digital-asset" / "mail" / ".gitignore").exists()
     assert (target / ".digital-asset" / "mail" / "inbox.jsonl").exists()
     assert (target / ".githooks" / "pre-push").exists()
+    manifest = target / ".ci" / "module-boundaries.candidate.yaml"
+    assert manifest.exists()
+    assert "repository_id: fresh-project" in manifest.read_text(encoding="utf-8")
+    assert not (target / ".ci" / "module-boundaries.yaml").exists()
+    assert (target / ".ci" / "ADOPTION.md").exists()
+    assert (target / "schemas" / "ci-module-boundary.schema.json").exists()
     assert any("README.md" in str(path) for path in changed)
 
 

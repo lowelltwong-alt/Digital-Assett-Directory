@@ -1,25 +1,7 @@
 name: rust-ci-pr
 
 on:
-  pull_request:
-    paths:
-      - "tools/dad_scan_core/**"
-      - "src/digital_asset_directory/rust_bridge/**"
-      - "src/digital_asset_directory/rust_rollout/**"
-      - "tests/test_rust_*.py"
-      - "scripts/run_dad_scan_core.py"
-      - "docs/rust/**"
-      - ".github/workflows/rust-ci-pr.yml"
-  push:
-    branches: [ main ]
-    paths:
-      - "tools/dad_scan_core/**"
-      - "src/digital_asset_directory/rust_bridge/**"
-      - "src/digital_asset_directory/rust_rollout/**"
-      - "tests/test_rust_*.py"
-      - "scripts/run_dad_scan_core.py"
-      - "docs/rust/**"
-      - ".github/workflows/rust-ci-pr.yml"
+  workflow_call:
 
 jobs:
   rust-pr:

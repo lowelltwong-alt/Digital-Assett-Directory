@@ -1,0 +1,47 @@
+schema_version: dad_subagent_pack.v0_1
+pack_id: dad:subagent-pack:dad-ci-module-boundary-governance
+version: 0.1.0
+status: candidate
+ai_agnostic: true
+methodology_ref: registry/subagent-evaluation-methodology.json#0.1.0
+authority_boundary: >
+  Roles return candidate, read-only inventory, synthesis, and independent
+  findings. They do not grant authority or approve adoption. The single parent
+  writer retains edits; source owners retain CI adoption, dependency truth,
+  required-check, release, exception, and activation decisions.
+routing_policy:
+  max_delegation_depth: 1
+  deterministic_first: true
+  writer_role_id: parent-agent
+  checker_role_id: independent-boundary-checker
+roles:
+  - role_id: boundary-inventory
+    profile_role_id: boundary_inventory
+    evaluated_role_revision_ids: []
+    capability_ids: [bounded_evidence_inventory, governance_authority_safety]
+    search_terms: [module ownership, CI workflow, changed paths, dependency edge]
+    effort: deterministic_then_low_for_ambiguity
+    mission: Inventory declared paths, workflows, suites, and observed dependency evidence.
+    required_input: [repo_metadata, manifest, workflow_paths]
+    required_output: [coverage, overlaps, unknowns, evidence_refs]
+    stop_conditions: [downstream_content_required, source_mutation_required]
+  - role_id: dependency-synthesizer
+    profile_role_id: dependency_synthesizer
+    evaluated_role_revision_ids: []
+    capability_ids: [architecture_reasoning, governance_authority_safety]
+    search_terms: [module graph, direct dependent, integration scope, release lane]
+    effort: medium_then_high_on_systemic_conflict
+    mission: Synthesize ambiguous module and cross-module contracts for the single parent writer.
+    required_input: [inventory, source_authority, observed_edges]
+    required_output: [candidate_contract, alternatives, risks, stop_conditions]
+    stop_conditions: [authority_conflict, semantic_dependency_unknown]
+  - role_id: independent-boundary-checker
+    profile_role_id: independent_boundary_checker
+    evaluated_role_revision_ids: []
+    capability_ids: [implementation_review, validation_design, governance_authority_safety]
+    search_terms: [CI boundary audit, false blocker, false green, required check deadlock]
+    effort: medium_then_high_on_unresolved_material_risk
+    mission: Independently red-team the completed manifest, adapter, validator, fixtures, and migration evidence.
+    required_input: [raw_artifacts, test_results, migration_audit]
+    required_output: [independent_findings, disagreement, release_gate]
+    stop_conditions: [checker_is_writer, evidence_incomplete, private_payload_required]

@@ -1,0 +1,16 @@
+schema_version: dad.ci_module_boundaries.v1
+capability_id: dad:capability:ci-module-boundary-governance
+modules:
+  - module_id: ocr
+    owners: [owner]
+    roots: [modules/ocr]
+    triggers:
+      - {edge_type: code, paths: [modules/**]}
+      - {edge_type: contract, paths: [modules/ocr/contracts/**]}
+      - {edge_type: authoritative_input, paths: [modules/ocr/inputs/**]}
+suites: []
+workflows: []
+workflow_paths: [.github/workflows/**]
+dependencies: []
+generated_artifacts: []
+exceptions: []

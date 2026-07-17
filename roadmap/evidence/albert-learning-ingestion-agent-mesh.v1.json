@@ -1,0 +1,116 @@
+{
+  "schema_version": "dad.task_local_agent_mesh_manifest.v1",
+  "mesh_id": "dad:agent-mesh:albert-learning-ingestion",
+  "task_id": "albert-learning-ingestion-20260716",
+  "revision_id": "dad:agent-mesh-revision:albert-learning-ingestion:v1",
+  "phase": "planning",
+  "status": "planned",
+  "source_snapshot_digest": "sha256:1798c750f402ef83981391e77c77f77c59fea060dae4c0ac74f06050e608aebe",
+  "authority": {
+    "source_authority": "Albert remains authoritative for source meaning; DAD owns only privacy-safe reusable copies, metadata, candidate lessons, and generated graph projections.",
+    "execution_authority": false,
+    "human_gate_required": true
+  },
+  "max_delegation_depth": 1,
+  "writer_role_id": "primary-ingestion-writer",
+  "checker_role_id": "independent-ingestion-checker",
+  "non_overlap_statement": "Only primary-ingestion-writer may edit the isolated DAD worktree; source and overlap specialists plus the checker are read-only, and Albert is never mutated.",
+  "roles": [
+    {
+      "role_id": "source-inventory-observer",
+      "why_needed": "A deterministic-first Luna lane can cover the approved Albert governance surfaces cheaply without exposing case material.",
+      "mission": "Inventory tracked reusable candidates, exact source revisions and hashes, privacy exclusions, and stable private-reference metadata without reading prohibited content.",
+      "inputs": ["approved Albert paths", "tracked filename inventory", "source Git revision and dirty-state digest", "privacy exclusion contract"],
+      "dependencies": [],
+      "authority": "Read-only Albert access limited to tracked governance, learning, configuration, schema, validator, synthetic-fixture, and manifest surfaces; no private workspace or case payload reads.",
+      "model_effort_class": "low",
+      "writer_checker_relation": "specialist",
+      "acceptance_conditions": ["Every candidate has a disposition or explicit unreviewed state.", "Every prohibited path class is excluded with counts only."],
+      "stop_conditions": ["A candidate requires case content, OCR text, private workspace contents, credentials, or source mutation."],
+      "handoff": {
+        "recipient_role_ids": ["primary-ingestion-writer"],
+        "deliverables": ["coverage inventory", "candidate classification", "privacy exclusions", "unknowns"],
+        "readiness_conditions": ["Source revision and coverage boundary are explicit."]
+      }
+    },
+    {
+      "role_id": "dedupe-graph-architect",
+      "why_needed": "Terra-level synthesis is needed to reuse DAD authorities and map source candidates into stable identities and typed graph edges without creating competing registries.",
+      "mission": "Compare Albert candidates with DAD lessons, assets, skills, workflows, schemas, registries, graphs, and TOCs, then recommend reuse, revision, safe copy, reference-only, or rejection.",
+      "inputs": ["DAD registries and graph contracts", "approved Albert governance files", "source inventory handoff"],
+      "dependencies": ["source-inventory-observer"],
+      "authority": "Read-only synthesis; cannot copy, register, promote, or approve candidates.",
+      "model_effort_class": "medium",
+      "writer_checker_relation": "specialist",
+      "acceptance_conditions": ["No competing authority or duplicate capability is proposed.", "Typed edges preserve provenance, review state, and reverse consumers."],
+      "stop_conditions": ["Identity, privacy, license, or authority cannot be resolved from permitted evidence."],
+      "handoff": {
+        "recipient_role_ids": ["primary-ingestion-writer"],
+        "deliverables": ["dedupe matrix", "identity and graph map", "integration surfaces", "human gates"],
+        "readiness_conditions": ["Reuse and non-reuse decisions cite exact DAD evidence."]
+      }
+    },
+    {
+      "role_id": "primary-ingestion-writer",
+      "why_needed": "One writer must keep schema, deterministic inventory, safe-copy package, graph, registries, navigation, tests, and evidence coherent.",
+      "mission": "Implement the governed ingestion capability and materialize a DAD-owned privacy-safe Albert snapshot with deterministic validation and complete navigation.",
+      "inputs": ["governing request", "DAD preflight", "specialist handoffs", "source-authority and privacy contracts"],
+      "dependencies": ["source-inventory-observer", "dedupe-graph-architect"],
+      "authority": "May edit only the isolated DAD worktree; may read only approved Albert sources; may not mutate downstream repositories or promote candidates without review.",
+      "model_effort_class": "medium",
+      "writer_checker_relation": "writer",
+      "acceptance_conditions": ["All reviewed candidates have provenance and disposition.", "Safe copies and graph outputs reproduce deterministically.", "DAD validation and focused tests pass."],
+      "stop_conditions": ["Private or case content would enter DAD.", "A second writer appears.", "A source-authority conflict requires a human decision."],
+      "handoff": {
+        "recipient_role_ids": ["independent-ingestion-checker"],
+        "deliverables": ["stable diff", "candidate inventory", "safe-copy manifest", "graph projection", "validation evidence"],
+        "readiness_conditions": ["Writer validation passes and privacy scan is clean."]
+      }
+    },
+    {
+      "role_id": "independent-ingestion-checker",
+      "why_needed": "A separate Terra/high review is required for source coverage, false authority, privacy leakage, graph completeness, and ingestion reproducibility.",
+      "mission": "Independently replay permitted-source coverage, hashes, classifications, deduplication, graph links, TOC routing, privacy exclusions, rollback, and downstream non-mutation evidence.",
+      "inputs": ["final DAD diff", "permitted Albert sources", "mesh revisions", "raw validator results"],
+      "dependencies": ["primary-ingestion-writer"],
+      "authority": "Read-only final review; cannot edit, promote, mutate Albert, or rely on writer self-grades.",
+      "model_effort_class": "high",
+      "writer_checker_relation": "checker",
+      "acceptance_conditions": ["Issues are returned as PROCEED, REPAIR, or explicit human escalation with reproducible evidence."],
+      "stop_conditions": ["Private payload access is required.", "Checker independence is compromised.", "Source snapshot drift invalidates evidence."],
+      "handoff": {
+        "recipient_role_ids": [],
+        "deliverables": ["independent findings", "coverage verdict", "privacy verdict", "release recommendation"],
+        "readiness_conditions": ["All permitted artifacts and deterministic receipts are available."]
+      }
+    }
+  ],
+  "proof_obligations": [
+    {
+      "obligation_id": "complete-safe-candidate-coverage",
+      "description": "Every approved or deterministically discovered reusable candidate is copied safely, referenced, deduplicated, rejected, or explicitly left unknown with provenance.",
+      "evidence_required": ["source inventory", "content hashes", "candidate dispositions", "privacy exclusions"],
+      "owner_role_id": "primary-ingestion-writer",
+      "checker_role_id": "independent-ingestion-checker",
+      "status": "pending"
+    },
+    {
+      "obligation_id": "graph-and-navigation-reachability",
+      "description": "Every retained candidate is reachable through registries, typed graph projections, reverse-consumer links, the AI front door, and the TOC without gaining false authority.",
+      "evidence_required": ["graph validator", "TOC validator", "registry validation", "reverse blast-radius audit"],
+      "owner_role_id": "primary-ingestion-writer",
+      "checker_role_id": "independent-ingestion-checker",
+      "status": "pending"
+    },
+    {
+      "obligation_id": "privacy-and-source-authority",
+      "description": "No case, OCR, witness, client, credential, raw-conversation, or ignored-private content enters DAD, and Albert remains source authority.",
+      "evidence_required": ["deny-path tests", "content screening", "zero downstream mutation evidence", "authority fields"],
+      "owner_role_id": "primary-ingestion-writer",
+      "checker_role_id": "independent-ingestion-checker",
+      "status": "pending"
+    }
+  ],
+  "unresolved_decisions": [],
+  "manifest_digest": "sha256:c4f8e5a6eb1fc76c22e9da2fd741f2b409e9e2ac7df03ec18adf4f2db11e613e"
+}

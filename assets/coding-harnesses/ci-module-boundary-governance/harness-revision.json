@@ -1,0 +1,31 @@
+{
+  "schema_version": "dad.harness_revision.v1",
+  "harness_id": "harness:ci-module-boundary-governance",
+  "revision_id": "harness-revision:ci-module-boundary-governance:0.1.0",
+  "version": "0.1.0",
+  "content_digest": "sha256:d95deb552bff5e93f5634fd251295182c7ab6744450bf19b30fc8e0764d9e951",
+  "predecessor_revision_id": "",
+  "lifecycle_state": "candidate",
+  "applicability_tags": ["ci_module_boundary", "provider_neutral", "dependency_trigger", "required_check"],
+  "runtime_requirements": {"python": ">=3.11", "model_calls": 0, "network": false},
+  "dependencies": ["schemas/ci-module-boundary.schema.json", "templates/ci-module-boundary"],
+  "fresh_until": "2026-10-16T00:00:00-04:00",
+  "commands": [
+    {
+      "command_id": "fixture-replay",
+      "argv": ["python", "scripts/validate_ci_module_boundaries.py", "--repo", ".", "fixtures"],
+      "cwd_policy": "target_repo",
+      "timeout_seconds": 120,
+      "effect_class": "read_only",
+      "required_tool_capabilities": ["python"],
+      "allowed_environment_keys": ["PYTHONPATH"]
+    }
+  ],
+  "positive_cases": ["Owned code selects only its module suite.", "A declared contract edge selects the correct downstream suite.", "A scheduled event selects full regression."],
+  "negative_cases": ["An unrelated module suite is selected.", "A broad glob or undeclared workflow passes.", "A required path-filtered workflow can skip without reporting."],
+  "failure_recovery_cases": ["An unowned moved path fails the contract lane.", "Missing observed dependency evidence fails.", "Expired exceptions fail and preserve diagnostics."],
+  "provenance_refs": ["roadmap/evidence/ci-module-boundary-learning-event.json", "tests/test_ci_module_boundaries.py"],
+  "rollback": "Remove activation and provider-adapter pointers, retain the manifest and evidence as candidate records, and restore the previous reviewed CI workflow.",
+  "review_evidence": ["roadmap/evidence/ci-module-boundary-decision.md", "roadmap/evidence/ci-module-boundary-agent-mesh.v1.json"],
+  "candidate_only": true
+}

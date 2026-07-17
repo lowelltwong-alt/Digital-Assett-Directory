@@ -1,0 +1,6 @@
+workflow_paths: [.github/workflows/**]
+modules: []
+dependencies: []
+suites: []
+workflows: []
+generated_artifacts: []

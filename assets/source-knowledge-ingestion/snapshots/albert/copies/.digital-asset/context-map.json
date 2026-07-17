@@ -1,0 +1,97 @@
+{
+  "authority_boundary": "Context routes choose candidate DAD assets to consult. They do not override local repo authority, tests, or human approvals.",
+  "context_dimensions": {
+    "context_tags": [
+      "persistent_repo",
+      "internal",
+      "rename_sensitive"
+    ],
+    "domains": [
+      "mock_trial"
+    ],
+    "languages": [
+      "unknown"
+    ],
+    "public_facing": false,
+    "repo_type": "application",
+    "visibility": "internal"
+  },
+  "dad_hub_ref": "dad://hub/Digital-Assett-Directory",
+  "mail_feedback": {
+    "message_types": [
+      "lesson_suggestion",
+      "asset_suggestion",
+      "workflow_suggestion",
+      "capability_suggestion",
+      "governance_notice"
+    ],
+    "send_to": "dad://repo/mock-trial-4-26/.digital-asset/mail/outbox.jsonl"
+  },
+  "repo_alias": "mock-trial",
+  "repo_id": "mock-trial-4-26",
+  "repo_ref": "dad://repo/mock-trial-4-26",
+  "routes": [
+    {
+      "control_planes": [
+        "reusable_assets",
+        "coding_test_parity",
+        "learning_postflight_loops"
+      ],
+      "dad_assets": [
+        "dad://asset/assets/ai-engineering-preflight",
+        "dad://registry/preflight-profile-router",
+        "dad://registry/coding-tactics-radar"
+      ],
+      "route_id": "software-work-preflight",
+      "use_when": [
+        "coding",
+        "refactoring",
+        "test-strategy",
+        "agent-instruction-design"
+      ]
+    },
+    {
+      "control_planes": [
+        "templates",
+        "governance_maps",
+        "data_maps",
+        "key_value_governance"
+      ],
+      "dad_assets": [
+        "dad://docs/DOWNSTREAM_REPO_GOVERNANCE",
+        "dad://docs/DAD_REPO_ENROLLMENT",
+        "dad://registry/control-plane-registry"
+      ],
+      "route_id": "repo-governance-work",
+      "use_when": [
+        "governance",
+        "schemas",
+        "templates",
+        "hooks",
+        "repo-enrollment"
+      ]
+    },
+    {
+      "control_planes": [
+        "key_value_governance",
+        "learning_postflight_loops"
+      ],
+      "dad_assets": [
+        "dad://docs/KEY_VALUE_GOVERNANCE",
+        "dad://schema/key_value_registry",
+        "dad://schema/key_value_change"
+      ],
+      "route_id": "key-value-governance-work",
+      "use_when": [
+        "defaults",
+        "thresholds",
+        "weights",
+        "formulas",
+        "scoring",
+        "schema-contracts",
+        "dependency-maps"
+      ]
+    }
+  ],
+  "schema_version": "0.1.0"
+}

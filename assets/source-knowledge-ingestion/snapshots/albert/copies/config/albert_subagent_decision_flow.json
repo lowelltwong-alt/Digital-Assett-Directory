@@ -1,0 +1,362 @@
+{
+  "schema": "albert_subagent_decision_flow.v1",
+  "status": "model_agnostic_advisory_roles_no_runtime",
+  "stable_rule": "role_id is the machine contract; display_alias is an internal UF/Gator-themed mnemonic only; Alberta is preferred for Albert-related witness boundaries; football-player aliases include jersey numbers and must not use Hernandez",
+  "ai_decisions_are_source_truth": false,
+  "human_review_required_for_high_effort": true,
+  "mcp_runtime_enabled": false,
+  "effort_tiers": {
+    "low": {
+      "description": "Mechanical, manifest, route, stale-doc, or DAD pointer work that validators can fully check.",
+      "human_review_default": false
+    },
+    "medium": {
+      "description": "Judgment-light drafting such as intake proposals, UI workflow review, public fixture scope, or podcast craft review.",
+      "human_review_default": true
+    },
+    "high": {
+      "description": "OCR/source promotion, photo relevance, witness knowledge, strategy/simulation, math/VVUQ, ethics, security, privacy, export, or real-case readiness.",
+      "human_review_default": true
+    }
+  },
+  "execution_efficiency_policy": {
+    "objective": "minimize total model tokens and cost while preserving deterministic evidence, legal boundaries, and independent quality checks",
+    "default_route_order": [
+      "python_or_rust_script",
+      "cached_deterministic_result",
+      "cursor_or_cheap_local_batch_worker",
+      "luna_low",
+      "terra_medium",
+      "terra_high",
+      "sol_high",
+      "sol_extra_high_with_human_approval"
+    ],
+    "script_first_task_classes": [
+      "file_inventory",
+      "hashing_and_manifest_generation",
+      "schema_validation",
+      "fixture_expansion",
+      "deterministic_replay",
+      "format_conversion",
+      "exact_search_and_deduplication",
+      "bulk_test_execution",
+      "metric_aggregation",
+      "visual_snapshot_generation"
+    ],
+    "cursor_or_cheap_batch_candidate_classes": [
+      "large_mechanical_refactor_with_tests",
+      "exhaustive_fixture_matrix",
+      "long_running_browser_or_qa_battery",
+      "bulk_report_regeneration",
+      "bounded_repository_inventory"
+    ],
+    "frontier_model_allowed_when": [
+      "architecture_or_contract_design",
+      "ambiguous_cross_document_reasoning",
+      "legal_or_witness_boundary_judgment",
+      "security_privacy_or_source_authority_risk",
+      "novel_root_cause_after_deterministic_failure",
+      "independent_quality_adjudication"
+    ],
+    "model_call_preflight": [
+      "define_machine_checkable_acceptance",
+      "deduplicate_against_prior_hash_and_result",
+      "send_minimum_bounded_context_or_summary",
+      "exclude_raw_private_or_cross_case_payloads",
+      "record_intended_route_and_stop_condition"
+    ],
+    "default_limits": {
+      "fanout": 1,
+      "implementation_attempts_before_replan": 1,
+      "independent_checkers": 1,
+      "max_context_artifacts": 12,
+      "extra_high_requires_named_human_approval": true
+    },
+    "escalation_triggers": [
+      "deterministic_validator_failure_requires_judgment",
+      "material_worker_checker_disagreement",
+      "legal_security_privacy_or_source_authority_risk",
+      "cheaper_route_cannot_meet_acceptance_evidence"
+    ],
+    "prohibited_waste_patterns": [
+      "frontier_model_for_command_replay_or_inventory",
+      "repeated_full_context_when_hash_or_summary_is_sufficient",
+      "parallel_agents_with_duplicate_scope",
+      "rerun_unchanged_expensive_stage_without_new_evidence",
+      "model_generation_where_rules_or_search_are_equivalent"
+    ],
+    "cursor_boundary": "Cursor may execute approved deterministic or mechanically reviewable batches using synthetic/public green-only data; it receives a bounded prompt, exact commands, acceptance checks, output paths, and stop conditions. Cursor execution does not waive human, source, privacy, or legal gates.",
+    "runtime_status": "routing_contract_only_no_model_or_cursor_runtime_enabled"
+  },
+  "required_decision_fields": [
+    "decision_id",
+    "role_id",
+    "executor_metadata",
+    "evidence_refs",
+    "source_or_artifact_refs",
+    "confidence",
+    "review_status",
+    "downstream_effects",
+    "wrong_if",
+    "human_admin_review_required"
+  ],
+  "roles": [
+    {
+      "role_id": "albert_general_orchestrator",
+      "display_alias": "Albert General Orchestrator",
+      "source_inspiration": "UF mascot lore",
+      "effort": "medium",
+      "purpose": "Coordinate workflow, read front doors, run validators, and delegate hard calls.",
+      "may_write_source_repo": false,
+      "runtime_status": "advisory_role_only"
+    },
+    {
+      "role_id": "lake_alice_source_custodian",
+      "display_alias": "Lake Alice Source Custodian",
+      "source_inspiration": "UF campus lore",
+      "effort": "high",
+      "purpose": "Protect raw source, OCR/page inventory, photo text, source-fidelity, and promotion gates.",
+      "may_write_source_repo": false,
+      "runtime_status": "advisory_role_only"
+    },
+    {
+      "role_id": "gatorade_text_lab",
+      "display_alias": "Gatorade Text Lab",
+      "source_inspiration": "UF innovation lore",
+      "effort": "medium",
+      "purpose": "Review OCR-to-ledger-to-artifact Markdown flow, normalization, chunking, tables, punctuation, and retrieval checks.",
+      "may_write_source_repo": false,
+      "runtime_status": "advisory_role_only"
+    },
+    {
+      "role_id": "alberta_witness_boundary_coach",
+      "display_alias": "Alberta Witness Boundary Coach",
+      "source_inspiration": "UF mascot lore",
+      "effort": "high",
+      "purpose": "Draft and audit witness knows/cannot-know, human-played/evidence-only status, exhibit familiarity, timeline perspective, and answer boundaries.",
+      "may_write_source_repo": false,
+      "runtime_status": "advisory_role_only"
+    },
+    {
+      "role_id": "tebow_15_pressure_drill_coach",
+      "display_alias": "Tebow 15 Pressure Drill Coach",
+      "source_inspiration": "UF football #15 quarterback pressure/leadership lore",
+      "effort": "medium",
+      "purpose": "Review cross-pressure drills, ten questions to get right, yes-set handling, and witness discipline under pressure.",
+      "may_write_source_repo": false,
+      "runtime_status": "advisory_role_only"
+    },
+    {
+      "role_id": "faye_dialogue_craft_reviewer",
+      "display_alias": "Faye Dialogue Craft Reviewer",
+      "source_inspiration": "UF alumni arts/literature lore",
+      "effort": "medium",
+      "purpose": "Review learning design, two-host dialogue structure, study-guide clarity, and style transfer without changing facts.",
+      "may_write_source_repo": false,
+      "runtime_status": "advisory_role_only"
+    },
+    {
+      "role_id": "petty_wildflowers_script_editor",
+      "display_alias": "Petty Wildflowers Script Editor",
+      "source_inspiration": "UF/Gainesville music lore",
+      "effort": "medium",
+      "purpose": "Review podcast transcripts, voice, pacing, emphasis, memorable phrasing, and emotional clarity without changing facts.",
+      "may_write_source_repo": false,
+      "runtime_status": "advisory_role_only"
+    },
+    {
+      "role_id": "spurrier_11_playbook_simulator",
+      "display_alias": "Spurrier 11 Playbook Simulator",
+      "source_inspiration": "UF football #11 quarterback/coach playbook lore",
+      "effort": "high",
+      "purpose": "Review attorney tactics, strategy paths, scenario sweeps, and simulation-control surfaces.",
+      "may_write_source_repo": false,
+      "runtime_status": "advisory_role_only"
+    },
+    {
+      "role_id": "smith_22_output_finisher",
+      "display_alias": "Smith 22 Output Finisher",
+      "source_inspiration": "UF football #22 running-back finish-and-deliver lore",
+      "effort": "medium",
+      "purpose": "Review output-package completeness, print/send readiness, selected-output manifests, and whether deliverables match the user's control-plane choices.",
+      "may_write_source_repo": false,
+      "runtime_status": "advisory_role_only"
+    },
+    {
+      "role_id": "wuerffel_7_integrity_reviewer",
+      "display_alias": "Wuerffel 7 Integrity Reviewer",
+      "source_inspiration": "UF football #7 quarterback scholar-athlete/service lore",
+      "effort": "high",
+      "purpose": "Review witness-prep integrity, honesty-premium language, role discipline, and whether prep keeps the lawyer responsible for winning the case.",
+      "may_write_source_repo": false,
+      "runtime_status": "advisory_role_only"
+    },
+    {
+      "role_id": "sagan_vvuq_scout",
+      "display_alias": "Sagan VVUQ Scout",
+      "source_inspiration": "DAD Sagan scout pattern",
+      "effort": "high",
+      "purpose": "Find and translate external professional simulation, Monte Carlo, VVUQ, sensitivity, and calibration methods.",
+      "may_write_source_repo": false,
+      "runtime_status": "advisory_role_only"
+    },
+    {
+      "role_id": "century_tower_control_plane_reviewer",
+      "display_alias": "Century Tower Control Plane Reviewer",
+      "source_inspiration": "UF campus lore",
+      "effort": "medium",
+      "purpose": "Review UI/control-plane draft-versus-approved states, buttons, output selection, and MCP route boundaries.",
+      "may_write_source_repo": false,
+      "runtime_status": "advisory_role_only"
+    },
+    {
+      "role_id": "bob_graham_governance_reviewer",
+      "display_alias": "Bob Graham Governance Reviewer",
+      "source_inspiration": "UF alumni public-service lore",
+      "effort": "high",
+      "purpose": "Review privacy, privilege, access control, export, Microsoft/Fabric/Copilot conversion, and real-case readiness blockers.",
+      "may_write_source_repo": false,
+      "runtime_status": "advisory_role_only"
+    },
+    {
+      "role_id": "century_tower_dad_cartographer",
+      "display_alias": "Century Tower DAD Cartographer",
+      "source_inspiration": "UF campus lore plus DAD workflow graph pattern",
+      "effort": "low",
+      "purpose": "Send reusable workflow lessons and candidate assets to DAD while keeping local repo authority.",
+      "may_write_source_repo": false,
+      "runtime_status": "advisory_role_only"
+    }
+  ],
+  "routing_rules": [
+    {
+      "when": "source custody, OCR, page inventory, photo text, or visual evidence promotion changes",
+      "primary_role_id": "lake_alice_source_custodian",
+      "support_role_ids": [
+        "gatorade_text_lab"
+      ],
+      "effort": "high"
+    },
+    {
+      "when": "artifact splitting, normalization, chunking, tables, punctuation, or retrieval checks change",
+      "primary_role_id": "gatorade_text_lab",
+      "support_role_ids": [
+        "lake_alice_source_custodian"
+      ],
+      "effort": "medium"
+    },
+    {
+      "when": "human witness packet, witness knowledge, exhibit familiarity, role alignment, or timeline perspective changes",
+      "primary_role_id": "alberta_witness_boundary_coach",
+      "support_role_ids": [
+        "tebow_15_pressure_drill_coach",
+        "wuerffel_7_integrity_reviewer"
+      ],
+      "effort": "high"
+    },
+    {
+      "when": "witness-prep podcast, NotebookLM production packet, script voice, study guide, or learning design changes",
+      "primary_role_id": "petty_wildflowers_script_editor",
+      "support_role_ids": [
+        "alberta_witness_boundary_coach",
+        "faye_dialogue_craft_reviewer"
+      ],
+      "effort": "medium"
+    },
+    {
+      "when": "attorney tactics, scenario sweeps, simulation controls, Monte Carlo, VVUQ, sensitivity, or calibration changes",
+      "primary_role_id": "spurrier_11_playbook_simulator",
+      "support_role_ids": [
+        "sagan_vvuq_scout",
+        "tebow_15_pressure_drill_coach"
+      ],
+      "effort": "high"
+    },
+    {
+      "when": "output package completeness, print/send readiness, output selection, or final artifact manifest changes",
+      "primary_role_id": "smith_22_output_finisher",
+      "support_role_ids": [
+        "albert_general_orchestrator",
+        "wuerffel_7_integrity_reviewer"
+      ],
+      "effort": "medium"
+    },
+    {
+      "when": "UI workflow, control plane, output selection, or MCP route boundary changes",
+      "primary_role_id": "century_tower_control_plane_reviewer",
+      "support_role_ids": [
+        "bob_graham_governance_reviewer"
+      ],
+      "effort": "medium"
+    },
+    {
+      "when": "privacy, privilege, Microsoft/Fabric/Copilot, export, security, real-case readiness, or deployment changes",
+      "primary_role_id": "bob_graham_governance_reviewer",
+      "support_role_ids": [
+        "century_tower_control_plane_reviewer"
+      ],
+      "effort": "high"
+    },
+    {
+      "when": "reusable lesson, DAD handoff, asset catalog, or cross-repo workflow memory changes",
+      "primary_role_id": "century_tower_dad_cartographer",
+      "support_role_ids": [
+        "albert_general_orchestrator"
+      ],
+      "effort": "low"
+    }
+  ],
+  "decision_surfaces": [
+    {
+      "surface_id": "ocr_to_markdown",
+      "required_artifacts": [
+        "page_inventory",
+        "extraction_records",
+        "whole_packet_extraction_ledger",
+        "ocr_visual_review_queue",
+        "artifact_level_normalized_markdown"
+      ],
+      "promotion_boundary": "whole_packet_extraction_ledger is review-only; artifact-level normalized Markdown feeds chunks and graph"
+    },
+    {
+      "surface_id": "photo_understanding",
+      "required_artifacts": [
+        "source_observation_layer",
+        "analysis_relevance_layer",
+        "human_review_status"
+      ],
+      "promotion_boundary": "analysis/relevance remains counsel-admin-only until reviewed"
+    },
+    {
+      "surface_id": "human_witness_packets",
+      "required_artifacts": [
+        "separate_markdown_packet_per_human_witness",
+        "witness_knows_cannot_know",
+        "witness_perspective_timeline",
+        "ten_questions_must_get_right",
+        "exhibit_familiarity",
+        "technique_controls",
+        "integrity_review"
+      ],
+      "promotion_boundary": "evidence-only people do not get standalone witness packets"
+    },
+    {
+      "surface_id": "simulation_and_scenario_sweep",
+      "required_artifacts": [
+        "strategy_controls",
+        "source_bound_answers",
+        "score_formula_explanations",
+        "sensitivity_watchlist",
+        "no_overclaim_language"
+      ],
+      "promotion_boundary": "heuristic review support only; no jury/verdict prediction or real-case readiness claim"
+    }
+  ],
+  "validation_commands": [
+    "python scripts/validate_albert_subagent_decision_flow.py",
+    "python scripts/validate_mcp_first_app_architecture.py",
+    "python scripts/validate_system_maps.py",
+    "python ai_workland/scripts/validate_ai_docs.py",
+    "python tools/validate_package.py"
+  ]
+}

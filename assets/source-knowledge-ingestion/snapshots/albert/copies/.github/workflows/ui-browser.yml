@@ -1,0 +1,89 @@
+name: Albert UI Browser
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - "apps/albert-trial-sim-ui/**"
+      - "scripts/rebuild_ui_test_fixture.py"
+      - "scripts/smoke_albert_workbench_facade.py"
+      - "scripts/smoke_albert_workbench_api.py"
+      - "outputs/cases/synthetic_minimal/**"
+  pull_request:
+    paths:
+      - "apps/albert-trial-sim-ui/**"
+      - "scripts/rebuild_ui_test_fixture.py"
+      - "scripts/smoke_albert_workbench_facade.py"
+      - "scripts/smoke_albert_workbench_api.py"
+      - "outputs/cases/synthetic_minimal/**"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: albert-ui-browser-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  browser:
+    name: Browser workflow, accessibility, and visual regression
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    defaults:
+      run:
+        working-directory: apps/albert-trial-sim-ui
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v6
+
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.13"
+
+      - name: Set up Node
+        uses: actions/setup-node@v6
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: apps/albert-trial-sim-ui/package-lock.json
+
+      - name: Install UI dependencies
+        run: npm ci
+
+      - name: Install deterministic fixture dependencies
+        working-directory: .
+        run: python -m pip install python-docx==1.2.0
+
+      - name: Install Chromium
+        run: npx playwright install --with-deps chromium
+
+      - name: Build UI
+        run: npm run build
+
+      - name: Rebuild deterministic synthetic fixture manifests
+        working-directory: .
+        run: python scripts/rebuild_ui_test_fixture.py
+
+      - name: Run browser suite
+        run: npx playwright test
+
+      - name: Run disposable mutation workflow
+        run: npm run test:mutation
+
+      - name: Upload browser evidence on failure
+        if: failure()
+        uses: actions/upload-artifact@v7
+        with:
+          name: albert-ui-browser-evidence
+          path: |
+            .tmp/ui-playwright/report
+            .tmp/ui-playwright/test-results
+          if-no-files-found: ignore
+          retention-days: 14
+
+      - name: Confirm raw sources remain untouched
+        working-directory: .
+        run: git diff --exit-code -- source/raw

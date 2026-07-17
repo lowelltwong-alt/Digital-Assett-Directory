@@ -1,15 +1,77 @@
 name: validate
 
 on:
-  push:
   pull_request:
+  push:
+    branches: [main]
 
 permissions:
   contents: read
 
 jobs:
-  validate:
-    name: local-full-suite
+  selector:
+    name: ci-contract
+    runs-on: ubuntu-latest
+    outputs:
+      run_python: ${{ steps.select.outputs.run_python }}
+      run_governance: ${{ steps.select.outputs.run_governance }}
+      run_rust: ${{ steps.select.outputs.run_rust }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: pip
+      - run: python -m pip install PyYAML jsonschema pathspec
+      - name: Build changed-path evidence
+        shell: bash
+        run: |
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            base_commit="origin/${{ github.base_ref }}"
+            git cat-file -e "${base_commit}^{commit}"
+            git diff --name-status "${base_commit}...HEAD" > changed-paths.txt
+          else
+            base_commit="${{ github.event.before }}"
+            if [ "$base_commit" = "0000000000000000000000000000000000000000" ]; then
+              git diff-tree --root --no-commit-id --name-status -r "${{ github.sha }}" > changed-paths.txt
+              : > base-module-boundaries.yaml
+              exit 0
+            fi
+            git cat-file -e "${base_commit}^{commit}"
+            git diff --name-status "${base_commit}...${{ github.sha }}" > changed-paths.txt
+          fi
+          if git cat-file -e "${base_commit}:.ci/module-boundaries.yaml" 2>/dev/null; then
+            git show "${base_commit}:.ci/module-boundaries.yaml" > base-module-boundaries.yaml
+          else
+            : > base-module-boundaries.yaml
+          fi
+      - id: select
+        name: Validate CI contract and select suites
+        shell: bash
+        env:
+          PYTHONPATH: src
+        run: |
+          base_args=()
+          if [ -s base-module-boundaries.yaml ]; then
+            base_args=(--base-manifest base-module-boundaries.yaml)
+          fi
+          python scripts/validate_ci_module_boundaries.py --repo . validate --provider github-actions --manifest .ci/module-boundaries.yaml "${base_args[@]}"
+          python scripts/validate_ci_module_boundaries.py --repo . evaluate --manifest .ci/module-boundaries.yaml --changes-file changed-paths.txt > selection.json
+          python - <<'PY'
+          import json, os
+          selected = set(json.load(open("selection.json", encoding="utf-8"))["selected_suites"])
+          with open(os.environ["GITHUB_OUTPUT"], "a", encoding="utf-8") as output:
+              output.write(f"run_python={'true' if 'python-control-plane' in selected else 'false'}\n")
+              output.write(f"run_governance={'true' if 'governance' in selected else 'false'}\n")
+              output.write(f"run_rust={'true' if 'rust-scan' in selected else 'false'}\n")
+          PY
+
+  python:
+    name: python-control-plane
+    needs: selector
+    if: ${{ needs.selector.outputs.run_python == 'true' }}
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -21,5 +83,39 @@ jobs:
           cache: pip
       - run: python -m pip install -e '.[dev]'
       - run: python -m pytest
+
+  governance:
+    name: governance-contracts
+    needs: selector
+    if: ${{ needs.selector.outputs.run_governance == 'true' }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: pip
+      - run: python -m pip install -e '.[dev]'
       - run: python -m digital_asset_directory.cli validate --hub .
       - run: python -m digital_asset_directory.cli roadmap check --hub . --no-update
+
+  rust:
+    needs: selector
+    if: ${{ needs.selector.outputs.run_rust == 'true' }}
+    uses: ./.github/workflows/rust-ci-pr.yml
+
+  validate:
+    name: local-full-suite
+    if: ${{ always() }}
+    needs: [selector, python, governance, rust]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Aggregate selected checks
+        shell: bash
+        run: |
+          test "${{ needs.selector.result }}" = "success"
+          test "${{ needs.python.result }}" = "success" -o "${{ needs.python.result }}" = "skipped"
+          test "${{ needs.governance.result }}" = "success" -o "${{ needs.governance.result }}" = "skipped"
+          test "${{ needs.rust.result }}" = "success" -o "${{ needs.rust.result }}" = "skipped"

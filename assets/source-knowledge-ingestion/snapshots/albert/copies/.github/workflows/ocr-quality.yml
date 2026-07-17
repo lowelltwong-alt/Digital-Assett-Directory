@@ -1,0 +1,76 @@
+name: Albert OCR Quality
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - "**/*ocr*"
+      - "**/*OCR*"
+      - "**/*tesseract*"
+      - "**/*TESSERACT*"
+      - "reports/nita_ocr_human_review/**"
+      - "outputs/cases/*/source/processed/human_verified_ocr/**"
+  pull_request:
+    paths:
+      - "**/*ocr*"
+      - "**/*OCR*"
+      - "**/*tesseract*"
+      - "**/*TESSERACT*"
+      - "reports/nita_ocr_human_review/**"
+      - "outputs/cases/*/source/processed/human_verified_ocr/**"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: albert-ocr-quality-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  ocr-quality:
+    name: OCR contracts and package boundaries
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v6
+
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.13"
+
+      - name: Install pinned local-POC test dependencies
+        run: python -m pip install -r requirements-local-poc-dev.txt
+
+      - name: Run OCR contract suite
+        run: >-
+          python -m pytest
+          tests/test_chunk_span_benchmark.py
+          tests/test_clinocr_structural_smoke.py
+          tests/test_local_case_ocr.py
+          tests/test_paired_ocr_engines.py
+          tests/test_nita_ocr_candidate_review_packet.py
+          tests/test_nita_ocr_confidence_review_plan.py
+          tests/test_nita_ocr_learning_loop.py
+          tests/test_nita_ranked_ocr_review_packets.py
+          tests/test_tesseract_synthetic_finetune_contract.py
+          tests/test_tesseract_clinocr_transfer_contract.py
+          tests/test_ocr_model_training_history.py
+          -q
+
+      - name: Validate generated catalogs and AI documentation
+        run: |
+          python scripts/build_digital_asset_catalog.py --check
+          python scripts/build_digital_asset_graph.py --check
+          python scripts/validate_system_maps.py --check
+          python ai_workland/scripts/validate_ai_docs.py
+          python tools/validate_package.py
+
+      - name: Confirm OCR boundaries
+        run: |
+          git diff --exit-code -- source/raw
+          git diff --check
+

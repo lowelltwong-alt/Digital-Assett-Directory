@@ -78,9 +78,15 @@ nox -s lint types validate
 Recommended wiring:
 
 - **Local pre-push hook** -> `nox -s changed` (fast, relevant to the change).
-- **CI** -> `nox -s tests lint types validate` (full coverage).
+- **Ordinary PR CI** -> run only suites selected by `.ci/module-boundaries.yaml`.
+- **Scheduled full regression** -> `nox -s tests lint types validate`.
 
-This keeps the heavy gate in CI while local loops stay fast. Do not reach for a workflow
+Ordinary PR CI follows declared module ownership and dependency edges. A module
+suite runs only for its code, contracts, authoritative inputs, or declared
+upstream changes that reach it as a direct dependent. Integration and release
+suites must declare cross-module scope. Scheduled full-system regression stays
+separate. Local selection may further optimize an already selected module but
+cannot broaden or weaken this contract. Do not reach for a workflow
 engine (Airflow/Prefect/Dagster): this is a single-machine CLI pipeline, and the Typer CLI
 plus nox is the right altitude.
 

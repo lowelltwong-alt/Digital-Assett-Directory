@@ -1,0 +1,49 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://dad.local/schemas/source-knowledge-graph.schema.json",
+  "title": "DAD source knowledge candidate graph",
+  "type": "object",
+  "required": ["schema_version", "graph_id", "source_repository", "source_revision", "authority_boundary", "nodes", "edges", "review_status"],
+  "properties": {
+    "schema_version": {"const": "dad.source_knowledge_graph.v1"},
+    "graph_id": {"type": "string", "minLength": 1},
+    "source_repository": {"type": "string", "pattern": "^dad://repo/"},
+    "source_revision": {"type": "string", "pattern": "^[0-9a-f]{40}$"},
+    "authority_boundary": {"type": "string", "minLength": 20},
+    "nodes": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["node_id", "node_type", "label", "review_status", "privacy_classification"],
+        "properties": {
+          "node_id": {"type": "string", "minLength": 1},
+          "node_type": {"type": "string", "minLength": 1},
+          "label": {"type": "string"},
+          "review_status": {"type": "string"},
+          "privacy_classification": {"type": "string"},
+          "classification": {"type": "string"},
+          "dedupe_status": {"type": "string"}
+        },
+        "additionalProperties": false
+      }
+    },
+    "edges": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["edge_id", "source", "target", "edge_type", "evidence_refs", "review_status"],
+        "properties": {
+          "edge_id": {"type": "string", "minLength": 1},
+          "source": {"type": "string", "minLength": 1},
+          "target": {"type": "string", "minLength": 1},
+          "edge_type": {"enum": ["contains", "governed_by", "possible_duplicate_of", "source_snapshot_of", "extracted_from"]},
+          "evidence_refs": {"type": "array", "items": {"type": "string"}, "minItems": 1},
+          "review_status": {"type": "string"}
+        },
+        "additionalProperties": false
+      }
+    },
+    "review_status": {"const": "generated_candidate"}
+  },
+  "additionalProperties": false
+}

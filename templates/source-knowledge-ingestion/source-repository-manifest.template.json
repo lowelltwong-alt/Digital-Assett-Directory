@@ -1,0 +1,14 @@
+{
+  "schema_version": "dad.source_repository_ingestion_request.v1",
+  "source_id": "dad://repo/example",
+  "owner": "human-owner",
+  "source_authority": "source-repository",
+  "candidate_families": ["lessons", "assets", "workflows", "schemas", "tests"],
+  "privacy_excluded_families": ["source/raw/**", "outputs/**", "reports/**", "private/**"],
+  "approved_content_read_paths": [],
+  "approved_exact_copy_paths": [],
+  "private_reference_manifest_ids": [],
+  "license_status": "review_required",
+  "human_review_required": true,
+  "downstream_mutation_authorized": false
+}

@@ -1,0 +1,153 @@
+{
+  "schema_version": "dad.source_knowledge_ingestion_report.v1",
+  "report_id": "dad:report:albert-source-knowledge-ingestion:2026-07-16",
+  "status": "candidate",
+  "preflight": {
+    "session_id": "dad:session:be4e56ef-2b81-4068-83d9-26069f00de94",
+    "trace_id": "dad:trace:12b56da2-12dc-560d-8785-0c69de5adf90",
+    "required_learning_rule_acknowledgements_completed": 8
+  },
+  "source_binding": {
+    "source_id": "dad://repo/mock-trial-4-26",
+    "source_authority": "Albert",
+    "source_revision": "c1ede94ce903cabadcd15aa5682814a76f3bf891",
+    "source_branch_observed": "codex/ocr-training-governance",
+    "dirty_state_digest": "sha256:12e8028ef795664efd4a107689e51f8b6fa5d1da615f2034dc02ade7d9f6785b",
+    "dirty_snapshot_is_committed_source_truth": false,
+    "source_mutations": 0
+  },
+  "coverage": {
+    "tracked_paths": 4426,
+    "candidate_paths": 1424,
+    "privacy_excluded_paths": 3002,
+    "inventory_records_including_safe_untracked_candidates": 4429,
+    "approved_content_reads": 21,
+    "exact_internal_candidate_copies": 10,
+    "normalized_knowledge_records": 552,
+    "graph_nodes": 1987,
+    "graph_edges": 1985
+  },
+  "structured_candidates": {
+    "numbered_lessons": 72,
+    "monte_carlo_lesson_sections": 9,
+    "digital_assets": 144,
+    "high_compounding_asset_families": 10,
+    "workflow_asset_patterns": 12,
+    "executor_adapters": 5,
+    "capability_profiles": 3,
+    "mesh_roles": 3,
+    "task_classes": 5,
+    "agent_roles": 14,
+    "routing_rules": 9,
+    "decision_surfaces": 4,
+    "workflow_phases": 9,
+    "legal_edge_vocabulary_candidates": 123,
+    "legal_research_basis_records": 16,
+    "witness_prep_technique_candidates": 106,
+    "witness_registry_findings": 8
+  },
+  "privacy_exclusions": {
+    "excluded_content_reads": 0,
+    "excluded_inventory_source_paths_persisted": 0,
+    "private_workspace_enumerated": false,
+    "private_workspace_content_copied": false,
+    "families": {
+      "outputs/cases/**": 1282,
+      "source/**": 125,
+      "reports/**": 1407,
+      "simulation/output/**": 120,
+      "analysis/**": 6,
+      "case_config/**": 2,
+      "exports/**": 2,
+      "training/**": 19,
+      "reviews/**": 4,
+      "data/non-asset/**": 35
+    },
+    "sanitized_not_copied": [
+      {
+        "source_path": ".digital-asset/dad-integration.json",
+        "reason": "absolute_private_path",
+        "retained": "source-relative identity, current SHA-256, classification, and bounded normalized metadata"
+      }
+    ]
+  },
+  "deduplication": {
+    "ci_lesson_source_id": "ALBERT-LESSON-072",
+    "deduplicated_to": [
+      "dad:learning-event:ci-unrelated-module-false-blocker:6631e5cb9401",
+      "learning-rule:ci-tests-follow-declared-module-dependency-edges",
+      "ci-module-boundary-governance",
+      "skill:dad-ci-module-boundary-governance"
+    ],
+    "approved_source_files_identical_to_existing_dad_tracked_files": 0,
+    "albert_asset_ids_exactly_matching_dad_registered_assets_or_offerings": 0,
+    "albert_workflow_patterns_exactly_matching_dad_pattern_records": 0,
+    "semantic_overlap_requires_human_review": true,
+    "automatic_merges": 0
+  },
+  "confirmed_findings": [
+    "Albert contains reusable learning, asset, orchestration, workflow, schema, registry, validation, privacy, portability, and human-gate candidates.",
+    "ALBERT-LESSON-072 is the source-specific provenance for DAD's existing CI module-boundary learning event and rule.",
+    "Albert's current CI changes are dirty or untracked adoption evidence and are not a promotable replacement for DAD's provider-neutral capability.",
+    "The source HEAD and dirty-state digest were unchanged by inventory and ingestion.",
+    "Every tracked item received either a reusable candidate disposition or an opaque privacy-exclusion record."
+  ],
+  "inferred_findings": [
+    "Albert's source-specific worker, foreman, boss, and role contracts may inform future mesh evaluation but should not become global DAD agents without separate evidence.",
+    "Legal edge and witness-technique taxonomies may be valuable Law Firm OS domain candidates, but global DAD graph authority would be unsafe without license, semantic, and human review."
+  ],
+  "unknowns": [
+    "Semantic duplicates beyond exact identifiers and the reviewed CI incident remain unresolved.",
+    "Albert's private/internal license does not establish public redistribution rights.",
+    "Metadata-only inventory cannot prove the usefulness, correctness, or current validation state of every candidate file.",
+    "The untracked Albert CI artifacts require source-repository review and commit provenance before adoption."
+  ],
+  "rejected_candidates": [
+    "All case, source, report, simulation-output, analysis, training, review, export, and non-asset data content was rejected from content ingestion.",
+    "Verbatim copies of Albert front doors, TOCs, instruction prose, lesson catalogs, and enrollment metadata were rejected in favor of hashes and normalized reusable fields.",
+    "Automatic registration of Albert assets, agents, orchestration roles, legal edges, witness techniques, or learning rules was rejected."
+  ],
+  "cross_repository_rollout": {
+    "audit_ref": "roadmap/evidence/ci-module-boundary-adoption-audit.json",
+    "enrolled_repositories_reported": 8,
+    "downstream_repositories_mutated": 0,
+    "recommended_patch_mode": "metadata_only_human_reviewed_local_adoption"
+  },
+  "independent_review": {
+    "verdict": "PROCEED",
+    "remaining_blockers": 0,
+    "core_tests_passed": 32,
+    "negative_ingestion_fixtures_executed": 8,
+    "repository_contracts_checked": 320,
+    "repository_validator_warnings": 0,
+    "source_head_and_status_digest_matched": true,
+    "source_mutations": 0
+  },
+  "publication_freshness_observation": {
+    "observed_at": "2026-07-17T03:11:49.2068951Z",
+    "source_head_unchanged": true,
+    "source_head": "c1ede94ce903cabadcd15aa5682814a76f3bf891",
+    "live_worktree_status_digest": "sha256:a6b60855919b84f743651add5e1fa9e62b29caebdd12ac438a88d5ec6f744351",
+    "live_worktree_status_entry_count": 514,
+    "snapshot_status": "historical_candidate_source_has_advanced",
+    "interpretation": "Albert continued changing after capture. The immutable snapshot remains valid for its recorded revision and capture-state digest, but it is not a claim about Albert's latest dirty worktree. A newer snapshot requires a separate privacy-safe build and review."
+  },
+  "outputs": {
+    "snapshot_manifest": "assets/source-knowledge-ingestion/snapshots/albert/manifest.json",
+    "inventory": "assets/source-knowledge-ingestion/snapshots/albert/inventory.jsonl",
+    "knowledge_records": "assets/source-knowledge-ingestion/snapshots/albert/knowledge-records.jsonl",
+    "knowledge_graph": "assets/source-knowledge-ingestion/snapshots/albert/knowledge-graph.json",
+    "policy": "assets/source-knowledge-ingestion/policy.json",
+    "registry": "registry/source-knowledge-ingestion-registry.json",
+    "template": "templates/source-knowledge-ingestion",
+    "validator": "scripts/ingest_source_knowledge.py"
+  },
+  "output_hashes": {
+    "inventory": "sha256:49673f30b49503a0b87b44978b7fb15359fe59a879b86a68ca203a454056603a",
+    "knowledge_records": "sha256:c839dd8288c95103896b53f2044d8115faab1d838714484ab962becb2de4854f",
+    "knowledge_graph": "sha256:74cf574b030c66d3195e917d0a3e552bc1907f4029cf98f40c03b2d2d94a8285"
+  },
+  "authority_boundary": "Albert remains source authority. DAD records are internal candidate observations; they do not grant promotion, public release, source mutation, downstream adoption, or execution authority.",
+  "human_review_required": true,
+  "review_status": "independent_review_proceed_candidate"
+}

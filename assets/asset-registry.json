@@ -605,6 +605,42 @@
         "The model is a coordinate system for graph nodes and records, not proof of graph truth or source authority.",
         "Frontier AI recommendations are candidate-only until migration tests and review pass."
       ]
+    },
+    {
+      "asset_id": "ci-module-boundary-governance",
+      "name": "CI Module Boundary Governance",
+      "version": "0.1.0",
+      "path": "assets/coding-harnesses/ci-module-boundary-governance",
+      "asset_type": "provider_neutral_ci_governance_capability",
+      "managed_block_id": "DAD_CI_MODULE_BOUNDARY_GOVERNANCE",
+      "profiles": ["ci", "monorepo", "multi-repo", "dependency-graph", "test-selection"],
+      "use_when": ["A repository or repo family needs dependency-scoped CI and module-owned tests.", "A repo-wide workflow causes unrelated false blockers or duplicate event runs."],
+      "does_not_apply_when": ["A declared integration, release, or separately scheduled full-system lane intentionally spans modules."],
+      "install_path": ".ci/module-boundaries.yaml",
+      "deploy_script": "scripts/validate_ci_module_boundaries.py",
+      "audit_script": "scripts/validate_ci_module_boundaries.py --repo . audit-enrolled",
+      "source_package": {"filename": "repo-local", "sha256": ""},
+      "installed_at": "2026-07-16",
+      "review_status": "candidate",
+      "safety_notes": ["Provider adapters cannot broaden the manifest.", "Downstream adoption is manual or approval-gated.", "Dependency completeness remains coverage_unavailable without observed-edge evidence."]
+    },
+    {
+      "asset_id": "governed-source-knowledge-ingestion",
+      "name": "Governed Source Knowledge Ingestion",
+      "version": "0.1.0",
+      "path": "assets/source-knowledge-ingestion",
+      "asset_type": "provider_neutral_knowledge_ingestion_capability",
+      "managed_block_id": "DAD_GOVERNED_SOURCE_KNOWLEDGE_INGESTION",
+      "profiles": ["learning-loop", "digital-assets", "knowledge-graph", "cross-repo", "privacy"],
+      "use_when": ["A source repository has reusable lessons, assets, agents, workflows, schemas, tests, or governance patterns that DAD should inventory and graph.", "DAD needs its own revision-bound candidate copy without ingesting product, case, client, private, or raw source content."],
+      "does_not_apply_when": ["The source owner has not approved bounded content reads.", "The requested result is automatic promotion, public distribution, or downstream mutation."],
+      "install_path": "assets/source-knowledge-ingestion",
+      "deploy_script": "scripts/ingest_source_knowledge.py",
+      "audit_script": "scripts/ingest_source_knowledge.py validate --destination <snapshot-dir>",
+      "source_package": {"filename": "repo-local", "sha256": ""},
+      "installed_at": "2026-07-16",
+      "review_status": "candidate",
+      "safety_notes": ["Source repositories retain authority.", "Excluded items use opaque path hashes and no content reads.", "Exact copies require a narrower explicit allowlist and deterministic scans.", "All normalized records remain internal candidates pending human and license review."]
     }
   ]
 }

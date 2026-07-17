@@ -1,0 +1,130 @@
+schema_version: dad.ci_module_boundaries.v1
+capability_id: dad:capability:ci-module-boundary-governance
+capability_revision: 0.1.0
+repository:
+  repository_id: synthetic-modular-system
+  owners: [platform-owner]
+  default_branch: main
+workflow_paths: [.github/workflows/**, .ci/**]
+modules:
+  - module_id: ocr
+    owners: [ocr-owner]
+    roots: [modules/ocr]
+    triggers:
+      - edge_type: code
+        paths: [modules/ocr/src/**, modules/ocr/tests/**]
+      - edge_type: contract
+        paths: [modules/ocr/contracts/**]
+      - edge_type: authoritative_input
+        paths: [modules/ocr/inputs/**]
+  - module_id: simulator
+    owners: [simulator-owner]
+    roots: [modules/simulator]
+    triggers:
+      - edge_type: code
+        paths: [modules/simulator/src/**, modules/simulator/tests/**]
+      - edge_type: contract
+        paths: [modules/simulator/contracts/**]
+      - edge_type: authoritative_input
+        paths: [modules/simulator/inputs/**]
+  - module_id: ui
+    owners: [ui-owner]
+    roots: [modules/ui]
+    triggers:
+      - edge_type: code
+        paths: [modules/ui/src/**, modules/ui/tests/**]
+      - edge_type: contract
+        paths: [modules/ui/contracts/**]
+      - edge_type: authoritative_input
+        paths: [modules/ui/inputs/**]
+dependencies:
+  - edge_id: ocr-to-simulator
+    from: ocr
+    to: simulator
+    edge_type: direct_dependent
+    on: [contract, authoritative_input]
+    evidence: Simulator integration consumes the reviewed OCR contract.
+  - edge_id: simulator-to-ui
+    from: simulator
+    to: ui
+    edge_type: direct_dependent
+    on: [contract]
+    evidence: Browser facade consumes the simulator integration contract.
+suites:
+  - suite_id: ci-contract
+    lane: ci_contract
+    scope: declared_modules
+    scope_modules: []
+    events: [pull_request, push_default_branch]
+    command: python scripts/validate_ci_module_boundaries.py --repo . validate
+  - suite_id: ocr
+    lane: module
+    scope: module
+    scope_modules: [ocr]
+    events: [pull_request, push_default_branch]
+    command: pytest modules/ocr/tests
+  - suite_id: simulator
+    lane: module
+    scope: module
+    scope_modules: [simulator]
+    events: [pull_request, push_default_branch]
+    command: pytest modules/simulator/tests
+  - suite_id: browser
+    lane: module
+    scope: module
+    scope_modules: [ui]
+    events: [pull_request, push_default_branch]
+    command: pytest modules/ui/tests
+  - suite_id: ui-integration
+    lane: integration
+    scope: declared_modules
+    scope_modules: [ocr, simulator, ui]
+    dependency_edges: [ocr-to-simulator, simulator-to-ui]
+    events: [pull_request, push_default_branch]
+    command: pytest integration/ui
+  - suite_id: release
+    lane: release
+    scope: declared_modules
+    scope_modules: [ocr, simulator, ui]
+    dependency_edges: [ocr-to-simulator, simulator-to-ui]
+    events: [release]
+    command: pytest release
+  - suite_id: scheduled-full
+    lane: scheduled_full_regression
+    scope: repository
+    scope_modules: [ocr, simulator, ui]
+    events: [schedule, workflow_dispatch]
+    command: pytest
+workflows:
+  - workflow_id: pr-selector
+    provider_path: .github/workflows/selector.yml
+    lane: ci_contract
+    events: [pull_request, push_default_branch]
+    required_check: true
+    always_reports: true
+    scope: selector
+    selector_job: selector
+    suite_job_map: {ocr: ocr, simulator: simulator, browser: browser, ui-integration: ui-integration}
+    required_aggregator_job: required-aggregate
+    workflow_contract_digest: sha256:0000000000000000000000000000000000000000000000000000000000000000
+    job_contract_digests:
+      selector: sha256:0000000000000000000000000000000000000000000000000000000000000000
+      ocr: sha256:0000000000000000000000000000000000000000000000000000000000000000
+      simulator: sha256:0000000000000000000000000000000000000000000000000000000000000000
+      browser: sha256:0000000000000000000000000000000000000000000000000000000000000000
+      ui-integration: sha256:0000000000000000000000000000000000000000000000000000000000000000
+      required-aggregate: sha256:0000000000000000000000000000000000000000000000000000000000000000
+  - workflow_id: scheduled-full
+    provider_path: .github/workflows/scheduled-full.yml
+    lane: scheduled_full_regression
+    events: [schedule, workflow_dispatch]
+    required_check: false
+    always_reports: true
+    scope: repository
+    workflow_contract_digest: sha256:0000000000000000000000000000000000000000000000000000000000000000
+generated_artifacts:
+  - artifact_id: simulator-snapshots
+    module_id: simulator
+    paths: [modules/simulator/generated/**]
+    authoritative_inputs: [modules/simulator/inputs/**]
+exceptions: []

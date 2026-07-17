@@ -68,6 +68,7 @@ def test_current_portability_registry_is_valid_and_baselined() -> None:
     assert set(result["inventory"]["new_identity_ids"]) == {
         "workflow:ml-synthetic-data-opportunity-review",
         "workflow:ml-synthetic-helper-research-refresh",
+        "skill:dad-ci-module-boundary-governance",
     }
 
 

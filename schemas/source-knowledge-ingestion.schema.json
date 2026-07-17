@@ -1,0 +1,80 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://dad.local/schemas/source-knowledge-ingestion.schema.json",
+  "title": "DAD source knowledge ingestion snapshot manifest",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "snapshot_id",
+    "source_repository",
+    "source_revision",
+    "source_worktree_status_sha256",
+    "source_mutated",
+    "authority_boundary",
+    "privacy_policy",
+    "license_status",
+    "tracked_path_count",
+    "candidate_count",
+    "privacy_excluded_count",
+    "approved_read_hashes",
+    "approved_copy_hashes",
+    "outputs",
+    "output_hashes",
+    "human_review_required",
+    "promotion_status",
+    "review_status"
+  ],
+  "properties": {
+    "schema_version": {"const": "dad.source_knowledge_ingestion.v1"},
+    "snapshot_id": {"type": "string", "minLength": 1},
+    "source_repository": {"type": "string", "pattern": "^dad://repo/"},
+    "source_display_name": {"type": "string"},
+    "source_revision": {"type": "string", "pattern": "^[0-9a-f]{40}$"},
+    "source_branch_observed": {"type": "string"},
+    "source_worktree_status_sha256": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"},
+    "source_mutated": {"const": false},
+    "authority_boundary": {"type": "string", "minLength": 20},
+    "privacy_policy": {
+      "type": "object",
+      "required": ["excluded_content_read_count", "excluded_inventory_source_paths_persisted", "private_workspace_content_copied"],
+      "properties": {
+        "excluded_content_read_count": {"const": 0},
+        "excluded_inventory_source_paths_persisted": {"const": 0},
+        "excluded_records_use_opaque_path_hashes": {"const": true},
+        "private_workspace_enumerated": {"const": false},
+        "private_workspace_content_copied": {"const": false}
+      },
+      "additionalProperties": false
+    },
+    "license_status": {"const": "internal_only_source_license_review_required_before_export_or_promotion"},
+    "tracked_path_count": {"type": "integer", "minimum": 1},
+    "inventory_record_count": {"type": "integer", "minimum": 1},
+    "candidate_count": {"type": "integer", "minimum": 0},
+    "privacy_excluded_count": {"type": "integer", "minimum": 0},
+    "classification_counts": {"type": "object", "additionalProperties": {"type": "integer", "minimum": 0}},
+    "privacy_exclusion_family_counts": {"type": "object", "additionalProperties": {"type": "integer", "minimum": 0}},
+    "approved_read_count": {"type": "integer", "minimum": 0},
+    "approved_read_hashes": {"$ref": "#/$defs/hashMap"},
+    "approved_copy_count": {"type": "integer", "minimum": 0},
+    "approved_copy_hashes": {"$ref": "#/$defs/hashMap"},
+    "sanitization_findings": {"type": "object", "additionalProperties": {"type": "array", "items": {"type": "string"}}},
+    "copy_rejections": {"type": "object", "additionalProperties": {"type": "array", "items": {"type": "string"}}},
+    "knowledge_record_count": {"type": "integer", "minimum": 0},
+    "knowledge_record_counts": {"type": "object", "additionalProperties": {"type": "integer", "minimum": 0}},
+    "graph_node_count": {"type": "integer", "minimum": 0},
+    "graph_edge_count": {"type": "integer", "minimum": 0},
+    "outputs": {"type": "object", "additionalProperties": {"type": "string"}},
+    "output_hashes": {"$ref": "#/$defs/hashMap"},
+    "human_review_required": {"const": true},
+    "promotion_status": {"const": "not_promoted_candidate_only"},
+    "review_status": {"const": "generated_candidate"},
+    "generated_by": {"type": "string"}
+  },
+  "$defs": {
+    "hashMap": {
+      "type": "object",
+      "additionalProperties": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"}
+    }
+  },
+  "additionalProperties": false
+}

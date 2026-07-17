@@ -1,0 +1,159 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://dad.local/schemas/ci-module-boundary-v1.json",
+  "title": "Provider-neutral CI module boundary manifest",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "capability_id",
+    "capability_revision",
+    "repository",
+    "workflow_paths",
+    "modules",
+    "dependencies",
+    "suites",
+    "workflows",
+    "generated_artifacts",
+    "exceptions"
+  ],
+  "properties": {
+    "schema_version": {"const": "dad.ci_module_boundaries.v1"},
+    "capability_id": {"const": "dad:capability:ci-module-boundary-governance"},
+    "capability_revision": {"const": "0.1.0"},
+    "repository": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["repository_id", "owners", "default_branch"],
+      "properties": {
+        "repository_id": {"type": "string", "minLength": 1},
+        "owners": {"type": "array", "minItems": 1, "uniqueItems": true, "items": {"type": "string", "minLength": 1}},
+        "default_branch": {"type": "string", "minLength": 1}
+      }
+    },
+    "workflow_paths": {"$ref": "#/$defs/paths"},
+    "modules": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["module_id", "owners", "roots", "triggers"],
+        "properties": {
+          "module_id": {"$ref": "#/$defs/id"},
+          "owners": {"type": "array", "minItems": 1, "uniqueItems": true, "items": {"type": "string", "minLength": 1}},
+          "roots": {"$ref": "#/$defs/paths"},
+          "triggers": {
+            "type": "array",
+            "minItems": 3,
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["edge_type", "paths"],
+              "properties": {
+                "edge_type": {"enum": ["code", "contract", "authoritative_input"]},
+                "paths": {"$ref": "#/$defs/paths"}
+              }
+            }
+          }
+        }
+      }
+    },
+    "dependencies": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["edge_id", "from", "to", "edge_type", "on", "evidence"],
+        "properties": {
+          "edge_id": {"$ref": "#/$defs/id"},
+          "from": {"$ref": "#/$defs/id"},
+          "to": {"$ref": "#/$defs/id"},
+          "edge_type": {"const": "direct_dependent"},
+          "on": {"type": "array", "minItems": 1, "uniqueItems": true, "items": {"enum": ["code", "contract", "authoritative_input"]}},
+          "evidence": {"type": "string", "minLength": 1}
+        }
+      }
+    },
+    "suites": {
+      "type": "array",
+      "minItems": 2,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["suite_id", "lane", "scope", "scope_modules", "events", "command"],
+        "properties": {
+          "suite_id": {"$ref": "#/$defs/id"},
+          "lane": {"enum": ["ci_contract", "module", "integration", "release", "scheduled_full_regression"]},
+          "scope": {"enum": ["module", "declared_modules", "repository"]},
+          "scope_modules": {"type": "array", "uniqueItems": true, "items": {"$ref": "#/$defs/id"}},
+          "dependency_edges": {"type": "array", "uniqueItems": true, "items": {"$ref": "#/$defs/id"}},
+          "events": {"type": "array", "uniqueItems": true, "items": {"$ref": "#/$defs/event"}},
+          "command": {"type": "string", "minLength": 1}
+        }
+      }
+    },
+    "workflows": {
+      "type": "array",
+      "minItems": 2,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["workflow_id", "provider_path", "lane", "events", "required_check", "always_reports", "scope", "workflow_contract_digest"],
+        "properties": {
+          "workflow_id": {"$ref": "#/$defs/id"},
+          "provider_path": {"type": "string", "minLength": 1},
+          "lane": {"enum": ["ci_contract", "module", "integration", "release", "scheduled_full_regression"]},
+          "events": {"type": "array", "minItems": 1, "uniqueItems": true, "items": {"$ref": "#/$defs/event"}},
+          "required_check": {"type": "boolean"},
+          "always_reports": {"type": "boolean"},
+          "scope": {"enum": ["selector", "module", "declared_modules", "repository"]}
+          ,"selector_job": {"type": "string", "minLength": 1}
+          ,"suite_job_map": {"type": "object", "minProperties": 1, "additionalProperties": {"type": "string", "minLength": 1}}
+          ,"required_aggregator_job": {"type": "string", "minLength": 1}
+          ,"workflow_contract_digest": {"$ref": "#/$defs/digest"}
+          ,"job_contract_digests": {"type": "object", "minProperties": 1, "additionalProperties": {"$ref": "#/$defs/digest"}}
+        }
+      }
+    },
+    "generated_artifacts": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["artifact_id", "module_id", "paths", "authoritative_inputs"],
+        "properties": {
+          "artifact_id": {"$ref": "#/$defs/id"},
+          "module_id": {"$ref": "#/$defs/id"},
+          "paths": {"$ref": "#/$defs/paths"},
+          "authoritative_inputs": {"$ref": "#/$defs/paths"}
+        }
+      }
+    },
+    "exceptions": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["exception_id", "codes", "diagnostic_scopes", "owner", "reason", "expires_on", "reviewed_by", "reviewed_at", "review_ref"],
+        "properties": {
+          "exception_id": {"$ref": "#/$defs/id"},
+          "codes": {"type": "array", "minItems": 1, "uniqueItems": true, "items": {"type": "string", "minLength": 1}},
+          "diagnostic_scopes": {"type": "array", "minItems": 1, "uniqueItems": true, "items": {"type": "string", "minLength": 1}},
+          "owner": {"type": "string", "minLength": 1},
+          "reason": {"type": "string", "minLength": 1},
+          "expires_on": {"type": "string", "format": "date"},
+          "reviewed_by": {"type": "string", "minLength": 1},
+          "reviewed_at": {"type": "string", "format": "date-time"},
+          "review_ref": {"type": "string", "minLength": 1}
+        }
+      }
+    }
+  },
+  "$defs": {
+    "id": {"type": "string", "pattern": "^[a-z][a-z0-9._-]*$"},
+    "paths": {"type": "array", "minItems": 1, "uniqueItems": true, "items": {"type": "string", "minLength": 1}},
+    "event": {"enum": ["pull_request", "push_default_branch", "push_all_branches", "workflow_dispatch", "workflow_call", "schedule", "release"]},
+    "digest": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"}
+  }
+}

@@ -12,6 +12,13 @@ description: Route material coding, governance, registry, and cross-repository w
 3. Search the DAD agent-skill library and asset registries before creating an
    agent, skill, template, algorithm, or workflow. Reuse the narrowest
    reviewed asset that fits.
+   For CI workflows, module test ownership, path filters, required checks,
+   monorepos, or cross-repo release lanes, route through
+   `dad-ci-module-boundary-governance` and its deterministic validator.
+   For cross-repository learning ingestion or a DAD-owned copy of reusable
+   source knowledge, route through `governed-source-knowledge-ingestion` and
+   preserve the source authority, privacy allowlists, candidate-only status,
+   and human promotion gate.
 4. State the scope, validation plan, and stop conditions. Local repository
    authority remains controlling.
 5. Use proportional independent review lanes for material work. Keep writes

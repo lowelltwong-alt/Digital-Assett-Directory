@@ -1,0 +1,15 @@
+schema_version: dad.ci_module_boundaries.v1
+capability_id: dad:capability:ci-module-boundary-governance
+modules: []
+suites: []
+workflow_paths: [.github/workflows/**]
+workflows:
+  - workflow_id: duplicate
+    lane: ci_contract
+    events: [pull_request, push_all_branches]
+    required_check: true
+    always_reports: false
+    scope: selector
+dependencies: []
+generated_artifacts: []
+exceptions: []

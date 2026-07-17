@@ -1,0 +1,21 @@
+{
+  "schema_version": "dad.ci_module_boundary_adoption_audit.v1",
+  "status": "candidate",
+  "capability_id": "dad:capability:ci-module-boundary-governance",
+  "capability_revision": "0.1.0",
+  "enrollment_audit_sha256": "sha256:feaf78a70a13746fdb6eb4436e7d5b021ecf15e55677bc0947d4dbb26e055ef6",
+  "authority_boundary": "Metadata-only findings. No downstream workflow contents were read and no source repository was mutated.",
+  "workflow_contents_read": 0,
+  "source_mutations": 0,
+  "coverage_limit": "Enrollment metadata cannot prove workflow triggers, dependency completeness, required checks, or current heads.",
+  "findings": [
+    {"repo_id": "dad", "manifest_status": "candidate_present_local", "finding_codes": ["local_ci_contract_candidate_validation_required"], "recommended_patch": "monorepo", "human_review_required": true},
+    {"repo_id": "lawfirm-os-exceptions-lake-runtime", "manifest_status": "not_evidenced", "finding_codes": ["local_ci_contract_audit_required", "module_manifest_not_evidenced", "multi_repo_dependency_manifest_candidate"], "recommended_patch": "multi-repo-law-firm-os", "human_review_required": true},
+    {"repo_id": "lawfirm-os-legal-knowledge-runtime", "manifest_status": "not_evidenced", "finding_codes": ["local_ci_contract_audit_required", "module_manifest_not_evidenced", "multi_repo_dependency_manifest_candidate"], "recommended_patch": "multi-repo-law-firm-os", "human_review_required": true},
+    {"repo_id": "lawfirm-os-orchestrator", "manifest_status": "not_evidenced", "finding_codes": ["local_ci_contract_audit_required", "module_manifest_not_evidenced", "multi_repo_dependency_manifest_candidate"], "recommended_patch": "multi-repo-law-firm-os", "human_review_required": true},
+    {"repo_id": "lawfirm-os-semantic-substrate", "manifest_status": "not_evidenced", "finding_codes": ["local_ci_contract_audit_required", "module_manifest_not_evidenced", "multi_repo_dependency_manifest_candidate"], "recommended_patch": "multi-repo-law-firm-os", "human_review_required": true},
+    {"repo_id": "lawfirm-os-skills-registry", "manifest_status": "not_evidenced", "finding_codes": ["local_ci_contract_audit_required", "module_manifest_not_evidenced", "multi_repo_dependency_manifest_candidate"], "recommended_patch": "multi-repo-law-firm-os", "human_review_required": true},
+    {"repo_id": "logos-scripture-graph", "manifest_status": "not_evidenced", "finding_codes": ["local_ci_contract_audit_required", "module_manifest_not_evidenced"], "recommended_patch": "monorepo", "human_review_required": true},
+    {"repo_id": "mock-trial-4-26", "manifest_status": "not_evidenced", "finding_codes": ["local_ci_contract_audit_required", "module_manifest_not_evidenced"], "recommended_patch": "monorepo", "human_review_required": true}
+  ]
+}
