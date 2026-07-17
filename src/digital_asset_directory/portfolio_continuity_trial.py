@@ -31,8 +31,10 @@ MINIMUM_SPAN_DAYS = 7
 
 _FAILURE_KEYS = (
     "missed_captures",
+    "missed_recoveries",
     "unnecessary_captures",
     "harmful_captures",
+    "false_duplicate_suggestions",
     "false_merges",
     "accidental_mutations",
     "repeated_unchanged_asks",
@@ -137,6 +139,12 @@ def _review_record(
     recorded_at: str,
     fixture_only: bool,
 ) -> dict[str, Any]:
+    missing_metrics = [key for key in _FAILURE_KEYS if key not in failure_metrics]
+    if missing_metrics:
+        raise ContinuityValidationError(
+            "Trial review lacks required current failure metrics: "
+            + ", ".join(missing_metrics)
+        )
     performance = {
         "hook_sample_count": hook_sample_count,
         "hook_latency_ms_p95": hook_latency_ms_p95,
@@ -402,8 +410,11 @@ def evaluate_trial(
     if span_days < MINIMUM_SPAN_DAYS:
         failures.append("trial_span_less_than_seven_days")
 
+    for key in _FAILURE_KEYS:
+        if any(key not in review["failure_metrics"] for review in selected):
+            failures.append(f"failure_metric_missing:{key}")
     aggregate_failures = {
-        key: sum(int(review["failure_metrics"][key]) for review in selected)
+        key: sum(int(review["failure_metrics"].get(key, 0)) for review in selected)
         for key in _FAILURE_KEYS
     }
     for key, value in aggregate_failures.items():

@@ -13,7 +13,7 @@ from .portfolio_continuity_adapter import ingest_receipt
 from .portfolio_continuity_events import _append_line, _exclusive_lock
 from .transport import data_path
 CODEX_HOOK_ADAPTER_ID = "adapter:intent-continuity-shadow"
-CODEX_HOOK_ADAPTER_REVISION_ID = "adapter-revision:intent-continuity-codex-host:0.3.4"
+CODEX_HOOK_ADAPTER_REVISION_ID = "adapter-revision:intent-continuity-codex-host:0.3.5"
 MAX_HOOK_INPUT_BYTES = 64 * 1024
 HOOK_LOCK_TIMEOUT_SECONDS = 1.5
 AUTHORITY_BOUNDARY = (

@@ -2,7 +2,11 @@
 
 from __future__ import annotations
 
+from datetime import datetime, timezone
+import hashlib
+import json
 from pathlib import Path
+import re
 from typing import Any, Iterable, Mapping
 
 from .entity_identity import fold_state as fold_entity_state
@@ -17,11 +21,13 @@ from .portfolio_continuity_projection import (
     build_continuity_projection,
     write_continuity_projection,
 )
+from .portfolio_continuity_workflow import assess_closeout, project_continuity_state
 from .portfolio_intents import fold_plan_index, load_plan_revision
 from .portfolio_intents import read_events as read_plan_events
+from .portfolio_relations import RelationTarget, classify_relations
 from .portfolio_roadmap import fold_roadmap, read_roadmap_events
 from .portfolio_workstreams import load_state as load_workstream_state
-from .transport import resolve_data_root
+from .transport import data_path, resolve_data_root
 
 
 AUTHORITY_BOUNDARY = (
@@ -29,10 +35,187 @@ AUTHORITY_BOUNDARY = (
     "fetch, merge identities, activate hooks, schedule, notify, mutate tasks or Git, "
     "archive work, or authorize execution."
 )
+MAX_AUTOMATIC_DUPLICATE_PLANS = 250
 
 
 class ContinuityRuntimeError(RuntimeError):
     """The continuity runtime cannot safely perform the requested operation."""
+
+
+def _digest(value: Any) -> str:
+    encoded = json.dumps(
+        value, sort_keys=True, separators=(",", ":"), ensure_ascii=False
+    ).encode("utf-8")
+    return "sha256:" + hashlib.sha256(encoded).hexdigest()
+
+
+def _plan_text(plan: Mapping[str, Any]) -> str:
+    return " ".join(
+        [
+            str(plan.get("title", "")),
+            *[str(value) for value in plan.get("aliases", [])],
+            str(plan.get("outcome", "")),
+        ]
+    )
+
+
+def _plan_identity_tokens(plan: Mapping[str, Any]) -> frozenset[str]:
+    """Keep numbers and generic words for conservative automatic identity checks."""
+
+    return frozenset(re.findall(r"[a-z0-9]+", _plan_text(plan).casefold()))
+
+
+def derive_plan_duplicate_search_results(
+    plans: Iterable[dict[str, Any]],
+) -> tuple[list[dict[str, Any]], list[str]]:
+    """Build conservative duplicate pairs from current private plan revisions.
+
+    The existing deterministic relation classifier owns the duplicate threshold.
+    This helper supplies the previously missing live queue input; it never merges
+    plans or selects a primary identity.
+    """
+
+    rows = sorted(plans, key=lambda row: str(row.get("plan_id", "")))
+    gaps: list[str] = []
+    if len(rows) > MAX_AUTOMATIC_DUPLICATE_PLANS:
+        rows = rows[:MAX_AUTOMATIC_DUPLICATE_PLANS]
+        gaps.append("automatic_plan_duplicate_scan_truncated")
+    results: list[dict[str, Any]] = []
+    for index, source in enumerate(rows):
+        source_id = str(source.get("plan_id", ""))
+        if not source_id:
+            continue
+        source_identity = _plan_identity_tokens(source)
+        for target in rows[index + 1 :]:
+            target_id = str(target.get("plan_id", ""))
+            if not target_id:
+                continue
+            if (
+                len(source_identity) < 4
+                or source_identity != _plan_identity_tokens(target)
+            ):
+                continue
+            relations, _coverage = classify_relations(
+                source_id,
+                _plan_text(source),
+                [
+                    RelationTarget(
+                        target_kind="plan",
+                        target_id=target_id,
+                        target_label=str(target.get("title", "")) or target_id,
+                        text=_plan_text(target),
+                        mature=str(target.get("implementation_state", ""))
+                        not in {"", "unstarted"},
+                    )
+                ],
+                limit=1,
+            )
+            if not relations or relations[0]["relationship_type"] != "duplicate":
+                continue
+            relation = relations[0]
+            material = {
+                "source_plan_id": source_id,
+                "target_plan_id": target_id,
+                "relation_id": relation["relation_id"],
+            }
+            results.append(
+                {
+                    "query_digest": _digest(material),
+                    "classification": "possible_duplicate_pair",
+                    "primary_candidate_id": "",
+                    "candidates": [
+                        {"candidate_id": source_id},
+                        {"candidate_id": target_id},
+                    ],
+                    "relation_evidence": {
+                        "relation_id": relation["relation_id"],
+                        "confidence": relation["confidence"],
+                        "score": relation["score"],
+                    },
+                    "candidate_only": True,
+                    "execution_authorized": False,
+                }
+            )
+    return results, gaps
+
+
+def derive_closeout_assessments(
+    plans: Iterable[dict[str, Any]],
+    workstream_state: Mapping[str, Any],
+) -> list[dict[str, Any]]:
+    """Assess terminal plans from current evidence without performing cleanup."""
+
+    workstreams = {
+        str(row.get("workstream_id", "")): row
+        for row in workstream_state.get("workstreams", [])
+    }
+    assessments: list[dict[str, Any]] = []
+    for plan in plans:
+        workstream = next(
+            (
+                workstreams[ref]
+                for ref in plan.get("workstream_refs", [])
+                if ref in workstreams
+            ),
+            None,
+        )
+        state = project_continuity_state(plan=plan, workstream=workstream)
+        terminal = (
+            state["overlays"]["delivery"] == "delivered"
+            or str(plan.get("lifecycle", "")) in {"superseded", "withdrawn"}
+        )
+        if not terminal:
+            continue
+        try:
+            assessed_at = datetime.fromisoformat(
+                str(plan.get("recorded_at", "")).replace("Z", "+00:00")
+            )
+            if assessed_at.tzinfo is None:
+                raise ValueError("naive plan observation time")
+            assessed_at = assessed_at.astimezone(timezone.utc)
+        except ValueError:
+            assessed_at = datetime(1970, 1, 1, tzinfo=timezone.utc)
+        assessment = assess_closeout(
+            plan=plan,
+            workstream=workstream,
+            now=assessed_at,
+        )
+        assessment["assessment_mode"] = "automatic_current_evidence_candidate"
+        assessments.append(assessment)
+    return assessments
+
+
+def read_previous_weekly_fingerprints(
+    hub_root: Path,
+) -> tuple[list[str], list[str]]:
+    """Read only prior derived asks; missing/corrupt history disables suppression."""
+
+    _root, mode = resolve_data_root(hub_root)
+    if mode != "data_root":
+        return [], ["weekly_changed_only_history_unavailable"]
+    path = data_path(hub_root, "portfolio_reports") / "continuity" / "global-graph.json"
+    try:
+        prior = json.loads(path.read_text(encoding="utf-8"))
+        attention = prior["attention_readiness"]
+        fingerprints = attention.get("weekly_seen_fingerprints")
+        if fingerprints is None:
+            asks = attention["weekly_digest_preview"]["asks"]
+            fingerprints = [
+                str(row["fingerprint"])
+                for row in asks
+                if isinstance(row, dict) and str(row.get("fingerprint", ""))
+            ]
+        if not isinstance(fingerprints, list):
+            raise TypeError("weekly fingerprint history is not a list")
+        if any(
+            not isinstance(value, str)
+            or re.fullmatch(r"sha256:[0-9a-f]{64}", value) is None
+            for value in fingerprints
+        ):
+            raise ValueError("weekly fingerprint history contains an invalid digest")
+    except (KeyError, OSError, TypeError, ValueError, json.JSONDecodeError):
+        return [], ["weekly_changed_only_history_unavailable"]
+    return sorted(set(fingerprints)), []
 
 
 def require_initialized_private_data_root(hub_root: Path) -> Path:
@@ -111,16 +294,42 @@ def build_current_projection(
     }
     if not {"session_started", "session_stopped"}.issubset(activity_kinds):
         external_gaps.append("activity_duration_coverage_unknown")
+    previous_weekly_fingerprints, weekly_history_gaps = read_previous_weekly_fingerprints(
+        hub_root
+    )
+    external_gaps.extend(weekly_history_gaps)
+    supplied_search_results = list(search_results)
+    supplied_closeout_assessments = list(closeout_assessments)
+    workstream_state = load_workstream_state(hub_root)
+    automatic_search_results, duplicate_gaps = derive_plan_duplicate_search_results(
+        plan_index["plans"]
+    )
+    automatic_closeout_assessments = derive_closeout_assessments(
+        plan_index["plans"], workstream_state
+    )
+    supplied_closeout_plan_ids = {
+        str(row.get("plan_id", "")) for row in supplied_closeout_assessments
+    }
+    automatic_closeout_assessments = [
+        row
+        for row in automatic_closeout_assessments
+        if str(row.get("plan_id", "")) not in supplied_closeout_plan_ids
+    ]
+    external_gaps.extend(duplicate_gaps)
     return build_continuity_projection(
         inventories=inventories,
         plan_index=plan_index,
         roadmap=fold_roadmap(read_roadmap_events(hub_root)),
-        workstream_state=load_workstream_state(hub_root),
+        workstream_state=workstream_state,
         entity_state=fold_entity_state(read_entity_events(hub_root)),
         continuity_events=continuity_events,
-        search_results=search_results,
-        closeout_assessments=closeout_assessments,
+        search_results=[*automatic_search_results, *supplied_search_results],
+        closeout_assessments=[
+            *automatic_closeout_assessments,
+            *supplied_closeout_assessments,
+        ],
         external_coverage_gaps=external_gaps,
+        previous_weekly_fingerprints=previous_weekly_fingerprints,
     )
 
 
@@ -156,6 +365,9 @@ def reconcile_current_projection(
 __all__ = [
     "AUTHORITY_BOUNDARY",
     "ContinuityRuntimeError",
+    "derive_closeout_assessments",
+    "derive_plan_duplicate_search_results",
+    "read_previous_weekly_fingerprints",
     "build_current_projection",
     "reconcile_current_projection",
     "require_initialized_private_data_root",

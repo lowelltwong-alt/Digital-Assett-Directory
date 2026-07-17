@@ -1,27 +1,22 @@
 {
   "schema_version": "dad.intent_continuity_host_readiness.v1",
-  "assessed_at": "2026-07-17T06:34:53.295102+00:00",
+  "assessed_at": "2026-07-17T07:43:21.867052+00:00",
   "repository_id": "dad",
   "repository_layout": "linked_worktree",
   "hook_definition": {
     "relative_path": ".codex/hooks.json",
     "definition_digest": "sha256:bfb90dcdb1e12c4a83193e4e858b386c30ae13fa02c61264e0dda83befcc38b5",
-    "enabled_events": [
-      "PostCompact",
-      "PreCompact",
-      "SessionStart",
-      "Stop"
-    ],
+    "enabled_events": ["PostCompact", "PreCompact", "SessionStart", "Stop"],
     "event_set_exact": true,
     "shadow_status": "supervised_silent_shadow",
     "host_readiness_gate_configured": true
   },
   "adapter_binding": {
     "artifact_id": "adapter:intent-continuity-codex-host",
-    "adapter_revision_id": "adapter-revision:intent-continuity-codex-host:0.3.4",
-    "portability_card_revision_id": "portability-card-revision:adapter-intent-continuity-codex-host:0.3.4",
-    "declared_interface_digest": "sha256:a517faac0659ce13d3e3121587fd46953fdd672c04dd6ec75de93900c8ac7d51",
-    "computed_interface_digest": "sha256:a517faac0659ce13d3e3121587fd46953fdd672c04dd6ec75de93900c8ac7d51",
+    "adapter_revision_id": "adapter-revision:intent-continuity-codex-host:0.3.5",
+    "portability_card_revision_id": "portability-card-revision:adapter-intent-continuity-codex-host:0.3.5",
+    "declared_interface_digest": "sha256:905e0708a476f1856c1f93e10dbbbde8cd4d85dec7b9f263a68fecd9e9c1db05",
+    "computed_interface_digest": "sha256:905e0708a476f1856c1f93e10dbbbde8cd4d85dec7b9f263a68fecd9e9c1db05",
     "interface_digest_matches": true
   },
   "host_observation": {
@@ -72,5 +67,5 @@
   "candidate_only": true,
   "execution_authorized": false,
   "authority_boundary": "Host readiness is read-only candidate evidence. It cannot trust a project or hook, authenticate host origin, bypass Codex review, run a hook, activate prompts or notifications, schedule work, mutate Git or tasks, archive work, or clean up a worktree.",
-  "assessment_digest": "sha256:1f75b8316bd9a72655ce648a3500a50862fbc0aba0558ede13a3e9149852420a"
+  "assessment_digest": "sha256:2db838947692a6a5a9461ea3158a1e02b6ee5c745dbd592425d8f48b3d9ae2a2"
 }

@@ -213,7 +213,7 @@ from .portfolio_continuity_runtime import (
     reconcile_current_projection,
     require_initialized_private_data_root,
 )
-from .portfolio_continuity_search import search_continuity
+from .portfolio_continuity_search import search_continuity_all_sources
 from .portfolio_continuity_hook_benchmark import (
     run_hook_performance_benchmark,
     run_hook_scale_harness,
@@ -11977,11 +11977,15 @@ def portfolio_continuity_recover(
     repo: Path = typer.Option(Path("."), "--repo"),
     codex_metadata_file: Optional[Path] = typer.Option(None, "--codex-metadata-file"),
     max_candidates: int = typer.Option(10, "--max-candidates", min=1, max=25),
+    config: Optional[Path] = typer.Option(None),
+    hub: Optional[Path] = typer.Option(None),
 ) -> None:
-    """Search bounded local evidence without selecting or merging an identity."""
+    """Search local and DAD evidence without selecting or merging an identity."""
     try:
-        result = search_continuity(
+        cfg = _cfg(config, hub)
+        result = search_continuity_all_sources(
             repo.resolve(),
+            cfg.repo_root,
             query,
             codex_metadata=(
                 _continuity_metadata(codex_metadata_file)

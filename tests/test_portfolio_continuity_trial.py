@@ -12,8 +12,10 @@ from digital_asset_directory.transport import init_data_root
 
 ZERO_FAILURES = {
     "missed_captures": 0,
+    "missed_recoveries": 0,
     "unnecessary_captures": 0,
     "harmful_captures": 0,
+    "false_duplicate_suggestions": 0,
     "false_merges": 0,
     "accidental_mutations": 0,
     "repeated_unchanged_asks": 0,
@@ -239,6 +241,8 @@ def test_historical_review_without_supervisor_attestation_remains_readable_but_f
         fixture_only=False,
     )
     del review["performance"]["supervisor_attestation_id"]
+    del review["failure_metrics"]["missed_recoveries"]
+    del review["failure_metrics"]["false_duplicate_suggestions"]
     material = {
         key: review[key]
         for key in (
@@ -272,7 +276,31 @@ def test_historical_review_without_supervisor_attestation_remains_readable_but_f
     assert state["status"] == "trial_incomplete"
     assert state["review_count"] == 1
     assert "supervisor_attestation_missing" in state["gate_failures"]
+    assert "failure_metric_missing:missed_recoveries" in state["gate_failures"]
+    assert (
+        "failure_metric_missing:false_duplicate_suggestions"
+        in state["gate_failures"]
+    )
     assert state["activation_authorized"] is False
+
+
+def test_current_trial_review_requires_recovery_and_duplicate_metrics() -> None:
+    legacy_metrics = {
+        key: value
+        for key, value in ZERO_FAILURES.items()
+        if key not in {"missed_recoveries", "false_duplicate_suggestions"}
+    }
+    with pytest.raises(
+        trial.ContinuityValidationError,
+        match="missed_recoveries, false_duplicate_suggestions",
+    ):
+        trial.build_fixture_trial_review(
+            trial_id="trial:v1",
+            reviewer_id="fixture",
+            snapshot_digest="sha256:" + "a" * 64,
+            failure_metrics=legacy_metrics,
+            recorded_at="2026-07-17T00:00:00+00:00",
+        )
 
 
 def test_production_review_requires_explicit_supervisor_attestation(

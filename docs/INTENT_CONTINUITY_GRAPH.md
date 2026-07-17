@@ -135,6 +135,12 @@ Recovery uses local evidence only and must never fetch:
 - bounded ref and worktree matching;
 - DAD plans, entities, accepted bindings, and explicit Codex metadata receipts.
 
+`asset-dir os continuity recover` joins those sources into one bounded,
+no-winner result. Git objects, dirty overlays, and Codex receipts remain
+path/content minimized; DAD plans, entities, families, skills, capabilities,
+and workflows retain their stable IDs and evidence references. Missing source
+classes remain explicit coverage gaps rather than a false all-clear.
+
 Missing, timed-out, corrupt, ignored, binary, oversized, or unavailable sources
 produce coverage gaps. They never produce a false all-clear result. Ref search
 persists match identities and hashes, not source snippets or blobs.
@@ -158,6 +164,15 @@ Views are:
 - possible-duplicate queue;
 - next-action queue, with at most three immediate asks;
 - archive candidates with separate task/worktree gates.
+
+Each repository cockpit carries repository-local current state, activity rows,
+queue slices and counts, closeout readiness counts, and coverage. The live
+status/reconciliation runtime conservatively derives duplicate-plan pairs and
+terminal closeout assessments instead of leaving those queues empty unless a
+test injects evidence. Automatic duplicate discovery first requires an exact
+normalized identity-token signature and then the established relation
+classifier; it is bounded to 250 plans and reports truncation as a coverage
+gap. No duplicate candidate is merged automatically.
 
 The objective's four action queues are `interrupted_resume`,
 `possible_duplicates`, `task_archive`, and `worktree_close`. The projection
@@ -303,6 +318,18 @@ The trial CLI no longer accepts free-form latency values. It validates the
 instrumented receipt's measurement identity, sample math, command digest,
 adapter revision, adapter-interface digest, silence, persistence, privacy, and
 unchanged-source result before recording a production-clock review.
+
+The current review contract also measures `missed_recoveries` and
+`false_duplicate_suggestions`. Historical rows without those fields remain
+readable but fail the current activation gate until current supervised reviews
+provide them.
+
+The projection includes a dormant `attention_readiness` contract. It renders a
+bounded session-start summary preview, reuses the existing changed-only weekly
+digest builder, and emits at most one generic breakpoint-prompt preview. Every
+preview records `delivery_authorized: false`; trial eligibility only opens a
+separate human-approval gate for the session summary and cannot skip ahead to a
+digest or breakpoint prompt.
 
 The first real-clock preflight review is intentionally non-qualifying: the
 installed npm CLI is older than the desktop host, its documented one-off trust

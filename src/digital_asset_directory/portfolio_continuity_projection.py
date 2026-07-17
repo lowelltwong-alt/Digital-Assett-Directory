@@ -9,6 +9,7 @@ from pathlib import Path
 from typing import Any, Iterable
 
 from .ids import stable_id
+from .portfolio_continuity_attention import build_progressive_attention_readiness
 from .portfolio_continuity_workflow import project_continuity_state
 from .transport import data_path, resolve_data_root
 from .utils import atomic_write_text, json_dumps
@@ -151,6 +152,8 @@ def build_continuity_projection(
     search_results: Iterable[dict[str, Any]] = (),
     closeout_assessments: Iterable[dict[str, Any]] = (),
     external_coverage_gaps: Iterable[str] = (),
+    activation_state: dict[str, Any] | None = None,
+    previous_weekly_fingerprints: Iterable[str] = (),
 ) -> dict[str, Any]:
     """Build deterministic graphs and humane queues from immutable evidence."""
 
@@ -348,7 +351,7 @@ def build_continuity_projection(
             repo_local_nodes.get(str(repository["repository_id"]), set())
         )
 
-    duplicate_queue: list[dict[str, Any]] = []
+    duplicate_queue_by_candidates: dict[tuple[str, ...], dict[str, Any]] = {}
     for result in search_results:
         candidates = list(result.get("candidates", []))
         if len(candidates) < 2:
@@ -362,7 +365,9 @@ def build_continuity_projection(
             "requires_human_decision": True,
             "candidate_only": True,
         }
-        duplicate_queue.append(row)
+        candidate_key = tuple(row["candidate_ids"])
+        duplicate_queue_by_candidates.setdefault(candidate_key, row)
+    duplicate_queue = list(duplicate_queue_by_candidates.values())
 
     current_state: list[dict[str, Any]] = []
     interrupted: list[dict[str, Any]] = []
@@ -471,6 +476,71 @@ def build_continuity_projection(
         "task_archive": sorted(task_archive, key=lambda row: row["assessment_id"]),
         "worktree_close": sorted(worktree_close, key=lambda row: row["assessment_id"]),
     }
+    repository_prefixes = [
+        str(repository["repository_id"]) + ":" for repository in repo_views
+    ]
+    for repository in repo_views:
+        local_ids = set(repository["node_ids"])
+
+        def local_queue(rows: Iterable[dict[str, Any]]) -> list[dict[str, Any]]:
+            return [
+                row
+                for row in rows
+                if (
+                    str(row.get("plan_id", "")) in local_ids
+                    or str(row.get("workstream_id", "")) in local_ids
+                    or bool(local_ids & set(row.get("candidate_ids", [])))
+                )
+            ]
+
+        local_queues = {
+            key: local_queue(value)
+            for key, value in queues.items()
+        }
+        local_activity = [
+            row for row in activity.values() if row["subject_id"] in local_ids
+        ]
+        repository_id = str(repository["repository_id"])
+        cockpit_gaps = sorted(
+            {
+                gap
+                for gap in coverage_gaps
+                if not any(gap.startswith(prefix) for prefix in repository_prefixes)
+                or gap.startswith(repository_id + ":")
+            }
+        )
+        repository["cockpit"] = {
+            "current_state": local_queues["current_state"],
+            "activity": sorted(local_activity, key=lambda row: row["subject_id"]),
+            "queues": local_queues,
+            "queue_counts": {
+                key: len(value) for key, value in local_queues.items()
+            },
+            "closeout_summary": {
+                "task_ready": sum(
+                    row.get("ready_for_human_decision") is True
+                    for row in local_queues["task_archive"]
+                ),
+                "task_blocked": sum(
+                    row.get("ready_for_human_decision") is not True
+                    for row in local_queues["task_archive"]
+                ),
+                "worktree_ready": sum(
+                    row.get("ready_for_human_decision") is True
+                    for row in local_queues["worktree_close"]
+                ),
+                "worktree_blocked": sum(
+                    row.get("ready_for_human_decision") is not True
+                    for row in local_queues["worktree_close"]
+                ),
+            },
+            "coverage": {
+                "status": "partial" if cockpit_gaps else "complete",
+                "gaps": cockpit_gaps,
+            },
+            "candidate_only": True,
+            "execution_authorized": False,
+        }
     material = {
         "repositories": repo_views,
         "graph": graph,
@@ -482,7 +552,7 @@ def build_continuity_projection(
             "repository_count": len(repo_views),
         },
     }
-    return {
+    projection = {
         "schema_version": SCHEMA_VERSION,
         "generated_at": _now(),
         **material,
@@ -491,6 +561,12 @@ def build_continuity_projection(
         "execution_authorized": False,
         "authority_boundary": AUTHORITY_BOUNDARY,
     }
+    projection["attention_readiness"] = build_progressive_attention_readiness(
+        projection,
+        activation_state=activation_state,
+        previous_weekly_fingerprints=previous_weekly_fingerprints,
+    )
+    return projection
 
 
 def write_continuity_projection(hub_root: Path, projection: dict[str, Any]) -> dict[str, Any]:

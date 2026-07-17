@@ -1,5 +1,10 @@
 from __future__ import annotations
 
+import json
+from pathlib import Path
+
+from jsonschema.validators import validator_for
+
 from digital_asset_directory.portfolio_continuity_projection import (
     build_continuity_projection,
     fold_continuity_activity,
@@ -184,6 +189,24 @@ def test_projection_is_rebuildable_has_global_repo_graph_and_all_queues() -> Non
     assert first["queues"]["possible_duplicates"][0]["primary_candidate_id"] == ""
     assert first["queues"]["task_archive"][0]["ready_for_human_decision"] is False
     assert first["queues"]["worktree_close"][0]["ready_for_human_decision"] is False
+    cockpit = first["repositories"][0]["cockpit"]
+    assert cockpit["current_state"][0]["plan_id"] == "plan:0"
+    assert cockpit["queue_counts"]["possible_duplicates"] == 0
+    assert cockpit["queue_counts"]["task_archive"] == 1
+    assert cockpit["closeout_summary"]["task_blocked"] == 1
+    assert cockpit["candidate_only"] is True
+    assert cockpit["execution_authorized"] is False
+
+    schema = json.loads(
+        (
+            Path(__file__).resolve().parents[1]
+            / "schemas"
+            / "portfolio-continuity-projection.schema.json"
+        ).read_text(encoding="utf-8")
+    )
+    validator_class = validator_for(schema)
+    validator_class.check_schema(schema)
+    validator_class(schema).validate(first)
 
 
 def test_projection_fingerprint_ignores_inventory_observation_time() -> None:
@@ -214,6 +237,10 @@ def test_external_private_root_gap_prevents_false_complete_coverage() -> None:
     assert projection["coverage"]["gaps"] == [
         "private_data_root_unavailable_for_current_hub"
     ]
+    assert projection["repositories"][0]["cockpit"]["coverage"] == {
+        "status": "partial",
+        "gaps": ["private_data_root_unavailable_for_current_hub"],
+    }
 
 
 def test_quiet_work_is_not_added_to_resume_or_next_action_queues() -> None:

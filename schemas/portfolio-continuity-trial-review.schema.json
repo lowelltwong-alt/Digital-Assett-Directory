@@ -29,8 +29,10 @@
       ],
       "properties": {
         "missed_captures": {"type": "integer", "minimum": 0},
+        "missed_recoveries": {"type": "integer", "minimum": 0},
         "unnecessary_captures": {"type": "integer", "minimum": 0},
         "harmful_captures": {"type": "integer", "minimum": 0},
+        "false_duplicate_suggestions": {"type": "integer", "minimum": 0},
         "false_merges": {"type": "integer", "minimum": 0},
         "accidental_mutations": {"type": "integer", "minimum": 0},
         "repeated_unchanged_asks": {"type": "integer", "minimum": 0},

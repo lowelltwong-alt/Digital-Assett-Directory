@@ -4,11 +4,11 @@
   "title": "DAD rebuildable Intent Continuity projection",
   "type": "object",
   "additionalProperties": false,
-  "required": ["schema_version", "generated_at", "repositories", "graph", "queues", "activity", "coverage", "projection_fingerprint", "candidate_only", "execution_authorized", "authority_boundary"],
+  "required": ["schema_version", "generated_at", "repositories", "graph", "queues", "activity", "coverage", "projection_fingerprint", "attention_readiness", "candidate_only", "execution_authorized", "authority_boundary"],
   "properties": {
     "schema_version": {"const": "dad.portfolio_continuity_projection.v1"},
     "generated_at": {"type": "string", "format": "date-time"},
-    "repositories": {"type": "array", "items": {"type": "object"}},
+    "repositories": {"type": "array", "items": {"$ref": "#/$defs/repository"}},
     "graph": {
       "type": "object",
       "additionalProperties": false,
@@ -44,8 +44,127 @@
       }
     },
     "projection_fingerprint": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"},
+    "attention_readiness": {
+      "type": "object",
+      "required": ["schema_version", "session_start_summary_preview", "weekly_digest_preview", "weekly_seen_fingerprints", "weekly_fingerprint_history_truncated", "breakpoint_prompt_preview", "automatic_cleanup_allowed", "candidate_only", "execution_authorized"],
+      "properties": {
+        "schema_version": {"const": "dad.portfolio_continuity_attention_readiness.v1"},
+        "session_start_summary_preview": {
+          "type": "object",
+          "required": ["items", "delivery_attempted", "delivery_authorized"],
+          "properties": {
+            "items": {"type": "array", "maxItems": 3},
+            "delivery_attempted": {"const": false},
+            "delivery_authorized": {"const": false}
+          }
+        },
+        "weekly_digest_preview": {
+          "type": "object",
+          "required": ["asks", "model_calls", "delivery", "candidate_only", "execution_authorized"],
+          "properties": {
+            "asks": {"type": "array", "maxItems": 3},
+            "model_calls": {"const": 0},
+            "delivery": {
+              "type": "object",
+              "required": ["attempted"],
+              "properties": {"attempted": {"const": false}}
+            },
+            "candidate_only": {"const": true},
+            "execution_authorized": {"const": false}
+          }
+        },
+        "weekly_seen_fingerprints": {"type": "array", "maxItems": 1000, "uniqueItems": true, "items": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"}},
+        "weekly_fingerprint_history_truncated": {"type": "boolean"},
+        "breakpoint_prompt_preview": {
+          "type": "object",
+          "required": ["allowed_responses", "delivery_attempted", "delivery_authorized"],
+          "properties": {
+            "allowed_responses": {"type": "array", "maxItems": 3},
+            "delivery_attempted": {"const": false},
+            "delivery_authorized": {"const": false}
+          }
+        },
+        "automatic_cleanup_allowed": {"const": false},
+        "candidate_only": {"const": true},
+        "execution_authorized": {"const": false}
+      }
+    },
     "candidate_only": {"const": true},
     "execution_authorized": {"const": false},
     "authority_boundary": {"type": "string", "minLength": 1}
+  },
+  "$defs": {
+    "queue_map": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["current_state", "interrupted_resume", "possible_duplicates", "next_actions", "next_actions_overflow", "task_archive", "worktree_close"],
+      "properties": {
+        "current_state": {"type": "array", "items": {"type": "object"}},
+        "interrupted_resume": {"type": "array", "items": {"type": "object"}},
+        "possible_duplicates": {"type": "array", "items": {"type": "object"}},
+        "next_actions": {"type": "array", "maxItems": 3, "items": {"type": "object"}},
+        "next_actions_overflow": {"type": "array", "items": {"type": "object"}},
+        "task_archive": {"type": "array", "items": {"type": "object"}},
+        "worktree_close": {"type": "array", "items": {"type": "object"}}
+      }
+    },
+    "queue_counts": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["current_state", "interrupted_resume", "possible_duplicates", "next_actions", "next_actions_overflow", "task_archive", "worktree_close"],
+      "properties": {
+        "current_state": {"type": "integer", "minimum": 0},
+        "interrupted_resume": {"type": "integer", "minimum": 0},
+        "possible_duplicates": {"type": "integer", "minimum": 0},
+        "next_actions": {"type": "integer", "minimum": 0, "maximum": 3},
+        "next_actions_overflow": {"type": "integer", "minimum": 0},
+        "task_archive": {"type": "integer", "minimum": 0},
+        "worktree_close": {"type": "integer", "minimum": 0}
+      }
+    },
+    "repository": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["repository_id", "node_ids", "coverage_gaps", "source_fingerprint", "cockpit"],
+      "properties": {
+        "repository_id": {"type": "string", "minLength": 1},
+        "node_ids": {"type": "array", "uniqueItems": true, "items": {"type": "string"}},
+        "coverage_gaps": {"type": "array", "uniqueItems": true, "items": {"type": "string"}},
+        "source_fingerprint": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"},
+        "cockpit": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["current_state", "activity", "queues", "queue_counts", "closeout_summary", "coverage", "candidate_only", "execution_authorized"],
+          "properties": {
+            "current_state": {"type": "array", "items": {"type": "object"}},
+            "activity": {"type": "array", "items": {"type": "object"}},
+            "queues": {"$ref": "#/$defs/queue_map"},
+            "queue_counts": {"$ref": "#/$defs/queue_counts"},
+            "closeout_summary": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["task_ready", "task_blocked", "worktree_ready", "worktree_blocked"],
+              "properties": {
+                "task_ready": {"type": "integer", "minimum": 0},
+                "task_blocked": {"type": "integer", "minimum": 0},
+                "worktree_ready": {"type": "integer", "minimum": 0},
+                "worktree_blocked": {"type": "integer", "minimum": 0}
+              }
+            },
+            "coverage": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["status", "gaps"],
+              "properties": {
+                "status": {"enum": ["complete", "partial"]},
+                "gaps": {"type": "array", "uniqueItems": true, "items": {"type": "string"}}
+              }
+            },
+            "candidate_only": {"const": true},
+            "execution_authorized": {"const": false}
+          }
+        }
+      }
+    }
   }
 }

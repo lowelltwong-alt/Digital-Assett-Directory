@@ -19,6 +19,7 @@ from .portfolio_continuity_inventory import (
     _run,
     _tokenize,
 )
+from .portfolio_related_work import search_related_work
 
 
 SCHEMA_VERSION = "dad.portfolio_continuity_search.v1"
@@ -451,6 +452,115 @@ def search_continuity(
     }
 
 
+def search_continuity_all_sources(
+    repo_root: Path,
+    hub_root: Path,
+    query: str,
+    *,
+    codex_metadata: Iterable[Mapping[str, Any]] | None = None,
+    max_candidates: int = 10,
+    runner: GitRunner | None = None,
+) -> dict[str, Any]:
+    """Search Git, overlays, Codex metadata, and DAD durable identities together."""
+
+    local = search_continuity(
+        repo_root,
+        query,
+        codex_metadata=codex_metadata,
+        max_candidates=max_candidates,
+        runner=runner,
+    )
+    try:
+        related = search_related_work(
+            repo_root,
+            hub_root,
+            query,
+            privacy_partition="private",
+            limit=min(max_candidates, 5),
+        )
+    except (OSError, RuntimeError, ValueError):
+        related = {
+            "candidates": [],
+            "coverage": {
+                "returned_count": 0,
+                "unavailable_sources": ["dad_durable_identity_surfaces"],
+                "model_calls": 0,
+            },
+            "authority_boundary": "DAD related-work evidence was unavailable.",
+        }
+    candidates = list(local["candidates"])
+    seen = {str(row["candidate_id"]) for row in candidates}
+    for row in related.get("candidates", []):
+        candidate_id = str(row.get("candidate_id", ""))
+        if not candidate_id or candidate_id in seen:
+            continue
+        seen.add(candidate_id)
+        candidates.append(
+            {
+                "candidate_id": candidate_id,
+                "source_kind": "dad_" + str(row.get("candidate_kind", "unknown")),
+                "title": str(row.get("title", "")),
+                "matched_fields": ["dad_durable_metadata"],
+                "deterministic_score": float(row.get("deterministic_score", 0.0)),
+                "evidence_refs": list(row.get("evidence_refs", [])),
+                "relation_candidate": str(row.get("relation_candidate", "")),
+                "candidate_only": True,
+                "execution_authorized": False,
+            }
+        )
+    candidates.sort(
+        key=lambda row: (
+            -float(row.get("deterministic_score", 0.0)),
+            str(row.get("source_kind", "")),
+            str(row.get("candidate_id", "")),
+        )
+    )
+    candidates = candidates[:max_candidates]
+    if not candidates:
+        classification = "insufficient_evidence"
+    elif (
+        len(candidates) > 1
+        and candidates[0].get("deterministic_score")
+        == candidates[1].get("deterministic_score")
+    ):
+        classification = "ambiguous_no_winner"
+    else:
+        classification = "candidate_set_no_winner"
+    related_unavailable = list(
+        related.get("coverage", {}).get("unavailable_sources", [])
+    )
+    return {
+        "schema_version": "dad.portfolio_continuity_search.v2",
+        "query_digest": local["query_digest"],
+        "repository_id": local["repository_id"],
+        "classification": classification,
+        "primary_candidate_id": "",
+        "candidates": candidates,
+        "coverage": {
+            "local": local["coverage"],
+            "dad": related.get("coverage", {}),
+            "gaps": sorted(
+                {
+                    *local["coverage"].get("gaps", []),
+                    *(
+                        f"dad_source_unavailable:{value}"
+                        for value in related_unavailable
+                    ),
+                }
+            ),
+            "candidates_returned": len(candidates),
+            "network_calls": 0,
+            "git_writes": 0,
+            "model_calls": 0,
+        },
+        "candidate_only": True,
+        "execution_authorized": False,
+        "authority_boundary": AUTHORITY_BOUNDARY,
+        "inventory_authority_boundary": INVENTORY_AUTHORITY_BOUNDARY,
+        "related_work_authority_boundary": related.get("authority_boundary", ""),
+    }
+
+
 search_repository_inventory = search_continuity
 
 
@@ -458,5 +568,6 @@ __all__ = [
     "AUTHORITY_BOUNDARY",
     "SCHEMA_VERSION",
     "search_continuity",
+    "search_continuity_all_sources",
     "search_repository_inventory",
 ]

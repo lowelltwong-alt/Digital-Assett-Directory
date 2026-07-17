@@ -5,8 +5,14 @@ import os
 from pathlib import Path
 import subprocess
 
+import pytest
+
 from digital_asset_directory import portfolio_continuity_inventory as inventory
-from digital_asset_directory.portfolio_continuity_search import search_continuity
+from digital_asset_directory import portfolio_continuity_search as continuity_search
+from digital_asset_directory.portfolio_continuity_search import (
+    search_continuity,
+    search_continuity_all_sources,
+)
 
 
 def _git(repo: Path, *args: str) -> str:
@@ -188,3 +194,69 @@ def test_search_uses_explicit_codex_metadata_privately_and_no_network_commands(
     assert task_id not in serialized
     assert title not in serialized
     assert r"C:\Users\lowel" not in serialized
+
+
+def test_unified_search_includes_dad_plan_entity_and_registry_candidates(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    repo = _repo(tmp_path)
+    monkeypatch.setattr(
+        continuity_search,
+        "search_related_work",
+        lambda *_a, **_k: {
+            "candidates": [
+                {
+                    "candidate_id": "dad:portfolio-plan:hybrid-ai",
+                    "candidate_kind": "plan",
+                    "title": "Hybrid AI architecture",
+                    "deterministic_score": 1.0,
+                    "evidence_refs": ["plan-revision:one"],
+                    "relation_candidate": "possible_duplicate_of",
+                },
+                {
+                    "candidate_id": "family:cloud-platform-sre",
+                    "candidate_kind": "agent_family",
+                    "title": "Cloud Platform SRE",
+                    "deterministic_score": 0.8,
+                    "evidence_refs": ["registry/agent-family-portfolio-registry.json"],
+                    "relation_candidate": "possible_duplicate_of",
+                },
+            ],
+            "coverage": {
+                "returned_count": 2,
+                "unavailable_sources": [],
+                "model_calls": 0,
+            },
+            "authority_boundary": "candidate only",
+        },
+    )
+
+    packet = search_continuity_all_sources(
+        repo, tmp_path / "hub", "hybrid ai architecture"
+    )
+
+    source_kinds = {row["source_kind"] for row in packet["candidates"]}
+    assert {"dad_plan", "dad_agent_family"} <= source_kinds
+    assert packet["schema_version"] == "dad.portfolio_continuity_search.v2"
+    assert packet["primary_candidate_id"] == ""
+    assert packet["coverage"]["network_calls"] == 0
+    assert packet["coverage"]["git_writes"] == 0
+    assert packet["coverage"]["model_calls"] == 0
+
+
+def test_unified_search_degrades_corrupt_dad_identity_state_to_coverage_gap(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    repo = _repo(tmp_path)
+    monkeypatch.setattr(
+        continuity_search,
+        "search_related_work",
+        lambda *_a, **_k: (_ for _ in ()).throw(RuntimeError("corrupt private row")),
+    )
+
+    packet = search_continuity_all_sources(repo, tmp_path / "hub", "hybrid architecture")
+
+    assert "dad_source_unavailable:dad_durable_identity_surfaces" in packet["coverage"]["gaps"]
+    assert "corrupt private row" not in json.dumps(packet)
+    assert packet["candidate_only"] is True
+    assert packet["execution_authorized"] is False
