@@ -194,12 +194,53 @@ from .portfolio_intents import (
 )
 from .portfolio_related_work import search_related_work
 from .portfolio_build_recovery import build_recovery_bundle
+from .portfolio_roadmap import (
+    fold_roadmap,
+    read_roadmap_events,
+    record_roadmap_item,
+    transition_roadmap_item,
+)
+from .portfolio_continuity_workflow import (
+    assess_closeout,
+    build_manual_workflow_status,
+    build_resume_packet,
+)
+from .portfolio_continuity_adapter import ingest_receipt_file
+from .portfolio_continuity_inventory import build_continuity_inventory
+from .portfolio_continuity_runtime import (
+    ContinuityRuntimeError,
+    build_current_projection,
+    reconcile_current_projection,
+    require_initialized_private_data_root,
+)
+from .portfolio_continuity_search import search_continuity
+from .portfolio_continuity_hook_benchmark import (
+    run_hook_performance_benchmark,
+    run_hook_scale_harness,
+    validate_hook_performance_evidence,
+    write_hook_performance_evidence,
+    write_hook_scale_evidence,
+)
+from .portfolio_continuity_host_readiness import (
+    HostReadinessError,
+    build_codex_host_readiness,
+    host_readiness_binding_failures,
+    host_readiness_recording_failures,
+    latest_host_readiness_assessment,
+    record_host_readiness_assessment,
+    validate_host_readiness_assessment,
+)
+from .portfolio_continuity_events import ContinuityIntegrityError
+from .portfolio_continuity_trial import (
+    evaluate_trial,
+    read_trial_reviews,
+    record_production_trial_review,
+)
 from .portfolio_weekly_digest import build_weekly_digest, metadata_safe_toast, write_weekly_digest
 from .entity_identity import (
     fold_state as fold_entity_state,
     read_events as read_entity_events,
     semantic_card,
-    register_entity,
     record_identity_decision,
 )
 from .entity_matching import find_candidates
@@ -540,6 +581,8 @@ os_app = typer.Typer(no_args_is_help=True)
 app.add_typer(os_app, name="os")
 plan_app = typer.Typer(no_args_is_help=True)
 os_app.add_typer(plan_app, name="plan")
+continuity_app = typer.Typer(no_args_is_help=True)
+os_app.add_typer(continuity_app, name="continuity")
 intent_app = typer.Typer(no_args_is_help=True)
 os_app.add_typer(intent_app, name="intent")
 recovery_app = typer.Typer(no_args_is_help=True)
@@ -11694,6 +11737,559 @@ def portfolio_plan_close(
         raise typer.BadParameter("close supports only withdrawn or superseded")
     cfg = _cfg(config, hub)
     console.print_json(data=revise_plan(cfg.repo_root, plan_id, lifecycle=lifecycle, request_id=request_id))
+
+
+@plan_app.command("accept")
+def portfolio_plan_accept(
+    plan_id: str = typer.Argument(...),
+    acceptance_evidence: list[str] = typer.Option(..., "--acceptance-evidence"),
+    independent_check_ref: str = typer.Option(..., "--independent-check-ref"),
+    producer_ref: str = typer.Option(..., "--producer-ref"),
+    independent_checker_ref: str = typer.Option(..., "--independent-checker-ref"),
+    request_id: str = typer.Option("", "--request-id"),
+    config: Optional[Path] = typer.Option(None),
+    hub: Optional[Path] = typer.Option(None),
+) -> None:
+    """Record evidence-gated verified completion of the exact current revision."""
+    cfg = _cfg(config, hub)
+    current = load_plan_revision(cfg.repo_root, plan_id)
+    console.print_json(
+        data=revise_plan(
+            cfg.repo_root,
+            plan_id,
+            implementation_state="verified_complete",
+            acceptance_evidence=acceptance_evidence,
+            independent_check_ref=independent_check_ref,
+            producer_ref=producer_ref,
+            independent_checker_ref=independent_checker_ref,
+            validated_plan_revision_id=str(current["revision_id"]),
+            request_id=request_id,
+        )
+    )
+
+
+@plan_app.command("roadmap-add")
+def portfolio_plan_roadmap_add(
+    plan_id: str = typer.Argument(...),
+    title: str = typer.Option(..., "--title"),
+    outcome: str = typer.Option(..., "--outcome"),
+    acceptance_criteria: list[str] = typer.Option(..., "--acceptance-criteria"),
+    dependency_item_id: list[str] = typer.Option([], "--dependency-item-id"),
+    request_id: str = typer.Option("", "--request-id"),
+    config: Optional[Path] = typer.Option(None),
+    hub: Optional[Path] = typer.Option(None),
+) -> None:
+    """Add a private structured roadmap item without creating execution work."""
+    cfg = _cfg(config, hub)
+    load_plan_revision(cfg.repo_root, plan_id)
+    console.print_json(
+        data=record_roadmap_item(
+            cfg.repo_root,
+            plan_id=plan_id,
+            title=title,
+            outcome=outcome,
+            acceptance_criteria=acceptance_criteria,
+            dependency_item_ids=dependency_item_id,
+            request_id=request_id,
+        )
+    )
+
+
+@plan_app.command("roadmap-transition")
+def portfolio_plan_roadmap_transition(
+    item_id: str = typer.Argument(...),
+    status: str = typer.Option(..., "--status"),
+    human_approval_ref: str = typer.Option(..., "--human-approval-ref"),
+    acceptance_evidence: list[str] = typer.Option([], "--acceptance-evidence"),
+    independent_check_ref: str = typer.Option("", "--independent-check-ref"),
+    producer_ref: str = typer.Option("", "--producer-ref"),
+    independent_checker_ref: str = typer.Option("", "--independent-checker-ref"),
+    request_id: str = typer.Option("", "--request-id"),
+    config: Optional[Path] = typer.Option(None),
+    hub: Optional[Path] = typer.Option(None),
+) -> None:
+    """Record a human-approved roadmap overlay transition; never execute it."""
+    cfg = _cfg(config, hub)
+    console.print_json(
+        data=transition_roadmap_item(
+            cfg.repo_root,
+            item_id=item_id,
+            status=status,
+            human_approval_ref=human_approval_ref,
+            acceptance_evidence=acceptance_evidence,
+            independent_check_ref=independent_check_ref,
+            producer_ref=producer_ref,
+            independent_checker_ref=independent_checker_ref,
+            request_id=request_id,
+        )
+    )
+
+
+@plan_app.command("roadmap-status")
+def portfolio_plan_roadmap_status(
+    plan_id: str = typer.Option("", "--plan-id"),
+    config: Optional[Path] = typer.Option(None),
+    hub: Optional[Path] = typer.Option(None),
+) -> None:
+    """Project current evidence-gated roadmap state."""
+    cfg = _cfg(config, hub)
+    console.print_json(data=fold_roadmap(read_roadmap_events(cfg.repo_root), plan_id=plan_id))
+
+
+def _load_optional_json(path: Optional[Path]) -> Any:
+    return json.loads(path.read_text(encoding="utf-8")) if path else None
+
+
+@plan_app.command("resume")
+def portfolio_plan_resume(
+    plan_id: str = typer.Argument(...),
+    workstream_file: Optional[Path] = typer.Option(None, "--workstream-file"),
+    execution_file: Optional[Path] = typer.Option(None, "--execution-file"),
+    recovery_file: Optional[Path] = typer.Option(None, "--recovery-file"),
+    activity_file: Optional[Path] = typer.Option(None, "--activity-file"),
+    config: Optional[Path] = typer.Option(None),
+    hub: Optional[Path] = typer.Option(None),
+) -> None:
+    """Build a compact read-only resume packet for an exact plan revision."""
+    cfg = _cfg(config, hub)
+    plan = next(
+        (row for row in fold_plan_index(read_intent_events(cfg.repo_root))["plans"] if row["plan_id"] == plan_id),
+        None,
+    )
+    if plan is None:
+        raise typer.BadParameter(f"unknown plan: {plan_id}")
+    console.print_json(
+        data=build_resume_packet(
+            plan=plan,
+            workstream=_load_optional_json(workstream_file),
+            execution_control=_load_optional_json(execution_file),
+            recovery_bundle=_load_optional_json(recovery_file),
+            activity=_load_optional_json(activity_file),
+        )
+    )
+
+
+@plan_app.command("archive-assess")
+def portfolio_plan_archive_assess(
+    plan_id: str = typer.Argument(...),
+    workstream_file: Optional[Path] = typer.Option(None, "--workstream-file"),
+    execution_file: Optional[Path] = typer.Option(None, "--execution-file"),
+    recovery_file: Optional[Path] = typer.Option(None, "--recovery-file"),
+    task_file: Optional[Path] = typer.Option(None, "--task-file"),
+    preserved_handoff_ref: str = typer.Option("", "--preserved-handoff-ref"),
+    branch_pr_disposition_ref: str = typer.Option("", "--branch-pr-disposition-ref"),
+    config: Optional[Path] = typer.Option(None),
+    hub: Optional[Path] = typer.Option(None),
+) -> None:
+    """Assess task archive and worktree removal separately; perform neither."""
+    cfg = _cfg(config, hub)
+    plan = next(
+        (row for row in fold_plan_index(read_intent_events(cfg.repo_root))["plans"] if row["plan_id"] == plan_id),
+        None,
+    )
+    if plan is None:
+        raise typer.BadParameter(f"unknown plan: {plan_id}")
+    console.print_json(
+        data=assess_closeout(
+            plan=plan,
+            workstream=_load_optional_json(workstream_file),
+            execution_control=_load_optional_json(execution_file),
+            recovery_bundle=_load_optional_json(recovery_file),
+            task_observation=_load_optional_json(task_file),
+            preserved_handoff_ref=preserved_handoff_ref,
+            branch_pr_disposition_ref=branch_pr_disposition_ref,
+        )
+    )
+
+
+@plan_app.command("workflow-status")
+def portfolio_plan_workflow_status(
+    plan_id: str = typer.Argument(...),
+    workstream_file: Optional[Path] = typer.Option(None, "--workstream-file"),
+    execution_file: Optional[Path] = typer.Option(None, "--execution-file"),
+    recovery_file: Optional[Path] = typer.Option(None, "--recovery-file"),
+    task_file: Optional[Path] = typer.Option(None, "--task-file"),
+    activity_file: Optional[Path] = typer.Option(None, "--activity-file"),
+    preserved_handoff_ref: str = typer.Option("", "--preserved-handoff-ref"),
+    branch_pr_disposition_ref: str = typer.Option("", "--branch-pr-disposition-ref"),
+    config: Optional[Path] = typer.Option(None),
+    hub: Optional[Path] = typer.Option(None),
+) -> None:
+    """Show capture-to-archive-assessment progress for one exact plan."""
+    cfg = _cfg(config, hub)
+    plan = next(
+        (row for row in fold_plan_index(read_intent_events(cfg.repo_root))["plans"] if row["plan_id"] == plan_id),
+        None,
+    )
+    if plan is None:
+        raise typer.BadParameter(f"unknown plan: {plan_id}")
+    console.print_json(
+        data=build_manual_workflow_status(
+            plan=plan,
+            roadmap=fold_roadmap(read_roadmap_events(cfg.repo_root), plan_id=plan_id),
+            workstream=_load_optional_json(workstream_file),
+            execution_control=_load_optional_json(execution_file),
+            recovery_bundle=_load_optional_json(recovery_file),
+            task_observation=_load_optional_json(task_file),
+            activity=_load_optional_json(activity_file),
+            preserved_handoff_ref=preserved_handoff_ref,
+            branch_pr_disposition_ref=branch_pr_disposition_ref,
+        )
+    )
+
+
+def _continuity_metadata(path: Optional[Path]) -> list[dict[str, Any]]:
+    if path is None:
+        return []
+    value = json.loads(path.read_text(encoding="utf-8"))
+    if not isinstance(value, list) or any(not isinstance(row, dict) for row in value):
+        raise typer.BadParameter("Codex metadata file must contain a JSON array of objects")
+    return value
+
+
+def _continuity_roots(repo: list[Path], *, default_root: Path) -> list[Path]:
+    return [path.resolve() for path in (repo or [default_root])]
+
+
+@continuity_app.command("scan")
+def portfolio_continuity_scan(
+    repo: Path = typer.Option(Path("."), "--repo"),
+    codex_metadata_file: Optional[Path] = typer.Option(None, "--codex-metadata-file"),
+) -> None:
+    """Read local refs, worktrees, dirty overlays, and supplied task metadata."""
+    try:
+        result = build_continuity_inventory(
+            repo.resolve(),
+            codex_metadata=(
+                _continuity_metadata(codex_metadata_file)
+                if codex_metadata_file is not None
+                else None
+            ),
+        )
+    except (OSError, ValueError, json.JSONDecodeError) as exc:
+        raise typer.BadParameter(str(exc)) from exc
+    console.print_json(data=result)
+
+
+@continuity_app.command("recover")
+def portfolio_continuity_recover(
+    query: str = typer.Argument(...),
+    repo: Path = typer.Option(Path("."), "--repo"),
+    codex_metadata_file: Optional[Path] = typer.Option(None, "--codex-metadata-file"),
+    max_candidates: int = typer.Option(10, "--max-candidates", min=1, max=25),
+) -> None:
+    """Search bounded local evidence without selecting or merging an identity."""
+    try:
+        result = search_continuity(
+            repo.resolve(),
+            query,
+            codex_metadata=(
+                _continuity_metadata(codex_metadata_file)
+                if codex_metadata_file is not None
+                else None
+            ),
+            max_candidates=max_candidates,
+        )
+    except (OSError, ValueError, json.JSONDecodeError) as exc:
+        raise typer.BadParameter(str(exc)) from exc
+    console.print_json(data=result)
+
+
+@continuity_app.command("status")
+def portfolio_continuity_status(
+    repo: list[Path] = typer.Option([], "--repo"),
+    codex_metadata_file: Optional[Path] = typer.Option(None, "--codex-metadata-file"),
+    view: str = typer.Option(
+        "summary", "--view", help="summary | graph | queues | full"
+    ),
+    config: Optional[Path] = typer.Option(None),
+    hub: Optional[Path] = typer.Option(None),
+) -> None:
+    """Rebuild an in-memory global continuity cockpit without persisting it."""
+    if view not in {"summary", "graph", "queues", "full"}:
+        raise typer.BadParameter("view must be summary, graph, queues, or full")
+    cfg = _cfg(config, hub)
+    roots = _continuity_roots(repo, default_root=cfg.repo_root)
+    if codex_metadata_file is not None and len(roots) != 1:
+        raise typer.BadParameter("--codex-metadata-file requires exactly one --repo")
+    metadata = (
+        {str(roots[0]): _continuity_metadata(codex_metadata_file)}
+        if codex_metadata_file is not None
+        else None
+    )
+    projection = build_current_projection(
+        cfg.repo_root,
+        repo_roots=roots,
+        codex_metadata_by_root=metadata,
+    )
+    if view == "graph":
+        output: dict[str, Any] = projection["graph"]
+    elif view == "queues":
+        output = projection["queues"]
+    elif view == "full":
+        output = projection
+    else:
+        output = {
+            "schema_version": projection["schema_version"],
+            "projection_fingerprint": projection["projection_fingerprint"],
+            "repository_count": len(projection["repositories"]),
+            "node_count": len(projection["graph"]["nodes"]),
+            "edge_count": len(projection["graph"]["edges"]),
+            "queue_counts": {
+                key: len(value) for key, value in projection["queues"].items()
+            },
+            "coverage": projection["coverage"],
+            "candidate_only": True,
+            "execution_authorized": False,
+            "authority_boundary": projection["authority_boundary"],
+        }
+    console.print_json(data=output)
+
+
+@continuity_app.command("reconcile")
+def portfolio_continuity_reconcile(
+    repo: list[Path] = typer.Option([], "--repo"),
+    codex_metadata_file: Optional[Path] = typer.Option(None, "--codex-metadata-file"),
+    config: Optional[Path] = typer.Option(None),
+    hub: Optional[Path] = typer.Option(None),
+) -> None:
+    """Persist only rebuildable projections; never mutate a source system."""
+    cfg = _cfg(config, hub)
+    roots = _continuity_roots(repo, default_root=cfg.repo_root)
+    if codex_metadata_file is not None and len(roots) != 1:
+        raise typer.BadParameter("--codex-metadata-file requires exactly one --repo")
+    metadata = (
+        {str(roots[0]): _continuity_metadata(codex_metadata_file)}
+        if codex_metadata_file is not None
+        else None
+    )
+    try:
+        result = reconcile_current_projection(
+            cfg.repo_root,
+            repo_roots=roots,
+            codex_metadata_by_root=metadata,
+        )
+    except ContinuityRuntimeError as exc:
+        raise typer.BadParameter(str(exc)) from exc
+    console.print_json(data=result)
+
+
+@continuity_app.command("observe")
+def portfolio_continuity_observe(
+    receipt_file: Path = typer.Option(..., "--receipt-file"),
+    config: Optional[Path] = typer.Option(None),
+    hub: Optional[Path] = typer.Option(None),
+) -> None:
+    """Ingest one minimized provider-neutral shadow receipt, silently."""
+    cfg = _cfg(config, hub)
+    try:
+        require_initialized_private_data_root(cfg.repo_root)
+        result = ingest_receipt_file(cfg.repo_root, receipt_file.resolve())
+    except (ContinuityRuntimeError, OSError, ValueError, json.JSONDecodeError) as exc:
+        raise typer.BadParameter(str(exc)) from exc
+    console.print_json(data=result)
+
+
+@continuity_app.command("benchmark-hook")
+def portfolio_continuity_benchmark_hook(
+    output: Path = typer.Option(..., "--output"),
+    sample_count: int = typer.Option(5, "--sample-count", min=5, max=100),
+    latency_budget_ms: float = typer.Option(1500.0, "--latency-budget-ms", min=0.001),
+) -> None:
+    """Write exact, synthetic, revision-bound Codex hook performance evidence."""
+
+    repo_root = find_repo_root(Path.cwd()).resolve()
+    try:
+        evidence = run_hook_performance_benchmark(
+            repo_root,
+            sample_count=sample_count,
+            latency_budget_ms=latency_budget_ms,
+        )
+        write_hook_performance_evidence(output.resolve(), evidence)
+    except (OSError, ValueError, subprocess.SubprocessError) as exc:
+        raise typer.BadParameter(str(exc)) from exc
+    console.print_json(data=evidence)
+
+
+@continuity_app.command("benchmark-hook-scale")
+def portfolio_continuity_benchmark_hook_scale(
+    output: Path = typer.Option(..., "--output"),
+) -> None:
+    """Write exact cold/warm 0, 1K, and 10K hook scale evidence."""
+
+    repo_root = find_repo_root(Path.cwd()).resolve()
+    try:
+        evidence = run_hook_scale_harness(repo_root)
+        write_hook_scale_evidence(output.resolve(), evidence)
+    except (OSError, ValueError, subprocess.SubprocessError) as exc:
+        raise typer.BadParameter(str(exc)) from exc
+    console.print_json(data=evidence)
+
+
+@continuity_app.command("host-readiness")
+def portfolio_continuity_host_readiness(
+    repo: Path = typer.Option(Path("."), "--repo"),
+    project_trust_status: str = typer.Option("unverified", "--project-trust-status"),
+    hook_trust_status: str = typer.Option("unverified", "--hook-trust-status"),
+    hook_discovery_status: str = typer.Option(
+        "unverified", "--hook-discovery-status"
+    ),
+    reviewed_hook_definition_digest: str = typer.Option(
+        "", "--reviewed-hook-definition-digest"
+    ),
+    reviewer_id: str = typer.Option("", "--reviewer-id"),
+    reviewed_at: str = typer.Option("", "--reviewed-at"),
+    dispatch_observer_id: str = typer.Option("", "--dispatch-observer-id"),
+    dispatch_attested_at: str = typer.Option("", "--dispatch-attested-at"),
+    attested_event_id: str = typer.Option("", "--attested-event-id"),
+    codex_version: str = typer.Option("", "--codex-version"),
+    record: bool = typer.Option(False, "--record"),
+    config: Optional[Path] = typer.Option(None),
+    hub: Optional[Path] = typer.Option(None),
+) -> None:
+    """Assess readiness; --record explicitly appends private candidate evidence."""
+
+    cfg = _cfg(config, hub)
+    try:
+        result = build_codex_host_readiness(
+            repo.resolve(),
+            cfg.repo_root,
+            project_trust_status=project_trust_status,
+            hook_trust_status=hook_trust_status,
+            hook_discovery_status=hook_discovery_status,
+            reviewed_hook_definition_digest=reviewed_hook_definition_digest,
+            reviewer_id=reviewer_id,
+            reviewed_at=reviewed_at,
+            dispatch_observer_id=dispatch_observer_id,
+            dispatch_attested_at=dispatch_attested_at,
+            attested_event_id=attested_event_id,
+            codex_version=codex_version,
+        )
+        recording_status = (
+            record_host_readiness_assessment(repo.resolve(), cfg.repo_root, result)
+            if record
+            else "not_requested"
+        )
+    except (
+        ContinuityIntegrityError,
+        HostReadinessError,
+        OSError,
+        ValueError,
+        json.JSONDecodeError,
+    ) as exc:
+        raise typer.BadParameter(str(exc)) from exc
+    console.print_json(
+        data=(
+            {"recording_status": recording_status, "assessment": result}
+            if record
+            else result
+        )
+    )
+
+
+@continuity_app.command("trial-review")
+def portfolio_continuity_trial_review(
+    trial_id: str = typer.Option(..., "--trial-id"),
+    reviewer_id: str = typer.Option(..., "--reviewer-id"),
+    snapshot_digest: str = typer.Option(..., "--snapshot-digest"),
+    metrics_file: Path = typer.Option(..., "--metrics-file"),
+    performance_evidence: Path = typer.Option(..., "--performance-evidence"),
+    supervisor_attestation_id: str = typer.Option(..., "--supervisor-attestation-id"),
+    useful_capture_count: int = typer.Option(0, "--useful-capture-count", min=0),
+    eligible_plan_count: int = typer.Option(0, "--eligible-plan-count", min=0),
+    max_asks_in_digest: int = typer.Option(0, "--max-asks-in-digest", min=0),
+    notification_content_safe: bool = typer.Option(
+        True, "--notification-content-safe/--notification-content-unsafe"
+    ),
+    config: Optional[Path] = typer.Option(None),
+    hub: Optional[Path] = typer.Option(None),
+) -> None:
+    """Record one real-clock supervised shadow review; fixtures cannot use this path."""
+    cfg = _cfg(config, hub)
+    try:
+        require_initialized_private_data_root(cfg.repo_root)
+        metrics = json.loads(metrics_file.read_text(encoding="utf-8"))
+        if not isinstance(metrics, dict):
+            raise ValueError("metrics file must contain one JSON object")
+        measured = json.loads(performance_evidence.read_text(encoding="utf-8"))
+        if not isinstance(measured, dict):
+            raise ValueError("performance evidence must contain one JSON object")
+        measured = validate_hook_performance_evidence(find_repo_root(Path.cwd()), measured)
+        from .portability_control import canonical_digest
+
+        result = record_production_trial_review(
+            cfg.repo_root,
+            trial_id=trial_id,
+            reviewer_id=reviewer_id,
+            snapshot_digest=snapshot_digest,
+            failure_metrics=metrics,
+            hook_sample_count=int(measured["sample_count"]),
+            hook_latency_ms_p95=float(measured["latency_ms_p95"]),
+            hook_latency_budget_ms=float(measured["latency_budget_ms"]),
+            performance_evidence_digest=canonical_digest(measured),
+            adapter_interface_digest=str(measured["adapter_interface_digest"]),
+            performance_measurement_origin="instrumented_harness",
+            supervisor_attestation_id=supervisor_attestation_id,
+            useful_capture_count=useful_capture_count,
+            eligible_plan_count=eligible_plan_count,
+            max_asks_in_digest=max_asks_in_digest,
+            notification_content_safe=notification_content_safe,
+        )
+    except (ContinuityRuntimeError, OSError, ValueError, json.JSONDecodeError) as exc:
+        raise typer.BadParameter(str(exc)) from exc
+    console.print_json(data=result)
+
+
+@continuity_app.command("activation-check")
+def portfolio_continuity_activation_check(
+    trial_id: str = typer.Option(..., "--trial-id"),
+    repo: Path = typer.Option(Path("."), "--repo"),
+    host_readiness_evidence: Optional[Path] = typer.Option(
+        None, "--host-readiness-evidence"
+    ),
+    config: Optional[Path] = typer.Option(None),
+    hub: Optional[Path] = typer.Option(None),
+) -> None:
+    """Evaluate trial eligibility without activating hooks or notifications."""
+    cfg = _cfg(config, hub)
+    try:
+        reviews = read_trial_reviews(cfg.repo_root)
+        if host_readiness_evidence is not None:
+            host_assessment = json.loads(
+                host_readiness_evidence.read_text(encoding="utf-8")
+            )
+            if not isinstance(host_assessment, dict):
+                raise ValueError("host-readiness evidence must contain one JSON object")
+            validate_host_readiness_assessment(repo.resolve(), host_assessment)
+        else:
+            host_assessment = latest_host_readiness_assessment(
+                repo.resolve(), cfg.repo_root
+            )
+        binding_failures = (
+            [
+                *host_readiness_binding_failures(repo.resolve(), host_assessment),
+                *host_readiness_recording_failures(
+                    repo.resolve(), cfg.repo_root, host_assessment
+                ),
+            ]
+            if host_assessment is not None
+            else []
+        )
+        result = evaluate_trial(
+            reviews,
+            trial_id=trial_id,
+            host_readiness=host_assessment,
+            host_binding_failures=binding_failures,
+        )
+    except (
+        ContinuityIntegrityError,
+        HostReadinessError,
+        OSError,
+        ValueError,
+        json.JSONDecodeError,
+    ) as exc:
+        raise typer.BadParameter(str(exc)) from exc
+    console.print_json(data=result)
 
 
 @recovery_app.command("digest")

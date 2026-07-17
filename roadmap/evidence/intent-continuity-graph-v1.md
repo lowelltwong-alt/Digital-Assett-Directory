@@ -1,0 +1,248 @@
+# Intent Continuity Graph V1 Evidence
+
+Status: implementation in progress; recurring activation is not eligible.
+
+## Required outcomes
+
+| Outcome | Acceptance evidence | Current status |
+| --- | --- | --- |
+| Fresh isolated build surface | Worktree created from verified `origin/main`; dirty main untouched | implemented candidate |
+| One lifecycle model | Durable kernel lifecycle retained; overlays separated; stray plan execution state removed | implemented candidate |
+| Manual capture-to-archive workflow | CLI and tests for roadmap, resume, evidence acceptance, and separate archive assessment | implemented candidate |
+| Ref-aware recovery | Local heads, remote-tracking refs, tags, linked worktrees, detached heads, and dirty-overlay fixtures; no network/write commands | implemented candidate |
+| Codex metadata adapter | Strict minimized receipt; no transcript/internal-file access; initialized private-data-root gate | implemented candidate |
+| Global/repository projections and queues | Deterministic replay, repo/global graph, four required action queues plus three supporting queue views, at most three immediate next actions | implemented candidate |
+| Silent shadow hooks | Repo-local Codex hook definition, content-free handler, exact retry, privacy, missed-hook reconciliation, latency, rollback tests, and host-readiness assessment | committed candidate; project trust, exact hook trust, linked-worktree discovery, and real dispatch unverified |
+| Bounded PM roles | Existing role pack remains 0.4.0; portable PM capability is 0.4.4; evaluated revision IDs remain empty pending real evidence | implemented candidate; promotion prohibited |
+| Supervised trial | Five qualifying reviews across at least seven days, measured latency, and zero-failure gates | preflight review recorded one missed capture; qualifying trial not started |
+| Progressive activation | Exact human approval after trial; no automatic cleanup | blocked by design until trial |
+
+## Current activation boundary
+
+Only manual commands and the repo-local content-free lifecycle hook are eligible
+during this phase. Persistent hook execution still requires Codex review of the
+exact hook hash. No session-start summary, digest, breakpoint prompt, scheduler,
+notification, Codex archive, worktree removal, branch
+deletion, worktree creation, push, merge, or deployment is authorized by this
+evidence record.
+
+The exact candidate hook-definition digest is
+`sha256:bfb90dcdb1e12c4a83193e4e858b386c30ae13fa02c61264e0dda83befcc38b5`.
+This DAD digest binds the exact hook-file bytes; it does not replace Codex's
+own trust state or supported `/hooks` review flow.
+
+## Hook activation decision
+
+Risk tier: high. The change affects a persistent lifecycle hook, private
+metadata, future-agent defaults, and the evidence used by later activation
+gates.
+
+- Chosen bounded option: one trusted-project `.codex/hooks.json` with four
+  lifecycle events, a five-second host timeout, a 1.5-second fail-fast ledger
+  lock budget, ignored content-bearing inputs, a non-path DAD repository ID,
+  private DAD-root writes, silent success/failure, a config-backed runtime kill
+  switch, and manual reconciliation. `Stop` means turn completion only and never
+  closes the Codex session.
+- Rejected option: global hooks, transcript or prompt ingestion, memories,
+  notifications, schedulers, model calls, and any cleanup action. It has a much
+  larger privacy and authority blast radius and is unnecessary for the trial.
+- Downstream surfaces: Codex project hook discovery, the private continuity
+  event ledger, rebuildable projections, trial reviews, portability cards, and
+  later human activation decisions. Git, tasks, branches, worktrees, and
+  external project systems remain outside the write boundary.
+- Rollback: delete or disable `.codex/hooks.json`, disable the four lifecycle
+  triggers in the reviewed config, retain immutable evidence, and reconcile
+  current state from local refs and explicit metadata.
+- Kill criteria: prompt/path/transcript/model metadata persistence, visible hook
+  output, notification, network/model call, Git/task mutation, semantic retry
+  conflict, missing review sample, p95 latency over the reviewed 1,500 ms
+  cold-start shadow budget, repeated unchanged
+  reminders, false duplicate, false completion, or restore failure.
+
+## Validation snapshot
+
+- 140 focused continuity, roadmap, plan-memory, recovery, and workstream tests
+  passed after the final graph-integrity and closeout-freshness repairs.
+- 33 global personal-skill registry tests passed.
+- Ruff passed on the new and changed continuity modules and tests.
+- Portability validation passed with 19 cards and zero findings after rebasing
+  over the current upstream MCP, CI-boundary, and ML-research capability cards.
+- General `asset-dir validate --hub .` passed 344 checks with zero warnings or
+  errors.
+- `asset-dir roadmap check --no-update` passed.
+- The instrumented repository suite completed in 19m51s with 1,794 passes and
+  one navigation-freshness failure. The missing historical paths were restored
+  without increasing the 20-entry limit; the affected navigation and
+  portability slice then passed 16 tests. The expensive unchanged full suite
+  was not repeated after this bounded metadata repair.
+- Independent asset review classified this as an internal candidate revision
+  of Personal Project Management Ops, not a duplicate skill. It found that the
+  Codex-host adapter digest was not derived by the validator; the validator now
+  recomputes the digest from the exact normalized repo-local authority file and
+  a negative tampering test passes.
+- The adapter binding now covers the hook definition, Windows/POSIX command
+  entrypoint, silent handler, and Codex bridge as one deterministic revision.
+- Production-clock preflight review
+  `dad:continuity-review:40ca761102e0cdc300da5fe61f1985ed4aaef4502f879e72465f96a26b1b25eb`
+  records one missed capture and zero latency samples after two real Codex CLI
+  sessions produced no hook event. It is held under the separate
+  `trial:intent-continuity-shadow-v1-preflight` ID and cannot qualify activation.
+- Two independent five-sample exact Windows hook measurements after stdin repair
+  found p95 values of 837.276 ms and 870.4 ms. Both runs were silent and used
+  temporary private data roots; the reviewed cold-start shadow budget is 1,500 ms
+  under the five-second host timeout. These measurements are engineering evidence,
+  not qualifying trial evidence, until an instrumented receipt is revision-bound.
+- Independent architecture review initially deferred persistent trust. It also
+  caught and drove repairs for false `Stop`-as-session-close semantics, imports
+  outside the silence boundary, double ledger scanning, missing non-path repo
+  attribution, and the lock/host timeout collision. Real Desktop-host firing and
+  a fresh independent review of the repaired adapter remain required before trust.
+- Adapter revision 0.3.0 adds a rebuildable SHA-256-bound command/offset index,
+  schema-derived cold replay with full validation retained on append, dead-owner
+  stale-lock recovery, content-free failure markers, concurrent process coverage,
+  and typed performance/0-1K-10K scale receipts. Trial review now rejects
+  free-form latency and requires at least five exact samples bound to the current
+  adapter-interface digest.
+- Adapter revision 0.3.1 closes independent adversarial findings: cold replay
+  enforces the nested receipt payload contract, scale validation requires exact
+  size/digest/count outcomes, stale recovery is cross-process serialized with
+  owner-token release, and benchmark receipts explicitly disclose their lack of
+  cryptographic origin authentication.
+- Adapter revision 0.3.2 treats Windows `PermissionError` on an existing
+  exclusive lock as ordinary contention while re-raising unrelated permission
+  failures, preventing best-effort failure-marker loss under concurrent hooks.
+- The final independent exact-hash review found adapter 0.3.2 safe to request
+  for repository-only supervised silent-shadow trust. It did not grant trust,
+  prove Desktop dispatch, authorize a later activation stage, or weaken any
+  kill criterion.
+- Adapter revision 0.3.3 adds a schema-validated, read-only host-readiness
+  assessment that separately gates project trust, exact hook trust, `/hooks`
+  discovery, exact-file hook-definition digest, current adapter-interface
+  digest, content-free failure markers, linked-worktree discovery risk, and a
+  human attestation bound to one exact current-revision event ID with temporal
+  ordering. Eight positive/negative/privacy tests pass. The assessment states
+  that ledger origin is not cryptographically authenticated.
+  The gate was added after current official Codex source research exposed an
+  open linked-worktree project-hook discovery report; absence of a real event
+  now fails closed instead of being treated as a trust-only problem.
+- PM capability revision 0.4.2 restores append-only compatibility for the
+  historical pre-attestation review row. Historical unattested real reviews
+  remain readable but fail `supervisor_attestation_missing`; new production
+  reviews are rejected before append without explicit attestation. Fourteen
+  trial tests, 25 portability tests, and the aggregate activation check passed.
+- PM capability revision 0.4.3 exposes the host-readiness assessment through
+  the existing continuity CLI without adding an activation or trust-write path.
+- Adapter revision 0.3.4 and PM capability revision 0.4.4 bind activation
+  eligibility to an explicitly recorded private host-readiness assessment.
+  The assessment exposes at most five content-free event references for exact
+  human attestation, is append-only and replay-safe, and is rechecked against
+  the current repository, hook bytes, adapter revision, and interface digest.
+  Reviews before the assessment and stale bindings fail closed; recording does
+  not grant trust, activation, cleanup, or archive authority.
+- The affected-suite rerun passed all 81 host-readiness, hook, runtime,
+  benchmark, trial, portability, and navigation tests in 114.8 seconds. A final
+  tightening kept linked-worktree risk open until exact-event attestation; all
+  eight host-readiness tests and Ruff passed afterward. Portability validation
+  reported zero findings, general validation passed 344 checks with zero
+  warnings/errors, roadmap inspection completed, and `git diff --check` passed.
+  The unchanged expensive 81-test command is retained as immutable evidence.
+- The final gate-link repair passed 31 focused host-readiness, trial, and
+  runtime tests plus Ruff. A later three-group parallel pytest attempt timed
+  out after 64.1 seconds without preserving per-group output. Its isolated
+  benchmark group then confirmed that concurrency was the wrong orchestration:
+  the contended warm-10K case reached 1,584.438 ms, above the 1,500 ms budget,
+  while the final revision-bound isolated run measured 937.199 ms and passed.
+  The failed contended run is retained as negative orchestration evidence; the
+  expensive benchmark was not repeated. Final delta validation therefore
+  reuses the immutable isolated receipts and runs only changed evidence and
+  navigation checks.
+- Because the continuity CLI is part of the revision-bound portability control
+  plane, its card advanced to 0.1.2 with a freshly computed content digest.
+  Repository portability validation then returned 19 cards, zero findings,
+  and zero quarantines.
+- Linked-worktree hub routing is explicit: source validation uses `--hub .`;
+  private continuity/trial operations omit `--hub` and use the canonical user
+  hub locator. This prevents accidental worktree-local private-store creation.
+- Performance and scale receipts are schema-checked, revision-bound, and
+  self-consistent local evidence, not cryptographically origin-authenticated
+  proof. Every qualifying real review therefore requires supervisor attestation,
+  and no receipt can authorize hook trust or activation by itself.
+- Revision-bound performance receipt
+  `dad:hook-performance:3d54fa33296ea6943aa39f8a32a7c9f22f1980266dc85ad85860d3c48fd98ed2`
+  recorded five exact cold-process Windows samples with p95 980.482 ms under the
+  1,500 ms budget; all five were silent, persisted, privacy-safe, and left the
+  source worktree unchanged. Evidence:
+  `roadmap/evidence/intent-continuity-hook-performance-2026-07-17.json`.
+- Revision-bound scale receipt
+  `dad:hook-scale:f4a517bfc8fa10cba45e9731de4797adf74e04211d716a33c8fc4ef416e8b7d4`
+  measured warm 0/1K/10K hook latency at 1,050.315/789.045/937.199 ms and a cold
+  10K index rebuild at 2,294.944 ms. Every case was silent, persisted exactly one
+  event, produced a valid size/hash-bound index, recorded zero failure markers,
+  remained below its applicable boundary, and left source unchanged. Evidence:
+  `roadmap/evidence/intent-continuity-hook-scale-2026-07-17.json`.
+- Host-readiness assessment
+  `sha256:1f75b8316bd9a72655ce648a3500a50862fbc0aba0558ede13a3e9149852420a`
+  proves the exact 0.3.4 adapter-interface digest matches, all four intended
+  lifecycle events are configured, no current-revision failure marker exists,
+  and the repository is a linked worktree. It correctly reports `not_ready`
+  because project trust, exact hook trust, `/hooks` discovery, hook-review
+  attestation, a current-revision dispatch event, and an exact-event dispatch
+  attestation are absent. Evidence:
+  `roadmap/evidence/intent-continuity-host-readiness-2026-07-17.json`.
+- The future qualifying production trial has zero reviews and has not started.
+- Manual reconciliation rebuilt the canonical private candidate projections
+  without touching Git, tasks, or source files; the timestamped pre-commit
+  projection fingerprint was
+  `sha256:a75d5783a0a55532752b3b2339759d989d19ef93c4a715d92a17a8ba51f9681d`.
+  Its immediate same-state live rebuild returned the exact same fingerprint.
+  Committing legitimately changes the repository HEAD included in projection
+  material, so this revision does not make a self-changing claim about the
+  post-commit current fingerprint. A regression test now proves that changing
+  only an inventory observation timestamp cannot change the projection
+  fingerprint; that volatile field was removed from fingerprint material after
+  the completion audit exposed the mismatch.
+  Coverage remains explicitly partial because activity-duration and Codex task
+  metadata were not supplied.
+- The immutable preflight trial currently has one nonqualifying review, span
+  zero days, one missed capture, no bound latency sample, and no supervisor
+  attestation. It is useful failing evidence but is not part of the future
+  qualifying trial.
+- The worktree was created from then-current `origin/main` at `dd831017`. The
+  candidate branch was subsequently rebased over freshly fetched `origin/main`
+  at `da71413` and is one local commit ahead with no upstream commits missing.
+  Publication remains a future governed step and is not completion evidence.
+- A frozen-revision full-suite attempt reached the 1,004-second command timeout
+  without a buffered pytest summary. Current full-suite status is therefore
+  unknown; no pass is claimed.
+
+## Reusable learning
+
+Repo-local lifecycle and source-authority contracts must be inventoried before
+using an installed/global project-management contract. A similarly named
+external contract is candidate guidance, not permission to replace the repo's
+reviewed lifecycle vocabulary. The observable correction in this build is one
+durable repo-local lifecycle kernel with plan, readiness, delivery, validation,
+and closeout represented as separate overlays or gates.
+
+The candidate asset is the 0.4.4 revision of Personal Project Management Ops
+plus a separate 0.3.4 supervised Codex-host adapter. It is not a new
+idea-library skill.
+The linked-worktree routing surprise was captured as a privacy-safe local
+exception candidate and resolved in the reviewed documentation and focused
+harness. Central exception collection still follows the canonical enrolled
+repo path, so the worktree-local candidate is not claimed as a centrally
+validated fix outcome.
+Hook trust, project trust, configuration discovery, and runtime dispatch are
+four different claims. A trusted hash cannot prove discovery in a linked
+worktree, and a discovered hook cannot prove successful private persistence.
+The reusable correction is to gate on an exact reviewed definition plus one
+real current-revision event, while treating upstream bug reports as risk signals
+rather than proof about the installed host.
+Unknowns remain visible: non-Codex and cross-OS qualification, public licensing,
+production adoption, and role-revision evaluation.
+
+## Completion rule
+
+V1 is complete only when every required outcome above has current deterministic
+or supervised evidence. Passing implementation tests does not replace the
+seven-day trial or Lowell's final activation decisions.

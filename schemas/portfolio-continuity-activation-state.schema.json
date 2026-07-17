@@ -1,0 +1,41 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://dad.local/schemas/portfolio-continuity-activation-state.schema.json",
+  "title": "DAD continuity activation eligibility state",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version", "trial_id", "status", "evaluated_at", "review_count",
+    "distinct_review_count", "trial_span_days", "fixture_review_count", "gate_failures",
+    "minimum_hook_sample_count", "maximum_hook_latency_ms_p95", "hook_latency_budget_ms",
+    "host_readiness_status", "host_readiness_assessment_digest",
+    "host_readiness_assessed_at", "host_binding_current", "host_readiness_gate_failures",
+    "human_approval_required", "human_approval_status", "activation_authorized",
+    "candidate_only", "execution_authorized", "authority_boundary"
+  ],
+  "properties": {
+    "schema_version": {"const": "dad.portfolio_continuity_activation_state.v1"},
+    "trial_id": {"type": "string", "minLength": 1},
+    "status": {"enum": ["inactive_shadow", "trial_incomplete", "eligible_for_human_activation"]},
+    "evaluated_at": {"type": "string", "format": "date-time"},
+    "review_count": {"type": "integer", "minimum": 0},
+    "distinct_review_count": {"type": "integer", "minimum": 0},
+    "trial_span_days": {"type": "number", "minimum": 0},
+    "fixture_review_count": {"type": "integer", "minimum": 0},
+    "minimum_hook_sample_count": {"type": "integer", "minimum": 0},
+    "maximum_hook_latency_ms_p95": {"type": "number", "minimum": 0},
+    "hook_latency_budget_ms": {"type": "number", "minimum": 0},
+    "host_readiness_status": {"enum": ["missing", "not_ready", "ready_for_supervised_trial"]},
+    "host_readiness_assessment_digest": {"type": "string", "pattern": "^(|sha256:[0-9a-f]{64})$"},
+    "host_readiness_assessed_at": {"type": "string"},
+    "host_binding_current": {"type": "boolean"},
+    "host_readiness_gate_failures": {"type": "array", "uniqueItems": true, "items": {"type": "string"}},
+    "gate_failures": {"type": "array", "uniqueItems": true, "items": {"type": "string"}},
+    "human_approval_required": {"const": true},
+    "human_approval_status": {"const": "separate_approval_required"},
+    "activation_authorized": {"const": false},
+    "candidate_only": {"const": true},
+    "execution_authorized": {"const": false},
+    "authority_boundary": {"type": "string", "minLength": 40}
+  }
+}

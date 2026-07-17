@@ -1,0 +1,42 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://dad.local/schemas/portfolio-continuity-event.schema.json",
+  "title": "DAD append-only intent continuity observation",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version", "event_id", "prev_event_id", "event_kind", "stream_id",
+    "command_id", "recorded_at", "observed_at", "adapter_id", "adapter_revision_id",
+    "source_kind", "source_id", "source_revision", "privacy_partition",
+    "redaction_count", "payload_digest", "payload", "candidate_only",
+    "execution_authorized", "authority_boundary"
+  ],
+  "properties": {
+    "schema_version": {"const": "dad.portfolio_continuity_event.v1"},
+    "event_id": {"type": "string", "pattern": "^dad:continuity-event:[0-9a-f]{64}$"},
+    "prev_event_id": {"type": "string", "pattern": "^$|^dad:continuity-event:[0-9a-f]{64}$"},
+    "event_kind": {
+      "enum": [
+        "codex_task_observed", "session_started", "session_stopped", "turn_stopped",
+        "interruption_observed", "resumption_observed", "dad_binding_observed",
+        "coverage_gap_observed", "reconciliation_completed", "manual_shadow_observed"
+      ]
+    },
+    "stream_id": {"type": "string", "minLength": 1, "maxLength": 240},
+    "command_id": {"type": "string", "pattern": "^dad:continuity-command:[0-9a-f]{64}$"},
+    "recorded_at": {"type": "string", "format": "date-time"},
+    "observed_at": {"type": "string", "format": "date-time"},
+    "adapter_id": {"type": "string", "minLength": 1, "maxLength": 160},
+    "adapter_revision_id": {"type": "string", "minLength": 1, "maxLength": 160},
+    "source_kind": {"enum": ["codex_task", "runtime_hook", "dad_binding", "manual_shadow"]},
+    "source_id": {"type": "string", "minLength": 1, "maxLength": 240},
+    "source_revision": {"type": "string", "minLength": 1, "maxLength": 240},
+    "privacy_partition": {"type": "string", "minLength": 1, "maxLength": 120},
+    "redaction_count": {"type": "integer", "minimum": 0},
+    "payload_digest": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"},
+    "payload": {"type": "object"},
+    "candidate_only": {"const": true},
+    "execution_authorized": {"const": false},
+    "authority_boundary": {"type": "string", "minLength": 40}
+  }
+}

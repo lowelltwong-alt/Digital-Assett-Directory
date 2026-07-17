@@ -23,6 +23,31 @@
       "risk_tier": "high",
       "value_ref": ".digital-asset/key-values/registry.json",
       "value_type": "boolean"
+    },
+    {
+      "affected_refs": [
+        "src/digital_asset_directory/cli.py",
+        "src/digital_asset_directory/portfolio_continuity_host_readiness.py",
+        "src/digital_asset_directory/portfolio_continuity_trial.py",
+        "schemas/intent-continuity-host-readiness.schema.json",
+        "schemas/portfolio-continuity-activation-state.schema.json",
+        "roadmap/evidence/intent-continuity-host-readiness-2026-07-17.json"
+      ],
+      "current_value_hash": "sha256:a517faac0659ce13d3e3121587fd46953fdd672c04dd6ec75de93900c8ac7d51",
+      "dependency_refs": [
+        ".codex/hooks.json",
+        "config/intent-continuity-shadow-hooks.json",
+        "registry/portable-capability-registry.json",
+        "private:raw_portfolio_intents/continuity-host-readiness.jsonl"
+      ],
+      "key_id": "intent-continuity-host-readiness-gate",
+      "label": "Intent Continuity activation requires recorded, current host readiness before supervised reviews",
+      "notes": "Candidate gate for adapter 0.3.4 and PM core 0.4.4. Readiness must be explicitly appended to the private exact-replay ledger, remain bound to the current repository, hook bytes, adapter, portability card, and interface, and predate every qualifying review. It cannot grant Codex project or hook trust, authenticate host origin, activate the shadow, or authorize cleanup or archive actions.",
+      "owner": "DAD and Lowell",
+      "review_status": "candidate",
+      "risk_tier": "high",
+      "value_ref": "schemas/intent-continuity-host-readiness.schema.json",
+      "value_type": "object"
     }
   ],
   "registry_id": "dad:key-values",

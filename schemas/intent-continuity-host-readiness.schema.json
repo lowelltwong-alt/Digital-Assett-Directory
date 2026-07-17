@@ -1,0 +1,131 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://dad.local/schemas/intent-continuity-host-readiness.schema.json",
+  "title": "DAD Codex host readiness assessment for Intent Continuity",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version", "assessment_digest", "assessed_at", "repository_id",
+    "repository_layout", "hook_definition", "adapter_binding",
+    "host_observation", "dispatch_evidence", "status", "gate_failures",
+    "human_actions_required", "candidate_only", "execution_authorized",
+    "authority_boundary"
+  ],
+  "properties": {
+    "schema_version": {"const": "dad.intent_continuity_host_readiness.v1"},
+    "assessment_digest": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"},
+    "assessed_at": {"type": "string", "format": "date-time"},
+    "repository_id": {"type": "string", "pattern": "^[A-Za-z0-9._:-]{1,120}$"},
+    "repository_layout": {"enum": ["primary_worktree", "linked_worktree", "unknown"]},
+    "hook_definition": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["relative_path", "definition_digest", "enabled_events", "event_set_exact", "shadow_status", "host_readiness_gate_configured"],
+      "properties": {
+        "relative_path": {"const": ".codex/hooks.json"},
+        "definition_digest": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"},
+        "enabled_events": {
+          "type": "array", "uniqueItems": true,
+          "items": {"enum": ["SessionStart", "PreCompact", "PostCompact", "Stop", "UserPromptSubmit", "PreToolUse", "PostToolUse", "PermissionRequest", "SubagentStart", "SubagentStop"]}
+        },
+        "event_set_exact": {"type": "boolean"},
+        "shadow_status": {"type": "string", "minLength": 1, "maxLength": 120},
+        "host_readiness_gate_configured": {"type": "boolean"}
+      }
+    },
+    "adapter_binding": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["artifact_id", "adapter_revision_id", "portability_card_revision_id", "declared_interface_digest", "computed_interface_digest", "interface_digest_matches"],
+      "properties": {
+        "artifact_id": {"const": "adapter:intent-continuity-codex-host"},
+        "adapter_revision_id": {"type": "string", "minLength": 1, "maxLength": 180},
+        "portability_card_revision_id": {"type": "string", "minLength": 1, "maxLength": 180},
+        "declared_interface_digest": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"},
+        "computed_interface_digest": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"},
+        "interface_digest_matches": {"type": "boolean"}
+      }
+    },
+    "host_observation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["codex_version", "project_trust_status", "hook_trust_status", "hook_discovery_status", "attestation_origin", "reviewer_id", "reviewed_at", "reviewed_hook_definition_digest", "reviewed_digest_matches"],
+      "properties": {
+        "codex_version": {"type": "string", "maxLength": 120},
+        "project_trust_status": {"enum": ["unverified", "trusted", "untrusted"]},
+        "hook_trust_status": {"enum": ["unverified", "trusted", "untrusted"]},
+        "hook_discovery_status": {"enum": ["unverified", "discovered", "not_discovered"]},
+        "attestation_origin": {"enum": ["not_supplied", "operator_supplied"]},
+        "reviewer_id": {"type": "string", "maxLength": 120},
+        "reviewed_at": {"type": "string", "maxLength": 80},
+        "reviewed_hook_definition_digest": {"type": "string", "maxLength": 71},
+        "reviewed_digest_matches": {"type": "boolean"}
+      }
+    },
+    "dispatch_evidence": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "status", "current_revision_event_count", "latest_observed_at",
+        "current_revision_failure_marker_count", "linked_worktree_discovery_risk",
+        "dispatch_attestation_origin", "dispatch_observer_id",
+        "dispatch_attested_at", "attested_event_id", "attested_event_found",
+        "temporal_binding_valid", "origin_authenticated", "verification_method",
+        "attestable_events"
+      ],
+      "properties": {
+        "status": {"enum": ["unverified", "observed_unattested", "operator_attested"]},
+        "current_revision_event_count": {"type": "integer", "minimum": 0},
+        "latest_observed_at": {"type": "string", "maxLength": 80},
+        "current_revision_failure_marker_count": {"type": "integer", "minimum": 0},
+        "linked_worktree_discovery_risk": {"type": "boolean"},
+        "dispatch_attestation_origin": {"enum": ["not_supplied", "operator_supplied"]},
+        "dispatch_observer_id": {"type": "string", "maxLength": 120},
+        "dispatch_attested_at": {"type": "string", "maxLength": 80},
+        "attested_event_id": {"type": "string", "pattern": "^$|^dad:continuity-event:[0-9a-f]{64}$"},
+        "attested_event_found": {"type": "boolean"},
+        "temporal_binding_valid": {"type": "boolean"},
+        "origin_authenticated": {"const": false},
+        "verification_method": {"const": "operator_attested_event_id"},
+        "attestable_events": {
+          "type": "array",
+          "maxItems": 5,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["event_id", "observed_at", "event_kind"],
+            "properties": {
+              "event_id": {"type": "string", "pattern": "^dad:continuity-event:[0-9a-f]{64}$"},
+              "observed_at": {"type": "string", "format": "date-time"},
+              "event_kind": {"enum": ["session_started", "interruption_observed", "resumption_observed", "turn_stopped"]}
+            }
+          }
+        }
+      }
+    },
+    "status": {"enum": ["not_ready", "ready_for_supervised_trial"]},
+    "gate_failures": {
+      "type": "array", "uniqueItems": true,
+      "items": {
+        "enum": [
+          "hook_event_set_not_exact", "shadow_config_not_supervised",
+          "host_readiness_gate_not_configured",
+          "adapter_interface_digest_mismatch", "project_trust_not_attested",
+          "exact_hook_trust_not_attested", "project_hook_discovery_not_attested",
+          "host_review_attestation_missing", "reviewed_hook_definition_digest_mismatch",
+          "real_codex_dispatch_not_observed", "supervised_dispatch_attestation_missing",
+          "attested_dispatch_event_not_found", "dispatch_attestation_temporal_mismatch",
+          "hook_failure_markers_observed",
+          "linked_worktree_dispatch_unverified"
+        ]
+      }
+    },
+    "human_actions_required": {
+      "type": "array", "uniqueItems": true,
+      "items": {"type": "string", "minLength": 12, "maxLength": 240}
+    },
+    "candidate_only": {"const": true},
+    "execution_authorized": {"const": false},
+    "authority_boundary": {"type": "string", "minLength": 80}
+  }
+}

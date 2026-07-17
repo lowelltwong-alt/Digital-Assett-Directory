@@ -1,0 +1,51 @@
+{
+  "schema_version": "dad.intent_continuity_shadow_hook_config.v1",
+  "config_id": "config:intent-continuity-shadow-hooks",
+  "status": "supervised_silent_shadow",
+  "adapter_id": "adapter:intent-continuity-shadow",
+  "runtime_adapter_id": "adapter:codex-host",
+  "provider_neutral_core": "schemas/portfolio-continuity-adapter-receipt.schema.json",
+  "triggers": [
+    {"runtime_event": "SessionStart", "continuity_event": "session_started", "enabled": true, "silent": true},
+    {"runtime_event": "PreCompact", "continuity_event": "interruption_observed", "enabled": true, "silent": true},
+    {"runtime_event": "PostCompact", "continuity_event": "resumption_observed", "enabled": true, "silent": true},
+    {"runtime_event": "Stop", "continuity_event": "turn_stopped", "enabled": true, "silent": true},
+    {"runtime_event": "UserPromptSubmit", "continuity_event": "manual_shadow_observed", "enabled": false, "silent": true, "activation_policy": "excluded_until_separately_approved"}
+  ],
+  "capture_contract": {
+    "receipt_schema": "schemas/portfolio-continuity-adapter-receipt.schema.json",
+    "template": "templates/hooks/intent-continuity-shadow-receipt.template.json",
+    "allowed_data": "opaque ids, timestamps, bounded state enums, and digests only",
+    "forbidden_data": "prompts, messages, transcripts, source content, diffs, paths, secrets, and credentials",
+    "model_calls": 0,
+    "network_calls": 0,
+    "notifications": 0,
+    "source_mutations": 0
+  },
+  "reconciliation": {
+    "command": "asset-dir os continuity reconcile --repo <local-repo> --hub <dad-hub>",
+    "startup_mode": "manual_or_separately_approved_scheduler_only",
+    "missed_event_behavior": "append a content-free best-effort failure marker when the private root is available; rebuild current state from local refs worktrees ledgers and explicit task metadata; mark activity coverage partial",
+    "idempotency_key": "request_id",
+    "ledger_index": "exact-content SHA-256-bound rebuildable command/offset index; full JSON Schema on append; payload-parity integrity validation on cold replay; serialized stale recovery and owner-token release",
+    "unchanged_cycle_model_calls": 0
+  },
+  "activation_gate": {
+    "host_readiness_schema": "schemas/intent-continuity-host-readiness.schema.json",
+    "project_trust_attestation_required": true,
+    "exact_hook_trust_attestation_required": true,
+    "real_codex_dispatch_required": true,
+    "recorded_host_readiness_required": true,
+    "linked_worktree_discovery_must_be_observed": true,
+    "minimum_non_fixture_reviews": 5,
+    "minimum_span_days": 7,
+    "hook_latency_budget_ms": 1500,
+    "minimum_hook_performance_samples_per_review": 5,
+    "performance_evidence": "self-consistent local harness receipt bound to the exact runtime-adapter interface digest; not origin-authenticated and requires supervisor attestation",
+    "all_failure_metrics_must_be_zero": true,
+    "maximum_asks_per_digest": 3,
+    "separate_human_approval_required": true,
+    "automatic_activation_allowed": false
+  },
+  "authority_boundary": "This repo-local supervised shadow configuration is silent, content-free, non-blocking, and subject to Codex hook trust. It cannot enable prompts, notifications, schedulers, models, network calls, Git or task mutation, branch or worktree cleanup, archival, or later activation stages."
+}

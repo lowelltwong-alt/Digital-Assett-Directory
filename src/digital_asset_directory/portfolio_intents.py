@@ -29,7 +29,7 @@ AUTHORITY_BOUNDARY = (
     "dispatch, execution permission, or source authority."
 )
 PLAN_LIFECYCLES = frozenset(
-    {"draft", "decision_complete", "approved_for_execution", "superseded", "withdrawn"}
+    {"draft", "decision_complete", "superseded", "withdrawn"}
 )
 PRIVACY_CLASSES = frozenset({"public", "internal", "private", "restricted"})
 CONSEQUENCE_CLASSES = frozenset({"C0", "C1", "C2", "C3", "C4"})
@@ -439,6 +439,11 @@ def capture_plan(
 ) -> dict[str, Any]:
     """Capture one immutable plan revision and return its non-authorizing event."""
 
+    if lifecycle == "approved_for_execution":
+        raise ValueError(
+            "Plan Memory cannot grant approved_for_execution; that state must be derived "
+            "from DAD's existing signed portfolio execution-control authority plane"
+        )
     if lifecycle not in PLAN_LIFECYCLES:
         raise ValueError(f"Unsupported plan lifecycle: {lifecycle}")
     if implementation_state not in IMPLEMENTATION_STATES:
@@ -455,11 +460,6 @@ def capture_plan(
         raise ValueError(
             "verified_complete requires acceptance evidence, distinct producer/checker identities, "
             "and an independent check bound to the predecessor plan revision"
-        )
-    if lifecycle == "approved_for_execution":
-        raise ValueError(
-            "Plan Memory cannot grant approved_for_execution; that state must be derived "
-            "from DAD's existing signed portfolio execution-control authority plane"
         )
     if privacy_class not in PRIVACY_CLASSES:
         raise ValueError(f"Unsupported privacy class: {privacy_class}")

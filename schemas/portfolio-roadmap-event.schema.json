@@ -1,0 +1,56 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://dad.local/schemas/portfolio-roadmap-event.schema.json",
+  "title": "DAD private portfolio roadmap event",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "event_id", "prev_event_id", "event_kind", "plan_id", "item_id", "request_id", "request_digest", "recorded_at", "payload", "candidate_only", "execution_authorized", "authority_boundary"],
+  "properties": {
+    "schema_version": {"const": "dad.portfolio_roadmap_event.v1"},
+    "event_id": {"type": "string", "minLength": 1},
+    "prev_event_id": {"type": "string"},
+    "event_kind": {"enum": ["roadmap_item_recorded", "roadmap_item_transitioned"]},
+    "plan_id": {"type": "string", "minLength": 1},
+    "item_id": {"type": "string", "minLength": 1},
+    "request_id": {"type": "string", "minLength": 1},
+    "request_digest": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"},
+    "recorded_at": {"type": "string", "format": "date-time"},
+    "candidate_only": {"const": true},
+    "execution_authorized": {"const": false},
+    "authority_boundary": {"type": "string", "minLength": 1},
+    "payload": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["plan_id", "item_id", "title", "outcome", "acceptance_criteria", "dependency_item_ids", "status", "acceptance_evidence", "independent_check_ref", "producer_ref", "independent_checker_ref", "human_approval_ref", "redaction_count"],
+      "properties": {
+        "plan_id": {"type": "string", "minLength": 1},
+        "item_id": {"type": "string", "minLength": 1},
+        "title": {"type": "string", "minLength": 1},
+        "outcome": {"type": "string", "minLength": 1},
+        "acceptance_criteria": {"type": "array", "minItems": 1, "uniqueItems": true, "items": {"type": "string", "minLength": 1}},
+        "dependency_item_ids": {"type": "array", "uniqueItems": true, "items": {"type": "string", "minLength": 1}},
+        "status": {"enum": ["proposed", "ready", "active", "blocked", "validation_pending", "accepted", "superseded"]},
+        "acceptance_evidence": {"type": "array", "uniqueItems": true, "items": {"type": "string", "minLength": 1}},
+        "independent_check_ref": {"type": "string"},
+        "producer_ref": {"type": "string"},
+        "independent_checker_ref": {"type": "string"},
+        "human_approval_ref": {"type": "string"},
+        "redaction_count": {"type": "integer", "minimum": 0}
+      },
+      "allOf": [
+        {
+          "if": {"properties": {"status": {"const": "accepted"}}},
+          "then": {
+            "properties": {
+              "acceptance_evidence": {"minItems": 1},
+              "independent_check_ref": {"minLength": 1},
+              "producer_ref": {"minLength": 1},
+              "independent_checker_ref": {"minLength": 1},
+              "human_approval_ref": {"minLength": 1}
+            }
+          }
+        }
+      ]
+    }
+  }
+}

@@ -1,0 +1,51 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://dad.local/schemas/intent-continuity-shadow-hook-config.schema.json",
+  "title": "DAD Intent Continuity supervised shadow hook configuration",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "config_id", "status", "adapter_id", "runtime_adapter_id", "provider_neutral_core", "triggers", "capture_contract", "reconciliation", "activation_gate", "authority_boundary"],
+  "properties": {
+    "schema_version": {"const": "dad.intent_continuity_shadow_hook_config.v1"},
+    "config_id": {"const": "config:intent-continuity-shadow-hooks"},
+    "status": {"enum": ["inactive_shadow", "supervised_silent_shadow"]},
+    "adapter_id": {"const": "adapter:intent-continuity-shadow"},
+    "runtime_adapter_id": {"const": "adapter:codex-host"},
+    "provider_neutral_core": {"type": "string", "minLength": 1},
+    "triggers": {"type": "array", "minItems": 1, "items": {"type": "object"}},
+    "capture_contract": {"type": "object"},
+    "reconciliation": {"type": "object"},
+    "activation_gate": {
+      "type": "object",
+      "required": [
+        "host_readiness_schema", "project_trust_attestation_required",
+        "exact_hook_trust_attestation_required", "real_codex_dispatch_required",
+        "recorded_host_readiness_required",
+        "linked_worktree_discovery_must_be_observed",
+        "minimum_non_fixture_reviews", "minimum_span_days",
+        "hook_latency_budget_ms", "minimum_hook_performance_samples_per_review",
+        "performance_evidence", "all_failure_metrics_must_be_zero",
+        "maximum_asks_per_digest", "separate_human_approval_required",
+        "automatic_activation_allowed"
+      ],
+      "properties": {
+        "host_readiness_schema": {"const": "schemas/intent-continuity-host-readiness.schema.json"},
+        "project_trust_attestation_required": {"const": true},
+        "exact_hook_trust_attestation_required": {"const": true},
+        "real_codex_dispatch_required": {"const": true},
+        "recorded_host_readiness_required": {"const": true},
+        "linked_worktree_discovery_must_be_observed": {"const": true},
+        "minimum_non_fixture_reviews": {"type": "integer", "minimum": 5},
+        "minimum_span_days": {"type": "integer", "minimum": 7},
+        "hook_latency_budget_ms": {"type": "number", "exclusiveMinimum": 0},
+        "minimum_hook_performance_samples_per_review": {"type": "integer", "minimum": 5},
+        "performance_evidence": {"type": "string", "minLength": 20},
+        "all_failure_metrics_must_be_zero": {"const": true},
+        "maximum_asks_per_digest": {"type": "integer", "minimum": 0, "maximum": 3},
+        "separate_human_approval_required": {"const": true},
+        "automatic_activation_allowed": {"const": false}
+      }
+    },
+    "authority_boundary": {"type": "string", "minLength": 1}
+  }
+}

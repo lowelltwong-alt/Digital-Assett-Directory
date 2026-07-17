@@ -1,0 +1,76 @@
+{
+  "schema_version": "dad.intent_continuity_host_readiness.v1",
+  "assessed_at": "2026-07-17T06:34:53.295102+00:00",
+  "repository_id": "dad",
+  "repository_layout": "linked_worktree",
+  "hook_definition": {
+    "relative_path": ".codex/hooks.json",
+    "definition_digest": "sha256:bfb90dcdb1e12c4a83193e4e858b386c30ae13fa02c61264e0dda83befcc38b5",
+    "enabled_events": [
+      "PostCompact",
+      "PreCompact",
+      "SessionStart",
+      "Stop"
+    ],
+    "event_set_exact": true,
+    "shadow_status": "supervised_silent_shadow",
+    "host_readiness_gate_configured": true
+  },
+  "adapter_binding": {
+    "artifact_id": "adapter:intent-continuity-codex-host",
+    "adapter_revision_id": "adapter-revision:intent-continuity-codex-host:0.3.4",
+    "portability_card_revision_id": "portability-card-revision:adapter-intent-continuity-codex-host:0.3.4",
+    "declared_interface_digest": "sha256:a517faac0659ce13d3e3121587fd46953fdd672c04dd6ec75de93900c8ac7d51",
+    "computed_interface_digest": "sha256:a517faac0659ce13d3e3121587fd46953fdd672c04dd6ec75de93900c8ac7d51",
+    "interface_digest_matches": true
+  },
+  "host_observation": {
+    "codex_version": "",
+    "project_trust_status": "unverified",
+    "hook_trust_status": "unverified",
+    "hook_discovery_status": "unverified",
+    "attestation_origin": "not_supplied",
+    "reviewer_id": "",
+    "reviewed_at": "",
+    "reviewed_hook_definition_digest": "",
+    "reviewed_digest_matches": false
+  },
+  "dispatch_evidence": {
+    "status": "unverified",
+    "current_revision_event_count": 0,
+    "latest_observed_at": "",
+    "current_revision_failure_marker_count": 0,
+    "linked_worktree_discovery_risk": true,
+    "dispatch_attestation_origin": "not_supplied",
+    "dispatch_observer_id": "",
+    "dispatch_attested_at": "",
+    "attested_event_id": "",
+    "attested_event_found": false,
+    "temporal_binding_valid": false,
+    "origin_authenticated": false,
+    "verification_method": "operator_attested_event_id",
+    "attestable_events": []
+  },
+  "status": "not_ready",
+  "gate_failures": [
+    "exact_hook_trust_not_attested",
+    "host_review_attestation_missing",
+    "linked_worktree_dispatch_unverified",
+    "project_hook_discovery_not_attested",
+    "project_trust_not_attested",
+    "real_codex_dispatch_not_observed",
+    "supervised_dispatch_attestation_missing"
+  ],
+  "human_actions_required": [
+    "Open a Codex task rooted in this repository and review project trust.",
+    "Open /hooks, inspect the exact current command hooks, and trust only that definition.",
+    "Record the reviewer, review time, and current hook-definition digest after Codex review.",
+    "Observe a supervised Codex lifecycle event and rerun this assessment; the ledger alone does not authenticate host origin.",
+    "After observing the host event, attest its exact event ID and time; ledger origin is not cryptographically authenticated.",
+    "Treat linked-worktree hook discovery as unverified until an exact event ID is operator-attested."
+  ],
+  "candidate_only": true,
+  "execution_authorized": false,
+  "authority_boundary": "Host readiness is read-only candidate evidence. It cannot trust a project or hook, authenticate host origin, bypass Codex review, run a hook, activate prompts or notifications, schedule work, mutate Git or tasks, archive work, or clean up a worktree.",
+  "assessment_digest": "sha256:1f75b8316bd9a72655ce648a3500a50862fbc0aba0558ede13a3e9149852420a"
+}

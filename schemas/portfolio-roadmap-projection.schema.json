@@ -1,0 +1,19 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://dad.local/schemas/portfolio-roadmap-projection.schema.json",
+  "title": "DAD portfolio roadmap projection",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "plan_id", "item_count", "accepted_count", "remaining_count", "items", "candidate_only", "execution_authorized", "authority_boundary"],
+  "properties": {
+    "schema_version": {"const": "dad.portfolio_roadmap_projection.v1"},
+    "plan_id": {"type": "string"},
+    "item_count": {"type": "integer", "minimum": 0},
+    "accepted_count": {"type": "integer", "minimum": 0},
+    "remaining_count": {"type": "integer", "minimum": 0},
+    "items": {"type": "array", "items": {"type": "object"}},
+    "candidate_only": {"const": true},
+    "execution_authorized": {"const": false},
+    "authority_boundary": {"type": "string", "minLength": 1}
+  }
+}

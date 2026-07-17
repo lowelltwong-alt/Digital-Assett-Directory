@@ -1,0 +1,51 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://dad.local/schemas/portfolio-continuity-projection.schema.json",
+  "title": "DAD rebuildable Intent Continuity projection",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "generated_at", "repositories", "graph", "queues", "activity", "coverage", "projection_fingerprint", "candidate_only", "execution_authorized", "authority_boundary"],
+  "properties": {
+    "schema_version": {"const": "dad.portfolio_continuity_projection.v1"},
+    "generated_at": {"type": "string", "format": "date-time"},
+    "repositories": {"type": "array", "items": {"type": "object"}},
+    "graph": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["nodes", "edges"],
+      "properties": {
+        "nodes": {"type": "array", "items": {"type": "object"}},
+        "edges": {"type": "array", "items": {"type": "object"}}
+      }
+    },
+    "queues": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["current_state", "interrupted_resume", "possible_duplicates", "next_actions", "next_actions_overflow", "task_archive", "worktree_close"],
+      "properties": {
+        "current_state": {"type": "array", "items": {"type": "object"}},
+        "interrupted_resume": {"type": "array", "items": {"type": "object"}},
+        "possible_duplicates": {"type": "array", "items": {"type": "object"}},
+        "next_actions": {"type": "array", "maxItems": 3, "items": {"type": "object"}},
+        "next_actions_overflow": {"type": "array", "items": {"type": "object"}},
+        "task_archive": {"type": "array", "items": {"type": "object"}},
+        "worktree_close": {"type": "array", "items": {"type": "object"}}
+      }
+    },
+    "activity": {"type": "array", "items": {"type": "object"}},
+    "coverage": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["status", "gaps", "repository_count"],
+      "properties": {
+        "status": {"enum": ["complete", "partial"]},
+        "gaps": {"type": "array", "uniqueItems": true, "items": {"type": "string"}},
+        "repository_count": {"type": "integer", "minimum": 0}
+      }
+    },
+    "projection_fingerprint": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"},
+    "candidate_only": {"const": true},
+    "execution_authorized": {"const": false},
+    "authority_boundary": {"type": "string", "minLength": 1}
+  }
+}
