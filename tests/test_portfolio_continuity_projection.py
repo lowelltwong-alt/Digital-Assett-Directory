@@ -105,6 +105,20 @@ def test_activity_duration_uses_only_explicit_paired_sessions() -> None:
     assert activity["interruption_count"] == 1
 
 
+def test_activity_order_normalizes_timezone_offsets() -> None:
+    activity = fold_continuity_activity(
+        [
+            _event("session_stopped", "2026-07-17T00:30:00Z", session_id="session:mixed-offset"),
+            _event("session_started", "2026-07-17T01:00:00+01:00", session_id="session:mixed-offset"),
+        ]
+    )["plan:0"]
+
+    assert activity["first_observed_at"] == "2026-07-17T01:00:00+01:00"
+    assert activity["last_observed_at"] == "2026-07-17T00:30:00Z"
+    assert activity["completed_session_count"] == 1
+    assert activity["engaged_duration_seconds"] == 1800
+
+
 def test_projection_is_rebuildable_has_global_repo_graph_and_all_queues() -> None:
     plans = [_plan(index) for index in range(5)]
     plans[0]["source_bindings"] = ["ref:main"]

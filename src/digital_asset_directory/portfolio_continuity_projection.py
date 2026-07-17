@@ -52,6 +52,22 @@ def _latest(*values: str) -> str:
     return max(valid)[1] if valid else ""
 
 
+def _earliest(*values: str) -> str:
+    valid = [(parsed, value) for value in values if (parsed := _parse(value)) is not None]
+    return min(valid)[1] if valid else ""
+
+
+def _activity_order_key(event: dict[str, Any]) -> tuple[bool, datetime, str, str]:
+    observed_at = str(event.get("observed_at", ""))
+    parsed = _parse(observed_at)
+    return (
+        parsed is None,
+        parsed or datetime.max.replace(tzinfo=timezone.utc),
+        observed_at,
+        str(event.get("event_id", "")),
+    )
+
+
 def _activity_key(event: dict[str, Any]) -> str:
     payload = event.get("payload", {})
     for field in ("entity_id", "workstream_id", "plan_id", "task_id", "repository_id"):
@@ -66,7 +82,7 @@ def fold_continuity_activity(events: Iterable[dict[str, Any]]) -> dict[str, dict
 
     groups: dict[str, dict[str, Any]] = {}
     starts: dict[tuple[str, str], datetime] = {}
-    for event in sorted(events, key=lambda row: (str(row.get("observed_at", "")), str(row.get("event_id", "")))):
+    for event in sorted(events, key=_activity_order_key):
         key = _activity_key(event)
         if not key:
             continue
@@ -87,9 +103,7 @@ def fold_continuity_activity(events: Iterable[dict[str, Any]]) -> dict[str, dict
                 "duration_coverage": "no_paired_sessions",
             },
         )
-        row["first_observed_at"] = min(
-            value for value in [row["first_observed_at"], observed_at] if value
-        )
+        row["first_observed_at"] = _earliest(row["first_observed_at"], observed_at)
         row["last_observed_at"] = _latest(row["last_observed_at"], observed_at)
         material_at = str(payload.get("last_material_activity_at", ""))
         if event.get("event_kind") in {
