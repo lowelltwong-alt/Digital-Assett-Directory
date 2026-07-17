@@ -1,0 +1,76 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://dad.local/schemas/mcp-surface-contract-v1.json",
+  "title": "DAD MCP surface contract",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "logical_server_name", "protocol_version", "authority", "capabilities", "limits", "compatibility", "privacy", "side_effects", "adapters", "dependency_map"],
+  "properties": {
+    "schema_version": {"const": "dad.mcp.surface_contract.v1"},
+    "logical_server_name": {"const": "dad-local-graph-surfaces"},
+    "protocol_version": {"const": "2025-06-18"},
+    "authority": {
+      "type": "object", "additionalProperties": false,
+      "required": ["transport", "local_only", "remote_enabled", "read_only", "execution_authorized", "host_configuration_write"],
+      "properties": {
+        "transport": {"const": "stdio"}, "local_only": {"const": true},
+        "remote_enabled": {"const": false}, "read_only": {"const": true},
+        "execution_authorized": {"const": false}, "host_configuration_write": {"const": false}
+      }
+    },
+    "capabilities": {
+      "type": "object", "additionalProperties": false,
+      "required": ["resources", "tools", "prompts", "packet_tools"],
+      "properties": {
+        "resources": {"type": "array", "items": {"type": "string"}, "uniqueItems": true},
+        "tools": {"type": "array", "items": {"type": "string"}, "uniqueItems": true},
+        "prompts": {"type": "array", "items": {"type": "string"}, "uniqueItems": true},
+        "packet_tools": {"type": "array", "items": {"type": "string"}, "uniqueItems": true}
+      }
+    },
+    "limits": {
+      "type": "object", "additionalProperties": false,
+      "required": ["query_limit", "prompt_argument_chars", "request_bytes", "response_bytes"],
+      "properties": {
+        "query_limit": {"type": "integer", "minimum": 1, "maximum": 100},
+        "prompt_argument_chars": {"type": "integer", "minimum": 1, "maximum": 2000},
+        "request_bytes": {"type": "integer", "minimum": 1024},
+        "response_bytes": {"type": "integer", "minimum": 1024}
+      }
+    },
+    "compatibility": {
+      "type": "object", "additionalProperties": false,
+      "required": ["legacy_graph_stdio", "additive_capabilities", "unknown_methods_fail_closed"],
+      "properties": {
+        "legacy_graph_stdio": {"const": true}, "additive_capabilities": {"const": true},
+        "unknown_methods_fail_closed": {"const": true}
+      }
+    },
+    "privacy": {
+      "type": "object", "additionalProperties": false,
+      "required": ["approved_partitions", "redacted_categories"],
+      "properties": {
+        "approved_partitions": {"type": "array", "items": {"type": "string"}, "minItems": 1, "uniqueItems": true},
+        "redacted_categories": {"type": "array", "items": {"type": "string"}, "minItems": 1, "uniqueItems": true}
+      }
+    },
+    "side_effects": {
+      "type": "object", "additionalProperties": false,
+      "required": ["allowed", "packet_only"],
+      "properties": {
+        "allowed": {"type": "array", "items": {"type": "string"}, "uniqueItems": true},
+        "packet_only": {"const": true}
+      }
+    },
+    "adapters": {"type": "array", "items": {"type": "string"}, "minItems": 1, "uniqueItems": true},
+    "dependency_map": {
+      "type": "object", "additionalProperties": false,
+      "required": ["node_id", "reverse_consumers", "freshness_required"],
+      "properties": {
+        "node_id": {"type": "string", "minLength": 1},
+        "reverse_consumers": {"type": "array", "items": {"type": "string"}, "uniqueItems": true},
+        "freshness_required": {"const": true}
+      }
+    }
+  }
+}

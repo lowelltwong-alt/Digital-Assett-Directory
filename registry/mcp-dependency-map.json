@@ -1,6 +1,6 @@
 {
   "schema_version": "dad.mcp.dependency_map.v1",
-  "map_revision": "2026-07-16.1",
+  "map_revision": "2026-07-16.2",
   "logical_server_name": "dad-local-graph-surfaces",
   "authority_policy": {
     "local_only": true,
@@ -33,7 +33,15 @@
       "label": "Canonical logical server identity",
       "artifact_kind": "file",
       "change_contract": "A logical-name or implementation change requires parity review in every adapter and host evidence row.",
-      "fingerprint": {"kind": "exact_sha256", "path": "assets/mcp/dad-local-readonly/contract.json", "sha256": "sha256:5323e2a76822cd11abbd75eb6d792be245c1cab1df5bf95057776d1f38b42794"}
+      "fingerprint": {"kind": "exact_sha256", "path": "assets/mcp/dad-local-readonly/contract.json", "sha256": "sha256:e7d2e95a3ee3ac12c5c54718b86223e0f91e6e8ec3a2e3012fd39554979866bc"}
+    },
+    {
+      "node_id": "mcp.node.contract.surface",
+      "category": "protocol",
+      "label": "Versioned provider-neutral MCP surface contract",
+      "artifact_kind": "file",
+      "change_contract": "Contract changes require schema, server, adapter, privacy, and compatibility conformance review.",
+      "fingerprint": {"kind": "exact_sha256", "path": "registry/mcp-surface-contract.json", "sha256": "sha256:5be788ebbed838ea618bbb607f06e0046eee7fb2e8440b1ba555dfc0c1305914"}
     },
     {
       "node_id": "mcp.node.protocol.jsonrpc-stdio",
@@ -41,7 +49,7 @@
       "label": "MCP JSON-RPC stdio protocol implementation",
       "artifact_kind": "file",
       "change_contract": "Protocol or method changes require initialize, tools, resources, privacy, and adapter parity checks.",
-      "fingerprint": {"kind": "exact_sha256", "path": "src/digital_asset_directory/mcp_server.py", "sha256": "sha256:8df37a8e9cb8516d2e9b08956372aaa1db168f9814885d96c7d95b02766493ca"}
+      "fingerprint": {"kind": "exact_sha256", "path": "src/digital_asset_directory/mcp_server.py", "sha256": "sha256:0c6d3e8611b87602b38ead1bd8fad8fd4b566d7f495e91551f7cbaf626c45852"}
     },
     {
       "node_id": "mcp.node.entrypoint.graph-stdio",
@@ -57,7 +65,23 @@
       "label": "Read-only MCP server",
       "artifact_kind": "file",
       "change_contract": "Any edit invalidates the exact implementation fingerprint and requires interface/privacy revalidation.",
-      "fingerprint": {"kind": "exact_sha256", "path": "src/digital_asset_directory/mcp_server.py", "sha256": "sha256:8df37a8e9cb8516d2e9b08956372aaa1db168f9814885d96c7d95b02766493ca"}
+      "fingerprint": {"kind": "exact_sha256", "path": "src/digital_asset_directory/mcp_server.py", "sha256": "sha256:0c6d3e8611b87602b38ead1bd8fad8fd4b566d7f495e91551f7cbaf626c45852"}
+    },
+    {
+      "node_id": "mcp.node.implementation.packet-engine",
+      "category": "implementation",
+      "label": "Supervised MCP packet engine",
+      "artifact_kind": "file",
+      "change_contract": "Packet identity, expiry, replay, checker separation, and non-authorizing result rules require packet and privacy tests.",
+      "fingerprint": {"kind": "exact_sha256", "path": "src/digital_asset_directory/mcp_packets.py", "sha256": "sha256:8ae4fcba16cad3225935494fdbd1cd88cbdb580dfc1cc42335ebc414e4247164"}
+    },
+    {
+      "node_id": "mcp.node.validation.remote-conformance",
+      "category": "validation",
+      "label": "Synthetic remote MCP conformance harness",
+      "artifact_kind": "file",
+      "change_contract": "Remote tests remain synthetic and must never enable network, tenant, credential, or execution authority.",
+      "fingerprint": {"kind": "exact_sha256", "path": "src/digital_asset_directory/mcp_conformance.py", "sha256": "sha256:740cf0e5b443e3790bcdb27a31278a383f27515caf4a27e12d2d18cb17b25f9b"}
     },
     {
       "node_id": "mcp.node.implementation.dependency-engine",
@@ -65,7 +89,7 @@
       "label": "Dependency freshness and impact engine",
       "artifact_kind": "file",
       "change_contract": "Any edit requires mutation, refusal, privacy, and deterministic replay tests.",
-      "fingerprint": {"kind": "exact_sha256", "path": "src/digital_asset_directory/mcp_dependency_map.py", "sha256": "sha256:1656e63f813f66686ca83ffd1273a14d13f4e57681d0ee757b6e64ddb6ec551e"}
+      "fingerprint": {"kind": "exact_sha256", "path": "src/digital_asset_directory/mcp_dependency_map.py", "sha256": "sha256:f1cd29d05b2c3ed32557cebe7c1274d5ef9ac729d60e06400ea9eeb2988030e5"}
     },
     {
       "node_id": "mcp.node.implementation.compatibility-facade",
@@ -158,7 +182,7 @@
       "label": "Vendor-neutral reusable host adapter bundle",
       "artifact_kind": "directory",
       "change_contract": "Every template, contract, evidence schema, and validator must normalize to one server and tool contract.",
-      "fingerprint": {"kind": "tree_sha256", "path": "assets/mcp/dad-local-readonly", "sha256": "sha256:553fe23fca9b29b49725b4b80854c20674f1eca1ba4fbe5b839f95f88ae84b35"}
+      "fingerprint": {"kind": "tree_sha256", "path": "assets/mcp/dad-local-readonly", "sha256": "sha256:d7a13200298db9c6e9dcb83c64c072372dfb41658bc22e69235e3e02d1991245"}
     },
     {
       "node_id": "mcp.node.host-adapter.installed-evidence",
@@ -206,7 +230,7 @@
       "label": "MCP dependency mutation and parity tests",
       "artifact_kind": "file",
       "change_contract": "Test edits require review so coverage cannot silently weaken.",
-      "fingerprint": {"kind": "exact_sha256", "path": "tests/test_mcp_dependency_map.py", "sha256": "sha256:d2b0e277a57aa3e05323f82ab23cfe9af4709e5743ef62470f858f6b4b1e6f53"}
+      "fingerprint": {"kind": "exact_sha256", "path": "tests/test_mcp_dependency_map.py", "sha256": "sha256:400ba1043e5dda514bb2f29dafdf2f9e3970ebf33656e908240d45a293d54709"}
     },
     {
       "node_id": "mcp.node.validation.repository-gate",
@@ -238,8 +262,10 @@
     {"edge_id": "mcp.edge.status-backend-to-server", "source": "mcp.node.backend.operational-status", "target": "mcp.node.implementation.server", "edge_type": "loads", "change_effect": "backend_contract_review"},
     {"edge_id": "mcp.edge.json-to-server", "source": "mcp.node.backend.json-serialization", "target": "mcp.node.implementation.server", "edge_type": "loads", "change_effect": "implementation_revalidation"},
     {"edge_id": "mcp.edge.engine-to-server", "source": "mcp.node.implementation.dependency-engine", "target": "mcp.node.implementation.server", "edge_type": "exposes", "change_effect": "implementation_revalidation"},
+    {"edge_id": "mcp.edge.packet-engine-to-server", "source": "mcp.node.implementation.packet-engine", "target": "mcp.node.implementation.server", "edge_type": "exposes", "change_effect": "implementation_revalidation"},
     {"edge_id": "mcp.edge.security-to-server", "source": "mcp.node.security-authority.readonly-boundary", "target": "mcp.node.implementation.server", "edge_type": "constrains", "change_effect": "privacy_security_review"},
     {"edge_id": "mcp.edge.protocol-to-server", "source": "mcp.node.protocol.jsonrpc-stdio", "target": "mcp.node.implementation.server", "edge_type": "constrains", "change_effect": "protocol_parity_review"},
+    {"edge_id": "mcp.edge.contract-to-server", "source": "mcp.node.contract.surface", "target": "mcp.node.implementation.server", "edge_type": "defines", "change_effect": "implementation_revalidation"},
     {"edge_id": "mcp.edge.server-to-facade", "source": "mcp.node.implementation.server", "target": "mcp.node.implementation.compatibility-facade", "edge_type": "exposes", "change_effect": "implementation_revalidation"},
     {"edge_id": "mcp.edge.facade-to-entrypoint", "source": "mcp.node.implementation.compatibility-facade", "target": "mcp.node.entrypoint.graph-stdio", "edge_type": "invokes", "change_effect": "entrypoint_parity_review"},
     {"edge_id": "mcp.edge.packaging-to-entrypoint", "source": "mcp.node.packaging.asset-dir", "target": "mcp.node.entrypoint.graph-stdio", "edge_type": "packages", "change_effect": "packaging_revalidation"},
@@ -248,6 +274,7 @@
     {"edge_id": "mcp.edge.security-to-adapters", "source": "mcp.node.security-authority.readonly-boundary", "target": "mcp.node.host-adapter.templates", "edge_type": "constrains", "change_effect": "authority_review"},
     {"edge_id": "mcp.edge.templates-to-installed-evidence", "source": "mcp.node.host-adapter.templates", "target": "mcp.node.host-adapter.installed-evidence", "edge_type": "validates", "change_effect": "host_activation_recheck"},
     {"edge_id": "mcp.edge.server-to-validation", "source": "mcp.node.implementation.server", "target": "mcp.node.validation.deterministic-suite", "edge_type": "validates", "change_effect": "validator_revalidation"},
+    {"edge_id": "mcp.edge.conformance-to-server", "source": "mcp.node.validation.remote-conformance", "target": "mcp.node.implementation.server", "edge_type": "validates", "change_effect": "validator_revalidation"},
     {"edge_id": "mcp.edge.engine-to-validation", "source": "mcp.node.implementation.dependency-engine", "target": "mcp.node.validation.deterministic-suite", "edge_type": "validates", "change_effect": "validator_revalidation"},
     {"edge_id": "mcp.edge.adapters-to-validation", "source": "mcp.node.host-adapter.templates", "target": "mcp.node.validation.deterministic-suite", "edge_type": "validates", "change_effect": "validator_revalidation"},
     {"edge_id": "mcp.edge.engine-to-repository-gate", "source": "mcp.node.implementation.dependency-engine", "target": "mcp.node.validation.repository-gate", "edge_type": "validates", "change_effect": "validator_revalidation"},
@@ -302,7 +329,7 @@
   ],
   "coverage": {
     "python_local_imports": [
-      {"path": "src/digital_asset_directory/mcp_server.py", "modules": ["daemon", "entity_graph", "entity_identity", "graph_surfaces", "journal", "mcp_dependency_map", "portfolio_intents", "portfolio_weekly_digest", "surface_versions", "utils"]},
+      {"path": "src/digital_asset_directory/mcp_server.py", "modules": ["cli", "daemon", "entity_graph", "entity_identity", "graph_surfaces", "journal", "mcp_dependency_map", "mcp_packets", "portfolio_intents", "portfolio_recovery", "portfolio_weekly_digest", "surface_versions", "utils"]},
       {"path": "src/digital_asset_directory/mcp_graph_server.py", "modules": ["mcp_server"]},
       {"path": "src/digital_asset_directory/mcp_dependency_map.py", "modules": []}
     ],
@@ -346,6 +373,10 @@
       "dad_mcp_dependency_status",
       "dad_mcp_dependency_impact",
       "dad_mcp_dependency_refresh_candidate"
+      ,"dad_lifecycle_packet_prepare"
+      ,"dad_recovery_packet_prepare"
+      ,"dad_lifecycle_result_record"
+      ,"dad_recovery_result_record"
     ],
     "resource_coverage": [
       {"match": "prefix", "value": "dad://registry/", "node_id": "mcp.node.registry.graph-surfaces", "allow_empty": false},

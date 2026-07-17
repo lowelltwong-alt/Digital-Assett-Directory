@@ -11,6 +11,7 @@ from __future__ import annotations
 import json
 import re
 import sys
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any
 from urllib.parse import urlparse
@@ -38,6 +39,11 @@ from .portfolio_intents import fold_plan_index, load_plan_revision, read_events 
 from .portfolio_weekly_digest import build_weekly_digest
 from .entity_identity import fold_state as fold_entity_state, read_events as read_entity_events
 from .entity_graph import build_entity_graph, reverse_blast_radius
+from .mcp_packets import (
+    MCPPacketError,
+    prepare_lifecycle_packet,
+    record_lifecycle_result,
+)
 
 MCP_PROTOCOL_VERSION = "2025-06-18"
 SERVER_NAME = "dad-local-graph-surfaces"
@@ -65,6 +71,7 @@ _REGISTRY_RESOURCES = {
     "graph-surface-registry": Path("registry") / "graph-surface-registry.json",
     "graph-edge-registry": Path("registry") / "graph-edge-registry.json",
     "schema-registry": Path("registry") / "schema-registry.json",
+    "mcp-surface-contract": Path("registry") / "mcp-surface-contract.json",
 }
 _REPORT_RESOURCES = {
     "journal-status",
@@ -501,6 +508,7 @@ class DADGraphMCPServer:
     ) -> None:
         self.hub_root = hub_root.resolve()
         self.approved_private_partitions = frozenset(approved_private_partitions)
+        self._packet_requests: dict[str, str] = {}
 
     def list_resources(self) -> list[dict[str, Any]]:
         registry = load_graph_surface_registry(self.hub_root)
@@ -703,6 +711,72 @@ class DADGraphMCPServer:
                 "description": "Calculate review-only dependency fingerprint candidates without writing or authorizing changes.",
                 "inputSchema": {"type": "object", "additionalProperties": False, "properties": {}},
             },
+            {
+                "name": "dad_lifecycle_packet_prepare",
+                "description": "Prepare a non-authorizing lifecycle action packet; no action is executed.",
+                "inputSchema": {
+                    "type": "object", "additionalProperties": False,
+                    "required": ["request_id", "action_kind", "repository_id", "source_snapshot_digest", "expected_preconditions_digest", "approval_ref"],
+                    "properties": {
+                        "request_id": {"type": "string", "minLength": 1, "maxLength": 160},
+                        "action_kind": {"enum": ["preflight", "midflight", "postflight", "dependency_refresh"]},
+                        "repository_id": {"type": "string", "minLength": 1, "maxLength": 160},
+                        "case_id": {"type": "string", "maxLength": 160},
+                        "source_snapshot_digest": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"},
+                        "expected_preconditions_digest": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"},
+                        "approval_ref": {"type": "string", "minLength": 1, "maxLength": 160},
+                        "rollback_ref": {"type": "string", "maxLength": 160},
+                        "expires_hours": {"type": "integer", "minimum": 1, "maximum": 168},
+                    },
+                },
+            },
+            {
+                "name": "dad_recovery_packet_prepare",
+                "description": "Prepare one digest-bound recovery packet from current approved shaping evidence.",
+                "inputSchema": {
+                    "type": "object", "additionalProperties": False,
+                    "required": ["decision_id"],
+                    "properties": {
+                        "decision_id": {"type": "string", "minLength": 1, "maxLength": 160},
+                        "expires_hours": {"type": "integer", "minimum": 1, "maximum": 168},
+                    },
+                },
+            },
+            {
+                "name": "dad_lifecycle_result_record",
+                "description": "Record a checked result for one exact packet; never executes the packet.",
+                "inputSchema": {
+                    "type": "object", "additionalProperties": False,
+                    "required": ["packet", "result_status", "before_snapshot_digest", "after_snapshot_digest", "worker_id", "checker_id", "evidence_refs"],
+                    "properties": {
+                        "packet": {"type": "object"},
+                        "result_status": {"enum": ["verified", "failed", "aborted"]},
+                        "before_snapshot_digest": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"},
+                        "after_snapshot_digest": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"},
+                        "worker_id": {"type": "string", "minLength": 1, "maxLength": 160},
+                        "checker_id": {"type": "string", "minLength": 1, "maxLength": 160},
+                        "evidence_refs": {"type": "array", "minItems": 1, "maxItems": 32, "items": {"type": "string", "maxLength": 160}},
+                    },
+                },
+            },
+            {
+                "name": "dad_recovery_result_record",
+                "description": "Record one independently checked recovery result for an exact packet.",
+                "inputSchema": {
+                    "type": "object", "additionalProperties": False,
+                    "required": ["packet", "result_status", "before_snapshot_digest", "after_snapshot_digest", "worker_id", "checker_id", "evidence_refs", "command_id"],
+                    "properties": {
+                        "packet": {"type": "object"},
+                        "result_status": {"enum": ["verified", "failed", "aborted"]},
+                        "before_snapshot_digest": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"},
+                        "after_snapshot_digest": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"},
+                        "worker_id": {"type": "string", "minLength": 1, "maxLength": 160},
+                        "checker_id": {"type": "string", "minLength": 1, "maxLength": 160},
+                        "evidence_refs": {"type": "array", "minItems": 1, "maxItems": 32, "items": {"type": "string", "maxLength": 160}},
+                        "command_id": {"type": "string", "minLength": 1, "maxLength": 160},
+                    },
+                },
+            },
         ]
 
     def list_prompts(self) -> list[dict[str, Any]]:
@@ -794,6 +868,58 @@ class DADGraphMCPServer:
             {"node_id", "max_depth"}
         ):
             raise MCPError(-32602, "Unexpected dependency impact argument")
+        if name == "dad_lifecycle_packet_prepare":
+            allowed = {"request_id", "action_kind", "repository_id", "case_id", "source_snapshot_digest", "expected_preconditions_digest", "approval_ref", "rollback_ref", "expires_hours"}
+            if not set(arguments).issubset(allowed):
+                raise MCPError(-32602, "Unexpected lifecycle packet argument")
+            packet = prepare_lifecycle_packet(**arguments)
+            request_id = str(arguments["request_id"])
+            body = json_dumps({key: value for key, value in packet.items() if key != "packet_id"})
+            prior = self._packet_requests.get(request_id)
+            if prior is not None and prior != body:
+                raise MCPError(-32602, "request_id was reused with conflicting packet data")
+            self._packet_requests[request_id] = body
+            return {"content": [{"type": "text", "text": json_dumps(packet, pretty=True)}], "structuredContent": packet}
+        if name == "dad_recovery_packet_prepare":
+            if not set(arguments).issubset({"decision_id", "expires_hours"}):
+                raise MCPError(-32602, "Unexpected recovery packet argument")
+            try:
+                from .cli import _cfg, _rebuild_current_recovery_shaping
+                from .portfolio_recovery import build_recovery_packet
+                cfg = _cfg(hub=self.hub_root)
+                _state, _cockpit, _reconciliation, shaping, _decisions = _rebuild_current_recovery_shaping(cfg)
+                now = datetime.now(timezone.utc)
+                packet = build_recovery_packet(
+                    cfg.repo_root,
+                    shaping,
+                    str(arguments["decision_id"]),
+                    now=now,
+                    expires_at=now + timedelta(hours=int(arguments.get("expires_hours", 24))),
+                )
+            except (OSError, ValueError, RuntimeError) as exc:
+                raise MCPError(-32602, "Recovery packet is unavailable") from exc
+            return {"content": [{"type": "text", "text": json_dumps(packet, pretty=True)}], "structuredContent": _strip_forbidden_fields(packet)}
+        if name == "dad_lifecycle_result_record":
+            if not set(arguments).issubset({"packet", "result_status", "before_snapshot_digest", "after_snapshot_digest", "worker_id", "checker_id", "evidence_refs"}):
+                raise MCPError(-32602, "Unexpected lifecycle result argument")
+            try:
+                payload = record_lifecycle_result(self.hub_root, arguments["packet"], result_status=str(arguments["result_status"]), before_snapshot_digest=str(arguments["before_snapshot_digest"]), after_snapshot_digest=str(arguments["after_snapshot_digest"]), worker_id=str(arguments["worker_id"]), checker_id=str(arguments["checker_id"]), evidence_refs=arguments["evidence_refs"])
+            except (MCPPacketError, OSError, ValueError) as exc:
+                raise MCPError(-32602, "Lifecycle result was rejected") from exc
+            return {"content": [{"type": "text", "text": json_dumps(payload, pretty=True)}], "structuredContent": payload}
+        if name == "dad_recovery_result_record":
+            allowed = {"packet", "result_status", "before_snapshot_digest", "after_snapshot_digest", "worker_id", "checker_id", "evidence_refs", "command_id"}
+            if not set(arguments).issubset(allowed):
+                raise MCPError(-32602, "Unexpected recovery result argument")
+            try:
+                from .cli import _cfg, _rebuild_current_recovery_shaping
+                from .portfolio_recovery import record_recovery_result
+                cfg = _cfg(hub=self.hub_root)
+                _state, _cockpit, _reconciliation, shaping, _decisions = _rebuild_current_recovery_shaping(cfg)
+                payload = record_recovery_result(cfg.repo_root, shaping, arguments["packet"], result_status=str(arguments["result_status"]), before_snapshot_digest=str(arguments["before_snapshot_digest"]), after_snapshot_digest=str(arguments["after_snapshot_digest"]), worker_id=str(arguments["worker_id"]), checker_id=str(arguments["checker_id"]), evidence_refs=arguments["evidence_refs"], command_id=str(arguments["command_id"]))
+            except (OSError, ValueError, RuntimeError) as exc:
+                raise MCPError(-32602, "Recovery result was rejected") from exc
+            return {"content": [{"type": "text", "text": json_dumps(payload, pretty=True)}], "structuredContent": _strip_forbidden_fields(payload)}
         if name == "dad_graph_surface_status":
             payload = graph_surface_status(self.hub_root)
         elif name == "dad_graph_get_node":

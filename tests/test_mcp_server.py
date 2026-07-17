@@ -134,6 +134,10 @@ def test_graph_mcp_initialize_lists_tools_and_resources(tmp_path: Path):
         "dad_mcp_dependency_status",
         "dad_mcp_dependency_impact",
         "dad_mcp_dependency_refresh_candidate",
+        "dad_lifecycle_packet_prepare",
+        "dad_recovery_packet_prepare",
+        "dad_lifecycle_result_record",
+        "dad_recovery_result_record",
     }
     resources = _request(server, "resources/list")["result"]["resources"]
     uris = {resource["uri"] for resource in resources}
@@ -210,6 +214,39 @@ def test_graph_mcp_prompts_require_bounded_arguments(tmp_path: Path):
             {"name": "dad_preflight_briefing", "arguments": arguments},
         )
         assert response["error"]["code"] == -32602
+
+
+def test_graph_mcp_packet_tools_prepare_and_record_without_authority(tmp_path: Path):
+    server = DADGraphMCPServer(_mcp_hub(tmp_path))
+    digest = "sha256:" + "a" * 64
+    packet = _call_tool(
+        server,
+        "dad_lifecycle_packet_prepare",
+        {
+            "request_id": "req-mcp-test",
+            "action_kind": "postflight",
+            "repository_id": "dad",
+            "source_snapshot_digest": digest,
+            "expected_preconditions_digest": digest,
+            "approval_ref": "approval-test",
+        },
+    )
+    assert packet["execution_authorized"] is False
+    result = _call_tool(
+        server,
+        "dad_lifecycle_result_record",
+        {
+            "packet": packet,
+            "result_status": "verified",
+            "before_snapshot_digest": digest,
+            "after_snapshot_digest": digest,
+            "worker_id": "worker-test",
+            "checker_id": "checker-test",
+            "evidence_refs": ["test:mcp:packet"],
+        },
+    )
+    assert result["execution_authorized"] is False
+    assert result["status"] == "recorded"
 
 
 def test_graph_mcp_rejects_unknown_and_hostile_resource_uris(tmp_path: Path):

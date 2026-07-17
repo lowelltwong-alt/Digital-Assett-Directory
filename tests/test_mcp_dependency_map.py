@@ -33,6 +33,10 @@ EXPECTED_TOOLS = {
     "dad_mcp_dependency_status",
     "dad_mcp_dependency_impact",
     "dad_mcp_dependency_refresh_candidate",
+    "dad_lifecycle_packet_prepare",
+    "dad_recovery_packet_prepare",
+    "dad_lifecycle_result_record",
+    "dad_recovery_result_record",
 }
 
 
