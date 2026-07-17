@@ -13,10 +13,10 @@ modules:
       - {edge_type: authoritative_input, paths: [src/digital_asset_directory/config.py]}
   - module_id: governance
     owners: [dad-maintainer]
-    roots: [registry, schemas, assets, templates, docs, roadmap, AGENTS.md, AI_FRONT_DOOR.md, AI_TABLE_OF_CONTENTS.md, MACHINE_NAVIGATION_MANIFEST.json]
+    roots: [registry, schemas, assets, templates, docs, roadmap, .gitattributes, AGENTS.md, AI_FRONT_DOOR.md, AI_TABLE_OF_CONTENTS.md, MACHINE_NAVIGATION_MANIFEST.json]
     triggers:
       - {edge_type: code, paths: [assets/**, templates/**]}
-      - {edge_type: contract, paths: [registry/**, schemas/**, AGENTS.md, AI_FRONT_DOOR.md, AI_TABLE_OF_CONTENTS.md, MACHINE_NAVIGATION_MANIFEST.json]}
+      - {edge_type: contract, paths: [registry/**, schemas/**, .gitattributes, AGENTS.md, AI_FRONT_DOOR.md, AI_TABLE_OF_CONTENTS.md, MACHINE_NAVIGATION_MANIFEST.json]}
       - {edge_type: authoritative_input, paths: [registry/**, schemas/**, docs/**, roadmap/**]}
   - module_id: rust-scan
     owners: [dad-maintainer]

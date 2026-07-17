@@ -258,6 +258,14 @@ def test_dad_rust_selection_is_enforced_by_fail_closed_selector_adapter():
     dad_manifest = load_manifest(ROOT / ".ci" / "module-boundaries.yaml")
     selected = evaluate_changes(dad_manifest, ["tools/dad_scan_core/src/lib.rs"])
     assert selected["selected_suites"] == ["ci-contract", "rust-scan"]
+
+    repository_contract = evaluate_changes(dad_manifest, [".gitattributes"])
+    assert repository_contract["status"] == "ok"
+    assert repository_contract["selected_suites"] == [
+        "ci-contract",
+        "governance",
+        "python-control-plane",
+    ]
     assert validate_github_workflows(ROOT, dad_manifest) == []
 
     workflow = (ROOT / ".github" / "workflows" / "validate.yml").read_text(encoding="utf-8")
