@@ -32,6 +32,24 @@ from typing import Any
 POLICY_RELPATH = Path("registry") / "contract-check-policy.json"
 
 
+class ContractCheckInfrastructureError(RuntimeError):
+    """The contract check could not establish the Git comparison surface."""
+
+
+def effective_mode(policy: dict[str, Any], requested_mode: str | None = None) -> str:
+    """Resolve an explicit mode or the reviewed registry policy mode."""
+
+    if requested_mode in (None, "", "policy"):
+        mode = str(policy.get("mode", "warn"))
+    else:
+        mode = requested_mode
+    if mode not in {"warn", "enforce"}:
+        raise ContractCheckInfrastructureError(
+            f"Unsupported contract-check mode {mode!r}; expected warn or enforce."
+        )
+    return mode
+
+
 def load_policy(hub_root: Path) -> dict[str, Any]:
     return json.loads((hub_root / POLICY_RELPATH).read_text(encoding="utf-8"))
 
@@ -96,6 +114,120 @@ def _git(repo: Path, *args: str) -> str:
     return result.stdout
 
 
+def _merge_base(repo: Path, head: str, comparison_ref: str) -> str:
+    try:
+        base = _git(repo, "merge-base", head, comparison_ref).strip()
+    except (OSError, subprocess.CalledProcessError, subprocess.TimeoutExpired) as exc:
+        raise ContractCheckInfrastructureError(
+            f"Could not determine a merge base between {head!r} and "
+            f"{comparison_ref!r}. Pass --base <ref-or-commit> explicitly."
+        ) from exc
+    if not base:
+        raise ContractCheckInfrastructureError(
+            f"Git returned an empty merge base for {head!r} and {comparison_ref!r}. "
+            "Pass --base <ref-or-commit> explicitly."
+        )
+    return base
+
+
+def resolve_base(repo: Path, head: str = "HEAD") -> str:
+    """Resolve a local Git base without assuming a remote or branch name.
+
+    A configured upstream is authoritative. Without one, exactly one locally
+    recorded ``refs/remotes/<remote>/HEAD`` may supply the comparison ref.
+    Network discovery and guesses such as ``origin/main`` are intentionally
+    excluded; ambiguous or absent evidence requires an explicit ``--base``.
+    """
+
+    upstream_expression = f"{head}@{{upstream}}"
+    try:
+        upstream = _git(
+            repo,
+            "rev-parse",
+            "--abbrev-ref",
+            "--symbolic-full-name",
+            upstream_expression,
+        ).strip()
+    except subprocess.CalledProcessError as upstream_error:
+        try:
+            branch = _git(repo, "rev-parse", "--abbrev-ref", head).strip()
+        except (
+            OSError,
+            subprocess.CalledProcessError,
+            subprocess.TimeoutExpired,
+        ) as exc:
+            raise ContractCheckInfrastructureError(
+                f"Could not inspect the configured upstream for {head!r}. "
+                "Pass --base <ref-or-commit> explicitly."
+            ) from exc
+        configured_upstream = False
+        if branch and branch != "HEAD":
+            for field in ("remote", "merge"):
+                try:
+                    value = _git(
+                        repo, "config", "--get", f"branch.{branch}.{field}"
+                    ).strip()
+                except subprocess.CalledProcessError as exc:
+                    if exc.returncode == 1:
+                        continue
+                    raise ContractCheckInfrastructureError(
+                        f"Could not inspect the configured upstream for {head!r}. "
+                        "Pass --base <ref-or-commit> explicitly."
+                    ) from exc
+                except (OSError, subprocess.TimeoutExpired) as exc:
+                    raise ContractCheckInfrastructureError(
+                        f"Could not inspect the configured upstream for {head!r}. "
+                        "Pass --base <ref-or-commit> explicitly."
+                    ) from exc
+                configured_upstream = configured_upstream or bool(value)
+        if configured_upstream:
+            raise ContractCheckInfrastructureError(
+                f"Configured upstream for {head!r} could not be resolved locally. "
+                "Pass --base <ref-or-commit> explicitly."
+            ) from upstream_error
+        upstream = ""
+    except (OSError, subprocess.TimeoutExpired) as exc:
+        raise ContractCheckInfrastructureError(
+            f"Could not inspect the configured upstream for {head!r}. "
+            "Pass --base <ref-or-commit> explicitly."
+        ) from exc
+    if upstream:
+        return _merge_base(repo, head, upstream)
+
+    try:
+        remote_refs = _git(
+            repo,
+            "for-each-ref",
+            "--format=%(refname)",
+            "refs/remotes",
+        ).splitlines()
+    except (OSError, subprocess.CalledProcessError, subprocess.TimeoutExpired) as exc:
+        raise ContractCheckInfrastructureError(
+            "Could not inspect locally recorded remote HEAD refs. "
+            "Pass --base <ref-or-commit> explicitly."
+        ) from exc
+    remote_heads = sorted(
+        {
+            ref.strip()
+            for ref in remote_refs
+            if ref.strip().startswith("refs/remotes/")
+            and ref.strip().endswith("/HEAD")
+        }
+    )
+    if len(remote_heads) == 1:
+        return _merge_base(repo, head, remote_heads[0])
+    if len(remote_heads) > 1:
+        choices = ", ".join(remote_heads)
+        raise ContractCheckInfrastructureError(
+            f"Multiple locally recorded remote HEAD refs are available ({choices}); "
+            "pass --base <ref-or-commit> explicitly."
+        )
+    raise ContractCheckInfrastructureError(
+        f"No configured upstream for {head!r} and no locally recorded "
+        "refs/remotes/<remote>/HEAD were found. Pass --base <ref-or-commit> explicitly."
+    )
+
+
 def changed_files(repo: Path, base: str, head: str = "HEAD") -> list[str]:
     output = _git(repo, "diff", "--name-only", f"{base}...{head}")
     return [line.strip() for line in output.splitlines() if line.strip()]
@@ -154,7 +286,7 @@ def run_contract_check(
     mode: str | None = None,
 ) -> dict[str, Any]:
     policy = load_policy(hub_root)
-    effective_mode = mode or policy.get("mode", "warn")
+    selected_mode = effective_mode(policy, mode)
     specs = protected_path_specs(hub_root, policy)
     exempt = [str(glob) for glob in policy.get("exempt_globs", []) or []]
     changed = changed_files(repo, base, head)
@@ -168,7 +300,7 @@ def run_contract_check(
     report: dict[str, Any] = {
         "schema_version": "0.1.0",
         "policy_id": policy.get("policy_id", ""),
-        "mode": effective_mode,
+        "mode": selected_mode,
         "base": base,
         "head": head,
         "changed_count": len(changed),

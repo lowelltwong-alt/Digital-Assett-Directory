@@ -8970,34 +8970,54 @@ def agent_postflight(
 @agent_app.command("contract-check")
 def agent_contract_check(
     repository: Path = typer.Option(Path("."), "--repo"),
-    base: str = typer.Option("", "--base", help="Base ref; defaults to merge-base with origin/main."),
+    base: str = typer.Option(
+        "",
+        "--base",
+        help=(
+            "Base ref; defaults to the configured upstream or exactly one locally "
+            "recorded remote HEAD. Otherwise --base is required."
+        ),
+    ),
     head: str = typer.Option("HEAD", "--head"),
     mode: str = typer.Option("", "--mode", help="warn or enforce; empty uses registry policy."),
     extra_text: str = typer.Option("", "--extra-text", help="Extra text to scan for trailers (e.g. PR body)."),
     hub: Optional[Path] = typer.Option(None),
 ) -> None:
     """Check that protected-path changes carry a DAD lifecycle trace trailer."""
-    import subprocess as _subprocess
-
-    from .contract_check import render_text, run_contract_check
+    from .contract_check import (
+        effective_mode,
+        load_policy,
+        render_text,
+        resolve_base,
+        run_contract_check,
+    )
 
     cfg = _cfg(hub=hub)
     repo = repository.resolve()
-    resolved_base = base or _subprocess.run(
-        ["git", "-C", str(repo), "merge-base", "HEAD", "origin/main"],
-        capture_output=True,
-        text=True,
-        check=True,
-        timeout=60,
-    ).stdout.strip()
-    report = run_contract_check(
-        repo,
-        cfg.repo_root,
-        resolved_base,
-        head,
-        extra_text=extra_text,
-        mode=mode or None,
-    )
+    # Fail closed until a reviewed policy mode is loaded. Only an exact,
+    # explicit warn request may make infrastructure failures non-blocking.
+    selected_mode = "warn" if mode == "warn" else "enforce"
+    try:
+        policy = load_policy(cfg.repo_root)
+        selected_mode = effective_mode(policy, mode or None)
+        resolved_base = base or resolve_base(repo, head)
+        report = run_contract_check(
+            repo,
+            cfg.repo_root,
+            resolved_base,
+            head,
+            extra_text=extra_text,
+            mode=selected_mode,
+        )
+    except Exception as exc:  # noqa: BLE001
+        if selected_mode == "enforce":
+            console.print(f"DAD contract check failed to run in enforce mode: {exc}")
+            raise typer.Exit(2) from exc
+        console.print(
+            f"DAD contract check could not run ({exc}); "
+            "not blocking in effective warn mode."
+        )
+        return
     console.print(render_text(report))
     console.print_json(data=report)
     if report["violation"] and report["mode"] == "enforce":

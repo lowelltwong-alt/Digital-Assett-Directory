@@ -346,7 +346,7 @@
     {
       "schema_version": "dad.portable_capability_card.v1",
       "card_id": "portability-card:harness-portable-capability-control-plane",
-      "revision_id": "portability-card-revision:harness-portable-capability-control-plane:0.1.5",
+      "revision_id": "portability-card-revision:harness-portable-capability-control-plane:0.1.7",
       "artifact_id": "harness:portable-capability-control-plane",
       "artifact_kind": "harness",
       "binding_class": "portable_core",
@@ -405,7 +405,7 @@
         "src/digital_asset_directory/validation.py",
         "templates/downstream/AGENTS_MANAGED_BLOCK.md"
       ],
-      "content_digest": "sha256:44bd77859ffc8b2c8e97c6ea28b4f89972fa17654ec8f5c3df4c3aeb7585f7c6",
+      "content_digest": "sha256:dc04a8a5ff22a50aa7b32fc85dbe0e586e1d482a347e685a5a20f573c96f86db",
       "contract_digests": {
         "input": "sha256:eee475da7d6fe76d90852dfa97de0e1f047cb72d7d0134552245b7cda9a9fb68",
         "output": "sha256:0ec04e3bcb58df087b53068eb3756924c878f35a40871814bd8749313aa69dea",
@@ -458,7 +458,8 @@
       "harness_revision_id": "harness-revision:portable-capability-contract:0.1.0",
       "evidence_refs": [
         "tests/test_portability_control.py",
-        "tests/test_governance.py"
+        "tests/test_governance.py",
+        "tests/test_contract_check.py"
       ],
       "fresh_until": "2026-10-15T00:00:00-04:00",
       "rollback_ref": "Revert the control-plane revision and restore the prior externally protected required-check revision.",
@@ -1342,7 +1343,7 @@
     {
       "schema_version": "dad.portable_capability_card.v1",
       "card_id": "portability-card:skill-personal-project-management-ops",
-      "revision_id": "portability-card-revision:skill-personal-project-management-ops:0.4.8",
+      "revision_id": "portability-card-revision:skill-personal-project-management-ops:0.4.9",
       "artifact_id": "skill:personal-project-management-ops",
       "artifact_kind": "skill",
       "binding_class": "portable_core",
@@ -1396,7 +1397,7 @@
         "src/digital_asset_directory/portfolio_roadmap.py",
         "templates/hooks/intent-continuity-shadow-receipt.template.json"
       ],
-      "content_digest": "sha256:7baa42eafbb1a4a224ec9654347ac2e53c09b33d72cbc5c5f6bf4413eb011c22",
+      "content_digest": "sha256:a414828a24fc3f0b1601263ac52d412714d871f5f7fe1bbb807157bd1dacca76",
       "source_observation_digest": "sha256:1aeef157eb837554b2d8bf2b3de020f8daf701533a3ca6efe7d31e0888368a9a",
       "contract_digests": {
         "input": "sha256:eee475da7d6fe76d90852dfa97de0e1f047cb72d7d0134552245b7cda9a9fb68",
@@ -1447,7 +1448,7 @@
         "capability-os-cockpit"
       ],
       "adapter_revision_ids": [
-        "portability-card-revision:adapter-intent-continuity-codex-host:0.3.9"
+        "portability-card-revision:adapter-intent-continuity-codex-host:0.3.10"
       ],
       "harness_revision_id": "harness-revision:portable-capability-contract:0.1.0",
       "evidence_refs": [
@@ -1464,20 +1465,20 @@
     {
       "schema_version": "dad.portable_capability_card.v1",
       "card_id": "portability-card:adapter-intent-continuity-codex-host",
-      "revision_id": "portability-card-revision:adapter-intent-continuity-codex-host:0.3.9",
+      "revision_id": "portability-card-revision:adapter-intent-continuity-codex-host:0.3.10",
       "artifact_id": "adapter:intent-continuity-codex-host",
       "artifact_kind": "runtime_adapter",
       "binding_class": "runtime_adapter",
       "source_authority": "config/intent-continuity-shadow-hooks.json",
       "owner": "DAD and Lowell",
       "status": "schema_validated",
-      "core_revision_id": "portability-card-revision:skill-personal-project-management-ops:0.4.8",
+      "core_revision_id": "portability-card-revision:skill-personal-project-management-ops:0.4.9",
       "content_digest": "sha256:4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
       "target_capability_predicate": {
         "runtime_adapter_id": "adapter:codex-host",
         "status": "supervised_silent_shadow"
       },
-      "adapter_interface_digest": "sha256:c9567379d4aab9f5520c5e590890da49d5666e71a8054803893c01cfe221f057",
+      "adapter_interface_digest": "sha256:6d6fed1ecba9d1617851e85620374bf2405fb6098f17817f6fa73275ce48a9c8",
       "adapter_interface_sources": [
         ".codex/hooks.json",
         ".codex/hooks/intent_continuity_shadow.py",

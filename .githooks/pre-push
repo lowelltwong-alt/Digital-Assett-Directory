@@ -10,7 +10,7 @@ if [ -z "$DAD_HUB" ]; then
   exit 1
 fi
 python "$DAD_HUB/scripts/enforce_postflight.py" --hub "$DAD_HUB" --repo "$(pwd)"
-# DAD contract check in registry policy mode: exits 0 while the reviewed
-# policy is warn (probation); blocks only after promotion to enforce.
+# DAD contract check in registry policy mode: warn-mode check failures are
+# non-blocking; enforce mode or an unreadable policy exits nonzero.
 # See registry/contract-check-policy.json.
 python "$DAD_HUB/scripts/contract_check.py" --hub "$DAD_HUB" --repo "$(pwd)"
