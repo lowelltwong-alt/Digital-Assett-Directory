@@ -230,6 +230,31 @@ def test_resolve_base_uses_configured_non_origin_upstream(tmp_path: Path) -> Non
     assert resolve_base(repo) == base
 
 
+def test_resolve_base_rejects_broken_configured_upstream_before_fallback(
+    tmp_path: Path,
+) -> None:
+    repo = _hub_repo(tmp_path)
+    base = _git(repo, "rev-parse", "HEAD").strip()
+    _commit(repo, "src/change.py", "change after broken upstream")
+    _git(repo, "remote", "add", "central", "https://example.invalid/repo.git")
+    _git(repo, "config", "branch.main.remote", "central")
+    _git(repo, "config", "branch.main.merge", "refs/heads/missing")
+    _git(repo, "remote", "add", "source", "https://example.invalid/repo.git")
+    _git(repo, "update-ref", "refs/remotes/source/trunk", base)
+    _git(
+        repo,
+        "symbolic-ref",
+        "refs/remotes/source/HEAD",
+        "refs/remotes/source/trunk",
+    )
+
+    with pytest.raises(
+        ContractCheckInfrastructureError,
+        match=r"Configured upstream.*--base",
+    ):
+        resolve_base(repo)
+
+
 def test_resolve_base_uses_single_recorded_remote_head(tmp_path: Path) -> None:
     repo = _hub_repo(tmp_path)
     base = _git(repo, "rev-parse", "HEAD").strip()

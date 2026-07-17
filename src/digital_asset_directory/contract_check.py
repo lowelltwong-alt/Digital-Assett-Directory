@@ -148,7 +148,43 @@ def resolve_base(repo: Path, head: str = "HEAD") -> str:
             "--symbolic-full-name",
             upstream_expression,
         ).strip()
-    except subprocess.CalledProcessError:
+    except subprocess.CalledProcessError as upstream_error:
+        try:
+            branch = _git(repo, "rev-parse", "--abbrev-ref", head).strip()
+        except (
+            OSError,
+            subprocess.CalledProcessError,
+            subprocess.TimeoutExpired,
+        ) as exc:
+            raise ContractCheckInfrastructureError(
+                f"Could not inspect the configured upstream for {head!r}. "
+                "Pass --base <ref-or-commit> explicitly."
+            ) from exc
+        configured_upstream = False
+        if branch and branch != "HEAD":
+            for field in ("remote", "merge"):
+                try:
+                    value = _git(
+                        repo, "config", "--get", f"branch.{branch}.{field}"
+                    ).strip()
+                except subprocess.CalledProcessError as exc:
+                    if exc.returncode == 1:
+                        continue
+                    raise ContractCheckInfrastructureError(
+                        f"Could not inspect the configured upstream for {head!r}. "
+                        "Pass --base <ref-or-commit> explicitly."
+                    ) from exc
+                except (OSError, subprocess.TimeoutExpired) as exc:
+                    raise ContractCheckInfrastructureError(
+                        f"Could not inspect the configured upstream for {head!r}. "
+                        "Pass --base <ref-or-commit> explicitly."
+                    ) from exc
+                configured_upstream = configured_upstream or bool(value)
+        if configured_upstream:
+            raise ContractCheckInfrastructureError(
+                f"Configured upstream for {head!r} could not be resolved locally. "
+                "Pass --base <ref-or-commit> explicitly."
+            ) from upstream_error
         upstream = ""
     except (OSError, subprocess.TimeoutExpired) as exc:
         raise ContractCheckInfrastructureError(
