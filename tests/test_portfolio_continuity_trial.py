@@ -18,6 +18,7 @@ ZERO_FAILURES = {
     "false_duplicate_suggestions": 0,
     "false_merges": 0,
     "accidental_mutations": 0,
+    "unauthorized_mutations": 0,
     "repeated_unchanged_asks": 0,
     "privacy_escapes": 0,
     "blind_delivery_retries": 0,
@@ -31,6 +32,9 @@ def _ready_host(assessed_at: str = "2026-06-30T00:00:00+00:00") -> dict:
         "assessment_digest": "sha256:" + "e" * 64,
         "assessed_at": assessed_at,
         "gate_failures": [],
+        "adapter_binding": {
+            "computed_interface_digest": "sha256:" + "a" * 64,
+        },
     }
 
 
@@ -107,6 +111,21 @@ def test_five_distinct_zero_failure_reviews_over_seven_days_only_become_eligible
     assert state["activation_authorized"] is False
     assert state["execution_authorized"] is False
 
+    packet = trial.build_trial_operator_packet(
+        reviews,
+        trial_id="trial:v1",
+        activation_state=state,
+        host_readiness=_ready_host(),
+        generated_at="2026-07-08T00:01:00+00:00",
+    )
+    assert packet["phase"] == "eligible_for_separate_human_approval"
+    assert packet["next_action"] == "request_separate_activation_approval"
+    assert packet["reviews_remaining"] == 0
+    assert packet["span_days_remaining"] == 0
+    assert packet["activation_authorized"] is False
+    assert packet["cleanup_authorized"] is False
+    trial.validate_trial_operator_packet(packet)
+
 
 def test_reviews_cannot_qualify_without_recorded_host_readiness(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
@@ -125,6 +144,19 @@ def test_reviews_cannot_qualify_without_recorded_host_readiness(
     assert state["status"] == "trial_incomplete"
     assert state["host_readiness_status"] == "missing"
     assert "host_readiness_missing" in state["gate_failures"]
+
+    packet = trial.build_trial_operator_packet(
+        reviews,
+        trial_id="trial:v1",
+        activation_state=state,
+        generated_at="2026-07-10T00:00:00+00:00",
+    )
+    assert packet["phase"] == "awaiting_host_readiness"
+    assert packet["next_action"] == "complete_host_readiness"
+    assert packet["restart_required"] is True
+    assert "recorded_reviews_lack_current_host_binding" in packet["restart_reasons"]
+    assert packet["reviews_remaining"] == 5
+    assert packet["earliest_eligibility_at"] == ""
 
 
 def test_reviews_before_host_readiness_cannot_qualify(
@@ -176,6 +208,7 @@ def test_stale_host_binding_cannot_qualify(
     [
         ({"false_merges": 1}, None, 3, "nonzero_failure_metric:false_merges"),
         ({"accidental_mutations": 1}, None, 3, "nonzero_failure_metric:accidental_mutations"),
+        ({"unauthorized_mutations": 1}, None, 3, "nonzero_failure_metric:unauthorized_mutations"),
         ({}, 2, 3, "notification_content_not_safe"),
         ({}, None, 4, "digest_exceeded_three_asks"),
     ],
@@ -386,6 +419,233 @@ def test_missing_latency_sample_is_preserved_as_failing_review(
     state = trial.evaluate_trial([result["review"]], trial_id="trial:preflight")
     assert "hook_latency_sample_missing" in state["gate_failures"]
     assert "nonzero_failure_metric:missed_captures" in state["gate_failures"]
+
+    packet = trial.build_trial_operator_packet(
+        [result["review"]],
+        trial_id="trial:preflight",
+        activation_state=state,
+        generated_at=state["evaluated_at"],
+    )
+    assert packet["restart_required"] is True
+    assert "hook_latency_sample_missing" in packet["restart_reasons"]
+    assert "nonzero_failure_metric:missed_captures" in packet["restart_reasons"]
+
+
+def test_operator_packet_tracks_reviews_and_earliest_real_clock_eligibility(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    start = datetime(2026, 7, 17, tzinfo=timezone.utc)
+    reviews = _record_reviews(tmp_path, monkeypatch, [start, start + timedelta(days=2)])
+    state = trial.evaluate_trial(
+        reviews,
+        trial_id="trial:v1",
+        evaluated_at="2026-07-19T00:00:00+00:00",
+        host_readiness=_ready_host("2026-07-17T00:00:00+00:00"),
+    )
+
+    packet = trial.build_trial_operator_packet(
+        reviews,
+        trial_id="trial:v1",
+        activation_state=state,
+        host_readiness=_ready_host("2026-07-17T00:00:00+00:00"),
+        generated_at="2026-07-19T00:00:00+00:00",
+    )
+
+    assert packet["phase"] == "collecting_supervised_reviews"
+    assert packet["reviews_remaining"] == 3
+    assert packet["trial_span_days"] == 2
+    assert packet["span_days_remaining"] == 5
+    assert packet["first_review_at"] == "2026-07-17T00:00:00+00:00"
+    assert packet["earliest_eligibility_at"] == "2026-07-24T00:00:00+00:00"
+    assert packet["review_contract"]["minimum_hook_sample_count"] == 5
+    assert packet["review_contract"]["maximum_asks_per_digest"] == 3
+    assert packet["review_contract"]["hook_latency_within_budget_required"] is True
+    assert packet["review_contract"]["performance_evidence_digest_required"] is True
+    assert packet["review_contract"]["adapter_interface_digest_match_required"] is True
+    assert packet["review_contract"]["notification_content_safe_required"] is True
+
+
+def test_operator_packet_digest_and_trial_binding_fail_closed() -> None:
+    state = trial.evaluate_trial([], trial_id="trial:v1", evaluated_at="2026-07-17T00:00:00+00:00")
+    packet = trial.build_trial_operator_packet(
+        [],
+        trial_id="trial:v1",
+        activation_state=state,
+        generated_at="2026-07-17T00:00:00+00:00",
+    )
+    tampered = {**packet, "reviews_remaining": 0}
+    with pytest.raises(trial.ContinuityValidationError, match="digest"):
+        trial.validate_trial_operator_packet(tampered)
+    with pytest.raises(trial.ContinuityValidationError, match="trial_id"):
+        trial.build_trial_operator_packet(
+            [],
+            trial_id="trial:other",
+            activation_state=state,
+            generated_at="2026-07-17T00:00:00+00:00",
+        )
+
+    incomplete_contract = {**packet, "review_contract": dict(packet["review_contract"])}
+    incomplete_contract["review_contract"]["failure_metric_keys"] = [
+        key
+        for key in packet["review_contract"]["failure_metric_keys"]
+        if key != "unauthorized_mutations"
+    ]
+    material = {
+        key: value for key, value in incomplete_contract.items() if key != "packet_digest"
+    }
+    incomplete_contract["packet_digest"] = "sha256:" + hashlib.sha256(
+        trial._canonical(material).encode("utf-8")
+    ).hexdigest()
+    with pytest.raises(trial.ContinuityValidationError, match="failure_metric_keys"):
+        trial.validate_trial_operator_packet(incomplete_contract)
+
+
+def test_operator_packet_rejects_activation_state_from_another_review_set(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    start = datetime(2026, 7, 17, tzinfo=timezone.utc)
+    reviews = _record_reviews(tmp_path, monkeypatch, [start, start + timedelta(days=1)])
+    state = trial.evaluate_trial(
+        reviews[:1],
+        trial_id="trial:v1",
+        evaluated_at="2026-07-18T00:00:00+00:00",
+        host_readiness=_ready_host("2026-07-17T00:00:00+00:00"),
+    )
+    with pytest.raises(trial.ContinuityValidationError, match="activation state"):
+        trial.build_trial_operator_packet(
+            reviews,
+            trial_id="trial:v1",
+            activation_state=state,
+            host_readiness=_ready_host("2026-07-17T00:00:00+00:00"),
+            generated_at="2026-07-18T00:00:00+00:00",
+        )
+
+
+def test_operator_packet_rejects_forged_eligible_activation_state() -> None:
+    state = trial.evaluate_trial(
+        [], trial_id="trial:v1", evaluated_at="2026-07-17T00:00:00+00:00"
+    )
+    forged = {
+        **state,
+        "status": "eligible_for_human_activation",
+        "review_count": 5,
+        "distinct_review_count": 5,
+        "trial_span_days": 7.0,
+        "host_readiness_status": "ready_for_supervised_trial",
+        "host_binding_current": True,
+        "gate_failures": [],
+    }
+    with pytest.raises(trial.ContinuityValidationError, match="activation state"):
+        trial.build_trial_operator_packet(
+            [],
+            trial_id="trial:v1",
+            activation_state=forged,
+            generated_at="2026-07-17T00:00:00+00:00",
+        )
+
+
+def test_operator_packet_requests_span_extending_review_after_calendar_wait(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    start = datetime(2026, 7, 1, tzinfo=timezone.utc)
+    reviews = _record_reviews(
+        tmp_path,
+        monkeypatch,
+        [start + timedelta(days=index) for index in range(5)],
+    )
+    state = trial.evaluate_trial(
+        reviews,
+        trial_id="trial:v1",
+        evaluated_at="2026-07-09T00:00:00+00:00",
+        host_readiness=_ready_host(),
+    )
+    packet = trial.build_trial_operator_packet(
+        reviews,
+        trial_id="trial:v1",
+        activation_state=state,
+        host_readiness=_ready_host(),
+        generated_at="2026-07-09T00:00:00+00:00",
+    )
+
+    assert packet["reviews_remaining"] == 0
+    assert packet["span_days_remaining"] == 0
+    assert packet["phase"] == "collecting_supervised_reviews"
+    assert packet["next_action"] == "record_span_extending_supervised_review"
+    assert "additional production-clock review" in packet["human_actions_required"][0]
+
+
+def test_clustered_reviews_tell_operator_to_wait_then_extend_span(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    start = datetime(2026, 7, 17, tzinfo=timezone.utc)
+    reviews = _record_reviews(
+        tmp_path,
+        monkeypatch,
+        [start + timedelta(hours=index) for index in range(5)],
+    )
+    state = trial.evaluate_trial(
+        reviews,
+        trial_id="trial:v1",
+        evaluated_at="2026-07-17T05:00:00+00:00",
+        host_readiness=_ready_host("2026-07-17T00:00:00+00:00"),
+    )
+    packet = trial.build_trial_operator_packet(
+        reviews,
+        trial_id="trial:v1",
+        activation_state=state,
+        host_readiness=_ready_host("2026-07-17T00:00:00+00:00"),
+        generated_at="2026-07-17T05:00:00+00:00",
+    )
+    assert packet["phase"] == "waiting_for_real_clock_span"
+    assert packet["next_action"] == "wait_then_record_span_extending_supervised_review"
+    assert "then record a production-clock review" in packet["human_actions_required"][0]
+
+
+def test_review_adapter_digest_must_match_current_ready_host(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    start = datetime(2026, 7, 1, tzinfo=timezone.utc)
+    reviews = _record_reviews(
+        tmp_path,
+        monkeypatch,
+        [start + timedelta(days=index * 2) for index in range(5)],
+    )
+    host = _ready_host()
+    host["adapter_binding"]["computed_interface_digest"] = "sha256:" + "b" * 64
+    state = trial.evaluate_trial(
+        reviews,
+        trial_id="trial:v1",
+        evaluated_at="2026-07-10T00:00:00+00:00",
+        host_readiness=host,
+    )
+    assert "review_adapter_interface_digest_mismatch" in state["gate_failures"]
+    packet = trial.build_trial_operator_packet(
+        reviews,
+        trial_id="trial:v1",
+        activation_state=state,
+        host_readiness=host,
+        generated_at="2026-07-10T00:00:00+00:00",
+    )
+    assert packet["restart_required"] is True
+    assert "review_adapter_interface_digest_mismatch" in packet["restart_reasons"]
+
+
+def test_operator_packet_rejects_sensitive_failure_tokens() -> None:
+    state = trial.evaluate_trial([], trial_id="trial:v1", evaluated_at="2026-07-17T00:00:00+00:00")
+    unsafe = {**state, "gate_failures": ["path:C:/private/source"]}
+    with pytest.raises(trial.ContinuityValidationError, match="does not match"):
+        trial.build_trial_operator_packet(
+            [],
+            trial_id="trial:v1",
+            activation_state=unsafe,
+            generated_at="2026-07-17T00:00:00+00:00",
+        )
+
+
+@pytest.mark.parametrize("trial_id", ["trial:C:/private/client", "trial:C:\\private\\client"])
+def test_trial_id_rejects_path_like_values(trial_id: str) -> None:
+    with pytest.raises(trial.ContinuityValidationError, match="trial_id"):
+        trial.evaluate_trial([], trial_id=trial_id, evaluated_at="2026-07-17T00:00:00+00:00")
 
 
 def test_production_recording_has_no_timestamp_parameter() -> None:

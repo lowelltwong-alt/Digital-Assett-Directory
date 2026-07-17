@@ -13,7 +13,7 @@
   "properties": {
     "schema_version": {"const": "dad.portfolio_continuity_trial_review.v1"},
     "review_id": {"type": "string", "pattern": "^dad:continuity-review:[0-9a-f]{64}$"},
-    "trial_id": {"type": "string", "minLength": 1, "maxLength": 160},
+    "trial_id": {"type": "string", "pattern": "^trial:[a-z0-9][a-z0-9._:-]{0,127}$"},
     "reviewer_id": {"type": "string", "minLength": 1, "maxLength": 160},
     "recorded_at": {"type": "string", "format": "date-time"},
     "snapshot_digest": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"},
@@ -35,6 +35,7 @@
         "false_duplicate_suggestions": {"type": "integer", "minimum": 0},
         "false_merges": {"type": "integer", "minimum": 0},
         "accidental_mutations": {"type": "integer", "minimum": 0},
+        "unauthorized_mutations": {"type": "integer", "minimum": 0},
         "repeated_unchanged_asks": {"type": "integer", "minimum": 0},
         "privacy_escapes": {"type": "integer", "minimum": 0},
         "blind_delivery_retries": {"type": "integer", "minimum": 0},

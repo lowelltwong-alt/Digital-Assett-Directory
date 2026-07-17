@@ -13,7 +13,7 @@ Status: implementation in progress; recurring activation is not eligible.
 | Codex metadata adapter | Strict minimized receipt; no transcript/internal-file access; initialized private-data-root gate | implemented candidate |
 | Global/repository projections and queues | Deterministic replay, repo/global graph, live conservative duplicate/closeout inputs, repository-local cockpits, four required action queues plus three supporting queue views, at most three immediate next actions | implemented candidate |
 | Silent shadow hooks | Repo-local Codex hook definition, content-free handler, exact retry, privacy, missed-hook reconciliation, latency, rollback tests, and host-readiness assessment | committed candidate; project trust, exact hook trust, linked-worktree discovery, and real dispatch unverified |
-| Bounded PM roles | Existing role pack remains 0.4.0; portable PM capability is 0.4.5; evaluated revision IDs remain empty pending real evidence | implemented candidate; promotion prohibited |
+| Bounded PM roles | Existing role pack remains 0.4.0; portable PM capability is 0.4.6; evaluated revision IDs remain empty pending real evidence | implemented candidate; promotion prohibited |
 | Supervised trial | Five qualifying reviews across at least seven days, measured latency, and zero-failure gates | preflight review recorded one missed capture; qualifying trial not started |
 | Progressive activation | Dormant stage readiness plus non-deliverable session, reused weekly-digest, and breakpoint previews; exact human approval after trial; no automatic cleanup | implementation candidate; activation blocked by design until trial |
 
@@ -161,11 +161,12 @@ gates.
   Repository portability validation then returned 19 cards, zero findings,
   and zero quarantines.
 - The live-queue and progressive-readiness continuation advanced the portable
-  PM core to 0.4.5, the supervised Codex adapter to 0.3.5, and the portability
-  harness card to 0.1.3. Unified recovery now joins local Git/worktree/Codex
+  PM core to 0.4.6, the supervised Codex adapter to 0.3.6, and the portability
+  harness card to 0.1.4. Unified recovery now joins local Git/worktree/Codex
   evidence with DAD plans, entities, families, skills, capabilities, and
   workflows; repository cockpits expose local queue/activity/closeout slices;
-  trial reviews add missed-recovery and false-duplicate metrics; and dormant
+  trial reviews add missed-recovery, false-duplicate, and unauthorized-mutation
+  metrics; and dormant
   attention previews remain explicitly non-deliverable.
 - Linked-worktree hub routing is explicit: source validation uses `--hub .`;
   private continuity/trial operations omit `--hub` and use the canonical user
@@ -175,30 +176,30 @@ gates.
   proof. Every qualifying real review therefore requires supervisor attestation,
   and no receipt can authorize hook trust or activation by itself.
 - Revision-bound performance receipt
-  `dad:hook-performance:2b041703191c3a0fbc77762c041f1f5d26de8b125942185310bed712a5776e85`
-  recorded five exact cold-process Windows samples with p95 758.484 ms under the
+  `dad:hook-performance:ec86d97e176017a05058e8a9500cf6c7e3584c1f26992504104a685c25fe2e02`
+  recorded five exact cold-process Windows samples with p95 693.177 ms under the
   1,500 ms budget; all five were silent, persisted, privacy-safe, and left the
   source worktree unchanged. Evidence:
   `roadmap/evidence/intent-continuity-hook-performance-2026-07-17.json`.
 - Revision-bound scale receipt
-  `dad:hook-scale:c81730e12e785cf53b2767c23ded3d0aecbb6dc4b07cf832b5bab4ebd7e406e5`
-  measured warm 0/1K/10K hook latency at 718.508/1,345.463/843.475 ms and a cold
-  10K index rebuild at 2,125.761 ms. Every case was silent, persisted exactly one
+  `dad:hook-scale:19e282b4bf86498245c434204c52f16559e6ae6b603fe0c8216a8a0192f52e1c`
+  measured warm 0/1K/10K hook latency at 720.434/700.731/857.351 ms and a cold
+  10K index rebuild at 2,138.419 ms. Every case was silent, persisted exactly one
   event, produced a valid size/hash-bound index, recorded zero failure markers,
   remained below its applicable boundary, and left source unchanged. Evidence:
   `roadmap/evidence/intent-continuity-hook-scale-2026-07-17.json`.
 - Host-readiness assessment
-  `sha256:2db838947692a6a5a9461ea3158a1e02b6ee5c745dbd592425d8f48b3d9ae2a2`
-  proves the exact 0.3.5 adapter-interface digest matches, all four intended
+  `sha256:42851eff9e1969c59c5b72d0a0fefc85497bd2d0fb2fdc3fc47b314c7ed7fd62`
+  proves the exact 0.3.6 adapter-interface digest matches, all four intended
   lifecycle events are configured, no current-revision failure marker exists,
   and the repository is a linked worktree. It correctly reports `not_ready`
   because project trust, exact hook trust, `/hooks` discovery, hook-review
   attestation, a current-revision dispatch event, and an exact-event dispatch
   attestation are absent. Evidence:
   `roadmap/evidence/intent-continuity-host-readiness-2026-07-17.json`.
-- The continuation focused gate passed 74 attention, projection, runtime,
-  unified-search, trial, host-readiness, benchmark, hook, and adapter tests.
-  Repository validation checked 345 contracts with zero warnings/errors;
+- The continuation focused gate passed 36 trial/runtime tests, 50 host/hook/
+  benchmark/adapter/event tests, 25 portability-control tests, and 30 schema
+  conformance tests. Repository validation checked 346 contracts with zero warnings/errors;
   portability validation returned 19 cards with zero findings/quarantines;
   Ruff and `git diff --check` passed on the affected surfaces.
 - A live unified recovery query for the lost full-stack engineering work
@@ -207,6 +208,12 @@ gates.
   status rebuild remained non-authorizing, and the post-revision activation
   check correctly stayed `inactive_shadow` with zero reviews and missing
   recorded host readiness.
+- The digest-bound `trial-readiness` operator packet now reports the exact
+  current host gate, remaining review count, real-clock wait, earliest possible
+  eligibility, permanent append-only failures requiring a new trial ID, and the
+  next honest human action. It binds the exact review set and current adapter
+  digest, rejects path-like identifiers and failure tokens, and carries
+  explicit false delivery, activation, cleanup, and execution authorities.
 - The future qualifying production trial has zero reviews and has not started.
 - Manual reconciliation rebuilt the canonical private candidate projections
   without touching Git, tasks, or source files; the timestamped pre-commit
@@ -242,8 +249,8 @@ reviewed lifecycle vocabulary. The observable correction in this build is one
 durable repo-local lifecycle kernel with plan, readiness, delivery, validation,
 and closeout represented as separate overlays or gates.
 
-The candidate asset is the 0.4.5 revision of Personal Project Management Ops
-plus a separate 0.3.5 supervised Codex-host adapter. It is not a new
+The candidate asset is the 0.4.6 revision of Personal Project Management Ops
+plus a separate 0.3.6 supervised Codex-host adapter. It is not a new
 idea-library skill.
 The linked-worktree routing surprise was captured as a privacy-safe local
 exception candidate and resolved in the reviewed documentation and focused

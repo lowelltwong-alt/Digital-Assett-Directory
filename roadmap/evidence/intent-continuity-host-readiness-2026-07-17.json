@@ -1,6 +1,6 @@
 {
   "schema_version": "dad.intent_continuity_host_readiness.v1",
-  "assessed_at": "2026-07-17T07:43:21.867052+00:00",
+  "assessed_at": "2026-07-17T08:43:42.109792+00:00",
   "repository_id": "dad",
   "repository_layout": "linked_worktree",
   "hook_definition": {
@@ -13,10 +13,10 @@
   },
   "adapter_binding": {
     "artifact_id": "adapter:intent-continuity-codex-host",
-    "adapter_revision_id": "adapter-revision:intent-continuity-codex-host:0.3.5",
-    "portability_card_revision_id": "portability-card-revision:adapter-intent-continuity-codex-host:0.3.5",
-    "declared_interface_digest": "sha256:905e0708a476f1856c1f93e10dbbbde8cd4d85dec7b9f263a68fecd9e9c1db05",
-    "computed_interface_digest": "sha256:905e0708a476f1856c1f93e10dbbbde8cd4d85dec7b9f263a68fecd9e9c1db05",
+    "adapter_revision_id": "adapter-revision:intent-continuity-codex-host:0.3.6",
+    "portability_card_revision_id": "portability-card-revision:adapter-intent-continuity-codex-host:0.3.6",
+    "declared_interface_digest": "sha256:5bc65413010484d9c4a7938afbd25ed4858a54c6b4462bc21d4ba0bb902161c5",
+    "computed_interface_digest": "sha256:5bc65413010484d9c4a7938afbd25ed4858a54c6b4462bc21d4ba0bb902161c5",
     "interface_digest_matches": true
   },
   "host_observation": {
@@ -67,5 +67,5 @@
   "candidate_only": true,
   "execution_authorized": false,
   "authority_boundary": "Host readiness is read-only candidate evidence. It cannot trust a project or hook, authenticate host origin, bypass Codex review, run a hook, activate prompts or notifications, schedule work, mutate Git or tasks, archive work, or clean up a worktree.",
-  "assessment_digest": "sha256:2db838947692a6a5a9461ea3158a1e02b6ee5c745dbd592425d8f48b3d9ae2a2"
+  "assessment_digest": "sha256:42851eff9e1969c59c5b72d0a0fefc85497bd2d0fb2fdc3fc47b314c7ed7fd62"
 }

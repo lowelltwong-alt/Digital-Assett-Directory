@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from functools import lru_cache
 import hashlib
 import json
@@ -29,6 +29,12 @@ MINIMUM_HOOK_SAMPLE_COUNT = 5
 MINIMUM_REVIEWS = 5
 MINIMUM_SPAN_DAYS = 7
 
+OPERATOR_PACKET_AUTHORITY_BOUNDARY = (
+    "The supervised-trial operator packet is read-only candidate guidance. It cannot "
+    "trust a host, record or fabricate a review, advance time, activate a stage, notify, "
+    "schedule, mutate Git or tasks, archive work, or authorize cleanup or execution."
+)
+
 _FAILURE_KEYS = (
     "missed_captures",
     "missed_recoveries",
@@ -37,6 +43,7 @@ _FAILURE_KEYS = (
     "false_duplicate_suggestions",
     "false_merges",
     "accidental_mutations",
+    "unauthorized_mutations",
     "repeated_unchanged_asks",
     "privacy_escapes",
     "blind_delivery_retries",
@@ -106,6 +113,34 @@ def validate_trial_review(review: Any) -> None:
 
 def validate_activation_state(state: Any) -> None:
     _validate(state, "portfolio-continuity-activation-state.schema.json")
+
+
+def validate_trial_operator_packet(packet: Any) -> None:
+    _validate(packet, "portfolio-continuity-trial-operator-packet.schema.json")
+    material = {key: value for key, value in packet.items() if key != "packet_digest"}
+    if packet["packet_digest"] != "sha256:" + hashlib.sha256(
+        _canonical(material).encode("utf-8")
+    ).hexdigest():
+        raise ContinuityValidationError("operator packet digest does not match packet material")
+
+
+def _trial_review_set_digest(
+    reviews: Sequence[Mapping[str, Any]], trial_id: str
+) -> str:
+    """Bind an activation decision to the exact matching immutable review set."""
+
+    rows: list[dict[str, Any]] = []
+    for review in reviews:
+        validate_trial_review(review)
+        if str(review["trial_id"]) == trial_id:
+            rows.append(
+                {
+                    "review_id": str(review["review_id"]),
+                    "fixture_only": bool(review["fixture_only"]),
+                }
+            )
+    rows.sort(key=lambda row: (row["review_id"], row["fixture_only"]))
+    return "sha256:" + hashlib.sha256(_canonical(rows).encode("utf-8")).hexdigest()
 
 
 def trial_review_ledger_path(hub_root: Path) -> Path:
@@ -362,6 +397,7 @@ def evaluate_trial(
     host_status = "missing"
     host_digest = ""
     host_assessed_at = ""
+    host_adapter_interface_digest = ""
     host_failures = sorted(set(str(value) for value in host_binding_failures))
     host_evidence_failures = list(host_failures)
     host_binding_current = False
@@ -372,6 +408,11 @@ def evaluate_trial(
         host_status = str(host_readiness.get("status", "not_ready"))
         host_digest = str(host_readiness.get("assessment_digest", ""))
         host_assessed_at = str(host_readiness.get("assessed_at", ""))
+        adapter_binding = host_readiness.get("adapter_binding", {})
+        if isinstance(adapter_binding, Mapping):
+            host_adapter_interface_digest = str(
+                adapter_binding.get("computed_interface_digest", "")
+            )
         host_gate_failures = host_readiness.get("gate_failures", [])
         if not isinstance(host_gate_failures, list):
             host_gate_failures = ["invalid_host_readiness_gate_failures"]
@@ -380,6 +421,12 @@ def evaluate_trial(
         host_evidence_failures = sorted(set([*host_failures, *host_gate_failures]))
         if host_status != "ready_for_supervised_trial" or host_gate_failures:
             failures.append("host_readiness_not_ready")
+        if (
+            host_status == "ready_for_supervised_trial"
+            and not host_gate_failures
+            and not host_adapter_interface_digest
+        ):
+            failures.append("host_readiness_adapter_digest_missing")
         try:
             host_time = _parse_time(host_assessed_at)
         except (ContinuityValidationError, ValueError):
@@ -391,6 +438,7 @@ def evaluate_trial(
             not host_failures
             and not host_gate_failures
             and host_status == "ready_for_supervised_trial"
+            and bool(host_adapter_interface_digest)
         )
     if any(_parse_time(str(review["recorded_at"])) > evaluated for review in selected):
         failures.append("review_recorded_after_evaluation_time")
@@ -438,6 +486,12 @@ def evaluate_trial(
         for review in selected
     ):
         failures.append("hook_performance_evidence_unbound")
+    if host_adapter_interface_digest and any(
+        str(review["performance"].get("adapter_interface_digest", ""))
+        != host_adapter_interface_digest
+        for review in selected
+    ):
+        failures.append("review_adapter_interface_digest_mismatch")
     if any(
         not str(review["performance"].get("supervisor_attestation_id", "")).strip()
         for review in selected
@@ -471,6 +525,7 @@ def evaluate_trial(
     state = {
         "schema_version": "dad.portfolio_continuity_activation_state.v1",
         "trial_id": trial_id,
+        "review_set_digest": _trial_review_set_digest(reviews, trial_id),
         "status": status,
         "evaluated_at": evaluated.isoformat(),
         "review_count": len(selected),
@@ -483,6 +538,7 @@ def evaluate_trial(
         "host_readiness_status": host_status,
         "host_readiness_assessment_digest": host_digest,
         "host_readiness_assessed_at": host_assessed_at,
+        "host_adapter_interface_digest": host_adapter_interface_digest,
         "host_binding_current": host_binding_current,
         "host_readiness_gate_failures": host_evidence_failures,
         "gate_failures": failures,
@@ -497,11 +553,215 @@ def evaluate_trial(
     return state
 
 
+def build_trial_operator_packet(
+    reviews: Sequence[Mapping[str, Any]],
+    *,
+    trial_id: str,
+    activation_state: Mapping[str, Any],
+    host_readiness: Mapping[str, Any] | None = None,
+    host_binding_failures: Sequence[str] = (),
+    generated_at: str | None = None,
+) -> dict[str, Any]:
+    """Explain the next honest supervised-trial action without performing it."""
+
+    validate_activation_state(activation_state)
+    if str(activation_state["trial_id"]) != trial_id:
+        raise ContinuityValidationError("activation state trial_id does not match packet trial_id")
+    recomputed_state = evaluate_trial(
+        reviews,
+        trial_id=trial_id,
+        evaluated_at=str(activation_state["evaluated_at"]),
+        host_readiness=host_readiness,
+        host_binding_failures=host_binding_failures,
+    )
+    if _canonical(activation_state) != _canonical(recomputed_state):
+        raise ContinuityValidationError(
+            "activation state does not match recomputed review and host evidence"
+        )
+    review_set_digest = _trial_review_set_digest(reviews, trial_id)
+    if str(activation_state["review_set_digest"]) != review_set_digest:
+        raise ContinuityValidationError(
+            "activation state review_set_digest does not match supplied reviews"
+        )
+    generated = _parse_time(generated_at) if generated_at else _utc_now()
+    evaluated = _parse_time(str(activation_state["evaluated_at"]))
+    if generated < evaluated:
+        raise ContinuityValidationError(
+            "operator packet generated_at precedes activation-state evaluation"
+        )
+    selected: list[dict[str, Any]] = []
+    for review in reviews:
+        validate_trial_review(review)
+        if str(review["trial_id"]) == trial_id and review["fixture_only"] is False:
+            selected.append(dict(review))
+
+    selected.sort(key=lambda row: _parse_time(str(row["recorded_at"])))
+    first_review_at = str(selected[0]["recorded_at"]) if selected else ""
+
+    failures = [str(value) for value in activation_state["gate_failures"]]
+    permanent_review_prefixes = (
+        "failure_metric_missing:",
+        "nonzero_failure_metric:",
+    )
+    permanent_review_failures = {
+        "review_recorded_after_evaluation_time",
+        "trial_review_precedes_host_readiness",
+        "digest_exceeded_three_asks",
+        "notification_content_not_safe",
+        "hook_latency_sample_missing",
+        "hook_latency_sample_insufficient",
+        "hook_performance_evidence_unbound",
+        "supervisor_attestation_missing",
+        "hook_latency_budget_exceeded",
+        "inconsistent_hook_latency_budgets",
+        "host_readiness_adapter_digest_missing",
+        "review_adapter_interface_digest_mismatch",
+    }
+    restart_reasons = sorted(
+        failure
+        for failure in failures
+        if failure in permanent_review_failures
+        or failure.startswith(permanent_review_prefixes)
+    )
+    if selected and activation_state["host_binding_current"] is not True:
+        restart_reasons.append("recorded_reviews_lack_current_host_binding")
+    restart_reasons = sorted(set(restart_reasons))
+
+    host_ready = (
+        activation_state["host_readiness_status"] == "ready_for_supervised_trial"
+        and activation_state["host_binding_current"] is True
+    )
+    observed = int(activation_state["distinct_review_count"])
+    reviews_remaining = (
+        MINIMUM_REVIEWS
+        if restart_reasons
+        else max(0, MINIMUM_REVIEWS - observed)
+    )
+    earliest_eligibility_at = ""
+    span_remaining = float(MINIMUM_SPAN_DAYS)
+    if host_ready and not restart_reasons and first_review_at:
+        first_review_time = _parse_time(first_review_at)
+        if generated < first_review_time:
+            raise ContinuityValidationError(
+                "operator packet generated_at precedes first production review"
+            )
+        earliest_time = first_review_time + timedelta(days=MINIMUM_SPAN_DAYS)
+        earliest_eligibility_at = earliest_time.isoformat()
+        span_remaining = max(
+            0.0, (earliest_time - generated).total_seconds() / 86400
+        )
+
+    if activation_state["status"] == "eligible_for_human_activation":
+        phase = "eligible_for_separate_human_approval"
+        next_action = "request_separate_activation_approval"
+    elif not host_ready:
+        phase = "awaiting_host_readiness"
+        next_action = "complete_host_readiness"
+    elif restart_reasons:
+        phase = "restart_required_after_correction"
+        next_action = "correct_and_start_new_trial_revision"
+    elif reviews_remaining:
+        phase = "collecting_supervised_reviews"
+        next_action = "record_next_supervised_review"
+    elif "trial_span_less_than_seven_days" in failures:
+        if span_remaining:
+            phase = "waiting_for_real_clock_span"
+            next_action = "wait_then_record_span_extending_supervised_review"
+        else:
+            phase = "collecting_supervised_reviews"
+            next_action = "record_span_extending_supervised_review"
+    else:
+        phase = "resolving_remaining_gates"
+        next_action = "resolve_remaining_gate_failures"
+
+    actions: list[str] = []
+    if not host_ready:
+        actions.append(
+            "Review project trust and the exact current hook definition, then attest one real current-revision event from this linked worktree."
+        )
+    if restart_reasons:
+        actions.append(
+            "Correct the revision-bound failure and start a new trial ID; append-only failing reviews cannot be rewritten into passing evidence."
+        )
+    if host_ready and not restart_reasons and reviews_remaining:
+        actions.append(
+            f"Record {reviews_remaining} more distinct production-clock supervised review(s) with the complete metrics and performance contract."
+        )
+    if (
+        host_ready
+        and not restart_reasons
+        and not reviews_remaining
+        and "trial_span_less_than_seven_days" in failures
+        and not span_remaining
+    ):
+        actions.append(
+            "Record one additional production-clock review now to extend the observed review span to at least seven days."
+        )
+    if host_ready and not restart_reasons and selected and span_remaining:
+        actions.append(
+            f"Do not claim eligibility before {earliest_eligibility_at}; wait {span_remaining:.6f} day(s), then record a production-clock review that extends the observed span to at least seven days."
+        )
+    if activation_state["status"] == "eligible_for_human_activation":
+        actions.append(
+            "Request a separate exact human approval for the session-start summary stage; eligibility activates nothing by itself."
+        )
+
+    packet: dict[str, Any] = {
+        "schema_version": "dad.portfolio_continuity_trial_operator_packet.v1",
+        "trial_id": trial_id,
+        "review_set_digest": review_set_digest,
+        "generated_at": generated.isoformat(),
+        "phase": phase,
+        "next_action": next_action,
+        "host_readiness_status": str(activation_state["host_readiness_status"]),
+        "host_binding_current": bool(activation_state["host_binding_current"]),
+        "observed_review_count": int(activation_state["review_count"]),
+        "distinct_review_count": observed,
+        "minimum_review_count": MINIMUM_REVIEWS,
+        "reviews_remaining": reviews_remaining,
+        "trial_span_days": float(activation_state["trial_span_days"]),
+        "minimum_span_days": MINIMUM_SPAN_DAYS,
+        "span_days_remaining": span_remaining,
+        "first_review_at": first_review_at,
+        "earliest_eligibility_at": earliest_eligibility_at,
+        "restart_required": bool(restart_reasons),
+        "restart_reasons": restart_reasons,
+        "gate_failures": failures,
+        "review_contract": {
+            "failure_metric_keys": list(_FAILURE_KEYS),
+            "minimum_hook_sample_count": MINIMUM_HOOK_SAMPLE_COUNT,
+            "maximum_asks_per_digest": 3,
+            "performance_measurement_origin": "instrumented_harness",
+            "hook_latency_within_budget_required": True,
+            "latency_budget_source": "validated_performance_evidence",
+            "performance_evidence_digest_required": True,
+            "adapter_interface_digest_match_required": True,
+            "supervisor_attestation_required": True,
+            "notification_content_safe_required": True,
+            "production_clock_required": True,
+            "zero_failure_metrics_required_for_activation": True,
+        },
+        "human_actions_required": actions,
+        "delivery_authorized": False,
+        "activation_authorized": False,
+        "cleanup_authorized": False,
+        "candidate_only": True,
+        "execution_authorized": False,
+        "authority_boundary": OPERATOR_PACKET_AUTHORITY_BOUNDARY,
+    }
+    packet["packet_digest"] = "sha256:" + hashlib.sha256(
+        _canonical(packet).encode("utf-8")
+    ).hexdigest()
+    validate_trial_operator_packet(packet)
+    return packet
+
+
 __all__ = [
     "MINIMUM_REVIEWS",
     "MINIMUM_SPAN_DAYS",
     "TRIAL_AUTHORITY_BOUNDARY",
     "build_fixture_trial_review",
+    "build_trial_operator_packet",
     "evaluate_trial",
     "read_trial_reviews",
     "record_production_trial_review",

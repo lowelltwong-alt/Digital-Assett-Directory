@@ -170,6 +170,7 @@
     "portfolio_continuity_adapter_receipt": "schemas/portfolio-continuity-adapter-receipt.schema.json",
     "portfolio_continuity_event": "schemas/portfolio-continuity-event.schema.json",
     "portfolio_continuity_trial_review": "schemas/portfolio-continuity-trial-review.schema.json",
+    "portfolio_continuity_trial_operator_packet": "schemas/portfolio-continuity-trial-operator-packet.schema.json",
     "portfolio_continuity_activation_state": "schemas/portfolio-continuity-activation-state.schema.json",
     "portfolio_continuity_projection": "schemas/portfolio-continuity-projection.schema.json",
     "portfolio_continuity_attention_readiness": "schemas/portfolio-continuity-attention-readiness.schema.json",

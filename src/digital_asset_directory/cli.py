@@ -232,6 +232,7 @@ from .portfolio_continuity_host_readiness import (
 )
 from .portfolio_continuity_events import ContinuityIntegrityError
 from .portfolio_continuity_trial import (
+    build_trial_operator_packet,
     evaluate_trial,
     read_trial_reviews,
     record_production_trial_review,
@@ -12292,6 +12293,46 @@ def portfolio_continuity_activation_check(
         ValueError,
         json.JSONDecodeError,
     ) as exc:
+        raise typer.BadParameter(str(exc)) from exc
+    console.print_json(data=result)
+
+
+@continuity_app.command("trial-readiness")
+def portfolio_continuity_trial_readiness(
+    trial_id: str = typer.Option(..., "--trial-id"),
+    repo: Path = typer.Option(Path("."), "--repo"),
+    config: Optional[Path] = typer.Option(None),
+    hub: Optional[Path] = typer.Option(None),
+) -> None:
+    """Explain the next honest trial action without recording or activating anything."""
+    cfg = _cfg(config, hub)
+    try:
+        reviews = read_trial_reviews(cfg.repo_root)
+        host_assessment = latest_host_readiness_assessment(repo.resolve(), cfg.repo_root)
+        binding_failures = (
+            [
+                *host_readiness_binding_failures(repo.resolve(), host_assessment),
+                *host_readiness_recording_failures(
+                    repo.resolve(), cfg.repo_root, host_assessment
+                ),
+            ]
+            if host_assessment is not None
+            else []
+        )
+        state = evaluate_trial(
+            reviews,
+            trial_id=trial_id,
+            host_readiness=host_assessment,
+            host_binding_failures=binding_failures,
+        )
+        result = build_trial_operator_packet(
+            reviews,
+            trial_id=trial_id,
+            activation_state=state,
+            host_readiness=host_assessment,
+            host_binding_failures=binding_failures,
+        )
+    except (ContinuityIntegrityError, HostReadinessError, OSError, ValueError) as exc:
         raise typer.BadParameter(str(exc)) from exc
     console.print_json(data=result)
 

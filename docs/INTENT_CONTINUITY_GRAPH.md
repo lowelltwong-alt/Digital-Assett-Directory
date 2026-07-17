@@ -98,6 +98,7 @@ asset-dir os continuity host-readiness --repo <local-repo>
 asset-dir os continuity host-readiness --repo <local-repo> <review-and-dispatch-attestations> --record
 asset-dir os continuity trial-review --performance-evidence <performance-evidence.json> --supervisor-attestation-id <reviewed-attestation-id>
 asset-dir os continuity activation-check
+asset-dir os continuity trial-readiness --trial-id <trial-id> --repo <local-repo>
 ```
 
 Benchmark receipts are revision-bound, schema-checked, and internally
@@ -319,10 +320,18 @@ instrumented receipt's measurement identity, sample math, command digest,
 adapter revision, adapter-interface digest, silence, persistence, privacy, and
 unchanged-source result before recording a production-clock review.
 
-The current review contract also measures `missed_recoveries` and
-`false_duplicate_suggestions`. Historical rows without those fields remain
+The current review contract also measures `missed_recoveries`,
+`false_duplicate_suggestions`, and `unauthorized_mutations` independently from
+accidental mutations. Historical rows without those fields remain
 readable but fail the current activation gate until current supervised reviews
 provide them.
+
+`trial-readiness` composes the validated activation state into one digest-bound,
+read-only operator packet. It reports the exact remaining review count, real
+calendar span, earliest possible eligibility timestamp, revision failures that
+require a new trial ID, the full metrics/performance contract, and the next
+honest human action. It cannot record a review, advance time, trust a host,
+activate a stage, deliver a reminder, or authorize cleanup.
 
 The projection includes a dormant `attention_readiness` contract. It renders a
 bounded session-start summary preview, reuses the existing changed-only weekly

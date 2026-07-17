@@ -224,6 +224,7 @@ def test_continuity_cli_surfaces_are_discoverable() -> None:
         "observe",
         "host-readiness",
         "trial-review",
+        "trial-readiness",
         "activation-check",
     ):
         assert command in result.stdout
