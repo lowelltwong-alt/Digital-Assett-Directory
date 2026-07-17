@@ -681,7 +681,7 @@
       "effect_classes": ["read_only", "candidate_local_artifact"],
       "dependencies": ["skill:dad-work-router", "skill:portable-capability-governance", "skill:subagent-continuous-improvement"],
       "reverse_consumers": ["portfolio-os-cli", "intent-continuity-shadow-trial", "capability-os-cockpit"],
-      "adapter_revision_ids": ["portability-card-revision:adapter-intent-continuity-codex-host:0.3.7"],
+      "adapter_revision_ids": ["portability-card-revision:adapter-intent-continuity-codex-host:0.3.8"],
       "harness_revision_id": "harness-revision:portable-capability-contract:0.1.0",
       "evidence_refs": ["docs/INTENT_CONTINUITY_GRAPH.md", "tests/test_portfolio_continuity_runtime.py", "tests/test_portfolio_continuity_trial.py"],
       "fresh_until": "2026-10-16T00:00:00-04:00",
@@ -693,7 +693,7 @@
     {
       "schema_version": "dad.portable_capability_card.v1",
       "card_id": "portability-card:adapter-intent-continuity-codex-host",
-      "revision_id": "portability-card-revision:adapter-intent-continuity-codex-host:0.3.7",
+      "revision_id": "portability-card-revision:adapter-intent-continuity-codex-host:0.3.8",
       "artifact_id": "adapter:intent-continuity-codex-host",
       "artifact_kind": "runtime_adapter",
       "binding_class": "runtime_adapter",
@@ -703,7 +703,7 @@
       "core_revision_id": "portability-card-revision:skill-personal-project-management-ops:0.4.7",
       "content_digest": "sha256:4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
       "target_capability_predicate": {"runtime_adapter_id": "adapter:codex-host", "status": "supervised_silent_shadow"},
-      "adapter_interface_digest": "sha256:aeddc608802603587fcda77e1611143a11d65945727a569e8545c2dc41917b60",
+      "adapter_interface_digest": "sha256:db8f6862a9c6f99132e86577937b49c7419cc47699be0aca234467838d0d335a",
       "adapter_interface_sources": [
         ".codex/hooks.json",
         ".codex/hooks/intent_continuity_shadow.py",

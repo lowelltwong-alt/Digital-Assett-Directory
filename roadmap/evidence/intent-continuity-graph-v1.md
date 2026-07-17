@@ -176,21 +176,21 @@ gates.
   proof. Every qualifying real review therefore requires supervisor attestation,
   and no receipt can authorize hook trust or activation by itself.
 - Revision-bound performance receipt
-  `dad:hook-performance:bdf5bdf4cb99e3aeb4868a2db7b40e7080f7fadd307e8049883ceabdc47f8773`
-  recorded five exact cold-process Windows samples with p95 687.66 ms under the
+  `dad:hook-performance:c98b34009208ec1e3ea0a7fe64bfd35f8bc62f3f5ab37e24198eee3197360974`
+  recorded five exact cold-process Windows samples with p95 815.456 ms under the
   1,500 ms budget; all five were silent, persisted, privacy-safe, and left the
   source worktree unchanged. Evidence:
   `roadmap/evidence/intent-continuity-hook-performance-2026-07-17.json`.
 - Revision-bound scale receipt
-  `dad:hook-scale:14fc23e66463fca3a1c142879a7b0fbe836e5575ede98220de5dc31e64267d77`
-  measured warm 0/1K/10K hook latency at 682.698/656.841/696.77 ms and a cold
-  10K index rebuild at 1,972.582 ms. Every case was silent, persisted exactly one
+  `dad:hook-scale:d3aeb008620ef64ed313101fc80b7ac25bdcbb3e9a8445a3d865f492f718c976`
+  measured warm 0/1K/10K hook latency at 691.58/598.586/687.863 ms and a cold
+  10K index rebuild at 1,942.565 ms. Every case was silent, persisted exactly one
   event, produced a valid size/hash-bound index, recorded zero failure markers,
   remained below its applicable boundary, and left source unchanged. Evidence:
   `roadmap/evidence/intent-continuity-hook-scale-2026-07-17.json`.
 - Host-readiness assessment
-  `sha256:abf01ad55681ca23afc58b819163dfd3f08032b5956b826282212388664d62aa`
-  proves the exact 0.3.7 adapter-interface digest matches, all four intended
+  `sha256:2a0b47fadf60f02c073ec133e979d7a02525d933cdafcf67dc11b6aa9989deec`
+  proves the exact revision-bound adapter-interface digest matches, all four intended
   lifecycle events are configured, no current-revision failure marker exists,
   and the repository is a linked worktree. It correctly reports `not_ready`
   because project trust, exact hook trust, `/hooks` discovery, hook-review
@@ -214,7 +214,7 @@ gates.
   next honest human action. It binds the exact review set and current adapter
   digest, rejects path-like identifiers and failure tokens, and carries
   explicit false delivery, activation, cleanup, and execution authorities.
-- PM core 0.4.7, supervised Codex adapter 0.3.7, and portability harness 0.1.5
+- PM core 0.4.7, supervised Codex adapter 0.3.8, and portability harness 0.1.5
   close the remaining non-human completion gaps. Recovery now searches exact
   private plan source bindings and accepted workstream bindings without
   emitting their raw refs, and a two-repository fixture proves cross-repository
@@ -226,7 +226,11 @@ gates.
   Independent review found and drove three additional repairs: private binding
   match tokens are redacted, append order makes a later kill authoritative
   despite clock rollback, and live status/reconcile consumes the raw stage
-  ledger instead of leaving it on a standalone CLI path.
+  ledger instead of leaving it on a standalone CLI path. A publication-gate
+  review found one further P1: the failure-marker path could fall back into the
+  source checkout when the private data root was unavailable. Adapter 0.3.8
+  now refuses uninitialized or wrong-hub data roots, with regression coverage
+  proving that neither the source checkout nor the mismatched root is mutated.
   Its live status contains zero approval records and authorizes no delivery,
   execution, archive, or cleanup effect.
 - The final bounded delta passed 123 continuity/recovery/host/hook/trial tests,
@@ -258,9 +262,14 @@ gates.
   candidate branch was subsequently rebased over freshly fetched `origin/main`
   at `da71413` and is four local commits ahead with no upstream commits missing.
   Publication remains a future governed step and is not completion evidence.
-- A frozen-revision full-suite attempt reached the 1,004-second command timeout
-  without a buffered pytest summary. Current full-suite status is therefore
-  unknown; no pass is claimed.
+- The governed publication run completed the authoritative sequential suite:
+  1,935 tests passed on the repaired tree in 860.64 seconds (862.6 seconds wall
+  time). One prior full run exposed a load-sensitive warm-10K latency sample;
+  that exact node passed in isolation and the unchanged full-suite retry passed.
+  The required long-run review classified the cost as filesystem/process
+  orchestration and
+  deferred optimization; no unprofiled Rust or parallel-runner rewrite was
+  admitted into the release.
 
 ## Reusable learning
 
@@ -272,7 +281,7 @@ durable repo-local lifecycle kernel with plan, readiness, delivery, validation,
 and closeout represented as separate overlays or gates.
 
 The candidate asset is the 0.4.7 revision of Personal Project Management Ops
-plus a separate 0.3.7 supervised Codex-host adapter. It is not a new
+plus a separate 0.3.8 supervised Codex-host adapter. It is not a new
 idea-library skill.
 The linked-worktree routing surprise was captured as a privacy-safe local
 exception candidate and resolved in the reviewed documentation and focused

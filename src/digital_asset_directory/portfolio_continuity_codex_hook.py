@@ -11,9 +11,11 @@ from typing import Any, Mapping
 
 from .portfolio_continuity_adapter import ingest_receipt
 from .portfolio_continuity_events import _append_line, _exclusive_lock
-from .transport import data_path
+from .transport import DATA_PLANE_PATHS, resolve_data_root
+
+
 CODEX_HOOK_ADAPTER_ID = "adapter:intent-continuity-shadow"
-CODEX_HOOK_ADAPTER_REVISION_ID = "adapter-revision:intent-continuity-codex-host:0.3.7"
+CODEX_HOOK_ADAPTER_REVISION_ID = "adapter-revision:intent-continuity-codex-host:0.3.8"
 MAX_HOOK_INPUT_BYTES = 64 * 1024
 HOOK_LOCK_TIMEOUT_SECONDS = 1.5
 AUTHORITY_BOUNDARY = (
@@ -143,8 +145,21 @@ def ingest_codex_hook(
     )
 
 
-def hook_failure_ledger_path(hub_root: Path) -> Path:
-    return data_path(hub_root, "raw_portfolio_intents") / "continuity-hook-failures.jsonl"
+def hook_failure_ledger_path(
+    hub_root: Path,
+    *,
+    require_private_data_root: bool = False,
+) -> Path:
+    root, mode = resolve_data_root(hub_root)
+    if require_private_data_root and mode != "data_root":
+        raise CodexHookInputError(
+            "Hook failure markers require an initialized private DAD data root"
+        )
+    return (
+        root
+        / DATA_PLANE_PATHS["raw_portfolio_intents"]
+        / "continuity-hook-failures.jsonl"
+    )
 
 
 def _validate_hook_failure_marker(marker: Mapping[str, Any]) -> None:
@@ -204,7 +219,7 @@ def record_codex_hook_failure(
         "failure_id": _expected_failure_id(material),
     }
     _validate_hook_failure_marker(marker)
-    path = hook_failure_ledger_path(hub_root)
+    path = hook_failure_ledger_path(hub_root, require_private_data_root=True)
     with _exclusive_lock(path, timeout_seconds=0.5):
         _append_line(path, marker)
     return marker

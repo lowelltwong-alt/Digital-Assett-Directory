@@ -107,6 +107,34 @@ def test_failure_markers_are_concurrent_and_identity_validated(
         read_codex_hook_failures(hub)
 
 
+@pytest.mark.parametrize("root_state", ["uninitialized", "bound_to_other_hub"])
+def test_failure_marker_never_falls_back_into_source_checkout(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    root_state: str,
+) -> None:
+    hub = tmp_path / "hub"
+    hub.mkdir()
+    data_root = tmp_path / "data"
+    if root_state == "bound_to_other_hub":
+        other_hub = tmp_path / "other-hub"
+        other_hub.mkdir()
+        init_data_root(data_root, hub_root=other_hub)
+    monkeypatch.setenv("DAD_DATA_ROOT", str(data_root))
+
+    with pytest.raises(CodexHookInputError, match="initialized private DAD data root"):
+        record_codex_hook_failure(
+            hub,
+            _input(),
+            repository_id="dad",
+            reason_code="hook_ingest_failed",
+        )
+
+    relative = Path("raw/portfolio/continuity-hook-failures.jsonl")
+    assert not (hub / relative).exists()
+    assert not (data_root / relative).exists()
+
+
 def test_hook_bootstrap_failure_is_silent(tmp_path: Path) -> None:
     root = Path(__file__).resolve().parents[1]
     isolated_hook = tmp_path / ".codex" / "hooks" / "intent_continuity_shadow.py"
