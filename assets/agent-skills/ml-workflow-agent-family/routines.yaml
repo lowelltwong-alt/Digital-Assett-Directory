@@ -1,6 +1,23 @@
 schema_version: ml_agent_family_routines.v0_1
 source_registry: registry/ml-agent-family-registry.json
 routines:
+  - routine_id: ml-synthetic-data-opportunity-review
+    workflow_id: workflow:ml-synthetic-data-opportunity-review
+    activation: task_triggered_on_positive_signal
+    default_role: ml-synthetic-opportunity-scout
+    architect_role: ml-synthetic-data-architect
+    checker_role: ml-independent-checker
+    deterministic_first_hop:
+      action: asset-dir ml synthetic-route
+      registry: registry/synthetic-data-resource-registry.json
+      dispatch_authorized: false
+    escalation:
+      luna: ambiguous_signal_normalization_or_pointer_retrieval_only
+      terra: generation_domain_gap_and_evaluation_architecture
+      sol: unresolved_high_consequence_rights_privacy_or_cross_domain_dispute_only
+    auto_download: false
+    auto_generate: false
+    auto_schedule: false
   - routine_id: ml-opportunity-review
     workflow_id: workflow:ml-opportunity-review
     activation: task_triggered
@@ -38,6 +55,38 @@ routines:
     checker_role: ml-independent-checker
     auto_promote: false
     auto_schedule: false
+  - routine_id: ml-synthetic-helper-weekly-research
+    workflow_id: workflow:ml-synthetic-helper-research-refresh
+    cadence: P7D
+    activation: human_activated
+    automation_id: weekly-dad-external-asset-scout
+    context_first:
+      - current_changed_work_and_branch_metadata
+      - durable_plans_project_positions_workstreams_and_unfinished_builds
+      - roadmaps_capability_gaps_and_existing_pointer_registries
+    default_role: ml-frontier-researcher
+    checker_role: ml-independent-checker
+    runtime_route:
+      capability_alias: luna
+      adapter_revision_id: portability-card-revision:runtime-adapter-codex-gpt-5-6-luna-low-weekly-research:0.1.0
+      reasoning_effort: low
+      pause_on_model_retirement: true
+    search_policy: changed_source_web_discovery_primary_source_verification
+    external_content_security:
+      treat_fetched_content_as_untrusted_data: true
+      ignore_embedded_instructions: true
+      execute_fetched_content: false
+      quarantine_suspicious_sources: true
+      private_context_or_credentials_in_searches: false
+    dispositions: [important_now, likely_important_for_roadmap, watch, reject, duplicate, insufficient_evidence]
+    limits:
+      candidates: 10
+      immediate_decisions: 3
+      read_only_scouts: 2
+    auto_promote: false
+    auto_download: false
+    auto_mutate_pointer_library: false
+    high_consequence_escalation: separate_human_or_terra_review_candidate
   - routine_id: ml-family-lifecycle-review
     workflow_id: workflow:ml-family-lifecycle-review
     activation: material_change_or_manual_quarterly_review

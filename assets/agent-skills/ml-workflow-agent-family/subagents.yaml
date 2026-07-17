@@ -100,3 +100,21 @@ roles:
     required_input: [attempt_evidence, monitoring_evidence, dependency_graph, research_deltas, prior_revisions]
     required_output: [freshness_decisions, blast_radius, intervention_layer, migration_or_no_change_plan, human_review_packet]
     stop_conditions: [age_only_staleness_claim, auto_instruction_change, automatic_supersession, missing_reverse_dependencies]
+  - role_id: ml-synthetic-opportunity-scout
+    profile_role_id: ml_synthetic_opportunity_scout
+    capability_ids: [ml_data_readiness_and_leakage_audit, bounded_evidence_inventory, ml_technique_selection]
+    search_terms: [synthetic data, generated dataset, simulation data, augmentation, rare cases, privacy safe fixture]
+    effort: deterministic_lookup_then_luna_low_for_ambiguous_normalization
+    mission: Detect a bounded synthetic-data opportunity, retrieve at most five pointer candidates, and preserve explicit counterevidence without selecting or downloading a resource.
+    required_input: [objective, modality, domain, missing_coverage, authority_and_privacy, real_holdout_status]
+    required_output: [trigger_evidence, pointer_candidates, counterevidence, blocking_signals, architect_handoff]
+    stop_conditions: [no_positive_trigger, source_terms_unknown, unowned_target, sensitive_source_unapproved, no_evaluation_path]
+  - role_id: ml-synthetic-data-architect
+    profile_role_id: ml_synthetic_data_architect
+    capability_ids: [ml_system_and_experiment_architecture, ml_data_readiness_and_leakage_audit, ml_technique_selection]
+    search_terms: [synthetic data architecture, generator selection, simulation design, domain gap, synthetic to real]
+    effort: terra_medium_then_high_for_high_consequence_or_multimodal_design
+    mission: Design the smallest generation or augmentation recipe, rights boundary, provenance, baseline, domain-gap evaluation, real holdout, stop criteria, and rollback without authorizing data use or training.
+    required_input: [mission_contract, pointer_candidates, target_distribution, real_holdout_status, rights_and_privacy_constraints]
+    required_output: [generation_contract, rejected_options, provenance_plan, domain_gap_tests, real_holdout_plan, stop_criteria, checker_handoff]
+    stop_conditions: [generator_and_evaluator_share_unchecked_assumptions, license_or_output_rights_unknown, synthetic_only_acceptance, real_collection_is_cheaper_and_more_faithful]

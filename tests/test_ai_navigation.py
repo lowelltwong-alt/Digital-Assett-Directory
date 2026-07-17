@@ -58,7 +58,7 @@ def test_manifest_exposes_navigation_and_graph_entrypoints() -> None:
     assert manifest["navigation_standards"]["navigation_registry"] == (
         "registry/ai-navigation-registry.json"
     )
-    assert manifest["navigation_standards"]["navigation_version"] == "2026.07.14.14"
+    assert manifest["navigation_standards"]["navigation_version"] == "2026.07.16.15"
     assert manifest["navigation_standards"]["routing_standard"] == (
         "docs/AI_ENTRYPOINT_AND_TOC_ROUTING_STANDARD.md"
     )
@@ -181,7 +181,7 @@ def test_navigation_registry_keeps_front_door_singular_and_fresh() -> None:
     registry = json.loads((ROOT / "registry" / "ai-navigation-registry.json").read_text())
 
     assert registry["singular_entrypoint"]["path"] == "AI_FRONT_DOOR.md"
-    assert registry["navigation_version"] == "2026.07.14.14"
+    assert registry["navigation_version"] == "2026.07.16.15"
     assert registry["updated_at"]
     assert "memory" in registry["entrypoint_policy"]["memory_rule"].lower()
     assert registry["freshness_policy"]["recent_changes_limit"] <= 20
@@ -263,8 +263,6 @@ def test_navigation_registry_keeps_front_door_singular_and_fresh() -> None:
         in change_paths
     )
     assert "docs/PR_BRANCH_LIFECYCLE_GOVERNANCE.md" in change_paths
-    assert "docs/rust/RUST_ROLLOUT_LESSON_CAPTURE_PROTOCOL.md" in change_paths
-    assert "schemas/rust-rollout-lesson.schema.json" in change_paths
 
 
 def test_mail_storm_runbook_distinguishes_spool_and_worktree_dirt() -> None:

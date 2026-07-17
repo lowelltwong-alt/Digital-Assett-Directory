@@ -133,6 +133,7 @@
     "ml_workflow_decision": "schemas/ml-workflow-decision.schema.json",
     "ml_fit_routing_assessment": "schemas/ml-fit-routing-assessment.schema.json",
     "ml_fit_routing_request": "schemas/ml-fit-routing-request.schema.json",
+    "synthetic_data_resource_registry": "schemas/synthetic-data-resource-registry.schema.json",
     "knowledge_engineering_family_registry": "schemas/knowledge-engineering-family-registry.schema.json",
     "knowledge_engineering_technique_registry": "schemas/knowledge-engineering-technique-registry.schema.json",
     "knowledge_engineering_source_registry": "schemas/knowledge-engineering-source-registry.schema.json",

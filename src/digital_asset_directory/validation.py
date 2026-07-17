@@ -1815,6 +1815,10 @@ def validate_repo(repo_root: Path) -> dict[str, Any]:
                 "registry/technical-product-company-os-registry.json",
             ),
             (
+                "synthetic_data_resource_registry",
+                "registry/synthetic-data-resource-registry.json",
+            ),
+            (
                 "subagent_evaluation_methodology",
                 "registry/subagent-evaluation-methodology.json",
             ),

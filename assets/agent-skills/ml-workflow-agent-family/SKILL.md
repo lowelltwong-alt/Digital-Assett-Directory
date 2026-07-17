@@ -30,6 +30,14 @@ a provider as an agent identity.
    `danger_if_misapplied` from every selected technique.
 5. Read `references/ML_WORKFLOW_CONTRACT.md` before implementation or deployment.
 
+When a task may benefit from synthetic data, run
+`asset-dir ml synthetic-route` before naming a generator. Positive triggers are
+scarce labels, rare cases, privacy-safe fixtures, controllable ground truth,
+available simulation, coverage stress, or domain randomization. Search pointers
+with `asset-dir ml synthetic-catalog`. A named dataset or generator never
+bypasses source-term, domain-gap, baseline, or real-holdout gates. For real-world
+claims, synthetic-only acceptance evidence is prohibited.
+
 Route retrieval, RAG, long-context, vector, and graph knowledge-system work to
 the Knowledge Engineering family first. Keep the simplest credible baseline
 first. Every optional toolchain stage needs explicit entry and stop criteria;
@@ -49,6 +57,11 @@ measured justification.
   its own split, metrics, leakage analysis, deployment, or instruction change.
 - Use the declared roles in `subagents.yaml` for bounded delegation. Search them
   through DAD's subagent directory; declarations are not competence ratings.
+- Route exact synthetic-pointer lookup deterministically. Use the low-cost
+  synthetic opportunity scout only to normalize ambiguous task signals, then a
+  Terra synthetic-data architect for generation/evaluation design. The existing
+  independent checker reviews rights, privacy, leakage, bias, domain gap, and
+  real-holdout adequacy. Reserve Sol for unresolved high-consequence disputes.
 
 ## Execute The ML Lifecycle
 
