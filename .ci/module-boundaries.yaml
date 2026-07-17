@@ -69,4 +69,13 @@ workflows:
   - {workflow_id: scheduled-full, provider_path: .github/workflows/scheduled-full-regression.yml, lane: scheduled_full_regression, events: [schedule, workflow_dispatch], required_check: false, always_reports: true, scope: repository, workflow_contract_digest: "sha256:05970a4507d42dd4eb8ef803a2dd805db314a9c633befb465424f0233110aa95"}
 generated_artifacts:
   - {artifact_id: processed-candidates, module_id: governance, paths: [processed/**], authoritative_inputs: [registry/**, schemas/**]}
-exceptions: []
+exceptions:
+  - exception_id: dad-contract-check-advisory-pr57
+    codes: [scope_broadening]
+    diagnostic_scopes: [manifest:scope]
+    owner: dad-maintainer
+    reason: PR 57 declares the warn-only, non-required dad-contract-check advisory workflow in the CI contract; it never blocks merges and this exception is removed after merge like the PR56 precedent.
+    expires_on: "2026-07-24"
+    reviewed_by: Lowell Wong
+    reviewed_at: "2026-07-17T09:35:00-04:00"
+    review_ref: claude-session:80adbe3d-008a-4083-85cd-54dc4fb5686c:approved-ci-scope-exception-pr57
