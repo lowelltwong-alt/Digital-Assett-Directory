@@ -12,3 +12,7 @@ if (-not $DadHub) {
   exit 1
 }
 python "$DadHub/scripts/enforce_postflight.py" --hub "$DadHub" --repo (Get-Location).Path
+if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+# Warn-only DAD contract check (probation; never blocks - see registry/contract-check-policy.json).
+try { python "$DadHub/scripts/contract_check.py" --hub "$DadHub" --repo (Get-Location).Path } catch {}
+exit 0

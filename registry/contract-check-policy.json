@@ -1,0 +1,33 @@
+{
+  "schema_version": "0.1.0",
+  "policy_id": "dad-contract-check",
+  "mode": "warn",
+  "authority_boundary": "The contract check is advisory in warn mode and a push/PR chokepoint in enforce mode. A trailer's presence never proves the session was real, the work was reviewed, or the output is correct; trailer identifiers are reconciled against the session store by a separate hub-side audit. Bypass trailers are always allowed but always logged.",
+  "protected_paths_source": ".ci/module-boundaries.yaml",
+  "extra_protected_globs": [
+    ".githooks/**",
+    ".github/**",
+    ".ci/**",
+    ".digital-asset/**",
+    "CLAUDE.md",
+    ".gitattributes"
+  ],
+  "exempt_globs": [
+    "processed/**",
+    "raw/**",
+    "state/**",
+    "audit/**"
+  ],
+  "trailer_key": "DAD-Session",
+  "trailer_pattern": "^dad:session:[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
+  "bypass_key": "DAD-Bypass",
+  "bypass_pattern": "^[^:]+:\\s*\\S.+$",
+  "remediation": "Material work needs a DAD lifecycle trace. Run `asset-dir agent preflight --repo . --agent <agent> --task \"<task>\"` before the work and `asset-dir agent postflight --session <id> ...` after it, then include the printed `DAD-Session: <id>` trailer in a commit message (or the PR body). For a reviewed emergency, use `DAD-Bypass: <your-name>: <reason>` — bypasses are logged and reviewed.",
+  "probation": {
+    "owner": "lowell",
+    "started": "2026-07-17",
+    "review_after": "2026-08-14",
+    "promotion_criteria": "At least 4 weeks or 30 protected-path pushes observed in warn mode; false-positive rate under 5 percent of flagged pushes; cold-agent simulation produces the remediation message; human sign-off flips mode to enforce.",
+    "kill_criteria": "Persistent false positives on non-material changes, or the gate blocking urgent work without a workable bypass: downgrade to a preflight warning per docs/HARNESS_VS_DETERMINISTIC_ENFORCEMENT.md."
+  }
+}
