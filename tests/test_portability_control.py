@@ -197,6 +197,25 @@ def test_baseline_or_portable_content_tampering_fails_closed(monkeypatch: pytest
     }
 
 
+def test_runtime_adapter_interface_is_bound_to_its_source_authority(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    registry = deepcopy(pc.load_registry(ROOT))
+    adapter = next(
+        card
+        for card in registry["cards"]
+        if card["artifact_id"] == "adapter:intent-continuity-codex-host"
+    )
+    adapter["adapter_interface_digest"] = "sha256:" + "0" * 64
+    monkeypatch.setattr(pc, "load_registry", lambda _root: registry)
+
+    result = pc.validate_portability(ROOT)
+
+    assert "adapter_interface_digest_mismatch" in {
+        row["code"] for row in result["findings"]
+    }
+
+
 def test_existing_identity_revision_needs_fresh_disposition(monkeypatch: pytest.MonkeyPatch) -> None:
     observed = _inventory([])
     observed["changed_identity_ids"] = ["skill:portable-capability-governance"]

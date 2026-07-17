@@ -10,6 +10,7 @@ from typing import Any
 
 from .entity_identity import fold_state as fold_entity_state, read_events as read_entity_events
 from .portfolio_intents import search_plans
+from .portfolio_workstreams import load_state as load_workstream_state
 
 
 AUTHORITY_BOUNDARY = (
@@ -56,7 +57,7 @@ def search_related_work(
     privacy_partition: str = "private",
     limit: int = 5,
 ) -> dict[str, Any]:
-    """Search plans, entities, families, skills and capability/workflow definitions.
+    """Search plans, accepted bindings, entities, and capability definitions.
 
     V1 intentionally performs no embedding call and never selects an identity winner.
     """
@@ -65,6 +66,7 @@ def search_related_work(
     if not query_tokens:
         raise ValueError("Related-work query must contain searchable terms")
     rows: list[dict[str, Any]] = []
+    unavailable: list[str] = []
 
     try:
         plan_result = search_plans(
@@ -79,9 +81,7 @@ def search_related_work(
                 "candidate_kind": "plan",
                 "title": plan["title"],
                 "shared_tokens": plan["shared_tokens"],
-                "deterministic_score": round(
-                    min(1.0, len(plan["shared_tokens"]) / max(1, len(query_tokens))), 6
-                ),
+                "deterministic_score": float(plan["deterministic_score"]),
                 "evidence_refs": [f"plan-revision:{plan['revision_id']}"],
                 "counterevidence": [],
                 "relation_candidate": "possible_duplicate_of",
@@ -89,6 +89,40 @@ def search_related_work(
                 "execution_authorized": False,
             }
         )
+
+    accepted_binding_count = 0
+    if privacy_partition == "private":
+        try:
+            workstream_state = load_workstream_state(hub_root)
+        except (OSError, RuntimeError, ValueError):
+            workstream_state = {"workstreams": []}
+            unavailable.append("private_workstream_bindings")
+        for workstream in workstream_state.get("workstreams", []):
+            for binding in workstream.get("bindings", []):
+                if binding.get("assertion_status") != "accepted":
+                    continue
+                accepted_binding_count += 1
+                candidate = _candidate(
+                    candidate_id=str(binding.get("binding_id", "")),
+                    kind="workstream_binding",
+                    title=(
+                        "Accepted "
+                        + str(binding.get("binding_kind", "workstream"))
+                        + " binding"
+                    ),
+                    text=" ".join(
+                        str(binding.get(key, ""))
+                        for key in ("binding_kind", "ref", "label")
+                    ),
+                    query_tokens=query_tokens,
+                    source_ref=(
+                        f"workstream:{workstream.get('workstream_id', '')}:"
+                        f"binding:{binding.get('binding_id', '')}"
+                    ),
+                )
+                if candidate:
+                    candidate["shared_tokens"] = []
+                    rows.append(candidate)
 
     entity_state = fold_entity_state(read_entity_events(hub_root))
     for entity in entity_state["entities"]:
@@ -119,7 +153,6 @@ def search_related_work(
         ("registry/technical-product-company-os-registry.json", "capabilities", "capability_id", "name", "capability"),
         ("registry/technical-product-company-os-registry.json", "workflows", "workflow_id", "workflow_id", "workflow"),
     )
-    unavailable: list[str] = []
     for source_ref, collection, id_key, title_key, kind in sources:
         path = repo_root / source_ref
         try:
@@ -170,6 +203,7 @@ def search_related_work(
             "candidate_count_before_limit": len(ranked),
             "returned_count": len(top),
             "unavailable_sources": sorted(set(unavailable)),
+            "accepted_workstream_bindings_examined": accepted_binding_count,
             "external_embedding_calls": 0,
             "model_calls": 0,
         },

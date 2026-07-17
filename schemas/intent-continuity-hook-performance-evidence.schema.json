@@ -1,0 +1,48 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://dad.local/schemas/intent-continuity-hook-performance-evidence.schema.json",
+  "title": "DAD instrumented intent-continuity hook performance evidence",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version", "measurement_id", "recorded_at", "measurement_origin",
+    "adapter_id", "adapter_revision_id", "adapter_interface_digest",
+    "command_kind", "command_digest", "methodology_id", "sample_count",
+    "latency_ms_samples", "latency_ms_p95", "latency_budget_ms", "timeout_ms",
+    "silent_success_count", "persistence_success_count", "privacy_check_passed",
+    "source_worktree_unchanged", "evidence_integrity", "origin_authenticated",
+    "supervisor_attestation_required", "synthetic_payload", "candidate_only",
+    "execution_authorized", "authority_boundary"
+  ],
+  "properties": {
+    "schema_version": {"const": "dad.intent_continuity_hook_performance_evidence.v1"},
+    "measurement_id": {"type": "string", "pattern": "^dad:hook-performance:[0-9a-f]{64}$"},
+    "recorded_at": {"type": "string", "format": "date-time"},
+    "measurement_origin": {"const": "instrumented_harness"},
+    "adapter_id": {"const": "adapter:intent-continuity-shadow"},
+    "adapter_revision_id": {"type": "string", "minLength": 1, "maxLength": 180},
+    "adapter_interface_digest": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"},
+    "command_kind": {"enum": ["command", "commandWindows"]},
+    "command_digest": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"},
+    "methodology_id": {"const": "methodology:nearest-rank-p95-cold-process-v1"},
+    "sample_count": {"type": "integer", "minimum": 1, "maximum": 100},
+    "latency_ms_samples": {
+      "type": "array", "minItems": 1, "maxItems": 100,
+      "items": {"type": "number", "minimum": 0}
+    },
+    "latency_ms_p95": {"type": "number", "minimum": 0},
+    "latency_budget_ms": {"type": "number", "exclusiveMinimum": 0},
+    "timeout_ms": {"type": "integer", "minimum": 1},
+    "silent_success_count": {"type": "integer", "minimum": 0},
+    "persistence_success_count": {"type": "integer", "minimum": 0},
+    "privacy_check_passed": {"type": "boolean"},
+    "source_worktree_unchanged": {"type": "boolean"},
+    "evidence_integrity": {"const": "self_consistent_not_origin_authenticated"},
+    "origin_authenticated": {"const": false},
+    "supervisor_attestation_required": {"const": true},
+    "synthetic_payload": {"const": true},
+    "candidate_only": {"const": true},
+    "execution_authorized": {"const": false},
+    "authority_boundary": {"type": "string", "minLength": 40}
+  }
+}

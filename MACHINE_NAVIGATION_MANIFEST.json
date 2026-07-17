@@ -12,8 +12,8 @@
     "AI_TABLE_OF_CONTENTS.md"
   ],
   "navigation_standards": {
-    "navigation_version": "2026.07.16.17",
-    "updated_at": "2026-07-17T03:00:00Z",
+    "navigation_version": "2026.07.17.1",
+    "updated_at": "2026-07-17T05:20:00Z",
     "single_ai_entrypoint": "AI_FRONT_DOOR.md",
     "ai_table_of_contents": "AI_TABLE_OF_CONTENTS.md",
     "navigation_registry": "registry/ai-navigation-registry.json",
@@ -257,6 +257,12 @@
     "registry/subagent-evaluation-methodologies/",
     "registry/subagent-capability-registry.json",
     "assets/agent-skills/personal-project-management-ops/",
+    "docs/INTENT_CONTINUITY_GRAPH.md",
+    "config/intent-continuity-shadow-hooks.json",
+    "src/digital_asset_directory/portfolio_continuity_runtime.py",
+    "src/digital_asset_directory/portfolio_continuity_host_readiness.py",
+    "schemas/intent-continuity-host-readiness.schema.json",
+    "roadmap/evidence/intent-continuity-host-readiness-2026-07-17.json",
     "assets/agent-skills/dad-trigger-pattern-radar/",
     "assets/agent-skills/personal-portfolio-capacity-review/",
     ".digital-asset/portfolio/missions.json",

@@ -1,0 +1,59 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://dad.local/schemas/intent-continuity-hook-scale-evidence.schema.json",
+  "title": "DAD indexed intent-continuity hook scale evidence",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version", "measurement_id", "recorded_at", "methodology_id",
+    "adapter_revision_id", "adapter_interface_digest", "warm_latency_budget_ms",
+    "cold_hard_timeout_ms", "results", "source_worktree_unchanged",
+    "evidence_integrity", "origin_authenticated", "supervisor_attestation_required",
+    "synthetic_payload", "candidate_only", "execution_authorized", "authority_boundary"
+  ],
+  "properties": {
+    "schema_version": {"const": "dad.intent_continuity_hook_scale_evidence.v1"},
+    "measurement_id": {"type": "string", "pattern": "^dad:hook-scale:[0-9a-f]{64}$"},
+    "recorded_at": {"type": "string", "format": "date-time"},
+    "methodology_id": {"const": "methodology:exact-content-index-scale-v1"},
+    "adapter_revision_id": {"type": "string", "minLength": 1, "maxLength": 180},
+    "adapter_interface_digest": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"},
+    "warm_latency_budget_ms": {"type": "number", "exclusiveMinimum": 0},
+    "cold_hard_timeout_ms": {"type": "integer", "minimum": 1},
+    "results": {
+      "type": "array", "minItems": 4, "maxItems": 4,
+      "items": {
+        "type": "object", "additionalProperties": false,
+        "required": [
+          "preexisting_event_count", "index_state", "latency_ms", "exit_code",
+          "silent", "ledger_event_count", "index_event_count", "index_valid",
+          "index_size_matches", "index_digest_matches", "index_command_count",
+          "failure_marker_count", "persistence_confirmed"
+        ],
+        "properties": {
+          "preexisting_event_count": {"enum": [0, 1000, 10000]},
+          "index_state": {"enum": ["cold", "warm"]},
+          "latency_ms": {"type": "number", "minimum": 0},
+          "exit_code": {"type": "integer"},
+          "silent": {"type": "boolean"},
+          "ledger_event_count": {"type": "integer", "minimum": 0},
+          "index_event_count": {"type": "integer", "minimum": 0},
+          "index_valid": {"type": "boolean"},
+          "index_size_matches": {"type": "boolean"},
+          "index_digest_matches": {"type": "boolean"},
+          "index_command_count": {"type": "integer", "minimum": 0},
+          "failure_marker_count": {"type": "integer", "minimum": 0},
+          "persistence_confirmed": {"type": "boolean"}
+        }
+      }
+    },
+    "source_worktree_unchanged": {"type": "boolean"},
+    "evidence_integrity": {"const": "self_consistent_not_origin_authenticated"},
+    "origin_authenticated": {"const": false},
+    "supervisor_attestation_required": {"const": true},
+    "synthetic_payload": {"const": true},
+    "candidate_only": {"const": true},
+    "execution_authorized": {"const": false},
+    "authority_boundary": {"type": "string", "minLength": 40}
+  }
+}

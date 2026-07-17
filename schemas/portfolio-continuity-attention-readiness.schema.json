@@ -1,0 +1,104 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://dad.local/schemas/portfolio-continuity-attention-readiness.schema.json",
+  "title": "DAD dormant progressive attention readiness",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "trial_status", "stage_activation_state_digest", "stages", "session_start_summary_preview", "weekly_digest_preview", "weekly_seen_fingerprints", "weekly_fingerprint_history_truncated", "breakpoint_prompt_preview", "automatic_cleanup_allowed", "candidate_only", "execution_authorized", "authority_boundary"],
+  "properties": {
+    "schema_version": {"const": "dad.portfolio_continuity_attention_readiness.v1"},
+    "trial_status": {"enum": ["inactive_shadow", "trial_incomplete", "eligible_for_human_activation"]},
+    "stage_activation_state_digest": {"type": "string", "pattern": "^(|sha256:[0-9a-f]{64})$"},
+    "stages": {
+      "type": "array",
+      "minItems": 5,
+      "maxItems": 5,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["stage_id", "order", "status", "gate_failures", "separate_human_approval_required", "activation_authorized", "approval_event_id", "valid_until", "rollback_criteria", "kill_criteria"],
+        "properties": {
+          "stage_id": {"enum": ["manual", "supervised_silent_shadow", "session_start_summary", "weekly_changed_only_digest", "breakpoint_prompts"]},
+          "order": {"type": "integer", "minimum": 1, "maximum": 5},
+          "status": {"type": "string", "minLength": 1},
+          "gate_failures": {"type": "array", "uniqueItems": true, "items": {"type": "string"}},
+          "separate_human_approval_required": {"type": "boolean"},
+          "activation_authorized": {"type": "boolean"},
+          "approval_event_id": {"type": "string", "pattern": "^(|dad:continuity-stage-approval:[0-9a-f]{64})$"},
+          "valid_until": {"type": "string"},
+          "rollback_criteria": {"type": "array", "uniqueItems": true, "items": {"type": "string", "pattern": "^[a-z0-9][a-z0-9._:-]{0,127}$"}},
+          "kill_criteria": {"type": "array", "uniqueItems": true, "items": {"type": "string", "pattern": "^[a-z0-9][a-z0-9._:-]{0,127}$"}}
+        }
+      }
+    },
+    "session_start_summary_preview": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["status", "items", "item_count", "delivery_attempted", "delivery_authorized"],
+      "properties": {
+        "status": {"const": "candidate_preview"},
+        "items": {
+          "type": "array",
+          "maxItems": 3,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["plan_id", "workstream_id", "next_action", "reason_codes", "source_queue"],
+            "properties": {
+              "plan_id": {"type": "string", "minLength": 1},
+              "workstream_id": {"type": "string"},
+              "next_action": {"type": "string"},
+              "reason_codes": {"type": "array", "uniqueItems": true, "items": {"type": "string"}},
+              "source_queue": {"enum": ["interrupted_resume", "next_actions"]}
+            }
+          }
+        },
+        "item_count": {"type": "integer", "minimum": 0, "maximum": 3},
+        "delivery_attempted": {"const": false},
+        "delivery_authorized": {"const": false}
+      }
+    },
+    "weekly_digest_preview": {
+      "type": "object",
+      "required": ["schema_version", "digest_id", "generated_at", "schedule_candidate", "inventory", "asks", "model_calls", "model_tokens", "delivery", "activation_status", "candidate_only", "execution_authorized", "authority_boundary"],
+      "properties": {
+        "schema_version": {"const": "dad.portfolio_weekly_digest.v1"},
+        "asks": {"type": "array", "maxItems": 3, "items": {"type": "object"}},
+        "model_calls": {"const": 0},
+        "model_tokens": {"const": 0},
+        "delivery": {
+          "type": "object",
+          "required": ["attempted", "confirmed", "blind_retry_allowed"],
+          "properties": {
+            "attempted": {"const": false},
+            "confirmed": {"const": false},
+            "blind_retry_allowed": {"const": false}
+          }
+        },
+        "activation_status": {"const": "supervised_trial_required"},
+        "candidate_only": {"const": true},
+        "execution_authorized": {"const": false}
+      }
+    },
+    "weekly_seen_fingerprints": {"type": "array", "maxItems": 1000, "uniqueItems": true, "items": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"}},
+    "weekly_fingerprint_history_truncated": {"type": "boolean"},
+    "breakpoint_prompt_preview": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["status", "plan_id", "workstream_id", "question", "allowed_responses", "delivery_attempted", "delivery_authorized"],
+      "properties": {
+        "status": {"enum": ["candidate_preview", "no_interruption_candidate"]},
+        "plan_id": {"type": "string"},
+        "workstream_id": {"type": "string"},
+        "question": {"type": "string"},
+        "allowed_responses": {"type": "array", "maxItems": 3, "uniqueItems": true, "items": {"enum": ["resume", "keep_current", "snooze"]}},
+        "delivery_attempted": {"const": false},
+        "delivery_authorized": {"const": false}
+      }
+    },
+    "automatic_cleanup_allowed": {"const": false},
+    "candidate_only": {"const": true},
+    "execution_authorized": {"const": false},
+    "authority_boundary": {"type": "string", "minLength": 40}
+  }
+}

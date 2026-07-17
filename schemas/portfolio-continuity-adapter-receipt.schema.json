@@ -1,0 +1,84 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://dad.local/schemas/portfolio-continuity-adapter-receipt.schema.json",
+  "title": "DAD provider-neutral continuity adapter receipt",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "request_id",
+    "adapter_id",
+    "adapter_revision_id",
+    "source_kind",
+    "source_id",
+    "source_revision",
+    "event_kind",
+    "observed_at",
+    "privacy_partition",
+    "payload"
+  ],
+  "properties": {
+    "schema_version": {"const": "dad.portfolio_continuity_adapter_receipt.v1"},
+    "request_id": {"type": "string", "minLength": 1, "maxLength": 240},
+    "adapter_id": {"type": "string", "minLength": 1, "maxLength": 160},
+    "adapter_revision_id": {"type": "string", "minLength": 1, "maxLength": 160},
+    "source_kind": {
+      "enum": ["codex_task", "runtime_hook", "dad_binding", "manual_shadow"]
+    },
+    "source_id": {"type": "string", "minLength": 1, "maxLength": 240},
+    "source_revision": {"type": "string", "minLength": 1, "maxLength": 240},
+    "event_kind": {
+      "enum": [
+        "codex_task_observed",
+        "session_started",
+        "session_stopped",
+        "turn_stopped",
+        "interruption_observed",
+        "resumption_observed",
+        "dad_binding_observed",
+        "coverage_gap_observed",
+        "reconciliation_completed",
+        "manual_shadow_observed"
+      ]
+    },
+    "observed_at": {"type": "string", "format": "date-time"},
+    "privacy_partition": {"type": "string", "minLength": 1, "maxLength": 120},
+    "payload": {
+      "type": "object",
+      "additionalProperties": false,
+      "minProperties": 1,
+      "properties": {
+        "task_id": {"type": "string", "maxLength": 240},
+        "status": {"type": "string", "maxLength": 120},
+        "archive_state": {"type": "string", "maxLength": 120},
+        "created_at": {"type": "string", "format": "date-time"},
+        "updated_at": {"type": "string", "format": "date-time"},
+        "last_observed_at": {"type": "string", "format": "date-time"},
+        "display_label": {"type": "string", "maxLength": 240},
+        "title_fingerprint": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"},
+        "repository_id": {"type": "string", "maxLength": 240},
+        "branch_id": {"type": "string", "maxLength": 240},
+        "worktree_id": {"type": "string", "maxLength": 240},
+        "plan_id": {"type": "string", "maxLength": 240},
+        "entity_id": {"type": "string", "maxLength": 240},
+        "workstream_id": {"type": "string", "maxLength": 240},
+        "session_id": {"type": "string", "maxLength": 240},
+        "interrupted_entity_id": {"type": "string", "maxLength": 240},
+        "new_entity_id": {"type": "string", "maxLength": 240},
+        "reason_code": {"type": "string", "maxLength": 120},
+        "source_digest": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"},
+        "last_material_activity_at": {"type": "string", "format": "date-time"},
+        "coverage_status": {"enum": ["complete", "partial", "unavailable", "unknown"]},
+        "coverage_gaps": {
+          "type": "array",
+          "uniqueItems": true,
+          "maxItems": 32,
+          "items": {"type": "string", "minLength": 1, "maxLength": 160}
+        },
+        "recommended_action": {
+          "enum": ["inspect", "resume_request", "hold", "snooze", "acknowledge"]
+        }
+      }
+    }
+  }
+}

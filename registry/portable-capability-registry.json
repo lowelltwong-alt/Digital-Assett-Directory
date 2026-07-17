@@ -346,7 +346,7 @@
     {
       "schema_version": "dad.portable_capability_card.v1",
       "card_id": "portability-card:harness-portable-capability-control-plane",
-      "revision_id": "portability-card-revision:harness-portable-capability-control-plane:0.1.1",
+      "revision_id": "portability-card-revision:harness-portable-capability-control-plane:0.1.5",
       "artifact_id": "harness:portable-capability-control-plane",
       "artifact_kind": "harness",
       "binding_class": "portable_core",
@@ -404,7 +404,7 @@
         "src/digital_asset_directory/validation.py",
         "templates/downstream/AGENTS_MANAGED_BLOCK.md"
       ],
-      "content_digest": "sha256:9f69c9b767cf7e5b10010561b94a5b84a4e6d93559b13631f18ef4fa9d0e3d56",
+      "content_digest": "sha256:3fc89bb0e1877d71836afd5416d96b521dc48e46d0b731b61dfd78c1f44b2cf7",
       "contract_digests": {
         "input": "sha256:eee475da7d6fe76d90852dfa97de0e1f047cb72d7d0134552245b7cda9a9fb68",
         "output": "sha256:0ec04e3bcb58df087b53068eb3756924c878f35a40871814bd8749313aa69dea",
@@ -717,7 +717,7 @@
         "src/digital_asset_directory/ml_agent_family.py",
         "src/digital_asset_directory/synthetic_data_resources.py"
       ],
-      "content_digest": "sha256:fc176d9fea322abdad58cfba29054a3638abb2f68c25947425149deff91a580b",
+      "content_digest": "sha256:8e1afcf2fd6cecdbeaa5864cd674d116875c09d23d388e4fda1dc2477aa577f4",
       "source_observation_digest": "sha256:bae686af0cdb051b26d1be598966ce0554c67495a3cea11ad21a039642867be3",
       "contract_digests": {
         "input": "sha256:237d32dea8556c1049117af26c53fd66ffbc5e4626b0bca598e1b5041531d16d",
@@ -1337,6 +1337,190 @@
       "candidate_only": true,
       "execution_authorized": false,
       "authority_boundary": "The adapter translates provider events only; it cannot broaden normative suite selection, change required checks, or activate itself."
+    },
+    {
+      "schema_version": "dad.portable_capability_card.v1",
+      "card_id": "portability-card:skill-personal-project-management-ops",
+      "revision_id": "portability-card-revision:skill-personal-project-management-ops:0.4.8",
+      "artifact_id": "skill:personal-project-management-ops",
+      "artifact_kind": "skill",
+      "binding_class": "portable_core",
+      "source_authority": "assets/agent-skills/personal-project-management-ops/SKILL.md",
+      "owner": "DAD and Lowell",
+      "status": "schema_validated",
+      "portable_files": [
+        "assets/agent-skills/personal-project-management-ops/SKILL.md",
+        "assets/agent-skills/personal-project-management-ops/subagents.yaml",
+        "assets/agent-skills/personal-project-management-ops/routines.yaml",
+        "assets/agent-skills/personal-project-management-ops/references/PROJECT_MANAGEMENT_CONTRACT.md",
+        "assets/agent-skills/personal-project-management-ops/references/UNFINISHED_INTENT_RECOVERY_CONTRACT.md",
+        "config/intent-continuity-shadow-hooks.json",
+        "docs/INTENT_CONTINUITY_GRAPH.md",
+        "registry/agent-skill-library.json",
+        "registry/runtime-adapter-registry.json",
+        "registry/schema-registry.json",
+        "schemas/intent-continuity-shadow-hook-config.schema.json",
+        "schemas/intent-continuity-hook-failure-marker.schema.json",
+        "schemas/intent-continuity-hook-performance-evidence.schema.json",
+        "schemas/intent-continuity-hook-scale-evidence.schema.json",
+        "schemas/intent-continuity-host-readiness.schema.json",
+        "schemas/portfolio-continuity-activation-state.schema.json",
+        "schemas/portfolio-continuity-attention-readiness.schema.json",
+        "schemas/portfolio-continuity-stage-activation-state.schema.json",
+        "schemas/portfolio-continuity-stage-approval.schema.json",
+        "schemas/portfolio-continuity-adapter-receipt.schema.json",
+        "schemas/portfolio-continuity-event.schema.json",
+        "schemas/portfolio-continuity-projection.schema.json",
+        "schemas/portfolio-continuity-trial-review.schema.json",
+        "schemas/portfolio-continuity-trial-operator-packet.schema.json",
+        "schemas/portfolio-weekly-digest.schema.json",
+        "schemas/portfolio-roadmap-event.schema.json",
+        "schemas/portfolio-roadmap-projection.schema.json",
+        "src/digital_asset_directory/cli.py",
+        "src/digital_asset_directory/portfolio_continuity_adapter.py",
+        "src/digital_asset_directory/portfolio_continuity_attention.py",
+        "src/digital_asset_directory/portfolio_continuity_events.py",
+        "src/digital_asset_directory/portfolio_continuity_inventory.py",
+        "src/digital_asset_directory/portfolio_continuity_hook_benchmark.py",
+        "src/digital_asset_directory/portfolio_continuity_host_readiness.py",
+        "src/digital_asset_directory/portfolio_continuity_projection.py",
+        "src/digital_asset_directory/portfolio_continuity_runtime.py",
+        "src/digital_asset_directory/portfolio_continuity_search.py",
+        "src/digital_asset_directory/portfolio_continuity_stage_activation.py",
+        "src/digital_asset_directory/portfolio_continuity_trial.py",
+        "src/digital_asset_directory/portfolio_continuity_workflow.py",
+        "src/digital_asset_directory/portfolio_related_work.py",
+        "src/digital_asset_directory/portfolio_weekly_digest.py",
+        "src/digital_asset_directory/portfolio_intents.py",
+        "src/digital_asset_directory/portfolio_roadmap.py",
+        "templates/hooks/intent-continuity-shadow-receipt.template.json"
+      ],
+      "content_digest": "sha256:8bdf6e0b909628e54a3cbfe8323deae112aad4167474b2918e48dc41bf9f59de",
+      "source_observation_digest": "sha256:1aeef157eb837554b2d8bf2b3de020f8daf701533a3ca6efe7d31e0888368a9a",
+      "contract_digests": {
+        "input": "sha256:eee475da7d6fe76d90852dfa97de0e1f047cb72d7d0134552245b7cda9a9fb68",
+        "output": "sha256:0ec04e3bcb58df087b53068eb3756924c878f35a40871814bd8749313aa69dea",
+        "error": "sha256:0c31568c5353cbf327cd009c17af20a687f7e97685e609c9a8d96f03852fd118",
+        "privacy": "sha256:6eccc25be5945d494635818e68177f6efe953e9f2e74fbf165b5139d08429551",
+        "effect": "sha256:c9093452afcdef36603faec991dc45d87d2166fb706f2b70f263b6625f6a3491",
+        "authority": "sha256:408c3ee0aef794f423d49ba8141f3492961aa68b354d03c37c455d072d7e32c3"
+      },
+      "capability_ids": [
+        "project_identity_and_related_work",
+        "workstream_planning",
+        "neglected_work_recovery",
+        "dependency_frontier_analysis",
+        "delivery_validation_and_handoff"
+      ],
+      "tool_ids": [
+        "dad-cli",
+        "git-read-only",
+        "json-schema",
+        "explicit-runtime-metadata-receipts"
+      ],
+      "context_contract": "Private minimized plan, roadmap, ref, worktree, task-metadata, validation, activity, and closeout evidence with explicit coverage gaps; never raw conversations, prompts, source blobs, diffs, paths, secrets, or credentials.",
+      "privacy_classes": [
+        "public",
+        "internal",
+        "confidential",
+        "restricted_by_local_policy"
+      ],
+      "consequence_classes": [
+        "small",
+        "medium",
+        "large",
+        "critical"
+      ],
+      "effect_classes": [
+        "read_only",
+        "candidate_local_artifact"
+      ],
+      "dependencies": [
+        "skill:dad-work-router",
+        "skill:portable-capability-governance",
+        "skill:subagent-continuous-improvement"
+      ],
+      "reverse_consumers": [
+        "portfolio-os-cli",
+        "intent-continuity-shadow-trial",
+        "capability-os-cockpit"
+      ],
+      "adapter_revision_ids": [
+        "portability-card-revision:adapter-intent-continuity-codex-host:0.3.9"
+      ],
+      "harness_revision_id": "harness-revision:portable-capability-contract:0.1.0",
+      "evidence_refs": [
+        "docs/INTENT_CONTINUITY_GRAPH.md",
+        "tests/test_portfolio_continuity_runtime.py",
+        "tests/test_portfolio_continuity_trial.py"
+      ],
+      "fresh_until": "2026-10-16T00:00:00-04:00",
+      "rollback_ref": "Disable and remove the inactive continuity adapter and projections while preserving immutable private plan and roadmap evidence.",
+      "candidate_only": true,
+      "execution_authorized": false,
+      "authority_boundary": "This portable core produces candidate recovery and closeout evidence only; it cannot activate hooks, choose a provider, merge identities, notify, schedule, mutate Git or tasks, archive work, or authorize execution."
+    },
+    {
+      "schema_version": "dad.portable_capability_card.v1",
+      "card_id": "portability-card:adapter-intent-continuity-codex-host",
+      "revision_id": "portability-card-revision:adapter-intent-continuity-codex-host:0.3.9",
+      "artifact_id": "adapter:intent-continuity-codex-host",
+      "artifact_kind": "runtime_adapter",
+      "binding_class": "runtime_adapter",
+      "source_authority": "config/intent-continuity-shadow-hooks.json",
+      "owner": "DAD and Lowell",
+      "status": "schema_validated",
+      "core_revision_id": "portability-card-revision:skill-personal-project-management-ops:0.4.8",
+      "content_digest": "sha256:4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+      "target_capability_predicate": {
+        "runtime_adapter_id": "adapter:codex-host",
+        "status": "supervised_silent_shadow"
+      },
+      "adapter_interface_digest": "sha256:c9567379d4aab9f5520c5e590890da49d5666e71a8054803893c01cfe221f057",
+      "adapter_interface_sources": [
+        ".codex/hooks.json",
+        ".codex/hooks/intent_continuity_shadow.py",
+        "config/intent-continuity-shadow-hooks.json",
+        "schemas/intent-continuity-hook-failure-marker.schema.json",
+        "schemas/intent-continuity-hook-performance-evidence.schema.json",
+        "schemas/intent-continuity-hook-scale-evidence.schema.json",
+        "schemas/intent-continuity-host-readiness.schema.json",
+        "schemas/portfolio-continuity-activation-state.schema.json",
+        "schemas/portfolio-continuity-adapter-receipt.schema.json",
+        "schemas/portfolio-continuity-event.schema.json",
+        "schemas/portfolio-continuity-trial-operator-packet.schema.json",
+        "src/digital_asset_directory/portfolio_continuity_adapter.py",
+        "src/digital_asset_directory/portfolio_continuity_codex_hook.py",
+        "src/digital_asset_directory/portfolio_continuity_events.py",
+        "src/digital_asset_directory/portfolio_continuity_hook_benchmark.py",
+        "src/digital_asset_directory/portfolio_continuity_host_readiness.py",
+        "src/digital_asset_directory/portfolio_continuity_trial.py",
+        "src/digital_asset_directory/cli.py"
+      ],
+      "preserved_contract_digests": {
+        "input": "sha256:eee475da7d6fe76d90852dfa97de0e1f047cb72d7d0134552245b7cda9a9fb68",
+        "output": "sha256:0ec04e3bcb58df087b53068eb3756924c878f35a40871814bd8749313aa69dea",
+        "error": "sha256:0c31568c5353cbf327cd009c17af20a687f7e97685e609c9a8d96f03852fd118",
+        "privacy": "sha256:6eccc25be5945d494635818e68177f6efe953e9f2e74fbf165b5139d08429551",
+        "effect": "sha256:c9093452afcdef36603faec991dc45d87d2166fb706f2b70f263b6625f6a3491",
+        "authority": "sha256:408c3ee0aef794f423d49ba8141f3492961aa68b354d03c37c455d072d7e32c3"
+      },
+      "compatibility_evidence": [
+        "schemas/portfolio-continuity-adapter-receipt.schema.json",
+        "schemas/intent-continuity-host-readiness.schema.json",
+        "tests/test_portfolio_continuity_adapter.py",
+        "tests/test_portfolio_continuity_codex_hook.py",
+        "tests/test_portfolio_continuity_host_readiness.py",
+        "tests/test_portfolio_continuity_runtime.py"
+      ],
+      "target_runtime_classes": [
+        "codex_host"
+      ],
+      "fresh_until": "2026-08-16T00:00:00-04:00",
+      "rollback_ref": "Delete or disable .codex/hooks.json and set every trigger in config/intent-continuity-shadow-hooks.json to disabled without changing the provider-neutral receipt core or private append-only evidence.",
+      "candidate_only": true,
+      "execution_authorized": false,
+      "authority_boundary": "This supervised repo-local host adapter hashes minimized lifecycle metadata only and cannot read transcripts or prompts, invoke models, notify, schedule, mutate Git or tasks, archive work, or activate any later stage."
     }
   ],
   "candidate_only": true,

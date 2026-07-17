@@ -1,0 +1,12 @@
+{
+  "missed_captures": 1,
+  "unnecessary_captures": 0,
+  "harmful_captures": 0,
+  "false_merges": 0,
+  "accidental_mutations": 0,
+  "unauthorized_mutations": 0,
+  "repeated_unchanged_asks": 0,
+  "privacy_escapes": 0,
+  "blind_delivery_retries": 0,
+  "model_calls_on_unchanged_cycles": 0
+}
