@@ -90,3 +90,30 @@ def test_result_rejects_unknown_packet_fields(tmp_path):
             checker_id="checker-1",
             evidence_refs=["test:mcp:unknown-field"],
         )
+
+
+def test_result_rejects_forged_packet_identity_or_gate(tmp_path):
+    packet = {**_packet(), "packet_id": "dad:mcp-action-packet:forged"}
+    with pytest.raises(MCPPacketError, match="identity"):
+        record_lifecycle_result(
+            tmp_path,
+            packet,
+            result_status="verified",
+            before_snapshot_digest=DIGEST,
+            after_snapshot_digest=DIGEST,
+            worker_id="worker-1",
+            checker_id="checker-1",
+            evidence_refs=["test:mcp:forged"],
+        )
+    packet = {**_packet(), "mutations_performed": True}
+    with pytest.raises(MCPPacketError, match="authorizing|mutations"):
+        record_lifecycle_result(
+            tmp_path,
+            packet,
+            result_status="verified",
+            before_snapshot_digest=DIGEST,
+            after_snapshot_digest=DIGEST,
+            worker_id="worker-1",
+            checker_id="checker-1",
+            evidence_refs=["test:mcp:mutated"],
+        )

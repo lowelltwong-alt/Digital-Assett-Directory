@@ -9,7 +9,7 @@ from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any, Mapping, Sequence
 
-from .mail_center import append_jsonl_locked
+from .mail_center import _jsonl_lock, append_jsonl
 
 PACKET_SCHEMA_VERSION = "dad.mcp.action_packet.v1"
 RESULT_SCHEMA_VERSION = "dad.mcp.action_result.v1"
@@ -37,6 +37,7 @@ _PACKET_FIELDS = frozenset(
         "rollback_ref",
     }
 )
+_PACKET_REQUIRED = _PACKET_FIELDS - {"rollback_ref"}
 
 
 class MCPPacketError(ValueError):
@@ -122,6 +123,41 @@ def prepare_lifecycle_packet(
     return packet
 
 
+def _validate_prepared_packet(packet: Mapping[str, Any]) -> dict[str, Any]:
+    unknown = set(packet) - _PACKET_FIELDS
+    missing = _PACKET_REQUIRED - set(packet)
+    if unknown:
+        raise MCPPacketError("packet contains unknown fields")
+    if missing:
+        raise MCPPacketError("packet is missing required fields")
+    if packet.get("schema_version") != PACKET_SCHEMA_VERSION:
+        raise MCPPacketError("packet schema_version is invalid")
+    if packet.get("human_gate_required") is not True or packet.get("independent_checker_required") is not True:
+        raise MCPPacketError("packet approval gates are invalid")
+    if packet.get("execution_authorized") is not False or packet.get("mutations_performed") is not False:
+        raise MCPPacketError("packet is authorizing or claims mutations")
+    _token(packet.get("request_id"), "request_id")
+    _token(packet.get("packet_id"), "packet_id")
+    _token(packet.get("repository_id"), "repository_id")
+    _token(packet.get("approval_ref"), "approval_ref")
+    if packet.get("case_id"):
+        _token(packet.get("case_id"), "case_id")
+    if packet.get("rollback_ref"):
+        _token(packet.get("rollback_ref"), "rollback_ref")
+    if packet.get("action_kind") not in _KINDS:
+        raise MCPPacketError("action_kind is invalid")
+    _digest(packet.get("source_snapshot_digest"), "source_snapshot_digest")
+    _digest(packet.get("expected_preconditions_digest"), "expected_preconditions_digest")
+    issued = _time(str(packet.get("issued_at")))
+    expires = _time(str(packet.get("expires_at")))
+    if expires <= issued:
+        raise MCPPacketError("packet expiry is invalid")
+    identity = {key: value for key, value in packet.items() if key not in {"issued_at", "expires_at", "packet_id"}}
+    if packet.get("packet_id") != _id("mcp-action-packet", identity):
+        raise MCPPacketError("packet identity does not match its contents")
+    return dict(packet)
+
+
 def record_lifecycle_result(
     hub_root: Path,
     packet: Mapping[str, Any],
@@ -133,11 +169,7 @@ def record_lifecycle_result(
     checker_id: str,
     evidence_refs: Sequence[str],
 ) -> dict[str, Any]:
-    unknown = set(packet) - _PACKET_FIELDS
-    if unknown:
-        raise MCPPacketError("packet contains unknown fields")
-    if packet.get("schema_version") != PACKET_SCHEMA_VERSION or packet.get("execution_authorized") is not False:
-        raise MCPPacketError("packet is not a non-authorizing MCP packet")
+    packet = _validate_prepared_packet(packet)
     if result_status not in _STATUSES:
         raise MCPPacketError("result_status is invalid")
     packet_id = _token(packet.get("packet_id"), "packet_id")
@@ -154,14 +186,6 @@ def record_lifecycle_result(
     if now >= _time(str(packet.get("expires_at", ""))):
         raise MCPPacketError("packet has expired")
     path = hub_root / "audit" / "events" / "mcp-action-results.jsonl"
-    rows: list[dict[str, Any]] = []
-    if path.exists():
-        for line in path.read_text(encoding="utf-8").splitlines():
-            if line.strip():
-                row = json.loads(line)
-                if not isinstance(row, dict):
-                    raise MCPPacketError("result ledger contains a non-object row")
-                rows.append(row)
     payload = {
         "schema_version": RESULT_SCHEMA_VERSION,
         "packet_id": packet_id,
@@ -175,13 +199,20 @@ def record_lifecycle_result(
     }
     result_id = _id("mcp-action-result", payload)
     payload["result_id"] = result_id
-    for row in rows:
-        if row.get("packet_id") != packet_id:
-            continue
-        if row == payload:
-            return {"status": "deduplicated", **payload}
-        raise MCPPacketError("packet already has a conflicting result")
-    append_jsonl_locked(path, payload)
+    with _jsonl_lock(path):
+        if path.exists():
+            for line in path.read_text(encoding="utf-8").splitlines():
+                if not line.strip():
+                    continue
+                row = json.loads(line)
+                if not isinstance(row, dict):
+                    raise MCPPacketError("result ledger contains a non-object row")
+                if row.get("packet_id") != packet_id:
+                    continue
+                if row == payload:
+                    return {"status": "deduplicated", **payload}
+                raise MCPPacketError("packet already has a conflicting result")
+        append_jsonl(path, payload)
     return {"status": "recorded", **payload}
 
 

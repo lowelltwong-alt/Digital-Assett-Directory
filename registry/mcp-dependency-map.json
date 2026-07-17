@@ -73,7 +73,7 @@
       "label": "Supervised MCP packet engine",
       "artifact_kind": "file",
       "change_contract": "Packet identity, expiry, replay, checker separation, and non-authorizing result rules require packet and privacy tests.",
-      "fingerprint": {"kind": "exact_sha256", "path": "src/digital_asset_directory/mcp_packets.py", "sha256": "sha256:8ae4fcba16cad3225935494fdbd1cd88cbdb580dfc1cc42335ebc414e4247164"}
+      "fingerprint": {"kind": "exact_sha256", "path": "src/digital_asset_directory/mcp_packets.py", "sha256": "sha256:d88a4ac5085697aaeabe9cd04b4a69a1efb2e80b6139083c8b024646b5aa962a"}
     },
     {
       "node_id": "mcp.node.validation.remote-conformance",
