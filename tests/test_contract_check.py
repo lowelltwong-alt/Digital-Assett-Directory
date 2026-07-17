@@ -372,7 +372,9 @@ def test_cli_fails_closed_before_effective_policy_mode_is_known(
     assert result.exit_code == 2
     normalized_output = " ".join(result.output.split())
     assert "failed to run in enforce mode" in normalized_output
-    assert expected_fragment in normalized_output
+    # Rich may wrap long paths inside a token at different terminal widths.
+    compact_output = "".join(result.output.split())
+    assert "".join(expected_fragment.split()) in compact_output
 
 
 def test_cli_explicit_warn_does_not_block_when_policy_cannot_be_loaded(
