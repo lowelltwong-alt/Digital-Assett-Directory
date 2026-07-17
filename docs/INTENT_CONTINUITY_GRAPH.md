@@ -99,6 +99,8 @@ asset-dir os continuity host-readiness --repo <local-repo> <review-and-dispatch-
 asset-dir os continuity trial-review --performance-evidence <performance-evidence.json> --supervisor-attestation-id <reviewed-attestation-id>
 asset-dir os continuity activation-check
 asset-dir os continuity trial-readiness --trial-id <trial-id> --repo <local-repo>
+asset-dir os continuity stage-status --trial-id <trial-id> --repo <local-repo>
+asset-dir os continuity stage-approval --trial-id <trial-id> --stage-id <stage> --decision <approve|revoke|kill> <operator-attestation-and-safety-criteria>
 ```
 
 Benchmark receipts are revision-bound, schema-checked, and internally
@@ -110,7 +112,9 @@ remain readable. Fixture rows never count toward activation, and historical
 real rows without attestation remain failing evidence. Every new
 production-clock review is rejected at recording time without an explicit
 supervisor attestation, while the evaluator independently rejects any
-unattested real review.
+unattested real review. The recorder also fails before reading metrics or
+appending anything unless the repository has a recorded, current, ready host
+assessment bound to the exact runtime-adapter interface.
 
 An accepted roadmap item requires acceptance evidence, an independent check,
 distinct producer/checker identities, and explicit human approval evidence.
@@ -134,7 +138,8 @@ Recovery uses local evidence only and must never fetch:
 - linked worktrees and detached heads;
 - staged, unstaged, and untracked overlay counts;
 - bounded ref and worktree matching;
-- DAD plans, entities, accepted bindings, and explicit Codex metadata receipts.
+- DAD plans (including private source bindings), entities, accepted workstream
+  bindings, and explicit Codex metadata receipts.
 
 `asset-dir os continuity recover` joins those sources into one bounded,
 no-winner result. Git objects, dirty overlays, and Codex receipts remain
@@ -339,6 +344,18 @@ digest builder, and emits at most one generic breakpoint-prompt preview. Every
 preview records `delivery_authorized: false`; trial eligibility only opens a
 separate human-approval gate for the session summary and cannot skip ahead to a
 digest or breakpoint prompt.
+
+Later stages have an append-only, private stage-decision ledger. An approval is
+bound to the stable qualifying review set, recorded host assessment, exact
+adapter-interface digest, predecessor approval event, expiry, rollback
+criteria, and kill criteria. Revoke and kill decisions fail closed and block
+downstream stages. Fixture approvals never authorize a real stage. The records
+are operator-attested rather than cryptographically origin-authenticated, and
+the control plane only projects scoped authority: it does not deliver a
+summary, schedule work, invoke a model, mutate Git or tasks, archive a task, or
+clean up a worktree. Both `stage-status` and the main in-memory/persisted
+continuity projections recompute state from the raw append-order ledger; a
+later safety decision wins even if a producer clock moves backward.
 
 The first real-clock preflight review is intentionally non-qualifying: the
 installed npm CLI is older than the desktop host, its documented one-off trust

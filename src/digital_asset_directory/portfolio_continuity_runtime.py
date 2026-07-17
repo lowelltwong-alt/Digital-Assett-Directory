@@ -17,11 +17,18 @@ from .portfolio_continuity_events import (
 )
 from .portfolio_continuity_codex_hook import read_codex_hook_failures
 from .portfolio_continuity_inventory import build_continuity_inventory
+from .portfolio_continuity_host_readiness import (
+    host_readiness_binding_failures,
+    host_readiness_recording_failures,
+    latest_host_readiness_assessment,
+)
 from .portfolio_continuity_projection import (
     build_continuity_projection,
     write_continuity_projection,
 )
 from .portfolio_continuity_workflow import assess_closeout, project_continuity_state
+from .portfolio_continuity_stage_activation import read_stage_approvals
+from .portfolio_continuity_trial import evaluate_trial, read_trial_reviews
 from .portfolio_intents import fold_plan_index, load_plan_revision
 from .portfolio_intents import read_events as read_plan_events
 from .portfolio_relations import RelationTarget, classify_relations
@@ -36,6 +43,7 @@ AUTHORITY_BOUNDARY = (
     "archive work, or authorize execution."
 )
 MAX_AUTOMATIC_DUPLICATE_PLANS = 250
+ADAPTER_ARTIFACT_ID = "adapter:intent-continuity-codex-host"
 
 
 class ContinuityRuntimeError(RuntimeError):
@@ -230,6 +238,65 @@ def require_initialized_private_data_root(hub_root: Path) -> Path:
     return root
 
 
+def derive_attention_stage_context(
+    hub_root: Path, repository_roots: Iterable[Path]
+) -> tuple[
+    dict[str, Any] | None,
+    list[dict[str, Any]] | None,
+    str,
+    list[str],
+]:
+    """Resolve the active trial and raw approval ledger for the live projection."""
+
+    reviews = read_trial_reviews(hub_root)
+    approvals = read_stage_approvals(hub_root)
+    non_fixture_approvals = [row for row in approvals if row["fixture_only"] is False]
+    non_fixture_reviews = [row for row in reviews if row["fixture_only"] is False]
+    if non_fixture_approvals:
+        trial_id = str(non_fixture_approvals[-1]["trial_id"])
+    elif non_fixture_reviews:
+        trial_id = str(non_fixture_reviews[-1]["trial_id"])
+    else:
+        return None, None, "", []
+
+    host_root = next(
+        (
+            Path(root).resolve()
+            for root in repository_roots
+            if (Path(root).resolve() / ".codex/hooks.json").is_file()
+            and (
+                Path(root).resolve()
+                / "registry/portable-capability-registry.json"
+            ).is_file()
+        ),
+        None,
+    )
+    if host_root is None:
+        return None, None, "", ["attention_host_adapter_repository_unavailable"]
+
+    host_assessment = latest_host_readiness_assessment(host_root, hub_root)
+    binding_failures = (
+        [
+            *host_readiness_binding_failures(host_root, host_assessment),
+            *host_readiness_recording_failures(
+                host_root, hub_root, host_assessment
+            ),
+        ]
+        if host_assessment is not None
+        else []
+    )
+    activation = evaluate_trial(
+        reviews,
+        trial_id=trial_id,
+        host_readiness=host_assessment,
+        host_binding_failures=binding_failures,
+    )
+    from .portability_control import runtime_adapter_interface_digest
+
+    adapter_digest = runtime_adapter_interface_digest(host_root, ADAPTER_ARTIFACT_ID)
+    return activation, approvals, adapter_digest, []
+
+
 def build_current_projection(
     hub_root: Path,
     *,
@@ -241,9 +308,9 @@ def build_current_projection(
     """Rebuild one global projection without changing any source system."""
 
     metadata = codex_metadata_by_root or {}
+    resolved_roots = [Path(root).resolve() for root in repo_roots]
     inventories = []
-    for root in repo_roots:
-        resolved = Path(root).resolve()
+    for resolved in resolved_roots:
         supplied_metadata = (
             metadata[str(resolved)] if str(resolved) in metadata else None
         )
@@ -298,6 +365,17 @@ def build_current_projection(
         hub_root
     )
     external_gaps.extend(weekly_history_gaps)
+    activation_state: dict[str, Any] | None = None
+    stage_approvals: list[dict[str, Any]] | None = None
+    adapter_interface_digest = ""
+    if private_root_mode == "data_root":
+        (
+            activation_state,
+            stage_approvals,
+            adapter_interface_digest,
+            attention_gaps,
+        ) = derive_attention_stage_context(hub_root, resolved_roots)
+        external_gaps.extend(attention_gaps)
     supplied_search_results = list(search_results)
     supplied_closeout_assessments = list(closeout_assessments)
     workstream_state = load_workstream_state(hub_root)
@@ -329,6 +407,9 @@ def build_current_projection(
             *supplied_closeout_assessments,
         ],
         external_coverage_gaps=external_gaps,
+        activation_state=activation_state,
+        stage_approvals=stage_approvals,
+        adapter_interface_digest=adapter_interface_digest,
         previous_weekly_fingerprints=previous_weekly_fingerprints,
     )
 
@@ -366,6 +447,7 @@ __all__ = [
     "AUTHORITY_BOUNDARY",
     "ContinuityRuntimeError",
     "derive_closeout_assessments",
+    "derive_attention_stage_context",
     "derive_plan_duplicate_search_results",
     "read_previous_weekly_fingerprints",
     "build_current_projection",

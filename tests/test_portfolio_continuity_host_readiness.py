@@ -51,7 +51,7 @@ def _bind_adapter(monkeypatch: pytest.MonkeyPatch) -> None:
         readiness,
         "_load_adapter_card",
         lambda _root: {
-            "revision_id": "portability-card-revision:adapter-intent-continuity-codex-host:0.3.6",
+            "revision_id": "portability-card-revision:adapter-intent-continuity-codex-host:0.3.7",
             "adapter_interface_digest": INTERFACE_DIGEST,
         },
     )

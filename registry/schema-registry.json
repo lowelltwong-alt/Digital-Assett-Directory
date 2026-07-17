@@ -174,6 +174,8 @@
     "portfolio_continuity_activation_state": "schemas/portfolio-continuity-activation-state.schema.json",
     "portfolio_continuity_projection": "schemas/portfolio-continuity-projection.schema.json",
     "portfolio_continuity_attention_readiness": "schemas/portfolio-continuity-attention-readiness.schema.json",
+    "portfolio_continuity_stage_approval": "schemas/portfolio-continuity-stage-approval.schema.json",
+    "portfolio_continuity_stage_activation_state": "schemas/portfolio-continuity-stage-activation-state.schema.json",
     "intent_continuity_shadow_hook_config": "schemas/intent-continuity-shadow-hook-config.schema.json",
     "intent_continuity_hook_failure_marker": "schemas/intent-continuity-hook-failure-marker.schema.json",
     "intent_continuity_hook_performance_evidence": "schemas/intent-continuity-hook-performance-evidence.schema.json",

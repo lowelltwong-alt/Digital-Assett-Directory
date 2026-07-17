@@ -153,6 +153,8 @@ def build_continuity_projection(
     closeout_assessments: Iterable[dict[str, Any]] = (),
     external_coverage_gaps: Iterable[str] = (),
     activation_state: dict[str, Any] | None = None,
+    stage_approvals: Iterable[dict[str, Any]] | None = None,
+    adapter_interface_digest: str = "",
     previous_weekly_fingerprints: Iterable[str] = (),
 ) -> dict[str, Any]:
     """Build deterministic graphs and humane queues from immutable evidence."""
@@ -564,6 +566,8 @@ def build_continuity_projection(
     projection["attention_readiness"] = build_progressive_attention_readiness(
         projection,
         activation_state=activation_state,
+        stage_approvals=stage_approvals,
+        adapter_interface_digest=adapter_interface_digest,
         previous_weekly_fingerprints=previous_weekly_fingerprints,
     )
     return projection

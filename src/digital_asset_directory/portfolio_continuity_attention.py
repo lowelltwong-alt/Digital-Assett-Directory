@@ -9,6 +9,7 @@ from __future__ import annotations
 from typing import Any, Iterable, Mapping
 
 from .portfolio_weekly_digest import build_weekly_digest
+from .portfolio_continuity_stage_activation import fold_stage_activation
 
 
 AUTHORITY_BOUNDARY = (
@@ -56,6 +57,9 @@ def build_progressive_attention_readiness(
     projection: Mapping[str, Any],
     *,
     activation_state: Mapping[str, Any] | None = None,
+    stage_approvals: Iterable[Mapping[str, Any]] | None = None,
+    adapter_interface_digest: str = "",
+    stage_evaluated_at: str | None = None,
     previous_weekly_fingerprints: Iterable[str] = (),
 ) -> dict[str, Any]:
     """Build stage gates plus non-deliverable session/digest/prompt previews."""
@@ -105,6 +109,53 @@ def build_progressive_attention_readiness(
             "separate_human_approval_required": True,
         },
     ]
+    for stage in stages:
+        stage.update(
+            {
+                "activation_authorized": (
+                    stage["stage_id"] == "manual"
+                    or (
+                        stage["stage_id"] == "supervised_silent_shadow"
+                        and trial_eligible
+                    )
+                ),
+                "approval_event_id": "",
+                "valid_until": "",
+                "rollback_criteria": [],
+                "kill_criteria": [],
+            }
+        )
+    stage_activation_state_digest = ""
+    if stage_approvals is not None:
+        if activation_state is None or not adapter_interface_digest:
+            raise ValueError(
+                "stage approvals require activation_state and adapter_interface_digest"
+            )
+        stage_activation_state = fold_stage_activation(
+            list(stage_approvals),
+            activation_state=activation_state,
+            adapter_interface_digest=adapter_interface_digest,
+            evaluated_at=stage_evaluated_at,
+        )
+        stage_activation_state_digest = str(stage_activation_state["state_digest"])
+        activated_by_id = {
+            str(row["stage_id"]): row for row in stage_activation_state["stages"]
+        }
+        for stage in stages:
+            activated = activated_by_id[str(stage["stage_id"])]
+            stage.update(
+                {
+                    "status": str(activated["status"]),
+                    "gate_failures": list(activated["gate_failures"]),
+                    "activation_authorized": bool(
+                        activated["activation_authorized"]
+                    ),
+                    "approval_event_id": str(activated["approval_event_id"]),
+                    "valid_until": str(activated["valid_until"]),
+                    "rollback_criteria": list(activated["rollback_criteria"]),
+                    "kill_criteria": list(activated["kill_criteria"]),
+                }
+            )
     queues = projection.get("queues", {})
     session_items = _session_items(queues)
     today_items = [
@@ -142,6 +193,7 @@ def build_progressive_attention_readiness(
     return {
         "schema_version": "dad.portfolio_continuity_attention_readiness.v1",
         "trial_status": trial_status,
+        "stage_activation_state_digest": stage_activation_state_digest,
         "stages": stages,
         "session_start_summary_preview": {
             "status": "candidate_preview",

@@ -237,6 +237,12 @@ from .portfolio_continuity_trial import (
     read_trial_reviews,
     record_production_trial_review,
 )
+from .portfolio_continuity_stage_activation import (
+    APPROVABLE_STAGE_IDS,
+    fold_stage_activation,
+    read_stage_approvals,
+    record_stage_approval,
+)
 from .portfolio_weekly_digest import build_weekly_digest, metadata_safe_toast, write_weekly_digest
 from .entity_identity import (
     fold_state as fold_entity_state,
@@ -12206,6 +12212,7 @@ def portfolio_continuity_trial_review(
     notification_content_safe: bool = typer.Option(
         True, "--notification-content-safe/--notification-content-unsafe"
     ),
+    repo: Path = typer.Option(Path("."), "--repo"),
     config: Optional[Path] = typer.Option(None),
     hub: Optional[Path] = typer.Option(None),
 ) -> None:
@@ -12213,13 +12220,36 @@ def portfolio_continuity_trial_review(
     cfg = _cfg(config, hub)
     try:
         require_initialized_private_data_root(cfg.repo_root)
+        repository = repo.resolve()
+        host_assessment = latest_host_readiness_assessment(
+            repository, cfg.repo_root
+        )
+        if host_assessment is None:
+            raise ContinuityRuntimeError(
+                "trial review recording requires a current recorded host-readiness assessment"
+            )
+        host_failures = sorted(
+            set(
+                [
+                    *host_readiness_binding_failures(repository, host_assessment),
+                    *host_readiness_recording_failures(
+                        repository, cfg.repo_root, host_assessment
+                    ),
+                ]
+            )
+        )
+        if host_failures:
+            raise ContinuityRuntimeError(
+                "trial review recording blocked by host readiness: "
+                + ", ".join(host_failures)
+            )
         metrics = json.loads(metrics_file.read_text(encoding="utf-8"))
         if not isinstance(metrics, dict):
             raise ValueError("metrics file must contain one JSON object")
         measured = json.loads(performance_evidence.read_text(encoding="utf-8"))
         if not isinstance(measured, dict):
             raise ValueError("performance evidence must contain one JSON object")
-        measured = validate_hook_performance_evidence(find_repo_root(Path.cwd()), measured)
+        measured = validate_hook_performance_evidence(repository, measured)
         from .portability_control import canonical_digest
 
         result = record_production_trial_review(
@@ -12335,6 +12365,140 @@ def portfolio_continuity_trial_readiness(
     except (ContinuityIntegrityError, HostReadinessError, OSError, ValueError) as exc:
         raise typer.BadParameter(str(exc)) from exc
     console.print_json(data=result)
+
+
+def _continuity_stage_context(
+    repo: Path, hub_root: Path, trial_id: str
+) -> tuple[dict[str, Any], str, list[dict[str, Any]]]:
+    """Load exact current trial and stage evidence for read/write CLI gates."""
+
+    repository = repo.resolve()
+    reviews = read_trial_reviews(hub_root)
+    host_assessment = latest_host_readiness_assessment(repository, hub_root)
+    binding_failures = (
+        [
+            *host_readiness_binding_failures(repository, host_assessment),
+            *host_readiness_recording_failures(
+                repository, hub_root, host_assessment
+            ),
+        ]
+        if host_assessment is not None
+        else []
+    )
+    activation = evaluate_trial(
+        reviews,
+        trial_id=trial_id,
+        host_readiness=host_assessment,
+        host_binding_failures=binding_failures,
+    )
+    from .portability_control import runtime_adapter_interface_digest
+
+    adapter_digest = runtime_adapter_interface_digest(
+        repository, "adapter:intent-continuity-codex-host"
+    )
+    return activation, adapter_digest, read_stage_approvals(hub_root)
+
+
+@continuity_app.command("stage-status")
+def portfolio_continuity_stage_status(
+    trial_id: str = typer.Option(..., "--trial-id"),
+    repo: Path = typer.Option(Path("."), "--repo"),
+    config: Optional[Path] = typer.Option(None),
+    hub: Optional[Path] = typer.Option(None),
+) -> None:
+    """Project revision-bound stage approvals without activating or delivering."""
+
+    cfg = _cfg(config, hub)
+    try:
+        activation, adapter_digest, approvals = _continuity_stage_context(
+            repo, cfg.repo_root, trial_id
+        )
+        result = fold_stage_activation(
+            approvals,
+            activation_state=activation,
+            adapter_interface_digest=adapter_digest,
+        )
+    except (
+        ContinuityIntegrityError,
+        HostReadinessError,
+        OSError,
+        ValueError,
+        json.JSONDecodeError,
+    ) as exc:
+        raise typer.BadParameter(str(exc)) from exc
+    console.print_json(data=result)
+
+
+@continuity_app.command("stage-approval")
+def portfolio_continuity_stage_approval(
+    trial_id: str = typer.Option(..., "--trial-id"),
+    stage_id: str = typer.Option(..., "--stage-id"),
+    decision: str = typer.Option(..., "--decision"),
+    approved_by: str = typer.Option(..., "--approved-by"),
+    approval_ref: str = typer.Option(..., "--approval-ref"),
+    valid_until: str = typer.Option(..., "--valid-until"),
+    rollback_criterion: list[str] = typer.Option(..., "--rollback-criterion"),
+    kill_criterion: list[str] = typer.Option(..., "--kill-criterion"),
+    repo: Path = typer.Option(Path("."), "--repo"),
+    config: Optional[Path] = typer.Option(None),
+    hub: Optional[Path] = typer.Option(None),
+) -> None:
+    """Append one exact operator-attested stage decision; performs no stage effect."""
+
+    if stage_id not in APPROVABLE_STAGE_IDS:
+        raise typer.BadParameter(
+            "stage-id must be one of: " + ", ".join(APPROVABLE_STAGE_IDS)
+        )
+    cfg = _cfg(config, hub)
+    try:
+        activation, adapter_digest, approvals = _continuity_stage_context(
+            repo, cfg.repo_root, trial_id
+        )
+        current = fold_stage_activation(
+            approvals,
+            activation_state=activation,
+            adapter_interface_digest=adapter_digest,
+        )
+        current_by_id = {str(row["stage_id"]): row for row in current["stages"]}
+        predecessor_by_stage = {
+            "session_start_summary": "supervised_silent_shadow",
+            "weekly_changed_only_digest": "session_start_summary",
+            "breakpoint_prompts": "weekly_changed_only_digest",
+        }
+        predecessor = current_by_id[predecessor_by_stage[stage_id]]
+        if decision == "approve" and predecessor["activation_authorized"] is not True:
+            raise ContinuityRuntimeError(
+                "stage approval blocked because the predecessor stage is not active"
+            )
+        predecessor_event_id = (
+            str(predecessor["approval_event_id"])
+            if stage_id != "session_start_summary"
+            else ""
+        )
+        recorded = record_stage_approval(
+            cfg.repo_root,
+            stage_id=stage_id,
+            decision=decision,
+            approved_by=approved_by,
+            approval_ref=approval_ref,
+            trial_id=trial_id,
+            eligibility_state_digest=str(current["eligibility_state_digest"]),
+            adapter_interface_digest=adapter_digest,
+            predecessor_approval_event_id=predecessor_event_id,
+            rollback_criteria=rollback_criterion,
+            kill_criteria=kill_criterion,
+            valid_until=valid_until,
+        )
+    except (
+        ContinuityIntegrityError,
+        ContinuityRuntimeError,
+        HostReadinessError,
+        OSError,
+        ValueError,
+        json.JSONDecodeError,
+    ) as exc:
+        raise typer.BadParameter(str(exc)) from exc
+    console.print_json(data=recorded)
 
 
 @recovery_app.command("digest")

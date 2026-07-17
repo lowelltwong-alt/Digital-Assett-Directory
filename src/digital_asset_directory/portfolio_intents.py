@@ -652,27 +652,54 @@ def search_plans(
     index = fold_plan_index(read_events(hub_root))
     query_tokens = idea_tokens(query)
     matches: list[dict[str, Any]] = []
+    unavailable_source_binding_artifacts = 0
     for plan in index["plans"]:
         if plan.get("privacy_class") != privacy_partition:
             continue
-        text = " ".join(
-            [str(plan.get("title", "")), *[str(v) for v in plan.get("aliases", [])], str(plan.get("outcome", ""))]
+        try:
+            revision = load_plan_revision(
+                hub_root, str(plan["plan_id"]), str(plan["revision_id"])
+            )
+            source_bindings = list(
+                revision.get("semantic_card", {}).get("source_bindings", [])
+            )
+        except (IntentIntegrityError, OSError, ValueError):
+            source_bindings = []
+            unavailable_source_binding_artifacts += 1
+        visible_text = " ".join(
+            [
+                str(plan.get("title", "")),
+                *[str(v) for v in plan.get("aliases", [])],
+                str(plan.get("outcome", "")),
+            ]
         )
-        shared = sorted(query_tokens & idea_tokens(text))
-        if not shared:
+        visible_shared = sorted(query_tokens & idea_tokens(visible_text))
+        binding_shared = query_tokens & idea_tokens(
+            " ".join(str(v) for v in source_bindings)
+        )
+        all_shared = sorted(set(visible_shared) | binding_shared)
+        if not all_shared:
             continue
         matches.append(
             {
                 "plan_id": plan["plan_id"],
                 "revision_id": plan["revision_id"],
                 "title": plan["title"],
-                "shared_tokens": shared[:8],
+                "shared_tokens": visible_shared[:8],
+                "deterministic_score": round(
+                    min(1.0, len(all_shared) / max(1, len(query_tokens))), 6
+                ),
                 "match_basis": "deterministic_lexical_candidate",
                 "review_status": "candidate",
                 "execution_authorized": False,
             }
         )
-    matches.sort(key=lambda row: (-len(row["shared_tokens"]), str(row["title"]).casefold()))
+    matches.sort(
+        key=lambda row: (
+            -float(row["deterministic_score"]),
+            str(row["title"]).casefold(),
+        )
+    )
     return {
         "query": query,
         "matches": matches[: max(0, min(limit, 25))],
@@ -682,6 +709,7 @@ def search_plans(
                 1 for row in index["plans"] if row.get("privacy_class") == privacy_partition
             ),
             "returned_count": min(len(matches), limit),
+            "source_binding_artifacts_unavailable": unavailable_source_binding_artifacts,
         },
         "authority_boundary": AUTHORITY_BOUNDARY,
     }

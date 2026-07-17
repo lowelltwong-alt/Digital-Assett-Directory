@@ -220,6 +220,38 @@ def test_projection_fingerprint_ignores_inventory_observation_time() -> None:
     assert first["projection_fingerprint"] == second["projection_fingerprint"]
 
 
+def test_two_repository_temporal_graph_preserves_cross_repo_plan_bindings() -> None:
+    first = _inventory()
+    second = _inventory()
+    second["repository_id"] = "repo:two"
+    second["inventory_fingerprint"] = "sha256:" + "9" * 64
+    second["objects"][0]["object_id"] = "b" * 40
+    second["objects"][0]["ref_ids"] = ["ref:repo-two-main"]
+    second["worktrees"][0]["worktree_id"] = "worktree:two"
+    second["worktrees"][0]["head_id"] = "b" * 40
+    second["codex_items"][0]["codex_item_id"] = "task:two"
+    plan = _plan(0, source_bindings=["ref:main", "ref:repo-two-main"])
+
+    projection = build_continuity_projection(
+        inventories=[first, second],
+        plan_index={"plans": [plan]},
+    )
+
+    assert len(projection["repositories"]) == 2
+    assert {row["repository_id"] for row in projection["repositories"]} == {
+        "repo:one",
+        "repo:two",
+    }
+    bound_targets = {
+        edge["target"]
+        for edge in projection["graph"]["edges"]
+        if edge["source"] == "plan:0" and edge["relation"] == "bound_to"
+    }
+    assert bound_targets == {"ref:main", "ref:repo-two-main"}
+    assert projection["candidate_only"] is True
+    assert projection["execution_authorized"] is False
+
+
 def test_missing_source_health_prevents_false_complete_coverage() -> None:
     inventory = _inventory()
     inventory["coverage"]["gaps"] = ["worktree_status_unavailable"]

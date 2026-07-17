@@ -34,6 +34,36 @@ def test_private_write_gate_fails_closed_on_legacy_mode(
 def test_reconciliation_recovers_current_state_when_hook_events_were_missed(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
+    activation_sentinel = {"status": "trial_incomplete"}
+    approvals_sentinel = [{"approval_event_id": "approval:sentinel"}]
+    adapter_digest = "sha256:" + "a" * 64
+    captured_attention: dict = {}
+    original_build_projection = runtime.build_continuity_projection
+
+    def _capture_attention(**kwargs):
+        captured_attention.update(
+            {
+                "activation_state": kwargs["activation_state"],
+                "stage_approvals": kwargs["stage_approvals"],
+                "adapter_interface_digest": kwargs["adapter_interface_digest"],
+            }
+        )
+        kwargs["activation_state"] = None
+        kwargs["stage_approvals"] = None
+        kwargs["adapter_interface_digest"] = ""
+        return original_build_projection(**kwargs)
+
+    monkeypatch.setattr(runtime, "build_continuity_projection", _capture_attention)
+    monkeypatch.setattr(
+        runtime,
+        "derive_attention_stage_context",
+        lambda *_a, **_k: (
+            activation_sentinel,
+            approvals_sentinel,
+            adapter_digest,
+            [],
+        ),
+    )
     monkeypatch.setattr(runtime, "build_continuity_inventory", lambda *_a, **_k: _inventory())
     monkeypatch.setattr(
         runtime,
@@ -83,6 +113,11 @@ def test_reconciliation_recovers_current_state_when_hook_events_were_missed(
     assert projection["activity"] == []
     assert projection["coverage"]["status"] == "partial"
     assert "activity_duration_coverage_unknown" in projection["coverage"]["gaps"]
+    assert captured_attention == {
+        "activation_state": activation_sentinel,
+        "stage_approvals": approvals_sentinel,
+        "adapter_interface_digest": adapter_digest,
+    }
 
 
 def test_live_runtime_populates_duplicate_and_terminal_closeout_queues(
@@ -225,6 +260,109 @@ def test_continuity_cli_surfaces_are_discoverable() -> None:
         "host-readiness",
         "trial-review",
         "trial-readiness",
+        "stage-status",
+        "stage-approval",
         "activation-check",
     ):
         assert command in result.stdout
+
+
+def test_trial_review_cli_blocks_before_files_or_append_without_ready_host(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(cli, "require_initialized_private_data_root", lambda _hub: None)
+    monkeypatch.setattr(cli, "latest_host_readiness_assessment", lambda *_a: None)
+    append_attempted = False
+
+    def _unexpected_append(*_args, **_kwargs):
+        nonlocal append_attempted
+        append_attempted = True
+        raise AssertionError("trial review append must not run")
+
+    monkeypatch.setattr(cli, "record_production_trial_review", _unexpected_append)
+    result = CliRunner().invoke(
+        cli.app,
+        [
+            "os",
+            "continuity",
+            "trial-review",
+            "--trial-id",
+            "trial:future",
+            "--reviewer-id",
+            "human:fixture",
+            "--snapshot-digest",
+            "sha256:" + "a" * 64,
+            "--metrics-file",
+            "missing-metrics.json",
+            "--performance-evidence",
+            "missing-performance.json",
+            "--supervisor-attestation-id",
+            "attestation:fixture",
+        ],
+    )
+
+    assert result.exit_code != 0
+    assert "requires a current recorded" in result.output
+    assert "host-readiness assessment" in result.output
+    assert append_attempted is False
+
+
+def test_stage_approval_cli_blocks_write_until_predecessor_is_active(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(
+        cli,
+        "_continuity_stage_context",
+        lambda *_a, **_k: ({}, "sha256:" + "a" * 64, []),
+    )
+    monkeypatch.setattr(
+        cli,
+        "fold_stage_activation",
+        lambda *_a, **_k: {
+            "eligibility_state_digest": "sha256:" + "b" * 64,
+            "stages": [
+                {
+                    "stage_id": "supervised_silent_shadow",
+                    "activation_authorized": False,
+                    "approval_event_id": "",
+                }
+            ],
+        },
+    )
+    append_attempted = False
+
+    def _unexpected_append(*_args, **_kwargs):
+        nonlocal append_attempted
+        append_attempted = True
+        raise AssertionError("stage approval append must not run")
+
+    monkeypatch.setattr(cli, "record_stage_approval", _unexpected_append)
+    result = CliRunner().invoke(
+        cli.app,
+        [
+            "os",
+            "continuity",
+            "stage-approval",
+            "--trial-id",
+            "trial:future",
+            "--stage-id",
+            "session_start_summary",
+            "--decision",
+            "approve",
+            "--approved-by",
+            "human:fixture",
+            "--approval-ref",
+            "approval:fixture",
+            "--valid-until",
+            "2026-08-01T00:00:00+00:00",
+            "--rollback-criterion",
+            "latency_budget_exceeded",
+            "--kill-criterion",
+            "unauthorized_mutation_observed",
+        ],
+    )
+
+    assert result.exit_code != 0
+    assert "stage approval blocked because the predecessor stage" in result.output
+    assert "active" in result.output
+    assert append_attempted is False

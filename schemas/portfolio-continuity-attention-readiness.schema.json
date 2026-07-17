@@ -4,10 +4,11 @@
   "title": "DAD dormant progressive attention readiness",
   "type": "object",
   "additionalProperties": false,
-  "required": ["schema_version", "trial_status", "stages", "session_start_summary_preview", "weekly_digest_preview", "weekly_seen_fingerprints", "weekly_fingerprint_history_truncated", "breakpoint_prompt_preview", "automatic_cleanup_allowed", "candidate_only", "execution_authorized", "authority_boundary"],
+  "required": ["schema_version", "trial_status", "stage_activation_state_digest", "stages", "session_start_summary_preview", "weekly_digest_preview", "weekly_seen_fingerprints", "weekly_fingerprint_history_truncated", "breakpoint_prompt_preview", "automatic_cleanup_allowed", "candidate_only", "execution_authorized", "authority_boundary"],
   "properties": {
     "schema_version": {"const": "dad.portfolio_continuity_attention_readiness.v1"},
     "trial_status": {"enum": ["inactive_shadow", "trial_incomplete", "eligible_for_human_activation"]},
+    "stage_activation_state_digest": {"type": "string", "pattern": "^(|sha256:[0-9a-f]{64})$"},
     "stages": {
       "type": "array",
       "minItems": 5,
@@ -15,13 +16,18 @@
       "items": {
         "type": "object",
         "additionalProperties": false,
-        "required": ["stage_id", "order", "status", "gate_failures", "separate_human_approval_required"],
+        "required": ["stage_id", "order", "status", "gate_failures", "separate_human_approval_required", "activation_authorized", "approval_event_id", "valid_until", "rollback_criteria", "kill_criteria"],
         "properties": {
           "stage_id": {"enum": ["manual", "supervised_silent_shadow", "session_start_summary", "weekly_changed_only_digest", "breakpoint_prompts"]},
           "order": {"type": "integer", "minimum": 1, "maximum": 5},
           "status": {"type": "string", "minLength": 1},
           "gate_failures": {"type": "array", "uniqueItems": true, "items": {"type": "string"}},
-          "separate_human_approval_required": {"type": "boolean"}
+          "separate_human_approval_required": {"type": "boolean"},
+          "activation_authorized": {"type": "boolean"},
+          "approval_event_id": {"type": "string", "pattern": "^(|dad:continuity-stage-approval:[0-9a-f]{64})$"},
+          "valid_until": {"type": "string"},
+          "rollback_criteria": {"type": "array", "uniqueItems": true, "items": {"type": "string", "pattern": "^[a-z0-9][a-z0-9._:-]{0,127}$"}},
+          "kill_criteria": {"type": "array", "uniqueItems": true, "items": {"type": "string", "pattern": "^[a-z0-9][a-z0-9._:-]{0,127}$"}}
         }
       }
     },
