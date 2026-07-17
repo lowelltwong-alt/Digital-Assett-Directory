@@ -287,6 +287,28 @@ def test_dad_rust_selection_is_enforced_by_fail_closed_selector_adapter():
     assert "needs: [selector, python, governance, rust]" in workflow
 
 
+def test_intent_continuity_runtime_and_metadata_paths_are_owned():
+    dad_manifest = load_manifest(ROOT / ".ci" / "module-boundaries.yaml")
+    selected = evaluate_changes(
+        dad_manifest,
+        [
+            ".codex/hooks.json",
+            ".codex/hooks/intent_continuity_shadow.py",
+            ".digital-asset/key-values/change-log.jsonl",
+            ".digital-asset/key-values/registry.json",
+            "config/intent-continuity-shadow-hooks.json",
+        ],
+    )
+
+    assert selected["status"] == "ok"
+    assert selected["diagnostics"] == []
+    assert selected["selected_suites"] == [
+        "ci-contract",
+        "governance",
+        "python-control-plane",
+    ]
+
+
 def test_provider_contract_digests_reject_condition_body_and_branch_drift(tmp_path: Path):
     workflow_root = tmp_path / ".github" / "workflows"
     copytree(ROOT / ".github" / "workflows", workflow_root)
