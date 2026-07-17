@@ -1,0 +1,100 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "dad://schemas/routine-contract-registry.v1",
+  "title": "DAD Routine Contract Registry",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "registry_id",
+    "authority_boundary",
+    "methodology",
+    "contracts"
+  ],
+  "properties": {
+    "schema_version": {"type": "string"},
+    "registry_id": {"type": "string"},
+    "authority_boundary": {"type": "string"},
+    "methodology": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["version", "statuses", "notes"],
+      "properties": {
+        "version": {"type": "string"},
+        "statuses": {
+          "type": "object",
+          "additionalProperties": {"type": "string"}
+        },
+        "notes": {"type": "string"}
+      }
+    },
+    "contracts": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "routine_id",
+          "kind",
+          "enabled",
+          "owner",
+          "artifact",
+          "freshness_hours"
+        ],
+        "properties": {
+          "routine_id": {"type": "string", "minLength": 1},
+          "kind": {
+            "enum": [
+              "daemon_step",
+              "windows_task_scheduler",
+              "llm_scheduled_task",
+              "cli_on_demand",
+              "git_hook",
+              "ci_job"
+            ]
+          },
+          "enabled": {"type": "boolean"},
+          "owner": {"type": "string"},
+          "description": {"type": "string"},
+          "artifact": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["root", "path"],
+            "properties": {
+              "root": {"enum": ["data", "repo"]},
+              "path": {
+                "type": "string",
+                "minLength": 1,
+                "description": "Relative path under the chosen root. May contain glob wildcards; the newest match is evaluated."
+              },
+              "parse_json": {
+                "type": "boolean",
+                "description": "When true, the artifact must parse as JSON or the routine is dead."
+              }
+            }
+          },
+          "freshness_hours": {
+            "type": ["number", "null"],
+            "description": "Maximum artifact age before the routine is stale. Null means on-demand: presence and parseability are checked, age is not."
+          },
+          "dependency_paths": {
+            "type": "array",
+            "items": {"type": "string"},
+            "description": "Repo-relative or absolute paths that must exist for the routine to be runnable."
+          },
+          "dependency_commands": {
+            "type": "array",
+            "items": {"type": "string"},
+            "description": "Executables that must be resolvable on PATH for the routine to be runnable."
+          },
+          "consumer": {
+            "type": "string",
+            "description": "Who or what reads the artifact. A healthy but unconsumed routine is still wasted work."
+          },
+          "kill_criteria": {"type": "string"},
+          "notes": {"type": "string"}
+        }
+      }
+    }
+  }
+}

@@ -23,6 +23,7 @@
     "template_record": "schemas/template-record.schema.json",
     "context_tag": "schemas/context-tag.schema.json",
     "worktree_attempt": "schemas/worktree-attempt.schema.json",
+    "routine_contract_registry": "schemas/routine-contract-registry.schema.json",
     "portfolio_attention_report": "schemas/portfolio-attention-report.schema.json",
     "portfolio_workstream_state": "schemas/portfolio-workstream-state.schema.json",
     "portfolio_cockpit": "schemas/portfolio-cockpit.schema.json",

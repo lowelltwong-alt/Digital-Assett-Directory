@@ -494,6 +494,8 @@ template_app = typer.Typer(no_args_is_help=True)
 app.add_typer(template_app, name="templates")
 orphan_app = typer.Typer(no_args_is_help=True)
 app.add_typer(orphan_app, name="orphan-radar")
+routines_app = typer.Typer(no_args_is_help=True)
+app.add_typer(routines_app, name="routines")
 test_app = typer.Typer(no_args_is_help=True)
 app.add_typer(test_app, name="test")
 recommend_app = typer.Typer(no_args_is_help=True)
@@ -10942,6 +10944,25 @@ def orphan_run(
 ) -> None:
     cfg = _cfg(hub=hub)
     console.print_json(data=run_orphan_radar(cfg.repo_root, source, executable))
+
+
+@routines_app.command("health")
+def routines_health(
+    hub: Optional[Path] = typer.Option(None),
+    strict: bool = typer.Option(
+        False,
+        "--strict",
+        help="Exit 2 when any routine is dead, stale, or missing a dependency.",
+    ),
+) -> None:
+    """Deterministic routine-contract health check (report-only by default)."""
+    from .routine_health import run_health_check
+
+    cfg = _cfg(hub=hub)
+    report = run_health_check(cfg.repo_root)
+    console.print_json(data=report)
+    if strict and report["summary"]["unhealthy_count"] > 0:
+        raise typer.Exit(2)
 
 
 def _publish_portfolio_projection_set(

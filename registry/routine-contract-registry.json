@@ -1,0 +1,89 @@
+{
+  "schema_version": "0.1.0",
+  "registry_id": "dad-routine-contracts",
+  "authority_boundary": "Routine contracts are operational health metadata only. A healthy status never proves output quality or authorizes any write; routine outputs remain candidate evidence under normal DAD review. Registering a routine here does not schedule or enable it.",
+  "methodology": {
+    "version": "dad.routine-health.v0.1.0",
+    "statuses": {
+      "alive": "Expected artifact exists (and parses when parse_json is set) and its age is within freshness_hours.",
+      "stale": "Artifact exists and parses but is older than freshness_hours.",
+      "dead": "Artifact is expected on a cadence but is missing, or the artifact exists and fails its parse check.",
+      "never_ran": "On-demand routine (freshness_hours null) with no artifact yet; informational, not a failure.",
+      "missing_dependency": "A declared dependency path or executable is missing, so the routine cannot run at all.",
+      "disabled": "Contract explicitly disabled; recorded for inventory, dependencies still reported."
+    },
+    "notes": "Statuses are deterministic boolean checks over file existence, parseability, and modification age. No score, weighting, or model judgment is involved. This registry exists because three orphan-radar surfaces ran divergently with no output contract and none was detected (2026-07-16)."
+  },
+  "contracts": [
+    {
+      "routine_id": "dad-daemon-run-cycle",
+      "kind": "windows_task_scheduler",
+      "enabled": true,
+      "owner": "dad-maintainer",
+      "description": "Daily DAD daemon cycle (asset-dir daemon run-cycle).",
+      "artifact": {"root": "data", "path": "processed/reports/daemon-heartbeat.json", "parse_json": true},
+      "freshness_hours": 26,
+      "consumer": "agent preflight daemon_status; daily review",
+      "kill_criteria": "Retire only if the daemon is replaced by a newer scheduler surface.",
+      "notes": "Freshness mirrors the daemon's own stale_after_hours=26."
+    },
+    {
+      "routine_id": "dad-daily-review-queue",
+      "kind": "daemon_step",
+      "enabled": true,
+      "owner": "dad-maintainer",
+      "description": "Daily review queue emitted by the daemon cycle.",
+      "artifact": {"root": "data", "path": "processed/reports/daily_review_queue.md"},
+      "freshness_hours": 26,
+      "consumer": "human daily review; cockpit attention feed"
+    },
+    {
+      "routine_id": "dad-mail-digest",
+      "kind": "cli_on_demand",
+      "enabled": true,
+      "owner": "dad-maintainer",
+      "description": "Daily mail digest check for the hub repo mailbox.",
+      "artifact": {"root": "repo", "path": ".digital-asset/mail/last_checked.json", "parse_json": true},
+      "freshness_hours": 24,
+      "consumer": "agent preflight mail_digest_status",
+      "notes": "Stale here matches the recurring 'mail digest is stale' preflight warning."
+    },
+    {
+      "routine_id": "weekly-skill-orphan-radar",
+      "kind": "llm_scheduled_task",
+      "enabled": false,
+      "owner": "lowell",
+      "description": "Weekly skill-need orphan radar (user-level Claude scheduled task).",
+      "artifact": {"root": "repo", "path": "processed/skill-radar/skill-radar-report-*.md"},
+      "freshness_hours": 192,
+      "dependency_paths": [
+        "assets/agent-skills/skill-need-orphan-radar/scripts/skill_orphan_radar.py"
+      ],
+      "consumer": "weekly human summary; radar-ledger effectiveness scorecard",
+      "kill_criteria": "4th consecutive run with zero resolved and zero accepted ledger findings.",
+      "notes": "Paused 2026-07-16: the script exists only in WIP commit 01e3063 on codex/skill-need-orphan-radar-hardening-20260713; the scheduled task was burning tokens against a missing dependency. Re-enable only after the script lands and this contract reports missing_dependency clear."
+    },
+    {
+      "routine_id": "orphan-radar-wrapper",
+      "kind": "cli_on_demand",
+      "enabled": true,
+      "owner": "dad-maintainer",
+      "description": "asset-dir orphan-radar run wrapper around the sibling orphan-radar executable.",
+      "artifact": {"root": "repo", "path": "raw/events/orphan-radar-*/adapter_run.json", "parse_json": true},
+      "freshness_hours": null,
+      "dependency_commands": ["orphan-radar"],
+      "consumer": "none registered — output currently flows nowhere (C2/task_589b16b9)",
+      "notes": "Known silent-failure wrapper (handoff item C2). never_ran or dead here is expected until the wrapper fix lands."
+    },
+    {
+      "routine_id": "dad-weekly-asset-coverage",
+      "kind": "daemon_step",
+      "enabled": true,
+      "owner": "dad-maintainer",
+      "description": "Weekly asset coverage sweep gated by weekly_asset_coverage_due.",
+      "artifact": {"root": "data", "path": "processed/reports/weekly_asset_coverage.json", "parse_json": true},
+      "freshness_hours": 192,
+      "consumer": "weekly review; coverage cycle log"
+    }
+  ]
+}

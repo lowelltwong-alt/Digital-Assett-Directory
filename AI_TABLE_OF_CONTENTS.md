@@ -1,4 +1,4 @@
-# AI Table Of Contents
+﻿# AI Table Of Contents
 
 This is the branching map after `AI_FRONT_DOOR.md`. Each first-class entry uses
 the deterministic AI TOC row shape:
@@ -393,6 +393,7 @@ them.
 |---|---|---|---|
 | `config/sources.example.yaml` | Example source configuration. | `workflow`, `authority` | You configure local scan scope. |
 | `docs/OPERATIONS.md` | Operational command and runbook guidance. | `workflow`, `validation` | You run DAD tasks. |
+| `asset-dir routines health` and `registry/routine-contract-registry.json` | Deterministic routine-contract health check: every registered routine declares artifact, freshness, and dependencies; statuses are boolean file checks written to `processed/reports/routine_health.{json,md}`. | `governance`, `validation`, `workflow`, `generated_output` | You need to know whether scheduled routines, radars, or daemon steps are actually producing their contracted outputs. |
 | `docs/DAD_LOCAL_DEPLOYMENT.md` | Local deployment runbook for bootstrap, user hub locator, stable `asset-dir` shims, and unavailable-hub policy. | `workflow`, `validation`, `deployment` | You need DAD callable from a non-DAD repo without manual `PYTHONPATH` knowledge. |
 | `asset-dir doctor` | Local operational readiness check that does not rescan or mutate sources. | `validation`, `workflow`, `generated_output` | You need one command to verify front-door, catalog, roadmap, generated surfaces, and readiness warnings. |
 | `asset-dir os status` | Read-only branch/worktree portfolio scan that writes local JSON and static HTML attention reports. | `workflow`, `branch_lifecycle`, `attention`, `generated_output`, `local_first` | You need the top three attention items plus a full filterable queue across configured projects without mutating them. |
