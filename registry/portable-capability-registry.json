@@ -6,8 +6,8 @@
   "active_policy_revision_id": "portability-policy-revision:0.1.0",
   "baseline": {
     "baseline_id": "portability-baseline:b34cf64",
-    "git_commit": "b34cf6419e78a65d996e54947564d24f9de9a02f",
-    "created_at": "2026-07-15T00:00:00-04:00",
+    "git_commit": "dd83101713b5778e659f7487da73b8eed4e803f8",
+    "created_at": "2026-07-16T19:15:00-04:00",
     "source_surfaces": [
       "assets/agent-skills/*/SKILL.md",
       "config/global-personal-skills.json#skills",
@@ -19,9 +19,39 @@
       "registry/ml-agent-family-registry.json#workflow_cards",
       "registry/ml-technique-registry.json#techniques"
     ],
-    "content_digest": "sha256:15bedfb127cce85440559cf1d0eeb04d56c8964c29809f55fd60289b5235a734"
+    "content_digest": "sha256:53686d3fa2ed9cb679207ec85d8bcb08b3cb853c05cc870eef0008d294a0bb60"
   },
   "cards": [
+    {
+      "schema_version": "dad.portable_capability_card.v1",
+      "card_id": "portability-card:capability-dad-governed-mcp",
+      "revision_id": "portability-card-revision:capability-dad-governed-mcp:0.1.0",
+      "artifact_id": "capability:dad-governed-mcp",
+      "artifact_kind": "library",
+      "binding_class": "portable_core",
+      "source_authority": "registry/mcp-surface-contract.json",
+      "owner": "DAD and Lowell",
+      "status": "schema_validated",
+      "portable_files": ["registry/mcp-surface-contract.json", "schemas/mcp-surface-contract.schema.json", "schemas/mcp-action-packet.schema.json", "schemas/mcp-action-result.schema.json", "src/digital_asset_directory/mcp_server.py", "src/digital_asset_directory/mcp_packets.py", "src/digital_asset_directory/mcp_conformance.py"],
+      "content_digest": "sha256:6a1ff8c9396da90d2001ace0efe30a4cf008e2175ad874bbc5b11c2bd7eb34be",
+      "contract_digests": {"input": "sha256:eee475da7d6fe76d90852dfa97de0e1f047cb72d7d0134552245b7cda9a9fb68", "output": "sha256:0ec04e3bcb58df087b53068eb3756924c878f35a40871814bd8749313aa69dea", "error": "sha256:0c31568c5353cbf327cd009c17af20a687f7e97685e609c9a8d96f03852fd118", "privacy": "sha256:6eccc25be5945d494635818e68177f6efe953e9f2e74fbf165b5139d08429551", "effect": "sha256:c9093452afcdef36603faec991dc45d87d2166fb706f2b70f263b6625f6a3491", "authority": "sha256:408c3ee0aef794f423d49ba8141f3492961aa68b354d03c37c455d072d7e32c3"},
+      "capability_ids": ["mcp_protocol_surface", "supervised_action_packets", "dependency_blast_radius", "remote_conformance"],
+      "tool_ids": ["dad-cli", "json-schema", "git"],
+      "context_contract": "Provider-neutral MCP metadata, synthetic fixtures, exact digests, and categorical evidence only; no credentials or raw client payloads.",
+      "privacy_classes": ["public", "internal", "confidential", "restricted_by_local_policy"],
+      "consequence_classes": ["small", "medium", "large", "critical"],
+      "effect_classes": ["read_only", "candidate_local_artifact"],
+      "dependencies": ["skill:portable-capability-governance", "harness:portable-capability-control-plane"],
+      "reverse_consumers": ["mcp-host-adapters", "agent-preflight", "portfolio-recovery", "remote-conformance-harness"],
+      "adapter_revision_ids": [],
+      "harness_revision_id": "harness-revision:portable-capability-contract:0.1.0",
+      "evidence_refs": ["tests/test_mcp_server.py", "tests/test_mcp_packets.py", "tests/test_mcp_conformance.py", "docs/MCP_REMOTE_CONFORMANCE.md"],
+      "fresh_until": "2026-10-16T00:00:00-04:00",
+      "rollback_ref": "Revert the governed MCP contract and packet surface while retaining the prior graph-only stdio server and dependency map.",
+      "candidate_only": true,
+      "execution_authorized": false,
+      "authority_boundary": "The MCP capability exposes candidate context and supervised packet receipts only; it cannot execute actions, configure hosts, authorize remote access, or promote itself."
+    },
     {
       "schema_version": "dad.portable_capability_card.v1",
       "card_id": "portability-card:skill-long-run-optimization-review-pack",
@@ -126,7 +156,7 @@
       "owner": "DAD and Lowell",
       "status": "schema_validated",
       "portable_files": [".claude/settings.json", ".github/CODEOWNERS", ".github/workflows/rust-ci-long.yml", ".github/workflows/validate.yml", "AGENTS.md", "config/global-personal-skills.json", "registry/agent-family-portfolio-registry.json", "registry/agent-skill-library.json", "registry/dad-offerings-registry.json", "registry/mcp-dependency-map.json", "registry/portability-policy-registry.json", "registry/portable-runtime-qualification-registry.json", "registry/schema-registry.json", "schemas/model-attempt-receipt-v2.schema.json", "schemas/portability-assessment.schema.json", "schemas/portability-health-snapshot.schema.json", "schemas/portability-policy.schema.json", "schemas/portable-capability-card.schema.json", "schemas/portable-capability-registry.schema.json", "schemas/portable-runtime-qualification.schema.json", "schemas/portfolio-execution-control-event.schema.json", "scripts/agent_lifecycle.py", "scripts/claude_hook.py", "src/digital_asset_directory/_portfolio_execution_legacy.py", "src/digital_asset_directory/agent_lifecycle.py", "src/digital_asset_directory/capability_os_cockpit.py", "src/digital_asset_directory/cli.py", "src/digital_asset_directory/enrollment.py", "src/digital_asset_directory/global_personal_skills.py", "src/digital_asset_directory/governance.py", "src/digital_asset_directory/learning.py", "src/digital_asset_directory/mcp_dependency_map.py", "src/digital_asset_directory/portability_control.py", "src/digital_asset_directory/portfolio_execution.py", "src/digital_asset_directory/validation.py", "templates/downstream/AGENTS_MANAGED_BLOCK.md"],
-      "content_digest": "sha256:1e937dd9eba9ed59ba1cae38aeb6348c3d8ce669efb87af718e4a732af965e78",
+      "content_digest": "sha256:0de76441d7b5f2a6286acc5cde19b00a1e8a794fd9d05ea7eb0c1251c2d10bc4",
       "contract_digests": {"input": "sha256:eee475da7d6fe76d90852dfa97de0e1f047cb72d7d0134552245b7cda9a9fb68", "output": "sha256:0ec04e3bcb58df087b53068eb3756924c878f35a40871814bd8749313aa69dea", "error": "sha256:0c31568c5353cbf327cd009c17af20a687f7e97685e609c9a8d96f03852fd118", "privacy": "sha256:6eccc25be5945d494635818e68177f6efe953e9f2e74fbf165b5139d08429551", "effect": "sha256:c9093452afcdef36603faec991dc45d87d2166fb706f2b70f263b6625f6a3491", "authority": "sha256:408c3ee0aef794f423d49ba8141f3492961aa68b354d03c37c455d072d7e32c3"},
       "capability_ids": ["deterministic_portability_assessment", "protected_transition_gating", "dependency_impact_analysis", "runtime_qualification"],
       "tool_ids": ["dad-cli", "json-schema", "git"],

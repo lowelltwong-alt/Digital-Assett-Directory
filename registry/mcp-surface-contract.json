@@ -1,0 +1,35 @@
+{
+  "schema_version": "dad.mcp.surface_contract.v1",
+  "logical_server_name": "dad-local-graph-surfaces",
+  "protocol_version": "2025-06-18",
+  "authority": {
+    "transport": "stdio",
+    "local_only": true,
+    "remote_enabled": false,
+    "read_only": true,
+    "execution_authorized": false,
+    "host_configuration_write": false
+  },
+  "capabilities": {
+    "resources": ["registry", "surface", "report", "kernel", "packet", "mcp"],
+    "tools": ["dad_graph_surface_status", "dad_graph_get_node", "dad_graph_neighbors", "dad_graph_search_nodes", "dad_mcp_dependency_status", "dad_mcp_dependency_impact", "dad_mcp_dependency_refresh_candidate"],
+    "prompts": ["dad_preflight_briefing", "dad_review_lane_checklist", "dad_postflight_draft"],
+    "packet_tools": ["dad_lifecycle_packet_prepare", "dad_recovery_packet_prepare", "dad_lifecycle_result_record", "dad_recovery_result_record"]
+  },
+  "limits": {"query_limit": 100, "prompt_argument_chars": 240, "request_bytes": 262144, "response_bytes": 1048576},
+  "compatibility": {"legacy_graph_stdio": true, "additive_capabilities": true, "unknown_methods_fail_closed": true},
+  "privacy": {
+    "approved_partitions": ["public_metadata", "internal_categorical", "synthetic_fixtures"],
+    "redacted_categories": ["absolute_paths", "credentials", "raw_conversations", "client_data", "private_source_rows"]
+  },
+  "side_effects": {
+    "allowed": ["read_only", "candidate_packet", "verified_result_receipt"],
+    "packet_only": true
+  },
+  "adapters": ["codex_project", "codex_global", "claude_code", "claude_desktop", "cursor", "vscode_github_copilot", "github_copilot_cli"],
+  "dependency_map": {
+    "node_id": "mcp.node.contract.surface",
+    "reverse_consumers": ["mcp-host-adapters", "agent-preflight", "portfolio-recovery", "remote-conformance-harness"],
+    "freshness_required": true
+  }
+}
