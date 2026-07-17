@@ -30,7 +30,12 @@ ORDINARY_EVENTS = {"pull_request", "push_default_branch", "push_all_branches"}
 
 
 class _Yaml12SafeLoader(yaml.SafeLoader):
-    pass
+    # PyYAML stores resolver lists on the base class. Copy them before applying
+    # YAML 1.2 boolean rules so importing this module cannot change safe_load().
+    yaml_implicit_resolvers = {
+        first_char: list(resolvers)
+        for first_char, resolvers in yaml.SafeLoader.yaml_implicit_resolvers.items()
+    }
 
 
 for first_char, resolvers in list(_Yaml12SafeLoader.yaml_implicit_resolvers.items()):

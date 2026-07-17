@@ -504,7 +504,7 @@
         "templates/ci-module-boundary/multi-repo-law-firm-os/family-module-boundaries.yaml",
         "assets/coding-harnesses/ci-module-boundary-governance/tests-or-evals/scenarios.yaml"
       ],
-      "content_digest": "sha256:4f57c9dc35eccbb75f4dc3fb625cdd108fc009e07ce2543a313473c4caab3282",
+      "content_digest": "sha256:6472ec3c6db12216ad555d82e7f0852d7edf8b7c0c43bfba7893950b36329a14",
       "source_observation_digest": "sha256:6fa79a984581c86ca50c8f4bf75a5db18fcd07f086e37e62e430b54e5dbc957d",
       "contract_digests": {
         "input": "sha256:01298fbb37ec7f2fc1f46541873ea2f100f0a88510cbb71c50da9df0f8d126c9",

@@ -5,6 +5,8 @@ from datetime import date
 from pathlib import Path
 from shutil import copytree
 
+import yaml
+
 from digital_asset_directory.ci_module_boundaries import (
     build_metadata_only_adoption_audit,
     evaluate_changes,
@@ -33,6 +35,10 @@ def manifest() -> dict:
 
 def error_codes(result: dict) -> set[str]:
     return {item["code"] for item in result["diagnostics"] if item["severity"] == "error"}
+
+
+def test_yaml12_manifest_loader_does_not_mutate_pyyaml_safe_loader():
+    assert yaml.safe_load("ai_agnostic: true\n") == {"ai_agnostic": True}
 
 
 def test_example_contract_is_valid_and_reports_dependency_coverage_limit():
