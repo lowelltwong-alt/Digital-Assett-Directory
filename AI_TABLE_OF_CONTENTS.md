@@ -393,6 +393,7 @@ them.
 |---|---|---|---|
 | `config/sources.example.yaml` | Example source configuration. | `workflow`, `authority` | You configure local scan scope. |
 | `docs/OPERATIONS.md` | Operational command and runbook guidance. | `workflow`, `validation` | You run DAD tasks. |
+| `docs/CONTRACT_CHECK.md` and `registry/contract-check-policy.json` | Warn-only lifecycle contract check: protected-path changes need a `DAD-Session:` trailer or logged `DAD-Bypass:`; runs in CI, pre-push, and `asset-dir agent contract-check`. | `governance`, `validation`, `workflow`, `harness_decision` | You push or review protected-path work, hit a contract-check warning, or evaluate promoting the gate from warn to enforce. |
 | `docs/DAD_LOCAL_DEPLOYMENT.md` | Local deployment runbook for bootstrap, user hub locator, stable `asset-dir` shims, and unavailable-hub policy. | `workflow`, `validation`, `deployment` | You need DAD callable from a non-DAD repo without manual `PYTHONPATH` knowledge. |
 | `asset-dir doctor` | Local operational readiness check that does not rescan or mutate sources. | `validation`, `workflow`, `generated_output` | You need one command to verify front-door, catalog, roadmap, generated surfaces, and readiness warnings. |
 | `asset-dir os status` | Read-only branch/worktree portfolio scan that writes local JSON and static HTML attention reports. | `workflow`, `branch_lifecycle`, `attention`, `generated_output`, `local_first` | You need the top three attention items plus a full filterable queue across configured projects without mutating them. |
