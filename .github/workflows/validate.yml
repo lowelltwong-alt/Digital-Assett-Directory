@@ -1,14 +1,69 @@
 name: validate
 
+# Test routing:
+# - docs-only PRs skip pytest + validate entirely.
+# - PRs that touch code/governance run the FULL suite, but parallelized (-n auto),
+#   so it is fast without weakening the gate (no test subsetting on the blocking path).
+# - A separate, non-blocking "affected-tests" job gives quick impact-selected feedback
+#   via pytest-testmon.
+# - merge_group + push-to-main run the authoritative full gate.
+#
+# To upgrade to true subset-on-PR + full-at-merge, enable GitHub's merge queue in
+# branch protection; then the merge_group run below becomes the safety backstop and
+# the PR "affected" job can be promoted to the required check. See
+# docs/PROMOTION_RESEARCH_LANE.md style: selection for speed, full suite before merge.
+
 on:
-  push:
   pull_request:
+  merge_group:
+  push:
+    branches: [main]
 
 permissions:
   contents: read
 
+concurrency:
+  group: validate-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
-  validate:
+  changes:
+    runs-on: ubuntu-latest
+    outputs:
+      heavy: ${{ steps.filter.outputs.heavy }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - id: filter
+        shell: bash
+        run: |
+          set -euo pipefail
+          # Determine the base commit to diff against.
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            base="${{ github.event.pull_request.base.sha }}"
+          else
+            base="${{ github.event.before }}"
+          fi
+          # Fail safe: if we cannot resolve a base, treat the change as heavy.
+          if [ -z "${base:-}" ] || [ "$base" = "0000000000000000000000000000000000000000" ] || ! git cat-file -e "$base" 2>/dev/null; then
+            echo "heavy=true" >> "$GITHUB_OUTPUT"
+            echo "Base unresolved; running the full gate."
+            exit 0
+          fi
+          files="$(git diff --name-only "$base" HEAD || true)"
+          echo "Changed files:"; echo "$files"
+          # "Heavy" = anything that can affect behavior, schemas, or governance.
+          if echo "$files" | grep -qE '^(src/|tests/|registry/|schemas/|roadmap/|pyproject\.toml|\.github/workflows/)'; then
+            echo "heavy=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "heavy=false" >> "$GITHUB_OUTPUT"
+            echo "Docs-only / non-behavioral change; skipping pytest + validate."
+          fi
+
+  gate:
+    needs: changes
+    if: needs.changes.outputs.heavy == 'true'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -17,6 +72,36 @@ jobs:
           python-version: '3.11'
           cache: pip
       - run: python -m pip install -e '.[dev]'
-      - run: python -m pytest
+      # Full suite, parallel. --dist loadscope keeps one file's tests on one worker,
+      # which is safer for filesystem/sqlite integration tests.
+      - run: python -m pytest -n auto --dist loadscope
       - run: python -m digital_asset_directory.cli validate --hub .
       - run: python -m digital_asset_directory.cli roadmap check --hub . --no-update
+
+  # Fast, impact-selected feedback for PR authors. Non-blocking: never gates a merge.
+  affected-tests:
+    needs: changes
+    if: github.event_name == 'pull_request' && needs.changes.outputs.heavy == 'true'
+    runs-on: ubuntu-latest
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: pip
+      - run: python -m pip install -e '.[dev]'
+      # Restore a testmon baseline so only affected tests run. Self-warming across PRs:
+      # on a cache miss testmon runs the full suite once and populates the DB.
+      - name: Restore testmon baseline
+        uses: actions/cache@v4
+        with:
+          path: .testmondata
+          key: testmon-${{ runner.os }}-py311-${{ github.base_ref }}-${{ github.sha }}
+          restore-keys: |
+            testmon-${{ runner.os }}-py311-${{ github.base_ref }}-
+            testmon-${{ runner.os }}-py311-
+      - name: Run impact-selected tests
+        run: python -m pytest --testmon -q

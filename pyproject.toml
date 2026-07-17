@@ -29,7 +29,8 @@ dev = [
   "types-requests>=2.32,<3",
   "nox>=2024.4.15",
   "pytest-testmon>=2.1",
-  "pytest-picked>=0.5"
+  "pytest-picked>=0.5",
+  "pytest-xdist>=3.6"
 ]
 
 [project.scripts]
