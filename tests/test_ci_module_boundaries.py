@@ -265,6 +265,10 @@ def test_dad_rust_selection_is_enforced_by_fail_closed_selector_adapter():
     selected = evaluate_changes(dad_manifest, ["tools/dad_scan_core/src/lib.rs"])
     assert selected["selected_suites"] == ["ci-contract", "rust-scan"]
 
+    dependency_lock = evaluate_changes(dad_manifest, ["uv.lock"])
+    assert dependency_lock["status"] == "ok"
+    assert dependency_lock["selected_suites"] == ["ci-contract", "python-control-plane"]
+
     repository_contract = evaluate_changes(dad_manifest, [".gitattributes"])
     assert repository_contract["status"] == "ok"
     assert repository_contract["selected_suites"] == [

@@ -6,10 +6,10 @@ workflow_paths: [.github/workflows/**, .ci/**]
 modules:
   - module_id: python-control-plane
     owners: [dad-maintainer]
-    roots: [src, tests, scripts, pyproject.toml]
+    roots: [src, tests, scripts, pyproject.toml, uv.lock]
     triggers:
       - {edge_type: code, paths: [src/**, tests/**, scripts/**]}
-      - {edge_type: contract, paths: [pyproject.toml, src/digital_asset_directory/cli.py]}
+      - {edge_type: contract, paths: [pyproject.toml, uv.lock, src/digital_asset_directory/cli.py]}
       - {edge_type: authoritative_input, paths: [src/digital_asset_directory/config.py]}
   - module_id: governance
     owners: [dad-maintainer]
