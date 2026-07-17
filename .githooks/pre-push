@@ -6,6 +6,11 @@ if [ -z "$DAD_HUB" ] && [ -f "$HOME/.dad/hub.json" ]; then
 fi
 if [ -z "$DAD_HUB" ]; then
   echo "DAD_HUB, DAD_HUB_PATH, or ~/.dad/hub.json is required before this DAD hook can enforce postflight." >&2
+  echo "Set DAD_HUB to the Digital Asset Directory checkout, or create ~/.dad/hub.json with {\"hub_path\": \"<path>\"}." >&2
   exit 1
 fi
 python "$DAD_HUB/scripts/enforce_postflight.py" --hub "$DAD_HUB" --repo "$(pwd)"
+# DAD contract check in registry policy mode: exits 0 while the reviewed
+# policy is warn (probation); blocks only after promotion to enforce.
+# See registry/contract-check-policy.json.
+python "$DAD_HUB/scripts/contract_check.py" --hub "$DAD_HUB" --repo "$(pwd)"

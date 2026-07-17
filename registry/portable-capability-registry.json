@@ -32,20 +32,70 @@
       "source_authority": "registry/mcp-surface-contract.json",
       "owner": "DAD and Lowell",
       "status": "schema_validated",
-      "portable_files": ["registry/mcp-surface-contract.json", "schemas/mcp-surface-contract.schema.json", "schemas/mcp-action-packet.schema.json", "schemas/mcp-action-result.schema.json", "src/digital_asset_directory/mcp_server.py", "src/digital_asset_directory/mcp_packets.py", "src/digital_asset_directory/mcp_conformance.py"],
+      "portable_files": [
+        "registry/mcp-surface-contract.json",
+        "schemas/mcp-surface-contract.schema.json",
+        "schemas/mcp-action-packet.schema.json",
+        "schemas/mcp-action-result.schema.json",
+        "src/digital_asset_directory/mcp_server.py",
+        "src/digital_asset_directory/mcp_packets.py",
+        "src/digital_asset_directory/mcp_conformance.py"
+      ],
       "content_digest": "sha256:6a1ff8c9396da90d2001ace0efe30a4cf008e2175ad874bbc5b11c2bd7eb34be",
-      "contract_digests": {"input": "sha256:eee475da7d6fe76d90852dfa97de0e1f047cb72d7d0134552245b7cda9a9fb68", "output": "sha256:0ec04e3bcb58df087b53068eb3756924c878f35a40871814bd8749313aa69dea", "error": "sha256:0c31568c5353cbf327cd009c17af20a687f7e97685e609c9a8d96f03852fd118", "privacy": "sha256:6eccc25be5945d494635818e68177f6efe953e9f2e74fbf165b5139d08429551", "effect": "sha256:c9093452afcdef36603faec991dc45d87d2166fb706f2b70f263b6625f6a3491", "authority": "sha256:408c3ee0aef794f423d49ba8141f3492961aa68b354d03c37c455d072d7e32c3"},
-      "capability_ids": ["mcp_protocol_surface", "supervised_action_packets", "dependency_blast_radius", "remote_conformance"],
-      "tool_ids": ["dad-cli", "json-schema", "git"],
+      "contract_digests": {
+        "input": "sha256:eee475da7d6fe76d90852dfa97de0e1f047cb72d7d0134552245b7cda9a9fb68",
+        "output": "sha256:0ec04e3bcb58df087b53068eb3756924c878f35a40871814bd8749313aa69dea",
+        "error": "sha256:0c31568c5353cbf327cd009c17af20a687f7e97685e609c9a8d96f03852fd118",
+        "privacy": "sha256:6eccc25be5945d494635818e68177f6efe953e9f2e74fbf165b5139d08429551",
+        "effect": "sha256:c9093452afcdef36603faec991dc45d87d2166fb706f2b70f263b6625f6a3491",
+        "authority": "sha256:408c3ee0aef794f423d49ba8141f3492961aa68b354d03c37c455d072d7e32c3"
+      },
+      "capability_ids": [
+        "mcp_protocol_surface",
+        "supervised_action_packets",
+        "dependency_blast_radius",
+        "remote_conformance"
+      ],
+      "tool_ids": [
+        "dad-cli",
+        "json-schema",
+        "git"
+      ],
       "context_contract": "Provider-neutral MCP metadata, synthetic fixtures, exact digests, and categorical evidence only; no credentials or raw client payloads.",
-      "privacy_classes": ["public", "internal", "confidential", "restricted_by_local_policy"],
-      "consequence_classes": ["small", "medium", "large", "critical"],
-      "effect_classes": ["read_only", "candidate_local_artifact"],
-      "dependencies": ["skill:portable-capability-governance", "harness:portable-capability-control-plane"],
-      "reverse_consumers": ["mcp-host-adapters", "agent-preflight", "portfolio-recovery", "remote-conformance-harness"],
+      "privacy_classes": [
+        "public",
+        "internal",
+        "confidential",
+        "restricted_by_local_policy"
+      ],
+      "consequence_classes": [
+        "small",
+        "medium",
+        "large",
+        "critical"
+      ],
+      "effect_classes": [
+        "read_only",
+        "candidate_local_artifact"
+      ],
+      "dependencies": [
+        "skill:portable-capability-governance",
+        "harness:portable-capability-control-plane"
+      ],
+      "reverse_consumers": [
+        "mcp-host-adapters",
+        "agent-preflight",
+        "portfolio-recovery",
+        "remote-conformance-harness"
+      ],
       "adapter_revision_ids": [],
       "harness_revision_id": "harness-revision:portable-capability-contract:0.1.0",
-      "evidence_refs": ["tests/test_mcp_server.py", "tests/test_mcp_packets.py", "tests/test_mcp_conformance.py", "docs/MCP_REMOTE_CONFORMANCE.md"],
+      "evidence_refs": [
+        "tests/test_mcp_server.py",
+        "tests/test_mcp_packets.py",
+        "tests/test_mcp_conformance.py",
+        "docs/MCP_REMOTE_CONFORMANCE.md"
+      ],
       "fresh_until": "2026-10-16T00:00:00-04:00",
       "rollback_ref": "Revert the governed MCP contract and packet surface while retaining the prior graph-only stdio server and dependency map.",
       "candidate_only": true,
@@ -62,21 +112,68 @@
       "source_authority": "assets/agent-skills/long-run-optimization-review-pack/README.md",
       "owner": "DAD and Lowell",
       "status": "schema_validated",
-      "portable_files": ["assets/agent-skills/long-run-optimization-review-pack/README.md", "assets/agent-skills/long-run-optimization-review-pack/subagents.yaml"],
+      "portable_files": [
+        "assets/agent-skills/long-run-optimization-review-pack/README.md",
+        "assets/agent-skills/long-run-optimization-review-pack/subagents.yaml"
+      ],
       "content_digest": "sha256:a6648d4e9242a4a3b8fdcaae35d714f890abecc52e7ea33ad5fd8b246e8593c0",
-      "instruction_binding": {"source_ref": "personal-codex-source:AGENTS.md", "begin_marker": "<!-- BEGIN REDUNDANT_WORK_GUARD -->", "end_marker": "<!-- END REDUNDANT_WORK_GUARD -->", "content_digest": "sha256:6960c4ea194abbaa9a4f712ab6b8b5db5f51a4da02a890b689ffcd8e770e857b"},
-      "contract_digests": {"input": "sha256:eee475da7d6fe76d90852dfa97de0e1f047cb72d7d0134552245b7cda9a9fb68", "output": "sha256:0ec04e3bcb58df087b53068eb3756924c878f35a40871814bd8749313aa69dea", "error": "sha256:0c31568c5353cbf327cd009c17af20a687f7e97685e609c9a8d96f03852fd118", "privacy": "sha256:6eccc25be5945d494635818e68177f6efe953e9f2e74fbf165b5139d08429551", "effect": "sha256:c9093452afcdef36603faec991dc45d87d2166fb706f2b70f263b6625f6a3491", "authority": "sha256:408c3ee0aef794f423d49ba8141f3492961aa68b354d03c37c455d072d7e32c3"},
-      "capability_ids": ["redundant_work_detection", "iteration_profiling", "cache_invalidation_design", "parity_validation"],
-      "tool_ids": ["dad-lifecycle-adapter", "git", "workflow-run-ledger"],
+      "instruction_binding": {
+        "source_ref": "personal-codex-source:AGENTS.md",
+        "begin_marker": "<!-- BEGIN REDUNDANT_WORK_GUARD -->",
+        "end_marker": "<!-- END REDUNDANT_WORK_GUARD -->",
+        "content_digest": "sha256:6960c4ea194abbaa9a4f712ab6b8b5db5f51a4da02a890b689ffcd8e770e857b"
+      },
+      "contract_digests": {
+        "input": "sha256:eee475da7d6fe76d90852dfa97de0e1f047cb72d7d0134552245b7cda9a9fb68",
+        "output": "sha256:0ec04e3bcb58df087b53068eb3756924c878f35a40871814bd8749313aa69dea",
+        "error": "sha256:0c31568c5353cbf327cd009c17af20a687f7e97685e609c9a8d96f03852fd118",
+        "privacy": "sha256:6eccc25be5945d494635818e68177f6efe953e9f2e74fbf165b5139d08429551",
+        "effect": "sha256:c9093452afcdef36603faec991dc45d87d2166fb706f2b70f263b6625f6a3491",
+        "authority": "sha256:408c3ee0aef794f423d49ba8141f3492961aa68b354d03c37c455d072d7e32c3"
+      },
+      "capability_ids": [
+        "redundant_work_detection",
+        "iteration_profiling",
+        "cache_invalidation_design",
+        "parity_validation"
+      ],
+      "tool_ids": [
+        "dad-lifecycle-adapter",
+        "git",
+        "workflow-run-ledger"
+      ],
       "context_contract": "Privacy-safe command signatures, exact source/repository state fingerprints, durations, cache-hit metadata, and suppressor codes only.",
-      "privacy_classes": ["public", "internal", "confidential", "restricted_by_local_policy"],
-      "consequence_classes": ["small", "medium", "large", "critical"],
-      "effect_classes": ["read_only", "candidate_local_artifact"],
-      "dependencies": ["skill:dad-iteration-optimizer", "skill:dad-trigger-pattern-radar"],
-      "reverse_consumers": ["agent-lifecycle-pre-tool", "enrolled-repository-governance", "full-stack-performance-cost-pack"],
+      "privacy_classes": [
+        "public",
+        "internal",
+        "confidential",
+        "restricted_by_local_policy"
+      ],
+      "consequence_classes": [
+        "small",
+        "medium",
+        "large",
+        "critical"
+      ],
+      "effect_classes": [
+        "read_only",
+        "candidate_local_artifact"
+      ],
+      "dependencies": [
+        "skill:dad-iteration-optimizer",
+        "skill:dad-trigger-pattern-radar"
+      ],
+      "reverse_consumers": [
+        "agent-lifecycle-pre-tool",
+        "enrolled-repository-governance",
+        "full-stack-performance-cost-pack"
+      ],
       "adapter_revision_ids": [],
       "harness_revision_id": "harness-revision:portable-capability-contract:0.1.0",
-      "evidence_refs": ["tests/test_agent_lifecycle.py", "tests/test_portability_control.py"],
+      "evidence_refs": [
+        "tests/test_agent_lifecycle.py",
+        "tests/test_portability_control.py"
+      ],
       "fresh_until": "2026-10-15T00:00:00-04:00",
       "rollback_ref": "Remove the early repeat trigger while retaining the existing 60-second long-run threshold and immutable baseline cache.",
       "candidate_only": true,
@@ -93,21 +190,68 @@
       "source_authority": "assets/agent-skills/portable-capability-governance/SKILL.md",
       "owner": "DAD and Lowell",
       "status": "schema_validated",
-      "portable_files": ["assets/agent-skills/portable-capability-governance/SKILL.md", "assets/agent-skills/portable-capability-governance/agents/openai.yaml", "assets/agent-skills/portable-capability-governance/subagents.yaml", "assets/agent-skills/portable-capability-governance/routines.yaml", "assets/agent-skills/portable-capability-governance/harness-revision.json", "assets/agent-skills/portable-capability-governance/references/PORTABLE_CAPABILITY_CONTRACT.md"],
+      "portable_files": [
+        "assets/agent-skills/portable-capability-governance/SKILL.md",
+        "assets/agent-skills/portable-capability-governance/agents/openai.yaml",
+        "assets/agent-skills/portable-capability-governance/subagents.yaml",
+        "assets/agent-skills/portable-capability-governance/routines.yaml",
+        "assets/agent-skills/portable-capability-governance/harness-revision.json",
+        "assets/agent-skills/portable-capability-governance/references/PORTABLE_CAPABILITY_CONTRACT.md"
+      ],
       "content_digest": "sha256:9e43b68da4b9ba3ff43aee367d9abc52c4981356fc83e2a776be5f9d86ac7305",
       "source_observation_digest": "sha256:c813de82b9619fc1438c849d65a5edf895ec100d2beab274d873a2ea7c678354",
-      "contract_digests": {"input": "sha256:eee475da7d6fe76d90852dfa97de0e1f047cb72d7d0134552245b7cda9a9fb68", "output": "sha256:0ec04e3bcb58df087b53068eb3756924c878f35a40871814bd8749313aa69dea", "error": "sha256:0c31568c5353cbf327cd009c17af20a687f7e97685e609c9a8d96f03852fd118", "privacy": "sha256:6eccc25be5945d494635818e68177f6efe953e9f2e74fbf165b5139d08429551", "effect": "sha256:c9093452afcdef36603faec991dc45d87d2166fb706f2b70f263b6625f6a3491", "authority": "sha256:408c3ee0aef794f423d49ba8141f3492961aa68b354d03c37c455d072d7e32c3"},
-      "capability_ids": ["architecture_reasoning", "governance_authority_safety", "validation_design"],
-      "tool_ids": ["dad-cli", "json-schema", "git"],
+      "contract_digests": {
+        "input": "sha256:eee475da7d6fe76d90852dfa97de0e1f047cb72d7d0134552245b7cda9a9fb68",
+        "output": "sha256:0ec04e3bcb58df087b53068eb3756924c878f35a40871814bd8749313aa69dea",
+        "error": "sha256:0c31568c5353cbf327cd009c17af20a687f7e97685e609c9a8d96f03852fd118",
+        "privacy": "sha256:6eccc25be5945d494635818e68177f6efe953e9f2e74fbf165b5139d08429551",
+        "effect": "sha256:c9093452afcdef36603faec991dc45d87d2166fb706f2b70f263b6625f6a3491",
+        "authority": "sha256:408c3ee0aef794f423d49ba8141f3492961aa68b354d03c37c455d072d7e32c3"
+      },
+      "capability_ids": [
+        "architecture_reasoning",
+        "governance_authority_safety",
+        "validation_design"
+      ],
+      "tool_ids": [
+        "dad-cli",
+        "json-schema",
+        "git"
+      ],
       "context_contract": "Metadata, manifests, schemas, registries, sanitized fixtures, and revision-bound evidence only.",
-      "privacy_classes": ["public", "internal", "confidential", "restricted_by_local_policy"],
-      "consequence_classes": ["small", "medium", "large", "critical"],
-      "effect_classes": ["read_only", "candidate_local_artifact"],
-      "dependencies": ["skill:dad-agent-skill-forge", "skill:subagent-continuous-improvement"],
-      "reverse_consumers": ["agent-preflight", "agent-midflight", "agent-postflight", "dad-validation", "capability-os-cockpit"],
+      "privacy_classes": [
+        "public",
+        "internal",
+        "confidential",
+        "restricted_by_local_policy"
+      ],
+      "consequence_classes": [
+        "small",
+        "medium",
+        "large",
+        "critical"
+      ],
+      "effect_classes": [
+        "read_only",
+        "candidate_local_artifact"
+      ],
+      "dependencies": [
+        "skill:dad-agent-skill-forge",
+        "skill:subagent-continuous-improvement"
+      ],
+      "reverse_consumers": [
+        "agent-preflight",
+        "agent-midflight",
+        "agent-postflight",
+        "dad-validation",
+        "capability-os-cockpit"
+      ],
       "adapter_revision_ids": [],
       "harness_revision_id": "harness-revision:portable-capability-contract:0.1.0",
-      "evidence_refs": ["docs/plans/PORTABLE_AI_CAPABILITY_CONTROL_PLANE_BUILD_PLAN_2026-07-15.md", "tests/test_portability_control.py"],
+      "evidence_refs": [
+        "docs/plans/PORTABLE_AI_CAPABILITY_CONTROL_PLANE_BUILD_PLAN_2026-07-15.md",
+        "tests/test_portability_control.py"
+      ],
       "fresh_until": "2026-10-15T00:00:00-04:00",
       "rollback_ref": "portability-policy-revision:0.1.0",
       "candidate_only": true,
@@ -124,21 +268,75 @@
       "source_authority": "assets/agent-skills/personal-portfolio-capacity-review/SKILL.md",
       "owner": "DAD and Lowell",
       "status": "schema_validated",
-      "portable_files": [".digital-asset/portfolio/missions.json", "assets/agent-skills/personal-portfolio-capacity-review/SKILL.md", "assets/agent-skills/personal-portfolio-capacity-review/agents/openai.yaml", "assets/agent-skills/personal-portfolio-capacity-review/references/PORTFOLIO_CAPACITY_REVIEW_CONTRACT.md", "assets/agent-skills/personal-portfolio-capacity-review/routines.yaml", "assets/agent-skills/personal-portfolio-capacity-review/subagents.yaml", "schemas/portfolio-capacity-review.schema.json", "schemas/repo-missions.schema.json", "src/digital_asset_directory/portfolio_capacity_review.py"],
+      "portable_files": [
+        ".digital-asset/portfolio/missions.json",
+        "assets/agent-skills/personal-portfolio-capacity-review/SKILL.md",
+        "assets/agent-skills/personal-portfolio-capacity-review/agents/openai.yaml",
+        "assets/agent-skills/personal-portfolio-capacity-review/references/PORTFOLIO_CAPACITY_REVIEW_CONTRACT.md",
+        "assets/agent-skills/personal-portfolio-capacity-review/routines.yaml",
+        "assets/agent-skills/personal-portfolio-capacity-review/subagents.yaml",
+        "schemas/portfolio-capacity-review.schema.json",
+        "schemas/repo-missions.schema.json",
+        "src/digital_asset_directory/portfolio_capacity_review.py"
+      ],
       "content_digest": "sha256:eedc4ef8e706b31b6531aa02cdb6d46699d15c9d10073be015b31b93cb950315",
       "source_observation_digest": "sha256:0582fcb66a6754dae057d4e6b16b837faf287de405e9e66f84be300d44349cd9",
-      "contract_digests": {"input": "sha256:eee475da7d6fe76d90852dfa97de0e1f047cb72d7d0134552245b7cda9a9fb68", "output": "sha256:0ec04e3bcb58df087b53068eb3756924c878f35a40871814bd8749313aa69dea", "error": "sha256:0c31568c5353cbf327cd009c17af20a687f7e97685e609c9a8d96f03852fd118", "privacy": "sha256:6eccc25be5945d494635818e68177f6efe953e9f2e74fbf165b5139d08429551", "effect": "sha256:c9093452afcdef36603faec991dc45d87d2166fb706f2b70f263b6625f6a3491", "authority": "sha256:408c3ee0aef794f423d49ba8141f3492961aa68b354d03c37c455d072d7e32c3"},
-      "capability_ids": ["portfolio_attention_curatorship", "dependency_frontier_analysis", "contract_and_roadmap_mapping", "evaluator_integrity_audit", "improvement_layer_attribution", "escalation_judgment", "governance_authority_safety"],
-      "tool_ids": ["dad-cli", "git", "registered-read-only-sources"],
+      "contract_digests": {
+        "input": "sha256:eee475da7d6fe76d90852dfa97de0e1f047cb72d7d0134552245b7cda9a9fb68",
+        "output": "sha256:0ec04e3bcb58df087b53068eb3756924c878f35a40871814bd8749313aa69dea",
+        "error": "sha256:0c31568c5353cbf327cd009c17af20a687f7e97685e609c9a8d96f03852fd118",
+        "privacy": "sha256:6eccc25be5945d494635818e68177f6efe953e9f2e74fbf165b5139d08429551",
+        "effect": "sha256:c9093452afcdef36603faec991dc45d87d2166fb706f2b70f263b6625f6a3491",
+        "authority": "sha256:408c3ee0aef794f423d49ba8141f3492961aa68b354d03c37c455d072d7e32c3"
+      },
+      "capability_ids": [
+        "portfolio_attention_curatorship",
+        "dependency_frontier_analysis",
+        "contract_and_roadmap_mapping",
+        "evaluator_integrity_audit",
+        "improvement_layer_attribution",
+        "escalation_judgment",
+        "governance_authority_safety"
+      ],
+      "tool_ids": [
+        "dad-cli",
+        "git",
+        "registered-read-only-sources"
+      ],
       "context_contract": "Metadata-only mission, worktree, decision, learning, iteration, routine, and architecture evidence with explicit coverage gaps; no C3 payloads or private source content.",
-      "privacy_classes": ["public", "internal", "confidential", "restricted_by_local_policy"],
-      "consequence_classes": ["small", "medium", "large", "critical"],
-      "effect_classes": ["read_only", "candidate_local_artifact"],
-      "dependencies": ["skill:dad-trigger-pattern-radar", "skill:personal-project-management-ops", "skill:subagent-continuous-improvement", "skill:dad-iteration-optimizer"],
-      "reverse_consumers": ["portfolio-capacity-review-cli", "weekly-shadow-review", "capability-os-cockpit"],
+      "privacy_classes": [
+        "public",
+        "internal",
+        "confidential",
+        "restricted_by_local_policy"
+      ],
+      "consequence_classes": [
+        "small",
+        "medium",
+        "large",
+        "critical"
+      ],
+      "effect_classes": [
+        "read_only",
+        "candidate_local_artifact"
+      ],
+      "dependencies": [
+        "skill:dad-trigger-pattern-radar",
+        "skill:personal-project-management-ops",
+        "skill:subagent-continuous-improvement",
+        "skill:dad-iteration-optimizer"
+      ],
+      "reverse_consumers": [
+        "portfolio-capacity-review-cli",
+        "weekly-shadow-review",
+        "capability-os-cockpit"
+      ],
       "adapter_revision_ids": [],
       "harness_revision_id": "harness-revision:portable-capability-contract:0.1.0",
-      "evidence_refs": ["tests/test_portfolio_capacity_review.py", "tests/test_subagent_role_directory.py"],
+      "evidence_refs": [
+        "tests/test_portfolio_capacity_review.py",
+        "tests/test_subagent_role_directory.py"
+      ],
       "fresh_until": "2026-08-15T00:00:00-04:00",
       "rollback_ref": "Remove the candidate skill registration and read-only route while preserving its immutable plan and evaluation evidence.",
       "candidate_only": true,
@@ -155,20 +353,112 @@
       "source_authority": "src/digital_asset_directory/portability_control.py",
       "owner": "DAD and Lowell",
       "status": "schema_validated",
-      "portable_files": [".claude/settings.json", ".github/CODEOWNERS", ".github/workflows/rust-ci-long.yml", ".github/workflows/rust-ci-pr.yml", ".github/workflows/scheduled-full-regression.yml", ".github/workflows/validate.yml", "AGENTS.md", "config/global-personal-skills.json", "registry/agent-family-portfolio-registry.json", "registry/agent-skill-library.json", "registry/dad-offerings-registry.json", "registry/mcp-dependency-map.json", "registry/portability-policy-registry.json", "registry/portable-runtime-qualification-registry.json", "registry/schema-registry.json", "schemas/model-attempt-receipt-v2.schema.json", "schemas/portability-assessment.schema.json", "schemas/portability-health-snapshot.schema.json", "schemas/portability-policy.schema.json", "schemas/portable-capability-card.schema.json", "schemas/portable-capability-registry.schema.json", "schemas/portable-runtime-qualification.schema.json", "schemas/portfolio-execution-control-event.schema.json", "scripts/agent_lifecycle.py", "scripts/claude_hook.py", "src/digital_asset_directory/_portfolio_execution_legacy.py", "src/digital_asset_directory/agent_lifecycle.py", "src/digital_asset_directory/capability_os_cockpit.py", "src/digital_asset_directory/ci_module_boundary_github.py", "src/digital_asset_directory/cli.py", "src/digital_asset_directory/enrollment.py", "src/digital_asset_directory/global_personal_skills.py", "src/digital_asset_directory/governance.py", "src/digital_asset_directory/learning.py", "src/digital_asset_directory/mcp_dependency_map.py", "src/digital_asset_directory/portability_control.py", "src/digital_asset_directory/portfolio_execution.py", "src/digital_asset_directory/validation.py", "templates/downstream/AGENTS_MANAGED_BLOCK.md"],
-      "content_digest": "sha256:ef6d094e601d2a15999dd7555508f9e507246f7b0843790f423be259412586a5",
-      "contract_digests": {"input": "sha256:eee475da7d6fe76d90852dfa97de0e1f047cb72d7d0134552245b7cda9a9fb68", "output": "sha256:0ec04e3bcb58df087b53068eb3756924c878f35a40871814bd8749313aa69dea", "error": "sha256:0c31568c5353cbf327cd009c17af20a687f7e97685e609c9a8d96f03852fd118", "privacy": "sha256:6eccc25be5945d494635818e68177f6efe953e9f2e74fbf165b5139d08429551", "effect": "sha256:c9093452afcdef36603faec991dc45d87d2166fb706f2b70f263b6625f6a3491", "authority": "sha256:408c3ee0aef794f423d49ba8141f3492961aa68b354d03c37c455d072d7e32c3"},
-      "capability_ids": ["deterministic_portability_assessment", "protected_transition_gating", "dependency_impact_analysis", "runtime_qualification"],
-      "tool_ids": ["dad-cli", "json-schema", "git"],
+      "portable_files": [
+        ".claude/settings.json",
+        ".githooks/pre-push",
+        ".githooks/pre-push.ps1",
+        ".github/CODEOWNERS",
+        ".github/workflows/dad-contract-check.yml",
+        ".github/workflows/rust-ci-long.yml",
+        ".github/workflows/rust-ci-pr.yml",
+        ".github/workflows/scheduled-full-regression.yml",
+        ".github/workflows/validate.yml",
+        "AGENTS.md",
+        "config/global-personal-skills.json",
+        "registry/agent-family-portfolio-registry.json",
+        "registry/agent-skill-library.json",
+        "registry/contract-check-policy.json",
+        "registry/dad-offerings-registry.json",
+        "registry/mcp-dependency-map.json",
+        "registry/portability-policy-registry.json",
+        "registry/portable-runtime-qualification-registry.json",
+        "registry/routine-contract-registry.json",
+        "registry/schema-registry.json",
+        "schemas/contract-check-policy.schema.json",
+        "schemas/model-attempt-receipt-v2.schema.json",
+        "schemas/portability-assessment.schema.json",
+        "schemas/portability-health-snapshot.schema.json",
+        "schemas/portability-policy.schema.json",
+        "schemas/portable-capability-card.schema.json",
+        "schemas/portable-capability-registry.schema.json",
+        "schemas/portable-runtime-qualification.schema.json",
+        "schemas/portfolio-execution-control-event.schema.json",
+        "schemas/routine-contract-registry.schema.json",
+        "scripts/agent_lifecycle.py",
+        "scripts/claude_hook.py",
+        "scripts/contract_check.py",
+        "src/digital_asset_directory/_portfolio_execution_legacy.py",
+        "src/digital_asset_directory/agent_lifecycle.py",
+        "src/digital_asset_directory/capability_os_cockpit.py",
+        "src/digital_asset_directory/ci_module_boundary_github.py",
+        "src/digital_asset_directory/cli.py",
+        "src/digital_asset_directory/contract_check.py",
+        "src/digital_asset_directory/enrollment.py",
+        "src/digital_asset_directory/global_personal_skills.py",
+        "src/digital_asset_directory/governance.py",
+        "src/digital_asset_directory/learning.py",
+        "src/digital_asset_directory/mcp_dependency_map.py",
+        "src/digital_asset_directory/portability_control.py",
+        "src/digital_asset_directory/portfolio_execution.py",
+        "src/digital_asset_directory/routine_health.py",
+        "src/digital_asset_directory/validation.py",
+        "templates/downstream/AGENTS_MANAGED_BLOCK.md"
+      ],
+      "content_digest": "sha256:1e2da9c4c1ca61b36ef87af938973e9c7e41e1acc29492c0053ab0c2d7e45653",
+      "contract_digests": {
+        "input": "sha256:eee475da7d6fe76d90852dfa97de0e1f047cb72d7d0134552245b7cda9a9fb68",
+        "output": "sha256:0ec04e3bcb58df087b53068eb3756924c878f35a40871814bd8749313aa69dea",
+        "error": "sha256:0c31568c5353cbf327cd009c17af20a687f7e97685e609c9a8d96f03852fd118",
+        "privacy": "sha256:6eccc25be5945d494635818e68177f6efe953e9f2e74fbf165b5139d08429551",
+        "effect": "sha256:c9093452afcdef36603faec991dc45d87d2166fb706f2b70f263b6625f6a3491",
+        "authority": "sha256:408c3ee0aef794f423d49ba8141f3492961aa68b354d03c37c455d072d7e32c3"
+      },
+      "capability_ids": [
+        "deterministic_portability_assessment",
+        "protected_transition_gating",
+        "dependency_impact_analysis",
+        "runtime_qualification"
+      ],
+      "tool_ids": [
+        "dad-cli",
+        "json-schema",
+        "git"
+      ],
       "context_contract": "Repository-relative governed files, immutable Git-object baselines, sanitized receipts, and exact artifact identities only.",
-      "privacy_classes": ["public", "internal", "confidential", "restricted_by_local_policy"],
-      "consequence_classes": ["small", "medium", "large", "critical"],
-      "effect_classes": ["read_only", "candidate_local_artifact"],
-      "dependencies": ["skill:portable-capability-governance", "family:harness-engineering-ops"],
-      "reverse_consumers": ["agent-preflight", "agent-midflight", "agent-postflight", "pre-push", "continuous-integration", "protected-release"],
+      "privacy_classes": [
+        "public",
+        "internal",
+        "confidential",
+        "restricted_by_local_policy"
+      ],
+      "consequence_classes": [
+        "small",
+        "medium",
+        "large",
+        "critical"
+      ],
+      "effect_classes": [
+        "read_only",
+        "candidate_local_artifact"
+      ],
+      "dependencies": [
+        "skill:portable-capability-governance",
+        "family:harness-engineering-ops"
+      ],
+      "reverse_consumers": [
+        "agent-preflight",
+        "agent-midflight",
+        "agent-postflight",
+        "pre-push",
+        "continuous-integration",
+        "protected-release"
+      ],
       "adapter_revision_ids": [],
       "harness_revision_id": "harness-revision:portable-capability-contract:0.1.0",
-      "evidence_refs": ["tests/test_portability_control.py", "tests/test_governance.py"],
+      "evidence_refs": [
+        "tests/test_portability_control.py",
+        "tests/test_governance.py"
+      ],
       "fresh_until": "2026-10-15T00:00:00-04:00",
       "rollback_ref": "Revert the control-plane revision and restore the prior externally protected required-check revision.",
       "candidate_only": true,
@@ -185,23 +475,68 @@
       "source_authority": "personal-skill-source:portable-capability-governance",
       "owner": "Lowell",
       "status": "schema_validated",
-      "portable_files": ["assets/agent-skills/portable-capability-governance/SKILL.md"],
+      "portable_files": [
+        "assets/agent-skills/portable-capability-governance/SKILL.md"
+      ],
       "content_digest": "sha256:fe4686a1c2cbfa7c1f800ea53191dffdbe8e9ce2ac06c72ba0842774b831f08b",
       "source_observation_digest": "sha256:b5a7c578c836089560a72e27108069c63390c63aaf19e0c783216a9cd75a4476",
-      "live_source_binding": {"source_ref": "personal-skill-source:portable-capability-governance/SKILL.md", "content_digest": "sha256:9a2b7d2bd071d3df2504b8b36fb421239a35fcb81822402e5589d079f6a065f9"},
-      "instruction_binding": {"source_ref": "personal-codex-source:AGENTS.md", "begin_marker": "<!-- BEGIN PORTABLE_CAPABILITY_GOVERNANCE -->", "end_marker": "<!-- END PORTABLE_CAPABILITY_GOVERNANCE -->", "content_digest": "sha256:324ad21492e6a57faf3f81a0a0582d261930e426cdaec6a34a5dfc25246240be"},
-      "contract_digests": {"input": "sha256:eee475da7d6fe76d90852dfa97de0e1f047cb72d7d0134552245b7cda9a9fb68", "output": "sha256:0ec04e3bcb58df087b53068eb3756924c878f35a40871814bd8749313aa69dea", "error": "sha256:0c31568c5353cbf327cd009c17af20a687f7e97685e609c9a8d96f03852fd118", "privacy": "sha256:6eccc25be5945d494635818e68177f6efe953e9f2e74fbf165b5139d08429551", "effect": "sha256:c9093452afcdef36603faec991dc45d87d2166fb706f2b70f263b6625f6a3491", "authority": "sha256:408c3ee0aef794f423d49ba8141f3492961aa68b354d03c37c455d072d7e32c3"},
-      "capability_ids": ["architecture_reasoning", "governance_authority_safety", "validation_design"],
-      "tool_ids": ["optional-dad-cli", "local-repository-tools"],
+      "live_source_binding": {
+        "source_ref": "personal-skill-source:portable-capability-governance/SKILL.md",
+        "content_digest": "sha256:9a2b7d2bd071d3df2504b8b36fb421239a35fcb81822402e5589d079f6a065f9"
+      },
+      "instruction_binding": {
+        "source_ref": "personal-codex-source:AGENTS.md",
+        "begin_marker": "<!-- BEGIN PORTABLE_CAPABILITY_GOVERNANCE -->",
+        "end_marker": "<!-- END PORTABLE_CAPABILITY_GOVERNANCE -->",
+        "content_digest": "sha256:324ad21492e6a57faf3f81a0a0582d261930e426cdaec6a34a5dfc25246240be"
+      },
+      "contract_digests": {
+        "input": "sha256:eee475da7d6fe76d90852dfa97de0e1f047cb72d7d0134552245b7cda9a9fb68",
+        "output": "sha256:0ec04e3bcb58df087b53068eb3756924c878f35a40871814bd8749313aa69dea",
+        "error": "sha256:0c31568c5353cbf327cd009c17af20a687f7e97685e609c9a8d96f03852fd118",
+        "privacy": "sha256:6eccc25be5945d494635818e68177f6efe953e9f2e74fbf165b5139d08429551",
+        "effect": "sha256:c9093452afcdef36603faec991dc45d87d2166fb706f2b70f263b6625f6a3491",
+        "authority": "sha256:408c3ee0aef794f423d49ba8141f3492961aa68b354d03c37c455d072d7e32c3"
+      },
+      "capability_ids": [
+        "architecture_reasoning",
+        "governance_authority_safety",
+        "validation_design"
+      ],
+      "tool_ids": [
+        "optional-dad-cli",
+        "local-repository-tools"
+      ],
       "context_contract": "Apply the portable checklist everywhere; claim verification only when a deterministic local harness is available.",
-      "privacy_classes": ["public", "internal", "confidential", "restricted_by_local_policy"],
-      "consequence_classes": ["small", "medium", "large", "critical"],
-      "effect_classes": ["read_only", "candidate_local_artifact"],
-      "dependencies": ["personal-skill-source:subagent-peer-review-routing"],
-      "reverse_consumers": ["Codex personal skill routing", "DAD adaptation"],
+      "privacy_classes": [
+        "public",
+        "internal",
+        "confidential",
+        "restricted_by_local_policy"
+      ],
+      "consequence_classes": [
+        "small",
+        "medium",
+        "large",
+        "critical"
+      ],
+      "effect_classes": [
+        "read_only",
+        "candidate_local_artifact"
+      ],
+      "dependencies": [
+        "personal-skill-source:subagent-peer-review-routing"
+      ],
+      "reverse_consumers": [
+        "Codex personal skill routing",
+        "DAD adaptation"
+      ],
       "adapter_revision_ids": [],
       "harness_revision_id": "harness-revision:portable-capability-contract:0.1.0",
-      "evidence_refs": ["personal-skill-source:portable-capability-governance", "skill:portable-capability-governance"],
+      "evidence_refs": [
+        "personal-skill-source:portable-capability-governance",
+        "skill:portable-capability-governance"
+      ],
       "fresh_until": "2026-10-15T00:00:00-04:00",
       "rollback_ref": "Remove the live skill only through a reviewed personal-skill lifecycle decision; preserve its DAD revision evidence.",
       "candidate_only": true,
@@ -218,20 +553,60 @@
       "source_authority": "assets/agent-skills/portable-capability-governance/subagents.yaml",
       "owner": "DAD and Lowell",
       "status": "schema_validated",
-      "portable_files": ["assets/agent-skills/portable-capability-governance/subagents.yaml"],
+      "portable_files": [
+        "assets/agent-skills/portable-capability-governance/subagents.yaml"
+      ],
       "content_digest": "sha256:0012388741299b55bce761336fd9d3240d1c8b300dcb6b90d312b9fca9007803",
-      "contract_digests": {"input": "sha256:eee475da7d6fe76d90852dfa97de0e1f047cb72d7d0134552245b7cda9a9fb68", "output": "sha256:0ec04e3bcb58df087b53068eb3756924c878f35a40871814bd8749313aa69dea", "error": "sha256:0c31568c5353cbf327cd009c17af20a687f7e97685e609c9a8d96f03852fd118", "privacy": "sha256:6eccc25be5945d494635818e68177f6efe953e9f2e74fbf165b5139d08429551", "effect": "sha256:c9093452afcdef36603faec991dc45d87d2166fb706f2b70f263b6625f6a3491", "authority": "sha256:408c3ee0aef794f423d49ba8141f3492961aa68b354d03c37c455d072d7e32c3"},
-      "capability_ids": ["bounded_evidence_inventory", "architecture_reasoning", "validation_design", "implementation_review", "governance_authority_safety"],
-      "tool_ids": ["dad-cli", "json-schema", "git"],
+      "contract_digests": {
+        "input": "sha256:eee475da7d6fe76d90852dfa97de0e1f047cb72d7d0134552245b7cda9a9fb68",
+        "output": "sha256:0ec04e3bcb58df087b53068eb3756924c878f35a40871814bd8749313aa69dea",
+        "error": "sha256:0c31568c5353cbf327cd009c17af20a687f7e97685e609c9a8d96f03852fd118",
+        "privacy": "sha256:6eccc25be5945d494635818e68177f6efe953e9f2e74fbf165b5139d08429551",
+        "effect": "sha256:c9093452afcdef36603faec991dc45d87d2166fb706f2b70f263b6625f6a3491",
+        "authority": "sha256:408c3ee0aef794f423d49ba8141f3492961aa68b354d03c37c455d072d7e32c3"
+      },
+      "capability_ids": [
+        "bounded_evidence_inventory",
+        "architecture_reasoning",
+        "validation_design",
+        "implementation_review",
+        "governance_authority_safety"
+      ],
+      "tool_ids": [
+        "dad-cli",
+        "json-schema",
+        "git"
+      ],
       "context_contract": "Each role receives only its bounded contract slice and sanitized evidence pointers.",
-      "privacy_classes": ["public", "internal", "confidential", "restricted_by_local_policy"],
-      "consequence_classes": ["small", "medium", "large", "critical"],
-      "effect_classes": ["read_only", "candidate_local_artifact"],
-      "dependencies": ["skill:portable-capability-governance", "skill:subagent-continuous-improvement"],
-      "reverse_consumers": ["family:harness-engineering-ops"],
+      "privacy_classes": [
+        "public",
+        "internal",
+        "confidential",
+        "restricted_by_local_policy"
+      ],
+      "consequence_classes": [
+        "small",
+        "medium",
+        "large",
+        "critical"
+      ],
+      "effect_classes": [
+        "read_only",
+        "candidate_local_artifact"
+      ],
+      "dependencies": [
+        "skill:portable-capability-governance",
+        "skill:subagent-continuous-improvement"
+      ],
+      "reverse_consumers": [
+        "family:harness-engineering-ops"
+      ],
       "adapter_revision_ids": [],
       "harness_revision_id": "harness-revision:portable-capability-contract:0.1.0",
-      "evidence_refs": ["assets/agent-skills/portable-capability-governance/subagents.yaml", "tests/test_portability_control.py"],
+      "evidence_refs": [
+        "assets/agent-skills/portable-capability-governance/subagents.yaml",
+        "tests/test_portability_control.py"
+      ],
       "fresh_until": "2026-10-15T00:00:00-04:00",
       "rollback_ref": "family:harness-engineering-ops remains active if this candidate pack is quarantined.",
       "candidate_only": true,
@@ -248,21 +623,66 @@
       "source_authority": "registry/agent-family-portfolio-registry.json#family:harness-engineering-ops",
       "owner": "DAD and Lowell",
       "status": "schema_validated",
-      "portable_files": ["assets/agent-skills/portable-capability-governance/references/PORTABLE_CAPABILITY_CONTRACT.md", "assets/agent-skills/dad-harness-engineering-ops/SKILL.md", "assets/agent-skills/dad-harness-engineering-ops/subagents.yaml"],
+      "portable_files": [
+        "assets/agent-skills/portable-capability-governance/references/PORTABLE_CAPABILITY_CONTRACT.md",
+        "assets/agent-skills/dad-harness-engineering-ops/SKILL.md",
+        "assets/agent-skills/dad-harness-engineering-ops/subagents.yaml"
+      ],
       "content_digest": "sha256:657988f80d58ce40cca2add39dede427981368bad0fcd2cbe52f6fff66a6487a",
       "source_observation_digest": "sha256:e6564071cbca6b5a88c23b0962a4dfa9466d0fee7107ac2850b2b35304983f7b",
-      "contract_digests": {"input": "sha256:eee475da7d6fe76d90852dfa97de0e1f047cb72d7d0134552245b7cda9a9fb68", "output": "sha256:0ec04e3bcb58df087b53068eb3756924c878f35a40871814bd8749313aa69dea", "error": "sha256:0c31568c5353cbf327cd009c17af20a687f7e97685e609c9a8d96f03852fd118", "privacy": "sha256:6eccc25be5945d494635818e68177f6efe953e9f2e74fbf165b5139d08429551", "effect": "sha256:c9093452afcdef36603faec991dc45d87d2166fb706f2b70f263b6625f6a3491", "authority": "sha256:408c3ee0aef794f423d49ba8141f3492961aa68b354d03c37c455d072d7e32c3"},
-      "capability_ids": ["harness_architecture", "runtime_fit", "validation_design", "governance_authority_safety"],
-      "tool_ids": ["dad-cli", "json-schema", "git"],
+      "contract_digests": {
+        "input": "sha256:eee475da7d6fe76d90852dfa97de0e1f047cb72d7d0134552245b7cda9a9fb68",
+        "output": "sha256:0ec04e3bcb58df087b53068eb3756924c878f35a40871814bd8749313aa69dea",
+        "error": "sha256:0c31568c5353cbf327cd009c17af20a687f7e97685e609c9a8d96f03852fd118",
+        "privacy": "sha256:6eccc25be5945d494635818e68177f6efe953e9f2e74fbf165b5139d08429551",
+        "effect": "sha256:c9093452afcdef36603faec991dc45d87d2166fb706f2b70f263b6625f6a3491",
+        "authority": "sha256:408c3ee0aef794f423d49ba8141f3492961aa68b354d03c37c455d072d7e32c3"
+      },
+      "capability_ids": [
+        "harness_architecture",
+        "runtime_fit",
+        "validation_design",
+        "governance_authority_safety"
+      ],
+      "tool_ids": [
+        "dad-cli",
+        "json-schema",
+        "git"
+      ],
       "context_contract": "The family remains provider-neutral; adapters and verified receipts carry runtime identity.",
-      "privacy_classes": ["public", "internal", "confidential", "restricted_by_local_policy"],
-      "consequence_classes": ["small", "medium", "large", "critical"],
-      "effect_classes": ["read_only", "candidate_local_artifact"],
-      "dependencies": ["skill:dad-harness-engineering-ops", "skill:portable-capability-governance", "family:quality-verification-release"],
-      "reverse_consumers": ["family:autonomy-oversight-and-control", "agent-preflight", "dad-validation"],
+      "privacy_classes": [
+        "public",
+        "internal",
+        "confidential",
+        "restricted_by_local_policy"
+      ],
+      "consequence_classes": [
+        "small",
+        "medium",
+        "large",
+        "critical"
+      ],
+      "effect_classes": [
+        "read_only",
+        "candidate_local_artifact"
+      ],
+      "dependencies": [
+        "skill:dad-harness-engineering-ops",
+        "skill:portable-capability-governance",
+        "family:quality-verification-release"
+      ],
+      "reverse_consumers": [
+        "family:autonomy-oversight-and-control",
+        "agent-preflight",
+        "dad-validation"
+      ],
       "adapter_revision_ids": [],
       "harness_revision_id": "harness-revision:portable-capability-contract:0.1.0",
-      "evidence_refs": ["registry/agent-family-portfolio-registry.json", "assets/agent-skills/portable-capability-governance/harness-revision.json", "tests/test_portability_control.py"],
+      "evidence_refs": [
+        "registry/agent-family-portfolio-registry.json",
+        "assets/agent-skills/portable-capability-governance/harness-revision.json",
+        "tests/test_portability_control.py"
+      ],
       "fresh_until": "2026-10-15T00:00:00-04:00",
       "rollback_ref": "Revert the specialist-pack link while preserving the existing harness-engineering family.",
       "candidate_only": true,
@@ -307,17 +727,53 @@
         "effect": "sha256:d0df78f59734cde9cccca2fbf7c95b0bc38a7fedca59c3b2e0d03daf67004879",
         "authority": "sha256:4de6879b22c13084ee7081140d00a312ed98fa928847e3e1393fe3a368194919"
       },
-      "capability_ids": ["ml_opportunity_and_goal_framing", "ml_technique_selection", "ml_workflow_decomposition", "ml_independent_validation", "ml_lifecycle_drift_and_supersession"],
-      "tool_ids": ["dad-cli", "json-schema", "registered-read-only-sources"],
+      "capability_ids": [
+        "ml_opportunity_and_goal_framing",
+        "ml_technique_selection",
+        "ml_workflow_decomposition",
+        "ml_independent_validation",
+        "ml_lifecycle_drift_and_supersession"
+      ],
+      "tool_ids": [
+        "dad-cli",
+        "json-schema",
+        "registered-read-only-sources"
+      ],
       "context_contract": "Provider-neutral objective, explicit problem shape, data and label readiness, decision costs, authority metadata, technique cards, and sanitized evidence references only.",
-      "privacy_classes": ["public", "internal", "confidential", "restricted_by_local_policy"],
-      "consequence_classes": ["small", "medium", "large", "critical"],
-      "effect_classes": ["read_only", "candidate_local_artifact"],
-      "dependencies": ["skill:personal-hierarchical-agent-mesh", "skill:subagent-continuous-improvement", "skill:dad-manifest-graph-engineering", "family:quality-verification-release"],
-      "reverse_consumers": ["family:ml-workflow", "agent-family-router", "ml-fit-cli", "capability-os-cockpit"],
+      "privacy_classes": [
+        "public",
+        "internal",
+        "confidential",
+        "restricted_by_local_policy"
+      ],
+      "consequence_classes": [
+        "small",
+        "medium",
+        "large",
+        "critical"
+      ],
+      "effect_classes": [
+        "read_only",
+        "candidate_local_artifact"
+      ],
+      "dependencies": [
+        "skill:personal-hierarchical-agent-mesh",
+        "skill:subagent-continuous-improvement",
+        "skill:dad-manifest-graph-engineering",
+        "family:quality-verification-release"
+      ],
+      "reverse_consumers": [
+        "family:ml-workflow",
+        "agent-family-router",
+        "ml-fit-cli",
+        "capability-os-cockpit"
+      ],
       "adapter_revision_ids": [],
       "harness_revision_id": "harness-revision:portable-capability-contract:0.1.0",
-      "evidence_refs": ["docs/ML_EXPERT_MESH_DELTA_INTEGRATION.md", "tests/test_ml_agent_family.py"],
+      "evidence_refs": [
+        "docs/ML_EXPERT_MESH_DELTA_INTEGRATION.md",
+        "tests/test_ml_agent_family.py"
+      ],
       "fresh_until": "2026-10-16T00:00:00-04:00",
       "rollback_ref": "Revert the candidate ML fit-route revision while preserving the prior ML family and immutable integration decision record.",
       "candidate_only": true,
@@ -334,7 +790,12 @@
       "source_authority": "registry/ml-agent-family-registry.json#workflow:ml-opportunity-review",
       "owner": "DAD and Lowell",
       "status": "schema_validated",
-      "portable_files": ["registry/ml-agent-family-registry.json", "schemas/ml-fit-routing-assessment.schema.json", "schemas/ml-fit-routing-request.schema.json", "src/digital_asset_directory/ml_agent_family.py"],
+      "portable_files": [
+        "registry/ml-agent-family-registry.json",
+        "schemas/ml-fit-routing-assessment.schema.json",
+        "schemas/ml-fit-routing-request.schema.json",
+        "src/digital_asset_directory/ml_agent_family.py"
+      ],
       "content_digest": "sha256:5b3c2b1361cb498faaf61006e5867bc8f48b620c2b51d267afc65c50f50546d1",
       "source_observation_digest": "sha256:d83669ee926910a5477d27d0329cdd88f5851f2b1d509b1b05be300ee5eabe4a",
       "contract_digests": {
@@ -345,17 +806,45 @@
         "effect": "sha256:d0df78f59734cde9cccca2fbf7c95b0bc38a7fedca59c3b2e0d03daf67004879",
         "authority": "sha256:4de6879b22c13084ee7081140d00a312ed98fa928847e3e1393fe3a368194919"
       },
-      "capability_ids": ["ml_opportunity_and_goal_framing", "ml_technique_selection"],
-      "tool_ids": ["dad-cli", "json-schema"],
+      "capability_ids": [
+        "ml_opportunity_and_goal_framing",
+        "ml_technique_selection"
+      ],
+      "tool_ids": [
+        "dad-cli",
+        "json-schema"
+      ],
       "context_contract": "Explicit bounded objective and routing metadata only; no source data, training payload, credentials, or raw conversation.",
-      "privacy_classes": ["public", "internal", "confidential", "restricted_by_local_policy"],
-      "consequence_classes": ["small", "medium", "large", "critical"],
-      "effect_classes": ["read_only", "candidate_local_artifact"],
-      "dependencies": ["skill:ml-workflow-agent-family", "family:quality-verification-release"],
-      "reverse_consumers": ["role:ml-technique-router", "workflow:ml-experiment-and-build"],
+      "privacy_classes": [
+        "public",
+        "internal",
+        "confidential",
+        "restricted_by_local_policy"
+      ],
+      "consequence_classes": [
+        "small",
+        "medium",
+        "large",
+        "critical"
+      ],
+      "effect_classes": [
+        "read_only",
+        "candidate_local_artifact"
+      ],
+      "dependencies": [
+        "skill:ml-workflow-agent-family",
+        "family:quality-verification-release"
+      ],
+      "reverse_consumers": [
+        "role:ml-technique-router",
+        "workflow:ml-experiment-and-build"
+      ],
       "adapter_revision_ids": [],
       "harness_revision_id": "harness-revision:portable-capability-contract:0.1.0",
-      "evidence_refs": ["schemas/ml-fit-routing-assessment.schema.json", "tests/test_ml_agent_family.py"],
+      "evidence_refs": [
+        "schemas/ml-fit-routing-assessment.schema.json",
+        "tests/test_ml_agent_family.py"
+      ],
       "fresh_until": "2026-10-16T00:00:00-04:00",
       "rollback_ref": "Revert the mandatory first-hop revision and retain the prior candidate ML family for inspection only.",
       "candidate_only": true,
@@ -372,21 +861,68 @@
       "source_authority": "registry/ml-agent-family-registry.json#workflow:ml-synthetic-data-opportunity-review",
       "owner": "DAD and Lowell",
       "status": "schema_validated",
-      "portable_files": ["assets/agent-skills/ml-workflow-agent-family/SKILL.md", "assets/agent-skills/ml-workflow-agent-family/routines.yaml", "assets/agent-skills/ml-workflow-agent-family/subagents.yaml", "registry/ml-agent-family-registry.json", "registry/synthetic-data-resource-registry.json", "schemas/synthetic-data-resource-registry.schema.json", "src/digital_asset_directory/synthetic_data_resources.py", "tests/test_synthetic_data_resources.py"],
+      "portable_files": [
+        "assets/agent-skills/ml-workflow-agent-family/SKILL.md",
+        "assets/agent-skills/ml-workflow-agent-family/routines.yaml",
+        "assets/agent-skills/ml-workflow-agent-family/subagents.yaml",
+        "registry/ml-agent-family-registry.json",
+        "registry/synthetic-data-resource-registry.json",
+        "schemas/synthetic-data-resource-registry.schema.json",
+        "src/digital_asset_directory/synthetic_data_resources.py",
+        "tests/test_synthetic_data_resources.py"
+      ],
       "content_digest": "sha256:1ebe595ba1b3a9bd67a2108f7c2934411bf5f1e7afc59e25f3bb5876d65d9a83",
       "source_observation_digest": "sha256:80afe3cadfd35c2c6332459f1ea037df4e6916d0f4920d2e8ffb71b8f86a7bb8",
-      "contract_digests": {"input": "sha256:237d32dea8556c1049117af26c53fd66ffbc5e4626b0bca598e1b5041531d16d", "output": "sha256:01e6c66cd3dc953ff736de9d1ebe7fbd3f36e4f8ed076854d75c6200f5bc4ad5", "error": "sha256:671c8c7849565545b87b9e0272fd996a4637f9b3ae367eb701192f6571652639", "privacy": "sha256:62e0d3a757ba4682d5722defbe6d1f69e8af50ffda571b735e921ead625f07c3", "effect": "sha256:d0df78f59734cde9cccca2fbf7c95b0bc38a7fedca59c3b2e0d03daf67004879", "authority": "sha256:4de6879b22c13084ee7081140d00a312ed98fa928847e3e1393fe3a368194919"},
-      "capability_ids": ["ml_data_readiness_and_leakage_audit", "ml_system_and_experiment_architecture", "ml_independent_validation"],
-      "tool_ids": ["dad-cli", "json-schema", "registered-read-only-sources"],
+      "contract_digests": {
+        "input": "sha256:237d32dea8556c1049117af26c53fd66ffbc5e4626b0bca598e1b5041531d16d",
+        "output": "sha256:01e6c66cd3dc953ff736de9d1ebe7fbd3f36e4f8ed076854d75c6200f5bc4ad5",
+        "error": "sha256:671c8c7849565545b87b9e0272fd996a4637f9b3ae367eb701192f6571652639",
+        "privacy": "sha256:62e0d3a757ba4682d5722defbe6d1f69e8af50ffda571b735e921ead625f07c3",
+        "effect": "sha256:d0df78f59734cde9cccca2fbf7c95b0bc38a7fedca59c3b2e0d03daf67004879",
+        "authority": "sha256:4de6879b22c13084ee7081140d00a312ed98fa928847e3e1393fe3a368194919"
+      },
+      "capability_ids": [
+        "ml_data_readiness_and_leakage_audit",
+        "ml_system_and_experiment_architecture",
+        "ml_independent_validation"
+      ],
+      "tool_ids": [
+        "dad-cli",
+        "json-schema",
+        "registered-read-only-sources"
+      ],
       "context_contract": "Provider-neutral objective, modality, domain, bounded need and blocker signals, source-term metadata, and sanitized evidence pointers only; no source data or generated payloads.",
-      "privacy_classes": ["public", "internal", "confidential", "restricted_by_local_policy"],
-      "consequence_classes": ["small", "medium", "large", "critical"],
-      "effect_classes": ["read_only", "candidate_local_artifact"],
-      "dependencies": ["skill:ml-workflow-agent-family", "family:quality-verification-release"],
-      "reverse_consumers": ["role:ml-synthetic-opportunity-scout", "role:ml-synthetic-data-architect", "role:ml-independent-checker"],
+      "privacy_classes": [
+        "public",
+        "internal",
+        "confidential",
+        "restricted_by_local_policy"
+      ],
+      "consequence_classes": [
+        "small",
+        "medium",
+        "large",
+        "critical"
+      ],
+      "effect_classes": [
+        "read_only",
+        "candidate_local_artifact"
+      ],
+      "dependencies": [
+        "skill:ml-workflow-agent-family",
+        "family:quality-verification-release"
+      ],
+      "reverse_consumers": [
+        "role:ml-synthetic-opportunity-scout",
+        "role:ml-synthetic-data-architect",
+        "role:ml-independent-checker"
+      ],
       "adapter_revision_ids": [],
       "harness_revision_id": "harness-revision:portable-capability-contract:0.1.0",
-      "evidence_refs": ["docs/SYNTHETIC_DATA_RESOURCE_LIBRARY.md", "tests/test_synthetic_data_resources.py"],
+      "evidence_refs": [
+        "docs/SYNTHETIC_DATA_RESOURCE_LIBRARY.md",
+        "tests/test_synthetic_data_resources.py"
+      ],
       "fresh_until": "2026-10-16T00:00:00-04:00",
       "rollback_ref": "Revert the candidate synthetic-data route and registry while preserving the existing ML family and research evidence pointers.",
       "candidate_only": true,
@@ -403,21 +939,70 @@
       "source_authority": "registry/ml-agent-family-registry.json#workflow:ml-synthetic-helper-research-refresh",
       "owner": "DAD and Lowell",
       "status": "schema_validated",
-      "portable_files": ["assets/agent-skills/ml-workflow-agent-family/routines.yaml", "registry/ml-agent-family-registry.json", "registry/synthetic-data-resource-registry.json", "schemas/synthetic-data-resource-registry.schema.json", "docs/SYNTHETIC_DATA_RESOURCE_LIBRARY.md", "tests/test_synthetic_data_resources.py"],
+      "portable_files": [
+        "assets/agent-skills/ml-workflow-agent-family/routines.yaml",
+        "registry/ml-agent-family-registry.json",
+        "registry/synthetic-data-resource-registry.json",
+        "schemas/synthetic-data-resource-registry.schema.json",
+        "docs/SYNTHETIC_DATA_RESOURCE_LIBRARY.md",
+        "tests/test_synthetic_data_resources.py"
+      ],
       "content_digest": "sha256:65d7a1f2238d76a2b9d73a1ec1f0ccecabfbcf085e5827bb153bbd47d790a020",
       "source_observation_digest": "sha256:d3169f148efef74cfc218393e950ce51deb67248e052d5018ba8fe70ce3f5f01",
-      "contract_digests": {"input": "sha256:237d32dea8556c1049117af26c53fd66ffbc5e4626b0bca598e1b5041531d16d", "output": "sha256:01e6c66cd3dc953ff736de9d1ebe7fbd3f36e4f8ed076854d75c6200f5bc4ad5", "error": "sha256:671c8c7849565545b87b9e0272fd996a4637f9b3ae367eb701192f6571652639", "privacy": "sha256:62e0d3a757ba4682d5722defbe6d1f69e8af50ffda571b735e921ead625f07c3", "effect": "sha256:d0df78f59734cde9cccca2fbf7c95b0bc38a7fedca59c3b2e0d03daf67004879", "authority": "sha256:4de6879b22c13084ee7081140d00a312ed98fa928847e3e1393fe3a368194919"},
-      "capability_ids": ["ml_primary_source_research_synthesis", "bounded_evidence_inventory", "governance_authority_safety"],
-      "tool_ids": ["dad-cli", "web-search", "json-schema", "registered-read-only-sources"],
+      "contract_digests": {
+        "input": "sha256:237d32dea8556c1049117af26c53fd66ffbc5e4626b0bca598e1b5041531d16d",
+        "output": "sha256:01e6c66cd3dc953ff736de9d1ebe7fbd3f36e4f8ed076854d75c6200f5bc4ad5",
+        "error": "sha256:671c8c7849565545b87b9e0272fd996a4637f9b3ae367eb701192f6571652639",
+        "privacy": "sha256:62e0d3a757ba4682d5722defbe6d1f69e8af50ffda571b735e921ead625f07c3",
+        "effect": "sha256:d0df78f59734cde9cccca2fbf7c95b0bc38a7fedca59c3b2e0d03daf67004879",
+        "authority": "sha256:4de6879b22c13084ee7081140d00a312ed98fa928847e3e1393fe3a368194919"
+      },
+      "capability_ids": [
+        "ml_primary_source_research_synthesis",
+        "bounded_evidence_inventory",
+        "governance_authority_safety"
+      ],
+      "tool_ids": [
+        "dad-cli",
+        "web-search",
+        "json-schema",
+        "registered-read-only-sources"
+      ],
       "context_contract": "Privacy-safe current-work and roadmap metadata, prior cursor, existing pointer identities, changed external source pointers, and primary-source evidence only.",
-      "privacy_classes": ["public", "internal", "confidential", "restricted_by_local_policy"],
-      "consequence_classes": ["small", "medium", "large", "critical"],
-      "effect_classes": ["read_only", "candidate_local_artifact"],
-      "dependencies": ["skill:ml-workflow-agent-family", "family:quality-verification-release"],
-      "reverse_consumers": ["codex-automation:weekly-dad-external-asset-scout", "registry:synthetic-data-resource-registry", "research-intake"],
-      "adapter_revision_ids": ["portability-card-revision:runtime-adapter-codex-gpt-5-6-luna-low-weekly-research:0.1.0"],
+      "privacy_classes": [
+        "public",
+        "internal",
+        "confidential",
+        "restricted_by_local_policy"
+      ],
+      "consequence_classes": [
+        "small",
+        "medium",
+        "large",
+        "critical"
+      ],
+      "effect_classes": [
+        "read_only",
+        "candidate_local_artifact"
+      ],
+      "dependencies": [
+        "skill:ml-workflow-agent-family",
+        "family:quality-verification-release"
+      ],
+      "reverse_consumers": [
+        "codex-automation:weekly-dad-external-asset-scout",
+        "registry:synthetic-data-resource-registry",
+        "research-intake"
+      ],
+      "adapter_revision_ids": [
+        "portability-card-revision:runtime-adapter-codex-gpt-5-6-luna-low-weekly-research:0.1.0"
+      ],
       "harness_revision_id": "harness-revision:portable-capability-contract:0.1.0",
-      "evidence_refs": ["codex-automation:weekly-dad-external-asset-scout", "tests/test_synthetic_data_resources.py", "asset-dir portability validate"],
+      "evidence_refs": [
+        "codex-automation:weekly-dad-external-asset-scout",
+        "tests/test_synthetic_data_resources.py",
+        "asset-dir portability validate"
+      ],
       "fresh_until": "2026-10-16T00:00:00-04:00",
       "rollback_ref": "Pause the weekly automation and preserve its last candidate/no-change receipt; the task-triggered synthetic-data route remains available.",
       "candidate_only": true,
@@ -436,12 +1021,32 @@
       "owner": "Lowell",
       "status": "shadow_validated",
       "core_revision_id": "portability-card-revision:workflow-ml-synthetic-helper-research-refresh:0.1.0",
-      "target_capability_predicate": {"capability_alias": "luna", "reasoning_effort": "low", "web_research": true, "read_only_external_content": true, "candidate_output_only": true},
+      "target_capability_predicate": {
+        "capability_alias": "luna",
+        "reasoning_effort": "low",
+        "web_research": true,
+        "read_only_external_content": true,
+        "candidate_output_only": true
+      },
       "adapter_interface_digest": "sha256:b9320db21caacc2f50c4afd42fe2980d88343c61e1336684216a589a4131f489",
-      "preserved_contract_digests": {"input": "sha256:237d32dea8556c1049117af26c53fd66ffbc5e4626b0bca598e1b5041531d16d", "output": "sha256:01e6c66cd3dc953ff736de9d1ebe7fbd3f36e4f8ed076854d75c6200f5bc4ad5", "error": "sha256:671c8c7849565545b87b9e0272fd996a4637f9b3ae367eb701192f6571652639", "privacy": "sha256:62e0d3a757ba4682d5722defbe6d1f69e8af50ffda571b735e921ead625f07c3", "effect": "sha256:d0df78f59734cde9cccca2fbf7c95b0bc38a7fedca59c3b2e0d03daf67004879", "authority": "sha256:4de6879b22c13084ee7081140d00a312ed98fa928847e3e1393fe3a368194919"},
-      "compatibility_evidence": ["Codex automation host accepted model gpt-5.6-luna with low reasoning effort on 2026-07-16.", "The automation retains candidate-only authority and disables local environment setup scripts."],
-      "target_runtime_classes": ["codex-local-worktree-automation"],
-      "provider_bindings": ["openai:gpt-5.6-luna"],
+      "preserved_contract_digests": {
+        "input": "sha256:237d32dea8556c1049117af26c53fd66ffbc5e4626b0bca598e1b5041531d16d",
+        "output": "sha256:01e6c66cd3dc953ff736de9d1ebe7fbd3f36e4f8ed076854d75c6200f5bc4ad5",
+        "error": "sha256:671c8c7849565545b87b9e0272fd996a4637f9b3ae367eb701192f6571652639",
+        "privacy": "sha256:62e0d3a757ba4682d5722defbe6d1f69e8af50ffda571b735e921ead625f07c3",
+        "effect": "sha256:d0df78f59734cde9cccca2fbf7c95b0bc38a7fedca59c3b2e0d03daf67004879",
+        "authority": "sha256:4de6879b22c13084ee7081140d00a312ed98fa928847e3e1393fe3a368194919"
+      },
+      "compatibility_evidence": [
+        "Codex automation host accepted model gpt-5.6-luna with low reasoning effort on 2026-07-16.",
+        "The automation retains candidate-only authority and disables local environment setup scripts."
+      ],
+      "target_runtime_classes": [
+        "codex-local-worktree-automation"
+      ],
+      "provider_bindings": [
+        "openai:gpt-5.6-luna"
+      ],
       "fresh_until": "2026-08-16T00:00:00-04:00",
       "rollback_ref": "Pause the automation. Do not substitute a model until a human reviews a new adapter against the same core contract.",
       "candidate_only": true,
@@ -458,21 +1063,61 @@
       "source_authority": "assets/agent-skills/dad-work-router/SKILL.md",
       "owner": "DAD and Lowell",
       "status": "schema_validated",
-      "portable_files": ["assets/agent-skills/dad-work-router/SKILL.md"],
+      "portable_files": [
+        "assets/agent-skills/dad-work-router/SKILL.md"
+      ],
       "content_digest": "sha256:c5a2145f00e7fd2f7fc1e49bb7f5b074fb092f5249db6874b6d763443d0e71b9",
       "source_observation_digest": "sha256:c192b0c8dbccc0956ef49d343fabe6988d1574fb799a39d442db5191be395bea",
-      "contract_digests": {"input": "sha256:eee475da7d6fe76d90852dfa97de0e1f047cb72d7d0134552245b7cda9a9fb68", "output": "sha256:0ec04e3bcb58df087b53068eb3756924c878f35a40871814bd8749313aa69dea", "error": "sha256:0c31568c5353cbf327cd009c17af20a687f7e97685e609c9a8d96f03852fd118", "privacy": "sha256:6eccc25be5945d494635818e68177f6efe953e9f2e74fbf165b5139d08429551", "effect": "sha256:c9093452afcdef36603faec991dc45d87d2166fb706f2b70f263b6625f6a3491", "authority": "sha256:408c3ee0aef794f423d49ba8141f3492961aa68b354d03c37c455d072d7e32c3"},
-      "capability_ids": ["governed_preflight_routing", "reusable_asset_discovery", "proportional_review_routing"],
-      "tool_ids": ["dad-cli", "git", "registered-read-only-sources"],
+      "contract_digests": {
+        "input": "sha256:eee475da7d6fe76d90852dfa97de0e1f047cb72d7d0134552245b7cda9a9fb68",
+        "output": "sha256:0ec04e3bcb58df087b53068eb3756924c878f35a40871814bd8749313aa69dea",
+        "error": "sha256:0c31568c5353cbf327cd009c17af20a687f7e97685e609c9a8d96f03852fd118",
+        "privacy": "sha256:6eccc25be5945d494635818e68177f6efe953e9f2e74fbf165b5139d08429551",
+        "effect": "sha256:c9093452afcdef36603faec991dc45d87d2166fb706f2b70f263b6625f6a3491",
+        "authority": "sha256:408c3ee0aef794f423d49ba8141f3492961aa68b354d03c37c455d072d7e32c3"
+      },
+      "capability_ids": [
+        "governed_preflight_routing",
+        "reusable_asset_discovery",
+        "proportional_review_routing"
+      ],
+      "tool_ids": [
+        "dad-cli",
+        "git",
+        "registered-read-only-sources"
+      ],
       "context_contract": "Bounded task metadata, repository-local policy, DAD registry pointers, and privacy-safe evidence only.",
-      "privacy_classes": ["public", "internal", "confidential", "restricted_by_local_policy"],
-      "consequence_classes": ["small", "medium", "large", "critical"],
-      "effect_classes": ["read_only", "candidate_local_artifact"],
-      "dependencies": ["skill:portable-capability-governance", "skill:subagent-continuous-improvement"],
-      "reverse_consumers": ["agent-preflight", "material-work-routing", "skill:dad-ci-module-boundary-governance"],
+      "privacy_classes": [
+        "public",
+        "internal",
+        "confidential",
+        "restricted_by_local_policy"
+      ],
+      "consequence_classes": [
+        "small",
+        "medium",
+        "large",
+        "critical"
+      ],
+      "effect_classes": [
+        "read_only",
+        "candidate_local_artifact"
+      ],
+      "dependencies": [
+        "skill:portable-capability-governance",
+        "skill:subagent-continuous-improvement"
+      ],
+      "reverse_consumers": [
+        "agent-preflight",
+        "material-work-routing",
+        "skill:dad-ci-module-boundary-governance"
+      ],
       "adapter_revision_ids": [],
       "harness_revision_id": "harness-revision:portable-capability-contract:0.1.0",
-      "evidence_refs": ["assets/agent-skills/dad-work-router/SKILL.md", "tests/test_portability_control.py"],
+      "evidence_refs": [
+        "assets/agent-skills/dad-work-router/SKILL.md",
+        "tests/test_portability_control.py"
+      ],
       "fresh_until": "2026-10-16T00:00:00-04:00",
       "rollback_ref": "Revert the source-ingestion and CI-boundary route additions while preserving the prior DAD preflight router.",
       "candidate_only": true,
@@ -514,17 +1159,52 @@
         "effect": "sha256:fb3e062e1556ef814252b1efc3c128aee15b32132ce649a2cdcdec380278f699",
         "authority": "sha256:cb357bdaa2156d602fae9cb95cb31c564654962e59a79807ebafbdfb42889004"
       },
-      "capability_ids": ["module_ownership_manifest", "transitive_suite_selection", "workflow_contract_validation", "metadata_only_adoption_audit"],
-      "tool_ids": ["python", "json-schema", "gitwildmatch"],
+      "capability_ids": [
+        "module_ownership_manifest",
+        "transitive_suite_selection",
+        "workflow_contract_validation",
+        "metadata_only_adoption_audit"
+      ],
+      "tool_ids": [
+        "python",
+        "json-schema",
+        "gitwildmatch"
+      ],
       "context_contract": "Repository-relative paths, module IDs, owners, dependency evidence, workflow metadata, and sanitized fixtures only.",
-      "privacy_classes": ["public", "internal", "confidential", "restricted_by_local_policy"],
-      "consequence_classes": ["small", "medium", "large", "critical"],
-      "effect_classes": ["read_only", "candidate_local_artifact"],
-      "dependencies": ["skill:dad-work-router", "skill:portable-capability-governance", "skill:subagent-peer-review-routing"],
-      "reverse_consumers": ["new-repo-scaffold", "ci-contract-workflow", "enrolled-repo-adoption-audit"],
-      "adapter_revision_ids": ["portability-card-revision:ci-module-boundary-github-adapter:0.1.0"],
+      "privacy_classes": [
+        "public",
+        "internal",
+        "confidential",
+        "restricted_by_local_policy"
+      ],
+      "consequence_classes": [
+        "small",
+        "medium",
+        "large",
+        "critical"
+      ],
+      "effect_classes": [
+        "read_only",
+        "candidate_local_artifact"
+      ],
+      "dependencies": [
+        "skill:dad-work-router",
+        "skill:portable-capability-governance",
+        "skill:subagent-peer-review-routing"
+      ],
+      "reverse_consumers": [
+        "new-repo-scaffold",
+        "ci-contract-workflow",
+        "enrolled-repo-adoption-audit"
+      ],
+      "adapter_revision_ids": [
+        "portability-card-revision:ci-module-boundary-github-adapter:0.1.0"
+      ],
       "harness_revision_id": "harness-revision:ci-module-boundary-governance:0.1.0",
-      "evidence_refs": ["tests/test_ci_module_boundaries.py", "roadmap/evidence/ci-module-boundary-decision.md"],
+      "evidence_refs": [
+        "tests/test_ci_module_boundaries.py",
+        "roadmap/evidence/ci-module-boundary-decision.md"
+      ],
       "fresh_until": "2026-10-16T00:00:00-04:00",
       "rollback_ref": "Remove activation pointers and provider adapters while preserving candidate manifests and evidence.",
       "candidate_only": true,
@@ -566,17 +1246,51 @@
         "effect": "sha256:0068c7b46efb7538383e33a20cacccb60b206d970edc5f16503e872d1817be2c",
         "authority": "sha256:16604db90e104319dc5f6334f4ca20fe67df2988d349755bf49c7cbd8c8e0e42"
       },
-      "capability_ids": ["metadata_first_source_inventory", "opaque_privacy_exclusion", "revision_bound_candidate_snapshot", "bounded_knowledge_normalization", "candidate_graph_projection"],
-      "tool_ids": ["python", "git", "json-schema"],
+      "capability_ids": [
+        "metadata_first_source_inventory",
+        "opaque_privacy_exclusion",
+        "revision_bound_candidate_snapshot",
+        "bounded_knowledge_normalization",
+        "candidate_graph_projection"
+      ],
+      "tool_ids": [
+        "python",
+        "git",
+        "json-schema"
+      ],
       "context_contract": "Stable source identity, Git metadata, explicit read and copy allowlists, bounded reusable fields, opaque privacy-exclusion hashes, and human-review evidence only.",
-      "privacy_classes": ["internal", "confidential", "restricted_by_local_policy"],
-      "consequence_classes": ["small", "medium", "large", "critical"],
-      "effect_classes": ["read_only", "candidate_local_artifact"],
-      "dependencies": ["skill:dad-work-router", "skill:portable-capability-governance", "skill:knowledge-engineering-ops"],
-      "reverse_consumers": ["search-before-create", "source-knowledge-ingestion-graph", "new-repo-scaffold", "cross-repo-learning-review"],
+      "privacy_classes": [
+        "internal",
+        "confidential",
+        "restricted_by_local_policy"
+      ],
+      "consequence_classes": [
+        "small",
+        "medium",
+        "large",
+        "critical"
+      ],
+      "effect_classes": [
+        "read_only",
+        "candidate_local_artifact"
+      ],
+      "dependencies": [
+        "skill:dad-work-router",
+        "skill:portable-capability-governance",
+        "skill:knowledge-engineering-ops"
+      ],
+      "reverse_consumers": [
+        "search-before-create",
+        "source-knowledge-ingestion-graph",
+        "new-repo-scaffold",
+        "cross-repo-learning-review"
+      ],
       "adapter_revision_ids": [],
       "harness_revision_id": "harness-revision:governed-source-knowledge-ingestion:0.1.0",
-      "evidence_refs": ["tests/test_source_knowledge_ingestion.py", "roadmap/evidence/albert-source-knowledge-ingestion-report.json"],
+      "evidence_refs": [
+        "tests/test_source_knowledge_ingestion.py",
+        "roadmap/evidence/albert-source-knowledge-ingestion-report.json"
+      ],
       "fresh_until": "2026-10-16T00:00:00-04:00",
       "rollback_ref": "Mark the snapshot rejected or superseded, route consumers to the prior reviewed snapshot, and rebuild the candidate graph without deleting provenance or mutating the source repository.",
       "candidate_only": true,
@@ -595,7 +1309,10 @@
       "status": "schema_validated",
       "content_digest": "sha256:4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
       "core_revision_id": "portability-card-revision:ci-module-boundary-governance:0.1.0",
-      "target_capability_predicate": {"provider": "github-actions", "required_status": "always_starting_aggregator"},
+      "target_capability_predicate": {
+        "provider": "github-actions",
+        "required_status": "always_starting_aggregator"
+      },
       "adapter_interface_digest": "sha256:75d4104d4d6cb13d20464e3051362cd3751b5a48de6a86bcfc3bd83815444d70",
       "preserved_contract_digests": {
         "input": "sha256:01298fbb37ec7f2fc1f46541873ea2f100f0a88510cbb71c50da9df0f8d126c9",
@@ -605,8 +1322,16 @@
         "effect": "sha256:fb3e062e1556ef814252b1efc3c128aee15b32132ce649a2cdcdec380278f699",
         "authority": "sha256:cb357bdaa2156d602fae9cb95cb31c564654962e59a79807ebafbdfb42889004"
       },
-      "compatibility_evidence": ["templates/ci-module-boundary/github/selector-and-aggregator.yml", "src/digital_asset_directory/ci_module_boundary_github.py", ".github/workflows/validate.yml", ".github/workflows/rust-ci-pr.yml", "tests/test_ci_module_boundaries.py"],
-      "target_runtime_classes": ["github-actions"],
+      "compatibility_evidence": [
+        "templates/ci-module-boundary/github/selector-and-aggregator.yml",
+        "src/digital_asset_directory/ci_module_boundary_github.py",
+        ".github/workflows/validate.yml",
+        ".github/workflows/rust-ci-pr.yml",
+        "tests/test_ci_module_boundaries.py"
+      ],
+      "target_runtime_classes": [
+        "github-actions"
+      ],
       "fresh_until": "2026-10-16T00:00:00-04:00",
       "rollback_ref": "Remove the GitHub adapter and restore the prior reviewed workflow without changing the provider-neutral manifest.",
       "candidate_only": true,
@@ -670,20 +1395,65 @@
         "src/digital_asset_directory/portfolio_roadmap.py",
         "templates/hooks/intent-continuity-shadow-receipt.template.json"
       ],
-      "content_digest": "sha256:ed82e8a906bedb35fe8d3b188fb637799c1ffc4b4196df330ef92270524ba5c0",
+      "content_digest": "sha256:8bdf6e0b909628e54a3cbfe8323deae112aad4167474b2918e48dc41bf9f59de",
       "source_observation_digest": "sha256:1aeef157eb837554b2d8bf2b3de020f8daf701533a3ca6efe7d31e0888368a9a",
-      "contract_digests": {"input": "sha256:eee475da7d6fe76d90852dfa97de0e1f047cb72d7d0134552245b7cda9a9fb68", "output": "sha256:0ec04e3bcb58df087b53068eb3756924c878f35a40871814bd8749313aa69dea", "error": "sha256:0c31568c5353cbf327cd009c17af20a687f7e97685e609c9a8d96f03852fd118", "privacy": "sha256:6eccc25be5945d494635818e68177f6efe953e9f2e74fbf165b5139d08429551", "effect": "sha256:c9093452afcdef36603faec991dc45d87d2166fb706f2b70f263b6625f6a3491", "authority": "sha256:408c3ee0aef794f423d49ba8141f3492961aa68b354d03c37c455d072d7e32c3"},
-      "capability_ids": ["project_identity_and_related_work", "workstream_planning", "neglected_work_recovery", "dependency_frontier_analysis", "delivery_validation_and_handoff"],
-      "tool_ids": ["dad-cli", "git-read-only", "json-schema", "explicit-runtime-metadata-receipts"],
+      "contract_digests": {
+        "input": "sha256:eee475da7d6fe76d90852dfa97de0e1f047cb72d7d0134552245b7cda9a9fb68",
+        "output": "sha256:0ec04e3bcb58df087b53068eb3756924c878f35a40871814bd8749313aa69dea",
+        "error": "sha256:0c31568c5353cbf327cd009c17af20a687f7e97685e609c9a8d96f03852fd118",
+        "privacy": "sha256:6eccc25be5945d494635818e68177f6efe953e9f2e74fbf165b5139d08429551",
+        "effect": "sha256:c9093452afcdef36603faec991dc45d87d2166fb706f2b70f263b6625f6a3491",
+        "authority": "sha256:408c3ee0aef794f423d49ba8141f3492961aa68b354d03c37c455d072d7e32c3"
+      },
+      "capability_ids": [
+        "project_identity_and_related_work",
+        "workstream_planning",
+        "neglected_work_recovery",
+        "dependency_frontier_analysis",
+        "delivery_validation_and_handoff"
+      ],
+      "tool_ids": [
+        "dad-cli",
+        "git-read-only",
+        "json-schema",
+        "explicit-runtime-metadata-receipts"
+      ],
       "context_contract": "Private minimized plan, roadmap, ref, worktree, task-metadata, validation, activity, and closeout evidence with explicit coverage gaps; never raw conversations, prompts, source blobs, diffs, paths, secrets, or credentials.",
-      "privacy_classes": ["public", "internal", "confidential", "restricted_by_local_policy"],
-      "consequence_classes": ["small", "medium", "large", "critical"],
-      "effect_classes": ["read_only", "candidate_local_artifact"],
-      "dependencies": ["skill:dad-work-router", "skill:portable-capability-governance", "skill:subagent-continuous-improvement"],
-      "reverse_consumers": ["portfolio-os-cli", "intent-continuity-shadow-trial", "capability-os-cockpit"],
-      "adapter_revision_ids": ["portability-card-revision:adapter-intent-continuity-codex-host:0.3.9"],
+      "privacy_classes": [
+        "public",
+        "internal",
+        "confidential",
+        "restricted_by_local_policy"
+      ],
+      "consequence_classes": [
+        "small",
+        "medium",
+        "large",
+        "critical"
+      ],
+      "effect_classes": [
+        "read_only",
+        "candidate_local_artifact"
+      ],
+      "dependencies": [
+        "skill:dad-work-router",
+        "skill:portable-capability-governance",
+        "skill:subagent-continuous-improvement"
+      ],
+      "reverse_consumers": [
+        "portfolio-os-cli",
+        "intent-continuity-shadow-trial",
+        "capability-os-cockpit"
+      ],
+      "adapter_revision_ids": [
+        "portability-card-revision:adapter-intent-continuity-codex-host:0.3.9"
+      ],
       "harness_revision_id": "harness-revision:portable-capability-contract:0.1.0",
-      "evidence_refs": ["docs/INTENT_CONTINUITY_GRAPH.md", "tests/test_portfolio_continuity_runtime.py", "tests/test_portfolio_continuity_trial.py"],
+      "evidence_refs": [
+        "docs/INTENT_CONTINUITY_GRAPH.md",
+        "tests/test_portfolio_continuity_runtime.py",
+        "tests/test_portfolio_continuity_trial.py"
+      ],
       "fresh_until": "2026-10-16T00:00:00-04:00",
       "rollback_ref": "Disable and remove the inactive continuity adapter and projections while preserving immutable private plan and roadmap evidence.",
       "candidate_only": true,
@@ -702,8 +1472,11 @@
       "status": "schema_validated",
       "core_revision_id": "portability-card-revision:skill-personal-project-management-ops:0.4.8",
       "content_digest": "sha256:4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
-      "target_capability_predicate": {"runtime_adapter_id": "adapter:codex-host", "status": "supervised_silent_shadow"},
-      "adapter_interface_digest": "sha256:351ee8de385bf728bcf6bf140f467ab343579bf9507f9d9e94b429d96ab44c28",
+      "target_capability_predicate": {
+        "runtime_adapter_id": "adapter:codex-host",
+        "status": "supervised_silent_shadow"
+      },
+      "adapter_interface_digest": "sha256:c9567379d4aab9f5520c5e590890da49d5666e71a8054803893c01cfe221f057",
       "adapter_interface_sources": [
         ".codex/hooks.json",
         ".codex/hooks/intent_continuity_shadow.py",
@@ -724,9 +1497,25 @@
         "src/digital_asset_directory/portfolio_continuity_trial.py",
         "src/digital_asset_directory/cli.py"
       ],
-      "preserved_contract_digests": {"input": "sha256:eee475da7d6fe76d90852dfa97de0e1f047cb72d7d0134552245b7cda9a9fb68", "output": "sha256:0ec04e3bcb58df087b53068eb3756924c878f35a40871814bd8749313aa69dea", "error": "sha256:0c31568c5353cbf327cd009c17af20a687f7e97685e609c9a8d96f03852fd118", "privacy": "sha256:6eccc25be5945d494635818e68177f6efe953e9f2e74fbf165b5139d08429551", "effect": "sha256:c9093452afcdef36603faec991dc45d87d2166fb706f2b70f263b6625f6a3491", "authority": "sha256:408c3ee0aef794f423d49ba8141f3492961aa68b354d03c37c455d072d7e32c3"},
-      "compatibility_evidence": ["schemas/portfolio-continuity-adapter-receipt.schema.json", "schemas/intent-continuity-host-readiness.schema.json", "tests/test_portfolio_continuity_adapter.py", "tests/test_portfolio_continuity_codex_hook.py", "tests/test_portfolio_continuity_host_readiness.py", "tests/test_portfolio_continuity_runtime.py"],
-      "target_runtime_classes": ["codex_host"],
+      "preserved_contract_digests": {
+        "input": "sha256:eee475da7d6fe76d90852dfa97de0e1f047cb72d7d0134552245b7cda9a9fb68",
+        "output": "sha256:0ec04e3bcb58df087b53068eb3756924c878f35a40871814bd8749313aa69dea",
+        "error": "sha256:0c31568c5353cbf327cd009c17af20a687f7e97685e609c9a8d96f03852fd118",
+        "privacy": "sha256:6eccc25be5945d494635818e68177f6efe953e9f2e74fbf165b5139d08429551",
+        "effect": "sha256:c9093452afcdef36603faec991dc45d87d2166fb706f2b70f263b6625f6a3491",
+        "authority": "sha256:408c3ee0aef794f423d49ba8141f3492961aa68b354d03c37c455d072d7e32c3"
+      },
+      "compatibility_evidence": [
+        "schemas/portfolio-continuity-adapter-receipt.schema.json",
+        "schemas/intent-continuity-host-readiness.schema.json",
+        "tests/test_portfolio_continuity_adapter.py",
+        "tests/test_portfolio_continuity_codex_hook.py",
+        "tests/test_portfolio_continuity_host_readiness.py",
+        "tests/test_portfolio_continuity_runtime.py"
+      ],
+      "target_runtime_classes": [
+        "codex_host"
+      ],
       "fresh_until": "2026-08-16T00:00:00-04:00",
       "rollback_ref": "Delete or disable .codex/hooks.json and set every trigger in config/intent-continuity-shadow-hooks.json to disabled without changing the provider-neutral receipt core or private append-only evidence.",
       "candidate_only": true,

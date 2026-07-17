@@ -1,4 +1,4 @@
-schema_version: dad.ci_module_boundaries.v1
+﻿schema_version: dad.ci_module_boundaries.v1
 capability_id: dad:capability:ci-module-boundary-governance
 capability_revision: 0.1.0
 repository: {repository_id: dad, owners: [dad-maintainer], default_branch: main}
@@ -13,10 +13,10 @@ modules:
       - {edge_type: authoritative_input, paths: [src/digital_asset_directory/config.py]}
   - module_id: governance
     owners: [dad-maintainer]
-    roots: [registry, schemas, assets, templates, docs, roadmap, config/intent-continuity-shadow-hooks.json, .digital-asset/key-values/change-log.jsonl, .digital-asset/key-values/registry.json, .codex/hooks.json, .gitattributes, AGENTS.md, AI_FRONT_DOOR.md, AI_TABLE_OF_CONTENTS.md, MACHINE_NAVIGATION_MANIFEST.json]
+    roots: [registry, schemas, assets, templates, docs, roadmap, config/intent-continuity-shadow-hooks.json, .digital-asset/key-values/change-log.jsonl, .digital-asset/key-values/registry.json, .codex/hooks.json, .githooks, .gitattributes, AGENTS.md, AI_FRONT_DOOR.md, AI_TABLE_OF_CONTENTS.md, MACHINE_NAVIGATION_MANIFEST.json]
     triggers:
       - {edge_type: code, paths: [assets/**, templates/**]}
-      - {edge_type: contract, paths: [registry/**, schemas/**, .digital-asset/key-values/change-log.jsonl, .digital-asset/key-values/registry.json, .codex/hooks.json, .gitattributes, AGENTS.md, AI_FRONT_DOOR.md, AI_TABLE_OF_CONTENTS.md, MACHINE_NAVIGATION_MANIFEST.json]}
+      - {edge_type: contract, paths: [registry/**, schemas/**, .digital-asset/key-values/change-log.jsonl, .digital-asset/key-values/registry.json, .codex/hooks.json, .githooks/**, .gitattributes, AGENTS.md, AI_FRONT_DOOR.md, AI_TABLE_OF_CONTENTS.md, MACHINE_NAVIGATION_MANIFEST.json]}
       - {edge_type: authoritative_input, paths: [registry/**, schemas/**, docs/**, roadmap/**, config/intent-continuity-shadow-hooks.json]}
   - module_id: rust-scan
     owners: [dad-maintainer]
@@ -63,9 +63,19 @@ workflows:
       governance: sha256:3383af32eddc0e53d2262a627b7c8563623edd9e482761b71269fc8b5d24ba64
       rust: sha256:9fcd0b0b653ebf381cad09a5c167b5c2b3b669889861bd444fdfa7e41044fb47
       validate: sha256:8a968878ee7dd02732ff51f504db2be70899c97eb471133fff83475c866b5657
+  - {workflow_id: dad-contract-check, provider_path: .github/workflows/dad-contract-check.yml, lane: ci_contract, events: [pull_request], required_check: false, always_reports: true, scope: repository, workflow_contract_digest: "sha256:ea3a64a94cc8819486ae24bda51f3b399b6151cebeaa9dbcbd3564fb986f1814"}
   - {workflow_id: rust-pr, provider_path: .github/workflows/rust-ci-pr.yml, lane: module, events: [workflow_call], required_check: false, always_reports: false, scope: module, workflow_contract_digest: "sha256:ca1889d5dd1c9913dbbff8ab3cdfe11cc77b5f7b6687e7334463c95a3e6ab556"}
   - {workflow_id: rust-long, provider_path: .github/workflows/rust-ci-long.yml, lane: scheduled_full_regression, events: [schedule, workflow_dispatch], required_check: false, always_reports: true, scope: repository, workflow_contract_digest: "sha256:1b8d168ea9d989bbd95930ff4f04c84efb121f557e07741c0a48c3ee4322af49"}
   - {workflow_id: scheduled-full, provider_path: .github/workflows/scheduled-full-regression.yml, lane: scheduled_full_regression, events: [schedule, workflow_dispatch], required_check: false, always_reports: true, scope: repository, workflow_contract_digest: "sha256:05970a4507d42dd4eb8ef803a2dd805db314a9c633befb465424f0233110aa95"}
 generated_artifacts:
   - {artifact_id: processed-candidates, module_id: governance, paths: [processed/**], authoritative_inputs: [registry/**, schemas/**]}
-exceptions: []
+exceptions:
+  - exception_id: dad-contract-check-advisory-pr57
+    codes: [scope_broadening]
+    diagnostic_scopes: [manifest:scope]
+    owner: dad-maintainer
+    reason: PR 57 declares the warn-only, non-required dad-contract-check advisory workflow in the CI contract; it never blocks merges and this exception is removed after merge like the PR56 precedent.
+    expires_on: "2026-07-24"
+    reviewed_by: Lowell Wong
+    reviewed_at: "2026-07-17T09:35:00-04:00"
+    review_ref: claude-session:80adbe3d-008a-4083-85cd-54dc4fb5686c:approved-ci-scope-exception-pr57

@@ -1,0 +1,51 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "dad://schemas/contract-check-policy.v1",
+  "title": "DAD Contract Check Policy",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "policy_id",
+    "mode",
+    "authority_boundary",
+    "protected_paths_source",
+    "extra_protected_globs",
+    "exempt_globs",
+    "trailer_key",
+    "trailer_pattern",
+    "bypass_key",
+    "bypass_pattern",
+    "remediation",
+    "probation"
+  ],
+  "properties": {
+    "schema_version": {"type": "string"},
+    "policy_id": {"type": "string"},
+    "mode": {"enum": ["warn", "enforce"]},
+    "authority_boundary": {"type": "string"},
+    "protected_paths_source": {
+      "type": "string",
+      "description": "Repo-relative CI module-boundaries manifest whose module roots and workflow paths define the protected surface. The contract check derives from it instead of keeping a competing path list."
+    },
+    "extra_protected_globs": {"type": "array", "items": {"type": "string"}},
+    "exempt_globs": {"type": "array", "items": {"type": "string"}},
+    "trailer_key": {"type": "string"},
+    "trailer_pattern": {"type": "string"},
+    "bypass_key": {"type": "string"},
+    "bypass_pattern": {"type": "string"},
+    "remediation": {"type": "string"},
+    "probation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["owner", "started", "review_after", "promotion_criteria", "kill_criteria"],
+      "properties": {
+        "owner": {"type": "string"},
+        "started": {"type": "string"},
+        "review_after": {"type": "string"},
+        "promotion_criteria": {"type": "string"},
+        "kill_criteria": {"type": "string"}
+      }
+    }
+  }
+}
