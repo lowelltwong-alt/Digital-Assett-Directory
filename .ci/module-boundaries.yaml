@@ -13,10 +13,10 @@ modules:
       - {edge_type: authoritative_input, paths: [src/digital_asset_directory/config.py]}
   - module_id: governance
     owners: [dad-maintainer]
-    roots: [registry, schemas, assets, templates, docs, roadmap, config/intent-continuity-shadow-hooks.json, .digital-asset/key-values/change-log.jsonl, .digital-asset/key-values/registry.json, .codex/hooks.json, .gitattributes, AGENTS.md, AI_FRONT_DOOR.md, AI_TABLE_OF_CONTENTS.md, MACHINE_NAVIGATION_MANIFEST.json]
+    roots: [registry, schemas, assets, templates, docs, roadmap, config/intent-continuity-shadow-hooks.json, .digital-asset/key-values/change-log.jsonl, .digital-asset/key-values/registry.json, .codex/hooks.json, .githooks, .gitattributes, AGENTS.md, AI_FRONT_DOOR.md, AI_TABLE_OF_CONTENTS.md, MACHINE_NAVIGATION_MANIFEST.json]
     triggers:
       - {edge_type: code, paths: [assets/**, templates/**]}
-      - {edge_type: contract, paths: [registry/**, schemas/**, .digital-asset/key-values/change-log.jsonl, .digital-asset/key-values/registry.json, .codex/hooks.json, .gitattributes, AGENTS.md, AI_FRONT_DOOR.md, AI_TABLE_OF_CONTENTS.md, MACHINE_NAVIGATION_MANIFEST.json]}
+      - {edge_type: contract, paths: [registry/**, schemas/**, .digital-asset/key-values/change-log.jsonl, .digital-asset/key-values/registry.json, .codex/hooks.json, .githooks/**, .gitattributes, AGENTS.md, AI_FRONT_DOOR.md, AI_TABLE_OF_CONTENTS.md, MACHINE_NAVIGATION_MANIFEST.json]}
       - {edge_type: authoritative_input, paths: [registry/**, schemas/**, docs/**, roadmap/**, config/intent-continuity-shadow-hooks.json]}
   - module_id: rust-scan
     owners: [dad-maintainer]
