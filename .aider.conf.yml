@@ -1,5 +1,0 @@
-# Read the repository contract before material work.
-# Run DAD preflight and postflight; include the printed DAD-Session trailer.
-read:
-# Protected-path changes without a lifecycle trailer are blocked by contract check.
-  - AGENTS.md
