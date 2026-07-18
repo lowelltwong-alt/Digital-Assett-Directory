@@ -358,6 +358,7 @@
         ".githooks/pre-push",
         ".githooks/pre-push.ps1",
         ".github/CODEOWNERS",
+        ".github/copilot-instructions.md",
         ".github/workflows/dad-contract-check.yml",
         ".github/workflows/rust-ci-long.yml",
         ".github/workflows/rust-ci-pr.yml",
@@ -405,7 +406,7 @@
         "src/digital_asset_directory/validation.py",
         "templates/downstream/AGENTS_MANAGED_BLOCK.md"
       ],
-      "content_digest": "sha256:dc04a8a5ff22a50aa7b32fc85dbe0e586e1d482a347e685a5a20f573c96f86db",
+      "content_digest": "sha256:2ce1ee01016142f9071a5e6b90e04e263b781c0ce3a170d8dd19d7928acc3386",
       "contract_digests": {
         "input": "sha256:eee475da7d6fe76d90852dfa97de0e1f047cb72d7d0134552245b7cda9a9fb68",
         "output": "sha256:0ec04e3bcb58df087b53068eb3756924c878f35a40871814bd8749313aa69dea",
