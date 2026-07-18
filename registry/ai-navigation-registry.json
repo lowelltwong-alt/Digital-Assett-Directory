@@ -646,7 +646,7 @@
     {
       "branch_id": "ml_workflow_agent_family",
       "path": "assets/agent-skills/ml-workflow-agent-family/SKILL.md",
-      "role": "Model-independent ML opportunity, technique, experiment, implementation, independent validation, research, deployment-readiness, monitoring, and lifecycle specialization.",
+      "role": "Model-independent ML opportunity, routed specialist and hybrid composition, experiment, implementation, independent validation, research, deployment-readiness, monitoring, and lifecycle specialization.",
       "tags": [
         "agent_skill",
         "machine_learning",
@@ -657,13 +657,14 @@
         "human_gate"
       ],
       "use_when": "You need to decide whether ML fits, find or route an ML role or technique, execute a governed ML workflow, inspect dependencies, or review research and lifecycle state.",
-      "current_version": "0.1.0",
-      "last_material_change_at": "2026-07-14T22:00:00Z",
+      "current_version": "0.2.0",
+      "last_material_change_at": "2026-07-18T12:00:00Z",
       "change_class": "library_catalog",
       "route_after": [
         "AI_FRONT_DOOR.md",
         "registry/ml-agent-family-registry.json",
         "registry/ml-technique-registry.json",
+        "docs/ML_SPECIALIST_MESH_AND_HYBRIDS.md",
         "registry/subagent-evaluation-profile-registry.json",
         "docs/RESEARCH_INTAKE_PIPELINE.md"
       ],
@@ -731,6 +732,15 @@
     }
   ],
   "recent_changes": [
+    {
+      "change_id": "nav-change:2026-07-18:ml-specialist-mesh-suite",
+      "changed_at": "2026-07-18T12:00:00Z",
+      "change_type": "expanded_ml_specialist_mesh_and_hybrid_workflows",
+      "paths": ["assets/agent-skills/ml-workflow-agent-family/", "registry/ml-agent-family-registry.json", "registry/ml-technique-registry.json", "docs/ML_SPECIALIST_MESH_AND_HYBRIDS.md", "tests/test_ml_agent_family.py"],
+      "summary": "Extended the single candidate ML family with eight demand-activated specialists, five technique cards, three governed workflows, typed experiment and prediction contracts, and primary-source hybrid guidance.",
+      "agent_action": "Begin with the deterministic fit receipt, route only the needed specialist, compare against a credible baseline, require component ablations and independent checking, and keep deployment, automation, training authority, and retraining human-gated.",
+      "route_tags": ["machine_learning", "agent_skill", "workflow", "research_intake", "validation", "governance", "human_gate"]
+    },
     {
       "change_id": "nav-change:2026-07-16:synthetic-data-resource-library",
       "changed_at": "2026-07-16T22:30:00Z",
@@ -1139,26 +1149,6 @@
         "learning_loop",
         "validation",
         "rust"
-      ]
-    },
-    {
-      "change_id": "nav-change:2026-07-06:phase-8-human-gate-review-packet",
-      "changed_at": "2026-07-06T04:30:06Z",
-      "change_type": "added_phase8_human_gate_review_packet_route",
-      "paths": [
-        "roadmap/evidence/phase-8-dad-local-deployment.human-review-packet.json",
-        "roadmap/evidence/phase-8-dad-local-deployment.md",
-        "roadmap/roadmap.yaml",
-        "AI_TABLE_OF_CONTENTS.md",
-        "MACHINE_NAVIGATION_MANIFEST.json"
-      ],
-      "summary": "Added a generated review-only packet and navigation route for the four open Phase 8 human gates; Phase 8 now declares awaiting_human_gate while command evidence remains pending human review.",
-      "agent_action": "Use the packet to review Phase 8 gates, but do not treat it as approval or write roadmap/gate-evidence.json without explicit human review.",
-      "route_tags": [
-        "roadmap",
-        "deployment",
-        "human_gate",
-        "validation"
       ]
     },
     {

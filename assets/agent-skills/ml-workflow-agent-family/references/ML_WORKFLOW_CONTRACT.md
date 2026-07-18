@@ -50,6 +50,26 @@ Use nested selection or a final untouched test set when tuning materially. Keep
 feature, preprocessing, resampling, and threshold fitting inside the training
 fold. Record all exclusions and failed attempts.
 
+Emit a versioned `MLExperimentContract` containing, at minimum:
+
+- dataset and schema identities, provenance, license or consent, and content
+  digests or immutable query identities;
+- target, task, supported decision, utility or error costs, and the no-ML
+  baseline;
+- split unit, event and availability cutoffs, selection protocol, metrics,
+  slices, calibration and uncertainty checks, robustness tests, and acceptance
+  or kill thresholds;
+- technique, implementation and dependency versions, random seeds where
+  meaningful, compute budget, and artifact hashes; and
+- decision, limitations, failed attempts, owner, checker, and human gates.
+
+Before an artifact can be integrated, emit a typed `PredictContract` that names
+required features, types, units, missing and unseen-category behavior, time
+cutoff, preprocessing identity, outputs, score semantics, intervals or other
+uncertainty, explanations and limitations, abstention, fallback, latency and
+resource bounds, and compatible artifact revisions. A schema-valid contract is
+not deployment authority.
+
 ## 4. Select Techniques From Evidence
 
 Search the technique registry. For every candidate, carry forward prerequisites,
@@ -66,6 +86,27 @@ simplest credible baseline first. Every optional stage records entry and stop
 criteria plus rejected alternatives. Do not introduce distributed execution
 without measured local insufficiency or an approved hard constraint. Use one
 deep-learning backend by default and justify any second backend independently.
+
+For a specialist champion/challenger, compare the specialist against the same
+simple baseline on the same split and decision metric. For a hybrid, lock each
+stage's input/output contract and run component ablations plus an end-to-end
+test. Useful candidate compositions include:
+
+- frozen text, image, or self-supervised embeddings feeding a gradient-boosted
+  tree on reviewed tabular features;
+- governed retrieval or graph candidate generation feeding a GBDT or
+  wide-and-deep ranker, with candidate recall and ranking quality evaluated
+  separately;
+- a time-series baseline or temporal model followed by quantile or conformal
+  residual intervals with rolling coverage checks;
+- double machine learning with tree or neural nuisance estimators, while the
+  causal identification assumptions remain controlling; and
+- calibrated uncertainty plus diversity for active-learning queues, with an
+  independently reviewed abstention and audit path.
+
+Stop a hybrid when one stage adds no held-out value, provenance or license
+cannot be carried end to end, leakage crosses stage boundaries, uncertainty is
+uncalibrated, or the fallback cannot isolate a failed stage.
 
 ## 5. Implement Reproducibly
 

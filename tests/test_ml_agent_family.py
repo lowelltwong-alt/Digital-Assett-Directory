@@ -61,7 +61,7 @@ def test_technique_registry_is_context_bounded_and_incomplete_by_design() -> Non
     techniques = registry["techniques"]
     ids = [row["technique_id"] for row in techniques]
     revisions = [row["revision_id"] for row in techniques]
-    assert len(techniques) == 15
+    assert len(techniques) == 20
     assert len(ids) == len(set(ids))
     assert len(revisions) == len(set(revisions))
     assert "intentionally incomplete" in registry["coverage_statement"]
@@ -75,6 +75,23 @@ def test_technique_registry_is_context_bounded_and_incomplete_by_design() -> Non
         assert row["evaluation_requirements"]
         assert row["operational_requirements"]
         assert row["source_refs"]
+
+
+def test_specialist_suite_and_frontier_techniques_are_discoverable() -> None:
+    registry = load_json("registry/ml-technique-registry.json")
+    ids = {row["technique_id"] for row in registry["techniques"]}
+    assert {
+        "ml-technique:wide-deep-tabular-learning",
+        "ml-technique:representation-tabular-hybrids",
+        "ml-technique:calibrated-conformal-uncertainty",
+        "ml-technique:active-learning",
+        "ml-technique:automl-hyperparameter-optimization",
+    } <= ids
+    boosting = next(
+        row for row in registry["techniques"]
+        if row["technique_id"] == "ml-technique:tree-ensembles"
+    )
+    assert "XGBoost" in boosting["implementation_options"]
 
 
 def test_runtime_observations_are_expiring_hints_not_identity() -> None:
@@ -115,6 +132,57 @@ def test_declared_role_pack_is_ai_agnostic_and_uses_closed_capabilities() -> Non
     assert pack["routing_policy"]["one_writer"] is True
     assert pack["routing_policy"]["independent_checker_required"] is True
     assert pack["routing_policy"]["model_ids_are_attempt_metadata_only"] is True
+    role_ids = {row["role_id"] for row in pack["roles"]}
+    assert {
+        "ml-tabular-boosting-specialist",
+        "ml-wide-deep-representation-specialist",
+        "ml-graph-ranking-specialist",
+        "ml-temporal-uncertainty-specialist",
+        "ml-causal-decision-specialist",
+        "ml-active-online-learning-specialist",
+        "ml-privacy-federated-specialist",
+        "ml-operations-evaluation-specialist",
+    } <= role_ids
+
+
+def test_specialist_workflows_are_candidate_only_and_human_gated() -> None:
+    family = load_json("registry/ml-agent-family-registry.json")
+    workflows = {row["workflow_id"]: row for row in family["workflow_cards"]}
+    assert {
+        "workflow:ml-specialist-champion-challenger",
+        "workflow:ml-hybrid-composition-review",
+        "workflow:ml-operational-monitoring-and-retraining",
+    } <= workflows.keys()
+    operations = workflows["workflow:ml-operational-monitoring-and-retraining"]
+    assert operations["activation_status"] == "manual"
+    assert "gate:human-deployment" in operations["gate_refs"]
+    routines = yaml.safe_load(
+        (ROOT / "assets/agent-skills/ml-workflow-agent-family/routines.yaml").read_text(
+            encoding="utf-8"
+        )
+    )
+    operational = next(
+        row for row in routines["routines"]
+        if row["routine_id"] == "ml-operational-monitoring-and-retraining"
+    )
+    assert operational["auto_deploy"] is False
+    assert operational["auto_retrain"] is False
+    assert operational["auto_schedule"] is False
+
+
+def test_experiment_predict_and_hybrid_contracts_are_explicit() -> None:
+    contract = (
+        ROOT / "assets/agent-skills/ml-workflow-agent-family/references/ML_WORKFLOW_CONTRACT.md"
+    ).read_text(encoding="utf-8")
+    assert "MLExperimentContract" in contract
+    assert "PredictContract" in contract
+    assert "component ablations" in contract
+    playbook = (ROOT / "docs/ML_SPECIALIST_MESH_AND_HYBRIDS.md").read_text(
+        encoding="utf-8"
+    )
+    assert "Embeddings + XGBoost" in playbook
+    assert "Retrieval/graph + ranker" in playbook
+    assert "Forecast + conformal interval" in playbook
 
 
 def test_catalog_search_is_read_only_relevance_not_dispatch() -> None:
@@ -203,13 +271,41 @@ def test_fit_route_is_mandatory_first_hop_and_schema_valid() -> None:
     assert result["first_hop_completed"] is True
     assert result["dispatch_authorized"] is False
     assert result["specialist_route"]["assessment_digest"] == result["assessment_digest"]
-    assert result["specialist_route"]["role_id"] == "ml-technique-router"
+    assert result["specialist_route"]["role_id"] == "ml-tabular-boosting-specialist"
     assert any("XGBoost" in row["alternative"] for row in result["rejected_alternatives"])
     assert validate_ml_fit_receipt(ROOT, result) == result
     specialist = ml_specialist_route(ROOT, result)
     assert specialist["assessment_digest"] == result["assessment_digest"]
     assert specialist["dispatch_authorized"] is False
 
+
+@pytest.mark.parametrize(
+    ("problem_shape", "expected_role", "required_techniques"),
+    [
+        ("tabular_prediction", "ml-tabular-boosting-specialist", {"ml-technique:tree-ensembles"}),
+        ("high_cardinality_tabular", "ml-wide-deep-representation-specialist", {"ml-technique:tree-ensembles", "ml-technique:wide-deep-tabular-learning"}),
+        ("deep_representation", "ml-wide-deep-representation-specialist", {"ml-technique:deep-representation-learning", "ml-technique:representation-tabular-hybrids"}),
+        ("graph_ranking", "ml-graph-ranking-specialist", {"ml-technique:ranking-recommendation", "ml-technique:graph-geometric-learning"}),
+        ("temporal_forecasting", "ml-temporal-uncertainty-specialist", {"ml-technique:time-series-forecasting", "ml-technique:calibrated-conformal-uncertainty"}),
+        ("causal_decision", "ml-causal-decision-specialist", {"ml-technique:causal-uplift-learning"}),
+        ("active_online_learning", "ml-active-online-learning-specialist", {"ml-technique:active-learning", "ml-technique:online-learning-bandits"}),
+        ("privacy_federated_learning", "ml-privacy-federated-specialist", {"ml-technique:privacy-preserving-federated-learning"}),
+        ("operational_evaluation", "ml-operations-evaluation-specialist", {"ml-technique:calibrated-conformal-uncertainty"}),
+    ],
+)
+def test_fit_route_deterministically_selects_specialist_mesh(
+    problem_shape: str, expected_role: str, required_techniques: set[str]
+) -> None:
+    result = ml_fit_route(
+        ROOT,
+        objective=f"Route a bounded {problem_shape} fixture.",
+        problem_shape=problem_shape,
+        execution_scale="local",
+        label_status="available",
+    )
+    assert result["specialist_route"]["role_id"] == expected_role
+    assert required_techniques <= set(result["candidate_technique_ids"])
+    assert validate_ml_fit_receipt(ROOT, result) == result
 
 @pytest.mark.parametrize("field", ["disposition", "ordered_toolchain", "required_gates"])
 def test_fit_receipt_rejects_material_tampering(field: str) -> None:
@@ -282,6 +378,35 @@ def test_fit_receipt_rejects_forged_but_self_consistent_policy_output() -> None:
     with pytest.raises(ValueError, match="deterministic policy replay"):
         validate_ml_fit_receipt(ROOT, forged)
 
+
+def test_fit_receipt_rejects_self_consistent_specialist_substitution() -> None:
+    receipt = ml_fit_route(
+        ROOT,
+        objective="Predict a bounded synthetic outcome.",
+        problem_shape="tabular_prediction",
+        execution_scale="local",
+        label_status="available",
+    )
+    forged = deepcopy(receipt)
+    forged["specialist_route"]["role_id"] = "ml-graph-ranking-specialist"
+    material = {
+        key: value
+        for key, value in forged.items()
+        if key not in {"assessment_id", "assessment_digest"}
+    }
+    material["specialist_route"] = {
+        key: value
+        for key, value in material["specialist_route"].items()
+        if key != "assessment_digest"
+    }
+    digest_hex = hashlib.sha256(
+        json.dumps(material, sort_keys=True, separators=(",", ":")).encode("utf-8")
+    ).hexdigest()
+    forged["assessment_digest"] = f"sha256:{digest_hex}"
+    forged["assessment_id"] = f"ml-fit-assessment:{digest_hex[:16]}"
+    forged["specialist_route"]["assessment_digest"] = forged["assessment_digest"]
+    with pytest.raises(ValueError, match="deterministic policy replay"):
+        validate_ml_fit_receipt(ROOT, forged)
 
 def test_fit_workflow_interfaces_resolve_and_request_maps_to_cli_inputs() -> None:
     family = load_json("registry/ml-agent-family-registry.json")
@@ -403,6 +528,22 @@ def test_family_contract_declares_non_bypass_and_receipt_binding() -> None:
         for edge in graph
     )
 
+
+    routed_specialists = {
+        edge["target"]
+        for edge in graph
+        if edge["source"] == "role:ml-technique-router" and edge["edge_type"] == "routes_to"
+    }
+    assert routed_specialists == {
+        "role:ml-tabular-boosting-specialist",
+        "role:ml-wide-deep-representation-specialist",
+        "role:ml-graph-ranking-specialist",
+        "role:ml-temporal-uncertainty-specialist",
+        "role:ml-causal-decision-specialist",
+        "role:ml-active-online-learning-specialist",
+        "role:ml-privacy-federated-specialist",
+        "role:ml-operations-evaluation-specialist",
+    }
 
 def test_workflow_decision_requires_no_ml_and_human_gates() -> None:
     payload = {

@@ -19,7 +19,7 @@ TECHNIQUE_SCHEMA = Path("schemas/ml-technique-registry.schema.json")
 FIT_SCHEMA = Path("schemas/ml-fit-routing-assessment.schema.json")
 FIT_REQUEST_SCHEMA = Path("schemas/ml-fit-routing-request.schema.json")
 SUBAGENT_PACK = Path("assets/agent-skills/ml-workflow-agent-family/subagents.yaml")
-ML_FIT_POLICY_REVISION = "ml-fit-routing-policy:0.2.0"
+ML_FIT_POLICY_REVISION = "ml-fit-routing-policy:0.3.0"
 
 PROBLEM_SHAPES = {
     "deterministic_transform",
@@ -27,6 +27,12 @@ PROBLEM_SHAPES = {
     "high_cardinality_tabular",
     "semantic_retrieval",
     "deep_representation",
+    "graph_ranking",
+    "temporal_forecasting",
+    "causal_decision",
+    "active_online_learning",
+    "privacy_federated_learning",
+    "operational_evaluation",
     "unknown",
 }
 EXECUTION_SCALES = {"local", "large_local", "distributed_required", "unknown"}
@@ -224,7 +230,7 @@ def ml_fit_route(
     """Build a deterministic, non-authorizing ML-fit first-hop receipt.
 
     The public route always completes ``workflow:ml-opportunity-review`` before
-    it can name the downstream technique router. A named tool is retained only
+    it can name a deterministic downstream specialist candidate. A named tool is retained only
     as a preference observation and never changes the route.
     """
     objective = objective.strip()
@@ -328,6 +334,10 @@ def ml_fit_route(
         techniques.append("ml-technique:linear-generalized-models")
         if problem_shape in {"tabular_prediction", "high_cardinality_tabular"}:
             techniques.append("ml-technique:tree-ensembles")
+            stage_techniques = ["ml-technique:tree-ensembles"]
+            if problem_shape == "high_cardinality_tabular":
+                techniques.append("ml-technique:wide-deep-tabular-learning")
+                stage_techniques.append("ml-technique:wide-deep-tabular-learning")
             stages.append(
                 _stage(
                     2,
@@ -335,11 +345,15 @@ def ml_fit_route(
                     required=False,
                     entry=["The locked baseline is insufficient on held-out evidence and nonlinear tabular interactions are plausible."],
                     stop=["Stop when comparable held-out gain does not justify added calibration, latency, explanation, and maintenance cost."],
-                    techniques=["ml-technique:tree-ensembles"],
+                    techniques=stage_techniques,
                 )
             )
         elif problem_shape == "deep_representation":
-            techniques.append("ml-technique:deep-representation-learning")
+            representation_techniques = [
+                "ml-technique:deep-representation-learning",
+                "ml-technique:representation-tabular-hybrids",
+            ]
+            techniques.extend(representation_techniques)
             stages.append(
                 _stage(
                     2,
@@ -347,9 +361,51 @@ def ml_fit_route(
                     required=False,
                     entry=["Simpler baselines fail and the modality or representation requirement justifies deep learning."],
                     stop=["Stop if one selected backend cannot beat the baseline under the locked quality, cost, and latency budget; do not add a second backend by default."],
-                    techniques=["ml-technique:deep-representation-learning"],
+                    techniques=representation_techniques,
                 )
             )
+        elif problem_shape == "graph_ranking":
+            graph_techniques = ["ml-technique:ranking-recommendation", "ml-technique:graph-geometric-learning"]
+            techniques.extend(graph_techniques)
+            stages.append(_stage(2, "graph-ranking-candidate", required=False,
+                entry=["A governed graph or candidate set and a measurable ranking target are available."],
+                stop=["Stop if graph-aware or learned ranking does not beat the simple candidate and ranking baseline."],
+                techniques=graph_techniques))
+        elif problem_shape == "temporal_forecasting":
+            temporal_techniques = ["ml-technique:time-series-forecasting", "ml-technique:calibrated-conformal-uncertainty"]
+            techniques.extend(temporal_techniques)
+            stages.append(_stage(2, "temporal-uncertainty-candidate", required=False,
+                entry=["Time-indexed splits, forecast horizon, and uncertainty coverage targets are locked."],
+                stop=["Stop if backtesting or interval coverage fails the locked temporal evaluation contract."],
+                techniques=temporal_techniques))
+        elif problem_shape == "causal_decision":
+            causal_techniques = ["ml-technique:causal-uplift-learning"]
+            techniques.extend(causal_techniques)
+            stages.append(_stage(2, "causal-decision-candidate", required=False,
+                entry=["Treatment, outcome, confounder assumptions, and decision estimand are explicit."],
+                stop=["Stop when identification assumptions or overlap diagnostics are not defensible."],
+                techniques=causal_techniques))
+        elif problem_shape == "active_online_learning":
+            active_techniques = ["ml-technique:active-learning", "ml-technique:online-learning-bandits"]
+            techniques.extend(active_techniques)
+            stages.append(_stage(2, "active-online-candidate", required=False,
+                entry=["Feedback timing, exploration budget, and human labeling authority are explicit."],
+                stop=["Stop if feedback bias, exploration harm, or labeling cost exceeds the approved budget."],
+                techniques=active_techniques))
+        elif problem_shape == "privacy_federated_learning":
+            privacy_techniques = ["ml-technique:privacy-preserving-federated-learning"]
+            techniques.extend(privacy_techniques)
+            stages.append(_stage(2, "privacy-federated-candidate", required=False,
+                entry=["A threat model and data-locality requirement justify distributed private learning."],
+                stop=["Stop when privacy accounting, secure aggregation, or local-data authority cannot be verified."],
+                techniques=privacy_techniques))
+        elif problem_shape == "operational_evaluation":
+            operations_techniques = ["ml-technique:calibrated-conformal-uncertainty"]
+            techniques.extend(operations_techniques)
+            stages.append(_stage(2, "operational-evaluation-candidate", required=False,
+                entry=["Prediction contract, calibration target, drift signals, and rollback owner are explicit."],
+                stop=["Stop before activation when monitoring, rollback, or post-deployment evaluation is incomplete."],
+                techniques=operations_techniques))
 
     if execution_scale != "distributed_required":
         rejected.append(
@@ -395,9 +451,20 @@ def ml_fit_route(
     request_validator_cls = validator_for(request_schema)
     request_validator_cls.check_schema(request_schema)
     request_validator_cls(request_schema).validate(request_payload)
+    specialist_by_problem_shape = {
+        "tabular_prediction": "ml-tabular-boosting-specialist",
+        "high_cardinality_tabular": "ml-wide-deep-representation-specialist",
+        "deep_representation": "ml-wide-deep-representation-specialist",
+        "graph_ranking": "ml-graph-ranking-specialist",
+        "temporal_forecasting": "ml-temporal-uncertainty-specialist",
+        "causal_decision": "ml-causal-decision-specialist",
+        "active_online_learning": "ml-active-online-learning-specialist",
+        "privacy_federated_learning": "ml-privacy-federated-specialist",
+        "operational_evaluation": "ml-operations-evaluation-specialist",
+    }
     specialist_route_material = (
         {
-            "role_id": "ml-technique-router",
+            "role_id": specialist_by_problem_shape[problem_shape],
             "route_status": "candidate_not_dispatched",
         }
         if disposition == "bounded_ml_candidate"

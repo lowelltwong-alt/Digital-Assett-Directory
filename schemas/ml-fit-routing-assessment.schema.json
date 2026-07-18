@@ -14,13 +14,13 @@
   ],
   "properties": {
     "schema_version": {"const": "ml.fit.routing_assessment.v1"},
-    "policy_revision_id": {"const": "ml-fit-routing-policy:0.2.0"},
+    "policy_revision_id": {"const": "ml-fit-routing-policy:0.3.0"},
     "assessment_id": {"type": "string", "pattern": "^ml-fit-assessment:[a-f0-9]{16}$"},
     "assessment_digest": {"type": "string", "pattern": "^sha256:[a-f0-9]{64}$"},
     "first_hop_workflow_id": {"const": "workflow:ml-opportunity-review"},
     "first_hop_completed": {"const": true},
     "objective": {"type": "string", "minLength": 1},
-    "problem_shape": {"enum": ["deterministic_transform", "tabular_prediction", "high_cardinality_tabular", "semantic_retrieval", "deep_representation", "unknown"]},
+    "problem_shape": {"enum": ["deterministic_transform", "tabular_prediction", "high_cardinality_tabular", "semantic_retrieval", "deep_representation", "graph_ranking", "temporal_forecasting", "causal_decision", "active_online_learning", "privacy_federated_learning", "operational_evaluation", "unknown"]},
     "execution_scale": {"enum": ["local", "large_local", "distributed_required", "unknown"]},
     "label_status": {"enum": ["available", "partial", "unavailable", "not_applicable", "unknown"]},
     "consequence": {"enum": ["low", "medium", "high"]},
@@ -40,7 +40,7 @@
           "type": "object", "additionalProperties": false,
           "required": ["role_id", "assessment_digest", "route_status"],
           "properties": {
-            "role_id": {"const": "ml-technique-router"},
+            "role_id": {"enum": ["ml-tabular-boosting-specialist", "ml-wide-deep-representation-specialist", "ml-graph-ranking-specialist", "ml-temporal-uncertainty-specialist", "ml-causal-decision-specialist", "ml-active-online-learning-specialist", "ml-privacy-federated-specialist", "ml-operations-evaluation-specialist"]},
             "assessment_digest": {"type": "string", "pattern": "^sha256:[a-f0-9]{64}$"},
             "route_status": {"const": "candidate_not_dispatched"}
           }

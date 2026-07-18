@@ -63,6 +63,36 @@ measured justification.
   independent checker reviews rights, privacy, leakage, bias, domain gap, and
   real-holdout adequacy. Reserve Sol for unresolved high-consequence disputes.
 
+### Route specialist depth only after fit
+
+The technique router may compose the following bounded specialists. These are
+responsibilities behind the existing receipt-bound route, not alternate entry
+points and not permanent model identities:
+
+- `ml-tabular-boosting-specialist` for XGBoost and other gradient-boosted-tree
+  champion/challenger work on reviewed structured data;
+- `ml-wide-deep-representation-specialist` for wide-and-deep tabular systems,
+  tabular transformers, frozen embeddings, and representation-plus-tree
+  hybrids;
+- `ml-graph-ranking-specialist` for graph prediction and retrieval/ranking
+  stages after Knowledge Engineering owns corpus and graph authority;
+- `ml-temporal-uncertainty-specialist` for forecasting, rolling evaluation,
+  calibration, and conformal or quantile uncertainty;
+- `ml-causal-decision-specialist` for causal, uplift, and double-machine-
+  learning designs whose identification assumptions are human reviewed;
+- `ml-active-online-learning-specialist` for active learning, bandits, and
+  feedback-loop design with calibrated uncertainty and safety constraints;
+- `ml-privacy-federated-specialist` for explicit privacy threat models,
+  federated evaluation, and attack-aware evidence; and
+- `ml-operations-evaluation-specialist` for signatures, model cards,
+  champion/challenger evaluation, drift, monitoring, retraining, and rollback.
+
+Use `workflow:ml-specialist-champion-challenger` for one specialist family and
+`workflow:ml-hybrid-composition-review` when two or more stages interact. Use
+`workflow:ml-operational-monitoring-and-retraining` only after a named owner has
+accepted the model artifact; it never authorizes deployment or recurring jobs.
+Keep the mesh demand-activated: do not summon every specialist for every task.
+
 ## Execute The ML Lifecycle
 
 Use the workflow cards in the family registry and preserve evidence for:
@@ -88,6 +118,12 @@ a new model or technique never authorizes silent rerouting or scope expansion.
 Stop when the target is not measurable, source authority is unknown, sensitive
 data lacks approval, leakage cannot be ruled out, a domain overlay is missing,
 or the proposed validation cannot distinguish the model from the baseline.
+
+For material experiments, emit a versioned `MLExperimentContract` and a typed
+`PredictContract` as defined in the workflow contract. Treat uncalibrated scores
+as scores, not confidence. A hybrid must prove each stage with component
+ablations and end-to-end evidence; adding a representation, graph, retrieval,
+or uncertainty layer cannot inherit another stage's validation.
 
 ## Improve Without Prompt Bloat
 

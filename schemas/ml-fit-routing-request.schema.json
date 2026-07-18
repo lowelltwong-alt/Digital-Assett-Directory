@@ -8,7 +8,7 @@
   "properties": {
     "schema_version": {"const": "ml.fit.routing_request.v1"},
     "objective": {"type": "string", "minLength": 1},
-    "problem_shape": {"enum": ["deterministic_transform", "tabular_prediction", "high_cardinality_tabular", "semantic_retrieval", "deep_representation", "unknown"]},
+    "problem_shape": {"enum": ["deterministic_transform", "tabular_prediction", "high_cardinality_tabular", "semantic_retrieval", "deep_representation", "graph_ranking", "temporal_forecasting", "causal_decision", "active_online_learning", "privacy_federated_learning", "operational_evaluation", "unknown"]},
     "execution_scale": {"enum": ["local", "large_local", "distributed_required", "unknown"]},
     "label_status": {"enum": ["available", "partial", "unavailable", "not_applicable", "unknown"]},
     "consequence": {"enum": ["low", "medium", "high"]},

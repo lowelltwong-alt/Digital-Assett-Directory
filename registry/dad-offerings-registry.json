@@ -586,7 +586,7 @@
     {
       "offering_id": "dad:offering:ml-workflow-agent-family",
       "name": "Machine Learning Workflow Agent Family",
-      "version": "0.1.0",
+      "version": "0.2.0",
       "offering_type": "skill",
       "path": "assets/agent-skills/ml-workflow-agent-family",
       "languages": ["agent-instruction", "python", "rust", "mixed"],
@@ -600,7 +600,8 @@
         "leakage_resistant_experiment_design",
         "independent_ml_validation",
         "fortnightly_primary_source_research",
-        "ml_lifecycle_and_supersession_review"
+        "ml_lifecycle_and_supersession_review",
+        "routed_ml_specialist_and_hybrid_composition"
       ],
       "applies_when": [
         "A repo needs to decide whether ML fits an end goal or to execute a governed ML workflow.",
@@ -616,7 +617,8 @@
       "source_refs": [
         "registry/agent-skill-library.json#skill:ml-workflow-agent-family",
         "registry/ml-agent-family-registry.json",
-        "registry/ml-technique-registry.json"
+        "registry/ml-technique-registry.json",
+        "docs/ML_SPECIALIST_MESH_AND_HYBRIDS.md"
       ],
       "review_status": "candidate",
       "validation_refs": ["tests/test_ml_agent_family.py", "scripts/validate_agent_skill_library.py"],
