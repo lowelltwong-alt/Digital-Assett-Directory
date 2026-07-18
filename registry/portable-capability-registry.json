@@ -346,7 +346,7 @@
     {
       "schema_version": "dad.portable_capability_card.v1",
       "card_id": "portability-card:harness-portable-capability-control-plane",
-      "revision_id": "portability-card-revision:harness-portable-capability-control-plane:0.1.7",
+      "revision_id": "portability-card-revision:harness-portable-capability-control-plane:0.1.8",
       "artifact_id": "harness:portable-capability-control-plane",
       "artifact_kind": "harness",
       "binding_class": "portable_core",
@@ -358,6 +358,7 @@
         ".githooks/pre-push",
         ".githooks/pre-push.ps1",
         ".github/CODEOWNERS",
+        ".github/copilot-instructions.md",
         ".github/workflows/dad-contract-check.yml",
         ".github/workflows/rust-ci-long.yml",
         ".github/workflows/rust-ci-pr.yml",
@@ -406,7 +407,7 @@
         "src/digital_asset_directory/validation.py",
         "templates/downstream/AGENTS_MANAGED_BLOCK.md"
       ],
-      "content_digest": "sha256:c5a896501131ec278aafaa6009d664ed60e7f6c8be8a165f5bb51fae0adabbc1",
+      "content_digest": "sha256:ba30437943baff9b7417691a4b5e38d665a96278bad81097808f05f58f84e211",
       "contract_digests": {
         "input": "sha256:eee475da7d6fe76d90852dfa97de0e1f047cb72d7d0134552245b7cda9a9fb68",
         "output": "sha256:0ec04e3bcb58df087b53068eb3756924c878f35a40871814bd8749313aa69dea",
