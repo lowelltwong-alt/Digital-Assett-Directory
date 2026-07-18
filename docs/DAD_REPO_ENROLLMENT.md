@@ -125,6 +125,12 @@ Managed Markdown changes must preserve repo-authored content outside DAD
 markers. Hook installation must be disclosed in the plan and audit output. Hook
 activation remains a local repo decision.
 
+Repo-local exception and fix-outcome paths are source-repository surfaces, not
+DAD-managed enrollment paths. Enrollment plans may list them for orientation,
+but `enroll apply` and `enroll update-apply` must not create, normalize, or
+update them. Their absence is informational and does not make an enrollment
+contract stale or update-needed.
+
 ## Cadence
 
 - Mail digest: daily.

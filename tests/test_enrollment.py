@@ -228,9 +228,9 @@ def test_apply_requires_approval_and_writes_only_approved_paths(tmp_path: Path):
     after = _all_files(repo)
     created = after - before
 
-    allowed_enrollment_bootstrap = set(APPROVED_RELATIVE_PATHS) | set(REPO_LOCAL_ONLY_PATHS)
-    assert set(result["changed_paths"]) <= allowed_enrollment_bootstrap
-    assert created <= allowed_enrollment_bootstrap
+    assert set(result["changed_paths"]) <= set(APPROVED_RELATIVE_PATHS)
+    assert created <= set(APPROVED_RELATIVE_PATHS)
+    assert not (repo / ".digital-asset" / "exceptions").exists()
     assert "Keep this line." in (repo / "AGENTS.md").read_text(encoding="utf-8")
     agents_text = (repo / "AGENTS.md").read_text(encoding="utf-8")
     assert "~/.dad/bin/asset-dir" in agents_text
@@ -252,6 +252,9 @@ def test_apply_requires_approval_and_writes_only_approved_paths(tmp_path: Path):
     assert "fail-closed boundaries below." in agents_text
     assert result["hook_install_disclosed"] is True
     assert result["repo_local_only_paths"] == REPO_LOCAL_ONLY_PATHS
+    front_door = (repo / "AI_FRONT_DOOR.md").read_text(encoding="utf-8")
+    assert front_door.index("`AGENTS.md`") < front_door.index("`README.md`")
+    assert "privacy, authority, or reuse boundaries" in front_door
     assert (repo / ".githooks" / "pre-push").exists()
     assert "~/.dad/hub.json" in (repo / ".githooks" / "pre-push").read_text(
         encoding="utf-8"
@@ -315,15 +318,31 @@ def test_apply_requires_approval_and_writes_only_approved_paths(tmp_path: Path):
         "repo_local_only_paths"
     ]
     assert not (set(REPO_LOCAL_ONLY_PATHS) & set(contract["approved_dad_managed_paths"]))
-    assert (repo / ".digital-asset" / "exceptions" / "README.md").exists()
-    assert (repo / ".digital-asset" / "exceptions" / ".gitignore").exists()
-    assert (repo / ".digital-asset" / "exceptions" / "outbox.jsonl").exists()
-    assert (repo / ".digital-asset" / "exceptions" / "inbox.jsonl").exists()
-    assert (repo / ".digital-asset" / "exceptions" / "archive.jsonl").exists()
-    assert "Never Send" in (
-        repo / ".digital-asset" / "exceptions" / "README.md"
-    ).read_text(encoding="utf-8")
     assert "software-work-preflight" in {route["route_id"] for route in context_map["routes"]}
+
+
+def test_apply_and_update_preserve_preexisting_repo_local_paths(tmp_path: Path):
+    hub = tmp_path / "hub"
+    repo = tmp_path / "repo-a"
+    hub.mkdir()
+    repo.mkdir()
+    policy = _policy(repo)
+
+    expected: dict[str, bytes] = {}
+    for index, rel in enumerate(REPO_LOCAL_ONLY_PATHS):
+        path = repo / rel
+        path.parent.mkdir(parents=True, exist_ok=True)
+        payload = f"source-owned-{index}\n".encode()
+        path.write_bytes(payload)
+        expected[rel] = payload
+
+    enroll_result = apply_enrollment(hub, policy, approval_id="APPROVED-1")
+    update_result = apply_enrollment(hub, policy, approval_id="APPROVED-1", update=True)
+
+    assert not (set(enroll_result["changed_paths"]) & set(REPO_LOCAL_ONLY_PATHS))
+    assert not (set(update_result["changed_paths"]) & set(REPO_LOCAL_ONLY_PATHS))
+    for rel, payload in expected.items():
+        assert (repo / rel).read_bytes() == payload
 
 
 def test_apply_fails_closed_when_policy_path_does_not_exist(tmp_path: Path):
@@ -604,7 +623,9 @@ def test_surface_version_status_writes_queue_by_repo_surface_and_expected_versio
     assert deduped["queue_appended"] == 0
 
 
-def test_enrollment_status_reports_missing_exception_surface(tmp_path: Path):
+def test_enrollment_status_treats_missing_repo_local_surface_as_source_owned(
+    tmp_path: Path,
+):
     hub = tmp_path / "hub"
     repo = tmp_path / "repo-a"
     hub.mkdir()
@@ -612,14 +633,12 @@ def test_enrollment_status_reports_missing_exception_surface(tmp_path: Path):
     policy = _policy(repo)
     apply_enrollment(hub, policy, approval_id="APPROVED-1")
 
-    (repo / ".digital-asset" / "exceptions" / "inbox.jsonl").unlink()
     status = enrollment_status(policy)
 
-    assert status["update_available"] is True
-    assert (
-        "Missing repo-local exception surface path: "
-        ".digital-asset/exceptions/inbox.jsonl"
-    ) in status["errors"]
+    assert status["update_available"] is False
+    assert status["errors"] == []
+    assert status["missing_repo_local_only_paths"] == REPO_LOCAL_ONLY_PATHS
+    assert not (repo / ".digital-asset" / "exceptions").exists()
 
 
 def test_public_facing_enrollment_omits_local_absolute_paths(tmp_path: Path):
