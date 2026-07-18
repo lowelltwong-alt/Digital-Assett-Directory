@@ -1,0 +1,8 @@
+---
+description: DAD agent operating contract
+globs: "**/*"
+alwaysApply: true
+---
+Read `AGENTS.md` before material work. Run DAD preflight before editing.
+After work, run DAD postflight and include its `DAD-Session: <id>` trailer.
+Protected-path changes without that lifecycle trailer are blocked by contract check.

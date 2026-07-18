@@ -1,0 +1,10 @@
+{
+  "rules": [
+    {
+      "name": "DAD agent contract",
+      "description": "Read AGENTS.md before material work; run DAD preflight and postflight; include DAD-Session; protected paths require a lifecycle trailer.",
+      "globs": ["**/*"],
+      "alwaysApply": true
+    }
+  ]
+}
