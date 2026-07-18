@@ -69,4 +69,13 @@ workflows:
   - {workflow_id: scheduled-full, provider_path: .github/workflows/scheduled-full-regression.yml, lane: scheduled_full_regression, events: [schedule, workflow_dispatch], required_check: false, always_reports: true, scope: repository, workflow_contract_digest: "sha256:05970a4507d42dd4eb8ef803a2dd805db314a9c633befb465424f0233110aa95"}
 generated_artifacts:
   - {artifact_id: processed-candidates, module_id: governance, paths: [processed/**], authoritative_inputs: [registry/**, schemas/**]}
-exceptions: []
+exceptions:
+  - exception_id: c8-copilot-pointer-scope
+    codes: [scope_broadening]
+    diagnostic_scopes: [manifest:scope]
+    owner: Lowell
+    reason: "Approved narrow exception for the repo-local Copilot pointer; existing governance module and required checks remain unchanged."
+    expires_on: "2026-08-18"
+    reviewed_by: Lowell
+    reviewed_at: "2026-07-18T09:45:00-04:00"
+    review_ref: "conversation:explicit-approval"
