@@ -33,7 +33,7 @@
       "additionalProperties": false,
       "required": ["policy_revision_id", "first_hop_workflow_id", "mandatory_before_specialist", "applies_to", "non_bypass_rule", "request_schema_ref", "receipt_schema_ref", "specialist_receipt_rule", "toolchain_policy", "forbidden_shortcuts"],
       "properties": {
-        "policy_revision_id": {"const": "ml-fit-routing-policy:0.2.0"},
+        "policy_revision_id": {"const": "ml-fit-routing-policy:0.3.0"},
         "first_hop_workflow_id": {"const": "workflow:ml-opportunity-review"},
         "mandatory_before_specialist": {"const": true},
         "applies_to": {"$ref": "#/$defs/nonEmptyStrings"},
