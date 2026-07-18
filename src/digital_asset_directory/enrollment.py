@@ -11,7 +11,6 @@ from jsonschema.validators import validator_for
 import yaml
 
 from .config import AppConfig, EnrollmentRepoPolicy
-from .mail_center import mail_digest_status, mail_gitignore_text, mail_readme_text
 from .surface_versions import contract_surface_statuses, expected_contract_surface_blocks
 from .transport import TRANSPORT_IMPLEMENTATION_VERSION, TRANSPORT_SURFACE_VERSION
 from .utils import append_jsonl, atomic_write_text, json_dumps, utc_now
@@ -1059,6 +1058,11 @@ def _ps_hook_text(hub_root: Path, policy: EnrollmentRepoPolicy) -> str:
 
 
 def _write_mailbox(repo_root: Path, changed: list[str]) -> None:
+    # Keep mail/model imports off the read-only enrollment planning path. The
+    # mail center pulls in the full Pydantic model stack and is needed only when
+    # applying mailbox files.
+    from .mail_center import mail_gitignore_text, mail_readme_text
+
     for rel, text in {
         ".digital-asset/mail/README.md": mail_readme_text(),
         ".digital-asset/mail/.gitignore": mail_gitignore_text(),
@@ -1313,6 +1317,9 @@ def apply_enrollment(
 def enrollment_status(
     policy: EnrollmentRepoPolicy, *, stale_hours: int = 24
 ) -> dict[str, Any]:
+    # Status needs mail freshness, but planning and policy selection do not.
+    from .mail_center import mail_digest_status
+
     repo_root = policy.path.resolve()
     contract_path = repo_root / ".digital-asset" / "dad-integration.json"
     contract: dict[str, Any] | None = None
