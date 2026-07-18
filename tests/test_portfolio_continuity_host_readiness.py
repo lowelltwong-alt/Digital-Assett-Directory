@@ -130,7 +130,7 @@ def test_exact_attestation_and_current_real_event_are_required_for_trial_readine
         dispatch_attested_at=event["observed_at"],
         attested_event_id=event["event_id"],
         codex_version="codex-cli 0.130.0",
-        assessed_at="2026-07-18T00:00:00+00:00",
+        assessed_at=event["observed_at"],
     )
 
     assert result["status"] == "ready_for_supervised_trial"
@@ -229,7 +229,7 @@ def test_current_host_binding_is_rechecked_at_activation_time(
         dispatch_attested_at=event["observed_at"],
         attested_event_id=event["event_id"],
         codex_version="codex-cli 0.130.0",
-        assessed_at="2026-07-18T00:00:00+00:00",
+        assessed_at=event["observed_at"],
     )
 
     assert readiness.host_readiness_binding_failures(repo, assessment) == []

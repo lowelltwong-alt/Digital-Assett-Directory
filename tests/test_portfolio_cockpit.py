@@ -621,6 +621,10 @@ def test_html_is_script_free_escaped_accessible_and_hash_bound() -> None:
     assert "http://" not in lowered and "https://" not in lowered
     assert f"sha256-{digest}" in unescape(html)
     assert 'href="#main"' in html
+    assert 'aria-label="Cockpit sections"' in html
+    for section in ("today", "sources", "queue", "evidence"):
+        assert f'href="#{section}"' in html
+        assert f'id="{section}"' in html
     assert "<caption>" in html
     assert 'scope="col"' in html
     _validate(result)
