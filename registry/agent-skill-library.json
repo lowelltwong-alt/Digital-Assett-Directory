@@ -1176,7 +1176,7 @@
     {
       "skill_id": "skill:ml-workflow-agent-family",
       "name": "Machine Learning Workflow Agent Family",
-      "version": "0.1.0",
+      "version": "0.2.0",
       "status": "candidate",
       "skill_format": "codex_skill",
       "path": "assets/agent-skills/ml-workflow-agent-family",
@@ -1224,6 +1224,7 @@
         "assets/agent-skills/ml-workflow-agent-family/subagents.yaml",
         "assets/agent-skills/ml-workflow-agent-family/routines.yaml",
         "assets/agent-skills/ml-workflow-agent-family/references/ML_WORKFLOW_CONTRACT.md",
+        "docs/ML_SPECIALIST_MESH_AND_HYBRIDS.md",
         "registry/ml-agent-family-registry.json",
         "registry/ml-technique-registry.json",
         "registry/subagent-evaluation-profile-registry.json",
@@ -1239,8 +1240,8 @@
       ],
       "authority_boundary": "The family produces candidate ML decisions and evidence only. Target repositories and named humans retain data, domain, privacy, security, training, deployment, release, automation, instruction-change, and supersession authority.",
       "review_status": "candidate",
-      "last_reviewed_at": "2026-07-14",
-      "next_review_due_at": "2026-08-14"
+      "last_reviewed_at": "2026-07-18",
+      "next_review_due_at": "2026-08-18"
     },
     {
       "skill_id": "skill:full-stack-engineering-agent-family",

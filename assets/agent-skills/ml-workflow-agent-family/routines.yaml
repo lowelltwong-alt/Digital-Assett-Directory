@@ -46,6 +46,53 @@ routines:
       - material_dependency_authority_privacy_or_scope_change
       - proof_obligation_or_learning_rule_change
     midflight_action: stop_run_dad_midflight_revise_and_relock_contract
+  - routine_id: ml-specialist-champion-challenger
+    workflow_id: workflow:ml-specialist-champion-challenger
+    activation: receipt_bound_task_triggered
+    default_role: ml-technique-router
+    writer_role: ml-implementation-worker
+    checker_role: ml-independent-checker
+    specialist_pool:
+      - ml-tabular-boosting-specialist
+      - ml-wide-deep-representation-specialist
+      - ml-graph-ranking-specialist
+      - ml-temporal-uncertainty-specialist
+      - ml-causal-decision-specialist
+      - ml-active-online-learning-specialist
+      - ml-privacy-federated-specialist
+    rules:
+      - baseline_before_specialist
+      - one_primary_specialist_by_default
+      - bounded_hyperparameter_budget
+      - independent_replay_before_acceptance
+    dispatch_authorized: false
+  - routine_id: ml-hybrid-composition-review
+    workflow_id: workflow:ml-hybrid-composition-review
+    activation: explicit_task_authority_after_fit
+    default_role: ml-solution-architect
+    foreman_role: ml-workflow-foreman
+    checker_role: ml-independent-checker
+    operations_role: ml-operations-evaluation-specialist
+    required_evidence:
+      - per_stage_contracts
+      - component_ablations
+      - end_to_end_acceptance
+      - failure_propagation_and_fallback
+      - provenance_and_license_chain
+    dispatch_authorized: false
+  - routine_id: ml-operational-monitoring-and-retraining
+    workflow_id: workflow:ml-operational-monitoring-and-retraining
+    activation: named_human_owner_and_manual_model_acceptance
+    default_role: ml-operations-evaluation-specialist
+    checker_role: ml-independent-checker
+    required_gates:
+      - named_monitoring_owner
+      - typed_predict_contract
+      - rollback_and_fallback
+      - retraining_approval_boundary
+    auto_deploy: false
+    auto_retrain: false
+    auto_schedule: false
   - routine_id: ml-frontier-research-refresh
     workflow_id: workflow:ml-frontier-research-refresh
     cadence: P14D

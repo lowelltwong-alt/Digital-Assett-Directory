@@ -69,6 +69,14 @@ def test_current_portability_registry_is_valid_and_baselined() -> None:
         "workflow:ml-synthetic-data-opportunity-review",
         "workflow:ml-synthetic-helper-research-refresh",
         "skill:dad-ci-module-boundary-governance",
+        "ml-technique:active-learning",
+        "ml-technique:automl-hyperparameter-optimization",
+        "ml-technique:calibrated-conformal-uncertainty",
+        "ml-technique:representation-tabular-hybrids",
+        "ml-technique:wide-deep-tabular-learning",
+        "workflow:ml-hybrid-composition-review",
+        "workflow:ml-operational-monitoring-and-retraining",
+        "workflow:ml-specialist-champion-challenger",
     }
 
 

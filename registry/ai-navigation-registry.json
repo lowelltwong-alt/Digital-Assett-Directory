@@ -646,7 +646,7 @@
     {
       "branch_id": "ml_workflow_agent_family",
       "path": "assets/agent-skills/ml-workflow-agent-family/SKILL.md",
-      "role": "Model-independent ML opportunity, technique, experiment, implementation, independent validation, research, deployment-readiness, monitoring, and lifecycle specialization.",
+      "role": "Model-independent ML opportunity, routed specialist and hybrid composition, experiment, implementation, independent validation, research, deployment-readiness, monitoring, and lifecycle specialization.",
       "tags": [
         "agent_skill",
         "machine_learning",
@@ -657,13 +657,14 @@
         "human_gate"
       ],
       "use_when": "You need to decide whether ML fits, find or route an ML role or technique, execute a governed ML workflow, inspect dependencies, or review research and lifecycle state.",
-      "current_version": "0.1.0",
-      "last_material_change_at": "2026-07-14T22:00:00Z",
+      "current_version": "0.2.0",
+      "last_material_change_at": "2026-07-18T12:00:00Z",
       "change_class": "library_catalog",
       "route_after": [
         "AI_FRONT_DOOR.md",
         "registry/ml-agent-family-registry.json",
         "registry/ml-technique-registry.json",
+        "docs/ML_SPECIALIST_MESH_AND_HYBRIDS.md",
         "registry/subagent-evaluation-profile-registry.json",
         "docs/RESEARCH_INTAKE_PIPELINE.md"
       ],
@@ -731,6 +732,15 @@
     }
   ],
   "recent_changes": [
+    {
+      "change_id": "nav-change:2026-07-18:ml-specialist-mesh-suite",
+      "changed_at": "2026-07-18T12:00:00Z",
+      "change_type": "expanded_ml_specialist_mesh_and_hybrid_workflows",
+      "paths": ["assets/agent-skills/ml-workflow-agent-family/", "registry/ml-agent-family-registry.json", "registry/ml-technique-registry.json", "docs/ML_SPECIALIST_MESH_AND_HYBRIDS.md", "tests/test_ml_agent_family.py"],
+      "summary": "Extended the single candidate ML family with eight demand-activated specialists, five technique cards, three governed workflows, typed experiment and prediction contracts, and primary-source hybrid guidance.",
+      "agent_action": "Begin with the deterministic fit receipt, route only the needed specialist, compare against a credible baseline, require component ablations and independent checking, and keep deployment, automation, training authority, and retraining human-gated.",
+      "route_tags": ["machine_learning", "agent_skill", "workflow", "research_intake", "validation", "governance", "human_gate"]
+    },
     {
       "change_id": "nav-change:2026-07-16:synthetic-data-resource-library",
       "changed_at": "2026-07-16T22:30:00Z",
@@ -1142,6 +1152,24 @@
       ]
     },
     {
+      "change_id": "nav-change:2026-07-15:project-right-sizing-expert-packs",
+      "changed_at": "2026-07-15T16:00:00Z",
+      "change_type": "added_project_position_and_specialist_packs",
+      "paths": ["docs/TECHNICAL_PRODUCT_COMPANY_OS.md", "assets/agent-skills/technical-product-company-os/references/PROJECT_POSITION_AND_COMPLETION_CONTRACT.md", "schemas/project-position-diagnosis.schema.json", "assets/agent-skills/mcp-integration-specialist-pack", "assets/agent-skills/ui-ux-specialist-pack", "registry/subagent-capability-registry.json", "processed/agents/subagent-capability-graph.json"],
+      "summary": "Added read-only project-position diagnosis, human-confirmed destination and completion depth, sufficient-stop boundaries, and on-demand MCP and UI/UX expert packs under existing families.",
+      "agent_action": "Diagnose first when destination or depth is ambiguous, ask at most three material questions, then route no more than three primary capabilities or specialist roles and stop at the approved depth.",
+      "route_tags": ["agent_skill", "workflow", "project_management", "mcp", "ux", "knowledge_graph", "governance", "human_gate"]
+    },
+    {
+      "change_id": "nav-change:2026-07-16:intent-continuity-graph-v1",
+      "changed_at": "2026-07-17T05:55:00Z",
+      "change_type": "added_inactive_intent_continuity_graph",
+      "paths": ["docs/INTENT_CONTINUITY_GRAPH.md", "config/intent-continuity-shadow-hooks.json", "schemas/intent-continuity-host-readiness.schema.json", "src/digital_asset_directory/portfolio_continuity_runtime.py", "src/digital_asset_directory/portfolio_continuity_host_readiness.py", "assets/agent-skills/personal-project-management-ops/subagents.yaml", "roadmap/evidence/intent-continuity-graph-v1.md"],
+      "summary": "Added private append-only intent continuity evidence, ref-aware recovery, rebuildable global and repo projections, separate closeout gates, bounded project-management roles, and a committed but untrusted shadow adapter with fail-closed project-trust, hook-trust, linked-worktree discovery, and real-dispatch readiness gates.",
+      "agent_action": "Use read-only scan, recovery, status, and host-readiness first; require an exact-file hook review plus one exact current-revision event ID attested by a human observer, disclose that ledger origin is not authenticated, keep duplicate links candidate-only, preserve quiet work, and never activate hooks, notify, archive tasks, or remove worktrees without their separate gates.",
+      "route_tags": ["project_management", "knowledge_graph", "attention", "workflow", "automation", "privacy", "human_gate"]
+    },
+    {
       "change_id": "nav-change:2026-07-06:phase-8-human-gate-review-packet",
       "changed_at": "2026-07-06T04:30:06Z",
       "change_type": "added_phase8_human_gate_review_packet_route",
@@ -1160,33 +1188,6 @@
         "human_gate",
         "validation"
       ]
-    },
-    {
-      "change_id": "nav-change:2026-07-14:technical-product-company-os",
-      "changed_at": "2026-07-15T02:31:33Z",
-      "change_type": "added_technical_product_company_os",
-      "paths": ["docs/TECHNICAL_PRODUCT_COMPANY_OS.md", "registry/technical-product-company-os-registry.json", "src/digital_asset_directory/technical_product_os.py", "assets/agent-skills/technical-product-company-os", "assets/agent-skills/platform-cloud-sre-agent-family"],
-      "summary": "Added the governed one-human capability OS with product catalyst and project-manager roles, top-ten technical coverage, AI decision rights, typed workflow/dependency evidence, append-only telemetry, dormant automations, and bounded offload classification.",
-      "agent_action": "Route technical-product work through the smallest eligible set, preserve source authority and evidence stages, keep routines dormant, and never infer execution permission from model strength or routing confidence.",
-      "route_tags": ["agent_skill", "workflow", "knowledge_graph", "project_management", "governance", "automation", "human_gate"]
-    },
-    {
-      "change_id": "nav-change:2026-07-15:project-right-sizing-expert-packs",
-      "changed_at": "2026-07-15T16:00:00Z",
-      "change_type": "added_project_position_and_specialist_packs",
-      "paths": ["docs/TECHNICAL_PRODUCT_COMPANY_OS.md", "assets/agent-skills/technical-product-company-os/references/PROJECT_POSITION_AND_COMPLETION_CONTRACT.md", "schemas/project-position-diagnosis.schema.json", "assets/agent-skills/mcp-integration-specialist-pack", "assets/agent-skills/ui-ux-specialist-pack", "registry/subagent-capability-registry.json", "processed/agents/subagent-capability-graph.json"],
-      "summary": "Added read-only project-position diagnosis, human-confirmed destination and completion depth, sufficient-stop boundaries, and on-demand MCP and UI/UX expert packs under existing families.",
-      "agent_action": "Diagnose first when destination or depth is ambiguous, ask at most three material questions, then route no more than three primary capabilities or specialist roles and stop at the approved depth.",
-      "route_tags": ["agent_skill", "workflow", "project_management", "mcp", "ux", "knowledge_graph", "governance", "human_gate"]
-    },
-    {
-      "change_id": "nav-change:2026-07-16:intent-continuity-graph-v1",
-      "changed_at": "2026-07-17T05:55:00Z",
-      "change_type": "added_inactive_intent_continuity_graph",
-      "paths": ["docs/INTENT_CONTINUITY_GRAPH.md", "config/intent-continuity-shadow-hooks.json", "schemas/intent-continuity-host-readiness.schema.json", "src/digital_asset_directory/portfolio_continuity_runtime.py", "src/digital_asset_directory/portfolio_continuity_host_readiness.py", "assets/agent-skills/personal-project-management-ops/subagents.yaml", "roadmap/evidence/intent-continuity-graph-v1.md"],
-      "summary": "Added private append-only intent continuity evidence, ref-aware recovery, rebuildable global and repo projections, separate closeout gates, bounded project-management roles, and a committed but untrusted shadow adapter with fail-closed project-trust, hook-trust, linked-worktree discovery, and real-dispatch readiness gates.",
-      "agent_action": "Use read-only scan, recovery, status, and host-readiness first; require an exact-file hook review plus one exact current-revision event ID attested by a human observer, disclose that ledger origin is not authenticated, keep duplicate links candidate-only, preserve quiet work, and never activate hooks, notify, archive tasks, or remove worktrees without their separate gates.",
-      "route_tags": ["project_management", "knowledge_graph", "attention", "workflow", "automation", "privacy", "human_gate"]
     }
   ],
   "authority_boundary": "This registry only governs DAD navigation freshness and routing. It does not make generated reports source truth, authorize downstream repo writes, or override source-repository authority."

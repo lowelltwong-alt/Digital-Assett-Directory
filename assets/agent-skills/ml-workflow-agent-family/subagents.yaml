@@ -1,6 +1,6 @@
 schema_version: dad_subagent_pack.v0_1
 pack_id: dad:subagent-pack:ml-workflow-agent-family
-version: 0.1.0
+version: 0.2.0
 status: candidate
 ai_agnostic: true
 methodology_ref: registry/subagent-evaluation-methodology.json#0.1.0
@@ -100,6 +100,78 @@ roles:
     required_input: [attempt_evidence, monitoring_evidence, dependency_graph, research_deltas, prior_revisions]
     required_output: [freshness_decisions, blast_radius, intervention_layer, migration_or_no_change_plan, human_review_packet]
     stop_conditions: [age_only_staleness_claim, auto_instruction_change, automatic_supersession, missing_reverse_dependencies]
+  - role_id: ml-tabular-boosting-specialist
+    profile_role_id: ml_tabular_boosting_specialist
+    capability_ids: [ml_technique_selection, ml_reproducible_implementation, ml_independent_validation]
+    search_terms: [XGBoost, gradient boosted trees, GBDT, tabular champion challenger]
+    effort: terra_medium_then_high_for_large_or_high_consequence_search
+    mission: Design or implement a bounded XGBoost or GBDT challenger with honest categorical handling, early stopping, calibration, explanation limits, and baseline parity.
+    required_input: [fit_receipt, data_and_split_contract, baseline_results, resource_budget]
+    required_output: [boosting_contract, bounded_search_space, reproducibility_manifest, calibration_and_slice_evidence, checker_handoff]
+    stop_conditions: [receipt_missing, leakage_or_split_failure, unsupported_category_semantics, no_baseline_lift, search_budget_unbounded]
+  - role_id: ml-wide-deep-representation-specialist
+    profile_role_id: ml_wide_deep_representation_specialist
+    capability_ids: [ml_system_and_experiment_architecture, ml_technique_selection, ml_reproducible_implementation]
+    search_terms: [wide and deep, tabular transformer, frozen embeddings, representation learning, multimodal tabular]
+    effort: terra_high_for_architecture_and_ablations
+    mission: Design the smallest justified wide-and-deep, tabular-transformer, or frozen-representation hybrid and prove each component with ablations.
+    required_input: [fit_receipt, modality_and_schema_contract, baseline_results, representation_provenance, latency_budget]
+    required_output: [representation_contract, stage_interfaces, ablation_matrix, provenance_and_license_chain, checker_handoff]
+    stop_conditions: [encoder_provenance_unknown, train_test_overlap_unknown, second_backend_unjustified, component_adds_no_value, latency_budget_failed]
+  - role_id: ml-graph-ranking-specialist
+    profile_role_id: ml_graph_ranking_specialist
+    capability_ids: [ml_system_and_experiment_architecture, ml_technique_selection, ml_data_readiness_and_leakage_audit]
+    search_terms: [graph neural network, graph ML, retrieval ranking, candidate generation, learning to rank]
+    effort: terra_high_with_knowledge_engineering_handoff
+    mission: Design graph prediction or candidate-generation-plus-ranking stages while preserving Knowledge Engineering source authority and structure-aware leakage controls.
+    required_input: [fit_receipt, graph_or_corpus_authority, edge_provenance, candidate_and_ranking_contracts]
+    required_output: [graph_split_contract, candidate_recall_plan, ranking_plan, edge_ablations, checker_handoff]
+    stop_conditions: [knowledge_authority_unresolved, speculative_edges_used_as_truth, transductive_leakage, candidate_recall_unmeasured]
+  - role_id: ml-temporal-uncertainty-specialist
+    profile_role_id: ml_temporal_uncertainty_specialist
+    capability_ids: [ml_technique_selection, ml_data_readiness_and_leakage_audit, ml_independent_validation]
+    search_terms: [time series, forecasting, conformal prediction, quantile regression, calibration]
+    effort: terra_medium_then_high_for_regime_or_consequence
+    mission: Design temporal baselines, rolling evaluation, calibrated predictions, and quantile or conformal intervals whose coverage matches the deployment horizon.
+    required_input: [fit_receipt, event_and_availability_times, forecast_horizon, baseline_results, coverage_target]
+    required_output: [rolling_split_contract, forecast_and_interval_plan, coverage_and_slice_tests, drift_triggers, checker_handoff]
+    stop_conditions: [availability_time_unknown, random_row_split, coverage_not_replayed, regime_shift_unbounded, interval_semantics_misrepresented]
+  - role_id: ml-causal-decision-specialist
+    profile_role_id: ml_causal_decision_specialist
+    capability_ids: [ml_system_and_experiment_architecture, ml_technique_selection, ml_independent_validation]
+    search_terms: [causal machine learning, double machine learning, uplift, treatment effects, policy evaluation]
+    effort: terra_high_then_sol_only_for_unresolved_high_consequence_identification
+    mission: Separate prediction from causal identification and design uplift or double-machine-learning evidence with explicit assumptions, sample splitting, overlap, and sensitivity checks.
+    required_input: [decision_and_estimand, causal_graph_or_assumptions, treatment_and_outcome_contract, domain_owner_review]
+    required_output: [identification_contract, nuisance_model_plan, overlap_and_sensitivity_tests, forbidden_claims, checker_handoff]
+    stop_conditions: [estimand_or_intervention_undefined, identification_unjustified, overlap_failure, interference_ignored, domain_review_missing]
+  - role_id: ml-active-online-learning-specialist
+    profile_role_id: ml_active_online_learning_specialist
+    capability_ids: [ml_system_and_experiment_architecture, ml_technique_selection, governance_authority_safety]
+    search_terms: [active learning, uncertainty sampling, contextual bandit, online learning, feedback loops]
+    effort: terra_medium_then_high_for_live_exploration
+    mission: Design calibrated uncertainty plus diversity review queues or bounded online policies with explicit exploration, feedback-bias, safety, and abstention controls.
+    required_input: [fit_receipt, label_or_reward_contract, feedback_loop, safety_constraints, human_review_capacity]
+    required_output: [query_or_policy_contract, calibration_and_diversity_tests, feedback_bias_audit, stop_policy, checker_handoff]
+    stop_conditions: [uncertainty_uncalibrated, reward_proxy_unowned, unsafe_exploration, review_capacity_missing, feedback_bias_unmeasured]
+  - role_id: ml-privacy-federated-specialist
+    profile_role_id: ml_privacy_federated_specialist
+    capability_ids: [ml_system_and_experiment_architecture, governance_authority_safety, ml_independent_validation]
+    search_terms: [federated learning, differential privacy, secure aggregation, privacy threat model]
+    effort: terra_high_then_sol_only_for_unresolved_privacy_or_security_dispute
+    mission: Design candidate federated or privacy-preserving learning only from a formal threat model, explicit accounting, client heterogeneity, and poisoning evidence.
+    required_input: [data_controller_authority, privacy_threat_model, participant_contract, utility_and_communication_budget]
+    required_output: [privacy_and_federation_contract, accounting_plan, attack_tests, local_only_comparison, checker_handoff]
+    stop_conditions: [threat_model_missing, privacy_slogan_only, participant_authority_unknown, accounting_not_replayable, poisoning_or_heterogeneity_unchecked]
+  - role_id: ml-operations-evaluation-specialist
+    profile_role_id: ml_operations_evaluation_specialist
+    capability_ids: [ml_deployment_monitoring_and_rollback, ml_independent_validation, ml_lifecycle_drift_and_supersession]
+    search_terms: [MLOps, model card, model signature, monitoring, drift, retraining, rollback]
+    effort: terra_medium_then_high_for_production_or_regulated_paths
+    mission: Define artifact signatures, model cards, evaluation gates, monitors, retraining approvals, fallbacks, rollback, and incident ownership without activating deployment or automation.
+    required_input: [accepted_experiment_contract, predict_contract, validation_evidence, deployment_boundary, named_owner]
+    required_output: [operational_readiness_packet, monitoring_contract, retraining_gate, rollback_drill, unresolved_risks]
+    stop_conditions: [predict_contract_missing, owner_missing, monitor_unactionable, rollback_unrehearsed, auto_retraining_unapproved]
   - role_id: ml-synthetic-opportunity-scout
     profile_role_id: ml_synthetic_opportunity_scout
     capability_ids: [ml_data_readiness_and_leakage_audit, bounded_evidence_inventory, ml_technique_selection]
