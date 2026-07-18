@@ -402,13 +402,12 @@
         "src/digital_asset_directory/mcp_dependency_map.py",
         "src/digital_asset_directory/portability_control.py",
         "src/digital_asset_directory/portfolio_execution.py",
-        ".github/copilot-instructions.md",
         "src/digital_asset_directory/portfolio_cockpit.py",
         "src/digital_asset_directory/routine_health.py",
         "src/digital_asset_directory/validation.py",
         "templates/downstream/AGENTS_MANAGED_BLOCK.md"
       ],
-      "content_digest": "sha256:602a2677d95f50a889f85cf8885dc6aec6888a874d51182c926390089c9b2bd3",
+      "content_digest": "sha256:ba30437943baff9b7417691a4b5e38d665a96278bad81097808f05f58f84e211",
       "contract_digests": {
         "input": "sha256:eee475da7d6fe76d90852dfa97de0e1f047cb72d7d0134552245b7cda9a9fb68",
         "output": "sha256:0ec04e3bcb58df087b53068eb3756924c878f35a40871814bd8749313aa69dea",
