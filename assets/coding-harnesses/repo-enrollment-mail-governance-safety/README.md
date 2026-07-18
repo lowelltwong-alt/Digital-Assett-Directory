@@ -3,6 +3,10 @@
 Candidate harness for checking DAD enrollment waves, mailbox-only recurring
 operation, protected repo gates, public-release holds, and approval IDs.
 
+Before apply, compare the implementation's actual write set with the plan's
+approved DAD-managed paths. Repo-local exception and fix-outcome paths may be
+reported for orientation but must not be created or normalized by enrollment.
+
 Use the mail-spool integrity cases when multiple repos or branches may be
 writing Rust rollout lessons, DAD mail, or learning-loop packets at the same
 time. The harness separates true mailbox hazards from ordinary dirty git

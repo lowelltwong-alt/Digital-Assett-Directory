@@ -1,0 +1,93 @@
+{
+  "authority_boundary": "DAD enrollment installs or updates only reviewed, marker-bounded governance surfaces after a human approval ID. Normal recurring DAD operation remains mailbox-only under .digital-asset/mail/**.",
+  "generated_at": "2026-07-18T18:30:46.788647+00:00",
+  "item_count": 1,
+  "items": [
+    {
+      "active_hold": false,
+      "active_hold_reason": "",
+      "allow_dirty_worktree": true,
+      "allow_non_main_branch": false,
+      "apply_allowed": true,
+      "apply_ready": true,
+      "approval_required": true,
+      "approved_approval_ids": [
+        "USER-2026-07-18-LAW-FIRM-DIGITAL-TWIN-DAD-ENROLLMENT"
+      ],
+      "approved_dad_managed_paths": [
+        ".digital-asset/dad-integration.json",
+        ".digital-asset/mail/README.md",
+        ".digital-asset/mail/.gitignore",
+        ".digital-asset/mail/inbox.jsonl",
+        ".digital-asset/mail/outbox.jsonl",
+        ".digital-asset/mail/archive.jsonl",
+        ".digital-asset/mail/adoption.jsonl",
+        ".digital-asset/assets/README.md",
+        ".digital-asset/assets/index.jsonl",
+        ".digital-asset/assets/adoption.jsonl",
+        ".digital-asset/learning/events.jsonl",
+        ".digital-asset/skills/checkout.json",
+        ".digital-asset/context-map.json",
+        ".digital-asset/governance-map.yaml",
+        ".digital-asset/data-map.yaml",
+        ".ai-assets.json",
+        "AGENTS.md",
+        "CLAUDE.md",
+        "AI_FRONT_DOOR.md",
+        "AI_TABLE_OF_CONTENTS.md",
+        ".githooks/pre-push",
+        ".githooks/pre-push.ps1"
+      ],
+      "authority_boundary": "DAD enrollment installs or updates only reviewed, marker-bounded governance surfaces after a human approval ID. Normal recurring DAD operation remains mailbox-only under .digital-asset/mail/**.",
+      "cadence": {
+        "asset_skill_template_enrollment_checks": "weekly",
+        "mail": "daily",
+        "preflight": "warn_only_when_stale"
+      },
+      "candidate_weekly_notices": [
+        "asset_update_available",
+        "skill_update_retirement_or_replacement",
+        "template_update_available",
+        "architecture_reference_update",
+        "governance_map_drift",
+        "data_map_drift",
+        "new_best_practice_or_library_recommendation"
+      ],
+      "dad_hub_ref": "dad://hub/Digital-Assett-Directory",
+      "git_state": {
+        "branch": "master",
+        "dirty_count": 61,
+        "exists": true,
+        "git_detected": true,
+        "head": "73e8560",
+        "is_dirty": true,
+        "remote_origin": "https://github.com/lowelltwong-alt/law-firm-digital-twin.git"
+      },
+      "hold_reasons": [],
+      "hook_install_disclosed": true,
+      "normal_operation_write_boundary": ".digital-asset/mail/**",
+      "operation": "enroll",
+      "public_facing": true,
+      "repo_alias": "Law Firm Digital Twin",
+      "repo_id": "law-firm-digital-twin",
+      "repo_local_only_boundary": "Repo-local exception and fix-outcome paths are source-repo owned and are not created or updated by DAD enrollment. They are not DAD-managed authority surfaces and normal DAD operation may not mutate them.",
+      "repo_local_only_paths": [
+        ".digital-asset/exceptions/README.md",
+        ".digital-asset/exceptions/.gitignore",
+        ".digital-asset/exceptions/outbox.jsonl",
+        ".digital-asset/exceptions/inbox.jsonl",
+        ".digital-asset/exceptions/archive.jsonl",
+        "processed/exceptions/fix-outcomes/outcomes.jsonl"
+      ],
+      "repo_ref": "dad://repo/law-firm-digital-twin",
+      "update_allowed": true,
+      "update_ready": true,
+      "visibility": "public",
+      "wave": "wave-2026-07-18-law-firm-digital-twin"
+    }
+  ],
+  "operation": "enroll",
+  "plan_id": "enroll-wave-2026-07-18-law-firm-digital-twin",
+  "schema_version": "0.1.0",
+  "wave": "wave-2026-07-18-law-firm-digital-twin"
+}

@@ -11,7 +11,6 @@ from jsonschema.validators import validator_for
 import yaml
 
 from .config import AppConfig, EnrollmentRepoPolicy
-from .mail_center import mail_digest_status, mail_gitignore_text, mail_readme_text
 from .surface_versions import contract_surface_statuses, expected_contract_surface_blocks
 from .transport import TRANSPORT_IMPLEMENTATION_VERSION, TRANSPORT_SURFACE_VERSION
 from .utils import append_jsonl, atomic_write_text, json_dumps, utc_now
@@ -22,7 +21,6 @@ ENROLLMENT_DIR = Path("processed") / "enrollment"
 AUDIT_PATH = ENROLLMENT_DIR / "audit.jsonl"
 CAPTURE_PATTERN_REGISTRY = Path("registry") / "exception-capture-pattern-registry.json"
 REPO_ENROLLMENT_SCHEMA = Path("schemas") / "repo-enrollment-contract.schema.json"
-DOWNSTREAM_EXCEPTION_README = Path("templates") / "downstream" / "EXCEPTIONS_README.md"
 DOWNSTREAM_ASSETS_README = Path("templates") / "downstream" / "DAD_ASSETS_README.md"
 
 GOVERNANCE_BEGIN = "<!-- BEGIN DIGITAL_ASSET_DIRECTORY_GOVERNANCE -->"
@@ -111,8 +109,8 @@ AUTHORITY_BOUNDARY = (
 )
 
 REPO_LOCAL_ONLY_BOUNDARY = (
-    "Repo-local exception and fix-outcome paths are bootstrapped for the source "
-    "repo to append safe metadata packets. They are not DAD-managed authority "
+    "Repo-local exception and fix-outcome paths are source-repo owned and are "
+    "not created or updated by DAD enrollment. They are not DAD-managed authority "
     "surfaces and normal DAD operation may not mutate them."
 )
 
@@ -460,7 +458,7 @@ def _plan_markdown(payload: dict[str, Any]) -> str:
             "",
             *[f"- `{path}`" for path in APPROVED_RELATIVE_PATHS],
             "",
-            "Repo-local exception bootstrap paths:",
+            "Repo-local source-owned paths (not written by enrollment):",
             "",
             REPO_LOCAL_ONLY_BOUNDARY,
             "",
@@ -900,7 +898,8 @@ Central DAD hub: `{hub_ref}` resolved by `--hub`, `DAD_HUB`, or
 `~/.dad/hub.json`.
 Contract: `.digital-asset/dad-integration.json`
 
-Before material AI-assisted work, read this repo's front door and run:
+Before material AI-assisted work, preserve the repo-authored instructions above,
+then read `AI_FRONT_DOOR.md` and `README.md`, and run:
 
 ```text
 asset-dir agent preflight --repo . --agent <agent-id> --task "<task>"
@@ -952,7 +951,17 @@ used, ignored, failed, or harmful DAD recommendations.
 
 
 def _front_door_body(policy: EnrollmentRepoPolicy) -> str:
-    return f"""## Digital Asset Directory Enrollment
+    return f"""## Required Read Order
+
+1. `AGENTS.md` - source authority for privacy, reuse, release, and simulation boundaries.
+2. `README.md` - secondary project orientation and current implementation status.
+3. `.digital-asset/dad-integration.json` - DAD enrollment contract and write boundary.
+4. `.digital-asset/context-map.json` - task-specific DAD routes and candidate guidance.
+
+Repo-authored rules in `AGENTS.md` override DAD recommendations when they conflict.
+Stop rather than weakening privacy, authority, or reuse boundaries.
+
+## Digital Asset Directory Enrollment
 
 - Contract: `.digital-asset/dad-integration.json`
 - Context map: `.digital-asset/context-map.json`
@@ -1049,6 +1058,11 @@ def _ps_hook_text(hub_root: Path, policy: EnrollmentRepoPolicy) -> str:
 
 
 def _write_mailbox(repo_root: Path, changed: list[str]) -> None:
+    # Keep mail/model imports off the read-only enrollment planning path. The
+    # mail center pulls in the full Pydantic model stack and is needed only when
+    # applying mailbox files.
+    from .mail_center import mail_gitignore_text, mail_readme_text
+
     for rel, text in {
         ".digital-asset/mail/README.md": mail_readme_text(),
         ".digital-asset/mail/.gitignore": mail_gitignore_text(),
@@ -1062,44 +1076,6 @@ def _write_mailbox(repo_root: Path, changed: list[str]) -> None:
         ".digital-asset/mail/adoption.jsonl",
     ):
         path = _target_path(repo_root, rel)
-        if not path.exists():
-            atomic_write_text(path, "")
-            changed.append(rel)
-
-
-def _exception_gitignore_text() -> str:
-    return "*.jsonl\n*.lock\nlast_*.json\n"
-
-
-def _exception_readme_text(hub_root: Path) -> str:
-    template = hub_root / DOWNSTREAM_EXCEPTION_README
-    if template.exists():
-        return template.read_text(encoding="utf-8")
-    return (
-        "# DAD Exceptions Outbox\n\n"
-        "Append metadata-only exception packets to `outbox.jsonl`. Do not copy "
-        "secrets, raw logs, private rows, source blobs, or hidden reasoning. "
-        "DAD treats these rows as candidate evidence until locally reviewed.\n\n"
-        "## Never Send\n\n"
-        "Do not send credentials, tokens, cookies, private keys, raw logs, full "
-        "stack traces, copied private rows, complete source files, generated "
-        "diffs, hidden reasoning, or long pasted payloads.\n"
-    )
-
-
-def _write_exception_surface(repo_root: Path, hub_root: Path, changed: list[str]) -> None:
-    for rel, text in {
-        ".digital-asset/exceptions/README.md": _exception_readme_text(hub_root),
-        ".digital-asset/exceptions/.gitignore": _exception_gitignore_text(),
-    }.items():
-        if _write_text_if_changed(_target_path(repo_root, rel, allow_local_only=True), text):
-            changed.append(rel)
-    for rel in (
-        ".digital-asset/exceptions/outbox.jsonl",
-        ".digital-asset/exceptions/inbox.jsonl",
-        ".digital-asset/exceptions/archive.jsonl",
-    ):
-        path = _target_path(repo_root, rel, allow_local_only=True)
         if not path.exists():
             atomic_write_text(path, "")
             changed.append(rel)
@@ -1173,7 +1149,6 @@ def _apply_payloads(
 
     _write_mailbox(repo_root, changed)
     _write_asset_memory_surface(repo_root, hub_root, changed)
-    _write_exception_surface(repo_root, hub_root, changed)
 
     if _write_managed_block(
         _target_path(repo_root, "AGENTS.md"),
@@ -1342,10 +1317,14 @@ def apply_enrollment(
 def enrollment_status(
     policy: EnrollmentRepoPolicy, *, stale_hours: int = 24
 ) -> dict[str, Any]:
+    # Status needs mail freshness, but planning and policy selection do not.
+    from .mail_center import mail_digest_status
+
     repo_root = policy.path.resolve()
     contract_path = repo_root / ".digital-asset" / "dad-integration.json"
     contract: dict[str, Any] | None = None
     errors: list[str] = []
+    missing_repo_local_paths: list[str] = []
     if contract_path.exists():
         try:
             contract = json.loads(contract_path.read_text(encoding="utf-8"))
@@ -1359,15 +1338,9 @@ def enrollment_status(
         except ValidationError as exc:
             errors.append(f"Enrollment contract schema validation failed: {exc.message}")
     if contract:
-        for rel in (
-            ".digital-asset/exceptions/README.md",
-            ".digital-asset/exceptions/.gitignore",
-            ".digital-asset/exceptions/outbox.jsonl",
-            ".digital-asset/exceptions/inbox.jsonl",
-            ".digital-asset/exceptions/archive.jsonl",
-        ):
+        for rel in REPO_LOCAL_ONLY_PATHS:
             if not _target_path(repo_root, rel, allow_local_only=True).exists():
-                errors.append(f"Missing repo-local exception surface path: {rel}")
+                missing_repo_local_paths.append(rel)
     mail_status = mail_digest_status(repo_root, stale_hours=stale_hours)
     contract_version = (
         str(contract.get("enrollment", {}).get("version", "")) if contract else ""
@@ -1431,6 +1404,7 @@ def enrollment_status(
         "repo_local_only_paths": REPO_LOCAL_ONLY_PATHS,
         "repo_local_only_boundary": REPO_LOCAL_ONLY_BOUNDARY,
         "errors": errors,
+        "missing_repo_local_only_paths": missing_repo_local_paths,
         "authority_boundary": AUTHORITY_BOUNDARY,
     }
 
