@@ -722,7 +722,7 @@
         "src/digital_asset_directory/ml_agent_family.py",
         "src/digital_asset_directory/synthetic_data_resources.py"
       ],
-      "content_digest": "sha256:fd4dc3440950475d492307f29ea8e6f09d3e47a2c3da1096cfbb02d3f4c8cd0e",
+      "content_digest": "sha256:617cbdceb7aa50f01dbb55b04ac08a90bbae33f0e440b0df4a5903f1742272e7",
       "source_observation_digest": "sha256:01e8bb182e297135e3e1502b249d199a84c29db4345f6b13561f170f5b9b3948",
       "contract_digests": {
         "input": "sha256:237d32dea8556c1049117af26c53fd66ffbc5e4626b0bca598e1b5041531d16d",
@@ -802,7 +802,7 @@
         "schemas/ml-fit-routing-request.schema.json",
         "src/digital_asset_directory/ml_agent_family.py"
       ],
-      "content_digest": "sha256:cfd709b1b93820b0a60de45f928c65458665d4a6d996a7cb741f1f034bde0219",
+      "content_digest": "sha256:6d7fedb582d8246531a6697dfa318cacacdf383e2b2d81799680b2b04713ed18",
       "source_observation_digest": "sha256:d83669ee926910a5477d27d0329cdd88f5851f2b1d509b1b05be300ee5eabe4a",
       "contract_digests": {
         "input": "sha256:237d32dea8556c1049117af26c53fd66ffbc5e4626b0bca598e1b5041531d16d",
@@ -1545,7 +1545,7 @@
                                "src/digital_asset_directory/ml_agent_family.py",
                                "tests/test_ml_agent_family.py"
                            ],
-        "content_digest":  "sha256:97dcb7d77a16a51db95dd7db1c9556a6fd610b645ddd7cfe728d4ef3fd07ae91",
+        "content_digest":  "sha256:fef6b24b270854dd448b62aeef51cce095c2c793be85aa637e46221339fb1c16",
         "source_observation_digest":  "sha256:57d8aabc9088f7e45e116679989a6d3d9ac4eeb9ccb189a339739d5d496a1f1c",
         "contract_digests":  {
                                  "input":  "sha256:237d32dea8556c1049117af26c53fd66ffbc5e4626b0bca598e1b5041531d16d",
@@ -1619,7 +1619,7 @@
                                "src/digital_asset_directory/ml_agent_family.py",
                                "tests/test_ml_agent_family.py"
                            ],
-        "content_digest":  "sha256:97dcb7d77a16a51db95dd7db1c9556a6fd610b645ddd7cfe728d4ef3fd07ae91",
+        "content_digest":  "sha256:fef6b24b270854dd448b62aeef51cce095c2c793be85aa637e46221339fb1c16",
         "source_observation_digest":  "sha256:e7c6e762916c9ff9b2dba68866dc5554ef2692d6fd6c76c3670753038f94e1a2",
         "contract_digests":  {
                                  "input":  "sha256:237d32dea8556c1049117af26c53fd66ffbc5e4626b0bca598e1b5041531d16d",
@@ -1693,7 +1693,7 @@
                                "src/digital_asset_directory/ml_agent_family.py",
                                "tests/test_ml_agent_family.py"
                            ],
-        "content_digest":  "sha256:97dcb7d77a16a51db95dd7db1c9556a6fd610b645ddd7cfe728d4ef3fd07ae91",
+        "content_digest":  "sha256:fef6b24b270854dd448b62aeef51cce095c2c793be85aa637e46221339fb1c16",
         "source_observation_digest":  "sha256:b613406e71cdc01505a6a8ec67d84cdcf8c9f1f1ed4673eb454f52f78cc18912",
         "contract_digests":  {
                                  "input":  "sha256:237d32dea8556c1049117af26c53fd66ffbc5e4626b0bca598e1b5041531d16d",
@@ -1767,7 +1767,7 @@
                                "src/digital_asset_directory/ml_agent_family.py",
                                "tests/test_ml_agent_family.py"
                            ],
-        "content_digest":  "sha256:97dcb7d77a16a51db95dd7db1c9556a6fd610b645ddd7cfe728d4ef3fd07ae91",
+        "content_digest":  "sha256:fef6b24b270854dd448b62aeef51cce095c2c793be85aa637e46221339fb1c16",
         "source_observation_digest":  "sha256:ac41b6a499407edfa59467dd6ef670d049d35aa43eb283543d3eeab260d3fbfb",
         "contract_digests":  {
                                  "input":  "sha256:237d32dea8556c1049117af26c53fd66ffbc5e4626b0bca598e1b5041531d16d",
@@ -1841,7 +1841,7 @@
                                "src/digital_asset_directory/ml_agent_family.py",
                                "tests/test_ml_agent_family.py"
                            ],
-        "content_digest":  "sha256:97dcb7d77a16a51db95dd7db1c9556a6fd610b645ddd7cfe728d4ef3fd07ae91",
+        "content_digest":  "sha256:fef6b24b270854dd448b62aeef51cce095c2c793be85aa637e46221339fb1c16",
         "source_observation_digest":  "sha256:19aad1ad2caac2c1a30264afcbde3f357e4eebd691608958a81e3738e096464d",
         "contract_digests":  {
                                  "input":  "sha256:237d32dea8556c1049117af26c53fd66ffbc5e4626b0bca598e1b5041531d16d",
@@ -1915,7 +1915,7 @@
                                "src/digital_asset_directory/ml_agent_family.py",
                                "tests/test_ml_agent_family.py"
                            ],
-        "content_digest":  "sha256:97dcb7d77a16a51db95dd7db1c9556a6fd610b645ddd7cfe728d4ef3fd07ae91",
+        "content_digest":  "sha256:fef6b24b270854dd448b62aeef51cce095c2c793be85aa637e46221339fb1c16",
         "source_observation_digest":  "sha256:122ac84f2c7b65eb5e0923bf181efcf854942e750a98023c1c78b8725eedeb9e",
         "contract_digests":  {
                                  "input":  "sha256:237d32dea8556c1049117af26c53fd66ffbc5e4626b0bca598e1b5041531d16d",
@@ -1991,7 +1991,7 @@
                                "src/digital_asset_directory/ml_agent_family.py",
                                "tests/test_ml_agent_family.py"
                            ],
-        "content_digest":  "sha256:ed362c4f4190781aa40316c656ce0c81448eb1349ab77dc50707539336578500",
+        "content_digest":  "sha256:77f06a3e889e6233ea40a425ca9bd26a6631e3a975f5eb734d2ef31f5dc3f766",
         "source_observation_digest":  "sha256:efa3301f54b0b1723259ed32c5cd211d2908df2faeaf8549e72fb04930c4d385",
         "contract_digests":  {
                                  "input":  "sha256:237d32dea8556c1049117af26c53fd66ffbc5e4626b0bca598e1b5041531d16d",
@@ -2067,7 +2067,7 @@
                                "src/digital_asset_directory/ml_agent_family.py",
                                "tests/test_ml_agent_family.py"
                            ],
-        "content_digest":  "sha256:ed362c4f4190781aa40316c656ce0c81448eb1349ab77dc50707539336578500",
+        "content_digest":  "sha256:77f06a3e889e6233ea40a425ca9bd26a6631e3a975f5eb734d2ef31f5dc3f766",
         "source_observation_digest":  "sha256:01a3e635c43cbe47bdaedc93f8c57fc5da00c7348f1fcad3448d98b9a599a7a6",
         "contract_digests":  {
                                  "input":  "sha256:237d32dea8556c1049117af26c53fd66ffbc5e4626b0bca598e1b5041531d16d",
@@ -2143,7 +2143,7 @@
                                "src/digital_asset_directory/ml_agent_family.py",
                                "tests/test_ml_agent_family.py"
                            ],
-        "content_digest":  "sha256:ed362c4f4190781aa40316c656ce0c81448eb1349ab77dc50707539336578500",
+        "content_digest":  "sha256:77f06a3e889e6233ea40a425ca9bd26a6631e3a975f5eb734d2ef31f5dc3f766",
         "source_observation_digest":  "sha256:80ba2cc875683640bb572008744aa9ad67b5fb646157150888ef72b1e07c72ed",
         "contract_digests":  {
                                  "input":  "sha256:237d32dea8556c1049117af26c53fd66ffbc5e4626b0bca598e1b5041531d16d",

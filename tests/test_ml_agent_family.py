@@ -300,12 +300,33 @@ def test_fit_route_deterministically_selects_specialist_mesh(
         ROOT,
         objective=f"Route a bounded {problem_shape} fixture.",
         problem_shape=problem_shape,
-        execution_scale="local",
+        execution_scale=(
+            "distributed_required" if problem_shape == "privacy_federated_learning" else "local"
+        ),
         label_status="available",
     )
     assert result["specialist_route"]["role_id"] == expected_role
     assert required_techniques <= set(result["candidate_technique_ids"])
     assert validate_ml_fit_receipt(ROOT, result) == result
+
+def test_federated_route_requires_distributed_execution() -> None:
+    for execution_scale in ("local", "unknown"):
+        result = ml_fit_route(
+            ROOT,
+            objective="Train a privacy-preserving federated fixture.",
+            problem_shape="privacy_federated_learning",
+            execution_scale=execution_scale,
+            label_status="available",
+        )
+        assert result["disposition"] == "insufficient_evidence"
+        assert result["specialist_route"] is None
+        assert result["human_decision_required"] is True
+        assert result["candidate_technique_ids"] == ["ml-technique:no-ml-baseline"]
+        assert not any(
+            row["alternative"] == "distributed compute stack"
+            for row in result["rejected_alternatives"]
+        )
+        assert validate_ml_fit_receipt(ROOT, result) == result
 
 @pytest.mark.parametrize("field", ["disposition", "ordered_toolchain", "required_gates"])
 def test_fit_receipt_rejects_material_tampering(field: str) -> None:

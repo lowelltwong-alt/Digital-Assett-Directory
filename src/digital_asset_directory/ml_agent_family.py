@@ -304,6 +304,26 @@ def ml_fit_route(
                 techniques=[baseline],
             )
         )
+    elif problem_shape == "privacy_federated_learning" and execution_scale != "distributed_required":
+        disposition = "insufficient_evidence"
+        unknowns.append("distributed participating-client execution requirement")
+        stages.append(
+            _stage(
+                1,
+                "clarify-federated-execution",
+                required=True,
+                entry=["Privacy-preserving federated learning was requested without required distributed execution evidence."],
+                stop=["Stop before specialist routing until participating clients, aggregation authority, and distributed execution are explicit."],
+                techniques=[baseline],
+            )
+        )
+        rejected.append(
+            {
+                "alternative": "privacy-preserving federated specialist route",
+                "reason": "Federated learning requires multiple participating clients and cannot be represented as a local or unknown-scale execution route.",
+                "reconsider_when": "The request declares distributed_required and supplies a reviewable threat model, client topology, and aggregation authority.",
+            }
+        )
     elif label_status in {"unavailable", "unknown", "not_applicable"}:
         disposition = "data_work_first"
         if label_status in {"unknown", "not_applicable"}:
@@ -407,7 +427,7 @@ def ml_fit_route(
                 stop=["Stop before activation when monitoring, rollback, or post-deployment evaluation is incomplete."],
                 techniques=operations_techniques))
 
-    if execution_scale != "distributed_required":
+    if execution_scale != "distributed_required" and problem_shape != "privacy_federated_learning":
         rejected.append(
             {
                 "alternative": "distributed compute stack",
