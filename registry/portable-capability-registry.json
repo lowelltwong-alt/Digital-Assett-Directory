@@ -722,7 +722,7 @@
         "src/digital_asset_directory/ml_agent_family.py",
         "src/digital_asset_directory/synthetic_data_resources.py"
       ],
-      "content_digest": "sha256:591de73f1baadfbe84bf6d7aaed25302bc82ec1bb81604d075b1f1a88f273758",
+      "content_digest": "sha256:fd4dc3440950475d492307f29ea8e6f09d3e47a2c3da1096cfbb02d3f4c8cd0e",
       "source_observation_digest": "sha256:01e8bb182e297135e3e1502b249d199a84c29db4345f6b13561f170f5b9b3948",
       "contract_digests": {
         "input": "sha256:237d32dea8556c1049117af26c53fd66ffbc5e4626b0bca598e1b5041531d16d",
