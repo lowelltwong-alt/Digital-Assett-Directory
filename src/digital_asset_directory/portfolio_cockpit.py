@@ -1093,6 +1093,7 @@ _STYLE = """
 :root{color-scheme:dark;--bg:#071016;--panel:#0d1d25;--line:#24404b;--text:#f4f7f7;--muted:#9fb3ba;--mint:#78e0bd;--amber:#ffc96f;--danger:#ff8d83}
 *{box-sizing:border-box}html{scroll-behavior:smooth}body{margin:0;background:radial-gradient(circle at 80% 0,#143743 0,transparent 38%),var(--bg);color:var(--text);font:15px/1.55 ui-sans-serif,system-ui,sans-serif}
 a.skip{position:absolute;left:-999px;top:8px;background:#fff;color:#000;padding:10px;z-index:2}a.skip:focus{left:8px}.shell{width:min(1400px,94vw);margin:auto;padding:46px 0 80px}
+.section-nav{position:sticky;top:0;z-index:1;display:flex;flex-wrap:wrap;gap:8px;padding:10px 0;background:color-mix(in srgb,var(--bg) 92%,transparent);backdrop-filter:blur(10px)}.section-nav a{color:var(--mint);border:1px solid var(--line);border-radius:999px;padding:.35rem .7rem;text-decoration:none;font-size:.82rem}.section-nav a:hover{background:var(--panel)}
 .eyebrow{text-transform:uppercase;letter-spacing:.13em;color:var(--mint);font-size:.72rem;font-weight:800}h1{font-size:clamp(2.4rem,6vw,5.7rem);line-height:.9;max-width:950px;margin:.3rem 0 1rem}h2{margin-top:3rem}h3{margin:.25rem 0}.muted{color:var(--muted);max-width:900px}
 .stats,.today,.sources{display:grid;gap:14px}.stats{grid-template-columns:repeat(6,minmax(120px,1fr));margin:28px 0}.today{grid-template-columns:repeat(3,1fr)}.sources{grid-template-columns:repeat(2,1fr)}
 .card,.stat,.table-wrap{background:color-mix(in srgb,var(--panel) 94%,transparent);border:1px solid var(--line);border-radius:17px;box-shadow:0 20px 55px #0004}.card,.stat{padding:18px}.stat strong{display:block;font-size:1.9rem}.stat span,.meta{color:var(--muted)}
@@ -1199,6 +1200,9 @@ def portfolio_cockpit_html(cockpit: dict[str, Any]) -> str:
   <div class="eyebrow">DAD &middot; Personal project operating system</div>
   <h1>See the whole field. Choose only three.</h1>
   <p class="muted">One deterministic view of observed Git work, creative workstreams, human decisions, and accepted dependency evidence. No control on this page can execute an action.</p>
+  <nav class="section-nav" aria-label="Cockpit sections">
+    <a href="#today">Today</a><a href="#sources">Source health</a><a href="#queue">Full queue</a><a href="#evidence">Evidence gaps</a>
+  </nav>
   <section class="stats" aria-label="Portfolio totals">
     <div class="stat"><strong>{summary["project_count"]}</strong><span>projects</span></div>
     <div class="stat"><strong>{summary["branch_count"]}</strong><span>branches</span></div>
@@ -1207,17 +1211,17 @@ def portfolio_cockpit_html(cockpit: dict[str, Any]) -> str:
     <div class="stat"><strong>{summary["today_item_count"]}</strong><span>Today</span></div>
     <div class="stat"><strong>{summary["unknown_count"]}</strong><span>unknowns</span></div>
   </section>
-  <h2>Today</h2>
+  <h2 id="today">Today</h2>
   <section class="today" aria-label="Today attention items">{_attention_cards(cockpit["today"], all_clear=summary["all_clear"])}</section>
-  <h2>Source health</h2>
+  <h2 id="sources">Source health</h2>
   <section class="sources" aria-label="Source health">{source_cards}</section>
-  <h2>Full attention queue</h2>
+  <h2 id="queue">Full attention queue</h2>
   <div class="table-wrap"><table>
     <caption>Deterministic display order; source priorities are not a composite value score.</caption>
     <thead><tr><th scope="col">Band</th><th scope="col">Work</th><th scope="col">Source</th><th scope="col">Why</th><th scope="col">Idle days</th><th scope="col">Suggested next action</th></tr></thead>
     <tbody>{queue_rows}</tbody>
   </table></div>
-  <h2>Evidence gaps</h2>
+  <h2 id="evidence">Evidence gaps</h2>
   <div class="table-wrap"><table>
     <caption>Unknown, stale, invalid, or unresolved evidence that prevents false confidence.</caption>
     <thead><tr><th scope="col">Severity</th><th scope="col">Source</th><th scope="col">Kind</th><th scope="col">Explanation</th></tr></thead>
