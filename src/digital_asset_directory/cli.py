@@ -398,6 +398,11 @@ from .portfolio_cockpit import (
     build_portfolio_cockpit,
     write_portfolio_cockpit_outputs,
 )
+from .operational_cockpit import (
+    build_operational_cockpit,
+    build_operational_cockpit_server,
+    write_operational_cockpit,
+)
 from .portfolio_reconciliation import (
     build_portfolio_reconciliation,
     write_portfolio_reconciliation_outputs,
@@ -11510,6 +11515,72 @@ def portfolio_os_cockpit(
         console.print_json(data=cockpit)
         return
     console.print_json(data={**outputs, "portfolio_scan": scan_summary})
+
+
+@os_app.command("operational-cockpit")
+def portfolio_os_operational_cockpit(
+    stale_after_hours: int = typer.Option(
+        26,
+        "--stale-after-hours",
+        min=1,
+        max=24 * 30,
+        help="Age after which a precomputed source is explicitly stale.",
+    ),
+    full: bool = typer.Option(False, "--full"),
+    config: Optional[Path] = typer.Option(None),
+    hub: Optional[Path] = typer.Option(None),
+) -> None:
+    """Compose and publish the read-only operational cockpit snapshot."""
+
+    cfg = _cfg(config, hub)
+    try:
+        cockpit = build_operational_cockpit(
+            cfg.repo_root,
+            stale_after_seconds=stale_after_hours * 60 * 60,
+        )
+        outputs = write_operational_cockpit(cfg.repo_root, cockpit)
+    except (OSError, ValueError, ValidationError) as exc:
+        console.print(f"Cannot publish operational cockpit: {exc}")
+        raise typer.Exit(2) from exc
+    console.print_json(data=cockpit if full else outputs)
+
+
+@os_app.command("cockpit-host")
+def portfolio_os_cockpit_host(
+    port: int = typer.Option(8765, "--port", min=1, max=65535),
+    rebuild: bool = typer.Option(
+        True,
+        "--rebuild/--no-rebuild",
+        help="Rebuild only the operational envelope from precomputed reports before serving.",
+    ),
+    stale_after_hours: int = typer.Option(26, "--stale-after-hours", min=1, max=24 * 30),
+    config: Optional[Path] = typer.Option(None),
+    hub: Optional[Path] = typer.Option(None),
+) -> None:
+    """Serve the operational cockpit in the foreground on loopback only."""
+
+    cfg = _cfg(config, hub)
+    try:
+        if rebuild:
+            cockpit = build_operational_cockpit(
+                cfg.repo_root,
+                stale_after_seconds=stale_after_hours * 60 * 60,
+            )
+            write_operational_cockpit(cfg.repo_root, cockpit)
+        server = build_operational_cockpit_server(cfg.repo_root, port=port)
+    except (OSError, ValueError, ValidationError) as exc:
+        console.print(f"Cannot start operational cockpit host: {exc}")
+        raise typer.Exit(2) from exc
+    console.print(
+        f"DAD operational cockpit: http://127.0.0.1:{server.server_port}/ "
+        "(foreground, read-only; Ctrl+C to stop)"
+    )
+    try:
+        server.serve_forever()
+    except KeyboardInterrupt:
+        pass
+    finally:
+        server.server_close()
 
 
 @os_app.command("reconcile")

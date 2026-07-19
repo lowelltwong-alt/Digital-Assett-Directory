@@ -337,6 +337,7 @@
     "agent_family_health_schema": "schemas/agent-family-health.schema.json",
     "agent_family_pilot_schema": "schemas/agent-family-pilot.schema.json",
     "portfolio_cockpit_v2_schema": "schemas/portfolio-cockpit-v2.schema.json",
+    "operational_cockpit_schema": "schemas/operational-cockpit.schema.json",
     "technical_product_company_os_registry_schema": "schemas/technical-product-company-os-registry.schema.json",
     "project_position_diagnosis_schema": "schemas/project-position-diagnosis.schema.json",
     "capability_routing_receipt_schema": "schemas/capability-routing-receipt.schema.json",

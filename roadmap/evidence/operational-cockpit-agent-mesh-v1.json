@@ -1,0 +1,133 @@
+{
+  "schema_version": "dad.task_local_agent_mesh_manifest.v1",
+  "mesh_id": "dad:agent-mesh:operational-cockpit",
+  "task_id": "operational-cockpit-platform-v2",
+  "revision_id": "dad:agent-mesh-revision:operational-cockpit:v1",
+  "phase": "planning",
+  "status": "active",
+  "source_snapshot_digest": "sha256:64c9aabb286a599f98818e272f5447620fb0d3b5c449dd7cf1800819c38da5cc",
+  "authority": {
+    "source_authority": "DAD retains authority for its cockpit contracts; every observed repository retains its own source authority.",
+    "execution_authority": false,
+    "human_gate_required": true
+  },
+  "max_delegation_depth": 1,
+  "writer_role_id": "bounded-writer",
+  "checker_role_id": "independent-checker",
+  "non_overlap_statement": "Only bounded-writer may edit the isolated cockpit worktree; independent-checker reviews the final diff and evidence read-only.",
+  "roles": [
+    {
+      "role_id": "bounded-writer",
+      "why_needed": "One owner must compose existing cockpit projections without creating a competing authority surface.",
+      "mission": "Implement a deterministic operational envelope and foreground loopback host over precomputed DAD reports.",
+      "inputs": [
+        "existing portfolio, family, capability, daemon, and event reports",
+        "official control-plane and accessibility research",
+        "DAD source-authority and portability contracts"
+      ],
+      "dependencies": [],
+      "authority": "May edit only the isolated DAD branch; may not activate a daemon, persist a host, or write another repository.",
+      "model_effort_class": "medium",
+      "writer_checker_relation": "writer",
+      "acceptance_conditions": [
+        "Schema-valid snapshot distinguishes current, stale, invalid, and missing sources.",
+        "Foreground host binds loopback and serves only immutable known routes without scanning sources.",
+        "Existing cockpit identities and repository source authority remain intact."
+      ],
+      "stop_conditions": [
+        "Implementation requires daemon activation, persistent scheduling, cross-repo writes, or external ingress.",
+        "Existing source authority cannot be preserved."
+      ],
+      "handoff": {
+        "recipient_role_ids": [
+          "independent-checker"
+        ],
+        "deliverables": [
+          "final diff",
+          "schema and tests",
+          "validation evidence"
+        ],
+        "readiness_conditions": [
+          "Focused tests and deterministic validators pass."
+        ]
+      }
+    },
+    {
+      "role_id": "independent-checker",
+      "why_needed": "The reusable host and cockpit contract need an independent false-authority, privacy, and failure-path review.",
+      "mission": "Verify scope, source freshness, loopback confinement, accessibility, portability, and regression evidence.",
+      "inputs": [
+        "final diff",
+        "test output",
+        "source contracts and research brief"
+      ],
+      "dependencies": [
+        "bounded-writer"
+      ],
+      "authority": "Read-only review; cannot edit, activate, publish, or approve its own work.",
+      "model_effort_class": "medium",
+      "writer_checker_relation": "checker",
+      "acceptance_conditions": [
+        "Independent findings identify any false-green, privacy, host, or rollout risk.",
+        "Release recommendation is tied to executed evidence."
+      ],
+      "stop_conditions": [
+        "Checker lacks the final diff or raw validation evidence.",
+        "Checker would become the writer."
+      ],
+      "handoff": {
+        "recipient_role_ids": [],
+        "deliverables": [
+          "independent findings",
+          "release gate"
+        ],
+        "readiness_conditions": [
+          "Writer handoff is complete."
+        ]
+      }
+    }
+  ],
+  "proof_obligations": [
+    {
+      "obligation_id": "bounded-read-only-host",
+      "description": "Prove the host binds only to loopback, exposes no mutation route, and never scans a source repository on request.",
+      "evidence_required": [
+        "host route tests",
+        "final diff",
+        "authority assertions"
+      ],
+      "owner_role_id": "bounded-writer",
+      "checker_role_id": "independent-checker",
+      "status": "pending"
+    },
+    {
+      "obligation_id": "honest-source-health",
+      "description": "Prove missing, invalid, stale, and partial source evidence cannot become a false current cockpit.",
+      "evidence_required": [
+        "schema validation",
+        "negative tests",
+        "source fingerprint assertions"
+      ],
+      "owner_role_id": "bounded-writer",
+      "checker_role_id": "independent-checker",
+      "status": "pending"
+    }
+  ],
+  "unresolved_decisions": [
+    {
+      "decision_id": "daemon-activation",
+      "summary": "Persistent daemon refresh remains inactive until Lowell separately approves the exact schedule, privacy scope, and repositories.",
+      "owner_role_id": "bounded-writer",
+      "blocking": false,
+      "status": "deferred"
+    },
+    {
+      "decision_id": "all-repo-rollout",
+      "summary": "Broad repo enrollment or adapter writes remain gated behind an opt-in pilot and reviewed enrollment wave.",
+      "owner_role_id": "bounded-writer",
+      "blocking": false,
+      "status": "deferred"
+    }
+  ],
+  "manifest_digest": "sha256:fb5bce8a3cf41b73e009dcaa168a64414140056c8a2a24d83bf4b88df5398489"
+}
