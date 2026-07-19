@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from datetime import datetime, timedelta, timezone
+from io import BytesIO
 import json
 from pathlib import Path
 from threading import Thread
@@ -9,9 +10,12 @@ from urllib.request import Request, urlopen
 
 import pytest
 from jsonschema import ValidationError
+from typer.testing import CliRunner
 
+from digital_asset_directory.cli import app
 from digital_asset_directory.portfolio_cockpit import build_portfolio_cockpit
 from digital_asset_directory.operational_cockpit import (
+    MAX_SOURCE_BYTES,
     build_operational_cockpit,
     build_operational_cockpit_server,
     operational_cockpit_html,
@@ -54,15 +58,25 @@ def _seed_sources(hub: Path, *, timestamp: datetime = NOW) -> None:
         )
     generated = timestamp.isoformat()
     paths = _source_paths(hub)
-    _write_json(
-        paths["portfolio_v1"],
-        build_portfolio_cockpit(
-            None,
-            None,
-            now=timestamp,
-            schema_root=ROOT / "schemas",
-        ),
+    portfolio_v1 = build_portfolio_cockpit(
+        None,
+        None,
+        now=timestamp,
+        schema_root=ROOT / "schemas",
     )
+    portfolio_v1["summary"].update(
+        {
+            "project_count": 12,
+            "branch_count": 48,
+            "worktree_count": 17,
+            "workstream_count": 9,
+            "attention_item_count": 6,
+            "unknown_count": 2,
+            "unassigned_attention_count": 1,
+            "all_clear": False,
+        }
+    )
+    _write_json(paths["portfolio_v1"], portfolio_v1)
     item_fingerprint = "sha256:" + "a" * 64
     v2_item = {
         "attention_id": "dad:attention:test",
@@ -176,6 +190,11 @@ def test_missing_sources_are_partial_and_never_false_green(
         "all_sources_current": False,
     }
     assert all(row["status"] == "missing" for row in cockpit["sources"].values())
+    overview = cockpit["operator_overview"]
+    assert overview["portfolio_scope"]["availability"] == "unavailable"
+    assert overview["portfolio_scope"]["project_count"] is None
+    assert overview["readiness"]["source_gap_count"] == 5
+    assert len(overview["readiness"]["source_actions"]) == 5
     assert cockpit["execution_authorized"] is False
 
 
@@ -195,6 +214,20 @@ def test_current_sources_compose_bounded_decisions_and_event_cursor(
     assert len(first["decisions"]) == 2
     assert first["event_pulse"]["event_count"] == 8
     assert first["event_pulse"]["cursor_fingerprint"].startswith("sha256:")
+    assert first["operator_overview"]["portfolio_scope"] == {
+        "availability": "current",
+        "source_id": "portfolio_v1",
+        "source_fingerprint": first["sources"]["portfolio_v1"]["fingerprint"],
+        "project_count": 12,
+        "branch_count": 48,
+        "worktree_count": 17,
+        "workstream_count": 9,
+        "attention_item_count": 6,
+        "unknown_count": 2,
+        "unassigned_attention_count": 1,
+        "all_clear": False,
+    }
+    assert first["operator_overview"]["readiness"]["source_gap_count"] == 0
     assert first["adapter_contract"]["core_kind"] == "portable_core"
     assert first["adapter_contract"]["rollout"] == "reviewed_opt_in_enrollment_wave"
 
@@ -218,6 +251,64 @@ def test_stale_and_invalid_sources_remain_visible(
     assert cockpit["summary"]["stale_count"] == 4
     assert cockpit["summary"]["invalid_count"] == 1
     assert cockpit["sources"]["event_pipeline"]["problems"] == ["source_unreadable_or_invalid_json"]
+
+
+def test_source_read_budget_fails_closed(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.delenv("DAD_DATA_ROOT", raising=False)
+    _seed_sources(tmp_path)
+    event_path = _source_paths(tmp_path)["event_pipeline"]
+    event_path.write_bytes(b" " * (MAX_SOURCE_BYTES + 1))
+
+    cockpit = build_operational_cockpit(tmp_path, now=NOW)
+
+    assert cockpit["status"] == "partial_candidate"
+    assert cockpit["sources"]["event_pipeline"]["status"] == "invalid"
+    assert cockpit["sources"]["event_pipeline"]["problems"] == ["source_exceeds_read_budget"]
+    assert cockpit["event_pulse"]["event_count"] is None
+
+    _seed_sources(tmp_path)
+    assert event_path.stat().st_size < MAX_SOURCE_BYTES
+    original_open = Path.open
+
+    def growing_open(path: Path, *args: object, **kwargs: object) -> object:
+        if path == event_path and args and args[0] == "rb":
+            return BytesIO(b" " * (MAX_SOURCE_BYTES + 1))
+        return original_open(path, *args, **kwargs)
+
+    monkeypatch.setattr(Path, "open", growing_open)
+    raced = build_operational_cockpit(tmp_path, now=NOW)
+    assert raced["sources"]["event_pipeline"]["problems"] == [
+        "source_exceeds_read_budget"
+    ]
+
+
+def test_cli_check_reports_readiness_without_publishing(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    (tmp_path / ".dad-data-root.json").write_text(
+        json.dumps({"hub_ref": str(ROOT.resolve())}),
+        encoding="utf-8",
+    )
+    monkeypatch.setenv("DAD_DATA_ROOT", str(tmp_path))
+    _seed_sources(tmp_path)
+    output_root = tmp_path / "processed/reports/portfolio_os"
+    output_paths = [
+        output_root / "operational-cockpit.json",
+        output_root / "operational-cockpit.html",
+        output_root / "operational-cockpit.receipt.json",
+    ]
+
+    result = CliRunner().invoke(
+        app,
+        ["os", "operational-cockpit", "--check", "--hub", str(ROOT)],
+    )
+
+    assert result.exit_code == 0, result.output
+    payload = json.loads(result.output)
+    assert payload["published"] is False
+    assert payload["status"] == "current_candidate"
+    assert payload["operator_overview"]["portfolio_scope"]["project_count"] == 12
+    assert all(not path.exists() for path in output_paths)
 
 
 def test_in_progress_daemon_heartbeat_cannot_make_cockpit_current(
@@ -347,6 +438,18 @@ def test_semantically_inconsistent_snapshot_is_rejected(
     with pytest.raises(ValidationError):
         validate_operational_cockpit(ROOT, contradictory)
 
+    mismatched_readiness = build_operational_cockpit(tmp_path, now=NOW)
+    mismatched_readiness["operator_overview"]["readiness"]["source_gap_count"] = 1
+    with pytest.raises((ValidationError, ValueError)):
+        validate_operational_cockpit(ROOT, mismatched_readiness)
+
+    misdirected = build_operational_cockpit(tmp_path / "missing-sources", now=NOW)
+    misdirected["operator_overview"]["readiness"]["source_actions"][0]["owner"] = (
+        "wrong-owner"
+    )
+    with pytest.raises(ValueError, match="operator readiness"):
+        validate_operational_cockpit(ROOT, misdirected)
+
 
 def test_html_is_accessible_script_free_and_escapes_source_text(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
@@ -365,6 +468,16 @@ def test_html_is_accessible_script_free_and_escapes_source_text(
     assert 'scope="col"' in html
     assert 'role="status"' in html
     assert "prefers-reduced-motion" in html
+    assert "DAD Â·" not in html
+    assert "&middot;" in html
+    assert 'href="#main"' in html
+    assert 'aria-label="Cockpit sections"' in html
+    for section in ("decisions", "portfolio", "signals", "sources", "contract"):
+        assert f'href="#{section}"' in html
+        assert f'id="{section}"' in html
+    assert "Unknown is never shown as zero." in html
+    assert "12</strong>projects" in html
+    assert "Evidence references" in html
 
 
 def test_foreground_host_is_loopback_read_only_and_route_bounded(
@@ -387,7 +500,14 @@ def test_foreground_host_is_loopback_read_only_and_route_bounded(
             payload = json.loads(response.read())
             assert payload["snapshot_id"] == cockpit["snapshot_id"]
         with urlopen(base + "/healthz", timeout=2) as response:
-            assert json.loads(response.read())["execution_authorized"] is False
+            health = json.loads(response.read())
+            assert health["execution_authorized"] is False
+            assert health["serving_status"] == "coherent"
+            assert health["evidence_status"] == "current_candidate"
+            assert health["snapshot_id"] == cockpit["snapshot_id"]
+        with pytest.raises(HTTPError) as disallowed_host:
+            urlopen(Request(base + "/", headers={"Host": "evil.example"}), timeout=2)
+        assert disallowed_host.value.code == 421
         for method in (
             "POST",
             "PUT",

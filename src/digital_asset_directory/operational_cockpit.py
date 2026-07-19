@@ -30,6 +30,7 @@ DEFAULT_STALE_AFTER_SECONDS: Final = 26 * 60 * 60
 MAX_FUTURE_SKEW_SECONDS: Final = 5 * 60
 MAX_DECISION_TEXT_LENGTH: Final = 240
 MAX_EVIDENCE_REFS: Final = 10
+MAX_SOURCE_BYTES: Final = 2_000_000
 LOOPBACK_HOST: Final = "127.0.0.1"
 AUTHORITY_BOUNDARY: Final = (
     "This operational cockpit is a local read-only projection over precomputed DAD "
@@ -43,6 +44,9 @@ class SourceSpec:
     source_id: str
     path: Path
     expected_schema: str
+    owner: str
+    producer_ref: str
+    human_approval_required: bool = False
     timestamp_fields: tuple[str, ...] = ("generated_at",)
     required_fields: tuple[str, ...] = ()
     field_types: tuple[tuple[str, type], ...] = ()
@@ -77,6 +81,8 @@ def _source_specs(hub_root: Path) -> tuple[SourceSpec, ...]:
             "portfolio_v1",
             reports / "portfolio_os" / "cockpit.json",
             "dad.portfolio_cockpit.v1",
+            "portfolio_os",
+            "src/digital_asset_directory/portfolio_cockpit.py",
             required_fields=(
                 "status",
                 "sources",
@@ -92,6 +98,8 @@ def _source_specs(hub_root: Path) -> tuple[SourceSpec, ...]:
             "portfolio_v2",
             reports / "portfolio_os" / "cockpit-v2.json",
             "dad.portfolio_cockpit.v2",
+            "agent_family_portfolio",
+            "src/digital_asset_directory/agent_families.py",
             required_fields=(
                 "status",
                 "sources",
@@ -115,6 +123,8 @@ def _source_specs(hub_root: Path) -> tuple[SourceSpec, ...]:
             "capability_os",
             portfolio / "capability-os-cockpit.json",
             "dad.capability_os_cockpit.v1",
+            "capability_os",
+            "src/digital_asset_directory/capability_os_cockpit.py",
             required_fields=(
                 "cockpit_id",
                 "views",
@@ -136,6 +146,9 @@ def _source_specs(hub_root: Path) -> tuple[SourceSpec, ...]:
             "daemon",
             reports / "daemon-heartbeat.json",
             "dad.daemon.heartbeat.v1",
+            "transport_daemon",
+            "docs/DAD_TRANSPORT_AND_COMMS_REDESIGN.md",
+            True,
             ("cycle_completed_at",),
             ("status", "reporting_privacy", "authority_boundary", "heartbeat_finalized"),
             (
@@ -150,6 +163,8 @@ def _source_specs(hub_root: Path) -> tuple[SourceSpec, ...]:
             "event_pipeline",
             events / "reports" / "event_pipeline.json",
             "dad.event_pipeline.report.v1",
+            "event_pipeline",
+            "docs/DAD_EVENT_PIPELINE.md",
             required_fields=(
                 "event_count",
                 "response_state_count",
@@ -179,6 +194,9 @@ def _load_source(
 ) -> tuple[dict[str, Any], dict[str, Any] | None]:
     base = {
         "source_id": spec.source_id,
+        "owner": spec.owner,
+        "producer_ref": spec.producer_ref,
+        "human_approval_required": spec.human_approval_required,
         "expected_schema": spec.expected_schema,
         "observed_schema": "",
         "status": "missing",
@@ -191,8 +209,23 @@ def _load_source(
     if not spec.path.is_file():
         return base, None
     try:
-        value = json.loads(spec.path.read_text(encoding="utf-8"))
-    except (OSError, json.JSONDecodeError):
+        with spec.path.open("rb") as source_file:
+            source_bytes = source_file.read(MAX_SOURCE_BYTES + 1)
+    except OSError:
+        return {
+            **base,
+            "status": "invalid",
+            "problems": ["source_unreadable_or_invalid_json"],
+        }, None
+    if len(source_bytes) > MAX_SOURCE_BYTES:
+        return {
+            **base,
+            "status": "invalid",
+            "problems": ["source_exceeds_read_budget"],
+        }, None
+    try:
+        value = json.loads(source_bytes.decode("utf-8"))
+    except (UnicodeDecodeError, json.JSONDecodeError):
         return {
             **base,
             "status": "invalid",
@@ -409,6 +442,59 @@ def _event_pulse(payload: dict[str, Any] | None) -> dict[str, Any]:
     return {**counts, "cursor_fingerprint": _canonical_digest(counts)}
 
 
+_PORTFOLIO_SCOPE_FIELDS: Final = (
+    "project_count",
+    "branch_count",
+    "worktree_count",
+    "workstream_count",
+    "attention_item_count",
+    "unknown_count",
+    "unassigned_attention_count",
+)
+
+
+def _operator_overview(
+    sources: dict[str, dict[str, Any]],
+    payloads: dict[str, dict[str, Any]],
+    *,
+    evidence_status: str,
+) -> dict[str, Any]:
+    portfolio_source = sources["portfolio_v1"]
+    portfolio_payload = payloads.get("portfolio_v1")
+    summary = portfolio_payload.get("summary", {}) if portfolio_payload else {}
+    portfolio_scope = {
+        "availability": "current" if portfolio_payload else "unavailable",
+        "source_id": "portfolio_v1",
+        "source_fingerprint": portfolio_source["fingerprint"] if portfolio_payload else "",
+        **{
+            field: summary.get(field) if portfolio_payload else None
+            for field in _PORTFOLIO_SCOPE_FIELDS
+        },
+        "all_clear": summary.get("all_clear") if portfolio_payload else None,
+    }
+    source_actions = [
+        {
+            "source_id": source_id,
+            "status": source["status"],
+            "problems": source["problems"],
+            "owner": source["owner"],
+            "producer_ref": source["producer_ref"],
+            "human_approval_required": source["human_approval_required"],
+        }
+        for source_id, source in sources.items()
+        if source["status"] != "observed"
+    ]
+    return {
+        "portfolio_scope": portfolio_scope,
+        "readiness": {
+            "evidence_status": evidence_status,
+            "projection_renderable": True,
+            "source_gap_count": len(source_actions),
+            "source_actions": source_actions,
+        },
+    }
+
+
 def build_operational_cockpit(
     hub_root: Path,
     *,
@@ -447,10 +533,12 @@ def build_operational_cockpit(
         "rollout": "reviewed_opt_in_enrollment_wave",
         "execution_authorized": False,
     }
+    operator_overview = _operator_overview(sources, payloads, evidence_status=status)
     snapshot_body = {
         "sources": sources,
         "decisions": decisions,
         "event_pulse": _event_pulse(payloads.get("event_pipeline")),
+        "operator_overview": operator_overview,
         "adapter_contract": adapter_contract,
     }
     return {
@@ -510,10 +598,48 @@ def validate_operational_cockpit(hub_root: Path, cockpit: dict[str, Any]) -> Non
     expected_status = "current_candidate" if all_current else "partial_candidate"
     if cockpit["status"] != expected_status:
         raise ValueError("cockpit status does not match source states")
+
+    overview = cockpit["operator_overview"]
+    readiness = overview["readiness"]
+    expected_actions = [
+        {
+            "source_id": source_id,
+            "status": source["status"],
+            "problems": source["problems"],
+            "owner": source["owner"],
+            "producer_ref": source["producer_ref"],
+            "human_approval_required": source["human_approval_required"],
+        }
+        for source_id, source in cockpit["sources"].items()
+        if source["status"] != "observed"
+    ]
+    if (
+        readiness["evidence_status"] != cockpit["status"]
+        or readiness["source_gap_count"] != len(expected_actions)
+        or readiness["source_actions"] != expected_actions
+    ):
+        raise ValueError("operator readiness does not match source states")
+    portfolio_scope = overview["portfolio_scope"]
+    portfolio_source = cockpit["sources"]["portfolio_v1"]
+    if portfolio_source["status"] == "observed":
+        if (
+            portfolio_scope["availability"] != "current"
+            or portfolio_scope["source_fingerprint"] != portfolio_source["fingerprint"]
+        ):
+            raise ValueError("portfolio scope provenance does not match current source")
+    elif (
+        portfolio_scope["availability"] != "unavailable"
+        or portfolio_scope["source_fingerprint"]
+        or any(portfolio_scope[field] is not None for field in _PORTFOLIO_SCOPE_FIELDS)
+        or portfolio_scope["all_clear"] is not None
+    ):
+        raise ValueError("unavailable portfolio scope must not expose counts")
+
     digest_body = {
         "sources": cockpit["sources"],
         "decisions": cockpit["decisions"],
         "event_pulse": cockpit["event_pulse"],
+        "operator_overview": cockpit["operator_overview"],
         "adapter_contract": cockpit["adapter_contract"],
     }
     expected_snapshot_id = (
@@ -524,15 +650,34 @@ def validate_operational_cockpit(hub_root: Path, cockpit: dict[str, Any]) -> Non
 
 
 def operational_cockpit_html(cockpit: dict[str, Any]) -> str:
+    """Render a script-free, evidence-transparent one-human cockpit."""
+
     summary = cockpit["summary"]
+    overview = cockpit["operator_overview"]
+    portfolio = overview["portfolio_scope"]
+    readiness = overview["readiness"]
+    pulse = cockpit["event_pulse"]
+
+    def display_count(value: Any) -> str:
+        if isinstance(value, int) and not isinstance(value, bool):
+            return escape(str(value))
+        return "unknown"
+
     decisions = (
         "".join(
             "<article class='decision'><p class='eyebrow'>Immediate review</p>"
-            f"<h2>{escape(row['label'])}</h2><p>{escape(row['next_action'])}</p>"
-            f"<p class='meta'>Source: {escape(row['source_id'])}</p></article>"
+            f"<h3>{escape(row['label'])}</h3><p>{escape(row['next_action'])}</p>"
+            f"<p class='meta'>Source: {escape(row['source_id'])}. Proposal only; no execution authority.</p>"
+            "<details><summary>Evidence references</summary><ul>"
+            + (
+                "".join(f"<li><code>{escape(ref)}</code></li>" for ref in row["evidence_refs"])
+                or "<li>No evidence references supplied.</li>"
+            )
+            + "</ul></details></article>"
             for row in cockpit["decisions"]
         )
-        or "<article class='decision'><h2>No immediate decision supplied</h2><p>Inspect partial or stale sources below before treating the portfolio as clear.</p></article>"
+        or "<article class='decision'><h3>No immediate decision supplied</h3>"
+        "<p>Inspect partial or stale sources below before treating the portfolio as clear.</p></article>"
     )
     source_rows = "".join(
         "<tr>"
@@ -541,6 +686,7 @@ def operational_cockpit_html(cockpit: dict[str, Any]) -> str:
         f"<td>{escape(source['freshness'])}</td>"
         f"<td>{escape(str(source['age_seconds']) if source['age_seconds'] is not None else 'unknown')}</td>"
         f"<td>{escape(', '.join(source['problems']) or 'none')}</td>"
+        f"<td>{escape(source['owner'])}<br><code>{escape(source['producer_ref'])}</code></td>"
         "</tr>"
         for source_id, source in cockpit["sources"].items()
     )
@@ -549,24 +695,82 @@ def operational_cockpit_html(cockpit: dict[str, Any]) -> str:
         if summary["all_sources_current"]
         else "Some sources are missing, stale, or invalid. DAD is deliberately withholding an all-clear."
     )
+    portfolio_metrics = "".join(
+        f"<div class='metric'><strong>{display_count(portfolio[field])}</strong>{escape(label)}</div>"
+        for field, label in (
+            ("project_count", "projects"),
+            ("branch_count", "branches"),
+            ("worktree_count", "worktrees"),
+            ("workstream_count", "workstreams"),
+        )
+    )
+    uncertainty_metrics = "".join(
+        f"<div class='metric'><strong>{display_count(portfolio[field])}</strong>{escape(label)}</div>"
+        for field, label in (
+            ("attention_item_count", "attention items"),
+            ("unknown_count", "unknowns"),
+            ("unassigned_attention_count", "unassigned"),
+        )
+    )
+    source_actions = (
+        "".join(
+            "<li><strong>"
+            + escape(row["source_id"].replace("_", " ").title())
+            + "</strong>: "
+            + escape(", ".join(row["problems"]))
+            + f" <span class='meta'>Owner {escape(row['owner'])}; producer "
+            + f"<code>{escape(row['producer_ref'])}</code>"
+            + ("; human approval required" if row["human_approval_required"] else "")
+            + "</span></li>"
+            for row in readiness["source_actions"]
+        )
+        or "<li>No source remediation is currently required.</li>"
+    )
+
     return f"""<!doctype html>
-<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
 <meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; img-src 'none'; script-src 'none'; object-src 'none'; frame-src 'none'; form-action 'none'; base-uri 'none'">
-<meta name="dad-snapshot-id" content="{escape(cockpit["snapshot_id"])}"><title>DAD Operational Cockpit</title><style>
-:root{{--bg:#071215;--panel:#102126;--line:#28444b;--text:#eef9f5;--muted:#9db8b3;--mint:#70e1bd;--amber:#ffd27a;--red:#ff9d9d}}
-*{{box-sizing:border-box}}body{{margin:0;background:radial-gradient(circle at 80% 0,#153f49 0,transparent 36%),var(--bg);color:var(--text);font:16px/1.55 system-ui,sans-serif}}
-main{{width:min(1220px,94vw);margin:auto;padding:3rem 0 5rem}}h1{{font-size:clamp(2.3rem,7vw,5.5rem);line-height:.94;max-width:900px}}h2{{line-height:1.15}}.eyebrow{{color:var(--mint);text-transform:uppercase;letter-spacing:.12em;font-weight:800;font-size:.75rem}}.meta,.lede,caption{{color:var(--muted)}}
-.summary,.decisions{{display:grid;grid-template-columns:repeat(3,1fr);gap:1rem}}.metric,.decision,.table-wrap{{background:var(--panel);border:1px solid var(--line);border-radius:1rem;padding:1.1rem}}.metric strong{{font-size:2rem;display:block}}.table-wrap{{overflow:auto;margin-top:1.5rem;padding:0}}table{{width:100%;border-collapse:collapse}}caption{{text-align:left;padding:1rem}}th,td{{padding:.85rem 1rem;border-top:1px solid var(--line);text-align:left;vertical-align:top}}.status{{font-weight:800}}.status-observed{{color:var(--mint)}}.status-stale{{color:var(--amber)}}.status-invalid,.status-missing{{color:var(--red)}}
-.notice{{border-left:.35rem solid var(--amber);padding:1rem;margin:1.5rem 0;background:var(--panel)}}:focus-visible{{outline:3px solid var(--amber);outline-offset:3px}}@media(max-width:850px){{.summary,.decisions{{grid-template-columns:1fr}}}}@media(prefers-reduced-motion:reduce){{*{{scroll-behavior:auto!important}}}}
-</style></head><body><main>
-<p class="eyebrow">DAD · local operational envelope</p><h1>One human. Honest state. No hidden execution.</h1>
+<meta name="dad-snapshot-id" content="{escape(cockpit["snapshot_id"])}">
+<title>DAD Operational Cockpit</title>
+<style>
+:root{{--bg:#071215;--panel:#102126;--line:#36565d;--text:#eef9f5;--muted:#afc7c2;--mint:#70e1bd;--amber:#ffd27a;--red:#ffaaaa;color-scheme:dark}}
+*{{box-sizing:border-box}}html{{scroll-behavior:smooth}}body{{margin:0;background:radial-gradient(circle at 80% 0,#153f49 0,transparent 36%),var(--bg);color:var(--text);font:16px/1.55 system-ui,sans-serif}}
+a.skip{{position:absolute;left:-999px;top:.5rem;background:#fff;color:#000;padding:.75rem;z-index:3}}a.skip:focus{{left:.5rem}}
+main{{width:min(1320px,94vw);margin:auto;padding:3rem 0 5rem}}h1{{font-size:clamp(2.3rem,7vw,5.5rem);line-height:.94;max-width:980px}}h2{{line-height:1.15;margin-top:2.5rem}}h3{{line-height:1.2}}.eyebrow{{color:var(--mint);text-transform:uppercase;letter-spacing:.12em;font-weight:800;font-size:.75rem}}.meta,.lede,caption{{color:var(--muted)}}code{{overflow-wrap:anywhere}}
+.section-nav{{position:sticky;top:0;z-index:2;display:flex;flex-wrap:wrap;gap:.5rem;padding:.75rem 0;background:var(--bg)}}.section-nav a{{color:var(--mint);border:1px solid var(--line);border-radius:999px;padding:.55rem .85rem;text-decoration:none}}
+.summary,.decisions,.scope-grid,.pulse-grid{{display:grid;grid-template-columns:repeat(3,1fr);gap:1rem}}.scope-grid{{grid-template-columns:repeat(4,1fr)}}.metric,.decision,.table-wrap,.panel{{background:var(--panel);border:1px solid var(--line);border-radius:1rem;padding:1.1rem}}.metric strong{{font-size:2rem;display:block}}.table-wrap{{overflow:auto;margin-top:1rem;padding:0}}table{{width:100%;border-collapse:collapse}}caption{{text-align:left;padding:1rem}}th,td{{padding:.85rem 1rem;border-top:1px solid var(--line);text-align:left;vertical-align:top}}
+.status{{font-weight:800}}.status-observed{{color:var(--mint)}}.status-stale{{color:var(--amber)}}.status-invalid,.status-missing{{color:var(--red)}}details{{margin-top:1rem}}summary{{cursor:pointer;color:var(--mint);min-height:44px;padding:.6rem 0}}
+.notice{{border-left:.35rem solid var(--amber);padding:1rem;margin:1.5rem 0;background:var(--panel)}}:focus-visible{{outline:3px solid var(--amber);outline-offset:3px}}
+@media(max-width:900px){{.summary,.decisions,.scope-grid,.pulse-grid{{grid-template-columns:1fr 1fr}}}}@media(max-width:620px){{.summary,.decisions,.scope-grid,.pulse-grid{{grid-template-columns:1fr}}}}@media(prefers-reduced-motion:reduce){{*{{scroll-behavior:auto!important}}}}@media(prefers-contrast:more){{:root{{--line:#b8d8d2;--muted:#d6e5e2}}}}
+</style>
+</head>
+<body>
+<a class="skip" href="#main">Skip to main content</a>
+<main id="main">
+<p class="eyebrow">DAD &middot; local operational envelope</p>
+<h1>See the whole field. Act on only what is proven.</h1>
 <p class="lede">A foreground, loopback-only view over existing portfolio, capability, daemon, and event evidence. Page requests never scan repositories.</p>
+<nav class="section-nav" aria-label="Cockpit sections"><a href="#decisions">Now</a><a href="#portfolio">Portfolio</a><a href="#signals">Signals</a><a href="#sources">Sources</a><a href="#contract">Authority</a></nav>
 <div class="notice" role="status">{escape(status_text)}</div>
 <section class="summary" aria-label="Source summary"><div class="metric"><strong>{summary["current_count"]}/{summary["source_count"]}</strong>current sources</div><div class="metric"><strong>{summary["stale_count"] + summary["missing_count"] + summary["invalid_count"]}</strong>source gaps</div><div class="metric"><strong>{summary["immediate_decision_count"]}</strong>immediate decisions</div></section>
-<h2>Now</h2><section class="decisions" aria-label="Immediate decisions">{decisions}</section>
-<div class="table-wrap"><table><caption>Source health and freshness; unknown state is never green.</caption><thead><tr><th scope="col">Source</th><th scope="col">Status</th><th scope="col">Freshness</th><th scope="col">Age (seconds)</th><th scope="col">Problems</th></tr></thead><tbody>{source_rows}</tbody></table></div>
-<footer><p>Generated {escape(cockpit["generated_at"])}. Refresh the browser after an explicit snapshot rebuild.</p><p>{escape(cockpit["authority_boundary"])}</p></footer>
-</main></body></html>"""
+<h2 id="decisions">Now</h2>
+<section class="decisions" aria-label="Immediate decisions">{decisions}</section>
+<h2 id="portfolio">Portfolio scope</h2>
+<p class="meta">Available only from a current, schema-validated Portfolio v1 source. Unknown is never shown as zero.</p>
+<section class="scope-grid" aria-label="Portfolio scope">{portfolio_metrics}</section>
+<section class="summary" aria-label="Portfolio uncertainty">{uncertainty_metrics}</section>
+<h2 id="signals">Operational signals</h2>
+<section class="pulse-grid" aria-label="Event pulse"><div class="metric"><strong>{display_count(pulse["event_count"])}</strong>events</div><div class="metric"><strong>{display_count(pulse["response_state_count"])}</strong>responses</div><div class="metric"><strong>{display_count(pulse["unanswered_notice_count"])}</strong>unanswered notices</div></section>
+<h2 id="sources">Source readiness</h2>
+<section class="panel"><p><strong>{readiness["source_gap_count"]}</strong> source gaps. Serving coherence and evidence currency are separate: this page may be safely served while its evidence remains partial.</p><ol>{source_actions}</ol></section>
+<div class="table-wrap"><table><caption>Source health and freshness; unknown state is never green.</caption><thead><tr><th scope="col">Source</th><th scope="col">Status</th><th scope="col">Freshness</th><th scope="col">Age (seconds)</th><th scope="col">Problems</th><th scope="col">Owner and producer</th></tr></thead><tbody>{source_rows}</tbody></table></div>
+<footer id="contract"><p>Generated <time datetime="{escape(cockpit["generated_at"])}">{escape(cockpit["generated_at"])}</time>. Refresh the browser after an explicit snapshot rebuild.</p><p>{escape(cockpit["authority_boundary"])}</p></footer>
+</main>
+</body>
+</html>"""
 
 
 def write_operational_cockpit(hub_root: Path, cockpit: dict[str, Any]) -> dict[str, Any]:
@@ -665,6 +869,17 @@ def _handler(
                 self.wfile.write(body)
 
         def do_GET(self) -> None:  # noqa: N802
+            allowed_hosts = {
+                LOOPBACK_HOST,
+                f"{LOOPBACK_HOST}:{self.server.server_port}",
+            }
+            if self.headers.get("Host", "") not in allowed_hosts:
+                self._send(
+                    HTTPStatus.MISDIRECTED_REQUEST,
+                    "application/json; charset=utf-8",
+                    b'{"status":"host_not_allowed"}\n',
+                )
+                return
             bundle = current_bundle()
             if bundle is None:
                 self._send(
@@ -673,7 +888,7 @@ def _handler(
                     b'{"status":"unavailable_or_invalid"}\n',
                 )
                 return
-            json_body, html_body, _cockpit = bundle
+            json_body, html_body, cockpit = bundle
             if self.path in {"/", "/index.html"}:
                 self._send(HTTPStatus.OK, "text/html; charset=utf-8", html_body)
             elif self.path == "/api/snapshot":
@@ -683,6 +898,10 @@ def _handler(
                     json.dumps(
                         {
                             "status": "serving",
+                            "serving_status": "coherent",
+                            "evidence_status": cockpit["status"],
+                            "snapshot_id": cockpit["snapshot_id"],
+                            "source_summary": cockpit["summary"],
                             "bind": LOOPBACK_HOST,
                             "execution_authorized": False,
                         },
@@ -753,6 +972,7 @@ def build_operational_cockpit_server(
 __all__ = [
     "AUTHORITY_BOUNDARY",
     "LOOPBACK_HOST",
+    "MAX_SOURCE_BYTES",
     "build_operational_cockpit",
     "build_operational_cockpit_server",
     "operational_cockpit_html",

@@ -8,7 +8,7 @@
     "schema_version", "generated_at", "snapshot_id", "status", "candidate_only",
     "execution_authorized", "authority_boundary", "refresh_model", "local_bind",
     "external_javascript", "data_classification", "summary", "sources", "decisions", "event_pulse",
-    "adapter_contract"
+    "operator_overview", "adapter_contract"
   ],
   "properties": {
     "schema_version": {"const": "dad.operational_cockpit.v1"},
@@ -64,6 +64,42 @@
         "cursor_fingerprint": {"type": "string", "pattern": "^(|sha256:[0-9a-f]{64})$"}
       }
     },
+    "operator_overview": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["portfolio_scope", "readiness"],
+      "properties": {
+        "portfolio_scope": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["availability", "source_id", "source_fingerprint", "project_count", "branch_count", "worktree_count", "workstream_count", "attention_item_count", "unknown_count", "unassigned_attention_count", "all_clear"],
+          "properties": {
+            "availability": {"enum": ["current", "unavailable"]},
+            "source_id": {"const": "portfolio_v1"},
+            "source_fingerprint": {"type": "string", "pattern": "^(|sha256:[0-9a-f]{64})$"},
+            "project_count": {"type": ["integer", "null"], "minimum": 0},
+            "branch_count": {"type": ["integer", "null"], "minimum": 0},
+            "worktree_count": {"type": ["integer", "null"], "minimum": 0},
+            "workstream_count": {"type": ["integer", "null"], "minimum": 0},
+            "attention_item_count": {"type": ["integer", "null"], "minimum": 0},
+            "unknown_count": {"type": ["integer", "null"], "minimum": 0},
+            "unassigned_attention_count": {"type": ["integer", "null"], "minimum": 0},
+            "all_clear": {"type": ["boolean", "null"]}
+          }
+        },
+        "readiness": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["evidence_status", "projection_renderable", "source_gap_count", "source_actions"],
+          "properties": {
+            "evidence_status": {"enum": ["current_candidate", "partial_candidate"]},
+            "projection_renderable": {"const": true},
+            "source_gap_count": {"type": "integer", "minimum": 0, "maximum": 5},
+            "source_actions": {"type": "array", "maxItems": 5, "items": {"$ref": "#/$defs/source_action"}}
+          }
+        }
+      }
+    },
     "adapter_contract": {
       "type": "object",
       "additionalProperties": false,
@@ -111,9 +147,12 @@
     "source": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["source_id", "expected_schema", "observed_schema", "status", "freshness", "generated_at", "age_seconds", "fingerprint", "problems"],
+      "required": ["source_id", "owner", "producer_ref", "human_approval_required", "expected_schema", "observed_schema", "status", "freshness", "generated_at", "age_seconds", "fingerprint", "problems"],
       "properties": {
         "source_id": {"type": "string", "minLength": 1},
+        "owner": {"type": "string", "minLength": 1, "maxLength": 80},
+        "producer_ref": {"type": "string", "minLength": 1, "maxLength": 240},
+        "human_approval_required": {"type": "boolean"},
         "expected_schema": {"type": "string", "minLength": 1},
         "observed_schema": {"type": "string"},
         "status": {"enum": ["observed", "stale", "missing", "invalid"]},
@@ -164,6 +203,19 @@
           }}
         }
       ]
+    },
+    "source_action": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["source_id", "status", "problems", "owner", "producer_ref", "human_approval_required"],
+      "properties": {
+        "source_id": {"enum": ["portfolio_v1", "portfolio_v2", "capability_os", "daemon", "event_pipeline"]},
+        "status": {"enum": ["stale", "missing", "invalid"]},
+        "problems": {"type": "array", "minItems": 1, "uniqueItems": true, "items": {"type": "string", "minLength": 1}},
+        "owner": {"type": "string", "minLength": 1, "maxLength": 80},
+        "producer_ref": {"type": "string", "minLength": 1, "maxLength": 240},
+        "human_approval_required": {"type": "boolean"}
+      }
     },
     "decision": {
       "type": "object",
