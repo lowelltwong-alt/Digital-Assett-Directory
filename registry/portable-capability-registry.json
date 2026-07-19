@@ -346,7 +346,7 @@
     {
       "schema_version": "dad.portable_capability_card.v1",
       "card_id": "portability-card:harness-portable-capability-control-plane",
-      "revision_id": "portability-card-revision:harness-portable-capability-control-plane:0.1.9",
+      "revision_id": "portability-card-revision:harness-portable-capability-control-plane:0.1.10",
       "artifact_id": "harness:portable-capability-control-plane",
       "artifact_kind": "harness",
       "binding_class": "portable_core",
@@ -407,7 +407,7 @@
         "src/digital_asset_directory/validation.py",
         "templates/downstream/AGENTS_MANAGED_BLOCK.md"
       ],
-      "content_digest": "sha256:0c755e70ecae26902e500fcfb38e686d97fc75d60fc490f8606ef4cc2805cf07",
+      "content_digest": "sha256:36d53be39db935e7e1915a6e7e71c75f042ab22386ea8d446edac403f127244b",
       "contract_digests": {
         "input": "sha256:eee475da7d6fe76d90852dfa97de0e1f047cb72d7d0134552245b7cda9a9fb68",
         "output": "sha256:0ec04e3bcb58df087b53068eb3756924c878f35a40871814bd8749313aa69dea",
@@ -1348,7 +1348,7 @@
     {
       "schema_version": "dad.portable_capability_card.v1",
       "card_id": "portability-card:skill-personal-project-management-ops",
-      "revision_id": "portability-card-revision:skill-personal-project-management-ops:0.4.9",
+      "revision_id": "portability-card-revision:skill-personal-project-management-ops:0.4.10",
       "artifact_id": "skill:personal-project-management-ops",
       "artifact_kind": "skill",
       "binding_class": "portable_core",
@@ -1402,7 +1402,7 @@
         "src/digital_asset_directory/portfolio_roadmap.py",
         "templates/hooks/intent-continuity-shadow-receipt.template.json"
       ],
-      "content_digest": "sha256:ea71a2105dd9c7e59ed00af52448e0c772360fea23948fa68b006096628817a6",
+      "content_digest": "sha256:c381591c25165fad07c91b6fe51da8c4bc3a2f2ea3701569037f62439325073b",
       "source_observation_digest": "sha256:1aeef157eb837554b2d8bf2b3de020f8daf701533a3ca6efe7d31e0888368a9a",
       "contract_digests": {
         "input": "sha256:eee475da7d6fe76d90852dfa97de0e1f047cb72d7d0134552245b7cda9a9fb68",
@@ -1453,7 +1453,7 @@
         "capability-os-cockpit"
       ],
       "adapter_revision_ids": [
-        "portability-card-revision:adapter-intent-continuity-codex-host:0.3.10"
+        "portability-card-revision:adapter-intent-continuity-codex-host:0.3.11"
       ],
       "harness_revision_id": "harness-revision:portable-capability-contract:0.1.0",
       "evidence_refs": [
@@ -1470,20 +1470,20 @@
     {
       "schema_version": "dad.portable_capability_card.v1",
       "card_id": "portability-card:adapter-intent-continuity-codex-host",
-      "revision_id": "portability-card-revision:adapter-intent-continuity-codex-host:0.3.10",
+      "revision_id": "portability-card-revision:adapter-intent-continuity-codex-host:0.3.11",
       "artifact_id": "adapter:intent-continuity-codex-host",
       "artifact_kind": "runtime_adapter",
       "binding_class": "runtime_adapter",
       "source_authority": "config/intent-continuity-shadow-hooks.json",
       "owner": "DAD and Lowell",
       "status": "schema_validated",
-      "core_revision_id": "portability-card-revision:skill-personal-project-management-ops:0.4.9",
+      "core_revision_id": "portability-card-revision:skill-personal-project-management-ops:0.4.10",
       "content_digest": "sha256:4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
       "target_capability_predicate": {
         "runtime_adapter_id": "adapter:codex-host",
         "status": "supervised_silent_shadow"
       },
-      "adapter_interface_digest": "sha256:6d6fed1ecba9d1617851e85620374bf2405fb6098f17817f6fa73275ce48a9c8",
+      "adapter_interface_digest": "sha256:b33f567fad7a8e03add401ccfeb89a8463d77e81078e4d4dd296211e45b3616f",
       "adapter_interface_sources": [
         ".codex/hooks.json",
         ".codex/hooks/intent_continuity_shadow.py",
@@ -2200,6 +2200,80 @@
         "candidate_only":  true,
         "execution_authorized":  false,
         "authority_boundary":  "This card records candidate routing and evaluation evidence only; it cannot authorize data access, specialist dispatch, training, deployment, scheduling, retraining, provider use, or release."
+    },
+    {
+      "schema_version": "dad.portable_capability_card.v1",
+      "card_id": "portability-card:knowledge-interface-operational-cockpit",
+      "revision_id": "portability-card-revision:knowledge-interface-operational-cockpit:0.2.0",
+      "artifact_id": "knowledge-interface:operational-cockpit",
+      "artifact_kind": "knowledge_interface",
+      "binding_class": "portable_core",
+      "source_authority": "src/digital_asset_directory/operational_cockpit.py",
+      "owner": "DAD and Lowell",
+      "status": "schema_validated",
+      "portable_files": [
+        "docs/DAD_OPERATIONAL_COCKPIT.md",
+        "schemas/operational-cockpit.schema.json",
+        "src/digital_asset_directory/operational_cockpit.py",
+        "tests/test_operational_cockpit.py"
+      ],
+      "content_digest": "sha256:bc1b3c9d07a0d8e5483bfcdcd4aca6d9c1fce85a18ededad98f3f4c436cd793c",
+      "contract_digests": {
+        "input": "sha256:0a7a5d9e8eb43eee77ebde706562952070e3a8849caeb48838003149e419a97e",
+        "output": "sha256:2db1f57b22eda578e9a1f0e741f3103ed54dbe0928e5f1434ea70722145865a1",
+        "error": "sha256:1b111a1cc5f70109c5f948d3c89b1139d02d313d6ba3d78b40f10f0ca02d45ac",
+        "privacy": "sha256:682703f796e5b1d21c72aed59e7dbefc68f77fd2f8a3970a12d68d47e32593d2",
+        "effect": "sha256:8a07707fbd7f735a37101894390cbb44846c59b0bae444c6eae297c3e9699e04",
+        "authority": "sha256:66dc78d16db264621b94d616a6060a0a326b2b13b8b5795eda22db972fa58af8"
+      },
+      "capability_ids": [
+        "operational_cockpit_projection",
+        "source_freshness_assessment",
+        "loopback_read_only_host",
+        "repo_adapter_contract"
+      ],
+      "tool_ids": [
+        "dad-cli",
+        "python-stdlib-http-server",
+        "json-schema"
+      ],
+      "context_contract": "Precomputed DAD candidate metadata and derived health only; no page-triggered source scan, raw source content, credential, secret, client payload, or raw conversation.",
+      "privacy_classes": [
+        "public",
+        "internal",
+        "confidential",
+        "restricted_by_local_policy"
+      ],
+      "consequence_classes": [
+        "small",
+        "medium",
+        "large"
+      ],
+      "effect_classes": [
+        "read_only",
+        "candidate_local_artifact"
+      ],
+      "dependencies": [
+        "skill:portable-capability-governance",
+        "harness:portable-capability-control-plane"
+      ],
+      "reverse_consumers": [
+        "portfolio-os-cli",
+        "local-operator",
+        "future-supervised-daemon"
+      ],
+      "adapter_revision_ids": [],
+      "harness_revision_id": "harness-revision:portable-capability-contract:0.1.0",
+      "evidence_refs": [
+        "docs/DAD_OPERATIONAL_COCKPIT.md",
+        "roadmap/evidence/operational-cockpit-agent-mesh-v1.json",
+        "tests/test_operational_cockpit.py"
+      ],
+      "fresh_until": "2026-08-19T00:00:00-04:00",
+      "rollback_ref": "Revert the operational cockpit core and CLI routes while preserving existing portfolio, capability, daemon, and event projections.",
+      "candidate_only": true,
+      "execution_authorized": false,
+      "authority_boundary": "This card validates a read-only candidate projection and foreground loopback host only; it cannot activate a daemon, persist a host, enroll repositories, execute requests, mutate sources, or grant authority."
     }
   ],
   "candidate_only": true,

@@ -1,0 +1,182 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://dad.local/schemas/operational-cockpit.schema.json",
+  "title": "DAD operational cockpit",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version", "generated_at", "snapshot_id", "status", "candidate_only",
+    "execution_authorized", "authority_boundary", "refresh_model", "local_bind",
+    "external_javascript", "data_classification", "summary", "sources", "decisions", "event_pulse",
+    "adapter_contract"
+  ],
+  "properties": {
+    "schema_version": {"const": "dad.operational_cockpit.v1"},
+    "generated_at": {"type": "string", "format": "date-time"},
+    "snapshot_id": {"type": "string", "pattern": "^dad:operational-cockpit:[0-9a-f]{64}$"},
+    "status": {"enum": ["current_candidate", "partial_candidate"]},
+    "candidate_only": {"const": true},
+    "execution_authorized": {"const": false},
+    "authority_boundary": {"type": "string", "minLength": 40},
+    "refresh_model": {"const": "foreground_on_demand_plus_separately_gated_reconciliation"},
+    "local_bind": {"const": "127.0.0.1"},
+    "external_javascript": {"const": false},
+    "data_classification": {"const": "local_private_metadata"},
+    "summary": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["source_count", "current_count", "stale_count", "missing_count", "invalid_count", "immediate_decision_count", "all_sources_current"],
+      "properties": {
+        "source_count": {"const": 5},
+        "current_count": {"type": "integer", "minimum": 0, "maximum": 5},
+        "stale_count": {"type": "integer", "minimum": 0, "maximum": 5},
+        "missing_count": {"type": "integer", "minimum": 0, "maximum": 5},
+        "invalid_count": {"type": "integer", "minimum": 0, "maximum": 5},
+        "immediate_decision_count": {"type": "integer", "minimum": 0, "maximum": 3},
+        "all_sources_current": {"type": "boolean"}
+      }
+    },
+    "sources": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["portfolio_v1", "portfolio_v2", "capability_os", "daemon", "event_pipeline"],
+      "properties": {
+        "portfolio_v1": {"$ref": "#/$defs/source"},
+        "portfolio_v2": {"$ref": "#/$defs/source"},
+        "capability_os": {"$ref": "#/$defs/source"},
+        "daemon": {"$ref": "#/$defs/source"},
+        "event_pipeline": {"$ref": "#/$defs/source"}
+      }
+    },
+    "decisions": {
+      "type": "array",
+      "maxItems": 3,
+      "items": {"$ref": "#/$defs/decision"}
+    },
+    "event_pulse": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["event_count", "response_state_count", "unanswered_notice_count", "cursor_fingerprint"],
+      "properties": {
+        "event_count": {"type": ["integer", "null"], "minimum": 0},
+        "response_state_count": {"type": ["integer", "null"], "minimum": 0},
+        "unanswered_notice_count": {"type": ["integer", "null"], "minimum": 0},
+        "cursor_fingerprint": {"type": "string", "pattern": "^(|sha256:[0-9a-f]{64})$"}
+      }
+    },
+    "adapter_contract": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["core_kind", "repo_contract_ref", "event_outbox_ref", "normal_write_boundary", "data_policy", "rollout", "execution_authorized"],
+      "properties": {
+        "core_kind": {"const": "portable_core"},
+        "repo_contract_ref": {"const": ".digital-asset/dad-integration.json"},
+        "event_outbox_ref": {"const": ".digital-asset/events/outbox.jsonl"},
+        "normal_write_boundary": {"const": ".digital-asset/mail/**"},
+        "data_policy": {"const": "metadata_and_derived_health_only"},
+        "rollout": {"const": "reviewed_opt_in_enrollment_wave"},
+        "execution_authorized": {"const": false}
+      }
+    }
+  },
+  "allOf": [
+    {
+      "if": {"properties": {"status": {"const": "current_candidate"}}},
+      "then": {
+        "properties": {
+          "summary": {
+            "properties": {
+              "current_count": {"const": 5},
+              "stale_count": {"const": 0},
+              "missing_count": {"const": 0},
+              "invalid_count": {"const": 0},
+              "all_sources_current": {"const": true}
+            }
+          },
+          "sources": {
+            "properties": {
+              "portfolio_v1": {"properties": {"status": {"const": "observed"}, "freshness": {"const": "current"}}},
+              "portfolio_v2": {"properties": {"status": {"const": "observed"}, "freshness": {"const": "current"}}},
+              "capability_os": {"properties": {"status": {"const": "observed"}, "freshness": {"const": "current"}}},
+              "daemon": {"properties": {"status": {"const": "observed"}, "freshness": {"const": "current"}}},
+              "event_pipeline": {"properties": {"status": {"const": "observed"}, "freshness": {"const": "current"}}}
+            }
+          }
+        }
+      },
+      "else": {"properties": {"summary": {"properties": {"all_sources_current": {"const": false}}}}}
+    }
+  ],
+  "$defs": {
+    "source": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["source_id", "expected_schema", "observed_schema", "status", "freshness", "generated_at", "age_seconds", "fingerprint", "problems"],
+      "properties": {
+        "source_id": {"type": "string", "minLength": 1},
+        "expected_schema": {"type": "string", "minLength": 1},
+        "observed_schema": {"type": "string"},
+        "status": {"enum": ["observed", "stale", "missing", "invalid"]},
+        "freshness": {"enum": ["current", "stale", "unknown"]},
+        "generated_at": {"type": "string"},
+        "age_seconds": {"type": ["integer", "null"], "minimum": 0},
+        "fingerprint": {"type": "string", "pattern": "^(|sha256:[0-9a-f]{64})$"},
+        "problems": {"type": "array", "uniqueItems": true, "items": {"type": "string", "minLength": 1}}
+      },
+      "allOf": [
+        {
+          "if": {"properties": {"status": {"const": "observed"}}},
+          "then": {"properties": {
+            "freshness": {"const": "current"},
+            "generated_at": {"type": "string", "format": "date-time"},
+            "age_seconds": {"type": "integer", "minimum": 0},
+            "fingerprint": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"},
+            "problems": {"maxItems": 0}
+          }}
+        },
+        {
+          "if": {"properties": {"status": {"const": "stale"}}},
+          "then": {"properties": {
+            "freshness": {"const": "stale"},
+            "generated_at": {"type": "string", "format": "date-time"},
+            "age_seconds": {"type": "integer", "minimum": 0},
+            "fingerprint": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"},
+            "problems": {"prefixItems": [{"const": "source_stale"}], "items": false, "minItems": 1, "maxItems": 1}
+          }}
+        },
+        {
+          "if": {"properties": {"status": {"const": "missing"}}},
+          "then": {"properties": {
+            "observed_schema": {"const": ""},
+            "freshness": {"const": "unknown"},
+            "generated_at": {"const": ""},
+            "age_seconds": {"const": null},
+            "fingerprint": {"const": ""},
+            "problems": {"prefixItems": [{"const": "source_missing"}], "items": false, "minItems": 1, "maxItems": 1}
+          }}
+        },
+        {
+          "if": {"properties": {"status": {"const": "invalid"}}},
+          "then": {"properties": {
+            "freshness": {"const": "unknown"},
+            "age_seconds": {"const": null},
+            "problems": {"minItems": 1}
+          }}
+        }
+      ]
+    },
+    "decision": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["decision_id", "source_id", "label", "next_action", "evidence_refs", "execution_authorized"],
+      "properties": {
+        "decision_id": {"type": "string", "pattern": "^dad:operational-decision:[0-9a-f]{64}$"},
+        "source_id": {"enum": ["portfolio_v2", "capability_os"]},
+        "label": {"type": "string", "minLength": 1, "maxLength": 240},
+        "next_action": {"type": "string", "minLength": 1, "maxLength": 240},
+        "evidence_refs": {"type": "array", "maxItems": 10, "uniqueItems": true, "items": {"type": "string", "maxLength": 240}},
+        "execution_authorized": {"const": false}
+      }
+    }
+  }
+}
