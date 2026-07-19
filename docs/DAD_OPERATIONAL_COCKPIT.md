@@ -20,32 +20,35 @@ bounded collectors -> append-only DAD events -> precomputed projections
                                   foreground loopback-only host
 ```
 
-The host verifies a generation receipt, JSON schema, semantic invariants, and matching JSON/HTML digests on every request. It seeds and retains the last valid bundle in memory, so a transient mismatch during rebuild serves the previous coherent generation; an invalid startup has no fallback and returns HTTP 503. It never scans a
-repository, rebuilds a source projection, appends an event, or executes an
-action. The operator explicitly rebuilds the operational envelope when desired.
+The host verifies a generation receipt, JSON schema, semantic invariants, and matching JSON/HTML digests on every request. It seeds and retains the last valid bundle in memory, so a transient mismatch during rebuild serves the previous coherent generation; an invalid startup has no fallback and returns HTTP 503. It also rejects Host headers outside the exact numeric IPv4 loopback allowlist (`127.0.0.1` with the bound port when present) and never reads a single source report larger than the bounded input budget. It never scans a repository, rebuilds a source projection, appends an event, or executes an action. The operator explicitly rebuilds the operational envelope when desired.
 
 ## Commands
 
+Inspect source readiness without publishing or overwriting outputs:
+
+~~~text
+asset-dir os operational-cockpit --check --hub <DAD checkout>
+~~~
+
 Build from precomputed local reports:
 
-```text
-asset-dir os operational-cockpit --hub <DAD checkout>
-```
+~~~text
+asset-dir os operational-cockpit --publish --hub <DAD checkout>
+~~~
 
 Serve in the foreground on loopback only:
 
-```text
+~~~text
 asset-dir os cockpit-host --hub <DAD checkout> --port 8765
-```
+~~~
 
 The host exposes only:
 
 - `/` and `/index.html`: escaped, script-free HTML;
 - `/api/snapshot`: the authoritative generated JSON projection;
-- `/healthz`: coherent last-valid-bundle availability, never source health or action authority.
+- `/healthz`: coherent last-valid-bundle availability plus the exact snapshot ID, categorical evidence status, and bounded source summary; never action authority.
 
-All mutation methods are denied. Directory browsing, arbitrary files, external
-bind addresses, external JavaScript, and action endpoints are absent.
+All mutation methods are denied. Directory browsing, arbitrary files, external bind addresses, Host headers outside `127.0.0.1` and `127.0.0.1:<bound-port>`, external JavaScript, and action endpoints are absent. Serving coherence and evidence currency are deliberately separate: a coherent partial snapshot is safe to display but is never an all-clear.
 
 ## Repo adapter contract
 
@@ -84,25 +87,24 @@ The whole cockpit is `current_candidate` only when all five sources are current;
 every other condition is `partial_candidate`. Candidate status is never an
 approval or source-authority transfer.
 
-The page exposes at most three immediate decisions and preserves the source
-health table as the drill-down. Unknown state is visible and never rendered as
-green.
+The page exposes at most three immediate decisions with bounded evidence references. It also shows a provenance-bound portfolio scope (projects, branches, worktrees, and workstreams), explicit attention and uncertainty counts, the event pulse, source owners and producer references, and source actions for every gap. Portfolio counts appear only when Portfolio v1 is current and schema-valid; unavailable values render as unknown, never zero or green. The script-free HTML includes a skip link, consistent section navigation, semantic headings and tables, visible focus, 44-pixel disclosure targets, reduced-motion and increased-contrast handling, and responsive one- or two-column fallbacks.
 
 ## Revision-bound contract evidence
 
-Revision `0.2.1` binds its contract digests to these canonical materials:
+Revision `0.3.0` binds its contract digests to these canonical materials:
 
-- input: five named precomputed sources, source-specific strict invariants v2,
-  and a maximum five-minute future-clock tolerance;
+- input: five named precomputed sources, source-specific strict invariants v3,
+  a maximum five-minute future-clock tolerance, explicit-offset timestamps, and
+  a two-megabyte per-source read budget;
 - output: `dad.operational_cockpit.v1`, a
   `dad.operational_cockpit.receipt.v1` coherence receipt,
-  `local_private_metadata`, at most three decisions, and an in-memory last-valid
+  `local_private_metadata`, at most three decisions, provenance-bound portfolio scope and readiness actions, non-publishing readiness inspection, evidence-aware health, and an in-memory last-valid
   bundle during foreground service;
 - error: invalid sources force `partial_candidate`, stale/invalid payloads
-  contribute no decisions or pulse, invalid startup bundles with no cached last-valid bundle return HTTP 503, and
-  mutation methods return HTTP 405;
-- privacy: loopback-only bind, local-private classification, decision strings
-  bounded to 240 characters, and at most ten 240-character evidence refs.
+  contribute no decisions or pulse, oversized sources fail closed, invalid startup bundles with no cached last-valid bundle return HTTP 503, non-loopback Host headers return HTTP 421, and mutation methods return HTTP 405;
+- privacy: loopback-only bind and an exact `127.0.0.1` / `127.0.0.1:<bound-port>` Host allowlist, local-private classification,
+  bounded source reads, decision strings bounded to 240 characters, and at most
+  ten 240-character evidence refs.
 
 The contract digests are deterministic canonical JSON digests of those named
 materials. Any change to those values requires a new revision and fresh

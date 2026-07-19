@@ -11527,10 +11527,15 @@ def portfolio_os_operational_cockpit(
         help="Age after which a precomputed source is explicitly stale.",
     ),
     full: bool = typer.Option(False, "--full"),
+    publish: bool = typer.Option(
+        True,
+        "--publish/--check",
+        help="Publish the envelope, or inspect source readiness without writing outputs.",
+    ),
     config: Optional[Path] = typer.Option(None),
     hub: Optional[Path] = typer.Option(None),
 ) -> None:
-    """Compose and publish the read-only operational cockpit snapshot."""
+    """Compose the read-only operational cockpit and optionally publish it."""
 
     cfg = _cfg(config, hub)
     try:
@@ -11538,11 +11543,25 @@ def portfolio_os_operational_cockpit(
             cfg.repo_root,
             stale_after_seconds=stale_after_hours * 60 * 60,
         )
-        outputs = write_operational_cockpit(cfg.repo_root, cockpit)
+        outputs = write_operational_cockpit(cfg.repo_root, cockpit) if publish else {}
     except (OSError, ValueError, ValidationError) as exc:
-        console.print(f"Cannot publish operational cockpit: {exc}")
+        console.print(f"Cannot compose operational cockpit: {exc}")
         raise typer.Exit(2) from exc
-    console.print_json(data=cockpit if full else outputs)
+    if full:
+        console.print_json(data=cockpit)
+    elif publish:
+        console.print_json(data=outputs)
+    else:
+        console.print_json(
+            data={
+                "status": cockpit["status"],
+                "summary": cockpit["summary"],
+                "operator_overview": cockpit["operator_overview"],
+                "sources": cockpit["sources"],
+                "published": False,
+                "execution_authorized": False,
+            }
+        )
 
 
 @os_app.command("cockpit-host")
