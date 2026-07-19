@@ -2204,7 +2204,7 @@
     {
       "schema_version": "dad.portable_capability_card.v1",
       "card_id": "portability-card:knowledge-interface-operational-cockpit",
-      "revision_id": "portability-card-revision:knowledge-interface-operational-cockpit:0.3.1",
+      "revision_id": "portability-card-revision:knowledge-interface-operational-cockpit:0.3.2",
       "artifact_id": "knowledge-interface:operational-cockpit",
       "artifact_kind": "knowledge_interface",
       "binding_class": "portable_core",
@@ -2217,7 +2217,7 @@
         "src/digital_asset_directory/operational_cockpit.py",
         "tests/test_operational_cockpit.py"
       ],
-      "content_digest": "sha256:a685a16fdc2fe11bedbc5b52c70dc51ed01735fe073fdeab4f327b6965d30c7a",
+      "content_digest": "sha256:af4db30b7e71eb850e776cddfe1b2cc79fb445ce38100181db16cb16a5afed00",
       "contract_digests": {
         "input": "sha256:2559628ee72728f8f576a9847b86f1f27b7c3774ba5f286718e8c84b8dd6b6eb",
         "output": "sha256:7c2ad83b69885846617a31776713d7c00aa381b1a96616c60303d90d2613a61a",
