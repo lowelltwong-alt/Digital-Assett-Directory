@@ -2204,7 +2204,7 @@
     {
       "schema_version": "dad.portable_capability_card.v1",
       "card_id": "portability-card:knowledge-interface-operational-cockpit",
-      "revision_id": "portability-card-revision:knowledge-interface-operational-cockpit:0.2.0",
+      "revision_id": "portability-card-revision:knowledge-interface-operational-cockpit:0.2.1",
       "artifact_id": "knowledge-interface:operational-cockpit",
       "artifact_kind": "knowledge_interface",
       "binding_class": "portable_core",
@@ -2217,11 +2217,11 @@
         "src/digital_asset_directory/operational_cockpit.py",
         "tests/test_operational_cockpit.py"
       ],
-      "content_digest": "sha256:bc1b3c9d07a0d8e5483bfcdcd4aca6d9c1fce85a18ededad98f3f4c436cd793c",
+      "content_digest": "sha256:cdb3aa6d4e80b28241b96a56af3c4e0f692d51108aae3a69063cd713c55d4d9a",
       "contract_digests": {
-        "input": "sha256:0a7a5d9e8eb43eee77ebde706562952070e3a8849caeb48838003149e419a97e",
-        "output": "sha256:2db1f57b22eda578e9a1f0e741f3103ed54dbe0928e5f1434ea70722145865a1",
-        "error": "sha256:1b111a1cc5f70109c5f948d3c89b1139d02d313d6ba3d78b40f10f0ca02d45ac",
+        "input": "sha256:9022988ce22acd004f9bcbec67ef6c667e040a93d321196baf71d0f5d3b23e00",
+        "output": "sha256:9cbd13adff3f04be182dc940a1d5df54df9f7695820febb793e00953ce40ba20",
+        "error": "sha256:51ca005586f57bda90ad5c3c62aafeb7acf0a7e15dc611d11e84e9bc28595f5b",
         "privacy": "sha256:682703f796e5b1d21c72aed59e7dbefc68f77fd2f8a3970a12d68d47e32593d2",
         "effect": "sha256:8a07707fbd7f735a37101894390cbb44846c59b0bae444c6eae297c3e9699e04",
         "authority": "sha256:66dc78d16db264621b94d616a6060a0a326b2b13b8b5795eda22db972fa58af8"

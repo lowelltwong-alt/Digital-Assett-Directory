@@ -249,6 +249,29 @@ def test_in_progress_daemon_heartbeat_cannot_make_cockpit_current(
     ]
 
 
+def test_timezone_less_producer_timestamps_fail_closed(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.delenv("DAD_DATA_ROOT", raising=False)
+    _seed_sources(tmp_path)
+    paths = _source_paths(tmp_path)
+
+    heartbeat = json.loads(paths["daemon"].read_text(encoding="utf-8"))
+    heartbeat["cycle_completed_at"] = "2026-07-19T04:00:00"
+    _write_json(paths["daemon"], heartbeat)
+
+    event = json.loads(paths["event_pipeline"].read_text(encoding="utf-8"))
+    event["generated_at"] = "2026-07-19"
+    _write_json(paths["event_pipeline"], event)
+
+    cockpit = build_operational_cockpit(tmp_path, now=NOW)
+
+    assert cockpit["status"] == "partial_candidate"
+    assert cockpit["summary"]["invalid_count"] == 2
+    for source_id in ("daemon", "event_pipeline"):
+        assert cockpit["sources"][source_id]["problems"] == ["timestamp_missing_or_invalid"]
+
+
 def test_authoritative_schema_range_and_future_violations_fail_closed(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
@@ -390,15 +413,31 @@ def test_foreground_host_is_loopback_read_only_and_route_bounded(
         assert missing.value.code == 404
 
         html_path = tmp_path / "processed/reports/portfolio_os/operational-cockpit.html"
-        html_path.write_text("corrupt generation", encoding="utf-8")
-        for route in ("/", "/api/snapshot", "/healthz"):
-            with pytest.raises(HTTPError) as invalid_bundle:
-                urlopen(base + route, timeout=2)
-            assert invalid_bundle.value.code == 503
+        html_path.write_text("transient mismatched generation", encoding="utf-8")
+        with urlopen(base + "/", timeout=2) as response:
+            assert b"DAD Operational Cockpit" in response.read()
+        with urlopen(base + "/api/snapshot", timeout=2) as response:
+            assert json.loads(response.read())["snapshot_id"] == cockpit["snapshot_id"]
+        with urlopen(base + "/healthz", timeout=2) as response:
+            assert json.loads(response.read())["status"] == "serving"
     finally:
         server.shutdown()
         server.server_close()
         thread.join(timeout=2)
+
+    invalid_server = build_operational_cockpit_server(tmp_path, port=0)
+    invalid_thread = Thread(target=invalid_server.serve_forever, daemon=True)
+    invalid_thread.start()
+    invalid_base = f"http://127.0.0.1:{invalid_server.server_port}"
+    try:
+        for route in ("/", "/api/snapshot", "/healthz"):
+            with pytest.raises(HTTPError) as invalid_bundle:
+                urlopen(invalid_base + route, timeout=2)
+            assert invalid_bundle.value.code == 503
+    finally:
+        invalid_server.shutdown()
+        invalid_server.server_close()
+        invalid_thread.join(timeout=2)
 
     with pytest.raises(ValueError, match="must bind 127.0.0.1"):
         build_operational_cockpit_server(tmp_path, host="0.0.0.0", port=0)

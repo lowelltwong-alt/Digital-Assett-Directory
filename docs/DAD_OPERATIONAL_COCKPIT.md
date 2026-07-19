@@ -20,7 +20,7 @@ bounded collectors -> append-only DAD events -> precomputed projections
                                   foreground loopback-only host
 ```
 
-The host verifies a generation receipt, JSON schema, semantic invariants, and matching JSON/HTML digests on every request. It never scans a
+The host verifies a generation receipt, JSON schema, semantic invariants, and matching JSON/HTML digests on every request. It seeds and retains the last valid bundle in memory, so a transient mismatch during rebuild serves the previous coherent generation; an invalid startup has no fallback and returns HTTP 503. It never scans a
 repository, rebuilds a source projection, appends an event, or executes an
 action. The operator explicitly rebuilds the operational envelope when desired.
 
@@ -79,7 +79,7 @@ risk deployment and is not part of this build.
 ## Source health semantics
 
 Each source is independently fingerprinted and classified as `observed`,
-`stale`, `missing`, or `invalid`. Portfolio v1, portfolio v2, and Capability OS inputs must pass their authoritative registered JSON Schemas. Daemon and event inputs must pass strict producer invariants: daemon evidence counts as current only after a complete, finalized cycle with a completion timestamp, and event counts must be nonnegative. Missing or malformed timestamps, timestamps more than five minutes in the future, wrong field types, and authority-contract violations are invalid. Stale or invalid sources cannot contribute decisions or event-pulse values.
+`stale`, `missing`, or `invalid`. Portfolio v1, portfolio v2, and Capability OS inputs must pass their authoritative registered JSON Schemas. Daemon and event inputs must pass strict producer invariants: daemon evidence counts as current only after a complete, finalized cycle with a completion timestamp, and event counts must be nonnegative. Missing timestamps, date-only or timezone-less timestamps, other malformed timestamps, timestamps more than five minutes in the future, wrong field types, and authority-contract violations are invalid. Stale or invalid sources cannot contribute decisions or event-pulse values.
 The whole cockpit is `current_candidate` only when all five sources are current;
 every other condition is `partial_candidate`. Candidate status is never an
 approval or source-authority transfer.
@@ -90,15 +90,16 @@ green.
 
 ## Revision-bound contract evidence
 
-Revision `0.2.0` binds its contract digests to these canonical materials:
+Revision `0.2.1` binds its contract digests to these canonical materials:
 
 - input: five named precomputed sources, source-specific strict invariants v2,
   and a maximum five-minute future-clock tolerance;
 - output: `dad.operational_cockpit.v1`, a
   `dad.operational_cockpit.receipt.v1` coherence receipt,
-  `local_private_metadata`, and at most three decisions;
+  `local_private_metadata`, at most three decisions, and an in-memory last-valid
+  bundle during foreground service;
 - error: invalid sources force `partial_candidate`, stale/invalid payloads
-  contribute no decisions or pulse, invalid bundles return HTTP 503, and
+  contribute no decisions or pulse, invalid startup bundles with no cached last-valid bundle return HTTP 503, and
   mutation methods return HTTP 405;
 - privacy: loopback-only bind, local-private classification, decision strings
   bounded to 240 characters, and at most ten 240-character evidence refs.

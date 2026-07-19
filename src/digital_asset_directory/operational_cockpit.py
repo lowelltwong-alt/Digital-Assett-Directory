@@ -14,6 +14,7 @@ from http import HTTPStatus
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 import json
 from pathlib import Path
+from threading import Lock
 from typing import Any, Final
 
 from jsonschema import FormatChecker, ValidationError
@@ -62,8 +63,8 @@ def _parse_datetime(value: Any) -> datetime | None:
         parsed = datetime.fromisoformat(value.replace("Z", "+00:00"))
     except ValueError:
         return None
-    if parsed.tzinfo is None:
-        parsed = parsed.replace(tzinfo=timezone.utc)
+    if parsed.tzinfo is None or parsed.utcoffset() is None:
+        return None
     return parsed.astimezone(timezone.utc)
 
 
@@ -624,6 +625,17 @@ def _validated_bundle(
 def _handler(
     hub_root: Path, snapshot_path: Path, html_path: Path, receipt_path: Path
 ) -> type[BaseHTTPRequestHandler]:
+    bundle_lock = Lock()
+    last_valid_bundle = _validated_bundle(hub_root, snapshot_path, html_path, receipt_path)
+
+    def current_bundle() -> tuple[bytes, bytes, dict[str, Any]] | None:
+        nonlocal last_valid_bundle
+        candidate = _validated_bundle(hub_root, snapshot_path, html_path, receipt_path)
+        with bundle_lock:
+            if candidate is not None:
+                last_valid_bundle = candidate
+            return last_valid_bundle
+
     class CockpitRequestHandler(BaseHTTPRequestHandler):
         server_version = "DADOperationalCockpit/1"
 
@@ -653,7 +665,7 @@ def _handler(
                 self.wfile.write(body)
 
         def do_GET(self) -> None:  # noqa: N802
-            bundle = _validated_bundle(hub_root, snapshot_path, html_path, receipt_path)
+            bundle = current_bundle()
             if bundle is None:
                 self._send(
                     HTTPStatus.SERVICE_UNAVAILABLE,
