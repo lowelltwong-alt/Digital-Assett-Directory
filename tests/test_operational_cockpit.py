@@ -12,6 +12,7 @@ import pytest
 from jsonschema import ValidationError
 from typer.testing import CliRunner
 
+import digital_asset_directory.cli as cli_module
 from digital_asset_directory.cli import app
 from digital_asset_directory.portfolio_cockpit import build_portfolio_cockpit
 from digital_asset_directory.operational_cockpit import (
@@ -172,6 +173,109 @@ def _seed_sources(hub: Path, *, timestamp: datetime = NOW) -> None:
     )
 
 
+def _stub_refresh_producers(
+    monkeypatch: pytest.MonkeyPatch, *, fail_at: str = ""
+) -> list[str]:
+    calls: list[str] = []
+
+    def called(name: str, value: object) -> object:
+        calls.append(name)
+        if name == fail_at:
+            raise ValueError(f"{name}_failed")
+        return value
+
+    monkeypatch.setattr(
+        cli_module,
+        "_v1_attention_report",
+        lambda _root: called("portfolio_v1_read", {"attention": []}),
+    )
+    monkeypatch.setattr(
+        cli_module,
+        "load_workstream_state",
+        lambda _root, portfolio_snapshot: called(
+            "portfolio_v1_fold", {"snapshot": portfolio_snapshot}
+        ),
+    )
+    monkeypatch.setattr(
+        cli_module,
+        "build_portfolio_cockpit",
+        lambda *_args, **_kwargs: called("portfolio_v1_build", {"v1": True}),
+    )
+    monkeypatch.setattr(
+        cli_module,
+        "write_portfolio_cockpit_outputs",
+        lambda *_args: called("portfolio_v1", {"json_path": "v1.json"}),
+    )
+    monkeypatch.setattr(
+        cli_module,
+        "agent_family_health",
+        lambda _root: called("portfolio_v2_health", {"health": True}),
+    )
+    monkeypatch.setattr(
+        cli_module,
+        "build_capability_portfolio_snapshot",
+        lambda _root: called("portfolio_v2_snapshot", {"capabilities": []}),
+    )
+    monkeypatch.setattr(
+        cli_module,
+        "build_portfolio_cockpit_v2",
+        lambda *_args: called("portfolio_v2_build", {"v2": True}),
+    )
+    monkeypatch.setattr(
+        cli_module,
+        "write_agent_family_health",
+        lambda *_args: called("portfolio_v2_health_write", {"json_path": "health.json"}),
+    )
+    monkeypatch.setattr(
+        cli_module,
+        "write_portfolio_cockpit_v2",
+        lambda *_args: called("portfolio_v2", {"json_path": "v2.json"}),
+    )
+    monkeypatch.setattr(
+        cli_module,
+        "build_capability_os_cockpit",
+        lambda *_args, **_kwargs: called("capability_os_build", {"capability": True}),
+    )
+    monkeypatch.setattr(
+        cli_module,
+        "write_capability_os_cockpit",
+        lambda *_args: called("capability_os", {"json_path": "capability.json"}),
+    )
+    monkeypatch.setattr(
+        cli_module,
+        "write_event_pipeline_report",
+        lambda _root: called("event_pipeline", {"json_path": "events.json"}),
+    )
+    monkeypatch.setattr(
+        cli_module,
+        "build_operational_cockpit",
+        lambda _root: called(
+            "operational_cockpit_build",
+            {"status": "partial_candidate", "summary": {"current_count": 4}},
+        ),
+    )
+    monkeypatch.setattr(
+        cli_module,
+        "write_operational_cockpit",
+        lambda *_args: called(
+            "operational_cockpit", {"json_path": "operational.json"}
+        ),
+    )
+    for forbidden in (
+        "run_daemon_cycle",
+        "collect_events",
+        "build_portfolio_attention_report",
+    ):
+        monkeypatch.setattr(
+            cli_module,
+            forbidden,
+            lambda *_args, _name=forbidden, **_kwargs: pytest.fail(
+                f"forbidden producer called: {_name}"
+            ),
+        )
+    return calls
+
+
 def test_missing_sources_are_partial_and_never_false_green(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
@@ -309,6 +413,87 @@ def test_cli_check_reports_readiness_without_publishing(
     assert payload["status"] == "current_candidate"
     assert payload["operator_overview"]["portfolio_scope"]["project_count"] == 12
     assert all(not path.exists() for path in output_paths)
+
+
+def test_refresh_now_runs_only_bounded_producers_in_dependency_order(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    calls = _stub_refresh_producers(monkeypatch)
+    cfg = type("Cfg", (), {"repo_root": tmp_path})()
+
+    result = cli_module._refresh_operational_cockpit_now(cfg)
+
+    assert result["status"] == "refreshed"
+    assert result["completed_sources"] == [
+        "portfolio_v1",
+        "portfolio_v2",
+        "capability_os",
+        "event_pipeline",
+    ]
+    assert result["excluded_source"] == "daemon"
+    assert result["evidence_status"] == "partial_candidate"
+    assert result["operational_cockpit_published"] is True
+    assert result["daemon_cycle_run"] is False
+    assert result["cross_repo_scan_run"] is False
+    assert result["event_collection_run"] is False
+    assert calls == [
+        "portfolio_v1_read",
+        "portfolio_v1_fold",
+        "portfolio_v1_build",
+        "portfolio_v1",
+        "portfolio_v2_health",
+        "portfolio_v2_snapshot",
+        "portfolio_v2_build",
+        "portfolio_v2_health_write",
+        "portfolio_v2",
+        "capability_os_build",
+        "capability_os",
+        "event_pipeline",
+        "operational_cockpit_build",
+        "operational_cockpit",
+    ]
+
+
+@pytest.mark.parametrize(
+    ("fail_at", "completed"),
+    [
+        ("portfolio_v1", []),
+        ("portfolio_v2", ["portfolio_v1"]),
+        ("capability_os", ["portfolio_v1", "portfolio_v2"]),
+        (
+            "event_pipeline",
+            ["portfolio_v1", "portfolio_v2", "capability_os"],
+        ),
+        (
+            "operational_cockpit_build",
+            ["portfolio_v1", "portfolio_v2", "capability_os", "event_pipeline"],
+        ),
+        (
+            "operational_cockpit",
+            ["portfolio_v1", "portfolio_v2", "capability_os", "event_pipeline"],
+        ),
+    ],
+)
+def test_refresh_failure_never_publishes_a_new_operational_envelope(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    fail_at: str,
+    completed: list[str],
+) -> None:
+    calls = _stub_refresh_producers(monkeypatch, fail_at=fail_at)
+    cfg = type("Cfg", (), {"repo_root": tmp_path})()
+
+    result = cli_module._refresh_operational_cockpit_now(cfg)
+
+    assert result["status"] == "refresh_failed"
+    assert result["completed_sources"] == completed
+    assert result["operational_cockpit_published"] is False
+    assert result["daemon_cycle_run"] is False
+    assert result["cross_repo_scan_run"] is False
+    assert result["event_collection_run"] is False
+    assert calls.count("operational_cockpit") == (
+        1 if fail_at == "operational_cockpit" else 0
+    )
 
 
 def test_in_progress_daemon_heartbeat_cannot_make_cockpit_current(
