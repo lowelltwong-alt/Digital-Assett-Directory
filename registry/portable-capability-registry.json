@@ -346,7 +346,7 @@
     {
       "schema_version": "dad.portable_capability_card.v1",
       "card_id": "portability-card:harness-portable-capability-control-plane",
-      "revision_id": "portability-card-revision:harness-portable-capability-control-plane:0.1.11",
+      "revision_id": "portability-card-revision:harness-portable-capability-control-plane:0.1.12",
       "artifact_id": "harness:portable-capability-control-plane",
       "artifact_kind": "harness",
       "binding_class": "portable_core",
@@ -407,7 +407,7 @@
         "src/digital_asset_directory/validation.py",
         "templates/downstream/AGENTS_MANAGED_BLOCK.md"
       ],
-      "content_digest": "sha256:5ac7630b2d0e3505e15bdaedd5e12b74de864d8e712d4ce9d2ccb3c3b22460b1",
+      "content_digest": "sha256:ebe207a662a4b43b8591c317527eccafb5253ffc58cec1ad4c2f53406deefc72",
       "contract_digests": {
         "input": "sha256:eee475da7d6fe76d90852dfa97de0e1f047cb72d7d0134552245b7cda9a9fb68",
         "output": "sha256:0ec04e3bcb58df087b53068eb3756924c878f35a40871814bd8749313aa69dea",
@@ -1348,7 +1348,7 @@
     {
       "schema_version": "dad.portable_capability_card.v1",
       "card_id": "portability-card:skill-personal-project-management-ops",
-      "revision_id": "portability-card-revision:skill-personal-project-management-ops:0.4.11",
+      "revision_id": "portability-card-revision:skill-personal-project-management-ops:0.4.12",
       "artifact_id": "skill:personal-project-management-ops",
       "artifact_kind": "skill",
       "binding_class": "portable_core",
@@ -1402,7 +1402,7 @@
         "src/digital_asset_directory/portfolio_roadmap.py",
         "templates/hooks/intent-continuity-shadow-receipt.template.json"
       ],
-      "content_digest": "sha256:05ba7e70ef97d3701bafff89aaf046394283b022fd45a0966d294212a9263bd1",
+      "content_digest": "sha256:ddfd056590da9e78231d6392da24bb043c8953c4340b36271486254ebb017293",
       "source_observation_digest": "sha256:1aeef157eb837554b2d8bf2b3de020f8daf701533a3ca6efe7d31e0888368a9a",
       "contract_digests": {
         "input": "sha256:eee475da7d6fe76d90852dfa97de0e1f047cb72d7d0134552245b7cda9a9fb68",
@@ -1453,7 +1453,7 @@
         "capability-os-cockpit"
       ],
       "adapter_revision_ids": [
-        "portability-card-revision:adapter-intent-continuity-codex-host:0.3.12"
+        "portability-card-revision:adapter-intent-continuity-codex-host:0.3.13"
       ],
       "harness_revision_id": "harness-revision:portable-capability-contract:0.1.0",
       "evidence_refs": [
@@ -1470,20 +1470,20 @@
     {
       "schema_version": "dad.portable_capability_card.v1",
       "card_id": "portability-card:adapter-intent-continuity-codex-host",
-      "revision_id": "portability-card-revision:adapter-intent-continuity-codex-host:0.3.12",
+      "revision_id": "portability-card-revision:adapter-intent-continuity-codex-host:0.3.13",
       "artifact_id": "adapter:intent-continuity-codex-host",
       "artifact_kind": "runtime_adapter",
       "binding_class": "runtime_adapter",
       "source_authority": "config/intent-continuity-shadow-hooks.json",
       "owner": "DAD and Lowell",
       "status": "schema_validated",
-      "core_revision_id": "portability-card-revision:skill-personal-project-management-ops:0.4.11",
+      "core_revision_id": "portability-card-revision:skill-personal-project-management-ops:0.4.12",
       "content_digest": "sha256:4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
       "target_capability_predicate": {
         "runtime_adapter_id": "adapter:codex-host",
         "status": "supervised_silent_shadow"
       },
-      "adapter_interface_digest": "sha256:b832aa90c7869172e6a45b29ac1040764a2269ccc29c6bd93a0169fd7fbec919",
+      "adapter_interface_digest": "sha256:75df10c6ce5cf228bc1124c770cfb8040ec7e3b017f6efc747ffcc37b88789d3",
       "adapter_interface_sources": [
         ".codex/hooks.json",
         ".codex/hooks/intent_continuity_shadow.py",
@@ -2204,7 +2204,7 @@
     {
       "schema_version": "dad.portable_capability_card.v1",
       "card_id": "portability-card:knowledge-interface-operational-cockpit",
-      "revision_id": "portability-card-revision:knowledge-interface-operational-cockpit:0.3.0",
+      "revision_id": "portability-card-revision:knowledge-interface-operational-cockpit:0.3.2",
       "artifact_id": "knowledge-interface:operational-cockpit",
       "artifact_kind": "knowledge_interface",
       "binding_class": "portable_core",
@@ -2217,7 +2217,7 @@
         "src/digital_asset_directory/operational_cockpit.py",
         "tests/test_operational_cockpit.py"
       ],
-      "content_digest": "sha256:a7f5e5f1d2be9963f826a4bcc8b7963bd643a16a4142c77615fae5a50cf794f0",
+      "content_digest": "sha256:af4db30b7e71eb850e776cddfe1b2cc79fb445ce38100181db16cb16a5afed00",
       "contract_digests": {
         "input": "sha256:2559628ee72728f8f576a9847b86f1f27b7c3774ba5f286718e8c84b8dd6b6eb",
         "output": "sha256:7c2ad83b69885846617a31776713d7c00aa381b1a96616c60303d90d2613a61a",

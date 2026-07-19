@@ -4,7 +4,10 @@ from datetime import datetime, timedelta, timezone
 from io import BytesIO
 import json
 from pathlib import Path
-from threading import Thread
+import os
+from threading import Event, Thread, current_thread
+import subprocess
+import sys
 from urllib.error import HTTPError
 from urllib.request import Request, urlopen
 
@@ -12,6 +15,8 @@ import pytest
 from jsonschema import ValidationError
 from typer.testing import CliRunner
 
+import digital_asset_directory.cli as cli_module
+import digital_asset_directory.operational_cockpit as cockpit_module
 from digital_asset_directory.cli import app
 from digital_asset_directory.portfolio_cockpit import build_portfolio_cockpit
 from digital_asset_directory.operational_cockpit import (
@@ -172,6 +177,109 @@ def _seed_sources(hub: Path, *, timestamp: datetime = NOW) -> None:
     )
 
 
+def _stub_refresh_producers(
+    monkeypatch: pytest.MonkeyPatch, *, fail_at: str = ""
+) -> list[str]:
+    calls: list[str] = []
+
+    def called(name: str, value: object) -> object:
+        calls.append(name)
+        if name == fail_at:
+            raise ValueError(f"{name}_failed")
+        return value
+
+    monkeypatch.setattr(
+        cli_module,
+        "_v1_attention_report",
+        lambda _root: called("portfolio_v1_read", {"attention": []}),
+    )
+    monkeypatch.setattr(
+        cli_module,
+        "load_workstream_state",
+        lambda _root, portfolio_snapshot: called(
+            "portfolio_v1_fold", {"snapshot": portfolio_snapshot}
+        ),
+    )
+    monkeypatch.setattr(
+        cli_module,
+        "build_portfolio_cockpit",
+        lambda *_args, **_kwargs: called("portfolio_v1_build", {"v1": True}),
+    )
+    monkeypatch.setattr(
+        cli_module,
+        "write_portfolio_cockpit_outputs",
+        lambda *_args: called("portfolio_v1", {"json_path": "v1.json"}),
+    )
+    monkeypatch.setattr(
+        cli_module,
+        "agent_family_health",
+        lambda _root: called("portfolio_v2_health", {"health": True}),
+    )
+    monkeypatch.setattr(
+        cli_module,
+        "build_capability_portfolio_snapshot",
+        lambda _root: called("portfolio_v2_snapshot", {"capabilities": []}),
+    )
+    monkeypatch.setattr(
+        cli_module,
+        "build_portfolio_cockpit_v2",
+        lambda *_args: called("portfolio_v2_build", {"v2": True}),
+    )
+    monkeypatch.setattr(
+        cli_module,
+        "write_agent_family_health",
+        lambda *_args: called("portfolio_v2_health_write", {"json_path": "health.json"}),
+    )
+    monkeypatch.setattr(
+        cli_module,
+        "write_portfolio_cockpit_v2",
+        lambda *_args: called("portfolio_v2", {"json_path": "v2.json"}),
+    )
+    monkeypatch.setattr(
+        cli_module,
+        "build_capability_os_cockpit",
+        lambda *_args, **_kwargs: called("capability_os_build", {"capability": True}),
+    )
+    monkeypatch.setattr(
+        cli_module,
+        "write_capability_os_cockpit",
+        lambda *_args: called("capability_os", {"json_path": "capability.json"}),
+    )
+    monkeypatch.setattr(
+        cli_module,
+        "write_event_pipeline_report",
+        lambda _root: called("event_pipeline", {"json_path": "events.json"}),
+    )
+    monkeypatch.setattr(
+        cli_module,
+        "build_operational_cockpit",
+        lambda _root: called(
+            "operational_cockpit_build",
+            {"status": "partial_candidate", "summary": {"current_count": 4}},
+        ),
+    )
+    monkeypatch.setattr(
+        cli_module,
+        "write_operational_cockpit",
+        lambda *_args: called(
+            "operational_cockpit", {"json_path": "operational.json"}
+        ),
+    )
+    for forbidden in (
+        "run_daemon_cycle",
+        "collect_events",
+        "build_portfolio_attention_report",
+    ):
+        monkeypatch.setattr(
+            cli_module,
+            forbidden,
+            lambda *_args, _name=forbidden, **_kwargs: pytest.fail(
+                f"forbidden producer called: {_name}"
+            ),
+        )
+    return calls
+
+
 def test_missing_sources_are_partial_and_never_false_green(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
@@ -309,6 +417,87 @@ def test_cli_check_reports_readiness_without_publishing(
     assert payload["status"] == "current_candidate"
     assert payload["operator_overview"]["portfolio_scope"]["project_count"] == 12
     assert all(not path.exists() for path in output_paths)
+
+
+def test_refresh_now_runs_only_bounded_producers_in_dependency_order(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    calls = _stub_refresh_producers(monkeypatch)
+    cfg = type("Cfg", (), {"repo_root": tmp_path})()
+
+    result = cli_module._refresh_operational_cockpit_now(cfg)
+
+    assert result["status"] == "refreshed"
+    assert result["completed_sources"] == [
+        "portfolio_v1",
+        "portfolio_v2",
+        "capability_os",
+        "event_pipeline",
+    ]
+    assert result["excluded_source"] == "daemon"
+    assert result["evidence_status"] == "partial_candidate"
+    assert result["operational_cockpit_published"] is True
+    assert result["daemon_cycle_run"] is False
+    assert result["cross_repo_scan_run"] is False
+    assert result["event_collection_run"] is False
+    assert calls == [
+        "portfolio_v1_read",
+        "portfolio_v1_fold",
+        "portfolio_v1_build",
+        "portfolio_v1",
+        "portfolio_v2_health",
+        "portfolio_v2_snapshot",
+        "portfolio_v2_build",
+        "portfolio_v2_health_write",
+        "portfolio_v2",
+        "capability_os_build",
+        "capability_os",
+        "event_pipeline",
+        "operational_cockpit_build",
+        "operational_cockpit",
+    ]
+
+
+@pytest.mark.parametrize(
+    ("fail_at", "completed"),
+    [
+        ("portfolio_v1", []),
+        ("portfolio_v2", ["portfolio_v1"]),
+        ("capability_os", ["portfolio_v1", "portfolio_v2"]),
+        (
+            "event_pipeline",
+            ["portfolio_v1", "portfolio_v2", "capability_os"],
+        ),
+        (
+            "operational_cockpit_build",
+            ["portfolio_v1", "portfolio_v2", "capability_os", "event_pipeline"],
+        ),
+        (
+            "operational_cockpit",
+            ["portfolio_v1", "portfolio_v2", "capability_os", "event_pipeline"],
+        ),
+    ],
+)
+def test_refresh_failure_never_publishes_a_new_operational_envelope(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    fail_at: str,
+    completed: list[str],
+) -> None:
+    calls = _stub_refresh_producers(monkeypatch, fail_at=fail_at)
+    cfg = type("Cfg", (), {"repo_root": tmp_path})()
+
+    result = cli_module._refresh_operational_cockpit_now(cfg)
+
+    assert result["status"] == "refresh_failed"
+    assert result["completed_sources"] == completed
+    assert result["operational_cockpit_published"] is False
+    assert result["daemon_cycle_run"] is False
+    assert result["cross_repo_scan_run"] is False
+    assert result["event_collection_run"] is False
+    assert calls.count("operational_cockpit") == (
+        1 if fail_at == "operational_cockpit" else 0
+    )
 
 
 def test_in_progress_daemon_heartbeat_cannot_make_cockpit_current(
@@ -449,6 +638,196 @@ def test_semantically_inconsistent_snapshot_is_rejected(
     )
     with pytest.raises(ValueError, match="operator readiness"):
         validate_operational_cockpit(ROOT, misdirected)
+
+
+def test_operational_publication_failure_restores_prior_coherent_bundle(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.delenv("DAD_DATA_ROOT", raising=False)
+    _seed_sources(tmp_path)
+    prior = build_operational_cockpit(tmp_path, now=NOW)
+    outputs = write_operational_cockpit(tmp_path, prior)
+    paths = [
+        Path(outputs["html_path"]),
+        Path(outputs["json_path"]),
+        Path(outputs["receipt_path"]),
+    ]
+    prior_text = {path: path.read_text(encoding="utf-8") for path in paths}
+
+    capability_path = _source_paths(tmp_path)["capability_os"]
+    capability = json.loads(capability_path.read_text(encoding="utf-8"))
+    capability["decisions"][0]["title"] = "Changed generation"
+    _write_json(capability_path, capability)
+    replacement = build_operational_cockpit(tmp_path, now=NOW)
+    assert replacement["snapshot_id"] != prior["snapshot_id"]
+
+    original_atomic_write = cockpit_module.atomic_write_text
+    write_count = 0
+
+    def fail_on_json(path: Path, value: str) -> None:
+        nonlocal write_count
+        write_count += 1
+        if write_count == 2:
+            raise OSError("injected publication interruption")
+        original_atomic_write(path, value)
+
+    monkeypatch.setattr(cockpit_module, "atomic_write_text", fail_on_json)
+
+    with pytest.raises(OSError, match="injected publication interruption"):
+        write_operational_cockpit(tmp_path, replacement)
+
+    assert write_count == 5
+    assert {path: path.read_text(encoding="utf-8") for path in paths} == prior_text
+
+
+def test_operational_publication_lock_preserves_newer_writer(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.delenv("DAD_DATA_ROOT", raising=False)
+    _seed_sources(tmp_path)
+    prior = build_operational_cockpit(tmp_path, now=NOW)
+    write_operational_cockpit(tmp_path, prior)
+
+    capability_path = _source_paths(tmp_path)["capability_os"]
+    capability = json.loads(capability_path.read_text(encoding="utf-8"))
+    capability["decisions"][0]["title"] = "Interrupted generation"
+    _write_json(capability_path, capability)
+    interrupted = build_operational_cockpit(tmp_path, now=NOW)
+    capability["decisions"][0]["title"] = "Newer generation"
+    _write_json(capability_path, capability)
+    newer = build_operational_cockpit(tmp_path, now=NOW)
+
+    original_atomic_write = cockpit_module.atomic_write_text
+    first_write_started = Event()
+    release_first_writer = Event()
+    newer_writer_done = Event()
+    errors: list[BaseException] = []
+    interrupted_write_count = 0
+
+    def controlled_write(path: Path, value: str) -> None:
+        nonlocal interrupted_write_count
+        if current_thread().name == "interrupted-cockpit-writer":
+            interrupted_write_count += 1
+            if interrupted_write_count == 1:
+                original_atomic_write(path, value)
+                first_write_started.set()
+                assert release_first_writer.wait(timeout=2)
+                return
+            if interrupted_write_count == 2:
+                raise OSError("injected publication interruption")
+        original_atomic_write(path, value)
+
+    def publish_interrupted() -> None:
+        try:
+            write_operational_cockpit(tmp_path, interrupted)
+        except OSError as exc:
+            errors.append(exc)
+
+    def publish_newer() -> None:
+        try:
+            write_operational_cockpit(tmp_path, newer)
+        finally:
+            newer_writer_done.set()
+
+    monkeypatch.setattr(cockpit_module, "atomic_write_text", controlled_write)
+    interrupted_thread = Thread(target=publish_interrupted, name="interrupted-cockpit-writer")
+    newer_thread = Thread(target=publish_newer, name="newer-cockpit-writer")
+    interrupted_thread.start()
+    newer_started = False
+    try:
+        assert first_write_started.wait(timeout=20)
+        newer_thread.start()
+        newer_started = True
+        assert not newer_writer_done.wait(timeout=0.1)
+    finally:
+        release_first_writer.set()
+        interrupted_thread.join(timeout=20)
+        if newer_started:
+            newer_thread.join(timeout=20)
+
+    assert newer_started
+
+    assert not interrupted_thread.is_alive()
+    assert not newer_thread.is_alive()
+    assert len(errors) == 1
+    assert "injected publication interruption" in str(errors[0])
+    root = tmp_path / "processed/reports/portfolio_os"
+    bundle = cockpit_module._validated_bundle(
+        tmp_path,
+        root / "operational-cockpit.json",
+        root / "operational-cockpit.html",
+        root / "operational-cockpit.receipt.json",
+    )
+    assert bundle is not None
+    assert bundle[2]["snapshot_id"] == newer["snapshot_id"]
+
+
+def test_publication_lock_blocks_a_separate_process(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.delenv("DAD_DATA_ROOT", raising=False)
+    root = tmp_path / "processed/reports/portfolio_os"
+    script = (
+        "import sys\n"
+        "from pathlib import Path\n"
+        "from digital_asset_directory.operational_cockpit import _publication_lock\n"
+        "with _publication_lock(Path(sys.argv[1])):\n"
+        "    print('locked', flush=True)\n"
+        "    sys.stdin.readline()\n"
+    )
+    env = os.environ.copy()
+    env.pop("DAD_DATA_ROOT", None)
+    env["PYTHONPATH"] = str(ROOT / "src")
+    child = subprocess.Popen(
+        [sys.executable, "-c", script, str(root)],
+        cwd=ROOT,
+        env=env,
+        stdin=subprocess.PIPE,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        text=True,
+    )
+    ready = Event()
+    ready_line: list[str] = []
+    attempted = Event()
+    acquired = Event()
+    contender_errors: list[BaseException] = []
+
+    def read_ready() -> None:
+        assert child.stdout is not None
+        ready_line.append(child.stdout.readline())
+        ready.set()
+
+    def contend() -> None:
+        try:
+            attempted.set()
+            with cockpit_module._publication_lock(root):
+                acquired.set()
+        except BaseException as exc:
+            contender_errors.append(exc)
+
+    reader = Thread(target=read_ready, name="cockpit-lock-child-reader")
+    contender = Thread(target=contend, name="cockpit-lock-contender")
+    reader.start()
+    try:
+        assert ready.wait(timeout=20)
+        assert ready_line == ["locked\n"]
+        contender.start()
+        assert attempted.wait(timeout=20)
+        assert not acquired.wait(timeout=0.1)
+    finally:
+        if child.stdin is not None and child.poll() is None:
+            child.stdin.write("\n")
+            child.stdin.flush()
+        child.wait(timeout=20)
+    reader.join(timeout=20)
+    contender.join(timeout=20)
+
+    assert not reader.is_alive()
+    assert not contender.is_alive()
+    assert child.returncode == 0, child.stderr.read() if child.stderr is not None else ""
+    assert not contender_errors
+    assert acquired.is_set()
 
 
 def test_html_is_accessible_script_free_and_escapes_source_text(

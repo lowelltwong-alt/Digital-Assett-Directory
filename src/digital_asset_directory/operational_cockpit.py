@@ -6,6 +6,7 @@ repository, appends an event, starts a daemon, or executes an operator action.
 
 from __future__ import annotations
 
+from contextlib import contextmanager, suppress
 from dataclasses import dataclass
 from datetime import datetime, timezone
 from hashlib import sha256
@@ -13,13 +14,16 @@ from html import escape
 from http import HTTPStatus
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 import json
+import os
 from pathlib import Path
 from threading import Lock
-from typing import Any, Final
+import time
+from typing import Any, Final, Iterator
 
 from jsonschema import FormatChecker, ValidationError
 from jsonschema.validators import validator_for
 
+from .logos_write_guard import assert_dad_write_allowed
 from .transport import data_path
 from .utils import atomic_write_text, json_dumps
 
@@ -32,11 +36,15 @@ MAX_DECISION_TEXT_LENGTH: Final = 240
 MAX_EVIDENCE_REFS: Final = 10
 MAX_SOURCE_BYTES: Final = 2_000_000
 LOOPBACK_HOST: Final = "127.0.0.1"
+PUBLICATION_LOCK_TIMEOUT_SECONDS: Final = 10.0
 AUTHORITY_BOUNDARY: Final = (
     "This operational cockpit is a local read-only projection over precomputed DAD "
     "reports. It cannot scan or mutate a source repository, dispatch an agent, execute "
     "a request, activate a daemon, schedule work, or grant authority."
 )
+
+_PUBLICATION_THREAD_LOCKS: dict[str, Lock] = {}
+_PUBLICATION_THREAD_LOCKS_GUARD = Lock()
 
 
 @dataclass(frozen=True)
@@ -773,6 +781,68 @@ main{{width:min(1320px,94vw);margin:auto;padding:3rem 0 5rem}}h1{{font-size:clam
 </html>"""
 
 
+def _thread_lock_for(path: Path) -> Lock:
+    key = os.path.normcase(str(path.resolve(strict=False)))
+    with _PUBLICATION_THREAD_LOCKS_GUARD:
+        return _PUBLICATION_THREAD_LOCKS.setdefault(key, Lock())
+
+
+@contextmanager
+def _publication_lock(root: Path) -> Iterator[None]:
+    """Serialize a complete cockpit publication across threads and processes."""
+
+    lock_path = root / ".operational-cockpit.publish.lock"
+    assert_dad_write_allowed(lock_path)
+    lock_path.parent.mkdir(parents=True, exist_ok=True)
+    deadline = time.monotonic() + PUBLICATION_LOCK_TIMEOUT_SECONDS
+    thread_lock = _thread_lock_for(lock_path)
+    if not thread_lock.acquire(timeout=PUBLICATION_LOCK_TIMEOUT_SECONDS):
+        raise TimeoutError(f"Timed out acquiring cockpit publication lock: {lock_path}")
+    descriptor: int | None = None
+    acquired = False
+    try:
+        descriptor = os.open(
+            str(lock_path),
+            os.O_CREAT | os.O_RDWR | getattr(os, "O_BINARY", 0),
+            0o600,
+        )
+        if os.fstat(descriptor).st_size == 0:
+            os.write(descriptor, b"0")
+            os.fsync(descriptor)
+        while not acquired:
+            try:
+                if os.name == "nt":
+                    import msvcrt
+
+                    os.lseek(descriptor, 0, os.SEEK_SET)
+                    msvcrt.locking(descriptor, msvcrt.LK_NBLCK, 1)
+                else:
+                    import fcntl
+
+                    fcntl.flock(descriptor, fcntl.LOCK_EX | fcntl.LOCK_NB)
+                acquired = True
+            except OSError:
+                if time.monotonic() >= deadline:
+                    raise TimeoutError(f"Timed out acquiring cockpit publication lock: {lock_path}")
+                time.sleep(0.01)
+        yield
+    finally:
+        if descriptor is not None:
+            if acquired:
+                with suppress(OSError):
+                    if os.name == "nt":
+                        import msvcrt
+
+                        os.lseek(descriptor, 0, os.SEEK_SET)
+                        msvcrt.locking(descriptor, msvcrt.LK_UNLCK, 1)
+                    else:
+                        import fcntl
+
+                        fcntl.flock(descriptor, fcntl.LOCK_UN)
+            os.close(descriptor)
+        thread_lock.release()
+
+
 def write_operational_cockpit(hub_root: Path, cockpit: dict[str, Any]) -> dict[str, Any]:
     validate_operational_cockpit(hub_root, cockpit)
     root = data_path(hub_root, "central_reports") / "portfolio_os"
@@ -781,15 +851,39 @@ def write_operational_cockpit(hub_root: Path, cockpit: dict[str, Any]) -> dict[s
     receipt_path = root / "operational-cockpit.receipt.json"
     html_text = operational_cockpit_html(cockpit)
     json_text = json_dumps(cockpit, pretty=True) + "\n"
-    atomic_write_text(html_path, html_text)
-    atomic_write_text(json_path, json_text)
     receipt = {
         "schema_version": "dad.operational_cockpit.receipt.v1",
         "snapshot_id": cockpit["snapshot_id"],
         "json_digest": "sha256:" + sha256(json_text.encode("utf-8")).hexdigest(),
         "html_digest": "sha256:" + sha256(html_text.encode("utf-8")).hexdigest(),
     }
-    atomic_write_text(receipt_path, json_dumps(receipt, pretty=True) + "\n")
+    paths = (html_path, json_path, receipt_path)
+    with _publication_lock(root):
+        previous: dict[Path, str | None] = {}
+        for path in paths:
+            previous[path] = path.read_text(encoding="utf-8") if path.exists() else None
+        try:
+            atomic_write_text(html_path, html_text)
+            atomic_write_text(json_path, json_text)
+            atomic_write_text(receipt_path, json_dumps(receipt, pretty=True) + "\n")
+        except Exception as exc:
+            rollback_errors: list[str] = []
+            for path in paths:
+                try:
+                    prior = previous[path]
+                    if prior is None:
+                        assert_dad_write_allowed(path)
+                        path.unlink(missing_ok=True)
+                    else:
+                        atomic_write_text(path, prior)
+                except OSError as rollback_exc:
+                    rollback_errors.append(f"{path.name}:{type(rollback_exc).__name__}")
+            if rollback_errors:
+                raise OSError(
+                    "Operational cockpit publication failed and rollback was incomplete: "
+                    + ", ".join(rollback_errors)
+                ) from exc
+            raise
     return {
         "html_path": str(html_path),
         "json_path": str(json_path),

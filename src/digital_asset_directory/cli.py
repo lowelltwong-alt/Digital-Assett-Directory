@@ -11564,6 +11564,133 @@ def portfolio_os_operational_cockpit(
         )
 
 
+def _operational_cockpit_refresh_failure(
+    *, completed_sources: list[str], failed_source: str, exc: Exception
+) -> dict[str, Any]:
+    return {
+        "schema_version": "dad.operational_cockpit.refresh.v1",
+        "status": "refresh_failed",
+        "completed_sources": completed_sources,
+        "failed_source": failed_source,
+        "error_class": type(exc).__name__,
+        "operational_cockpit_published": False,
+        "daemon_cycle_run": False,
+        "cross_repo_scan_run": False,
+        "event_collection_run": False,
+        "execution_authorized": False,
+        "authority_boundary": (
+            "The foreground refresh stopped before publishing a new operational envelope. "
+            "Completed derived reports remain independently valid; no daemon cycle, event "
+            "collection, configured-root scan, scheduler action, or source-repository write ran."
+        ),
+    }
+
+
+def _refresh_operational_cockpit_now(cfg: Any) -> dict[str, Any]:
+    """Refresh same-hub derived cockpit inputs without activating broader producers."""
+
+    completed: list[str] = []
+    producer_outputs: dict[str, Any] = {}
+    try:
+        attention = _v1_attention_report(cfg.repo_root)
+        state = load_workstream_state(cfg.repo_root, portfolio_snapshot=attention)
+        portfolio_v1 = build_portfolio_cockpit(
+            attention, state, schema_root=cfg.repo_root
+        )
+        producer_outputs["portfolio_v1"] = write_portfolio_cockpit_outputs(
+            cfg.repo_root, portfolio_v1
+        )
+        completed.append("portfolio_v1")
+    except (OSError, RuntimeError, ValueError, KeyError, TypeError, ValidationError) as exc:
+        return _operational_cockpit_refresh_failure(
+            completed_sources=completed, failed_source="portfolio_v1", exc=exc
+        )
+
+    try:
+        health = agent_family_health(cfg.repo_root)
+        capability_snapshot = build_capability_portfolio_snapshot(cfg.repo_root)
+        portfolio_v2 = build_portfolio_cockpit_v2(
+            health, portfolio_v1, capability_snapshot
+        )
+        producer_outputs["portfolio_v2"] = {
+            "health": write_agent_family_health(cfg.repo_root, health),
+            "cockpit": write_portfolio_cockpit_v2(cfg.repo_root, portfolio_v2),
+        }
+        completed.append("portfolio_v2")
+    except (OSError, RuntimeError, ValueError, KeyError, TypeError, ValidationError) as exc:
+        return _operational_cockpit_refresh_failure(
+            completed_sources=completed, failed_source="portfolio_v2", exc=exc
+        )
+
+    try:
+        capability_cockpit = build_capability_os_cockpit(
+            cfg.repo_root,
+            cfg.repo_root,
+            today_items=[],
+            usage_rows=[],
+        )
+        producer_outputs["capability_os"] = write_capability_os_cockpit(
+            cfg.repo_root, capability_cockpit
+        )
+        completed.append("capability_os")
+    except (OSError, RuntimeError, ValueError, KeyError, TypeError, ValidationError) as exc:
+        return _operational_cockpit_refresh_failure(
+            completed_sources=completed, failed_source="capability_os", exc=exc
+        )
+
+    try:
+        producer_outputs["event_pipeline"] = write_event_pipeline_report(cfg.repo_root)
+        completed.append("event_pipeline")
+    except (OSError, RuntimeError, ValueError, KeyError, TypeError, ValidationError) as exc:
+        return _operational_cockpit_refresh_failure(
+            completed_sources=completed, failed_source="event_pipeline", exc=exc
+        )
+
+    try:
+        cockpit = build_operational_cockpit(cfg.repo_root)
+        cockpit_outputs = write_operational_cockpit(cfg.repo_root, cockpit)
+    except (OSError, RuntimeError, ValueError, KeyError, TypeError, ValidationError) as exc:
+        return _operational_cockpit_refresh_failure(
+            completed_sources=completed, failed_source="operational_cockpit", exc=exc
+        )
+
+    return {
+        "schema_version": "dad.operational_cockpit.refresh.v1",
+        "status": "refreshed",
+        "completed_sources": completed,
+        "excluded_source": "daemon",
+        "excluded_source_reason": "requires_human_approved_daemon_cycle",
+        "producer_outputs": producer_outputs,
+        "operational_cockpit": cockpit_outputs,
+        "evidence_status": cockpit["status"],
+        "source_summary": cockpit["summary"],
+        "operational_cockpit_published": True,
+        "daemon_cycle_run": False,
+        "cross_repo_scan_run": False,
+        "event_collection_run": False,
+        "execution_authorized": False,
+        "authority_boundary": (
+            "This foreground command refreshes only same-hub derived reports from existing "
+            "local candidate state. It does not run a daemon cycle, collect repo events, scan "
+            "configured roots, activate a scheduler or host, or write a source repository."
+        ),
+    }
+
+
+@os_app.command("cockpit-refresh-now")
+def portfolio_os_cockpit_refresh_now(
+    config: Optional[Path] = typer.Option(None),
+    hub: Optional[Path] = typer.Option(None),
+) -> None:
+    """Refresh safe same-hub cockpit producers once, then publish the envelope."""
+
+    cfg = _cfg(config, hub)
+    result = _refresh_operational_cockpit_now(cfg)
+    console.print_json(data=result)
+    if result["status"] != "refreshed":
+        raise typer.Exit(2)
+
+
 @os_app.command("cockpit-host")
 def portfolio_os_cockpit_host(
     port: int = typer.Option(8765, "--port", min=1, max=65535),

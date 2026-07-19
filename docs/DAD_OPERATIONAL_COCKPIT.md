@@ -36,6 +36,24 @@ Build from precomputed local reports:
 asset-dir os operational-cockpit --publish --hub <DAD checkout>
 ~~~
 
+Refresh the safe same-hub producers once and then publish the envelope:
+
+~~~text
+asset-dir os cockpit-refresh-now --hub <DAD checkout>
+~~~
+
+`cockpit-refresh-now` rebuilds portfolio v1, portfolio v2, the Capability OS
+cockpit, and the event-pipeline report from existing DAD-local candidate state.
+It does not scan configured repository roots, collect repo event outboxes, run a
+daemon cycle, activate a scheduler or host, or write any source repository. It
+stops at the first failed producer and leaves the last coherent operational
+envelope in place. Successfully completed source reports remain independently
+valid because their canonical writers publish atomically.
+
+The daemon source is deliberately excluded. Without a separately approved real
+daemon cycle, a normal foreground refresh may honestly remain
+`partial_candidate`; the command never fabricates a completed heartbeat.
+
 Serve in the foreground on loopback only:
 
 ~~~text
