@@ -183,11 +183,23 @@ def build_agent_session_reaper_report(
             continue
         if not isinstance(payload, dict):
             counts["parse_error"] += 1
+            candidates.append(
+                {
+                    "session_file": name,
+                    "session_id": None,
+                    "path": str(path),
+                    "classification": "parse_error",
+                    "tier": None,
+                    "idle_hours": None,
+                    "exception_reason": None,
+                    "proposed_summary": None,
+                    "proposed_action": "none",
+                }
+            )
             continue
         status = str(payload.get("status", "") or "").strip().lower()
         if status != "open":
             continue
-        counts["open_considered"] += 1
         if repo_filter is not None:
             try:
                 session_repo = Path(str(payload.get("repository", "") or "")).resolve()
@@ -202,7 +214,22 @@ def build_agent_session_reaper_report(
             idle_h = round(_idle_hours(path, observed_at_dt), 2)
         except OSError:
             counts["parse_error"] += 1
+            candidates.append(
+                {
+                    "session_file": name,
+                    "session_id": sid,
+                    "path": str(path),
+                    "classification": "parse_error",
+                    "tier": None,
+                    "idle_hours": None,
+                    "exception_reason": None,
+                    "proposed_summary": None,
+                    "proposed_action": "none",
+                }
+            )
             continue
+
+        counts["open_considered"] += 1
 
         row: dict[str, Any] = {
             "session_file": name,
