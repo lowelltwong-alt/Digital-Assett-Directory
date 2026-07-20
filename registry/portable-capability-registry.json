@@ -368,6 +368,7 @@
         "AGENTS.md",
         "config/global-personal-skills.json",
         "docs/CROSS_VENDOR_REVIEW_POLICY.md",
+        "docs/AGENT_FAMILY_RECONCILIATION.md",
         "registry/agent-family-portfolio-registry.json",
         "registry/agent-skill-library.json",
         "registry/contract-check-policy.json",
@@ -413,10 +414,11 @@
         "src/digital_asset_directory/dad_library.py",
         "src/digital_asset_directory/intelligence_routing.py",
         "tests/test_cross_vendor_review_policy.py",
+        "tests/test_agent_family_reconciliation.py",
         "tests/test_intelligence_routing.py",
         "templates/downstream/AGENTS_MANAGED_BLOCK.md"
       ],
-      "content_digest": "sha256:1dd5af0bcf6f00ed9534f578eda42cde658631b53239e2e493847fb25f248cec",
+      "content_digest": "sha256:bbe7735ba6c5adc21345e706e4140ac1e1e1498b2e3abb3bd7c6007fc5bea2de",
       "contract_digests": {
         "input": "sha256:eee475da7d6fe76d90852dfa97de0e1f047cb72d7d0134552245b7cda9a9fb68",
         "output": "sha256:0ec04e3bcb58df087b53068eb3756924c878f35a40871814bd8749313aa69dea",
@@ -630,7 +632,7 @@
     {
       "schema_version": "dad.portable_capability_card.v1",
       "card_id": "portability-card:family-harness-engineering-ops",
-      "revision_id": "portability-card-revision:family-harness-engineering-ops:0.1.1",
+      "revision_id": "portability-card-revision:family-harness-engineering-ops:0.1.2",
       "artifact_id": "family:harness-engineering-ops",
       "artifact_kind": "family",
       "binding_class": "portable_core",
@@ -643,7 +645,7 @@
         "assets/agent-skills/dad-harness-engineering-ops/subagents.yaml"
       ],
       "content_digest": "sha256:657988f80d58ce40cca2add39dede427981368bad0fcd2cbe52f6fff66a6487a",
-      "source_observation_digest": "sha256:e6564071cbca6b5a88c23b0962a4dfa9466d0fee7107ac2850b2b35304983f7b",
+      "source_observation_digest": "sha256:0f8346fabe7a45c821ed71b9aa361d6febb95bf30d41741f5b769bb08dcdf847",
       "contract_digests": {
         "input": "sha256:eee475da7d6fe76d90852dfa97de0e1f047cb72d7d0134552245b7cda9a9fb68",
         "output": "sha256:0ec04e3bcb58df087b53068eb3756924c878f35a40871814bd8749313aa69dea",
@@ -702,6 +704,81 @@
       "candidate_only": true,
       "execution_authorized": false,
       "authority_boundary": "This disposition cannot activate, replace, retire, or execute a harness or runtime."
+    },
+    {
+      "schema_version": "dad.portable_capability_card.v1",
+      "card_id": "portability-card:family-full-stack-engineering",
+      "revision_id": "portability-card-revision:family-full-stack-engineering:0.1.0",
+      "artifact_id": "family:full-stack-engineering",
+      "artifact_kind": "family",
+      "binding_class": "portable_core",
+      "source_authority": "registry/agent-family-portfolio-registry.json#family:full-stack-engineering",
+      "owner": "DAD and Lowell",
+      "status": "schema_validated",
+      "portable_files": [
+        "assets/agent-skills/full-stack-engineering-agent-family/SKILL.md",
+        "assets/agent-skills/full-stack-engineering-agent-family/subagents.yaml",
+        "docs/AGENT_FAMILY_RECONCILIATION.md"
+      ],
+      "content_digest": "sha256:bf832f5cb7ef42cdde8869c861786ac8a099ae36204d2444f1f47225ee06b36f",
+      "source_observation_digest": "sha256:5b1df968979dd67fe022d8a159ab7869e4dc1ba661f615c8c488cf39b1a948d1",
+      "contract_digests": {
+        "input": "sha256:eee475da7d6fe76d90852dfa97de0e1f047cb72d7d0134552245b7cda9a9fb68",
+        "output": "sha256:0ec04e3bcb58df087b53068eb3756924c878f35a40871814bd8749313aa69dea",
+        "error": "sha256:0c31568c5353cbf327cd009c17af20a687f7e97685e609c9a8d96f03852fd118",
+        "privacy": "sha256:6eccc25be5945d494635818e68177f6efe953e9f2e74fbf165b5139d08429551",
+        "effect": "sha256:c9093452afcdef36603faec991dc45d87d2166fb706f2b70f263b6625f6a3491",
+        "authority": "sha256:408c3ee0aef794f423d49ba8141f3492961aa68b354d03c37c455d072d7e32c3"
+      },
+      "capability_ids": [
+        "stack_inventory",
+        "software_architecture",
+        "implementation",
+        "migration",
+        "release_handoff"
+      ],
+      "tool_ids": [
+        "dad-cli",
+        "json-schema",
+        "git"
+      ],
+      "context_contract": "The family remains provider-neutral; adapters and verified receipts carry runtime identity.",
+      "privacy_classes": [
+        "public",
+        "internal",
+        "confidential",
+        "restricted_by_local_policy"
+      ],
+      "consequence_classes": [
+        "small",
+        "medium",
+        "large",
+        "critical"
+      ],
+      "effect_classes": [
+        "read_only",
+        "candidate_local_artifact"
+      ],
+      "dependencies": [
+        "skill:full-stack-engineering-agent-family",
+        "family:quality-verification-release"
+      ],
+      "reverse_consumers": [
+        "skill:technical-product-company-os",
+        "agent-preflight"
+      ],
+      "adapter_revision_ids": [],
+      "harness_revision_id": "harness-revision:portable-capability-contract:0.1.0",
+      "evidence_refs": [
+        "registry/agent-family-portfolio-registry.json",
+        "docs/AGENT_FAMILY_RECONCILIATION.md",
+        "tests/test_agent_family_reconciliation.py"
+      ],
+      "fresh_until": "2026-10-20T00:00:00-04:00",
+      "rollback_ref": "Revert specialist-pack list and pilot coverage while preserving family:full-stack-engineering.",
+      "candidate_only": true,
+      "execution_authorized": false,
+      "authority_boundary": "This disposition cannot activate, replace, retire, or execute a family or runtime."
     },
     {
       "schema_version": "dad.portable_capability_card.v1",
