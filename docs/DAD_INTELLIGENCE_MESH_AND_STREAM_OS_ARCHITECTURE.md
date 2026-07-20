@@ -86,6 +86,13 @@ A daily **report-only** convergence radar over branches/worktrees:
   outcome.
 - The 2026-07-16 preservation audit + drain are the precedent: preserve,
   then close; never prune unpreserved work.
+V1 status (2026-07-19): the zero-model deterministic pass, strict report,
+on-demand foreman contract, and sanitized top-five operational-cockpit view are
+implemented in `portfolio_convergence.py` and
+`portfolio_convergence_git.py`. The optional model confirmation pass and
+closure crew remain unimplemented and separately gated; the deterministic
+score is review priority, never a same-intent decision.
+
 
 ### 1.6 Real-time posture
 

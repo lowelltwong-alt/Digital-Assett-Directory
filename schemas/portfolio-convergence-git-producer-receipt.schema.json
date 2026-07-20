@@ -1,0 +1,60 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://dad.local/schemas/portfolio-convergence-git-producer-receipt.schema.json",
+  "title": "DAD read-only Git convergence producer receipt",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "producer_id",
+    "producer_revision_id",
+    "observation_count",
+    "source_write_count",
+    "bounded",
+    "problems_recorded",
+    "details"
+  ],
+  "properties": {
+    "producer_id": {"const": "runtime-adapter:git-convergence-readonly"},
+    "producer_revision_id": {
+      "const": "runtime-adapter-revision:git-convergence-readonly:0.2.0"
+    },
+    "observation_count": {"type": "integer", "minimum": 0, "maximum": 10000},
+    "source_write_count": {"const": 0},
+    "bounded": {"const": true},
+    "problems_recorded": {"const": true},
+    "details": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "git_command_count",
+        "git_output_bytes",
+        "truncated_command_count",
+        "git_timeout_seconds",
+        "max_projects",
+        "max_branches_per_project",
+        "max_candidate_distances",
+        "max_paths_per_branch",
+        "max_git_commands",
+        "max_output_bytes_per_command",
+        "max_total_output_bytes",
+        "max_total_seconds",
+        "git_optional_locks"
+      ],
+      "properties": {
+        "git_command_count": {"type": "integer", "minimum": 0, "maximum": 10000},
+        "git_output_bytes": {"type": "integer", "minimum": 0, "maximum": 268435456},
+        "truncated_command_count": {"type": "integer", "minimum": 0, "maximum": 10000},
+        "git_timeout_seconds": {"type": "number", "minimum": 1, "maximum": 120},
+        "max_projects": {"type": "integer", "minimum": 1, "maximum": 256},
+        "max_branches_per_project": {"type": "integer", "minimum": 2, "maximum": 256},
+        "max_candidate_distances": {"type": "integer", "minimum": 1, "maximum": 2000},
+        "max_paths_per_branch": {"type": "integer", "minimum": 1, "maximum": 10000},
+        "max_git_commands": {"type": "integer", "minimum": 1, "maximum": 10000},
+        "max_output_bytes_per_command": {"type": "integer", "minimum": 1024, "maximum": 8388608},
+        "max_total_output_bytes": {"type": "integer", "minimum": 1024, "maximum": 268435456},
+        "max_total_seconds": {"type": "number", "minimum": 1, "maximum": 600},
+        "git_optional_locks": {"const": false}
+      }
+    }
+  }
+}

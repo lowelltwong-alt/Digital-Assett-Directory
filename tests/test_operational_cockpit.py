@@ -27,6 +27,12 @@ from digital_asset_directory.operational_cockpit import (
     validate_operational_cockpit,
     write_operational_cockpit,
 )
+from digital_asset_directory.portfolio_convergence import (
+    BranchEvidence,
+    PairDistance,
+    branch_pair_key,
+    finalize_report,
+)
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -42,6 +48,7 @@ def _source_paths(hub: Path) -> dict[str, Path]:
     return {
         "portfolio_v1": hub / "processed/reports/portfolio_os/cockpit.json",
         "portfolio_v2": hub / "processed/reports/portfolio_os/cockpit-v2.json",
+        "convergence_radar": hub / "processed/reports/portfolio_os/convergence-radar.json",
         "capability_os": hub / "processed/portfolio_os/capability-os-cockpit.json",
         "daemon": hub / "processed/reports/daemon-heartbeat.json",
         "event_pipeline": hub / "processed/events/reports/event_pipeline.json",
@@ -50,6 +57,7 @@ def _source_paths(hub: Path) -> dict[str, Path]:
 
 def _seed_sources(hub: Path, *, timestamp: datetime = NOW) -> None:
     for schema_name in (
+        "portfolio-convergence-report.schema.json",
         "operational-cockpit.schema.json",
         "portfolio-cockpit.schema.json",
         "portfolio-cockpit-v2.schema.json",
@@ -152,6 +160,52 @@ def _seed_sources(hub: Path, *, timestamp: datetime = NOW) -> None:
             "authority_boundary": "Candidate-only local cockpit; no execution authority.",
         },
     )
+    left = BranchEvidence(
+        project_id="dad:project:test",
+        project_name="DAD",
+        branch_name="codex/cockpit-refresh-a",
+        head="a" * 40,
+        default_branch="main",
+        name_tokens=("cockpit", "refresh"),
+        touched_paths=("src/cockpit.py", "tests/test_cockpit.py"),
+    )
+    right = BranchEvidence(
+        project_id="dad:project:test",
+        project_name="DAD",
+        branch_name="codex/cockpit-refresh-b",
+        head="b" * 40,
+        default_branch="main",
+        name_tokens=("cockpit", "refresh"),
+        touched_paths=("src/cockpit.py",),
+    )
+    convergence_report = finalize_report(
+        generated_at=generated,
+        source={
+            "schema_version": "dad.portfolio_attention.v1",
+            "generated_at": generated,
+            "fingerprint": "sha256:" + "d" * 64,
+            "project_count": 1,
+        },
+        branches=[left, right],
+        distances={
+            branch_pair_key(left, right): PairDistance(
+                status="observed",
+                merge_base="c" * 40,
+                left_commits=2,
+                right_commits=3,
+            )
+        },
+        producer={
+            "producer_id": "test-observer",
+            "producer_revision_id": "test-observer:0.1.0",
+            "observation_count": 2,
+            "source_write_count": 0,
+            "bounded": True,
+            "problems_recorded": True,
+            "details": {},
+        },
+    )
+    _write_json(paths["convergence_radar"], convergence_report)
     _write_json(
         paths["daemon"],
         {
@@ -177,9 +231,7 @@ def _seed_sources(hub: Path, *, timestamp: datetime = NOW) -> None:
     )
 
 
-def _stub_refresh_producers(
-    monkeypatch: pytest.MonkeyPatch, *, fail_at: str = ""
-) -> list[str]:
+def _stub_refresh_producers(monkeypatch: pytest.MonkeyPatch, *, fail_at: str = "") -> list[str]:
     calls: list[str] = []
 
     def called(name: str, value: object) -> object:
@@ -261,9 +313,7 @@ def _stub_refresh_producers(
     monkeypatch.setattr(
         cli_module,
         "write_operational_cockpit",
-        lambda *_args: called(
-            "operational_cockpit", {"json_path": "operational.json"}
-        ),
+        lambda *_args: called("operational_cockpit", {"json_path": "operational.json"}),
     )
     for forbidden in (
         "run_daemon_cycle",
@@ -289,10 +339,10 @@ def test_missing_sources_are_partial_and_never_false_green(
     validate_operational_cockpit(ROOT, cockpit)
     assert cockpit["status"] == "partial_candidate"
     assert cockpit["summary"] == {
-        "source_count": 5,
+        "source_count": 6,
         "current_count": 0,
         "stale_count": 0,
-        "missing_count": 5,
+        "missing_count": 6,
         "invalid_count": 0,
         "immediate_decision_count": 0,
         "all_sources_current": False,
@@ -301,8 +351,11 @@ def test_missing_sources_are_partial_and_never_false_green(
     overview = cockpit["operator_overview"]
     assert overview["portfolio_scope"]["availability"] == "unavailable"
     assert overview["portfolio_scope"]["project_count"] is None
-    assert overview["readiness"]["source_gap_count"] == 5
-    assert len(overview["readiness"]["source_actions"]) == 5
+    assert overview["convergence"]["availability"] == "unavailable"
+    assert overview["convergence"]["candidate_count"] is None
+    assert overview["convergence"]["top_candidates"] == []
+    assert overview["readiness"]["source_gap_count"] == 6
+    assert len(overview["readiness"]["source_actions"]) == 6
     assert cockpit["execution_authorized"] is False
 
 
@@ -336,6 +389,14 @@ def test_current_sources_compose_bounded_decisions_and_event_cursor(
         "all_clear": False,
     }
     assert first["operator_overview"]["readiness"]["source_gap_count"] == 0
+    convergence = first["operator_overview"]["convergence"]
+    assert convergence["availability"] == "current"
+    assert convergence["candidate_count"] == 1
+    assert convergence["evaluated_pair_count"] == 1
+    assert len(convergence["top_candidates"]) == 1
+    assert convergence["top_candidates"][0]["shared_touched_path_count"] == 1
+    assert convergence["top_candidates"][0]["execution_authorized"] is False
+
     assert first["adapter_contract"]["core_kind"] == "portable_core"
     assert first["adapter_contract"]["rollout"] == "reviewed_opt_in_enrollment_wave"
 
@@ -356,7 +417,7 @@ def test_stale_and_invalid_sources_remain_visible(
 
     validate_operational_cockpit(ROOT, cockpit)
     assert cockpit["status"] == "partial_candidate"
-    assert cockpit["summary"]["stale_count"] == 4
+    assert cockpit["summary"]["stale_count"] == 5
     assert cockpit["summary"]["invalid_count"] == 1
     assert cockpit["sources"]["event_pipeline"]["problems"] == ["source_unreadable_or_invalid_json"]
 
@@ -385,9 +446,7 @@ def test_source_read_budget_fails_closed(tmp_path: Path, monkeypatch: pytest.Mon
 
     monkeypatch.setattr(Path, "open", growing_open)
     raced = build_operational_cockpit(tmp_path, now=NOW)
-    assert raced["sources"]["event_pipeline"]["problems"] == [
-        "source_exceeds_read_budget"
-    ]
+    assert raced["sources"]["event_pipeline"]["problems"] == ["source_exceeds_read_budget"]
 
 
 def test_cli_check_reports_readiness_without_publishing(
@@ -495,9 +554,7 @@ def test_refresh_failure_never_publishes_a_new_operational_envelope(
     assert result["daemon_cycle_run"] is False
     assert result["cross_repo_scan_run"] is False
     assert result["event_collection_run"] is False
-    assert calls.count("operational_cockpit") == (
-        1 if fail_at == "operational_cockpit" else 0
-    )
+    assert calls.count("operational_cockpit") == (1 if fail_at == "operational_cockpit" else 0)
 
 
 def test_in_progress_daemon_heartbeat_cannot_make_cockpit_current(
@@ -520,7 +577,7 @@ def test_in_progress_daemon_heartbeat_cannot_make_cockpit_current(
     cockpit = build_operational_cockpit(tmp_path, now=NOW)
 
     assert cockpit["status"] == "partial_candidate"
-    assert cockpit["summary"]["current_count"] == 4
+    assert cockpit["summary"]["current_count"] == 5
     assert cockpit["summary"]["invalid_count"] == 1
     assert cockpit["sources"]["daemon"]["status"] == "invalid"
     assert cockpit["sources"]["daemon"]["freshness"] == "unknown"
@@ -618,7 +675,7 @@ def test_semantically_inconsistent_snapshot_is_rejected(
 
     contradictory = build_operational_cockpit(tmp_path, now=NOW)
     contradictory["status"] = "partial_candidate"
-    contradictory["summary"]["current_count"] = 4
+    contradictory["summary"]["current_count"] = 5
     contradictory["summary"]["stale_count"] = 1
     contradictory["summary"]["all_sources_current"] = False
     contradictory["sources"]["portfolio_v1"]["status"] = "stale"
@@ -633,9 +690,7 @@ def test_semantically_inconsistent_snapshot_is_rejected(
         validate_operational_cockpit(ROOT, mismatched_readiness)
 
     misdirected = build_operational_cockpit(tmp_path / "missing-sources", now=NOW)
-    misdirected["operator_overview"]["readiness"]["source_actions"][0]["owner"] = (
-        "wrong-owner"
-    )
+    misdirected["operator_overview"]["readiness"]["source_actions"][0]["owner"] = "wrong-owner"
     with pytest.raises(ValueError, match="operator readiness"):
         validate_operational_cockpit(ROOT, misdirected)
 
@@ -851,12 +906,17 @@ def test_html_is_accessible_script_free_and_escapes_source_text(
     assert "&middot;" in html
     assert 'href="#main"' in html
     assert 'aria-label="Cockpit sections"' in html
-    for section in ("decisions", "portfolio", "signals", "sources", "contract"):
+    for section in ("decisions", "portfolio", "convergence", "signals", "sources", "contract"):
         assert f'href="#{section}"' in html
         assert f'id="{section}"' in html
     assert "Unknown is never shown as zero." in html
     assert "12</strong>projects" in html
     assert "Evidence references" in html
+
+    assert "Convergence candidates" in html
+    assert "codex/cockpit-refresh-a" in html
+    assert "src/cockpit.py" not in html
+    assert "No action is authorized" in html
 
 
 def test_foreground_host_is_loopback_read_only_and_route_bounded(

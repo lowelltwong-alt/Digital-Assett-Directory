@@ -151,6 +151,28 @@ def _source_specs(hub_root: Path) -> tuple[SourceSpec, ...]:
             validation_schema=hub_root / "schemas/capability-os-cockpit.schema.json",
         ),
         SourceSpec(
+            "convergence_radar",
+            reports / "portfolio_os" / "convergence-radar.json",
+            "dad.portfolio_convergence_report.v1",
+            "portfolio_convergence",
+            "src/digital_asset_directory/portfolio_convergence_git.py",
+            human_approval_required=True,
+            required_fields=(
+                "report_id",
+                "summary",
+                "proposals",
+                "candidate_only",
+                "execution_authorized",
+            ),
+            field_types=(
+                ("report_id", str),
+                ("summary", dict),
+                ("proposals", list),
+            ),
+            required_values=(("candidate_only", True), ("execution_authorized", False)),
+            validation_schema=(hub_root / "schemas/portfolio-convergence-report.schema.json"),
+        ),
+        SourceSpec(
             "daemon",
             reports / "daemon-heartbeat.json",
             "dad.daemon.heartbeat.v1",
@@ -461,6 +483,66 @@ _PORTFOLIO_SCOPE_FIELDS: Final = (
 )
 
 
+def _convergence_overview(
+    sources: dict[str, dict[str, Any]],
+    payloads: dict[str, dict[str, Any]],
+) -> dict[str, Any]:
+    source = sources["convergence_radar"]
+    payload = payloads.get("convergence_radar")
+    if payload is None:
+        return {
+            "availability": "unavailable",
+            "source_id": "convergence_radar",
+            "source_fingerprint": "",
+            "candidate_count": None,
+            "evaluated_pair_count": None,
+            "top_candidates": [],
+        }
+
+    candidates: list[dict[str, Any]] = []
+    for row in payload.get("proposals", [])[:5]:
+        if not isinstance(row, dict):
+            continue
+        left = row.get("left", {})
+        right = row.get("right", {})
+        evidence = row.get("evidence", {})
+        if not all(isinstance(value, dict) for value in (left, right, evidence)):
+            continue
+        shared_tokens = evidence.get("shared_name_tokens", [])
+        candidates.append(
+            {
+                "proposal_id": str(row.get("proposal_id", ""))[:MAX_DECISION_TEXT_LENGTH],
+                "project_name": str(row.get("project_name", ""))[:MAX_DECISION_TEXT_LENGTH],
+                "left_branch": str(left.get("branch", ""))[:MAX_DECISION_TEXT_LENGTH],
+                "right_branch": str(right.get("branch", ""))[:MAX_DECISION_TEXT_LENGTH],
+                "priority_score": row.get("priority_score"),
+                "evidence_band": str(row.get("evidence_band", "weak_review")),
+                "shared_name_tokens": (
+                    [str(value)[:120] for value in shared_tokens[:8]]
+                    if isinstance(shared_tokens, list)
+                    else []
+                ),
+                "shared_touched_path_count": evidence.get("shared_touched_path_count", 0),
+                "merge_base_distance": evidence.get("merge_base_distance"),
+                "next_action": (
+                    "Inspect exact diffs and ownership, then decide combine, supersede, "
+                    "resume, or keep separate. No action is authorized."
+                ),
+                "human_decision_required": True,
+                "execution_authorized": False,
+            }
+        )
+    summary = payload.get("summary", {})
+    return {
+        "availability": "current",
+        "source_id": "convergence_radar",
+        "source_fingerprint": source["fingerprint"],
+        "candidate_count": summary.get("proposal_count"),
+        "evaluated_pair_count": summary.get("evaluated_pair_count"),
+        "top_candidates": candidates,
+    }
+
+
 def _operator_overview(
     sources: dict[str, dict[str, Any]],
     payloads: dict[str, dict[str, Any]],
@@ -494,6 +576,7 @@ def _operator_overview(
     ]
     return {
         "portfolio_scope": portfolio_scope,
+        "convergence": _convergence_overview(sources, payloads),
         "readiness": {
             "evidence_status": evidence_status,
             "projection_renderable": True,
@@ -642,6 +725,25 @@ def validate_operational_cockpit(hub_root: Path, cockpit: dict[str, Any]) -> Non
         or portfolio_scope["all_clear"] is not None
     ):
         raise ValueError("unavailable portfolio scope must not expose counts")
+    convergence = overview["convergence"]
+    convergence_source = cockpit["sources"]["convergence_radar"]
+    if convergence_source["status"] == "observed":
+        if (
+            convergence["availability"] != "current"
+            or convergence["source_fingerprint"] != convergence_source["fingerprint"]
+            or convergence["candidate_count"] != len(convergence["top_candidates"])
+            or convergence["evaluated_pair_count"] is None
+            or any(row["execution_authorized"] for row in convergence["top_candidates"])
+        ):
+            raise ValueError("convergence overview does not match current source")
+    elif (
+        convergence["availability"] != "unavailable"
+        or convergence["source_fingerprint"]
+        or convergence["candidate_count"] is not None
+        or convergence["evaluated_pair_count"] is not None
+        or convergence["top_candidates"]
+    ):
+        raise ValueError("unavailable convergence overview must not expose candidate evidence")
 
     digest_body = {
         "sources": cockpit["sources"],
@@ -665,6 +767,7 @@ def operational_cockpit_html(cockpit: dict[str, Any]) -> str:
     portfolio = overview["portfolio_scope"]
     readiness = overview["readiness"]
     pulse = cockpit["event_pulse"]
+    convergence = overview["convergence"]
 
     def display_count(value: Any) -> str:
         if isinstance(value, int) and not isinstance(value, bool):
@@ -687,6 +790,35 @@ def operational_cockpit_html(cockpit: dict[str, Any]) -> str:
         or "<article class='decision'><h3>No immediate decision supplied</h3>"
         "<p>Inspect partial or stale sources below before treating the portfolio as clear.</p></article>"
     )
+    if convergence["availability"] == "current":
+        convergence_cards = (
+            "".join(
+                "<article class='decision'><p class='eyebrow'>Convergence review</p>"
+                f"<h3>{escape(row['project_name'])}</h3>"
+                f"<p><code>{escape(row['left_branch'])}</code> &harr; "
+                f"<code>{escape(row['right_branch'])}</code></p>"
+                f"<p>{escape(row['next_action'])}</p>"
+                "<p class='meta'>Priority "
+                f"{escape(str(row['priority_score']))}; "
+                f"{display_count(row['shared_touched_path_count'])} shared touched paths; "
+                f"merge-base distance {display_count(row['merge_base_distance'])}. "
+                "Ordinal evidence only.</p>"
+                "<details><summary>Bounded evidence</summary>"
+                f"<p>Shared name tokens: {escape(', '.join(row['shared_name_tokens']) or 'none')}.</p>"
+                f"<p><code>{escape(row['proposal_id'])}</code></p></details></article>"
+                for row in convergence["top_candidates"]
+            )
+            or "<article class='decision'><h3>No convergence candidate crossed the review threshold</h3>"
+            "<p>This is evidence of a bounded evaluation, not proof that every branch is unrelated.</p></article>"
+        )
+    else:
+        convergence_cards = (
+            "<article class='decision'><h3>Convergence radar unavailable</h3>"
+            "<p>Run <code>asset-dir os status</code>, then "
+            "<code>asset-dir os convergence-radar</code>, and rebuild this cockpit. "
+            "No repository action is implied.</p></article>"
+        )
+
     source_rows = "".join(
         "<tr>"
         f"<th scope='row'>{escape(source_id.replace('_', ' ').title())}</th>"
@@ -699,7 +831,7 @@ def operational_cockpit_html(cockpit: dict[str, Any]) -> str:
         for source_id, source in cockpit["sources"].items()
     )
     status_text = (
-        "All five precomputed sources are current. This remains candidate evidence."
+        "All six precomputed sources are current. This remains candidate evidence."
         if summary["all_sources_current"]
         else "Some sources are missing, stale, or invalid. DAD is deliberately withholding an all-clear."
     )
@@ -761,7 +893,7 @@ main{{width:min(1320px,94vw);margin:auto;padding:3rem 0 5rem}}h1{{font-size:clam
 <p class="eyebrow">DAD &middot; local operational envelope</p>
 <h1>See the whole field. Act on only what is proven.</h1>
 <p class="lede">A foreground, loopback-only view over existing portfolio, capability, daemon, and event evidence. Page requests never scan repositories.</p>
-<nav class="section-nav" aria-label="Cockpit sections"><a href="#decisions">Now</a><a href="#portfolio">Portfolio</a><a href="#signals">Signals</a><a href="#sources">Sources</a><a href="#contract">Authority</a></nav>
+<nav class="section-nav" aria-label="Cockpit sections"><a href="#decisions">Now</a><a href="#portfolio">Portfolio</a><a href="#convergence">Convergence</a><a href="#signals">Signals</a><a href="#sources">Sources</a><a href="#contract">Authority</a></nav>
 <div class="notice" role="status">{escape(status_text)}</div>
 <section class="summary" aria-label="Source summary"><div class="metric"><strong>{summary["current_count"]}/{summary["source_count"]}</strong>current sources</div><div class="metric"><strong>{summary["stale_count"] + summary["missing_count"] + summary["invalid_count"]}</strong>source gaps</div><div class="metric"><strong>{summary["immediate_decision_count"]}</strong>immediate decisions</div></section>
 <h2 id="decisions">Now</h2>
@@ -770,6 +902,9 @@ main{{width:min(1320px,94vw);margin:auto;padding:3rem 0 5rem}}h1{{font-size:clam
 <p class="meta">Available only from a current, schema-validated Portfolio v1 source. Unknown is never shown as zero.</p>
 <section class="scope-grid" aria-label="Portfolio scope">{portfolio_metrics}</section>
 <section class="summary" aria-label="Portfolio uncertainty">{uncertainty_metrics}</section>
+<h2 id="convergence">Convergence candidates</h2>
+<p class="meta">Top five deterministic review candidates from branch names, touched paths, and merge-base distance. Similarity never authorizes an action.</p>
+<section class="decisions" aria-label="Convergence candidates">{convergence_cards}</section>
 <h2 id="signals">Operational signals</h2>
 <section class="pulse-grid" aria-label="Event pulse"><div class="metric"><strong>{display_count(pulse["event_count"])}</strong>events</div><div class="metric"><strong>{display_count(pulse["response_state_count"])}</strong>responses</div><div class="metric"><strong>{display_count(pulse["unanswered_notice_count"])}</strong>unanswered notices</div></section>
 <h2 id="sources">Source readiness</h2>

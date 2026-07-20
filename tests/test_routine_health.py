@@ -127,7 +127,11 @@ def test_disabled_contract_is_inventory_only(tmp_path: Path) -> None:
 def test_glob_artifact_uses_newest_match(tmp_path: Path) -> None:
     hub = _hub(
         tmp_path,
-        [_contract(artifact={"root": "repo", "path": "raw/events/run-*/out.json", "parse_json": True})],
+        [
+            _contract(
+                artifact={"root": "repo", "path": "raw/events/run-*/out.json", "parse_json": True}
+            )
+        ],
     )
     _write_artifact(hub, "raw/events/run-a/out.json", age_hours=100)
     fresh = _write_artifact(hub, "raw/events/run-b/out.json", age_hours=1)
@@ -141,7 +145,9 @@ def test_run_health_check_writes_reports_and_summary(tmp_path: Path) -> None:
         tmp_path,
         [
             _contract(routine_id="ok-routine"),
-            _contract(routine_id="dead-routine", artifact={"root": "repo", "path": "missing/nope.json"}),
+            _contract(
+                routine_id="dead-routine", artifact={"root": "repo", "path": "missing/nope.json"}
+            ),
         ],
     )
     _write_artifact(hub, "processed/reports/out.json")
@@ -175,7 +181,18 @@ def test_shipped_registry_covers_known_orphan_radar_surfaces() -> None:
         (ROOT / "registry" / "routine-contract-registry.json").read_text(encoding="utf-8")
     )
     ids = {contract["routine_id"] for contract in registry["contracts"]}
-    assert {"weekly-skill-orphan-radar", "orphan-radar-wrapper", "dad-daemon-run-cycle"} <= ids
+    assert {
+        "weekly-skill-orphan-radar",
+        "orphan-radar-wrapper",
+        "dad-daemon-run-cycle",
+        "dad-portfolio-convergence-radar",
+    } <= ids
+    convergence = next(
+        row
+        for row in registry["contracts"]
+        if row["routine_id"] == "dad-portfolio-convergence-radar"
+    )
+    assert (convergence["kind"], convergence["freshness_hours"]) == ("cli_on_demand", None)
 
 
 def test_freshness_boundary_uses_now_parameter(tmp_path: Path) -> None:

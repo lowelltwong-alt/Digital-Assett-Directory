@@ -27,11 +27,11 @@
       "additionalProperties": false,
       "required": ["source_count", "current_count", "stale_count", "missing_count", "invalid_count", "immediate_decision_count", "all_sources_current"],
       "properties": {
-        "source_count": {"const": 5},
-        "current_count": {"type": "integer", "minimum": 0, "maximum": 5},
-        "stale_count": {"type": "integer", "minimum": 0, "maximum": 5},
-        "missing_count": {"type": "integer", "minimum": 0, "maximum": 5},
-        "invalid_count": {"type": "integer", "minimum": 0, "maximum": 5},
+        "source_count": {"const": 6},
+        "current_count": {"type": "integer", "minimum": 0, "maximum": 6},
+        "stale_count": {"type": "integer", "minimum": 0, "maximum": 6},
+        "missing_count": {"type": "integer", "minimum": 0, "maximum": 6},
+        "invalid_count": {"type": "integer", "minimum": 0, "maximum": 6},
         "immediate_decision_count": {"type": "integer", "minimum": 0, "maximum": 3},
         "all_sources_current": {"type": "boolean"}
       }
@@ -39,11 +39,12 @@
     "sources": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["portfolio_v1", "portfolio_v2", "capability_os", "daemon", "event_pipeline"],
+      "required": ["portfolio_v1", "portfolio_v2", "capability_os", "convergence_radar", "daemon", "event_pipeline"],
       "properties": {
         "portfolio_v1": {"$ref": "#/$defs/source"},
         "portfolio_v2": {"$ref": "#/$defs/source"},
         "capability_os": {"$ref": "#/$defs/source"},
+        "convergence_radar": {"$ref": "#/$defs/source"},
         "daemon": {"$ref": "#/$defs/source"},
         "event_pipeline": {"$ref": "#/$defs/source"}
       }
@@ -67,7 +68,7 @@
     "operator_overview": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["portfolio_scope", "readiness"],
+      "required": ["portfolio_scope", "convergence", "readiness"],
       "properties": {
         "portfolio_scope": {
           "type": "object",
@@ -87,6 +88,20 @@
             "all_clear": {"type": ["boolean", "null"]}
           }
         },
+        "convergence": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["availability", "source_id", "source_fingerprint", "candidate_count", "evaluated_pair_count", "top_candidates"],
+          "properties": {
+            "availability": {"enum": ["current", "unavailable"]},
+            "source_id": {"const": "convergence_radar"},
+            "source_fingerprint": {"type": "string", "pattern": "^(|sha256:[0-9a-f]{64})$"},
+            "candidate_count": {"type": ["integer", "null"], "minimum": 0, "maximum": 5},
+            "evaluated_pair_count": {"type": ["integer", "null"], "minimum": 0},
+            "top_candidates": {"type": "array", "maxItems": 5, "items": {"$ref": "#/$defs/convergence_candidate"}}
+          }
+        },
+
         "readiness": {
           "type": "object",
           "additionalProperties": false,
@@ -94,8 +109,8 @@
           "properties": {
             "evidence_status": {"enum": ["current_candidate", "partial_candidate"]},
             "projection_renderable": {"const": true},
-            "source_gap_count": {"type": "integer", "minimum": 0, "maximum": 5},
-            "source_actions": {"type": "array", "maxItems": 5, "items": {"$ref": "#/$defs/source_action"}}
+            "source_gap_count": {"type": "integer", "minimum": 0, "maximum": 6},
+            "source_actions": {"type": "array", "maxItems": 6, "items": {"$ref": "#/$defs/source_action"}}
           }
         }
       }
@@ -122,7 +137,7 @@
         "properties": {
           "summary": {
             "properties": {
-              "current_count": {"const": 5},
+              "current_count": {"const": 6},
               "stale_count": {"const": 0},
               "missing_count": {"const": 0},
               "invalid_count": {"const": 0},
@@ -134,6 +149,7 @@
               "portfolio_v1": {"properties": {"status": {"const": "observed"}, "freshness": {"const": "current"}}},
               "portfolio_v2": {"properties": {"status": {"const": "observed"}, "freshness": {"const": "current"}}},
               "capability_os": {"properties": {"status": {"const": "observed"}, "freshness": {"const": "current"}}},
+              "convergence_radar": {"properties": {"status": {"const": "observed"}, "freshness": {"const": "current"}}},
               "daemon": {"properties": {"status": {"const": "observed"}, "freshness": {"const": "current"}}},
               "event_pipeline": {"properties": {"status": {"const": "observed"}, "freshness": {"const": "current"}}}
             }
@@ -144,6 +160,43 @@
     }
   ],
   "$defs": {
+    "convergence_candidate": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "proposal_id",
+        "project_name",
+        "left_branch",
+        "right_branch",
+        "priority_score",
+        "evidence_band",
+        "shared_name_tokens",
+        "shared_touched_path_count",
+        "merge_base_distance",
+        "next_action",
+        "human_decision_required",
+        "execution_authorized"
+      ],
+      "properties": {
+        "proposal_id": {"type": "string", "minLength": 20, "maxLength": 240},
+        "project_name": {"type": "string", "minLength": 1, "maxLength": 240},
+        "left_branch": {"type": "string", "minLength": 1, "maxLength": 240},
+        "right_branch": {"type": "string", "minLength": 1, "maxLength": 240},
+        "priority_score": {"type": "number", "minimum": 0, "maximum": 100},
+        "evidence_band": {"enum": ["strong_review", "review", "weak_review"]},
+        "shared_name_tokens": {
+          "type": "array",
+          "maxItems": 8,
+          "uniqueItems": true,
+          "items": {"type": "string", "minLength": 1, "maxLength": 120}
+        },
+        "shared_touched_path_count": {"type": "integer", "minimum": 0},
+        "merge_base_distance": {"type": ["integer", "null"], "minimum": 0},
+        "next_action": {"type": "string", "minLength": 40, "maxLength": 240},
+        "human_decision_required": {"const": true},
+        "execution_authorized": {"const": false}
+      }
+    },
     "source": {
       "type": "object",
       "additionalProperties": false,
@@ -209,7 +262,7 @@
       "additionalProperties": false,
       "required": ["source_id", "status", "problems", "owner", "producer_ref", "human_approval_required"],
       "properties": {
-        "source_id": {"enum": ["portfolio_v1", "portfolio_v2", "capability_os", "daemon", "event_pipeline"]},
+        "source_id": {"enum": ["portfolio_v1", "portfolio_v2", "capability_os", "convergence_radar", "daemon", "event_pipeline"]},
         "status": {"enum": ["stale", "missing", "invalid"]},
         "problems": {"type": "array", "minItems": 1, "uniqueItems": true, "items": {"type": "string", "minLength": 1}},
         "owner": {"type": "string", "minLength": 1, "maxLength": 80},
