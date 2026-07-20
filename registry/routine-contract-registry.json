@@ -112,6 +112,22 @@
       "consumer": "operational cockpit convergence view; human branch/worktree review",
       "kill_criteria": "Retire or redesign if bounded operator review shows persistent false-positive overload or if a replacement preserves the report-only authority boundary.",
       "notes": "Registration is on-demand only. It does not schedule a scan, run a daemon, or authorize any merge, close, deletion, cleanup, or source-repository write."
+    },
+    {
+      "routine_id": "dad-learning-loop-yield-report",
+      "kind": "cli_on_demand",
+      "enabled": false,
+      "owner": "lowell",
+      "description": "Monthly report-only learning-loop yield projection (asset-dir agent yield-report).",
+      "artifact": {"root": "data", "path": "processed/reports/learning_loop_yield.json", "parse_json": true},
+      "freshness_hours": null,
+      "dependency_paths": [
+        "src/digital_asset_directory/learning_yield_report.py",
+        "schemas/learning-loop-yield-report.schema.json"
+      ],
+      "consumer": "human learning-loop review; optional future cockpit surface",
+      "kill_criteria": "Retire or redesign if operators treat unknown coverage as zero or if self-scores begin driving counts.",
+      "notes": "Dormant registration only. Enabling or scheduling requires Lowell approval. Source records only; anti-gaming preserves coverage_unavailable."
     }
   ]
 }

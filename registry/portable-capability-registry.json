@@ -380,6 +380,7 @@
         "registry/schema-registry.json",
         "schemas/contract-check-policy.schema.json",
         "schemas/intelligence-routing-registry.schema.json",
+        "schemas/learning-loop-yield-report.schema.json",
         "schemas/model-attempt-receipt-v2.schema.json",
         "schemas/portability-assessment.schema.json",
         "schemas/portability-health-snapshot.schema.json",
@@ -402,6 +403,7 @@
         "src/digital_asset_directory/global_personal_skills.py",
         "src/digital_asset_directory/governance.py",
         "src/digital_asset_directory/learning.py",
+        "src/digital_asset_directory/learning_yield_report.py",
         "src/digital_asset_directory/mcp_dependency_map.py",
         "src/digital_asset_directory/models.py",
         "src/digital_asset_directory/portability_control.py",
@@ -415,10 +417,11 @@
         "src/digital_asset_directory/intelligence_routing.py",
         "tests/test_cross_vendor_review_policy.py",
         "tests/test_agent_family_reconciliation.py",
+        "tests/test_learning_yield_report.py",
         "tests/test_intelligence_routing.py",
         "templates/downstream/AGENTS_MANAGED_BLOCK.md"
       ],
-      "content_digest": "sha256:bbe7735ba6c5adc21345e706e4140ac1e1e1498b2e3abb3bd7c6007fc5bea2de",
+      "content_digest": "sha256:3a27c88a1a04eebd24a278f5a633928e223e117ffe249cc7c112326ccae60ff1",
       "contract_digests": {
         "input": "sha256:eee475da7d6fe76d90852dfa97de0e1f047cb72d7d0134552245b7cda9a9fb68",
         "output": "sha256:0ec04e3bcb58df087b53068eb3756924c878f35a40871814bd8749313aa69dea",
@@ -1488,7 +1491,7 @@
         "src/digital_asset_directory/portfolio_roadmap.py",
         "templates/hooks/intent-continuity-shadow-receipt.template.json"
       ],
-      "content_digest": "sha256:c81c049c83f64e12282723ca6c417bbc8f54ff87f7c7bdf51bce7b65405a4017",
+      "content_digest": "sha256:19d902309c51d2573422e4886bf04c435919d93cf8e717363756c3d3dd4fa59f",
       "source_observation_digest": "sha256:1aeef157eb837554b2d8bf2b3de020f8daf701533a3ca6efe7d31e0888368a9a",
       "contract_digests": {
         "input": "sha256:eee475da7d6fe76d90852dfa97de0e1f047cb72d7d0134552245b7cda9a9fb68",
@@ -1569,7 +1572,7 @@
         "runtime_adapter_id": "adapter:codex-host",
         "status": "supervised_silent_shadow"
       },
-      "adapter_interface_digest": "sha256:9232852f8fa4c44d48d7d068f1e8cca167bac8eb38215b70a09aa923283c2b0b",
+      "adapter_interface_digest": "sha256:fa49673c38584cf25e22996ce7984bffa61df1e628232924c73c618ba7e42e0a",
       "adapter_interface_sources": [
         ".codex/hooks.json",
         ".codex/hooks/intent_continuity_shadow.py",
@@ -2373,7 +2376,7 @@
         "requires": ["local_git_cli", "portfolio_attention_v1"],
         "forbids": ["source_repository_writes", "model_calls"]
       },
-      "adapter_interface_digest": "sha256:1cfbeb69391d83b13fcfb7093f764a8146ca6746462dee03347173070d0f4c22",
+      "adapter_interface_digest": "sha256:11e610bdaebfb40af85f5a617af79fe60e3f40f274b308401fab018505a14e34",
       "adapter_interface_sources": [
         "src/digital_asset_directory/portfolio_convergence_git.py",
         "schemas/portfolio-convergence-git-producer-receipt.schema.json",
@@ -2499,7 +2502,7 @@
           "workstream_creation"
         ]
       },
-      "adapter_interface_digest": "sha256:c0d9b4bf4b653263721b428b911971800c4b8bcba70bb3f082130fba83fbe0c0",
+      "adapter_interface_digest": "sha256:4e66e38ed9667aac66b3f01aa0029cc3a7df086cd24854bf52f7358e20bed3e3",
       "adapter_interface_sources": [
         "registry/routine-contract-registry.json",
         "schemas/portfolio-capture-candidate.schema.json",
