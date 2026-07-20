@@ -128,6 +128,22 @@
       "consumer": "human learning-loop review; optional future cockpit surface",
       "kill_criteria": "Retire or redesign if operators treat unknown coverage as zero or if self-scores begin driving counts.",
       "notes": "Dormant registration only. Enabling or scheduling requires Lowell approval. Source records only; anti-gaming preserves coverage_unavailable."
+    },
+    {
+      "routine_id": "dad-agent-session-split-report",
+      "kind": "cli_on_demand",
+      "enabled": false,
+      "owner": "lowell",
+      "description": "Dry-run compare of legacy vs data-root agent sessions (asset-dir agent session-split-report).",
+      "artifact": {"root": "data", "path": "processed/reports/agent_session_split.json", "parse_json": true},
+      "freshness_hours": null,
+      "dependency_paths": [
+        "src/digital_asset_directory/agent_session_split_report.py",
+        "schemas/agent-session-split-report.schema.json"
+      ],
+      "consumer": "human lifecycle integrity review before any session migration",
+      "kill_criteria": "Retire after legacy and data-root session surfaces are proven identical for a reviewed window and apply is either completed or declined.",
+      "notes": "Dormant registration only. Report-only; apply/migrate/delete of session files requires a separate named human approval."
     }
   ]
 }
