@@ -346,7 +346,7 @@
     {
       "schema_version": "dad.portable_capability_card.v1",
       "card_id": "portability-card:harness-portable-capability-control-plane",
-      "revision_id": "portability-card-revision:harness-portable-capability-control-plane:0.1.14",
+      "revision_id": "portability-card-revision:harness-portable-capability-control-plane:0.1.15",
       "artifact_id": "harness:portable-capability-control-plane",
       "artifact_kind": "harness",
       "binding_class": "portable_core",
@@ -407,7 +407,7 @@
         "src/digital_asset_directory/validation.py",
         "templates/downstream/AGENTS_MANAGED_BLOCK.md"
       ],
-      "content_digest": "sha256:f852a85d34b77aad63fad6c480b60cb135f1246e4d7e55c4774e6e7a70eae45c",
+      "content_digest": "sha256:efb037e19fc5e3193d6686fb6e9d77a9640ed6dffc5580ad0033967419274244",
       "contract_digests": {
         "input": "sha256:eee475da7d6fe76d90852dfa97de0e1f047cb72d7d0134552245b7cda9a9fb68",
         "output": "sha256:0ec04e3bcb58df087b53068eb3756924c878f35a40871814bd8749313aa69dea",
@@ -1348,7 +1348,7 @@
     {
       "schema_version": "dad.portable_capability_card.v1",
       "card_id": "portability-card:skill-personal-project-management-ops",
-      "revision_id": "portability-card-revision:skill-personal-project-management-ops:0.4.14",
+      "revision_id": "portability-card-revision:skill-personal-project-management-ops:0.4.15",
       "artifact_id": "skill:personal-project-management-ops",
       "artifact_kind": "skill",
       "binding_class": "portable_core",
@@ -1402,7 +1402,7 @@
         "src/digital_asset_directory/portfolio_roadmap.py",
         "templates/hooks/intent-continuity-shadow-receipt.template.json"
       ],
-      "content_digest": "sha256:c33736da82bd828a670e17dd45d0e5ab5f6a2eb1fd1d42b6526d2509128e3e97",
+      "content_digest": "sha256:c81c049c83f64e12282723ca6c417bbc8f54ff87f7c7bdf51bce7b65405a4017",
       "source_observation_digest": "sha256:1aeef157eb837554b2d8bf2b3de020f8daf701533a3ca6efe7d31e0888368a9a",
       "contract_digests": {
         "input": "sha256:eee475da7d6fe76d90852dfa97de0e1f047cb72d7d0134552245b7cda9a9fb68",
@@ -1453,7 +1453,7 @@
         "capability-os-cockpit"
       ],
       "adapter_revision_ids": [
-        "portability-card-revision:adapter-intent-continuity-codex-host:0.3.15"
+        "portability-card-revision:adapter-intent-continuity-codex-host:0.3.16"
       ],
       "harness_revision_id": "harness-revision:portable-capability-contract:0.1.0",
       "evidence_refs": [
@@ -1470,20 +1470,20 @@
     {
       "schema_version": "dad.portable_capability_card.v1",
       "card_id": "portability-card:adapter-intent-continuity-codex-host",
-      "revision_id": "portability-card-revision:adapter-intent-continuity-codex-host:0.3.15",
+      "revision_id": "portability-card-revision:adapter-intent-continuity-codex-host:0.3.16",
       "artifact_id": "adapter:intent-continuity-codex-host",
       "artifact_kind": "runtime_adapter",
       "binding_class": "runtime_adapter",
       "source_authority": "config/intent-continuity-shadow-hooks.json",
       "owner": "DAD and Lowell",
       "status": "schema_validated",
-      "core_revision_id": "portability-card-revision:skill-personal-project-management-ops:0.4.14",
+      "core_revision_id": "portability-card-revision:skill-personal-project-management-ops:0.4.15",
       "content_digest": "sha256:4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
       "target_capability_predicate": {
         "runtime_adapter_id": "adapter:codex-host",
         "status": "supervised_silent_shadow"
       },
-      "adapter_interface_digest": "sha256:355eedc0ca93ebede5b2a92cad73c935418239942b2275bacd717350a38afaf0",
+      "adapter_interface_digest": "sha256:9232852f8fa4c44d48d7d068f1e8cca167bac8eb38215b70a09aa923283c2b0b",
       "adapter_interface_sources": [
         ".codex/hooks.json",
         ".codex/hooks/intent_continuity_shadow.py",
@@ -2257,7 +2257,7 @@
         "local-operator"
       ],
       "adapter_revision_ids": [
-        "portability-card-revision:runtime-adapter-git-convergence-readonly:0.2.0"
+        "portability-card-revision:runtime-adapter-git-convergence-readonly:0.2.1"
       ],
       "harness_revision_id": "harness-revision:portable-capability-contract:0.1.0",
       "evidence_refs": [
@@ -2274,7 +2274,7 @@
     {
       "schema_version": "dad.portable_capability_card.v1",
       "card_id": "portability-card:runtime-adapter-git-convergence-readonly",
-      "revision_id": "portability-card-revision:runtime-adapter-git-convergence-readonly:0.2.0",
+      "revision_id": "portability-card-revision:runtime-adapter-git-convergence-readonly:0.2.1",
       "artifact_id": "runtime-adapter:git-convergence-readonly",
       "artifact_kind": "runtime_adapter",
       "binding_class": "runtime_adapter",
@@ -2287,7 +2287,7 @@
         "requires": ["local_git_cli", "portfolio_attention_v1"],
         "forbids": ["source_repository_writes", "model_calls"]
       },
-      "adapter_interface_digest": "sha256:533923c4f0ab8f6823eb555c0b222c49125b38d5c015e6bf736d2fbe045d4624",
+      "adapter_interface_digest": "sha256:1cfbeb69391d83b13fcfb7093f764a8146ca6746462dee03347173070d0f4c22",
       "adapter_interface_sources": [
         "src/digital_asset_directory/portfolio_convergence_git.py",
         "schemas/portfolio-convergence-git-producer-receipt.schema.json",
@@ -2320,8 +2320,136 @@
     },
     {
       "schema_version": "dad.portable_capability_card.v1",
+      "card_id": "portability-card:knowledge-interface-portfolio-capture-inbox",
+      "revision_id": "portability-card-revision:knowledge-interface-portfolio-capture-inbox:0.1.0",
+      "artifact_id": "knowledge-interface:portfolio-capture-inbox",
+      "artifact_kind": "knowledge_interface",
+      "binding_class": "portable_core",
+      "source_authority": "src/digital_asset_directory/portfolio_capture_core.py",
+      "owner": "DAD and Lowell",
+      "status": "schema_validated",
+      "portable_files": [
+        "roadmap/evidence/portfolio-capture-inbox-v1.md",
+        "schemas/portfolio-capture-candidate.schema.json",
+        "src/digital_asset_directory/portfolio_capture_core.py",
+        "tests/test_portfolio_capture_core.py"
+      ],
+      "content_digest": "sha256:99b0bdd33021f0f4f92ddd906fa6869716234db6daa0f00640e8ccccd3802b8d",
+      "contract_digests": {
+        "input": "sha256:761b47acdc231d18c4a632136142e2845e13a3a3c029b3104df1370c8e78544a",
+        "output": "sha256:3620cc6d9a229f2f99a96efad26ea4bf10a1d84baf158b3e688ac31d63ee9514",
+        "error": "sha256:30ede015bdbe2da76621cce4e397fa643515272ad4e2346a772e8d58a4ca56f4",
+        "privacy": "sha256:efd4f9348b9e57910cec3fd7b815fdf81bed20524a8cadb6f5f9768f65df7c01",
+        "effect": "sha256:01eef6a37325c8949a6a33bb68eacefc1a1120284e193b0e63319805fca2aae6",
+        "authority": "sha256:19dfa447d05122d7252c6c91cb5924a32c3abf1d0d809bad026aea92db93608e"
+      },
+      "capability_ids": [
+        "bounded_capture_line_structuring",
+        "privacy_minimized_capture_candidates",
+        "evidence_honest_budget_exhaustion"
+      ],
+      "tool_ids": [
+        "python-stdlib",
+        "json-schema"
+      ],
+      "context_contract": "Bounded normalized text lines and a source fingerprint only; the core receives no source path, filesystem authority, runtime identity, model binding, scheduler, or execution authority.",
+      "privacy_classes": [
+        "internal",
+        "restricted_by_local_policy"
+      ],
+      "consequence_classes": [
+        "small",
+        "medium"
+      ],
+      "effect_classes": [
+        "read_only",
+        "candidate_local_artifact"
+      ],
+      "dependencies": [
+        "skill:portable-capability-governance",
+        "harness:portable-capability-control-plane"
+      ],
+      "reverse_consumers": [
+        "runtime-adapter:local-file-capture-inbox",
+        "knowledge-interface:operational-cockpit",
+        "local-operator"
+      ],
+      "adapter_revision_ids": [
+        "portability-card-revision:runtime-adapter-local-file-capture-inbox:0.1.0"
+      ],
+      "harness_revision_id": "harness-revision:portable-capability-contract:0.1.0",
+      "evidence_refs": [
+        "roadmap/evidence/portfolio-capture-inbox-v1.md",
+        "schemas/portfolio-capture-candidate.schema.json",
+        "tests/test_portfolio_capture_core.py"
+      ],
+      "fresh_until": "2026-10-20T00:00:00-04:00",
+      "rollback_ref": "Revert the capture structuring core and cockpit consumption while retaining the immutable source inbox and prior cockpit evidence.",
+      "candidate_only": true,
+      "execution_authorized": false,
+      "authority_boundary": "This core creates privacy-minimized candidate records only; it cannot read or mutate files, create workstreams, invoke models, schedule work, or grant execution authority."
+    },
+    {
+      "schema_version": "dad.portable_capability_card.v1",
+      "card_id": "portability-card:runtime-adapter-local-file-capture-inbox",
+      "revision_id": "portability-card-revision:runtime-adapter-local-file-capture-inbox:0.1.0",
+      "artifact_id": "runtime-adapter:local-file-capture-inbox",
+      "artifact_kind": "runtime_adapter",
+      "binding_class": "runtime_adapter",
+      "content_digest": "sha256:4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+      "source_authority": "src/digital_asset_directory/portfolio_capture_inbox.py",
+      "owner": "DAD and Lowell",
+      "status": "schema_validated",
+      "core_revision_id": "portability-card-revision:knowledge-interface-portfolio-capture-inbox:0.1.0",
+      "target_capability_predicate": {
+        "requires": [
+          "local_utf8_file",
+          "dad_local_data_plane"
+        ],
+        "forbids": [
+          "source_file_writes",
+          "model_calls",
+          "scheduling",
+          "workstream_creation"
+        ]
+      },
+      "adapter_interface_digest": "sha256:c0d9b4bf4b653263721b428b911971800c4b8bcba70bb3f082130fba83fbe0c0",
+      "adapter_interface_sources": [
+        "registry/routine-contract-registry.json",
+        "schemas/portfolio-capture-candidate.schema.json",
+        "schemas/portfolio-capture-inbox-report.schema.json",
+        "src/digital_asset_directory/cli.py",
+        "src/digital_asset_directory/portfolio_capture_inbox.py",
+        "tests/test_portfolio_capture_inbox.py"
+      ],
+      "preserved_contract_digests": {
+        "input": "sha256:761b47acdc231d18c4a632136142e2845e13a3a3c029b3104df1370c8e78544a",
+        "output": "sha256:3620cc6d9a229f2f99a96efad26ea4bf10a1d84baf158b3e688ac31d63ee9514",
+        "error": "sha256:30ede015bdbe2da76621cce4e397fa643515272ad4e2346a772e8d58a4ca56f4",
+        "privacy": "sha256:efd4f9348b9e57910cec3fd7b815fdf81bed20524a8cadb6f5f9768f65df7c01",
+        "effect": "sha256:01eef6a37325c8949a6a33bb68eacefc1a1120284e193b0e63319805fca2aae6",
+        "authority": "sha256:19dfa447d05122d7252c6c91cb5924a32c3abf1d0d809bad026aea92db93608e"
+      },
+      "compatibility_evidence": [
+        "roadmap/evidence/portfolio-capture-inbox-v1.md",
+        "schemas/portfolio-capture-candidate.schema.json",
+        "schemas/portfolio-capture-inbox-report.schema.json",
+        "tests/test_portfolio_capture_inbox.py"
+      ],
+      "target_runtime_classes": [
+        "local_filesystem",
+        "python_3_11_plus"
+      ],
+      "fresh_until": "2026-10-20T00:00:00-04:00",
+      "rollback_ref": "Remove the local-file adapter, dormant routine, and CLI command while preserving the provider-neutral capture core and immutable source inbox.",
+      "candidate_only": true,
+      "execution_authorized": false,
+      "authority_boundary": "This adapter may read one explicitly named bounded UTF-8 file and append privacy-minimized candidates to DAD-local artifacts; it cannot mutate the source, scan a global path, invoke models, schedule work, create workstreams, or authorize execution."
+    },
+    {
+      "schema_version": "dad.portable_capability_card.v1",
       "card_id": "portability-card:knowledge-interface-operational-cockpit",
-      "revision_id": "portability-card-revision:knowledge-interface-operational-cockpit:0.3.3",
+      "revision_id": "portability-card-revision:knowledge-interface-operational-cockpit:0.4.0",
       "artifact_id": "knowledge-interface:operational-cockpit",
       "artifact_kind": "knowledge_interface",
       "binding_class": "portable_core",
@@ -2331,18 +2459,19 @@
       "portable_files": [
         "docs/DAD_OPERATIONAL_COCKPIT.md",
         "schemas/operational-cockpit.schema.json",
+        "schemas/portfolio-capture-inbox-report.schema.json",
         "schemas/portfolio-convergence-report.schema.json",
         "src/digital_asset_directory/operational_cockpit.py",
         "tests/test_operational_cockpit.py"
       ],
-      "content_digest": "sha256:b1c3b5c10e759fcc325fd91626f32032ba4e65143c50a1719e02aeb69979a131",
+      "content_digest": "sha256:7188d48e1be4a602b85e581e1ee7ba983a9f848e5462bde4c0307a6b2adc53fa",
       "contract_digests": {
-        "input": "sha256:712a8022dc96e8cf292925610c6f324a101907f6d3474a8e5471fb7ed121b4f9",
-        "output": "sha256:e9b10fe03f9ef53621756f8a17748ae76de19c1bbc65dffcc4dd4b55a3448253",
-        "error": "sha256:34bd0bd7788866f9b614406ddcf4dffdabfdcf2c84aa68d51d6a513880f3b033",
-        "privacy": "sha256:f0552b30d34bbdc297ef2ac49df85f072e0a91a5c38948a92f7504245c90eb6b",
-        "effect": "sha256:3283c123bab2a278e2c6f4806caa24d8fea8c5f11c3e4220674a45938e5f1d06",
-        "authority": "sha256:0b59afa0a4700f9120614a2d3bb9da1655b6840a4bafbd87f999317b6decc751"
+        "input": "sha256:ff2e685bd624c2cede6e4a4ba9a2edfd641ccc1270b65e115605e3d7345f1da1",
+        "output": "sha256:df67a75147af080d4c3a0c961186095872782618db396b303c3556380c5023ca",
+        "error": "sha256:2b7a662e819d18f79fc8fb7ada680e2be99fbde2125f2f89f35fb4b8a1d61334",
+        "privacy": "sha256:ef854437babf799954a8acb285f81775bdf47ab3fcae4fa6c51d9622cf80c187",
+        "effect": "sha256:3542aed7c0a024cad788c1811c6babbade36b9cea234369c935af0365b285494",
+        "authority": "sha256:1b9fe0d8f50ffc503684746fd5de74a3aaa3ddabed34eb4fb7fb7e3cd1786c78"
       },
       "capability_ids": [
         "operational_cockpit_projection",
@@ -2351,6 +2480,7 @@
         "evidence_aware_health",
         "loopback_read_only_host",
         "convergence_candidate_inspection",
+        "capture_inbox_status_inspection",
         "repo_adapter_contract"
       ],
       "tool_ids": [
@@ -2376,6 +2506,7 @@
       ],
       "dependencies": [
         "knowledge-interface:portfolio-convergence-radar",
+        "knowledge-interface:portfolio-capture-inbox",
         "skill:portable-capability-governance",
         "harness:portable-capability-control-plane"
       ],
@@ -2389,10 +2520,11 @@
       "evidence_refs": [
         "docs/DAD_OPERATIONAL_COCKPIT.md",
         "roadmap/evidence/operational-cockpit-agent-mesh-v1.json",
+        "roadmap/evidence/portfolio-capture-inbox-v1.md",
         "roadmap/evidence/portfolio-convergence-radar-v1.md",
         "tests/test_operational_cockpit.py"
       ],
-      "fresh_until": "2026-08-19T00:00:00-04:00",
+      "fresh_until": "2026-10-20T00:00:00-04:00",
       "rollback_ref": "Revert the operational cockpit core and CLI routes while preserving existing portfolio, capability, daemon, and event projections.",
       "candidate_only": true,
       "execution_authorized": false,

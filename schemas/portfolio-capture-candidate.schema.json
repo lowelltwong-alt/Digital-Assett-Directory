@@ -1,0 +1,28 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://dad.local/schemas/portfolio-capture-candidate.schema.json",
+  "title": "DAD Portfolio OS structured capture candidate",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version", "candidate_id", "captured_at", "source_fingerprint",
+    "source_line_number", "text", "text_fingerprint", "redaction_count",
+    "status", "recommended_action", "candidate_only", "execution_authorized",
+    "authority_boundary"
+  ],
+  "properties": {
+    "schema_version": {"const": "dad.portfolio_capture_candidate.v1"},
+    "candidate_id": {"type": "string", "pattern": "^dad:capture-candidate:[0-9a-f]{64}$"},
+    "captured_at": {"type": "string", "format": "date-time"},
+    "source_fingerprint": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"},
+    "source_line_number": {"type": "integer", "minimum": 1, "maximum": 10000},
+    "text": {"type": "string", "minLength": 1, "maxLength": 20000},
+    "text_fingerprint": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"},
+    "redaction_count": {"type": "integer", "minimum": 0},
+    "status": {"const": "needs_human_decision"},
+    "recommended_action": {"const": "review_with_dad_work_router"},
+    "candidate_only": {"const": true},
+    "execution_authorized": {"const": false},
+    "authority_boundary": {"type": "string", "minLength": 80}
+  }
+}

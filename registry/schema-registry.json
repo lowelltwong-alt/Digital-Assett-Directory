@@ -27,6 +27,8 @@
     "contract_check_policy": "schemas/contract-check-policy.schema.json",
     "intelligence_routing_registry": "schemas/intelligence-routing-registry.schema.json",
     "portfolio_convergence_report": "schemas/portfolio-convergence-report.schema.json",
+    "portfolio_capture_candidate": "schemas/portfolio-capture-candidate.schema.json",
+    "portfolio_capture_inbox_report": "schemas/portfolio-capture-inbox-report.schema.json",
     "portfolio_convergence_git_producer_receipt": "schemas/portfolio-convergence-git-producer-receipt.schema.json",
     "portfolio_attention_report": "schemas/portfolio-attention-report.schema.json",
     "portfolio_workstream_state": "schemas/portfolio-workstream-state.schema.json",

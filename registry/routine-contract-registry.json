@@ -86,6 +86,22 @@
       "consumer": "weekly review; coverage cycle log"
     },
     {
+      "routine_id": "dad-capture-inbox-structuring",
+      "kind": "cli_on_demand",
+      "enabled": false,
+      "owner": "lowell",
+      "description": "Bounded report-only structuring of an explicitly supplied local drop file (asset-dir os capture-inbox).",
+      "artifact": {"root": "data", "path": "processed/reports/portfolio_os/structured-captures.jsonl"},
+      "freshness_hours": 26,
+      "dependency_paths": [
+        "src/digital_asset_directory/portfolio_capture_core.py",
+        "src/digital_asset_directory/portfolio_capture_inbox.py"
+      ],
+      "consumer": "operational cockpit capture-inbox status; human workstream review",
+      "kill_criteria": "Retire or redesign if bounded operator review shows privacy leakage, false-intent creation, or no demonstrated reduction in capture loss.",
+      "notes": "Dormant registration only. Enabling or scheduling requires Lowell approval. The command never creates, clears, acknowledges, or mutates the source inbox and never creates workstreams."
+    },
+    {
       "routine_id": "dad-portfolio-convergence-radar",
       "kind": "cli_on_demand",
       "enabled": true,

@@ -5,7 +5,8 @@
 The operational cockpit is the thin local envelope around DAD's existing
 Portfolio Cockpit v1, Portfolio Cockpit v2, Capability OS cockpit, daemon
 heartbeat, event-pipeline report, and deterministic branch/worktree convergence
-radar. It does not replace any of those source projections.
+radar, plus a privacy-safe capture-inbox status report. It does not replace any
+of those source projections.
 
 
 ```text
@@ -31,6 +32,17 @@ Inspect source readiness without publishing or overwriting outputs:
 asset-dir os operational-cockpit --check --hub <DAD checkout>
 ~~~
 
+Capture one line directly, or structure an existing explicit local drop file:
+
+~~~text
+asset-dir os capture --raw "cockpit needs a bounded capture lane" --hub <DAD checkout>
+asset-dir os capture-inbox --inbox <explicit-path> --hub <DAD checkout>
+~~~
+
+The inbox adapter never creates, clears, acknowledges, or edits its source. It
+fails closed on byte, line, line-length, UTF-8, ledger-integrity, or schema
+limits; appends only minimized deduplicated DAD-local candidates; creates no
+workstream; and exposes only counts and categorical coverage in cockpit HTML.
 Build or refresh the convergence evidence after a Portfolio Attention scan:
 
 ~~~text
@@ -77,7 +89,9 @@ daemon cycle, a normal foreground refresh may honestly remain
 `partial_candidate`; the command never fabricates a completed heartbeat.
 The convergence source is also precomputed and is not fabricated by
 `cockpit-refresh-now`. If it has never run or is stale, the cockpit remains
-honestly partial until an operator runs the explicit commands above.
+honestly partial until an operator runs the explicit commands above. The
+capture-inbox source is likewise precomputed and explicit-path-only; foreground
+refresh never guesses a user inbox location or reads captured text.
 
 
 Serve in the foreground on loopback only:
@@ -127,9 +141,10 @@ risk deployment and is not part of this build.
 
 Each source is independently fingerprinted and classified as `observed`,
 `stale`, `missing`, or `invalid`. Portfolio v1, portfolio v2, Capability OS, and
-convergence inputs must pass their authoritative registered JSON Schemas. Daemon and event inputs must pass strict producer invariants: daemon evidence counts as current only after a complete, finalized cycle with a completion timestamp, and event counts must be nonnegative. Missing timestamps, date-only or timezone-less timestamps, other malformed timestamps, timestamps more than five minutes in the future, wrong field types, and authority-contract violations are invalid. Stale or invalid sources cannot contribute decisions, convergence candidates, or event-pulse values.
+convergence and capture-inbox inputs must pass their authoritative registered JSON
+Schemas. Capture counts contribute only after complete bounded coverage and an explicit false source-mutation assertion. Daemon and event inputs must pass strict producer invariants: daemon evidence counts as current only after a complete, finalized cycle with a completion timestamp, and event counts must be nonnegative. Missing timestamps, date-only or timezone-less timestamps, other malformed timestamps, timestamps more than five minutes in the future, wrong field types, and authority-contract violations are invalid. Stale or invalid sources cannot contribute decisions, capture counts, convergence candidates, or event-pulse values.
 
-The whole cockpit is `current_candidate` only when all six sources are current;
+The whole cockpit is `current_candidate` only when all seven sources are current;
 every other condition is `partial_candidate`. Candidate status is never an
 approval or source-authority transfer.
 
@@ -137,16 +152,18 @@ The page exposes at most three immediate decisions with bounded evidence referen
 
 ## Revision-bound contract evidence
 
-Revision `0.3.3` binds its contract digests to these canonical materials:
+Revision `0.4.0` binds its contract digests to these canonical materials:
 
-- input: six named precomputed sources, including the strict convergence report,
+- input: seven named precomputed sources, including the strict convergence and
+  capture-inbox reports,
   a maximum five-minute future-clock tolerance, explicit-offset timestamps, and
   a two-megabyte per-source read budget;
 - output: `dad.operational_cockpit.v1`, a
   `dad.operational_cockpit.receipt.v1` coherence receipt,
   `local_private_metadata`, at most three immediate decisions, a separate
   sanitized top-five convergence view, provenance-bound portfolio scope and readiness actions, non-publishing readiness inspection, evidence-aware health, and an in-memory last-valid
-  bundle during foreground service;
+  bundle during foreground service, plus capture counts and categorical coverage
+  that omit source paths and captured text;
 - error: invalid sources force `partial_candidate`, stale/invalid payloads
   contribute no decisions or pulse, oversized sources fail closed, invalid startup bundles with no cached last-valid bundle return HTTP 503, non-loopback Host headers return HTTP 421, and mutation methods return HTTP 405;
 - privacy: loopback-only bind and an exact `127.0.0.1` / `127.0.0.1:<bound-port>` Host allowlist, local-private classification,
@@ -158,6 +175,7 @@ materials. Any change to those values requires a new revision and fresh
 validation evidence.
 ## Activation gates
 
+
 The following remain separately human-gated:
 
 - Windows Task Scheduler or any recurring daemon activation;
@@ -165,6 +183,8 @@ The following remain separately human-gated:
 - remote ingress, tunnels, webhooks, GitHub Apps, plugins, or bots;
 - enrollment writes or broad all-repository rollout;
 - any action executor, notification, source mutation, or private payload flow.
+- creating or mutating a global `~/.dad/inbox.md` or any source acknowledgement cursor;
+- enabling or scheduling the dormant capture structuring routine or model router.
 
 Recommended rollout is: local DAD proof, one or two read-only opt-in repo pilots,
 failure-injection and usability evidence, then a separately approved broader

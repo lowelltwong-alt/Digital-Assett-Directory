@@ -398,6 +398,11 @@ from .portfolio_cockpit import (
     build_portfolio_cockpit,
     write_portfolio_cockpit_outputs,
 )
+from .portfolio_capture_inbox import (
+    CaptureInboxError,
+    CaptureInboxSettings,
+    write_capture_inbox_outputs,
+)
 from .portfolio_convergence_git import (
     GitConvergenceSettings,
     build_git_convergence_report,
@@ -1476,8 +1481,11 @@ def _print_os_write_result(result: dict[str, Any]) -> None:
 
 @os_app.command("capture")
 def portfolio_os_capture(
-    idea: list[str] = typer.Argument(
-        ..., help="One or more idea texts from a single conversation."
+    idea: Optional[list[str]] = typer.Argument(
+        None, help="One or more idea texts from a single conversation."
+    ),
+    raw: list[str] = typer.Option(
+        [], "--raw", help="Zero-friction one-line capture; repeat for multiple lines."
     ),
     conversation_id: str = typer.Option(
         "",
@@ -1503,10 +1511,13 @@ def portfolio_os_capture(
     """Capture ideas: minimize, relate to prior work, propose workstreams."""
 
     cfg = _cfg(config, hub)
+    ideas = [*(idea or []), *raw]
+    if not ideas:
+        raise typer.BadParameter("provide an idea argument or --raw")
     report = _v1_attention_report(cfg.repo_root) if join_report else None
     result = capture_workstream_ideas(
         cfg.repo_root,
-        list(idea),
+        ideas,
         conversation_id=conversation_id,
         conversation_title=title,
         portfolio_report=report,
@@ -1514,6 +1525,50 @@ def portfolio_os_capture(
         command_id=request_id or None,
     )
     _print_os_write_result(result)
+
+
+@os_app.command("capture-inbox")
+def portfolio_os_capture_inbox(
+    inbox: Path = typer.Option(
+        ...,
+        "--inbox",
+        help="Explicit local UTF-8 drop file. The command never creates or edits it.",
+    ),
+    max_bytes: int = typer.Option(512_000, "--max-bytes", min=1_024, max=8_000_000),
+    max_lines: int = typer.Option(500, "--max-lines", min=1, max=10_000),
+    max_line_chars: int = typer.Option(2_000, "--max-line-chars", min=32, max=20_000),
+    config: Optional[Path] = typer.Option(None),
+    hub: Optional[Path] = typer.Option(None),
+) -> None:
+    """Structure an explicit inbox into local candidates; never create workstreams."""
+
+    cfg = _cfg(config, hub)
+    try:
+        result = write_capture_inbox_outputs(
+            cfg.repo_root,
+            inbox,
+            settings=CaptureInboxSettings(
+                max_inbox_bytes=max_bytes,
+                max_lines=max_lines,
+                max_line_chars=max_line_chars,
+            ),
+        )
+    except (CaptureInboxError, OSError, ValueError) as exc:
+        console.print_json(
+            data={
+                "status": "blocked",
+                "error": str(exc),
+                "source_mutated": False,
+                "candidate_only": True,
+                "execution_authorized": False,
+                "authority_boundary": (
+                    "A blocked capture-inbox run grants no source mutation, "
+                    "workstream creation, scheduling, dispatch, or execution authority."
+                ),
+            }
+        )
+        raise typer.Exit(2) from exc
+    console.print_json(data=result)
 
 
 @os_app.command("capsule")
