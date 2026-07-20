@@ -622,11 +622,66 @@ def test_html_is_script_free_escaped_accessible_and_hash_bound() -> None:
     assert f"sha256-{digest}" in unescape(html)
     assert 'href="#main"' in html
     assert 'aria-label="Cockpit sections"' in html
-    for section in ("today", "sources", "queue", "evidence"):
+    for section in ("today", "fix-prompts", "sources", "queue", "evidence"):
         assert f'href="#{section}"' in html
         assert f'id="{section}"' in html
     assert "<caption>" in html
     assert 'scope="col"' in html
+    assert "Suggested AI fix prompts" in html
+    assert "Copy suggested AI fix prompt" in html
+    assert "C:/work/dad-cockpit" not in html
+    _validate(result)
+
+
+def test_suggested_fix_prompts_group_by_project_and_stay_privacy_safe() -> None:
+    result = pc.build_portfolio_cockpit(
+        _git(
+            projects=[
+                _project(name="Alpha", path="C:/secret/alpha"),
+                _project(
+                    project_id="dad:portfolio-project:beta",
+                    name="Beta",
+                    path="C:/secret/beta",
+                    branch="fix/beta",
+                ),
+            ],
+            attention=[
+                _git_attention(project_name="Alpha", path="C:/secret/alpha"),
+                _git_attention(
+                    project_id="dad:portfolio-project:beta",
+                    project_name="Beta",
+                    branch="fix/beta",
+                    path="C:/secret/beta",
+                    priority=90,
+                    reasons=["branch_behind_upstream"],
+                ),
+                _git_attention(
+                    project_name="Alpha",
+                    path="C:/secret/alpha",
+                    priority=80,
+                    branch="chore/alpha-stale",
+                    reasons=["dirty_worktree_idle", "stale_branch"],
+                ),
+            ],
+        ),
+        _state(),
+        now=NOW,
+    )
+    html = pc.portfolio_cockpit_html(result)
+    assert 'id="fix-prompts"' in html
+    assert html.count("<pre class=\"prompt\">") >= 3  # 2 project cards + today/queue details
+    assert "Project with open cockpit issues: Alpha" in html
+    assert "Project with open cockpit issues: Beta" in html
+    assert "dirty_worktree_idle" in html
+    assert "C:/secret" not in html
+    assert "worktree_path" not in html
+    prompt = pc._suggested_fix_prompt_for_project(
+        "Alpha",
+        [item for item in result["attention_queue"] if item.get("project_name") == "Alpha"],
+    )
+    assert "Do not commit, push, delete worktrees" in prompt
+    assert "Issue count: 2" in prompt
+    assert "C:/" not in prompt
     _validate(result)
 
 
