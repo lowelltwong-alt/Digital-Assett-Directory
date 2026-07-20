@@ -174,12 +174,33 @@ def build_learning_yield_report(
         created = _parse_ts(session.get("created_at") or session.get("closed_at"))
         if not _in_window(created, start, observed):
             continue
-        blob = json.dumps(session, sort_keys=True)
+        blob_ids = {
+            str(value)
+            for key, value in session.items()
+            if key.endswith("_id") and value
+        }
         for lesson_id in lesson_ids:
-            if lesson_id and lesson_id in blob:
+            if lesson_id and lesson_id in blob_ids:
                 reused_lesson_ids.add(lesson_id)
         for handoff_id in handoff_ids:
-            if handoff_id and handoff_id in blob:
+            if handoff_id and handoff_id in blob_ids:
+                reused_handoff_ids.add(handoff_id)
+        # Also accept explicit lesson/handoff lists and privacy-safe summary refs.
+        for key in ("lessons", "lesson_ids", "handoffs", "handoff_ids"):
+            values = session.get(key) or []
+            if isinstance(values, list):
+                for value in values:
+                    text = str(value)
+                    if text in lesson_ids:
+                        reused_lesson_ids.add(text)
+                    if text in handoff_ids:
+                        reused_handoff_ids.add(text)
+        summary = str(session.get("summary") or "")
+        for lesson_id in lesson_ids:
+            if lesson_id and lesson_id in summary:
+                reused_lesson_ids.add(lesson_id)
+        for handoff_id in handoff_ids:
+            if handoff_id and handoff_id in summary:
                 reused_handoff_ids.add(handoff_id)
 
     promoted = [
@@ -223,8 +244,8 @@ def build_learning_yield_report(
             "records_reused": len(reused_lesson_ids) + len(reused_handoff_ids),
             "records_promoted": len(promoted),
             "reuse_coverage": _coverage(
-                exact=bool(lesson_ids or handoff_ids),
-                partial=bool(sessions),
+                exact=bool((lesson_ids or handoff_ids) and sessions),
+                partial=bool(sessions) or bool(lessons or handoffs),
                 evidence_present=bool(lessons or handoffs or sessions),
             ),
         },
