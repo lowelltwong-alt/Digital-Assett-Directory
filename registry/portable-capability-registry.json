@@ -2628,7 +2628,7 @@
     {
       "schema_version": "dad.portable_capability_card.v1",
       "card_id": "portability-card:skill-dad-trigger-pattern-radar",
-      "revision_id": "portability-card-revision:skill-dad-trigger-pattern-radar:0.1.0",
+      "revision_id": "portability-card-revision:skill-dad-trigger-pattern-radar:0.1.1",
       "artifact_id": "skill:dad-trigger-pattern-radar",
       "artifact_kind": "skill",
       "binding_class": "portable_core",
@@ -2645,12 +2645,12 @@
       ],
       "content_digest": "sha256:97ac78a54bcd56b8ac96b7f1cba08d855192ffcf01d7a849cbb753cd17604ba5",
       "contract_digests": {
-        "input": "sha256:eee475da7d6fe76d90852dfa97de0e1f047cb72d7d0134552245b7cda9a9fb68",
-        "output": "sha256:0ec04e3bcb58df087b53068eb3756924c878f35a40871814bd8749313aa69dea",
-        "error": "sha256:0c31568c5353cbf327cd009c17af20a687f7e97685e609c9a8d96f03852fd118",
-        "privacy": "sha256:6eccc25be5945d494635818e68177f6efe953e9f2e74fbf165b5139d08429551",
-        "effect": "sha256:c9093452afcdef36603faec991dc45d87d2166fb706f2b70f263b6625f6a3491",
-        "authority": "sha256:408c3ee0aef794f423d49ba8141f3492961aa68b354d03c37c455d072d7e32c3"
+        "input": "sha256:70ecd1996b8eaccf7704118146da2f482daf58e08b4b0a1d6d074c65aee24c46",
+        "output": "sha256:db1293fa4315d64349cc5e94fb4066f92dd266d86c4fa233e7ee9a9b2ec32b18",
+        "error": "sha256:534d535ebbff4e19589fe4e0f40632936027d6fa671db938298f8df8fbacd756",
+        "privacy": "sha256:4e85d2356765d6ece17487fdd4fcd0e1a49560ed443868b1abbfa1af42e83c03",
+        "effect": "sha256:287120e3feb914bace0a535dd85e07dd19fd9ba7acef46a3141f75dcf86d519a",
+        "authority": "sha256:97c5a72bf90bc71d84d0c7f1818573d9f31828efdd56bdf950e9fd3e31375341"
       },
       "capability_ids": [
         "trigger_signature_discovery",
@@ -2662,7 +2662,7 @@
         "git",
         "registered-read-only-sources"
       ],
-      "context_contract": "Immutable task, repo, validation, and handoff observations plus privacy-safe candidate trigger packets only; no private payloads, secrets, or side-effect authority.",
+      "context_contract": "Immutable task/repo/validation/handoff observations and privacy-safe candidate trigger packets; no private payloads, secrets, or side-effect authority.",
       "privacy_classes": [
         "public",
         "internal",
@@ -2680,8 +2680,7 @@
         "candidate_local_artifact"
       ],
       "dependencies": [
-        "skill:portable-capability-governance",
-        "skill:dad-learning-loop"
+        "skill:portable-capability-governance"
       ],
       "reverse_consumers": [
         "agent-postflight",
@@ -2691,7 +2690,6 @@
       "adapter_revision_ids": [],
       "harness_revision_id": "harness-revision:portable-capability-contract:0.1.0",
       "evidence_refs": [
-        "assets/agent-skills/dad-trigger-pattern-radar/SKILL.md",
         "roadmap/evidence/lfdt-authority-scope-learning-loop-v1.md",
         "tests/test_ai_native_process_pilot_contract.py"
       ],
