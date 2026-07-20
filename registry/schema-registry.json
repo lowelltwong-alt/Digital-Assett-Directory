@@ -20,6 +20,7 @@
     "learning_loop": "schemas/learning-loop.schema.json",
     "learning_loop_yield_report": "schemas/learning-loop-yield-report.schema.json",
     "agent_session_split_report": "schemas/agent-session-split-report.schema.json",
+    "agent_session_reaper_report": "schemas/agent-session-reaper-report.schema.json",
     "workflow_part": "schemas/workflow-part.schema.json",
     "workflow_part_review": "schemas/workflow-part-review.schema.json",
     "template_record": "schemas/template-record.schema.json",

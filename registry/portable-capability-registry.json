@@ -421,10 +421,13 @@
         "tests/test_agent_family_reconciliation.py",
         "tests/test_learning_yield_report.py",
         "tests/test_agent_session_split_report.py",
+        "schemas/agent-session-reaper-report.schema.json",
+        "src/digital_asset_directory/agent_session_reaper.py",
+        "tests/test_agent_session_reaper.py",
         "tests/test_intelligence_routing.py",
         "templates/downstream/AGENTS_MANAGED_BLOCK.md"
       ],
-      "content_digest": "sha256:7722d1c5568977c68f87f99b38e7273cc8ffa44878ca817514ae0c317499fab9",
+      "content_digest": "sha256:21fae8595fd453e709aff976df421ed33e36ec7edc91d4cf80e68cf759102a15",
       "contract_digests": {
         "input": "sha256:eee475da7d6fe76d90852dfa97de0e1f047cb72d7d0134552245b7cda9a9fb68",
         "output": "sha256:0ec04e3bcb58df087b53068eb3756924c878f35a40871814bd8749313aa69dea",
@@ -1494,7 +1497,7 @@
         "src/digital_asset_directory/portfolio_roadmap.py",
         "templates/hooks/intent-continuity-shadow-receipt.template.json"
       ],
-      "content_digest": "sha256:1abc1a2480ffb67b6ce3922df08db0becb2e153c1910f3199918060d60f2151c",
+      "content_digest": "sha256:9be6cbe46b0ce3ed1dbb54d06931036872f9c804db29bb72fc65c13c1d3621c8",
       "source_observation_digest": "sha256:1aeef157eb837554b2d8bf2b3de020f8daf701533a3ca6efe7d31e0888368a9a",
       "contract_digests": {
         "input": "sha256:eee475da7d6fe76d90852dfa97de0e1f047cb72d7d0134552245b7cda9a9fb68",
@@ -1575,7 +1578,7 @@
         "runtime_adapter_id": "adapter:codex-host",
         "status": "supervised_silent_shadow"
       },
-      "adapter_interface_digest": "sha256:38d84374afc1a98fae5b216f3609ab471afdc21ebe6c2eb427a5082b41e666b1",
+      "adapter_interface_digest": "sha256:681fab10380da40bbf3cd616d4a04c7de2b90045c4b018a3e0e73464fb3b16a8",
       "adapter_interface_sources": [
         ".codex/hooks.json",
         ".codex/hooks/intent_continuity_shadow.py",
@@ -2379,7 +2382,7 @@
         "requires": ["local_git_cli", "portfolio_attention_v1"],
         "forbids": ["source_repository_writes", "model_calls"]
       },
-      "adapter_interface_digest": "sha256:d49bd8c00b12db9cdeaf01f04a073e2aa52827773b993a3f5e26b189a9c92dfb",
+      "adapter_interface_digest": "sha256:fb195b6b17ada643f200dfcd2ea65be165172d60095afd154134e5bb0468d9a9",
       "adapter_interface_sources": [
         "src/digital_asset_directory/portfolio_convergence_git.py",
         "schemas/portfolio-convergence-git-producer-receipt.schema.json",
@@ -2505,7 +2508,7 @@
           "workstream_creation"
         ]
       },
-      "adapter_interface_digest": "sha256:fe43523b77407e793b9d8c8bb33cfbc39b467ef527e3469a358b834d55441dd8",
+      "adapter_interface_digest": "sha256:3161df1351dcb09427a1888bf212fcfedb64d0d83da3c58cb42ee19500bdf0a1",
       "adapter_interface_sources": [
         "registry/routine-contract-registry.json",
         "schemas/portfolio-capture-candidate.schema.json",

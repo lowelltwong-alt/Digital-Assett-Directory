@@ -1,0 +1,113 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "dad.agent_session_reaper_report.v1",
+  "title": "Agent session reaper dry-run report",
+  "type": "object",
+  "additionalProperties": true,
+  "required": [
+    "schema_version",
+    "generated_at",
+    "report_id",
+    "status",
+    "method_id",
+    "candidate_only",
+    "execution_authorized",
+    "apply_authorized",
+    "dry_run",
+    "authority_boundary",
+    "liveness_rule",
+    "preservation_pointer",
+    "summary",
+    "candidates",
+    "routine_registration"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": "dad.agent_session_reaper_report.v1"
+    },
+    "generated_at": { "type": "string", "minLength": 1 },
+    "report_id": { "type": "string", "minLength": 1 },
+    "status": { "type": "string", "minLength": 1 },
+    "method_id": { "type": "string", "minLength": 1 },
+    "model_call_count": { "type": "integer", "minimum": 0 },
+    "model_token_count": { "type": "integer", "minimum": 0 },
+    "candidate_only": { "const": true },
+    "execution_authorized": { "const": false },
+    "apply_authorized": { "const": false },
+    "dry_run": { "const": true },
+    "data_classification": { "type": "string" },
+    "authority_boundary": { "type": "string", "minLength": 1 },
+    "liveness_rule": {
+      "type": "object",
+      "additionalProperties": true,
+      "required": ["signal", "idle_live_hours"],
+      "properties": {
+        "signal": { "type": "string", "minLength": 1 },
+        "idle_live_hours": { "type": "number", "exclusiveMinimum": 0 },
+        "note": { "type": "string" }
+      }
+    },
+    "preservation_pointer": { "type": "string", "minLength": 1 },
+    "summary": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "open_considered",
+        "candidate_close",
+        "skipped_live",
+        "skipped_exception",
+        "skipped_keep",
+        "parse_error",
+        "repo_mismatch"
+      ],
+      "properties": {
+        "open_considered": { "type": "integer", "minimum": 0 },
+        "candidate_close": { "type": "integer", "minimum": 0 },
+        "skipped_live": { "type": "integer", "minimum": 0 },
+        "skipped_exception": { "type": "integer", "minimum": 0 },
+        "skipped_keep": { "type": "integer", "minimum": 0 },
+        "parse_error": { "type": "integer", "minimum": 0 },
+        "repo_mismatch": { "type": "integer", "minimum": 0 }
+      }
+    },
+    "candidates": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": true,
+        "required": [
+          "session_file",
+          "classification",
+          "proposed_action"
+        ],
+        "properties": {
+          "session_file": { "type": "string" },
+          "session_id": { "type": ["string", "null"] },
+          "classification": {
+            "enum": [
+              "candidate_close",
+              "skipped_live",
+              "skipped_exception",
+              "skipped_keep",
+              "parse_error"
+            ]
+          },
+          "tier": { "type": ["string", "null"] },
+          "idle_hours": { "type": ["number", "null"] },
+          "proposed_summary": { "type": ["string", "null"] },
+          "proposed_action": { "type": "string" }
+        }
+      }
+    },
+    "routine_registration": {
+      "type": "object",
+      "additionalProperties": true,
+      "required": ["routine_id", "enabled", "scheduled"],
+      "properties": {
+        "routine_id": { "const": "dad-agent-session-reaper" },
+        "enabled": { "const": false },
+        "scheduled": { "const": false }
+      }
+    }
+  }
+}

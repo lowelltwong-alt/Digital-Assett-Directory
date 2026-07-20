@@ -144,6 +144,22 @@
       "consumer": "human lifecycle integrity review before any session migration",
       "kill_criteria": "Retire after legacy and data-root session surfaces are proven identical for a reviewed window and apply is either completed or declined.",
       "notes": "Dormant registration only. Report-only; apply/migrate/delete of session files requires a separate named human approval."
+    },
+    {
+      "routine_id": "dad-agent-session-reaper",
+      "kind": "cli_on_demand",
+      "enabled": false,
+      "owner": "lowell",
+      "description": "Dry-run classify of stale open agent sessions (asset-dir agent reaper --dry-run).",
+      "artifact": {"root": "data", "path": "processed/reports/agent_session_reaper.json", "parse_json": true},
+      "freshness_hours": null,
+      "dependency_paths": [
+        "src/digital_asset_directory/agent_session_reaper.py",
+        "schemas/agent-session-reaper-report.schema.json"
+      ],
+      "consumer": "human lifecycle review; F2 reaper apply gate evidence",
+      "kill_criteria": "Retire or redesign if dry-run false-positive closes dominate operator review or if apply is approved under a successor routine.",
+      "notes": "Dormant registration only. --dry-run is mandatory; apply/close is out of scope until named human approval (F2/G5)."
     }
   ]
 }
