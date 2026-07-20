@@ -2464,7 +2464,7 @@
         "src/digital_asset_directory/operational_cockpit.py",
         "tests/test_operational_cockpit.py"
       ],
-      "content_digest": "sha256:07e8f487fe09bc3142d4c5ecbf775261dfb74cf492191c655d3f9b1329648875",
+      "content_digest": "sha256:7188d48e1be4a602b85e581e1ee7ba983a9f848e5462bde4c0307a6b2adc53fa",
       "contract_digests": {
         "input": "sha256:ff2e685bd624c2cede6e4a4ba9a2edfd641ccc1270b65e115605e3d7345f1da1",
         "output": "sha256:df67a75147af080d4c3a0c961186095872782618db396b303c3556380c5023ca",

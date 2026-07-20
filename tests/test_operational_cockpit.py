@@ -36,7 +36,9 @@ from digital_asset_directory.portfolio_convergence import (
 
 
 ROOT = Path(__file__).resolve().parents[1]
-NOW = datetime(2026, 7, 19, 4, tzinfo=timezone.utc)
+# Relative to wall clock so CLI --check (which uses datetime.now) cannot drift
+# past the default 26h stale window as absolute fixture dates age.
+NOW = datetime.now(timezone.utc).replace(microsecond=0) - timedelta(hours=1)
 
 
 def _write_json(path: Path, value: dict[str, object]) -> None:
