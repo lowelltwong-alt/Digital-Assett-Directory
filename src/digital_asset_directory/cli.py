@@ -150,6 +150,11 @@ from .learning import (
     rebuild_lesson_routes,
 )
 from .learning_yield_report import write_learning_yield_report
+from .agent_session_reaper import (
+    DEFAULT_IDLE_LIVE_HOURS,
+    DEFAULT_PRESERVATION_POINTER,
+    write_agent_session_reaper_report,
+)
 from .agent_session_split_report import write_agent_session_split_report
 from .journal import checkpoint_journal, ingest_remote_outbox, journal_repo_status, journal_status
 from .lesson_automation_coverage import (
@@ -9134,6 +9139,68 @@ def agent_session_split_report_command(
             "summary": report["summary"],
             "data_plane": report["data_plane"],
             "apply_authorized": report["apply_authorized"],
+            "routine_registration": report["routine_registration"],
+            "authority_boundary": report["authority_boundary"],
+        }
+    )
+
+
+@agent_app.command("reaper")
+def agent_reaper_command(
+    dry_run: bool = typer.Option(
+        False,
+        "--dry-run",
+        help="Required. Classify and receipt only; never close sessions.",
+    ),
+    repository: Path = typer.Option(
+        Path("."),
+        "--repo",
+        help="Only consider open sessions for this repository path.",
+    ),
+    idle_live_hours: float = typer.Option(
+        DEFAULT_IDLE_LIVE_HOURS,
+        "--idle-live-hours",
+        min=0.1,
+        help="Sessions with file mtime newer than this many hours are treated as live.",
+    ),
+    keep_session: list[str] = typer.Option(
+        [],
+        "--keep-session",
+        help="Session id to keep open (repeatable).",
+    ),
+    preservation_pointer: str = typer.Option(
+        DEFAULT_PRESERVATION_POINTER,
+        "--preservation-pointer",
+        help="Nonblank preservation pointer embedded in proposed close summaries.",
+    ),
+    hub: Optional[Path] = typer.Option(None),
+) -> None:
+    """Dry-run classify stale open agent sessions (no apply/close)."""
+    if not dry_run:
+        raise typer.BadParameter(
+            "Apply mode is not available. Pass --dry-run to classify only "
+            "(F2/G5: apply requires a separate named human approval)."
+        )
+    cfg = _cfg(hub=hub)
+    result = write_agent_session_reaper_report(
+        cfg.repo_root,
+        repository=repository.resolve(),
+        idle_live_hours=idle_live_hours,
+        keep_session_ids=set(keep_session),
+        preservation_pointer=preservation_pointer,
+    )
+    report = result["report"]
+    console.print_json(
+        data={
+            "report_id": report["report_id"],
+            "dry_run": report["dry_run"],
+            "apply_authorized": report["apply_authorized"],
+            "json_path": result["json_path"],
+            "markdown_path": result["markdown_path"],
+            "receipt_path": result["receipt_path"],
+            "history_path": result["history_path"],
+            "summary": report["summary"],
+            "liveness_rule": report["liveness_rule"],
             "routine_registration": report["routine_registration"],
             "authority_boundary": report["authority_boundary"],
         }
