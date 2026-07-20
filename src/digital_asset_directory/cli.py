@@ -398,6 +398,11 @@ from .portfolio_cockpit import (
     build_portfolio_cockpit,
     write_portfolio_cockpit_outputs,
 )
+from .portfolio_convergence_git import (
+    GitConvergenceSettings,
+    build_git_convergence_report,
+    write_convergence_report,
+)
 from .operational_cockpit import (
     build_operational_cockpit,
     build_operational_cockpit_server,
@@ -1377,6 +1382,67 @@ def _v1_attention_report(repo_root: Path) -> dict[str, Any] | None:
     except (OSError, json.JSONDecodeError):
         return None
 
+
+@os_app.command("convergence-radar")
+def portfolio_os_convergence_radar(
+    proposal_limit: int = typer.Option(5, "--proposal-limit", min=1, max=5),
+    max_branches_per_project: int = typer.Option(
+        64, "--max-branches-per-project", min=2, max=256
+    ),
+    max_candidate_distances: int = typer.Option(
+        64, "--max-candidate-distances", min=1, max=2000
+    ),
+    max_paths_per_branch: int = typer.Option(
+        500, "--max-paths-per-branch", min=1, max=10000
+    ),
+    full: bool = typer.Option(False, "--full"),
+    config: Optional[Path] = typer.Option(None),
+    hub: Optional[Path] = typer.Option(None),
+) -> None:
+    """Build a top-five report-only branch/worktree convergence radar."""
+
+    cfg = _cfg(config, hub)
+    attention = _v1_attention_report(cfg.repo_root)
+    if attention is None:
+        console.print(
+            "A Portfolio Attention report is required. Run 'asset-dir os status' first."
+        )
+        raise typer.Exit(2)
+    try:
+        report = build_git_convergence_report(
+            attention,
+            schema_root=cfg.repo_root,
+            settings=GitConvergenceSettings(
+                proposal_limit=proposal_limit,
+                max_branches_per_project=max_branches_per_project,
+                max_candidate_distances=max_candidate_distances,
+                max_paths_per_branch=max_paths_per_branch,
+            ),
+        )
+        outputs = write_convergence_report(cfg.repo_root, report)
+    except (OSError, ValueError, subprocess.SubprocessError, ValidationError) as exc:
+        console.print(f"Cannot build convergence radar: {exc}")
+        raise typer.Exit(2) from exc
+    if full:
+        console.print_json(data=report)
+        return
+    console.print_json(
+        data={
+            **outputs,
+            "proposals": [
+                {
+                    "proposal_id": row["proposal_id"],
+                    "project_name": row["project_name"],
+                    "left_branch": row["left"]["branch"],
+                    "right_branch": row["right"]["branch"],
+                    "priority_score": row["priority_score"],
+                    "human_decision_required": True,
+                    "execution_authorized": False,
+                }
+                for row in report["proposals"]
+            ],
+        }
+    )
 
 _OS_REJECTED_STATUSES = {
     "accepted_repo_binding_required",

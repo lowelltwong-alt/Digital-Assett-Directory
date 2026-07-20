@@ -84,6 +84,18 @@
       "artifact": {"root": "data", "path": "processed/reports/weekly_asset_coverage.json", "parse_json": true},
       "freshness_hours": 192,
       "consumer": "weekly review; coverage cycle log"
+    },
+    {
+      "routine_id": "dad-portfolio-convergence-radar",
+      "kind": "cli_on_demand",
+      "enabled": true,
+      "owner": "dad-maintainer",
+      "description": "Bounded zero-model branch/worktree convergence candidate report (asset-dir os convergence-radar).",
+      "artifact": {"root": "data", "path": "processed/reports/portfolio_os/convergence-radar.json", "parse_json": true},
+      "freshness_hours": null,
+      "consumer": "operational cockpit convergence view; human branch/worktree review",
+      "kill_criteria": "Retire or redesign if bounded operator review shows persistent false-positive overload or if a replacement preserves the report-only authority boundary.",
+      "notes": "Registration is on-demand only. It does not schedule a scan, run a daemon, or authorize any merge, close, deletion, cleanup, or source-repository write."
     }
   ]
 }

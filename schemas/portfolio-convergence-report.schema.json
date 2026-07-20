@@ -1,0 +1,239 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://dad.local/schemas/portfolio-convergence-report.schema.json",
+  "title": "DAD branch and worktree convergence candidate report",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "generated_at",
+    "report_id",
+    "status",
+    "method_id",
+    "model_call_count",
+    "model_token_count",
+    "candidate_only",
+    "execution_authorized",
+    "data_classification",
+    "authority_boundary",
+    "source",
+    "producer",
+    "summary",
+    "proposals",
+    "problems"
+  ],
+  "properties": {
+    "schema_version": {"const": "dad.portfolio_convergence_report.v1"},
+    "generated_at": {"type": "string", "format": "date-time"},
+    "report_id": {"type": "string", "pattern": "^dad:portfolio-convergence:[0-9a-f]{64}$"},
+    "status": {"const": "generated_candidate"},
+    "method_id": {"const": "dad.branch-worktree-convergence.v1"},
+    "model_call_count": {"const": 0},
+    "model_token_count": {"const": 0},
+    "candidate_only": {"const": true},
+    "execution_authorized": {"const": false},
+    "data_classification": {"const": "local_private_metadata"},
+    "authority_boundary": {"type": "string", "minLength": 80},
+    "source": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["schema_version", "generated_at", "fingerprint", "project_count"],
+      "properties": {
+        "schema_version": {"const": "dad.portfolio_attention.v1"},
+        "generated_at": {"type": "string", "format": "date-time"},
+        "fingerprint": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"},
+        "project_count": {"type": "integer", "minimum": 0}
+      }
+    },
+    "producer": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "producer_id",
+        "producer_revision_id",
+        "observation_count",
+        "source_write_count",
+        "bounded",
+        "problems_recorded",
+        "details"
+      ],
+      "properties": {
+        "producer_id": {"type": "string", "minLength": 3, "maxLength": 200},
+        "producer_revision_id": {"type": "string", "minLength": 3, "maxLength": 200},
+        "observation_count": {"type": "integer", "minimum": 0, "maximum": 10000},
+        "source_write_count": {"const": 0},
+        "bounded": {"const": true},
+        "problems_recorded": {"const": true},
+        "details": {"type": "object"}
+      }
+    },
+    "summary": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "project_count",
+        "branch_count",
+        "proposal_count",
+        "problem_count",
+        "evaluated_pair_count",
+        "qualified_pair_count",
+        "suppressed_pair_count"
+      ],
+      "properties": {
+        "project_count": {"type": "integer", "minimum": 0},
+        "branch_count": {"type": "integer", "minimum": 0},
+        "proposal_count": {"type": "integer", "minimum": 0, "maximum": 5},
+        "problem_count": {"type": "integer", "minimum": 0},
+        "evaluated_pair_count": {"type": "integer", "minimum": 0},
+        "qualified_pair_count": {"type": "integer", "minimum": 0},
+        "suppressed_pair_count": {"type": "integer", "minimum": 0}
+      }
+    },
+    "proposals": {
+      "type": "array",
+      "maxItems": 5,
+      "items": {"$ref": "#/$defs/proposal"}
+    },
+    "problems": {
+      "type": "array",
+      "items": {"$ref": "#/$defs/problem"}
+    }
+  },
+  "$defs": {
+    "branch": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "branch",
+        "head",
+        "worktree_present",
+        "dirty_worktree",
+        "touched_path_count"
+      ],
+      "properties": {
+        "branch": {"type": "string", "minLength": 1, "maxLength": 500},
+        "head": {"type": "string", "pattern": "^[0-9a-fA-F]{7,64}$"},
+        "worktree_present": {"type": "boolean"},
+        "dirty_worktree": {"type": ["boolean", "null"]},
+        "touched_path_count": {"type": "integer", "minimum": 0, "maximum": 10000}
+      }
+    },
+    "evidence": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "name_similarity",
+        "path_similarity",
+        "shared_name_token_count",
+        "shared_name_tokens",
+        "shared_touched_path_count",
+        "shared_touched_paths",
+        "shared_paths_truncated",
+        "merge_base_status",
+        "merge_base",
+        "left_commits_from_merge_base",
+        "right_commits_from_merge_base",
+        "merge_base_distance"
+      ],
+      "properties": {
+        "name_similarity": {"type": "number", "minimum": 0, "maximum": 1},
+        "path_similarity": {"type": "number", "minimum": 0, "maximum": 1},
+        "shared_name_token_count": {"type": "integer", "minimum": 0},
+        "shared_name_tokens": {
+          "type": "array",
+          "maxItems": 8,
+          "uniqueItems": true,
+          "items": {"type": "string", "minLength": 1, "maxLength": 120}
+        },
+        "shared_touched_path_count": {"type": "integer", "minimum": 0},
+        "shared_touched_paths": {
+          "type": "array",
+          "maxItems": 12,
+          "uniqueItems": true,
+          "items": {"type": "string", "minLength": 1, "maxLength": 2000}
+        },
+        "shared_paths_truncated": {"type": "boolean"},
+        "merge_base_status": {"enum": ["observed", "unknown"]},
+        "merge_base": {"type": "string", "pattern": "^(|[0-9a-fA-F]{7,64})$"},
+        "left_commits_from_merge_base": {"type": ["integer", "null"], "minimum": 0},
+        "right_commits_from_merge_base": {"type": ["integer", "null"], "minimum": 0},
+        "merge_base_distance": {"type": ["integer", "null"], "minimum": 0}
+      },
+      "allOf": [
+        {
+          "if": {"properties": {"merge_base_status": {"const": "observed"}}},
+          "then": {
+            "properties": {
+              "merge_base": {"type": "string", "pattern": "^[0-9a-fA-F]{7,64}$"},
+              "left_commits_from_merge_base": {"type": "integer", "minimum": 0},
+              "right_commits_from_merge_base": {"type": "integer", "minimum": 0},
+              "merge_base_distance": {"type": "integer", "minimum": 0}
+            }
+          },
+          "else": {
+            "properties": {
+              "merge_base": {"const": ""},
+              "left_commits_from_merge_base": {"const": null},
+              "right_commits_from_merge_base": {"const": null},
+              "merge_base_distance": {"const": null}
+            }
+          }
+        }
+      ]
+    },
+    "proposal": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "proposal_id",
+        "pair_id",
+        "revision_id",
+        "project_id",
+        "project_name",
+        "left",
+        "right",
+        "priority_score",
+        "score_kind",
+        "evidence_band",
+        "evidence",
+        "problems",
+        "next_action",
+        "human_decision_required",
+        "candidate_only",
+        "execution_authorized"
+      ],
+      "properties": {
+        "proposal_id": {"type": "string", "minLength": 20},
+        "pair_id": {"type": "string", "minLength": 20},
+        "revision_id": {"type": "string", "minLength": 20},
+        "project_id": {"type": "string", "minLength": 1},
+        "project_name": {"type": "string", "minLength": 1, "maxLength": 500},
+        "left": {"$ref": "#/$defs/branch"},
+        "right": {"$ref": "#/$defs/branch"},
+        "priority_score": {"type": "number", "minimum": 0, "maximum": 100},
+        "score_kind": {"const": "ordinal_review_priority_not_probability"},
+        "evidence_band": {"enum": ["strong_review", "review", "weak_review"]},
+        "evidence": {"$ref": "#/$defs/evidence"},
+        "problems": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {"type": "string", "minLength": 1, "maxLength": 120}
+        },
+        "next_action": {"type": "string", "minLength": 80, "maxLength": 500},
+        "human_decision_required": {"const": true},
+        "candidate_only": {"const": true},
+        "execution_authorized": {"const": false}
+      }
+    },
+    "problem": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["project_id", "branch", "code"],
+      "properties": {
+        "project_id": {"type": "string", "minLength": 1},
+        "branch": {"type": "string", "maxLength": 500},
+        "code": {"type": "string", "minLength": 1, "maxLength": 120}
+      }
+    }
+  }
+}
