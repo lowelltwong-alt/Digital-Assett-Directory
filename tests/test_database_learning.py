@@ -81,6 +81,7 @@ def test_preflight_postflight_closes_session_and_persists(tmp_path: Path):
     assert "review-lane:learning-loop-completion" in lanes
     assert "review-lane:digital-asset-pattern-discovery" in lanes
     assert "review-lane:conversation-prompt-value" in lanes
+    assert "review-lane:cross-vendor-review" in lanes
     assert lanes["review-lane:red-team-and-premortem"]["mode"] in {
         "subagent_when_available_else_checklist",
         "checklist_if_useful",
@@ -98,6 +99,7 @@ def test_preflight_postflight_closes_session_and_persists(tmp_path: Path):
             "review-lane:learning-loop-completion:checklist:closed learning loops",
             "review-lane:digital-asset-pattern-discovery:checklist:deduped asset patterns",
             "review-lane:conversation-prompt-value:checklist:reviewed conversation delta",
+            "review-lane:cross-vendor-review:checklist:declared yes/no/why on PR",
         ],
     )
     assert handoff.session_id == session["session_id"]
@@ -110,6 +112,7 @@ def test_preflight_postflight_closes_session_and_persists(tmp_path: Path):
         "review-lane:learning-loop-completion",
         "review-lane:digital-asset-pattern-discovery",
         "review-lane:conversation-prompt-value",
+        "review-lane:cross-vendor-review",
     }
     assert lesson.lessons == ["capture state transitions"]
     with CatalogDB(db_path) as db:
@@ -385,6 +388,7 @@ def test_midflight_blocks_until_learning_rule_acknowledged(tmp_path: Path):
             "review-lane:learning-loop-completion",
             "review-lane:digital-asset-pattern-discovery",
             "review-lane:conversation-prompt-value",
+            "review-lane:cross-vendor-review",
         }
     assert blocked["missing_learning_rule_acknowledgements"] == [
         "learning-rule:test-temp-fixture"

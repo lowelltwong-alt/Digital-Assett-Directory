@@ -1057,6 +1057,22 @@ def recommended_review_lanes(task: str, paths: list[str] | None = None) -> list[
             "capture": "Store only privacy-safe summaries; exclude raw transcripts, hidden reasoning, secrets, and private payloads.",
             "required_for": "every material build, refactor, investigation, or cross-repo task",
         },
+        {
+            "lane_id": "review-lane:cross-vendor-review",
+            "mode": "checklist_if_useful",
+            "purpose": (
+                "Prefer a reviewer vendor different from the author vendor; declare "
+                "cross-vendor review: yes|no|why on the PR; answer or fix findings before merge."
+            ),
+            "capture": (
+                "Record the declaration and whether findings were resolved. Do not change "
+                "human-owned connector, branch-protection, or bot-install settings."
+            ),
+            "required_for": (
+                "material coding, architecture, governance, schema, or cross-repo work when "
+                "both vendors are available; see docs/CROSS_VENDOR_REVIEW_POLICY.md"
+            ),
+        },
     ]
 
 
