@@ -427,7 +427,7 @@
         "tests/test_intelligence_routing.py",
         "templates/downstream/AGENTS_MANAGED_BLOCK.md"
       ],
-      "content_digest": "sha256:21fae8595fd453e709aff976df421ed33e36ec7edc91d4cf80e68cf759102a15",
+      "content_digest": "sha256:51a62a9847223a48534afe3c913fca6b90036101997431b5ef814ba6bf88f03f",
       "contract_digests": {
         "input": "sha256:eee475da7d6fe76d90852dfa97de0e1f047cb72d7d0134552245b7cda9a9fb68",
         "output": "sha256:0ec04e3bcb58df087b53068eb3756924c878f35a40871814bd8749313aa69dea",
