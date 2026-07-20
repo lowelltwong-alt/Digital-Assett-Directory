@@ -346,7 +346,7 @@
     {
       "schema_version": "dad.portable_capability_card.v1",
       "card_id": "portability-card:harness-portable-capability-control-plane",
-      "revision_id": "portability-card-revision:harness-portable-capability-control-plane:0.1.14",
+      "revision_id": "portability-card-revision:harness-portable-capability-control-plane:0.1.15",
       "artifact_id": "harness:portable-capability-control-plane",
       "artifact_kind": "harness",
       "binding_class": "portable_core",
@@ -407,7 +407,7 @@
         "src/digital_asset_directory/validation.py",
         "templates/downstream/AGENTS_MANAGED_BLOCK.md"
       ],
-      "content_digest": "sha256:f852a85d34b77aad63fad6c480b60cb135f1246e4d7e55c4774e6e7a70eae45c",
+      "content_digest": "sha256:afbc65a560f828da275c7f5bb22386e845699b30fcbbd4a3dbe5ac5e363a53a0",
       "contract_digests": {
         "input": "sha256:eee475da7d6fe76d90852dfa97de0e1f047cb72d7d0134552245b7cda9a9fb68",
         "output": "sha256:0ec04e3bcb58df087b53068eb3756924c878f35a40871814bd8749313aa69dea",
@@ -697,7 +697,7 @@
     {
       "schema_version": "dad.portable_capability_card.v1",
       "card_id": "portability-card:skill-ml-workflow-agent-family",
-      "revision_id": "portability-card-revision:skill-ml-workflow-agent-family:0.3.0",
+      "revision_id": "portability-card-revision:skill-ml-workflow-agent-family:0.3.1",
       "artifact_id": "skill:ml-workflow-agent-family",
       "artifact_kind": "skill",
       "binding_class": "portable_core",
@@ -723,7 +723,7 @@
         "src/digital_asset_directory/ml_agent_family.py",
         "src/digital_asset_directory/synthetic_data_resources.py"
       ],
-      "content_digest": "sha256:617cbdceb7aa50f01dbb55b04ac08a90bbae33f0e440b0df4a5903f1742272e7",
+      "content_digest": "sha256:0a465ac1b20f9bc8fdc92e49773f1904e8421646ce76da360fe4124122266b63",
       "source_observation_digest": "sha256:01e8bb182e297135e3e1502b249d199a84c29db4345f6b13561f170f5b9b3948",
       "contract_digests": {
         "input": "sha256:237d32dea8556c1049117af26c53fd66ffbc5e4626b0bca598e1b5041531d16d",
@@ -1348,7 +1348,7 @@
     {
       "schema_version": "dad.portable_capability_card.v1",
       "card_id": "portability-card:skill-personal-project-management-ops",
-      "revision_id": "portability-card-revision:skill-personal-project-management-ops:0.4.14",
+      "revision_id": "portability-card-revision:skill-personal-project-management-ops:0.4.15",
       "artifact_id": "skill:personal-project-management-ops",
       "artifact_kind": "skill",
       "binding_class": "portable_core",
@@ -1402,7 +1402,7 @@
         "src/digital_asset_directory/portfolio_roadmap.py",
         "templates/hooks/intent-continuity-shadow-receipt.template.json"
       ],
-      "content_digest": "sha256:c33736da82bd828a670e17dd45d0e5ab5f6a2eb1fd1d42b6526d2509128e3e97",
+      "content_digest": "sha256:94b27c835dde2a3b5a6f70312f654153331f167411ea9c16557f891e2efc9feb",
       "source_observation_digest": "sha256:1aeef157eb837554b2d8bf2b3de020f8daf701533a3ca6efe7d31e0888368a9a",
       "contract_digests": {
         "input": "sha256:eee475da7d6fe76d90852dfa97de0e1f047cb72d7d0134552245b7cda9a9fb68",
@@ -1477,7 +1477,7 @@
       "source_authority": "config/intent-continuity-shadow-hooks.json",
       "owner": "DAD and Lowell",
       "status": "schema_validated",
-      "core_revision_id": "portability-card-revision:skill-personal-project-management-ops:0.4.14",
+      "core_revision_id": "portability-card-revision:skill-personal-project-management-ops:0.4.15",
       "content_digest": "sha256:4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
       "target_capability_predicate": {
         "runtime_adapter_id": "adapter:codex-host",
@@ -1529,677 +1529,659 @@
       "execution_authorized": false,
       "authority_boundary": "This supervised repo-local host adapter hashes minimized lifecycle metadata only and cannot read transcripts or prompts, invoke models, notify, schedule, mutate Git or tasks, archive work, or activate any later stage."
     },
-{
-        "schema_version":  "dad.portable_capability_card.v1",
-        "card_id":  "portability-card:ml-technique-active-learning",
-        "revision_id":  "portability-card-revision:ml-technique-active-learning:0.1.0",
-        "artifact_id":  "ml-technique:active-learning",
-        "artifact_kind":  "algorithm_pack",
-        "binding_class":  "portable_core",
-        "source_authority":  "registry/ml-technique-registry.json#ml-technique:active-learning",
-        "owner":  "DAD and Lowell",
-        "status":  "schema_validated",
-        "portable_files":  [
-                               "registry/ml-technique-registry.json",
-                               "schemas/ml-technique-registry.schema.json",
-                               "docs/ML_SPECIALIST_MESH_AND_HYBRIDS.md",
-                               "src/digital_asset_directory/ml_agent_family.py",
-                               "tests/test_ml_agent_family.py"
-                           ],
-        "content_digest":  "sha256:fef6b24b270854dd448b62aeef51cce095c2c793be85aa637e46221339fb1c16",
-        "source_observation_digest":  "sha256:57d8aabc9088f7e45e116679989a6d3d9ac4eeb9ccb189a339739d5d496a1f1c",
-        "contract_digests":  {
-                                 "input":  "sha256:237d32dea8556c1049117af26c53fd66ffbc5e4626b0bca598e1b5041531d16d",
-                                 "output":  "sha256:01e6c66cd3dc953ff736de9d1ebe7fbd3f36e4f8ed076854d75c6200f5bc4ad5",
-                                 "error":  "sha256:671c8c7849565545b87b9e0272fd996a4637f9b3ae367eb701192f6571652639",
-                                 "privacy":  "sha256:62e0d3a757ba4682d5722defbe6d1f69e8af50ffda571b735e921ead625f07c3",
-                                 "effect":  "sha256:d0df78f59734cde9cccca2fbf7c95b0bc38a7fedca59c3b2e0d03daf67004879",
-                                 "authority":  "sha256:4de6879b22c13084ee7081140d00a312ed98fa928847e3e1393fe3a368194919"
-                             },
-        "capability_ids":  [
-                               "ml_technique_selection",
-                               "ml_independent_validation"
-                           ],
-        "tool_ids":  [
-                         "dad-cli",
-                         "json-schema",
-                         "registered-read-only-sources"
-                     ],
-        "context_contract":  "Provider-neutral bounded objective, problem-shape metadata, technique evidence, evaluation contracts, and sanitized evidence references only; no source data, credentials, or raw conversations.",
-        "privacy_classes":  [
-                                "public",
-                                "internal",
-                                "confidential",
-                                "restricted_by_local_policy"
-                            ],
-        "consequence_classes":  [
-                                    "small",
-                                    "medium",
-                                    "large",
-                                    "critical"
-                                ],
-        "effect_classes":  [
-                               "read_only",
-                               "candidate_local_artifact"
-                           ],
-        "dependencies":  [
-                             "skill:ml-workflow-agent-family",
-                             "family:quality-verification-release"
-                         ],
-        "reverse_consumers":  [
-                                  "role:ml-active-online-learning-specialist"
-                              ],
-        "adapter_revision_ids":  [
-
-                                 ],
-        "harness_revision_id":  "harness-revision:portable-capability-contract:0.1.0",
-        "evidence_refs":  [
-                              "registry/ml-technique-registry.json",
-                              "tests/test_ml_agent_family.py"
-                          ],
-        "fresh_until":  "2026-10-16T00:00:00-04:00",
-        "rollback_ref":  "Revert this candidate ML suite revision while retaining the prior ML family for inspection.",
-        "candidate_only":  true,
-        "execution_authorized":  false,
-        "authority_boundary":  "This card records candidate routing and evaluation evidence only; it cannot authorize data access, specialist dispatch, training, deployment, scheduling, retraining, provider use, or release."
+    {
+      "schema_version": "dad.portable_capability_card.v1",
+      "card_id": "portability-card:ml-technique-active-learning",
+      "revision_id": "portability-card-revision:ml-technique-active-learning:0.1.0",
+      "artifact_id": "ml-technique:active-learning",
+      "artifact_kind": "algorithm_pack",
+      "binding_class": "portable_core",
+      "source_authority": "registry/ml-technique-registry.json#ml-technique:active-learning",
+      "owner": "DAD and Lowell",
+      "status": "schema_validated",
+      "portable_files": [
+        "registry/ml-technique-registry.json",
+        "schemas/ml-technique-registry.schema.json",
+        "docs/ML_SPECIALIST_MESH_AND_HYBRIDS.md",
+        "src/digital_asset_directory/ml_agent_family.py",
+        "tests/test_ml_agent_family.py"
+      ],
+      "content_digest": "sha256:fef6b24b270854dd448b62aeef51cce095c2c793be85aa637e46221339fb1c16",
+      "source_observation_digest": "sha256:57d8aabc9088f7e45e116679989a6d3d9ac4eeb9ccb189a339739d5d496a1f1c",
+      "contract_digests": {
+        "input": "sha256:237d32dea8556c1049117af26c53fd66ffbc5e4626b0bca598e1b5041531d16d",
+        "output": "sha256:01e6c66cd3dc953ff736de9d1ebe7fbd3f36e4f8ed076854d75c6200f5bc4ad5",
+        "error": "sha256:671c8c7849565545b87b9e0272fd996a4637f9b3ae367eb701192f6571652639",
+        "privacy": "sha256:62e0d3a757ba4682d5722defbe6d1f69e8af50ffda571b735e921ead625f07c3",
+        "effect": "sha256:d0df78f59734cde9cccca2fbf7c95b0bc38a7fedca59c3b2e0d03daf67004879",
+        "authority": "sha256:4de6879b22c13084ee7081140d00a312ed98fa928847e3e1393fe3a368194919"
+      },
+      "capability_ids": [
+        "ml_technique_selection",
+        "ml_independent_validation"
+      ],
+      "tool_ids": [
+        "dad-cli",
+        "json-schema",
+        "registered-read-only-sources"
+      ],
+      "context_contract": "Provider-neutral bounded objective, problem-shape metadata, technique evidence, evaluation contracts, and sanitized evidence references only; no source data, credentials, or raw conversations.",
+      "privacy_classes": [
+        "public",
+        "internal",
+        "confidential",
+        "restricted_by_local_policy"
+      ],
+      "consequence_classes": [
+        "small",
+        "medium",
+        "large",
+        "critical"
+      ],
+      "effect_classes": [
+        "read_only",
+        "candidate_local_artifact"
+      ],
+      "dependencies": [
+        "skill:ml-workflow-agent-family",
+        "family:quality-verification-release"
+      ],
+      "reverse_consumers": [
+        "role:ml-active-online-learning-specialist"
+      ],
+      "adapter_revision_ids": [],
+      "harness_revision_id": "harness-revision:portable-capability-contract:0.1.0",
+      "evidence_refs": [
+        "registry/ml-technique-registry.json",
+        "tests/test_ml_agent_family.py"
+      ],
+      "fresh_until": "2026-10-16T00:00:00-04:00",
+      "rollback_ref": "Revert this candidate ML suite revision while retaining the prior ML family for inspection.",
+      "candidate_only": true,
+      "execution_authorized": false,
+      "authority_boundary": "This card records candidate routing and evaluation evidence only; it cannot authorize data access, specialist dispatch, training, deployment, scheduling, retraining, provider use, or release."
     },
     {
-        "schema_version":  "dad.portable_capability_card.v1",
-        "card_id":  "portability-card:ml-technique-automl-hyperparameter-optimization",
-        "revision_id":  "portability-card-revision:ml-technique-automl-hyperparameter-optimization:0.1.0",
-        "artifact_id":  "ml-technique:automl-hyperparameter-optimization",
-        "artifact_kind":  "algorithm_pack",
-        "binding_class":  "portable_core",
-        "source_authority":  "registry/ml-technique-registry.json#ml-technique:automl-hyperparameter-optimization",
-        "owner":  "DAD and Lowell",
-        "status":  "schema_validated",
-        "portable_files":  [
-                               "registry/ml-technique-registry.json",
-                               "schemas/ml-technique-registry.schema.json",
-                               "docs/ML_SPECIALIST_MESH_AND_HYBRIDS.md",
-                               "src/digital_asset_directory/ml_agent_family.py",
-                               "tests/test_ml_agent_family.py"
-                           ],
-        "content_digest":  "sha256:fef6b24b270854dd448b62aeef51cce095c2c793be85aa637e46221339fb1c16",
-        "source_observation_digest":  "sha256:e7c6e762916c9ff9b2dba68866dc5554ef2692d6fd6c76c3670753038f94e1a2",
-        "contract_digests":  {
-                                 "input":  "sha256:237d32dea8556c1049117af26c53fd66ffbc5e4626b0bca598e1b5041531d16d",
-                                 "output":  "sha256:01e6c66cd3dc953ff736de9d1ebe7fbd3f36e4f8ed076854d75c6200f5bc4ad5",
-                                 "error":  "sha256:671c8c7849565545b87b9e0272fd996a4637f9b3ae367eb701192f6571652639",
-                                 "privacy":  "sha256:62e0d3a757ba4682d5722defbe6d1f69e8af50ffda571b735e921ead625f07c3",
-                                 "effect":  "sha256:d0df78f59734cde9cccca2fbf7c95b0bc38a7fedca59c3b2e0d03daf67004879",
-                                 "authority":  "sha256:4de6879b22c13084ee7081140d00a312ed98fa928847e3e1393fe3a368194919"
-                             },
-        "capability_ids":  [
-                               "ml_technique_selection",
-                               "ml_independent_validation"
-                           ],
-        "tool_ids":  [
-                         "dad-cli",
-                         "json-schema",
-                         "registered-read-only-sources"
-                     ],
-        "context_contract":  "Provider-neutral bounded objective, problem-shape metadata, technique evidence, evaluation contracts, and sanitized evidence references only; no source data, credentials, or raw conversations.",
-        "privacy_classes":  [
-                                "public",
-                                "internal",
-                                "confidential",
-                                "restricted_by_local_policy"
-                            ],
-        "consequence_classes":  [
-                                    "small",
-                                    "medium",
-                                    "large",
-                                    "critical"
-                                ],
-        "effect_classes":  [
-                               "read_only",
-                               "candidate_local_artifact"
-                           ],
-        "dependencies":  [
-                             "skill:ml-workflow-agent-family",
-                             "family:quality-verification-release"
-                         ],
-        "reverse_consumers":  [
-                                  "role:ml-technique-router"
-                              ],
-        "adapter_revision_ids":  [
-
-                                 ],
-        "harness_revision_id":  "harness-revision:portable-capability-contract:0.1.0",
-        "evidence_refs":  [
-                              "registry/ml-technique-registry.json",
-                              "tests/test_ml_agent_family.py"
-                          ],
-        "fresh_until":  "2026-10-16T00:00:00-04:00",
-        "rollback_ref":  "Revert this candidate ML suite revision while retaining the prior ML family for inspection.",
-        "candidate_only":  true,
-        "execution_authorized":  false,
-        "authority_boundary":  "This card records candidate routing and evaluation evidence only; it cannot authorize data access, specialist dispatch, training, deployment, scheduling, retraining, provider use, or release."
+      "schema_version": "dad.portable_capability_card.v1",
+      "card_id": "portability-card:ml-technique-automl-hyperparameter-optimization",
+      "revision_id": "portability-card-revision:ml-technique-automl-hyperparameter-optimization:0.1.0",
+      "artifact_id": "ml-technique:automl-hyperparameter-optimization",
+      "artifact_kind": "algorithm_pack",
+      "binding_class": "portable_core",
+      "source_authority": "registry/ml-technique-registry.json#ml-technique:automl-hyperparameter-optimization",
+      "owner": "DAD and Lowell",
+      "status": "schema_validated",
+      "portable_files": [
+        "registry/ml-technique-registry.json",
+        "schemas/ml-technique-registry.schema.json",
+        "docs/ML_SPECIALIST_MESH_AND_HYBRIDS.md",
+        "src/digital_asset_directory/ml_agent_family.py",
+        "tests/test_ml_agent_family.py"
+      ],
+      "content_digest": "sha256:fef6b24b270854dd448b62aeef51cce095c2c793be85aa637e46221339fb1c16",
+      "source_observation_digest": "sha256:e7c6e762916c9ff9b2dba68866dc5554ef2692d6fd6c76c3670753038f94e1a2",
+      "contract_digests": {
+        "input": "sha256:237d32dea8556c1049117af26c53fd66ffbc5e4626b0bca598e1b5041531d16d",
+        "output": "sha256:01e6c66cd3dc953ff736de9d1ebe7fbd3f36e4f8ed076854d75c6200f5bc4ad5",
+        "error": "sha256:671c8c7849565545b87b9e0272fd996a4637f9b3ae367eb701192f6571652639",
+        "privacy": "sha256:62e0d3a757ba4682d5722defbe6d1f69e8af50ffda571b735e921ead625f07c3",
+        "effect": "sha256:d0df78f59734cde9cccca2fbf7c95b0bc38a7fedca59c3b2e0d03daf67004879",
+        "authority": "sha256:4de6879b22c13084ee7081140d00a312ed98fa928847e3e1393fe3a368194919"
+      },
+      "capability_ids": [
+        "ml_technique_selection",
+        "ml_independent_validation"
+      ],
+      "tool_ids": [
+        "dad-cli",
+        "json-schema",
+        "registered-read-only-sources"
+      ],
+      "context_contract": "Provider-neutral bounded objective, problem-shape metadata, technique evidence, evaluation contracts, and sanitized evidence references only; no source data, credentials, or raw conversations.",
+      "privacy_classes": [
+        "public",
+        "internal",
+        "confidential",
+        "restricted_by_local_policy"
+      ],
+      "consequence_classes": [
+        "small",
+        "medium",
+        "large",
+        "critical"
+      ],
+      "effect_classes": [
+        "read_only",
+        "candidate_local_artifact"
+      ],
+      "dependencies": [
+        "skill:ml-workflow-agent-family",
+        "family:quality-verification-release"
+      ],
+      "reverse_consumers": [
+        "role:ml-technique-router"
+      ],
+      "adapter_revision_ids": [],
+      "harness_revision_id": "harness-revision:portable-capability-contract:0.1.0",
+      "evidence_refs": [
+        "registry/ml-technique-registry.json",
+        "tests/test_ml_agent_family.py"
+      ],
+      "fresh_until": "2026-10-16T00:00:00-04:00",
+      "rollback_ref": "Revert this candidate ML suite revision while retaining the prior ML family for inspection.",
+      "candidate_only": true,
+      "execution_authorized": false,
+      "authority_boundary": "This card records candidate routing and evaluation evidence only; it cannot authorize data access, specialist dispatch, training, deployment, scheduling, retraining, provider use, or release."
     },
     {
-        "schema_version":  "dad.portable_capability_card.v1",
-        "card_id":  "portability-card:ml-technique-calibrated-conformal-uncertainty",
-        "revision_id":  "portability-card-revision:ml-technique-calibrated-conformal-uncertainty:0.1.0",
-        "artifact_id":  "ml-technique:calibrated-conformal-uncertainty",
-        "artifact_kind":  "algorithm_pack",
-        "binding_class":  "portable_core",
-        "source_authority":  "registry/ml-technique-registry.json#ml-technique:calibrated-conformal-uncertainty",
-        "owner":  "DAD and Lowell",
-        "status":  "schema_validated",
-        "portable_files":  [
-                               "registry/ml-technique-registry.json",
-                               "schemas/ml-technique-registry.schema.json",
-                               "docs/ML_SPECIALIST_MESH_AND_HYBRIDS.md",
-                               "src/digital_asset_directory/ml_agent_family.py",
-                               "tests/test_ml_agent_family.py"
-                           ],
-        "content_digest":  "sha256:fef6b24b270854dd448b62aeef51cce095c2c793be85aa637e46221339fb1c16",
-        "source_observation_digest":  "sha256:b613406e71cdc01505a6a8ec67d84cdcf8c9f1f1ed4673eb454f52f78cc18912",
-        "contract_digests":  {
-                                 "input":  "sha256:237d32dea8556c1049117af26c53fd66ffbc5e4626b0bca598e1b5041531d16d",
-                                 "output":  "sha256:01e6c66cd3dc953ff736de9d1ebe7fbd3f36e4f8ed076854d75c6200f5bc4ad5",
-                                 "error":  "sha256:671c8c7849565545b87b9e0272fd996a4637f9b3ae367eb701192f6571652639",
-                                 "privacy":  "sha256:62e0d3a757ba4682d5722defbe6d1f69e8af50ffda571b735e921ead625f07c3",
-                                 "effect":  "sha256:d0df78f59734cde9cccca2fbf7c95b0bc38a7fedca59c3b2e0d03daf67004879",
-                                 "authority":  "sha256:4de6879b22c13084ee7081140d00a312ed98fa928847e3e1393fe3a368194919"
-                             },
-        "capability_ids":  [
-                               "ml_technique_selection",
-                               "ml_independent_validation"
-                           ],
-        "tool_ids":  [
-                         "dad-cli",
-                         "json-schema",
-                         "registered-read-only-sources"
-                     ],
-        "context_contract":  "Provider-neutral bounded objective, problem-shape metadata, technique evidence, evaluation contracts, and sanitized evidence references only; no source data, credentials, or raw conversations.",
-        "privacy_classes":  [
-                                "public",
-                                "internal",
-                                "confidential",
-                                "restricted_by_local_policy"
-                            ],
-        "consequence_classes":  [
-                                    "small",
-                                    "medium",
-                                    "large",
-                                    "critical"
-                                ],
-        "effect_classes":  [
-                               "read_only",
-                               "candidate_local_artifact"
-                           ],
-        "dependencies":  [
-                             "skill:ml-workflow-agent-family",
-                             "family:quality-verification-release"
-                         ],
-        "reverse_consumers":  [
-                                  "role:ml-temporal-uncertainty-specialist"
-                              ],
-        "adapter_revision_ids":  [
-
-                                 ],
-        "harness_revision_id":  "harness-revision:portable-capability-contract:0.1.0",
-        "evidence_refs":  [
-                              "registry/ml-technique-registry.json",
-                              "tests/test_ml_agent_family.py"
-                          ],
-        "fresh_until":  "2026-10-16T00:00:00-04:00",
-        "rollback_ref":  "Revert this candidate ML suite revision while retaining the prior ML family for inspection.",
-        "candidate_only":  true,
-        "execution_authorized":  false,
-        "authority_boundary":  "This card records candidate routing and evaluation evidence only; it cannot authorize data access, specialist dispatch, training, deployment, scheduling, retraining, provider use, or release."
+      "schema_version": "dad.portable_capability_card.v1",
+      "card_id": "portability-card:ml-technique-calibrated-conformal-uncertainty",
+      "revision_id": "portability-card-revision:ml-technique-calibrated-conformal-uncertainty:0.1.0",
+      "artifact_id": "ml-technique:calibrated-conformal-uncertainty",
+      "artifact_kind": "algorithm_pack",
+      "binding_class": "portable_core",
+      "source_authority": "registry/ml-technique-registry.json#ml-technique:calibrated-conformal-uncertainty",
+      "owner": "DAD and Lowell",
+      "status": "schema_validated",
+      "portable_files": [
+        "registry/ml-technique-registry.json",
+        "schemas/ml-technique-registry.schema.json",
+        "docs/ML_SPECIALIST_MESH_AND_HYBRIDS.md",
+        "src/digital_asset_directory/ml_agent_family.py",
+        "tests/test_ml_agent_family.py"
+      ],
+      "content_digest": "sha256:fef6b24b270854dd448b62aeef51cce095c2c793be85aa637e46221339fb1c16",
+      "source_observation_digest": "sha256:b613406e71cdc01505a6a8ec67d84cdcf8c9f1f1ed4673eb454f52f78cc18912",
+      "contract_digests": {
+        "input": "sha256:237d32dea8556c1049117af26c53fd66ffbc5e4626b0bca598e1b5041531d16d",
+        "output": "sha256:01e6c66cd3dc953ff736de9d1ebe7fbd3f36e4f8ed076854d75c6200f5bc4ad5",
+        "error": "sha256:671c8c7849565545b87b9e0272fd996a4637f9b3ae367eb701192f6571652639",
+        "privacy": "sha256:62e0d3a757ba4682d5722defbe6d1f69e8af50ffda571b735e921ead625f07c3",
+        "effect": "sha256:d0df78f59734cde9cccca2fbf7c95b0bc38a7fedca59c3b2e0d03daf67004879",
+        "authority": "sha256:4de6879b22c13084ee7081140d00a312ed98fa928847e3e1393fe3a368194919"
+      },
+      "capability_ids": [
+        "ml_technique_selection",
+        "ml_independent_validation"
+      ],
+      "tool_ids": [
+        "dad-cli",
+        "json-schema",
+        "registered-read-only-sources"
+      ],
+      "context_contract": "Provider-neutral bounded objective, problem-shape metadata, technique evidence, evaluation contracts, and sanitized evidence references only; no source data, credentials, or raw conversations.",
+      "privacy_classes": [
+        "public",
+        "internal",
+        "confidential",
+        "restricted_by_local_policy"
+      ],
+      "consequence_classes": [
+        "small",
+        "medium",
+        "large",
+        "critical"
+      ],
+      "effect_classes": [
+        "read_only",
+        "candidate_local_artifact"
+      ],
+      "dependencies": [
+        "skill:ml-workflow-agent-family",
+        "family:quality-verification-release"
+      ],
+      "reverse_consumers": [
+        "role:ml-temporal-uncertainty-specialist"
+      ],
+      "adapter_revision_ids": [],
+      "harness_revision_id": "harness-revision:portable-capability-contract:0.1.0",
+      "evidence_refs": [
+        "registry/ml-technique-registry.json",
+        "tests/test_ml_agent_family.py"
+      ],
+      "fresh_until": "2026-10-16T00:00:00-04:00",
+      "rollback_ref": "Revert this candidate ML suite revision while retaining the prior ML family for inspection.",
+      "candidate_only": true,
+      "execution_authorized": false,
+      "authority_boundary": "This card records candidate routing and evaluation evidence only; it cannot authorize data access, specialist dispatch, training, deployment, scheduling, retraining, provider use, or release."
     },
     {
-        "schema_version":  "dad.portable_capability_card.v1",
-        "card_id":  "portability-card:ml-technique-representation-tabular-hybrids",
-        "revision_id":  "portability-card-revision:ml-technique-representation-tabular-hybrids:0.1.0",
-        "artifact_id":  "ml-technique:representation-tabular-hybrids",
-        "artifact_kind":  "algorithm_pack",
-        "binding_class":  "portable_core",
-        "source_authority":  "registry/ml-technique-registry.json#ml-technique:representation-tabular-hybrids",
-        "owner":  "DAD and Lowell",
-        "status":  "schema_validated",
-        "portable_files":  [
-                               "registry/ml-technique-registry.json",
-                               "schemas/ml-technique-registry.schema.json",
-                               "docs/ML_SPECIALIST_MESH_AND_HYBRIDS.md",
-                               "src/digital_asset_directory/ml_agent_family.py",
-                               "tests/test_ml_agent_family.py"
-                           ],
-        "content_digest":  "sha256:fef6b24b270854dd448b62aeef51cce095c2c793be85aa637e46221339fb1c16",
-        "source_observation_digest":  "sha256:ac41b6a499407edfa59467dd6ef670d049d35aa43eb283543d3eeab260d3fbfb",
-        "contract_digests":  {
-                                 "input":  "sha256:237d32dea8556c1049117af26c53fd66ffbc5e4626b0bca598e1b5041531d16d",
-                                 "output":  "sha256:01e6c66cd3dc953ff736de9d1ebe7fbd3f36e4f8ed076854d75c6200f5bc4ad5",
-                                 "error":  "sha256:671c8c7849565545b87b9e0272fd996a4637f9b3ae367eb701192f6571652639",
-                                 "privacy":  "sha256:62e0d3a757ba4682d5722defbe6d1f69e8af50ffda571b735e921ead625f07c3",
-                                 "effect":  "sha256:d0df78f59734cde9cccca2fbf7c95b0bc38a7fedca59c3b2e0d03daf67004879",
-                                 "authority":  "sha256:4de6879b22c13084ee7081140d00a312ed98fa928847e3e1393fe3a368194919"
-                             },
-        "capability_ids":  [
-                               "ml_technique_selection",
-                               "ml_independent_validation"
-                           ],
-        "tool_ids":  [
-                         "dad-cli",
-                         "json-schema",
-                         "registered-read-only-sources"
-                     ],
-        "context_contract":  "Provider-neutral bounded objective, problem-shape metadata, technique evidence, evaluation contracts, and sanitized evidence references only; no source data, credentials, or raw conversations.",
-        "privacy_classes":  [
-                                "public",
-                                "internal",
-                                "confidential",
-                                "restricted_by_local_policy"
-                            ],
-        "consequence_classes":  [
-                                    "small",
-                                    "medium",
-                                    "large",
-                                    "critical"
-                                ],
-        "effect_classes":  [
-                               "read_only",
-                               "candidate_local_artifact"
-                           ],
-        "dependencies":  [
-                             "skill:ml-workflow-agent-family",
-                             "family:quality-verification-release"
-                         ],
-        "reverse_consumers":  [
-                                  "role:ml-wide-deep-representation-specialist"
-                              ],
-        "adapter_revision_ids":  [
-
-                                 ],
-        "harness_revision_id":  "harness-revision:portable-capability-contract:0.1.0",
-        "evidence_refs":  [
-                              "registry/ml-technique-registry.json",
-                              "tests/test_ml_agent_family.py"
-                          ],
-        "fresh_until":  "2026-10-16T00:00:00-04:00",
-        "rollback_ref":  "Revert this candidate ML suite revision while retaining the prior ML family for inspection.",
-        "candidate_only":  true,
-        "execution_authorized":  false,
-        "authority_boundary":  "This card records candidate routing and evaluation evidence only; it cannot authorize data access, specialist dispatch, training, deployment, scheduling, retraining, provider use, or release."
+      "schema_version": "dad.portable_capability_card.v1",
+      "card_id": "portability-card:ml-technique-representation-tabular-hybrids",
+      "revision_id": "portability-card-revision:ml-technique-representation-tabular-hybrids:0.1.0",
+      "artifact_id": "ml-technique:representation-tabular-hybrids",
+      "artifact_kind": "algorithm_pack",
+      "binding_class": "portable_core",
+      "source_authority": "registry/ml-technique-registry.json#ml-technique:representation-tabular-hybrids",
+      "owner": "DAD and Lowell",
+      "status": "schema_validated",
+      "portable_files": [
+        "registry/ml-technique-registry.json",
+        "schemas/ml-technique-registry.schema.json",
+        "docs/ML_SPECIALIST_MESH_AND_HYBRIDS.md",
+        "src/digital_asset_directory/ml_agent_family.py",
+        "tests/test_ml_agent_family.py"
+      ],
+      "content_digest": "sha256:fef6b24b270854dd448b62aeef51cce095c2c793be85aa637e46221339fb1c16",
+      "source_observation_digest": "sha256:ac41b6a499407edfa59467dd6ef670d049d35aa43eb283543d3eeab260d3fbfb",
+      "contract_digests": {
+        "input": "sha256:237d32dea8556c1049117af26c53fd66ffbc5e4626b0bca598e1b5041531d16d",
+        "output": "sha256:01e6c66cd3dc953ff736de9d1ebe7fbd3f36e4f8ed076854d75c6200f5bc4ad5",
+        "error": "sha256:671c8c7849565545b87b9e0272fd996a4637f9b3ae367eb701192f6571652639",
+        "privacy": "sha256:62e0d3a757ba4682d5722defbe6d1f69e8af50ffda571b735e921ead625f07c3",
+        "effect": "sha256:d0df78f59734cde9cccca2fbf7c95b0bc38a7fedca59c3b2e0d03daf67004879",
+        "authority": "sha256:4de6879b22c13084ee7081140d00a312ed98fa928847e3e1393fe3a368194919"
+      },
+      "capability_ids": [
+        "ml_technique_selection",
+        "ml_independent_validation"
+      ],
+      "tool_ids": [
+        "dad-cli",
+        "json-schema",
+        "registered-read-only-sources"
+      ],
+      "context_contract": "Provider-neutral bounded objective, problem-shape metadata, technique evidence, evaluation contracts, and sanitized evidence references only; no source data, credentials, or raw conversations.",
+      "privacy_classes": [
+        "public",
+        "internal",
+        "confidential",
+        "restricted_by_local_policy"
+      ],
+      "consequence_classes": [
+        "small",
+        "medium",
+        "large",
+        "critical"
+      ],
+      "effect_classes": [
+        "read_only",
+        "candidate_local_artifact"
+      ],
+      "dependencies": [
+        "skill:ml-workflow-agent-family",
+        "family:quality-verification-release"
+      ],
+      "reverse_consumers": [
+        "role:ml-wide-deep-representation-specialist"
+      ],
+      "adapter_revision_ids": [],
+      "harness_revision_id": "harness-revision:portable-capability-contract:0.1.0",
+      "evidence_refs": [
+        "registry/ml-technique-registry.json",
+        "tests/test_ml_agent_family.py"
+      ],
+      "fresh_until": "2026-10-16T00:00:00-04:00",
+      "rollback_ref": "Revert this candidate ML suite revision while retaining the prior ML family for inspection.",
+      "candidate_only": true,
+      "execution_authorized": false,
+      "authority_boundary": "This card records candidate routing and evaluation evidence only; it cannot authorize data access, specialist dispatch, training, deployment, scheduling, retraining, provider use, or release."
     },
     {
-        "schema_version":  "dad.portable_capability_card.v1",
-        "card_id":  "portability-card:ml-technique-tree-ensembles",
-        "revision_id":  "portability-card-revision:ml-technique-tree-ensembles:0.1.0",
-        "artifact_id":  "ml-technique:tree-ensembles",
-        "artifact_kind":  "algorithm_pack",
-        "binding_class":  "portable_core",
-        "source_authority":  "registry/ml-technique-registry.json#ml-technique:tree-ensembles",
-        "owner":  "DAD and Lowell",
-        "status":  "schema_validated",
-        "portable_files":  [
-                               "registry/ml-technique-registry.json",
-                               "schemas/ml-technique-registry.schema.json",
-                               "docs/ML_SPECIALIST_MESH_AND_HYBRIDS.md",
-                               "src/digital_asset_directory/ml_agent_family.py",
-                               "tests/test_ml_agent_family.py"
-                           ],
-        "content_digest":  "sha256:fef6b24b270854dd448b62aeef51cce095c2c793be85aa637e46221339fb1c16",
-        "source_observation_digest":  "sha256:19aad1ad2caac2c1a30264afcbde3f357e4eebd691608958a81e3738e096464d",
-        "contract_digests":  {
-                                 "input":  "sha256:237d32dea8556c1049117af26c53fd66ffbc5e4626b0bca598e1b5041531d16d",
-                                 "output":  "sha256:01e6c66cd3dc953ff736de9d1ebe7fbd3f36e4f8ed076854d75c6200f5bc4ad5",
-                                 "error":  "sha256:671c8c7849565545b87b9e0272fd996a4637f9b3ae367eb701192f6571652639",
-                                 "privacy":  "sha256:62e0d3a757ba4682d5722defbe6d1f69e8af50ffda571b735e921ead625f07c3",
-                                 "effect":  "sha256:d0df78f59734cde9cccca2fbf7c95b0bc38a7fedca59c3b2e0d03daf67004879",
-                                 "authority":  "sha256:4de6879b22c13084ee7081140d00a312ed98fa928847e3e1393fe3a368194919"
-                             },
-        "capability_ids":  [
-                               "ml_technique_selection",
-                               "ml_independent_validation"
-                           ],
-        "tool_ids":  [
-                         "dad-cli",
-                         "json-schema",
-                         "registered-read-only-sources"
-                     ],
-        "context_contract":  "Provider-neutral bounded objective, problem-shape metadata, technique evidence, evaluation contracts, and sanitized evidence references only; no source data, credentials, or raw conversations.",
-        "privacy_classes":  [
-                                "public",
-                                "internal",
-                                "confidential",
-                                "restricted_by_local_policy"
-                            ],
-        "consequence_classes":  [
-                                    "small",
-                                    "medium",
-                                    "large",
-                                    "critical"
-                                ],
-        "effect_classes":  [
-                               "read_only",
-                               "candidate_local_artifact"
-                           ],
-        "dependencies":  [
-                             "skill:ml-workflow-agent-family",
-                             "family:quality-verification-release"
-                         ],
-        "reverse_consumers":  [
-                                  "role:ml-tabular-boosting-specialist"
-                              ],
-        "adapter_revision_ids":  [
-
-                                 ],
-        "harness_revision_id":  "harness-revision:portable-capability-contract:0.1.0",
-        "evidence_refs":  [
-                              "registry/ml-technique-registry.json",
-                              "tests/test_ml_agent_family.py"
-                          ],
-        "fresh_until":  "2026-10-16T00:00:00-04:00",
-        "rollback_ref":  "Revert this candidate ML suite revision while retaining the prior ML family for inspection.",
-        "candidate_only":  true,
-        "execution_authorized":  false,
-        "authority_boundary":  "This card records candidate routing and evaluation evidence only; it cannot authorize data access, specialist dispatch, training, deployment, scheduling, retraining, provider use, or release."
+      "schema_version": "dad.portable_capability_card.v1",
+      "card_id": "portability-card:ml-technique-tree-ensembles",
+      "revision_id": "portability-card-revision:ml-technique-tree-ensembles:0.1.0",
+      "artifact_id": "ml-technique:tree-ensembles",
+      "artifact_kind": "algorithm_pack",
+      "binding_class": "portable_core",
+      "source_authority": "registry/ml-technique-registry.json#ml-technique:tree-ensembles",
+      "owner": "DAD and Lowell",
+      "status": "schema_validated",
+      "portable_files": [
+        "registry/ml-technique-registry.json",
+        "schemas/ml-technique-registry.schema.json",
+        "docs/ML_SPECIALIST_MESH_AND_HYBRIDS.md",
+        "src/digital_asset_directory/ml_agent_family.py",
+        "tests/test_ml_agent_family.py"
+      ],
+      "content_digest": "sha256:fef6b24b270854dd448b62aeef51cce095c2c793be85aa637e46221339fb1c16",
+      "source_observation_digest": "sha256:19aad1ad2caac2c1a30264afcbde3f357e4eebd691608958a81e3738e096464d",
+      "contract_digests": {
+        "input": "sha256:237d32dea8556c1049117af26c53fd66ffbc5e4626b0bca598e1b5041531d16d",
+        "output": "sha256:01e6c66cd3dc953ff736de9d1ebe7fbd3f36e4f8ed076854d75c6200f5bc4ad5",
+        "error": "sha256:671c8c7849565545b87b9e0272fd996a4637f9b3ae367eb701192f6571652639",
+        "privacy": "sha256:62e0d3a757ba4682d5722defbe6d1f69e8af50ffda571b735e921ead625f07c3",
+        "effect": "sha256:d0df78f59734cde9cccca2fbf7c95b0bc38a7fedca59c3b2e0d03daf67004879",
+        "authority": "sha256:4de6879b22c13084ee7081140d00a312ed98fa928847e3e1393fe3a368194919"
+      },
+      "capability_ids": [
+        "ml_technique_selection",
+        "ml_independent_validation"
+      ],
+      "tool_ids": [
+        "dad-cli",
+        "json-schema",
+        "registered-read-only-sources"
+      ],
+      "context_contract": "Provider-neutral bounded objective, problem-shape metadata, technique evidence, evaluation contracts, and sanitized evidence references only; no source data, credentials, or raw conversations.",
+      "privacy_classes": [
+        "public",
+        "internal",
+        "confidential",
+        "restricted_by_local_policy"
+      ],
+      "consequence_classes": [
+        "small",
+        "medium",
+        "large",
+        "critical"
+      ],
+      "effect_classes": [
+        "read_only",
+        "candidate_local_artifact"
+      ],
+      "dependencies": [
+        "skill:ml-workflow-agent-family",
+        "family:quality-verification-release"
+      ],
+      "reverse_consumers": [
+        "role:ml-tabular-boosting-specialist"
+      ],
+      "adapter_revision_ids": [],
+      "harness_revision_id": "harness-revision:portable-capability-contract:0.1.0",
+      "evidence_refs": [
+        "registry/ml-technique-registry.json",
+        "tests/test_ml_agent_family.py"
+      ],
+      "fresh_until": "2026-10-16T00:00:00-04:00",
+      "rollback_ref": "Revert this candidate ML suite revision while retaining the prior ML family for inspection.",
+      "candidate_only": true,
+      "execution_authorized": false,
+      "authority_boundary": "This card records candidate routing and evaluation evidence only; it cannot authorize data access, specialist dispatch, training, deployment, scheduling, retraining, provider use, or release."
     },
     {
-        "schema_version":  "dad.portable_capability_card.v1",
-        "card_id":  "portability-card:ml-technique-wide-deep-tabular-learning",
-        "revision_id":  "portability-card-revision:ml-technique-wide-deep-tabular-learning:0.1.0",
-        "artifact_id":  "ml-technique:wide-deep-tabular-learning",
-        "artifact_kind":  "algorithm_pack",
-        "binding_class":  "portable_core",
-        "source_authority":  "registry/ml-technique-registry.json#ml-technique:wide-deep-tabular-learning",
-        "owner":  "DAD and Lowell",
-        "status":  "schema_validated",
-        "portable_files":  [
-                               "registry/ml-technique-registry.json",
-                               "schemas/ml-technique-registry.schema.json",
-                               "docs/ML_SPECIALIST_MESH_AND_HYBRIDS.md",
-                               "src/digital_asset_directory/ml_agent_family.py",
-                               "tests/test_ml_agent_family.py"
-                           ],
-        "content_digest":  "sha256:fef6b24b270854dd448b62aeef51cce095c2c793be85aa637e46221339fb1c16",
-        "source_observation_digest":  "sha256:122ac84f2c7b65eb5e0923bf181efcf854942e750a98023c1c78b8725eedeb9e",
-        "contract_digests":  {
-                                 "input":  "sha256:237d32dea8556c1049117af26c53fd66ffbc5e4626b0bca598e1b5041531d16d",
-                                 "output":  "sha256:01e6c66cd3dc953ff736de9d1ebe7fbd3f36e4f8ed076854d75c6200f5bc4ad5",
-                                 "error":  "sha256:671c8c7849565545b87b9e0272fd996a4637f9b3ae367eb701192f6571652639",
-                                 "privacy":  "sha256:62e0d3a757ba4682d5722defbe6d1f69e8af50ffda571b735e921ead625f07c3",
-                                 "effect":  "sha256:d0df78f59734cde9cccca2fbf7c95b0bc38a7fedca59c3b2e0d03daf67004879",
-                                 "authority":  "sha256:4de6879b22c13084ee7081140d00a312ed98fa928847e3e1393fe3a368194919"
-                             },
-        "capability_ids":  [
-                               "ml_technique_selection",
-                               "ml_independent_validation"
-                           ],
-        "tool_ids":  [
-                         "dad-cli",
-                         "json-schema",
-                         "registered-read-only-sources"
-                     ],
-        "context_contract":  "Provider-neutral bounded objective, problem-shape metadata, technique evidence, evaluation contracts, and sanitized evidence references only; no source data, credentials, or raw conversations.",
-        "privacy_classes":  [
-                                "public",
-                                "internal",
-                                "confidential",
-                                "restricted_by_local_policy"
-                            ],
-        "consequence_classes":  [
-                                    "small",
-                                    "medium",
-                                    "large",
-                                    "critical"
-                                ],
-        "effect_classes":  [
-                               "read_only",
-                               "candidate_local_artifact"
-                           ],
-        "dependencies":  [
-                             "skill:ml-workflow-agent-family",
-                             "family:quality-verification-release"
-                         ],
-        "reverse_consumers":  [
-                                  "role:ml-wide-deep-representation-specialist"
-                              ],
-        "adapter_revision_ids":  [
-
-                                 ],
-        "harness_revision_id":  "harness-revision:portable-capability-contract:0.1.0",
-        "evidence_refs":  [
-                              "registry/ml-technique-registry.json",
-                              "tests/test_ml_agent_family.py"
-                          ],
-        "fresh_until":  "2026-10-16T00:00:00-04:00",
-        "rollback_ref":  "Revert this candidate ML suite revision while retaining the prior ML family for inspection.",
-        "candidate_only":  true,
-        "execution_authorized":  false,
-        "authority_boundary":  "This card records candidate routing and evaluation evidence only; it cannot authorize data access, specialist dispatch, training, deployment, scheduling, retraining, provider use, or release."
+      "schema_version": "dad.portable_capability_card.v1",
+      "card_id": "portability-card:ml-technique-wide-deep-tabular-learning",
+      "revision_id": "portability-card-revision:ml-technique-wide-deep-tabular-learning:0.1.0",
+      "artifact_id": "ml-technique:wide-deep-tabular-learning",
+      "artifact_kind": "algorithm_pack",
+      "binding_class": "portable_core",
+      "source_authority": "registry/ml-technique-registry.json#ml-technique:wide-deep-tabular-learning",
+      "owner": "DAD and Lowell",
+      "status": "schema_validated",
+      "portable_files": [
+        "registry/ml-technique-registry.json",
+        "schemas/ml-technique-registry.schema.json",
+        "docs/ML_SPECIALIST_MESH_AND_HYBRIDS.md",
+        "src/digital_asset_directory/ml_agent_family.py",
+        "tests/test_ml_agent_family.py"
+      ],
+      "content_digest": "sha256:fef6b24b270854dd448b62aeef51cce095c2c793be85aa637e46221339fb1c16",
+      "source_observation_digest": "sha256:122ac84f2c7b65eb5e0923bf181efcf854942e750a98023c1c78b8725eedeb9e",
+      "contract_digests": {
+        "input": "sha256:237d32dea8556c1049117af26c53fd66ffbc5e4626b0bca598e1b5041531d16d",
+        "output": "sha256:01e6c66cd3dc953ff736de9d1ebe7fbd3f36e4f8ed076854d75c6200f5bc4ad5",
+        "error": "sha256:671c8c7849565545b87b9e0272fd996a4637f9b3ae367eb701192f6571652639",
+        "privacy": "sha256:62e0d3a757ba4682d5722defbe6d1f69e8af50ffda571b735e921ead625f07c3",
+        "effect": "sha256:d0df78f59734cde9cccca2fbf7c95b0bc38a7fedca59c3b2e0d03daf67004879",
+        "authority": "sha256:4de6879b22c13084ee7081140d00a312ed98fa928847e3e1393fe3a368194919"
+      },
+      "capability_ids": [
+        "ml_technique_selection",
+        "ml_independent_validation"
+      ],
+      "tool_ids": [
+        "dad-cli",
+        "json-schema",
+        "registered-read-only-sources"
+      ],
+      "context_contract": "Provider-neutral bounded objective, problem-shape metadata, technique evidence, evaluation contracts, and sanitized evidence references only; no source data, credentials, or raw conversations.",
+      "privacy_classes": [
+        "public",
+        "internal",
+        "confidential",
+        "restricted_by_local_policy"
+      ],
+      "consequence_classes": [
+        "small",
+        "medium",
+        "large",
+        "critical"
+      ],
+      "effect_classes": [
+        "read_only",
+        "candidate_local_artifact"
+      ],
+      "dependencies": [
+        "skill:ml-workflow-agent-family",
+        "family:quality-verification-release"
+      ],
+      "reverse_consumers": [
+        "role:ml-wide-deep-representation-specialist"
+      ],
+      "adapter_revision_ids": [],
+      "harness_revision_id": "harness-revision:portable-capability-contract:0.1.0",
+      "evidence_refs": [
+        "registry/ml-technique-registry.json",
+        "tests/test_ml_agent_family.py"
+      ],
+      "fresh_until": "2026-10-16T00:00:00-04:00",
+      "rollback_ref": "Revert this candidate ML suite revision while retaining the prior ML family for inspection.",
+      "candidate_only": true,
+      "execution_authorized": false,
+      "authority_boundary": "This card records candidate routing and evaluation evidence only; it cannot authorize data access, specialist dispatch, training, deployment, scheduling, retraining, provider use, or release."
     },
     {
-        "schema_version":  "dad.portable_capability_card.v1",
-        "card_id":  "portability-card:workflow-ml-hybrid-composition-review",
-        "revision_id":  "portability-card-revision:workflow-ml-hybrid-composition-review:0.1.0",
-        "artifact_id":  "workflow:ml-hybrid-composition-review",
-        "artifact_kind":  "workflow",
-        "binding_class":  "portable_core",
-        "source_authority":  "registry/ml-agent-family-registry.json#workflow:ml-hybrid-composition-review",
-        "owner":  "DAD and Lowell",
-        "status":  "schema_validated",
-        "portable_files":  [
-                               "assets/agent-skills/ml-workflow-agent-family/references/ML_WORKFLOW_CONTRACT.md",
-                               "assets/agent-skills/ml-workflow-agent-family/routines.yaml",
-                               "assets/agent-skills/ml-workflow-agent-family/subagents.yaml",
-                               "registry/ml-agent-family-registry.json",
-                               "schemas/ml-agent-family-registry.schema.json",
-                               "src/digital_asset_directory/ml_agent_family.py",
-                               "tests/test_ml_agent_family.py"
-                           ],
-        "content_digest":  "sha256:77f06a3e889e6233ea40a425ca9bd26a6631e3a975f5eb734d2ef31f5dc3f766",
-        "source_observation_digest":  "sha256:efa3301f54b0b1723259ed32c5cd211d2908df2faeaf8549e72fb04930c4d385",
-        "contract_digests":  {
-                                 "input":  "sha256:237d32dea8556c1049117af26c53fd66ffbc5e4626b0bca598e1b5041531d16d",
-                                 "output":  "sha256:01e6c66cd3dc953ff736de9d1ebe7fbd3f36e4f8ed076854d75c6200f5bc4ad5",
-                                 "error":  "sha256:671c8c7849565545b87b9e0272fd996a4637f9b3ae367eb701192f6571652639",
-                                 "privacy":  "sha256:62e0d3a757ba4682d5722defbe6d1f69e8af50ffda571b735e921ead625f07c3",
-                                 "effect":  "sha256:d0df78f59734cde9cccca2fbf7c95b0bc38a7fedca59c3b2e0d03daf67004879",
-                                 "authority":  "sha256:4de6879b22c13084ee7081140d00a312ed98fa928847e3e1393fe3a368194919"
-                             },
-        "capability_ids":  [
-                               "ml_technique_selection",
-                               "ml_independent_validation"
-                           ],
-        "tool_ids":  [
-                         "dad-cli",
-                         "json-schema",
-                         "registered-read-only-sources"
-                     ],
-        "context_contract":  "Provider-neutral bounded objective, problem-shape metadata, technique evidence, evaluation contracts, and sanitized evidence references only; no source data, credentials, or raw conversations.",
-        "privacy_classes":  [
-                                "public",
-                                "internal",
-                                "confidential",
-                                "restricted_by_local_policy"
-                            ],
-        "consequence_classes":  [
-                                    "small",
-                                    "medium",
-                                    "large",
-                                    "critical"
-                                ],
-        "effect_classes":  [
-                               "read_only",
-                               "candidate_local_artifact"
-                           ],
-        "dependencies":  [
-                             "skill:ml-workflow-agent-family",
-                             "family:quality-verification-release"
-                         ],
-        "reverse_consumers":  [
-                                  "role:ml-solution-architect"
-                              ],
-        "adapter_revision_ids":  [
-
-                                 ],
-        "harness_revision_id":  "harness-revision:portable-capability-contract:0.1.0",
-        "evidence_refs":  [
-                              "assets/agent-skills/ml-workflow-agent-family/routines.yaml",
-                              "tests/test_ml_agent_family.py"
-                          ],
-        "fresh_until":  "2026-10-16T00:00:00-04:00",
-        "rollback_ref":  "Revert this candidate ML suite revision while retaining the prior ML family for inspection.",
-        "candidate_only":  true,
-        "execution_authorized":  false,
-        "authority_boundary":  "This card records candidate routing and evaluation evidence only; it cannot authorize data access, specialist dispatch, training, deployment, scheduling, retraining, provider use, or release."
+      "schema_version": "dad.portable_capability_card.v1",
+      "card_id": "portability-card:workflow-ml-hybrid-composition-review",
+      "revision_id": "portability-card-revision:workflow-ml-hybrid-composition-review:0.1.0",
+      "artifact_id": "workflow:ml-hybrid-composition-review",
+      "artifact_kind": "workflow",
+      "binding_class": "portable_core",
+      "source_authority": "registry/ml-agent-family-registry.json#workflow:ml-hybrid-composition-review",
+      "owner": "DAD and Lowell",
+      "status": "schema_validated",
+      "portable_files": [
+        "assets/agent-skills/ml-workflow-agent-family/references/ML_WORKFLOW_CONTRACT.md",
+        "assets/agent-skills/ml-workflow-agent-family/routines.yaml",
+        "assets/agent-skills/ml-workflow-agent-family/subagents.yaml",
+        "registry/ml-agent-family-registry.json",
+        "schemas/ml-agent-family-registry.schema.json",
+        "src/digital_asset_directory/ml_agent_family.py",
+        "tests/test_ml_agent_family.py"
+      ],
+      "content_digest": "sha256:77f06a3e889e6233ea40a425ca9bd26a6631e3a975f5eb734d2ef31f5dc3f766",
+      "source_observation_digest": "sha256:efa3301f54b0b1723259ed32c5cd211d2908df2faeaf8549e72fb04930c4d385",
+      "contract_digests": {
+        "input": "sha256:237d32dea8556c1049117af26c53fd66ffbc5e4626b0bca598e1b5041531d16d",
+        "output": "sha256:01e6c66cd3dc953ff736de9d1ebe7fbd3f36e4f8ed076854d75c6200f5bc4ad5",
+        "error": "sha256:671c8c7849565545b87b9e0272fd996a4637f9b3ae367eb701192f6571652639",
+        "privacy": "sha256:62e0d3a757ba4682d5722defbe6d1f69e8af50ffda571b735e921ead625f07c3",
+        "effect": "sha256:d0df78f59734cde9cccca2fbf7c95b0bc38a7fedca59c3b2e0d03daf67004879",
+        "authority": "sha256:4de6879b22c13084ee7081140d00a312ed98fa928847e3e1393fe3a368194919"
+      },
+      "capability_ids": [
+        "ml_technique_selection",
+        "ml_independent_validation"
+      ],
+      "tool_ids": [
+        "dad-cli",
+        "json-schema",
+        "registered-read-only-sources"
+      ],
+      "context_contract": "Provider-neutral bounded objective, problem-shape metadata, technique evidence, evaluation contracts, and sanitized evidence references only; no source data, credentials, or raw conversations.",
+      "privacy_classes": [
+        "public",
+        "internal",
+        "confidential",
+        "restricted_by_local_policy"
+      ],
+      "consequence_classes": [
+        "small",
+        "medium",
+        "large",
+        "critical"
+      ],
+      "effect_classes": [
+        "read_only",
+        "candidate_local_artifact"
+      ],
+      "dependencies": [
+        "skill:ml-workflow-agent-family",
+        "family:quality-verification-release"
+      ],
+      "reverse_consumers": [
+        "role:ml-solution-architect"
+      ],
+      "adapter_revision_ids": [],
+      "harness_revision_id": "harness-revision:portable-capability-contract:0.1.0",
+      "evidence_refs": [
+        "assets/agent-skills/ml-workflow-agent-family/routines.yaml",
+        "tests/test_ml_agent_family.py"
+      ],
+      "fresh_until": "2026-10-16T00:00:00-04:00",
+      "rollback_ref": "Revert this candidate ML suite revision while retaining the prior ML family for inspection.",
+      "candidate_only": true,
+      "execution_authorized": false,
+      "authority_boundary": "This card records candidate routing and evaluation evidence only; it cannot authorize data access, specialist dispatch, training, deployment, scheduling, retraining, provider use, or release."
     },
     {
-        "schema_version":  "dad.portable_capability_card.v1",
-        "card_id":  "portability-card:workflow-ml-operational-monitoring-and-retraining",
-        "revision_id":  "portability-card-revision:workflow-ml-operational-monitoring-and-retraining:0.1.0",
-        "artifact_id":  "workflow:ml-operational-monitoring-and-retraining",
-        "artifact_kind":  "workflow",
-        "binding_class":  "portable_core",
-        "source_authority":  "registry/ml-agent-family-registry.json#workflow:ml-operational-monitoring-and-retraining",
-        "owner":  "DAD and Lowell",
-        "status":  "schema_validated",
-        "portable_files":  [
-                               "assets/agent-skills/ml-workflow-agent-family/references/ML_WORKFLOW_CONTRACT.md",
-                               "assets/agent-skills/ml-workflow-agent-family/routines.yaml",
-                               "assets/agent-skills/ml-workflow-agent-family/subagents.yaml",
-                               "registry/ml-agent-family-registry.json",
-                               "schemas/ml-agent-family-registry.schema.json",
-                               "src/digital_asset_directory/ml_agent_family.py",
-                               "tests/test_ml_agent_family.py"
-                           ],
-        "content_digest":  "sha256:77f06a3e889e6233ea40a425ca9bd26a6631e3a975f5eb734d2ef31f5dc3f766",
-        "source_observation_digest":  "sha256:01a3e635c43cbe47bdaedc93f8c57fc5da00c7348f1fcad3448d98b9a599a7a6",
-        "contract_digests":  {
-                                 "input":  "sha256:237d32dea8556c1049117af26c53fd66ffbc5e4626b0bca598e1b5041531d16d",
-                                 "output":  "sha256:01e6c66cd3dc953ff736de9d1ebe7fbd3f36e4f8ed076854d75c6200f5bc4ad5",
-                                 "error":  "sha256:671c8c7849565545b87b9e0272fd996a4637f9b3ae367eb701192f6571652639",
-                                 "privacy":  "sha256:62e0d3a757ba4682d5722defbe6d1f69e8af50ffda571b735e921ead625f07c3",
-                                 "effect":  "sha256:d0df78f59734cde9cccca2fbf7c95b0bc38a7fedca59c3b2e0d03daf67004879",
-                                 "authority":  "sha256:4de6879b22c13084ee7081140d00a312ed98fa928847e3e1393fe3a368194919"
-                             },
-        "capability_ids":  [
-                               "ml_technique_selection",
-                               "ml_independent_validation"
-                           ],
-        "tool_ids":  [
-                         "dad-cli",
-                         "json-schema",
-                         "registered-read-only-sources"
-                     ],
-        "context_contract":  "Provider-neutral bounded objective, problem-shape metadata, technique evidence, evaluation contracts, and sanitized evidence references only; no source data, credentials, or raw conversations.",
-        "privacy_classes":  [
-                                "public",
-                                "internal",
-                                "confidential",
-                                "restricted_by_local_policy"
-                            ],
-        "consequence_classes":  [
-                                    "small",
-                                    "medium",
-                                    "large",
-                                    "critical"
-                                ],
-        "effect_classes":  [
-                               "read_only",
-                               "candidate_local_artifact"
-                           ],
-        "dependencies":  [
-                             "skill:ml-workflow-agent-family",
-                             "family:quality-verification-release"
-                         ],
-        "reverse_consumers":  [
-                                  "role:ml-operations-evaluation-specialist"
-                              ],
-        "adapter_revision_ids":  [
-
-                                 ],
-        "harness_revision_id":  "harness-revision:portable-capability-contract:0.1.0",
-        "evidence_refs":  [
-                              "assets/agent-skills/ml-workflow-agent-family/routines.yaml",
-                              "tests/test_ml_agent_family.py"
-                          ],
-        "fresh_until":  "2026-10-16T00:00:00-04:00",
-        "rollback_ref":  "Revert this candidate ML suite revision while retaining the prior ML family for inspection.",
-        "candidate_only":  true,
-        "execution_authorized":  false,
-        "authority_boundary":  "This card records candidate routing and evaluation evidence only; it cannot authorize data access, specialist dispatch, training, deployment, scheduling, retraining, provider use, or release."
+      "schema_version": "dad.portable_capability_card.v1",
+      "card_id": "portability-card:workflow-ml-operational-monitoring-and-retraining",
+      "revision_id": "portability-card-revision:workflow-ml-operational-monitoring-and-retraining:0.1.0",
+      "artifact_id": "workflow:ml-operational-monitoring-and-retraining",
+      "artifact_kind": "workflow",
+      "binding_class": "portable_core",
+      "source_authority": "registry/ml-agent-family-registry.json#workflow:ml-operational-monitoring-and-retraining",
+      "owner": "DAD and Lowell",
+      "status": "schema_validated",
+      "portable_files": [
+        "assets/agent-skills/ml-workflow-agent-family/references/ML_WORKFLOW_CONTRACT.md",
+        "assets/agent-skills/ml-workflow-agent-family/routines.yaml",
+        "assets/agent-skills/ml-workflow-agent-family/subagents.yaml",
+        "registry/ml-agent-family-registry.json",
+        "schemas/ml-agent-family-registry.schema.json",
+        "src/digital_asset_directory/ml_agent_family.py",
+        "tests/test_ml_agent_family.py"
+      ],
+      "content_digest": "sha256:77f06a3e889e6233ea40a425ca9bd26a6631e3a975f5eb734d2ef31f5dc3f766",
+      "source_observation_digest": "sha256:01a3e635c43cbe47bdaedc93f8c57fc5da00c7348f1fcad3448d98b9a599a7a6",
+      "contract_digests": {
+        "input": "sha256:237d32dea8556c1049117af26c53fd66ffbc5e4626b0bca598e1b5041531d16d",
+        "output": "sha256:01e6c66cd3dc953ff736de9d1ebe7fbd3f36e4f8ed076854d75c6200f5bc4ad5",
+        "error": "sha256:671c8c7849565545b87b9e0272fd996a4637f9b3ae367eb701192f6571652639",
+        "privacy": "sha256:62e0d3a757ba4682d5722defbe6d1f69e8af50ffda571b735e921ead625f07c3",
+        "effect": "sha256:d0df78f59734cde9cccca2fbf7c95b0bc38a7fedca59c3b2e0d03daf67004879",
+        "authority": "sha256:4de6879b22c13084ee7081140d00a312ed98fa928847e3e1393fe3a368194919"
+      },
+      "capability_ids": [
+        "ml_technique_selection",
+        "ml_independent_validation"
+      ],
+      "tool_ids": [
+        "dad-cli",
+        "json-schema",
+        "registered-read-only-sources"
+      ],
+      "context_contract": "Provider-neutral bounded objective, problem-shape metadata, technique evidence, evaluation contracts, and sanitized evidence references only; no source data, credentials, or raw conversations.",
+      "privacy_classes": [
+        "public",
+        "internal",
+        "confidential",
+        "restricted_by_local_policy"
+      ],
+      "consequence_classes": [
+        "small",
+        "medium",
+        "large",
+        "critical"
+      ],
+      "effect_classes": [
+        "read_only",
+        "candidate_local_artifact"
+      ],
+      "dependencies": [
+        "skill:ml-workflow-agent-family",
+        "family:quality-verification-release"
+      ],
+      "reverse_consumers": [
+        "role:ml-operations-evaluation-specialist"
+      ],
+      "adapter_revision_ids": [],
+      "harness_revision_id": "harness-revision:portable-capability-contract:0.1.0",
+      "evidence_refs": [
+        "assets/agent-skills/ml-workflow-agent-family/routines.yaml",
+        "tests/test_ml_agent_family.py"
+      ],
+      "fresh_until": "2026-10-16T00:00:00-04:00",
+      "rollback_ref": "Revert this candidate ML suite revision while retaining the prior ML family for inspection.",
+      "candidate_only": true,
+      "execution_authorized": false,
+      "authority_boundary": "This card records candidate routing and evaluation evidence only; it cannot authorize data access, specialist dispatch, training, deployment, scheduling, retraining, provider use, or release."
     },
     {
-        "schema_version":  "dad.portable_capability_card.v1",
-        "card_id":  "portability-card:workflow-ml-specialist-champion-challenger",
-        "revision_id":  "portability-card-revision:workflow-ml-specialist-champion-challenger:0.1.0",
-        "artifact_id":  "workflow:ml-specialist-champion-challenger",
-        "artifact_kind":  "workflow",
-        "binding_class":  "portable_core",
-        "source_authority":  "registry/ml-agent-family-registry.json#workflow:ml-specialist-champion-challenger",
-        "owner":  "DAD and Lowell",
-        "status":  "schema_validated",
-        "portable_files":  [
-                               "assets/agent-skills/ml-workflow-agent-family/references/ML_WORKFLOW_CONTRACT.md",
-                               "assets/agent-skills/ml-workflow-agent-family/routines.yaml",
-                               "assets/agent-skills/ml-workflow-agent-family/subagents.yaml",
-                               "registry/ml-agent-family-registry.json",
-                               "schemas/ml-agent-family-registry.schema.json",
-                               "src/digital_asset_directory/ml_agent_family.py",
-                               "tests/test_ml_agent_family.py"
-                           ],
-        "content_digest":  "sha256:77f06a3e889e6233ea40a425ca9bd26a6631e3a975f5eb734d2ef31f5dc3f766",
-        "source_observation_digest":  "sha256:80ba2cc875683640bb572008744aa9ad67b5fb646157150888ef72b1e07c72ed",
-        "contract_digests":  {
-                                 "input":  "sha256:237d32dea8556c1049117af26c53fd66ffbc5e4626b0bca598e1b5041531d16d",
-                                 "output":  "sha256:01e6c66cd3dc953ff736de9d1ebe7fbd3f36e4f8ed076854d75c6200f5bc4ad5",
-                                 "error":  "sha256:671c8c7849565545b87b9e0272fd996a4637f9b3ae367eb701192f6571652639",
-                                 "privacy":  "sha256:62e0d3a757ba4682d5722defbe6d1f69e8af50ffda571b735e921ead625f07c3",
-                                 "effect":  "sha256:d0df78f59734cde9cccca2fbf7c95b0bc38a7fedca59c3b2e0d03daf67004879",
-                                 "authority":  "sha256:4de6879b22c13084ee7081140d00a312ed98fa928847e3e1393fe3a368194919"
-                             },
-        "capability_ids":  [
-                               "ml_technique_selection",
-                               "ml_independent_validation"
-                           ],
-        "tool_ids":  [
-                         "dad-cli",
-                         "json-schema",
-                         "registered-read-only-sources"
-                     ],
-        "context_contract":  "Provider-neutral bounded objective, problem-shape metadata, technique evidence, evaluation contracts, and sanitized evidence references only; no source data, credentials, or raw conversations.",
-        "privacy_classes":  [
-                                "public",
-                                "internal",
-                                "confidential",
-                                "restricted_by_local_policy"
-                            ],
-        "consequence_classes":  [
-                                    "small",
-                                    "medium",
-                                    "large",
-                                    "critical"
-                                ],
-        "effect_classes":  [
-                               "read_only",
-                               "candidate_local_artifact"
-                           ],
-        "dependencies":  [
-                             "skill:ml-workflow-agent-family",
-                             "family:quality-verification-release"
-                         ],
-        "reverse_consumers":  [
-                                  "role:ml-technique-router"
-                              ],
-        "adapter_revision_ids":  [
-
-                                 ],
-        "harness_revision_id":  "harness-revision:portable-capability-contract:0.1.0",
-        "evidence_refs":  [
-                              "assets/agent-skills/ml-workflow-agent-family/routines.yaml",
-                              "tests/test_ml_agent_family.py"
-                          ],
-        "fresh_until":  "2026-10-16T00:00:00-04:00",
-        "rollback_ref":  "Revert this candidate ML suite revision while retaining the prior ML family for inspection.",
-        "candidate_only":  true,
-        "execution_authorized":  false,
-        "authority_boundary":  "This card records candidate routing and evaluation evidence only; it cannot authorize data access, specialist dispatch, training, deployment, scheduling, retraining, provider use, or release."
+      "schema_version": "dad.portable_capability_card.v1",
+      "card_id": "portability-card:workflow-ml-specialist-champion-challenger",
+      "revision_id": "portability-card-revision:workflow-ml-specialist-champion-challenger:0.1.0",
+      "artifact_id": "workflow:ml-specialist-champion-challenger",
+      "artifact_kind": "workflow",
+      "binding_class": "portable_core",
+      "source_authority": "registry/ml-agent-family-registry.json#workflow:ml-specialist-champion-challenger",
+      "owner": "DAD and Lowell",
+      "status": "schema_validated",
+      "portable_files": [
+        "assets/agent-skills/ml-workflow-agent-family/references/ML_WORKFLOW_CONTRACT.md",
+        "assets/agent-skills/ml-workflow-agent-family/routines.yaml",
+        "assets/agent-skills/ml-workflow-agent-family/subagents.yaml",
+        "registry/ml-agent-family-registry.json",
+        "schemas/ml-agent-family-registry.schema.json",
+        "src/digital_asset_directory/ml_agent_family.py",
+        "tests/test_ml_agent_family.py"
+      ],
+      "content_digest": "sha256:77f06a3e889e6233ea40a425ca9bd26a6631e3a975f5eb734d2ef31f5dc3f766",
+      "source_observation_digest": "sha256:80ba2cc875683640bb572008744aa9ad67b5fb646157150888ef72b1e07c72ed",
+      "contract_digests": {
+        "input": "sha256:237d32dea8556c1049117af26c53fd66ffbc5e4626b0bca598e1b5041531d16d",
+        "output": "sha256:01e6c66cd3dc953ff736de9d1ebe7fbd3f36e4f8ed076854d75c6200f5bc4ad5",
+        "error": "sha256:671c8c7849565545b87b9e0272fd996a4637f9b3ae367eb701192f6571652639",
+        "privacy": "sha256:62e0d3a757ba4682d5722defbe6d1f69e8af50ffda571b735e921ead625f07c3",
+        "effect": "sha256:d0df78f59734cde9cccca2fbf7c95b0bc38a7fedca59c3b2e0d03daf67004879",
+        "authority": "sha256:4de6879b22c13084ee7081140d00a312ed98fa928847e3e1393fe3a368194919"
+      },
+      "capability_ids": [
+        "ml_technique_selection",
+        "ml_independent_validation"
+      ],
+      "tool_ids": [
+        "dad-cli",
+        "json-schema",
+        "registered-read-only-sources"
+      ],
+      "context_contract": "Provider-neutral bounded objective, problem-shape metadata, technique evidence, evaluation contracts, and sanitized evidence references only; no source data, credentials, or raw conversations.",
+      "privacy_classes": [
+        "public",
+        "internal",
+        "confidential",
+        "restricted_by_local_policy"
+      ],
+      "consequence_classes": [
+        "small",
+        "medium",
+        "large",
+        "critical"
+      ],
+      "effect_classes": [
+        "read_only",
+        "candidate_local_artifact"
+      ],
+      "dependencies": [
+        "skill:ml-workflow-agent-family",
+        "family:quality-verification-release"
+      ],
+      "reverse_consumers": [
+        "role:ml-technique-router"
+      ],
+      "adapter_revision_ids": [],
+      "harness_revision_id": "harness-revision:portable-capability-contract:0.1.0",
+      "evidence_refs": [
+        "assets/agent-skills/ml-workflow-agent-family/routines.yaml",
+        "tests/test_ml_agent_family.py"
+      ],
+      "fresh_until": "2026-10-16T00:00:00-04:00",
+      "rollback_ref": "Revert this candidate ML suite revision while retaining the prior ML family for inspection.",
+      "candidate_only": true,
+      "execution_authorized": false,
+      "authority_boundary": "This card records candidate routing and evaluation evidence only; it cannot authorize data access, specialist dispatch, training, deployment, scheduling, retraining, provider use, or release."
     },
     {
       "schema_version": "dad.portable_capability_card.v1",
@@ -2284,8 +2266,14 @@
       "status": "schema_validated",
       "core_revision_id": "portability-card-revision:knowledge-interface-portfolio-convergence-radar:0.2.0",
       "target_capability_predicate": {
-        "requires": ["local_git_cli", "portfolio_attention_v1"],
-        "forbids": ["source_repository_writes", "model_calls"]
+        "requires": [
+          "local_git_cli",
+          "portfolio_attention_v1"
+        ],
+        "forbids": [
+          "source_repository_writes",
+          "model_calls"
+        ]
       },
       "adapter_interface_digest": "sha256:533923c4f0ab8f6823eb555c0b222c49125b38d5c015e6bf736d2fbe045d4624",
       "adapter_interface_sources": [
@@ -2397,6 +2385,76 @@
       "candidate_only": true,
       "execution_authorized": false,
       "authority_boundary": "This card validates a read-only candidate projection and foreground loopback host only; it cannot activate a daemon, persist a host, enroll repositories, execute requests, mutate sources, or grant authority."
+    },
+    {
+      "schema_version": "dad.portable_capability_card.v1",
+      "card_id": "portability-card:library-synthetic-silver-program",
+      "revision_id": "portability-card-revision:library-synthetic-silver-program:0.1.0",
+      "artifact_id": "library:synthetic-silver-program",
+      "artifact_kind": "library",
+      "binding_class": "portable_core",
+      "source_authority": "docs/SYNTHETIC_SILVER_PROGRAM.md",
+      "owner": "DAD and Lowell",
+      "status": "schema_validated",
+      "portable_files": [
+        "docs/SYNTHETIC_SILVER_PROGRAM.md",
+        "registry/synthetic-silver-program-registry.json",
+        "schemas/synthetic-silver-program-registry.schema.json",
+        "schemas/synthetic-silver-provenance-record.schema.json",
+        "schemas/synthetic-silver-release-manifest.schema.json"
+      ],
+      "capability_ids": [
+        "synthetic_silver_contract_plane",
+        "silver_tier_promotion_policy",
+        "silver_provenance_and_release_contracts"
+      ],
+      "tool_ids": [
+        "dad-cli",
+        "json-schema"
+      ],
+      "context_contract": "Provider-neutral contract plane for versioned synthetic silver corpora; domain repos own corpora, generators, judges, thresholds, and acceptance decisions.",
+      "candidate_only": true,
+      "execution_authorized": false,
+      "authority_boundary": "Candidate contract plane only. It cannot approve tier promotion, corpus acceptance, Logos access, litigation-engine canonical writes, downstream adoption, or any external effect; human gates and domain-repo authority remain controlling.",
+      "content_digest": "sha256:a9cbe4b90086e3d71bffb3d20e1b458e4025dad2e7a4465959e55782900cf31e",
+      "contract_digests": {
+        "input": "sha256:ddc899629392080d7148b5b5ab50d36f3faaf707e7effaae01a81147f4001ddc",
+        "output": "sha256:ba9caa9d43931853e186f65925e90bd9dc3beccb1a64deef3b144022305216d4",
+        "error": "sha256:d4b0dd015699538bdfb14a55b7c78a88a7909b18085d2cccf63297d0492afee0",
+        "privacy": "sha256:38db50302fbd1c81dc4647de2f2612e76f5f02b6812ec77dbb2e1a23aea027c1",
+        "effect": "sha256:54f9264185c589a07bcc27b8a4150966cbcb916281b5e8c914fae1fa00cd77de",
+        "authority": "sha256:5a759ad44467c0e9017b172a3fd4017ceea2da27a41d93b533758a3ffb022e41"
+      },
+      "privacy_classes": [
+        "public",
+        "internal",
+        "restricted_by_local_policy"
+      ],
+      "consequence_classes": [
+        "small",
+        "medium",
+        "large"
+      ],
+      "effect_classes": [
+        "read_only",
+        "candidate_local_artifact"
+      ],
+      "dependencies": [],
+      "reverse_consumers": [
+        "adapter:logos",
+        "adapter:law-firm-sim",
+        "adapter:litigation-corpus-factory"
+      ],
+      "adapter_revision_ids": [],
+      "harness_revision_id": "harness-revision:portable-capability-contract:0.1.0",
+      "evidence_refs": [
+        "docs/SYNTHETIC_SILVER_PROGRAM.md",
+        "tests/test_synthetic_silver_program.py",
+        "examples/synthetic-silver/provenance-record.golden.json",
+        "examples/synthetic-silver/release-manifest.golden.json"
+      ],
+      "fresh_until": "2026-10-20T00:00:00-04:00",
+      "rollback_ref": "Remove the synthetic-silver contract files, registry rows, and this card; no downstream repo state depends on them until a pilot adopts the contract."
     }
   ],
   "candidate_only": true,

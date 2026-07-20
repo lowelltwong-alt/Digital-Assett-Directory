@@ -1,0 +1,140 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://local.digital-asset-directory/schemas/synthetic-silver-provenance-record.schema.json",
+  "title": "Synthetic Silver Provenance Record",
+  "description": "One record per candidate silver item. Carries spans, hashes, identities, and decisions only; source text, generated payloads, secrets, and client data are structurally excluded.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version", "record_id", "source", "task", "candidate",
+    "hard_checks", "judge_results", "aggregate", "status",
+    "human_adjudication", "confidentiality_tier", "created_at"
+  ],
+  "properties": {
+    "schema_version": {"const": "0.1.0"},
+    "record_id": {"type": "string", "minLength": 1},
+    "source": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["document_id", "source_sha256", "source_version", "span"],
+      "properties": {
+        "document_id": {"type": "string", "minLength": 1},
+        "source_sha256": {"type": "string", "pattern": "^[a-f0-9]{64}$"},
+        "source_version": {"type": "string", "minLength": 1},
+        "span": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["start_char", "end_char"],
+          "properties": {
+            "start_char": {"type": "integer", "minimum": 0},
+            "end_char": {"type": "integer", "minimum": 0},
+            "page_start": {"type": "integer", "minimum": 0},
+            "page_end": {"type": "integer", "minimum": 0},
+            "section_id": {"type": "string"}
+          }
+        }
+      }
+    },
+    "task": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name", "task_version", "spec_version"],
+      "properties": {
+        "name": {"type": "string", "minLength": 1},
+        "task_version": {"type": "string", "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+$"},
+        "spec_version": {"type": "string", "minLength": 1}
+      }
+    },
+    "candidate": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "candidate_id", "producer_type", "producer", "producer_family",
+        "producer_version"
+      ],
+      "properties": {
+        "candidate_id": {"type": "string", "minLength": 1},
+        "producer_type": {"enum": ["rule", "llm", "ensemble", "human", "tool"]},
+        "producer": {"type": "string", "minLength": 1},
+        "producer_family": {"type": "string", "minLength": 1},
+        "producer_version": {"type": "string", "minLength": 1},
+        "prompt_hash": {"type": "string"},
+        "retrieval_snapshot": {"type": "string"},
+        "code_commit": {"type": "string"},
+        "seed": {"type": "integer"}
+      }
+    },
+    "hard_checks": {
+      "type": "object",
+      "minProperties": 1,
+      "additionalProperties": {"type": ["boolean", "integer", "number"]}
+    },
+    "judge_results": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["judge", "judge_family", "rubric_version", "pair_order", "scores"],
+        "properties": {
+          "judge": {"type": "string", "minLength": 1},
+          "judge_family": {"type": "string", "minLength": 1},
+          "rubric_version": {"type": "string", "minLength": 1},
+          "pair_order": {"enum": ["candidate_first", "candidate_second", "blind_single"]},
+          "scores": {
+            "type": "object",
+            "minProperties": 1,
+            "additionalProperties": {"type": ["number", "integer"]}
+          }
+        }
+      }
+    },
+    "aggregate": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["decision_policy"],
+      "properties": {
+        "accept_probability": {"type": "number", "minimum": 0, "maximum": 1},
+        "uncertainty": {"type": "number", "minimum": 0, "maximum": 1},
+        "decision_policy": {"type": "string", "minLength": 1}
+      }
+    },
+    "status": {
+      "enum": [
+        "s0_raw", "s1_machine_filtered", "s2_calibrated_accept",
+        "s3_human_sampled_accept", "needs_review", "rejected",
+        "g1_human_adjudicated", "g2_authoritative"
+      ]
+    },
+    "human_adjudication": {
+      "oneOf": [
+        {"type": "null"},
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["adjudicator", "decision", "decided_at"],
+          "properties": {
+            "adjudicator": {"type": "string", "minLength": 1},
+            "decision": {"enum": ["accept", "reject", "correct", "escalate"]},
+            "reason": {"type": "string"},
+            "decided_at": {"type": "string", "format": "date-time"}
+          }
+        }
+      ]
+    },
+    "confidentiality_tier": {
+      "enum": ["public", "internal", "restricted", "unknown"]
+    },
+    "rejection_reason": {"type": "string"},
+    "created_at": {"type": "string", "format": "date-time"}
+  },
+  "allOf": [
+    {
+      "if": {"properties": {"status": {"enum": ["g1_human_adjudicated", "g2_authoritative"]}}},
+      "then": {"properties": {"human_adjudication": {"type": "object"}}}
+    },
+    {
+      "if": {"properties": {"status": {"const": "rejected"}}},
+      "then": {"required": ["rejection_reason"]}
+    }
+  ]
+}

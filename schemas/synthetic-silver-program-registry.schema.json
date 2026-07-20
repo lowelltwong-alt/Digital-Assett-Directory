@@ -1,0 +1,119 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://local.digital-asset-directory/schemas/synthetic-silver-program-registry.schema.json",
+  "title": "Synthetic Silver Program Registry",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version", "registry_id", "registry_version", "status",
+    "ai_agnostic", "program_id", "authority_boundary", "operating_principle",
+    "tier_ladder", "non_negotiable_controls", "recipes", "adapters",
+    "pilots", "threshold_policy", "research_backlog"
+  ],
+  "properties": {
+    "schema_version": {"const": "0.1.0"},
+    "registry_id": {"const": "synthetic-silver-program-registry"},
+    "registry_version": {"type": "string", "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+$"},
+    "status": {"enum": ["candidate", "reviewed", "retired"]},
+    "ai_agnostic": {"const": true},
+    "program_id": {"const": "synthetic-silver"},
+    "authority_boundary": {"type": "string", "minLength": 1},
+    "operating_principle": {"type": "string", "minLength": 1},
+    "tier_ladder": {
+      "type": "array",
+      "minItems": 6,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "tier_id", "name", "dad_lifecycle", "permitted_use",
+          "required_controls", "human_gate_required"
+        ],
+        "properties": {
+          "tier_id": {"enum": ["S0", "S1", "S2", "S3", "G1", "G2"]},
+          "name": {"type": "string", "minLength": 1},
+          "dad_lifecycle": {"enum": ["candidate", "reviewed", "promoted"]},
+          "permitted_use": {"$ref": "#/$defs/nonEmptyStrings"},
+          "required_controls": {"$ref": "#/$defs/nonEmptyStrings"},
+          "human_gate_required": {"type": "boolean"}
+        }
+      }
+    },
+    "non_negotiable_controls": {"$ref": "#/$defs/nonEmptyStrings"},
+    "recipes": {
+      "type": "array",
+      "minItems": 3,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["recipe_id", "name", "task_types", "pipeline", "deterministic_first"],
+        "properties": {
+          "recipe_id": {"type": "string", "pattern": "^recipe:[a-z0-9-]+$"},
+          "name": {"type": "string", "minLength": 1},
+          "task_types": {"$ref": "#/$defs/nonEmptyStrings"},
+          "pipeline": {"$ref": "#/$defs/nonEmptyStrings"},
+          "deterministic_first": {"const": true}
+        }
+      }
+    },
+    "adapters": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["adapter_id", "target", "mode", "write_policy", "notes"],
+        "properties": {
+          "adapter_id": {"type": "string", "pattern": "^adapter:[a-z0-9-]+$"},
+          "target": {"type": "string", "minLength": 1},
+          "mode": {
+            "enum": [
+              "read_only_pointer",
+              "sovereignty_child_pointer",
+              "target_unresolved"
+            ]
+          },
+          "write_policy": {"const": "dad_never_writes"},
+          "notes": {"type": "string", "minLength": 1}
+        }
+      }
+    },
+    "pilots": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "pilot_id", "owner", "status", "dad_role", "brief", "blocking_unknowns"
+        ],
+        "properties": {
+          "pilot_id": {"type": "string", "pattern": "^pilot:[a-z0-9-]+$"},
+          "owner": {"type": "string", "minLength": 1},
+          "status": {"enum": ["proposed", "active", "paused", "complete", "abandoned"]},
+          "dad_role": {"type": "string", "minLength": 1},
+          "brief": {"type": "string", "minLength": 1},
+          "blocking_unknowns": {"type": "array", "items": {"type": "string", "minLength": 1}}
+        }
+      }
+    },
+    "threshold_policy": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["numeric_thresholds_in_registry", "calibration_required", "rationale"],
+      "properties": {
+        "numeric_thresholds_in_registry": {"const": false},
+        "calibration_required": {"const": true},
+        "rationale": {"type": "string", "minLength": 1}
+      }
+    },
+    "research_backlog": {"type": "array", "items": {"type": "string", "minLength": 1}}
+  },
+  "$defs": {
+    "nonEmptyStrings": {
+      "type": "array",
+      "minItems": 1,
+      "items": {"type": "string", "minLength": 1}
+    }
+  }
+}
