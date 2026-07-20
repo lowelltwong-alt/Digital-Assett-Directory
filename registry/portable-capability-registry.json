@@ -2615,6 +2615,82 @@
       "candidate_only": true,
       "execution_authorized": false,
       "authority_boundary": "This card validates a read-only candidate projection and foreground loopback host only; it cannot activate a daemon, persist a host, enroll repositories, execute requests, mutate sources, or grant authority."
+    },
+    {
+      "schema_version": "dad.portable_capability_card.v1",
+      "card_id": "portability-card:skill-dad-trigger-pattern-radar",
+      "revision_id": "portability-card-revision:skill-dad-trigger-pattern-radar:0.1.0",
+      "artifact_id": "skill:dad-trigger-pattern-radar",
+      "artifact_kind": "skill",
+      "binding_class": "portable_core",
+      "source_authority": "assets/agent-skills/dad-trigger-pattern-radar/SKILL.md",
+      "owner": "DAD and Lowell",
+      "status": "schema_validated",
+      "portable_files": [
+        "assets/agent-skills/dad-trigger-pattern-radar/SKILL.md",
+        "assets/agent-skills/dad-trigger-pattern-radar/routines.yaml",
+        "assets/agent-skills/dad-trigger-pattern-radar/subagents.yaml",
+        "assets/agent-skills/dad-trigger-pattern-radar/agents/openai.yaml",
+        "assets/agent-skills/dad-trigger-pattern-radar/references/TRIGGER_PATTERN_CONTRACT.md",
+        "assets/agent-skills/dad-trigger-pattern-radar/references/TRIGGER_PATTERN_TAXONOMY.md"
+      ],
+      "content_digest": "sha256:97ac78a54bcd56b8ac96b7f1cba08d855192ffcf01d7a849cbb753cd17604ba5",
+      "contract_digests": {
+        "input": "sha256:eee475da7d6fe76d90852dfa97de0e1f047cb72d7d0134552245b7cda9a9fb68",
+        "output": "sha256:0ec04e3bcb58df087b53068eb3756924c878f35a40871814bd8749313aa69dea",
+        "error": "sha256:0c31568c5353cbf327cd009c17af20a687f7e97685e609c9a8d96f03852fd118",
+        "privacy": "sha256:6eccc25be5945d494635818e68177f6efe953e9f2e74fbf165b5139d08429551",
+        "effect": "sha256:c9093452afcdef36603faec991dc45d87d2166fb706f2b70f263b6625f6a3491",
+        "authority": "sha256:408c3ee0aef794f423d49ba8141f3492961aa68b354d03c37c455d072d7e32c3"
+      },
+      "capability_ids": [
+        "trigger_signature_discovery",
+        "watch_only_routine_specs",
+        "false_positive_and_coverage_grading"
+      ],
+      "tool_ids": [
+        "dad-cli",
+        "git",
+        "registered-read-only-sources"
+      ],
+      "context_contract": "Immutable task, repo, validation, and handoff observations plus privacy-safe candidate trigger packets only; no private payloads, secrets, or side-effect authority.",
+      "privacy_classes": [
+        "public",
+        "internal",
+        "confidential",
+        "restricted_by_local_policy"
+      ],
+      "consequence_classes": [
+        "small",
+        "medium",
+        "large",
+        "critical"
+      ],
+      "effect_classes": [
+        "read_only",
+        "candidate_local_artifact"
+      ],
+      "dependencies": [
+        "skill:portable-capability-governance",
+        "skill:dad-learning-loop"
+      ],
+      "reverse_consumers": [
+        "agent-postflight",
+        "portfolio-review",
+        "material-work-routing"
+      ],
+      "adapter_revision_ids": [],
+      "harness_revision_id": "harness-revision:portable-capability-contract:0.1.0",
+      "evidence_refs": [
+        "assets/agent-skills/dad-trigger-pattern-radar/SKILL.md",
+        "roadmap/evidence/lfdt-authority-scope-learning-loop-v1.md",
+        "tests/test_ai_native_process_pilot_contract.py"
+      ],
+      "fresh_until": "2026-10-20T00:00:00-04:00",
+      "rollback_ref": "Revert the trigger-pattern radar portability card and watch-only pre-publication authority-scope routine while preserving prior watching-state trigger specs.",
+      "candidate_only": true,
+      "execution_authorized": false,
+      "authority_boundary": "This card dispositions candidate trigger-signature and watch-only routine specs only; it cannot schedule automations, mutate repositories, authorize publication, or grant side-effect authority."
     }
   ],
   "candidate_only": true,
