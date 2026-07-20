@@ -150,6 +150,7 @@ from .learning import (
     rebuild_lesson_routes,
 )
 from .learning_yield_report import write_learning_yield_report
+from .agent_session_split_report import write_agent_session_split_report
 from .journal import checkpoint_journal, ingest_remote_outbox, journal_repo_status, journal_status
 from .lesson_automation_coverage import (
     write_lesson_automation_coverage_outputs,
@@ -9110,6 +9111,29 @@ def agent_yield_report(
             "markdown_path": result["markdown_path"],
             "summary": report["summary"],
             "unknown_coverage": report["unknown_coverage"],
+            "routine_registration": report["routine_registration"],
+            "authority_boundary": report["authority_boundary"],
+        }
+    )
+
+
+@agent_app.command("session-split-report")
+def agent_session_split_report_command(
+    hub: Optional[Path] = typer.Option(None),
+) -> None:
+    """Dry-run compare of legacy vs data-root agent sessions (no apply/migrate)."""
+    cfg = _cfg(hub=hub)
+    result = write_agent_session_split_report(cfg.repo_root)
+    report = result["report"]
+    console.print_json(
+        data={
+            "report_id": report["report_id"],
+            "json_path": result["json_path"],
+            "markdown_path": result["markdown_path"],
+            "history_path": result["history_path"],
+            "summary": report["summary"],
+            "data_plane": report["data_plane"],
+            "apply_authorized": report["apply_authorized"],
             "routine_registration": report["routine_registration"],
             "authority_boundary": report["authority_boundary"],
         }
