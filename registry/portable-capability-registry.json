@@ -2334,7 +2334,7 @@
         "src/digital_asset_directory/portfolio_capture_core.py",
         "tests/test_portfolio_capture_core.py"
       ],
-      "content_digest": "sha256:df40dd2ed72a95fa92cd063831f748ab4910c2e4163981538277c25f3030eaa3",
+      "content_digest": "sha256:99b0bdd33021f0f4f92ddd906fa6869716234db6daa0f00640e8ccccd3802b8d",
       "contract_digests": {
         "input": "sha256:761b47acdc231d18c4a632136142e2845e13a3a3c029b3104df1370c8e78544a",
         "output": "sha256:3620cc6d9a229f2f99a96efad26ea4bf10a1d84baf158b3e688ac31d63ee9514",

@@ -76,6 +76,11 @@ def structure_capture_lines(
             break
         minimized, count = minimize_text(text.strip())
         minimized = " ".join(minimized.split())
+        # Privacy minimization can expand a line (e.g. /tmp/x -> [LOCAL_PATH]/x).
+        # Re-check after minimize/normalize so candidates never exceed the schema limit.
+        if len(minimized) > limits.max_line_chars:
+            problems.append("line_length_budget_exhausted")
+            break
         redaction_count += count
         if not minimized:
             blank_line_count += 1

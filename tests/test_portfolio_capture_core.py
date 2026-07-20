@@ -38,3 +38,20 @@ def test_core_discards_partial_batch_when_a_budget_is_exhausted() -> None:
     assert result["status"] == "partial_candidate"
     assert result["candidates"] == []
     assert result["coverage"]["problems"] == ["line_length_budget_exhausted"]
+
+
+def test_core_fails_closed_when_minimization_expands_past_line_budget() -> None:
+    """A max-length /tmp/... line can grow after path redaction; fail closed."""
+    # /tmp/a... (5 chars prefix) -> [LOCAL_PATH]/a... (13 chars), net +8.
+    max_chars = 20_000
+    raw = "/tmp/" + ("a" * (max_chars - len("/tmp/")))
+    assert len(raw) == max_chars
+    result = structure_capture_lines(
+        ["safe prior line", raw],
+        source_fingerprint="sha256:" + "c" * 64,
+        captured_at=NOW.isoformat(),
+        limits=CaptureCoreLimits(max_lines=10, max_line_chars=max_chars),
+    )
+    assert result["status"] == "partial_candidate"
+    assert result["candidates"] == []
+    assert result["coverage"]["problems"] == ["line_length_budget_exhausted"]
