@@ -149,6 +149,7 @@ from .learning import (
     preflight,
     rebuild_lesson_routes,
 )
+from .learning_yield_report import write_learning_yield_report
 from .journal import checkpoint_journal, ingest_remote_outbox, journal_repo_status, journal_status
 from .lesson_automation_coverage import (
     write_lesson_automation_coverage_outputs,
@@ -9089,6 +9090,28 @@ def agent_postflight(
             "handoff_id": handoff.handoff_id,
             "lesson_id": lesson_record.lesson_id,
             "commit_trailer": f"DAD-Session: {session}",
+        }
+    )
+
+
+@agent_app.command("yield-report")
+def agent_yield_report(
+    window_days: int = typer.Option(30, "--window-days", min=1),
+    hub: Optional[Path] = typer.Option(None),
+) -> None:
+    """Write a report-only monthly learning-loop yield projection (not scheduled)."""
+    cfg = _cfg(hub=hub)
+    result = write_learning_yield_report(cfg.repo_root, window_days=window_days)
+    report = result["report"]
+    console.print_json(
+        data={
+            "report_id": report["report_id"],
+            "json_path": result["json_path"],
+            "markdown_path": result["markdown_path"],
+            "summary": report["summary"],
+            "unknown_coverage": report["unknown_coverage"],
+            "routine_registration": report["routine_registration"],
+            "authority_boundary": report["authority_boundary"],
         }
     )
 

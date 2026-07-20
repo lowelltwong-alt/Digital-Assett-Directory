@@ -1,0 +1,118 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://dad.local/schemas/learning-loop-yield-report.schema.json",
+  "title": "DAD learning-loop yield report",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "generated_at",
+    "report_id",
+    "status",
+    "method_id",
+    "model_call_count",
+    "model_token_count",
+    "candidate_only",
+    "execution_authorized",
+    "data_classification",
+    "authority_boundary",
+    "window",
+    "loops",
+    "summary",
+    "unknown_coverage",
+    "anti_gaming_notes",
+    "routine_registration"
+  ],
+  "properties": {
+    "schema_version": {"const": "dad.learning_loop_yield_report.v1"},
+    "generated_at": {"type": "string", "format": "date-time"},
+    "report_id": {"type": "string", "pattern": "^dad:learning-loop-yield:"},
+    "status": {"const": "generated_candidate"},
+    "method_id": {"const": "dad.learning-loop-yield.v1"},
+    "model_call_count": {"const": 0},
+    "model_token_count": {"const": 0},
+    "candidate_only": {"const": true},
+    "execution_authorized": {"const": false},
+    "data_classification": {"const": "local_private_metadata"},
+    "authority_boundary": {"type": "string", "minLength": 80},
+    "window": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["days", "start_at", "end_at"],
+      "properties": {
+        "days": {"type": "integer", "minimum": 1},
+        "start_at": {"type": "string", "format": "date-time"},
+        "end_at": {"type": "string", "format": "date-time"}
+      }
+    },
+    "loops": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "loop_id",
+          "label",
+          "written_source",
+          "reuse_source",
+          "promotion_source",
+          "records_written",
+          "records_reused",
+          "records_promoted",
+          "reuse_coverage"
+        ],
+        "properties": {
+          "loop_id": {"type": "string", "minLength": 3},
+          "label": {"type": "string", "minLength": 3},
+          "written_source": {"type": "string", "minLength": 3},
+          "reuse_source": {"type": "string", "minLength": 3},
+          "promotion_source": {"type": "string", "minLength": 3},
+          "records_written": {"type": "integer", "minimum": 0},
+          "records_reused": {"type": "integer", "minimum": 0},
+          "records_promoted": {"type": "integer", "minimum": 0},
+          "reuse_coverage": {
+            "enum": ["exact", "partial", "coverage_unavailable"]
+          }
+        }
+      }
+    },
+    "summary": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "loop_count",
+        "records_written",
+        "records_reused",
+        "records_promoted",
+        "unknown_coverage_loop_count"
+      ],
+      "properties": {
+        "loop_count": {"type": "integer", "minimum": 1},
+        "records_written": {"type": "integer", "minimum": 0},
+        "records_reused": {"type": "integer", "minimum": 0},
+        "records_promoted": {"type": "integer", "minimum": 0},
+        "unknown_coverage_loop_count": {"type": "integer", "minimum": 0}
+      }
+    },
+    "unknown_coverage": {
+      "type": "array",
+      "items": {"type": "string", "minLength": 3}
+    },
+    "anti_gaming_notes": {
+      "type": "array",
+      "minItems": 1,
+      "items": {"type": "string", "minLength": 8}
+    },
+    "routine_registration": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["routine_id", "enabled", "scheduled"],
+      "properties": {
+        "routine_id": {"const": "dad-learning-loop-yield-report"},
+        "enabled": {"const": false},
+        "scheduled": {"const": false}
+      }
+    }
+  }
+}
