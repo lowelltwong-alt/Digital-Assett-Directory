@@ -9130,6 +9130,7 @@ def agent_session_split_report_command(
             "report_id": report["report_id"],
             "json_path": result["json_path"],
             "markdown_path": result["markdown_path"],
+            "history_path": result["history_path"],
             "summary": report["summary"],
             "data_plane": report["data_plane"],
             "apply_authorized": report["apply_authorized"],

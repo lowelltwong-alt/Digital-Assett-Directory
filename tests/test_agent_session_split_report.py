@@ -91,6 +91,16 @@ def test_same_location_reports_absent_split(tmp_path: Path) -> None:
     assert report["summary"]["split_evidence"] == "absent"
 
 
+def test_one_sided_orphan_is_present_split_evidence(tmp_path: Path) -> None:
+    hub = _hub_with_data_root(tmp_path)
+    legacy = hub / "state" / "agent_sessions"
+    _write_session(legacy / "orphan.json", status="open")
+    report = build_agent_session_split_report(hub)
+    assert report["summary"]["legacy_only"] == 1
+    assert report["summary"]["data_root_only"] == 0
+    assert report["summary"]["split_evidence"] == "present"
+
+
 def test_write_report_does_not_mutate_sessions(tmp_path: Path) -> None:
     hub = _hub_with_data_root(tmp_path)
     legacy = hub / "state" / "agent_sessions" / "keep.json"
@@ -98,6 +108,8 @@ def test_write_report_does_not_mutate_sessions(tmp_path: Path) -> None:
     before = legacy.read_text(encoding="utf-8")
     result = write_agent_session_split_report(hub)
     assert Path(result["json_path"]).is_file()
+    assert Path(result["markdown_path"]).is_file()
+    assert Path(result["history_path"]).is_file()
     assert legacy.read_text(encoding="utf-8") == before
 
 

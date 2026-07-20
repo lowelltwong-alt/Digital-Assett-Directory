@@ -281,7 +281,9 @@ def build_agent_session_split_report(
                     "present"
                     if counts["disagree"]
                     or counts["open_closed_split"]
-                    or (counts["legacy_only"] and counts["data_root_only"])
+                    or counts["legacy_only"]
+                    or counts["data_root_only"]
+                    or counts["parse_error"]
                     else "none_observed"
                 )
             ),
@@ -352,7 +354,12 @@ def write_agent_session_split_report(
     *,
     now: datetime | None = None,
 ) -> dict[str, Any]:
-    """Write JSON/Markdown split report under processed/reports (no session mutation)."""
+    """Write report artifacts only (no session mutation).
+
+    Writes JSON/Markdown under processed/reports and appends a metadata-only
+    cadence history row under processed/cadence. Never migrates, deletes, or
+    rewrites agent session files.
+    """
 
     report = build_agent_session_split_report(hub_root, now=now)
     reports_dir = data_path(hub_root, "central_reports")
