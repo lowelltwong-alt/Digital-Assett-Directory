@@ -1,7 +1,7 @@
 {
   "schema_version": "dad.agent_family_portfolio_registry.v1",
   "registry_id": "agent-family-portfolio-registry",
-  "registry_version": "0.2.0",
+  "registry_version": "0.2.1",
   "status": "candidate",
   "candidate_only": true,
   "ai_agnostic": true,
@@ -524,6 +524,55 @@
         "review_status": "candidate"
       },
       {
+        "source": "family:ml-workflow",
+        "edge_type": "applies_to",
+        "target": "repo:dad",
+        "evidence_ref": "registry/agent-family-portfolio-registry.json#pilot:dad-agent-family-portfolio",
+        "review_status": "candidate"
+      },
+      {
+        "source": "family:platform-cloud-sre",
+        "edge_type": "applies_to",
+        "target": "repo:dad",
+        "evidence_ref": "registry/agent-family-portfolio-registry.json#pilot:dad-agent-family-portfolio",
+        "review_status": "candidate"
+      },
+      {
+        "source": "family:harness-engineering-ops",
+        "edge_type": "applies_to",
+        "target": "repo:dad",
+        "evidence_ref": "registry/agent-family-portfolio-registry.json#pilot:dad-agent-family-portfolio",
+        "review_status": "candidate"
+      },
+      {
+        "source": "family:autonomy-oversight-and-control",
+        "edge_type": "applies_to",
+        "target": "repo:dad",
+        "evidence_ref": "registry/agent-family-portfolio-registry.json#pilot:dad-agent-family-portfolio",
+        "review_status": "candidate"
+      },
+      {
+        "source": "skill:technical-product-company-os",
+        "edge_type": "depends_on",
+        "target": "family:ml-workflow",
+        "evidence_ref": "docs/AGENT_FAMILY_RECONCILIATION.md",
+        "review_status": "candidate"
+      },
+      {
+        "source": "skill:technical-product-company-os",
+        "edge_type": "depends_on",
+        "target": "family:full-stack-engineering",
+        "evidence_ref": "docs/AGENT_FAMILY_RECONCILIATION.md",
+        "review_status": "candidate"
+      },
+      {
+        "source": "skill:technical-product-company-os",
+        "edge_type": "depends_on",
+        "target": "family:platform-cloud-sre",
+        "evidence_ref": "docs/AGENT_FAMILY_RECONCILIATION.md",
+        "review_status": "candidate"
+      },
+      {
         "source": "family:full-stack-engineering",
         "edge_type": "applies_to",
         "target": "repo:mock-trial",
@@ -781,10 +830,7 @@
         "release_handoff"
       ],
       "specialist_packs": [
-        "pack:developer-platform-devex-specialist-pack",
-        "migration_modernization",
-        "performance",
-        "cost_optimization"
+        "pack:developer-platform-devex-specialist-pack"
       ],
       "human_gates": [],
       "owner_authority": "source repository and named domain owner",
@@ -805,7 +851,7 @@
       "does_not_apply_when": [
         "A narrower existing DAD skill or deterministic tool fully satisfies the task."
       ],
-      "danger_if_misapplied": "Activating this family without evidence can add cost, duplicate authority, or create false confidence."
+      "danger_if_misapplied": "Activating this family without evidence can add cost, duplicate authority, or create false confidence. Deferred specialist packs (migration_modernization, performance, cost_optimization) remain unbuilt until promotion_policy recurrence evidence exists; see docs/AGENT_FAMILY_RECONCILIATION.md."
     },
     {
       "family_id": "family:quality-verification-release",
@@ -1304,7 +1350,7 @@
       "review_cadence": "weekly-delta-or-event-triggered",
       "applies_when": ["A reusable agent or workflow needs a provider-neutral harness or an existing harness may be stale."],
       "does_not_apply_when": ["A reviewed current harness exactly satisfies the task and no fit or lifecycle evidence changed."],
-      "danger_if_misapplied": "A weak or mismatched harness can create false confidence, unsafe execution, or lock roles to a retired runtime."
+      "danger_if_misapplied": "A weak or mismatched harness can create false confidence, unsafe execution, or lock roles to a retired runtime. pack:portable-capability-governance remains a deferred gap without a skill asset; see docs/AGENT_FAMILY_RECONCILIATION.md."
     },
     {
       "family_id": "family:autonomy-oversight-and-control",
@@ -1337,6 +1383,7 @@
       "status": "piloted_candidate",
       "privacy_scope": "repo_local_metadata_and_synthetic_tests_only",
       "family_ids": [
+        "family:ml-workflow",
         "family:full-stack-engineering",
         "family:quality-verification-release",
         "family:security-privacy-supply-chain",
@@ -1344,6 +1391,7 @@
         "family:data-schema-knowledge-graph",
         "family:integration-mcp-automation",
         "family:product-ux-accessibility",
+        "family:platform-cloud-sre",
         "family:harness-engineering-ops",
         "family:autonomy-oversight-and-control"
       ],
