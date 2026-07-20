@@ -236,6 +236,7 @@ class ReviewLaneRecord(BaseModel):
         "review-lane:learning-loop-completion",
         "review-lane:digital-asset-pattern-discovery",
         "review-lane:conversation-prompt-value",
+        "review-lane:cross-vendor-review",
     ]
     status: Literal["subagent", "checklist", "not_applicable", "not_run"]
     reviewer: str = ""
