@@ -1,6 +1,6 @@
 {
   "schema_version": "dad.mcp.dependency_map.v1",
-  "map_revision": "2026-07-16.3",
+  "map_revision": "2026-07-20.1",
   "logical_server_name": "dad-local-graph-surfaces",
   "authority_policy": {
     "local_only": true,
@@ -182,7 +182,7 @@
       "label": "Vendor-neutral reusable host adapter bundle",
       "artifact_kind": "directory",
       "change_contract": "Every template, contract, evidence schema, and validator must normalize to one server and tool contract.",
-      "fingerprint": {"kind": "tree_sha256", "path": "assets/mcp/dad-local-readonly", "sha256": "sha256:d7a13200298db9c6e9dcb83c64c072372dfb41658bc22e69235e3e02d1991245"}
+      "fingerprint": {"kind": "tree_sha256", "path": "assets/mcp/dad-local-readonly", "sha256": "sha256:15b8b437cb307d924f2bbe99998e6c38e0fe4c5988e8db0946acf7114ad2f026"}
     },
     {
       "node_id": "mcp.node.host-adapter.installed-evidence",
@@ -190,7 +190,7 @@
       "label": "Privacy-safe installed-host evidence",
       "artifact_kind": "file",
       "change_contract": "Installed/configured/available states are separate from reusable template parity and never imply activation.",
-      "fingerprint": {"kind": "exact_sha256", "path": "assets/mcp/dad-local-readonly/installed-host-evidence.json", "sha256": "sha256:d22dbf1b2ca65f6248f72e5248592cce4c8ebe9474c46591a0b43d9d54372027"}
+      "fingerprint": {"kind": "exact_sha256", "path": "assets/mcp/dad-local-readonly/installed-host-evidence.json", "sha256": "sha256:b526d3f69274264cf9b8f9b2e298f535ba145a08b0e857bae32d1c941c3b2d1e"}
     },
     {
       "node_id": "mcp.node.packaging.asset-dir",

@@ -1,6 +1,6 @@
 {
   "schema_version": "dad.mcp.installed_host_evidence.v1",
-  "captured_at": "2026-07-13T20:00:00Z",
+  "captured_at": "2026-07-20T21:47:00Z",
   "observation_max_age_days": 7,
   "future_skew_seconds": 0,
   "logical_server_name": "dad-local-graph-surfaces",
