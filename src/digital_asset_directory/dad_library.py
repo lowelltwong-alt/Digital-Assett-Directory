@@ -13,6 +13,7 @@ from pathlib import Path
 from typing import Any
 
 from .ids import stable_id
+from .intelligence_routing import recommend_start_tiers
 from .rust_bridge.dad_scan_core import validate_repo_inventory_probe_summary
 from .transport import data_path
 from .utils import append_jsonl, atomic_write_text, json_dumps, sha256_bytes, sha256_file, sha256_text_file_lf, utc_now
@@ -892,6 +893,11 @@ def compile_context_pack(
             f"{len(deferred_items)} previously deferred mail item(s) match this task; "
             "re-triage before finishing"
         )
+    intelligence_routing_advice: dict[str, Any] | None = None
+    try:
+        intelligence_routing_advice = recommend_start_tiers(task, hub_root)
+    except (FileNotFoundError, json.JSONDecodeError, KeyError, ValueError) as exc:
+        warnings.append(f"intelligence routing advice unavailable: {exc}")
     pack = {
         "schema_version": "0.1.0",
         "trace_id": trace_id,
@@ -906,6 +912,7 @@ def compile_context_pack(
         "deferred_mail": deferred_items,
         "deferred_mail_basis": str(deferred_payload.get("match_basis", "")),
         "deferred_backlog_count": int(deferred_payload.get("deferred_total", 0) or 0),
+        "intelligence_routing_advice": intelligence_routing_advice,
         "stop_conditions": [
             "Stop for a human when DAD recommendations conflict with local source authority.",
             "Stop before cross-repo writes, public releases, enrollment writes, or protected repo writes when DAD is unavailable.",

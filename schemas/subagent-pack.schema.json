@@ -55,6 +55,13 @@
             "items": {"type": "string", "minLength": 1}
           },
           "effort": {"type": "string", "minLength": 1},
+          "default_tier": {
+            "type": "array",
+            "description": "Optional provider-neutral start tiers from config/intelligence-routing-registry.json; advice only.",
+            "minItems": 1,
+            "uniqueItems": true,
+            "items": {"type": "string", "minLength": 1, "pattern": "^[a-z0-9][a-z0-9._-]*$"}
+          },
           "mission": {"type": "string", "minLength": 1},
           "required_input": {
             "type": "array",

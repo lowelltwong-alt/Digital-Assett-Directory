@@ -405,9 +405,14 @@
         "src/digital_asset_directory/portfolio_cockpit.py",
         "src/digital_asset_directory/routine_health.py",
         "src/digital_asset_directory/validation.py",
+        "schemas/agent-skill-library.schema.json",
+        "schemas/subagent-pack.schema.json",
+        "src/digital_asset_directory/dad_library.py",
+        "src/digital_asset_directory/intelligence_routing.py",
+        "tests/test_intelligence_routing.py",
         "templates/downstream/AGENTS_MANAGED_BLOCK.md"
       ],
-      "content_digest": "sha256:efb037e19fc5e3193d6686fb6e9d77a9640ed6dffc5580ad0033967419274244",
+      "content_digest": "sha256:66d4f25051eddc79a08cc4e164f18503c4db738e1716defb54d5767c1d576cc1",
       "contract_digests": {
         "input": "sha256:eee475da7d6fe76d90852dfa97de0e1f047cb72d7d0134552245b7cda9a9fb68",
         "output": "sha256:0ec04e3bcb58df087b53068eb3756924c878f35a40871814bd8749313aa69dea",
