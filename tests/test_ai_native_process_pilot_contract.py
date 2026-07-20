@@ -192,12 +192,16 @@ def test_ai_native_trigger_specs_satisfy_canonical_contract():
         "lineage_grouped_holdout",
         "drift_state",
     }
-    for routine_id in expected:
-        routine = by_id[routine_id]
+    pattern_rows = {
+        routine_id: routine
+        for routine_id, routine in by_id.items()
+        if "pattern_id" in routine
+    }
+    for routine_id, routine in pattern_rows.items():
         assert canonical_fields <= set(routine)
         assert routine["pattern_id"] != routine["pattern_revision_id"]
         assert routine["revision"] == 1
-        assert routine["status"] == "candidate"
+        assert routine["status"] in {"candidate", "watching"}
         assert routine["epistemic_state"] in {
             "observed",
             "derived",
@@ -222,9 +226,15 @@ def test_ai_native_trigger_specs_satisfy_canonical_contract():
             "harm",
             "miss",
         }
+        assert routine["historical_replay"]
+        assert routine["lineage_grouped_holdout"]
+        assert routine["drift_state"] == "not_calibrated"
+
+    for routine_id in expected:
+        routine = pattern_rows[routine_id]
+        assert routine["status"] == "candidate"
         assert routine["historical_replay"] == "not_run_candidate_only"
         assert routine["lineage_grouped_holdout"] == "not_run_candidate_only"
-        assert routine["drift_state"] == "not_calibrated"
 
     purpose = by_id["routine-purpose-expiry-review"]
     for material_field in (
@@ -254,6 +264,84 @@ def test_ai_native_trigger_specs_satisfy_canonical_contract():
         "cross_repo_write",
         "self_approve",
     } <= set(artifact["prohibited_side_effects"])
+
+
+def test_pre_publication_authority_scope_conflict_watch_contract():
+    routines = _yaml("assets/agent-skills/dad-trigger-pattern-radar/routines.yaml")
+    by_id = {row["routine_id"]: row for row in routines["routines"]}
+    watch = by_id["pre-publication-authority-scope-conflict-watch"]
+
+    assert watch["status"] == "watching"
+    assert watch["epistemic_state"] == "observed"
+    assert watch["minimum_lineage_distinct_occurrences"] == (
+        "1_for_watch_only_no_promotion"
+    )
+    assert {
+        "resolve_source_authority_and_supersession_chain",
+        "resolve_real_remote_base_and_proposed_head",
+        "compute_full_pr_commit_and_path_scope",
+        "compare_to_approved_scope",
+    } <= set(watch["ordered_sequence"])
+    assert {
+        "push",
+        "create_or_update_pr",
+        "mark_ready",
+        "merge",
+        "force_push",
+        "rewrite_history",
+        "delete_branch",
+        "self_approve",
+    } <= set(watch["prohibited_side_effects"])
+    assert (
+        "derived_handoff_or_later_natural_language_instruction_is_being_used_or_proposed_head_has_ancestors_absent_from_real_remote_base"
+        in watch["applies_when"]
+    )
+    assert (
+        "later_revision_bound_human_approval_explicitly_supersedes_the_prior_record_and_matches_exact_head_base_and_path_scope"
+        in watch["does_not_apply_when"]
+    )
+    assert {
+        "repository_identity",
+        "remote_identity",
+        "authority_revision_ids",
+        "supersession_refs",
+        "proposed_head",
+        "real_remote_base",
+        "ancestry",
+        "commit_set",
+        "pathset",
+        "input_fingerprint",
+        "suppressors",
+        "idempotency_key",
+    } <= set(watch["deterministic_fields"])
+    assert set(watch["model_proposed_fields"]) == {
+        "semantic_conflict_classification",
+        "whether_later_language_is_specific_enough_to_supersede",
+        "smallest_human_decision_packet",
+    }
+    assert watch["human_gate"] == (
+        "required_before_push_pr_creation_ready_transition_merge_history_rewrite_branch_deletion_or_instruction_change"
+    )
+    assert watch["side_effect_authority"] == "none_candidate_packet_only"
+    assert watch["rollback"] == (
+        "discard_conflict_packet_and_restore_prior_watching_state_no_git_or_instruction_change_exists"
+    )
+    assert "input_fingerprint_unchanged" in watch["suppress_when"]
+    assert {
+        "any_git_or_external_side_effect_occurs",
+        "trigger_treats_a_handoff_as_source_authority",
+        "trigger_auto_resolves_semantic_supersession",
+        "private_payload_is_required",
+        "repeated_false_positive_blocks_exact_approved_scope",
+    } == set(watch["kill_criteria"])
+    assert {
+        "roadmap/evidence/lfdt-authority-scope-learning-loop-v1.md",
+        "dad:lesson:ff023194-14a8-5ccd-b6af-6bb2cd53af1e",
+    } == set(watch["evidence_refs"])
+    assert watch["historical_replay"] == (
+        "one_observed_lfdt_incident_not_enough_for_promotion"
+    )
+    assert watch["lineage_grouped_holdout"] == "not_run_watch_only"
 
 
 def test_pay_forward_surfaces_workflow_telemetry_without_value_claims():
