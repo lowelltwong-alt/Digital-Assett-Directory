@@ -18,9 +18,16 @@ from typing import Any, Sequence
 
 from .event_pipeline import collect_events
 from .exceptions_lake import (
+    LAKE_PATH,
     collect_exception_events,
     collect_exception_fix_outcomes,
+    exception_data_path,
+    write_exception_backfill_refresh_plan,
+    write_exception_backfill_review_queue,
+    write_exception_fix_outcome_requests,
+    write_exception_learning_queue,
     write_exception_report,
+    write_exception_source_packet_opportunities,
 )
 from .graph_inference import write_inference_outputs
 from .logos_write_guard import assert_dad_write_allowed
@@ -829,6 +836,44 @@ def _collect_exceptions_for_repos(
     }
 
 
+# Events-lake-derived reports drift whenever the central lake changes (for
+# example after the daemon collects new exception events). They read only the
+# lake, so unlike the on-demand, repo-scanning backfill/capture reports they are
+# cheap to refresh every cycle and keep DAD validation green between manual runs.
+_EXCEPTION_LAKE_REPORT_BUILDERS = (
+    ("exception_learning_queue", write_exception_learning_queue),
+    ("exception_fix_outcome_requests", write_exception_fix_outcome_requests),
+    ("exception_source_packet_opportunities", write_exception_source_packet_opportunities),
+    ("exception_backfill_review_queue", write_exception_backfill_review_queue),
+    ("exception_backfill_refresh_plan", write_exception_backfill_refresh_plan),
+)
+
+
+def _run_exception_lake_reports(hub_root: Path) -> dict[str, Any]:
+    """Refresh the cheap events-lake-derived exception reports.
+
+    Skipped (not errored) when no central lake exists, so empty hubs and repos
+    without collected exception events stay clean. The heavier repo-scanning
+    backfill/capture reports are intentionally left on-demand.
+    """
+    if not exception_data_path(hub_root, LAKE_PATH).exists():
+        return {
+            "status": "skipped",
+            "step": "exception_lake_reports",
+            "reason": "exception_lake_absent",
+            "authority_boundary": AUTHORITY_BOUNDARY,
+        }
+    return {
+        "status": "ok",
+        "step": "exception_lake_reports",
+        "reports": {
+            name: _step_result(name, builder, hub_root)
+            for name, builder in _EXCEPTION_LAKE_REPORT_BUILDERS
+        },
+        "authority_boundary": AUTHORITY_BOUNDARY,
+    }
+
+
 def _run_exception_cycle(
     hub_root: Path, *, exception_repos: Sequence[Any] | None
 ) -> dict[str, Any]:
@@ -897,6 +942,7 @@ def run_daemon_cycle(
         "mail_follow_through_audit",
         "events_collect",
         "exceptions_collect",
+        "exception_lake_reports",
         "lesson_graph_rebuild",
         "logos_llos_read_only_audit",
         "subagent_improvement_review",
@@ -941,6 +987,7 @@ def run_daemon_cycle(
     )
     event_result = _run_event_cycle(hub_root, mail_repos=mail_repos)
     exception_result = _run_exception_cycle(hub_root, exception_repos=exception_repos)
+    exception_lake_reports_result = _run_exception_lake_reports(hub_root)
     graph_result = (
         _run_graph_cycle(hub_root)
         if rebuild_graphs
@@ -1059,6 +1106,7 @@ def run_daemon_cycle(
             "follow_through": follow_through_result,
             "events": event_result,
             "exceptions": exception_result,
+            "exception_lake_reports": exception_lake_reports_result,
             "graphs": graph_result,
             "logos_llos": logos_llos_result,
             "subagent_improvement": subagent_improvement_result,
@@ -1096,6 +1144,7 @@ def run_daemon_cycle(
         "follow_through": follow_through_result,
         "events": event_result,
         "exceptions": exception_result,
+        "exception_lake_reports": exception_lake_reports_result,
         "graphs": graph_result,
         "logos_llos": logos_llos_result,
         "subagent_improvement": subagent_improvement_result,

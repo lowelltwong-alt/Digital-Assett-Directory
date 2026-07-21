@@ -820,6 +820,7 @@ def test_daemon_cycle_writes_heartbeat_and_daily_queue(tmp_path: Path):
         "mail_follow_through_audit",
         "events_collect",
         "exceptions_collect",
+        "exception_lake_reports",
         "lesson_graph_rebuild",
         "logos_llos_read_only_audit",
         "subagent_improvement_review",
@@ -837,6 +838,8 @@ def test_daemon_cycle_writes_heartbeat_and_daily_queue(tmp_path: Path):
         first["graphs"]["subagent_capability_graph"]["reason"]
         == "subagent_evaluation_inputs_incomplete"
     )
+    assert first["exception_lake_reports"]["status"] == "skipped"
+    assert first["exception_lake_reports"]["reason"] == "exception_lake_absent"
     assert Path(first["daily_review_queue"]["markdown_path"]).exists()
     assert first["graph_surface_status"]["schema_version"] == "dad.graph_surface.status.v1"
     assert "graph_surfaces" in first["daily_review_queue"]["report"]
@@ -995,6 +998,44 @@ def test_daemon_fingerprint_tracks_graph_surface_registry_inputs(tmp_path: Path)
 
     assert after != before
     assert after_count == before_count
+
+
+def test_daemon_exception_lake_reports_skip_without_lake(tmp_path: Path):
+    hub = tmp_path / "hub"
+    hub.mkdir()
+    result = daemon_mod._run_exception_lake_reports(hub)
+    assert result["status"] == "skipped"
+    assert result["reason"] == "exception_lake_absent"
+
+
+def test_daemon_exception_lake_reports_run_when_lake_present(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+):
+    hub = tmp_path / "hub"
+    hub.mkdir()
+    lake = daemon_mod.exception_data_path(hub, daemon_mod.LAKE_PATH)
+    lake.parent.mkdir(parents=True, exist_ok=True)
+    lake.write_text('{"event_id":"e1","event_type":"x"}\n', encoding="utf-8")
+
+    calls: list[str] = []
+
+    def make_stub(name: str):
+        def _stub(hub_root: Path, **_kwargs: Any) -> dict[str, Any]:
+            calls.append(name)
+            return {"report": name}
+
+        return _stub
+
+    monkeypatch.setattr(
+        daemon_mod,
+        "_EXCEPTION_LAKE_REPORT_BUILDERS",
+        tuple((name, make_stub(name)) for name, _ in daemon_mod._EXCEPTION_LAKE_REPORT_BUILDERS),
+    )
+    result = daemon_mod._run_exception_lake_reports(hub)
+
+    assert result["status"] == "ok"
+    assert len(calls) == 5
+    assert all(step["status"] == "ok" for step in result["reports"].values())
 
 
 def test_daemon_fingerprint_tracks_logos_control_mirror_inputs(tmp_path: Path):
