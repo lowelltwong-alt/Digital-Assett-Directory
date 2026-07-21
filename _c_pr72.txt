@@ -1,5 +1,0 @@
-merge: reconcile Synthetic Silver program onto current main.
-
-Resolve MCP/portable digest conflicts, recompute fingerprints, and own examples/ under governance module boundaries.
-
-DAD-Session: dad:session:4246dce9-f7f9-4ba4-93ac-6b100d91828d
