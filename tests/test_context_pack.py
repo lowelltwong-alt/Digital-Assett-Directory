@@ -39,3 +39,33 @@ def test_rank_assets_weights_rare_query_terms_above_common_boilerplate():
 
     assert ranked[0][1].asset_id == "rare"
     assert ranked[0][2][0] == "rareterm"
+
+
+def test_snake_case_asset_matches_natural_language_query():
+    target = asset("lpr", "learning_promotion_readiness", [], 10)
+    noise = asset("noise", "unrelated_topic", [], 10)
+
+    ranked = rank_assets("learning promotion readiness", [target, noise])
+
+    assert ranked, "expected at least one match for a snake_case title"
+    assert ranked[0][1].asset_id == "lpr"
+
+
+def test_camel_case_asset_matches_natural_language_query():
+    target = asset("pc", "PortfolioCockpit", [], 10)
+    noise = asset("noise", "SomethingElse", [], 10)
+
+    ranked = rank_assets("portfolio cockpit", [target, noise])
+
+    assert ranked, "expected at least one match for a camelCase title"
+    assert ranked[0][1].asset_id == "pc"
+
+
+def test_exact_underscore_token_query_still_matches():
+    target = asset("bll", "budget_learning_loop", [], 10)
+    noise = asset("noise", "unrelated_topic", [], 10)
+
+    ranked = rank_assets("budget_learning_loop", [target, noise])
+
+    assert ranked, "exact underscore token query should still match"
+    assert ranked[0][1].asset_id == "bll"
