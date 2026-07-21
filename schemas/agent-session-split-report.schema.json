@@ -1,0 +1,127 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://dad.local/schemas/agent-session-split-report.schema.json",
+  "title": "DAD agent session split-state dry-run report",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "generated_at",
+    "report_id",
+    "status",
+    "method_id",
+    "model_call_count",
+    "model_token_count",
+    "candidate_only",
+    "execution_authorized",
+    "apply_authorized",
+    "data_classification",
+    "authority_boundary",
+    "data_plane",
+    "canonical_write_path",
+    "legacy_read_fallback",
+    "summary",
+    "pairs",
+    "next_actions",
+    "routine_registration"
+  ],
+  "properties": {
+    "schema_version": {"const": "dad.agent_session_split_report.v1"},
+    "generated_at": {"type": "string", "minLength": 10},
+    "report_id": {"type": "string", "pattern": "^dad:agent-session-split:"},
+    "status": {"const": "generated_candidate"},
+    "method_id": {"const": "dad.agent-session-split.v1"},
+    "model_call_count": {"const": 0},
+    "model_token_count": {"const": 0},
+    "candidate_only": {"const": true},
+    "execution_authorized": {"const": false},
+    "apply_authorized": {"const": false},
+    "data_classification": {"const": "local_private_metadata"},
+    "authority_boundary": {"type": "string", "minLength": 80},
+    "data_plane": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "mode",
+        "data_root",
+        "legacy_sessions_dir",
+        "canonical_sessions_dir",
+        "same_location"
+      ],
+      "properties": {
+        "mode": {"enum": ["legacy", "data_root"]},
+        "data_root": {"type": "string", "minLength": 1},
+        "legacy_sessions_dir": {"type": "string", "minLength": 1},
+        "canonical_sessions_dir": {"type": "string", "minLength": 1},
+        "same_location": {"type": "boolean"}
+      }
+    },
+    "canonical_write_path": {"type": "string", "minLength": 8},
+    "legacy_read_fallback": {"type": "string", "minLength": 8},
+    "summary": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "session_file_count",
+        "agree",
+        "disagree",
+        "legacy_only",
+        "data_root_only",
+        "open_closed_split",
+        "parse_error",
+        "same_location_no_split_possible",
+        "split_evidence"
+      ],
+      "properties": {
+        "session_file_count": {"type": "integer", "minimum": 0},
+        "agree": {"type": "integer", "minimum": 0},
+        "disagree": {"type": "integer", "minimum": 0},
+        "legacy_only": {"type": "integer", "minimum": 0},
+        "data_root_only": {"type": "integer", "minimum": 0},
+        "open_closed_split": {"type": "integer", "minimum": 0},
+        "parse_error": {"type": "integer", "minimum": 0},
+        "same_location_no_split_possible": {"type": "integer", "minimum": 0},
+        "split_evidence": {
+          "enum": ["absent", "none_observed", "present"]
+        }
+      }
+    },
+    "pairs": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": true,
+        "required": [
+          "session_file",
+          "classification",
+          "proposed_resolution",
+          "differing_fields"
+        ],
+        "properties": {
+          "session_file": {"type": "string"},
+          "classification": {"type": "string"},
+          "proposed_resolution": {"type": "string"},
+          "differing_fields": {
+            "type": "array",
+            "items": {"type": "string"}
+          }
+        }
+      }
+    },
+    "next_actions": {
+      "type": "array",
+      "minItems": 1,
+      "items": {"type": "string", "minLength": 8}
+    },
+    "routine_registration": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["routine_id", "enabled", "scheduled"],
+      "properties": {
+        "routine_id": {"const": "dad-agent-session-split-report"},
+        "enabled": {"const": false},
+        "scheduled": {"const": false}
+      }
+    }
+  }
+}

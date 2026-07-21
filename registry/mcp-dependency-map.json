@@ -1,6 +1,6 @@
 {
   "schema_version": "dad.mcp.dependency_map.v1",
-  "map_revision": "2026-07-20.1",
+  "map_revision": "2026-07-21.1",
   "logical_server_name": "dad-local-graph-surfaces",
   "authority_policy": {
     "local_only": true,
@@ -33,7 +33,11 @@
       "label": "Canonical logical server identity",
       "artifact_kind": "file",
       "change_contract": "A logical-name or implementation change requires parity review in every adapter and host evidence row.",
-      "fingerprint": {"kind": "exact_sha256", "path": "assets/mcp/dad-local-readonly/contract.json", "sha256": "sha256:e7d2e95a3ee3ac12c5c54718b86223e0f91e6e8ec3a2e3012fd39554979866bc"}
+      "fingerprint": {
+        "kind": "exact_sha256",
+        "path": "assets/mcp/dad-local-readonly/contract.json",
+        "sha256": "sha256:e7d2e95a3ee3ac12c5c54718b86223e0f91e6e8ec3a2e3012fd39554979866bc"
+      }
     },
     {
       "node_id": "mcp.node.contract.surface",
@@ -41,7 +45,11 @@
       "label": "Versioned provider-neutral MCP surface contract",
       "artifact_kind": "file",
       "change_contract": "Contract changes require schema, server, adapter, privacy, and compatibility conformance review.",
-      "fingerprint": {"kind": "exact_sha256", "path": "registry/mcp-surface-contract.json", "sha256": "sha256:5be788ebbed838ea618bbb607f06e0046eee7fb2e8440b1ba555dfc0c1305914"}
+      "fingerprint": {
+        "kind": "exact_sha256",
+        "path": "registry/mcp-surface-contract.json",
+        "sha256": "sha256:5be788ebbed838ea618bbb607f06e0046eee7fb2e8440b1ba555dfc0c1305914"
+      }
     },
     {
       "node_id": "mcp.node.protocol.jsonrpc-stdio",
@@ -49,7 +57,11 @@
       "label": "MCP JSON-RPC stdio protocol implementation",
       "artifact_kind": "file",
       "change_contract": "Protocol or method changes require initialize, tools, resources, privacy, and adapter parity checks.",
-      "fingerprint": {"kind": "exact_sha256", "path": "src/digital_asset_directory/mcp_server.py", "sha256": "sha256:0c6d3e8611b87602b38ead1bd8fad8fd4b566d7f495e91551f7cbaf626c45852"}
+      "fingerprint": {
+        "kind": "exact_sha256",
+        "path": "src/digital_asset_directory/mcp_server.py",
+        "sha256": "sha256:0c6d3e8611b87602b38ead1bd8fad8fd4b566d7f495e91551f7cbaf626c45852"
+      }
     },
     {
       "node_id": "mcp.node.entrypoint.graph-stdio",
@@ -57,7 +69,12 @@
       "label": "graph-stdio CLI entrypoint",
       "artifact_kind": "file",
       "change_contract": "The hardcoded module and CLI command coupling must stay identical to all host adapters.",
-      "fingerprint": {"kind": "python_symbol_sha256", "path": "src/digital_asset_directory/cli.py", "symbol": "mcp_graph_stdio", "sha256": "sha256:2eb0e2831a599b1fb8508973d8923bf64928ae1209d2d7fa587b6d0acd71b35b"}
+      "fingerprint": {
+        "kind": "python_symbol_sha256",
+        "path": "src/digital_asset_directory/cli.py",
+        "symbol": "mcp_graph_stdio",
+        "sha256": "sha256:2eb0e2831a599b1fb8508973d8923bf64928ae1209d2d7fa587b6d0acd71b35b"
+      }
     },
     {
       "node_id": "mcp.node.implementation.server",
@@ -65,7 +82,11 @@
       "label": "Read-only MCP server",
       "artifact_kind": "file",
       "change_contract": "Any edit invalidates the exact implementation fingerprint and requires interface/privacy revalidation.",
-      "fingerprint": {"kind": "exact_sha256", "path": "src/digital_asset_directory/mcp_server.py", "sha256": "sha256:0c6d3e8611b87602b38ead1bd8fad8fd4b566d7f495e91551f7cbaf626c45852"}
+      "fingerprint": {
+        "kind": "exact_sha256",
+        "path": "src/digital_asset_directory/mcp_server.py",
+        "sha256": "sha256:0c6d3e8611b87602b38ead1bd8fad8fd4b566d7f495e91551f7cbaf626c45852"
+      }
     },
     {
       "node_id": "mcp.node.implementation.packet-engine",
@@ -73,7 +94,11 @@
       "label": "Supervised MCP packet engine",
       "artifact_kind": "file",
       "change_contract": "Packet identity, expiry, replay, checker separation, and non-authorizing result rules require packet and privacy tests.",
-      "fingerprint": {"kind": "exact_sha256", "path": "src/digital_asset_directory/mcp_packets.py", "sha256": "sha256:d88a4ac5085697aaeabe9cd04b4a69a1efb2e80b6139083c8b024646b5aa962a"}
+      "fingerprint": {
+        "kind": "exact_sha256",
+        "path": "src/digital_asset_directory/mcp_packets.py",
+        "sha256": "sha256:d88a4ac5085697aaeabe9cd04b4a69a1efb2e80b6139083c8b024646b5aa962a"
+      }
     },
     {
       "node_id": "mcp.node.validation.remote-conformance",
@@ -81,7 +106,11 @@
       "label": "Synthetic remote MCP conformance harness",
       "artifact_kind": "file",
       "change_contract": "Remote tests remain synthetic and must never enable network, tenant, credential, or execution authority.",
-      "fingerprint": {"kind": "exact_sha256", "path": "src/digital_asset_directory/mcp_conformance.py", "sha256": "sha256:740cf0e5b443e3790bcdb27a31278a383f27515caf4a27e12d2d18cb17b25f9b"}
+      "fingerprint": {
+        "kind": "exact_sha256",
+        "path": "src/digital_asset_directory/mcp_conformance.py",
+        "sha256": "sha256:740cf0e5b443e3790bcdb27a31278a383f27515caf4a27e12d2d18cb17b25f9b"
+      }
     },
     {
       "node_id": "mcp.node.implementation.dependency-engine",
@@ -89,7 +118,11 @@
       "label": "Dependency freshness and impact engine",
       "artifact_kind": "file",
       "change_contract": "Any edit requires mutation, refusal, privacy, and deterministic replay tests.",
-      "fingerprint": {"kind": "exact_sha256", "path": "src/digital_asset_directory/mcp_dependency_map.py", "sha256": "sha256:f1cd29d05b2c3ed32557cebe7c1274d5ef9ac729d60e06400ea9eeb2988030e5"}
+      "fingerprint": {
+        "kind": "exact_sha256",
+        "path": "src/digital_asset_directory/mcp_dependency_map.py",
+        "sha256": "sha256:f1cd29d05b2c3ed32557cebe7c1274d5ef9ac729d60e06400ea9eeb2988030e5"
+      }
     },
     {
       "node_id": "mcp.node.implementation.compatibility-facade",
@@ -97,7 +130,11 @@
       "label": "Single-server compatibility facade",
       "artifact_kind": "file",
       "change_contract": "The facade must continue to re-export one canonical implementation without new authority.",
-      "fingerprint": {"kind": "exact_sha256", "path": "src/digital_asset_directory/mcp_graph_server.py", "sha256": "sha256:a50e533eb6d03834a21c3efc441b11c6abe9c4146cadfc5e1a4849b25b63b190"}
+      "fingerprint": {
+        "kind": "exact_sha256",
+        "path": "src/digital_asset_directory/mcp_graph_server.py",
+        "sha256": "sha256:a50e533eb6d03834a21c3efc441b11c6abe9c4146cadfc5e1a4849b25b63b190"
+      }
     },
     {
       "node_id": "mcp.node.backend.graph-surfaces",
@@ -105,7 +142,17 @@
       "label": "Graph surface read backend",
       "artifact_kind": "file",
       "change_contract": "Only the MCP-consumed graph-surface symbols are fingerprinted; unrelated module edits do not create false staleness.",
-      "fingerprint": {"kind": "python_symbols_sha256", "path": "src/digital_asset_directory/graph_surfaces.py", "symbols": ["graph_surface_freshness", "graph_surface_status", "load_graph_surface_registry", "resolve_graph_surface_path"], "sha256": "sha256:2d37a9b429544c00ed7173895bb97cada93aa6e2b0c5ec2748c2461de7b4c867"}
+      "fingerprint": {
+        "kind": "python_symbols_sha256",
+        "path": "src/digital_asset_directory/graph_surfaces.py",
+        "symbols": [
+          "graph_surface_freshness",
+          "graph_surface_status",
+          "load_graph_surface_registry",
+          "resolve_graph_surface_path"
+        ],
+        "sha256": "sha256:2d37a9b429544c00ed7173895bb97cada93aa6e2b0c5ec2748c2461de7b4c867"
+      }
     },
     {
       "node_id": "mcp.node.backend.operational-status",
@@ -120,7 +167,12 @@
       "label": "Canonical JSON serialization",
       "artifact_kind": "file",
       "change_contract": "Only json_dumps semantics affect this server dependency.",
-      "fingerprint": {"kind": "python_symbol_sha256", "path": "src/digital_asset_directory/utils.py", "symbol": "json_dumps", "sha256": "sha256:8cde579c6c209bf2938bc21b83d1c16a65b933c8ef7790763c4b82527ce90deb"}
+      "fingerprint": {
+        "kind": "python_symbol_sha256",
+        "path": "src/digital_asset_directory/utils.py",
+        "symbol": "json_dumps",
+        "sha256": "sha256:8cde579c6c209bf2938bc21b83d1c16a65b933c8ef7790763c4b82527ce90deb"
+      }
     },
     {
       "node_id": "mcp.node.runtime-data.local-hub",
@@ -135,7 +187,11 @@
       "label": "Strict MCP dependency map schema",
       "artifact_kind": "file",
       "change_contract": "Schema changes require map, validator, registry, and mutation-test updates.",
-      "fingerprint": {"kind": "exact_sha256", "path": "schemas/mcp-dependency-map.schema.json", "sha256": "sha256:142e598bbfa6f95e9db535d7443933b15531aeb5dc8ff06652b7575b2c8617c3"}
+      "fingerprint": {
+        "kind": "exact_sha256",
+        "path": "schemas/mcp-dependency-map.schema.json",
+        "sha256": "sha256:142e598bbfa6f95e9db535d7443933b15531aeb5dc8ff06652b7575b2c8617c3"
+      }
     },
     {
       "node_id": "mcp.node.schema.graph-surfaces",
@@ -143,7 +199,11 @@
       "label": "Graph surface schemas",
       "artifact_kind": "file",
       "change_contract": "Graph-surface contract changes require resource and data-flow review.",
-      "fingerprint": {"kind": "exact_sha256", "path": "schemas/graph-surface-registry.schema.json", "sha256": "sha256:254d266d69facfe194de36206374b7a86198c8066bddd23aae1aa78d0a3ec3fd"}
+      "fingerprint": {
+        "kind": "exact_sha256",
+        "path": "schemas/graph-surface-registry.schema.json",
+        "sha256": "sha256:254d266d69facfe194de36206374b7a86198c8066bddd23aae1aa78d0a3ec3fd"
+      }
     },
     {
       "node_id": "mcp.node.registry.dependency-map",
@@ -158,7 +218,12 @@
       "label": "Graph surface registry semantics",
       "artifact_kind": "file",
       "change_contract": "Canonical JSON semantics are fingerprinted so formatting-only changes do not create false staleness.",
-      "fingerprint": {"kind": "json_pointer_sha256", "path": "registry/graph-surface-registry.json", "pointer": "/surfaces", "sha256": "sha256:39d416c481a30cb3bdaf9bf81f74ab4ee595e33633b321a8f8e96ae916c955cc"}
+      "fingerprint": {
+        "kind": "json_pointer_sha256",
+        "path": "registry/graph-surface-registry.json",
+        "pointer": "/surfaces",
+        "sha256": "sha256:39d416c481a30cb3bdaf9bf81f74ab4ee595e33633b321a8f8e96ae916c955cc"
+      }
     },
     {
       "node_id": "mcp.node.registry.schema-route",
@@ -166,7 +231,12 @@
       "label": "Schema registry MCP dependency route",
       "artifact_kind": "file",
       "change_contract": "Only the named MCP schema route is fingerprinted in the shared schema registry.",
-      "fingerprint": {"kind": "json_pointer_sha256", "path": "registry/schema-registry.json", "pointer": "/schemas/mcp_dependency_map", "sha256": "sha256:817fb10f67751ba48bac355ea749bc23d911e7fd533aad4ea124d035931dc3da"}
+      "fingerprint": {
+        "kind": "json_pointer_sha256",
+        "path": "registry/schema-registry.json",
+        "pointer": "/schemas/mcp_dependency_map",
+        "sha256": "sha256:817fb10f67751ba48bac355ea749bc23d911e7fd533aad4ea124d035931dc3da"
+      }
     },
     {
       "node_id": "mcp.node.governance.mcp-first-policy",
@@ -174,7 +244,11 @@
       "label": "MCP-first integration policy",
       "artifact_kind": "file",
       "change_contract": "Governance changes require explicit authority and data-direction review before implementation follows.",
-      "fingerprint": {"kind": "exact_sha256", "path": "docs/MCP_FIRST_INTEGRATION_POLICY.md", "sha256": "sha256:550f20e3cf251243b41ca5b3a6ad0c157cbe6fd21a47d64497e4a70e6326f4d2"}
+      "fingerprint": {
+        "kind": "exact_sha256",
+        "path": "docs/MCP_FIRST_INTEGRATION_POLICY.md",
+        "sha256": "sha256:550f20e3cf251243b41ca5b3a6ad0c157cbe6fd21a47d64497e4a70e6326f4d2"
+      }
     },
     {
       "node_id": "mcp.node.host-adapter.templates",
@@ -182,23 +256,26 @@
       "label": "Vendor-neutral reusable host adapter bundle",
       "artifact_kind": "directory",
       "change_contract": "Every template, contract, evidence schema, and validator must normalize to one server and tool contract.",
-      "fingerprint": {"kind": "tree_sha256", "path": "assets/mcp/dad-local-readonly", "sha256": "sha256:15b8b437cb307d924f2bbe99998e6c38e0fe4c5988e8db0946acf7114ad2f026"}
-    },
+      "fingerprint": {"kind": "tree_sha256", "path": "assets/mcp/dad-local-readonly", "sha256": "sha256:c48c3cef3928e2e611cb8686c67f94820a3d35d4ccd07b42de41c52bc17a33b3"}    },
     {
       "node_id": "mcp.node.host-adapter.installed-evidence",
       "category": "host_adapter",
       "label": "Privacy-safe installed-host evidence",
       "artifact_kind": "file",
       "change_contract": "Installed/configured/available states are separate from reusable template parity and never imply activation.",
-      "fingerprint": {"kind": "exact_sha256", "path": "assets/mcp/dad-local-readonly/installed-host-evidence.json", "sha256": "sha256:b526d3f69274264cf9b8f9b2e298f535ba145a08b0e857bae32d1c941c3b2d1e"}
-    },
+      "fingerprint": {"kind": "exact_sha256", "path": "assets/mcp/dad-local-readonly/installed-host-evidence.json", "sha256": "sha256:9768dbdec4d859a7fab1b34c0e027350fcaa5a3acb3c8180044d09e42f329bc7"}    },
     {
       "node_id": "mcp.node.packaging.asset-dir",
       "category": "packaging",
       "label": "asset-dir console script packaging",
       "artifact_kind": "file",
       "change_contract": "Only the console-script binding is fingerprinted in shared packaging metadata.",
-      "fingerprint": {"kind": "toml_pointer_sha256", "path": "pyproject.toml", "pointer": "/project/scripts/asset-dir", "sha256": "sha256:9883c5305cb11bb83f6cd3d1a672ae85331bc338c5c01621e024835146312b0e"}
+      "fingerprint": {
+        "kind": "toml_pointer_sha256",
+        "path": "pyproject.toml",
+        "pointer": "/project/scripts/asset-dir",
+        "sha256": "sha256:9883c5305cb11bb83f6cd3d1a672ae85331bc338c5c01621e024835146312b0e"
+      }
     },
     {
       "node_id": "mcp.node.navigation.machine-route",
@@ -206,7 +283,12 @@
       "label": "Machine navigation route to the MCP dependency map",
       "artifact_kind": "file",
       "change_contract": "The shared navigation file is tracked by its one MCP route rather than a giant-file hash.",
-      "fingerprint": {"kind": "text_line_sha256", "path": "MACHINE_NAVIGATION_MANIFEST.json", "contains": "registry/mcp-dependency-map.json", "sha256": "sha256:fb2d942910fea1d041c79a1c06983a4c31941701425d820c758a4f87e4886f50"}
+      "fingerprint": {
+        "kind": "text_line_sha256",
+        "path": "MACHINE_NAVIGATION_MANIFEST.json",
+        "contains": "registry/mcp-dependency-map.json",
+        "sha256": "sha256:fb2d942910fea1d041c79a1c06983a4c31941701425d820c758a4f87e4886f50"
+      }
     },
     {
       "node_id": "mcp.node.navigation.ai-toc",
@@ -214,7 +296,12 @@
       "label": "AI table-of-contents MCP dependency route",
       "artifact_kind": "file",
       "change_contract": "The one semantic TOC row must keep path, role, tags, and use-when routing for the dependency map.",
-      "fingerprint": {"kind": "text_line_sha256", "path": "AI_TABLE_OF_CONTENTS.md", "contains": "| `registry/mcp-dependency-map.json` |", "sha256": "sha256:ae7da53ff694892d40600ccddee5802a0f2cda5116d0b99ffb2afbfee90b7f2a"}
+      "fingerprint": {
+        "kind": "text_line_sha256",
+        "path": "AI_TABLE_OF_CONTENTS.md",
+        "contains": "| `registry/mcp-dependency-map.json` |",
+        "sha256": "sha256:ae7da53ff694892d40600ccddee5802a0f2cda5116d0b99ffb2afbfee90b7f2a"
+      }
     },
     {
       "node_id": "mcp.node.navigation.ai-registry",
@@ -222,7 +309,16 @@
       "label": "AI navigation registry MCP route set",
       "artifact_kind": "file",
       "change_contract": "Only the three unique MCP dependency route lines in the shared registry are fingerprinted.",
-      "fingerprint": {"kind": "text_lines_sha256", "path": "registry/ai-navigation-registry.json", "contains": ["registry/mcp-dependency-map.json", "schemas/mcp-dependency-map.schema.json", "src/digital_asset_directory/mcp_dependency_map.py"], "sha256": "sha256:04e364484b3a97f0eb43f9614a3567c69e25c0d639c9ceac7b1548f5982cb9c6"}
+      "fingerprint": {
+        "kind": "text_lines_sha256",
+        "path": "registry/ai-navigation-registry.json",
+        "contains": [
+          "registry/mcp-dependency-map.json",
+          "schemas/mcp-dependency-map.schema.json",
+          "src/digital_asset_directory/mcp_dependency_map.py"
+        ],
+        "sha256": "sha256:04e364484b3a97f0eb43f9614a3567c69e25c0d639c9ceac7b1548f5982cb9c6"
+      }
     },
     {
       "node_id": "mcp.node.validation.deterministic-suite",
@@ -230,7 +326,11 @@
       "label": "MCP dependency mutation and parity tests",
       "artifact_kind": "file",
       "change_contract": "Test edits require review so coverage cannot silently weaken.",
-      "fingerprint": {"kind": "exact_sha256", "path": "tests/test_mcp_dependency_map.py", "sha256": "sha256:400ba1043e5dda514bb2f29dafdf2f9e3970ebf33656e908240d45a293d54709"}
+      "fingerprint": {
+        "kind": "exact_sha256",
+        "path": "tests/test_mcp_dependency_map.py",
+        "sha256": "sha256:400ba1043e5dda514bb2f29dafdf2f9e3970ebf33656e908240d45a293d54709"
+      }
     },
     {
       "node_id": "mcp.node.validation.repository-gate",
@@ -238,7 +338,12 @@
       "label": "Repository-wide MCP freshness gate",
       "artifact_kind": "file",
       "change_contract": "The shared validator is tracked by its one MCP freshness integration line.",
-      "fingerprint": {"kind": "python_symbol_sha256", "path": "src/digital_asset_directory/validation.py", "symbol": "validate_repo", "sha256": "sha256:64bdbf6ce9afdc6242421eb3164037d7d8e8cbc46b502d9198e269e3207aee4a"}
+      "fingerprint": {
+        "kind": "python_symbol_sha256",
+        "path": "src/digital_asset_directory/validation.py",
+        "symbol": "validate_repo",
+        "sha256": "sha256:8b645c42ba3729fc6df5f4b164a43e1a190f29ee19a4de977d4bb3a199c2dd24"
+      }
     },
     {
       "node_id": "mcp.node.security-authority.readonly-boundary",
@@ -246,53 +351,272 @@
       "label": "Local read-only no-execution authority boundary",
       "artifact_kind": "file",
       "change_contract": "Any direction toward remote access, writes, mutation tools, self-authorization, or host-config writes blocks validation.",
-      "fingerprint": {"kind": "json_pointer_sha256", "path": "assets/mcp/dad-local-readonly/contract.json", "pointer": "/authority", "sha256": "sha256:a693522efcfa9edff81bdcf920f43a6bf185c7ccb5976117db67b6728a0c53de"}
+      "fingerprint": {
+        "kind": "json_pointer_sha256",
+        "path": "assets/mcp/dad-local-readonly/contract.json",
+        "pointer": "/authority",
+        "sha256": "sha256:a693522efcfa9edff81bdcf920f43a6bf185c7ccb5976117db67b6728a0c53de"
+      }
     }
   ],
   "edges": [
-    {"edge_id": "mcp.edge.governance-to-security", "source": "mcp.node.governance.mcp-first-policy", "target": "mcp.node.security-authority.readonly-boundary", "edge_type": "constrains", "change_effect": "authority_review"},
-    {"edge_id": "mcp.edge.schema-to-map", "source": "mcp.node.schema.dependency-map", "target": "mcp.node.registry.dependency-map", "edge_type": "defines", "change_effect": "schema_revalidation"},
-    {"edge_id": "mcp.edge.schema-route-to-map", "source": "mcp.node.registry.schema-route", "target": "mcp.node.registry.dependency-map", "edge_type": "routes_to", "change_effect": "registry_semantic_review"},
-    {"edge_id": "mcp.edge.map-to-engine", "source": "mcp.node.registry.dependency-map", "target": "mcp.node.implementation.dependency-engine", "edge_type": "loads", "change_effect": "implementation_revalidation"},
-    {"edge_id": "mcp.edge.graph-schema-to-registry", "source": "mcp.node.schema.graph-surfaces", "target": "mcp.node.registry.graph-surfaces", "edge_type": "defines", "change_effect": "schema_revalidation"},
-    {"edge_id": "mcp.edge.graph-registry-to-backend", "source": "mcp.node.registry.graph-surfaces", "target": "mcp.node.backend.graph-surfaces", "edge_type": "loads", "change_effect": "registry_semantic_review"},
-    {"edge_id": "mcp.edge.runtime-to-graph-backend", "source": "mcp.node.runtime-data.local-hub", "target": "mcp.node.backend.graph-surfaces", "edge_type": "reads", "change_effect": "runtime_data_flow_review"},
-    {"edge_id": "mcp.edge.runtime-to-status-backend", "source": "mcp.node.runtime-data.local-hub", "target": "mcp.node.backend.operational-status", "edge_type": "reads", "change_effect": "runtime_data_flow_review"},
-    {"edge_id": "mcp.edge.graph-backend-to-server", "source": "mcp.node.backend.graph-surfaces", "target": "mcp.node.implementation.server", "edge_type": "loads", "change_effect": "backend_contract_review"},
-    {"edge_id": "mcp.edge.status-backend-to-server", "source": "mcp.node.backend.operational-status", "target": "mcp.node.implementation.server", "edge_type": "loads", "change_effect": "backend_contract_review"},
-    {"edge_id": "mcp.edge.json-to-server", "source": "mcp.node.backend.json-serialization", "target": "mcp.node.implementation.server", "edge_type": "loads", "change_effect": "implementation_revalidation"},
-    {"edge_id": "mcp.edge.engine-to-server", "source": "mcp.node.implementation.dependency-engine", "target": "mcp.node.implementation.server", "edge_type": "exposes", "change_effect": "implementation_revalidation"},
-    {"edge_id": "mcp.edge.packet-engine-to-server", "source": "mcp.node.implementation.packet-engine", "target": "mcp.node.implementation.server", "edge_type": "exposes", "change_effect": "implementation_revalidation"},
-    {"edge_id": "mcp.edge.security-to-server", "source": "mcp.node.security-authority.readonly-boundary", "target": "mcp.node.implementation.server", "edge_type": "constrains", "change_effect": "privacy_security_review"},
-    {"edge_id": "mcp.edge.protocol-to-server", "source": "mcp.node.protocol.jsonrpc-stdio", "target": "mcp.node.implementation.server", "edge_type": "constrains", "change_effect": "protocol_parity_review"},
-    {"edge_id": "mcp.edge.contract-to-server", "source": "mcp.node.contract.surface", "target": "mcp.node.implementation.server", "edge_type": "defines", "change_effect": "implementation_revalidation"},
-    {"edge_id": "mcp.edge.server-to-facade", "source": "mcp.node.implementation.server", "target": "mcp.node.implementation.compatibility-facade", "edge_type": "exposes", "change_effect": "implementation_revalidation"},
-    {"edge_id": "mcp.edge.facade-to-entrypoint", "source": "mcp.node.implementation.compatibility-facade", "target": "mcp.node.entrypoint.graph-stdio", "edge_type": "invokes", "change_effect": "entrypoint_parity_review"},
-    {"edge_id": "mcp.edge.packaging-to-entrypoint", "source": "mcp.node.packaging.asset-dir", "target": "mcp.node.entrypoint.graph-stdio", "edge_type": "packages", "change_effect": "packaging_revalidation"},
-    {"edge_id": "mcp.edge.identity-to-adapters", "source": "mcp.node.identity.logical-server", "target": "mcp.node.host-adapter.templates", "edge_type": "defines", "change_effect": "identity_review"},
-    {"edge_id": "mcp.edge.entrypoint-to-adapters", "source": "mcp.node.entrypoint.graph-stdio", "target": "mcp.node.host-adapter.templates", "edge_type": "invokes", "change_effect": "adapter_parity_review"},
-    {"edge_id": "mcp.edge.security-to-adapters", "source": "mcp.node.security-authority.readonly-boundary", "target": "mcp.node.host-adapter.templates", "edge_type": "constrains", "change_effect": "authority_review"},
-    {"edge_id": "mcp.edge.templates-to-installed-evidence", "source": "mcp.node.host-adapter.templates", "target": "mcp.node.host-adapter.installed-evidence", "edge_type": "validates", "change_effect": "host_activation_recheck"},
-    {"edge_id": "mcp.edge.server-to-validation", "source": "mcp.node.implementation.server", "target": "mcp.node.validation.deterministic-suite", "edge_type": "validates", "change_effect": "validator_revalidation"},
-    {"edge_id": "mcp.edge.conformance-to-server", "source": "mcp.node.validation.remote-conformance", "target": "mcp.node.implementation.server", "edge_type": "validates", "change_effect": "validator_revalidation"},
-    {"edge_id": "mcp.edge.engine-to-validation", "source": "mcp.node.implementation.dependency-engine", "target": "mcp.node.validation.deterministic-suite", "edge_type": "validates", "change_effect": "validator_revalidation"},
-    {"edge_id": "mcp.edge.adapters-to-validation", "source": "mcp.node.host-adapter.templates", "target": "mcp.node.validation.deterministic-suite", "edge_type": "validates", "change_effect": "validator_revalidation"},
-    {"edge_id": "mcp.edge.engine-to-repository-gate", "source": "mcp.node.implementation.dependency-engine", "target": "mcp.node.validation.repository-gate", "edge_type": "validates", "change_effect": "validator_revalidation"},
-    {"edge_id": "mcp.edge.repository-gate-to-suite", "source": "mcp.node.validation.repository-gate", "target": "mcp.node.validation.deterministic-suite", "edge_type": "validates", "change_effect": "validator_revalidation"},
-    {"edge_id": "mcp.edge.map-to-navigation", "source": "mcp.node.registry.dependency-map", "target": "mcp.node.navigation.machine-route", "edge_type": "documents", "change_effect": "navigation_refresh"},
-    {"edge_id": "mcp.edge.map-to-ai-toc", "source": "mcp.node.registry.dependency-map", "target": "mcp.node.navigation.ai-toc", "edge_type": "documents", "change_effect": "navigation_refresh"},
-    {"edge_id": "mcp.edge.map-to-ai-registry", "source": "mcp.node.registry.dependency-map", "target": "mcp.node.navigation.ai-registry", "edge_type": "documents", "change_effect": "navigation_refresh"},
-    {"edge_id": "mcp.edge.validation-to-navigation", "source": "mcp.node.validation.deterministic-suite", "target": "mcp.node.navigation.machine-route", "edge_type": "documents", "change_effect": "navigation_refresh"}
+    {
+      "edge_id": "mcp.edge.governance-to-security",
+      "source": "mcp.node.governance.mcp-first-policy",
+      "target": "mcp.node.security-authority.readonly-boundary",
+      "edge_type": "constrains",
+      "change_effect": "authority_review"
+    },
+    {
+      "edge_id": "mcp.edge.schema-to-map",
+      "source": "mcp.node.schema.dependency-map",
+      "target": "mcp.node.registry.dependency-map",
+      "edge_type": "defines",
+      "change_effect": "schema_revalidation"
+    },
+    {
+      "edge_id": "mcp.edge.schema-route-to-map",
+      "source": "mcp.node.registry.schema-route",
+      "target": "mcp.node.registry.dependency-map",
+      "edge_type": "routes_to",
+      "change_effect": "registry_semantic_review"
+    },
+    {
+      "edge_id": "mcp.edge.map-to-engine",
+      "source": "mcp.node.registry.dependency-map",
+      "target": "mcp.node.implementation.dependency-engine",
+      "edge_type": "loads",
+      "change_effect": "implementation_revalidation"
+    },
+    {
+      "edge_id": "mcp.edge.graph-schema-to-registry",
+      "source": "mcp.node.schema.graph-surfaces",
+      "target": "mcp.node.registry.graph-surfaces",
+      "edge_type": "defines",
+      "change_effect": "schema_revalidation"
+    },
+    {
+      "edge_id": "mcp.edge.graph-registry-to-backend",
+      "source": "mcp.node.registry.graph-surfaces",
+      "target": "mcp.node.backend.graph-surfaces",
+      "edge_type": "loads",
+      "change_effect": "registry_semantic_review"
+    },
+    {
+      "edge_id": "mcp.edge.runtime-to-graph-backend",
+      "source": "mcp.node.runtime-data.local-hub",
+      "target": "mcp.node.backend.graph-surfaces",
+      "edge_type": "reads",
+      "change_effect": "runtime_data_flow_review"
+    },
+    {
+      "edge_id": "mcp.edge.runtime-to-status-backend",
+      "source": "mcp.node.runtime-data.local-hub",
+      "target": "mcp.node.backend.operational-status",
+      "edge_type": "reads",
+      "change_effect": "runtime_data_flow_review"
+    },
+    {
+      "edge_id": "mcp.edge.graph-backend-to-server",
+      "source": "mcp.node.backend.graph-surfaces",
+      "target": "mcp.node.implementation.server",
+      "edge_type": "loads",
+      "change_effect": "backend_contract_review"
+    },
+    {
+      "edge_id": "mcp.edge.status-backend-to-server",
+      "source": "mcp.node.backend.operational-status",
+      "target": "mcp.node.implementation.server",
+      "edge_type": "loads",
+      "change_effect": "backend_contract_review"
+    },
+    {
+      "edge_id": "mcp.edge.json-to-server",
+      "source": "mcp.node.backend.json-serialization",
+      "target": "mcp.node.implementation.server",
+      "edge_type": "loads",
+      "change_effect": "implementation_revalidation"
+    },
+    {
+      "edge_id": "mcp.edge.engine-to-server",
+      "source": "mcp.node.implementation.dependency-engine",
+      "target": "mcp.node.implementation.server",
+      "edge_type": "exposes",
+      "change_effect": "implementation_revalidation"
+    },
+    {
+      "edge_id": "mcp.edge.packet-engine-to-server",
+      "source": "mcp.node.implementation.packet-engine",
+      "target": "mcp.node.implementation.server",
+      "edge_type": "exposes",
+      "change_effect": "implementation_revalidation"
+    },
+    {
+      "edge_id": "mcp.edge.security-to-server",
+      "source": "mcp.node.security-authority.readonly-boundary",
+      "target": "mcp.node.implementation.server",
+      "edge_type": "constrains",
+      "change_effect": "privacy_security_review"
+    },
+    {
+      "edge_id": "mcp.edge.protocol-to-server",
+      "source": "mcp.node.protocol.jsonrpc-stdio",
+      "target": "mcp.node.implementation.server",
+      "edge_type": "constrains",
+      "change_effect": "protocol_parity_review"
+    },
+    {
+      "edge_id": "mcp.edge.contract-to-server",
+      "source": "mcp.node.contract.surface",
+      "target": "mcp.node.implementation.server",
+      "edge_type": "defines",
+      "change_effect": "implementation_revalidation"
+    },
+    {
+      "edge_id": "mcp.edge.server-to-facade",
+      "source": "mcp.node.implementation.server",
+      "target": "mcp.node.implementation.compatibility-facade",
+      "edge_type": "exposes",
+      "change_effect": "implementation_revalidation"
+    },
+    {
+      "edge_id": "mcp.edge.facade-to-entrypoint",
+      "source": "mcp.node.implementation.compatibility-facade",
+      "target": "mcp.node.entrypoint.graph-stdio",
+      "edge_type": "invokes",
+      "change_effect": "entrypoint_parity_review"
+    },
+    {
+      "edge_id": "mcp.edge.packaging-to-entrypoint",
+      "source": "mcp.node.packaging.asset-dir",
+      "target": "mcp.node.entrypoint.graph-stdio",
+      "edge_type": "packages",
+      "change_effect": "packaging_revalidation"
+    },
+    {
+      "edge_id": "mcp.edge.identity-to-adapters",
+      "source": "mcp.node.identity.logical-server",
+      "target": "mcp.node.host-adapter.templates",
+      "edge_type": "defines",
+      "change_effect": "identity_review"
+    },
+    {
+      "edge_id": "mcp.edge.entrypoint-to-adapters",
+      "source": "mcp.node.entrypoint.graph-stdio",
+      "target": "mcp.node.host-adapter.templates",
+      "edge_type": "invokes",
+      "change_effect": "adapter_parity_review"
+    },
+    {
+      "edge_id": "mcp.edge.security-to-adapters",
+      "source": "mcp.node.security-authority.readonly-boundary",
+      "target": "mcp.node.host-adapter.templates",
+      "edge_type": "constrains",
+      "change_effect": "authority_review"
+    },
+    {
+      "edge_id": "mcp.edge.templates-to-installed-evidence",
+      "source": "mcp.node.host-adapter.templates",
+      "target": "mcp.node.host-adapter.installed-evidence",
+      "edge_type": "validates",
+      "change_effect": "host_activation_recheck"
+    },
+    {
+      "edge_id": "mcp.edge.server-to-validation",
+      "source": "mcp.node.implementation.server",
+      "target": "mcp.node.validation.deterministic-suite",
+      "edge_type": "validates",
+      "change_effect": "validator_revalidation"
+    },
+    {
+      "edge_id": "mcp.edge.conformance-to-server",
+      "source": "mcp.node.validation.remote-conformance",
+      "target": "mcp.node.implementation.server",
+      "edge_type": "validates",
+      "change_effect": "validator_revalidation"
+    },
+    {
+      "edge_id": "mcp.edge.engine-to-validation",
+      "source": "mcp.node.implementation.dependency-engine",
+      "target": "mcp.node.validation.deterministic-suite",
+      "edge_type": "validates",
+      "change_effect": "validator_revalidation"
+    },
+    {
+      "edge_id": "mcp.edge.adapters-to-validation",
+      "source": "mcp.node.host-adapter.templates",
+      "target": "mcp.node.validation.deterministic-suite",
+      "edge_type": "validates",
+      "change_effect": "validator_revalidation"
+    },
+    {
+      "edge_id": "mcp.edge.engine-to-repository-gate",
+      "source": "mcp.node.implementation.dependency-engine",
+      "target": "mcp.node.validation.repository-gate",
+      "edge_type": "validates",
+      "change_effect": "validator_revalidation"
+    },
+    {
+      "edge_id": "mcp.edge.repository-gate-to-suite",
+      "source": "mcp.node.validation.repository-gate",
+      "target": "mcp.node.validation.deterministic-suite",
+      "edge_type": "validates",
+      "change_effect": "validator_revalidation"
+    },
+    {
+      "edge_id": "mcp.edge.map-to-navigation",
+      "source": "mcp.node.registry.dependency-map",
+      "target": "mcp.node.navigation.machine-route",
+      "edge_type": "documents",
+      "change_effect": "navigation_refresh"
+    },
+    {
+      "edge_id": "mcp.edge.map-to-ai-toc",
+      "source": "mcp.node.registry.dependency-map",
+      "target": "mcp.node.navigation.ai-toc",
+      "edge_type": "documents",
+      "change_effect": "navigation_refresh"
+    },
+    {
+      "edge_id": "mcp.edge.map-to-ai-registry",
+      "source": "mcp.node.registry.dependency-map",
+      "target": "mcp.node.navigation.ai-registry",
+      "edge_type": "documents",
+      "change_effect": "navigation_refresh"
+    },
+    {
+      "edge_id": "mcp.edge.validation-to-navigation",
+      "source": "mcp.node.validation.deterministic-suite",
+      "target": "mcp.node.navigation.machine-route",
+      "edge_type": "documents",
+      "change_effect": "navigation_refresh"
+    }
   ],
   "data_flows": [
     {
       "flow_id": "mcp.flow.graph-read",
       "label": "Local generated graph to bounded MCP response",
       "steps": [
-        {"phase": "source", "node_id": "mcp.node.runtime-data.local-hub", "data_class": "generated_candidate_graph"},
-        {"phase": "transform", "node_id": "mcp.node.backend.graph-surfaces", "data_class": "bounded_query"},
-        {"phase": "transform", "node_id": "mcp.node.implementation.server", "data_class": "bounded_query"},
-        {"phase": "sink", "node_id": "mcp.node.protocol.jsonrpc-stdio", "data_class": "bounded_query"}
+        {
+          "phase": "source",
+          "node_id": "mcp.node.runtime-data.local-hub",
+          "data_class": "generated_candidate_graph"
+        },
+        {
+          "phase": "transform",
+          "node_id": "mcp.node.backend.graph-surfaces",
+          "data_class": "bounded_query"
+        },
+        {
+          "phase": "transform",
+          "node_id": "mcp.node.implementation.server",
+          "data_class": "bounded_query"
+        },
+        {
+          "phase": "sink",
+          "node_id": "mcp.node.protocol.jsonrpc-stdio",
+          "data_class": "bounded_query"
+        }
       ],
       "authority": "read_only_candidate_evidence"
     },
@@ -300,9 +624,21 @@
       "flow_id": "mcp.flow.dependency-status",
       "label": "Reviewed dependency metadata to categorical freshness status",
       "steps": [
-        {"phase": "source", "node_id": "mcp.node.registry.dependency-map", "data_class": "repository_metadata"},
-        {"phase": "transform", "node_id": "mcp.node.implementation.dependency-engine", "data_class": "categorical_status"},
-        {"phase": "sink", "node_id": "mcp.node.protocol.jsonrpc-stdio", "data_class": "categorical_status"}
+        {
+          "phase": "source",
+          "node_id": "mcp.node.registry.dependency-map",
+          "data_class": "repository_metadata"
+        },
+        {
+          "phase": "transform",
+          "node_id": "mcp.node.implementation.dependency-engine",
+          "data_class": "categorical_status"
+        },
+        {
+          "phase": "sink",
+          "node_id": "mcp.node.protocol.jsonrpc-stdio",
+          "data_class": "categorical_status"
+        }
       ],
       "authority": "read_only_candidate_evidence"
     },
@@ -310,9 +646,21 @@
       "flow_id": "mcp.flow.fingerprint-candidate",
       "label": "Repository artifacts to review-only fingerprint candidate",
       "steps": [
-        {"phase": "source", "node_id": "mcp.node.registry.dependency-map", "data_class": "repository_metadata"},
-        {"phase": "transform", "node_id": "mcp.node.implementation.dependency-engine", "data_class": "review_only_fingerprint"},
-        {"phase": "sink", "node_id": "mcp.node.validation.deterministic-suite", "data_class": "review_only_fingerprint"}
+        {
+          "phase": "source",
+          "node_id": "mcp.node.registry.dependency-map",
+          "data_class": "repository_metadata"
+        },
+        {
+          "phase": "transform",
+          "node_id": "mcp.node.implementation.dependency-engine",
+          "data_class": "review_only_fingerprint"
+        },
+        {
+          "phase": "sink",
+          "node_id": "mcp.node.validation.deterministic-suite",
+          "data_class": "review_only_fingerprint"
+        }
       ],
       "authority": "read_only_candidate_evidence"
     },
@@ -320,18 +668,55 @@
       "flow_id": "mcp.flow.host-parity",
       "label": "Reusable adapter metadata to installed-host evidence",
       "steps": [
-        {"phase": "source", "node_id": "mcp.node.host-adapter.templates", "data_class": "host_configuration_metadata"},
-        {"phase": "transform", "node_id": "mcp.node.implementation.dependency-engine", "data_class": "categorical_status"},
-        {"phase": "sink", "node_id": "mcp.node.host-adapter.installed-evidence", "data_class": "host_configuration_metadata"}
+        {
+          "phase": "source",
+          "node_id": "mcp.node.host-adapter.templates",
+          "data_class": "host_configuration_metadata"
+        },
+        {
+          "phase": "transform",
+          "node_id": "mcp.node.implementation.dependency-engine",
+          "data_class": "categorical_status"
+        },
+        {
+          "phase": "sink",
+          "node_id": "mcp.node.host-adapter.installed-evidence",
+          "data_class": "host_configuration_metadata"
+        }
       ],
       "authority": "read_only_candidate_evidence"
     }
   ],
   "coverage": {
     "python_local_imports": [
-      {"path": "src/digital_asset_directory/mcp_server.py", "modules": ["cli", "daemon", "entity_graph", "entity_identity", "graph_surfaces", "journal", "mcp_dependency_map", "mcp_packets", "portfolio_intents", "portfolio_recovery", "portfolio_weekly_digest", "surface_versions", "utils"]},
-      {"path": "src/digital_asset_directory/mcp_graph_server.py", "modules": ["mcp_server"]},
-      {"path": "src/digital_asset_directory/mcp_dependency_map.py", "modules": []}
+      {
+        "path": "src/digital_asset_directory/mcp_server.py",
+        "modules": [
+          "cli",
+          "daemon",
+          "entity_graph",
+          "entity_identity",
+          "graph_surfaces",
+          "journal",
+          "mcp_dependency_map",
+          "mcp_packets",
+          "portfolio_intents",
+          "portfolio_recovery",
+          "portfolio_weekly_digest",
+          "surface_versions",
+          "utils"
+        ]
+      },
+      {
+        "path": "src/digital_asset_directory/mcp_graph_server.py",
+        "modules": [
+          "mcp_server"
+        ]
+      },
+      {
+        "path": "src/digital_asset_directory/mcp_dependency_map.py",
+        "modules": []
+      }
     ],
     "cli_entrypoint": {
       "path": "src/digital_asset_directory/cli.py",
@@ -372,26 +757,91 @@
       "dad_graph_search_nodes",
       "dad_mcp_dependency_status",
       "dad_mcp_dependency_impact",
-      "dad_mcp_dependency_refresh_candidate"
-      ,"dad_lifecycle_packet_prepare"
-      ,"dad_recovery_packet_prepare"
-      ,"dad_lifecycle_result_record"
-      ,"dad_recovery_result_record"
+      "dad_mcp_dependency_refresh_candidate",
+      "dad_lifecycle_packet_prepare",
+      "dad_recovery_packet_prepare",
+      "dad_lifecycle_result_record",
+      "dad_recovery_result_record"
     ],
     "resource_coverage": [
-      {"match": "prefix", "value": "dad://registry/", "node_id": "mcp.node.registry.graph-surfaces", "allow_empty": false},
-      {"match": "prefix", "value": "dad://surface/", "node_id": "mcp.node.runtime-data.local-hub", "allow_empty": true},
-      {"match": "prefix", "value": "dad://report/", "node_id": "mcp.node.backend.operational-status", "allow_empty": false},
-      {"match": "prefix", "value": "dad://plans/", "node_id": "mcp.node.runtime-data.local-hub", "allow_empty": false},
-      {"match": "prefix", "value": "dad://identity/", "node_id": "mcp.node.runtime-data.local-hub", "allow_empty": true},
-      {"match": "prefix", "value": "dad://recovery/", "node_id": "mcp.node.backend.operational-status", "allow_empty": false},
-      {"match": "prefix", "value": "dad://kernel/", "node_id": "mcp.node.governance.mcp-first-policy", "allow_empty": false},
-      {"match": "prefix", "value": "dad://packet/", "node_id": "mcp.node.governance.mcp-first-policy", "allow_empty": false},
-      {"match": "exact", "value": "dad://mcp/dependency-map", "node_id": "mcp.node.registry.dependency-map", "allow_empty": false},
-      {"match": "exact", "value": "dad://mcp/dependency-status", "node_id": "mcp.node.implementation.dependency-engine", "allow_empty": false},
-      {"match": "exact", "value": "dad://mcp/dependency-refresh-candidate", "node_id": "mcp.node.implementation.dependency-engine", "allow_empty": false},
-      {"match": "exact", "value": "dad://mcp/installed-host-status", "node_id": "mcp.node.host-adapter.installed-evidence", "allow_empty": false},
-      {"match": "exact", "value": "dad://registry/schema-registry", "node_id": "mcp.node.registry.schema-route", "allow_empty": false}
+      {
+        "match": "prefix",
+        "value": "dad://registry/",
+        "node_id": "mcp.node.registry.graph-surfaces",
+        "allow_empty": false
+      },
+      {
+        "match": "prefix",
+        "value": "dad://surface/",
+        "node_id": "mcp.node.runtime-data.local-hub",
+        "allow_empty": true
+      },
+      {
+        "match": "prefix",
+        "value": "dad://report/",
+        "node_id": "mcp.node.backend.operational-status",
+        "allow_empty": false
+      },
+      {
+        "match": "prefix",
+        "value": "dad://plans/",
+        "node_id": "mcp.node.runtime-data.local-hub",
+        "allow_empty": false
+      },
+      {
+        "match": "prefix",
+        "value": "dad://identity/",
+        "node_id": "mcp.node.runtime-data.local-hub",
+        "allow_empty": true
+      },
+      {
+        "match": "prefix",
+        "value": "dad://recovery/",
+        "node_id": "mcp.node.backend.operational-status",
+        "allow_empty": false
+      },
+      {
+        "match": "prefix",
+        "value": "dad://kernel/",
+        "node_id": "mcp.node.governance.mcp-first-policy",
+        "allow_empty": false
+      },
+      {
+        "match": "prefix",
+        "value": "dad://packet/",
+        "node_id": "mcp.node.governance.mcp-first-policy",
+        "allow_empty": false
+      },
+      {
+        "match": "exact",
+        "value": "dad://mcp/dependency-map",
+        "node_id": "mcp.node.registry.dependency-map",
+        "allow_empty": false
+      },
+      {
+        "match": "exact",
+        "value": "dad://mcp/dependency-status",
+        "node_id": "mcp.node.implementation.dependency-engine",
+        "allow_empty": false
+      },
+      {
+        "match": "exact",
+        "value": "dad://mcp/dependency-refresh-candidate",
+        "node_id": "mcp.node.implementation.dependency-engine",
+        "allow_empty": false
+      },
+      {
+        "match": "exact",
+        "value": "dad://mcp/installed-host-status",
+        "node_id": "mcp.node.host-adapter.installed-evidence",
+        "allow_empty": false
+      },
+      {
+        "match": "exact",
+        "value": "dad://registry/schema-registry",
+        "node_id": "mcp.node.registry.schema-route",
+        "allow_empty": false
+      }
     ]
   },
   "refresh_policy": {

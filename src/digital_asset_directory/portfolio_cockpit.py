@@ -1095,12 +1095,13 @@ _STYLE = """
 a.skip{position:absolute;left:-999px;top:8px;background:#fff;color:#000;padding:10px;z-index:2}a.skip:focus{left:8px}.shell{width:min(1400px,94vw);margin:auto;padding:46px 0 80px}
 .section-nav{position:sticky;top:0;z-index:1;display:flex;flex-wrap:wrap;gap:8px;padding:10px 0;background:color-mix(in srgb,var(--bg) 92%,transparent);backdrop-filter:blur(10px)}.section-nav a{color:var(--mint);border:1px solid var(--line);border-radius:999px;padding:.35rem .7rem;text-decoration:none;font-size:.82rem}.section-nav a:hover{background:var(--panel)}
 .eyebrow{text-transform:uppercase;letter-spacing:.13em;color:var(--mint);font-size:.72rem;font-weight:800}h1{font-size:clamp(2.4rem,6vw,5.7rem);line-height:.9;max-width:950px;margin:.3rem 0 1rem}h2{margin-top:3rem}h3{margin:.25rem 0}.muted{color:var(--muted);max-width:900px}
-.stats,.today,.sources{display:grid;gap:14px}.stats{grid-template-columns:repeat(6,minmax(120px,1fr));margin:28px 0}.today{grid-template-columns:repeat(3,1fr)}.sources{grid-template-columns:repeat(2,1fr)}
+.stats,.today,.sources,.fix-prompts{display:grid;gap:14px}.stats{grid-template-columns:repeat(6,minmax(120px,1fr));margin:28px 0}.today{grid-template-columns:repeat(3,1fr)}.sources{grid-template-columns:repeat(2,1fr)}.fix-prompts{grid-template-columns:repeat(2,minmax(280px,1fr));margin-top:8px}
 .card,.stat,.table-wrap{background:color-mix(in srgb,var(--panel) 94%,transparent);border:1px solid var(--line);border-radius:17px;box-shadow:0 20px 55px #0004}.card,.stat{padding:18px}.stat strong{display:block;font-size:1.9rem}.stat span,.meta{color:var(--muted)}
 .badge{display:inline-block;border:1px solid var(--line);border-radius:999px;padding:.2rem .6rem;font-size:.74rem}.danger{color:var(--danger)}.warning{color:var(--amber)}code{color:#b5e4d4;overflow-wrap:anywhere}
+.prompt-box{margin-top:12px}.prompt-box>summary{cursor:pointer;color:var(--mint);font-weight:700}.prompt{margin:.75rem 0 0;padding:12px 14px;border:1px solid var(--line);border-radius:12px;background:#061018;color:#d7ebe4;font:12.5px/1.45 ui-monospace,Consolas,monospace;white-space:pre-wrap;overflow-wrap:anywhere}
 .table-wrap{overflow:auto}table{width:100%;border-collapse:collapse}caption{text-align:left;font-weight:700;padding:14px}th,td{padding:12px 14px;border-top:1px solid var(--line);text-align:left;vertical-align:top}th{color:var(--muted);font-size:.74rem;text-transform:uppercase;letter-spacing:.08em}
 footer{margin-top:48px;border-top:1px solid var(--line);padding-top:18px;color:var(--muted)}:focus-visible{outline:3px solid var(--amber);outline-offset:3px}
-@media(prefers-reduced-motion:reduce){html{scroll-behavior:auto}}@media(max-width:950px){.stats{grid-template-columns:repeat(3,1fr)}.today{grid-template-columns:1fr}.sources{grid-template-columns:1fr}}@media(max-width:560px){.stats{grid-template-columns:repeat(2,1fr)}.shell{padding-top:28px}}
+@media(prefers-reduced-motion:reduce){html{scroll-behavior:auto}}@media(max-width:950px){.stats{grid-template-columns:repeat(3,1fr)}.today,.fix-prompts{grid-template-columns:1fr}.sources{grid-template-columns:1fr}}@media(max-width:560px){.stats{grid-template-columns:repeat(2,1fr)}.shell{padding-top:28px}}
 """.strip()
 
 
@@ -1111,6 +1112,138 @@ def _csp() -> str:
         f"style-src 'sha256-{digest}'; "
         "img-src 'none'; connect-src 'none'; script-src 'none'; "
         "object-src 'none'; frame-src 'none'; base-uri 'none'; form-action 'none'"
+    )
+
+
+_PROMPT_PREAMBLE = (
+    "You are helping fix one local DAD portfolio attention issue. "
+    "This is candidate evidence only. Do not commit, push, delete worktrees, "
+    "merge, or mutate repos unless the human explicitly asks. Prefer the "
+    "smallest reversible investigation or fix."
+)
+
+
+def _project_prompt_key(item: dict[str, Any]) -> str:
+    name = str(item.get("project_name") or "").strip()
+    if name:
+        return name
+    if item.get("workstream_id"):
+        return "Unbound workstream"
+    return "Portfolio system"
+
+
+def _suggested_fix_prompt_for_item(item: dict[str, Any]) -> str:
+    """Build a privacy-safe, deterministic AI starter prompt for one attention item."""
+
+    evidence = item.get("evidence") if isinstance(item.get("evidence"), dict) else {}
+    git = evidence.get("git") if isinstance(evidence.get("git"), dict) else {}
+    workstream = (
+        evidence.get("workstream") if isinstance(evidence.get("workstream"), dict) else {}
+    )
+    reasons = [str(reason) for reason in item.get("reasons") or [] if str(reason).strip()]
+    lines = [
+        _PROMPT_PREAMBLE,
+        "",
+        f"Project: {_project_prompt_key(item)}",
+        f"Item: {item.get('label') or '(unnamed)'}",
+        f"Band: {item.get('band') or 'unknown'}",
+        f"Source: {item.get('source') or 'unknown'}",
+        f"Reasons: {', '.join(reasons) if reasons else '(none recorded)'}",
+        f"Suggested next action: {item.get('next_action') or '(none recorded)'}",
+    ]
+    if item.get("lifecycle_state"):
+        lines.append(f"Lifecycle: {item['lifecycle_state']}")
+    if item.get("inactive_days") is not None:
+        lines.append(f"Idle days: {item['inactive_days']}")
+    blocking = int(item.get("blocking_count") or 0)
+    if blocking:
+        lines.append(f"Blocking dependents: {blocking}")
+    if git:
+        lines.append(
+            "Git evidence (counts only): "
+            f"dirty={git.get('dirty')}, "
+            f"changed_paths={git.get('changed_path_count', 0)}, "
+            f"ahead={git.get('ahead', 0)}, behind={git.get('behind', 0)}"
+        )
+    if workstream.get("trigger_kind") or workstream.get("needs_human_decision"):
+        lines.append(
+            "Workstream evidence: "
+            f"trigger={workstream.get('trigger_kind') or '(n/a)'}; "
+            f"needs_human_decision={bool(workstream.get('needs_human_decision'))}"
+        )
+    lines.extend(
+        [
+            "",
+            "Start by:",
+            "1) Restating the issue in one sentence.",
+            "2) Listing the smallest safe checks to confirm the evidence.",
+            "3) Proposing one concrete next fix step for this item only.",
+        ]
+    )
+    return "\n".join(lines)
+
+
+def _suggested_fix_prompt_for_project(
+    project_name: str, items: list[dict[str, Any]]
+) -> str:
+    """Aggregate a starter prompt covering every issue currently shown for a project."""
+
+    lines = [
+        _PROMPT_PREAMBLE,
+        "",
+        f"Project with open cockpit issues: {project_name}",
+        f"Issue count: {len(items)}",
+        "",
+        "Issues to address (in cockpit display order):",
+    ]
+    for index, item in enumerate(items, start=1):
+        reasons = ", ".join(str(reason) for reason in item.get("reasons") or []) or "(none)"
+        lines.extend(
+            [
+                f"{index}. {item.get('label') or '(unnamed)'}",
+                f"   Band/source: {item.get('band')}/{item.get('source')}",
+                f"   Reasons: {reasons}",
+                f"   Next action: {item.get('next_action') or '(none)'}",
+            ]
+        )
+        evidence = item.get("evidence") if isinstance(item.get("evidence"), dict) else {}
+        git = evidence.get("git") if isinstance(evidence.get("git"), dict) else {}
+        if git:
+            lines.append(
+                "   Git counts: "
+                f"dirty={git.get('dirty')}, "
+                f"changed_paths={git.get('changed_path_count', 0)}, "
+                f"ahead={git.get('ahead', 0)}, behind={git.get('behind', 0)}"
+            )
+    lines.extend(
+        [
+            "",
+            "Task: propose a short ordered plan that clears these cockpit issues "
+            "for this project only, starting with the highest-band item. Keep "
+            "changes reversible and ask before any destructive cleanup.",
+        ]
+    )
+    return "\n".join(lines)
+
+
+def _group_attention_by_project(
+    items: list[dict[str, Any]],
+) -> list[tuple[str, list[dict[str, Any]]]]:
+    grouped: dict[str, list[dict[str, Any]]] = {}
+    order: list[str] = []
+    for item in items:
+        key = _project_prompt_key(item)
+        if key not in grouped:
+            grouped[key] = []
+            order.append(key)
+        grouped[key].append(item)
+    return [(key, grouped[key]) for key in order]
+
+
+def _prompt_details(summary: str, prompt: str) -> str:
+    return (
+        f'<details class="prompt-box"><summary>{escape(summary)}</summary>'
+        f'<pre class="prompt">{escape(prompt)}</pre></details>'
     )
 
 
@@ -1137,7 +1270,42 @@ def _attention_cards(items: list[dict[str, Any]], *, all_clear: bool) -> str:
             f"<p>{reasons}</p><p>{escape(item['next_action'])}</p>"
             f'<span class="badge">Git {item["source_local_priorities"]["git"]}</span> '
             f'<span class="badge">Workstream {item["source_local_priorities"]["workstreams"]}</span>'
+            + _prompt_details(
+                "Suggested AI fix prompt",
+                _suggested_fix_prompt_for_item(item),
+            )
+            + "</article>"
+        )
+    return "".join(cards)
+
+
+def _project_fix_prompt_cards(items: list[dict[str, Any]]) -> str:
+    groups = _group_attention_by_project(items)
+    if not groups:
+        return (
+            '<article class="card"><div class="eyebrow">No open issues</div>'
+            "<h3>No project prompts</h3>"
+            "<p>There are no ranked attention items to turn into AI fix prompts.</p>"
             "</article>"
+        )
+    cards: list[str] = []
+    for project_name, project_items in groups:
+        issue_bits = " &middot; ".join(
+            escape(str(item.get("label") or "(unnamed)")) for item in project_items[:4]
+        )
+        if len(project_items) > 4:
+            issue_bits += f" &middot; +{len(project_items) - 4} more"
+        cards.append(
+            '<article class="card">'
+            f'<div class="eyebrow">{len(project_items)} issue'
+            f'{"s" if len(project_items) != 1 else ""}</div>'
+            f"<h3>{escape(project_name)}</h3>"
+            f"<p>{issue_bits}</p>"
+            + _prompt_details(
+                "Copy suggested AI fix prompt",
+                _suggested_fix_prompt_for_project(project_name, project_items),
+            )
+            + "</article>"
         )
     return "".join(cards)
 
@@ -1161,7 +1329,12 @@ def portfolio_cockpit_html(cockpit: dict[str, Any]) -> str:
         (
             "<tr>"
             f'<td><span class="badge">{escape(item["band"].replace("_", " "))}</span></td>'
-            f"<td>{escape(item['label'])}</td>"
+            f"<td>{escape(item['label'])}"
+            + _prompt_details(
+                "AI fix prompt",
+                _suggested_fix_prompt_for_item(item),
+            )
+            + "</td>"
             f"<td>{escape(item['source'])}</td>"
             f"<td>{escape(', '.join(item['reasons']))}</td>"
             f"<td>{escape(str(item['inactive_days']) if item['inactive_days'] is not None else 'unknown')}</td>"
@@ -1185,6 +1358,7 @@ def portfolio_cockpit_html(cockpit: dict[str, Any]) -> str:
         queue_rows = '<tr><td colspan="6">No ranked attention items.</td></tr>'
     if not unknown_rows:
         unknown_rows = '<tr><td colspan="4">No unresolved evidence gaps.</td></tr>'
+    project_prompt_cards = _project_fix_prompt_cards(list(cockpit.get("attention_queue") or []))
     return f"""<!doctype html>
 <html lang="en">
 <head>
@@ -1201,7 +1375,7 @@ def portfolio_cockpit_html(cockpit: dict[str, Any]) -> str:
   <h1>See the whole field. Choose only three.</h1>
   <p class="muted">One deterministic view of observed Git work, creative workstreams, human decisions, and accepted dependency evidence. No control on this page can execute an action.</p>
   <nav class="section-nav" aria-label="Cockpit sections">
-    <a href="#today">Today</a><a href="#sources">Source health</a><a href="#queue">Full queue</a><a href="#evidence">Evidence gaps</a>
+    <a href="#today">Today</a><a href="#fix-prompts">AI fix prompts</a><a href="#sources">Source health</a><a href="#queue">Full queue</a><a href="#evidence">Evidence gaps</a>
   </nav>
   <section class="stats" aria-label="Portfolio totals">
     <div class="stat"><strong>{summary["project_count"]}</strong><span>projects</span></div>
@@ -1213,6 +1387,9 @@ def portfolio_cockpit_html(cockpit: dict[str, Any]) -> str:
   </section>
   <h2 id="today">Today</h2>
   <section class="today" aria-label="Today attention items">{_attention_cards(cockpit["today"], all_clear=summary["all_clear"])}</section>
+  <h2 id="fix-prompts">Suggested AI fix prompts</h2>
+  <p class="muted">One copy-ready starter prompt per project that currently has cockpit issues. Prompts use names, reason codes, and counts only — no absolute paths or diffs.</p>
+  <section class="fix-prompts" aria-label="Suggested AI fix prompts by project">{project_prompt_cards}</section>
   <h2 id="sources">Source health</h2>
   <section class="sources" aria-label="Source health">{source_cards}</section>
   <h2 id="queue">Full attention queue</h2>

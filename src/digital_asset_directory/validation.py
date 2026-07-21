@@ -1819,6 +1819,10 @@ def validate_repo(repo_root: Path) -> dict[str, Any]:
                 "registry/synthetic-data-resource-registry.json",
             ),
             (
+                "synthetic_silver_program_registry",
+                "registry/synthetic-silver-program-registry.json",
+            ),
+            (
                 "subagent_evaluation_methodology",
                 "registry/subagent-evaluation-methodology.json",
             ),
@@ -1852,6 +1856,23 @@ def validate_repo(repo_root: Path) -> dict[str, Any]:
             json.loads((repo_root / lesson_payload_fixture).read_text(encoding="utf-8")),
         )
         checked.append(lesson_payload_fixture)
+        for fixture_schema, fixture_rel in (
+            (
+                "synthetic_silver_provenance_record",
+                "examples/synthetic-silver/provenance-record.golden.json",
+            ),
+            (
+                "synthetic_silver_release_manifest",
+                "examples/synthetic-silver/release-manifest.golden.json",
+            ),
+        ):
+            _validate_payload(
+                repo_root,
+                registry,
+                fixture_schema,
+                json.loads((repo_root / fixture_rel).read_text(encoding="utf-8")),
+            )
+            checked.append(fixture_rel)
         _validate_jsonl_with_registered_schema(
             repo_root,
             registry,

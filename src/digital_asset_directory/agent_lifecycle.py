@@ -10,6 +10,7 @@ from pathlib import Path
 from typing import Any
 
 from .transport import data_path, existing_data_file
+from .agent_session_split_report import canonical_agent_session_path
 from .utils import append_jsonl, utc_now, write_json
 
 AGENT_LIFECYCLE_NAMESPACE = uuid.UUID("d7d89920-42cf-4c2d-9b7b-cfa3b7b33a24")
@@ -170,15 +171,21 @@ def handle_lifecycle_event(
     # Resolve through the transport data plane so hook-created sessions land
     # where the CLI (preflight/postflight/enforce) reads them; existing_data_file
     # keeps sessions written before the data-root reroute reachable at the
-    # legacy hub-relative path.
-    session_path = existing_data_file(
-        hub_root, "agent_sessions", f"{internal_uuid}.json"
+    # legacy hub-relative path. New creates always use the canonical write path.
+    session_uuid = internal_uuid
+    existing_path = existing_data_file(
+        hub_root, "agent_sessions", f"{session_uuid}.json"
+    )
+    session_path = (
+        existing_path
+        if existing_path.exists()
+        else canonical_agent_session_path(hub_root, session_uuid)
     )
     created = utc_now()
     audit_path = data_path(hub_root, "audit_events") / f"{created[:10]}.jsonl"
 
     if event == "session-start":
-        if not session_path.exists():
+        if not existing_path.exists():
             session = {
                 "schema_version": "0.1.0",
                 "session_id": sid,
