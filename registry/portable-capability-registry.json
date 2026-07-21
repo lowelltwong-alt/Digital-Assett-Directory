@@ -399,10 +399,13 @@
         "src/digital_asset_directory/agent_session_split_report.py",
         "src/digital_asset_directory/capability_os_cockpit.py",
         "src/digital_asset_directory/ci_module_boundary_github.py",
+        "registry/design-authority.json",
         "src/digital_asset_directory/catalog.py",
         "src/digital_asset_directory/cli.py",
         "src/digital_asset_directory/contract_check.py",
+        "src/digital_asset_directory/daemon.py",
         "src/digital_asset_directory/database.py",
+        "src/digital_asset_directory/lifecycle_janitor.py",
         "src/digital_asset_directory/enrollment.py",
         "src/digital_asset_directory/global_personal_skills.py",
         "src/digital_asset_directory/governance.py",
@@ -437,7 +440,7 @@
         "tests/test_intelligence_routing.py",
         "templates/downstream/AGENTS_MANAGED_BLOCK.md"
       ],
-      "content_digest": "sha256:aab53fdb25af80089ec3d2d8c4c6f0903f6d3d3af421856e9efb57d1b059afa9",
+      "content_digest": "sha256:4390a8648103cb37d067bfd191652aaa1204df715d583460651f2714012d869c",
       "contract_digests": {
         "input": "sha256:eee475da7d6fe76d90852dfa97de0e1f047cb72d7d0134552245b7cda9a9fb68",
         "output": "sha256:0ec04e3bcb58df087b53068eb3756924c878f35a40871814bd8749313aa69dea",
@@ -1507,7 +1510,7 @@
         "src/digital_asset_directory/portfolio_roadmap.py",
         "templates/hooks/intent-continuity-shadow-receipt.template.json"
       ],
-      "content_digest": "sha256:e35adbb7e38a461f1a95f7c2ee366e49dd63c1bbbd229c31c610b884cd600e3f",
+      "content_digest": "sha256:70e66b1a57c55087a805bdc12ea7b7e20f2ce812e33b4a1b5b146f514b18e4f7",
       "source_observation_digest": "sha256:1aeef157eb837554b2d8bf2b3de020f8daf701533a3ca6efe7d31e0888368a9a",
       "contract_digests": {
         "input": "sha256:eee475da7d6fe76d90852dfa97de0e1f047cb72d7d0134552245b7cda9a9fb68",
@@ -1588,7 +1591,7 @@
         "runtime_adapter_id": "adapter:codex-host",
         "status": "supervised_silent_shadow"
       },
-      "adapter_interface_digest": "sha256:e142c8bb8e23fd4afede723e15cfaa9bb56ef747d98797f620cadfae85ff9ff9",
+      "adapter_interface_digest": "sha256:bf5884c6b415ee16e2008f1750795da6acffb216da557d9babb2972dc5b06b63",
       "adapter_interface_sources": [
         ".codex/hooks.json",
         ".codex/hooks/intent_continuity_shadow.py",
@@ -2380,7 +2383,7 @@
           "model_calls"
         ]
       },
-      "adapter_interface_digest": "sha256:800fc3443904e982fcf29266f8244acbc79a841edd6d47505f94e791d84a8662",
+      "adapter_interface_digest": "sha256:9079a2eabdb89466374059946320b0fd17ddd2e8d00ad81e40c7d05def5f98df",
       "adapter_interface_sources": [
         "src/digital_asset_directory/portfolio_convergence_git.py",
         "schemas/portfolio-convergence-git-producer-receipt.schema.json",
@@ -2506,7 +2509,7 @@
           "workstream_creation"
         ]
       },
-      "adapter_interface_digest": "sha256:245ec1a299d509ce604e6e4bbd93b534783b4566bbe9fb81e4fa053c20b87f33",
+      "adapter_interface_digest": "sha256:c2c261b2cbd73bc258c28f22ac1e66ab8862fcd1827c5037bcafaade301cdcca",
       "adapter_interface_sources": [
         "registry/routine-contract-registry.json",
         "schemas/portfolio-capture-candidate.schema.json",
