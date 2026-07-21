@@ -7,6 +7,7 @@ configuration.
 
 from __future__ import annotations
 
+import importlib.util
 import json
 import hashlib
 import re
@@ -23,7 +24,7 @@ from .exceptions_lake import (
 )
 from .graph_inference import write_inference_outputs
 from .logos_write_guard import assert_dad_write_allowed
-from .graph_surfaces import graph_surface_status
+from .graph_surfaces import graph_surface_status, load_graph_surface_registry
 from .journal import checkpoint_journal, ingest_remote_outbox, journal_status
 from .learning import build_lesson_graph
 from .logos_llos import LOGOS_LLOS_SURFACES, POLICY_PATH, audit_logos_llos
@@ -32,6 +33,7 @@ from .lesson_automation_coverage import (
     write_weekly_asset_coverage_outputs,
 )
 from .mail_center import collect_mail, deliver_mail, diagnose_mail_dirty_state, route_mail
+from .subagent_evaluations import build_graph as build_subagent_capability_graph
 from .subagent_evaluations import build_improvement_review
 from .transport import AUTHORITY_BOUNDARY, audit_all_repo_transport, data_path, data_relative_path
 from .utils import atomic_write_text, json_dumps, sha256_file, utc_now
@@ -98,6 +100,13 @@ _SUBAGENT_CYCLE_INPUT_PATHS = (
     "raw/agent-evaluations/attempt-evaluations.jsonl",
     "raw/agent-evaluations/unrated-inventory.jsonl",
 )
+# The subagent-capability-graph builder raises on incomplete packets; these are
+# the immutable inputs that must all be present before a rebuild is attempted.
+_SUBAGENT_GRAPH_REQUIRED_INPUTS = (
+    "raw/agent-evaluations/role-profile-revisions.jsonl",
+    "raw/agent-evaluations/execution-attempts.jsonl",
+    "raw/agent-evaluations/attempt-evaluations.jsonl",
+)
 _CONTROL_HASH_MAX_BYTES = 1024 * 1024
 _MATERIAL_ERROR_STATUSES = {"blocked", "error", "failed", "invalid"}
 
@@ -160,6 +169,59 @@ def _git_index_path(repo_root: Path) -> Path | None:
     if not git_dir.is_absolute():
         git_dir = (repo_root / git_dir).resolve()
     return git_dir / "index"
+
+
+def _builder_source_path(module_ref: str) -> Path | None:
+    """Resolve a surface builder's source file without importing/executing it."""
+    module_name = module_ref.rpartition(".")[0]
+    if not module_name:
+        return None
+    try:
+        spec = importlib.util.find_spec(module_name)
+    except (ImportError, ValueError, AttributeError):
+        return None
+    origin = getattr(spec, "origin", None) if spec is not None else None
+    if not origin or origin in {"built-in", "frozen"}:
+        return None
+    return Path(origin)
+
+
+def _graph_surface_input_fingerprint_rows(hub_root: Path) -> list[tuple[Any, ...]]:
+    """Fingerprint the builder sources and registry inputs of registered graph
+    surfaces.
+
+    Generated surface manifests pin the hash of their builder code and registry
+    inputs. When those drift, the manifests go stale and validation blocks, but
+    the raw-data fingerprint alone would let an idle daemon skip the rebuild. This
+    tracks the same inputs so a code or registry change wakes the daemon to
+    re-pin the surface.
+    """
+    rows: list[tuple[Any, ...]] = []
+    registry = load_graph_surface_registry(hub_root)
+    for surface in registry.get("surfaces", []):
+        if not isinstance(surface, dict):
+            continue
+        builder = surface.get("builder", {})
+        if not isinstance(builder, dict):
+            continue
+        if str(builder.get("availability", "")) not in {"wired", "partial"}:
+            continue
+        owner = f"graph-surface:{surface.get('surface_id', 'surface')}"
+        source_path = _builder_source_path(str(builder.get("module", "")))
+        if source_path is not None:
+            row = _fingerprint_row(owner, f"builder_source:{builder.get('module', '')}", source_path)
+            if row is not None:
+                rows.append(row)
+        for source_input in surface.get("source_inputs", []):
+            if not isinstance(source_input, dict) or source_input.get("kind") != "registry_path":
+                continue
+            ref = str(source_input.get("ref", ""))
+            if not ref:
+                continue
+            row = _fingerprint_row(owner, ref, hub_root / ref)
+            if row is not None:
+                rows.append(row)
+    return rows
 
 
 def _cycle_input_fingerprint(
@@ -267,6 +329,7 @@ def _cycle_input_fingerprint(
         row = _fingerprint_row("dad-data", relative, path)
         if row is not None:
             rows.append(row)
+    rows.extend(_graph_surface_input_fingerprint_rows(hub_root))
     material = json.dumps(sorted(rows), separators=(",", ":"), ensure_ascii=True)
     return hashlib.sha256(material.encode("utf-8")).hexdigest(), len(rows)
 
@@ -663,11 +726,37 @@ def _run_remote_outbox_ingest(
     )
 
 
+def _run_subagent_capability_graph(hub_root: Path) -> dict[str, Any]:
+    """Rebuild the registered subagent-capability-graph surface when its inputs
+    are present.
+
+    The builder raises when a validated evaluation packet is incomplete, so a hub
+    with no evaluation data is skipped (not errored) to keep empty hubs clean.
+    """
+    for relative in _SUBAGENT_GRAPH_REQUIRED_INPUTS:
+        path = data_relative_path(hub_root, Path(relative))
+        try:
+            present = path.is_file() and path.stat().st_size > 0
+        except OSError:
+            present = False
+        if not present:
+            return {
+                "status": "skipped",
+                "step": "subagent_capability_graph",
+                "reason": "subagent_evaluation_inputs_incomplete",
+                "authority_boundary": AUTHORITY_BOUNDARY,
+            }
+    return _step_result(
+        "subagent_capability_graph", build_subagent_capability_graph, hub_root
+    )
+
+
 def _run_graph_cycle(hub_root: Path) -> dict[str, Any]:
     return {
         "status": "ok",
         "lesson_graph": _step_result("lesson_graph", build_lesson_graph, hub_root),
         "inference": _step_result("graph_inference", write_inference_outputs, hub_root),
+        "subagent_capability_graph": _run_subagent_capability_graph(hub_root),
         "authority_boundary": AUTHORITY_BOUNDARY,
     }
 
@@ -812,6 +901,7 @@ def run_daemon_cycle(
         "logos_llos_read_only_audit",
         "subagent_improvement_review",
         "graph_inference",
+        "subagent_capability_graph_rebuild",
         "transport_audit",
         "weekly_asset_coverage",
         "scheduled_task_registry",
