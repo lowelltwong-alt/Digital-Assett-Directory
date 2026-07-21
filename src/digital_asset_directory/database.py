@@ -212,6 +212,91 @@ class CatalogDB:
         )
         self.connection.commit()
 
+    def replace_scan_alerts(self, scan_id: str, alerts: Iterable[AlertRecord]) -> None:
+        """Replace this scan's open alerts, mirroring ``replace_scan_edges``.
+
+        Alerts are regenerated deterministically every scan, so appending them
+        (the old ``upsert_alerts`` path) accumulated hundreds of thousands of
+        rows across scans. Human-touched alerts (status != 'open') are preserved.
+        """
+        self.connection.execute(
+            "DELETE FROM alerts WHERE scan_id=? AND status='open'", (scan_id,)
+        )
+        self.connection.executemany(
+            "INSERT OR REPLACE INTO alerts VALUES (?, ?, ?, ?, ?, ?)",
+            [
+                (a.alert_id, a.alert_type, a.severity, a.status, a.scan_id, self._payload(a))
+                for a in alerts
+            ],
+        )
+        self.connection.commit()
+
+    def prune_generated_records(self, keep_scan_id: str) -> dict[str, int]:
+        """Drop per-scan generated rows that do not belong to the latest scan.
+
+        ``edges``, ``asset_chunks``, ``asset_deltas``, ``duplicate_clusters`` and
+        open ``alerts`` are keyed by ``scan_id`` and are only valid for the scan
+        that produced them; older scans' rows are stale graph state that bloats
+        the catalog. Assets persist (keyed by stable ``asset_id``). Non-open
+        alerts (human-acknowledged/resolved) are preserved as a safety net.
+
+        Assumes one scanner at a time (SQLite WAL single-writer): a concurrently
+        running second scan's rows would be pruned as "not latest". Concurrent
+        scans were already unsupported (assets upsert over each other); do not
+        run two scans against one catalog.
+        """
+        removed: dict[str, int] = {}
+        cur = self.connection.execute(
+            "DELETE FROM edges WHERE scan_id != ?", (keep_scan_id,)
+        )
+        removed["edges"] = cur.rowcount
+        cur = self.connection.execute(
+            "DELETE FROM asset_chunks WHERE scan_id != ?", (keep_scan_id,)
+        )
+        removed["asset_chunks"] = cur.rowcount
+        cur = self.connection.execute(
+            "DELETE FROM asset_deltas WHERE scan_id != ?", (keep_scan_id,)
+        )
+        removed["asset_deltas"] = cur.rowcount
+        cur = self.connection.execute(
+            "DELETE FROM duplicate_clusters WHERE scan_id != ?", (keep_scan_id,)
+        )
+        removed["duplicate_clusters"] = cur.rowcount
+        cur = self.connection.execute(
+            "DELETE FROM alerts WHERE scan_id != ? AND status='open'", (keep_scan_id,)
+        )
+        removed["alerts"] = cur.rowcount
+        self.connection.commit()
+        return removed
+
+    def prune_stale_running_scans(self, keep_scan_id: str) -> int:
+        """Remove interrupted 'running' scan rows (crashed scans never completed)."""
+        cur = self.connection.execute(
+            "DELETE FROM scans WHERE status='running' AND scan_id != ?", (keep_scan_id,)
+        )
+        self.connection.commit()
+        return cur.rowcount
+
+    def vacuum(self) -> None:
+        """Reclaim free pages after pruning. Must run outside an open transaction."""
+        self.connection.execute("VACUUM")
+        self.connection.commit()
+
+    def table_counts(self) -> dict[str, int]:
+        """Row counts per table for health/verification surfaces."""
+        tables = [
+            "assets", "edges", "alerts", "asset_chunks", "asset_deltas",
+            "duplicate_clusters", "scans", "synergies", "activation_triggers",
+            "lessons", "handoffs",
+        ]
+        counts: dict[str, int] = {}
+        for table in tables:
+            row = self.connection.execute(
+                'SELECT COUNT(*) FROM "%s"' % table
+            ).fetchone()
+            counts[table] = int(row[0]) if row else 0
+        return counts
+
     def upsert_synergies(self, records: Iterable[SynergyRecord]) -> None:
         self.connection.executemany(
             "INSERT OR REPLACE INTO synergies VALUES (?, ?, ?)",
@@ -278,5 +363,17 @@ class CatalogDB:
     def latest_scan(self) -> dict[str, Any] | None:
         row = self.connection.execute(
             "SELECT * FROM scans ORDER BY started_at DESC LIMIT 1"
+        ).fetchone()
+        return dict(row) if row else None
+
+    def latest_complete_scan(self) -> dict[str, Any] | None:
+        """Most recent fully-successful scan (status 'complete').
+
+        Retention/vacuum must key on this, not ``latest_scan``: if the most
+        recent scan crashed ('running') or failed, its subset/empty rows are not
+        a valid graph to prune everything else down to.
+        """
+        row = self.connection.execute(
+            "SELECT * FROM scans WHERE status='complete' ORDER BY started_at DESC LIMIT 1"
         ).fetchone()
         return dict(row) if row else None
