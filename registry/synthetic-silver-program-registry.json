@@ -1,0 +1,117 @@
+{
+  "schema_version": "0.1.0",
+  "registry_id": "synthetic-silver-program-registry",
+  "registry_version": "0.1.0",
+  "status": "candidate",
+  "ai_agnostic": true,
+  "program_id": "synthetic-silver",
+  "authority_boundary": "DAD owns only this program's contract plane: the program doc, this registry, the provenance-record and release-manifest schemas, tier policy, and adapter pointers. Corpus content, gold data, generators, validators, judges, releases, thresholds, and every acceptance decision belong to the domain repos. DAD never writes into Logos, never stores corpus content or generated silver payloads, and no silver metric promotes an artifact past S3 without an explicit human decision.",
+  "operating_principle": "Use synthetic silver to move the corpus; use human gold to measure the silver; use immutable primary sources to correct both.",
+  "tier_ladder": [
+    {"tier_id": "S0", "name": "raw_synthetic", "dad_lifecycle": "candidate", "permitted_use": ["exploration_only"], "required_controls": ["provenance_record"], "human_gate_required": false},
+    {"tier_id": "S1", "name": "machine_filtered", "dad_lifecycle": "candidate", "permitted_use": ["internal_candidate_pool"], "required_controls": ["provenance_record", "hard_validators_passed"], "human_gate_required": false},
+    {"tier_id": "S2", "name": "calibrated_silver", "dad_lifecycle": "candidate", "permitted_use": ["bulk_processing", "training"], "required_controls": ["provenance_record", "hard_validators_passed", "gold_anchor_calibration", "active_audit_process"], "human_gate_required": false},
+    {"tier_id": "S3", "name": "human_sampled_silver", "dad_lifecycle": "reviewed", "permitted_use": ["retrieval", "internal_analysis"], "required_controls": ["provenance_record", "hard_validators_passed", "gold_anchor_calibration", "stratified_human_audit_passed"], "human_gate_required": true},
+    {"tier_id": "G1", "name": "human_adjudicated", "dad_lifecycle": "reviewed", "permitted_use": ["reference", "publication_preparation"], "required_controls": ["qualified_human_review", "human_adjudication_record"], "human_gate_required": true},
+    {"tier_id": "G2", "name": "authoritative", "dad_lifecycle": "promoted", "permitted_use": ["source_of_truth_layer"], "required_controls": ["explicit_human_promotion_via_dad_gates", "promotion_research_lane_when_high_blast_radius"], "human_gate_required": true}
+  ],
+  "non_negotiable_controls": [
+    "The canonical source is never overwritten.",
+    "Every derived item is traceable to an exact source span.",
+    "The gold holdout is excluded from prompts, examples, tuning, threshold selection, and training.",
+    "No model both generates and solely certifies the same output.",
+    "Prompt variants of one model family are correlated sources; independence is tracked at the source-family level.",
+    "Deterministic validators run before any model judging.",
+    "Accepted items remain auditable; rejected items are retained with reasons.",
+    "Rare and difficult strata are intentionally sampled and never silently filtered away.",
+    "Human corrections are a separate authoritative layer.",
+    "Every release has a version, manifest, and reproducible configuration.",
+    "A new model never silently regenerates an old benchmark.",
+    "Task specifications are semantically versioned; no silent re-labeling.",
+    "Critical errors are binary gates; rubric scores cannot compensate.",
+    "Synthetic-only evidence never establishes real-world readiness; real source-separated holdouts remain the measure."
+  ],
+  "recipes": [
+    {
+      "recipe_id": "recipe:discrete-labels",
+      "name": "Discrete labels",
+      "task_types": ["document_classification", "entity_extraction", "clause_identification", "issue_tagging", "ocr_error_categories", "source_type_identification"],
+      "pipeline": ["define_label_ontology", "create_gold_anchor", "write_deterministic_labeling_functions", "run_multiple_model_families", "construct_label_matrix", "estimate_source_reliability_and_conflict", "aggregate_probability_distribution", "accept_high_confidence", "review_high_value_disagreements", "audit_accepted_labels"],
+      "deterministic_first": true
+    },
+    {
+      "recipe_id": "recipe:lossless-transformations",
+      "name": "Lossless transformations",
+      "task_types": ["chunking", "ocr_transcription", "unicode_normalization", "text_extraction", "structure_recovery", "footnote_association"],
+      "pipeline": ["generate_candidate_transformations", "run_exact_invariants", "reject_lossy_or_untraceable_candidates", "compare_structural_alternatives", "semantic_judging_only_for_unresolved_choices", "preserve_offsets_and_transformation_logs"],
+      "deterministic_first": true
+    },
+    {
+      "recipe_id": "recipe:open-ended-outputs",
+      "name": "Open-ended outputs",
+      "task_types": ["translation", "summaries", "theological_analysis", "legal_issue_spotting", "explanatory_notes", "research_synthesis"],
+      "pipeline": ["generate_diverse_candidates", "require_evidence_and_provenance", "run_deterministic_grounding_checks", "obtain_pairwise_or_ranked_preferences", "score_separate_rubric_dimensions", "retain_disagreement_and_ambiguity", "accept_only_for_authorized_use_tier"],
+      "deterministic_first": true
+    }
+  ],
+  "adapters": [
+    {
+      "adapter_id": "adapter:logos",
+      "target": "Logos corpus family",
+      "mode": "read_only_pointer",
+      "write_policy": "dad_never_writes",
+      "notes": "registry/logos-repo-authority.json denies all DAD writes into Logos. Logos pulls this contract and the record schemas through its own tooling and may send metadata-only results back. The chunking pilot runs Logos-side."
+    },
+    {
+      "adapter_id": "adapter:law-firm-sim",
+      "target": "LawFirm Sim synthetic litigation engine",
+      "mode": "sovereignty_child_pointer",
+      "write_policy": "dad_never_writes",
+      "notes": "Silver producers map onto the engine's proposal-only JobManifest/JobResult worker contract. The deterministic world kernel keeps sole ownership of canonical state; the engine's G0-G2 authority gates are not superseded by silver tiers."
+    },
+    {
+      "adapter_id": "adapter:world-builder",
+      "target": "Synthetic world/corpus factory builds",
+      "mode": "target_unresolved",
+      "write_policy": "dad_never_writes",
+      "notes": "Repo identity unconfirmed; likely a generalization of the litigation world kernel. Human confirmation of the target repository is required before this pointer is bound."
+    },
+    {
+      "adapter_id": "adapter:litigation-corpus-factory",
+      "target": "Case and artifact corpus generation lane inside the litigation world",
+      "mode": "sovereignty_child_pointer",
+      "write_policy": "dad_never_writes",
+      "notes": "Generated case corpora adopt the provenance record and release manifest. Treatment-blind evaluation, replay, and sealed-oracle grading remain engine-owned."
+    }
+  ],
+  "pilots": [
+    {
+      "pilot_id": "pilot:logos-chunking",
+      "owner": "Logos corpus family (Logos-side implementation and ownership)",
+      "status": "proposed",
+      "dad_role": "Holds the pilot brief, acceptance-specification requirements, and record contracts; reads approved metadata-only results.",
+      "brief": "P0-P12 chunking pilot from the source packet: inventory formats, write acceptance spec, create gold anchor and hidden holdout, canonical offsets, run candidate chunkers (structural, fixed-token, recursive, discourse, LLM-offset-only, domain-specific), hard validators, evidence-linked retrieval tests, stratified comparison, human review, freeze chunk-spec 0.1 and silver release 0.1.",
+      "blocking_unknowns": ["corpus volume and formats", "image-only percentage", "existing text-layer quality", "source licenses", "page/line identifier coverage", "Unicode normalization practice", "reviewer availability", "acceptable error ceilings"]
+    },
+    {
+      "pilot_id": "pilot:litigation-corpus-manifests",
+      "owner": "LawFirm Sim synthetic litigation engine",
+      "status": "proposed",
+      "dad_role": "Provides the provenance-record and release-manifest contracts for generated case corpora; no schedule coupling to the Logos pilot.",
+      "brief": "Adopt synthetic-silver provenance records and release manifests for generated case/artifact corpora at foundation scale (1 case, ~80-150 artifacts) before pilot scale, within existing G0-G2 authority.",
+      "blocking_unknowns": ["walking-skeleton completion state", "artifact schema revision stability"]
+    }
+  ],
+  "threshold_policy": {
+    "numeric_thresholds_in_registry": false,
+    "calibration_required": true,
+    "rationale": "Every numeric threshold in the source packet is a placeholder. Thresholds are set per corpus and per stratum after gold-anchor calibration, and are recorded in domain-repo release manifests, never in this registry."
+  },
+  "research_backlog": [
+    "Candidate intake of Snorkel, Cleanlab, ragas, Argilla, Meta synthetic-data-kit, and kraken into registry/synthetic-data-resource-registry.json via its normal weekly-scout intake.",
+    "Blind independent audit of the source packet's factual claims using its W-wave and adversarial prompts, run by a model family that has not read the packet conclusions.",
+    "Corpus inspection to resolve the Logos pilot blocking unknowns before any threshold is proposed.",
+    "Judge-calibration design reusing registry/subagent-evaluation-methodology.json pair-order, self-preference, and human-agreement controls.",
+    "Confirm the World Builder target repository identity and bind adapter:world-builder or retire it."
+  ]
+}

@@ -1,0 +1,67 @@
+{
+  "schema_version": "0.1.0",
+  "release_id": "logos-chunk-silver-0.1.0",
+  "program_id": "synthetic-silver",
+  "task": {
+    "name": "semantic_chunking",
+    "task_version": "0.1.0",
+    "spec_version": "chunk-spec-0.1.0"
+  },
+  "tier": "S2",
+  "source_snapshots": [
+    {
+      "snapshot_id": "logos-corpus-pilot-strata-0.1",
+      "sha256": "a1b2c3d4e5f60718293a4b5c6d7e8f90a1b2c3d4e5f60718293a4b5c6d7e8f90"
+    }
+  ],
+  "generation": {
+    "code_commit": "0000000000000000000000000000000000000000",
+    "prompt_hashes": [
+      "sha256:1c9a7e5f3b2d4c6a8e0f2b4d6c8a0e2f4b6d8c0a2e4f6b8d0c2a4e6f8b0d2c4a"
+    ],
+    "producers": [
+      {"producer": "structural-parser", "producer_family": "deterministic-rule", "producer_version": "0.1.0"},
+      {"producer": "fixed-token-baseline", "producer_family": "deterministic-rule", "producer_version": "0.1.0"},
+      {"producer": "model-family-b-chunker", "producer_family": "vendor-b-frontier", "producer_version": "2026-07"}
+    ]
+  },
+  "sampling_strategy": "Stratified over required pilot strata: born-digital Unicode, polytonic Greek, pointed and unpointed Hebrew, mixed-script pages, deep heading hierarchies, footnotes, multi-column, verse-numbered, poor OCR, commentaries with lemma structure.",
+  "counts": {
+    "items_total": 1200,
+    "accepted": 940,
+    "needs_review": 180,
+    "rejected": 80,
+    "hard_validator_failures": 46,
+    "by_stratum": [
+      {"stratum": "born_digital_unicode", "items": 300},
+      {"stratum": "polytonic_greek", "items": 220},
+      {"stratum": "pointed_hebrew", "items": 180},
+      {"stratum": "mixed_script", "items": 160},
+      {"stratum": "poor_ocr", "items": 140},
+      {"stratum": "commentary_lemma", "items": 200}
+    ]
+  },
+  "audit": {
+    "sample_size": 60,
+    "findings": [
+      "Two heading-attachment failures in multi-column strata; added to regression set."
+    ]
+  },
+  "performance": {
+    "gold_anchor": {
+      "boundary_agreement": 0.87,
+      "critical_error_escapes": 0
+    },
+    "gold_holdout": {
+      "boundary_agreement": 0.82,
+      "critical_error_escapes": 1
+    }
+  },
+  "known_limitations": [
+    "Fixture example only; all numbers are illustrative and carry no calibration authority.",
+    "Marginalia and page-image-only strata not yet represented."
+  ],
+  "confidentiality_tier": "internal",
+  "supersedes": null,
+  "created_at": "2026-07-20T00:00:00Z"
+}

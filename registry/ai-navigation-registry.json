@@ -1,8 +1,8 @@
 {
   "schema_version": "0.1.0",
   "registry_id": "ai-navigation-registry",
-  "navigation_version": "2026.07.17.1",
-  "updated_at": "2026-07-17T05:55:00Z",
+  "navigation_version": "2026.07.20.1",
+  "updated_at": "2026-07-20T14:00:00Z",
   "singular_entrypoint": {
     "path": "AI_FRONT_DOOR.md",
     "rule": "All agents start at AI_FRONT_DOOR.md, then follow the required read order and task-specific branches.",
@@ -58,12 +58,24 @@
       "branch_id": "ci_module_boundary_governance",
       "path": "assets/agent-skills/dad-ci-module-boundary-governance/SKILL.md",
       "role": "Provider-neutral module ownership, dependency-triggered suite selection, workflow-contract validation, required-check aggregation, and metadata-only migration routing.",
-      "tags": ["agent_skill", "ci", "dependency_graph", "monorepo", "validation", "governance"],
+      "tags": [
+        "agent_skill",
+        "ci",
+        "dependency_graph",
+        "monorepo",
+        "validation",
+        "governance"
+      ],
       "use_when": "You design, change, audit, or migrate CI workflows, module suites, path filters, required checks, integration/release lanes, or scheduled full regression.",
       "current_version": "0.1.0",
       "last_material_change_at": "2026-07-16T22:30:00Z",
       "change_class": "library_catalog",
-      "route_after": ["AI_FRONT_DOOR.md", ".ci/module-boundaries.yaml", "schemas/ci-module-boundary.schema.json", "assets/coding-harnesses/ci-module-boundary-governance/tests-or-evals/scenarios.yaml"],
+      "route_after": [
+        "AI_FRONT_DOOR.md",
+        ".ci/module-boundaries.yaml",
+        "schemas/ci-module-boundary.schema.json",
+        "assets/coding-harnesses/ci-module-boundary-governance/tests-or-evals/scenarios.yaml"
+      ],
       "freshness_hint": "Provider adapters cannot broaden manifest scope; dependency completeness is unknown without observed-edge evidence; downstream adoption remains human-gated."
     },
     {
@@ -674,90 +686,246 @@
       "branch_id": "synthetic_data_resource_library",
       "path": "docs/SYNTHETIC_DATA_RESOURCE_LIBRARY.md",
       "role": "Pointer-only synthetic dataset, generator, simulator, augmentation, fixture, and complementary real-holdout catalog with deterministic opportunity routing.",
-      "tags": ["registry", "machine_learning", "synthetic_data", "workflow", "research_intake", "validation", "human_gate"],
+      "tags": [
+        "registry",
+        "machine_learning",
+        "synthetic_data",
+        "workflow",
+        "research_intake",
+        "validation",
+        "human_gate"
+      ],
       "use_when": "A task has scarce labels, rare cases, controllable ground truth, simulation, privacy-safe fixture, domain-randomization, or coverage-stress needs and synthetic data may help.",
       "current_version": "0.1.0",
       "last_material_change_at": "2026-07-16T22:30:00Z",
       "change_class": "library_catalog",
-      "route_after": ["AI_FRONT_DOOR.md", "assets/agent-skills/ml-workflow-agent-family/SKILL.md", "registry/synthetic-data-resource-registry.json", "registry/ml-agent-family-registry.json"],
+      "route_after": [
+        "AI_FRONT_DOOR.md",
+        "assets/agent-skills/ml-workflow-agent-family/SKILL.md",
+        "registry/synthetic-data-resource-registry.json",
+        "registry/ml-agent-family-registry.json"
+      ],
       "freshness_hint": "Pointers and terms can change; the human-activated weekly research automation is active, candidate-only, and bound to an expiring runtime adapter; real-world claims always require a source-separated real holdout."
     },
     {
       "branch_id": "technical_product_company_os",
       "path": "docs/TECHNICAL_PRODUCT_COMPANY_OS.md",
       "role": "One-human capability operating system for project-position diagnosis, right-sized completion, product catalysis, project coordination, top-ten technical coverage, AI decision rights, routing, workflow evidence, automation, offload, gap detection, and improvement.",
-      "tags": ["agent_skill", "workflow", "knowledge_graph", "control_plane", "project_management", "governance", "automation", "human_gate"],
+      "tags": [
+        "agent_skill",
+        "workflow",
+        "knowledge_graph",
+        "control_plane",
+        "project_management",
+        "governance",
+        "automation",
+        "human_gate"
+      ],
       "use_when": "You diagnose where a project is, confirm its destination and completion depth, shape or coordinate a technical product, or retrieve the smallest sufficient capability and specialist set.",
       "current_version": "0.2.0",
       "last_material_change_at": "2026-07-15T16:00:00Z",
       "change_class": "library_catalog",
-      "route_after": ["AI_FRONT_DOOR.md", "registry/technical-product-company-os-registry.json", "registry/agent-family-portfolio-registry.json", "registry/agent-skill-library.json"],
+      "route_after": [
+        "AI_FRONT_DOOR.md",
+        "registry/technical-product-company-os-registry.json",
+        "registry/agent-family-portfolio-registry.json",
+        "registry/agent-skill-library.json"
+      ],
       "freshness_hint": "Project position remains separate from human-approved destination; MCP and UI/UX expert packs are on-demand only; telemetry is opt-in, routines are dormant, and all active change remains human-gated."
     },
     {
       "branch_id": "self_learning_improvement_system",
       "path": "docs/SELF_LEARNING_IMPROVEMENT_SYSTEM_PLAN.md",
       "role": "Candidate cross-family Self-Learning and Improvement overlay with evidence-locked evaluation, routed expert packs, technique and workflow lifecycle, weekly research radar, and one-human decision control.",
-      "tags": ["agent_skill", "workflow", "learning_loop", "machine_learning", "knowledge_graph", "automation", "governance", "human_gate"],
+      "tags": [
+        "agent_skill",
+        "workflow",
+        "learning_loop",
+        "machine_learning",
+        "knowledge_graph",
+        "automation",
+        "governance",
+        "human_gate"
+      ],
       "use_when": "You design, build, validate, pilot, activate, monitor, or audit any self-learning, self-improvement, memory, prompt optimization, workflow optimization, continual-learning, or capability-gap loop.",
       "current_version": "0.1.0",
       "last_material_change_at": "2026-07-15T04:09:48Z",
       "change_class": "library_catalog",
-      "route_after": ["AI_FRONT_DOOR.md", "docs/research/AI_SELF_LEARNING_AND_IMPROVEMENT_RESEARCH_2026-07-14.md", "docs/TECHNICAL_PRODUCT_COMPANY_OS.md", "registry/technical-product-company-os-registry.json"],
+      "route_after": [
+        "AI_FRONT_DOOR.md",
+        "docs/research/AI_SELF_LEARNING_AND_IMPROVEMENT_RESEARCH_2026-07-14.md",
+        "docs/TECHNICAL_PRODUCT_COMPANY_OS.md",
+        "registry/technical-product-company-os-registry.json"
+      ],
       "freshness_hint": "The design is candidate-only; the P7D radar, optimizers, training work, notifications, and mutations are dormant until independently checked and separately approved by Lowell."
     },
     {
       "branch_id": "agent_family_portfolio",
       "path": "docs/AGENT_FAMILY_PORTFOLIO.md",
       "role": "Model-neutral family portfolio with shared role and interface contracts, typed dependency projection, independent assurance, read-only pilots, lifecycle sentinels, and a one-human cockpit.",
-      "tags": ["agent_skill", "workflow", "knowledge_graph", "control_plane", "governance", "validation", "human_gate"],
+      "tags": [
+        "agent_skill",
+        "workflow",
+        "knowledge_graph",
+        "control_plane",
+        "governance",
+        "validation",
+        "human_gate"
+      ],
       "use_when": "You select, build, route, pilot, validate, monitor, adapt, supersede, or retire a reusable agent family.",
       "current_version": "0.1.0",
       "last_material_change_at": "2026-07-14T23:30:00Z",
       "change_class": "library_catalog",
-      "route_after": ["AI_FRONT_DOOR.md", "registry/agent-family-portfolio-registry.json", "registry/agent-skill-library.json", "registry/graph-edge-registry.json"],
+      "route_after": [
+        "AI_FRONT_DOOR.md",
+        "registry/agent-family-portfolio-registry.json",
+        "registry/agent-skill-library.json",
+        "registry/graph-edge-registry.json"
+      ],
       "freshness_hint": "Provider and model IDs are expiring attempt metadata; family health and graph links are candidate evidence, recurring research is dormant, and all mutation or promotion remains human-gated."
     },
     {
       "branch_id": "source_knowledge_ingestion",
       "path": "assets/source-knowledge-ingestion/README.md",
       "role": "Metadata-first cross-repository knowledge ingestion, privacy-safe inert snapshots, normalized candidate records, dedupe evidence, graph projection, and human-gated promotion.",
-      "tags": ["learning_loop", "digital_asset", "knowledge_graph", "cross_repo", "security_privacy", "validation", "human_gate"],
+      "tags": [
+        "learning_loop",
+        "digital_asset",
+        "knowledge_graph",
+        "cross_repo",
+        "security_privacy",
+        "validation",
+        "human_gate"
+      ],
       "use_when": "A source repository has reusable lessons, assets, roles, workflows, schemas, tests, or governance patterns that DAD should retain without copying case, client, raw, output, or private-workspace content.",
       "current_version": "0.1.0",
       "last_material_change_at": "2026-07-16T23:30:00Z",
       "change_class": "library_catalog",
-      "route_after": ["AI_FRONT_DOOR.md", "registry/source-knowledge-ingestion-registry.json", "assets/source-knowledge-ingestion/policy.json", "roadmap/evidence/albert-source-knowledge-ingestion-report.md", "registry/graph-surface-registry.json"],
+      "route_after": [
+        "AI_FRONT_DOOR.md",
+        "registry/source-knowledge-ingestion-registry.json",
+        "assets/source-knowledge-ingestion/policy.json",
+        "roadmap/evidence/albert-source-knowledge-ingestion-report.md",
+        "registry/graph-surface-registry.json"
+      ],
       "freshness_hint": "Every snapshot is source-revision and dirty-state bound; extracted records remain internal candidates, excluded paths remain opaque, and promotion or downstream adoption requires separate human review."
+    },
+    {
+      "branch_id": "synthetic_silver_program",
+      "path": "docs/SYNTHETIC_SILVER_PROGRAM.md",
+      "role": "DAD-side contract plane for versioned synthetic silver corpora: tier ladder, non-negotiable controls, recipes, provenance-record and release-manifest schemas, and pointer-only adapters for Logos, LawFirm Sim, World Builder, and the litigation corpus factory.",
+      "tags": [
+        "registry",
+        "synthetic_data",
+        "governance",
+        "schema",
+        "human_gate",
+        "cross_repo"
+      ],
+      "use_when": "You are designing, reviewing, or adopting synthetic silver corpus manufacturing (gold anchors, silver releases, judge calibration, tier promotion) in any DAD-family repo.",
+      "current_version": "0.1.0",
+      "last_material_change_at": "2026-07-20T14:00:00Z",
+      "change_class": "library_catalog",
+      "route_after": [
+        "registry/synthetic-silver-program-registry.json",
+        "schemas/synthetic-silver-provenance-record.schema.json",
+        "schemas/synthetic-silver-release-manifest.schema.json",
+        "registry/synthetic-data-resource-registry.json"
+      ],
+      "freshness_hint": "Candidate program contract; recheck after the Logos-side chunking pilot or litigation corpus manifest adoption reports back."
     }
   ],
   "recent_changes": [
     {
+      "change_id": "nav-change:2026-07-20:synthetic-silver-program",
+      "changed_at": "2026-07-20T14:00:00Z",
+      "change_type": "added_synthetic_silver_program_contract",
+      "paths": [
+        "docs/SYNTHETIC_SILVER_PROGRAM.md",
+        "registry/synthetic-silver-program-registry.json",
+        "schemas/synthetic-silver-program-registry.schema.json",
+        "schemas/synthetic-silver-provenance-record.schema.json",
+        "schemas/synthetic-silver-release-manifest.schema.json",
+        "examples/synthetic-silver/",
+        "tests/test_synthetic_silver_program.py"
+      ],
+      "summary": "Added the Synthetic Silver program contract plane: S0-G2 tier ladder mapped to DAD lifecycle, non-negotiable controls, three recipes, provenance-record and release-manifest schemas with golden fixtures, and pointer-only adapters (Logos read-only, LawFirm Sim sovereignty child, World Builder unresolved).",
+      "agent_action": "Read docs/SYNTHETIC_SILVER_PROGRAM.md before any synthetic corpus, gold/silver dataset, or judge-calibration work; never store corpus content in DAD and never write into Logos.",
+      "route_tags": [
+        "synthetic_data",
+        "governance",
+        "schema",
+        "cross_repo"
+      ]
+    },
+    {
       "change_id": "nav-change:2026-07-18:ml-specialist-mesh-suite",
       "changed_at": "2026-07-18T12:00:00Z",
       "change_type": "expanded_ml_specialist_mesh_and_hybrid_workflows",
-      "paths": ["assets/agent-skills/ml-workflow-agent-family/", "registry/ml-agent-family-registry.json", "registry/ml-technique-registry.json", "docs/ML_SPECIALIST_MESH_AND_HYBRIDS.md", "tests/test_ml_agent_family.py"],
+      "paths": [
+        "assets/agent-skills/ml-workflow-agent-family/",
+        "registry/ml-agent-family-registry.json",
+        "registry/ml-technique-registry.json",
+        "docs/ML_SPECIALIST_MESH_AND_HYBRIDS.md",
+        "tests/test_ml_agent_family.py"
+      ],
       "summary": "Extended the single candidate ML family with eight demand-activated specialists, five technique cards, three governed workflows, typed experiment and prediction contracts, and primary-source hybrid guidance.",
       "agent_action": "Begin with the deterministic fit receipt, route only the needed specialist, compare against a credible baseline, require component ablations and independent checking, and keep deployment, automation, training authority, and retraining human-gated.",
-      "route_tags": ["machine_learning", "agent_skill", "workflow", "research_intake", "validation", "governance", "human_gate"]
+      "route_tags": [
+        "machine_learning",
+        "agent_skill",
+        "workflow",
+        "research_intake",
+        "validation",
+        "governance",
+        "human_gate"
+      ]
     },
     {
       "change_id": "nav-change:2026-07-16:synthetic-data-resource-library",
       "changed_at": "2026-07-16T22:30:00Z",
       "change_type": "added_synthetic_data_resource_library",
-      "paths": ["docs/SYNTHETIC_DATA_RESOURCE_LIBRARY.md", "registry/synthetic-data-resource-registry.json", "schemas/synthetic-data-resource-registry.schema.json", "src/digital_asset_directory/synthetic_data_resources.py", "assets/agent-skills/ml-workflow-agent-family"],
+      "paths": [
+        "docs/SYNTHETIC_DATA_RESOURCE_LIBRARY.md",
+        "registry/synthetic-data-resource-registry.json",
+        "schemas/synthetic-data-resource-registry.schema.json",
+        "src/digital_asset_directory/synthetic_data_resources.py",
+        "assets/agent-skills/ml-workflow-agent-family"
+      ],
       "summary": "Added 48 primary-source synthetic-data and complementary real-holdout pointers, deterministic suggestion gates, and proportional scout/architect/checker routing inside the existing ML family.",
       "agent_action": "Run the deterministic route before naming a generator, use synthetic data only for a concrete coverage need, verify source terms, and require real-distribution validation for real-world claims.",
-      "route_tags": ["machine_learning", "synthetic_data", "workflow", "research_intake", "validation", "human_gate"]
+      "route_tags": [
+        "machine_learning",
+        "synthetic_data",
+        "workflow",
+        "research_intake",
+        "validation",
+        "human_gate"
+      ]
     },
     {
       "change_id": "nav-change:2026-07-15:self-learning-improvement-system-plan",
       "changed_at": "2026-07-15T04:09:48Z",
       "change_type": "added_self_learning_improvement_research_and_candidate_plan",
-      "paths": ["docs/research/AI_SELF_LEARNING_AND_IMPROVEMENT_RESEARCH_2026-07-14.md", "docs/SELF_LEARNING_IMPROVEMENT_SYSTEM_PLAN.md", "docs/FABLE_SELF_LEARNING_IMPROVEMENT_SYSTEM_PROMPT.md", "roadmap/evidence/self-learning-improvement-task-mesh-r1.json", "roadmap/evidence/self-learning-improvement-independent-review-2026-07-15.md"],
+      "paths": [
+        "docs/research/AI_SELF_LEARNING_AND_IMPROVEMENT_RESEARCH_2026-07-14.md",
+        "docs/SELF_LEARNING_IMPROVEMENT_SYSTEM_PLAN.md",
+        "docs/FABLE_SELF_LEARNING_IMPROVEMENT_SYSTEM_PROMPT.md",
+        "roadmap/evidence/self-learning-improvement-task-mesh-r1.json",
+        "roadmap/evidence/self-learning-improvement-independent-review-2026-07-15.md"
+      ],
       "summary": "Added a primary-source learning-technique taxonomy, candidate cross-family improvement overlay, 45 governed workflows, evaluator-integrity boundary, low-cost dormant weekly research radar, typed graph design, phased test plan, and sanitized Fable review packet.",
       "agent_action": "Use these artifacts for design and independent review only. Keep the weekly radar, optimizers, training, instruction edits, notifications, and external effects dormant; require frozen evaluation, an independent checker, rollback, and Lowell's decision before any adoption.",
-      "route_tags": ["research", "agent_skill", "learning_loop", "machine_learning", "workflow", "knowledge_graph", "governance", "human_gate"]
+      "route_tags": [
+        "research",
+        "agent_skill",
+        "learning_loop",
+        "machine_learning",
+        "workflow",
+        "knowledge_graph",
+        "governance",
+        "human_gate"
+      ]
     },
     {
       "change_id": "nav-change:2026-07-14:ml-workflow-agent-family",
@@ -941,33 +1109,6 @@
         "governance",
         "security_privacy",
         "validation"
-      ]
-    },
-    {
-      "change_id": "nav-change:2026-07-12:portfolio-pm-trigger-role-directory",
-      "changed_at": "2026-07-12T18:30:00Z",
-      "change_type": "added_registered_pm_trigger_role_directory",
-      "paths": [
-        "assets/agent-skills/personal-project-management-ops/",
-        "assets/agent-skills/dad-trigger-pattern-radar/",
-        "registry/agent-skill-library.json",
-        "registry/subagent-capability-registry.json",
-        "schemas/subagent-pack.schema.json",
-        "schemas/subagent-role-directory.schema.json",
-        "schemas/portfolio-trigger-feedback.schema.json",
-        "src/digital_asset_directory/subagent_evaluations.py",
-        "src/digital_asset_directory/portfolio_workstreams.py",
-        "processed/agents/subagent-role-directory.json"
-      ],
-      "summary": "Registered 11 runtime-neutral PM and trigger roles behind explicit pack allowlists, added a read-only categorical directory, and kept declarations separate from attempt-first grading.",
-      "agent_action": "Use subagents directory or os agents for retrieval; never treat declared capabilities as competence, infer evaluation links, dispatch work, or enable candidate routines from the directory.",
-      "route_tags": [
-        "agent_skill",
-        "project_management",
-        "trigger_pattern",
-        "knowledge_graph",
-        "human_gate",
-        "privacy"
       ]
     },
     {
@@ -1155,19 +1296,52 @@
       "change_id": "nav-change:2026-07-15:project-right-sizing-expert-packs",
       "changed_at": "2026-07-15T16:00:00Z",
       "change_type": "added_project_position_and_specialist_packs",
-      "paths": ["docs/TECHNICAL_PRODUCT_COMPANY_OS.md", "assets/agent-skills/technical-product-company-os/references/PROJECT_POSITION_AND_COMPLETION_CONTRACT.md", "schemas/project-position-diagnosis.schema.json", "assets/agent-skills/mcp-integration-specialist-pack", "assets/agent-skills/ui-ux-specialist-pack", "registry/subagent-capability-registry.json", "processed/agents/subagent-capability-graph.json"],
+      "paths": [
+        "docs/TECHNICAL_PRODUCT_COMPANY_OS.md",
+        "assets/agent-skills/technical-product-company-os/references/PROJECT_POSITION_AND_COMPLETION_CONTRACT.md",
+        "schemas/project-position-diagnosis.schema.json",
+        "assets/agent-skills/mcp-integration-specialist-pack",
+        "assets/agent-skills/ui-ux-specialist-pack",
+        "registry/subagent-capability-registry.json",
+        "processed/agents/subagent-capability-graph.json"
+      ],
       "summary": "Added read-only project-position diagnosis, human-confirmed destination and completion depth, sufficient-stop boundaries, and on-demand MCP and UI/UX expert packs under existing families.",
       "agent_action": "Diagnose first when destination or depth is ambiguous, ask at most three material questions, then route no more than three primary capabilities or specialist roles and stop at the approved depth.",
-      "route_tags": ["agent_skill", "workflow", "project_management", "mcp", "ux", "knowledge_graph", "governance", "human_gate"]
+      "route_tags": [
+        "agent_skill",
+        "workflow",
+        "project_management",
+        "mcp",
+        "ux",
+        "knowledge_graph",
+        "governance",
+        "human_gate"
+      ]
     },
     {
       "change_id": "nav-change:2026-07-16:intent-continuity-graph-v1",
       "changed_at": "2026-07-17T05:55:00Z",
       "change_type": "added_inactive_intent_continuity_graph",
-      "paths": ["docs/INTENT_CONTINUITY_GRAPH.md", "config/intent-continuity-shadow-hooks.json", "schemas/intent-continuity-host-readiness.schema.json", "src/digital_asset_directory/portfolio_continuity_runtime.py", "src/digital_asset_directory/portfolio_continuity_host_readiness.py", "assets/agent-skills/personal-project-management-ops/subagents.yaml", "roadmap/evidence/intent-continuity-graph-v1.md"],
+      "paths": [
+        "docs/INTENT_CONTINUITY_GRAPH.md",
+        "config/intent-continuity-shadow-hooks.json",
+        "schemas/intent-continuity-host-readiness.schema.json",
+        "src/digital_asset_directory/portfolio_continuity_runtime.py",
+        "src/digital_asset_directory/portfolio_continuity_host_readiness.py",
+        "assets/agent-skills/personal-project-management-ops/subagents.yaml",
+        "roadmap/evidence/intent-continuity-graph-v1.md"
+      ],
       "summary": "Added private append-only intent continuity evidence, ref-aware recovery, rebuildable global and repo projections, separate closeout gates, bounded project-management roles, and a committed but untrusted shadow adapter with fail-closed project-trust, hook-trust, linked-worktree discovery, and real-dispatch readiness gates.",
       "agent_action": "Use read-only scan, recovery, status, and host-readiness first; require an exact-file hook review plus one exact current-revision event ID attested by a human observer, disclose that ledger origin is not authenticated, keep duplicate links candidate-only, preserve quiet work, and never activate hooks, notify, archive tasks, or remove worktrees without their separate gates.",
-      "route_tags": ["project_management", "knowledge_graph", "attention", "workflow", "automation", "privacy", "human_gate"]
+      "route_tags": [
+        "project_management",
+        "knowledge_graph",
+        "attention",
+        "workflow",
+        "automation",
+        "privacy",
+        "human_gate"
+      ]
     },
     {
       "change_id": "nav-change:2026-07-06:phase-8-human-gate-review-packet",
