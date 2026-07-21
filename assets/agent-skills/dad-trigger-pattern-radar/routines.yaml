@@ -171,6 +171,61 @@ routines:
     lineage_grouped_holdout: not_run_candidate_only
     drift_state: not_calibrated
     budget: none_then_low_for_evidence_normalization
+  - routine_id: pre-publication-authority-scope-conflict-watch
+    pattern_id: dad:trigger-pattern:pre-publication-authority-scope-conflict
+    pattern_revision_id: dad:trigger-pattern-revision:pre-publication-authority-scope-conflict:v1
+    revision: 1
+    status: watching
+    epistemic_state: observed
+    problem_or_opportunity: prevent_a_derived_handoff_or_local_commit_scope_from_silently_broadening_committed_source_authority_during_push_pr_creation_or_merge
+    cadence: manual_before_push_pr_creation_ready_transition_or_merge_when_authority_or_scope_artifacts_exist
+    executor: deterministic_authority_and_remote_diff_comparator
+    escalation_role: terra-trigger-pattern-judge
+    input_fingerprint: sha256_of_repository_remote_default_base_proposed_head_committed_authority_revisions_derived_handoff_revisions_supersession_refs_approved_commit_and_path_scope_and_computed_remote_diff
+    applies_when: [external_git_publication_or_merge_is_proposed, committed_authority_or_exact_scope_packet_exists, derived_handoff_or_later_natural_language_instruction_is_being_used_or_proposed_head_has_ancestors_absent_from_real_remote_base]
+    does_not_apply_when: [no_external_git_mutation_is_proposed, no_authority_or_scope_artifact_exists, later_revision_bound_human_approval_explicitly_supersedes_the_prior_record_and_matches_exact_head_base_and_path_scope]
+    required_signals: [repository_and_remote_identity, proposed_action, proposed_head_and_real_remote_base, committed_authority_revision, approved_scope_or_explicit_unknown]
+    any_signals: [derived_handoff_present, natural_language_authority_paraphrase_present, full_pr_diff_exceeds_local_commit_diff, supersession_chain_missing, approved_pathset_mismatch, ancestor_commits_not_on_remote_base]
+    forbidden_signals: [private_payload_required, secret_or_raw_conversation_required, request_to_push_open_pr_merge_rewrite_history_or_delete_branch_without_human_gate]
+    counter_signals: [explicit_revision_bound_supersession, exact_head_base_and_path_scope_match, no_external_action, current_human_dismissal_for_same_fingerprint]
+    emit_when: committed_authority_conflicts_with_derived_instruction_or_computed_remote_diff_exceeds_approved_scope
+    suppress_when: [input_fingerprint_unchanged, no_authority_or_scope_conflict, explicit_revision_bound_supersession_matches_exact_head_base_and_path_scope, human_dismissal_fingerprint_unchanged]
+    quiet_when: no_external_action_or_exact_authority_supersession_and_scope_match_is_deterministically_proven
+    transitions: [unseen_to_watching, watching_to_candidate_conflict_packet, candidate_conflict_packet_to_human_decision, human_dismissed_to_wake_on_material_fingerprint_change]
+    ordered_sequence: [resolve_source_authority_and_supersession_chain, resolve_real_remote_base_and_proposed_head, compute_full_pr_commit_and_path_scope, compare_to_approved_scope, apply_suppressors, escalate_ambiguous_semantics, request_human_decision_before_side_effect]
+    grouping_key: repository_remote_proposed_action_and_authority_revision
+    temporal_window: current_authority_and_handoff_revisions_through_current_remote_head_base_pair
+    minimum_lineage_distinct_occurrences: 1_for_watch_only_no_promotion
+    source_diversity: committed_source_authority_plus_derived_handoff_plus_remote_git_diff_when_available
+    coverage: authority_identity_supersession_head_base_ancestry_commit_set_and_pathset_with_unknowns_explicit
+    deterministic_fields: [repository_identity, remote_identity, authority_revision_ids, supersession_refs, proposed_head, real_remote_base, ancestry, commit_set, pathset, input_fingerprint, suppressors, idempotency_key]
+    model_proposed_fields: [semantic_conflict_classification, whether_later_language_is_specific_enough_to_supersede, smallest_human_decision_packet]
+    idempotency_key: "pre-publication-authority-scope-conflict:{repository_id}:{proposed_action}:{input_fingerprint}"
+    candidate_action: suggest_stop_and_prepare_revision_bound_authority_conflict_packet
+    candidate_action_class: suggest
+    human_gate: required_before_push_pr_creation_ready_transition_merge_history_rewrite_branch_deletion_or_instruction_change
+    side_effect_authority: none_candidate_packet_only
+    prohibited_side_effects: [push, create_or_update_pr, mark_ready, merge, force_push, rewrite_history, delete_branch, mutate_source, edit_instruction, cross_repo_write, self_approve]
+    cooldown: until_authority_handoff_remote_base_proposed_head_or_approved_scope_fingerprint_changes
+    expiry: 90_days_without_second_lineage_distinct_occurrence_or_human_review
+    wake_condition: material_authority_supersession_remote_base_proposed_head_or_scope_change
+    privacy_class: internal_metadata_and_public_git_identity_only
+    redaction_rule: retain_revision_ids_commit_ids_path_counts_and_public_pr_refs_only_exclude_private_handoff_text_raw_conversations_secrets_and_payloads
+    evidence_refs: [roadmap/evidence/lfdt-authority-scope-learning-loop-v1.md, "dad:lesson:ff023194-14a8-5ccd-b6af-6bb2cd53af1e"]
+    expected_benefit: fewer_unauthorized_or_over_scoped_publications_and_earlier_detection_of_dependency_packed_prs
+    execution_cost: deterministic_git_and_authority_checks_then_medium_only_for_ambiguous_semantic_supersession
+    interruption_cost: one_deduplicated_fail_closed_conflict_packet_before_external_mutation
+    false_positive_harm: blocking_or_delaying_a_legitimate_later_approval_that_explicitly_and_revision_bound_supersedes_the_prior_record
+    validator: tests/test_ai_native_process_pilot_contract.py#test_pre_publication_authority_scope_conflict_watch_contract
+    positive_cases: [committed_commit_and_stop_packet_conflicts_with_private_push_and_merge_handoff, one_local_commit_produces_multi_commit_multi_path_pr_against_real_remote_base, approved_path_allowlist_differs_from_computed_pr_pathset]
+    negative_cases: [no_external_git_action, exact_revision_bound_supersession_and_scope_match, same_fingerprint_human_dismissal, no_authority_artifact_available_and_action_remains_human_blocked]
+    rollback: discard_conflict_packet_and_restore_prior_watching_state_no_git_or_instruction_change_exists
+    kill_criteria: [any_git_or_external_side_effect_occurs, trigger_treats_a_handoff_as_source_authority, trigger_auto_resolves_semantic_supersession, private_payload_is_required, repeated_false_positive_blocks_exact_approved_scope]
+    feedback_events: [accept, reject, dismiss, snooze, usefulness, harm, miss]
+    historical_replay: one_observed_lfdt_incident_not_enough_for_promotion
+    lineage_grouped_holdout: not_run_watch_only
+    drift_state: not_calibrated
+    budget: none_then_medium_only_for_ambiguous_semantic_conflict
   - routine_id: daily-portfolio-pulse
     cadence: daily_when_enabled
     executor: deterministic_fingerprinted_projection_refresh

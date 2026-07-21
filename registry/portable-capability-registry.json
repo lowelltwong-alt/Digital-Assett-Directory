@@ -435,7 +435,8 @@
         "tests/test_intelligence_routing.py",
         "templates/downstream/AGENTS_MANAGED_BLOCK.md"
       ],
-      "content_digest": "sha256:7abc4285c2bfc4bdd5df30a9aa7fe0c5ee54854f91cfe5a4b166fe807aef6e94",      "contract_digests": {
+      "content_digest": "sha256:008e6f6eb815f77c60bd075e050da5eb1749b6da4b5176a245cbf02356eba5ea",
+      "contract_digests": {
         "input": "sha256:eee475da7d6fe76d90852dfa97de0e1f047cb72d7d0134552245b7cda9a9fb68",
         "output": "sha256:0ec04e3bcb58df087b53068eb3756924c878f35a40871814bd8749313aa69dea",
         "error": "sha256:0c31568c5353cbf327cd009c17af20a687f7e97685e609c9a8d96f03852fd118",
@@ -1504,7 +1505,8 @@
         "src/digital_asset_directory/portfolio_roadmap.py",
         "templates/hooks/intent-continuity-shadow-receipt.template.json"
       ],
-      "content_digest": "sha256:0bf1c7af32850591c6a5d38e6bf40dd28299fe558eb97fa0c3a2db21a2f1dc44",      "source_observation_digest": "sha256:1aeef157eb837554b2d8bf2b3de020f8daf701533a3ca6efe7d31e0888368a9a",
+      "content_digest": "sha256:0bf1c7af32850591c6a5d38e6bf40dd28299fe558eb97fa0c3a2db21a2f1dc44",
+      "source_observation_digest": "sha256:1aeef157eb837554b2d8bf2b3de020f8daf701533a3ca6efe7d31e0888368a9a",
       "contract_digests": {
         "input": "sha256:eee475da7d6fe76d90852dfa97de0e1f047cb72d7d0134552245b7cda9a9fb68",
         "output": "sha256:0ec04e3bcb58df087b53068eb3756924c878f35a40871814bd8749313aa69dea",
@@ -2688,6 +2690,80 @@
       ],
       "fresh_until": "2026-10-20T00:00:00-04:00",
       "rollback_ref": "Remove the synthetic-silver contract files, registry rows, and this card; no downstream repo state depends on them until a pilot adopts the contract."
+    },
+    {
+      "schema_version": "dad.portable_capability_card.v1",
+      "card_id": "portability-card:skill-dad-trigger-pattern-radar",
+      "revision_id": "portability-card-revision:skill-dad-trigger-pattern-radar:0.1.1",
+      "artifact_id": "skill:dad-trigger-pattern-radar",
+      "artifact_kind": "skill",
+      "binding_class": "portable_core",
+      "source_authority": "assets/agent-skills/dad-trigger-pattern-radar/SKILL.md",
+      "owner": "DAD and Lowell",
+      "status": "schema_validated",
+      "portable_files": [
+        "assets/agent-skills/dad-trigger-pattern-radar/SKILL.md",
+        "assets/agent-skills/dad-trigger-pattern-radar/routines.yaml",
+        "assets/agent-skills/dad-trigger-pattern-radar/subagents.yaml",
+        "assets/agent-skills/dad-trigger-pattern-radar/agents/openai.yaml",
+        "assets/agent-skills/dad-trigger-pattern-radar/references/TRIGGER_PATTERN_CONTRACT.md",
+        "assets/agent-skills/dad-trigger-pattern-radar/references/TRIGGER_PATTERN_TAXONOMY.md"
+      ],
+      "content_digest": "sha256:97ac78a54bcd56b8ac96b7f1cba08d855192ffcf01d7a849cbb753cd17604ba5",
+      "contract_digests": {
+        "input": "sha256:70ecd1996b8eaccf7704118146da2f482daf58e08b4b0a1d6d074c65aee24c46",
+        "output": "sha256:db1293fa4315d64349cc5e94fb4066f92dd266d86c4fa233e7ee9a9b2ec32b18",
+        "error": "sha256:534d535ebbff4e19589fe4e0f40632936027d6fa671db938298f8df8fbacd756",
+        "privacy": "sha256:4e85d2356765d6ece17487fdd4fcd0e1a49560ed443868b1abbfa1af42e83c03",
+        "effect": "sha256:287120e3feb914bace0a535dd85e07dd19fd9ba7acef46a3141f75dcf86d519a",
+        "authority": "sha256:97c5a72bf90bc71d84d0c7f1818573d9f31828efdd56bdf950e9fd3e31375341"
+      },
+      "capability_ids": [
+        "trigger_signature_discovery",
+        "watch_only_routine_specs",
+        "false_positive_and_coverage_grading"
+      ],
+      "tool_ids": [
+        "dad-cli",
+        "git",
+        "registered-read-only-sources"
+      ],
+      "context_contract": "Immutable task/repo/validation/handoff observations and privacy-safe candidate trigger packets; no private payloads, secrets, or side-effect authority.",
+      "privacy_classes": [
+        "public",
+        "internal",
+        "confidential",
+        "restricted_by_local_policy"
+      ],
+      "consequence_classes": [
+        "small",
+        "medium",
+        "large",
+        "critical"
+      ],
+      "effect_classes": [
+        "read_only",
+        "candidate_local_artifact"
+      ],
+      "dependencies": [
+        "skill:portable-capability-governance"
+      ],
+      "reverse_consumers": [
+        "agent-postflight",
+        "portfolio-review",
+        "material-work-routing"
+      ],
+      "adapter_revision_ids": [],
+      "harness_revision_id": "harness-revision:portable-capability-contract:0.1.0",
+      "evidence_refs": [
+        "roadmap/evidence/lfdt-authority-scope-learning-loop-v1.md",
+        "tests/test_ai_native_process_pilot_contract.py"
+      ],
+      "fresh_until": "2026-10-20T00:00:00-04:00",
+      "rollback_ref": "Revert the trigger-pattern radar portability card and watch-only pre-publication authority-scope routine while preserving prior watching-state trigger specs.",
+      "candidate_only": true,
+      "execution_authorized": false,
+      "authority_boundary": "This card dispositions candidate trigger-signature and watch-only routine specs only; it cannot schedule automations, mutate repositories, authorize publication, or grant side-effect authority."
     }
   ],
   "candidate_only": true,
